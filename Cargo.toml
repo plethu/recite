@@ -1,0 +1,7 @@
+[package]
+name = "recite"
+version = "0.0.1"
+edition = "2024"
+description = "wip deterministic dialog runtime & tooling for ECS-oriented game development"
+license = "MIT"
+repository = "https://codeberg.org/plethu/recite"
