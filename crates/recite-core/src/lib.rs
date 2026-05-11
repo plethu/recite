@@ -3,18 +3,61 @@
 #![forbid(unsafe_code)]
 
 use std::fmt;
+use std::num::NonZeroU32;
+
+/// Error returned when constructing constrained core model values.
+#[derive(Clone, Debug, Eq, PartialEq)]
+pub enum CoreValueError {
+    ZeroSourceLine,
+    ZeroSourceColumn,
+    EmptyDiagnosticCode,
+    NonNamespacedDiagnosticCode(String),
+    EmptyId { kind: &'static str },
+}
+
+impl fmt::Display for CoreValueError {
+    fn fmt(&self, formatter: &mut fmt::Formatter<'_>) -> fmt::Result {
+        match self {
+            Self::ZeroSourceLine => formatter.write_str("source line must be 1-based"),
+            Self::ZeroSourceColumn => formatter.write_str("source column must be 1-based"),
+            Self::EmptyDiagnosticCode => formatter.write_str("diagnostic code must not be empty"),
+            Self::NonNamespacedDiagnosticCode(code) => {
+                write!(formatter, "diagnostic code `{code}` must be namespaced")
+            }
+            Self::EmptyId { kind } => write!(formatter, "{kind} must not be empty"),
+        }
+    }
+}
+
+impl std::error::Error for CoreValueError {}
 
 /// A 1-based position in an author-visible source file.
 #[derive(Clone, Copy, Debug, Eq, PartialEq, Hash, Ord, PartialOrd)]
 pub struct SourcePosition {
-    pub line: u32,
-    pub column: u32,
+    line: NonZeroU32,
+    column: NonZeroU32,
 }
 
 impl SourcePosition {
+    pub const fn new(line: u32, column: u32) -> Result<Self, CoreValueError> {
+        let Some(line) = NonZeroU32::new(line) else {
+            return Err(CoreValueError::ZeroSourceLine);
+        };
+        let Some(column) = NonZeroU32::new(column) else {
+            return Err(CoreValueError::ZeroSourceColumn);
+        };
+
+        Ok(Self { line, column })
+    }
+
     #[must_use]
-    pub const fn new(line: u32, column: u32) -> Self {
-        Self { line, column }
+    pub const fn line(self) -> u32 {
+        self.line.get()
+    }
+
+    #[must_use]
+    pub const fn column(self) -> u32 {
+        self.column.get()
     }
 }
 
@@ -60,9 +103,17 @@ pub enum DiagnosticSeverity {
 pub struct DiagnosticCode(String);
 
 impl DiagnosticCode {
-    #[must_use]
-    pub fn new(value: impl Into<String>) -> Self {
-        Self(value.into())
+    pub fn new(value: impl Into<String>) -> Result<Self, CoreValueError> {
+        let value = value.into();
+        if value.is_empty() {
+            return Err(CoreValueError::EmptyDiagnosticCode);
+        }
+
+        if !is_namespaced_diagnostic_code(&value) {
+            return Err(CoreValueError::NonNamespacedDiagnosticCode(value));
+        }
+
+        Ok(Self(value))
     }
 
     #[must_use]
@@ -108,13 +159,13 @@ pub struct Diagnostic {
 impl Diagnostic {
     #[must_use]
     pub fn new(
-        code: impl Into<DiagnosticCode>,
+        code: DiagnosticCode,
         severity: DiagnosticSeverity,
         message: impl Into<String>,
         span: SourceSpan,
     ) -> Self {
         Self {
-            code: code.into(),
+            code,
             severity,
             message: message.into(),
             span,
@@ -136,14 +187,18 @@ impl Diagnostic {
     }
 }
 
-impl From<&str> for DiagnosticCode {
-    fn from(value: &str) -> Self {
+impl TryFrom<&str> for DiagnosticCode {
+    type Error = CoreValueError;
+
+    fn try_from(value: &str) -> Result<Self, Self::Error> {
         Self::new(value)
     }
 }
 
-impl From<String> for DiagnosticCode {
-    fn from(value: String) -> Self {
+impl TryFrom<String> for DiagnosticCode {
+    type Error = CoreValueError;
+
+    fn try_from(value: String) -> Result<Self, Self::Error> {
         Self::new(value)
     }
 }
@@ -154,9 +209,15 @@ macro_rules! define_id {
         pub struct $name(String);
 
         impl $name {
-            #[must_use]
-            pub fn new(value: impl Into<String>) -> Self {
-                Self(value.into())
+            pub fn new(value: impl Into<String>) -> Result<Self, CoreValueError> {
+                let value = value.into();
+                if value.trim().is_empty() {
+                    return Err(CoreValueError::EmptyId {
+                        kind: stringify!($name),
+                    });
+                }
+
+                Ok(Self(value))
             }
 
             #[must_use]
@@ -171,14 +232,18 @@ macro_rules! define_id {
             }
         }
 
-        impl From<&str> for $name {
-            fn from(value: &str) -> Self {
+        impl TryFrom<&str> for $name {
+            type Error = CoreValueError;
+
+            fn try_from(value: &str) -> Result<Self, Self::Error> {
                 Self::new(value)
             }
         }
 
-        impl From<String> for $name {
-            fn from(value: String) -> Self {
+        impl TryFrom<String> for $name {
+            type Error = CoreValueError;
+
+            fn try_from(value: String) -> Result<Self, Self::Error> {
                 Self::new(value)
             }
         }
@@ -190,6 +255,18 @@ define_id!(ChoiceId);
 define_id!(BlockId);
 define_id!(EffectId);
 define_id!(SpeakerId);
+
+fn is_namespaced_diagnostic_code(value: &str) -> bool {
+    let Some((namespace, code)) = value.split_once('_') else {
+        return false;
+    };
+
+    !namespace.is_empty()
+        && !code.is_empty()
+        && value.chars().all(|character| {
+            character.is_ascii_uppercase() || character.is_ascii_digit() || character == '_'
+        })
+}
 
 /// Scalar metadata and schema values supported by the core model.
 #[derive(Clone, Debug, PartialEq)]
@@ -334,12 +411,14 @@ mod tests {
 
     #[test]
     fn source_spans_support_points_and_ranges() {
-        let start = SourcePosition::new(3, 5);
-        let end = SourcePosition::new(3, 12);
+        let start = SourcePosition::new(3, 5).expect("valid source position");
+        let end = SourcePosition::new(3, 12).expect("valid source position");
 
         let point = SourceSpan::point("dialogue/tavern.recite", start);
         assert_eq!(point.file, "dialogue/tavern.recite");
         assert_eq!(point.start, start);
+        assert_eq!(point.start.line(), 3);
+        assert_eq!(point.start.column(), 5);
         assert_eq!(point.end, None);
 
         let range = SourceSpan::new("dialogue/tavern.recite", start, Some(end));
@@ -347,19 +426,34 @@ mod tests {
     }
 
     #[test]
+    fn source_positions_reject_zero_line_or_column() {
+        assert_eq!(
+            SourcePosition::new(0, 1),
+            Err(CoreValueError::ZeroSourceLine)
+        );
+        assert_eq!(
+            SourcePosition::new(1, 0),
+            Err(CoreValueError::ZeroSourceColumn)
+        );
+    }
+
+    #[test]
     fn diagnostics_keep_stable_structured_fields() {
         let primary = SourceSpan::new(
             "dialogue/tavern.recite",
-            SourcePosition::new(8, 1),
-            Some(SourcePosition::new(8, 14)),
+            SourcePosition::new(8, 1).expect("valid source position"),
+            Some(SourcePosition::new(8, 14).expect("valid source position")),
         );
         let related = RelatedSpan::new(
-            SourceSpan::point("dialogue/tavern.recite", SourcePosition::new(2, 4)),
+            SourceSpan::point(
+                "dialogue/tavern.recite",
+                SourcePosition::new(2, 4).expect("valid source position"),
+            ),
             "first declaration is here",
         );
 
         let diagnostic = Diagnostic::new(
-            "RECITE_ID001",
+            DiagnosticCode::new("RECITE_ID001").expect("valid diagnostic code"),
             DiagnosticSeverity::Error,
             "duplicate line ID",
             primary.clone(),
@@ -379,15 +473,59 @@ mod tests {
     }
 
     #[test]
+    fn diagnostic_codes_reject_empty_or_non_namespaced_values() {
+        assert_eq!(
+            DiagnosticCode::new(""),
+            Err(CoreValueError::EmptyDiagnosticCode)
+        );
+        assert_eq!(
+            DiagnosticCode::new("ID001"),
+            Err(CoreValueError::NonNamespacedDiagnosticCode(
+                "ID001".to_owned()
+            ))
+        );
+        assert_eq!(
+            DiagnosticCode::new("recite_id001"),
+            Err(CoreValueError::NonNamespacedDiagnosticCode(
+                "recite_id001".to_owned()
+            ))
+        );
+    }
+
+    #[test]
     fn id_wrappers_are_explicit_and_display_their_inner_value() {
-        let line_id = LineId::new("tavern_intro_001");
-        let same_line_id = LineId::from("tavern_intro_001");
-        let choice_id = ChoiceId::new("ask_for_room");
+        let line_id = LineId::new("tavern_intro_001").expect("valid line ID");
+        let same_line_id = LineId::try_from("tavern_intro_001").expect("valid line ID");
+        let choice_id = ChoiceId::new("ask_for_room").expect("valid choice ID");
 
         assert_eq!(line_id, same_line_id);
         assert_eq!(line_id.as_str(), "tavern_intro_001");
         assert_eq!(line_id.to_string(), "tavern_intro_001");
         assert_eq!(choice_id.as_str(), "ask_for_room");
+    }
+
+    #[test]
+    fn id_wrappers_reject_empty_values() {
+        assert_eq!(
+            LineId::new(""),
+            Err(CoreValueError::EmptyId { kind: "LineId" })
+        );
+        assert_eq!(
+            ChoiceId::new("  "),
+            Err(CoreValueError::EmptyId { kind: "ChoiceId" })
+        );
+        assert_eq!(
+            BlockId::new(""),
+            Err(CoreValueError::EmptyId { kind: "BlockId" })
+        );
+        assert_eq!(
+            EffectId::new(""),
+            Err(CoreValueError::EmptyId { kind: "EffectId" })
+        );
+        assert_eq!(
+            SpeakerId::new(""),
+            Err(CoreValueError::EmptyId { kind: "SpeakerId" })
+        );
     }
 
     #[test]
@@ -397,7 +535,10 @@ mod tests {
         metadata.push(MetadataEntry::new("portrait", ScalarValue::from("neutral")));
         metadata.push(
             MetadataEntry::new("sfx", ScalarValue::from("mug")).with_source_span(
-                SourceSpan::point("dialogue/tavern.recite", SourcePosition::new(4, 9)),
+                SourceSpan::point(
+                    "dialogue/tavern.recite",
+                    SourcePosition::new(4, 9).expect("valid source position"),
+                ),
             ),
         );
 
