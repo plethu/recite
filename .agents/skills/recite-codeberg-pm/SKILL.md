@@ -174,6 +174,8 @@ Recite requires signed commits and explicit review gates. Codeberg branch protec
    - Keep the issue in `status/review`.
    - Confirm the PR targets `main` from the expected short-lived branch.
    - Review the diff and run the requested checks locally.
+   - Review beyond the issue acceptance criteria: call out correctness, maintainability, extensibility, public API shape, invariant preservation, and missing validation-policy coverage that would make later work build on weak foundations.
+   - Treat unclear validation ownership as a review finding when a branch introduces public model types, constructors, serialized shapes, or cross-crate contracts. Either the policy should be implemented in the branch or explicitly tracked by a focused issue before merge.
    - Require explicit Codeberg approval from a known maintainer.
    - Allow trusted maintainer author self-review only as a temporary single-maintainer exception. This is for transparency while Mari is the only maintainer, not a substitute for independent review, and must be revisited before or when another maintainer is added.
    - Require a clean-context agent review comment for the current PR head SHA.
