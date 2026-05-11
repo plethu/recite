@@ -1,0 +1,21 @@
+[package]
+name = "recite-cli"
+version.workspace = true
+edition.workspace = true
+description = "Command-line interface for Recite projects."
+license.workspace = true
+repository.workspace = true
+readme.workspace = true
+
+[[bin]]
+name = "recite"
+path = "src/main.rs"
+
+[dependencies]
+recite-core.workspace = true
+recite-parser.workspace = true
+recite-compiler.workspace = true
+recite-runtime.workspace = true
+
+[lints]
+workspace = true

@@ -1,0 +1,14 @@
+[package]
+name = "recite-runtime"
+version.workspace = true
+edition.workspace = true
+description = "Deterministic Recite runtime with no engine dependencies."
+license.workspace = true
+repository.workspace = true
+readme.workspace = true
+
+[dependencies]
+recite-core.workspace = true
+
+[lints]
+workspace = true

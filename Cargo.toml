@@ -1,8 +1,26 @@
-[package]
-name = "recite"
+[workspace]
+members = [
+    "crates/recite-cli",
+    "crates/recite-compiler",
+    "crates/recite-core",
+    "crates/recite-lsp",
+    "crates/recite-parser",
+    "crates/recite-runtime",
+]
+resolver = "3"
+
+[workspace.package]
 version = "0.0.1"
 edition = "2024"
-description = "wip deterministic dialog runtime & tooling for ECS-oriented game development"
 license = "MIT"
 repository = "https://codeberg.org/plethu/recite"
 readme = "README.md"
+
+[workspace.lints.rust]
+unsafe_code = "forbid"
+
+[workspace.dependencies]
+recite-core = { version = "0.0.1", path = "crates/recite-core" }
+recite-parser = { version = "0.0.1", path = "crates/recite-parser" }
+recite-compiler = { version = "0.0.1", path = "crates/recite-compiler" }
+recite-runtime = { version = "0.0.1", path = "crates/recite-runtime" }

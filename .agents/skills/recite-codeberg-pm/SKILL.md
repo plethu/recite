@@ -21,14 +21,14 @@ Recite uses Codeberg for public project management. Codeberg is free shared infr
 
 ## Before Remote Mutation
 
-Confirm the target repo and current state:
+Confirm the target repo and only the current state needed for the operation. For single-issue work, prefer the lightweight checker and a targeted issue read:
 
 ```bash
-git remote -v
-tea issues list --limit 5
-tea labels list
-tea milestones list
+.agents/skills/recite-codeberg-pm/scripts/recite-pm-check.sh quick
+tea issues 17 --fields index,title,state,milestone,labels,url
 ```
+
+Use `recite-pm-check.sh full` for broad planning or label/milestone audits, not as a routine before every mutation. The full mode lists labels, milestones, and open issues, so avoid running it repeatedly in one workflow unless the remote project state may have changed externally.
 
 If a command would create or edit many remote objects, write an idempotent script that checks current state first and skips existing objects.
 
@@ -131,16 +131,17 @@ EOF
   tea issues create \
     --title "Parser: parse block headers" \
     --labels "area/parser,kind/implementation,size/s,status/ready" \
-    --description "$tmp_body"
+    --description "$(cat "$tmp_body")"
 ```
 
 Move one issue to review by removing the old status and adding the new one:
 
 ```bash
 .agents/skills/recite-codeberg-pm/scripts/tea-rate-limit.sh issue -- \
-  tea issues edit 17 \
-    --remove-label "status/in-progress" \
-    --labels "status/review"
+  tea issues edit \
+    --remove-labels "status/in-progress" \
+    --add-labels "status/review" \
+    17
 ```
 
 Open a pull request:
@@ -162,14 +163,88 @@ EOF
     --head issue-17-parser-block-headers \
     --base main \
     --title "Parser: parse block headers" \
-    --description "$tmp_body"
+    --description "$(cat "$tmp_body")"
+```
+
+## Review and Signed Merge Pipeline
+
+Recite requires signed commits and explicit review gates. Codeberg branch protection is the source of truth for repository-level merge policy; local helpers audit that policy and handle Recite-specific gates that Codeberg cannot express. Do not merge pull requests with the Codeberg web UI or any forge-side merge command, because those paths can create unsigned merge commits and bypass local guardrails. Agents must treat review and merge as separate stages:
+
+1. Review stage:
+   - Keep the issue in `status/review`.
+   - Confirm the PR targets `main` from the expected short-lived branch.
+   - Review the diff and run the requested checks locally.
+   - Require explicit Codeberg approval from a known maintainer.
+   - Allow trusted maintainer author self-review only as a temporary single-maintainer exception. This is for transparency while Mari is the only maintainer, not a substitute for independent review, and must be revisited before or when another maintainer is added.
+   - Require a clean-context agent review comment for the current PR head SHA.
+   - Resolve or explicitly reject every review comment before merge.
+   - Do not push to `main` or close the PR until review gates pass.
+2. Signed merge stage:
+   - Start from a clean worktree.
+   - Run the review gate helper, which reads PR and branch protection state from the Codeberg API.
+   - Fetch `origin/main` and the PR head branch reported by the Codeberg API.
+   - Verify every PR commit signature with `git verify-commit`.
+   - Create a local no-ff merge, run checks, then commit the merge with `git commit -S`.
+   - Push `main` over SSH.
+   - Verify the PR and linked issue with targeted reads. If Codeberg does not mark the PR merged after the push, report that state instead of manually closing it unless Mari explicitly asks.
+
+Use the signed merge helper for the normal path:
+
+```bash
+.agents/skills/recite-codeberg-pm/scripts/merge-pr-signed.sh 34 issue-1-workspace-split main
+```
+
+The helper refuses to run with a dirty worktree, reads the PR base/head/head SHA from the Codeberg API, verifies review gates, verifies PR commit signatures, stages a no-ff merge, runs `cargo fmt --check` and `cargo test`, creates a signed merge commit, pushes `main`, and performs a targeted PR read. If checks fail after the merge is staged, inspect the failure and run:
+
+```bash
+git merge --abort
+```
+
+The review gate helper is read-only and may be run before attempting a merge:
+
+```bash
+.agents/skills/recite-codeberg-pm/scripts/check-pr-review-gates.sh 34 issue-1-workspace-split main
+```
+
+The review gate helper uses the Codeberg API as the primary source for PR state, branch protection, reviews, comments, and commit statuses. It requires the base branch to be protected, reports the branch's required approvals and status-check configuration, and then applies Recite-local gates for clean-context agent review and the signed local merge process.
+
+Known maintainers are derived from Codeberg repository metadata where possible: repository owner plus repository collaborators. The helper also reads `RECITE_MAINTAINERS` as a comma-separated fallback/additional list, defaulting to `plethu`. The same maintainer set is used to decide whether a PR author may satisfy the maintainer review gate by self-reviewing, but self-review is accepted only when the trusted maintainer set has exactly one member.
+
+Maintainer approval must use Codeberg PR approval and must go through the courtesy wrapper because it mutates remote PR state:
+
+```bash
+.agents/skills/recite-codeberg-pm/scripts/tea-rate-limit.sh issue -- \
+  tea pulls approve 34 "Approved for signed local merge."
+```
+
+A clean-context agent review is represented by a structured PR comment for the current PR head SHA. The reviewing agent must start from a clean context, review the PR independently, and post this exact shape through the courtesy wrapper:
+
+```bash
+.agents/skills/recite-codeberg-pm/scripts/tea-rate-limit.sh issue -- \
+  tea comment 34 '<!-- recite-agent-review:v1 -->
+Agent-Review: approved
+Head-SHA: 5b1c198ce742c81b3010eec0307e9d2cbcd1af92
+Context: clean'
+```
+
+If the PR head changes, the clean-context agent review is stale and must be repeated for the new head SHA. The gate also blocks failed or errored Codeberg commit statuses when any are reported; if no statuses exist yet, local `cargo fmt --check` and `cargo test` remain mandatory.
+
+Do not use these commands for Recite merges:
+
+```bash
+tea pulls merge ...
+# or the Codeberg web "Merge" button
 ```
 
 ## API Courtesy Rules
 
 - Do read-only preflight before mutation.
+- Keep preflight and verification targeted to the work at hand. Do not run broad issue-list audits when a single issue lookup is enough.
 - Never parallelize remote-mutating `tea` commands.
 - Use `scripts/tea-rate-limit.sh` for mutating issue, PR, label, and milestone commands.
+- `scripts/recite-pm-check.sh` defaults to `quick`, which only checks local remote configuration and the local `tea` version.
+- Use `scripts/recite-pm-check.sh issue <number>` after a single-issue mutation.
+- Use `scripts/recite-pm-check.sh full` sparingly for planning or project-wide audits. Full mode caches labels and milestones under `/tmp/recite-pm-cache` for 30 minutes by default; adjust with `RECITE_PM_CACHE_DIR` and `RECITE_PM_CACHE_TTL_SECONDS` if needed.
 - The wrapper defaults to at least 75 seconds between issue/PR mutations. This is based on a prior observed Codeberg throttle of 31 issue creations under 30 minutes, plus buffer.
 - The wrapper defaults to at least 10 seconds between label/milestone mutations as a courtesy safety floor.
 - The wrapper does not auto-retry or auto-sleep after a rate-limit failure. It surfaces the limit and exits; the agent must stop the current remote-mutation pass until the user explicitly resumes or the wait window has passed.
@@ -178,8 +253,14 @@ EOF
 
 ## Verification
 
-After remote changes, run:
+After a single issue mutation, verify only that issue:
 
 ```bash
-.agents/skills/recite-codeberg-pm/scripts/recite-pm-check.sh
+.agents/skills/recite-codeberg-pm/scripts/recite-pm-check.sh issue 17
+```
+
+After broad label, milestone, or planning work, run the full audit once:
+
+```bash
+.agents/skills/recite-codeberg-pm/scripts/recite-pm-check.sh full
 ```

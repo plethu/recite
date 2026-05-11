@@ -1,0 +1,15 @@
+[package]
+name = "recite-compiler"
+version.workspace = true
+edition.workspace = true
+description = "Recite compiler, validator, POT extractor, and compiled asset writer."
+license.workspace = true
+repository.workspace = true
+readme.workspace = true
+
+[dependencies]
+recite-core.workspace = true
+recite-parser.workspace = true
+
+[lints]
+workspace = true

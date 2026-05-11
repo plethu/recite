@@ -3,5 +3,46 @@
 version = 4
 
 [[package]]
-name = "recite"
+name = "recite-cli"
 version = "0.0.1"
+dependencies = [
+ "recite-compiler",
+ "recite-core",
+ "recite-parser",
+ "recite-runtime",
+]
+
+[[package]]
+name = "recite-compiler"
+version = "0.0.1"
+dependencies = [
+ "recite-core",
+ "recite-parser",
+]
+
+[[package]]
+name = "recite-core"
+version = "0.0.1"
+
+[[package]]
+name = "recite-lsp"
+version = "0.0.1"
+dependencies = [
+ "recite-compiler",
+ "recite-core",
+ "recite-parser",
+]
+
+[[package]]
+name = "recite-parser"
+version = "0.0.1"
+dependencies = [
+ "recite-core",
+]
+
+[[package]]
+name = "recite-runtime"
+version = "0.0.1"
+dependencies = [
+ "recite-core",
+]

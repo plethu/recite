@@ -1,0 +1,11 @@
+[package]
+name = "recite-core"
+version.workspace = true
+edition.workspace = true
+description = "Core Recite AST, identifiers, values, diagnostics, and schema model."
+license.workspace = true
+repository.workspace = true
+readme.workspace = true
+
+[lints]
+workspace = true
