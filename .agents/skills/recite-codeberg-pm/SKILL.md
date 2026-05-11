@@ -21,14 +21,14 @@ Recite uses Codeberg for public project management. Codeberg is free shared infr
 
 ## Before Remote Mutation
 
-Confirm the target repo and current state:
+Confirm the target repo and only the current state needed for the operation. For single-issue work, prefer the lightweight checker and a targeted issue read:
 
 ```bash
-git remote -v
-tea issues list --limit 5
-tea labels list
-tea milestones list
+.agents/skills/recite-codeberg-pm/scripts/recite-pm-check.sh quick
+tea issues 17 --fields index,title,state,milestone,labels,url
 ```
+
+Use `recite-pm-check.sh full` for broad planning or label/milestone audits, not as a routine before every mutation. The full mode lists labels, milestones, and open issues, so avoid running it repeatedly in one workflow unless the remote project state may have changed externally.
 
 If a command would create or edit many remote objects, write an idempotent script that checks current state first and skips existing objects.
 
@@ -138,9 +138,10 @@ Move one issue to review by removing the old status and adding the new one:
 
 ```bash
 .agents/skills/recite-codeberg-pm/scripts/tea-rate-limit.sh issue -- \
-  tea issues edit 17 \
-    --remove-label "status/in-progress" \
-    --labels "status/review"
+  tea issues edit \
+    --remove-labels "status/in-progress" \
+    --add-labels "status/review" \
+    17
 ```
 
 Open a pull request:
@@ -168,8 +169,12 @@ EOF
 ## API Courtesy Rules
 
 - Do read-only preflight before mutation.
+- Keep preflight and verification targeted to the work at hand. Do not run broad issue-list audits when a single issue lookup is enough.
 - Never parallelize remote-mutating `tea` commands.
 - Use `scripts/tea-rate-limit.sh` for mutating issue, PR, label, and milestone commands.
+- `scripts/recite-pm-check.sh` defaults to `quick`, which only checks local remote configuration and the local `tea` version.
+- Use `scripts/recite-pm-check.sh issue <number>` after a single-issue mutation.
+- Use `scripts/recite-pm-check.sh full` sparingly for planning or project-wide audits. Full mode caches labels and milestones under `/tmp/recite-pm-cache` for 30 minutes by default; adjust with `RECITE_PM_CACHE_DIR` and `RECITE_PM_CACHE_TTL_SECONDS` if needed.
 - The wrapper defaults to at least 75 seconds between issue/PR mutations. This is based on a prior observed Codeberg throttle of 31 issue creations under 30 minutes, plus buffer.
 - The wrapper defaults to at least 10 seconds between label/milestone mutations as a courtesy safety floor.
 - The wrapper does not auto-retry or auto-sleep after a rate-limit failure. It surfaces the limit and exits; the agent must stop the current remote-mutation pass until the user explicitly resumes or the wait window has passed.
@@ -178,8 +183,14 @@ EOF
 
 ## Verification
 
-After remote changes, run:
+After a single issue mutation, verify only that issue:
 
 ```bash
-.agents/skills/recite-codeberg-pm/scripts/recite-pm-check.sh
+.agents/skills/recite-codeberg-pm/scripts/recite-pm-check.sh issue 17
+```
+
+After broad label, milestone, or planning work, run the full audit once:
+
+```bash
+.agents/skills/recite-codeberg-pm/scripts/recite-pm-check.sh full
 ```

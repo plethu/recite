@@ -1,0 +1,20 @@
+[package]
+name = "recite-lsp"
+version.workspace = true
+edition.workspace = true
+description = "Language server for Recite source files."
+license.workspace = true
+repository.workspace = true
+readme.workspace = true
+
+[[bin]]
+name = "recite-lsp"
+path = "src/main.rs"
+
+[dependencies]
+recite-core.workspace = true
+recite-parser.workspace = true
+recite-compiler.workspace = true
+
+[lints]
+workspace = true
