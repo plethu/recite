@@ -16,6 +16,7 @@ Example:
 Environment:
   RECITE_SIGNED_MERGE_SKIP_CHECKS=1  Skip cargo fmt/test checks.
   RECITE_SIGNED_MERGE_SKIP_GATES=1   Skip remote review gates.
+  RECITE_SIGNED_MERGE_SKIP_MARK=1    Skip Codeberg manual-merged marker.
 
 If checks fail after the merge is staged, inspect the tree and run:
   git merge --abort
@@ -136,14 +137,64 @@ echo "== signed merge commit =="
 git commit -S \
   -m "Merge pull request #${pr_number} from ${head_branch}" \
   -m "Reviewed locally and merged with a signed merge commit."
+merge_sha="$(git rev-parse HEAD)"
 
 echo
 echo "== push ${base_branch} =="
 git push origin "$base_branch"
 
+if [[ "${RECITE_SIGNED_MERGE_SKIP_MARK:-0}" != "1" ]]; then
+  echo
+  echo "== verify pushed merge contains PR head =="
+  git fetch origin "$base_branch"
+  git merge-base --is-ancestor "$head_sha" "origin/${base_branch}"
+
+  echo
+  echo "== mark PR manually merged =="
+  manual_merge_message="Manually merged by signed local merge commit ${merge_sha}."
+  set +e
+  manual_merge_output="$(
+    tea api -X POST "repos/{owner}/{repo}/pulls/${pr_number}/merge" \
+      -f Do=manually-merged \
+      -f MergeCommitID="$merge_sha" \
+      -f MergeMessageField="$manual_merge_message" \
+      -f head_commit_id="$head_sha" 2>&1
+  )"
+  manual_merge_status=$?
+  set -e
+
+  if printf '%s\n' "$manual_merge_output" | grep -Fq 'not an allowed merge style'; then
+    echo "manual merge is not enabled for this repository; enabling it and retrying"
+    tea api -X PATCH repos/{owner}/{repo} \
+      -F allow_manual_merge=true \
+      -F autodetect_manual_merge=true >/dev/null
+
+    set +e
+    manual_merge_output="$(
+      tea api -X POST "repos/{owner}/{repo}/pulls/${pr_number}/merge" \
+        -f Do=manually-merged \
+        -f MergeCommitID="$merge_sha" \
+        -f MergeMessageField="$manual_merge_message" \
+        -f head_commit_id="$head_sha" 2>&1
+    )"
+    manual_merge_status=$?
+    set -e
+  fi
+
+  if (( manual_merge_status != 0 )); then
+    printf '%s\n' "$manual_merge_output" >&2
+    exit "$manual_merge_status"
+  fi
+
+  if [[ -n "$manual_merge_output" ]]; then
+    printf '%s\n' "$manual_merge_output"
+  fi
+fi
+
 echo
 echo "== post-merge PR state =="
-tea api "repos/{owner}/{repo}/pulls/${pr_number}" | jq '{
+post_merge_json="$(tea api "repos/{owner}/{repo}/pulls/${pr_number}")"
+printf '%s\n' "$post_merge_json" | jq '{
   number,
   title,
   state,
@@ -154,3 +205,12 @@ tea api "repos/{owner}/{repo}/pulls/${pr_number}" | jq '{
   merged,
   merge_commit_sha
 }'
+
+if [[ "${RECITE_SIGNED_MERGE_SKIP_MARK:-0}" != "1" ]]; then
+  pr_merged="$(printf '%s\n' "$post_merge_json" | jq -r '.merged')"
+  pr_merge_sha="$(printf '%s\n' "$post_merge_json" | jq -r '.merge_commit_sha // empty')"
+  if [[ "$pr_merged" != "true" || "$pr_merge_sha" != "$merge_sha" ]]; then
+    echo "PR #${pr_number} was pushed but Codeberg did not record manual merge ${merge_sha}" >&2
+    exit 1
+  fi
+fi
