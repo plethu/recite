@@ -131,7 +131,7 @@ EOF
   tea issues create \
     --title "Parser: parse block headers" \
     --labels "area/parser,kind/implementation,size/s,status/ready" \
-    --description "$tmp_body"
+    --description "$(cat "$tmp_body")"
 ```
 
 Move one issue to review by removing the old status and adding the new one:
@@ -163,7 +163,43 @@ EOF
     --head issue-17-parser-block-headers \
     --base main \
     --title "Parser: parse block headers" \
-    --description "$tmp_body"
+    --description "$(cat "$tmp_body")"
+```
+
+## Review and Signed Merge Pipeline
+
+Recite requires signed commits. Do not merge pull requests with the Codeberg web UI or any forge-side merge command, because those paths can create unsigned merge commits. Agents must treat review and merge as two separate stages:
+
+1. Review stage:
+   - Keep the issue in `status/review`.
+   - Confirm the PR targets `main` from the expected short-lived branch.
+   - Review the diff and run the requested checks locally.
+   - Do not push to `main` or close the PR without explicit maintainer approval.
+2. Signed merge stage:
+   - Start from a clean worktree.
+   - Fetch `origin/main` and the PR head branch.
+   - Verify every PR commit signature with `git verify-commit`.
+   - Create a local no-ff merge, run checks, then commit the merge with `git commit -S`.
+   - Push `main` over SSH.
+   - Verify the PR and linked issue with targeted reads. If Codeberg does not mark the PR merged after the push, report that state instead of manually closing it unless Mari explicitly asks.
+
+Use the signed merge helper for the normal path:
+
+```bash
+.agents/skills/recite-codeberg-pm/scripts/merge-pr-signed.sh 34 issue-1-workspace-split main
+```
+
+The helper refuses to run with a dirty worktree, verifies PR commit signatures, stages a no-ff merge, runs `cargo fmt --check` and `cargo test`, creates a signed merge commit, pushes `main`, and performs a targeted PR read. If checks fail after the merge is staged, inspect the failure and run:
+
+```bash
+git merge --abort
+```
+
+Do not use these commands for Recite merges:
+
+```bash
+tea pulls merge ...
+# or the Codeberg web "Merge" button
 ```
 
 ## API Courtesy Rules
