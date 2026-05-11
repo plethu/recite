@@ -1,0 +1,1705 @@
+# Recite - Production Specification
+
+## 1. Purpose
+
+Recite is an open-source deterministic dialogue compiler, runtime, editor, and tooling suite for ECS-oriented games.
+
+Its primary audience is developers building games where dialogue must be:
+
+- testable through programmatic fixtures and snapshot tests;
+- deterministic across replay, save/load, and CI;
+- integrated with explicit state machines rather than ad hoc runtime callbacks;
+- localisable through stable gettext-style workflows;
+- usable from Rust-first engines, especially Bevy;
+- authorable through excellent text tooling, with a visual editor as a structured companion rather than the only workflow.
+
+The project is not intended to be a general-purpose replacement for ink, Yarn Spinner, or Godot-native dialogue tools for all users. It is specifically for projects that value strict architectural boundaries, reproducible execution, schema-checked integration, and tool-assisted content validation.
+
+## 2. Core Invariants
+
+The following invariants define the project and must not be weakened for convenience:
+
+1. Dialogue traversal is deterministic.
+2. The runtime never performs game-side effects.
+3. Game-side effects are emitted as typed, schema-checked effect requests.
+4. Dialogue state is serialisable and deserialisable.
+5. Dialogue files can be validated without running the game.
+6. Localisable strings use stable IDs that survive nearby edits.
+7. Runtime data surfaces speaker, line, choice, metadata, and effect information as structured values, not conventions parsed from prose.
+8. Tooling is part of the product, not an optional afterthought.
+9. Stable IDs are author-visible and never silently rewritten by tooling. Renames go through an explicit code action.
+
+## 3. Terminology
+
+- **Dialogue source**: Human-authored text file in the dialogue DSL.
+- **Compiled dialogue asset**: Binary or structured compiled representation consumed by runtimes and adapters.
+- **Block**: Named unit of dialogue execution, equivalent to an ink knot or Yarn node.
+- **Line**: Atomic localisable dialogue/narration output.
+- **Prompt**: A line, optional line, or UI state that presents choices.
+- **Choice**: Player-selectable option with stable ID, localisable text, availability, metadata, and optional echo policy.
+- **Condition**: Pure query against game state, evaluated through a caller-provided context.
+- **Effect request**: Typed intent emitted by dialogue. The runtime does not execute it.
+- **Deferred effect**: Effect collected and returned when the scene ends.
+- **Immediate effect**: Effect yielded immediately while traversal may continue.
+- **Blocking effect**: Effect yielded immediately and requiring explicit acknowledgement before traversal continues.
+- **Metadata**: Ordered key/value annotations attached to lines, choices, blocks, or scenes.
+- **Inline markup**: Markup embedded inside localisable text, such as `[slow]...[/slow]`.
+- **Scene manifest**: Project-level mapping from scene IDs to dialogue assets, start blocks, participants, and presentation hints.
+
+## 4. Product Shape
+
+The production project should be delivered as a Rust workspace containing:
+
+- `recite-core`: AST, identifiers, value model, diagnostics, schema model.
+- `recite-parser`: DSL parser and source mapping.
+- `recite-compiler`: compiler, validator, POT extractor, compiled asset writer.
+- `recite-runtime`: deterministic runtime with no engine dependencies.
+- `recite-cli`: project CLI, exposing the `recite` binary.
+- `recite-lsp`: language server.
+- `recite-bevy`: Bevy adapter.
+- `recite-vscode`: VS Code extension.
+
+Visual-editor surfaces are deferred until text tooling is mature; the crate split (`recite-editor-core`, `recite-visual-editor`) will be designed when that work begins, not pre-declared here.
+
+Neovim support ships as documented LSP-client config and an optional Tree-sitter grammar, not a Rust crate.
+
+## 5. Source Format
+
+### 5.1 Requirements
+
+The format must be human-readable, line-oriented where practical, and formally specified with a grammar. Writers must not need to understand general programming beyond variables, function-style conditions, simple boolean logic, and structured annotations.
+
+Dialogue prose must not be written as quoted string literals. Quoted prose creates the same awkward formatting pressure as long strings in source code. Recite source should treat dialogue text as indented body text owned by a structured statement header.
+
+The source format should be indentation-first and must not mix one-line object literals, curly-brace blocks, and ad hoc nested styles. The concrete grammar should use a small, consistent statement vocabulary:
+
+```text
+:: block_name default      # block
+> line_id                  # line
+? choice_id                # choice
+! mode effect(...)         # effect
+-> target                  # goto
+:if condition(...)         # conditional branch
+:else                      # else branch
+:match query(...)          # enum match
+:case variant              # match arm
+# comment                  # comment
+```
+
+Statement headers carry structured fields. Indented bodies carry prose and nested statements.
+
+#### Indentation Rules
+
+A `>` line's indented body holds prose. Prose continues until a sibling-indented line begins with one of `?`, `!`, `->`, `>`, `:if`, `:else`, or `::` — at that point the prose body ends and nested statements begin at the same indent column. Blank lines inside prose are preserved as paragraph breaks; blank lines do not by themselves terminate the prose body.
+
+Nested statements inside a line body, conditional branch, or block share a single indent column. Mixing indent widths within a body is a parse error.
+
+The format must support:
+
+- named blocks;
+- exactly one default block per file or project;
+- block references within the same file;
+- block references across files;
+- localisable lines;
+- localisable choices;
+- structured speaker references;
+- ordered metadata entries;
+- conditional choices;
+- conditional branches;
+- effect declarations;
+- comments;
+- includes/imports;
+- inline markup in text;
+- stable source spans for diagnostics.
+
+### 5.2 Blocks
+
+A dialogue file is organised into named blocks.
+
+Each block may declare:
+
+- `id`;
+- optional metadata;
+- optional default speaker context;
+- a sequence of statements.
+
+Example syntax:
+
+```text
+:: tavern_arrival default
+
+> ta_001 speaker=innkeeper portrait=neutral
+  Welcome to the Rusty Flagon. Haven't seen you in a while.
+```
+
+The concrete syntax should optimise for writer ergonomics and LSP implementation while preserving this structural shape.
+
+### 5.3 Lines
+
+A line is the atomic localisable output unit.
+
+Each line must expose:
+
+- `id`: stable string identifier;
+- `speaker`: optional speaker identifier;
+- `source_text`: localisable source text;
+- `metadata`: ordered metadata entries;
+- `inline_markup`: preserved in source text and validated separately;
+- source location.
+
+Speaker names must not be parsed from line text. The following is invalid as a speaker declaration:
+
+```text
+Rhea: Hello.
+```
+
+Instead, speaker must be structured in the line header:
+
+```text
+> rhea_001 speaker=rhea
+  Hello.
+```
+
+Multiline prose is represented by the indented body:
+
+```text
+> rhea_014 speaker=rhea portrait=concerned
+  I didn't know it was that bad.
+
+  I mean, I knew it was bad.
+  Just not... that bad.
+```
+
+Standalone effects (`!`) are top-level statements between dialogue events, not children of a line body. Per-line presentation cues belong in metadata. See §7.5.
+
+### 5.4 Choices
+
+Choices are first-class records.
+
+Each choice must expose:
+
+- `id`: stable localisable choice ID;
+- `text`: source text;
+- `metadata`: ordered metadata entries;
+- optional `if` condition;
+- `target`: block reference or `END`;
+- `availability`: evaluated at runtime;
+- `echo`: explicit echo policy.
+
+Unavailable choices must be included in runtime output by default so callers can render disabled choices. The format may allow a choice to opt into hidden behaviour, but hiding must be explicit and visible to tooling.
+
+Choice echo policies:
+
+```text
+echo = none
+echo = selected_text
+echo = line(choice_echo_001)
+```
+
+The default should be `none`. If a game wants the protagonist to repeat the selected choice, it should be an explicit authored output, not a runtime quirk.
+
+### 5.4.1 ID Assignment Policy
+
+Every line and choice must reach the compiler with a stable ID. The intended workflow:
+
+- Authors may write line and choice headers without an ID. Example: `>` alone, or `> hazel_rhea.small_talk` with no suffix.
+- The LSP inserts a deterministic-but-unique short suffix (4–6 base32 characters) into the source file on save, producing e.g. `> hazel_rhea.small_talk_WPUQ`. The suffix is selected to be unique within the project at insertion time.
+- Once written to disk, IDs are **frozen**. The LSP never rewrites an existing ID. Renames go through the explicit `rename` code action and produce a structured rename record so translation tools can follow the change.
+- The compiler errors if any line or choice lacks an ID. `recite check-ids` enforces the same.
+- Because IDs do not encode content, translation files survive author edits to source text.
+
+This policy keeps gettext-style translation stable: an edit to source text does not invalidate `msgctxt`. Auto-rewriting IDs based on content is an explicit non-goal.
+
+### 5.5 Prompts
+
+The runtime must be able to represent choices attached to a line. Many games present a prompt line and choices as one UI state.
+
+The source format should support prompts as a line with nested choices:
+
+```text
+> ta_prompt_001 speaker=innkeeper portrait=neutral
+  What do you need?
+
+  ? ta_opt_room
+    I need a room.
+    -> get_room
+
+  ? ta_opt_news if familiarity_gte(innkeeper, 3)
+    What's the news?
+    -> local_news
+```
+
+A prompt may also omit line text and present choices only:
+
+```text
+? ta_opt_room
+  I need a room.
+  -> get_room
+
+? ta_opt_leave
+  Never mind.
+  -> END
+```
+
+### 5.6 Metadata
+
+Metadata must be ordered and must allow repeated keys.
+
+A plain string map is insufficient because existing production use cases include repeated cues such as multiple sound effects or ordered presentation hints.
+
+Runtime representation:
+
+```rust
+pub struct MetadataEntry {
+    pub key: String,
+    pub value: Value,
+    pub source_span: Option<SourceSpan>,
+}
+```
+
+Metadata values must support:
+
+- string;
+- integer;
+- float;
+- boolean;
+- arrays of scalar values.
+
+The core format must not hardcode keys such as `portrait`, `sfx`, `delay`, `shot`, `pose`, or `focus`. Those keys belong in project schema. The tooling must still make project-specific metadata validation excellent.
+
+### 5.7 Inline Markup
+
+Inline markup is allowed inside localisable text and must be preserved through extraction and runtime delivery.
+
+Examples:
+
+```text
+> hazel_rhea.small_talk.005 speaker=rhea portrait=concerned
+  [slow]I didn't know it was that bad.[/slow]
+
+> hazel_rhea.small_talk.002 speaker=hazel portrait=flat
+  [shake]Yeah, funny.[/shake]
+```
+
+The project must provide markup validation:
+
+- balanced tags;
+- known tag names from schema;
+- required tags preserved in translation;
+- no invalid nesting where a tag schema forbids nesting;
+- source spans for invalid markup.
+
+The runtime does not interpret inline markup. Presentation layers may interpret it.
+
+The bracketed tag form `[name]...[/name]` is deliberately distinct from ink's `[choice text]` convention. The visual collision is acknowledged; the bracket form is chosen for parser simplicity and translator familiarity.
+
+### 5.8 Diverts
+
+Blocks may divert to:
+
+- a block in the same file;
+- a block in another file;
+- `END`.
+
+Unknown targets must be validation errors.
+
+Runtime traversal of an unknown target must return an error and never silently end the scene.
+
+### 5.9 Conditional Branches
+
+Conditional branches gate a section of dialogue (lines, choices, effects, diverts, nested branches) on a condition expression.
+
+```text
+:if familiarity_gte(hazel, rhea, 3)
+  > greet_warm_001 speaker=rhea
+    You again. Good.
+:else
+  > greet_cold_001 speaker=rhea
+    Do I know you?
+```
+
+Rules:
+
+- `:if <condition>` opens a body of statements at the next indent level.
+- An optional `:else` at the same indent attaches to the immediately preceding `:if`. Anything else at that indent terminates the conditional.
+- No `:elif` in v1. Chained boolean conditions are a smell — they typically indicate that the dispatch is on an enum (use `:match`, see §5.9.1) or that the branches should be separate blocks. Adding `:elif` later is trivial if real authoring pain is reported; removing it once authors depend on it is not.
+- Conditions reuse §6 grammar, semantics, and validation. The expression must be a boolean condition.
+- Lines inside a branch must still carry stable IDs (§5.4.1) and are extracted to POT regardless of which branch evaluates true at runtime.
+- Branches may be nested arbitrarily.
+
+#### 5.9.1 Enum Match
+
+Pattern matching is restricted, additive sugar over `:if` chains for the case where dispatch is on an enum. It is not general destructuring.
+
+```text
+:match thread_stage(rhea_job_response)
+  :case tired
+    > rhea_tired_001 speaker=rhea
+      I'm exhausted. Let's keep it short.
+  :case angry
+    > rhea_angry_001 speaker=rhea
+      Don't.
+  :case fine
+    > rhea_fine_001 speaker=rhea
+      All right, what's up?
+  :case _
+    > rhea_default_001 speaker=rhea
+      Hey.
+```
+
+Rules:
+
+- The match scrutinee is a single condition-grammar query (§6.1) whose return type is declared in schema as an enum.
+- Schema must declare the function as enum-returning. Boolean-returning queries are not valid scrutinees — use `:if` for those.
+- `:case <variant>` arms must reference declared variants of that enum. Unknown variants are validation errors.
+- `:case _` is the wildcard arm. It matches any variant not covered above and may appear at most once, as the last arm.
+- Arms are evaluated top-to-bottom. The first matching arm runs; the rest are skipped.
+- The compiler validates **exhaustiveness**: a match must either cover every declared variant of the enum or include `:case _`. Missing arms are an error, not a warning.
+- Duplicate `:case <variant>` arms are validation errors.
+- Each arm's body follows the same indentation rules as `:if` bodies and may contain lines, choices, effects, diverts, nested `:if`, or nested `:match`.
+- Schema authors should mark a condition function as enum-returning by declaring `returns = "<enum_type>"`:
+
+  ```toml
+  [conditions.thread_stage]
+  params = ["thread_id: string"]
+  returns = "thread_stage_kind"
+
+  [types.thread_stage_kind]
+  kind = "enum"
+  values = ["fresh", "tired", "angry", "fine", "completed"]
+  ```
+
+- Runtime evaluation extends `DialogueContext` with an enum-returning lookup or, equivalently, schema-generated bindings convert string returns to typed variants. Either path is acceptable; the runtime contract is that the scrutinee returns one declared variant of the schema enum or evaluation fails as a structured error.
+
+The intent is narrow: schema-checked exhaustive dispatch on declared enum state. Writers who do not need it never see it; writers who do get compile-time coverage warnings when a new enum variant is added and an old `:match` was not updated.
+
+## 6. Conditions
+
+### 6.1 Condition Language
+
+Conditions must support:
+
+- named external function calls;
+- typed scalar arguments;
+- `and`;
+- `or`;
+- `not`;
+- parenthetical grouping;
+- arbitrary nesting;
+- clear precedence rules.
+
+Example:
+
+```text
+familiarity_gte(hazel, rhea, 3)
+and not thread_completed(rhea_job_response)
+```
+
+Identifiers such as actor IDs, thread IDs, and stage IDs should be accepted as bare tokens. Quoted string literals should be reserved for values that genuinely need spaces or punctuation beyond the identifier grammar. Dialogue prose itself must never require quotes.
+
+The grammar must be formally specified and parsed into an AST.
+
+### 6.2 Condition Semantics
+
+Conditions are pure queries. They must not mutate dialogue state or game state.
+
+The runtime evaluates conditions through a caller-provided context:
+
+```rust
+pub trait DialogueContext {
+    fn evaluate_condition(
+        &self,
+        function: &str,
+        args: &[Value],
+    ) -> Result<bool, DialogueError>;
+}
+```
+
+The core runtime should not know project-specific condition meanings.
+
+Condition functions return either a boolean (the default, used by `:if` and choice `if` clauses) or a schema-declared enum variant (used by `:match` scrutinees, see §5.9.1). An enum-returning function declares its return type via `returns = "<enum_type>"` in schema; the dialogue context exposes it through the same `evaluate_condition` path or a sibling enum-returning lookup, depending on adapter ergonomics.
+
+### 6.3 Schema Validation
+
+All condition functions must be declared in schema.
+
+Validation must reject:
+
+- unknown condition functions;
+- wrong arity;
+- wrong argument types;
+- invalid literal values where a schema defines an enum or registry;
+- non-boolean condition expressions in `:if` and choice `if` clauses;
+- non-enum-returning scrutinees in `:match`;
+- `:match` arms that reference variants not declared in the scrutinee's enum;
+- non-exhaustive `:match` (no `:case _` and at least one declared variant uncovered);
+- duplicate `:case <variant>` arms in a single `:match`.
+
+## 7. Effects
+
+### 7.1 Effect Model
+
+The previous term “mutation” is too narrow. The production system should use **effects**.
+
+Effects are typed intents emitted by dialogue. The runtime never executes them.
+
+```rust
+pub struct DialogueEffectRequest {
+    pub id: EffectRequestId,
+    pub mode: EffectMode,
+    pub function: String,
+    pub args: Vec<Value>,
+    pub source: EffectSource,
+}
+
+pub enum EffectMode {
+    Deferred,
+    Immediate,
+    Blocking,
+}
+```
+
+### 7.2 Deferred Effects
+
+Deferred effects are collected during traversal and returned when the scene ends.
+
+Use cases:
+
+- advance story thread;
+- record relationship interaction;
+- mark scene as seen;
+- commit relationship deltas.
+
+Example:
+
+```text
+! deferred advance_thread(rhea_job_response, tired)
+! deferred record_relationship_interaction(hazel, rhea, incidental_encounter)
+```
+
+### 7.3 Immediate Effects
+
+Immediate effects are yielded to the caller as soon as encountered. The runtime may continue after the caller observes the event.
+
+Use cases:
+
+- play sound cue;
+- fire presentation-only analytics;
+- trigger non-blocking animation cue.
+
+Example:
+
+```text
+! immediate play_sfx(snap)
+```
+
+Metadata may cover many presentation cues, but immediate effects are useful when a cue has event semantics rather than descriptive line metadata.
+
+### 7.4 Blocking Effects
+
+Blocking effects are yielded immediately and pause dialogue traversal until explicitly acknowledged.
+
+Use cases:
+
+- “Here, I’ll mark it on your map.”
+- wait for camera pan to complete;
+- wait for item grant animation;
+- open a UI overlay and resume after close.
+
+Example:
+
+```text
+! blocking mark_map(old_watchtower)
+```
+
+Runtime API:
+
+```rust
+pub fn acknowledge_effect(
+    session: &mut DialogueSession,
+    effect_id: EffectRequestId,
+    result: EffectAck,
+) -> Result<(), DialogueError>;
+```
+
+Initial production scope should only require completion/failure acknowledgement:
+
+```rust
+pub enum EffectAck {
+    Completed,
+    Failed { reason: String },
+}
+```
+
+Result-dependent branching should be deferred until there is a proven need. If dialogue needs to branch on the result of a game operation, the game should update state and later dialogue should query that state through conditions.
+
+### 7.5 Effect Ordering
+
+Effects must be emitted and collected in declaration order.
+
+Normative placement rule:
+
+- Effects are standalone statements (`!`) emitted in source order between dialogue events. Effects do not appear inside a line's prose body.
+- Per-line presentation cues (portrait, pose, sfx, delay, focus, shot) use metadata on the line header.
+- Deferred effects are appended to the session's deferred-effect list when traversal reaches their statement, and surface to the caller when the scene ends.
+- Immediate and blocking effects emit as `DialogueEvent::Effect` in the source order they are encountered.
+
+### 7.6 Effect Schema
+
+All effects must be declared in schema.
+
+Validation must reject:
+
+- unknown effect functions;
+- wrong arity;
+- wrong argument types;
+- unsupported mode for that effect;
+- invalid enum/registry values.
+
+Schema example:
+
+```toml
+[effects.advance_thread]
+modes = ["deferred"]
+params = ["thread_id: string", "stage_id: string"]
+
+[effects.record_relationship_interaction]
+modes = ["deferred"]
+params = ["actor_a: string", "actor_b: string", "kind: relationship_interaction_kind"]
+
+[effects.mark_map]
+modes = ["blocking"]
+params = ["location_id: string"]
+
+[effects.play_sfx]
+modes = ["immediate"]
+params = ["sound_effect_id: dialogue_sound_effect"]
+```
+
+## 8. Runtime
+
+### 8.1 Core Requirements
+
+The runtime must:
+
+- be implemented in Rust;
+- have no engine dependencies;
+- be deterministic;
+- be side-effect free;
+- expose serialisable session state;
+- support save/load while waiting on a blocking effect;
+- support programmatic tests without engine runtime;
+- return structured errors instead of panicking.
+
+### 8.2 Runtime API
+
+Illustrative API:
+
+```rust
+pub fn start_scene(
+    asset: &CompiledDialogue,
+    block: Option<&str>,
+    locale: LocaleId,
+) -> Result<DialogueSession, DialogueError>;
+
+pub fn next(
+    session: &mut DialogueSession,
+    context: &dyn DialogueContext,
+    locale: &dyn LocaleProvider,
+) -> Result<DialogueEvent, DialogueError>;
+
+pub fn choose(
+    session: &mut DialogueSession,
+    choice_id: ChoiceId,
+    context: &dyn DialogueContext,
+    locale: &dyn LocaleProvider,
+) -> Result<DialogueEvent, DialogueError>;
+
+pub fn acknowledge_effect(
+    session: &mut DialogueSession,
+    effect_id: EffectRequestId,
+    ack: EffectAck,
+) -> Result<(), DialogueError>;
+
+pub fn end_scene(
+    session: DialogueSession,
+) -> Result<Vec<DialogueEffectRequest>, DialogueError>;
+```
+
+The concrete API may differ, but the semantics must hold.
+
+### 8.3 Event Model
+
+The event model must represent prompts directly.
+
+```rust
+pub enum DialogueEvent {
+    Line(DialogueLine),
+    Prompt {
+        line: Option<DialogueLine>,
+        choices: Vec<DialogueChoice>,
+    },
+    Effect(DialogueEffectRequest),
+    End,
+}
+```
+
+`Line` should be used when no choices are present.
+
+`Prompt` should be used when choices are present, with or without prompt text.
+
+`Effect` should be used for immediate and blocking effects. Deferred effects are collected and may optionally also be observable in trace/debug mode.
+
+### 8.4 Line Model
+
+```rust
+pub struct DialogueLine {
+    pub id: LineId,
+    pub source_text: String,
+    pub text: String,
+    pub speaker: Option<SpeakerId>,
+    pub metadata: Vec<MetadataEntry>,
+    pub pending_deferred_effects: Vec<DialogueEffectRequest>,
+}
+```
+
+`text` is the resolved localized text.
+
+`source_text` is retained for diagnostics, fallback, tests, and gettext semantics.
+
+### 8.5 Choice Model
+
+```rust
+pub struct DialogueChoice {
+    pub id: ChoiceId,
+    pub source_text: String,
+    pub text: String,
+    pub metadata: Vec<MetadataEntry>,
+    pub is_available: bool,
+    pub unavailable_reason: Option<String>,
+    pub echo: ChoiceEchoMode,
+}
+
+pub enum ChoiceEchoMode {
+    None,
+    SelectedText,
+    ExplicitLine(LineId),
+}
+```
+
+Selection should prefer `ChoiceId` over index. Adapters may expose index-based APIs for engine ergonomics, but the core runtime should preserve stable choice identity.
+
+### 8.6 Session State
+
+`DialogueSession` must serialise enough information to resume exactly:
+
+- compiled asset identity/version;
+- current block;
+- statement pointer;
+- call/divert stack if applicable;
+- collected deferred effects;
+- pending blocking effect;
+- previous prompt choices;
+- locale;
+- deterministic trace counters;
+- selected choice history.
+
+The session must not serialise game state.
+
+#### Save/load while waiting on a blocking effect
+
+If the session is saved while a blocking effect is pending, on resume the runtime re-emits the same effect with the same `EffectRequestId`. The runtime makes no claim about whether the game-side operation was partially executed before the save. The game decides whether to fast-forward, replay, or otherwise reconcile and then calls `acknowledge_effect`. The runtime contract is purely: same ID re-emitted, same acknowledgement expected.
+
+### 8.7 Error Handling
+
+Runtime errors must be structured.
+
+Examples:
+
+- unknown block;
+- invalid choice;
+- unavailable choice selected;
+- missing blocking effect acknowledgement;
+- wrong acknowledgement ID;
+- malformed compiled asset;
+- condition evaluation failure;
+- locale provider failure;
+- unsupported compiled format version.
+
+The runtime must not panic on malformed project content.
+
+## 9. Localisation
+
+### 9.1 Requirements
+
+The project must support gettext/POT workflows as a first-class path.
+
+Localisable strings:
+
+- line text;
+- choice text;
+- speaker display names;
+- optional project-defined localisable metadata values.
+
+Each localisable string must have:
+
+- stable ID;
+- source text;
+- source location;
+- translator comments;
+- block/scene context where available.
+
+### 9.2 POT Extraction
+
+The CLI must emit POT files.
+
+For dialogue lines and choices:
+
+```po
+#. file: Dialogue/hazel_rhea/small_talk.recite
+#. block: small_talk_start
+#. speaker: rhea
+msgctxt "hazel_rhea.small_talk.001"
+msgid "Oh, hey! Didn't expect to see you here."
+msgstr ""
+```
+
+Speaker names must be extracted separately:
+
+```po
+msgctxt "dialogue_speaker:rhea"
+msgid "Rhea"
+msgstr ""
+```
+
+### 9.3 Locale Provider
+
+The runtime locale provider must receive both stable ID and source text.
+
+```rust
+pub trait LocaleProvider {
+    fn lookup(
+        &self,
+        id: &str,
+        source_text: &str,
+        domain: TextDomain,
+        locale: &LocaleId,
+        variant: Option<&str>,
+    ) -> Option<String>;
+}
+```
+
+This supports gettext-style lookup where `msgctxt` is the stable ID and `msgid` is the source text. The `variant` parameter carries the explicit selection from the caller (see §9.5).
+
+### 9.4 Fallback
+
+If no translation is found, runtime must fall back to source text.
+
+Fallback should be observable in diagnostics or trace mode so missing translations can be caught in tests.
+
+### 9.5 Grammatical Variants
+
+IDs may support variant suffixes:
+
+```text
+hazel_rhea.small_talk.001&formal
+hazel_rhea.small_talk.001
+```
+
+Lookup priority:
+
+1. `id&suffix`;
+2. `id`;
+3. source text.
+
+Variant selection must be explicit and deterministic. The caller selects a variant either via a session-level setter (`session.set_variant("formal")`) or via a per-call override threaded through `next` / `choose`. The runtime never infers a variant. Lookup priority remains `id&variant` → `id` → source text.
+
+### 9.6 Inline Markup in Translation
+
+Translation validation must be able to detect:
+
+- missing required inline tags;
+- invalid new tags;
+- unbalanced tags;
+- changed tag attributes where schema forbids changes.
+
+The runtime should not parse translated markup unless configured to validate in debug/test mode.
+
+## 10. Schema
+
+### 10.1 Schema Scope
+
+The schema must define:
+
+- condition functions, including their parameter types and optional `returns` enum type for `:match` scrutinees;
+- effect functions;
+- effect modes;
+- metadata keys;
+- inline markup tags;
+- speaker IDs;
+- optional actor registries;
+- optional sound effect registries;
+- optional cinematic cue registries;
+- custom enum types;
+- project-level content registries.
+
+### 10.2 Example Schema
+
+```toml
+[types.relationship_interaction_kind]
+kind = "enum"
+values = ["incidental_encounter", "story_event", "conflict", "support"]
+
+[registries.dialogue_sound_effect]
+source = "data/content/dialogue-sound-effects.toml"
+path = "dialogue_sound_effects[].id"
+
+[conditions.at_thread_stage]
+params = ["thread_id: string", "stage_id: string"]
+
+[conditions.at_or_past_thread_stage]
+params = ["thread_id: string", "stage_id: string"]
+
+[conditions.thread_completed]
+params = ["thread_id: string"]
+
+[conditions.thread_stage]
+params = ["thread_id: string"]
+returns = "thread_stage_kind"
+
+[types.thread_stage_kind]
+kind = "enum"
+values = ["fresh", "tired", "angry", "fine", "completed"]
+
+[conditions.familiarity_gte]
+params = ["actor_a: string", "actor_b: string", "threshold: int"]
+
+[conditions.trust_gte]
+params = ["actor_a: string", "actor_b: string", "threshold: int"]
+
+[conditions.tension_gte]
+params = ["actor_a: string", "actor_b: string", "threshold: int"]
+
+[effects.advance_thread]
+modes = ["deferred"]
+params = ["thread_id: string", "stage_id: string"]
+
+[effects.record_relationship_interaction]
+modes = ["deferred"]
+params = ["actor_a: string", "actor_b: string", "kind: relationship_interaction_kind"]
+
+[effects.mark_map]
+modes = ["blocking"]
+params = ["location_id: string"]
+
+[metadata.portrait]
+targets = ["line"]
+type = "string"
+
+[metadata.sfx]
+targets = ["line", "choice"]
+type = "dialogue_sound_effect"
+repeatable = true
+
+[metadata.delay]
+targets = ["line"]
+type = "float"
+min = 0.0
+
+[metadata.shot]
+targets = ["line"]
+type = "string"
+
+[metadata.pose]
+targets = ["line"]
+type = "string"
+
+[metadata.focus]
+targets = ["line"]
+type = "speaker_id"
+
+[markup.slow]
+requires_closing = true
+translatable = true
+
+[markup.shake]
+requires_closing = true
+translatable = true
+
+[markup.loud]
+requires_closing = true
+translatable = true
+```
+
+### 10.3 Validation Reporting
+
+Schema validation must report all violations in one run where possible.
+
+Diagnostics must include:
+
+- file path;
+- line;
+- column;
+- severity;
+- code;
+- message;
+- optional fix suggestion.
+
+## 11. Scene Manifest
+
+### 11.1 Purpose
+
+The project should include an optional scene manifest to connect dialogue assets to game concepts without embedding game-specific data in the dialogue DSL.
+
+This mirrors the current need for scene IDs, presentation modes, participants, and cinematic paths.
+
+### 11.2 Example
+
+```toml
+[project]
+content_set = "base"
+version = "0.1.0"
+
+[[scenes]]
+id = "scene.small-talk"
+presentation = "portrait_dialogue"
+asset = "Dialogue/Compiled/dialogue.recitec"
+block = "small_talk_start"
+participants = ["hazel", "rhea"]
+
+[[scenes]]
+id = "scene.heart-to-heart"
+presentation = "cinematic_cutscene"
+asset = "Dialogue/Compiled/dialogue.recitec"
+block = "heart_to_heart_start"
+participants = ["hazel", "rhea"]
+cinematic_scene = "Scenes/Dialogue/Cutscenes/HeartToHeartCutscene.tscn"
+```
+
+### 11.3 Manifest Validation
+
+Validation must check:
+
+- duplicate scene IDs;
+- missing compiled assets;
+- missing source assets where configured;
+- unknown start blocks;
+- missing participants;
+- unknown participants where a speaker/actor registry exists;
+- presentation mode requirements;
+- duplicate scene/block pairs if project policy disallows them;
+- stale compiled assets.
+
+## 12. Compiler
+
+### 12.1 Compilation
+
+The compiler must:
+
+- parse dialogue sources;
+- resolve imports/includes;
+- validate block references;
+- validate IDs;
+- validate conditions;
+- validate effects;
+- validate metadata;
+- validate markup;
+- emit compiled assets;
+- embed source fingerprints;
+- embed schema fingerprint;
+- embed compiler version;
+- preserve source map information for diagnostics.
+
+### 12.2 Compiled Format
+
+The compiled format should be deterministic and versioned.
+
+Acceptable formats:
+
+- MessagePack;
+- CBOR;
+- compact JSON for early development;
+- custom binary only if clearly justified.
+
+Compiled assets must include:
+
+- format version;
+- source file list;
+- source fingerprints;
+- schema fingerprint;
+- block table;
+- line table;
+- choice table;
+- speaker table;
+- metadata table;
+- effect table;
+- source map.
+
+### 12.3 Freshness
+
+The compiler must embed enough data for tooling to detect stale compiled assets.
+
+`recite check-fresh` must compare:
+
+- current source fingerprints;
+- current schema fingerprint;
+- current compiler compatibility version;
+- compiled asset embedded fingerprints.
+
+## 13. CLI
+
+The CLI is a core product surface.
+
+Required commands:
+
+```text
+recite compile <path-or-project>
+recite validate <path-or-project>
+recite validate-project <project-root>
+recite extract <path-or-project>
+recite check-ids <path-or-project>
+recite check-fresh <project-root>
+recite check-markup <path-or-project>
+recite check-metadata <path-or-project> --schema <schema>
+recite run <asset> --block <block> --fixture <fixture>
+recite trace <asset> --block <block> --fixture <fixture>
+recite play <asset> --block <block>
+```
+
+`recite play` is an interactive REPL for writers (Milestone 5.5). Future commands include `recite generate-bindings --schema <schema> --lang rust` once the schema and Bevy adapter stabilise; it is not part of the v1 CLI surface.
+
+### 13.1 `compile`
+
+Compiles source dialogue into a compiled asset.
+
+Must fail on validation errors unless `--allow-warnings` only warnings are present.
+
+### 13.2 `validate`
+
+Validates dialogue source without writing compiled output.
+
+Must report all recoverable diagnostics.
+
+### 13.3 `extract`
+
+Emits POT files.
+
+Options:
+
+- output path;
+- domain split;
+- include/exclude speaker names;
+- include/exclude metadata localisable fields.
+
+### 13.4 `check-ids`
+
+Reports:
+
+- missing IDs;
+- duplicate IDs;
+- IDs that do not match project naming policy;
+- IDs present in translations but absent from source;
+- source strings whose ID changed unexpectedly where history data is available.
+
+### 13.5 `run`
+
+Runs a dialogue scene headlessly with fixture data.
+
+Useful for tests, CI, and writer review.
+
+Must be able to:
+
+- auto-select choices by ID or index;
+- auto-acknowledge immediate/blocking effects;
+- emit transcript;
+- emit effect list;
+- emit condition query trace.
+
+### 13.6 `trace`
+
+Produces a deterministic execution trace including:
+
+- lines;
+- prompts;
+- choices;
+- conditions evaluated;
+- condition results;
+- effects emitted;
+- blocking acknowledgements;
+- final deferred effects.
+
+### 13.7 `play`
+
+Interactive REPL for writers. Loads a compiled asset (or compiles on-the-fly), starts a scene, prints lines and prompts to the terminal, accepts choice selections by ID or index, and auto-acknowledges blocking effects. Useful for fast authoring iteration without standing up a game.
+
+`play` is part of Milestone 5.5 (Authoring Polish) and is not on the v1 acceptance gate, but the runtime API must accommodate it.
+
+### 13.8 Future: `generate-bindings`
+
+Deferred past v1. Will generate typed Rust code (condition stubs, effect enum, runtime conversions, test helpers, optional Bevy event wrappers) from schema once the schema and Bevy adapter stabilise.
+
+## 14. LSP
+
+The LSP must be excellent enough that text authoring feels safe.
+
+Required capabilities:
+
+- syntax diagnostics;
+- schema diagnostics;
+- unknown block diagnostics;
+- duplicate ID diagnostics;
+- missing ID diagnostics;
+- unknown speaker diagnostics;
+- unknown metadata key diagnostics;
+- invalid metadata value diagnostics;
+- unknown condition/effect function diagnostics;
+- wrong arity/type diagnostics;
+- inline markup diagnostics;
+- completion for block references;
+- completion for speaker IDs;
+- completion for metadata keys;
+- completion for metadata values where schema provides registries;
+- completion for condition/effect functions;
+- hover documentation from schema;
+- go-to block definition;
+- find references for block IDs;
+- rename block;
+- code action to add missing ID;
+- code action to create block stub;
+- code action to add schema entry for unknown metadata/effect/condition where appropriate.
+
+Nice-to-have:
+
+- semantic tokens;
+- inlay hints for parameter names;
+- condition preview with fixture data;
+- dialogue flow outline;
+- graph preview export.
+
+## 15. Editor Support
+
+### 15.1 VS Code
+
+The VS Code extension must provide:
+
+- syntax highlighting;
+- LSP client wiring;
+- commands for compile/validate/extract;
+- problem matcher integration;
+- block outline;
+- quick run/trace command;
+- optional graph preview.
+
+### 15.2 Neovim
+
+Neovim support must include:
+
+- documented LSP setup;
+- Tree-sitter grammar if feasible;
+- filetype detection;
+- command examples for validation and extraction.
+
+### 15.3 Visual Editor
+
+The visual editor should be built after the source format, compiler, runtime, and LSP are stable enough to avoid designing the project around a premature UI.
+
+The visual editor should:
+
+- operate on the same source or a lossless structured representation;
+- never lock users out of text workflows;
+- show block graphs;
+- edit lines, choices, metadata, conditions, and effects;
+- surface validation diagnostics;
+- preview localized text;
+- preview effect traces;
+- integrate with schema completions.
+
+The visual editor is part of the long-term value proposition, but v1 should prove the text-first deterministic workflow first.
+
+## 16. Bevy Adapter
+
+### 16.1 Goals
+
+The Bevy adapter must feel like normal Bevy:
+
+- assets load through `AssetServer`;
+- runtime state lives in resources/components;
+- dialogue outputs use events/messages;
+- effects are emitted as typed Bevy events where possible;
+- users can drive UI however they want.
+
+### 16.2 Plugin API
+
+Illustrative API:
+
+```rust
+pub struct DialoguePlugin;
+
+pub struct StartDialogue {
+    pub asset: Handle<CompiledDialogue>,
+    pub block: Option<String>,
+    pub locale: LocaleId,
+}
+
+pub struct SelectDialogueChoice {
+    pub choice_id: ChoiceId,
+}
+
+pub struct AcknowledgeDialogueEffect {
+    pub effect_id: EffectRequestId,
+    pub ack: EffectAck,
+}
+```
+
+Output events:
+
+```rust
+pub enum DialogueOutput {
+    Line(DialogueLine),
+    Prompt {
+        line: Option<DialogueLine>,
+        choices: Vec<DialogueChoice>,
+    },
+    Effect(DialogueEffectRequest),
+    End {
+        deferred_effects: Vec<DialogueEffectRequest>,
+    },
+    Error(DialogueError),
+}
+```
+
+### 16.3 Active Sessions
+
+Initial Bevy adapter scope may maintain one active dialogue session at a time.
+
+Attempting to start a second scene while one is active must emit an error, not panic.
+
+Future versions may support multiple sessions keyed by entity/session ID.
+
+### 16.4 Bevy Conditions and Effects
+
+The adapter should support:
+
+- registering condition handlers as resources;
+- emitting generic effect requests;
+- optional generated typed effect events from schema;
+- test fixtures independent of Bevy app where possible.
+
+## 17. Testing
+
+### 17.1 Core Test Philosophy
+
+The project must make dialogue easy to test without a game engine.
+
+Supported test patterns:
+
+- transcript snapshot;
+- effect snapshot;
+- condition trace snapshot;
+- localization fallback snapshot;
+- unavailable choice assertion;
+- blocking effect pause/resume assertion;
+- save/load mid-scene assertion;
+- save/load while waiting on blocking effect assertion.
+
+### 17.2 Example Rust Test
+
+```rust
+let asset = compile_fixture("small_talk.recite");
+let mut session = start_scene(&asset, Some("small_talk_start"), locale!("en-GB"))?;
+let mut fixture = DialogueFixture::default()
+    .with_condition("trust_gte(hazel, rhea, 3)", true)
+    .auto_ack_effects();
+
+let trace = run_to_end(&mut session, &fixture)?;
+
+assert_snapshot!(trace.transcript);
+assert_eq!(
+    trace.deferred_effects,
+    vec![
+        effect!("advance_thread", "rhea_job_response", "fine"),
+    ],
+);
+```
+
+### 17.3 Fixture Format
+
+The CLI should support a fixture format for headless runs:
+
+```toml
+[conditions]
+"trust_gte(hazel, rhea, 3)" = true
+
+[choices]
+small_talk_start = "small_talk_start_WPUQ"
+
+[effects]
+auto_ack_blocking = true
+```
+
+Condition keys use bare identifiers inside the call, matching the dialogue DSL. The TOML key is quoted only because TOML requires it for keys containing parentheses; the inner argument list does not requote identifiers.
+
+## 18. Diagnostics
+
+Diagnostics must be stable and testable.
+
+Each diagnostic should include:
+
+- code;
+- severity;
+- message;
+- file;
+- line;
+- column;
+- optional end line/end column;
+- optional related spans;
+- optional help text.
+
+Diagnostic codes should be namespaced, for example:
+
+- `RECITE_PARSE001`;
+- `RECITE_ID001`;
+- `RECITE_SCHEMA001`;
+- `RECITE_EFFECT001`;
+- `RECITE_META001`;
+- `RECITE_MARKUP001`;
+- `RECITE_PROJECT001`;
+- `RECITE_FRESH001`.
+
+## 19. Performance and Benchmarks
+
+Performance is part of the product contract. Recite is intended for games that validate dialogue in CI, run headless tests frequently, and may load large narrative projects during editor workflows. Benchmarks must cover authoring, compilation, runtime traversal, localization, and adapter overhead.
+
+All numeric budgets in this section are **aspirational targets, not contracts**, until a baseline exists from realistic fixtures. They will be re-evaluated against measured numbers; failing to hit a target is a benchmark report, not an acceptance failure. Benchmarks are tracked under Milestone 6 and are not part of the §23 v1 acceptance gate.
+
+#### Incremental compilation and hot reload
+
+The compiler is whole-project for v1. The LSP maintains a separate live index that re-parses only edited files and resolves cross-file references incrementally. Hot reload during authoring is a property of the LSP's index, not of the compiler. Game-side hot reload of compiled assets is a per-adapter concern (Bevy's `AssetServer` already provides change detection).
+
+### 19.1 Benchmark Harness
+
+The workspace must include repeatable benchmarks using Criterion or an equivalent Rust benchmark framework.
+
+Benchmarks must be runnable through:
+
+```text
+cargo bench
+recite bench <fixture-or-project>
+```
+
+The CLI benchmark command should support:
+
+- JSON output for CI comparison;
+- Markdown summary output for release notes;
+- baseline comparison against a checked-in or downloaded benchmark snapshot;
+- filtering by benchmark group;
+- fixture scale selection.
+
+### 19.2 Benchmark Fixtures
+
+The repository must include synthetic and realistic fixtures.
+
+Synthetic fixtures:
+
+- tiny: 10 blocks, 100 lines, 20 choices;
+- small: 100 blocks, 1,000 lines, 200 choices;
+- medium: 1,000 blocks, 10,000 lines, 2,000 choices;
+- large: 5,000 blocks, 50,000 lines, 10,000 choices.
+
+Realistic fixtures:
+
+- conversation-heavy branching scene;
+- object interaction scene set;
+- relationship scene set with many conditions;
+- localization-heavy scene set;
+- effect-heavy scene set with deferred, immediate, and blocking effects.
+
+Fixtures must be deterministic and checked into the repository unless size makes that impractical. Generated fixtures must be produced by a deterministic generator with checked-in seeds.
+
+### 19.3 Compiler Benchmarks
+
+Compiler benchmarks must measure:
+
+- parse time;
+- AST allocation volume;
+- validation time;
+- schema validation time;
+- block reference resolution time;
+- ID uniqueness check time;
+- markup validation time;
+- POT extraction time;
+- compiled asset serialization time;
+- compiled asset size.
+
+Initial target budgets on a typical developer laptop:
+
+- small project compile: under 100 ms;
+- medium project compile: under 1 s;
+- large project compile: under 5 s;
+- no superlinear blowups for ID checks, block resolution, or schema validation.
+
+These are targets, not hard promises. If targets are missed, the benchmark report must make the cost visible.
+
+### 19.4 Runtime Benchmarks
+
+Runtime benchmarks must measure:
+
+- `start_scene`;
+- `next` for line events;
+- `next` for prompt events;
+- choice selection by ID;
+- condition evaluation dispatch overhead;
+- deferred effect collection;
+- immediate effect emission;
+- blocking effect pause and acknowledgement;
+- locale lookup overhead;
+- session serialization;
+- session deserialization;
+- full scene traversal with fixture context.
+
+Initial target budgets:
+
+- `next` without condition evaluation: allocation-free or near allocation-free after asset load;
+- line/prompt advancement: comfortably under 50 us per event in release builds;
+- choice selection by ID: effectively O(1) or O(log n), never linear over all project choices;
+- session save/load: proportional to session state, not compiled asset size;
+- runtime traversal must not clone full compiled assets.
+
+### 19.5 LSP and Editor Benchmarks
+
+LSP performance must be measured because authoring quality is a core product goal.
+
+Benchmarks must cover:
+
+- initial project indexing;
+- open file parse;
+- incremental edit parse;
+- diagnostics refresh;
+- completion latency;
+- go-to definition latency;
+- rename block latency;
+- memory usage for indexed projects.
+
+Initial target budgets:
+
+- completion response under 50 ms for small/medium projects;
+- diagnostics update under 100 ms for typical single-file edits;
+- large project indexing should be incremental and cancellable;
+- editor operations must avoid reparsing the entire project when a file-local edit is sufficient.
+
+### 19.6 Bevy Adapter Benchmarks
+
+The Bevy adapter must measure:
+
+- asset loading and conversion overhead;
+- event emission overhead;
+- active session system overhead per frame;
+- condition handler dispatch overhead through Bevy resources;
+- generated typed effect event conversion overhead.
+
+The adapter should add negligible frame cost when no dialogue session is active.
+
+### 19.7 Memory Metrics
+
+Benchmarks must report memory-sensitive metrics where practical:
+
+- compiled asset size;
+- peak compiler memory;
+- runtime session size;
+- LSP project index size;
+- number of allocations during hot runtime traversal;
+- number of clones of large strings or metadata vectors.
+
+The runtime should prefer shared immutable compiled data plus compact session state.
+
+### 19.8 Regression Policy
+
+CI should run a fast benchmark smoke suite on every pull request and a fuller benchmark suite on release branches or scheduled jobs.
+
+Performance regressions should be treated like test failures when they exceed configured thresholds:
+
+- more than 10% regression in hot runtime paths;
+- more than 20% regression in compiler/LSP paths;
+- any accidental O(n^2) behaviour on medium or large fixtures;
+- unexpected allocation increases in allocation-sensitive runtime benchmarks.
+
+Benchmark thresholds must be adjustable as the implementation matures, but changes to thresholds should be reviewed explicitly.
+
+### 19.9 Trace Metrics
+
+`recite trace` should optionally emit performance counters:
+
+- event count;
+- line count;
+- prompt count;
+- choice count;
+- condition evaluation count;
+- effect count by mode;
+- localization lookup count;
+- elapsed traversal time;
+- maximum serialized session size.
+
+This makes real project dialogue scenes measurable without requiring users to write Rust benchmarks.
+
+## 20. Import and Migration
+
+Full ink/Yarn/Clyde import compatibility is not a v1 goal.
+
+However, because the project is motivated by pain from ink/dink, a limited migration helper may be valuable later:
+
+- convert `Speaker: text #id:x #portrait:y` into structured line records;
+- convert `+ Choice #id:x` into structured choice records;
+- convert external function calls into effect declarations;
+- convert tags into metadata entries.
+
+This should be explicitly best-effort and should not constrain the native format.
+
+## 21. Non-Goals
+
+Initial non-goals:
+
+- executing game state mutations inside the runtime;
+- embedding variable storage in the dialogue runtime;
+- implementing a full scripting language;
+- hidden arbitrary code execution;
+- result-dependent branching from blocking effects;
+- full CLDR/pluralization engine in core runtime;
+- mandatory visual node editor for v1;
+- Unity/Godot adapters before Bevy proves the core value;
+- network/cloud collaboration;
+- AI-authored dialogue features;
+- automatic ID renaming based on content changes;
+- implicit localization variant selection by the runtime;
+- `:elif` / `else if` sugar (deferred until real authoring pain is reported; nested `:else` + `:if` and `:match` cover the use cases);
+- general pattern matching beyond schema-declared enum dispatch (no destructuring, no tuples, no guards).
+
+## 22. Recommended Milestones
+
+### Milestone 1: Core Language Spike
+
+- AST;
+- parser;
+- line/choice/block syntax;
+- source spans;
+- simple compiler;
+- basic validation.
+
+### Milestone 2: Runtime MVP
+
+- compiled asset;
+- deterministic session;
+- line/prompt/end events;
+- choice selection by ID;
+- deferred effects;
+- condition evaluation through context;
+- serialisable session state.
+
+### Milestone 3: Production Effect Model
+
+- immediate effects;
+- blocking effects;
+- acknowledgements;
+- save/load while blocked;
+- effect schema validation;
+- effect trace tests.
+
+### Milestone 4: Localisation and IDs
+
+- stable ID checks;
+- POT extraction;
+- gettext-compatible lookup API;
+- speaker extraction;
+- markup preservation checks.
+
+### Milestone 5: CLI and Test Harness
+
+- `compile`;
+- `validate`;
+- `extract`;
+- `check-ids`;
+- `check-fresh`;
+- `run`;
+- `trace`;
+- fixture support.
+
+### Milestone 5.5: Authoring Polish
+
+- `recite play` interactive REPL;
+- LSP code action that auto-fills missing IDs on save;
+- documented hot-reload story for LSP-driven editing.
+
+### Milestone 6: Performance Harness
+
+- Criterion benchmark suite;
+- deterministic fixture generator;
+- compiler benchmarks;
+- runtime benchmarks;
+- trace performance counters;
+- CI benchmark smoke suite.
+
+### Milestone 7: LSP
+
+- diagnostics;
+- completions;
+- go-to definition;
+- rename block;
+- hover from schema;
+- code action for missing IDs.
+
+### Milestone 8: Bevy Adapter
+
+- asset loader;
+- plugin;
+- start/select/ack events;
+- output events;
+- condition handler resource;
+- example game;
+- Bevy integration tests.
+
+### Milestone 9: Editor Extensions
+
+- VS Code extension;
+- Neovim setup;
+- syntax highlighting;
+- command integration.
+
+### Milestone 10: Visual Editor
+
+- block graph;
+- structured editing;
+- schema-backed controls;
+- trace preview;
+- localization preview.
+
+## 23. Acceptance Criteria for a Serious v1
+
+The project is not production-credible until all of the following are true:
+
+- A dialogue scene can be compiled, validated, run, snapshotted, localized, and replayed headlessly.
+- All runtime outputs are structured and deterministic.
+- Effects are schema-checked and never executed by the runtime.
+- Blocking effects can pause and resume across save/load, including re-emission of the pending effect with the same `EffectRequestId`.
+- Choice IDs are stable and selection by ID is supported.
+- Stable IDs survive author edits to source text. Renames happen only via the explicit code action.
+- Metadata supports repeated ordered keys.
+- Inline markup is preserved and validated.
+- POT extraction produces translator-usable context.
+- The LSP catches common mistakes before runtime, including auto-filling missing IDs on save.
+- CI can verify compiled assets are fresh relative to source and schema.
+
+The Bevy adapter (§16) and the benchmark suite (§19) are tracked as later milestones and are explicitly **not** required for v1 acceptance. Shipping a credible v1 means the Rust core + CLI + LSP land first; engine adapters and performance gates follow.
+
+## 24. Design Summary
+
+The core value is not “branching dialogue.” Many tools already do that.
+
+The core value is a deterministic dialogue/effect protocol:
+
+- authored in a writer-friendly structured format;
+- validated before runtime;
+- compiled into deterministic assets;
+- run as a pure state machine;
+- integrated with ECS through explicit typed effects;
+- tested with normal programmatic assertions.
+
+That is the standard the project should optimise for.
