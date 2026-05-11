@@ -4,7 +4,7 @@ set -euo pipefail
 usage() {
   cat <<'EOF'
 Usage:
-  merge-pr-signed.sh <pr-number> <head-branch> [base-branch]
+  merge-pr-signed.sh <pr-number> [expected-head-branch] [expected-base-branch]
 
 Creates a signed local merge commit for a Codeberg pull request and pushes the
 base branch. This avoids Codeberg's web merge path, which cannot satisfy
@@ -28,10 +28,10 @@ if [[ "${1:-}" == "-h" || "${1:-}" == "--help" || "${1:-}" == "help" ]]; then
 fi
 
 pr_number="${1:-}"
-head_branch="${2:-}"
-base_branch="${3:-main}"
+expected_head_branch="${2:-}"
+expected_base_branch="${3:-main}"
 
-if [[ -z "$pr_number" || -z "$head_branch" ]]; then
+if [[ -z "$pr_number" ]]; then
   usage >&2
   exit 2
 fi
@@ -46,6 +46,11 @@ if ! command -v tea >/dev/null 2>&1; then
   exit 2
 fi
 
+if ! command -v jq >/dev/null 2>&1; then
+  echo "jq not installed; install jq before merging" >&2
+  exit 2
+fi
+
 script_dir="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
 
 if [[ -n "$(git status --porcelain)" ]]; then
@@ -54,7 +59,36 @@ if [[ -n "$(git status --porcelain)" ]]; then
 fi
 
 echo "== pull request #${pr_number} =="
-tea pulls "$pr_number" --fields index,title,state,url,base,head,headSha
+pr_json="$(tea api "repos/{owner}/{repo}/pulls/${pr_number}")"
+printf '%s\n' "$pr_json" | jq '{
+  number,
+  title,
+  state,
+  url: (.html_url // .url),
+  base: .base.ref,
+  head: .head.ref,
+  headSha: .head.sha,
+  mergeable
+}'
+
+base_branch="$(printf '%s\n' "$pr_json" | jq -r '.base.ref // empty')"
+head_branch="$(printf '%s\n' "$pr_json" | jq -r '.head.ref // empty')"
+head_sha="$(printf '%s\n' "$pr_json" | jq -r '.head.sha // empty')"
+
+if [[ -z "$base_branch" || -z "$head_branch" || -z "$head_sha" ]]; then
+  echo "PR #${pr_number} is missing base, head, or head SHA in the Codeberg API response" >&2
+  exit 1
+fi
+
+if [[ "$base_branch" != "$expected_base_branch" ]]; then
+  echo "PR base is ${base_branch}, expected ${expected_base_branch}" >&2
+  exit 1
+fi
+
+if [[ -n "$expected_head_branch" && "$head_branch" != "$expected_head_branch" ]]; then
+  echo "PR head is ${head_branch}, expected ${expected_head_branch}" >&2
+  exit 1
+fi
 
 if [[ "${RECITE_SIGNED_MERGE_SKIP_GATES:-0}" != "1" ]]; then
   echo
@@ -109,4 +143,14 @@ git push origin "$base_branch"
 
 echo
 echo "== post-merge PR state =="
-tea pulls "$pr_number" --fields index,title,state,url,base,head,headSha
+tea api "repos/{owner}/{repo}/pulls/${pr_number}" | jq '{
+  number,
+  title,
+  state,
+  url: (.html_url // .url),
+  base: .base.ref,
+  head: .head.ref,
+  headSha: .head.sha,
+  merged,
+  merge_commit_sha
+}'
