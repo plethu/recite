@@ -186,7 +186,8 @@ Recite requires signed commits and explicit review gates. Codeberg branch protec
    - Verify every PR commit signature with `git verify-commit`.
    - Create a local no-ff merge, run checks, then commit the merge with `git commit -S`.
    - Push `main` over SSH.
-   - Verify the PR and linked issue with targeted reads. If Codeberg does not mark the PR merged after the push, report that state instead of manually closing it unless Mari explicitly asks.
+   - Mark the PR as `manually-merged` through the Codeberg API using the signed local merge commit SHA.
+   - Verify the PR and linked issue with targeted reads. Linked issues should close automatically from actionable references such as `Closes #17` once Codeberg records the PR as merged.
 
 Use the signed merge helper for the normal path:
 
@@ -194,7 +195,7 @@ Use the signed merge helper for the normal path:
 .agents/skills/recite-codeberg-pm/scripts/merge-pr-signed.sh 34 issue-1-workspace-split main
 ```
 
-The helper refuses to run with a dirty worktree, reads the PR base/head/head SHA from the Codeberg API, verifies review gates, verifies PR commit signatures, stages a no-ff merge, runs `cargo fmt --check` and `cargo test`, creates a signed merge commit, pushes `main`, and performs a targeted PR read. If checks fail after the merge is staged, inspect the failure and run:
+The helper refuses to run with a dirty worktree, reads the PR base/head/head SHA from the Codeberg API, verifies review gates, verifies PR commit signatures, stages a no-ff merge, runs `cargo fmt --check` and `cargo test`, creates a signed merge commit, pushes `main`, marks the PR as `manually-merged`, and performs a targeted PR read. If checks fail after the merge is staged, inspect the failure and run:
 
 ```bash
 git merge --abort
@@ -207,6 +208,18 @@ The review gate helper is read-only and may be run before attempting a merge:
 ```
 
 The review gate helper uses the Codeberg API as the primary source for PR state, branch protection, reviews, comments, and commit statuses. It requires the base branch to be protected, reports the branch's required approvals and status-check configuration, and then applies Recite-local gates for clean-context agent review and the signed local merge process.
+
+After pushing `main`, the signed merge helper verifies that the PR head SHA is contained in `origin/main`, then calls:
+
+```bash
+tea api -X POST repos/{owner}/{repo}/pulls/34/merge \
+  -f Do=manually-merged \
+  -f MergeCommitID=<signed-local-merge-sha> \
+  -f MergeMessageField="Manually merged by signed local merge commit <sha>." \
+  -f head_commit_id=<pr-head-sha>
+```
+
+If Codeberg reports that `manually-merged` is not an allowed merge style, the helper enables repository manual merge support with `allow_manual_merge=true` and `autodetect_manual_merge=true`, then retries. Do not replace this with `tea pulls merge`, because that would perform a forge-side merge instead of recording the already-pushed signed local merge.
 
 Known maintainers are derived from Codeberg repository metadata where possible: repository owner plus repository collaborators. The helper also reads `RECITE_MAINTAINERS` as a comma-separated fallback/additional list, defaulting to `plethu`. The same maintainer set is used to decide whether a PR author may satisfy the maintainer review gate by self-reviewing, but self-review is accepted only when the trusted maintainer set has exactly one member.
 
