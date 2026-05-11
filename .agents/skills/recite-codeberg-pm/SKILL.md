@@ -168,15 +168,19 @@ EOF
 
 ## Review and Signed Merge Pipeline
 
-Recite requires signed commits. Do not merge pull requests with the Codeberg web UI or any forge-side merge command, because those paths can create unsigned merge commits. Agents must treat review and merge as two separate stages:
+Recite requires signed commits and explicit review gates. Do not merge pull requests with the Codeberg web UI or any forge-side merge command, because those paths can create unsigned merge commits and bypass local guardrails. Agents must treat review and merge as separate stages:
 
 1. Review stage:
    - Keep the issue in `status/review`.
    - Confirm the PR targets `main` from the expected short-lived branch.
    - Review the diff and run the requested checks locally.
-   - Do not push to `main` or close the PR without explicit maintainer approval.
+   - Require explicit Codeberg approval from a known maintainer. Maintainer self-approval is allowed when the PR was co-authored with agents.
+   - Require a clean-context agent review comment for the current PR head SHA.
+   - Resolve or explicitly reject every review comment before merge.
+   - Do not push to `main` or close the PR until review gates pass.
 2. Signed merge stage:
    - Start from a clean worktree.
+   - Run the review gate helper.
    - Fetch `origin/main` and the PR head branch.
    - Verify every PR commit signature with `git verify-commit`.
    - Create a local no-ff merge, run checks, then commit the merge with `git commit -S`.
@@ -189,11 +193,38 @@ Use the signed merge helper for the normal path:
 .agents/skills/recite-codeberg-pm/scripts/merge-pr-signed.sh 34 issue-1-workspace-split main
 ```
 
-The helper refuses to run with a dirty worktree, verifies PR commit signatures, stages a no-ff merge, runs `cargo fmt --check` and `cargo test`, creates a signed merge commit, pushes `main`, and performs a targeted PR read. If checks fail after the merge is staged, inspect the failure and run:
+The helper refuses to run with a dirty worktree, verifies review gates, verifies PR commit signatures, stages a no-ff merge, runs `cargo fmt --check` and `cargo test`, creates a signed merge commit, pushes `main`, and performs a targeted PR read. If checks fail after the merge is staged, inspect the failure and run:
 
 ```bash
 git merge --abort
 ```
+
+The review gate helper is read-only and may be run before attempting a merge:
+
+```bash
+.agents/skills/recite-codeberg-pm/scripts/check-pr-review-gates.sh 34 issue-1-workspace-split main
+```
+
+Known maintainers are derived from Codeberg repository metadata where possible: repository owner plus repository collaborators. The helper also reads `RECITE_MAINTAINERS` as a comma-separated fallback/additional list, defaulting to `plethu`.
+
+Maintainer approval must use Codeberg PR approval and must go through the courtesy wrapper because it mutates remote PR state:
+
+```bash
+.agents/skills/recite-codeberg-pm/scripts/tea-rate-limit.sh issue -- \
+  tea pulls approve 34 "Approved for signed local merge."
+```
+
+A clean-context agent review is represented by a structured PR comment for the current PR head SHA. The reviewing agent must start from a clean context, review the PR independently, and post this exact shape through the courtesy wrapper:
+
+```bash
+.agents/skills/recite-codeberg-pm/scripts/tea-rate-limit.sh issue -- \
+  tea comment 34 '<!-- recite-agent-review:v1 -->
+Agent-Review: approved
+Head-SHA: 5b1c198ce742c81b3010eec0307e9d2cbcd1af92
+Context: clean'
+```
+
+If the PR head changes, the clean-context agent review is stale and must be repeated for the new head SHA. The gate also blocks failed or errored Codeberg commit statuses when any are reported; if no statuses exist yet, local `cargo fmt --check` and `cargo test` remain mandatory.
 
 Do not use these commands for Recite merges:
 

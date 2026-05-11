@@ -15,6 +15,7 @@ Example:
 
 Environment:
   RECITE_SIGNED_MERGE_SKIP_CHECKS=1  Skip cargo fmt/test checks.
+  RECITE_SIGNED_MERGE_SKIP_GATES=1   Skip remote review gates.
 
 If checks fail after the merge is staged, inspect the tree and run:
   git merge --abort
@@ -45,6 +46,8 @@ if ! command -v tea >/dev/null 2>&1; then
   exit 2
 fi
 
+script_dir="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
+
 if [[ -n "$(git status --porcelain)" ]]; then
   echo "working tree is not clean; commit, stash, or discard local changes before merging" >&2
   exit 1
@@ -52,6 +55,12 @@ fi
 
 echo "== pull request #${pr_number} =="
 tea pulls "$pr_number" --fields index,title,state,url,base,head,headSha
+
+if [[ "${RECITE_SIGNED_MERGE_SKIP_GATES:-0}" != "1" ]]; then
+  echo
+  echo "== review gates =="
+  "$script_dir/check-pr-review-gates.sh" "$pr_number" "$head_branch" "$base_branch"
+fi
 
 echo
 echo "== fetch =="
