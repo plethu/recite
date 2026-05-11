@@ -85,6 +85,8 @@ When touching blocking effects, verify:
 Before handoff:
 
 - Acceptance criteria are implemented or explicitly called out.
+- New public model types and constructors have a clear validation policy: invalid states are prevented, represented explicitly, or deliberately deferred to a named validation pass or issue.
+- Public API changes are reviewed for long-term correctness, maintainability, extensibility, and preservation of Recite's core invariants, not only for immediate issue scope.
 - Semantic changes include tests unless the issue is exploratory.
 - Error paths are covered for malformed source or invalid compiled content.
 - Source-backed errors include spans.
