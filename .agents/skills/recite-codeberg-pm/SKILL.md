@@ -1,6 +1,6 @@
 ---
 name: recite-codeberg-pm
-description: Use for Recite Codeberg/Forgejo project management with tea: issues, milestones, labels, pull requests, issue planning, co-work status labels, and issue branch workflow.
+description: "Use for Recite Codeberg/Forgejo project management with tea: issues, milestones, labels, pull requests, issue planning, co-work status labels, and issue branch workflow."
 ---
 
 # Recite Codeberg Project Management
