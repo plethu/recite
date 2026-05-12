@@ -112,6 +112,18 @@ The format must support:
 - inline markup in text;
 - stable source spans for diagnostics.
 
+### 5.1.1 Parser Architecture
+
+The production parser uses a rowan-style lossless syntax tree as the core parser foundation. Syntax parsing preserves source text, trivia, malformed regions, and recovery context, and reports syntax diagnostics with stable codes and spans.
+
+Valid and partially valid syntax lowers into the `recite-core` source AST. That AST is the compiler-facing source model, not the parse tree. Parser responsibilities stop at syntax shape, source spans, trivia, malformed regions, recovery, and parse diagnostics.
+
+Compiler-facing validation owns stable ID policy, references, schema checks, match exhaustiveness, semantic validation, and compiled output determinism. Runtime traversal must never depend on parser-only trivia or malformed syntax nodes.
+
+Tree-sitter is not part of the v1 core parser. It remains a possible future editor integration for highlighting or structural editing after the rowan parser and lowering path are established.
+
+Lossless syntax trees are heavier than AST-only parsing. Compiler and CLI flows should treat them as temporary parse artifacts and lower promptly. LSP flows may retain syntax trees and a live index for open or recently changed files.
+
 ### 5.2 Blocks
 
 A dialogue file is organised into named blocks.
@@ -1421,7 +1433,9 @@ Fixtures must be deterministic and checked into the repository unless size makes
 Compiler benchmarks must measure:
 
 - parse time;
-- AST allocation volume;
+- lowering time;
+- parser syntax tree memory;
+- source AST allocation volume;
 - validation time;
 - schema validation time;
 - block reference resolution time;
@@ -1503,6 +1517,8 @@ The adapter should add negligible frame cost when no dialogue session is active.
 
 Benchmarks must report memory-sensitive metrics where practical:
 
+- syntax tree size during parser-heavy flows;
+- source AST allocation volume;
 - compiled asset size;
 - peak compiler memory;
 - runtime session size;
@@ -1578,7 +1594,7 @@ Initial non-goals:
 ### Milestone 1: Core Language Spike
 
 - AST;
-- parser;
+- rowan syntax parser and source AST lowering;
 - line/choice/block syntax;
 - source spans;
 - simple compiler;
