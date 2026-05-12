@@ -1,5 +1,8 @@
-use recite_core::{ScalarValue, SpeakerId, Statement, StatementKind, Value};
-use recite_parser::parse;
+use expect_test::{Expect, expect};
+use recite_core::{Block, Line, ScalarValue, SpeakerId, Statement, StatementKind, Value};
+use recite_parser::{LoweredSourceFile, ReciteSyntaxKind, parse};
+
+const TEST_PATH: &str = "dialogue/tavern.recite";
 
 #[test]
 fn syntax_tree_round_trips_source_text() {
@@ -9,10 +12,53 @@ fn syntax_tree_round_trips_source_text() {
         "  Welcome [slow]back[/slow].\r\n",
     );
 
-    let parse = parse("dialogue/tavern.recite", source);
+    let parse = parse(TEST_PATH, source);
 
     assert_eq!(parse.syntax().text().to_string(), source);
     assert!(parse.diagnostics().is_empty());
+}
+
+#[test]
+fn statement_markers_classify_consistently() {
+    let source = concat!(
+        ":: tavern\n",
+        "> line\n",
+        "? choice\n",
+        "! deferred effect\n",
+        "-> END\n",
+        ":if knows_secret(player)\n",
+        ":else\n",
+        ":match thread_stage(thread)\n",
+        ":case _\n",
+        "# comment\n",
+        "  prose\n",
+        "oops\n",
+    );
+
+    let parse = parse(TEST_PATH, source);
+    let kinds = parse
+        .syntax()
+        .children()
+        .map(|node| node.kind())
+        .collect::<Vec<_>>();
+
+    assert_eq!(
+        kinds,
+        [
+            ReciteSyntaxKind::Block,
+            ReciteSyntaxKind::Line,
+            ReciteSyntaxKind::Choice,
+            ReciteSyntaxKind::Effect,
+            ReciteSyntaxKind::Divert,
+            ReciteSyntaxKind::If,
+            ReciteSyntaxKind::Else,
+            ReciteSyntaxKind::Match,
+            ReciteSyntaxKind::Case,
+            ReciteSyntaxKind::Comment,
+            ReciteSyntaxKind::Prose,
+            ReciteSyntaxKind::Error,
+        ]
+    );
 }
 
 #[test]
@@ -39,20 +85,18 @@ fn lowering_produces_source_file_shape_and_preserves_ordered_text() {
         "  What do you need?\n",
     );
 
-    let lowered = parse("dialogue/tavern.recite", source).lower_source_file();
+    let lowered = lower(source);
 
     assert!(lowered.diagnostics.is_empty());
-    assert_eq!(lowered.source_file.path, "dialogue/tavern.recite");
+    assert_eq!(lowered.source_file.path, TEST_PATH);
     assert_eq!(lowered.source_file.blocks.len(), 1);
 
-    let block = &lowered.source_file.blocks[0];
+    let block = single_block(&lowered);
     assert_eq!(block.id.as_str(), "tavern_arrival");
     assert!(block.is_default);
     assert_eq!(block.statements.len(), 2);
 
-    let Statement::Line(first_line) = &block.statements[0] else {
-        panic!("expected first lowered statement to be a line");
-    };
+    let first_line = line_statement(block, 0);
     assert_eq!(
         first_line.id.as_ref().map(recite_core::LineId::as_str),
         Some("ta_001")
@@ -79,9 +123,7 @@ fn lowering_produces_source_file_shape_and_preserves_ordered_text() {
     assert_eq!(first_line.span.start.line(), 2);
     assert_eq!(first_line.source_text.span.start.line(), 3);
 
-    let Statement::Line(second_line) = &block.statements[1] else {
-        panic!("expected second lowered statement to be a line");
-    };
+    let second_line = line_statement(block, 1);
     assert_eq!(
         second_line.id.as_ref().map(recite_core::LineId::as_str),
         Some("ta_002")
@@ -97,12 +139,11 @@ fn lowering_reports_unsupported_headers_without_losing_syntax() {
         "  Ask about the road.\n",
     );
 
-    let parse = parse("dialogue/tavern.recite", source);
+    let parse = parse(TEST_PATH, source);
     let lowered = parse.lower_source_file();
 
     assert_eq!(parse.syntax().text().to_string(), source);
-    assert_eq!(lowered.diagnostics.len(), 1);
-    assert_eq!(lowered.diagnostics[0].code.as_str(), "RECITE_PARSE004");
+    assert_diagnostic_codes(&lowered, ["RECITE_PARSE004"]);
     assert_eq!(lowered.source_file.blocks[0].statements.len(), 0);
 }
 
@@ -116,10 +157,10 @@ fn lowering_preserves_block_comments_in_source_order() {
         "# outro marker\n",
     );
 
-    let lowered = parse("dialogue/tavern.recite", source).lower_source_file();
+    let lowered = lower(source);
 
     assert!(lowered.diagnostics.is_empty());
-    let statements = &lowered.source_file.blocks[0].statements;
+    let statements = &single_block(&lowered).statements;
     assert_eq!(
         statements.iter().map(Statement::kind).collect::<Vec<_>>(),
         [
@@ -129,21 +170,15 @@ fn lowering_preserves_block_comments_in_source_order() {
         ]
     );
 
-    let Statement::Comment(first_comment) = &statements[0] else {
-        panic!("expected first lowered statement to be a comment");
-    };
+    let first_comment = comment_statement(single_block(&lowered), 0);
     assert_eq!(first_comment.text, "scene opener");
     assert_eq!(first_comment.span.start.line(), 2);
     assert_eq!(first_comment.span.start.column(), 1);
 
-    let Statement::Line(line) = &statements[1] else {
-        panic!("expected second lowered statement to be a line");
-    };
+    let line = line_statement(single_block(&lowered), 1);
     assert_eq!(line.source_text.text, "Welcome.");
 
-    let Statement::Comment(second_comment) = &statements[2] else {
-        panic!("expected third lowered statement to be a comment");
-    };
+    let second_comment = comment_statement(single_block(&lowered), 2);
     assert_eq!(second_comment.text, "outro marker");
     assert_eq!(second_comment.span.start.line(), 5);
 }
@@ -156,12 +191,10 @@ fn line_lowering_preserves_ordered_metadata_and_speaker() {
         "  Welcome.\n",
     );
 
-    let lowered = parse("dialogue/tavern.recite", source).lower_source_file();
+    let lowered = lower(source);
 
     assert!(lowered.diagnostics.is_empty());
-    let Statement::Line(line) = &lowered.source_file.blocks[0].statements[0] else {
-        panic!("expected lowered line");
-    };
+    let line = line_statement(single_block(&lowered), 0);
 
     assert_eq!(
         line.speaker.as_ref().map(SpeakerId::as_str),
@@ -199,15 +232,12 @@ fn unsupported_conditional_body_is_not_flattened_into_block_statements() {
         "  Welcome.\n",
     );
 
-    let lowered = parse("dialogue/tavern.recite", source).lower_source_file();
+    let lowered = lower(source);
 
-    assert_eq!(lowered.diagnostics.len(), 1);
-    assert_eq!(lowered.diagnostics[0].code.as_str(), "RECITE_PARSE004");
+    assert_diagnostic_codes(&lowered, ["RECITE_PARSE004"]);
     assert_eq!(lowered.source_file.blocks[0].statements.len(), 1);
 
-    let Statement::Line(line) = &lowered.source_file.blocks[0].statements[0] else {
-        panic!("expected ordinary sibling line");
-    };
+    let line = line_statement(single_block(&lowered), 0);
     assert_eq!(
         line.id.as_ref().map(recite_core::LineId::as_str),
         Some("ordinary_line")
@@ -226,16 +256,142 @@ fn unsupported_nested_choice_body_is_not_appended_to_parent_prose() {
         "  Still parent prose.\n",
     );
 
-    let lowered = parse("dialogue/tavern.recite", source).lower_source_file();
+    let lowered = lower(source);
 
-    assert_eq!(lowered.diagnostics.len(), 1);
-    assert_eq!(lowered.diagnostics[0].code.as_str(), "RECITE_PARSE004");
+    assert_diagnostic_codes(&lowered, ["RECITE_PARSE004"]);
 
-    let Statement::Line(line) = &lowered.source_file.blocks[0].statements[0] else {
-        panic!("expected prompt line");
-    };
+    let line = line_statement(single_block(&lowered), 0);
     assert_eq!(
         line.source_text.text,
         "What do you need?\nStill parent prose."
     );
+}
+
+#[test]
+fn lowering_summary_stays_stable_for_supported_and_recovered_statements() {
+    let source = concat!(
+        ":: tavern_arrival default\n",
+        "# scene opener\n",
+        "> ta_001 speaker=innkeeper portrait=neutral repeat=true\n",
+        "  Welcome.\n",
+        "  ? ask_road\n",
+        "    Ask about the road.\n",
+        "  Still parent prose.\n",
+        "? unsupported_choice\n",
+        "  Ask about work.\n",
+    );
+
+    let lowered = lower(source);
+
+    assert_snapshot(
+        &lowered_summary(&lowered),
+        expect![[r#"
+            diagnostics:
+              - RECITE_PARSE004 @ 5:3
+              - RECITE_PARSE004 @ 8:1
+            blocks:
+              - tavern_arrival default=true statements=2
+                - comment "scene opener" @ 2:1
+                - line ta_001 speaker=innkeeper text="Welcome.\nStill parent prose." metadata=[portrait, repeat]
+        "#]],
+    );
+}
+
+fn lower(source: &str) -> LoweredSourceFile {
+    parse(TEST_PATH, source).lower_source_file()
+}
+
+fn single_block(lowered: &LoweredSourceFile) -> &Block {
+    assert_eq!(lowered.source_file.blocks.len(), 1);
+    &lowered.source_file.blocks[0]
+}
+
+fn line_statement(block: &Block, index: usize) -> &Line {
+    let Statement::Line(line) = &block.statements[index] else {
+        panic!("expected statement {index} to be a line");
+    };
+
+    line
+}
+
+fn comment_statement(block: &Block, index: usize) -> &recite_core::Comment {
+    let Statement::Comment(comment) = &block.statements[index] else {
+        panic!("expected statement {index} to be a comment");
+    };
+
+    comment
+}
+
+fn assert_diagnostic_codes<const N: usize>(lowered: &LoweredSourceFile, expected: [&str; N]) {
+    assert_eq!(
+        lowered
+            .diagnostics
+            .iter()
+            .map(|diagnostic| diagnostic.code.as_str())
+            .collect::<Vec<_>>(),
+        expected
+    );
+}
+
+fn assert_snapshot(actual: &str, expected: Expect) {
+    expected.assert_eq(actual);
+}
+
+fn lowered_summary(lowered: &LoweredSourceFile) -> String {
+    let mut summary = String::new();
+
+    summary.push_str("diagnostics:\n");
+    if lowered.diagnostics.is_empty() {
+        summary.push_str("  <none>\n");
+    } else {
+        for diagnostic in &lowered.diagnostics {
+            summary.push_str(&format!(
+                "  - {} @ {}:{}\n",
+                diagnostic.code.as_str(),
+                diagnostic.span.start.line(),
+                diagnostic.span.start.column()
+            ));
+        }
+    }
+
+    summary.push_str("blocks:\n");
+    for block in &lowered.source_file.blocks {
+        summary.push_str(&format!(
+            "  - {} default={} statements={}\n",
+            block.id.as_str(),
+            block.is_default,
+            block.statements.len()
+        ));
+
+        for statement in &block.statements {
+            match statement {
+                Statement::Comment(comment) => summary.push_str(&format!(
+                    "    - comment {:?} @ {}:{}\n",
+                    comment.text,
+                    comment.span.start.line(),
+                    comment.span.start.column()
+                )),
+                Statement::Line(line) => summary.push_str(&format!(
+                    "    - line {} speaker={} text={:?} metadata=[{}]\n",
+                    line.id
+                        .as_ref()
+                        .map(recite_core::LineId::as_str)
+                        .unwrap_or("<missing>"),
+                    line.speaker
+                        .as_ref()
+                        .map(SpeakerId::as_str)
+                        .unwrap_or("<none>"),
+                    line.source_text.text,
+                    line.metadata
+                        .iter()
+                        .map(|entry| entry.key.as_str())
+                        .collect::<Vec<_>>()
+                        .join(", ")
+                )),
+                other => summary.push_str(&format!("    - {:?}\n", other.kind())),
+            }
+        }
+    }
+
+    summary
 }

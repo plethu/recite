@@ -11,6 +11,18 @@ impl<'a> LogicalLine<'a> {
     pub(crate) fn content_without_newline(self) -> &'a str {
         self.text
     }
+
+    pub(crate) fn indent_len(self) -> usize {
+        indent_len(self.content_without_newline())
+    }
+
+    pub(crate) fn indentation(self) -> &'a str {
+        &self.text[..self.indent_len()]
+    }
+
+    pub(crate) fn trimmed_content(self) -> &'a str {
+        &self.text[self.indent_len()..]
+    }
 }
 
 pub(crate) struct LogicalLines<'a> {

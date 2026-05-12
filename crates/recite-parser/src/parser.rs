@@ -1,9 +1,10 @@
 use recite_core::Diagnostic;
 use rowan::{GreenNode, GreenNodeBuilder};
 
-use crate::diagnostics::diagnostic;
+use crate::diagnostics::expected_statement_or_prose;
 use crate::lower::{LoweredSourceFile, lower_source_file};
-use crate::source::{LogicalLine, LogicalLines, indent_len, span_for_line};
+use crate::markers::StatementMarker;
+use crate::source::{LogicalLine, LogicalLines, span_for_line};
 use crate::syntax::{ReciteSyntaxKind, ReciteSyntaxNode};
 
 /// Lossless parse output plus stable syntax diagnostics.
@@ -63,21 +64,20 @@ fn parse_line(
     builder: &mut GreenNodeBuilder<'_>,
     diagnostics: &mut Vec<Diagnostic>,
 ) {
-    let content = line.content_without_newline();
-    let indent_len = indent_len(content);
-    let indent = &content[..indent_len];
-    let trimmed = &content[indent_len..];
+    let indent_len = line.indent_len();
+    let indent = line.indentation();
+    let trimmed = line.trimmed_content();
     let line_kind = classify_line(trimmed, indent_len);
 
     builder.start_node(line_kind.into());
     push_token(builder, ReciteSyntaxKind::Whitespace, indent);
 
     match line_kind {
-        ReciteSyntaxKind::Block => parse_prefixed_line(builder, trimmed, "::"),
-        ReciteSyntaxKind::Line => parse_prefixed_line(builder, trimmed, ">"),
-        ReciteSyntaxKind::Choice => parse_prefixed_line(builder, trimmed, "?"),
-        ReciteSyntaxKind::Effect => parse_prefixed_line(builder, trimmed, "!"),
-        ReciteSyntaxKind::Divert => parse_prefixed_line(builder, trimmed, "->"),
+        ReciteSyntaxKind::Block => parse_prefixed_line(builder, trimmed, StatementMarker::Block),
+        ReciteSyntaxKind::Line => parse_prefixed_line(builder, trimmed, StatementMarker::Line),
+        ReciteSyntaxKind::Choice => parse_prefixed_line(builder, trimmed, StatementMarker::Choice),
+        ReciteSyntaxKind::Effect => parse_prefixed_line(builder, trimmed, StatementMarker::Effect),
+        ReciteSyntaxKind::Divert => parse_prefixed_line(builder, trimmed, StatementMarker::Divert),
         ReciteSyntaxKind::If
         | ReciteSyntaxKind::Else
         | ReciteSyntaxKind::Match
@@ -87,11 +87,11 @@ fn parse_line(
         ReciteSyntaxKind::Error => {
             push_token(builder, ReciteSyntaxKind::Text, trimmed);
             if !trimmed.is_empty() {
-                diagnostics.push(diagnostic(
-                    "RECITE_PARSE001",
-                    "expected a Recite statement header or indented prose",
-                    span_for_line(path, line.number, indent_len + 1),
-                ));
+                diagnostics.push(expected_statement_or_prose(span_for_line(
+                    path,
+                    line.number,
+                    indent_len + 1,
+                )));
             }
         }
         _ => unreachable!("line classification must produce a node kind"),
@@ -106,31 +106,20 @@ fn classify_line(trimmed: &str, indent_len: usize) -> ReciteSyntaxKind {
         return ReciteSyntaxKind::Prose;
     }
 
-    if trimmed.starts_with("::") {
-        return ReciteSyntaxKind::Block;
+    if let Some(marker) = StatementMarker::parse(trimmed) {
+        return marker.syntax_kind();
     }
 
-    if trimmed.starts_with("->") {
-        return ReciteSyntaxKind::Divert;
-    }
-
-    match trimmed.as_bytes()[0] {
-        b'>' => ReciteSyntaxKind::Line,
-        b'?' => ReciteSyntaxKind::Choice,
-        b'!' => ReciteSyntaxKind::Effect,
-        b'#' => ReciteSyntaxKind::Comment,
-        b':' if trimmed.starts_with(":if") => ReciteSyntaxKind::If,
-        b':' if trimmed.starts_with(":else") => ReciteSyntaxKind::Else,
-        b':' if trimmed.starts_with(":match") => ReciteSyntaxKind::Match,
-        b':' if trimmed.starts_with(":case") => ReciteSyntaxKind::Case,
-        _ if indent_len > 0 => ReciteSyntaxKind::Prose,
-        _ => ReciteSyntaxKind::Error,
+    if indent_len > 0 {
+        ReciteSyntaxKind::Prose
+    } else {
+        ReciteSyntaxKind::Error
     }
 }
 
-fn parse_prefixed_line(builder: &mut GreenNodeBuilder<'_>, trimmed: &str, marker: &str) {
+fn parse_prefixed_line(builder: &mut GreenNodeBuilder<'_>, trimmed: &str, marker: StatementMarker) {
     push_marker(builder, marker);
-    let rest = &trimmed[marker.len()..];
+    let rest = &trimmed[marker.text().len()..];
     parse_header_rest(builder, rest);
 }
 
@@ -173,17 +162,8 @@ fn split_first_word(text: &str) -> Option<(&str, &str)> {
     Some(text.split_at(first_whitespace))
 }
 
-fn push_marker(builder: &mut GreenNodeBuilder<'_>, marker: &str) {
-    let kind = match marker {
-        "::" => ReciteSyntaxKind::BlockMarker,
-        ">" => ReciteSyntaxKind::LineMarker,
-        "?" => ReciteSyntaxKind::ChoiceMarker,
-        "!" => ReciteSyntaxKind::EffectMarker,
-        "->" => ReciteSyntaxKind::DivertMarker,
-        _ => ReciteSyntaxKind::Text,
-    };
-
-    push_token(builder, kind, marker);
+fn push_marker(builder: &mut GreenNodeBuilder<'_>, marker: StatementMarker) {
+    push_token(builder, marker.marker_syntax_kind(), marker.text());
 }
 
 fn push_token(builder: &mut GreenNodeBuilder<'_>, kind: ReciteSyntaxKind, text: &str) {

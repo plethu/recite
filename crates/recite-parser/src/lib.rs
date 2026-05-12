@@ -6,6 +6,7 @@
 
 mod diagnostics;
 mod lower;
+mod markers;
 mod parser;
 mod source;
 mod syntax;

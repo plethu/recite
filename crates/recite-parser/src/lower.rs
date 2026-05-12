@@ -1,10 +1,14 @@
 use recite_core::{
     Block, BlockId, Comment, Diagnostic, Line, Metadata, MetadataEntry, ScalarValue, SourceFile,
-    SourceText, SpeakerId, Statement,
+    SourceSpan, SourceText, SpeakerId, Statement,
 };
 
-use crate::diagnostics::diagnostic;
-use crate::source::{LogicalLine, LogicalLines, indent_len, span_for_line};
+use crate::diagnostics::{
+    empty_block_id, missing_block_id, missing_line_id, nested_unsupported_lowering,
+    statement_before_block, unsupported_lowering,
+};
+use crate::markers::StatementMarker;
+use crate::source::{LogicalLine, LogicalLines, span_for_line};
 
 #[derive(Clone, Debug, PartialEq)]
 pub struct LoweredSourceFile {
@@ -27,183 +31,243 @@ pub(crate) fn lower_source_file(
 }
 
 fn lower_blocks(path: &str, source: &str, diagnostics: &mut Vec<Diagnostic>) -> Vec<Block> {
-    let mut blocks = Vec::new();
-    let lines: Vec<_> = LogicalLines::new(source).collect();
-    let mut index = 0;
+    Lowerer::new(path, source, diagnostics).lower_blocks()
+}
 
-    while index < lines.len() {
-        let line = lines[index];
-        let trimmed = line
-            .content_without_newline()
-            .trim_start_matches([' ', '\t']);
+struct Lowerer<'source, 'diagnostics> {
+    path: &'source str,
+    lines: Vec<LogicalLine<'source>>,
+    diagnostics: &'diagnostics mut Vec<Diagnostic>,
+}
 
-        if !trimmed.starts_with("::") {
-            if !trimmed.is_empty() && !trimmed.starts_with('#') {
-                diagnostics.push(diagnostic(
-                    "RECITE_PARSE002",
-                    "statement appears before a block header",
-                    span_for_line(path, line.number, 1),
-                ));
-            }
-            index += 1;
-            continue;
+struct LoweredLineText {
+    text: String,
+    span: SourceSpan,
+    next_index: usize,
+}
+
+impl<'source, 'diagnostics> Lowerer<'source, 'diagnostics> {
+    fn new(
+        path: &'source str,
+        source: &'source str,
+        diagnostics: &'diagnostics mut Vec<Diagnostic>,
+    ) -> Self {
+        Self {
+            path,
+            lines: LogicalLines::new(source).collect(),
+            diagnostics,
         }
+    }
 
-        let Some(block_id) = first_field_after_prefix(trimmed, "::") else {
-            diagnostics.push(diagnostic(
-                "RECITE_PARSE003",
-                "block header must include a block id",
-                span_for_line(path, line.number, 1),
-            ));
-            index += 1;
-            continue;
-        };
+    fn lower_blocks(&mut self) -> Vec<Block> {
+        let mut blocks = Vec::new();
+        let mut index = 0;
 
-        let mut statements = Vec::new();
-        let block_start = span_for_line(path, line.number, 1);
-        let is_default = trimmed
-            .split_ascii_whitespace()
-            .skip(2)
-            .any(|field| field == "default");
+        while index < self.lines.len() {
+            let line = self.lines[index];
+            let trimmed = line.trimmed_content();
 
-        index += 1;
-        while index < lines.len() {
-            let statement_line = lines[index];
-            let content = statement_line.content_without_newline();
-            let trimmed_statement = content.trim_start_matches([' ', '\t']);
-
-            if trimmed_statement.starts_with("::") {
-                break;
-            }
-
-            if trimmed_statement.starts_with('>') {
-                let (line, next_index) = lower_line(path, &lines, index, diagnostics);
-                statements.push(Statement::Line(line));
-                index = next_index;
-                continue;
-            }
-
-            if trimmed_statement.starts_with('#') {
-                statements.push(Statement::Comment(lower_comment(path, statement_line)));
+            if StatementMarker::parse(trimmed) != Some(StatementMarker::Block) {
+                self.report_statement_before_block(line, trimmed);
                 index += 1;
                 continue;
             }
 
-            if is_unsupported_statement_header(trimmed_statement) {
-                diagnostics.push(diagnostic(
-                    "RECITE_PARSE004",
-                    "statement syntax is parsed losslessly but lowering is not implemented yet",
-                    span_for_line(path, statement_line.number, 1),
-                ));
-                index = skip_statement_body(&lines, index);
+            let (block, next_index) = self.lower_block(index);
+            if let Some(block) = block {
+                blocks.push(block);
+            }
+            index = next_index;
+        }
+
+        blocks
+    }
+
+    fn lower_block(&mut self, header_index: usize) -> (Option<Block>, usize) {
+        let line = self.lines[header_index];
+        let trimmed = line.trimmed_content();
+
+        let Some(block_id) = first_field_after_prefix(trimmed, StatementMarker::Block.text())
+        else {
+            self.diagnostics
+                .push(missing_block_id(span_for_line(self.path, line.number, 1)));
+            return (None, header_index + 1);
+        };
+
+        let block_start = span_for_line(self.path, line.number, 1);
+        let is_default = trimmed
+            .split_ascii_whitespace()
+            .skip(2)
+            .any(|field| field == "default");
+        let (statements, next_index) = self.lower_block_statements(header_index + 1);
+
+        let Ok(id) = BlockId::new(block_id) else {
+            self.diagnostics.push(empty_block_id(block_start.clone()));
+            return (None, next_index);
+        };
+
+        (
+            Some(Block::new(id, statements, block_start).with_default(is_default)),
+            next_index,
+        )
+    }
+
+    fn lower_block_statements(&mut self, mut index: usize) -> (Vec<Statement>, usize) {
+        let mut statements = Vec::new();
+
+        while index < self.lines.len() {
+            let trimmed = self.lines[index].trimmed_content();
+
+            if StatementMarker::parse(trimmed) == Some(StatementMarker::Block) {
+                break;
+            }
+
+            let (statement, next_index) = self.lower_block_statement(index, trimmed);
+            if let Some(statement) = statement {
+                statements.push(statement);
+            }
+            index = next_index;
+        }
+
+        (statements, index)
+    }
+
+    fn lower_block_statement(&mut self, index: usize, trimmed: &str) -> (Option<Statement>, usize) {
+        match StatementMarker::parse(trimmed) {
+            Some(StatementMarker::Line) => {
+                let (line, next_index) = self.lower_line(index);
+                (Some(Statement::Line(line)), next_index)
+            }
+            Some(StatementMarker::Comment) => (
+                Some(Statement::Comment(self.lower_comment(self.lines[index]))),
+                index + 1,
+            ),
+            Some(marker) if marker.is_unsupported_lowering() => {
+                self.report_unsupported_statement(index);
+                (None, skip_statement_body(&self.lines, index))
+            }
+            _ => (None, index + 1),
+        }
+    }
+
+    fn lower_line(&mut self, line_index: usize) -> (Line, usize) {
+        let header = self.lines[line_index];
+        let header_indent = header.indent_len();
+        let trimmed = header.trimmed_content();
+        let line_span = span_for_line(self.path, header.number, header_indent + 1);
+        let mut header_fields = header_fields_after_prefix(
+            trimmed,
+            StatementMarker::Line.text(),
+            header.number,
+            header_indent + 1,
+        );
+        let line_id = header_fields.next().map(|field| field.text);
+        let (speaker, metadata) = lower_line_header_fields(self.path, header_fields);
+        let lowered_text = self.lower_line_text(line_index + 1, header);
+
+        if line_id.is_none() {
+            self.diagnostics.push(missing_line_id(line_span.clone()));
+        }
+
+        let id = line_id.and_then(|value| recite_core::LineId::new(value).ok());
+        let mut line = Line::new(
+            id,
+            SourceText::new(lowered_text.text, lowered_text.span),
+            line_span,
+        )
+        .with_metadata(metadata);
+        if let Some(speaker) = speaker {
+            line = line.with_speaker(speaker);
+        }
+
+        (line, lowered_text.next_index)
+    }
+
+    fn lower_line_text(&mut self, start_index: usize, header: LogicalLine<'_>) -> LoweredLineText {
+        let header_indent = header.indent_len();
+        let mut text_lines = Vec::new();
+        let mut text_start_line = header.number;
+        let mut text_start_column = header_indent + 3;
+        let mut index = start_index;
+
+        while index < self.lines.len() {
+            let current = self.lines[index];
+            let trimmed = current.trimmed_content();
+            let indent = current.indent_len();
+
+            if StatementMarker::parse(trimmed) == Some(StatementMarker::Block)
+                || (indent <= header_indent && is_statement_header(trimmed))
+            {
+                break;
+            }
+
+            if trimmed.is_empty() {
+                text_lines.push(String::new());
+                index += 1;
                 continue;
             }
 
+            if is_statement_header(trimmed) {
+                self.report_nested_unsupported_statement(current, indent);
+                index = skip_statement_body(&self.lines, index);
+                continue;
+            }
+
+            if text_lines.is_empty() {
+                text_start_line = current.number;
+                text_start_column = indent + 1;
+            }
+            text_lines.push(trimmed.to_owned());
             index += 1;
         }
 
-        let Ok(id) = BlockId::new(block_id) else {
-            diagnostics.push(diagnostic(
-                "RECITE_PARSE005",
-                "block id must not be empty",
-                block_start.clone(),
-            ));
-            continue;
-        };
-
-        blocks.push(Block::new(id, statements, block_start).with_default(is_default));
+        LoweredLineText {
+            text: text_lines.join("\n"),
+            span: span_for_line(self.path, text_start_line, text_start_column),
+            next_index: index,
+        }
     }
 
-    blocks
-}
+    fn lower_comment(&self, line: LogicalLine<'_>) -> Comment {
+        let indent = line.indent_len();
+        let trimmed = line.trimmed_content();
+        let text = trimmed
+            .strip_prefix(StatementMarker::Comment.text())
+            .expect("comment lowering only receives comment lines")
+            .trim_start_matches([' ', '\t']);
 
-fn lower_line(
-    path: &str,
-    lines: &[LogicalLine<'_>],
-    line_index: usize,
-    diagnostics: &mut Vec<Diagnostic>,
-) -> (Line, usize) {
-    let header = lines[line_index];
-    let header_content = header.content_without_newline();
-    let header_indent = indent_len(header_content);
-    let trimmed = header_content.trim_start_matches([' ', '\t']);
-    let line_span = span_for_line(path, header.number, header_indent + 1);
-    let mut header_fields =
-        header_fields_after_prefix(trimmed, ">", header.number, header_indent + 1);
-    let line_id = header_fields.next().map(|field| field.text);
-    let (speaker, metadata) = lower_line_header_fields(path, header_fields);
-    let mut text_lines = Vec::new();
-    let mut text_start_line = header.number;
-    let mut text_start_column = header_indent + 3;
-    let mut index = line_index + 1;
-
-    while index < lines.len() {
-        let current = lines[index];
-        let current_content = current.content_without_newline();
-        let current_trimmed = current_content.trim_start_matches([' ', '\t']);
-
-        if current_trimmed.starts_with("::")
-            || (indent_len(current_content) <= header_indent
-                && is_statement_header(current_trimmed))
-        {
-            break;
-        }
-
-        if current_trimmed.is_empty() {
-            text_lines.push(String::new());
-            index += 1;
-            continue;
-        }
-
-        if is_statement_header(current_trimmed) {
-            diagnostics.push(diagnostic(
-                "RECITE_PARSE004",
-                "nested statement syntax is parsed losslessly but lowering is not implemented yet",
-                span_for_line(path, current.number, indent_len(current_content) + 1),
-            ));
-            index = skip_statement_body(lines, index);
-            continue;
-        }
-
-        if text_lines.is_empty() {
-            text_start_line = current.number;
-            text_start_column = indent_len(current_content) + 1;
-        }
-        text_lines.push(current_trimmed.to_owned());
-        index += 1;
+        Comment::new(text, span_for_line(self.path, line.number, indent + 1))
     }
 
-    let id = line_id.and_then(|value| recite_core::LineId::new(value).ok());
-    let text = text_lines.join("\n");
-    let text_span = span_for_line(path, text_start_line, text_start_column);
+    fn report_statement_before_block(&mut self, line: LogicalLine<'_>, trimmed: &str) {
+        if trimmed.is_empty() || StatementMarker::parse(trimmed) == Some(StatementMarker::Comment) {
+            return;
+        }
 
-    if line_id.is_none() {
-        diagnostics.push(diagnostic(
-            "RECITE_PARSE006",
-            "line header has no line id; semantic validation may require one",
-            line_span.clone(),
-        ));
+        self.diagnostics.push(statement_before_block(span_for_line(
+            self.path,
+            line.number,
+            1,
+        )));
     }
 
-    let mut line =
-        Line::new(id, SourceText::new(text, text_span), line_span).with_metadata(metadata);
-    if let Some(speaker) = speaker {
-        line = line.with_speaker(speaker);
+    fn report_unsupported_statement(&mut self, line_index: usize) {
+        let line = self.lines[line_index];
+        self.diagnostics.push(unsupported_lowering(span_for_line(
+            self.path,
+            line.number,
+            1,
+        )));
     }
 
-    (line, index)
-}
-
-fn lower_comment(path: &str, line: LogicalLine<'_>) -> Comment {
-    let content = line.content_without_newline();
-    let indent = indent_len(content);
-    let trimmed = content.trim_start_matches([' ', '\t']);
-    let text = trimmed
-        .strip_prefix('#')
-        .expect("comment lowering only receives comment lines")
-        .trim_start_matches([' ', '\t']);
-
-    Comment::new(text, span_for_line(path, line.number, indent + 1))
+    fn report_nested_unsupported_statement(&mut self, line: LogicalLine<'_>, indent: usize) {
+        self.diagnostics
+            .push(nested_unsupported_lowering(span_for_line(
+                self.path,
+                line.number,
+                indent + 1,
+            )));
+    }
 }
 
 fn first_field_after_prefix<'a>(trimmed: &'a str, prefix: &str) -> Option<&'a str> {
@@ -264,18 +328,18 @@ fn parse_scalar_value(value: &str) -> ScalarValue {
 }
 
 fn skip_statement_body(lines: &[LogicalLine<'_>], header_index: usize) -> usize {
-    let header_indent = indent_len(lines[header_index].content_without_newline());
+    let header_indent = lines[header_index].indent_len();
     let mut index = header_index + 1;
 
     while index < lines.len() {
-        let content = lines[index].content_without_newline();
-        let trimmed = content.trim_start_matches([' ', '\t']);
+        let line = lines[index];
+        let trimmed = line.trimmed_content();
 
-        if trimmed.starts_with("::") {
+        if StatementMarker::parse(trimmed) == Some(StatementMarker::Block) {
             break;
         }
 
-        if !trimmed.is_empty() && indent_len(content) <= header_indent {
+        if !trimmed.is_empty() && line.indent_len() <= header_indent {
             break;
         }
 
@@ -323,24 +387,5 @@ fn header_fields_after_prefix<'a>(
 }
 
 fn is_statement_header(trimmed: &str) -> bool {
-    trimmed.starts_with("::")
-        || trimmed.starts_with('>')
-        || trimmed.starts_with('?')
-        || trimmed.starts_with('!')
-        || trimmed.starts_with("->")
-        || trimmed.starts_with(":if")
-        || trimmed.starts_with(":else")
-        || trimmed.starts_with(":match")
-        || trimmed.starts_with(":case")
-        || trimmed.starts_with('#')
-}
-
-fn is_unsupported_statement_header(trimmed: &str) -> bool {
-    trimmed.starts_with('?')
-        || trimmed.starts_with('!')
-        || trimmed.starts_with("->")
-        || trimmed.starts_with(":if")
-        || trimmed.starts_with(":else")
-        || trimmed.starts_with(":match")
-        || trimmed.starts_with(":case")
+    StatementMarker::parse(trimmed).is_some()
 }

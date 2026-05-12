@@ -13,3 +13,6 @@ rowan = "0.16"
 
 [lints]
 workspace = true
+
+[dev-dependencies]
+expect-test = "1.5.1"
