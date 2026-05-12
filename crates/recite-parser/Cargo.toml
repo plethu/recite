@@ -9,6 +9,7 @@ readme.workspace = true
 
 [dependencies]
 recite-core.workspace = true
+rowan = "0.16"
 
 [lints]
 workspace = true
