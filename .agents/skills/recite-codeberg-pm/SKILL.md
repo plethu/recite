@@ -81,7 +81,9 @@ Questions that must be answered during co-work.
 Nearby work not included.
 
 ## Test/Check Commands
+- `cargo fmt --check`
 - `cargo test`
+- `cargo clippy --all-targets --all-features -- -D warnings`
 
 ## Spec References
 - `docs/recite-production-spec.md` §<section>
@@ -118,7 +120,9 @@ None known.
 Diverts, choices, runtime traversal, and LSP diagnostics.
 
 ## Test/Check Commands
+- `cargo fmt --check`
 - `cargo test`
+- `cargo clippy --all-targets --all-features -- -D warnings`
 
 ## Spec References
 - `docs/recite-production-spec.md` §5.2
@@ -155,7 +159,9 @@ Closes #17
 Adds parser support for block headers with source spans.
 
 ## Tests
+- `cargo fmt --check`
 - `cargo test`
+- `cargo clippy --all-targets --all-features -- -D warnings`
 EOF
 
 .agents/skills/recite-codeberg-pm/scripts/tea-rate-limit.sh issue -- \
