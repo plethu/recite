@@ -9,7 +9,7 @@ Usage:
 Read-only gate for Recite PR merges. Codeberg branch protection is the
 canonical project policy. This helper verifies that policy through the API,
 then applies Recite-local gates that Codeberg cannot express:
-  - clean-context agent review for the current head SHA;
+  - clean-context agent review for the current head SHA, including clippy with no warnings;
   - no unresolved review comments;
   - no failed or missing required commit statuses;
   - temporary single-maintainer self-review handling;
@@ -205,6 +205,7 @@ agent_review_count="$(
       | select((.body // "") | contains("<!-- recite-agent-review:v1 -->"))
       | select((.body // "") | test("Agent-Review:[[:space:]]*approved"; "i"))
       | select((.body // "") | test("Context:[[:space:]]*clean"; "i"))
+      | select((.body // "") | contains("cargo clippy --all-targets --all-features -- -D warnings"))
       | select((.body // "") | contains("Head-SHA: " + $sha))
     ]
     | length
@@ -214,7 +215,7 @@ agent_review_count="$(
 if (( agent_review_count > 0 )); then
   echo "found clean-context agent review for ${head_sha}"
 else
-  fail "missing clean-context agent review comment for ${head_sha}"
+  fail "missing clean-context agent review comment for ${head_sha} with cargo clippy --all-targets --all-features -- -D warnings"
 fi
 
 echo

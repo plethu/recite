@@ -99,4 +99,4 @@ Before handoff:
 - Stable IDs are included where required.
 - Effect order is asserted when effects are present.
 - Locale fallback and markup preservation are tested when touched.
-- `cargo test` or the relevant crate/workspace tests were run, or the blocker is stated.
+- `cargo fmt --check`, `cargo test`, and `cargo clippy --all-targets --all-features -- -D warnings` were run, or the blocker is stated.

@@ -91,4 +91,4 @@ Before handoff:
 - Error paths are covered for malformed source or invalid compiled content.
 - Source-backed errors include spans.
 - Source-order behavior is asserted where meaningful.
-- `cargo test` or the relevant crate/workspace tests were run, or the blocker is stated.
+- `cargo fmt --check`, `cargo test`, and `cargo clippy --all-targets --all-features -- -D warnings` were run, or the blocker is stated.
