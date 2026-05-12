@@ -2,6 +2,15 @@
 
 #![forbid(unsafe_code)]
 
+pub mod ast;
+
+pub use ast::{
+    Argument, Block, BlockReference, Choice, ChoiceEcho, Comment, ConditionCall,
+    ConditionExpression, ConditionGroup, ConditionUnary, Divert, DivertTarget, Effect, EffectMode,
+    IfBranch, Line, MatchArm, MatchBranch, MatchPattern, SourceFile, SourceText, Statement,
+    StatementKind,
+};
+
 use std::fmt;
 use std::num::NonZeroU32;
 
