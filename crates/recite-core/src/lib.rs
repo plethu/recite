@@ -373,7 +373,6 @@ impl Metadata {
         self.entries.push(entry);
     }
 
-    #[must_use]
     pub fn iter(&self) -> impl Iterator<Item = &MetadataEntry> {
         self.entries.iter()
     }

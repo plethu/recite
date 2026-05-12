@@ -14,7 +14,7 @@ Example:
   .agents/skills/recite-codeberg-pm/scripts/merge-pr-signed.sh 34 issue-1-workspace-split main
 
 Environment:
-  RECITE_SIGNED_MERGE_SKIP_CHECKS=1  Skip cargo fmt/test checks.
+  RECITE_SIGNED_MERGE_SKIP_CHECKS=1  Skip cargo fmt/test/clippy checks.
   RECITE_SIGNED_MERGE_SKIP_GATES=1   Skip remote review gates.
   RECITE_SIGNED_MERGE_SKIP_MARK=1    Skip Codeberg manual-merged marker.
 
@@ -130,6 +130,10 @@ if [[ "${RECITE_SIGNED_MERGE_SKIP_CHECKS:-0}" != "1" ]]; then
   echo
   echo "== cargo test =="
   cargo test
+
+  echo
+  echo "== cargo clippy =="
+  cargo clippy --all-targets --all-features -- -D warnings
 fi
 
 echo

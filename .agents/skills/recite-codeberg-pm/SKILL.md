@@ -174,6 +174,7 @@ Recite requires signed commits and explicit review gates. Codeberg branch protec
    - Keep the issue in `status/review`.
    - Confirm the PR targets `main` from the expected short-lived branch.
    - Review the diff and run the requested checks locally.
+   - Run the Recite review checks locally before posting agent approval: `cargo fmt --check`, `cargo test`, and `cargo clippy --all-targets --all-features -- -D warnings`.
    - Review beyond the issue acceptance criteria: call out correctness, maintainability, extensibility, public API shape, invariant preservation, and missing validation-policy coverage that would make later work build on weak foundations.
    - Treat unclear validation ownership as a review finding when a branch introduces public model types, constructors, serialized shapes, or cross-crate contracts. Either the policy should be implemented in the branch or explicitly tracked by a focused issue before merge.
    - Require explicit Codeberg approval from a known maintainer.
@@ -197,7 +198,7 @@ Use the signed merge helper for the normal path:
 .agents/skills/recite-codeberg-pm/scripts/merge-pr-signed.sh 34 issue-1-workspace-split main
 ```
 
-The helper refuses to run with a dirty worktree, reads the PR base/head/head SHA from the Codeberg API, verifies review gates, verifies PR commit signatures, stages a no-ff merge, runs `cargo fmt --check` and `cargo test`, creates a signed merge commit, pushes `main`, marks the PR as `manually-merged`, and performs a targeted PR read. If checks fail after the merge is staged, inspect the failure and run:
+The helper refuses to run with a dirty worktree, reads the PR base/head/head SHA from the Codeberg API, verifies review gates, verifies PR commit signatures, stages a no-ff merge, runs `cargo fmt --check`, `cargo test`, and `cargo clippy --all-targets --all-features -- -D warnings`, creates a signed merge commit, pushes `main`, marks the PR as `manually-merged`, and performs a targeted PR read. If checks fail after the merge is staged, inspect the failure and run:
 
 ```bash
 git merge --abort
@@ -239,10 +240,14 @@ A clean-context agent review is represented by a structured PR comment for the c
   tea comment 34 '<!-- recite-agent-review:v1 -->
 Agent-Review: approved
 Head-SHA: 5b1c198ce742c81b3010eec0307e9d2cbcd1af92
-Context: clean'
+Context: clean
+Checks:
+- cargo fmt --check
+- cargo test
+- cargo clippy --all-targets --all-features -- -D warnings'
 ```
 
-If the PR head changes, the clean-context agent review is stale and must be repeated for the new head SHA. The gate also blocks failed or errored Codeberg commit statuses when any are reported; if no statuses exist yet, local `cargo fmt --check` and `cargo test` remain mandatory.
+If the PR head changes, the clean-context agent review is stale and must be repeated for the new head SHA. The gate also blocks failed or errored Codeberg commit statuses when any are reported; if no statuses exist yet, local `cargo fmt --check`, `cargo test`, and `cargo clippy --all-targets --all-features -- -D warnings` remain mandatory.
 
 Do not use these commands for Recite merges:
 
