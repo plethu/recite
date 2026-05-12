@@ -1,4 +1,4 @@
-use recite_core::{ScalarValue, SpeakerId, Statement, Value};
+use recite_core::{ScalarValue, SpeakerId, Statement, StatementKind, Value};
 use recite_parser::parse;
 
 #[test]
@@ -104,6 +104,48 @@ fn lowering_reports_unsupported_headers_without_losing_syntax() {
     assert_eq!(lowered.diagnostics.len(), 1);
     assert_eq!(lowered.diagnostics[0].code.as_str(), "RECITE_PARSE004");
     assert_eq!(lowered.source_file.blocks[0].statements.len(), 0);
+}
+
+#[test]
+fn lowering_preserves_block_comments_in_source_order() {
+    let source = concat!(
+        ":: tavern_arrival\n",
+        "# scene opener\n",
+        "> ta_001\n",
+        "  Welcome.\n",
+        "# outro marker\n",
+    );
+
+    let lowered = parse("dialogue/tavern.recite", source).lower_source_file();
+
+    assert!(lowered.diagnostics.is_empty());
+    let statements = &lowered.source_file.blocks[0].statements;
+    assert_eq!(
+        statements.iter().map(Statement::kind).collect::<Vec<_>>(),
+        [
+            StatementKind::Comment,
+            StatementKind::Line,
+            StatementKind::Comment
+        ]
+    );
+
+    let Statement::Comment(first_comment) = &statements[0] else {
+        panic!("expected first lowered statement to be a comment");
+    };
+    assert_eq!(first_comment.text, "scene opener");
+    assert_eq!(first_comment.span.start.line(), 2);
+    assert_eq!(first_comment.span.start.column(), 1);
+
+    let Statement::Line(line) = &statements[1] else {
+        panic!("expected second lowered statement to be a line");
+    };
+    assert_eq!(line.source_text.text, "Welcome.");
+
+    let Statement::Comment(second_comment) = &statements[2] else {
+        panic!("expected third lowered statement to be a comment");
+    };
+    assert_eq!(second_comment.text, "outro marker");
+    assert_eq!(second_comment.span.start.line(), 5);
 }
 
 #[test]

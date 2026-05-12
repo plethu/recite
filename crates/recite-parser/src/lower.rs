@@ -1,6 +1,6 @@
 use recite_core::{
-    Block, BlockId, Diagnostic, Line, Metadata, MetadataEntry, ScalarValue, SourceFile, SourceText,
-    SpeakerId, Statement,
+    Block, BlockId, Comment, Diagnostic, Line, Metadata, MetadataEntry, ScalarValue, SourceFile,
+    SourceText, SpeakerId, Statement,
 };
 
 use crate::diagnostics::diagnostic;
@@ -80,6 +80,12 @@ fn lower_blocks(path: &str, source: &str, diagnostics: &mut Vec<Diagnostic>) -> 
                 let (line, next_index) = lower_line(path, &lines, index, diagnostics);
                 statements.push(Statement::Line(line));
                 index = next_index;
+                continue;
+            }
+
+            if trimmed_statement.starts_with('#') {
+                statements.push(Statement::Comment(lower_comment(path, statement_line)));
+                index += 1;
                 continue;
             }
 
@@ -186,6 +192,18 @@ fn lower_line(
     }
 
     (line, index)
+}
+
+fn lower_comment(path: &str, line: LogicalLine<'_>) -> Comment {
+    let content = line.content_without_newline();
+    let indent = indent_len(content);
+    let trimmed = content.trim_start_matches([' ', '\t']);
+    let text = trimmed
+        .strip_prefix('#')
+        .expect("comment lowering only receives comment lines")
+        .trim_start_matches([' ', '\t']);
+
+    Comment::new(text, span_for_line(path, line.number, indent + 1))
 }
 
 fn first_field_after_prefix<'a>(trimmed: &'a str, prefix: &str) -> Option<&'a str> {
