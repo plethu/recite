@@ -1,10 +1,7 @@
-use std::{fs, path::PathBuf};
-
 use expect_test::{Expect, expect};
 use recite_core::{
-    Argument, Block, Choice, ChoiceEcho, ConditionExpression, Diagnostic, DivertTarget, EffectMode,
-    IfBranch, Line, MatchBranch, MatchPattern, ScalarValue, SpeakerId, Statement, StatementKind,
-    Value,
+    Argument, Block, Choice, ChoiceEcho, ConditionExpression, DivertTarget, EffectMode, IfBranch,
+    Line, MatchBranch, MatchPattern, ScalarValue, SpeakerId, Statement, StatementKind, Value,
 };
 use recite_parser::{LoweredSourceFile, ReciteSyntaxKind, parse};
 
@@ -12,6 +9,8 @@ const TEST_PATH: &str = "dialogue/tavern.recite";
 
 #[path = "parser/branches_and_recovery.rs"]
 mod branches_and_recovery;
+#[path = "../../../tests/support/fixtures.rs"]
+mod fixture_support;
 #[path = "parser/lowering.rs"]
 mod lowering;
 #[path = "parser/metadata.rs"]
@@ -20,6 +19,8 @@ mod metadata;
 mod statements;
 #[path = "parser/syntax_and_fixtures.rs"]
 mod syntax_and_fixtures;
+
+use fixture_support::{assert_diagnostic_snapshot, fixture_source};
 
 fn lower(source: &str) -> LoweredSourceFile {
     parse(TEST_PATH, source).lower_source_file()
@@ -93,80 +94,12 @@ fn assert_snapshot(actual: &str, expected: Expect) {
     expected.assert_eq(actual);
 }
 
-fn assert_diagnostic_snapshot(diagnostics: &[Diagnostic], expected_path: String) {
-    assert_eq!(
-        render_diagnostics(diagnostics),
-        fixture_source(expected_path.as_str())
-    );
-}
-
-fn render_diagnostics(diagnostics: &[Diagnostic]) -> String {
-    let mut output = String::from("diagnostics:\n");
-
-    if diagnostics.is_empty() {
-        output.push_str("<none>\n");
-        return output;
-    }
-
-    for diagnostic in diagnostics {
-        output.push_str(&format!(
-            "- code: {}\n  severity: {:?}\n  message: {}\n",
-            diagnostic.code.as_str(),
-            diagnostic.severity,
-            diagnostic.message
-        ));
-        push_span_fields(&mut output, "  ", &diagnostic.span);
-
-        if !diagnostic.related.is_empty() {
-            output.push_str("  related:\n");
-            for related in &diagnostic.related {
-                output.push_str(&format!("  - message: {}\n", related.message));
-                push_span_fields(&mut output, "    ", &related.span);
-            }
-        }
-
-        if let Some(help) = &diagnostic.help {
-            output.push_str(&format!("  help: {help}\n"));
-        }
-    }
-
-    output
-}
-
-fn push_span_fields(output: &mut String, indent: &str, span: &recite_core::SourceSpan) {
-    output.push_str(&format!(
-        "{indent}file: {}\n{indent}line: {}\n{indent}column: {}\n",
-        span.file,
-        span.start.line(),
-        span.start.column()
-    ));
-
-    if let Some(end) = span.end {
-        output.push_str(&format!(
-            "{indent}end_line: {}\n{indent}end_column: {}\n",
-            end.line(),
-            end.column()
-        ));
-    }
-}
-
-fn fixture_source(relative_path: &str) -> String {
-    fs::read_to_string(workspace_path(relative_path))
-        .unwrap_or_else(|error| panic!("failed to read fixture `{relative_path}`: {error}"))
-}
-
-fn workspace_path(relative_path: &str) -> PathBuf {
-    PathBuf::from(env!("CARGO_MANIFEST_DIR"))
-        .join("../..")
-        .join(relative_path)
-}
-
 fn diagnostic_snapshot_path(source_path: &str) -> String {
-    source_path
-        .strip_suffix(".recite")
-        .expect("Recite fixture paths end with .recite")
-        .to_owned()
-        + ".diagnostics.txt"
+    fixture_support::sibling_snapshot_path(source_path, ".diagnostics.txt")
+}
+
+fn lowered_snapshot_path(source_path: &str) -> String {
+    fixture_support::sibling_snapshot_path(source_path, ".lowered.txt")
 }
 
 fn lowered_summary(lowered: &LoweredSourceFile) -> String {
@@ -226,4 +159,198 @@ fn lowered_summary(lowered: &LoweredSourceFile) -> String {
     }
 
     summary
+}
+
+fn lowered_fixture_summary(lowered: &LoweredSourceFile) -> String {
+    let mut summary = format!("source_file: {}\nblocks:\n", lowered.source_file.path);
+
+    for block in &lowered.source_file.blocks {
+        summary.push_str(&format!(
+            "- block {} default={} speaker={} metadata=[{}]\n",
+            block.id.as_str(),
+            block.is_default,
+            block
+                .default_speaker
+                .as_ref()
+                .map(SpeakerId::as_str)
+                .unwrap_or("<none>"),
+            metadata_keys(&block.metadata)
+        ));
+        push_statement_summaries(&mut summary, &block.statements, 1);
+    }
+
+    summary
+}
+
+fn push_statement_summaries(summary: &mut String, statements: &[Statement], depth: usize) {
+    for statement in statements {
+        push_statement_summary(summary, statement, depth);
+    }
+}
+
+fn push_statement_summary(summary: &mut String, statement: &Statement, depth: usize) {
+    let indent = "  ".repeat(depth);
+    match statement {
+        Statement::Comment(comment) => {
+            summary.push_str(&format!(
+                "{indent}- comment {:?} @ {}:{}\n",
+                comment.text,
+                comment.span.start.line(),
+                comment.span.start.column()
+            ));
+        }
+        Statement::Line(line) => {
+            summary.push_str(&format!(
+                "{indent}- line {} speaker={} text={:?} metadata=[{}]\n",
+                line.id
+                    .as_ref()
+                    .map(recite_core::LineId::as_str)
+                    .unwrap_or("<missing>"),
+                line.speaker
+                    .as_ref()
+                    .map(SpeakerId::as_str)
+                    .unwrap_or("<none>"),
+                line.source_text.text,
+                metadata_keys(&line.metadata)
+            ));
+            push_statement_summaries(summary, &line.statements, depth + 1);
+        }
+        Statement::Choice(choice) => {
+            summary.push_str(&format!(
+                "{indent}- choice {} text={:?} target={} metadata=[{}]\n",
+                choice
+                    .id
+                    .as_ref()
+                    .map(recite_core::ChoiceId::as_str)
+                    .unwrap_or("<missing>"),
+                choice.source_text.text,
+                choice
+                    .target
+                    .as_ref()
+                    .map(|target| divert_target_summary(&target.target))
+                    .unwrap_or_else(|| "<none>".to_owned()),
+                metadata_keys(&choice.metadata)
+            ));
+            push_statement_summaries(summary, &choice.statements, depth + 1);
+        }
+        Statement::Divert(divert) => {
+            summary.push_str(&format!(
+                "{indent}- divert {}\n",
+                divert_target_summary(&divert.target)
+            ));
+        }
+        Statement::If(branch) => {
+            summary.push_str(&format!(
+                "{indent}- if {}\n",
+                condition_summary(&branch.condition)
+            ));
+            if !branch.then_statements.is_empty() {
+                summary.push_str(&format!("{indent}  then:\n"));
+                push_statement_summaries(summary, &branch.then_statements, depth + 2);
+            }
+            if !branch.else_statements.is_empty() {
+                summary.push_str(&format!("{indent}  else:\n"));
+                push_statement_summaries(summary, &branch.else_statements, depth + 2);
+            }
+        }
+        Statement::Match(branch) => {
+            summary.push_str(&format!(
+                "{indent}- match {}\n",
+                condition_call_summary(&branch.scrutinee)
+            ));
+            for arm in &branch.arms {
+                summary.push_str(&format!(
+                    "{indent}  case {}:\n",
+                    match_pattern_summary(&arm.pattern)
+                ));
+                push_statement_summaries(summary, &arm.statements, depth + 2);
+            }
+        }
+        Statement::Effect(effect) => {
+            summary.push_str(&format!(
+                "{indent}- effect {:?} {}({})\n",
+                effect.mode,
+                effect.function,
+                effect
+                    .args
+                    .iter()
+                    .map(argument_summary)
+                    .collect::<Vec<_>>()
+                    .join(", ")
+            ));
+        }
+    }
+}
+
+fn metadata_keys(metadata: &recite_core::Metadata) -> String {
+    metadata
+        .iter()
+        .map(|entry| entry.key.as_str())
+        .collect::<Vec<_>>()
+        .join(", ")
+}
+
+fn divert_target_summary(target: &DivertTarget) -> String {
+    match target {
+        DivertTarget::End => "END".to_owned(),
+        DivertTarget::Block(reference) => match &reference.file {
+            Some(file) => format!("{file}::{}", reference.block_id),
+            None => reference.block_id.to_string(),
+        },
+    }
+}
+
+fn condition_summary(condition: &ConditionExpression) -> String {
+    match condition {
+        ConditionExpression::Call(call) => condition_call_summary(call),
+        ConditionExpression::And(group) => condition_group_summary("and", &group.expressions),
+        ConditionExpression::Or(group) => condition_group_summary("or", &group.expressions),
+        ConditionExpression::Not(unary) => format!("not {}", condition_summary(&unary.expression)),
+        ConditionExpression::Grouped(unary) => {
+            format!("({})", condition_summary(&unary.expression))
+        }
+    }
+}
+
+fn condition_group_summary(operator: &str, expressions: &[ConditionExpression]) -> String {
+    expressions
+        .iter()
+        .map(condition_summary)
+        .collect::<Vec<_>>()
+        .join(&format!(" {operator} "))
+}
+
+fn condition_call_summary(call: &recite_core::ConditionCall) -> String {
+    format!(
+        "{}({})",
+        call.function,
+        call.args
+            .iter()
+            .map(argument_summary)
+            .collect::<Vec<_>>()
+            .join(", ")
+    )
+}
+
+fn argument_summary(argument: &Argument) -> String {
+    match argument {
+        Argument::Identifier(identifier) => identifier.clone(),
+        Argument::Value(value) => scalar_summary(value),
+    }
+}
+
+fn scalar_summary(value: &ScalarValue) -> String {
+    match value {
+        ScalarValue::String(value) => format!("{value:?}"),
+        ScalarValue::Integer(value) => value.to_string(),
+        ScalarValue::Float(value) => value.to_string(),
+        ScalarValue::Boolean(value) => value.to_string(),
+    }
+}
+
+fn match_pattern_summary(pattern: &MatchPattern) -> String {
+    match pattern {
+        MatchPattern::Variant(variant) => variant.clone(),
+        MatchPattern::Wildcard => "_".to_owned(),
+    }
 }

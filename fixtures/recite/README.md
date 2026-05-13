@@ -9,6 +9,7 @@ future LSP tests.
   diagnostics.
 - Each `.recite` source with diagnostic coverage has a sibling
   `.diagnostics.txt` file.
+- Parser/lowering fixture expectations use sibling `.lowered.txt` files.
 
 Check commands:
 

@@ -137,6 +137,19 @@ fn valid_fixture_has_no_parser_or_lowering_diagnostics() {
 }
 
 #[test]
+fn valid_fixture_snapshots_lowered_source_shape() {
+    const FIXTURE: &str = "fixtures/recite/valid/core_language_spike.recite";
+
+    let source = fixture_source(FIXTURE);
+    let lowered = parse(FIXTURE, source.as_str()).lower_source_file();
+
+    fixture_support::assert_text_snapshot(
+        &lowered_fixture_summary(&lowered),
+        lowered_snapshot_path(FIXTURE),
+    );
+}
+
+#[test]
 fn fixture_snapshots_capture_directive_boundary_diagnostics() {
     const FIXTURE: &str = "fixtures/recite/invalid/parser_directive_boundaries.recite";
 
