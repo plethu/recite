@@ -256,6 +256,49 @@ fn mixed_indent_statement_markers_report_indent_diagnostics() {
 }
 
 #[test]
+fn mixed_indent_inside_nested_statement_bodies_reports_spans() {
+    let source = concat!(
+        ":: tavern_arrival\n",
+        "? ask_road\n",
+        "  Ask about the road.\n",
+        "    Wrong choice indent.\n",
+        ":if knows_secret(player)\n",
+        "  ! immediate play_sfx(ok)\n",
+        "    ! immediate wrong_if_indent()\n",
+        ":match thread_stage(thread)\n",
+        "    :case ready\n",
+        "      ! immediate play_sfx(ok)\n",
+        "  :case tired\n",
+        ":match mood(player)\n",
+        "  :case calm\n",
+        "    ! immediate play_sfx(ok)\n",
+        "      ! immediate wrong_case_indent()\n",
+    );
+
+    let parse = parse(TEST_PATH, source);
+    let lowered = parse.lower_source_file();
+
+    assert!(parse.diagnostics().is_empty());
+    assert_diagnostic_codes(
+        &lowered,
+        [
+            "RECITE_PARSE007",
+            "RECITE_PARSE007",
+            "RECITE_PARSE007",
+            "RECITE_PARSE007",
+        ],
+    );
+    assert_eq!(
+        lowered
+            .diagnostics
+            .iter()
+            .map(|diagnostic| (diagnostic.span.start.line(), diagnostic.span.start.column()))
+            .collect::<Vec<_>>(),
+        [(4, 5), (7, 5), (11, 3), (15, 7)]
+    );
+}
+
+#[test]
 fn sibling_indented_statement_headers_terminate_line_prose() {
     let source = concat!(
         ":: tavern_arrival\n",
@@ -873,6 +916,14 @@ fn condition_parser_rejects_dangling_and_trailing_tokens() {
     assert_diagnostic_codes(
         &lowered,
         ["RECITE_PARSE013", "RECITE_PARSE013", "RECITE_PARSE013"],
+    );
+    assert_eq!(
+        lowered
+            .diagnostics
+            .iter()
+            .map(|diagnostic| (diagnostic.span.start.line(), diagnostic.span.start.column()))
+            .collect::<Vec<_>>(),
+        [(2, 26), (5, 18), (8, 34)]
     );
 
     let choice = choice_statement(single_block(&lowered), 0);
