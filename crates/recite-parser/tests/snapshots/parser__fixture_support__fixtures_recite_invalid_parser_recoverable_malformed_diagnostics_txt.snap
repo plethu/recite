@@ -1,3 +1,7 @@
+---
+source: crates/recite-parser/tests/../../../tests/support/fixtures.rs
+expression: actual
+---
 diagnostics:
 - code: RECITE_PARSE001
   severity: Error

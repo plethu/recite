@@ -35,8 +35,8 @@ fn lower_fixture(path: &str) -> SourceFile {
     lower(path, fixture_support::fixture_source(path).as_str())
 }
 
-fn diagnostic_snapshot_path(source_path: &str) -> String {
-    fixture_support::sibling_snapshot_path(source_path, ".diagnostics.txt")
+fn diagnostic_snapshot_name(source_path: &str) -> String {
+    fixture_support::fixture_snapshot_name(source_path, ".diagnostics.txt")
 }
 
 fn assert_codes<const N: usize>(report: &ValidationReport, expected: [&str; N]) {

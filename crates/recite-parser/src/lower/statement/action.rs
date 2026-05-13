@@ -2,6 +2,7 @@ use recite_core::{Divert, Effect};
 
 use crate::condition::parse_condition_call;
 use crate::diagnostics::{malformed_divert_target, malformed_effect, missing_divert_target};
+use crate::header::rest_after_field;
 use crate::markers::StatementMarker;
 use crate::source::span_for_line;
 
@@ -52,13 +53,9 @@ impl Lowerer<'_, '_> {
             return None;
         };
 
-        let call_start = mode_field.offset + mode_field.text.len();
-        let rest = &trimmed[call_start..];
-        let whitespace_len = rest.len() - rest.trim_start_matches([' ', '\t']).len();
-        let call_text = &rest[whitespace_len..];
-        let call_column = base_column + trimmed[..call_start + whitespace_len].chars().count();
+        let call = rest_after_field(trimmed, mode_field);
 
-        match parse_condition_call(self.path, line.number, call_column, call_text) {
+        match parse_condition_call(self.path, line.number, call.column, call.text) {
             Ok(call) => Some(Effect::new(mode, call.function, call.args, span)),
             Err(error) => {
                 self.diagnostics

@@ -15,4 +15,4 @@ rowan = "0.16"
 workspace = true
 
 [dev-dependencies]
-expect-test = "1.5.1"
+insta.workspace = true

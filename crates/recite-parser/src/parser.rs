@@ -1,8 +1,9 @@
 use recite_core::Diagnostic;
 use rowan::{GreenNode, GreenNodeBuilder};
 
-use crate::diagnostics::{expected_statement_or_prose, mixed_indent};
-use crate::layout::{ClassifiedLine, LineBodyItem, classify_line, scan_line_body};
+use crate::body::{BodyBoundary, BodyCursor, BodyStep};
+use crate::diagnostics::expected_statement_or_prose;
+use crate::layout::{ClassifiedLine, classify_line};
 use crate::lower::{LoweredSourceFile, lower_source_file};
 use crate::markers::StatementMarker;
 use crate::source::{LogicalLine, LogicalLines, span_for_line};
@@ -138,11 +139,19 @@ fn validate_line_body_indentation(
     header_index: usize,
     diagnostics: &mut Vec<Diagnostic>,
 ) {
-    for item in scan_line_body(lines, header_index).items {
-        if let LineBodyItem::MixedIndent { index } = item {
-            let line = lines[index];
-            let indent = line.indent_len();
-            diagnostics.push(mixed_indent(span_for_line(path, line.number, indent + 1)));
+    let mut cursor = BodyCursor::new(lines, header_index, BodyBoundary::HeaderIndent);
+
+    while cursor.index() < lines.len() {
+        let line = lines[cursor.index()];
+        match cursor.step(path, line, true, diagnostics) {
+            BodyStep::Content { .. } => {
+                if matches!(classify_line(line), ClassifiedLine::Statement(_)) {
+                    break;
+                }
+                cursor.advance();
+            }
+            BodyStep::Boundary => break,
+            BodyStep::Blank | BodyStep::MixedIndent => {}
         }
     }
 }

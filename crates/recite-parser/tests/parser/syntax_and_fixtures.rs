@@ -133,7 +133,7 @@ fn valid_fixture_has_no_parser_or_lowering_diagnostics() {
 
     assert!(parse.diagnostics().is_empty());
     assert!(lowered.diagnostics.is_empty());
-    assert_diagnostic_snapshot(&lowered.diagnostics, diagnostic_snapshot_path(FIXTURE));
+    assert_diagnostic_snapshot(&lowered.diagnostics, diagnostic_snapshot_name(FIXTURE));
 }
 
 #[test]
@@ -145,7 +145,7 @@ fn valid_fixture_snapshots_lowered_source_shape() {
 
     fixture_support::assert_text_snapshot(
         &lowered_fixture_summary(&lowered),
-        lowered_snapshot_path(FIXTURE),
+        lowered_snapshot_name(FIXTURE),
     );
 }
 
@@ -170,7 +170,7 @@ fn fixture_snapshots_capture_directive_boundary_diagnostics() {
             ReciteSyntaxKind::Error,
         ]
     );
-    assert_diagnostic_snapshot(parse.diagnostics(), diagnostic_snapshot_path(FIXTURE));
+    assert_diagnostic_snapshot(parse.diagnostics(), diagnostic_snapshot_name(FIXTURE));
 }
 
 #[test]
@@ -184,7 +184,7 @@ fn fixture_snapshots_capture_mixed_indentation_spans() {
         line_statement(single_block(&lowered), 0).source_text.text,
         "Welcome.\nBack to the original indent."
     );
-    assert_diagnostic_snapshot(&lowered.diagnostics, diagnostic_snapshot_path(FIXTURE));
+    assert_diagnostic_snapshot(&lowered.diagnostics, diagnostic_snapshot_name(FIXTURE));
 }
 
 #[test]
@@ -197,5 +197,5 @@ fn fixture_snapshots_capture_recoverable_malformed_source() {
 
     assert_eq!(parse.syntax().text().to_string(), source);
     assert_eq!(single_block(&lowered).id.as_str(), "start");
-    assert_diagnostic_snapshot(&lowered.diagnostics, diagnostic_snapshot_path(FIXTURE));
+    assert_diagnostic_snapshot(&lowered.diagnostics, diagnostic_snapshot_name(FIXTURE));
 }

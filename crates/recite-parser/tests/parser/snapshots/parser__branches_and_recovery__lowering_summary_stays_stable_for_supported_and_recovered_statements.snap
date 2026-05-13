@@ -1,0 +1,11 @@
+---
+source: crates/recite-parser/tests/parser/branches_and_recovery.rs
+expression: lowered_summary(&lowered)
+---
+diagnostics:
+  - RECITE_PARSE017 @ 7:3
+blocks:
+  - tavern_arrival default=true statements=3
+    - comment "scene opener" @ 2:1
+    - line ta_001 speaker=innkeeper text="Welcome." metadata=[portrait, repeat]
+    - Choice

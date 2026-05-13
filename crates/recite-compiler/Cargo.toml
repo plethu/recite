@@ -11,5 +11,8 @@ readme.workspace = true
 recite-core.workspace = true
 recite-parser.workspace = true
 
+[dev-dependencies]
+insta.workspace = true
+
 [lints]
 workspace = true
