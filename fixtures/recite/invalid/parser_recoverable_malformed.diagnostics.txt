@@ -1,0 +1,13 @@
+diagnostics:
+- code: RECITE_PARSE001
+  severity: Error
+  message: expected a Recite statement header or indented prose
+  file: fixtures/recite/invalid/parser_recoverable_malformed.recite
+  line: 1
+  column: 1
+- code: RECITE_PARSE002
+  severity: Error
+  message: statement appears before a block header
+  file: fixtures/recite/invalid/parser_recoverable_malformed.recite
+  line: 1
+  column: 1

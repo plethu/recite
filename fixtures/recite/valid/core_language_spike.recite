@@ -1,0 +1,17 @@
+:: start default speaker=narrator
+# scene opener
+> intro_001 speaker=hazel mood=calm mood=alert
+  Welcome to the fixture.
+  ? ask_work
+    Ask about work.
+    -> work
+  :if trusts(player)
+    > secret_001
+      I can tell you.
+! deferred advance_thread(start, asked)
+-> END
+
+:: work
+> work_001
+  Work waits.
+-> END
