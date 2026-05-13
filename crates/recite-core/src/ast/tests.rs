@@ -1,7 +1,7 @@
 use super::*;
 use crate::{
-    BlockId, ChoiceId, LineId, Metadata, MetadataEntry, ScalarValue, SourcePosition, SourceSpan,
-    SpeakerId,
+    BlockId, ChoiceId, ChoiceTarget, LineId, Metadata, MetadataEntry, ScalarValue, SourcePosition,
+    SourceSpan, SpeakerId,
 };
 
 #[test]
@@ -39,7 +39,10 @@ fn source_ast_represents_dialogue_constructs_with_spans() {
         Some("ta_opt_news")
     );
     assert!(choice.condition.is_some());
-    assert_eq!(choice.target, Some(DivertTarget::End));
+    assert_eq!(
+        choice.target.as_ref().map(|target| &target.target),
+        Some(&DivertTarget::End)
+    );
     assert_eq!(choice.echo, ChoiceEcho::None);
 
     let Statement::Effect(effect) = &block.statements[4] else {
@@ -149,7 +152,7 @@ fn representative_source_file() -> SourceFile {
         ],
         span(7, 19),
     ))
-    .with_target(DivertTarget::End)
+    .with_target(ChoiceTarget::new(DivertTarget::End, span(9, 5)))
     .with_statements(vec![Statement::Divert(Divert::new(
         DivertTarget::Block(BlockReference::local(
             BlockId::new("local_news").expect("valid block ID"),

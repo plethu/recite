@@ -1,7 +1,7 @@
-use recite_core::{Choice, ChoiceId, ConditionExpression, SourceText, Statement};
+use recite_core::{Choice, ChoiceId, ChoiceTarget, ConditionExpression, SourceText, Statement};
 
 use crate::condition::parse_condition_expression;
-use crate::diagnostics::{malformed_condition, missing_choice_id};
+use crate::diagnostics::malformed_condition;
 use crate::header::HeaderField;
 use crate::markers::StatementMarker;
 use crate::source::span_for_line;
@@ -35,11 +35,6 @@ impl Lowerer<'_, '_> {
             None
         };
 
-        if choice_id.is_none() {
-            self.diagnostics
-                .push(missing_choice_id(choice_span.clone()));
-        }
-
         let (metadata, echo) = self.lower_choice_metadata(&header_fields[field_start..]);
         let condition = if let Some(if_index) = if_index {
             self.lower_choice_condition(trimmed, base_column, fields[if_index])
@@ -52,7 +47,7 @@ impl Lowerer<'_, '_> {
         for statement in body.statements {
             match statement {
                 Statement::Divert(divert) if target.is_none() => {
-                    target = Some(divert.target);
+                    target = Some(ChoiceTarget::new(divert.target, divert.span));
                 }
                 statement => statements.push(statement),
             }

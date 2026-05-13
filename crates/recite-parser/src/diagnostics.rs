@@ -4,10 +4,8 @@ pub(crate) const EXPECTED_STATEMENT_OR_PROSE: &str = "RECITE_PARSE001";
 pub(crate) const STATEMENT_BEFORE_BLOCK: &str = "RECITE_PARSE002";
 pub(crate) const MISSING_BLOCK_ID: &str = "RECITE_PARSE003";
 pub(crate) const EMPTY_BLOCK_ID: &str = "RECITE_PARSE005";
-pub(crate) const MISSING_LINE_ID: &str = "RECITE_PARSE006";
 pub(crate) const MIXED_INDENT: &str = "RECITE_PARSE007";
 pub(crate) const MALFORMED_HEADER: &str = "RECITE_PARSE008";
-pub(crate) const MISSING_CHOICE_ID: &str = "RECITE_PARSE009";
 pub(crate) const MISSING_DIVERT_TARGET: &str = "RECITE_PARSE010";
 pub(crate) const MALFORMED_DIVERT_TARGET: &str = "RECITE_PARSE011";
 pub(crate) const MALFORMED_EFFECT: &str = "RECITE_PARSE012";
@@ -45,14 +43,6 @@ pub(crate) fn empty_block_id(span: SourceSpan) -> Diagnostic {
     diagnostic(EMPTY_BLOCK_ID, "block id must not be empty", span)
 }
 
-pub(crate) fn missing_line_id(span: SourceSpan) -> Diagnostic {
-    diagnostic(
-        MISSING_LINE_ID,
-        "line header has no line id; semantic validation may require one",
-        span,
-    )
-}
-
 pub(crate) fn mixed_indent(span: SourceSpan) -> Diagnostic {
     diagnostic(
         MIXED_INDENT,
@@ -63,14 +53,6 @@ pub(crate) fn mixed_indent(span: SourceSpan) -> Diagnostic {
 
 pub(crate) fn malformed_header(span: SourceSpan) -> Diagnostic {
     diagnostic(MALFORMED_HEADER, "malformed statement header field", span)
-}
-
-pub(crate) fn missing_choice_id(span: SourceSpan) -> Diagnostic {
-    diagnostic(
-        MISSING_CHOICE_ID,
-        "choice header has no choice id; semantic validation may require one",
-        span,
-    )
 }
 
 pub(crate) fn missing_divert_target(span: SourceSpan) -> Diagnostic {

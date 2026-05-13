@@ -730,10 +730,17 @@ fn lowering_parses_statement_vocabulary_and_conditions() {
     assert_eq!(choice.source_text.text, "What's the news?");
     assert!(choice.condition.is_some());
     assert_eq!(
-        choice.target,
-        Some(DivertTarget::Block(recite_core::BlockReference::local(
+        choice.target.as_ref().map(|target| &target.target),
+        Some(&DivertTarget::Block(recite_core::BlockReference::local(
             recite_core::BlockId::new("local_news").expect("valid block id")
         )))
+    );
+    assert_eq!(
+        choice
+            .target
+            .as_ref()
+            .map(|target| target.span.start.line()),
+        Some(8)
     );
 
     let branch = if_statement(block, 2);
@@ -852,10 +859,17 @@ fn choice_extracts_first_divert_as_target_and_preserves_later_statement_order() 
     assert!(lowered.diagnostics.is_empty());
     let choice = choice_statement(single_block(&lowered), 0);
     assert_eq!(
-        choice.target,
-        Some(DivertTarget::Block(recite_core::BlockReference::local(
+        choice.target.as_ref().map(|target| &target.target),
+        Some(&DivertTarget::Block(recite_core::BlockReference::local(
             recite_core::BlockId::new("road_intro").expect("valid block id")
         )))
+    );
+    assert_eq!(
+        choice
+            .target
+            .as_ref()
+            .map(|target| target.span.start.line()),
+        Some(4)
     );
     assert_eq!(
         choice
@@ -1094,7 +1108,6 @@ fn malformed_headers_conditions_and_cases_report_diagnostics() {
         [
             "RECITE_PARSE008",
             "RECITE_PARSE008",
-            "RECITE_PARSE009",
             "RECITE_PARSE010",
             "RECITE_PARSE012",
             "RECITE_PARSE013",

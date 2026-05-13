@@ -1,6 +1,5 @@
 use recite_core::{Line, LineId, SourceText};
 
-use crate::diagnostics::missing_line_id;
 use crate::markers::StatementMarker;
 use crate::source::span_for_line;
 
@@ -25,10 +24,6 @@ impl Lowerer<'_, '_> {
         } else {
             None
         };
-
-        if line_id.is_none() {
-            self.diagnostics.push(missing_line_id(line_span.clone()));
-        }
 
         let (speaker, metadata) = self.lower_speaker_metadata(&fields[field_start..]);
         let body = self.lower_prose_body(line_index, false);

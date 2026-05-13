@@ -12,8 +12,9 @@ mod source;
 pub use condition::{Argument, ConditionCall, ConditionExpression, ConditionGroup, ConditionUnary};
 pub use effect::{Effect, EffectMode};
 pub use source::{
-    Block, BlockReference, Choice, ChoiceEcho, Comment, Divert, DivertTarget, IfBranch, Line,
-    MatchArm, MatchBranch, MatchPattern, SourceFile, SourceText, Statement, StatementKind,
+    Block, BlockReference, Choice, ChoiceEcho, ChoiceTarget, Comment, Divert, DivertTarget,
+    IfBranch, Line, MatchArm, MatchBranch, MatchPattern, SourceFile, SourceText, Statement,
+    StatementKind,
 };
 
 #[cfg(test)]
