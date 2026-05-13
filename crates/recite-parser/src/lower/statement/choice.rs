@@ -50,13 +50,12 @@ impl Lowerer<'_, '_> {
         let mut target = None;
         let mut statements = Vec::new();
         for statement in body.statements {
-            if target.is_none() {
-                if let Statement::Divert(divert) = statement {
+            match statement {
+                Statement::Divert(divert) if target.is_none() => {
                     target = Some(divert.target);
-                    continue;
                 }
+                statement => statements.push(statement),
             }
-            statements.push(statement);
         }
 
         let mut choice = Choice::new(

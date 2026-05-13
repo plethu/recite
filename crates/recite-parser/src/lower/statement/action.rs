@@ -27,9 +27,7 @@ impl Lowerer<'_, '_> {
             return None;
         }
 
-        let Some(target) = self.divert_target(target) else {
-            return None;
-        };
+        let target = self.divert_target(target)?;
 
         Some(Divert::new(target, span))
     }
