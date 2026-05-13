@@ -398,6 +398,57 @@ Rules:
 
 The intent is narrow: schema-checked exhaustive dispatch on declared enum state. Writers who do not need it never see it; writers who do get compile-time coverage warnings when a new enum variant is added and an old `:match` was not updated.
 
+### 5.10 Text Interpolation
+
+Localisable text may interpolate named values supplied by the caller.
+
+Placeholders use curly-brace syntax. Each placeholder is `{name}`, where `name` is a lowercase ASCII identifier (letters, digits, underscores; must start with a letter). Whitespace inside the braces is not permitted.
+
+```text
+> letters_001 speaker=narrator count=$letters_remaining
+  You have {letters_remaining} letters.
+```
+
+Placeholders must be declared on the line header using `name=$value_name` attributes. Each attribute binds a placeholder name to a caller-supplied value at delivery time.
+
+- An undeclared placeholder is a validation error.
+- A declared attribute that is not referenced in the line's text is a warning; the caller must still provide the value.
+- The `$` sigil distinguishes runtime-bound references from literal metadata values (`portrait=flat`).
+
+Interpolation rules:
+
+- Placeholders are preserved verbatim through POT extraction; translators see `{name}` in `msgid` and must preserve the same names in `msgstr`.
+- Translation validation must catch missing, renamed, or extra placeholders relative to the source.
+- Placeholders may appear inside inline markup (`[slow]{name}[/slow]`) but must not span tag boundaries.
+- The runtime substitutes placeholders after locale lookup, before delivering the line text on `DialogueLine.text`. `DialogueLine.source_text` retains the unsubstituted source for diagnostics and fallback.
+- Literal `{` and `}` in source text must be escaped as `\{` and `\}`. Escapes are preserved through extraction; the runtime emits literal braces in `text` and `source_text`.
+
+Caller-supplied values are threaded through `DialogueContext`. Missing values for declared attributes are a structured runtime error, not silent omission.
+
+Determinism: same line id, same declared values, same locale → same delivered text.
+
+### 5.11 Plural Lines
+
+Lines whose text varies by count declare two source forms — singular and plural — using a continuation line prefixed with `|`. Selection between forms is governed by gettext/CLDR plural rules per locale, not by recite.
+
+```text
+> letters_001 speaker=narrator count=$letters_remaining
+  You have one letter.
+  | You have {letters_remaining} letters.
+```
+
+Plural line rules:
+
+- The line header must include a `count=$<name>` attribute. The bound value must resolve to an integer.
+- The singular form is the first body line. The plural form is the immediately following body line prefixed with `|`. Exactly two source forms are permitted; additional plural arms for translated locales live in `.po` (see §9.7).
+- Both forms must be valid localisable text and may contain interpolation placeholders and inline markup.
+- The placeholder bound by `count` may, but need not, appear in either form.
+- POT extraction emits the line as a single entry with `msgid`, `msgid_plural`, and `msgstr[N]` arms (§9.7).
+- The runtime resolves which form to deliver via the locale provider's plural lookup, supplying the count value. If the locale provider returns no translation, the runtime falls back to the source forms using English CLDR rules (`n == 1 → singular`, otherwise plural).
+- Plurals compose with variants (§9.5): `id&formal` may be a plural line.
+
+Multiline body prose is not permitted on plural lines in v1. If a plural line needs more than one paragraph, split it into separate adjacent lines.
+
 ## 6. Conditions
 
 ### 6.1 Condition Language
@@ -818,9 +869,15 @@ This supports gettext-style lookup where `msgctxt` is the stable ID and `msgid` 
 
 ### 9.4 Fallback
 
-If no translation is found, runtime must fall back to source text.
+If no translation is found for the requested locale, the locale provider must attempt broader locales via BCP-47 region truncation before falling back to source text. Example: a lookup for `pt-BR` falls back to `pt`, then to `msgid`.
 
-Fallback should be observable in diagnostics or trace mode so missing translations can be caught in tests.
+The chain is the responsibility of the locale provider implementation. The spec requires:
+
+- The terminal fallback is always the source text (`msgid`, or for plural lines `msgid` / `msgid_plural` selected by English CLDR rules).
+- Each step in the chain — including the terminal source fallback — must be observable in diagnostics or trace mode so missing translations and unintended fallbacks can be caught in tests.
+- Fallback resolution must be deterministic for a given `(id, source, locale, variant, count)` tuple.
+
+The runtime never invents broader locales beyond BCP-47 truncation. Cross-locale fallback (e.g., `nb` → `nn`) is the caller's job, configured outside the provider.
 
 ### 9.5 Grammatical Variants
 
@@ -839,6 +896,8 @@ Lookup priority:
 
 Variant selection must be explicit and deterministic. The caller selects a variant either via a session-level setter (`session.set_variant("formal")`) or via a per-call override threaded through `next` / `choose`. The runtime never infers a variant. Lookup priority remains `id&variant` → `id` → source text.
 
+Variants are recite's mechanism for grammatical or register selection (formal/informal, masculine/feminine, polite/casual). They deliberately do not overload `msgctxt` semantically; `msgctxt` carries the full `id&variant` string and remains the stable lookup key. Counts (plural forms, §9.7) are a separate axis resolved by CLDR rules, not by variant lookup.
+
 ### 9.6 Inline Markup in Translation
 
 Translation validation must be able to detect:
@@ -849,6 +908,63 @@ Translation validation must be able to detect:
 - changed tag attributes where schema forbids changes.
 
 The runtime should not parse translated markup unless configured to validate in debug/test mode.
+
+### 9.7 Plural Forms
+
+Plural lines (§5.11) extract to standard gettext plural entries:
+
+```po
+#. file: Dialogue/town/inventory.recite
+#. block: post_courier
+#. speaker: narrator
+msgctxt "town.inventory.letters_001"
+msgid "You have one letter."
+msgid_plural "You have {letters_remaining} letters."
+msgstr[0] ""
+msgstr[1] ""
+```
+
+The number of `msgstr[N]` arms per locale is determined by the locale's `nplurals` header in the `.po` file. Translators use standard po editors (poedit, weblate, crowdin) without recite-specific tooling.
+
+The locale provider must expose a plural lookup alongside the singular one:
+
+```rust
+pub trait LocaleProvider {
+    fn lookup(
+        &self,
+        id: &str,
+        source_text: &str,
+        domain: TextDomain,
+        locale: &LocaleId,
+        variant: Option<&str>,
+    ) -> Option<String>;
+
+    fn lookup_plural(
+        &self,
+        id: &str,
+        source_singular: &str,
+        source_plural: &str,
+        count: i64,
+        domain: TextDomain,
+        locale: &LocaleId,
+        variant: Option<&str>,
+    ) -> Option<String>;
+}
+```
+
+Lookup priority for plurals mirrors §9.5:
+
+1. `id&variant` plural arm matching the locale's CLDR rule for `count`;
+2. `id` plural arm matching the locale's CLDR rule for `count`;
+3. source singular (if `count == 1`) or source plural (otherwise).
+
+The fallback chain in §9.4 applies between steps 1 and 2 and between step 2 and step 3.
+
+Plural translation validation must additionally detect:
+
+- missing required `msgstr[N]` arms for the locale's declared `nplurals`;
+- placeholder mismatch between any `msgstr[N]` and the corresponding source form;
+- locales missing the `Plural-Forms` header in their `.po`.
 
 ## 10. Schema
 
