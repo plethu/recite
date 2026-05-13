@@ -8,6 +8,10 @@
 > feedback are welcome, especially from real authoring, localisation,
 > runtime, or tooling needs.
 
+the canonical repository, issues, and pull requests live on
+[codeberg](https://codeberg.org/plethu/recite). github is a read-only mirror
+for discoverability.
+
 recite is a dialogue compiler, runtime, and toolchain for games with a lot to
 say: localisable, testable, predictable dialogue without tying it to one
 engine, one asset store, or one editor-shaped way of thinking.
