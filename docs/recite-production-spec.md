@@ -2,18 +2,27 @@
 
 ## 1. Purpose
 
-Recite is an open-source deterministic dialogue compiler, runtime, editor, and tooling suite for ECS-oriented games.
+Recite is an open-source deterministic dialogue compiler, runtime, editor, and tooling suite for narrative-heavy games.
 
 Its primary audience is developers building games where dialogue must be:
 
 - testable through programmatic fixtures and snapshot tests;
 - deterministic across replay, save/load, and CI;
-- integrated with explicit state machines rather than ad hoc runtime callbacks;
+- integrated with explicit game state boundaries rather than ad hoc runtime callbacks;
 - localisable through stable gettext-style workflows;
-- usable from Rust-first engines, especially Bevy;
+- portable across engine integrations without tying the dialogue model to one engine's scripting language;
 - authorable through excellent text tooling, with a visual editor as a structured companion rather than the only workflow.
 
-The project is not intended to be a general-purpose replacement for ink, Yarn Spinner, or Godot-native dialogue tools for all users. It is specifically for projects that value strict architectural boundaries, reproducible execution, schema-checked integration, and tool-assisted content validation.
+Recite should be a credible replacement for existing dialogue tools when their tradeoffs do not fit a project's narrative, tooling, or architecture needs. The motivating pain points are specific:
+
+- localisation workflows that depend on unstable text or ad hoc IDs;
+- editor tooling that cannot catch enough content mistakes before runtime;
+- dialogue scripts that can call directly into engine scripting or mutate game state;
+- one-off authoring languages whose concepts do not travel well outside that tool;
+- runtime behaviour that is difficult to replay, test, save, load, or inspect deterministically;
+- asset-store or engine-specific packaging that makes the dialogue model feel less portable than the game needs.
+
+This is not a claim that ink, Yarn Spinner, Godot-native tools, or other dialogue systems are bad fits for all projects. Recite is specifically for projects that value portable narrative-system thinking, strict architectural boundaries, reproducible execution, schema-checked integration, and tool-assisted content validation.
 
 ## 2. Core Invariants
 
@@ -48,7 +57,9 @@ The following invariants define the project and must not be weakened for conveni
 
 ## 4. Product Shape
 
-The production project should be delivered as a Rust workspace containing:
+The reference implementation should be delivered as a Rust workspace. Rust is the implementation language for the core toolchain, not a requirement that users build Rust-first games.
+
+The workspace should contain:
 
 - `recite-core`: AST, identifiers, value model, diagnostics, schema model.
 - `recite-parser`: DSL parser and source mapping.
@@ -56,7 +67,7 @@ The production project should be delivered as a Rust workspace containing:
 - `recite-runtime`: deterministic runtime with no engine dependencies.
 - `recite-cli`: project CLI, exposing the `recite` binary.
 - `recite-lsp`: language server.
-- `recite-bevy`: Bevy adapter.
+- engine adapter crates as integrations mature, such as `recite-godot` or `recite-bevy`.
 - `recite-vscode`: VS Code extension.
 
 Visual-editor surfaces are deferred until text tooling is mature; the crate split (`recite-editor-core`, `recite-visual-editor`) will be designed when that work begins, not pre-declared here.
@@ -68,6 +79,8 @@ Neovim support ships as documented LSP-client config and an optional Tree-sitter
 ### 5.1 Requirements
 
 The format must be human-readable, line-oriented where practical, and formally specified with a grammar. Writers must not need to understand general programming beyond variables, function-style conditions, simple boolean logic, and structured annotations.
+
+Recite has a small domain language because dialogue has structure that should be named directly: blocks, lines, choices, stable IDs, conditions, metadata, and effects. The format must teach a portable way of thinking about narrative systems, not a one-off bridge into a specific engine scripting language.
 
 Dialogue prose must not be written as quoted string literals. Quoted prose creates the same awkward formatting pressure as long strings in source code. Recite source should treat dialogue text as indented body text owned by a structured statement header.
 
@@ -1078,7 +1091,7 @@ recite trace <asset> --block <block> --fixture <fixture>
 recite play <asset> --block <block>
 ```
 
-`recite play` is an interactive REPL for writers (Milestone 5.5). Future commands include `recite generate-bindings --schema <schema> --lang rust` once the schema and Bevy adapter stabilise; it is not part of the v1 CLI surface.
+`recite play` is an interactive REPL for writers (Milestone 5.5). Future commands include `recite generate-bindings --schema <schema> --lang <lang>` once the schema and adapter contracts stabilise; it is not part of the v1 CLI surface.
 
 ### 13.1 `compile`
 
@@ -1148,7 +1161,7 @@ Interactive REPL for writers. Loads a compiled asset (or compiles on-the-fly), s
 
 ### 13.8 Future: `generate-bindings`
 
-Deferred past v1. Will generate typed Rust code (condition stubs, effect enum, runtime conversions, test helpers, optional Bevy event wrappers) from schema once the schema and Bevy adapter stabilise.
+Deferred past v1. Will generate typed host-language bindings (condition stubs, effect records/enums, runtime conversions, test helpers, optional engine event/signal wrappers) from schema once the schema and adapter contracts stabilise.
 
 ## 14. LSP
 
@@ -1228,74 +1241,62 @@ The visual editor should:
 
 The visual editor is part of the long-term value proposition, but v1 should prove the text-first deterministic workflow first.
 
-## 16. Bevy Adapter
+## 16. Engine Adapters
 
 ### 16.1 Goals
 
-The Bevy adapter must feel like normal Bevy:
+The core runtime is engine-independent. Engine adapters are integration layers that make Recite feel native in a host engine without changing the dialogue contract.
 
-- assets load through `AssetServer`;
-- runtime state lives in resources/components;
-- dialogue outputs use events/messages;
-- effects are emitted as typed Bevy events where possible;
-- users can drive UI however they want.
+Adapters must:
 
-### 16.2 Plugin API
+- load compiled dialogue assets through the host's asset pipeline where possible;
+- store active dialogue session state in host-native resources, nodes, components, or services;
+- expose dialogue lines, prompts, effects, endings, and errors through host-native events, messages, signals, or callbacks;
+- preserve choice selection by stable `ChoiceId`;
+- preserve blocking-effect acknowledgement semantics;
+- let users drive dialogue UI and presentation however they want;
+- avoid requiring dialogue files to call directly into engine scripts.
 
-Illustrative API:
+### 16.2 Adapter API Shape
 
-```rust
-pub struct DialoguePlugin;
+Every adapter should expose host-native equivalents of these operations:
 
-pub struct StartDialogue {
-    pub asset: Handle<CompiledDialogue>,
-    pub block: Option<String>,
-    pub locale: LocaleId,
-}
+- start dialogue from a compiled asset, optional block, and locale;
+- select a dialogue choice by `ChoiceId`;
+- acknowledge a blocking effect by `EffectRequestId`;
+- observe structured dialogue output:
+  - line;
+  - prompt with optional line and choices;
+  - effect request;
+  - end with deferred effects;
+  - structured error.
 
-pub struct SelectDialogueChoice {
-    pub choice_id: ChoiceId,
-}
-
-pub struct AcknowledgeDialogueEffect {
-    pub effect_id: EffectRequestId,
-    pub ack: EffectAck,
-}
-```
-
-Output events:
-
-```rust
-pub enum DialogueOutput {
-    Line(DialogueLine),
-    Prompt {
-        line: Option<DialogueLine>,
-        choices: Vec<DialogueChoice>,
-    },
-    Effect(DialogueEffectRequest),
-    End {
-        deferred_effects: Vec<DialogueEffectRequest>,
-    },
-    Error(DialogueError),
-}
-```
+The concrete API should feel idiomatic for the host engine. A Bevy adapter may use resources and events/messages. A Godot adapter may use nodes, resources, C# APIs, and signals. The semantics must stay equivalent.
 
 ### 16.3 Active Sessions
 
-Initial Bevy adapter scope may maintain one active dialogue session at a time.
+Initial adapter scope may maintain one active dialogue session at a time.
 
 Attempting to start a second scene while one is active must emit an error, not panic.
 
 Future versions may support multiple sessions keyed by entity/session ID.
 
-### 16.4 Bevy Conditions and Effects
+### 16.4 Conditions and Effects
 
-The adapter should support:
+Adapters should support:
 
-- registering condition handlers as resources;
+- registering condition handlers through the host's normal extension points;
 - emitting generic effect requests;
-- optional generated typed effect events from schema;
-- test fixtures independent of Bevy app where possible.
+- optional generated typed effect events, signals, or records from schema;
+- test fixtures independent of the host engine runtime where possible.
+
+Conditions must remain pure queries. Effects must remain typed requests emitted to the game. Adapter convenience APIs must not move game-side mutation into the Recite runtime.
+
+### 16.5 Initial Adapter Targets
+
+Godot and Bevy are both valid early adapter targets.
+
+Godot reflects the first concrete production pressure from an existing game. Bevy remains a strong fit for Rust and ECS-oriented users. Neither adapter may weaken the engine-independent core contract.
 
 ## 17. Testing
 
@@ -1386,7 +1387,7 @@ All numeric budgets in this section are **aspirational targets, not contracts**,
 
 #### Incremental compilation and hot reload
 
-The compiler is whole-project for v1. The LSP maintains a separate live index that re-parses only edited files and resolves cross-file references incrementally. Hot reload during authoring is a property of the LSP's index, not of the compiler. Game-side hot reload of compiled assets is a per-adapter concern (Bevy's `AssetServer` already provides change detection).
+The compiler is whole-project for v1. The LSP maintains a separate live index that re-parses only edited files and resolves cross-file references incrementally. Hot reload during authoring is a property of the LSP's index, not of the compiler. Game-side hot reload of compiled assets is a per-adapter concern that should integrate with the host engine's asset pipeline where possible.
 
 ### 19.1 Benchmark Harness
 
@@ -1501,17 +1502,17 @@ Initial target budgets:
 - large project indexing should be incremental and cancellable;
 - editor operations must avoid reparsing the entire project when a file-local edit is sufficient.
 
-### 19.6 Bevy Adapter Benchmarks
+### 19.6 Engine Adapter Benchmarks
 
-The Bevy adapter must measure:
+Engine adapters must measure:
 
 - asset loading and conversion overhead;
 - event emission overhead;
-- active session system overhead per frame;
-- condition handler dispatch overhead through Bevy resources;
-- generated typed effect event conversion overhead.
+- active session update overhead per frame or tick;
+- condition handler dispatch overhead through the host engine;
+- generated typed effect event/signal conversion overhead.
 
-The adapter should add negligible frame cost when no dialogue session is active.
+An adapter should add negligible frame cost when no dialogue session is active.
 
 ### 19.7 Memory Metrics
 
@@ -1561,11 +1562,11 @@ This makes real project dialogue scenes measurable without requiring users to wr
 
 Full ink/Yarn/Clyde import compatibility is not a v1 goal.
 
-However, because the project is motivated by pain from ink/dink, a limited migration helper may be valuable later:
+However, because the project is motivated by practical limitations across existing dialogue tooling, a limited migration helper may be valuable later:
 
 - convert `Speaker: text #id:x #portrait:y` into structured line records;
 - convert `+ Choice #id:x` into structured choice records;
-- convert external function calls into effect declarations;
+- convert external function calls or engine-script hooks into effect declarations;
 - convert tags into metadata entries.
 
 This should be explicitly best-effort and should not constrain the native format.
@@ -1581,7 +1582,8 @@ Initial non-goals:
 - result-dependent branching from blocking effects;
 - full CLDR/pluralization engine in core runtime;
 - mandatory visual node editor for v1;
-- Unity/Godot adapters before Bevy proves the core value;
+- tying the authoring model to one engine's scripting language;
+- engine adapters that move game logic into the Recite runtime;
 - network/cloud collaboration;
 - AI-authored dialogue features;
 - automatic ID renaming based on content changes;
@@ -1662,15 +1664,16 @@ Initial non-goals:
 - hover from schema;
 - code action for missing IDs.
 
-### Milestone 8: Bevy Adapter
+### Milestone 8: Engine Adapters
 
-- asset loader;
-- plugin;
-- start/select/ack events;
-- output events;
-- condition handler resource;
-- example game;
-- Bevy integration tests.
+- adapter contract;
+- at least one engine adapter, selected from active project pressure;
+- compiled asset loading;
+- start/select/ack integration;
+- structured output events, messages, signals, or callbacks;
+- condition handler integration;
+- example project;
+- engine integration tests.
 
 ### Milestone 9: Editor Extensions
 
@@ -1703,7 +1706,7 @@ The project is not production-credible until all of the following are true:
 - The LSP catches common mistakes before runtime, including auto-filling missing IDs on save.
 - CI can verify compiled assets are fresh relative to source and schema.
 
-The Bevy adapter (§16) and the benchmark suite (§19) are tracked as later milestones and are explicitly **not** required for v1 acceptance. Shipping a credible v1 means the Rust core + CLI + LSP land first; engine adapters and performance gates follow.
+Engine adapters (§16) and the benchmark suite (§19) are tracked as later milestones and are explicitly **not** required for v1 acceptance. Shipping a credible v1 means the core runtime + CLI + LSP land first; engine adapters and performance gates follow.
 
 ## 24. Design Summary
 
@@ -1711,11 +1714,13 @@ The core value is not “branching dialogue.” Many tools already do that.
 
 The core value is a deterministic dialogue/effect protocol:
 
-- authored in a writer-friendly structured format;
+- authored in a small domain language that names narrative structure directly;
 - validated before runtime;
 - compiled into deterministic assets;
 - run as a pure state machine;
-- integrated with ECS through explicit typed effects;
+- integrated with games through explicit typed effects;
 - tested with normal programmatic assertions.
+
+The source format is intentionally small. It is a way to describe dialogue structure, not a second general-purpose scripting layer. Conditions are pure queries. Effects are typed requests. Game logic stays in the game.
 
 That is the standard the project should optimise for.
