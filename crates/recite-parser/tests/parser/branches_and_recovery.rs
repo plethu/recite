@@ -313,16 +313,8 @@ fn lowering_summary_stays_stable_for_supported_and_recovered_statements() {
 
     let lowered = lower(source);
 
-    assert_snapshot(
-        &lowered_summary(&lowered),
-        expect![[r#"
-            diagnostics:
-              - RECITE_PARSE017 @ 7:3
-            blocks:
-              - tavern_arrival default=true statements=3
-                - comment "scene opener" @ 2:1
-                - line ta_001 speaker=innkeeper text="Welcome." metadata=[portrait, repeat]
-                - Choice
-        "#]],
+    insta::assert_snapshot!(
+        "lowering_summary_stays_stable_for_supported_and_recovered_statements",
+        lowered_summary(&lowered)
     );
 }

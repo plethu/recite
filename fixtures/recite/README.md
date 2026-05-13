@@ -7,9 +7,10 @@ future LSP tests.
   diagnostics.
 - `invalid/` contains sources expected to produce stable structured
   diagnostics.
-- Each `.recite` source with diagnostic coverage has a sibling
-  `.diagnostics.txt` file.
-- Parser/lowering fixture expectations use sibling `.lowered.txt` files.
+- Parser and compiler fixture expectations are stored as `insta` snapshots
+  under each crate's `tests/snapshots/` tree.
+- Shared fixture `.recite` inputs stay in this directory so parser, compiler,
+  CLI, and future LSP tests can reuse the same source files.
 
 Check commands:
 

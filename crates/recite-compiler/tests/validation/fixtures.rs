@@ -30,7 +30,7 @@ fn valid_fixture_can_be_reused_by_compiler_validation() {
     let files = vec![lower_fixture(FIXTURE)];
     let report = validate_source_files(&files);
 
-    assert_diagnostic_snapshot(&report.diagnostics, diagnostic_snapshot_path(FIXTURE));
+    assert_diagnostic_snapshot(&report.diagnostics, diagnostic_snapshot_name(FIXTURE));
 }
 
 #[test]
@@ -40,5 +40,5 @@ fn fixture_snapshot_captures_validation_ordering_related_spans_and_help() {
     let files = vec![lower_fixture(FIXTURE)];
     let report = validate_source_files(&files);
 
-    assert_diagnostic_snapshot(&report.diagnostics, diagnostic_snapshot_path(FIXTURE));
+    assert_diagnostic_snapshot(&report.diagnostics, diagnostic_snapshot_name(FIXTURE));
 }

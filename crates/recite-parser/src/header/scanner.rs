@@ -34,6 +34,17 @@ pub(crate) fn rest_after_prefix<'a>(
     }
 }
 
+pub(crate) fn rest_after_field<'a>(trimmed: &'a str, field: HeaderField<'_>) -> HeaderRest<'a> {
+    let start = field.offset + field.text.len();
+    let rest = &trimmed[start..];
+    let whitespace_len = rest.len() - rest.trim_start_matches([' ', '\t']).len();
+
+    HeaderRest {
+        text: &rest[whitespace_len..],
+        column: field.column + field.text.chars().count() + whitespace_len,
+    }
+}
+
 pub(crate) struct HeaderFields<'a> {
     trimmed: &'a str,
     cursor: usize,

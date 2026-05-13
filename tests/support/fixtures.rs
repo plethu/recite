@@ -2,12 +2,15 @@ use std::{fs, path::PathBuf};
 
 use recite_core::{Diagnostic, SourceSpan};
 
-pub(crate) fn assert_diagnostic_snapshot(diagnostics: &[Diagnostic], expected_path: String) {
-    assert_text_snapshot(&render_diagnostics(diagnostics), expected_path);
+pub(crate) fn assert_diagnostic_snapshot(diagnostics: &[Diagnostic], snapshot_name: String) {
+    assert_text_snapshot(&render_diagnostics(diagnostics), snapshot_name);
 }
 
-pub(crate) fn assert_text_snapshot(actual: &str, expected_path: String) {
-    assert_eq!(actual, fixture_source(expected_path.as_str()));
+pub(crate) fn assert_text_snapshot(actual: &str, snapshot_name: String) {
+    let snapshot_path = PathBuf::from(env!("CARGO_MANIFEST_DIR")).join("tests/snapshots");
+    insta::with_settings!({ snapshot_path => snapshot_path }, {
+        insta::assert_snapshot!(snapshot_name, actual);
+    });
 }
 
 pub(crate) fn fixture_source(relative_path: &str) -> String {
@@ -15,12 +18,12 @@ pub(crate) fn fixture_source(relative_path: &str) -> String {
         .unwrap_or_else(|error| panic!("failed to read fixture `{relative_path}`: {error}"))
 }
 
-pub(crate) fn sibling_snapshot_path(source_path: &str, suffix: &str) -> String {
-    source_path
+pub(crate) fn fixture_snapshot_name(source_path: &str, suffix: &str) -> String {
+    let stem = source_path
         .strip_suffix(".recite")
-        .expect("Recite fixture paths end with .recite")
-        .to_owned()
-        + suffix
+        .expect("Recite fixture paths end with .recite");
+
+    sanitize_snapshot_name(&format!("{stem}{suffix}"))
 }
 
 fn render_diagnostics(diagnostics: &[Diagnostic]) -> String {
@@ -77,4 +80,17 @@ fn workspace_path(relative_path: &str) -> PathBuf {
     PathBuf::from(env!("CARGO_MANIFEST_DIR"))
         .join("../..")
         .join(relative_path)
+}
+
+fn sanitize_snapshot_name(value: &str) -> String {
+    value
+        .chars()
+        .map(|character| {
+            if character.is_ascii_alphanumeric() {
+                character
+            } else {
+                '_'
+            }
+        })
+        .collect()
 }

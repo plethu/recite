@@ -1,0 +1,6 @@
+---
+source: crates/recite-compiler/tests/../../../tests/support/fixtures.rs
+expression: actual
+---
+diagnostics:
+<none>

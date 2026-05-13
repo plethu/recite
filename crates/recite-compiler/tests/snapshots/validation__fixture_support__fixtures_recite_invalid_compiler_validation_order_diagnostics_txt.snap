@@ -1,3 +1,7 @@
+---
+source: crates/recite-compiler/tests/../../../tests/support/fixtures.rs
+expression: actual
+---
 diagnostics:
 - code: RECITE_VALIDATE005
   severity: Error

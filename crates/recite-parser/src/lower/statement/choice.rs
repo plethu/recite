@@ -2,7 +2,7 @@ use recite_core::{Choice, ChoiceId, ChoiceTarget, ConditionExpression, SourceTex
 
 use crate::condition::parse_condition_expression;
 use crate::diagnostics::malformed_condition;
-use crate::header::HeaderField;
+use crate::header::{HeaderField, rest_after_field};
 use crate::markers::StatementMarker;
 use crate::source::span_for_line;
 
@@ -37,7 +37,7 @@ impl Lowerer<'_, '_> {
 
         let (metadata, echo) = self.lower_choice_metadata(&header_fields[field_start..]);
         let condition = if let Some(if_index) = if_index {
-            self.lower_choice_condition(trimmed, base_column, fields[if_index])
+            self.lower_choice_condition(trimmed, fields[if_index])
         } else {
             None
         };
@@ -74,16 +74,11 @@ impl Lowerer<'_, '_> {
     fn lower_choice_condition(
         &mut self,
         trimmed: &str,
-        base_column: usize,
         field: HeaderField<'_>,
     ) -> Option<ConditionExpression> {
-        let rest_start = field.offset + field.text.len();
-        let rest = &trimmed[rest_start..];
-        let whitespace_len = rest.len() - rest.trim_start_matches([' ', '\t']).len();
-        let condition = &rest[whitespace_len..];
-        let column = base_column + trimmed[..rest_start + whitespace_len].chars().count();
+        let rest = rest_after_field(trimmed, field);
 
-        match parse_condition_expression(self.path, field.line, column, condition) {
+        match parse_condition_expression(self.path, field.line, rest.column, rest.text) {
             Ok(condition) => Some(condition),
             Err(error) => {
                 self.diagnostics
