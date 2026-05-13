@@ -1,4 +1,4 @@
-use recite_core::SourceSpan;
+use recite_core::{ScalarValue, SourceSpan, Value};
 
 use crate::source::span_for_text;
 
@@ -17,7 +17,7 @@ impl<'a> HeaderField<'a> {
 
     pub(crate) fn key_value(self, path: &str) -> Option<HeaderKeyValue<'a>> {
         let (key, value) = self.text.split_once('=')?;
-        let value_column = self.column + key.len() + 1;
+        let value_column = self.column + key.chars().count() + 1;
 
         Some(HeaderKeyValue {
             key,
@@ -36,6 +36,12 @@ pub(crate) struct HeaderKeyValue<'a> {
     pub(crate) field_span: SourceSpan,
     pub(crate) key_span: SourceSpan,
     pub(crate) value_span: SourceSpan,
+}
+
+impl HeaderKeyValue<'_> {
+    pub(crate) fn parse_value(&self) -> Result<Value, SourceSpan> {
+        parse_value(self.value).map_err(|_| self.value_span.clone())
+    }
 }
 
 #[derive(Clone, Copy, Debug)]
@@ -94,10 +100,34 @@ impl<'a> Iterator for HeaderFields<'a> {
         }
 
         let start = self.cursor;
-        while self.cursor < self.trimmed.len()
-            && !matches!(self.trimmed.as_bytes()[self.cursor], b' ' | b'\t')
-        {
-            self.cursor += 1;
+        let mut quote = None;
+        let mut bracket_depth = 0_u32;
+
+        while let Some(character) = self.current_char() {
+            match character {
+                '\\' if quote.is_some() => {
+                    self.advance_char();
+                    self.advance_char();
+                }
+                '"' if quote == Some('"') => {
+                    quote = None;
+                    self.advance_char();
+                }
+                '"' if quote.is_none() => {
+                    quote = Some('"');
+                    self.advance_char();
+                }
+                '[' if quote.is_none() => {
+                    bracket_depth += 1;
+                    self.advance_char();
+                }
+                ']' if quote.is_none() && bracket_depth > 0 => {
+                    bracket_depth -= 1;
+                    self.advance_char();
+                }
+                ' ' | '\t' if quote.is_none() && bracket_depth == 0 => break,
+                _ => self.advance_char(),
+            }
         }
 
         Some(HeaderField {
@@ -107,4 +137,146 @@ impl<'a> Iterator for HeaderFields<'a> {
             offset: start,
         })
     }
+}
+
+impl HeaderFields<'_> {
+    fn current_char(&self) -> Option<char> {
+        self.trimmed[self.cursor..].chars().next()
+    }
+
+    fn advance_char(&mut self) {
+        let Some(character) = self.current_char() else {
+            return;
+        };
+        self.cursor += character.len_utf8();
+    }
+}
+
+fn parse_value(value: &str) -> Result<Value, ()> {
+    if value.starts_with('[') {
+        return parse_array(value).map(Value::Array);
+    }
+
+    parse_scalar(value).map(Value::Scalar)
+}
+
+fn parse_array(value: &str) -> Result<Vec<ScalarValue>, ()> {
+    let inner = value
+        .strip_prefix('[')
+        .and_then(|value| value.strip_suffix(']'))
+        .ok_or(())?;
+    let trimmed = inner.trim();
+
+    if trimmed.is_empty() {
+        return Ok(Vec::new());
+    }
+
+    split_array_items(trimmed)?
+        .into_iter()
+        .map(|item| parse_scalar(item.trim()))
+        .collect()
+}
+
+fn split_array_items(value: &str) -> Result<Vec<&str>, ()> {
+    let mut items = Vec::new();
+    let mut quote = None;
+    let mut start = 0;
+    let mut cursor = 0;
+
+    while let Some(character) = value[cursor..].chars().next() {
+        match character {
+            '\\' if quote.is_some() => {
+                cursor += character.len_utf8();
+                if let Some(escaped) = value[cursor..].chars().next() {
+                    cursor += escaped.len_utf8();
+                }
+            }
+            '"' if quote == Some('"') => {
+                quote = None;
+                cursor += character.len_utf8();
+            }
+            '"' if quote.is_none() => {
+                quote = Some('"');
+                cursor += character.len_utf8();
+            }
+            ',' if quote.is_none() => {
+                let item = value[start..cursor].trim();
+                if item.is_empty() {
+                    return Err(());
+                }
+                items.push(item);
+                cursor += character.len_utf8();
+                start = cursor;
+            }
+            _ => cursor += character.len_utf8(),
+        }
+    }
+
+    if quote.is_some() {
+        return Err(());
+    }
+
+    let item = value[start..].trim();
+    if item.is_empty() {
+        return Err(());
+    }
+    items.push(item);
+    Ok(items)
+}
+
+fn parse_scalar(value: &str) -> Result<ScalarValue, ()> {
+    if value == "true" {
+        return Ok(ScalarValue::Boolean(true));
+    }
+
+    if value == "false" {
+        return Ok(ScalarValue::Boolean(false));
+    }
+
+    if value.starts_with('"') {
+        return unquote(value).map(ScalarValue::String);
+    }
+
+    if value.starts_with('[') || value.ends_with(']') || value.contains('"') {
+        return Err(());
+    }
+
+    if let Ok(integer) = value.parse::<i64>() {
+        return Ok(ScalarValue::Integer(integer));
+    }
+
+    if let Ok(float) = value.parse::<f64>() {
+        return Ok(ScalarValue::Float(float));
+    }
+
+    Ok(ScalarValue::String(value.to_owned()))
+}
+
+fn unquote(value: &str) -> Result<String, ()> {
+    let inner = value
+        .strip_prefix('"')
+        .and_then(|value| value.strip_suffix('"'))
+        .ok_or(())?;
+    let mut output = String::new();
+    let mut chars = inner.chars();
+
+    while let Some(character) = chars.next() {
+        if character != '\\' {
+            output.push(character);
+            continue;
+        }
+
+        let Some(escaped) = chars.next() else {
+            return Err(());
+        };
+        match escaped {
+            '"' => output.push('"'),
+            '\\' => output.push('\\'),
+            'n' => output.push('\n'),
+            't' => output.push('\t'),
+            other => output.push(other),
+        }
+    }
+
+    Ok(output)
 }

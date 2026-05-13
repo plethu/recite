@@ -532,6 +532,82 @@ fn malformed_block_header_fields_are_reported() {
 }
 
 #[test]
+fn metadata_values_support_quotes_with_spaces_and_arrays() {
+    let source = concat!(
+        ":: tavern_arrival\n",
+        "> ta_001 portrait=\"neutral face\" tags=[door, \"mug clang\", true, 2, 1.5] sfx=door\n",
+        "  Hello.\n",
+    );
+
+    let lowered = lower(source);
+
+    assert!(lowered.diagnostics.is_empty());
+    let line = line_statement(single_block(&lowered), 0);
+    assert_eq!(
+        line.metadata
+            .iter()
+            .map(|entry| (entry.key.as_str(), &entry.value))
+            .collect::<Vec<_>>(),
+        [
+            (
+                "portrait",
+                &Value::Scalar(ScalarValue::String("neutral face".to_owned()))
+            ),
+            (
+                "tags",
+                &Value::Array(vec![
+                    ScalarValue::String("door".to_owned()),
+                    ScalarValue::String("mug clang".to_owned()),
+                    ScalarValue::Boolean(true),
+                    ScalarValue::Integer(2),
+                    ScalarValue::Float(1.5),
+                ])
+            ),
+            (
+                "sfx",
+                &Value::Scalar(ScalarValue::String("door".to_owned()))
+            ),
+        ]
+    );
+    assert_eq!(
+        line.metadata.as_slice()[0]
+            .value_span
+            .as_ref()
+            .unwrap()
+            .start
+            .column(),
+        19
+    );
+    assert_eq!(
+        line.metadata.as_slice()[1]
+            .value_span
+            .as_ref()
+            .unwrap()
+            .start
+            .column(),
+        39
+    );
+}
+
+#[test]
+fn malformed_quoted_and_array_metadata_values_are_reported() {
+    let source = concat!(
+        ":: tavern_arrival\n",
+        "> bad_quote mood=\"unterminated\n",
+        "  Hello.\n",
+        "> bad_array tags=[door,]\n",
+        "  Hello.\n",
+    );
+
+    let lowered = lower(source);
+
+    assert_diagnostic_codes(&lowered, ["RECITE_PARSE008", "RECITE_PARSE008"]);
+    let block = single_block(&lowered);
+    assert_eq!(line_statement(block, 0).metadata.len(), 0);
+    assert_eq!(line_statement(block, 1).metadata.len(), 0);
+}
+
+#[test]
 fn lowering_parses_statement_vocabulary_and_conditions() {
     let source = concat!(
         ":: tavern_arrival default speaker=innkeeper scene=opening scene=repeat\n",
@@ -677,6 +753,78 @@ fn effect_arguments_preserve_scalar_types() {
 }
 
 #[test]
+fn diverts_parse_external_targets_and_extra_token_spans() {
+    let source = concat!(
+        ":: tavern_arrival\n",
+        "-> local_news\n",
+        "-> dialogue/market.recite::market_intro\n",
+        "-> local_news extra\n",
+        "-> dialogue/market.recite::\n",
+    );
+
+    let lowered = lower(source);
+
+    assert_diagnostic_codes(&lowered, ["RECITE_PARSE011", "RECITE_PARSE011"]);
+    assert_eq!(lowered.diagnostics[0].span.start.line(), 4);
+    assert_eq!(lowered.diagnostics[0].span.start.column(), 15);
+    assert_eq!(lowered.diagnostics[1].span.start.line(), 5);
+    assert_eq!(lowered.diagnostics[1].span.start.column(), 4);
+
+    let block = single_block(&lowered);
+    let Statement::Divert(local) = &block.statements[0] else {
+        panic!("expected local divert");
+    };
+    assert_eq!(
+        local.target,
+        DivertTarget::Block(recite_core::BlockReference::local(
+            recite_core::BlockId::new("local_news").expect("valid block id")
+        ))
+    );
+
+    let Statement::Divert(external) = &block.statements[1] else {
+        panic!("expected external divert");
+    };
+    assert_eq!(
+        external.target,
+        DivertTarget::Block(recite_core::BlockReference::external(
+            "dialogue/market.recite",
+            recite_core::BlockId::new("market_intro").expect("valid block id")
+        ))
+    );
+}
+
+#[test]
+fn choice_extracts_first_divert_as_target_and_preserves_later_statement_order() {
+    let source = concat!(
+        ":: tavern_arrival\n",
+        "? ask_road\n",
+        "  Ask about the road.\n",
+        "  -> road_intro\n",
+        "  ! immediate play_sfx(page)\n",
+        "  -> fallback_road\n",
+    );
+
+    let lowered = lower(source);
+
+    assert!(lowered.diagnostics.is_empty());
+    let choice = choice_statement(single_block(&lowered), 0);
+    assert_eq!(
+        choice.target,
+        Some(DivertTarget::Block(recite_core::BlockReference::local(
+            recite_core::BlockId::new("road_intro").expect("valid block id")
+        )))
+    );
+    assert_eq!(
+        choice
+            .statements
+            .iter()
+            .map(Statement::kind)
+            .collect::<Vec<_>>(),
+        [StatementKind::Effect, StatementKind::Divert]
+    );
+}
+
+#[test]
 fn condition_precedence_and_grouping_are_lowered() {
     let source = concat!(
         ":: tavern_arrival\n",
@@ -780,6 +928,88 @@ fn else_only_attaches_to_immediately_preceding_if() {
         [StatementKind::If, StatementKind::Comment]
     );
     assert!(if_statement(block, 0).else_statements.is_empty());
+}
+
+#[test]
+fn nested_if_else_and_match_bodies_keep_their_owners() {
+    let source = concat!(
+        ":: tavern_arrival\n",
+        ":if outer()\n",
+        "  :if inner()\n",
+        "    > inner_true\n",
+        "      Inner true.\n",
+        "  :else\n",
+        "    :match stage(thread)\n",
+        "      :case ready\n",
+        "        > ready_line\n",
+        "          Ready.\n",
+    );
+
+    let lowered = lower(source);
+
+    assert!(lowered.diagnostics.is_empty());
+    let outer = if_statement(single_block(&lowered), 0);
+    assert!(outer.else_statements.is_empty());
+    assert_eq!(outer.then_statements.len(), 1);
+
+    let Statement::If(inner) = &outer.then_statements[0] else {
+        panic!("expected nested if");
+    };
+    assert_eq!(inner.then_statements.len(), 1);
+    assert_eq!(inner.else_statements.len(), 1);
+
+    let Statement::Match(branch) = &inner.else_statements[0] else {
+        panic!("expected match inside inner else");
+    };
+    assert_eq!(branch.arms.len(), 1);
+    assert_eq!(
+        branch.arms[0].pattern,
+        MatchPattern::Variant("ready".to_owned())
+    );
+}
+
+#[test]
+fn empty_if_and_match_bodies_lower_without_panics() {
+    let source = concat!(
+        ":: tavern_arrival\n",
+        ":if knows_secret(player)\n",
+        ":match thread_stage(thread)\n",
+        "> after_empty_bodies\n",
+        "  Carry on.\n",
+    );
+
+    let lowered = lower(source);
+
+    assert!(lowered.diagnostics.is_empty());
+    let block = single_block(&lowered);
+    assert_eq!(
+        block
+            .statements
+            .iter()
+            .map(Statement::kind)
+            .collect::<Vec<_>>(),
+        [StatementKind::If, StatementKind::Match, StatementKind::Line]
+    );
+    assert!(if_statement(block, 0).then_statements.is_empty());
+    assert!(match_statement(block, 1).arms.is_empty());
+}
+
+#[test]
+fn case_extra_token_diagnostic_points_at_extra_field() {
+    let source = concat!(
+        ":: tavern_arrival\n",
+        ":match thread_stage(thread)\n",
+        "  :case tired extra\n",
+        "    > tired_line\n",
+        "      Tired.\n",
+    );
+
+    let lowered = lower(source);
+
+    assert_diagnostic_codes(&lowered, ["RECITE_PARSE014"]);
+    assert_eq!(lowered.diagnostics[0].span.start.line(), 3);
+    assert_eq!(lowered.diagnostics[0].span.start.column(), 15);
+    assert!(match_statement(single_block(&lowered), 0).arms.is_empty());
 }
 
 #[test]

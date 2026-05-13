@@ -1,14 +1,16 @@
 use recite_core::{
-    Block, BlockId, Choice, ChoiceEcho, ChoiceId, Comment, ConditionExpression, Diagnostic, Divert,
-    DivertTarget, Effect, EffectMode, IfBranch, Line, LineId, MatchArm, MatchBranch, MatchPattern,
-    Metadata, MetadataEntry, ScalarValue, SourceFile, SourceSpan, SourceText, SpeakerId, Statement,
+    Block, BlockId, BlockReference, Choice, ChoiceEcho, ChoiceId, Comment, ConditionExpression,
+    Diagnostic, Divert, DivertTarget, Effect, EffectMode, IfBranch, Line, LineId, MatchArm,
+    MatchBranch, MatchPattern, Metadata, MetadataEntry, SourceFile, SourceSpan, SourceText,
+    SpeakerId, Statement,
 };
 
+use crate::body::{BodyBoundary, BodyCursor, BodyStep};
 use crate::condition::{parse_condition_call, parse_condition_expression};
 use crate::diagnostics::{
     empty_block_id, expected_statement_or_prose, malformed_case, malformed_condition,
     malformed_divert_target, malformed_effect, malformed_header, misplaced_case, misplaced_else,
-    missing_block_id, missing_choice_id, missing_divert_target, missing_line_id, mixed_indent,
+    missing_block_id, missing_choice_id, missing_divert_target, missing_line_id,
     prose_after_nested_statement, statement_before_block,
 };
 use crate::header::{HeaderField, HeaderKeyValue, fields_after_prefix, rest_after_prefix};
@@ -155,7 +157,9 @@ impl<'source, 'diagnostics> Lowerer<'source, 'diagnostics> {
                 continue;
             }
 
-            metadata.push(metadata_entry(kv));
+            if let Some(entry) = self.metadata_entry(kv) {
+                metadata.push(entry);
+            }
         }
 
         Some(BlockHeader {
@@ -169,45 +173,24 @@ impl<'source, 'diagnostics> Lowerer<'source, 'diagnostics> {
 
     fn lower_block_statements(&mut self, header_index: usize) -> (Vec<Statement>, usize) {
         let mut statements = Vec::new();
-        let mut body_indent = None;
-        let mut index = header_index + 1;
+        let mut cursor = BodyCursor::new(&self.lines, header_index, BodyBoundary::NextBlock);
 
-        while index < self.lines.len() {
-            let line = self.lines[index];
-            let trimmed = line.trimmed_content();
-
-            if trimmed.is_empty() {
-                index += 1;
-                continue;
-            }
-
-            if classify_line(line) == ClassifiedLine::Statement(StatementMarker::Block) {
-                break;
-            }
-
-            let indent = line.indent_len();
-            match body_indent {
-                Some(expected) if indent != expected => {
-                    self.diagnostics.push(mixed_indent(span_for_line(
-                        self.path,
-                        line.number,
-                        indent + 1,
-                    )));
-                    index += 1;
-                    continue;
-                }
-                None => body_indent = Some(indent),
-                _ => {}
-            }
+        while cursor.index() < self.lines.len() {
+            let line = self.lines[cursor.index()];
+            let index = match cursor.step(self.path, line, true, self.diagnostics) {
+                BodyStep::Content { index } => index,
+                BodyStep::Boundary => break,
+                BodyStep::Blank | BodyStep::MixedIndent => continue,
+            };
 
             let (statement, next_index) = self.lower_statement(index);
             if let Some(statement) = statement {
                 statements.push(statement);
             }
-            index = next_index;
+            cursor.set_index(next_index);
         }
 
-        (statements, index)
+        (statements, cursor.index())
     }
 
     fn lower_statement(&mut self, index: usize) -> (Option<Statement>, usize) {
@@ -406,19 +389,12 @@ impl<'source, 'diagnostics> Lowerer<'source, 'diagnostics> {
 
         if fields.len() > 1 {
             self.diagnostics
-                .push(malformed_divert_target(target.span(self.path)));
+                .push(malformed_divert_target(fields[1].span(self.path)));
             return None;
         }
 
-        let target = if target.text == "END" {
-            DivertTarget::End
-        } else {
-            let Ok(block_id) = BlockId::new(target.text) else {
-                self.diagnostics
-                    .push(malformed_divert_target(target.span(self.path)));
-                return None;
-            };
-            DivertTarget::Block(recite_core::BlockReference::local(block_id))
+        let Some(target) = self.divert_target(target) else {
+            return None;
         };
 
         Some(Divert::new(target, span))
@@ -547,50 +523,29 @@ impl<'source, 'diagnostics> Lowerer<'source, 'diagnostics> {
     }
 
     fn lower_match_arms(&mut self, header_index: usize) -> (Vec<MatchArm>, usize) {
-        let header_indent = self.lines[header_index].indent_len();
-        let mut body_indent = None;
         let mut arms = Vec::new();
-        let mut index = header_index + 1;
+        let mut cursor = BodyCursor::new(&self.lines, header_index, BodyBoundary::HeaderIndent);
 
-        while index < self.lines.len() {
-            let line = self.lines[index];
-            let trimmed = line.trimmed_content();
-
-            if trimmed.is_empty() {
-                index += 1;
-                continue;
-            }
-
-            if line.indent_len() <= header_indent {
-                break;
-            }
-
-            let indent = line.indent_len();
-            match body_indent {
-                Some(expected) if indent != expected => {
-                    self.diagnostics.push(mixed_indent(span_for_line(
-                        self.path,
-                        line.number,
-                        indent + 1,
-                    )));
-                    index += 1;
-                    continue;
-                }
-                None => body_indent = Some(indent),
-                _ => {}
-            }
+        while cursor.index() < self.lines.len() {
+            let line = self.lines[cursor.index()];
+            let index = match cursor.step(self.path, line, true, self.diagnostics) {
+                BodyStep::Content { index } => index,
+                BodyStep::Boundary => break,
+                BodyStep::Blank | BodyStep::MixedIndent => continue,
+            };
 
             if classify_line(line) != ClassifiedLine::Statement(StatementMarker::Case) {
                 self.diagnostics.push(malformed_case(span_for_line(
                     self.path,
                     line.number,
-                    indent + 1,
+                    line.indent_len() + 1,
                 )));
-                index = if matches!(classify_line(line), ClassifiedLine::Statement(_)) {
+                let next_index = if matches!(classify_line(line), ClassifiedLine::Statement(_)) {
                     self.skip_statement_body(index)
                 } else {
                     index + 1
                 };
+                cursor.set_index(next_index);
                 continue;
             }
 
@@ -598,10 +553,10 @@ impl<'source, 'diagnostics> Lowerer<'source, 'diagnostics> {
             if let Some(arm) = arm {
                 arms.push(arm);
             }
-            index = next_index;
+            cursor.set_index(next_index);
         }
 
-        (arms, index)
+        (arms, cursor.index())
     }
 
     fn lower_case(&mut self, index: usize) -> (Option<MatchArm>, usize) {
@@ -623,7 +578,7 @@ impl<'source, 'diagnostics> Lowerer<'source, 'diagnostics> {
 
         if fields.len() > 1 {
             self.diagnostics
-                .push(malformed_case(pattern_field.span(self.path)));
+                .push(malformed_case(fields[1].span(self.path)));
             return (None, next_index);
         }
 
@@ -650,50 +605,29 @@ impl<'source, 'diagnostics> Lowerer<'source, 'diagnostics> {
     ) -> LoweredProseBody {
         let header = self.lines[header_index];
         let header_indent = header.indent_len();
-        let mut body_indent = None;
         let mut text_start_line = header.number;
         let mut text_start_column = header_indent + 3;
         let mut text_lines = Vec::new();
         let mut statements = Vec::new();
         let mut saw_statement = false;
-        let mut index = header_index + 1;
+        let mut cursor = BodyCursor::new(&self.lines, header_index, BodyBoundary::HeaderIndent);
 
-        while index < self.lines.len() {
-            let line = self.lines[index];
-            let trimmed = line.trimmed_content();
-
-            if self.is_body_boundary(line, header_indent) {
-                break;
-            }
-
-            if trimmed.is_empty() {
-                if body_indent.is_some() && !saw_statement {
-                    text_lines.push(String::new());
-                }
-                index += 1;
-                continue;
-            }
-
-            let indent = line.indent_len();
-            if indent <= header_indent {
-                break;
-            }
-
-            match body_indent {
-                Some(expected) if indent != expected => {
-                    if emit_mixed_indent {
-                        self.diagnostics.push(mixed_indent(span_for_line(
-                            self.path,
-                            line.number,
-                            indent + 1,
-                        )));
+        while cursor.index() < self.lines.len() {
+            let line = self.lines[cursor.index()];
+            let index = match cursor.step(self.path, line, emit_mixed_indent, self.diagnostics) {
+                BodyStep::Content { index } => index,
+                BodyStep::Boundary => break,
+                BodyStep::Blank => {
+                    if !text_lines.is_empty() && !saw_statement {
+                        text_lines.push(String::new());
                     }
-                    index += 1;
                     continue;
                 }
-                None => body_indent = Some(indent),
-                _ => {}
-            }
+                BodyStep::MixedIndent => continue,
+            };
+
+            let trimmed = line.trimmed_content();
+            let indent = line.indent_len();
 
             if matches!(classify_line(line), ClassifiedLine::Statement(_)) {
                 trim_trailing_blank_lines(&mut text_lines);
@@ -702,7 +636,7 @@ impl<'source, 'diagnostics> Lowerer<'source, 'diagnostics> {
                 if let Some(statement) = statement {
                     statements.push(statement);
                 }
-                index = next_index;
+                cursor.set_index(next_index);
                 continue;
             }
 
@@ -713,7 +647,7 @@ impl<'source, 'diagnostics> Lowerer<'source, 'diagnostics> {
                         line.number,
                         indent + 1,
                     )));
-                index += 1;
+                cursor.advance();
                 continue;
             }
 
@@ -722,7 +656,7 @@ impl<'source, 'diagnostics> Lowerer<'source, 'diagnostics> {
                 text_start_column = indent + 1;
             }
             text_lines.push(trimmed.to_owned());
-            index += 1;
+            cursor.advance();
         }
 
         trim_trailing_blank_lines(&mut text_lines);
@@ -731,52 +665,30 @@ impl<'source, 'diagnostics> Lowerer<'source, 'diagnostics> {
             text: text_lines.join("\n"),
             text_span: span_for_line(self.path, text_start_line, text_start_column),
             statements,
-            next_index: index,
+            next_index: cursor.index(),
         }
     }
 
     fn lower_statement_body(&mut self, header_index: usize) -> (Vec<Statement>, usize) {
-        let header_indent = self.lines[header_index].indent_len();
-        let mut body_indent = None;
         let mut statements = Vec::new();
-        let mut index = header_index + 1;
+        let mut cursor = BodyCursor::new(&self.lines, header_index, BodyBoundary::HeaderIndent);
 
-        while index < self.lines.len() {
-            let line = self.lines[index];
-            let trimmed = line.trimmed_content();
-
-            if trimmed.is_empty() {
-                index += 1;
-                continue;
-            }
-
-            if line.indent_len() <= header_indent {
-                break;
-            }
-
-            let indent = line.indent_len();
-            match body_indent {
-                Some(expected) if indent != expected => {
-                    self.diagnostics.push(mixed_indent(span_for_line(
-                        self.path,
-                        line.number,
-                        indent + 1,
-                    )));
-                    index += 1;
-                    continue;
-                }
-                None => body_indent = Some(indent),
-                _ => {}
-            }
+        while cursor.index() < self.lines.len() {
+            let line = self.lines[cursor.index()];
+            let index = match cursor.step(self.path, line, true, self.diagnostics) {
+                BodyStep::Content { index } => index,
+                BodyStep::Boundary => break,
+                BodyStep::Blank | BodyStep::MixedIndent => continue,
+            };
 
             if !matches!(classify_line(line), ClassifiedLine::Statement(_)) {
                 self.diagnostics
                     .push(expected_statement_or_prose(span_for_line(
                         self.path,
                         line.number,
-                        indent + 1,
+                        line.indent_len() + 1,
                     )));
-                index += 1;
+                cursor.advance();
                 continue;
             }
 
@@ -784,10 +696,10 @@ impl<'source, 'diagnostics> Lowerer<'source, 'diagnostics> {
             if let Some(statement) = statement {
                 statements.push(statement);
             }
-            index = next_index;
+            cursor.set_index(next_index);
         }
 
-        (statements, index)
+        (statements, cursor.index())
     }
 
     fn lower_comment(&self, line: LogicalLine<'_>) -> Comment {
@@ -818,7 +730,9 @@ impl<'source, 'diagnostics> Lowerer<'source, 'diagnostics> {
                 continue;
             }
 
-            metadata.push(metadata_entry(kv));
+            if let Some(entry) = self.metadata_entry(kv) {
+                metadata.push(entry);
+            }
         }
 
         (speaker, metadata)
@@ -842,7 +756,9 @@ impl<'source, 'diagnostics> Lowerer<'source, 'diagnostics> {
                 continue;
             }
 
-            metadata.push(metadata_entry(kv));
+            if let Some(entry) = self.metadata_entry(kv) {
+                metadata.push(entry);
+            }
         }
 
         (metadata, echo)
@@ -875,17 +791,53 @@ impl<'source, 'diagnostics> Lowerer<'source, 'diagnostics> {
         }
     }
 
+    fn metadata_entry(&mut self, kv: HeaderKeyValue<'_>) -> Option<MetadataEntry> {
+        match metadata_entry(kv) {
+            Ok(entry) => Some(entry),
+            Err(span) => {
+                self.diagnostics.push(malformed_header(span));
+                None
+            }
+        }
+    }
+
+    fn divert_target(&mut self, field: HeaderField<'_>) -> Option<DivertTarget> {
+        if field.text == "END" {
+            return Some(DivertTarget::End);
+        }
+
+        let reference = if let Some((file, block_id)) = field.text.split_once("::") {
+            if file.is_empty() || block_id.is_empty() || block_id.contains("::") {
+                self.diagnostics
+                    .push(malformed_divert_target(field.span(self.path)));
+                return None;
+            }
+
+            let Ok(block_id) = BlockId::new(block_id) else {
+                self.diagnostics
+                    .push(malformed_divert_target(field.span(self.path)));
+                return None;
+            };
+
+            BlockReference::external(file, block_id)
+        } else {
+            let Ok(block_id) = BlockId::new(field.text) else {
+                self.diagnostics
+                    .push(malformed_divert_target(field.span(self.path)));
+                return None;
+            };
+
+            BlockReference::local(block_id)
+        };
+
+        Some(DivertTarget::Block(reference))
+    }
+
     fn is_else_at(&self, index: usize, indent: usize) -> bool {
         self.lines.get(index).is_some_and(|line| {
             line.indent_len() == indent
                 && classify_line(*line) == ClassifiedLine::Statement(StatementMarker::Else)
         })
-    }
-
-    fn is_body_boundary(&self, line: LogicalLine<'_>, header_indent: usize) -> bool {
-        !line.trimmed_content().is_empty()
-            && line.indent_len() <= header_indent
-            && matches!(classify_line(line), ClassifiedLine::Statement(_))
     }
 
     fn skip_statement_body(&self, header_index: usize) -> usize {
@@ -933,61 +885,12 @@ fn header_fields<'a>(
     fields_after_prefix(trimmed, marker.text(), line.number, base_column).collect()
 }
 
-fn metadata_entry(kv: HeaderKeyValue<'_>) -> MetadataEntry {
-    MetadataEntry::new(kv.key, parse_scalar_value(kv.value))
+fn metadata_entry(kv: HeaderKeyValue<'_>) -> Result<MetadataEntry, SourceSpan> {
+    let value = kv.parse_value()?;
+
+    Ok(MetadataEntry::new(kv.key, value)
         .with_source_span(kv.field_span)
-        .with_key_value_spans(kv.key_span, Some(kv.value_span))
-}
-
-fn parse_scalar_value(value: &str) -> ScalarValue {
-    if value == "true" {
-        return ScalarValue::Boolean(true);
-    }
-
-    if value == "false" {
-        return ScalarValue::Boolean(false);
-    }
-
-    if let Ok(integer) = value.parse::<i64>() {
-        return ScalarValue::Integer(integer);
-    }
-
-    if let Ok(float) = value.parse::<f64>() {
-        return ScalarValue::Float(float);
-    }
-
-    if let Some(unquoted) = unquote(value) {
-        return ScalarValue::String(unquoted);
-    }
-
-    ScalarValue::String(value.to_owned())
-}
-
-fn unquote(value: &str) -> Option<String> {
-    let inner = value.strip_prefix('"')?.strip_suffix('"')?;
-    let mut output = String::new();
-    let mut chars = inner.chars();
-
-    while let Some(character) = chars.next() {
-        if character != '\\' {
-            output.push(character);
-            continue;
-        }
-
-        let Some(escaped) = chars.next() else {
-            output.push('\\');
-            break;
-        };
-        match escaped {
-            '"' => output.push('"'),
-            '\\' => output.push('\\'),
-            'n' => output.push('\n'),
-            't' => output.push('\t'),
-            other => output.push(other),
-        }
-    }
-
-    Some(output)
+        .with_key_value_spans(kv.key_span, Some(kv.value_span)))
 }
 
 fn effect_mode(value: &str) -> Option<EffectMode> {
