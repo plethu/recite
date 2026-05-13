@@ -1,5 +1,8 @@
 use expect_test::{Expect, expect};
-use recite_core::{Block, Line, ScalarValue, SpeakerId, Statement, StatementKind, Value};
+use recite_core::{
+    Argument, Block, Choice, ChoiceEcho, ConditionExpression, DivertTarget, EffectMode, IfBranch,
+    Line, MatchBranch, MatchPattern, ScalarValue, SpeakerId, Statement, StatementKind, Value,
+};
 use recite_parser::{LoweredSourceFile, ReciteSyntaxKind, parse};
 
 const TEST_PATH: &str = "dialogue/tavern.recite";
@@ -93,6 +96,25 @@ fn directive_markers_are_boundary_aware() {
             "RECITE_PARSE001",
             "RECITE_PARSE001",
         ]
+    );
+}
+
+#[test]
+fn directive_like_prose_does_not_terminate_line_bodies() {
+    let source = concat!(
+        ":: tavern_arrival\n",
+        "> ta_001\n",
+        "  :ifx this is prose, not a directive.\n",
+        "  :casefile is also prose.\n",
+        "  :matchmaking remains prose.\n",
+    );
+
+    let lowered = lower(source);
+
+    assert!(lowered.diagnostics.is_empty());
+    assert_eq!(
+        line_statement(single_block(&lowered), 0).source_text.text,
+        ":ifx this is prose, not a directive.\n:casefile is also prose.\n:matchmaking remains prose."
     );
 }
 
@@ -256,11 +278,6 @@ fn sibling_indented_statement_headers_terminate_line_prose() {
         "  :if knows_secret(player)\n",
         "    > gated_line\n",
         "      Gated text.\n",
-        "> before_else\n",
-        "  Else prompt.\n",
-        "  :else\n",
-        "    > fallback_line\n",
-        "      Fallback text.\n",
         "> before_block\n",
         "  Block prompt.\n",
         ":: next_block\n",
@@ -270,21 +287,11 @@ fn sibling_indented_statement_headers_terminate_line_prose() {
 
     let lowered = lower(source);
 
-    assert_diagnostic_codes(
-        &lowered,
-        [
-            "RECITE_PARSE004",
-            "RECITE_PARSE004",
-            "RECITE_PARSE004",
-            "RECITE_PARSE004",
-            "RECITE_PARSE004",
-            "RECITE_PARSE004",
-        ],
-    );
+    assert!(lowered.diagnostics.is_empty());
 
     let first_block = &lowered.source_file.blocks[0];
     assert_eq!(
-        (0..6)
+        (0..5)
             .map(|index| line_statement(first_block, index).source_text.text.as_str())
             .collect::<Vec<_>>(),
         [
@@ -293,12 +300,52 @@ fn sibling_indented_statement_headers_terminate_line_prose() {
             "Divert prompt.",
             "Line prompt.",
             "If prompt.",
-            "Else prompt.",
         ]
     );
     assert_eq!(
-        line_statement(first_block, 6).source_text.text,
+        line_statement(first_block, 5).source_text.text,
         "Block prompt."
+    );
+
+    assert_eq!(
+        line_statement(first_block, 0)
+            .statements
+            .iter()
+            .map(Statement::kind)
+            .collect::<Vec<_>>(),
+        [StatementKind::Choice]
+    );
+    assert_eq!(
+        line_statement(first_block, 1)
+            .statements
+            .iter()
+            .map(Statement::kind)
+            .collect::<Vec<_>>(),
+        [StatementKind::Effect]
+    );
+    assert_eq!(
+        line_statement(first_block, 2)
+            .statements
+            .iter()
+            .map(Statement::kind)
+            .collect::<Vec<_>>(),
+        [StatementKind::Divert]
+    );
+    assert_eq!(
+        line_statement(first_block, 3)
+            .statements
+            .iter()
+            .map(Statement::kind)
+            .collect::<Vec<_>>(),
+        [StatementKind::Line]
+    );
+    assert_eq!(
+        line_statement(first_block, 4)
+            .statements
+            .iter()
+            .map(Statement::kind)
+            .collect::<Vec<_>>(),
+        [StatementKind::If]
     );
     assert_eq!(lowered.source_file.blocks[1].id.as_str(), "next_block");
 }
@@ -319,7 +366,7 @@ fn multiple_nested_statements_do_not_promote_to_block_statements() {
 
     let lowered = lower(source);
 
-    assert_diagnostic_codes(&lowered, ["RECITE_PARSE004"]);
+    assert!(lowered.diagnostics.is_empty());
     let block = single_block(&lowered);
     assert_eq!(block.statements.len(), 2);
 
@@ -329,6 +376,14 @@ fn multiple_nested_statements_do_not_promote_to_block_statements() {
         Some("prompt_line")
     );
     assert_eq!(prompt.source_text.text, "What do you need?");
+    assert_eq!(
+        prompt
+            .statements
+            .iter()
+            .map(Statement::kind)
+            .collect::<Vec<_>>(),
+        [StatementKind::Choice, StatementKind::Line]
+    );
 
     let after = line_statement(block, 1);
     assert_eq!(
@@ -339,7 +394,7 @@ fn multiple_nested_statements_do_not_promote_to_block_statements() {
 }
 
 #[test]
-fn lowering_reports_unsupported_headers_without_losing_syntax() {
+fn lowering_parses_top_level_choices_without_losing_syntax() {
     let source = concat!(
         ":: tavern_arrival\n",
         "? ta_choice\n",
@@ -350,8 +405,14 @@ fn lowering_reports_unsupported_headers_without_losing_syntax() {
     let lowered = parse.lower_source_file();
 
     assert_eq!(parse.syntax().text().to_string(), source);
-    assert_diagnostic_codes(&lowered, ["RECITE_PARSE004"]);
-    assert_eq!(lowered.source_file.blocks[0].statements.len(), 0);
+    assert!(lowered.diagnostics.is_empty());
+
+    let choice = choice_statement(single_block(&lowered), 0);
+    assert_eq!(
+        choice.id.as_ref().map(recite_core::ChoiceId::as_str),
+        Some("ta_choice")
+    );
+    assert_eq!(choice.source_text.text, "Ask about the road.");
 }
 
 #[test]
@@ -426,10 +487,345 @@ fn line_lowering_preserves_ordered_metadata_and_speaker() {
             ("count", &Value::Scalar(ScalarValue::Integer(2))),
         ]
     );
+
+    let first_metadata = &line.metadata.as_slice()[0];
+    assert_eq!(
+        first_metadata.source_span.as_ref().unwrap().start.column(),
+        28
+    );
+    assert_eq!(
+        first_metadata
+            .source_span
+            .as_ref()
+            .unwrap()
+            .end
+            .unwrap()
+            .column(),
+        43
+    );
+    assert_eq!(first_metadata.key_span.as_ref().unwrap().start.column(), 28);
+    assert_eq!(
+        first_metadata.value_span.as_ref().unwrap().start.column(),
+        37
+    );
 }
 
 #[test]
-fn unsupported_conditional_body_is_not_flattened_into_block_statements() {
+fn malformed_block_header_fields_are_reported() {
+    let source = concat!(
+        ":: id=bad\n",
+        ":: tavern_arrival default bare speaker=\n",
+        "> ta_001\n",
+        "  Hello.\n",
+    );
+
+    let lowered = lower(source);
+
+    assert_diagnostic_codes(
+        &lowered,
+        ["RECITE_PARSE003", "RECITE_PARSE008", "RECITE_PARSE008"],
+    );
+    let block = single_block(&lowered);
+    assert_eq!(block.id.as_str(), "tavern_arrival");
+    assert!(block.is_default);
+    assert!(block.default_speaker.is_none());
+}
+
+#[test]
+fn lowering_parses_statement_vocabulary_and_conditions() {
+    let source = concat!(
+        ":: tavern_arrival default speaker=innkeeper scene=opening scene=repeat\n",
+        "# scene opener\n",
+        "> prompt speaker=innkeeper portrait=neutral sfx=door sfx=mug\n",
+        "  What do you need?\n",
+        "\n",
+        "  ? ask_news echo=selected_text sfx=paper if familiarity_gte(hazel, rhea, 3)\n",
+        "    What's the news?\n",
+        "    -> local_news\n",
+        ":if not thread_completed(rhea_job_response) and familiarity_gte(hazel, rhea, 3)\n",
+        "  > gated_line\n",
+        "    Still waiting.\n",
+        ":else\n",
+        "  > fallback_line\n",
+        "    Fine.\n",
+        "! deferred advance_thread(rhea_job_response, tired)\n",
+        ":match thread_stage(rhea_job_response)\n",
+        "  :case tired\n",
+        "    > tired_line\n",
+        "      I'm tired.\n",
+        "  :case _\n",
+        "    ! immediate play_sfx(snap)\n",
+        "-> END\n",
+    );
+
+    let lowered = lower(source);
+
+    assert!(lowered.diagnostics.is_empty());
+    let block = single_block(&lowered);
+    assert!(block.is_default);
+    assert_eq!(
+        block.default_speaker.as_ref().map(SpeakerId::as_str),
+        Some("innkeeper")
+    );
+    assert_eq!(
+        block
+            .metadata
+            .iter()
+            .map(|entry| entry.key.as_str())
+            .collect::<Vec<_>>(),
+        ["scene", "scene"]
+    );
+    assert_eq!(
+        block
+            .statements
+            .iter()
+            .map(Statement::kind)
+            .collect::<Vec<_>>(),
+        [
+            StatementKind::Comment,
+            StatementKind::Line,
+            StatementKind::If,
+            StatementKind::Effect,
+            StatementKind::Match,
+            StatementKind::Divert,
+        ]
+    );
+
+    let prompt = line_statement(block, 1);
+    assert_eq!(prompt.source_text.text, "What do you need?");
+    assert_eq!(
+        prompt
+            .metadata
+            .iter()
+            .map(|entry| entry.key.as_str())
+            .collect::<Vec<_>>(),
+        ["portrait", "sfx", "sfx"]
+    );
+
+    let choice = nested_choice(prompt, 0);
+    assert_eq!(
+        choice.id.as_ref().map(recite_core::ChoiceId::as_str),
+        Some("ask_news")
+    );
+    assert_eq!(choice.echo, ChoiceEcho::SelectedText);
+    assert_eq!(choice.source_text.text, "What's the news?");
+    assert!(choice.condition.is_some());
+    assert_eq!(
+        choice.target,
+        Some(DivertTarget::Block(recite_core::BlockReference::local(
+            recite_core::BlockId::new("local_news").expect("valid block id")
+        )))
+    );
+
+    let branch = if_statement(block, 2);
+    let ConditionExpression::And(group) = &branch.condition else {
+        panic!("expected top-level and condition");
+    };
+    assert_eq!(group.expressions.len(), 2);
+    assert!(matches!(group.expressions[0], ConditionExpression::Not(_)));
+    assert_eq!(branch.then_statements.len(), 1);
+    assert_eq!(branch.else_statements.len(), 1);
+
+    let Statement::Effect(effect) = &block.statements[3] else {
+        panic!("expected effect");
+    };
+    assert_eq!(effect.mode, EffectMode::Deferred);
+    assert_eq!(effect.function, "advance_thread");
+    assert_eq!(
+        effect.args,
+        [
+            Argument::identifier("rhea_job_response"),
+            Argument::identifier("tired")
+        ]
+    );
+
+    let match_branch = match_statement(block, 4);
+    assert_eq!(match_branch.scrutinee.function, "thread_stage");
+    assert_eq!(match_branch.arms.len(), 2);
+    assert_eq!(
+        match_branch.arms[0].pattern,
+        MatchPattern::Variant("tired".to_owned())
+    );
+    assert_eq!(match_branch.arms[1].pattern, MatchPattern::Wildcard);
+}
+
+#[test]
+fn effect_arguments_preserve_scalar_types() {
+    let source = concat!(
+        ":: tavern_arrival\n",
+        "! immediate debug_effect(\"door slam\", -3, 1.5, false, actor.id)\n",
+    );
+
+    let lowered = lower(source);
+
+    assert!(lowered.diagnostics.is_empty());
+    let Statement::Effect(effect) = &single_block(&lowered).statements[0] else {
+        panic!("expected effect");
+    };
+    assert_eq!(effect.mode, EffectMode::Immediate);
+    assert_eq!(effect.function, "debug_effect");
+    assert_eq!(
+        effect.args,
+        [
+            ScalarValue::from("door slam").into(),
+            ScalarValue::from(-3_i64).into(),
+            ScalarValue::from(1.5_f64).into(),
+            ScalarValue::from(false).into(),
+            Argument::identifier("actor.id"),
+        ]
+    );
+}
+
+#[test]
+fn condition_precedence_and_grouping_are_lowered() {
+    let source = concat!(
+        ":: tavern_arrival\n",
+        ":if knows_a() or knows_b() and not (blocked())\n",
+        "  > gated_line\n",
+        "    Hi.\n",
+    );
+
+    let lowered = lower(source);
+
+    assert!(lowered.diagnostics.is_empty());
+    let branch = if_statement(single_block(&lowered), 0);
+    let ConditionExpression::Or(or_group) = &branch.condition else {
+        panic!("expected top-level or condition");
+    };
+    assert_eq!(or_group.expressions.len(), 2);
+    let ConditionExpression::And(and_group) = &or_group.expressions[1] else {
+        panic!("expected and to bind tighter than or");
+    };
+    assert_eq!(and_group.expressions.len(), 2);
+    let ConditionExpression::Not(not) = &and_group.expressions[1] else {
+        panic!("expected not expression");
+    };
+    assert!(matches!(
+        not.expression.as_ref(),
+        ConditionExpression::Grouped(_)
+    ));
+}
+
+#[test]
+fn condition_parser_rejects_dangling_and_trailing_tokens() {
+    let source = concat!(
+        ":: tavern_arrival\n",
+        ":if knows_secret(player) trailing\n",
+        "  > trailing_tokens\n",
+        "    Hi.\n",
+        ":if knows_a() and\n",
+        "  > dangling_operator\n",
+        "    Hi.\n",
+        "? ask if knows_secret(player) sfx=door\n",
+        "  Ask.\n",
+    );
+
+    let lowered = lower(source);
+
+    assert_diagnostic_codes(
+        &lowered,
+        ["RECITE_PARSE013", "RECITE_PARSE013", "RECITE_PARSE013"],
+    );
+
+    let choice = choice_statement(single_block(&lowered), 0);
+    assert_eq!(
+        choice.id.as_ref().map(recite_core::ChoiceId::as_str),
+        Some("ask")
+    );
+    assert!(choice.condition.is_none());
+    assert!(choice.metadata.is_empty());
+}
+
+#[test]
+fn effect_parser_rejects_incomplete_or_trailing_calls() {
+    let source = concat!(
+        ":: tavern_arrival\n",
+        "! deferred play_sfx(snap) trailing\n",
+        "! immediate play_sfx(\n",
+        "! blocking\n",
+    );
+
+    let lowered = lower(source);
+
+    assert_diagnostic_codes(
+        &lowered,
+        ["RECITE_PARSE012", "RECITE_PARSE012", "RECITE_PARSE012"],
+    );
+    assert!(single_block(&lowered).statements.is_empty());
+}
+
+#[test]
+fn else_only_attaches_to_immediately_preceding_if() {
+    let source = concat!(
+        ":: tavern_arrival\n",
+        ":if knows_secret(player)\n",
+        "  > gated_line\n",
+        "    Hi.\n",
+        "# comment breaks the if/else adjacency\n",
+        ":else\n",
+        "  > fallback_line\n",
+        "    Hi.\n",
+    );
+
+    let lowered = lower(source);
+
+    assert_diagnostic_codes(&lowered, ["RECITE_PARSE015"]);
+    let block = single_block(&lowered);
+    assert_eq!(
+        block
+            .statements
+            .iter()
+            .map(Statement::kind)
+            .collect::<Vec<_>>(),
+        [StatementKind::If, StatementKind::Comment]
+    );
+    assert!(if_statement(block, 0).else_statements.is_empty());
+}
+
+#[test]
+fn malformed_headers_conditions_and_cases_report_diagnostics() {
+    let source = concat!(
+        ":: tavern_arrival\n",
+        "> line bare key=\n",
+        "  Hello.\n",
+        "? if knows_secret(player)\n",
+        "  Choice.\n",
+        "->\n",
+        "! delayed play()\n",
+        ":if knows_secret(\n",
+        "  > gated\n",
+        "    Hi.\n",
+        ":else trailing\n",
+        "  > fallback\n",
+        "    Hi.\n",
+        ":case tired\n",
+        "  > orphan\n",
+        "    No.\n",
+        ":match thread_stage(thread)\n",
+        "  > not_case\n",
+        "    No.\n",
+    );
+
+    let lowered = lower(source);
+
+    assert_diagnostic_codes(
+        &lowered,
+        [
+            "RECITE_PARSE008",
+            "RECITE_PARSE008",
+            "RECITE_PARSE009",
+            "RECITE_PARSE010",
+            "RECITE_PARSE012",
+            "RECITE_PARSE013",
+            "RECITE_PARSE008",
+            "RECITE_PARSE016",
+            "RECITE_PARSE014",
+        ],
+    );
+}
+
+#[test]
+fn conditional_body_is_not_flattened_into_block_statements() {
     let source = concat!(
         ":: tavern_arrival\n",
         ":if knows_secret(player)\n",
@@ -441,10 +837,20 @@ fn unsupported_conditional_body_is_not_flattened_into_block_statements() {
 
     let lowered = lower(source);
 
-    assert_diagnostic_codes(&lowered, ["RECITE_PARSE004"]);
-    assert_eq!(lowered.source_file.blocks[0].statements.len(), 1);
+    assert!(lowered.diagnostics.is_empty());
+    assert_eq!(lowered.source_file.blocks[0].statements.len(), 2);
 
-    let line = line_statement(single_block(&lowered), 0);
+    let branch = if_statement(single_block(&lowered), 0);
+    assert_eq!(branch.then_statements.len(), 1);
+    let Statement::Line(gated_line) = &branch.then_statements[0] else {
+        panic!("expected gated line");
+    };
+    assert_eq!(
+        gated_line.id.as_ref().map(recite_core::LineId::as_str),
+        Some("gated_line")
+    );
+
+    let line = line_statement(single_block(&lowered), 1);
     assert_eq!(
         line.id.as_ref().map(recite_core::LineId::as_str),
         Some("ordinary_line")
@@ -453,7 +859,7 @@ fn unsupported_conditional_body_is_not_flattened_into_block_statements() {
 }
 
 #[test]
-fn unsupported_nested_choice_body_is_not_appended_to_parent_prose() {
+fn nested_choice_body_is_not_appended_to_parent_prose() {
     let source = concat!(
         ":: tavern_arrival\n",
         "> prompt_line\n",
@@ -465,10 +871,17 @@ fn unsupported_nested_choice_body_is_not_appended_to_parent_prose() {
 
     let lowered = lower(source);
 
-    assert_diagnostic_codes(&lowered, ["RECITE_PARSE004"]);
+    assert_diagnostic_codes(&lowered, ["RECITE_PARSE017"]);
 
     let line = line_statement(single_block(&lowered), 0);
     assert_eq!(line.source_text.text, "What do you need?");
+    assert_eq!(
+        line.statements
+            .iter()
+            .map(Statement::kind)
+            .collect::<Vec<_>>(),
+        [StatementKind::Choice]
+    );
 }
 
 #[test]
@@ -491,12 +904,12 @@ fn lowering_summary_stays_stable_for_supported_and_recovered_statements() {
         &lowered_summary(&lowered),
         expect![[r#"
             diagnostics:
-              - RECITE_PARSE004 @ 5:3
-              - RECITE_PARSE004 @ 8:1
+              - RECITE_PARSE017 @ 7:3
             blocks:
-              - tavern_arrival default=true statements=2
+              - tavern_arrival default=true statements=3
                 - comment "scene opener" @ 2:1
                 - line ta_001 speaker=innkeeper text="Welcome." metadata=[portrait, repeat]
+                - Choice
         "#]],
     );
 }
@@ -516,6 +929,38 @@ fn line_statement(block: &Block, index: usize) -> &Line {
     };
 
     line
+}
+
+fn choice_statement(block: &Block, index: usize) -> &Choice {
+    let Statement::Choice(choice) = &block.statements[index] else {
+        panic!("expected statement {index} to be a choice");
+    };
+
+    choice
+}
+
+fn nested_choice(line: &Line, index: usize) -> &Choice {
+    let Statement::Choice(choice) = &line.statements[index] else {
+        panic!("expected nested statement {index} to be a choice");
+    };
+
+    choice
+}
+
+fn if_statement(block: &Block, index: usize) -> &IfBranch {
+    let Statement::If(branch) = &block.statements[index] else {
+        panic!("expected statement {index} to be an if branch");
+    };
+
+    branch
+}
+
+fn match_statement(block: &Block, index: usize) -> &MatchBranch {
+    let Statement::Match(branch) = &block.statements[index] else {
+        panic!("expected statement {index} to be a match branch");
+    };
+
+    branch
 }
 
 fn comment_statement(block: &Block, index: usize) -> &recite_core::Comment {

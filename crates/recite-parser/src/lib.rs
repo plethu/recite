@@ -4,7 +4,9 @@
 //! and syntax diagnostics. Semantic validation stays in compiler-facing passes
 //! over the lowered `recite-core` source model.
 
+mod condition;
 mod diagnostics;
+mod header;
 mod layout;
 mod lower;
 mod markers;

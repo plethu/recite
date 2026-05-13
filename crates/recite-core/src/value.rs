@@ -58,6 +58,8 @@ pub struct MetadataEntry {
     pub key: String,
     pub value: Value,
     pub source_span: Option<SourceSpan>,
+    pub key_span: Option<SourceSpan>,
+    pub value_span: Option<SourceSpan>,
 }
 
 impl MetadataEntry {
@@ -67,12 +69,25 @@ impl MetadataEntry {
             key: key.into(),
             value: value.into(),
             source_span: None,
+            key_span: None,
+            value_span: None,
         }
     }
 
     #[must_use]
     pub fn with_source_span(mut self, source_span: SourceSpan) -> Self {
         self.source_span = Some(source_span);
+        self
+    }
+
+    #[must_use]
+    pub fn with_key_value_spans(
+        mut self,
+        key_span: SourceSpan,
+        value_span: Option<SourceSpan>,
+    ) -> Self {
+        self.key_span = Some(key_span);
+        self.value_span = value_span;
         self
     }
 }

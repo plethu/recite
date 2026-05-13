@@ -93,3 +93,22 @@ pub(crate) fn span_for_line(path: &str, line: u32, column: usize) -> SourceSpan 
             .expect("parser line and column positions are 1-based"),
     )
 }
+
+pub(crate) fn span_for_text(path: &str, line: u32, column: usize, text: &str) -> SourceSpan {
+    if text.is_empty() {
+        return span_for_line(path, line, column);
+    }
+
+    let end_column = column
+        .saturating_add(text.chars().count())
+        .saturating_sub(1);
+    SourceSpan::new(
+        path,
+        SourcePosition::new(line, u32::try_from(column).unwrap_or(u32::MAX))
+            .expect("parser line and column positions are 1-based"),
+        Some(
+            SourcePosition::new(line, u32::try_from(end_column).unwrap_or(u32::MAX))
+                .expect("parser line and column positions are 1-based"),
+        ),
+    )
+}
