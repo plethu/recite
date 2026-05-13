@@ -1,0 +1,7 @@
+diagnostics:
+- code: RECITE_PARSE007
+  severity: Error
+  message: mixed indentation inside statement body
+  file: fixtures/recite/invalid/parser_mixed_indent.recite
+  line: 4
+  column: 5

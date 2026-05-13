@@ -1,0 +1,10 @@
+:: start
+? choose_path
+  Choose.
+  >
+    Nested missing line ID.
+  -> missing_target
+> repeated
+  First repeated line.
+? repeated
+  Duplicate choice.

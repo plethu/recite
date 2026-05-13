@@ -1,0 +1,5 @@
+:: tavern_arrival
+> ta_001
+  Welcome.
+    This line uses a different indent.
+  Back to the original indent.
