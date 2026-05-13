@@ -215,7 +215,7 @@ pub struct Choice {
     pub source_text: SourceText,
     pub metadata: Metadata,
     pub condition: Option<ConditionExpression>,
-    pub target: Option<DivertTarget>,
+    pub target: Option<ChoiceTarget>,
     pub echo: ChoiceEcho,
     pub statements: Vec<Statement>,
     pub span: SourceSpan,
@@ -249,7 +249,7 @@ impl Choice {
     }
 
     #[must_use]
-    pub fn with_target(mut self, target: DivertTarget) -> Self {
+    pub fn with_target(mut self, target: ChoiceTarget) -> Self {
         self.target = Some(target);
         self
     }
@@ -264,6 +264,21 @@ impl Choice {
     pub fn with_statements(mut self, statements: Vec<Statement>) -> Self {
         self.statements = statements;
         self
+    }
+}
+
+/// The block or end target selected by a choice, with the source span of the
+/// authored target statement.
+#[derive(Clone, Debug, Eq, PartialEq)]
+pub struct ChoiceTarget {
+    pub target: DivertTarget,
+    pub span: SourceSpan,
+}
+
+impl ChoiceTarget {
+    #[must_use]
+    pub fn new(target: DivertTarget, span: SourceSpan) -> Self {
+        Self { target, span }
     }
 }
 

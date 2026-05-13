@@ -9,7 +9,7 @@ mod source_location;
 mod value;
 
 pub use ast::{
-    Argument, Block, BlockReference, Choice, ChoiceEcho, Comment, ConditionCall,
+    Argument, Block, BlockReference, Choice, ChoiceEcho, ChoiceTarget, Comment, ConditionCall,
     ConditionExpression, ConditionGroup, ConditionUnary, Divert, DivertTarget, Effect, EffectMode,
     IfBranch, Line, MatchArm, MatchBranch, MatchPattern, SourceFile, SourceText, Statement,
     StatementKind,
