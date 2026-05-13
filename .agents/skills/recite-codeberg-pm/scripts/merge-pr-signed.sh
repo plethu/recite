@@ -17,6 +17,7 @@ Environment:
   RECITE_SIGNED_MERGE_SKIP_CHECKS=1  Skip cargo fmt/test/clippy checks.
   RECITE_SIGNED_MERGE_SKIP_GATES=1   Skip remote review gates.
   RECITE_SIGNED_MERGE_SKIP_MARK=1    Skip Codeberg manual-merged marker.
+  RECITE_SIGNED_MERGE_KEEP_HEAD=1     Keep the PR head branch after merge.
 
 If checks fail after the merge is staged, inspect the tree and run:
   git merge --abort
@@ -75,6 +76,8 @@ printf '%s\n' "$pr_json" | jq '{
 base_branch="$(printf '%s\n' "$pr_json" | jq -r '.base.ref // empty')"
 head_branch="$(printf '%s\n' "$pr_json" | jq -r '.head.ref // empty')"
 head_sha="$(printf '%s\n' "$pr_json" | jq -r '.head.sha // empty')"
+base_repo="$(printf '%s\n' "$pr_json" | jq -r '.base.repo.full_name // empty')"
+head_repo="$(printf '%s\n' "$pr_json" | jq -r '.head.repo.full_name // empty')"
 
 if [[ -z "$base_branch" || -z "$head_branch" || -z "$head_sha" ]]; then
   echo "PR #${pr_number} is missing base, head, or head SHA in the Codeberg API response" >&2
@@ -192,6 +195,37 @@ if [[ "${RECITE_SIGNED_MERGE_SKIP_MARK:-0}" != "1" ]]; then
 
   if [[ -n "$manual_merge_output" ]]; then
     printf '%s\n' "$manual_merge_output"
+  fi
+
+  if [[ "${RECITE_SIGNED_MERGE_KEEP_HEAD:-0}" != "1" ]]; then
+    echo
+    echo "== delete merged head branch =="
+    if [[ -z "$base_repo" || -z "$head_repo" ]]; then
+      echo "skipping branch deletion: PR response did not include base/head repository names"
+    elif [[ "$head_repo" != "$base_repo" ]]; then
+      echo "skipping branch deletion: PR head is from ${head_repo}, not ${base_repo}"
+    elif [[ "$head_branch" == "$base_branch" || "$head_branch" == "main" ]]; then
+      echo "skipping branch deletion: refusing to delete protected branch name ${head_branch}"
+    else
+      encoded_head_branch="$(printf '%s' "$head_branch" | jq -sRr @uri)"
+      set +e
+      delete_branch_output="$(
+        tea api -X DELETE "repos/{owner}/{repo}/branches/${encoded_head_branch}" 2>&1
+      )"
+      delete_branch_status=$?
+      set -e
+
+      if (( delete_branch_status != 0 )); then
+        if printf '%s\n' "$delete_branch_output" | grep -Eq '(^|[^0-9])404([^0-9]|$)|not[ -]found|does not exist'; then
+          echo "head branch ${head_branch} was already deleted"
+        else
+          printf '%s\n' "$delete_branch_output" >&2
+          exit "$delete_branch_status"
+        fi
+      else
+        echo "deleted ${head_branch}"
+      fi
+    fi
   fi
 fi
 
