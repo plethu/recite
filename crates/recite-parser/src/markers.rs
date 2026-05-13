@@ -82,19 +82,6 @@ impl StatementMarker {
             Self::Comment => ReciteSyntaxKind::CommentText,
         }
     }
-
-    pub(crate) const fn is_unsupported_lowering(self) -> bool {
-        matches!(
-            self,
-            Self::Choice
-                | Self::Effect
-                | Self::Divert
-                | Self::If
-                | Self::Else
-                | Self::Match
-                | Self::Case
-        )
-    }
 }
 
 fn has_directive_marker(trimmed: &str, marker: &str) -> bool {
