@@ -2,47 +2,56 @@
 
 > dialogue tooling for narrative-heavy games.
 
-recite is a dialogue compiler, runtime, and tooling project for games with a
-lot to say: localisable, testable, predictable dialogue without tying the model
-to one engine's scripting language, one asset store, or one editor-shaped way of
-thinking.
+> **pre-release.** apis, surfaces, and edges are in flux while the v1 shape
+> settles. external code contributions are not being accepted yet — see
+> [`CONTRIBUTING.md`](CONTRIBUTING.md). issues, questions, and design
+> feedback are welcome, especially from real authoring, localisation,
+> runtime, or tooling needs.
 
-the basic idea is that dialogue should describe the conversation. game logic
-should stay in the game.
+recite is a dialogue compiler, runtime, and toolchain for games with a lot to
+say: localisable, testable, predictable dialogue without tying it to one
+engine, one asset store, or one editor-shaped way of thinking.
 
-recite treats authored text as a small deterministic protocol. content names
-the things narrative systems need, and the runtime reports structured events
-back to the caller.
+it is written in rust. godot and bevy are first-class adapter targets.
+
+the basic idea: dialogue should describe the conversation. game logic should
+stay in the game.
+
+authored text is a small deterministic protocol. content names what narrative
+systems need, and the runtime reports structured events back to the caller.
 
 ## why this exists
 
-recite, and the games i develop, are inspired by my love for games with a lot
-of narrative ambition: disco elysium, citizen sleeper, persona, final fantasy,
-planescape: torment, pillars of eternity, night in the woods, and larian's big
-reactive worlds.
+recite, and the games i develop, are inspired by games with narrative
+ambition: disco elysium, citizen sleeper, persona, final fantasy, planescape:
+torment, pillars of eternity, night in the woods, and larian's reactive
+worlds.
 
-the tooling for that kind of work can be frustrating in very practical ways:
-one-off mini-languages whose ideas do not travel much beyond the tool, dialogue
-that calls directly into engine scripting, asset-store paywalls, and
-localisation or content validation treated as afterthoughts. it can leave you
-feeling like you are getting better at a specific product, rather than building
-a portable way of thinking about narrative systems.
+the tooling for that kind of work has familiar frustrations:
 
-recite still has its own small language. that is intentional. dialogue has
-structure, and a format for dialogue should give that structure names while
-keeping it close to the text. the boundary is deliberately simple: conditions
-are pure queries. effects are typed requests. the game remains the place where
-game logic happens.
+- one-off mini-languages whose ideas don't travel beyond the tool;
+- dialogue that calls directly into engine scripting;
+- asset-store paywalls around basic features;
+- localisation and content validation treated as afterthoughts.
 
-recite's contract is deliberately small:
+it can leave you feeling like you're getting better at a specific product,
+rather than building a portable way of thinking about narrative systems.
+
+recite still has its own small language — intentionally. dialogue has
+structure, and a format for dialogue should name that structure while keeping
+it close to the text. the boundary stays simple: conditions are pure queries,
+effects are typed requests, and the game stays the place where game logic
+happens.
+
+the contract is deliberately small:
 
 - deterministic traversal across replay, save/load, and tests;
 - stable ids, useful extraction paths, and validation before runtime;
 - editor tooling that helps authors without owning the whole workflow;
 - structured runtime output, headless tests, traces, and fixtures.
 
-the writing can be strange, tender, sprawling, or funny. the machinery should be
-boring in the best possible way.
+the writing can be strange, tender, sprawling, or funny. the machinery should
+be boring in the best possible way.
 
 ## a small sketch
 
@@ -74,21 +83,8 @@ is a request for the game to handle.
 
 the production direction is described in
 [`docs/recite-production-spec.md`](docs/recite-production-spec.md): source
-format, schema, compiler, runtime, cli, editor tooling, and engine adapters that
-keep the core dialogue contract intact.
-
-## status
-
-> **pre-release**
->
-> recite is early public work. expect changing apis, incomplete surfaces, and
-> rough edges while the v1 shape settles.
-
-external code contributions are not being accepted until the v1 shape has
-stabilised. see [`CONTRIBUTING.md`](CONTRIBUTING.md) for the current policy.
-
-issues, questions, and design feedback are welcome, especially when they come
-from real authoring, localisation, runtime, or tooling needs.
+format, schema, compiler, runtime, cli, editor tooling, and engine adapters
+that keep the core dialogue contract intact.
 
 ## ai usage disclosure
 
