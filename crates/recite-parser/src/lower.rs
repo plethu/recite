@@ -7,6 +7,7 @@ use crate::diagnostics::{
     empty_block_id, missing_block_id, missing_line_id, nested_unsupported_lowering,
     statement_before_block, unsupported_lowering,
 };
+use crate::layout::{ClassifiedLine, LineBodyItem, classify_line, scan_line_body};
 use crate::markers::StatementMarker;
 use crate::source::{LogicalLine, LogicalLines, span_for_line};
 
@@ -67,7 +68,7 @@ impl<'source, 'diagnostics> Lowerer<'source, 'diagnostics> {
             let line = self.lines[index];
             let trimmed = line.trimmed_content();
 
-            if StatementMarker::parse(trimmed) != Some(StatementMarker::Block) {
+            if classify_line(line) != ClassifiedLine::Statement(StatementMarker::Block) {
                 self.report_statement_before_block(line, trimmed);
                 index += 1;
                 continue;
@@ -116,13 +117,13 @@ impl<'source, 'diagnostics> Lowerer<'source, 'diagnostics> {
         let mut statements = Vec::new();
 
         while index < self.lines.len() {
-            let trimmed = self.lines[index].trimmed_content();
+            let line = self.lines[index];
 
-            if StatementMarker::parse(trimmed) == Some(StatementMarker::Block) {
+            if classify_line(line) == ClassifiedLine::Statement(StatementMarker::Block) {
                 break;
             }
 
-            let (statement, next_index) = self.lower_block_statement(index, trimmed);
+            let (statement, next_index) = self.lower_block_statement(index);
             if let Some(statement) = statement {
                 statements.push(statement);
             }
@@ -132,17 +133,17 @@ impl<'source, 'diagnostics> Lowerer<'source, 'diagnostics> {
         (statements, index)
     }
 
-    fn lower_block_statement(&mut self, index: usize, trimmed: &str) -> (Option<Statement>, usize) {
-        match StatementMarker::parse(trimmed) {
-            Some(StatementMarker::Line) => {
+    fn lower_block_statement(&mut self, index: usize) -> (Option<Statement>, usize) {
+        match classify_line(self.lines[index]) {
+            ClassifiedLine::Statement(StatementMarker::Line) => {
                 let (line, next_index) = self.lower_line(index);
                 (Some(Statement::Line(line)), next_index)
             }
-            Some(StatementMarker::Comment) => (
+            ClassifiedLine::Statement(StatementMarker::Comment) => (
                 Some(Statement::Comment(self.lower_comment(self.lines[index]))),
                 index + 1,
             ),
-            Some(marker) if marker.is_unsupported_lowering() => {
+            ClassifiedLine::Statement(marker) if marker.is_unsupported_lowering() => {
                 self.report_unsupported_statement(index);
                 (None, skip_statement_body(&self.lines, index))
             }
@@ -163,7 +164,7 @@ impl<'source, 'diagnostics> Lowerer<'source, 'diagnostics> {
         );
         let line_id = header_fields.next().map(|field| field.text);
         let (speaker, metadata) = lower_line_header_fields(self.path, header_fields);
-        let lowered_text = self.lower_line_text(line_index + 1, header);
+        let lowered_text = self.lower_line_text(line_index, header);
 
         if line_id.is_none() {
             self.diagnostics.push(missing_line_id(line_span.clone()));
@@ -183,48 +184,39 @@ impl<'source, 'diagnostics> Lowerer<'source, 'diagnostics> {
         (line, lowered_text.next_index)
     }
 
-    fn lower_line_text(&mut self, start_index: usize, header: LogicalLine<'_>) -> LoweredLineText {
+    fn lower_line_text(&mut self, header_index: usize, header: LogicalLine<'_>) -> LoweredLineText {
         let header_indent = header.indent_len();
         let mut text_lines = Vec::new();
         let mut text_start_line = header.number;
         let mut text_start_column = header_indent + 3;
-        let mut index = start_index;
 
-        while index < self.lines.len() {
-            let current = self.lines[index];
-            let trimmed = current.trimmed_content();
-            let indent = current.indent_len();
+        let scan = scan_line_body(&self.lines, header_index);
+        for item in &scan.items {
+            match *item {
+                LineBodyItem::Blank { .. } => text_lines.push(String::new()),
+                LineBodyItem::Prose { index } => {
+                    let current = self.lines[index];
+                    let indent = current.indent_len();
 
-            if StatementMarker::parse(trimmed) == Some(StatementMarker::Block)
-                || (indent <= header_indent && is_statement_header(trimmed))
-            {
-                break;
+                    if text_lines.is_empty() {
+                        text_start_line = current.number;
+                        text_start_column = indent + 1;
+                    }
+                    text_lines.push(current.trimmed_content().to_owned());
+                }
+                LineBodyItem::MixedIndent { .. } => {}
+                LineBodyItem::NestedStatement { index } => {
+                    let current = self.lines[index];
+                    self.report_nested_unsupported_statement(current, current.indent_len());
+                    break;
+                }
             }
-
-            if trimmed.is_empty() {
-                text_lines.push(String::new());
-                index += 1;
-                continue;
-            }
-
-            if is_statement_header(trimmed) {
-                self.report_nested_unsupported_statement(current, indent);
-                index = skip_statement_body(&self.lines, index);
-                continue;
-            }
-
-            if text_lines.is_empty() {
-                text_start_line = current.number;
-                text_start_column = indent + 1;
-            }
-            text_lines.push(trimmed.to_owned());
-            index += 1;
         }
 
         LoweredLineText {
             text: text_lines.join("\n"),
             span: span_for_line(self.path, text_start_line, text_start_column),
-            next_index: index,
+            next_index: scan.next_index,
         }
     }
 
@@ -240,7 +232,9 @@ impl<'source, 'diagnostics> Lowerer<'source, 'diagnostics> {
     }
 
     fn report_statement_before_block(&mut self, line: LogicalLine<'_>, trimmed: &str) {
-        if trimmed.is_empty() || StatementMarker::parse(trimmed) == Some(StatementMarker::Comment) {
+        if trimmed.is_empty()
+            || classify_line(line) == ClassifiedLine::Statement(StatementMarker::Comment)
+        {
             return;
         }
 
@@ -333,13 +327,12 @@ fn skip_statement_body(lines: &[LogicalLine<'_>], header_index: usize) -> usize 
 
     while index < lines.len() {
         let line = lines[index];
-        let trimmed = line.trimmed_content();
 
-        if StatementMarker::parse(trimmed) == Some(StatementMarker::Block) {
+        if classify_line(line) == ClassifiedLine::Statement(StatementMarker::Block) {
             break;
         }
 
-        if !trimmed.is_empty() && line.indent_len() <= header_indent {
+        if !line.trimmed_content().is_empty() && line.indent_len() <= header_indent {
             break;
         }
 
@@ -384,8 +377,4 @@ fn header_fields_after_prefix<'a>(
             column: base_column + start,
         })
     })
-}
-
-fn is_statement_header(trimmed: &str) -> bool {
-    StatementMarker::parse(trimmed).is_some()
 }

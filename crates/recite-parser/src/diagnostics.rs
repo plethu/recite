@@ -6,6 +6,7 @@ pub(crate) const MISSING_BLOCK_ID: &str = "RECITE_PARSE003";
 pub(crate) const UNSUPPORTED_LOWERING: &str = "RECITE_PARSE004";
 pub(crate) const EMPTY_BLOCK_ID: &str = "RECITE_PARSE005";
 pub(crate) const MISSING_LINE_ID: &str = "RECITE_PARSE006";
+pub(crate) const MIXED_INDENT: &str = "RECITE_PARSE007";
 
 pub(crate) fn expected_statement_or_prose(span: SourceSpan) -> Diagnostic {
     diagnostic(
@@ -55,6 +56,14 @@ pub(crate) fn missing_line_id(span: SourceSpan) -> Diagnostic {
     diagnostic(
         MISSING_LINE_ID,
         "line header has no line id; semantic validation may require one",
+        span,
+    )
+}
+
+pub(crate) fn mixed_indent(span: SourceSpan) -> Diagnostic {
+    diagnostic(
+        MIXED_INDENT,
+        "mixed indentation inside statement body",
         span,
     )
 }

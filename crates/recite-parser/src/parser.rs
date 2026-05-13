@@ -1,7 +1,8 @@
 use recite_core::Diagnostic;
 use rowan::{GreenNode, GreenNodeBuilder};
 
-use crate::diagnostics::expected_statement_or_prose;
+use crate::diagnostics::{expected_statement_or_prose, mixed_indent};
+use crate::layout::{ClassifiedLine, LineBodyItem, classify_line, scan_line_body};
 use crate::lower::{LoweredSourceFile, lower_source_file};
 use crate::markers::StatementMarker;
 use crate::source::{LogicalLine, LogicalLines, span_for_line};
@@ -43,12 +44,14 @@ pub fn parse(path: impl Into<String>, source: impl Into<String>) -> Parse {
     let source = source.into();
     let mut builder = GreenNodeBuilder::new();
     let mut diagnostics = Vec::new();
+    let lines = LogicalLines::new(&source).collect::<Vec<_>>();
 
     builder.start_node(ReciteSyntaxKind::Root.into());
-    for logical_line in LogicalLines::new(&source) {
+    for logical_line in lines.iter().copied() {
         parse_line(&path, logical_line, &mut builder, &mut diagnostics);
     }
     builder.finish_node();
+    validate_body_indentation(&path, &lines, &mut diagnostics);
 
     Parse {
         path,
@@ -67,24 +70,39 @@ fn parse_line(
     let indent_len = line.indent_len();
     let indent = line.indentation();
     let trimmed = line.trimmed_content();
-    let line_kind = classify_line(trimmed, indent_len);
+    let classification = classify_line(line);
+    let line_kind = classification.syntax_kind();
 
     builder.start_node(line_kind.into());
     push_token(builder, ReciteSyntaxKind::Whitespace, indent);
 
-    match line_kind {
-        ReciteSyntaxKind::Block => parse_prefixed_line(builder, trimmed, StatementMarker::Block),
-        ReciteSyntaxKind::Line => parse_prefixed_line(builder, trimmed, StatementMarker::Line),
-        ReciteSyntaxKind::Choice => parse_prefixed_line(builder, trimmed, StatementMarker::Choice),
-        ReciteSyntaxKind::Effect => parse_prefixed_line(builder, trimmed, StatementMarker::Effect),
-        ReciteSyntaxKind::Divert => parse_prefixed_line(builder, trimmed, StatementMarker::Divert),
-        ReciteSyntaxKind::If
-        | ReciteSyntaxKind::Else
-        | ReciteSyntaxKind::Match
-        | ReciteSyntaxKind::Case => parse_directive_line(builder, trimmed),
-        ReciteSyntaxKind::Comment => parse_comment_line(builder, trimmed),
-        ReciteSyntaxKind::Prose => push_token(builder, ReciteSyntaxKind::Text, trimmed),
-        ReciteSyntaxKind::Error => {
+    match classification {
+        ClassifiedLine::Statement(StatementMarker::Block) => {
+            parse_prefixed_line(builder, trimmed, StatementMarker::Block);
+        }
+        ClassifiedLine::Statement(StatementMarker::Line) => {
+            parse_prefixed_line(builder, trimmed, StatementMarker::Line);
+        }
+        ClassifiedLine::Statement(StatementMarker::Choice) => {
+            parse_prefixed_line(builder, trimmed, StatementMarker::Choice);
+        }
+        ClassifiedLine::Statement(StatementMarker::Effect) => {
+            parse_prefixed_line(builder, trimmed, StatementMarker::Effect);
+        }
+        ClassifiedLine::Statement(StatementMarker::Divert) => {
+            parse_prefixed_line(builder, trimmed, StatementMarker::Divert);
+        }
+        ClassifiedLine::Statement(
+            StatementMarker::If
+            | StatementMarker::Else
+            | StatementMarker::Match
+            | StatementMarker::Case,
+        ) => parse_directive_line(builder, trimmed),
+        ClassifiedLine::Statement(StatementMarker::Comment) => parse_comment_line(builder, trimmed),
+        ClassifiedLine::Blank | ClassifiedLine::Prose => {
+            push_token(builder, ReciteSyntaxKind::Text, trimmed);
+        }
+        ClassifiedLine::Error => {
             push_token(builder, ReciteSyntaxKind::Text, trimmed);
             if !trimmed.is_empty() {
                 diagnostics.push(expected_statement_or_prose(span_for_line(
@@ -94,26 +112,38 @@ fn parse_line(
                 )));
             }
         }
-        _ => unreachable!("line classification must produce a node kind"),
     }
 
     push_token(builder, ReciteSyntaxKind::Newline, line.newline);
     builder.finish_node();
 }
 
-fn classify_line(trimmed: &str, indent_len: usize) -> ReciteSyntaxKind {
-    if trimmed.is_empty() {
-        return ReciteSyntaxKind::Prose;
-    }
+fn validate_body_indentation(
+    path: &str,
+    lines: &[LogicalLine<'_>],
+    diagnostics: &mut Vec<Diagnostic>,
+) {
+    for (index, line) in lines.iter().copied().enumerate() {
+        if classify_line(line) != ClassifiedLine::Statement(StatementMarker::Line) {
+            continue;
+        }
 
-    if let Some(marker) = StatementMarker::parse(trimmed) {
-        return marker.syntax_kind();
+        validate_line_body_indentation(path, lines, index, diagnostics);
     }
+}
 
-    if indent_len > 0 {
-        ReciteSyntaxKind::Prose
-    } else {
-        ReciteSyntaxKind::Error
+fn validate_line_body_indentation(
+    path: &str,
+    lines: &[LogicalLine<'_>],
+    header_index: usize,
+    diagnostics: &mut Vec<Diagnostic>,
+) {
+    for item in scan_line_body(lines, header_index).items {
+        if let LineBodyItem::MixedIndent { index } = item {
+            let line = lines[index];
+            let indent = line.indent_len();
+            diagnostics.push(mixed_indent(span_for_line(path, line.number, indent + 1)));
+        }
     }
 }
 
