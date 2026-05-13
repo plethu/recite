@@ -62,6 +62,41 @@ fn statement_markers_classify_consistently() {
 }
 
 #[test]
+fn directive_markers_are_boundary_aware() {
+    let source = concat!(":ifx\n", ":elsewhere\n", ":matchmaking\n", ":casefile\n");
+
+    let parse = parse(TEST_PATH, source);
+    let kinds = parse
+        .syntax()
+        .children()
+        .map(|node| node.kind())
+        .collect::<Vec<_>>();
+
+    assert_eq!(
+        kinds,
+        [
+            ReciteSyntaxKind::Error,
+            ReciteSyntaxKind::Error,
+            ReciteSyntaxKind::Error,
+            ReciteSyntaxKind::Error,
+        ]
+    );
+    assert_eq!(
+        parse
+            .diagnostics()
+            .iter()
+            .map(|diagnostic| diagnostic.code.as_str())
+            .collect::<Vec<_>>(),
+        [
+            "RECITE_PARSE001",
+            "RECITE_PARSE001",
+            "RECITE_PARSE001",
+            "RECITE_PARSE001",
+        ]
+    );
+}
+
+#[test]
 fn syntax_tree_recovers_malformed_lines_with_stable_diagnostics() {
     let parse = parse("dialogue/broken.recite", "oops\n:: tavern\n");
 
@@ -129,6 +164,178 @@ fn lowering_produces_source_file_shape_and_preserves_ordered_text() {
         Some("ta_002")
     );
     assert_eq!(second_line.source_text.text, "What do you need?");
+}
+
+#[test]
+fn lowering_reports_mixed_indent_inside_line_body() {
+    let source = concat!(
+        ":: tavern_arrival\n",
+        "> ta_001\n",
+        "  Welcome.\n",
+        "    This line uses a different indent.\n",
+        "  Back to the original indent.\n",
+    );
+
+    let parse = parse(TEST_PATH, source);
+    let lowered = parse.lower_source_file();
+
+    assert_eq!(
+        parse
+            .diagnostics()
+            .iter()
+            .map(|diagnostic| diagnostic.code.as_str())
+            .collect::<Vec<_>>(),
+        ["RECITE_PARSE007"]
+    );
+    assert_diagnostic_codes(&lowered, ["RECITE_PARSE007"]);
+    assert_eq!(lowered.diagnostics[0].span.start.line(), 4);
+    assert_eq!(lowered.diagnostics[0].span.start.column(), 5);
+
+    let line = line_statement(single_block(&lowered), 0);
+    assert_eq!(
+        line.source_text.text,
+        "Welcome.\nBack to the original indent."
+    );
+}
+
+#[test]
+fn mixed_indent_statement_markers_report_indent_diagnostics() {
+    let source = concat!(
+        ":: tavern_arrival\n",
+        "> ta_001\n",
+        "  Welcome.\n",
+        "    ? ask_road\n",
+        "    :if knows_secret(player)\n",
+        "  Back to the original indent.\n",
+    );
+
+    let parse = parse(TEST_PATH, source);
+    let lowered = parse.lower_source_file();
+
+    assert_eq!(
+        parse
+            .diagnostics()
+            .iter()
+            .map(|diagnostic| diagnostic.code.as_str())
+            .collect::<Vec<_>>(),
+        ["RECITE_PARSE007", "RECITE_PARSE007"]
+    );
+    assert_diagnostic_codes(&lowered, ["RECITE_PARSE007", "RECITE_PARSE007"]);
+    assert_eq!(lowered.diagnostics[0].span.start.line(), 4);
+    assert_eq!(lowered.diagnostics[0].span.start.column(), 5);
+    assert_eq!(lowered.diagnostics[1].span.start.line(), 5);
+    assert_eq!(lowered.diagnostics[1].span.start.column(), 5);
+
+    let line = line_statement(single_block(&lowered), 0);
+    assert_eq!(
+        line.source_text.text,
+        "Welcome.\nBack to the original indent."
+    );
+}
+
+#[test]
+fn sibling_indented_statement_headers_terminate_line_prose() {
+    let source = concat!(
+        ":: tavern_arrival\n",
+        "> before_choice\n",
+        "  Choice prompt.\n",
+        "  ? ask_road\n",
+        "    Ask about the road.\n",
+        "> before_effect\n",
+        "  Effect prompt.\n",
+        "  ! deferred play_sfx(door)\n",
+        "> before_divert\n",
+        "  Divert prompt.\n",
+        "  -> END\n",
+        "> before_line\n",
+        "  Line prompt.\n",
+        "  > nested_line\n",
+        "    Nested text.\n",
+        "> before_if\n",
+        "  If prompt.\n",
+        "  :if knows_secret(player)\n",
+        "    > gated_line\n",
+        "      Gated text.\n",
+        "> before_else\n",
+        "  Else prompt.\n",
+        "  :else\n",
+        "    > fallback_line\n",
+        "      Fallback text.\n",
+        "> before_block\n",
+        "  Block prompt.\n",
+        ":: next_block\n",
+        "> next_line\n",
+        "  Next block text.\n",
+    );
+
+    let lowered = lower(source);
+
+    assert_diagnostic_codes(
+        &lowered,
+        [
+            "RECITE_PARSE004",
+            "RECITE_PARSE004",
+            "RECITE_PARSE004",
+            "RECITE_PARSE004",
+            "RECITE_PARSE004",
+            "RECITE_PARSE004",
+        ],
+    );
+
+    let first_block = &lowered.source_file.blocks[0];
+    assert_eq!(
+        (0..6)
+            .map(|index| line_statement(first_block, index).source_text.text.as_str())
+            .collect::<Vec<_>>(),
+        [
+            "Choice prompt.",
+            "Effect prompt.",
+            "Divert prompt.",
+            "Line prompt.",
+            "If prompt.",
+            "Else prompt.",
+        ]
+    );
+    assert_eq!(
+        line_statement(first_block, 6).source_text.text,
+        "Block prompt."
+    );
+    assert_eq!(lowered.source_file.blocks[1].id.as_str(), "next_block");
+}
+
+#[test]
+fn multiple_nested_statements_do_not_promote_to_block_statements() {
+    let source = concat!(
+        ":: tavern_arrival\n",
+        "> prompt_line\n",
+        "  What do you need?\n",
+        "  ? ask_road\n",
+        "    Ask about the road.\n",
+        "  > nested_line\n",
+        "    Nested line text.\n",
+        "> after_prompt\n",
+        "  Carry on.\n",
+    );
+
+    let lowered = lower(source);
+
+    assert_diagnostic_codes(&lowered, ["RECITE_PARSE004"]);
+    let block = single_block(&lowered);
+    assert_eq!(block.statements.len(), 2);
+
+    let prompt = line_statement(block, 0);
+    assert_eq!(
+        prompt.id.as_ref().map(recite_core::LineId::as_str),
+        Some("prompt_line")
+    );
+    assert_eq!(prompt.source_text.text, "What do you need?");
+
+    let after = line_statement(block, 1);
+    assert_eq!(
+        after.id.as_ref().map(recite_core::LineId::as_str),
+        Some("after_prompt")
+    );
+    assert_eq!(after.source_text.text, "Carry on.");
 }
 
 #[test]
@@ -261,10 +468,7 @@ fn unsupported_nested_choice_body_is_not_appended_to_parent_prose() {
     assert_diagnostic_codes(&lowered, ["RECITE_PARSE004"]);
 
     let line = line_statement(single_block(&lowered), 0);
-    assert_eq!(
-        line.source_text.text,
-        "What do you need?\nStill parent prose."
-    );
+    assert_eq!(line.source_text.text, "What do you need?");
 }
 
 #[test]
@@ -292,7 +496,7 @@ fn lowering_summary_stays_stable_for_supported_and_recovered_statements() {
             blocks:
               - tavern_arrival default=true statements=2
                 - comment "scene opener" @ 2:1
-                - line ta_001 speaker=innkeeper text="Welcome.\nStill parent prose." metadata=[portrait, repeat]
+                - line ta_001 speaker=innkeeper text="Welcome." metadata=[portrait, repeat]
         "#]],
     );
 }

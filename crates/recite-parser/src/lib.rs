@@ -5,6 +5,7 @@
 //! over the lowered `recite-core` source model.
 
 mod diagnostics;
+mod layout;
 mod lower;
 mod markers;
 mod parser;

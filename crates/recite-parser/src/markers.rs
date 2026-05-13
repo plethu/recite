@@ -33,10 +33,10 @@ impl StatementMarker {
             b'?' => Some(Self::Choice),
             b'!' => Some(Self::Effect),
             b'#' => Some(Self::Comment),
-            b':' if trimmed.starts_with(Self::If.text()) => Some(Self::If),
-            b':' if trimmed.starts_with(Self::Else.text()) => Some(Self::Else),
-            b':' if trimmed.starts_with(Self::Match.text()) => Some(Self::Match),
-            b':' if trimmed.starts_with(Self::Case.text()) => Some(Self::Case),
+            b':' if has_directive_marker(trimmed, Self::If.text()) => Some(Self::If),
+            b':' if has_directive_marker(trimmed, Self::Else.text()) => Some(Self::Else),
+            b':' if has_directive_marker(trimmed, Self::Match.text()) => Some(Self::Match),
+            b':' if has_directive_marker(trimmed, Self::Case.text()) => Some(Self::Case),
             _ => None,
         }
     }
@@ -95,4 +95,12 @@ impl StatementMarker {
                 | Self::Case
         )
     }
+}
+
+fn has_directive_marker(trimmed: &str, marker: &str) -> bool {
+    let Some(rest) = trimmed.strip_prefix(marker) else {
+        return false;
+    };
+
+    rest.is_empty() || rest.starts_with(char::is_whitespace)
 }
