@@ -82,6 +82,12 @@ pub fn next(
                 return session.emit(event);
             }
             CompiledStatementKind::Prompt { line, choices } => {
+                if choices.is_empty() {
+                    return Err(malformed(format!(
+                        "prompt statement at index {} has no choices",
+                        session.next_statement.as_u32()
+                    )));
+                }
                 let line = line
                     .map(|line| dialogue_line(asset, line, block.default_speaker))
                     .transpose()?;

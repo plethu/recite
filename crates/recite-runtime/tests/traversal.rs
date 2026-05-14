@@ -1,8 +1,8 @@
 use recite_compiler::{CompileInput, CompileOptions, compile_inputs};
 use recite_core::{
-    BlockIndex, BlockLookupEntry, BlockLookupTable, CompiledAssetId, CompiledConditionCall,
-    CompiledDialogue, CompiledStatementKind, CompilerVersion, LineIndex, MatchArmIndex,
-    MatchArmRange, SchemaFingerprint, SourceMapId,
+    BlockIndex, BlockLookupEntry, BlockLookupTable, ChoiceRange, CompiledAssetId,
+    CompiledConditionCall, CompiledDialogue, CompiledStatementKind, CompilerVersion, LineIndex,
+    MatchArmIndex, MatchArmRange, SchemaFingerprint, SourceMapId,
 };
 use recite_runtime::{DialogueError, DialogueEvent, UnsupportedStatementKind, next, start_scene};
 
@@ -311,6 +311,31 @@ fn mismatched_explicit_block_lookup_entry_is_structured_error() {
 
     assert!(matches!(
         start_scene(&asset, Some("work")),
+        Err(DialogueError::MalformedCompiledAsset { .. })
+    ));
+}
+
+#[test]
+fn prompt_with_empty_choice_range_is_structured_error() {
+    let mut asset = compile_asset(
+        "dialogue/start.recite",
+        concat!(
+            ":: start default\n",
+            "> prompt_line\n",
+            "  What next?\n",
+            "  ? ask_work\n",
+            "    Ask about work.\n",
+            "    -> END\n",
+        ),
+    );
+    let CompiledStatementKind::Prompt { choices, .. } = &mut asset.statements[0].kind else {
+        panic!("expected prompt statement");
+    };
+    *choices = ChoiceRange::new(choices.start, 0);
+    let mut session = start_scene(&asset, None).expect("starts");
+
+    assert!(matches!(
+        next(&asset, &mut session),
         Err(DialogueError::MalformedCompiledAsset { .. })
     ));
 }
