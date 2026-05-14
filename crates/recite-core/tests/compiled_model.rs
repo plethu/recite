@@ -1,13 +1,60 @@
 use recite_core::{
-    BlockId, BlockIndex, BlockLookupEntry, COMPILED_ASSET_FORMAT_VERSION_V0,
-    COMPILER_COMPATIBILITY_VERSION_V0, ChoiceId, ChoiceIndex, ChoiceRange, CompiledAssetEncoding,
-    CompiledAssetHeader, CompiledAssetId, CompiledChoice, CompiledChoiceEcho, CompiledDivertTarget,
+    BLAKE3_DIGEST_LEN, BlockId, BlockIndex, BlockLookupEntry, BlockLookupTable,
+    COMPILED_ASSET_FORMAT_VERSION_V0, COMPILER_COMPATIBILITY_VERSION_V0, ChoiceId, ChoiceIndex,
+    ChoiceLookupEntry, ChoiceLookupTable, ChoiceRange, CompiledAssetEncoding, CompiledAssetHeader,
+    CompiledAssetId, CompiledChoice, CompiledChoiceEcho, CompiledDialogue, CompiledDivertTarget,
     CompiledInspectionEncoding, CompiledLine, CompiledMetadataEntry, CompiledSourceMapEntry,
     CompiledStatement, CompiledStatementKind, CompiledValueError, CompilerVersion,
-    ContentFingerprint, LineId, LineIndex, MetadataIndex, MetadataRange, ScalarValue,
-    SchemaFingerprint, SourceFileIndex, SourceMapId, SourceMapIndex, SourcePosition, SourceSpan,
-    SpeakerIndex, StatementIndex, StatementRange, Value,
+    ContentFingerprint, LineId, LineIndex, LineLookupEntry, LineLookupTable, MetadataIndex,
+    MetadataRange, ScalarValue, SchemaFingerprint, SourceFileIndex, SourceMapId, SourceMapIndex,
+    SourcePosition, SourceSpan, SpeakerIndex, StatementIndex, StatementRange,
+    V0_ARGUMENT_TAG_IDENTIFIER, V0_ARGUMENT_TAG_VALUE, V0_ASSET_ENCODING_MESSAGEPACK,
+    V0_ASSET_HEADER_FIELDS, V0_CHOICE_ECHO_TAG_EXPLICIT_LINE, V0_CHOICE_ECHO_TAG_NONE,
+    V0_CHOICE_ECHO_TAG_SELECTED_TEXT, V0_COMPILED_DIALOGUE_FIELDS, V0_CONDITION_TAG_AND,
+    V0_CONDITION_TAG_CALL, V0_CONDITION_TAG_NOT, V0_CONDITION_TAG_OR, V0_DIVERT_TARGET_TAG_BLOCK,
+    V0_DIVERT_TARGET_TAG_END, V0_EFFECT_MODE_TAG_BLOCKING, V0_EFFECT_MODE_TAG_DEFERRED,
+    V0_EFFECT_MODE_TAG_IMMEDIATE, V0_INSPECTION_ENCODING_COMPACT_JSON, V0_LOOKUP_ENTRY_FIELDS,
+    V0_RANGE_FIELDS, V0_SCHEMA_FINGERPRINT_TAG_FINGERPRINT, V0_SCHEMA_FINGERPRINT_TAG_NO_SCHEMA,
+    V0_SOURCE_SPAN_FIELDS, V0_STATEMENT_TAG_DIVERT, V0_STATEMENT_TAG_EFFECT, V0_STATEMENT_TAG_END,
+    V0_STATEMENT_TAG_IF, V0_STATEMENT_TAG_LINE, V0_STATEMENT_TAG_PROMPT, Value,
 };
+
+#[test]
+fn v0_wire_constants_lock_main_tuple_and_tag_decisions() {
+    assert_eq!(V0_COMPILED_DIALOGUE_FIELDS, 13);
+    assert_eq!(V0_ASSET_HEADER_FIELDS, 8);
+    assert_eq!(V0_RANGE_FIELDS, 2);
+    assert_eq!(V0_LOOKUP_ENTRY_FIELDS, 2);
+    assert_eq!(V0_SOURCE_SPAN_FIELDS, 5);
+
+    assert_eq!(V0_ASSET_ENCODING_MESSAGEPACK, 0);
+    assert_eq!(V0_INSPECTION_ENCODING_COMPACT_JSON, 0);
+    assert_eq!(V0_SCHEMA_FINGERPRINT_TAG_FINGERPRINT, 0);
+    assert_eq!(V0_SCHEMA_FINGERPRINT_TAG_NO_SCHEMA, 1);
+
+    assert_eq!(V0_STATEMENT_TAG_LINE, 0);
+    assert_eq!(V0_STATEMENT_TAG_PROMPT, 1);
+    assert_eq!(V0_STATEMENT_TAG_DIVERT, 2);
+    assert_eq!(V0_STATEMENT_TAG_IF, 3);
+    assert_eq!(V0_STATEMENT_TAG_EFFECT, 4);
+    assert_eq!(V0_STATEMENT_TAG_END, 5);
+
+    assert_eq!(V0_DIVERT_TARGET_TAG_BLOCK, 0);
+    assert_eq!(V0_DIVERT_TARGET_TAG_END, 1);
+    assert_eq!(V0_CHOICE_ECHO_TAG_NONE, 0);
+    assert_eq!(V0_CHOICE_ECHO_TAG_SELECTED_TEXT, 1);
+    assert_eq!(V0_CHOICE_ECHO_TAG_EXPLICIT_LINE, 2);
+
+    assert_eq!(V0_EFFECT_MODE_TAG_DEFERRED, 0);
+    assert_eq!(V0_EFFECT_MODE_TAG_IMMEDIATE, 1);
+    assert_eq!(V0_EFFECT_MODE_TAG_BLOCKING, 2);
+    assert_eq!(V0_CONDITION_TAG_CALL, 0);
+    assert_eq!(V0_CONDITION_TAG_AND, 1);
+    assert_eq!(V0_CONDITION_TAG_OR, 2);
+    assert_eq!(V0_CONDITION_TAG_NOT, 3);
+    assert_eq!(V0_ARGUMENT_TAG_IDENTIFIER, 0);
+    assert_eq!(V0_ARGUMENT_TAG_VALUE, 1);
+}
 
 #[test]
 fn v0_header_locks_messagepack_and_freshness_fields() {
@@ -35,11 +82,20 @@ fn v0_header_locks_messagepack_and_freshness_fields() {
         panic!("expected schema fingerprint");
     };
     assert_eq!(fingerprint.algorithm().as_str(), "blake3");
-    assert_eq!(fingerprint.digest().as_bytes(), &[1; 32]);
+    assert_eq!(fingerprint.digest().as_bytes(), &[1; BLAKE3_DIGEST_LEN]);
 }
 
 #[test]
-fn constrained_compiled_values_reject_empty_strings_and_digests() {
+fn blake3_fingerprints_accept_exactly_32_byte_digests() {
+    let fingerprint =
+        ContentFingerprint::blake3([1; BLAKE3_DIGEST_LEN]).expect("valid blake3 digest");
+
+    assert_eq!(fingerprint.algorithm().as_str(), "blake3");
+    assert_eq!(fingerprint.digest().as_bytes().len(), BLAKE3_DIGEST_LEN);
+}
+
+#[test]
+fn constrained_compiled_values_reject_empty_strings_and_invalid_digests() {
     assert_eq!(
         CompilerVersion::new(" "),
         Err(CompiledValueError::EmptyValue {
@@ -50,6 +106,22 @@ fn constrained_compiled_values_reject_empty_strings_and_digests() {
         ContentFingerprint::blake3([]),
         Err(CompiledValueError::EmptyValue {
             kind: "FingerprintDigest"
+        })
+    );
+    assert_eq!(
+        ContentFingerprint::blake3([1; BLAKE3_DIGEST_LEN - 1]),
+        Err(CompiledValueError::InvalidFingerprintDigestLength {
+            algorithm: "blake3",
+            expected: BLAKE3_DIGEST_LEN,
+            actual: BLAKE3_DIGEST_LEN - 1,
+        })
+    );
+    assert_eq!(
+        ContentFingerprint::blake3([1; BLAKE3_DIGEST_LEN + 1]),
+        Err(CompiledValueError::InvalidFingerprintDigestLength {
+            algorithm: "blake3",
+            expected: BLAKE3_DIGEST_LEN,
+            actual: BLAKE3_DIGEST_LEN + 1,
         })
     );
 }
@@ -138,6 +210,120 @@ fn ranges_and_lookup_rows_make_runtime_traversal_explicit() {
     assert_eq!(line, Some(LineIndex::new(0)));
     assert_eq!(choices.start, ChoiceIndex::new(0));
     assert_eq!(choices.len, 2);
+}
+
+#[test]
+fn lookup_table_wrappers_accept_sorted_unique_rows() {
+    let blocks = BlockLookupTable::new(vec![
+        BlockLookupEntry {
+            id: BlockId::new("intro").expect("valid block id"),
+            index: BlockIndex::new(0),
+        },
+        BlockLookupEntry {
+            id: BlockId::new("work").expect("valid block id"),
+            index: BlockIndex::new(1),
+        },
+    ])
+    .expect("sorted unique block lookup");
+    let lines = LineLookupTable::new(vec![
+        LineLookupEntry {
+            id: LineId::new("intro_001").expect("valid line id"),
+            index: LineIndex::new(0),
+        },
+        LineLookupEntry {
+            id: LineId::new("work_001").expect("valid line id"),
+            index: LineIndex::new(1),
+        },
+    ])
+    .expect("sorted unique line lookup");
+    let choices = ChoiceLookupTable::new(vec![
+        ChoiceLookupEntry {
+            id: ChoiceId::new("ask_work").expect("valid choice id"),
+            index: ChoiceIndex::new(0),
+        },
+        ChoiceLookupEntry {
+            id: ChoiceId::new("leave").expect("valid choice id"),
+            index: ChoiceIndex::new(1),
+        },
+    ])
+    .expect("sorted unique choice lookup");
+
+    assert_eq!(blocks.len(), 2);
+    assert_eq!(
+        blocks
+            .iter()
+            .map(|entry| entry.id.as_str())
+            .collect::<Vec<_>>(),
+        ["intro", "work"]
+    );
+    assert_eq!(lines.as_slice()[1].index, LineIndex::new(1));
+    assert_eq!(choices.as_slice()[0].id.as_str(), "ask_work");
+}
+
+#[test]
+fn lookup_table_wrappers_reject_duplicate_and_unsorted_rows() {
+    assert_eq!(
+        BlockLookupTable::new(vec![
+            BlockLookupEntry {
+                id: BlockId::new("work").expect("valid block id"),
+                index: BlockIndex::new(1),
+            },
+            BlockLookupEntry {
+                id: BlockId::new("intro").expect("valid block id"),
+                index: BlockIndex::new(0),
+            },
+        ]),
+        Err(CompiledValueError::UnsortedLookupTable {
+            table: "block",
+            previous: "work".to_owned(),
+            current: "intro".to_owned(),
+        })
+    );
+    assert_eq!(
+        ChoiceLookupTable::new(vec![
+            ChoiceLookupEntry {
+                id: ChoiceId::new("ask_work").expect("valid choice id"),
+                index: ChoiceIndex::new(0),
+            },
+            ChoiceLookupEntry {
+                id: ChoiceId::new("ask_work").expect("valid choice id"),
+                index: ChoiceIndex::new(1),
+            },
+        ]),
+        Err(CompiledValueError::UnsortedLookupTable {
+            table: "choice",
+            previous: "ask_work".to_owned(),
+            current: "ask_work".to_owned(),
+        })
+    );
+}
+
+#[test]
+fn compiled_dialogue_uses_typed_lookup_tables() {
+    let dialogue = CompiledDialogue {
+        header: CompiledAssetHeader::messagepack_v0(
+            CompilerVersion::new("0.0.1").expect("valid compiler version"),
+            CompiledAssetId::new("dialogue/main.recitec").expect("valid asset id"),
+            SourceMapId::new("dialogue/main.recitec.map").expect("valid source map id"),
+            SchemaFingerprint::NoSchema,
+        ),
+        sources: Vec::new(),
+        blocks: Vec::new(),
+        statements: Vec::new(),
+        lines: Vec::new(),
+        choices: Vec::new(),
+        speakers: Vec::new(),
+        metadata: Vec::new(),
+        effects: Vec::new(),
+        source_maps: Vec::new(),
+        block_lookup: BlockLookupTable::default(),
+        line_lookup: LineLookupTable::default(),
+        choice_lookup: ChoiceLookupTable::default(),
+    };
+
+    assert!(dialogue.block_lookup.is_empty());
+    assert!(dialogue.line_lookup.is_empty());
+    assert!(dialogue.choice_lookup.is_empty());
 }
 
 #[test]

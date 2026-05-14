@@ -1175,6 +1175,68 @@ repeat. Field ordering, table ordering, string encoding, numeric representation,
 and fingerprint inputs must be stable across repeated compiles of identical
 validated input.
 
+#### v0 wire shape
+
+Runtime assets encode all compound values as fixed-length MessagePack arrays,
+not maps. The decoded compact JSON inspection form renders the same arrays as
+objects with the field names below. JSON field names are for humans and tests;
+MessagePack array positions are authoritative.
+
+Scalar wire rules:
+
+- IDs and paths encode as UTF-8 strings.
+- Index newtypes encode as unsigned 32-bit integers.
+- Ranges encode as `[start, len]`, where `start` is the table index's `u32`
+  value and `len` is a `u32` count.
+- Optional values encode as MessagePack nil or the present value.
+- Fingerprints encode as `[algorithm, digest]`, where `digest` is binary bytes.
+- Source spans encode as `[file, start_line, start_column, end_line,
+  end_column]`; `end_line` and `end_column` are nil for point spans.
+- `Value` encodes as `[tag, payload]`, with tags `0 = scalar` and `1 = array`.
+- `ScalarValue` tags are `0 = string`, `1 = integer`, `2 = float`, and
+  `3 = boolean`.
+
+Top-level and row arrays use this field order:
+
+- `CompiledDialogue`: `[header, sources, blocks, statements, lines, choices,
+  speakers, metadata, effects, source_maps, block_lookup, line_lookup,
+  choice_lookup]`.
+- `CompiledAssetHeader`: `[format_version, compiler_compatibility_version,
+  primary_encoding, inspection_encoding, compiler_version, asset_id,
+  source_map_id, schema_fingerprint]`.
+- `CompiledSourceFile`: `[path, fingerprint]`.
+- `CompiledBlock`: `[id, source_file, statements, metadata, default_speaker,
+  source_map]`.
+- `CompiledStatement`: `[kind, source_map]`.
+- `CompiledLine`: `[id, source_text, speaker, metadata, source_map]`.
+- `CompiledChoice`: `[id, source_text, metadata, condition, target, echo,
+  source_map]`.
+- `CompiledSpeaker`: `[id]`.
+- `CompiledMetadataEntry`: `[key, value, source_map]`.
+- `CompiledEffect`: `[id, mode, function, args, source_map]`.
+- `CompiledSourceMapEntry`: `[source_file, span]`.
+- Lookup entries: `[id, index]`, sorted strictly ascending by ID.
+
+Enum-like values encode as `[tag, payload]` unless the variant has no payload,
+in which case the payload is nil. v0 tags are:
+
+- asset encoding: `0 = MessagePack`;
+- inspection encoding: `0 = CompactJson`;
+- schema fingerprint: `0 = fingerprint`, `1 = no_schema`;
+- statement kind: `0 = line`, `1 = prompt`, `2 = divert`, `3 = if`,
+  `4 = effect`, `5 = end`;
+- divert target: `0 = block`, `1 = end`;
+- choice echo: `0 = none`, `1 = selected_text`, `2 = explicit_line`;
+- effect mode: `0 = deferred`, `1 = immediate`, `2 = blocking`;
+- condition expression: `0 = call`, `1 = and`, `2 = or`, `3 = not`;
+- argument: `0 = identifier`, `1 = value`.
+
+v0 fixed array arity is not append-compatible. Field additions, removals,
+reordering, tag changes, or semantic changes require a `format_version` or
+`compiler_compatibility_version` change. A v0 reader must reject unexpected
+array lengths, unknown tags, invalid indexes, malformed lookup order, and
+algorithm-specific fingerprint length mismatches as malformed compiled assets.
+
 Compiled assets must include:
 
 - format version;

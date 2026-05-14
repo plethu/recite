@@ -1,8 +1,9 @@
 use crate::{BlockId, ChoiceId, EffectId, LineId, ScalarValue, SourceSpan, SpeakerId, Value};
 
 use super::{
-    BlockIndex, ChoiceIndex, ChoiceRange, CompiledAssetHeader, ContentFingerprint, EffectIndex,
-    LineIndex, MetadataRange, SourceFileIndex, SourceMapIndex, SpeakerIndex, StatementRange,
+    BlockIndex, BlockLookupTable, ChoiceLookupTable, ChoiceRange, CompiledAssetHeader,
+    ContentFingerprint, EffectIndex, LineIndex, LineLookupTable, MetadataRange, SourceFileIndex,
+    SourceMapIndex, SpeakerIndex, StatementRange,
 };
 
 /// Runtime-facing compiled dialogue asset.
@@ -18,9 +19,9 @@ pub struct CompiledDialogue {
     pub metadata: Vec<CompiledMetadataEntry>,
     pub effects: Vec<CompiledEffect>,
     pub source_maps: Vec<CompiledSourceMapEntry>,
-    pub block_lookup: Vec<BlockLookupEntry>,
-    pub line_lookup: Vec<LineLookupEntry>,
-    pub choice_lookup: Vec<ChoiceLookupEntry>,
+    pub block_lookup: BlockLookupTable,
+    pub line_lookup: LineLookupTable,
+    pub choice_lookup: ChoiceLookupTable,
 }
 
 #[derive(Clone, Debug, Eq, PartialEq)]
@@ -147,22 +148,4 @@ pub enum CompiledArgument {
 pub struct CompiledSourceMapEntry {
     pub source_file: SourceFileIndex,
     pub span: SourceSpan,
-}
-
-#[derive(Clone, Debug, Eq, PartialEq)]
-pub struct BlockLookupEntry {
-    pub id: BlockId,
-    pub index: BlockIndex,
-}
-
-#[derive(Clone, Debug, Eq, PartialEq)]
-pub struct LineLookupEntry {
-    pub id: LineId,
-    pub index: LineIndex,
-}
-
-#[derive(Clone, Debug, Eq, PartialEq)]
-pub struct ChoiceLookupEntry {
-    pub id: ChoiceId,
-    pub index: ChoiceIndex,
 }

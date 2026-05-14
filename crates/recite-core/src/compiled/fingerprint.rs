@@ -1,5 +1,7 @@
 use super::CompiledValueError;
 
+pub const BLAKE3_DIGEST_LEN: usize = 32;
+
 macro_rules! define_non_empty_string {
     ($name:ident) => {
         #[derive(Clone, Debug, Eq, PartialEq, Hash, Ord, PartialOrd)]
@@ -32,6 +34,13 @@ impl FingerprintAlgorithm {
     pub fn blake3() -> Self {
         Self("blake3".to_owned())
     }
+
+    fn expected_digest_len(&self) -> Option<usize> {
+        match self.as_str() {
+            "blake3" => Some(BLAKE3_DIGEST_LEN),
+            _ => None,
+        }
+    }
 }
 
 #[derive(Clone, Debug, Eq, PartialEq, Hash)]
@@ -62,16 +71,29 @@ pub struct ContentFingerprint {
 }
 
 impl ContentFingerprint {
-    #[must_use]
-    pub fn new(algorithm: FingerprintAlgorithm, digest: FingerprintDigest) -> Self {
-        Self { algorithm, digest }
+    pub fn new(
+        algorithm: FingerprintAlgorithm,
+        digest: FingerprintDigest,
+    ) -> Result<Self, CompiledValueError> {
+        if let Some(expected) = algorithm.expected_digest_len() {
+            let actual = digest.as_bytes().len();
+            if actual != expected {
+                return Err(CompiledValueError::InvalidFingerprintDigestLength {
+                    algorithm: "blake3",
+                    expected,
+                    actual,
+                });
+            }
+        }
+
+        Ok(Self { algorithm, digest })
     }
 
     pub fn blake3(digest: impl Into<Vec<u8>>) -> Result<Self, CompiledValueError> {
-        Ok(Self::new(
+        Self::new(
             FingerprintAlgorithm::blake3(),
             FingerprintDigest::new(digest)?,
-        ))
+        )
     }
 
     #[must_use]
