@@ -1153,28 +1153,123 @@ The compiler must:
 
 ### 12.2 Compiled Format
 
-The compiled format should be deterministic and versioned.
+The v0 compiled asset format is a deterministic MessagePack document with a
+decoded compact JSON inspection form for fixtures, debugging, and CLI tooling.
+The MessagePack bytes are the runtime-facing asset; the JSON form is
+non-authoritative and must be produced from the same structured model.
 
-Acceptable formats:
+v0 uses:
 
-- MessagePack;
-- CBOR;
-- compact JSON for early development;
-- custom binary only if clearly justified.
+- `format_version = 0`;
+- `compiler_compatibility_version = 0`;
+- MessagePack as the primary `.recitec` encoding;
+- compact JSON as a decoded inspection encoding, not as the shipped runtime
+  asset;
+- BLAKE3 as the default content fingerprint algorithm.
+
+The compiler must serialize deterministic tables, not parser-shaped object
+graphs. The v0 wire contract must preserve row order explicitly and must not
+depend on unordered map iteration. Lookup data is encoded as sorted tables keyed
+by stable IDs. Repeated metadata entries remain ordered rows, even when keys
+repeat. Field ordering, table ordering, string encoding, numeric representation,
+and fingerprint inputs must be stable across repeated compiles of identical
+validated input.
+
+#### v0 wire shape
+
+Runtime assets encode all compound values as fixed-length MessagePack arrays,
+not maps. The decoded compact JSON inspection form renders the same arrays as
+objects with the field names below. JSON field names are for humans and tests;
+MessagePack array positions are authoritative.
+
+Scalar wire rules:
+
+- IDs and paths encode as UTF-8 strings.
+- Index newtypes encode as unsigned 32-bit integers.
+- Ranges encode as `[start, len]`, where `start` is the table index's `u32`
+  value and `len` is a `u32` count.
+- Optional values encode as MessagePack nil or the present value.
+- Fingerprints encode as `[algorithm, digest]`, where `digest` is binary bytes.
+- Source spans encode as `[file, start_line, start_column, end_line,
+  end_column]`; `end_line` and `end_column` are nil for point spans.
+- `Value` encodes as `[tag, payload]`, with tags `0 = scalar` and `1 = array`.
+- `ScalarValue` tags are `0 = string`, `1 = integer`, `2 = float`, and
+  `3 = boolean`.
+
+Top-level and row arrays use this field order:
+
+- `CompiledDialogue`: `[header, sources, blocks, statements, match_arms,
+  lines, choices, speakers, metadata, effects, source_maps, block_lookup,
+  line_lookup, choice_lookup]`.
+- `CompiledAssetHeader`: `[format_version, compiler_compatibility_version,
+  primary_encoding, inspection_encoding, compiler_version, asset_id,
+  source_map_id, schema_fingerprint]`.
+- `CompiledSourceFile`: `[path, fingerprint]`.
+- `CompiledBlock`: `[id, source_file, statements, metadata, default_speaker,
+  source_map]`.
+- `CompiledStatement`: `[kind, source_map]`.
+- `CompiledMatchArm`: `[pattern, statements, source_map]`.
+- `CompiledLine`: `[id, source_text, speaker, metadata, source_map]`.
+- `CompiledChoice`: `[id, source_text, metadata, condition, target, echo,
+  source_map]`.
+- `CompiledSpeaker`: `[id]`.
+- `CompiledMetadataEntry`: `[key, value, source_map]`.
+- `CompiledEffect`: `[id, mode, function, args, source_map]`.
+- `CompiledSourceMapEntry`: `[source_file, span]`.
+- Lookup entries: `[id, index]`, sorted strictly ascending by ID.
+
+Enum-like values encode as `[tag, payload]` unless the variant has no payload,
+in which case the payload is nil. v0 tags are:
+
+- asset encoding: `0 = MessagePack`;
+- inspection encoding: `0 = CompactJson`;
+- schema fingerprint: `0 = fingerprint`, `1 = no_schema`;
+- statement kind: `0 = line`, `1 = prompt`, `2 = divert`, `3 = if`,
+  `4 = match`, `5 = effect`, `6 = end`;
+- match pattern: `0 = variant`, `1 = wildcard`;
+- divert target: `0 = block`, `1 = end`;
+- choice echo: `0 = none`, `1 = selected_text`, `2 = explicit_line`;
+- effect mode: `0 = deferred`, `1 = immediate`, `2 = blocking`;
+- condition expression: `0 = call`, `1 = and`, `2 = or`, `3 = not`;
+- argument: `0 = identifier`, `1 = value`.
+
+v0 fixed array arity is not append-compatible. Field additions, removals,
+reordering, tag changes, or semantic changes require a `format_version` or
+`compiler_compatibility_version` change. A v0 reader must reject unexpected
+array lengths, unknown tags, invalid indexes, malformed lookup order, and
+algorithm-specific fingerprint length mismatches as malformed compiled assets.
 
 Compiled assets must include:
 
 - format version;
-- source file list;
+- compiler compatibility version;
+- compiler version;
+- primary encoding and inspection encoding identifiers;
+- asset identity and source-map identity;
+- source file table;
 - source fingerprints;
-- schema fingerprint;
+- schema fingerprint, or an explicit no-schema marker;
 - block table;
+- statement table;
+- match arm table;
 - line table;
 - choice table;
 - speaker table;
 - metadata table;
 - effect table;
-- source map.
+- source map table;
+- sorted lookup tables for block IDs, line IDs, and choice IDs.
+
+The runtime-facing contract must exclude rowan syntax nodes, parser recovery
+state, malformed source state, comments that are not part of runtime semantics,
+and traversal over the `recite-core` source AST. Syntax trees and source AST
+values are compiler and tooling inputs only. Runtime traversal consumes compiled
+tables, source maps, fingerprints, and compact lookup indexes.
+
+Custom binary, FlatBuffers, Cap'n Proto, bincode, postcard, CBOR, and other
+encodings remain possible future versions if benchmark evidence or adapter
+requirements justify them. They must not be introduced as v0 alternatives after
+assets exist without a format or compatibility version change.
 
 ### 12.3 Freshness
 
@@ -1185,7 +1280,16 @@ The compiler must embed enough data for tooling to detect stale compiled assets.
 - current source fingerprints;
 - current schema fingerprint;
 - current compiler compatibility version;
-- compiled asset embedded fingerprints.
+- compiled asset embedded source fingerprints;
+- compiled asset embedded schema fingerprint or no-schema marker;
+- compiled asset embedded compiler compatibility version.
+
+The v0 freshness comparison is content-based. Source and schema fingerprints are
+algorithm-tagged binary digest values; the initial algorithm is BLAKE3. The
+MessagePack asset stores digest bytes directly. The compact JSON inspection form
+may render those bytes as stable lowercase hexadecimal text. A compiler version
+change alone does not require recompilation unless the compiler compatibility
+version changes or the writer changes any runtime-facing semantics.
 
 ## 13. CLI
 
