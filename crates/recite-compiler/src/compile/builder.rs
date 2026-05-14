@@ -86,6 +86,7 @@ impl<'a> AssetBuilder<'a> {
             }
         }
 
+        let default_block = self.default_block_index()?;
         let block_lookup = self.block_lookup()?;
         let line_lookup = self.line_lookup()?;
         let choice_lookup = self.choice_lookup()?;
@@ -97,6 +98,7 @@ impl<'a> AssetBuilder<'a> {
                 self.options.source_map_id,
                 self.options.schema_fingerprint,
             ),
+            default_block,
             sources,
             blocks: self.blocks,
             statements: self.statements,
@@ -174,5 +176,18 @@ impl<'a> AssetBuilder<'a> {
         });
 
         Ok(())
+    }
+
+    fn default_block_index(&self) -> Result<BlockIndex, CompileError> {
+        self.inputs
+            .iter()
+            .flat_map(|input| input.source_file.blocks.iter())
+            .find(|block| block.is_default)
+            .and_then(|block| self.block_indices.get(block.id.as_str()).copied())
+            .ok_or_else(|| {
+                CompileError::InvalidValidatedInput(
+                    "validated project did not contain an indexed default block".to_owned(),
+                )
+            })
     }
 }

@@ -24,7 +24,7 @@ use recite_core::{
 
 #[test]
 fn v0_wire_constants_lock_main_tuple_and_tag_decisions() {
-    assert_eq!(V0_COMPILED_DIALOGUE_FIELDS, 14);
+    assert_eq!(V0_COMPILED_DIALOGUE_FIELDS, 15);
     assert_eq!(V0_ASSET_HEADER_FIELDS, 8);
     assert_eq!(V0_MATCH_ARM_FIELDS, 3);
     assert_eq!(V0_RANGE_FIELDS, 2);
@@ -353,6 +353,7 @@ fn compiled_dialogue_uses_typed_lookup_tables() {
             SourceMapId::new("dialogue/main.recitec.map").expect("valid source map id"),
             SchemaFingerprint::NoSchema,
         ),
+        default_block: BlockIndex::new(0),
         sources: Vec::new(),
         blocks: Vec::new(),
         statements: Vec::new(),

@@ -1198,7 +1198,7 @@ Scalar wire rules:
 
 Top-level and row arrays use this field order:
 
-- `CompiledDialogue`: `[header, sources, blocks, statements, match_arms,
+- `CompiledDialogue`: `[header, default_block, sources, blocks, statements, match_arms,
   lines, choices, speakers, metadata, effects, source_maps, block_lookup,
   line_lookup, choice_lookup]`.
 - `CompiledAssetHeader`: `[format_version, compiler_compatibility_version,
@@ -1249,6 +1249,7 @@ Compiled assets must include:
 - source file table;
 - source fingerprints;
 - schema fingerprint, or an explicit no-schema marker;
+- default block index;
 - block table;
 - statement table;
 - match arm table;
