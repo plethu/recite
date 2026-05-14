@@ -13,7 +13,7 @@ use crate::compile::convert::{
     compile_argument, compile_choice_echo, compile_condition_expression, compile_effect_mode,
     compile_match_pattern, effect_id_for, required_choice_id, required_line_id,
 };
-use crate::compile::table::usize_to_u32;
+use crate::compile::table::{increment_u32_len, usize_to_u32};
 
 impl AssetBuilder<'_> {
     pub(super) fn compile_line_row(&mut self, line: &Line) -> Result<LineIndex, CompileError> {
@@ -46,7 +46,7 @@ impl AssetBuilder<'_> {
         let mut len = 0_u32;
         for choice in choices {
             self.compile_choice_row(choice)?;
-            len += 1;
+            len = increment_u32_len("choices", len)?;
         }
 
         Ok(ChoiceRange::new(start, len))
@@ -95,7 +95,7 @@ impl AssetBuilder<'_> {
                 statements,
                 source_map,
             });
-            len += 1;
+            len = increment_u32_len("match arms", len)?;
         }
 
         Ok(MatchArmRange::new(start, len))
@@ -118,7 +118,7 @@ impl AssetBuilder<'_> {
                 value: entry.value.clone(),
                 source_map,
             });
-            len += 1;
+            len = increment_u32_len("metadata", len)?;
         }
 
         Ok(MetadataRange::new(start, len))

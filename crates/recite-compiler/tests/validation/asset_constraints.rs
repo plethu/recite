@@ -94,3 +94,64 @@ fn validates_choice_bodies_do_not_leave_runtime_unrepresentable_children() {
     assert_eq!(report.diagnostics[0].span.start.line(), 5);
     assert_eq!(report.diagnostics[0].related[0].span.start.line(), 2);
 }
+
+#[test]
+fn validates_choice_echo_lines_exist_before_asset_output() {
+    let files = vec![lower(
+        "dialogue/start.recite",
+        concat!(
+            ":: start default\n",
+            "? choose echo=line(missing_echo_line)\n",
+            "  Choose.\n",
+            "  -> END\n",
+        ),
+    )];
+
+    let report = validate_source_files(&files);
+
+    assert_codes(&report, ["RECITE_VALIDATE015"]);
+    assert_eq!(report.diagnostics[0].span.start.line(), 2);
+}
+
+#[test]
+fn validates_choice_echo_can_reference_later_lines() {
+    let files = vec![lower(
+        "dialogue/start.recite",
+        concat!(
+            ":: start default\n",
+            "? choose echo=line(echo_line)\n",
+            "  Choose.\n",
+            "  -> END\n",
+            "> echo_line\n",
+            "  Echo.\n",
+        ),
+    )];
+
+    let report = validate_source_files(&files);
+
+    assert!(report.is_ok(), "later line IDs should be valid: {report:?}");
+}
+
+#[test]
+fn validates_metadata_floats_are_finite_for_v0_inspection_output() {
+    let files = vec![lower(
+        "dialogue/start.recite",
+        concat!(
+            ":: start default block_value=NaN\n",
+            "> line line_value=inf array_value=[1, -inf]\n",
+            "  Text.\n",
+        ),
+    )];
+
+    let report = validate_source_files(&files);
+
+    assert_codes(
+        &report,
+        [
+            "RECITE_VALIDATE016",
+            "RECITE_VALIDATE016",
+            "RECITE_VALIDATE016",
+        ],
+    );
+    assert_spans(&report, [(1, 30), (2, 19), (2, 35)]);
+}

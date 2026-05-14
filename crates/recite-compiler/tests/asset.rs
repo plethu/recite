@@ -226,6 +226,41 @@ fn malformed_or_invalid_content_returns_diagnostics_without_asset() {
         validation_failure.diagnostics[0].code.as_str(),
         "RECITE_VALIDATE012"
     );
+
+    let missing_echo_line = compile_inputs(
+        [CompileInput::new(
+            "dialogue/bad.recite",
+            concat!(
+                ":: start default\n",
+                "? choose echo=line(missing_echo_line)\n",
+                "  Choose.\n",
+                "  -> END\n",
+            ),
+        )],
+        options(),
+    )
+    .expect("validation diagnostics are not hard errors");
+
+    assert!(missing_echo_line.asset.is_none());
+    assert_eq!(
+        missing_echo_line.diagnostics[0].code.as_str(),
+        "RECITE_VALIDATE015"
+    );
+
+    let non_finite_metadata = compile_inputs(
+        [CompileInput::new(
+            "dialogue/bad.recite",
+            concat!(":: start default\n", "> line score=NaN\n", "  Text.\n",),
+        )],
+        options(),
+    )
+    .expect("validation diagnostics are not hard errors");
+
+    assert!(non_finite_metadata.asset.is_none());
+    assert_eq!(
+        non_finite_metadata.diagnostics[0].code.as_str(),
+        "RECITE_VALIDATE016"
+    );
 }
 
 #[test]

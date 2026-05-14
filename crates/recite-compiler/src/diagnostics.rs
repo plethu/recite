@@ -1,6 +1,6 @@
 use recite_core::{
     Block, BlockId, BlockReference, Choice, Diagnostic, DiagnosticCode, DiagnosticSeverity, Line,
-    RelatedSpan, SourceFile, SourceSpan, Statement,
+    LineId, RelatedSpan, SourceFile, SourceSpan, Statement,
 };
 
 pub(crate) const MISSING_LINE_ID: &str = "RECITE_VALIDATE001";
@@ -17,6 +17,8 @@ pub(crate) const AMBIGUOUS_COMPILED_BLOCK_ID: &str = "RECITE_VALIDATE011";
 pub(crate) const MISSING_CHOICE_TARGET: &str = "RECITE_VALIDATE012";
 pub(crate) const UNSUPPORTED_LINE_CHILD_STATEMENT: &str = "RECITE_VALIDATE013";
 pub(crate) const UNSUPPORTED_CHOICE_CHILD_STATEMENT: &str = "RECITE_VALIDATE014";
+pub(crate) const UNKNOWN_CHOICE_ECHO_LINE: &str = "RECITE_VALIDATE015";
+pub(crate) const NON_FINITE_FLOAT_VALUE: &str = "RECITE_VALIDATE016";
 
 pub(crate) fn missing_line_id(line: &Line) -> Diagnostic {
     diagnostic(
@@ -187,6 +189,27 @@ pub(crate) fn unsupported_choice_child_statement(
         "choice containing the unsupported nested statement is here",
     )])
     .with_help("keep choice bodies to text and one target divert for v0 compiled assets")
+}
+
+pub(crate) fn unknown_choice_echo_line(choice: &Choice, line_id: &LineId) -> Diagnostic {
+    diagnostic(
+        UNKNOWN_CHOICE_ECHO_LINE,
+        format!("choice echo references unknown line id `{line_id}`"),
+        choice.span.clone(),
+    )
+    .with_help("use an existing line ID, `echo=selected_text`, or `echo=none`")
+}
+
+pub(crate) fn non_finite_float_value(
+    span: SourceSpan,
+    owner: impl std::fmt::Display,
+) -> Diagnostic {
+    diagnostic(
+        NON_FINITE_FLOAT_VALUE,
+        format!("{owner} contains a non-finite float value"),
+        span,
+    )
+    .with_help("use a finite number so MessagePack and inspection JSON stay equivalent")
 }
 
 fn diagnostic(code: &str, message: impl Into<String>, span: SourceSpan) -> Diagnostic {
