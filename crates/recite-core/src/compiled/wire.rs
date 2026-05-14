@@ -1,8 +1,9 @@
-pub const V0_COMPILED_DIALOGUE_FIELDS: u8 = 13;
+pub const V0_COMPILED_DIALOGUE_FIELDS: u8 = 14;
 pub const V0_ASSET_HEADER_FIELDS: u8 = 8;
 pub const V0_SOURCE_FILE_FIELDS: u8 = 2;
 pub const V0_BLOCK_FIELDS: u8 = 6;
 pub const V0_STATEMENT_FIELDS: u8 = 2;
+pub const V0_MATCH_ARM_FIELDS: u8 = 3;
 pub const V0_LINE_FIELDS: u8 = 5;
 pub const V0_CHOICE_FIELDS: u8 = 7;
 pub const V0_SPEAKER_FIELDS: u8 = 1;
@@ -24,8 +25,12 @@ pub const V0_STATEMENT_TAG_LINE: u8 = 0;
 pub const V0_STATEMENT_TAG_PROMPT: u8 = 1;
 pub const V0_STATEMENT_TAG_DIVERT: u8 = 2;
 pub const V0_STATEMENT_TAG_IF: u8 = 3;
-pub const V0_STATEMENT_TAG_EFFECT: u8 = 4;
-pub const V0_STATEMENT_TAG_END: u8 = 5;
+pub const V0_STATEMENT_TAG_MATCH: u8 = 4;
+pub const V0_STATEMENT_TAG_EFFECT: u8 = 5;
+pub const V0_STATEMENT_TAG_END: u8 = 6;
+
+pub const V0_MATCH_PATTERN_TAG_VARIANT: u8 = 0;
+pub const V0_MATCH_PATTERN_TAG_WILDCARD: u8 = 1;
 
 pub const V0_DIVERT_TARGET_TAG_BLOCK: u8 = 0;
 pub const V0_DIVERT_TARGET_TAG_END: u8 = 1;

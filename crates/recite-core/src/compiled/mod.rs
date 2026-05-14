@@ -20,12 +20,14 @@ pub use lookup::{
 pub use rows::{
     CompiledArgument, CompiledBlock, CompiledChoice, CompiledChoiceEcho, CompiledConditionCall,
     CompiledConditionExpression, CompiledDialogue, CompiledDivertTarget, CompiledEffect,
-    CompiledEffectMode, CompiledLine, CompiledMetadataEntry, CompiledSourceFile,
-    CompiledSourceMapEntry, CompiledSpeaker, CompiledStatement, CompiledStatementKind,
+    CompiledEffectMode, CompiledLine, CompiledMatchArm, CompiledMatchPattern,
+    CompiledMetadataEntry, CompiledSourceFile, CompiledSourceMapEntry, CompiledSpeaker,
+    CompiledStatement, CompiledStatementKind,
 };
 pub use table::{
-    BlockIndex, ChoiceIndex, ChoiceRange, EffectIndex, LineIndex, MetadataIndex, MetadataRange,
-    SourceFileIndex, SourceMapIndex, SpeakerIndex, StatementIndex, StatementRange, TableRange,
+    BlockIndex, ChoiceIndex, ChoiceRange, EffectIndex, LineIndex, MatchArmIndex, MatchArmRange,
+    MetadataIndex, MetadataRange, SourceFileIndex, SourceMapIndex, SpeakerIndex, StatementIndex,
+    StatementRange, TableRange,
 };
 pub use wire::*;
 

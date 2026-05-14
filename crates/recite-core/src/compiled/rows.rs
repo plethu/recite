@@ -2,8 +2,8 @@ use crate::{BlockId, ChoiceId, EffectId, LineId, ScalarValue, SourceSpan, Speake
 
 use super::{
     BlockIndex, BlockLookupTable, ChoiceLookupTable, ChoiceRange, CompiledAssetHeader,
-    ContentFingerprint, EffectIndex, LineIndex, LineLookupTable, MetadataRange, SourceFileIndex,
-    SourceMapIndex, SpeakerIndex, StatementRange,
+    ContentFingerprint, EffectIndex, LineIndex, LineLookupTable, MatchArmRange, MetadataRange,
+    SourceFileIndex, SourceMapIndex, SpeakerIndex, StatementRange,
 };
 
 /// Runtime-facing compiled dialogue asset.
@@ -13,6 +13,7 @@ pub struct CompiledDialogue {
     pub sources: Vec<CompiledSourceFile>,
     pub blocks: Vec<CompiledBlock>,
     pub statements: Vec<CompiledStatement>,
+    pub match_arms: Vec<CompiledMatchArm>,
     pub lines: Vec<CompiledLine>,
     pub choices: Vec<CompiledChoice>,
     pub speakers: Vec<CompiledSpeaker>,
@@ -59,6 +60,10 @@ pub enum CompiledStatementKind {
         then_statements: StatementRange,
         else_statements: StatementRange,
     },
+    Match {
+        scrutinee: CompiledConditionCall,
+        arms: MatchArmRange,
+    },
     Effect(EffectIndex),
     End,
 }
@@ -87,6 +92,19 @@ pub struct CompiledChoice {
     pub target: CompiledDivertTarget,
     pub echo: CompiledChoiceEcho,
     pub source_map: SourceMapIndex,
+}
+
+#[derive(Clone, Debug, PartialEq)]
+pub struct CompiledMatchArm {
+    pub pattern: CompiledMatchPattern,
+    pub statements: StatementRange,
+    pub source_map: SourceMapIndex,
+}
+
+#[derive(Clone, Debug, Eq, PartialEq)]
+pub enum CompiledMatchPattern {
+    Variant(String),
+    Wildcard,
 }
 
 #[derive(Clone, Debug, Eq, PartialEq)]

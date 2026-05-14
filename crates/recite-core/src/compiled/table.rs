@@ -20,6 +20,7 @@ macro_rules! define_table_index {
 define_table_index!(SourceFileIndex);
 define_table_index!(BlockIndex);
 define_table_index!(StatementIndex);
+define_table_index!(MatchArmIndex);
 define_table_index!(LineIndex);
 define_table_index!(ChoiceIndex);
 define_table_index!(SpeakerIndex);
@@ -46,5 +47,6 @@ impl<I> TableRange<I> {
 }
 
 pub type StatementRange = TableRange<StatementIndex>;
+pub type MatchArmRange = TableRange<MatchArmIndex>;
 pub type ChoiceRange = TableRange<ChoiceIndex>;
 pub type MetadataRange = TableRange<MetadataIndex>;

@@ -3,26 +3,30 @@ use recite_core::{
     COMPILED_ASSET_FORMAT_VERSION_V0, COMPILER_COMPATIBILITY_VERSION_V0, ChoiceId, ChoiceIndex,
     ChoiceLookupEntry, ChoiceLookupTable, ChoiceRange, CompiledAssetEncoding, CompiledAssetHeader,
     CompiledAssetId, CompiledChoice, CompiledChoiceEcho, CompiledDialogue, CompiledDivertTarget,
-    CompiledInspectionEncoding, CompiledLine, CompiledMetadataEntry, CompiledSourceMapEntry,
-    CompiledStatement, CompiledStatementKind, CompiledValueError, CompilerVersion,
-    ContentFingerprint, LineId, LineIndex, LineLookupEntry, LineLookupTable, MetadataIndex,
-    MetadataRange, ScalarValue, SchemaFingerprint, SourceFileIndex, SourceMapId, SourceMapIndex,
-    SourcePosition, SourceSpan, SpeakerIndex, StatementIndex, StatementRange,
-    V0_ARGUMENT_TAG_IDENTIFIER, V0_ARGUMENT_TAG_VALUE, V0_ASSET_ENCODING_MESSAGEPACK,
-    V0_ASSET_HEADER_FIELDS, V0_CHOICE_ECHO_TAG_EXPLICIT_LINE, V0_CHOICE_ECHO_TAG_NONE,
-    V0_CHOICE_ECHO_TAG_SELECTED_TEXT, V0_COMPILED_DIALOGUE_FIELDS, V0_CONDITION_TAG_AND,
-    V0_CONDITION_TAG_CALL, V0_CONDITION_TAG_NOT, V0_CONDITION_TAG_OR, V0_DIVERT_TARGET_TAG_BLOCK,
-    V0_DIVERT_TARGET_TAG_END, V0_EFFECT_MODE_TAG_BLOCKING, V0_EFFECT_MODE_TAG_DEFERRED,
-    V0_EFFECT_MODE_TAG_IMMEDIATE, V0_INSPECTION_ENCODING_COMPACT_JSON, V0_LOOKUP_ENTRY_FIELDS,
-    V0_RANGE_FIELDS, V0_SCHEMA_FINGERPRINT_TAG_FINGERPRINT, V0_SCHEMA_FINGERPRINT_TAG_NO_SCHEMA,
+    CompiledInspectionEncoding, CompiledLine, CompiledMatchArm, CompiledMatchPattern,
+    CompiledMetadataEntry, CompiledSourceMapEntry, CompiledStatement, CompiledStatementKind,
+    CompiledValueError, CompilerVersion, ContentFingerprint, LineId, LineIndex, LineLookupEntry,
+    LineLookupTable, MatchArmIndex, MatchArmRange, MetadataIndex, MetadataRange, ScalarValue,
+    SchemaFingerprint, SourceFileIndex, SourceMapId, SourceMapIndex, SourcePosition, SourceSpan,
+    SpeakerIndex, StatementIndex, StatementRange, V0_ARGUMENT_TAG_IDENTIFIER,
+    V0_ARGUMENT_TAG_VALUE, V0_ASSET_ENCODING_MESSAGEPACK, V0_ASSET_HEADER_FIELDS,
+    V0_CHOICE_ECHO_TAG_EXPLICIT_LINE, V0_CHOICE_ECHO_TAG_NONE, V0_CHOICE_ECHO_TAG_SELECTED_TEXT,
+    V0_COMPILED_DIALOGUE_FIELDS, V0_CONDITION_TAG_AND, V0_CONDITION_TAG_CALL, V0_CONDITION_TAG_NOT,
+    V0_CONDITION_TAG_OR, V0_DIVERT_TARGET_TAG_BLOCK, V0_DIVERT_TARGET_TAG_END,
+    V0_EFFECT_MODE_TAG_BLOCKING, V0_EFFECT_MODE_TAG_DEFERRED, V0_EFFECT_MODE_TAG_IMMEDIATE,
+    V0_INSPECTION_ENCODING_COMPACT_JSON, V0_LOOKUP_ENTRY_FIELDS, V0_MATCH_ARM_FIELDS,
+    V0_MATCH_PATTERN_TAG_VARIANT, V0_MATCH_PATTERN_TAG_WILDCARD, V0_RANGE_FIELDS,
+    V0_SCHEMA_FINGERPRINT_TAG_FINGERPRINT, V0_SCHEMA_FINGERPRINT_TAG_NO_SCHEMA,
     V0_SOURCE_SPAN_FIELDS, V0_STATEMENT_TAG_DIVERT, V0_STATEMENT_TAG_EFFECT, V0_STATEMENT_TAG_END,
-    V0_STATEMENT_TAG_IF, V0_STATEMENT_TAG_LINE, V0_STATEMENT_TAG_PROMPT, Value,
+    V0_STATEMENT_TAG_IF, V0_STATEMENT_TAG_LINE, V0_STATEMENT_TAG_MATCH, V0_STATEMENT_TAG_PROMPT,
+    Value,
 };
 
 #[test]
 fn v0_wire_constants_lock_main_tuple_and_tag_decisions() {
-    assert_eq!(V0_COMPILED_DIALOGUE_FIELDS, 13);
+    assert_eq!(V0_COMPILED_DIALOGUE_FIELDS, 14);
     assert_eq!(V0_ASSET_HEADER_FIELDS, 8);
+    assert_eq!(V0_MATCH_ARM_FIELDS, 3);
     assert_eq!(V0_RANGE_FIELDS, 2);
     assert_eq!(V0_LOOKUP_ENTRY_FIELDS, 2);
     assert_eq!(V0_SOURCE_SPAN_FIELDS, 5);
@@ -36,8 +40,11 @@ fn v0_wire_constants_lock_main_tuple_and_tag_decisions() {
     assert_eq!(V0_STATEMENT_TAG_PROMPT, 1);
     assert_eq!(V0_STATEMENT_TAG_DIVERT, 2);
     assert_eq!(V0_STATEMENT_TAG_IF, 3);
-    assert_eq!(V0_STATEMENT_TAG_EFFECT, 4);
-    assert_eq!(V0_STATEMENT_TAG_END, 5);
+    assert_eq!(V0_STATEMENT_TAG_MATCH, 4);
+    assert_eq!(V0_STATEMENT_TAG_EFFECT, 5);
+    assert_eq!(V0_STATEMENT_TAG_END, 6);
+    assert_eq!(V0_MATCH_PATTERN_TAG_VARIANT, 0);
+    assert_eq!(V0_MATCH_PATTERN_TAG_WILDCARD, 1);
 
     assert_eq!(V0_DIVERT_TARGET_TAG_BLOCK, 0);
     assert_eq!(V0_DIVERT_TARGET_TAG_END, 1);
@@ -213,6 +220,45 @@ fn ranges_and_lookup_rows_make_runtime_traversal_explicit() {
 }
 
 #[test]
+fn match_statements_use_explicit_scrutinee_and_arm_tables() {
+    let arm = CompiledMatchArm {
+        pattern: CompiledMatchPattern::Variant("tired".to_owned()),
+        statements: StatementRange::new(StatementIndex::new(4), 2),
+        source_map: SourceMapIndex::new(2),
+    };
+    let fallback = CompiledMatchArm {
+        pattern: CompiledMatchPattern::Wildcard,
+        statements: StatementRange::new(StatementIndex::new(6), 1),
+        source_map: SourceMapIndex::new(3),
+    };
+    let statement = CompiledStatement {
+        kind: CompiledStatementKind::Match {
+            scrutinee: recite_core::CompiledConditionCall {
+                function: "thread_stage".to_owned(),
+                args: vec![recite_core::CompiledArgument::Identifier(
+                    "rhea_job_response".to_owned(),
+                )],
+            },
+            arms: MatchArmRange::new(MatchArmIndex::new(0), 2),
+        },
+        source_map: SourceMapIndex::new(1),
+    };
+
+    assert_eq!(
+        arm.pattern,
+        CompiledMatchPattern::Variant("tired".to_owned())
+    );
+    assert_eq!(fallback.pattern, CompiledMatchPattern::Wildcard);
+
+    let CompiledStatementKind::Match { scrutinee, arms } = statement.kind else {
+        panic!("expected match statement");
+    };
+    assert_eq!(scrutinee.function, "thread_stage");
+    assert_eq!(arms.start, MatchArmIndex::new(0));
+    assert_eq!(arms.len, 2);
+}
+
+#[test]
 fn lookup_table_wrappers_accept_sorted_unique_rows() {
     let blocks = BlockLookupTable::new(vec![
         BlockLookupEntry {
@@ -310,6 +356,7 @@ fn compiled_dialogue_uses_typed_lookup_tables() {
         sources: Vec::new(),
         blocks: Vec::new(),
         statements: Vec::new(),
+        match_arms: Vec::new(),
         lines: Vec::new(),
         choices: Vec::new(),
         speakers: Vec::new(),

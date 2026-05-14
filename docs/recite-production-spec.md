@@ -1198,9 +1198,9 @@ Scalar wire rules:
 
 Top-level and row arrays use this field order:
 
-- `CompiledDialogue`: `[header, sources, blocks, statements, lines, choices,
-  speakers, metadata, effects, source_maps, block_lookup, line_lookup,
-  choice_lookup]`.
+- `CompiledDialogue`: `[header, sources, blocks, statements, match_arms,
+  lines, choices, speakers, metadata, effects, source_maps, block_lookup,
+  line_lookup, choice_lookup]`.
 - `CompiledAssetHeader`: `[format_version, compiler_compatibility_version,
   primary_encoding, inspection_encoding, compiler_version, asset_id,
   source_map_id, schema_fingerprint]`.
@@ -1208,6 +1208,7 @@ Top-level and row arrays use this field order:
 - `CompiledBlock`: `[id, source_file, statements, metadata, default_speaker,
   source_map]`.
 - `CompiledStatement`: `[kind, source_map]`.
+- `CompiledMatchArm`: `[pattern, statements, source_map]`.
 - `CompiledLine`: `[id, source_text, speaker, metadata, source_map]`.
 - `CompiledChoice`: `[id, source_text, metadata, condition, target, echo,
   source_map]`.
@@ -1224,7 +1225,8 @@ in which case the payload is nil. v0 tags are:
 - inspection encoding: `0 = CompactJson`;
 - schema fingerprint: `0 = fingerprint`, `1 = no_schema`;
 - statement kind: `0 = line`, `1 = prompt`, `2 = divert`, `3 = if`,
-  `4 = effect`, `5 = end`;
+  `4 = match`, `5 = effect`, `6 = end`;
+- match pattern: `0 = variant`, `1 = wildcard`;
 - divert target: `0 = block`, `1 = end`;
 - choice echo: `0 = none`, `1 = selected_text`, `2 = explicit_line`;
 - effect mode: `0 = deferred`, `1 = immediate`, `2 = blocking`;
@@ -1249,6 +1251,7 @@ Compiled assets must include:
 - schema fingerprint, or an explicit no-schema marker;
 - block table;
 - statement table;
+- match arm table;
 - line table;
 - choice table;
 - speaker table;
