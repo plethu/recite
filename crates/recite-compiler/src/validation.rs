@@ -1,4 +1,4 @@
-mod project;
+pub(crate) mod project;
 
 use std::collections::{BTreeMap, BTreeSet};
 
@@ -48,7 +48,9 @@ struct Validator<'a> {
     source_files: Vec<&'a SourceFile>,
     diagnostics: Vec<Diagnostic>,
     blocks: BTreeMap<&'a str, BTreeSet<&'a str>>,
+    source_paths: BTreeMap<&'a str, SourceSpan>,
     block_ids: BTreeMap<(&'a str, &'a str), SourceSpan>,
+    compiled_block_ids: BTreeMap<&'a str, (&'a str, SourceSpan)>,
     localisable_ids: BTreeMap<&'a str, SourceSpan>,
     first_default: Option<&'a Block>,
     default_count: usize,
@@ -63,7 +65,9 @@ impl<'a> Validator<'a> {
             source_files,
             diagnostics: Vec::new(),
             blocks,
+            source_paths: BTreeMap::new(),
             block_ids: BTreeMap::new(),
+            compiled_block_ids: BTreeMap::new(),
             localisable_ids: BTreeMap::new(),
             first_default: None,
             default_count: 0,
@@ -84,11 +88,25 @@ impl<'a> Validator<'a> {
     }
 
     fn validate_source_file(&mut self, source_file: &'a SourceFile) {
+        self.validate_source_path(source_file);
+
         for block in &source_file.blocks {
             self.validate_block(source_file, block);
             for statement in &block.statements {
                 self.validate_statement(source_file, statement);
             }
+        }
+    }
+
+    fn validate_source_path(&mut self, source_file: &'a SourceFile) {
+        let span = project::first_source_span(&[source_file]);
+        if let Some(first_span) = self.source_paths.get(source_file.path.as_str()) {
+            self.diagnostics.push(diagnostics::duplicate_source_path(
+                source_file,
+                first_span.clone(),
+            ));
+        } else {
+            self.source_paths.insert(source_file.path.as_str(), span);
         }
     }
 
@@ -109,6 +127,22 @@ impl<'a> Validator<'a> {
             ));
         } else {
             self.block_ids.insert(key, block.span.clone());
+        }
+
+        if let Some((first_file, first_span)) = self.compiled_block_ids.get(block.id.as_str()) {
+            if *first_file != source_file.path {
+                self.diagnostics
+                    .push(diagnostics::ambiguous_compiled_block_id(
+                        &block.id,
+                        block.span.clone(),
+                        first_span.clone(),
+                    ));
+            }
+        } else {
+            self.compiled_block_ids.insert(
+                block.id.as_str(),
+                (source_file.path.as_str(), block.span.clone()),
+            );
         }
     }
 
@@ -131,12 +165,22 @@ impl<'a> Validator<'a> {
             Statement::Line(line) => {
                 self.validate_line(source_file, line);
                 for statement in &line.statements {
+                    if !matches!(statement, Statement::Choice(_)) {
+                        self.diagnostics
+                            .push(diagnostics::unsupported_line_child_statement(
+                                line, statement,
+                            ));
+                    }
                     self.validate_statement(source_file, statement);
                 }
             }
             Statement::Choice(choice) => {
                 self.validate_choice(source_file, choice);
                 for statement in &choice.statements {
+                    self.diagnostics
+                        .push(diagnostics::unsupported_choice_child_statement(
+                            choice, statement,
+                        ));
                     self.validate_statement(source_file, statement);
                 }
             }
@@ -208,6 +252,9 @@ impl<'a> Validator<'a> {
         if let Some(target) = &choice.target {
             self.validate_span(source_file, &target.span, "choice target");
             self.validate_reference(source_file, &target.target, &target.span);
+        } else {
+            self.diagnostics
+                .push(diagnostics::missing_choice_target(choice));
         }
     }
 

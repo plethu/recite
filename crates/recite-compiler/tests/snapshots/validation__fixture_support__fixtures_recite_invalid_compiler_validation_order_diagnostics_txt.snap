@@ -1,5 +1,6 @@
 ---
 source: crates/recite-compiler/tests/../../../tests/support/fixtures.rs
+assertion_line: 12
 expression: actual
 ---
 diagnostics:
@@ -17,6 +18,18 @@ diagnostics:
   line: 4
   column: 3
   help: add a stable author-visible ID to the line header
+- code: RECITE_VALIDATE014
+  severity: Error
+  message: choice `choose_path` contains a nested line statement that v0 compiled choices cannot represent
+  file: fixtures/recite/invalid/compiler_validation_order.recite
+  line: 4
+  column: 3
+  related:
+  - message: choice containing the unsupported nested statement is here
+    file: fixtures/recite/invalid/compiler_validation_order.recite
+    line: 2
+    column: 1
+  help: keep choice bodies to text and one target divert for v0 compiled assets
 - code: RECITE_VALIDATE007
   severity: Error
   message: unknown block reference `missing_target`

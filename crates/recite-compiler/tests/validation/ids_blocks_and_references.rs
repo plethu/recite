@@ -14,10 +14,13 @@ fn validates_missing_and_duplicate_line_and_choice_ids_in_source_order() {
             "  Prompt.\n",
             "  ?\n",
             "    Missing choice id.\n",
+            "    -> END\n",
             "  ? repeated_choice\n",
             "    First repeated choice id.\n",
+            "    -> END\n",
             "  ? repeated_choice\n",
             "    Second repeated choice id.\n",
+            "    -> END\n",
             "> repeated_line\n",
             "  Second repeated line id.\n",
         ),
@@ -34,8 +37,8 @@ fn validates_missing_and_duplicate_line_and_choice_ids_in_source_order() {
             "RECITE_VALIDATE003",
         ],
     );
-    assert_spans(&report, [(2, 1), (8, 3), (12, 3), (14, 1)]);
-    assert_eq!(report.diagnostics[2].related[0].span.start.line(), 10);
+    assert_spans(&report, [(2, 1), (8, 3), (14, 3), (17, 1)]);
+    assert_eq!(report.diagnostics[2].related[0].span.start.line(), 11);
     assert_eq!(report.diagnostics[3].related[0].span.start.line(), 4);
 }
 

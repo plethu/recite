@@ -5,9 +5,9 @@
   ? ask_work
     Ask about work.
     -> work
-  :if trusts(player)
-    > secret_001
-      I can tell you.
+:if trusts(player)
+  > secret_001
+    I can tell you.
 ! deferred advance_thread(start, asked)
 -> END
 
