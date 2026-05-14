@@ -44,7 +44,7 @@ pub(super) fn first_source_span(source_files: &[&SourceFile]) -> SourceSpan {
         })
 }
 
-pub(super) fn sort_diagnostics_by_source(diagnostics: &mut [Diagnostic]) {
+pub(crate) fn sort_diagnostics_by_source(diagnostics: &mut [Diagnostic]) {
     diagnostics.sort_by(|left, right| {
         left.span
             .file

@@ -1,11 +1,11 @@
-mod project;
+pub(crate) mod project;
 
 use std::collections::{BTreeMap, BTreeSet};
 
 use recite_core::{
-    Block, BlockReference, Choice, ConditionCall, ConditionExpression, Diagnostic, Divert,
-    DivertTarget, Effect, IfBranch, Line, MatchArm, MatchBranch, Metadata, SourceFile, SourceSpan,
-    SourceText, Statement,
+    Argument, Block, BlockReference, Choice, ChoiceEcho, ConditionCall, ConditionExpression,
+    Diagnostic, Divert, DivertTarget, Effect, IfBranch, Line, MatchArm, MatchBranch, Metadata,
+    MetadataEntry, ScalarValue, SourceFile, SourceSpan, SourceText, Statement, Value,
 };
 
 use self::project::{
@@ -48,7 +48,10 @@ struct Validator<'a> {
     source_files: Vec<&'a SourceFile>,
     diagnostics: Vec<Diagnostic>,
     blocks: BTreeMap<&'a str, BTreeSet<&'a str>>,
+    source_paths: BTreeMap<&'a str, SourceSpan>,
     block_ids: BTreeMap<(&'a str, &'a str), SourceSpan>,
+    compiled_block_ids: BTreeMap<&'a str, (&'a str, SourceSpan)>,
+    line_ids: BTreeSet<&'a str>,
     localisable_ids: BTreeMap<&'a str, SourceSpan>,
     first_default: Option<&'a Block>,
     default_count: usize,
@@ -58,12 +61,16 @@ impl<'a> Validator<'a> {
     fn new(source_files: &'a [SourceFile]) -> Self {
         let source_files = source_files_in_project_order(source_files);
         let blocks = collect_blocks(&source_files);
+        let line_ids = collect_line_ids(&source_files);
 
         Self {
             source_files,
             diagnostics: Vec::new(),
             blocks,
+            source_paths: BTreeMap::new(),
             block_ids: BTreeMap::new(),
+            compiled_block_ids: BTreeMap::new(),
+            line_ids,
             localisable_ids: BTreeMap::new(),
             first_default: None,
             default_count: 0,
@@ -84,11 +91,25 @@ impl<'a> Validator<'a> {
     }
 
     fn validate_source_file(&mut self, source_file: &'a SourceFile) {
+        self.validate_source_path(source_file);
+
         for block in &source_file.blocks {
             self.validate_block(source_file, block);
             for statement in &block.statements {
                 self.validate_statement(source_file, statement);
             }
+        }
+    }
+
+    fn validate_source_path(&mut self, source_file: &'a SourceFile) {
+        let span = project::first_source_span(&[source_file]);
+        if let Some(first_span) = self.source_paths.get(source_file.path.as_str()) {
+            self.diagnostics.push(diagnostics::duplicate_source_path(
+                source_file,
+                first_span.clone(),
+            ));
+        } else {
+            self.source_paths.insert(source_file.path.as_str(), span);
         }
     }
 
@@ -109,6 +130,22 @@ impl<'a> Validator<'a> {
             ));
         } else {
             self.block_ids.insert(key, block.span.clone());
+        }
+
+        if let Some((first_file, first_span)) = self.compiled_block_ids.get(block.id.as_str()) {
+            if *first_file != source_file.path {
+                self.diagnostics
+                    .push(diagnostics::ambiguous_compiled_block_id(
+                        &block.id,
+                        block.span.clone(),
+                        first_span.clone(),
+                    ));
+            }
+        } else {
+            self.compiled_block_ids.insert(
+                block.id.as_str(),
+                (source_file.path.as_str(), block.span.clone()),
+            );
         }
     }
 
@@ -131,12 +168,22 @@ impl<'a> Validator<'a> {
             Statement::Line(line) => {
                 self.validate_line(source_file, line);
                 for statement in &line.statements {
+                    if !matches!(statement, Statement::Choice(_)) {
+                        self.diagnostics
+                            .push(diagnostics::unsupported_line_child_statement(
+                                line, statement,
+                            ));
+                    }
                     self.validate_statement(source_file, statement);
                 }
             }
             Statement::Choice(choice) => {
                 self.validate_choice(source_file, choice);
                 for statement in &choice.statements {
+                    self.diagnostics
+                        .push(diagnostics::unsupported_choice_child_statement(
+                            choice, statement,
+                        ));
                     self.validate_statement(source_file, statement);
                 }
             }
@@ -188,6 +235,7 @@ impl<'a> Validator<'a> {
         self.validate_span(source_file, &choice.span, "choice");
         self.validate_source_text(source_file, &choice.source_text, "choice source text");
         self.validate_metadata(source_file, &choice.metadata);
+        self.validate_choice_echo(choice);
         if let Some(condition) = &choice.condition {
             self.validate_condition_expression(source_file, condition);
         }
@@ -208,6 +256,9 @@ impl<'a> Validator<'a> {
         if let Some(target) = &choice.target {
             self.validate_span(source_file, &target.span, "choice target");
             self.validate_reference(source_file, &target.target, &target.span);
+        } else {
+            self.diagnostics
+                .push(diagnostics::missing_choice_target(choice));
         }
     }
 
@@ -232,6 +283,7 @@ impl<'a> Validator<'a> {
 
     fn validate_effect(&mut self, source_file: &'a SourceFile, effect: &'a Effect) {
         self.validate_span(source_file, &effect.span, "effect");
+        self.validate_arguments(&effect.args, effect.span.clone(), "effect argument");
     }
 
     fn validate_source_text(
@@ -254,6 +306,7 @@ impl<'a> Validator<'a> {
             if let Some(span) = &entry.value_span {
                 self.validate_span(source_file, span, "metadata value");
             }
+            self.validate_metadata_value(source_file, entry);
         }
     }
 
@@ -279,6 +332,46 @@ impl<'a> Validator<'a> {
 
     fn validate_condition_call(&mut self, source_file: &'a SourceFile, call: &'a ConditionCall) {
         self.validate_span(source_file, &call.span, "condition call");
+        self.validate_arguments(&call.args, call.span.clone(), "condition argument");
+    }
+
+    fn validate_choice_echo(&mut self, choice: &'a Choice) {
+        let ChoiceEcho::Line(line_id) = &choice.echo else {
+            return;
+        };
+
+        if !self.line_ids.contains(line_id.as_str()) {
+            self.diagnostics
+                .push(diagnostics::unknown_choice_echo_line(choice, line_id));
+        }
+    }
+
+    fn validate_metadata_value(&mut self, source_file: &'a SourceFile, entry: &'a MetadataEntry) {
+        if !value_has_non_finite_float(&entry.value) {
+            return;
+        }
+
+        let span = entry
+            .value_span
+            .clone()
+            .or_else(|| entry.source_span.clone())
+            .unwrap_or_else(|| project::first_source_span(&[source_file]));
+        self.diagnostics.push(diagnostics::non_finite_float_value(
+            span,
+            format!("metadata value `{}`", entry.key),
+        ));
+    }
+
+    fn validate_arguments(
+        &mut self,
+        arguments: &'a [Argument],
+        span: SourceSpan,
+        owner: &'static str,
+    ) {
+        if arguments.iter().any(argument_has_non_finite_float) {
+            self.diagnostics
+                .push(diagnostics::non_finite_float_value(span, owner));
+        }
     }
 
     fn validate_span(
@@ -336,5 +429,42 @@ impl<'a> Validator<'a> {
         };
 
         blocks.contains(reference.block_id.as_str())
+    }
+}
+
+fn collect_line_ids<'a>(source_files: &[&'a SourceFile]) -> BTreeSet<&'a str> {
+    let mut line_ids = BTreeSet::new();
+
+    for source_file in source_files {
+        source_file.visit_statements_depth_first(&mut |statement| {
+            if let Statement::Line(line) = statement
+                && let Some(id) = &line.id
+            {
+                line_ids.insert(id.as_str());
+            }
+        });
+    }
+
+    line_ids
+}
+
+fn value_has_non_finite_float(value: &Value) -> bool {
+    match value {
+        Value::Scalar(value) => scalar_has_non_finite_float(value),
+        Value::Array(values) => values.iter().any(scalar_has_non_finite_float),
+    }
+}
+
+fn argument_has_non_finite_float(argument: &Argument) -> bool {
+    match argument {
+        Argument::Identifier(_) => false,
+        Argument::Value(value) => scalar_has_non_finite_float(value),
+    }
+}
+
+fn scalar_has_non_finite_float(value: &ScalarValue) -> bool {
+    match value {
+        ScalarValue::Float(value) => !value.is_finite(),
+        ScalarValue::String(_) | ScalarValue::Integer(_) | ScalarValue::Boolean(_) => false,
     }
 }

@@ -26,10 +26,11 @@ fn diagnostics_are_sorted_by_canonical_source_order() {
         [
             "RECITE_VALIDATE005",
             "RECITE_VALIDATE001",
+            "RECITE_VALIDATE014",
             "RECITE_VALIDATE007",
         ],
     );
-    assert_spans(&report, [(1, 1), (4, 3), (6, 3)]);
+    assert_spans(&report, [(1, 1), (4, 3), (4, 3), (6, 3)]);
 }
 
 #[test]
@@ -40,7 +41,12 @@ fn validation_is_independent_of_caller_file_order() {
     );
     let second = lower(
         "dialogue/b.recite",
-        concat!(":: second default\n", "? shared\n", "  Second.\n",),
+        concat!(
+            ":: second default\n",
+            "? shared\n",
+            "  Second.\n",
+            "  -> END\n",
+        ),
     );
 
     let forward = validate_source_files(&[first.clone(), second.clone()]);
@@ -68,6 +74,7 @@ fn line_and_choice_ids_share_one_localisable_namespace() {
             "  Line.\n",
             "? shared\n",
             "  Choice.\n",
+            "  -> END\n",
         ),
     )];
 

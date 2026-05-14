@@ -1,5 +1,6 @@
 ---
 source: crates/recite-parser/tests/../../../tests/support/fixtures.rs
+assertion_line: 12
 expression: actual
 ---
 source_file: fixtures/recite/valid/core_language_spike.recite
@@ -8,9 +9,9 @@ blocks:
   - comment "scene opener" @ 2:1
   - line intro_001 speaker=hazel text="Welcome to the fixture." metadata=[mood, mood]
     - choice ask_work text="Ask about work." target=work metadata=[]
-    - if trusts(player)
-      then:
-        - line secret_001 speaker=<none> text="I can tell you." metadata=[]
+  - if trusts(player)
+    then:
+      - line secret_001 speaker=<none> text="I can tell you." metadata=[]
   - effect Deferred advance_thread(start, asked)
   - divert END
 - block work default=false speaker=<none> metadata=[]

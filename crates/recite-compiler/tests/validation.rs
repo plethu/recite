@@ -5,6 +5,8 @@ use recite_core::{
 };
 use recite_parser::parse;
 
+#[path = "validation/asset_constraints.rs"]
+mod asset_constraints;
 #[path = "../../../tests/support/fixtures.rs"]
 mod fixture_support;
 #[path = "validation/fixtures.rs"]

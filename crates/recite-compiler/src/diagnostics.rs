@@ -1,6 +1,6 @@
 use recite_core::{
     Block, BlockId, BlockReference, Choice, Diagnostic, DiagnosticCode, DiagnosticSeverity, Line,
-    RelatedSpan, SourceSpan,
+    LineId, RelatedSpan, SourceFile, SourceSpan, Statement,
 };
 
 pub(crate) const MISSING_LINE_ID: &str = "RECITE_VALIDATE001";
@@ -12,6 +12,13 @@ pub(crate) const AMBIGUOUS_DEFAULT_BLOCK: &str = "RECITE_VALIDATE006";
 pub(crate) const UNKNOWN_BLOCK_REFERENCE: &str = "RECITE_VALIDATE007";
 pub(crate) const INVALID_SOURCE_SPAN: &str = "RECITE_VALIDATE008";
 pub(crate) const DUPLICATE_BLOCK_ID: &str = "RECITE_VALIDATE009";
+pub(crate) const DUPLICATE_SOURCE_PATH: &str = "RECITE_VALIDATE010";
+pub(crate) const AMBIGUOUS_COMPILED_BLOCK_ID: &str = "RECITE_VALIDATE011";
+pub(crate) const MISSING_CHOICE_TARGET: &str = "RECITE_VALIDATE012";
+pub(crate) const UNSUPPORTED_LINE_CHILD_STATEMENT: &str = "RECITE_VALIDATE013";
+pub(crate) const UNSUPPORTED_CHOICE_CHILD_STATEMENT: &str = "RECITE_VALIDATE014";
+pub(crate) const UNKNOWN_CHOICE_ECHO_LINE: &str = "RECITE_VALIDATE015";
+pub(crate) const NON_FINITE_FLOAT_VALUE: &str = "RECITE_VALIDATE016";
 
 pub(crate) fn missing_line_id(line: &Line) -> Diagnostic {
     diagnostic(
@@ -105,6 +112,106 @@ pub(crate) fn duplicate_block_id(
     .with_help("rename one of the duplicate block IDs")
 }
 
+pub(crate) fn duplicate_source_path(
+    source_file: &SourceFile,
+    first_span: SourceSpan,
+) -> Diagnostic {
+    diagnostic(
+        DUPLICATE_SOURCE_PATH,
+        format!("duplicate source path `{}`", source_file.path),
+        first_span_for(source_file),
+    )
+    .with_related([RelatedSpan::new(
+        first_span,
+        "first source file with this path is here",
+    )])
+    .with_help("compile each source path once")
+}
+
+pub(crate) fn ambiguous_compiled_block_id(
+    block_id: &BlockId,
+    span: SourceSpan,
+    first_span: SourceSpan,
+) -> Diagnostic {
+    diagnostic(
+        AMBIGUOUS_COMPILED_BLOCK_ID,
+        format!("compiled block id `{block_id}` must be globally unique"),
+        span,
+    )
+    .with_related([RelatedSpan::new(
+        first_span,
+        "first compiled block ID is here",
+    )])
+    .with_help("rename one block or split the runtime lookup contract in a future format version")
+}
+
+pub(crate) fn missing_choice_target(choice: &Choice) -> Diagnostic {
+    diagnostic(
+        MISSING_CHOICE_TARGET,
+        "choice must target a block or END before it can be compiled",
+        choice.span.clone(),
+    )
+    .with_help("add a choice body divert such as `-> next_block` or `-> END`")
+}
+
+pub(crate) fn unsupported_line_child_statement(line: &Line, statement: &Statement) -> Diagnostic {
+    diagnostic(
+        UNSUPPORTED_LINE_CHILD_STATEMENT,
+        format!(
+            "line `{}` contains a nested {} statement that v0 compiled prompts cannot represent",
+            display_optional_line_id(line),
+            display_statement_kind(statement),
+        ),
+        statement_span(statement).clone(),
+    )
+    .with_related([RelatedSpan::new(
+        line.span.clone(),
+        "line containing the unsupported nested statement is here",
+    )])
+    .with_help("keep only nested choices under prompt lines for v0 compiled assets")
+}
+
+pub(crate) fn unsupported_choice_child_statement(
+    choice: &Choice,
+    statement: &Statement,
+) -> Diagnostic {
+    diagnostic(
+        UNSUPPORTED_CHOICE_CHILD_STATEMENT,
+        format!(
+            "choice `{}` contains a nested {} statement that v0 compiled choices cannot represent",
+            display_optional_choice_id(choice),
+            display_statement_kind(statement),
+        ),
+        statement_span(statement).clone(),
+    )
+    .with_related([RelatedSpan::new(
+        choice.span.clone(),
+        "choice containing the unsupported nested statement is here",
+    )])
+    .with_help("keep choice bodies to text and one target divert for v0 compiled assets")
+}
+
+pub(crate) fn unknown_choice_echo_line(choice: &Choice, line_id: &LineId) -> Diagnostic {
+    diagnostic(
+        UNKNOWN_CHOICE_ECHO_LINE,
+        format!("choice echo references unknown line id `{line_id}`"),
+        choice.span.clone(),
+    )
+    .with_help("use an existing line ID, `echo=selected_text`, or `echo=none`")
+}
+
+pub(crate) fn non_finite_float_value(
+    span: SourceSpan,
+    owner: impl std::fmt::Display,
+) -> Diagnostic {
+    diagnostic(
+        NON_FINITE_FLOAT_VALUE,
+        format!("{owner} contains a non-finite float value"),
+        span,
+    )
+    .with_help("use a finite number so MessagePack and inspection JSON stay equivalent")
+}
+
 fn diagnostic(code: &str, message: impl Into<String>, span: SourceSpan) -> Diagnostic {
     Diagnostic::new(
         DiagnosticCode::new(code).expect("compiler diagnostic codes are static and namespaced"),
@@ -118,5 +225,54 @@ fn display_reference(reference: &BlockReference) -> String {
     match &reference.file {
         Some(file) => format!("{file}::{}", reference.block_id),
         None => reference.block_id.to_string(),
+    }
+}
+
+fn first_span_for(source_file: &SourceFile) -> SourceSpan {
+    source_file.blocks.first().map_or_else(
+        || {
+            SourceSpan::point(
+                source_file.path.clone(),
+                recite_core::SourcePosition::new(1, 1).expect("1:1 is a valid source position"),
+            )
+        },
+        |block| block.span.clone(),
+    )
+}
+
+fn display_optional_line_id(line: &Line) -> String {
+    line.id
+        .as_ref()
+        .map_or_else(|| "<missing>".to_owned(), ToString::to_string)
+}
+
+fn display_optional_choice_id(choice: &Choice) -> String {
+    choice
+        .id
+        .as_ref()
+        .map_or_else(|| "<missing>".to_owned(), ToString::to_string)
+}
+
+fn display_statement_kind(statement: &Statement) -> &'static str {
+    match statement {
+        Statement::Line(_) => "line",
+        Statement::Choice(_) => "choice",
+        Statement::Divert(_) => "divert",
+        Statement::If(_) => "if",
+        Statement::Match(_) => "match",
+        Statement::Effect(_) => "effect",
+        Statement::Comment(_) => "comment",
+    }
+}
+
+fn statement_span(statement: &Statement) -> &SourceSpan {
+    match statement {
+        Statement::Line(line) => &line.span,
+        Statement::Choice(choice) => &choice.span,
+        Statement::Divert(divert) => &divert.span,
+        Statement::If(branch) => &branch.span,
+        Statement::Match(branch) => &branch.span,
+        Statement::Effect(effect) => &effect.span,
+        Statement::Comment(comment) => &comment.span,
     }
 }
