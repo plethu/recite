@@ -1,4 +1,4 @@
-use recite_core::{BlockIndex, ChoiceId, CompiledAssetId, StatementIndex};
+use recite_core::{BlockIndex, ChoiceId, CompiledAssetId, CompiledDivertTarget, StatementIndex};
 
 use crate::{DialogueError, DialogueEvent};
 
@@ -48,9 +48,31 @@ impl DialogueSession {
 
         Ok(event)
     }
+
+    #[must_use]
+    pub fn selected_choice_history(&self) -> &[ChoiceId] {
+        &self.selected_choice_history
+    }
 }
 
 #[derive(Clone, Debug, Eq, PartialEq)]
 pub(crate) struct PendingPrompt {
-    pub(crate) choice_ids: Vec<ChoiceId>,
+    pub(crate) choices: Vec<PendingPromptChoice>,
+}
+
+impl PendingPrompt {
+    pub(crate) fn choice_ids(&self) -> Vec<ChoiceId> {
+        self.choices
+            .iter()
+            .map(|choice| choice.id.clone())
+            .collect()
+    }
+}
+
+#[derive(Clone, Debug, Eq, PartialEq)]
+pub(crate) struct PendingPromptChoice {
+    pub(crate) id: ChoiceId,
+    pub(crate) target: CompiledDivertTarget,
+    pub(crate) is_available: bool,
+    pub(crate) unavailable_reason: Option<String>,
 }

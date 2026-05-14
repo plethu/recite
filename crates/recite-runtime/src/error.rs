@@ -27,6 +27,17 @@ pub enum DialogueError {
     PromptPending {
         choices: Vec<ChoiceId>,
     },
+    NoPromptPending {
+        choice: ChoiceId,
+    },
+    InvalidChoice {
+        choice: ChoiceId,
+        prompt_choices: Vec<ChoiceId>,
+    },
+    UnavailableChoice {
+        choice: ChoiceId,
+        reason: Option<String>,
+    },
     SessionEnded,
     TraversalLimitExceeded {
         limit: usize,
@@ -63,6 +74,26 @@ impl std::fmt::Display for DialogueError {
             }
             Self::PromptPending { .. } => {
                 formatter.write_str("session is waiting for a choice selection")
+            }
+            Self::NoPromptPending { choice } => {
+                write!(
+                    formatter,
+                    "choice `{choice}` was selected with no pending prompt"
+                )
+            }
+            Self::InvalidChoice {
+                choice,
+                prompt_choices: _,
+            } => write!(
+                formatter,
+                "choice `{choice}` is not available in the pending prompt"
+            ),
+            Self::UnavailableChoice { choice, reason } => {
+                write!(formatter, "choice `{choice}` is unavailable")?;
+                if let Some(reason) = reason {
+                    write!(formatter, ": {reason}")?;
+                }
+                Ok(())
             }
             Self::SessionEnded => formatter.write_str("session has already ended"),
             Self::TraversalLimitExceeded { limit } => {
