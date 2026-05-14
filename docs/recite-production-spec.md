@@ -1233,11 +1233,13 @@ in which case the payload is nil. v0 tags are:
 - condition expression: `0 = call`, `1 = and`, `2 = or`, `3 = not`;
 - argument: `0 = identifier`, `1 = value`.
 
-v0 fixed array arity is not append-compatible. Field additions, removals,
-reordering, tag changes, or semantic changes require a `format_version` or
-`compiler_compatibility_version` change. A v0 reader must reject unexpected
-array lengths, unknown tags, invalid indexes, malformed lookup order, and
-algorithm-specific fingerprint length mismatches as malformed compiled assets.
+v0 fixed array arity is not append-compatible. The v0 shape may still be
+corrected before the runtime reader and compatibility gate are implemented, but
+once a v0 reader ships, field additions, removals, reordering, tag changes, or
+semantic changes require a `format_version` or `compiler_compatibility_version`
+change. A v0 reader must reject unexpected array lengths, unknown tags, invalid
+indexes, malformed lookup order, and algorithm-specific fingerprint length
+mismatches as malformed compiled assets.
 
 Compiled assets must include:
 
