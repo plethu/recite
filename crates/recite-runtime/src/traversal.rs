@@ -165,14 +165,25 @@ fn ensure_session_matches_asset(
 }
 
 fn lookup_block(asset: &CompiledDialogue, block: &str) -> Result<BlockIndex, DialogueError> {
-    asset
+    let block_index = asset
         .block_lookup
         .as_slice()
         .binary_search_by(|entry| entry.id.as_str().cmp(block))
         .map(|index| asset.block_lookup.as_slice()[index].index)
         .map_err(|_| DialogueError::UnknownBlock {
             block: block.to_owned(),
-        })
+        })?;
+    let resolved_block = block_at(asset, block_index)?;
+
+    if resolved_block.id.as_str() != block {
+        return Err(malformed(format!(
+            "block lookup entry `{block}` points to block `{}` at index {}",
+            resolved_block.id,
+            block_index.as_u32()
+        )));
+    }
+
+    Ok(block_index)
 }
 
 fn apply_divert(

@@ -1,7 +1,8 @@
 use recite_compiler::{CompileInput, CompileOptions, compile_inputs};
 use recite_core::{
-    BlockIndex, CompiledAssetId, CompiledConditionCall, CompiledDialogue, CompiledStatementKind,
-    CompilerVersion, LineIndex, MatchArmIndex, MatchArmRange, SchemaFingerprint, SourceMapId,
+    BlockIndex, BlockLookupEntry, BlockLookupTable, CompiledAssetId, CompiledConditionCall,
+    CompiledDialogue, CompiledStatementKind, CompilerVersion, LineIndex, MatchArmIndex,
+    MatchArmRange, SchemaFingerprint, SourceMapId,
 };
 use recite_runtime::{DialogueError, DialogueEvent, UnsupportedStatementKind, next, start_scene};
 
@@ -277,6 +278,39 @@ fn malformed_line_index_is_structured_error() {
 
     assert!(matches!(
         next(&asset, &mut session),
+        Err(DialogueError::MalformedCompiledAsset { .. })
+    ));
+}
+
+#[test]
+fn mismatched_explicit_block_lookup_entry_is_structured_error() {
+    let mut asset = compile_asset(
+        "dialogue/start.recite",
+        concat!(
+            ":: start default\n",
+            "> start_line\n",
+            "  Start.\n",
+            "-> END\n",
+            ":: work\n",
+            "> work_line\n",
+            "  Work.\n",
+            "-> END\n",
+        ),
+    );
+    asset.block_lookup = BlockLookupTable::new(vec![
+        BlockLookupEntry {
+            id: asset.blocks[0].id.clone(),
+            index: BlockIndex::new(0),
+        },
+        BlockLookupEntry {
+            id: asset.blocks[1].id.clone(),
+            index: BlockIndex::new(0),
+        },
+    ])
+    .expect("lookup entries remain sorted");
+
+    assert!(matches!(
+        start_scene(&asset, Some("work")),
         Err(DialogueError::MalformedCompiledAsset { .. })
     ));
 }
