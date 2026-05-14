@@ -258,7 +258,7 @@ fn invalid_choice_for_pending_prompt_is_structured_error_and_keeps_prompt_pendin
         choose(&asset, &mut session, missing.clone()),
         Err(DialogueError::InvalidChoice {
             choice: missing,
-            available_choices: vec![ask_work.clone()]
+            prompt_choices: vec![ask_work.clone()]
         })
     );
     assert_eq!(
@@ -300,6 +300,47 @@ fn stale_or_non_pending_choice_selection_is_structured_error() {
     assert_eq!(
         choose(&asset, &mut session, leave.clone()),
         Err(DialogueError::NoPromptPending { choice: leave })
+    );
+}
+
+#[test]
+fn stale_choice_id_is_invalid_when_a_later_prompt_is_pending() {
+    let asset = compile_asset(
+        "dialogue/start.recite",
+        concat!(
+            ":: start default\n",
+            "> first_prompt\n",
+            "  First?\n",
+            "  ? first_choice\n",
+            "    Continue.\n",
+            "    -> second\n",
+            ":: second\n",
+            "> second_prompt\n",
+            "  Second?\n",
+            "  ? second_choice\n",
+            "    End.\n",
+            "    -> END\n",
+        ),
+    );
+    let mut session = start_scene(&asset, None).expect("starts");
+    next(&asset, &mut session).expect("first prompt");
+    assert!(matches!(
+        choose(
+            &asset,
+            &mut session,
+            ChoiceId::new("first_choice").expect("valid choice ID"),
+        ),
+        Ok(DialogueEvent::Prompt { .. })
+    ));
+
+    let stale = ChoiceId::new("first_choice").expect("valid choice ID");
+    let current = ChoiceId::new("second_choice").expect("valid choice ID");
+    assert_eq!(
+        choose(&asset, &mut session, stale.clone()),
+        Err(DialogueError::InvalidChoice {
+            choice: stale,
+            prompt_choices: vec![current]
+        })
     );
 }
 

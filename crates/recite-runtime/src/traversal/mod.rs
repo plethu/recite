@@ -160,7 +160,7 @@ pub fn choose(
     else {
         return Err(DialogueError::InvalidChoice {
             choice: choice_id,
-            available_choices: prompt.choice_ids(),
+            prompt_choices: prompt.choice_ids(),
         });
     };
 

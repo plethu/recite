@@ -32,7 +32,7 @@ pub enum DialogueError {
     },
     InvalidChoice {
         choice: ChoiceId,
-        available_choices: Vec<ChoiceId>,
+        prompt_choices: Vec<ChoiceId>,
     },
     UnavailableChoice {
         choice: ChoiceId,
@@ -83,7 +83,7 @@ impl std::fmt::Display for DialogueError {
             }
             Self::InvalidChoice {
                 choice,
-                available_choices: _,
+                prompt_choices: _,
             } => write!(
                 formatter,
                 "choice `{choice}` is not available in the pending prompt"
