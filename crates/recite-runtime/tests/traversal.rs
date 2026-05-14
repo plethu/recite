@@ -1,10 +1,12 @@
 use recite_compiler::{CompileInput, CompileOptions, compile_inputs};
 use recite_core::{
-    BlockIndex, BlockLookupEntry, BlockLookupTable, ChoiceRange, CompiledAssetId,
-    CompiledConditionCall, CompiledDialogue, CompiledStatementKind, CompilerVersion, LineIndex,
-    MatchArmIndex, MatchArmRange, SchemaFingerprint, SourceMapId,
+    BlockIndex, BlockLookupEntry, BlockLookupTable, ChoiceId, ChoiceRange, CompiledAssetId,
+    CompiledConditionCall, CompiledDialogue, CompiledDivertTarget, CompiledStatementKind,
+    CompilerVersion, LineIndex, MatchArmIndex, MatchArmRange, SchemaFingerprint, SourceMapId,
 };
-use recite_runtime::{DialogueError, DialogueEvent, UnsupportedStatementKind, next, start_scene};
+use recite_runtime::{
+    DialogueError, DialogueEvent, UnsupportedStatementKind, choose, next, start_scene,
+};
 
 #[test]
 fn starts_at_compiled_default_block_even_when_it_is_not_first() {
@@ -149,6 +151,260 @@ fn emits_prompt_with_stable_choice_ids_and_waits_for_selection() {
         next(&asset, &mut session),
         Err(DialogueError::PromptPending {
             choices: vec![choices[0].id.clone()]
+        })
+    );
+}
+
+#[test]
+fn chooses_pending_prompt_option_by_stable_choice_id() {
+    let asset = compile_asset(
+        "dialogue/start.recite",
+        concat!(
+            ":: start default\n",
+            "> prompt_line\n",
+            "  What next?\n",
+            "  ? ask_work\n",
+            "    Ask about work.\n",
+            "    -> work\n",
+            "  ? leave\n",
+            "    Leave.\n",
+            "    -> END\n",
+            ":: work\n",
+            "> work_line\n",
+            "  Work waits.\n",
+            "-> END\n",
+        ),
+    );
+    let mut session = start_scene(&asset, None).expect("starts");
+
+    let DialogueEvent::Prompt { choices, .. } = next(&asset, &mut session).expect("emits prompt")
+    else {
+        panic!("expected prompt");
+    };
+    assert_eq!(choices[0].id.as_str(), "ask_work");
+    assert_eq!(choices[1].id.as_str(), "leave");
+
+    assert_eq!(
+        choose(
+            &asset,
+            &mut session,
+            ChoiceId::new("leave").expect("valid choice ID")
+        ),
+        Ok(DialogueEvent::End)
+    );
+    assert_eq!(
+        session
+            .selected_choice_history()
+            .iter()
+            .map(ChoiceId::as_str)
+            .collect::<Vec<_>>(),
+        ["leave"]
+    );
+}
+
+#[test]
+fn choosing_choice_target_continues_from_target_block() {
+    let asset = compile_asset(
+        "dialogue/start.recite",
+        concat!(
+            ":: start default\n",
+            "> prompt_line\n",
+            "  What next?\n",
+            "  ? ask_work\n",
+            "    Ask about work.\n",
+            "    -> work\n",
+            "  ? leave\n",
+            "    Leave.\n",
+            "    -> END\n",
+            ":: work\n",
+            "> work_line\n",
+            "  Work waits.\n",
+            "-> END\n",
+        ),
+    );
+    let mut session = start_scene(&asset, None).expect("starts");
+    next(&asset, &mut session).expect("emits prompt");
+
+    assert_line(
+        choose(
+            &asset,
+            &mut session,
+            ChoiceId::new("ask_work").expect("valid choice ID"),
+        ),
+        "work_line",
+        "Work waits.",
+    );
+}
+
+#[test]
+fn invalid_choice_for_pending_prompt_is_structured_error_and_keeps_prompt_pending() {
+    let asset = compile_asset(
+        "dialogue/start.recite",
+        concat!(
+            ":: start default\n",
+            "> prompt_line\n",
+            "  What next?\n",
+            "  ? ask_work\n",
+            "    Ask about work.\n",
+            "    -> END\n",
+        ),
+    );
+    let mut session = start_scene(&asset, None).expect("starts");
+    next(&asset, &mut session).expect("emits prompt");
+    let missing = ChoiceId::new("missing").expect("valid choice ID");
+    let ask_work = ChoiceId::new("ask_work").expect("valid choice ID");
+
+    assert_eq!(
+        choose(&asset, &mut session, missing.clone()),
+        Err(DialogueError::InvalidChoice {
+            choice: missing,
+            available_choices: vec![ask_work.clone()]
+        })
+    );
+    assert_eq!(
+        next(&asset, &mut session),
+        Err(DialogueError::PromptPending {
+            choices: vec![ask_work]
+        })
+    );
+}
+
+#[test]
+fn stale_or_non_pending_choice_selection_is_structured_error() {
+    let asset = compile_asset(
+        "dialogue/start.recite",
+        concat!(
+            ":: start default\n",
+            "> prompt_line\n",
+            "  What next?\n",
+            "  ? leave\n",
+            "    Leave.\n",
+            "    -> END\n",
+        ),
+    );
+    let mut session = start_scene(&asset, None).expect("starts");
+    let leave = ChoiceId::new("leave").expect("valid choice ID");
+
+    assert_eq!(
+        choose(&asset, &mut session, leave.clone()),
+        Err(DialogueError::NoPromptPending {
+            choice: leave.clone()
+        })
+    );
+
+    next(&asset, &mut session).expect("emits prompt");
+    assert_eq!(
+        choose(&asset, &mut session, leave.clone()),
+        Ok(DialogueEvent::End)
+    );
+    assert_eq!(
+        choose(&asset, &mut session, leave.clone()),
+        Err(DialogueError::NoPromptPending { choice: leave })
+    );
+}
+
+#[test]
+fn selected_choice_history_records_choices_in_selection_order() {
+    let asset = compile_asset(
+        "dialogue/start.recite",
+        concat!(
+            ":: start default\n",
+            "> first_prompt\n",
+            "  First?\n",
+            "  ? choose_work\n",
+            "    Work.\n",
+            "    -> work\n",
+            ":: work\n",
+            "> second_prompt\n",
+            "  Second?\n",
+            "  ? choose_end\n",
+            "    End.\n",
+            "    -> END\n",
+        ),
+    );
+    let mut session = start_scene(&asset, None).expect("starts");
+
+    next(&asset, &mut session).expect("first prompt");
+    assert!(matches!(
+        choose(
+            &asset,
+            &mut session,
+            ChoiceId::new("choose_work").expect("valid choice ID"),
+        ),
+        Ok(DialogueEvent::Prompt { .. })
+    ));
+    assert_eq!(
+        choose(
+            &asset,
+            &mut session,
+            ChoiceId::new("choose_end").expect("valid choice ID"),
+        ),
+        Ok(DialogueEvent::End)
+    );
+
+    assert_eq!(
+        session
+            .selected_choice_history()
+            .iter()
+            .map(ChoiceId::as_str)
+            .collect::<Vec<_>>(),
+        ["choose_work", "choose_end"]
+    );
+}
+
+#[test]
+fn choice_selection_continuation_is_deterministic() {
+    let asset = compile_asset(
+        "dialogue/start.recite",
+        concat!(
+            ":: start default\n",
+            "> prompt_line\n",
+            "  What next?\n",
+            "  ? ask_work\n",
+            "    Ask about work.\n",
+            "    -> work\n",
+            "  ? leave\n",
+            "    Leave.\n",
+            "    -> END\n",
+            ":: work\n",
+            "> work_line\n",
+            "  Work waits.\n",
+            "-> END\n",
+        ),
+    );
+
+    let first = run_trace(&asset, ["ask_work"]);
+    let second = run_trace(&asset, ["ask_work"]);
+
+    assert_eq!(first, second);
+}
+
+#[test]
+fn malformed_choice_target_is_structured_error_and_keeps_prompt_pending() {
+    let mut asset = compile_asset(
+        "dialogue/start.recite",
+        concat!(
+            ":: start default\n",
+            "> prompt_line\n",
+            "  What next?\n",
+            "  ? ask_work\n",
+            "    Ask about work.\n",
+            "    -> END\n",
+        ),
+    );
+    asset.choices[0].target = CompiledDivertTarget::Block(BlockIndex::new(99));
+    let mut session = start_scene(&asset, None).expect("starts");
+    next(&asset, &mut session).expect("emits prompt");
+    let ask_work = ChoiceId::new("ask_work").expect("valid choice ID");
+
+    assert!(matches!(
+        choose(&asset, &mut session, ask_work.clone()),
+        Err(DialogueError::MalformedCompiledAsset { .. })
+    ));
+    assert_eq!(
+        next(&asset, &mut session),
+        Err(DialogueError::PromptPending {
+            choices: vec![ask_work]
         })
     );
 }
@@ -428,6 +684,41 @@ fn run_to_end(asset: &CompiledDialogue) -> Vec<DialogueEvent> {
         let is_end = matches!(event, DialogueEvent::End);
         events.push(event);
         if is_end {
+            break;
+        }
+    }
+
+    events
+}
+
+fn run_trace<const N: usize>(
+    asset: &CompiledDialogue,
+    choice_ids: [&str; N],
+) -> Vec<DialogueEvent> {
+    let mut session = start_scene(asset, None).expect("starts");
+    let mut choices = choice_ids.into_iter();
+    let mut events = Vec::new();
+
+    loop {
+        let event = next(asset, &mut session).expect("next succeeds");
+        let is_prompt = matches!(event, DialogueEvent::Prompt { .. });
+        let is_end = matches!(event, DialogueEvent::End);
+        events.push(event);
+
+        if is_prompt {
+            let choice_id = choices.next().expect("choice provided for prompt");
+            let event = choose(
+                asset,
+                &mut session,
+                ChoiceId::new(choice_id).expect("valid choice ID"),
+            )
+            .expect("choice succeeds");
+            let is_end = matches!(event, DialogueEvent::End);
+            events.push(event);
+            if is_end {
+                break;
+            }
+        } else if is_end {
             break;
         }
     }
