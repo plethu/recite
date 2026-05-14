@@ -76,12 +76,15 @@ pub fn next(
         let statement = statement_at(asset, session.next_statement)?;
         match &statement.kind {
             CompiledStatementKind::Line(line) => {
-                let event = DialogueEvent::Line(dialogue_line(asset, *line)?);
+                let event =
+                    DialogueEvent::Line(dialogue_line(asset, *line, block.default_speaker)?);
                 session.next_statement = next_statement_after(session.next_statement)?;
                 return session.emit(event);
             }
             CompiledStatementKind::Prompt { line, choices } => {
-                let line = line.map(|line| dialogue_line(asset, line)).transpose()?;
+                let line = line
+                    .map(|line| dialogue_line(asset, line, block.default_speaker))
+                    .transpose()?;
                 let choices = dialogue_choices(asset, *choices)?;
                 let choice_ids = choices.iter().map(|choice| choice.id.clone()).collect();
                 session.next_statement = next_statement_after(session.next_statement)?;
@@ -192,6 +195,7 @@ fn apply_divert(
 fn dialogue_line(
     asset: &CompiledDialogue,
     line_index: LineIndex,
+    default_speaker: Option<SpeakerIndex>,
 ) -> Result<DialogueLine, DialogueError> {
     let line = line_at(asset, line_index)?;
     Ok(DialogueLine {
@@ -200,6 +204,7 @@ fn dialogue_line(
         text: line.source_text.clone(),
         speaker: line
             .speaker
+            .or(default_speaker)
             .map(|speaker| speaker_at(asset, speaker).map(|speaker| speaker.id.clone()))
             .transpose()?,
         metadata: metadata(asset, line.metadata)?,

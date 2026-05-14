@@ -66,12 +66,58 @@ fn emits_line_then_end_from_compiled_tables() {
 }
 
 #[test]
+fn line_output_uses_block_default_speaker_when_line_has_none() {
+    let asset = compile_asset(
+        "dialogue/start.recite",
+        concat!(
+            ":: start default speaker=narrator\n",
+            "> start_line\n",
+            "  Start.\n",
+            "-> END\n",
+        ),
+    );
+    let mut session = start_scene(&asset, None).expect("starts");
+
+    let DialogueEvent::Line(line) = next(&asset, &mut session).expect("emits line") else {
+        panic!("expected line event");
+    };
+
+    assert_eq!(
+        line.speaker.as_ref().map(|speaker| speaker.as_str()),
+        Some("narrator")
+    );
+}
+
+#[test]
+fn explicit_line_speaker_overrides_block_default_speaker() {
+    let asset = compile_asset(
+        "dialogue/start.recite",
+        concat!(
+            ":: start default speaker=narrator\n",
+            "> start_line speaker=hazel\n",
+            "  Start.\n",
+            "-> END\n",
+        ),
+    );
+    let mut session = start_scene(&asset, None).expect("starts");
+
+    let DialogueEvent::Line(line) = next(&asset, &mut session).expect("emits line") else {
+        panic!("expected line event");
+    };
+
+    assert_eq!(
+        line.speaker.as_ref().map(|speaker| speaker.as_str()),
+        Some("hazel")
+    );
+}
+
+#[test]
 fn emits_prompt_with_stable_choice_ids_and_waits_for_selection() {
     let asset = compile_asset(
         "dialogue/start.recite",
         concat!(
-            ":: start default\n",
-            "> prompt_line speaker=narrator mood=calm\n",
+            ":: start default speaker=narrator\n",
+            "> prompt_line mood=calm\n",
             "  What next?\n",
             "  ? ask_work\n",
             "    Ask about work.\n",
