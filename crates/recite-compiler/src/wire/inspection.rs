@@ -21,6 +21,7 @@ pub(crate) fn serialize_inspection_json(
 fn json_dialogue(dialogue: &CompiledDialogue) -> JsonValue {
     json!({
         "header": json_header(dialogue),
+        "default_block": dialogue.default_block.as_u32(),
         "sources": dialogue.sources.iter().map(|source| json!({
             "path": source.path.as_str(),
             "fingerprint": json_fingerprint(&source.fingerprint),

@@ -23,6 +23,7 @@ pub(crate) fn serialize_messagepack(dialogue: &CompiledDialogue) -> Result<Vec<u
 #[derive(Serialize)]
 struct MsgDialogue<'a>(
     MsgHeader<'a>,
+    u32,
     Vec<MsgSourceFile<'a>>,
     Vec<MsgBlock<'a>>,
     Vec<MsgStatement<'a>>,
@@ -42,6 +43,7 @@ impl<'a> From<&'a CompiledDialogue> for MsgDialogue<'a> {
     fn from(dialogue: &'a CompiledDialogue) -> Self {
         Self(
             MsgHeader::from(dialogue),
+            dialogue.default_block.as_u32(),
             dialogue.sources.iter().map(MsgSourceFile::from).collect(),
             dialogue.blocks.iter().map(MsgBlock::from).collect(),
             dialogue.statements.iter().map(MsgStatement::from).collect(),

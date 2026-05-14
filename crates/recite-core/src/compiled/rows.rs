@@ -10,6 +10,7 @@ use super::{
 #[derive(Clone, Debug, PartialEq)]
 pub struct CompiledDialogue {
     pub header: CompiledAssetHeader,
+    pub default_block: BlockIndex,
     pub sources: Vec<CompiledSourceFile>,
     pub blocks: Vec<CompiledBlock>,
     pub statements: Vec<CompiledStatement>,

@@ -1,4 +1,4 @@
-pub const V0_COMPILED_DIALOGUE_FIELDS: u8 = 14;
+pub const V0_COMPILED_DIALOGUE_FIELDS: u8 = 15;
 pub const V0_ASSET_HEADER_FIELDS: u8 = 8;
 pub const V0_SOURCE_FILE_FIELDS: u8 = 2;
 pub const V0_BLOCK_FIELDS: u8 = 6;

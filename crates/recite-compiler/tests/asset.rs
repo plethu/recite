@@ -49,6 +49,7 @@ fn valid_fixture_compiles_to_runtime_facing_v0_tables() {
             .collect::<Vec<_>>(),
         [("start", 0), ("work", 1)]
     );
+    assert_eq!(dialogue.default_block.as_u32(), 0);
     assert_eq!(
         dialogue
             .line_lookup
@@ -134,7 +135,8 @@ fn compilation_output_is_deterministic_for_identical_inputs() {
     assert_eq!(first.inspection_json, second.inspection_json);
 
     type TopLevel = (
-        Vec<IgnoredAny>,
+        IgnoredAny,
+        u32,
         IgnoredAny,
         IgnoredAny,
         IgnoredAny,
@@ -150,7 +152,7 @@ fn compilation_output_is_deterministic_for_identical_inputs() {
         IgnoredAny,
     );
     let decoded: TopLevel = rmp_serde::from_slice(&first.messagepack).expect("messagepack decodes");
-    assert_eq!(decoded.0.len(), 8);
+    assert_eq!(decoded.1, 0);
 }
 
 #[test]
@@ -187,6 +189,38 @@ fn compilation_order_is_canonical_for_project_inputs() {
             .map(|source| source.path.as_str())
             .collect::<Vec<_>>(),
         ["dialogue/next.recite", "dialogue/start.recite"]
+    );
+}
+
+#[test]
+fn default_block_index_is_stable_when_default_block_is_not_first() {
+    let alpha = CompileInput::new(
+        "dialogue/alpha.recite",
+        concat!(":: alpha\n", "> alpha_line\n", "  Alpha.\n", "-> END\n",),
+    );
+    let zed = CompileInput::new(
+        "dialogue/zed.recite",
+        concat!(":: zed default\n", "> zed_line\n", "  Zed.\n", "-> END\n",),
+    );
+
+    let output = compile_inputs([zed, alpha], options())
+        .expect("compile succeeds")
+        .asset
+        .expect("asset emitted");
+
+    assert_eq!(
+        output
+            .dialogue
+            .blocks
+            .iter()
+            .map(|block| block.id.as_str())
+            .collect::<Vec<_>>(),
+        ["alpha", "zed"]
+    );
+    assert_eq!(output.dialogue.default_block.as_u32(), 1);
+    assert!(
+        output.inspection_json.contains("\"default_block\":1"),
+        "inspection JSON should expose the default block index"
     );
 }
 
