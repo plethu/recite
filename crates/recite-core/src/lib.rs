@@ -1,6 +1,8 @@
-//! Core Recite AST, identifiers, values, diagnostics, and schema model.
+//! Core Recite AST, compiled dialogue model, identifiers, values, diagnostics,
+//! and schema model.
 
 pub mod ast;
+pub mod compiled;
 
 mod diagnostic;
 mod error;
@@ -13,6 +15,19 @@ pub use ast::{
     ConditionExpression, ConditionGroup, ConditionUnary, Divert, DivertTarget, Effect, EffectMode,
     IfBranch, Line, MatchArm, MatchBranch, MatchPattern, SourceFile, SourceText, Statement,
     StatementKind,
+};
+pub use compiled::{
+    BlockIndex, BlockLookupEntry, COMPILED_ASSET_FORMAT_VERSION_V0,
+    COMPILER_COMPATIBILITY_VERSION_V0, ChoiceIndex, ChoiceLookupEntry, ChoiceRange,
+    CompiledArgument, CompiledAssetEncoding, CompiledAssetHeader, CompiledAssetId, CompiledBlock,
+    CompiledChoice, CompiledChoiceEcho, CompiledConditionCall, CompiledConditionExpression,
+    CompiledDialogue, CompiledDivertTarget, CompiledEffect, CompiledEffectMode,
+    CompiledInspectionEncoding, CompiledLine, CompiledMetadataEntry, CompiledSourceFile,
+    CompiledSourceMapEntry, CompiledSpeaker, CompiledStatement, CompiledStatementKind,
+    CompiledValueError, CompilerVersion, ContentFingerprint, EffectIndex, FingerprintAlgorithm,
+    FingerprintDigest, LineIndex, LineLookupEntry, MetadataIndex, MetadataRange, SchemaFingerprint,
+    SourceFileIndex, SourceMapId, SourceMapIndex, SpeakerIndex, StatementIndex, StatementRange,
+    TableRange,
 };
 pub use diagnostic::{Diagnostic, DiagnosticCode, DiagnosticSeverity, RelatedSpan};
 pub use error::CoreValueError;
