@@ -16,47 +16,37 @@ for discoverability.
 
 ## overview
 
-**recite** is a dialogue compiler, runtime, and toolchain for games that need robust tooling:
-it's localisable, testable, and fully predictable. it isn't tied to one
-engine, a particular proprietary asset, or one editor-shaped way of thinking.
+**recite** is a dialogue compiler, runtime, and toolchain for narrative-driven
+games. it keeps authored conversation separate from game logic, then gives the
+game structured output it can observe and handle.
 
-it's written in rust for performance and portability between engines.
-as of right now, [godot](https://godotengine.org/) and [bevy](https://bevy.org/) are the first-class adapter targets,
-but depending on my availability i'll be looking to bring it to other widely used engines too.
+it's written in rust for performance and portability. [godot](https://godotengine.org/)
+and [bevy](https://bevy.org/) are the early adapter targets, but the core
+dialogue contract is engine-independent.
 
-**the core principle of the project** is that dialogue should describe a conversation, or an interactive piece of fiction,
-completely independently of the game's actual logic.
+the project is shaped by games with a lot of narrative ambition: 1000xRESIST,
+disco elysium, citizen sleeper, planescape: torment, persona, and plenty of
+others. recite is for work where the writing can be strange and sprawling, but
+the dialogue system still needs to stay predictable.
 
-authored text is a small deterministic protocol. content names what narrative
-systems need, and the runtime reports structured events back to the caller for it to integrate with the game's systems.
+there are already good dialogue tools, from yarn spinner and ink to unity and
+godot-native options. recite is for the cases where i want the dialogue source,
+validation, localisation ids, runtime traces, and game-facing effect requests to
+share one small contract instead of being split across editor state, engine
+scripts, and prose conventions.
 
-## why?
+that contract keeps the important pieces of a scene close together: prose,
+speakers, choices, guards, fallthrough, localisation ids, and effect requests.
+the goal is dialogue that is pleasant to write and still easy to inspect,
+validate, translate, and test.
 
-recite—and the games i develop—are inspired by games with a lot of
-narrative ambition: 1000xRESIST, disco elysium, citizen sleeper, planescape: torment, persona,
-and dozens of other games that use video games to tell big stories.
-
-the tooling for that kind of work, _especially_ for indie devs, has a couple big pain points:
-
-- one-off mini-languages that only really make sense inside one editor, so tooling ecosystems are fragmented and learning resources are sparse;
-- dialogue that calls directly into engine scripting;
-- asset-store paywalls around basic features with a black box you can't shape into the tool you need;
-- localisation and content validation treated as afterthoughts.
-
-this is the bet behind recite's small language: authoring dialogue works best
-when the important pieces stay close together. yes, that means another mini-language. i
-did try not to, but collocating prose, speakers, choices, guards, fallthrough, localisation
-ids, and the effect requests makes for it a lot easier to reason about what the outcome of a scene of dialogue will be.
-
-the boundary stays simple, to avoid making this yet another scripting language: conditions are pure queries, effects are
-typed requests, and the game stays the place where game logic happens. the contract is also deliberately small:
+the core shape is deliberately small:
 
 - deterministic traversal across replay, save/load, and tests;
+- pure conditions and typed effect requests;
 - stable ids, useful extraction paths, and validation before runtime;
 - editor tooling that helps authors without owning the whole workflow;
 - structured runtime output, headless tests, traces, and fixtures.
-
-the writing can be strange and sprawling without making the authoring experience reflect that.
 
 ## quick example
 
