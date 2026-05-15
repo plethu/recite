@@ -11,6 +11,12 @@ use crate::{DialogueError, DialogueSession};
 
 pub const SESSION_SNAPSHOT_FORMAT_VERSION_V0: u16 = 0;
 
+/// Versioned structural save data for a dialogue session.
+///
+/// Snapshots contain only compact runtime state and asset identity references.
+/// They are not a tamper-proof proof that the state was produced by a previous
+/// honest traversal. Hosts that treat save data as untrusted should
+/// authenticate or encrypt encoded snapshots before restoring them.
 #[derive(Clone, Debug, PartialEq, Serialize, Deserialize)]
 #[serde(deny_unknown_fields)]
 pub struct DialogueSessionSnapshot {
@@ -91,6 +97,11 @@ pub enum DialogueSchemaFingerprintSnapshot {
     NoSchema,
 }
 
+/// Captures the current session as trusted structural save data.
+///
+/// The returned snapshot is intended to be stored by the host save system. It
+/// should be authenticated by that host if users or external systems can modify
+/// saves before restore.
 #[must_use]
 pub fn snapshot_session(session: &DialogueSession) -> DialogueSessionSnapshot {
     DialogueSessionSnapshot {
@@ -127,6 +138,12 @@ pub fn snapshot_session(session: &DialogueSession) -> DialogueSessionSnapshot {
     }
 }
 
+/// Restores a session from trusted structural save data.
+///
+/// Restore validates that the snapshot matches the supplied compiled asset and
+/// that statement pointers, continuation frames, pending prompts, and deferred
+/// effect references are structurally coherent. It does not authenticate the
+/// snapshot or prove that it was produced by a previous traversal.
 pub fn restore_session(
     asset: &CompiledDialogue,
     snapshot: DialogueSessionSnapshot,
@@ -199,6 +216,9 @@ pub fn restore_session(
     })
 }
 
+/// Encodes a trusted session snapshot as MessagePack bytes.
+///
+/// The bytes are compact runtime state, not an authenticated envelope.
 pub fn encode_session_messagepack(session: &DialogueSession) -> Result<Vec<u8>, DialogueError> {
     rmp_serde::to_vec(&snapshot_session(session)).map_err(|error| {
         DialogueError::SessionSnapshotEncodeFailed {
@@ -207,6 +227,12 @@ pub fn encode_session_messagepack(session: &DialogueSession) -> Result<Vec<u8>, 
     })
 }
 
+/// Decodes MessagePack bytes and restores a session against the matching asset.
+///
+/// Restore validates asset identity, source fingerprints, statement ranges,
+/// pending prompt shape, and compiled deferred-effect references. It does not
+/// prove the bytes were produced by a previous traversal; authenticate save
+/// data at the host layer when tamper resistance matters.
 pub fn decode_session_messagepack(
     asset: &CompiledDialogue,
     bytes: &[u8],
