@@ -156,10 +156,11 @@ pub fn next(
                     return Err(DialogueError::UnsupportedEffectMode { mode });
                 }
 
+                let next_statement = next_statement_after(session.next_statement)?;
                 session
                     .deferred_effects
                     .push(dialogue_effect_request(asset_view, effect)?);
-                session.next_statement = next_statement_after(session.next_statement)?;
+                session.next_statement = next_statement;
             }
         }
     }
