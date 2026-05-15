@@ -20,6 +20,10 @@ pub enum DialogueError {
         expected_compiler_compatibility_version: u16,
         actual_compiler_compatibility_version: u16,
     },
+    AssetContentMismatch {
+        asset_id: String,
+        reason: String,
+    },
     MalformedCompiledAsset {
         reason: String,
     },
@@ -90,6 +94,12 @@ impl std::fmt::Display for DialogueError {
                 formatter,
                 "session is for asset `{expected_asset_id}` ({expected_format_version}/{expected_compiler_compatibility_version}) but got `{actual_asset_id}` ({actual_format_version}/{actual_compiler_compatibility_version})"
             ),
+            Self::AssetContentMismatch { asset_id, reason } => {
+                write!(
+                    formatter,
+                    "session is for a different compiled asset payload `{asset_id}`: {reason}"
+                )
+            }
             Self::MalformedCompiledAsset { reason } => {
                 write!(formatter, "malformed compiled asset: {reason}")
             }

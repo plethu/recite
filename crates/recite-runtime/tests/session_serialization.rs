@@ -4,8 +4,8 @@ use recite_core::{
     SourceMapId,
 };
 use recite_runtime::{
-    DialogueEffectArgument, DialogueEffectRequest, DialogueError, DialogueEvent,
-    DialogueSessionOptions, EmptyDialogueContext, choose as runtime_choose,
+    DialogueDeferredEffectSnapshot, DialogueEffectArgument, DialogueEffectRequest, DialogueError,
+    DialogueEvent, DialogueSessionOptions, EmptyDialogueContext, choose as runtime_choose,
     decode_session_messagepack, encode_session_messagepack, next as runtime_next, restore_session,
     snapshot_session, start_scene, start_scene_with_options,
 };
@@ -56,6 +56,9 @@ fn structured_snapshot_records_locale_and_compact_runtime_location() {
 
     let snapshot = snapshot_session(&session);
     assert_eq!(snapshot.asset_id, "dialogue/main.recitec");
+    assert_eq!(snapshot.compiler_version, "0.0.1");
+    assert_eq!(snapshot.source_map_id, "dialogue/main.recitec.map");
+    assert_eq!(snapshot.sources.len(), 1);
     assert_eq!(snapshot.current_block, 0);
     assert_eq!(snapshot.current_range.start, 0);
     assert_eq!(snapshot.locale.as_deref(), Some("en-GB"));
@@ -168,6 +171,44 @@ fn restores_selected_choice_history_after_choice_continuation() {
 }
 
 #[test]
+fn restores_continuation_stack_inside_conditional_branch() {
+    let asset = compile_asset(
+        "dialogue/start.recite",
+        concat!(
+            ":: start default\n",
+            ":if trusts(player)\n",
+            "  > inside\n",
+            "    Inside.\n",
+            "> after\n",
+            "  After.\n",
+            "-> END\n",
+        ),
+    );
+    let context = |_: recite_runtime::ConditionQuery<'_>| {
+        Ok::<_, recite_runtime::ConditionEvaluationError>(true)
+    };
+    let mut session = start_scene(&asset, None).expect("starts");
+
+    assert_line(
+        runtime_next(&asset, &mut session, &context),
+        "inside",
+        "Inside.",
+    );
+    let mut restored =
+        restore_session(&asset, snapshot_session(&session)).expect("restores branch state");
+
+    assert_line(
+        runtime_next(&asset, &mut restored, &context),
+        "after",
+        "After.",
+    );
+    assert_eq!(
+        runtime_next(&asset, &mut restored, &context),
+        Ok(empty_end())
+    );
+}
+
+#[test]
 fn restores_deferred_effects_collected_before_save_and_continues_in_order() {
     let asset = compile_asset(
         "dialogue/start.recite",
@@ -213,6 +254,30 @@ fn restores_deferred_effects_collected_before_save_and_continues_in_order() {
 }
 
 #[test]
+fn forged_deferred_effect_snapshot_must_reference_a_compiled_deferred_effect() {
+    let asset = compile_asset(
+        "dialogue/start.recite",
+        concat!(
+            ":: start default\n",
+            "! immediate play_sfx(snap)\n",
+            "> start_line\n",
+            "  Start.\n",
+            "-> END\n",
+        ),
+    );
+    let session = start_scene(&asset, None).expect("starts");
+    let mut snapshot = snapshot_session(&session);
+    snapshot.deferred_effects = vec![DialogueDeferredEffectSnapshot {
+        id: "effect:dialogue/start.recite:2:1".to_owned(),
+    }];
+
+    assert!(matches!(
+        restore_session(&asset, snapshot),
+        Err(DialogueError::InvalidSessionSnapshot { .. })
+    ));
+}
+
+#[test]
 fn restores_end_state_without_replaying_scene() {
     let asset = compile_asset(
         "dialogue/start.recite",
@@ -235,6 +300,36 @@ fn restores_end_state_without_replaying_scene() {
         Err(DialogueError::SessionEnded)
     );
     assert_effect_functions(restored.deferred_effects(), ["finished"]);
+}
+
+#[test]
+fn same_id_different_asset_content_is_rejected() {
+    let first = compile_asset_with_id(
+        "dialogue/start.recite",
+        concat!(
+            ":: start default\n",
+            "> start_line\n",
+            "  First.\n",
+            "-> END\n",
+        ),
+        "dialogue/same.recitec",
+    );
+    let second = compile_asset_with_id(
+        "dialogue/start.recite",
+        concat!(
+            ":: start default\n",
+            "> start_line\n",
+            "  Changed.\n",
+            "-> END\n",
+        ),
+        "dialogue/same.recitec",
+    );
+    let session = start_scene(&first, None).expect("starts");
+
+    assert!(matches!(
+        restore_session(&second, snapshot_session(&session)),
+        Err(DialogueError::AssetContentMismatch { .. })
+    ));
 }
 
 #[test]

@@ -14,7 +14,8 @@ use crate::session::{DialogueSessionOptions, PendingPrompt, PendingPromptChoice,
 use crate::{DialogueError, DialogueSession};
 
 pub(crate) use self::asset::{AssetView, malformed};
-use self::output::{dialogue_choice, dialogue_effect_request, dialogue_line, effect_mode};
+pub(crate) use self::output::dialogue_effect_request;
+use self::output::{dialogue_choice, dialogue_line, effect_mode};
 
 const MAX_INTERNAL_STEPS: usize = 10_000;
 const MAX_CONDITION_DEPTH: usize = 128;
@@ -43,9 +44,8 @@ pub fn start_scene_with_options(
     let compiled_block = asset_view.block_at(block_index)?;
 
     Ok(DialogueSession::new(
-        asset.header.asset_id.clone(),
-        asset.header.format_version,
-        asset.header.compiler_compatibility_version,
+        &asset.header,
+        asset.sources.clone(),
         block_index,
         compiled_block.statements,
         options,
@@ -413,9 +413,8 @@ mod tests {
         let asset = empty_asset();
         let choice_id = ChoiceId::new("locked_choice").expect("valid choice ID");
         let mut session = DialogueSession::new(
-            asset.header.asset_id.clone(),
-            asset.header.format_version,
-            asset.header.compiler_compatibility_version,
+            &asset.header,
+            asset.sources.clone(),
             BlockIndex::new(0),
             StatementRange::new(StatementIndex::new(0), 0),
             DialogueSessionOptions::default(),

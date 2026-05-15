@@ -1,12 +1,12 @@
 use recite_core::{
-    BlockIndex, ChoiceId, CompiledDialogue, CompiledStatementKind, EffectId, LocaleId,
-    SourcePosition, SourceSpan, StatementIndex, StatementRange,
+    BlockIndex, ChoiceId, CompiledDialogue, CompiledSourceFile, CompiledStatementKind,
+    ContentFingerprint, EffectId, LocaleId, SchemaFingerprint, StatementIndex, StatementRange,
 };
 use serde::{Deserialize, Serialize};
 
-use crate::event::{DialogueEffectArgument, DialogueEffectMode, DialogueEffectRequest};
+use crate::event::DialogueEffectRequest;
 use crate::session::{PendingPrompt, PendingPromptChoice, StatementFrame};
-use crate::traversal::AssetView;
+use crate::traversal::{AssetView, dialogue_effect_request};
 use crate::{DialogueError, DialogueSession};
 
 pub const SESSION_SNAPSHOT_FORMAT_VERSION_V0: u16 = 0;
@@ -18,6 +18,10 @@ pub struct DialogueSessionSnapshot {
     pub asset_id: String,
     pub asset_format_version: u16,
     pub asset_compiler_compatibility_version: u16,
+    pub compiler_version: String,
+    pub source_map_id: String,
+    pub schema_fingerprint: DialogueSchemaFingerprintSnapshot,
+    pub sources: Vec<DialogueSessionSourceSnapshot>,
     pub current_block: u32,
     pub current_range: DialogueSessionRangeSnapshot,
     pub next_statement: u32,
@@ -25,7 +29,7 @@ pub struct DialogueSessionSnapshot {
     pub pending_prompt: Option<DialogueSessionPendingPromptSnapshot>,
     pub previous_prompt_choices: Vec<String>,
     pub selected_choice_history: Vec<String>,
-    pub deferred_effects: Vec<DialogueEffectRequestSnapshot>,
+    pub deferred_effects: Vec<DialogueDeferredEffectSnapshot>,
     pub locale: Option<String>,
     pub trace_counter: u64,
     pub ended: bool,
@@ -60,47 +64,31 @@ pub struct DialogueSessionPendingChoiceSnapshot {
     pub unavailable_reason: Option<String>,
 }
 
-#[derive(Clone, Debug, PartialEq, Serialize, Deserialize)]
+#[derive(Clone, Debug, Eq, PartialEq, Serialize, Deserialize)]
 #[serde(deny_unknown_fields)]
-pub struct DialogueEffectRequestSnapshot {
+pub struct DialogueDeferredEffectSnapshot {
     pub id: String,
-    pub mode: DialogueEffectModeSnapshot,
-    pub function: String,
-    pub args: Vec<DialogueEffectArgumentSnapshot>,
-    pub source_span: DialogueSourceSpanSnapshot,
-}
-
-#[derive(Clone, Copy, Debug, Eq, PartialEq, Serialize, Deserialize)]
-#[serde(rename_all = "snake_case")]
-pub enum DialogueEffectModeSnapshot {
-    Deferred,
-    Immediate,
-    Blocking,
-}
-
-#[derive(Clone, Debug, PartialEq, Serialize, Deserialize)]
-#[serde(rename_all = "snake_case")]
-pub enum DialogueEffectArgumentSnapshot {
-    Identifier(String),
-    String(String),
-    Integer(i64),
-    Float(f64),
-    Boolean(bool),
 }
 
 #[derive(Clone, Debug, Eq, PartialEq, Serialize, Deserialize)]
 #[serde(deny_unknown_fields)]
-pub struct DialogueSourceSpanSnapshot {
-    pub file: String,
-    pub start: DialogueSourcePositionSnapshot,
-    pub end: Option<DialogueSourcePositionSnapshot>,
+pub struct DialogueSessionSourceSnapshot {
+    pub path: String,
+    pub fingerprint: DialogueContentFingerprintSnapshot,
 }
 
-#[derive(Clone, Copy, Debug, Eq, PartialEq, Serialize, Deserialize)]
+#[derive(Clone, Debug, Eq, PartialEq, Serialize, Deserialize)]
 #[serde(deny_unknown_fields)]
-pub struct DialogueSourcePositionSnapshot {
-    pub line: u32,
-    pub column: u32,
+pub struct DialogueContentFingerprintSnapshot {
+    pub algorithm: String,
+    pub digest: Vec<u8>,
+}
+
+#[derive(Clone, Debug, Eq, PartialEq, Serialize, Deserialize)]
+#[serde(rename_all = "snake_case")]
+pub enum DialogueSchemaFingerprintSnapshot {
+    Fingerprint(DialogueContentFingerprintSnapshot),
+    NoSchema,
 }
 
 #[must_use]
@@ -110,6 +98,10 @@ pub fn snapshot_session(session: &DialogueSession) -> DialogueSessionSnapshot {
         asset_id: session.asset_id.as_str().to_owned(),
         asset_format_version: session.format_version,
         asset_compiler_compatibility_version: session.compiler_compatibility_version,
+        compiler_version: session.compiler_version.as_str().to_owned(),
+        source_map_id: session.source_map_id.as_str().to_owned(),
+        schema_fingerprint: schema_fingerprint_snapshot(&session.schema_fingerprint),
+        sources: session.sources.iter().map(source_snapshot).collect(),
         current_block: session.current_block.as_u32(),
         current_range: range_snapshot(session.current_range),
         next_statement: session.next_statement.as_u32(),
@@ -168,7 +160,7 @@ pub fn restore_session(
         "selected choice history",
         &snapshot.selected_choice_history,
     )?;
-    let deferred_effects = restore_effects(&snapshot.deferred_effects)?;
+    let deferred_effects = restore_effects(asset_view, &snapshot.deferred_effects)?;
     let locale = restore_locale(snapshot.locale.as_deref())?;
     let pending_prompt = restore_pending_prompt(
         asset_view,
@@ -181,6 +173,10 @@ pub fn restore_session(
         asset_id: asset.header.asset_id.clone(),
         format_version: asset.header.format_version,
         compiler_compatibility_version: asset.header.compiler_compatibility_version,
+        compiler_version: asset.header.compiler_version.clone(),
+        source_map_id: asset.header.source_map_id.clone(),
+        schema_fingerprint: asset.header.schema_fingerprint.clone(),
+        sources: asset.sources.clone(),
         current_block,
         current_range,
         next_statement,
@@ -234,8 +230,48 @@ fn ensure_snapshot_matches_asset(
             actual_compiler_compatibility_version: asset.header.compiler_compatibility_version,
         });
     }
+    if snapshot.compiler_version != asset.header.compiler_version.as_str() {
+        return asset_content_mismatch(
+            snapshot,
+            "compiler version differs from the provided compiled asset",
+        );
+    }
+    if snapshot.source_map_id != asset.header.source_map_id.as_str() {
+        return asset_content_mismatch(
+            snapshot,
+            "source map id differs from the provided compiled asset",
+        );
+    }
+    if snapshot.schema_fingerprint != schema_fingerprint_snapshot(&asset.header.schema_fingerprint)
+    {
+        return asset_content_mismatch(
+            snapshot,
+            "schema fingerprint differs from the provided compiled asset",
+        );
+    }
+    let sources = asset
+        .sources
+        .iter()
+        .map(source_snapshot)
+        .collect::<Vec<_>>();
+    if snapshot.sources != sources {
+        return asset_content_mismatch(
+            snapshot,
+            "source fingerprints differ from the provided compiled asset",
+        );
+    }
 
     Ok(())
+}
+
+fn asset_content_mismatch<T>(
+    snapshot: &DialogueSessionSnapshot,
+    reason: impl Into<String>,
+) -> Result<T, DialogueError> {
+    Err(DialogueError::AssetContentMismatch {
+        asset_id: snapshot.asset_id.clone(),
+        reason: reason.into(),
+    })
 }
 
 fn restore_frames(
@@ -348,21 +384,30 @@ fn restore_choice_ids(
 }
 
 fn restore_effects(
-    snapshots: &[DialogueEffectRequestSnapshot],
+    asset: AssetView<'_>,
+    snapshots: &[DialogueDeferredEffectSnapshot],
 ) -> Result<Vec<DialogueEffectRequest>, DialogueError> {
-    snapshots.iter().map(restore_effect).collect()
+    snapshots
+        .iter()
+        .map(|snapshot| restore_effect(asset, snapshot))
+        .collect()
 }
 
 fn restore_effect(
-    snapshot: &DialogueEffectRequestSnapshot,
+    asset: AssetView<'_>,
+    snapshot: &DialogueDeferredEffectSnapshot,
 ) -> Result<DialogueEffectRequest, DialogueError> {
-    Ok(DialogueEffectRequest {
-        id: effect_id(&snapshot.id)?,
-        mode: restore_effect_mode(snapshot.mode),
-        function: snapshot.function.clone(),
-        args: snapshot.args.iter().map(restore_effect_argument).collect(),
-        source_span: restore_source_span(&snapshot.source_span)?,
-    })
+    let effect_id = effect_id(&snapshot.id)?;
+    let effect = asset
+        .deferred_effect_by_id(&effect_id)
+        .map_err(|error| match error {
+            DialogueError::MalformedCompiledAsset { reason } => {
+                invalid_snapshot(format!("deferred effect reference is invalid: {reason}"))
+            }
+            other => other,
+        })?;
+
+    dialogue_effect_request(asset, effect)
 }
 
 fn restore_locale(value: Option<&str>) -> Result<Option<LocaleId>, DialogueError> {
@@ -398,13 +443,9 @@ fn choice_ids_snapshot(choice_ids: &[ChoiceId]) -> Vec<String> {
         .collect()
 }
 
-fn effect_request_snapshot(effect: &DialogueEffectRequest) -> DialogueEffectRequestSnapshot {
-    DialogueEffectRequestSnapshot {
+fn effect_request_snapshot(effect: &DialogueEffectRequest) -> DialogueDeferredEffectSnapshot {
+    DialogueDeferredEffectSnapshot {
         id: effect.id.as_str().to_owned(),
-        mode: effect_mode_snapshot(effect.mode),
-        function: effect.function.clone(),
-        args: effect.args.iter().map(effect_argument_snapshot).collect(),
-        source_span: source_span_snapshot(&effect.source_span),
     }
 }
 
@@ -439,85 +480,41 @@ fn validate_statement_pointer(
     Ok(())
 }
 
-fn effect_mode_snapshot(mode: DialogueEffectMode) -> DialogueEffectModeSnapshot {
-    match mode {
-        DialogueEffectMode::Deferred => DialogueEffectModeSnapshot::Deferred,
-        DialogueEffectMode::Immediate => DialogueEffectModeSnapshot::Immediate,
-        DialogueEffectMode::Blocking => DialogueEffectModeSnapshot::Blocking,
-    }
-}
-
-fn restore_effect_mode(mode: DialogueEffectModeSnapshot) -> DialogueEffectMode {
-    match mode {
-        DialogueEffectModeSnapshot::Deferred => DialogueEffectMode::Deferred,
-        DialogueEffectModeSnapshot::Immediate => DialogueEffectMode::Immediate,
-        DialogueEffectModeSnapshot::Blocking => DialogueEffectMode::Blocking,
-    }
-}
-
-fn effect_argument_snapshot(argument: &DialogueEffectArgument) -> DialogueEffectArgumentSnapshot {
-    match argument {
-        DialogueEffectArgument::Identifier(value) => {
-            DialogueEffectArgumentSnapshot::Identifier(value.clone())
-        }
-        DialogueEffectArgument::String(value) => {
-            DialogueEffectArgumentSnapshot::String(value.clone())
-        }
-        DialogueEffectArgument::Integer(value) => DialogueEffectArgumentSnapshot::Integer(*value),
-        DialogueEffectArgument::Float(value) => DialogueEffectArgumentSnapshot::Float(*value),
-        DialogueEffectArgument::Boolean(value) => DialogueEffectArgumentSnapshot::Boolean(*value),
-    }
-}
-
-fn restore_effect_argument(argument: &DialogueEffectArgumentSnapshot) -> DialogueEffectArgument {
-    match argument {
-        DialogueEffectArgumentSnapshot::Identifier(value) => {
-            DialogueEffectArgument::Identifier(value.clone())
-        }
-        DialogueEffectArgumentSnapshot::String(value) => {
-            DialogueEffectArgument::String(value.clone())
-        }
-        DialogueEffectArgumentSnapshot::Integer(value) => DialogueEffectArgument::Integer(*value),
-        DialogueEffectArgumentSnapshot::Float(value) => DialogueEffectArgument::Float(*value),
-        DialogueEffectArgumentSnapshot::Boolean(value) => DialogueEffectArgument::Boolean(*value),
-    }
-}
-
-fn source_span_snapshot(span: &SourceSpan) -> DialogueSourceSpanSnapshot {
-    DialogueSourceSpanSnapshot {
-        file: span.file.clone(),
-        start: source_position_snapshot(span.start),
-        end: span.end.map(source_position_snapshot),
-    }
-}
-
-fn source_position_snapshot(position: SourcePosition) -> DialogueSourcePositionSnapshot {
-    DialogueSourcePositionSnapshot {
-        line: position.line(),
-        column: position.column(),
-    }
-}
-
-fn restore_source_span(snapshot: &DialogueSourceSpanSnapshot) -> Result<SourceSpan, DialogueError> {
-    Ok(SourceSpan {
-        file: snapshot.file.clone(),
-        start: restore_source_position(snapshot.start)?,
-        end: snapshot.end.map(restore_source_position).transpose()?,
-    })
-}
-
-fn restore_source_position(
-    snapshot: DialogueSourcePositionSnapshot,
-) -> Result<SourcePosition, DialogueError> {
-    SourcePosition::new(snapshot.line, snapshot.column).map_err(core_error)
-}
-
 fn choice_id(value: &str) -> Result<ChoiceId, DialogueError> {
     ChoiceId::new(value).map_err(core_error)
 }
 
 fn effect_id(value: &str) -> Result<EffectId, DialogueError> {
     EffectId::new(value).map_err(core_error)
+}
+
+fn source_snapshot(source: &CompiledSourceFile) -> DialogueSessionSourceSnapshot {
+    DialogueSessionSourceSnapshot {
+        path: source.path.clone(),
+        fingerprint: content_fingerprint_snapshot(&source.fingerprint),
+    }
+}
+
+fn schema_fingerprint_snapshot(
+    fingerprint: &SchemaFingerprint,
+) -> DialogueSchemaFingerprintSnapshot {
+    match fingerprint {
+        SchemaFingerprint::Fingerprint(fingerprint) => {
+            DialogueSchemaFingerprintSnapshot::Fingerprint(content_fingerprint_snapshot(
+                fingerprint,
+            ))
+        }
+        SchemaFingerprint::NoSchema => DialogueSchemaFingerprintSnapshot::NoSchema,
+    }
+}
+
+fn content_fingerprint_snapshot(
+    fingerprint: &ContentFingerprint,
+) -> DialogueContentFingerprintSnapshot {
+    DialogueContentFingerprintSnapshot {
+        algorithm: fingerprint.algorithm().as_str().to_owned(),
+        digest: fingerprint.digest().as_bytes().to_vec(),
+    }
 }
 
 fn core_error(error: impl std::fmt::Display) -> DialogueError {

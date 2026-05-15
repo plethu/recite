@@ -3,9 +3,10 @@ use std::ops::Range;
 use recite_core::{
     BlockIndex, COMPILED_ASSET_FORMAT_VERSION_V0, COMPILER_COMPATIBILITY_VERSION_V0, ChoiceId,
     ChoiceIndex, ChoiceRange, CompiledAssetHeader, CompiledChoice, CompiledDialogue,
-    CompiledEffect, CompiledLine, CompiledMetadataEntry, CompiledSourceMapEntry, CompiledStatement,
-    CompiledValueError, EffectIndex, LineIndex, MetadataIndex, MetadataRange, SourceMapIndex,
-    SpeakerIndex, StatementIndex, StatementRange, TableRange,
+    CompiledEffect, CompiledEffectMode, CompiledLine, CompiledMetadataEntry,
+    CompiledSourceMapEntry, CompiledStatement, CompiledValueError, EffectId, EffectIndex,
+    LineIndex, MetadataIndex, MetadataRange, SourceMapIndex, SpeakerIndex, StatementIndex,
+    StatementRange, TableRange,
 };
 
 use crate::{DialogueError, DialogueSession};
@@ -45,6 +46,16 @@ impl<'a> AssetView<'a> {
                     .asset
                     .header
                     .compiler_compatibility_version,
+            });
+        }
+        if session.compiler_version != self.asset.header.compiler_version
+            || session.source_map_id != self.asset.header.source_map_id
+            || session.schema_fingerprint != self.asset.header.schema_fingerprint
+            || session.sources != self.asset.sources
+        {
+            return Err(DialogueError::AssetContentMismatch {
+                asset_id: session.asset_id.as_str().to_owned(),
+                reason: "compiled asset identity fields or source fingerprints differ".to_owned(),
             });
         }
 
@@ -111,6 +122,34 @@ impl<'a> AssetView<'a> {
             .effects
             .get(index.as_u32() as usize)
             .ok_or_else(|| malformed(format!("effect index {} is out of range", index.as_u32())))
+    }
+
+    pub(crate) fn deferred_effect_by_id(
+        self,
+        effect_id: &EffectId,
+    ) -> Result<&'a CompiledEffect, DialogueError> {
+        let mut matches = self
+            .asset
+            .effects
+            .iter()
+            .filter(|effect| effect.id == *effect_id);
+        let Some(effect) = matches.next() else {
+            return Err(malformed(format!(
+                "effect `{effect_id}` is not in compiled effect table"
+            )));
+        };
+        if matches.next().is_some() {
+            return Err(malformed(format!(
+                "effect `{effect_id}` appears more than once in compiled effect table"
+            )));
+        }
+        if effect.mode != CompiledEffectMode::Deferred {
+            return Err(malformed(format!(
+                "effect `{effect_id}` is not a deferred effect"
+            )));
+        }
+
+        Ok(effect)
     }
 
     pub(crate) fn speaker_at(
