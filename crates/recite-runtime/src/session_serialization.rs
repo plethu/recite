@@ -158,10 +158,10 @@ pub fn restore_session(
     ensure_snapshot_matches_asset(asset, &snapshot)?;
 
     let current_block = BlockIndex::new(snapshot.current_block);
-    let block = asset_view.block_at(current_block)?;
+    let block = snapshot_reference("current block", asset_view.block_at(current_block))?;
 
     let current_range = statement_range(snapshot.current_range);
-    asset_view.statement_range(current_range)?;
+    snapshot_reference("current range", asset_view.statement_range(current_range))?;
 
     let next_statement = StatementIndex::new(snapshot.next_statement);
     validate_statement_pointer("next statement", current_range, next_statement)?;
@@ -316,7 +316,7 @@ fn restore_frames(
         .iter()
         .map(|snapshot| {
             let range = statement_range(snapshot.range);
-            asset.statement_range(range)?;
+            snapshot_reference("continuation frame range", asset.statement_range(range))?;
             let next_statement = StatementIndex::new(snapshot.next_statement);
             validate_statement_pointer("continuation next statement", range, next_statement)?;
 
@@ -350,7 +350,10 @@ fn restore_pending_prompt(
 
     let statement_index = StatementIndex::new(snapshot.statement);
     validate_pending_prompt_position(statement_index, current_range, next_statement)?;
-    let statement = asset.statement_at(statement_index)?;
+    let statement = snapshot_reference(
+        "pending prompt statement",
+        asset.statement_at(statement_index),
+    )?;
     let CompiledStatementKind::Prompt { choices, .. } = &statement.kind else {
         return Err(invalid_snapshot(format!(
             "pending prompt statement {} is not a prompt",
@@ -520,6 +523,18 @@ fn restore_choice_ids(
             )),
             other => other,
         })
+}
+
+fn snapshot_reference<T>(
+    field: &'static str,
+    result: Result<T, DialogueError>,
+) -> Result<T, DialogueError> {
+    result.map_err(|error| match error {
+        DialogueError::MalformedCompiledAsset { reason } => {
+            invalid_snapshot(format!("{field} references invalid asset data: {reason}"))
+        }
+        other => other,
+    })
 }
 
 fn restore_effects(
