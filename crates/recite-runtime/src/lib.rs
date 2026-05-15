@@ -11,6 +11,9 @@ pub use context::{
     DialogueContext, EmptyDialogueContext,
 };
 pub use error::{DialogueError, UnsupportedStatementKind};
-pub use event::{ChoiceEchoMode, DialogueChoice, DialogueEvent, DialogueLine};
+pub use event::{
+    ChoiceEchoMode, DialogueChoice, DialogueEffectArgument, DialogueEffectMode,
+    DialogueEffectRequest, DialogueEvent, DialogueLine,
+};
 pub use session::DialogueSession;
 pub use traversal::{choose, next, start_scene};

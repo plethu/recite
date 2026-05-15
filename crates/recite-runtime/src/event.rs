@@ -1,4 +1,4 @@
-use recite_core::{ChoiceId, LineId, MetadataEntry, SpeakerId};
+use recite_core::{ChoiceId, EffectId, LineId, MetadataEntry, SourceSpan, SpeakerId};
 
 /// Structured output emitted by runtime traversal.
 #[derive(Clone, Debug, PartialEq)]
@@ -8,7 +8,9 @@ pub enum DialogueEvent {
         line: Option<DialogueLine>,
         choices: Vec<DialogueChoice>,
     },
-    End,
+    End {
+        deferred_effects: Vec<DialogueEffectRequest>,
+    },
 }
 
 #[derive(Clone, Debug, PartialEq)]
@@ -36,4 +38,29 @@ pub enum ChoiceEchoMode {
     None,
     SelectedText,
     ExplicitLine(LineId),
+}
+
+#[derive(Clone, Debug, PartialEq)]
+pub struct DialogueEffectRequest {
+    pub id: EffectId,
+    pub mode: DialogueEffectMode,
+    pub function: String,
+    pub args: Vec<DialogueEffectArgument>,
+    pub source_span: SourceSpan,
+}
+
+#[derive(Clone, Copy, Debug, Eq, PartialEq)]
+pub enum DialogueEffectMode {
+    Deferred,
+    Immediate,
+    Blocking,
+}
+
+#[derive(Clone, Debug, PartialEq)]
+pub enum DialogueEffectArgument {
+    Identifier(String),
+    String(String),
+    Integer(i64),
+    Float(f64),
+    Boolean(bool),
 }

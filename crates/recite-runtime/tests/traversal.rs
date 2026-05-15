@@ -2,13 +2,13 @@ use recite_compiler::{CompileInput, CompileOptions, compile_inputs};
 use recite_core::{
     BlockIndex, BlockLookupEntry, BlockLookupTable, ChoiceId, ChoiceRange, CompiledAssetId,
     CompiledConditionCall, CompiledConditionExpression, CompiledDialogue, CompiledDivertTarget,
-    CompiledStatementKind, CompilerVersion, LineIndex, MatchArmIndex, MatchArmRange,
+    CompiledStatementKind, CompilerVersion, EffectIndex, LineIndex, MatchArmIndex, MatchArmRange,
     SchemaFingerprint, SourceMapId,
 };
 use recite_runtime::{
-    ConditionArgument, ConditionEvaluationError, ConditionQuery, DialogueError, DialogueEvent,
-    EmptyDialogueContext, UnsupportedStatementKind, choose as runtime_choose, next as runtime_next,
-    start_scene,
+    ConditionArgument, ConditionEvaluationError, ConditionQuery, DialogueEffectArgument,
+    DialogueEffectMode, DialogueEffectRequest, DialogueError, DialogueEvent, EmptyDialogueContext,
+    UnsupportedStatementKind, choose as runtime_choose, next as runtime_next, start_scene,
 };
 use std::cell::RefCell;
 use std::collections::BTreeMap;
@@ -69,7 +69,7 @@ fn emits_line_then_end_from_compiled_tables() {
     let mut session = start_scene(&asset, None).expect("starts");
 
     assert_line(next(&asset, &mut session), "start_line", "Start.");
-    assert_eq!(next(&asset, &mut session), Ok(DialogueEvent::End));
+    assert_eq!(next(&asset, &mut session), Ok(empty_end()));
     assert_eq!(next(&asset, &mut session), Err(DialogueError::SessionEnded));
 }
 
@@ -195,7 +195,7 @@ fn chooses_pending_prompt_option_by_stable_choice_id() {
             &mut session,
             ChoiceId::new("leave").expect("valid choice ID")
         ),
-        Ok(DialogueEvent::End)
+        Ok(empty_end())
     );
     assert_eq!(
         session
@@ -298,10 +298,7 @@ fn stale_or_non_pending_choice_selection_is_structured_error() {
     );
 
     next(&asset, &mut session).expect("emits prompt");
-    assert_eq!(
-        choose(&asset, &mut session, leave.clone()),
-        Ok(DialogueEvent::End)
-    );
+    assert_eq!(choose(&asset, &mut session, leave.clone()), Ok(empty_end()));
     assert_eq!(
         choose(&asset, &mut session, leave.clone()),
         Err(DialogueError::NoPromptPending { choice: leave })
@@ -385,7 +382,7 @@ fn selected_choice_history_records_choices_in_selection_order() {
             &mut session,
             ChoiceId::new("choose_end").expect("valid choice ID"),
         ),
-        Ok(DialogueEvent::End)
+        Ok(empty_end())
     );
 
     assert_eq!(
@@ -534,7 +531,7 @@ fn true_condition_enters_then_branch_and_resumes_parent_range() {
     );
     assert_eq!(
         next_with_context(&asset, &mut session, &context),
-        Ok(DialogueEvent::End)
+        Ok(empty_end())
     );
     assert_eq!(
         context.calls(),
@@ -831,7 +828,7 @@ fn choice_conditions_mark_unavailable_choices_without_hiding_them() {
             ChoiceId::new("leave").expect("valid choice ID"),
             &context,
         ),
-        Ok(DialogueEvent::End)
+        Ok(empty_end())
     );
 }
 
@@ -964,6 +961,26 @@ fn malformed_line_index_is_structured_error() {
 }
 
 #[test]
+fn malformed_effect_index_is_structured_error() {
+    let mut asset = compile_asset(
+        "dialogue/start.recite",
+        concat!(
+            ":: start default\n",
+            "> start_line\n",
+            "  Start.\n",
+            "-> END\n",
+        ),
+    );
+    asset.statements[0].kind = CompiledStatementKind::Effect(EffectIndex::new(99));
+    let mut session = start_scene(&asset, None).expect("starts");
+
+    assert!(matches!(
+        next(&asset, &mut session),
+        Err(DialogueError::MalformedCompiledAsset { .. })
+    ));
+}
+
+#[test]
 fn mismatched_explicit_block_lookup_entry_is_structured_error() {
     let mut asset = compile_asset(
         "dialogue/start.recite",
@@ -1022,8 +1039,53 @@ fn prompt_with_empty_choice_range_is_structured_error() {
 }
 
 #[test]
-fn unsupported_effect_statement_is_structured_error() {
-    let effect_asset = compile_asset(
+fn collects_deferred_effects_in_source_order_and_returns_them_at_end() {
+    let asset = compile_asset(
+        "dialogue/start.recite",
+        concat!(
+            ":: start default\n",
+            "> before\n",
+            "  Before.\n",
+            "! deferred first(alpha, \"beta\", 3, 0.5, true)\n",
+            "> middle\n",
+            "  Middle.\n",
+            "! deferred second()\n",
+            "-> END\n",
+        ),
+    );
+    let mut session = start_scene(&asset, None).expect("starts");
+
+    assert_line(next(&asset, &mut session), "before", "Before.");
+    assert!(session.deferred_effects().is_empty());
+    assert_line(next(&asset, &mut session), "middle", "Middle.");
+    assert_eq!(
+        session
+            .deferred_effects()
+            .iter()
+            .map(|effect| effect.function.as_str())
+            .collect::<Vec<_>>(),
+        ["first"]
+    );
+
+    let effects = assert_end_effects(next(&asset, &mut session), ["first", "second"]);
+    assert_eq!(effects[0].id.as_str(), "effect:dialogue/start.recite:4:1");
+    assert_eq!(effects[0].mode, DialogueEffectMode::Deferred);
+    assert_eq!(
+        effects[0].args,
+        vec![
+            DialogueEffectArgument::Identifier("alpha".to_owned()),
+            DialogueEffectArgument::String("beta".to_owned()),
+            DialogueEffectArgument::Integer(3),
+            DialogueEffectArgument::Float(0.5),
+            DialogueEffectArgument::Boolean(true),
+        ]
+    );
+    assert_eq!(effects[0].source_span.start.line(), 4);
+}
+
+#[test]
+fn deferred_effects_are_collected_without_calling_game_context() {
+    let asset = compile_asset(
         "dialogue/start.recite",
         concat!(
             ":: start default\n",
@@ -1031,11 +1093,117 @@ fn unsupported_effect_statement_is_structured_error() {
             "-> END\n",
         ),
     );
-    let mut effect_session = start_scene(&effect_asset, None).expect("starts");
+    let context = RecordingContext::default().failing("advance_thread", "should not be called");
+    let mut session = start_scene(&asset, None).expect("starts");
+
+    assert_end_effects(
+        next_with_context(&asset, &mut session, &context),
+        ["advance_thread"],
+    );
+    assert!(context.calls().is_empty());
+}
+
+#[test]
+fn deferred_effects_follow_selected_choice_and_divert_paths() {
+    let asset = compile_asset(
+        "dialogue/start.recite",
+        concat!(
+            ":: start default\n",
+            "! deferred entered_start()\n",
+            "> prompt_line\n",
+            "  What next?\n",
+            "  ? work\n",
+            "    Work.\n",
+            "    -> work\n",
+            "  ? leave\n",
+            "    Leave.\n",
+            "    -> END\n",
+            ":: work\n",
+            "! deferred entered_work()\n",
+            "-> finish\n",
+            ":: finish\n",
+            "! deferred entered_finish()\n",
+            "-> END\n",
+        ),
+    );
+    let mut session = start_scene(&asset, None).expect("starts");
+
+    let DialogueEvent::Prompt { .. } = next(&asset, &mut session).expect("emits prompt") else {
+        panic!("expected prompt");
+    };
+
+    assert_end_effects(
+        choose(
+            &asset,
+            &mut session,
+            ChoiceId::new("work").expect("valid choice ID"),
+        ),
+        ["entered_start", "entered_work", "entered_finish"],
+    );
+}
+
+#[test]
+fn deferred_effects_only_collect_reached_conditional_branch() {
+    let asset = compile_asset(
+        "dialogue/start.recite",
+        concat!(
+            ":: start default\n",
+            "! deferred before_branch()\n",
+            ":if trusts(player)\n",
+            "  ! deferred then_branch()\n",
+            ":else\n",
+            "  ! deferred else_branch()\n",
+            "! deferred after_branch()\n",
+            "-> END\n",
+        ),
+    );
+
+    let then_context = RecordingContext::default().with("trusts", true);
+    let mut then_session = start_scene(&asset, None).expect("starts");
+    assert_end_effects(
+        next_with_context(&asset, &mut then_session, &then_context),
+        ["before_branch", "then_branch", "after_branch"],
+    );
+
+    let else_context = RecordingContext::default().with("trusts", false);
+    let mut else_session = start_scene(&asset, None).expect("starts");
+    assert_end_effects(
+        next_with_context(&asset, &mut else_session, &else_context),
+        ["before_branch", "else_branch", "after_branch"],
+    );
+}
+
+#[test]
+fn immediate_and_blocking_effects_are_structured_unsupported_mode_errors() {
+    let immediate_asset = compile_asset(
+        "dialogue/immediate.recite",
+        concat!(
+            ":: start default\n",
+            "! immediate play_sfx(snap)\n",
+            "-> END\n",
+        ),
+    );
+    let mut immediate_session = start_scene(&immediate_asset, None).expect("starts");
     assert_eq!(
-        next(&effect_asset, &mut effect_session),
-        Err(DialogueError::UnsupportedStatement {
-            kind: UnsupportedStatementKind::Effect
+        next(&immediate_asset, &mut immediate_session),
+        Err(DialogueError::UnsupportedEffectMode {
+            mode: DialogueEffectMode::Immediate,
+        })
+    );
+
+    let blocking_asset = compile_asset(
+        "dialogue/blocking.recite",
+        concat!(
+            ":: start default\n",
+            "! blocking grant_item(map)\n",
+            "-> END\n",
+        ),
+    );
+    let mut blocking_session = start_scene(&blocking_asset, None).expect("starts");
+    assert_eq!(
+        next(&blocking_asset, &mut blocking_session),
+        Err(DialogueError::UnsupportedEffectMode {
+            mode: DialogueEffectMode::Blocking,
         })
     );
 }
@@ -1178,7 +1346,7 @@ fn run_to_end(asset: &CompiledDialogue) -> Vec<DialogueEvent> {
 
     loop {
         let event = next(asset, &mut session).expect("next succeeds");
-        let is_end = matches!(event, DialogueEvent::End);
+        let is_end = matches!(event, DialogueEvent::End { .. });
         events.push(event);
         if is_end {
             break;
@@ -1199,7 +1367,7 @@ fn run_trace<const N: usize>(
     loop {
         let event = next(asset, &mut session).expect("next succeeds");
         let is_prompt = matches!(event, DialogueEvent::Prompt { .. });
-        let is_end = matches!(event, DialogueEvent::End);
+        let is_end = matches!(event, DialogueEvent::End { .. });
         events.push(event);
 
         if is_prompt {
@@ -1210,7 +1378,7 @@ fn run_trace<const N: usize>(
                 ChoiceId::new(choice_id).expect("valid choice ID"),
             )
             .expect("choice succeeds");
-            let is_end = matches!(event, DialogueEvent::End);
+            let is_end = matches!(event, DialogueEvent::End { .. });
             events.push(event);
             if is_end {
                 break;
@@ -1263,6 +1431,31 @@ fn assert_line(event: Result<DialogueEvent, DialogueError>, id: &str, text: &str
     assert_eq!(line.id.as_str(), id);
     assert_eq!(line.source_text, text);
     assert_eq!(line.text, text);
+}
+
+fn empty_end() -> DialogueEvent {
+    DialogueEvent::End {
+        deferred_effects: Vec::new(),
+    }
+}
+
+fn assert_end_effects<const N: usize>(
+    event: Result<DialogueEvent, DialogueError>,
+    expected_functions: [&str; N],
+) -> Vec<DialogueEffectRequest> {
+    let DialogueEvent::End { deferred_effects } = event.expect("next succeeds") else {
+        panic!("expected end event");
+    };
+
+    assert_eq!(
+        deferred_effects
+            .iter()
+            .map(|effect| effect.function.as_str())
+            .collect::<Vec<_>>(),
+        expected_functions
+    );
+
+    deferred_effects
 }
 
 fn compile_asset(path: &str, source: &str) -> CompiledDialogue {
