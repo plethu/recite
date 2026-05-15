@@ -1,4 +1,6 @@
-use recite_core::{BlockIndex, ChoiceId, CompiledAssetId, CompiledDivertTarget, StatementIndex};
+use recite_core::{
+    BlockIndex, ChoiceId, CompiledAssetId, CompiledDivertTarget, StatementIndex, StatementRange,
+};
 
 use crate::{DialogueError, DialogueEvent};
 
@@ -9,7 +11,9 @@ pub struct DialogueSession {
     pub(crate) format_version: u16,
     pub(crate) compiler_compatibility_version: u16,
     pub(crate) current_block: BlockIndex,
+    pub(crate) current_range: StatementRange,
     pub(crate) next_statement: StatementIndex,
+    pub(crate) continuation_stack: Vec<StatementFrame>,
     pub(crate) pending_prompt: Option<PendingPrompt>,
     pub(crate) previous_prompt_choices: Vec<ChoiceId>,
     pub(crate) selected_choice_history: Vec<ChoiceId>,
@@ -23,14 +27,16 @@ impl DialogueSession {
         format_version: u16,
         compiler_compatibility_version: u16,
         current_block: BlockIndex,
-        next_statement: StatementIndex,
+        current_range: StatementRange,
     ) -> Self {
         Self {
             asset_id,
             format_version,
             compiler_compatibility_version,
             current_block,
-            next_statement,
+            current_range,
+            next_statement: current_range.start,
+            continuation_stack: Vec::new(),
             pending_prompt: None,
             previous_prompt_choices: Vec::new(),
             selected_choice_history: Vec::new(),
@@ -53,6 +59,12 @@ impl DialogueSession {
     pub fn selected_choice_history(&self) -> &[ChoiceId] {
         &self.selected_choice_history
     }
+}
+
+#[derive(Clone, Debug, Eq, PartialEq)]
+pub(crate) struct StatementFrame {
+    pub(crate) range: StatementRange,
+    pub(crate) next_statement: StatementIndex,
 }
 
 #[derive(Clone, Debug, Eq, PartialEq)]

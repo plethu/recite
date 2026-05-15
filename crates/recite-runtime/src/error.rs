@@ -38,6 +38,13 @@ pub enum DialogueError {
         choice: ChoiceId,
         reason: Option<String>,
     },
+    ConditionEvaluationFailed {
+        function: String,
+        reason: String,
+    },
+    ConditionDepthLimitExceeded {
+        limit: usize,
+    },
     SessionEnded,
     TraversalLimitExceeded {
         limit: usize,
@@ -95,6 +102,15 @@ impl std::fmt::Display for DialogueError {
                 }
                 Ok(())
             }
+            Self::ConditionEvaluationFailed { function, reason } => {
+                write!(formatter, "condition `{function}` failed: {reason}")
+            }
+            Self::ConditionDepthLimitExceeded { limit } => {
+                write!(
+                    formatter,
+                    "condition expression exceeded maximum evaluation depth {limit}"
+                )
+            }
             Self::SessionEnded => formatter.write_str("session has already ended"),
             Self::TraversalLimitExceeded { limit } => {
                 write!(
@@ -113,7 +129,6 @@ pub enum UnsupportedStatementKind {
     If,
     Match,
     Effect,
-    ChoiceCondition,
 }
 
 impl std::fmt::Display for UnsupportedStatementKind {
@@ -122,7 +137,6 @@ impl std::fmt::Display for UnsupportedStatementKind {
             Self::If => formatter.write_str("conditional branches"),
             Self::Match => formatter.write_str("match branches"),
             Self::Effect => formatter.write_str("effects"),
-            Self::ChoiceCondition => formatter.write_str("conditional choices"),
         }
     }
 }

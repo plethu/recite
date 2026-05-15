@@ -2,19 +2,21 @@ mod asset;
 mod output;
 
 use recite_core::{
-    ChoiceId, ChoiceRange, CompiledDialogue, CompiledDivertTarget, CompiledStatementKind,
-    StatementIndex,
+    ChoiceId, ChoiceRange, CompiledConditionCall, CompiledConditionExpression, CompiledDialogue,
+    CompiledDivertTarget, CompiledStatementKind, StatementIndex, StatementRange,
 };
 
+use crate::context::{ConditionQuery, DialogueContext};
 use crate::error::UnsupportedStatementKind;
-use crate::event::DialogueEvent;
-use crate::session::{PendingPrompt, PendingPromptChoice};
+use crate::event::{DialogueChoice, DialogueEvent};
+use crate::session::{PendingPrompt, PendingPromptChoice, StatementFrame};
 use crate::{DialogueError, DialogueSession};
 
 use self::asset::{AssetView, malformed};
-use self::output::{dialogue_choices, dialogue_line};
+use self::output::{dialogue_choice, dialogue_line};
 
 const MAX_INTERNAL_STEPS: usize = 10_000;
+const MAX_CONDITION_DEPTH: usize = 128;
 
 /// Start a dialogue session at the compiled default block or an explicit block.
 pub fn start_scene(
@@ -34,7 +36,7 @@ pub fn start_scene(
         asset.header.format_version,
         asset.header.compiler_compatibility_version,
         block_index,
-        compiled_block.statements.start,
+        compiled_block.statements,
     ))
 }
 
@@ -42,6 +44,7 @@ pub fn start_scene(
 pub fn next(
     asset: &CompiledDialogue,
     session: &mut DialogueSession,
+    context: &dyn DialogueContext,
 ) -> Result<DialogueEvent, DialogueError> {
     let asset_view = AssetView::new(asset)?;
     asset_view.ensure_session_matches(session)?;
@@ -57,20 +60,26 @@ pub fn next(
 
     for _ in 0..MAX_INTERNAL_STEPS {
         let block = asset_view.block_at(session.current_block)?;
-        let block_statements = asset_view.statement_range(block.statements)?;
+        let current_statements = asset_view.statement_range(session.current_range)?;
         let next_statement = session.next_statement.as_u32() as usize;
 
-        if next_statement == block_statements.end {
+        if next_statement == current_statements.end {
+            if let Some(frame) = session.continuation_stack.pop() {
+                session.current_range = frame.range;
+                session.next_statement = frame.next_statement;
+                continue;
+            }
+
             session.ended = true;
             return session.emit(DialogueEvent::End);
         }
-        if !block_statements.contains(&next_statement) {
+        if !current_statements.contains(&next_statement) {
             return Err(malformed(format!(
-                "session statement pointer {} is outside block `{}` range {}..{}",
+                "session statement pointer {} is outside active range {}..{} in block `{}`",
                 session.next_statement.as_u32(),
+                current_statements.start,
+                current_statements.end,
                 block.id,
-                block_statements.start,
-                block_statements.end
             )));
         }
 
@@ -94,20 +103,27 @@ pub fn next(
                 let line = line
                     .map(|line| dialogue_line(asset_view, line, block.default_speaker))
                     .transpose()?;
-                let choices = dialogue_choices(asset_view, choice_range)?;
-                let pending_choices = pending_prompt_choices(asset_view, choice_range)?;
-                let choice_ids = choices.iter().map(|choice| choice.id.clone()).collect();
+                let prompt_choices = prompt_choices(asset_view, choice_range, context)?;
+                let choice_ids = prompt_choices
+                    .events
+                    .iter()
+                    .map(|choice| choice.id.clone())
+                    .collect();
                 session.next_statement = next_statement_after(session.next_statement)?;
                 session.previous_prompt_choices = choice_ids;
                 session.pending_prompt = Some(PendingPrompt {
-                    choices: pending_choices,
+                    choices: prompt_choices.pending,
                 });
 
-                return session.emit(DialogueEvent::Prompt { line, choices });
+                return session.emit(DialogueEvent::Prompt {
+                    line,
+                    choices: prompt_choices.events,
+                });
             }
             CompiledStatementKind::Divert(target) => {
                 if matches!(target, CompiledDivertTarget::End) {
                     session.ended = true;
+                    session.continuation_stack.clear();
                     return session.emit(DialogueEvent::End);
                 }
 
@@ -115,12 +131,22 @@ pub fn next(
             }
             CompiledStatementKind::End => {
                 session.ended = true;
+                session.continuation_stack.clear();
                 return session.emit(DialogueEvent::End);
             }
-            CompiledStatementKind::If { .. } => {
-                return Err(DialogueError::UnsupportedStatement {
-                    kind: UnsupportedStatementKind::If,
-                });
+            CompiledStatementKind::If {
+                condition,
+                then_statements,
+                else_statements,
+            } => {
+                let condition_is_true = evaluate_condition(context, condition)?;
+                let selected_range = if condition_is_true {
+                    *then_statements
+                } else {
+                    *else_statements
+                };
+                let continuation = next_statement_after(session.next_statement)?;
+                enter_statement_range(asset_view, session, selected_range, continuation)?;
             }
             CompiledStatementKind::Match { .. } => {
                 return Err(DialogueError::UnsupportedStatement {
@@ -145,6 +171,7 @@ pub fn choose(
     asset: &CompiledDialogue,
     session: &mut DialogueSession,
     choice_id: ChoiceId,
+    context: &dyn DialogueContext,
 ) -> Result<DialogueEvent, DialogueError> {
     let asset_view = AssetView::new(asset)?;
     asset_view.ensure_session_matches(session)?;
@@ -184,30 +211,52 @@ pub fn choose(
 
     if let Some((block_index, statement_index)) = next_location {
         session.current_block = block_index;
+        session.current_range = asset_view.block_at(block_index)?.statements;
         session.next_statement = statement_index;
-        return next(asset, session);
+        session.continuation_stack.clear();
+        return next(asset, session, context);
     }
 
     session.ended = true;
+    session.continuation_stack.clear();
     session.emit(DialogueEvent::End)
 }
 
-fn pending_prompt_choices(
+struct PromptChoices {
+    events: Vec<DialogueChoice>,
+    pending: Vec<PendingPromptChoice>,
+}
+
+fn prompt_choices(
     asset: AssetView<'_>,
     range: ChoiceRange,
-) -> Result<Vec<PendingPromptChoice>, DialogueError> {
-    asset
-        .choices(range)?
-        .iter()
-        .map(|choice| {
-            Ok(PendingPromptChoice {
-                id: choice.id.clone(),
-                target: choice.target.clone(),
-                is_available: true,
-                unavailable_reason: None,
-            })
-        })
-        .collect()
+    context: &dyn DialogueContext,
+) -> Result<PromptChoices, DialogueError> {
+    let mut events = Vec::new();
+    let mut pending = Vec::new();
+
+    for choice in asset.choices(range)? {
+        let is_available = match &choice.condition {
+            Some(condition) => evaluate_condition(context, condition)?,
+            None => true,
+        };
+        let unavailable_reason = None;
+
+        events.push(dialogue_choice(
+            asset,
+            choice,
+            is_available,
+            unavailable_reason.clone(),
+        )?);
+        pending.push(PendingPromptChoice {
+            id: choice.id.clone(),
+            target: choice.target.clone(),
+            is_available,
+            unavailable_reason,
+        });
+    }
+
+    Ok(PromptChoices { events, pending })
 }
 
 fn apply_divert(
@@ -219,12 +268,101 @@ fn apply_divert(
         CompiledDivertTarget::Block(block_index) => {
             let block = asset.block_at(*block_index)?;
             session.current_block = *block_index;
+            session.current_range = block.statements;
             session.next_statement = block.statements.start;
+            session.continuation_stack.clear();
         }
         CompiledDivertTarget::End => unreachable!("end diverts are handled by caller"),
     }
 
     Ok(())
+}
+
+fn enter_statement_range(
+    asset: AssetView<'_>,
+    session: &mut DialogueSession,
+    range: StatementRange,
+    continuation: StatementIndex,
+) -> Result<(), DialogueError> {
+    asset.statement_range(range)?;
+    session.continuation_stack.push(StatementFrame {
+        range: session.current_range,
+        next_statement: continuation,
+    });
+    session.current_range = range;
+    session.next_statement = range.start;
+
+    Ok(())
+}
+
+fn evaluate_condition(
+    context: &dyn DialogueContext,
+    condition: &CompiledConditionExpression,
+) -> Result<bool, DialogueError> {
+    evaluate_condition_at_depth(context, condition, 0)
+}
+
+fn evaluate_condition_at_depth(
+    context: &dyn DialogueContext,
+    condition: &CompiledConditionExpression,
+    depth: usize,
+) -> Result<bool, DialogueError> {
+    if depth > MAX_CONDITION_DEPTH {
+        return Err(DialogueError::ConditionDepthLimitExceeded {
+            limit: MAX_CONDITION_DEPTH,
+        });
+    }
+
+    match condition {
+        CompiledConditionExpression::Call(call) => evaluate_condition_call(context, call),
+        CompiledConditionExpression::And(expressions) => {
+            if expressions.is_empty() {
+                return Err(malformed(
+                    "condition `and` expression has no children".to_owned(),
+                ));
+            }
+
+            for expression in expressions {
+                if !evaluate_condition_at_depth(context, expression, depth + 1)? {
+                    return Ok(false);
+                }
+            }
+
+            Ok(true)
+        }
+        CompiledConditionExpression::Or(expressions) => {
+            if expressions.is_empty() {
+                return Err(malformed(
+                    "condition `or` expression has no children".to_owned(),
+                ));
+            }
+
+            for expression in expressions {
+                if evaluate_condition_at_depth(context, expression, depth + 1)? {
+                    return Ok(true);
+                }
+            }
+
+            Ok(false)
+        }
+        CompiledConditionExpression::Not(expression) => Ok(!evaluate_condition_at_depth(
+            context,
+            expression,
+            depth + 1,
+        )?),
+    }
+}
+
+fn evaluate_condition_call(
+    context: &dyn DialogueContext,
+    call: &CompiledConditionCall,
+) -> Result<bool, DialogueError> {
+    context
+        .evaluate_condition(ConditionQuery::new(&call.function, &call.args))
+        .map_err(|error| DialogueError::ConditionEvaluationFailed {
+            function: call.function.clone(),
+            reason: error.reason().to_owned(),
+        })
 }
 
 fn next_statement_after(index: StatementIndex) -> Result<StatementIndex, DialogueError> {
@@ -240,11 +378,11 @@ mod tests {
     use recite_core::{
         BlockIndex, BlockLookupTable, ChoiceId, ChoiceLookupTable, CompiledAssetHeader,
         CompiledAssetId, CompiledDialogue, CompiledDivertTarget, CompilerVersion, LineLookupTable,
-        SchemaFingerprint, SourceMapId, StatementIndex,
+        SchemaFingerprint, SourceMapId, StatementIndex, StatementRange,
     };
 
     use crate::session::{PendingPrompt, PendingPromptChoice};
-    use crate::{DialogueError, DialogueSession};
+    use crate::{DialogueError, DialogueSession, EmptyDialogueContext};
 
     use super::choose;
 
@@ -257,7 +395,7 @@ mod tests {
             asset.header.format_version,
             asset.header.compiler_compatibility_version,
             BlockIndex::new(0),
-            StatementIndex::new(0),
+            StatementRange::new(StatementIndex::new(0), 0),
         );
         session.pending_prompt = Some(PendingPrompt {
             choices: vec![PendingPromptChoice {
@@ -269,7 +407,12 @@ mod tests {
         });
 
         assert_eq!(
-            choose(&asset, &mut session, choice_id.clone()),
+            choose(
+                &asset,
+                &mut session,
+                choice_id.clone(),
+                &EmptyDialogueContext
+            ),
             Err(DialogueError::UnavailableChoice {
                 choice: choice_id.clone(),
                 reason: Some("missing trust".to_owned())

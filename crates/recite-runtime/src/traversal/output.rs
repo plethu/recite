@@ -1,9 +1,9 @@
 use recite_core::{
-    ChoiceRange, CompiledChoiceEcho, CompiledMetadataEntry, LineIndex, MetadataRange, SpeakerIndex,
+    CompiledChoice, CompiledChoiceEcho, CompiledMetadataEntry, LineIndex, MetadataRange,
+    SpeakerIndex,
 };
 
 use crate::DialogueError;
-use crate::error::UnsupportedStatementKind;
 use crate::event::{ChoiceEchoMode, DialogueChoice, DialogueLine};
 
 use super::asset::AssetView;
@@ -28,31 +28,21 @@ pub(super) fn dialogue_line(
     })
 }
 
-pub(super) fn dialogue_choices(
+pub(super) fn dialogue_choice(
     asset: AssetView<'_>,
-    range: ChoiceRange,
-) -> Result<Vec<DialogueChoice>, DialogueError> {
-    asset
-        .choices(range)?
-        .iter()
-        .map(|choice| {
-            if choice.condition.is_some() {
-                return Err(DialogueError::UnsupportedStatement {
-                    kind: UnsupportedStatementKind::ChoiceCondition,
-                });
-            }
-
-            Ok(DialogueChoice {
-                id: choice.id.clone(),
-                source_text: choice.source_text.clone(),
-                text: choice.source_text.clone(),
-                metadata: metadata(asset, choice.metadata)?,
-                is_available: true,
-                unavailable_reason: None,
-                echo: choice_echo(&choice.echo),
-            })
-        })
-        .collect()
+    choice: &CompiledChoice,
+    is_available: bool,
+    unavailable_reason: Option<String>,
+) -> Result<DialogueChoice, DialogueError> {
+    Ok(DialogueChoice {
+        id: choice.id.clone(),
+        source_text: choice.source_text.clone(),
+        text: choice.source_text.clone(),
+        metadata: metadata(asset, choice.metadata)?,
+        is_available,
+        unavailable_reason,
+        echo: choice_echo(&choice.echo),
+    })
 }
 
 fn choice_echo(echo: &CompiledChoiceEcho) -> ChoiceEchoMode {
