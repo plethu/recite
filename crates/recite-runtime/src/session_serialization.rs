@@ -141,7 +141,7 @@ pub fn restore_session(
     ensure_snapshot_matches_asset(asset, &snapshot)?;
 
     let current_block = BlockIndex::new(snapshot.current_block);
-    asset_view.block_at(current_block)?;
+    let block = asset_view.block_at(current_block)?;
 
     let current_range = statement_range(snapshot.current_range);
     asset_view.statement_range(current_range)?;
@@ -150,6 +150,12 @@ pub fn restore_session(
     validate_statement_pointer("next statement", current_range, next_statement)?;
 
     let continuation_stack = restore_frames(asset_view, &snapshot.continuation_stack)?;
+    validate_range_stack(
+        asset_view,
+        block.statements,
+        current_range,
+        &continuation_stack,
+    )?;
     let previous_prompt_choices = restore_choice_ids(
         asset_view,
         "previous prompt choices",
@@ -167,6 +173,8 @@ pub fn restore_session(
         snapshot.pending_prompt.as_ref(),
         &previous_prompt_choices,
         snapshot.ended,
+        current_range,
+        next_statement,
     )?;
 
     Ok(DialogueSession {
@@ -299,6 +307,8 @@ fn restore_pending_prompt(
     snapshot: Option<&DialogueSessionPendingPromptSnapshot>,
     previous_prompt_choices: &[ChoiceId],
     ended: bool,
+    current_range: StatementRange,
+    next_statement: StatementIndex,
 ) -> Result<Option<PendingPrompt>, DialogueError> {
     let Some(snapshot) = snapshot else {
         return Ok(None);
@@ -313,6 +323,7 @@ fn restore_pending_prompt(
     }
 
     let statement_index = StatementIndex::new(snapshot.statement);
+    validate_pending_prompt_position(statement_index, current_range, next_statement)?;
     let statement = asset.statement_at(statement_index)?;
     let CompiledStatementKind::Prompt { choices, .. } = &statement.kind else {
         return Err(invalid_snapshot(format!(
@@ -360,6 +371,108 @@ fn restore_pending_prompt(
         statement: statement_index,
         choices: pending_choices,
     }))
+}
+
+fn validate_range_stack(
+    asset: AssetView<'_>,
+    block_range: StatementRange,
+    current_range: StatementRange,
+    frames: &[StatementFrame],
+) -> Result<(), DialogueError> {
+    if frames.is_empty() {
+        if current_range != block_range {
+            return Err(invalid_snapshot(
+                "active statement range must match current block when continuation stack is empty",
+            ));
+        }
+        return Ok(());
+    }
+
+    if frames[0].range != block_range {
+        return Err(invalid_snapshot(
+            "first continuation frame must resume within the current block range",
+        ));
+    }
+
+    for (index, frame) in frames.iter().enumerate() {
+        let child_range = frames
+            .get(index + 1)
+            .map_or(current_range, |next_frame| next_frame.range);
+        validate_child_range(asset, frame.range, frame.next_statement, child_range)?;
+    }
+
+    Ok(())
+}
+
+fn validate_child_range(
+    asset: AssetView<'_>,
+    parent_range: StatementRange,
+    continuation: StatementIndex,
+    child_range: StatementRange,
+) -> Result<(), DialogueError> {
+    let parent_start = parent_range.start.as_u32();
+    let parent_end = parent_start
+        .checked_add(parent_range.len)
+        .ok_or_else(|| invalid_snapshot("parent range overflows u32"))?;
+    let Some(branch_statement) = continuation.as_u32().checked_sub(1) else {
+        return Err(invalid_snapshot(
+            "continuation frame cannot resume before statement zero",
+        ));
+    };
+
+    if branch_statement < parent_start || branch_statement >= parent_end {
+        return Err(invalid_snapshot(
+            "continuation frame does not resume after a statement in its parent range",
+        ));
+    }
+
+    let statement = asset.statement_at(StatementIndex::new(branch_statement))?;
+    let CompiledStatementKind::If {
+        then_statements,
+        else_statements,
+        ..
+    } = &statement.kind
+    else {
+        return Err(invalid_snapshot(
+            "continuation frame does not resume after a conditional branch",
+        ));
+    };
+
+    if child_range != *then_statements && child_range != *else_statements {
+        return Err(invalid_snapshot(
+            "active child range is not selected by its continuation frame",
+        ));
+    }
+
+    Ok(())
+}
+
+fn validate_pending_prompt_position(
+    prompt_statement: StatementIndex,
+    current_range: StatementRange,
+    next_statement: StatementIndex,
+) -> Result<(), DialogueError> {
+    let range_start = current_range.start.as_u32();
+    let range_end = range_start
+        .checked_add(current_range.len)
+        .ok_or_else(|| invalid_snapshot("active range overflows u32"))?;
+    let prompt_statement = prompt_statement.as_u32();
+    let expected_next = prompt_statement
+        .checked_add(1)
+        .ok_or_else(|| invalid_snapshot("pending prompt statement overflows u32"))?;
+
+    if prompt_statement < range_start || prompt_statement >= range_end {
+        return Err(invalid_snapshot(
+            "pending prompt statement is outside the active range",
+        ));
+    }
+    if next_statement.as_u32() != expected_next {
+        return Err(invalid_snapshot(
+            "pending prompt must be immediately before the restored next statement",
+        ));
+    }
+
+    Ok(())
 }
 
 fn restore_choice_ids(
