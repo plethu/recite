@@ -1,12 +1,17 @@
 use recite_compiler::{CompileInput, CompileOptions, compile_inputs};
 use recite_core::{
     BlockIndex, BlockLookupEntry, BlockLookupTable, ChoiceId, ChoiceRange, CompiledAssetId,
-    CompiledConditionCall, CompiledDialogue, CompiledDivertTarget, CompiledStatementKind,
-    CompilerVersion, LineIndex, MatchArmIndex, MatchArmRange, SchemaFingerprint, SourceMapId,
+    CompiledConditionCall, CompiledConditionExpression, CompiledDialogue, CompiledDivertTarget,
+    CompiledStatementKind, CompilerVersion, LineIndex, MatchArmIndex, MatchArmRange,
+    SchemaFingerprint, SourceMapId,
 };
 use recite_runtime::{
-    DialogueError, DialogueEvent, UnsupportedStatementKind, choose, next, start_scene,
+    ConditionArgument, ConditionEvaluationError, ConditionQuery, DialogueError, DialogueEvent,
+    EmptyDialogueContext, UnsupportedStatementKind, choose as runtime_choose, next as runtime_next,
+    start_scene,
 };
+use std::cell::RefCell;
+use std::collections::BTreeMap;
 
 #[test]
 fn starts_at_compiled_default_block_even_when_it_is_not_first() {
@@ -491,6 +496,385 @@ fn traversal_is_deterministic_for_repeated_sessions() {
 }
 
 #[test]
+fn true_condition_enters_then_branch_and_resumes_parent_range() {
+    let asset = compile_asset(
+        "dialogue/start.recite",
+        concat!(
+            ":: start default\n",
+            "> before\n",
+            "  Before.\n",
+            ":if trusts(player, \"hazel rhea\", 3, 0.75, true)\n",
+            "  > secret\n",
+            "    Secret.\n",
+            ":else\n",
+            "  > fallback\n",
+            "    Fallback.\n",
+            "> after\n",
+            "  After.\n",
+            "-> END\n",
+        ),
+    );
+    let context = RecordingContext::default().with("trusts", true);
+    let mut session = start_scene(&asset, None).expect("starts");
+
+    assert_line(
+        next_with_context(&asset, &mut session, &context),
+        "before",
+        "Before.",
+    );
+    assert_line(
+        next_with_context(&asset, &mut session, &context),
+        "secret",
+        "Secret.",
+    );
+    assert_line(
+        next_with_context(&asset, &mut session, &context),
+        "after",
+        "After.",
+    );
+    assert_eq!(
+        next_with_context(&asset, &mut session, &context),
+        Ok(DialogueEvent::End)
+    );
+    assert_eq!(
+        context.calls(),
+        [RecordedCall {
+            function: "trusts".to_owned(),
+            arguments: vec![
+                RecordedArgument::Identifier("player".to_owned()),
+                RecordedArgument::String("hazel rhea".to_owned()),
+                RecordedArgument::Integer(3),
+                RecordedArgument::Float(0.75),
+                RecordedArgument::Boolean(true),
+            ],
+        }]
+    );
+}
+
+#[test]
+fn false_condition_enters_else_branch() {
+    let asset = compile_asset(
+        "dialogue/start.recite",
+        concat!(
+            ":: start default\n",
+            ":if trusts(player)\n",
+            "  > secret\n",
+            "    Secret.\n",
+            ":else\n",
+            "  > fallback\n",
+            "    Fallback.\n",
+            "> after\n",
+            "  After.\n",
+            "-> END\n",
+        ),
+    );
+    let context = RecordingContext::default().with("trusts", false);
+    let mut session = start_scene(&asset, None).expect("starts");
+
+    assert_line(
+        next_with_context(&asset, &mut session, &context),
+        "fallback",
+        "Fallback.",
+    );
+    assert_line(
+        next_with_context(&asset, &mut session, &context),
+        "after",
+        "After.",
+    );
+}
+
+#[test]
+fn false_condition_without_else_skips_gated_statements() {
+    let asset = compile_asset(
+        "dialogue/start.recite",
+        concat!(
+            ":: start default\n",
+            ":if trusts(player)\n",
+            "  > secret\n",
+            "    Secret.\n",
+            "> after\n",
+            "  After.\n",
+            "-> END\n",
+        ),
+    );
+    let context = RecordingContext::default().with("trusts", false);
+    let mut session = start_scene(&asset, None).expect("starts");
+
+    assert_line(
+        next_with_context(&asset, &mut session, &context),
+        "after",
+        "After.",
+    );
+}
+
+#[test]
+fn not_condition_inverts_context_result() {
+    let asset = compile_asset(
+        "dialogue/start.recite",
+        concat!(
+            ":: start default\n",
+            ":if not trusts(player)\n",
+            "  > secret\n",
+            "    Secret.\n",
+            "-> END\n",
+        ),
+    );
+    let context = RecordingContext::default().with("trusts", false);
+    let mut session = start_scene(&asset, None).expect("starts");
+
+    assert_line(
+        next_with_context(&asset, &mut session, &context),
+        "secret",
+        "Secret.",
+    );
+}
+
+#[test]
+fn condition_failure_is_structured_and_keeps_session_position() {
+    let asset = compile_asset(
+        "dialogue/start.recite",
+        concat!(
+            ":: start default\n",
+            ":if trusts(player)\n",
+            "  > secret\n",
+            "    Secret.\n",
+            "-> END\n",
+        ),
+    );
+    let failing = RecordingContext::default().failing("trusts", "condition is unavailable");
+    let passing = RecordingContext::default().with("trusts", true);
+    let mut session = start_scene(&asset, None).expect("starts");
+
+    assert_eq!(
+        next_with_context(&asset, &mut session, &failing),
+        Err(DialogueError::ConditionEvaluationFailed {
+            function: "trusts".to_owned(),
+            reason: "condition is unavailable".to_owned(),
+        })
+    );
+    assert_line(
+        next_with_context(&asset, &mut session, &passing),
+        "secret",
+        "Secret.",
+    );
+}
+
+#[test]
+fn deeply_nested_condition_returns_structured_depth_error() {
+    let mut asset = compile_asset(
+        "dialogue/start.recite",
+        concat!(
+            ":: start default\n",
+            ":if trusts(player)\n",
+            "  > secret\n",
+            "    Secret.\n",
+            "-> END\n",
+        ),
+    );
+    let CompiledStatementKind::If { condition, .. } = &mut asset.statements[0].kind else {
+        panic!("expected if statement");
+    };
+    *condition = deeply_nested_condition(150);
+    let context = RecordingContext::default().with("trusts", true);
+    let mut session = start_scene(&asset, None).expect("starts");
+
+    assert_eq!(
+        next_with_context(&asset, &mut session, &context),
+        Err(DialogueError::ConditionDepthLimitExceeded { limit: 128 })
+    );
+    assert!(
+        context.calls().is_empty(),
+        "runtime should stop before reaching the deeply nested call"
+    );
+}
+
+#[test]
+fn boolean_conditions_short_circuit_left_to_right() {
+    let and_asset = compile_asset(
+        "dialogue/and.recite",
+        concat!(
+            ":: start default\n",
+            ":if first() and missing()\n",
+            "  > secret\n",
+            "    Secret.\n",
+            "> after\n",
+            "  After.\n",
+            "-> END\n",
+        ),
+    );
+    let and_context = RecordingContext::default().with("first", false);
+    let mut and_session = start_scene(&and_asset, None).expect("starts");
+
+    assert_line(
+        next_with_context(&and_asset, &mut and_session, &and_context),
+        "after",
+        "After.",
+    );
+    assert_eq!(
+        and_context.calls(),
+        [RecordedCall {
+            function: "first".to_owned(),
+            arguments: Vec::new(),
+        }]
+    );
+
+    let or_asset = compile_asset(
+        "dialogue/or.recite",
+        concat!(
+            ":: start default\n",
+            ":if first() or missing()\n",
+            "  > secret\n",
+            "    Secret.\n",
+            "> after\n",
+            "  After.\n",
+            "-> END\n",
+        ),
+    );
+    let or_context = RecordingContext::default().with("first", true);
+    let mut or_session = start_scene(&or_asset, None).expect("starts");
+
+    assert_line(
+        next_with_context(&or_asset, &mut or_session, &or_context),
+        "secret",
+        "Secret.",
+    );
+    assert_eq!(
+        or_context.calls(),
+        [RecordedCall {
+            function: "first".to_owned(),
+            arguments: Vec::new(),
+        }]
+    );
+}
+
+#[test]
+fn choice_condition_failure_keeps_session_position() {
+    let asset = compile_asset(
+        "dialogue/start.recite",
+        concat!(
+            ":: start default\n",
+            "> prompt_line\n",
+            "  What next?\n",
+            "  ? locked if trusts(player)\n",
+            "    Locked.\n",
+            "    -> END\n",
+        ),
+    );
+    let failing = RecordingContext::default().failing("trusts", "condition is unavailable");
+    let passing = RecordingContext::default().with("trusts", true);
+    let mut session = start_scene(&asset, None).expect("starts");
+
+    assert_eq!(
+        next_with_context(&asset, &mut session, &failing),
+        Err(DialogueError::ConditionEvaluationFailed {
+            function: "trusts".to_owned(),
+            reason: "condition is unavailable".to_owned(),
+        })
+    );
+
+    let DialogueEvent::Prompt { choices, .. } =
+        next_with_context(&asset, &mut session, &passing).expect("emits prompt")
+    else {
+        panic!("expected prompt event");
+    };
+    assert_eq!(choices[0].id.as_str(), "locked");
+    assert!(choices[0].is_available);
+}
+
+#[test]
+fn choice_conditions_mark_unavailable_choices_without_hiding_them() {
+    let asset = compile_asset(
+        "dialogue/start.recite",
+        concat!(
+            ":: start default\n",
+            "> prompt_line\n",
+            "  What next?\n",
+            "  ? locked if trusts(player)\n",
+            "    Locked.\n",
+            "    -> locked\n",
+            "  ? leave\n",
+            "    Leave.\n",
+            "    -> END\n",
+            ":: locked\n",
+            "> locked_line\n",
+            "  Locked path.\n",
+            "-> END\n",
+        ),
+    );
+    let context = RecordingContext::default().with("trusts", false);
+    let mut session = start_scene(&asset, None).expect("starts");
+
+    let DialogueEvent::Prompt { choices, .. } =
+        next_with_context(&asset, &mut session, &context).expect("emits prompt")
+    else {
+        panic!("expected prompt event");
+    };
+    assert_eq!(choices.len(), 2);
+    assert_eq!(choices[0].id.as_str(), "locked");
+    assert!(!choices[0].is_available);
+    assert_eq!(choices[0].unavailable_reason, None);
+    assert_eq!(choices[1].id.as_str(), "leave");
+    assert!(choices[1].is_available);
+
+    let locked = ChoiceId::new("locked").expect("valid choice ID");
+    assert_eq!(
+        choose_with_context(&asset, &mut session, locked.clone(), &context),
+        Err(DialogueError::UnavailableChoice {
+            choice: locked,
+            reason: None,
+        })
+    );
+    assert_eq!(
+        choose_with_context(
+            &asset,
+            &mut session,
+            ChoiceId::new("leave").expect("valid choice ID"),
+            &context,
+        ),
+        Ok(DialogueEvent::End)
+    );
+}
+
+#[test]
+fn available_choice_condition_can_be_selected() {
+    let asset = compile_asset(
+        "dialogue/start.recite",
+        concat!(
+            ":: start default\n",
+            "> prompt_line\n",
+            "  What next?\n",
+            "  ? locked if trusts(player)\n",
+            "    Locked.\n",
+            "    -> locked\n",
+            ":: locked\n",
+            "> locked_line\n",
+            "  Locked path.\n",
+            "-> END\n",
+        ),
+    );
+    let context = RecordingContext::default().with("trusts", true);
+    let mut session = start_scene(&asset, None).expect("starts");
+
+    let DialogueEvent::Prompt { choices, .. } =
+        next_with_context(&asset, &mut session, &context).expect("emits prompt")
+    else {
+        panic!("expected prompt event");
+    };
+    assert!(choices[0].is_available);
+
+    assert_line(
+        choose_with_context(
+            &asset,
+            &mut session,
+            ChoiceId::new("locked").expect("valid choice ID"),
+            &context,
+        ),
+        "locked_line",
+        "Locked path.",
+    );
+}
+
+#[test]
 fn unknown_explicit_block_is_structured_error() {
     let asset = compile_asset(
         "dialogue/start.recite",
@@ -638,25 +1022,7 @@ fn prompt_with_empty_choice_range_is_structured_error() {
 }
 
 #[test]
-fn unsupported_statements_are_structured_errors() {
-    let if_asset = compile_asset(
-        "dialogue/start.recite",
-        concat!(
-            ":: start default\n",
-            ":if trusts(player)\n",
-            "  > secret\n",
-            "    Secret.\n",
-            "-> END\n",
-        ),
-    );
-    let mut if_session = start_scene(&if_asset, None).expect("starts");
-    assert_eq!(
-        next(&if_asset, &mut if_session),
-        Err(DialogueError::UnsupportedStatement {
-            kind: UnsupportedStatementKind::If
-        })
-    );
-
+fn unsupported_effect_statement_is_structured_error() {
     let effect_asset = compile_asset(
         "dialogue/start.recite",
         concat!(
@@ -716,6 +1082,96 @@ fn internal_divert_loop_returns_traversal_limit_error() {
     );
 }
 
+#[derive(Debug, Default)]
+struct RecordingContext {
+    results: BTreeMap<String, bool>,
+    failures: BTreeMap<String, String>,
+    calls: RefCell<Vec<RecordedCall>>,
+}
+
+impl RecordingContext {
+    fn with(mut self, function: &str, result: bool) -> Self {
+        self.results.insert(function.to_owned(), result);
+        self
+    }
+
+    fn failing(mut self, function: &str, reason: &str) -> Self {
+        self.failures.insert(function.to_owned(), reason.to_owned());
+        self
+    }
+
+    fn calls(&self) -> Vec<RecordedCall> {
+        self.calls.borrow().clone()
+    }
+}
+
+impl recite_runtime::DialogueContext for RecordingContext {
+    fn evaluate_condition(
+        &self,
+        query: ConditionQuery<'_>,
+    ) -> Result<bool, ConditionEvaluationError> {
+        let function = query.function().to_owned();
+        let arguments = query
+            .arguments()
+            .into_iter()
+            .map(RecordedArgument::from)
+            .collect();
+        self.calls.borrow_mut().push(RecordedCall {
+            function: function.clone(),
+            arguments,
+        });
+
+        if let Some(reason) = self.failures.get(&function) {
+            return Err(ConditionEvaluationError::new(reason.clone()));
+        }
+
+        self.results
+            .get(&function)
+            .copied()
+            .ok_or_else(|| ConditionEvaluationError::new(format!("missing condition `{function}`")))
+    }
+}
+
+#[derive(Clone, Debug, PartialEq)]
+struct RecordedCall {
+    function: String,
+    arguments: Vec<RecordedArgument>,
+}
+
+#[derive(Clone, Debug, PartialEq)]
+enum RecordedArgument {
+    Identifier(String),
+    String(String),
+    Integer(i64),
+    Float(f64),
+    Boolean(bool),
+}
+
+impl From<ConditionArgument<'_>> for RecordedArgument {
+    fn from(argument: ConditionArgument<'_>) -> Self {
+        match argument {
+            ConditionArgument::Identifier(value) => Self::Identifier(value.to_owned()),
+            ConditionArgument::String(value) => Self::String(value.to_owned()),
+            ConditionArgument::Integer(value) => Self::Integer(value),
+            ConditionArgument::Float(value) => Self::Float(value),
+            ConditionArgument::Boolean(value) => Self::Boolean(value),
+        }
+    }
+}
+
+fn deeply_nested_condition(depth: usize) -> CompiledConditionExpression {
+    let mut expression = CompiledConditionExpression::Call(CompiledConditionCall {
+        function: "trusts".to_owned(),
+        args: Vec::new(),
+    });
+
+    for _ in 0..depth {
+        expression = CompiledConditionExpression::Not(Box::new(expression));
+    }
+
+    expression
+}
+
 fn run_to_end(asset: &CompiledDialogue) -> Vec<DialogueEvent> {
     let mut session = start_scene(asset, None).expect("starts");
     let mut events = Vec::new();
@@ -765,6 +1221,38 @@ fn run_trace<const N: usize>(
     }
 
     events
+}
+
+fn next(
+    asset: &CompiledDialogue,
+    session: &mut recite_runtime::DialogueSession,
+) -> Result<DialogueEvent, DialogueError> {
+    runtime_next(asset, session, &EmptyDialogueContext)
+}
+
+fn next_with_context(
+    asset: &CompiledDialogue,
+    session: &mut recite_runtime::DialogueSession,
+    context: &dyn recite_runtime::DialogueContext,
+) -> Result<DialogueEvent, DialogueError> {
+    runtime_next(asset, session, context)
+}
+
+fn choose(
+    asset: &CompiledDialogue,
+    session: &mut recite_runtime::DialogueSession,
+    choice_id: ChoiceId,
+) -> Result<DialogueEvent, DialogueError> {
+    runtime_choose(asset, session, choice_id, &EmptyDialogueContext)
+}
+
+fn choose_with_context(
+    asset: &CompiledDialogue,
+    session: &mut recite_runtime::DialogueSession,
+    choice_id: ChoiceId,
+    context: &dyn recite_runtime::DialogueContext,
+) -> Result<DialogueEvent, DialogueError> {
+    runtime_choose(asset, session, choice_id, context)
 }
 
 fn assert_line(event: Result<DialogueEvent, DialogueError>, id: &str, text: &str) {
