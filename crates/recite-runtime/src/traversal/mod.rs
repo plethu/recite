@@ -239,6 +239,10 @@ pub fn choose(
 
 fn finish_scene(session: &mut DialogueSession) -> Result<DialogueEvent, DialogueError> {
     session.ended = true;
+    if let Some(root_frame) = session.continuation_stack.first() {
+        session.current_range = root_frame.range;
+    }
+    session.next_statement = range_end_statement(session.current_range)?;
     session.continuation_stack.clear();
     let deferred_effects = session.deferred_effects.clone();
     session.emit(DialogueEvent::End { deferred_effects })
@@ -393,6 +397,15 @@ fn next_statement_after(index: StatementIndex) -> Result<StatementIndex, Dialogu
         .checked_add(1)
         .map(StatementIndex::new)
         .ok_or_else(|| malformed("statement index overflowed".to_owned()))
+}
+
+fn range_end_statement(range: StatementRange) -> Result<StatementIndex, DialogueError> {
+    range
+        .start
+        .as_u32()
+        .checked_add(range.len)
+        .map(StatementIndex::new)
+        .ok_or_else(|| malformed("statement range end overflowed".to_owned()))
 }
 
 #[cfg(test)]
