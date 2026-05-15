@@ -48,7 +48,7 @@ pub(super) fn dialogue_choice(
     })
 }
 
-pub(super) fn dialogue_effect_request(
+pub(crate) fn dialogue_effect_request(
     asset: AssetView<'_>,
     effect: &CompiledEffect,
 ) -> Result<DialogueEffectRequest, DialogueError> {

@@ -46,7 +46,7 @@ pub use compiled::{
 };
 pub use diagnostic::{Diagnostic, DiagnosticCode, DiagnosticSeverity, RelatedSpan};
 pub use error::CoreValueError;
-pub use ids::{BlockId, ChoiceId, EffectId, LineId, SpeakerId};
+pub use ids::{BlockId, ChoiceId, EffectId, LineId, LocaleId, SpeakerId};
 pub use source_location::{SourcePosition, SourceSpan};
 pub use value::{Metadata, MetadataEntry, ScalarValue, Value};
 

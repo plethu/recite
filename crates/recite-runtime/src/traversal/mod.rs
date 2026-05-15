@@ -10,11 +10,12 @@ use recite_core::{
 use crate::context::{ConditionQuery, DialogueContext};
 use crate::error::UnsupportedStatementKind;
 use crate::event::{DialogueChoice, DialogueEvent};
-use crate::session::{PendingPrompt, PendingPromptChoice, StatementFrame};
+use crate::session::{DialogueSessionOptions, PendingPrompt, PendingPromptChoice, StatementFrame};
 use crate::{DialogueError, DialogueSession};
 
-use self::asset::{AssetView, malformed};
-use self::output::{dialogue_choice, dialogue_effect_request, dialogue_line, effect_mode};
+pub(crate) use self::asset::{AssetView, malformed};
+pub(crate) use self::output::dialogue_effect_request;
+use self::output::{dialogue_choice, dialogue_line, effect_mode};
 
 const MAX_INTERNAL_STEPS: usize = 10_000;
 const MAX_CONDITION_DEPTH: usize = 128;
@@ -23,6 +24,16 @@ const MAX_CONDITION_DEPTH: usize = 128;
 pub fn start_scene(
     asset: &CompiledDialogue,
     block: Option<&str>,
+) -> Result<DialogueSession, DialogueError> {
+    start_scene_with_options(asset, block, DialogueSessionOptions::default())
+}
+
+/// Start a dialogue session at the compiled default block or an explicit block
+/// with explicit runtime options.
+pub fn start_scene_with_options(
+    asset: &CompiledDialogue,
+    block: Option<&str>,
+    options: DialogueSessionOptions,
 ) -> Result<DialogueSession, DialogueError> {
     let asset_view = AssetView::new(asset)?;
 
@@ -33,11 +44,11 @@ pub fn start_scene(
     let compiled_block = asset_view.block_at(block_index)?;
 
     Ok(DialogueSession::new(
-        asset.header.asset_id.clone(),
-        asset.header.format_version,
-        asset.header.compiler_compatibility_version,
+        &asset.header,
+        asset.sources.clone(),
         block_index,
         compiled_block.statements,
+        options,
     ))
 }
 
@@ -109,9 +120,11 @@ pub fn next(
                     .iter()
                     .map(|choice| choice.id.clone())
                     .collect();
+                let prompt_statement = session.next_statement;
                 session.next_statement = next_statement_after(session.next_statement)?;
                 session.previous_prompt_choices = choice_ids;
                 session.pending_prompt = Some(PendingPrompt {
+                    statement: prompt_statement,
                     choices: prompt_choices.pending,
                 });
 
@@ -226,6 +239,10 @@ pub fn choose(
 
 fn finish_scene(session: &mut DialogueSession) -> Result<DialogueEvent, DialogueError> {
     session.ended = true;
+    if let Some(root_frame) = session.continuation_stack.first() {
+        session.current_range = root_frame.range;
+    }
+    session.next_statement = range_end_statement(session.current_range)?;
     session.continuation_stack.clear();
     let deferred_effects = session.deferred_effects.clone();
     session.emit(DialogueEvent::End { deferred_effects })
@@ -382,6 +399,15 @@ fn next_statement_after(index: StatementIndex) -> Result<StatementIndex, Dialogu
         .ok_or_else(|| malformed("statement index overflowed".to_owned()))
 }
 
+fn range_end_statement(range: StatementRange) -> Result<StatementIndex, DialogueError> {
+    range
+        .start
+        .as_u32()
+        .checked_add(range.len)
+        .map(StatementIndex::new)
+        .ok_or_else(|| malformed("statement range end overflowed".to_owned()))
+}
+
 #[cfg(test)]
 mod tests {
     use recite_core::{
@@ -391,7 +417,7 @@ mod tests {
     };
 
     use crate::session::{PendingPrompt, PendingPromptChoice};
-    use crate::{DialogueError, DialogueSession, EmptyDialogueContext};
+    use crate::{DialogueError, DialogueSession, DialogueSessionOptions, EmptyDialogueContext};
 
     use super::choose;
 
@@ -400,13 +426,14 @@ mod tests {
         let asset = empty_asset();
         let choice_id = ChoiceId::new("locked_choice").expect("valid choice ID");
         let mut session = DialogueSession::new(
-            asset.header.asset_id.clone(),
-            asset.header.format_version,
-            asset.header.compiler_compatibility_version,
+            &asset.header,
+            asset.sources.clone(),
             BlockIndex::new(0),
             StatementRange::new(StatementIndex::new(0), 0),
+            DialogueSessionOptions::default(),
         );
         session.pending_prompt = Some(PendingPrompt {
+            statement: StatementIndex::new(0),
             choices: vec![PendingPromptChoice {
                 id: choice_id.clone(),
                 target: CompiledDivertTarget::End,

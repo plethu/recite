@@ -9,6 +9,8 @@ readme.workspace = true
 
 [dependencies]
 recite-core.workspace = true
+rmp-serde.workspace = true
+serde.workspace = true
 
 [dev-dependencies]
 recite-compiler.workspace = true

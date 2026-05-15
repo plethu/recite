@@ -53,4 +53,5 @@ define_id!(LineId);
 define_id!(ChoiceId);
 define_id!(BlockId);
 define_id!(EffectId);
+define_id!(LocaleId);
 define_id!(SpeakerId);

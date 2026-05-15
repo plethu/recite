@@ -20,6 +20,10 @@ pub enum DialogueError {
         expected_compiler_compatibility_version: u16,
         actual_compiler_compatibility_version: u16,
     },
+    AssetContentMismatch {
+        asset_id: String,
+        reason: String,
+    },
     MalformedCompiledAsset {
         reason: String,
     },
@@ -50,6 +54,18 @@ pub enum DialogueError {
     ConditionDepthLimitExceeded {
         limit: usize,
     },
+    UnsupportedSessionSnapshotFormat {
+        snapshot_format_version: u16,
+    },
+    SessionSnapshotEncodeFailed {
+        reason: String,
+    },
+    SessionSnapshotDecodeFailed {
+        reason: String,
+    },
+    InvalidSessionSnapshot {
+        reason: String,
+    },
     SessionEnded,
     TraversalLimitExceeded {
         limit: usize,
@@ -78,6 +94,12 @@ impl std::fmt::Display for DialogueError {
                 formatter,
                 "session is for asset `{expected_asset_id}` ({expected_format_version}/{expected_compiler_compatibility_version}) but got `{actual_asset_id}` ({actual_format_version}/{actual_compiler_compatibility_version})"
             ),
+            Self::AssetContentMismatch { asset_id, reason } => {
+                write!(
+                    formatter,
+                    "session is for a different compiled asset payload `{asset_id}`: {reason}"
+                )
+            }
             Self::MalformedCompiledAsset { reason } => {
                 write!(formatter, "malformed compiled asset: {reason}")
             }
@@ -121,6 +143,21 @@ impl std::fmt::Display for DialogueError {
                     formatter,
                     "condition expression exceeded maximum evaluation depth {limit}"
                 )
+            }
+            Self::UnsupportedSessionSnapshotFormat {
+                snapshot_format_version,
+            } => write!(
+                formatter,
+                "unsupported session snapshot format {snapshot_format_version}"
+            ),
+            Self::SessionSnapshotEncodeFailed { reason } => {
+                write!(formatter, "failed to encode session snapshot: {reason}")
+            }
+            Self::SessionSnapshotDecodeFailed { reason } => {
+                write!(formatter, "failed to decode session snapshot: {reason}")
+            }
+            Self::InvalidSessionSnapshot { reason } => {
+                write!(formatter, "invalid session snapshot: {reason}")
             }
             Self::SessionEnded => formatter.write_str("session has already ended"),
             Self::TraversalLimitExceeded { limit } => {
