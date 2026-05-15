@@ -2,10 +2,10 @@ use std::ops::Range;
 
 use recite_core::{
     BlockIndex, COMPILED_ASSET_FORMAT_VERSION_V0, COMPILER_COMPATIBILITY_VERSION_V0, ChoiceIndex,
-    ChoiceRange, CompiledAssetHeader, CompiledChoice, CompiledDialogue, CompiledLine,
-    CompiledMetadataEntry, CompiledSourceMapEntry, CompiledStatement, CompiledValueError,
-    LineIndex, MetadataIndex, MetadataRange, SourceMapIndex, SpeakerIndex, StatementIndex,
-    StatementRange, TableRange,
+    ChoiceRange, CompiledAssetHeader, CompiledChoice, CompiledDialogue, CompiledEffect,
+    CompiledLine, CompiledMetadataEntry, CompiledSourceMapEntry, CompiledStatement,
+    CompiledValueError, EffectIndex, LineIndex, MetadataIndex, MetadataRange, SourceMapIndex,
+    SpeakerIndex, StatementIndex, StatementRange, TableRange,
 };
 
 use crate::{DialogueError, DialogueSession};
@@ -104,6 +104,13 @@ impl<'a> AssetView<'a> {
             .lines
             .get(index.as_u32() as usize)
             .ok_or_else(|| malformed(format!("line index {} is out of range", index.as_u32())))
+    }
+
+    pub(super) fn effect_at(self, index: EffectIndex) -> Result<&'a CompiledEffect, DialogueError> {
+        self.asset
+            .effects
+            .get(index.as_u32() as usize)
+            .ok_or_else(|| malformed(format!("effect index {} is out of range", index.as_u32())))
     }
 
     pub(super) fn speaker_at(

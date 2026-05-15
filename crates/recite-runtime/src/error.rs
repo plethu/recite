@@ -1,5 +1,7 @@
 use recite_core::ChoiceId;
 
+use crate::DialogueEffectMode;
+
 /// Runtime error for deterministic traversal over compiled dialogue assets.
 #[derive(Clone, Debug, Eq, PartialEq)]
 pub enum DialogueError {
@@ -23,6 +25,9 @@ pub enum DialogueError {
     },
     UnsupportedStatement {
         kind: UnsupportedStatementKind,
+    },
+    UnsupportedEffectMode {
+        mode: DialogueEffectMode,
     },
     PromptPending {
         choices: Vec<ChoiceId>,
@@ -79,6 +84,12 @@ impl std::fmt::Display for DialogueError {
             Self::UnsupportedStatement { kind } => {
                 write!(formatter, "runtime traversal does not support {kind} yet")
             }
+            Self::UnsupportedEffectMode { mode } => {
+                write!(
+                    formatter,
+                    "runtime traversal does not support {mode} effects yet"
+                )
+            }
             Self::PromptPending { .. } => {
                 formatter.write_str("session is waiting for a choice selection")
             }
@@ -118,6 +129,16 @@ impl std::fmt::Display for DialogueError {
                     "runtime traversal exceeded {limit} internal steps"
                 )
             }
+        }
+    }
+}
+
+impl std::fmt::Display for DialogueEffectMode {
+    fn fmt(&self, formatter: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
+        match self {
+            Self::Deferred => formatter.write_str("deferred"),
+            Self::Immediate => formatter.write_str("immediate"),
+            Self::Blocking => formatter.write_str("blocking"),
         }
     }
 }

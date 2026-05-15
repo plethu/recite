@@ -1,10 +1,13 @@
 use recite_core::{
-    CompiledChoice, CompiledChoiceEcho, CompiledMetadataEntry, LineIndex, MetadataRange,
-    SpeakerIndex,
+    CompiledArgument, CompiledChoice, CompiledChoiceEcho, CompiledEffect, CompiledEffectMode,
+    CompiledMetadataEntry, LineIndex, MetadataRange, ScalarValue, SpeakerIndex,
 };
 
 use crate::DialogueError;
-use crate::event::{ChoiceEchoMode, DialogueChoice, DialogueLine};
+use crate::event::{
+    ChoiceEchoMode, DialogueChoice, DialogueEffectArgument, DialogueEffectMode,
+    DialogueEffectRequest, DialogueLine,
+};
 
 use super::asset::AssetView;
 
@@ -45,11 +48,48 @@ pub(super) fn dialogue_choice(
     })
 }
 
+pub(super) fn dialogue_effect_request(
+    asset: AssetView<'_>,
+    effect: &CompiledEffect,
+) -> Result<DialogueEffectRequest, DialogueError> {
+    Ok(DialogueEffectRequest {
+        id: effect.id.clone(),
+        mode: effect_mode(effect.mode),
+        function: effect.function.clone(),
+        args: effect.args.iter().map(effect_argument).collect(),
+        source_span: asset.source_map_at(effect.source_map)?.span.clone(),
+    })
+}
+
+pub(super) fn effect_mode(mode: CompiledEffectMode) -> DialogueEffectMode {
+    match mode {
+        CompiledEffectMode::Deferred => DialogueEffectMode::Deferred,
+        CompiledEffectMode::Immediate => DialogueEffectMode::Immediate,
+        CompiledEffectMode::Blocking => DialogueEffectMode::Blocking,
+    }
+}
+
 fn choice_echo(echo: &CompiledChoiceEcho) -> ChoiceEchoMode {
     match echo {
         CompiledChoiceEcho::None => ChoiceEchoMode::None,
         CompiledChoiceEcho::SelectedText => ChoiceEchoMode::SelectedText,
         CompiledChoiceEcho::ExplicitLine(line_id) => ChoiceEchoMode::ExplicitLine(line_id.clone()),
+    }
+}
+
+fn effect_argument(argument: &CompiledArgument) -> DialogueEffectArgument {
+    match argument {
+        CompiledArgument::Identifier(value) => DialogueEffectArgument::Identifier(value.clone()),
+        CompiledArgument::Value(ScalarValue::String(value)) => {
+            DialogueEffectArgument::String(value.clone())
+        }
+        CompiledArgument::Value(ScalarValue::Integer(value)) => {
+            DialogueEffectArgument::Integer(*value)
+        }
+        CompiledArgument::Value(ScalarValue::Float(value)) => DialogueEffectArgument::Float(*value),
+        CompiledArgument::Value(ScalarValue::Boolean(value)) => {
+            DialogueEffectArgument::Boolean(*value)
+        }
     }
 }
 

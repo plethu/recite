@@ -3,7 +3,8 @@ mod output;
 
 use recite_core::{
     ChoiceId, ChoiceRange, CompiledConditionCall, CompiledConditionExpression, CompiledDialogue,
-    CompiledDivertTarget, CompiledStatementKind, StatementIndex, StatementRange,
+    CompiledDivertTarget, CompiledEffectMode, CompiledStatementKind, StatementIndex,
+    StatementRange,
 };
 
 use crate::context::{ConditionQuery, DialogueContext};
@@ -13,7 +14,7 @@ use crate::session::{PendingPrompt, PendingPromptChoice, StatementFrame};
 use crate::{DialogueError, DialogueSession};
 
 use self::asset::{AssetView, malformed};
-use self::output::{dialogue_choice, dialogue_line};
+use self::output::{dialogue_choice, dialogue_effect_request, dialogue_line, effect_mode};
 
 const MAX_INTERNAL_STEPS: usize = 10_000;
 const MAX_CONDITION_DEPTH: usize = 128;
@@ -70,8 +71,7 @@ pub fn next(
                 continue;
             }
 
-            session.ended = true;
-            return session.emit(DialogueEvent::End);
+            return finish_scene(session);
         }
         if !current_statements.contains(&next_statement) {
             return Err(malformed(format!(
@@ -122,17 +122,13 @@ pub fn next(
             }
             CompiledStatementKind::Divert(target) => {
                 if matches!(target, CompiledDivertTarget::End) {
-                    session.ended = true;
-                    session.continuation_stack.clear();
-                    return session.emit(DialogueEvent::End);
+                    return finish_scene(session);
                 }
 
                 apply_divert(asset_view, session, target)?;
             }
             CompiledStatementKind::End => {
-                session.ended = true;
-                session.continuation_stack.clear();
-                return session.emit(DialogueEvent::End);
+                return finish_scene(session);
             }
             CompiledStatementKind::If {
                 condition,
@@ -153,10 +149,18 @@ pub fn next(
                     kind: UnsupportedStatementKind::Match,
                 });
             }
-            CompiledStatementKind::Effect(_) => {
-                return Err(DialogueError::UnsupportedStatement {
-                    kind: UnsupportedStatementKind::Effect,
-                });
+            CompiledStatementKind::Effect(effect_index) => {
+                let effect = asset_view.effect_at(*effect_index)?;
+                let mode = effect_mode(effect.mode);
+                if !matches!(effect.mode, CompiledEffectMode::Deferred) {
+                    return Err(DialogueError::UnsupportedEffectMode { mode });
+                }
+
+                let next_statement = next_statement_after(session.next_statement)?;
+                session
+                    .deferred_effects
+                    .push(dialogue_effect_request(asset_view, effect)?);
+                session.next_statement = next_statement;
             }
         }
     }
@@ -217,9 +221,14 @@ pub fn choose(
         return next(asset, session, context);
     }
 
+    finish_scene(session)
+}
+
+fn finish_scene(session: &mut DialogueSession) -> Result<DialogueEvent, DialogueError> {
     session.ended = true;
     session.continuation_stack.clear();
-    session.emit(DialogueEvent::End)
+    let deferred_effects = session.deferred_effects.clone();
+    session.emit(DialogueEvent::End { deferred_effects })
 }
 
 struct PromptChoices {

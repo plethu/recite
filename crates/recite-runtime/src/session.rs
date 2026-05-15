@@ -2,10 +2,10 @@ use recite_core::{
     BlockIndex, ChoiceId, CompiledAssetId, CompiledDivertTarget, StatementIndex, StatementRange,
 };
 
-use crate::{DialogueError, DialogueEvent};
+use crate::{DialogueEffectRequest, DialogueError, DialogueEvent};
 
 /// Compact, asset-free runtime session state.
-#[derive(Clone, Debug, Eq, PartialEq)]
+#[derive(Clone, Debug, PartialEq)]
 pub struct DialogueSession {
     pub(crate) asset_id: CompiledAssetId,
     pub(crate) format_version: u16,
@@ -17,6 +17,7 @@ pub struct DialogueSession {
     pub(crate) pending_prompt: Option<PendingPrompt>,
     pub(crate) previous_prompt_choices: Vec<ChoiceId>,
     pub(crate) selected_choice_history: Vec<ChoiceId>,
+    pub(crate) deferred_effects: Vec<DialogueEffectRequest>,
     pub(crate) trace_counter: u64,
     pub(crate) ended: bool,
 }
@@ -40,6 +41,7 @@ impl DialogueSession {
             pending_prompt: None,
             previous_prompt_choices: Vec::new(),
             selected_choice_history: Vec::new(),
+            deferred_effects: Vec::new(),
             trace_counter: 0,
             ended: false,
         }
@@ -58,6 +60,11 @@ impl DialogueSession {
     #[must_use]
     pub fn selected_choice_history(&self) -> &[ChoiceId] {
         &self.selected_choice_history
+    }
+
+    #[must_use]
+    pub fn deferred_effects(&self) -> &[DialogueEffectRequest] {
+        &self.deferred_effects
     }
 }
 
