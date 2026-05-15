@@ -184,17 +184,13 @@ impl std::error::Error for DialogueError {}
 
 #[derive(Clone, Copy, Debug, Eq, PartialEq)]
 pub enum UnsupportedStatementKind {
-    If,
     Match,
-    Effect,
 }
 
 impl std::fmt::Display for UnsupportedStatementKind {
     fn fmt(&self, formatter: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
         match self {
-            Self::If => formatter.write_str("conditional branches"),
             Self::Match => formatter.write_str("match branches"),
-            Self::Effect => formatter.write_str("effects"),
         }
     }
 }

@@ -1,24 +1,24 @@
 mod asset;
+mod condition;
 mod output;
 
 use recite_core::{
-    ChoiceId, ChoiceRange, CompiledConditionCall, CompiledConditionExpression, CompiledDialogue,
-    CompiledDivertTarget, CompiledEffectMode, CompiledStatementKind, StatementIndex,
-    StatementRange,
+    ChoiceId, ChoiceRange, CompiledDialogue, CompiledDivertTarget, CompiledEffectMode,
+    CompiledStatementKind, StatementIndex, StatementRange,
 };
 
-use crate::context::{ConditionQuery, DialogueContext};
+use crate::context::DialogueContext;
 use crate::error::UnsupportedStatementKind;
 use crate::event::{DialogueChoice, DialogueEvent};
 use crate::session::{DialogueSessionOptions, PendingPrompt, PendingPromptChoice, StatementFrame};
 use crate::{DialogueError, DialogueSession};
 
 pub(crate) use self::asset::{AssetView, malformed};
+use self::condition::evaluate_condition;
 pub(crate) use self::output::dialogue_effect_request;
 use self::output::{dialogue_choice, dialogue_line, effect_mode};
 
 const MAX_INTERNAL_STEPS: usize = 10_000;
-const MAX_CONDITION_DEPTH: usize = 128;
 
 /// Start a dialogue session at the compiled default block or an explicit block.
 pub fn start_scene(
@@ -319,76 +319,6 @@ fn enter_statement_range(
     session.next_statement = range.start;
 
     Ok(())
-}
-
-fn evaluate_condition(
-    context: &dyn DialogueContext,
-    condition: &CompiledConditionExpression,
-) -> Result<bool, DialogueError> {
-    evaluate_condition_at_depth(context, condition, 0)
-}
-
-fn evaluate_condition_at_depth(
-    context: &dyn DialogueContext,
-    condition: &CompiledConditionExpression,
-    depth: usize,
-) -> Result<bool, DialogueError> {
-    if depth > MAX_CONDITION_DEPTH {
-        return Err(DialogueError::ConditionDepthLimitExceeded {
-            limit: MAX_CONDITION_DEPTH,
-        });
-    }
-
-    match condition {
-        CompiledConditionExpression::Call(call) => evaluate_condition_call(context, call),
-        CompiledConditionExpression::And(expressions) => {
-            if expressions.is_empty() {
-                return Err(malformed(
-                    "condition `and` expression has no children".to_owned(),
-                ));
-            }
-
-            for expression in expressions {
-                if !evaluate_condition_at_depth(context, expression, depth + 1)? {
-                    return Ok(false);
-                }
-            }
-
-            Ok(true)
-        }
-        CompiledConditionExpression::Or(expressions) => {
-            if expressions.is_empty() {
-                return Err(malformed(
-                    "condition `or` expression has no children".to_owned(),
-                ));
-            }
-
-            for expression in expressions {
-                if evaluate_condition_at_depth(context, expression, depth + 1)? {
-                    return Ok(true);
-                }
-            }
-
-            Ok(false)
-        }
-        CompiledConditionExpression::Not(expression) => Ok(!evaluate_condition_at_depth(
-            context,
-            expression,
-            depth + 1,
-        )?),
-    }
-}
-
-fn evaluate_condition_call(
-    context: &dyn DialogueContext,
-    call: &CompiledConditionCall,
-) -> Result<bool, DialogueError> {
-    context
-        .evaluate_condition(ConditionQuery::new(&call.function, &call.args))
-        .map_err(|error| DialogueError::ConditionEvaluationFailed {
-            function: call.function.clone(),
-            reason: error.reason().to_owned(),
-        })
 }
 
 fn next_statement_after(index: StatementIndex) -> Result<StatementIndex, DialogueError> {

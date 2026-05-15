@@ -1,142 +1,18 @@
 use recite_core::{
-    BlockIndex, ChoiceId, CompiledDialogue, CompiledSourceFile, CompiledStatementKind,
-    ContentFingerprint, EffectId, LocaleId, SchemaFingerprint, StatementIndex, StatementRange,
+    BlockIndex, ChoiceId, CompiledDialogue, CompiledStatementKind, EffectId, LocaleId,
+    StatementIndex, StatementRange,
 };
-use serde::{Deserialize, Serialize};
 
 use crate::event::DialogueEffectRequest;
 use crate::session::{PendingPrompt, PendingPromptChoice, StatementFrame};
+use crate::session_snapshot::{
+    DialogueDeferredEffectSnapshot, DialogueSessionFrameSnapshot,
+    DialogueSessionPendingPromptSnapshot, DialogueSessionSnapshot,
+    SESSION_SNAPSHOT_FORMAT_VERSION_V0, schema_fingerprint_snapshot, snapshot_session,
+    source_snapshot, statement_range,
+};
 use crate::traversal::{AssetView, dialogue_effect_request};
 use crate::{DialogueError, DialogueSession};
-
-pub const SESSION_SNAPSHOT_FORMAT_VERSION_V0: u16 = 0;
-
-/// Versioned structural save data for a dialogue session.
-///
-/// Snapshots contain only compact runtime state and asset identity references.
-/// They are not a tamper-proof proof that the state was produced by a previous
-/// honest traversal. Hosts that treat save data as untrusted should
-/// authenticate or encrypt encoded snapshots before restoring them.
-#[derive(Clone, Debug, PartialEq, Serialize, Deserialize)]
-#[serde(deny_unknown_fields)]
-pub struct DialogueSessionSnapshot {
-    pub snapshot_format_version: u16,
-    pub asset_id: String,
-    pub asset_format_version: u16,
-    pub asset_compiler_compatibility_version: u16,
-    pub compiler_version: String,
-    pub source_map_id: String,
-    pub schema_fingerprint: DialogueSchemaFingerprintSnapshot,
-    pub sources: Vec<DialogueSessionSourceSnapshot>,
-    pub current_block: u32,
-    pub current_range: DialogueSessionRangeSnapshot,
-    pub next_statement: u32,
-    pub continuation_stack: Vec<DialogueSessionFrameSnapshot>,
-    pub pending_prompt: Option<DialogueSessionPendingPromptSnapshot>,
-    pub previous_prompt_choices: Vec<String>,
-    pub selected_choice_history: Vec<String>,
-    pub deferred_effects: Vec<DialogueDeferredEffectSnapshot>,
-    pub locale: Option<String>,
-    pub trace_counter: u64,
-    pub ended: bool,
-}
-
-#[derive(Clone, Copy, Debug, Eq, PartialEq, Serialize, Deserialize)]
-#[serde(deny_unknown_fields)]
-pub struct DialogueSessionRangeSnapshot {
-    pub start: u32,
-    pub len: u32,
-}
-
-#[derive(Clone, Copy, Debug, Eq, PartialEq, Serialize, Deserialize)]
-#[serde(deny_unknown_fields)]
-pub struct DialogueSessionFrameSnapshot {
-    pub range: DialogueSessionRangeSnapshot,
-    pub next_statement: u32,
-}
-
-#[derive(Clone, Debug, Eq, PartialEq, Serialize, Deserialize)]
-#[serde(deny_unknown_fields)]
-pub struct DialogueSessionPendingPromptSnapshot {
-    pub statement: u32,
-    pub choices: Vec<DialogueSessionPendingChoiceSnapshot>,
-}
-
-#[derive(Clone, Debug, Eq, PartialEq, Serialize, Deserialize)]
-#[serde(deny_unknown_fields)]
-pub struct DialogueSessionPendingChoiceSnapshot {
-    pub id: String,
-    pub is_available: bool,
-    pub unavailable_reason: Option<String>,
-}
-
-#[derive(Clone, Debug, Eq, PartialEq, Serialize, Deserialize)]
-#[serde(deny_unknown_fields)]
-pub struct DialogueDeferredEffectSnapshot {
-    pub id: String,
-}
-
-#[derive(Clone, Debug, Eq, PartialEq, Serialize, Deserialize)]
-#[serde(deny_unknown_fields)]
-pub struct DialogueSessionSourceSnapshot {
-    pub path: String,
-    pub fingerprint: DialogueContentFingerprintSnapshot,
-}
-
-#[derive(Clone, Debug, Eq, PartialEq, Serialize, Deserialize)]
-#[serde(deny_unknown_fields)]
-pub struct DialogueContentFingerprintSnapshot {
-    pub algorithm: String,
-    pub digest: Vec<u8>,
-}
-
-#[derive(Clone, Debug, Eq, PartialEq, Serialize, Deserialize)]
-#[serde(rename_all = "snake_case")]
-pub enum DialogueSchemaFingerprintSnapshot {
-    Fingerprint(DialogueContentFingerprintSnapshot),
-    NoSchema,
-}
-
-/// Captures the current session as trusted structural save data.
-///
-/// The returned snapshot is intended to be stored by the host save system. It
-/// should be authenticated by that host if users or external systems can modify
-/// saves before restore.
-#[must_use]
-pub fn snapshot_session(session: &DialogueSession) -> DialogueSessionSnapshot {
-    DialogueSessionSnapshot {
-        snapshot_format_version: SESSION_SNAPSHOT_FORMAT_VERSION_V0,
-        asset_id: session.asset_id.as_str().to_owned(),
-        asset_format_version: session.format_version,
-        asset_compiler_compatibility_version: session.compiler_compatibility_version,
-        compiler_version: session.compiler_version.as_str().to_owned(),
-        source_map_id: session.source_map_id.as_str().to_owned(),
-        schema_fingerprint: schema_fingerprint_snapshot(&session.schema_fingerprint),
-        sources: session.sources.iter().map(source_snapshot).collect(),
-        current_block: session.current_block.as_u32(),
-        current_range: range_snapshot(session.current_range),
-        next_statement: session.next_statement.as_u32(),
-        continuation_stack: session
-            .continuation_stack
-            .iter()
-            .map(frame_snapshot)
-            .collect(),
-        pending_prompt: session.pending_prompt.as_ref().map(pending_prompt_snapshot),
-        previous_prompt_choices: choice_ids_snapshot(&session.previous_prompt_choices),
-        selected_choice_history: choice_ids_snapshot(&session.selected_choice_history),
-        deferred_effects: session
-            .deferred_effects
-            .iter()
-            .map(effect_request_snapshot)
-            .collect(),
-        locale: session
-            .locale
-            .as_ref()
-            .map(|locale| locale.as_str().to_owned()),
-        trace_counter: session.trace_counter,
-        ended: session.ended,
-    }
-}
 
 /// Restores a session from trusted structural save data.
 ///
@@ -568,52 +444,6 @@ fn restore_locale(value: Option<&str>) -> Result<Option<LocaleId>, DialogueError
     value.map(LocaleId::new).transpose().map_err(core_error)
 }
 
-fn frame_snapshot(frame: &StatementFrame) -> DialogueSessionFrameSnapshot {
-    DialogueSessionFrameSnapshot {
-        range: range_snapshot(frame.range),
-        next_statement: frame.next_statement.as_u32(),
-    }
-}
-
-fn pending_prompt_snapshot(prompt: &PendingPrompt) -> DialogueSessionPendingPromptSnapshot {
-    DialogueSessionPendingPromptSnapshot {
-        statement: prompt.statement.as_u32(),
-        choices: prompt
-            .choices
-            .iter()
-            .map(|choice| DialogueSessionPendingChoiceSnapshot {
-                id: choice.id.as_str().to_owned(),
-                is_available: choice.is_available,
-                unavailable_reason: choice.unavailable_reason.clone(),
-            })
-            .collect(),
-    }
-}
-
-fn choice_ids_snapshot(choice_ids: &[ChoiceId]) -> Vec<String> {
-    choice_ids
-        .iter()
-        .map(|choice_id| choice_id.as_str().to_owned())
-        .collect()
-}
-
-fn effect_request_snapshot(effect: &DialogueEffectRequest) -> DialogueDeferredEffectSnapshot {
-    DialogueDeferredEffectSnapshot {
-        id: effect.id.as_str().to_owned(),
-    }
-}
-
-fn range_snapshot(range: StatementRange) -> DialogueSessionRangeSnapshot {
-    DialogueSessionRangeSnapshot {
-        start: range.start.as_u32(),
-        len: range.len,
-    }
-}
-
-fn statement_range(snapshot: DialogueSessionRangeSnapshot) -> StatementRange {
-    StatementRange::new(StatementIndex::new(snapshot.start), snapshot.len)
-}
-
 fn validate_statement_pointer(
     field: &'static str,
     range: StatementRange,
@@ -640,35 +470,6 @@ fn choice_id(value: &str) -> Result<ChoiceId, DialogueError> {
 
 fn effect_id(value: &str) -> Result<EffectId, DialogueError> {
     EffectId::new(value).map_err(core_error)
-}
-
-fn source_snapshot(source: &CompiledSourceFile) -> DialogueSessionSourceSnapshot {
-    DialogueSessionSourceSnapshot {
-        path: source.path.clone(),
-        fingerprint: content_fingerprint_snapshot(&source.fingerprint),
-    }
-}
-
-fn schema_fingerprint_snapshot(
-    fingerprint: &SchemaFingerprint,
-) -> DialogueSchemaFingerprintSnapshot {
-    match fingerprint {
-        SchemaFingerprint::Fingerprint(fingerprint) => {
-            DialogueSchemaFingerprintSnapshot::Fingerprint(content_fingerprint_snapshot(
-                fingerprint,
-            ))
-        }
-        SchemaFingerprint::NoSchema => DialogueSchemaFingerprintSnapshot::NoSchema,
-    }
-}
-
-fn content_fingerprint_snapshot(
-    fingerprint: &ContentFingerprint,
-) -> DialogueContentFingerprintSnapshot {
-    DialogueContentFingerprintSnapshot {
-        algorithm: fingerprint.algorithm().as_str().to_owned(),
-        digest: fingerprint.digest().as_bytes().to_vec(),
-    }
 }
 
 fn core_error(error: impl std::fmt::Display) -> DialogueError {
