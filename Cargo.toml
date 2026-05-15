@@ -25,3 +25,5 @@ recite-parser = { version = "0.0.1", path = "crates/recite-parser" }
 recite-compiler = { version = "0.0.1", path = "crates/recite-compiler" }
 recite-runtime = { version = "0.0.1", path = "crates/recite-runtime" }
 insta = { version = "1.47.2", default-features = false }
+rmp-serde = "1.3.1"
+serde = { version = "1.0.228", features = ["derive"] }

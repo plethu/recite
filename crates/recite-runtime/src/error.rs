@@ -50,6 +50,18 @@ pub enum DialogueError {
     ConditionDepthLimitExceeded {
         limit: usize,
     },
+    UnsupportedSessionSnapshotFormat {
+        snapshot_format_version: u16,
+    },
+    SessionSnapshotEncodeFailed {
+        reason: String,
+    },
+    SessionSnapshotDecodeFailed {
+        reason: String,
+    },
+    InvalidSessionSnapshot {
+        reason: String,
+    },
     SessionEnded,
     TraversalLimitExceeded {
         limit: usize,
@@ -121,6 +133,21 @@ impl std::fmt::Display for DialogueError {
                     formatter,
                     "condition expression exceeded maximum evaluation depth {limit}"
                 )
+            }
+            Self::UnsupportedSessionSnapshotFormat {
+                snapshot_format_version,
+            } => write!(
+                formatter,
+                "unsupported session snapshot format {snapshot_format_version}"
+            ),
+            Self::SessionSnapshotEncodeFailed { reason } => {
+                write!(formatter, "failed to encode session snapshot: {reason}")
+            }
+            Self::SessionSnapshotDecodeFailed { reason } => {
+                write!(formatter, "failed to decode session snapshot: {reason}")
+            }
+            Self::InvalidSessionSnapshot { reason } => {
+                write!(formatter, "invalid session snapshot: {reason}")
             }
             Self::SessionEnded => formatter.write_str("session has already ended"),
             Self::TraversalLimitExceeded { limit } => {

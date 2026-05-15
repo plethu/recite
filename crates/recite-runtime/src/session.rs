@@ -1,5 +1,6 @@
 use recite_core::{
-    BlockIndex, ChoiceId, CompiledAssetId, CompiledDivertTarget, StatementIndex, StatementRange,
+    BlockIndex, ChoiceId, CompiledAssetId, CompiledDivertTarget, LocaleId, StatementIndex,
+    StatementRange,
 };
 
 use crate::{DialogueEffectRequest, DialogueError, DialogueEvent};
@@ -18,6 +19,7 @@ pub struct DialogueSession {
     pub(crate) previous_prompt_choices: Vec<ChoiceId>,
     pub(crate) selected_choice_history: Vec<ChoiceId>,
     pub(crate) deferred_effects: Vec<DialogueEffectRequest>,
+    pub(crate) locale: Option<LocaleId>,
     pub(crate) trace_counter: u64,
     pub(crate) ended: bool,
 }
@@ -29,6 +31,7 @@ impl DialogueSession {
         compiler_compatibility_version: u16,
         current_block: BlockIndex,
         current_range: StatementRange,
+        options: DialogueSessionOptions,
     ) -> Self {
         Self {
             asset_id,
@@ -42,6 +45,7 @@ impl DialogueSession {
             previous_prompt_choices: Vec::new(),
             selected_choice_history: Vec::new(),
             deferred_effects: Vec::new(),
+            locale: options.locale,
             trace_counter: 0,
             ended: false,
         }
@@ -66,6 +70,34 @@ impl DialogueSession {
     pub fn deferred_effects(&self) -> &[DialogueEffectRequest] {
         &self.deferred_effects
     }
+
+    #[must_use]
+    pub fn locale(&self) -> Option<&LocaleId> {
+        self.locale.as_ref()
+    }
+}
+
+#[derive(Clone, Debug, Default, Eq, PartialEq)]
+pub struct DialogueSessionOptions {
+    locale: Option<LocaleId>,
+}
+
+impl DialogueSessionOptions {
+    #[must_use]
+    pub fn new() -> Self {
+        Self::default()
+    }
+
+    #[must_use]
+    pub fn with_locale(mut self, locale: LocaleId) -> Self {
+        self.locale = Some(locale);
+        self
+    }
+
+    #[must_use]
+    pub fn locale(&self) -> Option<&LocaleId> {
+        self.locale.as_ref()
+    }
 }
 
 #[derive(Clone, Debug, Eq, PartialEq)]
@@ -76,6 +108,7 @@ pub(crate) struct StatementFrame {
 
 #[derive(Clone, Debug, Eq, PartialEq)]
 pub(crate) struct PendingPrompt {
+    pub(crate) statement: StatementIndex,
     pub(crate) choices: Vec<PendingPromptChoice>,
 }
 

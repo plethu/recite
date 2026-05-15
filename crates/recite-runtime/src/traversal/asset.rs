@@ -1,9 +1,9 @@
 use std::ops::Range;
 
 use recite_core::{
-    BlockIndex, COMPILED_ASSET_FORMAT_VERSION_V0, COMPILER_COMPATIBILITY_VERSION_V0, ChoiceIndex,
-    ChoiceRange, CompiledAssetHeader, CompiledChoice, CompiledDialogue, CompiledEffect,
-    CompiledLine, CompiledMetadataEntry, CompiledSourceMapEntry, CompiledStatement,
+    BlockIndex, COMPILED_ASSET_FORMAT_VERSION_V0, COMPILER_COMPATIBILITY_VERSION_V0, ChoiceId,
+    ChoiceIndex, ChoiceRange, CompiledAssetHeader, CompiledChoice, CompiledDialogue,
+    CompiledEffect, CompiledLine, CompiledMetadataEntry, CompiledSourceMapEntry, CompiledStatement,
     CompiledValueError, EffectIndex, LineIndex, MetadataIndex, MetadataRange, SourceMapIndex,
     SpeakerIndex, StatementIndex, StatementRange, TableRange,
 };
@@ -11,22 +11,22 @@ use recite_core::{
 use crate::{DialogueError, DialogueSession};
 
 #[derive(Clone, Copy)]
-pub(super) struct AssetView<'a> {
+pub(crate) struct AssetView<'a> {
     asset: &'a CompiledDialogue,
 }
 
 impl<'a> AssetView<'a> {
-    pub(super) fn new(asset: &'a CompiledDialogue) -> Result<Self, DialogueError> {
+    pub(crate) fn new(asset: &'a CompiledDialogue) -> Result<Self, DialogueError> {
         ensure_supported_header(&asset.header)?;
 
         Ok(Self { asset })
     }
 
-    pub(super) fn default_block(self) -> BlockIndex {
+    pub(crate) fn default_block(self) -> BlockIndex {
         self.asset.default_block
     }
 
-    pub(super) fn ensure_session_matches(
+    pub(crate) fn ensure_session_matches(
         self,
         session: &DialogueSession,
     ) -> Result<(), DialogueError> {
@@ -51,7 +51,7 @@ impl<'a> AssetView<'a> {
         Ok(())
     }
 
-    pub(super) fn lookup_block(self, block: &str) -> Result<BlockIndex, DialogueError> {
+    pub(crate) fn lookup_block(self, block: &str) -> Result<BlockIndex, DialogueError> {
         let block_index = self
             .asset
             .block_lookup
@@ -74,7 +74,7 @@ impl<'a> AssetView<'a> {
         Ok(block_index)
     }
 
-    pub(super) fn block_at(
+    pub(crate) fn block_at(
         self,
         index: BlockIndex,
     ) -> Result<&'a recite_core::CompiledBlock, DialogueError> {
@@ -84,7 +84,7 @@ impl<'a> AssetView<'a> {
             .ok_or_else(|| malformed(format!("block index {} is out of range", index.as_u32())))
     }
 
-    pub(super) fn statement_at(
+    pub(crate) fn statement_at(
         self,
         index: StatementIndex,
     ) -> Result<&'a CompiledStatement, DialogueError> {
@@ -99,21 +99,21 @@ impl<'a> AssetView<'a> {
             })
     }
 
-    pub(super) fn line_at(self, index: LineIndex) -> Result<&'a CompiledLine, DialogueError> {
+    pub(crate) fn line_at(self, index: LineIndex) -> Result<&'a CompiledLine, DialogueError> {
         self.asset
             .lines
             .get(index.as_u32() as usize)
             .ok_or_else(|| malformed(format!("line index {} is out of range", index.as_u32())))
     }
 
-    pub(super) fn effect_at(self, index: EffectIndex) -> Result<&'a CompiledEffect, DialogueError> {
+    pub(crate) fn effect_at(self, index: EffectIndex) -> Result<&'a CompiledEffect, DialogueError> {
         self.asset
             .effects
             .get(index.as_u32() as usize)
             .ok_or_else(|| malformed(format!("effect index {} is out of range", index.as_u32())))
     }
 
-    pub(super) fn speaker_at(
+    pub(crate) fn speaker_at(
         self,
         index: SpeakerIndex,
     ) -> Result<&'a recite_core::CompiledSpeaker, DialogueError> {
@@ -123,7 +123,7 @@ impl<'a> AssetView<'a> {
             .ok_or_else(|| malformed(format!("speaker index {} is out of range", index.as_u32())))
     }
 
-    pub(super) fn source_map_at(
+    pub(crate) fn source_map_at(
         self,
         index: SourceMapIndex,
     ) -> Result<&'a CompiledSourceMapEntry, DialogueError> {
@@ -138,7 +138,7 @@ impl<'a> AssetView<'a> {
             })
     }
 
-    pub(super) fn choices(self, range: ChoiceRange) -> Result<&'a [CompiledChoice], DialogueError> {
+    pub(crate) fn choices(self, range: ChoiceRange) -> Result<&'a [CompiledChoice], DialogueError> {
         let bounds = table_range(
             "choices",
             self.asset.choices.len(),
@@ -149,7 +149,40 @@ impl<'a> AssetView<'a> {
         Ok(&self.asset.choices[bounds])
     }
 
-    pub(super) fn metadata_entries(
+    pub(crate) fn choice_by_id(
+        self,
+        choice_id: &ChoiceId,
+    ) -> Result<&'a CompiledChoice, DialogueError> {
+        let choice_index = self
+            .asset
+            .choice_lookup
+            .as_slice()
+            .binary_search_by(|entry| entry.id.cmp(choice_id))
+            .map(|index| self.asset.choice_lookup.as_slice()[index].index)
+            .map_err(|_| malformed(format!("choice `{choice_id}` is not in compiled lookup")))?;
+        let choice = self
+            .asset
+            .choices
+            .get(choice_index.as_u32() as usize)
+            .ok_or_else(|| {
+                malformed(format!(
+                    "choice lookup entry `{choice_id}` points to out-of-range choice index {}",
+                    choice_index.as_u32()
+                ))
+            })?;
+
+        if choice.id != *choice_id {
+            return Err(malformed(format!(
+                "choice lookup entry `{choice_id}` points to choice `{}` at index {}",
+                choice.id,
+                choice_index.as_u32()
+            )));
+        }
+
+        Ok(choice)
+    }
+
+    pub(crate) fn metadata_entries(
         self,
         range: MetadataRange,
     ) -> Result<&'a [CompiledMetadataEntry], DialogueError> {
@@ -163,7 +196,7 @@ impl<'a> AssetView<'a> {
         Ok(&self.asset.metadata[bounds])
     }
 
-    pub(super) fn statement_range(
+    pub(crate) fn statement_range(
         self,
         range: StatementRange,
     ) -> Result<Range<usize>, DialogueError> {
@@ -210,7 +243,7 @@ fn table_range<I: Copy>(
     Ok(start..end)
 }
 
-pub(super) fn malformed(reason: String) -> DialogueError {
+pub(crate) fn malformed(reason: String) -> DialogueError {
     DialogueError::MalformedCompiledAsset { reason }
 }
 

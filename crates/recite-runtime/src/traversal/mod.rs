@@ -10,10 +10,10 @@ use recite_core::{
 use crate::context::{ConditionQuery, DialogueContext};
 use crate::error::UnsupportedStatementKind;
 use crate::event::{DialogueChoice, DialogueEvent};
-use crate::session::{PendingPrompt, PendingPromptChoice, StatementFrame};
+use crate::session::{DialogueSessionOptions, PendingPrompt, PendingPromptChoice, StatementFrame};
 use crate::{DialogueError, DialogueSession};
 
-use self::asset::{AssetView, malformed};
+pub(crate) use self::asset::{AssetView, malformed};
 use self::output::{dialogue_choice, dialogue_effect_request, dialogue_line, effect_mode};
 
 const MAX_INTERNAL_STEPS: usize = 10_000;
@@ -23,6 +23,16 @@ const MAX_CONDITION_DEPTH: usize = 128;
 pub fn start_scene(
     asset: &CompiledDialogue,
     block: Option<&str>,
+) -> Result<DialogueSession, DialogueError> {
+    start_scene_with_options(asset, block, DialogueSessionOptions::default())
+}
+
+/// Start a dialogue session at the compiled default block or an explicit block
+/// with explicit runtime options.
+pub fn start_scene_with_options(
+    asset: &CompiledDialogue,
+    block: Option<&str>,
+    options: DialogueSessionOptions,
 ) -> Result<DialogueSession, DialogueError> {
     let asset_view = AssetView::new(asset)?;
 
@@ -38,6 +48,7 @@ pub fn start_scene(
         asset.header.compiler_compatibility_version,
         block_index,
         compiled_block.statements,
+        options,
     ))
 }
 
@@ -109,9 +120,11 @@ pub fn next(
                     .iter()
                     .map(|choice| choice.id.clone())
                     .collect();
+                let prompt_statement = session.next_statement;
                 session.next_statement = next_statement_after(session.next_statement)?;
                 session.previous_prompt_choices = choice_ids;
                 session.pending_prompt = Some(PendingPrompt {
+                    statement: prompt_statement,
                     choices: prompt_choices.pending,
                 });
 
@@ -391,7 +404,7 @@ mod tests {
     };
 
     use crate::session::{PendingPrompt, PendingPromptChoice};
-    use crate::{DialogueError, DialogueSession, EmptyDialogueContext};
+    use crate::{DialogueError, DialogueSession, DialogueSessionOptions, EmptyDialogueContext};
 
     use super::choose;
 
@@ -405,8 +418,10 @@ mod tests {
             asset.header.compiler_compatibility_version,
             BlockIndex::new(0),
             StatementRange::new(StatementIndex::new(0), 0),
+            DialogueSessionOptions::default(),
         );
         session.pending_prompt = Some(PendingPrompt {
+            statement: StatementIndex::new(0),
             choices: vec![PendingPromptChoice {
                 id: choice_id.clone(),
                 target: CompiledDivertTarget::End,
