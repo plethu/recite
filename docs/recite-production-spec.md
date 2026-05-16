@@ -1042,8 +1042,15 @@ condition queries, enum state, speakers, and registries near their adapter
 code. Recite should reuse that existing typed surface instead of asking
 developers to maintain a parallel string-based schema file.
 
-Adapter registration should feel like ordinary typed game code. A Rust adapter
-might expose a builder like this:
+Producer APIs should be native to their host ecosystem. A Bevy adapter should
+feel like Rust, Godot adapters should support Godot-facing C# and/or GDScript
+surfaces, Unity should feel like C#, LÖVE should feel like Lua, and future
+adapters should follow the language their users already write. Those producer
+APIs may differ, but they must all export the same generated manifest and pass
+the same Recite manifest validation suite.
+
+Adapter registration should feel like ordinary typed game code. The Bevy/Rust
+adapter should support a builder style for explicit central registration:
 
 ```rust
 schema
@@ -1064,8 +1071,9 @@ schema
     .param::<DialogueSoundEffectId>("sound_effect");
 ```
 
-Derive or macro-based producer APIs are acceptable where they improve adapter
-ergonomics, but they lower into the same canonical model:
+The Bevy/Rust adapter should also support derive or macro-based declarations
+from the start. Builder registration and derive declarations serve different
+ergonomic needs, and both lower into the same canonical model:
 
 ```rust
 #[derive(ReciteEffect)]
