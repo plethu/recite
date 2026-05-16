@@ -382,19 +382,35 @@ Rules:
 - The compiler validates **exhaustiveness**: a match must either cover every declared variant of the enum or include `:case _`. Missing arms are an error, not a warning.
 - Duplicate `:case <variant>` arms are validation errors.
 - Each arm's body follows the same indentation rules as `:if` bodies and may contain lines, choices, effects, diverts, nested `:if`, or nested `:match`.
-- Schema authors should mark a condition function as enum-returning by declaring `returns = "<enum_type>"`:
+- Schema producers should mark a condition function as enum-returning in the
+  canonical schema model. Adapter code should do this through typed bindings,
+  and the generated manifest records the enum type for compiler and LSP use:
 
-  ```toml
-  [conditions.thread_stage]
-  params = ["thread_id: string"]
-  returns = "thread_stage_kind"
-
-  [types.thread_stage_kind]
-  kind = "enum"
-  values = ["fresh", "tired", "angry", "fine", "completed"]
+  ```rust
+  schema
+      .condition("thread_stage")
+      .param::<ThreadId>("thread_id")
+      .returns_enum::<ThreadStageKind>();
   ```
 
-- Runtime evaluation extends `DialogueContext` with an enum-returning lookup or, equivalently, schema-generated bindings convert string returns to typed variants. Either path is acceptable; the runtime contract is that the scrutinee returns one declared variant of the schema enum or evaluation fails as a structured error.
+  ```json
+  {
+    "types": {
+      "thread_stage_kind": {
+        "kind": "enum",
+        "values": ["fresh", "tired", "angry", "fine", "completed"]
+      }
+    },
+    "conditions": {
+      "thread_stage": {
+        "params": [{ "name": "thread_id", "type": "registry:thread" }],
+        "returns": "enum:thread_stage_kind"
+      }
+    }
+  }
+  ```
+
+- Runtime evaluation extends `DialogueContext` with an enum-returning lookup or, equivalently, schema-generated bindings convert host return values to declared variants. Either path is acceptable; the runtime contract is that the scrutinee returns one declared variant of the schema enum or evaluation fails as a structured error.
 
 The intent is narrow: schema-checked exhaustive dispatch on declared enum state. Writers who do not need it never see it; writers who do get compile-time coverage warnings when a new enum variant is added and an old `:match` was not updated.
 
@@ -493,7 +509,7 @@ pub trait DialogueContext {
 
 The core runtime should not know project-specific condition meanings.
 
-Condition functions return either a boolean (the default, used by `:if` and choice `if` clauses) or a schema-declared enum variant (used by `:match` scrutinees, see §5.9.1). An enum-returning function declares its return type via `returns = "<enum_type>"` in schema; the dialogue context exposes it through the same `evaluate_condition` path or a sibling enum-returning lookup, depending on adapter ergonomics.
+Condition functions return either a boolean (the default, used by `:if` and choice `if` clauses) or a schema-declared enum variant (used by `:match` scrutinees, see §5.9.1). An enum-returning function declares its return type in the canonical schema model; the dialogue context exposes it through the same `evaluate_condition` path or a sibling enum-returning lookup, depending on adapter ergonomics.
 
 ### 6.3 Schema Validation
 
@@ -632,24 +648,51 @@ Validation must reject:
 - unsupported mode for that effect;
 - invalid enum/registry values.
 
-Schema example:
+Preferred adapter registration example:
 
-```toml
-[effects.advance_thread]
-modes = ["deferred"]
-params = ["thread_id: string", "stage_id: string"]
+```rust
+schema
+    .effect("advance_thread")
+    .deferred()
+    .param::<ThreadId>("thread_id")
+    .param::<ThreadStageKind>("stage");
 
-[effects.record_relationship_interaction]
-modes = ["deferred"]
-params = ["actor_a: string", "actor_b: string", "kind: relationship_interaction_kind"]
+schema
+    .effect("record_relationship_interaction")
+    .deferred()
+    .param::<ActorId>("actor_a")
+    .param::<ActorId>("actor_b")
+    .param::<RelationshipInteractionKind>("kind");
 
-[effects.mark_map]
-modes = ["blocking"]
-params = ["location_id: string"]
+schema
+    .effect("mark_map")
+    .blocking()
+    .param::<LocationId>("location_id");
 
-[effects.play_sfx]
-modes = ["immediate"]
-params = ["sound_effect_id: dialogue_sound_effect"]
+schema
+    .effect("play_sfx")
+    .immediate()
+    .param::<DialogueSoundEffectId>("sound_effect_id");
+```
+
+Generated manifest excerpt:
+
+```json
+{
+  "effects": {
+    "advance_thread": {
+      "modes": ["deferred"],
+      "params": [
+        { "name": "thread_id", "type": "registry:thread" },
+        { "name": "stage", "type": "enum:thread_stage_kind" }
+      ]
+    },
+    "play_sfx": {
+      "modes": ["immediate"],
+      "params": [{ "name": "sound_effect_id", "type": "registry:dialogue_sound_effect" }]
+    }
+  }
+}
 ```
 
 ## 8. Runtime
@@ -984,93 +1027,178 @@ The schema must define:
 - custom enum types;
 - project-level content registries.
 
-### 10.2 Example Schema
+### 10.2 Schema Model and Producers
 
-```toml
-[types.relationship_interaction_kind]
-kind = "enum"
-values = ["incidental_encounter", "story_event", "conflict", "support"]
+The schema has three separate surfaces:
 
-[registries.dialogue_sound_effect]
-source = "data/content/dialogue-sound-effects.toml"
-path = "dialogue_sound_effects[].id"
+1. a canonical Rust model in `recite-core`;
+2. a generated schema manifest consumed by `recite-compiler`, `recite-cli`, and
+   `recite-lsp`;
+3. producer-specific authoring surfaces that create the manifest.
 
-[conditions.at_thread_stage]
-params = ["thread_id: string", "stage_id: string"]
+The preferred producer is adapter or game code, not hand-authored schema
+configuration. Game projects already define typed handles, effect handlers,
+condition queries, enum state, speakers, and registries near their adapter
+code. Recite should reuse that existing typed surface instead of asking
+developers to maintain a parallel string-based schema file.
 
-[conditions.at_or_past_thread_stage]
-params = ["thread_id: string", "stage_id: string"]
+Producer APIs should be native to their host ecosystem. A Bevy adapter should
+feel like Rust, Godot adapters should support Godot-facing C# and/or GDScript
+surfaces, Unity should feel like C#, LÖVE should feel like Lua, and future
+adapters should follow the language their users already write. Those producer
+APIs may differ, but they must all export the same generated manifest and pass
+the same Recite manifest validation suite.
 
-[conditions.thread_completed]
-params = ["thread_id: string"]
+Adapter registration should feel like ordinary typed game code. The Bevy/Rust
+adapter should support a builder style for explicit central registration:
 
-[conditions.thread_stage]
-params = ["thread_id: string"]
-returns = "thread_stage_kind"
+```rust
+schema
+    .condition("trust_gte")
+    .param::<ActorId>("actor_a")
+    .param::<ActorId>("actor_b")
+    .param::<i32>("threshold")
+    .returns_bool();
 
-[types.thread_stage_kind]
-kind = "enum"
-values = ["fresh", "tired", "angry", "fine", "completed"]
+schema
+    .condition("thread_stage")
+    .param::<ThreadId>("thread_id")
+    .returns_enum::<ThreadStageKind>();
 
-[conditions.familiarity_gte]
-params = ["actor_a: string", "actor_b: string", "threshold: int"]
-
-[conditions.trust_gte]
-params = ["actor_a: string", "actor_b: string", "threshold: int"]
-
-[conditions.tension_gte]
-params = ["actor_a: string", "actor_b: string", "threshold: int"]
-
-[effects.advance_thread]
-modes = ["deferred"]
-params = ["thread_id: string", "stage_id: string"]
-
-[effects.record_relationship_interaction]
-modes = ["deferred"]
-params = ["actor_a: string", "actor_b: string", "kind: relationship_interaction_kind"]
-
-[effects.mark_map]
-modes = ["blocking"]
-params = ["location_id: string"]
-
-[metadata.portrait]
-targets = ["line"]
-type = "string"
-
-[metadata.sfx]
-targets = ["line", "choice"]
-type = "dialogue_sound_effect"
-repeatable = true
-
-[metadata.delay]
-targets = ["line"]
-type = "float"
-min = 0.0
-
-[metadata.shot]
-targets = ["line"]
-type = "string"
-
-[metadata.pose]
-targets = ["line"]
-type = "string"
-
-[metadata.focus]
-targets = ["line"]
-type = "speaker_id"
-
-[markup.slow]
-requires_closing = true
-translatable = true
-
-[markup.shake]
-requires_closing = true
-translatable = true
-
-[markup.loud]
-requires_closing = true
-translatable = true
+schema
+    .effect("play_sfx")
+    .immediate()
+    .param::<DialogueSoundEffectId>("sound_effect");
 ```
+
+The Bevy/Rust adapter should also support derive or macro-based declarations
+from the start. Builder registration and derive declarations serve different
+ergonomic needs, and both lower into the same canonical model:
+
+```rust
+#[derive(ReciteEffect)]
+#[recite(name = "play_sfx", mode = "immediate")]
+struct PlaySfx {
+    sound_effect: DialogueSoundEffectId,
+}
+```
+
+The generated manifest is a deterministic, language-neutral data artifact.
+It is the only schema surface the compiler and LSP must understand. Compiler
+and editor tooling must not execute game code to validate dialogue.
+
+The manifest format for v1 should be JSON unless implementation evidence shows
+that another data format materially improves the toolchain. JSON is widely
+generated by game tooling, easy for editor integrations to read, and adequate
+because the manifest is produced by adapters rather than hand-authored as the
+primary developer interface. The manifest is canonical only after parsing into
+the typed Rust model and sorting map-like collections deterministically for
+fingerprinting and diagnostics.
+
+Recite should publish a JSON Schema for the generated manifest format. That
+JSON Schema validates manifest document shape only: required fields, allowed
+keys, scalar types, array/object structure, effect mode strings, and basic
+version compatibility. It is a useful public contract for adapter authors,
+CI checks, editor IntelliSense, and people inspecting generated manifests.
+
+JSON Schema is not the authority for Recite semantics. After document-shape
+validation, Recite must lower the manifest into the canonical Rust model and
+run semantic validation there. Semantic validation owns duplicate definitions,
+unknown type references, registry/value checks, condition return compatibility,
+effect arity/type checks, metadata target policy, markup policy, diagnostics,
+and deterministic fingerprinting.
+
+The Rust schema model should live in `recite-core::schema` and include:
+
+- `ProjectSchema`;
+- `SchemaTypeDefinition`, including enum definitions;
+- `SchemaTypeRef`, covering built-in scalar types, speaker IDs, enum types, and
+  registry-backed IDs;
+- `ConditionDefinition`, including typed parameters and optional enum return
+  type;
+- `EffectDefinition`, including typed parameters and supported modes;
+- `MetadataDefinition`, including targets, type, repeatability, and optional
+  range or value constraints;
+- `MarkupDefinition`, including closing, translatability, and nesting policy;
+- `SpeakerDefinition`;
+- `RegistryDefinition`, including value snapshots and optional origin metadata.
+
+The generated manifest should be self-contained enough for validation without
+running the game. Registry-backed values should therefore be emitted as stable
+snapshots, optionally with source/origin metadata and fingerprints so tooling
+can explain where a value came from. If an adapter needs to read game data to
+build those snapshots, that happens during the explicit schema export command,
+not during normal Recite compilation or editor diagnostics.
+
+Example generated manifest excerpt:
+
+```json
+{
+  "schema_version": 1,
+  "types": {
+    "thread_stage_kind": {
+      "kind": "enum",
+      "values": ["fresh", "tired", "angry", "fine", "completed"]
+    }
+  },
+  "registries": {
+    "dialogue_sound_effect": {
+      "values": ["snap", "door_close", "rain_window"],
+      "origin": "data/content/dialogue-sound-effects.toml"
+    }
+  },
+  "speakers": {
+    "rhea": {},
+    "hazel": {}
+  },
+  "conditions": {
+    "thread_stage": {
+      "params": [{ "name": "thread_id", "type": "registry:thread" }],
+      "returns": "enum:thread_stage_kind"
+    },
+    "trust_gte": {
+      "params": [
+        { "name": "actor_a", "type": "registry:actor" },
+        { "name": "actor_b", "type": "registry:actor" },
+        { "name": "threshold", "type": "int" }
+      ],
+      "returns": "bool"
+    }
+  },
+  "effects": {
+    "play_sfx": {
+      "modes": ["immediate"],
+      "params": [{ "name": "sound_effect", "type": "registry:dialogue_sound_effect" }]
+    }
+  },
+  "metadata": {
+    "portrait": { "targets": ["line"], "type": "string" },
+    "sfx": {
+      "targets": ["line", "choice"],
+      "type": "registry:dialogue_sound_effect",
+      "repeatable": true
+    }
+  },
+  "markup": {
+    "slow": { "requires_closing": true, "translatable": true },
+    "shake": { "requires_closing": true, "translatable": true }
+  }
+}
+```
+
+Hand-authored schema configuration may exist as a fallback for standalone
+experiments, tests, or projects without an adapter. That fallback must lower
+into the same `ProjectSchema` model and must not become the primary integration
+contract for typed game projects.
+
+Schema freshness is part of the authoring contract:
+
+- compiled assets compare against the current schema manifest fingerprint;
+- adapter tooling should provide a command to regenerate the manifest;
+- adapter tooling should provide a check that reports stale generated schema
+  manifests where the host ecosystem can support it;
+- Recite diagnostics should clearly distinguish dialogue errors from stale or
+  malformed schema manifest errors.
 
 ### 10.3 Validation Reporting
 
@@ -1085,6 +1213,31 @@ Diagnostics must include:
 - code;
 - message;
 - optional fix suggestion.
+
+Schema validation should use the same `Diagnostic` model as parser and compiler
+validation. The compiler should expose shared diagnostic factories or a shared
+diagnostic catalog for schema-related checks so CLI, LSP, and test fixtures use
+the same stable codes and messages.
+
+Source-backed diagnostics must point at the smallest useful value-specific span
+available:
+
+- condition function names;
+- condition arguments;
+- effect names;
+- effect modes;
+- effect arguments;
+- metadata keys;
+- metadata values;
+- inline markup tag names;
+- speaker IDs;
+- registry references and registry values;
+- schema manifest fields when the manifest itself is malformed.
+
+When a schema manifest is generated from adapter code, the manifest may include
+producer origin metadata for definitions and registry values. Recite diagnostics
+may surface that origin as related context, but dialogue-source diagnostics must
+remain valid even when producer origins are unavailable.
 
 ## 11. Scene Manifest
 
