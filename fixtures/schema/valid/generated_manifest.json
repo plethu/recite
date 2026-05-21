@@ -45,6 +45,19 @@
         { "name": "thread_id", "type": "registry:thread" },
         { "name": "stage", "type": "enum:thread_stage_kind" }
       ]
+    },
+    "scalar_effect": {
+      "modes": ["immediate"],
+      "params": [
+        { "name": "text", "type": "string" },
+        { "name": "count", "type": "int" },
+        { "name": "weight", "type": "float" },
+        { "name": "enabled", "type": "bool" }
+      ]
+    },
+    "speaker_effect": {
+      "modes": ["immediate"],
+      "params": [{ "name": "speaker", "type": "speaker" }]
     }
   },
   "metadata": {

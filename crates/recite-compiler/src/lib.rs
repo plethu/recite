@@ -7,5 +7,9 @@ mod wire;
 
 pub use compile::{
     CompileError, CompileInput, CompileOptions, CompileReport, CompiledAssetOutput, compile_inputs,
+    compile_inputs_with_schema,
 };
-pub use validation::{ValidationReport, validate_source_file, validate_source_files};
+pub use validation::{
+    ValidationReport, validate_source_file, validate_source_files,
+    validate_source_files_with_schema,
+};
