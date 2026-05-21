@@ -123,10 +123,6 @@ fn json_number_token(source: &str, value_start: usize) -> &str {
     &source[value_start..value_end]
 }
 
-fn escape_json_string(value: &str) -> String {
-    value.replace('\\', "\\\\").replace('"', "\\\"")
-}
-
 #[derive(Debug, Default)]
 pub(crate) struct ManifestSpans {
     next_offsets: BTreeMap<String, usize>,
@@ -149,7 +145,6 @@ impl ManifestSpans {
         source: &str,
         needle: &str,
     ) -> SourceSpan {
-        let quoted = format!("\"{}\"", escape_json_string(needle));
         let range = self.active_range.unwrap_or(SourceRange {
             start: 0,
             end: source.len(),
@@ -164,18 +159,16 @@ impl ManifestSpans {
             return document_start_span(file);
         }
 
-        let Some(relative_start) = source[search_start..range.end].find(&quoted) else {
+        let Some(span_range) = next_json_string_range(source, range, search_start, needle) else {
             return document_start_span(file);
         };
 
-        let start = search_start + relative_start;
-        let end = start + quoted.len();
-        self.next_offsets.insert(search_key, end);
+        self.next_offsets.insert(search_key, span_range.end);
 
         SourceSpan::new(
             file,
-            position_for_offset(source, start),
-            Some(position_for_offset(source, end)),
+            position_for_offset(source, span_range.start),
+            Some(position_for_offset(source, span_range.end)),
         )
     }
 }
@@ -186,50 +179,48 @@ struct SourceRange {
     end: usize,
 }
 
-fn source_section_range(source: &str, section: &str) -> Option<SourceRange> {
-    let mut depth = 0_u32;
-    let mut in_string = false;
-    let mut escaped = false;
-    let mut string_start = None;
+fn next_json_string_range(
+    source: &str,
+    range: SourceRange,
+    search_start: usize,
+    needle: &str,
+) -> Option<SourceRange> {
+    let bytes = source.as_bytes();
+    let mut index = search_start;
 
-    for (index, character) in source.char_indices() {
-        if in_string {
-            if escaped {
-                escaped = false;
-            } else if character == '\\' {
-                escaped = true;
-            } else if character == '"' {
-                in_string = false;
-                if depth == 1 {
-                    let start = string_start.expect("string start is recorded before entering");
-                    let content_start = start + 1;
-                    if source[content_start..index] == *section
-                        && next_non_whitespace(source, index + character.len_utf8()) == Some(':')
-                    {
-                        let value_start =
-                            section_value_start(source, index + character.len_utf8())?;
-                        let value_end = value_end(source, value_start)?;
-                        return Some(SourceRange {
-                            start: value_start,
-                            end: value_end,
-                        });
-                    }
-                }
-            }
+    while index < range.end {
+        if bytes[index] != b'"' {
+            index += 1;
             continue;
         }
 
-        if character == '"' {
-            in_string = true;
-            string_start = Some(index);
-        } else if character == '{' || character == '[' {
-            depth = depth.saturating_add(1);
-        } else if character == '}' || character == ']' {
-            depth = depth.saturating_sub(1);
+        let string_start = index;
+        let string_end = skip_json_string(bytes, string_start)?;
+        if string_end >= range.end {
+            return None;
         }
+
+        if json_string_equals(source, string_start, string_end, needle) {
+            return Some(SourceRange {
+                start: string_start,
+                end: string_end + 1,
+            });
+        }
+
+        index = string_end + 1;
     }
 
     None
+}
+
+fn source_section_range(source: &str, section: &str) -> Option<SourceRange> {
+    let key_range = top_level_key_range(source, section)?;
+    let value_start = section_value_start(source, key_range.end)?;
+    let value_end = value_end(source, value_start)?;
+    Some(SourceRange {
+        start: value_start,
+        end: value_end,
+    })
 }
 
 fn value_end(source: &str, start: usize) -> Option<usize> {
@@ -277,9 +268,4 @@ fn section_value_start(source: &str, key_end: usize) -> Option<usize> {
     source[colon..]
         .find(|character: char| !character.is_whitespace())
         .map(|offset| colon + offset)
-}
-
-fn next_non_whitespace(source: &str, start: usize) -> Option<char> {
-    let index = skip_whitespace(source, start)?;
-    source[index..].chars().next()
 }

@@ -113,6 +113,19 @@ fn schema_version_rejects_numbers_that_only_round_to_one() {
 }
 
 #[test]
+fn schema_version_rejects_large_negative_exponents_without_allocating_expected_value() {
+    let report = load_schema_manifest_str(
+        "fixtures/schema/invalid/schema_version_large_exponent.json",
+        r#"{
+  "schema_version": 1e-100000
+}"#,
+    );
+
+    assert!(report.schema.is_none());
+    assert_eq!(diagnostic_codes(&report), ["RECITE_SCHEMA002"]);
+}
+
+#[test]
 fn duplicate_definitions_and_values_report_stable_diagnostics() {
     let duplicate_definitions = load_schema_manifest_str(
         "fixtures/schema/invalid/duplicate_definitions.json",
@@ -163,6 +176,26 @@ fn invalid_enum_and_registry_type_references_report_stable_diagnostics() {
     assert_eq!(report.diagnostics[1].span.start.line(), 6);
     assert_eq!(report.diagnostics[2].span.start.line(), 12);
     assert_eq!(report.diagnostics[3].span.start.line(), 18);
+}
+
+#[test]
+fn escaped_section_and_value_strings_keep_semantic_diagnostic_spans() {
+    let report = load_schema_manifest_str(
+        "fixtures/schema/invalid/escaped_section_value_spans.json",
+        r#"{
+  "schema_version": 1,
+  "eff\u0065cts": {
+    "bad_effect": {
+      "modes": ["deferred"],
+      "params": [{ "name": "target", "type": "registry\u003amissing" }]
+    }
+  }
+}"#,
+    );
+
+    assert!(report.schema.is_none());
+    assert_eq!(diagnostic_codes(&report), ["RECITE_SCHEMA004"]);
+    assert_eq!(report.diagnostics[0].span.start.line(), 6);
 }
 
 #[test]

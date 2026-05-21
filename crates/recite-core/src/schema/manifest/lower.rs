@@ -172,9 +172,17 @@ fn number_token_equals_one(token: &str) -> bool {
     if scale < 0 {
         return false;
     };
-    let scale = usize::try_from(scale).unwrap_or(usize::MAX);
+    let Ok(scale) = usize::try_from(scale) else {
+        return false;
+    };
 
-    coefficient == format!("1{}", "0".repeat(scale))
+    let Some(expected_len) = scale.checked_add(1) else {
+        return false;
+    };
+    let mut bytes = coefficient.bytes();
+    coefficient.len() == expected_len
+        && bytes.next() == Some(b'1')
+        && bytes.all(|byte| byte == b'0')
 }
 
 fn split_decimal_exponent(token: &str) -> Option<(&str, i64)> {
