@@ -1,6 +1,6 @@
 use recite_core::{
-    Block, BlockId, BlockReference, Choice, Diagnostic, DiagnosticCode, DiagnosticSeverity, Line,
-    LineId, RelatedSpan, SourceFile, SourceSpan, Statement,
+    Block, BlockId, BlockReference, Choice, Diagnostic, DiagnosticCode, DiagnosticSeverity,
+    EffectMode, Line, LineId, RelatedSpan, SchemaTypeRef, SourceFile, SourceSpan, Statement,
 };
 
 pub(crate) const MISSING_LINE_ID: &str = "RECITE_VALIDATE001";
@@ -19,6 +19,11 @@ pub(crate) const UNSUPPORTED_LINE_CHILD_STATEMENT: &str = "RECITE_VALIDATE013";
 pub(crate) const UNSUPPORTED_CHOICE_CHILD_STATEMENT: &str = "RECITE_VALIDATE014";
 pub(crate) const UNKNOWN_CHOICE_ECHO_LINE: &str = "RECITE_VALIDATE015";
 pub(crate) const NON_FINITE_FLOAT_VALUE: &str = "RECITE_VALIDATE016";
+pub(crate) const UNKNOWN_EFFECT_FUNCTION: &str = "RECITE_VALIDATE017";
+pub(crate) const WRONG_EFFECT_ARITY: &str = "RECITE_VALIDATE018";
+pub(crate) const WRONG_EFFECT_ARGUMENT_TYPE: &str = "RECITE_VALIDATE019";
+pub(crate) const UNSUPPORTED_EFFECT_MODE: &str = "RECITE_VALIDATE020";
+pub(crate) const INVALID_EFFECT_ARGUMENT_VALUE: &str = "RECITE_VALIDATE021";
 
 pub(crate) fn missing_line_id(line: &Line) -> Diagnostic {
     diagnostic(
@@ -212,6 +217,85 @@ pub(crate) fn non_finite_float_value(
     .with_help("use a finite number so MessagePack and inspection JSON stay equivalent")
 }
 
+pub(crate) fn unknown_effect_function(function: &str, span: SourceSpan) -> Diagnostic {
+    diagnostic(
+        UNKNOWN_EFFECT_FUNCTION,
+        format!("unknown effect function `{function}`"),
+        span,
+    )
+    .with_help("declare the effect in the project schema manifest")
+}
+
+pub(crate) fn wrong_effect_arity(
+    function: &str,
+    expected: usize,
+    actual: usize,
+    span: SourceSpan,
+) -> Diagnostic {
+    diagnostic(
+        WRONG_EFFECT_ARITY,
+        format!(
+            "effect `{function}` expects {expected} argument{}, but got {actual}",
+            if expected == 1 { "" } else { "s" }
+        ),
+        span,
+    )
+    .with_help("match the effect parameters declared in the project schema manifest")
+}
+
+pub(crate) fn wrong_effect_argument_type(
+    function: &str,
+    index: usize,
+    expected: &SchemaTypeRef,
+    actual: &str,
+    span: SourceSpan,
+) -> Diagnostic {
+    diagnostic(
+        WRONG_EFFECT_ARGUMENT_TYPE,
+        format!(
+            "argument {} for effect `{function}` expects {}, but got {actual}",
+            index + 1,
+            display_schema_type_ref(expected),
+        ),
+        span,
+    )
+}
+
+pub(crate) fn unsupported_effect_mode(
+    function: &str,
+    mode: EffectMode,
+    span: SourceSpan,
+) -> Diagnostic {
+    diagnostic(
+        UNSUPPORTED_EFFECT_MODE,
+        format!(
+            "effect `{function}` does not support {} mode",
+            display_effect_mode(mode)
+        ),
+        span,
+    )
+    .with_help("use a mode declared for this effect in the project schema manifest")
+}
+
+pub(crate) fn invalid_effect_argument_value(
+    function: &str,
+    index: usize,
+    expected: &SchemaTypeRef,
+    value: &str,
+    span: SourceSpan,
+) -> Diagnostic {
+    diagnostic(
+        INVALID_EFFECT_ARGUMENT_VALUE,
+        format!(
+            "argument {} for effect `{function}` uses unknown {} value `{value}`",
+            index + 1,
+            display_schema_type_ref(expected),
+        ),
+        span,
+    )
+    .with_help("use a value exported in the project schema manifest")
+}
+
 fn diagnostic(code: &str, message: impl Into<String>, span: SourceSpan) -> Diagnostic {
     Diagnostic::new(
         DiagnosticCode::new(code).expect("compiler diagnostic codes are static and namespaced"),
@@ -262,6 +346,26 @@ fn display_statement_kind(statement: &Statement) -> &'static str {
         Statement::Match(_) => "match",
         Statement::Effect(_) => "effect",
         Statement::Comment(_) => "comment",
+    }
+}
+
+fn display_effect_mode(mode: EffectMode) -> &'static str {
+    match mode {
+        EffectMode::Deferred => "deferred",
+        EffectMode::Immediate => "immediate",
+        EffectMode::Blocking => "blocking",
+    }
+}
+
+fn display_schema_type_ref(type_ref: &SchemaTypeRef) -> String {
+    match type_ref {
+        SchemaTypeRef::String => "string".to_owned(),
+        SchemaTypeRef::Int => "int".to_owned(),
+        SchemaTypeRef::Float => "float".to_owned(),
+        SchemaTypeRef::Bool => "bool".to_owned(),
+        SchemaTypeRef::Speaker => "speaker".to_owned(),
+        SchemaTypeRef::Enum(name) => format!("enum:{name}"),
+        SchemaTypeRef::Registry(name) => format!("registry:{name}"),
     }
 }
 

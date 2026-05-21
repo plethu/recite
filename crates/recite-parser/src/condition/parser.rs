@@ -109,9 +109,12 @@ impl<'a> Parser<'a> {
         )?;
 
         let mut args = Vec::new();
+        let mut arg_spans = Vec::new();
         if !self.at(TokenKindDiscriminant::RightParen) {
             loop {
-                args.push(self.parse_argument()?);
+                let (argument, span) = self.parse_argument()?;
+                args.push(argument);
+                arg_spans.push(span);
                 if !self.at(TokenKindDiscriminant::Comma) {
                     break;
                 }
@@ -123,33 +126,34 @@ impl<'a> Parser<'a> {
             .expect(TokenKindDiscriminant::RightParen, "expected ')'")?
             .clone();
         let span = join_spans(self.path, &function_span, &right.span);
-        Ok(ConditionCall::new(function, args, span))
+        Ok(ConditionCall::new(function, args, span).with_source_spans(function_span, arg_spans))
     }
 
-    fn parse_argument(&mut self) -> Result<Argument, ParseError> {
+    fn parse_argument(&mut self) -> Result<(Argument, SourceSpan), ParseError> {
         let token = self.current().clone();
+        let span = token.span;
         match token.kind {
             TokenKind::Ident(value) => {
                 self.bump();
-                Ok(Argument::identifier(value))
+                Ok((Argument::identifier(value), span))
             }
             TokenKind::String(value) => {
                 self.bump();
-                Ok(ScalarValue::from(value).into())
+                Ok((ScalarValue::from(value).into(), span))
             }
             TokenKind::Integer(value) => {
                 self.bump();
-                Ok(ScalarValue::from(value).into())
+                Ok((ScalarValue::from(value).into(), span))
             }
             TokenKind::Float(value) => {
                 self.bump();
-                Ok(ScalarValue::from(value).into())
+                Ok((ScalarValue::from(value).into(), span))
             }
             TokenKind::Boolean(value) => {
                 self.bump();
-                Ok(ScalarValue::from(value).into())
+                Ok((ScalarValue::from(value).into(), span))
             }
-            _ => Err(ParseError::new(token.span, "expected scalar argument")),
+            _ => Err(ParseError::new(span, "expected scalar argument")),
         }
     }
 

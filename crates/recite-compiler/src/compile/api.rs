@@ -1,12 +1,15 @@
 use recite_core::{
-    CompiledAssetId, CompiledDialogue, CompilerVersion, Diagnostic, SchemaFingerprint, SourceMapId,
+    CompiledAssetId, CompiledDialogue, CompilerVersion, Diagnostic, ProjectSchema,
+    SchemaFingerprint, SourceMapId,
 };
 use recite_parser::parse;
 
 use super::CompileError;
 use super::builder::build_dialogue;
 use super::lowered::LoweredInput;
-use crate::validation::{project::sort_diagnostics_by_source, validate_source_files};
+use crate::validation::{
+    project::sort_diagnostics_by_source, validate_source_files, validate_source_files_with_schema,
+};
 use crate::wire::{serialize_inspection_json, serialize_messagepack};
 
 /// Raw source input for one file in a compiler invocation.
@@ -79,6 +82,23 @@ pub fn compile_inputs(
     inputs: impl IntoIterator<Item = CompileInput>,
     options: CompileOptions,
 ) -> Result<CompileReport, CompileError> {
+    compile_inputs_with_optional_schema(inputs, options, None)
+}
+
+/// Compile raw Recite source inputs against a loaded project schema.
+pub fn compile_inputs_with_schema(
+    inputs: impl IntoIterator<Item = CompileInput>,
+    options: CompileOptions,
+    schema: &ProjectSchema,
+) -> Result<CompileReport, CompileError> {
+    compile_inputs_with_optional_schema(inputs, options, Some(schema))
+}
+
+fn compile_inputs_with_optional_schema(
+    inputs: impl IntoIterator<Item = CompileInput>,
+    options: CompileOptions,
+    schema: Option<&ProjectSchema>,
+) -> Result<CompileReport, CompileError> {
     let mut lowered_inputs = Vec::new();
     let mut diagnostics = Vec::new();
 
@@ -105,7 +125,11 @@ pub fn compile_inputs(
         .iter()
         .map(|input| input.source_file.clone())
         .collect::<Vec<_>>();
-    let validation = validate_source_files(&source_files);
+    let validation = if let Some(schema) = schema {
+        validate_source_files_with_schema(&source_files, schema)
+    } else {
+        validate_source_files(&source_files)
+    };
     if !validation.is_ok() {
         return Ok(CompileReport {
             diagnostics: validation.diagnostics,

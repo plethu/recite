@@ -81,7 +81,9 @@ impl ConditionUnary {
 #[derive(Clone, Debug, PartialEq)]
 pub struct ConditionCall {
     pub function: String,
+    pub function_span: Option<SourceSpan>,
     pub args: Vec<Argument>,
+    pub arg_spans: Vec<SourceSpan>,
     pub span: SourceSpan,
 }
 
@@ -90,9 +92,22 @@ impl ConditionCall {
     pub fn new(function: impl Into<String>, args: Vec<Argument>, span: SourceSpan) -> Self {
         Self {
             function: function.into(),
+            function_span: None,
             args,
+            arg_spans: Vec::new(),
             span,
         }
+    }
+
+    #[must_use]
+    pub fn with_source_spans(
+        mut self,
+        function_span: SourceSpan,
+        arg_spans: Vec<SourceSpan>,
+    ) -> Self {
+        self.function_span = Some(function_span);
+        self.arg_spans = arg_spans;
+        self
     }
 }
 

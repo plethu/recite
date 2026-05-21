@@ -1,6 +1,6 @@
 use std::collections::{BTreeMap, BTreeSet};
 
-use recite_core::{Block, Diagnostic, SourceFile, SourceSpan};
+use recite_core::{Block, Diagnostic, ProjectSchema, SourceFile, SourceSpan};
 
 use super::ids::collect_line_ids;
 use super::project::{collect_blocks, first_source_span, source_files_in_project_order};
@@ -9,6 +9,7 @@ use crate::diagnostics;
 pub(super) struct Validator<'a> {
     pub(super) source_files: Vec<&'a SourceFile>,
     pub(super) diagnostics: Vec<Diagnostic>,
+    pub(super) schema: Option<&'a ProjectSchema>,
     pub(super) blocks: BTreeMap<&'a str, BTreeSet<&'a str>>,
     pub(super) source_paths: BTreeMap<&'a str, SourceSpan>,
     pub(super) block_ids: BTreeMap<(&'a str, &'a str), SourceSpan>,
@@ -20,7 +21,7 @@ pub(super) struct Validator<'a> {
 }
 
 impl<'a> Validator<'a> {
-    pub(super) fn new(source_files: &'a [SourceFile]) -> Self {
+    pub(super) fn new(source_files: &'a [SourceFile], schema: Option<&'a ProjectSchema>) -> Self {
         let source_files = source_files_in_project_order(source_files);
         let blocks = collect_blocks(&source_files);
         let line_ids = collect_line_ids(&source_files);
@@ -28,6 +29,7 @@ impl<'a> Validator<'a> {
         Self {
             source_files,
             diagnostics: Vec::new(),
+            schema,
             blocks,
             source_paths: BTreeMap::new(),
             block_ids: BTreeMap::new(),

@@ -1,4 +1,4 @@
-use recite_compiler::{ValidationReport, validate_source_files};
+use recite_compiler::{ValidationReport, validate_source_files, validate_source_files_with_schema};
 use recite_core::{
     Block, BlockId, Choice, ChoiceId, ChoiceTarget, Diagnostic, DivertTarget, Line, LineId,
     SourceFile, SourcePosition, SourceSpan, SourceText, Statement,
@@ -7,6 +7,8 @@ use recite_parser::parse;
 
 #[path = "validation/asset_constraints.rs"]
 mod asset_constraints;
+#[path = "validation/effects_schema.rs"]
+mod effects_schema;
 #[path = "../../../tests/support/fixtures.rs"]
 mod fixture_support;
 #[path = "validation/fixtures.rs"]

@@ -133,6 +133,19 @@ impl<'a> Validator<'a> {
     }
     pub(super) fn validate_effect(&mut self, source_file: &'a SourceFile, effect: &'a Effect) {
         self.validate_span(source_file, &effect.span, "effect");
+        if let Some(span) = &effect.mode_span {
+            self.validate_span(source_file, span, "effect mode");
+        }
+        if let Some(span) = &effect.function_span {
+            self.validate_span(source_file, span, "effect function");
+        }
+        if let Some(span) = &effect.call_span {
+            self.validate_span(source_file, span, "effect call");
+        }
+        for span in &effect.arg_spans {
+            self.validate_span(source_file, span, "effect argument");
+        }
         self.validate_arguments(&effect.args, effect.span.clone(), "effect argument");
+        self.validate_effect_schema(source_file, effect);
     }
 }

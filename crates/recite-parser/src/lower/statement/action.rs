@@ -56,7 +56,15 @@ impl Lowerer<'_, '_> {
         let call = rest_after_field(trimmed, mode_field);
 
         match parse_condition_call(self.path, line.number, call.column, call.text) {
-            Ok(call) => Some(Effect::new(mode, call.function, call.args, span)),
+            Ok(call) => Some(
+                Effect::new(mode, call.function, call.args, span).with_source_spans(
+                    mode_field.span(self.path),
+                    call.span,
+                    call.function_span
+                        .expect("parser-created calls carry function spans"),
+                    call.arg_spans,
+                ),
+            ),
             Err(error) => {
                 self.diagnostics
                     .push(malformed_effect(error.span, error.message));

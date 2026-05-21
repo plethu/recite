@@ -1,8 +1,11 @@
-use recite_compiler::{CompileInput, CompileOptions, CompiledAssetOutput, compile_inputs};
+use recite_compiler::{
+    CompileInput, CompileOptions, CompiledAssetOutput, compile_inputs, compile_inputs_with_schema,
+};
 use recite_core::{
     BLAKE3_DIGEST_LEN, COMPILED_ASSET_FORMAT_VERSION_V0, COMPILER_COMPATIBILITY_VERSION_V0,
     CompiledAssetEncoding, CompiledAssetId, CompiledEffectMode, CompiledInspectionEncoding,
     CompiledStatementKind, CompilerVersion, SchemaFingerprint, SourceMapId, StatementIndex,
+    load_schema_manifest_str,
 };
 use serde::de::IgnoredAny;
 
@@ -295,6 +298,29 @@ fn malformed_or_invalid_content_returns_diagnostics_without_asset() {
         non_finite_metadata.diagnostics[0].code.as_str(),
         "RECITE_VALIDATE016"
     );
+}
+
+#[test]
+fn compile_with_schema_reports_effect_validation_without_asset() {
+    let schema = load_schema_manifest_str(
+        "fixtures/schema/valid/generated_manifest.json",
+        include_str!("../../../fixtures/schema/valid/generated_manifest.json"),
+    )
+    .schema
+    .expect("valid generated manifest fixture");
+
+    let report = compile_inputs_with_schema(
+        [CompileInput::new(
+            "dialogue/bad.recite",
+            concat!(":: start default\n", "! immediate missing_effect(snap)\n"),
+        )],
+        options(),
+        &schema,
+    )
+    .expect("validation diagnostics are not hard errors");
+
+    assert!(report.asset.is_none());
+    assert_eq!(report.diagnostics[0].code.as_str(), "RECITE_VALIDATE017");
 }
 
 #[test]

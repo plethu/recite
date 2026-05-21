@@ -60,6 +60,12 @@ impl<'a> Validator<'a> {
         call: &'a ConditionCall,
     ) {
         self.validate_span(source_file, &call.span, "condition call");
+        if let Some(span) = &call.function_span {
+            self.validate_span(source_file, span, "condition function");
+        }
+        for span in &call.arg_spans {
+            self.validate_span(source_file, span, "condition argument");
+        }
         self.validate_arguments(&call.args, call.span.clone(), "condition argument");
     }
     pub(super) fn validate_metadata_value(
