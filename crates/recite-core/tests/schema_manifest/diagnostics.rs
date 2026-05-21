@@ -121,6 +121,112 @@ fn manifest_loader_rejects_strings_rejected_by_the_public_json_schema_contract()
 }
 
 #[test]
+fn manifest_loader_rejects_missing_required_values_fields() {
+    let report = load_schema_manifest_str(
+        "fixtures/schema/invalid/missing_required_values.json",
+        r#"{
+  "schema_version": 1,
+  "types": {
+    "state": { "kind": "enum" }
+  }
+}"#,
+    );
+
+    assert!(report.schema.is_none());
+    assert_eq!(diagnostic_codes(&report), ["RECITE_SCHEMA001"]);
+}
+
+#[test]
+fn manifest_loader_rejects_explicit_null_optionals() {
+    let report = load_schema_manifest_str(
+        "fixtures/schema/invalid/null_optionals.json",
+        r#"{
+  "schema_version": 1,
+  "registries": {
+    "sound": { "values": ["snap"], "origin": null }
+  }
+}"#,
+    );
+
+    assert!(report.schema.is_none());
+    assert_eq!(diagnostic_codes(&report), ["RECITE_SCHEMA001"]);
+}
+
+#[test]
+fn diagnostic_spans_stay_with_their_section_when_top_level_objects_are_reordered() {
+    let report = load_schema_manifest_str(
+        "fixtures/schema/invalid/reordered_sections_repeated_refs.json",
+        r#"{
+  "schema_version": 1,
+  "effects": {
+    "bad_effect": {
+      "modes": ["deferred"],
+      "params": [{ "name": "target", "type": "registry:missing" }]
+    }
+  },
+  "conditions": {
+    "bad_condition": {
+      "params": [{ "name": "target", "type": "registry:missing" }]
+    }
+  }
+}"#,
+    );
+
+    assert!(report.schema.is_none());
+    assert_eq!(
+        diagnostic_codes(&report),
+        ["RECITE_SCHEMA004", "RECITE_SCHEMA004"]
+    );
+    assert_eq!(report.diagnostics[0].span.start.line(), 11);
+    assert_eq!(report.diagnostics[1].span.start.line(), 6);
+}
+
+#[test]
+fn section_span_lookup_ignores_section_names_inside_values() {
+    let report = load_schema_manifest_str(
+        "fixtures/schema/invalid/section_name_value_before_section.json",
+        r#"{
+  "schema_version": 1,
+  "registries": {
+    "labels": { "values": ["effects"] }
+  },
+  "effects": {
+    "bad_effect": {
+      "modes": ["deferred"],
+      "params": [{ "name": "target", "type": "registry:missing" }]
+    }
+  }
+}"#,
+    );
+
+    assert!(report.schema.is_none());
+    assert_eq!(diagnostic_codes(&report), ["RECITE_SCHEMA004"]);
+    assert_eq!(report.diagnostics[0].span.start.line(), 9);
+}
+
+#[test]
+fn section_span_lookup_ignores_the_section_key_itself() {
+    let report = load_schema_manifest_str(
+        "fixtures/schema/invalid/section_name_as_definition_name.json",
+        r#"{
+  "schema_version": 1,
+  "effects": {
+    "effects": {
+      "modes": ["deferred"]
+    },
+    "effects": {
+      "modes": ["immediate"]
+    }
+  }
+}"#,
+    );
+
+    assert!(report.schema.is_none());
+    assert_eq!(diagnostic_codes(&report), ["RECITE_SCHEMA003"]);
+    assert_eq!(report.diagnostics[0].span.start.line(), 7);
+}
+
+#[test]
 fn duplicate_parameter_names_are_schema_diagnostics() {
     let report = load_schema_manifest_str(
         "fixtures/schema/invalid/duplicate_params.json",

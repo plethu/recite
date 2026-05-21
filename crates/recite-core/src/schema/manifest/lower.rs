@@ -43,6 +43,7 @@ pub(crate) fn lower_manifest(file: String, source: &str, raw: RawManifest) -> Sc
         )),
     }
 
+    spans.enter_section(source, "types");
     lower_types(
         &file,
         source,
@@ -51,6 +52,7 @@ pub(crate) fn lower_manifest(file: String, source: &str, raw: RawManifest) -> Sc
         &mut schema,
         &mut diagnostics,
     );
+    spans.enter_section(source, "registries");
     lower_registries(
         &file,
         source,
@@ -59,6 +61,7 @@ pub(crate) fn lower_manifest(file: String, source: &str, raw: RawManifest) -> Sc
         &mut schema,
         &mut diagnostics,
     );
+    spans.enter_section(source, "speakers");
     lower_speakers(
         &file,
         source,
@@ -67,6 +70,7 @@ pub(crate) fn lower_manifest(file: String, source: &str, raw: RawManifest) -> Sc
         &mut schema,
         &mut diagnostics,
     );
+    spans.enter_section(source, "conditions");
     lower_conditions(
         &file,
         source,
@@ -76,6 +80,7 @@ pub(crate) fn lower_manifest(file: String, source: &str, raw: RawManifest) -> Sc
         &mut diagnostics,
         &mut pending_type_refs,
     );
+    spans.enter_section(source, "effects");
     lower_effects(
         &file,
         source,
@@ -85,6 +90,7 @@ pub(crate) fn lower_manifest(file: String, source: &str, raw: RawManifest) -> Sc
         &mut diagnostics,
         &mut pending_type_refs,
     );
+    spans.enter_section(source, "metadata");
     lower_metadata(
         &file,
         source,
@@ -94,6 +100,7 @@ pub(crate) fn lower_manifest(file: String, source: &str, raw: RawManifest) -> Sc
         &mut diagnostics,
         &mut pending_type_refs,
     );
+    spans.enter_section(source, "markup");
     lower_markup(
         &file,
         source,

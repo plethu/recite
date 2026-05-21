@@ -35,21 +35,21 @@ pub(crate) struct Named<T> {
 #[serde(deny_unknown_fields)]
 pub(crate) struct RawTypeDefinition {
     pub(crate) kind: String,
-    #[serde(default)]
     pub(crate) values: Vec<String>,
 }
 
 #[derive(Debug, Deserialize)]
 #[serde(deny_unknown_fields)]
 pub(crate) struct RawRegistryDefinition {
-    #[serde(default)]
     pub(crate) values: Vec<String>,
+    #[serde(default, deserialize_with = "deserialize_optional_non_null")]
     pub(crate) origin: Option<String>,
 }
 
 #[derive(Debug, Deserialize)]
 #[serde(deny_unknown_fields)]
 pub(crate) struct RawSpeakerDefinition {
+    #[serde(default, deserialize_with = "deserialize_optional_non_null")]
     pub(crate) display_name: Option<String>,
 }
 
@@ -66,6 +66,7 @@ pub(crate) struct RawParameterDefinition {
 pub(crate) struct RawConditionDefinition {
     #[serde(default)]
     pub(crate) params: Vec<RawParameterDefinition>,
+    #[serde(default, deserialize_with = "deserialize_optional_non_null")]
     pub(crate) returns: Option<String>,
 }
 
@@ -92,7 +93,16 @@ pub(crate) struct RawMetadataDefinition {
 pub(crate) struct RawMarkupDefinition {
     pub(crate) requires_closing: bool,
     pub(crate) translatable: bool,
+    #[serde(default, deserialize_with = "deserialize_optional_non_null")]
     pub(crate) allows_nesting: Option<bool>,
+}
+
+fn deserialize_optional_non_null<'de, D, T>(deserializer: D) -> Result<Option<T>, D::Error>
+where
+    D: Deserializer<'de>,
+    T: Deserialize<'de>,
+{
+    T::deserialize(deserializer).map(Some)
 }
 
 fn deserialize_named_entries<'de, D, T>(deserializer: D) -> Result<Vec<Named<T>>, D::Error>
