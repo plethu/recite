@@ -20,7 +20,8 @@ use super::raw::{
 use super::spans::{ManifestSpans, key_span};
 use super::validate::{
     PendingTypeReference, duplicate_definition, parse_effect_mode, parse_enum_return,
-    parse_metadata_target, parse_type_ref, validate_non_empty_string, validate_type_references,
+    parse_metadata_target, parse_type_ref, validate_manifest_name, validate_non_empty_string,
+    validate_type_references,
 };
 
 pub(crate) fn lower_manifest(file: String, source: &str, raw: RawManifest) -> SchemaLoadReport {
@@ -129,6 +130,9 @@ fn lower_types(
     let mut seen = BTreeSet::new();
     for entry in entries {
         let name_span = spans.next_string_span(file, source, &entry.name);
+        if !validate_manifest_name(diagnostics, "type name", &entry.name, name_span.clone()) {
+            continue;
+        }
         if !seen.insert(entry.name.clone()) {
             duplicate_definition(diagnostics, "type", &entry.name, name_span);
             continue;
@@ -173,6 +177,9 @@ fn lower_registries(
     let mut seen = BTreeSet::new();
     for entry in entries {
         let name_span = spans.next_string_span(file, source, &entry.name);
+        if !validate_manifest_name(diagnostics, "registry name", &entry.name, name_span.clone()) {
+            continue;
+        }
         if !seen.insert(entry.name.clone()) {
             duplicate_definition(diagnostics, "registry", &entry.name, name_span);
             continue;
@@ -211,6 +218,9 @@ fn lower_speakers(
     let mut seen = BTreeSet::new();
     for entry in entries {
         let name_span = spans.next_string_span(file, source, &entry.name);
+        if !validate_manifest_name(diagnostics, "speaker name", &entry.name, name_span.clone()) {
+            continue;
+        }
         if !seen.insert(entry.name.clone()) {
             duplicate_definition(diagnostics, "speaker", &entry.name, name_span);
             continue;
@@ -246,6 +256,14 @@ fn lower_conditions(
     let mut seen = BTreeSet::new();
     for entry in entries {
         let name_span = spans.next_string_span(file, source, &entry.name);
+        if !validate_manifest_name(
+            diagnostics,
+            "condition name",
+            &entry.name,
+            name_span.clone(),
+        ) {
+            continue;
+        }
         if !seen.insert(entry.name.clone()) {
             duplicate_definition(diagnostics, "condition", &entry.name, name_span);
             continue;
@@ -306,6 +324,9 @@ fn lower_effects(
     let mut seen = BTreeSet::new();
     for entry in entries {
         let name_span = spans.next_string_span(file, source, &entry.name);
+        if !validate_manifest_name(diagnostics, "effect name", &entry.name, name_span.clone()) {
+            continue;
+        }
         if !seen.insert(entry.name.clone()) {
             duplicate_definition(diagnostics, "effect", &entry.name, name_span);
             continue;
@@ -359,6 +380,9 @@ fn lower_metadata(
     let mut seen = BTreeSet::new();
     for entry in entries {
         let name_span = spans.next_string_span(file, source, &entry.name);
+        if !validate_manifest_name(diagnostics, "metadata name", &entry.name, name_span.clone()) {
+            continue;
+        }
         if !seen.insert(entry.name.clone()) {
             duplicate_definition(diagnostics, "metadata", &entry.name, name_span);
             continue;
@@ -430,6 +454,9 @@ fn lower_markup(
     let mut seen = BTreeSet::new();
     for entry in entries {
         let name_span = spans.next_string_span(file, source, &entry.name);
+        if !validate_manifest_name(diagnostics, "markup name", &entry.name, name_span.clone()) {
+            continue;
+        }
         if !seen.insert(entry.name.clone()) {
             duplicate_definition(diagnostics, "markup", &entry.name, name_span);
             continue;
@@ -460,12 +487,19 @@ fn lower_params(
         .iter()
         .map(|param| {
             let name_span = spans.next_string_span(file, source, &param.name);
-            validate_non_empty_string(
+            if validate_non_empty_string(
                 diagnostics,
                 "parameter name",
                 &param.name,
                 name_span.clone(),
-            );
+            ) {
+                validate_manifest_name(
+                    diagnostics,
+                    "parameter name",
+                    &param.name,
+                    name_span.clone(),
+                );
+            }
             if !seen.insert(param.name.clone()) {
                 diagnostics.push(diagnostic(
                     DUPLICATE_DEFINITION,

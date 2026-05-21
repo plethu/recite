@@ -121,6 +121,43 @@ fn manifest_loader_rejects_strings_rejected_by_the_public_json_schema_contract()
 }
 
 #[test]
+fn manifest_loader_rejects_invalid_definition_and_parameter_names() {
+    let report = load_schema_manifest_str(
+        "fixtures/schema/invalid/invalid_definition_names.json",
+        r#"{
+  "schema_version": 1,
+  "types": {
+    "": { "kind": "enum", "values": ["fresh"] },
+    "bad name": { "kind": "enum", "values": ["fresh"] },
+    "1bad": { "kind": "enum", "values": ["fresh"] }
+  },
+  "conditions": {
+    "trust_gte": {
+      "params": [
+        { "name": "bad name", "type": "speaker" }
+      ]
+    }
+  }
+}"#,
+    );
+
+    assert!(report.schema.is_none());
+    assert_eq!(
+        diagnostic_codes(&report),
+        [
+            "RECITE_SCHEMA001",
+            "RECITE_SCHEMA001",
+            "RECITE_SCHEMA001",
+            "RECITE_SCHEMA001"
+        ]
+    );
+    assert_eq!(report.diagnostics[0].span.start.line(), 4);
+    assert_eq!(report.diagnostics[1].span.start.line(), 5);
+    assert_eq!(report.diagnostics[2].span.start.line(), 6);
+    assert_eq!(report.diagnostics[3].span.start.line(), 11);
+}
+
+#[test]
 fn manifest_loader_rejects_missing_required_values_fields() {
     let report = load_schema_manifest_str(
         "fixtures/schema/invalid/missing_required_values.json",

@@ -78,6 +78,24 @@ pub(crate) fn validate_non_empty_string(
     true
 }
 
+pub(crate) fn validate_manifest_name(
+    diagnostics: &mut Vec<Diagnostic>,
+    field: &str,
+    value: &str,
+    span: SourceSpan,
+) -> bool {
+    if is_manifest_name(value) {
+        return true;
+    }
+
+    diagnostics.push(diagnostic(
+        MALFORMED_SHAPE,
+        format!("{field} must be an identifier-like schema name"),
+        span,
+    ));
+    false
+}
+
 pub(crate) fn parse_type_ref(value: &str) -> Option<SchemaTypeRef> {
     match value {
         "string" => Some(SchemaTypeRef::String),
@@ -87,12 +105,12 @@ pub(crate) fn parse_type_ref(value: &str) -> Option<SchemaTypeRef> {
         "speaker" => Some(SchemaTypeRef::Speaker),
         _ => value
             .strip_prefix("enum:")
-            .filter(|name| is_manifest_ref_name(name))
+            .filter(|name| is_manifest_name(name))
             .map(|name| SchemaTypeRef::Enum(name.to_owned()))
             .or_else(|| {
                 value
                     .strip_prefix("registry:")
-                    .filter(|name| is_manifest_ref_name(name))
+                    .filter(|name| is_manifest_name(name))
                     .map(|name| SchemaTypeRef::Registry(name.to_owned()))
             }),
     }
@@ -101,17 +119,21 @@ pub(crate) fn parse_type_ref(value: &str) -> Option<SchemaTypeRef> {
 pub(crate) fn parse_enum_return(value: &str) -> Option<String> {
     value
         .strip_prefix("enum:")
-        .filter(|name| is_manifest_ref_name(name))
+        .filter(|name| is_manifest_name(name))
         .map(ToOwned::to_owned)
 }
 
-fn is_manifest_ref_name(value: &str) -> bool {
-    !value.is_empty()
-        && value.chars().all(|character| {
+fn is_manifest_name(value: &str) -> bool {
+    let mut chars = value.chars();
+    let Some(first) = chars.next() else {
+        return false;
+    };
+
+    (first.is_ascii_alphabetic() || first == '_')
+        && chars.all(|character| {
             character.is_ascii_alphanumeric()
                 || character == '_'
                 || character == '.'
-                || character == ':'
                 || character == '-'
         })
 }

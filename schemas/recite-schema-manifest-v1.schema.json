@@ -9,44 +9,55 @@
     "schema_version": { "const": 1 },
     "types": {
       "type": "object",
+      "propertyNames": { "$ref": "#/$defs/definitionName" },
       "additionalProperties": { "$ref": "#/$defs/typeDefinition" }
     },
     "registries": {
       "type": "object",
+      "propertyNames": { "$ref": "#/$defs/definitionName" },
       "additionalProperties": { "$ref": "#/$defs/registryDefinition" }
     },
     "speakers": {
       "type": "object",
+      "propertyNames": { "$ref": "#/$defs/definitionName" },
       "additionalProperties": { "$ref": "#/$defs/speakerDefinition" }
     },
     "conditions": {
       "type": "object",
+      "propertyNames": { "$ref": "#/$defs/definitionName" },
       "additionalProperties": { "$ref": "#/$defs/conditionDefinition" }
     },
     "effects": {
       "type": "object",
+      "propertyNames": { "$ref": "#/$defs/definitionName" },
       "additionalProperties": { "$ref": "#/$defs/effectDefinition" }
     },
     "metadata": {
       "type": "object",
+      "propertyNames": { "$ref": "#/$defs/definitionName" },
       "additionalProperties": { "$ref": "#/$defs/metadataDefinition" }
     },
     "markup": {
       "type": "object",
+      "propertyNames": { "$ref": "#/$defs/definitionName" },
       "additionalProperties": { "$ref": "#/$defs/markupDefinition" }
     }
   },
   "$defs": {
+    "definitionName": {
+      "type": "string",
+      "pattern": "^[A-Za-z_][A-Za-z0-9_.-]*$"
+    },
     "typeReference": {
       "type": "string",
-      "pattern": "^(string|int|float|bool|speaker|enum:[A-Za-z0-9_.:-]+|registry:[A-Za-z0-9_.:-]+)$"
+      "pattern": "^(string|int|float|bool|speaker|enum:[A-Za-z_][A-Za-z0-9_.-]*|registry:[A-Za-z_][A-Za-z0-9_.-]*)$"
     },
     "parameter": {
       "type": "object",
       "additionalProperties": false,
       "required": ["name", "type"],
       "properties": {
-        "name": { "type": "string", "minLength": 1 },
+        "name": { "$ref": "#/$defs/definitionName" },
         "type": { "$ref": "#/$defs/typeReference" }
       }
     },
@@ -92,7 +103,7 @@
         },
         "returns": {
           "type": "string",
-          "pattern": "^(bool|enum:[A-Za-z0-9_.:-]+)$",
+          "pattern": "^(bool|enum:[A-Za-z_][A-Za-z0-9_.-]*)$",
           "default": "bool"
         }
       }
