@@ -203,41 +203,51 @@ fn next_json_string_range(
     role: StringRole,
 ) -> Option<SourceRange> {
     let bytes = source.as_bytes();
-    let mut index = search_start;
+    let mut depth = 0usize;
+    let mut index = range.start;
 
     while index < range.end {
-        if bytes[index] != b'"' {
-            index += 1;
-            continue;
-        }
+        match bytes[index] {
+            b'"' => {
+                let string_start = index;
+                let string_end = skip_json_string(bytes, string_start)?;
+                if string_end >= range.end {
+                    return None;
+                }
 
-        let string_start = index;
-        let string_end = skip_json_string(bytes, string_start)?;
-        if string_end >= range.end {
-            return None;
-        }
+                if string_start >= search_start
+                    && string_role_matches(source, string_end + 1, role, depth)
+                    && json_string_equals(source, string_start, string_end, needle)
+                {
+                    return Some(SourceRange {
+                        start: string_start,
+                        end: string_end + 1,
+                    });
+                }
 
-        if string_role_matches(source, string_end + 1, role)
-            && json_string_equals(source, string_start, string_end, needle)
-        {
-            return Some(SourceRange {
-                start: string_start,
-                end: string_end + 1,
-            });
+                index = string_end + 1;
+            }
+            b'{' | b'[' => {
+                depth += 1;
+                index += 1;
+            }
+            b'}' | b']' => {
+                depth = depth.checked_sub(1)?;
+                index += 1;
+            }
+            _ => index += 1,
         }
-
-        index = string_end + 1;
     }
 
     None
 }
 
-fn string_role_matches(source: &str, after_string: usize, role: StringRole) -> bool {
+fn string_role_matches(source: &str, after_string: usize, role: StringRole, depth: usize) -> bool {
     let is_key = skip_whitespace(source, after_string)
         .and_then(|index| source.as_bytes().get(index))
         == Some(&b':');
     match role {
-        StringRole::Key => is_key,
+        StringRole::Key => is_key && depth == 1,
         StringRole::Value => !is_key,
     }
 }

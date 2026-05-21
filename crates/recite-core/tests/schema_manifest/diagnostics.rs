@@ -195,6 +195,24 @@ fn value_spans_ignore_matching_manifest_field_keys() {
 }
 
 #[test]
+fn definition_key_spans_ignore_matching_inner_field_keys() {
+    let report = load_schema_manifest_str(
+        "fixtures/schema/invalid/definition_key_matches_field_key.json",
+        r#"{
+  "schema_version": 1,
+  "types": {
+    "kind": { "kind": "enum", "values": ["fresh"] },
+    "kind": { "kind": "enum", "values": ["stale"] }
+  }
+}"#,
+    );
+
+    assert!(report.schema.is_none());
+    assert_eq!(diagnostic_codes(&report), ["RECITE_SCHEMA003"]);
+    assert_eq!(report.diagnostics[0].span.start.line(), 5);
+}
+
+#[test]
 fn invalid_enum_and_registry_type_references_report_stable_diagnostics() {
     let report = load_schema_manifest_str(
         "fixtures/schema/invalid/invalid_type_references.json",
