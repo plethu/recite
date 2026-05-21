@@ -27,15 +27,59 @@ fn unsupported_manifest_versions_report_schema_diagnostic() {
 
 #[test]
 fn schema_version_accepts_json_numbers_equal_to_one() {
-    let report = load_schema_manifest_str(
-        "fixtures/schema/valid/schema_version_float.json",
+    for source in [
         r#"{
   "schema_version": 1.0
+}"#,
+        r#"{
+  "schema_version": 1e0
+}"#,
+        r#"{
+  "schema_version": 10e-1
+}"#,
+    ] {
+        let report =
+            load_schema_manifest_str("fixtures/schema/valid/schema_version_one.json", source);
+
+        assert_eq!(diagnostic_codes(&report), Vec::<&str>::new());
+        assert!(report.schema.is_some());
+    }
+}
+
+#[test]
+fn schema_version_token_lookup_uses_the_top_level_field() {
+    let report = load_schema_manifest_str(
+        "fixtures/schema/valid/schema_version_one.json",
+        r#"{
+  "types": {
+    "schema_version": { "kind": "enum", "values": ["nested"] }
+  },
+  "schema_version": 1
 }"#,
     );
 
     assert_eq!(diagnostic_codes(&report), Vec::<&str>::new());
     assert!(report.schema.is_some());
+}
+
+#[test]
+fn schema_version_rejects_numbers_that_only_round_to_one() {
+    for source in [
+        r#"{
+  "schema_version": 1.0000000000000001
+}"#,
+        r#"{
+  "schema_version": 1.00000000000000000000000000001
+}"#,
+    ] {
+        let report = load_schema_manifest_str(
+            "fixtures/schema/invalid/schema_version_near_one.json",
+            source,
+        );
+
+        assert!(report.schema.is_none());
+        assert_eq!(diagnostic_codes(&report), ["RECITE_SCHEMA002"]);
+    }
 }
 
 #[test]

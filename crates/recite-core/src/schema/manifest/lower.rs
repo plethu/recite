@@ -30,14 +30,14 @@ pub(crate) fn lower_manifest(file: String, source: &str, raw: RawManifest) -> Sc
     let mut spans = ManifestSpans::new();
     let mut pending_type_refs = Vec::new();
 
-    match schema_version_number(&raw.schema_version) {
-        Some(1.0) => {}
-        Some(version) => diagnostics.push(diagnostic(
+    match schema_version(source, &raw.schema_version) {
+        SchemaVersion::One => {}
+        SchemaVersion::Unsupported(version) => diagnostics.push(diagnostic(
             UNSUPPORTED_VERSION,
             format!("unsupported schema manifest version {version}"),
             key_span(&file, source, "schema_version"),
         )),
-        None => diagnostics.push(diagnostic(
+        SchemaVersion::Malformed => diagnostics.push(diagnostic(
             MALFORMED_SHAPE,
             "schema_version must be an integer",
             key_span(&file, source, "schema_version"),
@@ -119,13 +119,135 @@ pub(crate) fn lower_manifest(file: String, source: &str, raw: RawManifest) -> Sc
     }
 }
 
-fn schema_version_number(value: &serde_json::Value) -> Option<f64> {
-    let number = value.as_number()?;
-    number
-        .as_u64()
-        .map(|value| value as f64)
-        .or_else(|| number.as_i64().map(|value| value as f64))
-        .or_else(|| number.as_f64())
+#[derive(Clone, Copy, Debug, Eq, PartialEq)]
+enum SchemaVersion<'a> {
+    One,
+    Unsupported(&'a str),
+    Malformed,
+}
+
+fn schema_version<'a>(source: &'a str, value: &serde_json::Value) -> SchemaVersion<'a> {
+    if !value.is_number() {
+        return SchemaVersion::Malformed;
+    }
+
+    let Some(token) = top_level_number_token(source, "schema_version") else {
+        return SchemaVersion::Malformed;
+    };
+
+    if number_token_equals_one(token) {
+        SchemaVersion::One
+    } else {
+        SchemaVersion::Unsupported(token)
+    }
+}
+
+fn top_level_number_token<'a>(source: &'a str, key: &str) -> Option<&'a str> {
+    let bytes = source.as_bytes();
+    let mut depth = 0usize;
+    let mut index = 0usize;
+
+    while index < bytes.len() {
+        match bytes[index] {
+            b'"' => {
+                let string_start = index;
+                let string_end = skip_json_string(bytes, string_start)?;
+                if depth == 1 && &source[string_start + 1..string_end] == key {
+                    let colon = skip_whitespace(source, string_end + 1)?;
+                    if bytes.get(colon) != Some(&b':') {
+                        return None;
+                    }
+                    let value_start = skip_whitespace(source, colon + 1)?;
+                    return Some(json_number_token(source, value_start));
+                }
+                index = string_end + 1;
+            }
+            b'{' | b'[' => {
+                depth += 1;
+                index += 1;
+            }
+            b'}' | b']' => {
+                depth = depth.checked_sub(1)?;
+                index += 1;
+            }
+            _ => index += 1,
+        }
+    }
+
+    None
+}
+
+fn skip_json_string(bytes: &[u8], start: usize) -> Option<usize> {
+    let mut escaped = false;
+    let mut index = start + 1;
+    while index < bytes.len() {
+        match bytes[index] {
+            b'\\' if !escaped => escaped = true,
+            b'"' if !escaped => return Some(index),
+            _ => escaped = false,
+        }
+        index += 1;
+    }
+
+    None
+}
+
+fn skip_whitespace(source: &str, start: usize) -> Option<usize> {
+    source[start..]
+        .find(|character: char| !character.is_whitespace())
+        .map(|offset| start + offset)
+}
+
+fn json_number_token(source: &str, value_start: usize) -> &str {
+    let value_end = source[value_start..]
+        .find(|character: char| character.is_whitespace() || character == ',' || character == '}')
+        .map_or(source.len(), |offset| value_start + offset);
+
+    &source[value_start..value_end]
+}
+
+fn number_token_equals_one(token: &str) -> bool {
+    let Some((significand, exponent)) = split_decimal_exponent(token) else {
+        return false;
+    };
+    if significand.starts_with('-') {
+        return false;
+    }
+
+    let Some((integer, fraction)) = significand.split_once('.').or(Some((significand, ""))) else {
+        return false;
+    };
+    let coefficient = format!("{integer}{fraction}");
+    if coefficient.is_empty()
+        || !coefficient
+            .chars()
+            .all(|character| character.is_ascii_digit())
+    {
+        return false;
+    }
+
+    let coefficient = coefficient.trim_start_matches('0');
+    if coefficient.is_empty() {
+        return false;
+    }
+
+    let decimal_places = i64::try_from(fraction.len()).unwrap_or(i64::MAX);
+    let scale = decimal_places - exponent;
+    if scale < 0 {
+        return false;
+    };
+    let scale = usize::try_from(scale).unwrap_or(usize::MAX);
+
+    coefficient == format!("1{}", "0".repeat(scale))
+}
+
+fn split_decimal_exponent(token: &str) -> Option<(&str, i64)> {
+    let Some(index) = token.find(['e', 'E']) else {
+        return Some((token, 0));
+    };
+    let significand = &token[..index];
+    let exponent = token[index + 1..].parse::<i64>().ok()?;
+    Some((significand, exponent))
 }
 
 fn lower_types(
