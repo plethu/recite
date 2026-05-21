@@ -1,0 +1,42 @@
+{
+  "schema_version": 1,
+  "types": {
+    "z_state": { "kind": "enum", "values": ["z", "a", "m"] },
+    "a_state": { "kind": "enum", "values": ["beta", "alpha"] }
+  },
+  "registries": {
+    "z_registry": { "values": ["three", "one", "two"] },
+    "a_registry": { "values": ["right", "left"] }
+  },
+  "speakers": {
+    "zara": {},
+    "ada": {}
+  },
+  "conditions": {
+    "z_check": {
+      "params": [{ "name": "state", "type": "enum:z_state" }],
+      "returns": "bool"
+    },
+    "a_check": {
+      "params": [{ "name": "item", "type": "registry:a_registry" }]
+    }
+  },
+  "effects": {
+    "z_effect": {
+      "modes": ["blocking", "deferred"],
+      "params": [{ "name": "state", "type": "enum:a_state" }]
+    },
+    "a_effect": {
+      "modes": ["immediate"],
+      "params": [{ "name": "speaker", "type": "speaker" }]
+    }
+  },
+  "metadata": {
+    "z_meta": { "targets": ["choice", "line"], "type": "registry:z_registry" },
+    "a_meta": { "targets": ["project"], "type": "bool" }
+  },
+  "markup": {
+    "z_tag": { "requires_closing": true, "translatable": true },
+    "a_tag": { "requires_closing": false, "translatable": false }
+  }
+}

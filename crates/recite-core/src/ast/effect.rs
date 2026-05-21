@@ -29,7 +29,7 @@ impl Effect {
 }
 
 /// Effect emission mode.
-#[derive(Clone, Copy, Debug, Eq, PartialEq, Hash)]
+#[derive(Clone, Copy, Debug, Eq, PartialEq, Hash, Ord, PartialOrd)]
 pub enum EffectMode {
     Deferred,
     Immediate,

@@ -298,6 +298,10 @@ dependencies = [
 [[package]]
 name = "recite-core"
 version = "0.0.1"
+dependencies = [
+ "serde",
+ "serde_json",
+]
 
 [[package]]
 name = "recite-lsp"

@@ -1,0 +1,151 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://codeberg.org/plethu/recite/raw/branch/main/schemas/recite-schema-manifest-v1.schema.json",
+  "title": "Recite generated schema manifest v1",
+  "type": "object",
+  "additionalProperties": false,
+  "required": ["schema_version"],
+  "properties": {
+    "schema_version": { "const": 1 },
+    "types": {
+      "type": "object",
+      "propertyNames": { "$ref": "#/$defs/definitionName" },
+      "additionalProperties": { "$ref": "#/$defs/typeDefinition" }
+    },
+    "registries": {
+      "type": "object",
+      "propertyNames": { "$ref": "#/$defs/definitionName" },
+      "additionalProperties": { "$ref": "#/$defs/registryDefinition" }
+    },
+    "speakers": {
+      "type": "object",
+      "propertyNames": { "$ref": "#/$defs/definitionName" },
+      "additionalProperties": { "$ref": "#/$defs/speakerDefinition" }
+    },
+    "conditions": {
+      "type": "object",
+      "propertyNames": { "$ref": "#/$defs/definitionName" },
+      "additionalProperties": { "$ref": "#/$defs/conditionDefinition" }
+    },
+    "effects": {
+      "type": "object",
+      "propertyNames": { "$ref": "#/$defs/definitionName" },
+      "additionalProperties": { "$ref": "#/$defs/effectDefinition" }
+    },
+    "metadata": {
+      "type": "object",
+      "propertyNames": { "$ref": "#/$defs/definitionName" },
+      "additionalProperties": { "$ref": "#/$defs/metadataDefinition" }
+    },
+    "markup": {
+      "type": "object",
+      "propertyNames": { "$ref": "#/$defs/definitionName" },
+      "additionalProperties": { "$ref": "#/$defs/markupDefinition" }
+    }
+  },
+  "$defs": {
+    "definitionName": {
+      "type": "string",
+      "pattern": "^[A-Za-z_][A-Za-z0-9_.-]*$"
+    },
+    "typeReference": {
+      "type": "string",
+      "pattern": "^(string|int|float|bool|speaker|enum:[A-Za-z_][A-Za-z0-9_.-]*|registry:[A-Za-z_][A-Za-z0-9_.-]*)$"
+    },
+    "parameter": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["name", "type"],
+      "properties": {
+        "name": { "$ref": "#/$defs/definitionName" },
+        "type": { "$ref": "#/$defs/typeReference" }
+      }
+    },
+    "typeDefinition": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["kind", "values"],
+      "properties": {
+        "kind": { "const": "enum" },
+        "values": {
+          "type": "array",
+          "items": { "type": "string", "minLength": 1 }
+        }
+      }
+    },
+    "registryDefinition": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["values"],
+      "properties": {
+        "values": {
+          "type": "array",
+          "items": { "type": "string", "minLength": 1 }
+        },
+        "origin": { "type": "string", "minLength": 1 }
+      }
+    },
+    "speakerDefinition": {
+      "type": "object",
+      "additionalProperties": false,
+      "properties": {
+        "display_name": { "type": "string", "minLength": 1 }
+      }
+    },
+    "conditionDefinition": {
+      "type": "object",
+      "additionalProperties": false,
+      "properties": {
+        "params": {
+          "type": "array",
+          "items": { "$ref": "#/$defs/parameter" },
+          "default": []
+        },
+        "returns": {
+          "type": "string",
+          "pattern": "^(bool|enum:[A-Za-z_][A-Za-z0-9_.-]*)$",
+          "default": "bool"
+        }
+      }
+    },
+    "effectDefinition": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["modes"],
+      "properties": {
+        "modes": {
+          "type": "array",
+          "items": { "enum": ["deferred", "immediate", "blocking"] }
+        },
+        "params": {
+          "type": "array",
+          "items": { "$ref": "#/$defs/parameter" },
+          "default": []
+        }
+      }
+    },
+    "metadataDefinition": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["targets", "type"],
+      "properties": {
+        "targets": {
+          "type": "array",
+          "items": { "enum": ["block", "choice", "line", "project"] }
+        },
+        "type": { "$ref": "#/$defs/typeReference" },
+        "repeatable": { "type": "boolean", "default": false }
+      }
+    },
+    "markupDefinition": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["requires_closing", "translatable"],
+      "properties": {
+        "requires_closing": { "type": "boolean" },
+        "translatable": { "type": "boolean" },
+        "allows_nesting": { "type": "boolean", "default": true }
+      }
+    }
+  }
+}

@@ -1,0 +1,72 @@
+{
+  "schema_version": 1,
+  "types": {
+    "thread_stage_kind": {
+      "kind": "enum",
+      "values": ["fresh", "tired", "angry", "fine", "completed"]
+    }
+  },
+  "registries": {
+    "thread": {
+      "values": ["rhea_job_response", "hazel_intro"]
+    },
+    "dialogue_sound_effect": {
+      "values": ["snap", "door_close", "rain_window"],
+      "origin": "data/content/dialogue-sound-effects.toml"
+    }
+  },
+  "speakers": {
+    "rhea": {},
+    "hazel": {
+      "display_name": "Hazel"
+    }
+  },
+  "conditions": {
+    "trust_gte": {
+      "params": [
+        { "name": "actor_a", "type": "speaker" },
+        { "name": "actor_b", "type": "speaker" },
+        { "name": "threshold", "type": "int" }
+      ]
+    },
+    "thread_stage": {
+      "params": [{ "name": "thread_id", "type": "registry:thread" }],
+      "returns": "enum:thread_stage_kind"
+    }
+  },
+  "effects": {
+    "play_sfx": {
+      "modes": ["immediate"],
+      "params": [{ "name": "sound_effect", "type": "registry:dialogue_sound_effect" }]
+    },
+    "advance_thread": {
+      "modes": ["deferred", "blocking"],
+      "params": [
+        { "name": "thread_id", "type": "registry:thread" },
+        { "name": "stage", "type": "enum:thread_stage_kind" }
+      ]
+    }
+  },
+  "metadata": {
+    "sfx": {
+      "targets": ["line", "choice"],
+      "type": "registry:dialogue_sound_effect",
+      "repeatable": true
+    },
+    "portrait": {
+      "targets": ["line"],
+      "type": "string"
+    }
+  },
+  "markup": {
+    "slow": {
+      "requires_closing": true,
+      "translatable": true
+    },
+    "shake": {
+      "requires_closing": true,
+      "translatable": true,
+      "allows_nesting": false
+    }
+  }
+}
