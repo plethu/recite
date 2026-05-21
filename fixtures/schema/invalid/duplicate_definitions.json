@@ -1,0 +1,13 @@
+{
+  "schema_version": 1,
+  "types": {
+    "thread_stage_kind": {
+      "kind": "enum",
+      "values": ["fresh", "tired"]
+    },
+    "thread_stage_kind": {
+      "kind": "enum",
+      "values": ["angry"]
+    }
+  }
+}

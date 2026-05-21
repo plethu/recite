@@ -1,0 +1,21 @@
+{
+  "schema_version": 1,
+  "conditions": {
+    "thread_stage": {
+      "params": [{ "name": "thread_id", "type": "registry:thread" }],
+      "returns": "enum:thread_stage_kind"
+    }
+  },
+  "effects": {
+    "advance_thread": {
+      "modes": ["deferred"],
+      "params": [{ "name": "stage", "type": "enum:thread_stage_kind" }]
+    }
+  },
+  "metadata": {
+    "sfx": {
+      "targets": ["line"],
+      "type": "registry:dialogue_sound_effect"
+    }
+  }
+}

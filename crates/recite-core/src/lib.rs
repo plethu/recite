@@ -3,6 +3,7 @@
 
 pub mod ast;
 pub mod compiled;
+pub mod schema;
 
 mod diagnostic;
 mod error;
@@ -47,6 +48,12 @@ pub use compiled::{
 pub use diagnostic::{Diagnostic, DiagnosticCode, DiagnosticSeverity, RelatedSpan};
 pub use error::CoreValueError;
 pub use ids::{BlockId, ChoiceId, EffectId, LineId, LocaleId, SpeakerId};
+pub use schema::{
+    ConditionDefinition, ConditionReturnType, EffectDefinition, EnumTypeDefinition,
+    MarkupDefinition, MetadataDefinition, MetadataTarget, ParameterDefinition, ProjectSchema,
+    RegistryDefinition, SchemaLoadReport, SchemaTypeDefinition, SchemaTypeRef, SpeakerDefinition,
+    load_schema_manifest_str,
+};
 pub use source_location::{SourcePosition, SourceSpan};
 pub use value::{Metadata, MetadataEntry, ScalarValue, Value};
 

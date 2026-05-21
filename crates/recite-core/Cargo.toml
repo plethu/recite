@@ -7,5 +7,9 @@ license.workspace = true
 repository.workspace = true
 readme.workspace = true
 
+[dependencies]
+serde.workspace = true
+serde_json.workspace = true
+
 [lints]
 workspace = true

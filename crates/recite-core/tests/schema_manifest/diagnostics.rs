@@ -1,0 +1,143 @@
+use recite_core::load_schema_manifest_str;
+
+use crate::diagnostic_codes;
+
+#[test]
+fn malformed_manifest_shape_reports_schema_diagnostic() {
+    let report = load_schema_manifest_str(
+        "fixtures/schema/invalid/malformed_shape.json",
+        include_str!("../../../../fixtures/schema/invalid/malformed_shape.json"),
+    );
+
+    assert!(report.schema.is_none());
+    assert_eq!(diagnostic_codes(&report), ["RECITE_SCHEMA001"]);
+    assert_eq!(report.diagnostics[0].span.start.line(), 2);
+}
+
+#[test]
+fn unsupported_manifest_versions_report_schema_diagnostic() {
+    let report = load_schema_manifest_str(
+        "fixtures/schema/invalid/unsupported_version.json",
+        include_str!("../../../../fixtures/schema/invalid/unsupported_version.json"),
+    );
+
+    assert!(report.schema.is_none());
+    assert_eq!(diagnostic_codes(&report), ["RECITE_SCHEMA002"]);
+}
+
+#[test]
+fn duplicate_definitions_and_values_report_stable_diagnostics() {
+    let duplicate_definitions = load_schema_manifest_str(
+        "fixtures/schema/invalid/duplicate_definitions.json",
+        include_str!("../../../../fixtures/schema/invalid/duplicate_definitions.json"),
+    );
+    assert!(duplicate_definitions.schema.is_none());
+    assert_eq!(
+        diagnostic_codes(&duplicate_definitions),
+        ["RECITE_SCHEMA003"]
+    );
+    assert_eq!(duplicate_definitions.diagnostics[0].span.start.line(), 8);
+
+    let duplicate_values = load_schema_manifest_str(
+        "fixtures/schema/invalid/duplicate_values.json",
+        include_str!("../../../../fixtures/schema/invalid/duplicate_values.json"),
+    );
+    assert!(duplicate_values.schema.is_none());
+    assert_eq!(
+        diagnostic_codes(&duplicate_values),
+        ["RECITE_SCHEMA003", "RECITE_SCHEMA003"]
+    );
+    assert_eq!(duplicate_values.diagnostics[0].span.start.line(), 6);
+    assert_eq!(duplicate_values.diagnostics[1].span.start.line(), 11);
+}
+
+#[test]
+fn invalid_enum_and_registry_type_references_report_stable_diagnostics() {
+    let report = load_schema_manifest_str(
+        "fixtures/schema/invalid/invalid_type_references.json",
+        include_str!("../../../../fixtures/schema/invalid/invalid_type_references.json"),
+    );
+
+    assert!(report.schema.is_none());
+    assert_eq!(
+        diagnostic_codes(&report),
+        [
+            "RECITE_SCHEMA004",
+            "RECITE_SCHEMA004",
+            "RECITE_SCHEMA004",
+            "RECITE_SCHEMA004"
+        ]
+    );
+    assert_eq!(
+        report.diagnostics[0].message,
+        "condition 'thread_stage' parameter 'thread_id' references unknown registry 'thread'"
+    );
+    assert_eq!(report.diagnostics[0].span.start.line(), 5);
+    assert_eq!(report.diagnostics[1].span.start.line(), 6);
+    assert_eq!(report.diagnostics[2].span.start.line(), 12);
+    assert_eq!(report.diagnostics[3].span.start.line(), 18);
+}
+
+#[test]
+fn manifest_loader_rejects_strings_rejected_by_the_public_json_schema_contract() {
+    let report = load_schema_manifest_str(
+        "fixtures/schema/invalid/schema_contract_drift.json",
+        r#"{
+  "schema_version": 1,
+  "types": {
+    "state": { "kind": "enum", "values": [""] }
+  },
+  "registries": {
+    "sound": { "values": ["snap"], "origin": "" }
+  },
+  "speakers": {
+    "hazel": { "display_name": "" }
+  },
+  "conditions": {
+    "bad_condition": {
+      "params": [{ "name": "", "type": "enum:bad space" }],
+      "returns": "enum:"
+    }
+  },
+  "metadata": {
+    "bad_metadata": { "targets": ["line"], "type": "registry:" }
+  }
+}"#,
+    );
+
+    assert!(report.schema.is_none());
+    assert_eq!(
+        diagnostic_codes(&report),
+        [
+            "RECITE_SCHEMA001",
+            "RECITE_SCHEMA001",
+            "RECITE_SCHEMA001",
+            "RECITE_SCHEMA001",
+            "RECITE_SCHEMA004",
+            "RECITE_SCHEMA004",
+            "RECITE_SCHEMA004"
+        ]
+    );
+}
+
+#[test]
+fn duplicate_parameter_names_are_schema_diagnostics() {
+    let report = load_schema_manifest_str(
+        "fixtures/schema/invalid/duplicate_params.json",
+        r#"{
+  "schema_version": 1,
+  "conditions": {
+    "trust_gte": {
+      "params": [
+        { "name": "actor", "type": "speaker" },
+        { "name": "actor", "type": "speaker" }
+      ]
+    }
+  }
+}"#,
+    );
+
+    assert!(report.schema.is_none());
+    assert_eq!(diagnostic_codes(&report), ["RECITE_SCHEMA003"]);
+    assert_eq!(report.diagnostics[0].span.start.line(), 7);
+}
