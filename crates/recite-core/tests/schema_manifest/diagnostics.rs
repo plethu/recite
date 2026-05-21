@@ -26,6 +26,19 @@ fn unsupported_manifest_versions_report_schema_diagnostic() {
 }
 
 #[test]
+fn schema_version_accepts_json_numbers_equal_to_one() {
+    let report = load_schema_manifest_str(
+        "fixtures/schema/valid/schema_version_float.json",
+        r#"{
+  "schema_version": 1.0
+}"#,
+    );
+
+    assert_eq!(diagnostic_codes(&report), Vec::<&str>::new());
+    assert!(report.schema.is_some());
+}
+
+#[test]
 fn duplicate_definitions_and_values_report_stable_diagnostics() {
     let duplicate_definitions = load_schema_manifest_str(
         "fixtures/schema/invalid/duplicate_definitions.json",

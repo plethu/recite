@@ -30,8 +30,8 @@ pub(crate) fn lower_manifest(file: String, source: &str, raw: RawManifest) -> Sc
     let mut spans = ManifestSpans::new();
     let mut pending_type_refs = Vec::new();
 
-    match raw.schema_version.as_u64() {
-        Some(1) => {}
+    match schema_version_number(&raw.schema_version) {
+        Some(1.0) => {}
         Some(version) => diagnostics.push(diagnostic(
             UNSUPPORTED_VERSION,
             format!("unsupported schema manifest version {version}"),
@@ -117,6 +117,15 @@ pub(crate) fn lower_manifest(file: String, source: &str, raw: RawManifest) -> Sc
         schema,
         diagnostics,
     }
+}
+
+fn schema_version_number(value: &serde_json::Value) -> Option<f64> {
+    let number = value.as_number()?;
+    number
+        .as_u64()
+        .map(|value| value as f64)
+        .or_else(|| number.as_i64().map(|value| value as f64))
+        .or_else(|| number.as_f64())
 }
 
 fn lower_types(
