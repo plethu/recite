@@ -17,7 +17,7 @@ use super::raw::{
     RawMetadataDefinition, RawParameterDefinition, RawRegistryDefinition, RawSpeakerDefinition,
     RawTypeDefinition,
 };
-use super::spans::{ManifestSpans, key_span};
+use super::spans::{ManifestSpans, top_level_key_span, top_level_number_token};
 use super::validate::{
     PendingTypeReference, duplicate_definition, parse_effect_mode, parse_enum_return,
     parse_metadata_target, parse_type_ref, validate_manifest_name, validate_non_empty_string,
@@ -35,12 +35,12 @@ pub(crate) fn lower_manifest(file: String, source: &str, raw: RawManifest) -> Sc
         SchemaVersion::Unsupported(version) => diagnostics.push(diagnostic(
             UNSUPPORTED_VERSION,
             format!("unsupported schema manifest version {version}"),
-            key_span(&file, source, "schema_version"),
+            top_level_key_span(&file, source, "schema_version"),
         )),
         SchemaVersion::Malformed => diagnostics.push(diagnostic(
             MALFORMED_SHAPE,
             "schema_version must be an integer",
-            key_span(&file, source, "schema_version"),
+            top_level_key_span(&file, source, "schema_version"),
         )),
     }
 
@@ -140,70 +140,6 @@ fn schema_version<'a>(source: &'a str, value: &serde_json::Value) -> SchemaVersi
     } else {
         SchemaVersion::Unsupported(token)
     }
-}
-
-fn top_level_number_token<'a>(source: &'a str, key: &str) -> Option<&'a str> {
-    let bytes = source.as_bytes();
-    let mut depth = 0usize;
-    let mut index = 0usize;
-
-    while index < bytes.len() {
-        match bytes[index] {
-            b'"' => {
-                let string_start = index;
-                let string_end = skip_json_string(bytes, string_start)?;
-                if depth == 1 && &source[string_start + 1..string_end] == key {
-                    let colon = skip_whitespace(source, string_end + 1)?;
-                    if bytes.get(colon) != Some(&b':') {
-                        return None;
-                    }
-                    let value_start = skip_whitespace(source, colon + 1)?;
-                    return Some(json_number_token(source, value_start));
-                }
-                index = string_end + 1;
-            }
-            b'{' | b'[' => {
-                depth += 1;
-                index += 1;
-            }
-            b'}' | b']' => {
-                depth = depth.checked_sub(1)?;
-                index += 1;
-            }
-            _ => index += 1,
-        }
-    }
-
-    None
-}
-
-fn skip_json_string(bytes: &[u8], start: usize) -> Option<usize> {
-    let mut escaped = false;
-    let mut index = start + 1;
-    while index < bytes.len() {
-        match bytes[index] {
-            b'\\' if !escaped => escaped = true,
-            b'"' if !escaped => return Some(index),
-            _ => escaped = false,
-        }
-        index += 1;
-    }
-
-    None
-}
-
-fn skip_whitespace(source: &str, start: usize) -> Option<usize> {
-    source[start..]
-        .find(|character: char| !character.is_whitespace())
-        .map(|offset| start + offset)
-}
-
-fn json_number_token(source: &str, value_start: usize) -> &str {
-    let value_end = source[value_start..]
-        .find(|character: char| character.is_whitespace() || character == ',' || character == '}')
-        .map_or(source.len(), |offset| value_start + offset);
-
-    &source[value_start..value_end]
 }
 
 fn number_token_equals_one(token: &str) -> bool {

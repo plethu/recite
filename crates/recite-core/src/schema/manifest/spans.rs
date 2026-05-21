@@ -11,19 +11,26 @@ pub(crate) fn json_error_span(file: &str, error: &serde_json::Error) -> SourceSp
     )
 }
 
-pub(crate) fn key_span(file: &str, source: &str, key: &str) -> SourceSpan {
-    string_span(file, source, key).unwrap_or_else(|| document_start_span(file))
+pub(crate) fn top_level_key_span(file: &str, source: &str, key: &str) -> SourceSpan {
+    top_level_key_range(source, key)
+        .map(|range| {
+            SourceSpan::new(
+                file,
+                position_for_offset(source, range.start),
+                Some(position_for_offset(source, range.end)),
+            )
+        })
+        .unwrap_or_else(|| document_start_span(file))
 }
 
-fn string_span(file: &str, source: &str, needle: &str) -> Option<SourceSpan> {
-    let quoted = format!("\"{}\"", escape_json_string(needle));
-    let start = source.find(&quoted)?;
-    let end = start + quoted.len();
-    Some(SourceSpan::new(
-        file,
-        position_for_offset(source, start),
-        Some(position_for_offset(source, end)),
-    ))
+pub(crate) fn top_level_number_token<'a>(source: &'a str, key: &str) -> Option<&'a str> {
+    let range = top_level_key_range(source, key)?;
+    let colon = skip_whitespace(source, range.end)?;
+    if source.as_bytes().get(colon) != Some(&b':') {
+        return None;
+    }
+    let value_start = skip_whitespace(source, colon + 1)?;
+    Some(json_number_token(source, value_start))
 }
 
 fn document_start_span(file: &str) -> SourceSpan {
@@ -48,6 +55,72 @@ fn position_for_offset(source: &str, offset: usize) -> SourcePosition {
         }
     }
     SourcePosition::new(line, column).expect("line and column start at one")
+}
+
+fn top_level_key_range(source: &str, key: &str) -> Option<SourceRange> {
+    let bytes = source.as_bytes();
+    let mut depth = 0usize;
+    let mut index = 0usize;
+
+    while index < bytes.len() {
+        match bytes[index] {
+            b'"' => {
+                let string_start = index;
+                let string_end = skip_json_string(bytes, string_start)?;
+                if depth == 1 && json_string_equals(source, string_start, string_end, key) {
+                    return Some(SourceRange {
+                        start: string_start,
+                        end: string_end + 1,
+                    });
+                }
+                index = string_end + 1;
+            }
+            b'{' | b'[' => {
+                depth += 1;
+                index += 1;
+            }
+            b'}' | b']' => {
+                depth = depth.checked_sub(1)?;
+                index += 1;
+            }
+            _ => index += 1,
+        }
+    }
+
+    None
+}
+
+fn skip_json_string(bytes: &[u8], start: usize) -> Option<usize> {
+    let mut escaped = false;
+    let mut index = start + 1;
+    while index < bytes.len() {
+        match bytes[index] {
+            b'\\' if !escaped => escaped = true,
+            b'"' if !escaped => return Some(index),
+            _ => escaped = false,
+        }
+        index += 1;
+    }
+
+    None
+}
+
+fn json_string_equals(source: &str, start: usize, end: usize, expected: &str) -> bool {
+    serde_json::from_str::<String>(&source[start..=end]).is_ok_and(|value| value == expected)
+}
+
+fn skip_whitespace(source: &str, start: usize) -> Option<usize> {
+    source[start..]
+        .find(|character: char| !character.is_whitespace())
+        .map(|offset| start + offset)
+}
+
+fn json_number_token(source: &str, value_start: usize) -> &str {
+    let value_end = source[value_start..]
+        .find(|character: char| character.is_whitespace() || character == ',' || character == '}')
+        .map_or(source.len(), |offset| value_start + offset);
+
+    &source[value_start..value_end]
 }
 
 fn escape_json_string(value: &str) -> String {
@@ -207,7 +280,6 @@ fn section_value_start(source: &str, key_end: usize) -> Option<usize> {
 }
 
 fn next_non_whitespace(source: &str, start: usize) -> Option<char> {
-    source[start..]
-        .chars()
-        .find(|character| !character.is_whitespace())
+    let index = skip_whitespace(source, start)?;
+    source[index..].chars().next()
 }
