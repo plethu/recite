@@ -139,17 +139,26 @@ impl ManifestSpans {
         self.next_offsets.clear();
     }
 
-    pub(crate) fn next_string_span(
+    pub(crate) fn next_key_span(&mut self, file: &str, source: &str, needle: &str) -> SourceSpan {
+        self.next_string_span(file, source, needle, StringRole::Key)
+    }
+
+    pub(crate) fn next_value_span(&mut self, file: &str, source: &str, needle: &str) -> SourceSpan {
+        self.next_string_span(file, source, needle, StringRole::Value)
+    }
+
+    fn next_string_span(
         &mut self,
         file: &str,
         source: &str,
         needle: &str,
+        role: StringRole,
     ) -> SourceSpan {
         let range = self.active_range.unwrap_or(SourceRange {
             start: 0,
             end: source.len(),
         });
-        let search_key = format!("{}:{needle}", range.start);
+        let search_key = format!("{}:{role:?}:{needle}", range.start);
         let search_start = self
             .next_offsets
             .get(&search_key)
@@ -159,7 +168,8 @@ impl ManifestSpans {
             return document_start_span(file);
         }
 
-        let Some(span_range) = next_json_string_range(source, range, search_start, needle) else {
+        let Some(span_range) = next_json_string_range(source, range, search_start, needle, role)
+        else {
             return document_start_span(file);
         };
 
@@ -179,11 +189,18 @@ struct SourceRange {
     end: usize,
 }
 
+#[derive(Clone, Copy, Debug)]
+enum StringRole {
+    Key,
+    Value,
+}
+
 fn next_json_string_range(
     source: &str,
     range: SourceRange,
     search_start: usize,
     needle: &str,
+    role: StringRole,
 ) -> Option<SourceRange> {
     let bytes = source.as_bytes();
     let mut index = search_start;
@@ -200,7 +217,9 @@ fn next_json_string_range(
             return None;
         }
 
-        if json_string_equals(source, string_start, string_end, needle) {
+        if string_role_matches(source, string_end + 1, role)
+            && json_string_equals(source, string_start, string_end, needle)
+        {
             return Some(SourceRange {
                 start: string_start,
                 end: string_end + 1,
@@ -211,6 +230,16 @@ fn next_json_string_range(
     }
 
     None
+}
+
+fn string_role_matches(source: &str, after_string: usize, role: StringRole) -> bool {
+    let is_key = skip_whitespace(source, after_string)
+        .and_then(|index| source.as_bytes().get(index))
+        == Some(&b':');
+    match role {
+        StringRole::Key => is_key,
+        StringRole::Value => !is_key,
+    }
 }
 
 fn source_section_range(source: &str, section: &str) -> Option<SourceRange> {

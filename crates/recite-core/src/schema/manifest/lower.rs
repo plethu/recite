@@ -204,7 +204,7 @@ fn lower_types(
 ) {
     let mut seen = BTreeSet::new();
     for entry in entries {
-        let name_span = spans.next_string_span(file, source, &entry.name);
+        let name_span = spans.next_key_span(file, source, &entry.name);
         if !validate_manifest_name(diagnostics, "type name", &entry.name, name_span.clone()) {
             continue;
         }
@@ -213,7 +213,7 @@ fn lower_types(
             continue;
         }
 
-        let kind_span = spans.next_string_span(file, source, &entry.value.kind);
+        let kind_span = spans.next_value_span(file, source, &entry.value.kind);
         if entry.value.kind != "enum" {
             diagnostics.push(diagnostic(
                 MALFORMED_SHAPE,
@@ -251,7 +251,7 @@ fn lower_registries(
 ) {
     let mut seen = BTreeSet::new();
     for entry in entries {
-        let name_span = spans.next_string_span(file, source, &entry.name);
+        let name_span = spans.next_key_span(file, source, &entry.name);
         if !validate_manifest_name(diagnostics, "registry name", &entry.name, name_span.clone()) {
             continue;
         }
@@ -269,7 +269,7 @@ fn lower_registries(
             &entry.value.values,
         );
         if let Some(origin) = &entry.value.origin {
-            let origin_span = spans.next_string_span(file, source, origin);
+            let origin_span = spans.next_value_span(file, source, origin);
             validate_non_empty_string(diagnostics, "registry origin", origin, origin_span);
         }
         schema.registries.insert(
@@ -292,7 +292,7 @@ fn lower_speakers(
 ) {
     let mut seen = BTreeSet::new();
     for entry in entries {
-        let name_span = spans.next_string_span(file, source, &entry.name);
+        let name_span = spans.next_key_span(file, source, &entry.name);
         if !validate_manifest_name(diagnostics, "speaker name", &entry.name, name_span.clone()) {
             continue;
         }
@@ -302,7 +302,7 @@ fn lower_speakers(
         }
 
         if let Some(display_name) = &entry.value.display_name {
-            let display_name_span = spans.next_string_span(file, source, display_name);
+            let display_name_span = spans.next_value_span(file, source, display_name);
             validate_non_empty_string(
                 diagnostics,
                 "speaker display_name",
@@ -330,7 +330,7 @@ fn lower_conditions(
 ) {
     let mut seen = BTreeSet::new();
     for entry in entries {
-        let name_span = spans.next_string_span(file, source, &entry.name);
+        let name_span = spans.next_key_span(file, source, &entry.name);
         if !validate_manifest_name(
             diagnostics,
             "condition name",
@@ -356,7 +356,7 @@ fn lower_conditions(
         let returns = match entry.value.returns.as_deref() {
             None | Some("bool") => ConditionReturnType::Bool,
             Some(value) => {
-                let return_span = spans.next_string_span(file, source, value);
+                let return_span = spans.next_value_span(file, source, value);
                 match parse_enum_return(value) {
                     Some(name) => {
                         pending_type_refs.push(PendingTypeReference {
@@ -398,7 +398,7 @@ fn lower_effects(
 ) {
     let mut seen = BTreeSet::new();
     for entry in entries {
-        let name_span = spans.next_string_span(file, source, &entry.name);
+        let name_span = spans.next_key_span(file, source, &entry.name);
         if !validate_manifest_name(diagnostics, "effect name", &entry.name, name_span.clone()) {
             continue;
         }
@@ -409,7 +409,7 @@ fn lower_effects(
 
         let mut modes = BTreeSet::new();
         for mode in &entry.value.modes {
-            let mode_span = spans.next_string_span(file, source, mode);
+            let mode_span = spans.next_value_span(file, source, mode);
             let Some(effect_mode) = parse_effect_mode(mode) else {
                 diagnostics.push(diagnostic(
                     MALFORMED_SHAPE,
@@ -454,7 +454,7 @@ fn lower_metadata(
 ) {
     let mut seen = BTreeSet::new();
     for entry in entries {
-        let name_span = spans.next_string_span(file, source, &entry.name);
+        let name_span = spans.next_key_span(file, source, &entry.name);
         if !validate_manifest_name(diagnostics, "metadata name", &entry.name, name_span.clone()) {
             continue;
         }
@@ -465,7 +465,7 @@ fn lower_metadata(
 
         let mut targets = BTreeSet::new();
         for target in &entry.value.targets {
-            let target_span = spans.next_string_span(file, source, target);
+            let target_span = spans.next_value_span(file, source, target);
             let Some(metadata_target) = parse_metadata_target(target) else {
                 diagnostics.push(diagnostic(
                     MALFORMED_SHAPE,
@@ -487,7 +487,7 @@ fn lower_metadata(
             }
         }
 
-        let type_ref_span = spans.next_string_span(file, source, &entry.value.type_ref);
+        let type_ref_span = spans.next_value_span(file, source, &entry.value.type_ref);
         let type_ref = parse_type_ref(&entry.value.type_ref).unwrap_or_else(|| {
             diagnostics.push(diagnostic(
                 INVALID_TYPE_REFERENCE,
@@ -528,7 +528,7 @@ fn lower_markup(
 ) {
     let mut seen = BTreeSet::new();
     for entry in entries {
-        let name_span = spans.next_string_span(file, source, &entry.name);
+        let name_span = spans.next_key_span(file, source, &entry.name);
         if !validate_manifest_name(diagnostics, "markup name", &entry.name, name_span.clone()) {
             continue;
         }
@@ -561,7 +561,7 @@ fn lower_params(
     params
         .iter()
         .map(|param| {
-            let name_span = spans.next_string_span(file, source, &param.name);
+            let name_span = spans.next_value_span(file, source, &param.name);
             if validate_non_empty_string(
                 diagnostics,
                 "parameter name",
@@ -583,7 +583,7 @@ fn lower_params(
                 ));
             }
 
-            let type_ref_span = spans.next_string_span(file, source, &param.type_ref);
+            let type_ref_span = spans.next_value_span(file, source, &param.type_ref);
             let type_ref = parse_type_ref(&param.type_ref).unwrap_or_else(|| {
                 diagnostics.push(diagnostic(
                     INVALID_TYPE_REFERENCE,
@@ -621,7 +621,7 @@ fn canonical_string_values(
 ) -> BTreeSet<String> {
     let mut canonical = BTreeSet::new();
     for value in values {
-        let value_span = spans.next_string_span(file, source, value);
+        let value_span = spans.next_value_span(file, source, value);
         if !validate_non_empty_string(diagnostics, "schema value", value, value_span.clone()) {
             continue;
         }

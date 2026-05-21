@@ -152,6 +152,49 @@ fn duplicate_definitions_and_values_report_stable_diagnostics() {
 }
 
 #[test]
+fn value_spans_ignore_matching_manifest_field_keys() {
+    let duplicate_enum_value = load_schema_manifest_str(
+        "fixtures/schema/invalid/value_name_matches_field_key.json",
+        r#"{
+  "schema_version": 1,
+  "types": {
+    "state": {
+      "kind": "enum",
+      "values": ["values", "values"]
+    }
+  }
+}"#,
+    );
+    assert!(duplicate_enum_value.schema.is_none());
+    assert_eq!(
+        diagnostic_codes(&duplicate_enum_value),
+        ["RECITE_SCHEMA003"]
+    );
+    assert_eq!(duplicate_enum_value.diagnostics[0].span.start.line(), 6);
+
+    let duplicate_parameter_name = load_schema_manifest_str(
+        "fixtures/schema/invalid/parameter_name_matches_field_key.json",
+        r#"{
+  "schema_version": 1,
+  "conditions": {
+    "check": {
+      "params": [
+        { "name": "params", "type": "bool" },
+        { "name": "params", "type": "bool" }
+      ]
+    }
+  }
+}"#,
+    );
+    assert!(duplicate_parameter_name.schema.is_none());
+    assert_eq!(
+        diagnostic_codes(&duplicate_parameter_name),
+        ["RECITE_SCHEMA003"]
+    );
+    assert_eq!(duplicate_parameter_name.diagnostics[0].span.start.line(), 7);
+}
+
+#[test]
 fn invalid_enum_and_registry_type_references_report_stable_diagnostics() {
     let report = load_schema_manifest_str(
         "fixtures/schema/invalid/invalid_type_references.json",
