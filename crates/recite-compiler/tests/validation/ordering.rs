@@ -25,7 +25,7 @@ fn diagnostics_are_sorted_by_canonical_source_order() {
         &report,
         [
             "RECITE_VALIDATE005",
-            "RECITE_VALIDATE001",
+            "RECITE_ID001",
             "RECITE_VALIDATE014",
             "RECITE_VALIDATE007",
         ],
@@ -53,7 +53,7 @@ fn validation_is_independent_of_caller_file_order() {
     let reverse = validate_source_files(&[second, first]);
 
     assert_eq!(forward, reverse);
-    assert_codes(&forward, ["RECITE_VALIDATE006", "RECITE_VALIDATE004"]);
+    assert_codes(&forward, ["RECITE_VALIDATE006", "RECITE_ID004"]);
     assert_eq!(
         forward.diagnostics[0].related[0].span.file,
         "dialogue/a.recite"
@@ -80,7 +80,7 @@ fn line_and_choice_ids_share_one_localisable_namespace() {
 
     let report = validate_source_files(&files);
 
-    assert_codes(&report, ["RECITE_VALIDATE004"]);
+    assert_codes(&report, ["RECITE_ID004"]);
     assert_eq!(report.diagnostics[0].span.start.line(), 4);
     assert_eq!(report.diagnostics[0].related[0].span.start.line(), 2);
 }

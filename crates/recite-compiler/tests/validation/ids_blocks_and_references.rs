@@ -31,10 +31,10 @@ fn validates_missing_and_duplicate_line_and_choice_ids_in_source_order() {
     assert_codes(
         &report,
         [
-            "RECITE_VALIDATE001",
-            "RECITE_VALIDATE002",
-            "RECITE_VALIDATE004",
-            "RECITE_VALIDATE003",
+            "RECITE_ID001",
+            "RECITE_ID002",
+            "RECITE_ID004",
+            "RECITE_ID003",
         ],
     );
     assert_spans(&report, [(2, 1), (8, 3), (14, 3), (17, 1)]);
