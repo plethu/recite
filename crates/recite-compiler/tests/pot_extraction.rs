@@ -87,6 +87,29 @@ fn structured_entries_preserve_context_before_formatting() {
 }
 
 #[test]
+fn extracts_inline_markup_from_recite_source_unchanged() {
+    let inputs = vec![CompileInput::new(
+        "dialogue/markup.recite",
+        concat!(
+            ":: start default\n",
+            "> marked_line\n",
+            "  [slow]Choose[/slow].\n",
+            "  ? marked_choice\n",
+            "    [shake]Ask now[/shake].\n",
+            "    -> END\n",
+        ),
+    )];
+
+    let document = extract_pot(inputs).catalog.expect("valid POT catalog");
+
+    assert_eq!(document.entries.len(), 2);
+    assert_eq!(document.entries[0].context, "marked_line");
+    assert_eq!(document.entries[0].source_text, "[slow]Choose[/slow].");
+    assert_eq!(document.entries[1].context, "marked_choice");
+    assert_eq!(document.entries[1].source_text, "[shake]Ask now[/shake].");
+}
+
+#[test]
 fn extraction_order_is_independent_of_caller_file_order() {
     let forward = project_inputs();
     let reverse = forward.iter().cloned().rev().collect::<Vec<_>>();

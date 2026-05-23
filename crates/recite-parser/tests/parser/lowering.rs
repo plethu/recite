@@ -91,6 +91,47 @@ fn lowering_reports_mixed_indent_inside_line_body() {
 }
 
 #[test]
+fn lowering_preserves_inline_markup_as_source_text() {
+    let source = concat!(
+        ":: tavern_arrival default\n",
+        "> marked_line\n",
+        "  [slow]Welcome[/slow]\n",
+        "  [shake]Stay alert.[/shake]\n",
+        "  ? ask_road\n",
+        "    [slow]Ask about the road.[/slow]\n",
+        "    -> END\n",
+    );
+
+    let lowered = lower(source);
+
+    assert!(lowered.diagnostics.is_empty());
+    let line = line_statement(single_block(&lowered), 0);
+    assert_eq!(
+        line.source_text.text,
+        "[slow]Welcome[/slow]\n[shake]Stay alert.[/shake]"
+    );
+    assert_eq!(
+        nested_choice(line, 0).source_text.text,
+        "[slow]Ask about the road.[/slow]"
+    );
+}
+
+#[test]
+fn lowering_leaves_malformed_markup_text_for_validation() {
+    let source = concat!(
+        ":: tavern_arrival default\n",
+        "> marked_line\n",
+        "  [slow]Welcome.\n",
+    );
+
+    let lowered = lower(source);
+
+    assert!(lowered.diagnostics.is_empty());
+    let line = line_statement(single_block(&lowered), 0);
+    assert_eq!(line.source_text.text, "[slow]Welcome.");
+}
+
+#[test]
 fn mixed_indent_statement_markers_report_indent_diagnostics() {
     let source = concat!(
         ":: tavern_arrival\n",

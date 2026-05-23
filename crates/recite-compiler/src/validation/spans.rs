@@ -16,6 +16,7 @@ impl<'a> Validator<'a> {
         owner: &'static str,
     ) {
         self.validate_span(source_file, &source_text.span, owner);
+        self.validate_markup(source_text);
     }
     pub(super) fn validate_metadata(
         &mut self,

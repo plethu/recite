@@ -146,3 +146,29 @@ fn emits_prompt_with_stable_choice_ids_and_waits_for_selection() {
         })
     );
 }
+
+#[test]
+fn runtime_preserves_inline_markup_without_interpreting_it() {
+    let asset = compile_asset(
+        "dialogue/start.recite",
+        concat!(
+            ":: start default\n",
+            "> prompt_line\n",
+            "  [slow]What next?[/slow]\n",
+            "  ? ask_work\n",
+            "    [shake]Ask about work.[/shake]\n",
+            "    -> END\n",
+        ),
+    );
+    let mut session = start_scene(&asset, None).expect("starts");
+
+    let event = next(&asset, &mut session).expect("emits prompt");
+    let DialogueEvent::Prompt { line, choices } = event else {
+        panic!("expected prompt event");
+    };
+    let line = line.expect("prompt line is present");
+    assert_eq!(line.source_text, "[slow]What next?[/slow]");
+    assert_eq!(line.text, "[slow]What next?[/slow]");
+    assert_eq!(choices[0].source_text, "[shake]Ask about work.[/shake]");
+    assert_eq!(choices[0].text, "[shake]Ask about work.[/shake]");
+}
