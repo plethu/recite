@@ -2,6 +2,20 @@ use super::CompiledValueError;
 
 pub const BLAKE3_DIGEST_LEN: usize = 32;
 
+#[must_use]
+pub fn canonical_source_fingerprint(source: &str) -> ContentFingerprint {
+    canonical_blake3_fingerprint(source.as_bytes())
+}
+
+#[must_use]
+pub(crate) fn canonical_blake3_fingerprint(bytes: &[u8]) -> ContentFingerprint {
+    let digest = blake3::hash(bytes);
+    ContentFingerprint {
+        algorithm: FingerprintAlgorithm::blake3(),
+        digest: FingerprintDigest(digest.as_bytes().to_vec()),
+    }
+}
+
 macro_rules! define_non_empty_string {
     ($name:ident) => {
         #[derive(Clone, Debug, Eq, PartialEq, Hash, Ord, PartialOrd)]

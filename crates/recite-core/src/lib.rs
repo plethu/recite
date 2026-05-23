@@ -44,6 +44,7 @@ pub use compiled::{
     V0_SOURCE_SPAN_FIELDS, V0_SPEAKER_FIELDS, V0_STATEMENT_FIELDS, V0_STATEMENT_TAG_DIVERT,
     V0_STATEMENT_TAG_EFFECT, V0_STATEMENT_TAG_END, V0_STATEMENT_TAG_IF, V0_STATEMENT_TAG_LINE,
     V0_STATEMENT_TAG_MATCH, V0_STATEMENT_TAG_PROMPT, V0_VALUE_TAG_ARRAY, V0_VALUE_TAG_SCALAR,
+    canonical_source_fingerprint,
 };
 pub use diagnostic::{Diagnostic, DiagnosticCode, DiagnosticSeverity, RelatedSpan};
 pub use error::CoreValueError;
@@ -52,7 +53,7 @@ pub use schema::{
     ConditionDefinition, ConditionReturnType, EffectDefinition, EnumTypeDefinition,
     MarkupDefinition, MetadataDefinition, MetadataTarget, ParameterDefinition, ProjectSchema,
     RegistryDefinition, SchemaLoadReport, SchemaTypeDefinition, SchemaTypeRef, SpeakerDefinition,
-    load_schema_manifest_str,
+    canonical_schema_fingerprint, load_schema_manifest_str,
 };
 pub use source_location::{SourcePosition, SourceSpan};
 pub use value::{Metadata, MetadataEntry, ScalarValue, Value};

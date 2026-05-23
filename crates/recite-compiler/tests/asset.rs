@@ -5,7 +5,7 @@ use recite_core::{
     BLAKE3_DIGEST_LEN, COMPILED_ASSET_FORMAT_VERSION_V0, COMPILER_COMPATIBILITY_VERSION_V0,
     CompiledAssetEncoding, CompiledAssetId, CompiledEffectMode, CompiledInspectionEncoding,
     CompiledStatementKind, CompilerVersion, SchemaFingerprint, SourceMapId, StatementIndex,
-    load_schema_manifest_str,
+    canonical_source_fingerprint, load_schema_manifest_str,
 };
 use serde::de::IgnoredAny;
 
@@ -42,6 +42,12 @@ fn valid_fixture_compiles_to_runtime_facing_v0_tables() {
     assert_eq!(
         dialogue.sources[0].fingerprint.digest().as_bytes().len(),
         BLAKE3_DIGEST_LEN
+    );
+    assert_eq!(
+        dialogue.sources[0].fingerprint,
+        canonical_source_fingerprint(&fixture_support::fixture_source(
+            "fixtures/recite/valid/core_language_spike.recite"
+        ))
     );
 
     assert_eq!(

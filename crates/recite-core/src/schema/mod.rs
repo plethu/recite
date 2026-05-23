@@ -8,4 +8,5 @@ pub use model::{
     ConditionDefinition, ConditionReturnType, EffectDefinition, EnumTypeDefinition,
     MarkupDefinition, MetadataDefinition, MetadataTarget, ParameterDefinition, ProjectSchema,
     RegistryDefinition, SchemaTypeDefinition, SchemaTypeRef, SpeakerDefinition,
+    canonical_schema_fingerprint,
 };
