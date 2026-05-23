@@ -20,7 +20,7 @@ mod choices;
 mod conditions;
 #[path = "traversal/control_flow.rs"]
 mod control_flow;
-#[path = "traversal/effects.rs"]
+#[path = "traversal/effects/mod.rs"]
 mod effects;
 #[path = "traversal/localisation.rs"]
 mod localisation;

@@ -1,6 +1,9 @@
 use std::collections::BTreeMap;
 
-use crate::{SourcePosition, SourceSpan};
+use crate::{
+    SourcePosition, SourceSpan,
+    source_location::{point_one, position_for_byte_offset},
+};
 
 pub(crate) fn json_error_span(file: &str, error: &serde_json::Error) -> SourceSpan {
     let line = u32::try_from(error.line()).unwrap_or(u32::MAX).max(1);
@@ -16,8 +19,8 @@ pub(crate) fn top_level_key_span(file: &str, source: &str, key: &str) -> SourceS
         .map(|range| {
             SourceSpan::new(
                 file,
-                position_for_offset(source, range.start),
-                Some(position_for_offset(source, range.end)),
+                position_for_byte_offset(source, range.start),
+                Some(position_for_byte_offset(source, range.end)),
             )
         })
         .unwrap_or_else(|| document_start_span(file))
@@ -34,27 +37,7 @@ pub(crate) fn top_level_number_token<'a>(source: &'a str, key: &str) -> Option<&
 }
 
 fn document_start_span(file: &str) -> SourceSpan {
-    SourceSpan::point(
-        file,
-        SourcePosition::new(1, 1).expect("static source position is valid"),
-    )
-}
-
-fn position_for_offset(source: &str, offset: usize) -> SourcePosition {
-    let mut line = 1_u32;
-    let mut column = 1_u32;
-    for (index, character) in source.char_indices() {
-        if index >= offset {
-            break;
-        }
-        if character == '\n' {
-            line = line.saturating_add(1);
-            column = 1;
-        } else {
-            column = column.saturating_add(1);
-        }
-    }
-    SourcePosition::new(line, column).expect("line and column start at one")
+    SourceSpan::point(file, point_one())
 }
 
 fn top_level_key_range(source: &str, key: &str) -> Option<SourceRange> {
@@ -177,8 +160,8 @@ impl ManifestSpans {
 
         SourceSpan::new(
             file,
-            position_for_offset(source, span_range.start),
-            Some(position_for_offset(source, span_range.end)),
+            position_for_byte_offset(source, span_range.start),
+            Some(position_for_byte_offset(source, span_range.end)),
         )
     }
 }
