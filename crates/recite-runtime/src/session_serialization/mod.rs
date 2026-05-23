@@ -1,5 +1,7 @@
 mod codec;
 mod identity;
+mod pending_effect;
+mod pending_position;
 mod prompt;
 mod references;
 mod restore;

@@ -25,6 +25,18 @@ pub(super) fn assert_line(event: Result<DialogueEvent, DialogueError>, id: &str,
     assert_eq!(line.text, text);
 }
 
+pub(super) fn assert_effect(
+    event: Result<DialogueEvent, DialogueError>,
+    function: &str,
+) -> DialogueEffectRequest {
+    let DialogueEvent::Effect(effect) = event.expect("effect event succeeds") else {
+        panic!("expected effect event");
+    };
+
+    assert_eq!(effect.function, function);
+    effect
+}
+
 pub(super) fn empty_end() -> DialogueEvent {
     DialogueEvent::End {
         deferred_effects: Vec::new(),

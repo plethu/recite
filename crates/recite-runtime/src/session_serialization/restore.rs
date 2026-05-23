@@ -1,12 +1,13 @@
 use recite_core::{BlockIndex, CompiledDialogue, StatementIndex};
 
 use crate::session_snapshot::{
-    DialogueSessionSnapshot, SESSION_SNAPSHOT_FORMAT_VERSION_V0, statement_range,
+    CURRENT_SESSION_SNAPSHOT_FORMAT_VERSION, DialogueSessionSnapshot, statement_range,
 };
 use crate::traversal::AssetView;
 use crate::{DialogueError, DialogueSession};
 
 use super::identity::ensure_snapshot_matches_asset;
+use super::pending_effect::restore_pending_effect;
 use super::prompt::restore_pending_prompt;
 use super::references::{restore_choice_ids, restore_effects, restore_locale, snapshot_reference};
 use super::stack::{restore_frames, validate_range_stack, validate_statement_pointer};
@@ -15,7 +16,7 @@ pub fn restore_session(
     asset: &CompiledDialogue,
     snapshot: DialogueSessionSnapshot,
 ) -> Result<DialogueSession, DialogueError> {
-    if snapshot.snapshot_format_version != SESSION_SNAPSHOT_FORMAT_VERSION_V0 {
+    if snapshot.snapshot_format_version != CURRENT_SESSION_SNAPSHOT_FORMAT_VERSION {
         return Err(DialogueError::UnsupportedSessionSnapshotFormat {
             snapshot_format_version: snapshot.snapshot_format_version,
         });
@@ -60,6 +61,15 @@ pub fn restore_session(
         current_range,
         next_statement,
     )?;
+    let pending_effect = restore_pending_effect(
+        asset_view,
+        snapshot.pending_effect.as_ref(),
+        pending_prompt.is_some(),
+        snapshot.ended,
+        current_range,
+        next_statement,
+        snapshot.trace_counter,
+    )?;
 
     Ok(DialogueSession {
         asset_id: asset.header.asset_id.clone(),
@@ -74,7 +84,7 @@ pub fn restore_session(
         next_statement,
         continuation_stack,
         pending_prompt,
-        pending_effect: None,
+        pending_effect,
         previous_prompt_choices,
         selected_choice_history,
         deferred_effects,

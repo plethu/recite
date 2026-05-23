@@ -22,10 +22,11 @@ pub use session_serialization::{
     decode_session_messagepack, encode_session_messagepack, restore_session,
 };
 pub use session_snapshot::{
-    DialogueContentFingerprintSnapshot, DialogueDeferredEffectSnapshot,
-    DialogueSchemaFingerprintSnapshot, DialogueSessionFrameSnapshot,
-    DialogueSessionPendingChoiceSnapshot, DialogueSessionPendingPromptSnapshot,
+    CURRENT_SESSION_SNAPSHOT_FORMAT_VERSION, DialogueContentFingerprintSnapshot,
+    DialogueDeferredEffectSnapshot, DialogueSchemaFingerprintSnapshot,
+    DialogueSessionFrameSnapshot, DialogueSessionPendingChoiceSnapshot,
+    DialogueSessionPendingEffectSnapshot, DialogueSessionPendingPromptSnapshot,
     DialogueSessionRangeSnapshot, DialogueSessionSnapshot, DialogueSessionSourceSnapshot,
-    SESSION_SNAPSHOT_FORMAT_VERSION_V0, snapshot_session,
+    SESSION_SNAPSHOT_FORMAT_VERSION_V0, SESSION_SNAPSHOT_FORMAT_VERSION_V1, snapshot_session,
 };
 pub use traversal::{acknowledge_effect, choose, next, start_scene, start_scene_with_options};

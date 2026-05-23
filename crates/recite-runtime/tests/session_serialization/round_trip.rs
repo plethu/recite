@@ -45,6 +45,7 @@ fn structured_snapshot_records_locale_and_compact_runtime_location() {
     assert_line(next(&asset, &mut session), "start_line", "Start.");
 
     let snapshot = snapshot_session(&session);
+    assert_eq!(snapshot.snapshot_format_version, 1);
     assert_eq!(snapshot.asset_id, "dialogue/main.recitec");
     assert_eq!(snapshot.compiler_version, "0.0.1");
     assert_eq!(snapshot.source_map_id, "dialogue/main.recitec.map");

@@ -26,9 +26,14 @@ pub fn next(
     if session.ended {
         return Err(DialogueError::SessionEnded);
     }
-    if let Some(effect) = &session.pending_effect {
+    if let Some(effect) = &mut session.pending_effect {
+        if effect.reemit_on_next {
+            effect.reemit_on_next = false;
+            return Ok(DialogueEvent::Effect(effect.request.clone()));
+        }
+
         return Err(DialogueError::EffectPending {
-            effect: effect.id.clone(),
+            effect: effect.request.id.clone(),
         });
     }
     if let Some(prompt) = &session.pending_prompt {

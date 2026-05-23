@@ -22,7 +22,7 @@ pub fn choose(
 
     if let Some(effect) = &session.pending_effect {
         return Err(DialogueError::EffectPending {
-            effect: effect.id.clone(),
+            effect: effect.request.id.clone(),
         });
     }
 

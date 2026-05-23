@@ -194,3 +194,183 @@ fn unreachable_pending_prompt_statement_is_rejected() {
         Err(DialogueError::InvalidSessionSnapshot { .. })
     ));
 }
+
+#[test]
+fn out_of_range_pending_effect_statement_snapshot_is_rejected_as_snapshot_error() {
+    let asset = blocking_effect_asset();
+    let mut session = start_scene(&asset, None).expect("starts");
+    next(&asset, &mut session).expect("emits blocking effect");
+    let mut snapshot = snapshot_session(&session);
+    snapshot
+        .pending_effect
+        .as_mut()
+        .expect("pending effect")
+        .statement = 99;
+
+    assert!(matches!(
+        restore_session(&asset, snapshot),
+        Err(DialogueError::InvalidSessionSnapshot { .. })
+    ));
+}
+
+#[test]
+fn pending_effect_statement_must_be_immediately_before_next_statement() {
+    let asset = blocking_effect_asset();
+    let mut session = start_scene(&asset, None).expect("starts");
+    next(&asset, &mut session).expect("emits blocking effect");
+    let mut snapshot = snapshot_session(&session);
+    snapshot.next_statement = snapshot
+        .pending_effect
+        .as_ref()
+        .expect("pending effect")
+        .statement;
+
+    assert!(matches!(
+        restore_session(&asset, snapshot),
+        Err(DialogueError::InvalidSessionSnapshot { .. })
+    ));
+}
+
+#[test]
+fn pending_effect_statement_must_reference_an_effect_statement() {
+    let asset = compile_asset(
+        "dialogue/start.recite",
+        concat!(
+            ":: start default\n",
+            "> start_line\n",
+            "  Start.\n",
+            "-> END\n",
+        ),
+    );
+    let mut session = start_scene(&asset, None).expect("starts");
+    next(&asset, &mut session).expect("emits line");
+    let mut snapshot = snapshot_session(&session);
+    snapshot.pending_effect = Some(DialogueSessionPendingEffectSnapshot {
+        statement: 0,
+        id: "effect:dialogue/start.recite:2:1#1".to_owned(),
+    });
+
+    assert!(matches!(
+        restore_session(&asset, snapshot),
+        Err(DialogueError::InvalidSessionSnapshot { .. })
+    ));
+}
+
+#[test]
+fn pending_effect_statement_must_reference_a_blocking_effect() {
+    let asset = compile_asset(
+        "dialogue/start.recite",
+        concat!(
+            ":: start default\n",
+            "! immediate play_sfx(snap)\n",
+            "-> END\n",
+        ),
+    );
+    let mut session = start_scene(&asset, None).expect("starts");
+    next(&asset, &mut session).expect("emits immediate effect");
+    let mut snapshot = snapshot_session(&session);
+    snapshot.pending_effect = Some(DialogueSessionPendingEffectSnapshot {
+        statement: 0,
+        id: "effect:dialogue/start.recite:2:1#1".to_owned(),
+    });
+
+    assert!(matches!(
+        restore_session(&asset, snapshot),
+        Err(DialogueError::InvalidSessionSnapshot { .. })
+    ));
+}
+
+#[test]
+fn pending_effect_rejects_forged_deferred_effect_statement() {
+    let asset = compile_asset(
+        "dialogue/start.recite",
+        concat!(
+            ":: start default\n",
+            "! deferred entered_start()\n",
+            "> start_line\n",
+            "  Start.\n",
+            "-> END\n",
+        ),
+    );
+    let session = start_scene(&asset, None).expect("starts");
+    let mut snapshot = snapshot_session(&session);
+    snapshot.next_statement = 1;
+    snapshot.trace_counter = 1;
+    snapshot.pending_effect = Some(DialogueSessionPendingEffectSnapshot {
+        statement: 0,
+        id: "effect:dialogue/start.recite:2:1#1".to_owned(),
+    });
+
+    assert!(matches!(
+        restore_session(&asset, snapshot),
+        Err(DialogueError::InvalidSessionSnapshot { .. })
+    ));
+}
+
+#[test]
+fn forged_pending_effect_id_is_rejected_as_snapshot_error() {
+    let asset = blocking_effect_asset();
+    let mut session = start_scene(&asset, None).expect("starts");
+    next(&asset, &mut session).expect("emits blocking effect");
+    let mut snapshot = snapshot_session(&session);
+    snapshot.pending_effect.as_mut().expect("pending effect").id = "effect:forged#1".to_owned();
+
+    assert!(matches!(
+        restore_session(&asset, snapshot),
+        Err(DialogueError::InvalidSessionSnapshot { .. })
+    ));
+}
+
+#[test]
+fn ended_session_with_pending_effect_is_rejected_as_snapshot_error() {
+    let asset = blocking_effect_asset();
+    let mut session = start_scene(&asset, None).expect("starts");
+    next(&asset, &mut session).expect("emits blocking effect");
+    let mut snapshot = snapshot_session(&session);
+    snapshot.ended = true;
+
+    assert!(matches!(
+        restore_session(&asset, snapshot),
+        Err(DialogueError::InvalidSessionSnapshot { .. })
+    ));
+}
+
+#[test]
+fn snapshot_cannot_have_both_pending_prompt_and_pending_effect() {
+    let asset = compile_asset(
+        "dialogue/start.recite",
+        concat!(
+            ":: start default\n",
+            "> prompt_line\n",
+            "  What next?\n",
+            "  ? work\n",
+            "    Work.\n",
+            "    -> END\n",
+        ),
+    );
+    let mut session = start_scene(&asset, None).expect("starts");
+    next(&asset, &mut session).expect("emits prompt");
+    let mut snapshot = snapshot_session(&session);
+    snapshot.pending_effect = Some(DialogueSessionPendingEffectSnapshot {
+        statement: 0,
+        id: "effect:dialogue/start.recite:2:1#1".to_owned(),
+    });
+
+    assert!(matches!(
+        restore_session(&asset, snapshot),
+        Err(DialogueError::InvalidSessionSnapshot { .. })
+    ));
+}
+
+fn blocking_effect_asset() -> CompiledDialogue {
+    compile_asset(
+        "dialogue/start.recite",
+        concat!(
+            ":: start default\n",
+            "! blocking grant_item(map)\n",
+            "> after_grant\n",
+            "  Granted.\n",
+            "-> END\n",
+        ),
+    )
+}
