@@ -5,9 +5,10 @@ mod rows;
 mod table;
 mod wire;
 
+pub(crate) use fingerprint::canonical_blake3_fingerprint;
 pub use fingerprint::{
     BLAKE3_DIGEST_LEN, ContentFingerprint, FingerprintAlgorithm, FingerprintDigest,
-    SchemaFingerprint,
+    SchemaFingerprint, canonical_source_fingerprint,
 };
 pub use header::{
     COMPILED_ASSET_FORMAT_VERSION_V0, COMPILER_COMPATIBILITY_VERSION_V0, CompiledAssetEncoding,

@@ -285,7 +285,6 @@ dependencies = [
 name = "recite-compiler"
 version = "0.0.1"
 dependencies = [
- "blake3",
  "insta",
  "recite-core",
  "recite-parser",
@@ -299,6 +298,7 @@ dependencies = [
 name = "recite-core"
 version = "0.0.1"
 dependencies = [
+ "blake3",
  "serde",
  "serde_json",
 ]

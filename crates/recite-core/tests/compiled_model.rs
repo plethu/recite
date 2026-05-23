@@ -19,7 +19,7 @@ use recite_core::{
     V0_SCHEMA_FINGERPRINT_TAG_FINGERPRINT, V0_SCHEMA_FINGERPRINT_TAG_NO_SCHEMA,
     V0_SOURCE_SPAN_FIELDS, V0_STATEMENT_TAG_DIVERT, V0_STATEMENT_TAG_EFFECT, V0_STATEMENT_TAG_END,
     V0_STATEMENT_TAG_IF, V0_STATEMENT_TAG_LINE, V0_STATEMENT_TAG_MATCH, V0_STATEMENT_TAG_PROMPT,
-    Value,
+    Value, canonical_source_fingerprint,
 };
 
 #[test]
@@ -99,6 +99,18 @@ fn blake3_fingerprints_accept_exactly_32_byte_digests() {
 
     assert_eq!(fingerprint.algorithm().as_str(), "blake3");
     assert_eq!(fingerprint.digest().as_bytes().len(), BLAKE3_DIGEST_LEN);
+}
+
+#[test]
+fn canonical_source_fingerprint_is_blake3_with_stable_digest_length() {
+    let first = canonical_source_fingerprint(":: start default\n-> END\n");
+    let second = canonical_source_fingerprint(":: start default\n-> END\n");
+    let changed = canonical_source_fingerprint(":: start default\n> line\n  Text.\n");
+
+    assert_eq!(first, second);
+    assert_ne!(first, changed);
+    assert_eq!(first.algorithm().as_str(), "blake3");
+    assert_eq!(first.digest().as_bytes().len(), BLAKE3_DIGEST_LEN);
 }
 
 #[test]

@@ -8,7 +8,6 @@ repository.workspace = true
 readme.workspace = true
 
 [dependencies]
-blake3 = "1.8.5"
 recite-core.workspace = true
 recite-parser.workspace = true
 rmp-serde.workspace = true

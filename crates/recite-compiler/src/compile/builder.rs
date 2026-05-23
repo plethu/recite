@@ -3,8 +3,8 @@ use std::collections::BTreeMap;
 use recite_core::{
     BlockIndex, Choice, CompiledAssetHeader, CompiledBlock, CompiledChoice, CompiledDialogue,
     CompiledEffect, CompiledLine, CompiledMatchArm, CompiledMetadataEntry, CompiledSourceFile,
-    CompiledSourceMapEntry, CompiledSpeaker, CompiledStatement, ContentFingerprint, DivertTarget,
-    Effect, IfBranch, Line, SourceFileIndex, SpeakerIndex,
+    CompiledSourceMapEntry, CompiledSpeaker, CompiledStatement, DivertTarget, Effect, IfBranch,
+    Line, SourceFileIndex, SpeakerIndex, canonical_source_fingerprint,
 };
 
 use super::CompileError;
@@ -143,10 +143,9 @@ impl<'a> AssetBuilder<'a> {
         self.inputs
             .iter()
             .map(|input| {
-                let digest = blake3::hash(input.source.as_bytes());
                 Ok(CompiledSourceFile {
                     path: input.source_file.path.clone(),
-                    fingerprint: ContentFingerprint::blake3(digest.as_bytes().to_vec())?,
+                    fingerprint: canonical_source_fingerprint(&input.source),
                 })
             })
             .collect()
