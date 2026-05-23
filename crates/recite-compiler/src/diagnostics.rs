@@ -24,6 +24,10 @@ pub(crate) const WRONG_EFFECT_ARITY: &str = "RECITE_VALIDATE018";
 pub(crate) const WRONG_EFFECT_ARGUMENT_TYPE: &str = "RECITE_VALIDATE019";
 pub(crate) const UNSUPPORTED_EFFECT_MODE: &str = "RECITE_VALIDATE020";
 pub(crate) const INVALID_EFFECT_ARGUMENT_VALUE: &str = "RECITE_VALIDATE021";
+pub(crate) const UNKNOWN_MARKUP_TAG: &str = "RECITE_VALIDATE022";
+pub(crate) const UNBALANCED_MARKUP_TAG: &str = "RECITE_VALIDATE023";
+pub(crate) const MISSING_MARKUP_CLOSING_TAG: &str = "RECITE_VALIDATE024";
+pub(crate) const INVALID_MARKUP_NESTING: &str = "RECITE_VALIDATE025";
 
 pub(crate) fn missing_line_id(line: &Line) -> Diagnostic {
     diagnostic(
@@ -294,6 +298,62 @@ pub(crate) fn invalid_effect_argument_value(
         span,
     )
     .with_help("use a value exported in the project schema manifest")
+}
+
+pub(crate) fn unknown_markup_tag(tag: &str, span: SourceSpan) -> Diagnostic {
+    diagnostic(
+        UNKNOWN_MARKUP_TAG,
+        format!("unknown inline markup tag `{tag}`"),
+        span,
+    )
+    .with_help("declare the tag in the project schema manifest or remove the markup")
+}
+
+pub(crate) fn unbalanced_markup_tag(
+    tag: &str,
+    span: SourceSpan,
+    detail: impl Into<String>,
+    related_opening: Option<SourceSpan>,
+) -> Diagnostic {
+    let diagnostic = diagnostic(
+        UNBALANCED_MARKUP_TAG,
+        format!("unbalanced inline markup tag `{tag}`: {}", detail.into()),
+        span,
+    )
+    .with_help("balance inline markup tags in localisable source text");
+
+    if let Some(opening) = related_opening {
+        diagnostic.with_related([RelatedSpan::new(opening, "open markup tag is here")])
+    } else {
+        diagnostic
+    }
+}
+
+pub(crate) fn missing_markup_closing_tag(tag: &str, span: SourceSpan) -> Diagnostic {
+    diagnostic(
+        MISSING_MARKUP_CLOSING_TAG,
+        format!("inline markup tag `{tag}` requires a closing tag"),
+        span,
+    )
+    .with_help(format!("add `[/{}]` before the localisable text ends", tag))
+}
+
+pub(crate) fn invalid_markup_nesting(
+    parent: &str,
+    child: &str,
+    child_span: SourceSpan,
+    parent_span: SourceSpan,
+) -> Diagnostic {
+    diagnostic(
+        INVALID_MARKUP_NESTING,
+        format!("inline markup tag `{parent}` cannot contain nested tag `{child}`"),
+        child_span,
+    )
+    .with_related([RelatedSpan::new(
+        parent_span,
+        "non-nesting markup tag starts here",
+    )])
+    .with_help(format!("close `[{parent}]` before opening `[{child}]`"))
 }
 
 fn diagnostic(code: &str, message: impl Into<String>, span: SourceSpan) -> Diagnostic {

@@ -2,6 +2,7 @@ pub(crate) mod project;
 
 mod effects;
 mod ids;
+mod markup;
 mod spans;
 mod state;
 mod statements;

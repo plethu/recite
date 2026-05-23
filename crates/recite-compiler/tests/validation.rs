@@ -15,6 +15,8 @@ mod fixture_support;
 mod fixtures;
 #[path = "validation/ids_blocks_and_references.rs"]
 mod ids_blocks_and_references;
+#[path = "validation/markup.rs"]
+mod markup;
 #[path = "validation/ordering.rs"]
 mod ordering;
 #[path = "validation/source_spans.rs"]
