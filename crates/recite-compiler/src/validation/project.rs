@@ -2,7 +2,7 @@ use std::collections::{BTreeMap, BTreeSet};
 
 use recite_core::{Diagnostic, SourceFile, SourcePosition, SourceSpan};
 
-pub(super) fn source_files_in_project_order(source_files: &[SourceFile]) -> Vec<&SourceFile> {
+pub(crate) fn source_files_in_project_order(source_files: &[SourceFile]) -> Vec<&SourceFile> {
     let mut ordered = source_files.iter().enumerate().collect::<Vec<_>>();
     ordered.sort_by(|(left_index, left), (right_index, right)| {
         left.path.cmp(&right.path).then(left_index.cmp(right_index))

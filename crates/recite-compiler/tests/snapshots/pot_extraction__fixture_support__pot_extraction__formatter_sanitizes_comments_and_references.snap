@@ -1,0 +1,10 @@
+---
+source: crates/recite-compiler/tests/../../../tests/support/fixtures.rs
+assertion_line: 12
+expression: actual
+---
+#. file: dialogue bad.recite
+#: dialogue/bad_name_part.recite:1:1
+msgctxt "safe"
+msgid "Text."
+msgstr ""
