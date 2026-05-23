@@ -1,0 +1,70 @@
+---
+source: crates/recite-compiler/tests/../../../tests/support/fixtures.rs
+assertion_line: 12
+expression: actual
+---
+#. file: dialogue/a.recite
+#. block: start
+#. speaker: narrator
+#: dialogue/a.recite:3:3
+msgctxt "intro_001"
+msgid "Welcome\\home."
+msgstr ""
+
+#. file: dialogue/a.recite
+#. block: start
+#. speaker: narrator
+#: dialogue/a.recite:5:5
+msgctxt "ask_work"
+msgid "Ask about work."
+msgstr ""
+
+#. file: dialogue/a.recite
+#. block: start
+#. speaker: hazel
+#: dialogue/a.recite:9:5
+msgctxt "secret_001"
+msgid "I can tell you."
+msgstr ""
+
+#. file: dialogue/a.recite
+#. block: start
+#. speaker: narrator
+#: dialogue/a.recite:12:5
+msgctxt "fallback_001"
+msgid "Not yet."
+msgstr ""
+
+#. file: dialogue/a.recite
+#. block: start
+#. speaker: hazel
+#: dialogue/a.recite:16:7
+msgctxt "ready_001"
+msgid "Ready."
+msgstr ""
+
+#. file: dialogue/a.recite
+#. block: start
+#. speaker: narrator
+#: dialogue/a.recite:19:7
+msgctxt "waiting_001"
+msgid "Waiting."
+msgstr ""
+
+#. file: dialogue/b.recite
+#. block: later
+#. speaker: hazel
+#: dialogue/b.recite:3:3
+msgctxt "later_line"
+msgid "Later \"quoted\" text."
+msgstr ""
+
+#. speaker display name
+msgctxt "dialogue_speaker:hazel"
+msgid "Hazel"
+msgstr ""
+
+#. speaker display name
+msgctxt "dialogue_speaker:narrator"
+msgid "Narrator"
+msgstr ""
