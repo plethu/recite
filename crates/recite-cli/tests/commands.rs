@@ -32,9 +32,59 @@ fn validate_reports_diagnostics_and_success() {
         ":: start default\n>\n  Missing id.\n",
     );
     let output = run(recite().arg("validate").arg(&invalid));
-    output.assert_failure();
+    assert_diagnostic_failure(&output);
     output.assert_stderr_contains("error RECITE_ID001");
     output.assert_stderr_contains("invalid.recite:2:1");
+}
+
+#[test]
+fn operational_failures_keep_error_prefix() {
+    let temp = TempDir::new().expect("tempdir");
+    let output = run(recite().arg("validate").arg(temp.path()));
+
+    output.assert_failure();
+    output.assert_exit_code(1);
+    output.assert_stderr("error: no .recite inputs found\n");
+}
+
+#[test]
+fn help_covers_issue_25_commands_and_options() {
+    let output = run(recite().arg("--help"));
+    output.assert_success().assert_stderr("");
+    for command in [
+        "validate",
+        "compile",
+        "extract",
+        "check-ids",
+        "check-markup",
+        "check-metadata",
+        "validate-project",
+        "check-fresh",
+    ] {
+        output.assert_stdout_contains(command);
+    }
+
+    let compile = run(recite().arg("compile").arg("--help"));
+    compile.assert_success().assert_stderr("");
+    compile.assert_stdout_contains("Usage: recite compile [OPTIONS] --output <OUTPUT> <PATHS>...");
+    compile.assert_stdout_contains("--schema <SCHEMA>");
+
+    let extract = run(recite().arg("extract").arg("--help"));
+    extract.assert_success().assert_stderr("");
+    extract.assert_stdout_contains("--output <OUTPUT>");
+    extract.assert_stdout_contains("--schema <SCHEMA>");
+
+    let metadata = run(recite().arg("check-metadata").arg("--help"));
+    metadata.assert_success().assert_stderr("");
+    metadata.assert_stdout_contains("--schema <SCHEMA>");
+
+    let project = run(recite().arg("validate-project").arg("--help"));
+    project.assert_success().assert_stderr("");
+    project.assert_stdout_contains("recite.project.toml");
+
+    let fresh = run(recite().arg("check-fresh").arg("--help"));
+    fresh.assert_success().assert_stderr("");
+    fresh.assert_stdout_contains("compiled assets are fresh");
 }
 
 #[test]
@@ -72,12 +122,46 @@ fn compile_writes_messagepack_only_after_clean_validation() {
         .arg("--output")
         .arg(&output_path)
         .arg(&invalid));
-    output.assert_failure();
+    assert_diagnostic_failure(&output);
     output.assert_stderr_contains("RECITE_ID001");
     assert_eq!(
         fs::read(&output_path).expect("stale output remains"),
         stale,
         "failed compile must not overwrite existing output"
+    );
+}
+
+#[test]
+fn compile_does_not_write_output_when_schema_fails_to_load() {
+    let temp = TempDir::new().expect("tempdir");
+    let source = write_recite(
+        temp.path(),
+        "valid.recite",
+        ":: start default\n> intro\n  Hello.\n-> END\n",
+    );
+    let bad_schema = write_file(
+        temp.path(),
+        "bad-schema.json",
+        r#"{"schema_version":"one"}"#,
+    );
+    let output_path = temp.path().join("dialogue.recitec");
+    let stale = b"do not overwrite";
+    fs::write(&output_path, stale).expect("stale output");
+
+    let output = run(recite()
+        .arg("compile")
+        .arg("--output")
+        .arg(&output_path)
+        .arg("--schema")
+        .arg(bad_schema)
+        .arg(source));
+
+    assert_diagnostic_failure(&output);
+    output.assert_stderr_contains("RECITE_SCHEMA001");
+    assert_eq!(
+        fs::read(&output_path).expect("stale output remains"),
+        stale,
+        "failed schema load must not overwrite existing output"
     );
 }
 
@@ -133,6 +217,58 @@ fn extract_emits_pot_to_stdout_or_output_after_validation() {
 }
 
 #[test]
+fn extract_does_not_write_output_on_validation_or_schema_failure() {
+    let temp = TempDir::new().expect("tempdir");
+    let invalid = write_recite(
+        temp.path(),
+        "invalid.recite",
+        ":: start default\n>\n  Missing id.\n",
+    );
+    let missing_output = temp.path().join("missing.pot");
+
+    let output = run(recite()
+        .arg("extract")
+        .arg("--output")
+        .arg(&missing_output)
+        .arg(&invalid));
+    assert_diagnostic_failure(&output);
+    output.assert_stderr_contains("RECITE_ID001");
+    assert!(
+        !missing_output.exists(),
+        "failed extract must not create a new output file"
+    );
+
+    let valid = write_recite(
+        temp.path(),
+        "valid.recite",
+        ":: start default\n> intro\n  Hello.\n-> END\n",
+    );
+    let bad_schema = write_file(
+        temp.path(),
+        "bad-schema.json",
+        r#"{"schema_version":"one"}"#,
+    );
+    let stale_output = temp.path().join("stale.pot");
+    let stale = b"do not overwrite";
+    fs::write(&stale_output, stale).expect("stale output");
+
+    let output = run(recite()
+        .arg("extract")
+        .arg("--output")
+        .arg(&stale_output)
+        .arg("--schema")
+        .arg(bad_schema)
+        .arg(valid));
+    assert_diagnostic_failure(&output);
+    output.assert_stderr_contains("RECITE_SCHEMA001");
+    assert_eq!(
+        fs::read(&stale_output).expect("stale output remains"),
+        stale,
+        "failed schema load must not overwrite existing output"
+    );
+}
+
+#[test]
 fn extract_refuses_to_overwrite_input_source() {
     let temp = TempDir::new().expect("tempdir");
     let source_text = ":: start default\n> intro\n  Hello.\n-> END\n";
@@ -163,7 +299,7 @@ fn check_ids_reports_only_id_diagnostics() {
     );
 
     let output = run(recite().arg("check-ids").arg(&source));
-    output.assert_failure();
+    assert_diagnostic_failure(&output);
     output.assert_stderr_contains("RECITE_ID001");
     output.assert_stderr_contains("RECITE_ID003");
     output.assert_stderr_not_contains("RECITE_VALIDATE005");
@@ -201,7 +337,7 @@ fn check_markup_uses_schema_when_supplied_and_skips_schema_policy_without_one() 
         ":: start default\n> intro\n  Hello.\n    Mixed indent.\n",
     );
     let output = run(recite().arg("check-markup").arg(malformed));
-    output.assert_failure();
+    assert_diagnostic_failure(&output);
     output.assert_stderr_contains("RECITE_PARSE007");
 
     let schema = write_file(
@@ -214,7 +350,7 @@ fn check_markup_uses_schema_when_supplied_and_skips_schema_policy_without_one() 
         .arg("--schema")
         .arg(schema)
         .arg(source));
-    output.assert_failure();
+    assert_diagnostic_failure(&output);
     output.assert_stderr_contains("RECITE_VALIDATE022");
 }
 
@@ -249,7 +385,7 @@ fn check_metadata_requires_schema_and_reports_schema_validation() {
         .arg("--schema")
         .arg(&schema)
         .arg(invalid_metadata));
-    output.assert_failure();
+    assert_diagnostic_failure(&output);
     output.assert_stderr_contains("RECITE_VALIDATE026");
 
     let bad_schema = write_file(
@@ -262,7 +398,7 @@ fn check_metadata_requires_schema_and_reports_schema_validation() {
         .arg("--schema")
         .arg(bad_schema)
         .arg(source));
-    output.assert_failure();
+    assert_diagnostic_failure(&output);
     output.assert_stderr_contains("RECITE_SCHEMA001");
 }
 
@@ -355,7 +491,7 @@ participants = ["hazel"]
     );
 
     let output = run(recite().arg("validate-project").arg(temp.path()));
-    output.assert_failure();
+    assert_diagnostic_failure(&output);
     output.assert_stderr_contains("RECITE_PROJECT002");
     output.assert_stderr_contains("RECITE_PROJECT003");
     output.assert_stderr_contains("RECITE_PROJECT004");
@@ -382,7 +518,7 @@ participants = ["rhea"]
     );
 
     let output = run(recite().arg("validate-project").arg(temp.path()));
-    output.assert_failure();
+    assert_diagnostic_failure(&output);
     output.assert_stderr_contains("RECITE_PROJECT008");
 
     write_project_manifest(
@@ -398,7 +534,7 @@ participants = ["hazel"]
     );
 
     let output = run(recite().arg("validate-project").arg(temp.path()));
-    output.assert_failure();
+    assert_diagnostic_failure(&output);
     output.assert_stderr_contains("RECITE_PROJECT001");
 }
 
@@ -428,7 +564,7 @@ participants = ["hazel"]
     .expect("stale source");
     fs::write(&schema, schema_manifest(["hazel", "rhea"])).expect("stale schema");
     let output = run(recite().arg("check-fresh").arg(temp.path()));
-    output.assert_failure();
+    assert_diagnostic_failure(&output);
     output.assert_stderr_contains("RECITE_FRESH001");
     output.assert_stderr_contains("RECITE_FRESH002");
 
@@ -437,7 +573,7 @@ participants = ["hazel"]
     compile_project_asset(temp.path(), &source, "dialogue.recitec", Some(&schema));
     corrupt_compiler_compatibility(&temp.path().join("dialogue.recitec"));
     let output = run(recite().arg("check-fresh").arg(temp.path()));
-    output.assert_failure();
+    assert_diagnostic_failure(&output);
     output.assert_stderr_contains("RECITE_FRESH003");
 }
 
@@ -462,7 +598,7 @@ participants = ["hazel"]
 
     fs::write(&schema, r#"{"schema_version":"one"}"#).expect("invalid schema");
     let output = run(recite().arg("check-fresh").arg(temp.path()));
-    output.assert_failure();
+    assert_diagnostic_failure(&output);
     output.assert_stderr_contains("RECITE_SCHEMA001");
     output.assert_stderr_not_contains("RECITE_FRESH002");
 }
@@ -484,8 +620,14 @@ participants = ["hazel"]
 
     fs::remove_file(source).expect("remove compiled source");
     let output = run(recite().arg("check-fresh").arg(temp.path()));
-    output.assert_failure();
+    assert_diagnostic_failure(&output);
     output.assert_stderr_contains("RECITE_PROJECT006");
+}
+
+fn assert_diagnostic_failure(output: &Output) {
+    output.assert_failure();
+    output.assert_exit_code(1);
+    output.assert_stderr_not_contains("error: diagnostics reported");
 }
 
 fn write_recite(root: &Path, name: &str, source: &str) -> PathBuf {
@@ -562,6 +704,7 @@ impl CommandExt for Command {
 trait OutputExt {
     fn assert_success(&self) -> &Self;
     fn assert_failure(&self) -> &Self;
+    fn assert_exit_code(&self, expected: i32) -> &Self;
     fn assert_stdout(&self, expected: &str) -> &Self;
     fn assert_stderr(&self, expected: &str) -> &Self;
     fn assert_stdout_contains(&self, expected: &str);
@@ -585,6 +728,17 @@ impl OutputExt for Output {
         assert!(
             !self.status.success(),
             "expected failure\nstdout:\n{}\nstderr:\n{}",
+            stdout(self),
+            stderr(self)
+        );
+        self
+    }
+
+    fn assert_exit_code(&self, expected: i32) -> &Self {
+        assert_eq!(
+            self.status.code(),
+            Some(expected),
+            "unexpected exit code\nstdout:\n{}\nstderr:\n{}",
             stdout(self),
             stderr(self)
         );

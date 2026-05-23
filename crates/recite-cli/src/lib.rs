@@ -126,6 +126,7 @@ pub fn run(args: impl IntoIterator<Item = OsString>) -> ExitCode {
 
     match run_command(cli.command, &mut stdout, &mut stderr) {
         Ok(()) => SUCCESS,
+        Err(CliError::Diagnostics) => ExitCode::from(1),
         Err(error) => {
             let _ = writeln!(stderr, "error: {error}");
             ExitCode::from(1)
