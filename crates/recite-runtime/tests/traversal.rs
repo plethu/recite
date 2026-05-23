@@ -2,13 +2,14 @@ use recite_compiler::{CompileInput, CompileOptions, compile_inputs};
 use recite_core::{
     BlockIndex, BlockLookupEntry, BlockLookupTable, ChoiceId, ChoiceRange, CompiledAssetId,
     CompiledConditionCall, CompiledConditionExpression, CompiledDialogue, CompiledDivertTarget,
-    CompiledStatementKind, CompilerVersion, EffectIndex, LineIndex, MatchArmIndex, MatchArmRange,
-    SchemaFingerprint, SourceMapId,
+    CompiledStatementKind, CompilerVersion, EffectId, EffectIndex, LineIndex, MatchArmIndex,
+    MatchArmRange, SchemaFingerprint, SourceMapId,
 };
 use recite_runtime::{
     ConditionArgument, ConditionEvaluationError, ConditionQuery, DialogueEffectArgument,
-    DialogueEffectMode, DialogueEffectRequest, DialogueError, DialogueEvent, EmptyDialogueContext,
-    UnsupportedStatementKind, choose as runtime_choose, next as runtime_next, start_scene,
+    DialogueEffectMode, DialogueEffectRequest, DialogueError, DialogueEvent, EffectAck,
+    EmptyDialogueContext, UnsupportedStatementKind, acknowledge_effect, choose as runtime_choose,
+    next as runtime_next, start_scene,
 };
 use std::cell::RefCell;
 use std::collections::BTreeMap;

@@ -15,7 +15,7 @@ pub use context::{
 pub use error::{DialogueError, UnsupportedStatementKind};
 pub use event::{
     ChoiceEchoMode, DialogueChoice, DialogueEffectArgument, DialogueEffectMode,
-    DialogueEffectRequest, DialogueEvent, DialogueLine,
+    DialogueEffectRequest, DialogueEvent, DialogueLine, EffectAck,
 };
 pub use session::{DialogueSession, DialogueSessionOptions};
 pub use session_serialization::{
@@ -28,4 +28,4 @@ pub use session_snapshot::{
     DialogueSessionRangeSnapshot, DialogueSessionSnapshot, DialogueSessionSourceSnapshot,
     SESSION_SNAPSHOT_FORMAT_VERSION_V0, snapshot_session,
 };
-pub use traversal::{choose, next, start_scene, start_scene_with_options};
+pub use traversal::{acknowledge_effect, choose, next, start_scene, start_scene_with_options};

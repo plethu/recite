@@ -74,6 +74,7 @@ pub fn restore_session(
         next_statement,
         continuation_stack,
         pending_prompt,
+        pending_effect: None,
         previous_prompt_choices,
         selected_choice_history,
         deferred_effects,

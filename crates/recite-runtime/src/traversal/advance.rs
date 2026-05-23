@@ -8,7 +8,7 @@ use crate::{DialogueError, DialogueSession};
 
 use super::choice::prompt_choices;
 use super::condition::evaluate_condition;
-use super::effect::collect_deferred_effect;
+use super::effect::handle_effect;
 use super::flow::{apply_divert, enter_statement_range, finish_scene, next_statement_after};
 use super::output::dialogue_line;
 use super::{AssetView, malformed};
@@ -25,6 +25,11 @@ pub fn next(
 
     if session.ended {
         return Err(DialogueError::SessionEnded);
+    }
+    if let Some(effect) = &session.pending_effect {
+        return Err(DialogueError::EffectPending {
+            effect: effect.id.clone(),
+        });
     }
     if let Some(prompt) = &session.pending_prompt {
         return Err(DialogueError::PromptPending {
@@ -125,7 +130,9 @@ pub fn next(
                 });
             }
             CompiledStatementKind::Effect(effect_index) => {
-                collect_deferred_effect(asset_view, session, *effect_index)?;
+                if let Some(event) = handle_effect(asset_view, session, *effect_index)? {
+                    return session.emit(event);
+                }
             }
         }
     }
