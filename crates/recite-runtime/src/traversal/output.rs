@@ -1,6 +1,6 @@
 use recite_core::{
     CompiledArgument, CompiledChoice, CompiledChoiceEcho, CompiledEffect, CompiledEffectMode,
-    CompiledMetadataEntry, LineIndex, MetadataRange, ScalarValue, SpeakerIndex,
+    CompiledMetadataEntry, LineIndex, LocaleId, MetadataRange, ScalarValue, SpeakerIndex,
 };
 
 use crate::DialogueError;
@@ -8,20 +8,45 @@ use crate::event::{
     ChoiceEchoMode, DialogueChoice, DialogueEffectArgument, DialogueEffectMode,
     DialogueEffectRequest, DialogueLine,
 };
+use crate::locale::{LocaleProvider, TextDomain};
 
 use super::asset::AssetView;
+
+#[derive(Clone, Copy)]
+pub(super) struct LocaleLookup<'a> {
+    pub(super) locale: Option<&'a LocaleId>,
+    pub(super) variant: Option<&'a str>,
+    pub(super) provider: Option<&'a dyn LocaleProvider>,
+}
+
+impl<'a> LocaleLookup<'a> {
+    pub(super) fn source() -> Self {
+        Self {
+            locale: None,
+            variant: None,
+            provider: None,
+        }
+    }
+}
 
 pub(super) fn dialogue_line(
     asset: AssetView<'_>,
     line_index: LineIndex,
     default_speaker: Option<SpeakerIndex>,
+    locale: LocaleLookup<'_>,
 ) -> Result<DialogueLine, DialogueError> {
     let line = asset.line_at(line_index)?;
+    let text = localise_text(
+        line.id.as_str(),
+        &line.source_text,
+        TextDomain::Line,
+        locale,
+    );
 
     Ok(DialogueLine {
         id: line.id.clone(),
         source_text: line.source_text.clone(),
-        text: line.source_text.clone(),
+        text,
         speaker: line
             .speaker
             .or(default_speaker)
@@ -36,16 +61,39 @@ pub(super) fn dialogue_choice(
     choice: &CompiledChoice,
     is_available: bool,
     unavailable_reason: Option<String>,
+    locale: LocaleLookup<'_>,
 ) -> Result<DialogueChoice, DialogueError> {
+    let text = localise_text(
+        choice.id.as_str(),
+        &choice.source_text,
+        TextDomain::Choice,
+        locale,
+    );
+
     Ok(DialogueChoice {
         id: choice.id.clone(),
         source_text: choice.source_text.clone(),
-        text: choice.source_text.clone(),
+        text,
         metadata: metadata(asset, choice.metadata)?,
         is_available,
         unavailable_reason,
         echo: choice_echo(&choice.echo),
     })
+}
+
+fn localise_text(
+    id: &str,
+    source_text: &str,
+    domain: TextDomain,
+    locale: LocaleLookup<'_>,
+) -> String {
+    let Some((locale_id, provider)) = locale.locale.zip(locale.provider) else {
+        return source_text.to_owned();
+    };
+
+    provider
+        .lookup(id, source_text, domain, locale_id, locale.variant)
+        .unwrap_or_else(|| source_text.to_owned())
 }
 
 pub(crate) fn dialogue_effect_request(
