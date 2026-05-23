@@ -3,6 +3,7 @@ use recite_core::{CompiledDialogue, CompiledDivertTarget, CompiledStatementKind}
 use crate::context::DialogueContext;
 use crate::error::UnsupportedStatementKind;
 use crate::event::DialogueEvent;
+use crate::locale::LocaleProvider;
 use crate::session::PendingPrompt;
 use crate::{DialogueError, DialogueSession};
 
@@ -10,7 +11,7 @@ use super::choice::prompt_choices;
 use super::condition::evaluate_condition;
 use super::effect::handle_effect;
 use super::flow::{apply_divert, enter_statement_range, finish_scene, next_statement_after};
-use super::output::dialogue_line;
+use super::output::{LocaleLookup, dialogue_line};
 use super::{AssetView, malformed};
 
 const MAX_INTERNAL_STEPS: usize = 10_000;
@@ -19,6 +20,46 @@ pub fn next(
     asset: &CompiledDialogue,
     session: &mut DialogueSession,
     context: &dyn DialogueContext,
+) -> Result<DialogueEvent, DialogueError> {
+    next_with_locale(asset, session, context, LocaleLookup::source())
+}
+
+pub fn next_with_locale_provider(
+    asset: &CompiledDialogue,
+    session: &mut DialogueSession,
+    context: &dyn DialogueContext,
+    provider: &dyn LocaleProvider,
+) -> Result<DialogueEvent, DialogueError> {
+    next_with_locale_provider_and_variant(asset, session, context, provider, None)
+}
+
+pub fn next_with_locale_provider_and_variant(
+    asset: &CompiledDialogue,
+    session: &mut DialogueSession,
+    context: &dyn DialogueContext,
+    provider: &dyn LocaleProvider,
+    variant: Option<&str>,
+) -> Result<DialogueEvent, DialogueError> {
+    let locale = session.locale().cloned();
+    let variant = variant.map(str::to_owned);
+
+    next_with_locale(
+        asset,
+        session,
+        context,
+        LocaleLookup {
+            locale: locale.as_ref(),
+            variant: variant.as_deref(),
+            provider: Some(provider),
+        },
+    )
+}
+
+pub(super) fn next_with_locale(
+    asset: &CompiledDialogue,
+    session: &mut DialogueSession,
+    context: &dyn DialogueContext,
+    locale: LocaleLookup<'_>,
 ) -> Result<DialogueEvent, DialogueError> {
     let asset_view = AssetView::new(asset)?;
     asset_view.ensure_session_matches(session)?;
@@ -69,8 +110,12 @@ pub fn next(
         let statement = asset_view.statement_at(session.next_statement)?;
         match &statement.kind {
             CompiledStatementKind::Line(line) => {
-                let event =
-                    DialogueEvent::Line(dialogue_line(asset_view, *line, block.default_speaker)?);
+                let event = DialogueEvent::Line(dialogue_line(
+                    asset_view,
+                    *line,
+                    block.default_speaker,
+                    locale,
+                )?);
                 session.next_statement = next_statement_after(session.next_statement)?;
                 return session.emit(event);
             }
@@ -84,9 +129,9 @@ pub fn next(
                 }
 
                 let line = line
-                    .map(|line| dialogue_line(asset_view, line, block.default_speaker))
+                    .map(|line| dialogue_line(asset_view, line, block.default_speaker, locale))
                     .transpose()?;
-                let prompt_choices = prompt_choices(asset_view, choice_range, context)?;
+                let prompt_choices = prompt_choices(asset_view, choice_range, context, locale)?;
                 let choice_ids = prompt_choices
                     .events
                     .iter()

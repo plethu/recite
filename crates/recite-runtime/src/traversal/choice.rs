@@ -2,20 +2,65 @@ use recite_core::{ChoiceId, ChoiceRange, CompiledDialogue, CompiledDivertTarget}
 
 use crate::context::DialogueContext;
 use crate::event::{DialogueChoice, DialogueEvent};
+use crate::locale::LocaleProvider;
 use crate::session::PendingPromptChoice;
 use crate::{DialogueError, DialogueSession};
 
 use super::AssetView;
-use super::advance::next;
+use super::advance::next_with_locale;
 use super::condition::evaluate_condition;
 use super::flow::finish_scene;
-use super::output::dialogue_choice;
+use super::output::{LocaleLookup, dialogue_choice};
 
 pub fn choose(
     asset: &CompiledDialogue,
     session: &mut DialogueSession,
     choice_id: ChoiceId,
     context: &dyn DialogueContext,
+) -> Result<DialogueEvent, DialogueError> {
+    choose_with_locale(asset, session, choice_id, context, LocaleLookup::source())
+}
+
+pub fn choose_with_locale_provider(
+    asset: &CompiledDialogue,
+    session: &mut DialogueSession,
+    choice_id: ChoiceId,
+    context: &dyn DialogueContext,
+    provider: &dyn LocaleProvider,
+) -> Result<DialogueEvent, DialogueError> {
+    choose_with_locale_provider_and_variant(asset, session, choice_id, context, provider, None)
+}
+
+pub fn choose_with_locale_provider_and_variant(
+    asset: &CompiledDialogue,
+    session: &mut DialogueSession,
+    choice_id: ChoiceId,
+    context: &dyn DialogueContext,
+    provider: &dyn LocaleProvider,
+    variant: Option<&str>,
+) -> Result<DialogueEvent, DialogueError> {
+    let locale = session.locale().cloned();
+    let variant = variant.map(str::to_owned);
+
+    choose_with_locale(
+        asset,
+        session,
+        choice_id,
+        context,
+        LocaleLookup {
+            locale: locale.as_ref(),
+            variant: variant.as_deref(),
+            provider: Some(provider),
+        },
+    )
+}
+
+fn choose_with_locale(
+    asset: &CompiledDialogue,
+    session: &mut DialogueSession,
+    choice_id: ChoiceId,
+    context: &dyn DialogueContext,
+    locale: LocaleLookup<'_>,
 ) -> Result<DialogueEvent, DialogueError> {
     let asset_view = AssetView::new(asset)?;
     asset_view.ensure_session_matches(session)?;
@@ -64,7 +109,7 @@ pub fn choose(
         session.current_range = asset_view.block_at(block_index)?.statements;
         session.next_statement = statement_index;
         session.continuation_stack.clear();
-        return next(asset, session, context);
+        return next_with_locale(asset, session, context, locale);
     }
 
     finish_scene(session)
@@ -79,6 +124,7 @@ pub(super) fn prompt_choices(
     asset: AssetView<'_>,
     range: ChoiceRange,
     context: &dyn DialogueContext,
+    locale: LocaleLookup<'_>,
 ) -> Result<PromptChoices, DialogueError> {
     let mut events = Vec::new();
     let mut pending = Vec::new();
@@ -95,6 +141,7 @@ pub(super) fn prompt_choices(
             choice,
             is_available,
             unavailable_reason.clone(),
+            locale,
         )?);
         pending.push(PendingPromptChoice {
             id: choice.id.clone(),
