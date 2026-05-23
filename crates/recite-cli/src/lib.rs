@@ -1,3 +1,4 @@
+use std::collections::BTreeMap;
 use std::ffi::OsString;
 use std::fs;
 use std::io::{self, Write};
@@ -10,12 +11,19 @@ use recite_compiler::{
     extract_pot_with_schema, validate_source_files, validate_source_files_with_schema,
 };
 use recite_core::{
-    CompiledAssetId, CompilerVersion, Diagnostic, ProjectSchema, SchemaFingerprint, SourceMapId,
-    load_schema_manifest_str,
+    COMPILED_ASSET_FORMAT_VERSION_V0, COMPILER_COMPATIBILITY_VERSION_V0, CompiledAssetDecodeError,
+    CompiledAssetId, CompilerVersion, Diagnostic, DiagnosticCode, DiagnosticSeverity,
+    ProjectFreshnessInput, ProjectManifest, ProjectSchema, SchemaFingerprint, SourceMapId,
+    SourceSpan, decode_compiled_dialogue_messagepack, load_schema_manifest_str,
+    project::{
+        MALFORMED_COMPILED_ASSET, MISSING_COMPILED_ASSET, STALE_COMPILER_COMPATIBILITY,
+        project_scene_key_span, validate_project_freshness, validate_project_manifest,
+    },
 };
 use recite_parser::parse;
 
 const SUCCESS: ExitCode = ExitCode::SUCCESS;
+const PROJECT_MANIFEST_FILE: &str = "recite.project.toml";
 #[derive(Debug, Parser)]
 #[command(
     name = "recite",
@@ -44,6 +52,12 @@ enum Command {
     /// Validate metadata against a schema manifest.
     #[command(name = "check-metadata")]
     CheckMetadata(RequiredSchemaInputArgs),
+    /// Validate recite.project.toml and referenced compiled assets.
+    #[command(name = "validate-project")]
+    ValidateProject(ProjectRootArgs),
+    /// Check whether project compiled assets are fresh.
+    #[command(name = "check-fresh")]
+    CheckFresh(ProjectRootArgs),
 }
 
 #[derive(Debug, Args)]
@@ -71,6 +85,12 @@ struct RequiredSchemaInputArgs {
     /// One or more .recite files, or directories containing .recite files.
     #[arg(required = true)]
     paths: Vec<PathBuf>,
+}
+
+#[derive(Debug, Args)]
+struct ProjectRootArgs {
+    /// Project root containing recite.project.toml.
+    project_root: PathBuf,
 }
 
 #[derive(Debug, Args)]
@@ -167,13 +187,21 @@ fn run_command(
                 )
             })
         }
+        Command::ValidateProject(args) | Command::CheckFresh(args) => {
+            let diagnostics = validate_project(args.project_root)?;
+            report_diagnostics(stderr, diagnostics.iter())?;
+            diagnostics
+                .is_empty()
+                .then_some(())
+                .ok_or(CliError::Diagnostics)
+        }
     }
 }
 
 fn compile_command(args: CompileArgs, stderr: &mut dyn Write) -> Result<(), CliError> {
     let input_files = collect_input_files(&args.paths)?;
     reject_output_input_alias(&args.output, &input_files)?;
-    let inputs = read_compile_inputs_from_files(input_files)?;
+    let inputs = read_compile_inputs_for_output(&args.output, input_files)?;
     let schema = load_optional_schema(args.schema.as_deref(), stderr)?;
     let options = compile_options(&args.output, schema.as_ref())?;
     let report = if let Some(schema) = &schema {
@@ -220,6 +248,171 @@ fn extract_command(
         stdout.write_all(pot.as_bytes())?;
     }
     Ok(())
+}
+
+fn validate_project(project_root: PathBuf) -> Result<Vec<Diagnostic>, CliError> {
+    let manifest_path = project_root.join(PROJECT_MANIFEST_FILE);
+    let manifest_source = fs::read_to_string(&manifest_path).map_err(|source| CliError::Read {
+        path: manifest_path.clone(),
+        source,
+    })?;
+    let manifest_file = display_path(&manifest_path);
+    let report = ProjectManifest::load_str(manifest_file.clone(), &manifest_source);
+    let mut diagnostics = report.diagnostics;
+    let Some(manifest) = report.manifest else {
+        return Ok(diagnostics);
+    };
+
+    let loaded_schema = load_project_schema(&project_root, &manifest)?;
+    diagnostics.extend(loaded_schema.diagnostics.iter().cloned());
+    diagnostics.extend(validate_project_manifest(
+        &manifest_file,
+        &manifest_source,
+        &manifest,
+        loaded_schema.schema.as_ref(),
+    ));
+
+    let current_schema_fingerprint = match loaded_schema.schema.as_ref() {
+        Some(schema) => Some(ProjectSchema::canonical_fingerprint(schema)),
+        None if loaded_schema.diagnostics.is_empty() => Some(SchemaFingerprint::NoSchema),
+        None => None,
+    };
+
+    for (scene_index, scene) in manifest.scenes.iter().enumerate() {
+        let asset_path = resolve_project_path(&project_root, &scene.asset);
+        if !asset_path.is_file() {
+            diagnostics.push(project_diagnostic(
+                MISSING_COMPILED_ASSET,
+                format!(
+                    "scene '{}' references missing compiled asset '{}'",
+                    scene.id, scene.asset
+                ),
+                project_scene_key_span(&manifest_file, &manifest_source, scene_index, "asset"),
+            ));
+            continue;
+        }
+
+        let bytes = fs::read(&asset_path).map_err(|source| CliError::Read {
+            path: asset_path.clone(),
+            source,
+        })?;
+        let asset = match decode_compiled_dialogue_messagepack(&bytes) {
+            Ok(asset) => asset,
+            Err(CompiledAssetDecodeError::UnsupportedFormat {
+                format_version,
+                compiler_compatibility_version,
+            }) if format_version == COMPILED_ASSET_FORMAT_VERSION_V0
+                && compiler_compatibility_version != COMPILER_COMPATIBILITY_VERSION_V0 =>
+            {
+                diagnostics.push(project_diagnostic(
+                    STALE_COMPILER_COMPATIBILITY,
+                    format!(
+                        "compiled asset '{}' uses compiler compatibility version {}, expected {}",
+                        scene.asset,
+                        compiler_compatibility_version,
+                        COMPILER_COMPATIBILITY_VERSION_V0
+                    ),
+                    project_scene_key_span(&manifest_file, &manifest_source, scene_index, "asset"),
+                ));
+                continue;
+            }
+            Err(error) => {
+                diagnostics.push(project_diagnostic(
+                    MALFORMED_COMPILED_ASSET,
+                    format!(
+                        "scene '{}' references malformed compiled asset '{}': {error}",
+                        scene.id, scene.asset
+                    ),
+                    project_scene_key_span(&manifest_file, &manifest_source, scene_index, "asset"),
+                ));
+                continue;
+            }
+        };
+
+        let current_sources = read_project_sources(&project_root, &asset_path, &asset.sources);
+        let current_source_map = current_sources
+            .iter()
+            .map(|(path, source)| (path.as_str(), source.as_deref()))
+            .collect::<BTreeMap<_, _>>();
+        diagnostics.extend(validate_project_freshness(
+            &manifest_file,
+            &manifest_source,
+            ProjectFreshnessInput {
+                scene_index,
+                scene,
+                asset: &asset,
+                current_sources: current_source_map,
+                current_schema_fingerprint: current_schema_fingerprint.clone(),
+            },
+        ));
+    }
+
+    Ok(diagnostics)
+}
+
+fn load_project_schema(
+    project_root: &Path,
+    manifest: &ProjectManifest,
+) -> Result<LoadedSchema, CliError> {
+    let Some(schema_path) = manifest.project.schema.as_deref() else {
+        return Ok(LoadedSchema {
+            schema: None,
+            diagnostics: Vec::new(),
+        });
+    };
+
+    load_schema(&resolve_project_path(project_root, schema_path))
+}
+
+fn read_project_sources(
+    project_root: &Path,
+    asset_path: &Path,
+    sources: &[recite_core::CompiledSourceFile],
+) -> Vec<(String, Option<String>)> {
+    sources
+        .iter()
+        .map(|source| {
+            let current_source = project_source_candidates(project_root, asset_path, &source.path)
+                .into_iter()
+                .find_map(|path| fs::read_to_string(path).ok());
+            (source.path.clone(), current_source)
+        })
+        .collect()
+}
+
+fn project_source_candidates(
+    project_root: &Path,
+    asset_path: &Path,
+    source_path: &str,
+) -> Vec<PathBuf> {
+    let source_path = Path::new(source_path);
+    if source_path.is_absolute() {
+        return vec![source_path.to_owned()];
+    }
+
+    let mut candidates = Vec::new();
+    let mut ancestor = asset_path.parent();
+    while let Some(directory) = ancestor {
+        let candidate = directory.join(source_path);
+        if !candidates.iter().any(|existing| existing == &candidate) {
+            candidates.push(candidate);
+        }
+
+        if directory == project_root {
+            break;
+        }
+        ancestor = directory.parent();
+    }
+
+    let project_candidate = project_root.join(source_path);
+    if !candidates
+        .iter()
+        .any(|existing| existing == &project_candidate)
+    {
+        candidates.push(project_candidate);
+    }
+
+    candidates
 }
 
 fn validate_inputs(
@@ -283,6 +476,60 @@ fn read_compile_inputs_from_files(files: Vec<PathBuf>) -> Result<Vec<CompileInpu
             Ok(CompileInput::new(display_path(&path), source))
         })
         .collect()
+}
+
+fn read_compile_inputs_for_output(
+    output: &Path,
+    files: Vec<PathBuf>,
+) -> Result<Vec<CompileInput>, CliError> {
+    let project_root = compile_path_root(output, &files);
+    files
+        .into_iter()
+        .map(|path| {
+            let source = fs::read_to_string(&path).map_err(|source| CliError::Read {
+                path: path.clone(),
+                source,
+            })?;
+            let input_path = project_root
+                .as_ref()
+                .and_then(|root| project_relative_path(root, &path))
+                .unwrap_or_else(|| display_path(&path));
+            Ok(CompileInput::new(input_path, source))
+        })
+        .collect()
+}
+
+fn compile_path_root(output: &Path, files: &[PathBuf]) -> Option<PathBuf> {
+    let output = canonical_output_path(output)?;
+    let mut root = output.parent()?.to_owned();
+
+    for file in files {
+        let canonical = fs::canonicalize(file).ok()?;
+        root = common_path_prefix(&root, &canonical)?;
+    }
+
+    (root.components().count() > 1).then_some(root)
+}
+
+fn project_relative_path(root: &Path, path: &Path) -> Option<String> {
+    let canonical = fs::canonicalize(path).ok()?;
+    canonical
+        .strip_prefix(root)
+        .ok()
+        .map(display_path)
+        .filter(|path| !path.is_empty())
+}
+
+fn common_path_prefix(left: &Path, right: &Path) -> Option<PathBuf> {
+    let mut prefix = PathBuf::new();
+    for (left_component, right_component) in left.components().zip(right.components()) {
+        if left_component != right_component {
+            break;
+        }
+        prefix.push(left_component.as_os_str());
+    }
+
+    (!prefix.as_os_str().is_empty()).then_some(prefix)
 }
 
 fn reject_output_input_alias(output: &Path, input_files: &[PathBuf]) -> Result<(), CliError> {
@@ -519,6 +766,24 @@ fn severity_name(severity: recite_core::DiagnosticSeverity) -> &'static str {
 
 fn display_path(path: &Path) -> String {
     path.to_string_lossy().replace('\\', "/")
+}
+
+fn resolve_project_path(project_root: &Path, path: &str) -> PathBuf {
+    let path = Path::new(path);
+    if path.is_absolute() {
+        path.to_owned()
+    } else {
+        project_root.join(path)
+    }
+}
+
+fn project_diagnostic(code: &str, message: impl Into<String>, span: SourceSpan) -> Diagnostic {
+    Diagnostic::new(
+        DiagnosticCode::new(code).expect("project diagnostic codes are static and namespaced"),
+        DiagnosticSeverity::Error,
+        message,
+        span,
+    )
 }
 
 #[derive(Debug)]

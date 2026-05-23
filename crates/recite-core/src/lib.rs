@@ -3,6 +3,7 @@
 
 pub mod ast;
 pub mod compiled;
+pub mod project;
 pub mod schema;
 
 mod diagnostic;
@@ -50,6 +51,10 @@ pub use compiled::{
 pub use diagnostic::{Diagnostic, DiagnosticCode, DiagnosticSeverity, RelatedSpan};
 pub use error::CoreValueError;
 pub use ids::{BlockId, ChoiceId, EffectId, LineId, LocaleId, SpeakerId};
+pub use project::{
+    ProjectFreshnessInput, ProjectManifest, ProjectManifestLoadReport, ProjectManifestMetadata,
+    ProjectScene, project_scene_key_span, validate_project_freshness, validate_project_manifest,
+};
 pub use schema::{
     ConditionDefinition, ConditionReturnType, EffectDefinition, EnumTypeDefinition,
     MarkupDefinition, MetadataDefinition, MetadataTarget, ParameterDefinition, ProjectSchema,
