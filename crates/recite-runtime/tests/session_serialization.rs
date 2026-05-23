@@ -1,14 +1,9 @@
-use recite_compiler::{CompileInput, CompileOptions, compile_inputs};
-use recite_core::{
-    ChoiceId, CompiledAssetId, CompiledDialogue, CompilerVersion, EffectId, LocaleId,
-    SchemaFingerprint, SourceMapId,
-};
+use recite_core::{ChoiceId, CompiledDialogue, EffectId, LocaleId};
 use recite_runtime::{
     DialogueDeferredEffectSnapshot, DialogueEffectArgument, DialogueEffectRequest, DialogueError,
     DialogueEvent, DialogueSessionOptions, DialogueSessionPendingEffectSnapshot, EffectAck,
-    EmptyDialogueContext, acknowledge_effect, choose as runtime_choose, decode_session_messagepack,
-    encode_session_messagepack, next as runtime_next, restore_session, snapshot_session,
-    start_scene, start_scene_with_options,
+    acknowledge_effect, decode_session_messagepack, encode_session_messagepack,
+    next as runtime_next, restore_session, snapshot_session, start_scene, start_scene_with_options,
 };
 
 #[path = "session_serialization/asset_identity.rs"]
@@ -27,7 +22,10 @@ mod pending_effect;
 mod pending_prompt;
 #[path = "session_serialization/round_trip.rs"]
 mod round_trip;
+#[path = "support/shared.rs"]
+mod shared_support;
 #[path = "session_serialization/support.rs"]
 mod support;
 
+use shared_support::*;
 use support::*;

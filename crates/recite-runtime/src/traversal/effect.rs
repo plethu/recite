@@ -43,11 +43,9 @@ pub(super) fn handle_effect(
             session.deferred_effects.push(request);
             Ok(None)
         }
-        CompiledEffectMode::Immediate => Ok(Some(DialogueEvent::Effect(runtime_effect_request(
-            session, request,
-        )?))),
+        CompiledEffectMode::Immediate => emit_effect_for_next_trace_event(session, request),
         CompiledEffectMode::Blocking => {
-            let request = runtime_effect_request(session, request)?;
+            let request = request_for_next_trace_event(session, request)?;
             session.pending_effect = Some(PendingEffect {
                 statement: effect_statement,
                 request: request.clone(),
@@ -58,7 +56,15 @@ pub(super) fn handle_effect(
     }
 }
 
-fn runtime_effect_request(
+fn emit_effect_for_next_trace_event(
+    session: &DialogueSession,
+    request: crate::DialogueEffectRequest,
+) -> Result<Option<DialogueEvent>, DialogueError> {
+    request_for_next_trace_event(session, request)
+        .map(|request| Some(DialogueEvent::Effect(request)))
+}
+
+fn request_for_next_trace_event(
     session: &DialogueSession,
     request: crate::DialogueEffectRequest,
 ) -> Result<crate::DialogueEffectRequest, DialogueError> {

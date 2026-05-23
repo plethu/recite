@@ -1,15 +1,13 @@
-use recite_compiler::{CompileInput, CompileOptions, compile_inputs};
 use recite_core::{
-    BlockIndex, BlockLookupEntry, BlockLookupTable, ChoiceId, ChoiceRange, CompiledAssetId,
-    CompiledConditionCall, CompiledConditionExpression, CompiledDialogue, CompiledDivertTarget,
-    CompiledStatementKind, CompilerVersion, EffectId, EffectIndex, LineIndex, MatchArmIndex,
-    MatchArmRange, SchemaFingerprint, SourceMapId,
+    BlockIndex, BlockLookupEntry, BlockLookupTable, ChoiceId, ChoiceRange, CompiledConditionCall,
+    CompiledConditionExpression, CompiledDialogue, CompiledDivertTarget, CompiledStatementKind,
+    EffectId, EffectIndex, LineIndex, MatchArmIndex, MatchArmRange,
 };
 use recite_runtime::{
     ConditionArgument, ConditionEvaluationError, ConditionQuery, DialogueEffectArgument,
     DialogueEffectMode, DialogueEffectRequest, DialogueError, DialogueEvent, EffectAck,
-    EmptyDialogueContext, UnsupportedStatementKind, acknowledge_effect, choose as runtime_choose,
-    next as runtime_next, start_scene,
+    UnsupportedStatementKind, acknowledge_effect, choose as runtime_choose, next as runtime_next,
+    start_scene,
 };
 use std::cell::RefCell;
 use std::collections::BTreeMap;
@@ -24,9 +22,12 @@ mod control_flow;
 mod effects;
 #[path = "traversal/malformed_assets.rs"]
 mod malformed_assets;
+#[path = "support/shared.rs"]
+mod shared_support;
 #[path = "traversal/start_and_output.rs"]
 mod start_and_output;
 #[path = "traversal/support.rs"]
 mod support;
 
+use shared_support::*;
 use support::*;

@@ -487,19 +487,18 @@ fn lower_metadata(
             }
         }
 
-        let type_ref_span = spans.next_value_span(file, source, &entry.value.type_ref);
-        let type_ref = parse_type_ref(&entry.value.type_ref).unwrap_or_else(|| {
-            diagnostics.push(diagnostic(
-                INVALID_TYPE_REFERENCE,
-                format!(
-                    "metadata '{}' has invalid type reference '{}'",
-                    entry.name, entry.value.type_ref
-                ),
-                type_ref_span.clone(),
-            ));
-            SchemaTypeRef::String
-        });
-        if parse_type_ref(&entry.value.type_ref).is_some() {
+        let (type_ref, type_ref_span, type_ref_is_valid) = lower_type_reference(
+            file,
+            source,
+            spans,
+            diagnostics,
+            &entry.value.type_ref,
+            format!(
+                "metadata '{}' has invalid type reference '{}'",
+                entry.name, entry.value.type_ref
+            ),
+        );
+        if type_ref_is_valid {
             pending_type_refs.push(PendingTypeReference {
                 owner: format!("metadata '{}'", entry.name),
                 type_ref: type_ref.clone(),
@@ -583,19 +582,18 @@ fn lower_params(
                 ));
             }
 
-            let type_ref_span = spans.next_value_span(file, source, &param.type_ref);
-            let type_ref = parse_type_ref(&param.type_ref).unwrap_or_else(|| {
-                diagnostics.push(diagnostic(
-                    INVALID_TYPE_REFERENCE,
-                    format!(
-                        "parameter '{}' has invalid type reference '{}'",
-                        param.name, param.type_ref
-                    ),
-                    type_ref_span.clone(),
-                ));
-                SchemaTypeRef::String
-            });
-            if parse_type_ref(&param.type_ref).is_some() {
+            let (type_ref, type_ref_span, type_ref_is_valid) = lower_type_reference(
+                file,
+                source,
+                spans,
+                diagnostics,
+                &param.type_ref,
+                format!(
+                    "parameter '{}' has invalid type reference '{}'",
+                    param.name, param.type_ref
+                ),
+            );
+            if type_ref_is_valid {
                 pending_type_refs.push(PendingTypeReference {
                     owner: format!("{owner} parameter '{}'", param.name),
                     type_ref: type_ref.clone(),
@@ -609,6 +607,28 @@ fn lower_params(
             }
         })
         .collect()
+}
+
+fn lower_type_reference(
+    file: &str,
+    source: &str,
+    spans: &mut ManifestSpans,
+    diagnostics: &mut Vec<Diagnostic>,
+    value: &str,
+    invalid_message: String,
+) -> (SchemaTypeRef, crate::SourceSpan, bool) {
+    let type_ref_span = spans.next_value_span(file, source, value);
+    match parse_type_ref(value) {
+        Some(type_ref) => (type_ref, type_ref_span, true),
+        None => {
+            diagnostics.push(diagnostic(
+                INVALID_TYPE_REFERENCE,
+                invalid_message,
+                type_ref_span.clone(),
+            ));
+            (SchemaTypeRef::String, type_ref_span, false)
+        }
+    }
 }
 
 fn canonical_string_values(

@@ -77,112 +77,103 @@ impl<'a> Validator<'a> {
             SchemaTypeRef::Float => matches!(argument, Argument::Value(ScalarValue::Float(_))),
             SchemaTypeRef::Bool => matches!(argument, Argument::Value(ScalarValue::Boolean(_))),
             SchemaTypeRef::Speaker => {
-                let Some(value) = argument_reference_value(argument) else {
-                    self.diagnostics
-                        .push(diagnostics::wrong_effect_argument_type(
-                            &effect.function,
-                            index,
-                            type_ref,
-                            display_argument_type(argument),
-                            span,
-                        ));
+                let Some(value) =
+                    self.effect_reference_argument_value(effect, index, argument, type_ref, &span)
+                else {
                     return;
                 };
                 if !schema.speakers.contains_key(value) {
-                    self.diagnostics
-                        .push(diagnostics::invalid_effect_argument_value(
-                            &effect.function,
-                            index,
-                            type_ref,
-                            value,
-                            span,
-                        ));
+                    self.invalid_effect_argument_value(effect, index, type_ref, value, span);
                 }
                 return;
             }
             SchemaTypeRef::Enum(enum_name) => {
-                let Some(value) = argument_reference_value(argument) else {
-                    self.diagnostics
-                        .push(diagnostics::wrong_effect_argument_type(
-                            &effect.function,
-                            index,
-                            type_ref,
-                            display_argument_type(argument),
-                            span,
-                        ));
+                let Some(value) =
+                    self.effect_reference_argument_value(effect, index, argument, type_ref, &span)
+                else {
                     return;
                 };
                 let Some(definition) = schema.types.get(enum_name) else {
-                    self.diagnostics
-                        .push(diagnostics::wrong_effect_argument_type(
-                            &effect.function,
-                            index,
-                            type_ref,
-                            display_argument_type(argument),
-                            span,
-                        ));
+                    self.wrong_effect_argument_type(effect, index, type_ref, argument, span);
                     return;
                 };
                 let recite_core::SchemaTypeDefinition::Enum(definition) = definition;
                 if !definition.values.contains(value) {
-                    self.diagnostics
-                        .push(diagnostics::invalid_effect_argument_value(
-                            &effect.function,
-                            index,
-                            type_ref,
-                            value,
-                            span,
-                        ));
+                    self.invalid_effect_argument_value(effect, index, type_ref, value, span);
                 }
                 return;
             }
             SchemaTypeRef::Registry(registry_name) => {
-                let Some(value) = argument_reference_value(argument) else {
-                    self.diagnostics
-                        .push(diagnostics::wrong_effect_argument_type(
-                            &effect.function,
-                            index,
-                            type_ref,
-                            display_argument_type(argument),
-                            span,
-                        ));
+                let Some(value) =
+                    self.effect_reference_argument_value(effect, index, argument, type_ref, &span)
+                else {
                     return;
                 };
                 let Some(registry) = schema.registries.get(registry_name) else {
-                    self.diagnostics
-                        .push(diagnostics::wrong_effect_argument_type(
-                            &effect.function,
-                            index,
-                            type_ref,
-                            display_argument_type(argument),
-                            span,
-                        ));
+                    self.wrong_effect_argument_type(effect, index, type_ref, argument, span);
                     return;
                 };
                 if !registry.values.contains(value) {
-                    self.diagnostics
-                        .push(diagnostics::invalid_effect_argument_value(
-                            &effect.function,
-                            index,
-                            type_ref,
-                            value,
-                            span,
-                        ));
+                    self.invalid_effect_argument_value(effect, index, type_ref, value, span);
                 }
                 return;
             }
         };
 
         if !valid {
-            self.diagnostics
-                .push(diagnostics::wrong_effect_argument_type(
-                    &effect.function,
-                    index,
-                    type_ref,
-                    display_argument_type(argument),
-                    span,
-                ));
+            self.wrong_effect_argument_type(effect, index, type_ref, argument, span);
         }
+    }
+
+    fn effect_reference_argument_value<'b>(
+        &mut self,
+        effect: &Effect,
+        index: usize,
+        argument: &'b Argument,
+        type_ref: &SchemaTypeRef,
+        span: &SourceSpan,
+    ) -> Option<&'b str> {
+        let value = argument_reference_value(argument);
+        if value.is_none() {
+            self.wrong_effect_argument_type(effect, index, type_ref, argument, span.clone());
+        }
+        value
+    }
+
+    fn wrong_effect_argument_type(
+        &mut self,
+        effect: &Effect,
+        index: usize,
+        type_ref: &SchemaTypeRef,
+        argument: &Argument,
+        span: SourceSpan,
+    ) {
+        self.diagnostics
+            .push(diagnostics::wrong_effect_argument_type(
+                &effect.function,
+                index,
+                type_ref,
+                display_argument_type(argument),
+                span,
+            ));
+    }
+
+    fn invalid_effect_argument_value(
+        &mut self,
+        effect: &Effect,
+        index: usize,
+        type_ref: &SchemaTypeRef,
+        value: &str,
+        span: SourceSpan,
+    ) {
+        self.diagnostics
+            .push(diagnostics::invalid_effect_argument_value(
+                &effect.function,
+                index,
+                type_ref,
+                value,
+                span,
+            ));
     }
 
     fn effect_mode_span(&self, effect: &Effect) -> SourceSpan {

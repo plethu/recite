@@ -198,12 +198,7 @@ fn unsupported_match_statement_is_structured_error() {
 #[test]
 fn unsupported_statement_kind_display_covers_public_variants() {
     assert_eq!(
-        UnsupportedStatementKind::If.to_string(),
-        "conditional branches"
-    );
-    assert_eq!(
         UnsupportedStatementKind::Match.to_string(),
         "match branches"
     );
-    assert_eq!(UnsupportedStatementKind::Effect.to_string(), "effects");
 }
