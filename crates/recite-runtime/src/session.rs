@@ -21,6 +21,7 @@ pub struct DialogueSession {
     pub(crate) next_statement: StatementIndex,
     pub(crate) continuation_stack: Vec<StatementFrame>,
     pub(crate) pending_prompt: Option<PendingPrompt>,
+    pub(crate) pending_effect: Option<DialogueEffectRequest>,
     pub(crate) previous_prompt_choices: Vec<ChoiceId>,
     pub(crate) selected_choice_history: Vec<ChoiceId>,
     pub(crate) deferred_effects: Vec<DialogueEffectRequest>,
@@ -50,6 +51,7 @@ impl DialogueSession {
             next_statement: current_range.start,
             continuation_stack: Vec::new(),
             pending_prompt: None,
+            pending_effect: None,
             previous_prompt_choices: Vec::new(),
             selected_choice_history: Vec::new(),
             deferred_effects: Vec::new(),
@@ -60,13 +62,17 @@ impl DialogueSession {
     }
 
     pub(crate) fn emit(&mut self, event: DialogueEvent) -> Result<DialogueEvent, DialogueError> {
-        self.trace_counter = self.trace_counter.checked_add(1).ok_or_else(|| {
-            DialogueError::MalformedCompiledAsset {
-                reason: "session trace counter overflowed".to_owned(),
-            }
-        })?;
+        self.trace_counter = self.next_trace_counter()?;
 
         Ok(event)
+    }
+
+    pub(crate) fn next_trace_counter(&self) -> Result<u64, DialogueError> {
+        self.trace_counter
+            .checked_add(1)
+            .ok_or_else(|| DialogueError::MalformedCompiledAsset {
+                reason: "session trace counter overflowed".to_owned(),
+            })
     }
 
     #[must_use]
@@ -77,6 +83,11 @@ impl DialogueSession {
     #[must_use]
     pub fn deferred_effects(&self) -> &[DialogueEffectRequest] {
         &self.deferred_effects
+    }
+
+    #[must_use]
+    pub fn pending_effect(&self) -> Option<&DialogueEffectRequest> {
+        self.pending_effect.as_ref()
     }
 
     #[must_use]

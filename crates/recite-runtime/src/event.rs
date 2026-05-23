@@ -8,6 +8,7 @@ pub enum DialogueEvent {
         line: Option<DialogueLine>,
         choices: Vec<DialogueChoice>,
     },
+    Effect(DialogueEffectRequest),
     End {
         deferred_effects: Vec<DialogueEffectRequest>,
     },
@@ -63,4 +64,10 @@ pub enum DialogueEffectArgument {
     Integer(i64),
     Float(f64),
     Boolean(bool),
+}
+
+#[derive(Clone, Debug, Eq, PartialEq)]
+pub enum EffectAck {
+    Completed,
+    Failed { reason: String },
 }

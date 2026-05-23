@@ -20,6 +20,12 @@ pub fn choose(
     let asset_view = AssetView::new(asset)?;
     asset_view.ensure_session_matches(session)?;
 
+    if let Some(effect) = &session.pending_effect {
+        return Err(DialogueError::EffectPending {
+            effect: effect.id.clone(),
+        });
+    }
+
     let Some(prompt) = &session.pending_prompt else {
         return Err(DialogueError::NoPromptPending { choice: choice_id });
     };

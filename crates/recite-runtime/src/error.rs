@@ -1,4 +1,4 @@
-use recite_core::ChoiceId;
+use recite_core::{ChoiceId, EffectId};
 
 use crate::DialogueEffectMode;
 
@@ -30,8 +30,15 @@ pub enum DialogueError {
     UnsupportedStatement {
         kind: UnsupportedStatementKind,
     },
-    UnsupportedEffectMode {
-        mode: DialogueEffectMode,
+    EffectPending {
+        effect: EffectId,
+    },
+    NoEffectPending {
+        effect: EffectId,
+    },
+    WrongEffectAcknowledgement {
+        expected: EffectId,
+        actual: EffectId,
     },
     PromptPending {
         choices: Vec<ChoiceId>,
@@ -106,10 +113,22 @@ impl std::fmt::Display for DialogueError {
             Self::UnsupportedStatement { kind } => {
                 write!(formatter, "runtime traversal does not support {kind} yet")
             }
-            Self::UnsupportedEffectMode { mode } => {
+            Self::EffectPending { effect } => {
                 write!(
                     formatter,
-                    "runtime traversal does not support {mode} effects yet"
+                    "session is waiting for effect `{effect}` to be acknowledged"
+                )
+            }
+            Self::NoEffectPending { effect } => {
+                write!(
+                    formatter,
+                    "effect `{effect}` was acknowledged with no pending effect"
+                )
+            }
+            Self::WrongEffectAcknowledgement { expected, actual } => {
+                write!(
+                    formatter,
+                    "effect acknowledgement `{actual}` does not match pending effect `{expected}`"
                 )
             }
             Self::PromptPending { .. } => {
