@@ -17,6 +17,8 @@ mod fixtures;
 mod ids_blocks_and_references;
 #[path = "validation/markup.rs"]
 mod markup;
+#[path = "validation/metadata_schema.rs"]
+mod metadata_schema;
 #[path = "validation/ordering.rs"]
 mod ordering;
 #[path = "validation/source_spans.rs"]
