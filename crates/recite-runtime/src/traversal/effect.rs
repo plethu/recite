@@ -1,5 +1,6 @@
 use recite_core::{CompiledEffectMode, EffectId, EffectIndex};
 
+use crate::session::PendingEffect;
 use crate::{DialogueError, DialogueEvent, DialogueSession, EffectAck};
 
 use super::AssetView;
@@ -14,9 +15,9 @@ pub fn acknowledge_effect(
     let Some(pending) = &session.pending_effect else {
         return Err(DialogueError::NoEffectPending { effect: effect_id });
     };
-    if pending.id != effect_id {
+    if pending.request.id != effect_id {
         return Err(DialogueError::WrongEffectAcknowledgement {
-            expected: pending.id.clone(),
+            expected: pending.request.id.clone(),
             actual: effect_id,
         });
     }
@@ -33,6 +34,7 @@ pub(super) fn handle_effect(
     let effect = asset.effect_at(effect_index)?;
     let request = dialogue_effect_request(asset, effect)?;
 
+    let effect_statement = session.next_statement;
     let next_statement = next_statement_after(session.next_statement)?;
     session.next_statement = next_statement;
 
@@ -46,7 +48,11 @@ pub(super) fn handle_effect(
         )?))),
         CompiledEffectMode::Blocking => {
             let request = runtime_effect_request(session, request)?;
-            session.pending_effect = Some(request.clone());
+            session.pending_effect = Some(PendingEffect {
+                statement: effect_statement,
+                request: request.clone(),
+                reemit_on_next: false,
+            });
             Ok(Some(DialogueEvent::Effect(request)))
         }
     }
@@ -54,15 +60,20 @@ pub(super) fn handle_effect(
 
 fn runtime_effect_request(
     session: &DialogueSession,
-    mut request: crate::DialogueEffectRequest,
+    request: crate::DialogueEffectRequest,
 ) -> Result<crate::DialogueEffectRequest, DialogueError> {
-    request.id = EffectId::new(format!(
-        "{}#{}",
-        request.id.as_str(),
-        session.next_trace_counter()?
-    ))
-    .map_err(|error| DialogueError::MalformedCompiledAsset {
-        reason: format!("runtime effect request id is invalid: {error}"),
-    })?;
+    runtime_effect_request_for_trace_counter(request, session.next_trace_counter()?)
+}
+
+pub(crate) fn runtime_effect_request_for_trace_counter(
+    mut request: crate::DialogueEffectRequest,
+    trace_counter: u64,
+) -> Result<crate::DialogueEffectRequest, DialogueError> {
+    request.id =
+        EffectId::new(format!("{}#{}", request.id.as_str(), trace_counter)).map_err(|error| {
+            DialogueError::MalformedCompiledAsset {
+                reason: format!("runtime effect request id is invalid: {error}"),
+            }
+        })?;
     Ok(request)
 }

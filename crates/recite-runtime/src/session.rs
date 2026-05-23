@@ -21,7 +21,7 @@ pub struct DialogueSession {
     pub(crate) next_statement: StatementIndex,
     pub(crate) continuation_stack: Vec<StatementFrame>,
     pub(crate) pending_prompt: Option<PendingPrompt>,
-    pub(crate) pending_effect: Option<DialogueEffectRequest>,
+    pub(crate) pending_effect: Option<PendingEffect>,
     pub(crate) previous_prompt_choices: Vec<ChoiceId>,
     pub(crate) selected_choice_history: Vec<ChoiceId>,
     pub(crate) deferred_effects: Vec<DialogueEffectRequest>,
@@ -87,7 +87,7 @@ impl DialogueSession {
 
     #[must_use]
     pub fn pending_effect(&self) -> Option<&DialogueEffectRequest> {
-        self.pending_effect.as_ref()
+        self.pending_effect.as_ref().map(|effect| &effect.request)
     }
 
     #[must_use]
@@ -146,4 +146,13 @@ pub(crate) struct PendingPromptChoice {
     pub(crate) target: CompiledDivertTarget,
     pub(crate) is_available: bool,
     pub(crate) unavailable_reason: Option<String>,
+}
+
+#[derive(Clone, Debug, PartialEq)]
+pub(crate) struct PendingEffect {
+    pub(crate) statement: StatementIndex,
+    pub(crate) request: DialogueEffectRequest,
+    /// Restore-only replay marker. It is intentionally not snapshotted because
+    /// any saved blocked session must re-emit once after the next restore.
+    pub(crate) reemit_on_next: bool,
 }

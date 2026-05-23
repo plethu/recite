@@ -73,7 +73,7 @@ pub(super) fn choice_id(value: &str) -> Result<ChoiceId, DialogueError> {
     ChoiceId::new(value).map_err(core_error)
 }
 
-fn effect_id(value: &str) -> Result<EffectId, DialogueError> {
+pub(super) fn effect_id(value: &str) -> Result<EffectId, DialogueError> {
     EffectId::new(value).map_err(core_error)
 }
 

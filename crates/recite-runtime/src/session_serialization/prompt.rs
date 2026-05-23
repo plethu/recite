@@ -5,6 +5,7 @@ use crate::session::{PendingPrompt, PendingPromptChoice};
 use crate::session_snapshot::DialogueSessionPendingPromptSnapshot;
 use crate::traversal::AssetView;
 
+use super::pending_position::validate_pending_statement_position;
 use super::references::{choice_id, invalid_snapshot, snapshot_reference};
 
 pub(super) fn restore_pending_prompt(
@@ -28,7 +29,7 @@ pub(super) fn restore_pending_prompt(
     }
 
     let statement_index = StatementIndex::new(snapshot.statement);
-    validate_pending_prompt_position(statement_index, current_range, next_statement)?;
+    validate_pending_statement_position("prompt", statement_index, current_range, next_statement)?;
     let statement = snapshot_reference(
         "pending prompt statement",
         asset.statement_at(statement_index),
@@ -79,32 +80,4 @@ pub(super) fn restore_pending_prompt(
         statement: statement_index,
         choices: pending_choices,
     }))
-}
-
-fn validate_pending_prompt_position(
-    prompt_statement: StatementIndex,
-    current_range: StatementRange,
-    next_statement: StatementIndex,
-) -> Result<(), DialogueError> {
-    let range_start = current_range.start.as_u32();
-    let range_end = range_start
-        .checked_add(current_range.len)
-        .ok_or_else(|| invalid_snapshot("active range overflows u32"))?;
-    let prompt_statement = prompt_statement.as_u32();
-    let expected_next = prompt_statement
-        .checked_add(1)
-        .ok_or_else(|| invalid_snapshot("pending prompt statement overflows u32"))?;
-
-    if prompt_statement < range_start || prompt_statement >= range_end {
-        return Err(invalid_snapshot(
-            "pending prompt statement is outside the active range",
-        ));
-    }
-    if next_statement.as_u32() != expected_next {
-        return Err(invalid_snapshot(
-            "pending prompt must be immediately before the restored next statement",
-        ));
-    }
-
-    Ok(())
 }

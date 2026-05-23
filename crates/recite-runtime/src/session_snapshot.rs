@@ -6,9 +6,11 @@ use serde::{Deserialize, Serialize};
 
 use crate::DialogueSession;
 use crate::event::DialogueEffectRequest;
-use crate::session::{PendingPrompt, StatementFrame};
+use crate::session::{PendingEffect, PendingPrompt, StatementFrame};
 
 pub const SESSION_SNAPSHOT_FORMAT_VERSION_V0: u16 = 0;
+pub const SESSION_SNAPSHOT_FORMAT_VERSION_V1: u16 = 1;
+pub const CURRENT_SESSION_SNAPSHOT_FORMAT_VERSION: u16 = SESSION_SNAPSHOT_FORMAT_VERSION_V1;
 
 /// Versioned structural save data for a dialogue session.
 ///
@@ -32,6 +34,7 @@ pub struct DialogueSessionSnapshot {
     pub next_statement: u32,
     pub continuation_stack: Vec<DialogueSessionFrameSnapshot>,
     pub pending_prompt: Option<DialogueSessionPendingPromptSnapshot>,
+    pub pending_effect: Option<DialogueSessionPendingEffectSnapshot>,
     pub previous_prompt_choices: Vec<String>,
     pub selected_choice_history: Vec<String>,
     pub deferred_effects: Vec<DialogueDeferredEffectSnapshot>,
@@ -71,6 +74,13 @@ pub struct DialogueSessionPendingChoiceSnapshot {
 
 #[derive(Clone, Debug, Eq, PartialEq, Serialize, Deserialize)]
 #[serde(deny_unknown_fields)]
+pub struct DialogueSessionPendingEffectSnapshot {
+    pub statement: u32,
+    pub id: String,
+}
+
+#[derive(Clone, Debug, Eq, PartialEq, Serialize, Deserialize)]
+#[serde(deny_unknown_fields)]
 pub struct DialogueDeferredEffectSnapshot {
     pub id: String,
 }
@@ -104,7 +114,7 @@ pub enum DialogueSchemaFingerprintSnapshot {
 #[must_use]
 pub fn snapshot_session(session: &DialogueSession) -> DialogueSessionSnapshot {
     DialogueSessionSnapshot {
-        snapshot_format_version: SESSION_SNAPSHOT_FORMAT_VERSION_V0,
+        snapshot_format_version: CURRENT_SESSION_SNAPSHOT_FORMAT_VERSION,
         asset_id: session.asset_id.as_str().to_owned(),
         asset_format_version: session.format_version,
         asset_compiler_compatibility_version: session.compiler_compatibility_version,
@@ -121,6 +131,7 @@ pub fn snapshot_session(session: &DialogueSession) -> DialogueSessionSnapshot {
             .map(frame_snapshot)
             .collect(),
         pending_prompt: session.pending_prompt.as_ref().map(pending_prompt_snapshot),
+        pending_effect: session.pending_effect.as_ref().map(pending_effect_snapshot),
         previous_prompt_choices: choice_ids_snapshot(&session.previous_prompt_choices),
         selected_choice_history: choice_ids_snapshot(&session.selected_choice_history),
         deferred_effects: session
@@ -181,6 +192,13 @@ fn pending_prompt_snapshot(prompt: &PendingPrompt) -> DialogueSessionPendingProm
                 unavailable_reason: choice.unavailable_reason.clone(),
             })
             .collect(),
+    }
+}
+
+fn pending_effect_snapshot(effect: &PendingEffect) -> DialogueSessionPendingEffectSnapshot {
+    DialogueSessionPendingEffectSnapshot {
+        statement: effect.statement.as_u32(),
+        id: effect.request.id.as_str().to_owned(),
     }
 }
 
