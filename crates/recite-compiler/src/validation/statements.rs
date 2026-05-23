@@ -1,5 +1,6 @@
 use recite_core::{
-    Block, Choice, Divert, Effect, IfBranch, Line, MatchArm, MatchBranch, SourceFile, Statement,
+    Block, Choice, Divert, Effect, IfBranch, Line, MatchArm, MatchBranch, MetadataTarget,
+    SourceFile, Statement,
 };
 
 use super::state::Validator;
@@ -8,7 +9,7 @@ use crate::diagnostics;
 impl<'a> Validator<'a> {
     pub(super) fn validate_block(&mut self, source_file: &'a SourceFile, block: &'a Block) {
         self.validate_span(source_file, &block.span, "block");
-        self.validate_metadata(source_file, &block.metadata);
+        self.validate_metadata(source_file, &block.metadata, MetadataTarget::Block);
         self.validate_block_id(source_file, block);
         self.validate_default_block(block);
     }
@@ -68,7 +69,7 @@ impl<'a> Validator<'a> {
     pub(super) fn validate_line(&mut self, source_file: &'a SourceFile, line: &'a Line) {
         self.validate_span(source_file, &line.span, "line");
         self.validate_source_text(source_file, &line.source_text, "line source text");
-        self.validate_metadata(source_file, &line.metadata);
+        self.validate_metadata(source_file, &line.metadata, MetadataTarget::Line);
 
         let Some(id) = &line.id else {
             self.diagnostics.push(diagnostics::missing_line_id(line));
@@ -85,7 +86,7 @@ impl<'a> Validator<'a> {
     pub(super) fn validate_choice(&mut self, source_file: &'a SourceFile, choice: &'a Choice) {
         self.validate_span(source_file, &choice.span, "choice");
         self.validate_source_text(source_file, &choice.source_text, "choice source text");
-        self.validate_metadata(source_file, &choice.metadata);
+        self.validate_metadata(source_file, &choice.metadata, MetadataTarget::Choice);
         self.validate_choice_echo(choice);
         if let Some(condition) = &choice.condition {
             self.validate_condition_expression(source_file, condition);

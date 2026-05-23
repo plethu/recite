@@ -28,6 +28,11 @@ pub(crate) const UNKNOWN_MARKUP_TAG: &str = "RECITE_VALIDATE022";
 pub(crate) const UNBALANCED_MARKUP_TAG: &str = "RECITE_VALIDATE023";
 pub(crate) const MISSING_MARKUP_CLOSING_TAG: &str = "RECITE_VALIDATE024";
 pub(crate) const INVALID_MARKUP_NESTING: &str = "RECITE_VALIDATE025";
+pub(crate) const UNKNOWN_METADATA_KEY: &str = "RECITE_VALIDATE026";
+pub(crate) const INVALID_METADATA_TARGET: &str = "RECITE_VALIDATE027";
+pub(crate) const DUPLICATE_METADATA_KEY: &str = "RECITE_VALIDATE028";
+pub(crate) const WRONG_METADATA_VALUE_TYPE: &str = "RECITE_VALIDATE029";
+pub(crate) const INVALID_METADATA_VALUE: &str = "RECITE_VALIDATE030";
 
 pub(crate) fn missing_line_id(line: &Line) -> Diagnostic {
     diagnostic(
@@ -356,6 +361,67 @@ pub(crate) fn invalid_markup_nesting(
     .with_help(format!("close `[{parent}]` before opening `[{child}]`"))
 }
 
+pub(crate) fn unknown_metadata_key(key: &str, span: SourceSpan) -> Diagnostic {
+    diagnostic(
+        UNKNOWN_METADATA_KEY,
+        format!("unknown metadata key `{key}`"),
+        span,
+    )
+    .with_help("declare the metadata key in the project schema manifest")
+}
+
+pub(crate) fn invalid_metadata_target(key: &str, target: &str, span: SourceSpan) -> Diagnostic {
+    diagnostic(
+        INVALID_METADATA_TARGET,
+        format!("metadata key `{key}` is not allowed on {target}"),
+        span,
+    )
+    .with_help("move the metadata entry to an allowed target or update the project schema manifest")
+}
+
+pub(crate) fn duplicate_metadata_key(key: &str, span: SourceSpan) -> Diagnostic {
+    diagnostic(
+        DUPLICATE_METADATA_KEY,
+        format!("metadata key `{key}` is not repeatable"),
+        span,
+    )
+    .with_help("remove the duplicate metadata entry or mark the key repeatable in the schema")
+}
+
+pub(crate) fn wrong_metadata_value_type(
+    key: &str,
+    expected: &SchemaTypeRef,
+    actual: &str,
+    span: SourceSpan,
+) -> Diagnostic {
+    diagnostic(
+        WRONG_METADATA_VALUE_TYPE,
+        format!(
+            "metadata key `{key}` expects {}, but got {actual}",
+            display_schema_type_ref(expected),
+        ),
+        span,
+    )
+    .with_help("use a metadata value matching the project schema manifest")
+}
+
+pub(crate) fn invalid_metadata_value(
+    key: &str,
+    expected: &SchemaTypeRef,
+    value: &str,
+    span: SourceSpan,
+) -> Diagnostic {
+    diagnostic(
+        INVALID_METADATA_VALUE,
+        format!(
+            "metadata key `{key}` uses unknown {} value `{value}`",
+            display_schema_type_ref(expected),
+        ),
+        span,
+    )
+    .with_help("use a value exported in the project schema manifest")
+}
+
 fn diagnostic(code: &str, message: impl Into<String>, span: SourceSpan) -> Diagnostic {
     Diagnostic::new(
         DiagnosticCode::new(code).expect("compiler diagnostic codes are static and namespaced"),
@@ -417,7 +483,7 @@ fn display_effect_mode(mode: EffectMode) -> &'static str {
     }
 }
 
-fn display_schema_type_ref(type_ref: &SchemaTypeRef) -> String {
+pub(crate) fn display_schema_type_ref(type_ref: &SchemaTypeRef) -> String {
     match type_ref {
         SchemaTypeRef::String => "string".to_owned(),
         SchemaTypeRef::Int => "int".to_owned(),

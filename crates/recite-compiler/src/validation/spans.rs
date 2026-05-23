@@ -1,6 +1,6 @@
 use recite_core::{
-    Argument, ConditionCall, ConditionExpression, Metadata, MetadataEntry, SourceFile, SourceSpan,
-    SourceText,
+    Argument, ConditionCall, ConditionExpression, Metadata, MetadataEntry, MetadataTarget,
+    SourceFile, SourceSpan, SourceText,
 };
 
 use super::project;
@@ -22,6 +22,7 @@ impl<'a> Validator<'a> {
         &mut self,
         source_file: &'a SourceFile,
         metadata: &'a Metadata,
+        target: MetadataTarget,
     ) {
         for entry in metadata {
             if let Some(span) = &entry.source_span {
@@ -35,6 +36,7 @@ impl<'a> Validator<'a> {
             }
             self.validate_metadata_value(source_file, entry);
         }
+        self.validate_metadata_schema(source_file, metadata, target);
     }
     pub(super) fn validate_condition_expression(
         &mut self,
