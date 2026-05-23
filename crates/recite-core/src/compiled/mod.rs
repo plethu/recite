@@ -1,6 +1,7 @@
 mod fingerprint;
 mod header;
 mod lookup;
+mod messagepack;
 mod rows;
 mod table;
 mod wire;
@@ -18,6 +19,7 @@ pub use lookup::{
     BlockLookupEntry, BlockLookupTable, ChoiceLookupEntry, ChoiceLookupTable, LineLookupEntry,
     LineLookupTable,
 };
+pub use messagepack::{CompiledAssetDecodeError, decode_compiled_dialogue_messagepack};
 pub use rows::{
     CompiledArgument, CompiledBlock, CompiledChoice, CompiledChoiceEcho, CompiledConditionCall,
     CompiledConditionExpression, CompiledDialogue, CompiledDivertTarget, CompiledEffect,
