@@ -3,10 +3,10 @@ use recite_core::{
     EffectMode, Line, LineId, RelatedSpan, SchemaTypeRef, SourceFile, SourceSpan, Statement,
 };
 
-pub(crate) const MISSING_LINE_ID: &str = "RECITE_VALIDATE001";
-pub(crate) const MISSING_CHOICE_ID: &str = "RECITE_VALIDATE002";
-pub(crate) const DUPLICATE_LINE_ID: &str = "RECITE_VALIDATE003";
-pub(crate) const DUPLICATE_CHOICE_ID: &str = "RECITE_VALIDATE004";
+pub(crate) const MISSING_LINE_ID: &str = "RECITE_ID001";
+pub(crate) const MISSING_CHOICE_ID: &str = "RECITE_ID002";
+pub(crate) const DUPLICATE_LINE_ID: &str = "RECITE_ID003";
+pub(crate) const DUPLICATE_CHOICE_ID: &str = "RECITE_ID004";
 pub(crate) const MISSING_DEFAULT_BLOCK: &str = "RECITE_VALIDATE005";
 pub(crate) const AMBIGUOUS_DEFAULT_BLOCK: &str = "RECITE_VALIDATE006";
 pub(crate) const UNKNOWN_BLOCK_REFERENCE: &str = "RECITE_VALIDATE007";
