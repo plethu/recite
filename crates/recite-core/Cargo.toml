@@ -9,7 +9,10 @@ readme.workspace = true
 
 [dependencies]
 blake3.workspace = true
+rmp-serde.workspace = true
 serde.workspace = true
+serde_bytes.workspace = true
+serde-value.workspace = true
 serde_json.workspace = true
 
 [lints]

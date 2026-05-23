@@ -3,6 +3,7 @@ use recite_core::{
     StatementIndex, TableRange,
 };
 use serde::Serialize;
+use serde::ser::SerializeTuple;
 
 use self::tags::{
     MsgArgument, MsgAssetEncoding, MsgChoiceEcho, MsgConditionExpression, MsgDivertTarget,
@@ -199,12 +200,22 @@ impl<'a> From<&'a recite_core::CompiledChoice> for MsgChoice<'a> {
     }
 }
 
-#[derive(Serialize)]
 struct MsgSpeaker<'a>(&'a str);
 
 impl<'a> From<&'a recite_core::CompiledSpeaker> for MsgSpeaker<'a> {
     fn from(speaker: &'a recite_core::CompiledSpeaker) -> Self {
         Self(speaker.id.as_str())
+    }
+}
+
+impl Serialize for MsgSpeaker<'_> {
+    fn serialize<S>(&self, serializer: S) -> Result<S::Ok, S::Error>
+    where
+        S: serde::Serializer,
+    {
+        let mut tuple = serializer.serialize_tuple(1)?;
+        tuple.serialize_element(&self.0)?;
+        tuple.end()
     }
 }
 
