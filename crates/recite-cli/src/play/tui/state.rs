@@ -165,6 +165,15 @@ pub(super) fn toggle_help(prompt: &mut TuiPrompt) {
     }
 }
 
+pub(super) fn close_help(prompt: &mut TuiPrompt) {
+    match prompt {
+        TuiPrompt::Choice { show_help, .. }
+        | TuiPrompt::Condition { show_help, .. }
+        | TuiPrompt::Effect { show_help, .. } => *show_help = false,
+        _ => {}
+    }
+}
+
 pub(super) fn set_command(prompt: &mut TuiPrompt, command: TextBuffer) {
     match prompt {
         TuiPrompt::Choice {
@@ -364,5 +373,21 @@ mod tests {
         assert_eq!(selected_choice_id(&prompt), Some("last"));
         move_choice_selection(&mut prompt, 1);
         assert_eq!(selected_choice_id(&prompt), Some("first"));
+    }
+
+    #[test]
+    fn help_mode_can_be_closed_without_changing_stored_prompt_mode() {
+        let mut prompt = TuiPrompt::Condition {
+            query: "trusts(player)".to_owned(),
+            mode: PromptMode::Insert,
+            input: TextBuffer::default(),
+            command: TextBuffer::default(),
+            show_help: true,
+        };
+
+        assert_eq!(prompt_mode(&prompt), PromptMode::Help);
+        close_help(&mut prompt);
+
+        assert_eq!(prompt_mode(&prompt), PromptMode::Insert);
     }
 }

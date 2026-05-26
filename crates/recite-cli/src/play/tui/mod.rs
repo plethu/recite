@@ -21,7 +21,7 @@ use super::format::condition_query_text;
 use render::render_tui;
 use state::{
     TuiChoiceRow, TuiPrompt, TuiPromptLine, TuiState, TuiTranscriptEntry, TuiTranscriptKind,
-    choice_status, clear_prompt_input, initial_choice_selection, initial_prompt_mode,
+    choice_status, clear_prompt_input, close_help, initial_choice_selection, initial_prompt_mode,
     move_choice_selection, mutate_prompt_command, mutate_prompt_input, prompt_command,
     prompt_input, prompt_label, prompt_mode, selected_choice_id, set_command, set_prompt_mode,
     toggle_help,
@@ -195,15 +195,29 @@ impl<'a, B: Backend> TuiPlayUi<'a, B> {
         }
     }
 
-    fn handle_global_prompt_intent(&mut self, intent: TuiIntent) -> Result<bool, CliError> {
+    fn handle_global_prompt_intent(
+        &mut self,
+        mode: PromptMode,
+        intent: TuiIntent,
+    ) -> Result<PromptIntentStatus, CliError> {
         match intent {
             TuiIntent::Quit => Err(CliError::PlayInterrupted),
-            TuiIntent::OpenCommand => self.read_command(),
+            TuiIntent::OpenCommand => {
+                if self.read_command()? {
+                    Ok(PromptIntentStatus::Quit)
+                } else {
+                    Ok(PromptIntentStatus::Consumed)
+                }
+            }
             TuiIntent::ToggleHelp => {
                 toggle_help(&mut self.state.prompt);
-                Ok(false)
+                Ok(PromptIntentStatus::Consumed)
             }
-            _ => Ok(false),
+            TuiIntent::Cancel if mode == PromptMode::Help => {
+                close_help(&mut self.state.prompt);
+                Ok(PromptIntentStatus::Consumed)
+            }
+            _ => Ok(PromptIntentStatus::Continue),
         }
     }
 
@@ -211,8 +225,10 @@ impl<'a, B: Backend> TuiPlayUi<'a, B> {
         loop {
             let mode = prompt_mode(&self.state.prompt);
             let intent = self.read_intent(mode)?;
-            if self.handle_global_prompt_intent(intent)? {
-                return Err(CliError::PlayInterrupted);
+            match self.handle_global_prompt_intent(mode, intent)? {
+                PromptIntentStatus::Quit => return Err(CliError::PlayInterrupted),
+                PromptIntentStatus::Consumed => continue,
+                PromptIntentStatus::Continue => {}
             }
             match intent {
                 TuiIntent::Submit => {
@@ -267,8 +283,10 @@ impl<'a, B: Backend> TuiPlayUi<'a, B> {
         loop {
             let mode = prompt_mode(&self.state.prompt);
             let intent = self.read_intent(mode)?;
-            if self.handle_global_prompt_intent(intent)? {
-                return Err(CliError::PlayInterrupted);
+            match self.handle_global_prompt_intent(mode, intent)? {
+                PromptIntentStatus::Quit => return Err(CliError::PlayInterrupted),
+                PromptIntentStatus::Consumed => continue,
+                PromptIntentStatus::Continue => {}
             }
             match intent {
                 TuiIntent::Submit => {
@@ -292,6 +310,13 @@ impl<'a, B: Backend> TuiPlayUi<'a, B> {
             }
         }
     }
+}
+
+#[derive(Clone, Copy, Debug, Eq, PartialEq)]
+enum PromptIntentStatus {
+    Continue,
+    Consumed,
+    Quit,
 }
 
 impl<B: Backend> PlayUiAdapter for TuiPlayUi<'_, B> {

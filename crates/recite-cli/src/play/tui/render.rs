@@ -8,7 +8,7 @@ use ratatui::{
 use crate::i18n::{Messages, MsgId};
 use crate::tui::{KeyHints, PromptMode, TextBuffer};
 
-use super::state::{TuiPrompt, TuiState, TuiTranscriptEntry, TuiTranscriptKind};
+use super::state::{TuiPrompt, TuiState, TuiTranscriptEntry, TuiTranscriptKind, prompt_mode};
 
 pub(super) fn render_tui(frame: &mut ratatui::Frame<'_>, state: &TuiState, messages: &Messages) {
     let chunks = Layout::default()
@@ -350,7 +350,10 @@ fn render_footer<'a>(state: &'a TuiState, messages: &'a Messages) -> Line<'a> {
             TuiPrompt::Finished => messages.text(MsgId::TuiFooterCompactFinished),
             TuiPrompt::None => String::new(),
         },
-        KeyHints::Contextual => match state.prompt {
+        KeyHints::Contextual => match &state.prompt {
+            _ if prompt_mode(&state.prompt) == PromptMode::Help => {
+                messages.text(MsgId::TuiFooterHelp)
+            }
             TuiPrompt::Choice { mode, .. } => match mode {
                 PromptMode::Normal => messages.text(MsgId::TuiFooterChoiceNormal),
                 PromptMode::Insert => messages.text(MsgId::TuiFooterChoiceInsert),
@@ -498,6 +501,27 @@ mod tests {
         assert!(content.contains("end"));
         assert!(content.contains("Enter/Esc/q to exit"));
         assert!(!content.contains("No active prompt"));
+    }
+
+    #[test]
+    fn tui_render_footer_uses_effective_help_mode() {
+        let state = TuiState {
+            asset: "asset".to_owned(),
+            block: "start".to_owned(),
+            transcript: Vec::new(),
+            prompt: TuiPrompt::Condition {
+                query: "trusts(player)".to_owned(),
+                mode: PromptMode::Insert,
+                input: TextBuffer::default(),
+                command: TextBuffer::default(),
+                show_help: true,
+            },
+            status: "answer> ".to_owned(),
+            key_hints: KeyHints::Contextual,
+        };
+        let content = render_tui_content(&state, 80, 20);
+
+        assert!(content.contains("Esc closes help"));
     }
 
     #[test]
