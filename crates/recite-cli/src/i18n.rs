@@ -9,6 +9,16 @@ pub(crate) const DEFAULT_LOCALE: &str = "en-US";
 
 const DEFAULT_RESOURCE: &str = include_str!("../i18n/en-US.ftl");
 
+struct EmbeddedCatalog {
+    locale: &'static str,
+    source: &'static str,
+}
+
+const EMBEDDED_CATALOGS: &[EmbeddedCatalog] = &[EmbeddedCatalog {
+    locale: DEFAULT_LOCALE,
+    source: DEFAULT_RESOURCE,
+}];
+
 #[derive(Clone, Debug, Eq, PartialEq)]
 pub(crate) enum UiLocale {
     Locale(LanguageIdentifier),
@@ -325,11 +335,9 @@ pub(crate) struct Messages {
 
 impl Messages {
     pub(crate) fn load(locale: &UiLocale) -> Result<Self, CliError> {
-        Self::from_resources(
-            locale.resolve(),
-            [(default_langid(), DEFAULT_RESOURCE.to_owned())],
-        )
-        .map_err(|source| CliError::UiCatalog { source })
+        let resources = embedded_resources().map_err(|source| CliError::UiCatalog { source })?;
+        Self::from_resources(locale.resolve(), resources)
+            .map_err(|source| CliError::UiCatalog { source })
     }
 
     fn from_resources(
@@ -338,14 +346,27 @@ impl Messages {
     ) -> Result<Self, String> {
         let mut bundles = BTreeMap::new();
         for (locale, source) in resources {
-            let resource = FluentResource::try_new(source)
-                .map_err(|(_, errors)| format!("failed to parse Fluent resource: {errors:?}"))?;
+            let locale_key = locale.to_string();
+            let resource = match FluentResource::try_new(source) {
+                Ok(resource) => resource,
+                Err((_, errors)) if locale_key == DEFAULT_LOCALE => {
+                    return Err(format!(
+                        "failed to parse default Fluent resource: {errors:?}"
+                    ));
+                }
+                Err(_) => continue,
+            };
             let mut bundle = FluentBundle::new(vec![locale.clone()]);
             bundle.set_use_isolating(false);
-            bundle
-                .add_resource(resource)
-                .map_err(|errors| format!("failed to add Fluent resource: {errors:?}"))?;
-            bundles.insert(locale.to_string(), bundle);
+            match bundle.add_resource(resource) {
+                Ok(()) => {
+                    bundles.insert(locale_key, bundle);
+                }
+                Err(errors) if locale_key == DEFAULT_LOCALE => {
+                    return Err(format!("failed to add default Fluent resource: {errors:?}"));
+                }
+                Err(_) => continue,
+            }
         }
 
         let default_key = DEFAULT_LOCALE.to_owned();
@@ -393,6 +414,19 @@ impl Messages {
         }
         id.key().to_owned()
     }
+}
+
+fn embedded_resources() -> Result<Vec<(LanguageIdentifier, String)>, String> {
+    EMBEDDED_CATALOGS
+        .iter()
+        .map(|catalog| {
+            catalog
+                .locale
+                .parse::<LanguageIdentifier>()
+                .map(|locale| (locale, catalog.source.to_owned()))
+                .map_err(|error| format!("invalid embedded locale {}: {error}", catalog.locale))
+        })
+        .collect()
 }
 
 pub(crate) fn default_langid() -> LanguageIdentifier {
@@ -508,6 +542,28 @@ mod tests {
             [
                 ("en-US", DEFAULT_RESOURCE),
                 ("en-GB", "other-message = Other\n"),
+            ],
+        );
+
+        assert_eq!(
+            messages.format(
+                MsgId::PlayStart,
+                [
+                    ("asset", "asset-1".to_owned()),
+                    ("block", "start".to_owned())
+                ],
+            ),
+            "play asset=asset-1 block=start"
+        );
+    }
+
+    #[test]
+    fn malformed_non_default_catalog_falls_back_to_default_catalog() {
+        let messages = messages_with(
+            "en-GB",
+            [
+                ("en-US", DEFAULT_RESOURCE),
+                ("en-GB", "not valid fluent = {"),
             ],
         );
 

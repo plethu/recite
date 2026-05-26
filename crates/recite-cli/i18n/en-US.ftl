@@ -6,12 +6,12 @@ play-prompt-line = prompt {$id}: {$text}
 play-prompt = prompt
 play-choice-row =   [{$index}] {$id}: {$text}{$availability}
 play-choice-unavailable-suffix =  (unavailable)
-play-choice-prompt = choice> 
-play-condition-prompt = condition {$query} [y/n]> 
+play-choice-prompt = choice>
+play-condition-prompt = condition {$query} [y/n]>
 play-condition-result = condition {$query} = {$result}
 play-selected-choice = selected choice {$id}
 play-effect = effect {$mode} id={$id} function={$function} args={$args}
-play-ack-prompt = ack {$id} with Enter or `ack`> 
+play-ack-prompt = ack {$id} with Enter or `ack`>
 play-ack-completed = acknowledged effect {$id} completed
 play-end = end
 play-deferred-effects = deferred effects:
@@ -35,11 +35,11 @@ tui-unknown-command = unknown command: :{$command}
 tui-normal-mode = normal mode
 tui-choice-status-standard = choice> arrows move, type ID/index, Enter selects
 tui-choice-status-vim = choice normal> j/k or arrows move, i types ID/index
-tui-choice-input-prefix = choice id/index> 
+tui-choice-input-prefix = choice id/index>
 tui-choice-input = choice id/index> {$input}
-tui-condition-input-prefix = condition> 
+tui-condition-input-prefix = condition>
 tui-ack-status = ack {$id} with Enter or ack
-tui-ack-input-prefix = ack> 
+tui-ack-input-prefix = ack>
 
 tui-header-title = recite play
 tui-header-asset = asset
@@ -69,7 +69,7 @@ tui-transcript-selected = selected
 tui-transcript-completed = completed
 tui-transcript-deferred-effects = deferred effects
 
-tui-help-label = help 
+tui-help-label = help
 tui-help-choice = arrows move, Enter selects, type an ID/index, :q quits
 tui-help-condition = enter y/n, :q quits, Ctrl-C quits
 tui-help-effect = Enter or ack completes, :q quits, Ctrl-C quits

@@ -95,6 +95,9 @@ impl<'a> PlayDriver<'a> {
                 None => match runtime_next(self.asset, &mut session, &context) {
                     Ok(event) => event,
                     Err(_) if context.was_interrupted() => return Err(CliError::PlayInterrupted),
+                    Err(_) if context.has_ui_error() => {
+                        return Err(context.take_ui_error().expect("UI error is present"));
+                    }
                     Err(error) => return Err(error.into()),
                 },
             };
@@ -128,6 +131,7 @@ impl<'a> PlayDriver<'a> {
 struct InteractiveContext<'a, U> {
     ui: RefCell<&'a mut U>,
     interrupted: RefCell<bool>,
+    ui_error: RefCell<Option<CliError>>,
 }
 
 impl<'a, U> InteractiveContext<'a, U> {
@@ -135,6 +139,7 @@ impl<'a, U> InteractiveContext<'a, U> {
         Self {
             ui: RefCell::new(ui),
             interrupted: RefCell::new(false),
+            ui_error: RefCell::new(None),
         }
     }
 }
@@ -247,6 +252,18 @@ impl<U: PlayUiAdapter> InteractiveContext<'_, U> {
     fn was_interrupted(&self) -> bool {
         *self.interrupted.borrow()
     }
+
+    fn set_ui_error(&self, error: CliError) {
+        *self.ui_error.borrow_mut() = Some(error);
+    }
+
+    fn has_ui_error(&self) -> bool {
+        self.ui_error.borrow().is_some()
+    }
+
+    fn take_ui_error(&self) -> Option<CliError> {
+        self.ui_error.borrow_mut().take()
+    }
 }
 
 impl<U: PlayUiAdapter> DialogueContext for InteractiveContext<'_, U> {
@@ -258,7 +275,9 @@ impl<U: PlayUiAdapter> DialogueContext for InteractiveContext<'_, U> {
             if matches!(error, CliError::PlayInterrupted) {
                 self.mark_interrupted();
             }
-            ConditionEvaluationError::new(error.to_string())
+            let message = error.to_string();
+            self.set_ui_error(error);
+            ConditionEvaluationError::new(message)
         })
     }
 }
@@ -399,7 +418,7 @@ impl<R: Read + ?Sized, W: Write + ?Sized> PlayUiAdapter for PlainPlayUi<'_, R, W
         }
         write!(
             self.output,
-            "{}",
+            "{} ",
             self.messages.text(MsgId::PlayChoicePrompt)
         )?;
         self.output.flush()?;
@@ -412,7 +431,7 @@ impl<R: Read + ?Sized, W: Write + ?Sized> PlayUiAdapter for PlainPlayUi<'_, R, W
         loop {
             write!(
                 self.output,
-                "{}",
+                "{} ",
                 self.messages
                     .format(MsgId::PlayConditionPrompt, [("query", query.clone())])
             )?;
@@ -479,7 +498,7 @@ impl<R: Read + ?Sized, W: Write + ?Sized> PlayUiAdapter for PlainPlayUi<'_, R, W
         loop {
             write!(
                 self.output,
-                "{}",
+                "{} ",
                 self.messages.format(
                     MsgId::PlayAckPrompt,
                     [("id", effect.id.as_str().to_owned())],
@@ -860,7 +879,8 @@ impl<'a, B: Backend> TuiPlayUi<'a, B> {
                 }
                 TuiIntent::StartInsert => {
                     set_prompt_mode(&mut self.state.prompt, PromptMode::Insert);
-                    self.state.status = self.messages.text(MsgId::TuiChoiceInputPrefix);
+                    self.state.status =
+                        prompt_label(self.messages.text(MsgId::TuiChoiceInputPrefix));
                 }
                 TuiIntent::Cancel => {
                     if self.settings.keymap == Keymap::Vim && mode == PromptMode::Insert {
@@ -1204,9 +1224,9 @@ impl<B: Backend> PlayUiAdapter for TuiPlayUi<'_, B> {
             show_help: false,
         };
         loop {
-            self.state.status = self.messages.text(MsgId::TuiConditionInputPrefix);
-            let input =
-                self.read_text_prompt(self.messages.text(MsgId::TuiConditionInputPrefix))?;
+            let label = prompt_label(self.messages.text(MsgId::TuiConditionInputPrefix));
+            self.state.status = label.clone();
+            let input = self.read_text_prompt(label)?;
             match input.trim().to_ascii_lowercase().as_str() {
                 "y" | "yes" | "true" | "1" => {
                     self.push(TuiTranscriptKind::Condition, Some(query.clone()), "true")?;
@@ -1245,7 +1265,8 @@ impl<B: Backend> PlayUiAdapter for TuiPlayUi<'_, B> {
             self.state.status = self
                 .messages
                 .format(MsgId::TuiAckStatus, [("id", effect.id.as_str().to_owned())]);
-            let input = self.read_text_prompt(self.messages.text(MsgId::TuiAckInputPrefix))?;
+            let input =
+                self.read_text_prompt(prompt_label(self.messages.text(MsgId::TuiAckInputPrefix)))?;
             if input.trim().is_empty() || input.trim().eq_ignore_ascii_case("ack") {
                 self.push(
                     TuiTranscriptKind::Ack,
@@ -1600,6 +1621,10 @@ fn input_line<'a>(label: String, input: &'a TextBuffer, command: &'a TextBuffer)
     ])
 }
 
+fn prompt_label(label: String) -> String {
+    format!("{label} ")
+}
+
 fn help_lines(context: &str, messages: &Messages) -> Vec<Line<'static>> {
     vec![
         Line::from(""),
@@ -1608,6 +1633,7 @@ fn help_lines(context: &str, messages: &Messages) -> Vec<Line<'static>> {
                 messages.text(MsgId::TuiHelpLabel),
                 Style::default().fg(Color::DarkGray),
             ),
+            Span::raw(" "),
             Span::raw(match context {
                 "choice" => messages.text(MsgId::TuiHelpChoice),
                 "condition" => messages.text(MsgId::TuiHelpCondition),
@@ -1845,6 +1871,27 @@ mod tests {
         let error = run_plain(&asset, "").expect_err("eof fails");
 
         assert!(error.to_string().contains("reached EOF"));
+    }
+
+    #[test]
+    fn plain_play_reports_condition_prompt_eof_as_cli_error() {
+        let asset = asset(concat!(
+            ":: start default\n",
+            "> intro\n",
+            "  Welcome.\n",
+            "  ? help if trusts(player)\n",
+            "    Help.\n",
+            "    -> END\n",
+        ));
+
+        let error = run_plain(&asset, "").expect_err("eof fails");
+
+        assert!(matches!(
+            error,
+            CliError::PlayEof {
+                field: "condition answer"
+            }
+        ));
     }
 
     #[test]
