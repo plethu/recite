@@ -8,7 +8,7 @@ use ratatui::{
 use crate::i18n::{Messages, MsgId};
 use crate::tui::{KeyHints, PromptMode, TextBuffer};
 
-use super::tui_state::{TuiPrompt, TuiState, TuiTranscriptEntry, TuiTranscriptKind};
+use super::state::{TuiPrompt, TuiState, TuiTranscriptEntry, TuiTranscriptKind};
 
 pub(super) fn render_tui(frame: &mut ratatui::Frame<'_>, state: &TuiState, messages: &Messages) {
     let chunks = Layout::default()
@@ -389,7 +389,7 @@ mod tests {
     use super::*;
     use ratatui::Terminal;
 
-    use super::super::tui_state::{TuiChoiceRow, TuiPromptLine};
+    use super::super::state::{TuiChoiceRow, TuiPromptLine};
 
     #[test]
     fn transcript_ids_are_aligned_and_clamped() {

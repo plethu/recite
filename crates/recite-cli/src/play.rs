@@ -9,9 +9,7 @@ use crate::tui::TuiSettings;
 mod driver;
 mod format;
 mod plain;
-mod tui_play;
-mod tui_render;
-mod tui_state;
+mod tui;
 
 pub(crate) fn run_play_command(
     args: PlayArgs,
@@ -28,7 +26,7 @@ pub(crate) fn run_play_command(
                 return Err(CliError::PlayTuiRequiresTerminal);
             }
             writeln!(stderr, "{}", messages.text(MsgId::PlayTuiStarting))?;
-            tui_play::run_tui_stdio(&asset, &args.block, settings, messages)
+            tui::run_tui_stdio(&asset, &args.block, settings, messages)
         }
     }
 }

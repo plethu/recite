@@ -18,14 +18,17 @@ use crate::tui::{
 
 use super::driver::{ChoiceSelection, PlayDriver, PlayUiAdapter};
 use super::format::condition_query_text;
-use super::tui_render::render_tui;
-use super::tui_state::{
+use render::render_tui;
+use state::{
     TuiChoiceRow, TuiPrompt, TuiPromptLine, TuiState, TuiTranscriptEntry, TuiTranscriptKind,
     choice_status, clear_prompt_input, initial_choice_selection, initial_prompt_mode,
     move_choice_selection, mutate_prompt_command, mutate_prompt_input, prompt_command,
     prompt_input, prompt_label, prompt_mode, selected_choice_id, set_command, set_prompt_mode,
     toggle_help,
 };
+
+mod render;
+mod state;
 
 pub(super) fn run_tui_stdio(
     asset: &CompiledDialogue,
