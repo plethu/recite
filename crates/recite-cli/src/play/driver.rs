@@ -8,7 +8,7 @@ use recite_runtime::{
 };
 
 use crate::error::CliError;
-use crate::i18n::MsgId;
+use crate::i18n::{Messages, MsgId};
 
 pub(super) struct PlayDriver<'a> {
     asset: &'a CompiledDialogue,
@@ -240,6 +240,20 @@ pub(super) trait PlayUiAdapter {
 pub(super) enum ChoiceSelection {
     Index(usize),
     Id(String),
+}
+
+impl ChoiceSelection {
+    pub(super) fn parse(input: &str, messages: &Messages) -> Result<Self, CliError> {
+        if input.is_empty() {
+            return Err(CliError::PlayInvalidInput(
+                messages.text(MsgId::PlayErrorEmptyChoice),
+            ));
+        }
+        if let Ok(index) = input.parse::<usize>() {
+            return Ok(Self::Index(index));
+        }
+        Ok(Self::Id(input.to_owned()))
+    }
 }
 
 fn unavailable_choice_message<U: PlayUiAdapter>(

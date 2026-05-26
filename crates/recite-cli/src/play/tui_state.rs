@@ -1,0 +1,368 @@
+use crate::i18n::{Messages, MsgId};
+use crate::tui::{KeyHints, Keymap, PromptMode, TextBuffer, TuiIntent};
+
+#[derive(Default)]
+pub(super) struct TuiState {
+    pub(super) asset: String,
+    pub(super) block: String,
+    pub(super) transcript: Vec<TuiTranscriptEntry>,
+    pub(super) prompt: TuiPrompt,
+    pub(super) status: String,
+    pub(super) key_hints: KeyHints,
+}
+
+#[derive(Clone, Debug, Eq, PartialEq)]
+pub(super) struct TuiTranscriptEntry {
+    pub(super) kind: TuiTranscriptKind,
+    pub(super) id: Option<String>,
+    pub(super) text: String,
+}
+
+#[derive(Clone, Copy, Debug, Eq, PartialEq)]
+pub(super) enum TuiTranscriptKind {
+    Line,
+    Prompt,
+    Choice,
+    Condition,
+    Effect,
+    Ack,
+    End,
+}
+
+#[derive(Clone, Debug, Default, Eq, PartialEq)]
+pub(super) enum TuiPrompt {
+    #[default]
+    None,
+    Choice {
+        line: Option<TuiPromptLine>,
+        choices: Vec<TuiChoiceRow>,
+        selected: usize,
+        mode: PromptMode,
+        input: TextBuffer,
+        command: TextBuffer,
+        show_help: bool,
+    },
+    Condition {
+        query: String,
+        mode: PromptMode,
+        input: TextBuffer,
+        command: TextBuffer,
+        show_help: bool,
+    },
+    Effect {
+        mode: String,
+        id: String,
+        function: String,
+        args: String,
+        input_mode: PromptMode,
+        input: TextBuffer,
+        command: TextBuffer,
+        show_help: bool,
+    },
+    Finished,
+}
+
+#[derive(Clone, Debug, Eq, PartialEq)]
+pub(super) struct TuiPromptLine {
+    pub(super) id: String,
+    pub(super) text: String,
+}
+
+#[derive(Clone, Debug, Eq, PartialEq)]
+pub(super) struct TuiChoiceRow {
+    pub(super) index: usize,
+    pub(super) id: String,
+    pub(super) text: String,
+    pub(super) is_available: bool,
+    pub(super) unavailable_reason: Option<String>,
+    pub(super) is_visible: bool,
+}
+
+pub(super) fn initial_prompt_mode(keymap: Keymap) -> PromptMode {
+    match keymap {
+        Keymap::Standard => PromptMode::Insert,
+        Keymap::Vim => PromptMode::Normal,
+    }
+}
+
+pub(super) fn choice_status(messages: &Messages, keymap: Keymap) -> String {
+    match keymap {
+        Keymap::Standard => messages.text(MsgId::TuiChoiceStatusStandard),
+        Keymap::Vim => messages.text(MsgId::TuiChoiceStatusVim),
+    }
+}
+
+pub(super) fn initial_choice_selection(choices: &[TuiChoiceRow]) -> usize {
+    choices
+        .iter()
+        .position(|choice| choice.is_visible && choice.is_available)
+        .or_else(|| choices.iter().position(|choice| choice.is_visible))
+        .unwrap_or(0)
+}
+
+pub(super) fn prompt_mode(prompt: &TuiPrompt) -> PromptMode {
+    match prompt {
+        TuiPrompt::Choice {
+            mode, show_help, ..
+        }
+        | TuiPrompt::Condition {
+            mode, show_help, ..
+        } => {
+            if *show_help {
+                PromptMode::Help
+            } else {
+                *mode
+            }
+        }
+        TuiPrompt::Effect {
+            input_mode,
+            show_help,
+            ..
+        } => {
+            if *show_help {
+                PromptMode::Help
+            } else {
+                *input_mode
+            }
+        }
+        _ => PromptMode::Normal,
+    }
+}
+
+pub(super) fn set_prompt_mode(prompt: &mut TuiPrompt, mode: PromptMode) {
+    match prompt {
+        TuiPrompt::Choice {
+            mode: prompt_mode,
+            show_help,
+            ..
+        }
+        | TuiPrompt::Condition {
+            mode: prompt_mode,
+            show_help,
+            ..
+        } => {
+            *prompt_mode = mode;
+            *show_help = false;
+        }
+        TuiPrompt::Effect {
+            input_mode,
+            show_help,
+            ..
+        } => {
+            *input_mode = mode;
+            *show_help = false;
+        }
+        _ => {}
+    }
+}
+
+pub(super) fn toggle_help(prompt: &mut TuiPrompt) {
+    match prompt {
+        TuiPrompt::Choice { show_help, .. }
+        | TuiPrompt::Condition { show_help, .. }
+        | TuiPrompt::Effect { show_help, .. } => *show_help = !*show_help,
+        _ => {}
+    }
+}
+
+pub(super) fn set_command(prompt: &mut TuiPrompt, command: TextBuffer) {
+    match prompt {
+        TuiPrompt::Choice {
+            command: prompt_command,
+            ..
+        }
+        | TuiPrompt::Condition {
+            command: prompt_command,
+            ..
+        }
+        | TuiPrompt::Effect {
+            command: prompt_command,
+            ..
+        } => *prompt_command = command,
+        _ => {}
+    }
+}
+
+pub(super) fn prompt_command(prompt: &TuiPrompt) -> &str {
+    match prompt {
+        TuiPrompt::Choice { command, .. }
+        | TuiPrompt::Condition { command, .. }
+        | TuiPrompt::Effect { command, .. } => command.as_str(),
+        _ => "",
+    }
+}
+
+pub(super) fn mutate_prompt_command(prompt: &mut TuiPrompt, intent: TuiIntent) {
+    match prompt {
+        TuiPrompt::Choice { command, .. }
+        | TuiPrompt::Condition { command, .. }
+        | TuiPrompt::Effect { command, .. } => mutate_buffer(command, intent),
+        _ => {}
+    }
+}
+
+pub(super) fn prompt_input(prompt: &TuiPrompt) -> &str {
+    match prompt {
+        TuiPrompt::Choice { input, .. }
+        | TuiPrompt::Condition { input, .. }
+        | TuiPrompt::Effect { input, .. } => input.as_str(),
+        _ => "",
+    }
+}
+
+pub(super) fn clear_prompt_input(prompt: &mut TuiPrompt) {
+    match prompt {
+        TuiPrompt::Choice { input, .. }
+        | TuiPrompt::Condition { input, .. }
+        | TuiPrompt::Effect { input, .. } => input.clear(),
+        _ => {}
+    }
+}
+
+pub(super) fn mutate_prompt_input(prompt: &mut TuiPrompt, intent: TuiIntent) {
+    match prompt {
+        TuiPrompt::Choice { input, mode, .. } => {
+            if matches!(intent, TuiIntent::Text(_)) {
+                *mode = PromptMode::Insert;
+            }
+            mutate_buffer(input, intent);
+        }
+        TuiPrompt::Condition { input, .. } | TuiPrompt::Effect { input, .. } => {
+            mutate_buffer(input, intent);
+        }
+        _ => {}
+    }
+}
+
+fn mutate_buffer(buffer: &mut TextBuffer, intent: TuiIntent) {
+    match intent {
+        TuiIntent::Text(ch) => buffer.insert(ch),
+        TuiIntent::Backspace => buffer.backspace(),
+        TuiIntent::Delete => buffer.delete(),
+        TuiIntent::MoveCursorLeft => buffer.move_left(),
+        TuiIntent::MoveCursorRight => buffer.move_right(),
+        TuiIntent::MoveCursorStart => buffer.move_start(),
+        TuiIntent::MoveCursorEnd => buffer.move_end(),
+        TuiIntent::ClearLine => buffer.clear(),
+        TuiIntent::DeleteWord => buffer.delete_word_before_cursor(),
+        _ => {}
+    }
+}
+
+pub(super) fn selected_choice_id(prompt: &TuiPrompt) -> Option<&str> {
+    match prompt {
+        TuiPrompt::Choice {
+            choices, selected, ..
+        } => choices.get(*selected).map(|choice| choice.id.as_str()),
+        _ => None,
+    }
+}
+
+pub(super) fn move_choice_selection(prompt: &mut TuiPrompt, direction: isize) {
+    let TuiPrompt::Choice {
+        choices, selected, ..
+    } = prompt
+    else {
+        return;
+    };
+    if choices.is_empty() {
+        return;
+    }
+    let len = choices.len();
+    let mut next = *selected;
+    for _ in 0..len {
+        next = if direction > 0 {
+            (next + 1) % len
+        } else {
+            (next + len - 1) % len
+        };
+        if choices[next].is_visible && choices[next].is_available {
+            *selected = next;
+            return;
+        }
+    }
+}
+
+pub(super) fn prompt_label(label: String) -> String {
+    format!("{label} ")
+}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+
+    #[test]
+    fn choice_selection_prefers_first_visible_available_choice() {
+        let choices = vec![
+            TuiChoiceRow {
+                index: 1,
+                id: "locked".to_owned(),
+                text: "Locked.".to_owned(),
+                is_available: false,
+                unavailable_reason: Some("missing key".to_owned()),
+                is_visible: true,
+            },
+            TuiChoiceRow {
+                index: 2,
+                id: "open".to_owned(),
+                text: "Open.".to_owned(),
+                is_available: true,
+                unavailable_reason: None,
+                is_visible: true,
+            },
+        ];
+
+        assert_eq!(initial_choice_selection(&choices), 1);
+    }
+
+    #[test]
+    fn choice_navigation_skips_hidden_and_unavailable_choices() {
+        let mut prompt = TuiPrompt::Choice {
+            line: None,
+            choices: vec![
+                TuiChoiceRow {
+                    index: 1,
+                    id: "first".to_owned(),
+                    text: "First.".to_owned(),
+                    is_available: true,
+                    unavailable_reason: None,
+                    is_visible: true,
+                },
+                TuiChoiceRow {
+                    index: 2,
+                    id: "locked".to_owned(),
+                    text: "Locked.".to_owned(),
+                    is_available: false,
+                    unavailable_reason: None,
+                    is_visible: true,
+                },
+                TuiChoiceRow {
+                    index: 3,
+                    id: "hidden".to_owned(),
+                    text: "Hidden.".to_owned(),
+                    is_available: true,
+                    unavailable_reason: None,
+                    is_visible: false,
+                },
+                TuiChoiceRow {
+                    index: 4,
+                    id: "last".to_owned(),
+                    text: "Last.".to_owned(),
+                    is_available: true,
+                    unavailable_reason: None,
+                    is_visible: true,
+                },
+            ],
+            selected: 0,
+            mode: PromptMode::Insert,
+            input: TextBuffer::default(),
+            command: TextBuffer::default(),
+            show_help: false,
+        };
+
+        move_choice_selection(&mut prompt, 1);
+        assert_eq!(selected_choice_id(&prompt), Some("last"));
+        move_choice_selection(&mut prompt, 1);
+        assert_eq!(selected_choice_id(&prompt), Some("first"));
+    }
+}
