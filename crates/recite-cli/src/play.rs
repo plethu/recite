@@ -94,11 +94,7 @@ impl<'a> PlayDriver<'a> {
                 Some(event) => event,
                 None => match runtime_next(self.asset, &mut session, &context) {
                     Ok(event) => event,
-                    Err(_) if context.was_interrupted() => return Err(CliError::PlayInterrupted),
-                    Err(_) if context.has_ui_error() => {
-                        return Err(context.take_ui_error().expect("UI error is present"));
-                    }
-                    Err(error) => return Err(error.into()),
+                    Err(error) => return Err(context.resolve_runtime_error(error)),
                 },
             };
 
@@ -107,7 +103,8 @@ impl<'a> PlayDriver<'a> {
                 DialogueEvent::Prompt { line, choices } => {
                     let choice_id = context.choice(line.as_ref(), &choices)?;
                     context.selected_choice(&choice_id)?;
-                    let event = runtime_choose(self.asset, &mut session, choice_id, &context)?;
+                    let event = runtime_choose(self.asset, &mut session, choice_id, &context)
+                        .map_err(|error| context.resolve_runtime_error(error))?;
                     pending_event = Some(event);
                 }
                 DialogueEvent::Effect(effect) => {
@@ -257,12 +254,15 @@ impl<U: PlayUiAdapter> InteractiveContext<'_, U> {
         *self.ui_error.borrow_mut() = Some(error);
     }
 
-    fn has_ui_error(&self) -> bool {
-        self.ui_error.borrow().is_some()
-    }
-
     fn take_ui_error(&self) -> Option<CliError> {
         self.ui_error.borrow_mut().take()
+    }
+
+    fn resolve_runtime_error(&self, error: recite_runtime::DialogueError) -> CliError {
+        if self.was_interrupted() {
+            return CliError::PlayInterrupted;
+        }
+        self.take_ui_error().unwrap_or_else(|| error.into())
     }
 }
 
@@ -1885,6 +1885,32 @@ mod tests {
         ));
 
         let error = run_plain(&asset, "").expect_err("eof fails");
+
+        assert!(matches!(
+            error,
+            CliError::PlayEof {
+                field: "condition answer"
+            }
+        ));
+    }
+
+    #[test]
+    fn plain_play_reports_post_choice_condition_eof_as_cli_error() {
+        let asset = asset(concat!(
+            ":: start default\n",
+            "> intro\n",
+            "  Welcome.\n",
+            "  ? help\n",
+            "    Help.\n",
+            "    -> help\n",
+            ":: help\n",
+            ":if trusts(player)\n",
+            "  > helped\n",
+            "    Helped.\n",
+            "-> END\n",
+        ));
+
+        let error = run_plain(&asset, "help\n").expect_err("eof fails");
 
         assert!(matches!(
             error,
