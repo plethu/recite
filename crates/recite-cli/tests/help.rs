@@ -16,6 +16,7 @@ fn help_covers_issue_25_commands_and_options() {
         "check-fresh",
         "run",
         "trace",
+        "play",
     ] {
         output.assert_stdout_contains(command);
     }
@@ -51,4 +52,10 @@ fn help_covers_issue_25_commands_and_options() {
     trace.assert_success().assert_stderr("");
     trace.assert_stdout_contains("--block <BLOCK>");
     trace.assert_stdout_contains("--fixture <FIXTURE>");
+
+    let play = run(recite().arg("play").arg("--help"));
+    play.assert_success().assert_stderr("");
+    play.assert_stdout_contains("--block <BLOCK>");
+    play.assert_stdout_contains("--ui <UI>");
+    play.assert_stdout_contains("--keymap <KEYMAP>");
 }

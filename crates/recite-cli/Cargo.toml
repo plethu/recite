@@ -13,6 +13,9 @@ path = "src/main.rs"
 
 [dependencies]
 clap.workspace = true
+crossterm.workspace = true
+fluent-bundle.workspace = true
+ratatui.workspace = true
 recite-core.workspace = true
 recite-parser.workspace = true
 recite-compiler.workspace = true
@@ -20,6 +23,7 @@ recite-runtime.workspace = true
 serde.workspace = true
 serde_json.workspace = true
 toml.workspace = true
+unic-langid.workspace = true
 
 [dev-dependencies]
 tempfile.workspace = true

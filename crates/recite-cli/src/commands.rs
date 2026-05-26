@@ -12,6 +12,7 @@ use crate::fs::{
     read_compile_inputs_for_output, read_compile_inputs_from_files, reject_output_input_alias,
     validate_inputs, validate_project, write_staged,
 };
+use crate::play::run_play_command;
 use crate::runtime_fixture::{execute_runtime_fixture, load_compiled_asset, load_runtime_fixture};
 
 pub(crate) fn run_command(
@@ -78,6 +79,7 @@ pub(crate) fn run_command(
         }
         Command::Run(args) => runtime_command(args, RuntimeOutput::Run, stdout),
         Command::Trace(args) => runtime_command(args, RuntimeOutput::Trace, stdout),
+        Command::Play(args) => run_play_command(args, stdout, stderr),
     }
 }
 
