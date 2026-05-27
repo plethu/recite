@@ -16,8 +16,9 @@ use serde::Deserialize;
 
 use crate::{args::PlayKeymap, error::CliError, i18n::UiLocale};
 
-#[derive(Clone, Copy, Debug, Eq, PartialEq)]
+#[derive(Clone, Copy, Debug, Default, Eq, PartialEq)]
 pub(crate) enum Keymap {
+    #[default]
     Standard,
     Vim,
 }
@@ -350,7 +351,6 @@ pub(crate) fn map_key(keymap: Keymap, mode: PromptMode, key: KeyEvent) -> TuiInt
                 }
             }
             KeyCode::Enter => TuiIntent::Submit,
-            KeyCode::Char(':') if keymap == Keymap::Standard => TuiIntent::OpenCommand,
             KeyCode::Char('?') => TuiIntent::ToggleHelp,
             KeyCode::Char(ch) => TuiIntent::Text(ch),
             KeyCode::Backspace => TuiIntent::Backspace,
@@ -368,7 +368,7 @@ pub(crate) fn map_key(keymap: Keymap, mode: PromptMode, key: KeyEvent) -> TuiInt
             KeyCode::Enter => TuiIntent::Submit,
             KeyCode::Up => TuiIntent::MovePrevious,
             KeyCode::Down => TuiIntent::MoveNext,
-            KeyCode::Char(':') => TuiIntent::OpenCommand,
+            KeyCode::Char(':') if keymap == Keymap::Vim => TuiIntent::OpenCommand,
             KeyCode::Char('?') => TuiIntent::ToggleHelp,
             KeyCode::Char('i') if keymap == Keymap::Vim => TuiIntent::StartInsert,
             KeyCode::Char('j') if keymap == Keymap::Vim => TuiIntent::MoveNext,
@@ -465,6 +465,47 @@ mod tests {
         assert_eq!(
             map_key(Keymap::Standard, PromptMode::Normal, key),
             TuiIntent::Text('j')
+        );
+    }
+
+    #[test]
+    fn standard_colon_does_not_enter_command_mode() {
+        let key = KeyEvent::new(KeyCode::Char(':'), KeyModifiers::NONE);
+        assert_eq!(
+            map_key(Keymap::Standard, PromptMode::Normal, key),
+            TuiIntent::Text(':')
+        );
+    }
+
+    #[test]
+    fn vim_colon_enters_command_mode() {
+        let key = KeyEvent::new(KeyCode::Char(':'), KeyModifiers::NONE);
+        assert_eq!(
+            map_key(Keymap::Vim, PromptMode::Normal, key),
+            TuiIntent::OpenCommand
+        );
+    }
+
+    #[test]
+    fn condition_yes_no_shortcuts_are_standard_only_in_normal_mode() {
+        let yes = KeyEvent::new(KeyCode::Char('y'), KeyModifiers::NONE);
+        let no = KeyEvent::new(KeyCode::Char('n'), KeyModifiers::NONE);
+
+        assert_eq!(
+            map_key(Keymap::Standard, PromptMode::Normal, yes),
+            TuiIntent::Text('y')
+        );
+        assert_eq!(
+            map_key(Keymap::Standard, PromptMode::Normal, no),
+            TuiIntent::Text('n')
+        );
+        assert_eq!(
+            map_key(Keymap::Vim, PromptMode::Normal, yes),
+            TuiIntent::Ignore
+        );
+        assert_eq!(
+            map_key(Keymap::Vim, PromptMode::Normal, no),
+            TuiIntent::Ignore
         );
     }
 

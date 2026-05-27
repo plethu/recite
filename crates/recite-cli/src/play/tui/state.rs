@@ -1,4 +1,3 @@
-use crate::i18n::{Messages, MsgId};
 use crate::tui::{KeyHints, Keymap, PromptMode, TextBuffer, TuiIntent};
 
 #[derive(Default)]
@@ -9,6 +8,7 @@ pub(super) struct TuiState {
     pub(super) prompt: TuiPrompt,
     pub(super) status: String,
     pub(super) key_hints: KeyHints,
+    pub(super) keymap: Keymap,
 }
 
 #[derive(Clone, Debug, Eq, PartialEq)]
@@ -26,6 +26,7 @@ pub(super) enum TuiTranscriptKind {
     Condition,
     Effect,
     Ack,
+    Deferred,
     End,
 }
 
@@ -44,8 +45,8 @@ pub(super) enum TuiPrompt {
     },
     Condition {
         query: String,
+        selected: bool,
         mode: PromptMode,
-        input: TextBuffer,
         command: TextBuffer,
         show_help: bool,
     },
@@ -59,7 +60,9 @@ pub(super) enum TuiPrompt {
         command: TextBuffer,
         show_help: bool,
     },
-    Finished,
+    Finished {
+        show_help: bool,
+    },
 }
 
 #[derive(Clone, Debug, Eq, PartialEq)]
@@ -82,13 +85,6 @@ pub(super) fn initial_prompt_mode(keymap: Keymap) -> PromptMode {
     match keymap {
         Keymap::Standard => PromptMode::Insert,
         Keymap::Vim => PromptMode::Normal,
-    }
-}
-
-pub(super) fn choice_status(messages: &Messages, keymap: Keymap) -> String {
-    match keymap {
-        Keymap::Standard => messages.text(MsgId::TuiChoiceStatusStandard),
-        Keymap::Vim => messages.text(MsgId::TuiChoiceStatusVim),
     }
 }
 
@@ -123,6 +119,13 @@ pub(super) fn prompt_mode(prompt: &TuiPrompt) -> PromptMode {
                 PromptMode::Help
             } else {
                 *input_mode
+            }
+        }
+        TuiPrompt::Finished { show_help } => {
+            if *show_help {
+                PromptMode::Help
+            } else {
+                PromptMode::Normal
             }
         }
         _ => PromptMode::Normal,
@@ -160,7 +163,8 @@ pub(super) fn toggle_help(prompt: &mut TuiPrompt) {
     match prompt {
         TuiPrompt::Choice { show_help, .. }
         | TuiPrompt::Condition { show_help, .. }
-        | TuiPrompt::Effect { show_help, .. } => *show_help = !*show_help,
+        | TuiPrompt::Effect { show_help, .. }
+        | TuiPrompt::Finished { show_help } => *show_help = !*show_help,
         _ => {}
     }
 }
@@ -169,7 +173,8 @@ pub(super) fn close_help(prompt: &mut TuiPrompt) {
     match prompt {
         TuiPrompt::Choice { show_help, .. }
         | TuiPrompt::Condition { show_help, .. }
-        | TuiPrompt::Effect { show_help, .. } => *show_help = false,
+        | TuiPrompt::Effect { show_help, .. }
+        | TuiPrompt::Finished { show_help } => *show_help = false,
         _ => {}
     }
 }
@@ -212,19 +217,8 @@ pub(super) fn mutate_prompt_command(prompt: &mut TuiPrompt, intent: TuiIntent) {
 
 pub(super) fn prompt_input(prompt: &TuiPrompt) -> &str {
     match prompt {
-        TuiPrompt::Choice { input, .. }
-        | TuiPrompt::Condition { input, .. }
-        | TuiPrompt::Effect { input, .. } => input.as_str(),
+        TuiPrompt::Choice { input, .. } | TuiPrompt::Effect { input, .. } => input.as_str(),
         _ => "",
-    }
-}
-
-pub(super) fn clear_prompt_input(prompt: &mut TuiPrompt) {
-    match prompt {
-        TuiPrompt::Choice { input, .. }
-        | TuiPrompt::Condition { input, .. }
-        | TuiPrompt::Effect { input, .. } => input.clear(),
-        _ => {}
     }
 }
 
@@ -236,9 +230,8 @@ pub(super) fn mutate_prompt_input(prompt: &mut TuiPrompt, intent: TuiIntent) {
             }
             mutate_buffer(input, intent);
         }
-        TuiPrompt::Condition { input, .. } | TuiPrompt::Effect { input, .. } => {
-            mutate_buffer(input, intent);
-        }
+        TuiPrompt::Effect { input, .. } => mutate_buffer(input, intent),
+        TuiPrompt::Condition { .. } => {}
         _ => {}
     }
 }
@@ -292,102 +285,29 @@ pub(super) fn move_choice_selection(prompt: &mut TuiPrompt, direction: isize) {
     }
 }
 
+pub(super) fn condition_selection(prompt: &TuiPrompt) -> Option<bool> {
+    match prompt {
+        TuiPrompt::Condition { selected, .. } => Some(*selected),
+        _ => None,
+    }
+}
+
+pub(super) fn move_condition_selection(prompt: &mut TuiPrompt) {
+    if let TuiPrompt::Condition { selected, .. } = prompt {
+        *selected = !*selected;
+    }
+}
+
+pub(super) fn set_condition_selection(prompt: &mut TuiPrompt, value: bool) {
+    if let TuiPrompt::Condition { selected, .. } = prompt {
+        *selected = value;
+    }
+}
+
 pub(super) fn prompt_label(label: String) -> String {
     format!("{label} ")
 }
 
 #[cfg(test)]
-mod tests {
-    use super::*;
-
-    #[test]
-    fn choice_selection_prefers_first_visible_available_choice() {
-        let choices = vec![
-            TuiChoiceRow {
-                index: 1,
-                id: "locked".to_owned(),
-                text: "Locked.".to_owned(),
-                is_available: false,
-                unavailable_reason: Some("missing key".to_owned()),
-                is_visible: true,
-            },
-            TuiChoiceRow {
-                index: 2,
-                id: "open".to_owned(),
-                text: "Open.".to_owned(),
-                is_available: true,
-                unavailable_reason: None,
-                is_visible: true,
-            },
-        ];
-
-        assert_eq!(initial_choice_selection(&choices), 1);
-    }
-
-    #[test]
-    fn choice_navigation_skips_hidden_and_unavailable_choices() {
-        let mut prompt = TuiPrompt::Choice {
-            line: None,
-            choices: vec![
-                TuiChoiceRow {
-                    index: 1,
-                    id: "first".to_owned(),
-                    text: "First.".to_owned(),
-                    is_available: true,
-                    unavailable_reason: None,
-                    is_visible: true,
-                },
-                TuiChoiceRow {
-                    index: 2,
-                    id: "locked".to_owned(),
-                    text: "Locked.".to_owned(),
-                    is_available: false,
-                    unavailable_reason: None,
-                    is_visible: true,
-                },
-                TuiChoiceRow {
-                    index: 3,
-                    id: "hidden".to_owned(),
-                    text: "Hidden.".to_owned(),
-                    is_available: true,
-                    unavailable_reason: None,
-                    is_visible: false,
-                },
-                TuiChoiceRow {
-                    index: 4,
-                    id: "last".to_owned(),
-                    text: "Last.".to_owned(),
-                    is_available: true,
-                    unavailable_reason: None,
-                    is_visible: true,
-                },
-            ],
-            selected: 0,
-            mode: PromptMode::Insert,
-            input: TextBuffer::default(),
-            command: TextBuffer::default(),
-            show_help: false,
-        };
-
-        move_choice_selection(&mut prompt, 1);
-        assert_eq!(selected_choice_id(&prompt), Some("last"));
-        move_choice_selection(&mut prompt, 1);
-        assert_eq!(selected_choice_id(&prompt), Some("first"));
-    }
-
-    #[test]
-    fn help_mode_can_be_closed_without_changing_stored_prompt_mode() {
-        let mut prompt = TuiPrompt::Condition {
-            query: "trusts(player)".to_owned(),
-            mode: PromptMode::Insert,
-            input: TextBuffer::default(),
-            command: TextBuffer::default(),
-            show_help: true,
-        };
-
-        assert_eq!(prompt_mode(&prompt), PromptMode::Help);
-        close_help(&mut prompt);
-
-        assert_eq!(prompt_mode(&prompt), PromptMode::Insert);
-    }
-}
+#[path = "state_tests.rs"]
+mod tests;

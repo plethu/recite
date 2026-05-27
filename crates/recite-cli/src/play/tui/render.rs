@@ -1,16 +1,21 @@
 use ratatui::{
     layout::{Constraint, Direction, Layout},
     style::{Color, Modifier, Style},
-    text::{Line, Span},
+    text::{Line, Span, Text},
     widgets::{Paragraph, Wrap},
 };
 
 use crate::i18n::{Messages, MsgId};
-use crate::tui::{KeyHints, PromptMode, TextBuffer};
+use crate::tui::{KeyHints, Keymap, PromptMode, TextBuffer};
 
 use super::state::{TuiPrompt, TuiState, TuiTranscriptEntry, TuiTranscriptKind, prompt_mode};
 
 pub(super) fn render_tui(frame: &mut ratatui::Frame<'_>, state: &TuiState, messages: &Messages) {
+    if prompt_mode(&state.prompt) == PromptMode::Help {
+        render_help_overlay(frame, state, messages);
+        return;
+    }
+
     let chunks = Layout::default()
         .direction(Direction::Vertical)
         .constraints([
@@ -46,25 +51,20 @@ pub(super) fn render_tui(frame: &mut ratatui::Frame<'_>, state: &TuiState, messa
     ]);
     frame.render_widget(Paragraph::new(vec![header, Line::from("")]), chunks[0]);
 
-    let visible_transcript = state
-        .transcript
-        .iter()
-        .rev()
-        .take(chunks[1].height as usize)
-        .rev()
-        .collect::<Vec<_>>();
-    let id_width = transcript_id_width(&visible_transcript);
-    let transcript = visible_transcript
-        .iter()
-        .map(|entry| render_transcript_entry(entry, id_width, messages))
-        .collect::<Vec<_>>();
+    let transcript = render_transcript(
+        &state.transcript,
+        chunks[1].width,
+        chunks[1].height,
+        messages,
+    );
     frame.render_widget(
         Paragraph::new(transcript).wrap(Wrap { trim: false }),
         chunks[1],
     );
 
     frame.render_widget(
-        Paragraph::new(render_prompt(&state.prompt, messages)).wrap(Wrap { trim: false }),
+        Paragraph::new(render_prompt(&state.prompt, state.keymap, messages))
+            .wrap(Wrap { trim: false }),
         chunks[2],
     );
 
@@ -73,43 +73,59 @@ pub(super) fn render_tui(frame: &mut ratatui::Frame<'_>, state: &TuiState, messa
 
 fn prompt_height(prompt: &TuiPrompt) -> u16 {
     match prompt {
-        TuiPrompt::None | TuiPrompt::Finished => 2,
+        TuiPrompt::None | TuiPrompt::Finished { .. } => 2,
         TuiPrompt::Choice { choices, .. } => {
             let visible = choices.iter().filter(|choice| choice.is_visible).count();
             (visible as u16 + 5).clamp(5, 12)
         }
-        TuiPrompt::Condition { show_help, .. } => {
-            if *show_help {
-                6
-            } else {
-                4
-            }
-        }
-        TuiPrompt::Effect { show_help, .. } => {
-            if *show_help {
-                9
-            } else {
-                7
-            }
-        }
+        TuiPrompt::Condition { .. } => 5,
+        TuiPrompt::Effect { .. } => 7,
     }
 }
 
-fn transcript_id_width(entries: &[&TuiTranscriptEntry]) -> usize {
-    entries
-        .iter()
-        .filter_map(|entry| entry.id.as_ref())
-        .map(|id| id.chars().count().min(32))
-        .max()
-        .unwrap_or(12)
-        .clamp(12, 32)
+fn render_help_overlay(frame: &mut ratatui::Frame<'_>, state: &TuiState, messages: &Messages) {
+    let chunks = Layout::default()
+        .direction(Direction::Vertical)
+        .constraints([Constraint::Min(1), Constraint::Length(1)])
+        .split(frame.area());
+
+    frame.render_widget(
+        Paragraph::new(help_overlay_lines(&state.prompt, state.keymap, messages)),
+        chunks[0],
+    );
+    frame.render_widget(
+        Paragraph::new(Line::from(help_footer_control(
+            &state.prompt,
+            state.keymap,
+            messages,
+        ))),
+        chunks[1],
+    );
+}
+
+fn render_transcript<'a>(
+    entries: &'a [TuiTranscriptEntry],
+    width: u16,
+    height: u16,
+    messages: &'a Messages,
+) -> Text<'a> {
+    let mut lines = Vec::new();
+    for entry in entries {
+        lines.extend(render_transcript_entry(entry, width as usize, messages));
+        lines.push(Line::from(""));
+    }
+    if !lines.is_empty() {
+        lines.pop();
+    }
+    let visible_start = lines.len().saturating_sub(height as usize);
+    Text::from(lines.split_off(visible_start))
 }
 
 fn render_transcript_entry<'a>(
     entry: &'a TuiTranscriptEntry,
-    id_width: usize,
+    width: usize,
     messages: &'a Messages,
-) -> Line<'a> {
+) -> Vec<Line<'a>> {
     let (label, color) = match entry.kind {
         TuiTranscriptKind::Line => (messages.text(MsgId::TuiTranscriptLine), Color::Green),
         TuiTranscriptKind::Prompt => (messages.text(MsgId::TuiTranscriptPrompt), Color::Blue),
@@ -119,70 +135,125 @@ fn render_transcript_entry<'a>(
         }
         TuiTranscriptKind::Effect => (messages.text(MsgId::TuiTranscriptEffect), Color::Magenta),
         TuiTranscriptKind::Ack => (messages.text(MsgId::TuiTranscriptAck), Color::Magenta),
+        TuiTranscriptKind::Deferred => {
+            (messages.text(MsgId::TuiTranscriptDeferred), Color::Magenta)
+        }
         TuiTranscriptKind::End => (messages.text(MsgId::TuiTranscriptEnd), Color::DarkGray),
     };
     let mut spans = vec![Span::styled(
-        format!("{label:<9}"),
+        label,
         Style::default().fg(color).add_modifier(Modifier::BOLD),
     )];
-    let id = entry
-        .id
-        .as_deref()
-        .map(|id| clamp_display(id, id_width))
-        .unwrap_or_else(|| String::from(""));
-    spans.push(Span::styled(
-        format!("{id:<id_width$}"),
-        Style::default().fg(Color::DarkGray),
-    ));
-    spans.push(Span::raw("  "));
-    spans.push(Span::raw(entry.text.as_str()));
-    Line::from(spans)
+    match entry.kind {
+        TuiTranscriptKind::Condition | TuiTranscriptKind::Choice | TuiTranscriptKind::Ack => {
+            if let Some(id) = entry.id.as_deref() {
+                spans.push(Span::raw(" "));
+                spans.push(Span::styled(id, Style::default().fg(Color::DarkGray)));
+            }
+            spans.push(Span::raw(" -> "));
+            spans.push(Span::raw(entry.text.as_str()));
+            vec![Line::from(spans)]
+        }
+        TuiTranscriptKind::Effect | TuiTranscriptKind::Deferred => {
+            if !entry.text.is_empty() {
+                spans.push(Span::raw(" "));
+                spans.push(Span::raw(entry.text.as_str()));
+            }
+            let mut lines = vec![Line::from(spans)];
+            if let Some(id) = entry.id.as_deref() {
+                lines.push(continuation_metadata("id", id));
+            }
+            lines
+        }
+        TuiTranscriptKind::End => {
+            if !entry.text.is_empty() {
+                spans.push(Span::raw(" "));
+                spans.push(Span::raw(entry.text.as_str()));
+            }
+            vec![Line::from(spans)]
+        }
+        TuiTranscriptKind::Line | TuiTranscriptKind::Prompt => {
+            if let Some(id) = entry.id.as_deref() {
+                spans.push(Span::raw(" "));
+                spans.push(Span::styled(id, Style::default().fg(Color::DarkGray)));
+            }
+            let mut lines = vec![Line::from(spans)];
+            lines.extend(wrap_continuation(entry.text.as_str(), width, 2));
+            lines
+        }
+    }
 }
 
-fn clamp_display(value: &str, max_width: usize) -> String {
-    let char_count = value.chars().count();
-    if char_count <= max_width {
-        return value.to_owned();
-    }
-    if max_width <= 3 {
-        return ".".repeat(max_width);
-    }
-    let prefix = value.chars().take(max_width - 3).collect::<String>();
-    format!("{prefix}...")
+fn continuation_metadata<'a>(label: &'static str, value: &'a str) -> Line<'a> {
+    Line::from(vec![
+        Span::styled("  | ", Style::default().fg(Color::DarkGray)),
+        Span::styled(label, Style::default().fg(Color::DarkGray)),
+        Span::styled(" ", Style::default().fg(Color::DarkGray)),
+        Span::styled(value, Style::default().fg(Color::DarkGray)),
+    ])
 }
 
-fn render_prompt<'a>(prompt: &'a TuiPrompt, messages: &'a Messages) -> Vec<Line<'a>> {
+fn wrap_continuation(text: &str, width: usize, indent: usize) -> Vec<Line<'_>> {
+    let prefix = if indent == 2 {
+        "  | ".to_owned()
+    } else {
+        " ".repeat(indent)
+    };
+    let available = width.saturating_sub(prefix.chars().count()).max(8);
+    let mut lines = Vec::new();
+    let mut current = String::new();
+    for word in text.split_whitespace() {
+        let separator = usize::from(!current.is_empty());
+        if current.chars().count() + separator + word.chars().count() > available
+            && !current.is_empty()
+        {
+            lines.push(Line::from(format!("{prefix}{current}")));
+            current.clear();
+        }
+        if !current.is_empty() {
+            current.push(' ');
+        }
+        current.push_str(word);
+    }
+    if current.is_empty() && text.is_empty() {
+        return lines;
+    }
+    lines.push(Line::from(format!("{prefix}{current}")));
+    lines
+}
+
+fn render_prompt<'a>(
+    prompt: &'a TuiPrompt,
+    keymap: Keymap,
+    messages: &'a Messages,
+) -> Vec<Line<'a>> {
     match prompt {
         TuiPrompt::None => vec![Line::from(Span::styled(
             messages.text(MsgId::TuiWaiting),
             Style::default().fg(Color::DarkGray),
         ))],
-        TuiPrompt::Finished => vec![Line::from("")],
+        TuiPrompt::Finished { .. } => vec![Line::from("")],
         TuiPrompt::Condition {
             query,
-            input,
             command,
-            show_help,
+            selected,
             ..
         } => {
-            let mut lines = vec![
+            vec![
                 Line::from(Span::styled(
                     messages.text(MsgId::TuiConditionTitle),
                     Style::default()
                         .fg(Color::Yellow)
                         .add_modifier(Modifier::BOLD),
                 )),
-                Line::from(vec![
-                    Span::styled(query.as_str(), Style::default().fg(Color::DarkGray)),
-                    Span::raw("  "),
-                    Span::raw("y/n"),
-                ]),
-                input_line(messages.text(MsgId::TuiInputAnswer), input, command),
-            ];
-            if *show_help {
-                lines.extend(help_lines("condition", messages));
-            }
-            lines
+                Line::from(vec![Span::styled(
+                    query.as_str(),
+                    Style::default().fg(Color::DarkGray),
+                )]),
+                condition_row(*selected, true, keymap, messages),
+                condition_row(!*selected, false, keymap, messages),
+                command_line(command),
+            ]
         }
         TuiPrompt::Effect {
             mode,
@@ -191,10 +262,9 @@ fn render_prompt<'a>(prompt: &'a TuiPrompt, messages: &'a Messages) -> Vec<Line<
             args,
             input,
             command,
-            show_help,
             ..
         } => {
-            let mut lines = vec![
+            vec![
                 Line::from(Span::styled(
                     messages.text(MsgId::TuiEffectTitle),
                     Style::default()
@@ -205,12 +275,17 @@ fn render_prompt<'a>(prompt: &'a TuiPrompt, messages: &'a Messages) -> Vec<Line<
                 metadata_line(messages.text(MsgId::TuiMetadataRuntimeEffectId), id),
                 metadata_line(messages.text(MsgId::TuiMetadataFunction), function),
                 metadata_line(messages.text(MsgId::TuiMetadataArgs), args),
-                input_line(messages.text(MsgId::TuiInputAck), input, command),
-            ];
-            if *show_help {
-                lines.extend(help_lines("effect", messages));
-            }
-            lines
+                if command.is_empty() {
+                    Line::from(Span::styled(
+                        messages.text(MsgId::TuiAckEnterHint),
+                        Style::default()
+                            .fg(Color::Magenta)
+                            .add_modifier(Modifier::BOLD),
+                    ))
+                } else {
+                    input_line(messages.text(MsgId::TuiInputAck), input, command)
+                },
+            ]
         }
         TuiPrompt::Choice {
             line,
@@ -218,7 +293,6 @@ fn render_prompt<'a>(prompt: &'a TuiPrompt, messages: &'a Messages) -> Vec<Line<
             selected,
             input,
             command,
-            show_help,
             ..
         } => {
             let mut lines = Vec::new();
@@ -293,12 +367,45 @@ fn render_prompt<'a>(prompt: &'a TuiPrompt, messages: &'a Messages) -> Vec<Line<
                 input,
                 command,
             ));
-            if *show_help {
-                lines.extend(help_lines("choice", messages));
-            }
             lines
         }
     }
+}
+
+fn condition_row<'a>(
+    is_selected: bool,
+    value: bool,
+    keymap: Keymap,
+    messages: &'a Messages,
+) -> Line<'a> {
+    let marker_style = if is_selected {
+        Style::default()
+            .fg(Color::Yellow)
+            .add_modifier(Modifier::BOLD)
+    } else {
+        Style::default().fg(Color::DarkGray)
+    };
+    let label = match (keymap, value) {
+        (Keymap::Standard, true) => messages.text(MsgId::TuiConditionYesShortcutRow),
+        (Keymap::Standard, false) => messages.text(MsgId::TuiConditionNoShortcutRow),
+        (_, true) => messages.text(MsgId::TuiConditionYesRow),
+        (_, false) => messages.text(MsgId::TuiConditionNoRow),
+    };
+    Line::from(vec![
+        Span::styled(if is_selected { ">" } else { " " }, marker_style),
+        Span::raw(" "),
+        Span::raw(label),
+    ])
+}
+
+fn command_line<'a>(command: &'a TextBuffer) -> Line<'a> {
+    if command.is_empty() {
+        return Line::from("");
+    }
+    Line::from(vec![
+        Span::styled(":", Style::default().fg(Color::DarkGray)),
+        Span::raw(command.as_str()),
+    ])
 }
 
 fn input_line<'a>(label: String, input: &'a TextBuffer, command: &'a TextBuffer) -> Line<'a> {
@@ -314,23 +421,68 @@ fn input_line<'a>(label: String, input: &'a TextBuffer, command: &'a TextBuffer)
     ])
 }
 
-fn help_lines(context: &str, messages: &Messages) -> Vec<Line<'static>> {
-    vec![
+fn help_overlay_lines(
+    prompt: &TuiPrompt,
+    keymap: Keymap,
+    messages: &Messages,
+) -> Vec<Line<'static>> {
+    let mut lines = vec![
+        Line::from(Span::styled(
+            messages.text(MsgId::TuiHelpTitle),
+            Style::default()
+                .fg(Color::Cyan)
+                .add_modifier(Modifier::BOLD),
+        )),
         Line::from(""),
-        Line::from(vec![
-            Span::styled(
-                messages.text(MsgId::TuiHelpLabel),
-                Style::default().fg(Color::DarkGray),
-            ),
-            Span::raw(" "),
-            Span::raw(match context {
-                "choice" => messages.text(MsgId::TuiHelpChoice),
-                "condition" => messages.text(MsgId::TuiHelpCondition),
-                "effect" => messages.text(MsgId::TuiHelpEffect),
-                _ => messages.text(MsgId::TuiHelpDefault),
-            }),
-        ]),
+        help_table_row(
+            messages.text(MsgId::TuiHelpKeyHeading),
+            messages.text(MsgId::TuiHelpActionHeading),
+            messages.text(MsgId::TuiHelpDescriptionHeading),
+            true,
+        ),
+        help_table_row(
+            "? / Esc",
+            messages.text(MsgId::TuiHelpActionClose),
+            messages.text(MsgId::TuiHelpDescriptionClose),
+            false,
+        ),
+        help_table_row(
+            "Ctrl-C",
+            messages.text(MsgId::TuiHelpActionQuit),
+            messages.text(MsgId::TuiHelpDescriptionInterrupt),
+            false,
+        ),
+    ];
+    for control in controls_for_prompt(prompt, keymap) {
+        lines.push(help_table_row(
+            control.keys,
+            messages.text(control.action),
+            messages.text(control.description),
+            false,
+        ));
+    }
+    lines
+}
+
+fn help_table_row(
+    key: impl Into<String>,
+    action: impl Into<String>,
+    description: impl Into<String>,
+    heading: bool,
+) -> Line<'static> {
+    let style = if heading {
+        Style::default()
+            .fg(Color::DarkGray)
+            .add_modifier(Modifier::BOLD)
+    } else {
+        Style::default()
+    };
+    vec![
+        Span::styled(format!("{:<12}", key.into()), style),
+        Span::styled(format!("{:<14}", action.into()), style),
+        Span::styled(description.into(), style),
     ]
+    .into()
 }
 
 fn metadata_line<'a>(label: String, value: &'a str) -> Line<'a> {
@@ -343,42 +495,17 @@ fn metadata_line<'a>(label: String, value: &'a str) -> Line<'a> {
 fn render_footer<'a>(state: &'a TuiState, messages: &'a Messages) -> Line<'a> {
     let help = match state.key_hints {
         KeyHints::Hidden => String::new(),
-        KeyHints::Compact => match state.prompt {
-            TuiPrompt::Choice { .. } => messages.text(MsgId::TuiFooterCompactChoice),
-            TuiPrompt::Condition { .. } => messages.text(MsgId::TuiFooterCompactCondition),
-            TuiPrompt::Effect { .. } => messages.text(MsgId::TuiFooterCompactEffect),
-            TuiPrompt::Finished => messages.text(MsgId::TuiFooterCompactFinished),
-            TuiPrompt::None => String::new(),
-        },
-        KeyHints::Contextual => match &state.prompt {
-            _ if prompt_mode(&state.prompt) == PromptMode::Help => {
-                messages.text(MsgId::TuiFooterHelp)
-            }
-            TuiPrompt::Choice { mode, .. } => match mode {
-                PromptMode::Normal => messages.text(MsgId::TuiFooterChoiceNormal),
-                PromptMode::Insert => messages.text(MsgId::TuiFooterChoiceInsert),
-                PromptMode::Command => messages.text(MsgId::TuiFooterCommand),
-                PromptMode::Help => messages.text(MsgId::TuiFooterHelp),
-            },
-            TuiPrompt::Condition { mode, .. } => match mode {
-                PromptMode::Command => messages.text(MsgId::TuiFooterCommand),
-                PromptMode::Help => messages.text(MsgId::TuiFooterHelp),
-                _ => messages.text(MsgId::TuiFooterCondition),
-            },
-            TuiPrompt::Effect { input_mode, .. } => match input_mode {
-                PromptMode::Command => messages.text(MsgId::TuiFooterCommand),
-                PromptMode::Help => messages.text(MsgId::TuiFooterHelp),
-                _ => messages.text(MsgId::TuiFooterEffect),
-            },
-            TuiPrompt::Finished => messages.text(MsgId::TuiFooterFinished),
-            TuiPrompt::None => String::new(),
-        },
+        KeyHints::Compact => compact_footer_controls(&state.prompt, state.keymap, messages),
+        KeyHints::Contextual => contextual_footer_controls(&state.prompt, state.keymap, messages),
     };
     if help.is_empty() {
         return Line::from(Span::styled(
             state.status.as_str(),
             Style::default().fg(Color::DarkGray),
         ));
+    }
+    if state.status.is_empty() {
+        return Line::from(help);
     }
     Line::from(vec![
         Span::styled(state.status.as_str(), Style::default().fg(Color::DarkGray)),
@@ -387,189 +514,271 @@ fn render_footer<'a>(state: &'a TuiState, messages: &'a Messages) -> Line<'a> {
     ])
 }
 
-#[cfg(test)]
-mod tests {
-    use super::*;
-    use ratatui::Terminal;
+#[derive(Clone, Copy, Debug, Eq, PartialEq)]
+pub(super) enum ControlAvailability {
+    All,
+    Standard,
+    Vim,
+}
 
-    use super::super::state::{TuiChoiceRow, TuiPromptLine};
+#[derive(Clone, Copy, Debug, Eq, PartialEq)]
+pub(super) struct TuiControl {
+    pub(super) keys: &'static str,
+    pub(super) action: MsgId,
+    pub(super) description: MsgId,
+    pub(super) availability: ControlAvailability,
+    pub(super) footer: bool,
+    pub(super) compact_footer: bool,
+}
 
-    #[test]
-    fn transcript_ids_are_aligned_and_clamped() {
-        let entries = [
-            TuiTranscriptEntry {
-                kind: TuiTranscriptKind::Line,
-                id: Some("short".to_owned()),
-                text: "Line.".to_owned(),
-            },
-            TuiTranscriptEntry {
-                kind: TuiTranscriptKind::Effect,
-                id: Some("effect:very-long-source-location:123:45#9".to_owned()),
-                text: "blocking grant_item (map)".to_owned(),
-            },
-        ];
-        let visible = entries.iter().collect::<Vec<_>>();
-        let width = transcript_id_width(&visible);
-
-        assert_eq!(width, 32);
-        let messages = Messages::load(&crate::i18n::UiLocale::default()).expect("messages");
-        assert!(
-            format!(
-                "{:?}",
-                render_transcript_entry(&entries[1], width, &messages)
-            )
-            .contains("...")
-        );
+impl TuiControl {
+    const fn all(
+        keys: &'static str,
+        action: MsgId,
+        description: MsgId,
+        footer: bool,
+        compact_footer: bool,
+    ) -> Self {
+        Self {
+            keys,
+            action,
+            description,
+            availability: ControlAvailability::All,
+            footer,
+            compact_footer,
+        }
     }
 
-    #[test]
-    fn tui_render_includes_header_and_choice_prompt() {
-        let state = TuiState {
-            asset: "asset".to_owned(),
-            block: "start".to_owned(),
-            transcript: vec![TuiTranscriptEntry {
-                kind: TuiTranscriptKind::Line,
-                id: Some("intro".to_owned()),
-                text: "Welcome.".to_owned(),
-            }],
-            prompt: TuiPrompt::Choice {
-                line: Some(TuiPromptLine {
-                    id: "intro".to_owned(),
-                    text: "Welcome.".to_owned(),
-                }),
-                choices: vec![TuiChoiceRow {
-                    index: 1,
-                    id: "help".to_owned(),
-                    text: "Help.".to_owned(),
-                    is_available: true,
-                    unavailable_reason: None,
-                    is_visible: true,
-                }],
-                selected: 0,
-                mode: PromptMode::Insert,
-                input: TextBuffer::default(),
-                command: TextBuffer::default(),
-                show_help: false,
-            },
-            status: "choice> ".to_owned(),
-            key_hints: KeyHints::Contextual,
-        };
-        let content = render_tui_content(&state, 80, 20);
-
-        assert!(content.contains("recite play"));
-        assert!(content.contains("asset"));
-        assert!(content.contains("block"));
-        assert!(content.contains("intro"));
-        assert!(content.contains("Welcome."));
-        assert!(content.contains("help"));
-        assert!(content.contains("Help."));
-        assert!(content.contains("Type choice ID/index"));
+    const fn standard(
+        keys: &'static str,
+        action: MsgId,
+        description: MsgId,
+        footer: bool,
+        compact_footer: bool,
+    ) -> Self {
+        Self {
+            keys,
+            action,
+            description,
+            availability: ControlAvailability::Standard,
+            footer,
+            compact_footer,
+        }
     }
 
-    #[test]
-    fn tui_render_finished_state_without_inactive_prompt_filler() {
-        let state = TuiState {
-            asset: "asset".to_owned(),
-            block: "start".to_owned(),
-            transcript: vec![
-                TuiTranscriptEntry {
-                    kind: TuiTranscriptKind::Choice,
-                    id: Some("help".to_owned()),
-                    text: "selected".to_owned(),
-                },
-                TuiTranscriptEntry {
-                    kind: TuiTranscriptKind::Line,
-                    id: Some("helped".to_owned()),
-                    text: "Helped.".to_owned(),
-                },
-                TuiTranscriptEntry {
-                    kind: TuiTranscriptKind::End,
-                    id: None,
-                    text: "end".to_owned(),
-                },
-            ],
-            prompt: TuiPrompt::Finished,
-            status: "finished".to_owned(),
-            key_hints: KeyHints::Contextual,
-        };
-        let content = render_tui_content(&state, 80, 20);
-
-        assert!(content.contains("choice"));
-        assert!(content.contains("help"));
-        assert!(content.contains("line"));
-        assert!(content.contains("Helped."));
-        assert!(content.contains("end"));
-        assert!(content.contains("Enter/Esc/q to exit"));
-        assert!(!content.contains("No active prompt"));
+    const fn vim(
+        keys: &'static str,
+        action: MsgId,
+        description: MsgId,
+        footer: bool,
+        compact_footer: bool,
+    ) -> Self {
+        Self {
+            keys,
+            action,
+            description,
+            availability: ControlAvailability::Vim,
+            footer,
+            compact_footer,
+        }
     }
 
-    #[test]
-    fn tui_render_footer_uses_effective_help_mode() {
-        let state = TuiState {
-            asset: "asset".to_owned(),
-            block: "start".to_owned(),
-            transcript: Vec::new(),
-            prompt: TuiPrompt::Condition {
-                query: "trusts(player)".to_owned(),
-                mode: PromptMode::Insert,
-                input: TextBuffer::default(),
-                command: TextBuffer::default(),
-                show_help: true,
-            },
-            status: "answer> ".to_owned(),
-            key_hints: KeyHints::Contextual,
-        };
-        let content = render_tui_content(&state, 80, 20);
-
-        assert!(content.contains("Esc closes help"));
-    }
-
-    #[test]
-    fn tui_render_stays_structured_on_narrow_terminal() {
-        let state = TuiState {
-            asset: "/tmp/recite-play.recitec".to_owned(),
-            block: "start".to_owned(),
-            transcript: vec![TuiTranscriptEntry {
-                kind: TuiTranscriptKind::Effect,
-                id: Some("grant#1".to_owned()),
-                text: "blocking grant_item (map)".to_owned(),
-            }],
-            prompt: TuiPrompt::Effect {
-                mode: "blocking".to_owned(),
-                id: "grant#1".to_owned(),
-                function: "grant_item".to_owned(),
-                args: "(map)".to_owned(),
-                input_mode: PromptMode::Insert,
-                input: TextBuffer::default(),
-                command: TextBuffer::default(),
-                show_help: false,
-            },
-            status: "ack grant#1 with Enter or ack".to_owned(),
-            key_hints: KeyHints::Contextual,
-        };
-        let content = render_tui_content(&state, 60, 16);
-
-        assert!(content.contains("recite play"));
-        assert!(content.contains("Blocking Effect"));
-        assert!(content.contains("runtime effect ID"));
-        assert!(content.contains("grant#1"));
-        assert!(content.contains("Enter or ack"));
-    }
-
-    fn render_tui_content(state: &TuiState, width: u16, height: u16) -> String {
-        let backend = ratatui::backend::TestBackend::new(width, height);
-        let mut terminal = Terminal::new(backend).expect("terminal");
-        let messages = Messages::load(&crate::i18n::UiLocale::default()).expect("messages");
-
-        terminal
-            .draw(|frame| render_tui(frame, state, &messages))
-            .expect("draw");
-        terminal
-            .backend()
-            .buffer()
-            .content
-            .iter()
-            .map(|cell| cell.symbol())
-            .collect::<String>()
+    fn is_available(self, keymap: Keymap) -> bool {
+        matches!(
+            (self.availability, keymap),
+            (ControlAvailability::All, _)
+                | (ControlAvailability::Standard, Keymap::Standard)
+                | (ControlAvailability::Vim, Keymap::Vim)
+        )
     }
 }
+
+pub(super) fn controls_for_prompt(prompt: &TuiPrompt, keymap: Keymap) -> Vec<TuiControl> {
+    let mut controls = Vec::new();
+    let help_mode = prompt_mode(prompt) == PromptMode::Help;
+    if help_mode {
+        controls.push(TuiControl::all(
+            "? / Esc",
+            MsgId::TuiHelpActionClose,
+            MsgId::TuiHelpDescriptionClose,
+            true,
+            true,
+        ));
+        controls.push(TuiControl::all(
+            "Ctrl-C",
+            MsgId::TuiHelpActionQuit,
+            MsgId::TuiHelpDescriptionInterrupt,
+            false,
+            false,
+        ));
+    }
+    match prompt {
+        TuiPrompt::Choice { .. } => {
+            controls.extend([
+                TuiControl::all(
+                    "Up/Down",
+                    MsgId::TuiHelpActionMove,
+                    MsgId::TuiHelpDescriptionMoveChoice,
+                    true,
+                    true,
+                ),
+                TuiControl::vim(
+                    "j / k",
+                    MsgId::TuiHelpActionMove,
+                    MsgId::TuiHelpDescriptionMoveChoice,
+                    true,
+                    false,
+                ),
+                TuiControl::all(
+                    "Enter",
+                    MsgId::TuiHelpActionSubmit,
+                    MsgId::TuiHelpDescriptionSubmitChoice,
+                    true,
+                    true,
+                ),
+                TuiControl::standard(
+                    "ID/index",
+                    MsgId::TuiHelpActionInput,
+                    MsgId::TuiHelpDescriptionInputChoice,
+                    true,
+                    false,
+                ),
+                TuiControl::vim(
+                    "i",
+                    MsgId::TuiHelpActionInput,
+                    MsgId::TuiHelpDescriptionInputChoice,
+                    true,
+                    false,
+                ),
+            ]);
+        }
+        TuiPrompt::Condition { .. } => {
+            controls.extend([
+                TuiControl::all(
+                    "Up/Down",
+                    MsgId::TuiHelpActionMove,
+                    MsgId::TuiHelpDescriptionMoveCondition,
+                    true,
+                    true,
+                ),
+                TuiControl::standard(
+                    "y / n",
+                    MsgId::TuiHelpActionShortcut,
+                    MsgId::TuiHelpDescriptionShortcutCondition,
+                    true,
+                    true,
+                ),
+                TuiControl::all(
+                    "Enter",
+                    MsgId::TuiHelpActionSubmit,
+                    MsgId::TuiHelpDescriptionSubmitCondition,
+                    true,
+                    true,
+                ),
+            ]);
+        }
+        TuiPrompt::Effect { .. } => controls.push(TuiControl::all(
+            "Enter",
+            MsgId::TuiHelpActionSubmit,
+            MsgId::TuiHelpDescriptionSubmitEffect,
+            true,
+            true,
+        )),
+        TuiPrompt::Finished { .. } => controls.push(TuiControl::all(
+            "Enter/Esc/q",
+            MsgId::TuiHelpActionQuit,
+            MsgId::TuiHelpDescriptionFinished,
+            true,
+            true,
+        )),
+        TuiPrompt::None => {}
+    }
+    if !help_mode && !matches!(prompt, TuiPrompt::None) {
+        controls.push(TuiControl::all(
+            "?",
+            MsgId::TuiHelpActionHelp,
+            MsgId::TuiHelpDescriptionOpenHelp,
+            true,
+            true,
+        ));
+        controls.push(TuiControl::all(
+            "Ctrl-C",
+            MsgId::TuiHelpActionQuit,
+            MsgId::TuiHelpDescriptionInterrupt,
+            false,
+            false,
+        ));
+    }
+    if keymap == Keymap::Vim {
+        controls.extend([
+            TuiControl::vim(
+                ":q",
+                MsgId::TuiHelpActionQuit,
+                MsgId::TuiHelpDescriptionQuit,
+                true,
+                false,
+            ),
+            TuiControl::vim(
+                ":",
+                MsgId::TuiHelpActionCommand,
+                MsgId::TuiHelpDescriptionCommand,
+                true,
+                false,
+            ),
+        ]);
+    }
+    controls
+        .into_iter()
+        .filter(|control| control.is_available(keymap))
+        .collect()
+}
+
+fn compact_footer_controls(prompt: &TuiPrompt, keymap: Keymap, messages: &Messages) -> String {
+    footer_controls(prompt, keymap, messages, true)
+}
+
+fn contextual_footer_controls(prompt: &TuiPrompt, keymap: Keymap, messages: &Messages) -> String {
+    if prompt_mode(prompt) == PromptMode::Command {
+        return messages.text(MsgId::TuiFooterCommand);
+    }
+    footer_controls(prompt, keymap, messages, false)
+}
+
+fn help_footer_control(prompt: &TuiPrompt, keymap: Keymap, messages: &Messages) -> String {
+    controls_for_prompt(prompt, keymap)
+        .into_iter()
+        .find(|control| control.action == MsgId::TuiHelpActionClose)
+        .map(|control| footer_control_text(control, messages, false))
+        .unwrap_or_default()
+}
+
+fn footer_controls(
+    prompt: &TuiPrompt,
+    keymap: Keymap,
+    messages: &Messages,
+    compact: bool,
+) -> String {
+    controls_for_prompt(prompt, keymap)
+        .into_iter()
+        .filter(|control| {
+            if compact {
+                control.compact_footer
+            } else {
+                control.footer
+            }
+        })
+        .map(|control| footer_control_text(control, messages, compact))
+        .collect::<Vec<_>>()
+        .join(" | ")
+}
+
+fn footer_control_text(control: TuiControl, messages: &Messages, compact: bool) -> String {
+    if compact {
+        return control.keys.to_owned();
+    }
+    format!("{} {}", control.keys, messages.text(control.action))
+}
+
+#[cfg(test)]
+#[path = "render_tests.rs"]
+mod tests;

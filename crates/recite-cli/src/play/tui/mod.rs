@@ -1,4 +1,4 @@
-use std::io;
+use std::{collections::HashMap, io};
 
 use crossterm::event::{self, Event, KeyCode, KeyEventKind, KeyModifiers};
 use ratatui::{
@@ -21,10 +21,10 @@ use super::format::condition_query_text;
 use render::render_tui;
 use state::{
     TuiChoiceRow, TuiPrompt, TuiPromptLine, TuiState, TuiTranscriptEntry, TuiTranscriptKind,
-    choice_status, clear_prompt_input, close_help, initial_choice_selection, initial_prompt_mode,
-    move_choice_selection, mutate_prompt_command, mutate_prompt_input, prompt_command,
-    prompt_input, prompt_label, prompt_mode, selected_choice_id, set_command, set_prompt_mode,
-    toggle_help,
+    close_help, condition_selection, initial_choice_selection, initial_prompt_mode,
+    move_choice_selection, move_condition_selection, mutate_prompt_command, mutate_prompt_input,
+    prompt_command, prompt_input, prompt_label, prompt_mode, selected_choice_id, set_command,
+    set_condition_selection, set_prompt_mode, toggle_help,
 };
 
 mod render;
@@ -58,12 +58,14 @@ struct TuiPlayUi<'a, B: Backend> {
     state: TuiState,
     settings: TuiSettings,
     messages: Messages,
+    condition_answers: HashMap<String, bool>,
 }
 
 impl<'a, B: Backend> TuiPlayUi<'a, B> {
     fn new(terminal: &'a mut Terminal<B>, settings: TuiSettings, messages: Messages) -> Self {
         let state = TuiState {
             key_hints: settings.key_hints,
+            keymap: settings.keymap,
             ..TuiState::default()
         };
         Self {
@@ -71,6 +73,7 @@ impl<'a, B: Backend> TuiPlayUi<'a, B> {
             state,
             settings,
             messages,
+            condition_answers: HashMap::new(),
         }
     }
 
@@ -148,9 +151,22 @@ impl<'a, B: Backend> TuiPlayUi<'a, B> {
                     }
                     continue;
                 }
+                if prompt_mode(&self.state.prompt) == PromptMode::Help {
+                    match key.code {
+                        KeyCode::Esc | KeyCode::Char('?') => {
+                            close_help(&mut self.state.prompt);
+                            continue;
+                        }
+                        KeyCode::Char('q') => return Ok(()),
+                        _ => {}
+                    }
+                }
                 match key.code {
                     KeyCode::Enter | KeyCode::Esc | KeyCode::Char('q') => return Ok(()),
-                    KeyCode::Char(':') => {
+                    KeyCode::Char('?') => {
+                        toggle_help(&mut self.state.prompt);
+                    }
+                    KeyCode::Char(':') if self.settings.keymap == Keymap::Vim => {
                         command_mode = true;
                         command.clear();
                         self.state.status = self.messages.text(MsgId::TuiCommand);
@@ -245,11 +261,11 @@ impl<'a, B: Backend> TuiPlayUi<'a, B> {
                 }
                 TuiIntent::MoveNext => {
                     move_choice_selection(&mut self.state.prompt, 1);
-                    self.state.status = choice_status(&self.messages, self.settings.keymap);
+                    self.state.status.clear();
                 }
                 TuiIntent::MovePrevious => {
                     move_choice_selection(&mut self.state.prompt, -1);
-                    self.state.status = choice_status(&self.messages, self.settings.keymap);
+                    self.state.status.clear();
                 }
                 TuiIntent::StartInsert => {
                     set_prompt_mode(&mut self.state.prompt, PromptMode::Insert);
@@ -259,14 +275,14 @@ impl<'a, B: Backend> TuiPlayUi<'a, B> {
                 TuiIntent::Cancel => {
                     if self.settings.keymap == Keymap::Vim && mode == PromptMode::Insert {
                         set_prompt_mode(&mut self.state.prompt, PromptMode::Normal);
-                        self.state.status = choice_status(&self.messages, self.settings.keymap);
+                        self.state.status.clear();
                     }
                 }
                 intent => {
                     mutate_prompt_input(&mut self.state.prompt, intent);
                     let input = prompt_input(&self.state.prompt);
                     if input.is_empty() {
-                        self.state.status = choice_status(&self.messages, self.settings.keymap);
+                        self.state.status.clear();
                     } else {
                         self.state.status = self
                             .messages
@@ -277,9 +293,7 @@ impl<'a, B: Backend> TuiPlayUi<'a, B> {
         }
     }
 
-    fn read_text_prompt(&mut self, label: impl AsRef<str>) -> Result<String, CliError> {
-        clear_prompt_input(&mut self.state.prompt);
-        let label = label.as_ref();
+    fn read_condition_selection(&mut self) -> Result<bool, CliError> {
         loop {
             let mode = prompt_mode(&self.state.prompt);
             let intent = self.read_intent(mode)?;
@@ -290,23 +304,57 @@ impl<'a, B: Backend> TuiPlayUi<'a, B> {
             }
             match intent {
                 TuiIntent::Submit => {
-                    let input = prompt_input(&self.state.prompt).to_owned();
-                    clear_prompt_input(&mut self.state.prompt);
-                    return Ok(input);
+                    return condition_selection(&self.state.prompt).ok_or_else(|| {
+                        CliError::PlayInvalidInput(self.messages.text(MsgId::PlayErrorEnterYOrN))
+                    });
                 }
-                TuiIntent::Cancel => {
-                    if self.settings.keymap == Keymap::Vim && mode == PromptMode::Insert {
-                        set_prompt_mode(&mut self.state.prompt, PromptMode::Normal);
-                        self.state.status = self.messages.text(MsgId::TuiNormalMode);
-                    }
+                TuiIntent::MoveNext | TuiIntent::MovePrevious => {
+                    move_condition_selection(&mut self.state.prompt);
+                    self.state.status.clear();
+                }
+                TuiIntent::Text(ch)
+                    if self.settings.keymap == Keymap::Standard
+                        && matches!(ch, 'y' | 'Y' | 'n' | 'N') =>
+                {
+                    let value = matches!(ch, 'y' | 'Y');
+                    set_condition_selection(&mut self.state.prompt, value);
+                    return Ok(value);
+                }
+                TuiIntent::Cancel
+                    if self.settings.keymap == Keymap::Vim && mode == PromptMode::Insert =>
+                {
+                    set_prompt_mode(&mut self.state.prompt, PromptMode::Normal);
+                    self.state.status.clear();
                 }
                 TuiIntent::StartInsert => {
                     set_prompt_mode(&mut self.state.prompt, PromptMode::Insert);
                 }
-                intent => {
-                    mutate_prompt_input(&mut self.state.prompt, intent);
-                    self.state.status = format!("{label}{}", prompt_input(&self.state.prompt));
+                _ => {}
+            }
+        }
+    }
+
+    fn read_effect_acknowledgement(&mut self) -> Result<(), CliError> {
+        loop {
+            let mode = prompt_mode(&self.state.prompt);
+            let intent = self.read_intent(mode)?;
+            match self.handle_global_prompt_intent(mode, intent)? {
+                PromptIntentStatus::Quit => return Err(CliError::PlayInterrupted),
+                PromptIntentStatus::Consumed => continue,
+                PromptIntentStatus::Continue => {}
+            }
+            match intent {
+                TuiIntent::Submit => return Ok(()),
+                TuiIntent::Cancel
+                    if self.settings.keymap == Keymap::Vim && mode == PromptMode::Insert =>
+                {
+                    set_prompt_mode(&mut self.state.prompt, PromptMode::Normal);
+                    self.state.status.clear();
                 }
+                TuiIntent::StartInsert => {
+                    set_prompt_mode(&mut self.state.prompt, PromptMode::Insert);
+                }
+                _ => {}
             }
         }
     }
@@ -317,6 +365,10 @@ enum PromptIntentStatus {
     Continue,
     Consumed,
     Quit,
+}
+
+fn cached_condition_answer(cache: &HashMap<String, bool>, query: &str) -> bool {
+    cache.get(query).copied().unwrap_or(true)
 }
 
 impl<B: Backend> PlayUiAdapter for TuiPlayUi<'_, B> {
@@ -370,7 +422,7 @@ impl<B: Backend> PlayUiAdapter for TuiPlayUi<'_, B> {
             command: TextBuffer::default(),
             show_help: false,
         };
-        self.state.status = choice_status(&self.messages, self.settings.keymap);
+        self.state.status.clear();
         self.read_choice_selection()
     }
 
@@ -394,29 +446,23 @@ impl<B: Backend> PlayUiAdapter for TuiPlayUi<'_, B> {
 
     fn condition(&mut self, query: ConditionQuery<'_>) -> Result<bool, CliError> {
         let query = condition_query_text(query);
+        let selected = cached_condition_answer(&self.condition_answers, &query);
         self.state.prompt = TuiPrompt::Condition {
             query: query.clone(),
-            mode: PromptMode::Insert,
-            input: TextBuffer::default(),
+            selected,
+            mode: initial_prompt_mode(self.settings.keymap),
             command: TextBuffer::default(),
             show_help: false,
         };
-        loop {
-            let label = prompt_label(self.messages.text(MsgId::TuiConditionInputPrefix));
-            self.state.status = label.clone();
-            let input = self.read_text_prompt(label)?;
-            match input.trim().to_ascii_lowercase().as_str() {
-                "y" | "yes" | "true" | "1" => {
-                    self.push(TuiTranscriptKind::Condition, Some(query.clone()), "true")?;
-                    return Ok(true);
-                }
-                "n" | "no" | "false" | "0" => {
-                    self.push(TuiTranscriptKind::Condition, Some(query.clone()), "false")?;
-                    return Ok(false);
-                }
-                _ => self.invalid_input(self.messages.text(MsgId::PlayErrorEnterYOrN))?,
-            }
-        }
+        self.state.status.clear();
+        let answer = self.read_condition_selection()?;
+        self.condition_answers.insert(query.clone(), answer);
+        self.push(
+            TuiTranscriptKind::Condition,
+            Some(query),
+            answer.to_string(),
+        )?;
+        Ok(answer)
     }
 
     fn effect(&mut self, effect: &DialogueEffectRequest) -> Result<(), CliError> {
@@ -439,26 +485,18 @@ impl<B: Backend> PlayUiAdapter for TuiPlayUi<'_, B> {
     }
 
     fn acknowledge(&mut self, effect: &DialogueEffectRequest) -> Result<(), CliError> {
-        loop {
-            self.state.status = self
-                .messages
-                .format(MsgId::TuiAckStatus, [("id", effect.id.as_str().to_owned())]);
-            let input =
-                self.read_text_prompt(prompt_label(self.messages.text(MsgId::TuiAckInputPrefix)))?;
-            if input.trim().is_empty() || input.trim().eq_ignore_ascii_case("ack") {
-                self.push(
-                    TuiTranscriptKind::Ack,
-                    Some(effect.id.as_str().to_owned()),
-                    self.messages.text(MsgId::TuiTranscriptCompleted),
-                )?;
-                return Ok(());
-            }
-            self.invalid_input(self.messages.text(MsgId::PlayErrorPressEnterOrAck))?;
-        }
+        self.state.status.clear();
+        self.read_effect_acknowledgement()?;
+        self.push(
+            TuiTranscriptKind::Ack,
+            Some(effect.id.as_str().to_owned()),
+            self.messages.text(MsgId::TuiTranscriptCompleted),
+        )?;
+        Ok(())
     }
 
     fn end(&mut self, deferred_effects: &[DialogueEffectRequest]) -> Result<(), CliError> {
-        self.state.prompt = TuiPrompt::Finished;
+        self.state.prompt = TuiPrompt::Finished { show_help: false };
         self.push(
             TuiTranscriptKind::End,
             None,
@@ -466,13 +504,13 @@ impl<B: Backend> PlayUiAdapter for TuiPlayUi<'_, B> {
         )?;
         if !deferred_effects.is_empty() {
             self.state.transcript.push(TuiTranscriptEntry {
-                kind: TuiTranscriptKind::Effect,
+                kind: TuiTranscriptKind::Deferred,
                 id: None,
                 text: self.messages.text(MsgId::TuiTranscriptDeferredEffects),
             });
             for effect in deferred_effects {
                 self.state.transcript.push(TuiTranscriptEntry {
-                    kind: TuiTranscriptKind::Effect,
+                    kind: TuiTranscriptKind::Deferred,
                     id: Some(effect.id.as_str().to_owned()),
                     text: format!(
                         "{} {}",
@@ -494,3 +532,7 @@ impl<B: Backend> PlayUiAdapter for TuiPlayUi<'_, B> {
         self.render()
     }
 }
+
+#[cfg(test)]
+#[path = "mod_tests.rs"]
+mod tests;
