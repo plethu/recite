@@ -6,7 +6,9 @@ use ratatui::{
     backend::{Backend, CrosstermBackend},
 };
 use recite_core::{ChoiceId, CompiledDialogue};
-use recite_runtime::{ConditionQuery, DialogueChoice, DialogueEffectRequest, DialogueLine};
+use recite_runtime::{
+    ConditionQuery, DialogueChoice, DialogueEffectMode, DialogueEffectRequest, DialogueLine,
+};
 
 use crate::error::CliError;
 use crate::i18n::{Messages, MsgId};
@@ -16,15 +18,16 @@ use crate::tui::{
     restore_terminal,
 };
 
-use super::driver::{ChoiceSelection, PlayDriver, PlayUiAdapter};
+use super::driver::{ChoiceSelection, DeferredQueueStatus, PlayDriver, PlayUiAdapter};
 use super::format::condition_query_text;
 use render::render_tui;
 use state::{
-    TuiChoiceRow, TuiPrompt, TuiPromptLine, TuiState, TuiTranscriptEntry, TuiTranscriptKind,
-    close_help, condition_selection, initial_choice_selection, initial_prompt_mode,
-    move_choice_selection, move_condition_selection, mutate_prompt_command, mutate_prompt_input,
-    prompt_command, prompt_input, prompt_label, prompt_mode, selected_choice_id, set_command,
-    set_condition_selection, set_prompt_mode, toggle_help,
+    TuiChoiceRow, TuiDeferredEffectRow, TuiDeferredQueueState, TuiPrompt, TuiPromptLine, TuiState,
+    TuiTranscriptEntry, TuiTranscriptKind, close_help, condition_selection,
+    initial_choice_selection, initial_prompt_mode, move_choice_selection, move_condition_selection,
+    mutate_prompt_command, mutate_prompt_input, prompt_command, prompt_input, prompt_label,
+    prompt_mode, selected_choice_id, set_command, set_condition_selection, set_prompt_mode,
+    toggle_deferred_queue, toggle_help,
 };
 
 mod render;
@@ -124,6 +127,12 @@ impl<'a, B: Backend> TuiPlayUi<'a, B> {
                     && matches!(key.code, KeyCode::Char('c') | KeyCode::Char('C'))
                 {
                     return Ok(());
+                }
+                if key.modifiers.contains(KeyModifiers::CONTROL)
+                    && matches!(key.code, KeyCode::Char('d') | KeyCode::Char('D'))
+                {
+                    toggle_deferred_queue(&mut self.state);
+                    continue;
                 }
                 if command_mode {
                     match key.code {
@@ -227,6 +236,10 @@ impl<'a, B: Backend> TuiPlayUi<'a, B> {
             }
             TuiIntent::ToggleHelp => {
                 toggle_help(&mut self.state.prompt);
+                Ok(PromptIntentStatus::Consumed)
+            }
+            TuiIntent::ToggleDeferredQueue => {
+                toggle_deferred_queue(&mut self.state);
                 Ok(PromptIntentStatus::Consumed)
             }
             TuiIntent::Cancel if mode == PromptMode::Help => {
@@ -440,7 +453,7 @@ impl<B: Backend> PlayUiAdapter for TuiPlayUi<'_, B> {
         self.push(
             TuiTranscriptKind::Choice,
             Some(choice_id.as_str().to_owned()),
-            self.messages.text(MsgId::TuiTranscriptSelected),
+            String::new(),
         )
     }
 
@@ -495,13 +508,29 @@ impl<B: Backend> PlayUiAdapter for TuiPlayUi<'_, B> {
         Ok(())
     }
 
+    fn deferred_queue(
+        &mut self,
+        effects: &[DialogueEffectRequest],
+        status: DeferredQueueStatus,
+    ) -> Result<(), CliError> {
+        self.state.deferred_queue = effects
+            .iter()
+            .map(|effect| TuiDeferredEffectRow {
+                id: effect.id.as_str().to_owned(),
+                function: effect.function.clone(),
+                args: format_effect_arguments(&effect.args),
+            })
+            .collect();
+        self.state.deferred_queue_state = match status {
+            DeferredQueueStatus::Scheduled => Some(TuiDeferredQueueState::Scheduled),
+            DeferredQueueStatus::Dispatched => Some(TuiDeferredQueueState::Dispatched),
+        };
+        self.render()
+    }
+
     fn end(&mut self, deferred_effects: &[DialogueEffectRequest]) -> Result<(), CliError> {
         self.state.prompt = TuiPrompt::Finished { show_help: false };
-        self.push(
-            TuiTranscriptKind::End,
-            None,
-            self.messages.text(MsgId::PlayEnd),
-        )?;
+        self.push(TuiTranscriptKind::End, None, String::new())?;
         if !deferred_effects.is_empty() {
             self.state.transcript.push(TuiTranscriptEntry {
                 kind: TuiTranscriptKind::Deferred,
@@ -513,7 +542,8 @@ impl<B: Backend> PlayUiAdapter for TuiPlayUi<'_, B> {
                     kind: TuiTranscriptKind::Deferred,
                     id: Some(effect.id.as_str().to_owned()),
                     text: format!(
-                        "{} {}",
+                        "{} {} {}",
+                        DialogueEffectMode::Deferred,
                         effect.function,
                         format_effect_arguments(&effect.args)
                     ),

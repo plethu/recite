@@ -8,7 +8,10 @@ use ratatui::{
 use crate::i18n::{Messages, MsgId};
 use crate::tui::{KeyHints, Keymap, PromptMode, TextBuffer};
 
-use super::state::{TuiPrompt, TuiState, TuiTranscriptEntry, TuiTranscriptKind, prompt_mode};
+use super::state::{
+    TuiDeferredEffectRow, TuiDeferredQueueState, TuiPrompt, TuiState, TuiTranscriptEntry,
+    TuiTranscriptKind, prompt_mode,
+};
 
 pub(super) fn render_tui(frame: &mut ratatui::Frame<'_>, state: &TuiState, messages: &Messages) {
     if prompt_mode(&state.prompt) == PromptMode::Help {
@@ -16,11 +19,13 @@ pub(super) fn render_tui(frame: &mut ratatui::Frame<'_>, state: &TuiState, messa
         return;
     }
 
+    let queue_height = deferred_queue_height(state);
     let chunks = Layout::default()
         .direction(Direction::Vertical)
         .constraints([
             Constraint::Length(2),
             Constraint::Min(5),
+            Constraint::Length(queue_height),
             Constraint::Length(prompt_height(&state.prompt)),
             Constraint::Length(1),
         ])
@@ -62,13 +67,20 @@ pub(super) fn render_tui(frame: &mut ratatui::Frame<'_>, state: &TuiState, messa
         chunks[1],
     );
 
+    if queue_height > 0 {
+        frame.render_widget(
+            Paragraph::new(render_deferred_queue(state, messages)).wrap(Wrap { trim: false }),
+            chunks[2],
+        );
+    }
+
     frame.render_widget(
         Paragraph::new(render_prompt(&state.prompt, state.keymap, messages))
             .wrap(Wrap { trim: false }),
-        chunks[2],
+        chunks[3],
     );
 
-    frame.render_widget(Paragraph::new(render_footer(state, messages)), chunks[3]);
+    frame.render_widget(Paragraph::new(render_footer(state, messages)), chunks[4]);
 }
 
 fn prompt_height(prompt: &TuiPrompt) -> u16 {
@@ -83,6 +95,14 @@ fn prompt_height(prompt: &TuiPrompt) -> u16 {
     }
 }
 
+fn deferred_queue_height(state: &TuiState) -> u16 {
+    if state.deferred_queue_expanded && !state.deferred_queue.is_empty() {
+        (state.deferred_queue.len() as u16 + 1).clamp(2, 6)
+    } else {
+        0
+    }
+}
+
 fn render_help_overlay(frame: &mut ratatui::Frame<'_>, state: &TuiState, messages: &Messages) {
     let chunks = Layout::default()
         .direction(Direction::Vertical)
@@ -90,7 +110,7 @@ fn render_help_overlay(frame: &mut ratatui::Frame<'_>, state: &TuiState, message
         .split(frame.area());
 
     frame.render_widget(
-        Paragraph::new(help_overlay_lines(&state.prompt, state.keymap, messages)),
+        Paragraph::new(help_overlay_lines(state, messages)),
         chunks[0],
     );
     frame.render_widget(
@@ -150,20 +170,22 @@ fn render_transcript_entry<'a>(
                 spans.push(Span::raw(" "));
                 spans.push(Span::styled(id, Style::default().fg(Color::DarkGray)));
             }
-            spans.push(Span::raw(" -> "));
-            spans.push(Span::raw(entry.text.as_str()));
+            if !entry.text.is_empty() {
+                spans.push(Span::raw(" -> "));
+                spans.push(Span::raw(entry.text.as_str()));
+            }
             vec![Line::from(spans)]
         }
         TuiTranscriptKind::Effect | TuiTranscriptKind::Deferred => {
+            if let Some(id) = entry.id.as_deref() {
+                spans.push(Span::raw(" "));
+                spans.push(Span::styled(id, Style::default().fg(Color::DarkGray)));
+            }
             if !entry.text.is_empty() {
                 spans.push(Span::raw(" "));
                 spans.push(Span::raw(entry.text.as_str()));
             }
-            let mut lines = vec![Line::from(spans)];
-            if let Some(id) = entry.id.as_deref() {
-                lines.push(continuation_metadata("id", id));
-            }
-            lines
+            vec![Line::from(spans)]
         }
         TuiTranscriptKind::End => {
             if !entry.text.is_empty() {
@@ -182,15 +204,6 @@ fn render_transcript_entry<'a>(
             lines
         }
     }
-}
-
-fn continuation_metadata<'a>(label: &'static str, value: &'a str) -> Line<'a> {
-    Line::from(vec![
-        Span::styled("  | ", Style::default().fg(Color::DarkGray)),
-        Span::styled(label, Style::default().fg(Color::DarkGray)),
-        Span::styled(" ", Style::default().fg(Color::DarkGray)),
-        Span::styled(value, Style::default().fg(Color::DarkGray)),
-    ])
 }
 
 fn wrap_continuation(text: &str, width: usize, indent: usize) -> Vec<Line<'_>> {
@@ -372,6 +385,38 @@ fn render_prompt<'a>(
     }
 }
 
+fn render_deferred_queue<'a>(state: &'a TuiState, messages: &'a Messages) -> Vec<Line<'a>> {
+    let status = match state.deferred_queue_state {
+        Some(TuiDeferredQueueState::Dispatched) => messages.text(MsgId::TuiDeferredQueueDispatched),
+        Some(TuiDeferredQueueState::Scheduled) | None => {
+            messages.text(MsgId::TuiDeferredQueueScheduled)
+        }
+    };
+    let mut lines = vec![Line::from(vec![
+        Span::styled(
+            messages.text(MsgId::TuiDeferredQueueTitle),
+            Style::default()
+                .fg(Color::Magenta)
+                .add_modifier(Modifier::BOLD),
+        ),
+        Span::raw(" "),
+        Span::styled(status, Style::default().fg(Color::DarkGray)),
+    ])];
+    lines.extend(state.deferred_queue.iter().map(deferred_queue_row).take(5));
+    lines
+}
+
+fn deferred_queue_row(effect: &TuiDeferredEffectRow) -> Line<'_> {
+    Line::from(vec![
+        Span::styled("  ", Style::default().fg(Color::DarkGray)),
+        Span::styled(effect.id.as_str(), Style::default().fg(Color::DarkGray)),
+        Span::raw(" "),
+        Span::raw(effect.function.as_str()),
+        Span::raw(" "),
+        Span::raw(effect.args.as_str()),
+    ])
+}
+
 fn condition_row<'a>(
     is_selected: bool,
     value: bool,
@@ -421,11 +466,7 @@ fn input_line<'a>(label: String, input: &'a TextBuffer, command: &'a TextBuffer)
     ])
 }
 
-fn help_overlay_lines(
-    prompt: &TuiPrompt,
-    keymap: Keymap,
-    messages: &Messages,
-) -> Vec<Line<'static>> {
+fn help_overlay_lines(state: &TuiState, messages: &Messages) -> Vec<Line<'static>> {
     let mut lines = vec![
         Line::from(Span::styled(
             messages.text(MsgId::TuiHelpTitle),
@@ -453,7 +494,15 @@ fn help_overlay_lines(
             false,
         ),
     ];
-    for control in controls_for_prompt(prompt, keymap) {
+    if !state.deferred_queue.is_empty() {
+        lines.push(help_table_row(
+            "Ctrl-D",
+            messages.text(MsgId::TuiHelpActionQueue),
+            messages.text(MsgId::TuiHelpDescriptionQueue),
+            false,
+        ));
+    }
+    for control in controls_for_prompt(&state.prompt, state.keymap) {
         lines.push(help_table_row(
             control.keys,
             messages.text(control.action),
@@ -493,11 +542,31 @@ fn metadata_line<'a>(label: String, value: &'a str) -> Line<'a> {
 }
 
 fn render_footer<'a>(state: &'a TuiState, messages: &'a Messages) -> Line<'a> {
-    let help = match state.key_hints {
+    let mut help = match state.key_hints {
         KeyHints::Hidden => String::new(),
         KeyHints::Compact => compact_footer_controls(&state.prompt, state.keymap, messages),
         KeyHints::Contextual => contextual_footer_controls(&state.prompt, state.keymap, messages),
     };
+    if !state.deferred_queue.is_empty() && state.key_hints != KeyHints::Hidden {
+        let queue = if state.key_hints == KeyHints::Compact {
+            "Ctrl-D".to_owned()
+        } else {
+            format!(
+                "Ctrl-D {}",
+                if state.deferred_queue_expanded {
+                    messages.text(MsgId::TuiHelpActionClose)
+                } else {
+                    messages.text(MsgId::TuiHelpActionQueue)
+                }
+            )
+        };
+        if help.is_empty() {
+            help = queue;
+        } else {
+            help.push_str(" | ");
+            help.push_str(&queue);
+        }
+    }
     if help.is_empty() {
         return Line::from(Span::styled(
             state.status.as_str(),

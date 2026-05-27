@@ -15,6 +15,12 @@ pub(super) struct PlayDriver<'a> {
     block: &'a str,
 }
 
+#[derive(Clone, Copy, Debug, Eq, PartialEq)]
+pub(super) enum DeferredQueueStatus {
+    Scheduled,
+    Dispatched,
+}
+
 impl<'a> PlayDriver<'a> {
     pub(super) fn new(asset: &'a CompiledDialogue, block: &'a str) -> Self {
         Self { asset, block }
@@ -25,12 +31,21 @@ impl<'a> PlayDriver<'a> {
         let context = InteractiveContext::new(ui);
         let mut session = start_scene(self.asset, Some(self.block))?;
         let mut pending_event = None;
+        let mut deferred_effect_count = 0;
 
         loop {
             let event = match pending_event.take() {
                 Some(event) => event,
                 None => match runtime_next(self.asset, &mut session, &context) {
-                    Ok(event) => event,
+                    Ok(event) => {
+                        let deferred_effects = session.deferred_effects();
+                        if deferred_effects.len() != deferred_effect_count {
+                            context
+                                .deferred_queue(deferred_effects, DeferredQueueStatus::Scheduled)?;
+                            deferred_effect_count = deferred_effects.len();
+                        }
+                        event
+                    }
                     Err(error) => return Err(context.resolve_runtime_error(error)),
                 },
             };
@@ -52,6 +67,7 @@ impl<'a> PlayDriver<'a> {
                     }
                 }
                 DialogueEvent::End { deferred_effects } => {
+                    context.deferred_queue(&deferred_effects, DeferredQueueStatus::Dispatched)?;
                     context.end(&deferred_effects)?;
                     break;
                 }
@@ -175,6 +191,14 @@ impl<U: PlayUiAdapter> InteractiveContext<'_, U> {
         self.ui.borrow_mut().acknowledge(effect)
     }
 
+    fn deferred_queue(
+        &self,
+        effects: &[DialogueEffectRequest],
+        status: DeferredQueueStatus,
+    ) -> Result<(), CliError> {
+        self.ui.borrow_mut().deferred_queue(effects, status)
+    }
+
     fn end(&self, deferred_effects: &[DialogueEffectRequest]) -> Result<(), CliError> {
         self.ui.borrow_mut().end(deferred_effects)
     }
@@ -232,6 +256,13 @@ pub(super) trait PlayUiAdapter {
     fn condition(&mut self, query: ConditionQuery<'_>) -> Result<bool, CliError>;
     fn effect(&mut self, effect: &DialogueEffectRequest) -> Result<(), CliError>;
     fn acknowledge(&mut self, effect: &DialogueEffectRequest) -> Result<(), CliError>;
+    fn deferred_queue(
+        &mut self,
+        _effects: &[DialogueEffectRequest],
+        _status: DeferredQueueStatus,
+    ) -> Result<(), CliError> {
+        Ok(())
+    }
     fn end(&mut self, deferred_effects: &[DialogueEffectRequest]) -> Result<(), CliError>;
     fn invalid_input(&mut self, message: String) -> Result<(), CliError>;
 }

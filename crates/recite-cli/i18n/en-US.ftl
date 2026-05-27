@@ -56,6 +56,9 @@ tui-input-ack = ack
 tui-input-choice = choice
 tui-choice-unavailable =  unavailable
 tui-choice-unavailable-reason =  unavailable: {$reason}
+tui-deferred-queue-title = Deferred Queue
+tui-deferred-queue-scheduled = scheduled
+tui-deferred-queue-dispatched = dispatched
 
 tui-transcript-line = line
 tui-transcript-prompt = prompt
@@ -65,7 +68,6 @@ tui-transcript-effect = effect
 tui-transcript-ack = ack
 tui-transcript-deferred = deferred
 tui-transcript-end = end
-tui-transcript-selected = selected
 tui-transcript-completed = completed
 tui-transcript-deferred-effects = deferred effects
 
@@ -81,6 +83,7 @@ tui-help-action-input = type
 tui-help-action-shortcut = shortcut
 tui-help-action-command = command
 tui-help-action-help = help
+tui-help-action-queue = queue
 tui-help-description-close = close this help overlay
 tui-help-description-open-help = open this help overlay
 tui-help-description-quit = quit the current play session
@@ -94,6 +97,7 @@ tui-help-description-submit-condition = submit the highlighted condition answer
 tui-help-description-submit-effect = acknowledge the blocking effect
 tui-help-description-finished = leave the finished play screen
 tui-help-description-command = enter command mode
+tui-help-description-queue = expand or collapse deferred effect queue
 tui-footer-command = Enter runs command | Esc cancels
 
 cli-error-play-eof = reached EOF while reading {$field}

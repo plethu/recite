@@ -146,3 +146,21 @@ fn condition_selection_moves_and_sets_answer() {
     set_condition_selection(&mut prompt, true);
     assert_eq!(condition_selection(&prompt), Some(true));
 }
+
+#[test]
+fn deferred_queue_toggle_requires_items() {
+    let mut state = TuiState::default();
+
+    toggle_deferred_queue(&mut state);
+    assert!(!state.deferred_queue_expanded);
+
+    state.deferred_queue.push(TuiDeferredEffectRow {
+        id: "effect:flag#2".to_owned(),
+        function: "record_flag".to_owned(),
+        args: "(mira_helped)".to_owned(),
+    });
+    toggle_deferred_queue(&mut state);
+    assert!(state.deferred_queue_expanded);
+    toggle_deferred_queue(&mut state);
+    assert!(!state.deferred_queue_expanded);
+}

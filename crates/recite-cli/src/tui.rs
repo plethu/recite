@@ -302,6 +302,7 @@ pub(crate) enum TuiIntent {
     StartInsert,
     OpenCommand,
     ToggleHelp,
+    ToggleDeferredQueue,
     Text(char),
     Backspace,
     Delete,
@@ -318,6 +319,7 @@ pub(crate) fn map_key(keymap: Keymap, mode: PromptMode, key: KeyEvent) -> TuiInt
     if key.modifiers.contains(KeyModifiers::CONTROL) {
         return match key.code {
             KeyCode::Char('c') | KeyCode::Char('C') => TuiIntent::Quit,
+            KeyCode::Char('d') | KeyCode::Char('D') => TuiIntent::ToggleDeferredQueue,
             KeyCode::Char('u') | KeyCode::Char('U') => TuiIntent::ClearLine,
             KeyCode::Char('w') | KeyCode::Char('W') => TuiIntent::DeleteWord,
             _ => TuiIntent::Ignore,
@@ -506,6 +508,15 @@ mod tests {
         assert_eq!(
             map_key(Keymap::Vim, PromptMode::Normal, no),
             TuiIntent::Ignore
+        );
+    }
+
+    #[test]
+    fn control_d_toggles_deferred_queue() {
+        let key = KeyEvent::new(KeyCode::Char('d'), KeyModifiers::CONTROL);
+        assert_eq!(
+            map_key(Keymap::Standard, PromptMode::Insert, key),
+            TuiIntent::ToggleDeferredQueue
         );
     }
 

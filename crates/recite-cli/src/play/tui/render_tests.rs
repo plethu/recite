@@ -18,6 +18,16 @@ fn transcript_entries_render_as_separated_stacked_blocks() {
             id: Some("effect:intro:1".to_owned()),
             text: "immediate play_sfx (panel_open)".to_owned(),
         },
+        TuiTranscriptEntry {
+            kind: TuiTranscriptKind::Choice,
+            id: Some("ask_mira".to_owned()),
+            text: String::new(),
+        },
+        TuiTranscriptEntry {
+            kind: TuiTranscriptKind::End,
+            id: None,
+            text: String::new(),
+        },
     ];
     let messages = Messages::load(&crate::i18n::UiLocale::default()).expect("messages");
     let rendered = render_transcript(&entries, 40, 10, &messages);
@@ -29,6 +39,10 @@ fn transcript_entries_render_as_separated_stacked_blocks() {
     assert!(debug.contains("effect"));
     assert!(debug.contains("immediate play_sfx"));
     assert!(debug.contains("effect:intro:1"));
+    assert!(!debug.contains("id effect:intro:1"));
+    assert!(debug.contains("ask_mira"));
+    assert!(!debug.contains("selected"));
+    assert!(!debug.contains("end end"));
 }
 
 #[test]
@@ -63,6 +77,7 @@ fn tui_render_includes_header_and_choice_prompt() {
         status: "choice> ".to_owned(),
         key_hints: KeyHints::Contextual,
         keymap: Keymap::Standard,
+        ..TuiState::default()
     };
     let content = render_tui_content(&state, 80, 20);
 
@@ -102,6 +117,7 @@ fn tui_render_finished_state_without_inactive_prompt_filler() {
         status: "finished".to_owned(),
         key_hints: KeyHints::Contextual,
         keymap: Keymap::Standard,
+        ..TuiState::default()
     };
     let content = render_tui_content(&state, 80, 20);
 
@@ -130,6 +146,7 @@ fn tui_render_footer_uses_effective_help_mode() {
         status: "answer> ".to_owned(),
         key_hints: KeyHints::Contextual,
         keymap: Keymap::Standard,
+        ..TuiState::default()
     };
     let content = render_tui_content(&state, 80, 20);
 
@@ -152,6 +169,7 @@ fn tui_render_condition_prompt_uses_selectable_boolean_rows() {
         status: String::new(),
         key_hints: KeyHints::Contextual,
         keymap: Keymap::Standard,
+        ..TuiState::default()
     };
     let content = render_tui_content(&state, 80, 16);
 
@@ -178,6 +196,7 @@ fn vim_condition_prompt_omits_standard_yes_no_shortcut_labels() {
         status: String::new(),
         key_hints: KeyHints::Contextual,
         keymap: Keymap::Vim,
+        ..TuiState::default()
     };
     let content = render_tui_content(&state, 80, 16);
 
@@ -204,6 +223,7 @@ fn compact_condition_footer_uses_only_compact_control_keys() {
         status: String::new(),
         key_hints: KeyHints::Compact,
         keymap: Keymap::Standard,
+        ..TuiState::default()
     };
     let content = render_tui_content(&state, 80, 16);
 
@@ -211,6 +231,65 @@ fn compact_condition_footer_uses_only_compact_control_keys() {
     assert!(!content.contains("move"));
     assert!(!content.contains("submit"));
     assert!(!content.contains("help open"));
+}
+
+#[test]
+fn deferred_queue_renders_only_when_expanded() {
+    let state = TuiState {
+        asset: "asset".to_owned(),
+        block: "start".to_owned(),
+        deferred_queue: vec![TuiDeferredEffectRow {
+            id: "effect:flag#2".to_owned(),
+            function: "record_flag".to_owned(),
+            args: "(mira_helped)".to_owned(),
+        }],
+        deferred_queue_state: Some(TuiDeferredQueueState::Scheduled),
+        deferred_queue_expanded: true,
+        prompt: TuiPrompt::Condition {
+            query: "trusts(mira)".to_owned(),
+            selected: true,
+            mode: PromptMode::Insert,
+            command: TextBuffer::default(),
+            show_help: false,
+        },
+        key_hints: KeyHints::Contextual,
+        keymap: Keymap::Standard,
+        ..TuiState::default()
+    };
+    let content = render_tui_content(&state, 80, 18);
+
+    assert!(content.contains("Deferred Queue"));
+    assert!(content.contains("scheduled"));
+    assert!(content.contains("effect:flag#2 record_flag (mira_helped)"));
+    assert!(content.contains("Ctrl-D close"));
+
+    let collapsed = TuiState {
+        deferred_queue_expanded: false,
+        ..state
+    };
+    let content = render_tui_content(&collapsed, 80, 18);
+
+    assert!(!content.contains("Deferred Queue"));
+    assert!(content.contains("Ctrl-D queue"));
+}
+
+#[test]
+fn deferred_queue_help_row_is_contextual() {
+    let state = TuiState {
+        deferred_queue: vec![TuiDeferredEffectRow {
+            id: "effect:flag#2".to_owned(),
+            function: "record_flag".to_owned(),
+            args: "(mira_helped)".to_owned(),
+        }],
+        prompt: condition_prompt(true),
+        key_hints: KeyHints::Contextual,
+        keymap: Keymap::Standard,
+        ..TuiState::default()
+    };
+    let content = render_tui_content(&state, 80, 18);
+
+    assert!(content.contains("Ctrl-D"));
+    assert!(content.contains("expand or collapse deferred effect queue"));
 }
 
 #[test]
@@ -233,6 +312,7 @@ fn tui_render_help_overlay_replaces_prompt_with_table() {
         status: "condition".to_owned(),
         key_hints: KeyHints::Contextual,
         keymap: Keymap::Standard,
+        ..TuiState::default()
     };
     let content = render_tui_content(&state, 80, 18);
 
@@ -340,6 +420,7 @@ fn tui_render_stays_structured_on_narrow_terminal() {
         status: "ack grant#1 with Enter".to_owned(),
         key_hints: KeyHints::Contextual,
         keymap: Keymap::Standard,
+        ..TuiState::default()
     };
     let content = render_tui_content(&state, 60, 16);
 
@@ -375,6 +456,7 @@ fn choice_help_state(keymap: Keymap) -> TuiState {
         status: "choice".to_owned(),
         key_hints: KeyHints::Contextual,
         keymap,
+        ..TuiState::default()
     }
 }
 
@@ -412,6 +494,7 @@ fn condition_help_state(keymap: Keymap) -> TuiState {
         status: "condition".to_owned(),
         key_hints: KeyHints::Contextual,
         keymap,
+        ..TuiState::default()
     }
 }
 

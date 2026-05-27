@@ -5,6 +5,9 @@ pub(super) struct TuiState {
     pub(super) asset: String,
     pub(super) block: String,
     pub(super) transcript: Vec<TuiTranscriptEntry>,
+    pub(super) deferred_queue: Vec<TuiDeferredEffectRow>,
+    pub(super) deferred_queue_state: Option<TuiDeferredQueueState>,
+    pub(super) deferred_queue_expanded: bool,
     pub(super) prompt: TuiPrompt,
     pub(super) status: String,
     pub(super) key_hints: KeyHints,
@@ -28,6 +31,19 @@ pub(super) enum TuiTranscriptKind {
     Ack,
     Deferred,
     End,
+}
+
+#[derive(Clone, Copy, Debug, Eq, PartialEq)]
+pub(super) enum TuiDeferredQueueState {
+    Scheduled,
+    Dispatched,
+}
+
+#[derive(Clone, Debug, Eq, PartialEq)]
+pub(super) struct TuiDeferredEffectRow {
+    pub(super) id: String,
+    pub(super) function: String,
+    pub(super) args: String,
 }
 
 #[derive(Clone, Debug, Default, Eq, PartialEq)]
@@ -176,6 +192,12 @@ pub(super) fn close_help(prompt: &mut TuiPrompt) {
         | TuiPrompt::Effect { show_help, .. }
         | TuiPrompt::Finished { show_help } => *show_help = false,
         _ => {}
+    }
+}
+
+pub(super) fn toggle_deferred_queue(state: &mut TuiState) {
+    if !state.deferred_queue.is_empty() {
+        state.deferred_queue_expanded = !state.deferred_queue_expanded;
     }
 }
 
