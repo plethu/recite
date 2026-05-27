@@ -3,8 +3,8 @@ use std::cell::RefCell;
 use recite_core::{ChoiceId, CompiledDialogue};
 use recite_runtime::{
     ConditionEvaluationError, ConditionQuery, DialogueChoice, DialogueContext, DialogueEffectMode,
-    DialogueEffectRequest, DialogueEvent, DialogueLine, EffectAck, acknowledge_effect,
-    choose as runtime_choose, next as runtime_next, start_scene,
+    DialogueEffectRequest, DialogueEvent, DialogueLine, DialogueSession, EffectAck,
+    acknowledge_effect, choose as runtime_choose, next as runtime_next, start_scene,
 };
 
 use crate::error::CliError;
@@ -18,7 +18,7 @@ pub(super) struct PlayDriver<'a> {
 #[derive(Clone, Copy, Debug, Eq, PartialEq)]
 pub(super) enum DeferredQueueStatus {
     Scheduled,
-    Dispatched,
+    Ready,
 }
 
 impl<'a> PlayDriver<'a> {
@@ -38,12 +38,11 @@ impl<'a> PlayDriver<'a> {
                 Some(event) => event,
                 None => match runtime_next(self.asset, &mut session, &context) {
                     Ok(event) => {
-                        let deferred_effects = session.deferred_effects();
-                        if deferred_effects.len() != deferred_effect_count {
-                            context
-                                .deferred_queue(deferred_effects, DeferredQueueStatus::Scheduled)?;
-                            deferred_effect_count = deferred_effects.len();
-                        }
+                        notify_scheduled_deferred_queue(
+                            &context,
+                            &session,
+                            &mut deferred_effect_count,
+                        )?;
                         event
                     }
                     Err(error) => return Err(context.resolve_runtime_error(error)),
@@ -57,6 +56,11 @@ impl<'a> PlayDriver<'a> {
                     context.selected_choice(&choice_id)?;
                     let event = runtime_choose(self.asset, &mut session, choice_id, &context)
                         .map_err(|error| context.resolve_runtime_error(error))?;
+                    notify_scheduled_deferred_queue(
+                        &context,
+                        &session,
+                        &mut deferred_effect_count,
+                    )?;
                     pending_event = Some(event);
                 }
                 DialogueEvent::Effect(effect) => {
@@ -67,7 +71,7 @@ impl<'a> PlayDriver<'a> {
                     }
                 }
                 DialogueEvent::End { deferred_effects } => {
-                    context.deferred_queue(&deferred_effects, DeferredQueueStatus::Dispatched)?;
+                    context.deferred_queue(&deferred_effects, DeferredQueueStatus::Ready)?;
                     context.end(&deferred_effects)?;
                     break;
                 }
@@ -76,6 +80,19 @@ impl<'a> PlayDriver<'a> {
 
         Ok(())
     }
+}
+
+fn notify_scheduled_deferred_queue<U: PlayUiAdapter>(
+    context: &InteractiveContext<'_, U>,
+    session: &DialogueSession,
+    deferred_effect_count: &mut usize,
+) -> Result<(), CliError> {
+    let deferred_effects = session.deferred_effects();
+    if deferred_effects.len() != *deferred_effect_count {
+        context.deferred_queue(deferred_effects, DeferredQueueStatus::Scheduled)?;
+        *deferred_effect_count = deferred_effects.len();
+    }
+    Ok(())
 }
 
 struct InteractiveContext<'a, U> {
@@ -304,5 +321,185 @@ fn unavailable_choice_message<U: PlayUiAdapter>(
             MsgId::PlayErrorChoiceUnavailable,
             [("id", choice.id.as_str().to_owned())],
         ),
+    }
+}
+
+#[cfg(test)]
+mod tests {
+    use std::path::Path;
+
+    use recite_compiler::{CompileInput, compile_inputs};
+
+    use crate::fs::compile_options;
+
+    use super::*;
+
+    #[derive(Debug, Eq, PartialEq)]
+    enum UiEvent {
+        Effect(String),
+        Acknowledged(String),
+        Queue {
+            status: DeferredQueueStatus,
+            functions: Vec<String>,
+        },
+        End(Vec<String>),
+    }
+
+    #[derive(Default)]
+    struct RecordingUi {
+        events: Vec<UiEvent>,
+    }
+
+    impl PlayUiAdapter for RecordingUi {
+        fn message(
+            &self,
+            id: MsgId,
+            _args: impl IntoIterator<Item = (&'static str, String)>,
+        ) -> String {
+            id.key().to_owned()
+        }
+
+        fn start(&mut self, _asset: &CompiledDialogue, _block: &str) -> Result<(), CliError> {
+            Ok(())
+        }
+
+        fn line(&mut self, _line: &DialogueLine) -> Result<(), CliError> {
+            Ok(())
+        }
+
+        fn choice(
+            &mut self,
+            _line: Option<&DialogueLine>,
+            choices: &[DialogueChoice],
+        ) -> Result<ChoiceSelection, CliError> {
+            Ok(ChoiceSelection::Id(
+                choices
+                    .first()
+                    .expect("choice exists")
+                    .id
+                    .as_str()
+                    .to_owned(),
+            ))
+        }
+
+        fn selected_choice(&mut self, _choice_id: &ChoiceId) -> Result<(), CliError> {
+            Ok(())
+        }
+
+        fn condition(&mut self, _query: ConditionQuery<'_>) -> Result<bool, CliError> {
+            Ok(true)
+        }
+
+        fn effect(&mut self, effect: &DialogueEffectRequest) -> Result<(), CliError> {
+            self.events.push(UiEvent::Effect(effect.function.clone()));
+            Ok(())
+        }
+
+        fn acknowledge(&mut self, effect: &DialogueEffectRequest) -> Result<(), CliError> {
+            self.events
+                .push(UiEvent::Acknowledged(effect.function.clone()));
+            Ok(())
+        }
+
+        fn deferred_queue(
+            &mut self,
+            effects: &[DialogueEffectRequest],
+            status: DeferredQueueStatus,
+        ) -> Result<(), CliError> {
+            self.events.push(UiEvent::Queue {
+                status,
+                functions: effect_functions(effects),
+            });
+            Ok(())
+        }
+
+        fn end(&mut self, deferred_effects: &[DialogueEffectRequest]) -> Result<(), CliError> {
+            self.events
+                .push(UiEvent::End(effect_functions(deferred_effects)));
+            Ok(())
+        }
+
+        fn invalid_input(&mut self, _message: String) -> Result<(), CliError> {
+            Ok(())
+        }
+    }
+
+    #[test]
+    fn deferred_queue_updates_when_effects_are_scheduled_before_later_events() {
+        let asset = asset(concat!(
+            ":: start default\n",
+            "> intro\n",
+            "  Choose.\n",
+            "  ? go\n",
+            "    Go.\n",
+            "    -> branch\n",
+            ":: branch\n",
+            "! deferred first_deferred()\n",
+            "! immediate notify_game()\n",
+            "! deferred second_deferred()\n",
+            "! blocking grant_item(map)\n",
+            "! deferred final_deferred()\n",
+            "-> END\n",
+        ));
+        let mut ui = RecordingUi::default();
+
+        PlayDriver::new(&asset, "start")
+            .run(&mut ui)
+            .expect("play succeeds");
+
+        assert_eq!(
+            ui.events,
+            vec![
+                UiEvent::Queue {
+                    status: DeferredQueueStatus::Scheduled,
+                    functions: vec!["first_deferred".to_owned()],
+                },
+                UiEvent::Effect("notify_game".to_owned()),
+                UiEvent::Queue {
+                    status: DeferredQueueStatus::Scheduled,
+                    functions: vec!["first_deferred".to_owned(), "second_deferred".to_owned()],
+                },
+                UiEvent::Effect("grant_item".to_owned()),
+                UiEvent::Acknowledged("grant_item".to_owned()),
+                UiEvent::Queue {
+                    status: DeferredQueueStatus::Scheduled,
+                    functions: vec![
+                        "first_deferred".to_owned(),
+                        "second_deferred".to_owned(),
+                        "final_deferred".to_owned(),
+                    ],
+                },
+                UiEvent::Queue {
+                    status: DeferredQueueStatus::Ready,
+                    functions: vec![
+                        "first_deferred".to_owned(),
+                        "second_deferred".to_owned(),
+                        "final_deferred".to_owned(),
+                    ],
+                },
+                UiEvent::End(vec![
+                    "first_deferred".to_owned(),
+                    "second_deferred".to_owned(),
+                    "final_deferred".to_owned(),
+                ]),
+            ]
+        );
+    }
+
+    fn asset(source: &str) -> CompiledDialogue {
+        let report = compile_inputs(
+            vec![CompileInput::new("test.recite", source)],
+            compile_options(Path::new("test.recitec"), None).expect("options"),
+        )
+        .expect("compiles");
+        assert!(report.diagnostics.is_empty(), "{:?}", report.diagnostics);
+        report.asset.expect("asset").dialogue
+    }
+
+    fn effect_functions(effects: &[DialogueEffectRequest]) -> Vec<String> {
+        effects
+            .iter()
+            .map(|effect| effect.function.clone())
+            .collect()
     }
 }

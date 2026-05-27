@@ -36,7 +36,7 @@ pub(super) enum TuiTranscriptKind {
 #[derive(Clone, Copy, Debug, Eq, PartialEq)]
 pub(super) enum TuiDeferredQueueState {
     Scheduled,
-    Dispatched,
+    Ready,
 }
 
 #[derive(Clone, Debug, Eq, PartialEq)]
