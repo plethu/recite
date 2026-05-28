@@ -58,8 +58,8 @@ impl PlayUiAdapter for RecordingUi {
         Ok(())
     }
 
-    fn condition(&mut self, _query: ConditionQuery<'_>) -> Result<bool, CliError> {
-        Ok(true)
+    fn condition(&mut self, _query: ConditionQuery<'_>) -> Result<ConditionValue, CliError> {
+        Ok(ConditionValue::Bool(true))
     }
 
     fn effect(&mut self, effect: &DialogueEffectRequest) -> Result<(), CliError> {

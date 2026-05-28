@@ -7,7 +7,8 @@ use ratatui::{
 };
 use recite_core::{ChoiceId, CompiledDialogue};
 use recite_runtime::{
-    ConditionQuery, DialogueChoice, DialogueEffectMode, DialogueEffectRequest, DialogueLine,
+    ConditionExpectedType, ConditionQuery, ConditionValue, DialogueChoice, DialogueEffectMode,
+    DialogueEffectRequest, DialogueLine,
 };
 
 use crate::error::CliError;
@@ -188,8 +189,28 @@ impl<B: Backend> PlayUiAdapter for TuiPlayUi<'_, B> {
         )
     }
 
-    fn condition(&mut self, query: ConditionQuery<'_>) -> Result<bool, CliError> {
+    fn condition(&mut self, query: ConditionQuery<'_>) -> Result<ConditionValue, CliError> {
+        let expected_type = query.expected_type();
         let query = condition_query_text(query);
+        if matches!(expected_type, ConditionExpectedType::Enum) {
+            self.state.prompt = TuiPrompt::Choice {
+                line: None,
+                choices: Vec::new(),
+                selected: 0,
+                mode: initial_prompt_mode(self.settings.keymap),
+                input: TextBuffer::default(),
+                command: TextBuffer::default(),
+                show_help: false,
+            };
+            self.state.status = query.clone();
+            let value = match self.read_choice_selection()? {
+                ChoiceSelection::Id(value) => value,
+                ChoiceSelection::Index(value) => value.to_string(),
+            };
+            self.push(TuiTranscriptKind::Condition, Some(query), value.clone())?;
+            return Ok(ConditionValue::EnumVariant(value));
+        }
+
         let selected = cached_condition_answer(&self.condition_answers, &query);
         self.state.prompt = TuiPrompt::Condition {
             query: query.clone(),
@@ -206,7 +227,7 @@ impl<B: Backend> PlayUiAdapter for TuiPlayUi<'_, B> {
             Some(query),
             answer.to_string(),
         )?;
-        Ok(answer)
+        Ok(ConditionValue::Bool(answer))
     }
 
     fn effect(&mut self, effect: &DialogueEffectRequest) -> Result<(), CliError> {

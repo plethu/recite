@@ -228,6 +228,112 @@ surprise = true
 }
 
 #[test]
+fn run_trace_and_play_plain_execute_match_conditions() {
+    let temp = TempDir::new().expect("tempdir");
+    let source = write_recite(
+        temp.path(),
+        "dialogue.recite",
+        concat!(
+            ":: start default\n",
+            ":match thread_stage(thread)\n",
+            "  :case tired\n",
+            "    > tired_line\n",
+            "      Tired.\n",
+            "  :case _\n",
+            "    > fallback_line\n",
+            "      Fallback.\n",
+            "-> END\n",
+        ),
+    );
+    let asset = compile_project_asset(temp.path(), &source, "dialogue.recitec", None);
+    let fixture = write_file(
+        temp.path(),
+        "fixture.toml",
+        r#"[conditions]
+"thread_stage(thread)" = { enum = "tired" }
+"#,
+    );
+
+    let run_output = run(recite()
+        .arg("run")
+        .arg(&asset)
+        .arg("--block")
+        .arg("start")
+        .arg("--fixture")
+        .arg(&fixture));
+    run_output.assert_success().assert_stderr("");
+    run_output.assert_stdout_contains("condition thread_stage(thread) = enum tired");
+    run_output.assert_stdout_contains("line tired_line: Tired.");
+
+    let trace_output = run(recite()
+        .arg("trace")
+        .arg(&asset)
+        .arg("--block")
+        .arg("start")
+        .arg("--fixture")
+        .arg(&fixture));
+    trace_output.assert_success().assert_stderr("");
+    let second_trace_output = run(recite()
+        .arg("trace")
+        .arg(&asset)
+        .arg("--block")
+        .arg("start")
+        .arg("--fixture")
+        .arg(&fixture));
+    second_trace_output.assert_success().assert_stderr("");
+    assert_eq!(trace_output.stdout, second_trace_output.stdout);
+    let trace: serde_json::Value =
+        serde_json::from_slice(&trace_output.stdout).expect("trace is JSON");
+    let events = trace["events"].as_array().expect("events array");
+    assert!(events.iter().any(|event| {
+        event["type"] == "condition"
+            && event["condition"]["query"] == "thread_stage(thread)"
+            && event["condition"]["result"]["enum"] == "tired"
+    }));
+    assert!(events.iter().any(|event| {
+        event["type"] == "line"
+            && event["line"]["id"] == "tired_line"
+            && event["line"]["text"] == "Tired."
+    }));
+
+    let missing_fixture = write_file(temp.path(), "missing.toml", "");
+    let output = run(recite()
+        .arg("run")
+        .arg(&asset)
+        .arg("--block")
+        .arg("start")
+        .arg("--fixture")
+        .arg(&missing_fixture));
+    output.assert_failure();
+    output.assert_stderr_contains("fixture is missing condition `thread_stage(thread)`");
+    output.assert_stderr_not_contains("does not support");
+
+    let mut child = recite()
+        .arg("play")
+        .arg(&asset)
+        .arg("--block")
+        .arg("start")
+        .arg("--ui")
+        .arg("plain")
+        .stdin(Stdio::piped())
+        .stdout(Stdio::piped())
+        .stderr(Stdio::piped())
+        .spawn()
+        .expect("spawn recite play");
+    child
+        .stdin
+        .as_mut()
+        .expect("stdin")
+        .write_all(b"tired\n")
+        .expect("write stdin");
+    let output = child.wait_with_output().expect("wait");
+
+    output.assert_success().assert_stderr("");
+    output.assert_stdout_contains("condition thread_stage(thread) = tired");
+    output.assert_stdout_contains("line tired_line: Tired.");
+}
+
+#[test]
 fn play_plain_accepts_piped_input_and_keeps_run_trace_stable() {
     let temp = TempDir::new().expect("tempdir");
     let source = write_recite(

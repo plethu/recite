@@ -1,7 +1,7 @@
 use recite_core::{CompiledConditionCall, CompiledConditionExpression};
 
 use crate::DialogueError;
-use crate::context::{ConditionQuery, DialogueContext};
+use crate::context::{ConditionExpectedType, ConditionQuery, ConditionValue, DialogueContext};
 
 use super::malformed;
 
@@ -69,8 +69,41 @@ fn evaluate_condition_call(
     context: &dyn DialogueContext,
     call: &CompiledConditionCall,
 ) -> Result<bool, DialogueError> {
+    match evaluate_condition_value(context, call, ConditionExpectedType::Bool)? {
+        ConditionValue::Bool(value) => Ok(value),
+        value => Err(DialogueError::ConditionResultTypeMismatch {
+            function: call.function.clone(),
+            expected: ConditionExpectedType::Bool,
+            actual: value.kind(),
+        }),
+    }
+}
+
+pub(super) fn evaluate_enum_condition(
+    context: &dyn DialogueContext,
+    call: &CompiledConditionCall,
+) -> Result<String, DialogueError> {
+    match evaluate_condition_value(context, call, ConditionExpectedType::Enum)? {
+        ConditionValue::EnumVariant(value) => Ok(value),
+        value => Err(DialogueError::ConditionResultTypeMismatch {
+            function: call.function.clone(),
+            expected: ConditionExpectedType::Enum,
+            actual: value.kind(),
+        }),
+    }
+}
+
+fn evaluate_condition_value(
+    context: &dyn DialogueContext,
+    call: &CompiledConditionCall,
+    expected_type: ConditionExpectedType,
+) -> Result<ConditionValue, DialogueError> {
     context
-        .evaluate_condition(ConditionQuery::new(&call.function, &call.args))
+        .evaluate_condition(ConditionQuery::new(
+            &call.function,
+            &call.args,
+            expected_type,
+        ))
         .map_err(|error| DialogueError::ConditionEvaluationFailed {
             function: call.function.clone(),
             reason: error.reason().to_owned(),

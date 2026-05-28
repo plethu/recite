@@ -1,13 +1,14 @@
 use recite_core::{
     BlockIndex, BlockLookupEntry, BlockLookupTable, ChoiceId, ChoiceRange, CompiledConditionCall,
-    CompiledConditionExpression, CompiledDialogue, CompiledDivertTarget, CompiledStatementKind,
-    EffectId, EffectIndex, LineIndex, LocaleId, MatchArmIndex, MatchArmRange,
+    CompiledConditionExpression, CompiledDialogue, CompiledDivertTarget, CompiledMatchArm,
+    CompiledMatchPattern, CompiledStatementKind, EffectId, EffectIndex, LineIndex, LocaleId,
+    MatchArmIndex, MatchArmRange,
 };
 use recite_runtime::{
-    ConditionArgument, ConditionEvaluationError, ConditionQuery, DialogueEffectArgument,
-    DialogueEffectMode, DialogueEffectRequest, DialogueError, DialogueEvent,
-    DialogueSessionOptions, EffectAck, EmptyDialogueContext, LocaleProvider, TextDomain,
-    UnsupportedStatementKind, acknowledge_effect, choose as runtime_choose,
+    ConditionArgument, ConditionEvaluationError, ConditionExpectedType, ConditionQuery,
+    DialogueEffectArgument, DialogueEffectMode, DialogueEffectRequest, DialogueError,
+    DialogueEvent, DialogueSessionOptions, EffectAck, EmptyDialogueContext, LocaleProvider,
+    TextDomain, acknowledge_effect, choose as runtime_choose,
     choose_with_locale_provider_and_variant, next as runtime_next, next_with_locale_provider,
     next_with_locale_provider_and_variant, start_scene, start_scene_with_options,
 };
@@ -26,6 +27,8 @@ mod effects;
 mod localisation;
 #[path = "traversal/malformed_assets.rs"]
 mod malformed_assets;
+#[path = "traversal/matches.rs"]
+mod matches;
 #[path = "support/shared.rs"]
 mod shared_support;
 #[path = "traversal/start_and_output.rs"]

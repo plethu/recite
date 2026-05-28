@@ -81,24 +81,37 @@ fn validate_child_range(
     }
 
     let statement = asset.statement_at(StatementIndex::new(branch_statement))?;
-    let CompiledStatementKind::If {
-        then_statements,
-        else_statements,
-        ..
-    } = &statement.kind
-    else {
-        return Err(invalid_snapshot(
-            "continuation frame does not resume after a conditional branch",
-        ));
-    };
+    match &statement.kind {
+        CompiledStatementKind::If {
+            then_statements,
+            else_statements,
+            ..
+        } => {
+            if child_range != *then_statements && child_range != *else_statements {
+                return Err(invalid_snapshot(
+                    "active child range is not selected by its continuation frame",
+                ));
+            }
 
-    if child_range != *then_statements && child_range != *else_statements {
-        return Err(invalid_snapshot(
-            "active child range is not selected by its continuation frame",
-        ));
+            Ok(())
+        }
+        CompiledStatementKind::Match { arms, .. } => {
+            if asset
+                .match_arms(*arms)?
+                .iter()
+                .any(|arm| arm.statements == child_range)
+            {
+                Ok(())
+            } else {
+                Err(invalid_snapshot(
+                    "active child range is not selected by its continuation frame",
+                ))
+            }
+        }
+        _ => Err(invalid_snapshot(
+            "continuation frame does not resume after a branching statement",
+        )),
     }
-
-    Ok(())
 }
 
 pub(super) fn validate_statement_pointer(

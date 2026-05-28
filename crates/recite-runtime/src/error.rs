@@ -1,6 +1,6 @@
 use recite_core::{ChoiceId, EffectId};
 
-use crate::DialogueEffectMode;
+use crate::{ConditionExpectedType, DialogueEffectMode};
 
 /// Runtime error for deterministic traversal over compiled dialogue assets.
 #[derive(Clone, Debug, Eq, PartialEq)]
@@ -26,9 +26,6 @@ pub enum DialogueError {
     },
     MalformedCompiledAsset {
         reason: String,
-    },
-    UnsupportedStatement {
-        kind: UnsupportedStatementKind,
     },
     EffectPending {
         effect: EffectId,
@@ -57,6 +54,11 @@ pub enum DialogueError {
     ConditionEvaluationFailed {
         function: String,
         reason: String,
+    },
+    ConditionResultTypeMismatch {
+        function: String,
+        expected: ConditionExpectedType,
+        actual: ConditionExpectedType,
     },
     ConditionDepthLimitExceeded {
         limit: usize,
@@ -110,9 +112,6 @@ impl std::fmt::Display for DialogueError {
             Self::MalformedCompiledAsset { reason } => {
                 write!(formatter, "malformed compiled asset: {reason}")
             }
-            Self::UnsupportedStatement { kind } => {
-                write!(formatter, "runtime traversal does not support {kind} yet")
-            }
             Self::EffectPending { effect } => {
                 write!(
                     formatter,
@@ -157,6 +156,14 @@ impl std::fmt::Display for DialogueError {
             Self::ConditionEvaluationFailed { function, reason } => {
                 write!(formatter, "condition `{function}` failed: {reason}")
             }
+            Self::ConditionResultTypeMismatch {
+                function,
+                expected,
+                actual,
+            } => write!(
+                formatter,
+                "condition `{function}` returned {actual} but runtime expected {expected}"
+            ),
             Self::ConditionDepthLimitExceeded { limit } => {
                 write!(
                     formatter,
@@ -189,6 +196,15 @@ impl std::fmt::Display for DialogueError {
     }
 }
 
+impl std::fmt::Display for ConditionExpectedType {
+    fn fmt(&self, formatter: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
+        match self {
+            Self::Bool => formatter.write_str("bool"),
+            Self::Enum => formatter.write_str("enum"),
+        }
+    }
+}
+
 impl std::fmt::Display for DialogueEffectMode {
     fn fmt(&self, formatter: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
         match self {
@@ -200,16 +216,3 @@ impl std::fmt::Display for DialogueEffectMode {
 }
 
 impl std::error::Error for DialogueError {}
-
-#[derive(Clone, Copy, Debug, Eq, PartialEq)]
-pub enum UnsupportedStatementKind {
-    Match,
-}
-
-impl std::fmt::Display for UnsupportedStatementKind {
-    fn fmt(&self, formatter: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
-        match self {
-            Self::Match => formatter.write_str("match branches"),
-        }
-    }
-}

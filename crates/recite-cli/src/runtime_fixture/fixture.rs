@@ -33,11 +33,18 @@ pub(crate) fn load_runtime_fixture(path: &Path) -> Result<RuntimeFixture, CliErr
 #[serde(deny_unknown_fields)]
 pub(crate) struct RuntimeFixture {
     #[serde(default)]
-    pub(super) conditions: BTreeMap<String, bool>,
+    pub(super) conditions: BTreeMap<String, FixtureConditionValue>,
     #[serde(default)]
     pub(super) choices: BTreeMap<String, FixtureChoice>,
     #[serde(default)]
     pub(super) effects: FixtureEffects,
+}
+
+#[derive(Clone, Debug, Deserialize)]
+#[serde(untagged)]
+pub(super) enum FixtureConditionValue {
+    Bool(bool),
+    Enum { r#enum: String },
 }
 
 #[derive(Clone, Debug, Deserialize)]

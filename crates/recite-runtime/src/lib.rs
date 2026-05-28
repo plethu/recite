@@ -10,10 +10,10 @@ mod session_snapshot;
 mod traversal;
 
 pub use context::{
-    ConditionArgument, ConditionArguments, ConditionEvaluationError, ConditionQuery,
-    DialogueContext, EmptyDialogueContext,
+    ConditionArgument, ConditionArguments, ConditionEvaluationError, ConditionExpectedType,
+    ConditionQuery, ConditionValue, DialogueContext, EmptyDialogueContext,
 };
-pub use error::{DialogueError, UnsupportedStatementKind};
+pub use error::DialogueError;
 pub use event::{
     ChoiceEchoMode, DialogueChoice, DialogueEffectArgument, DialogueEffectMode,
     DialogueEffectRequest, DialogueEvent, DialogueLine, EffectAck,

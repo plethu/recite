@@ -3,6 +3,7 @@ use super::*;
 #[derive(Debug, Default)]
 pub(super) struct RecordingContext {
     results: BTreeMap<String, bool>,
+    enum_results: BTreeMap<String, String>,
     failures: BTreeMap<String, String>,
     calls: RefCell<Vec<RecordedCall>>,
 }
@@ -10,6 +11,12 @@ pub(super) struct RecordingContext {
 impl RecordingContext {
     pub(super) fn with(mut self, function: &str, result: bool) -> Self {
         self.results.insert(function.to_owned(), result);
+        self
+    }
+
+    pub(super) fn with_enum(mut self, function: &str, result: &str) -> Self {
+        self.enum_results
+            .insert(function.to_owned(), result.to_owned());
         self
     }
 
@@ -27,7 +34,7 @@ impl recite_runtime::DialogueContext for RecordingContext {
     fn evaluate_condition(
         &self,
         query: ConditionQuery<'_>,
-    ) -> Result<bool, ConditionEvaluationError> {
+    ) -> Result<recite_runtime::ConditionValue, ConditionEvaluationError> {
         let function = query.function().to_owned();
         let arguments = query
             .arguments()
@@ -43,10 +50,16 @@ impl recite_runtime::DialogueContext for RecordingContext {
             return Err(ConditionEvaluationError::new(reason.clone()));
         }
 
-        self.results
-            .get(&function)
-            .copied()
-            .ok_or_else(|| ConditionEvaluationError::new(format!("missing condition `{function}`")))
+        if let Some(result) = self.results.get(&function) {
+            return Ok(recite_runtime::ConditionValue::Bool(*result));
+        }
+        if let Some(result) = self.enum_results.get(&function) {
+            return Ok(recite_runtime::ConditionValue::EnumVariant(result.clone()));
+        }
+
+        Err(ConditionEvaluationError::new(format!(
+            "missing condition `{function}`"
+        )))
     }
 }
 

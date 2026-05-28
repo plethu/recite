@@ -2,9 +2,9 @@ use std::cell::RefCell;
 
 use recite_core::{ChoiceId, CompiledDialogue};
 use recite_runtime::{
-    ConditionEvaluationError, ConditionQuery, DialogueChoice, DialogueContext, DialogueEffectMode,
-    DialogueEffectRequest, DialogueEvent, DialogueLine, DialogueSession, EffectAck,
-    acknowledge_effect, choose as runtime_choose, next as runtime_next, start_scene,
+    ConditionEvaluationError, ConditionQuery, ConditionValue, DialogueChoice, DialogueContext,
+    DialogueEffectMode, DialogueEffectRequest, DialogueEvent, DialogueLine, DialogueSession,
+    EffectAck, acknowledge_effect, choose as runtime_choose, next as runtime_next, start_scene,
 };
 
 use crate::error::CliError;
@@ -248,7 +248,7 @@ impl<U: PlayUiAdapter> DialogueContext for InteractiveContext<'_, U> {
     fn evaluate_condition(
         &self,
         query: ConditionQuery<'_>,
-    ) -> Result<bool, ConditionEvaluationError> {
+    ) -> Result<ConditionValue, ConditionEvaluationError> {
         self.ui.borrow_mut().condition(query).map_err(|error| {
             if matches!(error, CliError::PlayInterrupted) {
                 self.mark_interrupted();
@@ -270,7 +270,7 @@ pub(super) trait PlayUiAdapter {
         choices: &[DialogueChoice],
     ) -> Result<ChoiceSelection, CliError>;
     fn selected_choice(&mut self, choice_id: &ChoiceId) -> Result<(), CliError>;
-    fn condition(&mut self, query: ConditionQuery<'_>) -> Result<bool, CliError>;
+    fn condition(&mut self, query: ConditionQuery<'_>) -> Result<ConditionValue, CliError>;
     fn effect(&mut self, effect: &DialogueEffectRequest) -> Result<(), CliError>;
     fn acknowledge(&mut self, effect: &DialogueEffectRequest) -> Result<(), CliError>;
     fn deferred_queue(

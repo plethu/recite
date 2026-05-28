@@ -89,7 +89,9 @@ fn out_of_range_continuation_frame_range_snapshot_is_rejected_as_snapshot_error(
         ),
     );
     let context = |_: recite_runtime::ConditionQuery<'_>| {
-        Ok::<_, recite_runtime::ConditionEvaluationError>(true)
+        Ok::<_, recite_runtime::ConditionEvaluationError>(recite_runtime::ConditionValue::Bool(
+            true,
+        ))
     };
     let mut session = start_scene(&asset, None).expect("starts");
     runtime_next(&asset, &mut session, &context).expect("emits branch line");
