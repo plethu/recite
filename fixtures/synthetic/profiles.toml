@@ -1,0 +1,49 @@
+[profiles.tiny]
+name = "tiny"
+seed = 72
+blocks = 10
+lines = 100
+choices = 20
+localisable_entries = 120
+generated_words = 1000
+shards = 2
+
+[profiles.small]
+name = "small"
+seed = 7201
+blocks = 100
+lines = 1000
+choices = 200
+localisable_entries = 1200
+generated_words = 10000
+shards = 4
+
+[profiles.medium]
+name = "medium"
+seed = 7202
+blocks = 1000
+lines = 10000
+choices = 2000
+localisable_entries = 12000
+generated_words = 100000
+shards = 10
+
+[profiles.large]
+name = "large"
+seed = 7203
+blocks = 5000
+lines = 50000
+choices = 10000
+localisable_entries = 60000
+generated_words = 500000
+shards = 20
+
+[profiles.epic]
+name = "epic"
+seed = 7204
+blocks = 10000
+lines = 80000
+choices = 20000
+localisable_entries = 100000
+generated_words = 1000000
+shards = 40

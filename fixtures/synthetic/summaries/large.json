@@ -1,0 +1,143 @@
+{
+  "profile": {
+    "name": "large",
+    "seed": 7203,
+    "blocks": 5000,
+    "lines": 50000,
+    "choices": 10000,
+    "localisable_entries": 60000,
+    "generated_words": 500000,
+    "shards": 20
+  },
+  "counts": {
+    "blocks": 5000,
+    "lines": 50000,
+    "choices": 10000,
+    "localisable_entries": 60000,
+    "generated_words": 540000,
+    "shards": 20
+  },
+  "files": [
+    {
+      "path": "locales/en-US.po",
+      "bytes": 9519036,
+      "blake3": "9c25bb8d377287fe33b18f6912648063ac5935fa664782919531576cce3d51cc"
+    },
+    {
+      "path": "recite.project.toml",
+      "bytes": 232,
+      "blake3": "901ab21ff4da0d7943869e3aa852f80d227e3748d631d8a54a0c739378e31ed9"
+    },
+    {
+      "path": "runtime-fixture.toml",
+      "bytes": 181967,
+      "blake3": "a90141302468f4faadc6c6776ed0e843ff6e8ffc8f3fcf1d856fd76a44d1b996"
+    },
+    {
+      "path": "schema/synthetic.schema.json",
+      "bytes": 1752,
+      "blake3": "cfd8b7a3ffba91c97dca8eece5f36ced013160b6a94c96e858d3b499b4f47af2"
+    },
+    {
+      "path": "src/shard-000.recite",
+      "bytes": 450660,
+      "blake3": "b64da04ad072682a0c2e53df43df902466121107e67420bf91f35fd604486d1d"
+    },
+    {
+      "path": "src/shard-001.recite",
+      "bytes": 450953,
+      "blake3": "db696ed27d494833f2740e0f1fe68e6adfc8a4c30e11242a7468f60e8ea3a29e"
+    },
+    {
+      "path": "src/shard-002.recite",
+      "bytes": 450889,
+      "blake3": "b8dbc823a0f8599c45c11c37956cc619d14df54ec599504094723c7d4e491eb0"
+    },
+    {
+      "path": "src/shard-003.recite",
+      "bytes": 450524,
+      "blake3": "a226be447535567ba86d5c9d8bf6f010e34a6e69e70cbd3ee42810307da87dad"
+    },
+    {
+      "path": "src/shard-004.recite",
+      "bytes": 450609,
+      "blake3": "7c35fa3bfbd56e013ed9cf04b54742b269c8988a44284ba9e12cea79a0dc00db"
+    },
+    {
+      "path": "src/shard-005.recite",
+      "bytes": 450699,
+      "blake3": "56b1b981a0affc5484df2de126be6efc31d2298fe2f656fc853b095f7d49e13a"
+    },
+    {
+      "path": "src/shard-006.recite",
+      "bytes": 450616,
+      "blake3": "25a0378bd1c2c089ac34283554fef4dc550cb72d986ab948f52720babd5f4b77"
+    },
+    {
+      "path": "src/shard-007.recite",
+      "bytes": 450590,
+      "blake3": "07332f3f0c09af7d415d058f10f1c835e6442a5803762796f5a781bec7ec28bd"
+    },
+    {
+      "path": "src/shard-008.recite",
+      "bytes": 451078,
+      "blake3": "46e475b5ff17c57bb26c241a90b41ae713a81fe34388d13adc1b9e6be3560444"
+    },
+    {
+      "path": "src/shard-009.recite",
+      "bytes": 450685,
+      "blake3": "2ac0ae2cffe5066825c030d4787d645636ea1ed2439817ce488a5353442307c8"
+    },
+    {
+      "path": "src/shard-010.recite",
+      "bytes": 450269,
+      "blake3": "9ac7b2d14422bf54ebfe2fc58f34caf56c2241f011efcd0baa6f42b37d288e01"
+    },
+    {
+      "path": "src/shard-011.recite",
+      "bytes": 450642,
+      "blake3": "f9bf0c1d553fbc1bd2d9a876149a3764ab9ccd4d1ae81c76cbd30895f0be9726"
+    },
+    {
+      "path": "src/shard-012.recite",
+      "bytes": 450745,
+      "blake3": "869b4736b1b38514c323b104e2a3fd4181dfd2bab16458f1b5d77f4656a9c489"
+    },
+    {
+      "path": "src/shard-013.recite",
+      "bytes": 450847,
+      "blake3": "e6c410ae94540d5c510e332acb3a199b26b7b0fcb12b15a5b5533042f37a6a34"
+    },
+    {
+      "path": "src/shard-014.recite",
+      "bytes": 450791,
+      "blake3": "da09a8ff6019b758aadccb853166dfb27ffd8dd5cd8ae3d48c6af1de80cbb888"
+    },
+    {
+      "path": "src/shard-015.recite",
+      "bytes": 450841,
+      "blake3": "c76523efb0995a365ee38b93de11017d9e7cbd0091c0e5ad4db69001682c91a4"
+    },
+    {
+      "path": "src/shard-016.recite",
+      "bytes": 450739,
+      "blake3": "2ea501d5170ad9cded96652c641c3a236283a430b4210d06aca5911bef4806a3"
+    },
+    {
+      "path": "src/shard-017.recite",
+      "bytes": 450780,
+      "blake3": "735a05498ba357b3599941182e65aa1bcc4de0083e5f76db4639ddcb75808ec9"
+    },
+    {
+      "path": "src/shard-018.recite",
+      "bytes": 450619,
+      "blake3": "096c16ee0b001dfb4e89cb8b7faf7d5412672826a6963f48b6d55f210b09e224"
+    },
+    {
+      "path": "src/shard-019.recite",
+      "bytes": 450406,
+      "blake3": "228d5f62890b93735e5fa8f95916cb176caa39b328967a3d4d646ebededb59aa"
+    }
+  ],
+  "summary_hash": "28b48036ddd229f9c4bf55cdd6d35f33ddbc0dd2d9534947136279114caff931"
+}

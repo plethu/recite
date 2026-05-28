@@ -1,0 +1,31 @@
+{
+  "schema_version": 1,
+  "types": {"thread_stage_kind": {"kind": "enum", "values": ["fresh", "active", "resolved"]}},
+  "registries": {"thread": {"values": ["main", "side", "epilogue"]}, "dialogue_sound_effect": {"values": ["ping", "chime", "gate"]}},
+  "speakers": {
+    "speaker_00": {"display_name": "Synthetic Speaker 00"},
+    "speaker_01": {"display_name": "Synthetic Speaker 01"},
+    "speaker_02": {"display_name": "Synthetic Speaker 02"},
+    "speaker_03": {"display_name": "Synthetic Speaker 03"},
+    "speaker_04": {"display_name": "Synthetic Speaker 04"},
+    "speaker_05": {"display_name": "Synthetic Speaker 05"},
+    "speaker_06": {"display_name": "Synthetic Speaker 06"},
+    "speaker_07": {"display_name": "Synthetic Speaker 07"},
+    "narrator": {"display_name": "Synthetic Narrator"}
+  },
+  "conditions": {
+    "flag": {"params": [{"name": "flag_id", "type": "string"}]},
+    "counter_gte": {"params": [{"name": "counter_id", "type": "string"}, {"name": "threshold", "type": "int"}]},
+    "relationship": {"params": [{"name": "actor_a", "type": "speaker"}, {"name": "actor_b", "type": "speaker"}], "returns": "enum:thread_stage_kind"}
+  },
+  "effects": {
+    "play_sfx": {"modes": ["immediate"], "params": [{"name": "sound_effect", "type": "registry:dialogue_sound_effect"}]},
+    "advance_thread": {"modes": ["deferred", "blocking"], "params": [{"name": "thread_id", "type": "registry:thread"}, {"name": "stage", "type": "enum:thread_stage_kind"}]}
+  },
+  "metadata": {
+    "tier": {"targets": ["block"], "type": "string"},
+    "speaker": {"targets": ["block", "line"], "type": "speaker"},
+    "portrait": {"targets": ["line"], "type": "string"},
+    "sfx": {"targets": ["choice"], "type": "registry:dialogue_sound_effect"}
+  }
+}

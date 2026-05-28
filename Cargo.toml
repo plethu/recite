@@ -3,6 +3,7 @@ members = [
     "crates/recite-cli",
     "crates/recite-compiler",
     "crates/recite-core",
+    "crates/recite-fixturegen",
     "crates/recite-lsp",
     "crates/recite-parser",
     "crates/recite-runtime",
@@ -31,6 +32,7 @@ fluent-bundle = "0.15.3"
 insta = { version = "1.47.2", default-features = false }
 notify = "8.2.0"
 ratatui = "0.29.0"
+rand_chacha = { version = "0.10.0", default-features = false }
 rmp-serde = "1.3.1"
 serde = { version = "1.0.228", features = ["derive"] }
 serde_bytes = "0.11.19"
