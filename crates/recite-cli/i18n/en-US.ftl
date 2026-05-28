@@ -11,6 +11,7 @@ cli-help-command-check-markup = Validate inline markup, optionally against a sch
 cli-help-command-check-metadata = Validate metadata against a schema manifest
 cli-help-command-validate-project = Validate recite.project.toml and referenced compiled assets
 cli-help-command-check-fresh = Check whether project compiled assets are fresh
+cli-help-command-watch = Watch project inputs and rebuild manifest assets
 cli-help-command-run = Run a compiled asset headlessly with fixture data
 cli-help-command-trace = Emit deterministic JSON for a headless fixture run
 cli-help-command-play = Play a compiled asset interactively

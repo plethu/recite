@@ -18,6 +18,7 @@ use crate::runtime_fixture::{
     dialogue_preview_from_fixture, execute_runtime_fixture, load_compiled_asset,
     load_runtime_fixture,
 };
+use crate::watch::run_watch_command;
 
 pub(crate) fn run_command(
     command: Command,
@@ -81,6 +82,7 @@ pub(crate) fn run_command(
                 .then_some(())
                 .ok_or(CliError::Diagnostics)
         }
+        Command::Watch(args) => run_watch_command(args, stderr),
         Command::Run(args) => runtime_command(args, RuntimeOutput::Run, stdout),
         Command::Trace(args) => runtime_command(args, RuntimeOutput::Trace, stdout),
         Command::Play(args) => run_play_command(args, stdout, stderr),

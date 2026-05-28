@@ -15,6 +15,7 @@ path = "src/main.rs"
 clap.workspace = true
 crossterm.workspace = true
 fluent-bundle.workspace = true
+notify.workspace = true
 ratatui.workspace = true
 recite-core.workspace = true
 recite-parser.workspace = true

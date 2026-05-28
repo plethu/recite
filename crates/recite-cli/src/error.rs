@@ -100,6 +100,9 @@ pub(crate) enum CliError {
         line: Option<String>,
         choices: Vec<String>,
     },
+    Watch {
+        message: String,
+    },
     Write {
         path: PathBuf,
         source: io::Error,
@@ -242,6 +245,7 @@ impl std::fmt::Display for CliError {
                 line.as_deref().unwrap_or("<none>"),
                 choices.join(", ")
             ),
+            Self::Watch { message } => formatter.write_str(message),
             Self::Write { path, source } => {
                 write!(
                     formatter,

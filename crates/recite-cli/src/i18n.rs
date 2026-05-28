@@ -92,6 +92,7 @@ message_ids! {
     CliHelpCommandCheckMetadata => "cli-help-command-check-metadata",
     CliHelpCommandValidateProject => "cli-help-command-validate-project",
     CliHelpCommandCheckFresh => "cli-help-command-check-fresh",
+    CliHelpCommandWatch => "cli-help-command-watch",
     CliHelpCommandRun => "cli-help-command-run",
     CliHelpCommandTrace => "cli-help-command-trace",
     CliHelpCommandPlay => "cli-help-command-play",
