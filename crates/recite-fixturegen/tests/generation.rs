@@ -1,6 +1,7 @@
 use std::cell::Cell;
-use std::collections::BTreeMap;
+use std::collections::{BTreeMap, BTreeSet};
 use std::fs;
+use std::path::Path;
 
 use recite_compiler::{
     CompileInput, CompileOptions, compile_inputs_with_schema, extract_pot_with_schema,
@@ -52,6 +53,13 @@ fn checked_in_tiny_fixture_matches_regenerated_output() {
     let generated = generate_tiny_in_memory(&tiny_profile(72)).expect("tiny fixture");
     let synthetic_root = fixture_root();
     let fixture_root = synthetic_root.join("tiny");
+    let checked_paths = checked_in_files(&fixture_root);
+    let generated_paths = generated.files.keys().cloned().collect::<BTreeSet<_>>();
+
+    assert_eq!(
+        checked_paths, generated_paths,
+        "checked-in tiny fixture file set drifted"
+    );
 
     for (path, expected) in &generated.files {
         let actual = fs::read(fixture_root.join(path)).unwrap_or_else(|error| {
@@ -59,13 +67,24 @@ fn checked_in_tiny_fixture_matches_regenerated_output() {
         });
         assert_eq!(&actual, expected, "checked-in {path} drifted");
     }
+}
 
-    let checked_summary: serde_json::Value =
-        serde_json::from_slice(&fs::read(synthetic_root.join("summaries/tiny.json")).unwrap())
-            .expect("checked-in summary JSON");
-    let generated_summary =
-        serde_json::to_value(&generated.summary).expect("generated summary JSON");
-    assert_eq!(checked_summary, generated_summary);
+#[test]
+fn checked_in_summaries_match_regenerated_output() {
+    let synthetic_root = fixture_root();
+    let profiles =
+        FixtureConfigSet::load_path(&synthetic_root.join("profiles.toml")).expect("profiles load");
+
+    for name in ["tiny", "small", "medium", "large", "epic"] {
+        let checked_summary: serde_json::Value = serde_json::from_slice(
+            &fs::read(synthetic_root.join(format!("summaries/{name}.json"))).unwrap(),
+        )
+        .expect("checked-in summary JSON");
+        let summary = SummarySet::generate_one(profiles.profile(name).expect("profile"))
+            .expect("generated summary");
+        let generated_summary = serde_json::to_value(summary).expect("generated summary JSON");
+        assert_eq!(checked_summary, generated_summary, "{name} summary drifted");
+    }
 }
 
 #[test]
@@ -326,6 +345,30 @@ fn unquote(value: &str) -> String {
 fn fixture_root() -> std::path::PathBuf {
     std::path::Path::new(env!("CARGO_MANIFEST_DIR")).join("../../fixtures/synthetic")
 }
+
+fn checked_in_files(root: &Path) -> BTreeSet<String> {
+    let mut files = BTreeSet::new();
+    collect_checked_in_files(root, root, &mut files);
+    files
+}
+
+fn collect_checked_in_files(root: &Path, dir: &Path, files: &mut BTreeSet<String>) {
+    for entry in fs::read_dir(dir).expect("read checked-in fixture directory") {
+        let entry = entry.expect("checked-in fixture entry");
+        let path = entry.path();
+        if path.is_dir() {
+            collect_checked_in_files(root, &path, files);
+        } else {
+            let relative = path
+                .strip_prefix(root)
+                .expect("fixture path under root")
+                .to_string_lossy()
+                .replace('\\', "/");
+            files.insert(relative);
+        }
+    }
+}
+
 fn source_inputs(files: &BTreeMap<String, Vec<u8>>) -> Vec<CompileInput> {
     files
         .iter()
