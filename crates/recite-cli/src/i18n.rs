@@ -8,16 +8,23 @@ use crate::error::CliError;
 pub(crate) const DEFAULT_LOCALE: &str = "en-US";
 
 const DEFAULT_RESOURCE: &str = include_str!("../i18n/en-US.ftl");
+const EN_GB_RESOURCE: &str = include_str!("../i18n/en-GB.ftl");
 
 struct EmbeddedCatalog {
     locale: &'static str,
     source: &'static str,
 }
 
-const EMBEDDED_CATALOGS: &[EmbeddedCatalog] = &[EmbeddedCatalog {
-    locale: DEFAULT_LOCALE,
-    source: DEFAULT_RESOURCE,
-}];
+const EMBEDDED_CATALOGS: &[EmbeddedCatalog] = &[
+    EmbeddedCatalog {
+        locale: DEFAULT_LOCALE,
+        source: DEFAULT_RESOURCE,
+    },
+    EmbeddedCatalog {
+        locale: "en-GB",
+        source: EN_GB_RESOURCE,
+    },
+];
 
 #[derive(Clone, Debug, Eq, PartialEq)]
 pub(crate) enum UiLocale {
@@ -72,6 +79,37 @@ macro_rules! message_ids {
 }
 
 message_ids! {
+    CliHelpAbout => "cli-help-about",
+    CliHelpUsageHeading => "cli-help-usage-heading",
+    CliHelpCommandsHeading => "cli-help-commands-heading",
+    CliHelpArgumentsHeading => "cli-help-arguments-heading",
+    CliHelpOptionsHeading => "cli-help-options-heading",
+    CliHelpCommandValidate => "cli-help-command-validate",
+    CliHelpCommandCompile => "cli-help-command-compile",
+    CliHelpCommandExtract => "cli-help-command-extract",
+    CliHelpCommandCheckIds => "cli-help-command-check-ids",
+    CliHelpCommandCheckMarkup => "cli-help-command-check-markup",
+    CliHelpCommandCheckMetadata => "cli-help-command-check-metadata",
+    CliHelpCommandValidateProject => "cli-help-command-validate-project",
+    CliHelpCommandCheckFresh => "cli-help-command-check-fresh",
+    CliHelpCommandRun => "cli-help-command-run",
+    CliHelpCommandTrace => "cli-help-command-trace",
+    CliHelpCommandPlay => "cli-help-command-play",
+    CliHelpArgPaths => "cli-help-arg-paths",
+    CliHelpArgSchema => "cli-help-arg-schema",
+    CliHelpArgProjectRoot => "cli-help-arg-project-root",
+    CliHelpArgOutputCompile => "cli-help-arg-output-compile",
+    CliHelpArgOutputExtract => "cli-help-arg-output-extract",
+    CliHelpArgAssetRun => "cli-help-arg-asset-run",
+    CliHelpArgAssetPlay => "cli-help-arg-asset-play",
+    CliHelpArgBlock => "cli-help-arg-block",
+    CliHelpArgFixture => "cli-help-arg-fixture",
+    CliHelpArgUi => "cli-help-arg-ui",
+    CliHelpArgKeymap => "cli-help-arg-keymap",
+    CliHelpArgDialogueLocale => "cli-help-arg-dialogue-locale",
+    CliHelpArgDialogueCatalog => "cli-help-arg-dialogue-catalog",
+    CliHelpArgHelp => "cli-help-arg-help",
+    CliHelpArgVersion => "cli-help-arg-version",
     PlayTuiStarting => "play-tui-starting",
     PlayStart => "play-start",
     PlayLine => "play-line",

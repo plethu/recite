@@ -1,3 +1,35 @@
+cli-help-about = Recite dialogue compiler and validation CLI.
+cli-help-usage-heading = Usage:
+cli-help-commands-heading = Commands
+cli-help-arguments-heading = Arguments
+cli-help-options-heading = Options
+cli-help-command-validate = Validate dialogue source without writing compiled output
+cli-help-command-compile = Compile dialogue source to a MessagePack .recitec asset
+cli-help-command-extract = Extract gettext POT entries
+cli-help-command-check-ids = Report stable line and choice ID diagnostics
+cli-help-command-check-markup = Validate inline markup, optionally against a schema manifest
+cli-help-command-check-metadata = Validate metadata against a schema manifest
+cli-help-command-validate-project = Validate recite.project.toml and referenced compiled assets
+cli-help-command-check-fresh = Check whether project compiled assets are fresh
+cli-help-command-run = Run a compiled asset headlessly with fixture data
+cli-help-command-trace = Emit deterministic JSON for a headless fixture run
+cli-help-command-play = Play a compiled asset interactively
+cli-help-arg-paths = One or more .recite files, or directories containing .recite files
+cli-help-arg-schema = Generated schema manifest JSON
+cli-help-arg-project-root = Project root containing recite.project.toml
+cli-help-arg-output-compile = Write MessagePack compiled asset bytes to this path
+cli-help-arg-output-extract = Write POT output to this path instead of stdout
+cli-help-arg-asset-run = MessagePack .recitec asset to run
+cli-help-arg-asset-play = MessagePack .recitec asset to play
+cli-help-arg-block = Block ID to start from
+cli-help-arg-fixture = TOML fixture with conditions, choices, and effect options
+cli-help-arg-ui = Interactive UI mode
+cli-help-arg-keymap = TUI keymap. Overrides [ui].keymap in the user config file
+cli-help-arg-dialogue-locale = Dialogue content locale to preview through the runtime locale provider
+cli-help-arg-dialogue-catalog = Dialogue gettext catalog mapping in LOCALE=PATH form. Repeatable
+cli-help-arg-help = Print help
+cli-help-arg-version = Print version
+
 play-tui-starting = starting recite play TUI; use --ui plain for line-oriented output
 
 play-start = play asset={$asset} block={$block}

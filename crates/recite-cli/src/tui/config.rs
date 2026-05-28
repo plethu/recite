@@ -74,6 +74,23 @@ impl TuiSettings {
             })?;
         raw.into_settings(path)
     }
+
+    pub(crate) fn help_locale() -> UiLocale {
+        let Some(path) = config_path() else {
+            return UiLocale::default();
+        };
+        let Ok(source) = fs::read_to_string(path) else {
+            return UiLocale::default();
+        };
+        let Ok(raw) = toml::from_str::<RawConfig>(&source) else {
+            return UiLocale::default();
+        };
+        raw.ui
+            .locale
+            .as_deref()
+            .and_then(|locale| UiLocale::parse(locale).ok())
+            .unwrap_or_default()
+    }
 }
 
 fn config_path() -> Option<PathBuf> {
