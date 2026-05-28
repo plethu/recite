@@ -2,6 +2,7 @@ use std::fs;
 use std::path::{Path, PathBuf};
 use std::time::Duration;
 
+use recite_core::decode_compiled_dialogue_messagepack;
 use tempfile::TempDir;
 
 use super::build::{BuildStatus, build_once};
@@ -60,7 +61,13 @@ fn build_once_writes_manifest_assets_from_project_sources() {
     let status = build_once(&mut state, &mut stderr).expect("build");
 
     assert_eq!(status, BuildStatus::Fresh { asset_count: 1 });
-    assert!(temp.path().join("compiled/dialogue.recitec").is_file());
+    let asset = fs::read(temp.path().join("compiled/dialogue.recitec")).expect("asset");
+    let asset = decode_compiled_dialogue_messagepack(&asset).expect("decode asset");
+    assert_eq!(asset.header.asset_id.as_str(), "compiled/dialogue.recitec");
+    assert_eq!(
+        asset.header.source_map_id.as_str(),
+        "compiled/dialogue.recitec.map"
+    );
     assert_eq!(String::from_utf8(stderr).expect("stderr"), "");
 }
 
@@ -140,6 +147,20 @@ fn invalid_schema_reports_diagnostics_without_overwriting_existing_asset() {
     assert_eq!(fs::read(asset).expect("asset unchanged"), original);
     let stderr = String::from_utf8(stderr).expect("stderr");
     assert!(stderr.contains("RECITE_SCHEMA"));
+}
+
+#[test]
+fn missing_schema_path_is_tracked_for_later_recovery() {
+    let temp = TempDir::new().expect("tempdir");
+    write_project_with_schema(temp.path());
+    write_file(temp.path(), "dialogue/main.recite", valid_source());
+
+    let mut state = WatchState::new(temp.path().to_owned());
+    let mut stderr = Vec::new();
+    let error = build_once(&mut state, &mut stderr).expect_err("missing schema is an IO error");
+
+    assert!(error.to_string().contains("schema.json"));
+    assert!(state.is_relevant_path(&temp.path().join("schema.json")));
 }
 
 #[test]

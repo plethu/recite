@@ -1,18 +1,21 @@
-use std::collections::BTreeSet;
+use std::collections::BTreeMap;
 use std::fs;
 use std::io::Write;
 use std::path::{Path, PathBuf};
 
-use recite_compiler::{compile_inputs, compile_inputs_with_schema};
-use recite_core::{Diagnostic, ProjectManifest, ProjectSchema, project::validate_project_manifest};
+use recite_compiler::{CompileOptions, compile_inputs, compile_inputs_with_schema};
+use recite_core::{
+    CompiledAssetId, CompilerVersion, Diagnostic, ProjectManifest, ProjectSchema,
+    SchemaFingerprint, SourceMapId, project::validate_project_manifest,
+};
 
 use super::events::WatchState;
 use super::inputs::collect_project_sources;
 use crate::diagnostics::report_diagnostics;
 use crate::error::CliError;
 use crate::fs::{
-    compile_options, display_path, load_schema, read_compile_inputs_for_output,
-    reject_output_input_alias, resolve_project_path, validate_project, write_staged,
+    display_path, load_schema, read_compile_inputs_for_output, reject_output_input_alias,
+    resolve_project_path, validate_project, write_staged,
 };
 
 pub(super) fn build_once(
@@ -35,8 +38,8 @@ pub(super) fn build_once(
         .manifest
         .expect("manifest is present without diagnostics");
 
-    let loaded_schema = load_project_schema(&state.project_root, &manifest)?;
-    state.schema_path = loaded_schema.path;
+    state.schema_path = project_schema_path(&state.project_root, &manifest);
+    let loaded_schema = load_project_schema(state.schema_path.as_deref())?;
     if !loaded_schema.diagnostics.is_empty() {
         report_diagnostics(stderr, loaded_schema.diagnostics.iter())?;
         return Ok(BuildStatus::Diagnostics);
@@ -59,10 +62,11 @@ pub(super) fn build_once(
     }
 
     let mut compiled_assets = Vec::new();
-    for output in unique_asset_paths(&state.project_root, &manifest) {
-        reject_output_input_alias(&output, &input_files)?;
-        let inputs = read_compile_inputs_for_output(&output, input_files.clone())?;
-        let options = compile_options(&output, loaded_schema.schema.as_ref())?;
+    for target in unique_asset_targets(&state.project_root, &manifest) {
+        reject_output_input_alias(&target.write_path, &input_files)?;
+        let inputs = read_compile_inputs_for_output(&target.write_path, input_files.clone())?;
+        let options =
+            compile_options_for_asset_id(&target.asset_id, loaded_schema.schema.as_ref())?;
         let report = if let Some(schema) = &loaded_schema.schema {
             compile_inputs_with_schema(inputs, options, schema)?
         } else {
@@ -73,7 +77,7 @@ pub(super) fn build_once(
         let Some(asset) = report.asset else {
             return Ok(BuildStatus::Diagnostics);
         };
-        compiled_assets.push((output, asset.messagepack));
+        compiled_assets.push((target.write_path, asset.messagepack));
     }
 
     for (output, bytes) in &compiled_assets {
@@ -97,35 +101,65 @@ pub(super) fn build_once(
     }
 }
 
-fn load_project_schema(
-    project_root: &Path,
-    manifest: &ProjectManifest,
-) -> Result<LoadedProjectSchema, CliError> {
-    let Some(schema) = manifest.project.schema.as_deref() else {
+fn load_project_schema(schema_path: Option<&Path>) -> Result<LoadedProjectSchema, CliError> {
+    let Some(schema_path) = schema_path else {
         return Ok(LoadedProjectSchema {
-            path: None,
             schema: None,
             diagnostics: Vec::new(),
         });
     };
 
-    let path = resolve_project_path(project_root, schema);
-    let loaded = load_schema(&path)?;
+    let loaded = load_schema(schema_path)?;
     Ok(LoadedProjectSchema {
-        path: Some(path),
         schema: loaded.schema,
         diagnostics: loaded.diagnostics,
     })
 }
 
-fn unique_asset_paths(project_root: &Path, manifest: &ProjectManifest) -> Vec<PathBuf> {
+fn project_schema_path(project_root: &Path, manifest: &ProjectManifest) -> Option<PathBuf> {
     manifest
-        .scenes
-        .iter()
-        .map(|scene| resolve_project_path(project_root, &scene.asset))
-        .collect::<BTreeSet<_>>()
+        .project
+        .schema
+        .as_deref()
+        .map(|schema| resolve_project_path(project_root, schema))
+}
+
+fn compile_options_for_asset_id(
+    asset_id: &str,
+    schema: Option<&ProjectSchema>,
+) -> Result<CompileOptions, CliError> {
+    Ok(CompileOptions::new(
+        CompilerVersion::new(env!("CARGO_PKG_VERSION"))?,
+        CompiledAssetId::new(asset_id.to_owned())?,
+        SourceMapId::new(format!("{asset_id}.map"))?,
+        schema.map_or(
+            SchemaFingerprint::NoSchema,
+            ProjectSchema::canonical_fingerprint,
+        ),
+    ))
+}
+
+fn unique_asset_targets(project_root: &Path, manifest: &ProjectManifest) -> Vec<AssetTarget> {
+    let mut targets = BTreeMap::new();
+    for scene in &manifest.scenes {
+        targets
+            .entry(resolve_project_path(project_root, &scene.asset))
+            .or_insert_with(|| display_path(Path::new(&scene.asset)));
+    }
+
+    targets
         .into_iter()
+        .map(|(write_path, asset_id)| AssetTarget {
+            write_path,
+            asset_id,
+        })
         .collect()
+}
+
+#[derive(Clone, Debug, Eq, PartialEq)]
+struct AssetTarget {
+    write_path: PathBuf,
+    asset_id: String,
 }
 
 #[derive(Debug, Eq, PartialEq)]
@@ -135,7 +169,6 @@ pub(super) enum BuildStatus {
 }
 
 struct LoadedProjectSchema {
-    path: Option<PathBuf>,
     schema: Option<ProjectSchema>,
     diagnostics: Vec<Diagnostic>,
 }
