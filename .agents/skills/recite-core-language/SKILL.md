@@ -9,7 +9,7 @@ description: Use for Recite parser, AST, compiler, runtime, schema, effects, loc
 
 Core language work defines Recite's durable semantics. Prefer small changes that preserve deterministic behavior and leave game-specific meaning outside the core runtime.
 
-The repo is early and not yet split into the production workspace crates. Apply this guidance to the current crate now, and to `recite-parser`, `recite-core`, `recite-compiler`, `recite-runtime`, and related crates as they land.
+Apply this guidance across the Rust workspace, especially `recite-parser`, `recite-core`, `recite-compiler`, `recite-runtime`, and related crates.
 
 ## Spec Routing
 
@@ -41,8 +41,7 @@ Read the relevant section of `docs/recite-production-spec.md` before implementat
 - Parser code should describe syntax and spans, not runtime policy.
 - Compiler code should validate references, IDs, schema use, and deterministic compiled output.
 - Runtime code should consume compiled structures and expose structured events.
-- Avoid adding public API surface that the current issue does not need.
-- Prefer explicit structured types over strings that callers must parse.
+- Keep public API and generic Rust quality checks aligned with `.agents/skills/recite-rust-quality/SKILL.md`.
 
 ## Parser/AST Issue Example
 

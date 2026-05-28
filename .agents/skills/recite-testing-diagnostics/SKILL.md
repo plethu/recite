@@ -7,9 +7,7 @@ description: Use for Recite fixtures, snapshot-style tests, diagnostics, CLI val
 
 ## Why
 
-Recite should make dialogue testable without running a game. Tests and diagnostics should be deterministic, structured, and useful to both CLI and editor surfaces.
-
-The repo is currently at the initial single-crate stage. CLI, LSP, fixture harnesses, and snapshot conventions are aspirational until implemented; use this skill to shape those surfaces as they land.
+Recite should make dialogue testable without running a game. Tests and diagnostics should be deterministic, structured, and useful to compiler, runtime, CLI, and editor surfaces.
 
 ## Spec Routing
 
@@ -24,12 +22,14 @@ Read these sections of `docs/recite-production-spec.md` when relevant:
 
 ## Testing Principles
 
-- Prefer fixture-driven tests for language behavior.
-- Assert structured outputs instead of formatted prose when possible.
-- Keep output ordering deterministic: source order or explicit sorting.
-- Share fixture expectations between compiler, CLI, and LSP tests where practical.
-- Runtime tests should run headlessly without engine runtime.
-- Benchmarks are not part of the v1 acceptance gate unless the issue is explicitly milestone 6.
+| Concern | Expectation |
+| --- | --- |
+| Language behavior | Prefer fixture-driven tests and share fixture expectations between compiler, CLI, and LSP where practical. |
+| Assertions | Assert structured outputs instead of formatted prose when possible. |
+| Ordering | Keep output deterministic: source order or explicit sorting. |
+| Runtime | Run headlessly without engine runtime. |
+| Benchmarks | Exclude from the v1 acceptance gate unless the issue is explicitly milestone 6. |
+| Large tests | Use `.agents/skills/recite-rust-quality/SKILL.md` to review cohesion and helper extraction. |
 
 ## Rust Test Organization
 
@@ -103,11 +103,11 @@ When these surfaces exist:
 
 ## Quality Gate
 
-Before handoff:
+Before handoff, state blockers or confirm:
 
-- Tests are deterministic and do not depend on host paths or wall-clock time.
-- Structured outputs are asserted directly where possible.
-- Stable IDs are included where required.
-- Effect order is asserted when effects are present.
-- Locale fallback and markup preservation are tested when touched.
-- `.agents/skills/recite-codeberg-pm/scripts/check-test-organization.sh`, `cargo fmt --check`, `cargo test`, and `cargo clippy --all-targets --all-features -- -D warnings` were run, or the blocker is stated.
+| Concern | Required check |
+| --- | --- |
+| Determinism | Tests avoid host paths and wall-clock time. |
+| Structured output | Direct assertions are used where possible. |
+| Stable IDs/effects/locales | Stable IDs, effect order, locale fallback, and markup preservation are asserted when touched. |
+| Commands | `.agents/skills/recite-codeberg-pm/scripts/check-test-organization.sh`, `cargo fmt --check`, `cargo test`, and `cargo clippy --all-targets --all-features -- -D warnings`. |
