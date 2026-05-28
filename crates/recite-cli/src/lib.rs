@@ -2,9 +2,8 @@ use std::ffi::OsString;
 use std::io::{self, Write};
 use std::process::ExitCode;
 
-use clap::Parser;
-
 mod args;
+mod cli_help;
 mod commands;
 mod diagnostics;
 mod dialogue_locale;
@@ -16,7 +15,7 @@ mod runtime_fixture;
 mod runtime_format;
 mod tui;
 
-use args::{Cli, Command};
+use args::Command;
 use error::CliError;
 use i18n::{Messages, UiLocale};
 use tui::TuiSettings;
@@ -24,7 +23,13 @@ use tui::TuiSettings;
 const SUCCESS: ExitCode = ExitCode::SUCCESS;
 
 pub fn run(args: impl IntoIterator<Item = OsString>) -> ExitCode {
-    let cli = Cli::parse_from(args);
+    let cli = match cli_help::parse(args) {
+        Ok(cli) => cli,
+        Err(error) => {
+            let _ = error.print();
+            return ExitCode::from(error.exit_code() as u8);
+        }
+    };
     let mut stdout = io::stdout().lock();
     let mut stderr = io::stderr().lock();
     let error_messages = error_messages_for_command(&cli.command);

@@ -25,7 +25,7 @@ recite-parser = { version = "0.0.1", path = "crates/recite-parser" }
 recite-compiler = { version = "0.0.1", path = "crates/recite-compiler" }
 recite-runtime = { version = "0.0.1", path = "crates/recite-runtime" }
 blake3 = "1.8.5"
-clap = { version = "4.5.51", features = ["derive"] }
+clap = { version = "4.5.51", features = ["derive", "string"] }
 crossterm = "0.28.1"
 fluent-bundle = "0.15.3"
 insta = { version = "1.47.2", default-features = false }
