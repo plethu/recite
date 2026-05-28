@@ -4,6 +4,7 @@ use std::path::PathBuf;
 use recite_core::CompiledAssetDecodeError;
 
 use crate::fs::display_path;
+use crate::i18n::{Messages, MsgId};
 
 #[derive(Debug)]
 pub(crate) enum CliError {
@@ -41,6 +42,12 @@ pub(crate) enum CliError {
         output: PathBuf,
         input: PathBuf,
     },
+    PlayEof {
+        field: &'static str,
+    },
+    PlayInvalidInput(String),
+    PlayInterrupted,
+    PlayTuiRequiresTerminal,
     Read {
         path: PathBuf,
         source: io::Error,
@@ -54,6 +61,21 @@ pub(crate) enum CliError {
         effect: String,
     },
     TraceJson(serde_json::Error),
+    TuiConfigRead {
+        path: PathBuf,
+        source: io::Error,
+    },
+    TuiConfigToml {
+        path: PathBuf,
+        source: toml::de::Error,
+    },
+    UiCatalog {
+        source: String,
+    },
+    UiLocaleInvalid {
+        path: PathBuf,
+        locale: String,
+    },
     UnknownPrompt {
         line: Option<String>,
         choices: Vec<String>,
@@ -123,6 +145,14 @@ impl std::fmt::Display for CliError {
                 display_path(input),
                 display_path(output)
             ),
+            Self::PlayEof { field } => {
+                write!(formatter, "reached EOF while reading {field}")
+            }
+            Self::PlayInvalidInput(message) => write!(formatter, "invalid play input: {message}"),
+            Self::PlayInterrupted => formatter.write_str("play interrupted"),
+            Self::PlayTuiRequiresTerminal => formatter.write_str(
+                "recite play --ui tui requires interactive stdin and stdout; use --ui plain for pipes, CI, or accessibility tools",
+            ),
             Self::Read { path, source } => {
                 write!(formatter, "failed to read {}: {source}", display_path(path))
             }
@@ -139,6 +169,22 @@ impl std::fmt::Display for CliError {
                 "blocking effect `{effect}` requires [effects].auto_ack_blocking = true in the fixture"
             ),
             Self::TraceJson(error) => write!(formatter, "failed to encode trace JSON: {error}"),
+            Self::TuiConfigRead { path, source } => write!(
+                formatter,
+                "failed to read UI config {}: {source}",
+                display_path(path)
+            ),
+            Self::TuiConfigToml { path, source } => write!(
+                formatter,
+                "failed to parse UI config {}: {source}",
+                display_path(path)
+            ),
+            Self::UiCatalog { source } => write!(formatter, "failed to load UI text catalog: {source}"),
+            Self::UiLocaleInvalid { path, locale } => write!(
+                formatter,
+                "failed to parse UI config {}: invalid [ui].locale `{locale}`; expected a BCP-47 locale such as \"en-US\" or \"system\"",
+                display_path(path)
+            ),
             Self::UnknownPrompt { line, choices } => write!(
                 formatter,
                 "runtime emitted an unknown prompt line={} choices=[{}]",
@@ -157,6 +203,35 @@ impl std::fmt::Display for CliError {
 }
 
 impl std::error::Error for CliError {}
+
+impl CliError {
+    pub(crate) fn to_user_message(&self, messages: &Messages) -> String {
+        match self {
+            Self::PlayEof { field } => {
+                messages.format(MsgId::CliErrorPlayEof, [("field", (*field).to_owned())])
+            }
+            Self::PlayInvalidInput(message) => messages.format(
+                MsgId::CliErrorPlayInvalidInput,
+                [("message", message.clone())],
+            ),
+            Self::PlayInterrupted => messages.text(MsgId::CliErrorPlayInterrupted),
+            Self::PlayTuiRequiresTerminal => messages.text(MsgId::CliErrorPlayTuiRequiresTerminal),
+            Self::TuiConfigRead { path, source } => messages.format(
+                MsgId::CliErrorUiConfigRead,
+                [("path", display_path(path)), ("source", source.to_string())],
+            ),
+            Self::TuiConfigToml { path, source } => messages.format(
+                MsgId::CliErrorUiConfigToml,
+                [("path", display_path(path)), ("source", source.to_string())],
+            ),
+            Self::UiLocaleInvalid { path, locale } => messages.format(
+                MsgId::CliErrorUiLocaleInvalid,
+                [("path", display_path(path)), ("locale", locale.clone())],
+            ),
+            _ => self.to_string(),
+        }
+    }
+}
 
 impl From<io::Error> for CliError {
     fn from(error: io::Error) -> Self {

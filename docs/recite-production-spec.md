@@ -849,6 +849,13 @@ The runtime must not panic on malformed project content.
 
 ## 9. Localisation
 
+Recite has two localisation domains:
+
+- dialogue content localisation, owned by compiled project content and runtime locale providers;
+- Recite-owned tool UI text, owned by CLI/TUI catalog resources.
+
+Dialogue content uses the gettext/POT workflow in this section. CLI/TUI helper text, labels, footer hints, status messages, and Recite-owned human error text use Fluent resources inside `recite-cli` so UI strings can carry variables, future plural/select rules, and deterministic fallback behavior. These catalogs must not be used as a substitute for translated dialogue text. Future content preview work must load explicit dialogue catalogs through the runtime/provider path rather than mixing dialogue content into the tool UI catalog.
+
 ### 9.1 Requirements
 
 The project must support gettext/POT workflows as a first-class path.
@@ -1464,7 +1471,7 @@ recite check-markup <path-or-project>
 recite check-metadata <path-or-project> --schema <schema>
 recite run <asset> --block <block> --fixture <fixture>
 recite trace <asset> --block <block> --fixture <fixture>
-recite play <asset> --block <block>
+recite play <asset> --block <block> [--ui auto|tui|plain] [--keymap standard|vim]
 ```
 
 `recite play` is an interactive REPL for writers (Milestone 5.5). Future commands include `recite generate-bindings --schema <schema> --lang <lang>` once the schema and adapter contracts stabilise; it is not part of the v1 CLI surface.
@@ -1531,7 +1538,41 @@ Produces a deterministic execution trace including:
 
 ### 13.7 `play`
 
-Interactive REPL for writers. Loads a compiled asset (or compiles on-the-fly), starts a scene, prints lines and prompts to the terminal, accepts choice selections by ID or index, and auto-acknowledges blocking effects. Useful for fast authoring iteration without standing up a game.
+Interactive REPL for writers. Loads a compiled asset, starts a scene, prints or renders lines and prompts, accepts choice selections by ID or index, asks for condition results as `y`/`n`, and requires explicit acknowledgement of blocking effects. Useful for fast authoring iteration without standing up a game.
+
+`play` is a live authoring surface, distinct from the deterministic fixture runner. `run` and `trace` remain scriptable commands driven by fixture data; `play` is allowed to prompt the author and maintain an interactive transcript.
+
+The default `--ui auto` mode should use a TUI when stdin and stdout are interactive terminals, and should fall back to the line-oriented plain mode for pipes, CI, and accessibility tooling. `--ui tui` must fail clearly when no interactive terminal is available and suggest `--ui plain`. `--ui plain` must preserve the same runtime event flow as the TUI with line-oriented prompts and responses.
+
+Interactive UI preferences are user preferences, not project content. The CLI may read `$RECITE_CONFIG`, then `$XDG_CONFIG_HOME/recite/config.toml`, then `~/.config/recite/config.toml`. Missing config uses defaults. UI preferences must not be stored in `recite.project.toml`. Malformed UI config must not affect `run` or `trace`.
+
+Initial UI config:
+
+```toml
+[ui]
+locale = "en-US"        # BCP-47 locale, or "system"
+keymap = "standard"      # "standard" or "vim"
+key_hints = "contextual" # "contextual", "compact", or "hidden"
+
+[play]
+show_unavailable_choices = true
+```
+
+The UI locale controls only Recite-owned CLI/TUI text: pane titles, transcript labels, footer hints, prompts, status messages, invalid input text, blocking-effect acknowledgement labels, and human CLI errors owned by `recite-cli`. It does not control dialogue line or choice translation for `play`, `run`, or `trace`; those remain runtime/provider concerns (§9). There is no `--ui-locale` flag.
+
+Locale fallback for CLI/TUI text is deterministic: requested locale, then language-only locale, then `en-US`. Missing or malformed non-default catalogs fall back to `en-US`. The default `en-US` catalog is a test-gated resource.
+
+The default keymap is `standard`: arrows move choices, printable keys enter a choice ID/index, Enter submits typed input or the highlighted choice, and Ctrl-C/Esc/`:q`/`:quit` quit cleanly. Vim mode is opt-in: choices start in normal mode, `j`/`k` and arrows move, `i` enters text input, `:` opens command mode, and Esc leaves insert/command/help before quitting at the root prompt.
+
+The TUI should include:
+
+- a transcript pane for lines, selected choices, effects, acknowledgements, and end state;
+- a current prompt pane with visible choice indexes and stable choice IDs;
+- a status/footer area showing the compiled asset, block, and available controls;
+- a condition prompt accepting `y`/`n`;
+- a blocking-effect panel showing mode, runtime effect ID, function, args, and Enter/`ack` acknowledgement.
+
+`play` must not execute game-side effects. Immediate and blocking effects remain typed runtime requests emitted to the authoring surface.
 
 `play` is part of Milestone 5.5 (Authoring Polish) and is not on the v1 acceptance gate, but the runtime API must accommodate it.
 

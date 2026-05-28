@@ -5,6 +5,10 @@ use recite_runtime::{
 };
 use serde::Serialize;
 
+use crate::runtime_format::{
+    RuntimeDisplayArgument, format_condition_query, format_effect_arguments as format_effect_args,
+};
+
 pub(super) fn trace_line(line: &DialogueLine) -> TraceLine {
     TraceLine {
         id: line.id.as_str().to_owned(),
@@ -93,33 +97,24 @@ pub(super) fn trace_effect_argument(argument: &DialogueEffectArgument) -> TraceS
 }
 
 pub(super) fn condition_query_text(function: &str, arguments: &[TraceScalar]) -> String {
-    let arguments = arguments
-        .iter()
-        .map(format_condition_argument)
-        .collect::<Vec<_>>()
-        .join(", ");
-    format!("{function}({arguments})")
+    format_condition_query(
+        function,
+        arguments.iter().map(trace_scalar_display_argument),
+    )
 }
 
-fn format_condition_argument(argument: &TraceScalar) -> String {
+fn trace_scalar_display_argument(argument: &TraceScalar) -> RuntimeDisplayArgument<'_> {
     match argument {
-        TraceScalar::Identifier(value) => value.clone(),
-        TraceScalar::String(value) => {
-            serde_json::to_string(value).expect("serializing a string cannot fail")
-        }
-        TraceScalar::Integer(value) => value.to_string(),
-        TraceScalar::Float(value) => value.to_string(),
-        TraceScalar::Boolean(value) => value.to_string(),
+        TraceScalar::Identifier(value) => RuntimeDisplayArgument::Identifier(value),
+        TraceScalar::String(value) => RuntimeDisplayArgument::String(value),
+        TraceScalar::Integer(value) => RuntimeDisplayArgument::Integer(*value),
+        TraceScalar::Float(value) => RuntimeDisplayArgument::Float(*value),
+        TraceScalar::Boolean(value) => RuntimeDisplayArgument::Boolean(*value),
     }
 }
 
 pub(super) fn format_effect_arguments(arguments: &[DialogueEffectArgument]) -> String {
-    let arguments = arguments
-        .iter()
-        .map(|argument| format_condition_argument(&trace_effect_argument(argument)))
-        .collect::<Vec<_>>()
-        .join(", ");
-    format!("({arguments})")
+    format_effect_args(arguments)
 }
 
 fn effect_mode_name(mode: DialogueEffectMode) -> &'static str {

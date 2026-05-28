@@ -3,6 +3,9 @@ use tempfile::TempDir;
 mod support;
 use support::*;
 
+use std::io::Write;
+use std::process::Stdio;
+
 #[test]
 fn run_and_trace_execute_fixture_choices_conditions_and_effect_acknowledgement() {
     let temp = TempDir::new().expect("tempdir");
@@ -222,4 +225,181 @@ surprise = true
         .arg(&unknown_field_fixture));
     output.assert_failure();
     output.assert_stderr_contains("unknown field");
+}
+
+#[test]
+fn play_plain_accepts_piped_input_and_keeps_run_trace_stable() {
+    let temp = TempDir::new().expect("tempdir");
+    let source = write_recite(
+        temp.path(),
+        "dialogue.recite",
+        concat!(
+            ":: start default\n",
+            "> intro\n",
+            "  Welcome.\n",
+            "  ? help if trusts(player)\n",
+            "    Help.\n",
+            "    -> help\n",
+            "  ? leave\n",
+            "    Leave.\n",
+            "    -> END\n",
+            ":: help\n",
+            "! blocking grant_item(map)\n",
+            "> helped\n",
+            "  Helped.\n",
+            "! deferred finish(help)\n",
+            "-> END\n",
+        ),
+    );
+    let asset = compile_project_asset(temp.path(), &source, "dialogue.recitec", None);
+
+    let mut child = recite()
+        .arg("play")
+        .arg(&asset)
+        .arg("--block")
+        .arg("start")
+        .arg("--ui")
+        .arg("plain")
+        .stdin(Stdio::piped())
+        .stdout(Stdio::piped())
+        .stderr(Stdio::piped())
+        .spawn()
+        .expect("spawn recite play");
+    child
+        .stdin
+        .as_mut()
+        .expect("stdin")
+        .write_all(b"y\nhelp\n\n")
+        .expect("write stdin");
+    let output = child.wait_with_output().expect("wait");
+
+    output.assert_success().assert_stderr("");
+    output.assert_stdout_contains("play asset=");
+    output.assert_stdout_contains("condition trusts(player) = true");
+    output.assert_stdout_contains("selected choice help");
+    output.assert_stdout_contains("effect blocking id=");
+    output.assert_stdout_contains("acknowledged effect");
+    output.assert_stdout_contains("line helped: Helped.");
+    output.assert_stdout_contains("deferred effects:");
+
+    let mut child = recite()
+        .arg("play")
+        .arg(&asset)
+        .arg("--block")
+        .arg("start")
+        .stdin(Stdio::piped())
+        .stdout(Stdio::piped())
+        .stderr(Stdio::piped())
+        .spawn()
+        .expect("spawn recite play auto");
+    child
+        .stdin
+        .as_mut()
+        .expect("stdin")
+        .write_all(b"n\nleave\n")
+        .expect("write stdin");
+    let output = child.wait_with_output().expect("wait");
+
+    output.assert_success().assert_stderr("");
+    output.assert_stdout_contains("condition trusts(player) = false");
+    output.assert_stdout_contains("selected choice leave");
+    output.assert_stdout_contains("end");
+
+    let output = run(recite()
+        .arg("play")
+        .arg(&asset)
+        .arg("--block")
+        .arg("start")
+        .arg("--ui")
+        .arg("tui"));
+    output.assert_failure();
+    output.assert_stderr_contains("use --ui plain");
+}
+
+#[test]
+fn play_ui_locale_config_falls_back_to_default_catalog_and_rejects_bad_locale() {
+    let temp = TempDir::new().expect("tempdir");
+    let source = write_recite(
+        temp.path(),
+        "dialogue.recite",
+        concat!(
+            ":: start default\n",
+            "> intro\n",
+            "  Welcome.\n",
+            "  ? leave\n",
+            "    Leave.\n",
+            "    -> END\n",
+        ),
+    );
+    let asset = compile_project_asset(temp.path(), &source, "dialogue.recitec", None);
+
+    let fallback_config = write_file(
+        temp.path(),
+        "config-fallback.toml",
+        r#"[ui]
+locale = "en-GB"
+"#,
+    );
+    let mut child = recite()
+        .arg("play")
+        .arg(&asset)
+        .arg("--block")
+        .arg("start")
+        .arg("--ui")
+        .arg("plain")
+        .env("RECITE_CONFIG", &fallback_config)
+        .stdin(Stdio::piped())
+        .stdout(Stdio::piped())
+        .stderr(Stdio::piped())
+        .spawn()
+        .expect("spawn recite play");
+    child
+        .stdin
+        .as_mut()
+        .expect("stdin")
+        .write_all(b"leave\n")
+        .expect("write stdin");
+    let output = child.wait_with_output().expect("wait");
+
+    output.assert_success().assert_stderr("");
+    output.assert_stdout_contains("prompt intro: Welcome.");
+    output.assert_stdout_contains("selected choice leave");
+
+    let bad_config = write_file(
+        temp.path(),
+        "config-bad.toml",
+        r#"[ui]
+locale = "not a locale"
+"#,
+    );
+    let output = run(recite()
+        .arg("play")
+        .arg(&asset)
+        .arg("--block")
+        .arg("start")
+        .arg("--ui")
+        .arg("plain")
+        .env("RECITE_CONFIG", &bad_config));
+
+    output.assert_failure();
+    output.assert_stderr_contains("invalid [ui].locale");
+
+    let fixture = write_file(
+        temp.path(),
+        "fixture.toml",
+        r#"[choices]
+intro = "leave"
+"#,
+    );
+    let output = run(recite()
+        .arg("run")
+        .arg(&asset)
+        .arg("--block")
+        .arg("start")
+        .arg("--fixture")
+        .arg(&fixture)
+        .env("RECITE_CONFIG", &bad_config));
+
+    output.assert_success().assert_stderr("");
+    output.assert_stdout_contains("selected choice leave");
 }

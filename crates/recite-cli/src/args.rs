@@ -40,6 +40,8 @@ pub(crate) enum Command {
     Run(RuntimeArgs),
     /// Emit deterministic JSON for a headless fixture run.
     Trace(RuntimeArgs),
+    /// Play a compiled asset interactively.
+    Play(PlayArgs),
 }
 
 #[derive(Debug, Args)]
@@ -111,4 +113,32 @@ pub(crate) struct RuntimeArgs {
     /// TOML fixture with conditions, choices, and effect options.
     #[arg(long)]
     pub(crate) fixture: PathBuf,
+}
+
+#[derive(Clone, Copy, Debug, Eq, PartialEq, clap::ValueEnum)]
+pub(crate) enum PlayUi {
+    Auto,
+    Tui,
+    Plain,
+}
+
+#[derive(Clone, Copy, Debug, Eq, PartialEq, clap::ValueEnum)]
+pub(crate) enum PlayKeymap {
+    Standard,
+    Vim,
+}
+
+#[derive(Debug, Args)]
+pub(crate) struct PlayArgs {
+    /// MessagePack .recitec asset to play.
+    pub(crate) asset: PathBuf,
+    /// Block ID to start from.
+    #[arg(long)]
+    pub(crate) block: String,
+    /// Interactive UI mode.
+    #[arg(long, value_enum, default_value_t = PlayUi::Auto)]
+    pub(crate) ui: PlayUi,
+    /// TUI keymap. Overrides [ui].keymap in the user config file.
+    #[arg(long, value_enum)]
+    pub(crate) keymap: Option<PlayKeymap>,
 }
