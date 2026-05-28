@@ -1923,14 +1923,50 @@ The CLI benchmark command should support:
 
 ### 19.2 Benchmark Fixtures
 
-The repository must include synthetic and realistic fixtures.
+The repository must include synthetic and realistic fixtures. Synthetic fixtures
+must be generated from named scale profiles so compiler, runtime, CLI, LSP, and
+adapter benchmarks exercise the same deterministic project shapes.
 
-Synthetic fixtures:
+Synthetic scale profiles:
 
-- tiny: 10 blocks, 100 lines, 20 choices;
-- small: 100 blocks, 1,000 lines, 200 choices;
-- medium: 1,000 blocks, 10,000 lines, 2,000 choices;
-- large: 5,000 blocks, 50,000 lines, 10,000 choices.
+| Profile | Blocks | Lines | Choices | Localizable entries | Generated words |
+| --- | ---: | ---: | ---: | ---: | ---: |
+| tiny | 10 | 100 | 20 | about 120 | about 1,000 |
+| small | 100 | 1,000 | 200 | about 1,200 | about 10,000 |
+| medium | 1,000 | 10,000 | 2,000 | about 12,000 | about 100,000 |
+| large | 5,000 | 50,000 | 10,000 | about 60,000 | about 500,000 |
+| epic | 10,000 | 80,000 | 20,000 | about 100,000 | about 1,000,000 |
+
+Each synthetic profile must define deterministic structural complexity targets:
+
+- conditions on a representative subset of lines and choices, including shared
+  flags, counters, and relationship-style state;
+- metadata on blocks, lines, choices, and project inputs;
+- deferred, immediate, and blocking effects with schema-checked payload shapes;
+- localization catalogs and POT extraction pressure proportional to the
+  localizable entry target;
+- cross-block references and branching fan-out sufficient to expose reference
+  resolution and choice lookup costs;
+- stable line and choice IDs that remain deterministic across generator runs.
+
+Synthetic fixture generation must take structured inputs: the scale profile,
+the deterministic seed, schema shape configuration, localization configuration,
+and any runtime fixture configuration needed for headless traversal. The
+generator must produce Recite sources, schema files, runtime fixtures, and a
+compact deterministic summary containing counts and content hashes. Summary
+hashes are the reviewable signal that regenerated large fixtures still match the
+expected shape without checking all generated data into git.
+
+Checked-in synthetic fixture policy:
+
+- check in the generator seed and profile configuration for every profile;
+- check in the generated tiny fixture so smoke tests and examples work without a
+  generation step;
+- check in compact deterministic summaries for small, medium, large, and epic;
+- generate small, medium, large, and epic fixture data on demand for benchmarks,
+  stress checks, and profiling runs;
+- do not check in generated fixture data whose size would make ordinary source
+  review or clone time materially worse.
 
 Realistic fixtures:
 
@@ -1940,7 +1976,24 @@ Realistic fixtures:
 - localization-heavy scene set;
 - effect-heavy scene set with deferred, immediate, and blocking effects.
 
-Fixtures must be deterministic and checked into the repository unless size makes that impractical. Generated fixtures must be produced by a deterministic generator with checked-in seeds.
+Realistic fixtures should be compact enough to review by hand and checked into
+the repository when possible. Larger realistic fixtures may follow the generated
+fixture policy when they are derived from public, MIT-compatible source material
+or fully synthetic project descriptions.
+
+Measurement hygiene:
+
+- portable suites on Windows, macOS, and Linux must prove generator
+  determinism, CLI stress correctness, and benchmark buildability;
+- Criterion or the equivalent primary timing harness should provide warmup,
+  sampling, outlier handling, baseline comparison, and noise reporting;
+- authoritative trend numbers should come from one stable Linux runner or
+  documented local Linux profile, not mixed operating-system timing;
+- instruction, cache, and heap profiles may use Linux-only external tooling such
+  as Valgrind or `perf`, but GPL tooling must remain documented external tooling
+  rather than linked or vendored project dependencies;
+- benchmark and profiling crate dependencies must be compatible with Recite's
+  MIT distribution policy before they are added to the workspace.
 
 ### 19.3 Compiler Benchmarks
 
