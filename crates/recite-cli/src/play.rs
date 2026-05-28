@@ -1,6 +1,7 @@
 use std::io::{self, IsTerminal, Write};
 
 use crate::args::{PlayArgs, PlayUi};
+use crate::dialogue_locale::{LoadedDialoguePreview, dialogue_preview_from_play_args};
 use crate::error::CliError;
 use crate::i18n::{Messages, MsgId};
 use crate::runtime_fixture::load_compiled_asset;
@@ -19,14 +20,23 @@ pub(crate) fn run_play_command(
     let asset = load_compiled_asset(&args.asset)?;
     let settings = TuiSettings::load(args.keymap)?;
     let messages = Messages::load(&settings.locale)?;
+    let dialogue_preview =
+        dialogue_preview_from_play_args(args.dialogue_locale, args.dialogue_catalog)?
+            .map(LoadedDialoguePreview::load)
+            .transpose()?;
+    let dialogue_preview = dialogue_preview
+        .as_ref()
+        .map(LoadedDialoguePreview::traversal_preview);
     match resolve_ui(args.ui)? {
-        ResolvedUi::Plain => plain::run_plain_stdio(&asset, &args.block, stdout, &messages),
+        ResolvedUi::Plain => {
+            plain::run_plain_stdio(&asset, &args.block, stdout, &messages, dialogue_preview)
+        }
         ResolvedUi::Tui => {
             if !io::stdin().is_terminal() || !io::stdout().is_terminal() {
                 return Err(CliError::PlayTuiRequiresTerminal);
             }
             writeln!(stderr, "{}", messages.text(MsgId::PlayTuiStarting))?;
-            tui::run_tui_stdio(&asset, &args.block, settings, messages)
+            tui::run_tui_stdio(&asset, &args.block, settings, messages, dialogue_preview)
         }
     }
 }

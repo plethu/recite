@@ -1,10 +1,11 @@
 use std::collections::BTreeMap;
 use std::fs;
-use std::path::Path;
+use std::path::{Path, PathBuf};
 
 use recite_core::{CompiledDialogue, decode_compiled_dialogue_messagepack};
 use serde::Deserialize;
 
+use crate::dialogue_locale::DialoguePreviewConfig;
 use crate::error::CliError;
 
 pub(crate) fn load_compiled_asset(path: &Path) -> Result<CompiledDialogue, CliError> {
@@ -23,15 +24,53 @@ pub(crate) fn load_runtime_fixture(path: &Path) -> Result<RuntimeFixture, CliErr
         path: path.to_owned(),
         source,
     })?;
-    toml::from_str(&source).map_err(|source| CliError::FixtureToml {
-        path: path.to_owned(),
-        source,
-    })
+    let mut fixture: RuntimeFixture =
+        toml::from_str(&source).map_err(|source| CliError::FixtureToml {
+            path: path.to_owned(),
+            source,
+        })?;
+    fixture.dialogue.resolve_paths(path);
+    Ok(fixture)
+}
+
+pub(crate) fn dialogue_preview_from_fixture(
+    fixture: &RuntimeFixture,
+) -> Result<Option<DialoguePreviewConfig>, CliError> {
+    fixture.dialogue.preview()
+}
+
+#[derive(Debug, Default, Deserialize)]
+#[serde(deny_unknown_fields)]
+pub(super) struct FixtureDialogue {
+    pub(super) locale: Option<String>,
+    #[serde(default)]
+    pub(super) catalogs: BTreeMap<String, Vec<PathBuf>>,
+}
+
+impl FixtureDialogue {
+    fn resolve_paths(&mut self, fixture_path: &Path) {
+        let Some(base) = fixture_path.parent() else {
+            return;
+        };
+        for paths in self.catalogs.values_mut() {
+            for path in paths {
+                if !path.is_absolute() {
+                    *path = base.join(&path);
+                }
+            }
+        }
+    }
+
+    fn preview(&self) -> Result<Option<DialoguePreviewConfig>, CliError> {
+        DialoguePreviewConfig::from_fixture(self.locale.as_deref(), &self.catalogs)
+    }
 }
 
 #[derive(Debug, Default, Deserialize)]
 #[serde(deny_unknown_fields)]
 pub(crate) struct RuntimeFixture {
+    #[serde(default)]
+    pub(super) dialogue: FixtureDialogue,
     #[serde(default)]
     pub(super) conditions: BTreeMap<String, FixtureConditionValue>,
     #[serde(default)]

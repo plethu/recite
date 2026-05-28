@@ -171,6 +171,21 @@ message_ids! {
     CliErrorUiConfigRead => "cli-error-ui-config-read",
     CliErrorUiConfigToml => "cli-error-ui-config-toml",
     CliErrorUiLocaleInvalid => "cli-error-ui-locale-invalid",
+    CliErrorDialogueCatalogConflict => "cli-error-dialogue-catalog-conflict",
+    CliErrorDialogueCatalogMalformed => "cli-error-dialogue-catalog-malformed",
+    CliErrorDialogueCatalogMissingLocale => "cli-error-dialogue-catalog-missing-locale",
+    CliErrorDialogueCatalogSpecInvalid => "cli-error-dialogue-catalog-spec-invalid",
+    CliErrorDialogueLocaleInvalid => "cli-error-dialogue-locale-invalid",
+    CliErrorDialogueCatalogReasonExpectedDirective => "cli-error-dialogue-catalog-reason-expected-directive",
+    CliErrorDialogueCatalogReasonExpectedQuotedString => "cli-error-dialogue-catalog-reason-expected-quoted-string",
+    CliErrorDialogueCatalogReasonMissingContext => "cli-error-dialogue-catalog-reason-missing-context",
+    CliErrorDialogueCatalogReasonMissingId => "cli-error-dialogue-catalog-reason-missing-id",
+    CliErrorDialogueCatalogReasonMissingTranslation => "cli-error-dialogue-catalog-reason-missing-translation",
+    CliErrorDialogueCatalogReasonPluralEntriesUnsupported => "cli-error-dialogue-catalog-reason-plural-entries-unsupported",
+    CliErrorDialogueCatalogReasonQuotedContinuationWithoutField => "cli-error-dialogue-catalog-reason-quoted-continuation-without-field",
+    CliErrorDialogueCatalogReasonUnexpectedTextAfterQuotedString => "cli-error-dialogue-catalog-reason-unexpected-text-after-quoted-string",
+    CliErrorDialogueCatalogReasonUnterminatedQuotedString => "cli-error-dialogue-catalog-reason-unterminated-quoted-string",
+    CliErrorDialogueCatalogReasonUnsupportedEscape => "cli-error-dialogue-catalog-reason-unsupported-escape",
 }
 
 pub(crate) struct Messages {

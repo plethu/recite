@@ -11,6 +11,7 @@ use recite_runtime::{
     DialogueEffectRequest, DialogueLine,
 };
 
+use crate::dialogue_locale::DialogueTraversalPreview;
 use crate::error::CliError;
 use crate::i18n::{Messages, MsgId};
 use crate::runtime_format::format_effect_arguments;
@@ -35,13 +36,18 @@ pub(super) fn run_tui_stdio(
     block: &str,
     settings: TuiSettings,
     messages: Messages,
+    dialogue_preview: Option<DialogueTraversalPreview<'_>>,
 ) -> Result<(), CliError> {
     let mut restore_guard = enter_terminal()?;
     let stdout = io::stdout();
     let backend = CrosstermBackend::new(stdout);
     let mut terminal = Terminal::new(backend)?;
     let mut ui = TuiPlayUi::new(&mut terminal, settings, messages);
-    let result = PlayDriver::new(asset, block).run(&mut ui);
+    let driver = PlayDriver::new(asset, block);
+    let result = match dialogue_preview {
+        Some(preview) => driver.with_dialogue_preview(preview).run(&mut ui),
+        None => driver.run(&mut ui),
+    };
     let restore_result = restore_terminal(&mut terminal);
     if restore_result.is_ok() {
         restore_guard.disarm();

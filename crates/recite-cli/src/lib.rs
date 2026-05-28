@@ -7,6 +7,7 @@ use clap::Parser;
 mod args;
 mod commands;
 mod diagnostics;
+mod dialogue_locale;
 mod error;
 mod fs;
 mod i18n;

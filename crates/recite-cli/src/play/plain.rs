@@ -6,6 +6,7 @@ use recite_runtime::{
     DialogueLine,
 };
 
+use crate::dialogue_locale::DialogueTraversalPreview;
 use crate::error::CliError;
 use crate::i18n::{Messages, MsgId};
 use crate::runtime_format::format_effect_arguments;
@@ -18,10 +19,15 @@ pub(super) fn run_plain_stdio(
     block: &str,
     stdout: &mut dyn Write,
     messages: &Messages,
+    dialogue_preview: Option<DialogueTraversalPreview<'_>>,
 ) -> Result<(), CliError> {
     let mut stdin = io::stdin().lock();
     let mut ui = PlainPlayUi::new(&mut stdin, stdout, messages);
-    PlayDriver::new(asset, block).run(&mut ui)
+    let driver = PlayDriver::new(asset, block);
+    match dialogue_preview {
+        Some(preview) => driver.with_dialogue_preview(preview).run(&mut ui),
+        None => driver.run(&mut ui),
+    }
 }
 
 struct PlainPlayUi<'a, R: ?Sized, W: ?Sized> {

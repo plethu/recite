@@ -58,4 +58,6 @@ fn help_covers_issue_25_commands_and_options() {
     play.assert_stdout_contains("--block <BLOCK>");
     play.assert_stdout_contains("--ui <UI>");
     play.assert_stdout_contains("--keymap <KEYMAP>");
+    play.assert_stdout_contains("--dialogue-locale <DIALOGUE_LOCALE>");
+    play.assert_stdout_contains("--dialogue-catalog <DIALOGUE_CATALOG>");
 }

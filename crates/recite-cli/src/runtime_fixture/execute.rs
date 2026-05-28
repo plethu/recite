@@ -5,7 +5,6 @@ use recite_core::CompiledDialogue;
 use recite_runtime::{
     ConditionEvaluationError, ConditionExpectedType, ConditionQuery, ConditionValue,
     DialogueContext, DialogueEffectMode, DialogueEvent, EffectAck, acknowledge_effect,
-    choose as runtime_choose, next as runtime_next, start_scene,
 };
 
 use super::fixture::{FixtureConditionValue, RuntimeFixture};
@@ -18,6 +17,7 @@ use super::trace::{
     condition_query_text, format_effect_arguments, trace_condition_argument, trace_effect,
     trace_line,
 };
+use crate::dialogue_locale::{DialogueTraversal, DialogueTraversalPreview};
 use crate::error::CliError;
 
 pub(crate) struct RuntimeExecution {
@@ -29,10 +29,13 @@ pub(crate) fn execute_runtime_fixture(
     asset: &CompiledDialogue,
     block: &str,
     fixture: &RuntimeFixture,
+    dialogue_preview: Option<DialogueTraversalPreview<'_>>,
+    dialogue_locale_fallbacks: Option<Vec<String>>,
 ) -> Result<RuntimeExecution, CliError> {
     let prompt_catalog = PromptCatalog::new(asset)?;
     let context = FixtureContext::new(&fixture.conditions);
-    let mut session = start_scene(asset, Some(block))?;
+    let traversal = DialogueTraversal::new(asset, dialogue_preview);
+    let mut session = traversal.start(Some(block))?;
     let mut trace_events = Vec::new();
     let mut run_lines = Vec::new();
     let mut pending_event = None;
@@ -42,7 +45,7 @@ pub(crate) fn execute_runtime_fixture(
         let event = match pending_event.take() {
             Some(event) => event,
             None => {
-                let event = runtime_next(asset, &mut session, &context)?;
+                let event = traversal.next(&mut session, &context)?;
                 record_conditions(&context, &mut run_lines, &mut trace_events);
                 event
             }
@@ -69,7 +72,7 @@ pub(crate) fn execute_runtime_fixture(
                     choice: choice_id.as_str().to_owned(),
                 });
 
-                let event = runtime_choose(asset, &mut session, choice_id, &context)?;
+                let event = traversal.choose(&mut session, choice_id, &context)?;
                 record_conditions(&context, &mut run_lines, &mut trace_events);
                 pending_event = Some(event);
             }
@@ -129,6 +132,8 @@ pub(crate) fn execute_runtime_fixture(
         trace: TraceDocument::new(
             asset.header.asset_id.as_str().to_owned(),
             block.to_owned(),
+            dialogue_preview.map(|preview| preview.locale().as_str().to_owned()),
+            dialogue_locale_fallbacks,
             trace_events,
             final_deferred_effects,
         ),

@@ -3,6 +3,7 @@ use std::path::PathBuf;
 
 use recite_core::CompiledAssetDecodeError;
 
+use crate::dialogue_locale::DialogueCatalogMalformedReason;
 use crate::fs::display_path;
 use crate::i18n::{Messages, MsgId};
 
@@ -16,6 +17,25 @@ pub(crate) enum CliError {
         source: CompiledAssetDecodeError,
     },
     Diagnostics,
+    DialogueCatalogConflict {
+        path: PathBuf,
+        locale: String,
+        context: String,
+        source_text: String,
+    },
+    DialogueCatalogMalformed {
+        path: PathBuf,
+        line: usize,
+        reason: DialogueCatalogMalformedReason,
+    },
+    DialogueCatalogMissingLocale,
+    DialogueCatalogSpecInvalid {
+        spec: String,
+    },
+    DialogueLocaleInvalid {
+        field: &'static str,
+        locale: String,
+    },
     FixtureChoiceIndexOutOfRange {
         index: usize,
         choice_count: usize,
@@ -100,6 +120,37 @@ impl std::fmt::Display for CliError {
                 )
             }
             Self::Diagnostics => formatter.write_str("diagnostics reported"),
+            Self::DialogueCatalogConflict {
+                path,
+                locale,
+                context,
+                source_text,
+            } => write!(
+                formatter,
+                "dialogue catalog {} has conflicting translations for locale `{locale}`, context `{context}`, source text `{source_text}`",
+                display_path(path)
+            ),
+            Self::DialogueCatalogMalformed {
+                path,
+                line,
+                reason,
+            } => write!(
+                formatter,
+                "failed to parse dialogue catalog {} at line {line}: {}",
+                display_path(path),
+                reason.fallback_message()
+            ),
+            Self::DialogueCatalogMissingLocale => formatter.write_str(
+                "dialogue catalogs require a dialogue locale; pass --dialogue-locale for play or set [dialogue].locale in the fixture",
+            ),
+            Self::DialogueCatalogSpecInvalid { spec } => write!(
+                formatter,
+                "invalid dialogue catalog `{spec}`; expected LOCALE=PATH"
+            ),
+            Self::DialogueLocaleInvalid { field, locale } => write!(
+                formatter,
+                "invalid dialogue locale in {field}: `{locale}`; expected a BCP-47 locale such as \"en-US\""
+            ),
             Self::FixtureChoiceIndexOutOfRange {
                 index,
                 choice_count,
@@ -227,6 +278,39 @@ impl CliError {
             Self::UiLocaleInvalid { path, locale } => messages.format(
                 MsgId::CliErrorUiLocaleInvalid,
                 [("path", display_path(path)), ("locale", locale.clone())],
+            ),
+            Self::DialogueCatalogConflict {
+                path,
+                locale,
+                context,
+                source_text,
+            } => messages.format(
+                MsgId::CliErrorDialogueCatalogConflict,
+                [
+                    ("path", display_path(path)),
+                    ("locale", locale.clone()),
+                    ("context", context.clone()),
+                    ("source_text", source_text.clone()),
+                ],
+            ),
+            Self::DialogueCatalogMalformed { path, line, reason } => messages.format(
+                MsgId::CliErrorDialogueCatalogMalformed,
+                [
+                    ("path", display_path(path)),
+                    ("line", line.to_string()),
+                    ("reason", reason.user_message(messages)),
+                ],
+            ),
+            Self::DialogueCatalogMissingLocale => {
+                messages.text(MsgId::CliErrorDialogueCatalogMissingLocale)
+            }
+            Self::DialogueCatalogSpecInvalid { spec } => messages.format(
+                MsgId::CliErrorDialogueCatalogSpecInvalid,
+                [("spec", spec.clone())],
+            ),
+            Self::DialogueLocaleInvalid { field, locale } => messages.format(
+                MsgId::CliErrorDialogueLocaleInvalid,
+                [("field", (*field).to_owned()), ("locale", locale.clone())],
             ),
             _ => self.to_string(),
         }

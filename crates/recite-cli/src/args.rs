@@ -141,4 +141,10 @@ pub(crate) struct PlayArgs {
     /// TUI keymap. Overrides [ui].keymap in the user config file.
     #[arg(long, value_enum)]
     pub(crate) keymap: Option<PlayKeymap>,
+    /// Dialogue content locale to preview through the runtime locale provider.
+    #[arg(long)]
+    pub(crate) dialogue_locale: Option<String>,
+    /// Dialogue gettext catalog mapping in LOCALE=PATH form. Repeatable.
+    #[arg(long)]
+    pub(crate) dialogue_catalog: Vec<String>,
 }

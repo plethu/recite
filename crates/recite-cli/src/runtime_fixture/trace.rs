@@ -129,6 +129,10 @@ fn effect_mode_name(mode: DialogueEffectMode) -> &'static str {
 pub(crate) struct TraceDocument {
     asset_id: String,
     block: String,
+    #[serde(skip_serializing_if = "Option::is_none")]
+    dialogue_locale: Option<String>,
+    #[serde(skip_serializing_if = "Option::is_none")]
+    dialogue_locale_fallbacks: Option<Vec<String>>,
     events: Vec<TraceEvent>,
     final_deferred_effects: Vec<TraceEffect>,
 }
@@ -137,12 +141,16 @@ impl TraceDocument {
     pub(super) fn new(
         asset_id: String,
         block: String,
+        dialogue_locale: Option<String>,
+        dialogue_locale_fallbacks: Option<Vec<String>>,
         events: Vec<TraceEvent>,
         final_deferred_effects: Vec<TraceEffect>,
     ) -> Self {
         Self {
             asset_id,
             block,
+            dialogue_locale,
+            dialogue_locale_fallbacks,
             events,
             final_deferred_effects,
         }
