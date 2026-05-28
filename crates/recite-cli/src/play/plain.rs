@@ -1,7 +1,10 @@
 use std::io::{self, Read, Write};
 
 use recite_core::{ChoiceId, CompiledDialogue};
-use recite_runtime::{ConditionQuery, DialogueChoice, DialogueEffectRequest, DialogueLine};
+use recite_runtime::{
+    ConditionExpectedType, ConditionQuery, ConditionValue, DialogueChoice, DialogueEffectRequest,
+    DialogueLine,
+};
 
 use crate::error::CliError;
 use crate::i18n::{Messages, MsgId};
@@ -122,8 +125,35 @@ impl<R: Read + ?Sized, W: Write + ?Sized> PlayUiAdapter for PlainPlayUi<'_, R, W
         ChoiceSelection::parse(input.trim(), self.messages)
     }
 
-    fn condition(&mut self, query: ConditionQuery<'_>) -> Result<bool, CliError> {
+    fn condition(&mut self, query: ConditionQuery<'_>) -> Result<ConditionValue, CliError> {
+        let expected_type = query.expected_type();
         let query = condition_query_text(query);
+        if matches!(expected_type, ConditionExpectedType::Enum) {
+            write!(
+                self.output,
+                "{} ",
+                self.messages
+                    .format(MsgId::PlayConditionPrompt, [("query", query.clone())])
+            )?;
+            self.output.flush()?;
+            let input = read_line(self.input, "condition enum answer")?;
+            let value = input.trim().to_owned();
+            if value.is_empty() {
+                return Err(CliError::PlayInvalidInput(
+                    "enter an enum variant".to_owned(),
+                ));
+            }
+            writeln!(
+                self.output,
+                "{}",
+                self.messages.format(
+                    MsgId::PlayConditionResult,
+                    [("query", query), ("result", value.clone())],
+                )
+            )?;
+            return Ok(ConditionValue::EnumVariant(value));
+        }
+
         loop {
             write!(
                 self.output,
@@ -143,7 +173,7 @@ impl<R: Read + ?Sized, W: Write + ?Sized> PlayUiAdapter for PlainPlayUi<'_, R, W
                             [("query", query.clone()), ("result", "true".to_owned())],
                         )
                     )?;
-                    return Ok(true);
+                    return Ok(ConditionValue::Bool(true));
                 }
                 "n" | "no" | "false" | "0" => {
                     writeln!(
@@ -154,7 +184,7 @@ impl<R: Read + ?Sized, W: Write + ?Sized> PlayUiAdapter for PlainPlayUi<'_, R, W
                             [("query", query.clone()), ("result", "false".to_owned())],
                         )
                     )?;
-                    return Ok(false);
+                    return Ok(ConditionValue::Bool(false));
                 }
                 _ => self.invalid_input(self.messages.text(MsgId::PlayErrorEnterYOrN))?,
             }

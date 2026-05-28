@@ -182,7 +182,23 @@ pub(super) struct TraceCondition {
     pub(super) query: String,
     pub(super) function: String,
     pub(super) arguments: Vec<TraceScalar>,
-    pub(super) result: bool,
+    pub(super) result: TraceConditionValue,
+}
+
+#[derive(Clone, Debug, Serialize)]
+#[serde(untagged)]
+pub(super) enum TraceConditionValue {
+    Bool(bool),
+    EnumVariant { r#enum: String },
+}
+
+impl std::fmt::Display for TraceConditionValue {
+    fn fmt(&self, formatter: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
+        match self {
+            Self::Bool(value) => write!(formatter, "{value}"),
+            Self::EnumVariant { r#enum } => write!(formatter, "enum {enum}"),
+        }
+    }
 }
 
 #[derive(Clone, Debug, Serialize)]

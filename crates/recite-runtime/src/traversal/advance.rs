@@ -1,14 +1,16 @@
-use recite_core::{CompiledDialogue, CompiledDivertTarget, CompiledStatementKind};
+use recite_core::{
+    CompiledDialogue, CompiledDivertTarget, CompiledMatchPattern, CompiledStatementKind,
+    StatementRange,
+};
 
 use crate::context::DialogueContext;
-use crate::error::UnsupportedStatementKind;
 use crate::event::DialogueEvent;
 use crate::locale::LocaleProvider;
 use crate::session::PendingPrompt;
 use crate::{DialogueError, DialogueSession};
 
 use super::choice::prompt_choices;
-use super::condition::evaluate_condition;
+use super::condition::{evaluate_condition, evaluate_enum_condition};
 use super::effect::handle_effect;
 use super::flow::{apply_divert, enter_statement_range, finish_scene, next_statement_after};
 use super::output::{LocaleLookup, dialogue_line};
@@ -174,10 +176,11 @@ pub(super) fn next_with_locale(
                 let continuation = next_statement_after(session.next_statement)?;
                 enter_statement_range(asset_view, session, selected_range, continuation)?;
             }
-            CompiledStatementKind::Match { .. } => {
-                return Err(DialogueError::UnsupportedStatement {
-                    kind: UnsupportedStatementKind::Match,
-                });
+            CompiledStatementKind::Match { scrutinee, arms } => {
+                let variant = evaluate_enum_condition(context, scrutinee)?;
+                let selected_range = select_match_arm(asset_view, *arms, &variant)?;
+                let continuation = next_statement_after(session.next_statement)?;
+                enter_statement_range(asset_view, session, selected_range, continuation)?;
             }
             CompiledStatementKind::Effect(effect_index) => {
                 if let Some(event) = handle_effect(asset_view, session, *effect_index)? {
@@ -189,5 +192,31 @@ pub(super) fn next_with_locale(
 
     Err(DialogueError::TraversalLimitExceeded {
         limit: MAX_INTERNAL_STEPS,
+    })
+}
+
+fn select_match_arm(
+    asset: AssetView<'_>,
+    arms: recite_core::MatchArmRange,
+    variant: &str,
+) -> Result<StatementRange, DialogueError> {
+    let mut wildcard_range = None;
+
+    for arm in asset.match_arms(arms)? {
+        match &arm.pattern {
+            CompiledMatchPattern::Variant(value) if value == variant => {
+                return Ok(arm.statements);
+            }
+            CompiledMatchPattern::Wildcard if wildcard_range.is_none() => {
+                wildcard_range = Some(arm.statements);
+            }
+            CompiledMatchPattern::Variant(_) | CompiledMatchPattern::Wildcard => {}
+        }
+    }
+
+    wildcard_range.ok_or_else(|| {
+        malformed(format!(
+            "match statement has no arm for enum variant `{variant}` and no wildcard arm"
+        ))
     })
 }

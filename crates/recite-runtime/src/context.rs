@@ -5,17 +5,17 @@ pub trait DialogueContext {
     fn evaluate_condition(
         &self,
         query: ConditionQuery<'_>,
-    ) -> Result<bool, ConditionEvaluationError>;
+    ) -> Result<ConditionValue, ConditionEvaluationError>;
 }
 
 impl<F> DialogueContext for F
 where
-    F: for<'a> Fn(ConditionQuery<'a>) -> Result<bool, ConditionEvaluationError>,
+    F: for<'a> Fn(ConditionQuery<'a>) -> Result<ConditionValue, ConditionEvaluationError>,
 {
     fn evaluate_condition(
         &self,
         query: ConditionQuery<'_>,
-    ) -> Result<bool, ConditionEvaluationError> {
+    ) -> Result<ConditionValue, ConditionEvaluationError> {
         self(query)
     }
 }
@@ -28,7 +28,7 @@ impl DialogueContext for EmptyDialogueContext {
     fn evaluate_condition(
         &self,
         query: ConditionQuery<'_>,
-    ) -> Result<bool, ConditionEvaluationError> {
+    ) -> Result<ConditionValue, ConditionEvaluationError> {
         Err(ConditionEvaluationError::new(format!(
             "no condition handler registered for `{}`",
             query.function()
@@ -41,13 +41,19 @@ impl DialogueContext for EmptyDialogueContext {
 pub struct ConditionQuery<'a> {
     function: &'a str,
     arguments: ConditionArguments<'a>,
+    expected_type: ConditionExpectedType,
 }
 
 impl<'a> ConditionQuery<'a> {
-    pub(crate) fn new(function: &'a str, arguments: &'a [CompiledArgument]) -> Self {
+    pub(crate) fn new(
+        function: &'a str,
+        arguments: &'a [CompiledArgument],
+        expected_type: ConditionExpectedType,
+    ) -> Self {
         Self {
             function,
             arguments: ConditionArguments { arguments },
+            expected_type,
         }
     }
 
@@ -60,6 +66,35 @@ impl<'a> ConditionQuery<'a> {
     pub fn arguments(&self) -> ConditionArguments<'a> {
         self.arguments
     }
+
+    #[must_use]
+    pub fn expected_type(&self) -> ConditionExpectedType {
+        self.expected_type
+    }
+}
+
+/// Runtime condition result requested from the host context.
+#[derive(Clone, Debug, Eq, PartialEq)]
+pub enum ConditionValue {
+    Bool(bool),
+    EnumVariant(String),
+}
+
+impl ConditionValue {
+    #[must_use]
+    pub fn kind(&self) -> ConditionExpectedType {
+        match self {
+            Self::Bool(_) => ConditionExpectedType::Bool,
+            Self::EnumVariant(_) => ConditionExpectedType::Enum,
+        }
+    }
+}
+
+/// Result kind expected by a runtime condition query.
+#[derive(Clone, Copy, Debug, Eq, PartialEq)]
+pub enum ConditionExpectedType {
+    Bool,
+    Enum,
 }
 
 /// Borrowed condition arguments that preserve identifiers separately from strings.

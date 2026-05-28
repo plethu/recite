@@ -3,18 +3,20 @@ use std::collections::BTreeMap;
 
 use recite_core::CompiledDialogue;
 use recite_runtime::{
-    ConditionEvaluationError, ConditionQuery, DialogueContext, DialogueEffectMode, DialogueEvent,
-    EffectAck, acknowledge_effect, choose as runtime_choose, next as runtime_next, start_scene,
+    ConditionEvaluationError, ConditionExpectedType, ConditionQuery, ConditionValue,
+    DialogueContext, DialogueEffectMode, DialogueEvent, EffectAck, acknowledge_effect,
+    choose as runtime_choose, next as runtime_next, start_scene,
 };
 
-use super::fixture::RuntimeFixture;
+use super::fixture::{FixtureConditionValue, RuntimeFixture};
 use super::prompt::{
     PromptCatalog, select_fixture_choice, trace_prompt, trace_prompt_identity,
     write_prompt_run_lines,
 };
 use super::trace::{
-    TraceCondition, TraceDocument, TraceEffect, TraceEvent, condition_query_text,
-    format_effect_arguments, trace_condition_argument, trace_effect, trace_line,
+    TraceCondition, TraceConditionValue, TraceDocument, TraceEffect, TraceEvent,
+    condition_query_text, format_effect_arguments, trace_condition_argument, trace_effect,
+    trace_line,
 };
 use crate::error::CliError;
 
@@ -148,12 +150,12 @@ fn record_conditions(
 }
 
 struct FixtureContext<'a> {
-    conditions: &'a BTreeMap<String, bool>,
+    conditions: &'a BTreeMap<String, FixtureConditionValue>,
     records: RefCell<Vec<TraceCondition>>,
 }
 
 impl<'a> FixtureContext<'a> {
-    fn new(conditions: &'a BTreeMap<String, bool>) -> Self {
+    fn new(conditions: &'a BTreeMap<String, FixtureConditionValue>) -> Self {
         Self {
             conditions,
             records: RefCell::new(Vec::new()),
@@ -169,25 +171,48 @@ impl DialogueContext for FixtureContext<'_> {
     fn evaluate_condition(
         &self,
         query: ConditionQuery<'_>,
-    ) -> Result<bool, ConditionEvaluationError> {
+    ) -> Result<ConditionValue, ConditionEvaluationError> {
         let arguments = query
             .arguments()
             .into_iter()
             .map(trace_condition_argument)
             .collect::<Vec<_>>();
         let query_text = condition_query_text(query.function(), &arguments);
-        let Some(result) = self.conditions.get(&query_text).copied() else {
+        let Some(result) = self.conditions.get(&query_text) else {
             return Err(ConditionEvaluationError::new(format!(
                 "fixture is missing condition `{query_text}`"
             )));
+        };
+        let result = match (query.expected_type(), result) {
+            (ConditionExpectedType::Bool, FixtureConditionValue::Bool(value)) => {
+                ConditionValue::Bool(*value)
+            }
+            (ConditionExpectedType::Enum, FixtureConditionValue::Enum { r#enum }) => {
+                ConditionValue::EnumVariant(r#enum.clone())
+            }
+            (ConditionExpectedType::Bool, FixtureConditionValue::Enum { .. }) => {
+                ConditionValue::EnumVariant("<fixture enum>".to_owned())
+            }
+            (ConditionExpectedType::Enum, FixtureConditionValue::Bool(value)) => {
+                ConditionValue::Bool(*value)
+            }
         };
 
         self.records.borrow_mut().push(TraceCondition {
             query: query_text,
             function: query.function().to_owned(),
             arguments,
-            result,
+            result: trace_condition_value(&result),
         });
         Ok(result)
+    }
+}
+
+fn trace_condition_value(value: &ConditionValue) -> TraceConditionValue {
+    match value {
+        ConditionValue::Bool(value) => TraceConditionValue::Bool(*value),
+        ConditionValue::EnumVariant(value) => TraceConditionValue::EnumVariant {
+            r#enum: value.clone(),
+        },
     }
 }

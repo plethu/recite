@@ -3,10 +3,10 @@ use std::ops::Range;
 use recite_core::{
     BlockIndex, COMPILED_ASSET_FORMAT_VERSION_V0, COMPILER_COMPATIBILITY_VERSION_V0, ChoiceId,
     ChoiceIndex, ChoiceRange, CompiledAssetHeader, CompiledChoice, CompiledDialogue,
-    CompiledEffect, CompiledEffectMode, CompiledLine, CompiledMetadataEntry,
+    CompiledEffect, CompiledEffectMode, CompiledLine, CompiledMatchArm, CompiledMetadataEntry,
     CompiledSourceMapEntry, CompiledStatement, CompiledValueError, EffectId, EffectIndex,
-    LineIndex, MetadataIndex, MetadataRange, SourceMapIndex, SpeakerIndex, StatementIndex,
-    StatementRange, TableRange,
+    LineIndex, MatchArmIndex, MatchArmRange, MetadataIndex, MetadataRange, SourceMapIndex,
+    SpeakerIndex, StatementIndex, StatementRange, TableRange,
 };
 
 use crate::{DialogueError, DialogueSession};
@@ -186,6 +186,20 @@ impl<'a> AssetView<'a> {
         )?;
 
         Ok(&self.asset.choices[bounds])
+    }
+
+    pub(crate) fn match_arms(
+        self,
+        range: MatchArmRange,
+    ) -> Result<&'a [CompiledMatchArm], DialogueError> {
+        let bounds = table_range(
+            "match arms",
+            self.asset.match_arms.len(),
+            range,
+            MatchArmIndex::as_u32,
+        )?;
+
+        Ok(&self.asset.match_arms[bounds])
     }
 
     pub(crate) fn choice_by_id(

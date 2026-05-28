@@ -168,7 +168,7 @@ fn prompt_with_empty_choice_range_is_structured_error() {
 }
 
 #[test]
-fn unsupported_match_statement_is_structured_error() {
+fn malformed_match_arm_range_is_structured_error() {
     let mut asset = compile_asset(
         "dialogue/start.recite",
         concat!(
@@ -183,22 +183,50 @@ fn unsupported_match_statement_is_structured_error() {
             function: "mood".to_owned(),
             args: Vec::new(),
         },
-        arms: MatchArmRange::new(MatchArmIndex::new(0), 0),
+        arms: MatchArmRange::new(MatchArmIndex::new(99), 1),
     };
+    let context = RecordingContext::default().with_enum("mood", "tired");
     let mut session = start_scene(&asset, None).expect("starts");
 
-    assert_eq!(
-        next(&asset, &mut session),
-        Err(DialogueError::UnsupportedStatement {
-            kind: UnsupportedStatementKind::Match
-        })
-    );
+    assert!(matches!(
+        next_with_context(&asset, &mut session, &context),
+        Err(DialogueError::MalformedCompiledAsset { .. })
+    ));
 }
 
 #[test]
-fn unsupported_statement_kind_display_covers_public_variants() {
-    assert_eq!(
-        UnsupportedStatementKind::Match.to_string(),
-        "match branches"
+fn non_exhaustive_match_is_structured_error() {
+    let mut asset = compile_asset(
+        "dialogue/start.recite",
+        concat!(
+            ":: start default\n",
+            ":match mood()\n",
+            "  :case tired\n",
+            "    > tired_line\n",
+            "      Tired.\n",
+            "-> END\n",
+        ),
     );
+    let CompiledStatementKind::Match { arms, .. } = asset.statements[0].kind else {
+        panic!("expected match statement");
+    };
+    asset.match_arms = vec![CompiledMatchArm {
+        pattern: CompiledMatchPattern::Variant("focused".to_owned()),
+        statements: asset.match_arms[arms.start.as_u32() as usize].statements,
+        source_map: asset.match_arms[arms.start.as_u32() as usize].source_map,
+    }];
+    asset.statements[0].kind = CompiledStatementKind::Match {
+        scrutinee: CompiledConditionCall {
+            function: "mood".to_owned(),
+            args: Vec::new(),
+        },
+        arms: MatchArmRange::new(MatchArmIndex::new(0), 1),
+    };
+    let context = RecordingContext::default().with_enum("mood", "tired");
+    let mut session = start_scene(&asset, None).expect("starts");
+
+    assert!(matches!(
+        next_with_context(&asset, &mut session, &context),
+        Err(DialogueError::MalformedCompiledAsset { .. })
+    ));
 }
