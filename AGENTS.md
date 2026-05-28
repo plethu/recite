@@ -11,7 +11,8 @@ Recite is a Rust-first deterministic dialogue compiler, runtime, and tooling pro
 - Keep patches scoped to the issue or user request.
 - Do not revert unrelated user changes.
 - Prefer small, reviewable changes over broad refactors.
-- Test the crate(s) or workspace surface changed. The current repo is a single crate, so `cargo test` is sufficient until the workspace split lands.
+- Test the crate(s) or workspace surface changed. The current repo is a workspace; use `cargo test` for broad changes unless a narrower crate check is clearly sufficient.
+- Follow the Rust test organization policy in `.agents/skills/recite-testing-diagnostics/SKILL.md`; PR gates fail if tests are added in the wrong location.
 
 ## Product Invariants
 

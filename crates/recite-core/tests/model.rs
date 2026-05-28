@@ -1,4 +1,4 @@
-use super::*;
+use recite_core::*;
 
 #[test]
 fn source_spans_support_points_and_ranges() {

@@ -1,8 +1,4 @@
-use super::*;
-use crate::{
-    BlockId, ChoiceId, ChoiceTarget, LineId, Metadata, MetadataEntry, ScalarValue, SourcePosition,
-    SourceSpan, SpeakerId,
-};
+use recite_core::*;
 
 #[test]
 fn source_ast_represents_dialogue_constructs_with_spans() {

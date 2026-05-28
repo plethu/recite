@@ -63,6 +63,3 @@ pub use schema::{
 };
 pub use source_location::{SourcePosition, SourceSpan};
 pub use value::{Metadata, MetadataEntry, ScalarValue, Value};
-
-#[cfg(test)]
-mod model_tests;

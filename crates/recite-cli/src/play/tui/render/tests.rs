@@ -7,7 +7,7 @@ use super::super::state::{
 };
 use super::*;
 
-#[path = "render_tests/support.rs"]
+#[path = "tests/support.rs"]
 mod support;
 use support::*;
 
@@ -36,7 +36,7 @@ fn transcript_entries_render_as_separated_stacked_blocks() {
         },
     ];
     let messages = Messages::load(&crate::i18n::UiLocale::default()).expect("messages");
-    let rendered = render_transcript(&entries, 40, 10, &messages);
+    let rendered = transcript::render_transcript(&entries, 40, 10, &messages);
     let debug = format!("{rendered:?}");
 
     assert!(debug.contains("prompt"));
@@ -320,25 +320,30 @@ fn tui_render_condition_prompt_uses_selectable_boolean_rows() {
 #[test]
 fn active_prompt_labels_reuse_transcript_label_styles() {
     let messages = Messages::load(&crate::i18n::UiLocale::default()).expect("messages");
-    let condition = prompt_header_line(
+    let condition = transcript::prompt_header_line(
         TuiTranscriptKind::Condition,
         Some("trusts(mira)"),
         &messages,
     );
-    let prompt = prompt_header_line(TuiTranscriptKind::Prompt, Some("intro_001"), &messages);
-    let effect = prompt_header_line(TuiTranscriptKind::Effect, Some("effect:intro#1"), &messages);
+    let prompt =
+        transcript::prompt_header_line(TuiTranscriptKind::Prompt, Some("intro_001"), &messages);
+    let effect = transcript::prompt_header_line(
+        TuiTranscriptKind::Effect,
+        Some("effect:intro#1"),
+        &messages,
+    );
 
     assert_eq!(
         condition.spans[0].style,
-        transcript_label(TuiTranscriptKind::Condition, &messages).1
+        transcript::transcript_label(TuiTranscriptKind::Condition, &messages).1
     );
     assert_eq!(
         prompt.spans[0].style,
-        transcript_label(TuiTranscriptKind::Prompt, &messages).1
+        transcript::transcript_label(TuiTranscriptKind::Prompt, &messages).1
     );
     assert_eq!(
         effect.spans[0].style,
-        transcript_label(TuiTranscriptKind::Effect, &messages).1
+        transcript::transcript_label(TuiTranscriptKind::Effect, &messages).1
     );
 }
 

@@ -177,40 +177,4 @@ fn render_help_overlay(frame: &mut ratatui::Frame<'_>, state: &TuiState, message
 }
 
 #[cfg(test)]
-fn render_transcript<'a>(
-    entries: &'a [super::state::TuiTranscriptEntry],
-    width: u16,
-    height: u16,
-    messages: &'a Messages,
-) -> ratatui::text::Text<'a> {
-    transcript::render_transcript(entries, width, height, messages)
-}
-
-#[cfg(test)]
-fn prompt_header_line<'a>(
-    kind: super::state::TuiTranscriptKind,
-    id: Option<&'a str>,
-    messages: &Messages,
-) -> Line<'a> {
-    transcript::prompt_header_line(kind, id, messages)
-}
-
-#[cfg(test)]
-fn transcript_label(kind: super::state::TuiTranscriptKind, messages: &Messages) -> (String, Style) {
-    transcript::transcript_label(kind, messages)
-}
-
-#[cfg(test)]
-fn control_keys_for_prompt(
-    prompt: &super::state::TuiPrompt,
-    keymap: crate::tui::Keymap,
-) -> Vec<&'static str> {
-    controls::controls_for_prompt(prompt, keymap)
-        .into_iter()
-        .map(|control| control.keys)
-        .collect()
-}
-
-#[cfg(test)]
-#[path = "render_tests.rs"]
 mod tests;

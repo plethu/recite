@@ -295,5 +295,4 @@ impl<B: Backend> PlayUiAdapter for TuiPlayUi<'_, B> {
 }
 
 #[cfg(test)]
-#[path = "mod_tests.rs"]
 mod tests;

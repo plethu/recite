@@ -127,6 +127,10 @@ git merge --no-commit --no-ff "origin/${head_branch}"
 
 if [[ "${RECITE_SIGNED_MERGE_SKIP_CHECKS:-0}" != "1" ]]; then
   echo
+  echo "== test organization =="
+  "$script_dir/check-test-organization.sh"
+
+  echo
   echo "== cargo fmt --check =="
   cargo fmt --check
 

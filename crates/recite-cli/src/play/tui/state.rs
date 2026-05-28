@@ -331,5 +331,4 @@ pub(super) fn prompt_label(label: String) -> String {
 }
 
 #[cfg(test)]
-#[path = "state_tests.rs"]
 mod tests;
