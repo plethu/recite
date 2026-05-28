@@ -31,6 +31,17 @@ Read these sections of `docs/recite-production-spec.md` when relevant:
 - Runtime tests should run headlessly without engine runtime.
 - Benchmarks are not part of the v1 acceptance gate unless the issue is explicitly milestone 6.
 
+## Rust Test Organization
+
+Use a small number of predictable test locations:
+
+- Put externally observable crate behavior in `crates/<crate>/tests/**`. This is the default for parser, compiler, runtime, CLI, fixture, snapshot, diagnostic, and public model behavior.
+- Put private unit tests in module-local `src/**/tests.rs` sidecars only when the test needs private internals that should not become public API.
+- Do not put `#[test]` bodies inline in production source files.
+- Do not use source-side `*_test.rs` or `*_tests.rs` files.
+- Keep shared cross-crate fixtures under top-level `tests/support`.
+- Run `.agents/skills/recite-codeberg-pm/scripts/check-test-organization.sh` before handoff when test files move or new tests are added.
+
 ## Fixture Shape Example
 
 Use a fixture layout like this once the harness exists:
@@ -99,4 +110,4 @@ Before handoff:
 - Stable IDs are included where required.
 - Effect order is asserted when effects are present.
 - Locale fallback and markup preservation are tested when touched.
-- `cargo fmt --check`, `cargo test`, and `cargo clippy --all-targets --all-features -- -D warnings` were run, or the blocker is stated.
+- `.agents/skills/recite-codeberg-pm/scripts/check-test-organization.sh`, `cargo fmt --check`, `cargo test`, and `cargo clippy --all-targets --all-features -- -D warnings` were run, or the blocker is stated.

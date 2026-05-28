@@ -16,6 +16,3 @@ pub use source::{
     IfBranch, Line, MatchArm, MatchBranch, MatchPattern, SourceFile, SourceText, Statement,
     StatementKind,
 };
-
-#[cfg(test)]
-mod tests;

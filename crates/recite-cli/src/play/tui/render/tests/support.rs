@@ -4,7 +4,7 @@ use crate::i18n::Messages;
 use crate::tui::{KeyHints, Keymap, PromptMode, TextBuffer};
 
 use super::super::super::state::{TuiChoiceRow, TuiPrompt, TuiState};
-use super::super::{control_keys_for_prompt, render_tui};
+use super::super::{controls, render_tui};
 
 pub(super) fn choice_help_state(keymap: Keymap) -> TuiState {
     TuiState {
@@ -75,7 +75,10 @@ pub(super) fn effect_prompt(show_help: bool) -> TuiPrompt {
 }
 
 pub(super) fn control_keys(prompt: &TuiPrompt, keymap: Keymap) -> Vec<&'static str> {
-    control_keys_for_prompt(prompt, keymap)
+    controls::controls_for_prompt(prompt, keymap)
+        .into_iter()
+        .map(|control| control.keys)
+        .collect()
 }
 
 pub(super) fn render_tui_content(state: &TuiState, width: u16, height: u16) -> String {

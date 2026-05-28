@@ -81,6 +81,7 @@ Questions that must be answered during co-work.
 Nearby work not included.
 
 ## Test/Check Commands
+- `.agents/skills/recite-codeberg-pm/scripts/check-test-organization.sh`
 - `cargo fmt --check`
 - `cargo test`
 - `cargo clippy --all-targets --all-features -- -D warnings`
@@ -120,6 +121,7 @@ None known.
 Diverts, choices, runtime traversal, and LSP diagnostics.
 
 ## Test/Check Commands
+- `.agents/skills/recite-codeberg-pm/scripts/check-test-organization.sh`
 - `cargo fmt --check`
 - `cargo test`
 - `cargo clippy --all-targets --all-features -- -D warnings`
@@ -159,6 +161,7 @@ Closes #17
 Adds parser support for block headers with source spans.
 
 ## Tests
+- `.agents/skills/recite-codeberg-pm/scripts/check-test-organization.sh`
 - `cargo fmt --check`
 - `cargo test`
 - `cargo clippy --all-targets --all-features -- -D warnings`
@@ -180,7 +183,7 @@ Recite requires signed commits and explicit review gates. Codeberg branch protec
    - Keep the issue in `status/review`.
    - Confirm the PR targets `main` from the expected short-lived branch.
    - Review the diff and run the requested checks locally.
-   - Run the Recite review checks locally before posting agent approval: `cargo fmt --check`, `cargo test`, and `cargo clippy --all-targets --all-features -- -D warnings`.
+   - Run the Recite review checks locally before posting agent approval: `.agents/skills/recite-codeberg-pm/scripts/check-test-organization.sh`, `cargo fmt --check`, `cargo test`, and `cargo clippy --all-targets --all-features -- -D warnings`.
    - Review beyond the issue acceptance criteria: call out correctness, maintainability, extensibility, public API shape, invariant preservation, and missing validation-policy coverage that would make later work build on weak foundations.
    - Treat unclear validation ownership as a review finding when a branch introduces public model types, constructors, serialized shapes, or cross-crate contracts. Either the policy should be implemented in the branch or explicitly tracked by a focused issue before merge.
    - Require explicit Codeberg approval from a known maintainer.
@@ -204,7 +207,7 @@ Use the signed merge helper for the normal path:
 .agents/skills/recite-codeberg-pm/scripts/merge-pr-signed.sh 34 issue-1-workspace-split main
 ```
 
-The helper refuses to run with a dirty worktree, reads the PR base/head/head SHA from the Codeberg API, verifies review gates, verifies PR commit signatures, stages a no-ff merge, runs `cargo fmt --check`, `cargo test`, and `cargo clippy --all-targets --all-features -- -D warnings`, creates a signed merge commit, pushes `main`, marks the PR as `manually-merged`, and performs a targeted PR read. If checks fail after the merge is staged, inspect the failure and run:
+The helper refuses to run with a dirty worktree, reads the PR base/head/head SHA from the Codeberg API, verifies review gates, verifies PR commit signatures, stages a no-ff merge, runs `.agents/skills/recite-codeberg-pm/scripts/check-test-organization.sh`, `cargo fmt --check`, `cargo test`, and `cargo clippy --all-targets --all-features -- -D warnings`, creates a signed merge commit, pushes `main`, marks the PR as `manually-merged`, and performs a targeted PR read. If checks fail after the merge is staged, inspect the failure and run:
 
 ```bash
 git merge --abort
@@ -248,12 +251,13 @@ Agent-Review: approved
 Head-SHA: 5b1c198ce742c81b3010eec0307e9d2cbcd1af92
 Context: clean
 Checks:
+- .agents/skills/recite-codeberg-pm/scripts/check-test-organization.sh
 - cargo fmt --check
 - cargo test
 - cargo clippy --all-targets --all-features -- -D warnings'
 ```
 
-If the PR head changes, the clean-context agent review is stale and must be repeated for the new head SHA. The gate also blocks failed or errored Codeberg commit statuses when any are reported; if no statuses exist yet, local `cargo fmt --check`, `cargo test`, and `cargo clippy --all-targets --all-features -- -D warnings` remain mandatory.
+If the PR head changes, the clean-context agent review is stale and must be repeated for the new head SHA. The gate also blocks failed or errored Codeberg commit statuses when any are reported; if no statuses exist yet, local `.agents/skills/recite-codeberg-pm/scripts/check-test-organization.sh`, `cargo fmt --check`, `cargo test`, and `cargo clippy --all-targets --all-features -- -D warnings` remain mandatory.
 
 Do not use these commands for Recite merges:
 
