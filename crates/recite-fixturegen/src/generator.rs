@@ -3,17 +3,9 @@ use std::fmt::Write as _;
 use std::fs;
 use std::path::Path;
 
-use rand_chacha::ChaCha8Rng;
-use rand_chacha::rand_core::{Rng, SeedableRng};
-
 use crate::config::{FixtureError, FixtureProfile};
+use crate::content::GeneratedText;
 use crate::summary::{FileSummary, FixtureCounts, FixtureSummary, hash_hex, summary_hash};
-
-const WORDS: &[&str] = &[
-    "amber", "bridge", "circuit", "delta", "ember", "fable", "garden", "harbor", "ion", "jasmine",
-    "keystone", "lantern", "meadow", "needle", "orbit", "prairie", "quartz", "ripple", "signal",
-    "thicket", "umbra", "velvet", "willow", "xenial", "yonder", "zenith",
-];
 
 pub fn write_project(
     config: &FixtureProfile,
@@ -43,7 +35,6 @@ pub struct GeneratedProject {
 
 pub(crate) struct FixtureGenerator {
     profile: FixtureProfile,
-    rng: FixtureRng,
     files: BTreeMap<String, Vec<u8>>,
 }
 
@@ -51,7 +42,6 @@ impl FixtureGenerator {
     pub(crate) fn new(profile: FixtureProfile) -> Result<Self, FixtureError> {
         profile.validate()?;
         Ok(Self {
-            rng: FixtureRng::new(profile.seed),
             profile,
             files: BTreeMap::new(),
         })
@@ -254,37 +244,60 @@ impl FixtureGenerator {
 
         let lines = self.lines_in_block(block);
         for line in 0..lines {
-            let text = self.entry_text("line", block, line);
-            writeln!(
-                source,
-                "> line_{block:05}_{line:03} speaker=speaker_{speaker:02} portrait=\"portrait_{speaker:02}\""
-            )
-            .expect("write string");
-            writeln!(source, "  {text}").expect("write string");
-            if line == 0 {
-                for choice in 0..self.choices_in_block(block) {
-                    let target = if block + 1 < self.profile.blocks {
-                        self.reference_to_block(block, block + 1)
-                    } else {
-                        "END".to_owned()
-                    };
-                    let condition = if choice % 2 == 0 {
-                        format!(" if flag(\"flag_{:02}\")", block % 64)
-                    } else {
-                        " if counter_gte(\"counter_00\", 2)".to_owned()
-                    };
-                    writeln!(
-                        source,
-                        "  ? choice_{block:05}_{choice:03} sfx=chime{condition}"
-                    )
+            if line == 0 && self.uses_relationship_match(block) {
+                writeln!(source, ":match relationship(speaker_00, speaker_01)")
                     .expect("write string");
-                    writeln!(source, "    {}", self.entry_text("choice", block, choice))
-                        .expect("write string");
-                    writeln!(source, "    -> {target}").expect("write string");
-                }
+                writeln!(source, "  :case active").expect("write string");
+                self.emit_line(block, line, speaker, 4, source);
+            } else {
+                self.emit_line(block, line, speaker, 0, source);
             }
         }
         writeln!(source, "-> END\n").expect("write string");
+    }
+
+    fn emit_line(&self, block: u32, line: u32, speaker: u32, indent: usize, source: &mut String) {
+        let prefix = " ".repeat(indent);
+        let body_prefix = " ".repeat(indent + 2);
+        writeln!(
+            source,
+            "{prefix}> line_{block:05}_{line:03} speaker=speaker_{speaker:02} portrait=\"portrait_{speaker:02}\""
+        )
+        .expect("write string");
+        writeln!(
+            source,
+            "{body_prefix}{}",
+            self.entry_text("line", block, line)
+        )
+        .expect("write string");
+        if line == 0 {
+            self.emit_choices(block, indent + 2, source);
+        }
+    }
+
+    fn emit_choices(&self, block: u32, indent: usize, source: &mut String) {
+        let choice_prefix = " ".repeat(indent);
+        let body_prefix = " ".repeat(indent + 2);
+        for choice in 0..self.choices_in_block(block) {
+            let target = self.choice_target(block, choice);
+            let condition = if choice % 2 == 0 {
+                format!(" if flag(\"flag_{:02}\")", block % 64)
+            } else {
+                " if counter_gte(\"counter_00\", 2)".to_owned()
+            };
+            writeln!(
+                source,
+                "{choice_prefix}? choice_{block:05}_{choice:03} sfx=chime{condition}"
+            )
+            .expect("write string");
+            writeln!(
+                source,
+                "{body_prefix}{}",
+                self.entry_text("choice", block, choice)
+            )
+            .expect("write string");
+            writeln!(source, "{body_prefix}-> {target}").expect("write string");
+        }
     }
 
     fn lines_in_block(&self, block: u32) -> u32 {
@@ -293,6 +306,22 @@ impl FixtureGenerator {
 
     fn choices_in_block(&self, block: u32) -> u32 {
         distributed_count(self.profile.choices, self.profile.blocks, block)
+    }
+
+    fn uses_relationship_match(&self, block: u32) -> bool {
+        block.is_multiple_of(3)
+    }
+
+    fn choice_target(&self, block: u32, choice: u32) -> String {
+        let offset = if choice == 0 { 1 } else { (choice % 3) + 1 };
+        let Some(target_block) = block.checked_add(offset) else {
+            return "END".to_owned();
+        };
+        if target_block < self.profile.blocks {
+            self.reference_to_block(block, target_block)
+        } else {
+            "END".to_owned()
+        }
     }
 
     fn reference_to_block(&self, source_block: u32, target_block: u32) -> String {
@@ -310,18 +339,12 @@ impl FixtureGenerator {
         block / blocks_per_shard
     }
 
-    fn entry_text(&mut self, kind: &str, block: u32, index: u32) -> String {
-        let mut text = format!("{kind} {block:05} {index:03}");
-        for _ in 0..self.profile.words_per_entry() {
-            let word = WORDS[self.rng.index(WORDS.len() as u32) as usize];
-            text.push(' ');
-            text.push_str(word);
-        }
-        text.push('.');
-        text
+    fn entry_text(&self, kind: &str, block: u32, index: u32) -> String {
+        GeneratedText::new(self.profile.seed, self.profile.words_per_entry())
+            .entry(kind, block, index)
     }
 
-    fn for_each_entry(&mut self, mut emit: impl FnMut(&str, String, String)) {
+    fn for_each_entry(&self, mut emit: impl FnMut(&str, String, String)) {
         for block in 0..self.profile.blocks {
             for line in 0..self.lines_in_block(block) {
                 emit(
@@ -340,22 +363,6 @@ impl FixtureGenerator {
                 }
             }
         }
-    }
-}
-
-struct FixtureRng {
-    rng: ChaCha8Rng,
-}
-
-impl FixtureRng {
-    fn new(seed: u64) -> Self {
-        Self {
-            rng: ChaCha8Rng::seed_from_u64(seed),
-        }
-    }
-
-    fn index(&mut self, upper_bound: u32) -> u32 {
-        self.rng.next_u32() % upper_bound
     }
 }
 

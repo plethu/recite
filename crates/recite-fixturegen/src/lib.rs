@@ -1,6 +1,7 @@
 //! Deterministic synthetic fixture generation for Recite benchmark profiles.
 
 mod config;
+mod content;
 mod generator;
 mod summary;
 

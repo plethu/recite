@@ -20,8 +20,8 @@
   "files": [
     {
       "path": "locales/en-US.po",
-      "bytes": 19048,
-      "blake3": "c895cbdc9632b27e94b69daeaf82bdf4d8ee96f7942ab9b4141e4dc41373a18b"
+      "bytes": 19033,
+      "blake3": "36fb372a7fa98864154b3ef1de0951d325ed9b1a77a2b4cb80047a2289fe7bef"
     },
     {
       "path": "recite.project.toml",
@@ -40,14 +40,14 @@
     },
     {
       "path": "src/shard-000.recite",
-      "bytes": 9110,
-      "blake3": "2d041bf5263b135bf234faea93f34519190177e93838deb0b9f9b42a36b8bdfb"
+      "bytes": 9282,
+      "blake3": "7f74fd8ef6b5dc31ca5a14e2759908ba8b08fb32f90654e9e6795e94d7e7cb67"
     },
     {
       "path": "src/shard-001.recite",
-      "bytes": 8990,
-      "blake3": "c0f64c501594944283e352ed255dfdafc6fdc0e2e8afcd2b90224db818edee36"
+      "bytes": 9208,
+      "blake3": "c3e4cb0c143a4f5c19fbd6d6235d645916c56dae405e8e42cf16e2f247095958"
     }
   ],
-  "summary_hash": "9389dbc50bbe85386623c83bda7bf5003992e5ac35ac130d6354da0527f56212"
+  "summary_hash": "45196f7dc320f3fd244235141eef84198543960d070a759040db84dfcf517be3"
 }

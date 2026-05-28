@@ -1,15 +1,20 @@
+use std::cell::Cell;
 use std::collections::BTreeMap;
+use std::fs;
 
 use recite_compiler::{
     CompileInput, CompileOptions, compile_inputs_with_schema, extract_pot_with_schema,
 };
 use recite_core::{
-    CompiledAssetId, CompilerVersion, SchemaFingerprint, SourceMapId, load_schema_manifest_str,
+    CompiledAssetId, CompilerVersion, LocaleId, SchemaFingerprint, SourceMapId,
+    load_schema_manifest_str,
 };
 use recite_fixturegen::{FixtureConfigSet, FixtureProfile, SummarySet, generate_tiny_in_memory};
 use recite_runtime::{
     ConditionEvaluationError, ConditionQuery, ConditionValue, DialogueContext, DialogueEvent,
-    EffectAck, acknowledge_effect, choose, next, start_scene,
+    DialogueSessionOptions, EffectAck, LocaleProvider, TextDomain, acknowledge_effect,
+    choose_with_locale_provider, decode_session_messagepack, encode_session_messagepack,
+    next_with_locale_provider, start_scene_with_options,
 };
 
 fn tiny_profile(seed: u64) -> FixtureProfile {
@@ -43,9 +48,29 @@ fn changed_seed_changes_summary_hash() {
 }
 
 #[test]
+fn checked_in_tiny_fixture_matches_regenerated_output() {
+    let generated = generate_tiny_in_memory(&tiny_profile(72)).expect("tiny fixture");
+    let synthetic_root = fixture_root();
+    let fixture_root = synthetic_root.join("tiny");
+
+    for (path, expected) in &generated.files {
+        let actual = fs::read(fixture_root.join(path)).unwrap_or_else(|error| {
+            panic!("read checked-in generated file {path}: {error}");
+        });
+        assert_eq!(&actual, expected, "checked-in {path} drifted");
+    }
+
+    let checked_summary: serde_json::Value =
+        serde_json::from_slice(&fs::read(synthetic_root.join("summaries/tiny.json")).unwrap())
+            .expect("checked-in summary JSON");
+    let generated_summary =
+        serde_json::to_value(&generated.summary).expect("generated summary JSON");
+    assert_eq!(checked_summary, generated_summary);
+}
+
+#[test]
 fn profile_counts_match_spec_budgets() {
-    let profiles_path = std::path::Path::new(env!("CARGO_MANIFEST_DIR"))
-        .join("../../fixtures/synthetic/profiles.toml");
+    let profiles_path = fixture_root().join("profiles.toml");
     let profiles = FixtureConfigSet::load_path(&profiles_path).expect("profiles load");
     for expected in [
         ("tiny", 10, 100, 20, 120, 1_000),
@@ -97,64 +122,133 @@ fn generated_tiny_fixture_validates_compiles_extracts_and_traverses() {
         pot.catalog.expect("catalog").entries.len(),
         generated.summary.counts.localisable_entries as usize + 9
     );
+    let catalog = GeneratedCatalog::parse(text(&generated.files, "locales/en-US.po"));
 
-    let mut session = start_scene(&asset, Some("block_00000")).expect("start scene");
-    let context = FixtureContext;
-    let mut saw_prompt = false;
-    let mut saw_blocking = false;
+    let mut session = start_scene_with_options(
+        &asset,
+        Some("block_00000"),
+        DialogueSessionOptions::new().with_locale(LocaleId::new("en-US").expect("locale")),
+    )
+    .expect("start scene");
+    let context = FixtureContext::default();
+    let mut traversal = GeneratedTraversal::new(&asset, &mut session, &context, &catalog);
     for _ in 0..80 {
-        let event = next(&asset, &mut session, &context).expect("next");
-        let should_stop = handle_event(
-            event,
-            &asset,
-            &mut session,
-            &context,
-            &mut saw_prompt,
-            &mut saw_blocking,
-        );
-        if should_stop {
+        if traversal.next() {
             break;
         }
     }
 
-    assert!(saw_prompt, "runtime traversal should reach a prompt");
     assert!(
-        saw_blocking,
+        traversal.saw_prompt,
+        "runtime traversal should reach a prompt"
+    );
+    assert!(
+        traversal.saw_blocking,
         "runtime traversal should emit a blocking effect"
+    );
+    assert!(
+        context.saw_relationship.get(),
+        "runtime traversal should evaluate relationship-style state"
+    );
+    assert!(
+        traversal.saw_localised_line,
+        "runtime traversal should use generated locale catalog translations"
     );
 }
 
-fn handle_event(
-    event: DialogueEvent,
-    asset: &recite_core::CompiledDialogue,
-    session: &mut recite_runtime::DialogueSession,
-    context: &dyn DialogueContext,
-    saw_prompt: &mut bool,
-    saw_blocking: &mut bool,
-) -> bool {
-    match event {
-        DialogueEvent::Effect(effect) => {
-            if matches!(effect.mode, recite_runtime::DialogueEffectMode::Blocking) {
-                *saw_blocking = true;
-                acknowledge_effect(session, effect.id, EffectAck::Completed).expect("ack");
-            }
-            false
+struct GeneratedTraversal<'a> {
+    asset: &'a recite_core::CompiledDialogue,
+    session: &'a mut recite_runtime::DialogueSession,
+    context: &'a dyn DialogueContext,
+    locale_provider: &'a dyn LocaleProvider,
+    saw_prompt: bool,
+    saw_blocking: bool,
+    saw_localised_line: bool,
+}
+
+impl<'a> GeneratedTraversal<'a> {
+    fn new(
+        asset: &'a recite_core::CompiledDialogue,
+        session: &'a mut recite_runtime::DialogueSession,
+        context: &'a dyn DialogueContext,
+        locale_provider: &'a dyn LocaleProvider,
+    ) -> Self {
+        Self {
+            asset,
+            session,
+            context,
+            locale_provider,
+            saw_prompt: false,
+            saw_blocking: false,
+            saw_localised_line: false,
         }
-        DialogueEvent::Prompt { choices, .. } => {
-            *saw_prompt = true;
-            let selected = choices[0].id.clone();
-            let event = choose(asset, session, selected, context).expect("choose");
-            match event {
-                DialogueEvent::End { .. } => true,
-                nested => handle_event(nested, asset, session, context, saw_prompt, saw_blocking),
+    }
+
+    fn next(&mut self) -> bool {
+        let event =
+            next_with_locale_provider(self.asset, self.session, self.context, self.locale_provider)
+                .expect("next");
+        self.handle_event(event)
+    }
+
+    fn handle_event(&mut self, event: DialogueEvent) -> bool {
+        match event {
+            DialogueEvent::Effect(effect) => {
+                if matches!(effect.mode, recite_runtime::DialogueEffectMode::Blocking) {
+                    self.saw_blocking = true;
+                    let bytes =
+                        encode_session_messagepack(self.session).expect("encode blocked session");
+                    let mut restored = decode_session_messagepack(self.asset, &bytes)
+                        .expect("restore blocked session");
+                    let restored_effect = match next_with_locale_provider(
+                        self.asset,
+                        &mut restored,
+                        self.context,
+                        self.locale_provider,
+                    )
+                    .expect("reemit restored effect")
+                    {
+                        DialogueEvent::Effect(effect) => effect,
+                        other => panic!("expected restored blocking effect, got {other:?}"),
+                    };
+                    assert_eq!(restored_effect, effect);
+                    acknowledge_effect(&mut restored, effect.id, EffectAck::Completed)
+                        .expect("ack");
+                    *self.session = restored;
+                }
+                false
             }
+            DialogueEvent::Prompt { choices, .. } => {
+                self.saw_prompt = true;
+                if let Some(first) = choices.first()
+                    && first.text.starts_with("choice translation for ")
+                {
+                    self.saw_localised_line = true;
+                }
+                let selected = choices[0].id.clone();
+                let event = choose_with_locale_provider(
+                    self.asset,
+                    self.session,
+                    selected,
+                    self.context,
+                    self.locale_provider,
+                )
+                .expect("choose");
+                match event {
+                    DialogueEvent::End { .. } => true,
+                    nested => self.handle_event(nested),
+                }
+            }
+            DialogueEvent::End { .. } => true,
+            DialogueEvent::Line(_) => false,
         }
-        DialogueEvent::End { .. } => true,
-        DialogueEvent::Line(_) => false,
     }
 }
 
-struct FixtureContext;
+#[derive(Default)]
+struct FixtureContext {
+    saw_relationship: Cell<bool>,
+}
 
 impl DialogueContext for FixtureContext {
     fn evaluate_condition(
@@ -163,12 +257,74 @@ impl DialogueContext for FixtureContext {
     ) -> Result<ConditionValue, ConditionEvaluationError> {
         match query.function() {
             "flag" | "counter_gte" => Ok(ConditionValue::Bool(true)),
-            "relationship" => Ok(ConditionValue::EnumVariant("active".to_owned())),
+            "relationship" => {
+                self.saw_relationship.set(true);
+                Ok(ConditionValue::EnumVariant("active".to_owned()))
+            }
             function => Err(ConditionEvaluationError::new(format!(
                 "unexpected condition `{function}`"
             ))),
         }
     }
+}
+
+#[derive(Debug)]
+struct GeneratedCatalog {
+    entries: BTreeMap<(String, String, TextDomain), String>,
+}
+
+impl GeneratedCatalog {
+    fn parse(source: &str) -> Self {
+        let mut entries = BTreeMap::new();
+        let mut context = None::<String>;
+        let mut source_text = None::<String>;
+
+        for line in source.lines() {
+            if let Some(value) = line.strip_prefix("msgctxt ") {
+                context = Some(unquote(value));
+            } else if let Some(value) = line.strip_prefix("msgid ") {
+                source_text = Some(unquote(value));
+            } else if let Some(value) = line.strip_prefix("msgstr ") {
+                let context = context.take().expect("context before msgstr");
+                let source_text = source_text.take().expect("msgid before msgstr");
+                let domain = if context.starts_with("choice_") {
+                    TextDomain::Choice
+                } else {
+                    TextDomain::Line
+                };
+                entries.insert((context, source_text, domain), unquote(value));
+            }
+        }
+
+        Self { entries }
+    }
+}
+
+impl LocaleProvider for GeneratedCatalog {
+    fn lookup(
+        &self,
+        id: &str,
+        source_text: &str,
+        domain: TextDomain,
+        _locale: &LocaleId,
+        _variant: Option<&str>,
+    ) -> Option<String> {
+        self.entries
+            .get(&(id.to_owned(), source_text.to_owned(), domain))
+            .cloned()
+    }
+}
+
+fn unquote(value: &str) -> String {
+    value
+        .strip_prefix('"')
+        .and_then(|value| value.strip_suffix('"'))
+        .expect("generated PO uses single-line quoted strings")
+        .to_owned()
+}
+
+fn fixture_root() -> std::path::PathBuf {
+    std::path::Path::new(env!("CARGO_MANIFEST_DIR")).join("../../fixtures/synthetic")
 }
 fn source_inputs(files: &BTreeMap<String, Vec<u8>>) -> Vec<CompileInput> {
     files
