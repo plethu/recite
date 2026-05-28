@@ -1,6 +1,6 @@
 use std::collections::BTreeMap;
 
-use recite_core::{ChoiceId, CompiledDialogue, CompiledStatementKind};
+use recite_core::{ChoiceId, CompiledDialogue, CompiledStatementKind, StatementRange};
 use recite_runtime::{DialogueChoice, DialogueLine};
 
 use super::fixture::{FixtureChoice, RuntimeFixture};
@@ -26,47 +26,13 @@ impl PromptCatalog {
 
         for block in &asset.blocks {
             let block_id = block.id.as_str().to_owned();
-            let statement_start = block.statements.start.as_u32();
-            let statement_end = statement_start + block.statements.len;
-
-            for statement_index in statement_start..statement_end {
-                let statement =
-                    asset
-                        .statements
-                        .get(statement_index as usize)
-                        .ok_or_else(|| CliError::MalformedCompiledAsset {
-                            reason: format!("statement index {statement_index} is out of bounds"),
-                        })?;
-                let CompiledStatementKind::Prompt { line, choices } = &statement.kind else {
-                    continue;
-                };
-
-                let line = line
-                    .map(|line| {
-                        asset
-                            .lines
-                            .get(line.as_u32() as usize)
-                            .map(|line| line.id.as_str().to_owned())
-                            .ok_or_else(|| CliError::MalformedCompiledAsset {
-                                reason: format!("line index {} is out of bounds", line.as_u32()),
-                            })
-                    })
-                    .transpose()?;
-                let choice_start = choices.start.as_u32();
-                let choice_end = choice_start + choices.len;
-                let mut choice_ids = Vec::new();
-                for choice_index in choice_start..choice_end {
-                    let choice = asset.choices.get(choice_index as usize).ok_or_else(|| {
-                        CliError::MalformedCompiledAsset {
-                            reason: format!("choice index {choice_index} is out of bounds"),
-                        }
-                    })?;
-                    choice_ids.push(choice.id.as_str().to_owned());
-                }
-
-                *block_prompt_counts.entry(block_id.clone()).or_default() += 1;
-                prompt_rows.push((block_id.clone(), line, choice_ids));
-            }
+            collect_prompts(
+                asset,
+                block.statements,
+                &block_id,
+                &mut block_prompt_counts,
+                &mut prompt_rows,
+            )?;
         }
 
         let prompts = prompt_rows
@@ -119,6 +85,99 @@ impl PromptCatalog {
                 choices: choice_ids.into_iter().map(str::to_owned).collect(),
             })
     }
+}
+
+fn collect_prompts(
+    asset: &CompiledDialogue,
+    range: StatementRange,
+    block_id: &str,
+    block_prompt_counts: &mut BTreeMap<String, usize>,
+    prompt_rows: &mut Vec<(String, Option<String>, Vec<String>)>,
+) -> Result<(), CliError> {
+    let statement_start = range.start.as_u32();
+    let statement_end = statement_start + range.len;
+
+    for statement_index in statement_start..statement_end {
+        let statement = asset
+            .statements
+            .get(statement_index as usize)
+            .ok_or_else(|| CliError::MalformedCompiledAsset {
+                reason: format!("statement index {statement_index} is out of bounds"),
+            })?;
+        match &statement.kind {
+            CompiledStatementKind::Prompt { line, choices } => {
+                let line = line
+                    .map(|line| {
+                        asset
+                            .lines
+                            .get(line.as_u32() as usize)
+                            .map(|line| line.id.as_str().to_owned())
+                            .ok_or_else(|| CliError::MalformedCompiledAsset {
+                                reason: format!("line index {} is out of bounds", line.as_u32()),
+                            })
+                    })
+                    .transpose()?;
+                let choice_start = choices.start.as_u32();
+                let choice_end = choice_start + choices.len;
+                let mut choice_ids = Vec::new();
+                for choice_index in choice_start..choice_end {
+                    let choice = asset.choices.get(choice_index as usize).ok_or_else(|| {
+                        CliError::MalformedCompiledAsset {
+                            reason: format!("choice index {choice_index} is out of bounds"),
+                        }
+                    })?;
+                    choice_ids.push(choice.id.as_str().to_owned());
+                }
+
+                *block_prompt_counts.entry(block_id.to_owned()).or_default() += 1;
+                prompt_rows.push((block_id.to_owned(), line, choice_ids));
+            }
+            CompiledStatementKind::If {
+                then_statements,
+                else_statements,
+                ..
+            } => {
+                collect_prompts(
+                    asset,
+                    *then_statements,
+                    block_id,
+                    block_prompt_counts,
+                    prompt_rows,
+                )?;
+                collect_prompts(
+                    asset,
+                    *else_statements,
+                    block_id,
+                    block_prompt_counts,
+                    prompt_rows,
+                )?;
+            }
+            CompiledStatementKind::Match { arms, .. } => {
+                let arm_start = arms.start.as_u32();
+                let arm_end = arm_start + arms.len;
+                for arm_index in arm_start..arm_end {
+                    let arm = asset.match_arms.get(arm_index as usize).ok_or_else(|| {
+                        CliError::MalformedCompiledAsset {
+                            reason: format!("match arm index {arm_index} is out of bounds"),
+                        }
+                    })?;
+                    collect_prompts(
+                        asset,
+                        arm.statements,
+                        block_id,
+                        block_prompt_counts,
+                        prompt_rows,
+                    )?;
+                }
+            }
+            CompiledStatementKind::Line(_)
+            | CompiledStatementKind::Divert(_)
+            | CompiledStatementKind::Effect(_)
+            | CompiledStatementKind::End => {}
+        }
+    }
+
+    Ok(())
 }
 
 pub(super) fn select_fixture_choice(

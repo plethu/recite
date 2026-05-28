@@ -1,0 +1,53 @@
+{
+  "profile": {
+    "name": "tiny",
+    "seed": 72,
+    "blocks": 10,
+    "lines": 100,
+    "choices": 20,
+    "localisable_entries": 120,
+    "generated_words": 1000,
+    "shards": 2
+  },
+  "counts": {
+    "blocks": 10,
+    "lines": 100,
+    "choices": 20,
+    "localisable_entries": 120,
+    "generated_words": 1080,
+    "shards": 2
+  },
+  "files": [
+    {
+      "path": "locales/en-US.po",
+      "bytes": 19033,
+      "blake3": "36fb372a7fa98864154b3ef1de0951d325ed9b1a77a2b4cb80047a2289fe7bef"
+    },
+    {
+      "path": "recite.project.toml",
+      "bytes": 228,
+      "blake3": "9892b3fae7d7eabf15dacc51995e5f692b3baa9f5527c50343dbcc8b98faa4d8"
+    },
+    {
+      "path": "runtime-fixture.toml",
+      "bytes": 2327,
+      "blake3": "20bddaf5227da97a915ecb59cd80bf17812b2ef63bb97ce39a2ebc77dd00160f"
+    },
+    {
+      "path": "schema/synthetic.schema.json",
+      "bytes": 1752,
+      "blake3": "cfd8b7a3ffba91c97dca8eece5f36ced013160b6a94c96e858d3b499b4f47af2"
+    },
+    {
+      "path": "src/shard-000.recite",
+      "bytes": 9282,
+      "blake3": "7f74fd8ef6b5dc31ca5a14e2759908ba8b08fb32f90654e9e6795e94d7e7cb67"
+    },
+    {
+      "path": "src/shard-001.recite",
+      "bytes": 9208,
+      "blake3": "c3e4cb0c143a4f5c19fbd6d6235d645916c56dae405e8e42cf16e2f247095958"
+    }
+  ],
+  "summary_hash": "45196f7dc320f3fd244235141eef84198543960d070a759040db84dfcf517be3"
+}

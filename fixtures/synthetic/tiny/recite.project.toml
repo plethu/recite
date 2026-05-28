@@ -1,0 +1,10 @@
+[project]
+content_set = "synthetic-tiny"
+version = "72"
+schema = "schema/synthetic.schema.json"
+
+[[scenes]]
+id = "synthetic_tiny"
+asset = "build/synthetic.recitec"
+block = "block_00000"
+participants = ["narrator", "speaker_00"]

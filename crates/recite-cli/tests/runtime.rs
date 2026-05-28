@@ -239,6 +239,9 @@ fn run_trace_and_play_plain_execute_match_conditions() {
             "  :case tired\n",
             "    > tired_line\n",
             "      Tired.\n",
+            "      ? rest\n",
+            "        Rest.\n",
+            "        -> END\n",
             "  :case _\n",
             "    > fallback_line\n",
             "      Fallback.\n",
@@ -251,6 +254,9 @@ fn run_trace_and_play_plain_execute_match_conditions() {
         "fixture.toml",
         r#"[conditions]
 "thread_stage(thread)" = { enum = "tired" }
+
+[choices]
+tired_line = "rest"
 "#,
     );
 
@@ -263,7 +269,8 @@ fn run_trace_and_play_plain_execute_match_conditions() {
         .arg(&fixture));
     run_output.assert_success().assert_stderr("");
     run_output.assert_stdout_contains("condition thread_stage(thread) = enum tired");
-    run_output.assert_stdout_contains("line tired_line: Tired.");
+    run_output.assert_stdout_contains("prompt tired_line: Tired.");
+    run_output.assert_stdout_contains("selected choice rest");
 
     let trace_output = run(recite()
         .arg("trace")
@@ -291,9 +298,9 @@ fn run_trace_and_play_plain_execute_match_conditions() {
             && event["condition"]["result"]["enum"] == "tired"
     }));
     assert!(events.iter().any(|event| {
-        event["type"] == "line"
-            && event["line"]["id"] == "tired_line"
-            && event["line"]["text"] == "Tired."
+        event["type"] == "prompt"
+            && event["prompt"]["identity"]["line"] == "tired_line"
+            && event["prompt"]["identity"]["fixture_keys"][0] == "tired_line"
     }));
 
     let missing_fixture = write_file(temp.path(), "missing.toml", "");
@@ -324,13 +331,14 @@ fn run_trace_and_play_plain_execute_match_conditions() {
         .stdin
         .as_mut()
         .expect("stdin")
-        .write_all(b"tired\n")
+        .write_all(b"tired\nrest\n")
         .expect("write stdin");
     let output = child.wait_with_output().expect("wait");
 
     output.assert_success().assert_stderr("");
     output.assert_stdout_contains("condition thread_stage(thread) = tired");
-    output.assert_stdout_contains("line tired_line: Tired.");
+    output.assert_stdout_contains("prompt tired_line: Tired.");
+    output.assert_stdout_contains("selected choice rest");
 }
 
 #[test]

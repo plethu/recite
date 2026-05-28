@@ -1,0 +1,29 @@
+[package]
+name = "recite-fixturegen"
+version.workspace = true
+edition.workspace = true
+description = "Deterministic synthetic fixture generator for Recite benchmark profiles."
+license.workspace = true
+repository.workspace = true
+readme.workspace = true
+
+[[bin]]
+name = "recite-fixturegen"
+path = "src/main.rs"
+
+[dependencies]
+blake3.workspace = true
+clap.workspace = true
+rand_chacha.workspace = true
+serde.workspace = true
+serde_json.workspace = true
+toml.workspace = true
+
+[dev-dependencies]
+recite-compiler.workspace = true
+recite-core.workspace = true
+recite-runtime.workspace = true
+tempfile.workspace = true
+
+[lints]
+workspace = true

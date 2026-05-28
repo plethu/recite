@@ -1,0 +1,87 @@
+[dialogue]
+locale = "en-US"
+[dialogue.catalogs]
+en-US = ["locales/en-US.po"]
+
+[conditions]
+"flag(\"flag_00\")" = true
+"flag(\"flag_01\")" = true
+"flag(\"flag_02\")" = true
+"flag(\"flag_03\")" = true
+"flag(\"flag_04\")" = true
+"flag(\"flag_05\")" = true
+"flag(\"flag_06\")" = true
+"flag(\"flag_07\")" = true
+"flag(\"flag_08\")" = true
+"flag(\"flag_09\")" = true
+"flag(\"flag_10\")" = true
+"flag(\"flag_11\")" = true
+"flag(\"flag_12\")" = true
+"flag(\"flag_13\")" = true
+"flag(\"flag_14\")" = true
+"flag(\"flag_15\")" = true
+"flag(\"flag_16\")" = true
+"flag(\"flag_17\")" = true
+"flag(\"flag_18\")" = true
+"flag(\"flag_19\")" = true
+"flag(\"flag_20\")" = true
+"flag(\"flag_21\")" = true
+"flag(\"flag_22\")" = true
+"flag(\"flag_23\")" = true
+"flag(\"flag_24\")" = true
+"flag(\"flag_25\")" = true
+"flag(\"flag_26\")" = true
+"flag(\"flag_27\")" = true
+"flag(\"flag_28\")" = true
+"flag(\"flag_29\")" = true
+"flag(\"flag_30\")" = true
+"flag(\"flag_31\")" = true
+"flag(\"flag_32\")" = true
+"flag(\"flag_33\")" = true
+"flag(\"flag_34\")" = true
+"flag(\"flag_35\")" = true
+"flag(\"flag_36\")" = true
+"flag(\"flag_37\")" = true
+"flag(\"flag_38\")" = true
+"flag(\"flag_39\")" = true
+"flag(\"flag_40\")" = true
+"flag(\"flag_41\")" = true
+"flag(\"flag_42\")" = true
+"flag(\"flag_43\")" = true
+"flag(\"flag_44\")" = true
+"flag(\"flag_45\")" = true
+"flag(\"flag_46\")" = true
+"flag(\"flag_47\")" = true
+"flag(\"flag_48\")" = true
+"flag(\"flag_49\")" = true
+"flag(\"flag_50\")" = true
+"flag(\"flag_51\")" = true
+"flag(\"flag_52\")" = true
+"flag(\"flag_53\")" = true
+"flag(\"flag_54\")" = true
+"flag(\"flag_55\")" = true
+"flag(\"flag_56\")" = true
+"flag(\"flag_57\")" = true
+"flag(\"flag_58\")" = true
+"flag(\"flag_59\")" = true
+"flag(\"flag_60\")" = true
+"flag(\"flag_61\")" = true
+"flag(\"flag_62\")" = true
+"flag(\"flag_63\")" = true
+"counter_gte(\"counter_00\", 2)" = true
+"relationship(speaker_00, speaker_01)" = { enum = "active" }
+
+[choices]
+line_00000_000 = "choice_00000_000"
+line_00001_000 = "choice_00001_000"
+line_00002_000 = "choice_00002_000"
+line_00003_000 = "choice_00003_000"
+line_00004_000 = "choice_00004_000"
+line_00005_000 = "choice_00005_000"
+line_00006_000 = "choice_00006_000"
+line_00007_000 = "choice_00007_000"
+line_00008_000 = "choice_00008_000"
+line_00009_000 = "choice_00009_000"
+
+[effects]
+auto_ack_blocking = true
