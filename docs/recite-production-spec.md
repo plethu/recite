@@ -2063,49 +2063,84 @@ Initial non-goals:
 - LSP code action that auto-fills missing IDs on save;
 - documented hot-reload story for LSP-driven editing.
 
-### Milestone 6: Performance Harness
+### Milestone 6: Scale and Performance Proof
 
-- Criterion benchmark suite;
-- deterministic fixture generator;
-- compiler benchmarks;
-- runtime benchmarks;
+- deterministic large-project fixture generator;
+- compiler and runtime benchmark suite;
 - trace performance counters;
+- validation, compile, run, trace, and snapshot stress tests;
+- memory/profile notes for realistic project shapes;
+- documented scale limits and regression policy;
 - CI benchmark smoke suite.
 
-### Milestone 7: LSP
+### Milestone 7: LSP and Text Authoring Readiness
 
 - diagnostics;
 - completions;
 - go-to definition;
 - rename block;
 - hover from schema;
-- code action for missing IDs.
+- code action for missing IDs;
+- saved/live project indexing that remains useful on large projects.
 
-### Milestone 8: Engine Adapters
+### Milestone 8: Engine Adapter Contract
 
-- adapter contract;
+- host-agnostic adapter contract;
+- compiled asset loading boundary;
+- start/select/ack integration shape;
+- structured output events, messages, signals, or callbacks;
+- condition handler integration;
+- save/load handoff rules;
+- adapter conformance tests.
+
+### Milestone 9: First Production Adapters
+
 - at least one engine adapter, selected from active project pressure;
+- credible adapter stories for commercially relevant target engines;
 - compiled asset loading;
 - start/select/ack integration;
-- structured output events, messages, signals, or callbacks;
 - condition handler integration;
 - example project;
 - engine integration tests.
 
-### Milestone 9: Editor Extensions
+### Milestone 10: v1 Adoption Documentation and Release Readiness
+
+- public documentation site;
+- Rustdoc crate examples;
+- complete workflow demo project;
+- install, publishing, compatibility, and release policy;
+- game-developer guides for core CLI, LSP, localisation, testing, and adapter workflows;
+- alternatives and adoption guide grounded in the shipped v1 shape.
+
+### Milestone 11: Migration and Interop
+
+- transition guides from established dialogue systems;
+- best-effort importer boundary design;
+- unsupported-construct inspection prototype;
+- honest compatibility notes for Ink, Yarn Spinner, Dialogic, Dialogue Manager, Dialogue System for Unity, and adjacent tools.
+
+### Milestone 12: Editor Extensions
 
 - VS Code extension;
 - Neovim setup;
 - syntax highlighting;
 - command integration.
 
-### Milestone 10: Visual Editor
+### Milestone 13: Visual Editor
 
 - block graph;
 - structured editing;
 - schema-backed controls;
 - trace preview;
 - localization preview.
+
+### Milestone 14: v1 Release Hardening
+
+- release candidate checklist;
+- compatibility audit across compiled assets, runtime snapshots, schema manifests, and CLI output;
+- packaging and installation smoke tests;
+- final documentation review against shipped commands and adapter workflows;
+- known-limits document for scale, migration, editor support, and engine integration.
 
 ## 23. Acceptance Criteria for a Serious v1
 
@@ -2122,8 +2157,14 @@ The project is not production-credible until all of the following are true:
 - POT extraction produces translator-usable context.
 - The LSP catches common mistakes before runtime, including auto-filling missing IDs on save.
 - CI can verify compiled assets are fresh relative to source and schema.
+- Large-project fixtures exercise compile, validate, run, trace, localisation extraction, and snapshot restore at narrative scale comparable to serious commercial dialogue-heavy games.
+- Performance and memory characteristics are measured, documented, and protected by regression smoke checks.
+- At least one production-quality engine adapter can load compiled assets, traverse dialogue, evaluate conditions, emit effects without executing them, and participate in save/load workflows.
+- The adapter contract is stable enough that additional engines can be implemented without changing core runtime semantics.
+- Public docs and examples demonstrate both headless CLI workflows and at least one real engine integration path.
+- Adoption and migration guidance makes a credible case for teams evaluating Recite against established tools such as Dialogue System for Unity, Dialogue Manager, Dialogic, Yarn Spinner, and Ink.
 
-Engine adapters (§16) and the benchmark suite (§19) are tracked as later milestones and are explicitly **not** required for v1 acceptance. Shipping a credible v1 means the core runtime + CLI + LSP land first; engine adapters and performance gates follow.
+Shipping a credible v1 means more than proving the core can run headlessly. The core runtime, CLI, LSP, scale proof, adapter contract, at least one production adapter, and adoption documentation must work together well enough for a serious narrative-heavy game team to evaluate Recite as a practical replacement for established dialogue tooling.
 
 ## 24. Design Summary
 
