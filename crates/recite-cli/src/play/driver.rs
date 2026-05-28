@@ -4,15 +4,17 @@ use recite_core::{ChoiceId, CompiledDialogue};
 use recite_runtime::{
     ConditionEvaluationError, ConditionQuery, ConditionValue, DialogueChoice, DialogueContext,
     DialogueEffectMode, DialogueEffectRequest, DialogueEvent, DialogueLine, DialogueSession,
-    EffectAck, acknowledge_effect, choose as runtime_choose, next as runtime_next, start_scene,
+    EffectAck, acknowledge_effect,
 };
 
+use crate::dialogue_locale::{DialogueTraversal, DialogueTraversalPreview};
 use crate::error::CliError;
 use crate::i18n::{Messages, MsgId};
 
 pub(super) struct PlayDriver<'a> {
     asset: &'a CompiledDialogue,
     block: &'a str,
+    dialogue_preview: Option<DialogueTraversalPreview<'a>>,
 }
 
 #[derive(Clone, Copy, Debug, Eq, PartialEq)]
@@ -23,20 +25,30 @@ pub(super) enum DeferredQueueStatus {
 
 impl<'a> PlayDriver<'a> {
     pub(super) fn new(asset: &'a CompiledDialogue, block: &'a str) -> Self {
-        Self { asset, block }
+        Self {
+            asset,
+            block,
+            dialogue_preview: None,
+        }
+    }
+
+    pub(super) fn with_dialogue_preview(mut self, preview: DialogueTraversalPreview<'a>) -> Self {
+        self.dialogue_preview = Some(preview);
+        self
     }
 
     pub(super) fn run<U: PlayUiAdapter>(self, ui: &mut U) -> Result<(), CliError> {
         ui.start(self.asset, self.block)?;
         let context = InteractiveContext::new(ui);
-        let mut session = start_scene(self.asset, Some(self.block))?;
+        let traversal = DialogueTraversal::new(self.asset, self.dialogue_preview);
+        let mut session = traversal.start(Some(self.block))?;
         let mut pending_event = None;
         let mut deferred_effect_count = 0;
 
         loop {
             let event = match pending_event.take() {
                 Some(event) => event,
-                None => match runtime_next(self.asset, &mut session, &context) {
+                None => match traversal.next(&mut session, &context) {
                     Ok(event) => {
                         notify_scheduled_deferred_queue(
                             &context,
@@ -54,7 +66,8 @@ impl<'a> PlayDriver<'a> {
                 DialogueEvent::Prompt { line, choices } => {
                     let choice_id = context.choice(line.as_ref(), &choices)?;
                     context.selected_choice(&choice_id)?;
-                    let event = runtime_choose(self.asset, &mut session, choice_id, &context)
+                    let event = traversal
+                        .choose(&mut session, choice_id, &context)
                         .map_err(|error| context.resolve_runtime_error(error))?;
                     notify_scheduled_deferred_queue(
                         &context,

@@ -6,6 +6,7 @@ use recite_compiler::{
 
 use crate::args::{Command, CompileArgs, ExtractArgs, RuntimeArgs};
 use crate::diagnostics::{report_diagnostics, report_targeted_diagnostics};
+use crate::dialogue_locale::LoadedDialoguePreview;
 use crate::error::CliError;
 use crate::fs::{
     collect_input_files, compile_options, load_optional_schema, load_schema,
@@ -13,7 +14,10 @@ use crate::fs::{
     validate_inputs, validate_project, write_staged,
 };
 use crate::play::run_play_command;
-use crate::runtime_fixture::{execute_runtime_fixture, load_compiled_asset, load_runtime_fixture};
+use crate::runtime_fixture::{
+    dialogue_preview_from_fixture, execute_runtime_fixture, load_compiled_asset,
+    load_runtime_fixture,
+};
 
 pub(crate) fn run_command(
     command: Command,
@@ -142,7 +146,20 @@ fn runtime_command(
 ) -> Result<(), CliError> {
     let asset = load_compiled_asset(&args.asset)?;
     let fixture = load_runtime_fixture(&args.fixture)?;
-    let execution = execute_runtime_fixture(&asset, &args.block, &fixture)?;
+    let dialogue_preview = dialogue_preview_from_fixture(&fixture)?
+        .map(LoadedDialoguePreview::load)
+        .transpose()?;
+    let execution = execute_runtime_fixture(
+        &asset,
+        &args.block,
+        &fixture,
+        dialogue_preview
+            .as_ref()
+            .map(LoadedDialoguePreview::traversal_preview),
+        dialogue_preview
+            .as_ref()
+            .map(LoadedDialoguePreview::locale_fallbacks),
+    )?;
 
     match output {
         RuntimeOutput::Run => {

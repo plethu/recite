@@ -1472,6 +1472,7 @@ recite check-metadata <path-or-project> --schema <schema>
 recite run <asset> --block <block> --fixture <fixture>
 recite trace <asset> --block <block> --fixture <fixture>
 recite play <asset> --block <block> [--ui auto|tui|plain] [--keymap standard|vim]
+  [--dialogue-locale <locale>] [--dialogue-catalog <locale=path>]...
 ```
 
 `recite play` is an interactive REPL for writers (Milestone 5.5). Future commands include `recite generate-bindings --schema <schema> --lang <lang>` once the schema and adapter contracts stabilise; it is not part of the v1 CLI surface.
@@ -1523,6 +1524,11 @@ Must be able to:
 - emit effect list;
 - emit condition query trace.
 
+`run` may preview translated dialogue content only when the fixture opts in with
+`[dialogue].locale`. Dialogue catalog paths in fixtures are resolved relative to
+the fixture file directory. Without `[dialogue].locale`, line and choice output
+must remain source text. Catalogs without a dialogue locale are an error.
+
 ### 13.6 `trace`
 
 Produces a deterministic execution trace including:
@@ -1535,6 +1541,12 @@ Produces a deterministic execution trace including:
 - effects emitted;
 - blocking acknowledgements;
 - final deferred effects.
+
+Structured trace field names and machine values are stable English identifiers.
+When fixture dialogue preview is configured, trace output includes the selected
+dialogue locale and fallback chain as metadata, while line and choice records
+keep both `source_text` and preview `text` fields so terminal source fallback
+remains testable.
 
 ### 13.7 `play`
 
@@ -1559,6 +1571,20 @@ show_unavailable_choices = true
 ```
 
 The UI locale controls only Recite-owned CLI/TUI text: pane titles, transcript labels, footer hints, prompts, status messages, invalid input text, blocking-effect acknowledgement labels, and human CLI errors owned by `recite-cli`. It does not control dialogue line or choice translation for `play`, `run`, or `trace`; those remain runtime/provider concerns (§9). There is no `--ui-locale` flag.
+
+Dialogue content preview for `play` is separately opt in:
+
+```text
+recite play <asset> --block <block> --dialogue-locale fr-FR \
+  --dialogue-catalog fr-FR=locale/fr-FR.po
+```
+
+`--dialogue-catalog` is repeatable and accepts `LOCALE=PATH`. Catalog paths on
+the `play` command line are resolved relative to the current working directory
+unless absolute. Passing a dialogue catalog without `--dialogue-locale` is an
+error. Missing or empty catalog translations fall back to source text through
+the runtime locale-provider path; Recite-owned UI text remains on the Fluent UI
+catalog path.
 
 Locale fallback for CLI/TUI text is deterministic: requested locale, then language-only locale, then `en-US`. Missing or malformed non-default catalogs fall back to `en-US`. The default `en-US` catalog is a test-gated resource.
 
@@ -1765,9 +1791,23 @@ small_talk_start = "small_talk_start_WPUQ"
 
 [effects]
 auto_ack_blocking = true
+
+[dialogue]
+locale = "fr-FR"
+
+[dialogue.catalogs]
+"fr-FR" = ["locale/fr-FR.po"]
+fr = ["locale/fr.po"]
 ```
 
 Condition keys use bare identifiers inside the call, matching the dialogue DSL. The TOML key is quoted only because TOML requires it for keys containing parentheses; the inner argument list does not requote identifiers.
+
+The `[dialogue]` fixture table is optional. When present, `locale` selects the
+runtime dialogue locale for preview, and `catalogs` maps locale IDs to gettext
+PO files. Catalog entries use singular gettext records with `msgctxt` as the
+stable line or choice ID, `msgid` as source text, and `msgstr` as translated
+text. Variant-specific entries may use `id&variant` contexts and should fall
+back to `id` before source text.
 
 ## 18. Diagnostics
 
