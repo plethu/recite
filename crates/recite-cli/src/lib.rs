@@ -14,6 +14,7 @@ mod play;
 mod runtime_fixture;
 mod runtime_format;
 mod tui;
+mod watch;
 
 use args::Command;
 use error::CliError;

@@ -107,6 +107,15 @@ fn localise_subcommand(command: &mut clap::Command, messages: &Messages) {
                 messages,
             );
         }
+        "watch" => {
+            set_about(command, messages.text(MsgId::CliHelpCommandWatch));
+            set_arg_help(
+                command,
+                "project_root",
+                messages.text(MsgId::CliHelpArgProjectRoot),
+                messages,
+            );
+        }
         "run" => {
             set_about(command, messages.text(MsgId::CliHelpCommandRun));
             localise_runtime_args(command, messages, MsgId::CliHelpArgAssetRun);

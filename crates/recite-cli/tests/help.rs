@@ -16,6 +16,7 @@ fn help_covers_issue_25_commands_and_options() {
         "check-metadata",
         "validate-project",
         "check-fresh",
+        "watch",
         "run",
         "trace",
         "play",
@@ -44,6 +45,11 @@ fn help_covers_issue_25_commands_and_options() {
     let fresh = run(recite().arg("check-fresh").arg("--help"));
     fresh.assert_success().assert_stderr("");
     fresh.assert_stdout_contains("compiled assets are fresh");
+
+    let watch = run(recite().arg("watch").arg("--help"));
+    watch.assert_success().assert_stderr("");
+    watch.assert_stdout_contains("Usage: recite watch <PROJECT_ROOT>");
+    watch.assert_stdout_contains("recite.project.toml");
 
     let run_help = run(recite().arg("run").arg("--help"));
     run_help.assert_success().assert_stderr("");

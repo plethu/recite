@@ -45,7 +45,7 @@ pub(crate) fn display_path(path: &Path) -> String {
     path.to_string_lossy().replace('\\', "/")
 }
 
-pub(super) fn resolve_project_path(project_root: &Path, path: &str) -> PathBuf {
+pub(crate) fn resolve_project_path(project_root: &Path, path: &str) -> PathBuf {
     let path = Path::new(path);
     if path.is_absolute() {
         path.to_owned()
