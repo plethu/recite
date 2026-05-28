@@ -1469,6 +1469,7 @@ recite check-ids <path-or-project>
 recite check-fresh <project-root>
 recite check-markup <path-or-project>
 recite check-metadata <path-or-project> --schema <schema>
+recite watch <project-root>
 recite run <asset> --block <block> --fixture <fixture>
 recite trace <asset> --block <block> --fixture <fixture>
 recite play <asset> --block <block> [--ui auto|tui|plain] [--keymap standard|vim]
@@ -1602,7 +1603,35 @@ The TUI should include:
 
 `play` is part of Milestone 5.5 (Authoring Polish) and is not on the v1 acceptance gate, but the runtime API must accommodate it.
 
-### 13.8 Future: `generate-bindings`
+### 13.8 `watch`
+
+Authoring build loop for source, schema, and project changes:
+
+```text
+recite watch <project-root>
+```
+
+`watch` observes the project manifest, dialogue source files, generated schema
+manifest, and other compile inputs. On change, it validates the project and
+rebuilds compiled assets using the same deterministic whole-project compiler as
+`compile`. It should reuse `check-fresh` fingerprint semantics so generated
+assets can be compared against current source and schema without editor- or
+engine-specific state.
+
+The expected authoring loop is:
+
+1. edit source or schema inputs;
+2. LSP reports live diagnostics;
+3. on save, LSP/editor code actions may insert missing stable IDs without
+   rewriting existing IDs;
+4. `recite watch` validates and rebuilds compiled assets;
+5. the engine adapter imports or refreshes those assets and restarts the scene
+   or applies the adapter's documented active-session policy.
+
+`watch` must not imply mid-session patch reload for v1. It is a fast rebuild
+surface for authoring, CI-adjacent local checks, and editor/engine integration.
+
+### 13.9 Future: `generate-bindings`
 
 Deferred past v1. Will generate typed host-language bindings (condition stubs, effect records/enums, runtime conversions, test helpers, optional engine event/signal wrappers) from schema once the schema and adapter contracts stabilise.
 
@@ -1652,7 +1681,7 @@ The VS Code extension must provide:
 
 - syntax highlighting;
 - LSP client wiring;
-- commands for compile/validate/extract;
+- commands for compile/validate/extract/watch;
 - problem matcher integration;
 - block outline;
 - quick run/trace command;
@@ -1693,6 +1722,7 @@ The core runtime is engine-independent. Engine adapters are integration layers t
 Adapters must:
 
 - load compiled dialogue assets through the host's asset pipeline where possible;
+- define how compiled assets are imported or refreshed during authoring;
 - store active dialogue session state in host-native resources, nodes, components, or services;
 - expose dialogue lines, prompts, effects, endings, and errors through host-native events, messages, signals, or callbacks;
 - preserve choice selection by stable `ChoiceId`;
@@ -1721,6 +1751,18 @@ The concrete API should feel idiomatic for the host engine. A Bevy adapter may u
 Initial adapter scope may maintain one active dialogue session at a time.
 
 Attempting to start a second scene while one is active must emit an error, not panic.
+
+Each adapter must document what happens when a compiled asset changes while a
+session is active. For v1, acceptable policies include rejecting the refresh
+until the session ends, requiring the author to restart the scene, or reloading
+only for the next session. Silent mid-session mutation is not acceptable because
+it can break deterministic traversal, save/load identity, and pending
+blocking-effect semantics.
+
+Adapters should make the edit-source -> LSP diagnostics -> on-save IDs ->
+`recite watch` rebuild -> engine import/refresh -> restart scene loop practical
+for their host engine. A richer mid-session patch reload can be explored after
+v1, but it is not required for the serious v1 gate.
 
 Future versions may support multiple sessions keyed by entity/session ID.
 
@@ -1842,9 +1884,23 @@ Performance is part of the product contract. Recite is intended for games that v
 
 All numeric budgets in this section are **aspirational targets, not contracts**, until a baseline exists from realistic fixtures. They will be re-evaluated against measured numbers; failing to hit a target is a benchmark report, not an acceptance failure. Benchmarks are tracked under Milestone 6 and are not part of the §23 v1 acceptance gate.
 
-#### Incremental compilation and hot reload
+#### Authoring refresh layers
 
-The compiler is whole-project for v1. The LSP maintains a separate live index that re-parses only edited files and resolves cross-file references incrementally. Hot reload during authoring is a property of the LSP's index, not of the compiler. Game-side hot reload of compiled assets is a per-adapter concern that should integrate with the host engine's asset pipeline where possible.
+The compiler is whole-project for v1. Recite has several distinct refresh
+layers:
+
+- LSP live refresh: the editor-facing index re-parses edited files, refreshes
+  diagnostics, and resolves cross-file references incrementally.
+- Watch/build refresh: `recite watch <project-root>` observes source, schema,
+  and project inputs, then re-runs deterministic whole-project validation and
+  asset compilation.
+- Adapter import refresh: each engine adapter defines how rebuilt compiled
+  assets enter the host asset pipeline and what authors do with active sessions.
+- Mid-session patch reload: changing the compiled asset underneath an already
+  running session without restarting it is a non-v1 feature.
+
+The v1 requirement is a competitive edit/save/rebuild/import/restart authoring
+loop, not arbitrary runtime patching of active dialogue sessions.
 
 ### 19.1 Benchmark Harness
 
@@ -2100,8 +2156,9 @@ Initial non-goals:
 ### Milestone 5.5: Authoring Polish
 
 - `recite play` interactive REPL;
+- `recite watch` authoring build loop for source/schema/project changes;
 - LSP code action that auto-fills missing IDs on save;
-- documented hot-reload story for LSP-driven editing.
+- documented editor and engine authoring refresh loop.
 
 ### Milestone 6: Scale and Performance Proof
 
@@ -2131,6 +2188,7 @@ Initial non-goals:
 - structured output events, messages, signals, or callbacks;
 - condition handler integration;
 - save/load handoff rules;
+- adapter asset refresh and active-session reload policy;
 - adapter conformance tests.
 
 ### Milestone 9: First Production Adapters
@@ -2138,6 +2196,7 @@ Initial non-goals:
 - at least one engine adapter, selected from active project pressure;
 - credible adapter stories for commercially relevant target engines;
 - compiled asset loading;
+- native authoring asset refresh loops for Godot, Bevy, and Unity;
 - start/select/ack integration;
 - condition handler integration;
 - example project;
@@ -2150,6 +2209,7 @@ Initial non-goals:
 - complete workflow demo project;
 - install, publishing, compatibility, and release policy;
 - game-developer guides for core CLI, LSP, localisation, testing, and adapter workflows;
+- engine-facing authoring refresh docs and examples, including known reload limits;
 - alternatives and adoption guide grounded in the shipped v1 shape.
 
 ### Milestone 11: Migration and Interop
@@ -2164,7 +2224,7 @@ Initial non-goals:
 - VS Code extension;
 - Neovim setup;
 - syntax highlighting;
-- command integration.
+- command integration, including `recite watch`.
 
 ### Milestone 13: Visual Editor
 
@@ -2180,7 +2240,10 @@ Initial non-goals:
 - compatibility audit across compiled assets, runtime snapshots, schema manifests, and CLI output;
 - packaging and installation smoke tests;
 - final documentation review against shipped commands and adapter workflows;
-- known-limits document for scale, migration, editor support, and engine integration.
+- final verification that docs, examples, adapter behavior, and known limits
+  describe the same shipped authoring refresh workflow;
+- known-limits document for scale, migration, editor support, engine integration,
+  and active-session reload behavior.
 
 ## 23. Acceptance Criteria for a Serious v1
 
@@ -2197,9 +2260,14 @@ The project is not production-credible until all of the following are true:
 - POT extraction produces translator-usable context.
 - The LSP catches common mistakes before runtime, including auto-filling missing IDs on save.
 - CI can verify compiled assets are fresh relative to source and schema.
+- Authors have a fast documented loop from source edit to LSP diagnostics,
+  on-save stable ID insertion, `recite watch` rebuild, engine adapter
+  import/refresh, and scene restart or documented active-session behavior.
 - Large-project fixtures exercise compile, validate, run, trace, localisation extraction, and snapshot restore at narrative scale comparable to serious commercial dialogue-heavy games.
 - Performance and memory characteristics are measured, documented, and protected by regression smoke checks.
 - At least one production-quality engine adapter can load compiled assets, traverse dialogue, evaluate conditions, emit effects without executing them, and participate in save/load workflows.
+- Each v1 adapter has a documented asset refresh/import workflow and an
+  explicit active-session behavior for changed compiled assets.
 - The adapter contract is stable enough that additional engines can be implemented without changing core runtime semantics.
 - Public docs and examples demonstrate both headless CLI workflows and at least one real engine integration path.
 - Adoption and migration guidance makes a credible case for teams evaluating Recite against established tools such as Dialogue System for Unity, Dialogue Manager, Dialogic, Yarn Spinner, and Ink.
