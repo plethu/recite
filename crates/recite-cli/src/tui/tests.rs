@@ -20,6 +20,18 @@ fn text_buffer_edits_with_cursor_awareness() {
 }
 
 #[test]
+fn text_buffer_applies_text_edit_intents() {
+    let mut buffer = TextBuffer::default();
+    buffer.apply_intent(TuiIntent::Text('a'));
+    buffer.apply_intent(TuiIntent::Text('b'));
+    buffer.apply_intent(TuiIntent::MoveCursorLeft);
+    buffer.apply_intent(TuiIntent::Text('x'));
+    buffer.apply_intent(TuiIntent::DeleteWord);
+
+    assert_eq!(buffer.as_str(), "b");
+}
+
+#[test]
 fn maps_standard_printable_keys_to_text() {
     let key = KeyEvent::new(KeyCode::Char('j'), KeyModifiers::NONE);
     assert_eq!(
@@ -70,11 +82,20 @@ fn condition_yes_no_shortcuts_are_standard_only_in_normal_mode() {
 }
 
 #[test]
-fn control_d_toggles_deferred_queue() {
+fn control_d_toggles_auxiliary_panel() {
     let key = KeyEvent::new(KeyCode::Char('d'), KeyModifiers::CONTROL);
     assert_eq!(
         map_key(Keymap::Standard, PromptMode::Insert, key),
-        TuiIntent::ToggleDeferredQueue
+        TuiIntent::ToggleAuxiliaryPanel
+    );
+}
+
+#[test]
+fn help_enter_maps_to_submit_for_context_specific_handling() {
+    let key = KeyEvent::new(KeyCode::Enter, KeyModifiers::NONE);
+    assert_eq!(
+        map_key(Keymap::Standard, PromptMode::Help, key),
+        TuiIntent::Submit
     );
 }
 
@@ -97,6 +118,43 @@ fn command_parser_accepts_quit_commands_only() {
     assert!(command_quits("q"));
     assert!(command_quits("quit"));
     assert!(!command_quits("write"));
+}
+
+#[test]
+fn global_actions_classify_shared_intents() {
+    assert_eq!(
+        global_action(PromptMode::Normal, TuiIntent::Quit),
+        Some(GlobalAction::Quit)
+    );
+    assert_eq!(
+        global_action(PromptMode::Normal, TuiIntent::OpenCommand),
+        Some(GlobalAction::OpenCommand)
+    );
+    assert_eq!(
+        global_action(PromptMode::Normal, TuiIntent::ToggleAuxiliaryPanel),
+        Some(GlobalAction::ToggleAuxiliaryPanel)
+    );
+    assert_eq!(
+        global_action(PromptMode::Help, TuiIntent::Cancel),
+        Some(GlobalAction::CloseHelp)
+    );
+    assert_eq!(global_action(PromptMode::Insert, TuiIntent::Cancel), None);
+}
+
+#[test]
+fn interaction_state_tracks_help_and_command_modes() {
+    let mut interaction = TuiInteractionState::new(PromptMode::Normal);
+
+    interaction.toggle_help();
+    assert_eq!(interaction.effective_mode(), PromptMode::Help);
+
+    interaction.close_help();
+    assert_eq!(interaction.effective_mode(), PromptMode::Normal);
+
+    interaction.start_command();
+    interaction.mutate_command(TuiIntent::Text('q'));
+    assert_eq!(interaction.effective_mode(), PromptMode::Command);
+    assert_eq!(interaction.command(), "q");
 }
 
 #[test]

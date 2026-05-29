@@ -13,10 +13,6 @@ impl TextBuffer {
         &self.text
     }
 
-    pub(crate) fn is_empty(&self) -> bool {
-        self.text.is_empty()
-    }
-
     pub(crate) fn clear(&mut self) {
         self.text.clear();
         self.cursor = 0;
@@ -100,6 +96,21 @@ impl TextBuffer {
             self.backspace();
         }
     }
+
+    pub(crate) fn apply_intent(&mut self, intent: TuiIntent) {
+        match intent {
+            TuiIntent::Text(ch) => self.insert(ch),
+            TuiIntent::Backspace => self.backspace(),
+            TuiIntent::Delete => self.delete(),
+            TuiIntent::MoveCursorLeft => self.move_left(),
+            TuiIntent::MoveCursorRight => self.move_right(),
+            TuiIntent::MoveCursorStart => self.move_start(),
+            TuiIntent::MoveCursorEnd => self.move_end(),
+            TuiIntent::ClearLine => self.clear(),
+            TuiIntent::DeleteWord => self.delete_word_before_cursor(),
+            _ => {}
+        }
+    }
 }
 
 #[derive(Clone, Copy, Debug, Eq, PartialEq)]
@@ -108,6 +119,7 @@ pub(crate) enum PromptMode {
     Insert,
     Command,
     Help,
+    Finished,
 }
 
 #[derive(Clone, Copy, Debug, Eq, PartialEq)]
@@ -120,7 +132,7 @@ pub(crate) enum TuiIntent {
     StartInsert,
     OpenCommand,
     ToggleHelp,
-    ToggleDeferredQueue,
+    ToggleAuxiliaryPanel,
     Text(char),
     Backspace,
     Delete,
@@ -137,7 +149,7 @@ pub(crate) fn map_key(keymap: Keymap, mode: PromptMode, key: KeyEvent) -> TuiInt
     if key.modifiers.contains(KeyModifiers::CONTROL) {
         return match key.code {
             KeyCode::Char('c') | KeyCode::Char('C') => TuiIntent::Quit,
-            KeyCode::Char('d') | KeyCode::Char('D') => TuiIntent::ToggleDeferredQueue,
+            KeyCode::Char('d') | KeyCode::Char('D') => TuiIntent::ToggleAuxiliaryPanel,
             KeyCode::Char('u') | KeyCode::Char('U') => TuiIntent::ClearLine,
             KeyCode::Char('w') | KeyCode::Char('W') => TuiIntent::DeleteWord,
             _ => TuiIntent::Ignore,
@@ -146,8 +158,16 @@ pub(crate) fn map_key(keymap: Keymap, mode: PromptMode, key: KeyEvent) -> TuiInt
 
     match mode {
         PromptMode::Help => match key.code {
+            KeyCode::Enter => TuiIntent::Submit,
             KeyCode::Esc | KeyCode::Char('?') => TuiIntent::Cancel,
             KeyCode::Char('q') => TuiIntent::Quit,
+            _ => TuiIntent::Ignore,
+        },
+        PromptMode::Finished => match key.code {
+            KeyCode::Enter => TuiIntent::Submit,
+            KeyCode::Esc | KeyCode::Char('q') => TuiIntent::Quit,
+            KeyCode::Char(':') if keymap == Keymap::Vim => TuiIntent::OpenCommand,
+            KeyCode::Char('?') => TuiIntent::ToggleHelp,
             _ => TuiIntent::Ignore,
         },
         PromptMode::Command => match key.code {
@@ -197,8 +217,4 @@ pub(crate) fn map_key(keymap: Keymap, mode: PromptMode, key: KeyEvent) -> TuiInt
             _ => TuiIntent::Ignore,
         },
     }
-}
-
-pub(crate) fn command_quits(command: &str) -> bool {
-    matches!(command.trim(), "q" | "quit")
 }

@@ -1,7 +1,7 @@
 use ratatui::Terminal;
 
 use crate::i18n::Messages;
-use crate::tui::{KeyHints, Keymap, PromptMode, TextBuffer};
+use crate::tui::{KeyHints, Keymap, PromptMode, TextBuffer, TuiInteractionState};
 
 use super::super::super::state::{TuiChoiceRow, TuiPrompt, TuiState};
 use super::super::{controls, render_tui};
@@ -31,10 +31,8 @@ pub(super) fn choice_prompt(show_help: bool) -> TuiPrompt {
             is_visible: true,
         }],
         selected: 0,
-        mode: PromptMode::Normal,
+        interaction: TuiInteractionState::new(PromptMode::Normal).with_help(show_help),
         input: TextBuffer::default(),
-        command: TextBuffer::default(),
-        show_help,
     }
 }
 
@@ -55,19 +53,15 @@ pub(super) fn condition_prompt(show_help: bool) -> TuiPrompt {
     TuiPrompt::Condition {
         query: "trusts(mira)".to_owned(),
         selected: true,
-        mode: PromptMode::Normal,
-        command: TextBuffer::default(),
-        show_help,
+        interaction: TuiInteractionState::new(PromptMode::Normal).with_help(show_help),
     }
 }
 
 pub(super) fn enum_condition_prompt(show_help: bool) -> TuiPrompt {
     TuiPrompt::EnumCondition {
         query: "memory_pressure(hazel, music_shop)".to_owned(),
-        mode: PromptMode::Insert,
+        interaction: TuiInteractionState::new(PromptMode::Insert).with_help(show_help),
         input: TextBuffer::default(),
-        command: TextBuffer::default(),
-        show_help,
     }
 }
 
@@ -77,10 +71,8 @@ pub(super) fn effect_prompt(show_help: bool) -> TuiPrompt {
         id: "grant#1".to_owned(),
         function: "grant_item".to_owned(),
         args: "(map)".to_owned(),
-        input_mode: PromptMode::Insert,
+        interaction: TuiInteractionState::new(PromptMode::Insert).with_help(show_help),
         input: TextBuffer::default(),
-        command: TextBuffer::default(),
-        show_help,
     }
 }
 

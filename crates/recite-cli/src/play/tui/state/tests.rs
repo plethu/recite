@@ -63,10 +63,8 @@ fn choice_navigation_skips_hidden_and_unavailable_choices() {
             },
         ],
         selected: 0,
-        mode: PromptMode::Insert,
+        interaction: TuiInteractionState::new(PromptMode::Insert),
         input: TextBuffer::default(),
-        command: TextBuffer::default(),
-        show_help: false,
     };
 
     move_choice_selection(&mut prompt, 1);
@@ -80,9 +78,7 @@ fn help_mode_can_be_closed_without_changing_stored_prompt_mode() {
     let mut prompt = TuiPrompt::Condition {
         query: "trusts(player)".to_owned(),
         selected: true,
-        mode: PromptMode::Insert,
-        command: TextBuffer::default(),
-        show_help: true,
+        interaction: TuiInteractionState::new(PromptMode::Insert).with_help(true),
     };
 
     assert_eq!(prompt_mode(&prompt), PromptMode::Help);
@@ -98,36 +94,30 @@ fn help_mode_closes_for_choice_condition_effect_and_finished_prompts() {
             line: None,
             choices: Vec::new(),
             selected: 0,
-            mode: PromptMode::Insert,
+            interaction: TuiInteractionState::new(PromptMode::Insert).with_help(true),
             input: TextBuffer::default(),
-            command: TextBuffer::default(),
-            show_help: true,
         },
         TuiPrompt::Condition {
             query: "trusts(player)".to_owned(),
             selected: true,
-            mode: PromptMode::Insert,
-            command: TextBuffer::default(),
-            show_help: true,
+            interaction: TuiInteractionState::new(PromptMode::Insert).with_help(true),
         },
         TuiPrompt::EnumCondition {
             query: "memory_pressure(hazel, music_shop)".to_owned(),
-            mode: PromptMode::Insert,
+            interaction: TuiInteractionState::new(PromptMode::Insert).with_help(true),
             input: TextBuffer::default(),
-            command: TextBuffer::default(),
-            show_help: true,
         },
         TuiPrompt::Effect {
             mode: "blocking".to_owned(),
             id: "effect#1".to_owned(),
             function: "grant_item".to_owned(),
             args: "(key)".to_owned(),
-            input_mode: PromptMode::Insert,
+            interaction: TuiInteractionState::new(PromptMode::Insert).with_help(true),
             input: TextBuffer::default(),
-            command: TextBuffer::default(),
-            show_help: true,
         },
-        TuiPrompt::Finished { show_help: true },
+        TuiPrompt::Finished {
+            interaction: TuiInteractionState::new(PromptMode::Finished).with_help(true),
+        },
     ];
 
     for prompt in &mut prompts {
@@ -142,9 +132,7 @@ fn condition_selection_moves_and_sets_answer() {
     let mut prompt = TuiPrompt::Condition {
         query: "trusts(player)".to_owned(),
         selected: true,
-        mode: PromptMode::Insert,
-        command: TextBuffer::default(),
-        show_help: false,
+        interaction: TuiInteractionState::new(PromptMode::Insert),
     };
 
     assert_eq!(condition_selection(&prompt), Some(true));
@@ -158,10 +146,8 @@ fn condition_selection_moves_and_sets_answer() {
 fn enum_condition_prompt_uses_text_input_and_not_boolean_selection() {
     let mut prompt = TuiPrompt::EnumCondition {
         query: "memory_pressure(hazel, music_shop)".to_owned(),
-        mode: PromptMode::Normal,
+        interaction: TuiInteractionState::new(PromptMode::Normal),
         input: TextBuffer::default(),
-        command: TextBuffer::default(),
-        show_help: false,
     };
 
     assert_eq!(condition_selection(&prompt), None);

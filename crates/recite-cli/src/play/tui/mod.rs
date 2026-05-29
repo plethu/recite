@@ -16,8 +16,8 @@ use crate::error::CliError;
 use crate::i18n::{Messages, MsgId};
 use crate::runtime_format::format_effect_arguments;
 use crate::tui::{
-    Keymap, PromptMode, TextBuffer, TuiIntent, TuiSettings, enter_terminal, map_key,
-    restore_terminal,
+    Keymap, PromptMode, TextBuffer, TuiIntent, TuiInteractionState, TuiSettings, enter_terminal,
+    map_key, restore_terminal,
 };
 
 use super::driver::{ChoiceSelection, DeferredQueueStatus, PlayDriver, PlayUiAdapter};
@@ -25,7 +25,8 @@ use super::format::condition_query_text;
 use render::render_tui;
 use state::{
     TuiChoiceRow, TuiDeferredEffectRow, TuiDeferredQueueState, TuiPrompt, TuiPromptLine, TuiState,
-    TuiTranscriptEntry, TuiTranscriptKind, initial_choice_selection, initial_prompt_mode,
+    TuiTranscriptEntry, TuiTranscriptKind, finished_interaction, initial_choice_selection,
+    initial_interaction,
 };
 
 mod interaction;
@@ -133,16 +134,12 @@ fn condition_prompt(
         ConditionExpectedType::Bool => TuiPrompt::Condition {
             query,
             selected: selected_bool_answer,
-            mode: initial_prompt_mode(keymap),
-            command: TextBuffer::default(),
-            show_help: false,
+            interaction: initial_interaction(keymap),
         },
         ConditionExpectedType::Enum => TuiPrompt::EnumCondition {
             query,
-            mode: initial_prompt_mode(keymap),
+            interaction: initial_interaction(keymap),
             input: TextBuffer::default(),
-            command: TextBuffer::default(),
-            show_help: false,
         },
     }
 }
@@ -193,10 +190,8 @@ impl<B: Backend> PlayUiAdapter for TuiPlayUi<'_, B> {
             }),
             choices: rows,
             selected,
-            mode: initial_prompt_mode(self.settings.keymap),
+            interaction: initial_interaction(self.settings.keymap),
             input: TextBuffer::default(),
-            command: TextBuffer::default(),
-            show_help: false,
         };
         self.state.status.clear();
         self.read_choice_selection()
@@ -256,10 +251,8 @@ impl<B: Backend> PlayUiAdapter for TuiPlayUi<'_, B> {
             id: effect.id.as_str().to_owned(),
             function: effect.function.clone(),
             args: args.clone(),
-            input_mode: PromptMode::Insert,
+            interaction: TuiInteractionState::new(PromptMode::Insert),
             input: TextBuffer::default(),
-            command: TextBuffer::default(),
-            show_help: false,
         };
         self.push(
             TuiTranscriptKind::Effect,
@@ -300,7 +293,9 @@ impl<B: Backend> PlayUiAdapter for TuiPlayUi<'_, B> {
     }
 
     fn end(&mut self, deferred_effects: &[DialogueEffectRequest]) -> Result<(), CliError> {
-        self.state.prompt = TuiPrompt::Finished { show_help: false };
+        self.state.prompt = TuiPrompt::Finished {
+            interaction: finished_interaction(),
+        };
         self.push(TuiTranscriptKind::End, None, String::new())?;
         if !deferred_effects.is_empty() {
             self.state.transcript.push(TuiTranscriptEntry {

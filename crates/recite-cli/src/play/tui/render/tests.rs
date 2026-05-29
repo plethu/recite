@@ -1,5 +1,5 @@
 use crate::i18n::Messages;
-use crate::tui::{KeyHints, Keymap, PromptMode, TextBuffer};
+use crate::tui::{KeyHints, Keymap, PromptMode, TextBuffer, TuiInteractionState};
 
 use super::super::state::{
     TuiChoiceRow, TuiDeferredEffectRow, TuiDeferredQueueState, TuiPrompt, TuiPromptLine, TuiState,
@@ -75,10 +75,8 @@ fn tui_render_includes_header_and_choice_prompt() {
                 is_visible: true,
             }],
             selected: 0,
-            mode: PromptMode::Insert,
+            interaction: TuiInteractionState::new(PromptMode::Insert).with_help(false),
             input: TextBuffer::default(),
-            command: TextBuffer::default(),
-            show_help: false,
         },
         status: "choice> ".to_owned(),
         key_hints: KeyHints::Contextual,
@@ -116,10 +114,8 @@ fn active_choice_prompt_uses_transcript_prompt_header_and_wrapped_text() {
                 is_visible: true,
             }],
             selected: 0,
-            mode: PromptMode::Insert,
+            interaction: TuiInteractionState::new(PromptMode::Insert).with_help(false),
             input: TextBuffer::default(),
-            command: TextBuffer::default(),
-            show_help: false,
         },
         key_hints: KeyHints::Contextual,
         keymap: Keymap::Standard,
@@ -170,10 +166,8 @@ fn wrapped_choice_prompt_allocates_height_for_visible_choices() {
                 },
             ],
             selected: 0,
-            mode: PromptMode::Insert,
+            interaction: TuiInteractionState::new(PromptMode::Insert).with_help(false),
             input: TextBuffer::default(),
-            command: TextBuffer::default(),
-            show_help: false,
         },
         key_hints: KeyHints::Contextual,
         keymap: Keymap::Standard,
@@ -210,10 +204,8 @@ fn typed_choice_input_renders_only_in_status_footer() {
                 is_visible: true,
             }],
             selected: 0,
-            mode: PromptMode::Insert,
+            interaction: TuiInteractionState::new(PromptMode::Insert),
             input,
-            command: TextBuffer::default(),
-            show_help: false,
         },
         status: "choice id/index> ask_mira".to_owned(),
         key_hints: KeyHints::Contextual,
@@ -248,7 +240,9 @@ fn tui_render_finished_state_without_inactive_prompt_filler() {
                 text: "end".to_owned(),
             },
         ],
-        prompt: TuiPrompt::Finished { show_help: false },
+        prompt: TuiPrompt::Finished {
+            interaction: TuiInteractionState::new(PromptMode::Finished).with_help(false),
+        },
         status: "finished".to_owned(),
         key_hints: KeyHints::Contextual,
         keymap: Keymap::Standard,
@@ -274,9 +268,7 @@ fn tui_render_footer_uses_effective_help_mode() {
         prompt: TuiPrompt::Condition {
             query: "trusts(player)".to_owned(),
             selected: true,
-            mode: PromptMode::Insert,
-            command: TextBuffer::default(),
-            show_help: true,
+            interaction: TuiInteractionState::new(PromptMode::Insert).with_help(true),
         },
         status: "answer> ".to_owned(),
         key_hints: KeyHints::Contextual,
@@ -297,9 +289,7 @@ fn tui_render_condition_prompt_uses_selectable_boolean_rows() {
         prompt: TuiPrompt::Condition {
             query: "trusts(mira)".to_owned(),
             selected: false,
-            mode: PromptMode::Insert,
-            command: TextBuffer::default(),
-            show_help: false,
+            interaction: TuiInteractionState::new(PromptMode::Insert).with_help(false),
         },
         status: String::new(),
         key_hints: KeyHints::Contextual,
@@ -329,10 +319,8 @@ fn tui_render_enum_condition_prompt_shows_query_and_variant_input() {
         transcript: Vec::new(),
         prompt: TuiPrompt::EnumCondition {
             query: "memory_pressure(hazel, music_shop)".to_owned(),
-            mode: PromptMode::Insert,
+            interaction: TuiInteractionState::new(PromptMode::Insert),
             input,
-            command: TextBuffer::default(),
-            show_help: false,
         },
         status: "enum variant> high".to_owned(),
         key_hints: KeyHints::Contextual,
@@ -391,9 +379,7 @@ fn vim_condition_prompt_omits_standard_yes_no_shortcut_labels() {
         prompt: TuiPrompt::Condition {
             query: "trusts(mira)".to_owned(),
             selected: true,
-            mode: PromptMode::Normal,
-            command: TextBuffer::default(),
-            show_help: false,
+            interaction: TuiInteractionState::new(PromptMode::Normal).with_help(false),
         },
         status: String::new(),
         key_hints: KeyHints::Contextual,
@@ -418,9 +404,7 @@ fn compact_condition_footer_uses_only_compact_control_keys() {
         prompt: TuiPrompt::Condition {
             query: "trusts(mira)".to_owned(),
             selected: true,
-            mode: PromptMode::Insert,
-            command: TextBuffer::default(),
-            show_help: false,
+            interaction: TuiInteractionState::new(PromptMode::Insert).with_help(false),
         },
         status: String::new(),
         key_hints: KeyHints::Compact,
@@ -450,9 +434,7 @@ fn deferred_queue_renders_only_when_expanded() {
         prompt: TuiPrompt::Condition {
             query: "trusts(mira)".to_owned(),
             selected: true,
-            mode: PromptMode::Insert,
-            command: TextBuffer::default(),
-            show_help: false,
+            interaction: TuiInteractionState::new(PromptMode::Insert).with_help(false),
         },
         key_hints: KeyHints::Contextual,
         keymap: Keymap::Standard,
@@ -487,7 +469,9 @@ fn deferred_queue_finished_state_renders_ready_at_end() {
         }],
         deferred_queue_state: Some(TuiDeferredQueueState::Ready),
         deferred_queue_expanded: true,
-        prompt: TuiPrompt::Finished { show_help: false },
+        prompt: TuiPrompt::Finished {
+            interaction: TuiInteractionState::new(PromptMode::Finished).with_help(false),
+        },
         key_hints: KeyHints::Contextual,
         keymap: Keymap::Standard,
         ..TuiState::default()
@@ -530,9 +514,7 @@ fn tui_render_help_overlay_replaces_prompt_with_table() {
         prompt: TuiPrompt::Condition {
             query: "trusts(mira)".to_owned(),
             selected: true,
-            mode: PromptMode::Insert,
-            command: TextBuffer::default(),
-            show_help: true,
+            interaction: TuiInteractionState::new(PromptMode::Insert).with_help(true),
         },
         status: "condition".to_owned(),
         key_hints: KeyHints::Contextual,
@@ -621,7 +603,12 @@ fn shared_control_filtering_matches_prompt_and_keymap() {
     let effect = control_keys(&effect_prompt(false), Keymap::Standard);
     assert_eq!(effect, ["Enter", "?", "Ctrl-C"]);
 
-    let finished = control_keys(&TuiPrompt::Finished { show_help: false }, Keymap::Standard);
+    let finished = control_keys(
+        &TuiPrompt::Finished {
+            interaction: TuiInteractionState::new(PromptMode::Finished).with_help(false),
+        },
+        Keymap::Standard,
+    );
     assert_eq!(finished, ["Enter/Esc/q", "?", "Ctrl-C"]);
 
     let help = control_keys(&condition_prompt(true), Keymap::Standard);
@@ -646,10 +633,8 @@ fn tui_render_stays_structured_on_narrow_terminal() {
             id: "grant#1".to_owned(),
             function: "grant_item".to_owned(),
             args: "(map)".to_owned(),
-            input_mode: PromptMode::Insert,
+            interaction: TuiInteractionState::new(PromptMode::Insert),
             input: TextBuffer::default(),
-            command: TextBuffer::default(),
-            show_help: false,
         },
         status: "ack grant#1 with Enter".to_owned(),
         key_hints: KeyHints::Contextual,

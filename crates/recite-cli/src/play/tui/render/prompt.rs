@@ -25,7 +25,7 @@ pub(super) fn render_prompt<'a>(
         TuiPrompt::Finished { .. } => vec![Line::from("")],
         TuiPrompt::Condition {
             query,
-            command,
+            interaction,
             selected,
             ..
         } => {
@@ -33,13 +33,13 @@ pub(super) fn render_prompt<'a>(
                 prompt_header_line(TuiTranscriptKind::Condition, Some(query.as_str()), messages),
                 condition_row(*selected, true, keymap, messages),
                 condition_row(!*selected, false, keymap, messages),
-                command_line(command),
+                command_line(interaction.command()),
             ]
         }
         TuiPrompt::EnumCondition {
             query,
             input,
-            command,
+            interaction,
             ..
         } => {
             vec![
@@ -48,7 +48,11 @@ pub(super) fn render_prompt<'a>(
                     messages.text(MsgId::TuiEnumConditionHint),
                     Style::default().fg(Color::DarkGray),
                 )),
-                input_line(messages.text(MsgId::TuiInputEnumVariant), input, command),
+                input_line(
+                    messages.text(MsgId::TuiInputEnumVariant),
+                    input,
+                    interaction.command(),
+                ),
             ]
         }
         TuiPrompt::Effect {
@@ -57,7 +61,7 @@ pub(super) fn render_prompt<'a>(
             function,
             args,
             input,
-            command,
+            interaction,
             ..
         } => {
             vec![
@@ -66,7 +70,7 @@ pub(super) fn render_prompt<'a>(
                 metadata_line(messages.text(MsgId::TuiMetadataRuntimeEffectId), id),
                 metadata_line(messages.text(MsgId::TuiMetadataFunction), function),
                 metadata_line(messages.text(MsgId::TuiMetadataArgs), args),
-                if command.is_empty() {
+                if interaction.command().is_empty() {
                     Line::from(Span::styled(
                         messages.text(MsgId::TuiAckEnterHint),
                         Style::default()
@@ -74,7 +78,11 @@ pub(super) fn render_prompt<'a>(
                             .add_modifier(Modifier::BOLD),
                     ))
                 } else {
-                    input_line(messages.text(MsgId::TuiInputAck), input, command)
+                    input_line(
+                        messages.text(MsgId::TuiInputAck),
+                        input,
+                        interaction.command(),
+                    )
                 },
             ]
         }
@@ -82,7 +90,7 @@ pub(super) fn render_prompt<'a>(
             line,
             choices,
             selected,
-            command,
+            interaction,
             ..
         } => {
             let mut lines = Vec::new();
@@ -137,7 +145,7 @@ pub(super) fn render_prompt<'a>(
                     Span::styled(suffix, Style::default().fg(Color::DarkGray)),
                 ]));
             }
-            lines.push(command_line(command));
+            lines.push(command_line(interaction.command()));
             lines
         }
     }
@@ -217,21 +225,21 @@ fn condition_row<'a>(
     ])
 }
 
-fn command_line<'a>(command: &'a TextBuffer) -> Line<'a> {
+fn command_line(command: &str) -> Line<'_> {
     if command.is_empty() {
         return Line::from("");
     }
     Line::from(vec![
         Span::styled(":", Style::default().fg(Color::DarkGray)),
-        Span::raw(command.as_str()),
+        Span::raw(command.to_owned()),
     ])
 }
 
-fn input_line<'a>(label: String, input: &'a TextBuffer, command: &'a TextBuffer) -> Line<'a> {
+fn input_line<'a>(label: String, input: &'a TextBuffer, command: &str) -> Line<'a> {
     if !command.is_empty() {
         return Line::from(vec![
             Span::styled(":", Style::default().fg(Color::DarkGray)),
-            Span::raw(command.as_str()),
+            Span::raw(command.to_owned()),
         ]);
     }
     Line::from(vec![

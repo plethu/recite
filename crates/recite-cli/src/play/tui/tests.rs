@@ -1,7 +1,7 @@
 use std::collections::HashMap;
 
 use crate::i18n::{Messages, UiLocale};
-use crate::tui::{Keymap, PromptMode};
+use crate::tui::{Keymap, PromptMode, TuiInteractionState};
 
 use super::interaction::enum_condition_variant;
 use super::*;
@@ -30,9 +30,7 @@ fn condition_prompt_uses_expected_type_specific_state() {
         TuiPrompt::Condition {
             query: "trusts(mira)".to_owned(),
             selected: false,
-            mode: PromptMode::Insert,
-            command: TextBuffer::default(),
-            show_help: false,
+            interaction: TuiInteractionState::new(PromptMode::Insert),
         }
     );
 
@@ -46,10 +44,8 @@ fn condition_prompt_uses_expected_type_specific_state() {
         enumeration,
         TuiPrompt::EnumCondition {
             query: "memory_pressure(hazel, music_shop)".to_owned(),
-            mode: PromptMode::Normal,
+            interaction: TuiInteractionState::new(PromptMode::Normal),
             input: TextBuffer::default(),
-            command: TextBuffer::default(),
-            show_help: false,
         }
     );
 }
