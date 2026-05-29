@@ -48,7 +48,9 @@ pub use compiled::{
     V0_VALUE_TAG_ARRAY, V0_VALUE_TAG_SCALAR, canonical_source_fingerprint,
     decode_compiled_dialogue_messagepack,
 };
-pub use diagnostic::{Diagnostic, DiagnosticCode, DiagnosticSeverity, RelatedSpan};
+pub use diagnostic::{
+    Diagnostic, DiagnosticCategory, DiagnosticCode, DiagnosticSeverity, RelatedSpan,
+};
 pub use error::CoreValueError;
 pub use ids::{BlockId, ChoiceId, EffectId, LineId, LocaleId, SpeakerId};
 pub use project::{

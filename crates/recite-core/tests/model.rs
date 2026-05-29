@@ -52,6 +52,7 @@ fn diagnostics_keep_stable_structured_fields() {
     .with_help("rename one of the duplicate IDs");
 
     assert_eq!(diagnostic.code.as_str(), "RECITE_ID001");
+    assert_eq!(diagnostic.code.category(), DiagnosticCategory::Identifier);
     assert_eq!(diagnostic.code.to_string(), "RECITE_ID001");
     assert_eq!(diagnostic.severity, DiagnosticSeverity::Error);
     assert_eq!(diagnostic.span, primary);

@@ -12,6 +12,20 @@ pub enum DiagnosticSeverity {
     Hint,
 }
 
+/// A stable diagnostic category used by CLI and editor tooling.
+#[derive(Clone, Copy, Debug, Eq, PartialEq, Hash)]
+pub enum DiagnosticCategory {
+    Freshness,
+    Identifier,
+    Markup,
+    Metadata,
+    Parse,
+    Project,
+    Schema,
+    Validation,
+    Unknown,
+}
+
 /// A stable diagnostic code, for example `RECITE_PARSE001`.
 #[derive(Clone, Debug, Eq, PartialEq, Hash)]
 pub struct DiagnosticCode(Cow<'static, str>);
@@ -44,6 +58,11 @@ impl DiagnosticCode {
     #[must_use]
     pub fn as_str(&self) -> &str {
         &self.0
+    }
+
+    #[must_use]
+    pub fn category(&self) -> DiagnosticCategory {
+        diagnostic_category(self.0.as_bytes())
     }
 }
 
@@ -172,6 +191,69 @@ const fn is_namespaced_diagnostic_code_const(value: &str) -> bool {
     }
 
     has_separator && has_prefix && has_code
+}
+
+const fn diagnostic_category(value: &[u8]) -> DiagnosticCategory {
+    if starts_with(value, b"RECITE_ID") {
+        DiagnosticCategory::Identifier
+    } else if starts_with(value, b"RECITE_PARSE") {
+        DiagnosticCategory::Parse
+    } else if starts_with(value, b"RECITE_PROJECT") {
+        DiagnosticCategory::Project
+    } else if starts_with(value, b"RECITE_FRESH") {
+        DiagnosticCategory::Freshness
+    } else if starts_with(value, b"RECITE_SCHEMA") {
+        DiagnosticCategory::Schema
+    } else if starts_with(value, b"RECITE_VALIDATE") {
+        validation_category(value)
+    } else {
+        DiagnosticCategory::Unknown
+    }
+}
+
+const fn validation_category(value: &[u8]) -> DiagnosticCategory {
+    let Some(number) = trailing_three_digit_number(value) else {
+        return DiagnosticCategory::Validation;
+    };
+
+    if number >= 22 && number <= 25 {
+        DiagnosticCategory::Markup
+    } else if number >= 26 && number <= 30 {
+        DiagnosticCategory::Metadata
+    } else {
+        DiagnosticCategory::Validation
+    }
+}
+
+const fn trailing_three_digit_number(value: &[u8]) -> Option<u16> {
+    if value.len() < 3 {
+        return None;
+    }
+
+    let hundreds = value[value.len() - 3];
+    let tens = value[value.len() - 2];
+    let ones = value[value.len() - 1];
+    if !is_digit(hundreds) || !is_digit(tens) || !is_digit(ones) {
+        return None;
+    }
+
+    Some(((hundreds - b'0') as u16 * 100) + ((tens - b'0') as u16 * 10) + (ones - b'0') as u16)
+}
+
+const fn starts_with(value: &[u8], prefix: &[u8]) -> bool {
+    if value.len() < prefix.len() {
+        return false;
+    }
+
+    let mut index = 0;
+    while index < prefix.len() {
+        if value[index] != prefix[index] {
+            return false;
+        }
+        index += 1;
+    }
+
+    true
 }
 
 const fn is_uppercase_letter_or_digit(byte: u8) -> bool {

@@ -1,9 +1,5 @@
 use std::io::Write;
 
-use recite_compiler::{
-    compile_inputs, compile_inputs_with_schema, extract_pot, extract_pot_with_schema,
-};
-
 use crate::args::{Command, CompileArgs, ExtractArgs, RuntimeArgs};
 use crate::diagnostics::{report_diagnostics, report_targeted_diagnostics};
 use crate::dialogue_locale::LoadedDialoguePreview;
@@ -19,6 +15,10 @@ use crate::runtime_fixture::{
     load_runtime_fixture,
 };
 use crate::watch::run_watch_command;
+use recite_compiler::{
+    compile_inputs, compile_inputs_with_schema, extract_pot, extract_pot_with_schema,
+};
+use recite_core::DiagnosticCategory;
 
 pub(crate) fn run_command(
     command: Command,
@@ -39,20 +39,14 @@ pub(crate) fn run_command(
         Command::CheckIds(args) => {
             let diagnostics = validate_inputs(&args.paths, None)?;
             report_targeted_diagnostics(stderr, diagnostics, |diagnostic| {
-                diagnostic.code.as_str().starts_with("RECITE_ID")
+                diagnostic.code.category() == DiagnosticCategory::Identifier
             })
         }
         Command::CheckMarkup(args) => {
             let schema = load_optional_schema(args.schema.as_deref(), stderr)?;
             let diagnostics = validate_inputs(&args.paths, schema.as_ref())?;
             report_targeted_diagnostics(stderr, diagnostics, |diagnostic| {
-                matches!(
-                    diagnostic.code.as_str(),
-                    "RECITE_VALIDATE022"
-                        | "RECITE_VALIDATE023"
-                        | "RECITE_VALIDATE024"
-                        | "RECITE_VALIDATE025"
-                )
+                diagnostic.code.category() == DiagnosticCategory::Markup
             })
         }
         Command::CheckMetadata(args) => {
@@ -64,14 +58,7 @@ pub(crate) fn run_command(
 
             let diagnostics = validate_inputs(&args.paths, schema.schema.as_ref())?;
             report_targeted_diagnostics(stderr, diagnostics, |diagnostic| {
-                matches!(
-                    diagnostic.code.as_str(),
-                    "RECITE_VALIDATE026"
-                        | "RECITE_VALIDATE027"
-                        | "RECITE_VALIDATE028"
-                        | "RECITE_VALIDATE029"
-                        | "RECITE_VALIDATE030"
-                )
+                diagnostic.code.category() == DiagnosticCategory::Metadata
             })
         }
         Command::ValidateProject(args) | Command::CheckFresh(args) => {
