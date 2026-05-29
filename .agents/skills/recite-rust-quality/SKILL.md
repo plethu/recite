@@ -49,6 +49,7 @@ Accept a large file only when it is cohesive and splitting would make the code h
 - Avoid widening public API, `pub(crate)`, or module visibility just to make a local implementation convenient.
 - Keep deterministic ordering explicit with source order or stable sorting where output can be observed.
 - Prefer structured types, enums, and diagnostics over string conventions callers must parse.
+- Build diagnostics through the shared `recite-core` constructor (`Diagnostic::error`) and the per-crate code constants; do not re-create a module-local `diagnostic()`/`*_diagnostic()` helper. Codes are static and namespaced: validate them at compile time (`DiagnosticCode::new_static`), never `.expect()` a code at runtime. Select or group diagnostics by `DiagnosticCategory`, never by matching or duplicating raw code strings across crates.
 
 ## DRY Checks
 
@@ -60,10 +61,11 @@ Accept a large file only when it is cohesive and splitting would make the code h
 ## Rust Practice Checks
 
 - Prefer small private functions and focused modules over long functions with many mode flags.
+- Do not grow a signature with stacked optional parameters or `_with_a_and_b` suffixes. At the third knob, take an options/resolution struct and keep a zero-config entry point (precedents: `LocaleResolution` behind `next_with`/`choose_with`, `DialogueSessionOptions` behind `start_scene_with_options`).
 - Keep ownership clear; avoid needless clones, but do not contort simple code to avoid cheap clones on small values.
 - Prefer typed errors/results and explicit variants for observable failure modes.
 - Preserve source spans, diagnostic codes, stable IDs, and serialization compatibility when touching those surfaces.
-- Add dependencies only when the repo does not already have a small, clear local or standard-library path.
+- Add a dependency only when it (1) removes error-prone or voluminous local code, (2) does not weaken a product invariant — determinism, stable IDs/codes, serialization compatibility, MIT licensing — and (3) covers a boundary the project does not want to own. A crate being well-regarded or popular is not itself a reason; reject it when std or a small local path already suffices. Worked judgment: `thiserror` earns its place on the library error enums (it deletes hand-rolled `Display`/`Error`/`From`) but not on `CliError`, whose rendering the Fluent i18n table owns — and never for output the project keeps deliberately minimal and stable, such as the CLI diagnostic renderer.
 
 ## Handoff
 
