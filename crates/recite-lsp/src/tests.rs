@@ -37,6 +37,24 @@ mod lifecycle {
     }
 
     #[test]
+    fn initialize_defaults_to_utf16_when_client_lists_only_utf8() {
+        let (harness, result) = Harness::start_with_result(json!({
+            "capabilities": {
+                "general": {
+                    "positionEncodings": ["utf-8"]
+                }
+            }
+        }));
+
+        assert_eq!(
+            result.capabilities.position_encoding,
+            Some(PositionEncodingKind::UTF16)
+        );
+
+        harness.finish();
+    }
+
+    #[test]
     fn did_save_is_an_explicit_no_op() {
         let harness = Harness::start();
         let uri = uri("file:///workspace/dialogue/save.recite");
@@ -55,6 +73,16 @@ mod lifecycle {
     fn shutdown_request_and_exit_notification_terminate_loop() {
         let harness = Harness::start();
         harness.finish();
+    }
+
+    #[test]
+    fn exit_before_shutdown_terminates_with_error() {
+        let harness = Harness::start();
+
+        match harness.exit_without_shutdown() {
+            Err(crate::server::ServerError::ExitWithoutShutdown) => {}
+            other => panic!("unexpected server result after early exit: {other:?}"),
+        }
     }
 }
 
@@ -195,6 +223,17 @@ mod sync {
         let published = harness.recv_publish_diagnostics();
         assert_eq!(published.version, Some(4));
         assert!(published.diagnostics.is_empty());
+
+        harness.finish();
+    }
+
+    #[test]
+    fn change_for_unopened_document_is_ignored() {
+        let harness = Harness::start();
+        let uri = uri("file:///workspace/dialogue/unopened.recite");
+
+        harness.did_change(uri, 1, vec![full_change("oops\n:: tavern\n")]);
+        harness.assert_no_message();
 
         harness.finish();
     }

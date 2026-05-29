@@ -15,11 +15,14 @@ use crate::diagnostics::{clear_diagnostics, publish_diagnostics};
 use crate::documents::OpenDocumentStore;
 
 #[derive(Debug, thiserror::Error)]
+#[non_exhaustive]
 pub enum ServerError {
     #[error("LSP protocol error: {0}")]
     Protocol(#[from] lsp_server::ProtocolError),
     #[error("LSP transport disconnected")]
     Disconnected,
+    #[error("client exited before shutdown")]
+    ExitWithoutShutdown,
     #[error("failed to send LSP message")]
     Send,
     #[error("failed to join LSP stdio threads: {0}")]
@@ -72,6 +75,8 @@ fn initialize_result(params: &InitializeParams) -> InitializeResult {
 }
 
 fn select_position_encoding(_params: &InitializeParams) -> PositionEncodingKind {
+    // UTF-16 is mandatory in LSP 3.17. If the client omits it from the
+    // advertised list, the server may still assume support.
     PositionEncodingKind::UTF16
 }
 
@@ -107,7 +112,11 @@ impl Server {
             }
         }
 
-        Ok(())
+        if self.shutdown_requested {
+            Ok(())
+        } else {
+            Err(ServerError::Disconnected)
+        }
     }
 
     fn handle_request(&mut self, request: Request) -> Result<bool, ServerError> {
@@ -130,7 +139,13 @@ impl Server {
     fn handle_notification(&mut self, notification: Notification) -> Result<bool, ServerError> {
         match notification.method.as_str() {
             Initialized::METHOD | DidSaveTextDocument::METHOD => {}
-            Exit::METHOD => return Ok(self.shutdown_requested),
+            Exit::METHOD => {
+                if self.shutdown_requested {
+                    return Ok(true);
+                }
+
+                return Err(ServerError::ExitWithoutShutdown);
+            }
             DidOpenTextDocument::METHOD => self.handle_did_open(notification)?,
             DidChangeTextDocument::METHOD => self.handle_did_change(notification)?,
             DidCloseTextDocument::METHOD => self.handle_did_close(notification)?,

@@ -1,4 +1,5 @@
 use std::thread::{self, JoinHandle};
+use std::time::Duration;
 
 use lsp_server::{Connection, Message, Notification, Request, RequestId, Response};
 use lsp_types::notification::{
@@ -64,6 +65,15 @@ impl Harness {
         }
     }
 
+    pub(super) fn assert_no_message(&self) {
+        for _ in 0..10 {
+            if let Ok(message) = self.client.receiver.try_recv() {
+                panic!("expected no server message, got {message:?}");
+            }
+            thread::sleep(Duration::from_millis(5));
+        }
+    }
+
     pub(super) fn did_open(&self, uri: Uri, version: i32, text: &str) {
         self.send_notification(
             DidOpenTextDocument::METHOD,
@@ -117,6 +127,14 @@ impl Harness {
         match this.server.join() {
             Ok(Ok(())) => {}
             Ok(Err(error)) => panic!("server returned error: {error}"),
+            Err(_) => panic!("server thread panicked"),
+        }
+    }
+
+    pub(super) fn exit_without_shutdown(self) -> Result<(), ServerError> {
+        self.send_notification(Exit::METHOD, ());
+        match self.server.join() {
+            Ok(result) => result,
             Err(_) => panic!("server thread panicked"),
         }
     }

@@ -42,6 +42,10 @@ impl OpenDocumentStore {
         version: i32,
         changes: Vec<TextDocumentContentChangeEvent>,
     ) -> Option<&OpenDocument> {
+        if !self.documents.contains_key(uri) {
+            return None;
+        }
+
         if self.is_stale(uri, version) {
             return self.documents.get(uri);
         }
