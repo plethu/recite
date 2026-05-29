@@ -84,6 +84,33 @@ fn diagnostic_codes_reject_empty_or_non_namespaced_values() {
 }
 
 #[test]
+fn diagnostic_codes_classify_stable_categories() {
+    let cases = [
+        ("RECITE_ID001", DiagnosticCategory::Identifier),
+        ("RECITE_PARSE001", DiagnosticCategory::Parse),
+        ("RECITE_PROJECT001", DiagnosticCategory::Project),
+        ("RECITE_FRESH001", DiagnosticCategory::Freshness),
+        ("RECITE_SCHEMA001", DiagnosticCategory::Schema),
+        ("RECITE_VALIDATE021", DiagnosticCategory::Validation),
+        ("RECITE_VALIDATE022", DiagnosticCategory::Markup),
+        ("RECITE_VALIDATE025", DiagnosticCategory::Markup),
+        ("RECITE_VALIDATE026", DiagnosticCategory::Metadata),
+        ("RECITE_VALIDATE030", DiagnosticCategory::Metadata),
+        ("RECITE_VALIDATE031", DiagnosticCategory::Validation),
+        ("RECITE_VALIDATEABC", DiagnosticCategory::Validation),
+        ("RECITE_OTHER001", DiagnosticCategory::Unknown),
+    ];
+
+    for (code, category) in cases {
+        let static_code = DiagnosticCode::new_static(code);
+        let owned_code = DiagnosticCode::new(code).expect("valid diagnostic code");
+
+        assert_eq!(static_code.category(), category, "{code}");
+        assert_eq!(owned_code.category(), category, "{code}");
+    }
+}
+
+#[test]
 fn id_wrappers_are_explicit_and_display_their_inner_value() {
     let line_id = LineId::new("tavern_intro_001").expect("valid line ID");
     let same_line_id = LineId::try_from("tavern_intro_001").expect("valid line ID");
