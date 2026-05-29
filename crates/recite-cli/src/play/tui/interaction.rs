@@ -248,6 +248,55 @@ impl<B: Backend> TuiPlayUi<'_, B> {
         }
     }
 
+    pub(super) fn read_enum_condition_variant(&mut self) -> Result<String, CliError> {
+        loop {
+            let mode = prompt_mode(&self.state.prompt);
+            let intent = self.read_intent(mode)?;
+            match self.handle_global_prompt_intent(mode, intent)? {
+                PromptIntentStatus::Quit => return Err(CliError::PlayInterrupted),
+                PromptIntentStatus::Consumed => continue,
+                PromptIntentStatus::Continue => {}
+            }
+            match intent {
+                TuiIntent::Submit => {
+                    let input = prompt_input(&self.state.prompt);
+                    match enum_condition_variant(input, &self.messages) {
+                        Ok(value) => return Ok(value),
+                        Err(CliError::PlayInvalidInput(message)) => {
+                            self.state.status = self
+                                .messages
+                                .format(MsgId::PlayInvalidInput, [("message", message)]);
+                            continue;
+                        }
+                        Err(error) => return Err(error),
+                    }
+                }
+                TuiIntent::Cancel
+                    if self.settings.keymap == Keymap::Vim && mode == PromptMode::Insert =>
+                {
+                    set_prompt_mode(&mut self.state.prompt, PromptMode::Normal);
+                    self.state.status.clear();
+                }
+                TuiIntent::StartInsert => {
+                    set_prompt_mode(&mut self.state.prompt, PromptMode::Insert);
+                    self.state.status =
+                        prompt_label(self.messages.text(MsgId::TuiInputEnumVariant));
+                }
+                intent => {
+                    mutate_prompt_input(&mut self.state.prompt, intent);
+                    let input = prompt_input(&self.state.prompt);
+                    if input.is_empty() {
+                        self.state.status.clear();
+                    } else {
+                        self.state.status = self
+                            .messages
+                            .format(MsgId::TuiEnumVariantInput, [("input", input.to_owned())]);
+                    }
+                }
+            }
+        }
+    }
+
     pub(super) fn read_effect_acknowledgement(&mut self) -> Result<(), CliError> {
         loop {
             let mode = prompt_mode(&self.state.prompt);
@@ -272,6 +321,19 @@ impl<B: Backend> TuiPlayUi<'_, B> {
             }
         }
     }
+}
+
+pub(super) fn enum_condition_variant(
+    input: &str,
+    messages: &crate::i18n::Messages,
+) -> Result<String, CliError> {
+    let value = input.trim().to_owned();
+    if value.is_empty() {
+        return Err(CliError::PlayInvalidInput(
+            messages.text(MsgId::PlayErrorEnterEnumVariant),
+        ));
+    }
+    Ok(value)
 }
 
 #[derive(Clone, Copy, Debug, Eq, PartialEq)]

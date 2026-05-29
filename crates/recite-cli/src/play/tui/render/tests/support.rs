@@ -61,6 +61,16 @@ pub(super) fn condition_prompt(show_help: bool) -> TuiPrompt {
     }
 }
 
+pub(super) fn enum_condition_prompt(show_help: bool) -> TuiPrompt {
+    TuiPrompt::EnumCondition {
+        query: "memory_pressure(hazel, music_shop)".to_owned(),
+        mode: PromptMode::Insert,
+        input: TextBuffer::default(),
+        command: TextBuffer::default(),
+        show_help,
+    }
+}
+
 pub(super) fn effect_prompt(show_help: bool) -> TuiPrompt {
     TuiPrompt::Effect {
         mode: "blocking".to_owned(),

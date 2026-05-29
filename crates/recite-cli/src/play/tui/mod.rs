@@ -16,7 +16,8 @@ use crate::error::CliError;
 use crate::i18n::{Messages, MsgId};
 use crate::runtime_format::format_effect_arguments;
 use crate::tui::{
-    PromptMode, TextBuffer, TuiIntent, TuiSettings, enter_terminal, map_key, restore_terminal,
+    Keymap, PromptMode, TextBuffer, TuiIntent, TuiSettings, enter_terminal, map_key,
+    restore_terminal,
 };
 
 use super::driver::{ChoiceSelection, DeferredQueueStatus, PlayDriver, PlayUiAdapter};
@@ -122,6 +123,30 @@ fn cached_condition_answer(cache: &HashMap<String, bool>, query: &str) -> bool {
     cache.get(query).copied().unwrap_or(true)
 }
 
+fn condition_prompt(
+    expected_type: ConditionExpectedType,
+    query: String,
+    selected_bool_answer: bool,
+    keymap: Keymap,
+) -> TuiPrompt {
+    match expected_type {
+        ConditionExpectedType::Bool => TuiPrompt::Condition {
+            query,
+            selected: selected_bool_answer,
+            mode: initial_prompt_mode(keymap),
+            command: TextBuffer::default(),
+            show_help: false,
+        },
+        ConditionExpectedType::Enum => TuiPrompt::EnumCondition {
+            query,
+            mode: initial_prompt_mode(keymap),
+            input: TextBuffer::default(),
+            command: TextBuffer::default(),
+            show_help: false,
+        },
+    }
+}
+
 impl<B: Backend> PlayUiAdapter for TuiPlayUi<'_, B> {
     fn message(&self, id: MsgId, args: impl IntoIterator<Item = (&'static str, String)>) -> String {
         self.messages.format(id, args)
@@ -198,42 +223,30 @@ impl<B: Backend> PlayUiAdapter for TuiPlayUi<'_, B> {
     fn condition(&mut self, query: ConditionQuery<'_>) -> Result<ConditionValue, CliError> {
         let expected_type = query.expected_type();
         let query = condition_query_text(query);
-        if matches!(expected_type, ConditionExpectedType::Enum) {
-            self.state.prompt = TuiPrompt::Choice {
-                line: None,
-                choices: Vec::new(),
-                selected: 0,
-                mode: initial_prompt_mode(self.settings.keymap),
-                input: TextBuffer::default(),
-                command: TextBuffer::default(),
-                show_help: false,
-            };
-            self.state.status = query.clone();
-            let value = match self.read_choice_selection()? {
-                ChoiceSelection::Id(value) => value,
-                ChoiceSelection::Index(value) => value.to_string(),
-            };
-            self.push(TuiTranscriptKind::Condition, Some(query), value.clone())?;
-            return Ok(ConditionValue::EnumVariant(value));
+        match expected_type {
+            ConditionExpectedType::Enum => {
+                self.state.prompt =
+                    condition_prompt(expected_type, query.clone(), true, self.settings.keymap);
+                self.state.status.clear();
+                let value = self.read_enum_condition_variant()?;
+                self.push(TuiTranscriptKind::Condition, Some(query), value.clone())?;
+                Ok(ConditionValue::EnumVariant(value))
+            }
+            ConditionExpectedType::Bool => {
+                let selected = cached_condition_answer(&self.condition_answers, &query);
+                self.state.prompt =
+                    condition_prompt(expected_type, query.clone(), selected, self.settings.keymap);
+                self.state.status.clear();
+                let answer = self.read_condition_selection()?;
+                self.condition_answers.insert(query.clone(), answer);
+                self.push(
+                    TuiTranscriptKind::Condition,
+                    Some(query),
+                    answer.to_string(),
+                )?;
+                Ok(ConditionValue::Bool(answer))
+            }
         }
-
-        let selected = cached_condition_answer(&self.condition_answers, &query);
-        self.state.prompt = TuiPrompt::Condition {
-            query: query.clone(),
-            selected,
-            mode: initial_prompt_mode(self.settings.keymap),
-            command: TextBuffer::default(),
-            show_help: false,
-        };
-        self.state.status.clear();
-        let answer = self.read_condition_selection()?;
-        self.condition_answers.insert(query.clone(), answer);
-        self.push(
-            TuiTranscriptKind::Condition,
-            Some(query),
-            answer.to_string(),
-        )?;
-        Ok(ConditionValue::Bool(answer))
     }
 
     fn effect(&mut self, effect: &DialogueEffectRequest) -> Result<(), CliError> {

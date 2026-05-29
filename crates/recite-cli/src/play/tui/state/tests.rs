@@ -110,6 +110,13 @@ fn help_mode_closes_for_choice_condition_effect_and_finished_prompts() {
             command: TextBuffer::default(),
             show_help: true,
         },
+        TuiPrompt::EnumCondition {
+            query: "memory_pressure(hazel, music_shop)".to_owned(),
+            mode: PromptMode::Insert,
+            input: TextBuffer::default(),
+            command: TextBuffer::default(),
+            show_help: true,
+        },
         TuiPrompt::Effect {
             mode: "blocking".to_owned(),
             id: "effect#1".to_owned(),
@@ -145,6 +152,24 @@ fn condition_selection_moves_and_sets_answer() {
     assert_eq!(condition_selection(&prompt), Some(false));
     set_condition_selection(&mut prompt, true);
     assert_eq!(condition_selection(&prompt), Some(true));
+}
+
+#[test]
+fn enum_condition_prompt_uses_text_input_and_not_boolean_selection() {
+    let mut prompt = TuiPrompt::EnumCondition {
+        query: "memory_pressure(hazel, music_shop)".to_owned(),
+        mode: PromptMode::Normal,
+        input: TextBuffer::default(),
+        command: TextBuffer::default(),
+        show_help: false,
+    };
+
+    assert_eq!(condition_selection(&prompt), None);
+    mutate_prompt_input(&mut prompt, TuiIntent::Text('h'));
+    mutate_prompt_input(&mut prompt, TuiIntent::Text('i'));
+
+    assert_eq!(prompt_mode(&prompt), PromptMode::Insert);
+    assert_eq!(prompt_input(&prompt), "hi");
 }
 
 #[test]

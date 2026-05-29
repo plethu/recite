@@ -36,6 +36,21 @@ pub(super) fn render_prompt<'a>(
                 command_line(command),
             ]
         }
+        TuiPrompt::EnumCondition {
+            query,
+            input,
+            command,
+            ..
+        } => {
+            vec![
+                prompt_header_line(TuiTranscriptKind::Condition, Some(query.as_str()), messages),
+                Line::from(Span::styled(
+                    messages.text(MsgId::TuiEnumConditionHint),
+                    Style::default().fg(Color::DarkGray),
+                )),
+                input_line(messages.text(MsgId::TuiInputEnumVariant), input, command),
+            ]
+        }
         TuiPrompt::Effect {
             mode,
             id,

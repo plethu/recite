@@ -318,6 +318,41 @@ fn tui_render_condition_prompt_uses_selectable_boolean_rows() {
 }
 
 #[test]
+fn tui_render_enum_condition_prompt_shows_query_and_variant_input() {
+    let mut input = TextBuffer::default();
+    for ch in "high".chars() {
+        input.insert(ch);
+    }
+    let state = TuiState {
+        asset: "asset".to_owned(),
+        block: "start".to_owned(),
+        transcript: Vec::new(),
+        prompt: TuiPrompt::EnumCondition {
+            query: "memory_pressure(hazel, music_shop)".to_owned(),
+            mode: PromptMode::Insert,
+            input,
+            command: TextBuffer::default(),
+            show_help: false,
+        },
+        status: "enum variant> high".to_owned(),
+        key_hints: KeyHints::Contextual,
+        keymap: Keymap::Standard,
+        ..TuiState::default()
+    };
+    let content = render_tui_content(&state, 80, 16);
+
+    assert!(content.contains("condition memory_pressure(hazel, music_shop)"));
+    assert!(content.contains("Type an enum variant and press Enter."));
+    assert!(content.contains("variant high"));
+    assert!(content.contains("enum variant> high"));
+    assert!(content.contains("variant type"));
+    assert!(!content.contains("prompt"));
+    assert!(!content.contains("(y)es"));
+    assert!(!content.contains("(n)o"));
+    assert!(!content.contains("ID/index"));
+}
+
+#[test]
 fn active_prompt_labels_reuse_transcript_label_styles() {
     let messages = Messages::load(&crate::i18n::UiLocale::default()).expect("messages");
     let condition = transcript::prompt_header_line(
@@ -577,6 +612,12 @@ fn shared_control_filtering_matches_prompt_and_keymap() {
         ["Up/Down", "Enter", "?", "Ctrl-C", ":q", ":"]
     );
 
+    let enum_condition_standard = control_keys(&enum_condition_prompt(false), Keymap::Standard);
+    assert_eq!(enum_condition_standard, ["Enter", "variant", "?", "Ctrl-C"]);
+
+    let enum_condition_vim = control_keys(&enum_condition_prompt(false), Keymap::Vim);
+    assert_eq!(enum_condition_vim, ["Enter", "i", "?", "Ctrl-C", ":q", ":"]);
+
     let effect = control_keys(&effect_prompt(false), Keymap::Standard);
     assert_eq!(effect, ["Enter", "?", "Ctrl-C"]);
 
@@ -585,6 +626,9 @@ fn shared_control_filtering_matches_prompt_and_keymap() {
 
     let help = control_keys(&condition_prompt(true), Keymap::Standard);
     assert_eq!(help, ["? / Esc", "Ctrl-C", "Up/Down", "y / n", "Enter"]);
+
+    let enum_help = control_keys(&enum_condition_prompt(true), Keymap::Standard);
+    assert_eq!(enum_help, ["? / Esc", "Ctrl-C", "Enter", "variant"]);
 }
 
 #[test]
