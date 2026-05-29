@@ -1,3 +1,5 @@
+#![cfg(test)]
+
 use recite_core::{
     BlockIndex, BlockLookupEntry, BlockLookupTable, ChoiceId, ChoiceRange, CompiledConditionCall,
     CompiledConditionExpression, CompiledDialogue, CompiledDivertTarget, CompiledMatchArm,

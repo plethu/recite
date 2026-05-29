@@ -1,4 +1,5 @@
 #![allow(dead_code)]
+#![cfg(test)]
 
 use recite_core::{
     BLAKE3_DIGEST_LEN, COMPILED_ASSET_FORMAT_VERSION_V0, COMPILER_COMPATIBILITY_VERSION_V0,

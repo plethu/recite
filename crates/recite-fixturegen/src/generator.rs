@@ -1,3 +1,6 @@
+// Fixturegen is a deterministic generator/tooling crate; string-write panics indicate logic bugs.
+#![allow(clippy::expect_used)]
+
 use std::collections::BTreeMap;
 use std::fmt::Write as _;
 use std::fs;

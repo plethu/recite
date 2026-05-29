@@ -20,6 +20,12 @@ readme = "README.md"
 [workspace.lints.rust]
 unsafe_code = "forbid"
 
+[workspace.lints.clippy]
+unwrap_used = "warn"
+expect_used = "warn"
+todo = "warn"
+unimplemented = "warn"
+
 [workspace.dependencies]
 recite-core = { version = "0.0.1", path = "crates/recite-core" }
 recite-parser = { version = "0.0.1", path = "crates/recite-parser" }

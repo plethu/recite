@@ -29,6 +29,8 @@ pub(super) fn collect_blocks<'a>(
     blocks
 }
 
+// Invariant: 1:1 is a valid fallback source position for empty source-file sets.
+#[allow(clippy::expect_used)]
 pub(super) fn first_source_span(source_files: &[&SourceFile]) -> SourceSpan {
     source_files
         .iter()

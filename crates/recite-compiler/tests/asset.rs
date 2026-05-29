@@ -1,3 +1,5 @@
+#![cfg(test)]
+
 use recite_compiler::{
     CompileInput, CompileOptions, CompiledAssetOutput, compile_inputs, compile_inputs_with_schema,
 };

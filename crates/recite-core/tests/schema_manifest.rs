@@ -1,3 +1,5 @@
+#![cfg(test)]
+
 #[path = "schema_manifest/mod.rs"]
 mod manifest_tests;
 

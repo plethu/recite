@@ -1,3 +1,5 @@
+#![cfg(test)]
+
 use std::cell::Cell;
 use std::collections::{BTreeMap, BTreeSet};
 use std::fs;

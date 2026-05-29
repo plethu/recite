@@ -55,6 +55,8 @@ fn error_messages_for_command(command: &Command) -> Messages {
     }
 }
 
+// Invariant: the embedded default UI catalog is bundled with the CLI binary.
+#[allow(clippy::expect_used)]
 fn default_messages() -> Messages {
     Messages::load(&UiLocale::default()).expect("embedded default UI catalog must load")
 }

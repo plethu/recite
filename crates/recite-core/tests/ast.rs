@@ -1,3 +1,5 @@
+#![cfg(test)]
+
 use recite_core::*;
 
 #[test]

@@ -20,43 +20,43 @@ impl<'a> Parser<'a> {
 
     pub(super) fn parse_or(&mut self) -> Result<ConditionExpression, ParseError> {
         let first = self.parse_and()?;
+        let first_span = first.span().clone();
+        let mut last_span = first_span.clone();
         let mut expressions = vec![first];
 
         while self.at(TokenKindDiscriminant::Or) {
             self.bump();
-            expressions.push(self.parse_and()?);
+            let expression = self.parse_and()?;
+            last_span = expression.span().clone();
+            expressions.push(expression);
         }
 
         if expressions.len() == 1 {
             return Ok(expressions.remove(0));
         }
 
-        let span = join_spans(
-            self.path,
-            expressions.first().unwrap().span(),
-            expressions.last().unwrap().span(),
-        );
+        let span = join_spans(self.path, &first_span, &last_span);
         Ok(ConditionExpression::or(expressions, span))
     }
 
     fn parse_and(&mut self) -> Result<ConditionExpression, ParseError> {
         let first = self.parse_unary()?;
+        let first_span = first.span().clone();
+        let mut last_span = first_span.clone();
         let mut expressions = vec![first];
 
         while self.at(TokenKindDiscriminant::And) {
             self.bump();
-            expressions.push(self.parse_unary()?);
+            let expression = self.parse_unary()?;
+            last_span = expression.span().clone();
+            expressions.push(expression);
         }
 
         if expressions.len() == 1 {
             return Ok(expressions.remove(0));
         }
 
-        let span = join_spans(
-            self.path,
-            expressions.first().unwrap().span(),
-            expressions.last().unwrap().span(),
-        );
+        let span = join_spans(self.path, &first_span, &last_span);
         Ok(ConditionExpression::and(expressions, span))
     }
 

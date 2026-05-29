@@ -53,9 +53,12 @@ pub(crate) fn run_watch_command(args: WatchArgs, stderr: &mut dyn Write) -> Resu
         let event = receiver.recv().map_err(|_| CliError::Watch {
             message: "watcher event channel closed".to_owned(),
         })?;
-        let Ok(event) = event else {
-            writeln!(stderr, "watch: watcher event error: {}", event.unwrap_err())?;
-            continue;
+        let event = match event {
+            Ok(event) => event,
+            Err(error) => {
+                writeln!(stderr, "watch: watcher event error: {error}")?;
+                continue;
+            }
         };
 
         if !state.is_relevant_event(&event) {

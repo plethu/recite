@@ -54,6 +54,8 @@ pub(crate) fn format_effect_arguments(arguments: &[DialogueEffectArgument]) -> S
     format!("({arguments})")
 }
 
+// Invariant: serde_json string serialization has no data-dependent failure path.
+#[allow(clippy::expect_used)]
 pub(crate) fn format_runtime_argument(argument: RuntimeDisplayArgument<'_>) -> String {
     match argument {
         RuntimeDisplayArgument::Identifier(value) => value.to_owned(),

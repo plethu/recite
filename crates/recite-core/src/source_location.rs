@@ -66,6 +66,8 @@ pub(crate) fn source_position(line: usize, column: usize) -> Option<SourcePositi
     SourcePosition::new(line, column).ok()
 }
 
+// Invariant: computed source positions start at 1:1 and only increase from there.
+#[allow(clippy::expect_used)]
 pub(crate) fn position_for_byte_offset(source: &str, offset: usize) -> SourcePosition {
     let mut line = 1usize;
     let mut column = 1usize;
@@ -84,6 +86,8 @@ pub(crate) fn position_for_byte_offset(source: &str, offset: usize) -> SourcePos
     source_position(line, column).expect("line and column start at one")
 }
 
+// Invariant: 1:1 is the canonical valid source start position.
+#[allow(clippy::expect_used)]
 pub(crate) fn point_one() -> SourcePosition {
     SourcePosition::new(1, 1).expect("1-based position is valid")
 }

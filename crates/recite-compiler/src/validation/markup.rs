@@ -160,6 +160,8 @@ fn span_for_offset(source_text: &SourceText, offset: usize, len: usize) -> Sourc
     SourceSpan::new(source_text.span.file.clone(), start, end)
 }
 
+// Invariant: offsets are within source text whose span starts at a valid source position.
+#[allow(clippy::expect_used)]
 fn position_for_offset(source_text: &SourceText, offset: usize) -> SourcePosition {
     let mut line = source_text.span.start.line();
     let mut column = source_text.span.start.column();

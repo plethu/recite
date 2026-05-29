@@ -1,3 +1,5 @@
+#![cfg(test)]
+
 use recite_compiler::{ValidationReport, validate_source_files, validate_source_files_with_schema};
 use recite_core::{
     Block, BlockId, Choice, ChoiceId, ChoiceTarget, Diagnostic, DivertTarget, Line, LineId,

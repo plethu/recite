@@ -1,3 +1,5 @@
+#![cfg(test)]
+
 use recite_core::{
     BLAKE3_DIGEST_LEN, BlockId, BlockIndex, BlockLookupEntry, BlockLookupTable,
     COMPILED_ASSET_FORMAT_VERSION_V0, COMPILER_COMPATIBILITY_VERSION_V0, ChoiceId, ChoiceIndex,

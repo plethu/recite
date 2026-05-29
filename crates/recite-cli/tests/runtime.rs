@@ -1,3 +1,5 @@
+#![cfg(test)]
+
 use tempfile::TempDir;
 
 mod support;

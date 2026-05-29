@@ -34,9 +34,9 @@ pub(super) fn build_once(
         state.schema_path = None;
         return Ok(BuildStatus::Diagnostics);
     }
-    let manifest = report
-        .manifest
-        .expect("manifest is present without diagnostics");
+    let Some(manifest) = report.manifest else {
+        return Ok(BuildStatus::Diagnostics);
+    };
 
     state.schema_path = project_schema_path(&state.project_root, &manifest);
     let loaded_schema = load_project_schema(state.schema_path.as_deref())?;

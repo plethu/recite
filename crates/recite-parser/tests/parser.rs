@@ -1,3 +1,5 @@
+#![cfg(test)]
+
 use recite_core::{
     Argument, Block, Choice, ChoiceEcho, ConditionExpression, DivertTarget, EffectMode, IfBranch,
     Line, MatchBranch, MatchPattern, ScalarValue, SpeakerId, Statement, StatementKind, Value,

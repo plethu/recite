@@ -1,3 +1,5 @@
+#![cfg(test)]
+
 use recite_core::{
     COMPILED_ASSET_FORMAT_VERSION_V0, COMPILER_COMPATIBILITY_VERSION_V0, CompiledAssetDecodeError,
     decode_compiled_dialogue_messagepack,

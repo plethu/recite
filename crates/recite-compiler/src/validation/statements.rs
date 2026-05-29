@@ -78,7 +78,7 @@ impl<'a> Validator<'a> {
 
         if let Some(first_span) = self.localisable_ids.get(id.as_str()) {
             self.diagnostics
-                .push(diagnostics::duplicate_line_id(line, first_span.clone()));
+                .push(diagnostics::duplicate_line_id(line, id, first_span.clone()));
         } else {
             self.localisable_ids.insert(id.as_str(), line.span.clone());
         }
@@ -94,8 +94,11 @@ impl<'a> Validator<'a> {
 
         if let Some(id) = &choice.id {
             if let Some(first_span) = self.localisable_ids.get(id.as_str()) {
-                self.diagnostics
-                    .push(diagnostics::duplicate_choice_id(choice, first_span.clone()));
+                self.diagnostics.push(diagnostics::duplicate_choice_id(
+                    choice,
+                    id,
+                    first_span.clone(),
+                ));
             } else {
                 self.localisable_ids
                     .insert(id.as_str(), choice.span.clone());

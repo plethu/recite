@@ -70,7 +70,7 @@ impl Lowerer<'_, '_> {
         let trimmed = line.trimmed_content();
         let text = trimmed
             .strip_prefix(StatementMarker::Comment.text())
-            .expect("comment lowering only receives comment lines")
+            .unwrap_or(trimmed)
             .trim_start_matches([' ', '\t']);
 
         Comment::new(text, span_for_line(self.path, line.number, indent + 1))

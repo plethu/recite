@@ -19,6 +19,8 @@ pub(crate) fn parse(args: impl IntoIterator<Item = OsString>) -> Result<Cli, Err
     Cli::from_arg_matches(&matches).map_err(|error| error.format(&mut command))
 }
 
+// Invariant: the embedded default UI catalog is bundled with the CLI binary.
+#[allow(clippy::expect_used)]
 fn help_messages() -> Messages {
     Messages::load(&TuiSettings::help_locale())
         .or_else(|_| Messages::load(&UiLocale::default()))
@@ -234,6 +236,8 @@ fn version_arg(messages: &Messages) -> Arg {
         .help_heading(messages.text(MsgId::CliHelpOptionsHeading))
 }
 
+// Invariant: the embedded default UI catalog is bundled with the CLI binary.
+#[allow(clippy::expect_used)]
 fn default_messages() -> Messages {
     Messages::load(&UiLocale::default()).expect("embedded default UI catalog must load")
 }

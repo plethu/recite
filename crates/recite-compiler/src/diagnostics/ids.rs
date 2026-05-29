@@ -1,4 +1,6 @@
-use recite_core::{Choice, Diagnostic, DiagnosticCode, Line, RelatedSpan, SourceSpan};
+use recite_core::{
+    Choice, ChoiceId, Diagnostic, DiagnosticCode, Line, LineId, RelatedSpan, SourceSpan,
+};
 
 const MISSING_LINE_ID: DiagnosticCode = DiagnosticCode::new_static("RECITE_ID001");
 const MISSING_CHOICE_ID: DiagnosticCode = DiagnosticCode::new_static("RECITE_ID002");
@@ -23,8 +25,7 @@ pub(crate) fn missing_choice_id(choice: &Choice) -> Diagnostic {
     .with_help("add a stable author-visible ID to the choice header")
 }
 
-pub(crate) fn duplicate_line_id(line: &Line, first_span: SourceSpan) -> Diagnostic {
-    let id = line.id.as_ref().expect("duplicate line IDs have an ID");
+pub(crate) fn duplicate_line_id(line: &Line, id: &LineId, first_span: SourceSpan) -> Diagnostic {
     Diagnostic::error(
         DUPLICATE_LINE_ID,
         format!("duplicate localisable id `{id}` on line"),
@@ -34,8 +35,11 @@ pub(crate) fn duplicate_line_id(line: &Line, first_span: SourceSpan) -> Diagnost
     .with_help("rename one of the duplicate localisable IDs")
 }
 
-pub(crate) fn duplicate_choice_id(choice: &Choice, first_span: SourceSpan) -> Diagnostic {
-    let id = choice.id.as_ref().expect("duplicate choice IDs have an ID");
+pub(crate) fn duplicate_choice_id(
+    choice: &Choice,
+    id: &ChoiceId,
+    first_span: SourceSpan,
+) -> Diagnostic {
     Diagnostic::error(
         DUPLICATE_CHOICE_ID,
         format!("duplicate localisable id `{id}` on choice"),

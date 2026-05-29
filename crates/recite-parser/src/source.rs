@@ -86,6 +86,8 @@ pub(crate) fn indent_len(content: &str) -> usize {
     content.len() - content.trim_start_matches([' ', '\t']).len()
 }
 
+// Invariant: parser line numbers are 1-based and columns are clamped to non-zero u32 values.
+#[allow(clippy::expect_used)]
 pub(crate) fn span_for_line(path: &str, line: u32, column: usize) -> SourceSpan {
     SourceSpan::point(
         path,
@@ -94,6 +96,8 @@ pub(crate) fn span_for_line(path: &str, line: u32, column: usize) -> SourceSpan 
     )
 }
 
+// Invariant: parser line numbers are 1-based and columns are clamped to non-zero u32 values.
+#[allow(clippy::expect_used)]
 pub(crate) fn span_for_text(path: &str, line: u32, column: usize, text: &str) -> SourceSpan {
     if text.is_empty() {
         return span_for_line(path, line, column);

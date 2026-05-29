@@ -1,3 +1,5 @@
+#![cfg(test)]
+
 use recite_core::{ChoiceId, CompiledDialogue, EffectId, LocaleId};
 use recite_runtime::{
     DialogueDeferredEffectSnapshot, DialogueEffectArgument, DialogueEffectRequest, DialogueError,
