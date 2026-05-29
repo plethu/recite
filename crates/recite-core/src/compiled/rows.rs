@@ -26,6 +26,15 @@ pub struct CompiledDialogue {
     pub choice_lookup: ChoiceLookupTable,
 }
 
+/// A compiled asset is a read-only program the runtime borrows per call, so it
+/// must stay shareable across threads (e.g. wrapped in `Arc` behind a worker
+/// pool). This guard fails to compile if a future field reintroduces interior
+/// mutability or any other non-`Send`/`Sync` type.
+const _: fn() = || {
+    fn assert_send_sync<T: Send + Sync + 'static>() {}
+    assert_send_sync::<CompiledDialogue>();
+};
+
 #[derive(Clone, Debug, Eq, PartialEq)]
 pub struct CompiledSourceFile {
     pub path: String,
