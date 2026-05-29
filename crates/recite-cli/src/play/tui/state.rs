@@ -66,6 +66,13 @@ pub(super) enum TuiPrompt {
         command: TextBuffer,
         show_help: bool,
     },
+    EnumCondition {
+        query: String,
+        mode: PromptMode,
+        input: TextBuffer,
+        command: TextBuffer,
+        show_help: bool,
+    },
     Effect {
         mode: String,
         id: String,
@@ -119,6 +126,9 @@ pub(super) fn prompt_mode(prompt: &TuiPrompt) -> PromptMode {
         }
         | TuiPrompt::Condition {
             mode, show_help, ..
+        }
+        | TuiPrompt::EnumCondition {
+            mode, show_help, ..
         } => {
             if *show_help {
                 PromptMode::Help
@@ -144,7 +154,7 @@ pub(super) fn prompt_mode(prompt: &TuiPrompt) -> PromptMode {
                 PromptMode::Normal
             }
         }
-        _ => PromptMode::Normal,
+        TuiPrompt::None => PromptMode::Normal,
     }
 }
 
@@ -156,6 +166,11 @@ pub(super) fn set_prompt_mode(prompt: &mut TuiPrompt, mode: PromptMode) {
             ..
         }
         | TuiPrompt::Condition {
+            mode: prompt_mode,
+            show_help,
+            ..
+        }
+        | TuiPrompt::EnumCondition {
             mode: prompt_mode,
             show_help,
             ..
@@ -171,7 +186,7 @@ pub(super) fn set_prompt_mode(prompt: &mut TuiPrompt, mode: PromptMode) {
             *input_mode = mode;
             *show_help = false;
         }
-        _ => {}
+        TuiPrompt::None | TuiPrompt::Finished { .. } => {}
     }
 }
 
@@ -179,9 +194,10 @@ pub(super) fn toggle_help(prompt: &mut TuiPrompt) {
     match prompt {
         TuiPrompt::Choice { show_help, .. }
         | TuiPrompt::Condition { show_help, .. }
+        | TuiPrompt::EnumCondition { show_help, .. }
         | TuiPrompt::Effect { show_help, .. }
         | TuiPrompt::Finished { show_help } => *show_help = !*show_help,
-        _ => {}
+        TuiPrompt::None => {}
     }
 }
 
@@ -189,9 +205,10 @@ pub(super) fn close_help(prompt: &mut TuiPrompt) {
     match prompt {
         TuiPrompt::Choice { show_help, .. }
         | TuiPrompt::Condition { show_help, .. }
+        | TuiPrompt::EnumCondition { show_help, .. }
         | TuiPrompt::Effect { show_help, .. }
         | TuiPrompt::Finished { show_help } => *show_help = false,
-        _ => {}
+        TuiPrompt::None => {}
     }
 }
 
@@ -211,11 +228,15 @@ pub(super) fn set_command(prompt: &mut TuiPrompt, command: TextBuffer) {
             command: prompt_command,
             ..
         }
+        | TuiPrompt::EnumCondition {
+            command: prompt_command,
+            ..
+        }
         | TuiPrompt::Effect {
             command: prompt_command,
             ..
         } => *prompt_command = command,
-        _ => {}
+        TuiPrompt::None | TuiPrompt::Finished { .. } => {}
     }
 }
 
@@ -223,8 +244,9 @@ pub(super) fn prompt_command(prompt: &TuiPrompt) -> &str {
     match prompt {
         TuiPrompt::Choice { command, .. }
         | TuiPrompt::Condition { command, .. }
+        | TuiPrompt::EnumCondition { command, .. }
         | TuiPrompt::Effect { command, .. } => command.as_str(),
-        _ => "",
+        TuiPrompt::None | TuiPrompt::Finished { .. } => "",
     }
 }
 
@@ -232,15 +254,18 @@ pub(super) fn mutate_prompt_command(prompt: &mut TuiPrompt, intent: TuiIntent) {
     match prompt {
         TuiPrompt::Choice { command, .. }
         | TuiPrompt::Condition { command, .. }
+        | TuiPrompt::EnumCondition { command, .. }
         | TuiPrompt::Effect { command, .. } => mutate_buffer(command, intent),
-        _ => {}
+        TuiPrompt::None | TuiPrompt::Finished { .. } => {}
     }
 }
 
 pub(super) fn prompt_input(prompt: &TuiPrompt) -> &str {
     match prompt {
-        TuiPrompt::Choice { input, .. } | TuiPrompt::Effect { input, .. } => input.as_str(),
-        _ => "",
+        TuiPrompt::Choice { input, .. }
+        | TuiPrompt::EnumCondition { input, .. }
+        | TuiPrompt::Effect { input, .. } => input.as_str(),
+        TuiPrompt::None | TuiPrompt::Condition { .. } | TuiPrompt::Finished { .. } => "",
     }
 }
 
@@ -252,9 +277,14 @@ pub(super) fn mutate_prompt_input(prompt: &mut TuiPrompt, intent: TuiIntent) {
             }
             mutate_buffer(input, intent);
         }
+        TuiPrompt::EnumCondition { input, mode, .. } => {
+            if matches!(intent, TuiIntent::Text(_)) {
+                *mode = PromptMode::Insert;
+            }
+            mutate_buffer(input, intent);
+        }
         TuiPrompt::Effect { input, .. } => mutate_buffer(input, intent),
-        TuiPrompt::Condition { .. } => {}
-        _ => {}
+        TuiPrompt::None | TuiPrompt::Condition { .. } | TuiPrompt::Finished { .. } => {}
     }
 }
 
@@ -278,16 +308,24 @@ pub(super) fn selected_choice_id(prompt: &TuiPrompt) -> Option<&str> {
         TuiPrompt::Choice {
             choices, selected, ..
         } => choices.get(*selected).map(|choice| choice.id.as_str()),
-        _ => None,
+        TuiPrompt::None
+        | TuiPrompt::Condition { .. }
+        | TuiPrompt::EnumCondition { .. }
+        | TuiPrompt::Effect { .. }
+        | TuiPrompt::Finished { .. } => None,
     }
 }
 
 pub(super) fn move_choice_selection(prompt: &mut TuiPrompt, direction: isize) {
-    let TuiPrompt::Choice {
-        choices, selected, ..
-    } = prompt
-    else {
-        return;
+    let (choices, selected) = match prompt {
+        TuiPrompt::Choice {
+            choices, selected, ..
+        } => (choices, selected),
+        TuiPrompt::None
+        | TuiPrompt::Condition { .. }
+        | TuiPrompt::EnumCondition { .. }
+        | TuiPrompt::Effect { .. }
+        | TuiPrompt::Finished { .. } => return,
     };
     if choices.is_empty() {
         return;
@@ -310,19 +348,33 @@ pub(super) fn move_choice_selection(prompt: &mut TuiPrompt, direction: isize) {
 pub(super) fn condition_selection(prompt: &TuiPrompt) -> Option<bool> {
     match prompt {
         TuiPrompt::Condition { selected, .. } => Some(*selected),
-        _ => None,
+        TuiPrompt::None
+        | TuiPrompt::Choice { .. }
+        | TuiPrompt::EnumCondition { .. }
+        | TuiPrompt::Effect { .. }
+        | TuiPrompt::Finished { .. } => None,
     }
 }
 
 pub(super) fn move_condition_selection(prompt: &mut TuiPrompt) {
-    if let TuiPrompt::Condition { selected, .. } = prompt {
-        *selected = !*selected;
+    match prompt {
+        TuiPrompt::Condition { selected, .. } => *selected = !*selected,
+        TuiPrompt::None
+        | TuiPrompt::Choice { .. }
+        | TuiPrompt::EnumCondition { .. }
+        | TuiPrompt::Effect { .. }
+        | TuiPrompt::Finished { .. } => {}
     }
 }
 
 pub(super) fn set_condition_selection(prompt: &mut TuiPrompt, value: bool) {
-    if let TuiPrompt::Condition { selected, .. } = prompt {
-        *selected = value;
+    match prompt {
+        TuiPrompt::Condition { selected, .. } => *selected = value,
+        TuiPrompt::None
+        | TuiPrompt::Choice { .. }
+        | TuiPrompt::EnumCondition { .. }
+        | TuiPrompt::Effect { .. }
+        | TuiPrompt::Finished { .. } => {}
     }
 }
 

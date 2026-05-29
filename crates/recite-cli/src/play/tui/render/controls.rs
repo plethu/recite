@@ -171,6 +171,31 @@ pub(super) fn controls_for_prompt(prompt: &TuiPrompt, keymap: Keymap) -> Vec<Tui
                 ),
             ]);
         }
+        TuiPrompt::EnumCondition { .. } => {
+            controls.extend([
+                TuiControl::all(
+                    "Enter",
+                    MsgId::TuiHelpActionSubmit,
+                    MsgId::TuiHelpDescriptionSubmitEnumCondition,
+                    true,
+                    true,
+                ),
+                TuiControl::standard(
+                    "variant",
+                    MsgId::TuiHelpActionInput,
+                    MsgId::TuiHelpDescriptionInputEnumCondition,
+                    true,
+                    false,
+                ),
+                TuiControl::vim(
+                    "i",
+                    MsgId::TuiHelpActionInput,
+                    MsgId::TuiHelpDescriptionInputEnumCondition,
+                    true,
+                    false,
+                ),
+            ]);
+        }
         TuiPrompt::Effect { .. } => controls.push(TuiControl::all(
             "Enter",
             MsgId::TuiHelpActionSubmit,

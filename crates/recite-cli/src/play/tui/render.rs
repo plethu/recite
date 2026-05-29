@@ -115,6 +115,7 @@ fn prompt_height(prompt: &TuiPrompt, width: u16) -> u16 {
             (prompt_lines + visible + 1).clamp(5, u16::MAX as usize) as u16
         }
         TuiPrompt::Condition { .. } => 5,
+        TuiPrompt::EnumCondition { .. } => 4,
         TuiPrompt::Effect { .. } => 7,
     }
 }
