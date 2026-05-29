@@ -13,26 +13,15 @@ Apply this guidance across the Rust workspace, especially `recite-parser`, `reci
 
 ## Spec Routing
 
-Read the relevant section of `docs/recite-production-spec.md` before implementation:
-
-- Source format/parser: §5
-- Conditions: §6
-- Effects: §7
-- Runtime: §8
-- Localisation and stable IDs: §9
-- Schema: §10
-- Manifests/compiler: §11-12
-- Milestones and v1 gate: §22-23
+Read the relevant section of `docs/recite-production-spec.md` before implementation. Section numbers live in the Spec Authority table in `AGENTS.md`; for core work the relevant subsystems are source format/parser, conditions, effects, runtime, localisation and stable IDs, schema, manifests/compiler, and the milestones/v1 gate.
 
 ## Core Invariants
 
-- Runtime traversal is deterministic.
-- Runtime code does not perform game-side effects.
-- Effects are typed requests emitted to the caller.
+The canonical project invariants are the Product Invariants list in `AGENTS.md`. Core work adds these subsystem-specific invariants:
+
 - Conditions are evaluated through caller-provided context.
 - Source-backed diagnostics carry spans.
 - Metadata preserves repeated keys and source order.
-- Stable line and choice IDs are author-visible and should not be rewritten implicitly.
 - Blocking effects pause traversal and must resume with the same effect ID after save/load.
 
 ## Implementation Guidance

@@ -11,14 +11,7 @@ Recite should make dialogue testable without running a game. Tests and diagnosti
 
 ## Spec Routing
 
-Read these sections of `docs/recite-production-spec.md` when relevant:
-
-- CLI: §13
-- LSP/editor: §14-15
-- Tests: §17
-- Diagnostics: §18
-- Performance/benchmarks: §19
-- v1 gate: §23
+Read the relevant section of `docs/recite-production-spec.md` when needed. Section numbers live in the Spec Authority table in `AGENTS.md`; for this skill the relevant subsystems are CLI, LSP/editor, tests, diagnostics, performance/benchmarks, and the v1 gate.
 
 ## Testing Principles
 
@@ -42,41 +35,42 @@ Use a small number of predictable test locations:
 - Keep shared cross-crate fixtures under top-level `tests/support`.
 - Run `.agents/skills/recite-codeberg-pm/scripts/check-test-organization.sh` before handoff when test files move or new tests are added.
 
-## Fixture Shape Example
+## Fixture Shape
 
-Use a fixture layout like this once the harness exists:
+Shared `.recite` source inputs live under `fixtures/recite/`, split by expectation, so parser, compiler, CLI, and LSP tests reuse the same sources:
 
 ```text
 fixtures/
-  parser/
-    block_headers.recite
-    block_headers.expected.ron
-    block_headers.diagnostics.ron
-  runtime/
-    blocking_effect.recite
-    blocking_effect.trace.ron
+  recite/
+    valid/      # sources expected to parse, lower, and validate cleanly
+    invalid/    # sources expected to produce stable structured diagnostics
+  schema/
+    valid/
+    invalid/
 ```
 
-A fixture should include:
+Expectations are stored as `insta` snapshots under each crate's `tests/snapshots/`, loaded through `tests/support/fixtures.rs`. Do not add `.expected.ron`/`.diagnostics.ron` sidecars. Fixture expectations should cover:
 
-- Source input.
-- Expected structured output or diagnostic.
+- Structured output or diagnostics for the source.
 - Stable IDs where required.
 - Effect order when effects are present.
 - Locale fallback or markup preservation when relevant.
 
 ## Diagnostic Expectation Example
 
-```ron
-Diagnostic(
-  code: "mixed-indent",
-  severity: Error,
-  span: Span(file: "dialogue/example.recite", start: 42, end: 46),
-  message: "mixed indentation inside block body",
-)
+Diagnostics are asserted as `insta` snapshots, keyed by stable diagnostic code:
+
+```yaml
+diagnostics:
+- code: RECITE_PARSE007
+  severity: Error
+  message: mixed indentation inside statement body
+  file: fixtures/recite/invalid/parser_mixed_indent.recite
+  line: 4
+  column: 5
 ```
 
-Diagnostics should be stable enough for snapshots. Avoid messages that include nondeterministic ordering, host paths, or debug-only formatting.
+Keep snapshots stable: use the stable diagnostic code, and avoid messages with nondeterministic ordering, host paths, or debug-only formatting.
 
 ## Runtime Trace Assertion Example
 
@@ -93,8 +87,6 @@ fn deferred_effects_are_source_ordered() {
 ```
 
 ## CLI and LSP Guidance
-
-When these surfaces exist:
 
 - CLI validation should emit machine-readable diagnostics where possible.
 - LSP diagnostics should use the same diagnostic codes as compiler/CLI validation.

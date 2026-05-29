@@ -15,8 +15,6 @@ Recite uses Codeberg for public project management. Codeberg is free shared infr
 - Assume `tea` batching is unavailable for this workflow. Use sequential commands.
 - This workflow was written against `tea 0.14.0`.
 - If the installed `tea` version differs, re-check command syntax and whether rate-limit headers are exposed before trusting wrapper defaults.
-- If `tea` prints a rate-limit wait in an error, honor it; otherwise wait at least 15 minutes before resuming.
-- `scripts/tea-rate-limit.sh` has best-effort 5xx detection. Treat a non-zero `tea` exit code as authoritative.
 - Run `tea --version` and the relevant `tea <subcommand> --help` when command syntax matters.
 
 ## Before Remote Mutation
@@ -99,11 +97,11 @@ Recite requires signed commits and explicit review gates. Do not merge pull requ
 
 Do not push to `main` or close the PR until review gates pass. Trusted maintainer author self-review is only a temporary single-maintainer exception.
 
-Normal read-only gate and signed merge commands:
+Normal read-only gate and signed merge commands (replace the PR number, branch, and base with your values):
 
 ```bash
-.agents/skills/recite-codeberg-pm/scripts/check-pr-review-gates.sh 34 issue-1-workspace-split main
-.agents/skills/recite-codeberg-pm/scripts/merge-pr-signed.sh 34 issue-1-workspace-split main
+.agents/skills/recite-codeberg-pm/scripts/check-pr-review-gates.sh <pr> <branch> main
+.agents/skills/recite-codeberg-pm/scripts/merge-pr-signed.sh <pr> <branch> main
 ```
 
 For clean-context review comment shape, manual merge recording details, and maintainer approval commands, read `references/signed-merge-details.md`.
@@ -113,11 +111,11 @@ For clean-context review comment shape, manual merge recording details, and main
 - Do read-only preflight before mutation.
 - Keep preflight and verification targeted to the work at hand. Do not run broad issue-list audits when a single issue lookup is enough.
 - Never parallelize remote-mutating `tea` commands.
-- Use `scripts/tea-rate-limit.sh` for mutating issue, PR, label, and milestone commands.
+- Use `scripts/tea-rate-limit.sh` for mutating issue, PR, label, and milestone commands. It has best-effort 5xx detection; treat a non-zero `tea` exit code as authoritative.
 - Use `scripts/recite-pm-check.sh issue <number>` after a single-issue mutation.
 - Use `scripts/recite-pm-check.sh full` sparingly for planning or project-wide audits. Full mode caches labels and milestones under `/tmp/recite-pm-cache` for 30 minutes by default; adjust with `RECITE_PM_CACHE_DIR` and `RECITE_PM_CACHE_TTL_SECONDS` if needed.
 - The wrapper defaults to at least 75 seconds between issue/PR mutations and at least 10 seconds between label/milestone mutations.
-- The wrapper does not auto-retry or auto-sleep after a rate-limit failure. It surfaces the limit and exits; stop the current remote-mutation pass until the user explicitly resumes or the wait window has passed.
+- The wrapper does not auto-retry or auto-sleep after a rate-limit failure. It surfaces the limit and exits; stop the current remote-mutation pass until the user explicitly resumes or the wait window has passed. If `tea` prints a rate-limit wait, honor it; otherwise wait at least 15 minutes before resuming.
 - On a single 5xx-like Forgejo/Codeberg failure, stop the current remote-mutation pass, surface the failure, and do not silently retry. Treat a second 5xx during the same pass as repeated failure and wait for user direction.
 - The wrapper lock prevents concurrent agent sessions or terminals from mutating Codeberg at the same time through this project workflow.
 

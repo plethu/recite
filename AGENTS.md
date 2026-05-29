@@ -56,3 +56,4 @@ Use the relevant skill for procedural details:
 - Rust maintainability, architecture, DRY, visibility, validation ownership, and file-size review triggers: `.agents/skills/recite-rust-quality/SKILL.md`
 - Parser, AST, compiler, runtime, schema, effects, localisation IDs, and deterministic dialogue semantics: `.agents/skills/recite-core-language/SKILL.md`
 - Fixtures, snapshots, diagnostics, CLI checks, LSP behavior, and headless runtime tests: `.agents/skills/recite-testing-diagnostics/SKILL.md`
+- Authoring or editing agent-facing instructions (`CLAUDE.md`, `AGENTS.md`, `SKILL.md` files): `.agents/skills/recite-agent-instructions/SKILL.md`
