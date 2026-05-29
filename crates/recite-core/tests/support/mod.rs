@@ -273,6 +273,7 @@ pub(crate) enum WireStatementKind {
         line: Option<u32>,
         choices: WireRange,
     },
+    Unknown(u8),
 }
 
 impl Serialize for WireStatementKind {
@@ -286,6 +287,7 @@ impl Serialize for WireStatementKind {
                 Tagged::payload(recite_core::V0_STATEMENT_TAG_PROMPT, (*line, *choices))
                     .serialize(serializer)
             }
+            Self::Unknown(tag) => Tagged::<u8>::nil(*tag).serialize(serializer),
         }
     }
 }
@@ -344,6 +346,7 @@ pub(crate) enum WireConditionExpression<'a> {
     Call(WireConditionCall<'a>),
     EmptyAnd,
     EmptyOr,
+    Unknown(u8),
 }
 
 impl Serialize for WireConditionExpression<'_> {
@@ -361,6 +364,7 @@ impl Serialize for WireConditionExpression<'_> {
             }
             Self::EmptyOr => Tagged::payload(recite_core::V0_CONDITION_TAG_OR, Vec::<Self>::new())
                 .serialize(serializer),
+            Self::Unknown(tag) => Tagged::<u8>::nil(*tag).serialize(serializer),
         }
     }
 }

@@ -1,3 +1,12 @@
+//! MessagePack v0 tagged-value encoders.
+//!
+//! This module is the compiler encode half of the same wire format decoded by
+//! `crates/recite-core/src/compiled/messagepack/tags.rs`. Both halves are keyed
+//! by the shared `recite_core::V0_*` tag constants; add, remove, or renumber
+//! tags in the encoder, decoder, and constant definitions together. Once a v0
+//! reader ships, tag changes also require the versioning policy in
+//! `docs/recite-production-spec.md` §12.2.
+
 use recite_core::{
     CompiledArgument, CompiledAssetEncoding, CompiledChoiceEcho, CompiledConditionCall,
     CompiledConditionExpression, CompiledDivertTarget, CompiledEffectMode,

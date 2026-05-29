@@ -20,14 +20,115 @@ fn decode_rejects_unexpected_top_level_array_length() {
 fn decode_rejects_unknown_wire_tags() {
     let mut asset = valid_wire_asset();
     asset.header.primary_encoding = Tagged::nil(99);
-    let bytes = rmp_serde::to_vec(&asset).expect("test wire encodes");
+    assert_malformed_asset_contains(asset, "unknown asset encoding tag 99");
 
-    let error = decode_compiled_dialogue_messagepack(&bytes).expect_err("unknown tag is rejected");
+    let mut asset = valid_wire_asset();
+    asset.header.inspection_encoding = Tagged::nil(99);
+    assert_malformed_asset_contains(asset, "unknown inspection encoding tag 99");
 
-    assert!(matches!(
-        error,
-        CompiledAssetDecodeError::MalformedAsset(message) if message.contains("unknown asset encoding tag 99")
-    ));
+    let mut asset = valid_wire_asset();
+    asset.header.schema_fingerprint = Tagged::nil(99);
+    assert_malformed_asset_contains(asset, "unknown schema fingerprint tag 99");
+
+    let mut asset = valid_wire_asset();
+    asset.statements[0].kind = WireStatementKind::Unknown(99);
+    assert_malformed_asset_contains(asset, "unknown statement kind tag 99");
+
+    let mut asset = valid_wire_asset();
+    asset.statements[0].kind = WireStatementKind::Prompt {
+        line: None,
+        choices: WireRange(0, 1),
+    };
+    asset.choices.push(WireChoice {
+        id: "ask",
+        source_text: "Ask?",
+        metadata: WireRange(0, 0),
+        condition: None,
+        target: Tagged::nil(99),
+        echo: Tagged::nil(recite_core::V0_CHOICE_ECHO_TAG_NONE),
+        source_map: 0,
+    });
+    asset.choice_lookup.push(WireLookupEntry {
+        id: "ask",
+        index: 0,
+    });
+    assert_malformed_asset_contains(asset, "unknown divert target tag 99");
+
+    let mut asset = valid_wire_asset();
+    asset.statements[0].kind = WireStatementKind::Prompt {
+        line: None,
+        choices: WireRange(0, 1),
+    };
+    asset.choices.push(WireChoice {
+        id: "ask",
+        source_text: "Ask?",
+        metadata: WireRange(0, 0),
+        condition: None,
+        target: Tagged::nil(recite_core::V0_DIVERT_TARGET_TAG_END),
+        echo: Tagged::nil(99),
+        source_map: 0,
+    });
+    asset.choice_lookup.push(WireLookupEntry {
+        id: "ask",
+        index: 0,
+    });
+    assert_malformed_asset_contains(asset, "unknown choice echo tag 99");
+
+    let mut asset = valid_wire_asset();
+    asset.effects.push(WireEffect {
+        id: "effect:dialogue/main.recite:1:1",
+        mode: Tagged::nil(99),
+        function: "advance_thread",
+        args: Vec::new(),
+        source_map: 0,
+    });
+    assert_malformed_asset_contains(asset, "unknown effect mode tag 99");
+
+    let mut asset = valid_wire_asset();
+    asset.statements[0].kind = WireStatementKind::Prompt {
+        line: None,
+        choices: WireRange(0, 1),
+    };
+    asset.choices.push(WireChoice {
+        id: "ask",
+        source_text: "Ask?",
+        metadata: WireRange(0, 0),
+        condition: Some(WireConditionExpression::Unknown(99)),
+        target: Tagged::nil(recite_core::V0_DIVERT_TARGET_TAG_END),
+        echo: Tagged::nil(recite_core::V0_CHOICE_ECHO_TAG_NONE),
+        source_map: 0,
+    });
+    asset.choice_lookup.push(WireLookupEntry {
+        id: "ask",
+        index: 0,
+    });
+    assert_malformed_asset_contains(asset, "unknown condition expression tag 99");
+
+    let mut asset = valid_wire_asset();
+    asset.effects.push(WireEffect {
+        id: "effect:dialogue/main.recite:1:1",
+        mode: Tagged::nil(recite_core::V0_EFFECT_MODE_TAG_DEFERRED),
+        function: "advance_thread",
+        args: vec![Tagged::nil(99)],
+        source_map: 0,
+    });
+    assert_malformed_asset_contains(asset, "unknown argument tag 99");
+
+    let mut asset = valid_wire_asset();
+    asset.metadata.push(WireMetadataEntry {
+        key: "score",
+        value: Tagged::nil(99),
+        source_map: None,
+    });
+    assert_malformed_asset_contains(asset, "unknown value tag 99");
+
+    let mut asset = valid_wire_asset();
+    asset.metadata.push(WireMetadataEntry {
+        key: "score",
+        value: Tagged::payload(recite_core::V0_VALUE_TAG_SCALAR, Tagged::payload(99, 1.0)),
+        source_map: None,
+    });
+    assert_malformed_asset_contains(asset, "unknown scalar value tag 99");
 }
 
 #[test]
