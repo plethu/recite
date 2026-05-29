@@ -61,11 +61,15 @@ Accept a large file only when it is cohesive and splitting would make the code h
 ## Rust Practice Checks
 
 - Prefer small private functions and focused modules over long functions with many mode flags.
-- Do not grow a signature with stacked optional parameters or `_with_a_and_b` suffixes. At the third knob, take an options/resolution struct and keep a zero-config entry point (precedents: `LocaleResolution` behind `next_with`/`choose_with`, `DialogueSessionOptions` behind `start_scene_with_options`).
 - Keep ownership clear; avoid needless clones, but do not contort simple code to avoid cheap clones on small values.
 - Prefer typed errors/results and explicit variants for observable failure modes.
 - Preserve source spans, diagnostic codes, stable IDs, and serialization compatibility when touching those surfaces.
-- Add a dependency only when it (1) removes error-prone or voluminous local code, (2) does not weaken a product invariant — determinism, stable IDs/codes, serialization compatibility, MIT licensing — and (3) covers a boundary the project does not want to own. A crate being well-regarded or popular is not itself a reason; reject it when std or a small local path already suffices. Worked judgment: `thiserror` earns its place on the library error enums (it deletes hand-rolled `Display`/`Error`/`From`) but not on `CliError`, whose rendering the Fluent i18n table owns — and never for output the project keeps deliberately minimal and stable, such as the CLI diagnostic renderer.
+- Add a dependency only when it (1) removes error-prone or voluminous local code, (2) does not weaken a product invariant — determinism, stable IDs/codes, serialization compatibility, MIT licensing — and (3) covers a boundary the project does not want to own. A crate being well-regarded or popular is not itself a reason; reject it when std or a small local path already suffices. Worked judgment: `thiserror` earns its place on the library error enums (it deletes hand-rolled `Display`/`Error`/`From`) but not on `CliError`, whose rendering the Fluent i18n table owns.
+
+## Public API and Extensibility
+
+- Do not grow a signature with stacked optional parameters or `_with_a_and_b` suffixes. At the third knob, take an options/resolution struct and keep a zero-config entry point (precedents: `LocaleResolution` behind `next_with`/`choose_with`, `DialogueSessionOptions` behind `start_scene_with_options`).
+- Mark consumer-facing public enums and structs `#[non_exhaustive]` when they may gain variants or fields, so downstream code (e.g. the Bevy adapter) keeps compiling when one is added. Apply it to errors, events, and effect/condition kinds; do not apply it to internal compiled-row enums, where same-crate exhaustive matching is the intended contract and wire compatibility is governed by tag mapping and format version.
 
 ## Handoff
 
