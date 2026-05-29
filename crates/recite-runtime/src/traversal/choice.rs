@@ -2,7 +2,6 @@ use recite_core::{ChoiceId, ChoiceRange, CompiledDialogue, CompiledDivertTarget}
 
 use crate::context::DialogueContext;
 use crate::event::{DialogueChoice, DialogueEvent};
-use crate::locale::LocaleProvider;
 use crate::session::PendingPromptChoice;
 use crate::{DialogueError, DialogueSession};
 
@@ -10,7 +9,7 @@ use super::AssetView;
 use super::advance::next_with_locale;
 use super::condition::evaluate_condition;
 use super::flow::finish_scene;
-use super::output::{LocaleLookup, dialogue_choice};
+use super::output::{LocaleLookup, LocaleResolution, dialogue_choice};
 
 pub fn choose(
     asset: &CompiledDialogue,
@@ -21,37 +20,25 @@ pub fn choose(
     choose_with_locale(asset, session, choice_id, context, LocaleLookup::source())
 }
 
-pub fn choose_with_locale_provider(
+/// Selects a pending choice with explicit locale resolution options.
+///
+/// Use [`LocaleResolution::new`] for source-text output, or attach a locale
+/// provider and optional variant to resolve text against the session locale.
+pub fn choose_with(
     asset: &CompiledDialogue,
     session: &mut DialogueSession,
     choice_id: ChoiceId,
     context: &dyn DialogueContext,
-    provider: &dyn LocaleProvider,
-) -> Result<DialogueEvent, DialogueError> {
-    choose_with_locale_provider_and_variant(asset, session, choice_id, context, provider, None)
-}
-
-pub fn choose_with_locale_provider_and_variant(
-    asset: &CompiledDialogue,
-    session: &mut DialogueSession,
-    choice_id: ChoiceId,
-    context: &dyn DialogueContext,
-    provider: &dyn LocaleProvider,
-    variant: Option<&str>,
+    locale_resolution: LocaleResolution<'_>,
 ) -> Result<DialogueEvent, DialogueError> {
     let locale = session.locale().cloned();
-    let variant = variant.map(str::to_owned);
 
     choose_with_locale(
         asset,
         session,
         choice_id,
         context,
-        LocaleLookup {
-            locale: locale.as_ref(),
-            variant: variant.as_deref(),
-            provider: Some(provider),
-        },
+        LocaleLookup::from_resolution(locale.as_ref(), locale_resolution),
     )
 }
 

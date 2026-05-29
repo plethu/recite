@@ -13,9 +13,9 @@ use recite_core::{
 use recite_fixturegen::{FixtureConfigSet, FixtureProfile, SummarySet, generate_tiny_in_memory};
 use recite_runtime::{
     ConditionEvaluationError, ConditionQuery, ConditionValue, DialogueContext, DialogueEvent,
-    DialogueSessionOptions, EffectAck, LocaleProvider, TextDomain, acknowledge_effect,
-    choose_with_locale_provider, decode_session_messagepack, encode_session_messagepack,
-    next_with_locale_provider, start_scene_with_options,
+    DialogueSessionOptions, EffectAck, LocaleProvider, LocaleResolution, TextDomain,
+    acknowledge_effect, choose_with, decode_session_messagepack, encode_session_messagepack,
+    next_with, start_scene_with_options,
 };
 
 fn tiny_profile(seed: u64) -> FixtureProfile {
@@ -204,9 +204,13 @@ impl<'a> GeneratedTraversal<'a> {
     }
 
     fn next(&mut self) -> bool {
-        let event =
-            next_with_locale_provider(self.asset, self.session, self.context, self.locale_provider)
-                .expect("next");
+        let event = next_with(
+            self.asset,
+            self.session,
+            self.context,
+            LocaleResolution::new().with_provider(self.locale_provider),
+        )
+        .expect("next");
         self.handle_event(event)
     }
 
@@ -219,11 +223,11 @@ impl<'a> GeneratedTraversal<'a> {
                         encode_session_messagepack(self.session).expect("encode blocked session");
                     let mut restored = decode_session_messagepack(self.asset, &bytes)
                         .expect("restore blocked session");
-                    let restored_effect = match next_with_locale_provider(
+                    let restored_effect = match next_with(
                         self.asset,
                         &mut restored,
                         self.context,
-                        self.locale_provider,
+                        LocaleResolution::new().with_provider(self.locale_provider),
                     )
                     .expect("reemit restored effect")
                     {
@@ -245,12 +249,12 @@ impl<'a> GeneratedTraversal<'a> {
                     self.saw_localised_line = true;
                 }
                 let selected = choices[0].id.clone();
-                let event = choose_with_locale_provider(
+                let event = choose_with(
                     self.asset,
                     self.session,
                     selected,
                     self.context,
-                    self.locale_provider,
+                    LocaleResolution::new().with_provider(self.locale_provider),
                 )
                 .expect("choose");
                 match event {

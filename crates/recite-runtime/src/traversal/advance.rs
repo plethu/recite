@@ -5,7 +5,6 @@ use recite_core::{
 
 use crate::context::DialogueContext;
 use crate::event::DialogueEvent;
-use crate::locale::LocaleProvider;
 use crate::session::PendingPrompt;
 use crate::{DialogueError, DialogueSession};
 
@@ -13,7 +12,7 @@ use super::choice::prompt_choices;
 use super::condition::{evaluate_condition, evaluate_enum_condition};
 use super::effect::handle_effect;
 use super::flow::{apply_divert, enter_statement_range, finish_scene, next_statement_after};
-use super::output::{LocaleLookup, dialogue_line};
+use super::output::{LocaleLookup, LocaleResolution, dialogue_line};
 use super::{AssetView, malformed};
 
 const MAX_INTERNAL_STEPS: usize = 10_000;
@@ -26,34 +25,23 @@ pub fn next(
     next_with_locale(asset, session, context, LocaleLookup::source())
 }
 
-pub fn next_with_locale_provider(
+/// Advances traversal with explicit locale resolution options.
+///
+/// Use [`LocaleResolution::new`] for source-text output, or attach a locale
+/// provider and optional variant to resolve text against the session locale.
+pub fn next_with(
     asset: &CompiledDialogue,
     session: &mut DialogueSession,
     context: &dyn DialogueContext,
-    provider: &dyn LocaleProvider,
-) -> Result<DialogueEvent, DialogueError> {
-    next_with_locale_provider_and_variant(asset, session, context, provider, None)
-}
-
-pub fn next_with_locale_provider_and_variant(
-    asset: &CompiledDialogue,
-    session: &mut DialogueSession,
-    context: &dyn DialogueContext,
-    provider: &dyn LocaleProvider,
-    variant: Option<&str>,
+    locale_resolution: LocaleResolution<'_>,
 ) -> Result<DialogueEvent, DialogueError> {
     let locale = session.locale().cloned();
-    let variant = variant.map(str::to_owned);
 
     next_with_locale(
         asset,
         session,
         context,
-        LocaleLookup {
-            locale: locale.as_ref(),
-            variant: variant.as_deref(),
-            provider: Some(provider),
-        },
+        LocaleLookup::from_resolution(locale.as_ref(), locale_resolution),
     )
 }
 

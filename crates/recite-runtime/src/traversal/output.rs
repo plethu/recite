@@ -12,6 +12,56 @@ use crate::locale::{LocaleProvider, TextDomain};
 
 use super::asset::AssetView;
 
+/// Options used to resolve localised runtime output.
+///
+/// By default, runtime output uses the source text stored in the compiled
+/// dialogue. Attach a [`LocaleProvider`] to look up text for the session locale;
+/// attach a variant when the provider should resolve an explicit grammatical or
+/// register variant such as formal/informal, masculine/feminine, or
+/// polite/casual.
+///
+/// If no session locale is configured, or no provider is attached, source text
+/// is emitted unchanged.
+#[derive(Clone, Copy, Default)]
+pub struct LocaleResolution<'a> {
+    provider: Option<&'a dyn LocaleProvider>,
+    variant: Option<&'a str>,
+}
+
+impl<'a> LocaleResolution<'a> {
+    /// Creates locale resolution options that emit source text.
+    #[must_use]
+    pub fn new() -> Self {
+        Self::default()
+    }
+
+    /// Resolves text through the provided locale provider.
+    #[must_use]
+    pub fn with_provider(mut self, provider: &'a dyn LocaleProvider) -> Self {
+        self.provider = Some(provider);
+        self
+    }
+
+    /// Requests an explicit grammatical or register variant.
+    #[must_use]
+    pub fn with_variant(mut self, variant: &'a str) -> Self {
+        self.variant = Some(variant);
+        self
+    }
+
+    /// Returns the locale provider used for resolution, if any.
+    #[must_use]
+    pub fn provider(&self) -> Option<&'a dyn LocaleProvider> {
+        self.provider
+    }
+
+    /// Returns the provider-specific variant used for resolution, if any.
+    #[must_use]
+    pub fn variant(&self) -> Option<&'a str> {
+        self.variant
+    }
+}
+
 #[derive(Clone, Copy)]
 pub(super) struct LocaleLookup<'a> {
     pub(super) locale: Option<&'a LocaleId>,
@@ -25,6 +75,17 @@ impl<'a> LocaleLookup<'a> {
             locale: None,
             variant: None,
             provider: None,
+        }
+    }
+
+    pub(super) fn from_resolution(
+        locale: Option<&'a LocaleId>,
+        resolution: LocaleResolution<'a>,
+    ) -> Self {
+        Self {
+            locale,
+            variant: resolution.variant,
+            provider: resolution.provider,
         }
     }
 }

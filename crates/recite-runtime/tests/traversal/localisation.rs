@@ -68,6 +68,19 @@ struct LocaleCall {
     variant: Option<String>,
 }
 
+fn locale_resolution(provider: &dyn LocaleProvider) -> LocaleResolution<'_> {
+    LocaleResolution::new().with_provider(provider)
+}
+
+fn variant_locale_resolution<'a>(
+    provider: &'a dyn LocaleProvider,
+    variant: &'a str,
+) -> LocaleResolution<'a> {
+    LocaleResolution::new()
+        .with_provider(provider)
+        .with_variant(variant)
+}
+
 #[test]
 fn locale_provider_receives_line_lookup_fields_and_variant() {
     let asset = compile_asset(
@@ -92,12 +105,11 @@ fn locale_provider_receives_line_lookup_fields_and_variant() {
     )
     .expect("starts");
 
-    let DialogueEvent::Line(line) = next_with_locale_provider_and_variant(
+    let DialogueEvent::Line(line) = runtime_next_with(
         &asset,
         &mut session,
         &EmptyDialogueContext,
-        &provider,
-        Some("formal"),
+        variant_locale_resolution(&provider, "formal"),
     )
     .expect("emits translated line") else {
         panic!("expected line");
@@ -137,12 +149,11 @@ fn variant_lookup_can_fall_back_to_non_variant_translation() {
     )
     .expect("starts");
 
-    let DialogueEvent::Line(line) = next_with_locale_provider_and_variant(
+    let DialogueEvent::Line(line) = runtime_next_with(
         &asset,
         &mut session,
         &EmptyDialogueContext,
-        &provider,
-        Some("formal"),
+        variant_locale_resolution(&provider, "formal"),
     )
     .expect("emits translated line") else {
         panic!("expected line");
@@ -172,7 +183,12 @@ fn missing_translation_falls_back_to_source_text() {
     .expect("starts");
 
     assert_line(
-        next_with_locale_provider(&asset, &mut session, &EmptyDialogueContext, &provider),
+        runtime_next_with(
+            &asset,
+            &mut session,
+            &EmptyDialogueContext,
+            locale_resolution(&provider),
+        ),
         "intro_001",
         "Hello.",
     );
@@ -207,12 +223,11 @@ fn prompt_line_and_choices_are_localised_with_distinct_domains() {
     )
     .expect("starts");
 
-    let DialogueEvent::Prompt { line, choices } = next_with_locale_provider_and_variant(
+    let DialogueEvent::Prompt { line, choices } = runtime_next_with(
         &asset,
         &mut session,
         &EmptyDialogueContext,
-        &provider,
-        Some("formal"),
+        variant_locale_resolution(&provider, "formal"),
     )
     .expect("emits prompt") else {
         panic!("expected prompt");
@@ -259,16 +274,20 @@ fn choosing_prompt_uses_locale_provider_for_followup_line() {
         DialogueSessionOptions::new().with_locale(locale("en-GB")),
     )
     .expect("starts");
-    next_with_locale_provider(&asset, &mut session, &EmptyDialogueContext, &provider)
-        .expect("emits prompt");
+    runtime_next_with(
+        &asset,
+        &mut session,
+        &EmptyDialogueContext,
+        locale_resolution(&provider),
+    )
+    .expect("emits prompt");
 
-    let DialogueEvent::Line(line) = choose_with_locale_provider_and_variant(
+    let DialogueEvent::Line(line) = runtime_choose_with(
         &asset,
         &mut session,
         ChoiceId::new("continue_001").expect("valid choice id"),
         &EmptyDialogueContext,
-        &provider,
-        Some("formal"),
+        variant_locale_resolution(&provider, "formal"),
     )
     .expect("chooses and emits followup") else {
         panic!("expected line");

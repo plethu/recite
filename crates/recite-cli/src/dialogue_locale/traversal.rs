@@ -1,8 +1,7 @@
 use recite_core::{ChoiceId, CompiledDialogue, LocaleId};
 use recite_runtime::{
     DialogueContext, DialogueEvent, DialogueSession, DialogueSessionOptions, LocaleProvider,
-    choose, choose_with_locale_provider, next, next_with_locale_provider, start_scene,
-    start_scene_with_options,
+    LocaleResolution, choose, choose_with, next, next_with, start_scene, start_scene_with_options,
 };
 
 use crate::error::CliError;
@@ -53,9 +52,12 @@ impl<'a> DialogueTraversal<'a> {
         context: &dyn DialogueContext,
     ) -> Result<DialogueEvent, recite_runtime::DialogueError> {
         match self.preview {
-            Some(preview) => {
-                next_with_locale_provider(self.asset, session, context, preview.provider)
-            }
+            Some(preview) => next_with(
+                self.asset,
+                session,
+                context,
+                LocaleResolution::new().with_provider(preview.provider),
+            ),
             None => next(self.asset, session, context),
         }
     }
@@ -67,12 +69,12 @@ impl<'a> DialogueTraversal<'a> {
         context: &dyn DialogueContext,
     ) -> Result<DialogueEvent, recite_runtime::DialogueError> {
         match self.preview {
-            Some(preview) => choose_with_locale_provider(
+            Some(preview) => choose_with(
                 self.asset,
                 session,
                 choice_id,
                 context,
-                preview.provider,
+                LocaleResolution::new().with_provider(preview.provider),
             ),
             None => choose(self.asset, session, choice_id, context),
         }

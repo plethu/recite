@@ -32,7 +32,6 @@ pub use session_snapshot::{
     SESSION_SNAPSHOT_FORMAT_VERSION_V0, SESSION_SNAPSHOT_FORMAT_VERSION_V1, snapshot_session,
 };
 pub use traversal::{
-    acknowledge_effect, choose, choose_with_locale_provider,
-    choose_with_locale_provider_and_variant, next, next_with_locale_provider,
-    next_with_locale_provider_and_variant, start_scene, start_scene_with_options,
+    LocaleResolution, acknowledge_effect, choose, choose_with, next, next_with, start_scene,
+    start_scene_with_options,
 };
