@@ -52,6 +52,28 @@ fn unavailable_pending_choice_is_structured_error_without_mutating_session() {
     assert!(session.selected_choice_history().is_empty());
 }
 
+#[test]
+fn unavailable_choice_display_preserves_reason_formatting() {
+    let choice = ChoiceId::new("locked_choice").expect("valid choice ID");
+
+    assert_eq!(
+        DialogueError::UnavailableChoice {
+            choice: choice.clone(),
+            reason: None,
+        }
+        .to_string(),
+        "choice `locked_choice` is unavailable"
+    );
+    assert_eq!(
+        DialogueError::UnavailableChoice {
+            choice,
+            reason: Some("missing trust".to_owned()),
+        }
+        .to_string(),
+        "choice `locked_choice` is unavailable: missing trust"
+    );
+}
+
 fn empty_asset() -> CompiledDialogue {
     CompiledDialogue {
         header: CompiledAssetHeader::messagepack_v0(
