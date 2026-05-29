@@ -1792,9 +1792,10 @@ Conditions must remain pure queries. Effects must remain typed requests emitted 
 ### 16.5 Initial Adapter Targets
 
 Godot, Bevy, and Unity are v1-facing adapter targets. This is a settled product
-scope decision, not a ranking of engine value. The serious v1 gate requires at
-least one production-quality adapter plus contract-aligned asset refresh and
-active-session behavior for the other target stories.
+scope decision, not a ranking of engine value. The serious v1 gate requires all
+three adapters to be production-quality and to pass the engine-independent
+conformance coverage in `docs/engine-adapter-contract.md` §13, including
+contract-aligned asset refresh and active-session behavior.
 
 No adapter may weaken the engine-independent core contract.
 

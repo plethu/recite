@@ -38,11 +38,25 @@ Adapters must not:
 
 ## 2. Compiled Asset Identity and Freshness
 
-A compiled Recite asset must have a stable identity that can be stored in
-session state and compared during save/load. The identity should include enough
-information to distinguish incompatible compiled assets, such as a project asset
-ID, compiled asset version or fingerprint, schema fingerprint, and compiler
-compatibility version.
+This section covers two distinct questions that adapters must not conflate:
+
+- **Compatibility identity** — "is this the same compiled asset a saved session
+  was created against?" — used for save/load resume (see §9 and spec §8.6).
+- **Freshness** — "is this compiled asset stale relative to the source and
+  schema on disk?" — used for authoring import and diagnostics (spec §12.3).
+
+A compiled Recite asset must have a stable **compatibility identity** that can
+be stored in session state and compared during save/load. The identity should
+include enough information to distinguish incompatible compiled assets, such as
+a project asset ID, a compiled-asset version or fingerprint, the schema
+fingerprint, and the compiler compatibility version. This identity answers
+resume compatibility, not staleness.
+
+**Freshness** is a separate, content-based comparison. Per spec §12.3 it is
+computed over current source fingerprints, the current schema fingerprint, and
+the current compiler compatibility version, compared against the values embedded
+in the compiled asset. Adapters must not substitute the single compatibility
+fingerprint for this source-level freshness comparison.
 
 Locale catalogs are not part of compiled asset identity unless an adapter
 explicitly bundles them into the host asset. If catalogs are bundled, the
@@ -54,10 +68,11 @@ a session. Loading or decoding failures must surface as structured adapter
 errors. Stale or schema-incompatible assets must not start a session as if they
 were current.
 
-Adapters should reuse the same freshness semantics as the CLI build/check
-surface where possible. A host asset importer may cache engine-native resources,
-but the cache must not hide stale compiled content from session start, resume,
-or diagnostics when source and schema inputs are available.
+Adapters should reuse the same freshness semantics as the CLI `compile` and
+`check-fresh` surface (spec §12.3) where possible. A host asset importer may
+cache engine-native resources, but the cache must not hide stale compiled
+content from session start, resume, or diagnostics when source and schema inputs
+are available.
 
 ## 3. Session Ownership
 
@@ -99,6 +114,15 @@ Acknowledging an effect must require the exact pending `EffectRequestId`. The
 adapter must reject acknowledgements when no blocking effect is pending or when
 the ID does not match the pending effect.
 
+Adapters must expose both acknowledgement outcomes from spec §7.4
+(`EffectAck::Completed` and `EffectAck::Failed { reason }`), not only the success
+path. A host that cannot complete a blocking effect must have a contract-blessed
+way to report failure back into traversal.
+
+Selecting a choice may emit an echoed line (`ChoiceEchoMode`, spec §8.5) as the
+first output after `select`. Adapters must treat this as ordinary line output in
+the drained batch or `next` sequence, not as unexpected content.
+
 ## 5. Structured Output
 
 Adapters must surface runtime output as structured values, not host-formatted
@@ -106,7 +130,11 @@ strings. The host-visible shape must include equivalents for:
 
 - line output with line ID, speaker, localized text, source text where useful,
   metadata, markup, and pending deferred effects;
-- prompt output with optional line content and a list of structured choices;
+- prompt output with optional line content and a list of structured choices,
+  where each choice preserves its `ChoiceId`, localized text, source text,
+  metadata, availability state, and unavailable reason (spec §8.5) so hosts can
+  present and disable choices and so the §4 unavailable-choice error is
+  satisfiable from emitted data alone;
 - effect request output with effect request ID, effect name, mode, arguments,
   and source/debug identity where available;
 - end output with deferred effects;
@@ -126,9 +154,14 @@ through host-native extension points and evaluate them through caller-provided
 game context.
 
 Condition handlers must not mutate game state, advance time, emit effects, or
-depend on nondeterministic ordering. If a handler cannot be found, receives
-invalid arguments, or returns a value outside the declared schema type, the
-adapter must surface a structured error.
+depend on nondeterministic ordering. The adapter must surface a structured error
+when:
+
+- no handler can be found (`missing_condition_handler_error`);
+- a handler receives invalid arguments or fails during evaluation
+  (`condition_evaluation_error`);
+- a handler returns a value outside the declared schema type
+  (`invalid_condition_result_error`).
 
 Schema-generated or hand-written typed condition bindings are allowed, but they
 must lower into the same canonical schema manifest used by the compiler, CLI,
@@ -169,9 +202,18 @@ and must not hide unknown or schema-invalid effects.
 ## 9. Save and Load Handoff
 
 Recite session state and host game state are separate. The adapter must provide
-a host-native way to extract and restore the serialized Recite session state,
-including compiled asset identity, current traversal position, locale, selected
-choice history, deferred effects, and any pending blocking effect.
+a host-native way to extract and restore the serialized Recite session state.
+
+The runtime owns the session state shape (spec §8.6). The adapter must round-trip
+the runtime's complete serialized session state as a single opaque unit. It must
+not re-serialize a hand-picked subset of fields, because the snapshot includes
+determinism-critical state — compiled asset identity, current block and statement
+pointer, the call/divert stack, deterministic trace counters, previous prompt
+choices, selected choice history, locale and variant, collected deferred effects,
+and any pending blocking effect. Dropping any of these (for example, trace
+counters or the divert stack) silently breaks deterministic resume, which the
+core contract forbids. Treat the snapshot as opaque: serialize and restore what
+the runtime produces, in full.
 
 The adapter must not serialize arbitrary game state into Recite session state.
 The host game owns its own save data and decides how to reconcile game-side
@@ -193,9 +235,18 @@ policy. Locale fallback must be deterministic and must preserve the same
 localized text, source text, line IDs, choice IDs, metadata, and markup that
 the runtime exposes.
 
+Adapters must expose grammatical variant selection (spec §9.5) as an explicit,
+caller-driven choice — a session-level setter or a per-operation override that
+threads into traversal. The runtime never infers a variant, so adapters must not
+derive it from host environment or locale; lookup priority remains
+`id&variant` → `id` → source text, and resolution must stay deterministic for a
+given `(id, source, locale, variant, count)` tuple. The resolved text exposed in
+§5 output reflects the selected variant.
+
 Changing locale for an active session is not part of the v1 contract unless an
 adapter documents and tests the exact behavior. Restarting the session with a
-new locale is always acceptable.
+new locale is always acceptable. Variant selection, by contrast, may change
+mid-session because it is an explicit per-lookup axis, not a session-rebuild.
 
 Missing translations may use the runtime/compiler documented deterministic
 fallback path. Malformed catalogs must surface a structured loading or
@@ -243,6 +294,7 @@ Required categories:
 - `unavailable_choice_error`;
 - `stale_choice_error`;
 - `missing_condition_handler_error`;
+- `condition_evaluation_error`;
 - `invalid_condition_result_error`;
 - `effect_acknowledgement_error`;
 - `rejected_changed_asset_refresh_error`;
@@ -276,11 +328,17 @@ Host-runtime tests may be adapter-specific, but the expected Recite trace should
 remain engine-independent where practical. Manual checks are acceptable only for
 editor/import UX that cannot reasonably be automated.
 
+Conformance above covers semantics. Adapters must also meet the engine-adapter
+performance expectations in spec §19.6, including negligible cost when no session
+is active.
+
 ## 14. Per-Engine Guidance
 
 Godot, Bevy, and Unity are the v1-facing adapter targets. This document treats
-that set as settled product scope and only defines the contract each target must
-preserve.
+that set as settled product scope and defines the contract each target must
+preserve. The serious v1 gate (spec §16.5) requires all three adapters to be
+production-quality and to pass the §13 conformance coverage; one adapter does
+not satisfy the gate on its own.
 
 ### 14.1 Godot
 
