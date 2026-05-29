@@ -3,15 +3,20 @@ use recite_core::{ChoiceId, EffectId};
 use crate::{ConditionExpectedType, DialogueEffectMode};
 
 /// Runtime error for deterministic traversal over compiled dialogue assets.
-#[derive(Clone, Debug, Eq, PartialEq)]
+#[derive(Clone, Debug, Eq, PartialEq, thiserror::Error)]
 pub enum DialogueError {
-    UnknownBlock {
-        block: String,
-    },
+    #[error("unknown block `{block}`")]
+    UnknownBlock { block: String },
+    #[error(
+        "unsupported compiled asset format {format_version} with compatibility version {compiler_compatibility_version}"
+    )]
     UnsupportedCompiledFormat {
         format_version: u16,
         compiler_compatibility_version: u16,
     },
+    #[error(
+        "session is for asset `{expected_asset_id}` ({expected_format_version}/{expected_compiler_compatibility_version}) but got `{actual_asset_id}` ({actual_format_version}/{actual_compiler_compatibility_version})"
+    )]
     AssetMismatch {
         expected_asset_id: String,
         actual_asset_id: String,
@@ -20,180 +25,67 @@ pub enum DialogueError {
         expected_compiler_compatibility_version: u16,
         actual_compiler_compatibility_version: u16,
     },
-    AssetContentMismatch {
-        asset_id: String,
-        reason: String,
-    },
-    MalformedCompiledAsset {
-        reason: String,
-    },
-    EffectPending {
-        effect: EffectId,
-    },
-    NoEffectPending {
-        effect: EffectId,
-    },
+    #[error("session is for a different compiled asset payload `{asset_id}`: {reason}")]
+    AssetContentMismatch { asset_id: String, reason: String },
+    #[error("malformed compiled asset: {reason}")]
+    MalformedCompiledAsset { reason: String },
+    #[error("session is waiting for effect `{effect}` to be acknowledged")]
+    EffectPending { effect: EffectId },
+    #[error("effect `{effect}` was acknowledged with no pending effect")]
+    NoEffectPending { effect: EffectId },
+    #[error("effect acknowledgement `{actual}` does not match pending effect `{expected}`")]
     WrongEffectAcknowledgement {
         expected: EffectId,
         actual: EffectId,
     },
-    PromptPending {
-        choices: Vec<ChoiceId>,
-    },
-    NoPromptPending {
-        choice: ChoiceId,
-    },
+    #[error("session is waiting for a choice selection")]
+    PromptPending { choices: Vec<ChoiceId> },
+    #[error("choice `{choice}` was selected with no pending prompt")]
+    NoPromptPending { choice: ChoiceId },
+    #[error("choice `{choice}` is not available in the pending prompt")]
     InvalidChoice {
         choice: ChoiceId,
         prompt_choices: Vec<ChoiceId>,
     },
+    #[error(fmt = fmt_unavailable_choice)]
     UnavailableChoice {
         choice: ChoiceId,
         reason: Option<String>,
     },
-    ConditionEvaluationFailed {
-        function: String,
-        reason: String,
-    },
+    #[error("condition `{function}` failed: {reason}")]
+    ConditionEvaluationFailed { function: String, reason: String },
+    #[error("condition `{function}` returned {actual} but runtime expected {expected}")]
     ConditionResultTypeMismatch {
         function: String,
         expected: ConditionExpectedType,
         actual: ConditionExpectedType,
     },
-    ConditionDepthLimitExceeded {
-        limit: usize,
-    },
-    UnsupportedSessionSnapshotFormat {
-        snapshot_format_version: u16,
-    },
-    SessionSnapshotEncodeFailed {
-        reason: String,
-    },
-    SessionSnapshotDecodeFailed {
-        reason: String,
-    },
-    InvalidSessionSnapshot {
-        reason: String,
-    },
+    #[error("condition expression exceeded maximum evaluation depth {limit}")]
+    ConditionDepthLimitExceeded { limit: usize },
+    #[error("unsupported session snapshot format {snapshot_format_version}")]
+    UnsupportedSessionSnapshotFormat { snapshot_format_version: u16 },
+    #[error("failed to encode session snapshot: {reason}")]
+    SessionSnapshotEncodeFailed { reason: String },
+    #[error("failed to decode session snapshot: {reason}")]
+    SessionSnapshotDecodeFailed { reason: String },
+    #[error("invalid session snapshot: {reason}")]
+    InvalidSessionSnapshot { reason: String },
+    #[error("session has already ended")]
     SessionEnded,
-    TraversalLimitExceeded {
-        limit: usize,
-    },
+    #[error("runtime traversal exceeded {limit} internal steps")]
+    TraversalLimitExceeded { limit: usize },
 }
 
-impl std::fmt::Display for DialogueError {
-    fn fmt(&self, formatter: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
-        match self {
-            Self::UnknownBlock { block } => write!(formatter, "unknown block `{block}`"),
-            Self::UnsupportedCompiledFormat {
-                format_version,
-                compiler_compatibility_version,
-            } => write!(
-                formatter,
-                "unsupported compiled asset format {format_version} with compatibility version {compiler_compatibility_version}"
-            ),
-            Self::AssetMismatch {
-                expected_asset_id,
-                actual_asset_id,
-                expected_format_version,
-                actual_format_version,
-                expected_compiler_compatibility_version,
-                actual_compiler_compatibility_version,
-            } => write!(
-                formatter,
-                "session is for asset `{expected_asset_id}` ({expected_format_version}/{expected_compiler_compatibility_version}) but got `{actual_asset_id}` ({actual_format_version}/{actual_compiler_compatibility_version})"
-            ),
-            Self::AssetContentMismatch { asset_id, reason } => {
-                write!(
-                    formatter,
-                    "session is for a different compiled asset payload `{asset_id}`: {reason}"
-                )
-            }
-            Self::MalformedCompiledAsset { reason } => {
-                write!(formatter, "malformed compiled asset: {reason}")
-            }
-            Self::EffectPending { effect } => {
-                write!(
-                    formatter,
-                    "session is waiting for effect `{effect}` to be acknowledged"
-                )
-            }
-            Self::NoEffectPending { effect } => {
-                write!(
-                    formatter,
-                    "effect `{effect}` was acknowledged with no pending effect"
-                )
-            }
-            Self::WrongEffectAcknowledgement { expected, actual } => {
-                write!(
-                    formatter,
-                    "effect acknowledgement `{actual}` does not match pending effect `{expected}`"
-                )
-            }
-            Self::PromptPending { .. } => {
-                formatter.write_str("session is waiting for a choice selection")
-            }
-            Self::NoPromptPending { choice } => {
-                write!(
-                    formatter,
-                    "choice `{choice}` was selected with no pending prompt"
-                )
-            }
-            Self::InvalidChoice {
-                choice,
-                prompt_choices: _,
-            } => write!(
-                formatter,
-                "choice `{choice}` is not available in the pending prompt"
-            ),
-            Self::UnavailableChoice { choice, reason } => {
-                write!(formatter, "choice `{choice}` is unavailable")?;
-                if let Some(reason) = reason {
-                    write!(formatter, ": {reason}")?;
-                }
-                Ok(())
-            }
-            Self::ConditionEvaluationFailed { function, reason } => {
-                write!(formatter, "condition `{function}` failed: {reason}")
-            }
-            Self::ConditionResultTypeMismatch {
-                function,
-                expected,
-                actual,
-            } => write!(
-                formatter,
-                "condition `{function}` returned {actual} but runtime expected {expected}"
-            ),
-            Self::ConditionDepthLimitExceeded { limit } => {
-                write!(
-                    formatter,
-                    "condition expression exceeded maximum evaluation depth {limit}"
-                )
-            }
-            Self::UnsupportedSessionSnapshotFormat {
-                snapshot_format_version,
-            } => write!(
-                formatter,
-                "unsupported session snapshot format {snapshot_format_version}"
-            ),
-            Self::SessionSnapshotEncodeFailed { reason } => {
-                write!(formatter, "failed to encode session snapshot: {reason}")
-            }
-            Self::SessionSnapshotDecodeFailed { reason } => {
-                write!(formatter, "failed to decode session snapshot: {reason}")
-            }
-            Self::InvalidSessionSnapshot { reason } => {
-                write!(formatter, "invalid session snapshot: {reason}")
-            }
-            Self::SessionEnded => formatter.write_str("session has already ended"),
-            Self::TraversalLimitExceeded { limit } => {
-                write!(
-                    formatter,
-                    "runtime traversal exceeded {limit} internal steps"
-                )
-            }
-        }
+fn fmt_unavailable_choice(
+    choice: &ChoiceId,
+    reason: &Option<String>,
+    formatter: &mut std::fmt::Formatter<'_>,
+) -> std::fmt::Result {
+    write!(formatter, "choice `{choice}` is unavailable")?;
+    if let Some(reason) = reason {
+        write!(formatter, ": {reason}")?;
     }
+    Ok(())
 }
 
 impl std::fmt::Display for ConditionExpectedType {
@@ -214,5 +106,3 @@ impl std::fmt::Display for DialogueEffectMode {
         }
     }
 }
-
-impl std::error::Error for DialogueError {}
