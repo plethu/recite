@@ -49,7 +49,7 @@ Accept a large file only when it is cohesive and splitting would make the code h
 - Avoid widening public API, `pub(crate)`, or module visibility just to make a local implementation convenient.
 - Keep deterministic ordering explicit with source order or stable sorting where output can be observed.
 - Prefer structured types, enums, and diagnostics over string conventions callers must parse.
-- Build diagnostics through the shared `recite-core` constructor (`Diagnostic::error`) and the per-crate code constants; do not re-create a module-local `diagnostic()`/`*_diagnostic()` helper. Codes are static and namespaced: validate them at compile time (`DiagnosticCode::new_static`), never `.expect()` a code at runtime. Select or group diagnostics by `DiagnosticCategory`, never by matching or duplicating raw code strings across crates.
+- Build diagnostics through the shared `recite-core` constructor (`Diagnostic::error`) and the per-crate code constants; do not re-create a module-local `diagnostic()`/`*_diagnostic()` helper. Codes are static and namespaced: validate them at compile time with `DiagnosticCode::new_static`. Select or group diagnostics by `DiagnosticCategory`, never by matching or duplicating raw code strings across crates.
 
 ## DRY Checks
 
