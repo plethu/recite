@@ -28,8 +28,8 @@ pub struct CompiledDialogue {
 
 /// A compiled asset is a read-only program the runtime borrows per call, so it
 /// must stay shareable across threads (e.g. wrapped in `Arc` behind a worker
-/// pool). This guard fails to compile if a future field reintroduces interior
-/// mutability or any other non-`Send`/`Sync` type.
+/// pool). This guard fails to compile if a future field reintroduces a
+/// thread-unsafe type such as `Rc`, `Cell`, or `RefCell`.
 const _: fn() = || {
     fn assert_send_sync<T: Send + Sync + 'static>() {}
     assert_send_sync::<CompiledDialogue>();
