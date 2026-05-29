@@ -46,7 +46,7 @@ Recite issues are Mari + agent co-work by default. Do not encode assumptions tha
 
 ## Milestones
 
-Use the milestone names from `docs/recite-production-spec.md` §22. The serious v1 boundary is Rust core + CLI + LSP first; Bevy and performance harness work are tracked later unless the issue says otherwise.
+Use the milestone names from `docs/recite-production-spec.md` §22. The serious v1 boundary is defined by §23 and is broad: it covers the core runtime, CLI, LSP, scale proof, the engine-adapter contract, at least one production adapter, and adoption/migration docs. Do not treat adapter, performance, or editor work as automatically post-v1; defer to §23 and the issue's milestone.
 
 ## Issue Shape
 
