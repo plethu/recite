@@ -379,6 +379,12 @@ appropriate, or service responses. Condition and effect bindings should feel
 like ordinary typed C# game code and must still export or consume the canonical
 Recite schema manifest.
 
+GameObject-facing and DOTS-facing Unity facades should share the same adapter
+core. The DOTS surface may use Entities components, systems, buffers, or baked
+data, but it must not fork Recite traversal, asset identity, save/load,
+localisation, error, or changed-asset semantics away from the non-DOTS Unity
+surface.
+
 Editor import should make the edit/save/build/import/restart loop explicit.
 The adapter must declare one changed-asset policy from this document before it
 is treated as v1-ready.
