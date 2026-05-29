@@ -1,8 +1,6 @@
 use std::collections::BTreeSet;
 
-use super::super::diagnostics::{
-    DUPLICATE_DEFINITION, INVALID_TYPE_REFERENCE, MALFORMED_SHAPE, diagnostic,
-};
+use super::super::diagnostics::{DUPLICATE_DEFINITION, INVALID_TYPE_REFERENCE, MALFORMED_SHAPE};
 use super::super::raw::{
     Named, RawConditionDefinition, RawEffectDefinition, RawParameterDefinition,
 };
@@ -66,7 +64,7 @@ pub(super) fn lower_conditions(
                         ConditionReturnType::Enum(name)
                     }
                     None => {
-                        diagnostics.push(diagnostic(
+                        diagnostics.push(Diagnostic::error(
                             INVALID_TYPE_REFERENCE,
                             format!(
                                 "condition '{}' has invalid return type '{}'",
@@ -110,7 +108,7 @@ pub(super) fn lower_effects(
         for mode in &entry.value.modes {
             let mode_span = spans.next_value_span(file, source, mode);
             let Some(effect_mode) = parse_effect_mode(mode) else {
-                diagnostics.push(diagnostic(
+                diagnostics.push(Diagnostic::error(
                     MALFORMED_SHAPE,
                     format!("effect '{}' uses unsupported mode '{}'", entry.name, mode),
                     mode_span,
@@ -119,7 +117,7 @@ pub(super) fn lower_effects(
             };
 
             if !modes.insert(effect_mode) {
-                diagnostics.push(diagnostic(
+                diagnostics.push(Diagnostic::error(
                     DUPLICATE_DEFINITION,
                     format!("effect '{}' repeats mode '{}'", entry.name, mode),
                     mode_span,
@@ -170,7 +168,7 @@ fn lower_params(
                 );
             }
             if !seen.insert(param.name.clone()) {
-                diagnostics.push(diagnostic(
+                diagnostics.push(Diagnostic::error(
                     DUPLICATE_DEFINITION,
                     format!("{owner} repeats parameter '{}'", param.name),
                     name_span,

@@ -3,8 +3,7 @@ use std::collections::BTreeSet;
 use super::{
     MALFORMED_COMPILED_ASSET, MISSING_SOURCE_ASSET, ProjectFreshnessInput,
     STALE_COMPILER_COMPATIBILITY, STALE_SCHEMA_FINGERPRINT, STALE_SOURCE_FINGERPRINT,
-    UNKNOWN_PARTICIPANT, UNKNOWN_START_BLOCK,
-    spans::{diagnostic, scene_key_span},
+    UNKNOWN_PARTICIPANT, UNKNOWN_START_BLOCK, spans::scene_key_span,
 };
 use crate::{
     COMPILED_ASSET_FORMAT_VERSION_V0, COMPILER_COMPATIBILITY_VERSION_V0, Diagnostic,
@@ -27,7 +26,7 @@ pub fn validate_project_freshness(
         .iter()
         .any(|entry| entry.id.as_str() == scene.block)
     {
-        diagnostics.push(diagnostic(
+        diagnostics.push(Diagnostic::error(
             UNKNOWN_START_BLOCK,
             format!(
                 "scene '{}' references unknown block '{}'",
@@ -45,7 +44,7 @@ pub fn validate_project_freshness(
         .collect::<BTreeSet<_>>();
     for participant in &scene.participants {
         if !asset_speakers.is_empty() && !asset_speakers.contains(participant.as_str()) {
-            diagnostics.push(diagnostic(
+            diagnostics.push(Diagnostic::error(
                 UNKNOWN_PARTICIPANT,
                 format!(
                     "scene '{}' participant '{participant}' is not present in compiled asset '{}'",
@@ -61,7 +60,7 @@ pub fn validate_project_freshness(
             Some(Some(current_source)) => {
                 let current_fingerprint = canonical_source_fingerprint(current_source);
                 if current_fingerprint != compiled_source.fingerprint {
-                    diagnostics.push(diagnostic(
+                    diagnostics.push(Diagnostic::error(
                         STALE_SOURCE_FINGERPRINT,
                         format!(
                             "compiled asset '{}' is stale for source '{}'",
@@ -72,7 +71,7 @@ pub fn validate_project_freshness(
                 }
             }
             Some(None) | None => {
-                diagnostics.push(diagnostic(
+                diagnostics.push(Diagnostic::error(
                     MISSING_SOURCE_ASSET,
                     format!(
                         "compiled asset '{}' references missing source '{}'",
@@ -88,7 +87,7 @@ pub fn validate_project_freshness(
         .current_schema_fingerprint
         .is_some_and(|current| input.asset.header.schema_fingerprint != current)
     {
-        diagnostics.push(diagnostic(
+        diagnostics.push(Diagnostic::error(
             STALE_SCHEMA_FINGERPRINT,
             format!(
                 "compiled asset '{}' has a stale schema fingerprint",
@@ -99,7 +98,7 @@ pub fn validate_project_freshness(
     }
 
     if input.asset.header.compiler_compatibility_version != COMPILER_COMPATIBILITY_VERSION_V0 {
-        diagnostics.push(diagnostic(
+        diagnostics.push(Diagnostic::error(
             STALE_COMPILER_COMPATIBILITY,
             format!(
                 "compiled asset '{}' uses compiler compatibility version {}, expected {}",
@@ -112,7 +111,7 @@ pub fn validate_project_freshness(
     }
 
     if input.asset.header.format_version != COMPILED_ASSET_FORMAT_VERSION_V0 {
-        diagnostics.push(diagnostic(
+        diagnostics.push(Diagnostic::error(
             MALFORMED_COMPILED_ASSET,
             format!(
                 "compiled asset '{}' uses unsupported format version {}",

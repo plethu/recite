@@ -1,6 +1,6 @@
 use std::collections::BTreeSet;
 
-use super::super::diagnostics::{DUPLICATE_DEFINITION, MALFORMED_SHAPE, diagnostic};
+use super::super::diagnostics::{DUPLICATE_DEFINITION, MALFORMED_SHAPE};
 use super::super::raw::{Named, RawMarkupDefinition, RawMetadataDefinition};
 use super::super::spans::ManifestSpans;
 use super::super::validate::{
@@ -34,7 +34,7 @@ pub(super) fn lower_metadata(
         for target in &entry.value.targets {
             let target_span = spans.next_value_span(file, source, target);
             let Some(metadata_target) = parse_metadata_target(target) else {
-                diagnostics.push(diagnostic(
+                diagnostics.push(Diagnostic::error(
                     MALFORMED_SHAPE,
                     format!(
                         "metadata '{}' uses unsupported target '{}'",
@@ -46,7 +46,7 @@ pub(super) fn lower_metadata(
             };
 
             if !targets.insert(metadata_target) {
-                diagnostics.push(diagnostic(
+                diagnostics.push(Diagnostic::error(
                     DUPLICATE_DEFINITION,
                     format!("metadata '{}' repeats target '{}'", entry.name, target),
                     target_span,

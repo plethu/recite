@@ -43,9 +43,8 @@ fn diagnostics_keep_stable_structured_fields() {
         "first declaration is here",
     );
 
-    let diagnostic = Diagnostic::new(
-        DiagnosticCode::new("RECITE_ID001").expect("valid diagnostic code"),
-        DiagnosticSeverity::Error,
+    let diagnostic = Diagnostic::error(
+        DiagnosticCode::new_static("RECITE_ID001"),
         "duplicate line ID",
         primary.clone(),
     )

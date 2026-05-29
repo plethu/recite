@@ -1,41 +1,67 @@
 use recite_core::{
-    Block, BlockId, BlockReference, Choice, Diagnostic, DiagnosticCode, DiagnosticSeverity,
-    EffectMode, Line, LineId, RelatedSpan, SchemaTypeRef, SourceFile, SourceSpan, Statement,
+    Block, BlockId, BlockReference, Choice, Diagnostic, DiagnosticCode, EffectMode, Line, LineId,
+    RelatedSpan, SchemaTypeRef, SourceFile, SourceSpan, Statement,
 };
 
-pub(crate) const MISSING_LINE_ID: &str = "RECITE_ID001";
-pub(crate) const MISSING_CHOICE_ID: &str = "RECITE_ID002";
-pub(crate) const DUPLICATE_LINE_ID: &str = "RECITE_ID003";
-pub(crate) const DUPLICATE_CHOICE_ID: &str = "RECITE_ID004";
-pub(crate) const MISSING_DEFAULT_BLOCK: &str = "RECITE_VALIDATE005";
-pub(crate) const AMBIGUOUS_DEFAULT_BLOCK: &str = "RECITE_VALIDATE006";
-pub(crate) const UNKNOWN_BLOCK_REFERENCE: &str = "RECITE_VALIDATE007";
-pub(crate) const INVALID_SOURCE_SPAN: &str = "RECITE_VALIDATE008";
-pub(crate) const DUPLICATE_BLOCK_ID: &str = "RECITE_VALIDATE009";
-pub(crate) const DUPLICATE_SOURCE_PATH: &str = "RECITE_VALIDATE010";
-pub(crate) const AMBIGUOUS_COMPILED_BLOCK_ID: &str = "RECITE_VALIDATE011";
-pub(crate) const MISSING_CHOICE_TARGET: &str = "RECITE_VALIDATE012";
-pub(crate) const UNSUPPORTED_LINE_CHILD_STATEMENT: &str = "RECITE_VALIDATE013";
-pub(crate) const UNSUPPORTED_CHOICE_CHILD_STATEMENT: &str = "RECITE_VALIDATE014";
-pub(crate) const UNKNOWN_CHOICE_ECHO_LINE: &str = "RECITE_VALIDATE015";
-pub(crate) const NON_FINITE_FLOAT_VALUE: &str = "RECITE_VALIDATE016";
-pub(crate) const UNKNOWN_EFFECT_FUNCTION: &str = "RECITE_VALIDATE017";
-pub(crate) const WRONG_EFFECT_ARITY: &str = "RECITE_VALIDATE018";
-pub(crate) const WRONG_EFFECT_ARGUMENT_TYPE: &str = "RECITE_VALIDATE019";
-pub(crate) const UNSUPPORTED_EFFECT_MODE: &str = "RECITE_VALIDATE020";
-pub(crate) const INVALID_EFFECT_ARGUMENT_VALUE: &str = "RECITE_VALIDATE021";
-pub(crate) const UNKNOWN_MARKUP_TAG: &str = "RECITE_VALIDATE022";
-pub(crate) const UNBALANCED_MARKUP_TAG: &str = "RECITE_VALIDATE023";
-pub(crate) const MISSING_MARKUP_CLOSING_TAG: &str = "RECITE_VALIDATE024";
-pub(crate) const INVALID_MARKUP_NESTING: &str = "RECITE_VALIDATE025";
-pub(crate) const UNKNOWN_METADATA_KEY: &str = "RECITE_VALIDATE026";
-pub(crate) const INVALID_METADATA_TARGET: &str = "RECITE_VALIDATE027";
-pub(crate) const DUPLICATE_METADATA_KEY: &str = "RECITE_VALIDATE028";
-pub(crate) const WRONG_METADATA_VALUE_TYPE: &str = "RECITE_VALIDATE029";
-pub(crate) const INVALID_METADATA_VALUE: &str = "RECITE_VALIDATE030";
+pub(crate) const MISSING_LINE_ID: DiagnosticCode = DiagnosticCode::new_static("RECITE_ID001");
+pub(crate) const MISSING_CHOICE_ID: DiagnosticCode = DiagnosticCode::new_static("RECITE_ID002");
+pub(crate) const DUPLICATE_LINE_ID: DiagnosticCode = DiagnosticCode::new_static("RECITE_ID003");
+pub(crate) const DUPLICATE_CHOICE_ID: DiagnosticCode = DiagnosticCode::new_static("RECITE_ID004");
+pub(crate) const MISSING_DEFAULT_BLOCK: DiagnosticCode =
+    DiagnosticCode::new_static("RECITE_VALIDATE005");
+pub(crate) const AMBIGUOUS_DEFAULT_BLOCK: DiagnosticCode =
+    DiagnosticCode::new_static("RECITE_VALIDATE006");
+pub(crate) const UNKNOWN_BLOCK_REFERENCE: DiagnosticCode =
+    DiagnosticCode::new_static("RECITE_VALIDATE007");
+pub(crate) const INVALID_SOURCE_SPAN: DiagnosticCode =
+    DiagnosticCode::new_static("RECITE_VALIDATE008");
+pub(crate) const DUPLICATE_BLOCK_ID: DiagnosticCode =
+    DiagnosticCode::new_static("RECITE_VALIDATE009");
+pub(crate) const DUPLICATE_SOURCE_PATH: DiagnosticCode =
+    DiagnosticCode::new_static("RECITE_VALIDATE010");
+pub(crate) const AMBIGUOUS_COMPILED_BLOCK_ID: DiagnosticCode =
+    DiagnosticCode::new_static("RECITE_VALIDATE011");
+pub(crate) const MISSING_CHOICE_TARGET: DiagnosticCode =
+    DiagnosticCode::new_static("RECITE_VALIDATE012");
+pub(crate) const UNSUPPORTED_LINE_CHILD_STATEMENT: DiagnosticCode =
+    DiagnosticCode::new_static("RECITE_VALIDATE013");
+pub(crate) const UNSUPPORTED_CHOICE_CHILD_STATEMENT: DiagnosticCode =
+    DiagnosticCode::new_static("RECITE_VALIDATE014");
+pub(crate) const UNKNOWN_CHOICE_ECHO_LINE: DiagnosticCode =
+    DiagnosticCode::new_static("RECITE_VALIDATE015");
+pub(crate) const NON_FINITE_FLOAT_VALUE: DiagnosticCode =
+    DiagnosticCode::new_static("RECITE_VALIDATE016");
+pub(crate) const UNKNOWN_EFFECT_FUNCTION: DiagnosticCode =
+    DiagnosticCode::new_static("RECITE_VALIDATE017");
+pub(crate) const WRONG_EFFECT_ARITY: DiagnosticCode =
+    DiagnosticCode::new_static("RECITE_VALIDATE018");
+pub(crate) const WRONG_EFFECT_ARGUMENT_TYPE: DiagnosticCode =
+    DiagnosticCode::new_static("RECITE_VALIDATE019");
+pub(crate) const UNSUPPORTED_EFFECT_MODE: DiagnosticCode =
+    DiagnosticCode::new_static("RECITE_VALIDATE020");
+pub(crate) const INVALID_EFFECT_ARGUMENT_VALUE: DiagnosticCode =
+    DiagnosticCode::new_static("RECITE_VALIDATE021");
+pub(crate) const UNKNOWN_MARKUP_TAG: DiagnosticCode =
+    DiagnosticCode::new_static("RECITE_VALIDATE022");
+pub(crate) const UNBALANCED_MARKUP_TAG: DiagnosticCode =
+    DiagnosticCode::new_static("RECITE_VALIDATE023");
+pub(crate) const MISSING_MARKUP_CLOSING_TAG: DiagnosticCode =
+    DiagnosticCode::new_static("RECITE_VALIDATE024");
+pub(crate) const INVALID_MARKUP_NESTING: DiagnosticCode =
+    DiagnosticCode::new_static("RECITE_VALIDATE025");
+pub(crate) const UNKNOWN_METADATA_KEY: DiagnosticCode =
+    DiagnosticCode::new_static("RECITE_VALIDATE026");
+pub(crate) const INVALID_METADATA_TARGET: DiagnosticCode =
+    DiagnosticCode::new_static("RECITE_VALIDATE027");
+pub(crate) const DUPLICATE_METADATA_KEY: DiagnosticCode =
+    DiagnosticCode::new_static("RECITE_VALIDATE028");
+pub(crate) const WRONG_METADATA_VALUE_TYPE: DiagnosticCode =
+    DiagnosticCode::new_static("RECITE_VALIDATE029");
+pub(crate) const INVALID_METADATA_VALUE: DiagnosticCode =
+    DiagnosticCode::new_static("RECITE_VALIDATE030");
 
 pub(crate) fn missing_line_id(line: &Line) -> Diagnostic {
-    diagnostic(
+    Diagnostic::error(
         MISSING_LINE_ID,
         "line header must include a stable line id",
         line.span.clone(),
@@ -44,7 +70,7 @@ pub(crate) fn missing_line_id(line: &Line) -> Diagnostic {
 }
 
 pub(crate) fn missing_choice_id(choice: &Choice) -> Diagnostic {
-    diagnostic(
+    Diagnostic::error(
         MISSING_CHOICE_ID,
         "choice header must include a stable choice id",
         choice.span.clone(),
@@ -54,7 +80,7 @@ pub(crate) fn missing_choice_id(choice: &Choice) -> Diagnostic {
 
 pub(crate) fn duplicate_line_id(line: &Line, first_span: SourceSpan) -> Diagnostic {
     let id = line.id.as_ref().expect("duplicate line IDs have an ID");
-    diagnostic(
+    Diagnostic::error(
         DUPLICATE_LINE_ID,
         format!("duplicate localisable id `{id}` on line"),
         line.span.clone(),
@@ -65,7 +91,7 @@ pub(crate) fn duplicate_line_id(line: &Line, first_span: SourceSpan) -> Diagnost
 
 pub(crate) fn duplicate_choice_id(choice: &Choice, first_span: SourceSpan) -> Diagnostic {
     let id = choice.id.as_ref().expect("duplicate choice IDs have an ID");
-    diagnostic(
+    Diagnostic::error(
         DUPLICATE_CHOICE_ID,
         format!("duplicate localisable id `{id}` on choice"),
         choice.span.clone(),
@@ -75,7 +101,7 @@ pub(crate) fn duplicate_choice_id(choice: &Choice, first_span: SourceSpan) -> Di
 }
 
 pub(crate) fn missing_default_block(span: SourceSpan) -> Diagnostic {
-    diagnostic(
+    Diagnostic::error(
         MISSING_DEFAULT_BLOCK,
         "project must declare exactly one default block",
         span,
@@ -84,7 +110,7 @@ pub(crate) fn missing_default_block(span: SourceSpan) -> Diagnostic {
 }
 
 pub(crate) fn ambiguous_default_block(block: &Block, first: &Block) -> Diagnostic {
-    diagnostic(
+    Diagnostic::error(
         AMBIGUOUS_DEFAULT_BLOCK,
         format!("block `{}` is another default block", block.id),
         block.span.clone(),
@@ -97,7 +123,7 @@ pub(crate) fn ambiguous_default_block(block: &Block, first: &Block) -> Diagnosti
 }
 
 pub(crate) fn unknown_block_reference(reference: &BlockReference, span: SourceSpan) -> Diagnostic {
-    diagnostic(
+    Diagnostic::error(
         UNKNOWN_BLOCK_REFERENCE,
         format!("unknown block reference `{}`", display_reference(reference)),
         span,
@@ -105,7 +131,7 @@ pub(crate) fn unknown_block_reference(reference: &BlockReference, span: SourceSp
 }
 
 pub(crate) fn invalid_source_span(span: SourceSpan, owner: &str, detail: &str) -> Diagnostic {
-    diagnostic(
+    Diagnostic::error(
         INVALID_SOURCE_SPAN,
         format!("invalid source span for {owner}: {detail}"),
         span,
@@ -117,7 +143,7 @@ pub(crate) fn duplicate_block_id(
     span: SourceSpan,
     first_span: SourceSpan,
 ) -> Diagnostic {
-    diagnostic(
+    Diagnostic::error(
         DUPLICATE_BLOCK_ID,
         format!("duplicate block id `{block_id}`"),
         span,
@@ -130,7 +156,7 @@ pub(crate) fn duplicate_source_path(
     source_file: &SourceFile,
     first_span: SourceSpan,
 ) -> Diagnostic {
-    diagnostic(
+    Diagnostic::error(
         DUPLICATE_SOURCE_PATH,
         format!("duplicate source path `{}`", source_file.path),
         first_span_for(source_file),
@@ -147,7 +173,7 @@ pub(crate) fn ambiguous_compiled_block_id(
     span: SourceSpan,
     first_span: SourceSpan,
 ) -> Diagnostic {
-    diagnostic(
+    Diagnostic::error(
         AMBIGUOUS_COMPILED_BLOCK_ID,
         format!("compiled block id `{block_id}` must be globally unique"),
         span,
@@ -160,7 +186,7 @@ pub(crate) fn ambiguous_compiled_block_id(
 }
 
 pub(crate) fn missing_choice_target(choice: &Choice) -> Diagnostic {
-    diagnostic(
+    Diagnostic::error(
         MISSING_CHOICE_TARGET,
         "choice must target a block or END before it can be compiled",
         choice.span.clone(),
@@ -169,7 +195,7 @@ pub(crate) fn missing_choice_target(choice: &Choice) -> Diagnostic {
 }
 
 pub(crate) fn unsupported_line_child_statement(line: &Line, statement: &Statement) -> Diagnostic {
-    diagnostic(
+    Diagnostic::error(
         UNSUPPORTED_LINE_CHILD_STATEMENT,
         format!(
             "line `{}` contains a nested {} statement that v0 compiled prompts cannot represent",
@@ -189,7 +215,7 @@ pub(crate) fn unsupported_choice_child_statement(
     choice: &Choice,
     statement: &Statement,
 ) -> Diagnostic {
-    diagnostic(
+    Diagnostic::error(
         UNSUPPORTED_CHOICE_CHILD_STATEMENT,
         format!(
             "choice `{}` contains a nested {} statement that v0 compiled choices cannot represent",
@@ -206,7 +232,7 @@ pub(crate) fn unsupported_choice_child_statement(
 }
 
 pub(crate) fn unknown_choice_echo_line(choice: &Choice, line_id: &LineId) -> Diagnostic {
-    diagnostic(
+    Diagnostic::error(
         UNKNOWN_CHOICE_ECHO_LINE,
         format!("choice echo references unknown line id `{line_id}`"),
         choice.span.clone(),
@@ -218,7 +244,7 @@ pub(crate) fn non_finite_float_value(
     span: SourceSpan,
     owner: impl std::fmt::Display,
 ) -> Diagnostic {
-    diagnostic(
+    Diagnostic::error(
         NON_FINITE_FLOAT_VALUE,
         format!("{owner} contains a non-finite float value"),
         span,
@@ -227,7 +253,7 @@ pub(crate) fn non_finite_float_value(
 }
 
 pub(crate) fn unknown_effect_function(function: &str, span: SourceSpan) -> Diagnostic {
-    diagnostic(
+    Diagnostic::error(
         UNKNOWN_EFFECT_FUNCTION,
         format!("unknown effect function `{function}`"),
         span,
@@ -241,7 +267,7 @@ pub(crate) fn wrong_effect_arity(
     actual: usize,
     span: SourceSpan,
 ) -> Diagnostic {
-    diagnostic(
+    Diagnostic::error(
         WRONG_EFFECT_ARITY,
         format!(
             "effect `{function}` expects {expected} argument{}, but got {actual}",
@@ -259,7 +285,7 @@ pub(crate) fn wrong_effect_argument_type(
     actual: &str,
     span: SourceSpan,
 ) -> Diagnostic {
-    diagnostic(
+    Diagnostic::error(
         WRONG_EFFECT_ARGUMENT_TYPE,
         format!(
             "argument {} for effect `{function}` expects {}, but got {actual}",
@@ -275,7 +301,7 @@ pub(crate) fn unsupported_effect_mode(
     mode: EffectMode,
     span: SourceSpan,
 ) -> Diagnostic {
-    diagnostic(
+    Diagnostic::error(
         UNSUPPORTED_EFFECT_MODE,
         format!(
             "effect `{function}` does not support {} mode",
@@ -293,7 +319,7 @@ pub(crate) fn invalid_effect_argument_value(
     value: &str,
     span: SourceSpan,
 ) -> Diagnostic {
-    diagnostic(
+    Diagnostic::error(
         INVALID_EFFECT_ARGUMENT_VALUE,
         format!(
             "argument {} for effect `{function}` uses unknown {} value `{value}`",
@@ -306,7 +332,7 @@ pub(crate) fn invalid_effect_argument_value(
 }
 
 pub(crate) fn unknown_markup_tag(tag: &str, span: SourceSpan) -> Diagnostic {
-    diagnostic(
+    Diagnostic::error(
         UNKNOWN_MARKUP_TAG,
         format!("unknown inline markup tag `{tag}`"),
         span,
@@ -320,7 +346,7 @@ pub(crate) fn unbalanced_markup_tag(
     detail: impl Into<String>,
     related_opening: Option<SourceSpan>,
 ) -> Diagnostic {
-    let diagnostic = diagnostic(
+    let diagnostic = Diagnostic::error(
         UNBALANCED_MARKUP_TAG,
         format!("unbalanced inline markup tag `{tag}`: {}", detail.into()),
         span,
@@ -335,7 +361,7 @@ pub(crate) fn unbalanced_markup_tag(
 }
 
 pub(crate) fn missing_markup_closing_tag(tag: &str, span: SourceSpan) -> Diagnostic {
-    diagnostic(
+    Diagnostic::error(
         MISSING_MARKUP_CLOSING_TAG,
         format!("inline markup tag `{tag}` requires a closing tag"),
         span,
@@ -349,7 +375,7 @@ pub(crate) fn invalid_markup_nesting(
     child_span: SourceSpan,
     parent_span: SourceSpan,
 ) -> Diagnostic {
-    diagnostic(
+    Diagnostic::error(
         INVALID_MARKUP_NESTING,
         format!("inline markup tag `{parent}` cannot contain nested tag `{child}`"),
         child_span,
@@ -362,7 +388,7 @@ pub(crate) fn invalid_markup_nesting(
 }
 
 pub(crate) fn unknown_metadata_key(key: &str, span: SourceSpan) -> Diagnostic {
-    diagnostic(
+    Diagnostic::error(
         UNKNOWN_METADATA_KEY,
         format!("unknown metadata key `{key}`"),
         span,
@@ -371,7 +397,7 @@ pub(crate) fn unknown_metadata_key(key: &str, span: SourceSpan) -> Diagnostic {
 }
 
 pub(crate) fn invalid_metadata_target(key: &str, target: &str, span: SourceSpan) -> Diagnostic {
-    diagnostic(
+    Diagnostic::error(
         INVALID_METADATA_TARGET,
         format!("metadata key `{key}` is not allowed on {target}"),
         span,
@@ -380,7 +406,7 @@ pub(crate) fn invalid_metadata_target(key: &str, target: &str, span: SourceSpan)
 }
 
 pub(crate) fn duplicate_metadata_key(key: &str, span: SourceSpan) -> Diagnostic {
-    diagnostic(
+    Diagnostic::error(
         DUPLICATE_METADATA_KEY,
         format!("metadata key `{key}` is not repeatable"),
         span,
@@ -394,7 +420,7 @@ pub(crate) fn wrong_metadata_value_type(
     actual: &str,
     span: SourceSpan,
 ) -> Diagnostic {
-    diagnostic(
+    Diagnostic::error(
         WRONG_METADATA_VALUE_TYPE,
         format!(
             "metadata key `{key}` expects {}, but got {actual}",
@@ -411,7 +437,7 @@ pub(crate) fn invalid_metadata_value(
     value: &str,
     span: SourceSpan,
 ) -> Diagnostic {
-    diagnostic(
+    Diagnostic::error(
         INVALID_METADATA_VALUE,
         format!(
             "metadata key `{key}` uses unknown {} value `{value}`",
@@ -420,15 +446,6 @@ pub(crate) fn invalid_metadata_value(
         span,
     )
     .with_help("use a value exported in the project schema manifest")
-}
-
-fn diagnostic(code: &str, message: impl Into<String>, span: SourceSpan) -> Diagnostic {
-    Diagnostic::new(
-        DiagnosticCode::new(code).expect("compiler diagnostic codes are static and namespaced"),
-        DiagnosticSeverity::Error,
-        message,
-        span,
-    )
 }
 
 fn display_reference(reference: &BlockReference) -> String {

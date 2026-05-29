@@ -1,4 +1,4 @@
-use super::super::diagnostics::{INVALID_TYPE_REFERENCE, diagnostic};
+use super::super::diagnostics::INVALID_TYPE_REFERENCE;
 use super::super::spans::ManifestSpans;
 use super::super::validate::parse_type_ref;
 use crate::schema::SchemaTypeRef;
@@ -16,7 +16,7 @@ pub(super) fn lower_type_reference(
     match parse_type_ref(value) {
         Some(type_ref) => (type_ref, type_ref_span, true),
         None => {
-            diagnostics.push(diagnostic(
+            diagnostics.push(Diagnostic::error(
                 INVALID_TYPE_REFERENCE,
                 invalid_message,
                 type_ref_span.clone(),

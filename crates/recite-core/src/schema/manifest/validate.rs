@@ -2,9 +2,7 @@ use crate::{Diagnostic, EffectMode, SourceSpan};
 
 use crate::schema::{MetadataTarget, ProjectSchema, SchemaTypeRef};
 
-use super::diagnostics::{
-    DUPLICATE_DEFINITION, INVALID_TYPE_REFERENCE, MALFORMED_SHAPE, diagnostic,
-};
+use super::diagnostics::{DUPLICATE_DEFINITION, INVALID_TYPE_REFERENCE, MALFORMED_SHAPE};
 
 #[derive(Clone, Debug)]
 pub(crate) struct PendingTypeReference {
@@ -30,14 +28,14 @@ fn validate_type_ref(
 ) {
     match &pending.type_ref {
         SchemaTypeRef::Enum(name) if !schema.types.contains_key(name) => {
-            diagnostics.push(diagnostic(
+            diagnostics.push(Diagnostic::error(
                 INVALID_TYPE_REFERENCE,
                 format!("{} references unknown enum type '{name}'", pending.owner),
                 pending.span.clone(),
             ));
         }
         SchemaTypeRef::Registry(name) if !schema.registries.contains_key(name) => {
-            diagnostics.push(diagnostic(
+            diagnostics.push(Diagnostic::error(
                 INVALID_TYPE_REFERENCE,
                 format!("{} references unknown registry '{name}'", pending.owner),
                 pending.span.clone(),
@@ -53,7 +51,7 @@ pub(crate) fn duplicate_definition(
     name: &str,
     span: SourceSpan,
 ) {
-    diagnostics.push(diagnostic(
+    diagnostics.push(Diagnostic::error(
         DUPLICATE_DEFINITION,
         format!("duplicate {kind} definition '{name}'"),
         span,
@@ -67,7 +65,7 @@ pub(crate) fn validate_non_empty_string(
     span: SourceSpan,
 ) -> bool {
     if value.is_empty() {
-        diagnostics.push(diagnostic(
+        diagnostics.push(Diagnostic::error(
             MALFORMED_SHAPE,
             format!("{field} must not be empty"),
             span,
@@ -88,7 +86,7 @@ pub(crate) fn validate_manifest_name(
         return true;
     }
 
-    diagnostics.push(diagnostic(
+    diagnostics.push(Diagnostic::error(
         MALFORMED_SHAPE,
         format!("{field} must be an identifier-like schema name"),
         span,

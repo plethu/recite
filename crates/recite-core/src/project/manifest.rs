@@ -4,7 +4,7 @@ use super::{
     MALFORMED_MANIFEST, ProjectManifest, ProjectManifestLoadReport, ProjectManifestMetadata,
     ProjectScene,
 };
-use crate::project::spans::{diagnostic, toml_error_span};
+use crate::{Diagnostic, project::spans::toml_error_span};
 
 impl ProjectManifest {
     #[must_use]
@@ -17,7 +17,7 @@ impl ProjectManifest {
             },
             Err(error) => ProjectManifestLoadReport {
                 manifest: None,
-                diagnostics: vec![diagnostic(
+                diagnostics: vec![Diagnostic::error(
                     MALFORMED_MANIFEST,
                     format!("malformed project manifest: {error}"),
                     toml_error_span(&file, source, &error),

@@ -5,24 +5,26 @@ mod validate;
 
 use std::collections::BTreeMap;
 
-use crate::{CompiledDialogue, SchemaFingerprint};
+use crate::{CompiledDialogue, DiagnosticCode, SchemaFingerprint};
 
 pub use freshness::validate_project_freshness;
 pub use spans::project_scene_key_span;
 pub use validate::validate_project_manifest;
 
-pub const MALFORMED_MANIFEST: &str = "RECITE_PROJECT001";
-pub const DUPLICATE_SCENE_ID: &str = "RECITE_PROJECT002";
-pub const MISSING_COMPILED_ASSET: &str = "RECITE_PROJECT003";
-pub const UNKNOWN_START_BLOCK: &str = "RECITE_PROJECT004";
-pub const MISSING_PARTICIPANTS: &str = "RECITE_PROJECT005";
-pub const MISSING_SOURCE_ASSET: &str = "RECITE_PROJECT006";
-pub const MALFORMED_COMPILED_ASSET: &str = "RECITE_PROJECT007";
-pub const UNKNOWN_PARTICIPANT: &str = "RECITE_PROJECT008";
+pub const MALFORMED_MANIFEST: DiagnosticCode = DiagnosticCode::new_static("RECITE_PROJECT001");
+pub const DUPLICATE_SCENE_ID: DiagnosticCode = DiagnosticCode::new_static("RECITE_PROJECT002");
+pub const MISSING_COMPILED_ASSET: DiagnosticCode = DiagnosticCode::new_static("RECITE_PROJECT003");
+pub const UNKNOWN_START_BLOCK: DiagnosticCode = DiagnosticCode::new_static("RECITE_PROJECT004");
+pub const MISSING_PARTICIPANTS: DiagnosticCode = DiagnosticCode::new_static("RECITE_PROJECT005");
+pub const MISSING_SOURCE_ASSET: DiagnosticCode = DiagnosticCode::new_static("RECITE_PROJECT006");
+pub const MALFORMED_COMPILED_ASSET: DiagnosticCode =
+    DiagnosticCode::new_static("RECITE_PROJECT007");
+pub const UNKNOWN_PARTICIPANT: DiagnosticCode = DiagnosticCode::new_static("RECITE_PROJECT008");
 
-pub const STALE_SOURCE_FINGERPRINT: &str = "RECITE_FRESH001";
-pub const STALE_SCHEMA_FINGERPRINT: &str = "RECITE_FRESH002";
-pub const STALE_COMPILER_COMPATIBILITY: &str = "RECITE_FRESH003";
+pub const STALE_SOURCE_FINGERPRINT: DiagnosticCode = DiagnosticCode::new_static("RECITE_FRESH001");
+pub const STALE_SCHEMA_FINGERPRINT: DiagnosticCode = DiagnosticCode::new_static("RECITE_FRESH002");
+pub const STALE_COMPILER_COMPATIBILITY: DiagnosticCode =
+    DiagnosticCode::new_static("RECITE_FRESH003");
 
 /// Loaded `recite.project.toml` manifest.
 #[derive(Clone, Debug, Eq, PartialEq)]

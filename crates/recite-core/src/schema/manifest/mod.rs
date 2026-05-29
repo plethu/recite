@@ -7,7 +7,7 @@ mod validate;
 use crate::Diagnostic;
 
 use super::ProjectSchema;
-use diagnostics::{MALFORMED_SHAPE, diagnostic};
+use diagnostics::MALFORMED_SHAPE;
 use lower::lower_manifest;
 use raw::RawManifest;
 use spans::json_error_span;
@@ -28,7 +28,7 @@ pub fn load_schema_manifest_str(file: impl Into<String>, source: &str) -> Schema
         Err(error) => {
             return SchemaLoadReport {
                 schema: None,
-                diagnostics: vec![diagnostic(
+                diagnostics: vec![Diagnostic::error(
                     MALFORMED_SHAPE,
                     format!("malformed schema manifest: {error}"),
                     json_error_span(&file, &error),

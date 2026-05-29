@@ -1,5 +1,5 @@
 use crate::{
-    Diagnostic, DiagnosticCode, DiagnosticSeverity, SourcePosition, SourceSpan,
+    SourcePosition, SourceSpan,
     source_location::{point_one, position_for_byte_offset, source_position},
 };
 
@@ -11,15 +11,6 @@ pub fn project_scene_key_span(
     key: &str,
 ) -> SourceSpan {
     scene_key_span(file, source, scene_index, key)
-}
-
-pub(super) fn diagnostic(code: &str, message: impl Into<String>, span: SourceSpan) -> Diagnostic {
-    Diagnostic::new(
-        DiagnosticCode::new(code).expect("project diagnostic codes are static and namespaced"),
-        DiagnosticSeverity::Error,
-        message,
-        span,
-    )
 }
 
 pub(super) fn toml_error_span(file: &str, source: &str, error: &toml::de::Error) -> SourceSpan {

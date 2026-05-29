@@ -1,6 +1,6 @@
 use std::collections::BTreeSet;
 
-use super::super::diagnostics::{DUPLICATE_DEFINITION, MALFORMED_SHAPE, diagnostic};
+use super::super::diagnostics::{DUPLICATE_DEFINITION, MALFORMED_SHAPE};
 use super::super::raw::{Named, RawRegistryDefinition, RawSpeakerDefinition, RawTypeDefinition};
 use super::super::spans::ManifestSpans;
 use super::super::validate::{
@@ -32,7 +32,7 @@ pub(super) fn lower_types(
 
         let kind_span = spans.next_value_span(file, source, &entry.value.kind);
         if entry.value.kind != "enum" {
-            diagnostics.push(diagnostic(
+            diagnostics.push(Diagnostic::error(
                 MALFORMED_SHAPE,
                 format!(
                     "type '{}' uses unsupported kind '{}'",
@@ -151,7 +151,7 @@ pub(super) fn canonical_string_values(
             continue;
         }
         if !canonical.insert(value.clone()) {
-            diagnostics.push(diagnostic(
+            diagnostics.push(Diagnostic::error(
                 DUPLICATE_DEFINITION,
                 format!("{owner} repeats value '{value}'"),
                 value_span,

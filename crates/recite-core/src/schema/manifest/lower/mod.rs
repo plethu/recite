@@ -5,10 +5,11 @@ mod types;
 mod version;
 
 use super::SchemaLoadReport;
-use super::diagnostics::{MALFORMED_SHAPE, UNSUPPORTED_VERSION, diagnostic};
+use super::diagnostics::{MALFORMED_SHAPE, UNSUPPORTED_VERSION};
 use super::raw::RawManifest;
 use super::spans::{ManifestSpans, top_level_key_span};
 use super::validate::validate_type_references;
+use crate::Diagnostic;
 use crate::schema::ProjectSchema;
 
 use content::{lower_markup, lower_metadata};
@@ -24,12 +25,12 @@ pub(crate) fn lower_manifest(file: String, source: &str, raw: RawManifest) -> Sc
 
     match schema_version(source, &raw.schema_version) {
         SchemaVersion::One => {}
-        SchemaVersion::Unsupported(version) => diagnostics.push(diagnostic(
+        SchemaVersion::Unsupported(version) => diagnostics.push(Diagnostic::error(
             UNSUPPORTED_VERSION,
             format!("unsupported schema manifest version {version}"),
             top_level_key_span(&file, source, "schema_version"),
         )),
-        SchemaVersion::Malformed => diagnostics.push(diagnostic(
+        SchemaVersion::Malformed => diagnostics.push(Diagnostic::error(
             MALFORMED_SHAPE,
             "schema_version must be an integer",
             top_level_key_span(&file, source, "schema_version"),

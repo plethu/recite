@@ -2,7 +2,7 @@ use std::collections::BTreeMap;
 
 use super::{
     DUPLICATE_SCENE_ID, MISSING_PARTICIPANTS, ProjectManifest, UNKNOWN_PARTICIPANT,
-    spans::{diagnostic, scene_key_span},
+    spans::scene_key_span,
 };
 use crate::{Diagnostic, ProjectSchema};
 
@@ -19,7 +19,7 @@ pub fn validate_project_manifest(
 
     for (scene_index, scene) in manifest.scenes.iter().enumerate() {
         if scene.participants.is_empty() {
-            diagnostics.push(diagnostic(
+            diagnostics.push(Diagnostic::error(
                 MISSING_PARTICIPANTS,
                 format!("scene '{}' must declare at least one participant", scene.id),
                 scene_key_span(file, source, scene_index, "participants"),
@@ -31,7 +31,7 @@ pub fn validate_project_manifest(
         {
             for participant in &scene.participants {
                 if !schema.speakers.contains_key(participant) {
-                    diagnostics.push(diagnostic(
+                    diagnostics.push(Diagnostic::error(
                         UNKNOWN_PARTICIPANT,
                         format!(
                             "scene '{}' references unknown participant '{participant}'",
@@ -58,7 +58,7 @@ fn validate_duplicate_scene_ids(
     for (scene_index, scene) in manifest.scenes.iter().enumerate() {
         if let Some(first_index) = seen.get(scene.id.as_str()).copied() {
             diagnostics.push(
-                diagnostic(
+                Diagnostic::error(
                     DUPLICATE_SCENE_ID,
                     format!("duplicate scene id '{}'", scene.id),
                     scene_key_span(file, source, scene_index, "id"),

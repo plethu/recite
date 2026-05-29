@@ -4,8 +4,8 @@ use std::path::{Path, PathBuf};
 
 use recite_core::{
     COMPILED_ASSET_FORMAT_VERSION_V0, COMPILER_COMPATIBILITY_VERSION_V0, CompiledAssetDecodeError,
-    Diagnostic, DiagnosticCode, DiagnosticSeverity, ProjectFreshnessInput, ProjectManifest,
-    ProjectSchema, SchemaFingerprint, SourceSpan, decode_compiled_dialogue_messagepack,
+    Diagnostic, ProjectFreshnessInput, ProjectManifest, ProjectSchema, SchemaFingerprint,
+    decode_compiled_dialogue_messagepack,
     project::{
         MALFORMED_COMPILED_ASSET, MISSING_COMPILED_ASSET, STALE_COMPILER_COMPATIBILITY,
         project_scene_key_span, validate_project_freshness, validate_project_manifest,
@@ -49,7 +49,7 @@ pub(crate) fn validate_project(project_root: PathBuf) -> Result<Vec<Diagnostic>,
     for (scene_index, scene) in manifest.scenes.iter().enumerate() {
         let asset_path = resolve_project_path(&project_root, &scene.asset);
         if !asset_path.is_file() {
-            diagnostics.push(project_diagnostic(
+            diagnostics.push(Diagnostic::error(
                 MISSING_COMPILED_ASSET,
                 format!(
                     "scene '{}' references missing compiled asset '{}'",
@@ -72,7 +72,7 @@ pub(crate) fn validate_project(project_root: PathBuf) -> Result<Vec<Diagnostic>,
             }) if format_version == COMPILED_ASSET_FORMAT_VERSION_V0
                 && compiler_compatibility_version != COMPILER_COMPATIBILITY_VERSION_V0 =>
             {
-                diagnostics.push(project_diagnostic(
+                diagnostics.push(Diagnostic::error(
                     STALE_COMPILER_COMPATIBILITY,
                     format!(
                         "compiled asset '{}' uses compiler compatibility version {}, expected {}",
@@ -85,7 +85,7 @@ pub(crate) fn validate_project(project_root: PathBuf) -> Result<Vec<Diagnostic>,
                 continue;
             }
             Err(error) => {
-                diagnostics.push(project_diagnostic(
+                diagnostics.push(Diagnostic::error(
                     MALFORMED_COMPILED_ASSET,
                     format!(
                         "scene '{}' references malformed compiled asset '{}': {error}",
@@ -181,13 +181,4 @@ fn project_source_candidates(
     }
 
     candidates
-}
-
-fn project_diagnostic(code: &str, message: impl Into<String>, span: SourceSpan) -> Diagnostic {
-    Diagnostic::new(
-        DiagnosticCode::new(code).expect("project diagnostic codes are static and namespaced"),
-        DiagnosticSeverity::Error,
-        message,
-        span,
-    )
 }
