@@ -1,4 +1,4 @@
-use std::collections::HashMap;
+use std::collections::BTreeMap;
 
 use crate::i18n::{Messages, UiLocale};
 use crate::tui::{Keymap, PromptMode, TuiInteractionState};
@@ -8,7 +8,7 @@ use super::*;
 
 #[test]
 fn condition_answer_cache_defaults_true_and_returns_prior_answer() {
-    let mut cache = HashMap::new();
+    let mut cache = BTreeMap::new();
 
     assert!(cached_condition_answer(&cache, "trusts(mira)"));
     cache.insert("trusts(mira)".to_owned(), false);

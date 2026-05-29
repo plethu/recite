@@ -1,2 +1,11 @@
 allow-unwrap-in-tests = true
 allow-expect-in-tests = true
+disallowed-types = [
+  { path = "std::collections::HashMap", reason = "iteration order is nondeterministic; use BTreeMap" },
+  { path = "std::collections::HashSet", reason = "iteration order is nondeterministic; use BTreeSet" },
+]
+disallowed-methods = [
+  { path = "std::time::SystemTime::now", reason = "no wall-clock in deterministic crates" },
+  { path = "std::time::Instant::now", reason = "no wall-clock in deterministic crates" },
+  { path = "rand::thread_rng", reason = "use a seeded rng (rand_chacha)" },
+]

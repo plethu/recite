@@ -19,6 +19,7 @@ readme = "README.md"
 
 [workspace.lints.rust]
 unsafe_code = "forbid"
+unreachable_pub = "warn"
 
 [workspace.lints.clippy]
 unwrap_used = "warn"

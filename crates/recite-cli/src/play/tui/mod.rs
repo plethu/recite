@@ -1,4 +1,4 @@
-use std::{collections::HashMap, io};
+use std::{collections::BTreeMap, io};
 
 use crossterm::event::{self, Event, KeyEventKind};
 use ratatui::{
@@ -66,7 +66,7 @@ struct TuiPlayUi<'a, B: Backend> {
     state: TuiState,
     settings: TuiSettings,
     messages: Messages,
-    condition_answers: HashMap<String, bool>,
+    condition_answers: BTreeMap<String, bool>,
 }
 
 impl<'a, B: Backend> TuiPlayUi<'a, B> {
@@ -81,7 +81,7 @@ impl<'a, B: Backend> TuiPlayUi<'a, B> {
             state,
             settings,
             messages,
-            condition_answers: HashMap::new(),
+            condition_answers: BTreeMap::new(),
         }
     }
 
@@ -120,7 +120,7 @@ impl<'a, B: Backend> TuiPlayUi<'a, B> {
     }
 }
 
-fn cached_condition_answer(cache: &HashMap<String, bool>, query: &str) -> bool {
+fn cached_condition_answer(cache: &BTreeMap<String, bool>, query: &str) -> bool {
     cache.get(query).copied().unwrap_or(true)
 }
 
