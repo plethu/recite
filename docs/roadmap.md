@@ -82,10 +82,10 @@ flowchart LR
   subgraph PERF["Perf track"]
     direction LR
     i73["#73 benchmarks"] --> i74["#74"]
+    i73 --> i36["#36"]
+    i73 --> i105["#105"]
+    i73 --> i126["#126"]
     i75["#75 counters"] --> i74
-    i36["#36"]
-    i105["#105"]
-    i126["#126"]
   end
 
   subgraph DOCS["Docs / adoption"]
