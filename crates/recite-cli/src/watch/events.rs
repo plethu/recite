@@ -12,7 +12,9 @@ use crate::error::CliError;
 const DEBOUNCE: Duration = Duration::from_millis(250);
 
 // Instant::now is intentional here: this is CLI file-watcher debounce logic,
-// not deterministic dialogue runtime code.
+// not deterministic dialogue runtime code. The absolute deadline is tracked so
+// irrelevant events (generated output writes) consume the window without
+// resetting it; do not simplify to a per-loop recv_timeout(DEBOUNCE).
 #[allow(clippy::disallowed_methods)]
 pub(super) fn drain_debounce(
     receiver: &mpsc::Receiver<notify::Result<Event>>,
