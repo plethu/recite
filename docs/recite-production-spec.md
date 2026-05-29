@@ -67,7 +67,8 @@ The workspace should contain:
 - `recite-runtime`: deterministic runtime with no engine dependencies.
 - `recite-cli`: project CLI, exposing the `recite` binary.
 - `recite-lsp`: language server.
-- engine adapter crates as integrations mature, such as `recite-godot` or `recite-bevy`.
+- engine adapter crates as integrations mature, such as `recite-godot`,
+  `recite-bevy`, or `recite-unity`.
 - `recite-vscode`: VS Code extension.
 
 Visual-editor surfaces are deferred until text tooling is mature; the crate split (`recite-editor-core`, `recite-visual-editor`) will be designed when that work begins, not pre-declared here.
@@ -1715,6 +1716,10 @@ The visual editor is part of the long-term value proposition, but v1 should prov
 
 ## 16. Engine Adapters
 
+The normative adapter contract lives in
+`docs/engine-adapter-contract.md`. This section records the product-level
+requirements that the contract expands.
+
 ### 16.1 Goals
 
 The core runtime is engine-independent. Engine adapters are integration layers that make Recite feel native in a host engine without changing the dialogue contract.
@@ -1744,20 +1749,27 @@ Every adapter should expose host-native equivalents of these operations:
   - end with deferred effects;
   - structured error.
 
-The concrete API should feel idiomatic for the host engine. A Bevy adapter may use resources and events/messages. A Godot adapter may use nodes, resources, C# APIs, and signals. The semantics must stay equivalent.
+The concrete API should feel idiomatic for the host engine. A Bevy adapter may
+use resources and events/messages. A Godot adapter may use nodes, resources,
+C# APIs, and signals. A Unity adapter may use C# packages, imported assets,
+events, and editor import hooks. The semantics must stay equivalent.
 
 ### 16.3 Active Sessions
 
-Initial adapter scope may maintain one active dialogue session at a time.
+Initial adapter scope may maintain one active dialogue session per declared
+adapter owner. Each adapter must document whether that owner is a singleton
+service/resource, node, component, scene service, or equivalent host-native
+object.
 
-Attempting to start a second scene while one is active must emit an error, not panic.
+Attempting to start a second scene on the same owner while one is active must
+emit an error, not panic.
 
-Each adapter must document what happens when a compiled asset changes while a
-session is active. For v1, acceptable policies include rejecting the refresh
-until the session ends, requiring the author to restart the scene, or reloading
-only for the next session. Silent mid-session mutation is not acceptable because
-it can break deterministic traversal, save/load identity, and pending
-blocking-effect semantics.
+Each adapter must document and test what happens when a compiled asset changes
+while a session is active. The shared policy names are
+`reject_refresh_until_session_ends`, `reload_for_next_session_only`, and
+`restart_required`. Silent mid-session mutation is not acceptable because it can
+break deterministic traversal, save/load identity, previous prompt choice
+validation, and pending blocking-effect semantics.
 
 Adapters should make the edit-source -> LSP diagnostics -> on-save IDs ->
 `recite watch` rebuild -> engine import/refresh -> restart scene loop practical
@@ -1779,9 +1791,15 @@ Conditions must remain pure queries. Effects must remain typed requests emitted 
 
 ### 16.5 Initial Adapter Targets
 
-Godot and Bevy are both valid early adapter targets.
+Godot, Bevy, and Unity are v1-facing adapter targets. This is a settled product
+scope decision, not a ranking of engine value. The serious v1 gate requires all
+three adapters to be production-quality and to pass the engine-independent
+conformance coverage in `docs/engine-adapter-contract.md` §13, including
+contract-aligned asset refresh and active-session behavior.
 
-Godot reflects the first concrete production pressure from an existing game. Bevy remains a strong fit for Rust and ECS-oriented users. Neither adapter may weaken the engine-independent core contract.
+No adapter may weaken the engine-independent core contract.
+
+Unreal and GameMaker remain post-v1 evaluation targets.
 
 ## 17. Testing
 
@@ -2247,7 +2265,7 @@ Initial non-goals:
 ### Milestone 9: First Production Adapters
 
 - at least one engine adapter, selected from active project pressure;
-- credible adapter stories for commercially relevant target engines;
+- credible adapter stories for the v1 target engines;
 - compiled asset loading;
 - native authoring asset refresh loops for Godot, Bevy, and Unity;
 - start/select/ack integration;
@@ -2316,7 +2334,9 @@ The project is not production-credible until all of the following are true:
 - Authors have a fast documented loop from source edit to LSP diagnostics,
   on-save stable ID insertion, `recite watch` rebuild, engine adapter
   import/refresh, and scene restart or documented active-session behavior.
-- Large-project fixtures exercise compile, validate, run, trace, localisation extraction, and snapshot restore at narrative scale comparable to serious commercial dialogue-heavy games.
+- Large-project fixtures exercise compile, validate, run, trace, localisation
+  extraction, and snapshot restore at narrative scale comparable to serious
+  dialogue-heavy games.
 - Performance and memory characteristics are measured, documented, and protected by regression smoke checks.
 - At least one production-quality engine adapter can load compiled assets, traverse dialogue, evaluate conditions, emit effects without executing them, and participate in save/load workflows.
 - Each v1 adapter has a documented asset refresh/import workflow and an
