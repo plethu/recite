@@ -1178,11 +1178,13 @@ The Rust schema model should live in `recite-core::schema` and include:
 - `EffectDefinition`, including typed parameters and supported modes;
 - `MetadataDefinition`, including targets, type, repeatability, and optional
   range constraints, and optional domain reference;
-- `MetadataDomainDefinition`, including flat value sets and contextual value
-  selectors;
+- `MetadataDomainDefinition`, including flat value sets, contextual value
+  selectors, and optional origin/fingerprint metadata for adapter-produced
+  manifests;
 - `MarkupDefinition`, including closing, translatability, and nesting policy;
 - `SpeakerDefinition`;
-- `RegistryDefinition`, including value snapshots and optional origin metadata.
+- `RegistryDefinition`, including value snapshots and optional
+  origin/fingerprint metadata.
 
 Metadata domains are named schema definitions. Metadata definitions reference
 domains by name rather than hardcoding special keys such as `portrait`.

@@ -182,8 +182,9 @@ requirements.
 
 Adapters must not introduce a second, host-only schema truth that can drift
 from compiled dialogue validation. The generated manifest is the boundary: game
-or adapter code may produce it, but Recite compiler, CLI, LSP, and runtime code
-only consume it.
+or adapter code may produce it; Recite compiler, CLI, LSP, and adapter import
+tooling consume it. Runtime traversal consumes compiled assets produced from
+that manifest-backed validation, not host schema discovery APIs.
 
 ### 7.1 Producer Responsibilities
 
@@ -201,8 +202,10 @@ an engine adapter or may be a standalone project tool, but it owns:
 
 Recite core validation must not scan engine resources, query an asset database,
 load editor-only data, reflect over game code, or execute game code to validate
-dialogue. Normal compiler, CLI, LSP, and runtime flows consume only the
-generated manifest plus dialogue/project inputs.
+dialogue. Compiler, CLI, and LSP validation consume only the generated manifest
+plus dialogue/project inputs. Runtime-facing adapter code consumes compiled
+assets and any schema-derived bindings; it must not rediscover host schema data
+during traversal.
 
 ### 7.2 Metadata-Domain Export Shape
 
@@ -215,8 +218,11 @@ Flat domains must include:
 
 - `kind: "flat"`;
 - a deterministic list of symbol `values`;
-- optional domain-level and value-level origin metadata when available;
-- optional producer fingerprints for the host inputs used to create the domain.
+- optional domain-level `origin` metadata when available;
+- optional `value_origins`, keyed by symbol value, when value-level provenance
+  is available;
+- optional `producer_fingerprints` for the host inputs used to create the
+  domain.
 
 Contextual domains must include:
 
@@ -224,14 +230,52 @@ Contextual domains must include:
 - a contextual `selector`, using the v1 selector forms defined by spec §10.2;
 - deterministic `values_by_context`, keyed by the selector result symbol;
 - a declared `missing_context` policy;
-- optional domain-level, context-level, and value-level origin metadata when
-  available;
-- optional producer fingerprints for the host inputs used to create the domain.
+- optional domain-level `origin` metadata when available;
+- optional `context_origins`, keyed by context symbol, when context provenance
+  is available;
+- optional `value_origins`, keyed by context symbol and then value symbol, when
+  value-level provenance is available;
+- optional `producer_fingerprints` for the host inputs used to create the
+  domain.
 
 `missing_context` must be one of the policies accepted by the schema model:
 `diagnostic`, `empty`, or `fallback` to a named flat domain. Fallback targets
 must be metadata-domain references, not copied value lists, so validation,
 completion, fingerprinting, and diagnostics share one definition.
+
+Origin metadata must be structured enough for tools to identify the host source
+without parsing prose. The minimum logical shape is:
+
+```json
+{
+  "kind": "asset_path",
+  "id": "content/items/brass_key.item",
+  "label": "Brass Key"
+}
+```
+
+`kind` names the origin namespace, such as `asset_path`, `asset_guid`,
+`script_member`, `type_member`, `data_row`, or an adapter-defined namespace.
+`id` is the stable identifier within that namespace. `label` is optional,
+diagnostic-only display text. Producers may include additional namespaced fields,
+but compiler acceptance must not depend on them.
+
+Producer fingerprints must use a stable shape:
+
+```json
+{
+  "id": "content/items",
+  "kind": "directory",
+  "algorithm": "blake3",
+  "value": "6f1d..."
+}
+```
+
+`id` identifies the input set, `kind` identifies how the producer found it,
+`algorithm` names the fingerprint algorithm or host fingerprint source, and
+`value` is the repeatable fingerprint. Producer fingerprints may appear at the
+manifest level for whole-export inputs or inside a domain for domain-specific
+inputs.
 
 ### 7.3 Deterministic Snapshots and Fingerprints
 
@@ -252,7 +296,7 @@ diagnostics. At minimum, producers must make ordering stable for:
 - contextual-domain values within each context;
 - metadata-domain references;
 - registry names and values;
-- included origin and producer-fingerprint records.
+- canonical origin and producer-fingerprint records.
 
 The schema fingerprint must change when any canonical domain definition changes,
 including:
@@ -265,19 +309,27 @@ including:
 - `missing_context` policy or fallback target changes;
 - metadata definitions that reference different domains;
 - inclusion or exclusion policy changes that affect exported domain content;
-- included origin or producer-fingerprint changes that are part of the
+- origin or producer-fingerprint changes that are explicitly part of the
   canonical manifest model.
 
 Producer metadata that is explicitly non-canonical for diagnostics only must be
 marked or modeled so it cannot accidentally perturb schema fingerprints.
+Manifest fields that describe the export process itself, such as producer name,
+producer tool version, schema export version, previous-output path, or cached
+stale-check results, are non-canonical unless the schema model explicitly
+promotes them. A manifest must not include its own canonical schema fingerprint
+as a fingerprint input. If a producer records the last computed schema
+fingerprint for troubleshooting, that record is non-canonical and excluded from
+schema fingerprint computation.
 
 ### 7.4 Provenance and Diagnostics
 
-When the host can provide provenance, generated manifests should include origins
-for domains, contexts, and values. Origins may name a resource path, asset GUID,
-asset database key, script/type/member, data-table row, import source, or other
-stable host identifier. Producers should also include fingerprints for input
-sets when the host can compute them cheaply and repeatably.
+When the host can provide provenance, generated manifests should include
+`origin`, `context_origins`, and `value_origins` for domains, contexts, and
+values. Origins may name a resource path, asset GUID, asset database key,
+script/type/member, data-table row, import source, or other stable host
+identifier. Producers should also include fingerprints for input sets when the
+host can compute them cheaply and repeatably.
 
 Origins and fingerprints are for diagnostics, LSP hovers, stale-schema checks,
 and adapter troubleshooting. Dialogue diagnostics must still work when origin
@@ -288,9 +340,22 @@ make an invalid dialogue valid.
 
 Adapters and standalone producers should provide a command or editor action
 that reports whether the generated schema manifest is stale relative to the
-producer's current host inputs. Host-agnostic checks compare the manifest's
-recorded producer fingerprints, inclusion policy, schema export version, and
-canonical schema fingerprint against a fresh export plan.
+producer's current host inputs. The strongest host-agnostic check is to rerun
+the producer, lower both the existing manifest and fresh export into the
+canonical schema model, and compare the resulting canonical schema
+fingerprints.
+
+Producer metadata may support cheaper preflight checks before a full export:
+
+- `schema_export_version`, a non-canonical producer-contract version for the
+  export shape;
+- `inclusion_policy`, a stable symbolic name or fingerprint for the producer's
+  include/exclude rules;
+- manifest-level or domain-level `producer_fingerprints`, as defined in §7.2.
+
+Those fields are producer stale-check inputs, not a replacement for Recite's
+canonical schema fingerprint. They are non-canonical unless the schema model
+explicitly says otherwise.
 
 Where the host cannot expose reliable file or asset fingerprints, the adapter
 must document the weaker check it can perform. The adapter may require an
@@ -312,11 +377,36 @@ by `metadata:item`.
 ```json
 {
   "schema_version": 1,
+  "schema_export_version": 1,
+  "inclusion_policy": "dialogue-export-v1",
+  "producer_fingerprints": [
+    {
+      "id": "content/items",
+      "kind": "directory",
+      "algorithm": "blake3",
+      "value": "6f1d..."
+    }
+  ],
   "metadata_domains": {
     "inventory_item": {
       "kind": "flat",
       "values": ["brass_key", "field_journal"],
-      "origin": "content/items"
+      "origin": {
+        "kind": "directory",
+        "id": "content/items"
+      },
+      "value_origins": {
+        "brass_key": {
+          "kind": "asset_path",
+          "id": "content/items/brass_key.item",
+          "label": "Brass Key"
+        },
+        "field_journal": {
+          "kind": "asset_path",
+          "id": "content/items/field_journal.item",
+          "label": "Field Journal"
+        }
+      }
     },
     "inspection_state_all": {
       "kind": "flat",
@@ -333,7 +423,36 @@ by `metadata:item`.
         "policy": "fallback",
         "domain": "inspection_state_all"
       },
-      "origin": "content/items"
+      "origin": {
+        "kind": "directory",
+        "id": "content/items"
+      },
+      "context_origins": {
+        "brass_key": {
+          "kind": "asset_path",
+          "id": "content/items/brass_key.item",
+          "label": "Brass Key"
+        },
+        "field_journal": {
+          "kind": "asset_path",
+          "id": "content/items/field_journal.item",
+          "label": "Field Journal"
+        }
+      },
+      "value_origins": {
+        "brass_key": {
+          "matched_to_lock": {
+            "kind": "asset_path",
+            "id": "content/items/brass_key.item#inspection_states"
+          }
+        },
+        "field_journal": {
+          "decoded_margin_notes": {
+            "kind": "asset_path",
+            "id": "content/items/field_journal.item#inspection_states"
+          }
+        }
+      }
     }
   },
   "metadata": {
