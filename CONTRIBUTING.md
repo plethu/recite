@@ -1,12 +1,10 @@
 # Contributing
 
-Recite is public source, but it is not accepting external code contributions yet.
+Recite is public source, but isn't accepting external code contributions yet while v1 architecture settles, to minimise churn.
 
-The project is still settling its v1 architecture, language shape, and crate boundaries. Until that shape has stabilised, I am keeping implementation work tightly directed so the core design can stay coherent.
+Issues, questions, and design feedback are still welcome on Codeberg, especially where they clarify real authoring, localisation, runtime, or tooling needs. Pull requests will be auto-closed for the time being.
 
-Issues, questions, and design feedback are still welcome on Codeberg, especially where they clarify real authoring, localisation, runtime, or tooling needs. Please do not open pull requests unless I have explicitly asked for one.
-
-After the v1 shape is stable, I will review and publish fuller contribution guidelines covering pull request scope, tests, review expectations, compatibility policy, and release process.
+After the v1 shape is stable, I'll review and publish fuller contribution guidelines covering pull request scope, tests, review expectations, compatibility policy, and release process.
 
 ## Project Notes
 

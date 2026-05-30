@@ -2360,6 +2360,6 @@ The core value is a deterministic dialogue/effect protocol:
 - integrated with games through explicit typed effects;
 - tested with normal programmatic assertions.
 
-The source format is intentionally small. It is a way to describe dialogue structure, not a second general-purpose scripting layer. Conditions are pure queries. Effects are typed requests. Game logic stays in the game.
+The source format is small. It is a way to describe dialogue structure, not a second general-purpose scripting layer. Conditions are pure queries. Effects are typed requests. Game logic stays in the game.
 
 That is the standard the project should optimise for.

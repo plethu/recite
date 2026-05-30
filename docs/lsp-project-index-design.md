@@ -74,8 +74,8 @@ The first project discovery pass should include:
 
 If the client supplies explicit Recite source roots, use those instead of
 walking the entire workspace root. Until scene manifests land, this fallback
-discovery is intentionally conservative: source roots and excludes should be
-configuration, not hard-coded assumptions about a game repository.
+discovery stays conservative: source roots and excludes should be configuration,
+not hard-coded assumptions about a game repository.
 
 The first pass should not invent scene manifest discovery. That belongs in a
 later issue after the production manifest shape is implemented.
