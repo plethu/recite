@@ -104,7 +104,7 @@ impl Lowerer<'_, '_> {
     }
 
     pub(super) fn divert_target(&mut self, field: HeaderField<'_>) -> Option<DivertTarget> {
-        if field.text == "END" {
+        if field.text == recite_core::END_DIVERT_TARGET {
             return Some(DivertTarget::End);
         }
 

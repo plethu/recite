@@ -1,5 +1,6 @@
 [workspace]
 members = [
+    "crates/recite-benchmarks",
     "crates/recite-cli",
     "crates/recite-compiler",
     "crates/recite-core",
@@ -31,9 +32,11 @@ unimplemented = "warn"
 recite-core = { version = "0.0.1", path = "crates/recite-core" }
 recite-parser = { version = "0.0.1", path = "crates/recite-parser" }
 recite-compiler = { version = "0.0.1", path = "crates/recite-compiler" }
+recite-fixturegen = { version = "0.0.1", path = "crates/recite-fixturegen" }
 recite-runtime = { version = "0.0.1", path = "crates/recite-runtime" }
 blake3 = "1.8.5"
 clap = { version = "4.5.51", features = ["derive", "string"] }
+criterion = { version = "0.8.2", default-features = false, features = ["plotters"] }
 crossterm = "0.28.1"
 fluent-bundle = "0.15.3"
 insta = { version = "1.47.2", default-features = false }

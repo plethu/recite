@@ -1,5 +1,8 @@
 use crate::{BlockId, SourceSpan};
 
+/// Source-format token used to target dialogue termination.
+pub const END_DIVERT_TARGET: &str = "END";
+
 /// A standalone divert statement.
 #[derive(Clone, Debug, Eq, PartialEq)]
 pub struct Divert {

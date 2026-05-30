@@ -10,6 +10,8 @@ use crate::config::{FixtureError, FixtureProfile};
 use crate::content::GeneratedText;
 use crate::summary::{FileSummary, FixtureCounts, FixtureSummary, hash_hex, summary_hash};
 
+const END_TARGET: &str = recite_core::END_DIVERT_TARGET;
+
 pub fn write_project(
     config: &FixtureProfile,
     output_dir: impl AsRef<Path>,
@@ -188,11 +190,13 @@ impl FixtureGenerator {
         .expect("write string");
         writeln!(&mut fixture, "[choices]").expect("write string");
         for block in 0..self.profile.blocks {
-            writeln!(
-                &mut fixture,
-                "line_{block:05}_000 = \"choice_{block:05}_000\""
-            )
-            .expect("write string");
+            if self.block_has_choices(block) {
+                writeln!(
+                    &mut fixture,
+                    "line_{block:05}_000 = \"choice_{block:05}_000\""
+                )
+                .expect("write string");
+            }
         }
         writeln!(&mut fixture, "\n[effects]\nauto_ack_blocking = true").expect("write string");
         self.insert_text("runtime-fixture.toml", fixture);
@@ -256,7 +260,7 @@ impl FixtureGenerator {
                 self.emit_line(block, line, speaker, 0, source);
             }
         }
-        writeln!(source, "-> END\n").expect("write string");
+        writeln!(source, "-> {}\n", self.block_fallthrough_target(block)).expect("write string");
     }
 
     fn emit_line(&self, block: u32, line: u32, speaker: u32, indent: usize, source: &mut String) {
@@ -273,7 +277,7 @@ impl FixtureGenerator {
             self.entry_text("line", block, line)
         )
         .expect("write string");
-        if line == 0 {
+        if line == 0 && self.block_has_choices(block) {
             self.emit_choices(block, indent + 2, source);
         }
     }
@@ -283,10 +287,14 @@ impl FixtureGenerator {
         let body_prefix = " ".repeat(indent + 2);
         for choice in 0..self.choices_in_block(block) {
             let target = self.choice_target(block, choice);
-            let condition = if choice % 2 == 0 {
-                format!(" if flag(\"flag_{:02}\")", block % 64)
+            let condition = if self.choice_conditions_enabled(block) {
+                if choice % 2 == 0 {
+                    format!(" if flag(\"flag_{:02}\")", block % 64)
+                } else {
+                    " if counter_gte(\"counter_00\", 2)".to_owned()
+                }
             } else {
-                " if counter_gte(\"counter_00\", 2)".to_owned()
+                String::new()
             };
             writeln!(
                 source,
@@ -308,7 +316,31 @@ impl FixtureGenerator {
     }
 
     fn choices_in_block(&self, block: u32) -> u32 {
-        distributed_count(self.profile.choices, self.profile.blocks, block)
+        if !self.block_has_choices(block) {
+            return 0;
+        }
+
+        distributed_count(
+            self.profile.choices,
+            self.choice_block_count(),
+            self.choice_block_index(block),
+        )
+    }
+
+    fn block_has_choices(&self, block: u32) -> bool {
+        block.is_multiple_of(2)
+    }
+
+    fn choice_block_count(&self) -> u32 {
+        self.profile.blocks.div_ceil(2)
+    }
+
+    fn choice_block_index(&self, block: u32) -> u32 {
+        block / 2
+    }
+
+    fn choice_conditions_enabled(&self, block: u32) -> bool {
+        block.is_multiple_of(4)
     }
 
     fn uses_relationship_match(&self, block: u32) -> bool {
@@ -318,12 +350,27 @@ impl FixtureGenerator {
     fn choice_target(&self, block: u32, choice: u32) -> String {
         let offset = if choice == 0 { 1 } else { (choice % 3) + 1 };
         let Some(target_block) = block.checked_add(offset) else {
-            return "END".to_owned();
+            return END_TARGET.to_owned();
         };
         if target_block < self.profile.blocks {
             self.reference_to_block(block, target_block)
         } else {
-            "END".to_owned()
+            END_TARGET.to_owned()
+        }
+    }
+
+    fn block_fallthrough_target(&self, block: u32) -> String {
+        if self.block_has_choices(block) {
+            return END_TARGET.to_owned();
+        }
+
+        let Some(target_block) = block.checked_add(1) else {
+            return END_TARGET.to_owned();
+        };
+        if target_block < self.profile.blocks {
+            self.reference_to_block(block, target_block)
+        } else {
+            END_TARGET.to_owned()
         }
     }
 
@@ -355,7 +402,7 @@ impl FixtureGenerator {
                     format!("line_{block:05}_{line:03}"),
                     self.entry_text("line", block, line),
                 );
-                if line == 0 {
+                if line == 0 && self.block_has_choices(block) {
                     for choice in 0..self.choices_in_block(block) {
                         emit(
                             "choice",

@@ -269,7 +269,7 @@ fn metadata_keys(metadata: &recite_core::Metadata) -> String {
 
 fn divert_target_summary(target: &DivertTarget) -> String {
     match target {
-        DivertTarget::End => "END".to_owned(),
+        DivertTarget::End => recite_core::END_DIVERT_TARGET.to_owned(),
         DivertTarget::Block(reference) => match &reference.file {
             Some(file) => format!("{file}::{}", reference.block_id),
             None => reference.block_id.to_string(),
