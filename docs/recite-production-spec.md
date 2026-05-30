@@ -1160,6 +1160,15 @@ keys, scalar types, array/object structure, effect mode strings, and basic
 version compatibility. It is a useful public contract for adapter authors,
 CI checks, editor IntelliSense, and people inspecting generated manifests.
 
+The JSON Schema and manifest loader must classify adapter-produced provenance
+and producer metadata consistently with `docs/engine-adapter-contract.md` §7.
+Optional fields such as domain origins, value origins, context origins,
+producer fingerprints, schema export versions, and inclusion policies must be
+accepted only in their documented shapes. The loader must either preserve them
+for diagnostics, hovers, and stale-schema tooling or explicitly ignore
+non-canonical producer metadata; it must not accidentally treat diagnostic-only
+metadata as semantic validation input.
+
 JSON Schema is not the authority for Recite semantics. After document-shape
 validation, Recite must lower the manifest into the canonical Rust model and
 run semantic validation there. Semantic validation owns duplicate definitions,
@@ -1382,8 +1391,9 @@ available:
 - schema manifest fields when the manifest itself is malformed.
 
 When a schema manifest is generated from adapter code, the manifest may include
-producer origin metadata for definitions and registry values. Recite diagnostics
-may surface that origin as related context, but dialogue-source diagnostics must
+producer origin metadata for definitions, metadata domains, metadata-domain
+contexts, metadata-domain values, and registry values. Recite diagnostics may
+surface that origin as related context, but dialogue-source diagnostics must
 remain valid even when producer origins are unavailable.
 
 ## 11. Scene Manifest
