@@ -13,6 +13,6 @@ pub use condition::{Argument, ConditionCall, ConditionExpression, ConditionGroup
 pub use effect::{Effect, EffectMode};
 pub use source::{
     Block, BlockReference, Choice, ChoiceEcho, ChoiceTarget, Comment, Divert, DivertTarget,
-    IfBranch, Line, MatchArm, MatchBranch, MatchPattern, SourceFile, SourceText, Statement,
-    StatementKind,
+    END_DIVERT_TARGET, IfBranch, Line, MatchArm, MatchBranch, MatchPattern, SourceFile, SourceText,
+    Statement, StatementKind,
 };

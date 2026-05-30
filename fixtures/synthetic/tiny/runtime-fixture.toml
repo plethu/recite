@@ -73,15 +73,10 @@ en-US = ["locales/en-US.po"]
 
 [choices]
 line_00000_000 = "choice_00000_000"
-line_00001_000 = "choice_00001_000"
 line_00002_000 = "choice_00002_000"
-line_00003_000 = "choice_00003_000"
 line_00004_000 = "choice_00004_000"
-line_00005_000 = "choice_00005_000"
 line_00006_000 = "choice_00006_000"
-line_00007_000 = "choice_00007_000"
 line_00008_000 = "choice_00008_000"
-line_00009_000 = "choice_00009_000"
 
 [effects]
 auto_ack_blocking = true

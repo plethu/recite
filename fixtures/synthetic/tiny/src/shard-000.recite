@@ -13,6 +13,12 @@
       ? choice_00000_001 sfx=chime if counter_gte("counter_00", 2)
         choice 00000 001 prairie orbit yonder keystone jasmine quartz umbra prairie lantern.
         -> block_00002
+      ? choice_00000_002 sfx=chime if flag("flag_00")
+        choice 00000 002 velvet needle fable umbra bridge delta bridge thicket garden.
+        -> block_00003
+      ? choice_00000_003 sfx=chime if counter_gte("counter_00", 2)
+        choice 00000 003 umbra bridge ion circuit garden thicket umbra signal fable.
+        -> block_00001
 > line_00000_001 speaker=speaker_00 portrait="portrait_00"
   line 00000 001 meadow jasmine ember amber circuit orbit circuit keystone yonder.
 > line_00000_002 speaker=speaker_00 portrait="portrait_00"
@@ -37,12 +43,6 @@
 # synthetic block 00001
 > line_00001_000 speaker=speaker_01 portrait="portrait_01"
   line 00001 000 delta bridge meadow willow umbra needle keystone ripple lantern.
-  ? choice_00001_000 sfx=chime if flag("flag_01")
-    choice 00001 000 quartz circuit garden willow garden keystone circuit yonder ember.
-    -> block_00002
-  ? choice_00001_001 sfx=chime if counter_gte("counter_00", 2)
-    choice 00001 001 xenial delta yonder yonder lantern velvet ion circuit lantern.
-    -> block_00003
 > line_00001_001 speaker=speaker_01 portrait="portrait_01"
   line 00001 001 orbit umbra meadow ion lantern quartz signal lantern meadow.
 > line_00001_002 speaker=speaker_01 portrait="portrait_01"
@@ -61,18 +61,24 @@
   line 00001 008 zenith willow xenial velvet umbra lantern ripple zenith amber.
 > line_00001_009 speaker=speaker_01 portrait="portrait_01"
   line 00001 009 ripple meadow garden zenith jasmine orbit willow lantern garden.
--> END
+-> block_00002
 
 :: block_00002 speaker=speaker_02 tier="tiny"
 # synthetic block 00002
 > line_00002_000 speaker=speaker_02 portrait="portrait_02"
   line 00002 000 thicket fable delta velvet needle thicket willow delta jasmine.
-  ? choice_00002_000 sfx=chime if flag("flag_02")
+  ? choice_00002_000 sfx=chime
     choice 00002 000 yonder quartz harbor prairie harbor delta fable umbra meadow.
     -> block_00003
-  ? choice_00002_001 sfx=chime if counter_gte("counter_00", 2)
+  ? choice_00002_001 sfx=chime
     choice 00002 001 ember needle meadow lantern fable umbra circuit ripple willow.
     -> block_00004
+  ? choice_00002_002 sfx=chime
+    choice 00002 002 needle thicket meadow lantern quartz circuit umbra keystone xenial.
+    -> src/shard-001.recite::block_00005
+  ? choice_00002_003 sfx=chime
+    choice 00002 003 xenial circuit prairie bridge ion prairie meadow jasmine orbit.
+    -> block_00003
 > line_00002_001 speaker=speaker_02 portrait="portrait_02"
   line 00002 001 velvet needle ion amber harbor zenith amber xenial ember.
 > line_00002_002 speaker=speaker_02 portrait="portrait_02"
@@ -99,12 +105,6 @@
   :case active
     > line_00003_000 speaker=speaker_03 portrait="portrait_03"
       line 00003 000 willow ion velvet amber zenith fable yonder signal quartz.
-      ? choice_00003_000 sfx=chime if flag("flag_03")
-        choice 00003 000 prairie garden lantern jasmine umbra velvet ion keystone circuit.
-        -> block_00004
-      ? choice_00003_001 sfx=chime if counter_gte("counter_00", 2)
-        choice 00003 001 delta keystone meadow signal velvet prairie velvet jasmine willow.
-        -> src/shard-001.recite::block_00005
 > line_00003_001 speaker=speaker_03 portrait="portrait_03"
   line 00003 001 orbit delta velvet yonder prairie umbra umbra ember ion.
 > line_00003_002 speaker=speaker_03 portrait="portrait_03"
@@ -123,7 +123,7 @@
   line 00003 008 jasmine velvet willow circuit jasmine ember velvet lantern xenial.
 > line_00003_009 speaker=speaker_03 portrait="portrait_03"
   line 00003 009 amber lantern thicket velvet ripple ember quartz ripple keystone.
--> END
+-> block_00004
 
 :: block_00004 speaker=speaker_04 tier="tiny"
 # synthetic block 00004
@@ -135,6 +135,12 @@
   ? choice_00004_001 sfx=chime if counter_gte("counter_00", 2)
     choice 00004 001 ripple thicket fable keystone xenial needle quartz bridge willow.
     -> src/shard-001.recite::block_00006
+  ? choice_00004_002 sfx=chime if flag("flag_04")
+    choice 00004 002 delta zenith umbra jasmine velvet needle zenith fable signal.
+    -> src/shard-001.recite::block_00007
+  ? choice_00004_003 sfx=chime if counter_gte("counter_00", 2)
+    choice 00004 003 umbra orbit signal meadow signal prairie circuit quartz delta.
+    -> src/shard-001.recite::block_00005
 > line_00004_001 speaker=speaker_04 portrait="portrait_04"
   line 00004 001 meadow garden fable bridge quartz yonder jasmine umbra thicket.
 > line_00004_002 speaker=speaker_04 portrait="portrait_04"

@@ -1,12 +1,12 @@
 use std::fs;
 use std::path::Path;
 
-use serde::Serialize;
+use serde::{Deserialize, Serialize};
 
 use crate::config::{FixtureConfigSet, FixtureError, FixtureProfile};
 use crate::generator::FixtureGenerator;
 
-#[derive(Clone, Debug, Eq, PartialEq, Serialize)]
+#[derive(Clone, Debug, Deserialize, Eq, PartialEq, Serialize)]
 pub struct FixtureSummary {
     pub profile: FixtureProfile,
     pub counts: FixtureCounts,
@@ -14,7 +14,7 @@ pub struct FixtureSummary {
     pub summary_hash: String,
 }
 
-#[derive(Clone, Debug, Eq, PartialEq, Serialize)]
+#[derive(Clone, Debug, Deserialize, Eq, PartialEq, Serialize)]
 pub struct FixtureCounts {
     pub blocks: u32,
     pub lines: u32,
@@ -24,7 +24,7 @@ pub struct FixtureCounts {
     pub shards: u32,
 }
 
-#[derive(Clone, Debug, Eq, PartialEq, Serialize)]
+#[derive(Clone, Debug, Deserialize, Eq, PartialEq, Serialize)]
 pub struct FileSummary {
     pub path: String,
     pub bytes: u64,
