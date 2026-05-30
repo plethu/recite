@@ -6,6 +6,9 @@ use recite_benchmarks::runtime::RuntimeProject;
 use recite_benchmarks::scale::parse_scale_list;
 use recite_benchmarks::{BenchmarkScale, compiler};
 use std::fs;
+use std::sync::Mutex;
+
+static GENERATED_PROJECT_LOCK: Mutex<()> = Mutex::new(());
 
 #[test]
 fn scale_selection_defaults_are_tiny_and_small() {
@@ -37,6 +40,9 @@ fn tiny_project_loads_and_matches_checked_summary() -> Result<(), Box<dyn std::e
 
 #[test]
 fn generated_small_project_matches_checked_summary() -> Result<(), Box<dyn std::error::Error>> {
+    let _generated_project_guard = GENERATED_PROJECT_LOCK
+        .lock()
+        .expect("lock generated project");
     let project = BenchmarkProject::load(BenchmarkScale::Small)?;
     assert_eq!(project.summary().profile.name, "small");
     assert!(
@@ -49,6 +55,9 @@ fn generated_small_project_matches_checked_summary() -> Result<(), Box<dyn std::
 
 #[test]
 fn generated_project_replaces_stale_output() -> Result<(), Box<dyn std::error::Error>> {
+    let _generated_project_guard = GENERATED_PROJECT_LOCK
+        .lock()
+        .expect("lock generated project");
     let project = BenchmarkProject::load(BenchmarkScale::Small)?;
     let stale = project.root().join("src/stale.recite");
     fs::write(&stale, ":: stale\n> stale\n")?;
