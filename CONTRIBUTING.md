@@ -11,7 +11,7 @@ After the v1 shape is stable, I will review and publish fuller contribution guid
 ## Project Notes
 
 - Recite is hosted on Codeberg. Do not use GitHub workflows for this project.
-- Recite is MIT-licensed public open source. Do not submit proprietary content, copied private material, or dependency code that is incompatible with MIT distribution.
+- Recite is dual-licensed public open source under MIT OR Apache-2.0. Do not submit proprietary content, copied private material, or dependency code that is incompatible with that distribution.
 - The production spec is in `docs/recite-production-spec.md`.
 - Current development is issue-led and branch-based, using short-lived branches from `main`.
 - Until CI is wired up, the local quality gate is `cargo fmt --check`, `cargo test`, and `cargo clippy --all-targets --all-features -- -D warnings`.

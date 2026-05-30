@@ -1,6 +1,6 @@
 # Recite Agent Instructions
 
-Recite is a Rust-first deterministic dialogue compiler, runtime, and tooling project for ECS-oriented games. It is MIT-licensed public open source; do not introduce proprietary content, copied private material, or dependency code that is incompatible with MIT distribution.
+Recite is a Rust-first deterministic dialogue compiler, runtime, and tooling project for ECS-oriented games. It is dual-licensed public open source under MIT OR Apache-2.0; do not introduce proprietary content, copied private material, or dependency code that is incompatible with that distribution.
 
 ## Project Workflow
 

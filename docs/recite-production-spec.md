@@ -1996,7 +1996,7 @@ Realistic fixtures:
 
 Realistic fixtures should be compact enough to review by hand and checked into
 the repository when possible. Larger realistic fixtures may follow the generated
-fixture policy when they are derived from public, MIT-compatible source material
+fixture policy when they are derived from public, MIT OR Apache-2.0-compatible source material
 or fully synthetic project descriptions.
 
 Measurement hygiene:
@@ -2011,7 +2011,7 @@ Measurement hygiene:
   as Valgrind or `perf`, but GPL tooling must remain documented external tooling
   rather than linked or vendored project dependencies;
 - benchmark and profiling crate dependencies must be compatible with Recite's
-  MIT distribution policy before they are added to the workspace.
+  MIT OR Apache-2.0 distribution policy before they are added to the workspace.
 
 ### 19.3 Compiler Benchmarks
 
