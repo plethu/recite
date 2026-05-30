@@ -4,8 +4,8 @@ This document defines the host-agnostic contract that Godot, Bevy, Unity, and
 future Recite engine adapters must preserve. It is normative unless a section is
 explicitly marked as illustrative.
 
-This is a contract document, not an implementation plan. Issue #78 does not add
-a public Rust API, generated bindings, a shared `recite-adapter` crate, or a new
+This is a contract document, not an implementation plan. It does not add a
+public Rust API, generated bindings, a shared `recite-adapter` crate, or a new
 dependency. Adapters may call `recite-core` and `recite-runtime` directly until
 real adapter MVPs prove which helper types deserve to be shared.
 
@@ -172,15 +172,207 @@ LSP, and runtime integration.
 Adapters should let game projects produce Recite schema manifests from typed
 host code where practical. The host-specific authoring surface may be a Rust
 builder or derive, Godot C#/GDScript registration, Unity C# attributes or
-builders, or another native mechanism.
+builders, editor-imported assets, data tables, or another native mechanism.
 
 All producer surfaces must lower into the canonical Recite schema model and
 generated manifest. The compiler, CLI, LSP, and adapter runtime integration
 must agree on condition names, effect names, parameter types, enum variants,
-registries, metadata keys, and documented handler requirements.
+registries, metadata keys, metadata domains, and documented handler
+requirements.
 
 Adapters must not introduce a second, host-only schema truth that can drift
-from compiled dialogue validation.
+from compiled dialogue validation. The generated manifest is the boundary: game
+or adapter code may produce it, but Recite compiler, CLI, LSP, and runtime code
+only consume it.
+
+### 7.1 Producer Responsibilities
+
+Schema producers are responsible for host discovery. A producer may be part of
+an engine adapter or may be a standalone project tool, but it owns:
+
+- scanning host resource directories, content folders, asset databases, and
+  import metadata;
+- reading typed registries, editor assets, data tables, or reflected host code;
+- applying host-specific inclusion and exclusion rules;
+- resolving resource-backed enum, registry, and metadata-domain values into a
+  self-contained manifest snapshot;
+- checking whether the previously generated manifest is stale relative to the
+  host state it claims to represent.
+
+Recite core validation must not scan engine resources, query an asset database,
+load editor-only data, reflect over game code, or execute game code to validate
+dialogue. Normal compiler, CLI, LSP, and runtime flows consume only the
+generated manifest plus dialogue/project inputs.
+
+### 7.2 Metadata-Domain Export Shape
+
+The manifest must represent metadata domains using the schema model from spec
+§10.2. Adapters and standalone producers must export domains by symbolic domain
+name, not by hardcoded presentation keys. A metadata definition references a
+domain by name; the key using that domain remains project schema data.
+
+Flat domains must include:
+
+- `kind: "flat"`;
+- a deterministic list of symbol `values`;
+- optional domain-level and value-level origin metadata when available;
+- optional producer fingerprints for the host inputs used to create the domain.
+
+Contextual domains must include:
+
+- `kind: "contextual"`;
+- a contextual `selector`, using the v1 selector forms defined by spec §10.2;
+- deterministic `values_by_context`, keyed by the selector result symbol;
+- a declared `missing_context` policy;
+- optional domain-level, context-level, and value-level origin metadata when
+  available;
+- optional producer fingerprints for the host inputs used to create the domain.
+
+`missing_context` must be one of the policies accepted by the schema model:
+`diagnostic`, `empty`, or `fallback` to a named flat domain. Fallback targets
+must be metadata-domain references, not copied value lists, so validation,
+completion, fingerprinting, and diagnostics share one definition.
+
+### 7.3 Deterministic Snapshots and Fingerprints
+
+Generated schema manifests are snapshots. The same host state and producer
+configuration must produce the same canonical schema model and schema
+fingerprint.
+
+Producers must use stable symbolic IDs for resource-backed values. Host object
+addresses, transient import IDs, localized display names, filesystem traversal
+order, wall-clock time, or editor session state must not affect symbol identity.
+
+Manifest content must be ordered deterministically before fingerprinting and
+diagnostics. At minimum, producers must make ordering stable for:
+
+- domain names;
+- flat-domain values;
+- contextual-domain context keys;
+- contextual-domain values within each context;
+- metadata-domain references;
+- registry names and values;
+- included origin and producer-fingerprint records.
+
+The schema fingerprint must change when any canonical domain definition changes,
+including:
+
+- added, removed, or renamed domains;
+- domain kind changes;
+- added, removed, renamed, or reordered canonical values;
+- selector changes;
+- `values_by_context` changes;
+- `missing_context` policy or fallback target changes;
+- metadata definitions that reference different domains;
+- inclusion or exclusion policy changes that affect exported domain content;
+- included origin or producer-fingerprint changes that are part of the
+  canonical manifest model.
+
+Producer metadata that is explicitly non-canonical for diagnostics only must be
+marked or modeled so it cannot accidentally perturb schema fingerprints.
+
+### 7.4 Provenance and Diagnostics
+
+When the host can provide provenance, generated manifests should include origins
+for domains, contexts, and values. Origins may name a resource path, asset GUID,
+asset database key, script/type/member, data-table row, import source, or other
+stable host identifier. Producers should also include fingerprints for input
+sets when the host can compute them cheaply and repeatably.
+
+Origins and fingerprints are for diagnostics, LSP hovers, stale-schema checks,
+and adapter troubleshooting. Dialogue diagnostics must still work when origin
+metadata is absent. A missing origin must not make a valid dialogue invalid or
+make an invalid dialogue valid.
+
+### 7.5 Stale-Schema Checks
+
+Adapters and standalone producers should provide a command or editor action
+that reports whether the generated schema manifest is stale relative to the
+producer's current host inputs. Host-agnostic checks compare the manifest's
+recorded producer fingerprints, inclusion policy, schema export version, and
+canonical schema fingerprint against a fresh export plan.
+
+Where the host cannot expose reliable file or asset fingerprints, the adapter
+must document the weaker check it can perform. The adapter may require an
+explicit regenerate action, but it must not hide stale schemas by silently
+falling back to editor state that Recite compiler, CLI, and LSP cannot reproduce.
+
+Recite diagnostics should distinguish dialogue-source validation failures from
+malformed manifests and stale-schema reports. Stale-schema reporting belongs to
+producer and adapter tooling; compiler and LSP validation may surface it only
+when the manifest carries enough producer metadata to make the check
+reproducible without host access.
+
+### 7.6 Host-Agnostic Example
+
+This example models item inspection states. The dialogue uses a project metadata
+key named `item`, and a second metadata key references a contextual domain keyed
+by `metadata:item`.
+
+```json
+{
+  "schema_version": 1,
+  "metadata_domains": {
+    "inventory_item": {
+      "kind": "flat",
+      "values": ["brass_key", "field_journal"],
+      "origin": "content/items"
+    },
+    "inspection_state_all": {
+      "kind": "flat",
+      "values": ["new", "noticed", "examined"]
+    },
+    "inspection_state_by_item": {
+      "kind": "contextual",
+      "selector": "metadata:item",
+      "values_by_context": {
+        "brass_key": ["new", "noted_teeth", "matched_to_lock"],
+        "field_journal": ["new", "skimmed", "decoded_margin_notes"]
+      },
+      "missing_context": {
+        "policy": "fallback",
+        "domain": "inspection_state_all"
+      },
+      "origin": "content/items"
+    }
+  },
+  "metadata": {
+    "item": {
+      "targets": ["line", "choice"],
+      "type": "symbol",
+      "domain": "inventory_item"
+    },
+    "inspection_state": {
+      "targets": ["line", "choice"],
+      "type": "symbol",
+      "domain": "inspection_state_by_item"
+    }
+  }
+}
+```
+
+The producer owns the scan that turns host item definitions into
+`inventory_item` and `inspection_state_by_item`. Recite validation only sees the
+manifest snapshot. If a dialogue line uses `inspection_state=matched_to_lock`
+without `item=brass_key`, validation follows the `missing_context` policy from
+the manifest; it does not query the host item registry.
+
+### 7.7 Engine Notes
+
+Bevy producers may gather metadata domains from Rust builders, derives,
+resources, asset collections, or editor-side export commands. They must emit the
+same manifest shape whether the data came from reflected code, `AssetServer`
+paths, or project data files.
+
+Godot producers may gather metadata domains from imported resources, project
+settings, C# registrations, GDScript registrations, or editor plugins. They must
+snapshot Godot resource identities into stable Recite symbols rather than
+requiring Recite compiler or LSP code to open the Godot project.
+
+Unity producers may gather metadata domains from ScriptableObjects, importers,
+GUID-addressed assets, C# attributes, Addressables, or editor tooling. They must
+export stable symbols and fingerprints in the generated manifest; Recite
+tooling must not depend on Unity editor APIs to validate dialogue.
 
 ## 8. Effects
 
@@ -484,7 +676,7 @@ A future shared helper crate may be justified if Godot, Bevy, and Unity adapter
 MVPs repeat the same stable concepts, such as compiled asset identity,
 freshness checks, adapter error categories, changed-asset policy names, or
 session snapshot handoff helpers. That decision belongs in follow-up adapter
-implementation work, not issue #78.
+implementation work, not this contract document.
 
 ## 17. Follow-up Prerequisites
 
