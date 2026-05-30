@@ -283,6 +283,41 @@ pub struct MetadataEntry {
 }
 ```
 
+Source metadata values must distinguish author spelling from compiled/runtime
+meaning. The future source AST should preserve a distinct metadata value type
+equivalent to:
+
+```rust
+pub enum SourceMetadataValue {
+    Symbol(String),
+    StringLiteral(String),
+    Integer(i64),
+    Float(f64),
+    Boolean(bool),
+    Array(Vec<SourceMetadataScalarValue>),
+    RuntimeRef(String), // reserved for explicit future support
+}
+```
+
+`SourceMetadataScalarValue` is the scalar subset: symbol, string literal,
+integer, float, boolean, and reserved runtime reference. Nested arrays are not
+part of v1.
+
+Metadata source spelling:
+
+- bare values such as `portrait=grin` are symbols/reference tokens;
+- quoted values such as `caption="Door closes"` are literal strings;
+- integer, float, boolean, and array values remain typed literals;
+- arrays validate each scalar element against the same metadata definition and
+  domain rules as a single value;
+- runtime-bound `$name` metadata values are reserved for explicit future
+  support and must not be accepted silently as ordinary symbols.
+
+Compiled/runtime metadata semantics are schema-driven. Runtime consumers should
+not infer meaning from whether a source value was bare or quoted; they consume
+the compiled value after schema validation has assigned the allowed type and
+domain.
+
 Metadata values must support:
 
 - string;
@@ -292,6 +327,13 @@ Metadata values must support:
 - arrays of scalar values.
 
 The core format must not hardcode keys such as `portrait`, `sfx`, `delay`, `shot`, `pose`, or `focus`. Those keys belong in project schema. The tooling must still make project-specific metadata validation excellent.
+
+Migration note: existing examples, fixtures, and tests should leave
+reference-like metadata values bare (`portrait=grin`, `sfx=chime`,
+`speaker=rhea`). Literal display text or values that rely on spaces or
+punctuation must be quoted. Existing generated fixtures that quote registry-like
+presentation values are legacy inputs until the parser/schema implementation
+issue updates them.
 
 ### 5.7 Inline Markup
 
@@ -430,7 +472,10 @@ Placeholders must be declared on the line header using `name=$value_name` attrib
 
 - An undeclared placeholder is a validation error.
 - A declared attribute that is not referenced in the line's text is a warning; the caller must still provide the value.
-- The `$` sigil distinguishes runtime-bound references from literal metadata values (`portrait=flat`).
+- The `$` sigil distinguishes runtime-bound references from metadata symbols
+  and literal strings (`portrait=flat`, `caption="Door closes"`). `$name`
+  metadata values remain reserved until explicit runtime-bound metadata support
+  is designed.
 
 Interpolation rules:
 
@@ -1027,6 +1072,7 @@ The schema must define:
 - effect functions;
 - effect modes;
 - metadata keys;
+- named metadata domains;
 - inline markup tags;
 - speaker IDs;
 - optional actor registries;
@@ -1121,15 +1167,60 @@ The Rust schema model should live in `recite-core::schema` and include:
 - `ProjectSchema`;
 - `SchemaTypeDefinition`, including enum definitions;
 - `SchemaTypeRef`, covering built-in scalar types, speaker IDs, enum types, and
-  registry-backed IDs;
+  registry-backed IDs, and the metadata-only `symbol` scalar;
 - `ConditionDefinition`, including typed parameters and optional enum return
   type;
 - `EffectDefinition`, including typed parameters and supported modes;
 - `MetadataDefinition`, including targets, type, repeatability, and optional
-  range or value constraints;
+  range constraints, and optional domain reference;
+- `MetadataDomainDefinition`, including flat value sets and contextual value
+  selectors;
 - `MarkupDefinition`, including closing, translatability, and nesting policy;
 - `SpeakerDefinition`;
 - `RegistryDefinition`, including value snapshots and optional origin metadata.
+
+Metadata domains are named schema definitions. Metadata definitions reference
+domains by name rather than hardcoding special keys such as `portrait`.
+
+`symbol` is a metadata schema scalar, not a new runtime value kind. A metadata
+definition with `"type": "symbol"` accepts source `SourceMetadataValue::Symbol`
+values, rejects quoted string literals unless a different metadata type permits
+them, and lowers the accepted symbol into the compiled/runtime metadata value
+model as a string-like value with schema-validated domain semantics. Runtime
+consumers must use the metadata key and schema contract to interpret that value;
+they must not depend on source spelling.
+
+Domain kinds:
+
+- flat domains declare a deterministic set of valid symbol values;
+- contextual domains select the valid symbol values from another source item
+  field or metadata key.
+
+V1 contextual selector scope is deliberately small:
+
+- `field:speaker` resolves the line speaker first, then the inherited block
+  default speaker;
+- `metadata:<key>` resolves metadata with `<key>` on the same source item. It
+  succeeds only when that key appears exactly once on the item and the value is
+  a scalar symbol after source-value lowering. An absent key follows the
+  domain's missing-context policy. Repeated keys, arrays, quoted strings, and
+  non-symbol scalar values are selector-shape diagnostics because they would make
+  compiler and LSP resolution ambiguous.
+
+Block-wide and project-wide selectors are deferred until a concrete
+implementation issue needs them.
+
+Contextual domains must declare a missing-context policy. The default is
+`diagnostic`, which reports that the selector could not be resolved. Other
+allowed policy values are `empty`, which produces no valid values or
+completions, and `fallback`, which falls back to a named flat domain declared in
+the same `missing_context` object. Fallback targets must be flat domains so
+diagnostics and completions remain deterministic.
+
+Compiler validation, CLI validation, and LSP completions/diagnostics must
+consume the same manifest-backed metadata domain rules. The compiler is the
+authority for acceptance; LSP behavior is a live authoring projection of the
+same domain resolution.
 
 The generated manifest should be self-contained enough for validation without
 running the game. Registry-backed values should therefore be emitted as stable
@@ -1159,6 +1250,37 @@ Example generated manifest excerpt:
     "rhea": {},
     "hazel": {}
   },
+  "metadata_domains": {
+    "portrait_all": {
+      "kind": "flat",
+      "values": ["flat", "concerned", "wry"]
+    },
+    "sound_effect": {
+      "kind": "flat",
+      "values": ["snap", "door_close", "rain_window"]
+    },
+    "portrait_by_speaker": {
+      "kind": "contextual",
+      "selector": "field:speaker",
+      "values_by_context": {
+        "rhea": ["flat", "concerned"],
+        "hazel": ["flat", "wry"]
+      },
+      "missing_context": {
+        "policy": "fallback",
+        "domain": "portrait_all"
+      }
+    },
+    "emotion_by_subject": {
+      "kind": "contextual",
+      "selector": "metadata:subject",
+      "values_by_context": {
+        "rhea": ["calm", "hurt", "angry"],
+        "hazel": ["calm", "guarded", "wry"]
+      },
+      "missing_context": { "policy": "diagnostic" }
+    }
+  },
   "conditions": {
     "thread_stage": {
       "params": [{ "name": "thread_id", "type": "registry:thread" }],
@@ -1180,10 +1302,15 @@ Example generated manifest excerpt:
     }
   },
   "metadata": {
-    "portrait": { "targets": ["line"], "type": "string" },
+    "portrait": {
+      "targets": ["line"],
+      "type": "symbol",
+      "domain": "portrait_by_speaker"
+    },
     "sfx": {
       "targets": ["line", "choice"],
-      "type": "registry:dialogue_sound_effect",
+      "type": "symbol",
+      "domain": "sound_effect",
       "repeatable": true
     }
   },
@@ -1665,6 +1792,14 @@ Required capabilities:
 - code action to add missing ID;
 - code action to create block stub;
 - code action to add schema entry for unknown metadata/effect/condition where appropriate.
+
+Metadata value completions and diagnostics must use the same domain resolution
+rules as compiler validation (§10.2). In particular, contextual metadata
+domains resolve `field:speaker` and `metadata:<key>` selectors the same way in
+the LSP as in the compiler, including the schema-declared missing-context
+policy. The LSP must not invent broader fallback behavior for convenience; if
+the manifest says the result is diagnostic, empty, or fallback to a named flat
+domain, editor completions and diagnostics must reflect that same result.
 
 Nice-to-have:
 
