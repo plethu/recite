@@ -17,8 +17,12 @@ impl<'a> DialogueTraversalPreview<'a> {
         Self { locale, provider }
     }
 
-    pub(crate) fn locale(&self) -> &LocaleId {
+    pub(crate) fn locale(&self) -> &'a LocaleId {
         self.locale
+    }
+
+    pub(crate) fn provider(&self) -> &'a dyn LocaleProvider {
+        self.provider
     }
 }
 

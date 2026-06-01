@@ -26,7 +26,7 @@ pub(crate) enum Command {
     CheckFresh(ProjectRootArgs),
     Watch(WatchArgs),
     Run(RuntimeArgs),
-    Trace(RuntimeArgs),
+    Trace(TraceArgs),
     Play(PlayArgs),
 }
 
@@ -89,6 +89,14 @@ pub(crate) struct RuntimeArgs {
     pub(crate) block: String,
     #[arg(long)]
     pub(crate) fixture: PathBuf,
+}
+
+#[derive(Debug, Args)]
+pub(crate) struct TraceArgs {
+    #[command(flatten)]
+    pub(crate) runtime: RuntimeArgs,
+    #[arg(long)]
+    pub(crate) metrics: bool,
 }
 
 #[derive(Clone, Copy, Debug, Eq, PartialEq, clap::ValueEnum)]

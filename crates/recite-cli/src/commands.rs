@@ -1,6 +1,6 @@
 use std::io::Write;
 
-use crate::args::{Command, CompileArgs, ExtractArgs, RuntimeArgs};
+use crate::args::{Command, CompileArgs, ExtractArgs, RuntimeArgs, TraceArgs};
 use crate::diagnostics::{report_diagnostics, report_targeted_diagnostics};
 use crate::dialogue_locale::LoadedDialoguePreview;
 use crate::error::CliError;
@@ -11,8 +11,8 @@ use crate::fs::{
 };
 use crate::play::run_play_command;
 use crate::runtime_fixture::{
-    dialogue_preview_from_fixture, execute_runtime_fixture, load_compiled_asset,
-    load_runtime_fixture,
+    RuntimeFixtureOptions, dialogue_preview_from_fixture, execute_runtime_fixture,
+    load_compiled_asset, load_runtime_fixture,
 };
 use crate::watch::run_watch_command;
 use recite_compiler::{
@@ -71,7 +71,7 @@ pub(crate) fn run_command(
         }
         Command::Watch(args) => run_watch_command(args, stderr),
         Command::Run(args) => runtime_command(args, RuntimeOutput::Run, stdout),
-        Command::Trace(args) => runtime_command(args, RuntimeOutput::Trace, stdout),
+        Command::Trace(args) => trace_command(args, stdout),
         Command::Play(args) => run_play_command(args, stdout, stderr),
     }
 }
@@ -133,6 +133,26 @@ fn runtime_command(
     output: RuntimeOutput,
     stdout: &mut dyn Write,
 ) -> Result<(), CliError> {
+    runtime_command_with_options(args, output, RuntimeFixtureOptions::default(), stdout)
+}
+
+fn trace_command(args: TraceArgs, stdout: &mut dyn Write) -> Result<(), CliError> {
+    runtime_command_with_options(
+        args.runtime,
+        RuntimeOutput::Trace,
+        RuntimeFixtureOptions {
+            metrics: args.metrics,
+        },
+        stdout,
+    )
+}
+
+fn runtime_command_with_options(
+    args: RuntimeArgs,
+    output: RuntimeOutput,
+    options: RuntimeFixtureOptions,
+    stdout: &mut dyn Write,
+) -> Result<(), CliError> {
     let asset = load_compiled_asset(&args.asset)?;
     let fixture = load_runtime_fixture(&args.fixture)?;
     let dialogue_preview = dialogue_preview_from_fixture(&fixture)?
@@ -148,6 +168,7 @@ fn runtime_command(
         dialogue_preview
             .as_ref()
             .map(LoadedDialoguePreview::locale_fallbacks),
+        options,
     )?;
 
     match output {

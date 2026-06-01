@@ -135,6 +135,19 @@ intro = "help"
         serde_json::from_slice(&default_trace.stdout).expect("trace is JSON");
     assert!(trace.get("dialogue_locale").is_none());
 
+    let metrics_trace = run(recite()
+        .arg("trace")
+        .arg(&asset)
+        .arg("--block")
+        .arg("start")
+        .arg("--fixture")
+        .arg(&fixture)
+        .arg("--metrics"));
+    metrics_trace.assert_success().assert_stderr("");
+    let trace: serde_json::Value =
+        serde_json::from_slice(&metrics_trace.stdout).expect("trace is JSON");
+    assert_eq!(trace["metrics"]["localization_lookup_count"], 4);
+
     let mut child = recite()
         .arg("play")
         .arg("dialogue.recitec")
