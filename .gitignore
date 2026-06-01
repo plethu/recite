@@ -2,6 +2,10 @@
 /crates/recite-benchmarks/target/
 **/*.rs.bk
 
+node_modules/
+docs-site/.astro/
+docs-site/dist/
+
 .DS_Store
 .direnv/
 .env
