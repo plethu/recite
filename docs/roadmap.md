@@ -24,15 +24,12 @@ adoption docs have all landed.
 
 ## Work that can start now
 
-These issues have no unmet dependencies. Some are still labelled
-`status/blocked` on Codeberg until the next issue-hygiene pass, but their listed
-blocking dependencies are closed.
+These issues have no unmet dependencies.
 
 | Issue | Role | Unlocks |
 | --- | --- | --- |
-| #139 Metadata value domains | unblocks a track | schema-aware metadata validation, LSP schema-domain support |
-| #75 Trace performance counters | leaf | — |
-| #88 Docs site scaffold | leaf | later docs content |
+| #76 LSP project and schema indexes | unblocks a track | LSP semantic diagnostics, completions, hover, navigation, rename |
+| #74 Fast benchmark smoke and regression policy | unblocks a track | scale proof and performance release evidence |
 | #91 Rustdoc API examples | leaf | — |
 | #96 Migration transition guides | leaf | — |
 | #95 Importer-boundary design | design | #97 |
@@ -51,7 +48,7 @@ flowchart LR
   subgraph LSP["LSP track (authoring)"]
     direction LR
     i138["#138"] --> i139["#139"]
-    i139 --> i76["#76"]
+    i139["#139"] --> i76["#76"]
     i76 --> i30["#30"]
     i76 --> i31["#31"]
     i76 --> i32["#32"]
@@ -77,17 +74,15 @@ flowchart LR
 
   subgraph PERF["Perf track"]
     direction LR
-    i74["#74"]
+    i73["#73"] --> i74["#74"]
     i36["#36"]
     i105["#105"]
     i126["#126"]
-    i75["#75 counters"] --> i74
   end
 
   subgraph DOCS["Docs / adoption"]
     direction LR
     subgraph DNOW["available now"]
-      i88["#88"]
       i91["#91"]
       i96["#96"]
     end
@@ -133,10 +128,19 @@ export issue (#140) are now closed. The current open chain is:
 per-engine adapter MVPs + watch/editor refresh prerequisites → per-engine refresh workflows → adapter docs → release verification
 ```
 
-The metadata-domain design gate (#137) and metadata value syntax issue (#138)
-are also closed. The first open follow-up is #139 metadata value domains and
-contextual validation, which should land before treating schema-aware metadata
-validation, LSP completions, or editor affordances as routine implementation.
+The metadata-domain design gate (#137), metadata value syntax issue (#138), and
+metadata value-domain implementation (#139) are also closed. The first open
+follow-up is #76 LSP project and schema indexes, which now has the schema-domain
+surface it needs before semantic diagnostics, completions, hover, navigation, or
+rename work fan out.
+
+The benchmark suite (#73) and trace counters (#75) are closed. The first open
+performance-policy follow-up is #74 fast benchmark smoke and regression policy.
+
+The docs site scaffold (#88) is closed. The remaining available docs/adoption
+leaf work is Rustdoc examples (#91) and migration transition guides (#96), while
+release-positioning docs such as #89 remain blocked on scale evidence and
+credible adapter paths.
 
 ## Release hardening
 
