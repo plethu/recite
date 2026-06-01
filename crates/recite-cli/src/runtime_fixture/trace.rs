@@ -135,6 +135,8 @@ pub(crate) struct TraceDocument {
     dialogue_locale_fallbacks: Option<Vec<String>>,
     events: Vec<TraceEvent>,
     final_deferred_effects: Vec<TraceEffect>,
+    #[serde(skip_serializing_if = "Option::is_none")]
+    metrics: Option<TraceMetrics>,
 }
 
 impl TraceDocument {
@@ -145,6 +147,7 @@ impl TraceDocument {
         dialogue_locale_fallbacks: Option<Vec<String>>,
         events: Vec<TraceEvent>,
         final_deferred_effects: Vec<TraceEffect>,
+        metrics: Option<TraceMetrics>,
     ) -> Self {
         Self {
             asset_id,
@@ -153,8 +156,29 @@ impl TraceDocument {
             dialogue_locale_fallbacks,
             events,
             final_deferred_effects,
+            metrics,
         }
     }
+}
+
+#[derive(Clone, Debug, Serialize)]
+pub(super) struct TraceMetrics {
+    pub(super) event_count: usize,
+    pub(super) line_count: usize,
+    pub(super) prompt_count: usize,
+    pub(super) choice_count: usize,
+    pub(super) condition_evaluation_count: usize,
+    pub(super) effect_count: TraceEffectCounts,
+    pub(super) localization_lookup_count: usize,
+    pub(super) elapsed_traversal_time_ns: u128,
+    pub(super) max_serialized_session_size_bytes: usize,
+}
+
+#[derive(Clone, Debug, Default, Serialize)]
+pub(super) struct TraceEffectCounts {
+    pub(super) deferred: usize,
+    pub(super) immediate: usize,
+    pub(super) blocking: usize,
 }
 
 #[derive(Serialize)]

@@ -57,11 +57,13 @@ fn help_covers_issue_25_commands_and_options() {
     run_help.assert_success().assert_stderr("");
     run_help.assert_stdout_contains("--block <BLOCK>");
     run_help.assert_stdout_contains("--fixture <FIXTURE>");
+    assert!(!stdout(&run_help).contains("--metrics"));
 
     let trace = run(recite().arg("trace").arg("--help"));
     trace.assert_success().assert_stderr("");
     trace.assert_stdout_contains("--block <BLOCK>");
     trace.assert_stdout_contains("--fixture <FIXTURE>");
+    trace.assert_stdout_contains("--metrics");
 
     let play = run(recite().arg("play").arg("--help"));
     play.assert_success().assert_stderr("");
