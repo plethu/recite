@@ -102,6 +102,29 @@ The production spec —
 source format, schema, compiler, runtime, CLI, editor tooling, and the engine
 adapters that keep the core dialogue contract intact.
 
+## Documentation
+
+The Astro/Starlight documentation site lives in
+[`docs-site`](docs-site). It is the game-developer-facing manual and examples
+surface; Rustdoc remains the Rust API reference.
+
+The initial docs-site target is local static output only. No hosted deployment is
+configured yet.
+
+Run the docs site locally with:
+
+```bash
+pnpm install
+pnpm docs:dev
+```
+
+Build and check it with:
+
+```bash
+pnpm docs:check
+pnpm docs:build
+```
+
 ## AI usage
 
 Agentic AI tools are part of the development workflow: drafting, implementation,
