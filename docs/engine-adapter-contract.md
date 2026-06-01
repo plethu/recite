@@ -132,9 +132,9 @@ strings. The host-visible shape must include equivalents for:
   metadata, markup, and pending deferred effects;
 - prompt output with optional line content and a list of structured choices,
   where each choice preserves its `ChoiceId`, localized text, source text,
-  metadata, availability state, and unavailable reason (spec §8.5) so hosts can
-  present and disable choices and so the §4 unavailable-choice error is
-  satisfiable from emitted data alone;
+  metadata, availability state, and structured unavailable reason data (spec
+  §8.5) so hosts can present and disable choices and so the §4
+  unavailable-choice error is satisfiable from emitted data alone;
 - effect request output with effect request ID, effect name, mode, arguments,
   and source/debug identity where available;
 - end output with deferred effects;
@@ -146,6 +146,22 @@ modes, line/choice metadata, locale, and error categories. Inline markup must be
 preserved as part of runtime text/source text; adapters may add a later
 presentation layer that interprets markup, but that layer is outside the core
 adapter contract.
+
+Choice availability data must preserve the runtime reason tree rather than
+flattening it to a single host string. Adapters should expose equivalents for:
+
+- available/unavailable state;
+- primary reason when present;
+- `all` and `any` reason groups matching `and` and `or` requirement structure;
+- leaf reason ID, template/source text where available, localized text where
+  resolved, bound reason arguments, and reason origin as either a source
+  condition call or the compiler's canonical full requirement expression.
+
+Adapters may add host UI helpers that choose a compact primary reason for
+display. Those helpers are presentation policy; conformance output and
+structured APIs must retain the full tree. Selecting an unavailable choice must
+return the unavailable-choice error without advancing traversal or recording
+selected-choice history.
 
 ## 6. Conditions
 
@@ -177,8 +193,8 @@ builders, editor-imported assets, data tables, or another native mechanism.
 All producer surfaces must lower into the canonical Recite schema model and
 generated manifest. The compiler, CLI, LSP, and adapter runtime integration
 must agree on condition names, effect names, parameter types, enum variants,
-registries, metadata keys, metadata domains, and documented handler
-requirements.
+registries, metadata keys, metadata domains, availability reason templates,
+condition-to-reason mappings, and documented handler requirements.
 
 Adapters must not introduce a second, host-only schema truth that can drift
 from compiled dialogue validation. The generated manifest is the boundary: game
@@ -197,6 +213,8 @@ an engine adapter or may be a standalone project tool, but it owns:
 - applying host-specific inclusion and exclusion rules;
 - resolving resource-backed enum, registry, and metadata-domain values into a
   self-contained manifest snapshot;
+- exporting schema-owned availability reason templates and condition reason
+  mappings without requiring Recite tooling to execute game code;
 - checking whether the previously generated manifest is stale relative to the
   host state it claims to represent.
 
@@ -296,7 +314,14 @@ diagnostics. At minimum, producers must make ordering stable for:
 - contextual-domain values within each context;
 - metadata-domain references;
 - registry names and values;
+- availability reason IDs, templates, parameter definitions, and provenance;
+- condition-to-availability-reason mappings;
 - canonical origin and producer-fingerprint records.
+
+Schema fingerprints must include availability reason templates and
+condition-to-reason mappings. A template, parameter, mapping, or provenance
+change that can affect validation, localisation, generated bindings, or runtime
+reason output must change the canonical schema fingerprint.
 
 The schema fingerprint must change when any canonical domain definition changes,
 including:
