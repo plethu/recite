@@ -88,7 +88,11 @@ issue live, but they should not re-audit the full issue graph.
    until no findings.
 3. Implement the approved plan. Run the checks required by the issue or changed
    crates.
-4. Review the implementation independently. Fix findings and re-review until no
+4. For Rust changes, run the `recite-rust-quality` quick audit before review
+   and include size-triggered files with a split/cohesion/follow-up decision in
+   the worker handoff.
+5. Review the implementation independently. Require the reviewer to check the
+   same size-triggered file list. Fix findings and re-review until no
    findings.
 
 If using terminal-launched Codex workers after cost approval, use local profiles
@@ -114,7 +118,7 @@ codex -m gpt-5.3-codex -c 'model_reasoning_effort="xhigh"' \
   -C ../recite-worktrees/<branch> exec review \
   --base origin/main \
   -o /tmp/recite-agent-runs/<branch>/impl-review.md \
-  "Review this issue implementation. Findings first. If clean, say NO FINDINGS."
+  "Review this issue implementation. Findings first. Include the recite-rust-quality size-trigger audit for Rust changes. If clean, say NO FINDINGS."
 ```
 
 ## PR And Merge

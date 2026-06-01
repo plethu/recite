@@ -90,7 +90,7 @@ Recite requires signed commits and explicit review gates. Do not merge pull requ
 
 | Stage | Required actions |
 | --- | --- |
-| Review | Keep the issue in `status/review`; confirm the PR targets `main` from the expected short-lived branch; review beyond acceptance criteria for correctness, maintainability, extensibility, public API shape, invariant preservation, and validation ownership; run `scripts/check-project-gates.sh`; use `.agents/skills/recite-rust-quality/SKILL.md` for Rust changes; require maintainer approval and a current clean-context agent review; resolve or explicitly reject every review comment. |
+| Review | Keep the issue in `status/review`; confirm the PR targets `main` from the expected short-lived branch; review beyond acceptance criteria for correctness, maintainability, extensibility, public API shape, invariant preservation, and validation ownership; run `scripts/check-project-gates.sh`; for Rust changes, run the `.agents/skills/recite-rust-quality/SKILL.md` quick audit and include its size-triggered split/cohesion/follow-up handoff in review notes; require maintainer approval and a current clean-context agent review; resolve or explicitly reject every review comment. |
 | Signed merge | Start from a clean worktree; run the review gate helper; fetch `origin/main` and the PR head branch; verify every PR commit signature with `git verify-commit`; stage a local no-ff merge, run checks, commit with `git commit -S`, push `main`, mark the PR as `manually-merged`, and verify the PR plus linked issue. |
 
 Do not push to `main` or close the PR until review gates pass. Trusted maintainer author self-review is only a temporary single-maintainer exception.
