@@ -24,7 +24,7 @@ fn compiler_generated_messagepack_round_trips_the_v0_tag_surface() {
             "dialogue/tag-surface.recite",
             concat!(
                 ":: start default speaker=hazel\n",
-                "> prompt_line portrait=neutral\n",
+                "> prompt_line portrait=\"neutral\"\n",
                 "  Choose.\n",
                 "  ? choose_none\n",
                 "    No echo.\n",
@@ -229,6 +229,29 @@ fn assert_value_tag_surface_is_covered(dialogue: &CompiledDialogue) {
     assert_eq!(
         scalar_tags,
         BTreeSet::from(["boolean", "float", "integer", "string"])
+    );
+
+    assert_eq!(
+        dialogue
+            .metadata
+            .iter()
+            .find(|entry| entry.key == "label")
+            .map(|entry| &entry.value),
+        Some(&Value::Scalar(ScalarValue::String("plain".to_owned())))
+    );
+    assert_eq!(
+        dialogue
+            .metadata
+            .iter()
+            .find(|entry| entry.key == "tags")
+            .map(|entry| &entry.value),
+        Some(&Value::Array(vec![
+            ScalarValue::String("door".to_owned()),
+            ScalarValue::String("mug clang".to_owned()),
+            ScalarValue::Boolean(true),
+            ScalarValue::Integer(2),
+            ScalarValue::Float(1.5),
+        ]))
     );
 }
 

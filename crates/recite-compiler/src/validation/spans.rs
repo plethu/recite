@@ -1,11 +1,11 @@
 use recite_core::{
-    Argument, ConditionCall, ConditionExpression, Metadata, MetadataEntry, MetadataTarget,
-    SourceFile, SourceSpan, SourceText,
+    Argument, ConditionCall, ConditionExpression, MetadataTarget, SourceFile, SourceMetadata,
+    SourceMetadataEntry, SourceSpan, SourceText,
 };
 
 use super::project;
 use super::state::Validator;
-use super::values::{argument_has_non_finite_float, value_has_non_finite_float};
+use super::values::{argument_has_non_finite_float, source_metadata_value_has_non_finite_float};
 use crate::diagnostics;
 
 impl<'a> Validator<'a> {
@@ -21,7 +21,7 @@ impl<'a> Validator<'a> {
     pub(super) fn validate_metadata(
         &mut self,
         source_file: &'a SourceFile,
-        metadata: &'a Metadata,
+        metadata: &'a SourceMetadata,
         target: MetadataTarget,
     ) {
         for entry in metadata {
@@ -74,9 +74,9 @@ impl<'a> Validator<'a> {
     pub(super) fn validate_metadata_value(
         &mut self,
         source_file: &'a SourceFile,
-        entry: &'a MetadataEntry,
+        entry: &'a SourceMetadataEntry,
     ) {
-        if !value_has_non_finite_float(&entry.value) {
+        if !source_metadata_value_has_non_finite_float(&entry.value) {
             return;
         }
 

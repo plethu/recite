@@ -72,6 +72,7 @@ pub struct EnumTypeDefinition {
 #[derive(Clone, Debug, Eq, PartialEq, Ord, PartialOrd, Hash)]
 pub enum SchemaTypeRef {
     String,
+    Symbol,
     Int,
     Float,
     Bool,
@@ -310,6 +311,7 @@ impl CanonicalSchemaBytes {
     fn type_ref(&mut self, type_ref: &SchemaTypeRef) {
         match type_ref {
             SchemaTypeRef::String => self.string("string"),
+            SchemaTypeRef::Symbol => self.string("symbol"),
             SchemaTypeRef::Int => self.string("int"),
             SchemaTypeRef::Float => self.string("float"),
             SchemaTypeRef::Bool => self.string("bool"),

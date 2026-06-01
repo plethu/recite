@@ -1,4 +1,4 @@
-use recite_core::{SourceSpan, Value};
+use recite_core::{SourceMetadataValue, SourceSpan};
 
 use crate::source::span_for_text;
 
@@ -41,7 +41,7 @@ pub(crate) struct HeaderKeyValue<'a> {
 }
 
 impl HeaderKeyValue<'_> {
-    pub(crate) fn parse_value(&self) -> Result<Value, SourceSpan> {
+    pub(crate) fn parse_value(&self) -> Result<SourceMetadataValue, SourceSpan> {
         parse_value(self.value).map_err(|_| self.value_span.clone())
     }
 }

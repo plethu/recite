@@ -78,3 +78,22 @@ fn manifest_type_refs_support_the_issue_52_surface_exactly() {
         SchemaTypeRef::Speaker
     );
 }
+
+#[test]
+fn metadata_type_refs_support_symbol() {
+    let report = load_schema_manifest_str(
+        "fixtures/schema/valid/symbol_metadata_type.json",
+        r#"{
+  "schema_version": 1,
+  "metadata": {
+    "route": {
+      "targets": ["line"],
+      "type": "symbol"
+    }
+  }
+}"#,
+    );
+    assert_eq!(diagnostic_codes(&report), Vec::<&str>::new());
+    let schema = report.schema.expect("valid symbol metadata schema");
+    assert_eq!(schema.metadata["route"].type_ref, SchemaTypeRef::Symbol);
+}

@@ -284,24 +284,25 @@ pub struct MetadataEntry {
 ```
 
 Source metadata values must distinguish author spelling from compiled/runtime
-meaning. The future source AST should preserve a distinct metadata value type
-equivalent to:
+meaning. The source AST preserves this as:
 
 ```rust
 pub enum SourceMetadataValue {
+    Scalar(SourceMetadataScalar),
+    Array(Vec<SourceMetadataScalar>),
+}
+
+pub enum SourceMetadataScalar {
     Symbol(String),
     StringLiteral(String),
     Integer(i64),
     Float(f64),
-    Boolean(bool),
-    Array(Vec<SourceMetadataScalarValue>),
-    RuntimeRef(String), // reserved for explicit future support
+    Bool(bool),
 }
 ```
 
-`SourceMetadataScalarValue` is the scalar subset: symbol, string literal,
-integer, float, boolean, and reserved runtime reference. Nested arrays are not
-part of v1.
+`SourceMetadataScalar` is the scalar subset: symbol, string literal, integer,
+float, and bool. Nested arrays are not part of v1.
 
 Metadata source spelling:
 
@@ -311,7 +312,8 @@ Metadata source spelling:
 - arrays validate each scalar element against the same metadata definition and
   domain rules as a single value;
 - runtime-bound `$name` metadata values are reserved for explicit future
-  support and must not be accepted silently as ordinary symbols.
+  support and must not be accepted silently as ordinary symbols; they are
+  malformed until that support is added.
 
 Compiled/runtime metadata semantics are schema-driven. Runtime consumers should
 not infer meaning from whether a source value was bare or quoted; they consume
@@ -1199,12 +1201,13 @@ Metadata domains are named schema definitions. Metadata definitions reference
 domains by name rather than hardcoding special keys such as `portrait`.
 
 `symbol` is a metadata schema scalar, not a new runtime value kind. A metadata
-definition with `"type": "symbol"` accepts source `SourceMetadataValue::Symbol`
-values, rejects quoted string literals unless a different metadata type permits
-them, and lowers the accepted symbol into the compiled/runtime metadata value
-model as a string-like value with schema-validated domain semantics. Runtime
-consumers must use the metadata key and schema contract to interpret that value;
-they must not depend on source spelling.
+definition with `"type": "symbol"` accepts source
+`SourceMetadataValue::Scalar(SourceMetadataScalar::Symbol(_))` values, rejects
+quoted string literals unless a different metadata type permits them, and
+lowers the accepted symbol into the compiled/runtime metadata value model as a
+string-like value with schema-validated domain semantics. Runtime consumers
+must use the metadata key and schema contract to interpret that value; they
+must not depend on source spelling.
 
 Domain kinds:
 
