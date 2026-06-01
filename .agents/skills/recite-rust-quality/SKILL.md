@@ -14,7 +14,7 @@ Recite's Rust code should stay easy to review, deterministic, and boring to exte
 When reviewing uncommitted Rust changes, inspect the changed files and run a line-count pass over the touched surface:
 
 ```bash
-git diff --name-only --diff-filter=ACMRT -- '*.rs' | xargs -r wc -l | sort -nr
+git diff --name-only --diff-filter=ACMRT HEAD -- '*.rs' | xargs -r wc -l | sort -nr
 ```
 
 When reviewing a committed branch, compare against the branch base:
