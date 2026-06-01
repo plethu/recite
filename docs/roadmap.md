@@ -37,11 +37,11 @@ These issues have no unmet dependencies.
 | #104 Large/epic CLI stress checks | scale proof | release evidence |
 | #105 Memory profiles and known limits | scale proof | release known-limits docs |
 | #126 `recite bench` command | scale proof | user-facing benchmark reports |
-| #36 ID small-string evaluation | performance review | follow-up optimization decision |
-| #91 Rustdoc API examples | leaf | — |
-| #95 Importer-boundary design | design | #97 |
+| #156 Compact ID storage switch | performance follow-up | reduced ID allocation pressure |
+| #97 Migration source inspection prototype | migration | importer/reporting implementation |
 | #81 Unity adapter design | design | feeds #108, Unity refresh |
-| #83 Editor highlighting strategy | design | M12 editor extensions |
+| #84 VS Code LSP client scaffold | editor extensions | VS Code authoring workflow |
+| #85 Neovim setup documentation | editor extensions | Neovim authoring workflow |
 | #134 v0 wire sync risk | hardening | #113 |
 | #136 Large Rust file cohesion audit | hardening | follow-up refactors as needed |
 
@@ -63,6 +63,7 @@ flowchart LR
     i76 --> i77["#77 block/schema actions"]
     i76 --> i106["#106 LSP benchmarks"]
     i84["#84"] --> i86["#86"]
+    i85["#85 Neovim setup"]
   end
 
   subgraph ADP["Adapter track (critical path)"]
@@ -85,25 +86,21 @@ flowchart LR
     i74 --> i126["#126 recite bench"]
     i72["#72"] --> i104["#104 large/epic stress"]
     i73 --> i105["#105 memory limits"]
-    i73 --> i36["#36 ID SSO evaluation"]
+    i36["#36"] --> i156["#156 compact IDs"]
   end
 
   subgraph DOCS["Docs / adoption"]
     direction LR
-    subgraph DNOW["available now"]
-      i91["#91"]
-    end
     subgraph DLATER["after scale + adapters"]
       i89["#89"]
       i90["#90"]
       i92["#92"]
       i93["#93"]
     end
-    DNOW --> DLATER
   end
 
   subgraph MIG["Migration"]
-    i95["#95"] --> i97["#97"]
+    i97["#97 source inspection"]
   end
 
   subgraph REL["Release hardening (M14)"]
@@ -117,7 +114,8 @@ flowchart LR
     i116["#116"]
   end
 
-  i85["#85"] -.-> editor["M12 editor extensions, #70 docs"]
+  i84 -.-> editor["M12 editor extensions, #70 docs"]
+  i85 -.-> editor
   i134 --> i113
   i135 --> i112
   i94 -- adapters --> REL
@@ -141,16 +139,17 @@ metadata value-domain implementation (#139), and LSP project/schema index issue
 completion/hover (#31), navigation/rename (#32), missing-ID code actions (#33),
 block/schema repair actions (#77), and LSP scale benchmarks (#106).
 
-The benchmark suite (#73), trace counters (#75), and benchmark smoke/regression
-policy (#74) are closed. The performance track can now move into large/epic CLI
-stress checks (#104), memory and known-limit reporting (#105), the user-facing
-`recite bench` command (#126), and the measured ID small-string evaluation
-(#36).
+The benchmark suite (#73), trace counters (#75), benchmark smoke/regression
+policy (#74), and measured ID small-string evaluation (#36) are closed. The
+performance track can now move into large/epic CLI stress checks (#104), memory
+and known-limit reporting (#105), the user-facing `recite bench` command
+(#126), and the compact ID storage follow-up (#156).
 
-The docs site scaffold (#88) and migration transition guides (#96) are closed.
-The remaining available docs/adoption leaf work is Rustdoc examples (#91), while
-release-positioning docs such as #89 remain blocked on scale evidence and
-credible adapter paths.
+The docs site scaffold (#88), Rustdoc API examples (#91), migration transition
+guides (#96), and importer-boundary design (#95) are closed. Migration source
+inspection (#97), VS Code LSP client scaffolding (#84), and Neovim setup docs
+(#85) can now start. Release-positioning docs such as #89 remain blocked on
+scale evidence and credible adapter paths.
 
 ## Release hardening
 
