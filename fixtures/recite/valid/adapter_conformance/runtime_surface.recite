@@ -1,0 +1,22 @@
+:: start default
+> intro_line
+  Intro line.
+! immediate intro_sfx()
+? ask_work
+  Ask about work.
+  -> work
+? locked if trusts(player)
+  Take the locked route.
+  -> locked
+
+:: work
+! deferred finished_work()
+! blocking grant_item(map)
+? end_now
+  End now.
+  -> END
+
+:: locked
+> locked_line
+  Locked route reached.
+-> END

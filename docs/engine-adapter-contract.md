@@ -615,33 +615,134 @@ Required categories:
 Adapters should preserve source-backed diagnostics from the compiler and should
 include host asset paths or resource identifiers when available.
 
-## 13. Adapter Conformance Scenarios
+## 13. Adapter Conformance Fixtures
 
-Each adapter must have automated conformance coverage for host-independent
-semantics:
+The shared host-agnostic conformance artifacts live under
+`fixtures/adapter-conformance/v1/`:
+
+- `scenarios.json` (versioned scenario manifest);
+- `adapter-conformance-manifest-v1.schema.json` (manifest schema);
+- `adapter-conformance-operation-result-v1.schema.json` (stable operation/result schema).
+
+These files are public adapter-consumable fixtures, not private Rust-only test
+helpers.
+
+### 13.1 Source Fixture Boundary
+
+`.recite` source fixtures should stay under `fixtures/recite/` so parser,
+compiler, runtime, CLI, and LSP tests share one source corpus.
+
+Adapter-conformance manifests are the exception layer for:
+
+- driver operations and step sequencing;
+- declared capabilities;
+- declared changed-asset policy;
+- expected host-observable results and stable error categories.
+
+Do not duplicate parser/compiler/runtime snapshot expectations in
+`fixtures/adapter-conformance/`.
+
+### 13.2 `AdapterConformanceDriver` Operation Contract
+
+Adapters should expose a host-test surface equivalent to the v1 operation/result
+schema so external suites can run the same scenarios. The contract covers:
+
+- compile/import operations for conformance fixture inputs;
+- start from default or explicit block;
+- advance (`next`) and choose by stable `ChoiceId`;
+- acknowledge blocking effects with `EffectAck`;
+- save/load operations for session snapshots;
+- condition-hook configuration and failure injection;
+- localisation-hook behavior and failure injection;
+- declared adapter capabilities;
+- declared changed-asset policy and active-session refresh/import behavior;
+- structured success outputs and structured stable-category errors.
+
+The result shape is machine-checkable. Callers must not parse prose to determine
+pass/fail.
+
+### 13.3 Stable Category Table and Drift Checks
+
+The scenario manifest schema includes an exhaustive stable category table. The
+table must match §12 exactly.
+
+Reference-driver verification must fail when any of these drift:
+
+- §12 categories in this document;
+- the manifest schema table;
+- the operation/result schema category enum;
+- the scenario manifest table.
+
+This is a continuous contract check, not a one-time manual audit.
+
+### 13.4 Scenario Requirements
+
+Failure scenarios must map to exactly one expected stable error category, or to
+an explicit allowed category set only where this contract deliberately permits
+more than one outcome. Success-only scenarios may omit `expected_error`; they
+must contain no error step.
+
+Mandatory scenarios must cover every committed stable category from §12:
+
+- `validation_error`;
+- `asset_load_or_decode_error`;
+- `stale_or_incompatible_asset_error`;
+- `schema_mismatch_error`;
+- `no_active_session_error`;
+- `session_already_active_error`;
+- `unknown_start_block_error`;
+- `invalid_choice_error`;
+- `unavailable_choice_error`;
+- `stale_choice_error`;
+- `missing_condition_handler_error`;
+- `condition_evaluation_error`;
+- `invalid_condition_result_error`;
+- `effect_acknowledgement_error`;
+- `rejected_changed_asset_refresh_error`;
+- `save_load_incompatibility_error`;
+- `localisation_error`.
+
+If a category cannot be exercised with a host-agnostic reference runtime alone,
+the scenario must remain in the manifest as `adapter_runner_required` with the
+same operation/result shape and an explicit runner note. It must not be omitted.
+
+Changed-asset scenarios must carry the declared policy and expected observable
+behavior for each supported policy, including success-only behavior such as
+`reload_for_next_session_only`.
+
+Freshness scenarios are split:
+
+- mandatory scenarios for compiled-asset compatibility and save/load identity;
+- capability-gated scenarios for source/schema freshness checks, gated by the
+  adapter's declared source/schema import visibility.
+
+### 13.5 Required Host-Independent Coverage
+
+Each adapter must have automated coverage for host-independent semantics,
+including:
 
 - load/decode failure;
-- stale compiled asset or schema mismatch;
+- stale compiled asset compatibility and schema mismatch behavior;
 - one-active-session rejection;
 - start from default and explicit block;
 - prompt selection by `ChoiceId`;
 - unavailable or stale choice rejection;
 - blocking effect acknowledgement and wrong-ID rejection;
-- blocking effect save/load with same pending effect ID;
+- blocking-effect save/load with the same pending effect ID;
 - pure condition handler dispatch;
-- missing condition handler error;
+- missing/evaluation/result-type condition errors;
 - immediate, blocking, and deferred effect emission;
 - save/load with a pending prompt;
-- locale fallback or localization failure behavior;
+- locale fallback or localisation failure behavior;
 - the adapter's declared changed-asset policy.
 
-Host-runtime tests may be adapter-specific, but the expected Recite trace should
+Host-runtime tests may be adapter-specific, but expected Recite traces should
 remain engine-independent where practical. Manual checks are acceptable only for
 editor/import UX that cannot reasonably be automated.
 
 Conformance above covers semantics. Adapters must also meet the engine-adapter
-performance expectations in spec §19.6, including negligible cost when no session
-is active.
+performance expectations in spec §19.6, including negligible cost when no
+session is active.
 
 ## 14. Per-Engine Guidance
 
