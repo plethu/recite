@@ -5,4 +5,4 @@ description: Placeholder for validating, compiling, running, and tracing dialogu
 
 This example will demonstrate a headless CLI workflow for validation, compilation, run, and trace commands.
 
-Command names should stay aligned with the [CLI spec](../../../../../docs/recite-production-spec.md).
+Command names should stay aligned with the [CLI spec](https://codeberg.org/plethu/recite/src/branch/main/docs/recite-production-spec.md).
