@@ -1,21 +1,25 @@
+use std::fs;
+use std::path::Path;
 use std::thread::{self, JoinHandle};
 use std::time::Duration;
 
 use lsp_server::{Connection, Message, Notification, Request, RequestId, Response};
 use lsp_types::notification::{
-    DidChangeTextDocument, DidCloseTextDocument, DidOpenTextDocument, Exit, Initialized,
-    Notification as LspNotification, PublishDiagnostics,
+    DidChangeTextDocument, DidCloseTextDocument, DidOpenTextDocument, DidSaveTextDocument, Exit,
+    Initialized, Notification as LspNotification, PublishDiagnostics,
 };
 use lsp_types::request::{Request as LspRequest, Shutdown};
 use lsp_types::{
     DidChangeTextDocumentParams, DidCloseTextDocumentParams, DidOpenTextDocumentParams,
-    InitializeResult, PublishDiagnosticsParams, TextDocumentContentChangeEvent,
-    TextDocumentIdentifier, TextDocumentItem, Uri, VersionedTextDocumentIdentifier,
+    DidSaveTextDocumentParams, InitializeResult, PublishDiagnosticsParams,
+    TextDocumentContentChangeEvent, TextDocumentIdentifier, TextDocumentItem, Uri,
+    VersionedTextDocumentIdentifier,
 };
 use serde::Serialize;
 use serde_json::{Value, json};
 
 use crate::server::{ServerError, run_connection};
+use crate::workspace::LspWorkspace;
 
 pub(super) struct Harness {
     client: Connection,
@@ -55,13 +59,13 @@ impl Harness {
     }
 
     pub(super) fn recv_publish_diagnostics(&self) -> PublishDiagnosticsParams {
-        match self.client.receiver.recv() {
+        match self.client.receiver.recv_timeout(Duration::from_secs(1)) {
             Ok(Message::Notification(notification)) => {
                 assert_eq!(notification.method, PublishDiagnostics::METHOD);
                 from_value(notification.params)
             }
             Ok(other) => panic!("expected diagnostics notification, got {other:?}"),
-            Err(error) => panic!("failed to receive diagnostics: {error}"),
+            Err(error) => panic!("timed out or failed waiting for diagnostics: {error}"),
         }
     }
 
@@ -108,6 +112,16 @@ impl Harness {
             DidCloseTextDocument::METHOD,
             DidCloseTextDocumentParams {
                 text_document: TextDocumentIdentifier { uri },
+            },
+        );
+    }
+
+    pub(super) fn did_save(&self, uri: Uri) {
+        self.send_notification(
+            DidSaveTextDocument::METHOD,
+            DidSaveTextDocumentParams {
+                text_document: TextDocumentIdentifier { uri },
+                text: None,
             },
         );
     }
@@ -189,6 +203,50 @@ pub(super) fn uri(value: &str) -> Uri {
     match value.parse::<Uri>() {
         Ok(uri) => uri,
         Err(error) => panic!("invalid test URI {value}: {error}"),
+    }
+}
+
+pub(super) fn file_uri(path: &Path) -> Uri {
+    match crate::paths::file_path_to_uri(path) {
+        Some(uri) => uri,
+        None => panic!(
+            "path cannot be represented as a file URI: {}",
+            path.display()
+        ),
+    }
+}
+
+pub(super) fn harness_for_root(root: &Path) -> Harness {
+    let root_uri = file_uri(root);
+    Harness::start_with_result(json!({
+        "capabilities": {
+            "general": {
+                "positionEncodings": ["utf-16"]
+            }
+        },
+        "rootUri": root_uri.as_str()
+    }))
+    .0
+}
+
+pub(super) fn block_names(workspace: &LspWorkspace) -> Vec<String> {
+    workspace
+        .snapshot()
+        .summaries()
+        .iter()
+        .flat_map(|summary| summary.blocks.iter().map(|block| block.name.clone()))
+        .collect()
+}
+
+pub(super) fn write_file(root: &Path, relative: &str, contents: &str) {
+    let path = root.join(relative);
+    if let Some(parent) = path.parent()
+        && let Err(error) = fs::create_dir_all(parent)
+    {
+        panic!("failed to create {}: {error}", parent.display());
+    }
+    if let Err(error) = fs::write(&path, contents) {
+        panic!("failed to write {}: {error}", path.display());
     }
 }
 

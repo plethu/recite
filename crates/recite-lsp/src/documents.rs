@@ -2,16 +2,22 @@ use std::collections::BTreeMap;
 
 use lsp_types::{TextDocumentContentChangeEvent, Uri};
 use recite_core::Diagnostic;
-use recite_parser::parse;
+
+use crate::summary::{FileSummary, OpenFileIdentity};
 
 #[derive(Clone, Debug)]
 pub(crate) struct OpenDocument {
+    identity: OpenFileIdentity,
     version: i32,
     text: String,
-    diagnostics: Vec<Diagnostic>,
+    summary: FileSummary,
 }
 
 impl OpenDocument {
+    pub(crate) fn identity(&self) -> &OpenFileIdentity {
+        &self.identity
+    }
+
     pub(crate) fn version(&self) -> i32 {
         self.version
     }
@@ -21,7 +27,11 @@ impl OpenDocument {
     }
 
     pub(crate) fn diagnostics(&self) -> &[Diagnostic] {
-        &self.diagnostics
+        &self.summary.diagnostics
+    }
+
+    pub(crate) fn summary(&self) -> &FileSummary {
+        &self.summary
     }
 }
 
@@ -31,37 +41,68 @@ pub(crate) struct OpenDocumentStore {
 }
 
 impl OpenDocumentStore {
-    pub(crate) fn open(&mut self, uri: Uri, version: i32, text: String) -> &OpenDocument {
-        let document = parse_document(&uri, version, text);
-        self.documents.entry(uri).insert_entry(document).into_mut()
+    pub(crate) fn open(
+        &mut self,
+        identity: OpenFileIdentity,
+        version: i32,
+        text: String,
+    ) -> OpenDocument {
+        let document = parse_document(identity, version, text);
+        self.documents
+            .insert(document.identity.uri.clone(), document.clone());
+        document
     }
 
     pub(crate) fn change(
         &mut self,
-        uri: &Uri,
+        identity: OpenFileIdentity,
         version: i32,
         changes: Vec<TextDocumentContentChangeEvent>,
-    ) -> Option<&OpenDocument> {
-        if !self.documents.contains_key(uri) {
-            return None;
+    ) -> DocumentChangeResult {
+        let uri = identity.uri.clone();
+        if !self.documents.contains_key(&uri) {
+            return DocumentChangeResult::Unopened;
         }
 
-        if self.is_stale(uri, version) {
-            return self.documents.get(uri);
+        if self.is_stale(&uri, version) {
+            return DocumentChangeResult::Stale;
         }
 
-        let text = full_text_change(changes)?;
-        let document = parse_document(uri, version, text);
-        Some(
-            self.documents
-                .entry(uri.clone())
-                .insert_entry(document)
-                .into_mut(),
-        )
+        let Some(text) = full_text_change(changes) else {
+            return DocumentChangeResult::Malformed;
+        };
+        let document = parse_document(identity, version, text);
+        self.documents.insert(uri, document.clone());
+        DocumentChangeResult::Accepted(Box::new(document))
     }
 
-    pub(crate) fn close(&mut self, uri: &Uri) -> bool {
-        self.documents.remove(uri).is_some()
+    pub(crate) fn refresh_identity(
+        &mut self,
+        identity: OpenFileIdentity,
+    ) -> Option<OpenDocumentIdentityRefresh> {
+        let existing = self.documents.get(&identity.uri)?;
+        if existing.identity == identity {
+            return Some(OpenDocumentIdentityRefresh {
+                document: existing.clone(),
+                identity_changed: false,
+            });
+        }
+
+        let document = parse_document(identity.clone(), existing.version, existing.text.clone());
+        self.documents
+            .insert(identity.uri.clone(), document.clone());
+        Some(OpenDocumentIdentityRefresh {
+            document,
+            identity_changed: true,
+        })
+    }
+
+    pub(crate) fn close(&mut self, uri: &Uri) -> Option<OpenDocument> {
+        self.documents.remove(uri)
+    }
+
+    pub(crate) fn documents(&self) -> impl Iterator<Item = &OpenDocument> {
+        self.documents.values()
     }
 
     fn is_stale(&self, uri: &Uri, version: i32) -> bool {
@@ -71,12 +112,31 @@ impl OpenDocumentStore {
     }
 }
 
-fn parse_document(uri: &Uri, version: i32, text: String) -> OpenDocument {
-    let parse = parse(uri.as_str(), text.as_str());
+#[derive(Clone, Debug)]
+pub(crate) enum DocumentChangeResult {
+    Accepted(Box<OpenDocument>),
+    Stale,
+    Malformed,
+    Unopened,
+}
+
+#[derive(Clone, Debug)]
+pub(crate) struct OpenDocumentIdentityRefresh {
+    pub(crate) document: OpenDocument,
+    pub(crate) identity_changed: bool,
+}
+
+fn parse_document(identity: OpenFileIdentity, version: i32, text: String) -> OpenDocument {
+    let summary = FileSummary::from_text(
+        crate::summary::FileIdentity::Open(identity.clone()),
+        Some(version),
+        text.as_str(),
+    );
     OpenDocument {
+        identity,
         version,
         text,
-        diagnostics: parse.diagnostics().to_vec(),
+        summary,
     }
 }
 
