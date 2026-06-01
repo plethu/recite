@@ -28,10 +28,7 @@ None known.
 Diverts, choices, runtime traversal, and LSP diagnostics.
 
 ## Test/Check Commands
-- `.agents/skills/recite-codeberg-pm/scripts/check-test-organization.sh`
-- `cargo fmt --check`
-- `cargo test`
-- `cargo clippy --all-targets --all-features -- -D warnings`
+- `scripts/check-project-gates.sh`
 
 ## Spec References
 - `docs/recite-production-spec.md` §5.2
@@ -68,10 +65,7 @@ Closes #17
 Adds parser support for block headers with source spans.
 
 ## Tests
-- `.agents/skills/recite-codeberg-pm/scripts/check-test-organization.sh`
-- `cargo fmt --check`
-- `cargo test`
-- `cargo clippy --all-targets --all-features -- -D warnings`
+- `scripts/check-project-gates.sh`
 EOF
 
 .agents/skills/recite-codeberg-pm/scripts/tea-rate-limit.sh issue -- \
