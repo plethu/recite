@@ -1,13 +1,15 @@
 ---
 name: recite-rust-quality
-description: Use for Recite Rust code quality review, maintainability cleanup, module boundaries, DRY judgment, Rust best practice, validation ownership, visibility, and file-size review triggers.
+description: "Use for Recite Rust maintainability review: module boundaries, validation ownership, deterministic surfaces, diagnostics, dependency judgment, and file-size triggers."
 ---
 
 # Recite Rust Quality
 
 ## Why
 
-Recite's Rust code should stay easy to review, deterministic, and boring to extend. Use this skill for non-trivial Rust implementation, refactors, reviews, and any touched Rust file that crosses the file-size triggers below.
+Use the global `rust-quality` skill for generic Rust architecture and review.
+This skill adds Recite-specific maintainability checks for deterministic dialogue
+semantics, diagnostics, validation ownership, and file-size triggers.
 
 ## Quick Audit
 
@@ -48,7 +50,7 @@ A clean Rust implementation review is not complete until every touched productio
 - Cohesive; keep as-is, with the reason.
 - Follow-up needed, with the issue or handoff note.
 
-## Architecture Checks
+## Recite Checks
 
 - Keep parser, AST/model, compiler/validation, runtime traversal, serialization, CLI/TUI, and LSP responsibilities separate.
 - Put validation policy at the boundary that owns the invalid state: constructors, typed models, loader/lowerer, compiler validation, runtime asset checks, or a named future issue.
@@ -56,19 +58,6 @@ A clean Rust implementation review is not complete until every touched productio
 - Keep deterministic ordering explicit with source order or stable sorting where output can be observed.
 - Prefer structured types, enums, and diagnostics over string conventions callers must parse.
 - Build diagnostics through the shared `recite-core` constructor (`Diagnostic::error`) and the per-crate code constants; do not re-create a module-local `diagnostic()`/`*_diagnostic()` helper. Codes are static and namespaced: validate them at compile time with `DiagnosticCode::new_static`. Select or group diagnostics by `DiagnosticCategory`, never by matching or duplicating raw code strings across crates.
-
-## DRY Checks
-
-- Remove repeated logic when it is already stable and shared by the same concept.
-- Do not create abstractions only because two blocks look similar; wait for shared meaning, ownership, and test pressure.
-- Extract repeated test setup into local helpers or support modules when it makes assertions clearer.
-- Keep helper modules named for the responsibility they own, not for vague mechanics such as `utils` unless the surrounding code already uses that pattern.
-
-## Rust Practice Checks
-
-- Prefer small private functions and focused modules over long functions with many mode flags.
-- Keep ownership clear; avoid needless clones, but do not contort simple code to avoid cheap clones on small values.
-- Prefer typed errors/results and explicit variants for observable failure modes.
 - Preserve source spans, diagnostic codes, stable IDs, and serialization compatibility when touching those surfaces.
 - Add a dependency only when it (1) removes error-prone or voluminous local code, (2) does not weaken a product invariant — determinism, stable IDs/codes, serialization compatibility, MIT licensing — and (3) covers a boundary the project does not want to own. A crate being well-regarded or popular is not itself a reason; reject it when std or a small local path already suffices. Worked judgment: `thiserror` earns its place on the library error enums (it deletes hand-rolled `Display`/`Error`/`From`) but not on `CliError`, whose rendering the Fluent i18n table owns.
 

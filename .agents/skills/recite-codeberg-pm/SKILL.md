@@ -1,25 +1,19 @@
 ---
 name: recite-codeberg-pm
-description: "Use for Recite Codeberg/Forgejo project management with tea: issues, milestones, labels, pull requests, issue planning, co-work status labels, and issue branch workflow."
+description: "Use for Recite-specific Codeberg project management: labels, milestones, issue shape, review gates, signed local merges, and repo helper scripts."
 ---
 
 # Recite Codeberg Project Management
 
 ## Why
 
-Recite uses Codeberg for public project management. Codeberg is free shared infrastructure, so prefer correctness, idempotence, and courtesy over throughput. Do not use GitHub workflows for this project.
+Use the global `codeberg-pm` skill for generic Codeberg/Forgejo workflow. This
+skill adds only Recite-specific labels, issue shape, milestone/spec routing, and
+review/merge gates.
 
-## Current Tooling Assumptions
+## Recite Preflight
 
-- Use the `tea` CLI for Codeberg operations.
-- Assume `tea` batching is unavailable for this workflow. Use sequential commands.
-- This workflow was written against `tea 0.14.0`.
-- If the installed `tea` version differs, re-check command syntax and whether rate-limit headers are exposed before trusting wrapper defaults.
-- Run `tea --version` and the relevant `tea <subcommand> --help` when command syntax matters.
-
-## Before Remote Mutation
-
-Confirm the target repo and only the current state needed for the operation. For single-issue work, prefer the lightweight checker and a targeted issue read:
+For single-issue work, prefer the lightweight checker and a targeted issue read:
 
 ```bash
 .agents/skills/recite-codeberg-pm/scripts/recite-pm-check.sh quick
@@ -106,9 +100,6 @@ For clean-context review comment shape, manual merge recording details, and main
 
 ## API Courtesy Rules
 
-- Do read-only preflight before mutation.
-- Keep preflight and verification targeted to the work at hand. Do not run broad issue-list audits when a single issue lookup is enough.
-- Never parallelize remote-mutating `tea` commands.
 - Use `scripts/tea-rate-limit.sh` for mutating issue, PR, label, and milestone commands. It has best-effort 5xx detection; treat a non-zero `tea` exit code as authoritative.
 - Use `scripts/recite-pm-check.sh issue <number>` after a single-issue mutation.
 - Use `scripts/recite-pm-check.sh full` sparingly for planning or project-wide audits. Full mode caches labels and milestones under `/tmp/recite-pm-cache` for 30 minutes by default; adjust with `RECITE_PM_CACHE_DIR` and `RECITE_PM_CACHE_TTL_SECONDS` if needed.

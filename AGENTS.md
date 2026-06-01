@@ -14,6 +14,7 @@ Recite is a Rust-first deterministic dialogue compiler, runtime, and tooling pro
 - For non-trivial Rust changes, use `.agents/skills/recite-rust-quality/SKILL.md` to review maintainability, module boundaries, duplication, visibility, validation ownership, and file-size triggers before handoff.
 - Test the crate(s) or workspace surface changed. The current repo is a workspace; use `cargo test` for broad changes unless a narrower crate check is clearly sufficient.
 - Follow the Rust test organization policy in `.agents/skills/recite-testing-diagnostics/SKILL.md`; PR gates fail if tests are added in the wrong location.
+- Repo-local skills must be Recite-specific overlays or Recite domain guidance. Put reusable personal workflow skills in the global agent config instead.
 
 ## Product Invariants
 
@@ -57,4 +58,5 @@ Use the relevant skill for procedural details:
 - Rust maintainability, architecture, DRY, visibility, validation ownership, and file-size review triggers: `.agents/skills/recite-rust-quality/SKILL.md`
 - Parser, AST, compiler, runtime, schema, effects, localisation IDs, and deterministic dialogue semantics: `.agents/skills/recite-core-language/SKILL.md`
 - Fixtures, snapshots, diagnostics, CLI checks, LSP behavior, and headless runtime tests: `.agents/skills/recite-testing-diagnostics/SKILL.md`
-- Authoring or editing agent-facing instructions (`CLAUDE.md`, `AGENTS.md`, `SKILL.md` files): `.agents/skills/recite-agent-instructions/SKILL.md`
+
+For agent-facing instruction edits, use the global `agent-instructions` skill when available. In this repo, keep `AGENTS.md` to workflow, product invariants, spec routing, and Recite-specific skill pointers.

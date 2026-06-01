@@ -27,3 +27,8 @@ nvim.log
 \#*\#
 .\#*
 *~
+
+# Local/private agent overlays
+.agents/local/
+.agents/private/
+.agents/tmp/
