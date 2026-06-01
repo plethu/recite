@@ -62,8 +62,9 @@ flowchart LR
     i76 --> i33["#33 missing-ID action"]
     i76 --> i77["#77 block/schema actions"]
     i76 --> i106["#106 LSP benchmarks"]
-    i84["#84"] --> i86["#86"]
-    i85["#85 Neovim setup"]
+    i84["#84 VS Code scaffold"] --> i157["#157 VS Code highlighting"]
+    i157 --> i86["#86"]
+    i85["#85 Neovim setup"] --> i158["#158 Neovim highlighting"]
   end
 
   subgraph ADP["Adapter track (critical path)"]
@@ -114,8 +115,8 @@ flowchart LR
     i116["#116"]
   end
 
-  i84 -.-> editor["M12 editor extensions, #70 docs"]
-  i85 -.-> editor
+  i157 -.-> editor["M12 editor extensions, #70 docs"]
+  i158 -.-> editor
   i134 --> i113
   i135 --> i112
   i94 -- adapters --> REL
@@ -148,8 +149,9 @@ and known-limit reporting (#105), the user-facing `recite bench` command
 The docs site scaffold (#88), Rustdoc API examples (#91), migration transition
 guides (#96), and importer-boundary design (#95) are closed. Migration source
 inspection (#97), VS Code LSP client scaffolding (#84), and Neovim setup docs
-(#85) can now start. Release-positioning docs such as #89 remain blocked on
-scale evidence and credible adapter paths.
+(#85) can now start. VS Code TextMate highlighting (#157) follows #84, and
+Neovim Tree-sitter highlighting (#158) follows #85. Release-positioning docs
+such as #89 remain blocked on scale evidence and credible adapter paths.
 
 ## Release hardening
 
