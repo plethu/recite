@@ -1,5 +1,6 @@
 mod content;
 mod definitions;
+mod domains;
 mod functions;
 mod types;
 mod version;
@@ -8,12 +9,13 @@ use super::SchemaLoadReport;
 use super::diagnostics::{MALFORMED_SHAPE, UNSUPPORTED_VERSION};
 use super::raw::RawManifest;
 use super::spans::{ManifestSpans, top_level_key_span};
-use super::validate::validate_type_references;
+use super::validate::{validate_domain_references, validate_type_references};
 use crate::Diagnostic;
 use crate::schema::ProjectSchema;
 
-use content::{lower_markup, lower_metadata};
+use content::{PendingReferences, lower_markup, lower_metadata};
 use definitions::{lower_registries, lower_speakers, lower_types};
+use domains::lower_metadata_domains;
 use functions::{lower_conditions, lower_effects};
 use version::{SchemaVersion, schema_version};
 
@@ -22,6 +24,7 @@ pub(crate) fn lower_manifest(file: String, source: &str, raw: RawManifest) -> Sc
     let mut schema = ProjectSchema::empty_v1();
     let mut spans = ManifestSpans::new();
     let mut pending_type_refs = Vec::new();
+    let mut pending_domain_refs = Vec::new();
 
     match schema_version(source, &raw.schema_version) {
         SchemaVersion::One => {}
@@ -84,6 +87,16 @@ pub(crate) fn lower_manifest(file: String, source: &str, raw: RawManifest) -> Sc
         &mut diagnostics,
         &mut pending_type_refs,
     );
+    spans.enter_section(source, "metadata_domains");
+    lower_metadata_domains(
+        &file,
+        source,
+        &mut spans,
+        raw.metadata_domains,
+        &mut schema,
+        &mut diagnostics,
+        &mut pending_domain_refs,
+    );
     spans.enter_section(source, "metadata");
     lower_metadata(
         &file,
@@ -92,7 +105,10 @@ pub(crate) fn lower_manifest(file: String, source: &str, raw: RawManifest) -> Sc
         raw.metadata,
         &mut schema,
         &mut diagnostics,
-        &mut pending_type_refs,
+        PendingReferences {
+            type_refs: &mut pending_type_refs,
+            domain_refs: &mut pending_domain_refs,
+        },
     );
     spans.enter_section(source, "markup");
     lower_markup(
@@ -104,6 +120,7 @@ pub(crate) fn lower_manifest(file: String, source: &str, raw: RawManifest) -> Sc
         &mut diagnostics,
     );
     validate_type_references(&schema, &pending_type_refs, &mut diagnostics);
+    validate_domain_references(&schema, &pending_domain_refs, &mut diagnostics);
 
     let schema = diagnostics.is_empty().then_some(schema);
     SchemaLoadReport {

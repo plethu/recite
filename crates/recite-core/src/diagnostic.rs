@@ -218,7 +218,7 @@ const fn validation_category(value: &[u8]) -> DiagnosticCategory {
 
     if number >= 22 && number <= 25 {
         DiagnosticCategory::Markup
-    } else if number >= 26 && number <= 30 {
+    } else if number >= 26 && number <= 33 {
         DiagnosticCategory::Metadata
     } else {
         DiagnosticCategory::Validation

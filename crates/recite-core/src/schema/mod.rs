@@ -5,8 +5,9 @@ mod model;
 
 pub use manifest::{SchemaLoadReport, load_schema_manifest_str};
 pub use model::{
-    ConditionDefinition, ConditionReturnType, EffectDefinition, EnumTypeDefinition,
-    MarkupDefinition, MetadataDefinition, MetadataTarget, ParameterDefinition, ProjectSchema,
-    RegistryDefinition, SchemaTypeDefinition, SchemaTypeRef, SpeakerDefinition,
-    canonical_schema_fingerprint,
+    ConditionDefinition, ConditionReturnType, ContextualMetadataDomain, EffectDefinition,
+    EnumTypeDefinition, FlatMetadataDomain, MarkupDefinition, MetadataContextSelector,
+    MetadataDefinition, MetadataDomainDefinition, MetadataTarget, MissingMetadataContextPolicy,
+    ParameterDefinition, ProjectSchema, RegistryDefinition, SchemaTypeDefinition, SchemaTypeRef,
+    SpeakerDefinition, canonical_schema_fingerprint,
 };

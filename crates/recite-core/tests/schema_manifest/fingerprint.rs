@@ -1,10 +1,12 @@
 use std::collections::{BTreeMap, BTreeSet};
 
 use recite_core::{
-    BLAKE3_DIGEST_LEN, ConditionDefinition, ConditionReturnType, EffectDefinition, EffectMode,
-    EnumTypeDefinition, MarkupDefinition, MetadataDefinition, MetadataTarget, ParameterDefinition,
-    ProjectSchema, RegistryDefinition, SchemaFingerprint, SchemaTypeDefinition, SchemaTypeRef,
-    SpeakerDefinition, canonical_schema_fingerprint,
+    BLAKE3_DIGEST_LEN, ConditionDefinition, ConditionReturnType, ContextualMetadataDomain,
+    EffectDefinition, EffectMode, EnumTypeDefinition, FlatMetadataDomain, MarkupDefinition,
+    MetadataContextSelector, MetadataDefinition, MetadataDomainDefinition, MetadataTarget,
+    MissingMetadataContextPolicy, ParameterDefinition, ProjectSchema, RegistryDefinition,
+    SchemaFingerprint, SchemaTypeDefinition, SchemaTypeRef, SpeakerDefinition,
+    canonical_schema_fingerprint,
 };
 
 #[test]
@@ -90,6 +92,77 @@ fn schema_fingerprint_changes_when_freshness_relevant_fields_change() {
         .expect("metadata exists")
         .repeatable = false;
     assert_ne!(base_fingerprint, canonical_schema_fingerprint(&metadata));
+
+    let mut metadata_domain = base.clone();
+    let MetadataDomainDefinition::Flat(portrait_all) = metadata_domain
+        .metadata_domains
+        .get_mut("portrait_all")
+        .expect("metadata domain exists")
+    else {
+        panic!("portrait_all is flat");
+    };
+    portrait_all.values.insert("wry".to_owned());
+    assert_ne!(
+        base_fingerprint,
+        canonical_schema_fingerprint(&metadata_domain)
+    );
+
+    let mut metadata_domain_selector = base.clone();
+    let MetadataDomainDefinition::Contextual(portrait_by_speaker) = metadata_domain_selector
+        .metadata_domains
+        .get_mut("portrait_by_speaker")
+        .expect("metadata domain exists")
+    else {
+        panic!("portrait_by_speaker is contextual");
+    };
+    portrait_by_speaker.selector = MetadataContextSelector::MetadataKey("subject".to_owned());
+    assert_ne!(
+        base_fingerprint,
+        canonical_schema_fingerprint(&metadata_domain_selector)
+    );
+
+    let mut metadata_domain_context = base.clone();
+    let MetadataDomainDefinition::Contextual(portrait_by_speaker) = metadata_domain_context
+        .metadata_domains
+        .get_mut("portrait_by_speaker")
+        .expect("metadata domain exists")
+    else {
+        panic!("portrait_by_speaker is contextual");
+    };
+    portrait_by_speaker
+        .values_by_context
+        .entry("hazel".to_owned())
+        .or_default()
+        .insert("concerned".to_owned());
+    assert_ne!(
+        base_fingerprint,
+        canonical_schema_fingerprint(&metadata_domain_context)
+    );
+
+    let mut metadata_domain_missing = base.clone();
+    let MetadataDomainDefinition::Contextual(portrait_by_speaker) = metadata_domain_missing
+        .metadata_domains
+        .get_mut("portrait_by_speaker")
+        .expect("metadata domain exists")
+    else {
+        panic!("portrait_by_speaker is contextual");
+    };
+    portrait_by_speaker.missing_context = MissingMetadataContextPolicy::Empty;
+    assert_ne!(
+        base_fingerprint,
+        canonical_schema_fingerprint(&metadata_domain_missing)
+    );
+
+    let mut metadata_domain_reference = base.clone();
+    metadata_domain_reference
+        .metadata
+        .get_mut("portrait")
+        .expect("metadata exists")
+        .domain = Some("portrait_all".to_owned());
+    assert_ne!(
+        base_fingerprint,
+        canonical_schema_fingerprint(&metadata_domain_reference)
+    );
 
     let mut markup = base.clone();
     markup
@@ -207,6 +280,34 @@ fn schema_with_order(order: Order) -> ProjectSchema {
         ],
     );
     insert_entries(
+        &mut schema.metadata_domains,
+        order,
+        [
+            (
+                "portrait_all",
+                MetadataDomainDefinition::Flat(FlatMetadataDomain {
+                    values: set(order, ["flat", "neutral"]),
+                }),
+            ),
+            (
+                "portrait_by_speaker",
+                MetadataDomainDefinition::Contextual(ContextualMetadataDomain {
+                    selector: MetadataContextSelector::FieldSpeaker,
+                    values_by_context: map(
+                        order,
+                        [
+                            ("hazel", set(order, ["flat", "neutral"])),
+                            ("rhea", set(order, ["flat"])),
+                        ],
+                    ),
+                    missing_context: MissingMetadataContextPolicy::Fallback {
+                        domain: "portrait_all".to_owned(),
+                    },
+                }),
+            ),
+        ],
+    );
+    insert_entries(
         &mut schema.metadata,
         order,
         [
@@ -216,14 +317,16 @@ fn schema_with_order(order: Order) -> ProjectSchema {
                     targets: targets(order, [MetadataTarget::Line, MetadataTarget::Choice]),
                     type_ref: SchemaTypeRef::Registry("sound".to_owned()),
                     repeatable: true,
+                    domain: None,
                 },
             ),
             (
                 "portrait",
                 MetadataDefinition {
                     targets: targets(order, [MetadataTarget::Block, MetadataTarget::Line]),
-                    type_ref: SchemaTypeRef::String,
+                    type_ref: SchemaTypeRef::Symbol,
                     repeatable: false,
+                    domain: Some("portrait_by_speaker".to_owned()),
                 },
             ),
         ],
@@ -276,6 +379,18 @@ fn set<const N: usize>(order: Order, values: [&str; N]) -> BTreeSet<String> {
     }
 
     values.into_iter().map(str::to_owned).collect()
+}
+
+fn map<T, const N: usize>(order: Order, entries: [(&str, T); N]) -> BTreeMap<String, T> {
+    let mut entries = entries.into_iter().collect::<Vec<_>>();
+    if matches!(order, Order::Reverse) {
+        entries.reverse();
+    }
+
+    entries
+        .into_iter()
+        .map(|(key, value)| (key.to_owned(), value))
+        .collect()
 }
 
 fn effect_modes<const N: usize>(order: Order, values: [EffectMode; N]) -> BTreeSet<EffectMode> {

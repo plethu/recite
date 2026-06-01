@@ -32,6 +32,11 @@
       "propertyNames": { "$ref": "#/$defs/definitionName" },
       "additionalProperties": { "$ref": "#/$defs/effectDefinition" }
     },
+    "metadata_domains": {
+      "type": "object",
+      "propertyNames": { "$ref": "#/$defs/definitionName" },
+      "additionalProperties": { "$ref": "#/$defs/metadataDomainDefinition" }
+    },
     "metadata": {
       "type": "object",
       "propertyNames": { "$ref": "#/$defs/definitionName" },
@@ -134,8 +139,69 @@
           "items": { "enum": ["block", "choice", "line", "project"] }
         },
         "type": { "$ref": "#/$defs/typeReference" },
-        "repeatable": { "type": "boolean", "default": false }
+        "repeatable": { "type": "boolean", "default": false },
+        "domain": { "$ref": "#/$defs/definitionName" }
       }
+    },
+    "metadataDomainDefinition": {
+      "oneOf": [
+        { "$ref": "#/$defs/flatMetadataDomainDefinition" },
+        { "$ref": "#/$defs/contextualMetadataDomainDefinition" }
+      ]
+    },
+    "flatMetadataDomainDefinition": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["kind", "values"],
+      "properties": {
+        "kind": { "const": "flat" },
+        "values": {
+          "type": "array",
+          "items": { "type": "string", "minLength": 1 }
+        }
+      }
+    },
+    "contextualMetadataDomainDefinition": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["kind", "selector", "values_by_context"],
+      "properties": {
+        "kind": { "const": "contextual" },
+        "selector": {
+          "type": "string",
+          "pattern": "^(field:speaker|metadata:[A-Za-z_][A-Za-z0-9_.-]*)$"
+        },
+        "values_by_context": {
+          "type": "object",
+          "propertyNames": { "$ref": "#/$defs/definitionName" },
+          "additionalProperties": {
+            "type": "array",
+            "items": { "type": "string", "minLength": 1 }
+          }
+        },
+        "missing_context": { "$ref": "#/$defs/missingMetadataContext" }
+      }
+    },
+    "missingMetadataContext": {
+      "oneOf": [
+        {
+          "type": "object",
+          "additionalProperties": false,
+          "required": ["policy"],
+          "properties": {
+            "policy": { "enum": ["diagnostic", "empty"] }
+          }
+        },
+        {
+          "type": "object",
+          "additionalProperties": false,
+          "required": ["policy", "domain"],
+          "properties": {
+            "policy": { "const": "fallback" },
+            "domain": { "$ref": "#/$defs/definitionName" }
+          }
+        }
+      ]
     },
     "markupDefinition": {
       "type": "object",

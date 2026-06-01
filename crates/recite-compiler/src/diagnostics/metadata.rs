@@ -7,6 +7,12 @@ const INVALID_METADATA_TARGET: DiagnosticCode = DiagnosticCode::new_static("RECI
 const DUPLICATE_METADATA_KEY: DiagnosticCode = DiagnosticCode::new_static("RECITE_VALIDATE028");
 const WRONG_METADATA_VALUE_TYPE: DiagnosticCode = DiagnosticCode::new_static("RECITE_VALIDATE029");
 const INVALID_METADATA_VALUE: DiagnosticCode = DiagnosticCode::new_static("RECITE_VALIDATE030");
+const INVALID_METADATA_DOMAIN_VALUE: DiagnosticCode =
+    DiagnosticCode::new_static("RECITE_VALIDATE031");
+const MISSING_METADATA_DOMAIN_CONTEXT: DiagnosticCode =
+    DiagnosticCode::new_static("RECITE_VALIDATE032");
+const MALFORMED_METADATA_DOMAIN_CONTEXT: DiagnosticCode =
+    DiagnosticCode::new_static("RECITE_VALIDATE033");
 
 pub(crate) fn unknown_metadata_key(key: &str, span: SourceSpan) -> Diagnostic {
     Diagnostic::error(
@@ -67,4 +73,47 @@ pub(crate) fn invalid_metadata_value(
         span,
     )
     .with_help("use a value exported in the project schema manifest")
+}
+
+pub(crate) fn invalid_metadata_domain_value(
+    key: &str,
+    domain: &str,
+    value: &str,
+    span: SourceSpan,
+) -> Diagnostic {
+    Diagnostic::error(
+        INVALID_METADATA_DOMAIN_VALUE,
+        format!("metadata key `{key}` uses value `{value}` outside metadata domain `{domain}`"),
+        span,
+    )
+    .with_help("use a symbol value exported in the metadata domain snapshot")
+}
+
+pub(crate) fn missing_metadata_domain_context(
+    key: &str,
+    domain: &str,
+    selector: &str,
+    span: SourceSpan,
+) -> Diagnostic {
+    Diagnostic::error(
+        MISSING_METADATA_DOMAIN_CONTEXT,
+        format!(
+            "metadata key `{key}` cannot resolve selector `{selector}` for metadata domain `{domain}`"
+        ),
+        span,
+    )
+    .with_help("provide the selector context or update the domain missing-context policy")
+}
+
+pub(crate) fn malformed_metadata_domain_context(
+    key: &str,
+    selector: &str,
+    span: SourceSpan,
+) -> Diagnostic {
+    Diagnostic::error(
+        MALFORMED_METADATA_DOMAIN_CONTEXT,
+        format!("metadata key `{key}` has ambiguous or non-symbol selector `{selector}`"),
+        span,
+    )
+    .with_help("metadata domain selectors require exactly one scalar symbol context value")
 }

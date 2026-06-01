@@ -17,6 +17,7 @@ pub struct ProjectSchema {
     pub speakers: BTreeMap<String, SpeakerDefinition>,
     pub conditions: BTreeMap<String, ConditionDefinition>,
     pub effects: BTreeMap<String, EffectDefinition>,
+    pub metadata_domains: BTreeMap<String, MetadataDomainDefinition>,
     pub metadata: BTreeMap<String, MetadataDefinition>,
     pub markup: BTreeMap<String, MarkupDefinition>,
 }
@@ -31,6 +32,7 @@ impl ProjectSchema {
             speakers: BTreeMap::new(),
             conditions: BTreeMap::new(),
             effects: BTreeMap::new(),
+            metadata_domains: BTreeMap::new(),
             metadata: BTreeMap::new(),
             markup: BTreeMap::new(),
         }
@@ -50,6 +52,7 @@ impl ProjectSchema {
         canonical.speakers(&self.speakers);
         canonical.conditions(&self.conditions);
         canonical.effects(&self.effects);
+        canonical.metadata_domains(&self.metadata_domains);
         canonical.metadata(&self.metadata);
         canonical.markup(&self.markup);
         canonical_blake3_fingerprint(canonical.as_bytes())
@@ -128,6 +131,43 @@ pub struct MetadataDefinition {
     pub targets: BTreeSet<MetadataTarget>,
     pub type_ref: SchemaTypeRef,
     pub repeatable: bool,
+    pub domain: Option<String>,
+}
+
+/// A named metadata value domain.
+#[derive(Clone, Debug, Eq, PartialEq)]
+pub enum MetadataDomainDefinition {
+    Flat(FlatMetadataDomain),
+    Contextual(ContextualMetadataDomain),
+}
+
+/// A deterministic flat set of valid metadata symbol values.
+#[derive(Clone, Debug, Eq, PartialEq)]
+pub struct FlatMetadataDomain {
+    pub values: BTreeSet<String>,
+}
+
+/// A deterministic context-indexed set of valid metadata symbol values.
+#[derive(Clone, Debug, Eq, PartialEq)]
+pub struct ContextualMetadataDomain {
+    pub selector: MetadataContextSelector,
+    pub values_by_context: BTreeMap<String, BTreeSet<String>>,
+    pub missing_context: MissingMetadataContextPolicy,
+}
+
+/// The v1 metadata context selector slice.
+#[derive(Clone, Debug, Eq, PartialEq, Ord, PartialOrd, Hash)]
+pub enum MetadataContextSelector {
+    FieldSpeaker,
+    MetadataKey(String),
+}
+
+/// Policy used when a contextual domain selector cannot resolve context.
+#[derive(Clone, Debug, Eq, PartialEq)]
+pub enum MissingMetadataContextPolicy {
+    Diagnostic,
+    Empty,
+    Fallback { domain: String },
 }
 
 /// Authoring targets that metadata may attach to.
@@ -261,6 +301,33 @@ impl CanonicalSchemaBytes {
             self.field("type");
             self.type_ref(&definition.type_ref);
             self.field_bool("repeatable", definition.repeatable);
+            self.field_option_string("domain", definition.domain.as_deref());
+        }
+    }
+
+    fn metadata_domains(&mut self, domains: &BTreeMap<String, MetadataDomainDefinition>) {
+        self.section("metadata_domains", domains.len());
+        for (name, definition) in domains {
+            self.entry(name);
+            match definition {
+                MetadataDomainDefinition::Flat(domain) => {
+                    self.field_string("kind", "flat");
+                    self.string_set("values", &domain.values);
+                }
+                MetadataDomainDefinition::Contextual(domain) => {
+                    self.field_string("kind", "contextual");
+                    self.field("selector");
+                    self.metadata_context_selector(&domain.selector);
+                    self.field("values_by_context");
+                    self.usize(domain.values_by_context.len());
+                    for (context, values) in &domain.values_by_context {
+                        self.entry(context);
+                        self.string_set("values", values);
+                    }
+                    self.field("missing_context");
+                    self.missing_metadata_context_policy(&domain.missing_context);
+                }
+            }
         }
     }
 
@@ -323,6 +390,27 @@ impl CanonicalSchemaBytes {
             SchemaTypeRef::Registry(name) => {
                 self.token("registry");
                 self.string(name);
+            }
+        }
+    }
+
+    fn metadata_context_selector(&mut self, selector: &MetadataContextSelector) {
+        match selector {
+            MetadataContextSelector::FieldSpeaker => self.string("field:speaker"),
+            MetadataContextSelector::MetadataKey(key) => {
+                self.token("metadata");
+                self.string(key);
+            }
+        }
+    }
+
+    fn missing_metadata_context_policy(&mut self, policy: &MissingMetadataContextPolicy) {
+        match policy {
+            MissingMetadataContextPolicy::Diagnostic => self.string("diagnostic"),
+            MissingMetadataContextPolicy::Empty => self.string("empty"),
+            MissingMetadataContextPolicy::Fallback { domain } => {
+                self.token("fallback");
+                self.string(domain);
             }
         }
     }

@@ -152,3 +152,42 @@ fn check_metadata_requires_schema_and_reports_schema_validation() {
     assert_diagnostic_failure(&output);
     output.assert_stderr_contains("RECITE_SCHEMA001");
 }
+
+#[test]
+fn check_metadata_reports_domain_diagnostics_without_unrelated_validation() {
+    let temp = TempDir::new().expect("tempdir");
+    let source = write_recite(
+        temp.path(),
+        "metadata-domain.recite",
+        ":: start\n> intro portrait=missing\n  Hello.\n",
+    );
+    let schema = write_file(
+        temp.path(),
+        "schema.json",
+        r#"{
+  "schema_version": 1,
+  "metadata_domains": {
+    "portrait_values": {
+      "kind": "flat",
+      "values": ["flat"]
+    }
+  },
+  "metadata": {
+    "portrait": {
+      "targets": ["line"],
+      "type": "symbol",
+      "domain": "portrait_values"
+    }
+  }
+}"#,
+    );
+
+    let output = run(recite()
+        .arg("check-metadata")
+        .arg("--schema")
+        .arg(schema)
+        .arg(source));
+    assert_diagnostic_failure(&output);
+    output.assert_stderr_contains("RECITE_VALIDATE031");
+    output.assert_stderr_not_contains("RECITE_VALIDATE005");
+}

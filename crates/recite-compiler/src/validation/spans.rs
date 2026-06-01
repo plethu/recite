@@ -1,8 +1,9 @@
 use recite_core::{
-    Argument, ConditionCall, ConditionExpression, MetadataTarget, SourceFile, SourceMetadata,
-    SourceMetadataEntry, SourceSpan, SourceText,
+    Argument, ConditionCall, ConditionExpression, SourceFile, SourceMetadataEntry, SourceSpan,
+    SourceText,
 };
 
+use super::metadata::MetadataValidationContext;
 use super::project;
 use super::state::Validator;
 use super::values::{argument_has_non_finite_float, source_metadata_value_has_non_finite_float};
@@ -21,10 +22,9 @@ impl<'a> Validator<'a> {
     pub(super) fn validate_metadata(
         &mut self,
         source_file: &'a SourceFile,
-        metadata: &'a SourceMetadata,
-        target: MetadataTarget,
+        context: MetadataValidationContext<'a>,
     ) {
-        for entry in metadata {
+        for entry in context.metadata {
             if let Some(span) = &entry.source_span {
                 self.validate_span(source_file, span, "metadata entry");
             }
@@ -36,7 +36,7 @@ impl<'a> Validator<'a> {
             }
             self.validate_metadata_value(source_file, entry);
         }
-        self.validate_metadata_schema(source_file, metadata, target);
+        self.validate_metadata_schema(source_file, context);
     }
     pub(super) fn validate_condition_expression(
         &mut self,

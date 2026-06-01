@@ -4,11 +4,17 @@ use super::super::diagnostics::{DUPLICATE_DEFINITION, MALFORMED_SHAPE};
 use super::super::raw::{Named, RawMarkupDefinition, RawMetadataDefinition};
 use super::super::spans::ManifestSpans;
 use super::super::validate::{
-    PendingTypeReference, duplicate_definition, parse_metadata_target, validate_manifest_name,
+    PendingDomainReference, PendingTypeReference, duplicate_definition, parse_metadata_target,
+    validate_manifest_name,
 };
 use super::types::lower_type_reference;
 use crate::Diagnostic;
 use crate::schema::{MarkupDefinition, MetadataDefinition, ProjectSchema};
+
+pub(super) struct PendingReferences<'a> {
+    pub(super) type_refs: &'a mut Vec<PendingTypeReference>,
+    pub(super) domain_refs: &'a mut Vec<PendingDomainReference>,
+}
 
 pub(super) fn lower_metadata(
     file: &str,
@@ -17,7 +23,7 @@ pub(super) fn lower_metadata(
     entries: Vec<Named<RawMetadataDefinition>>,
     schema: &mut ProjectSchema,
     diagnostics: &mut Vec<Diagnostic>,
-    pending_type_refs: &mut Vec<PendingTypeReference>,
+    pending_refs: PendingReferences<'_>,
 ) {
     let mut seen = BTreeSet::new();
     for entry in entries {
@@ -66,11 +72,32 @@ pub(super) fn lower_metadata(
             ),
         );
         if type_ref_is_valid {
-            pending_type_refs.push(PendingTypeReference {
+            pending_refs.type_refs.push(PendingTypeReference {
                 owner: format!("metadata '{}'", entry.name),
                 type_ref: type_ref.clone(),
                 span: type_ref_span,
             });
+        }
+
+        if let Some(domain) = &entry.value.domain {
+            let domain_span = spans.next_value_span(file, source, domain);
+            if type_ref != crate::schema::SchemaTypeRef::Symbol {
+                diagnostics.push(Diagnostic::error(
+                    MALFORMED_SHAPE,
+                    format!(
+                        "metadata '{}' uses a metadata domain but has non-symbol type '{}'",
+                        entry.name, entry.value.type_ref
+                    ),
+                    domain_span,
+                ));
+            } else {
+                pending_refs.domain_refs.push(PendingDomainReference {
+                    owner: format!("metadata '{}'", entry.name),
+                    domain: domain.clone(),
+                    require_flat: false,
+                    span: domain_span,
+                });
+            }
         }
 
         schema.metadata.insert(
@@ -79,6 +106,7 @@ pub(super) fn lower_metadata(
                 targets,
                 type_ref,
                 repeatable: entry.value.repeatable,
+                domain: entry.value.domain,
             },
         );
     }
