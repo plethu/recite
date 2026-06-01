@@ -1871,8 +1871,8 @@ Initial highlighting scopes and captures:
 | Block names, line IDs, choice IDs, and divert targets | `entity.name.section.recite`, `entity.name.label.recite`, `variable.other.reference.recite` | `@label`, `@variable` |
 | Reserved words such as `default`, `END`, and header `if` | `constant.language.recite`, `keyword.control.conditional.recite` | `@constant.builtin`, `@keyword.conditional` |
 | Metadata keys and assignment punctuation | `variable.parameter.recite`, `keyword.operator.assignment.recite` | `@property`, `@operator` |
-| Metadata values: symbols, strings, numbers, booleans, and arrays | `string.quoted.double.recite`, `constant.numeric.recite`, `constant.language.boolean.recite` | `@string`, `@number`, `@boolean`, `@punctuation.bracket` |
-| Reserved `$` metadata values and runtime interpolation bindings | `invalid.illegal.recite`, `variable.other.runtime.recite` | `@error`, `@variable.builtin` |
+| Metadata values: symbols, strings, numbers, booleans, and arrays | `constant.other.symbol.recite`, `string.quoted.double.recite`, `constant.numeric.recite`, `constant.language.boolean.recite` | `@constant`, `@string`, `@number`, `@boolean`, `@punctuation.bracket` |
+| Runtime interpolation bindings such as `$name` | `variable.other.runtime.recite` | `@variable.builtin` |
 | Condition and effect function calls and call punctuation | `support.function.recite`, `punctuation.section.arguments.recite` | `@function.call`, `@punctuation.bracket`, `@punctuation.delimiter` |
 | Localisable prose bodies | `string.unquoted.prose.recite` | `@string.special` |
 | Inline markup tags and interpolation placeholders | `entity.name.tag.recite`, `punctuation.definition.tag.recite`, `variable.other.placeholder.recite` | `@tag`, `@punctuation.bracket`, `@variable.parameter` |
