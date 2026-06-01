@@ -1867,7 +1867,7 @@ Initial highlighting scopes and captures:
 | Source category | TextMate scope family | Tree-sitter capture |
 | --- | --- | --- |
 | Comments | `comment.line.number-sign.recite` | `@comment` |
-| Statement markers and directives such as `::`, `>`, `?`, `!`, `->`, `:if`, `:else`, `:match`, `:case`, and plural `|` | `keyword.control.recite`, `punctuation.definition.*.recite` | `@keyword`, `@keyword.conditional`, `@punctuation.special` |
+| Statement markers and directives such as `::`, `>`, `?`, `!`, `->`, `:if`, `:else`, `:match`, `:case`, and plural pipes | `keyword.control.recite`, `punctuation.definition.*.recite` | `@keyword`, `@keyword.conditional`, `@punctuation.special` |
 | Block names, line IDs, choice IDs, and divert targets | `entity.name.section.recite`, `entity.name.label.recite`, `variable.other.reference.recite` | `@label`, `@variable` |
 | Reserved words such as `default`, `END`, and header `if` | `constant.language.recite`, `keyword.control.conditional.recite` | `@constant.builtin`, `@keyword.conditional` |
 | Metadata keys and assignment punctuation | `variable.parameter.recite`, `keyword.operator.assignment.recite` | `@property`, `@operator` |
