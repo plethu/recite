@@ -44,8 +44,17 @@ impl RuntimeFixture {
     }
 
     #[must_use]
+    pub fn locale_ref(&self) -> &LocaleId {
+        &self.locale
+    }
+
+    #[must_use]
     pub fn catalogs(&self) -> &BTreeMap<String, Vec<String>> {
         &self.catalogs
+    }
+
+    pub fn choice_ids(&self) -> impl Iterator<Item = &ChoiceId> {
+        self.choices.values()
     }
 
     pub fn choice_for_line(&self, line_id: &str) -> BenchmarkResult<ChoiceId> {

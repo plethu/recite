@@ -1096,6 +1096,7 @@ name = "recite-core"
 version = "0.0.1"
 dependencies = [
  "blake3",
+ "compact_str",
  "rmp-serde",
  "serde",
  "serde-value",

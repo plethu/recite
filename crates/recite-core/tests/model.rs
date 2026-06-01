@@ -127,6 +127,15 @@ fn id_wrappers_are_explicit_and_display_their_inner_value() {
 }
 
 #[test]
+fn id_wrappers_preserve_values_longer_than_small_string_storage() {
+    let value = "line_id_that_is_deliberately_longer_than_inline_storage";
+    let line_id = LineId::new(value).expect("valid line ID");
+
+    assert_eq!(line_id.as_str(), value);
+    assert_eq!(line_id.to_string(), value);
+}
+
+#[test]
 fn id_wrappers_reject_empty_values() {
     assert_eq!(
         LineId::new(""),

@@ -36,6 +36,7 @@ recite-fixturegen = { version = "0.0.1", path = "crates/recite-fixturegen" }
 recite-runtime = { version = "0.0.1", path = "crates/recite-runtime" }
 blake3 = "1.8.5"
 clap = { version = "4.5.51", features = ["derive", "string"] }
+compact_str = "0.8.1"
 criterion = { version = "0.8.2", default-features = false, features = ["plotters"] }
 crossterm = "0.28.1"
 fluent-bundle = "0.15.3"
