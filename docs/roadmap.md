@@ -5,7 +5,7 @@ can start now, what's blocked, and what's on the critical path.
 
 This is a planning aid. The live Codeberg board and
 `docs/recite-production-spec.md` §22–23 are authoritative; the issue numbers and
-edges here were pulled from the "Depends on" lines in issue bodies on 2026-05-30,
+edges here were pulled from the "Depends on" lines in issue bodies on 2026-06-01,
 and will drift as work lands.
 
 ## v1 scope
@@ -24,12 +24,14 @@ adoption docs have all landed.
 
 ## Work that can start now
 
-These issues have no unmet dependencies. One of them unlocks a whole authoring
-track; the rest are independent and can run in parallel.
+These issues have no unmet dependencies. Some are still labelled
+`status/blocked` on Codeberg until the next issue-hygiene pass, but their listed
+blocking dependencies are closed.
 
 | Issue | Role | Unlocks |
 | --- | --- | --- |
-| #137 Metadata-domain design | unblocks a track | metadata value syntax, contextual validation, LSP schema-domain support, adapter schema export |
+| #138 Metadata value syntax | unblocks a track | contextual validation, LSP schema-domain support |
+| #79 Adapter conformance fixtures | unblocks a track | per-engine adapter MVPs and refresh workflows |
 | #75 Trace performance counters | leaf | — |
 | #88 Docs site scaffold | leaf | later docs content |
 | #91 Rustdoc API examples | leaf | — |
@@ -37,6 +39,9 @@ track; the rest are independent and can run in parallel.
 | #95 Importer-boundary design | design | #97 |
 | #81 Unity adapter design | design | feeds #108, Unity refresh |
 | #83 Editor highlighting strategy | design | M12 editor extensions |
+| #134 v0 wire sync risk | hardening | #113 |
+| #135 Project-facing gates | hardening | #112 |
+| #136 Large Rust file cohesion audit | hardening | follow-up refactors as needed |
 
 ## Tracks
 
@@ -47,8 +52,6 @@ milestone.
 flowchart LR
   subgraph LSP["LSP track (authoring)"]
     direction LR
-    i137["#137 metadata-domain design"] --> i138["#138"]
-    i137 --> i139["#139"]
     i138 --> i139
     i139 --> i76["#76"]
     i76 --> i30["#30"]
@@ -62,10 +65,6 @@ flowchart LR
 
   subgraph ADP["Adapter track (critical path)"]
     direction LR
-    i140["#140 schema-domain export"] -.-> i79["#79"]
-    i140 -.-> i80["#80"]
-    i140 -.-> i82["#82"]
-    i140 -.-> i107["#107"]
     i79 --> i120["#120"]
     i79 --> i121["#121"]
     i79 --> i122["#122"]
@@ -107,6 +106,10 @@ flowchart LR
   end
 
   subgraph REL["Release hardening (M14)"]
+    direction LR
+    i134["#134"]
+    i135["#135"]
+    i136["#136"]
     i112["#112"]
     i113["#113"]
     i114["#114"]
@@ -114,8 +117,9 @@ flowchart LR
     i116["#116"]
   end
 
-  i137 --> i140
   i85["#85"] -.-> editor["M12 editor extensions, #70 docs"]
+  i134 --> i113
+  i135 --> i112
   i94 -- adapters --> REL
   i74 -- scale proof --> REL
   DLATER -- adoption docs --> REL
@@ -123,20 +127,24 @@ flowchart LR
 
 ## Critical path
 
-The adapter chain is still the longest release chain, but the original adapter
-contract design issue (#78) is now closed. The current open chain is:
+The adapter chain is still the longest release chain. The original adapter
+contract design issue (#78) and schema-domain export issue (#140) are now
+closed. The current open chain is:
 
 ```
 #79 conformance + per-engine adapter MVPs → per-engine refresh workflows → adapter docs → release verification
 ```
 
-The new metadata-domain design gate (#137) also matters for both authoring and
-adapters. It feeds the LSP schema/index work (#76, #30, #31, #77) and the
-resource-backed schema-domain export contract (#140), so it should be resolved
-before treating schema-aware completions, diagnostics, or adapter schema export
-as routine implementation.
+The metadata-domain design gate (#137) is also closed. Its first open follow-up
+is #138 metadata value syntax, which should land before treating schema-aware
+metadata validation, LSP completions, or editor affordances as routine
+implementation.
 
 ## Release hardening
 
 The M14 "Release:" issues (#112–#116) sit at the end of the graph. They can't
 start until scale, adapters, and adoption docs are in place.
+
+Issues #134, #135, and #136 are pre-release hardening tasks that can start
+earlier because they reduce compatibility, gate, and review-surface risk before
+the final release checklist work.
