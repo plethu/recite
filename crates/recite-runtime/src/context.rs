@@ -1,6 +1,39 @@
 use recite_core::{CompiledArgument, ScalarValue};
 
 /// Caller-provided pure condition evaluation for runtime traversal.
+///
+/// Context implementations bridge Recite condition calls to host game state.
+/// They should be deterministic queries: do not mutate game state, emit effects,
+/// or depend on unordered host data.
+///
+/// # Example
+///
+/// ```
+/// use recite_runtime::{
+///     ConditionEvaluationError, ConditionQuery, ConditionValue, DialogueContext,
+/// };
+///
+/// struct InventoryContext {
+///     has_map: bool,
+/// }
+///
+/// impl DialogueContext for InventoryContext {
+///     fn evaluate_condition(
+///         &self,
+///         query: ConditionQuery<'_>,
+///     ) -> Result<ConditionValue, ConditionEvaluationError> {
+///         match query.function() {
+///             "has_map" => Ok(ConditionValue::Bool(self.has_map)),
+///             other => Err(ConditionEvaluationError::new(format!(
+///                 "no condition handler registered for `{other}`",
+///             ))),
+///         }
+///     }
+/// }
+///
+/// let context = InventoryContext { has_map: true };
+/// let _runtime_context: &dyn DialogueContext = &context;
+/// ```
 pub trait DialogueContext {
     fn evaluate_condition(
         &self,

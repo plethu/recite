@@ -1,3 +1,24 @@
+//! Library entry point for the `recite` command-line interface.
+//!
+//! Most users run the binary. The library surface exists so tests, packagers,
+//! and host tooling can execute the same CLI parser and command dispatcher
+//! without spawning a child process.
+//!
+//! CLI commands are user-facing wrappers around the parser, compiler, schema,
+//! project, and runtime crates. Library integrations that need structured data
+//! should prefer those lower-level crates directly.
+//!
+//! # Example
+//!
+//! ```no_run
+//! use std::ffi::OsString;
+//!
+//! let _status = recite_cli::run([
+//!     OsString::from("recite"),
+//!     OsString::from("--help"),
+//! ]);
+//! ```
+
 use std::ffi::OsString;
 use std::io::{self, Write};
 use std::process::ExitCode;

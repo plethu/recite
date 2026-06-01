@@ -7,6 +7,12 @@ use super::AssetView;
 use super::flow::next_statement_after;
 use super::output::dialogue_effect_request;
 
+/// Acknowledge the blocking effect currently pending on a session.
+///
+/// The acknowledgement ID must match the exact runtime effect request emitted by
+/// traversal. The runtime clears the pending effect but does not execute or
+/// interpret the game-side operation; callers decide whether a completed or
+/// failed acknowledgement affects their own game state.
 pub fn acknowledge_effect(
     session: &mut DialogueSession,
     effect_id: recite_core::EffectId,

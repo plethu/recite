@@ -1,5 +1,75 @@
-//! Core Recite AST, compiled dialogue model, identifiers, values, diagnostics,
-//! and schema model.
+//! Shared Recite model types used by the parser, compiler, runtime, CLI, LSP,
+//! and adapter tooling.
+//!
+//! This crate owns the data contracts that must remain consistent across the
+//! workspace:
+//!
+//! - source-level AST values used after parsing and before semantic validation;
+//! - stable identifiers, source spans, values, metadata, and structured
+//!   diagnostics;
+//! - the canonical project schema model and generated manifest loader;
+//! - deterministic compiled dialogue tables, fingerprints, and v0 wire
+//!   constants.
+//!
+//! Game code usually reaches these types through `recite-compiler` or
+//! `recite-runtime`. Adapter and tooling code may use this crate directly when
+//! it needs to inspect schema manifests, compiled assets, diagnostic codes, or
+//! stable IDs.
+//!
+//! The [game-developer guides][guides] and Rust API entry point live in the docs
+//! site; this Rustdoc is the library API reference and intentionally does not
+//! duplicate the full guide material.
+//!
+//! [guides]: https://codeberg.org/plethu/recite/src/branch/main/docs-site/src/content/docs
+//!
+//! # Example: Load A Schema Manifest
+//!
+//! ```
+//! use recite_core::load_schema_manifest_str;
+//!
+//! let report = load_schema_manifest_str(
+//!     "schema/recite.schema.json",
+//!     r#"{
+//!       "schema_version": 1,
+//!       "speakers": {
+//!         "hazel": { "display_name": "Hazel" }
+//!       },
+//!       "conditions": {
+//!         "trust_gte": {
+//!           "params": [{ "name": "threshold", "type": "int" }]
+//!         }
+//!       }
+//!     }"#,
+//! );
+//!
+//! assert!(report.diagnostics.is_empty());
+//! let schema = report.schema.expect("valid manifest loads");
+//! assert!(schema.speakers.contains_key("hazel"));
+//! assert!(schema.conditions.contains_key("trust_gte"));
+//! ```
+//!
+//! # Example: Build A Diagnostic
+//!
+//! ```
+//! # fn main() -> Result<(), Box<dyn std::error::Error>> {
+//! use recite_core::{
+//!     Diagnostic, DiagnosticCategory, DiagnosticCode, SourcePosition, SourceSpan,
+//! };
+//!
+//! let diagnostic = Diagnostic::error(
+//!     DiagnosticCode::new_static("RECITE_PARSE001"),
+//!     "expected a Recite statement",
+//!     SourceSpan::point(
+//!         "dialogue/start.recite",
+//!         SourcePosition::new(3, 1)?,
+//!     ),
+//! );
+//!
+//! assert_eq!(diagnostic.code.category(), DiagnosticCategory::Parse);
+//! assert_eq!(diagnostic.span.file, "dialogue/start.recite");
+//! # Ok(())
+//! # }
+//! ```
 
 pub mod ast;
 pub mod compiled;

@@ -1,4 +1,21 @@
 //! Language server scaffolding for Recite source files.
+//!
+//! This crate exposes the stdio entry point used by the `recite-lsp` binary and
+//! keeps protocol handling separate from parser/compiler diagnostics. Editor
+//! integrations normally launch the binary; tests and embedding hosts may call
+//! [`run_stdio`] directly.
+//!
+//! The LSP projects syntax and schema-loading diagnostics into editor-facing
+//! notifications. Compiler-backed semantic diagnostics are added through
+//! separate LSP feature work; this crate does not own language semantics.
+//!
+//! # Example
+//!
+//! ```no_run
+//! fn main() -> Result<(), recite_lsp::ServerError> {
+//!     recite_lsp::run_stdio()
+//! }
+//! ```
 
 mod capabilities;
 mod diagnostics;
