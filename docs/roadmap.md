@@ -34,6 +34,7 @@ These issues have no unmet dependencies.
 | #33 LSP missing-ID code action | LSP track | on-save ID workflow |
 | #77 LSP block/schema code actions | LSP track | editor repair actions |
 | #106 LSP large-project benchmarks | scale proof | LSP release evidence |
+| #170 Choice availability design | language foundations | #171, #172, final #90 wording |
 | #104 Large/epic CLI stress checks | scale proof | release evidence |
 | #105 Memory profiles and known limits | scale proof | release known-limits docs |
 | #126 `recite bench` command | scale proof | user-facing benchmark reports |
@@ -106,11 +107,18 @@ flowchart LR
     i168 --> i169
   end
 
+  subgraph LANG["Language foundations"]
+    direction LR
+    iAvailDesign["#170 availability design"] --> iAvailImpl["#171 requires availability"]
+    iAvailDesign --> iAffordance["#172 generic choice affordances"]
+    iAvailImpl --> i90Source["#90 source-format wording"]
+  end
+
   subgraph DOCS["Docs / adoption"]
     direction LR
     subgraph DLATER["after scale + adapters"]
       i89["#89"]
-      i90["#90"]
+      i90Docs["#90 core workflow guides"]
       i92["#92"]
       i93["#93"]
     end
@@ -184,8 +192,19 @@ report/provenance (#159), custom JSON/CSV import (#160), Twee/Twine import
 compatibility notes (#164). VS Code LSP client scaffolding (#84) and Neovim
 setup docs (#85) can now start. VS Code TextMate highlighting (#157) follows
 #84, and Neovim Tree-sitter highlighting (#158) follows #85.
-Release-positioning docs such as #89 remain blocked on scale evidence and
-credible adapter paths.
+
+Choice availability has been split out of the source-format reference docs.
+Issue #170 can start now to settle hidden-vs-disabled semantics, the final
+availability syntax, and player-facing unavailable reason ownership. Issue #171
+then implements the approved model, and #172 separately designs generic choice
+affordances after #170 without committing RPG-specific syntax to core Recite.
+The source-format page under #90 may still land stable sections such as blocks,
+lines, speakers, metadata, choices without availability, targets, conditional
+branches, effects, stable IDs, and related links. Final choice-availability
+wording for that page remains blocked until #171 lands. The broader #90 core
+workflow guides remain in the docs/adoption lane and keep their existing scale,
+adapter-contract, #119, and adapter-detail blockers. Release-positioning docs
+such as #89 remain blocked on scale evidence and credible adapter paths.
 
 ## Release hardening
 
