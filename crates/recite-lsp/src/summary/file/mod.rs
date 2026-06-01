@@ -1,0 +1,91 @@
+mod collector;
+mod identity;
+mod items;
+
+use std::path::Path;
+
+use lsp_types::Uri;
+use recite_core::Diagnostic;
+use recite_parser::parse;
+
+use collector::FileSummaryCollector;
+pub(crate) use identity::{FileIdentity, OpenFileIdentity, SavedFileIdentity};
+pub(crate) use items::{
+    BlockReferenceSummary, FileSummaryCompleteness, FunctionReferenceSummary, MetadataKeySummary,
+    MissingIdKind, MissingIdSummary, SpannedName,
+};
+
+#[derive(Clone, Debug)]
+#[allow(dead_code)]
+pub(crate) struct FileSummary {
+    pub(crate) identity: FileIdentity,
+    pub(crate) version: Option<i32>,
+    pub(crate) diagnostics: Vec<Diagnostic>,
+    pub(crate) completeness: FileSummaryCompleteness,
+    pub(crate) blocks: Vec<SpannedName>,
+    pub(crate) block_references: Vec<BlockReferenceSummary>,
+    pub(crate) line_ids: Vec<SpannedName>,
+    pub(crate) choice_ids: Vec<SpannedName>,
+    pub(crate) missing_ids: Vec<MissingIdSummary>,
+    pub(crate) metadata_keys: Vec<MetadataKeySummary>,
+    pub(crate) condition_functions: Vec<FunctionReferenceSummary>,
+    pub(crate) effect_functions: Vec<FunctionReferenceSummary>,
+}
+
+impl FileSummary {
+    pub(crate) fn from_text(identity: FileIdentity, version: Option<i32>, text: &str) -> Self {
+        let parse = parse(identity.uri().as_str(), text);
+        let lowered = parse.lower_source_file();
+        let diagnostics = unique_diagnostics(lowered.diagnostics.clone());
+        let mut collector = FileSummaryCollector::new();
+        collector.collect_source_file(&lowered.source_file);
+        let complete_source_model = lowered.diagnostics.is_empty();
+
+        Self {
+            identity,
+            version,
+            diagnostics,
+            completeness: FileSummaryCompleteness {
+                block_definitions: complete_source_model,
+                block_references: complete_source_model,
+                stable_ids: complete_source_model,
+                metadata: complete_source_model,
+                condition_functions: complete_source_model,
+                effect_functions: complete_source_model,
+                inline_markup: false,
+                recoverable_regions: false,
+            },
+            blocks: collector.blocks,
+            block_references: collector.block_references,
+            line_ids: collector.line_ids,
+            choice_ids: collector.choice_ids,
+            missing_ids: collector.missing_ids,
+            metadata_keys: collector.metadata_keys,
+            condition_functions: collector.condition_functions,
+            effect_functions: collector.effect_functions,
+        }
+    }
+
+    pub(crate) fn uri(&self) -> &Uri {
+        self.identity.uri()
+    }
+
+    pub(crate) fn saved_path(&self) -> Option<&Path> {
+        self.identity.saved_path()
+    }
+
+    pub(crate) fn project_relative_path(&self) -> Option<&str> {
+        self.identity.project_relative_path()
+    }
+}
+
+fn unique_diagnostics(diagnostics: Vec<Diagnostic>) -> Vec<Diagnostic> {
+    let mut unique = Vec::new();
+    for diagnostic in diagnostics {
+        if !unique.contains(&diagnostic) {
+            unique.push(diagnostic);
+        }
+    }
+
+    unique
+}

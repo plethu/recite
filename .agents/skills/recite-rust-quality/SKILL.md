@@ -14,13 +14,13 @@ Recite's Rust code should stay easy to review, deterministic, and boring to exte
 When reviewing uncommitted Rust changes, inspect the changed files and run a line-count pass over the touched surface:
 
 ```bash
-git diff --name-only -- '*.rs' | xargs -r wc -l | sort -nr
+git diff --name-only --diff-filter=ACMRT HEAD -- '*.rs' | xargs -r wc -l | sort -nr
 ```
 
 When reviewing a committed branch, compare against the branch base:
 
 ```bash
-git diff --name-only main...HEAD -- '*.rs' | xargs -r wc -l | sort -nr
+git diff --name-only --diff-filter=ACMRT main...HEAD -- '*.rs' | xargs -r wc -l | sort -nr
 ```
 
 For branch-wide cleanup or review, use tracked files:
@@ -41,6 +41,12 @@ Line count is a triage trigger, not an automatic split rule. The real question i
 | Test/support Rust | >350 LOC | >500 LOC |
 
 Accept a large file only when it is cohesive and splitting would make the code harder to understand. Split smaller files when responsibilities are mixed.
+
+A clean Rust implementation review is not complete until every touched production Rust file over 250 LOC and every touched test/support Rust file over 350 LOC is listed with one of:
+
+- Split now.
+- Cohesive; keep as-is, with the reason.
+- Follow-up needed, with the issue or handoff note.
 
 ## Architecture Checks
 
