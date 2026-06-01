@@ -207,12 +207,64 @@ Each choice must expose:
 - `id`: stable localisable choice ID;
 - `text`: source text;
 - `metadata`: ordered metadata entries;
-- optional `if` condition;
+- optional `requires=(<condition expression>)` availability requirement;
+- optional `reason=<availability_reason_id>` primary unavailable reason
+  override;
 - `target`: block reference or `END`;
 - `availability`: evaluated at runtime;
 - `echo`: explicit echo policy.
 
-Unavailable choices must be included in runtime output by default so callers can render disabled choices. The format may allow a choice to opt into hidden behaviour, but hiding must be explicit and visible to tooling.
+Unavailable choices must be included in runtime output by default so callers can render disabled choices. Hidden choices are authored structurally by placing the choice inside a `:if` branch. A hidden choice is omitted from the prompt entirely; it is not a disabled prompt item.
+
+Choice header clauses are dedicated syntax, not metadata:
+
+```text
+? ask_news requires=(trust_gte(innkeeper, player, 3))
+  What's the news?
+  -> local_news
+
+? ask_news_deeper topic=rumours requires=(trust_gte(innkeeper, player, 5)) reason=innkeeper_trust_hint
+  What aren't you telling visitors?
+  -> guarded_rumours
+```
+
+Rules:
+
+- `requires=(...)` is evaluated through the §6 pure condition language. If it evaluates true, the choice is available. If it evaluates false, the choice remains in prompt output with `availability.is_available = false` and structured availability reason data when one can be resolved.
+- `reason=<availability_reason_id>` is an explicit primary presentation reason
+  used when the requirement is false. The ID must reference a schema-declared,
+  parameterless availability reason (§10.2.3). Use this for narrative
+  exceptions or for negated and otherwise ambiguous expressions where automatic
+  condition-derived reasons would be misleading. It does not erase the detailed
+  derived reason tree when one can be produced.
+- Metadata clauses may appear before or after `requires=(...)` and `reason=...`; metadata order must be preserved relative to other metadata entries. `requires` and `reason` are not emitted as metadata entries.
+- `:if` is for structural omission and hidden choices. A choice omitted by `:if` is not in the previous prompt choice set; selecting its ID is invalid or stale, not unavailable.
+- The old trailing choice `if` form is malformed syntax in v1. Authors should use `requires=(...)` for visible-but-unavailable choices and `:if` for hidden or structurally different dialogue.
+
+Examples:
+
+```text
+# Plain single-player dialogue: disabled until trust is high enough.
+? ask_news requires=(trust_gte(innkeeper, player, 3))
+  What's the news?
+  -> local_news
+
+# Visual novel: structural omission for a route-specific option.
+:if route_active(rhea_confession)
+  ? confess
+    Tell Rhea the truth.
+    -> confession
+
+# Twine-like interactive fiction: disabled affordance with a reusable hint.
+? open_door requires=(has_flag(cell_key)) reason=need_cell_key
+  Unlock the cell door.
+  -> cell_exit
+
+# CRPG-flavoured content without RPG-specific core syntax.
+? intimidate_guard requires=(trait_gte(player, presence, 4)) reason=presence_too_low
+  Make the guard stand aside.
+  -> guard_intimidated
+```
 
 Choice echo policies:
 
@@ -224,7 +276,47 @@ echo = line(choice_echo_001)
 
 The default should be `none`. If a game wants the protagonist to repeat the selected choice, it should be an explicit authored output, not a runtime quirk.
 
-### 5.4.1 ID Assignment Policy
+### 5.4.1 Choice Availability And Reasons
+
+Choice availability is a prompt affordance, not control flow. It answers "can the player select this visible option now?" Structural branches answer "does this dialogue content exist in this traversal?"
+
+Runtime behavior:
+
+- A choice with no `requires=(...)` clause is available.
+- A choice with `requires=(...)` remains in prompt output by default whether available or unavailable.
+- Unavailable choices remain in previous-prompt/session state so the runtime can reject selection with an unavailable-choice error instead of treating the ID as stale.
+- Selecting an unavailable choice returns a structured unavailable-choice error, does not advance traversal, does not emit choice echo, and does not record selected-choice history.
+- Choices omitted by `:if` are not prompt choices. Selecting an omitted choice ID is invalid or stale according to the current prompt/session state.
+
+Unavailable reason ownership:
+
+- Recite runtime must not invent project-facing prose.
+- Reusable unavailable reasons are declared in schema as localisable templates with typed parameters (§10.2.3).
+- Boolean condition definitions may declare a default reason mapping from condition arguments to a reason template.
+- Choice `reason=...` is a v1 primary presentation reason used when the
+  requirement is false. It takes precedence for compact UI presentation and
+  `primary_reason` output, while the detailed derived reason tree remains
+  available when one can be produced safely. It must reference a parameterless
+  availability reason in v1. Parameterised per-choice overrides require an
+  explicit binding syntax and are deferred.
+- Negated expressions (`not has_key(cell_key)`) and ambiguous compound expressions do not produce automatic reasons by default. Use a parameterless explicit `reason=...` override when presentation matters.
+
+Compound requirements preserve their boolean structure in runtime output:
+
+- `and` produces an `all` group: every failed child requirement explains why the choice is unavailable.
+- `or` produces an `any` group: failed alternatives are preserved as alternatives, not flattened into one prose sentence.
+- Parentheses preserve grouping.
+- Leaf reason nodes include origin identity (condition call or full requirement
+  expression), stable reason ID when resolved, template/source text when
+  available, localized text when resolved, and bound reason arguments.
+- If a choice-level primary reason is used for a negated or ambiguous
+  expression, the detailed derived tree may be absent. The primary reason leaf
+  records the full requirement expression as its origin and does not invent leaf
+  reasons for the expression's child calls.
+
+CLI/TUI surfaces may render a compact primary reason for readability, but `trace`, tests, and adapter conformance output must expose the full structured reason tree.
+
+### 5.4.2 ID Assignment Policy
 
 Every line and choice must reach the compiler with a stable ID. The intended workflow:
 
@@ -250,7 +342,7 @@ The source format should support prompts as a line with nested choices:
     I need a room.
     -> get_room
 
-  ? ta_opt_news if familiarity_gte(innkeeper, 3)
+  ? ta_opt_news requires=(trust_gte(innkeeper, player, 3))
     What's the news?
     -> local_news
 ```
@@ -394,7 +486,7 @@ Rules:
 - An optional `:else` at the same indent attaches to the immediately preceding `:if`. Anything else at that indent terminates the conditional.
 - No `:elif` in v1. Chained boolean conditions are a smell — they typically indicate that the dispatch is on an enum (use `:match`, see §5.9.1) or that the branches should be separate blocks. Adding `:elif` later is trivial if real authoring pain is reported; removing it once authors depend on it is not.
 - Conditions reuse §6 grammar, semantics, and validation. The expression must be a boolean condition.
-- Lines inside a branch must still carry stable IDs (§5.4.1) and are extracted to POT regardless of which branch evaluates true at runtime.
+- Lines inside a branch must still carry stable IDs (§5.4.2) and are extracted to POT regardless of which branch evaluates true at runtime.
 - Branches may be nested arbitrarily.
 
 #### 5.9.1 Enum Match
@@ -557,7 +649,7 @@ pub trait DialogueContext {
 
 The core runtime should not know project-specific condition meanings.
 
-Condition functions return either a boolean (the default, used by `:if` and choice `if` clauses) or a schema-declared enum variant (used by `:match` scrutinees, see §5.9.1). An enum-returning function declares its return type in the canonical schema model; the dialogue context exposes it through the same `evaluate_condition` path or a sibling enum-returning lookup, depending on adapter ergonomics.
+Condition functions return either a boolean (the default, used by `:if` and choice `requires=(...)` clauses) or a schema-declared enum variant (used by `:match` scrutinees, see §5.9.1). An enum-returning function declares its return type in the canonical schema model; the dialogue context exposes it through the same `evaluate_condition` path or a sibling enum-returning lookup, depending on adapter ergonomics.
 
 ### 6.3 Schema Validation
 
@@ -569,7 +661,7 @@ Validation must reject:
 - wrong arity;
 - wrong argument types;
 - invalid literal values where a schema defines an enum or registry;
-- non-boolean condition expressions in `:if` and choice `if` clauses;
+- non-boolean condition expressions in `:if` and choice `requires=(...)` clauses;
 - non-enum-returning scrutinees in `:match`;
 - `:match` arms that reference variants not declared in the scrutinee's enum;
 - non-exhaustive `:match` (no `:case _` and at least one declared variant uncovered);
@@ -842,9 +934,38 @@ pub struct DialogueChoice {
     pub source_text: String,
     pub text: String,
     pub metadata: Vec<MetadataEntry>,
-    pub is_available: bool,
-    pub unavailable_reason: Option<String>,
+    pub availability: ChoiceAvailability,
     pub echo: ChoiceEchoMode,
+}
+
+pub struct ChoiceAvailability {
+    pub is_available: bool,
+    pub primary_reason: Option<AvailabilityReasonLeaf>,
+    pub reason_tree: Option<AvailabilityReasonTree>,
+}
+
+pub enum AvailabilityReasonTree {
+    All(Vec<AvailabilityReasonTree>),
+    Any(Vec<AvailabilityReasonTree>),
+    Leaf(AvailabilityReasonLeaf),
+}
+
+pub struct AvailabilityReasonLeaf {
+    pub reason_id: Option<AvailabilityReasonId>,
+    pub template_source_text: Option<String>,
+    pub localized_text: Option<String>,
+    pub args: Vec<AvailabilityReasonArg>,
+    pub origin: AvailabilityReasonOrigin,
+}
+
+pub enum AvailabilityReasonOrigin {
+    ConditionCall {
+        function: String,
+        args: Vec<Value>,
+    },
+    RequirementExpression {
+        source: String,
+    },
 }
 
 pub enum ChoiceEchoMode {
@@ -855,6 +976,13 @@ pub enum ChoiceEchoMode {
 ```
 
 Selection should prefer `ChoiceId` over index. Adapters may expose index-based APIs for engine ergonomics, but the core runtime should preserve stable choice identity.
+
+`availability.primary_reason` is present only when an explicit choice-level
+`reason=...` override applies. Tooling and adapters may derive compact display
+reasons from `reason_tree`, but that presentation choice is outside runtime
+conformance output. `availability.reason_tree` is present only for unavailable
+choices when the compiler and schema can resolve detailed structured reason
+data. A v1 API must not expose only a flat `Option<String>` reason.
 
 ### 8.6 Session State
 
@@ -912,6 +1040,7 @@ Localisable strings:
 
 - line text;
 - choice text;
+- availability reason templates;
 - speaker display names;
 - optional project-defined localisable metadata values.
 
@@ -945,6 +1074,28 @@ msgctxt "dialogue_speaker:rhea"
 msgid "Rhea"
 msgstr ""
 ```
+
+Availability reason templates are extracted by stable schema reason ID:
+
+```po
+msgctxt "availability_reason:trust_too_low"
+msgid "{subject} does not trust {target} enough."
+msgstr ""
+```
+
+Availability reason placeholders follow the same placeholder syntax as line
+interpolation (§5.10). Translation validation must reject missing, renamed, or
+extra placeholders relative to the source template. Runtime reason localisation
+first resolves the template by `availability_reason:<id>`, then renders the
+template with the structured `AvailabilityReasonArg` values recorded on the
+reason leaf. `localized_text` on a reason leaf is the rendered display string;
+the localized template and source template remain available through the reason
+ID and `template_source_text` for trace/debug output.
+
+Reason parameters with registry-backed IDs render as stable symbols in v1.
+Localized display names for registry values require a future self-contained
+compiled/localisation contract and must not be fetched from game code or
+adapter registries during traversal.
 
 ### 9.3 Locale Provider
 
@@ -1185,7 +1336,9 @@ The Rust schema model should live in `recite-core::schema` and include:
 - `SchemaTypeRef`, covering built-in scalar types, speaker IDs, enum types, and
   registry-backed IDs, and the metadata-only `symbol` scalar;
 - `ConditionDefinition`, including typed parameters and optional enum return
-  type;
+  type, and optional availability reason mapping;
+- `AvailabilityReasonDefinition`, including localisable template text and
+  typed parameters;
 - `EffectDefinition`, including typed parameters and supported modes;
 - `MetadataDefinition`, including targets, type, repeatability, and optional
   range constraints, and optional domain reference;
@@ -1253,6 +1406,34 @@ exporting flat and contextual metadata-domain snapshots, recording provenance,
 and reporting stale manifests are normative in `docs/engine-adapter-contract.md`
 §7 and should not be redefined differently by engine-specific adapters.
 
+#### 10.2.3 Availability Reason Definitions
+
+Availability reasons are schema-owned reusable templates for explaining visible-but-unavailable choices. They give adapters, CLI/TUI, LSP, tests, and localisation tools structured data without requiring the core runtime to invent prose.
+
+Rules:
+
+- `availability_reasons` is a schema-level map keyed by stable reason ID.
+- Each reason declares localisable source template text and typed parameters.
+- Generated schema manifests must include enough reason-template data, parameter types, and provenance for compiler, LSP, CLI/TUI, runtime, and adapter tooling to validate and present reasons without executing game code.
+- Template text is dialogue/project content, not Recite-owned UI text. It follows the dialogue localisation path, not the CLI/TUI Fluent catalog path.
+- Boolean condition definitions may declare an `availability_reason` mapping. Mapping values bind reason parameters from condition arguments using `$<condition_param>` references or literal values valid for the target parameter type.
+- The compiler validates that condition reason mappings reference existing reason IDs, bind every required reason parameter exactly once, do not bind unknown parameters, and produce values compatible with the reason parameter types.
+- A choice-level `reason=<id>` primary reason override must reference an
+  existing parameterless availability reason in v1. Referencing a parameterised
+  reason is a compiler diagnostic until an explicit binding syntax is designed;
+  the compiler must not guess bindings from condition arguments.
+- Negated conditions and compound expressions do not synthesize new reason prose. They may carry leaf reasons for positive condition calls where the boolean grouping preserves meaning, or no leaf reason where the schema cannot explain the failure safely.
+
+Example choice and schema pairing:
+
+```text
+? ask_news requires=(trust_gte(innkeeper, player, 3)) reason=innkeeper_trust_hint
+  What's the real news?
+  -> local_news_private
+```
+
+The primary reason override above uses the reusable `innkeeper_trust_hint` template instead of repeating prose on every choice. The compiler may still preserve any schema-derived detailed reason tree for trace and adapter output.
+
 Example generated manifest excerpt:
 
 ```json
@@ -1316,7 +1497,29 @@ Example generated manifest excerpt:
         { "name": "actor_b", "type": "registry:actor" },
         { "name": "threshold", "type": "int" }
       ],
-      "returns": "bool"
+      "returns": "bool",
+      "availability_reason": {
+        "reason": "trust_too_low",
+        "args": {
+          "subject": "$actor_a",
+          "target": "$actor_b",
+          "threshold": "$threshold"
+        }
+      }
+    }
+  },
+  "availability_reasons": {
+    "trust_too_low": {
+      "template": "{subject} does not trust {target} enough.",
+      "params": [
+        { "name": "subject", "type": "registry:actor" },
+        { "name": "target", "type": "registry:actor" },
+        { "name": "threshold", "type": "int" }
+      ]
+    },
+    "innkeeper_trust_hint": {
+      "template": "The innkeeper is not ready to share that.",
+      "params": []
     }
   },
   "effects": {
@@ -1511,9 +1714,9 @@ Scalar wire rules:
 
 Top-level and row arrays use this field order:
 
-- `CompiledDialogue`: `[header, default_block, sources, blocks, statements, match_arms,
-  lines, choices, speakers, metadata, effects, source_maps, block_lookup,
-  line_lookup, choice_lookup]`.
+- `CompiledDialogue`: `[header, default_block, sources, blocks, statements,
+  match_arms, lines, choices, availability_reasons, speakers, metadata,
+  effects, source_maps, block_lookup, line_lookup, choice_lookup]`.
 - `CompiledAssetHeader`: `[format_version, compiler_compatibility_version,
   primary_encoding, inspection_encoding, compiler_version, asset_id,
   source_map_id, schema_fingerprint]`.
@@ -1523,8 +1726,12 @@ Top-level and row arrays use this field order:
 - `CompiledStatement`: `[kind, source_map]`.
 - `CompiledMatchArm`: `[pattern, statements, source_map]`.
 - `CompiledLine`: `[id, source_text, speaker, metadata, source_map]`.
-- `CompiledChoice`: `[id, source_text, metadata, condition, target, echo,
+- `CompiledChoice`: `[id, source_text, metadata, requirement,
+  requirement_source_text, availability_reason_override, target, echo,
   source_map]`.
+- `CompiledAvailabilityReason`: `[id, template_source_text, params,
+  source_map]`.
+- `CompiledAvailabilityReasonParam`: `[name, type]`.
 - `CompiledSpeaker`: `[id]`.
 - `CompiledMetadataEntry`: `[key, value, source_map]`.
 - `CompiledEffect`: `[id, mode, function, args, source_map]`.
@@ -1545,6 +1752,17 @@ in which case the payload is nil. v0 tags are:
 - effect mode: `0 = deferred`, `1 = immediate`, `2 = blocking`;
 - condition expression: `0 = call`, `1 = and`, `2 = or`, `3 = not`;
 - argument: `0 = identifier`, `1 = value`.
+
+The compiled `requirement` tree stores condition calls plus schema-derived
+availability reason mappings for positive boolean condition leaves.
+`requirement_source_text` stores the compiler's canonical expression text for
+the full requirement and is used for `RequirementExpression` origins. The
+compiled data must be self-contained: runtime traversal and adapters must not
+require the original schema manifest or game code to recover reason IDs,
+template source text, parameter definitions, bound argument values, source
+condition identity, or the full requirement expression identity.
+`availability_reasons` is the compiled reason table used for localisation,
+trace output, and adapter export during traversal.
 
 v0 fixed array arity is not append-compatible. The v0 shape may still be
 corrected before the runtime reader and compatibility gate are implemented, but
@@ -1673,10 +1891,12 @@ Useful for tests, CI, and writer review.
 Must be able to:
 
 - auto-select choices by ID or index;
+- reject fixture selections of unavailable choices without advancing traversal;
 - auto-acknowledge immediate/blocking effects;
 - emit transcript;
 - emit effect list;
-- emit condition query trace.
+- emit condition query trace;
+- emit unavailable choice reason trees in machine-readable output.
 
 `run` may preview translated dialogue content only when the fixture opts in with
 `[dialogue].locale`. Dialogue catalog paths in fixtures are resolved relative to
@@ -1690,6 +1910,8 @@ Produces a deterministic execution trace including:
 - lines;
 - prompts;
 - choices;
+- choice availability, including hidden-vs-unavailable behavior and structured
+  unavailable reason trees;
 - conditions evaluated;
 - condition results;
 - effects emitted;
@@ -1723,6 +1945,8 @@ key_hints = "contextual" # "contextual", "compact", or "hidden"
 [play]
 show_unavailable_choices = true
 ```
+
+When `show_unavailable_choices` is true, `play` should render unavailable choices as disabled and may show a compact primary reason. The full structured reason tree remains available through trace/test output and adapter conformance fixtures. When the setting is false, `play` may hide unavailable choices as a UI preference only; runtime prompt output and previous-prompt state are unchanged.
 
 The UI locale controls only Recite-owned CLI/TUI text: pane titles, transcript labels, footer hints, prompts, status messages, invalid input text, blocking-effect acknowledgement labels, and human CLI errors owned by `recite-cli`. It does not control dialogue line or choice translation for `play`, `run`, or `trace`; those remain runtime/provider concerns (§9). There is no `--ui-locale` flag.
 
@@ -1869,7 +2093,7 @@ Initial highlighting scopes and captures:
 | Comments | `comment.line.number-sign.recite` | `@comment` |
 | Statement markers and directives such as `::`, `>`, `?`, `!`, `->`, `:if`, `:else`, `:match`, `:case`, and plural pipes | `keyword.control.recite`, `punctuation.definition.*.recite` | `@keyword`, `@keyword.conditional`, `@punctuation.special` |
 | Block names, line IDs, choice IDs, and divert targets | `entity.name.section.recite`, `entity.name.label.recite`, `variable.other.reference.recite` | `@label`, `@variable` |
-| Reserved words such as `default`, `END`, and header `if` | `constant.language.recite`, `keyword.control.conditional.recite` | `@constant.builtin`, `@keyword.conditional` |
+| Reserved words and choice clauses such as `default`, `END`, `requires`, and `reason` | `constant.language.recite`, `keyword.control.conditional.recite`, `variable.parameter.recite` | `@constant.builtin`, `@keyword.conditional`, `@property` |
 | Metadata keys and assignment punctuation | `variable.parameter.recite`, `keyword.operator.assignment.recite` | `@property`, `@operator` |
 | Metadata values: symbols, strings, numbers, booleans, and arrays | `constant.other.symbol.recite`, `string.quoted.double.recite`, `constant.numeric.recite`, `constant.language.boolean.recite` | `@constant`, `@string`, `@number`, `@boolean`, `@punctuation.bracket` |
 | Runtime interpolation bindings such as `$name` | `variable.other.runtime.recite` | `@variable.builtin` |
@@ -1969,7 +2193,8 @@ Every adapter should expose host-native equivalents of these operations:
 - acknowledge a blocking effect by `EffectRequestId`;
 - observe structured dialogue output:
   - line;
-  - prompt with optional line and choices;
+  - prompt with optional line and choices, preserving choice availability and
+    structured unavailable reason trees;
   - effect request;
   - end with deferred effects;
   - structured error.
@@ -2055,7 +2280,10 @@ Supported test patterns:
 - effect snapshot;
 - condition trace snapshot;
 - localization fallback snapshot;
-- unavailable choice assertion;
+- unavailable choice assertion, including no traversal mutation after rejected
+  selection;
+- structured availability reason tree snapshot;
+- hidden-vs-unavailable prompt output assertion;
 - blocking effect pause/resume assertion;
 - save/load mid-scene assertion;
 - save/load while waiting on blocking effect assertion;
