@@ -1,0 +1,65 @@
+#!/usr/bin/env bash
+set -euo pipefail
+
+usage() {
+  cat <<'EOF'
+Usage:
+  check-project-gates.sh [repo-root]
+
+Runs Recite's canonical local project gates:
+  1. scripts/check-test-organization.sh
+  2. cargo fmt --check
+  3. cargo test
+  4. cargo clippy --all-targets --all-features -- -D warnings
+EOF
+}
+
+if [[ "${1:-}" == "-h" || "${1:-}" == "--help" || "${1:-}" == "help" ]]; then
+  usage
+  exit 0
+fi
+
+input_root="${1:-}"
+if [[ -n "$input_root" ]]; then
+  if ! repo_root="$(git -C "$input_root" rev-parse --show-toplevel 2>/dev/null)"; then
+    echo "repo root is not a git checkout: $input_root" >&2
+    exit 2
+  fi
+else
+  if ! repo_root="$(git rev-parse --show-toplevel 2>/dev/null)"; then
+    echo "unable to resolve git repo root from current directory" >&2
+    exit 2
+  fi
+fi
+
+if [[ ! -x "$repo_root/scripts/check-test-organization.sh" ]]; then
+  echo "missing executable gate: $repo_root/scripts/check-test-organization.sh" >&2
+  exit 2
+fi
+
+echo "== test organization =="
+"$repo_root/scripts/check-test-organization.sh" "$repo_root"
+
+echo
+echo "== cargo fmt --check =="
+(
+  cd "$repo_root"
+  cargo fmt --check
+)
+
+echo
+echo "== cargo test =="
+(
+  cd "$repo_root"
+  cargo test
+)
+
+echo
+echo "== cargo clippy =="
+(
+  cd "$repo_root"
+  cargo clippy --all-targets --all-features -- -D warnings
+)
+
+echo
+echo "Recite project gates passed."

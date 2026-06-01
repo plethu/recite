@@ -14,7 +14,7 @@ Example:
   .agents/skills/recite-codeberg-pm/scripts/merge-pr-signed.sh 34 issue-1-workspace-split main
 
 Environment:
-  RECITE_SIGNED_MERGE_SKIP_CHECKS=1  Skip cargo fmt/test/clippy checks.
+  RECITE_SIGNED_MERGE_SKIP_CHECKS=1  Skip scripts/check-project-gates.sh.
   RECITE_SIGNED_MERGE_SKIP_GATES=1   Skip remote review gates.
   RECITE_SIGNED_MERGE_SKIP_MARK=1    Skip Codeberg manual-merged marker.
   RECITE_SIGNED_MERGE_KEEP_HEAD=1     Keep the PR head branch after merge.
@@ -54,6 +54,8 @@ if ! command -v jq >/dev/null 2>&1; then
 fi
 
 script_dir="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
+repo_root="$(git -C "$script_dir" rev-parse --show-toplevel)"
+cd "$repo_root"
 
 if [[ -n "$(git status --porcelain)" ]]; then
   echo "working tree is not clean; commit, stash, or discard local changes before merging" >&2
@@ -127,20 +129,8 @@ git merge --no-commit --no-ff "origin/${head_branch}"
 
 if [[ "${RECITE_SIGNED_MERGE_SKIP_CHECKS:-0}" != "1" ]]; then
   echo
-  echo "== test organization =="
-  "$script_dir/check-test-organization.sh"
-
-  echo
-  echo "== cargo fmt --check =="
-  cargo fmt --check
-
-  echo
-  echo "== cargo test =="
-  cargo test
-
-  echo
-  echo "== cargo clippy =="
-  cargo clippy --all-targets --all-features -- -D warnings
+  echo "== local project gates =="
+  "$repo_root/scripts/check-project-gates.sh" "$repo_root"
 fi
 
 echo

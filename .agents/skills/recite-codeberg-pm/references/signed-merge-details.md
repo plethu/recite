@@ -55,10 +55,7 @@ Agent-Review: approved
 Head-SHA: 5b1c198ce742c81b3010eec0307e9d2cbcd1af92
 Context: clean
 Checks:
-- .agents/skills/recite-codeberg-pm/scripts/check-test-organization.sh
-- cargo fmt --check
-- cargo test
-- cargo clippy --all-targets --all-features -- -D warnings'
+- scripts/check-project-gates.sh'
 ```
 
 If the PR head changes, the clean-context agent review is stale and must be repeated for the new head SHA. The gate also blocks failed or errored Codeberg commit statuses when any are reported; if no statuses exist yet, local checks remain mandatory.
