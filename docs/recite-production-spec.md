@@ -1836,11 +1836,68 @@ Nice-to-have:
 
 ## 15. Editor Support
 
+The first syntax highlighting implementation uses a staged, editor-native
+strategy:
+
+- VS Code starts with a TextMate grammar and `.recite` language contribution.
+- Neovim starts with `recite` filetype detection, documented LSP setup, and a
+  Tree-sitter grammar if that grammar can remain a syntax-only highlighter.
+- LSP semantic tokens may later layer richer classification on top of syntax
+  highlighting, but they are not the first highlighting path and are not
+  required for basic highlighting.
+
+This choice favors immediate adoption in common text editors while keeping
+semantic authority in the parser, compiler, and LSP. TextMate is broad enough
+for Recite's line-oriented statement vocabulary and works before an LSP starts,
+but it cannot faithfully model every indentation and recovery boundary.
+Tree-sitter is a better fit for Neovim and future structural editing, but it
+must remain an editor grammar only; it must not replace the rowan parser or
+perform schema, reference, ID, condition, effect, markup, or match-exhaustiveness
+validation.
+
+Highlighting grammars must classify source text using stable visual categories
+only. They must tolerate incomplete or malformed buffers and defer all
+author-facing correctness to parser, compiler, and LSP diagnostics. In
+particular, editor grammars must not decide whether IDs are valid or unique,
+block references resolve, metadata keys or values are known, condition/effect
+calls type-check, inline markup is balanced, or match arms are exhaustive.
+
+Initial highlighting scopes and captures:
+
+| Source category | TextMate scope family | Tree-sitter capture |
+| --- | --- | --- |
+| Comments | `comment.line.number-sign.recite` | `@comment` |
+| Statement markers and directives such as `::`, `>`, `?`, `!`, `->`, `:if`, `:else`, `:match`, `:case`, and plural `|` | `keyword.control.recite`, `punctuation.definition.*.recite` | `@keyword`, `@keyword.conditional`, `@punctuation.special` |
+| Block names, line IDs, choice IDs, and divert targets | `entity.name.section.recite`, `entity.name.label.recite`, `variable.other.reference.recite` | `@label`, `@variable` |
+| Reserved words such as `default`, `END`, and header `if` | `constant.language.recite`, `keyword.control.conditional.recite` | `@constant.builtin`, `@keyword.conditional` |
+| Metadata keys and assignment punctuation | `variable.parameter.recite`, `keyword.operator.assignment.recite` | `@property`, `@operator` |
+| Metadata values: symbols, strings, numbers, booleans, arrays, and `$runtime_refs` | `string.quoted.double.recite`, `constant.numeric.recite`, `constant.language.boolean.recite`, `variable.other.runtime.recite` | `@string`, `@number`, `@boolean`, `@variable.builtin`, `@punctuation.bracket` |
+| Condition and effect function calls and call punctuation | `support.function.recite`, `punctuation.section.arguments.recite` | `@function.call`, `@punctuation.bracket`, `@punctuation.delimiter` |
+| Localisable prose bodies | `string.unquoted.prose.recite` | `@string.special` |
+| Inline markup tags and interpolation placeholders | `entity.name.tag.recite`, `punctuation.definition.tag.recite`, `variable.other.placeholder.recite` | `@tag`, `@punctuation.bracket`, `@variable.parameter` |
+| Malformed or incomplete syntax | `invalid.illegal.recite` only for obvious lexical errors | `@error` only when the editor grammar emits it |
+
+Filetype detection is intentionally narrow: `.recite` maps to the Recite source
+language/filetype, while `.recitec`, `recite.project.toml`, schema JSON, gettext
+files, and generated artifacts keep their own formats.
+
+Follow-up implementation work should be split into at least two issues:
+
+- VS Code highlighting: add the `recite-vscode` language contribution,
+  `.recite` file association, TextMate grammar, representative grammar fixtures
+  or snapshots, and a clear boundary between grammar highlighting and LSP
+  diagnostics.
+- Neovim highlighting: add filetype detection and documented LSP setup, then add
+  a Tree-sitter grammar and capture queries if feasible without duplicating
+  semantic validation. If Tree-sitter proves too large for the first Neovim
+  pass, keep filetype detection plus LSP setup as the initial deliverable and
+  track Tree-sitter separately.
+
 ### 15.1 VS Code
 
 The VS Code extension must provide:
 
-- syntax highlighting;
+- TextMate syntax highlighting;
 - LSP client wiring;
 - commands for compile/validate/extract/watch;
 - problem matcher integration;
@@ -1854,7 +1911,7 @@ Neovim support must include:
 
 - documented LSP setup;
 - Tree-sitter grammar if feasible;
-- filetype detection;
+- `recite` filetype detection for `.recite` files;
 - command examples for validation and extraction.
 
 ### 15.3 Visual Editor
