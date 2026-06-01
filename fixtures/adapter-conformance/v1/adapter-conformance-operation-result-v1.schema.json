@@ -1,0 +1,556 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://codeberg.org/plethu/recite/fixtures/adapter-conformance/v1/adapter-conformance-operation-result-v1.schema.json",
+  "title": "Recite Adapter Conformance Operation and Result Contract v1",
+  "type": "object",
+  "$defs": {
+    "stable_error_category": {
+      "type": "string",
+      "enum": [
+        "validation_error",
+        "asset_load_or_decode_error",
+        "stale_or_incompatible_asset_error",
+        "schema_mismatch_error",
+        "no_active_session_error",
+        "session_already_active_error",
+        "unknown_start_block_error",
+        "invalid_choice_error",
+        "unavailable_choice_error",
+        "stale_choice_error",
+        "missing_condition_handler_error",
+        "condition_evaluation_error",
+        "invalid_condition_result_error",
+        "effect_acknowledgement_error",
+        "rejected_changed_asset_refresh_error",
+        "save_load_incompatibility_error",
+        "localisation_error"
+      ]
+    },
+    "changed_asset_policy": {
+      "type": "string",
+      "enum": [
+        "reject_refresh_until_session_ends",
+        "reload_for_next_session_only",
+        "restart_required"
+      ]
+    },
+    "capability": {
+      "type": "string",
+      "enum": [
+        "source_import_visibility",
+        "schema_import_visibility"
+      ]
+    },
+    "requirement_level": {
+      "type": "string",
+      "enum": [
+        "mandatory",
+        "capability_gated"
+      ]
+    },
+    "execution_mode": {
+      "type": "string",
+      "enum": [
+        "reference_driver",
+        "adapter_runner_required"
+      ]
+    },
+    "expected_error": {
+      "oneOf": [
+        {
+          "type": "object",
+          "required": [
+            "error_category"
+          ],
+          "properties": {
+            "error_category": {
+              "$ref": "#/$defs/stable_error_category"
+            }
+          },
+          "additionalProperties": false
+        },
+        {
+          "type": "object",
+          "required": [
+            "allowed_error_categories"
+          ],
+          "properties": {
+            "allowed_error_categories": {
+              "type": "array",
+              "items": {
+                "$ref": "#/$defs/stable_error_category"
+              },
+              "minItems": 2,
+              "uniqueItems": true
+            }
+          },
+          "additionalProperties": false
+        }
+      ]
+    },
+    "operation": {
+      "oneOf": [
+        {
+          "type": "object",
+          "required": [
+            "kind",
+            "fixture",
+            "asset_slot"
+          ],
+          "properties": {
+            "kind": {
+              "const": "compile_fixture"
+            },
+            "fixture": {
+              "type": "string"
+            },
+            "asset_slot": {
+              "type": "string"
+            },
+            "asset_id": {
+              "type": "string"
+            },
+            "schema_fingerprint": {
+              "type": "string"
+            }
+          },
+          "additionalProperties": false
+        },
+        {
+          "type": "object",
+          "required": [
+            "kind",
+            "fixture"
+          ],
+          "properties": {
+            "kind": {
+              "const": "compile_invalid_fixture"
+            },
+            "fixture": {
+              "type": "string"
+            }
+          },
+          "additionalProperties": false
+        },
+        {
+          "type": "object",
+          "required": [
+            "kind",
+            "bytes_case"
+          ],
+          "properties": {
+            "kind": {
+              "const": "decode_compiled_bytes"
+            },
+            "bytes_case": {
+              "type": "string",
+              "enum": [
+                "truncated_messagepack"
+              ]
+            }
+          },
+          "additionalProperties": false
+        },
+        {
+          "type": "object",
+          "required": [
+            "kind",
+            "asset_slot"
+          ],
+          "properties": {
+            "kind": {
+              "const": "import_asset"
+            },
+            "asset_slot": {
+              "type": "string"
+            },
+            "declared_source_fingerprint": {
+              "type": "string"
+            },
+            "declared_schema_fingerprint": {
+              "type": "string"
+            }
+          },
+          "additionalProperties": false
+        },
+        {
+          "type": "object",
+          "required": [
+            "kind",
+            "asset_slot"
+          ],
+          "properties": {
+            "kind": {
+              "const": "start_session"
+            },
+            "asset_slot": {
+              "type": "string"
+            },
+            "block": {
+              "type": "string"
+            },
+            "locale": {
+              "type": "string"
+            }
+          },
+          "additionalProperties": false
+        },
+        {
+          "type": "object",
+          "required": [
+            "kind"
+          ],
+          "properties": {
+            "kind": {
+              "const": "advance"
+            },
+            "asset_slot": {
+              "type": "string"
+            }
+          },
+          "additionalProperties": false
+        },
+        {
+          "type": "object",
+          "required": [
+            "kind",
+            "asset_slot",
+            "locale"
+          ],
+          "properties": {
+            "kind": {
+              "const": "exercise_localisation_failure"
+            },
+            "asset_slot": {
+              "type": "string"
+            },
+            "locale": {
+              "type": "string"
+            }
+          },
+          "additionalProperties": false
+        },
+        {
+          "type": "object",
+          "required": [
+            "kind",
+            "choice_id"
+          ],
+          "properties": {
+            "kind": {
+              "const": "choose"
+            },
+            "choice_id": {
+              "type": "string"
+            }
+          },
+          "additionalProperties": false
+        },
+        {
+          "type": "object",
+          "required": [
+            "kind",
+            "slot"
+          ],
+          "properties": {
+            "kind": {
+              "const": "choose_from_slot"
+            },
+            "slot": {
+              "type": "string"
+            }
+          },
+          "additionalProperties": false
+        },
+        {
+          "type": "object",
+          "required": [
+            "kind",
+            "index",
+            "slot"
+          ],
+          "properties": {
+            "kind": {
+              "const": "remember_prompt_choice"
+            },
+            "index": {
+              "type": "integer",
+              "minimum": 0
+            },
+            "slot": {
+              "type": "string"
+            }
+          },
+          "additionalProperties": false
+        },
+        {
+          "type": "object",
+          "required": [
+            "kind",
+            "slot"
+          ],
+          "properties": {
+            "kind": {
+              "const": "remember_pending_effect_id"
+            },
+            "slot": {
+              "type": "string"
+            }
+          },
+          "additionalProperties": false
+        },
+        {
+          "type": "object",
+          "required": [
+            "kind",
+            "ack"
+          ],
+          "properties": {
+            "kind": {
+              "const": "acknowledge_effect"
+            },
+            "ack": {
+              "type": "string",
+              "enum": [
+                "completed",
+                "failed"
+              ]
+            },
+            "effect_id": {
+              "type": "string"
+            },
+            "effect_slot": {
+              "type": "string"
+            },
+            "failure_reason": {
+              "type": "string"
+            }
+          },
+          "additionalProperties": false
+        },
+        {
+          "type": "object",
+          "required": [
+            "kind",
+            "snapshot_slot"
+          ],
+          "properties": {
+            "kind": {
+              "const": "save_session"
+            },
+            "snapshot_slot": {
+              "type": "string"
+            }
+          },
+          "additionalProperties": false
+        },
+        {
+          "type": "object",
+          "required": [
+            "kind",
+            "snapshot_slot",
+            "asset_slot"
+          ],
+          "properties": {
+            "kind": {
+              "const": "load_session"
+            },
+            "snapshot_slot": {
+              "type": "string"
+            },
+            "asset_slot": {
+              "type": "string"
+            }
+          },
+          "additionalProperties": false
+        },
+        {
+          "type": "object",
+          "required": [
+            "kind",
+            "input_snapshot_slot",
+            "output_snapshot_slot",
+            "snapshot_format_version"
+          ],
+          "properties": {
+            "kind": {
+              "const": "mutate_snapshot_format"
+            },
+            "input_snapshot_slot": {
+              "type": "string"
+            },
+            "output_snapshot_slot": {
+              "type": "string"
+            },
+            "snapshot_format_version": {
+              "type": "integer",
+              "minimum": 0,
+              "maximum": 65535
+            }
+          },
+          "additionalProperties": false
+        },
+        {
+          "type": "object",
+          "required": [
+            "kind"
+          ],
+          "properties": {
+            "kind": {
+              "const": "end_session"
+            }
+          },
+          "additionalProperties": false
+        },
+        {
+          "type": "object",
+          "required": [
+            "kind"
+          ],
+          "properties": {
+            "kind": {
+              "const": "clear_condition_handlers"
+            }
+          },
+          "additionalProperties": false
+        },
+        {
+          "type": "object",
+          "required": [
+            "kind",
+            "function",
+            "behavior_kind"
+          ],
+          "properties": {
+            "kind": {
+              "const": "set_condition_behavior"
+            },
+            "function": {
+              "type": "string"
+            },
+            "behavior_kind": {
+              "type": "string",
+              "enum": [
+                "bool",
+                "enum",
+                "failure"
+              ]
+            },
+            "bool_value": {
+              "type": "boolean"
+            },
+            "enum_value": {
+              "type": "string"
+            },
+            "failure_reason": {
+              "type": "string"
+            }
+          },
+          "additionalProperties": false
+        }
+      ]
+    },
+    "event_kind": {
+      "type": "string",
+      "enum": [
+        "line",
+        "prompt",
+        "effect",
+        "end"
+      ]
+    },
+    "effect_mode": {
+      "type": "string",
+      "enum": [
+        "deferred",
+        "immediate",
+        "blocking"
+      ]
+    },
+    "step_expectation": {
+      "type": "object",
+      "required": [
+        "status"
+      ],
+      "properties": {
+        "status": {
+          "type": "string",
+          "enum": [
+            "ok",
+            "error"
+          ]
+        },
+        "event_kind": {
+          "$ref": "#/$defs/event_kind"
+        },
+        "prompt_choice_ids": {
+          "type": "array",
+          "items": {
+            "type": "string"
+          }
+        },
+        "line_text": {
+          "type": "string"
+        },
+        "prompt_unavailable_choice_ids": {
+          "type": "array",
+          "items": {
+            "type": "string"
+          }
+        },
+        "effect_function": {
+          "type": "string"
+        },
+        "effect_mode": {
+          "$ref": "#/$defs/effect_mode"
+        },
+        "deferred_effect_functions": {
+          "type": "array",
+          "items": {
+            "type": "string"
+          }
+        },
+        "pending_effect_slot": {
+          "type": "string"
+        },
+        "error_category": {
+          "$ref": "#/$defs/stable_error_category"
+        },
+        "allowed_error_categories": {
+          "type": "array",
+          "items": {
+            "$ref": "#/$defs/stable_error_category"
+          },
+          "minItems": 2,
+          "uniqueItems": true
+        }
+      },
+      "allOf": [
+        {
+          "if": {
+            "properties": {
+              "status": {
+                "const": "error"
+              }
+            }
+          },
+          "then": {
+            "oneOf": [
+              {
+                "required": [
+                  "error_category"
+                ]
+              },
+              {
+                "required": [
+                  "allowed_error_categories"
+                ]
+              }
+            ]
+          }
+        }
+      ],
+      "additionalProperties": false
+    }
+  }
+}

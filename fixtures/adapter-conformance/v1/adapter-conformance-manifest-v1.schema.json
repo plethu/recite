@@ -1,0 +1,131 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://codeberg.org/plethu/recite/fixtures/adapter-conformance/v1/adapter-conformance-manifest-v1.schema.json",
+  "title": "Recite Adapter Conformance Manifest v1",
+  "type": "object",
+  "required": [
+    "manifest_version",
+    "operation_result_schema",
+    "stable_error_categories",
+    "reference_driver",
+    "scenarios"
+  ],
+  "properties": {
+    "manifest_version": {
+      "const": 1
+    },
+    "operation_result_schema": {
+      "const": "adapter-conformance-operation-result-v1.schema.json"
+    },
+    "stable_error_categories": {
+      "const": [
+        "validation_error",
+        "asset_load_or_decode_error",
+        "stale_or_incompatible_asset_error",
+        "schema_mismatch_error",
+        "no_active_session_error",
+        "session_already_active_error",
+        "unknown_start_block_error",
+        "invalid_choice_error",
+        "unavailable_choice_error",
+        "stale_choice_error",
+        "missing_condition_handler_error",
+        "condition_evaluation_error",
+        "invalid_condition_result_error",
+        "effect_acknowledgement_error",
+        "rejected_changed_asset_refresh_error",
+        "save_load_incompatibility_error",
+        "localisation_error"
+      ]
+    },
+    "reference_driver": {
+      "type": "object",
+      "required": [
+        "changed_asset_policy",
+        "capabilities"
+      ],
+      "properties": {
+        "changed_asset_policy": {
+          "$ref": "adapter-conformance-operation-result-v1.schema.json#/$defs/changed_asset_policy"
+        },
+        "capabilities": {
+          "type": "array",
+          "items": {
+            "$ref": "adapter-conformance-operation-result-v1.schema.json#/$defs/capability"
+          },
+          "uniqueItems": true
+        }
+      },
+      "additionalProperties": false
+    },
+    "scenarios": {
+      "type": "array",
+      "minItems": 1,
+      "items": {
+        "type": "object",
+        "required": [
+          "id",
+          "title",
+          "requirement_level",
+          "execution_mode",
+          "capability_gates",
+          "steps"
+        ],
+        "properties": {
+          "id": {
+            "type": "string",
+            "minLength": 1
+          },
+          "title": {
+            "type": "string",
+            "minLength": 1
+          },
+          "requirement_level": {
+            "$ref": "adapter-conformance-operation-result-v1.schema.json#/$defs/requirement_level"
+          },
+          "execution_mode": {
+            "$ref": "adapter-conformance-operation-result-v1.schema.json#/$defs/execution_mode"
+          },
+          "capability_gates": {
+            "type": "array",
+            "items": {
+              "$ref": "adapter-conformance-operation-result-v1.schema.json#/$defs/capability"
+            },
+            "uniqueItems": true
+          },
+          "changed_asset_policy": {
+            "$ref": "adapter-conformance-operation-result-v1.schema.json#/$defs/changed_asset_policy"
+          },
+          "expected_error": {
+            "$ref": "adapter-conformance-operation-result-v1.schema.json#/$defs/expected_error"
+          },
+          "adapter_runner_notes": {
+            "type": "string"
+          },
+          "steps": {
+            "type": "array",
+            "minItems": 1,
+            "items": {
+              "type": "object",
+              "required": [
+                "operation",
+                "expect"
+              ],
+              "properties": {
+                "operation": {
+                  "$ref": "adapter-conformance-operation-result-v1.schema.json#/$defs/operation"
+                },
+                "expect": {
+                  "$ref": "adapter-conformance-operation-result-v1.schema.json#/$defs/step_expectation"
+                }
+              },
+              "additionalProperties": false
+            }
+          }
+        },
+        "additionalProperties": false
+      }
+    }
+  },
+  "additionalProperties": false
+}

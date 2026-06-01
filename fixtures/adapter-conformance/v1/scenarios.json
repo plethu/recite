@@ -1,0 +1,1588 @@
+{
+  "manifest_version": 1,
+  "operation_result_schema": "adapter-conformance-operation-result-v1.schema.json",
+  "stable_error_categories": [
+    "validation_error",
+    "asset_load_or_decode_error",
+    "stale_or_incompatible_asset_error",
+    "schema_mismatch_error",
+    "no_active_session_error",
+    "session_already_active_error",
+    "unknown_start_block_error",
+    "invalid_choice_error",
+    "unavailable_choice_error",
+    "stale_choice_error",
+    "missing_condition_handler_error",
+    "condition_evaluation_error",
+    "invalid_condition_result_error",
+    "effect_acknowledgement_error",
+    "rejected_changed_asset_refresh_error",
+    "save_load_incompatibility_error",
+    "localisation_error"
+  ],
+  "reference_driver": {
+    "changed_asset_policy": "reject_refresh_until_session_ends",
+    "capabilities": [
+      "source_import_visibility",
+      "schema_import_visibility"
+    ]
+  },
+  "scenarios": [
+    {
+      "id": "validation_error_invalid_source_fixture",
+      "title": "Invalid source fixture maps to validation_error",
+      "requirement_level": "mandatory",
+      "execution_mode": "reference_driver",
+      "capability_gates": [],
+      "expected_error": {
+        "error_category": "validation_error"
+      },
+      "steps": [
+        {
+          "operation": {
+            "kind": "compile_invalid_fixture",
+            "fixture": "fixtures/recite/invalid/compiler_validation_order.recite"
+          },
+          "expect": {
+            "status": "error",
+            "error_category": "validation_error"
+          }
+        }
+      ]
+    },
+    {
+      "id": "asset_load_or_decode_error_truncated_messagepack",
+      "title": "Malformed compiled bytes map to asset_load_or_decode_error",
+      "requirement_level": "mandatory",
+      "execution_mode": "reference_driver",
+      "capability_gates": [],
+      "expected_error": {
+        "error_category": "asset_load_or_decode_error"
+      },
+      "steps": [
+        {
+          "operation": {
+            "kind": "decode_compiled_bytes",
+            "bytes_case": "truncated_messagepack"
+          },
+          "expect": {
+            "status": "error",
+            "error_category": "asset_load_or_decode_error"
+          }
+        }
+      ]
+    },
+    {
+      "id": "stale_or_incompatible_asset_error_asset_mismatch_on_advance",
+      "title": "Advancing with a mismatched compiled asset maps to stale_or_incompatible_asset_error",
+      "requirement_level": "mandatory",
+      "execution_mode": "reference_driver",
+      "capability_gates": [],
+      "expected_error": {
+        "error_category": "stale_or_incompatible_asset_error"
+      },
+      "steps": [
+        {
+          "operation": {
+            "kind": "compile_fixture",
+            "fixture": "fixtures/recite/valid/adapter_conformance/runtime_surface.recite",
+            "asset_slot": "primary",
+            "asset_id": "dialogue/runtime_surface_primary.recitec"
+          },
+          "expect": {
+            "status": "ok"
+          }
+        },
+        {
+          "operation": {
+            "kind": "compile_fixture",
+            "fixture": "fixtures/recite/valid/adapter_conformance/runtime_surface.recite",
+            "asset_slot": "alternate",
+            "asset_id": "dialogue/runtime_surface_alternate.recitec"
+          },
+          "expect": {
+            "status": "ok"
+          }
+        },
+        {
+          "operation": {
+            "kind": "import_asset",
+            "asset_slot": "primary"
+          },
+          "expect": {
+            "status": "ok"
+          }
+        },
+        {
+          "operation": {
+            "kind": "import_asset",
+            "asset_slot": "alternate"
+          },
+          "expect": {
+            "status": "ok"
+          }
+        },
+        {
+          "operation": {
+            "kind": "start_session",
+            "asset_slot": "primary"
+          },
+          "expect": {
+            "status": "ok"
+          }
+        },
+        {
+          "operation": {
+            "kind": "advance",
+            "asset_slot": "alternate"
+          },
+          "expect": {
+            "status": "error",
+            "error_category": "stale_or_incompatible_asset_error"
+          }
+        }
+      ]
+    },
+    {
+      "id": "schema_mismatch_error_on_restore",
+      "title": "Restoring against a schema-mismatched compiled asset maps to schema_mismatch_error",
+      "requirement_level": "mandatory",
+      "execution_mode": "reference_driver",
+      "capability_gates": [],
+      "expected_error": {
+        "error_category": "schema_mismatch_error"
+      },
+      "steps": [
+        {
+          "operation": {
+            "kind": "compile_fixture",
+            "fixture": "fixtures/recite/valid/adapter_conformance/runtime_surface.recite",
+            "asset_slot": "schema_a",
+            "schema_fingerprint": "schema:a"
+          },
+          "expect": {
+            "status": "ok"
+          }
+        },
+        {
+          "operation": {
+            "kind": "compile_fixture",
+            "fixture": "fixtures/recite/valid/adapter_conformance/runtime_surface.recite",
+            "asset_slot": "schema_b",
+            "schema_fingerprint": "schema:b"
+          },
+          "expect": {
+            "status": "ok"
+          }
+        },
+        {
+          "operation": {
+            "kind": "import_asset",
+            "asset_slot": "schema_a"
+          },
+          "expect": {
+            "status": "ok"
+          }
+        },
+        {
+          "operation": {
+            "kind": "start_session",
+            "asset_slot": "schema_a"
+          },
+          "expect": {
+            "status": "ok"
+          }
+        },
+        {
+          "operation": {
+            "kind": "save_session",
+            "snapshot_slot": "schema_snapshot"
+          },
+          "expect": {
+            "status": "ok"
+          }
+        },
+        {
+          "operation": {
+            "kind": "end_session"
+          },
+          "expect": {
+            "status": "ok"
+          }
+        },
+        {
+          "operation": {
+            "kind": "import_asset",
+            "asset_slot": "schema_b"
+          },
+          "expect": {
+            "status": "ok"
+          }
+        },
+        {
+          "operation": {
+            "kind": "load_session",
+            "snapshot_slot": "schema_snapshot",
+            "asset_slot": "schema_b"
+          },
+          "expect": {
+            "status": "error",
+            "error_category": "schema_mismatch_error"
+          }
+        }
+      ]
+    },
+    {
+      "id": "no_active_session_error_after_explicit_end",
+      "title": "Operations after explicit end_session map to no_active_session_error",
+      "requirement_level": "mandatory",
+      "execution_mode": "reference_driver",
+      "capability_gates": [],
+      "expected_error": {
+        "error_category": "no_active_session_error"
+      },
+      "steps": [
+        {
+          "operation": {
+            "kind": "compile_fixture",
+            "fixture": "fixtures/recite/valid/adapter_conformance/runtime_surface.recite",
+            "asset_slot": "main"
+          },
+          "expect": {
+            "status": "ok"
+          }
+        },
+        {
+          "operation": {
+            "kind": "import_asset",
+            "asset_slot": "main"
+          },
+          "expect": {
+            "status": "ok"
+          }
+        },
+        {
+          "operation": {
+            "kind": "set_condition_behavior",
+            "function": "trusts",
+            "behavior_kind": "bool",
+            "bool_value": false
+          },
+          "expect": {
+            "status": "ok"
+          }
+        },
+        {
+          "operation": {
+            "kind": "start_session",
+            "asset_slot": "main"
+          },
+          "expect": {
+            "status": "ok"
+          }
+        },
+        {
+          "operation": {
+            "kind": "advance"
+          },
+          "expect": {
+            "status": "ok",
+            "event_kind": "line",
+            "line_text": "Intro line."
+          }
+        },
+        {
+          "operation": {
+            "kind": "advance"
+          },
+          "expect": {
+            "status": "ok",
+            "event_kind": "effect",
+            "effect_function": "intro_sfx",
+            "effect_mode": "immediate"
+          }
+        },
+        {
+          "operation": {
+            "kind": "advance"
+          },
+          "expect": {
+            "status": "ok",
+            "event_kind": "prompt",
+            "prompt_choice_ids": [
+              "ask_work",
+              "locked"
+            ],
+            "prompt_unavailable_choice_ids": [
+              "locked"
+            ]
+          }
+        },
+        {
+          "operation": {
+            "kind": "choose",
+            "choice_id": "ask_work"
+          },
+          "expect": {
+            "status": "ok",
+            "event_kind": "effect",
+            "effect_function": "grant_item",
+            "effect_mode": "blocking"
+          }
+        },
+        {
+          "operation": {
+            "kind": "remember_pending_effect_id",
+            "slot": "blocking_effect"
+          },
+          "expect": {
+            "status": "ok"
+          }
+        },
+        {
+          "operation": {
+            "kind": "acknowledge_effect",
+            "ack": "completed",
+            "effect_slot": "blocking_effect"
+          },
+          "expect": {
+            "status": "ok"
+          }
+        },
+        {
+          "operation": {
+            "kind": "advance"
+          },
+          "expect": {
+            "status": "ok",
+            "event_kind": "prompt",
+            "prompt_choice_ids": [
+              "end_now"
+            ]
+          }
+        },
+        {
+          "operation": {
+            "kind": "choose",
+            "choice_id": "end_now"
+          },
+          "expect": {
+            "status": "ok",
+            "event_kind": "end",
+            "deferred_effect_functions": [
+              "finished_work"
+            ]
+          }
+        },
+        {
+          "operation": {
+            "kind": "end_session"
+          },
+          "expect": {
+            "status": "ok"
+          }
+        },
+        {
+          "operation": {
+            "kind": "choose",
+            "choice_id": "ask_work"
+          },
+          "expect": {
+            "status": "error",
+            "error_category": "no_active_session_error"
+          }
+        }
+      ]
+    },
+    {
+      "id": "session_already_active_error_second_start",
+      "title": "Starting a second session on the same owner maps to session_already_active_error",
+      "requirement_level": "mandatory",
+      "execution_mode": "reference_driver",
+      "capability_gates": [],
+      "expected_error": {
+        "error_category": "session_already_active_error"
+      },
+      "steps": [
+        {
+          "operation": {
+            "kind": "compile_fixture",
+            "fixture": "fixtures/recite/valid/adapter_conformance/runtime_surface.recite",
+            "asset_slot": "main"
+          },
+          "expect": {
+            "status": "ok"
+          }
+        },
+        {
+          "operation": {
+            "kind": "import_asset",
+            "asset_slot": "main"
+          },
+          "expect": {
+            "status": "ok"
+          }
+        },
+        {
+          "operation": {
+            "kind": "start_session",
+            "asset_slot": "main",
+            "block": "start"
+          },
+          "expect": {
+            "status": "ok"
+          }
+        },
+        {
+          "operation": {
+            "kind": "start_session",
+            "asset_slot": "main"
+          },
+          "expect": {
+            "status": "error",
+            "error_category": "session_already_active_error"
+          }
+        }
+      ]
+    },
+    {
+      "id": "unknown_start_block_error_missing_block",
+      "title": "Unknown explicit start block maps to unknown_start_block_error",
+      "requirement_level": "mandatory",
+      "execution_mode": "reference_driver",
+      "capability_gates": [],
+      "expected_error": {
+        "error_category": "unknown_start_block_error"
+      },
+      "steps": [
+        {
+          "operation": {
+            "kind": "compile_fixture",
+            "fixture": "fixtures/recite/valid/adapter_conformance/runtime_surface.recite",
+            "asset_slot": "main"
+          },
+          "expect": {
+            "status": "ok"
+          }
+        },
+        {
+          "operation": {
+            "kind": "import_asset",
+            "asset_slot": "main"
+          },
+          "expect": {
+            "status": "ok"
+          }
+        },
+        {
+          "operation": {
+            "kind": "start_session",
+            "asset_slot": "main",
+            "block": "missing_block"
+          },
+          "expect": {
+            "status": "error",
+            "error_category": "unknown_start_block_error"
+          }
+        }
+      ]
+    },
+    {
+      "id": "invalid_choice_error_unknown_choice_id",
+      "title": "Unknown prompt choice IDs map to invalid_choice_error",
+      "requirement_level": "mandatory",
+      "execution_mode": "reference_driver",
+      "capability_gates": [],
+      "expected_error": {
+        "error_category": "invalid_choice_error"
+      },
+      "steps": [
+        {
+          "operation": {
+            "kind": "compile_fixture",
+            "fixture": "fixtures/recite/valid/adapter_conformance/runtime_surface.recite",
+            "asset_slot": "main"
+          },
+          "expect": {
+            "status": "ok"
+          }
+        },
+        {
+          "operation": {
+            "kind": "import_asset",
+            "asset_slot": "main"
+          },
+          "expect": {
+            "status": "ok"
+          }
+        },
+        {
+          "operation": {
+            "kind": "set_condition_behavior",
+            "function": "trusts",
+            "behavior_kind": "bool",
+            "bool_value": false
+          },
+          "expect": {
+            "status": "ok"
+          }
+        },
+        {
+          "operation": {
+            "kind": "start_session",
+            "asset_slot": "main"
+          },
+          "expect": {
+            "status": "ok"
+          }
+        },
+        {
+          "operation": {
+            "kind": "advance"
+          },
+          "expect": {
+            "status": "ok",
+            "event_kind": "line",
+            "line_text": "Intro line."
+          }
+        },
+        {
+          "operation": {
+            "kind": "advance"
+          },
+          "expect": {
+            "status": "ok",
+            "event_kind": "effect",
+            "effect_function": "intro_sfx",
+            "effect_mode": "immediate"
+          }
+        },
+        {
+          "operation": {
+            "kind": "advance"
+          },
+          "expect": {
+            "status": "ok",
+            "event_kind": "prompt"
+          }
+        },
+        {
+          "operation": {
+            "kind": "choose",
+            "choice_id": "missing_choice"
+          },
+          "expect": {
+            "status": "error",
+            "error_category": "invalid_choice_error"
+          }
+        }
+      ]
+    },
+    {
+      "id": "unavailable_choice_error_conditioned_choice",
+      "title": "Unavailable prompt choices map to unavailable_choice_error",
+      "requirement_level": "mandatory",
+      "execution_mode": "reference_driver",
+      "capability_gates": [],
+      "expected_error": {
+        "error_category": "unavailable_choice_error"
+      },
+      "steps": [
+        {
+          "operation": {
+            "kind": "compile_fixture",
+            "fixture": "fixtures/recite/valid/adapter_conformance/runtime_surface.recite",
+            "asset_slot": "main"
+          },
+          "expect": {
+            "status": "ok"
+          }
+        },
+        {
+          "operation": {
+            "kind": "import_asset",
+            "asset_slot": "main"
+          },
+          "expect": {
+            "status": "ok"
+          }
+        },
+        {
+          "operation": {
+            "kind": "set_condition_behavior",
+            "function": "trusts",
+            "behavior_kind": "bool",
+            "bool_value": false
+          },
+          "expect": {
+            "status": "ok"
+          }
+        },
+        {
+          "operation": {
+            "kind": "start_session",
+            "asset_slot": "main"
+          },
+          "expect": {
+            "status": "ok"
+          }
+        },
+        {
+          "operation": {
+            "kind": "advance"
+          },
+          "expect": {
+            "status": "ok",
+            "event_kind": "line",
+            "line_text": "Intro line."
+          }
+        },
+        {
+          "operation": {
+            "kind": "advance"
+          },
+          "expect": {
+            "status": "ok",
+            "event_kind": "effect"
+          }
+        },
+        {
+          "operation": {
+            "kind": "advance"
+          },
+          "expect": {
+            "status": "ok",
+            "event_kind": "prompt",
+            "prompt_unavailable_choice_ids": [
+              "locked"
+            ]
+          }
+        },
+        {
+          "operation": {
+            "kind": "choose",
+            "choice_id": "locked"
+          },
+          "expect": {
+            "status": "error",
+            "error_category": "unavailable_choice_error"
+          }
+        }
+      ]
+    },
+    {
+      "id": "stale_choice_error_after_prompt_transition",
+      "title": "Previously valid choice IDs rejected after prompt transition map to stale_choice_error",
+      "requirement_level": "mandatory",
+      "execution_mode": "reference_driver",
+      "capability_gates": [],
+      "expected_error": {
+        "error_category": "stale_choice_error"
+      },
+      "steps": [
+        {
+          "operation": {
+            "kind": "compile_fixture",
+            "fixture": "fixtures/recite/valid/adapter_conformance/runtime_surface.recite",
+            "asset_slot": "main"
+          },
+          "expect": {
+            "status": "ok"
+          }
+        },
+        {
+          "operation": {
+            "kind": "import_asset",
+            "asset_slot": "main"
+          },
+          "expect": {
+            "status": "ok"
+          }
+        },
+        {
+          "operation": {
+            "kind": "set_condition_behavior",
+            "function": "trusts",
+            "behavior_kind": "bool",
+            "bool_value": true
+          },
+          "expect": {
+            "status": "ok"
+          }
+        },
+        {
+          "operation": {
+            "kind": "start_session",
+            "asset_slot": "main"
+          },
+          "expect": {
+            "status": "ok"
+          }
+        },
+        {
+          "operation": {
+            "kind": "advance"
+          },
+          "expect": {
+            "status": "ok",
+            "event_kind": "line"
+          }
+        },
+        {
+          "operation": {
+            "kind": "advance"
+          },
+          "expect": {
+            "status": "ok",
+            "event_kind": "effect"
+          }
+        },
+        {
+          "operation": {
+            "kind": "advance"
+          },
+          "expect": {
+            "status": "ok",
+            "event_kind": "prompt",
+            "prompt_choice_ids": [
+              "ask_work",
+              "locked"
+            ]
+          }
+        },
+        {
+          "operation": {
+            "kind": "remember_prompt_choice",
+            "index": 0,
+            "slot": "stale_choice"
+          },
+          "expect": {
+            "status": "ok"
+          }
+        },
+        {
+          "operation": {
+            "kind": "choose_from_slot",
+            "slot": "stale_choice"
+          },
+          "expect": {
+            "status": "ok",
+            "event_kind": "effect",
+            "effect_mode": "blocking",
+            "effect_function": "grant_item"
+          }
+        },
+        {
+          "operation": {
+            "kind": "remember_pending_effect_id",
+            "slot": "stale_choice_effect"
+          },
+          "expect": {
+            "status": "ok"
+          }
+        },
+        {
+          "operation": {
+            "kind": "acknowledge_effect",
+            "ack": "completed",
+            "effect_slot": "stale_choice_effect"
+          },
+          "expect": {
+            "status": "ok"
+          }
+        },
+        {
+          "operation": {
+            "kind": "advance"
+          },
+          "expect": {
+            "status": "ok",
+            "event_kind": "prompt",
+            "prompt_choice_ids": [
+              "end_now"
+            ]
+          }
+        },
+        {
+          "operation": {
+            "kind": "choose_from_slot",
+            "slot": "stale_choice"
+          },
+          "expect": {
+            "status": "error",
+            "error_category": "stale_choice_error"
+          }
+        }
+      ]
+    },
+    {
+      "id": "missing_condition_handler_error_no_registered_handler",
+      "title": "Missing condition handlers map to missing_condition_handler_error",
+      "requirement_level": "mandatory",
+      "execution_mode": "reference_driver",
+      "capability_gates": [],
+      "expected_error": {
+        "error_category": "missing_condition_handler_error"
+      },
+      "steps": [
+        {
+          "operation": {
+            "kind": "compile_fixture",
+            "fixture": "fixtures/recite/valid/adapter_conformance/runtime_surface.recite",
+            "asset_slot": "main"
+          },
+          "expect": {
+            "status": "ok"
+          }
+        },
+        {
+          "operation": {
+            "kind": "import_asset",
+            "asset_slot": "main"
+          },
+          "expect": {
+            "status": "ok"
+          }
+        },
+        {
+          "operation": {
+            "kind": "clear_condition_handlers"
+          },
+          "expect": {
+            "status": "ok"
+          }
+        },
+        {
+          "operation": {
+            "kind": "start_session",
+            "asset_slot": "main"
+          },
+          "expect": {
+            "status": "ok"
+          }
+        },
+        {
+          "operation": {
+            "kind": "advance"
+          },
+          "expect": {
+            "status": "ok",
+            "event_kind": "line"
+          }
+        },
+        {
+          "operation": {
+            "kind": "advance"
+          },
+          "expect": {
+            "status": "ok",
+            "event_kind": "effect"
+          }
+        },
+        {
+          "operation": {
+            "kind": "advance"
+          },
+          "expect": {
+            "status": "error",
+            "error_category": "missing_condition_handler_error"
+          }
+        }
+      ]
+    },
+    {
+      "id": "condition_evaluation_error_handler_failure",
+      "title": "Condition handler failures map to condition_evaluation_error",
+      "requirement_level": "mandatory",
+      "execution_mode": "reference_driver",
+      "capability_gates": [],
+      "expected_error": {
+        "error_category": "condition_evaluation_error"
+      },
+      "steps": [
+        {
+          "operation": {
+            "kind": "compile_fixture",
+            "fixture": "fixtures/recite/valid/adapter_conformance/runtime_surface.recite",
+            "asset_slot": "main"
+          },
+          "expect": {
+            "status": "ok"
+          }
+        },
+        {
+          "operation": {
+            "kind": "import_asset",
+            "asset_slot": "main"
+          },
+          "expect": {
+            "status": "ok"
+          }
+        },
+        {
+          "operation": {
+            "kind": "set_condition_behavior",
+            "function": "trusts",
+            "behavior_kind": "failure",
+            "failure_reason": "condition service unavailable"
+          },
+          "expect": {
+            "status": "ok"
+          }
+        },
+        {
+          "operation": {
+            "kind": "start_session",
+            "asset_slot": "main"
+          },
+          "expect": {
+            "status": "ok"
+          }
+        },
+        {
+          "operation": {
+            "kind": "advance"
+          },
+          "expect": {
+            "status": "ok",
+            "event_kind": "line"
+          }
+        },
+        {
+          "operation": {
+            "kind": "advance"
+          },
+          "expect": {
+            "status": "ok",
+            "event_kind": "effect"
+          }
+        },
+        {
+          "operation": {
+            "kind": "advance"
+          },
+          "expect": {
+            "status": "error",
+            "error_category": "condition_evaluation_error"
+          }
+        }
+      ]
+    },
+    {
+      "id": "invalid_condition_result_error_wrong_result_type",
+      "title": "Condition handlers returning the wrong type map to invalid_condition_result_error",
+      "requirement_level": "mandatory",
+      "execution_mode": "reference_driver",
+      "capability_gates": [],
+      "expected_error": {
+        "error_category": "invalid_condition_result_error"
+      },
+      "steps": [
+        {
+          "operation": {
+            "kind": "compile_fixture",
+            "fixture": "fixtures/recite/valid/adapter_conformance/runtime_surface.recite",
+            "asset_slot": "main"
+          },
+          "expect": {
+            "status": "ok"
+          }
+        },
+        {
+          "operation": {
+            "kind": "import_asset",
+            "asset_slot": "main"
+          },
+          "expect": {
+            "status": "ok"
+          }
+        },
+        {
+          "operation": {
+            "kind": "set_condition_behavior",
+            "function": "trusts",
+            "behavior_kind": "enum",
+            "enum_value": "ready"
+          },
+          "expect": {
+            "status": "ok"
+          }
+        },
+        {
+          "operation": {
+            "kind": "start_session",
+            "asset_slot": "main"
+          },
+          "expect": {
+            "status": "ok"
+          }
+        },
+        {
+          "operation": {
+            "kind": "advance"
+          },
+          "expect": {
+            "status": "ok",
+            "event_kind": "line"
+          }
+        },
+        {
+          "operation": {
+            "kind": "advance"
+          },
+          "expect": {
+            "status": "ok",
+            "event_kind": "effect"
+          }
+        },
+        {
+          "operation": {
+            "kind": "advance"
+          },
+          "expect": {
+            "status": "error",
+            "error_category": "invalid_condition_result_error"
+          }
+        }
+      ]
+    },
+    {
+      "id": "effect_acknowledgement_error_wrong_pending_effect_id",
+      "title": "Wrong effect acknowledgement IDs map to effect_acknowledgement_error",
+      "requirement_level": "mandatory",
+      "execution_mode": "reference_driver",
+      "capability_gates": [],
+      "expected_error": {
+        "error_category": "effect_acknowledgement_error"
+      },
+      "steps": [
+        {
+          "operation": {
+            "kind": "compile_fixture",
+            "fixture": "fixtures/recite/valid/adapter_conformance/runtime_surface.recite",
+            "asset_slot": "main"
+          },
+          "expect": {
+            "status": "ok"
+          }
+        },
+        {
+          "operation": {
+            "kind": "import_asset",
+            "asset_slot": "main"
+          },
+          "expect": {
+            "status": "ok"
+          }
+        },
+        {
+          "operation": {
+            "kind": "set_condition_behavior",
+            "function": "trusts",
+            "behavior_kind": "bool",
+            "bool_value": true
+          },
+          "expect": {
+            "status": "ok"
+          }
+        },
+        {
+          "operation": {
+            "kind": "start_session",
+            "asset_slot": "main"
+          },
+          "expect": {
+            "status": "ok"
+          }
+        },
+        {
+          "operation": {
+            "kind": "advance"
+          },
+          "expect": {
+            "status": "ok",
+            "event_kind": "line"
+          }
+        },
+        {
+          "operation": {
+            "kind": "advance"
+          },
+          "expect": {
+            "status": "ok",
+            "event_kind": "effect"
+          }
+        },
+        {
+          "operation": {
+            "kind": "advance"
+          },
+          "expect": {
+            "status": "ok",
+            "event_kind": "prompt"
+          }
+        },
+        {
+          "operation": {
+            "kind": "choose",
+            "choice_id": "ask_work"
+          },
+          "expect": {
+            "status": "ok",
+            "event_kind": "effect",
+            "effect_mode": "blocking",
+            "effect_function": "grant_item"
+          }
+        },
+        {
+          "operation": {
+            "kind": "remember_pending_effect_id",
+            "slot": "saved_pending_effect"
+          },
+          "expect": {
+            "status": "ok"
+          }
+        },
+        {
+          "operation": {
+            "kind": "save_session",
+            "snapshot_slot": "blocked_snapshot"
+          },
+          "expect": {
+            "status": "ok"
+          }
+        },
+        {
+          "operation": {
+            "kind": "end_session"
+          },
+          "expect": {
+            "status": "ok"
+          }
+        },
+        {
+          "operation": {
+            "kind": "load_session",
+            "snapshot_slot": "blocked_snapshot",
+            "asset_slot": "main"
+          },
+          "expect": {
+            "status": "ok",
+            "pending_effect_slot": "saved_pending_effect"
+          }
+        },
+        {
+          "operation": {
+            "kind": "acknowledge_effect",
+            "ack": "completed",
+            "effect_id": "effect:wrong"
+          },
+          "expect": {
+            "status": "error",
+            "error_category": "effect_acknowledgement_error"
+          }
+        }
+      ]
+    },
+    {
+      "id": "rejected_changed_asset_refresh_error_active_session_refresh",
+      "title": "Active-session refresh rejection maps to rejected_changed_asset_refresh_error",
+      "requirement_level": "mandatory",
+      "execution_mode": "reference_driver",
+      "capability_gates": [],
+      "changed_asset_policy": "reject_refresh_until_session_ends",
+      "expected_error": {
+        "error_category": "rejected_changed_asset_refresh_error"
+      },
+      "steps": [
+        {
+          "operation": {
+            "kind": "compile_fixture",
+            "fixture": "fixtures/recite/valid/adapter_conformance/runtime_surface.recite",
+            "asset_slot": "baseline"
+          },
+          "expect": {
+            "status": "ok"
+          }
+        },
+        {
+          "operation": {
+            "kind": "compile_fixture",
+            "fixture": "fixtures/recite/valid/adapter_conformance/runtime_surface_changed.recite",
+            "asset_slot": "changed"
+          },
+          "expect": {
+            "status": "ok"
+          }
+        },
+        {
+          "operation": {
+            "kind": "import_asset",
+            "asset_slot": "baseline"
+          },
+          "expect": {
+            "status": "ok"
+          }
+        },
+        {
+          "operation": {
+            "kind": "start_session",
+            "asset_slot": "baseline"
+          },
+          "expect": {
+            "status": "ok"
+          }
+        },
+        {
+          "operation": {
+            "kind": "import_asset",
+            "asset_slot": "changed"
+          },
+          "expect": {
+            "status": "error",
+            "error_category": "rejected_changed_asset_refresh_error"
+          }
+        }
+      ]
+    },
+    {
+      "id": "reload_for_next_session_only_active_session_import",
+      "title": "Reload-for-next-session policy keeps active session stable while accepting next-session import",
+      "requirement_level": "mandatory",
+      "execution_mode": "reference_driver",
+      "capability_gates": [],
+      "changed_asset_policy": "reload_for_next_session_only",
+      "steps": [
+        {
+          "operation": {
+            "kind": "compile_fixture",
+            "fixture": "fixtures/recite/valid/adapter_conformance/runtime_surface.recite",
+            "asset_slot": "baseline"
+          },
+          "expect": {
+            "status": "ok"
+          }
+        },
+        {
+          "operation": {
+            "kind": "compile_fixture",
+            "fixture": "fixtures/recite/valid/adapter_conformance/runtime_surface_changed.recite",
+            "asset_slot": "changed"
+          },
+          "expect": {
+            "status": "ok"
+          }
+        },
+        {
+          "operation": {
+            "kind": "import_asset",
+            "asset_slot": "baseline"
+          },
+          "expect": {
+            "status": "ok"
+          }
+        },
+        {
+          "operation": {
+            "kind": "start_session",
+            "asset_slot": "baseline"
+          },
+          "expect": {
+            "status": "ok"
+          }
+        },
+        {
+          "operation": {
+            "kind": "import_asset",
+            "asset_slot": "changed"
+          },
+          "expect": {
+            "status": "ok"
+          }
+        },
+        {
+          "operation": {
+            "kind": "advance"
+          },
+          "expect": {
+            "status": "ok",
+            "event_kind": "line",
+            "line_text": "Intro line."
+          }
+        },
+        {
+          "operation": {
+            "kind": "end_session"
+          },
+          "expect": {
+            "status": "ok"
+          }
+        },
+        {
+          "operation": {
+            "kind": "start_session",
+            "asset_slot": "changed"
+          },
+          "expect": {
+            "status": "ok"
+          }
+        },
+        {
+          "operation": {
+            "kind": "advance"
+          },
+          "expect": {
+            "status": "ok",
+            "event_kind": "line",
+            "line_text": "Intro line changed."
+          }
+        }
+      ]
+    },
+    {
+      "id": "restart_required_active_session_refresh_rejection",
+      "title": "Restart-required policy rejects active-session refresh with structured category",
+      "requirement_level": "mandatory",
+      "execution_mode": "reference_driver",
+      "capability_gates": [],
+      "changed_asset_policy": "restart_required",
+      "expected_error": {
+        "error_category": "rejected_changed_asset_refresh_error"
+      },
+      "steps": [
+        {
+          "operation": {
+            "kind": "compile_fixture",
+            "fixture": "fixtures/recite/valid/adapter_conformance/runtime_surface.recite",
+            "asset_slot": "baseline"
+          },
+          "expect": {
+            "status": "ok"
+          }
+        },
+        {
+          "operation": {
+            "kind": "compile_fixture",
+            "fixture": "fixtures/recite/valid/adapter_conformance/runtime_surface_changed.recite",
+            "asset_slot": "changed"
+          },
+          "expect": {
+            "status": "ok"
+          }
+        },
+        {
+          "operation": {
+            "kind": "import_asset",
+            "asset_slot": "baseline"
+          },
+          "expect": {
+            "status": "ok"
+          }
+        },
+        {
+          "operation": {
+            "kind": "start_session",
+            "asset_slot": "baseline"
+          },
+          "expect": {
+            "status": "ok"
+          }
+        },
+        {
+          "operation": {
+            "kind": "import_asset",
+            "asset_slot": "changed"
+          },
+          "expect": {
+            "status": "error",
+            "error_category": "rejected_changed_asset_refresh_error"
+          }
+        }
+      ]
+    },
+    {
+      "id": "save_load_incompatibility_error_snapshot_format_mismatch",
+      "title": "Invalid session snapshot format maps to save_load_incompatibility_error",
+      "requirement_level": "mandatory",
+      "execution_mode": "reference_driver",
+      "capability_gates": [],
+      "expected_error": {
+        "error_category": "save_load_incompatibility_error"
+      },
+      "steps": [
+        {
+          "operation": {
+            "kind": "compile_fixture",
+            "fixture": "fixtures/recite/valid/adapter_conformance/runtime_surface.recite",
+            "asset_slot": "main"
+          },
+          "expect": {
+            "status": "ok"
+          }
+        },
+        {
+          "operation": {
+            "kind": "import_asset",
+            "asset_slot": "main"
+          },
+          "expect": {
+            "status": "ok"
+          }
+        },
+        {
+          "operation": {
+            "kind": "start_session",
+            "asset_slot": "main"
+          },
+          "expect": {
+            "status": "ok"
+          }
+        },
+        {
+          "operation": {
+            "kind": "save_session",
+            "snapshot_slot": "save_for_mutation"
+          },
+          "expect": {
+            "status": "ok"
+          }
+        },
+        {
+          "operation": {
+            "kind": "mutate_snapshot_format",
+            "input_snapshot_slot": "save_for_mutation",
+            "output_snapshot_slot": "save_bad_format",
+            "snapshot_format_version": 99
+          },
+          "expect": {
+            "status": "ok"
+          }
+        },
+        {
+          "operation": {
+            "kind": "end_session"
+          },
+          "expect": {
+            "status": "ok"
+          }
+        },
+        {
+          "operation": {
+            "kind": "load_session",
+            "snapshot_slot": "save_bad_format",
+            "asset_slot": "main"
+          },
+          "expect": {
+            "status": "error",
+            "error_category": "save_load_incompatibility_error"
+          }
+        }
+      ]
+    },
+    {
+      "id": "localisation_error_adapter_runner_required",
+      "title": "Localisation import/load failures map to localisation_error",
+      "requirement_level": "mandatory",
+      "execution_mode": "adapter_runner_required",
+      "capability_gates": [],
+      "expected_error": {
+        "error_category": "localisation_error"
+      },
+      "adapter_runner_notes": "Adapter suites must configure a malformed or unavailable locale catalog for the requested locale and assert a structured localisation_error without parsing host prose. The error may surface at import, start, or advance time; eager validation is compliant.",
+      "steps": [
+        {
+          "operation": {
+            "kind": "compile_fixture",
+            "fixture": "fixtures/recite/valid/adapter_conformance/runtime_surface.recite",
+            "asset_slot": "main"
+          },
+          "expect": {
+            "status": "ok"
+          }
+        },
+        {
+          "operation": {
+            "kind": "exercise_localisation_failure",
+            "asset_slot": "main",
+            "locale": "fr-FR"
+          },
+          "expect": {
+            "status": "error",
+            "error_category": "localisation_error"
+          }
+        }
+      ]
+    },
+    {
+      "id": "source_fingerprint_freshness_capability_gate",
+      "title": "Source-fingerprint freshness checks are capability-gated",
+      "requirement_level": "capability_gated",
+      "execution_mode": "reference_driver",
+      "capability_gates": [
+        "source_import_visibility"
+      ],
+      "expected_error": {
+        "error_category": "stale_or_incompatible_asset_error"
+      },
+      "steps": [
+        {
+          "operation": {
+            "kind": "compile_fixture",
+            "fixture": "fixtures/recite/valid/adapter_conformance/runtime_surface.recite",
+            "asset_slot": "source_visibility_target"
+          },
+          "expect": {
+            "status": "ok"
+          }
+        },
+        {
+          "operation": {
+            "kind": "import_asset",
+            "asset_slot": "source_visibility_target",
+            "declared_source_fingerprint": "blake3:outdated"
+          },
+          "expect": {
+            "status": "error",
+            "error_category": "stale_or_incompatible_asset_error"
+          }
+        }
+      ]
+    },
+    {
+      "id": "schema_fingerprint_freshness_capability_gate",
+      "title": "Schema-fingerprint freshness checks are capability-gated",
+      "requirement_level": "capability_gated",
+      "execution_mode": "reference_driver",
+      "capability_gates": [
+        "schema_import_visibility"
+      ],
+      "expected_error": {
+        "error_category": "schema_mismatch_error"
+      },
+      "steps": [
+        {
+          "operation": {
+            "kind": "compile_fixture",
+            "fixture": "fixtures/recite/valid/adapter_conformance/runtime_surface.recite",
+            "asset_slot": "schema_visibility_target",
+            "schema_fingerprint": "schema:reference"
+          },
+          "expect": {
+            "status": "ok"
+          }
+        },
+        {
+          "operation": {
+            "kind": "import_asset",
+            "asset_slot": "schema_visibility_target",
+            "declared_schema_fingerprint": "schema:outdated"
+          },
+          "expect": {
+            "status": "error",
+            "error_category": "schema_mismatch_error"
+          }
+        }
+      ]
+    }
+  ]
+}

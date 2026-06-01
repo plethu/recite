@@ -1965,6 +1965,23 @@ No adapter may weaken the engine-independent core contract.
 
 Unreal and GameMaker remain post-v1 evaluation targets.
 
+### 16.6 Shared Conformance Artifacts
+
+Adapter conformance scenarios are published in
+`fixtures/adapter-conformance/v1/` with:
+
+- a versioned scenario manifest;
+- a manifest schema;
+- a stable operation/result schema.
+
+Those fixtures are adapter-consumable contracts, not private Rust-only test
+support. They define operation sequencing, capability gates, changed-asset
+policy declarations, and expected structured outcomes/errors.
+
+`.recite` source fixtures still belong under `fixtures/recite/`; conformance
+manifests reference those sources instead of duplicating parser/compiler/runtime
+snapshot expectations.
+
 ## 17. Testing
 
 ### 17.1 Core Test Philosophy
@@ -1980,7 +1997,8 @@ Supported test patterns:
 - unavailable choice assertion;
 - blocking effect pause/resume assertion;
 - save/load mid-scene assertion;
-- save/load while waiting on blocking effect assertion.
+- save/load while waiting on blocking effect assertion;
+- adapter conformance operation/result traces.
 
 ### 17.2 Example Rust Test
 
@@ -2032,6 +2050,24 @@ PO files. Catalog entries use singular gettext records with `msgctxt` as the
 stable line or choice ID, `msgid` as source text, and `msgstr` as translated
 text. Variant-specific entries may use `id&variant` contexts and should fall
 back to `id` before source text.
+
+### 17.4 Adapter Conformance Fixtures
+
+The normative adapter conformance fixture contract is in
+`docs/engine-adapter-contract.md` §13 and is backed by
+`fixtures/adapter-conformance/v1/`.
+
+Testing policy:
+
+- mandatory scenarios cover every stable adapter error category from contract
+  §12;
+- source/schema freshness scenarios are capability-gated by adapter-declared
+  source/schema import visibility;
+- compiled-asset compatibility and save/load identity scenarios are mandatory;
+- scenarios that require concrete adapters remain in the manifest as
+  `adapter_runner_required` with operation/result shape and runner notes;
+- reference-driver checks must fail when §12 categories drift from fixture
+  schema tables.
 
 ## 18. Diagnostics
 
