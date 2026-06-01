@@ -1,6 +1,6 @@
-use crate::{ChoiceId, LineId, Metadata, SourceSpan};
+use crate::{ChoiceId, LineId, SourceSpan};
 
-use super::{ConditionExpression, DivertTarget, SourceText, Statement};
+use super::{ConditionExpression, DivertTarget, SourceMetadata, SourceText, Statement};
 
 /// A player-selectable choice. Missing IDs are represented for later
 /// compiler/LSP validation.
@@ -8,7 +8,7 @@ use super::{ConditionExpression, DivertTarget, SourceText, Statement};
 pub struct Choice {
     pub id: Option<ChoiceId>,
     pub source_text: SourceText,
-    pub metadata: Metadata,
+    pub metadata: SourceMetadata,
     pub condition: Option<ConditionExpression>,
     pub target: Option<ChoiceTarget>,
     pub echo: ChoiceEcho,
@@ -22,7 +22,7 @@ impl Choice {
         Self {
             id,
             source_text,
-            metadata: Metadata::new(),
+            metadata: SourceMetadata::new(),
             condition: None,
             target: None,
             echo: ChoiceEcho::None,
@@ -32,7 +32,7 @@ impl Choice {
     }
 
     #[must_use]
-    pub fn with_metadata(mut self, metadata: Metadata) -> Self {
+    pub fn with_metadata(mut self, metadata: SourceMetadata) -> Self {
         self.metadata = metadata;
         self
     }

@@ -130,11 +130,19 @@ fn missing_line_and_choice_ids_are_representable_before_validation() {
 }
 
 fn representative_source_file() -> SourceFile {
-    let mut metadata = Metadata::new();
-    metadata.push(MetadataEntry::new("sfx", ScalarValue::from("door")));
-    metadata.push(MetadataEntry::new("portrait", ScalarValue::from("neutral")));
-    metadata
-        .push(MetadataEntry::new("sfx", ScalarValue::from("mug")).with_source_span(span(3, 20)));
+    let mut metadata = SourceMetadata::new();
+    metadata.push(SourceMetadataEntry::new(
+        "sfx",
+        SourceMetadataScalar::Symbol("door".to_owned()),
+    ));
+    metadata.push(SourceMetadataEntry::new(
+        "portrait",
+        SourceMetadataScalar::Symbol("neutral".to_owned()),
+    ));
+    metadata.push(
+        SourceMetadataEntry::new("sfx", SourceMetadataScalar::Symbol("mug".to_owned()))
+            .with_source_span(span(3, 20)),
+    );
 
     let choice = Choice::new(
         Some(ChoiceId::new("ta_opt_news").expect("valid choice ID")),

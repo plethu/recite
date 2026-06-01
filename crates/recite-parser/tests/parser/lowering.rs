@@ -40,7 +40,7 @@ fn lowering_produces_source_file_shape_and_preserves_ordered_text() {
             .collect::<Vec<_>>(),
         [(
             "portrait",
-            &Value::Scalar(ScalarValue::String("neutral".to_owned()))
+            &SourceMetadataValue::Scalar(SourceMetadataScalar::Symbol("neutral".to_owned(),))
         )]
     );
     assert_eq!(

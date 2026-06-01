@@ -50,7 +50,7 @@
     },
     "typeReference": {
       "type": "string",
-      "pattern": "^(string|int|float|bool|speaker|enum:[A-Za-z_][A-Za-z0-9_.-]*|registry:[A-Za-z_][A-Za-z0-9_.-]*)$"
+      "pattern": "^(string|symbol|int|float|bool|speaker|enum:[A-Za-z_][A-Za-z0-9_.-]*|registry:[A-Za-z_][A-Za-z0-9_.-]*)$"
     },
     "parameter": {
       "type": "object",

@@ -3,8 +3,9 @@ use recite_core::{
     ChoiceLookupTable, ChoiceRange, CompiledChoice, CompiledDivertTarget, CompiledEffect,
     CompiledLine, CompiledMatchArm, CompiledMetadataEntry, CompiledSourceMapEntry, CompiledSpeaker,
     DivertTarget, Effect, EffectIndex, Line, LineIndex, LineLookupEntry, LineLookupTable, MatchArm,
-    MatchArmIndex, MatchArmRange, Metadata, MetadataIndex, MetadataRange, SourceFileIndex,
-    SourceMapIndex, SourceSpan, SpeakerId, SpeakerIndex,
+    MatchArmIndex, MatchArmRange, MetadataIndex, MetadataRange, ScalarValue, SourceFileIndex,
+    SourceMapIndex, SourceMetadata, SourceMetadataScalar, SourceMetadataValue, SourceSpan,
+    SpeakerId, SpeakerIndex, Value,
 };
 
 use super::AssetBuilder;
@@ -103,7 +104,7 @@ impl AssetBuilder<'_> {
 
     pub(super) fn compile_metadata(
         &mut self,
-        metadata: &Metadata,
+        metadata: &SourceMetadata,
     ) -> Result<MetadataRange, CompileError> {
         let start = MetadataIndex::new(usize_to_u32("metadata", self.metadata.len())?);
         let mut len = 0_u32;
@@ -115,7 +116,7 @@ impl AssetBuilder<'_> {
                 .transpose()?;
             self.metadata.push(CompiledMetadataEntry {
                 key: entry.key.clone(),
-                value: entry.value.clone(),
+                value: lower_source_metadata_value(&entry.value),
                 source_map,
             });
             len = increment_u32_len("metadata", len)?;
@@ -248,5 +249,28 @@ impl AssetBuilder<'_> {
         entries.sort_by(|left, right| left.id.cmp(&right.id));
 
         Ok(ChoiceLookupTable::new(entries)?)
+    }
+}
+
+fn lower_source_metadata_value(value: &SourceMetadataValue) -> Value {
+    match value {
+        SourceMetadataValue::Scalar(value) => Value::Scalar(lower_source_metadata_scalar(value)),
+        SourceMetadataValue::Array(values) => Value::Array(
+            values
+                .iter()
+                .map(lower_source_metadata_scalar)
+                .collect::<Vec<_>>(),
+        ),
+    }
+}
+
+fn lower_source_metadata_scalar(value: &SourceMetadataScalar) -> ScalarValue {
+    match value {
+        SourceMetadataScalar::Symbol(value) | SourceMetadataScalar::StringLiteral(value) => {
+            ScalarValue::String(value.clone())
+        }
+        SourceMetadataScalar::Integer(value) => ScalarValue::Integer(*value),
+        SourceMetadataScalar::Float(value) => ScalarValue::Float(*value),
+        SourceMetadataScalar::Bool(value) => ScalarValue::Boolean(*value),
     }
 }

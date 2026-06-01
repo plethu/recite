@@ -31,6 +31,14 @@ fn metadata_schema() -> ProjectSchema {
             "block_tag".to_owned(),
             MetadataDefinition {
                 targets: BTreeSet::from([MetadataTarget::Block]),
+                type_ref: SchemaTypeRef::Symbol,
+                repeatable: false,
+            },
+        ),
+        (
+            "caption".to_owned(),
+            MetadataDefinition {
+                targets: BTreeSet::from([MetadataTarget::Line]),
                 type_ref: SchemaTypeRef::String,
                 repeatable: false,
             },
@@ -76,6 +84,14 @@ fn metadata_schema() -> ProjectSchema {
             },
         ),
         (
+            "route".to_owned(),
+            MetadataDefinition {
+                targets: BTreeSet::from([MetadataTarget::Line]),
+                type_ref: SchemaTypeRef::Symbol,
+                repeatable: false,
+            },
+        ),
+        (
             "talker".to_owned(),
             MetadataDefinition {
                 targets: BTreeSet::from([MetadataTarget::Line]),
@@ -102,7 +118,7 @@ fn accepts_schema_declared_metadata_on_supported_targets() {
         "dialogue/start.recite",
         concat!(
             ":: start default block_tag=room\n",
-            "> intro speaker=hazel portrait=neutral mood=calm priority=3 weight=1.5 flag=true talker=rhea sfx=snap sfx=door_close\n",
+            "> intro speaker=hazel portrait=\"neutral\" caption=\"Hello.\" mood=calm priority=3 weight=1.5 flag=true route=north talker=rhea sfx=snap sfx=door_close\n",
             "  Hello.\n",
             "  ? ask sfx=snap\n",
             "    Ask.\n",
@@ -134,7 +150,7 @@ fn reports_invalid_metadata_target_on_key_span() {
     let schema = metadata_schema();
     let files = vec![lower(
         "dialogue/start.recite",
-        ":: start default portrait=neutral\n> intro speaker=hazel\n  Hello.\n",
+        ":: start default portrait=\"neutral\"\n> intro speaker=hazel\n  Hello.\n",
     )];
 
     let report = validate_source_files_with_schema(&files, &schema);
@@ -148,13 +164,13 @@ fn reports_non_repeatable_duplicate_metadata_on_duplicate_key_span() {
     let schema = metadata_schema();
     let files = vec![lower(
         "dialogue/start.recite",
-        ":: start default\n> intro speaker=hazel portrait=neutral portrait=flat\n  Hello.\n",
+        ":: start default\n> intro speaker=hazel portrait=\"neutral\" portrait=\"flat\"\n  Hello.\n",
     )];
 
     let report = validate_source_files_with_schema(&files, &schema);
 
     assert_codes(&report, ["RECITE_VALIDATE028"]);
-    assert_spans(&report, [(2, 40)]);
+    assert_spans(&report, [(2, 42)]);
 }
 
 #[test]
@@ -164,7 +180,7 @@ fn reports_scalar_metadata_type_mismatches_on_value_spans() {
         "dialogue/start.recite",
         concat!(
             ":: start default\n",
-            "> intro speaker=hazel priority=\"high\" weight=heavy flag=yes portrait=[flat]\n",
+            "> intro speaker=hazel priority=\"high\" weight=heavy flag=yes portrait=[flat] caption=plain\n",
             "  Hello.\n",
         ),
     )];
@@ -178,9 +194,37 @@ fn reports_scalar_metadata_type_mismatches_on_value_spans() {
             "RECITE_VALIDATE029",
             "RECITE_VALIDATE029",
             "RECITE_VALIDATE029",
+            "RECITE_VALIDATE029",
         ],
     );
-    assert_spans(&report, [(2, 32), (2, 46), (2, 57), (2, 70)]);
+    assert_spans(&report, [(2, 32), (2, 46), (2, 57), (2, 70), (2, 85)]);
+}
+
+#[test]
+fn reports_quoted_reference_and_symbol_metadata_type_mismatches_on_value_spans() {
+    let schema = metadata_schema();
+    let files = vec![lower(
+        "dialogue/start.recite",
+        concat!(
+            ":: start default block_tag=\"room\"\n",
+            "> intro speaker=hazel talker=\"rhea\" mood=\"calm\" sfx=\"snap\" route=\"north\"\n",
+            "  Hello.\n",
+        ),
+    )];
+
+    let report = validate_source_files_with_schema(&files, &schema);
+
+    assert_codes(
+        &report,
+        [
+            "RECITE_VALIDATE029",
+            "RECITE_VALIDATE029",
+            "RECITE_VALIDATE029",
+            "RECITE_VALIDATE029",
+            "RECITE_VALIDATE029",
+        ],
+    );
+    assert_spans(&report, [(1, 28), (2, 30), (2, 42), (2, 53), (2, 66)]);
 }
 
 #[test]
@@ -225,4 +269,21 @@ fn skips_metadata_schema_validation_without_schema() {
         report.is_ok(),
         "schema-less metadata should pass: {report:?}"
     );
+}
+
+#[test]
+fn accepts_metadata_only_symbol_type_on_line_metadata() {
+    let schema = metadata_schema();
+    let files = vec![lower(
+        "dialogue/start.recite",
+        concat!(
+            ":: start default\n",
+            "> intro speaker=hazel route=north\n",
+            "  Hello.\n",
+        ),
+    )];
+
+    let report = validate_source_files_with_schema(&files, &schema);
+
+    assert!(report.is_ok(), "symbol metadata should pass: {report:?}");
 }

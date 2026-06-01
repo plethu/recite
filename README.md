@@ -85,6 +85,10 @@ The source format reads like prose with rails:
 -> END
 ```
 
+Metadata values use source-aware scalar syntax: bare identifier-like tokens are
+symbols (`portrait=grin`, `sfx=door_close`), while quoted values are string
+literals (`caption="Door closes"`).
+
 This adapts a public-domain exchange from [*Alice's Adventures in
 Wonderland*](https://www.gutenberg.org/ebooks/11).
 

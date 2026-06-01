@@ -4,7 +4,9 @@ mod branch;
 mod metadata;
 mod statement;
 
-use recite_core::{BlockId, Diagnostic, Metadata, SourceFile, SourceSpan, SpeakerId, Statement};
+use recite_core::{
+    BlockId, Diagnostic, SourceFile, SourceMetadata, SourceSpan, SpeakerId, Statement,
+};
 
 use crate::header::{HeaderField, fields_after_prefix};
 use crate::markers::StatementMarker;
@@ -49,7 +51,7 @@ pub(super) struct BlockHeader {
     pub(super) id: BlockId,
     pub(super) is_default: bool,
     pub(super) default_speaker: Option<SpeakerId>,
-    pub(super) metadata: Metadata,
+    pub(super) metadata: SourceMetadata,
     pub(super) span: SourceSpan,
 }
 

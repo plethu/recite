@@ -25,15 +25,24 @@ fn line_lowering_preserves_ordered_metadata_and_speaker() {
         [
             (
                 "portrait",
-                &Value::Scalar(ScalarValue::String("neutral".to_owned()))
+                &SourceMetadataValue::Scalar(SourceMetadataScalar::Symbol("neutral".to_owned()))
             ),
             (
                 "sfx",
-                &Value::Scalar(ScalarValue::String("door".to_owned()))
+                &SourceMetadataValue::Scalar(SourceMetadataScalar::Symbol("door".to_owned()))
             ),
-            ("sfx", &Value::Scalar(ScalarValue::String("mug".to_owned()))),
-            ("repeat", &Value::Scalar(ScalarValue::Boolean(true))),
-            ("count", &Value::Scalar(ScalarValue::Integer(2))),
+            (
+                "sfx",
+                &SourceMetadataValue::Scalar(SourceMetadataScalar::Symbol("mug".to_owned()))
+            ),
+            (
+                "repeat",
+                &SourceMetadataValue::Scalar(SourceMetadataScalar::Bool(true))
+            ),
+            (
+                "count",
+                &SourceMetadataValue::Scalar(SourceMetadataScalar::Integer(2))
+            ),
         ]
     );
 
@@ -100,21 +109,23 @@ fn metadata_values_support_quotes_with_spaces_and_arrays() {
         [
             (
                 "portrait",
-                &Value::Scalar(ScalarValue::String("neutral face".to_owned()))
+                &SourceMetadataValue::Scalar(SourceMetadataScalar::StringLiteral(
+                    "neutral face".to_owned()
+                ))
             ),
             (
                 "tags",
-                &Value::Array(vec![
-                    ScalarValue::String("door".to_owned()),
-                    ScalarValue::String("mug clang".to_owned()),
-                    ScalarValue::Boolean(true),
-                    ScalarValue::Integer(2),
-                    ScalarValue::Float(1.5),
+                &SourceMetadataValue::Array(vec![
+                    SourceMetadataScalar::Symbol("door".to_owned()),
+                    SourceMetadataScalar::StringLiteral("mug clang".to_owned()),
+                    SourceMetadataScalar::Bool(true),
+                    SourceMetadataScalar::Integer(2),
+                    SourceMetadataScalar::Float(1.5),
                 ])
             ),
             (
                 "sfx",
-                &Value::Scalar(ScalarValue::String("door".to_owned()))
+                &SourceMetadataValue::Scalar(SourceMetadataScalar::Symbol("door".to_owned()))
             ),
         ]
     );
@@ -154,4 +165,28 @@ fn malformed_quoted_and_array_metadata_values_are_reported() {
     let block = single_block(&lowered);
     assert_eq!(line_statement(block, 0).metadata.len(), 0);
     assert_eq!(line_statement(block, 1).metadata.len(), 0);
+}
+
+#[test]
+fn malformed_bare_symbol_metadata_values_are_reported() {
+    let source = concat!(
+        ":: tavern_arrival\n",
+        "> bad_dollar mood=$hero\n",
+        "  Hello.\n",
+        "> bad_punctuation mood=hero!\n",
+        "  Hello.\n",
+        "> bad_comma mood=hero,alt\n",
+        "  Hello.\n",
+    );
+
+    let lowered = lower(source);
+
+    assert_diagnostic_codes(
+        &lowered,
+        ["RECITE_PARSE008", "RECITE_PARSE008", "RECITE_PARSE008"],
+    );
+    let block = single_block(&lowered);
+    assert_eq!(line_statement(block, 0).metadata.len(), 0);
+    assert_eq!(line_statement(block, 1).metadata.len(), 0);
+    assert_eq!(line_statement(block, 2).metadata.len(), 0);
 }

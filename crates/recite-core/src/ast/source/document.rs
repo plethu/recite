@@ -1,6 +1,6 @@
-use crate::{BlockId, Metadata, SourceSpan, SpeakerId};
+use crate::{BlockId, SourceSpan, SpeakerId};
 
-use super::Statement;
+use super::{SourceMetadata, Statement};
 
 /// A parsed Recite source file.
 #[derive(Clone, Debug, PartialEq)]
@@ -31,7 +31,7 @@ pub struct Block {
     pub id: BlockId,
     pub is_default: bool,
     pub default_speaker: Option<SpeakerId>,
-    pub metadata: Metadata,
+    pub metadata: SourceMetadata,
     pub statements: Vec<Statement>,
     pub span: SourceSpan,
 }
@@ -43,7 +43,7 @@ impl Block {
             id,
             is_default: false,
             default_speaker: None,
-            metadata: Metadata::new(),
+            metadata: SourceMetadata::new(),
             statements,
             span,
         }
@@ -62,7 +62,7 @@ impl Block {
     }
 
     #[must_use]
-    pub fn with_metadata(mut self, metadata: Metadata) -> Self {
+    pub fn with_metadata(mut self, metadata: SourceMetadata) -> Self {
         self.metadata = metadata;
         self
     }
