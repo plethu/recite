@@ -6,8 +6,20 @@
 .direnv/
 .env
 .env.*
+.envrc.local
+.mise.local.toml
+mise.local.toml
 
+# Editor-local files
 .idea/
 .vscode/
-*.swp
+.vs/
+.zed/
+.helix/
+*.code-workspace
+*.sw?
+.*.sw?
+nvim.log
+\#*\#
+.\#*
 *~
