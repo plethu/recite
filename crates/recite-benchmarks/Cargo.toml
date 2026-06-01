@@ -19,6 +19,10 @@ harness = false
 name = "runtime"
 harness = false
 
+[features]
+default = []
+small-ids = ["recite-core/small-ids"]
+
 [dependencies]
 blake3.workspace = true
 recite-compiler.workspace = true

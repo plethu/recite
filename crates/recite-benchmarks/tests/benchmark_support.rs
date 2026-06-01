@@ -1,6 +1,9 @@
 use recite_benchmarks::catalog::{CatalogProvider, parse_po_catalog};
 use recite_benchmarks::compiler::CompilerProject;
 use recite_benchmarks::fixture_context::RuntimeFixture;
+use recite_benchmarks::id_metrics::{
+    compiled_id_metrics, id_storage_report, runtime_fixture_id_metrics, source_id_metrics,
+};
 use recite_benchmarks::project::BenchmarkProject;
 use recite_benchmarks::runtime::RuntimeProject;
 use recite_benchmarks::scale::parse_scale_list;
@@ -110,6 +113,38 @@ fn tiny_compiler_smoke_builds_asset() -> Result<(), Box<dyn std::error::Error>> 
     let compiled = compiler.compile_with_schema()?;
     assert_eq!(compiled.asset().dialogue.blocks.len(), 10);
     Ok(())
+}
+
+#[test]
+fn tiny_id_metrics_cover_source_compiled_and_runtime_fixture_ids()
+-> Result<(), Box<dyn std::error::Error>> {
+    let project = BenchmarkProject::load(BenchmarkScale::Tiny)?;
+    let compiler = CompilerProject::load(&project)?;
+    let source_ids = source_id_metrics(&compiler.source_files());
+    let compiled = compiler.compile_with_schema()?;
+    let compiled_ids = compiled_id_metrics(&compiled.asset().dialogue);
+    let runtime_fixture = RuntimeFixture::load(&project.runtime_fixture_source()?)?;
+    let runtime_ids = runtime_fixture_id_metrics(&runtime_fixture);
+
+    assert!(source_ids.total.count >= 130);
+    assert!(compiled_ids.total.count >= source_ids.total.count);
+    assert!(runtime_ids.total.count > 1);
+    assert!(
+        compiled_ids.total.compact_heap_payload_bytes
+            < compiled_ids.total.string_heap_payload_bytes
+    );
+    Ok(())
+}
+
+#[test]
+fn id_storage_report_keeps_id_wrappers_string_sized() {
+    let report = id_storage_report();
+
+    assert_eq!(report.id_size_bytes, report.string_size_bytes);
+    assert_eq!(
+        report.compact_inline_capacity_bytes,
+        report.string_size_bytes
+    );
 }
 
 #[test]

@@ -7,8 +7,13 @@ license.workspace = true
 repository.workspace = true
 readme.workspace = true
 
+[features]
+default = []
+small-ids = ["dep:compact_str"]
+
 [dependencies]
 blake3.workspace = true
+compact_str = { workspace = true, optional = true }
 rmp-serde.workspace = true
 serde.workspace = true
 serde_bytes.workspace = true
