@@ -97,6 +97,7 @@ pub(crate) fn validate_manifest_name(
 pub(crate) fn parse_type_ref(value: &str) -> Option<SchemaTypeRef> {
     match value {
         "string" => Some(SchemaTypeRef::String),
+        "symbol" => Some(SchemaTypeRef::Symbol),
         "int" => Some(SchemaTypeRef::Int),
         "float" => Some(SchemaTypeRef::Float),
         "bool" => Some(SchemaTypeRef::Bool),

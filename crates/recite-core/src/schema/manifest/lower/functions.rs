@@ -175,7 +175,7 @@ fn lower_params(
                 ));
             }
 
-            let (type_ref, type_ref_span, type_ref_is_valid) = lower_type_reference(
+            let (mut type_ref, type_ref_span, type_ref_is_valid) = lower_type_reference(
                 file,
                 source,
                 spans,
@@ -186,6 +186,14 @@ fn lower_params(
                     param.name, param.type_ref
                 ),
             );
+            let type_ref_is_valid = type_ref_is_valid
+                && validate_parameter_type_ref(
+                    diagnostics,
+                    owner,
+                    param,
+                    &mut type_ref,
+                    &type_ref_span,
+                );
             if type_ref_is_valid {
                 pending_type_refs.push(PendingTypeReference {
                     owner: format!("{owner} parameter '{}'", param.name),
@@ -200,4 +208,27 @@ fn lower_params(
             }
         })
         .collect()
+}
+
+fn validate_parameter_type_ref(
+    diagnostics: &mut Vec<Diagnostic>,
+    owner: &str,
+    param: &RawParameterDefinition,
+    type_ref: &mut SchemaTypeRef,
+    type_ref_span: &crate::SourceSpan,
+) -> bool {
+    if !matches!(type_ref, SchemaTypeRef::Symbol) {
+        return true;
+    }
+
+    diagnostics.push(Diagnostic::error(
+        INVALID_TYPE_REFERENCE,
+        format!(
+            "{owner} parameter '{}' uses metadata-only type reference 'symbol'",
+            param.name
+        ),
+        type_ref_span.clone(),
+    ));
+    *type_ref = SchemaTypeRef::String;
+    false
 }

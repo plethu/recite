@@ -73,6 +73,7 @@ impl<'a> Validator<'a> {
 
         let valid = match type_ref {
             SchemaTypeRef::String => matches!(argument, Argument::Value(ScalarValue::String(_))),
+            SchemaTypeRef::Symbol => matches!(argument, Argument::Identifier(_)),
             SchemaTypeRef::Int => matches!(argument, Argument::Value(ScalarValue::Integer(_))),
             SchemaTypeRef::Float => matches!(argument, Argument::Value(ScalarValue::Float(_))),
             SchemaTypeRef::Bool => matches!(argument, Argument::Value(ScalarValue::Boolean(_))),

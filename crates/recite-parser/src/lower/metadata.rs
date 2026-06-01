@@ -1,6 +1,6 @@
 use recite_core::{
-    BlockId, BlockReference, ChoiceEcho, DivertTarget, EffectMode, LineId, Metadata, MetadataEntry,
-    SourceSpan, SpeakerId,
+    BlockId, BlockReference, ChoiceEcho, DivertTarget, EffectMode, LineId, SourceMetadata,
+    SourceMetadataEntry, SourceSpan, SpeakerId,
 };
 
 use crate::diagnostics::{malformed_divert_target, malformed_header};
@@ -12,9 +12,9 @@ impl Lowerer<'_, '_> {
     pub(super) fn lower_speaker_metadata(
         &mut self,
         fields: &[HeaderField<'_>],
-    ) -> (Option<SpeakerId>, Metadata) {
+    ) -> (Option<SpeakerId>, SourceMetadata) {
         let mut speaker = None;
-        let mut metadata = Metadata::new();
+        let mut metadata = SourceMetadata::new();
 
         for field in fields.iter().copied() {
             let Some(kv) = self.valid_key_value(field) else {
@@ -37,8 +37,8 @@ impl Lowerer<'_, '_> {
     pub(super) fn lower_choice_metadata(
         &mut self,
         fields: &[HeaderField<'_>],
-    ) -> (Metadata, ChoiceEcho) {
-        let mut metadata = Metadata::new();
+    ) -> (SourceMetadata, ChoiceEcho) {
+        let mut metadata = SourceMetadata::new();
         let mut echo = ChoiceEcho::None;
 
         for field in fields.iter().copied() {
@@ -93,7 +93,7 @@ impl Lowerer<'_, '_> {
         }
     }
 
-    pub(super) fn metadata_entry(&mut self, kv: HeaderKeyValue<'_>) -> Option<MetadataEntry> {
+    pub(super) fn metadata_entry(&mut self, kv: HeaderKeyValue<'_>) -> Option<SourceMetadataEntry> {
         match metadata_entry(kv) {
             Ok(entry) => Some(entry),
             Err(span) => {
@@ -145,10 +145,10 @@ pub(super) fn effect_mode(value: &str) -> Option<EffectMode> {
     }
 }
 
-fn metadata_entry(kv: HeaderKeyValue<'_>) -> Result<MetadataEntry, SourceSpan> {
+fn metadata_entry(kv: HeaderKeyValue<'_>) -> Result<SourceMetadataEntry, SourceSpan> {
     let value = kv.parse_value()?;
 
-    Ok(MetadataEntry::new(kv.key, value)
+    Ok(SourceMetadataEntry::new(kv.key, value)
         .with_source_span(kv.field_span)
         .with_key_value_spans(kv.key_span, Some(kv.value_span)))
 }

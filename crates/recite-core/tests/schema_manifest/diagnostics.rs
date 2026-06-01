@@ -240,6 +240,33 @@ fn invalid_enum_and_registry_type_references_report_stable_diagnostics() {
 }
 
 #[test]
+fn manifest_loader_rejects_metadata_only_symbol_for_parameters() {
+    let report = load_schema_manifest_str(
+        "fixtures/schema/invalid/metadata_only_symbol_for_parameters.json",
+        r#"{
+  "schema_version": 1,
+  "conditions": {
+    "can_talk": {
+      "params": [{ "name": "who", "type": "symbol" }]
+    }
+  },
+  "effects": {
+    "play_bark": {
+      "modes": ["immediate"],
+      "params": [{ "name": "who", "type": "symbol" }]
+    }
+  }
+}"#,
+    );
+
+    assert!(report.schema.is_none());
+    assert_eq!(
+        diagnostic_codes(&report),
+        ["RECITE_SCHEMA004", "RECITE_SCHEMA004"]
+    );
+}
+
+#[test]
 fn escaped_section_and_value_strings_keep_semantic_diagnostic_spans() {
     let report = load_schema_manifest_str(
         "fixtures/schema/invalid/escaped_section_value_spans.json",

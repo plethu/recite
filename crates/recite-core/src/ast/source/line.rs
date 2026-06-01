@@ -1,6 +1,6 @@
-use crate::{LineId, Metadata, SourceSpan, SpeakerId};
+use crate::{LineId, SourceSpan, SpeakerId};
 
-use super::Statement;
+use super::{SourceMetadata, Statement};
 
 /// Localisable source text with its own span.
 #[derive(Clone, Debug, Eq, PartialEq)]
@@ -26,7 +26,7 @@ pub struct Line {
     pub id: Option<LineId>,
     pub speaker: Option<SpeakerId>,
     pub source_text: SourceText,
-    pub metadata: Metadata,
+    pub metadata: SourceMetadata,
     pub statements: Vec<Statement>,
     pub span: SourceSpan,
 }
@@ -38,7 +38,7 @@ impl Line {
             id,
             speaker: None,
             source_text,
-            metadata: Metadata::new(),
+            metadata: SourceMetadata::new(),
             statements: Vec::new(),
             span,
         }
@@ -51,7 +51,7 @@ impl Line {
     }
 
     #[must_use]
-    pub fn with_metadata(mut self, metadata: Metadata) -> Self {
+    pub fn with_metadata(mut self, metadata: SourceMetadata) -> Self {
         self.metadata = metadata;
         self
     }

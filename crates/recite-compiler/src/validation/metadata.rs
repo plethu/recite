@@ -1,8 +1,8 @@
 use std::collections::BTreeSet;
 
 use recite_core::{
-    Metadata, MetadataDefinition, MetadataEntry, MetadataTarget, ScalarValue, SchemaTypeDefinition,
-    SchemaTypeRef, SourceFile, SourceSpan, Value,
+    MetadataDefinition, MetadataTarget, SchemaTypeDefinition, SchemaTypeRef, SourceFile,
+    SourceMetadata, SourceMetadataEntry, SourceMetadataScalar, SourceMetadataValue, SourceSpan,
 };
 
 use super::project;
@@ -13,7 +13,7 @@ impl<'a> Validator<'a> {
     pub(super) fn validate_metadata_schema(
         &mut self,
         source_file: &'a SourceFile,
-        metadata: &'a Metadata,
+        metadata: &'a SourceMetadata,
         target: MetadataTarget,
     ) {
         let Some(schema) = self.schema else {
@@ -52,7 +52,7 @@ impl<'a> Validator<'a> {
 
     fn validate_metadata_value_schema(
         &mut self,
-        entry: &MetadataEntry,
+        entry: &SourceMetadataEntry,
         definition: &MetadataDefinition,
         span: SourceSpan,
     ) {
@@ -61,17 +61,33 @@ impl<'a> Validator<'a> {
         };
 
         let valid = match &definition.type_ref {
-            SchemaTypeRef::String => {
-                matches!(entry.value, Value::Scalar(ScalarValue::String(_)))
+            SchemaTypeRef::String => matches!(
+                entry.value,
+                SourceMetadataValue::Scalar(SourceMetadataScalar::StringLiteral(_))
+            ),
+            SchemaTypeRef::Symbol => {
+                matches!(
+                    entry.value,
+                    SourceMetadataValue::Scalar(SourceMetadataScalar::Symbol(_))
+                )
             }
             SchemaTypeRef::Int => {
-                matches!(entry.value, Value::Scalar(ScalarValue::Integer(_)))
+                matches!(
+                    entry.value,
+                    SourceMetadataValue::Scalar(SourceMetadataScalar::Integer(_))
+                )
             }
             SchemaTypeRef::Float => {
-                matches!(entry.value, Value::Scalar(ScalarValue::Float(_)))
+                matches!(
+                    entry.value,
+                    SourceMetadataValue::Scalar(SourceMetadataScalar::Float(_))
+                )
             }
             SchemaTypeRef::Bool => {
-                matches!(entry.value, Value::Scalar(ScalarValue::Boolean(_)))
+                matches!(
+                    entry.value,
+                    SourceMetadataValue::Scalar(SourceMetadataScalar::Bool(_))
+                )
             }
             SchemaTypeRef::Speaker => {
                 let Some(value) =
@@ -124,11 +140,11 @@ impl<'a> Validator<'a> {
 
     fn metadata_reference_value<'b>(
         &mut self,
-        entry: &'b MetadataEntry,
+        entry: &'b SourceMetadataEntry,
         type_ref: &SchemaTypeRef,
         span: SourceSpan,
     ) -> Option<&'b str> {
-        let value = metadata_scalar_string(entry);
+        let value = metadata_scalar_symbol(entry);
         if value.is_none() {
             self.wrong_metadata_value_type(entry, type_ref, span);
         }
@@ -137,7 +153,7 @@ impl<'a> Validator<'a> {
 
     fn wrong_metadata_value_type(
         &mut self,
-        entry: &MetadataEntry,
+        entry: &SourceMetadataEntry,
         expected: &SchemaTypeRef,
         span: SourceSpan,
     ) {
@@ -152,7 +168,7 @@ impl<'a> Validator<'a> {
 
     fn invalid_metadata_value(
         &mut self,
-        entry: &MetadataEntry,
+        entry: &SourceMetadataEntry,
         expected: &SchemaTypeRef,
         value: &str,
         span: SourceSpan,
@@ -163,7 +179,7 @@ impl<'a> Validator<'a> {
     }
 }
 
-fn metadata_key_span(source_file: &SourceFile, entry: &MetadataEntry) -> SourceSpan {
+fn metadata_key_span(source_file: &SourceFile, entry: &SourceMetadataEntry) -> SourceSpan {
     entry
         .key_span
         .clone()
@@ -171,7 +187,7 @@ fn metadata_key_span(source_file: &SourceFile, entry: &MetadataEntry) -> SourceS
         .unwrap_or_else(|| metadata_value_span(source_file, entry))
 }
 
-fn metadata_value_span(source_file: &SourceFile, entry: &MetadataEntry) -> SourceSpan {
+fn metadata_value_span(source_file: &SourceFile, entry: &SourceMetadataEntry) -> SourceSpan {
     entry
         .value_span
         .clone()
@@ -179,20 +195,21 @@ fn metadata_value_span(source_file: &SourceFile, entry: &MetadataEntry) -> Sourc
         .unwrap_or_else(|| project::first_source_span(&[source_file]))
 }
 
-fn metadata_scalar_string(entry: &MetadataEntry) -> Option<&str> {
+fn metadata_scalar_symbol(entry: &SourceMetadataEntry) -> Option<&str> {
     match &entry.value {
-        Value::Scalar(ScalarValue::String(value)) => Some(value),
-        Value::Scalar(_) | Value::Array(_) => None,
+        SourceMetadataValue::Scalar(SourceMetadataScalar::Symbol(value)) => Some(value),
+        SourceMetadataValue::Scalar(_) | SourceMetadataValue::Array(_) => None,
     }
 }
 
-fn display_metadata_value_type(value: &Value) -> &'static str {
+fn display_metadata_value_type(value: &SourceMetadataValue) -> &'static str {
     match value {
-        Value::Scalar(ScalarValue::String(_)) => "string",
-        Value::Scalar(ScalarValue::Integer(_)) => "int",
-        Value::Scalar(ScalarValue::Float(_)) => "float",
-        Value::Scalar(ScalarValue::Boolean(_)) => "bool",
-        Value::Array(_) => "array",
+        SourceMetadataValue::Scalar(SourceMetadataScalar::Symbol(_)) => "symbol",
+        SourceMetadataValue::Scalar(SourceMetadataScalar::StringLiteral(_)) => "string",
+        SourceMetadataValue::Scalar(SourceMetadataScalar::Integer(_)) => "int",
+        SourceMetadataValue::Scalar(SourceMetadataScalar::Float(_)) => "float",
+        SourceMetadataValue::Scalar(SourceMetadataScalar::Bool(_)) => "bool",
+        SourceMetadataValue::Array(_) => "array",
     }
 }
 

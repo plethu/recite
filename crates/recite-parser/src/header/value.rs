@@ -1,14 +1,14 @@
-use recite_core::{ScalarValue, Value};
+use recite_core::{SourceMetadataScalar, SourceMetadataValue};
 
-pub(super) fn parse_value(value: &str) -> Result<Value, ()> {
+pub(super) fn parse_value(value: &str) -> Result<SourceMetadataValue, ()> {
     if value.starts_with('[') {
-        return parse_array(value).map(Value::Array);
+        return parse_array(value).map(SourceMetadataValue::Array);
     }
 
-    parse_scalar(value).map(Value::Scalar)
+    parse_scalar(value).map(SourceMetadataValue::Scalar)
 }
 
-fn parse_array(value: &str) -> Result<Vec<ScalarValue>, ()> {
+fn parse_array(value: &str) -> Result<Vec<SourceMetadataScalar>, ()> {
     let inner = value
         .strip_prefix('[')
         .and_then(|value| value.strip_suffix(']'))
@@ -72,17 +72,17 @@ fn split_array_items(value: &str) -> Result<Vec<&str>, ()> {
     Ok(items)
 }
 
-fn parse_scalar(value: &str) -> Result<ScalarValue, ()> {
+fn parse_scalar(value: &str) -> Result<SourceMetadataScalar, ()> {
     if value == "true" {
-        return Ok(ScalarValue::Boolean(true));
+        return Ok(SourceMetadataScalar::Bool(true));
     }
 
     if value == "false" {
-        return Ok(ScalarValue::Boolean(false));
+        return Ok(SourceMetadataScalar::Bool(false));
     }
 
     if value.starts_with('"') {
-        return unquote(value).map(ScalarValue::String);
+        return unquote(value).map(SourceMetadataScalar::StringLiteral);
     }
 
     if value.starts_with('[') || value.ends_with(']') || value.contains('"') {
@@ -90,14 +90,33 @@ fn parse_scalar(value: &str) -> Result<ScalarValue, ()> {
     }
 
     if let Ok(integer) = value.parse::<i64>() {
-        return Ok(ScalarValue::Integer(integer));
+        return Ok(SourceMetadataScalar::Integer(integer));
     }
 
     if let Ok(float) = value.parse::<f64>() {
-        return Ok(ScalarValue::Float(float));
+        return Ok(SourceMetadataScalar::Float(float));
     }
 
-    Ok(ScalarValue::String(value.to_owned()))
+    if !is_symbol(value) {
+        return Err(());
+    }
+
+    Ok(SourceMetadataScalar::Symbol(value.to_owned()))
+}
+
+fn is_symbol(value: &str) -> bool {
+    let mut chars = value.chars();
+    let Some(first) = chars.next() else {
+        return false;
+    };
+
+    (first.is_ascii_alphabetic() || first == '_')
+        && chars.all(|character| {
+            character.is_ascii_alphanumeric()
+                || character == '_'
+                || character == '.'
+                || character == '-'
+        })
 }
 
 fn unquote(value: &str) -> Result<String, ()> {

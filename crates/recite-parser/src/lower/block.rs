@@ -1,4 +1,4 @@
-use recite_core::{Block, BlockId, Metadata, Statement};
+use recite_core::{Block, BlockId, SourceMetadata, Statement};
 
 use crate::body::{BodyBoundary, BodyCursor, BodyStep};
 use crate::diagnostics::{empty_block_id, missing_block_id, statement_before_block};
@@ -75,7 +75,7 @@ impl Lowerer<'_, '_> {
 
         let mut is_default = false;
         let mut default_speaker = None;
-        let mut metadata = Metadata::new();
+        let mut metadata = SourceMetadata::new();
 
         for field in fields.iter().skip(1).copied() {
             if field.text == "default" {

@@ -17,6 +17,7 @@ pub(crate) use project::*;
 pub(crate) fn display_schema_type_ref(type_ref: &SchemaTypeRef) -> String {
     match type_ref {
         SchemaTypeRef::String => "string".to_owned(),
+        SchemaTypeRef::Symbol => "symbol".to_owned(),
         SchemaTypeRef::Int => "int".to_owned(),
         SchemaTypeRef::Float => "float".to_owned(),
         SchemaTypeRef::Bool => "bool".to_owned(),

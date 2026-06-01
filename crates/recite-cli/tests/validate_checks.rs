@@ -111,7 +111,7 @@ fn check_metadata_requires_schema_and_reports_schema_validation() {
     let source = write_recite(
         temp.path(),
         "metadata.recite",
-        ":: start default\n> intro mood=angry\n  Hello.\n-> END\n",
+        ":: start default\n> intro mood=\"angry\"\n  Hello.\n-> END\n",
     );
     let schema = write_file(
         temp.path(),

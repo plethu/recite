@@ -259,7 +259,7 @@ fn push_statement_summary(summary: &mut String, statement: &Statement, depth: us
     }
 }
 
-fn metadata_keys(metadata: &recite_core::Metadata) -> String {
+fn metadata_keys(metadata: &recite_core::SourceMetadata) -> String {
     metadata
         .iter()
         .map(|entry| entry.key.as_str())

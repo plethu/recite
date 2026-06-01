@@ -16,7 +16,8 @@ pub use ast::{
     Argument, Block, BlockReference, Choice, ChoiceEcho, ChoiceTarget, Comment, ConditionCall,
     ConditionExpression, ConditionGroup, ConditionUnary, Divert, DivertTarget, END_DIVERT_TARGET,
     Effect, EffectMode, IfBranch, Line, MatchArm, MatchBranch, MatchPattern, SourceFile,
-    SourceText, Statement, StatementKind,
+    SourceMetadata, SourceMetadataEntry, SourceMetadataScalar, SourceMetadataValue, SourceText,
+    Statement, StatementKind,
 };
 pub use compiled::{
     BLAKE3_DIGEST_LEN, BlockIndex, BlockLookupEntry, BlockLookupTable,
