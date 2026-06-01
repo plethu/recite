@@ -59,10 +59,11 @@ pub use project::{
     ProjectScene, project_scene_key_span, validate_project_freshness, validate_project_manifest,
 };
 pub use schema::{
-    ConditionDefinition, ConditionReturnType, EffectDefinition, EnumTypeDefinition,
-    MarkupDefinition, MetadataDefinition, MetadataTarget, ParameterDefinition, ProjectSchema,
-    RegistryDefinition, SchemaLoadReport, SchemaTypeDefinition, SchemaTypeRef, SpeakerDefinition,
-    canonical_schema_fingerprint, load_schema_manifest_str,
+    ConditionDefinition, ConditionReturnType, ContextualMetadataDomain, EffectDefinition,
+    EnumTypeDefinition, FlatMetadataDomain, MarkupDefinition, MetadataContextSelector,
+    MetadataDefinition, MetadataDomainDefinition, MetadataTarget, MissingMetadataContextPolicy,
+    ParameterDefinition, ProjectSchema, RegistryDefinition, SchemaLoadReport, SchemaTypeDefinition,
+    SchemaTypeRef, SpeakerDefinition, canonical_schema_fingerprint, load_schema_manifest_str,
 };
 pub use source_location::{SourcePosition, SourceSpan};
 pub use value::{Metadata, MetadataEntry, ScalarValue, Value};

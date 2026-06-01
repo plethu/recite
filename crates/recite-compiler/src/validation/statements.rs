@@ -3,24 +3,34 @@ use recite_core::{
     SourceFile, Statement,
 };
 
+use super::metadata::MetadataValidationContext;
 use super::state::Validator;
 use crate::diagnostics;
 
 impl<'a> Validator<'a> {
     pub(super) fn validate_block(&mut self, source_file: &'a SourceFile, block: &'a Block) {
         self.validate_span(source_file, &block.span, "block");
-        self.validate_metadata(source_file, &block.metadata, MetadataTarget::Block);
+        self.validate_metadata(
+            source_file,
+            MetadataValidationContext {
+                target: MetadataTarget::Block,
+                line_speaker: None,
+                block_default_speaker: None,
+                metadata: &block.metadata,
+            },
+        );
         self.validate_block_id(source_file, block);
         self.validate_default_block(block);
     }
-    pub(super) fn validate_statement(
+    pub(super) fn validate_statement_with_block(
         &mut self,
         source_file: &'a SourceFile,
         statement: &'a Statement,
+        block_default_speaker: Option<&'a str>,
     ) {
         match statement {
             Statement::Line(line) => {
-                self.validate_line(source_file, line);
+                self.validate_line(source_file, line, block_default_speaker);
                 for statement in &line.statements {
                     if !matches!(statement, Statement::Choice(_)) {
                         self.diagnostics
@@ -28,7 +38,11 @@ impl<'a> Validator<'a> {
                                 line, statement,
                             ));
                     }
-                    self.validate_statement(source_file, statement);
+                    self.validate_statement_with_block(
+                        source_file,
+                        statement,
+                        block_default_speaker,
+                    );
                 }
             }
             Statement::Choice(choice) => {
@@ -38,17 +52,29 @@ impl<'a> Validator<'a> {
                         .push(diagnostics::unsupported_choice_child_statement(
                             choice, statement,
                         ));
-                    self.validate_statement(source_file, statement);
+                    self.validate_statement_with_block(
+                        source_file,
+                        statement,
+                        block_default_speaker,
+                    );
                 }
             }
             Statement::Divert(divert) => self.validate_divert(source_file, divert),
             Statement::If(branch) => {
                 self.validate_if_branch(source_file, branch);
                 for statement in &branch.then_statements {
-                    self.validate_statement(source_file, statement);
+                    self.validate_statement_with_block(
+                        source_file,
+                        statement,
+                        block_default_speaker,
+                    );
                 }
                 for statement in &branch.else_statements {
-                    self.validate_statement(source_file, statement);
+                    self.validate_statement_with_block(
+                        source_file,
+                        statement,
+                        block_default_speaker,
+                    );
                 }
             }
             Statement::Match(branch) => {
@@ -56,7 +82,11 @@ impl<'a> Validator<'a> {
                 for arm in &branch.arms {
                     self.validate_match_arm(source_file, arm);
                     for statement in &arm.statements {
-                        self.validate_statement(source_file, statement);
+                        self.validate_statement_with_block(
+                            source_file,
+                            statement,
+                            block_default_speaker,
+                        );
                     }
                 }
             }
@@ -66,10 +96,23 @@ impl<'a> Validator<'a> {
             }
         }
     }
-    pub(super) fn validate_line(&mut self, source_file: &'a SourceFile, line: &'a Line) {
+    pub(super) fn validate_line(
+        &mut self,
+        source_file: &'a SourceFile,
+        line: &'a Line,
+        block_default_speaker: Option<&'a str>,
+    ) {
         self.validate_span(source_file, &line.span, "line");
         self.validate_source_text(source_file, &line.source_text, "line source text");
-        self.validate_metadata(source_file, &line.metadata, MetadataTarget::Line);
+        self.validate_metadata(
+            source_file,
+            MetadataValidationContext {
+                target: MetadataTarget::Line,
+                line_speaker: line.speaker.as_ref().map(|speaker| speaker.as_str()),
+                block_default_speaker,
+                metadata: &line.metadata,
+            },
+        );
 
         let Some(id) = &line.id else {
             self.diagnostics.push(diagnostics::missing_line_id(line));
@@ -86,7 +129,15 @@ impl<'a> Validator<'a> {
     pub(super) fn validate_choice(&mut self, source_file: &'a SourceFile, choice: &'a Choice) {
         self.validate_span(source_file, &choice.span, "choice");
         self.validate_source_text(source_file, &choice.source_text, "choice source text");
-        self.validate_metadata(source_file, &choice.metadata, MetadataTarget::Choice);
+        self.validate_metadata(
+            source_file,
+            MetadataValidationContext {
+                target: MetadataTarget::Choice,
+                line_speaker: None,
+                block_default_speaker: None,
+                metadata: &choice.metadata,
+            },
+        );
         self.validate_choice_echo(choice);
         if let Some(condition) = &choice.condition {
             self.validate_condition_expression(source_file, condition);

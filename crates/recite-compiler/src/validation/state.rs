@@ -58,7 +58,14 @@ impl<'a> Validator<'a> {
         for block in &source_file.blocks {
             self.validate_block(source_file, block);
             for statement in &block.statements {
-                self.validate_statement(source_file, statement);
+                self.validate_statement_with_block(
+                    source_file,
+                    statement,
+                    block
+                        .default_speaker
+                        .as_ref()
+                        .map(|speaker| speaker.as_str()),
+                );
             }
         }
     }

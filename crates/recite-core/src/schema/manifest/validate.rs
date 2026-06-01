@@ -1,6 +1,8 @@
 use crate::{Diagnostic, EffectMode, SourceSpan};
 
-use crate::schema::{MetadataTarget, ProjectSchema, SchemaTypeRef};
+use crate::schema::{
+    MetadataContextSelector, MetadataDomainDefinition, MetadataTarget, ProjectSchema, SchemaTypeRef,
+};
 
 use super::diagnostics::{DUPLICATE_DEFINITION, INVALID_TYPE_REFERENCE, MALFORMED_SHAPE};
 
@@ -11,6 +13,14 @@ pub(crate) struct PendingTypeReference {
     pub(crate) span: SourceSpan,
 }
 
+#[derive(Clone, Debug)]
+pub(crate) struct PendingDomainReference {
+    pub(crate) owner: String,
+    pub(crate) domain: String,
+    pub(crate) require_flat: bool,
+    pub(crate) span: SourceSpan,
+}
+
 pub(crate) fn validate_type_references(
     schema: &ProjectSchema,
     pending_type_refs: &[PendingTypeReference],
@@ -18,6 +28,37 @@ pub(crate) fn validate_type_references(
 ) {
     for pending in pending_type_refs {
         validate_type_ref(schema, diagnostics, pending);
+    }
+}
+
+pub(crate) fn validate_domain_references(
+    schema: &ProjectSchema,
+    pending_domain_refs: &[PendingDomainReference],
+    diagnostics: &mut Vec<Diagnostic>,
+) {
+    for pending in pending_domain_refs {
+        match schema.metadata_domains.get(&pending.domain) {
+            Some(MetadataDomainDefinition::Flat(_)) => {}
+            Some(MetadataDomainDefinition::Contextual(_)) if pending.require_flat => {
+                diagnostics.push(Diagnostic::error(
+                    INVALID_TYPE_REFERENCE,
+                    format!(
+                        "{} references contextual metadata domain '{}', but a flat domain is required",
+                        pending.owner, pending.domain
+                    ),
+                    pending.span.clone(),
+                ));
+            }
+            Some(MetadataDomainDefinition::Contextual(_)) => {}
+            None => diagnostics.push(Diagnostic::error(
+                INVALID_TYPE_REFERENCE,
+                format!(
+                    "{} references unknown metadata domain '{}'",
+                    pending.owner, pending.domain
+                ),
+                pending.span.clone(),
+            )),
+        }
     }
 }
 
@@ -112,6 +153,16 @@ pub(crate) fn parse_type_ref(value: &str) -> Option<SchemaTypeRef> {
                     .filter(|name| is_manifest_name(name))
                     .map(|name| SchemaTypeRef::Registry(name.to_owned()))
             }),
+    }
+}
+
+pub(crate) fn parse_metadata_context_selector(value: &str) -> Option<MetadataContextSelector> {
+    match value {
+        "field:speaker" => Some(MetadataContextSelector::FieldSpeaker),
+        _ => value
+            .strip_prefix("metadata:")
+            .filter(|name| is_manifest_name(name))
+            .map(|name| MetadataContextSelector::MetadataKey(name.to_owned())),
     }
 }
 

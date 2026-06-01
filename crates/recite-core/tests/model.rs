@@ -98,7 +98,9 @@ fn diagnostic_codes_classify_stable_categories() {
         ("RECITE_VALIDATE025", DiagnosticCategory::Markup),
         ("RECITE_VALIDATE026", DiagnosticCategory::Metadata),
         ("RECITE_VALIDATE030", DiagnosticCategory::Metadata),
-        ("RECITE_VALIDATE031", DiagnosticCategory::Validation),
+        ("RECITE_VALIDATE031", DiagnosticCategory::Metadata),
+        ("RECITE_VALIDATE033", DiagnosticCategory::Metadata),
+        ("RECITE_VALIDATE034", DiagnosticCategory::Validation),
         ("RECITE_VALIDATEABC", DiagnosticCategory::Validation),
         ("RECITE_OTHER001", DiagnosticCategory::Unknown),
     ];

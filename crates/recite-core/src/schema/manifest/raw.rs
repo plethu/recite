@@ -20,6 +20,8 @@ pub(crate) struct RawManifest {
     #[serde(default, deserialize_with = "deserialize_named_entries")]
     pub(crate) effects: Vec<Named<RawEffectDefinition>>,
     #[serde(default, deserialize_with = "deserialize_named_entries")]
+    pub(crate) metadata_domains: Vec<Named<RawMetadataDomainDefinition>>,
+    #[serde(default, deserialize_with = "deserialize_named_entries")]
     pub(crate) metadata: Vec<Named<RawMetadataDefinition>>,
     #[serde(default, deserialize_with = "deserialize_named_entries")]
     pub(crate) markup: Vec<Named<RawMarkupDefinition>>,
@@ -86,6 +88,30 @@ pub(crate) struct RawMetadataDefinition {
     pub(crate) type_ref: String,
     #[serde(default)]
     pub(crate) repeatable: bool,
+    #[serde(default, deserialize_with = "deserialize_optional_non_null")]
+    pub(crate) domain: Option<String>,
+}
+
+#[derive(Debug, Deserialize)]
+#[serde(deny_unknown_fields)]
+pub(crate) struct RawMetadataDomainDefinition {
+    pub(crate) kind: String,
+    #[serde(default, deserialize_with = "deserialize_optional_non_null")]
+    pub(crate) values: Option<Vec<String>>,
+    #[serde(default, deserialize_with = "deserialize_optional_non_null")]
+    pub(crate) selector: Option<String>,
+    #[serde(default, deserialize_with = "deserialize_optional_named_entries")]
+    pub(crate) values_by_context: Option<Vec<Named<Vec<String>>>>,
+    #[serde(default, deserialize_with = "deserialize_optional_non_null")]
+    pub(crate) missing_context: Option<RawMissingMetadataContext>,
+}
+
+#[derive(Debug, Deserialize)]
+#[serde(deny_unknown_fields)]
+pub(crate) struct RawMissingMetadataContext {
+    pub(crate) policy: String,
+    #[serde(default, deserialize_with = "deserialize_optional_non_null")]
+    pub(crate) domain: Option<String>,
 }
 
 #[derive(Debug, Deserialize)]
@@ -139,4 +165,14 @@ where
     deserializer.deserialize_map(NamedEntriesVisitor {
         marker: PhantomData,
     })
+}
+
+fn deserialize_optional_named_entries<'de, D, T>(
+    deserializer: D,
+) -> Result<Option<Vec<Named<T>>>, D::Error>
+where
+    D: Deserializer<'de>,
+    T: Deserialize<'de>,
+{
+    deserialize_named_entries(deserializer).map(Some)
 }

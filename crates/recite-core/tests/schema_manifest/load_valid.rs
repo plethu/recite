@@ -1,5 +1,6 @@
 use recite_core::{
-    ConditionReturnType, EffectMode, MetadataTarget, SchemaTypeDefinition, SchemaTypeRef,
+    ConditionReturnType, EffectMode, MetadataContextSelector, MetadataDomainDefinition,
+    MetadataTarget, MissingMetadataContextPolicy, SchemaTypeDefinition, SchemaTypeRef,
     load_schema_manifest_str,
 };
 
@@ -96,4 +97,55 @@ fn metadata_type_refs_support_symbol() {
     assert_eq!(diagnostic_codes(&report), Vec::<&str>::new());
     let schema = report.schema.expect("valid symbol metadata schema");
     assert_eq!(schema.metadata["route"].type_ref, SchemaTypeRef::Symbol);
+}
+
+#[test]
+fn metadata_domains_load_into_canonical_schema() {
+    let report = load_schema_manifest_str(
+        "fixtures/schema/valid/metadata_domains.json",
+        r#"{
+  "schema_version": 1,
+  "metadata_domains": {
+    "portrait_all": {
+      "kind": "flat",
+      "values": ["flat", "concerned", "wry"]
+    },
+    "portrait_by_speaker": {
+      "kind": "contextual",
+      "selector": "field:speaker",
+      "values_by_context": {
+        "rhea": ["flat", "concerned"],
+        "hazel": ["flat", "wry"]
+      },
+      "missing_context": { "policy": "fallback", "domain": "portrait_all" }
+    }
+  },
+  "metadata": {
+    "portrait": {
+      "targets": ["line"],
+      "type": "symbol",
+      "domain": "portrait_by_speaker"
+    }
+  }
+}"#,
+    );
+
+    assert_eq!(diagnostic_codes(&report), Vec::<&str>::new());
+    let schema = report.schema.expect("valid metadata domain schema");
+    assert_eq!(
+        schema.metadata["portrait"].domain.as_deref(),
+        Some("portrait_by_speaker")
+    );
+    let MetadataDomainDefinition::Contextual(domain) =
+        &schema.metadata_domains["portrait_by_speaker"]
+    else {
+        panic!("portrait_by_speaker should be contextual");
+    };
+    assert_eq!(domain.selector, MetadataContextSelector::FieldSpeaker);
+    assert_eq!(
+        domain.missing_context,
+        MissingMetadataContextPolicy::Fallback {
+            domain: "portrait_all".to_owned()
+        }
+    );
 }
