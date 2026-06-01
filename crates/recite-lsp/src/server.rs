@@ -6,13 +6,12 @@ use lsp_types::notification::{
 use lsp_types::request::{Request as LspRequest, Shutdown};
 use lsp_types::{
     DidChangeTextDocumentParams, DidCloseTextDocumentParams, DidOpenTextDocumentParams,
-    InitializeParams, InitializeResult, PositionEncodingKind, SaveOptions, ServerCapabilities,
-    ServerInfo, TextDocumentSyncCapability, TextDocumentSyncKind, TextDocumentSyncOptions,
-    TextDocumentSyncSaveOptions,
+    DidSaveTextDocumentParams, InitializeParams,
 };
 
+use crate::capabilities::initialize_result;
 use crate::diagnostics::{clear_diagnostics, publish_diagnostics};
-use crate::documents::OpenDocumentStore;
+use crate::workspace::{DiagnosticRefresh, LspWorkspace, WorkspaceChangeResult, WorkspaceConfig};
 
 #[derive(Debug, thiserror::Error)]
 #[non_exhaustive]
@@ -46,51 +45,25 @@ pub(crate) fn run_connection(connection: Connection) -> Result<(), ServerError> 
     let initialize_result = initialize_result(&initialize_params);
     connection.initialize_finish(initialize_id, serde_json::to_value(initialize_result)?)?;
 
-    let mut server = Server::new(connection);
+    let mut server = Server::new(
+        connection,
+        WorkspaceConfig::from_initialize_params(&initialize_params),
+    );
+    server.publish_schema_diagnostics()?;
     server.run()
-}
-
-fn initialize_result(params: &InitializeParams) -> InitializeResult {
-    InitializeResult {
-        capabilities: ServerCapabilities {
-            position_encoding: Some(select_position_encoding(params)),
-            text_document_sync: Some(TextDocumentSyncCapability::Options(
-                TextDocumentSyncOptions {
-                    open_close: Some(true),
-                    change: Some(TextDocumentSyncKind::FULL),
-                    will_save: None,
-                    will_save_wait_until: None,
-                    save: Some(TextDocumentSyncSaveOptions::SaveOptions(SaveOptions {
-                        include_text: None,
-                    })),
-                },
-            )),
-            ..ServerCapabilities::default()
-        },
-        server_info: Some(ServerInfo {
-            name: "recite-lsp".to_owned(),
-            version: Some(env!("CARGO_PKG_VERSION").to_owned()),
-        }),
-    }
-}
-
-fn select_position_encoding(_params: &InitializeParams) -> PositionEncodingKind {
-    // UTF-16 is mandatory in LSP 3.17. If the client omits it from the
-    // advertised list, the server may still assume support.
-    PositionEncodingKind::UTF16
 }
 
 struct Server {
     connection: Connection,
-    documents: OpenDocumentStore,
+    workspace: LspWorkspace,
     shutdown_requested: bool,
 }
 
 impl Server {
-    fn new(connection: Connection) -> Self {
+    fn new(connection: Connection, workspace_config: WorkspaceConfig) -> Self {
         Self {
             connection,
-            documents: OpenDocumentStore::default(),
+            workspace: LspWorkspace::new(workspace_config),
             shutdown_requested: false,
         }
     }
@@ -138,7 +111,8 @@ impl Server {
 
     fn handle_notification(&mut self, notification: Notification) -> Result<bool, ServerError> {
         match notification.method.as_str() {
-            Initialized::METHOD | DidSaveTextDocument::METHOD => {}
+            Initialized::METHOD => {}
+            DidSaveTextDocument::METHOD => self.handle_did_save(notification)?,
             Exit::METHOD => {
                 if self.shutdown_requested {
                     return Ok(true);
@@ -155,27 +129,26 @@ impl Server {
         Ok(false)
     }
 
+    fn publish_schema_diagnostics(&mut self) -> Result<(), ServerError> {
+        if let Some(refresh) = self.workspace.schema_diagnostics() {
+            self.publish_refresh(refresh)?;
+        }
+
+        Ok(())
+    }
+
     fn handle_did_open(&mut self, notification: Notification) -> Result<(), ServerError> {
         let Ok(params) =
             notification.extract::<DidOpenTextDocumentParams>(DidOpenTextDocument::METHOD)
         else {
             return Ok(());
         };
-        let uri = params.text_document.uri;
-        let publish_params = {
-            let document = self.documents.open(
-                uri.clone(),
-                params.text_document.version,
-                params.text_document.text,
-            );
-            publish_diagnostics(
-                uri,
-                document.text(),
-                Some(document.version()),
-                document.diagnostics(),
-            )
-        };
-        self.send(Notification::new(PublishDiagnostics::METHOD.to_owned(), publish_params).into())
+        let refresh = self.workspace.open(
+            params.text_document.uri,
+            params.text_document.version,
+            params.text_document.text,
+        );
+        self.publish_refresh(refresh)
     }
 
     fn handle_did_change(&mut self, notification: Notification) -> Result<(), ServerError> {
@@ -186,16 +159,23 @@ impl Server {
         };
         let uri = params.text_document.uri;
         let version = params.text_document.version;
-        if let Some(document) = self.documents.change(&uri, version, params.content_changes) {
-            let publish_params = publish_diagnostics(
-                uri,
-                document.text(),
-                Some(document.version()),
-                document.diagnostics(),
-            );
-            self.send(
-                Notification::new(PublishDiagnostics::METHOD.to_owned(), publish_params).into(),
-            )?;
+        if let WorkspaceChangeResult::Accepted(refresh) =
+            self.workspace.change(uri, version, params.content_changes)
+        {
+            self.publish_refresh(refresh)?;
+        }
+
+        Ok(())
+    }
+
+    fn handle_did_save(&mut self, notification: Notification) -> Result<(), ServerError> {
+        let Ok(params) =
+            notification.extract::<DidSaveTextDocumentParams>(DidSaveTextDocument::METHOD)
+        else {
+            return Ok(());
+        };
+        if let Some(refresh) = self.workspace.save(params.text_document.uri) {
+            self.publish_refresh(refresh)?;
         }
 
         Ok(())
@@ -207,21 +187,40 @@ impl Server {
         else {
             return Ok(());
         };
-        if self.documents.close(&params.text_document.uri) {
-            self.publish_clear(params.text_document.uri)?;
+        if let Some(refresh) = self.workspace.close(params.text_document.uri) {
+            self.publish_refresh(refresh)?;
         }
 
         Ok(())
     }
 
-    fn publish_clear(&self, uri: lsp_types::Uri) -> Result<(), ServerError> {
-        self.send(
-            Notification::new(
-                PublishDiagnostics::METHOD.to_owned(),
-                clear_diagnostics(uri),
-            )
-            .into(),
-        )
+    fn publish_refresh(&self, refresh: DiagnosticRefresh) -> Result<(), ServerError> {
+        if !self.workspace.is_current_generation(refresh.generation()) {
+            return Ok(());
+        }
+
+        match refresh {
+            DiagnosticRefresh::Publish(diagnostics) => {
+                let crate::workspace::DocumentDiagnostics {
+                    uri,
+                    text,
+                    version,
+                    diagnostics,
+                    ..
+                } = diagnostics;
+                let publish_params = publish_diagnostics(uri, text.as_str(), version, &diagnostics);
+                self.send(
+                    Notification::new(PublishDiagnostics::METHOD.to_owned(), publish_params).into(),
+                )
+            }
+            DiagnosticRefresh::Clear { uri, .. } => self.send(
+                Notification::new(
+                    PublishDiagnostics::METHOD.to_owned(),
+                    clear_diagnostics(uri),
+                )
+                .into(),
+            ),
+        }
     }
 
     fn send(&self, message: Message) -> Result<(), ServerError> {
