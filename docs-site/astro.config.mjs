@@ -52,7 +52,22 @@ export default defineConfig({
         },
         {
           label: "Migration",
-          items: [{ label: "Overview", slug: "migration" }],
+          items: [
+            { label: "Overview", slug: "migration" },
+            { label: "Importer Boundaries", slug: "migration/importer-boundaries" },
+            {
+              label: "Dialogue System for Unity",
+              slug: "migration/dialogue-system-for-unity",
+            },
+            { label: "Dialogue Manager", slug: "migration/dialogue-manager" },
+            { label: "Dialogic", slug: "migration/dialogic" },
+            { label: "Yarn Spinner", slug: "migration/yarn-spinner" },
+            { label: "Ink", slug: "migration/ink" },
+            {
+              label: "JSON, CSV, and Engine-Native",
+              slug: "migration/json-csv-engine-native",
+            },
+          ],
         },
         {
           label: "Release Notes",
