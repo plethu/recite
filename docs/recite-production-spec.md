@@ -2359,16 +2359,107 @@ This makes real project dialogue scenes measurable without requiring users to wr
 
 ## 20. Import and Migration
 
-Full ink/Yarn/Clyde import compatibility is not a v1 goal.
+Full ink/Yarn/Clyde import compatibility is not a v1 goal. Importers exist to
+help teams inspect and migrate existing content, not to make Recite execute
+another tool's runtime model.
 
-However, because the project is motivated by practical limitations across existing dialogue tooling, a limited migration helper may be valuable later:
+Importer design must follow these boundaries:
 
-- convert `Speaker: text #id:x #portrait:y` into structured line records;
-- convert `+ Choice #id:x` into structured choice records;
-- convert external function calls or engine-script hooks into effect declarations;
-- convert tags into metadata entries.
+- importers produce ordinary Recite source and structured reports, not a second
+  compiled format or compatibility runtime;
+- generated source is validated by the normal Recite parser, compiler, schema,
+  ID, localisation, and effect checks;
+- native Recite syntax, runtime semantics, schema rules, and stable-ID policy do
+  not change to preserve compatibility with an imported source format;
+- unsupported constructs are reported explicitly instead of being silently
+  dropped;
+- lossy conversions are reported even when usable Recite source can be emitted;
+- source provenance is preserved where practical so authors can review the
+  original construct that produced each generated line, choice, effect, or
+  report item.
 
-This should be explicitly best-effort and should not constrain the native format.
+The useful v1 migration surface is a best-effort assistant with honest limits:
+
+- convert recognizable line forms such as `Speaker: text #id:x #portrait:y`
+  into structured line records with speaker and metadata where the source format
+  exposes that information;
+- convert simple choices such as `+ Choice #id:x` or link-style options into
+  structured choice records;
+- convert direct jumps, diverts, or passage links into Recite block references
+  when the target is statically identifiable;
+- convert tags, headers, passage metadata, or export fields into ordered
+  metadata entries;
+- map external calls, commands, or engine hooks to typed effect declarations
+  only when the user supplies an explicit schema-backed mapping;
+- preserve source IDs when they already exist and are valid Recite IDs, and
+  otherwise record an old-to-new ID mapping for review.
+
+Importer output should include:
+
+- generated `.recite` source files that are meant to be edited after import;
+- a machine-readable import report containing diagnostics, skipped constructs,
+  lossy conversions, generated IDs, old-to-new ID mappings, and unmapped source
+  fields;
+- human-readable summary counts by source file and construct type;
+- provenance references for generated records and report items.
+
+The report should use the same diagnostic shape as §18. Importer diagnostic
+codes should use a dedicated namespace such as `RECITE_IMPORT001`. Each report
+item should include severity, source family, source file, source location when
+available, source construct type, action taken, and help text for the expected
+manual follow-up.
+
+Source-location preservation is best-effort:
+
+- plain text formats should report file, line, column, and end position where
+  the importer parser can recover them;
+- CSV imports should report row, column, and header name;
+- JSON imports should report a JSON Pointer path and, when supported by the
+  parser used by the implementation, byte or line/column ranges;
+- if a source format does not expose stable spans, the report should still carry
+  a stable record key such as node name, passage title, row number, or object ID.
+
+Supported migration paths by source family:
+
+- **ink**: importers may map knots, stitches, plain lines, simple choices,
+  static diverts, tags, and explicitly mapped external function calls. They must
+  report variables, tunnels, threads, glue/weave behavior, list operations,
+  sequence/shuffle behavior, arithmetic, complex expressions, and runtime
+  control flow as unsupported or lossy unless a later implementation issue
+  defines a narrower safe subset.
+- **Yarn Spinner**: importers may map nodes, dialogue lines, speaker prefixes,
+  options, tags, headers, simple jumps, and explicitly mapped commands. They
+  must report variable storage, expression semantics, command side effects,
+  shortcuts with unsupported conditions, localization metadata that cannot be
+  preserved, and runtime-specific behavior as manual migration work.
+- **Twee/Twine-style source**: importers may map passages to blocks, passage
+  text to lines, simple links to choices or diverts, and passage tags to
+  metadata. They must report macros, widgets, JavaScript/CSS, story-format
+  behavior, global state, and conditional/link syntax that has no direct Recite
+  equivalent.
+- **custom JSON/CSV exports**: importers may map conventional fields such as ID,
+  speaker, text, choice text, target, condition, effect, and metadata when the
+  mapping is explicit. They must report ambiguous nesting, multiple possible
+  targets, embedded scripts, unmapped columns or object fields, and rows or
+  objects that cannot produce valid Recite statements.
+
+The likely implementation order is:
+
+1. define the shared import report, provenance model, diagnostic namespace, and
+   fixture expectations;
+2. prototype a custom JSON/CSV importer because it validates mappings,
+   reporting, and span fallbacks without inheriting another language's runtime
+   semantics;
+3. prototype a small Twee/Twine-style subset because passages and links map
+   cleanly to blocks and choices;
+4. add ink and Yarn Spinner inspection or subset importers only after the report
+   model has proven useful for skipped and lossy constructs.
+
+Importer follow-up issues should stay separate from the native language design.
+The branchable work units are: shared import report/provenance model, custom
+JSON/CSV importer prototype, Twee/Twine subset importer prototype, ink
+inspection or subset importer, Yarn Spinner inspection or subset importer, and
+compatibility notes that document what must be migrated manually.
 
 ## 21. Non-Goals
 
@@ -2388,7 +2479,13 @@ Initial non-goals:
 - automatic ID renaming based on content changes;
 - implicit localization variant selection by the runtime;
 - `:elif` / `else if` sugar (deferred until real authoring pain is reported; nested `:else` + `:if` and `:match` cover the use cases);
-- general pattern matching beyond schema-declared enum dispatch (no destructuring, no tuples, no guards).
+- general pattern matching beyond schema-declared enum dispatch (no destructuring, no tuples, no guards);
+- a compatibility runtime for ink, Yarn Spinner, Clyde, Twee/Twine story
+  formats, or engine-specific dialogue plugins;
+- importer behavior that requires Recite to adopt another tool's syntax,
+  variable model, expression language, runtime side effects, or localization
+  pipeline;
+- silent migration of unsupported source constructs.
 
 ## 22. Recommended Milestones
 
