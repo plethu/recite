@@ -38,6 +38,10 @@ These issues have no unmet dependencies.
 | #105 Memory profiles and known limits | scale proof | release known-limits docs |
 | #126 `recite bench` command | scale proof | user-facing benchmark reports |
 | #156 Compact ID storage switch | performance follow-up | reduced ID allocation pressure |
+| #165 Realistic benchmark fixtures | scale proof | realistic project-shape evidence |
+| #166 Targeted compiler phase benchmarks | scale proof | algorithmic hot-spot visibility |
+| #167 Runtime allocation/clone pressure | scale proof | allocation-sensitive runtime evidence |
+| #168 Watch rebuild latency stress | scale proof | authoring refresh evidence |
 | #159 Import report/provenance model | migration | source-family importer prototypes |
 | #81 Unity adapter design | design | feeds #108, Unity refresh |
 | #84 VS Code LSP client scaffold | editor extensions | VS Code authoring workflow |
@@ -88,6 +92,18 @@ flowchart LR
     i72["#72"] --> i104["#104 large/epic stress"]
     i73 --> i105["#105 memory limits"]
     i36["#36"] --> i156["#156 compact IDs"]
+    i72 --> i165["#165 realistic fixtures"]
+    i73 --> i166["#166 targeted compiler benches"]
+    i73 --> i167["#167 runtime allocation pressure"]
+    i168["#168 watch rebuild stress"]
+    i104 --> i169["#169 release benchmark baseline"]
+    i105 --> i169
+    i126 --> i169
+    i156 --> i169
+    i165 --> i169
+    i166 --> i169
+    i167 --> i169
+    i168 --> i169
   end
 
   subgraph DOCS["Docs / adoption"]
@@ -129,6 +145,7 @@ flowchart LR
   i135 --> i112
   i94 -- adapters --> REL
   i74 -- scale proof --> REL
+  i169 -- release benchmark baseline --> REL
   i164 -- migration notes --> REL
   DLATER -- adoption docs --> REL
 ```
@@ -153,7 +170,11 @@ The benchmark suite (#73), trace counters (#75), benchmark smoke/regression
 policy (#74), and measured ID small-string evaluation (#36) are closed. The
 performance track can now move into large/epic CLI stress checks (#104), memory
 and known-limit reporting (#105), the user-facing `recite bench` command
-(#126), and the compact ID storage follow-up (#156).
+(#126), the compact ID storage follow-up (#156), realistic benchmark fixtures
+(#165), targeted compiler phase benchmarks (#166), runtime allocation/clone
+pressure measurement (#167), and watch rebuild latency stress checks (#168).
+Those measurement and coverage issues feed the blocked release benchmark
+baseline profile (#169).
 
 The docs site scaffold (#88), Rustdoc API examples (#91), migration transition
 guides (#96), and importer-boundary design (#95) are closed. The broad
