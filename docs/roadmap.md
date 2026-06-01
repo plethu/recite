@@ -30,8 +30,7 @@ blocking dependencies are closed.
 
 | Issue | Role | Unlocks |
 | --- | --- | --- |
-| #138 Metadata value syntax | unblocks a track | contextual validation, LSP schema-domain support |
-| #79 Adapter conformance fixtures | unblocks a track | per-engine adapter MVPs and refresh workflows |
+| #139 Metadata value domains | unblocks a track | schema-aware metadata validation, LSP schema-domain support |
 | #75 Trace performance counters | leaf | — |
 | #88 Docs site scaffold | leaf | later docs content |
 | #91 Rustdoc API examples | leaf | — |
@@ -40,7 +39,6 @@ blocking dependencies are closed.
 | #81 Unity adapter design | design | feeds #108, Unity refresh |
 | #83 Editor highlighting strategy | design | M12 editor extensions |
 | #134 v0 wire sync risk | hardening | #113 |
-| #135 Project-facing gates | hardening | #112 |
 | #136 Large Rust file cohesion audit | hardening | follow-up refactors as needed |
 
 ## Tracks
@@ -52,7 +50,7 @@ milestone.
 flowchart LR
   subgraph LSP["LSP track (authoring)"]
     direction LR
-    i138 --> i139
+    i138["#138"] --> i139["#139"]
     i139 --> i76["#76"]
     i76 --> i30["#30"]
     i76 --> i31["#31"]
@@ -65,15 +63,16 @@ flowchart LR
 
   subgraph ADP["Adapter track (critical path)"]
     direction LR
-    i79 --> i120["#120"]
-    i79 --> i121["#121"]
-    i79 --> i122["#122"]
+    i80["#80 Godot MVP"] --> i120["#120"]
+    i119["#119 watch loop"] --> i120
+    iBevy["Bevy MVP"] --> i121["#121"]
+    iUnity["Unity MVP"] --> i122["#122"]
     i120 --> i123["#123"]
     i121 --> i123
     i122 --> i123
     i123 --> i94["#94 adapter docs"]
-    i79 --> i108["#108 (also needs #81)"]
     i81["#81"] --> i108
+    i80 --> i108["#108 (also needs #81)"]
   end
 
   subgraph PERF["Perf track"]
@@ -108,7 +107,6 @@ flowchart LR
   subgraph REL["Release hardening (M14)"]
     direction LR
     i134["#134"]
-    i135["#135"]
     i136["#136"]
     i112["#112"]
     i113["#113"]
@@ -128,23 +126,24 @@ flowchart LR
 ## Critical path
 
 The adapter chain is still the longest release chain. The original adapter
-contract design issue (#78) and schema-domain export issue (#140) are now
-closed. The current open chain is:
+contract design issue (#78), conformance-fixture issue (#79), and schema-domain
+export issue (#140) are now closed. The current open chain is:
 
 ```
-#79 conformance + per-engine adapter MVPs → per-engine refresh workflows → adapter docs → release verification
+per-engine adapter MVPs + watch/editor refresh prerequisites → per-engine refresh workflows → adapter docs → release verification
 ```
 
-The metadata-domain design gate (#137) is also closed. Its first open follow-up
-is #138 metadata value syntax, which should land before treating schema-aware
-metadata validation, LSP completions, or editor affordances as routine
-implementation.
+The metadata-domain design gate (#137) and metadata value syntax issue (#138)
+are also closed. The first open follow-up is #139 metadata value domains and
+contextual validation, which should land before treating schema-aware metadata
+validation, LSP completions, or editor affordances as routine implementation.
 
 ## Release hardening
 
 The M14 "Release:" issues (#112–#116) sit at the end of the graph. They can't
 start until scale, adapters, and adoption docs are in place.
 
-Issues #134, #135, and #136 are pre-release hardening tasks that can start
-earlier because they reduce compatibility, gate, and review-surface risk before
-the final release checklist work.
+Issues #134 and #136 are pre-release hardening tasks that can start earlier
+because they reduce compatibility and review-surface risk before the final
+release checklist work. Issue #135 has already landed the project-facing gate
+script that release issue #112 can build on.
