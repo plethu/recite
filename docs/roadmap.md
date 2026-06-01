@@ -28,10 +28,17 @@ These issues have no unmet dependencies.
 
 | Issue | Role | Unlocks |
 | --- | --- | --- |
-| #76 LSP project and schema indexes | unblocks a track | LSP semantic diagnostics, completions, hover, navigation, rename |
-| #74 Fast benchmark smoke and regression policy | unblocks a track | scale proof and performance release evidence |
+| #30 LSP semantic diagnostics | LSP track | richer authoring feedback |
+| #31 LSP completions and hover | LSP track | schema-aware authoring |
+| #32 LSP navigation and rename | LSP track | cross-file refactoring |
+| #33 LSP missing-ID code action | LSP track | on-save ID workflow |
+| #77 LSP block/schema code actions | LSP track | editor repair actions |
+| #106 LSP large-project benchmarks | scale proof | LSP release evidence |
+| #104 Large/epic CLI stress checks | scale proof | release evidence |
+| #105 Memory profiles and known limits | scale proof | release known-limits docs |
+| #126 `recite bench` command | scale proof | user-facing benchmark reports |
+| #36 ID small-string evaluation | performance review | follow-up optimization decision |
 | #91 Rustdoc API examples | leaf | — |
-| #96 Migration transition guides | leaf | — |
 | #95 Importer-boundary design | design | #97 |
 | #81 Unity adapter design | design | feeds #108, Unity refresh |
 | #83 Editor highlighting strategy | design | M12 editor extensions |
@@ -49,12 +56,12 @@ flowchart LR
     direction LR
     i138["#138"] --> i139["#139"]
     i139["#139"] --> i76["#76"]
-    i76 --> i30["#30"]
-    i76 --> i31["#31"]
-    i76 --> i32["#32"]
-    i76 --> i33["#33"]
-    i76 --> i77["#77"]
-    i76 --> i106["#106"]
+    i76 --> i30["#30 diagnostics"]
+    i76 --> i31["#31 completions/hover"]
+    i76 --> i32["#32 navigation/rename"]
+    i76 --> i33["#33 missing-ID action"]
+    i76 --> i77["#77 block/schema actions"]
+    i76 --> i106["#106 LSP benchmarks"]
     i84["#84"] --> i86["#86"]
   end
 
@@ -75,16 +82,16 @@ flowchart LR
   subgraph PERF["Perf track"]
     direction LR
     i73["#73"] --> i74["#74"]
-    i36["#36"]
-    i105["#105"]
-    i126["#126"]
+    i74 --> i126["#126 recite bench"]
+    i72["#72"] --> i104["#104 large/epic stress"]
+    i73 --> i105["#105 memory limits"]
+    i73 --> i36["#36 ID SSO evaluation"]
   end
 
   subgraph DOCS["Docs / adoption"]
     direction LR
     subgraph DNOW["available now"]
       i91["#91"]
-      i96["#96"]
     end
     subgraph DLATER["after scale + adapters"]
       i89["#89"]
@@ -128,17 +135,20 @@ export issue (#140) are now closed. The current open chain is:
 per-engine adapter MVPs + watch/editor refresh prerequisites → per-engine refresh workflows → adapter docs → release verification
 ```
 
-The metadata-domain design gate (#137), metadata value syntax issue (#138), and
-metadata value-domain implementation (#139) are also closed. The first open
-follow-up is #76 LSP project and schema indexes, which now has the schema-domain
-surface it needs before semantic diagnostics, completions, hover, navigation, or
-rename work fan out.
+The metadata-domain design gate (#137), metadata value syntax issue (#138),
+metadata value-domain implementation (#139), and LSP project/schema index issue
+(#76) are closed. The LSP track can now fan out into semantic diagnostics (#30),
+completion/hover (#31), navigation/rename (#32), missing-ID code actions (#33),
+block/schema repair actions (#77), and LSP scale benchmarks (#106).
 
-The benchmark suite (#73) and trace counters (#75) are closed. The first open
-performance-policy follow-up is #74 fast benchmark smoke and regression policy.
+The benchmark suite (#73), trace counters (#75), and benchmark smoke/regression
+policy (#74) are closed. The performance track can now move into large/epic CLI
+stress checks (#104), memory and known-limit reporting (#105), the user-facing
+`recite bench` command (#126), and the measured ID small-string evaluation
+(#36).
 
-The docs site scaffold (#88) is closed. The remaining available docs/adoption
-leaf work is Rustdoc examples (#91) and migration transition guides (#96), while
+The docs site scaffold (#88) and migration transition guides (#96) are closed.
+The remaining available docs/adoption leaf work is Rustdoc examples (#91), while
 release-positioning docs such as #89 remain blocked on scale evidence and
 credible adapter paths.
 
