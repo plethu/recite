@@ -1,4 +1,27 @@
 //! Shared support for Recite Criterion benchmark targets.
+//!
+//! This unpublished crate contains reusable loaders, fixture drivers, and scale
+//! selection helpers for the workspace benchmark targets. It is documented so
+//! maintainers can extend the benchmark suite without duplicating compiler and
+//! runtime setup code.
+//!
+//! Local benchmark runs default to the small local scales. Heavier scales should
+//! be selected explicitly with `RECITE_BENCH_SCALES`.
+//!
+//! # Example
+//!
+//! ```
+//! # fn main() -> Result<(), Box<dyn std::error::Error>> {
+//! use std::str::FromStr;
+//!
+//! use recite_benchmarks::BenchmarkScale;
+//!
+//! let scale = BenchmarkScale::from_str("tiny")?;
+//! assert_eq!(scale.as_str(), "tiny");
+//! assert!(BenchmarkScale::DEFAULT.contains(&BenchmarkScale::Tiny));
+//! # Ok(())
+//! # }
+//! ```
 
 pub mod catalog;
 pub mod compiler;
