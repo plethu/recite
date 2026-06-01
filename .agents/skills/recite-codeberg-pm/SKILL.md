@@ -29,7 +29,7 @@ tea issues 17 --fields index,title,state,milestone,labels,url
 Use `recite-pm-check.sh full` for broad planning or label/milestone audits, not as a routine before every mutation. If a command would create or edit many remote objects, write an idempotent script that checks current state first and skips existing objects.
 
 For detailed issue and PR command examples, read `references/issue-pr-examples.md`.
-For parallel roadmap or milestone execution, read `references/parallel-issue-orchestration.md`.
+For multi-agent roadmap or milestone orchestration, use `.agents/skills/recite-parallel-issue-orchestration/SKILL.md`.
 
 ## Labels
 

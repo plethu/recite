@@ -53,6 +53,7 @@ Do not copy large sections of the spec into agent guidance. Read the relevant sp
 Use the relevant skill for procedural details:
 
 - Codeberg issues, milestones, labels, pull requests, and project planning: `.agents/skills/recite-codeberg-pm/SKILL.md`
+- Multi-agent roadmap or milestone orchestration: `.agents/skills/recite-parallel-issue-orchestration/SKILL.md`
 - Rust maintainability, architecture, DRY, visibility, validation ownership, and file-size review triggers: `.agents/skills/recite-rust-quality/SKILL.md`
 - Parser, AST, compiler, runtime, schema, effects, localisation IDs, and deterministic dialogue semantics: `.agents/skills/recite-core-language/SKILL.md`
 - Fixtures, snapshots, diagnostics, CLI checks, LSP behavior, and headless runtime tests: `.agents/skills/recite-testing-diagnostics/SKILL.md`
