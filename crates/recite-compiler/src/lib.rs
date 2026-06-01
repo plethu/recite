@@ -10,8 +10,9 @@
 //! Callers should inspect structured diagnostics instead of parsing rendered
 //! messages.
 //!
-//! For end-to-end authoring workflows, see the
-//! [game-developer guides][guides]. This Rustdoc focuses on the library API.
+//! Broader authoring workflow guides live in the
+//! [docs site][guides] as they are filled in. This Rustdoc focuses on the
+//! library API.
 //!
 //! [guides]: https://codeberg.org/plethu/recite/src/branch/main/docs-site/src/content/docs
 //!

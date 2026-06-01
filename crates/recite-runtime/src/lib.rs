@@ -13,8 +13,8 @@
 //! Adapter-facing convenience APIs are intentionally deferred to future adapter
 //! crates. Until those crates exist, adapters may call this crate directly while
 //! preserving the host-agnostic contract in `docs/engine-adapter-contract.md`.
-//! For end-to-end game-developer workflows, see the
-//! [game-developer guides][guides].
+//! Broader game-developer workflow guides live in the [docs site][guides] as
+//! they are filled in.
 //!
 //! [guides]: https://codeberg.org/plethu/recite/src/branch/main/docs-site/src/content/docs
 //!

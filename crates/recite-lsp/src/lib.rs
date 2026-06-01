@@ -5,8 +5,9 @@
 //! integrations normally launch the binary; tests and embedding hosts may call
 //! [`run_stdio`] directly.
 //!
-//! The LSP projects parser, compiler, schema, and project diagnostics into
-//! editor-facing notifications. It does not own language semantics.
+//! The LSP projects syntax and schema-loading diagnostics into editor-facing
+//! notifications. Compiler-backed semantic diagnostics are added through
+//! separate LSP feature work; this crate does not own language semantics.
 //!
 //! # Example
 //!
