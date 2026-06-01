@@ -38,7 +38,7 @@ These issues have no unmet dependencies.
 | #105 Memory profiles and known limits | scale proof | release known-limits docs |
 | #126 `recite bench` command | scale proof | user-facing benchmark reports |
 | #156 Compact ID storage switch | performance follow-up | reduced ID allocation pressure |
-| #97 Migration source inspection prototype | migration | importer/reporting implementation |
+| #159 Import report/provenance model | migration | source-family importer prototypes |
 | #81 Unity adapter design | design | feeds #108, Unity refresh |
 | #84 VS Code LSP client scaffold | editor extensions | VS Code authoring workflow |
 | #85 Neovim setup documentation | editor extensions | Neovim authoring workflow |
@@ -101,7 +101,15 @@ flowchart LR
   end
 
   subgraph MIG["Migration"]
-    i97["#97 source inspection"]
+    direction LR
+    i95["#95 importer boundary"] --> i159["#159 report/provenance"]
+    i159 --> i160["#160 JSON/CSV import"]
+    i159 --> i161["#161 Twee/Twine import"]
+    i159 --> i164["#164 compatibility notes"]
+    i160 --> i162["#162 ink import"]
+    i161 --> i162
+    i160 --> i163["#163 Yarn import"]
+    i161 --> i163
   end
 
   subgraph REL["Release hardening (M14)"]
@@ -121,6 +129,7 @@ flowchart LR
   i135 --> i112
   i94 -- adapters --> REL
   i74 -- scale proof --> REL
+  i164 -- migration notes --> REL
   DLATER -- adoption docs --> REL
 ```
 
@@ -147,11 +156,15 @@ and known-limit reporting (#105), the user-facing `recite bench` command
 (#126), and the compact ID storage follow-up (#156).
 
 The docs site scaffold (#88), Rustdoc API examples (#91), migration transition
-guides (#96), and importer-boundary design (#95) are closed. Migration source
-inspection (#97), VS Code LSP client scaffolding (#84), and Neovim setup docs
-(#85) can now start. VS Code TextMate highlighting (#157) follows #84, and
-Neovim Tree-sitter highlighting (#158) follows #85. Release-positioning docs
-such as #89 remain blocked on scale evidence and credible adapter paths.
+guides (#96), and importer-boundary design (#95) are closed. The broad
+migration source-inspection issue (#97) has been split into import
+report/provenance (#159), custom JSON/CSV import (#160), Twee/Twine import
+(#161), ink import (#162), Yarn Spinner import (#163), and initial migration
+compatibility notes (#164). VS Code LSP client scaffolding (#84) and Neovim
+setup docs (#85) can now start. VS Code TextMate highlighting (#157) follows
+#84, and Neovim Tree-sitter highlighting (#158) follows #85.
+Release-positioning docs such as #89 remain blocked on scale evidence and
+credible adapter paths.
 
 ## Release hardening
 
