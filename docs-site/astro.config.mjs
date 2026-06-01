@@ -45,6 +45,7 @@ export default defineConfig({
             { label: "Overview", slug: "reference" },
             { label: "CLI", slug: "reference/cli" },
             { label: "Rust API", slug: "reference/rust-api" },
+            { label: "Benchmarks", slug: "reference/benchmarks" },
             { label: "Source Format", slug: "reference/source-format" },
             { label: "Schema", slug: "reference/schema" },
           ],

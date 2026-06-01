@@ -2318,9 +2318,21 @@ The runtime should prefer shared immutable compiled data plus compact session st
 
 ### 19.8 Regression Policy
 
-CI should run a fast benchmark smoke suite on every pull request and a fuller benchmark suite on release branches or scheduled jobs.
+CI should run a fast, non-comparative benchmark smoke suite on every pull
+request and a fuller benchmark suite on release branches or scheduled jobs. The
+pull-request smoke suite must use the existing `crates/recite-benchmarks`
+Criterion targets with `RECITE_BENCH_SCALES=tiny` and explicit compiler/runtime
+bench target commands. It proves that the tiny compiler and runtime benchmarks
+build and execute quickly; it does not compare timings or enforce regression
+thresholds.
 
-Performance regressions should be treated like test failures when they exceed configured thresholds:
+Regression thresholds must be explicit and reviewable. They become blocking
+only when measured against an agreed baseline and execution profile, such as a
+stable Linux runner or documented release-measurement profile. Before those
+baselines exist, exceeding a threshold is a review trigger rather than an
+automatic failure.
+
+Initial regression review thresholds:
 
 - more than 10% regression in hot runtime paths;
 - more than 20% regression in compiler/LSP paths;
