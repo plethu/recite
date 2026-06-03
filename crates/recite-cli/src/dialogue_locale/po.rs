@@ -2,6 +2,7 @@ use std::path::Path;
 
 use super::DialogueCatalogMalformedReason;
 use crate::error::CliError;
+use recite_core::{extract_placeholder_names, validate_translation_placeholders};
 
 #[derive(Debug)]
 pub(super) struct PoEntry {
@@ -147,6 +148,7 @@ fn finish_entry(
         builder.start_line = 0;
         return Ok(());
     }
+    validate_placeholders(path, line, &source_text, &translation)?;
     let context = context
         .ok_or_else(|| malformed(path, line, DialogueCatalogMalformedReason::MissingContext))?;
 
@@ -158,6 +160,45 @@ fn finish_entry(
     builder.active = None;
     builder.start_line = 0;
     Ok(())
+}
+
+fn validate_placeholders(
+    path: &Path,
+    line: usize,
+    source_text: &str,
+    translation: &str,
+) -> Result<(), CliError> {
+    if translation.is_empty() {
+        return Ok(());
+    }
+
+    extract_placeholder_names(source_text).map_err(|error| {
+        malformed(
+            path,
+            line,
+            DialogueCatalogMalformedReason::PlaceholderMismatch {
+                detail: format!("msgid has invalid placeholder syntax: {}", error.message()),
+            },
+        )
+    })?;
+    extract_placeholder_names(translation).map_err(|error| {
+        malformed(
+            path,
+            line,
+            DialogueCatalogMalformedReason::PlaceholderMismatch {
+                detail: format!("msgstr has invalid placeholder syntax: {}", error.message()),
+            },
+        )
+    })?;
+    validate_translation_placeholders(source_text, translation).map_err(|error| {
+        malformed(
+            path,
+            line,
+            DialogueCatalogMalformedReason::PlaceholderMismatch {
+                detail: error.message(),
+            },
+        )
+    })
 }
 
 fn parse_po_quoted(path: &Path, line_number: usize, input: &str) -> Result<String, CliError> {

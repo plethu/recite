@@ -1,4 +1,4 @@
-use std::fmt;
+use std::{borrow::Borrow, fmt};
 
 use crate::CoreValueError;
 
@@ -37,6 +37,12 @@ macro_rules! define_id {
             }
         }
 
+        impl Borrow<str> for $name {
+            fn borrow(&self) -> &str {
+                self.as_str()
+            }
+        }
+
         impl TryFrom<&str> for $name {
             type Error = CoreValueError;
 
@@ -61,3 +67,4 @@ define_id!(BlockId);
 define_id!(EffectId);
 define_id!(LocaleId);
 define_id!(SpeakerId);
+define_id!(AvailabilityReasonId);

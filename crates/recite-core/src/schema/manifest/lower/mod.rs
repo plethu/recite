@@ -1,3 +1,4 @@
+mod availability;
 mod content;
 mod definitions;
 mod domains;
@@ -13,10 +14,11 @@ use super::validate::{validate_domain_references, validate_type_references};
 use crate::Diagnostic;
 use crate::schema::ProjectSchema;
 
+use availability::{lower_availability_reasons, validate_condition_availability_reason_mappings};
 use content::{PendingReferences, lower_markup, lower_metadata};
 use definitions::{lower_registries, lower_speakers, lower_types};
 use domains::lower_metadata_domains;
-use functions::{lower_conditions, lower_effects};
+use functions::{FunctionPendingReferences, lower_conditions, lower_effects};
 use version::{SchemaVersion, schema_version};
 
 pub(crate) fn lower_manifest(file: String, source: &str, raw: RawManifest) -> SchemaLoadReport {
@@ -25,6 +27,7 @@ pub(crate) fn lower_manifest(file: String, source: &str, raw: RawManifest) -> Sc
     let mut spans = ManifestSpans::new();
     let mut pending_type_refs = Vec::new();
     let mut pending_domain_refs = Vec::new();
+    let mut pending_availability_reason_mappings = Vec::new();
 
     match schema_version(source, &raw.schema_version) {
         SchemaVersion::One => {}
@@ -75,7 +78,29 @@ pub(crate) fn lower_manifest(file: String, source: &str, raw: RawManifest) -> Sc
         raw.conditions,
         &mut schema,
         &mut diagnostics,
+        FunctionPendingReferences {
+            type_refs: &mut pending_type_refs,
+            availability_reason_mappings: &mut pending_availability_reason_mappings,
+        },
+    );
+    spans.enter_section(source, "availability_reasons");
+    lower_availability_reasons(
+        &file,
+        source,
+        &mut spans,
+        raw.availability_reasons,
+        &mut schema,
+        &mut diagnostics,
         &mut pending_type_refs,
+    );
+    spans.enter_section(source, "conditions");
+    validate_condition_availability_reason_mappings(
+        &file,
+        source,
+        &mut spans,
+        pending_availability_reason_mappings,
+        &mut schema,
+        &mut diagnostics,
     );
     spans.enter_section(source, "effects");
     lower_effects(

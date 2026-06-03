@@ -1,7 +1,7 @@
 use recite_core::{
-    ConditionReturnType, EffectMode, MetadataContextSelector, MetadataDomainDefinition,
-    MetadataTarget, MissingMetadataContextPolicy, SchemaTypeDefinition, SchemaTypeRef,
-    load_schema_manifest_str,
+    AvailabilityReasonArgBinding, ConditionReturnType, EffectMode, MetadataContextSelector,
+    MetadataDomainDefinition, MetadataTarget, MissingMetadataContextPolicy, SchemaLiteralValue,
+    SchemaTypeDefinition, SchemaTypeRef, load_schema_manifest_str,
 };
 
 use crate::diagnostic_codes;
@@ -35,6 +35,25 @@ fn valid_generated_manifest_loads_into_canonical_schema() {
         schema.conditions["trust_gte"].returns,
         ConditionReturnType::Bool
     );
+    let mapping = schema.conditions["trust_gte"]
+        .availability_reason
+        .as_ref()
+        .expect("trust_gte has reason mapping");
+    assert_eq!(mapping.reason.as_str(), "trust_too_low");
+    assert_eq!(
+        mapping.args["subject"],
+        AvailabilityReasonArgBinding::ConditionParam("actor_a".to_owned())
+    );
+    assert_eq!(
+        schema.availability_reasons["trust_too_low"].template,
+        "{subject} does not trust {target} enough ({threshold})."
+    );
+    assert_eq!(
+        schema.availability_reasons["trust_too_low"]
+            .origin
+            .as_deref(),
+        Some("schema/availability.rs")
+    );
     assert_eq!(
         schema.conditions["thread_stage"].returns,
         ConditionReturnType::Enum("thread_stage_kind".to_owned())
@@ -56,6 +75,111 @@ fn valid_generated_manifest_loads_into_canonical_schema() {
         [MetadataTarget::Choice, MetadataTarget::Line]
     );
     assert!(!schema.markup["shake"].allows_nesting);
+}
+
+#[test]
+fn missing_and_empty_availability_reason_sections_lower_to_empty_maps() {
+    let missing = load_schema_manifest_str(
+        "fixtures/schema/valid/no_availability_reasons.json",
+        r#"{
+  "schema_version": 1
+}"#,
+    );
+    assert_eq!(diagnostic_codes(&missing), Vec::<&str>::new());
+    assert!(
+        missing
+            .schema
+            .expect("missing availability reason section is valid")
+            .availability_reasons
+            .is_empty()
+    );
+
+    let empty = load_schema_manifest_str(
+        "fixtures/schema/valid/empty_availability_reasons.json",
+        r#"{
+  "schema_version": 1,
+  "availability_reasons": {}
+}"#,
+    );
+    assert_eq!(diagnostic_codes(&empty), Vec::<&str>::new());
+    assert!(
+        empty
+            .schema
+            .expect("empty availability reason section is valid")
+            .availability_reasons
+            .is_empty()
+    );
+}
+
+#[test]
+fn availability_reason_literals_load_into_canonical_schema() {
+    let report = load_schema_manifest_str(
+        "fixtures/schema/valid/availability_reason_literals.json",
+        r#"{
+  "schema_version": 1,
+  "types": {
+    "mood": { "kind": "enum", "values": ["sad"] }
+  },
+  "registries": {
+    "actor": { "values": ["hazel"] }
+  },
+  "speakers": {
+    "rhea": {}
+  },
+  "conditions": {
+    "can_answer": {
+      "availability_reason": {
+        "reason": "answer_blocked",
+        "args": {
+          "actor": "hazel",
+          "speaker": "rhea",
+          "mood": "sad",
+          "count": 3,
+          "weight": 1.5,
+          "enabled": true
+        }
+      }
+    }
+  },
+  "availability_reasons": {
+    "answer_blocked": {
+      "template": "{actor} {speaker} {mood} {count} {weight} {enabled}",
+      "params": [
+        { "name": "actor", "type": "registry:actor" },
+        { "name": "speaker", "type": "speaker" },
+        { "name": "mood", "type": "enum:mood" },
+        { "name": "count", "type": "int" },
+        { "name": "weight", "type": "float" },
+        { "name": "enabled", "type": "bool" }
+      ]
+    }
+  }
+}"#,
+    );
+
+    assert_eq!(diagnostic_codes(&report), Vec::<&str>::new());
+    let schema = report.schema.expect("valid reason literals");
+    let args = &schema.conditions["can_answer"]
+        .availability_reason
+        .as_ref()
+        .expect("mapping")
+        .args;
+    assert_eq!(
+        args["actor"],
+        AvailabilityReasonArgBinding::Literal(SchemaLiteralValue::String("hazel".to_owned()))
+    );
+    assert_eq!(
+        args["count"],
+        AvailabilityReasonArgBinding::Literal(SchemaLiteralValue::Int(3))
+    );
+    assert_eq!(
+        args["weight"],
+        AvailabilityReasonArgBinding::Literal(SchemaLiteralValue::Float("1.5".to_owned()))
+    );
+    assert_eq!(
+        args["enabled"],
+        AvailabilityReasonArgBinding::Literal(SchemaLiteralValue::Bool(true))
+    );
 }
 
 #[test]

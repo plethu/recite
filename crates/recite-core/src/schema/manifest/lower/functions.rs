@@ -2,7 +2,8 @@ use std::collections::BTreeSet;
 
 use super::super::diagnostics::{DUPLICATE_DEFINITION, INVALID_TYPE_REFERENCE, MALFORMED_SHAPE};
 use super::super::raw::{
-    Named, RawConditionDefinition, RawEffectDefinition, RawParameterDefinition,
+    Named, RawConditionAvailabilityReasonMapping, RawConditionDefinition, RawEffectDefinition,
+    RawParameterDefinition,
 };
 use super::super::spans::ManifestSpans;
 use super::super::validate::{
@@ -16,6 +17,16 @@ use crate::schema::{
     SchemaTypeRef,
 };
 
+pub(super) struct PendingConditionAvailabilityReasonMapping {
+    pub(super) condition: String,
+    pub(super) raw: RawConditionAvailabilityReasonMapping,
+}
+
+pub(super) struct FunctionPendingReferences<'a> {
+    pub(super) type_refs: &'a mut Vec<PendingTypeReference>,
+    pub(super) availability_reason_mappings: &'a mut Vec<PendingConditionAvailabilityReasonMapping>,
+}
+
 pub(super) fn lower_conditions(
     file: &str,
     source: &str,
@@ -23,7 +34,7 @@ pub(super) fn lower_conditions(
     entries: Vec<Named<RawConditionDefinition>>,
     schema: &mut ProjectSchema,
     diagnostics: &mut Vec<Diagnostic>,
-    pending_type_refs: &mut Vec<PendingTypeReference>,
+    pending_refs: FunctionPendingReferences<'_>,
 ) {
     let mut seen = BTreeSet::new();
     for entry in entries {
@@ -48,7 +59,7 @@ pub(super) fn lower_conditions(
             diagnostics,
             &format!("condition '{}'", entry.name),
             &entry.value.params,
-            pending_type_refs,
+            pending_refs.type_refs,
         );
         let returns = match entry.value.returns.as_deref() {
             None | Some("bool") => ConditionReturnType::Bool,
@@ -56,7 +67,7 @@ pub(super) fn lower_conditions(
                 let return_span = spans.next_value_span(file, source, value);
                 match parse_enum_return(value) {
                     Some(name) => {
-                        pending_type_refs.push(PendingTypeReference {
+                        pending_refs.type_refs.push(PendingTypeReference {
                             owner: format!("condition '{}' return type", entry.name),
                             type_ref: SchemaTypeRef::Enum(name.clone()),
                             span: return_span,
@@ -78,9 +89,23 @@ pub(super) fn lower_conditions(
             }
         };
 
-        schema
-            .conditions
-            .insert(entry.name, ConditionDefinition { params, returns });
+        if let Some(mapping) = entry.value.availability_reason {
+            pending_refs.availability_reason_mappings.push(
+                PendingConditionAvailabilityReasonMapping {
+                    condition: entry.name.clone(),
+                    raw: mapping,
+                },
+            );
+        }
+
+        schema.conditions.insert(
+            entry.name,
+            ConditionDefinition {
+                params,
+                returns,
+                availability_reason: None,
+            },
+        );
     }
 }
 
@@ -140,7 +165,7 @@ pub(super) fn lower_effects(
     }
 }
 
-fn lower_params(
+pub(super) fn lower_params(
     file: &str,
     source: &str,
     spans: &mut ManifestSpans,

@@ -5,7 +5,10 @@ use std::collections::BTreeMap;
 use recite_compiler::{
     CompileInput, PotDocument, PotEntry, PotReference, extract_pot, extract_pot_with_schema,
 };
-use recite_core::{ProjectSchema, SpeakerDefinition};
+use recite_core::{
+    AvailabilityReasonDefinition, AvailabilityReasonId, ParameterDefinition, ProjectSchema,
+    SchemaTypeRef, SpeakerDefinition,
+};
 
 #[path = "../../../tests/support/fixtures.rs"]
 #[allow(dead_code)]
@@ -40,6 +43,62 @@ fn extracts_lines_choices_and_speaker_display_names_to_pot() {
         &pot.to_pot_string(),
         "pot_extraction__lines_choices_and_speaker_display_names".to_owned(),
     );
+}
+
+#[test]
+fn extracts_availability_reason_templates_to_pot_in_schema_order() {
+    let mut schema = ProjectSchema::empty_v1();
+    schema.availability_reasons = BTreeMap::from([
+        (
+            AvailabilityReasonId::new("z_reason").expect("valid reason id"),
+            AvailabilityReasonDefinition {
+                template: "Zed is blocked.".to_owned(),
+                params: Vec::new(),
+                origin: None,
+            },
+        ),
+        (
+            AvailabilityReasonId::new("trust_too_low").expect("valid reason id"),
+            AvailabilityReasonDefinition {
+                template: "{subject} does not trust {target} enough.".to_owned(),
+                params: vec![
+                    ParameterDefinition {
+                        name: "subject".to_owned(),
+                        type_ref: SchemaTypeRef::Speaker,
+                    },
+                    ParameterDefinition {
+                        name: "target".to_owned(),
+                        type_ref: SchemaTypeRef::Speaker,
+                    },
+                ],
+                origin: Some("schema/reasons.rs".to_owned()),
+            },
+        ),
+    ]);
+
+    let report = extract_pot_with_schema(project_inputs(), &schema);
+    let pot = report.catalog.expect("valid inputs produce a POT catalog");
+    let reason_entries = pot
+        .entries
+        .iter()
+        .filter(|entry| entry.context.starts_with("availability_reason:"))
+        .collect::<Vec<_>>();
+
+    assert_eq!(
+        reason_entries
+            .iter()
+            .map(|entry| entry.context.as_str())
+            .collect::<Vec<_>>(),
+        [
+            "availability_reason:trust_too_low",
+            "availability_reason:z_reason"
+        ]
+    );
+    assert_eq!(
+        reason_entries[0].source_text,
+        "{subject} does not trust {target} enough."
+    );
+    assert_eq!(reason_entries[0].comments, ["availability reason template"]);
 }
 
 #[test]

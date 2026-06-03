@@ -18,6 +18,8 @@ pub(crate) struct RawManifest {
     #[serde(default, deserialize_with = "deserialize_named_entries")]
     pub(crate) conditions: Vec<Named<RawConditionDefinition>>,
     #[serde(default, deserialize_with = "deserialize_named_entries")]
+    pub(crate) availability_reasons: Vec<Named<RawAvailabilityReasonDefinition>>,
+    #[serde(default, deserialize_with = "deserialize_named_entries")]
     pub(crate) effects: Vec<Named<RawEffectDefinition>>,
     #[serde(default, deserialize_with = "deserialize_named_entries")]
     pub(crate) metadata_domains: Vec<Named<RawMetadataDomainDefinition>>,
@@ -70,6 +72,26 @@ pub(crate) struct RawConditionDefinition {
     pub(crate) params: Vec<RawParameterDefinition>,
     #[serde(default, deserialize_with = "deserialize_optional_non_null")]
     pub(crate) returns: Option<String>,
+    #[serde(default, deserialize_with = "deserialize_optional_non_null")]
+    pub(crate) availability_reason: Option<RawConditionAvailabilityReasonMapping>,
+}
+
+#[derive(Debug, Deserialize)]
+#[serde(deny_unknown_fields)]
+pub(crate) struct RawConditionAvailabilityReasonMapping {
+    pub(crate) reason: String,
+    #[serde(default, deserialize_with = "deserialize_named_entries")]
+    pub(crate) args: Vec<Named<Value>>,
+}
+
+#[derive(Debug, Deserialize)]
+#[serde(deny_unknown_fields)]
+pub(crate) struct RawAvailabilityReasonDefinition {
+    pub(crate) template: String,
+    #[serde(default)]
+    pub(crate) params: Vec<RawParameterDefinition>,
+    #[serde(default, deserialize_with = "deserialize_optional_non_null")]
+    pub(crate) origin: Option<String>,
 }
 
 #[derive(Debug, Deserialize)]

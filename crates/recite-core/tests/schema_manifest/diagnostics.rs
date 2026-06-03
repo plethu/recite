@@ -585,3 +585,132 @@ fn duplicate_parameter_names_are_schema_diagnostics() {
     assert_eq!(diagnostic_codes(&report), ["RECITE_SCHEMA003"]);
     assert_eq!(report.diagnostics[0].span.start.line(), 7);
 }
+
+#[test]
+fn malformed_availability_reason_definitions_report_schema_diagnostics() {
+    let report = load_schema_manifest_str(
+        "fixtures/schema/invalid/availability_reason_definitions.json",
+        r#"{
+  "schema_version": 1,
+  "availability_reasons": {
+    "bad name": {
+      "template": "{subject}",
+      "params": [{ "name": "subject", "type": "speaker" }]
+    },
+    "unused_param": {
+      "template": "No placeholders.",
+      "params": [{ "name": "subject", "type": "speaker" }]
+    },
+    "unknown_placeholder": {
+      "template": "{subject} {target}",
+      "params": [{ "name": "subject", "type": "speaker" }]
+    },
+    "symbol_param": {
+      "template": "{subject}",
+      "params": [{ "name": "subject", "type": "symbol" }]
+    }
+  }
+}"#,
+    );
+
+    assert!(report.schema.is_none());
+    assert_eq!(
+        diagnostic_codes(&report),
+        [
+            "RECITE_SCHEMA001",
+            "RECITE_SCHEMA001",
+            "RECITE_SCHEMA001",
+            "RECITE_SCHEMA004"
+        ]
+    );
+}
+
+#[test]
+fn malformed_condition_availability_reason_mappings_report_schema_diagnostics() {
+    let report = load_schema_manifest_str(
+        "fixtures/schema/invalid/availability_reason_mappings.json",
+        r#"{
+  "schema_version": 1,
+  "types": {
+    "stage": { "kind": "enum", "values": ["intro"] }
+  },
+  "speakers": {
+    "hazel": {}
+  },
+  "conditions": {
+    "stage_is": {
+      "returns": "enum:stage",
+      "availability_reason": {
+        "reason": "need_trust",
+        "args": { "subject": "hazel" }
+      }
+    },
+    "trust_gte": {
+      "params": [{ "name": "actor", "type": "speaker" }],
+      "availability_reason": {
+        "reason": "need_trust",
+        "args": {
+          "subject": "$missing",
+          "threshold": "high",
+          "extra": true
+        }
+      }
+    },
+    "unknown_reason": {
+      "availability_reason": {
+        "reason": "missing_reason",
+        "args": {}
+      }
+    }
+  },
+  "availability_reasons": {
+    "need_trust": {
+      "template": "{subject} {threshold}",
+      "params": [
+        { "name": "subject", "type": "speaker" },
+        { "name": "threshold", "type": "int" }
+      ]
+    }
+  }
+}"#,
+    );
+
+    assert!(report.schema.is_none());
+    assert_eq!(
+        diagnostic_codes(&report),
+        [
+            "RECITE_SCHEMA001",
+            "RECITE_SCHEMA001",
+            "RECITE_SCHEMA004",
+            "RECITE_SCHEMA001",
+            "RECITE_SCHEMA001",
+            "RECITE_SCHEMA001",
+            "RECITE_SCHEMA001",
+            "RECITE_SCHEMA004"
+        ]
+    );
+    assert_eq!(
+        report
+            .diagnostics
+            .iter()
+            .find(|diagnostic| diagnostic.message.contains("stage_is")
+                && diagnostic.message.contains("missing argument 'threshold'"))
+            .expect("missing stage_is threshold diagnostic")
+            .span
+            .start
+            .line(),
+        13
+    );
+    assert_eq!(
+        report
+            .diagnostics
+            .iter()
+            .find(|diagnostic| diagnostic.message.contains("trust_gte")
+                && diagnostic.message.contains("missing argument 'subject'"))
+            .expect("missing trust_gte subject diagnostic")
+            .span
+            .start
+            .line(),
+        20
+    );
+}
