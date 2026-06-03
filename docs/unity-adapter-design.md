@@ -169,8 +169,16 @@ The exporter should provide two explicit editor commands:
 
 - export schema manifest: scan Unity-side declarations and write the generated
   manifest to the configured project path;
-- check schema freshness: compare the existing manifest against Unity-side
-  producer fingerprints and report stale or malformed producer state.
+- check schema freshness: rerun the Unity producer, lower both the existing
+  manifest and fresh export into the canonical schema model, compare the
+  resulting canonical schema fingerprints, and report stale or malformed
+  producer state.
+
+Unity-side producer fingerprints may support cheaper preflight checks when they
+are reliable, but they are not a replacement for canonical schema fingerprint
+comparison. If a Unity input source cannot expose reliable fingerprints, the
+adapter must document the weaker preflight behavior and still offer an explicit
+regenerate or full freshness check.
 
 Unity may also call those commands from CI or editor automation, but validation
 inside Recite tooling must still work from the manifest alone. Compiler and LSP
@@ -273,8 +281,10 @@ adapter has enough source/schema visibility to check freshness.
 
 ## Test Strategy
 
-The follow-up implementation should include Unity EditMode and PlayMode tests,
-plus host-independent adapter conformance coverage where possible.
+The follow-up implementation must include the host-independent adapter
+conformance coverage required by the engine-adapter contract. Unity EditMode
+and PlayMode tests should cover Unity-specific editor and runtime integration
+around that shared conformance baseline.
 
 EditMode tests should cover:
 
@@ -290,15 +300,21 @@ PlayMode tests should cover:
 - GameObject/OO start/select/acknowledge flow;
 - DOTS start/select/acknowledge flow once the DOTS facade exists;
 - one-active-session rejection;
+- default and explicit block starts;
+- unavailable and stale choice rejection;
 - pure condition registration and missing/evaluation/result-type errors;
 - immediate, blocking, and deferred effect requests;
+- wrong blocking-effect acknowledgement rejection;
 - blocking-effect save/load with the same pending effect ID;
 - locale fallback behavior;
+- stale compiled asset compatibility and schema mismatch behavior;
+- the declared `reload_for_next_session_only` changed-asset policy;
 - save/load handoff with pending prompts and pending blocking effects.
 
-Where Unity test runners cannot exercise the native bridge directly in CI,
-adapter conformance scenarios should still be runnable against a headless core
-or a thin test host so expected Recite traces stay shared with other adapters.
+Where Unity test runners cannot exercise the native bridge directly in CI, the
+Unity adapter still needs a thin or headless adapter driver for the required
+conformance scenarios so expected Recite traces stay shared with other
+adapters.
 
 ## MVP and Follow-Up Sequencing
 
