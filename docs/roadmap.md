@@ -5,7 +5,7 @@ can start now, what's blocked, and what's on the critical path.
 
 This is a planning aid. The live Codeberg board and
 `docs/recite-production-spec.md` §22–23 are authoritative; the issue numbers and
-edges here were pulled from the "Depends on" lines in issue bodies on 2026-06-01,
+edges here were refreshed from the "Depends on" lines in issue bodies on 2026-06-03,
 and will drift as work lands.
 
 ## v1 scope
@@ -34,7 +34,7 @@ These issues have no unmet dependencies.
 | #33 LSP missing-ID code action | LSP track | on-save ID workflow |
 | #77 LSP block/schema code actions | LSP track | editor repair actions |
 | #106 LSP large-project benchmarks | scale proof | LSP release evidence |
-| #170 Choice availability design | language foundations | #171, #172, final #90 wording |
+| #172 Presentation projection design | language foundations | #181, #182, #183, #184 |
 | #104 Large/epic CLI stress checks | scale proof | release evidence |
 | #105 Memory profiles and known limits | scale proof | release known-limits docs |
 | #126 `recite bench` command | scale proof | user-facing benchmark reports |
@@ -49,6 +49,7 @@ These issues have no unmet dependencies.
 | #85 Neovim setup documentation | editor extensions | Neovim authoring workflow |
 | #134 v0 wire sync risk | hardening | #113 |
 | #136 Large Rust file cohesion audit | hardening | follow-up refactors as needed |
+| #180 Generic condition/effect definitions | schema refactor | possible schema maintainability cleanup |
 
 ## Tracks
 
@@ -110,7 +111,11 @@ flowchart LR
   subgraph LANG["Language foundations"]
     direction LR
     iAvailDesign["#170 availability design"] --> iAvailImpl["#171 requires availability"]
-    iAvailDesign --> iAffordance["#172 generic choice affordances"]
+    iAvailDesign --> iProjectionDesign["#172 presentation projection design"]
+    iProjectionDesign --> iProjectionSchema["#181 projection schema"]
+    iProjectionSchema --> iProjectionWire["#182 projection compiled wire"]
+    iProjectionSchema --> iProjectionCliLsp["#183 projection CLI/LSP"]
+    iProjectionWire --> iProjectionConformance["#184 projection conformance"]
     iAvailImpl --> i90Source["#90 source-format wording"]
   end
 
@@ -194,10 +199,21 @@ setup docs (#85) can now start. VS Code TextMate highlighting (#157) follows
 #84, and Neovim Tree-sitter highlighting (#158) follows #85.
 
 Choice availability has been split out of the source-format reference docs.
-Issue #170 can start now to settle hidden-vs-disabled semantics, the final
+Issue #170 is closed and settled hidden-vs-disabled semantics, the final
 availability syntax, and player-facing unavailable reason ownership. Issue #171
-then implements the approved model, and #172 separately designs generic choice
-affordances after #170 without committing RPG-specific syntax to core Recite.
+then implements the approved model. Issue #172 separately designs the broader
+presentation projection contract that lets metadata on lines, choices, blocks,
+and project inputs drive structured adapter-visible affordances without
+committing RPG-specific syntax or runtime semantics to core Recite.
+
+The projection implementation follow-ups are split by surface: #181 adds the
+schema-owned projection declarations and label-template extraction, #182
+compiles those declarations into self-contained wire data, #183 surfaces the
+schema declarations through CLI/LSP diagnostics and authoring support, and #184
+adds adapter conformance coverage for projection-capable adapters. These remain
+blocked until the #172 design lands, and #182/#183/#184 depend on the schema
+surface from #181.
+
 The source-format page under #90 may still land stable sections such as blocks,
 lines, speakers, metadata, choices without availability, targets, conditional
 branches, effects, stable IDs, and related links. Final choice-availability
