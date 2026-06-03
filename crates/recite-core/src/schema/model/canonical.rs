@@ -5,10 +5,10 @@ use crate::{AvailabilityReasonId, ContentFingerprint, EffectMode};
 
 use super::{
     AvailabilityReasonArgBinding, AvailabilityReasonDefinition, ConditionAvailabilityReasonMapping,
-    ConditionDefinition, ConditionReturnType, EffectDefinition, FlatMetadataDomain,
-    MarkupDefinition, MetadataContextSelector, MetadataDomainDefinition, MetadataDefinition,
-    MetadataTarget, MissingMetadataContextPolicy, ParameterDefinition, ProjectSchema,
-    RegistryDefinition, SchemaLiteralValue, SchemaTypeDefinition, SchemaTypeRef, SpeakerDefinition,
+    ConditionDefinition, ConditionReturnType, EffectDefinition, MarkupDefinition,
+    MetadataContextSelector, MetadataDefinition, MetadataDomainDefinition, MetadataTarget,
+    MissingMetadataContextPolicy, ParameterDefinition, ProjectSchema, RegistryDefinition,
+    SchemaLiteralValue, SchemaTypeDefinition, SchemaTypeRef, SpeakerDefinition,
 };
 
 pub(super) fn compute_canonical_fingerprint(schema: &ProjectSchema) -> ContentFingerprint {

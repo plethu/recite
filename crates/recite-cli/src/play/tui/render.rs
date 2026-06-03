@@ -11,11 +11,12 @@ use crate::tui::PromptMode;
 use super::state::{TuiPrompt, TuiState, prompt_mode};
 
 mod controls;
+mod footer;
 mod help;
 mod prompt;
 mod transcript;
 
-use controls::{help_footer_control, render_footer};
+use footer::{help_footer_control, render_footer};
 use help::help_overlay_lines;
 use prompt::{render_deferred_queue, render_prompt};
 

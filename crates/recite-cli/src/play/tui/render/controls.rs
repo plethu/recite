@@ -246,4 +246,3 @@ pub(super) fn controls_for_prompt(prompt: &TuiPrompt, keymap: Keymap) -> Vec<Tui
         .filter(|control| control.is_available(keymap))
         .collect()
 }
-
