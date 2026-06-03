@@ -51,6 +51,7 @@ pub(crate) enum ChangedAssetPolicy {
 pub(crate) enum Capability {
     SourceImportVisibility,
     SchemaImportVisibility,
+    PresentationProjection,
 }
 
 #[derive(Clone, Copy, Debug, Deserialize, Eq, PartialEq)]
@@ -139,6 +140,11 @@ pub(crate) enum Operation {
         asset_slot: String,
         locale: String,
     },
+    ExerciseProjectionFailure {
+        asset_slot: String,
+        projection_id: String,
+        failure_kind: ProjectionFailureKind,
+    },
     Advance {
         asset_slot: Option<String>,
     },
@@ -203,6 +209,14 @@ pub(crate) enum ConditionBehaviorKind {
     Bool,
     Enum,
     Failure,
+}
+
+#[derive(Clone, Copy, Debug, Deserialize, Eq, PartialEq)]
+#[serde(rename_all = "snake_case")]
+pub(crate) enum ProjectionFailureKind {
+    MissingHandler,
+    EvaluationFailure,
+    InvalidResult,
 }
 
 #[derive(Clone, Debug, Deserialize)]

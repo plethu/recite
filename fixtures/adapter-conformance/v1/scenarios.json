@@ -18,7 +18,10 @@
     "effect_acknowledgement_error",
     "rejected_changed_asset_refresh_error",
     "save_load_incompatibility_error",
-    "localisation_error"
+    "localisation_error",
+    "missing_projection_handler_error",
+    "projection_evaluation_error",
+    "invalid_projection_result_error"
   ],
   "reference_driver": {
     "changed_asset_policy": "reject_refresh_until_session_ends",
@@ -1509,6 +1512,117 @@
           "expect": {
             "status": "error",
             "error_category": "localisation_error"
+          }
+        }
+      ]
+    },
+    {
+      "id": "missing_projection_handler_error_adapter_runner_required",
+      "title": "Missing projection handlers map to missing_projection_handler_error",
+      "requirement_level": "capability_gated",
+      "execution_mode": "adapter_runner_required",
+      "capability_gates": [
+        "presentation_projection"
+      ],
+      "expected_error": {
+        "error_category": "missing_projection_handler_error"
+      },
+      "adapter_runner_notes": "Adapter suites must configure a compiled asset with a presentation projection query whose handler is not registered, then assert a structured missing_projection_handler_error without parsing host prose.",
+      "steps": [
+        {
+          "operation": {
+            "kind": "compile_fixture",
+            "fixture": "fixtures/recite/valid/adapter_conformance/runtime_surface.recite",
+            "asset_slot": "main"
+          },
+          "expect": {
+            "status": "ok"
+          }
+        },
+        {
+          "operation": {
+            "kind": "exercise_projection_failure",
+            "asset_slot": "main",
+            "projection_id": "choice_affordance",
+            "failure_kind": "missing_handler"
+          },
+          "expect": {
+            "status": "error",
+            "error_category": "missing_projection_handler_error"
+          }
+        }
+      ]
+    },
+    {
+      "id": "projection_evaluation_error_adapter_runner_required",
+      "title": "Projection handler failures map to projection_evaluation_error",
+      "requirement_level": "capability_gated",
+      "execution_mode": "adapter_runner_required",
+      "capability_gates": [
+        "presentation_projection"
+      ],
+      "expected_error": {
+        "error_category": "projection_evaluation_error"
+      },
+      "adapter_runner_notes": "Adapter suites must register a projection query handler that fails while evaluating an otherwise valid presentation projection, then assert a structured projection_evaluation_error without parsing host prose.",
+      "steps": [
+        {
+          "operation": {
+            "kind": "compile_fixture",
+            "fixture": "fixtures/recite/valid/adapter_conformance/runtime_surface.recite",
+            "asset_slot": "main"
+          },
+          "expect": {
+            "status": "ok"
+          }
+        },
+        {
+          "operation": {
+            "kind": "exercise_projection_failure",
+            "asset_slot": "main",
+            "projection_id": "choice_affordance",
+            "failure_kind": "evaluation_failure"
+          },
+          "expect": {
+            "status": "error",
+            "error_category": "projection_evaluation_error"
+          }
+        }
+      ]
+    },
+    {
+      "id": "invalid_projection_result_error_adapter_runner_required",
+      "title": "Invalid projection handler results map to invalid_projection_result_error",
+      "requirement_level": "capability_gated",
+      "execution_mode": "adapter_runner_required",
+      "capability_gates": [
+        "presentation_projection"
+      ],
+      "expected_error": {
+        "error_category": "invalid_projection_result_error"
+      },
+      "adapter_runner_notes": "Adapter suites must register a projection query handler that returns a value outside the declared projection output contract, then assert a structured invalid_projection_result_error without parsing host prose.",
+      "steps": [
+        {
+          "operation": {
+            "kind": "compile_fixture",
+            "fixture": "fixtures/recite/valid/adapter_conformance/runtime_surface.recite",
+            "asset_slot": "main"
+          },
+          "expect": {
+            "status": "ok"
+          }
+        },
+        {
+          "operation": {
+            "kind": "exercise_projection_failure",
+            "asset_slot": "main",
+            "projection_id": "choice_affordance",
+            "failure_kind": "invalid_result"
+          },
+          "expect": {
+            "status": "error",
+            "error_category": "invalid_projection_result_error"
           }
         }
       ]

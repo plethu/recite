@@ -163,6 +163,31 @@ structured APIs must retain the full tree. Selecting an unavailable choice must
 return the unavailable-choice error without advancing traversal or recording
 selected-choice history.
 
+Adapters may also expose optional presentation projection hooks as defined by
+spec §5.6.1. Projection may add structured presentation affordances such as
+prefixes, badges, costs, chance estimates, skill labels, risk labels,
+consequence hints, portraits, sound cues, camera cues, or route hints to runtime
+output for host UI display. Projection must run around runtime traversal, not
+inside it: it must not add, remove, reorder, enable, or disable choices; change
+runtime output; mutate runtime session state; emit game-side effects; perform
+random rolls; or make save/load depend on projected UI state.
+
+Projection queries are pure host queries for presentation. Adapters that expose
+them must document when projection runs, whether it is synchronous or
+asynchronous, how stale projection data is refreshed while runtime output is
+visible, and how structured projection errors surface to the host. Projection
+query work must be bounded by the emitted runtime event, compiled metadata
+reachable from that event, and declared projector definitions; display must not
+trigger unbounded scans of engine resources or editor assets.
+
+Adapters may use host-native generic projector, affordance, target, kind, slot,
+or source types internally. Those types must lower into the canonical
+`SchemaPresentationProjectorDefinition`, `RuntimeProjectedDialogueEvent`, and
+`RuntimePresentationProjectionQuery` shapes from spec §5.6.1 before generated
+manifests, CLI/LSP tooling, or adapter conformance output depend on them. The
+generic helper shape is an implementation convenience; the lowered structured
+contract is the cross-adapter compatibility boundary.
+
 ## 6. Conditions
 
 Conditions are pure host queries. Adapters must register condition handlers
@@ -194,7 +219,9 @@ All producer surfaces must lower into the canonical Recite schema model and
 generated manifest. The compiler, CLI, LSP, and adapter runtime integration
 must agree on condition names, effect names, parameter types, enum variants,
 registries, metadata keys, metadata domains, availability reason templates,
-condition-to-reason mappings, and documented handler requirements.
+condition-to-reason mappings, projection query functions, presentation
+projector definitions, presentation label templates, and documented handler
+requirements.
 
 Adapters must not introduce a second, host-only schema truth that can drift
 from compiled dialogue validation. The generated manifest is the boundary: game
@@ -215,6 +242,9 @@ an engine adapter or may be a standalone project tool, but it owns:
   self-contained manifest snapshot;
 - exporting schema-owned availability reason templates and condition reason
   mappings without requiring Recite tooling to execute game code;
+- exporting schema-owned projection query function declarations, presentation
+  projector definitions, and presentation label templates without requiring
+  Recite tooling to execute game code;
 - checking whether the previously generated manifest is stale relative to the
   host state it claims to represent.
 
@@ -316,12 +346,20 @@ diagnostics. At minimum, producers must make ordering stable for:
 - registry names and values;
 - availability reason IDs, templates, parameter definitions, and provenance;
 - condition-to-availability-reason mappings;
+- projection query function names, parameter definitions, return types, and
+  call bounds;
+- presentation projector IDs, candidate selectors, inputs, query calls, output
+  IDs, output ordering, label template IDs, label source text, and structured
+  output field definitions;
 - canonical origin and producer-fingerprint records.
 
 Schema fingerprints must include availability reason templates and
-condition-to-reason mappings. A template, parameter, mapping, or provenance
-change that can affect validation, localisation, generated bindings, or runtime
-reason output must change the canonical schema fingerprint.
+condition-to-reason mappings, projection query function declarations,
+presentation projector definitions, and presentation label templates. A
+template, parameter, mapping, projector definition, projection query
+declaration, or provenance change that can affect validation, localisation,
+generated bindings, projection output, or runtime reason output must change the
+canonical schema fingerprint.
 
 The schema fingerprint must change when any canonical domain definition changes,
 including:
@@ -635,10 +673,20 @@ Required categories:
 - `effect_acknowledgement_error`;
 - `rejected_changed_asset_refresh_error`;
 - `save_load_incompatibility_error`;
-- `localisation_error`.
+- `localisation_error`;
+- `missing_projection_handler_error`;
+- `projection_evaluation_error`;
+- `invalid_projection_result_error`.
 
 Adapters should preserve source-backed diagnostics from the compiler and should
 include host asset paths or resource identifiers when available.
+
+Projection error categories are capability-gated: adapters that do not expose
+presentation projection do not emit them. `missing_projection_handler_error`
+means a declared projection query function has no host handler.
+`projection_evaluation_error` means a handler failed while evaluating a
+projection query. `invalid_projection_result_error` means a handler returned a
+value outside the declared projection query function return type.
 
 ## 13. Adapter Conformance Fixtures
 
@@ -679,6 +727,8 @@ schema so external suites can run the same scenarios. The contract covers:
 - save/load operations for session snapshots;
 - condition-hook configuration and failure injection;
 - localisation-hook behavior and failure injection;
+- projection-hook configuration and failure injection when the adapter exposes
+  presentation projection;
 - declared adapter capabilities;
 - declared changed-asset policy and active-session refresh/import behavior;
 - structured success outputs and structured stable-category errors.
@@ -707,7 +757,9 @@ an explicit allowed category set only where this contract deliberately permits
 more than one outcome. Success-only scenarios may omit `expected_error`; they
 must contain no error step.
 
-Mandatory scenarios must cover every committed stable category from §12:
+Mandatory scenarios must cover every committed stable category from §12, except
+projection categories, which are required only when the adapter declares
+presentation projection capability:
 
 - `validation_error`;
 - `asset_load_or_decode_error`;
@@ -725,7 +777,10 @@ Mandatory scenarios must cover every committed stable category from §12:
 - `effect_acknowledgement_error`;
 - `rejected_changed_asset_refresh_error`;
 - `save_load_incompatibility_error`;
-- `localisation_error`.
+- `localisation_error`;
+- `missing_projection_handler_error`;
+- `projection_evaluation_error`;
+- `invalid_projection_result_error`.
 
 If a category cannot be exercised with a host-agnostic reference runtime alone,
 the scenario must remain in the manifest as `adapter_runner_required` with the
@@ -760,6 +815,16 @@ including:
 - save/load with a pending prompt;
 - locale fallback or localisation failure behavior;
 - the adapter's declared changed-asset policy.
+
+Adapters that expose presentation projection must also cover:
+
+- deterministic projection candidate ordering for prompts with lines and
+  multiple choices;
+- repeated-metadata occurrence behavior;
+- projection query handler dispatch, failure, and result-type validation;
+- stable affordance ID and ordering in conformance output;
+- presentation label template ID, source text, localized text, and structured
+  field preservation.
 
 Host-runtime tests may be adapter-specific, but expected Recite traces should
 remain engine-independent where practical. Manual checks are acceptable only for

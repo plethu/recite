@@ -9,9 +9,15 @@ use std::collections::BTreeSet;
 
 use driver::{ReferenceDriver, StepResult};
 use manifest::{
-    ExecutionMode, RequirementLevel, StepStatus, load_contract_error_categories, load_manifest,
-    load_manifest_schema_error_categories, load_operation_schema_error_categories,
+    Capability, ExecutionMode, RequirementLevel, StepStatus, load_contract_error_categories,
+    load_manifest, load_manifest_schema_error_categories, load_operation_schema_error_categories,
 };
+
+const PROJECTION_ERROR_CATEGORIES: [&str; 3] = [
+    "missing_projection_handler_error",
+    "projection_evaluation_error",
+    "invalid_projection_result_error",
+];
 
 #[test]
 fn stable_error_category_table_stays_in_sync_with_contract_and_schema_artifacts() {
@@ -51,9 +57,36 @@ fn reference_driver_runs_reference_scenarios_and_checks_mandatory_category_cover
         .flat_map(|expected_error| expected_error.categories())
         .collect::<BTreeSet<_>>();
     let contract_categories_set = contract_categories.into_iter().collect::<BTreeSet<_>>();
+    let projection_categories = PROJECTION_ERROR_CATEGORIES
+        .into_iter()
+        .map(str::to_owned)
+        .collect::<BTreeSet<_>>();
+    let mandatory_contract_categories = contract_categories_set
+        .difference(&projection_categories)
+        .cloned()
+        .collect::<BTreeSet<_>>();
     assert_eq!(
-        mandatory_categories, contract_categories_set,
-        "mandatory scenario set must cover every stable category from docs/engine-adapter-contract.md §12"
+        mandatory_categories, mandatory_contract_categories,
+        "mandatory scenario set must cover every non-projection stable category from docs/engine-adapter-contract.md §12"
+    );
+
+    let projection_capability_categories = manifest
+        .scenarios
+        .iter()
+        .filter(|scenario| {
+            matches!(
+                scenario.requirement_level,
+                RequirementLevel::CapabilityGated
+            ) && scenario
+                .capability_gates
+                .contains(&Capability::PresentationProjection)
+        })
+        .filter_map(|scenario| scenario.expected_error.as_ref())
+        .flat_map(|expected_error| expected_error.categories())
+        .collect::<BTreeSet<_>>();
+    assert_eq!(
+        projection_capability_categories, projection_categories,
+        "presentation_projection scenarios must cover every projection stable error category from docs/engine-adapter-contract.md §12"
     );
 
     let mut executed = 0usize;
