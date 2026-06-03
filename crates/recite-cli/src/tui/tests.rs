@@ -163,7 +163,7 @@ fn settings_default_to_standard_contextual_hints_and_visible_unavailable_choices
 
     assert_eq!(settings.keymap, Keymap::Standard);
     assert_eq!(settings.key_hints, KeyHints::Contextual);
-    assert_eq!(settings.locale.to_string(), crate::i18n::DEFAULT_LOCALE);
+    assert_eq!(settings.locale.to_string(), "en-US");
     assert!(settings.show_unavailable_choices);
 }
 

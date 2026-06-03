@@ -1,3 +1,5 @@
+use super::locale::DEFAULT_LOCALE;
+use super::messages::DEFAULT_RESOURCE;
 use super::*;
 
 fn messages_with(
