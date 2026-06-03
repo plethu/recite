@@ -17,7 +17,7 @@ use recite_runtime::{
 use super::manifest::workspace_path;
 use super::manifest::{
     AckKind, BytesCase, Capability, ChangedAssetPolicy, ConditionBehaviorKind, EffectMode,
-    EventKind, Operation, ReferenceDriverConfig,
+    EventKind, Operation, ProjectionFailureKind, ReferenceDriverConfig,
 };
 
 const CATEGORY_VALIDATION_ERROR: &str = "validation_error";
@@ -37,6 +37,9 @@ const CATEGORY_EFFECT_ACKNOWLEDGEMENT_ERROR: &str = "effect_acknowledgement_erro
 const CATEGORY_REJECTED_CHANGED_ASSET_REFRESH_ERROR: &str = "rejected_changed_asset_refresh_error";
 const CATEGORY_SAVE_LOAD_INCOMPATIBILITY_ERROR: &str = "save_load_incompatibility_error";
 const CATEGORY_LOCALISATION_ERROR: &str = "localisation_error";
+const CATEGORY_MISSING_PROJECTION_HANDLER_ERROR: &str = "missing_projection_handler_error";
+const CATEGORY_PROJECTION_EVALUATION_ERROR: &str = "projection_evaluation_error";
+const CATEGORY_INVALID_PROJECTION_RESULT_ERROR: &str = "invalid_projection_result_error";
 
 #[derive(Clone, Debug)]
 struct CompiledSlot {
@@ -151,6 +154,11 @@ impl ReferenceDriver {
             Operation::ExerciseLocalisationFailure { asset_slot, locale } => {
                 self.exercise_localisation_failure(asset_slot, locale)
             }
+            Operation::ExerciseProjectionFailure {
+                asset_slot,
+                projection_id,
+                failure_kind,
+            } => self.exercise_projection_failure(asset_slot, projection_id, *failure_kind),
             Operation::Advance { asset_slot } => self.advance(asset_slot.as_deref()),
             Operation::Choose { choice_id } => self.choose(choice_id),
             Operation::ChooseFromSlot { slot } => self.choose_from_slot(slot),
@@ -505,6 +513,30 @@ impl ReferenceDriver {
             CATEGORY_LOCALISATION_ERROR,
             "adapter runner must accept localisation_error at import, start, or advance".to_owned(),
         )
+    }
+
+    fn exercise_projection_failure(
+        &mut self,
+        asset_slot: &str,
+        projection_id: &str,
+        failure_kind: ProjectionFailureKind,
+    ) -> StepResult {
+        let _ = (asset_slot, projection_id);
+        let (category, detail) = match failure_kind {
+            ProjectionFailureKind::MissingHandler => (
+                CATEGORY_MISSING_PROJECTION_HANDLER_ERROR,
+                "adapter runner must report missing projection query handlers",
+            ),
+            ProjectionFailureKind::EvaluationFailure => (
+                CATEGORY_PROJECTION_EVALUATION_ERROR,
+                "adapter runner must report projection handler evaluation failures",
+            ),
+            ProjectionFailureKind::InvalidResult => (
+                CATEGORY_INVALID_PROJECTION_RESULT_ERROR,
+                "adapter runner must report projection results outside the declared output contract",
+            ),
+        };
+        self.error(category, detail.to_owned())
     }
 
     fn advance(&mut self, asset_slot_override: Option<&str>) -> StepResult {

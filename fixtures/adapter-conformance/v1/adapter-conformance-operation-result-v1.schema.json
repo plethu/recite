@@ -23,7 +23,10 @@
         "effect_acknowledgement_error",
         "rejected_changed_asset_refresh_error",
         "save_load_incompatibility_error",
-        "localisation_error"
+        "localisation_error",
+        "missing_projection_handler_error",
+        "projection_evaluation_error",
+        "invalid_projection_result_error"
       ]
     },
     "changed_asset_policy": {
@@ -226,6 +229,35 @@
             },
             "locale": {
               "type": "string"
+            }
+          },
+          "additionalProperties": false
+        },
+        {
+          "type": "object",
+          "required": [
+            "kind",
+            "asset_slot",
+            "projection_id",
+            "failure_kind"
+          ],
+          "properties": {
+            "kind": {
+              "const": "exercise_projection_failure"
+            },
+            "asset_slot": {
+              "type": "string"
+            },
+            "projection_id": {
+              "type": "string"
+            },
+            "failure_kind": {
+              "type": "string",
+              "enum": [
+                "missing_handler",
+                "evaluation_failure",
+                "invalid_result"
+              ]
             }
           },
           "additionalProperties": false

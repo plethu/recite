@@ -35,7 +35,10 @@
         "effect_acknowledgement_error",
         "rejected_changed_asset_refresh_error",
         "save_load_incompatibility_error",
-        "localisation_error"
+        "localisation_error",
+        "missing_projection_handler_error",
+        "projection_evaluation_error",
+        "invalid_projection_result_error"
       ]
     },
     "reference_driver": {
