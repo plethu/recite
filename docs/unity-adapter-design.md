@@ -28,6 +28,81 @@ surface.
 - Adding generated C# bindings or a generated C# runtime fork.
 - Changing the Rust runtime, compiler, schema model, or manifest format.
 
+## Unity Documentation Baseline
+
+The design is validated against these Unity documentation surfaces:
+
+- Unity Package Manager:
+  <https://docs.unity3d.com/Manual/upm-ui.html> and
+  <https://docs.unity3d.com/Manual/Packages.html>.
+- `ScriptableObject` assets:
+  <https://docs.unity3d.com/6000.1/Documentation/Manual/class-ScriptableObject.html>.
+- `MonoBehaviour` components:
+  <https://docs.unity3d.com/2023.1/Documentation/ScriptReference/MonoBehaviour.html>.
+- `UnityEvent` inspector callbacks:
+  <https://docs.unity3d.com/Manual/UnityEvents.html>.
+- Scripted importers:
+  <https://docs.unity3d.com/Manual/ScriptedImporters.html>.
+- Asset postprocessing:
+  <https://docs.unity3d.com/ScriptReference/AssetPostprocessor.html>.
+- Entities package:
+  <https://docs.unity.cn/Components/com.unity.entities.html>.
+- Entities component concepts:
+  <https://docs.unity.cn/Packages/com.unity.entities@1.0/manual/concepts-components.html>.
+- Entities baking systems:
+  <https://docs.unity.cn/Packages/com.unity.entities@1.0/manual/baking-baking-systems-overview.html>.
+- Entities dynamic buffer components:
+  <https://docs.unity.cn/Packages/com.unity.entities@1.0/manual/components-buffer-introducing.html>.
+
+Unity package and Entities documentation is versioned. The first implementation
+issue must pin the supported Unity Editor and Entities package versions before
+locking public C# API shape. This design uses the docs above only to validate
+model fit and implementation constraints.
+
+## Upfront Plan Validation
+
+The package plan fits Unity Package Manager expectations: Recite should ship as
+a UPM package with separate runtime and editor assemblies, tests, samples if
+needed, and package metadata. Editor-only schema export and import code must
+stay out of player builds.
+
+The GameObject/OO plan fits the documented Unity object model. `MonoBehaviour`
+is the scene/component entry point, so `ReciteDialogueRunner` can provide scene
+wiring and lifecycle integration. `ScriptableObject` is suitable for asset-like
+shared data, so `ReciteDialogueAsset` may be a ScriptableObject-backed imported
+asset if implementation evidence supports it. `UnityEvent` can support
+inspector-configured callbacks, but it remains a convenience wrapper around
+structured C# output and must not replace machine-readable events or errors.
+
+The import plan fits Unity's asset pipeline. A scripted importer is the right
+candidate for turning compiled Recite files into Unity-native assets when the
+file extension can be owned by the adapter. Asset postprocessing can observe
+broader import completion or secondary changes, but should not become the only
+freshness authority because Recite's freshness contract is canonical schema and
+compiled-asset fingerprint comparison.
+
+The DOTS plan fits the Entities model if it treats ECS data as a facade over the
+shared adapter core. Entities components should hold data and request/output
+state; systems should translate those requests into adapter-core operations.
+Because unmanaged `IComponentData` and dynamic buffers are constrained data
+containers, the DOTS facade must not assume that every structured Recite value
+can be stored directly as a managed C# object in ECS component data. The
+implementation may need stable IDs, blob/proxy assets, dynamic buffers, or
+event entities to carry output while the shared adapter core owns traversal,
+native bridge calls, save/load snapshots, localisation, and errors.
+
+The baking plan fits Unity's authoring-to-entity workflow only if authoring
+components bake asset identity or references into runtime ECS data. Baking
+systems may help coordinate conversion, but entities that must end up in baked
+scenes should be created through bakers. DOTS support can therefore be staged
+after the GameObject MVP, but the shared asset/session model must be designed
+before either facade hardens.
+
+The validation result is that the current plan remains viable, with two
+implementation constraints: Unity version/package support must be pinned before
+public API work, and DOTS output/session data must be designed around Entities
+data restrictions rather than copying the OO C# object surface directly.
+
 ## Package Shape
 
 The Unity adapter should ship as a Unity Package Manager package, for example
