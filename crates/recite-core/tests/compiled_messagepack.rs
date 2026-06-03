@@ -45,7 +45,8 @@ fn decode_rejects_unknown_wire_tags() {
         id: "ask",
         source_text: "Ask?",
         metadata: WireRange(0, 0),
-        condition: None,
+        availability_requirement: None,
+        availability_reason_override: None,
         target: Tagged::nil(99),
         echo: Tagged::nil(recite_core::V0_CHOICE_ECHO_TAG_NONE),
         source_map: 0,
@@ -65,7 +66,8 @@ fn decode_rejects_unknown_wire_tags() {
         id: "ask",
         source_text: "Ask?",
         metadata: WireRange(0, 0),
-        condition: None,
+        availability_requirement: None,
+        availability_reason_override: None,
         target: Tagged::nil(recite_core::V0_DIVERT_TARGET_TAG_END),
         echo: Tagged::nil(99),
         source_map: 0,
@@ -95,7 +97,8 @@ fn decode_rejects_unknown_wire_tags() {
         id: "ask",
         source_text: "Ask?",
         metadata: WireRange(0, 0),
-        condition: Some(WireConditionExpression::Unknown(99)),
+        availability_requirement: Some(WireConditionExpression::Unknown(99)),
+        availability_reason_override: None,
         target: Tagged::nil(recite_core::V0_DIVERT_TARGET_TAG_END),
         echo: Tagged::nil(recite_core::V0_CHOICE_ECHO_TAG_NONE),
         source_map: 0,
@@ -208,6 +211,40 @@ fn decode_rejects_trailing_messagepack_bytes() {
 }
 
 #[test]
+fn decode_preserves_choice_availability_reason_override() {
+    let mut asset = valid_wire_asset();
+    asset.statements[0].kind = WireStatementKind::Prompt {
+        line: None,
+        choices: WireRange(0, 1),
+    };
+    asset.choices.push(WireChoice {
+        id: "ask",
+        source_text: "Ask?",
+        metadata: WireRange(0, 0),
+        availability_requirement: None,
+        availability_reason_override: Some("innkeeper_trust_hint"),
+        target: Tagged::nil(recite_core::V0_DIVERT_TARGET_TAG_END),
+        echo: Tagged::nil(recite_core::V0_CHOICE_ECHO_TAG_NONE),
+        source_map: 0,
+    });
+    asset.choice_lookup.push(WireLookupEntry {
+        id: "ask",
+        index: 0,
+    });
+    let bytes = rmp_serde::to_vec(&asset).expect("test wire encodes");
+
+    let decoded = decode_compiled_dialogue_messagepack(&bytes).expect("valid asset decodes");
+
+    assert_eq!(
+        decoded.choices[0]
+            .availability_reason_override
+            .as_ref()
+            .map(recite_core::AvailabilityReasonId::as_str),
+        Some("innkeeper_trust_hint")
+    );
+}
+
+#[test]
 fn decode_rejects_unsorted_or_duplicate_lookup_entries() {
     let mut unsorted = valid_wire_asset();
     unsorted.blocks.push(WireBlock {
@@ -281,7 +318,8 @@ fn decode_rejects_choice_echo_referencing_unknown_line() {
         id: "ask",
         source_text: "Ask?",
         metadata: WireRange(0, 0),
-        condition: None,
+        availability_requirement: None,
+        availability_reason_override: None,
         target: Tagged::nil(recite_core::V0_DIVERT_TARGET_TAG_END),
         echo: Tagged::payload(
             recite_core::V0_CHOICE_ECHO_TAG_EXPLICIT_LINE,
@@ -395,10 +433,11 @@ fn decode_rejects_invalid_compiled_names() {
         id: "ask",
         source_text: "Ask?",
         metadata: WireRange(0, 0),
-        condition: Some(WireConditionExpression::Call(WireConditionCall {
+        availability_requirement: Some(WireConditionExpression::Call(WireConditionCall {
             function: "",
             args: Vec::new(),
         })),
+        availability_reason_override: None,
         target: Tagged::nil(recite_core::V0_DIVERT_TARGET_TAG_END),
         echo: Tagged::nil(recite_core::V0_CHOICE_ECHO_TAG_NONE),
         source_map: 0,
@@ -468,7 +507,8 @@ fn decode_rejects_duplicate_line_and_choice_ids() {
         id: "shared_id",
         source_text: "Choice?",
         metadata: WireRange(0, 0),
-        condition: None,
+        availability_requirement: None,
+        availability_reason_override: None,
         target: Tagged::nil(recite_core::V0_DIVERT_TARGET_TAG_END),
         echo: Tagged::nil(recite_core::V0_CHOICE_ECHO_TAG_NONE),
         source_map: 0,
@@ -495,7 +535,8 @@ fn decode_rejects_empty_prompt_choices_and_condition_groups() {
         id: "ask",
         source_text: "Ask?",
         metadata: WireRange(0, 0),
-        condition: Some(WireConditionExpression::EmptyAnd),
+        availability_requirement: Some(WireConditionExpression::EmptyAnd),
+        availability_reason_override: None,
         target: Tagged::nil(recite_core::V0_DIVERT_TARGET_TAG_END),
         echo: Tagged::nil(recite_core::V0_CHOICE_ECHO_TAG_NONE),
         source_map: 0,
@@ -511,7 +552,8 @@ fn decode_rejects_empty_prompt_choices_and_condition_groups() {
         id: "ask",
         source_text: "Ask?",
         metadata: WireRange(0, 0),
-        condition: Some(WireConditionExpression::EmptyOr),
+        availability_requirement: Some(WireConditionExpression::EmptyOr),
+        availability_reason_override: None,
         target: Tagged::nil(recite_core::V0_DIVERT_TARGET_TAG_END),
         echo: Tagged::nil(recite_core::V0_CHOICE_ECHO_TAG_NONE),
         source_map: 0,

@@ -29,7 +29,7 @@ fn compiler_generated_messagepack_round_trips_the_v0_tag_surface() {
                 "  ? choose_none\n",
                 "    No echo.\n",
                 "    -> END\n",
-                "  ? choose_selected echo=selected_text if trust_gte(hazel, rhea, 1) or not trust_gte(rhea, hazel, 2)\n",
+                "  ? choose_selected echo=selected_text requires=(trust_gte(hazel, rhea, 1) or not trust_gte(rhea, hazel, 2))\n",
                 "    Selected.\n",
                 "    -> branch\n",
                 "  ? choose_explicit echo=line(echo_line)\n",
@@ -158,7 +158,7 @@ fn assert_schema_tag_surface_is_covered(dialogue: &CompiledDialogue) {
     }
     for choice in &dialogue.choices {
         collect_divert_tag(&choice.target, &mut divert_tags);
-        if let Some(condition) = &choice.condition {
+        if let Some(condition) = &choice.availability_requirement {
             collect_condition_tags(
                 condition,
                 &mut condition_tags,

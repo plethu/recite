@@ -84,7 +84,8 @@ mod text;
 mod value;
 
 pub use ast::{
-    Argument, Block, BlockReference, Choice, ChoiceEcho, ChoiceTarget, Comment, ConditionCall,
+    Argument, Block, BlockReference, Choice, ChoiceAvailabilityReasonOverride,
+    ChoiceAvailabilityRequirement, ChoiceEcho, ChoiceTarget, Comment, ConditionCall,
     ConditionExpression, ConditionGroup, ConditionUnary, Divert, DivertTarget, END_DIVERT_TARGET,
     Effect, EffectMode, IfBranch, Line, MatchArm, MatchBranch, MatchPattern, SourceFile,
     SourceMetadata, SourceMetadataEntry, SourceMetadataScalar, SourceMetadataValue, SourceText,

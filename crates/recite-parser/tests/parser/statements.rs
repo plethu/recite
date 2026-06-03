@@ -8,7 +8,7 @@ fn lowering_parses_statement_vocabulary_and_conditions() {
         "> prompt speaker=innkeeper portrait=neutral sfx=door sfx=mug\n",
         "  What do you need?\n",
         "\n",
-        "  ? ask_news echo=selected_text sfx=paper if familiarity_gte(hazel, rhea, 3)\n",
+        "  ? ask_news echo=selected_text sfx=paper requires=(familiarity_gte(hazel, rhea, 3))\n",
         "    What's the news?\n",
         "    -> local_news\n",
         ":if not thread_completed(rhea_job_response) and familiarity_gte(hazel, rhea, 3)\n",
@@ -78,7 +78,7 @@ fn lowering_parses_statement_vocabulary_and_conditions() {
     );
     assert_eq!(choice.echo, ChoiceEcho::SelectedText);
     assert_eq!(choice.source_text.text, "What's the news?");
-    assert!(choice.condition.is_some());
+    assert!(choice.availability_requirement.is_some());
     assert_eq!(
         choice.target.as_ref().map(|target| &target.target),
         Some(&DivertTarget::Block(recite_core::BlockReference::local(
@@ -123,6 +123,148 @@ fn lowering_parses_statement_vocabulary_and_conditions() {
         MatchPattern::Variant("tired".to_owned())
     );
     assert_eq!(match_branch.arms[1].pattern, MatchPattern::Wildcard);
+}
+
+#[test]
+fn choice_requires_and_reason_clauses_are_not_metadata() {
+    let source = concat!(
+        ":: tavern_arrival\n",
+        "? ask_news sfx=paper requires=(trust_gte(hazel, rhea, 3)) topic=rumours reason=innkeeper_trust_hint\n",
+        "  What's the news?\n",
+        "  -> END\n",
+    );
+
+    let lowered = lower(source);
+
+    assert!(lowered.diagnostics.is_empty());
+    let choice = choice_statement(single_block(&lowered), 0);
+    assert_eq!(
+        choice
+            .metadata
+            .iter()
+            .map(|entry| entry.key.as_str())
+            .collect::<Vec<_>>(),
+        ["sfx", "topic"]
+    );
+    let requirement = choice
+        .availability_requirement
+        .as_ref()
+        .expect("requires clause lowers");
+    let ConditionExpression::Grouped(grouped) = &requirement.condition else {
+        panic!("expected requires value to preserve grouped expression");
+    };
+    let ConditionExpression::Call(call) = grouped.expression.as_ref() else {
+        panic!("expected condition call");
+    };
+    assert_eq!(call.function, "trust_gte");
+    assert_eq!(
+        call.args,
+        [
+            Argument::identifier("hazel"),
+            Argument::identifier("rhea"),
+            ScalarValue::from(3_i64).into(),
+        ]
+    );
+    let reason = choice
+        .availability_reason_override
+        .as_ref()
+        .expect("reason clause lowers");
+    assert_eq!(reason.reason_id.as_str(), "innkeeper_trust_hint");
+    assert!(reason.argument_span.is_none());
+}
+
+#[test]
+fn bare_reason_without_requires_is_representable_before_validation() {
+    let source = concat!(
+        ":: tavern_arrival\n",
+        "? ask_news reason=innkeeper_trust_hint\n",
+        "  What's the news?\n",
+        "  -> END\n",
+    );
+
+    let lowered = lower(source);
+
+    assert!(lowered.diagnostics.is_empty());
+    let choice = choice_statement(single_block(&lowered), 0);
+    assert!(choice.availability_requirement.is_none());
+    assert_eq!(
+        choice
+            .availability_reason_override
+            .as_ref()
+            .map(|reason| reason.reason_id.as_str()),
+        Some("innkeeper_trust_hint")
+    );
+}
+
+#[test]
+fn parameterized_reason_clause_preserves_argument_span_for_validation() {
+    let source = concat!(
+        ":: tavern_arrival\n",
+        "? ask_news requires=(trust_gte(hazel, rhea, 3)) reason=trust_too_low(hazel)\n",
+        "  What's the news?\n",
+        "  -> END\n",
+    );
+
+    let lowered = lower(source);
+
+    assert!(lowered.diagnostics.is_empty());
+    let choice = choice_statement(single_block(&lowered), 0);
+    let reason = choice
+        .availability_reason_override
+        .as_ref()
+        .expect("reason clause lowers");
+    assert_eq!(reason.reason_id.as_str(), "trust_too_low");
+    assert_eq!(
+        reason
+            .argument_span
+            .as_ref()
+            .map(|span| (span.start.line(), span.start.column())),
+        Some((2, 69))
+    );
+}
+
+#[test]
+fn malformed_choice_availability_clauses_report_diagnostics() {
+    let source = concat!(
+        ":: tavern_arrival\n",
+        "? ask_news requires=(trust_gte(\n",
+        "  What's the news?\n",
+        "? ask_more reason=trust_too_low(\n",
+        "  More?\n",
+        "? ask_again requires=(trust_gte(hazel, rhea, 3)) requires=(trust_gte(hazel, rhea, 4)) reason=innkeeper_trust_hint reason=other\n",
+        "  Again?\n",
+    );
+
+    let lowered = lower(source);
+
+    assert_diagnostic_codes(
+        &lowered,
+        [
+            "RECITE_PARSE013",
+            "RECITE_PARSE008",
+            "RECITE_PARSE008",
+            "RECITE_PARSE008",
+        ],
+    );
+}
+
+#[test]
+fn trailing_choice_if_reports_targeted_help_without_condition_cascade() {
+    let source = concat!(
+        ":: tavern_arrival\n",
+        "? ask_news if trust_gte(hazel, rhea, 3)\n",
+        "  What's the news?\n",
+    );
+
+    let lowered = lower(source);
+
+    assert_diagnostic_codes(&lowered, ["RECITE_PARSE018"]);
+    assert_eq!(
+        lowered.diagnostics[0].help.as_deref(),
+        Some("use requires=(...) for visible unavailable choices or :if for hidden choices")
+    );
+    let choice = choice_statement(single_block(&lowered), 0);
+    assert!(choice.availability_requirement.is_none());
 }
 
 #[test]

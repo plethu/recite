@@ -40,54 +40,54 @@
     },
     {
       "path": "src/shard-000.recite",
-      "bytes": 181450,
-      "blake3": "95a175a577fdb576cac9fc2643c018fe314d902e15cc7b7352ca246f7ac676e3"
+      "bytes": 182250,
+      "blake3": "660ab7dbf0fd136f6f555b1bb2782caa7d7a21ab46c8cdd6a9ad9a658a1f717f"
     },
     {
       "path": "src/shard-001.recite",
-      "bytes": 181298,
-      "blake3": "5c41a5908767a4a661c3574f53d66f5098d0ffbd9aeaf354c423fb5a591a2fd5"
+      "bytes": 182098,
+      "blake3": "d37a8ac8036e18aa412547422c0bc3e0465f5ca26f4210916fe9198ef9024088"
     },
     {
       "path": "src/shard-002.recite",
-      "bytes": 181205,
-      "blake3": "55ee38afc41b990c0d281666ef081b37b12a5d40f7cbfc8a8e827d02e932afe1"
+      "bytes": 182005,
+      "blake3": "4a92436d65e8c82a4d835f8bd1a24c9837894fb35a52bd63cadbb842d1ed2ae0"
     },
     {
       "path": "src/shard-003.recite",
-      "bytes": 181508,
-      "blake3": "415e697b2bf1f57da49d9df10327203b3c466618235e7e339e325a632a2f5af1"
+      "bytes": 182308,
+      "blake3": "ab5814eafb6097ef6b2d39c51c4a2c6aabd638af9f1b8766613a301c1dcae27a"
     },
     {
       "path": "src/shard-004.recite",
-      "bytes": 181364,
-      "blake3": "06397d5427fb5b517442299b52c2ffdf8aa8a99bae89390f36d9a09f0026b661"
+      "bytes": 182164,
+      "blake3": "f12b98c2f724878e85a2dd33e0e9be85224bff30928bc0f7f78d4c4f28f51e87"
     },
     {
       "path": "src/shard-005.recite",
-      "bytes": 181353,
-      "blake3": "d5f33e670bcbd435d9ec492c4145dd2c0b36507250a6c1e023077f8beb5b6274"
+      "bytes": 182153,
+      "blake3": "b699946c4979d2d3ed233fe512da8831755ca14b7bb3fc1bd960ad1d366e97d2"
     },
     {
       "path": "src/shard-006.recite",
-      "bytes": 181389,
-      "blake3": "2c7a80fe4d6a14a44f315654eedc103ac3bac470ad7ac3763265b20bf471e217"
+      "bytes": 182189,
+      "blake3": "997a60542e8b1a4d5d0fa5732aa9f02d7d7f62c216108502774e2d63db66718f"
     },
     {
       "path": "src/shard-007.recite",
-      "bytes": 181231,
-      "blake3": "0a23dfaa513026fe869ae81ea8e644ea02b2e0b6ba9c7633ce4c9ec2c4038f8a"
+      "bytes": 182031,
+      "blake3": "379d7c60d10f93801e2969d22ca338389be8c1bfb872402da8c6fbfe10065d45"
     },
     {
       "path": "src/shard-008.recite",
-      "bytes": 181202,
-      "blake3": "96c067ea3a362b446dffcec043727a71e01d6d27605980e8615657eecb3911f6"
+      "bytes": 182002,
+      "blake3": "7fe673474c322f509878ffc6a9188a5608c309beb6d518bb1a8992b8dc24840f"
     },
     {
       "path": "src/shard-009.recite",
-      "bytes": 181251,
-      "blake3": "79f79cc8a9a55af59abf584dc41c6ea80d21d2a60fe45f8a8547b84637071adb"
+      "bytes": 182051,
+      "blake3": "acd16aac8ed5d109f1a56dabdd2aba4077e6d1397eb17492708eb89991cc2cc5"
     }
   ],
-  "summary_hash": "c295f5d636b2d74653d754f295c09d8697ecae0787eb93aaa3020dc7b09be7e3"
+  "summary_hash": "ccc6457d489e64413d1690130cbfe2f8b722739158a9f63e7581fbf6ea29f58c"
 }

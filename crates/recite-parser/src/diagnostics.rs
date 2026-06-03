@@ -20,6 +20,7 @@ pub(crate) const MISPLACED_ELSE: DiagnosticCode = DiagnosticCode::new_static("RE
 pub(crate) const MISPLACED_CASE: DiagnosticCode = DiagnosticCode::new_static("RECITE_PARSE016");
 pub(crate) const PROSE_AFTER_NESTED_STATEMENT: DiagnosticCode =
     DiagnosticCode::new_static("RECITE_PARSE017");
+pub(crate) const TRAILING_CHOICE_IF: DiagnosticCode = DiagnosticCode::new_static("RECITE_PARSE018");
 
 pub(crate) fn expected_statement_or_prose(span: SourceSpan) -> Diagnostic {
     Diagnostic::error(
@@ -87,6 +88,15 @@ pub(crate) fn malformed_condition(span: SourceSpan, detail: impl AsRef<str>) -> 
         format!("malformed condition expression: {}", detail.as_ref()),
         span,
     )
+}
+
+pub(crate) fn trailing_choice_if(span: SourceSpan) -> Diagnostic {
+    Diagnostic::error(
+        TRAILING_CHOICE_IF,
+        "old trailing choice if syntax is not valid Recite v1 syntax",
+        span,
+    )
+    .with_help("use requires=(...) for visible unavailable choices or :if for hidden choices")
 }
 
 pub(crate) fn malformed_case(span: SourceSpan) -> Diagnostic {

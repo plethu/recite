@@ -6,8 +6,9 @@ use recite_compiler::{
     CompileInput, PotDocument, PotEntry, PotReference, extract_pot, extract_pot_with_schema,
 };
 use recite_core::{
-    AvailabilityReasonDefinition, AvailabilityReasonId, ParameterDefinition, ProjectSchema,
-    SchemaTypeRef, SpeakerDefinition,
+    AvailabilityReasonDefinition, AvailabilityReasonId, ConditionDefinition, ConditionReturnType,
+    EnumTypeDefinition, ParameterDefinition, ProjectSchema, SchemaTypeDefinition, SchemaTypeRef,
+    SpeakerDefinition,
 };
 
 #[path = "../../../tests/support/fixtures.rs"]
@@ -35,6 +36,7 @@ fn extracts_lines_choices_and_speaker_display_names_to_pot() {
             SpeakerDefinition { display_name: None },
         ),
     ]);
+    add_project_input_conditions(&mut schema);
 
     let report = extract_pot_with_schema(project_inputs(), &schema);
     let pot = report.catalog.expect("valid inputs produce a POT catalog");
@@ -75,6 +77,7 @@ fn extracts_availability_reason_templates_to_pot_in_schema_order() {
             },
         ),
     ]);
+    add_project_input_conditions(&mut schema);
 
     let report = extract_pot_with_schema(project_inputs(), &schema);
     let pot = report.catalog.expect("valid inputs produce a POT catalog");
@@ -99,6 +102,37 @@ fn extracts_availability_reason_templates_to_pot_in_schema_order() {
         "{subject} does not trust {target} enough."
     );
     assert_eq!(reason_entries[0].comments, ["availability reason template"]);
+}
+
+fn add_project_input_conditions(schema: &mut ProjectSchema) {
+    schema.types.insert(
+        "stage_kind".to_owned(),
+        SchemaTypeDefinition::Enum(EnumTypeDefinition {
+            values: ["ready".to_owned(), "waiting".to_owned()].into(),
+        }),
+    );
+    schema.conditions.insert(
+        "trusts".to_owned(),
+        ConditionDefinition {
+            params: vec![ParameterDefinition {
+                name: "actor".to_owned(),
+                type_ref: SchemaTypeRef::Symbol,
+            }],
+            returns: ConditionReturnType::Bool,
+            availability_reason: None,
+        },
+    );
+    schema.conditions.insert(
+        "stage".to_owned(),
+        ConditionDefinition {
+            params: vec![ParameterDefinition {
+                name: "thread".to_owned(),
+                type_ref: SchemaTypeRef::Symbol,
+            }],
+            returns: ConditionReturnType::Enum("stage_kind".to_owned()),
+            availability_reason: None,
+        },
+    );
 }
 
 #[test]

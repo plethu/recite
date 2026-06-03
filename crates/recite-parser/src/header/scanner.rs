@@ -69,6 +69,7 @@ impl<'a> Iterator for HeaderFields<'a> {
         let start = self.cursor;
         let mut quote = None;
         let mut bracket_depth = 0_u32;
+        let mut paren_depth = 0_u32;
 
         while let Some(character) = self.current_char() {
             match character {
@@ -92,7 +93,15 @@ impl<'a> Iterator for HeaderFields<'a> {
                     bracket_depth -= 1;
                     self.advance_char();
                 }
-                ' ' | '\t' if quote.is_none() && bracket_depth == 0 => break,
+                '(' if quote.is_none() => {
+                    paren_depth += 1;
+                    self.advance_char();
+                }
+                ')' if quote.is_none() && paren_depth > 0 => {
+                    paren_depth -= 1;
+                    self.advance_char();
+                }
+                ' ' | '\t' if quote.is_none() && bracket_depth == 0 && paren_depth == 0 => break,
                 _ => self.advance_char(),
             }
         }

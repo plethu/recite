@@ -48,7 +48,7 @@ fn condition_parser_rejects_dangling_and_trailing_tokens() {
 
     assert_diagnostic_codes(
         &lowered,
-        ["RECITE_PARSE013", "RECITE_PARSE013", "RECITE_PARSE013"],
+        ["RECITE_PARSE013", "RECITE_PARSE013", "RECITE_PARSE018"],
     );
     assert_eq!(
         lowered
@@ -56,7 +56,7 @@ fn condition_parser_rejects_dangling_and_trailing_tokens() {
             .iter()
             .map(|diagnostic| (diagnostic.span.start.line(), diagnostic.span.start.column()))
             .collect::<Vec<_>>(),
-        [(2, 26), (5, 18), (8, 34)]
+        [(2, 26), (5, 18), (8, 7)]
     );
 
     let choice = choice_statement(single_block(&lowered), 0);
@@ -64,7 +64,7 @@ fn condition_parser_rejects_dangling_and_trailing_tokens() {
         choice.id.as_ref().map(recite_core::ChoiceId::as_str),
         Some("ask")
     );
-    assert!(choice.condition.is_none());
+    assert!(choice.availability_requirement.is_none());
     assert!(choice.metadata.is_empty());
 }
 
@@ -227,6 +227,7 @@ fn malformed_headers_conditions_and_cases_report_diagnostics() {
         [
             "RECITE_PARSE008",
             "RECITE_PARSE008",
+            "RECITE_PARSE018",
             "RECITE_PARSE010",
             "RECITE_PARSE012",
             "RECITE_PARSE013",

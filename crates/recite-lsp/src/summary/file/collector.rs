@@ -83,8 +83,8 @@ impl FileSummaryCollector {
             }),
         }
         self.collect_metadata(&choice.metadata);
-        if let Some(condition) = &choice.condition {
-            self.collect_condition_expression(condition);
+        if let Some(requirement) = &choice.availability_requirement {
+            self.collect_condition_expression(&requirement.condition);
         }
         if let Some(target) = &choice.target {
             self.collect_divert_target(&target.target, &target.span);

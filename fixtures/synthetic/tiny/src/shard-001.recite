@@ -90,16 +90,16 @@
 # synthetic block 00008
 > line_00008_000 speaker=speaker_00 portrait="portrait_00"
   line 00008 000 umbra lantern thicket circuit zenith needle circuit bridge lantern.
-  ? choice_00008_000 sfx=chime if flag("flag_08")
+  ? choice_00008_000 sfx=chime requires=(flag("flag_08"))
     choice 00008 000 xenial garden ember zenith needle bridge delta yonder xenial.
     -> block_00009
-  ? choice_00008_001 sfx=chime if counter_gte("counter_00", 2)
+  ? choice_00008_001 sfx=chime requires=(counter_gte("counter_00", 2))
     choice 00008 001 willow umbra needle willow fable lantern orbit willow jasmine.
     -> END
-  ? choice_00008_002 sfx=chime if flag("flag_08")
+  ? choice_00008_002 sfx=chime requires=(flag("flag_08"))
     choice 00008 002 signal willow ripple jasmine quartz garden fable ion bridge.
     -> END
-  ? choice_00008_003 sfx=chime if counter_gte("counter_00", 2)
+  ? choice_00008_003 sfx=chime requires=(counter_gte("counter_00", 2))
     choice 00008 003 bridge orbit keystone ember lantern needle circuit signal yonder.
     -> block_00009
 > line_00008_001 speaker=speaker_00 portrait="portrait_00"

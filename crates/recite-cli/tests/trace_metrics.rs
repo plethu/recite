@@ -15,7 +15,7 @@ fn trace_metrics_are_opt_in_and_run_rejects_metrics_flag() {
             ":: start default\n",
             "> intro\n",
             "  Welcome.\n",
-            "  ? help if trusts(player)\n",
+            "  ? help requires=(trusts(player))\n",
             "    Help.\n",
             "    -> help\n",
             "  ? leave\n",

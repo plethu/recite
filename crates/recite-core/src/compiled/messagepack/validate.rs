@@ -98,7 +98,7 @@ pub(super) fn validate_dialogue(
             choice.metadata,
             MetadataIndex::as_u32,
         )?;
-        if let Some(condition) = &choice.condition {
+        if let Some(condition) = &choice.availability_requirement {
             validate_condition(condition)?;
         }
         validate_divert(dialogue, &choice.target)?;
