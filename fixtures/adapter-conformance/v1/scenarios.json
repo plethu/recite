@@ -1519,9 +1519,11 @@
     {
       "id": "missing_projection_handler_error_adapter_runner_required",
       "title": "Missing projection handlers map to missing_projection_handler_error",
-      "requirement_level": "mandatory",
+      "requirement_level": "capability_gated",
       "execution_mode": "adapter_runner_required",
-      "capability_gates": [],
+      "capability_gates": [
+        "presentation_projection"
+      ],
       "expected_error": {
         "error_category": "missing_projection_handler_error"
       },
@@ -1554,9 +1556,11 @@
     {
       "id": "projection_evaluation_error_adapter_runner_required",
       "title": "Projection handler failures map to projection_evaluation_error",
-      "requirement_level": "mandatory",
+      "requirement_level": "capability_gated",
       "execution_mode": "adapter_runner_required",
-      "capability_gates": [],
+      "capability_gates": [
+        "presentation_projection"
+      ],
       "expected_error": {
         "error_category": "projection_evaluation_error"
       },
@@ -1589,9 +1593,11 @@
     {
       "id": "invalid_projection_result_error_adapter_runner_required",
       "title": "Invalid projection handler results map to invalid_projection_result_error",
-      "requirement_level": "mandatory",
+      "requirement_level": "capability_gated",
       "execution_mode": "adapter_runner_required",
-      "capability_gates": [],
+      "capability_gates": [
+        "presentation_projection"
+      ],
       "expected_error": {
         "error_category": "invalid_projection_result_error"
       },

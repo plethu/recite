@@ -51,6 +51,7 @@ pub(crate) enum ChangedAssetPolicy {
 pub(crate) enum Capability {
     SourceImportVisibility,
     SchemaImportVisibility,
+    PresentationProjection,
 }
 
 #[derive(Clone, Copy, Debug, Deserialize, Eq, PartialEq)]

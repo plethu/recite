@@ -41,7 +41,8 @@
       "type": "string",
       "enum": [
         "source_import_visibility",
-        "schema_import_visibility"
+        "schema_import_visibility",
+        "presentation_projection"
       ]
     },
     "requirement_level": {
