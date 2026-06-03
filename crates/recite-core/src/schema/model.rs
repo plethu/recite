@@ -1,7 +1,7 @@
 use std::collections::{BTreeMap, BTreeSet};
 
 use crate::compiled::{SchemaFingerprint, canonical_blake3_fingerprint};
-use crate::{ContentFingerprint, EffectMode};
+use crate::{AvailabilityReasonId, ContentFingerprint, EffectMode};
 
 #[must_use]
 pub fn canonical_schema_fingerprint(schema: &ProjectSchema) -> SchemaFingerprint {
@@ -16,6 +16,7 @@ pub struct ProjectSchema {
     pub registries: BTreeMap<String, RegistryDefinition>,
     pub speakers: BTreeMap<String, SpeakerDefinition>,
     pub conditions: BTreeMap<String, ConditionDefinition>,
+    pub availability_reasons: BTreeMap<AvailabilityReasonId, AvailabilityReasonDefinition>,
     pub effects: BTreeMap<String, EffectDefinition>,
     pub metadata_domains: BTreeMap<String, MetadataDomainDefinition>,
     pub metadata: BTreeMap<String, MetadataDefinition>,
@@ -31,6 +32,7 @@ impl ProjectSchema {
             registries: BTreeMap::new(),
             speakers: BTreeMap::new(),
             conditions: BTreeMap::new(),
+            availability_reasons: BTreeMap::new(),
             effects: BTreeMap::new(),
             metadata_domains: BTreeMap::new(),
             metadata: BTreeMap::new(),
@@ -51,6 +53,7 @@ impl ProjectSchema {
         canonical.registries(&self.registries);
         canonical.speakers(&self.speakers);
         canonical.conditions(&self.conditions);
+        canonical.availability_reasons(&self.availability_reasons);
         canonical.effects(&self.effects);
         canonical.metadata_domains(&self.metadata_domains);
         canonical.metadata(&self.metadata);
@@ -109,6 +112,7 @@ pub struct ParameterDefinition {
 pub struct ConditionDefinition {
     pub params: Vec<ParameterDefinition>,
     pub returns: ConditionReturnType,
+    pub availability_reason: Option<ConditionAvailabilityReasonMapping>,
 }
 
 /// Supported condition return domains.
@@ -116,6 +120,37 @@ pub struct ConditionDefinition {
 pub enum ConditionReturnType {
     Bool,
     Enum(String),
+}
+
+/// A schema-owned localisable template for unavailable-choice explanations.
+#[derive(Clone, Debug, Eq, PartialEq)]
+pub struct AvailabilityReasonDefinition {
+    pub template: String,
+    pub params: Vec<ParameterDefinition>,
+    pub origin: Option<String>,
+}
+
+/// Default availability reason mapping declared on a boolean condition.
+#[derive(Clone, Debug, Eq, PartialEq)]
+pub struct ConditionAvailabilityReasonMapping {
+    pub reason: AvailabilityReasonId,
+    pub args: BTreeMap<String, AvailabilityReasonArgBinding>,
+}
+
+/// Binding from an availability reason parameter to a condition argument or literal.
+#[derive(Clone, Debug, Eq, PartialEq)]
+pub enum AvailabilityReasonArgBinding {
+    ConditionParam(String),
+    Literal(SchemaLiteralValue),
+}
+
+/// Eq-safe schema literal used in canonical schema-owned mappings.
+#[derive(Clone, Debug, Eq, PartialEq)]
+pub enum SchemaLiteralValue {
+    String(String),
+    Int(i64),
+    Float(String),
+    Bool(bool),
 }
 
 /// A declared effect request.
@@ -281,6 +316,21 @@ impl CanonicalSchemaBytes {
                     self.string(name);
                 }
             }
+            self.field("availability_reason");
+            self.availability_reason_mapping(definition.availability_reason.as_ref());
+        }
+    }
+
+    fn availability_reasons(
+        &mut self,
+        reasons: &BTreeMap<AvailabilityReasonId, AvailabilityReasonDefinition>,
+    ) {
+        self.section("availability_reasons", reasons.len());
+        for (id, definition) in reasons {
+            self.entry(id.as_str());
+            self.field_string("template", &definition.template);
+            self.params("params", &definition.params);
+            self.field_option_string("origin", definition.origin.as_deref());
         }
     }
 
@@ -348,6 +398,59 @@ impl CanonicalSchemaBytes {
             self.entry(&param.name);
             self.field("type");
             self.type_ref(&param.type_ref);
+        }
+    }
+
+    fn availability_reason_mapping(
+        &mut self,
+        mapping: Option<&ConditionAvailabilityReasonMapping>,
+    ) {
+        match mapping {
+            Some(mapping) => {
+                self.token("some");
+                self.field_string("reason", mapping.reason.as_str());
+                self.field("args");
+                self.usize(mapping.args.len());
+                for (name, binding) in &mapping.args {
+                    self.entry(name);
+                    self.availability_reason_arg_binding(binding);
+                }
+            }
+            None => self.token("none"),
+        }
+    }
+
+    fn availability_reason_arg_binding(&mut self, binding: &AvailabilityReasonArgBinding) {
+        match binding {
+            AvailabilityReasonArgBinding::ConditionParam(name) => {
+                self.token("condition_param");
+                self.string(name);
+            }
+            AvailabilityReasonArgBinding::Literal(value) => {
+                self.token("literal");
+                self.schema_literal_value(value);
+            }
+        }
+    }
+
+    fn schema_literal_value(&mut self, value: &SchemaLiteralValue) {
+        match value {
+            SchemaLiteralValue::String(value) => {
+                self.token("string");
+                self.string(value);
+            }
+            SchemaLiteralValue::Int(value) => {
+                self.token("int");
+                self.bytes.extend_from_slice(&value.to_le_bytes());
+            }
+            SchemaLiteralValue::Float(value) => {
+                self.token("float");
+                self.string(value);
+            }
+            SchemaLiteralValue::Bool(value) => {
+                self.token("bool");
+                self.bool(*value);
+            }
         }
     }
 

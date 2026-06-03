@@ -153,6 +153,7 @@ cli-error-dialogue-catalog-reason-expected-quoted-string = expected quoted gette
 cli-error-dialogue-catalog-reason-missing-context = entry is missing msgctxt
 cli-error-dialogue-catalog-reason-missing-id = entry is missing msgid
 cli-error-dialogue-catalog-reason-missing-translation = entry is missing msgstr
+cli-error-dialogue-catalog-reason-placeholder-mismatch = {$detail}
 cli-error-dialogue-catalog-reason-plural-entries-unsupported = plural entries are not supported
 cli-error-dialogue-catalog-reason-quoted-continuation-without-field = quoted continuation without msgctxt, msgid, or msgstr
 cli-error-dialogue-catalog-reason-unexpected-text-after-quoted-string = unexpected text after quoted string

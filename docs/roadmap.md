@@ -206,13 +206,14 @@ broader presentation projection contract that lets metadata on lines, choices,
 blocks, and project inputs drive structured adapter-visible affordances without
 committing RPG-specific syntax or runtime semantics to core Recite.
 
-The projection implementation follow-ups are split by surface: #181 adds the
-schema-owned projection declarations and label-template extraction, #182
-compiles those declarations into self-contained wire data, #183 surfaces the
-schema declarations through CLI/LSP diagnostics and authoring support, and #184
-adds adapter conformance coverage for projection-capable adapters. With #172
-closed, #181 is the next unblocked projection implementation issue, and
-#182/#183/#184 depend on the schema surface from #181.
+The availability and projection implementation follow-ups are split by surface:
+#176 adds schema-owned availability reason definitions and localisation
+extraction as the current ready schema/localisation foundation for #177/#179.
+#181 adds schema-owned projection declarations and label-template extraction but
+remains blocked until its live dependencies and labels are resolved. #182
+compiles projection declarations into self-contained wire data, #183 surfaces
+the schema declarations through CLI/LSP diagnostics and authoring support, and
+#184 adds adapter conformance coverage for projection-capable adapters.
 
 The source-format page under #90 may still land stable sections such as blocks,
 lines, speakers, metadata, choices without availability, targets, conditional

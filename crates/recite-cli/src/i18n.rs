@@ -226,6 +226,7 @@ message_ids! {
     CliErrorDialogueCatalogReasonMissingContext => "cli-error-dialogue-catalog-reason-missing-context",
     CliErrorDialogueCatalogReasonMissingId => "cli-error-dialogue-catalog-reason-missing-id",
     CliErrorDialogueCatalogReasonMissingTranslation => "cli-error-dialogue-catalog-reason-missing-translation",
+    CliErrorDialogueCatalogReasonPlaceholderMismatch => "cli-error-dialogue-catalog-reason-placeholder-mismatch",
     CliErrorDialogueCatalogReasonPluralEntriesUnsupported => "cli-error-dialogue-catalog-reason-plural-entries-unsupported",
     CliErrorDialogueCatalogReasonQuotedContinuationWithoutField => "cli-error-dialogue-catalog-reason-quoted-continuation-without-field",
     CliErrorDialogueCatalogReasonUnexpectedTextAfterQuotedString => "cli-error-dialogue-catalog-reason-unexpected-text-after-quoted-string",

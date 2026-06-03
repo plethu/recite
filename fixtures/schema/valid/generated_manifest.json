@@ -27,11 +27,34 @@
         { "name": "actor_a", "type": "speaker" },
         { "name": "actor_b", "type": "speaker" },
         { "name": "threshold", "type": "int" }
-      ]
+      ],
+      "availability_reason": {
+        "reason": "trust_too_low",
+        "args": {
+          "subject": "$actor_a",
+          "target": "$actor_b",
+          "threshold": "$threshold"
+        }
+      }
     },
     "thread_stage": {
       "params": [{ "name": "thread_id", "type": "registry:thread" }],
       "returns": "enum:thread_stage_kind"
+    }
+  },
+  "availability_reasons": {
+    "trust_too_low": {
+      "template": "{subject} does not trust {target} enough ({threshold}).",
+      "params": [
+        { "name": "subject", "type": "speaker" },
+        { "name": "target", "type": "speaker" },
+        { "name": "threshold", "type": "int" }
+      ],
+      "origin": "schema/availability.rs"
+    },
+    "innkeeper_trust_hint": {
+      "template": "The innkeeper is not ready to share that.",
+      "params": []
     }
   },
   "effects": {

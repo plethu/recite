@@ -1,12 +1,13 @@
 use std::collections::{BTreeMap, BTreeSet};
 
 use recite_core::{
-    BLAKE3_DIGEST_LEN, ConditionDefinition, ConditionReturnType, ContextualMetadataDomain,
-    EffectDefinition, EffectMode, EnumTypeDefinition, FlatMetadataDomain, MarkupDefinition,
-    MetadataContextSelector, MetadataDefinition, MetadataDomainDefinition, MetadataTarget,
-    MissingMetadataContextPolicy, ParameterDefinition, ProjectSchema, RegistryDefinition,
-    SchemaFingerprint, SchemaTypeDefinition, SchemaTypeRef, SpeakerDefinition,
-    canonical_schema_fingerprint,
+    AvailabilityReasonArgBinding, AvailabilityReasonDefinition, AvailabilityReasonId,
+    BLAKE3_DIGEST_LEN, ConditionAvailabilityReasonMapping, ConditionDefinition,
+    ConditionReturnType, ContextualMetadataDomain, EffectDefinition, EffectMode,
+    EnumTypeDefinition, FlatMetadataDomain, MarkupDefinition, MetadataContextSelector,
+    MetadataDefinition, MetadataDomainDefinition, MetadataTarget, MissingMetadataContextPolicy,
+    ParameterDefinition, ProjectSchema, RegistryDefinition, SchemaFingerprint, SchemaLiteralValue,
+    SchemaTypeDefinition, SchemaTypeRef, SpeakerDefinition, canonical_schema_fingerprint,
 };
 
 #[test]
@@ -75,6 +76,35 @@ fn schema_fingerprint_changes_when_freshness_relevant_fields_change() {
         .expect("condition exists")
         .returns = ConditionReturnType::Bool;
     assert_ne!(base_fingerprint, canonical_schema_fingerprint(&condition));
+
+    let mut condition_reason_mapping = base.clone();
+    condition_reason_mapping
+        .conditions
+        .get_mut("trust_gte")
+        .expect("condition exists")
+        .availability_reason
+        .as_mut()
+        .expect("mapping exists")
+        .args
+        .insert(
+            "threshold".to_owned(),
+            AvailabilityReasonArgBinding::Literal(SchemaLiteralValue::Int(4)),
+        );
+    assert_ne!(
+        base_fingerprint,
+        canonical_schema_fingerprint(&condition_reason_mapping)
+    );
+
+    let mut availability_reason = base.clone();
+    availability_reason
+        .availability_reasons
+        .get_mut(&AvailabilityReasonId::new("trust_too_low").expect("valid reason id"))
+        .expect("availability reason exists")
+        .template = "{subject} needs more trust.".to_owned();
+    assert_ne!(
+        base_fingerprint,
+        canonical_schema_fingerprint(&availability_reason)
+    );
 
     let mut effect = base.clone();
     effect
@@ -182,7 +212,7 @@ enum Order {
 fn schema_with_order(order: Order) -> ProjectSchema {
     let mut schema = ProjectSchema::empty_v1();
 
-    insert_entries(
+    insert_entries_str(
         &mut schema.types,
         order,
         [
@@ -200,7 +230,7 @@ fn schema_with_order(order: Order) -> ProjectSchema {
             ),
         ],
     );
-    insert_entries(
+    insert_entries_str(
         &mut schema.registries,
         order,
         [
@@ -220,7 +250,7 @@ fn schema_with_order(order: Order) -> ProjectSchema {
             ),
         ],
     );
-    insert_entries(
+    insert_entries_str(
         &mut schema.speakers,
         order,
         [
@@ -233,7 +263,7 @@ fn schema_with_order(order: Order) -> ProjectSchema {
             ),
         ],
     );
-    insert_entries(
+    insert_entries_str(
         &mut schema.conditions,
         order,
         [
@@ -245,6 +275,7 @@ fn schema_with_order(order: Order) -> ProjectSchema {
                         SchemaTypeRef::Registry("thread".to_owned()),
                     )],
                     returns: ConditionReturnType::Enum("thread_stage".to_owned()),
+                    availability_reason: None,
                 },
             ),
             (
@@ -255,11 +286,57 @@ fn schema_with_order(order: Order) -> ProjectSchema {
                         param("threshold", SchemaTypeRef::Int),
                     ],
                     returns: ConditionReturnType::Bool,
+                    availability_reason: Some(ConditionAvailabilityReasonMapping {
+                        reason: AvailabilityReasonId::new("trust_too_low")
+                            .expect("valid reason id"),
+                        args: map(
+                            order,
+                            [
+                                (
+                                    "subject",
+                                    AvailabilityReasonArgBinding::ConditionParam(
+                                        "speaker".to_owned(),
+                                    ),
+                                ),
+                                (
+                                    "threshold",
+                                    AvailabilityReasonArgBinding::ConditionParam(
+                                        "threshold".to_owned(),
+                                    ),
+                                ),
+                            ],
+                        ),
+                    }),
                 },
             ),
         ],
     );
     insert_entries(
+        &mut schema.availability_reasons,
+        order,
+        [
+            (
+                AvailabilityReasonId::new("trust_too_low").expect("valid reason id"),
+                AvailabilityReasonDefinition {
+                    template: "{subject} needs {threshold} trust.".to_owned(),
+                    params: vec![
+                        param("subject", SchemaTypeRef::Speaker),
+                        param("threshold", SchemaTypeRef::Int),
+                    ],
+                    origin: Some("schema/reasons.rs".to_owned()),
+                },
+            ),
+            (
+                AvailabilityReasonId::new("need_key").expect("valid reason id"),
+                AvailabilityReasonDefinition {
+                    template: "Needs a key.".to_owned(),
+                    params: Vec::new(),
+                    origin: None,
+                },
+            ),
+        ],
+    );
+    insert_entries_str(
         &mut schema.effects,
         order,
         [
@@ -279,7 +356,7 @@ fn schema_with_order(order: Order) -> ProjectSchema {
             ),
         ],
     );
-    insert_entries(
+    insert_entries_str(
         &mut schema.metadata_domains,
         order,
         [
@@ -307,7 +384,7 @@ fn schema_with_order(order: Order) -> ProjectSchema {
             ),
         ],
     );
-    insert_entries(
+    insert_entries_str(
         &mut schema.metadata,
         order,
         [
@@ -331,7 +408,7 @@ fn schema_with_order(order: Order) -> ProjectSchema {
             ),
         ],
     );
-    insert_entries(
+    insert_entries_str(
         &mut schema.markup,
         order,
         [
@@ -357,19 +434,33 @@ fn schema_with_order(order: Order) -> ProjectSchema {
     schema
 }
 
-fn insert_entries<T, const N: usize>(
-    map: &mut BTreeMap<String, T>,
+fn insert_entries<K, T, const N: usize>(
+    map: &mut BTreeMap<K, T>,
     order: Order,
-    entries: [(&str, T); N],
-) {
+    entries: [(K, T); N],
+) where
+    K: Ord,
+{
     let mut entries = entries.into_iter().collect::<Vec<_>>();
     if matches!(order, Order::Reverse) {
         entries.reverse();
     }
 
     for (key, value) in entries {
-        map.insert(key.to_owned(), value);
+        map.insert(key, value);
     }
+}
+
+fn insert_entries_str<T, const N: usize>(
+    map: &mut BTreeMap<String, T>,
+    order: Order,
+    entries: [(&str, T); N],
+) {
+    insert_entries(
+        map,
+        order,
+        entries.map(|(key, value)| (key.to_owned(), value)),
+    );
 }
 
 fn set<const N: usize>(order: Order, values: [&str; N]) -> BTreeSet<String> {

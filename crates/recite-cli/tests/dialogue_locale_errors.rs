@@ -188,3 +188,58 @@ fn plural_catalog_entries_are_rejected() {
     output.assert_failure();
     output.assert_stderr_contains("plural entries are not supported");
 }
+
+#[test]
+fn non_empty_catalog_translations_must_preserve_placeholders() {
+    let temp = TempDir::new().expect("tempdir");
+    let asset = simple_asset(&temp);
+    let catalog = write_file(
+        temp.path(),
+        "bad-placeholders.po",
+        concat!(
+            "msgctxt \"availability_reason:trust_too_low\"\n",
+            "msgid \"{subject} does not trust {target} enough.\"\n",
+            "msgstr \"{actor} does not trust enough.\"\n",
+        ),
+    );
+    let fixture = write_file(
+        temp.path(),
+        "bad-placeholders.toml",
+        &format!(
+            "[dialogue]\nlocale = \"fr-FR\"\n\n[dialogue.catalogs]\n\"fr-FR\" = [\"{}\"]\n",
+            catalog.display()
+        ),
+    );
+
+    let output = run_fixture(&asset, &fixture);
+    output.assert_failure();
+    output.assert_stderr_contains("translation placeholders must match msgid");
+    output.assert_stderr_contains("missing {subject}, {target}");
+    output.assert_stderr_contains("extra {actor}");
+}
+
+#[test]
+fn empty_catalog_translations_may_omit_placeholders_for_fallback() {
+    let temp = TempDir::new().expect("tempdir");
+    let asset = simple_asset(&temp);
+    let catalog = write_file(
+        temp.path(),
+        "empty-placeholders.po",
+        concat!(
+            "msgctxt \"availability_reason:trust_too_low\"\n",
+            "msgid \"{subject} does not trust {target} enough.\"\n",
+            "msgstr \"\"\n",
+        ),
+    );
+    let fixture = write_file(
+        temp.path(),
+        "empty-placeholders.toml",
+        &format!(
+            "[dialogue]\nlocale = \"fr-FR\"\n\n[dialogue.catalogs]\n\"fr-FR\" = [\"{}\"]\n",
+            catalog.display()
+        ),
+    );
+
+    let output = run_fixture(&asset, &fixture);
+    output.assert_success();
+}

@@ -7,6 +7,7 @@ pub(crate) enum DialogueCatalogMalformedReason {
     MissingContext,
     MissingId,
     MissingTranslation,
+    PlaceholderMismatch { detail: String },
     PluralEntriesUnsupported,
     QuotedContinuationWithoutField,
     UnexpectedTextAfterQuotedString,
@@ -30,6 +31,10 @@ impl DialogueCatalogMalformedReason {
             Self::MissingTranslation => {
                 messages.text(MsgId::CliErrorDialogueCatalogReasonMissingTranslation)
             }
+            Self::PlaceholderMismatch { detail } => messages.format(
+                MsgId::CliErrorDialogueCatalogReasonPlaceholderMismatch,
+                [("detail", detail.clone())],
+            ),
             Self::PluralEntriesUnsupported => {
                 messages.text(MsgId::CliErrorDialogueCatalogReasonPluralEntriesUnsupported)
             }
@@ -56,6 +61,7 @@ impl DialogueCatalogMalformedReason {
             Self::MissingContext => "entry is missing msgctxt".to_owned(),
             Self::MissingId => "entry is missing msgid".to_owned(),
             Self::MissingTranslation => "entry is missing msgstr".to_owned(),
+            Self::PlaceholderMismatch { detail } => detail.clone(),
             Self::PluralEntriesUnsupported => "plural entries are not supported".to_owned(),
             Self::QuotedContinuationWithoutField => {
                 "quoted continuation without msgctxt, msgid, or msgstr".to_owned()

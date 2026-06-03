@@ -80,6 +80,7 @@ mod diagnostic;
 mod error;
 mod ids;
 mod source_location;
+mod text;
 mod value;
 
 pub use ast::{
@@ -123,17 +124,23 @@ pub use diagnostic::{
     Diagnostic, DiagnosticCategory, DiagnosticCode, DiagnosticSeverity, RelatedSpan,
 };
 pub use error::CoreValueError;
-pub use ids::{BlockId, ChoiceId, EffectId, LineId, LocaleId, SpeakerId};
+pub use ids::{AvailabilityReasonId, BlockId, ChoiceId, EffectId, LineId, LocaleId, SpeakerId};
 pub use project::{
     ProjectFreshnessInput, ProjectManifest, ProjectManifestLoadReport, ProjectManifestMetadata,
     ProjectScene, project_scene_key_span, validate_project_freshness, validate_project_manifest,
 };
 pub use schema::{
+    AvailabilityReasonArgBinding, AvailabilityReasonDefinition, ConditionAvailabilityReasonMapping,
     ConditionDefinition, ConditionReturnType, ContextualMetadataDomain, EffectDefinition,
     EnumTypeDefinition, FlatMetadataDomain, MarkupDefinition, MetadataContextSelector,
     MetadataDefinition, MetadataDomainDefinition, MetadataTarget, MissingMetadataContextPolicy,
-    ParameterDefinition, ProjectSchema, RegistryDefinition, SchemaLoadReport, SchemaTypeDefinition,
-    SchemaTypeRef, SpeakerDefinition, canonical_schema_fingerprint, load_schema_manifest_str,
+    ParameterDefinition, ProjectSchema, RegistryDefinition, SchemaLiteralValue, SchemaLoadReport,
+    SchemaTypeDefinition, SchemaTypeRef, SpeakerDefinition, canonical_schema_fingerprint,
+    load_schema_manifest_str,
 };
 pub use source_location::{SourcePosition, SourceSpan};
+pub use text::{
+    PlaceholderSyntaxError, PlaceholderValidationError, extract_placeholder_names,
+    validate_translation_placeholders,
+};
 pub use value::{Metadata, MetadataEntry, ScalarValue, Value};

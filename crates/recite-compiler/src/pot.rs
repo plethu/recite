@@ -160,6 +160,14 @@ fn collect_pot(source_files: &[SourceFile], schema: Option<&ProjectSchema>) -> P
                 });
             }
         }
+        for (reason_id, reason) in &schema.availability_reasons {
+            entries.push(PotEntry {
+                context: format!("availability_reason:{reason_id}"),
+                source_text: reason.template.clone(),
+                comments: vec!["availability reason template".to_owned()],
+                reference: None,
+            });
+        }
     }
 
     PotDocument { entries }
