@@ -34,7 +34,8 @@ These issues have no unmet dependencies.
 | #33 LSP missing-ID code action | LSP track | on-save ID workflow |
 | #77 LSP block/schema code actions | LSP track | editor repair actions |
 | #106 LSP large-project benchmarks | scale proof | LSP release evidence |
-| #171 Requires-based choice availability | language foundations | #177, #179, #90 |
+| #177 Runtime structured availability reasons | language foundations | adapter conformance follow-up |
+| #179 LSP choice availability diagnostics | LSP track | schema-aware availability authoring |
 | #104 Large/epic CLI stress checks | scale proof | release evidence |
 | #105 Memory profiles and known limits | scale proof | release known-limits docs |
 | #126 `recite bench` command | scale proof | user-facing benchmark reports |
@@ -207,14 +208,13 @@ Choice availability has been split out of the source-format reference docs.
 Issue #170 is closed and settled hidden-vs-disabled semantics, the final
 availability syntax, and player-facing unavailable reason ownership. Issue #176
 is also closed and now provides schema-owned availability reason definitions and
-localisation extraction. Issue #171 is the current ready language-foundation
-task; it implements the approved `requires=(...)` and `reason=...`
-source/lowering model and, together with #176, unblocks #177 runtime reason
-emission and #179 LSP availability diagnostics. Issue #172 is closed; it
-settled the broader presentation projection contract that lets metadata on
-lines, choices, blocks, and project inputs drive structured adapter-visible
-affordances without committing RPG-specific syntax or runtime semantics to core
-Recite.
+localisation extraction. Issue #171 is closed and implements the approved
+`requires=(...)` and `reason=...` source/lowering model. With #171 and #176
+both landed, #177 runtime reason emission and #179 LSP availability diagnostics
+can now start. Issue #172 is closed; it settled the broader presentation
+projection contract that lets metadata on lines, choices, blocks, and project
+inputs drive structured adapter-visible affordances without committing
+RPG-specific syntax or runtime semantics to core Recite.
 
 The projection implementation follow-ups remain split by surface. #181 adds
 schema-owned projection declarations and label-template extraction but remains
@@ -223,13 +223,13 @@ projection declarations into self-contained wire data, #183 surfaces the schema
 declarations through CLI/LSP diagnostics and authoring support, and #184 adds
 adapter conformance coverage for projection-capable adapters.
 
-The source-format page under #90 may still land stable sections such as blocks,
-lines, speakers, metadata, choices without availability, targets, conditional
-branches, effects, stable IDs, and related links. Final choice-availability
-wording for that page remains blocked until #171 lands. The broader #90 core
-workflow guides remain in the docs/adoption lane and keep their existing scale,
-adapter-contract, #119, and adapter-detail blockers. Release-positioning docs
-such as #89 remain blocked on scale evidence and credible adapter paths.
+The source-format page under #90 may now include final choice-availability
+wording for `requires=(...)` and `reason=...` alongside stable sections such as
+blocks, lines, speakers, metadata, targets, conditional branches, effects,
+stable IDs, and related links. The broader #90 core workflow guides remain in
+the docs/adoption lane and keep their existing scale, adapter-contract, #119,
+and adapter-detail blockers. Release-positioning docs such as #89 remain
+blocked on scale evidence and credible adapter paths.
 
 ## Release hardening
 
