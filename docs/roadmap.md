@@ -45,7 +45,6 @@ These issues have no unmet dependencies.
 | #167 Runtime allocation/clone pressure | scale proof | allocation-sensitive runtime evidence |
 | #168 Watch rebuild latency stress | scale proof | authoring refresh evidence |
 | #159 Import report/provenance model | migration | source-family importer prototypes |
-| #81 Unity adapter design | design | feeds #108, Unity refresh |
 | #84 VS Code LSP client scaffold | editor extensions | VS Code authoring workflow |
 | #85 Neovim setup documentation | editor extensions | Neovim authoring workflow |
 | #134 v0 wire sync risk | hardening | #113 |
@@ -84,8 +83,7 @@ flowchart LR
     i121 --> i123
     i122 --> i123
     i123 --> i94["#94 adapter docs"]
-    i81["#81"] --> i108
-    i80 --> i108["#108 (also needs #81)"]
+    i80 --> i108["#108 Unity MVP"]
   end
 
   subgraph PERF["Perf track"]
@@ -172,8 +170,9 @@ flowchart LR
 ## Critical path
 
 The adapter chain is still the longest release chain. The original adapter
-contract design issue (#78), conformance-fixture issue (#79), and schema-domain
-export issue (#140) are now closed. The current open chain is:
+contract design issue (#78), conformance-fixture issue (#79), Unity adapter
+design issue (#81), and schema-domain export issue (#140) are now closed. The
+current open chain is:
 
 ```
 per-engine adapter MVPs + watch/editor refresh prerequisites → per-engine refresh workflows → adapter docs → release verification
