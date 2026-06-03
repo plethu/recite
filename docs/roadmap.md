@@ -34,7 +34,7 @@ These issues have no unmet dependencies.
 | #33 LSP missing-ID code action | LSP track | on-save ID workflow |
 | #77 LSP block/schema code actions | LSP track | editor repair actions |
 | #106 LSP large-project benchmarks | scale proof | LSP release evidence |
-| #172 Presentation projection design | language foundations | #181, #182, #183, #184 |
+| #181 Presentation projection schema declarations | language foundations | #182, #183, #184 |
 | #104 Large/epic CLI stress checks | scale proof | release evidence |
 | #105 Memory profiles and known limits | scale proof | release known-limits docs |
 | #126 `recite bench` command | scale proof | user-facing benchmark reports |
@@ -201,18 +201,18 @@ setup docs (#85) can now start. VS Code TextMate highlighting (#157) follows
 Choice availability has been split out of the source-format reference docs.
 Issue #170 is closed and settled hidden-vs-disabled semantics, the final
 availability syntax, and player-facing unavailable reason ownership. Issue #171
-then implements the approved model. Issue #172 separately designs the broader
-presentation projection contract that lets metadata on lines, choices, blocks,
-and project inputs drive structured adapter-visible affordances without
+then implements the approved model. Issue #172 is closed; it settled the
+broader presentation projection contract that lets metadata on lines, choices,
+blocks, and project inputs drive structured adapter-visible affordances without
 committing RPG-specific syntax or runtime semantics to core Recite.
 
 The projection implementation follow-ups are split by surface: #181 adds the
 schema-owned projection declarations and label-template extraction, #182
 compiles those declarations into self-contained wire data, #183 surfaces the
 schema declarations through CLI/LSP diagnostics and authoring support, and #184
-adds adapter conformance coverage for projection-capable adapters. These remain
-blocked until the #172 design lands, and #182/#183/#184 depend on the schema
-surface from #181.
+adds adapter conformance coverage for projection-capable adapters. With #172
+closed, #181 is the next unblocked projection implementation issue, and
+#182/#183/#184 depend on the schema surface from #181.
 
 The source-format page under #90 may still land stable sections such as blocks,
 lines, speakers, metadata, choices without availability, targets, conditional
