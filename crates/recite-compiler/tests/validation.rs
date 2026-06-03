@@ -9,6 +9,8 @@ use recite_parser::parse;
 
 #[path = "validation/asset_constraints.rs"]
 mod asset_constraints;
+#[path = "validation/conditions_schema.rs"]
+mod conditions_schema;
 #[path = "validation/effects_schema.rs"]
 mod effects_schema;
 #[path = "../../../tests/support/fixtures.rs"]

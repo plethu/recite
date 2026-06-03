@@ -117,7 +117,7 @@ pub(super) fn prompt_choices(
     let mut pending = Vec::new();
 
     for choice in asset.choices(range)? {
-        let is_available = match &choice.condition {
+        let is_available = match &choice.availability_requirement {
             Some(condition) => evaluate_condition(context, condition)?,
             None => true,
         };

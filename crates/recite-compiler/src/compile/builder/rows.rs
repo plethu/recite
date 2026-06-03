@@ -56,7 +56,10 @@ impl AssetBuilder<'_> {
     fn compile_choice_row(&mut self, choice: &Choice) -> Result<ChoiceIndex, CompileError> {
         let index = ChoiceIndex::new(usize_to_u32("choices", self.choices.len())?);
         let metadata = self.compile_metadata(&choice.metadata)?;
-        let condition = choice.condition.as_ref().map(compile_condition_expression);
+        let availability_requirement = choice
+            .availability_requirement
+            .as_ref()
+            .map(|requirement| compile_condition_expression(&requirement.condition));
         let target = choice
             .target
             .as_ref()
@@ -73,7 +76,11 @@ impl AssetBuilder<'_> {
             id,
             source_text: choice.source_text.text.clone(),
             metadata,
-            condition,
+            availability_requirement,
+            availability_reason_override: choice
+                .availability_reason_override
+                .as_ref()
+                .map(|reason| reason.reason_id.clone()),
             target,
             echo: compile_choice_echo(&choice.echo),
             source_map,

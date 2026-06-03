@@ -36,7 +36,7 @@ fn source_ast_represents_dialogue_constructs_with_spans() {
         choice.id.as_ref().map(ChoiceId::as_str),
         Some("ta_opt_news")
     );
-    assert!(choice.condition.is_some());
+    assert!(choice.availability_requirement.is_some());
     assert_eq!(
         choice.target.as_ref().map(|target| &target.target),
         Some(&DivertTarget::End)
@@ -149,13 +149,16 @@ fn representative_source_file() -> SourceFile {
         SourceText::new("What's the news?", span(8, 5)),
         span(7, 3),
     )
-    .with_condition(ConditionExpression::call(
-        "familiarity_gte",
-        vec![
-            Argument::identifier("hazel"),
-            Argument::identifier("innkeeper"),
-            ScalarValue::from(3_i64).into(),
-        ],
+    .with_availability_requirement(ChoiceAvailabilityRequirement::new(
+        ConditionExpression::call(
+            "familiarity_gte",
+            vec![
+                Argument::identifier("hazel"),
+                Argument::identifier("innkeeper"),
+                ScalarValue::from(3_i64).into(),
+            ],
+            span(7, 19),
+        ),
         span(7, 19),
     ))
     .with_target(ChoiceTarget::new(DivertTarget::End, span(9, 5)))

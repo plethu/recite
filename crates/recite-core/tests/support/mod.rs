@@ -320,7 +320,8 @@ pub(crate) struct WireChoice<'a> {
     pub(crate) id: &'a str,
     pub(crate) source_text: &'a str,
     pub(crate) metadata: WireRange,
-    pub(crate) condition: Option<WireConditionExpression<'a>>,
+    pub(crate) availability_requirement: Option<WireConditionExpression<'a>>,
+    pub(crate) availability_reason_override: Option<&'a str>,
     pub(crate) target: Tagged<u32>,
     pub(crate) echo: Tagged<&'a str>,
     pub(crate) source_map: u32,
@@ -331,11 +332,12 @@ impl Serialize for WireChoice<'_> {
     where
         S: serde::Serializer,
     {
-        let mut tuple = serializer.serialize_tuple(7)?;
+        let mut tuple = serializer.serialize_tuple(8)?;
         tuple.serialize_element(&self.id)?;
         tuple.serialize_element(&self.source_text)?;
         tuple.serialize_element(&self.metadata)?;
-        tuple.serialize_element(&self.condition)?;
+        tuple.serialize_element(&self.availability_requirement)?;
+        tuple.serialize_element(&self.availability_reason_override)?;
         tuple.serialize_element(&self.target)?;
         tuple.serialize_element(&self.echo)?;
         tuple.serialize_element(&self.source_map)?;

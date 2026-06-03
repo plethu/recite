@@ -181,6 +181,7 @@ struct MsgChoice<'a>(
     &'a str,
     MsgRange,
     Option<MsgConditionExpression<'a>>,
+    Option<&'a str>,
     MsgDivertTarget<'a>,
     MsgChoiceEcho<'a>,
     u32,
@@ -192,7 +193,14 @@ impl<'a> From<&'a recite_core::CompiledChoice> for MsgChoice<'a> {
             choice.id.as_str(),
             choice.source_text.as_str(),
             metadata_range(choice.metadata),
-            choice.condition.as_ref().map(MsgConditionExpression),
+            choice
+                .availability_requirement
+                .as_ref()
+                .map(MsgConditionExpression),
+            choice
+                .availability_reason_override
+                .as_ref()
+                .map(recite_core::AvailabilityReasonId::as_str),
             MsgDivertTarget(&choice.target),
             MsgChoiceEcho(&choice.echo),
             choice.source_map.as_u32(),

@@ -1,6 +1,6 @@
 use serde::Deserialize;
 
-use crate::{BlockId, ChoiceId, EffectId, LineId, SpeakerId};
+use crate::{AvailabilityReasonId, BlockId, ChoiceId, EffectId, LineId, SpeakerId};
 
 use super::CompiledAssetDecodeError;
 use super::tags::{
@@ -202,6 +202,7 @@ struct MsgChoice(
     String,
     MsgRange,
     Option<MsgConditionExpression>,
+    Option<String>,
     MsgDivertTarget,
     MsgChoiceEcho,
     u32,
@@ -215,10 +216,11 @@ impl TryFrom<MsgChoice> for CompiledChoice {
             id: ChoiceId::new(value.0)?,
             source_text: value.1,
             metadata: value.2.metadata(),
-            condition: value.3.map(|condition| condition.0),
-            target: value.4.0,
-            echo: value.5.0,
-            source_map: SourceMapIndex::new(value.6),
+            availability_requirement: value.3.map(|condition| condition.0),
+            availability_reason_override: value.4.map(AvailabilityReasonId::new).transpose()?,
+            target: value.5.0,
+            echo: value.6.0,
+            source_map: SourceMapIndex::new(value.7),
         })
     }
 }

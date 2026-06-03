@@ -12,8 +12,8 @@ mod source;
 pub use condition::{Argument, ConditionCall, ConditionExpression, ConditionGroup, ConditionUnary};
 pub use effect::{Effect, EffectMode};
 pub use source::{
-    Block, BlockReference, Choice, ChoiceEcho, ChoiceTarget, Comment, Divert, DivertTarget,
-    END_DIVERT_TARGET, IfBranch, Line, MatchArm, MatchBranch, MatchPattern, SourceFile,
-    SourceMetadata, SourceMetadataEntry, SourceMetadataScalar, SourceMetadataValue, SourceText,
-    Statement, StatementKind,
+    Block, BlockReference, Choice, ChoiceAvailabilityReasonOverride, ChoiceAvailabilityRequirement,
+    ChoiceEcho, ChoiceTarget, Comment, Divert, DivertTarget, END_DIVERT_TARGET, IfBranch, Line,
+    MatchArm, MatchBranch, MatchPattern, SourceFile, SourceMetadata, SourceMetadataEntry,
+    SourceMetadataScalar, SourceMetadataValue, SourceText, Statement, StatementKind,
 };

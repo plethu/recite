@@ -289,9 +289,9 @@ impl FixtureGenerator {
             let target = self.choice_target(block, choice);
             let condition = if self.choice_conditions_enabled(block) {
                 if choice % 2 == 0 {
-                    format!(" if flag(\"flag_{:02}\")", block % 64)
+                    format!(" requires=(flag(\"flag_{:02}\"))", block % 64)
                 } else {
-                    " if counter_gte(\"counter_00\", 2)".to_owned()
+                    " requires=(counter_gte(\"counter_00\", 2))".to_owned()
                 }
             } else {
                 String::new()

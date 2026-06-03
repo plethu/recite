@@ -5,7 +5,7 @@
 ? ask_work
   Ask about work.
   -> work
-? locked if trusts(player)
+? locked requires=(trusts(player))
   Take the locked route.
   -> locked
 

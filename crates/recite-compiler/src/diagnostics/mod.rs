@@ -1,4 +1,5 @@
 mod asset;
+mod conditions;
 mod effects;
 mod ids;
 mod markup;
@@ -8,6 +9,7 @@ mod project;
 use recite_core::SchemaTypeRef;
 
 pub(crate) use asset::*;
+pub(crate) use conditions::*;
 pub(crate) use effects::*;
 pub(crate) use ids::*;
 pub(crate) use markup::*;

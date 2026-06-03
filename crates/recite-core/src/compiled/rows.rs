@@ -1,4 +1,7 @@
-use crate::{BlockId, ChoiceId, EffectId, LineId, ScalarValue, SourceSpan, SpeakerId, Value};
+use crate::{
+    AvailabilityReasonId, BlockId, ChoiceId, EffectId, LineId, ScalarValue, SourceSpan, SpeakerId,
+    Value,
+};
 
 use super::{
     BlockIndex, BlockLookupTable, ChoiceLookupTable, ChoiceRange, CompiledAssetHeader,
@@ -98,7 +101,8 @@ pub struct CompiledChoice {
     pub id: ChoiceId,
     pub source_text: String,
     pub metadata: MetadataRange,
-    pub condition: Option<CompiledConditionExpression>,
+    pub availability_requirement: Option<CompiledConditionExpression>,
+    pub availability_reason_override: Option<AvailabilityReasonId>,
     pub target: CompiledDivertTarget,
     pub echo: CompiledChoiceEcho,
     pub source_map: SourceMapIndex,

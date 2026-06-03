@@ -139,9 +139,27 @@ impl<'a> Validator<'a> {
             },
         );
         self.validate_choice_echo(choice);
-        if let Some(condition) = &choice.condition {
-            self.validate_condition_expression(source_file, condition);
+        if let Some(requirement) = &choice.availability_requirement {
+            self.validate_span(
+                source_file,
+                &requirement.span,
+                "choice availability requirement",
+            );
+            self.validate_condition_expression(source_file, &requirement.condition);
+            self.validate_boolean_condition_schema(&requirement.condition);
         }
+        if let Some(reason) = &choice.availability_reason_override {
+            self.validate_span(source_file, &reason.span, "choice availability reason");
+            self.validate_span(
+                source_file,
+                &reason.id_span,
+                "choice availability reason id",
+            );
+            if let Some(span) = &reason.argument_span {
+                self.validate_span(source_file, span, "choice availability reason arguments");
+            }
+        }
+        self.validate_choice_availability_reason(choice);
 
         if let Some(id) = &choice.id {
             if let Some(first_span) = self.localisable_ids.get(id.as_str()) {
@@ -174,6 +192,7 @@ impl<'a> Validator<'a> {
     pub(super) fn validate_if_branch(&mut self, source_file: &'a SourceFile, branch: &'a IfBranch) {
         self.validate_span(source_file, &branch.span, "if branch");
         self.validate_condition_expression(source_file, &branch.condition);
+        self.validate_boolean_condition_schema(&branch.condition);
     }
     pub(super) fn validate_match_branch(
         &mut self,
@@ -182,6 +201,7 @@ impl<'a> Validator<'a> {
     ) {
         self.validate_span(source_file, &branch.span, "match branch");
         self.validate_condition_call(source_file, &branch.scrutinee);
+        self.validate_match_scrutinee_schema(&branch.scrutinee);
     }
     pub(super) fn validate_match_arm(&mut self, source_file: &'a SourceFile, arm: &'a MatchArm) {
         self.validate_span(source_file, &arm.span, "match arm");
