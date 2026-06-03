@@ -11,6 +11,7 @@ Recite is a Rust-first deterministic dialogue compiler, runtime, and tooling pro
 - Keep patches scoped to the issue or user request.
 - Do not revert unrelated user changes.
 - Prefer small, reviewable changes over broad refactors.
+- After merging issue or PR work into `main`, verify `docs/roadmap.md` against live Codeberg issue and PR state before handoff. If the merge closed, unblocked, or superseded roadmap items, update the roadmap on `main`, commit, and push that follow-through.
 - For non-trivial Rust changes, use `.agents/skills/recite-rust-quality/SKILL.md` to review maintainability, module boundaries, duplication, visibility, validation ownership, and file-size triggers before handoff.
 - Test the crate(s) or workspace surface changed. The current repo is a workspace; use `cargo test` for broad changes unless a narrower crate check is clearly sufficient.
 - Follow the Rust test organization policy in `.agents/skills/recite-testing-diagnostics/SKILL.md`; PR gates fail if tests are added in the wrong location.

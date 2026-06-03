@@ -34,7 +34,7 @@ These issues have no unmet dependencies.
 | #33 LSP missing-ID code action | LSP track | on-save ID workflow |
 | #77 LSP block/schema code actions | LSP track | editor repair actions |
 | #106 LSP large-project benchmarks | scale proof | LSP release evidence |
-| #181 Presentation projection schema declarations | language foundations | #182, #183, #184 |
+| #171 Requires-based choice availability | language foundations | #177, #179, #90 |
 | #104 Large/epic CLI stress checks | scale proof | release evidence |
 | #105 Memory profiles and known limits | scale proof | release known-limits docs |
 | #126 `recite bench` command | scale proof | user-facing benchmark reports |
@@ -111,6 +111,11 @@ flowchart LR
   subgraph LANG["Language foundations"]
     direction LR
     iAvailDesign["#170 availability design"] --> iAvailImpl["#171 requires availability"]
+    iAvailDesign --> iAvailReasons["#176 availability reason schema"]
+    iAvailReasons --> iRuntimeReasons["#177 runtime reasons"]
+    iAvailReasons --> iLspAvailability["#179 LSP availability"]
+    iAvailImpl --> iRuntimeReasons
+    iAvailImpl --> iLspAvailability
     iAvailDesign --> iProjectionDesign["#172 presentation projection design"]
     iProjectionDesign --> iProjectionSchema["#181 projection schema"]
     iProjectionSchema --> iProjectionWire["#182 projection compiled wire"]
@@ -200,20 +205,23 @@ setup docs (#85) can now start. VS Code TextMate highlighting (#157) follows
 
 Choice availability has been split out of the source-format reference docs.
 Issue #170 is closed and settled hidden-vs-disabled semantics, the final
-availability syntax, and player-facing unavailable reason ownership. Issue #171
-then implements the approved model. Issue #172 is closed; it settled the
-broader presentation projection contract that lets metadata on lines, choices,
-blocks, and project inputs drive structured adapter-visible affordances without
-committing RPG-specific syntax or runtime semantics to core Recite.
+availability syntax, and player-facing unavailable reason ownership. Issue #176
+is also closed and now provides schema-owned availability reason definitions and
+localisation extraction. Issue #171 is the current ready language-foundation
+task; it implements the approved `requires=(...)` and `reason=...`
+source/lowering model and, together with #176, unblocks #177 runtime reason
+emission and #179 LSP availability diagnostics. Issue #172 is closed; it
+settled the broader presentation projection contract that lets metadata on
+lines, choices, blocks, and project inputs drive structured adapter-visible
+affordances without committing RPG-specific syntax or runtime semantics to core
+Recite.
 
-The availability and projection implementation follow-ups are split by surface:
-#176 adds schema-owned availability reason definitions and localisation
-extraction as the current ready schema/localisation foundation for #177/#179.
-#181 adds schema-owned projection declarations and label-template extraction but
-remains blocked until its live dependencies and labels are resolved. #182
-compiles projection declarations into self-contained wire data, #183 surfaces
-the schema declarations through CLI/LSP diagnostics and authoring support, and
-#184 adds adapter conformance coverage for projection-capable adapters.
+The projection implementation follow-ups remain split by surface. #181 adds
+schema-owned projection declarations and label-template extraction but remains
+blocked until its live dependencies and labels are resolved. #182 compiles
+projection declarations into self-contained wire data, #183 surfaces the schema
+declarations through CLI/LSP diagnostics and authoring support, and #184 adds
+adapter conformance coverage for projection-capable adapters.
 
 The source-format page under #90 may still land stable sections such as blocks,
 lines, speakers, metadata, choices without availability, targets, conditional
