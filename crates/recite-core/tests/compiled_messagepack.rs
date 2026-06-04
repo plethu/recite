@@ -411,6 +411,27 @@ fn decode_rejects_non_finite_float_values() {
 }
 
 #[test]
+fn decode_rejects_non_finite_availability_reason_float_literals() {
+    let mut asset = valid_wire_asset();
+    asset.availability_reasons.push(WireAvailabilityReason {
+        id: "blocked",
+        template: "{weight}",
+    });
+    asset
+        .condition_availability_reasons
+        .push(WireConditionAvailabilityReason {
+            function: "can_answer",
+            reason: "blocked",
+            args: vec![WireAvailabilityReasonArgBinding {
+                name: "weight",
+                value: WireAvailabilityReasonArgValue::LiteralFloat(f64::NAN),
+            }],
+        });
+
+    assert_malformed_asset_contains(asset, "availability reason float literal must be finite");
+}
+
+#[test]
 fn decode_rejects_invalid_compiled_names() {
     let mut metadata = valid_wire_asset();
     metadata.metadata.push(WireMetadataEntry {

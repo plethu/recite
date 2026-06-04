@@ -391,7 +391,7 @@ impl Serialize for WireConditionAvailabilityReason<'_> {
 
 pub(crate) struct WireAvailabilityReasonArgBinding<'a> {
     pub(crate) name: &'a str,
-    pub(crate) value: (&'a str, &'a str),
+    pub(crate) value: WireAvailabilityReasonArgValue<'a>,
 }
 
 impl Serialize for WireAvailabilityReasonArgBinding<'_> {
@@ -402,6 +402,46 @@ impl Serialize for WireAvailabilityReasonArgBinding<'_> {
         let mut tuple = serializer.serialize_tuple(2)?;
         tuple.serialize_element(&self.name)?;
         tuple.serialize_element(&self.value)?;
+        tuple.end()
+    }
+}
+
+pub(crate) enum WireAvailabilityReasonArgValue<'a> {
+    ConditionArg(&'a str),
+    LiteralString(&'a str),
+    LiteralInt(i64),
+    LiteralFloat(f64),
+    LiteralBool(bool),
+}
+
+impl Serialize for WireAvailabilityReasonArgValue<'_> {
+    fn serialize<S>(&self, serializer: S) -> Result<S::Ok, S::Error>
+    where
+        S: serde::Serializer,
+    {
+        let mut tuple = serializer.serialize_tuple(2)?;
+        match self {
+            Self::ConditionArg(value) => {
+                tuple.serialize_element("ConditionArg")?;
+                tuple.serialize_element(value)?;
+            }
+            Self::LiteralString(value) => {
+                tuple.serialize_element("LiteralString")?;
+                tuple.serialize_element(value)?;
+            }
+            Self::LiteralInt(value) => {
+                tuple.serialize_element("LiteralInt")?;
+                tuple.serialize_element(value)?;
+            }
+            Self::LiteralFloat(value) => {
+                tuple.serialize_element("LiteralFloat")?;
+                tuple.serialize_element(value)?;
+            }
+            Self::LiteralBool(value) => {
+                tuple.serialize_element("LiteralBool")?;
+                tuple.serialize_element(value)?;
+            }
+        }
         tuple.end()
     }
 }

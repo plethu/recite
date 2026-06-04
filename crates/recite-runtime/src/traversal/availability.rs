@@ -266,18 +266,7 @@ fn reason_arg_value(
         CompiledAvailabilityReasonArgValue::ConditionArg(name) => {
             condition_argument_value(name, &call.args)
         }
-        CompiledAvailabilityReasonArgValue::LiteralString(value) => {
-            Some(ChoiceAvailabilityReasonValue::String(value.clone()))
-        }
-        CompiledAvailabilityReasonArgValue::LiteralInt(value) => {
-            Some(ChoiceAvailabilityReasonValue::Integer(*value))
-        }
-        CompiledAvailabilityReasonArgValue::LiteralFloat(value) => {
-            Some(ChoiceAvailabilityReasonValue::Float(*value))
-        }
-        CompiledAvailabilityReasonArgValue::LiteralBool(value) => {
-            Some(ChoiceAvailabilityReasonValue::Boolean(*value))
-        }
+        CompiledAvailabilityReasonArgValue::Literal(value) => Some(availability_scalar(value)),
     }
 }
 
@@ -294,18 +283,16 @@ fn availability_argument(argument: &CompiledArgument) -> ChoiceAvailabilityReaso
         CompiledArgument::Identifier(value) => {
             ChoiceAvailabilityReasonValue::Identifier(value.clone())
         }
-        CompiledArgument::Value(ScalarValue::String(value)) => {
-            ChoiceAvailabilityReasonValue::String(value.clone())
-        }
-        CompiledArgument::Value(ScalarValue::Integer(value)) => {
-            ChoiceAvailabilityReasonValue::Integer(*value)
-        }
-        CompiledArgument::Value(ScalarValue::Float(value)) => {
-            ChoiceAvailabilityReasonValue::Float(*value)
-        }
-        CompiledArgument::Value(ScalarValue::Boolean(value)) => {
-            ChoiceAvailabilityReasonValue::Boolean(*value)
-        }
+        CompiledArgument::Value(value) => availability_scalar(value),
+    }
+}
+
+fn availability_scalar(value: &ScalarValue) -> ChoiceAvailabilityReasonValue {
+    match value {
+        ScalarValue::String(value) => ChoiceAvailabilityReasonValue::String(value.clone()),
+        ScalarValue::Integer(value) => ChoiceAvailabilityReasonValue::Integer(*value),
+        ScalarValue::Float(value) => ChoiceAvailabilityReasonValue::Float(*value),
+        ScalarValue::Boolean(value) => ChoiceAvailabilityReasonValue::Boolean(*value),
     }
 }
 

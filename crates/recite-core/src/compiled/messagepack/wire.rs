@@ -1,7 +1,7 @@
 use serde::Deserialize;
 use serde::de::{SeqAccess, Visitor};
 
-use crate::{AvailabilityReasonId, BlockId, ChoiceId, EffectId, LineId, SpeakerId};
+use crate::{AvailabilityReasonId, BlockId, ChoiceId, EffectId, LineId, ScalarValue, SpeakerId};
 
 use super::CompiledAssetDecodeError;
 use super::tags::{
@@ -320,28 +320,39 @@ impl<'de> Visitor<'de> for MsgAvailabilityReasonArgValueVisitor {
                 ))
             }
             "LiteralString" => Ok(MsgAvailabilityReasonArgValueWrapper(
-                crate::compiled::CompiledAvailabilityReasonArgValue::LiteralString(
+                crate::compiled::CompiledAvailabilityReasonArgValue::Literal(ScalarValue::String(
                     seq.next_element::<String>()?
                         .ok_or_else(|| serde::de::Error::invalid_length(1, &self))?,
-                ),
+                )),
             )),
             "LiteralInt" => Ok(MsgAvailabilityReasonArgValueWrapper(
-                crate::compiled::CompiledAvailabilityReasonArgValue::LiteralInt(
+                crate::compiled::CompiledAvailabilityReasonArgValue::Literal(ScalarValue::Integer(
                     seq.next_element::<i64>()?
                         .ok_or_else(|| serde::de::Error::invalid_length(1, &self))?,
-                ),
+                )),
             )),
-            "LiteralFloat" => Ok(MsgAvailabilityReasonArgValueWrapper(
-                crate::compiled::CompiledAvailabilityReasonArgValue::LiteralFloat(
-                    seq.next_element::<f64>()?
-                        .ok_or_else(|| serde::de::Error::invalid_length(1, &self))?,
-                ),
-            )),
+            "LiteralFloat" => {
+                let value = seq
+                    .next_element::<f64>()?
+                    .ok_or_else(|| serde::de::Error::invalid_length(1, &self))?;
+                if !value.is_finite() {
+                    return Err(serde::de::Error::custom(
+                        CompiledAssetDecodeError::MalformedAsset(
+                            "availability reason float literal must be finite".to_owned(),
+                        ),
+                    ));
+                }
+                Ok(MsgAvailabilityReasonArgValueWrapper(
+                    crate::compiled::CompiledAvailabilityReasonArgValue::Literal(
+                        ScalarValue::Float(value),
+                    ),
+                ))
+            }
             "LiteralBool" => Ok(MsgAvailabilityReasonArgValueWrapper(
-                crate::compiled::CompiledAvailabilityReasonArgValue::LiteralBool(
+                crate::compiled::CompiledAvailabilityReasonArgValue::Literal(ScalarValue::Boolean(
                     seq.next_element::<bool>()?
                         .ok_or_else(|| serde::de::Error::invalid_length(1, &self))?,
-                ),
+                )),
             )),
             _ => Err(serde::de::Error::custom(format!(
                 "unknown availability reason argument value tag `{tag}`"

@@ -7,7 +7,7 @@ use recite_core::{
     CompiledConditionAvailabilityReason, CompiledDialogue, CompiledEffect, CompiledLine,
     CompiledMatchArm, CompiledMetadataEntry, CompiledSourceFile, CompiledSourceMapEntry,
     CompiledSpeaker, CompiledStatement, DivertTarget, Effect, IfBranch, Line, ProjectSchema,
-    SchemaLiteralValue, SourceFileIndex, SpeakerIndex, canonical_source_fingerprint,
+    ScalarValue, SchemaLiteralValue, SourceFileIndex, SpeakerIndex, canonical_source_fingerprint,
 };
 
 use super::CompileError;
@@ -272,21 +272,21 @@ fn compiled_schema_literal(
     value: &SchemaLiteralValue,
 ) -> Result<CompiledAvailabilityReasonArgValue, CompileError> {
     match value {
-        SchemaLiteralValue::String(value) => Ok(CompiledAvailabilityReasonArgValue::LiteralString(
-            value.clone(),
+        SchemaLiteralValue::String(value) => Ok(CompiledAvailabilityReasonArgValue::Literal(
+            ScalarValue::String(value.clone()),
         )),
-        SchemaLiteralValue::Int(value) => {
-            Ok(CompiledAvailabilityReasonArgValue::LiteralInt(*value))
-        }
-        SchemaLiteralValue::Float(value) => Ok(CompiledAvailabilityReasonArgValue::LiteralFloat(
-            value.parse::<f64>().map_err(|_| {
+        SchemaLiteralValue::Int(value) => Ok(CompiledAvailabilityReasonArgValue::Literal(
+            ScalarValue::Integer(*value),
+        )),
+        SchemaLiteralValue::Float(value) => Ok(CompiledAvailabilityReasonArgValue::Literal(
+            ScalarValue::Float(value.parse::<f64>().map_err(|_| {
                 CompileError::InvalidValidatedInput(format!(
                     "validated availability reason float literal `{value}` is not a float"
                 ))
-            })?,
+            })?),
         )),
-        SchemaLiteralValue::Bool(value) => {
-            Ok(CompiledAvailabilityReasonArgValue::LiteralBool(*value))
-        }
+        SchemaLiteralValue::Bool(value) => Ok(CompiledAvailabilityReasonArgValue::Literal(
+            ScalarValue::Boolean(*value),
+        )),
     }
 }
