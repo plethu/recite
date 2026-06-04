@@ -113,8 +113,17 @@ fn json_availability_reason_arg_binding(
             recite_core::CompiledAvailabilityReasonArgValue::ConditionArg(value) => {
                 tagged_json("condition_arg", json!(value))
             }
-            recite_core::CompiledAvailabilityReasonArgValue::Literal(value) => {
-                tagged_json("literal", json!(value))
+            recite_core::CompiledAvailabilityReasonArgValue::LiteralString(value) => {
+                tagged_json("literal_string", json!(value))
+            }
+            recite_core::CompiledAvailabilityReasonArgValue::LiteralInt(value) => {
+                tagged_json("literal_int", json!(value))
+            }
+            recite_core::CompiledAvailabilityReasonArgValue::LiteralFloat(value) => {
+                tagged_json("literal_float", json!(value))
+            }
+            recite_core::CompiledAvailabilityReasonArgValue::LiteralBool(value) => {
+                tagged_json("literal_bool", json!(value))
             }
         },
     })

@@ -266,8 +266,17 @@ fn reason_arg_value(
         CompiledAvailabilityReasonArgValue::ConditionArg(name) => {
             condition_argument_value(name, &call.args)
         }
-        CompiledAvailabilityReasonArgValue::Literal(value) => {
+        CompiledAvailabilityReasonArgValue::LiteralString(value) => {
             Some(ChoiceAvailabilityReasonValue::String(value.clone()))
+        }
+        CompiledAvailabilityReasonArgValue::LiteralInt(value) => {
+            Some(ChoiceAvailabilityReasonValue::Integer(*value))
+        }
+        CompiledAvailabilityReasonArgValue::LiteralFloat(value) => {
+            Some(ChoiceAvailabilityReasonValue::Float(*value))
+        }
+        CompiledAvailabilityReasonArgValue::LiteralBool(value) => {
+            Some(ChoiceAvailabilityReasonValue::Boolean(*value))
         }
     }
 }

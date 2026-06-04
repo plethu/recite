@@ -1,4 +1,5 @@
 use serde::Deserialize;
+use serde::de::{SeqAccess, Visitor};
 
 use crate::{AvailabilityReasonId, BlockId, ChoiceId, EffectId, LineId, SpeakerId};
 
@@ -287,17 +288,60 @@ impl<'de> Deserialize<'de> for MsgAvailabilityReasonArgValueWrapper {
     where
         D: serde::Deserializer<'de>,
     {
-        let (tag, value): (String, String) = Deserialize::deserialize(deserializer)?;
+        deserializer.deserialize_tuple(2, MsgAvailabilityReasonArgValueVisitor)
+    }
+}
+
+struct MsgAvailabilityReasonArgValueVisitor;
+
+impl<'de> Visitor<'de> for MsgAvailabilityReasonArgValueVisitor {
+    type Value = MsgAvailabilityReasonArgValueWrapper;
+
+    fn expecting(&self, formatter: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
+        formatter.write_str("availability reason argument value tuple")
+    }
+
+    fn visit_seq<A>(self, mut seq: A) -> Result<Self::Value, A::Error>
+    where
+        A: SeqAccess<'de>,
+    {
+        let tag = seq
+            .next_element::<String>()?
+            .ok_or_else(|| serde::de::Error::invalid_length(0, &self))?;
         match tag.as_str() {
             "ConditionArg" => {
+                let value = seq
+                    .next_element::<String>()?
+                    .ok_or_else(|| serde::de::Error::invalid_length(1, &self))?;
                 ensure_non_empty("availability reason condition argument", &value)
                     .map_err(serde::de::Error::custom)?;
-                Ok(Self(
+                Ok(MsgAvailabilityReasonArgValueWrapper(
                     crate::compiled::CompiledAvailabilityReasonArgValue::ConditionArg(value),
                 ))
             }
-            "Literal" => Ok(Self(
-                crate::compiled::CompiledAvailabilityReasonArgValue::Literal(value),
+            "LiteralString" => Ok(MsgAvailabilityReasonArgValueWrapper(
+                crate::compiled::CompiledAvailabilityReasonArgValue::LiteralString(
+                    seq.next_element::<String>()?
+                        .ok_or_else(|| serde::de::Error::invalid_length(1, &self))?,
+                ),
+            )),
+            "LiteralInt" => Ok(MsgAvailabilityReasonArgValueWrapper(
+                crate::compiled::CompiledAvailabilityReasonArgValue::LiteralInt(
+                    seq.next_element::<i64>()?
+                        .ok_or_else(|| serde::de::Error::invalid_length(1, &self))?,
+                ),
+            )),
+            "LiteralFloat" => Ok(MsgAvailabilityReasonArgValueWrapper(
+                crate::compiled::CompiledAvailabilityReasonArgValue::LiteralFloat(
+                    seq.next_element::<f64>()?
+                        .ok_or_else(|| serde::de::Error::invalid_length(1, &self))?,
+                ),
+            )),
+            "LiteralBool" => Ok(MsgAvailabilityReasonArgValueWrapper(
+                crate::compiled::CompiledAvailabilityReasonArgValue::LiteralBool(
+                    seq.next_element::<bool>()?
+                        .ok_or_else(|| serde::de::Error::invalid_length(1, &self))?,
+                ),
             )),
             _ => Err(serde::de::Error::custom(format!(
                 "unknown availability reason argument value tag `{tag}`"

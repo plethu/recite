@@ -332,6 +332,115 @@ intro = "leave"
 }
 
 #[test]
+fn trace_preserves_typed_literal_availability_reason_args() {
+    let temp = TempDir::new().expect("tempdir");
+    let source = write_recite(
+        temp.path(),
+        "dialogue.recite",
+        concat!(
+            ":: start default\n",
+            "> intro\n",
+            "  Welcome.\n",
+            "  ? answer requires=(can_answer())\n",
+            "    Answer.\n",
+            "    -> END\n",
+            "  ? leave\n",
+            "    Leave.\n",
+            "    -> END\n",
+        ),
+    );
+    let schema = write_file(
+        temp.path(),
+        "schema.json",
+        r#"{
+  "schema_version": 1,
+  "types": {
+    "mood": { "kind": "enum", "values": ["sad"] }
+  },
+  "registries": {
+    "actor": { "values": ["hazel"] }
+  },
+  "speakers": {
+    "rhea": {}
+  },
+  "conditions": {
+    "can_answer": {
+      "availability_reason": {
+        "reason": "answer_blocked",
+        "args": {
+          "actor": "hazel",
+          "speaker": "rhea",
+          "mood": "sad",
+          "count": 3,
+          "weight": 1.5,
+          "enabled": true
+        }
+      }
+    }
+  },
+  "availability_reasons": {
+    "answer_blocked": {
+      "template": "{actor} {speaker} {mood} {count} {weight} {enabled}",
+      "params": [
+        { "name": "actor", "type": "registry:actor" },
+        { "name": "speaker", "type": "speaker" },
+        { "name": "mood", "type": "enum:mood" },
+        { "name": "count", "type": "int" },
+        { "name": "weight", "type": "float" },
+        { "name": "enabled", "type": "bool" }
+      ]
+    }
+  }
+}"#,
+    );
+    let asset = compile_project_asset(temp.path(), &source, "dialogue.recitec", Some(&schema));
+    let fixture = write_file(
+        temp.path(),
+        "fixture.toml",
+        r#"[conditions]
+"can_answer()" = false
+
+[choices]
+intro = "leave"
+"#,
+    );
+
+    let trace_output = run(recite()
+        .arg("trace")
+        .arg(&asset)
+        .arg("--block")
+        .arg("start")
+        .arg("--fixture")
+        .arg(&fixture));
+    trace_output.assert_success().assert_stderr("");
+    let trace: serde_json::Value =
+        serde_json::from_slice(&trace_output.stdout).expect("trace is JSON");
+    let choices = trace["events"][1]["prompt"]["choices"]
+        .as_array()
+        .expect("prompt choices");
+    let answer = choices
+        .iter()
+        .find(|choice| choice["id"] == "answer")
+        .expect("answer choice");
+
+    assert_eq!(
+        answer["availability"]["reason_tree"]["value"]["args"],
+        serde_json::json!([
+            { "name": "actor", "value": { "type": "string", "value": "hazel" } },
+            { "name": "count", "value": { "type": "integer", "value": 3 } },
+            { "name": "enabled", "value": { "type": "boolean", "value": true } },
+            { "name": "mood", "value": { "type": "string", "value": "sad" } },
+            { "name": "speaker", "value": { "type": "string", "value": "rhea" } },
+            { "name": "weight", "value": { "type": "float", "value": 1.5 } }
+        ])
+    );
+    assert_eq!(
+        answer["availability"]["reason_tree"]["value"]["text"],
+        "hazel rhea sad 3 1.5 true"
+    );
+}
+
+#[test]
 fn run_trace_and_play_plain_execute_match_conditions() {
     let temp = TempDir::new().expect("tempdir");
     let source = write_recite(

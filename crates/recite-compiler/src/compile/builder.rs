@@ -264,23 +264,29 @@ fn compiled_reason_arg_value(
                 index.to_string(),
             ))
         }
-        AvailabilityReasonArgBinding::Literal(value) => Ok(
-            CompiledAvailabilityReasonArgValue::Literal(compiled_schema_literal(value)?),
-        ),
+        AvailabilityReasonArgBinding::Literal(value) => compiled_schema_literal(value),
     }
 }
 
-fn compiled_schema_literal(value: &SchemaLiteralValue) -> Result<String, CompileError> {
+fn compiled_schema_literal(
+    value: &SchemaLiteralValue,
+) -> Result<CompiledAvailabilityReasonArgValue, CompileError> {
     match value {
-        SchemaLiteralValue::String(value) => Ok(value.clone()),
-        SchemaLiteralValue::Int(value) => Ok(value.to_string()),
-        SchemaLiteralValue::Float(value) => {
-            value.parse::<f64>().map(|_| value.clone()).map_err(|_| {
+        SchemaLiteralValue::String(value) => Ok(CompiledAvailabilityReasonArgValue::LiteralString(
+            value.clone(),
+        )),
+        SchemaLiteralValue::Int(value) => {
+            Ok(CompiledAvailabilityReasonArgValue::LiteralInt(*value))
+        }
+        SchemaLiteralValue::Float(value) => Ok(CompiledAvailabilityReasonArgValue::LiteralFloat(
+            value.parse::<f64>().map_err(|_| {
                 CompileError::InvalidValidatedInput(format!(
                     "validated availability reason float literal `{value}` is not a float"
                 ))
-            })
+            })?,
+        )),
+        SchemaLiteralValue::Bool(value) => {
+            Ok(CompiledAvailabilityReasonArgValue::LiteralBool(*value))
         }
-        SchemaLiteralValue::Bool(value) => Ok(value.to_string()),
     }
 }

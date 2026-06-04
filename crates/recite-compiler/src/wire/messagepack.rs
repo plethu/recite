@@ -281,8 +281,20 @@ impl Serialize for MsgAvailabilityReasonArgValue<'_> {
                 tuple.serialize_element("ConditionArg")?;
                 tuple.serialize_element(value)?;
             }
-            recite_core::CompiledAvailabilityReasonArgValue::Literal(value) => {
-                tuple.serialize_element("Literal")?;
+            recite_core::CompiledAvailabilityReasonArgValue::LiteralString(value) => {
+                tuple.serialize_element("LiteralString")?;
+                tuple.serialize_element(value)?;
+            }
+            recite_core::CompiledAvailabilityReasonArgValue::LiteralInt(value) => {
+                tuple.serialize_element("LiteralInt")?;
+                tuple.serialize_element(value)?;
+            }
+            recite_core::CompiledAvailabilityReasonArgValue::LiteralFloat(value) => {
+                tuple.serialize_element("LiteralFloat")?;
+                tuple.serialize_element(value)?;
+            }
+            recite_core::CompiledAvailabilityReasonArgValue::LiteralBool(value) => {
+                tuple.serialize_element("LiteralBool")?;
                 tuple.serialize_element(value)?;
             }
         }
