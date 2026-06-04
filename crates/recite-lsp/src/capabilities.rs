@@ -1,7 +1,7 @@
 use lsp_types::{
-    InitializeParams, InitializeResult, PositionEncodingKind, SaveOptions, ServerCapabilities,
-    ServerInfo, TextDocumentSyncCapability, TextDocumentSyncKind, TextDocumentSyncOptions,
-    TextDocumentSyncSaveOptions,
+    CompletionOptions, HoverProviderCapability, InitializeParams, InitializeResult,
+    PositionEncodingKind, SaveOptions, ServerCapabilities, ServerInfo, TextDocumentSyncCapability,
+    TextDocumentSyncKind, TextDocumentSyncOptions, TextDocumentSyncSaveOptions,
 };
 
 pub(crate) fn initialize_result(params: &InitializeParams) -> InitializeResult {
@@ -19,6 +19,12 @@ pub(crate) fn initialize_result(params: &InitializeParams) -> InitializeResult {
                     })),
                 },
             )),
+            completion_provider: Some(CompletionOptions {
+                resolve_provider: Some(false),
+                trigger_characters: Some(vec!["(".to_owned(), "=".to_owned()]),
+                ..CompletionOptions::default()
+            }),
+            hover_provider: Some(HoverProviderCapability::Simple(true)),
             ..ServerCapabilities::default()
         },
         server_info: Some(ServerInfo {

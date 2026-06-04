@@ -4,14 +4,16 @@ mod schema_index;
 
 use std::fs;
 
-use lsp_types::{TextDocumentContentChangeEvent, Uri};
-use recite_core::Diagnostic;
+use lsp_types::{CompletionResponse, Hover, Position, TextDocumentContentChangeEvent, Uri};
+use recite_core::{Diagnostic, ProjectSchema};
+use recite_parser::parse;
 
 pub(crate) use config::WorkspaceConfig;
 use project_index::{LiveProjectSnapshot, SavedDocument, SavedProjectIndex};
 use schema_index::SchemaIndex;
 
 use crate::documents::{DocumentChangeResult, OpenDocument, OpenDocumentStore};
+use crate::features;
 use crate::paths::{project_relative_path, uri_to_file_path};
 use crate::summary::OpenFileIdentity;
 
@@ -122,6 +124,17 @@ impl LspWorkspace {
         self.schema.diagnostics_refresh(self.generation)
     }
 
+    pub(crate) fn completion(&self, uri: &Uri, position: Position) -> Option<CompletionResponse> {
+        let text = self.documents.document(uri)?.text();
+        let schema = self.schema.schema()?;
+        features::completion(text, position, schema)
+    }
+
+    pub(crate) fn hover(&self, uri: &Uri, position: Position) -> Option<Hover> {
+        let text = self.documents.document(uri)?.text();
+        features::hover(text, position)
+    }
+
     pub(crate) fn is_current_generation(&self, generation: SnapshotGeneration) -> bool {
         self.generation == generation
     }
@@ -226,4 +239,23 @@ pub(crate) struct DocumentDiagnostics {
     pub(crate) version: Option<i32>,
     pub(crate) diagnostics: Vec<Diagnostic>,
     pub(crate) generation: SnapshotGeneration,
+}
+
+impl DocumentDiagnostics {
+    pub(crate) fn with_schema_diagnostics(mut self, schema: Option<&ProjectSchema>) -> Self {
+        if self.diagnostics.is_empty()
+            && let Some(schema) = schema
+        {
+            let lowered = parse(self.uri.as_str(), self.text.as_str()).lower_source_file();
+            if lowered.diagnostics.is_empty() {
+                self.diagnostics = recite_compiler::validate_source_files_with_schema(
+                    &[lowered.source_file],
+                    schema,
+                )
+                .diagnostics;
+            }
+        }
+
+        self
+    }
 }

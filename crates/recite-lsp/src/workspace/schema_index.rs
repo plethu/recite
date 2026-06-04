@@ -3,7 +3,7 @@ use std::path::PathBuf;
 
 use lsp_types::Uri;
 use recite_core::{
-    Diagnostic, DiagnosticCode, SourcePosition, SourceSpan, load_schema_manifest_str,
+    Diagnostic, DiagnosticCode, ProjectSchema, SourcePosition, SourceSpan, load_schema_manifest_str,
 };
 
 use super::{DiagnosticRefresh, DocumentDiagnostics, SnapshotGeneration};
@@ -16,6 +16,7 @@ pub(crate) struct SchemaIndex {
     uri: Option<Uri>,
     #[allow(dead_code)]
     summary: Option<SchemaSummary>,
+    schema: Option<ProjectSchema>,
     diagnostics: Vec<Diagnostic>,
     text: Option<String>,
 }
@@ -26,6 +27,7 @@ impl SchemaIndex {
             return Self {
                 uri: None,
                 summary: None,
+                schema: None,
                 diagnostics: Vec::new(),
                 text: None,
             };
@@ -38,6 +40,7 @@ impl SchemaIndex {
                 return Self {
                     uri,
                     summary: None,
+                    schema: None,
                     diagnostics: schema_io_diagnostic(display_path, &error),
                     text: None,
                 };
@@ -49,6 +52,7 @@ impl SchemaIndex {
         Self {
             uri,
             summary,
+            schema: report.schema,
             diagnostics: report.diagnostics,
             text: Some(source),
         }
@@ -57,6 +61,10 @@ impl SchemaIndex {
     #[allow(dead_code)]
     pub(crate) fn summary(&self) -> Option<&SchemaSummary> {
         self.summary.as_ref()
+    }
+
+    pub(crate) fn schema(&self) -> Option<&ProjectSchema> {
+        self.schema.as_ref()
     }
 
     #[allow(dead_code)]

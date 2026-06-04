@@ -3,10 +3,10 @@ use lsp_types::notification::{
     DidChangeTextDocument, DidCloseTextDocument, DidOpenTextDocument, DidSaveTextDocument, Exit,
     Initialized, Notification as LspNotification, PublishDiagnostics,
 };
-use lsp_types::request::{Request as LspRequest, Shutdown};
+use lsp_types::request::{Completion, HoverRequest, Request as LspRequest, Shutdown};
 use lsp_types::{
-    DidChangeTextDocumentParams, DidCloseTextDocumentParams, DidOpenTextDocumentParams,
-    DidSaveTextDocumentParams, InitializeParams,
+    CompletionParams, DidChangeTextDocumentParams, DidCloseTextDocumentParams,
+    DidOpenTextDocumentParams, DidSaveTextDocumentParams, HoverParams, InitializeParams,
 };
 
 use crate::capabilities::initialize_result;
@@ -97,6 +97,32 @@ impl Server {
             let response = Response::new_ok(request.id, ());
             self.send(response.into())?;
             self.shutdown_requested = true;
+            return Ok(false);
+        }
+
+        if request.method == Completion::METHOD {
+            let id = request.id.clone();
+            let result = match request.extract::<CompletionParams>(Completion::METHOD) {
+                Ok((_, params)) => self.workspace.completion(
+                    &params.text_document_position.text_document.uri,
+                    params.text_document_position.position,
+                ),
+                Err(_) => None,
+            };
+            self.send(Response::new_ok(id, result).into())?;
+            return Ok(false);
+        }
+
+        if request.method == HoverRequest::METHOD {
+            let id = request.id.clone();
+            let result = match request.extract::<HoverParams>(HoverRequest::METHOD) {
+                Ok((_, params)) => self.workspace.hover(
+                    &params.text_document_position_params.text_document.uri,
+                    params.text_document_position_params.position,
+                ),
+                Err(_) => None,
+            };
+            self.send(Response::new_ok(id, result).into())?;
             return Ok(false);
         }
 
@@ -207,7 +233,7 @@ impl Server {
                     version,
                     diagnostics,
                     ..
-                } = diagnostics;
+                } = diagnostics.with_schema_diagnostics(self.workspace.schema().schema());
                 let publish_params = publish_diagnostics(uri, text.as_str(), version, &diagnostics);
                 self.send(
                     Notification::new(PublishDiagnostics::METHOD.to_owned(), publish_params).into(),
