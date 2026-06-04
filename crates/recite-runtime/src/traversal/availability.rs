@@ -47,21 +47,21 @@ pub(super) fn choice_availability(
         return Ok(ChoiceAvailability::available());
     }
 
-    Ok(ChoiceAvailability::unavailable(
-        primary_reason_override.and_then(|reason| {
-            reason_for_id(
-                asset,
-                reason,
-                locale,
-                requirement_source_text.map(|source_text| {
-                    ChoiceAvailabilityReasonOrigin::RequirementExpression {
-                        source_text: source_text.to_owned(),
-                    }
-                }),
-            )
-        }),
-        reason_tree,
-    ))
+    let primary_reason = match primary_reason_override {
+        Some(reason) => reason_for_id(
+            asset,
+            reason,
+            locale,
+            requirement_source_text.map(|source_text| {
+                ChoiceAvailabilityReasonOrigin::RequirementExpression {
+                    source_text: source_text.to_owned(),
+                }
+            }),
+        )?,
+        None => None,
+    };
+
+    Ok(ChoiceAvailability::unavailable(primary_reason, reason_tree))
 }
 
 fn evaluate_availability_expression(
@@ -222,7 +222,7 @@ fn reason_for_call(
             })
         })
         .collect::<Result<Vec<_>, DialogueError>>()?;
-    Ok(reason_for_id_with_args(
+    reason_for_id_with_args(
         asset,
         &mapping.reason,
         locale,
@@ -231,7 +231,7 @@ fn reason_for_call(
             args: call.args.iter().map(availability_argument).collect(),
         }),
         args,
-    ))
+    )
 }
 
 fn reason_for_id(
@@ -239,7 +239,7 @@ fn reason_for_id(
     reason_id: &recite_core::AvailabilityReasonId,
     locale: LocaleLookup<'_>,
     origin: Option<ChoiceAvailabilityReasonOrigin>,
-) -> Option<ChoiceAvailabilityReason> {
+) -> Result<Option<ChoiceAvailabilityReason>, DialogueError> {
     reason_for_id_with_args(asset, reason_id, locale, origin, std::iter::empty())
 }
 
@@ -249,19 +249,23 @@ fn reason_for_id_with_args(
     locale: LocaleLookup<'_>,
     origin: Option<ChoiceAvailabilityReasonOrigin>,
     args: impl IntoIterator<Item = ChoiceAvailabilityReasonArg>,
-) -> Option<ChoiceAvailabilityReason> {
-    let reason = asset.availability_reason(reason_id)?;
+) -> Result<Option<ChoiceAvailabilityReason>, DialogueError> {
+    let Some(reason) = asset.availability_reason(reason_id) else {
+        return Err(malformed(format!(
+            "availability reason `{reason_id}` is not in compiled availability reason table"
+        )));
+    };
     let args = args.into_iter().collect::<Vec<_>>();
     let source_text = reason.template.clone();
     let localized_template = localise_reason_template(reason.id.as_str(), &source_text, locale);
     let text = render_reason_template(&localized_template, &args);
-    Some(ChoiceAvailabilityReason {
+    Ok(Some(ChoiceAvailabilityReason {
         id: reason.id.clone(),
         source_text,
         text,
         origin,
         args,
-    })
+    }))
 }
 
 fn reason_arg_value(

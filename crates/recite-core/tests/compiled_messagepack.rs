@@ -52,6 +52,10 @@ fn decode_rejects_unknown_wire_tags() {
         echo: Tagged::nil(recite_core::V0_CHOICE_ECHO_TAG_NONE),
         source_map: 0,
     });
+    asset.availability_reasons.push(WireAvailabilityReason {
+        id: "innkeeper_trust_hint",
+        template: "Need more trust.",
+    });
     asset.choice_lookup.push(WireLookupEntry {
         id: "ask",
         index: 0,
@@ -106,6 +110,10 @@ fn decode_rejects_unknown_wire_tags() {
         echo: Tagged::nil(recite_core::V0_CHOICE_ECHO_TAG_NONE),
         source_map: 0,
     });
+    asset.availability_reasons.push(WireAvailabilityReason {
+        id: "innkeeper_trust_hint",
+        template: "Need more trust.",
+    });
     asset.choice_lookup.push(WireLookupEntry {
         id: "ask",
         index: 0,
@@ -137,6 +145,91 @@ fn decode_rejects_unknown_wire_tags() {
         source_map: None,
     });
     assert_malformed_asset_contains(asset, "unknown scalar value tag 99");
+}
+
+#[test]
+fn decode_rejects_invalid_availability_reason_references_and_duplicates() {
+    let mut missing_override = valid_wire_asset();
+    missing_override.statements[0].kind = WireStatementKind::Prompt {
+        line: None,
+        choices: WireRange(0, 1),
+    };
+    missing_override.choices.push(WireChoice {
+        id: "ask",
+        source_text: "Ask?",
+        metadata: WireRange(0, 0),
+        availability_requirement: None,
+        availability_requirement_source_text: None,
+        availability_reason_override: Some("missing_reason"),
+        target: Tagged::nil(recite_core::V0_DIVERT_TARGET_TAG_END),
+        echo: Tagged::nil(recite_core::V0_CHOICE_ECHO_TAG_NONE),
+        source_map: 0,
+    });
+    missing_override.choice_lookup.push(WireLookupEntry {
+        id: "ask",
+        index: 0,
+    });
+    assert_malformed_asset_contains(
+        missing_override,
+        "choice availability reason override references unknown availability reason `missing_reason`",
+    );
+
+    let mut missing_mapping_reason = valid_wire_asset();
+    missing_mapping_reason
+        .condition_availability_reasons
+        .push(WireConditionAvailabilityReason {
+            function: "trust_gte",
+            reason: "missing_reason",
+            args: Vec::new(),
+        });
+    assert_malformed_asset_contains(
+        missing_mapping_reason,
+        "condition availability reason mapping references unknown availability reason `missing_reason`",
+    );
+
+    let mut duplicate_reason = valid_wire_asset();
+    duplicate_reason
+        .availability_reasons
+        .push(WireAvailabilityReason {
+            id: "trust_hint",
+            template: "Need trust.",
+        });
+    duplicate_reason
+        .availability_reasons
+        .push(WireAvailabilityReason {
+            id: "trust_hint",
+            template: "Still need trust.",
+        });
+    assert_malformed_asset_contains(
+        duplicate_reason,
+        "availability reason id `trust_hint` appears more than once",
+    );
+
+    let mut duplicate_mapping = valid_wire_asset();
+    duplicate_mapping
+        .availability_reasons
+        .push(WireAvailabilityReason {
+            id: "trust_hint",
+            template: "Need trust.",
+        });
+    duplicate_mapping
+        .condition_availability_reasons
+        .push(WireConditionAvailabilityReason {
+            function: "trust_gte",
+            reason: "trust_hint",
+            args: Vec::new(),
+        });
+    duplicate_mapping
+        .condition_availability_reasons
+        .push(WireConditionAvailabilityReason {
+            function: "trust_gte",
+            reason: "trust_hint",
+            args: Vec::new(),
+        });
+    assert_malformed_asset_contains(
+        duplicate_mapping,
+        "condition availability reason function `trust_gte` appears more than once",
+    );
 }
 
 #[test]
@@ -230,6 +323,10 @@ fn decode_preserves_choice_availability_reason_override() {
         target: Tagged::nil(recite_core::V0_DIVERT_TARGET_TAG_END),
         echo: Tagged::nil(recite_core::V0_CHOICE_ECHO_TAG_NONE),
         source_map: 0,
+    });
+    asset.availability_reasons.push(WireAvailabilityReason {
+        id: "innkeeper_trust_hint",
+        template: "Need more trust.",
     });
     asset.choice_lookup.push(WireLookupEntry {
         id: "ask",

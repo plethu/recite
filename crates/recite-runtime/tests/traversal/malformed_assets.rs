@@ -168,6 +168,36 @@ fn prompt_with_empty_choice_range_is_structured_error() {
 }
 
 #[test]
+fn missing_availability_reason_reference_is_structured_error() {
+    let schema = recite_core::load_schema_manifest_str(
+        "fixtures/schema/valid/generated_manifest.json",
+        include_str!("../../../../fixtures/schema/valid/generated_manifest.json"),
+    )
+    .schema
+    .expect("valid schema fixture");
+    let mut asset = compile_asset_with_schema(
+        "dialogue/start.recite",
+        concat!(
+            ":: start default\n",
+            "> prompt_line\n",
+            "  What next?\n",
+            "  ? ask_news requires=(trust_gte(hazel, rhea, 3)) reason=innkeeper_trust_hint\n",
+            "    Ask for private news.\n",
+            "    -> END\n",
+        ),
+        &schema,
+    );
+    asset.availability_reasons.clear();
+    let context = RecordingContext::default().with("trust_gte", false);
+    let mut session = start_scene(&asset, None).expect("starts");
+
+    assert!(matches!(
+        next_with_context(&asset, &mut session, &context),
+        Err(DialogueError::MalformedCompiledAsset { .. })
+    ));
+}
+
+#[test]
 fn malformed_match_arm_range_is_structured_error() {
     let mut asset = compile_asset(
         "dialogue/start.recite",
