@@ -105,7 +105,7 @@ pub(super) fn did_close_refreshes_saved_summary_before_falling_back() {
     let harness = harness_for_root(temp.path());
     let uri = file_uri(&source);
 
-    harness.did_open(uri.clone(), 1, ":: live\n");
+    harness.did_open(uri.clone(), 1, ":: live default\n> intro\n  Hello.\n");
     assert!(harness.recv_publish_diagnostics().diagnostics.is_empty());
 
     harness.did_close(uri);

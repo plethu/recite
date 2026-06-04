@@ -126,23 +126,33 @@ impl LspWorkspace {
         self.schema.diagnostics_refresh(self.generation)
     }
 
-    pub(crate) fn with_schema_diagnostics(
+    pub(crate) fn save_schema(&mut self, uri: &Uri) -> Option<DiagnosticRefresh> {
+        if !self.schema.refresh_uri(uri) {
+            return None;
+        }
+        self.rebuild_next_generation();
+        self.schema.refresh_or_clear(self.generation)
+    }
+
+    pub(crate) fn with_semantic_diagnostics(
         &self,
         mut diagnostics: DocumentDiagnostics,
     ) -> DocumentDiagnostics {
         if !diagnostics.diagnostics.is_empty() {
             return diagnostics;
         }
-        let Some(schema) = self.schema.schema() else {
-            return diagnostics;
-        };
         let Some(source_files) = self.live_source_files() else {
             return diagnostics;
         };
         let validation_path = self.validation_path_for_uri(&diagnostics.uri);
 
-        diagnostics.diagnostics =
-            recite_compiler::validate_source_files_with_schema(&source_files, schema).diagnostics;
+        diagnostics.diagnostics = match self.schema.schema() {
+            Some(schema) => {
+                recite_compiler::validate_source_files_with_schema(&source_files, schema)
+                    .diagnostics
+            }
+            None => recite_compiler::validate_source_files(&source_files).diagnostics,
+        };
         diagnostics
             .diagnostics
             .retain(|diagnostic| diagnostic.span.file == validation_path);

@@ -14,6 +14,7 @@ const SCHEMA_LOAD_ERROR: DiagnosticCode = DiagnosticCode::new_static("RECITE_SCH
 
 pub(crate) struct SchemaIndex {
     uri: Option<Uri>,
+    path: Option<PathBuf>,
     #[allow(dead_code)]
     summary: Option<SchemaSummary>,
     schema: Option<ProjectSchema>,
@@ -26,6 +27,7 @@ impl SchemaIndex {
         let Some(path) = path else {
             return Self {
                 uri: None,
+                path: None,
                 summary: None,
                 schema: None,
                 diagnostics: Vec::new(),
@@ -39,6 +41,7 @@ impl SchemaIndex {
             Err(error) => {
                 return Self {
                     uri,
+                    path: Some(path),
                     summary: None,
                     schema: None,
                     diagnostics: schema_io_diagnostic(display_path, &error),
@@ -51,6 +54,7 @@ impl SchemaIndex {
         let summary = report.schema.as_ref().map(SchemaSummary::from_schema);
         Self {
             uri,
+            path: Some(path),
             summary,
             schema: report.schema,
             diagnostics: report.diagnostics,
@@ -88,6 +92,30 @@ impl SchemaIndex {
             diagnostics: self.diagnostics.clone(),
             generation,
         }))
+    }
+
+    pub(super) fn refresh_uri(&mut self, uri: &Uri) -> bool {
+        let Some(schema_uri) = &self.uri else {
+            return false;
+        };
+        if schema_uri != uri {
+            return false;
+        }
+
+        let path = self.path.clone();
+        *self = Self::load(path);
+        true
+    }
+
+    pub(super) fn refresh_or_clear(
+        &self,
+        generation: SnapshotGeneration,
+    ) -> Option<DiagnosticRefresh> {
+        self.diagnostics_refresh(generation).or_else(|| {
+            self.uri
+                .clone()
+                .map(|uri| DiagnosticRefresh::Clear { uri, generation })
+        })
     }
 }
 
