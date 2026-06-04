@@ -311,10 +311,8 @@ impl<'de> Visitor<'de> for MsgAvailabilityReasonArgValueVisitor {
         match tag.as_str() {
             "ConditionArg" => {
                 let value = seq
-                    .next_element::<String>()?
+                    .next_element::<u32>()?
                     .ok_or_else(|| serde::de::Error::invalid_length(1, &self))?;
-                ensure_non_empty("availability reason condition argument", &value)
-                    .map_err(serde::de::Error::custom)?;
                 Ok(MsgAvailabilityReasonArgValueWrapper(
                     crate::compiled::CompiledAvailabilityReasonArgValue::ConditionArg(value),
                 ))

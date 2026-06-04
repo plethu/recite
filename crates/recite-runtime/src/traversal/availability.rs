@@ -193,25 +193,36 @@ fn evaluate_availability_call(
         return Ok((true, None));
     }
 
-    Ok((
-        false,
-        reason_for_call(asset, call, locale)
-            .map(ChoiceAvailabilityReasonTree::Reason)
-            .or_else(|| {
-                requirement_source_text
-                    .map(str::to_owned)
-                    .map(ChoiceAvailabilityReasonTree::RequirementSourceText)
-            }),
-    ))
+    let reason = reason_for_call(asset, call, locale)?
+        .map(ChoiceAvailabilityReasonTree::Reason)
+        .or_else(|| {
+            requirement_source_text
+                .map(str::to_owned)
+                .map(ChoiceAvailabilityReasonTree::RequirementSourceText)
+        });
+
+    Ok((false, reason))
 }
 
 fn reason_for_call(
     asset: AssetView<'_>,
     call: &CompiledConditionCall,
     locale: LocaleLookup<'_>,
-) -> Option<ChoiceAvailabilityReason> {
-    let mapping = asset.condition_availability_reason(&call.function)?;
-    reason_for_id_with_args(
+) -> Result<Option<ChoiceAvailabilityReason>, DialogueError> {
+    let Some(mapping) = asset.condition_availability_reason(&call.function) else {
+        return Ok(None);
+    };
+    let args = mapping
+        .args
+        .iter()
+        .map(|binding| {
+            Ok(ChoiceAvailabilityReasonArg {
+                name: binding.name.clone(),
+                value: reason_arg_value(&binding.value, call)?,
+            })
+        })
+        .collect::<Result<Vec<_>, DialogueError>>()?;
+    Ok(reason_for_id_with_args(
         asset,
         &mapping.reason,
         locale,
@@ -219,13 +230,8 @@ fn reason_for_call(
             function: call.function.clone(),
             args: call.args.iter().map(availability_argument).collect(),
         }),
-        mapping.args.iter().filter_map(|binding| {
-            reason_arg_value(&binding.value, call).map(|value| ChoiceAvailabilityReasonArg {
-                name: binding.name.clone(),
-                value,
-            })
-        }),
-    )
+        args,
+    ))
 }
 
 fn reason_for_id(
@@ -261,21 +267,26 @@ fn reason_for_id_with_args(
 fn reason_arg_value(
     value: &CompiledAvailabilityReasonArgValue,
     call: &CompiledConditionCall,
-) -> Option<ChoiceAvailabilityReasonValue> {
+) -> Result<ChoiceAvailabilityReasonValue, DialogueError> {
     match value {
-        CompiledAvailabilityReasonArgValue::ConditionArg(name) => {
-            condition_argument_value(name, &call.args)
+        CompiledAvailabilityReasonArgValue::ConditionArg(index) => {
+            condition_argument_value(*index, &call.args)
         }
-        CompiledAvailabilityReasonArgValue::Literal(value) => Some(availability_scalar(value)),
+        CompiledAvailabilityReasonArgValue::Literal(value) => Ok(availability_scalar(value)),
     }
 }
 
 fn condition_argument_value(
-    name: &str,
+    index: u32,
     args: &[CompiledArgument],
-) -> Option<ChoiceAvailabilityReasonValue> {
-    let index = name.parse::<usize>().ok()?;
-    args.get(index).map(availability_argument)
+) -> Result<ChoiceAvailabilityReasonValue, DialogueError> {
+    args.get(index as usize)
+        .map(availability_argument)
+        .ok_or_else(|| {
+            malformed(format!(
+                "availability reason condition argument index {index} is out of range"
+            ))
+        })
 }
 
 fn availability_argument(argument: &CompiledArgument) -> ChoiceAvailabilityReasonValue {

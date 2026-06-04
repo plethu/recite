@@ -132,7 +132,7 @@ pub struct CompiledAvailabilityReasonArgBinding {
 
 #[derive(Clone, Debug, PartialEq)]
 pub enum CompiledAvailabilityReasonArgValue {
-    ConditionArg(String),
+    ConditionArg(u32),
     Literal(ScalarValue),
 }
 

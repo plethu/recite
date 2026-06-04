@@ -260,9 +260,12 @@ fn compiled_reason_arg_value(
                     "validated availability reason mapping references unknown condition parameter `{name}`"
                 )));
             };
-            Ok(CompiledAvailabilityReasonArgValue::ConditionArg(
-                index.to_string(),
-            ))
+            let index = index.try_into().map_err(|_| {
+                CompileError::InvalidValidatedInput(format!(
+                    "validated availability reason mapping references condition parameter `{name}` beyond compiled index range"
+                ))
+            })?;
+            Ok(CompiledAvailabilityReasonArgValue::ConditionArg(index))
         }
         AvailabilityReasonArgBinding::Literal(value) => compiled_schema_literal(value),
     }
@@ -278,13 +281,21 @@ fn compiled_schema_literal(
         SchemaLiteralValue::Int(value) => Ok(CompiledAvailabilityReasonArgValue::Literal(
             ScalarValue::Integer(*value),
         )),
-        SchemaLiteralValue::Float(value) => Ok(CompiledAvailabilityReasonArgValue::Literal(
-            ScalarValue::Float(value.parse::<f64>().map_err(|_| {
+        SchemaLiteralValue::Float(value) => {
+            let value = value.parse::<f64>().map_err(|_| {
                 CompileError::InvalidValidatedInput(format!(
                     "validated availability reason float literal `{value}` is not a float"
                 ))
-            })?),
-        )),
+            })?;
+            if !value.is_finite() {
+                return Err(CompileError::InvalidValidatedInput(
+                    "validated availability reason float literal is not finite".to_owned(),
+                ));
+            }
+            Ok(CompiledAvailabilityReasonArgValue::Literal(
+                ScalarValue::Float(value),
+            ))
+        }
         SchemaLiteralValue::Bool(value) => Ok(CompiledAvailabilityReasonArgValue::Literal(
             ScalarValue::Boolean(*value),
         )),

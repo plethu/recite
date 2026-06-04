@@ -407,7 +407,7 @@ impl Serialize for WireAvailabilityReasonArgBinding<'_> {
 }
 
 pub(crate) enum WireAvailabilityReasonArgValue<'a> {
-    ConditionArg(&'a str),
+    ConditionArg(u32),
     LiteralString(&'a str),
     LiteralInt(i64),
     LiteralFloat(f64),
