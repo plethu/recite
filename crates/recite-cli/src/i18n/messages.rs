@@ -1,14 +1,14 @@
-use std::{borrow::Cow, collections::BTreeMap, env, fmt};
+use std::{borrow::Cow, collections::BTreeMap};
 
 use fluent_bundle::{FluentArgs, FluentBundle, FluentResource, FluentValue};
-use unic_langid::{LanguageIdentifier, langid};
+use unic_langid::LanguageIdentifier;
 
 use crate::error::CliError;
 
-pub(crate) const DEFAULT_LOCALE: &str = "en-US";
+use super::locale::{DEFAULT_LOCALE, UiLocale, fallback_chain};
 
-const DEFAULT_RESOURCE: &str = include_str!("../i18n/en-US.ftl");
-const EN_GB_RESOURCE: &str = include_str!("../i18n/en-GB.ftl");
+pub(crate) const DEFAULT_RESOURCE: &str = include_str!("../../i18n/en-US.ftl");
+const EN_GB_RESOURCE: &str = include_str!("../../i18n/en-GB.ftl");
 
 struct EmbeddedCatalog {
     locale: &'static str,
@@ -25,37 +25,6 @@ const EMBEDDED_CATALOGS: &[EmbeddedCatalog] = &[
         source: EN_GB_RESOURCE,
     },
 ];
-
-#[derive(Clone, Debug, Eq, PartialEq)]
-pub(crate) enum UiLocale {
-    Locale(LanguageIdentifier),
-    System,
-}
-
-impl Default for UiLocale {
-    fn default() -> Self {
-        Self::Locale(default_langid())
-    }
-}
-
-impl UiLocale {
-    pub(crate) fn parse(value: &str) -> Result<Self, ()> {
-        if value == "system" {
-            return Ok(Self::System);
-        }
-        value
-            .parse::<LanguageIdentifier>()
-            .map(Self::Locale)
-            .map_err(|_| ())
-    }
-
-    fn resolve(&self) -> LanguageIdentifier {
-        match self {
-            Self::Locale(locale) => locale.clone(),
-            Self::System => system_locale().unwrap_or_else(default_langid),
-        }
-    }
-}
 
 macro_rules! message_ids {
     ($($variant:ident => $key:literal,)+) => {
@@ -235,8 +204,8 @@ message_ids! {
 }
 
 pub(crate) struct Messages {
-    requested: LanguageIdentifier,
-    bundles: BTreeMap<String, FluentBundle<FluentResource>>,
+    pub(super) requested: LanguageIdentifier,
+    pub(super) bundles: BTreeMap<String, FluentBundle<FluentResource>>,
 }
 
 impl Messages {
@@ -246,7 +215,7 @@ impl Messages {
             .map_err(|source| CliError::UiCatalog { source })
     }
 
-    fn from_resources(
+    pub(super) fn from_resources(
         requested: LanguageIdentifier,
         resources: impl IntoIterator<Item = (LanguageIdentifier, String)>,
     ) -> Result<Self, String> {
@@ -322,7 +291,7 @@ impl Messages {
     }
 }
 
-fn embedded_resources() -> Result<Vec<(LanguageIdentifier, String)>, String> {
+pub(super) fn embedded_resources() -> Result<Vec<(LanguageIdentifier, String)>, String> {
     EMBEDDED_CATALOGS
         .iter()
         .map(|catalog| {
@@ -334,62 +303,3 @@ fn embedded_resources() -> Result<Vec<(LanguageIdentifier, String)>, String> {
         })
         .collect()
 }
-
-pub(crate) fn default_langid() -> LanguageIdentifier {
-    langid!("en-US")
-}
-
-fn fallback_chain(requested: &LanguageIdentifier) -> Vec<LanguageIdentifier> {
-    let mut locales = vec![requested.clone()];
-    if requested.region.is_some() {
-        let language_only = requested
-            .language
-            .to_string()
-            .parse()
-            .unwrap_or_else(|_| default_langid());
-        if !locales.contains(&language_only) {
-            locales.push(language_only);
-        }
-    }
-    let default = default_langid();
-    if !locales.contains(&default) {
-        locales.push(default);
-    }
-    locales
-}
-
-fn system_locale() -> Option<LanguageIdentifier> {
-    for key in ["LC_ALL", "LC_MESSAGES", "LANG"] {
-        let Ok(value) = env::var(key) else {
-            continue;
-        };
-        let value = value.trim();
-        if value.is_empty() || value == "C" || value == "POSIX" {
-            continue;
-        }
-        let locale = value
-            .split('.')
-            .next()
-            .unwrap_or(value)
-            .split('@')
-            .next()
-            .unwrap_or(value)
-            .replace('_', "-");
-        if let Ok(locale) = locale.parse::<LanguageIdentifier>() {
-            return Some(locale);
-        }
-    }
-    None
-}
-
-impl fmt::Display for UiLocale {
-    fn fmt(&self, formatter: &mut fmt::Formatter<'_>) -> fmt::Result {
-        match self {
-            Self::Locale(locale) => write!(formatter, "{locale}"),
-            Self::System => formatter.write_str("system"),
-        }
-    }
-}
-
-#[cfg(test)]
-mod tests;
