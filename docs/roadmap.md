@@ -34,7 +34,6 @@ These issues have no unmet dependencies.
 | #33 LSP missing-ID code action | LSP track | on-save ID workflow |
 | #77 LSP block/schema code actions | LSP track | editor repair actions |
 | #106 LSP large-project benchmarks | scale proof | LSP release evidence |
-| #179 LSP choice availability diagnostics | LSP track | schema-aware availability authoring |
 | #104 Large/epic CLI stress checks | scale proof | release evidence |
 | #105 Memory profiles and known limits | scale proof | release known-limits docs |
 | #126 `recite bench` command | scale proof | user-facing benchmark reports |
@@ -210,12 +209,13 @@ localisation extraction. Issue #171 is closed and implements the approved
 `requires=(...)` and `reason=...` source/lowering model. Issue #177 is closed
 and now emits structured runtime availability reasons through compiled assets,
 prompt events, unavailable-choice errors, session snapshots, CLI/play fixtures,
-and trace output. With #171, #176, and #177 landed, #179 LSP availability
-diagnostics and the adapter conformance follow-up can now start. Issue #172 is
-closed; it settled the broader presentation projection contract that lets
-metadata on lines, choices, blocks, and project inputs drive structured
-adapter-visible affordances without committing RPG-specific syntax or runtime
-semantics to core Recite.
+and trace output. Issue #179 is closed and surfaces choice availability parser
+and schema diagnostics, completion, and hover through the LSP authoring surface.
+The adapter conformance follow-up can now start. Issue #172 is closed; it
+settled the broader presentation projection contract that lets metadata on
+lines, choices, blocks, and project inputs drive structured adapter-visible
+affordances without committing RPG-specific syntax or runtime semantics to core
+Recite.
 
 The projection implementation follow-ups remain split by surface. #181 adds
 schema-owned projection declarations and label-template extraction but remains
