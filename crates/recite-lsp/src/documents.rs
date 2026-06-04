@@ -105,6 +105,10 @@ impl OpenDocumentStore {
         self.documents.values()
     }
 
+    pub(crate) fn document(&self, uri: &Uri) -> Option<&OpenDocument> {
+        self.documents.get(uri)
+    }
+
     fn is_stale(&self, uri: &Uri, version: i32) -> bool {
         self.documents
             .get(uri)

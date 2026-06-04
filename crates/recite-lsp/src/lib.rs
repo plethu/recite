@@ -6,8 +6,9 @@
 //! [`run_stdio`] directly.
 //!
 //! The LSP projects syntax and schema-loading diagnostics into editor-facing
-//! notifications. Compiler-backed semantic diagnostics are added through
-//! separate LSP feature work; this crate does not own language semantics.
+//! notifications and reuses compiler validation for schema-backed semantic
+//! diagnostics. This crate projects language semantics into editor features; it
+//! does not own those semantics.
 //!
 //! # Example
 //!
@@ -20,6 +21,7 @@
 mod capabilities;
 mod diagnostics;
 mod documents;
+mod features;
 mod paths;
 mod position;
 mod server;

@@ -155,6 +155,10 @@ impl SavedProjectIndex {
         let path = canonical_or_existing_parent_path(&path)?;
         self.documents.get(&path)
     }
+
+    pub(super) fn documents(&self) -> impl Iterator<Item = &SavedDocument> {
+        self.documents.values()
+    }
 }
 
 #[derive(Clone, Debug)]

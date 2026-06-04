@@ -3,10 +3,10 @@ use lsp_types::notification::{
     DidChangeTextDocument, DidCloseTextDocument, DidOpenTextDocument, DidSaveTextDocument, Exit,
     Initialized, Notification as LspNotification, PublishDiagnostics,
 };
-use lsp_types::request::{Request as LspRequest, Shutdown};
+use lsp_types::request::{Completion, HoverRequest, Request as LspRequest, Shutdown};
 use lsp_types::{
-    DidChangeTextDocumentParams, DidCloseTextDocumentParams, DidOpenTextDocumentParams,
-    DidSaveTextDocumentParams, InitializeParams,
+    CompletionParams, DidChangeTextDocumentParams, DidCloseTextDocumentParams,
+    DidOpenTextDocumentParams, DidSaveTextDocumentParams, HoverParams, InitializeParams,
 };
 
 use crate::capabilities::initialize_result;
@@ -100,6 +100,42 @@ impl Server {
             return Ok(false);
         }
 
+        if request.method == Completion::METHOD {
+            let id = request.id.clone();
+            let result = match request.extract::<CompletionParams>(Completion::METHOD) {
+                Ok((_, params)) => self.workspace.completion(
+                    &params.text_document_position.text_document.uri,
+                    params.text_document_position.position,
+                ),
+                Err(error) => {
+                    let response =
+                        Response::new_err(id, ErrorCode::InvalidParams as i32, error.to_string());
+                    self.send(response.into())?;
+                    return Ok(false);
+                }
+            };
+            self.send(Response::new_ok(id, result).into())?;
+            return Ok(false);
+        }
+
+        if request.method == HoverRequest::METHOD {
+            let id = request.id.clone();
+            let result = match request.extract::<HoverParams>(HoverRequest::METHOD) {
+                Ok((_, params)) => self.workspace.hover(
+                    &params.text_document_position_params.text_document.uri,
+                    params.text_document_position_params.position,
+                ),
+                Err(error) => {
+                    let response =
+                        Response::new_err(id, ErrorCode::InvalidParams as i32, error.to_string());
+                    self.send(response.into())?;
+                    return Ok(false);
+                }
+            };
+            self.send(Response::new_ok(id, result).into())?;
+            return Ok(false);
+        }
+
         let response = Response::new_err(
             request.id,
             ErrorCode::MethodNotFound as i32,
@@ -144,11 +180,12 @@ impl Server {
             return Ok(());
         };
         let refresh = self.workspace.open(
-            params.text_document.uri,
+            params.text_document.uri.clone(),
             params.text_document.version,
             params.text_document.text,
         );
-        self.publish_refresh(refresh)
+        self.publish_refresh(refresh)?;
+        self.publish_open_document_refreshes(Some(&params.text_document.uri))
     }
 
     fn handle_did_change(&mut self, notification: Notification) -> Result<(), ServerError> {
@@ -160,9 +197,11 @@ impl Server {
         let uri = params.text_document.uri;
         let version = params.text_document.version;
         if let WorkspaceChangeResult::Accepted(refresh) =
-            self.workspace.change(uri, version, params.content_changes)
+            self.workspace
+                .change(uri.clone(), version, params.content_changes)
         {
             self.publish_refresh(refresh)?;
+            self.publish_open_document_refreshes(Some(&uri))?;
         }
 
         Ok(())
@@ -174,8 +213,10 @@ impl Server {
         else {
             return Ok(());
         };
-        if let Some(refresh) = self.workspace.save(params.text_document.uri) {
+        let uri = params.text_document.uri;
+        if let Some(refresh) = self.workspace.save(uri.clone()) {
             self.publish_refresh(refresh)?;
+            self.publish_open_document_refreshes(Some(&uri))?;
         }
 
         Ok(())
@@ -189,6 +230,7 @@ impl Server {
         };
         if let Some(refresh) = self.workspace.close(params.text_document.uri) {
             self.publish_refresh(refresh)?;
+            self.publish_open_document_refreshes(None)?;
         }
 
         Ok(())
@@ -207,7 +249,7 @@ impl Server {
                     version,
                     diagnostics,
                     ..
-                } = diagnostics;
+                } = self.workspace.with_schema_diagnostics(diagnostics);
                 let publish_params = publish_diagnostics(uri, text.as_str(), version, &diagnostics);
                 self.send(
                     Notification::new(PublishDiagnostics::METHOD.to_owned(), publish_params).into(),
@@ -221,6 +263,17 @@ impl Server {
                 .into(),
             ),
         }
+    }
+
+    fn publish_open_document_refreshes(
+        &self,
+        exclude: Option<&lsp_types::Uri>,
+    ) -> Result<(), ServerError> {
+        for refresh in self.workspace.open_document_diagnostics_except(exclude) {
+            self.publish_refresh(refresh)?;
+        }
+
+        Ok(())
     }
 
     fn send(&self, message: Message) -> Result<(), ServerError> {

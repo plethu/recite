@@ -1,3 +1,4 @@
+mod availability;
 mod diagnostics;
 mod lifecycle;
 mod position;
@@ -8,6 +9,11 @@ mod sync;
 #[test]
 fn initialize_advertises_full_sync_save_and_utf16() {
     lifecycle::initialize_advertises_full_sync_save_and_utf16();
+}
+
+#[test]
+fn initialize_advertises_completion_and_hover() {
+    availability::initialize_advertises_completion_and_hover();
 }
 
 #[test]
@@ -38,6 +44,46 @@ fn did_open_publishes_source_diagnostics_with_stable_shape() {
 #[test]
 fn did_open_publishes_lowering_diagnostics() {
     diagnostics::did_open_publishes_lowering_diagnostics();
+}
+
+#[test]
+fn publishes_choice_availability_parser_diagnostics() {
+    availability::publishes_choice_availability_parser_diagnostics();
+}
+
+#[test]
+fn publishes_choice_availability_schema_diagnostics() {
+    availability::publishes_choice_availability_schema_diagnostics();
+}
+
+#[test]
+fn schema_diagnostics_validate_live_project_before_filtering_to_uri() {
+    availability::schema_diagnostics_validate_live_project_before_filtering_to_uri();
+}
+
+#[test]
+fn schema_diagnostics_republish_open_references_after_target_changes() {
+    availability::schema_diagnostics_republish_open_references_after_target_changes();
+}
+
+#[test]
+fn completes_requires_conditions_and_parameterless_reasons() {
+    availability::completes_requires_conditions_and_parameterless_reasons();
+}
+
+#[test]
+fn hover_distinguishes_unavailable_and_hidden_choices() {
+    availability::hover_distinguishes_unavailable_and_hidden_choices();
+}
+
+#[test]
+fn hover_uses_utf16_positions_after_non_ascii_prefix() {
+    availability::hover_uses_utf16_positions_after_non_ascii_prefix();
+}
+
+#[test]
+fn malformed_completion_and_hover_params_return_invalid_params() {
+    availability::malformed_completion_and_hover_params_return_invalid_params();
 }
 
 #[test]

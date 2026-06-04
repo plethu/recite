@@ -8,12 +8,13 @@ use lsp_types::notification::{
     DidChangeTextDocument, DidCloseTextDocument, DidOpenTextDocument, DidSaveTextDocument, Exit,
     Initialized, Notification as LspNotification, PublishDiagnostics,
 };
-use lsp_types::request::{Request as LspRequest, Shutdown};
+use lsp_types::request::{Completion, HoverRequest, Request as LspRequest, Shutdown};
 use lsp_types::{
-    DidChangeTextDocumentParams, DidCloseTextDocumentParams, DidOpenTextDocumentParams,
-    DidSaveTextDocumentParams, InitializeResult, PublishDiagnosticsParams,
-    TextDocumentContentChangeEvent, TextDocumentIdentifier, TextDocumentItem, Uri,
-    VersionedTextDocumentIdentifier,
+    CompletionParams, CompletionResponse, DidChangeTextDocumentParams, DidCloseTextDocumentParams,
+    DidOpenTextDocumentParams, DidSaveTextDocumentParams, Hover, HoverParams, InitializeResult,
+    PartialResultParams, Position, PublishDiagnosticsParams, TextDocumentContentChangeEvent,
+    TextDocumentIdentifier, TextDocumentItem, TextDocumentPositionParams, Uri,
+    VersionedTextDocumentIdentifier, WorkDoneProgressParams,
 };
 use serde::Serialize;
 use serde_json::{Value, json};
@@ -126,6 +127,54 @@ impl Harness {
         );
     }
 
+    pub(super) fn completion(
+        &mut self,
+        uri: Uri,
+        position: Position,
+    ) -> Option<CompletionResponse> {
+        let id = self.next_request_id();
+        self.send(Message::Request(Request {
+            id,
+            method: Completion::METHOD.to_owned(),
+            params: to_value(CompletionParams {
+                text_document_position: TextDocumentPositionParams {
+                    text_document: TextDocumentIdentifier { uri },
+                    position,
+                },
+                work_done_progress_params: WorkDoneProgressParams::default(),
+                partial_result_params: PartialResultParams::default(),
+                context: None,
+            }),
+        }));
+        self.recv_response_result()
+    }
+
+    pub(super) fn hover(&mut self, uri: Uri, position: Position) -> Option<Hover> {
+        let id = self.next_request_id();
+        self.send(Message::Request(Request {
+            id,
+            method: HoverRequest::METHOD.to_owned(),
+            params: to_value(HoverParams {
+                text_document_position_params: TextDocumentPositionParams {
+                    text_document: TextDocumentIdentifier { uri },
+                    position,
+                },
+                work_done_progress_params: WorkDoneProgressParams::default(),
+            }),
+        }));
+        self.recv_response_result()
+    }
+
+    pub(super) fn raw_request_response(&mut self, method: &str, params: Value) -> Response {
+        let id = self.next_request_id();
+        self.send(Message::Request(Request {
+            id,
+            method: method.to_owned(),
+            params,
+        }));
+        self.recv_response()
+    }
+
     pub(super) fn finish(self) {
         let mut this = self;
         let id = this.next_request_id();
@@ -188,6 +237,14 @@ impl Harness {
             Ok(other) => panic!("expected response, got {other:?}"),
             Err(error) => panic!("failed to receive response: {error}"),
         }
+    }
+
+    fn recv_response_result<T: serde::de::DeserializeOwned>(&self) -> T {
+        let response = self.recv_response();
+        if let Some(error) = response.error {
+            panic!("request failed: {error:?}");
+        }
+        from_value(response.result.unwrap_or(Value::Null))
     }
 }
 
