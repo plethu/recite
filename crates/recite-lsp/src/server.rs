@@ -180,11 +180,12 @@ impl Server {
             return Ok(());
         };
         let refresh = self.workspace.open(
-            params.text_document.uri,
+            params.text_document.uri.clone(),
             params.text_document.version,
             params.text_document.text,
         );
-        self.publish_refresh(refresh)
+        self.publish_refresh(refresh)?;
+        self.publish_open_document_refreshes(Some(&params.text_document.uri))
     }
 
     fn handle_did_change(&mut self, notification: Notification) -> Result<(), ServerError> {
@@ -196,9 +197,11 @@ impl Server {
         let uri = params.text_document.uri;
         let version = params.text_document.version;
         if let WorkspaceChangeResult::Accepted(refresh) =
-            self.workspace.change(uri, version, params.content_changes)
+            self.workspace
+                .change(uri.clone(), version, params.content_changes)
         {
             self.publish_refresh(refresh)?;
+            self.publish_open_document_refreshes(Some(&uri))?;
         }
 
         Ok(())
@@ -210,8 +213,10 @@ impl Server {
         else {
             return Ok(());
         };
-        if let Some(refresh) = self.workspace.save(params.text_document.uri) {
+        let uri = params.text_document.uri;
+        if let Some(refresh) = self.workspace.save(uri.clone()) {
             self.publish_refresh(refresh)?;
+            self.publish_open_document_refreshes(Some(&uri))?;
         }
 
         Ok(())
@@ -225,6 +230,7 @@ impl Server {
         };
         if let Some(refresh) = self.workspace.close(params.text_document.uri) {
             self.publish_refresh(refresh)?;
+            self.publish_open_document_refreshes(None)?;
         }
 
         Ok(())
@@ -257,6 +263,17 @@ impl Server {
                 .into(),
             ),
         }
+    }
+
+    fn publish_open_document_refreshes(
+        &self,
+        exclude: Option<&lsp_types::Uri>,
+    ) -> Result<(), ServerError> {
+        for refresh in self.workspace.open_document_diagnostics_except(exclude) {
+            self.publish_refresh(refresh)?;
+        }
+
+        Ok(())
     }
 
     fn send(&self, message: Message) -> Result<(), ServerError> {

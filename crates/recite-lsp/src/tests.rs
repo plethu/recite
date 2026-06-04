@@ -62,6 +62,11 @@ fn schema_diagnostics_validate_live_project_before_filtering_to_uri() {
 }
 
 #[test]
+fn schema_diagnostics_republish_open_references_after_target_changes() {
+    availability::schema_diagnostics_republish_open_references_after_target_changes();
+}
+
+#[test]
 fn completes_requires_conditions_and_parameterless_reasons() {
     availability::completes_requires_conditions_and_parameterless_reasons();
 }

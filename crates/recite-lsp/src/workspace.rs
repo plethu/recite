@@ -139,12 +139,13 @@ impl LspWorkspace {
         let Some(source_files) = self.live_source_files() else {
             return diagnostics;
         };
+        let validation_path = self.validation_path_for_uri(&diagnostics.uri);
 
         diagnostics.diagnostics =
             recite_compiler::validate_source_files_with_schema(&source_files, schema).diagnostics;
         diagnostics
             .diagnostics
-            .retain(|diagnostic| diagnostic.span.file == diagnostics.uri.as_str());
+            .retain(|diagnostic| diagnostic.span.file == validation_path);
         diagnostics
     }
 
@@ -157,6 +158,20 @@ impl LspWorkspace {
     pub(crate) fn hover(&self, uri: &Uri, position: Position) -> Option<Hover> {
         let text = self.documents.document(uri)?.text();
         features::hover(text, position)
+    }
+
+    pub(crate) fn open_document_diagnostics_except(
+        &self,
+        exclude: Option<&Uri>,
+    ) -> Vec<DiagnosticRefresh> {
+        self.documents
+            .documents()
+            .filter(|document| match exclude {
+                Some(uri) => document.identity().uri != *uri,
+                None => true,
+            })
+            .map(|document| DiagnosticRefresh::publish_open(document, self.generation))
+            .collect()
     }
 
     pub(crate) fn is_current_generation(&self, generation: SnapshotGeneration) -> bool {
@@ -207,16 +222,25 @@ impl LspWorkspace {
             })
             .map(|document| {
                 (
-                    document.summary.uri().as_str().to_owned(),
+                    document
+                        .summary
+                        .project_relative_path()
+                        .unwrap_or(document.summary.uri().as_str())
+                        .to_owned(),
                     document.text.as_str(),
                 )
             })
             .collect::<Vec<_>>();
-        inputs.extend(
-            self.documents
-                .documents()
-                .map(|document| (document.identity().uri.as_str().to_owned(), document.text())),
-        );
+        inputs.extend(self.documents.documents().map(|document| {
+            (
+                document
+                    .summary()
+                    .project_relative_path()
+                    .unwrap_or(document.identity().uri.as_str())
+                    .to_owned(),
+                document.text(),
+            )
+        }));
         inputs.sort_by(|left, right| left.0.cmp(&right.0));
 
         let mut source_files = Vec::with_capacity(inputs.len());
@@ -229,6 +253,25 @@ impl LspWorkspace {
         }
 
         Some(source_files)
+    }
+
+    fn validation_path_for_uri(&self, uri: &Uri) -> String {
+        if let Some(document) = self.documents.document(uri) {
+            return document
+                .summary()
+                .project_relative_path()
+                .unwrap_or(uri.as_str())
+                .to_owned();
+        }
+        if let Some(document) = self.saved.document_by_uri(uri) {
+            return document
+                .summary
+                .project_relative_path()
+                .unwrap_or(uri.as_str())
+                .to_owned();
+        }
+
+        uri.as_str().to_owned()
     }
 
     fn open_identity(&self, uri: Uri) -> OpenFileIdentity {
