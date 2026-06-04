@@ -107,7 +107,12 @@ impl Server {
                     &params.text_document_position.text_document.uri,
                     params.text_document_position.position,
                 ),
-                Err(_) => None,
+                Err(error) => {
+                    let response =
+                        Response::new_err(id, ErrorCode::InvalidParams as i32, error.to_string());
+                    self.send(response.into())?;
+                    return Ok(false);
+                }
             };
             self.send(Response::new_ok(id, result).into())?;
             return Ok(false);
@@ -120,7 +125,12 @@ impl Server {
                     &params.text_document_position_params.text_document.uri,
                     params.text_document_position_params.position,
                 ),
-                Err(_) => None,
+                Err(error) => {
+                    let response =
+                        Response::new_err(id, ErrorCode::InvalidParams as i32, error.to_string());
+                    self.send(response.into())?;
+                    return Ok(false);
+                }
             };
             self.send(Response::new_ok(id, result).into())?;
             return Ok(false);
@@ -233,7 +243,7 @@ impl Server {
                     version,
                     diagnostics,
                     ..
-                } = diagnostics.with_schema_diagnostics(self.workspace.schema().schema());
+                } = self.workspace.with_schema_diagnostics(diagnostics);
                 let publish_params = publish_diagnostics(uri, text.as_str(), version, &diagnostics);
                 self.send(
                     Notification::new(PublishDiagnostics::METHOD.to_owned(), publish_params).into(),

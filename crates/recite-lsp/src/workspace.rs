@@ -2,10 +2,12 @@ mod config;
 mod project_index;
 mod schema_index;
 
+use std::collections::BTreeSet;
 use std::fs;
+use std::path::{Path, PathBuf};
 
 use lsp_types::{CompletionResponse, Hover, Position, TextDocumentContentChangeEvent, Uri};
-use recite_core::{Diagnostic, ProjectSchema};
+use recite_core::{Diagnostic, SourceFile};
 use recite_parser::parse;
 
 pub(crate) use config::WorkspaceConfig;
@@ -124,6 +126,28 @@ impl LspWorkspace {
         self.schema.diagnostics_refresh(self.generation)
     }
 
+    pub(crate) fn with_schema_diagnostics(
+        &self,
+        mut diagnostics: DocumentDiagnostics,
+    ) -> DocumentDiagnostics {
+        if !diagnostics.diagnostics.is_empty() {
+            return diagnostics;
+        }
+        let Some(schema) = self.schema.schema() else {
+            return diagnostics;
+        };
+        let Some(source_files) = self.live_source_files() else {
+            return diagnostics;
+        };
+
+        diagnostics.diagnostics =
+            recite_compiler::validate_source_files_with_schema(&source_files, schema).diagnostics;
+        diagnostics
+            .diagnostics
+            .retain(|diagnostic| diagnostic.span.file == diagnostics.uri.as_str());
+        diagnostics
+    }
+
     pub(crate) fn completion(&self, uri: &Uri, position: Position) -> Option<CompletionResponse> {
         let text = self.documents.document(uri)?.text();
         let schema = self.schema.schema()?;
@@ -157,6 +181,54 @@ impl LspWorkspace {
     fn rebuild_next_generation(&mut self) {
         self.generation = SnapshotGeneration(self.generation.0.saturating_add(1));
         self.snapshot = LiveProjectSnapshot::rebuild(self.generation, &self.saved, &self.documents);
+    }
+
+    fn live_source_files(&self) -> Option<Vec<SourceFile>> {
+        let open_saved_paths = self
+            .documents
+            .documents()
+            .filter_map(|document| document.summary().saved_path().map(Path::to_owned))
+            .collect::<BTreeSet<PathBuf>>();
+        let open_uris = self
+            .documents
+            .documents()
+            .map(|document| document.summary().uri().as_str().to_owned())
+            .collect::<BTreeSet<_>>();
+
+        let mut inputs = self
+            .saved
+            .documents()
+            .filter(|document| {
+                !document
+                    .summary
+                    .saved_path()
+                    .is_some_and(|path| open_saved_paths.contains(path))
+                    && !open_uris.contains(document.summary.uri().as_str())
+            })
+            .map(|document| {
+                (
+                    document.summary.uri().as_str().to_owned(),
+                    document.text.as_str(),
+                )
+            })
+            .collect::<Vec<_>>();
+        inputs.extend(
+            self.documents
+                .documents()
+                .map(|document| (document.identity().uri.as_str().to_owned(), document.text())),
+        );
+        inputs.sort_by(|left, right| left.0.cmp(&right.0));
+
+        let mut source_files = Vec::with_capacity(inputs.len());
+        for (uri, text) in inputs {
+            let lowered = parse(uri.as_str(), text).lower_source_file();
+            if !lowered.diagnostics.is_empty() {
+                return None;
+            }
+            source_files.push(lowered.source_file);
+        }
+
+        Some(source_files)
     }
 
     fn open_identity(&self, uri: Uri) -> OpenFileIdentity {
@@ -239,23 +311,4 @@ pub(crate) struct DocumentDiagnostics {
     pub(crate) version: Option<i32>,
     pub(crate) diagnostics: Vec<Diagnostic>,
     pub(crate) generation: SnapshotGeneration,
-}
-
-impl DocumentDiagnostics {
-    pub(crate) fn with_schema_diagnostics(mut self, schema: Option<&ProjectSchema>) -> Self {
-        if self.diagnostics.is_empty()
-            && let Some(schema) = schema
-        {
-            let lowered = parse(self.uri.as_str(), self.text.as_str()).lower_source_file();
-            if lowered.diagnostics.is_empty() {
-                self.diagnostics = recite_compiler::validate_source_files_with_schema(
-                    &[lowered.source_file],
-                    schema,
-                )
-                .diagnostics;
-            }
-        }
-
-        self
-    }
 }

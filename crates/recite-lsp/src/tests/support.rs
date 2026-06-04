@@ -165,6 +165,16 @@ impl Harness {
         self.recv_response_result()
     }
 
+    pub(super) fn raw_request_response(&mut self, method: &str, params: Value) -> Response {
+        let id = self.next_request_id();
+        self.send(Message::Request(Request {
+            id,
+            method: method.to_owned(),
+            params,
+        }));
+        self.recv_response()
+    }
+
     pub(super) fn finish(self) {
         let mut this = self;
         let id = this.next_request_id();

@@ -57,6 +57,11 @@ fn publishes_choice_availability_schema_diagnostics() {
 }
 
 #[test]
+fn schema_diagnostics_validate_live_project_before_filtering_to_uri() {
+    availability::schema_diagnostics_validate_live_project_before_filtering_to_uri();
+}
+
+#[test]
 fn completes_requires_conditions_and_parameterless_reasons() {
     availability::completes_requires_conditions_and_parameterless_reasons();
 }
@@ -64,6 +69,16 @@ fn completes_requires_conditions_and_parameterless_reasons() {
 #[test]
 fn hover_distinguishes_unavailable_and_hidden_choices() {
     availability::hover_distinguishes_unavailable_and_hidden_choices();
+}
+
+#[test]
+fn hover_uses_utf16_positions_after_non_ascii_prefix() {
+    availability::hover_uses_utf16_positions_after_non_ascii_prefix();
+}
+
+#[test]
+fn malformed_completion_and_hover_params_return_invalid_params() {
+    availability::malformed_completion_and_hover_params_return_invalid_params();
 }
 
 #[test]

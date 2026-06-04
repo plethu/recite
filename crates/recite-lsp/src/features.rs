@@ -51,12 +51,12 @@ pub(crate) fn completion(
 
 pub(crate) fn hover(text: &str, position: Position) -> Option<Hover> {
     let line_index = usize::try_from(position.line).ok()?;
-    let character = usize::try_from(position.character).ok()?;
     let line = text.lines().nth(line_index)?;
-    if let Some(range) = find_requires_range(line, line_index, character) {
+    let byte_index = byte_index_for_utf16_character(line, position.character)?;
+    if let Some(range) = find_requires_range(line, line_index, byte_index) {
         return Some(hover_response(REQUIRES_HOVER, range));
     }
-    if let Some(range) = find_if_range(line, line_index, character) {
+    if let Some(range) = find_if_range(line, line_index, byte_index) {
         return Some(hover_response(IF_HOVER, range));
     }
 
@@ -92,19 +92,19 @@ fn line_prefix(text: &str, position: Position) -> Option<&str> {
     line.get(..end)
 }
 
-fn find_requires_range(line: &str, line_index: usize, character: usize) -> Option<Range> {
+fn find_requires_range(line: &str, line_index: usize, byte_index: usize) -> Option<Range> {
     let start = line.find("requires=(")?;
     let end = match line[start..].find(')') {
         Some(relative_end) => start + relative_end + 1,
         None => line.len(),
     };
-    (start <= character && character <= end).then(|| range(line_index, start, end))
+    (start <= byte_index && byte_index <= end).then(|| range(line, line_index, start, end))
 }
 
-fn find_if_range(line: &str, line_index: usize, character: usize) -> Option<Range> {
+fn find_if_range(line: &str, line_index: usize, byte_index: usize) -> Option<Range> {
     let start = line.find(":if")?;
     let end = start + ":if".len();
-    (start <= character && character <= end).then(|| range(line_index, start, end))
+    (start <= byte_index && byte_index <= end).then(|| range(line, line_index, start, end))
 }
 
 fn hover_response(value: &str, range: Range) -> Hover {
@@ -117,15 +117,15 @@ fn hover_response(value: &str, range: Range) -> Hover {
     }
 }
 
-fn range(line: usize, start: usize, end: usize) -> Range {
+fn range(text_line: &str, line: usize, start: usize, end: usize) -> Range {
     Range {
         start: Position {
             line: u32::try_from(line).unwrap_or(u32::MAX),
-            character: u32::try_from(start).unwrap_or(u32::MAX),
+            character: utf16_units_for_byte_index(text_line, start),
         },
         end: Position {
             line: u32::try_from(line).unwrap_or(u32::MAX),
-            character: u32::try_from(end).unwrap_or(u32::MAX),
+            character: utf16_units_for_byte_index(text_line, end),
         },
     }
 }
@@ -143,6 +143,16 @@ fn byte_index_for_utf16_character(line: &str, character: u32) -> Option<usize> {
     }
 
     (utf16_units == character).then_some(line.len())
+}
+
+fn utf16_units_for_byte_index(line: &str, byte_index: usize) -> u32 {
+    line.get(..byte_index)
+        .unwrap_or(line)
+        .chars()
+        .map(char::len_utf16)
+        .fold(0_u32, |total, width| {
+            total.saturating_add(u32::try_from(width).unwrap_or(u32::MAX))
+        })
 }
 
 fn condition_detail(return_type: &ConditionReturnType) -> String {
