@@ -151,6 +151,7 @@ pub(in crate::runtime_fixture) struct TraceChoiceAvailability {
 pub(in crate::runtime_fixture) struct TraceChoiceAvailabilityReason {
     pub(in crate::runtime_fixture) id: String,
     pub(in crate::runtime_fixture) source_text: String,
+    pub(in crate::runtime_fixture) text: String,
     pub(in crate::runtime_fixture) origin: Option<TraceChoiceAvailabilityReasonOrigin>,
     pub(in crate::runtime_fixture) args: Vec<TraceChoiceAvailabilityReasonArg>,
 }
@@ -158,14 +159,29 @@ pub(in crate::runtime_fixture) struct TraceChoiceAvailabilityReason {
 #[derive(Clone, Debug, Serialize)]
 #[serde(tag = "type", rename_all = "snake_case")]
 pub(in crate::runtime_fixture) enum TraceChoiceAvailabilityReasonOrigin {
-    ConditionCall { function: String, args: Vec<String> },
-    RequirementExpression { source_text: String },
+    ConditionCall {
+        function: String,
+        args: Vec<TraceChoiceAvailabilityReasonValue>,
+    },
+    RequirementExpression {
+        source_text: String,
+    },
 }
 
 #[derive(Clone, Debug, Serialize)]
 pub(in crate::runtime_fixture) struct TraceChoiceAvailabilityReasonArg {
     pub(in crate::runtime_fixture) name: String,
-    pub(in crate::runtime_fixture) value: String,
+    pub(in crate::runtime_fixture) value: TraceChoiceAvailabilityReasonValue,
+}
+
+#[derive(Clone, Debug, Serialize)]
+#[serde(tag = "type", content = "value", rename_all = "snake_case")]
+pub(in crate::runtime_fixture) enum TraceChoiceAvailabilityReasonValue {
+    Identifier(String),
+    String(String),
+    Integer(i64),
+    Float(f64),
+    Boolean(bool),
 }
 
 #[derive(Clone, Debug, Serialize)]

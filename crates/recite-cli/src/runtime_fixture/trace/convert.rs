@@ -1,16 +1,16 @@
 use recite_core::{MetadataEntry, ScalarValue, SourceSpan, Value};
 use recite_runtime::{
     ChoiceAvailability, ChoiceAvailabilityReason, ChoiceAvailabilityReasonArg,
-    ChoiceAvailabilityReasonOrigin, ChoiceAvailabilityReasonTree, ConditionArgument,
-    DialogueChoice, DialogueEffectArgument, DialogueEffectRequest, DialogueLine,
+    ChoiceAvailabilityReasonOrigin, ChoiceAvailabilityReasonTree, ChoiceAvailabilityReasonValue,
+    ConditionArgument, DialogueChoice, DialogueEffectArgument, DialogueEffectRequest, DialogueLine,
 };
 
 use super::format::effect_mode_name;
 use super::model::{
     TraceChoice, TraceChoiceAvailability, TraceChoiceAvailabilityReason,
     TraceChoiceAvailabilityReasonArg, TraceChoiceAvailabilityReasonOrigin,
-    TraceChoiceAvailabilityReasonTree, TraceEffect, TraceLine, TraceMetadata, TraceScalar,
-    TraceSourceSpan, TraceValue,
+    TraceChoiceAvailabilityReasonTree, TraceChoiceAvailabilityReasonValue, TraceEffect, TraceLine,
+    TraceMetadata, TraceScalar, TraceSourceSpan, TraceValue,
 };
 
 pub(in crate::runtime_fixture) fn trace_line(line: &DialogueLine) -> TraceLine {
@@ -38,7 +38,7 @@ pub(in crate::runtime_fixture) fn trace_choice(choice: &DialogueChoice) -> Trace
             .availability
             .primary_reason
             .as_ref()
-            .map(|reason| reason.source_text.clone()),
+            .map(|reason| reason.text.clone()),
     }
 }
 
@@ -60,6 +60,7 @@ fn trace_availability_reason(reason: &ChoiceAvailabilityReason) -> TraceChoiceAv
     TraceChoiceAvailabilityReason {
         id: reason.id.as_str().to_owned(),
         source_text: reason.source_text.clone(),
+        text: reason.text.clone(),
         origin: reason.origin.as_ref().map(trace_availability_reason_origin),
         args: reason
             .args
@@ -76,7 +77,7 @@ fn trace_availability_reason_origin(
         ChoiceAvailabilityReasonOrigin::ConditionCall { function, args } => {
             TraceChoiceAvailabilityReasonOrigin::ConditionCall {
                 function: function.clone(),
-                args: args.clone(),
+                args: args.iter().map(trace_availability_reason_value).collect(),
             }
         }
         ChoiceAvailabilityReasonOrigin::RequirementExpression { source_text } => {
@@ -92,7 +93,29 @@ fn trace_availability_reason_arg(
 ) -> TraceChoiceAvailabilityReasonArg {
     TraceChoiceAvailabilityReasonArg {
         name: arg.name.clone(),
-        value: arg.value.clone(),
+        value: trace_availability_reason_value(&arg.value),
+    }
+}
+
+fn trace_availability_reason_value(
+    value: &ChoiceAvailabilityReasonValue,
+) -> TraceChoiceAvailabilityReasonValue {
+    match value {
+        ChoiceAvailabilityReasonValue::Identifier(value) => {
+            TraceChoiceAvailabilityReasonValue::Identifier(value.clone())
+        }
+        ChoiceAvailabilityReasonValue::String(value) => {
+            TraceChoiceAvailabilityReasonValue::String(value.clone())
+        }
+        ChoiceAvailabilityReasonValue::Integer(value) => {
+            TraceChoiceAvailabilityReasonValue::Integer(*value)
+        }
+        ChoiceAvailabilityReasonValue::Float(value) => {
+            TraceChoiceAvailabilityReasonValue::Float(*value)
+        }
+        ChoiceAvailabilityReasonValue::Boolean(value) => {
+            TraceChoiceAvailabilityReasonValue::Boolean(*value)
+        }
     }
 }
 

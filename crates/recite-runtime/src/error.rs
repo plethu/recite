@@ -3,7 +3,7 @@ use recite_core::{ChoiceId, EffectId};
 use crate::{ChoiceAvailability, ConditionExpectedType, DialogueEffectMode};
 
 /// Runtime error for deterministic traversal over compiled dialogue assets.
-#[derive(Clone, Debug, Eq, PartialEq, thiserror::Error)]
+#[derive(Clone, Debug, PartialEq, thiserror::Error)]
 pub enum DialogueError {
     #[error("unknown block `{block}`")]
     UnknownBlock { block: String },
@@ -83,7 +83,7 @@ fn fmt_unavailable_choice(
 ) -> std::fmt::Result {
     write!(formatter, "choice `{choice}` is unavailable")?;
     if let Some(reason) = &availability.primary_reason {
-        write!(formatter, ": {}", reason.source_text)?;
+        write!(formatter, ": {}", reason.text)?;
     }
     Ok(())
 }

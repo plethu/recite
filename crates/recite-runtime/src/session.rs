@@ -125,7 +125,7 @@ pub(crate) struct StatementFrame {
     pub(crate) next_statement: StatementIndex,
 }
 
-#[derive(Clone, Debug, Eq, PartialEq)]
+#[derive(Clone, Debug, PartialEq)]
 pub(crate) struct PendingPrompt {
     pub(crate) statement: StatementIndex,
     pub(crate) choices: Vec<PendingPromptChoice>,
@@ -140,7 +140,7 @@ impl PendingPrompt {
     }
 }
 
-#[derive(Clone, Debug, Eq, PartialEq)]
+#[derive(Clone, Debug, PartialEq)]
 pub(crate) struct PendingPromptChoice {
     pub(crate) id: ChoiceId,
     pub(crate) target: CompiledDivertTarget,

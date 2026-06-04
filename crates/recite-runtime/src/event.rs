@@ -35,7 +35,7 @@ pub struct DialogueChoice {
     pub echo: ChoiceEchoMode,
 }
 
-#[derive(Clone, Debug, Eq, PartialEq)]
+#[derive(Clone, Debug, PartialEq)]
 pub struct ChoiceAvailability {
     pub is_available: bool,
     pub primary_reason: Option<ChoiceAvailabilityReason>,
@@ -65,27 +65,42 @@ impl ChoiceAvailability {
     }
 }
 
-#[derive(Clone, Debug, Eq, PartialEq)]
+#[derive(Clone, Debug, PartialEq)]
 pub struct ChoiceAvailabilityReason {
     pub id: AvailabilityReasonId,
     pub source_text: String,
+    pub text: String,
     pub origin: Option<ChoiceAvailabilityReasonOrigin>,
     pub args: Vec<ChoiceAvailabilityReasonArg>,
 }
 
-#[derive(Clone, Debug, Eq, PartialEq)]
+#[derive(Clone, Debug, PartialEq)]
 pub enum ChoiceAvailabilityReasonOrigin {
-    ConditionCall { function: String, args: Vec<String> },
-    RequirementExpression { source_text: String },
+    ConditionCall {
+        function: String,
+        args: Vec<ChoiceAvailabilityReasonValue>,
+    },
+    RequirementExpression {
+        source_text: String,
+    },
 }
 
-#[derive(Clone, Debug, Eq, PartialEq)]
+#[derive(Clone, Debug, PartialEq)]
 pub struct ChoiceAvailabilityReasonArg {
     pub name: String,
-    pub value: String,
+    pub value: ChoiceAvailabilityReasonValue,
 }
 
-#[derive(Clone, Debug, Eq, PartialEq)]
+#[derive(Clone, Debug, PartialEq)]
+pub enum ChoiceAvailabilityReasonValue {
+    Identifier(String),
+    String(String),
+    Integer(i64),
+    Float(f64),
+    Boolean(bool),
+}
+
+#[derive(Clone, Debug, PartialEq)]
 pub enum ChoiceAvailabilityReasonTree {
     All(Vec<ChoiceAvailabilityReasonTree>),
     Any(Vec<ChoiceAvailabilityReasonTree>),

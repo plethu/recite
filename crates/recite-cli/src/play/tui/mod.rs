@@ -182,7 +182,7 @@ impl<B: Backend> PlayUiAdapter for TuiPlayUi<'_, B> {
                     .availability
                     .primary_reason
                     .as_ref()
-                    .map(|reason| reason.source_text.clone()),
+                    .map(|reason| reason.text.clone()),
                 is_visible: self.settings.show_unavailable_choices
                     || choice.availability.is_available,
             })

@@ -119,12 +119,16 @@ fn unavailable_choice_exposes_primary_reason_and_reason_tree() {
     let availability = &choices[0].availability;
     assert!(!availability.is_available);
     assert_eq!(
-        availability
-            .primary_reason
-            .as_ref()
-            .map(|reason| (reason.id.as_str(), reason.source_text.as_str())),
+        availability.primary_reason.as_ref().map(|reason| {
+            (
+                reason.id.as_str(),
+                reason.source_text.as_str(),
+                reason.text.as_str(),
+            )
+        }),
         Some((
             "innkeeper_trust_hint",
+            "The innkeeper is not ready to share that.",
             "The innkeeper is not ready to share that.",
         ))
     );
@@ -137,15 +141,29 @@ fn unavailable_choice_exposes_primary_reason_and_reason_tree() {
         reason
             .args
             .iter()
-            .map(|arg| (arg.name.as_str(), arg.value.as_str()))
+            .map(|arg| (arg.name.as_str(), &arg.value))
             .collect::<Vec<_>>(),
-        [("subject", "hazel"), ("target", "rhea"), ("threshold", "3"),]
+        [
+            (
+                "subject",
+                &ChoiceAvailabilityReasonValue::Identifier("hazel".to_owned())
+            ),
+            (
+                "target",
+                &ChoiceAvailabilityReasonValue::Identifier("rhea".to_owned())
+            ),
+            ("threshold", &ChoiceAvailabilityReasonValue::Integer(3)),
+        ]
     );
     assert_eq!(
         reason.origin,
         Some(ChoiceAvailabilityReasonOrigin::ConditionCall {
             function: "trust_gte".to_owned(),
-            args: vec!["hazel".to_owned(), "rhea".to_owned(), "3".to_owned()],
+            args: vec![
+                ChoiceAvailabilityReasonValue::Identifier("hazel".to_owned()),
+                ChoiceAvailabilityReasonValue::Identifier("rhea".to_owned()),
+                ChoiceAvailabilityReasonValue::Integer(3),
+            ],
         })
     );
     assert_eq!(
@@ -209,8 +227,60 @@ fn and_reason_tree_contains_only_failed_children() {
         reason.origin,
         Some(ChoiceAvailabilityReasonOrigin::ConditionCall {
             function: "trust_gte".to_owned(),
-            args: vec!["hazel".to_owned(), "rhea".to_owned(), "3".to_owned()],
+            args: vec![
+                ChoiceAvailabilityReasonValue::Identifier("hazel".to_owned()),
+                ChoiceAvailabilityReasonValue::Identifier("rhea".to_owned()),
+                ChoiceAvailabilityReasonValue::Integer(3),
+            ],
         })
+    );
+}
+
+#[test]
+fn or_requirement_short_circuits_after_passing_child() {
+    let mut schema = recite_core::load_schema_manifest_str(
+        "fixtures/schema/valid/generated_manifest.json",
+        include_str!("../../../../../fixtures/schema/valid/generated_manifest.json"),
+    )
+    .schema
+    .expect("valid schema fixture");
+    let trust_gte = schema
+        .conditions
+        .get("trust_gte")
+        .expect("schema has trust condition")
+        .clone();
+    schema
+        .conditions
+        .insert("missing_condition".to_owned(), trust_gte);
+    let asset = compile_asset_with_schema(
+        "dialogue/start.recite",
+        concat!(
+            ":: start default\n",
+            "> prompt_line\n",
+            "  What next?\n",
+            "  ? ask_news requires=(trust_gte(hazel, rhea, 3) or missing_condition(hazel, rhea, 1))\n",
+            "    Ask for private news.\n",
+            "    -> END\n",
+        ),
+        &schema,
+    );
+    let context = RecordingContext::default().with("trust_gte", true);
+    let mut session = start_scene(&asset, None).expect("starts");
+
+    let DialogueEvent::Prompt { choices, .. } =
+        next_with_context(&asset, &mut session, &context).expect("emits prompt")
+    else {
+        panic!("expected prompt event");
+    };
+
+    assert!(choices[0].availability.is_available);
+    assert_eq!(
+        context
+            .calls()
+            .into_iter()
+            .map(|call| call.function)
+            .collect::<Vec<_>>(),
+        ["trust_gte"]
     );
 }
 

@@ -302,15 +302,29 @@ intro = "leave"
             "value": {
                 "id": "trust_too_low",
                 "source_text": "{subject} does not trust {target} enough ({threshold}).",
+                "text": "hazel does not trust rhea enough (3).",
                 "origin": {
                     "type": "condition_call",
                     "function": "trust_gte",
-                    "args": ["hazel", "rhea", "3"]
+                    "args": [
+                        { "type": "identifier", "value": "hazel" },
+                        { "type": "identifier", "value": "rhea" },
+                        { "type": "integer", "value": 3 }
+                    ]
                 },
                 "args": [
-                    { "name": "subject", "value": "hazel" },
-                    { "name": "target", "value": "rhea" },
-                    { "name": "threshold", "value": "3" }
+                    {
+                        "name": "subject",
+                        "value": { "type": "identifier", "value": "hazel" }
+                    },
+                    {
+                        "name": "target",
+                        "value": { "type": "identifier", "value": "rhea" }
+                    },
+                    {
+                        "name": "threshold",
+                        "value": { "type": "integer", "value": 3 }
+                    }
                 ]
             }
         })

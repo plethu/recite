@@ -123,6 +123,7 @@ pub(super) fn prompt_choices(
             choice.availability_requirement_source_text.as_deref(),
             choice.availability_reason_override.as_ref(),
             context,
+            locale,
         )?;
 
         events.push(dialogue_choice(

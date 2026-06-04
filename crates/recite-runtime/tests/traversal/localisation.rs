@@ -249,6 +249,77 @@ fn prompt_line_and_choices_are_localised_with_distinct_domains() {
 }
 
 #[test]
+fn availability_reasons_are_localised_and_rendered_with_args() {
+    let schema = recite_core::load_schema_manifest_str(
+        "fixtures/schema/valid/generated_manifest.json",
+        include_str!("../../../../fixtures/schema/valid/generated_manifest.json"),
+    )
+    .schema
+    .expect("valid schema fixture");
+    let asset = compile_asset_with_schema(
+        "dialogue/start.recite",
+        concat!(
+            ":: start default\n",
+            "> prompt_001\n",
+            "  What next?\n",
+            "  ? ask_news requires=(trust_gte(hazel, rhea, 3))\n",
+            "    Ask for private news.\n",
+            "    -> END\n",
+        ),
+        &schema,
+    );
+    let provider = RecordingLocaleProvider::default().with(
+        "trust_too_low",
+        TextDomain::AvailabilityReason,
+        Some("formal"),
+        "{subject} ne fait pas assez confiance a {target} ({threshold}).",
+    );
+    let context = RecordingContext::default().with("trust_gte", false);
+    let mut session = start_scene_with_options(
+        &asset,
+        None,
+        DialogueSessionOptions::new().with_locale(locale("en-GB")),
+    )
+    .expect("starts");
+
+    let DialogueEvent::Prompt { choices, .. } = runtime_next_with(
+        &asset,
+        &mut session,
+        &context,
+        variant_locale_resolution(&provider, "formal"),
+    )
+    .expect("emits prompt") else {
+        panic!("expected prompt");
+    };
+
+    let Some(ChoiceAvailabilityReasonTree::Reason(reason)) = &choices[0].availability.reason_tree
+    else {
+        panic!("expected reason tree");
+    };
+    assert_eq!(
+        reason.source_text,
+        "{subject} does not trust {target} enough ({threshold})."
+    );
+    assert_eq!(reason.text, "hazel ne fait pas assez confiance a rhea (3).");
+    assert_eq!(
+        provider
+            .calls()
+            .iter()
+            .map(|call| (&call.id, call.domain, call.variant.as_deref()))
+            .collect::<Vec<_>>(),
+        [
+            (&"prompt_001".to_owned(), TextDomain::Line, Some("formal")),
+            (
+                &"trust_too_low".to_owned(),
+                TextDomain::AvailabilityReason,
+                Some("formal")
+            ),
+            (&"ask_news".to_owned(), TextDomain::Choice, Some("formal")),
+        ]
+    );
+}
+
+#[test]
 fn choosing_prompt_uses_locale_provider_for_followup_line() {
     let asset = compile_asset(
         "dialogue/start.recite",

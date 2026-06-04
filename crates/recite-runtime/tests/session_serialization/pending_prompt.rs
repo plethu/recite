@@ -134,12 +134,17 @@ fn restores_pending_prompt_choice_availability_reasons() {
         panic!("expected reason tree");
     };
     assert_eq!(reason.id.as_str(), "trust_too_low");
+    assert_eq!(reason.text, "hazel does not trust rhea enough (3).");
     assert_eq!(
         reason.origin,
         Some(
             DialogueChoiceAvailabilityReasonOriginSnapshot::ConditionCall {
                 function: "trust_gte".to_owned(),
-                args: vec!["hazel".to_owned(), "rhea".to_owned(), "3".to_owned()],
+                args: vec![
+                    DialogueChoiceAvailabilityReasonValueSnapshot::Identifier("hazel".to_owned()),
+                    DialogueChoiceAvailabilityReasonValueSnapshot::Identifier("rhea".to_owned()),
+                    DialogueChoiceAvailabilityReasonValueSnapshot::Integer(3),
+                ],
             }
         )
     );
