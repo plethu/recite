@@ -7,7 +7,7 @@ use serde::{Deserialize, Serialize};
 use crate::DialogueSession;
 use crate::event::{
     ChoiceAvailability, ChoiceAvailabilityReason, ChoiceAvailabilityReasonArg,
-    ChoiceAvailabilityReasonTree, DialogueEffectRequest,
+    ChoiceAvailabilityReasonOrigin, ChoiceAvailabilityReasonTree, DialogueEffectRequest,
 };
 use crate::session::{PendingEffect, PendingPrompt, StatementFrame};
 
@@ -87,7 +87,15 @@ pub struct DialogueChoiceAvailabilitySnapshot {
 pub struct DialogueChoiceAvailabilityReasonSnapshot {
     pub id: String,
     pub source_text: String,
+    pub origin: Option<DialogueChoiceAvailabilityReasonOriginSnapshot>,
     pub args: Vec<DialogueChoiceAvailabilityReasonArgSnapshot>,
+}
+
+#[derive(Clone, Debug, Eq, PartialEq, Serialize, Deserialize)]
+#[serde(rename_all = "snake_case")]
+pub enum DialogueChoiceAvailabilityReasonOriginSnapshot {
+    ConditionCall { function: String, args: Vec<String> },
+    RequirementExpression { source_text: String },
 }
 
 #[derive(Clone, Debug, Eq, PartialEq, Serialize, Deserialize)]
@@ -102,7 +110,6 @@ pub struct DialogueChoiceAvailabilityReasonArgSnapshot {
 pub enum DialogueChoiceAvailabilityReasonTreeSnapshot {
     All(Vec<DialogueChoiceAvailabilityReasonTreeSnapshot>),
     Any(Vec<DialogueChoiceAvailabilityReasonTreeSnapshot>),
-    Not(Box<DialogueChoiceAvailabilityReasonTreeSnapshot>),
     Reason(DialogueChoiceAvailabilityReasonSnapshot),
     RequirementSourceText(String),
 }
@@ -259,6 +266,7 @@ fn reason_snapshot(reason: &ChoiceAvailabilityReason) -> DialogueChoiceAvailabil
     DialogueChoiceAvailabilityReasonSnapshot {
         id: reason.id.as_str().to_owned(),
         source_text: reason.source_text.clone(),
+        origin: reason.origin.as_ref().map(reason_origin_snapshot),
         args: reason
             .args
             .iter()
@@ -276,6 +284,7 @@ fn reason_from_snapshot(
     Ok(ChoiceAvailabilityReason {
         id: AvailabilityReasonId::new(snapshot.id).map_err(|error| error.to_string())?,
         source_text: snapshot.source_text,
+        origin: snapshot.origin.map(reason_origin_from_snapshot),
         args: snapshot
             .args
             .into_iter()
@@ -285,6 +294,37 @@ fn reason_from_snapshot(
             })
             .collect(),
     })
+}
+
+fn reason_origin_snapshot(
+    origin: &ChoiceAvailabilityReasonOrigin,
+) -> DialogueChoiceAvailabilityReasonOriginSnapshot {
+    match origin {
+        ChoiceAvailabilityReasonOrigin::ConditionCall { function, args } => {
+            DialogueChoiceAvailabilityReasonOriginSnapshot::ConditionCall {
+                function: function.clone(),
+                args: args.clone(),
+            }
+        }
+        ChoiceAvailabilityReasonOrigin::RequirementExpression { source_text } => {
+            DialogueChoiceAvailabilityReasonOriginSnapshot::RequirementExpression {
+                source_text: source_text.clone(),
+            }
+        }
+    }
+}
+
+fn reason_origin_from_snapshot(
+    snapshot: DialogueChoiceAvailabilityReasonOriginSnapshot,
+) -> ChoiceAvailabilityReasonOrigin {
+    match snapshot {
+        DialogueChoiceAvailabilityReasonOriginSnapshot::ConditionCall { function, args } => {
+            ChoiceAvailabilityReasonOrigin::ConditionCall { function, args }
+        }
+        DialogueChoiceAvailabilityReasonOriginSnapshot::RequirementExpression { source_text } => {
+            ChoiceAvailabilityReasonOrigin::RequirementExpression { source_text }
+        }
+    }
 }
 
 fn reason_tree_snapshot(
@@ -300,9 +340,6 @@ fn reason_tree_snapshot(
             DialogueChoiceAvailabilityReasonTreeSnapshot::Any(
                 children.iter().map(reason_tree_snapshot).collect(),
             )
-        }
-        ChoiceAvailabilityReasonTree::Not(child) => {
-            DialogueChoiceAvailabilityReasonTreeSnapshot::Not(Box::new(reason_tree_snapshot(child)))
         }
         ChoiceAvailabilityReasonTree::Reason(reason) => {
             DialogueChoiceAvailabilityReasonTreeSnapshot::Reason(reason_snapshot(reason))
@@ -333,9 +370,6 @@ fn reason_tree_from_snapshot(
                     .collect::<Result<Vec<_>, _>>()?,
             ))
         }
-        DialogueChoiceAvailabilityReasonTreeSnapshot::Not(child) => Ok(
-            ChoiceAvailabilityReasonTree::Not(Box::new(reason_tree_from_snapshot(*child)?)),
-        ),
         DialogueChoiceAvailabilityReasonTreeSnapshot::Reason(reason) => Ok(
             ChoiceAvailabilityReasonTree::Reason(reason_from_snapshot(reason)?),
         ),

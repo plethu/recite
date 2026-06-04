@@ -141,6 +141,118 @@ fn unavailable_choice_exposes_primary_reason_and_reason_tree() {
             .collect::<Vec<_>>(),
         [("subject", "hazel"), ("target", "rhea"), ("threshold", "3"),]
     );
+    assert_eq!(
+        reason.origin,
+        Some(ChoiceAvailabilityReasonOrigin::ConditionCall {
+            function: "trust_gte".to_owned(),
+            args: vec!["hazel".to_owned(), "rhea".to_owned(), "3".to_owned()],
+        })
+    );
+    assert_eq!(
+        availability
+            .primary_reason
+            .as_ref()
+            .and_then(|reason| reason.origin.as_ref()),
+        Some(&ChoiceAvailabilityReasonOrigin::RequirementExpression {
+            source_text: "requires=(trust_gte(hazel, rhea, 3))".to_owned(),
+        })
+    );
+}
+
+#[test]
+fn and_reason_tree_contains_only_failed_children() {
+    let mut schema = recite_core::load_schema_manifest_str(
+        "fixtures/schema/valid/generated_manifest.json",
+        include_str!("../../../../../fixtures/schema/valid/generated_manifest.json"),
+    )
+    .schema
+    .expect("valid schema fixture");
+    let trust_gte = schema
+        .conditions
+        .get("trust_gte")
+        .expect("schema has trust condition")
+        .clone();
+    schema.conditions.insert("has_key".to_owned(), trust_gte);
+    let asset = compile_asset_with_schema(
+        "dialogue/start.recite",
+        concat!(
+            ":: start default\n",
+            "> prompt_line\n",
+            "  What next?\n",
+            "  ? ask_news requires=(has_key(hazel, rhea, 1) and trust_gte(hazel, rhea, 3))\n",
+            "    Ask for private news.\n",
+            "    -> END\n",
+        ),
+        &schema,
+    );
+    let context = RecordingContext::default()
+        .with("has_key", true)
+        .with("trust_gte", false);
+    let mut session = start_scene(&asset, None).expect("starts");
+
+    let DialogueEvent::Prompt { choices, .. } =
+        next_with_context(&asset, &mut session, &context).expect("emits prompt")
+    else {
+        panic!("expected prompt event");
+    };
+
+    let Some(ChoiceAvailabilityReasonTree::All(children)) = &choices[0].availability.reason_tree
+    else {
+        panic!("expected all reason tree");
+    };
+    assert_eq!(children.len(), 1);
+    let ChoiceAvailabilityReasonTree::Reason(reason) = &children[0] else {
+        panic!("expected failed condition reason");
+    };
+    assert_eq!(reason.id.as_str(), "trust_too_low");
+    assert_eq!(
+        reason.origin,
+        Some(ChoiceAvailabilityReasonOrigin::ConditionCall {
+            function: "trust_gte".to_owned(),
+            args: vec!["hazel".to_owned(), "rhea".to_owned(), "3".to_owned()],
+        })
+    );
+}
+
+#[test]
+fn negated_requirement_does_not_synthesize_automatic_reason_tree() {
+    let schema = recite_core::load_schema_manifest_str(
+        "fixtures/schema/valid/generated_manifest.json",
+        include_str!("../../../../../fixtures/schema/valid/generated_manifest.json"),
+    )
+    .schema
+    .expect("valid schema fixture");
+    let asset = compile_asset_with_schema(
+        "dialogue/start.recite",
+        concat!(
+            ":: start default\n",
+            "> prompt_line\n",
+            "  What next?\n",
+            "  ? ask_news requires=(not trust_gte(hazel, rhea, 3)) reason=innkeeper_trust_hint\n",
+            "    Ask for private news.\n",
+            "    -> END\n",
+        ),
+        &schema,
+    );
+    let context = RecordingContext::default().with("trust_gte", true);
+    let mut session = start_scene(&asset, None).expect("starts");
+
+    let DialogueEvent::Prompt { choices, .. } =
+        next_with_context(&asset, &mut session, &context).expect("emits prompt")
+    else {
+        panic!("expected prompt event");
+    };
+
+    let availability = &choices[0].availability;
+    assert!(!availability.is_available);
+    assert_eq!(
+        availability
+            .primary_reason
+            .as_ref()
+            .map(|reason| reason.id.as_str()),
+        Some("innkeeper_trust_hint")
+    );
+    assert_eq!(availability.reason_tree, None);
 }
 
 #[test]

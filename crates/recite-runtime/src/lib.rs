@@ -80,8 +80,9 @@ pub use context::{
 pub use error::DialogueError;
 pub use event::{
     ChoiceAvailability, ChoiceAvailabilityReason, ChoiceAvailabilityReasonArg,
-    ChoiceAvailabilityReasonTree, ChoiceEchoMode, DialogueChoice, DialogueEffectArgument,
-    DialogueEffectMode, DialogueEffectRequest, DialogueEvent, DialogueLine, EffectAck,
+    ChoiceAvailabilityReasonOrigin, ChoiceAvailabilityReasonTree, ChoiceEchoMode, DialogueChoice,
+    DialogueEffectArgument, DialogueEffectMode, DialogueEffectRequest, DialogueEvent, DialogueLine,
+    EffectAck,
 };
 pub use locale::{LocaleProvider, TextDomain};
 pub use session::{DialogueSession, DialogueSessionOptions};
@@ -90,13 +91,14 @@ pub use session_serialization::{
 };
 pub use session_snapshot::{
     CURRENT_SESSION_SNAPSHOT_FORMAT_VERSION, DialogueChoiceAvailabilityReasonArgSnapshot,
-    DialogueChoiceAvailabilityReasonSnapshot, DialogueChoiceAvailabilityReasonTreeSnapshot,
-    DialogueChoiceAvailabilitySnapshot, DialogueContentFingerprintSnapshot,
-    DialogueDeferredEffectSnapshot, DialogueSchemaFingerprintSnapshot,
-    DialogueSessionFrameSnapshot, DialogueSessionPendingChoiceSnapshot,
-    DialogueSessionPendingEffectSnapshot, DialogueSessionPendingPromptSnapshot,
-    DialogueSessionRangeSnapshot, DialogueSessionSnapshot, DialogueSessionSourceSnapshot,
-    SESSION_SNAPSHOT_FORMAT_VERSION_V0, SESSION_SNAPSHOT_FORMAT_VERSION_V1, snapshot_session,
+    DialogueChoiceAvailabilityReasonOriginSnapshot, DialogueChoiceAvailabilityReasonSnapshot,
+    DialogueChoiceAvailabilityReasonTreeSnapshot, DialogueChoiceAvailabilitySnapshot,
+    DialogueContentFingerprintSnapshot, DialogueDeferredEffectSnapshot,
+    DialogueSchemaFingerprintSnapshot, DialogueSessionFrameSnapshot,
+    DialogueSessionPendingChoiceSnapshot, DialogueSessionPendingEffectSnapshot,
+    DialogueSessionPendingPromptSnapshot, DialogueSessionRangeSnapshot, DialogueSessionSnapshot,
+    DialogueSessionSourceSnapshot, SESSION_SNAPSHOT_FORMAT_VERSION_V0,
+    SESSION_SNAPSHOT_FORMAT_VERSION_V1, snapshot_session,
 };
 pub use traversal::{
     LocaleResolution, acknowledge_effect, choose, choose_with, next, next_with, start_scene,

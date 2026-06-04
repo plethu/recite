@@ -82,6 +82,7 @@ fn missing_trust_availability() -> ChoiceAvailability {
         Some(ChoiceAvailabilityReason {
             id: recite_core::AvailabilityReasonId::new("missing_trust").expect("valid reason id"),
             source_text: "missing trust".to_owned(),
+            origin: None,
             args: Vec::new(),
         }),
         None,

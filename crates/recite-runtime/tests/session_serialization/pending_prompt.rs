@@ -116,12 +116,33 @@ fn restores_pending_prompt_choice_availability_reasons() {
             .map(|reason| reason.id.as_str()),
         Some("innkeeper_trust_hint")
     );
+    assert_eq!(
+        restored_choice
+            .availability
+            .primary_reason
+            .as_ref()
+            .and_then(|reason| reason.origin.as_ref()),
+        Some(
+            &DialogueChoiceAvailabilityReasonOriginSnapshot::RequirementExpression {
+                source_text: "requires=(trust_gte(hazel, rhea, 3))".to_owned(),
+            }
+        )
+    );
     let Some(DialogueChoiceAvailabilityReasonTreeSnapshot::Reason(reason)) =
         &restored_choice.availability.reason_tree
     else {
         panic!("expected reason tree");
     };
     assert_eq!(reason.id.as_str(), "trust_too_low");
+    assert_eq!(
+        reason.origin,
+        Some(
+            DialogueChoiceAvailabilityReasonOriginSnapshot::ConditionCall {
+                function: "trust_gte".to_owned(),
+                args: vec!["hazel".to_owned(), "rhea".to_owned(), "3".to_owned()],
+            }
+        )
+    );
 }
 
 #[test]

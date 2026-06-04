@@ -69,7 +69,14 @@ impl ChoiceAvailability {
 pub struct ChoiceAvailabilityReason {
     pub id: AvailabilityReasonId,
     pub source_text: String,
+    pub origin: Option<ChoiceAvailabilityReasonOrigin>,
     pub args: Vec<ChoiceAvailabilityReasonArg>,
+}
+
+#[derive(Clone, Debug, Eq, PartialEq)]
+pub enum ChoiceAvailabilityReasonOrigin {
+    ConditionCall { function: String, args: Vec<String> },
+    RequirementExpression { source_text: String },
 }
 
 #[derive(Clone, Debug, Eq, PartialEq)]
@@ -82,7 +89,6 @@ pub struct ChoiceAvailabilityReasonArg {
 pub enum ChoiceAvailabilityReasonTree {
     All(Vec<ChoiceAvailabilityReasonTree>),
     Any(Vec<ChoiceAvailabilityReasonTree>),
-    Not(Box<ChoiceAvailabilityReasonTree>),
     Reason(ChoiceAvailabilityReason),
     RequirementSourceText(String),
 }
