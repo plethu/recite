@@ -1,6 +1,7 @@
 use serde::Deserialize;
+use serde::de::{SeqAccess, Visitor};
 
-use crate::{AvailabilityReasonId, BlockId, ChoiceId, EffectId, LineId, SpeakerId};
+use crate::{AvailabilityReasonId, BlockId, ChoiceId, EffectId, LineId, ScalarValue, SpeakerId};
 
 use super::CompiledAssetDecodeError;
 use super::tags::{
@@ -29,6 +30,8 @@ pub(super) struct MsgDialogue(
     Vec<MsgMatchArm>,
     Vec<MsgLine>,
     Vec<MsgChoice>,
+    Vec<MsgAvailabilityReason>,
+    Vec<MsgConditionAvailabilityReason>,
     Vec<MsgSpeaker>,
     Vec<MsgMetadataEntry>,
     Vec<MsgEffect>,
@@ -51,27 +54,29 @@ impl TryFrom<MsgDialogue> for CompiledDialogue {
             match_arms: collect(value.5)?,
             lines: collect(value.6)?,
             choices: collect(value.7)?,
-            speakers: collect(value.8)?,
-            metadata: collect(value.9)?,
-            effects: collect(value.10)?,
-            source_maps: collect(value.11)?,
+            availability_reasons: collect(value.8)?,
+            condition_availability_reasons: collect(value.9)?,
+            speakers: collect(value.10)?,
+            metadata: collect(value.11)?,
+            effects: collect(value.12)?,
+            source_maps: collect(value.13)?,
             block_lookup: BlockLookupTable::new(
                 value
-                    .12
+                    .14
                     .into_iter()
                     .map(|entry| entry.block())
                     .collect::<Result<Vec<_>, _>>()?,
             )?,
             line_lookup: LineLookupTable::new(
                 value
-                    .13
+                    .15
                     .into_iter()
                     .map(|entry| entry.line())
                     .collect::<Result<Vec<_>, _>>()?,
             )?,
             choice_lookup: ChoiceLookupTable::new(
                 value
-                    .14
+                    .16
                     .into_iter()
                     .map(|entry| entry.choice())
                     .collect::<Result<Vec<_>, _>>()?,
@@ -203,6 +208,7 @@ struct MsgChoice(
     MsgRange,
     Option<MsgConditionExpression>,
     Option<String>,
+    Option<String>,
     MsgDivertTarget,
     MsgChoiceEcho,
     u32,
@@ -217,11 +223,139 @@ impl TryFrom<MsgChoice> for CompiledChoice {
             source_text: value.1,
             metadata: value.2.metadata(),
             availability_requirement: value.3.map(|condition| condition.0),
-            availability_reason_override: value.4.map(AvailabilityReasonId::new).transpose()?,
-            target: value.5.0,
-            echo: value.6.0,
-            source_map: SourceMapIndex::new(value.7),
+            availability_requirement_source_text: value.4,
+            availability_reason_override: value.5.map(AvailabilityReasonId::new).transpose()?,
+            target: value.6.0,
+            echo: value.7.0,
+            source_map: SourceMapIndex::new(value.8),
         })
+    }
+}
+
+#[derive(Deserialize)]
+struct MsgAvailabilityReason(String, String);
+
+impl TryFrom<MsgAvailabilityReason> for crate::compiled::CompiledAvailabilityReason {
+    type Error = CompiledAssetDecodeError;
+
+    fn try_from(value: MsgAvailabilityReason) -> Result<Self, Self::Error> {
+        Ok(Self {
+            id: AvailabilityReasonId::new(value.0)?,
+            template: value.1,
+        })
+    }
+}
+
+#[derive(Deserialize)]
+struct MsgConditionAvailabilityReason(String, String, Vec<MsgAvailabilityReasonArgBinding>);
+
+impl TryFrom<MsgConditionAvailabilityReason>
+    for crate::compiled::CompiledConditionAvailabilityReason
+{
+    type Error = CompiledAssetDecodeError;
+
+    fn try_from(value: MsgConditionAvailabilityReason) -> Result<Self, Self::Error> {
+        ensure_non_empty("condition availability reason function", &value.0)?;
+        Ok(Self {
+            function: value.0,
+            reason: AvailabilityReasonId::new(value.1)?,
+            args: collect(value.2)?,
+        })
+    }
+}
+
+#[derive(Deserialize)]
+struct MsgAvailabilityReasonArgBinding(String, MsgAvailabilityReasonArgValueWrapper);
+
+impl TryFrom<MsgAvailabilityReasonArgBinding>
+    for crate::compiled::CompiledAvailabilityReasonArgBinding
+{
+    type Error = CompiledAssetDecodeError;
+
+    fn try_from(value: MsgAvailabilityReasonArgBinding) -> Result<Self, Self::Error> {
+        ensure_non_empty("availability reason argument name", &value.0)?;
+        Ok(Self {
+            name: value.0,
+            value: value.1.0,
+        })
+    }
+}
+
+struct MsgAvailabilityReasonArgValueWrapper(crate::compiled::CompiledAvailabilityReasonArgValue);
+
+impl<'de> Deserialize<'de> for MsgAvailabilityReasonArgValueWrapper {
+    fn deserialize<D>(deserializer: D) -> Result<Self, D::Error>
+    where
+        D: serde::Deserializer<'de>,
+    {
+        deserializer.deserialize_tuple(2, MsgAvailabilityReasonArgValueVisitor)
+    }
+}
+
+struct MsgAvailabilityReasonArgValueVisitor;
+
+impl<'de> Visitor<'de> for MsgAvailabilityReasonArgValueVisitor {
+    type Value = MsgAvailabilityReasonArgValueWrapper;
+
+    fn expecting(&self, formatter: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
+        formatter.write_str("availability reason argument value tuple")
+    }
+
+    fn visit_seq<A>(self, mut seq: A) -> Result<Self::Value, A::Error>
+    where
+        A: SeqAccess<'de>,
+    {
+        let tag = seq
+            .next_element::<String>()?
+            .ok_or_else(|| serde::de::Error::invalid_length(0, &self))?;
+        match tag.as_str() {
+            "ConditionArg" => {
+                let value = seq
+                    .next_element::<u32>()?
+                    .ok_or_else(|| serde::de::Error::invalid_length(1, &self))?;
+                Ok(MsgAvailabilityReasonArgValueWrapper(
+                    crate::compiled::CompiledAvailabilityReasonArgValue::ConditionArg(value),
+                ))
+            }
+            "LiteralString" => Ok(MsgAvailabilityReasonArgValueWrapper(
+                crate::compiled::CompiledAvailabilityReasonArgValue::Literal(ScalarValue::String(
+                    seq.next_element::<String>()?
+                        .ok_or_else(|| serde::de::Error::invalid_length(1, &self))?,
+                )),
+            )),
+            "LiteralInt" => Ok(MsgAvailabilityReasonArgValueWrapper(
+                crate::compiled::CompiledAvailabilityReasonArgValue::Literal(ScalarValue::Integer(
+                    seq.next_element::<i64>()?
+                        .ok_or_else(|| serde::de::Error::invalid_length(1, &self))?,
+                )),
+            )),
+            "LiteralFloat" => {
+                let value = seq
+                    .next_element::<f64>()?
+                    .ok_or_else(|| serde::de::Error::invalid_length(1, &self))?;
+                if !value.is_finite() {
+                    return Err(serde::de::Error::custom(
+                        CompiledAssetDecodeError::MalformedAsset(
+                            "availability reason float literal must be finite".to_owned(),
+                        ),
+                    ));
+                }
+                Ok(MsgAvailabilityReasonArgValueWrapper(
+                    crate::compiled::CompiledAvailabilityReasonArgValue::Literal(
+                        ScalarValue::Float(value),
+                    ),
+                ))
+            }
+            "LiteralBool" => Ok(MsgAvailabilityReasonArgValueWrapper(
+                crate::compiled::CompiledAvailabilityReasonArgValue::Literal(ScalarValue::Boolean(
+                    seq.next_element::<bool>()?
+                        .ok_or_else(|| serde::de::Error::invalid_length(1, &self))?,
+                )),
+            )),
+            _ => Err(serde::de::Error::custom(format!(
+                "unknown availability reason argument value tag `{tag}`"
+            ))),
+        }
     }
 }
 

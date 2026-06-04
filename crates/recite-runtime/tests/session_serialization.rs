@@ -2,10 +2,12 @@
 
 use recite_core::{ChoiceId, CompiledDialogue, EffectId, LocaleId};
 use recite_runtime::{
-    DialogueDeferredEffectSnapshot, DialogueEffectArgument, DialogueEffectRequest, DialogueError,
-    DialogueEvent, DialogueSessionOptions, DialogueSessionPendingEffectSnapshot, EffectAck,
-    acknowledge_effect, decode_session_messagepack, encode_session_messagepack,
-    next as runtime_next, restore_session, snapshot_session, start_scene, start_scene_with_options,
+    DialogueChoiceAvailabilityReasonOriginSnapshot, DialogueChoiceAvailabilityReasonTreeSnapshot,
+    DialogueChoiceAvailabilityReasonValueSnapshot, DialogueDeferredEffectSnapshot,
+    DialogueEffectArgument, DialogueEffectRequest, DialogueError, DialogueEvent,
+    DialogueSessionOptions, DialogueSessionPendingEffectSnapshot, EffectAck, acknowledge_effect,
+    decode_session_messagepack, encode_session_messagepack, next as runtime_next, restore_session,
+    snapshot_session, start_scene, start_scene_with_options,
 };
 
 #[path = "session_serialization/asset_identity.rs"]

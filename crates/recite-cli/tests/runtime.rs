@@ -230,6 +230,217 @@ surprise = true
 }
 
 #[test]
+fn trace_exposes_structured_choice_availability_reasons() {
+    let temp = TempDir::new().expect("tempdir");
+    let source = write_recite(
+        temp.path(),
+        "dialogue.recite",
+        concat!(
+            ":: start default\n",
+            "> intro\n",
+            "  Welcome.\n",
+            "  ? ask_news requires=(trust_gte(hazel, rhea, 3)) reason=innkeeper_trust_hint\n",
+            "    Ask for private news.\n",
+            "    -> END\n",
+            "  ? leave\n",
+            "    Leave.\n",
+            "    -> END\n",
+        ),
+    );
+    let schema = write_file(
+        temp.path(),
+        "schema.json",
+        include_str!("../../../fixtures/schema/valid/generated_manifest.json"),
+    );
+    let asset = compile_project_asset(temp.path(), &source, "dialogue.recitec", Some(&schema));
+    let fixture = write_file(
+        temp.path(),
+        "fixture.toml",
+        r#"[conditions]
+"trust_gte(hazel, rhea, 3)" = false
+
+[choices]
+intro = "leave"
+"#,
+    );
+
+    let trace_output = run(recite()
+        .arg("trace")
+        .arg(&asset)
+        .arg("--block")
+        .arg("start")
+        .arg("--fixture")
+        .arg(&fixture));
+    trace_output.assert_success().assert_stderr("");
+    let trace: serde_json::Value =
+        serde_json::from_slice(&trace_output.stdout).expect("trace is JSON");
+    let choices = trace["events"][1]["prompt"]["choices"]
+        .as_array()
+        .expect("prompt choices");
+    let ask_news = choices
+        .iter()
+        .find(|choice| choice["id"] == "ask_news")
+        .expect("ask_news choice");
+
+    assert_eq!(ask_news["is_available"], false);
+    assert_eq!(
+        ask_news["unavailable_reason"],
+        "The innkeeper is not ready to share that."
+    );
+    assert_eq!(ask_news["availability"]["is_available"], false);
+    assert_eq!(
+        ask_news["availability"]["primary_reason"]["origin"],
+        serde_json::json!({
+            "type": "requirement_expression",
+            "source_text": "requires=(trust_gte(hazel, rhea, 3))"
+        })
+    );
+    assert_eq!(
+        ask_news["availability"]["reason_tree"],
+        serde_json::json!({
+            "type": "reason",
+            "value": {
+                "id": "trust_too_low",
+                "source_text": "{subject} does not trust {target} enough ({threshold}).",
+                "text": "hazel does not trust rhea enough (3).",
+                "origin": {
+                    "type": "condition_call",
+                    "function": "trust_gte",
+                    "args": [
+                        { "type": "identifier", "value": "hazel" },
+                        { "type": "identifier", "value": "rhea" },
+                        { "type": "integer", "value": 3 }
+                    ]
+                },
+                "args": [
+                    {
+                        "name": "subject",
+                        "value": { "type": "identifier", "value": "hazel" }
+                    },
+                    {
+                        "name": "target",
+                        "value": { "type": "identifier", "value": "rhea" }
+                    },
+                    {
+                        "name": "threshold",
+                        "value": { "type": "integer", "value": 3 }
+                    }
+                ]
+            }
+        })
+    );
+}
+
+#[test]
+fn trace_preserves_typed_literal_availability_reason_args() {
+    let temp = TempDir::new().expect("tempdir");
+    let source = write_recite(
+        temp.path(),
+        "dialogue.recite",
+        concat!(
+            ":: start default\n",
+            "> intro\n",
+            "  Welcome.\n",
+            "  ? answer requires=(can_answer())\n",
+            "    Answer.\n",
+            "    -> END\n",
+            "  ? leave\n",
+            "    Leave.\n",
+            "    -> END\n",
+        ),
+    );
+    let schema = write_file(
+        temp.path(),
+        "schema.json",
+        r#"{
+  "schema_version": 1,
+  "types": {
+    "mood": { "kind": "enum", "values": ["sad"] }
+  },
+  "registries": {
+    "actor": { "values": ["hazel"] }
+  },
+  "speakers": {
+    "rhea": {}
+  },
+  "conditions": {
+    "can_answer": {
+      "availability_reason": {
+        "reason": "answer_blocked",
+        "args": {
+          "actor": "hazel",
+          "speaker": "rhea",
+          "mood": "sad",
+          "count": 3,
+          "weight": 1.5,
+          "enabled": true
+        }
+      }
+    }
+  },
+  "availability_reasons": {
+    "answer_blocked": {
+      "template": "{actor} {speaker} {mood} {count} {weight} {enabled}",
+      "params": [
+        { "name": "actor", "type": "registry:actor" },
+        { "name": "speaker", "type": "speaker" },
+        { "name": "mood", "type": "enum:mood" },
+        { "name": "count", "type": "int" },
+        { "name": "weight", "type": "float" },
+        { "name": "enabled", "type": "bool" }
+      ]
+    }
+  }
+}"#,
+    );
+    let asset = compile_project_asset(temp.path(), &source, "dialogue.recitec", Some(&schema));
+    let fixture = write_file(
+        temp.path(),
+        "fixture.toml",
+        r#"[conditions]
+"can_answer()" = false
+
+[choices]
+intro = "leave"
+"#,
+    );
+
+    let trace_output = run(recite()
+        .arg("trace")
+        .arg(&asset)
+        .arg("--block")
+        .arg("start")
+        .arg("--fixture")
+        .arg(&fixture));
+    trace_output.assert_success().assert_stderr("");
+    let trace: serde_json::Value =
+        serde_json::from_slice(&trace_output.stdout).expect("trace is JSON");
+    let choices = trace["events"][1]["prompt"]["choices"]
+        .as_array()
+        .expect("prompt choices");
+    let answer = choices
+        .iter()
+        .find(|choice| choice["id"] == "answer")
+        .expect("answer choice");
+
+    assert_eq!(
+        answer["availability"]["reason_tree"]["value"]["args"],
+        serde_json::json!([
+            { "name": "actor", "value": { "type": "string", "value": "hazel" } },
+            { "name": "count", "value": { "type": "integer", "value": 3 } },
+            { "name": "enabled", "value": { "type": "boolean", "value": true } },
+            { "name": "mood", "value": { "type": "string", "value": "sad" } },
+            { "name": "speaker", "value": { "type": "string", "value": "rhea" } },
+            { "name": "weight", "value": { "type": "float", "value": 1.5 } }
+        ])
+    );
+    assert_eq!(
+        answer["availability"]["reason_tree"]["value"]["text"],
+        "hazel rhea sad 3 1.5 true"
+    );
+}
+
+#[test]
 fn run_trace_and_play_plain_execute_match_conditions() {
     let temp = TempDir::new().expect("tempdir");
     let source = write_recite(

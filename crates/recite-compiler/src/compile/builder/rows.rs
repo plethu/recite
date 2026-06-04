@@ -60,6 +60,10 @@ impl AssetBuilder<'_> {
             .availability_requirement
             .as_ref()
             .map(|requirement| compile_condition_expression(&requirement.condition));
+        let availability_requirement_source_text = choice
+            .availability_requirement
+            .as_ref()
+            .and_then(|requirement| self.source_text_for_span(&requirement.span));
         let target = choice
             .target
             .as_ref()
@@ -77,6 +81,7 @@ impl AssetBuilder<'_> {
             source_text: choice.source_text.text.clone(),
             metadata,
             availability_requirement,
+            availability_requirement_source_text,
             availability_reason_override: choice
                 .availability_reason_override
                 .as_ref()
@@ -87,6 +92,16 @@ impl AssetBuilder<'_> {
         });
 
         Ok(index)
+    }
+
+    fn source_text_for_span(&self, span: &SourceSpan) -> Option<String> {
+        let source = self
+            .inputs
+            .iter()
+            .find(|input| input.source_file.path == span.file)?
+            .source
+            .as_str();
+        slice_source_span(source, span)
     }
 
     pub(super) fn compile_match_arms(
@@ -257,6 +272,45 @@ impl AssetBuilder<'_> {
 
         Ok(ChoiceLookupTable::new(entries)?)
     }
+}
+
+fn slice_source_span(source: &str, span: &SourceSpan) -> Option<String> {
+    let start = byte_offset_for_position(source, span.start.line(), span.start.column())?;
+    let end = span
+        .end
+        .and_then(|end| byte_offset_after_position(source, end.line(), end.column()))
+        .unwrap_or(start);
+
+    if end < start {
+        return None;
+    }
+
+    source.get(start..end).map(str::to_owned)
+}
+
+fn byte_offset_after_position(source: &str, line: u32, column: u32) -> Option<usize> {
+    let start = byte_offset_for_position(source, line, column)?;
+    let character = source.get(start..)?.chars().next()?;
+    Some(start + character.len_utf8())
+}
+
+fn byte_offset_for_position(source: &str, line: u32, column: u32) -> Option<usize> {
+    let mut current_line = 1_u32;
+    let mut current_column = 1_u32;
+
+    for (index, character) in source.char_indices() {
+        if current_line == line && current_column == column {
+            return Some(index);
+        }
+        if character == '\n' {
+            current_line += 1;
+            current_column = 1;
+        } else {
+            current_column += 1;
+        }
+    }
+
+    (current_line == line && current_column == column).then_some(source.len())
 }
 
 fn lower_source_metadata_value(value: &SourceMetadataValue) -> Value {

@@ -1,11 +1,16 @@
 use recite_core::{MetadataEntry, ScalarValue, SourceSpan, Value};
 use recite_runtime::{
+    ChoiceAvailability, ChoiceAvailabilityReason, ChoiceAvailabilityReasonArg,
+    ChoiceAvailabilityReasonOrigin, ChoiceAvailabilityReasonTree, ChoiceAvailabilityReasonValue,
     ConditionArgument, DialogueChoice, DialogueEffectArgument, DialogueEffectRequest, DialogueLine,
 };
 
 use super::format::effect_mode_name;
 use super::model::{
-    TraceChoice, TraceEffect, TraceLine, TraceMetadata, TraceScalar, TraceSourceSpan, TraceValue,
+    TraceChoice, TraceChoiceAvailability, TraceChoiceAvailabilityReason,
+    TraceChoiceAvailabilityReasonArg, TraceChoiceAvailabilityReasonOrigin,
+    TraceChoiceAvailabilityReasonTree, TraceChoiceAvailabilityReasonValue, TraceEffect, TraceLine,
+    TraceMetadata, TraceScalar, TraceSourceSpan, TraceValue,
 };
 
 pub(in crate::runtime_fixture) fn trace_line(line: &DialogueLine) -> TraceLine {
@@ -27,8 +32,115 @@ pub(in crate::runtime_fixture) fn trace_choice(choice: &DialogueChoice) -> Trace
         source_text: choice.source_text.clone(),
         text: choice.text.clone(),
         metadata: choice.metadata.iter().map(trace_metadata).collect(),
-        is_available: choice.is_available,
-        unavailable_reason: choice.unavailable_reason.clone(),
+        is_available: choice.availability.is_available,
+        availability: trace_availability(&choice.availability),
+        unavailable_reason: choice
+            .availability
+            .primary_reason
+            .as_ref()
+            .map(|reason| reason.text.clone()),
+    }
+}
+
+fn trace_availability(availability: &ChoiceAvailability) -> TraceChoiceAvailability {
+    TraceChoiceAvailability {
+        is_available: availability.is_available,
+        primary_reason: availability
+            .primary_reason
+            .as_ref()
+            .map(trace_availability_reason),
+        reason_tree: availability
+            .reason_tree
+            .as_ref()
+            .map(trace_availability_reason_tree),
+    }
+}
+
+fn trace_availability_reason(reason: &ChoiceAvailabilityReason) -> TraceChoiceAvailabilityReason {
+    TraceChoiceAvailabilityReason {
+        id: reason.id.as_str().to_owned(),
+        source_text: reason.source_text.clone(),
+        text: reason.text.clone(),
+        origin: reason.origin.as_ref().map(trace_availability_reason_origin),
+        args: reason
+            .args
+            .iter()
+            .map(trace_availability_reason_arg)
+            .collect(),
+    }
+}
+
+fn trace_availability_reason_origin(
+    origin: &ChoiceAvailabilityReasonOrigin,
+) -> TraceChoiceAvailabilityReasonOrigin {
+    match origin {
+        ChoiceAvailabilityReasonOrigin::ConditionCall { function, args } => {
+            TraceChoiceAvailabilityReasonOrigin::ConditionCall {
+                function: function.clone(),
+                args: args.iter().map(trace_availability_reason_value).collect(),
+            }
+        }
+        ChoiceAvailabilityReasonOrigin::RequirementExpression { source_text } => {
+            TraceChoiceAvailabilityReasonOrigin::RequirementExpression {
+                source_text: source_text.clone(),
+            }
+        }
+    }
+}
+
+fn trace_availability_reason_arg(
+    arg: &ChoiceAvailabilityReasonArg,
+) -> TraceChoiceAvailabilityReasonArg {
+    TraceChoiceAvailabilityReasonArg {
+        name: arg.name.clone(),
+        value: trace_availability_reason_value(&arg.value),
+    }
+}
+
+fn trace_availability_reason_value(
+    value: &ChoiceAvailabilityReasonValue,
+) -> TraceChoiceAvailabilityReasonValue {
+    match value {
+        ChoiceAvailabilityReasonValue::Identifier(value) => {
+            TraceChoiceAvailabilityReasonValue::Identifier(value.clone())
+        }
+        ChoiceAvailabilityReasonValue::String(value) => {
+            TraceChoiceAvailabilityReasonValue::String(value.clone())
+        }
+        ChoiceAvailabilityReasonValue::Integer(value) => {
+            TraceChoiceAvailabilityReasonValue::Integer(*value)
+        }
+        ChoiceAvailabilityReasonValue::Float(value) => {
+            TraceChoiceAvailabilityReasonValue::Float(*value)
+        }
+        ChoiceAvailabilityReasonValue::Boolean(value) => {
+            TraceChoiceAvailabilityReasonValue::Boolean(*value)
+        }
+    }
+}
+
+fn trace_availability_reason_tree(
+    tree: &ChoiceAvailabilityReasonTree,
+) -> TraceChoiceAvailabilityReasonTree {
+    match tree {
+        ChoiceAvailabilityReasonTree::All(children) => TraceChoiceAvailabilityReasonTree::All(
+            children
+                .iter()
+                .map(trace_availability_reason_tree)
+                .collect(),
+        ),
+        ChoiceAvailabilityReasonTree::Any(children) => TraceChoiceAvailabilityReasonTree::Any(
+            children
+                .iter()
+                .map(trace_availability_reason_tree)
+                .collect(),
+        ),
+        ChoiceAvailabilityReasonTree::Reason(reason) => {
+            TraceChoiceAvailabilityReasonTree::Reason(trace_availability_reason(reason))
+        }
+        ChoiceAvailabilityReasonTree::RequirementSourceText(source_text) => {
+            TraceChoiceAvailabilityReasonTree::RequirementSourceText(source_text.clone())
+        }
     }
 }
 

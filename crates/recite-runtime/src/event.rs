@@ -1,4 +1,6 @@
-use recite_core::{ChoiceId, EffectId, LineId, MetadataEntry, SourceSpan, SpeakerId};
+use recite_core::{
+    AvailabilityReasonId, ChoiceId, EffectId, LineId, MetadataEntry, SourceSpan, SpeakerId,
+};
 
 /// Structured output emitted by runtime traversal.
 #[derive(Clone, Debug, PartialEq)]
@@ -29,9 +31,81 @@ pub struct DialogueChoice {
     pub source_text: String,
     pub text: String,
     pub metadata: Vec<MetadataEntry>,
-    pub is_available: bool,
-    pub unavailable_reason: Option<String>,
+    pub availability: ChoiceAvailability,
     pub echo: ChoiceEchoMode,
+}
+
+#[derive(Clone, Debug, PartialEq)]
+pub struct ChoiceAvailability {
+    pub is_available: bool,
+    pub primary_reason: Option<ChoiceAvailabilityReason>,
+    pub reason_tree: Option<ChoiceAvailabilityReasonTree>,
+}
+
+impl ChoiceAvailability {
+    #[must_use]
+    pub fn available() -> Self {
+        Self {
+            is_available: true,
+            primary_reason: None,
+            reason_tree: None,
+        }
+    }
+
+    #[must_use]
+    pub fn unavailable(
+        primary_reason: Option<ChoiceAvailabilityReason>,
+        reason_tree: Option<ChoiceAvailabilityReasonTree>,
+    ) -> Self {
+        Self {
+            is_available: false,
+            primary_reason,
+            reason_tree,
+        }
+    }
+}
+
+#[derive(Clone, Debug, PartialEq)]
+pub struct ChoiceAvailabilityReason {
+    pub id: AvailabilityReasonId,
+    pub source_text: String,
+    pub text: String,
+    pub origin: Option<ChoiceAvailabilityReasonOrigin>,
+    pub args: Vec<ChoiceAvailabilityReasonArg>,
+}
+
+#[derive(Clone, Debug, PartialEq)]
+pub enum ChoiceAvailabilityReasonOrigin {
+    ConditionCall {
+        function: String,
+        args: Vec<ChoiceAvailabilityReasonValue>,
+    },
+    RequirementExpression {
+        source_text: String,
+    },
+}
+
+#[derive(Clone, Debug, PartialEq)]
+pub struct ChoiceAvailabilityReasonArg {
+    pub name: String,
+    pub value: ChoiceAvailabilityReasonValue,
+}
+
+#[derive(Clone, Debug, PartialEq)]
+pub enum ChoiceAvailabilityReasonValue {
+    Identifier(String),
+    String(String),
+    Integer(i64),
+    Float(f64),
+    Boolean(bool),
+}
+
+#[derive(Clone, Debug, PartialEq)]
+pub enum ChoiceAvailabilityReasonTree {
+    All(Vec<ChoiceAvailabilityReasonTree>),
+    Any(Vec<ChoiceAvailabilityReasonTree>),
+    Reason(ChoiceAvailabilityReason),
+    RequirementSourceText(String),
 }
 
 #[derive(Clone, Debug, Eq, PartialEq)]

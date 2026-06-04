@@ -21,11 +21,12 @@ pub use lookup::{
 };
 pub use messagepack::{CompiledAssetDecodeError, decode_compiled_dialogue_messagepack};
 pub use rows::{
-    CompiledArgument, CompiledBlock, CompiledChoice, CompiledChoiceEcho, CompiledConditionCall,
-    CompiledConditionExpression, CompiledDialogue, CompiledDivertTarget, CompiledEffect,
-    CompiledEffectMode, CompiledLine, CompiledMatchArm, CompiledMatchPattern,
-    CompiledMetadataEntry, CompiledSourceFile, CompiledSourceMapEntry, CompiledSpeaker,
-    CompiledStatement, CompiledStatementKind,
+    CompiledArgument, CompiledAvailabilityReason, CompiledAvailabilityReasonArgBinding,
+    CompiledAvailabilityReasonArgValue, CompiledBlock, CompiledChoice, CompiledChoiceEcho,
+    CompiledConditionAvailabilityReason, CompiledConditionCall, CompiledConditionExpression,
+    CompiledDialogue, CompiledDivertTarget, CompiledEffect, CompiledEffectMode, CompiledLine,
+    CompiledMatchArm, CompiledMatchPattern, CompiledMetadataEntry, CompiledSourceFile,
+    CompiledSourceMapEntry, CompiledSpeaker, CompiledStatement, CompiledStatementKind,
 };
 pub use table::{
     BlockIndex, ChoiceIndex, ChoiceRange, EffectIndex, LineIndex, MatchArmIndex, MatchArmRange,

@@ -20,6 +20,8 @@ pub struct CompiledDialogue {
     pub match_arms: Vec<CompiledMatchArm>,
     pub lines: Vec<CompiledLine>,
     pub choices: Vec<CompiledChoice>,
+    pub availability_reasons: Vec<CompiledAvailabilityReason>,
+    pub condition_availability_reasons: Vec<CompiledConditionAvailabilityReason>,
     pub speakers: Vec<CompiledSpeaker>,
     pub metadata: Vec<CompiledMetadataEntry>,
     pub effects: Vec<CompiledEffect>,
@@ -102,10 +104,36 @@ pub struct CompiledChoice {
     pub source_text: String,
     pub metadata: MetadataRange,
     pub availability_requirement: Option<CompiledConditionExpression>,
+    pub availability_requirement_source_text: Option<String>,
     pub availability_reason_override: Option<AvailabilityReasonId>,
     pub target: CompiledDivertTarget,
     pub echo: CompiledChoiceEcho,
     pub source_map: SourceMapIndex,
+}
+
+#[derive(Clone, Debug, Eq, PartialEq)]
+pub struct CompiledAvailabilityReason {
+    pub id: AvailabilityReasonId,
+    pub template: String,
+}
+
+#[derive(Clone, Debug, PartialEq)]
+pub struct CompiledConditionAvailabilityReason {
+    pub function: String,
+    pub reason: AvailabilityReasonId,
+    pub args: Vec<CompiledAvailabilityReasonArgBinding>,
+}
+
+#[derive(Clone, Debug, PartialEq)]
+pub struct CompiledAvailabilityReasonArgBinding {
+    pub name: String,
+    pub value: CompiledAvailabilityReasonArgValue,
+}
+
+#[derive(Clone, Debug, PartialEq)]
+pub enum CompiledAvailabilityReasonArgValue {
+    ConditionArg(u32),
+    Literal(ScalarValue),
 }
 
 #[derive(Clone, Debug, PartialEq)]

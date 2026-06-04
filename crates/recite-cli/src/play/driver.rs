@@ -154,7 +154,7 @@ impl<U: PlayUiAdapter> InteractiveContext<'_, U> {
                         .iter()
                         .find(|choice| choice.id.as_str() == numeric_id)
                     {
-                        if choice.is_available {
+                        if choice.availability.is_available {
                             return Ok(choice.id.clone());
                         }
                         let message = unavailable_choice_message(&self.ui, choice);
@@ -173,7 +173,7 @@ impl<U: PlayUiAdapter> InteractiveContext<'_, U> {
                         continue;
                     }
                     let choice = &choices[index - 1];
-                    if choice.is_available {
+                    if choice.availability.is_available {
                         return Ok(choice.id.clone());
                     }
                     let message = unavailable_choice_message(&self.ui, choice);
@@ -192,7 +192,7 @@ impl<U: PlayUiAdapter> InteractiveContext<'_, U> {
                         }
                     };
                     if let Some(choice) = choices.iter().find(|choice| choice.id == choice_id) {
-                        if choice.is_available {
+                        if choice.availability.is_available {
                             return Ok(choice_id);
                         }
                         let message = unavailable_choice_message(&self.ui, choice);
@@ -322,7 +322,12 @@ fn unavailable_choice_message<U: PlayUiAdapter>(
     choice: &DialogueChoice,
 ) -> String {
     let ui = ui.borrow();
-    match choice.unavailable_reason.as_deref() {
+    match choice
+        .availability
+        .primary_reason
+        .as_ref()
+        .map(|reason| reason.source_text.as_str())
+    {
         Some(reason) if !reason.is_empty() => ui.message(
             MsgId::PlayErrorChoiceUnavailableReason,
             [

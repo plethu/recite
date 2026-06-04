@@ -4,7 +4,7 @@ use recite_core::{
     StatementRange,
 };
 
-use crate::{DialogueEffectRequest, DialogueError, DialogueEvent};
+use crate::{ChoiceAvailability, DialogueEffectRequest, DialogueError, DialogueEvent};
 
 /// Compact, asset-free runtime session state.
 #[derive(Clone, Debug, PartialEq)]
@@ -125,7 +125,7 @@ pub(crate) struct StatementFrame {
     pub(crate) next_statement: StatementIndex,
 }
 
-#[derive(Clone, Debug, Eq, PartialEq)]
+#[derive(Clone, Debug, PartialEq)]
 pub(crate) struct PendingPrompt {
     pub(crate) statement: StatementIndex,
     pub(crate) choices: Vec<PendingPromptChoice>,
@@ -140,12 +140,12 @@ impl PendingPrompt {
     }
 }
 
-#[derive(Clone, Debug, Eq, PartialEq)]
+#[derive(Clone, Debug, PartialEq)]
 pub(crate) struct PendingPromptChoice {
     pub(crate) id: ChoiceId,
     pub(crate) target: CompiledDivertTarget,
     pub(crate) is_available: bool,
-    pub(crate) unavailable_reason: Option<String>,
+    pub(crate) availability: ChoiceAvailability,
 }
 
 #[derive(Clone, Debug, PartialEq)]

@@ -136,7 +136,61 @@ pub(in crate::runtime_fixture) struct TraceChoice {
     pub(in crate::runtime_fixture) text: String,
     pub(in crate::runtime_fixture) metadata: Vec<TraceMetadata>,
     pub(in crate::runtime_fixture) is_available: bool,
+    pub(in crate::runtime_fixture) availability: TraceChoiceAvailability,
     pub(in crate::runtime_fixture) unavailable_reason: Option<String>,
+}
+
+#[derive(Clone, Debug, Serialize)]
+pub(in crate::runtime_fixture) struct TraceChoiceAvailability {
+    pub(in crate::runtime_fixture) is_available: bool,
+    pub(in crate::runtime_fixture) primary_reason: Option<TraceChoiceAvailabilityReason>,
+    pub(in crate::runtime_fixture) reason_tree: Option<TraceChoiceAvailabilityReasonTree>,
+}
+
+#[derive(Clone, Debug, Serialize)]
+pub(in crate::runtime_fixture) struct TraceChoiceAvailabilityReason {
+    pub(in crate::runtime_fixture) id: String,
+    pub(in crate::runtime_fixture) source_text: String,
+    pub(in crate::runtime_fixture) text: String,
+    pub(in crate::runtime_fixture) origin: Option<TraceChoiceAvailabilityReasonOrigin>,
+    pub(in crate::runtime_fixture) args: Vec<TraceChoiceAvailabilityReasonArg>,
+}
+
+#[derive(Clone, Debug, Serialize)]
+#[serde(tag = "type", rename_all = "snake_case")]
+pub(in crate::runtime_fixture) enum TraceChoiceAvailabilityReasonOrigin {
+    ConditionCall {
+        function: String,
+        args: Vec<TraceChoiceAvailabilityReasonValue>,
+    },
+    RequirementExpression {
+        source_text: String,
+    },
+}
+
+#[derive(Clone, Debug, Serialize)]
+pub(in crate::runtime_fixture) struct TraceChoiceAvailabilityReasonArg {
+    pub(in crate::runtime_fixture) name: String,
+    pub(in crate::runtime_fixture) value: TraceChoiceAvailabilityReasonValue,
+}
+
+#[derive(Clone, Debug, Serialize)]
+#[serde(tag = "type", content = "value", rename_all = "snake_case")]
+pub(in crate::runtime_fixture) enum TraceChoiceAvailabilityReasonValue {
+    Identifier(String),
+    String(String),
+    Integer(i64),
+    Float(f64),
+    Boolean(bool),
+}
+
+#[derive(Clone, Debug, Serialize)]
+#[serde(tag = "type", content = "value", rename_all = "snake_case")]
+pub(in crate::runtime_fixture) enum TraceChoiceAvailabilityReasonTree {
+    All(Vec<TraceChoiceAvailabilityReasonTree>),
+    Any(Vec<TraceChoiceAvailabilityReasonTree>),
+    Reason(TraceChoiceAvailabilityReason),
+    RequirementSourceText(String),
 }
 
 #[derive(Clone, Debug, Serialize)]

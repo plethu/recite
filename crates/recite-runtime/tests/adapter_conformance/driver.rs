@@ -902,7 +902,7 @@ impl ReferenceDriver {
                 outcome.prompt_unavailable_choice_ids = Some(
                     choices
                         .iter()
-                        .filter(|choice| !choice.is_available)
+                        .filter(|choice| !choice.availability.is_available)
                         .map(|choice| choice.id.as_str().to_owned())
                         .collect(),
                 );

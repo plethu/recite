@@ -101,6 +101,13 @@ pub(super) fn validate_dialogue(
         if let Some(condition) = &choice.availability_requirement {
             validate_condition(condition)?;
         }
+        if let Some(reason_id) = &choice.availability_reason_override {
+            ensure_availability_reason(
+                dialogue,
+                "choice availability reason override",
+                reason_id.as_str(),
+            )?;
+        }
         validate_divert(dialogue, &choice.target)?;
         validate_choice_echo(dialogue, &choice.echo)?;
         ensure_index(
@@ -129,6 +136,27 @@ pub(super) fn validate_dialogue(
         "effect id",
         dialogue.effects.iter().map(|effect| effect.id.as_str()),
     )?;
+    ensure_unique_strings(
+        "availability reason id",
+        dialogue
+            .availability_reasons
+            .iter()
+            .map(|reason| reason.id.as_str()),
+    )?;
+    ensure_unique_strings(
+        "condition availability reason function",
+        dialogue
+            .condition_availability_reasons
+            .iter()
+            .map(|mapping| mapping.function.as_str()),
+    )?;
+    for mapping in &dialogue.condition_availability_reasons {
+        ensure_availability_reason(
+            dialogue,
+            "condition availability reason mapping",
+            mapping.reason.as_str(),
+        )?;
+    }
     for source_map in &dialogue.source_maps {
         ensure_index(
             "source map source file",
@@ -323,6 +351,24 @@ fn validate_choice_echo(
         "choice echo references unknown line id `{line_id}`"
     )))
 }
+
+fn ensure_availability_reason(
+    dialogue: &CompiledDialogue,
+    field: &'static str,
+    reason_id: &str,
+) -> Result<(), CompiledAssetDecodeError> {
+    if dialogue
+        .availability_reasons
+        .iter()
+        .any(|reason| reason.id.as_str() == reason_id)
+    {
+        return Ok(());
+    }
+    Err(malformed(format!(
+        "{field} references unknown availability reason `{reason_id}`"
+    )))
+}
+
 fn ensure_unique_strings<'a>(
     field: &'static str,
     values: impl IntoIterator<Item = &'a str>,

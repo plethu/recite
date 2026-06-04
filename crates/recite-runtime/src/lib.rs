@@ -79,6 +79,8 @@ pub use context::{
 };
 pub use error::DialogueError;
 pub use event::{
+    ChoiceAvailability, ChoiceAvailabilityReason, ChoiceAvailabilityReasonArg,
+    ChoiceAvailabilityReasonOrigin, ChoiceAvailabilityReasonTree, ChoiceAvailabilityReasonValue,
     ChoiceEchoMode, DialogueChoice, DialogueEffectArgument, DialogueEffectMode,
     DialogueEffectRequest, DialogueEvent, DialogueLine, EffectAck,
 };
@@ -88,7 +90,10 @@ pub use session_serialization::{
     decode_session_messagepack, encode_session_messagepack, restore_session,
 };
 pub use session_snapshot::{
-    CURRENT_SESSION_SNAPSHOT_FORMAT_VERSION, DialogueContentFingerprintSnapshot,
+    CURRENT_SESSION_SNAPSHOT_FORMAT_VERSION, DialogueChoiceAvailabilityReasonArgSnapshot,
+    DialogueChoiceAvailabilityReasonOriginSnapshot, DialogueChoiceAvailabilityReasonSnapshot,
+    DialogueChoiceAvailabilityReasonTreeSnapshot, DialogueChoiceAvailabilityReasonValueSnapshot,
+    DialogueChoiceAvailabilitySnapshot, DialogueContentFingerprintSnapshot,
     DialogueDeferredEffectSnapshot, DialogueSchemaFingerprintSnapshot,
     DialogueSessionFrameSnapshot, DialogueSessionPendingChoiceSnapshot,
     DialogueSessionPendingEffectSnapshot, DialogueSessionPendingPromptSnapshot,

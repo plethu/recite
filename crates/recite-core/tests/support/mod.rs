@@ -42,6 +42,8 @@ pub(crate) fn valid_wire_asset() -> WireAsset<'static> {
         match_arms: Vec::new(),
         lines: Vec::new(),
         choices: Vec::new(),
+        availability_reasons: Vec::new(),
+        condition_availability_reasons: Vec::new(),
         speakers: Vec::new(),
         metadata: Vec::new(),
         effects: Vec::new(),
@@ -96,6 +98,8 @@ pub(crate) struct WireAsset<'a> {
     pub(crate) match_arms: Vec<()>,
     pub(crate) lines: Vec<WireLine<'a>>,
     pub(crate) choices: Vec<WireChoice<'a>>,
+    pub(crate) availability_reasons: Vec<WireAvailabilityReason<'a>>,
+    pub(crate) condition_availability_reasons: Vec<WireConditionAvailabilityReason<'a>>,
     pub(crate) speakers: Vec<WireSpeaker<'a>>,
     pub(crate) metadata: Vec<WireMetadataEntry<'a>>,
     pub(crate) effects: Vec<WireEffect<'a>>,
@@ -110,7 +114,7 @@ impl Serialize for WireAsset<'_> {
     where
         S: serde::Serializer,
     {
-        let mut tuple = serializer.serialize_tuple(15)?;
+        let mut tuple = serializer.serialize_tuple(17)?;
         tuple.serialize_element(&self.header)?;
         tuple.serialize_element(&self.default_block)?;
         tuple.serialize_element(&self.sources)?;
@@ -119,6 +123,8 @@ impl Serialize for WireAsset<'_> {
         tuple.serialize_element(&self.match_arms)?;
         tuple.serialize_element(&self.lines)?;
         tuple.serialize_element(&self.choices)?;
+        tuple.serialize_element(&self.availability_reasons)?;
+        tuple.serialize_element(&self.condition_availability_reasons)?;
         tuple.serialize_element(&self.speakers)?;
         tuple.serialize_element(&self.metadata)?;
         tuple.serialize_element(&self.effects)?;
@@ -321,6 +327,7 @@ pub(crate) struct WireChoice<'a> {
     pub(crate) source_text: &'a str,
     pub(crate) metadata: WireRange,
     pub(crate) availability_requirement: Option<WireConditionExpression<'a>>,
+    pub(crate) availability_requirement_source_text: Option<&'a str>,
     pub(crate) availability_reason_override: Option<&'a str>,
     pub(crate) target: Tagged<u32>,
     pub(crate) echo: Tagged<&'a str>,
@@ -332,15 +339,109 @@ impl Serialize for WireChoice<'_> {
     where
         S: serde::Serializer,
     {
-        let mut tuple = serializer.serialize_tuple(8)?;
+        let mut tuple = serializer.serialize_tuple(9)?;
         tuple.serialize_element(&self.id)?;
         tuple.serialize_element(&self.source_text)?;
         tuple.serialize_element(&self.metadata)?;
         tuple.serialize_element(&self.availability_requirement)?;
+        tuple.serialize_element(&self.availability_requirement_source_text)?;
         tuple.serialize_element(&self.availability_reason_override)?;
         tuple.serialize_element(&self.target)?;
         tuple.serialize_element(&self.echo)?;
         tuple.serialize_element(&self.source_map)?;
+        tuple.end()
+    }
+}
+
+pub(crate) struct WireAvailabilityReason<'a> {
+    pub(crate) id: &'a str,
+    pub(crate) template: &'a str,
+}
+
+impl Serialize for WireAvailabilityReason<'_> {
+    fn serialize<S>(&self, serializer: S) -> Result<S::Ok, S::Error>
+    where
+        S: serde::Serializer,
+    {
+        let mut tuple = serializer.serialize_tuple(2)?;
+        tuple.serialize_element(&self.id)?;
+        tuple.serialize_element(&self.template)?;
+        tuple.end()
+    }
+}
+
+pub(crate) struct WireConditionAvailabilityReason<'a> {
+    pub(crate) function: &'a str,
+    pub(crate) reason: &'a str,
+    pub(crate) args: Vec<WireAvailabilityReasonArgBinding<'a>>,
+}
+
+impl Serialize for WireConditionAvailabilityReason<'_> {
+    fn serialize<S>(&self, serializer: S) -> Result<S::Ok, S::Error>
+    where
+        S: serde::Serializer,
+    {
+        let mut tuple = serializer.serialize_tuple(3)?;
+        tuple.serialize_element(&self.function)?;
+        tuple.serialize_element(&self.reason)?;
+        tuple.serialize_element(&self.args)?;
+        tuple.end()
+    }
+}
+
+pub(crate) struct WireAvailabilityReasonArgBinding<'a> {
+    pub(crate) name: &'a str,
+    pub(crate) value: WireAvailabilityReasonArgValue<'a>,
+}
+
+impl Serialize for WireAvailabilityReasonArgBinding<'_> {
+    fn serialize<S>(&self, serializer: S) -> Result<S::Ok, S::Error>
+    where
+        S: serde::Serializer,
+    {
+        let mut tuple = serializer.serialize_tuple(2)?;
+        tuple.serialize_element(&self.name)?;
+        tuple.serialize_element(&self.value)?;
+        tuple.end()
+    }
+}
+
+pub(crate) enum WireAvailabilityReasonArgValue<'a> {
+    ConditionArg(u32),
+    LiteralString(&'a str),
+    LiteralInt(i64),
+    LiteralFloat(f64),
+    LiteralBool(bool),
+}
+
+impl Serialize for WireAvailabilityReasonArgValue<'_> {
+    fn serialize<S>(&self, serializer: S) -> Result<S::Ok, S::Error>
+    where
+        S: serde::Serializer,
+    {
+        let mut tuple = serializer.serialize_tuple(2)?;
+        match self {
+            Self::ConditionArg(value) => {
+                tuple.serialize_element("ConditionArg")?;
+                tuple.serialize_element(value)?;
+            }
+            Self::LiteralString(value) => {
+                tuple.serialize_element("LiteralString")?;
+                tuple.serialize_element(value)?;
+            }
+            Self::LiteralInt(value) => {
+                tuple.serialize_element("LiteralInt")?;
+                tuple.serialize_element(value)?;
+            }
+            Self::LiteralFloat(value) => {
+                tuple.serialize_element("LiteralFloat")?;
+                tuple.serialize_element(value)?;
+            }
+            Self::LiteralBool(value) => {
+                tuple.serialize_element("LiteralBool")?;
+                tuple.serialize_element(value)?;
+            }
+        }
         tuple.end()
     }
 }

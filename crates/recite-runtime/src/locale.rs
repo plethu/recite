@@ -5,6 +5,7 @@ use recite_core::LocaleId;
 pub enum TextDomain {
     Line,
     Choice,
+    AvailabilityReason,
 }
 
 /// Runtime translation lookup surface.

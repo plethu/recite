@@ -60,6 +60,97 @@ fn restores_pending_prompt_and_selects_choice_using_matching_asset() {
 }
 
 #[test]
+fn restores_pending_prompt_choice_availability_reasons() {
+    let schema = recite_core::load_schema_manifest_str(
+        "fixtures/schema/valid/generated_manifest.json",
+        include_str!("../../../../fixtures/schema/valid/generated_manifest.json"),
+    )
+    .schema
+    .expect("valid schema fixture");
+    let asset = compile_asset_with_schema(
+        "dialogue/start.recite",
+        concat!(
+            ":: start default\n",
+            "> prompt_line\n",
+            "  What next?\n",
+            "  ? ask_news requires=(trust_gte(hazel, rhea, 3)) reason=innkeeper_trust_hint\n",
+            "    Ask for private news.\n",
+            "    -> END\n",
+        ),
+        &schema,
+    );
+    let context = |query: recite_runtime::ConditionQuery<'_>| {
+        assert_eq!(query.function(), "trust_gte");
+        Ok(recite_runtime::ConditionValue::Bool(false))
+    };
+    let mut session = start_scene(&asset, None).expect("starts");
+    let DialogueEvent::Prompt { choices, .. } =
+        runtime_next(&asset, &mut session, &context).expect("emits prompt")
+    else {
+        panic!("expected prompt");
+    };
+    assert!(!choices[0].availability.is_available);
+
+    let snapshot = snapshot_session(&session);
+    assert_eq!(
+        snapshot.pending_prompt.as_ref().expect("pending").choices[0]
+            .availability
+            .primary_reason
+            .as_ref()
+            .map(|reason| reason.id.as_str()),
+        Some("innkeeper_trust_hint")
+    );
+
+    let restored = restore_session(&asset, snapshot).expect("restores pending prompt");
+    let restored_snapshot = snapshot_session(&restored);
+    let restored_choice = &restored_snapshot
+        .pending_prompt
+        .as_ref()
+        .expect("pending prompt")
+        .choices[0];
+    assert_eq!(
+        restored_choice
+            .availability
+            .primary_reason
+            .as_ref()
+            .map(|reason| reason.id.as_str()),
+        Some("innkeeper_trust_hint")
+    );
+    assert_eq!(
+        restored_choice
+            .availability
+            .primary_reason
+            .as_ref()
+            .and_then(|reason| reason.origin.as_ref()),
+        Some(
+            &DialogueChoiceAvailabilityReasonOriginSnapshot::RequirementExpression {
+                source_text: "requires=(trust_gte(hazel, rhea, 3))".to_owned(),
+            }
+        )
+    );
+    let Some(DialogueChoiceAvailabilityReasonTreeSnapshot::Reason(reason)) =
+        &restored_choice.availability.reason_tree
+    else {
+        panic!("expected reason tree");
+    };
+    assert_eq!(reason.id.as_str(), "trust_too_low");
+    assert_eq!(reason.text, "hazel does not trust rhea enough (3).");
+    assert_eq!(
+        reason.origin,
+        Some(
+            DialogueChoiceAvailabilityReasonOriginSnapshot::ConditionCall {
+                function: "trust_gte".to_owned(),
+                args: vec![
+                    DialogueChoiceAvailabilityReasonValueSnapshot::Identifier("hazel".to_owned()),
+                    DialogueChoiceAvailabilityReasonValueSnapshot::Identifier("rhea".to_owned()),
+                    DialogueChoiceAvailabilityReasonValueSnapshot::Integer(3),
+                ],
+            }
+        )
+    );
+}
+
+#[test]
 fn restores_selected_choice_history_after_choice_continuation() {
     let asset = compile_asset(
         "dialogue/start.recite",

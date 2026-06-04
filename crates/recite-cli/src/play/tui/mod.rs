@@ -177,9 +177,14 @@ impl<B: Backend> PlayUiAdapter for TuiPlayUi<'_, B> {
                 index: index + 1,
                 id: choice.id.as_str().to_owned(),
                 text: choice.text.clone(),
-                is_available: choice.is_available,
-                unavailable_reason: choice.unavailable_reason.clone(),
-                is_visible: self.settings.show_unavailable_choices || choice.is_available,
+                is_available: choice.availability.is_available,
+                unavailable_reason: choice
+                    .availability
+                    .primary_reason
+                    .as_ref()
+                    .map(|reason| reason.text.clone()),
+                is_visible: self.settings.show_unavailable_choices
+                    || choice.availability.is_available,
             })
             .collect::<Vec<_>>();
         let selected = initial_choice_selection(&rows);

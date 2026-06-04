@@ -1,11 +1,11 @@
-pub const V0_COMPILED_DIALOGUE_FIELDS: u8 = 15;
+pub const V0_COMPILED_DIALOGUE_FIELDS: u8 = 17;
 pub const V0_ASSET_HEADER_FIELDS: u8 = 8;
 pub const V0_SOURCE_FILE_FIELDS: u8 = 2;
 pub const V0_BLOCK_FIELDS: u8 = 6;
 pub const V0_STATEMENT_FIELDS: u8 = 2;
 pub const V0_MATCH_ARM_FIELDS: u8 = 3;
 pub const V0_LINE_FIELDS: u8 = 5;
-pub const V0_CHOICE_FIELDS: u8 = 8;
+pub const V0_CHOICE_FIELDS: u8 = 9;
 pub const V0_SPEAKER_FIELDS: u8 = 1;
 pub const V0_METADATA_ENTRY_FIELDS: u8 = 3;
 pub const V0_EFFECT_FIELDS: u8 = 5;
