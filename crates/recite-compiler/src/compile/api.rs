@@ -144,7 +144,7 @@ fn compile_inputs_with_optional_schema(
             .then(left.input_index.cmp(&right.input_index))
     });
 
-    let dialogue = build_dialogue(&lowered_inputs, options)?;
+    let dialogue = build_dialogue(&lowered_inputs, options, schema)?;
     let messagepack = serialize_messagepack(&dialogue)?;
     let inspection_json = serialize_inspection_json(&dialogue)?;
 

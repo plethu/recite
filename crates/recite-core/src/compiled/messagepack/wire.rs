@@ -29,6 +29,8 @@ pub(super) struct MsgDialogue(
     Vec<MsgMatchArm>,
     Vec<MsgLine>,
     Vec<MsgChoice>,
+    Vec<MsgAvailabilityReason>,
+    Vec<MsgConditionAvailabilityReason>,
     Vec<MsgSpeaker>,
     Vec<MsgMetadataEntry>,
     Vec<MsgEffect>,
@@ -51,27 +53,29 @@ impl TryFrom<MsgDialogue> for CompiledDialogue {
             match_arms: collect(value.5)?,
             lines: collect(value.6)?,
             choices: collect(value.7)?,
-            speakers: collect(value.8)?,
-            metadata: collect(value.9)?,
-            effects: collect(value.10)?,
-            source_maps: collect(value.11)?,
+            availability_reasons: collect(value.8)?,
+            condition_availability_reasons: collect(value.9)?,
+            speakers: collect(value.10)?,
+            metadata: collect(value.11)?,
+            effects: collect(value.12)?,
+            source_maps: collect(value.13)?,
             block_lookup: BlockLookupTable::new(
                 value
-                    .12
+                    .14
                     .into_iter()
                     .map(|entry| entry.block())
                     .collect::<Result<Vec<_>, _>>()?,
             )?,
             line_lookup: LineLookupTable::new(
                 value
-                    .13
+                    .15
                     .into_iter()
                     .map(|entry| entry.line())
                     .collect::<Result<Vec<_>, _>>()?,
             )?,
             choice_lookup: ChoiceLookupTable::new(
                 value
-                    .14
+                    .16
                     .into_iter()
                     .map(|entry| entry.choice())
                     .collect::<Result<Vec<_>, _>>()?,
@@ -203,6 +207,7 @@ struct MsgChoice(
     MsgRange,
     Option<MsgConditionExpression>,
     Option<String>,
+    Option<String>,
     MsgDivertTarget,
     MsgChoiceEcho,
     u32,
@@ -217,11 +222,87 @@ impl TryFrom<MsgChoice> for CompiledChoice {
             source_text: value.1,
             metadata: value.2.metadata(),
             availability_requirement: value.3.map(|condition| condition.0),
-            availability_reason_override: value.4.map(AvailabilityReasonId::new).transpose()?,
-            target: value.5.0,
-            echo: value.6.0,
-            source_map: SourceMapIndex::new(value.7),
+            availability_requirement_source_text: value.4,
+            availability_reason_override: value.5.map(AvailabilityReasonId::new).transpose()?,
+            target: value.6.0,
+            echo: value.7.0,
+            source_map: SourceMapIndex::new(value.8),
         })
+    }
+}
+
+#[derive(Deserialize)]
+struct MsgAvailabilityReason(String, String);
+
+impl TryFrom<MsgAvailabilityReason> for crate::compiled::CompiledAvailabilityReason {
+    type Error = CompiledAssetDecodeError;
+
+    fn try_from(value: MsgAvailabilityReason) -> Result<Self, Self::Error> {
+        Ok(Self {
+            id: AvailabilityReasonId::new(value.0)?,
+            template: value.1,
+        })
+    }
+}
+
+#[derive(Deserialize)]
+struct MsgConditionAvailabilityReason(String, String, Vec<MsgAvailabilityReasonArgBinding>);
+
+impl TryFrom<MsgConditionAvailabilityReason>
+    for crate::compiled::CompiledConditionAvailabilityReason
+{
+    type Error = CompiledAssetDecodeError;
+
+    fn try_from(value: MsgConditionAvailabilityReason) -> Result<Self, Self::Error> {
+        ensure_non_empty("condition availability reason function", &value.0)?;
+        Ok(Self {
+            function: value.0,
+            reason: AvailabilityReasonId::new(value.1)?,
+            args: collect(value.2)?,
+        })
+    }
+}
+
+#[derive(Deserialize)]
+struct MsgAvailabilityReasonArgBinding(String, MsgAvailabilityReasonArgValueWrapper);
+
+impl TryFrom<MsgAvailabilityReasonArgBinding>
+    for crate::compiled::CompiledAvailabilityReasonArgBinding
+{
+    type Error = CompiledAssetDecodeError;
+
+    fn try_from(value: MsgAvailabilityReasonArgBinding) -> Result<Self, Self::Error> {
+        ensure_non_empty("availability reason argument name", &value.0)?;
+        Ok(Self {
+            name: value.0,
+            value: value.1.0,
+        })
+    }
+}
+
+struct MsgAvailabilityReasonArgValueWrapper(crate::compiled::CompiledAvailabilityReasonArgValue);
+
+impl<'de> Deserialize<'de> for MsgAvailabilityReasonArgValueWrapper {
+    fn deserialize<D>(deserializer: D) -> Result<Self, D::Error>
+    where
+        D: serde::Deserializer<'de>,
+    {
+        let (tag, value): (String, String) = Deserialize::deserialize(deserializer)?;
+        match tag.as_str() {
+            "ConditionArg" => {
+                ensure_non_empty("availability reason condition argument", &value)
+                    .map_err(serde::de::Error::custom)?;
+                Ok(Self(
+                    crate::compiled::CompiledAvailabilityReasonArgValue::ConditionArg(value),
+                ))
+            }
+            "Literal" => Ok(Self(
+                crate::compiled::CompiledAvailabilityReasonArgValue::Literal(value),
+            )),
+            _ => Err(serde::de::Error::custom(format!(
+                "unknown availability reason argument value tag `{tag}`"
+            ))),
+        }
     }
 }
 

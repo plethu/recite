@@ -1,12 +1,13 @@
 use std::ops::Range;
 
 use recite_core::{
-    BlockIndex, COMPILED_ASSET_FORMAT_VERSION_V0, COMPILER_COMPATIBILITY_VERSION_V0, ChoiceId,
-    ChoiceIndex, ChoiceRange, CompiledAssetHeader, CompiledChoice, CompiledDialogue,
-    CompiledEffect, CompiledEffectMode, CompiledLine, CompiledMatchArm, CompiledMetadataEntry,
-    CompiledSourceMapEntry, CompiledStatement, CompiledValueError, EffectId, EffectIndex,
-    LineIndex, MatchArmIndex, MatchArmRange, MetadataIndex, MetadataRange, SourceMapIndex,
-    SpeakerIndex, StatementIndex, StatementRange, TableRange,
+    AvailabilityReasonId, BlockIndex, COMPILED_ASSET_FORMAT_VERSION_V0,
+    COMPILER_COMPATIBILITY_VERSION_V0, ChoiceId, ChoiceIndex, ChoiceRange, CompiledAssetHeader,
+    CompiledAvailabilityReason, CompiledChoice, CompiledConditionAvailabilityReason,
+    CompiledDialogue, CompiledEffect, CompiledEffectMode, CompiledLine, CompiledMatchArm,
+    CompiledMetadataEntry, CompiledSourceMapEntry, CompiledStatement, CompiledValueError, EffectId,
+    EffectIndex, LineIndex, MatchArmIndex, MatchArmRange, MetadataIndex, MetadataRange,
+    SourceMapIndex, SpeakerIndex, StatementIndex, StatementRange, TableRange,
 };
 
 use crate::{DialogueError, DialogueSession};
@@ -233,6 +234,26 @@ impl<'a> AssetView<'a> {
         }
 
         Ok(choice)
+    }
+
+    pub(crate) fn availability_reason(
+        self,
+        reason_id: &AvailabilityReasonId,
+    ) -> Option<&'a CompiledAvailabilityReason> {
+        self.asset
+            .availability_reasons
+            .iter()
+            .find(|reason| reason.id == *reason_id)
+    }
+
+    pub(crate) fn condition_availability_reason(
+        self,
+        function: &str,
+    ) -> Option<&'a CompiledConditionAvailabilityReason> {
+        self.asset
+            .condition_availability_reasons
+            .iter()
+            .find(|mapping| mapping.function == function)
     }
 
     pub(crate) fn metadata_entries(

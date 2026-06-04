@@ -1,6 +1,7 @@
-use recite_compiler::{CompileInput, CompileOptions, compile_inputs};
+use recite_compiler::{CompileInput, CompileOptions, compile_inputs, compile_inputs_with_schema};
 use recite_core::{
-    ChoiceId, CompiledAssetId, CompiledDialogue, CompilerVersion, SchemaFingerprint, SourceMapId,
+    ChoiceId, CompiledAssetId, CompiledDialogue, CompilerVersion, ProjectSchema, SchemaFingerprint,
+    SourceMapId,
 };
 use recite_runtime::{
     DialogueEffectRequest, DialogueError, DialogueEvent, EmptyDialogueContext,
@@ -65,6 +66,32 @@ pub(super) fn assert_effect_functions<const N: usize>(
 
 pub(super) fn compile_asset(path: &str, source: &str) -> CompiledDialogue {
     compile_asset_with_id(path, source, "dialogue/main.recitec")
+}
+
+pub(super) fn compile_asset_with_schema(
+    path: &str,
+    source: &str,
+    schema: &ProjectSchema,
+) -> CompiledDialogue {
+    let report = compile_inputs_with_schema(
+        [CompileInput::new(path, source)],
+        CompileOptions::new(
+            CompilerVersion::new("0.0.1").expect("valid compiler version"),
+            CompiledAssetId::new("dialogue/main.recitec").expect("valid asset id"),
+            SourceMapId::new("dialogue/main.recitec.map").expect("valid source map id"),
+            schema.canonical_fingerprint(),
+        ),
+        schema,
+    )
+    .expect("compile does not hard fail");
+
+    assert!(
+        report.diagnostics.is_empty(),
+        "test source should compile without diagnostics: {:?}",
+        report.diagnostics
+    );
+
+    report.asset.expect("asset emitted").dialogue
 }
 
 pub(super) fn compile_asset_with_id(path: &str, source: &str, asset_id: &str) -> CompiledDialogue {

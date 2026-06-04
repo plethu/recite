@@ -2,7 +2,7 @@ use recite_core::{ChoiceId, CompiledStatementKind, StatementIndex, StatementRang
 
 use crate::DialogueError;
 use crate::session::{PendingPrompt, PendingPromptChoice};
-use crate::session_snapshot::DialogueSessionPendingPromptSnapshot;
+use crate::session_snapshot::{DialogueSessionPendingPromptSnapshot, availability_from_snapshot};
 use crate::traversal::AssetView;
 
 use super::pending_position::validate_pending_statement_position;
@@ -58,11 +58,13 @@ pub(super) fn restore_pending_prompt(
                 snapshot_choice.id, compiled_choice.id
             )));
         }
+        let availability = availability_from_snapshot(snapshot_choice.availability.clone())
+            .map_err(invalid_snapshot)?;
         pending_choices.push(PendingPromptChoice {
             id: choice_id,
             target: compiled_choice.target.clone(),
-            is_available: snapshot_choice.is_available,
-            unavailable_reason: snapshot_choice.unavailable_reason.clone(),
+            is_available: availability.is_available,
+            availability,
         });
     }
 

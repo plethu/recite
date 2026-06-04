@@ -55,10 +55,20 @@ fn json_dialogue(dialogue: &CompiledDialogue) -> JsonValue {
             "source_text": choice.source_text.as_str(),
             "metadata": json_range(choice.metadata, MetadataIndex::as_u32),
             "availability_requirement": choice.availability_requirement.as_ref().map(json_condition_expression),
+            "availability_requirement_source_text": choice.availability_requirement_source_text.as_deref(),
             "availability_reason_override": choice.availability_reason_override.as_ref().map(recite_core::AvailabilityReasonId::as_str),
             "target": json_divert_target(&choice.target),
             "echo": json_choice_echo(&choice.echo),
             "source_map": choice.source_map.as_u32(),
+        })).collect::<Vec<_>>(),
+        "availability_reasons": dialogue.availability_reasons.iter().map(|reason| json!({
+            "id": reason.id.as_str(),
+            "template": reason.template.as_str(),
+        })).collect::<Vec<_>>(),
+        "condition_availability_reasons": dialogue.condition_availability_reasons.iter().map(|mapping| json!({
+            "function": mapping.function.as_str(),
+            "reason": mapping.reason.as_str(),
+            "args": mapping.args.iter().map(json_availability_reason_arg_binding).collect::<Vec<_>>(),
         })).collect::<Vec<_>>(),
         "speakers": dialogue.speakers.iter().map(|speaker| json!({
             "id": speaker.id.as_str(),
@@ -91,6 +101,22 @@ fn json_dialogue(dialogue: &CompiledDialogue) -> JsonValue {
             "id": entry.id.as_str(),
             "index": entry.index.as_u32(),
         })).collect::<Vec<_>>(),
+    })
+}
+
+fn json_availability_reason_arg_binding(
+    binding: &recite_core::CompiledAvailabilityReasonArgBinding,
+) -> JsonValue {
+    json!({
+        "name": binding.name.as_str(),
+        "value": match &binding.value {
+            recite_core::CompiledAvailabilityReasonArgValue::ConditionArg(value) => {
+                tagged_json("condition_arg", json!(value))
+            }
+            recite_core::CompiledAvailabilityReasonArgValue::Literal(value) => {
+                tagged_json("literal", json!(value))
+            }
+        },
     })
 }
 

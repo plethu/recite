@@ -1,5 +1,6 @@
 mod advance;
 mod asset;
+mod availability;
 mod choice;
 mod condition;
 mod effect;

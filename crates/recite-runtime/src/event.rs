@@ -1,4 +1,6 @@
-use recite_core::{ChoiceId, EffectId, LineId, MetadataEntry, SourceSpan, SpeakerId};
+use recite_core::{
+    AvailabilityReasonId, ChoiceId, EffectId, LineId, MetadataEntry, SourceSpan, SpeakerId,
+};
 
 /// Structured output emitted by runtime traversal.
 #[derive(Clone, Debug, PartialEq)]
@@ -29,9 +31,60 @@ pub struct DialogueChoice {
     pub source_text: String,
     pub text: String,
     pub metadata: Vec<MetadataEntry>,
-    pub is_available: bool,
-    pub unavailable_reason: Option<String>,
+    pub availability: ChoiceAvailability,
     pub echo: ChoiceEchoMode,
+}
+
+#[derive(Clone, Debug, Eq, PartialEq)]
+pub struct ChoiceAvailability {
+    pub is_available: bool,
+    pub primary_reason: Option<ChoiceAvailabilityReason>,
+    pub reason_tree: Option<ChoiceAvailabilityReasonTree>,
+}
+
+impl ChoiceAvailability {
+    #[must_use]
+    pub fn available() -> Self {
+        Self {
+            is_available: true,
+            primary_reason: None,
+            reason_tree: None,
+        }
+    }
+
+    #[must_use]
+    pub fn unavailable(
+        primary_reason: Option<ChoiceAvailabilityReason>,
+        reason_tree: Option<ChoiceAvailabilityReasonTree>,
+    ) -> Self {
+        Self {
+            is_available: false,
+            primary_reason,
+            reason_tree,
+        }
+    }
+}
+
+#[derive(Clone, Debug, Eq, PartialEq)]
+pub struct ChoiceAvailabilityReason {
+    pub id: AvailabilityReasonId,
+    pub source_text: String,
+    pub args: Vec<ChoiceAvailabilityReasonArg>,
+}
+
+#[derive(Clone, Debug, Eq, PartialEq)]
+pub struct ChoiceAvailabilityReasonArg {
+    pub name: String,
+    pub value: String,
+}
+
+#[derive(Clone, Debug, Eq, PartialEq)]
+pub enum ChoiceAvailabilityReasonTree {
+    All(Vec<ChoiceAvailabilityReasonTree>),
+    Any(Vec<ChoiceAvailabilityReasonTree>),
+    Not(Box<ChoiceAvailabilityReasonTree>),
+    Reason(ChoiceAvailabilityReason),
+    RequirementSourceText(String),
 }
 
 #[derive(Clone, Debug, Eq, PartialEq)]

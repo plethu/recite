@@ -28,9 +28,9 @@ use recite_core::{
 
 #[test]
 fn v0_wire_constants_lock_main_tuple_and_tag_decisions() {
-    assert_eq!(V0_COMPILED_DIALOGUE_FIELDS, 15);
+    assert_eq!(V0_COMPILED_DIALOGUE_FIELDS, 17);
     assert_eq!(V0_ASSET_HEADER_FIELDS, 8);
-    assert_eq!(V0_CHOICE_FIELDS, 8);
+    assert_eq!(V0_CHOICE_FIELDS, 9);
     assert_eq!(V0_MATCH_ARM_FIELDS, 3);
     assert_eq!(V0_RANGE_FIELDS, 2);
     assert_eq!(V0_LOOKUP_ENTRY_FIELDS, 2);
@@ -170,6 +170,7 @@ fn compiled_rows_require_stable_line_and_choice_ids() {
         source_text: "Ask about work.".to_owned(),
         metadata: MetadataRange::new(MetadataIndex::new(0), 0),
         availability_requirement: None,
+        availability_requirement_source_text: None,
         availability_reason_override: None,
         target: CompiledDivertTarget::Block(BlockIndex::new(1)),
         echo: CompiledChoiceEcho::None,
@@ -384,6 +385,8 @@ fn compiled_dialogue_uses_typed_lookup_tables() {
         match_arms: Vec::new(),
         lines: Vec::new(),
         choices: Vec::new(),
+        availability_reasons: Vec::new(),
+        condition_availability_reasons: Vec::new(),
         speakers: Vec::new(),
         metadata: Vec::new(),
         effects: Vec::new(),

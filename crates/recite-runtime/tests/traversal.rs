@@ -7,12 +7,12 @@ use recite_core::{
     MatchArmIndex, MatchArmRange,
 };
 use recite_runtime::{
-    ConditionArgument, ConditionEvaluationError, ConditionExpectedType, ConditionQuery,
-    DialogueEffectArgument, DialogueEffectMode, DialogueEffectRequest, DialogueError,
-    DialogueEvent, DialogueSessionOptions, EffectAck, EmptyDialogueContext, LocaleProvider,
-    LocaleResolution, TextDomain, acknowledge_effect, choose as runtime_choose,
-    choose_with as runtime_choose_with, next as runtime_next, next_with as runtime_next_with,
-    start_scene, start_scene_with_options,
+    ChoiceAvailabilityReasonTree, ConditionArgument, ConditionEvaluationError,
+    ConditionExpectedType, ConditionQuery, DialogueEffectArgument, DialogueEffectMode,
+    DialogueEffectRequest, DialogueError, DialogueEvent, DialogueSessionOptions, EffectAck,
+    EmptyDialogueContext, LocaleProvider, LocaleResolution, TextDomain, acknowledge_effect,
+    choose as runtime_choose, choose_with as runtime_choose_with, next as runtime_next,
+    next_with as runtime_next_with, start_scene, start_scene_with_options,
 };
 use std::cell::RefCell;
 use std::collections::BTreeMap;

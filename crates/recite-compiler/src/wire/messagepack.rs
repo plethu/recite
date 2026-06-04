@@ -31,6 +31,8 @@ struct MsgDialogue<'a>(
     Vec<MsgMatchArm<'a>>,
     Vec<MsgLine<'a>>,
     Vec<MsgChoice<'a>>,
+    Vec<MsgAvailabilityReason<'a>>,
+    Vec<MsgConditionAvailabilityReason<'a>>,
     Vec<MsgSpeaker<'a>>,
     Vec<MsgMetadataEntry<'a>>,
     Vec<MsgEffect<'a>>,
@@ -51,6 +53,16 @@ impl<'a> From<&'a CompiledDialogue> for MsgDialogue<'a> {
             dialogue.match_arms.iter().map(MsgMatchArm::from).collect(),
             dialogue.lines.iter().map(MsgLine::from).collect(),
             dialogue.choices.iter().map(MsgChoice::from).collect(),
+            dialogue
+                .availability_reasons
+                .iter()
+                .map(MsgAvailabilityReason::from)
+                .collect(),
+            dialogue
+                .condition_availability_reasons
+                .iter()
+                .map(MsgConditionAvailabilityReason::from)
+                .collect(),
             dialogue.speakers.iter().map(MsgSpeaker::from).collect(),
             dialogue
                 .metadata
@@ -182,6 +194,7 @@ struct MsgChoice<'a>(
     MsgRange,
     Option<MsgConditionExpression<'a>>,
     Option<&'a str>,
+    Option<&'a str>,
     MsgDivertTarget<'a>,
     MsgChoiceEcho<'a>,
     u32,
@@ -197,6 +210,7 @@ impl<'a> From<&'a recite_core::CompiledChoice> for MsgChoice<'a> {
                 .availability_requirement
                 .as_ref()
                 .map(MsgConditionExpression),
+            choice.availability_requirement_source_text.as_deref(),
             choice
                 .availability_reason_override
                 .as_ref()
@@ -205,6 +219,74 @@ impl<'a> From<&'a recite_core::CompiledChoice> for MsgChoice<'a> {
             MsgChoiceEcho(&choice.echo),
             choice.source_map.as_u32(),
         )
+    }
+}
+
+#[derive(Serialize)]
+struct MsgAvailabilityReason<'a>(&'a str, &'a str);
+
+impl<'a> From<&'a recite_core::CompiledAvailabilityReason> for MsgAvailabilityReason<'a> {
+    fn from(reason: &'a recite_core::CompiledAvailabilityReason) -> Self {
+        Self(reason.id.as_str(), reason.template.as_str())
+    }
+}
+
+#[derive(Serialize)]
+struct MsgConditionAvailabilityReason<'a>(
+    &'a str,
+    &'a str,
+    Vec<MsgAvailabilityReasonArgBinding<'a>>,
+);
+
+impl<'a> From<&'a recite_core::CompiledConditionAvailabilityReason>
+    for MsgConditionAvailabilityReason<'a>
+{
+    fn from(mapping: &'a recite_core::CompiledConditionAvailabilityReason) -> Self {
+        Self(
+            mapping.function.as_str(),
+            mapping.reason.as_str(),
+            mapping
+                .args
+                .iter()
+                .map(MsgAvailabilityReasonArgBinding::from)
+                .collect(),
+        )
+    }
+}
+
+#[derive(Serialize)]
+struct MsgAvailabilityReasonArgBinding<'a>(&'a str, MsgAvailabilityReasonArgValue<'a>);
+
+impl<'a> From<&'a recite_core::CompiledAvailabilityReasonArgBinding>
+    for MsgAvailabilityReasonArgBinding<'a>
+{
+    fn from(binding: &'a recite_core::CompiledAvailabilityReasonArgBinding) -> Self {
+        Self(
+            binding.name.as_str(),
+            MsgAvailabilityReasonArgValue(&binding.value),
+        )
+    }
+}
+
+struct MsgAvailabilityReasonArgValue<'a>(&'a recite_core::CompiledAvailabilityReasonArgValue);
+
+impl Serialize for MsgAvailabilityReasonArgValue<'_> {
+    fn serialize<S>(&self, serializer: S) -> Result<S::Ok, S::Error>
+    where
+        S: serde::Serializer,
+    {
+        let mut tuple = serializer.serialize_tuple(2)?;
+        match self.0 {
+            recite_core::CompiledAvailabilityReasonArgValue::ConditionArg(value) => {
+                tuple.serialize_element("ConditionArg")?;
+                tuple.serialize_element(value)?;
+            }
+            recite_core::CompiledAvailabilityReasonArgValue::Literal(value) => {
+                tuple.serialize_element("Literal")?;
+                tuple.serialize_element(value)?;
+            }
+        }
+        tuple.end()
     }
 }
 

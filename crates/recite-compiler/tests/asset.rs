@@ -9,8 +9,6 @@ use recite_core::{
     CompiledStatementKind, CompilerVersion, SchemaFingerprint, SourceMapId, StatementIndex,
     canonical_source_fingerprint, decode_compiled_dialogue_messagepack, load_schema_manifest_str,
 };
-use serde::de::IgnoredAny;
-
 #[path = "../../../tests/support/fixtures.rs"]
 #[allow(dead_code)]
 mod fixture_support;
@@ -88,27 +86,6 @@ fn valid_fixture_compiles_to_runtime_facing_v0_tables() {
             .collect::<Vec<_>>(),
         ["narrator", "hazel"]
     );
-    type TopLevelSpeakers = (
-        IgnoredAny,
-        IgnoredAny,
-        IgnoredAny,
-        IgnoredAny,
-        IgnoredAny,
-        IgnoredAny,
-        IgnoredAny,
-        IgnoredAny,
-        Vec<(String,)>,
-        IgnoredAny,
-        IgnoredAny,
-        IgnoredAny,
-        IgnoredAny,
-        IgnoredAny,
-        IgnoredAny,
-    );
-    let decoded: TopLevelSpeakers =
-        rmp_serde::from_slice(&asset.messagepack).expect("speaker rows use fixed arrays");
-    assert_eq!(decoded.8, [("narrator".to_owned(),), ("hazel".to_owned(),)]);
-
     let start_block = &dialogue.blocks[0];
     assert_eq!(start_block.statements.start, StatementIndex::new(0));
     assert_eq!(start_block.statements.len, 4);
@@ -161,6 +138,60 @@ fn valid_fixture_compiles_to_runtime_facing_v0_tables() {
 }
 
 #[test]
+fn schema_availability_reasons_compile_into_runtime_asset() {
+    let schema = load_schema_manifest_str(
+        "fixtures/schema/valid/generated_manifest.json",
+        include_str!("../../../fixtures/schema/valid/generated_manifest.json"),
+    )
+    .schema
+    .expect("valid generated manifest fixture");
+    let report = compile_inputs_with_schema(
+        [CompileInput::new(
+            "dialogue/start.recite",
+            concat!(
+                ":: start default\n",
+                "? ask_news requires=(trust_gte(hazel, rhea, 3)) reason=innkeeper_trust_hint\n",
+                "  What's the news?\n",
+                "  -> END\n",
+            ),
+        )],
+        CompileOptions::new(
+            CompilerVersion::new("0.0.1").expect("valid compiler version"),
+            CompiledAssetId::new("dialogue/main.recitec").expect("valid asset id"),
+            SourceMapId::new("dialogue/main.recitec.map").expect("valid source map id"),
+            schema.canonical_fingerprint(),
+        ),
+        &schema,
+    )
+    .expect("compile succeeds");
+    assert!(report.diagnostics.is_empty(), "{:?}", report.diagnostics);
+    let asset = report.asset.expect("asset emitted");
+
+    assert_eq!(
+        asset.dialogue.choices[0]
+            .availability_requirement_source_text
+            .as_deref(),
+        Some("requires=(trust_gte(hazel, rhea, 3))")
+    );
+    assert_eq!(asset.dialogue.availability_reasons.len(), 2);
+    assert_eq!(
+        asset.dialogue.condition_availability_reasons[0].function,
+        "trust_gte"
+    );
+
+    let inspection: serde_json::Value =
+        serde_json::from_str(&asset.inspection_json).expect("inspection JSON parses");
+    assert_eq!(
+        inspection["choices"][0]["availability_reason_override"],
+        "innkeeper_trust_hint"
+    );
+    assert_eq!(
+        inspection["condition_availability_reasons"][0]["args"][2]["name"],
+        "threshold"
+    );
+}
+
+#[test]
 fn compilation_output_is_deterministic_for_identical_inputs() {
     let first = compile_fixture("fixtures/recite/valid/core_language_spike.recite");
     let second = compile_fixture("fixtures/recite/valid/core_language_spike.recite");
@@ -168,25 +199,9 @@ fn compilation_output_is_deterministic_for_identical_inputs() {
     assert_eq!(first.messagepack, second.messagepack);
     assert_eq!(first.inspection_json, second.inspection_json);
 
-    type TopLevel = (
-        IgnoredAny,
-        u32,
-        IgnoredAny,
-        IgnoredAny,
-        IgnoredAny,
-        IgnoredAny,
-        IgnoredAny,
-        IgnoredAny,
-        IgnoredAny,
-        IgnoredAny,
-        IgnoredAny,
-        IgnoredAny,
-        IgnoredAny,
-        IgnoredAny,
-        IgnoredAny,
-    );
-    let decoded: TopLevel = rmp_serde::from_slice(&first.messagepack).expect("messagepack decodes");
-    assert_eq!(decoded.1, 0);
+    let decoded =
+        decode_compiled_dialogue_messagepack(&first.messagepack).expect("messagepack decodes");
+    assert_eq!(decoded.default_block.as_u32(), 0);
 }
 
 #[test]

@@ -1,10 +1,13 @@
 use std::collections::BTreeMap;
 
 use recite_core::{
-    BlockIndex, Choice, CompiledAssetHeader, CompiledBlock, CompiledChoice, CompiledDialogue,
-    CompiledEffect, CompiledLine, CompiledMatchArm, CompiledMetadataEntry, CompiledSourceFile,
-    CompiledSourceMapEntry, CompiledSpeaker, CompiledStatement, DivertTarget, Effect, IfBranch,
-    Line, SourceFileIndex, SpeakerIndex, canonical_source_fingerprint,
+    AvailabilityReasonArgBinding, BlockIndex, Choice, CompiledAssetHeader,
+    CompiledAvailabilityReason, CompiledAvailabilityReasonArgBinding,
+    CompiledAvailabilityReasonArgValue, CompiledBlock, CompiledChoice,
+    CompiledConditionAvailabilityReason, CompiledDialogue, CompiledEffect, CompiledLine,
+    CompiledMatchArm, CompiledMetadataEntry, CompiledSourceFile, CompiledSourceMapEntry,
+    CompiledSpeaker, CompiledStatement, DivertTarget, Effect, IfBranch, Line, ProjectSchema,
+    SchemaLiteralValue, SourceFileIndex, SpeakerIndex, canonical_source_fingerprint,
 };
 
 use super::CompileError;
@@ -18,8 +21,9 @@ mod statements;
 pub(super) fn build_dialogue(
     inputs: &[LoweredInput],
     options: CompileOptions,
+    schema: Option<&ProjectSchema>,
 ) -> Result<CompiledDialogue, CompileError> {
-    AssetBuilder::new(inputs, options).compile()
+    AssetBuilder::new(inputs, options, schema).compile()
 }
 
 struct ReservedStatement<'a> {
@@ -39,6 +43,7 @@ enum StatementPlan<'a> {
 struct AssetBuilder<'a> {
     inputs: &'a [LoweredInput],
     options: CompileOptions,
+    schema: Option<&'a ProjectSchema>,
     source_file_indices: BTreeMap<&'a str, SourceFileIndex>,
     block_indices: BTreeMap<&'a str, BlockIndex>,
     speakers_by_id: BTreeMap<String, SpeakerIndex>,
@@ -54,10 +59,15 @@ struct AssetBuilder<'a> {
 }
 
 impl<'a> AssetBuilder<'a> {
-    fn new(inputs: &'a [LoweredInput], options: CompileOptions) -> Self {
+    fn new(
+        inputs: &'a [LoweredInput],
+        options: CompileOptions,
+        schema: Option<&'a ProjectSchema>,
+    ) -> Self {
         Self {
             inputs,
             options,
+            schema,
             source_file_indices: BTreeMap::new(),
             block_indices: BTreeMap::new(),
             speakers_by_id: BTreeMap::new(),
@@ -90,6 +100,8 @@ impl<'a> AssetBuilder<'a> {
         let block_lookup = self.block_lookup()?;
         let line_lookup = self.line_lookup()?;
         let choice_lookup = self.choice_lookup()?;
+        let availability_reasons = self.compile_availability_reasons();
+        let condition_availability_reasons = self.compile_condition_availability_reasons()?;
 
         Ok(CompiledDialogue {
             header: CompiledAssetHeader::messagepack_v0(
@@ -105,6 +117,8 @@ impl<'a> AssetBuilder<'a> {
             match_arms: self.match_arms,
             lines: self.lines,
             choices: self.choices,
+            availability_reasons,
+            condition_availability_reasons,
             speakers: self.speakers,
             metadata: self.metadata,
             effects: self.effects,
@@ -113,6 +127,50 @@ impl<'a> AssetBuilder<'a> {
             line_lookup,
             choice_lookup,
         })
+    }
+
+    fn compile_availability_reasons(&self) -> Vec<CompiledAvailabilityReason> {
+        let Some(schema) = self.schema else {
+            return Vec::new();
+        };
+
+        schema
+            .availability_reasons
+            .iter()
+            .map(|(id, reason)| CompiledAvailabilityReason {
+                id: id.clone(),
+                template: reason.template.clone(),
+            })
+            .collect()
+    }
+
+    fn compile_condition_availability_reasons(
+        &self,
+    ) -> Result<Vec<CompiledConditionAvailabilityReason>, CompileError> {
+        let Some(schema) = self.schema else {
+            return Ok(Vec::new());
+        };
+
+        let mut mappings = Vec::new();
+        for (function, condition) in &schema.conditions {
+            let Some(mapping) = &condition.availability_reason else {
+                continue;
+            };
+            let mut args = Vec::new();
+            for (name, value) in &mapping.args {
+                args.push(CompiledAvailabilityReasonArgBinding {
+                    name: name.clone(),
+                    value: compiled_reason_arg_value(value, &condition.params)?,
+                });
+            }
+            mappings.push(CompiledConditionAvailabilityReason {
+                function: function.clone(),
+                reason: mapping.reason.clone(),
+                args,
+            });
+        }
+
+        Ok(mappings)
     }
 
     fn index_source_files(&mut self) -> Result<(), CompileError> {
@@ -188,5 +246,41 @@ impl<'a> AssetBuilder<'a> {
                     "validated project did not contain an indexed default block".to_owned(),
                 )
             })
+    }
+}
+
+fn compiled_reason_arg_value(
+    value: &AvailabilityReasonArgBinding,
+    params: &[recite_core::ParameterDefinition],
+) -> Result<CompiledAvailabilityReasonArgValue, CompileError> {
+    match value {
+        AvailabilityReasonArgBinding::ConditionParam(name) => {
+            let Some(index) = params.iter().position(|param| param.name == *name) else {
+                return Err(CompileError::InvalidValidatedInput(format!(
+                    "validated availability reason mapping references unknown condition parameter `{name}`"
+                )));
+            };
+            Ok(CompiledAvailabilityReasonArgValue::ConditionArg(
+                index.to_string(),
+            ))
+        }
+        AvailabilityReasonArgBinding::Literal(value) => Ok(
+            CompiledAvailabilityReasonArgValue::Literal(compiled_schema_literal(value)?),
+        ),
+    }
+}
+
+fn compiled_schema_literal(value: &SchemaLiteralValue) -> Result<String, CompileError> {
+    match value {
+        SchemaLiteralValue::String(value) => Ok(value.clone()),
+        SchemaLiteralValue::Int(value) => Ok(value.to_string()),
+        SchemaLiteralValue::Float(value) => {
+            value.parse::<f64>().map(|_| value.clone()).map_err(|_| {
+                CompileError::InvalidValidatedInput(format!(
+                    "validated availability reason float literal `{value}` is not a float"
+                ))
+            })
+        }
+        SchemaLiteralValue::Bool(value) => Ok(value.to_string()),
     }
 }

@@ -27,8 +27,12 @@ pub(in crate::runtime_fixture) fn trace_choice(choice: &DialogueChoice) -> Trace
         source_text: choice.source_text.clone(),
         text: choice.text.clone(),
         metadata: choice.metadata.iter().map(trace_metadata).collect(),
-        is_available: choice.is_available,
-        unavailable_reason: choice.unavailable_reason.clone(),
+        is_available: choice.availability.is_available,
+        unavailable_reason: choice
+            .availability
+            .primary_reason
+            .as_ref()
+            .map(|reason| reason.source_text.clone()),
     }
 }
 

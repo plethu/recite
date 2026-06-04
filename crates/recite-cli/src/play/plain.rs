@@ -102,7 +102,7 @@ impl<R: Read + ?Sized, W: Write + ?Sized> PlayUiAdapter for PlainPlayUi<'_, R, W
             writeln!(self.output, "{}", self.messages.text(MsgId::PlayPrompt))?;
         }
         for (index, choice) in choices.iter().enumerate() {
-            let availability = if choice.is_available {
+            let availability = if choice.availability.is_available {
                 String::new()
             } else {
                 self.messages.text(MsgId::PlayChoiceUnavailableSuffix)

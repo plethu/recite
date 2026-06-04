@@ -56,10 +56,15 @@ pub(crate) fn compile_project_asset(
 
 pub(crate) fn corrupt_compiler_compatibility(asset: &Path) {
     let mut bytes = fs::read(asset).expect("compiled asset bytes");
-    assert_eq!(bytes[0], 0x9f, "compiled dialogue is a 15-field array");
-    assert_eq!(bytes[1], 0x98, "asset header is an 8-field array");
-    assert_eq!(bytes[2], 0, "format version starts at v0");
-    bytes[3] = 1;
+    assert_eq!(bytes[0], 0xdc, "compiled dialogue uses array16");
+    assert_eq!(
+        &bytes[1..3],
+        &[0, 17],
+        "compiled dialogue is a 17-field array"
+    );
+    assert_eq!(bytes[3], 0x98, "asset header is an 8-field array");
+    assert_eq!(bytes[4], 0, "format version starts at v0");
+    bytes[5] = 1;
     fs::write(asset, bytes).expect("corrupt compiler compatibility");
 }
 

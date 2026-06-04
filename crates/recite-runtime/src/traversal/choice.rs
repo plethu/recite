@@ -7,7 +7,7 @@ use crate::{DialogueError, DialogueSession};
 
 use super::AssetView;
 use super::advance::next_with_locale;
-use super::condition::evaluate_condition;
+use super::availability::choice_availability;
 use super::flow::finish_scene;
 use super::output::{LocaleLookup, LocaleResolution, dialogue_choice};
 
@@ -76,7 +76,7 @@ fn choose_with_locale(
     if !choice.is_available {
         return Err(DialogueError::UnavailableChoice {
             choice: choice.id,
-            reason: choice.unavailable_reason,
+            availability: Box::new(choice.availability),
         });
     }
 
@@ -117,24 +117,25 @@ pub(super) fn prompt_choices(
     let mut pending = Vec::new();
 
     for choice in asset.choices(range)? {
-        let is_available = match &choice.availability_requirement {
-            Some(condition) => evaluate_condition(context, condition)?,
-            None => true,
-        };
-        let unavailable_reason = None;
+        let availability = choice_availability(
+            asset,
+            choice.availability_requirement.as_ref(),
+            choice.availability_requirement_source_text.as_deref(),
+            choice.availability_reason_override.as_ref(),
+            context,
+        )?;
 
         events.push(dialogue_choice(
             asset,
             choice,
-            is_available,
-            unavailable_reason.clone(),
+            availability.clone(),
             locale,
         )?);
         pending.push(PendingPromptChoice {
             id: choice.id.clone(),
             target: choice.target.clone(),
-            is_available,
-            unavailable_reason,
+            is_available: availability.is_available,
+            availability,
         });
     }
 

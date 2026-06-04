@@ -137,7 +137,7 @@ fn emits_prompt_with_stable_choice_ids_and_waits_for_selection() {
     assert_eq!(choices.len(), 1);
     assert_eq!(choices[0].id.as_str(), "ask_work");
     assert_eq!(choices[0].source_text, "Ask about work.");
-    assert!(choices[0].is_available);
+    assert!(choices[0].availability.is_available);
 
     assert_eq!(
         next(&asset, &mut session),

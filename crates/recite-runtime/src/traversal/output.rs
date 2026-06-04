@@ -5,7 +5,7 @@ use recite_core::{
 
 use crate::DialogueError;
 use crate::event::{
-    ChoiceEchoMode, DialogueChoice, DialogueEffectArgument, DialogueEffectMode,
+    ChoiceAvailability, ChoiceEchoMode, DialogueChoice, DialogueEffectArgument, DialogueEffectMode,
     DialogueEffectRequest, DialogueLine,
 };
 use crate::locale::{LocaleProvider, TextDomain};
@@ -120,8 +120,7 @@ pub(super) fn dialogue_line(
 pub(super) fn dialogue_choice(
     asset: AssetView<'_>,
     choice: &CompiledChoice,
-    is_available: bool,
-    unavailable_reason: Option<String>,
+    availability: ChoiceAvailability,
     locale: LocaleLookup<'_>,
 ) -> Result<DialogueChoice, DialogueError> {
     let text = localise_text(
@@ -136,8 +135,7 @@ pub(super) fn dialogue_choice(
         source_text: choice.source_text.clone(),
         text,
         metadata: metadata(asset, choice.metadata)?,
-        is_available,
-        unavailable_reason,
+        availability,
         echo: choice_echo(&choice.echo),
     })
 }

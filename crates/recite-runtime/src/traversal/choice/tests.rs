@@ -5,7 +5,10 @@ use recite_core::{
 };
 
 use crate::session::{PendingPrompt, PendingPromptChoice};
-use crate::{DialogueError, DialogueSession, DialogueSessionOptions, EmptyDialogueContext};
+use crate::{
+    ChoiceAvailability, ChoiceAvailabilityReason, DialogueError, DialogueSession,
+    DialogueSessionOptions, EmptyDialogueContext,
+};
 
 use super::choose;
 
@@ -26,7 +29,7 @@ fn unavailable_pending_choice_is_structured_error_without_mutating_session() {
             id: choice_id.clone(),
             target: CompiledDivertTarget::End,
             is_available: false,
-            unavailable_reason: Some("missing trust".to_owned()),
+            availability: missing_trust_availability(),
         }],
     });
 
@@ -39,7 +42,7 @@ fn unavailable_pending_choice_is_structured_error_without_mutating_session() {
         ),
         Err(DialogueError::UnavailableChoice {
             choice: choice_id.clone(),
-            reason: Some("missing trust".to_owned())
+            availability: Box::new(missing_trust_availability()),
         })
     );
     assert_eq!(
@@ -59,7 +62,7 @@ fn unavailable_choice_display_preserves_reason_formatting() {
     assert_eq!(
         DialogueError::UnavailableChoice {
             choice: choice.clone(),
-            reason: None,
+            availability: Box::new(ChoiceAvailability::unavailable(None, None)),
         }
         .to_string(),
         "choice `locked_choice` is unavailable"
@@ -67,11 +70,22 @@ fn unavailable_choice_display_preserves_reason_formatting() {
     assert_eq!(
         DialogueError::UnavailableChoice {
             choice,
-            reason: Some("missing trust".to_owned()),
+            availability: Box::new(missing_trust_availability()),
         }
         .to_string(),
         "choice `locked_choice` is unavailable: missing trust"
     );
+}
+
+fn missing_trust_availability() -> ChoiceAvailability {
+    ChoiceAvailability::unavailable(
+        Some(ChoiceAvailabilityReason {
+            id: recite_core::AvailabilityReasonId::new("missing_trust").expect("valid reason id"),
+            source_text: "missing trust".to_owned(),
+            args: Vec::new(),
+        }),
+        None,
+    )
 }
 
 fn empty_asset() -> CompiledDialogue {
@@ -89,6 +103,8 @@ fn empty_asset() -> CompiledDialogue {
         match_arms: Vec::new(),
         lines: Vec::new(),
         choices: Vec::new(),
+        availability_reasons: Vec::new(),
+        condition_availability_reasons: Vec::new(),
         speakers: Vec::new(),
         metadata: Vec::new(),
         effects: Vec::new(),

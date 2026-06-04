@@ -230,7 +230,7 @@ pub(super) fn write_prompt_run_lines(
     }
 
     for (index, choice) in choices.iter().enumerate() {
-        let availability = if choice.is_available {
+        let availability = if choice.availability.is_available {
             ""
         } else {
             " (unavailable)"
