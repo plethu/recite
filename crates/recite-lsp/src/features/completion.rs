@@ -18,11 +18,16 @@ pub(super) fn completion(
         CompletionContext::BlockReference => Some(items(block_completion_items(snapshot))),
         CompletionContext::Speaker => Some(items(speaker_completion_items(schema))),
         CompletionContext::MetadataKey => Some(items(metadata_key_completion_items(schema))),
-        CompletionContext::MetadataValue { key } => {
+        CompletionContext::MetadataValue { key, header_kind } => {
             let line_index = usize::try_from(position.line).ok()?;
             let line_text = text.lines().nth(line_index)?;
             Some(items(metadata_value_completion_items(
-                schema, text, line_text, line_index, &key,
+                schema,
+                text,
+                line_text,
+                line_index,
+                &key,
+                header_kind,
             )))
         }
         CompletionContext::Condition => Some(items(condition_completion_items(schema))),
@@ -49,11 +54,27 @@ enum CompletionContext {
     BlockReference,
     Speaker,
     MetadataKey,
-    MetadataValue { key: String },
+    MetadataValue {
+        key: String,
+        header_kind: HeaderKind,
+    },
     Condition,
     Effect,
     Reason,
     None,
+}
+
+#[derive(Clone, Copy)]
+enum HeaderKind {
+    Block,
+    Line,
+    Choice,
+}
+
+enum SelectorContext {
+    Value(String),
+    Missing,
+    Malformed,
 }
 
 fn completion_context(line_prefix: &str) -> CompletionContext {
@@ -82,27 +103,23 @@ fn completion_context(line_prefix: &str) -> CompletionContext {
         }
     }
 
+    let header_kind = header_kind(line_prefix);
     if let Some(token) = current_token(line_prefix) {
-        if token.starts_with("speaker=") {
+        if token.starts_with("speaker=") && header_kind.is_some() {
             return CompletionContext::Speaker;
         }
         if let Some((key, _)) = token.split_once('=')
             && !key.is_empty()
+            && let Some(header_kind) = header_kind
         {
             return CompletionContext::MetadataValue {
                 key: key.to_owned(),
+                header_kind,
             };
         }
     }
 
-    if let Some(token) = current_token(line_prefix)
-        && !token.is_empty()
-        && !token.contains('=')
-        && line_prefix
-            .chars()
-            .next()
-            .is_some_and(|character| matches!(character, '>' | '?' | ':' | ' '))
-    {
+    if is_metadata_key_position(line_prefix, header_kind) {
         return CompletionContext::MetadataKey;
     }
 
@@ -164,6 +181,7 @@ fn metadata_value_completion_items(
     line: &str,
     line_index: usize,
     key: &str,
+    header_kind: HeaderKind,
 ) -> Vec<CompletionItem> {
     if key == "speaker" {
         return speaker_completion_items(schema);
@@ -174,7 +192,7 @@ fn metadata_value_completion_items(
     let Some(domain_name) = &metadata.domain else {
         return Vec::new();
     };
-    metadata_domain_values(schema, domain_name, text, line, line_index)
+    metadata_domain_values(schema, domain_name, text, line, line_index, header_kind)
         .into_iter()
         .map(|value| CompletionItem {
             label: value,
@@ -191,6 +209,7 @@ fn metadata_domain_values(
     text: &str,
     line: &str,
     line_index: usize,
+    header_kind: HeaderKind,
 ) -> BTreeSet<String> {
     let Some(domain) = schema.metadata_domains.get(domain_name) else {
         return BTreeSet::new();
@@ -198,15 +217,15 @@ fn metadata_domain_values(
     match domain {
         MetadataDomainDefinition::Flat(domain) => domain.values.clone(),
         MetadataDomainDefinition::Contextual(domain) => {
-            let Some(context) = metadata_domain_context(&domain.selector, text, line, line_index)
-            else {
-                return missing_context_values(schema, &domain.missing_context);
-            };
-            domain
-                .values_by_context
-                .get(context.as_str())
-                .cloned()
-                .unwrap_or_default()
+            match metadata_domain_context(&domain.selector, text, line, line_index, header_kind) {
+                SelectorContext::Value(context) => domain
+                    .values_by_context
+                    .get(context.as_str())
+                    .cloned()
+                    .unwrap_or_default(),
+                SelectorContext::Missing => missing_context_values(schema, &domain.missing_context),
+                SelectorContext::Malformed => BTreeSet::new(),
+            }
         }
     }
 }
@@ -233,16 +252,21 @@ fn metadata_domain_context(
     text: &str,
     line: &str,
     line_index: usize,
-) -> Option<String> {
+    header_kind: HeaderKind,
+) -> SelectorContext {
     match selector {
-        MetadataContextSelector::FieldSpeaker => {
-            metadata_symbol(line, "speaker").or_else(|| block_default_speaker(text, line_index))
-        }
+        MetadataContextSelector::FieldSpeaker => match header_kind {
+            HeaderKind::Line => metadata_symbol(line, "speaker")
+                .or_else(|| block_default_speaker(text, line_index))
+                .map_or(SelectorContext::Missing, SelectorContext::Value),
+            HeaderKind::Block | HeaderKind::Choice => SelectorContext::Missing,
+        },
         MetadataContextSelector::MetadataKey(key) => {
-            let mut matches = metadata_symbols(line, key);
-            match matches.as_mut_slice() {
-                [value] => Some(std::mem::take(value)),
-                _ => None,
+            let matches = metadata_selector_values(line, key);
+            match matches.as_slice() {
+                [] => SelectorContext::Missing,
+                [Some(value)] => SelectorContext::Value(value.clone()),
+                [_] | [_, ..] => SelectorContext::Malformed,
             }
         }
     }
@@ -282,6 +306,36 @@ fn current_token(line_prefix: &str) -> Option<&str> {
     line_prefix.split_whitespace().last()
 }
 
+fn header_kind(line_prefix: &str) -> Option<HeaderKind> {
+    let trimmed = line_prefix.trim_start();
+    if trimmed.starts_with("::") {
+        Some(HeaderKind::Block)
+    } else if trimmed.starts_with('>') {
+        Some(HeaderKind::Line)
+    } else if trimmed.starts_with('?') {
+        Some(HeaderKind::Choice)
+    } else {
+        None
+    }
+}
+
+fn is_metadata_key_position(line_prefix: &str, header_kind: Option<HeaderKind>) -> bool {
+    let Some(header_kind) = header_kind else {
+        return false;
+    };
+    let Some(token) = current_token(line_prefix) else {
+        return false;
+    };
+    if token.is_empty() || token.contains('=') {
+        return false;
+    }
+    let field_count = line_prefix.split_whitespace().count();
+    match header_kind {
+        HeaderKind::Block => field_count >= 3 && !("default".starts_with(token)),
+        HeaderKind::Line | HeaderKind::Choice => field_count >= 3,
+    }
+}
+
 fn effect_prefix_is_completing_function(line_prefix: &str) -> bool {
     let mut parts = line_prefix.split_whitespace();
     matches!(parts.next(), Some("!"))
@@ -290,15 +344,19 @@ fn effect_prefix_is_completing_function(line_prefix: &str) -> bool {
 }
 
 fn metadata_symbol(line: &str, key: &str) -> Option<String> {
-    let mut values = metadata_symbols(line, key);
-    (values.len() == 1).then(|| values.remove(0))
+    let mut values = metadata_selector_values(line, key);
+    if values.len() == 1 {
+        values.remove(0)
+    } else {
+        None
+    }
 }
 
-fn metadata_symbols(line: &str, key: &str) -> Vec<String> {
+fn metadata_selector_values(line: &str, key: &str) -> Vec<Option<String>> {
     line.split_whitespace()
         .filter_map(|token| token.split_once('='))
         .filter(|(candidate, _)| *candidate == key)
-        .filter_map(|(_, value)| scalar_symbol(value))
+        .map(|(_, value)| scalar_symbol(value))
         .collect()
 }
 

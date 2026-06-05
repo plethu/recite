@@ -102,6 +102,11 @@ fn completes_metadata_domain_values_from_schema_context() {
 }
 
 #[test]
+fn completion_ignores_non_metadata_authoring_positions() {
+    availability::completion_ignores_non_metadata_authoring_positions();
+}
+
+#[test]
 fn hover_distinguishes_unavailable_and_hidden_choices() {
     availability::hover_distinguishes_unavailable_and_hidden_choices();
 }
