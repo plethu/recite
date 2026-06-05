@@ -11,7 +11,8 @@ use recite_core::{Diagnostic, SourceFile};
 use recite_parser::parse;
 
 pub(crate) use config::WorkspaceConfig;
-use project_index::{LiveProjectSnapshot, SavedDocument, SavedProjectIndex};
+pub(crate) use project_index::LiveProjectSnapshot;
+use project_index::{SavedDocument, SavedProjectIndex};
 use schema_index::SchemaIndex;
 
 use crate::documents::{DocumentChangeResult, OpenDocument, OpenDocumentStore};
@@ -162,12 +163,12 @@ impl LspWorkspace {
     pub(crate) fn completion(&self, uri: &Uri, position: Position) -> Option<CompletionResponse> {
         let text = self.documents.document(uri)?.text();
         let schema = self.schema.schema()?;
-        features::completion(text, position, schema)
+        features::completion(text, position, schema, &self.snapshot)
     }
 
     pub(crate) fn hover(&self, uri: &Uri, position: Position) -> Option<Hover> {
         let text = self.documents.document(uri)?.text();
-        features::hover(text, position)
+        features::hover(text, position, self.schema.schema(), &self.snapshot)
     }
 
     pub(crate) fn open_document_diagnostics_except(

@@ -92,6 +92,21 @@ fn completes_requires_conditions_and_parameterless_reasons() {
 }
 
 #[test]
+fn completes_project_and_schema_authoring_symbols() {
+    availability::completes_project_and_schema_authoring_symbols();
+}
+
+#[test]
+fn completes_metadata_domain_values_from_schema_context() {
+    availability::completes_metadata_domain_values_from_schema_context();
+}
+
+#[test]
+fn completion_ignores_non_metadata_authoring_positions() {
+    availability::completion_ignores_non_metadata_authoring_positions();
+}
+
+#[test]
 fn hover_distinguishes_unavailable_and_hidden_choices() {
     availability::hover_distinguishes_unavailable_and_hidden_choices();
 }
@@ -99,6 +114,11 @@ fn hover_distinguishes_unavailable_and_hidden_choices() {
 #[test]
 fn hover_uses_utf16_positions_after_non_ascii_prefix() {
     availability::hover_uses_utf16_positions_after_non_ascii_prefix();
+}
+
+#[test]
+fn hover_describes_schema_and_project_symbols() {
+    availability::hover_describes_schema_and_project_symbols();
 }
 
 #[test]
