@@ -154,6 +154,8 @@ pub(super) fn completes_metadata_domain_values_from_schema_context() {
         "  Hi.\n",
         "> by_tone mood=warm stage=\n",
         "  Welcome.\n",
+        "> dotted mood=warm.tone stage=\n",
+        "  Dotted.\n",
         "> unmapped mood=cold stage=\n",
         "  Cold.\n",
         "> fallback stage=\n",
@@ -198,6 +200,16 @@ pub(super) fn completes_metadata_domain_values_from_schema_context() {
             .expect("metadata-key contextual metadata completion"),
     );
     assert_eq!(metadata_key_context, ["market"]);
+
+    let dotted_metadata_context = completion_labels(
+        harness
+            .completion(
+                source_uri.clone(),
+                position_after(source, "mood=warm.tone stage="),
+            )
+            .expect("dotted metadata-key contextual metadata completion"),
+    );
+    assert_eq!(dotted_metadata_context, ["market"]);
 
     let unmapped_context = completion_labels(
         harness

@@ -64,7 +64,8 @@ pub(super) fn authoring_schema() -> &'static str {
       "kind": "contextual",
       "selector": "metadata:mood",
       "values_by_context": {
-        "warm": ["market"]
+        "warm": ["market"],
+        "warm.tone": ["market"]
       },
       "missing_context": { "policy": "fallback", "domain": "stage_all" }
     },

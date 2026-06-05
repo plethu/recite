@@ -365,10 +365,12 @@ fn scalar_symbol(value: &str) -> Option<String> {
         .trim_end_matches(',')
         .trim_end_matches(')')
         .trim_end_matches(']');
-    (!value.is_empty()
-        && value
-            .chars()
-            .all(|character| character.is_ascii_alphanumeric() || matches!(character, '_' | '-')))
+    let mut characters = value.chars();
+    let first = characters.next()?;
+    ((first.is_ascii_alphabetic() || first == '_')
+        && characters.all(|character| {
+            character.is_ascii_alphanumeric() || matches!(character, '_' | '.' | '-')
+        }))
     .then(|| value.to_owned())
 }
 
