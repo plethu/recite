@@ -1,5 +1,3 @@
-use std::collections::BTreeSet;
-
 use lsp_types::{
     DocumentChanges, GotoDefinitionResponse, Location, OneOf,
     OptionalVersionedTextDocumentIdentifier, Position, PrepareRenameResponse, Range,
@@ -40,7 +38,7 @@ pub(crate) fn references(
     let mut locations = Vec::new();
     if include_declaration {
         locations.extend(
-            definitions_named(&symbol.name, documents)
+            definitions_for_symbol(&symbol, documents)
                 .into_iter()
                 .map(location_for_definition),
         );
@@ -81,7 +79,7 @@ pub(crate) fn rename(
     definition_for_symbol(&symbol, documents)?;
 
     let mut changes = Vec::<(Uri, Vec<TextEdit>)>::new();
-    for definition in definitions_named(&symbol.name, documents) {
+    for definition in definitions_for_symbol(&symbol, documents) {
         push_change(
             &mut changes,
             definition.document.uri.clone(),
@@ -129,7 +127,8 @@ pub(crate) fn rename(
 
 struct Symbol {
     name: String,
-    file: Option<String>,
+    target_file: Option<String>,
+    target_uri: Uri,
     range: Range,
     kind: SymbolKind,
 }
@@ -178,7 +177,8 @@ fn symbol_for_definition(
     let range = block_identifier_range(document.text, block);
     range_contains(range, position).then(|| Symbol {
         name: block.name.clone(),
-        file: None,
+        target_file: document.project_relative_path.map(str::to_owned),
+        target_uri: document.uri.clone(),
         range,
         kind: SymbolKind::Definition,
     })
@@ -190,9 +190,14 @@ fn symbol_for_reference(
     position: Position,
 ) -> Option<Symbol> {
     let range = span_to_range(document.text, &reference.span);
+    let target_file = reference
+        .file
+        .clone()
+        .or_else(|| document.project_relative_path.map(str::to_owned));
     range_contains(range, position).then(|| Symbol {
         name: reference.block_id.clone(),
-        file: reference.file.clone(),
+        target_file,
+        target_uri: document.uri.clone(),
         range,
         kind: SymbolKind::Reference,
     })
@@ -203,36 +208,48 @@ fn definition_for_symbol<'a>(
     documents: &'a [NavigationDocument<'a>],
 ) -> Option<Definition<'a>> {
     match symbol.kind {
-        SymbolKind::Definition => unique_definition(&symbol.name, None, documents),
-        SymbolKind::Reference => unique_definition(&symbol.name, symbol.file.as_deref(), documents),
+        SymbolKind::Definition | SymbolKind::Reference => unique_definition(
+            &symbol.name,
+            symbol.target_file.as_deref(),
+            &symbol.target_uri,
+            documents,
+        ),
     }
 }
 
 fn unique_definition<'a>(
     name: &str,
     file: Option<&str>,
+    uri: &Uri,
     documents: &'a [NavigationDocument<'a>],
 ) -> Option<Definition<'a>> {
-    let mut definitions = definitions_named_in_file(name, file, documents);
+    let mut definitions = definitions_matching_target(name, file, uri, documents);
     let definition = definitions.next()?;
     definitions.next().is_none().then_some(definition)
 }
 
-fn definitions_named<'a>(
-    name: &str,
+fn definitions_for_symbol<'a>(
+    symbol: &Symbol,
     documents: &'a [NavigationDocument<'a>],
 ) -> Vec<Definition<'a>> {
-    definitions_named_in_file(name, None, documents).collect()
+    definitions_matching_target(
+        &symbol.name,
+        symbol.target_file.as_deref(),
+        &symbol.target_uri,
+        documents,
+    )
+    .collect()
 }
 
-fn definitions_named_in_file<'a>(
+fn definitions_matching_target<'a>(
     name: &str,
     file: Option<&str>,
+    uri: &Uri,
     documents: &'a [NavigationDocument<'a>],
 ) -> impl Iterator<Item = Definition<'a>> {
     documents
         .iter()
-        .filter(move |document| file_matches(document, file))
+        .filter(move |document| document_targets_symbol(document, file, uri))
         .flat_map(move |document| {
             document
                 .summary
@@ -250,26 +267,9 @@ fn references_to_symbol<'a>(
     symbol: &Symbol,
     documents: &'a [NavigationDocument<'a>],
 ) -> Vec<Reference<'a>> {
-    let target_files = if let Some(file) = &symbol.file {
-        BTreeSet::from([file.as_str()])
-    } else {
-        documents
-            .iter()
-            .filter(|document| {
-                document
-                    .summary
-                    .blocks
-                    .iter()
-                    .any(|block| block.name == symbol.name)
-            })
-            .filter_map(|document| document.project_relative_path)
-            .collect::<BTreeSet<_>>()
-    };
-
     documents
         .iter()
         .flat_map(|document| {
-            let target_files = &target_files;
             document
                 .summary
                 .block_references
@@ -277,8 +277,8 @@ fn references_to_symbol<'a>(
                 .filter(move |reference| {
                     reference.block_id == symbol.name
                         && match reference.file.as_deref() {
-                            Some(file) => target_files.contains(file),
-                            None => symbol.file.is_none(),
+                            Some(file) => symbol.target_file.as_deref() == Some(file),
+                            None => document.uri == &symbol.target_uri,
                         }
                 })
                 .map(move |reference| Reference {
@@ -289,8 +289,15 @@ fn references_to_symbol<'a>(
         .collect()
 }
 
-fn file_matches(document: &NavigationDocument<'_>, file: Option<&str>) -> bool {
-    file.is_none_or(|file| document.project_relative_path == Some(file))
+fn document_targets_symbol(
+    document: &NavigationDocument<'_>,
+    file: Option<&str>,
+    uri: &Uri,
+) -> bool {
+    match file {
+        Some(file) => document.project_relative_path == Some(file),
+        None => document.uri == uri,
+    }
 }
 
 fn push_change(changes: &mut Vec<(Uri, Vec<TextEdit>)>, uri: Uri, edit: TextEdit) {

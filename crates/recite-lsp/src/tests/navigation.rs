@@ -38,7 +38,7 @@ pub(super) fn definition_resolves_block_references() {
 
 pub(super) fn references_include_declaration_and_project_references() {
     let temp = TempDir::new().unwrap_or_else(|error| panic!("tempdir: {error}"));
-    write_file(temp.path(), "a.recite", ":: start\n-> shared\n");
+    write_file(temp.path(), "a.recite", ":: start\n-> shared\n:: shared\n");
     write_file(temp.path(), "b.recite", ":: shared\n-> END\n");
     write_file(
         temp.path(),
@@ -46,20 +46,35 @@ pub(super) fn references_include_declaration_and_project_references() {
         ":: caller\n-> b.recite::shared\n",
     );
     let mut harness = harness_for_root(temp.path());
-    let source_uri = file_uri(&temp.path().join("a.recite"));
+    let local_uri = file_uri(&temp.path().join("a.recite"));
+    let external_uri = file_uri(&temp.path().join("nested/c.recite"));
 
-    let references = harness
-        .references(source_uri, Position::new(1, 5), true)
-        .expect("references response");
+    let local_references = harness
+        .references(local_uri, Position::new(1, 5), true)
+        .expect("local references response");
 
     assert_eq!(
-        references
+        local_references
+            .iter()
+            .map(|location| (relative_uri(&location.uri, temp.path()), location.range))
+            .collect::<Vec<_>>(),
+        [
+            ("a.recite".to_owned(), range(2, 3, 2, 9)),
+            ("a.recite".to_owned(), range(1, 3, 1, 9)),
+        ]
+    );
+
+    let external_references = harness
+        .references(external_uri, Position::new(1, 14), true)
+        .expect("external references response");
+
+    assert_eq!(
+        external_references
             .iter()
             .map(|location| (relative_uri(&location.uri, temp.path()), location.range))
             .collect::<Vec<_>>(),
         [
             ("b.recite".to_owned(), range(0, 3, 0, 9)),
-            ("a.recite".to_owned(), range(1, 3, 1, 9)),
             ("nested/c.recite".to_owned(), range(1, 13, 1, 19)),
         ]
     );
