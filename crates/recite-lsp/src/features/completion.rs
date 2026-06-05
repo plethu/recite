@@ -222,7 +222,7 @@ fn metadata_domain_values(
                     .values_by_context
                     .get(context.as_str())
                     .cloned()
-                    .unwrap_or_default(),
+                    .unwrap_or_else(|| missing_context_values(schema, &domain.missing_context)),
                 SelectorContext::Missing => missing_context_values(schema, &domain.missing_context),
                 SelectorContext::Malformed => BTreeSet::new(),
             }
