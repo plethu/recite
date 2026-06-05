@@ -39,11 +39,11 @@ pub(super) fn definition_resolves_block_references() {
 pub(super) fn references_include_declaration_and_project_references() {
     let temp = TempDir::new().unwrap_or_else(|error| panic!("tempdir: {error}"));
     write_file(temp.path(), "a.recite", ":: start\n-> shared\n:: shared\n");
-    write_file(temp.path(), "b.recite", ":: shared\n-> END\n");
+    write_file(temp.path(), "b.recite", ":: shared\n-> shared\n");
     write_file(
         temp.path(),
         "nested/c.recite",
-        ":: caller\n-> b.recite::shared\n",
+        ":: caller\n-> b.recite::shared\n:: shared\n-> shared\n",
     );
     let mut harness = harness_for_root(temp.path());
     let local_uri = file_uri(&temp.path().join("a.recite"));
@@ -75,6 +75,7 @@ pub(super) fn references_include_declaration_and_project_references() {
             .collect::<Vec<_>>(),
         [
             ("b.recite".to_owned(), range(0, 3, 0, 9)),
+            ("b.recite".to_owned(), range(1, 3, 1, 9)),
             ("nested/c.recite".to_owned(), range(1, 13, 1, 19)),
         ]
     );

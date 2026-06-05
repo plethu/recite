@@ -278,7 +278,7 @@ fn references_to_symbol<'a>(
                     reference.block_id == symbol.name
                         && match reference.file.as_deref() {
                             Some(file) => symbol.target_file.as_deref() == Some(file),
-                            None => document.uri == &symbol.target_uri,
+                            None => unqualified_reference_targets_symbol(document, symbol),
                         }
                 })
                 .map(move |reference| Reference {
@@ -297,6 +297,16 @@ fn document_targets_symbol(
     match file {
         Some(file) => document.project_relative_path == Some(file),
         None => document.uri == uri,
+    }
+}
+
+fn unqualified_reference_targets_symbol(
+    document: &NavigationDocument<'_>,
+    symbol: &Symbol,
+) -> bool {
+    match symbol.target_file.as_deref() {
+        Some(file) => document.project_relative_path == Some(file),
+        None => document.uri == &symbol.target_uri,
     }
 }
 
