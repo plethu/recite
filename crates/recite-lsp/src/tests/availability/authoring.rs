@@ -18,6 +18,9 @@ pub(super) fn initialize_advertises_completion_and_hover() {
 
     assert!(result.capabilities.completion_provider.is_some());
     assert!(result.capabilities.hover_provider.is_some());
+    assert!(result.capabilities.definition_provider.is_some());
+    assert!(result.capabilities.references_provider.is_some());
+    assert!(result.capabilities.rename_provider.is_some());
 
     harness.finish();
 }

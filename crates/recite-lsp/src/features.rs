@@ -8,6 +8,7 @@ use recite_core::{ConditionReturnType, EffectMode, ProjectSchema};
 use crate::workspace::LiveProjectSnapshot;
 
 mod completion;
+mod navigation;
 
 const REQUIRES_HOVER: &str =
     "requires=(...) keeps the choice visible and marks it unavailable when the condition is false.";
@@ -22,6 +23,8 @@ pub(crate) fn completion(
 ) -> Option<CompletionResponse> {
     completion::completion(text, position, schema, snapshot)
 }
+
+pub(crate) use navigation::{NavigationDocument, definition, prepare_rename, references, rename};
 
 pub(crate) fn hover(
     text: &str,

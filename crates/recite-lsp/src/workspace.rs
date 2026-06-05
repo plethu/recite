@@ -6,7 +6,10 @@ use std::collections::BTreeSet;
 use std::fs;
 use std::path::{Path, PathBuf};
 
-use lsp_types::{CompletionResponse, Hover, Position, TextDocumentContentChangeEvent, Uri};
+use lsp_types::{
+    CompletionResponse, GotoDefinitionResponse, Hover, Location, Position, PrepareRenameResponse,
+    TextDocumentContentChangeEvent, Uri, WorkspaceEdit,
+};
 use recite_core::{Diagnostic, SourceFile};
 use recite_parser::parse;
 
@@ -18,7 +21,7 @@ use schema_index::SchemaIndex;
 use crate::documents::{DocumentChangeResult, OpenDocument, OpenDocumentStore};
 use crate::features;
 use crate::paths::{project_relative_path, uri_to_file_path};
-use crate::summary::OpenFileIdentity;
+use crate::summary::{FileSummary, OpenFileIdentity};
 
 #[derive(Clone, Copy, Debug, Eq, PartialEq)]
 pub(crate) struct SnapshotGeneration(u64);
@@ -171,6 +174,44 @@ impl LspWorkspace {
         features::hover(text, position, self.schema.schema(), &self.snapshot)
     }
 
+    pub(crate) fn definition(
+        &self,
+        uri: &Uri,
+        position: Position,
+    ) -> Option<GotoDefinitionResponse> {
+        let documents = self.navigation_documents();
+        features::definition(uri, position, &documents)
+    }
+
+    pub(crate) fn references(
+        &self,
+        uri: &Uri,
+        position: Position,
+        include_declaration: bool,
+    ) -> Option<Vec<Location>> {
+        let documents = self.navigation_documents();
+        features::references(uri, position, include_declaration, &documents)
+    }
+
+    pub(crate) fn prepare_rename(
+        &self,
+        uri: &Uri,
+        position: Position,
+    ) -> Option<PrepareRenameResponse> {
+        let documents = self.navigation_documents();
+        features::prepare_rename(uri, position, &documents)
+    }
+
+    pub(crate) fn rename(
+        &self,
+        uri: &Uri,
+        position: Position,
+        new_name: &str,
+    ) -> Option<WorkspaceEdit> {
+        let documents = self.navigation_documents();
+        features::rename(uri, position, new_name, &documents)
+    }
+
     pub(crate) fn open_document_diagnostics_except(
         &self,
         exclude: Option<&Uri>,
@@ -207,6 +248,33 @@ impl LspWorkspace {
     fn rebuild_next_generation(&mut self) {
         self.generation = SnapshotGeneration(self.generation.0.saturating_add(1));
         self.snapshot = LiveProjectSnapshot::rebuild(self.generation, &self.saved, &self.documents);
+    }
+
+    fn navigation_documents(&self) -> Vec<features::NavigationDocument<'_>> {
+        self.snapshot
+            .summaries()
+            .iter()
+            .filter_map(|summary| {
+                let text = self.text_for_summary(summary)?;
+                Some(features::NavigationDocument {
+                    uri: summary.uri(),
+                    project_relative_path: summary.project_relative_path(),
+                    text,
+                    summary,
+                })
+            })
+            .collect()
+    }
+
+    fn text_for_summary(&self, summary: &FileSummary) -> Option<&str> {
+        self.documents
+            .document(summary.uri())
+            .map(OpenDocument::text)
+            .or_else(|| {
+                self.saved
+                    .document_by_uri(summary.uri())
+                    .map(|document| document.text.as_str())
+            })
     }
 
     fn live_source_files(&self) -> Option<Vec<SourceFile>> {

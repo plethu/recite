@@ -5,7 +5,7 @@ mod items;
 use std::path::Path;
 
 use lsp_types::Uri;
-use recite_core::Diagnostic;
+use recite_core::{Diagnostic, SourcePosition, SourceSpan};
 use recite_parser::parse;
 
 use collector::FileSummaryCollector;
@@ -39,6 +39,7 @@ impl FileSummary {
         let diagnostics = unique_diagnostics(lowered.diagnostics.clone());
         let mut collector = FileSummaryCollector::new();
         collector.collect_source_file(&lowered.source_file);
+        narrow_block_reference_spans(&mut collector.block_references, text);
         let complete_source_model = lowered.diagnostics.is_empty();
 
         Self {
@@ -76,6 +77,37 @@ impl FileSummary {
 
     pub(crate) fn project_relative_path(&self) -> Option<&str> {
         self.identity.project_relative_path()
+    }
+}
+
+fn narrow_block_reference_spans(block_references: &mut [BlockReferenceSummary], text: &str) {
+    let lines = text.lines().collect::<Vec<_>>();
+    for reference in block_references {
+        let line_index = reference
+            .span
+            .start
+            .line()
+            .saturating_sub(1)
+            .try_into()
+            .unwrap_or(usize::MAX);
+        let Some(line) = lines.get(line_index).copied() else {
+            continue;
+        };
+        let Some(block_start) = line.rfind(reference.block_id.as_str()) else {
+            continue;
+        };
+        let block_end = block_start + reference.block_id.len();
+        let start_column = u32::try_from(line[..block_start].chars().count())
+            .unwrap_or(u32::MAX)
+            .saturating_add(1);
+        let end_column = u32::try_from(line[..block_end].chars().count()).unwrap_or(u32::MAX);
+        let Ok(start) = SourcePosition::new(reference.span.start.line(), start_column) else {
+            continue;
+        };
+        let Ok(end) = SourcePosition::new(reference.span.start.line(), end_column) else {
+            continue;
+        };
+        reference.span = SourceSpan::new(reference.span.file.clone(), start, Some(end));
     }
 }
 
