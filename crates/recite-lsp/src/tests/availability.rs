@@ -25,12 +25,24 @@ pub(super) fn completes_requires_conditions_and_parameterless_reasons() {
     authoring::completes_requires_conditions_and_parameterless_reasons();
 }
 
+pub(super) fn completes_project_and_schema_authoring_symbols() {
+    authoring::completes_project_and_schema_authoring_symbols();
+}
+
+pub(super) fn completes_metadata_domain_values_from_schema_context() {
+    authoring::completes_metadata_domain_values_from_schema_context();
+}
+
 pub(super) fn hover_distinguishes_unavailable_and_hidden_choices() {
     authoring::hover_distinguishes_unavailable_and_hidden_choices();
 }
 
 pub(super) fn hover_uses_utf16_positions_after_non_ascii_prefix() {
     authoring::hover_uses_utf16_positions_after_non_ascii_prefix();
+}
+
+pub(super) fn hover_describes_schema_and_project_symbols() {
+    authoring::hover_describes_schema_and_project_symbols();
 }
 
 pub(super) fn malformed_completion_and_hover_params_return_invalid_params() {

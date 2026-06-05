@@ -1,8 +1,13 @@
+use std::collections::BTreeSet;
+
 use lsp_types::{
-    CompletionItem, CompletionItemKind, CompletionResponse, Documentation, Hover, HoverContents,
-    MarkupContent, MarkupKind, Position, Range,
+    CompletionResponse, Hover, HoverContents, MarkupContent, MarkupKind, Position, Range,
 };
-use recite_core::{ConditionReturnType, ProjectSchema};
+use recite_core::{ConditionReturnType, EffectMode, ProjectSchema};
+
+use crate::workspace::LiveProjectSnapshot;
+
+mod completion;
 
 const REQUIRES_HOVER: &str =
     "requires=(...) keeps the choice visible and marks it unavailable when the condition is false.";
@@ -13,43 +18,17 @@ pub(crate) fn completion(
     text: &str,
     position: Position,
     schema: &ProjectSchema,
+    snapshot: &LiveProjectSnapshot,
 ) -> Option<CompletionResponse> {
-    let line = line_prefix(text, position)?;
-    match completion_context(line) {
-        CompletionContext::Requires => Some(CompletionResponse::Array(
-            schema
-                .conditions
-                .iter()
-                .map(|(name, definition)| CompletionItem {
-                    label: name.clone(),
-                    kind: Some(CompletionItemKind::FUNCTION),
-                    detail: Some(condition_detail(&definition.returns)),
-                    documentation: Some(Documentation::String(
-                        "Recite condition function".to_owned(),
-                    )),
-                    ..CompletionItem::default()
-                })
-                .collect(),
-        )),
-        CompletionContext::Reason => Some(CompletionResponse::Array(
-            schema
-                .availability_reasons
-                .iter()
-                .filter(|(_, definition)| definition.params.is_empty())
-                .map(|(id, definition)| CompletionItem {
-                    label: id.as_str().to_owned(),
-                    kind: Some(CompletionItemKind::CONSTANT),
-                    detail: Some("parameterless availability reason".to_owned()),
-                    documentation: Some(Documentation::String(definition.template.clone())),
-                    ..CompletionItem::default()
-                })
-                .collect(),
-        )),
-        CompletionContext::None => None,
-    }
+    completion::completion(text, position, schema, snapshot)
 }
 
-pub(crate) fn hover(text: &str, position: Position) -> Option<Hover> {
+pub(crate) fn hover(
+    text: &str,
+    position: Position,
+    schema: Option<&ProjectSchema>,
+    snapshot: &LiveProjectSnapshot,
+) -> Option<Hover> {
     let line_index = usize::try_from(position.line).ok()?;
     let line = text.lines().nth(line_index)?;
     let byte_index = byte_index_for_utf16_character(line, position.character)?;
@@ -60,33 +39,51 @@ pub(crate) fn hover(text: &str, position: Position) -> Option<Hover> {
         return Some(hover_response(IF_HOVER, range));
     }
 
+    let (word, range) = word_at(line, line_index, byte_index)?;
+    if let Some(schema) = schema {
+        if let Some(definition) = schema.speakers.get(word) {
+            let value = definition.display_name.as_ref().map_or_else(
+                || format!("Recite speaker `{word}`."),
+                |display_name| format!("Recite speaker `{word}` ({display_name})."),
+            );
+            return Some(hover_response(&value, range));
+        }
+        if let Some(definition) = schema.metadata.get(word) {
+            let mut value = format!("Recite metadata key `{word}`.");
+            if let Some(domain) = &definition.domain {
+                value.push_str(&format!(" Values use metadata domain `{domain}`."));
+            }
+            return Some(hover_response(&value, range));
+        }
+        if let Some(definition) = schema.conditions.get(word) {
+            return Some(hover_response(
+                &condition_detail(&definition.returns),
+                range,
+            ));
+        }
+        if let Some(definition) = schema.effects.get(word) {
+            return Some(hover_response(&effect_detail(&definition.modes), range));
+        }
+    }
+    if block_names(snapshot).contains(word) {
+        return Some(hover_response(
+            &format!("Recite block `{word}` in the current project index."),
+            range,
+        ));
+    }
+
     None
 }
 
-enum CompletionContext {
-    Requires,
-    Reason,
-    None,
+pub(super) fn block_names(snapshot: &LiveProjectSnapshot) -> BTreeSet<String> {
+    snapshot
+        .summaries()
+        .iter()
+        .flat_map(|summary| summary.blocks.iter().map(|block| block.name.clone()))
+        .collect()
 }
 
-fn completion_context(line_prefix: &str) -> CompletionContext {
-    if let Some(index) = line_prefix.rfind("requires=(")
-        && !line_prefix[index + "requires=(".len()..].contains(')')
-    {
-        return CompletionContext::Requires;
-    }
-
-    if let Some(index) = line_prefix.rfind("reason=") {
-        let value = &line_prefix[index + "reason=".len()..];
-        if !value.chars().any(char::is_whitespace) {
-            return CompletionContext::Reason;
-        }
-    }
-
-    CompletionContext::None
-}
-
-fn line_prefix(text: &str, position: Position) -> Option<&str> {
+pub(super) fn line_prefix(text: &str, position: Position) -> Option<&str> {
     let line = text.lines().nth(usize::try_from(position.line).ok()?)?;
     let end = byte_index_for_utf16_character(line, position.character)?;
     line.get(..end)
@@ -105,6 +102,31 @@ fn find_if_range(line: &str, line_index: usize, byte_index: usize) -> Option<Ran
     let start = line.find(":if")?;
     let end = start + ":if".len();
     (start <= byte_index && byte_index <= end).then(|| range(line, line_index, start, end))
+}
+
+fn word_at(line: &str, line_index: usize, byte_index: usize) -> Option<(&str, Range)> {
+    if byte_index > line.len() {
+        return None;
+    }
+    let mut start = byte_index;
+    for (index, character) in line[..byte_index].char_indices().rev() {
+        if !is_symbol_character(character) {
+            break;
+        }
+        start = index;
+    }
+    let mut end = byte_index;
+    for (relative_index, character) in line[byte_index..].char_indices() {
+        if !is_symbol_character(character) {
+            break;
+        }
+        end = byte_index + relative_index + character.len_utf8();
+    }
+    (start < end).then(|| (&line[start..end], range(line, line_index, start, end)))
+}
+
+fn is_symbol_character(character: char) -> bool {
+    character.is_ascii_alphanumeric() || matches!(character, '_' | '-' | ':')
 }
 
 fn hover_response(value: &str, range: Range) -> Hover {
@@ -155,9 +177,22 @@ fn utf16_units_for_byte_index(line: &str, byte_index: usize) -> u32 {
         })
 }
 
-fn condition_detail(return_type: &ConditionReturnType) -> String {
+pub(super) fn condition_detail(return_type: &ConditionReturnType) -> String {
     match return_type {
         ConditionReturnType::Bool => "condition -> bool".to_owned(),
         ConditionReturnType::Enum(name) => format!("condition -> enum:{name}"),
     }
+}
+
+pub(super) fn effect_detail(modes: &BTreeSet<EffectMode>) -> String {
+    let modes = modes
+        .iter()
+        .map(|mode| match mode {
+            EffectMode::Immediate => "immediate",
+            EffectMode::Deferred => "deferred",
+            EffectMode::Blocking => "blocking",
+        })
+        .collect::<Vec<_>>()
+        .join(", ");
+    format!("effect request -> {modes}")
 }
