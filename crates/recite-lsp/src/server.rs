@@ -214,6 +214,10 @@ impl Server {
             return Ok(());
         };
         let uri = params.text_document.uri;
+        if let Some(refresh) = self.workspace.save_schema(&uri) {
+            self.publish_refresh(refresh)?;
+            self.publish_open_document_refreshes(None)?;
+        }
         if let Some(refresh) = self.workspace.save(uri.clone()) {
             self.publish_refresh(refresh)?;
             self.publish_open_document_refreshes(Some(&uri))?;
@@ -249,7 +253,7 @@ impl Server {
                     version,
                     diagnostics,
                     ..
-                } = self.workspace.with_schema_diagnostics(diagnostics);
+                } = self.workspace.with_semantic_diagnostics(diagnostics);
                 let publish_params = publish_diagnostics(uri, text.as_str(), version, &diagnostics);
                 self.send(
                     Notification::new(PublishDiagnostics::METHOD.to_owned(), publish_params).into(),

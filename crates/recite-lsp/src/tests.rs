@@ -47,6 +47,26 @@ fn did_open_publishes_lowering_diagnostics() {
 }
 
 #[test]
+fn did_open_publishes_schema_less_semantic_diagnostics() {
+    diagnostics::did_open_publishes_schema_less_semantic_diagnostics();
+}
+
+#[test]
+fn did_open_publishes_schema_backed_semantic_diagnostics() {
+    diagnostics::did_open_publishes_schema_backed_semantic_diagnostics();
+}
+
+#[test]
+fn did_save_publishes_schema_backed_diagnostics_for_closed_project_files() {
+    diagnostics::did_save_publishes_schema_backed_diagnostics_for_closed_project_files();
+}
+
+#[test]
+fn did_save_schema_reloads_and_republishes_source_diagnostics() {
+    diagnostics::did_save_schema_reloads_and_republishes_source_diagnostics();
+}
+
+#[test]
 fn publishes_choice_availability_parser_diagnostics() {
     availability::publishes_choice_availability_parser_diagnostics();
 }
