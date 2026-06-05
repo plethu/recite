@@ -3,10 +3,14 @@ use lsp_types::notification::{
     DidChangeTextDocument, DidCloseTextDocument, DidOpenTextDocument, DidSaveTextDocument, Exit,
     Initialized, Notification as LspNotification, PublishDiagnostics,
 };
-use lsp_types::request::{Completion, HoverRequest, Request as LspRequest, Shutdown};
+use lsp_types::request::{
+    Completion, GotoDefinition, HoverRequest, PrepareRenameRequest, References, Rename,
+    Request as LspRequest, Shutdown,
+};
 use lsp_types::{
     CompletionParams, DidChangeTextDocumentParams, DidCloseTextDocumentParams,
-    DidOpenTextDocumentParams, DidSaveTextDocumentParams, HoverParams, InitializeParams,
+    DidOpenTextDocumentParams, DidSaveTextDocumentParams, GotoDefinitionParams, HoverParams,
+    InitializeParams, ReferenceParams, RenameParams, TextDocumentPositionParams,
 };
 
 use crate::capabilities::initialize_result;
@@ -124,6 +128,81 @@ impl Server {
                 Ok((_, params)) => self.workspace.hover(
                     &params.text_document_position_params.text_document.uri,
                     params.text_document_position_params.position,
+                ),
+                Err(error) => {
+                    let response =
+                        Response::new_err(id, ErrorCode::InvalidParams as i32, error.to_string());
+                    self.send(response.into())?;
+                    return Ok(false);
+                }
+            };
+            self.send(Response::new_ok(id, result).into())?;
+            return Ok(false);
+        }
+
+        if request.method == GotoDefinition::METHOD {
+            let id = request.id.clone();
+            let result = match request.extract::<GotoDefinitionParams>(GotoDefinition::METHOD) {
+                Ok((_, params)) => self.workspace.definition(
+                    &params.text_document_position_params.text_document.uri,
+                    params.text_document_position_params.position,
+                ),
+                Err(error) => {
+                    let response =
+                        Response::new_err(id, ErrorCode::InvalidParams as i32, error.to_string());
+                    self.send(response.into())?;
+                    return Ok(false);
+                }
+            };
+            self.send(Response::new_ok(id, result).into())?;
+            return Ok(false);
+        }
+
+        if request.method == References::METHOD {
+            let id = request.id.clone();
+            let result = match request.extract::<ReferenceParams>(References::METHOD) {
+                Ok((_, params)) => self.workspace.references(
+                    &params.text_document_position.text_document.uri,
+                    params.text_document_position.position,
+                    params.context.include_declaration,
+                ),
+                Err(error) => {
+                    let response =
+                        Response::new_err(id, ErrorCode::InvalidParams as i32, error.to_string());
+                    self.send(response.into())?;
+                    return Ok(false);
+                }
+            };
+            self.send(Response::new_ok(id, result).into())?;
+            return Ok(false);
+        }
+
+        if request.method == PrepareRenameRequest::METHOD {
+            let id = request.id.clone();
+            let result = match request
+                .extract::<TextDocumentPositionParams>(PrepareRenameRequest::METHOD)
+            {
+                Ok((_, params)) => self
+                    .workspace
+                    .prepare_rename(&params.text_document.uri, params.position),
+                Err(error) => {
+                    let response =
+                        Response::new_err(id, ErrorCode::InvalidParams as i32, error.to_string());
+                    self.send(response.into())?;
+                    return Ok(false);
+                }
+            };
+            self.send(Response::new_ok(id, result).into())?;
+            return Ok(false);
+        }
+
+        if request.method == Rename::METHOD {
+            let id = request.id.clone();
+            let result = match request.extract::<RenameParams>(Rename::METHOD) {
+                Ok((_, params)) => self.workspace.rename(
+                    &params.text_document_position.text_document.uri,
+                    params.text_document_position.position,
+                    &params.new_name,
                 ),
                 Err(error) => {
                     let response =

@@ -4,17 +4,23 @@ use std::thread::{self, JoinHandle};
 use std::time::Duration;
 
 use lsp_server::{Connection, Message, Notification, Request, RequestId, Response};
+use lsp_types::RenameParams;
 use lsp_types::notification::{
     DidChangeTextDocument, DidCloseTextDocument, DidOpenTextDocument, DidSaveTextDocument, Exit,
     Initialized, Notification as LspNotification, PublishDiagnostics,
 };
-use lsp_types::request::{Completion, HoverRequest, Request as LspRequest, Shutdown};
+use lsp_types::request::{
+    Completion, GotoDefinition, HoverRequest, PrepareRenameRequest, References, Rename,
+    Request as LspRequest, Shutdown,
+};
 use lsp_types::{
     CompletionParams, CompletionResponse, DidChangeTextDocumentParams, DidCloseTextDocumentParams,
-    DidOpenTextDocumentParams, DidSaveTextDocumentParams, Hover, HoverParams, InitializeResult,
-    PartialResultParams, Position, PublishDiagnosticsParams, TextDocumentContentChangeEvent,
-    TextDocumentIdentifier, TextDocumentItem, TextDocumentPositionParams, Uri,
-    VersionedTextDocumentIdentifier, WorkDoneProgressParams,
+    DidOpenTextDocumentParams, DidSaveTextDocumentParams, GotoDefinitionParams,
+    GotoDefinitionResponse, Hover, HoverParams, InitializeResult, Location, PartialResultParams,
+    Position, PrepareRenameResponse, PublishDiagnosticsParams, ReferenceContext, ReferenceParams,
+    TextDocumentContentChangeEvent, TextDocumentIdentifier, TextDocumentItem,
+    TextDocumentPositionParams, Uri, VersionedTextDocumentIdentifier, WorkDoneProgressParams,
+    WorkspaceEdit,
 };
 use serde::Serialize;
 use serde_json::{Value, json};
@@ -159,6 +165,91 @@ impl Harness {
                     text_document: TextDocumentIdentifier { uri },
                     position,
                 },
+                work_done_progress_params: WorkDoneProgressParams::default(),
+            }),
+        }));
+        self.recv_response_result()
+    }
+
+    pub(super) fn definition(
+        &mut self,
+        uri: Uri,
+        position: Position,
+    ) -> Option<GotoDefinitionResponse> {
+        let id = self.next_request_id();
+        self.send(Message::Request(Request {
+            id,
+            method: GotoDefinition::METHOD.to_owned(),
+            params: to_value(GotoDefinitionParams {
+                text_document_position_params: TextDocumentPositionParams {
+                    text_document: TextDocumentIdentifier { uri },
+                    position,
+                },
+                work_done_progress_params: WorkDoneProgressParams::default(),
+                partial_result_params: PartialResultParams::default(),
+            }),
+        }));
+        self.recv_response_result()
+    }
+
+    pub(super) fn references(
+        &mut self,
+        uri: Uri,
+        position: Position,
+        include_declaration: bool,
+    ) -> Option<Vec<Location>> {
+        let id = self.next_request_id();
+        self.send(Message::Request(Request {
+            id,
+            method: References::METHOD.to_owned(),
+            params: to_value(ReferenceParams {
+                text_document_position: TextDocumentPositionParams {
+                    text_document: TextDocumentIdentifier { uri },
+                    position,
+                },
+                work_done_progress_params: WorkDoneProgressParams::default(),
+                partial_result_params: PartialResultParams::default(),
+                context: ReferenceContext {
+                    include_declaration,
+                },
+            }),
+        }));
+        self.recv_response_result()
+    }
+
+    pub(super) fn prepare_rename(
+        &mut self,
+        uri: Uri,
+        position: Position,
+    ) -> Option<PrepareRenameResponse> {
+        let id = self.next_request_id();
+        self.send(Message::Request(Request {
+            id,
+            method: PrepareRenameRequest::METHOD.to_owned(),
+            params: to_value(TextDocumentPositionParams {
+                text_document: TextDocumentIdentifier { uri },
+                position,
+            }),
+        }));
+        self.recv_response_result()
+    }
+
+    pub(super) fn rename(
+        &mut self,
+        uri: Uri,
+        position: Position,
+        new_name: &str,
+    ) -> Option<WorkspaceEdit> {
+        let id = self.next_request_id();
+        self.send(Message::Request(Request {
+            id,
+            method: Rename::METHOD.to_owned(),
+            params: to_value(RenameParams {
+                text_document_position: TextDocumentPositionParams {
+                    text_document: TextDocumentIdentifier { uri },
+                    position,
+                },
+                new_name: new_name.to_owned(),
                 work_done_progress_params: WorkDoneProgressParams::default(),
             }),
         }));

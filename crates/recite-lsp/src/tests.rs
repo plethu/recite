@@ -1,6 +1,7 @@
 mod availability;
 mod diagnostics;
 mod lifecycle;
+mod navigation;
 mod position;
 mod project_indexes;
 mod support;
@@ -124,6 +125,26 @@ fn hover_describes_schema_and_project_symbols() {
 #[test]
 fn malformed_completion_and_hover_params_return_invalid_params() {
     availability::malformed_completion_and_hover_params_return_invalid_params();
+}
+
+#[test]
+fn definition_resolves_block_references() {
+    navigation::definition_resolves_block_references();
+}
+
+#[test]
+fn references_include_declaration_and_project_references() {
+    navigation::references_include_declaration_and_project_references();
+}
+
+#[test]
+fn rename_updates_only_block_symbols() {
+    navigation::rename_updates_only_block_symbols();
+}
+
+#[test]
+fn rename_rejects_non_block_symbols_and_invalid_names() {
+    navigation::rename_rejects_non_block_symbols_and_invalid_names();
 }
 
 #[test]
