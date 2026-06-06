@@ -28,7 +28,6 @@ These issues have no unmet dependencies.
 
 | Issue | Role | Unlocks |
 | --- | --- | --- |
-| #33 LSP missing-ID code action | LSP track | on-save ID workflow |
 | #77 LSP block/schema code actions | LSP track | editor repair actions |
 | #106 LSP large-project benchmarks | scale proof | LSP release evidence |
 | #104 Large/epic CLI stress checks | scale proof | release evidence |
@@ -60,7 +59,6 @@ flowchart LR
     i76 --> i30["#30 diagnostics"]
     i76 --> i31["#31 completions/hover"]
     i76 --> i32["#32 navigation/rename"]
-    i76 --> i33["#33 missing-ID action"]
     i76 --> i77["#77 block/schema actions"]
     i76 --> i106["#106 LSP benchmarks"]
     i84["#84 VS Code scaffold"] --> i157["#157 VS Code highlighting"]
@@ -176,9 +174,9 @@ per-engine adapter MVPs + watch/editor refresh prerequisites → per-engine refr
 The metadata-domain design gate (#137), metadata value syntax issue (#138),
 metadata value-domain implementation (#139), LSP project/schema index issue
 (#76), LSP semantic diagnostics (#30), LSP completion/hover authoring support
-(#31), and LSP navigation/rename (#32) are closed. The remaining LSP track can
-now fan out into missing-ID code actions (#33), block/schema repair actions
-(#77), and LSP scale benchmarks (#106).
+(#31), LSP navigation/rename (#32), and missing-ID code actions (#33) are
+closed. The remaining LSP track can now fan out into block/schema repair actions
+(#77) and LSP scale benchmarks (#106).
 
 The benchmark suite (#73), trace counters (#75), benchmark smoke/regression
 policy (#74), and measured ID small-string evaluation (#36) are closed. The
