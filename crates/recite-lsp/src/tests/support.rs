@@ -4,15 +4,15 @@ use std::thread::{self, JoinHandle};
 use std::time::Duration;
 
 use lsp_server::{Connection, Message, Notification, Request, RequestId, Response};
-use lsp_types::RenameParams;
 use lsp_types::notification::{
     DidChangeTextDocument, DidCloseTextDocument, DidOpenTextDocument, DidSaveTextDocument, Exit,
     Initialized, Notification as LspNotification, PublishDiagnostics,
 };
 use lsp_types::request::{
-    Completion, GotoDefinition, HoverRequest, PrepareRenameRequest, References, Rename,
-    Request as LspRequest, Shutdown,
+    CodeActionRequest, Completion, GotoDefinition, HoverRequest, PrepareRenameRequest, References,
+    Rename, Request as LspRequest, Shutdown,
 };
+use lsp_types::{CodeActionParams, CodeActionResponse, RenameParams};
 use lsp_types::{
     CompletionParams, CompletionResponse, DidChangeTextDocumentParams, DidCloseTextDocumentParams,
     DidOpenTextDocumentParams, DidSaveTextDocumentParams, GotoDefinitionParams,
@@ -252,6 +252,16 @@ impl Harness {
                 new_name: new_name.to_owned(),
                 work_done_progress_params: WorkDoneProgressParams::default(),
             }),
+        }));
+        self.recv_response_result()
+    }
+
+    pub(super) fn code_action(&mut self, params: CodeActionParams) -> Option<CodeActionResponse> {
+        let id = self.next_request_id();
+        self.send(Message::Request(Request {
+            id,
+            method: CodeActionRequest::METHOD.to_owned(),
+            params: to_value(params),
         }));
         self.recv_response_result()
     }

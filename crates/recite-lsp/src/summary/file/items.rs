@@ -27,9 +27,10 @@ pub(crate) struct BlockReferenceSummary {
 pub(crate) struct MissingIdSummary {
     pub(crate) kind: MissingIdKind,
     pub(crate) span: SourceSpan,
+    pub(crate) insertion_position: SourcePosition,
 }
 
-#[derive(Clone, Copy, Debug, Eq, PartialEq)]
+#[derive(Clone, Copy, Debug, Eq, Ord, PartialEq, PartialOrd)]
 pub(crate) enum MissingIdKind {
     Line,
     Choice,
@@ -47,4 +48,4 @@ pub(crate) struct FunctionReferenceSummary {
     pub(crate) name: String,
     pub(crate) span: SourceSpan,
 }
-use recite_core::SourceSpan;
+use recite_core::{SourcePosition, SourceSpan};

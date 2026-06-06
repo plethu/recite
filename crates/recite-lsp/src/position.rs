@@ -11,7 +11,7 @@ pub(crate) fn span_to_range(text: &str, span: &SourceSpan) -> Range {
     Range { start, end }
 }
 
-fn source_position_to_lsp(text: &str, position: SourcePosition) -> Position {
+pub(crate) fn source_position_to_lsp(text: &str, position: SourcePosition) -> Position {
     let lines = DocumentLines::new(text);
     let line_index = position
         .line()
