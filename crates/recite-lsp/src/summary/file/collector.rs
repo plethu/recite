@@ -1,6 +1,6 @@
 use recite_core::{
     Block, Choice, ConditionCall, ConditionExpression, DivertTarget, Effect, IfBranch, Line,
-    MatchBranch, SourceFile, SourceMetadata, SourceSpan, Statement,
+    MatchBranch, SourceFile, SourceMetadata, SourcePosition, SourceSpan, Statement,
 };
 
 use super::{
@@ -63,6 +63,7 @@ impl FileSummaryCollector {
             None => self.missing_ids.push(MissingIdSummary {
                 kind: MissingIdKind::Line,
                 span: line.span.clone(),
+                insertion_position: insertion_position_after_marker(&line.span),
             }),
         }
         self.collect_metadata(&line.metadata);
@@ -80,6 +81,7 @@ impl FileSummaryCollector {
             None => self.missing_ids.push(MissingIdSummary {
                 kind: MissingIdKind::Choice,
                 span: choice.span.clone(),
+                insertion_position: insertion_position_after_marker(&choice.span),
             }),
         }
         self.collect_metadata(&choice.metadata);
@@ -166,4 +168,9 @@ impl FileSummaryCollector {
             });
         }
     }
+}
+
+fn insertion_position_after_marker(span: &SourceSpan) -> SourcePosition {
+    SourcePosition::new(span.start.line(), span.start.column().saturating_add(1))
+        .unwrap_or(span.start)
 }

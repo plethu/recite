@@ -1,12 +1,14 @@
 use std::collections::BTreeSet;
 
 use lsp_types::{
-    CompletionResponse, Hover, HoverContents, MarkupContent, MarkupKind, Position, Range,
+    CodeActionParams, CodeActionResponse, CompletionResponse, Hover, HoverContents, MarkupContent,
+    MarkupKind, Position, Range,
 };
 use recite_core::{ConditionReturnType, EffectMode, ProjectSchema};
 
 use crate::workspace::LiveProjectSnapshot;
 
+mod code_action;
 mod completion;
 mod navigation;
 
@@ -22,6 +24,15 @@ pub(crate) fn completion(
     snapshot: &LiveProjectSnapshot,
 ) -> Option<CompletionResponse> {
     completion::completion(text, position, schema, snapshot)
+}
+
+pub(crate) use code_action::CodeActionDocument;
+
+pub(crate) fn code_action(
+    params: &CodeActionParams,
+    documents: &[CodeActionDocument<'_>],
+) -> Option<CodeActionResponse> {
+    code_action::code_action(params, documents)
 }
 
 pub(crate) use navigation::{NavigationDocument, definition, prepare_rename, references, rename};

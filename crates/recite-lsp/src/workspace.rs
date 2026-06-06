@@ -7,8 +7,8 @@ use std::fs;
 use std::path::{Path, PathBuf};
 
 use lsp_types::{
-    CompletionResponse, GotoDefinitionResponse, Hover, Location, Position, PrepareRenameResponse,
-    TextDocumentContentChangeEvent, Uri, WorkspaceEdit,
+    CodeActionParams, CodeActionResponse, CompletionResponse, GotoDefinitionResponse, Hover,
+    Location, Position, PrepareRenameResponse, TextDocumentContentChangeEvent, Uri, WorkspaceEdit,
 };
 use recite_core::{Diagnostic, SourceFile};
 use recite_parser::parse;
@@ -212,6 +212,11 @@ impl LspWorkspace {
         features::rename(uri, position, new_name, &documents)
     }
 
+    pub(crate) fn code_action(&self, params: &CodeActionParams) -> Option<CodeActionResponse> {
+        let documents = self.code_action_documents();
+        features::code_action(params, &documents)
+    }
+
     pub(crate) fn open_document_diagnostics_except(
         &self,
         exclude: Option<&Uri>,
@@ -259,6 +264,21 @@ impl LspWorkspace {
                 Some(features::NavigationDocument {
                     uri: summary.uri(),
                     project_relative_path: summary.project_relative_path(),
+                    text,
+                    summary,
+                })
+            })
+            .collect()
+    }
+
+    fn code_action_documents(&self) -> Vec<features::CodeActionDocument<'_>> {
+        self.snapshot
+            .summaries()
+            .iter()
+            .filter_map(|summary| {
+                let text = self.text_for_summary(summary)?;
+                Some(features::CodeActionDocument {
+                    uri: summary.uri(),
                     text,
                     summary,
                 })

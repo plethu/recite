@@ -1,8 +1,9 @@
 use lsp_types::{
-    CompletionOptions, HoverProviderCapability, InitializeParams, InitializeResult, OneOf,
-    PositionEncodingKind, RenameOptions, SaveOptions, ServerCapabilities, ServerInfo,
-    TextDocumentSyncCapability, TextDocumentSyncKind, TextDocumentSyncOptions,
-    TextDocumentSyncSaveOptions, WorkDoneProgressOptions,
+    CodeActionKind, CodeActionOptions, CodeActionProviderCapability, CompletionOptions,
+    HoverProviderCapability, InitializeParams, InitializeResult, OneOf, PositionEncodingKind,
+    RenameOptions, SaveOptions, ServerCapabilities, ServerInfo, TextDocumentSyncCapability,
+    TextDocumentSyncKind, TextDocumentSyncOptions, TextDocumentSyncSaveOptions,
+    WorkDoneProgressOptions,
 };
 
 pub(crate) fn initialize_result(params: &InitializeParams) -> InitializeResult {
@@ -26,6 +27,14 @@ pub(crate) fn initialize_result(params: &InitializeParams) -> InitializeResult {
                 ..CompletionOptions::default()
             }),
             hover_provider: Some(HoverProviderCapability::Simple(true)),
+            code_action_provider: Some(CodeActionProviderCapability::Options(CodeActionOptions {
+                code_action_kinds: Some(vec![
+                    CodeActionKind::QUICKFIX,
+                    CodeActionKind::SOURCE_FIX_ALL,
+                ]),
+                resolve_provider: Some(false),
+                work_done_progress_options: WorkDoneProgressOptions::default(),
+            })),
             definition_provider: Some(OneOf::Left(true)),
             references_provider: Some(OneOf::Left(true)),
             rename_provider: Some(OneOf::Right(RenameOptions {

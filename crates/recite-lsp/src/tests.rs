@@ -1,4 +1,5 @@
 mod availability;
+mod code_action;
 mod diagnostics;
 mod lifecycle;
 mod navigation;
@@ -15,6 +16,11 @@ fn initialize_advertises_full_sync_save_and_utf16() {
 #[test]
 fn initialize_advertises_completion_and_hover() {
     availability::initialize_advertises_completion_and_hover();
+}
+
+#[test]
+fn initialize_advertises_missing_id_code_actions() {
+    code_action::initialize_advertises_missing_id_code_actions();
 }
 
 #[test]
@@ -125,6 +131,41 @@ fn hover_describes_schema_and_project_symbols() {
 #[test]
 fn malformed_completion_and_hover_params_return_invalid_params() {
     availability::malformed_completion_and_hover_params_return_invalid_params();
+}
+
+#[test]
+fn quick_fix_inserts_marker_only_line_and_choice_ids() {
+    code_action::quick_fix_inserts_marker_only_line_and_choice_ids();
+}
+
+#[test]
+fn quick_fix_preserves_spacing_for_metadata_and_clauses_first_headers() {
+    code_action::quick_fix_preserves_spacing_for_metadata_and_clauses_first_headers();
+}
+
+#[test]
+fn source_fix_all_orders_deterministic_multi_edits_and_preserves_existing_ids() {
+    code_action::source_fix_all_orders_deterministic_multi_edits_and_preserves_existing_ids();
+}
+
+#[test]
+fn generated_ids_are_deterministic_and_avoid_line_choice_namespace_collisions() {
+    code_action::generated_ids_are_deterministic_and_avoid_line_choice_namespace_collisions();
+}
+
+#[test]
+fn code_actions_use_utf16_crlf_and_indented_ranges() {
+    code_action::code_actions_use_utf16_crlf_and_indented_ranges();
+}
+
+#[test]
+fn existing_and_draft_stem_ids_do_not_receive_missing_id_actions() {
+    code_action::existing_and_draft_stem_ids_do_not_receive_missing_id_actions();
+}
+
+#[test]
+fn malformed_code_action_params_return_invalid_params() {
+    code_action::malformed_code_action_params_return_invalid_params();
 }
 
 #[test]

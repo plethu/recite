@@ -4,11 +4,11 @@ use lsp_types::notification::{
     Initialized, Notification as LspNotification, PublishDiagnostics,
 };
 use lsp_types::request::{
-    Completion, GotoDefinition, HoverRequest, PrepareRenameRequest, References, Rename,
-    Request as LspRequest, Shutdown,
+    CodeActionRequest, Completion, GotoDefinition, HoverRequest, PrepareRenameRequest, References,
+    Rename, Request as LspRequest, Shutdown,
 };
 use lsp_types::{
-    CompletionParams, DidChangeTextDocumentParams, DidCloseTextDocumentParams,
+    CodeActionParams, CompletionParams, DidChangeTextDocumentParams, DidCloseTextDocumentParams,
     DidOpenTextDocumentParams, DidSaveTextDocumentParams, GotoDefinitionParams, HoverParams,
     InitializeParams, ReferenceParams, RenameParams, TextDocumentPositionParams,
 };
@@ -111,6 +111,21 @@ impl Server {
                     &params.text_document_position.text_document.uri,
                     params.text_document_position.position,
                 ),
+                Err(error) => {
+                    let response =
+                        Response::new_err(id, ErrorCode::InvalidParams as i32, error.to_string());
+                    self.send(response.into())?;
+                    return Ok(false);
+                }
+            };
+            self.send(Response::new_ok(id, result).into())?;
+            return Ok(false);
+        }
+
+        if request.method == CodeActionRequest::METHOD {
+            let id = request.id.clone();
+            let result = match request.extract::<CodeActionParams>(CodeActionRequest::METHOD) {
+                Ok((_, params)) => self.workspace.code_action(&params),
                 Err(error) => {
                     let response =
                         Response::new_err(id, ErrorCode::InvalidParams as i32, error.to_string());
