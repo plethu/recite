@@ -1,0 +1,22 @@
+:: localization speaker=narrator scene="radiocomputer" beat="notice"
+> notice_01@1111111111111111111b speaker=radiocomputer portrait="lamp" camera="insert"
+  Clock notice: Meridian Station reports minute zero before the embassy relay.
+> notice_02@1111111111111111111c speaker=radiocomputer portrait="lamp" camera="insert"
+  Wire notice: the recorder head was reversed after the first spoken name.
+> notice_03@1111111111111111111d speaker=radiocomputer portrait="lamp" camera="insert"
+  Seal notice: diplomatic wax contains railway grit from the eastern loop.
+> notice_04@1111111111111111111e speaker=radiocomputer portrait="lamp" camera="insert"
+  Clerk notice: the station log omits one passenger with military clearance.
+> notice_05@1111111111111111111f speaker=radiocomputer portrait="lamp" camera="insert"
+  Cipher notice: LACUNA's card answers to a bureau key retired in 1919.
+> localization_prompt@11111111111111111120 speaker=operator portrait="listening" beat="choice"
+  The lamps sort the night into proofs, but none of them say why she called.
+  ? follow_archive@21111111111111111119 object=radiocomputer_console tone="analytical"
+    Follow the clock variance through the radiocomputer tables.
+    -> src/effects.recite::effects
+  ? follow_watch@2111111111111111111a quest=case_lamplight tone="severe"
+    Follow the wire recording and challenge her last sentence.
+    -> src/effects.recite::effects
+  ? return_to_gate@2111111111111111111b object=transit_seal tone="patient"
+    Return to the transit seal and ask who handled it.
+    -> src/arrival.recite::arrival_return

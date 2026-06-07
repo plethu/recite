@@ -1,0 +1,96 @@
+{
+  "schema_version": 1,
+  "types": {
+    "relationship_state": {
+      "kind": "enum",
+      "values": ["cold", "steady", "trusted"]
+    },
+    "quest_stage": {
+      "kind": "enum",
+      "values": ["unopened", "contested", "confirmed", "sealed"]
+    }
+  },
+  "registries": {
+    "object": {
+      "values": ["wire_recorder", "cipher_card", "radiocomputer_console", "transit_seal"]
+    },
+    "quest": {
+      "values": ["case_lamplight", "missing_train", "operator_oath"]
+    },
+    "sound": {
+      "values": ["carrier_tone", "relay_click", "tape_hiss", "dial_return"]
+    },
+    "inventory_item": {
+      "values": ["cipher_key", "station_log", "oxide_tape"]
+    }
+  },
+  "speakers": {
+    "narrator": {"display_name": "Narrator"},
+    "lacuna": {"display_name": "LACUNA"},
+    "operator": {"display_name": "OPERATOR"},
+    "analyst": {"display_name": "Analyst"},
+    "radiocomputer": {"display_name": "Radiocomputer"}
+  },
+  "conditions": {
+    "has_item": {
+      "params": [{"name": "item", "type": "registry:inventory_item"}]
+    },
+    "object_seen": {
+      "params": [{"name": "object", "type": "registry:object"}]
+    },
+    "quest_stage": {
+      "params": [{"name": "quest", "type": "registry:quest"}],
+      "returns": "enum:quest_stage"
+    },
+    "relationship": {
+      "params": [
+        {"name": "actor_a", "type": "speaker"},
+        {"name": "actor_b", "type": "speaker"}
+      ],
+      "returns": "enum:relationship_state"
+    },
+    "trust_at_least": {
+      "params": [
+        {"name": "actor_a", "type": "speaker"},
+        {"name": "actor_b", "type": "speaker"},
+        {"name": "threshold", "type": "int"}
+      ]
+    }
+  },
+  "effects": {
+    "play_sfx": {
+      "modes": ["immediate"],
+      "params": [{"name": "sound", "type": "registry:sound"}]
+    },
+    "record_object": {
+      "modes": ["deferred"],
+      "params": [{"name": "object", "type": "registry:object"}]
+    },
+    "advance_quest": {
+      "modes": ["deferred", "blocking"],
+      "params": [
+        {"name": "quest", "type": "registry:quest"},
+        {"name": "stage", "type": "enum:quest_stage"}
+      ]
+    },
+    "grant_item": {
+      "modes": ["blocking"],
+      "params": [{"name": "item", "type": "registry:inventory_item"}]
+    },
+    "open_interface": {
+      "modes": ["blocking"],
+      "params": [{"name": "object", "type": "registry:object"}]
+    }
+  },
+  "metadata": {
+    "scene": {"targets": ["block"], "type": "string"},
+    "beat": {"targets": ["block", "line"], "type": "string"},
+    "speaker": {"targets": ["block", "line"], "type": "speaker"},
+    "portrait": {"targets": ["line"], "type": "string"},
+    "camera": {"targets": ["line"], "type": "string"},
+    "object": {"targets": ["line", "choice"], "type": "registry:object"},
+    "quest": {"targets": ["choice"], "type": "registry:quest"},
+    "tone": {"targets": ["choice"], "type": "string"},
+    "sfx": {"targets": ["choice"], "type": "registry:sound"}
+  }
+}

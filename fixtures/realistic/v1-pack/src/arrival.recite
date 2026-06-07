@@ -1,0 +1,19 @@
+:: arrival default speaker=narrator scene="briefing" beat="opening"
+! immediate play_sfx(carrier_tone)
+! blocking open_interface(radiocomputer_console)
+> arrival_prompt@11111111111111111111 speaker=operator portrait="listening" camera="scope"
+  LACUNA comes through the carrier in winter static, saying the minister was dead before the train arrived.
+  ? inspect_wire@21111111111111111111 object=wire_recorder tone="measured" sfx=relay_click requires=(object_seen(wire_recorder))
+    Ask her to wait while you thread the wire recording.
+    -> src/objects.recite::objects
+  ? hear_lacuna@21111111111111111112 tone="open" requires=(trust_at_least(operator, lacuna, 2))
+    Let LACUNA give the account in her own order.
+    -> src/relationships.recite::relationships
+  ? query_console@21111111111111111113 tone="skeptical"
+    Set the radiocomputer to compare the station clocks.
+    -> src/localization.recite::localization
+
+:: arrival_return speaker=operator scene="briefing" beat="return"
+> return_line@11111111111111111112 portrait="quiet" camera="close"
+  The case narrows to a signal, a seal, and the pause before she answers.
+-> src/effects.recite::effects

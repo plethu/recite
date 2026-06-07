@@ -7,7 +7,7 @@ use recite_benchmarks::compiler::{
     validate_with_schema, validate_without_schema,
 };
 use recite_benchmarks::project::BenchmarkProject;
-use recite_benchmarks::{BenchmarkResult, BenchmarkScale};
+use recite_benchmarks::{BenchmarkFixture, BenchmarkResult};
 
 fn compiler_benchmarks(criterion: &mut Criterion) {
     for fixture in load_compiler_projects() {
@@ -22,7 +22,7 @@ fn compiler_benchmarks(criterion: &mut Criterion) {
 
 fn bench_parse(criterion: &mut Criterion, fixture: &CompilerFixture) {
     criterion.benchmark_group("compiler/parse").bench_function(
-        BenchmarkId::from_parameter(fixture.scale.as_str()),
+        BenchmarkId::from_parameter(fixture.fixture.as_str()),
         |bencher| {
             bencher.iter_batched(
                 || fixture.project.compile_inputs(),
@@ -35,7 +35,7 @@ fn bench_parse(criterion: &mut Criterion, fixture: &CompilerFixture) {
 
 fn bench_lower(criterion: &mut Criterion, fixture: &CompilerFixture) {
     criterion.benchmark_group("compiler/lower").bench_function(
-        BenchmarkId::from_parameter(fixture.scale.as_str()),
+        BenchmarkId::from_parameter(fixture.fixture.as_str()),
         |bencher| {
             bencher.iter_batched(
                 || fixture.project.compile_inputs(),
@@ -50,7 +50,7 @@ fn bench_validate(criterion: &mut Criterion, fixture: &CompilerFixture) {
     criterion
         .benchmark_group("compiler/validate")
         .bench_function(
-            BenchmarkId::from_parameter(fixture.scale.as_str()),
+            BenchmarkId::from_parameter(fixture.fixture.as_str()),
             |bencher| {
                 bencher.iter_batched(
                     || fixture.project.source_files(),
@@ -65,7 +65,7 @@ fn bench_validate_with_schema(criterion: &mut Criterion, fixture: &CompilerFixtu
     criterion
         .benchmark_group("compiler/validate_with_schema")
         .bench_function(
-            BenchmarkId::from_parameter(fixture.scale.as_str()),
+            BenchmarkId::from_parameter(fixture.fixture.as_str()),
             |bencher| {
                 bencher.iter_batched(
                     || fixture.project.source_files(),
@@ -85,7 +85,7 @@ fn bench_compile_with_schema(criterion: &mut Criterion, fixture: &CompilerFixtur
     criterion
         .benchmark_group("compiler/compile_with_schema")
         .bench_function(
-            BenchmarkId::from_parameter(fixture.scale.as_str()),
+            BenchmarkId::from_parameter(fixture.fixture.as_str()),
             |bencher| {
                 bencher.iter_batched(
                     || fixture.project.clone(),
@@ -100,7 +100,7 @@ fn bench_extract_pot_with_schema(criterion: &mut Criterion, fixture: &CompilerFi
     criterion
         .benchmark_group("compiler/extract_pot_with_schema")
         .bench_function(
-            BenchmarkId::from_parameter(fixture.scale.as_str()),
+            BenchmarkId::from_parameter(fixture.fixture.as_str()),
             |bencher| {
                 bencher.iter_batched(
                     || fixture.project.clone(),
@@ -113,7 +113,7 @@ fn bench_extract_pot_with_schema(criterion: &mut Criterion, fixture: &CompilerFi
 
 #[derive(Clone)]
 struct CompilerFixture {
-    scale: BenchmarkScale,
+    fixture: BenchmarkFixture,
     project: CompilerProject,
 }
 
@@ -122,13 +122,13 @@ fn load_compiler_projects() -> Vec<CompilerFixture> {
 }
 
 fn load_compiler_projects_result() -> BenchmarkResult<Vec<CompilerFixture>> {
-    BenchmarkScale::selected_from_env()?
+    BenchmarkFixture::selected_from_env()?
         .into_iter()
-        .map(|scale| {
-            let project = BenchmarkProject::load(scale)?;
+        .map(|fixture| {
+            let project = BenchmarkProject::load_fixture(fixture)?;
             let compiler = CompilerProject::load(&project)?;
             Ok(CompilerFixture {
-                scale,
+                fixture,
                 project: compiler,
             })
         })

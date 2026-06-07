@@ -41,8 +41,11 @@ impl CompilerProject {
         };
         let options = CompileOptions::new(
             CompilerVersion::new("benchmarks")?,
-            CompiledAssetId::new(format!("synthetic-{}", project.scale().as_str()))?,
-            SourceMapId::new(format!("synthetic-{}-source-map", project.scale().as_str()))?,
+            CompiledAssetId::new(format!("benchmark-{}", project.fixture().asset_stem()))?,
+            SourceMapId::new(format!(
+                "benchmark-{}-source-map",
+                project.fixture().asset_stem()
+            ))?,
             schema.canonical_fingerprint(),
         );
         Ok(Self {

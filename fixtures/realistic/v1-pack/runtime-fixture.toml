@@ -1,0 +1,28 @@
+[dialogue]
+locale = "en-US"
+[dialogue.catalogs]
+en-US = ["locales/en-US.po"]
+
+[anchors]
+choice_anchor_line = "11111111111111111111"
+first_line_block = "objects"
+first_prompt_block = "relationships"
+deferred_effect_block = "effects"
+
+[conditions]
+"has_item(cipher_key)" = true
+"has_item(station_log)" = true
+"object_seen(wire_recorder)" = true
+"quest_stage(missing_train)" = { enum = "contested" }
+"relationship(operator, lacuna)" = { enum = "trusted" }
+"trust_at_least(operator, lacuna, 2)" = true
+
+[choices]
+"11111111111111111111" = "21111111111111111111"
+"11111111111111111113" = "21111111111111111114"
+"1111111111111111111a" = "21111111111111111116"
+"11111111111111111120" = "21111111111111111119"
+"11111111111111111122" = "2111111111111111111c"
+
+[effects]
+auto_ack_blocking = true

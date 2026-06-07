@@ -6,8 +6,8 @@ use recite_benchmarks::id_metrics::{
 };
 use recite_benchmarks::project::BenchmarkProject;
 use recite_benchmarks::runtime::RuntimeProject;
-use recite_benchmarks::scale::parse_scale_list;
-use recite_benchmarks::{BenchmarkScale, compiler};
+use recite_benchmarks::scale::{parse_fixture_list, parse_scale_list};
+use recite_benchmarks::{BenchmarkFixture, BenchmarkScale, compiler};
 use std::fs;
 use std::sync::Mutex;
 
@@ -34,10 +34,71 @@ fn scale_selection_rejects_empty_entries() {
 }
 
 #[test]
+fn fixture_selection_supports_synthetic_scales_and_realistic_pack()
+-> Result<(), Box<dyn std::error::Error>> {
+    let fixtures = parse_fixture_list("tiny, realistic:v1-pack, tiny")?;
+    assert_eq!(
+        fixtures,
+        [
+            BenchmarkFixture::Synthetic(BenchmarkScale::Tiny),
+            BenchmarkFixture::RealisticV1Pack,
+        ]
+    );
+    assert_eq!(
+        BenchmarkFixture::DEFAULT.len(),
+        BenchmarkScale::DEFAULT.len()
+    );
+    Ok(())
+}
+
+#[test]
 fn tiny_project_loads_and_matches_checked_summary() -> Result<(), Box<dyn std::error::Error>> {
     let project = BenchmarkProject::load(BenchmarkScale::Tiny)?;
     assert_eq!(project.summary().profile.name, "tiny");
     assert_eq!(project.source_files()?.len(), 2);
+    Ok(())
+}
+
+#[test]
+fn realistic_v1_pack_loads_and_matches_checked_summary() -> Result<(), Box<dyn std::error::Error>> {
+    let project = BenchmarkProject::load_fixture(BenchmarkFixture::RealisticV1Pack)?;
+    let summary = project
+        .realistic_summary()
+        .expect("realistic project exposes realistic summary");
+
+    assert_eq!(project.fixture_label(), "realistic:v1-pack");
+    assert_eq!(summary.name, "v1-pack");
+    assert_eq!(summary.counts.source_files, 5);
+    assert_eq!(summary.counts.choices, 12);
+    assert_eq!(project.source_files()?.len(), 5);
+    Ok(())
+}
+
+#[test]
+fn realistic_v1_pack_compiles_extracts_catalog_and_traverses()
+-> Result<(), Box<dyn std::error::Error>> {
+    let project = BenchmarkProject::load_fixture(BenchmarkFixture::RealisticV1Pack)?;
+    let runtime_fixture = RuntimeFixture::load(&project.runtime_fixture_source()?)?;
+    let catalog = CatalogProvider::load(&project, &runtime_fixture)?;
+    assert_eq!(
+        catalog.get("1111111111111111111b"),
+        Some("Clock notice: Meridian Station reports minute zero before the embassy relay.")
+    );
+
+    let compiler = CompilerProject::load(&project)?;
+    assert!(compiler::validate_with_schema(&compiler.source_files(), compiler.schema()).is_ok());
+    let pot = compiler::extract_pot(&compiler)?;
+    assert!(pot.entries.len() >= 20);
+
+    let compiled = compiler.compile_with_schema()?;
+    assert_eq!(compiled.asset().dialogue.sources.len(), 5);
+    assert!(compiled.asset().dialogue.effects.len() >= 6);
+
+    let runtime = RuntimeProject::load(&project, &compiled)?;
+    let first = runtime.driver().full_traversal()?;
+    let second = runtime.driver().full_traversal()?;
+    assert_eq!(first, second);
+    assert!(first >= 10);
     Ok(())
 }
 
