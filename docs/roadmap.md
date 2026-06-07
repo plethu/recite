@@ -175,8 +175,10 @@ The metadata-domain design gate (#137), metadata value syntax issue (#138),
 metadata value-domain implementation (#139), LSP project/schema index issue
 (#76), LSP semantic diagnostics (#30), LSP completion/hover authoring support
 (#31), LSP navigation/rename (#32), and missing-ID code actions (#33) are
-closed. The remaining LSP track can now fan out into block/schema repair actions
-(#77) and LSP scale benchmarks (#106).
+closed. The later draft-stem suffix design issue (#197) is also closed; it was
+resolved by the anchor-canonical `label@anchor` source-ID model where labels are
+editable context and anchors are canonical IDs. The remaining LSP track can now
+fan out into block/schema repair actions (#77) and LSP scale benchmarks (#106).
 
 The benchmark suite (#73), trace counters (#75), benchmark smoke/regression
 policy (#74), and measured ID small-string evaluation (#36) are closed. The
