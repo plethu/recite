@@ -28,7 +28,6 @@ These issues have no unmet dependencies.
 
 | Issue | Role | Unlocks |
 | --- | --- | --- |
-| #106 LSP large-project benchmarks | scale proof | LSP release evidence |
 | #105 Memory profiles and known limits | scale proof | release known-limits docs |
 | #126 `recite bench` command | scale proof | user-facing benchmark reports |
 | #156 Compact ID storage switch | performance follow-up | reduced ID allocation pressure |
@@ -170,8 +169,9 @@ metadata value-domain implementation (#139), LSP project/schema index issue
 block/schema repair actions (#77) are
 closed. The later draft-stem suffix design issue (#197) is also closed; it was
 resolved by the anchor-canonical `label@anchor` source-ID model where labels are
-editable context and anchors are canonical IDs. The remaining LSP track can now
-focus on LSP scale benchmarks (#106).
+editable context and anchors are canonical IDs. LSP scale benchmarks (#106) are
+also closed, so the core LSP authoring-readiness lane now has diagnostics,
+completion/hover, navigation/rename, code actions, and scale evidence in place.
 
 The benchmark suite (#73), trace counters (#75), benchmark smoke/regression
 policy (#74), measured ID small-string evaluation (#36), large/epic CLI stress
