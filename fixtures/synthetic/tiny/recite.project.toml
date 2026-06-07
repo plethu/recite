@@ -7,4 +7,4 @@ schema = "schema/synthetic.schema.json"
 id = "synthetic_tiny"
 asset = "build/synthetic.recitec"
 block = "block_00000"
-participants = ["narrator", "speaker_00"]
+participants = ["speaker_00"]

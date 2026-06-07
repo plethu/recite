@@ -25,8 +25,8 @@
     },
     {
       "path": "recite.project.toml",
-      "bytes": 234,
-      "blake3": "6782313f7eec9112821645febe3a6a070a4e54a137e10fe7352ae396e11b1d12"
+      "bytes": 222,
+      "blake3": "5e8accc1546235add398546ef97b05c350df34c12c0a33f672bc271287dd4bae"
     },
     {
       "path": "runtime-fixture.toml",
@@ -89,5 +89,5 @@
       "blake3": "f84ced2cf3ef610bbfc0079a6b7bdb9f7f787ee4e3b60eefc72c6fd052b0a4fa"
     }
   ],
-  "summary_hash": "cb7a207cd47e87a62efb912b2f66e47fc253b0c5933648ee0a3ce9c27656a2df"
+  "summary_hash": "c2abddd7c4a8d57cf75b6bf2b77ad709c136b2dc575cc063750b1d47171de1f4"
 }
