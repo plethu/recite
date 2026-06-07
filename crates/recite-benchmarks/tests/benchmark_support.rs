@@ -4,6 +4,7 @@ use recite_benchmarks::fixture_context::RuntimeFixture;
 use recite_benchmarks::id_metrics::{
     compiled_id_metrics, id_storage_report, runtime_fixture_id_metrics, source_id_metrics,
 };
+use recite_benchmarks::lsp::LspBenchmarkProject;
 use recite_benchmarks::project::BenchmarkProject;
 use recite_benchmarks::runtime::RuntimeProject;
 use recite_benchmarks::scale::{parse_fixture_list, parse_scale_list};
@@ -113,6 +114,68 @@ fn realistic_v1_pack_compiles_extracts_catalog_and_traverses()
     let second = runtime.driver().full_traversal()?;
     assert_eq!(first, second);
     assert!(first >= 10);
+    Ok(())
+}
+
+#[test]
+fn tiny_lsp_benchmark_probes_are_deterministic() -> Result<(), Box<dyn std::error::Error>> {
+    let project = BenchmarkProject::load(BenchmarkScale::Tiny)?;
+    let lsp = LspBenchmarkProject::load(&project)?;
+    let first = lsp.probes();
+    let second = lsp.probes();
+
+    assert_eq!(first.document.project_relative_path, "shard-000.recite");
+    assert_eq!(
+        first.document.project_relative_path,
+        second.document.project_relative_path
+    );
+    assert_eq!(first.completion.position, second.completion.position);
+    assert_eq!(first.definition.position, second.definition.position);
+    assert_eq!(first.rename.position, second.rename.position);
+    Ok(())
+}
+
+#[test]
+fn tiny_lsp_initial_index_reports_stable_memory_counts() -> Result<(), Box<dyn std::error::Error>> {
+    let project = BenchmarkProject::load(BenchmarkScale::Tiny)?;
+    let lsp = LspBenchmarkProject::load(&project)?;
+    let report = lsp.memory_report();
+
+    assert_eq!(report.source_files, 2);
+    assert!(report.indexed_source_bytes > 0);
+    assert_eq!(report.block_definitions, 10);
+    assert!(report.block_references > 0);
+    assert!(report.line_ids > 0);
+    assert!(report.choice_ids > 0);
+    assert!(report.estimated_summary_bytes >= report.indexed_source_bytes);
+    assert!(report.to_markdown().contains("estimated_summary_bytes"));
+    Ok(())
+}
+
+#[test]
+fn tiny_lsp_driver_exercises_editor_operations() -> Result<(), Box<dyn std::error::Error>> {
+    let project = BenchmarkProject::load(BenchmarkScale::Tiny)?;
+    let lsp = LspBenchmarkProject::load(&project)?;
+    let mut driver = lsp.driver();
+    let probes = driver.probes();
+
+    let _diagnostics = driver.open_file(&probes.document);
+    let _changed = driver.change_file(&probes.document);
+    let _refreshed = driver.diagnostics_refresh(&probes.document);
+    assert!(driver.completion(&probes.completion).is_some());
+    assert!(driver.definition(&probes.definition).is_some());
+    assert!(driver.rename(&probes.rename, "renamed_block").is_some());
+    Ok(())
+}
+
+#[test]
+fn tiny_lsp_stale_change_does_not_advance_generation() -> Result<(), Box<dyn std::error::Error>> {
+    let project = BenchmarkProject::load(BenchmarkScale::Tiny)?;
+    let lsp = LspBenchmarkProject::load(&project)?;
+    let mut driver = lsp.driver();
+    let probes = driver.probes();
+
+    assert!(driver.stale_change_is_suppressed(&probes.document));
     Ok(())
 }
 

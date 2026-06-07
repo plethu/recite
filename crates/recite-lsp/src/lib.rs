@@ -18,6 +18,9 @@
 //! }
 //! ```
 
+#[cfg(feature = "bench-support")]
+#[doc(hidden)]
+pub mod bench_support;
 mod capabilities;
 mod diagnostics;
 mod documents;

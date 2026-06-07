@@ -11,6 +11,10 @@ readme.workspace = true
 name = "recite-lsp"
 path = "src/main.rs"
 
+[features]
+default = []
+bench-support = []
+
 [dependencies]
 recite-core.workspace = true
 recite-parser.workspace = true

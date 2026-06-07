@@ -1049,6 +1049,7 @@ dependencies = [
  "recite-compiler",
  "recite-core",
  "recite-fixturegen",
+ "recite-lsp",
  "recite-parser",
  "recite-runtime",
  "serde",

@@ -27,6 +27,7 @@ pub mod catalog;
 pub mod compiler;
 pub mod fixture_context;
 pub mod id_metrics;
+pub mod lsp;
 pub mod project;
 pub mod runtime;
 pub mod scale;

@@ -33,6 +33,7 @@ recite-core = { version = "0.0.1", path = "crates/recite-core" }
 recite-parser = { version = "0.0.1", path = "crates/recite-parser" }
 recite-compiler = { version = "0.0.1", path = "crates/recite-compiler" }
 recite-fixturegen = { version = "0.0.1", path = "crates/recite-fixturegen" }
+recite-lsp = { version = "0.0.1", path = "crates/recite-lsp" }
 recite-runtime = { version = "0.0.1", path = "crates/recite-runtime" }
 blake3 = "1.8.5"
 clap = { version = "4.5.51", features = ["derive", "string"] }
