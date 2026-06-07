@@ -61,20 +61,21 @@ impl<'a> TraversalDriver<'a> {
     }
 
     pub fn session_before_first_line(&self) -> BenchmarkResult<DialogueSession> {
-        start_scene(self.asset, Some("block_00001")).map_err(Into::into)
+        start_scene(self.asset, Some(self.fixture.first_line_block().as_str())).map_err(Into::into)
     }
 
     pub fn localised_session_before_first_line(&self) -> BenchmarkResult<DialogueSession> {
         start_scene_with_options(
             self.asset,
-            Some("block_00001"),
+            Some(self.fixture.first_line_block().as_str()),
             DialogueSessionOptions::new().with_locale(self.fixture.locale()),
         )
         .map_err(Into::into)
     }
 
     pub fn session_before_first_prompt(&self) -> BenchmarkResult<DialogueSession> {
-        start_scene(self.asset, Some("block_00002")).map_err(Into::into)
+        start_scene(self.asset, Some(self.fixture.first_prompt_block().as_str()))
+            .map_err(Into::into)
     }
 
     pub fn session_before_condition_prompt(&self) -> BenchmarkResult<DialogueSession> {
@@ -97,7 +98,11 @@ impl<'a> TraversalDriver<'a> {
     }
 
     pub fn session_before_deferred_effect(&self) -> BenchmarkResult<DialogueSession> {
-        start_scene(self.asset, Some("block_00007")).map_err(Into::into)
+        start_scene(
+            self.asset,
+            Some(self.fixture.deferred_effect_block().as_str()),
+        )
+        .map_err(Into::into)
     }
 
     pub fn next_line(&self, session: &mut DialogueSession) -> BenchmarkResult<DialogueEvent> {
@@ -111,7 +116,9 @@ impl<'a> TraversalDriver<'a> {
     }
 
     pub fn choose_first(&self, session: &mut DialogueSession) -> BenchmarkResult<DialogueEvent> {
-        let choice = self.fixture.choice_for_line("line_00000_000")?;
+        let choice = self
+            .fixture
+            .choice_for_line(self.fixture.choice_anchor_line().as_str())?;
         choose(self.asset, session, choice, self.fixture).map_err(Into::into)
     }
 

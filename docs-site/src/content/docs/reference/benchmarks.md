@@ -4,8 +4,8 @@ description: Commands and policy for Recite benchmark smoke checks and regressio
 ---
 
 Recite benchmarks live in `crates/recite-benchmarks` and use Criterion against
-the shared synthetic fixture profiles. The suite is split into explicit compiler
-and runtime bench targets.
+the shared synthetic fixture profiles and checked-in realistic fixture packs.
+The suite is split into explicit compiler and runtime bench targets.
 
 ## Fast smoke
 
@@ -43,6 +43,13 @@ them:
 ```bash
 RECITE_BENCH_SCALES=medium cargo bench -p recite-benchmarks
 RECITE_BENCH_SCALES=large,epic cargo bench -p recite-benchmarks -- --sample-size 10
+```
+
+The same selector also accepts checked-in realistic packs:
+
+```bash
+RECITE_BENCH_SCALES=realistic:v1-pack cargo bench -p recite-benchmarks
+RECITE_BENCH_SCALES=tiny,realistic:v1-pack cargo bench -p recite-benchmarks
 ```
 
 Target one side of the suite when isolating a change:

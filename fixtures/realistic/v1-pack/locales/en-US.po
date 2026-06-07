@@ -1,0 +1,83 @@
+msgctxt "11111111111111111111"
+msgid "LACUNA comes through the carrier in winter static, saying the minister was dead before the train arrived."
+msgstr "LACUNA comes through the carrier in winter static, saying the minister was dead before the train arrived."
+
+msgctxt "21111111111111111111"
+msgid "Ask her to wait while you thread the wire recording."
+msgstr "Ask her to wait while you thread the wire recording."
+
+msgctxt "21111111111111111112"
+msgid "Let LACUNA give the account in her own order."
+msgstr "Let LACUNA give the account in her own order."
+
+msgctxt "21111111111111111113"
+msgid "Set the radiocomputer to compare the station clocks."
+msgstr "Set the radiocomputer to compare the station clocks."
+
+msgctxt "11111111111111111113"
+msgid "The wire carries a second breath beneath hers, too regular to be fear."
+msgstr "The wire carries a second breath beneath hers, too regular to be fear."
+
+msgctxt "11111111111111111117"
+msgid "OPERATOR, you know my silences. This one was bought, not chosen."
+msgstr "OPERATOR, you know my silences. This one was bought, not chosen."
+
+msgctxt "1111111111111111111a"
+msgid "You can hear her, or you can hear the evidence that refuses her."
+msgstr "You can hear her, or you can hear the evidence that refuses her."
+
+msgctxt "1111111111111111111b"
+msgid "Clock notice: Meridian Station reports minute zero before the embassy relay."
+msgstr "Clock notice: Meridian Station reports minute zero before the embassy relay."
+
+msgctxt "1111111111111111111c"
+msgid "Wire notice: the recorder head was reversed after the first spoken name."
+msgstr "Wire notice: the recorder head was reversed after the first spoken name."
+
+msgctxt "1111111111111111111d"
+msgid "Seal notice: diplomatic wax contains railway grit from the eastern loop."
+msgstr "Seal notice: diplomatic wax contains railway grit from the eastern loop."
+
+msgctxt "1111111111111111111e"
+msgid "Clerk notice: the station log omits one passenger with military clearance."
+msgstr "Clerk notice: the station log omits one passenger with military clearance."
+
+msgctxt "1111111111111111111f"
+msgid "Cipher notice: LACUNA's card answers to a bureau key retired in 1919."
+msgstr "Cipher notice: LACUNA's card answers to a bureau key retired in 1919."
+
+msgctxt "11111111111111111120"
+msgid "The lamps sort the night into proofs, but none of them say why she called."
+msgstr "The lamps sort the night into proofs, but none of them say why she called."
+
+msgctxt "11111111111111111121"
+msgid "I can burn the comparison to oxide tape, but the console will demand your cipher key."
+msgstr "I can burn the comparison to oxide tape, but the console will demand your cipher key."
+
+msgctxt "11111111111111111122"
+msgid "The case is no longer clean, only legible."
+msgstr "The case is no longer clean, only legible."
+
+msgctxt "11111111111111111123"
+msgid "Deferred comparison queued for the Lamplight file."
+msgstr "Deferred comparison queued for the Lamplight file."
+
+msgctxt "dialogue_speaker:analyst"
+msgid "Analyst"
+msgstr "Analyst"
+
+msgctxt "dialogue_speaker:lacuna"
+msgid "LACUNA"
+msgstr "LACUNA"
+
+msgctxt "dialogue_speaker:narrator"
+msgid "Narrator"
+msgstr "Narrator"
+
+msgctxt "dialogue_speaker:operator"
+msgid "OPERATOR"
+msgstr "OPERATOR"
+
+msgctxt "dialogue_speaker:radiocomputer"
+msgid "Radiocomputer"
+msgstr "Radiocomputer"

@@ -5,7 +5,7 @@ use criterion::{BatchSize, BenchmarkId, Criterion, criterion_group, criterion_ma
 use recite_benchmarks::compiler::CompilerProject;
 use recite_benchmarks::project::BenchmarkProject;
 use recite_benchmarks::runtime::RuntimeProject;
-use recite_benchmarks::{BenchmarkResult, BenchmarkScale};
+use recite_benchmarks::{BenchmarkFixture, BenchmarkResult};
 
 fn runtime_benchmarks(criterion: &mut Criterion) {
     for fixture in load_runtime_projects() {
@@ -28,7 +28,7 @@ fn bench_start_scene(criterion: &mut Criterion, fixture: &RuntimeFixture) {
     criterion
         .benchmark_group("runtime/start_scene")
         .bench_function(
-            BenchmarkId::from_parameter(fixture.scale.as_str()),
+            BenchmarkId::from_parameter(fixture.fixture.as_str()),
             |bencher| {
                 let driver = fixture.project.driver();
                 bencher.iter(|| black_box(must(driver.start_scene())));
@@ -40,7 +40,7 @@ fn bench_next_line(criterion: &mut Criterion, fixture: &RuntimeFixture) {
     criterion
         .benchmark_group("runtime/next_line")
         .bench_function(
-            BenchmarkId::from_parameter(fixture.scale.as_str()),
+            BenchmarkId::from_parameter(fixture.fixture.as_str()),
             |bencher| {
                 let driver = fixture.project.driver();
                 bencher.iter_batched(
@@ -56,7 +56,7 @@ fn bench_next_prompt(criterion: &mut Criterion, fixture: &RuntimeFixture) {
     criterion
         .benchmark_group("runtime/next_prompt")
         .bench_function(
-            BenchmarkId::from_parameter(fixture.scale.as_str()),
+            BenchmarkId::from_parameter(fixture.fixture.as_str()),
             |bencher| {
                 let driver = fixture.project.driver();
                 bencher.iter_batched(
@@ -72,7 +72,7 @@ fn bench_choose_first(criterion: &mut Criterion, fixture: &RuntimeFixture) {
     criterion
         .benchmark_group("runtime/choose_first")
         .bench_function(
-            BenchmarkId::from_parameter(fixture.scale.as_str()),
+            BenchmarkId::from_parameter(fixture.fixture.as_str()),
             |bencher| {
                 let driver = fixture.project.driver();
                 bencher.iter_batched(
@@ -88,7 +88,7 @@ fn bench_condition_dispatch(criterion: &mut Criterion, fixture: &RuntimeFixture)
     criterion
         .benchmark_group("runtime/condition_dispatch")
         .bench_function(
-            BenchmarkId::from_parameter(fixture.scale.as_str()),
+            BenchmarkId::from_parameter(fixture.fixture.as_str()),
             |bencher| {
                 let driver = fixture.project.driver();
                 bencher.iter_batched(
@@ -106,7 +106,7 @@ fn bench_effect_immediate(criterion: &mut Criterion, fixture: &RuntimeFixture) {
     criterion
         .benchmark_group("runtime/effect_immediate")
         .bench_function(
-            BenchmarkId::from_parameter(fixture.scale.as_str()),
+            BenchmarkId::from_parameter(fixture.fixture.as_str()),
             |bencher| {
                 let driver = fixture.project.driver();
                 bencher.iter_batched(
@@ -122,7 +122,7 @@ fn bench_effect_deferred(criterion: &mut Criterion, fixture: &RuntimeFixture) {
     criterion
         .benchmark_group("runtime/effect_deferred")
         .bench_function(
-            BenchmarkId::from_parameter(fixture.scale.as_str()),
+            BenchmarkId::from_parameter(fixture.fixture.as_str()),
             |bencher| {
                 let driver = fixture.project.driver();
                 bencher.iter_batched(
@@ -138,7 +138,7 @@ fn bench_effect_blocking_ack(criterion: &mut Criterion, fixture: &RuntimeFixture
     criterion
         .benchmark_group("runtime/effect_blocking_ack")
         .bench_function(
-            BenchmarkId::from_parameter(fixture.scale.as_str()),
+            BenchmarkId::from_parameter(fixture.fixture.as_str()),
             |bencher| {
                 let driver = fixture.project.driver();
                 bencher.iter_batched(
@@ -161,7 +161,7 @@ fn bench_localised_next(criterion: &mut Criterion, fixture: &RuntimeFixture) {
     criterion
         .benchmark_group("runtime/localised_next")
         .bench_function(
-            BenchmarkId::from_parameter(fixture.scale.as_str()),
+            BenchmarkId::from_parameter(fixture.fixture.as_str()),
             |bencher| {
                 let driver = fixture.project.driver();
                 bencher.iter_batched(
@@ -177,7 +177,7 @@ fn bench_session_encode(criterion: &mut Criterion, fixture: &RuntimeFixture) {
     criterion
         .benchmark_group("runtime/session_encode")
         .bench_function(
-            BenchmarkId::from_parameter(fixture.scale.as_str()),
+            BenchmarkId::from_parameter(fixture.fixture.as_str()),
             |bencher| {
                 let driver = fixture.project.driver();
                 bencher.iter_batched(
@@ -193,7 +193,7 @@ fn bench_session_decode(criterion: &mut Criterion, fixture: &RuntimeFixture) {
     criterion
         .benchmark_group("runtime/session_decode")
         .bench_function(
-            BenchmarkId::from_parameter(fixture.scale.as_str()),
+            BenchmarkId::from_parameter(fixture.fixture.as_str()),
             |bencher| {
                 let driver = fixture.project.driver();
                 let bytes = must(driver.encoded_prompt_session());
@@ -210,7 +210,7 @@ fn bench_full_traversal(criterion: &mut Criterion, fixture: &RuntimeFixture) {
     criterion
         .benchmark_group("runtime/full_traversal")
         .bench_function(
-            BenchmarkId::from_parameter(fixture.scale.as_str()),
+            BenchmarkId::from_parameter(fixture.fixture.as_str()),
             |bencher| {
                 let driver = fixture.project.driver();
                 bencher.iter(|| black_box(must(driver.full_traversal())));
@@ -220,7 +220,7 @@ fn bench_full_traversal(criterion: &mut Criterion, fixture: &RuntimeFixture) {
 
 #[derive(Clone)]
 struct RuntimeFixture {
-    scale: BenchmarkScale,
+    fixture: BenchmarkFixture,
     project: RuntimeProject,
 }
 
@@ -229,15 +229,15 @@ fn load_runtime_projects() -> Vec<RuntimeFixture> {
 }
 
 fn load_runtime_projects_result() -> BenchmarkResult<Vec<RuntimeFixture>> {
-    BenchmarkScale::selected_from_env()?
+    BenchmarkFixture::selected_from_env()?
         .into_iter()
-        .map(|scale| {
-            let project = BenchmarkProject::load(scale)?;
+        .map(|fixture| {
+            let project = BenchmarkProject::load_fixture(fixture)?;
             let compiler = CompilerProject::load(&project)?;
             let compiled = compiler.compile_with_schema()?;
             let runtime = RuntimeProject::load(&project, &compiled)?;
             Ok(RuntimeFixture {
-                scale,
+                fixture,
                 project: runtime,
             })
         })

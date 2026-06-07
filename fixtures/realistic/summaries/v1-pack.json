@@ -1,0 +1,63 @@
+{
+  "name": "v1-pack",
+  "fixture": "realistic:v1-pack",
+  "counts": {
+    "source_files": 5,
+    "schema_files": 1,
+    "runtime_fixtures": 1,
+    "locale_catalogs": 1,
+    "recite_lines": 104,
+    "dialogue_lines": 19,
+    "choices": 12,
+    "effects": 8,
+    "conditions": 7
+  },
+  "bytes": 13700,
+  "files": [
+    {
+      "path": "locales/en-US.po",
+      "bytes": 3313,
+      "blake3": "2137cf1c127304c9e0f9384934a7c41e526d49c1e44c432495356b943a27e3a1"
+    },
+    {
+      "path": "recite.project.toml",
+      "bytes": 138,
+      "blake3": "0334c339b8a0883a3d6de6fb612c1d65825d425c43d0642471f6629ab3eb36d9"
+    },
+    {
+      "path": "runtime-fixture.toml",
+      "bytes": 794,
+      "blake3": "fba459dccffb381a65f565fefc13a5690a986a6545f0b1c86e0130198390f78c"
+    },
+    {
+      "path": "schema/realistic.schema.json",
+      "bytes": 2941,
+      "blake3": "e53c6828e9a81d04e556e63c240f614b4571356a6efb3a7fced041236a5e087a"
+    },
+    {
+      "path": "src/arrival.recite",
+      "bytes": 1162,
+      "blake3": "4d193939e438b3087d214e37e0fe687e5c5992037020939d74cd7571d6ecc410"
+    },
+    {
+      "path": "src/effects.recite",
+      "bytes": 932,
+      "blake3": "74b0ef8afaf43e4fc43c56ad5fa4f672d63b3cf8f26ca866879064ebbb3a0a8a"
+    },
+    {
+      "path": "src/localization.recite",
+      "bytes": 1583,
+      "blake3": "d4e13ac40294e66b9c3727df8b36b86fd9f93c9fb14d0831765e6cd7f2591633"
+    },
+    {
+      "path": "src/objects.recite",
+      "bytes": 1445,
+      "blake3": "1e6095e7490d19804ba11cd227a3d0475dbd683b4859213d932b20f338ce842d"
+    },
+    {
+      "path": "src/relationships.recite",
+      "bytes": 1392,
+      "blake3": "3696d358f161dd7f4c4f1d91232876de6863f6f1f61dd3bb3880ce0fc5c0dd9d"
+    }
+  ]
+}

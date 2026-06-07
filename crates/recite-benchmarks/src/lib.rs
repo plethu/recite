@@ -31,7 +31,7 @@ pub mod project;
 pub mod runtime;
 pub mod scale;
 
-pub use scale::BenchmarkScale;
+pub use scale::{BenchmarkFixture, BenchmarkScale};
 
 #[derive(Debug, thiserror::Error)]
 pub enum BenchmarkError {

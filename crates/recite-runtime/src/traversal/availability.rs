@@ -155,7 +155,7 @@ fn evaluate_availability_group(
     }
 
     let is_available = !any_failed;
-    let reason_tree = (!is_available && !failed_children.is_empty()).then(|| match group {
+    let reason_tree = (!is_available && !failed_children.is_empty()).then_some(match group {
         AvailabilityGroup::All => ChoiceAvailabilityReasonTree::All(failed_children),
         AvailabilityGroup::Any => ChoiceAvailabilityReasonTree::Any(failed_children),
     });

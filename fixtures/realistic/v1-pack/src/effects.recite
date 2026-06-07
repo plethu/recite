@@ -1,0 +1,17 @@
+:: effects speaker=narrator scene="effects" beat="resolution"
+! immediate play_sfx(dial_return)
+> effects_line@11111111111111111121 speaker=analyst portrait="ready" camera="close"
+  I can burn the comparison to oxide tape, but the console will demand your cipher key.
+! deferred advance_quest(missing_train, confirmed)
+! blocking grant_item(oxide_tape)
+> effects_prompt@11111111111111111122 speaker=operator portrait="resolved" beat="choice"
+  The case is no longer clean, only legible.
+  ? finish_watch@2111111111111111111c quest=case_lamplight tone="resolved" sfx=carrier_tone
+    Seal the Lamplight file and keep LACUNA on the line.
+    -> END
+
+:: deferred_anchor speaker=narrator scene="effects" beat="deferred_anchor"
+! deferred advance_quest(missing_train, confirmed)
+> deferred_anchor_line@11111111111111111123 speaker=radiocomputer portrait="lamp" camera="insert"
+  Deferred comparison queued for the Lamplight file.
+-> END

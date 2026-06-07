@@ -1,0 +1,24 @@
+:: objects speaker=analyst scene="evidence" beat="inspection"
+> lantern_line@11111111111111111113 speaker=analyst portrait="tired" object=wire_recorder
+  The wire carries a second breath beneath hers, too regular to be fear.
+  ? turn_shutter@21111111111111111114 object=wire_recorder tone="clinical" sfx=tape_hiss
+    Mark the breath pattern and compare it against the station switchboard.
+    -> crate_check
+  ? copy_markings@21111111111111111115 object=cipher_card tone="careful" requires=(has_item(station_log))
+    Match the cipher card to the night clerk's station log.
+    -> terminal_check
+
+:: crate_check speaker=narrator scene="evidence" beat="seal"
+:if has_item(cipher_key)
+  > crate_open@11111111111111111114 speaker=analyst portrait="working" object=transit_seal
+    The cipher key opens the seal record; the ink is fresh where history should be dry.
+  ! deferred record_object(transit_seal)
+> crate_note@11111111111111111115 object=transit_seal
+  The transit seal places LACUNA south of the platform when the shot was logged north.
+-> src/relationships.recite::relationships
+
+:: terminal_check speaker=radiocomputer scene="evidence" beat="console"
+> terminal_line@11111111111111111116 speaker=radiocomputer portrait="lamp" object=radiocomputer_console
+  Chronology variance: one confession, two clock pulses, no matching departure whistle.
+! blocking open_interface(radiocomputer_console)
+-> src/relationships.recite::relationships

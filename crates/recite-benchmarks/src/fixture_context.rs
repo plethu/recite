@@ -1,5 +1,6 @@
 use std::collections::BTreeMap;
 
+use recite_core::{BlockId, LineId};
 use recite_core::{ChoiceId, LocaleId};
 use recite_runtime::{
     ConditionArgument, ConditionEvaluationError, ConditionQuery, ConditionValue, DialogueContext,
@@ -14,6 +15,7 @@ pub struct RuntimeFixture {
     catalogs: BTreeMap<String, Vec<String>>,
     conditions: BTreeMap<String, ConditionValue>,
     choices: BTreeMap<String, ChoiceId>,
+    anchors: RuntimeAnchors,
     auto_ack_blocking: bool,
 }
 
@@ -34,6 +36,7 @@ impl RuntimeFixture {
             catalogs: raw.dialogue.catalogs,
             conditions,
             choices,
+            anchors: RuntimeAnchors::try_from(raw.anchors)?,
             auto_ack_blocking: raw.effects.auto_ack_blocking,
         })
     }
@@ -63,6 +66,22 @@ impl RuntimeFixture {
                 "runtime fixture has no choice for line `{line_id}`"
             ))
         })
+    }
+
+    pub fn choice_anchor_line(&self) -> &LineId {
+        &self.anchors.choice_anchor_line
+    }
+
+    pub fn first_line_block(&self) -> &BlockId {
+        &self.anchors.first_line_block
+    }
+
+    pub fn first_prompt_block(&self) -> &BlockId {
+        &self.anchors.first_prompt_block
+    }
+
+    pub fn deferred_effect_block(&self) -> &BlockId {
+        &self.anchors.deferred_effect_block
     }
 
     #[must_use]
@@ -101,6 +120,8 @@ struct RawRuntimeFixture {
     #[serde(default)]
     choices: BTreeMap<String, String>,
     #[serde(default)]
+    anchors: RawRuntimeAnchors,
+    #[serde(default)]
     effects: RawEffectsFixture,
 }
 
@@ -115,6 +136,66 @@ struct RawDialogueFixture {
 struct RawEffectsFixture {
     #[serde(default)]
     auto_ack_blocking: bool,
+}
+
+#[derive(Debug, Deserialize)]
+struct RawRuntimeAnchors {
+    #[serde(default = "default_choice_anchor_line")]
+    choice_anchor_line: String,
+    #[serde(default = "default_first_line_block")]
+    first_line_block: String,
+    #[serde(default = "default_first_prompt_block")]
+    first_prompt_block: String,
+    #[serde(default = "default_deferred_effect_block")]
+    deferred_effect_block: String,
+}
+
+impl Default for RawRuntimeAnchors {
+    fn default() -> Self {
+        Self {
+            choice_anchor_line: default_choice_anchor_line(),
+            first_line_block: default_first_line_block(),
+            first_prompt_block: default_first_prompt_block(),
+            deferred_effect_block: default_deferred_effect_block(),
+        }
+    }
+}
+
+#[derive(Clone, Debug)]
+struct RuntimeAnchors {
+    choice_anchor_line: LineId,
+    first_line_block: BlockId,
+    first_prompt_block: BlockId,
+    deferred_effect_block: BlockId,
+}
+
+impl TryFrom<RawRuntimeAnchors> for RuntimeAnchors {
+    type Error = recite_core::CoreValueError;
+
+    fn try_from(raw: RawRuntimeAnchors) -> Result<Self, Self::Error> {
+        Ok(Self {
+            choice_anchor_line: LineId::new(raw.choice_anchor_line)?,
+            first_line_block: BlockId::new(raw.first_line_block)?,
+            first_prompt_block: BlockId::new(raw.first_prompt_block)?,
+            deferred_effect_block: BlockId::new(raw.deferred_effect_block)?,
+        })
+    }
+}
+
+fn default_choice_anchor_line() -> String {
+    "line_00000_000".to_owned()
+}
+
+fn default_first_line_block() -> String {
+    "block_00001".to_owned()
+}
+
+fn default_first_prompt_block() -> String {
+    "block_00002".to_owned()
+}
+
+fn default_deferred_effect_block() -> String {
+    "block_00007".to_owned()
 }
 
 #[derive(Debug, Deserialize)]

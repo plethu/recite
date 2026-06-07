@@ -1,0 +1,7 @@
+[project]
+name = "realistic-v1-pack"
+schema = "schema/realistic.schema.json"
+
+[locales]
+default = "en-US"
+catalogs = ["locales/en-US.po"]

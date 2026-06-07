@@ -1,0 +1,22 @@
+:: relationships speaker=lacuna scene="interrogation" beat="pressure"
+:match relationship(operator, lacuna)
+  :case trusted
+    > trusted_line@11111111111111111117 speaker=lacuna portrait="steady" camera="two_shot"
+      OPERATOR, you know my silences. This one was bought, not chosen.
+  :case steady
+    > steady_line@11111111111111111118 speaker=lacuna portrait="guarded" camera="two_shot"
+      If you want the truth, stop making the machine ask before you do.
+  :case cold
+    > strained_line@11111111111111111119 speaker=lacuna portrait="closed" camera="two_shot"
+      Then file me with the other useful lies and be done.
+> relationship_prompt@1111111111111111111a speaker=operator portrait="still" beat="choice"
+  You can hear her, or you can hear the evidence that refuses her.
+  ? press_manifest@21111111111111111116 quest=missing_train tone="firm" requires=(trust_at_least(operator, lacuna, 2))
+    Press the missing train report against her timeline.
+    -> src/localization.recite::localization
+  ? honor_promise@21111111111111111117 quest=operator_oath tone="low" requires=(trust_at_least(operator, lacuna, 2))
+    Let the old field oath stand for one more answer.
+    -> src/localization.recite::localization
+  ? move_on@21111111111111111118 quest=case_lamplight tone="cold"
+    Stop listening and run the case by instruments alone.
+    -> src/localization.recite::localization

@@ -2,18 +2,30 @@ use std::fs;
 use std::path::{Path, PathBuf};
 
 use recite_fixturegen::{FixtureConfigSet, FixtureSummary, write_project};
+use serde::Deserialize;
 
-use crate::{BenchmarkResult, BenchmarkScale, error};
+use crate::{BenchmarkFixture, BenchmarkResult, BenchmarkScale, error};
 
 #[derive(Clone, Debug)]
 pub struct BenchmarkProject {
-    scale: BenchmarkScale,
+    fixture: BenchmarkFixture,
     root: PathBuf,
-    summary: FixtureSummary,
+    summary: ProjectSummary,
 }
 
 impl BenchmarkProject {
     pub fn load(scale: BenchmarkScale) -> BenchmarkResult<Self> {
+        Self::load_fixture(BenchmarkFixture::Synthetic(scale))
+    }
+
+    pub fn load_fixture(fixture: BenchmarkFixture) -> BenchmarkResult<Self> {
+        match fixture {
+            BenchmarkFixture::Synthetic(scale) => Self::load_synthetic(scale),
+            BenchmarkFixture::RealisticV1Pack => Self::load_realistic_v1_pack(),
+        }
+    }
+
+    fn load_synthetic(scale: BenchmarkScale) -> BenchmarkResult<Self> {
         let workspace = workspace_root();
         let profiles =
             FixtureConfigSet::load_path(&workspace.join("fixtures/synthetic/profiles.toml"))?;
@@ -41,15 +53,42 @@ impl BenchmarkProject {
 
         verify_summary_files(&root, &expected)?;
         Ok(Self {
-            scale,
+            fixture: BenchmarkFixture::Synthetic(scale),
             root,
-            summary: expected,
+            summary: ProjectSummary::Synthetic(expected),
+        })
+    }
+
+    fn load_realistic_v1_pack() -> BenchmarkResult<Self> {
+        let workspace = workspace_root();
+        let root = workspace.join("fixtures/realistic/v1-pack");
+        let summary = read_realistic_summary(&workspace, "v1-pack")?;
+        verify_realistic_summary_files(&root, &summary)?;
+        Ok(Self {
+            fixture: BenchmarkFixture::RealisticV1Pack,
+            root,
+            summary: ProjectSummary::Realistic(summary),
         })
     }
 
     #[must_use]
     pub fn scale(&self) -> BenchmarkScale {
-        self.scale
+        match self.fixture {
+            BenchmarkFixture::Synthetic(scale) => scale,
+            BenchmarkFixture::RealisticV1Pack => {
+                panic!("realistic benchmark fixtures do not have a synthetic scale")
+            }
+        }
+    }
+
+    #[must_use]
+    pub fn fixture(&self) -> BenchmarkFixture {
+        self.fixture
+    }
+
+    #[must_use]
+    pub fn fixture_label(&self) -> &'static str {
+        self.fixture.as_str()
     }
 
     #[must_use]
@@ -59,7 +98,20 @@ impl BenchmarkProject {
 
     #[must_use]
     pub fn summary(&self) -> &FixtureSummary {
-        &self.summary
+        match &self.summary {
+            ProjectSummary::Synthetic(summary) => summary,
+            ProjectSummary::Realistic(_) => {
+                panic!("realistic benchmark fixtures do not use synthetic fixture summaries")
+            }
+        }
+    }
+
+    #[must_use]
+    pub fn realistic_summary(&self) -> Option<&RealisticFixtureSummary> {
+        match &self.summary {
+            ProjectSummary::Synthetic(_) => None,
+            ProjectSummary::Realistic(summary) => Some(summary),
+        }
     }
 
     pub fn source_files(&self) -> BenchmarkResult<Vec<ProjectFile>> {
@@ -79,12 +131,51 @@ impl BenchmarkProject {
     }
 
     pub fn schema_file(&self) -> BenchmarkResult<ProjectFile> {
-        read_project_file(self.root(), self.root.join("schema/synthetic.schema.json"))
+        let schema_name = match self.fixture {
+            BenchmarkFixture::Synthetic(_) => "synthetic.schema.json",
+            BenchmarkFixture::RealisticV1Pack => "realistic.schema.json",
+        };
+        read_project_file(self.root(), self.root.join("schema").join(schema_name))
     }
 
     pub fn runtime_fixture_source(&self) -> BenchmarkResult<String> {
         fs::read_to_string(self.root.join("runtime-fixture.toml")).map_err(Into::into)
     }
+}
+
+#[derive(Clone, Debug)]
+enum ProjectSummary {
+    Synthetic(FixtureSummary),
+    Realistic(RealisticFixtureSummary),
+}
+
+#[derive(Clone, Debug, Deserialize, Eq, PartialEq)]
+pub struct RealisticFixtureSummary {
+    pub name: String,
+    pub fixture: String,
+    pub counts: RealisticFixtureCounts,
+    pub bytes: u64,
+    pub files: Vec<RealisticFixtureFile>,
+}
+
+#[derive(Clone, Debug, Deserialize, Eq, PartialEq)]
+pub struct RealisticFixtureCounts {
+    pub source_files: u64,
+    pub schema_files: u64,
+    pub runtime_fixtures: u64,
+    pub locale_catalogs: u64,
+    pub recite_lines: u64,
+    pub dialogue_lines: u64,
+    pub choices: u64,
+    pub effects: u64,
+    pub conditions: u64,
+}
+
+#[derive(Clone, Debug, Deserialize, Eq, PartialEq)]
+pub struct RealisticFixtureFile {
+    pub path: String,
+    pub bytes: u64,
+    pub blake3: String,
 }
 
 #[derive(Clone, Debug, Eq, PartialEq)]
@@ -125,6 +216,48 @@ fn verify_summary_files(root: &Path, summary: &FixtureSummary) -> BenchmarkResul
                 path.display()
             )));
         }
+    }
+    Ok(())
+}
+
+fn read_realistic_summary(
+    workspace: &Path,
+    name: &str,
+) -> BenchmarkResult<RealisticFixtureSummary> {
+    let source = fs::read_to_string(
+        workspace
+            .join("fixtures/realistic/summaries")
+            .join(format!("{name}.json")),
+    )?;
+    serde_json::from_str(&source).map_err(|json_error| {
+        error(format!(
+            "failed to read checked realistic `{name}` fixture summary: {json_error}"
+        ))
+    })
+}
+
+fn verify_realistic_summary_files(
+    root: &Path,
+    summary: &RealisticFixtureSummary,
+) -> BenchmarkResult<()> {
+    let mut total_bytes = 0;
+    for file in &summary.files {
+        let path = root.join(&file.path);
+        let bytes = fs::read(&path)?;
+        let hash = blake3::hash(&bytes).to_hex().to_string();
+        if bytes.len() as u64 != file.bytes || hash != file.blake3 {
+            return Err(error(format!(
+                "realistic fixture file `{}` does not match checked summary",
+                path.display()
+            )));
+        }
+        total_bytes += file.bytes;
+    }
+    if total_bytes != summary.bytes {
+        return Err(error(format!(
+            "realistic fixture byte total is {total_bytes}, expected {}",
+            summary.bytes
+        )));
     }
     Ok(())
 }
