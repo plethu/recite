@@ -1066,6 +1066,7 @@ dependencies = [
  "fluent-bundle",
  "notify",
  "ratatui",
+ "recite-benchmarks",
  "recite-compiler",
  "recite-core",
  "recite-parser",
