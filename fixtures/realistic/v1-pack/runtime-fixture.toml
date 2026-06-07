@@ -5,9 +5,9 @@ en-US = ["locales/en-US.po"]
 
 [anchors]
 choice_anchor_line = "11111111111111111111"
-first_line_block = "objects"
-first_prompt_block = "relationships"
-deferred_effect_block = "effects"
+first_line_block = "arrival_return"
+first_prompt_block = "objects"
+deferred_effect_block = "deferred_anchor"
 
 [conditions]
 "has_item(cipher_key)" = true

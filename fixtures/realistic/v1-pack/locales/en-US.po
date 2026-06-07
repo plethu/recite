@@ -58,6 +58,10 @@ msgctxt "11111111111111111122"
 msgid "The case is no longer clean, only legible."
 msgstr "The case is no longer clean, only legible."
 
+msgctxt "11111111111111111123"
+msgid "Deferred comparison queued for the Lamplight file."
+msgstr "Deferred comparison queued for the Lamplight file."
+
 msgctxt "dialogue_speaker:analyst"
 msgid "Analyst"
 msgstr "Analyst"

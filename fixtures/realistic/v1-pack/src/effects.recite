@@ -9,3 +9,9 @@
   ? finish_watch@2111111111111111111c quest=case_lamplight tone="resolved" sfx=carrier_tone
     Seal the Lamplight file and keep LACUNA on the line.
     -> END
+
+:: deferred_anchor speaker=narrator scene="effects" beat="deferred_anchor"
+! deferred advance_quest(missing_train, confirmed)
+> deferred_anchor_line@11111111111111111123 speaker=radiocomputer portrait="lamp" camera="insert"
+  Deferred comparison queued for the Lamplight file.
+-> END

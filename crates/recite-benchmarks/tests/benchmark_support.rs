@@ -95,6 +95,20 @@ fn realistic_v1_pack_compiles_extracts_catalog_and_traverses()
     assert!(compiled.asset().dialogue.effects.len() >= 6);
 
     let runtime = RuntimeProject::load(&project, &compiled)?;
+    let driver = runtime.driver();
+
+    let mut line_session = driver.session_before_first_line()?;
+    let _line = driver.next_line(&mut line_session)?;
+
+    let mut localised_session = driver.localised_session_before_first_line()?;
+    let _localised_line = driver.localised_next(&mut localised_session)?;
+
+    let mut prompt_session = driver.session_before_first_prompt()?;
+    let _prompt = driver.next_prompt(&mut prompt_session)?;
+
+    let mut deferred_session = driver.session_before_deferred_effect()?;
+    let _deferred = driver.deferred_effect(&mut deferred_session)?;
+
     let first = runtime.driver().full_traversal()?;
     let second = runtime.driver().full_traversal()?;
     assert_eq!(first, second);

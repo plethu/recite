@@ -6,18 +6,18 @@
     "schema_files": 1,
     "runtime_fixtures": 1,
     "locale_catalogs": 1,
-    "recite_lines": 98,
-    "dialogue_lines": 18,
+    "recite_lines": 104,
+    "dialogue_lines": 19,
     "choices": 12,
-    "effects": 7,
+    "effects": 8,
     "conditions": 7
   },
-  "bytes": 13255,
+  "bytes": 13700,
   "files": [
     {
       "path": "locales/en-US.po",
-      "bytes": 3162,
-      "blake3": "8adf227360caddf34450580a0ab48363f74e66b3d2ceb87a85140f8bad20a0ae"
+      "bytes": 3313,
+      "blake3": "2137cf1c127304c9e0f9384934a7c41e526d49c1e44c432495356b943a27e3a1"
     },
     {
       "path": "recite.project.toml",
@@ -26,8 +26,8 @@
     },
     {
       "path": "runtime-fixture.toml",
-      "bytes": 785,
-      "blake3": "f1901913b37835be63fb4c08b625f3d79407aa8f0a06fae954bf0ee6ebf90066"
+      "bytes": 794,
+      "blake3": "fba459dccffb381a65f565fefc13a5690a986a6545f0b1c86e0130198390f78c"
     },
     {
       "path": "schema/realistic.schema.json",
@@ -41,8 +41,8 @@
     },
     {
       "path": "src/effects.recite",
-      "bytes": 647,
-      "blake3": "05fb568929d9b79976fd20c22d9e513ac781ade6aced4545e22c4df5f20525a3"
+      "bytes": 932,
+      "blake3": "74b0ef8afaf43e4fc43c56ad5fa4f672d63b3cf8f26ca866879064ebbb3a0a8a"
     },
     {
       "path": "src/localization.recite",
