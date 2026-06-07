@@ -1,12 +1,12 @@
 use recite_core::{
-    Block, Choice, ConditionCall, ConditionExpression, DivertTarget, Effect, IfBranch, Line,
-    MatchBranch, SourceFile, SourceId, SourceMetadata, SourcePosition, SourceSpan, Statement,
+    Block, Choice, ConditionCall, ConditionExpression, DivertTarget, Effect, EffectMode, IfBranch,
+    Line, MatchBranch, SourceFile, SourceId, SourceMetadata, SourcePosition, SourceSpan, Statement,
     is_valid_source_label,
 };
 
 use super::{
-    BlockReferenceSummary, FunctionReferenceSummary, MetadataKeySummary, MissingIdInsertion,
-    MissingIdKind, MissingIdSummary, SpannedName,
+    BlockReferenceSummary, FunctionReferenceKind, FunctionReferenceSummary, MetadataKeySummary,
+    MissingIdInsertion, MissingIdKind, MissingIdSummary, SpannedName,
 };
 
 #[derive(Default)]
@@ -108,7 +108,7 @@ impl FileSummaryCollector {
         }
         self.collect_metadata(&choice.metadata);
         if let Some(requirement) = &choice.availability_requirement {
-            self.collect_condition_expression(&requirement.condition);
+            self.collect_bool_condition_expression(&requirement.condition);
         }
         if let Some(target) = &choice.target {
             self.collect_divert_target(&target.target, &target.span);
@@ -148,7 +148,7 @@ impl FileSummaryCollector {
     }
 
     fn collect_if_branch(&mut self, branch: &IfBranch) {
-        self.collect_condition_expression(&branch.condition);
+        self.collect_bool_condition_expression(&branch.condition);
         for statement in &branch.then_statements {
             self.collect_statement(statement);
         }
@@ -158,7 +158,7 @@ impl FileSummaryCollector {
     }
 
     fn collect_match_branch(&mut self, branch: &MatchBranch) {
-        self.collect_condition_call(&branch.scrutinee);
+        self.collect_condition_call(&branch.scrutinee, FunctionReferenceKind::MatchCondition);
         for arm in &branch.arms {
             for statement in &arm.statements {
                 self.collect_statement(statement);
@@ -173,6 +173,8 @@ impl FileSummaryCollector {
                 .function_span
                 .clone()
                 .unwrap_or_else(|| effect.span.clone()),
+            argument_count: effect.args.len(),
+            kind: effect_kind(effect.mode),
         });
     }
 
@@ -186,27 +188,31 @@ impl FileSummaryCollector {
         }
     }
 
-    fn collect_condition_expression(&mut self, expression: &ConditionExpression) {
+    fn collect_bool_condition_expression(&mut self, expression: &ConditionExpression) {
         match expression {
-            ConditionExpression::Call(call) => self.collect_condition_call(call),
+            ConditionExpression::Call(call) => {
+                self.collect_condition_call(call, FunctionReferenceKind::BoolCondition);
+            }
             ConditionExpression::And(group) | ConditionExpression::Or(group) => {
                 for expression in &group.expressions {
-                    self.collect_condition_expression(expression);
+                    self.collect_bool_condition_expression(expression);
                 }
             }
             ConditionExpression::Not(unary) | ConditionExpression::Grouped(unary) => {
-                self.collect_condition_expression(&unary.expression);
+                self.collect_bool_condition_expression(&unary.expression);
             }
         }
     }
 
-    fn collect_condition_call(&mut self, call: &ConditionCall) {
+    fn collect_condition_call(&mut self, call: &ConditionCall, kind: FunctionReferenceKind) {
         self.condition_functions.push(FunctionReferenceSummary {
             name: call.function.clone(),
             span: call
                 .function_span
                 .clone()
                 .unwrap_or_else(|| call.span.clone()),
+            argument_count: call.args.len(),
+            kind,
         });
     }
 
@@ -218,6 +224,14 @@ impl FileSummaryCollector {
                 entry_span: entry.source_span.clone(),
             });
         }
+    }
+}
+
+fn effect_kind(mode: EffectMode) -> FunctionReferenceKind {
+    match mode {
+        EffectMode::Deferred => FunctionReferenceKind::DeferredEffect,
+        EffectMode::Immediate => FunctionReferenceKind::ImmediateEffect,
+        EffectMode::Blocking => FunctionReferenceKind::BlockingEffect,
     }
 }
 

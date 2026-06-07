@@ -26,13 +26,14 @@ pub(crate) fn completion(
     completion::completion(text, position, schema, snapshot)
 }
 
-pub(crate) use code_action::CodeActionDocument;
+pub(crate) use code_action::{CodeActionDocument, SchemaCodeActionDocument};
 
 pub(crate) fn code_action(
     params: &CodeActionParams,
     documents: &[CodeActionDocument<'_>],
+    schema: Option<SchemaCodeActionDocument<'_>>,
 ) -> Option<CodeActionResponse> {
-    code_action::code_action(params, documents)
+    code_action::code_action(params, documents, schema)
 }
 
 pub(crate) use navigation::{NavigationDocument, definition, prepare_rename, references, rename};

@@ -74,6 +74,11 @@ fn did_save_schema_reloads_and_republishes_source_diagnostics() {
 }
 
 #[test]
+fn did_save_schema_reloads_from_non_canonical_schema_uri() {
+    diagnostics::did_save_schema_reloads_from_non_canonical_schema_uri();
+}
+
+#[test]
 fn publishes_choice_availability_parser_diagnostics() {
     availability::publishes_choice_availability_parser_diagnostics();
 }
@@ -166,6 +171,71 @@ fn code_actions_use_utf16_crlf_and_indented_ranges() {
 #[test]
 fn existing_and_draft_stem_ids_do_not_receive_missing_id_actions() {
     code_action::existing_and_draft_stem_ids_do_not_receive_missing_id_actions();
+}
+
+#[test]
+fn block_stub_quick_fix_inserts_local_eof_stub() {
+    code_action::block_stub_quick_fix_inserts_local_eof_stub();
+}
+
+#[test]
+fn block_stub_quick_fix_targets_unique_external_file() {
+    code_action::block_stub_quick_fix_targets_unique_external_file();
+}
+
+#[test]
+fn block_stub_quick_fix_rejects_unresolved_target_and_target_collision() {
+    code_action::block_stub_quick_fix_rejects_unresolved_target_and_target_collision();
+}
+
+#[test]
+fn block_stub_quick_fix_rejects_incomplete_block_reference_summary() {
+    code_action::block_stub_quick_fix_rejects_incomplete_block_reference_summary();
+}
+
+#[test]
+fn condition_schema_quick_fix_inserts_zero_arg_bool_entry() {
+    code_action::condition_schema_quick_fix_inserts_zero_arg_bool_entry();
+}
+
+#[test]
+fn condition_schema_quick_fix_rejects_arguments_and_match_scrutinee() {
+    code_action::condition_schema_quick_fix_rejects_arguments_and_match_scrutinee();
+}
+
+#[test]
+fn effect_schema_quick_fix_inserts_zero_arg_mode_entry() {
+    code_action::effect_schema_quick_fix_inserts_zero_arg_mode_entry();
+}
+
+#[test]
+fn effect_schema_quick_fix_rejects_arguments_and_metadata() {
+    code_action::effect_schema_quick_fix_rejects_arguments_and_metadata();
+}
+
+#[test]
+fn schema_entry_quick_fix_uses_project_wide_same_name_function_context() {
+    code_action::schema_entry_quick_fix_uses_project_wide_same_name_function_context();
+}
+
+#[test]
+fn schema_entry_quick_fix_rejects_incomplete_project_function_summaries() {
+    code_action::schema_entry_quick_fix_rejects_incomplete_project_function_summaries();
+}
+
+#[test]
+fn schema_entry_insertion_handles_crlf_and_eof_without_trailing_newline() {
+    code_action::schema_entry_insertion_handles_crlf_and_eof_without_trailing_newline();
+}
+
+#[test]
+fn schema_entry_quick_fix_rejects_missing_sections() {
+    code_action::schema_entry_quick_fix_rejects_missing_sections();
+}
+
+#[test]
+fn schema_entry_quick_fix_rejects_open_schema_buffers() {
+    code_action::schema_entry_quick_fix_rejects_open_schema_buffers();
 }
 
 #[test]

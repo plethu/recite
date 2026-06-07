@@ -11,8 +11,9 @@ use recite_parser::parse;
 use collector::FileSummaryCollector;
 pub(crate) use identity::{FileIdentity, OpenFileIdentity, SavedFileIdentity};
 pub(crate) use items::{
-    BlockReferenceSummary, FileSummaryCompleteness, FunctionReferenceSummary, MetadataKeySummary,
-    MissingIdInsertion, MissingIdKind, MissingIdSummary, SpannedName,
+    BlockReferenceSummary, FileSummaryCompleteness, FunctionReferenceKind,
+    FunctionReferenceSummary, MetadataKeySummary, MissingIdInsertion, MissingIdKind,
+    MissingIdSummary, SpannedName,
 };
 
 #[derive(Clone, Debug)]

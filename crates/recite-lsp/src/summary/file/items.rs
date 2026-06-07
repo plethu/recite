@@ -56,5 +56,16 @@ pub(crate) struct MetadataKeySummary {
 pub(crate) struct FunctionReferenceSummary {
     pub(crate) name: String,
     pub(crate) span: SourceSpan,
+    pub(crate) argument_count: usize,
+    pub(crate) kind: FunctionReferenceKind,
+}
+
+#[derive(Clone, Copy, Debug, Eq, PartialEq)]
+pub(crate) enum FunctionReferenceKind {
+    BoolCondition,
+    MatchCondition,
+    DeferredEffect,
+    ImmediateEffect,
+    BlockingEffect,
 }
 use recite_core::{SourcePosition, SourceSpan};

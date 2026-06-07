@@ -259,6 +259,46 @@ pub(super) fn did_save_schema_reloads_and_republishes_source_diagnostics() {
     harness.finish();
 }
 
+pub(super) fn did_save_schema_reloads_from_non_canonical_schema_uri() {
+    let temp = TempDir::new().unwrap_or_else(|error| panic!("tempdir: {error}"));
+    write_file(temp.path(), "schema.json", semantic_schema());
+    let schema_uri = file_uri(&temp.path().join(".").join("schema.json"));
+    let harness = harness_for_schema(&temp);
+    let source_uri = file_uri(&temp.path().join("dialogue/start.recite"));
+
+    harness.did_open(
+        source_uri.clone(),
+        1,
+        concat!(
+            ":: start default\n",
+            "> intro@e3ca7d7cd6e07208a608\n",
+            "  Hello.\n",
+            "! immediate play_sfx(missing)\n",
+        ),
+    );
+    let published = harness.recv_publish_diagnostics();
+    assert_eq!(
+        diagnostic_codes(&published.diagnostics),
+        ["RECITE_VALIDATE021"]
+    );
+
+    let updated_schema = semantic_schema().replace(
+        "\"sound\": { \"values\": [\"snap\"] }",
+        "\"sound\": { \"values\": [\"snap\", \"missing\"] }",
+    );
+    write_file(temp.path(), "schema.json", &updated_schema);
+    harness.did_save(schema_uri);
+
+    let schema_clear = harness.recv_publish_diagnostics();
+    assert!(schema_clear.diagnostics.is_empty());
+
+    let source_refresh = harness.recv_publish_diagnostics();
+    assert_eq!(source_refresh.uri, source_uri);
+    assert!(source_refresh.diagnostics.is_empty());
+
+    harness.finish();
+}
+
 pub(super) fn did_close_removes_state_and_clears_diagnostics() {
     let harness = Harness::start();
     let uri = uri("file:///workspace/dialogue/close.recite");
