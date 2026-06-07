@@ -12,7 +12,7 @@ use collector::FileSummaryCollector;
 pub(crate) use identity::{FileIdentity, OpenFileIdentity, SavedFileIdentity};
 pub(crate) use items::{
     BlockReferenceSummary, FileSummaryCompleteness, FunctionReferenceSummary, MetadataKeySummary,
-    MissingIdKind, MissingIdSummary, SpannedName,
+    MissingIdInsertion, MissingIdKind, MissingIdSummary, SpannedName,
 };
 
 #[derive(Clone, Debug)]

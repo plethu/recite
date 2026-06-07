@@ -27,7 +27,7 @@
 //!
 //! let source = concat!(
 //!     ":: start default\n",
-//!     "> intro_001\n",
+//!     "> intro_001@8843fd6f53f020a12b31\n",
 //!     "  Hello.\n",
 //!     "-> END\n",
 //! );
@@ -45,7 +45,7 @@
 //!
 //! assert!(report.diagnostics.is_empty());
 //! let asset = report.asset.expect("valid source emits an asset");
-//! assert_eq!(asset.dialogue.lines[0].id.as_str(), "intro_001");
+//! assert_eq!(asset.dialogue.lines[0].id.as_str(), "8843fd6f53f020a12b31");
 //! assert!(!asset.messagepack.is_empty());
 //! # Ok(())
 //! # }

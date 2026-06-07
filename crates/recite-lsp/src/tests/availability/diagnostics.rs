@@ -12,11 +12,11 @@ pub(super) fn publishes_choice_availability_parser_diagnostics() {
         1,
         concat!(
             ":: start default\n",
-            "? bad_requires requires=(trust_gte(\n",
+            "? bad_requires@ea24e3ad8d984bc9ef6e requires=(trust_gte(\n",
             "  Bad requires?\n",
-            "? bad_reason reason=trust_too_low(\n",
+            "? bad_reason@ed13511a54906af0e6f7 reason=trust_too_low(\n",
             "  Bad reason?\n",
-            "? old_if if trust_gte(hazel, rhea, 3)\n",
+            "? old_if@55a5e41a04b29e42a62f if trust_gte(hazel, rhea, 3)\n",
             "  Old if?\n",
         ),
     );
@@ -36,9 +36,9 @@ pub(super) fn publishes_choice_availability_parser_diagnostics() {
             Some(NumberOrString::String("RECITE_PARSE018".to_owned())),
         ]
     );
-    assert_eq!(published.diagnostics[0].range.start, Position::new(1, 35));
-    assert_eq!(published.diagnostics[1].range.start, Position::new(3, 20));
-    assert_eq!(published.diagnostics[2].range.start, Position::new(5, 9));
+    assert_eq!(published.diagnostics[0].range.start, Position::new(1, 56));
+    assert_eq!(published.diagnostics[1].range.start, Position::new(3, 41));
+    assert_eq!(published.diagnostics[2].range.start, Position::new(5, 30));
 
     harness.finish();
 }
@@ -71,16 +71,16 @@ pub(super) fn publishes_choice_availability_schema_diagnostics() {
         1,
         concat!(
             ":: start default\n",
-            "? unknown requires=(missing_condition(hazel))\n",
+            "? unknown@b3a51dd1c9cb94222ef6 requires=(missing_condition(hazel))\n",
             "  Unknown?\n",
             "  -> END\n",
-            "? non_bool requires=(thread_stage(hazel_intro))\n",
+            "? non_bool@06e347304ac7dc5d4805 requires=(thread_stage(hazel_intro))\n",
             "  Non bool?\n",
             "  -> END\n",
-            "? unknown_reason requires=(trust_gte(hazel, rhea, 3)) reason=missing_reason\n",
+            "? unknown_reason@2a4aef6cb544612d76d5 requires=(trust_gte(hazel, rhea, 3)) reason=missing_reason\n",
             "  Unknown reason?\n",
             "  -> END\n",
-            "? parameterized_reason requires=(trust_gte(hazel, rhea, 3)) reason=trust_too_low\n",
+            "? parameterized_reason@b6cdfe483d461691b584 requires=(trust_gte(hazel, rhea, 3)) reason=trust_too_low\n",
             "  Parameterized reason?\n",
             "  -> END\n",
         ),
@@ -102,10 +102,10 @@ pub(super) fn publishes_choice_availability_schema_diagnostics() {
             Some(NumberOrString::String("RECITE_VALIDATE040".to_owned())),
         ]
     );
-    assert_eq!(published.diagnostics[0].range.start, Position::new(1, 20));
-    assert_eq!(published.diagnostics[1].range.start, Position::new(4, 21));
-    assert_eq!(published.diagnostics[2].range.start, Position::new(7, 61));
-    assert_eq!(published.diagnostics[3].range.start, Position::new(10, 67));
+    assert_eq!(published.diagnostics[0].range.start, Position::new(1, 41));
+    assert_eq!(published.diagnostics[1].range.start, Position::new(4, 42));
+    assert_eq!(published.diagnostics[2].range.start, Position::new(7, 82));
+    assert_eq!(published.diagnostics[3].range.start, Position::new(10, 88));
 
     harness.finish();
 }
@@ -122,7 +122,7 @@ pub(super) fn schema_diagnostics_validate_live_project_before_filtering_to_uri()
         "dialogue/target.recite",
         concat!(
             ":: target default\n",
-            "> target_001\n",
+            "> target_001@13735be5c7c04520e31a\n",
             "  Target text.\n",
             "-> END\n",
         ),
@@ -148,7 +148,7 @@ pub(super) fn schema_diagnostics_validate_live_project_before_filtering_to_uri()
         1,
         concat!(
             ":: start\n",
-            "? ask requires=(trust_gte(hazel, rhea, 3)) reason=innkeeper_trust_hint\n",
+            "? ask@6fb399777f3a433174a6 requires=(trust_gte(hazel, rhea, 3)) reason=innkeeper_trust_hint\n",
             "  Ask?\n",
             "  -> dialogue/target.recite::target\n",
         ),
@@ -177,7 +177,7 @@ pub(super) fn schema_diagnostics_republish_open_references_after_target_changes(
         "dialogue/target.recite",
         concat!(
             ":: target default\n",
-            "> target_001\n",
+            "> target_001@ce3b3623bb5cfd88c013\n",
             "  Target.\n",
             "-> END\n",
         ),
@@ -204,7 +204,7 @@ pub(super) fn schema_diagnostics_republish_open_references_after_target_changes(
         1,
         concat!(
             ":: start\n",
-            "> start_001\n",
+            "> start_001@d2398fc41c6b1c2ce317\n",
             "  Start.\n",
             "-> dialogue/target.recite::target\n",
         ),
@@ -216,7 +216,7 @@ pub(super) fn schema_diagnostics_republish_open_references_after_target_changes(
         1,
         concat!(
             ":: target default\n",
-            "> target_001\n",
+            "> target_001@de8654b3d84ed2956a46\n",
             "  Target.\n",
             "-> END\n",
         ),
@@ -229,7 +229,7 @@ pub(super) fn schema_diagnostics_republish_open_references_after_target_changes(
         2,
         vec![full_change(concat!(
             ":: other default\n",
-            "> other_001\n",
+            "> other_001@0b57811d9f80fe62f97b\n",
             "  Other.\n",
             "-> END\n",
         ))],

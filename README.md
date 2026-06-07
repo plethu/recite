@@ -63,21 +63,21 @@ The source format reads like prose with rails:
 # A referenceable block of prose.
 :: which_way default
 
-# A line with a stable ID for localisation, plus speaker metadata.
-> alice_way_001 speaker=alice
+# A line with a stable anchor for localisation, plus speaker metadata.
+> alice_way_001@7701ceab59d2adfa057a speaker=alice
   Would you tell me, please, which way I ought to go from here?
 
-> cat_way_001 speaker=cheshire_cat portrait=grin
+> cat_way_001@e26ae3e6834c21c1b716 speaker=cheshire_cat portrait=grin
   That depends a good deal on where you want to get to.
 
-# A choice — a branch in the dialogue — with the stable ID answer_anywhere.
-? answer_anywhere
+# A choice — a branch in the dialogue — with a stable anchor.
+? answer_anywhere@a6f46c2edbe8466b9bfd
   I don't much care where.
   -> anywhere
 
 :: anywhere
 
-> cat_anywhere_001 speaker=cheshire_cat
+> cat_anywhere_001@a11b4b64dceda892c08e speaker=cheshire_cat
   Then it doesn't matter which way you go.
 
 # Scene's done. Flag a quest thread, deferred until the scene finishes.

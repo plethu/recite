@@ -6,21 +6,25 @@ fn messagepack_round_trip_resumes_line_progress_without_asset_payload() {
         "dialogue/start.recite",
         concat!(
             ":: start default\n",
-            "> first\n",
+            "> first@88b5fdc745112f7b578a\n",
             "  First.\n",
-            "> second\n",
+            "> second@896425f97b4669797f92\n",
             "  Second.\n",
             "-> END\n",
         ),
     );
     let mut session = start_scene(&asset, None).expect("starts");
 
-    assert_line(next(&asset, &mut session), "first", "First.");
+    assert_line(next(&asset, &mut session), "88b5fdc745112f7b578a", "First.");
     let bytes = encode_session_messagepack(&session).expect("encodes session");
     let mut restored =
         decode_session_messagepack(&asset, &bytes).expect("restores from messagepack");
 
-    assert_line(next(&asset, &mut restored), "second", "Second.");
+    assert_line(
+        next(&asset, &mut restored),
+        "896425f97b4669797f92",
+        "Second.",
+    );
     assert_eq!(next(&asset, &mut restored), Ok(empty_end()));
 }
 
@@ -30,7 +34,7 @@ fn structured_snapshot_records_locale_and_compact_runtime_location() {
         "dialogue/start.recite",
         concat!(
             ":: start default\n",
-            "> start_line\n",
+            "> start_line@bfe6f9b87b58303a0a8b\n",
             "  Start.\n",
             "-> END\n",
         ),
@@ -42,7 +46,7 @@ fn structured_snapshot_records_locale_and_compact_runtime_location() {
         DialogueSessionOptions::new().with_locale(locale.clone()),
     )
     .expect("starts with options");
-    assert_line(next(&asset, &mut session), "start_line", "Start.");
+    assert_line(next(&asset, &mut session), "bfe6f9b87b58303a0a8b", "Start.");
 
     let snapshot = snapshot_session(&session);
     assert_eq!(snapshot.snapshot_format_version, 1);

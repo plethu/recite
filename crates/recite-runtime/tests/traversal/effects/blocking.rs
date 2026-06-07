@@ -47,17 +47,17 @@ fn blocking_effects_pause_until_acknowledged_and_resume_after_completion_or_fail
         "dialogue/blocking.recite",
         concat!(
             ":: start default\n",
-            "> prompt\n",
+            "> prompt@28223239f2412470522b\n",
             "  Choose.\n",
-            "  ? work\n",
+            "  ? work@84312f6cb3f74dcf0ef6\n",
             "    Work.\n",
             "    -> work\n",
             ":: work\n",
             "! blocking grant_item(map)\n",
-            "> after_grant\n",
+            "> after_grant@411e56adbc0190f9c49a\n",
             "  Granted.\n",
             "! blocking open_overlay(inventory)\n",
-            "> after_overlay\n",
+            "> after_overlay@688be43a663a47140ee0\n",
             "  Closed.\n",
             "-> END\n",
         ),
@@ -71,7 +71,7 @@ fn blocking_effects_pause_until_acknowledged_and_resume_after_completion_or_fail
         choose(
             &asset,
             &mut session,
-            ChoiceId::new("work").expect("valid choice ID"),
+            ChoiceId::new("84312f6cb3f74dcf0ef6").expect("valid choice ID"),
         ),
         "grant_item",
         DialogueEffectMode::Blocking,
@@ -87,7 +87,7 @@ fn blocking_effects_pause_until_acknowledged_and_resume_after_completion_or_fail
         choose(
             &asset,
             &mut session,
-            ChoiceId::new("work").expect("valid choice ID"),
+            ChoiceId::new("84312f6cb3f74dcf0ef6").expect("valid choice ID"),
         ),
         Err(DialogueError::EffectPending {
             effect: first_effect.id.clone(),
@@ -107,7 +107,11 @@ fn blocking_effects_pause_until_acknowledged_and_resume_after_completion_or_fail
     acknowledge_effect(&mut session, first_effect.id.clone(), EffectAck::Completed)
         .expect("completed acknowledgement succeeds");
     assert!(session.pending_effect().is_none());
-    assert_line(next(&asset, &mut session), "after_grant", "Granted.");
+    assert_line(
+        next(&asset, &mut session),
+        "411e56adbc0190f9c49a",
+        "Granted.",
+    );
 
     let second_effect = assert_effect(
         next(&asset, &mut session),
@@ -129,6 +133,10 @@ fn blocking_effects_pause_until_acknowledged_and_resume_after_completion_or_fail
             effect: second_effect.id,
         })
     );
-    assert_line(next(&asset, &mut session), "after_overlay", "Closed.");
+    assert_line(
+        next(&asset, &mut session),
+        "688be43a663a47140ee0",
+        "Closed.",
+    );
     assert_end_effects(next(&asset, &mut session), []);
 }

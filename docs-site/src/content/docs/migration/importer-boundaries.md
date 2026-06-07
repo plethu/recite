@@ -33,10 +33,10 @@ The importer should not silently guess semantics for host-game state, execute ex
 
 ```text
 :: pier_intro default
-> pier_001 speaker=guide mood=calm
+> pier_001@4bc426982eed8fc98cee speaker=guide mood=calm
   The tide is coming in.
 
-? pier_ask_boat
+? pier_ask_boat@1fdd852a770b04574d58
   Ask about the boat.
   -> boat
 
@@ -44,7 +44,7 @@ The importer should not silently guess semantics for host-game state, execute ex
 -> END
 
 :: boat
-> pier_002 speaker=guide
+> pier_002@96a6b05cd8fb673bdc50 speaker=guide
   It is tied below the old signal lamp.
 -> END
 ```

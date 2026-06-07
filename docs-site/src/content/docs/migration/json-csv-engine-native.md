@@ -64,16 +64,16 @@ This page covers internal JSON, CSV, spreadsheets, ScriptableObjects, Godot reso
 
 ```text
 :: market_01 default
-> market_001 speaker=seller source_id=market_01
+> market_001@b78d4fb08772db37e008 speaker=seller source_id=market_01
   Fresh pears.
-? market_buy_one
+? market_buy_one@f3fef3a9609f2191ce0e
   Buy one.
   -> market_buy
 
 :: market_buy
 ! blocking spend_currency(coins, 1)
 ! blocking grant_item(pear)
-> market_002 speaker=seller
+> market_002@4ccc3fb8501a3fe3017d speaker=seller
   Here you go.
 -> END
 ```

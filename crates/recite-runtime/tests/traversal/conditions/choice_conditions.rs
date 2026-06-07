@@ -6,9 +6,9 @@ fn choice_condition_failure_keeps_session_position() {
         "dialogue/start.recite",
         concat!(
             ":: start default\n",
-            "> prompt_line\n",
+            "> prompt_line@5f332cf0725195edb2b8\n",
             "  What next?\n",
-            "  ? locked requires=(trusts(player))\n",
+            "  ? locked@baa4233d710cc23fd277 requires=(trusts(player))\n",
             "    Locked.\n",
             "    -> END\n",
         ),
@@ -30,7 +30,7 @@ fn choice_condition_failure_keeps_session_position() {
     else {
         panic!("expected prompt event");
     };
-    assert_eq!(choices[0].id.as_str(), "locked");
+    assert_eq!(choices[0].id.as_str(), "baa4233d710cc23fd277");
     assert!(choices[0].availability.is_available);
 }
 
@@ -40,16 +40,16 @@ fn choice_conditions_mark_unavailable_choices_without_hiding_them() {
         "dialogue/start.recite",
         concat!(
             ":: start default\n",
-            "> prompt_line\n",
+            "> prompt_line@119199f50c84d430fd79\n",
             "  What next?\n",
-            "  ? locked requires=(trusts(player))\n",
+            "  ? locked@dff55b26a02abe254920 requires=(trusts(player))\n",
             "    Locked.\n",
             "    -> locked\n",
-            "  ? leave\n",
+            "  ? leave@630ece67467f4cc775ca\n",
             "    Leave.\n",
             "    -> END\n",
             ":: locked\n",
-            "> locked_line\n",
+            "> locked_line@40da158abeea3c3a48e9\n",
             "  Locked path.\n",
             "-> END\n",
         ),
@@ -63,13 +63,13 @@ fn choice_conditions_mark_unavailable_choices_without_hiding_them() {
         panic!("expected prompt event");
     };
     assert_eq!(choices.len(), 2);
-    assert_eq!(choices[0].id.as_str(), "locked");
+    assert_eq!(choices[0].id.as_str(), "dff55b26a02abe254920");
     assert!(!choices[0].availability.is_available);
     assert_eq!(choices[0].availability.primary_reason, None);
-    assert_eq!(choices[1].id.as_str(), "leave");
+    assert_eq!(choices[1].id.as_str(), "630ece67467f4cc775ca");
     assert!(choices[1].availability.is_available);
 
-    let locked = ChoiceId::new("locked").expect("valid choice ID");
+    let locked = ChoiceId::new("dff55b26a02abe254920").expect("valid choice ID");
     assert_eq!(
         choose_with_context(&asset, &mut session, locked.clone(), &context),
         Err(DialogueError::UnavailableChoice {
@@ -81,7 +81,7 @@ fn choice_conditions_mark_unavailable_choices_without_hiding_them() {
         choose_with_context(
             &asset,
             &mut session,
-            ChoiceId::new("leave").expect("valid choice ID"),
+            ChoiceId::new("630ece67467f4cc775ca").expect("valid choice ID"),
             &context,
         ),
         Ok(empty_end())
@@ -100,9 +100,9 @@ fn unavailable_choice_exposes_primary_reason_and_reason_tree() {
         "dialogue/start.recite",
         concat!(
             ":: start default\n",
-            "> prompt_line\n",
+            "> prompt_line@b725fc1b0ab00561ac37\n",
             "  What next?\n",
-            "  ? ask_news requires=(trust_gte(hazel, rhea, 3)) reason=innkeeper_trust_hint\n",
+            "  ? ask_news@c1db3914d2910b958050 requires=(trust_gte(hazel, rhea, 3)) reason=innkeeper_trust_hint\n",
             "    Ask for private news.\n",
             "    -> END\n",
         ),
@@ -195,9 +195,9 @@ fn and_reason_tree_contains_only_failed_children() {
         "dialogue/start.recite",
         concat!(
             ":: start default\n",
-            "> prompt_line\n",
+            "> prompt_line@d77130f2adfaa90945b7\n",
             "  What next?\n",
-            "  ? ask_news requires=(has_key(hazel, rhea, 1) and trust_gte(hazel, rhea, 3))\n",
+            "  ? ask_news@951da0aaf4d0caab698d requires=(has_key(hazel, rhea, 1) and trust_gte(hazel, rhea, 3))\n",
             "    Ask for private news.\n",
             "    -> END\n",
         ),
@@ -256,9 +256,9 @@ fn or_requirement_short_circuits_after_passing_child() {
         "dialogue/start.recite",
         concat!(
             ":: start default\n",
-            "> prompt_line\n",
+            "> prompt_line@aae712ebc576b27b3235\n",
             "  What next?\n",
-            "  ? ask_news requires=(trust_gte(hazel, rhea, 3) or missing_condition(hazel, rhea, 1))\n",
+            "  ? ask_news@d213df7e71995f5c202c requires=(trust_gte(hazel, rhea, 3) or missing_condition(hazel, rhea, 1))\n",
             "    Ask for private news.\n",
             "    -> END\n",
         ),
@@ -296,9 +296,9 @@ fn negated_requirement_does_not_synthesize_automatic_reason_tree() {
         "dialogue/start.recite",
         concat!(
             ":: start default\n",
-            "> prompt_line\n",
+            "> prompt_line@9f1ff626175374f7b98d\n",
             "  What next?\n",
-            "  ? ask_news requires=(not trust_gte(hazel, rhea, 3)) reason=innkeeper_trust_hint\n",
+            "  ? ask_news@b8af63c339a222bdf3b9 requires=(not trust_gte(hazel, rhea, 3)) reason=innkeeper_trust_hint\n",
             "    Ask for private news.\n",
             "    -> END\n",
         ),
@@ -331,13 +331,13 @@ fn available_choice_condition_can_be_selected() {
         "dialogue/start.recite",
         concat!(
             ":: start default\n",
-            "> prompt_line\n",
+            "> prompt_line@f16655c71a1d49cc2ce3\n",
             "  What next?\n",
-            "  ? locked requires=(trusts(player))\n",
+            "  ? locked@6015d3fa8bf1508ea9e3 requires=(trusts(player))\n",
             "    Locked.\n",
             "    -> locked\n",
             ":: locked\n",
-            "> locked_line\n",
+            "> locked_line@42e4b38b5929000271fa\n",
             "  Locked path.\n",
             "-> END\n",
         ),
@@ -356,10 +356,10 @@ fn available_choice_condition_can_be_selected() {
         choose_with_context(
             &asset,
             &mut session,
-            ChoiceId::new("locked").expect("valid choice ID"),
+            ChoiceId::new("6015d3fa8bf1508ea9e3").expect("valid choice ID"),
             &context,
         ),
-        "locked_line",
+        "42e4b38b5929000271fa",
         "Locked path.",
     );
 }

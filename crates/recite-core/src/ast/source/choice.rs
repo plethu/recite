@@ -1,4 +1,4 @@
-use crate::{AvailabilityReasonId, ChoiceId, LineId, SourceSpan};
+use crate::{AvailabilityReasonId, ChoiceId, LineId, SourceAnchor, SourceId, SourceSpan};
 
 use super::{ConditionExpression, DivertTarget, SourceMetadata, SourceText, Statement};
 
@@ -6,6 +6,7 @@ use super::{ConditionExpression, DivertTarget, SourceMetadata, SourceText, State
 /// compiler/LSP validation.
 #[derive(Clone, Debug, PartialEq)]
 pub struct Choice {
+    pub source_id: SourceId,
     pub id: Option<ChoiceId>,
     pub source_text: SourceText,
     pub metadata: SourceMetadata,
@@ -21,6 +22,11 @@ impl Choice {
     #[must_use]
     pub fn new(id: Option<ChoiceId>, source_text: SourceText, span: SourceSpan) -> Self {
         Self {
+            source_id: id
+                .as_ref()
+                .and_then(|id| SourceAnchor::new(id.as_str()).ok())
+                .and_then(|anchor| SourceId::frozen("choice", anchor))
+                .unwrap_or(SourceId::Missing),
             id,
             source_text,
             metadata: SourceMetadata::new(),
@@ -31,6 +37,13 @@ impl Choice {
             statements: Vec::new(),
             span,
         }
+    }
+
+    #[must_use]
+    pub fn with_source_id(mut self, source_id: SourceId) -> Self {
+        self.id = source_id.canonical_choice_id();
+        self.source_id = source_id;
+        self
     }
 
     #[must_use]

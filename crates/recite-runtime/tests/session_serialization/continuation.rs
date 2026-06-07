@@ -7,9 +7,9 @@ fn restores_continuation_stack_inside_conditional_branch() {
         concat!(
             ":: start default\n",
             ":if trusts(player)\n",
-            "  > inside\n",
+            "  > inside@eedc6e8ea24b3e6809f8\n",
             "    Inside.\n",
-            "> after\n",
+            "> after@26a5f3da3383cf221b7d\n",
             "  After.\n",
             "-> END\n",
         ),
@@ -23,7 +23,7 @@ fn restores_continuation_stack_inside_conditional_branch() {
 
     assert_line(
         runtime_next(&asset, &mut session, &context),
-        "inside",
+        "eedc6e8ea24b3e6809f8",
         "Inside.",
     );
     let mut restored =
@@ -31,7 +31,7 @@ fn restores_continuation_stack_inside_conditional_branch() {
 
     assert_line(
         runtime_next(&asset, &mut restored, &context),
-        "after",
+        "26a5f3da3383cf221b7d",
         "After.",
     );
     assert_eq!(
@@ -49,7 +49,7 @@ fn restores_end_state_reached_inside_conditional_branch() {
             ":if trusts(player)\n",
             "  ! deferred branch_done()\n",
             "  -> END\n",
-            "> after\n",
+            "> after@e1c13dacc2bb0e82080d\n",
             "  After.\n",
             "-> END\n",
         ),
@@ -82,12 +82,12 @@ fn restores_continuation_stack_inside_match_arm() {
             ":: start default\n",
             ":match mood()\n",
             "  :case tired\n",
-            "    > inside\n",
+            "    > inside@2faca4e74f3382336ff7\n",
             "      Inside.\n",
             "  :case _\n",
-            "    > fallback\n",
+            "    > fallback@66cec1a7117cd4905dd7\n",
             "      Fallback.\n",
-            "> after\n",
+            "> after@3cc87e383f3f09945030\n",
             "  After.\n",
             "-> END\n",
         ),
@@ -101,7 +101,7 @@ fn restores_continuation_stack_inside_match_arm() {
 
     assert_line(
         runtime_next(&asset, &mut session, &context),
-        "inside",
+        "2faca4e74f3382336ff7",
         "Inside.",
     );
     let mut restored =
@@ -109,7 +109,7 @@ fn restores_continuation_stack_inside_match_arm() {
 
     assert_line(
         runtime_next(&asset, &mut restored, &context),
-        "after",
+        "3cc87e383f3f09945030",
         "After.",
     );
 }
@@ -125,15 +125,15 @@ fn restores_nested_match_and_if_continuations() {
             "    :if trusts(player)\n",
             "      :match stage()\n",
             "        :case tired\n",
-            "          > deep\n",
+            "          > deep@fb4f4bf0d1d3c7ee0a26\n",
             "            Deep.\n",
             "        :case _\n",
-            "          > other\n",
+            "          > other@796fb82b1df076c6d2c9\n",
             "            Other.\n",
             "  :case _\n",
-            "    > fallback\n",
+            "    > fallback@ce1625c7fb901d4f6833\n",
             "      Fallback.\n",
-            "> after\n",
+            "> after@0275abeda43f946b048a\n",
             "  After.\n",
             "-> END\n",
         ),
@@ -151,7 +151,7 @@ fn restores_nested_match_and_if_continuations() {
 
     assert_line(
         runtime_next(&asset, &mut session, &context),
-        "deep",
+        "fb4f4bf0d1d3c7ee0a26",
         "Deep.",
     );
     let mut restored =
@@ -159,7 +159,7 @@ fn restores_nested_match_and_if_continuations() {
 
     assert_line(
         runtime_next(&asset, &mut restored, &context),
-        "after",
+        "0275abeda43f946b048a",
         "After.",
     );
 }

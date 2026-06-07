@@ -79,6 +79,7 @@ pub mod schema;
 mod diagnostic;
 mod error;
 mod ids;
+mod source_id;
 mod source_location;
 mod text;
 mod value;
@@ -139,6 +140,10 @@ pub use schema::{
     ParameterDefinition, ProjectSchema, RegistryDefinition, SchemaLiteralValue, SchemaLoadReport,
     SchemaTypeDefinition, SchemaTypeRef, SpeakerDefinition, canonical_schema_fingerprint,
     load_schema_manifest_str,
+};
+pub use source_id::{
+    SOURCE_ID_ANCHOR_HEX_LEN, SourceAnchor, SourceId, SourceIdKind, is_valid_source_anchor,
+    is_valid_source_label,
 };
 pub use source_location::{SourcePosition, SourceSpan};
 pub use text::{

@@ -8,20 +8,20 @@ fn validates_missing_and_duplicate_line_and_choice_ids_in_source_order() {
             ":: start default\n",
             ">\n",
             "  Missing line id.\n",
-            "> repeated_line\n",
+            "> repeated_line@17e8fb36b9f5d585af6f\n",
             "  First repeated line id.\n",
-            "> prompt\n",
+            "> prompt@f853ed8c8d0abec4733b\n",
             "  Prompt.\n",
             "  ?\n",
             "    Missing choice id.\n",
             "    -> END\n",
-            "  ? repeated_choice\n",
+            "  ? repeated_choice@82b4ad7f10be15c409a0\n",
             "    First repeated choice id.\n",
             "    -> END\n",
-            "  ? repeated_choice\n",
+            "  ? repeated_choice@82b4ad7f10be15c409a0\n",
             "    Second repeated choice id.\n",
             "    -> END\n",
-            "> repeated_line\n",
+            "> repeated_line@17e8fb36b9f5d585af6f\n",
             "  Second repeated line id.\n",
         ),
     )];
@@ -46,7 +46,7 @@ fn validates_missing_and_duplicate_line_and_choice_ids_in_source_order() {
 fn validates_missing_and_ambiguous_default_blocks() {
     let missing = validate_source_files(&[lower(
         "dialogue/no_default.recite",
-        concat!(":: start\n", "> intro\n", "  Hello.\n",),
+        concat!(":: start\n", "> intro@11111111111111111111\n", "  Hello.\n",),
     )]);
 
     assert_codes(&missing, ["RECITE_VALIDATE005"]);
@@ -59,11 +59,19 @@ fn validates_missing_and_ambiguous_default_blocks() {
     let ambiguous = validate_source_files(&[
         lower(
             "dialogue/start.recite",
-            concat!(":: start default\n", "> intro\n", "  Hello.\n",),
+            concat!(
+                ":: start default\n",
+                "> intro@11111111111111111111\n",
+                "  Hello.\n",
+            ),
         ),
         lower(
             "dialogue/other.recite",
-            concat!(":: other default\n", "> other_line\n", "  Hello.\n",),
+            concat!(
+                ":: other default\n",
+                "> other_line@22222222222222222222\n",
+                "  Hello.\n",
+            ),
         ),
     ]);
 
@@ -85,19 +93,23 @@ fn validates_unknown_block_references_from_diverts_and_choice_targets() {
                 ":: start default\n",
                 "-> later\n",
                 "-> missing_local\n",
-                "? choose_path\n",
+                "? choose_path@c6b375afd88d45fe4f42\n",
                 "  Choose a path.\n",
                 "  -> missing_choice_target\n",
                 "-> dialogue/next.recite::next\n",
                 "-> dialogue/next.recite::missing_external\n",
                 ":: later\n",
-                "> after\n",
+                "> after@6975e5f8664ee3b8b53d\n",
                 "  Later.\n",
             ),
         ),
         lower(
             "dialogue/next.recite",
-            concat!(":: next\n", "> next_line\n", "  Next.\n",),
+            concat!(
+                ":: next\n",
+                "> next_line@11111111111111111111\n",
+                "  Next.\n",
+            ),
         ),
     ];
 
@@ -120,10 +132,10 @@ fn validates_duplicate_block_ids() {
         "dialogue/blocks.recite",
         concat!(
             ":: repeated default\n",
-            "> first\n",
+            "> first@4d47cd7f7176d06338db\n",
             "  First.\n",
             ":: repeated\n",
-            "> second\n",
+            "> second@be835762d239511a53b0\n",
             "  Second.\n",
             "-> repeated\n",
         ),

@@ -5,22 +5,22 @@ fn lowering_parses_statement_vocabulary_and_conditions() {
     let source = concat!(
         ":: tavern_arrival default speaker=innkeeper scene=opening scene=repeat\n",
         "# scene opener\n",
-        "> prompt speaker=innkeeper portrait=neutral sfx=door sfx=mug\n",
+        "> prompt@5e0925cd041f2f6df9e2 speaker=innkeeper portrait=neutral sfx=door sfx=mug\n",
         "  What do you need?\n",
         "\n",
-        "  ? ask_news echo=selected_text sfx=paper requires=(familiarity_gte(hazel, rhea, 3))\n",
+        "  ? ask_news@8d398d18dbde0d7303c2 echo=selected_text sfx=paper requires=(familiarity_gte(hazel, rhea, 3))\n",
         "    What's the news?\n",
         "    -> local_news\n",
         ":if not thread_completed(rhea_job_response) and familiarity_gte(hazel, rhea, 3)\n",
-        "  > gated_line\n",
+        "  > gated_line@f6bbac5df45570bc709f\n",
         "    Still waiting.\n",
         ":else\n",
-        "  > fallback_line\n",
+        "  > fallback_line@cc27810a0d2aeed3edea\n",
         "    Fine.\n",
         "! deferred advance_thread(rhea_job_response, tired)\n",
         ":match thread_stage(rhea_job_response)\n",
         "  :case tired\n",
-        "    > tired_line\n",
+        "    > tired_line@05283c0e9a1365072e3f\n",
         "      I'm tired.\n",
         "  :case _\n",
         "    ! immediate play_sfx(snap)\n",
@@ -74,7 +74,7 @@ fn lowering_parses_statement_vocabulary_and_conditions() {
     let choice = nested_choice(prompt, 0);
     assert_eq!(
         choice.id.as_ref().map(recite_core::ChoiceId::as_str),
-        Some("ask_news")
+        Some("8d398d18dbde0d7303c2")
     );
     assert_eq!(choice.echo, ChoiceEcho::SelectedText);
     assert_eq!(choice.source_text.text, "What's the news?");
@@ -129,7 +129,7 @@ fn lowering_parses_statement_vocabulary_and_conditions() {
 fn choice_requires_and_reason_clauses_are_not_metadata() {
     let source = concat!(
         ":: tavern_arrival\n",
-        "? ask_news sfx=paper requires=(trust_gte(hazel, rhea, 3)) topic=rumours reason=innkeeper_trust_hint\n",
+        "? ask_news@bc0a5874483fd8a329fd sfx=paper requires=(trust_gte(hazel, rhea, 3)) topic=rumours reason=innkeeper_trust_hint\n",
         "  What's the news?\n",
         "  -> END\n",
     );
@@ -177,7 +177,7 @@ fn choice_requires_and_reason_clauses_are_not_metadata() {
 fn bare_reason_without_requires_is_representable_before_validation() {
     let source = concat!(
         ":: tavern_arrival\n",
-        "? ask_news reason=innkeeper_trust_hint\n",
+        "? ask_news@af1afd5f236b8e93d917 reason=innkeeper_trust_hint\n",
         "  What's the news?\n",
         "  -> END\n",
     );
@@ -200,7 +200,7 @@ fn bare_reason_without_requires_is_representable_before_validation() {
 fn parameterized_reason_clause_preserves_argument_span_for_validation() {
     let source = concat!(
         ":: tavern_arrival\n",
-        "? ask_news requires=(trust_gte(hazel, rhea, 3)) reason=trust_too_low(hazel)\n",
+        "? ask_news@7bbdd4c4c2b97516923d requires=(trust_gte(hazel, rhea, 3)) reason=trust_too_low(hazel)\n",
         "  What's the news?\n",
         "  -> END\n",
     );
@@ -219,7 +219,7 @@ fn parameterized_reason_clause_preserves_argument_span_for_validation() {
             .argument_span
             .as_ref()
             .map(|span| (span.start.line(), span.start.column())),
-        Some((2, 69))
+        Some((2, 90))
     );
 }
 
@@ -227,11 +227,11 @@ fn parameterized_reason_clause_preserves_argument_span_for_validation() {
 fn malformed_choice_availability_clauses_report_diagnostics() {
     let source = concat!(
         ":: tavern_arrival\n",
-        "? ask_news requires=(trust_gte(\n",
+        "? ask_news@43427ec20eb491b44bbb requires=(trust_gte(\n",
         "  What's the news?\n",
-        "? ask_more reason=trust_too_low(\n",
+        "? ask_more@70a460e3cecd373440d5 reason=trust_too_low(\n",
         "  More?\n",
-        "? ask_again requires=(trust_gte(hazel, rhea, 3)) requires=(trust_gte(hazel, rhea, 4)) reason=innkeeper_trust_hint reason=other\n",
+        "? ask_again@047176c7b6a98aa21676 requires=(trust_gte(hazel, rhea, 3)) requires=(trust_gte(hazel, rhea, 4)) reason=innkeeper_trust_hint reason=other\n",
         "  Again?\n",
     );
 
@@ -252,7 +252,7 @@ fn malformed_choice_availability_clauses_report_diagnostics() {
 fn trailing_choice_if_reports_targeted_help_without_condition_cascade() {
     let source = concat!(
         ":: tavern_arrival\n",
-        "? ask_news if trust_gte(hazel, rhea, 3)\n",
+        "? ask_news@a74221348f0e47548c59 if trust_gte(hazel, rhea, 3)\n",
         "  What's the news?\n",
     );
 
@@ -339,7 +339,7 @@ fn diverts_parse_external_targets_and_extra_token_spans() {
 fn choice_extracts_first_divert_as_target_and_preserves_later_statement_order() {
     let source = concat!(
         ":: tavern_arrival\n",
-        "? ask_road\n",
+        "? ask_road@c16635bfe6bc795f818b\n",
         "  Ask about the road.\n",
         "  -> road_intro\n",
         "  ! immediate play_sfx(page)\n",

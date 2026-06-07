@@ -1,6 +1,6 @@
 use recite_core::{
     Block, Choice, Divert, Effect, IfBranch, Line, MatchArm, MatchBranch, MetadataTarget,
-    SourceFile, Statement,
+    SourceFile, SourceId, Statement,
 };
 
 use super::metadata::MetadataValidationContext;
@@ -114,8 +114,16 @@ impl<'a> Validator<'a> {
             },
         );
 
-        let Some(id) = &line.id else {
-            self.diagnostics.push(diagnostics::missing_line_id(line));
+        let SourceId::Frozen { .. } = &line.source_id else {
+            self.diagnostics.push(match &line.source_id {
+                SourceId::Missing => diagnostics::missing_line_id(line),
+                SourceId::Draft { .. } => diagnostics::draft_line_id(line),
+                SourceId::Malformed { .. } => diagnostics::malformed_line_id(line, &line.source_id),
+                SourceId::Frozen { .. } => unreachable!("frozen ID matched earlier"),
+            });
+            return;
+        };
+        let Some(id) = line.id.as_ref() else {
             return;
         };
 
@@ -161,7 +169,10 @@ impl<'a> Validator<'a> {
         }
         self.validate_choice_availability_reason(choice);
 
-        if let Some(id) = &choice.id {
+        if let SourceId::Frozen { .. } = &choice.source_id {
+            let Some(id) = choice.id.as_ref() else {
+                return;
+            };
             if let Some(first_span) = self.localisable_ids.get(id.as_str()) {
                 self.diagnostics.push(diagnostics::duplicate_choice_id(
                     choice,
@@ -173,8 +184,14 @@ impl<'a> Validator<'a> {
                     .insert(id.as_str(), choice.span.clone());
             }
         } else {
-            self.diagnostics
-                .push(diagnostics::missing_choice_id(choice));
+            self.diagnostics.push(match &choice.source_id {
+                SourceId::Missing => diagnostics::missing_choice_id(choice),
+                SourceId::Draft { .. } => diagnostics::draft_choice_id(choice),
+                SourceId::Malformed { .. } => {
+                    diagnostics::malformed_choice_id(choice, &choice.source_id)
+                }
+                SourceId::Frozen { .. } => unreachable!("frozen ID matched earlier"),
+            });
         }
 
         if let Some(target) = &choice.target {

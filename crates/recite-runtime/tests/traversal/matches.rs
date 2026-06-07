@@ -8,12 +8,12 @@ fn match_enters_first_matching_variant_and_skips_later_arms() {
             ":: start default\n",
             ":match thread_stage(thread)\n",
             "  :case tired\n",
-            "    > tired_line\n",
+            "    > tired_line@f9c433be77d9486d158f\n",
             "      Tired.\n",
             "  :case _\n",
-            "    > fallback_line\n",
+            "    > fallback_line@e0e4e075e77925ffc767\n",
             "      Fallback.\n",
-            "> after\n",
+            "> after@1d9b481352f484253839\n",
             "  After.\n",
             "-> END\n",
         ),
@@ -23,12 +23,12 @@ fn match_enters_first_matching_variant_and_skips_later_arms() {
 
     assert_line(
         next_with_context(&asset, &mut session, &context),
-        "tired_line",
+        "f9c433be77d9486d158f",
         "Tired.",
     );
     assert_line(
         next_with_context(&asset, &mut session, &context),
-        "after",
+        "1d9b481352f484253839",
         "After.",
     );
     assert_eq!(
@@ -48,12 +48,12 @@ fn match_wildcard_runs_only_when_no_variant_matches() {
             ":: start default\n",
             ":match thread_stage(thread)\n",
             "  :case tired\n",
-            "    > tired_line\n",
+            "    > tired_line@8346d134e58c12c254c3\n",
             "      Tired.\n",
             "  :case _\n",
-            "    > fallback_line\n",
+            "    > fallback_line@078ef090046530a363e0\n",
             "      Fallback.\n",
-            "> after\n",
+            "> after@776956c8b42042ae32a5\n",
             "  After.\n",
             "-> END\n",
         ),
@@ -63,12 +63,12 @@ fn match_wildcard_runs_only_when_no_variant_matches() {
 
     assert_line(
         next_with_context(&asset, &mut session, &context),
-        "fallback_line",
+        "078ef090046530a363e0",
         "Fallback.",
     );
     assert_line(
         next_with_context(&asset, &mut session, &context),
-        "after",
+        "776956c8b42042ae32a5",
         "After.",
     );
 }
@@ -83,13 +83,13 @@ fn match_arm_bodies_traverse_runtime_constructs() {
             "  :case tired\n",
             "    :match mood()\n",
             "      :case tired\n",
-            "        > low_line\n",
+            "        > low_line@39bdae88ca9ffd1503ee\n",
             "          Low.\n",
             "      :case _\n",
-            "        > other_line\n",
+            "        > other_line@e46e71801736f8af303b\n",
             "          Other.\n",
             "  :case _\n",
-            "    > fallback_line\n",
+            "    > fallback_line@daaf0ddfb563b4db5813\n",
             "      Fallback.\n",
             "-> END\n",
         ),
@@ -101,7 +101,7 @@ fn match_arm_bodies_traverse_runtime_constructs() {
 
     assert_line(
         next_with_context(&asset, &mut session, &context),
-        "low_line",
+        "39bdae88ca9ffd1503ee",
         "Low.",
     );
 }
@@ -114,16 +114,16 @@ fn match_arm_can_present_choice_and_divert() {
             ":: start default\n",
             ":match stage()\n",
             "  :case tired\n",
-            "    > prompt_line\n",
+            "    > prompt_line@ccdc2ad1752b7e7faeb4\n",
             "      Pick.\n",
-            "      ? continue\n",
+            "      ? continue@292c3bdaedddbe25c300\n",
             "        Continue.\n",
             "        -> done\n",
             "  :case _\n",
-            "    > fallback_line\n",
+            "    > fallback_line@a763bf9b1a92598199c0\n",
             "      Fallback.\n",
             ":: done\n",
-            "> done_line\n",
+            "> done_line@da9debbfa2ea916aa980\n",
             "  Done.\n",
             "-> END\n",
         ),
@@ -139,10 +139,10 @@ fn match_arm_can_present_choice_and_divert() {
         choose_with_context(
             &asset,
             &mut session,
-            ChoiceId::new("continue").expect("valid choice id"),
+            ChoiceId::new("292c3bdaedddbe25c300").expect("valid choice id"),
             &context,
         ),
-        "done_line",
+        "da9debbfa2ea916aa980",
         "Done.",
     );
 }
@@ -157,7 +157,7 @@ fn match_arm_can_emit_immediate_effect() {
             "  :case tired\n",
             "    ! immediate notify(tired)\n",
             "  :case _\n",
-            "    > fallback_line\n",
+            "    > fallback_line@703e738521faa003319c\n",
             "      Fallback.\n",
             "-> END\n",
         ),
@@ -182,10 +182,10 @@ fn match_arm_can_enter_nested_if() {
             ":match stage()\n",
             "  :case tired\n",
             "    :if trusts(player)\n",
-            "      > trusted_line\n",
+            "      > trusted_line@7d0ab384f5f7ff552de0\n",
             "        Trusted.\n",
             "  :case _\n",
-            "    > fallback_line\n",
+            "    > fallback_line@32e96a0baca8d5b7ed3a\n",
             "      Fallback.\n",
             "-> END\n",
         ),
@@ -197,7 +197,7 @@ fn match_arm_can_enter_nested_if() {
 
     assert_line(
         next_with_context(&asset, &mut session, &context),
-        "trusted_line",
+        "7d0ab384f5f7ff552de0",
         "Trusted.",
     );
 }
@@ -210,10 +210,10 @@ fn match_condition_failure_keeps_session_position() {
             ":: start default\n",
             ":match mood()\n",
             "  :case tired\n",
-            "    > tired_line\n",
+            "    > tired_line@1a2610e2e792ccb3df70\n",
             "      Tired.\n",
             "  :case _\n",
-            "    > fallback_line\n",
+            "    > fallback_line@76c9977d372b39f703f8\n",
             "      Fallback.\n",
             "-> END\n",
         ),
@@ -231,7 +231,7 @@ fn match_condition_failure_keeps_session_position() {
     );
     assert_line(
         next_with_context(&asset, &mut session, &passing),
-        "tired_line",
+        "1a2610e2e792ccb3df70",
         "Tired.",
     );
 }
@@ -244,10 +244,10 @@ fn match_reports_wrong_condition_kind() {
             ":: start default\n",
             ":match mood()\n",
             "  :case tired\n",
-            "    > tired_line\n",
+            "    > tired_line@4541f1d39acb6460faae\n",
             "      Tired.\n",
             "  :case _\n",
-            "    > fallback_line\n",
+            "    > fallback_line@ffa51f61deec39ca5910\n",
             "      Fallback.\n",
             "-> END\n",
         ),
@@ -272,7 +272,7 @@ fn boolean_condition_reports_wrong_condition_kind() {
         concat!(
             ":: start default\n",
             ":if mood()\n",
-            "  > secret\n",
+            "  > secret@fdd09cd4f3f31e064584\n",
             "    Secret.\n",
             "-> END\n",
         ),

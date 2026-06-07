@@ -14,11 +14,11 @@ pub(super) fn definition_resolves_block_references() {
         1,
         concat!(
             ":: start default\n",
-            "> intro\n",
+            "> intro@8a535b2e538dd4f39758\n",
             "  Hello.\n",
             "-> target\n",
             ":: target\n",
-            "> target_line\n",
+            "> target_line@b7cf36a63a75edb16a8f\n",
             "  There.\n",
         ),
     );
@@ -91,13 +91,13 @@ pub(super) fn rename_updates_only_block_symbols() {
         1,
         concat!(
             ":: start default\n",
-            "> target\n",
+            "> target@8392209a350039cc0dfd\n",
             "  This stable line ID must stay target.\n",
-            "? choice_target\n",
+            "? choice_target@5a9d82b6cb8104fc9f19\n",
             "  This choice ID must stay choice_target.\n",
             "  -> target\n",
             ":: target\n",
-            "> second\n",
+            "> second@1a9463b9bc53e7500590\n",
             "  Done.\n",
         ),
     );
@@ -155,7 +155,7 @@ pub(super) fn rename_rejects_non_block_symbols_and_invalid_names() {
         1,
         concat!(
             ":: start default\n",
-            "> line_id\n",
+            "> line_id@6deabd0ba0f3a4d7938a\n",
             "  Hello.\n",
             "-> target\n",
             ":: target\n",

@@ -4,7 +4,7 @@ use super::*;
 fn syntax_tree_round_trips_source_text() {
     let source = concat!(
         ":: tavern_arrival default\r\n",
-        "> ta_001 speaker=innkeeper\r\n",
+        "> ta_001@adfa366c452c0c649fb2 speaker=innkeeper\r\n",
         "  Welcome [slow]back[/slow].\r\n",
     );
 
@@ -18,8 +18,8 @@ fn syntax_tree_round_trips_source_text() {
 fn statement_markers_classify_consistently() {
     let source = concat!(
         ":: tavern\n",
-        "> line\n",
-        "? choice\n",
+        "> line@1ae75ebb2fae238d8ade\n",
+        "? choice@e0541a57a16607b99cb5\n",
         "! deferred effect\n",
         "-> END\n",
         ":if knows_secret(player)\n",
@@ -96,7 +96,7 @@ fn directive_markers_are_boundary_aware() {
 fn directive_like_prose_does_not_terminate_line_bodies() {
     let source = concat!(
         ":: tavern_arrival\n",
-        "> ta_001\n",
+        "> ta_001@0bf7b16fcf5fcbc4a0aa\n",
         "  :ifx this is prose, not a directive.\n",
         "  :casefile is also prose.\n",
         "  :matchmaking remains prose.\n",

@@ -198,6 +198,7 @@ fn extract_statement_entries(
             if let Some(id) = &line.id {
                 entries.push(source_entry(
                     id.as_str(),
+                    line.source_id.display_text().as_deref(),
                     &line.source_text.text,
                     source_file,
                     block,
@@ -214,6 +215,7 @@ fn extract_statement_entries(
             if let Some(id) = &choice.id {
                 entries.push(source_entry(
                     id.as_str(),
+                    choice.source_id.display_text().as_deref(),
                     &choice.source_text.text,
                     source_file,
                     block,
@@ -253,6 +255,7 @@ fn extract_statement_entries(
 
 fn source_entry(
     context: &str,
+    source_id_display: Option<&str>,
     source_text: &str,
     source_file: &SourceFile,
     block: &Block,
@@ -265,6 +268,9 @@ fn source_entry(
     ];
     if let Some(speaker) = speaker {
         comments.push(format!("speaker: {speaker}"));
+    }
+    if let Some(source_id_display) = source_id_display {
+        comments.push(format!("source id: {source_id_display}"));
     }
 
     PotEntry {

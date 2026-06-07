@@ -1,4 +1,4 @@
-use lsp_types::{CompletionResponse, Position};
+use lsp_types::CompletionResponse;
 use serde_json::json;
 use tempfile::TempDir;
 
@@ -28,27 +28,24 @@ pub(super) fn completes_requires_conditions_and_parameterless_reasons() {
     }))
     .0;
     let source_uri = file_uri(&temp.path().join("dialogue/start.recite"));
-    harness.did_open(
-        source_uri.clone(),
-        1,
-        concat!(
-            ":: start default\n",
-            "? ask requires=(tr\n",
-            "? ask_reason requires=(trust_gte(hazel, rhea, 3)) reason=inn\n",
-        ),
+    let source = concat!(
+        ":: start default\n",
+        "? ask@3ec8745874ed3cde29ce requires=(tr\n",
+        "? ask_reason@116831dfd01a44eaedb1 requires=(trust_gte(hazel, rhea, 3)) reason=inn\n",
     );
+    harness.did_open(source_uri.clone(), 1, source);
     let _ = harness.recv_publish_diagnostics();
 
     let requires = completion_labels(
         harness
-            .completion(source_uri.clone(), Position::new(1, 18))
+            .completion(source_uri.clone(), position_after(source, "requires=(tr"))
             .expect("requires completion"),
     );
     assert_eq!(requires, ["thread_stage", "trust_gte"]);
 
     let reasons = completion_labels(
         harness
-            .completion(source_uri, Position::new(2, 59))
+            .completion(source_uri, position_after(source, "reason=inn"))
             .expect("reason completion"),
     );
     assert_eq!(reasons, ["innkeeper_trust_hint"]);
@@ -77,12 +74,12 @@ pub(super) fn completes_project_and_schema_authoring_symbols() {
     let source_uri = file_uri(&temp.path().join("dialogue/start.recite"));
     let source = concat!(
         ":: start default\n",
-        "> line speaker=ha portrait=w\n",
+        "> line@ff34745f262d15d5b4ce speaker=ha portrait=w\n",
         "  Hello.\n",
         "-> sav\n",
         ":if can_t\n",
         "! immediate play\n",
-        "> metadata_line por\n",
+        "> metadata_line@32a122c362c13a9fba4e por\n",
     );
     harness.did_open(source_uri.clone(), 1, source);
     let _ = harness.recv_publish_diagnostics();
@@ -120,7 +117,10 @@ pub(super) fn completes_project_and_schema_authoring_symbols() {
 
     let metadata_keys = completion_labels(
         harness
-            .completion(source_uri, position_after(source, "> metadata_line por"))
+            .completion(
+                source_uri,
+                position_after(source, "> metadata_line@32a122c362c13a9fba4e por"),
+            )
             .expect("metadata key completion"),
     );
     assert_eq!(metadata_keys, ["mood", "portrait", "stage"]);
@@ -148,23 +148,23 @@ pub(super) fn completes_metadata_domain_values_from_schema_context() {
     let source_uri = file_uri(&temp.path().join("dialogue/start.recite"));
     let source = concat!(
         ":: start default speaker=rhea\n",
-        "> line speaker=hazel portrait=\n",
+        "> line@6932a28590a3e2589912 speaker=hazel portrait=\n",
         "  Hello.\n",
-        "> inherited portrait=\n",
+        "> inherited@b5e6d41190a085e8e199 portrait=\n",
         "  Hi.\n",
-        "> by_tone mood=warm stage=\n",
+        "> by_tone@00986d119571fe502b6c mood=warm stage=\n",
         "  Welcome.\n",
-        "> dotted mood=warm.tone stage=\n",
+        "> dotted@50114af655afb00259aa mood=warm.tone stage=\n",
         "  Dotted.\n",
-        "> unmapped mood=cold stage=\n",
+        "> unmapped@4ca3cc23f3daf60b72ff mood=cold stage=\n",
         "  Cold.\n",
-        "> fallback stage=\n",
+        "> fallback@6ee55288cd8572cabeba stage=\n",
         "  There.\n",
-        "> empty mood=\n",
+        "> empty@3f999d94c15264aff741 mood=\n",
         "  Quiet.\n",
-        "> repeated mood=warm mood=bright stage=\n",
+        "> repeated@cca0e492ff706239ae60 mood=warm mood=bright stage=\n",
         "  Repeated.\n",
-        "> malformed mood=\"warm\" stage=\n",
+        "> malformed@bd10c23e35161e49f8bd mood=\"warm\" stage=\n",
         "  Malformed.\n",
         ":: block speaker=hazel portrait=\n",
     );
@@ -185,7 +185,7 @@ pub(super) fn completes_metadata_domain_values_from_schema_context() {
         harness
             .completion(
                 source_uri.clone(),
-                position_after(source, "> inherited portrait="),
+                position_after(source, "> inherited@b5e6d41190a085e8e199 portrait="),
             )
             .expect("inherited speaker contextual metadata completion"),
     );
@@ -225,7 +225,7 @@ pub(super) fn completes_metadata_domain_values_from_schema_context() {
         harness
             .completion(
                 source_uri.clone(),
-                position_after(source, "> fallback stage="),
+                position_after(source, "> fallback@6ee55288cd8572cabeba stage="),
             )
             .expect("fallback contextual metadata completion"),
     );
@@ -233,7 +233,10 @@ pub(super) fn completes_metadata_domain_values_from_schema_context() {
 
     let empty = completion_labels(
         harness
-            .completion(source_uri.clone(), position_after(source, "> empty mood="))
+            .completion(
+                source_uri.clone(),
+                position_after(source, "> empty@3f999d94c15264aff741 mood="),
+            )
             .expect("empty contextual metadata completion"),
     );
     assert!(empty.is_empty());
@@ -291,9 +294,9 @@ pub(super) fn ignores_non_metadata_authoring_positions() {
     let source_uri = file_uri(&temp.path().join("dialogue/start.recite"));
     let source = concat!(
         ":: start default\n",
-        "> li\n",
+        "> li@cc29a2bf4d2fcbf3ce96\n",
         "  prose por\n",
-        "? ch\n",
+        "? ch@d5b763017bd6c66a9a53\n",
         ":else por\n",
         ":: start def\n",
     );

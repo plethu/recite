@@ -26,8 +26,17 @@ pub(crate) struct BlockReferenceSummary {
 #[derive(Clone, Debug, Eq, PartialEq)]
 pub(crate) struct MissingIdSummary {
     pub(crate) kind: MissingIdKind,
+    pub(crate) label: Option<String>,
+    pub(crate) insertion: MissingIdInsertion,
     pub(crate) span: SourceSpan,
     pub(crate) insertion_position: SourcePosition,
+}
+
+#[derive(Clone, Copy, Debug, Eq, PartialEq)]
+pub(crate) enum MissingIdInsertion {
+    FullId,
+    AnchorOnly,
+    AtAnchor,
 }
 
 #[derive(Clone, Copy, Debug, Eq, Ord, PartialEq, PartialOrd)]

@@ -9,6 +9,7 @@ use std::path::Path;
 use crate::config::{FixtureError, FixtureProfile};
 use crate::content::GeneratedText;
 use crate::summary::{FileSummary, FixtureCounts, FixtureSummary, hash_hex, summary_hash};
+use recite_core::{SourceId, SourceIdKind};
 
 const END_TARGET: &str = recite_core::END_DIVERT_TARGET;
 
@@ -193,7 +194,9 @@ impl FixtureGenerator {
             if self.block_has_choices(block) {
                 writeln!(
                     &mut fixture,
-                    "line_{block:05}_000 = \"choice_{block:05}_000\""
+                    "\"{}\" = \"{}\"",
+                    self.entry_id(SourceIdKind::Line, block, 0),
+                    self.entry_id(SourceIdKind::Choice, block, 0)
                 )
                 .expect("write string");
             }
@@ -268,7 +271,8 @@ impl FixtureGenerator {
         let body_prefix = " ".repeat(indent + 2);
         writeln!(
             source,
-            "{prefix}> line_{block:05}_{line:03} speaker=speaker_{speaker:02} portrait=\"portrait_{speaker:02}\""
+            "{prefix}> {} speaker=speaker_{speaker:02} portrait=\"portrait_{speaker:02}\"",
+            self.entry_source_id(SourceIdKind::Line, block, line)
         )
         .expect("write string");
         writeln!(
@@ -298,7 +302,8 @@ impl FixtureGenerator {
             };
             writeln!(
                 source,
-                "{choice_prefix}? choice_{block:05}_{choice:03} sfx=chime{condition}"
+                "{choice_prefix}? {} sfx=chime{condition}",
+                self.entry_source_id(SourceIdKind::Choice, block, choice)
             )
             .expect("write string");
             writeln!(
@@ -399,19 +404,45 @@ impl FixtureGenerator {
             for line in 0..self.lines_in_block(block) {
                 emit(
                     "line",
-                    format!("line_{block:05}_{line:03}"),
+                    self.entry_id(SourceIdKind::Line, block, line),
                     self.entry_text("line", block, line),
                 );
                 if line == 0 && self.block_has_choices(block) {
                     for choice in 0..self.choices_in_block(block) {
                         emit(
                             "choice",
-                            format!("choice_{block:05}_{choice:03}"),
+                            self.entry_id(SourceIdKind::Choice, block, choice),
                             self.entry_text("choice", block, choice),
                         );
                     }
                 }
             }
+        }
+    }
+
+    fn entry_source_id(&self, kind: SourceIdKind, block: u32, index: u32) -> String {
+        let label = self.entry_label(kind, block, index);
+        format!("{label}@{}", self.entry_id(kind, block, index))
+    }
+
+    fn entry_id(&self, kind: SourceIdKind, block: u32, index: u32) -> String {
+        let label = self.entry_label(kind, block, index);
+        let path = format!("src/shard-{:03}.recite", self.shard_for_block(block));
+        SourceId::generated_anchor(
+            &path,
+            kind,
+            block.saturating_add(1),
+            index.saturating_add(1),
+            &label,
+            0,
+        )
+        .to_string()
+    }
+
+    fn entry_label(&self, kind: SourceIdKind, block: u32, index: u32) -> String {
+        match kind {
+            SourceIdKind::Line => format!("line_{block:05}_{index:03}"),
+            SourceIdKind::Choice => format!("choice_{block:05}_{index:03}"),
         }
     }
 }

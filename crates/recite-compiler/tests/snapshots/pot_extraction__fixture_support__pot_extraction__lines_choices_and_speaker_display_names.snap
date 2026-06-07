@@ -6,56 +6,63 @@ expression: actual
 #. file: dialogue/a.recite
 #. block: start
 #. speaker: narrator
+#. source id: intro_001@3405f692e824dbcfeb0a
 #: dialogue/a.recite:3:3
-msgctxt "intro_001"
+msgctxt "3405f692e824dbcfeb0a"
 msgid "Welcome\\home."
 msgstr ""
 
 #. file: dialogue/a.recite
 #. block: start
 #. speaker: narrator
+#. source id: ask_work@ea0500bd7f56ff76a26d
 #: dialogue/a.recite:5:5
-msgctxt "ask_work"
+msgctxt "ea0500bd7f56ff76a26d"
 msgid "Ask about work."
 msgstr ""
 
 #. file: dialogue/a.recite
 #. block: start
 #. speaker: hazel
+#. source id: secret_001@747bda8c394633508ae4
 #: dialogue/a.recite:9:5
-msgctxt "secret_001"
+msgctxt "747bda8c394633508ae4"
 msgid "I can tell you."
 msgstr ""
 
 #. file: dialogue/a.recite
 #. block: start
 #. speaker: narrator
+#. source id: fallback_001@10a38c94916b96109a1b
 #: dialogue/a.recite:12:5
-msgctxt "fallback_001"
+msgctxt "10a38c94916b96109a1b"
 msgid "Not yet."
 msgstr ""
 
 #. file: dialogue/a.recite
 #. block: start
 #. speaker: hazel
+#. source id: ready_001@6fccfe013a697c7c5d3a
 #: dialogue/a.recite:16:7
-msgctxt "ready_001"
+msgctxt "6fccfe013a697c7c5d3a"
 msgid "Ready."
 msgstr ""
 
 #. file: dialogue/a.recite
 #. block: start
 #. speaker: narrator
+#. source id: waiting_001@73fdf511bdf43fb5441b
 #: dialogue/a.recite:19:7
-msgctxt "waiting_001"
+msgctxt "73fdf511bdf43fb5441b"
 msgid "Waiting."
 msgstr ""
 
 #. file: dialogue/b.recite
 #. block: later
 #. speaker: hazel
+#. source id: later_line@2d12c8f9e4ed2220115d
 #: dialogue/b.recite:3:3
-msgctxt "later_line"
+msgctxt "2d12c8f9e4ed2220115d"
 msgid "Later \"quoted\" text."
 msgstr ""
 

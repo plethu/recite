@@ -87,13 +87,13 @@ fn locale_provider_receives_line_lookup_fields_and_variant() {
         "dialogue/start.recite",
         concat!(
             ":: start default\n",
-            "> intro_001\n",
+            "> intro_001@387c8392720b9a6ee7ee\n",
             "  Hello.\n",
             "-> END\n",
         ),
     );
     let provider = RecordingLocaleProvider::default().with(
-        "intro_001",
+        "387c8392720b9a6ee7ee",
         TextDomain::Line,
         Some("formal"),
         "Bonjour.",
@@ -120,7 +120,7 @@ fn locale_provider_receives_line_lookup_fields_and_variant() {
     assert_eq!(
         provider.calls(),
         [LocaleCall {
-            id: "intro_001".to_owned(),
+            id: "387c8392720b9a6ee7ee".to_owned(),
             source_text: "Hello.".to_owned(),
             domain: TextDomain::Line,
             locale: "en-GB".to_owned(),
@@ -135,13 +135,17 @@ fn variant_lookup_can_fall_back_to_non_variant_translation() {
         "dialogue/start.recite",
         concat!(
             ":: start default\n",
-            "> intro_001\n",
+            "> intro_001@05b1c6ec207a7241bfb3\n",
             "  Hello.\n",
             "-> END\n",
         ),
     );
-    let provider =
-        RecordingLocaleProvider::default().with("intro_001", TextDomain::Line, None, "Salut.");
+    let provider = RecordingLocaleProvider::default().with(
+        "05b1c6ec207a7241bfb3",
+        TextDomain::Line,
+        None,
+        "Salut.",
+    );
     let mut session = start_scene_with_options(
         &asset,
         None,
@@ -169,7 +173,7 @@ fn missing_translation_falls_back_to_source_text() {
         "dialogue/start.recite",
         concat!(
             ":: start default\n",
-            "> intro_001\n",
+            "> intro_001@7c5d5ca0355a339592a1\n",
             "  Hello.\n",
             "-> END\n",
         ),
@@ -189,7 +193,7 @@ fn missing_translation_falls_back_to_source_text() {
             &EmptyDialogueContext,
             locale_resolution(&provider),
         ),
-        "intro_001",
+        "7c5d5ca0355a339592a1",
         "Hello.",
     );
     assert_eq!(provider.calls()[0].variant, None);
@@ -201,17 +205,22 @@ fn prompt_line_and_choices_are_localised_with_distinct_domains() {
         "dialogue/start.recite",
         concat!(
             ":: start default\n",
-            "> prompt_001\n",
+            "> prompt_001@ac167fb82b9c65a1d2b4\n",
             "  What next?\n",
-            "  ? ask_work\n",
+            "  ? ask_work@471a5d020df49d155f44\n",
             "    Ask about work.\n",
             "    -> END\n",
         ),
     );
     let provider = RecordingLocaleProvider::default()
-        .with("prompt_001", TextDomain::Line, None, "Que faire ?")
         .with(
-            "ask_work",
+            "ac167fb82b9c65a1d2b4",
+            TextDomain::Line,
+            None,
+            "Que faire ?",
+        )
+        .with(
+            "471a5d020df49d155f44",
             TextDomain::Choice,
             Some("formal"),
             "Discuter du travail.",
@@ -242,8 +251,16 @@ fn prompt_line_and_choices_are_localised_with_distinct_domains() {
             .map(|call| (&call.id, call.domain, call.variant.as_deref()))
             .collect::<Vec<_>>(),
         [
-            (&"prompt_001".to_owned(), TextDomain::Line, Some("formal")),
-            (&"ask_work".to_owned(), TextDomain::Choice, Some("formal")),
+            (
+                &"ac167fb82b9c65a1d2b4".to_owned(),
+                TextDomain::Line,
+                Some("formal")
+            ),
+            (
+                &"471a5d020df49d155f44".to_owned(),
+                TextDomain::Choice,
+                Some("formal")
+            ),
         ]
     );
 }
@@ -260,9 +277,9 @@ fn availability_reasons_are_localised_and_rendered_with_args() {
         "dialogue/start.recite",
         concat!(
             ":: start default\n",
-            "> prompt_001\n",
+            "> prompt_001@b982264a60db93aeac41\n",
             "  What next?\n",
-            "  ? ask_news requires=(trust_gte(hazel, rhea, 3))\n",
+            "  ? ask_news@ba77b5f681c56e1b0f73 requires=(trust_gte(hazel, rhea, 3))\n",
             "    Ask for private news.\n",
             "    -> END\n",
         ),
@@ -308,13 +325,21 @@ fn availability_reasons_are_localised_and_rendered_with_args() {
             .map(|call| (&call.id, call.domain, call.variant.as_deref()))
             .collect::<Vec<_>>(),
         [
-            (&"prompt_001".to_owned(), TextDomain::Line, Some("formal")),
+            (
+                &"b982264a60db93aeac41".to_owned(),
+                TextDomain::Line,
+                Some("formal")
+            ),
             (
                 &"trust_too_low".to_owned(),
                 TextDomain::AvailabilityReason,
                 Some("formal")
             ),
-            (&"ask_news".to_owned(), TextDomain::Choice, Some("formal")),
+            (
+                &"ba77b5f681c56e1b0f73".to_owned(),
+                TextDomain::Choice,
+                Some("formal")
+            ),
         ]
     );
 }
@@ -325,20 +350,30 @@ fn choosing_prompt_uses_locale_provider_for_followup_line() {
         "dialogue/start.recite",
         concat!(
             ":: start default\n",
-            "> prompt_001\n",
+            "> prompt_001@4644217cff5148276292\n",
             "  What next?\n",
-            "  ? continue_001\n",
+            "  ? continue_001@d206341f846e4c3e3b2a\n",
             "    Continue.\n",
             "    -> next\n",
             ":: next\n",
-            "> followup_001\n",
+            "> followup_001@a534d4efe6d9bf7a0971\n",
             "  Follow up.\n",
             "-> END\n",
         ),
     );
     let provider = RecordingLocaleProvider::default()
-        .with("continue_001", TextDomain::Choice, None, "Continuer.")
-        .with("followup_001", TextDomain::Line, Some("formal"), "Suite.");
+        .with(
+            "d206341f846e4c3e3b2a",
+            TextDomain::Choice,
+            None,
+            "Continuer.",
+        )
+        .with(
+            "a534d4efe6d9bf7a0971",
+            TextDomain::Line,
+            Some("formal"),
+            "Suite.",
+        );
     let mut session = start_scene_with_options(
         &asset,
         None,
@@ -356,7 +391,7 @@ fn choosing_prompt_uses_locale_provider_for_followup_line() {
     let DialogueEvent::Line(line) = runtime_choose_with(
         &asset,
         &mut session,
-        ChoiceId::new("continue_001").expect("valid choice id"),
+        ChoiceId::new("d206341f846e4c3e3b2a").expect("valid choice id"),
         &EmptyDialogueContext,
         variant_locale_resolution(&provider, "formal"),
     )

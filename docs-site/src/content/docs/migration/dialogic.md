@@ -64,16 +64,16 @@ if {Power.online}:
 
 ```text
 :: start default
-> lift_001 speaker=mira
+> lift_001@ad82d453e24d1d9d71d7 speaker=mira
   The lift is offline.
-? lift_try_switch
+? lift_try_switch@727902127db19ed79d97
   Try the switch.
   -> check
 
 :: check
 ! blocking try_switch(power_panel)
 :if power_online()
-  > lift_002 speaker=mira
+  > lift_002@400cd2e9e42c14d8856f speaker=mira
     That worked.
 -> END
 ```

@@ -59,7 +59,11 @@ fn completed_acknowledgement_after_restore_resumes_traversal() {
     acknowledge_effect(&mut restored, effect.id, EffectAck::Completed)
         .expect("acknowledgement succeeds");
 
-    assert_line(next(&asset, &mut restored), "after_grant", "Granted.");
+    assert_line(
+        next(&asset, &mut restored),
+        "fb4049b539cc9a9307de",
+        "Granted.",
+    );
     assert_end_effects(next(&asset, &mut restored), []);
 }
 
@@ -80,7 +84,11 @@ fn failed_acknowledgement_after_restore_resumes_traversal() {
     )
     .expect("acknowledgement succeeds");
 
-    assert_line(next(&asset, &mut restored), "after_grant", "Granted.");
+    assert_line(
+        next(&asset, &mut restored),
+        "fb4049b539cc9a9307de",
+        "Granted.",
+    );
     assert_end_effects(next(&asset, &mut restored), []);
 }
 
@@ -117,7 +125,7 @@ fn blocking_asset() -> CompiledDialogue {
         concat!(
             ":: start default\n",
             "! blocking grant_item(map)\n",
-            "> after_grant\n",
+            "> after_grant@fb4049b539cc9a9307de\n",
             "  Granted.\n",
             "-> END\n",
         ),

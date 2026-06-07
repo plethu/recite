@@ -4,11 +4,11 @@ use super::*;
 fn lowering_produces_source_file_shape_and_preserves_ordered_text() {
     let source = concat!(
         ":: tavern_arrival default\n",
-        "> ta_001 speaker=innkeeper portrait=neutral\n",
+        "> ta_001@6b7e04b6db0ea1aa0c92 speaker=innkeeper portrait=neutral\n",
         "  Welcome to the Rusty Flagon.\n",
         "\n",
         "  Haven't seen you in a while.\n",
-        "> ta_002\n",
+        "> ta_002@b72a30d9ba026356f43d\n",
         "  What do you need?\n",
     );
 
@@ -26,7 +26,7 @@ fn lowering_produces_source_file_shape_and_preserves_ordered_text() {
     let first_line = line_statement(block, 0);
     assert_eq!(
         first_line.id.as_ref().map(recite_core::LineId::as_str),
-        Some("ta_001")
+        Some("6b7e04b6db0ea1aa0c92")
     );
     assert_eq!(
         first_line.speaker.as_ref().map(SpeakerId::as_str),
@@ -53,7 +53,7 @@ fn lowering_produces_source_file_shape_and_preserves_ordered_text() {
     let second_line = line_statement(block, 1);
     assert_eq!(
         second_line.id.as_ref().map(recite_core::LineId::as_str),
-        Some("ta_002")
+        Some("b72a30d9ba026356f43d")
     );
     assert_eq!(second_line.source_text.text, "What do you need?");
 }
@@ -62,7 +62,7 @@ fn lowering_produces_source_file_shape_and_preserves_ordered_text() {
 fn lowering_reports_mixed_indent_inside_line_body() {
     let source = concat!(
         ":: tavern_arrival\n",
-        "> ta_001\n",
+        "> ta_001@62ecf61c18c6f547a003\n",
         "  Welcome.\n",
         "    This line uses a different indent.\n",
         "  Back to the original indent.\n",
@@ -94,10 +94,10 @@ fn lowering_reports_mixed_indent_inside_line_body() {
 fn lowering_preserves_inline_markup_as_source_text() {
     let source = concat!(
         ":: tavern_arrival default\n",
-        "> marked_line\n",
+        "> marked_line@ffc0b63891bea6a73672\n",
         "  [slow]Welcome[/slow]\n",
         "  [shake]Stay alert.[/shake]\n",
-        "  ? ask_road\n",
+        "  ? ask_road@3ac5e79ead51923b7e16\n",
         "    [slow]Ask about the road.[/slow]\n",
         "    -> END\n",
     );
@@ -120,7 +120,7 @@ fn lowering_preserves_inline_markup_as_source_text() {
 fn lowering_leaves_malformed_markup_text_for_validation() {
     let source = concat!(
         ":: tavern_arrival default\n",
-        "> marked_line\n",
+        "> marked_line@ae83a676eb305058cfd1\n",
         "  [slow]Welcome.\n",
     );
 
@@ -135,9 +135,9 @@ fn lowering_leaves_malformed_markup_text_for_validation() {
 fn mixed_indent_statement_markers_report_indent_diagnostics() {
     let source = concat!(
         ":: tavern_arrival\n",
-        "> ta_001\n",
+        "> ta_001@0fc923d88fedea16ba68\n",
         "  Welcome.\n",
-        "    ? ask_road\n",
+        "    ? ask_road@c9527ddfc2d1f258097a\n",
         "    :if knows_secret(player)\n",
         "  Back to the original indent.\n",
     );
@@ -170,7 +170,7 @@ fn mixed_indent_statement_markers_report_indent_diagnostics() {
 fn mixed_indent_inside_nested_statement_bodies_reports_spans() {
     let source = concat!(
         ":: tavern_arrival\n",
-        "? ask_road\n",
+        "? ask_road@d6ab36496b6baaa13868\n",
         "  Ask about the road.\n",
         "    Wrong choice indent.\n",
         ":if knows_secret(player)\n",
@@ -213,29 +213,29 @@ fn mixed_indent_inside_nested_statement_bodies_reports_spans() {
 fn sibling_indented_statement_headers_terminate_line_prose() {
     let source = concat!(
         ":: tavern_arrival\n",
-        "> before_choice\n",
+        "> before_choice@47f4e39f75973ba9cabc\n",
         "  Choice prompt.\n",
-        "  ? ask_road\n",
+        "  ? ask_road@0ad4ccc27cc95826afac\n",
         "    Ask about the road.\n",
-        "> before_effect\n",
+        "> before_effect@bfde5dd4d71f0c207d86\n",
         "  Effect prompt.\n",
         "  ! deferred play_sfx(door)\n",
-        "> before_divert\n",
+        "> before_divert@67349cbe70364ca4406c\n",
         "  Divert prompt.\n",
         "  -> END\n",
-        "> before_line\n",
+        "> before_line@7c36ee194925093fd1f4\n",
         "  Line prompt.\n",
-        "  > nested_line\n",
+        "  > nested_line@9a83b7eefa16d9f1c9e0\n",
         "    Nested text.\n",
-        "> before_if\n",
+        "> before_if@04e16072abc16b52a1e5\n",
         "  If prompt.\n",
         "  :if knows_secret(player)\n",
-        "    > gated_line\n",
+        "    > gated_line@7218df24253cbe950e45\n",
         "      Gated text.\n",
-        "> before_block\n",
+        "> before_block@07b18735df29f344bcc3\n",
         "  Block prompt.\n",
         ":: next_block\n",
-        "> next_line\n",
+        "> next_line@29e1186523dd7c7bbc7d\n",
         "  Next block text.\n",
     );
 
@@ -308,13 +308,13 @@ fn sibling_indented_statement_headers_terminate_line_prose() {
 fn multiple_nested_statements_do_not_promote_to_block_statements() {
     let source = concat!(
         ":: tavern_arrival\n",
-        "> prompt_line\n",
+        "> prompt_line@35e376f1b6d2d65553d3\n",
         "  What do you need?\n",
-        "  ? ask_road\n",
+        "  ? ask_road@59707fa901ee410584bc\n",
         "    Ask about the road.\n",
-        "  > nested_line\n",
+        "  > nested_line@190cc1c8c0e1b2d56944\n",
         "    Nested line text.\n",
-        "> after_prompt\n",
+        "> after_prompt@4905e05b12229c6b5e14\n",
         "  Carry on.\n",
     );
 
@@ -327,7 +327,7 @@ fn multiple_nested_statements_do_not_promote_to_block_statements() {
     let prompt = line_statement(block, 0);
     assert_eq!(
         prompt.id.as_ref().map(recite_core::LineId::as_str),
-        Some("prompt_line")
+        Some("35e376f1b6d2d65553d3")
     );
     assert_eq!(prompt.source_text.text, "What do you need?");
     assert_eq!(
@@ -342,7 +342,7 @@ fn multiple_nested_statements_do_not_promote_to_block_statements() {
     let after = line_statement(block, 1);
     assert_eq!(
         after.id.as_ref().map(recite_core::LineId::as_str),
-        Some("after_prompt")
+        Some("4905e05b12229c6b5e14")
     );
     assert_eq!(after.source_text.text, "Carry on.");
 }
@@ -351,7 +351,7 @@ fn multiple_nested_statements_do_not_promote_to_block_statements() {
 fn lowering_parses_top_level_choices_without_losing_syntax() {
     let source = concat!(
         ":: tavern_arrival\n",
-        "? ta_choice\n",
+        "? ta_choice@f9ef6d3d271127e6eaff\n",
         "  Ask about the road.\n",
     );
 
@@ -364,7 +364,7 @@ fn lowering_parses_top_level_choices_without_losing_syntax() {
     let choice = choice_statement(single_block(&lowered), 0);
     assert_eq!(
         choice.id.as_ref().map(recite_core::ChoiceId::as_str),
-        Some("ta_choice")
+        Some("f9ef6d3d271127e6eaff")
     );
     assert_eq!(choice.source_text.text, "Ask about the road.");
 }
@@ -374,7 +374,7 @@ fn lowering_preserves_block_comments_in_source_order() {
     let source = concat!(
         ":: tavern_arrival\n",
         "# scene opener\n",
-        "> ta_001\n",
+        "> ta_001@c0bdc643ef3edfc9fb7f\n",
         "  Welcome.\n",
         "# outro marker\n",
     );

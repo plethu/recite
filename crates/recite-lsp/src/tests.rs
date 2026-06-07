@@ -144,6 +144,11 @@ fn quick_fix_preserves_spacing_for_metadata_and_clauses_first_headers() {
 }
 
 #[test]
+fn quick_fix_freezes_draft_and_plain_label_headers() {
+    code_action::quick_fix_freezes_draft_and_plain_label_headers();
+}
+
+#[test]
 fn source_fix_all_orders_deterministic_multi_edits_and_preserves_existing_ids() {
     code_action::source_fix_all_orders_deterministic_multi_edits_and_preserves_existing_ids();
 }

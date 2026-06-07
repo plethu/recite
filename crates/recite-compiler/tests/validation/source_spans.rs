@@ -9,13 +9,13 @@ fn validates_invalid_source_spans() {
                 BlockId::new("start").expect("valid block ID"),
                 vec![
                     Statement::Line(Line::new(
-                        Some(LineId::new("line").expect("valid line ID")),
+                        Some(LineId::new("11111111111111111111").expect("valid line ID")),
                         SourceText::new("Line.", span_range("dialogue/source.recite", 2, 8, 2, 3)),
                         span("dialogue/zz_wrong.recite", 2, 1),
                     )),
                     Statement::Choice(
                         Choice::new(
-                            Some(ChoiceId::new("choice").expect("valid choice ID")),
+                            Some(ChoiceId::new("22222222222222222222").expect("valid choice ID")),
                             SourceText::new("Choice.", span("dialogue/source.recite", 3, 3)),
                             span("dialogue/source.recite", 3, 1),
                         )

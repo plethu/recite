@@ -54,7 +54,7 @@ pub(super) fn did_open_publishes_lowering_diagnostics() {
     let uri = uri("file:///workspace/dialogue/lowering.recite");
     let source = concat!(
         ":: tavern_arrival\n",
-        "? ask_road\n",
+        "? ask_road@a5b41169900e68f23ea0\n",
         "  Ask about the road.\n",
         "    Wrong choice indent.\n",
         ":if knows_secret(player)\n",
@@ -105,17 +105,17 @@ pub(super) fn did_open_publishes_schema_less_semantic_diagnostics() {
             ":: start default\n",
             ">\n",
             "  Missing line id.\n",
-            "> repeated\n",
+            "> repeated@83709c28414d0ce4659c\n",
             "  First repeated line id.\n",
-            "> prompt\n",
+            "> prompt@b6b804baf5b0ea3ec34a\n",
             "  Prompt.\n",
-            "  ? repeated_choice\n",
+            "  ? repeated_choice@88d47ec76de1bbce527a\n",
             "    First repeated choice.\n",
             "    -> missing_block\n",
-            "  ? repeated_choice\n",
+            "  ? other_choice_label@88d47ec76de1bbce527a\n",
             "    Second repeated choice.\n",
             "    -> END\n",
-            "> repeated\n",
+            "> other_line_label@83709c28414d0ce4659c\n",
             "  Second repeated line id.\n",
         ),
     );
@@ -140,7 +140,7 @@ pub(super) fn did_open_publishes_schema_less_semantic_diagnostics() {
         2,
         vec![full_change(concat!(
             ":: start default\n",
-            "> fixed\n",
+            "> fixed@64cd2c5a62499a4e9bb4\n",
             "  Fixed.\n",
         ))],
     );
@@ -162,11 +162,11 @@ pub(super) fn did_open_publishes_schema_backed_semantic_diagnostics() {
         1,
         concat!(
             ":: start default\n",
-            "> intro speaker=rhea talker=ghost sfx=missing portrait=neutral\n",
+            "> intro@d0c93b6fa28cacf4b1b0 speaker=rhea talker=ghost sfx=missing portrait=neutral\n",
             "  [ghost]Hello[/ghost]\n",
-            "> missing_context portrait=neutral\n",
+            "> missing_context@6e9cc3e62c1b68602ec8 portrait=neutral\n",
             "  Missing context.\n",
-            "? ask requires=(missing_condition(hazel))\n",
+            "? ask@8d454f8d90909d59c202 requires=(missing_condition(hazel))\n",
             "  Ask?\n",
             "  -> END\n",
             "! immediate missing_effect(snap)\n",
@@ -187,9 +187,9 @@ pub(super) fn did_open_publishes_schema_backed_semantic_diagnostics() {
             "RECITE_VALIDATE017"
         ]
     );
-    assert_eq!(published.diagnostics[0].range.start, Position::new(1, 28));
-    assert_eq!(published.diagnostics[2].range.start, Position::new(1, 55));
-    assert_eq!(published.diagnostics[5].range.start, Position::new(3, 27));
+    assert_eq!(published.diagnostics[0].range.start, Position::new(1, 49));
+    assert_eq!(published.diagnostics[2].range.start, Position::new(1, 76));
+    assert_eq!(published.diagnostics[5].range.start, Position::new(3, 48));
 
     harness.finish();
 }
@@ -230,7 +230,7 @@ pub(super) fn did_save_schema_reloads_and_republishes_source_diagnostics() {
         1,
         concat!(
             ":: start default\n",
-            "> intro\n",
+            "> intro@e3ca7d7cd6e07208a608\n",
             "  Hello.\n",
             "! immediate play_sfx(missing)\n",
         ),

@@ -16,16 +16,16 @@ fn run_trace_and_play_plain_preview_dialogue_locale_catalogs() {
         "dialogue.recite",
         concat!(
             ":: start default\n",
-            "> intro\n",
+            "> intro@75f6c2ec830c44fc0b07\n",
             "  Hello.\n",
-            "  ? help\n",
+            "  ? help@7648ae75984a9367d2b8\n",
             "    Help me.\n",
             "    -> help\n",
-            "  ? leave\n",
+            "  ? leave@d095be3772cca8f41dfc\n",
             "    Leave.\n",
             "    -> END\n",
             ":: help\n",
-            "> helped\n",
+            "> helped@a65d329b1d6d610af8ee\n",
             "  Done.\n",
             "-> END\n",
         ),
@@ -39,15 +39,15 @@ fn run_trace_and_play_plain_preview_dialogue_locale_catalogs() {
             "msgstr \"\"\n",
             "\"Language: fr-FR\\n\"\n",
             "\n",
-            "msgctxt \"intro\"\n",
+            "msgctxt \"75f6c2ec830c44fc0b07\"\n",
             "msgid \"Hello.\"\n",
             "msgstr \"Bonjour.\"\n",
             "\n",
-            "msgctxt \"help\"\n",
+            "msgctxt \"7648ae75984a9367d2b8\"\n",
             "msgid \"Help me.\"\n",
             "msgstr \"Aidez-moi.\"\n",
             "\n",
-            "msgctxt \"helped\"\n",
+            "msgctxt \"a65d329b1d6d610af8ee\"\n",
             "msgid \"Done.\"\n",
             "msgstr \"\"\n",
         ),
@@ -62,7 +62,7 @@ locale = "fr-FR"
 "fr-FR" = ["locale/fr-FR.po"]
 
 [choices]
-intro = "help"
+"75f6c2ec830c44fc0b07" = "7648ae75984a9367d2b8"
 "#,
     );
 
@@ -70,7 +70,7 @@ intro = "help"
         temp.path(),
         "default.toml",
         r#"[choices]
-intro = "help"
+"75f6c2ec830c44fc0b07" = "7648ae75984a9367d2b8"
 "#,
     );
     let default_run = run(recite()
@@ -81,9 +81,9 @@ intro = "help"
         .arg("--fixture")
         .arg(&default_fixture));
     default_run.assert_success().assert_stderr("");
-    default_run.assert_stdout_contains("prompt intro: Hello.");
-    default_run.assert_stdout_contains("  [1] help: Help me.");
-    default_run.assert_stdout_contains("line helped: Done.");
+    default_run.assert_stdout_contains("prompt 75f6c2ec830c44fc0b07: Hello.");
+    default_run.assert_stdout_contains("  [1] 7648ae75984a9367d2b8: Help me.");
+    default_run.assert_stdout_contains("line a65d329b1d6d610af8ee: Done.");
 
     let run_output = run(recite()
         .arg("run")
@@ -93,9 +93,9 @@ intro = "help"
         .arg("--fixture")
         .arg(&fixture));
     run_output.assert_success().assert_stderr("");
-    run_output.assert_stdout_contains("prompt intro: Bonjour.");
-    run_output.assert_stdout_contains("  [1] help: Aidez-moi.");
-    run_output.assert_stdout_contains("line helped: Done.");
+    run_output.assert_stdout_contains("prompt 75f6c2ec830c44fc0b07: Bonjour.");
+    run_output.assert_stdout_contains("  [1] 7648ae75984a9367d2b8: Aidez-moi.");
+    run_output.assert_stdout_contains("line a65d329b1d6d610af8ee: Done.");
 
     let trace_output = run(recite()
         .arg("trace")
@@ -172,13 +172,13 @@ intro = "help"
         .stdin
         .as_mut()
         .expect("stdin")
-        .write_all(b"help\n")
+        .write_all(b"7648ae75984a9367d2b8\n")
         .expect("write stdin");
     let output = child.wait_with_output().expect("wait");
     output.assert_success().assert_stderr("");
-    output.assert_stdout_contains("prompt intro: Bonjour.");
-    output.assert_stdout_contains("[1] help: Aidez-moi.");
-    output.assert_stdout_contains("line helped: Done.");
+    output.assert_stdout_contains("prompt 75f6c2ec830c44fc0b07: Bonjour.");
+    output.assert_stdout_contains("[1] 7648ae75984a9367d2b8: Aidez-moi.");
+    output.assert_stdout_contains("line a65d329b1d6d610af8ee: Done.");
 }
 
 #[test]
@@ -187,13 +187,13 @@ fn dialogue_locale_falls_back_to_language_catalog() {
     let source = write_recite(
         temp.path(),
         "dialogue.recite",
-        ":: start default\n> intro\n  Hello.\n-> END\n",
+        ":: start default\n> intro@11111111111111111111\n  Hello.\n-> END\n",
     );
     let asset = compile_project_asset(temp.path(), &source, "dialogue.recitec", None);
     write_file(
         temp.path(),
         "locale/fr.po",
-        "msgctxt \"intro\"\nmsgid \"Hello.\"\nmsgstr \"Salut.\"\n",
+        "msgctxt \"11111111111111111111\"\nmsgid \"Hello.\"\nmsgstr \"Salut.\"\n",
     );
     let fixture = write_file(
         temp.path(),
@@ -214,7 +214,7 @@ fr = ["locale/fr.po"]
         .arg("--fixture")
         .arg(&fixture));
     output.assert_success().assert_stderr("");
-    output.assert_stdout_contains("line intro: Salut.");
+    output.assert_stdout_contains("line 11111111111111111111: Salut.");
 
     let trace_output = run(recite()
         .arg("trace")
@@ -238,18 +238,18 @@ fn dialogue_locale_falls_back_through_intermediate_locale() {
     let source = write_recite(
         temp.path(),
         "dialogue.recite",
-        ":: start default\n> intro\n  Hello.\n-> END\n",
+        ":: start default\n> intro@11111111111111111111\n  Hello.\n-> END\n",
     );
     let asset = compile_project_asset(temp.path(), &source, "dialogue.recitec", None);
     write_file(
         temp.path(),
         "locale/zh-Hant.po",
-        "msgctxt \"intro\"\nmsgid \"Hello.\"\nmsgstr \"Ni hao.\"\n",
+        "msgctxt \"11111111111111111111\"\nmsgid \"Hello.\"\nmsgstr \"Ni hao.\"\n",
     );
     write_file(
         temp.path(),
         "locale/zh.po",
-        "msgctxt \"intro\"\nmsgid \"Hello.\"\nmsgstr \"Wrong fallback.\"\n",
+        "msgctxt \"11111111111111111111\"\nmsgid \"Hello.\"\nmsgstr \"Wrong fallback.\"\n",
     );
     let fixture = write_file(
         temp.path(),
@@ -271,7 +271,7 @@ zh = ["locale/zh.po"]
         .arg("--fixture")
         .arg(&fixture));
     output.assert_success().assert_stderr("");
-    output.assert_stdout_contains("line intro: Ni hao.");
+    output.assert_stdout_contains("line 11111111111111111111: Ni hao.");
 
     let trace_output = run(recite()
         .arg("trace")
