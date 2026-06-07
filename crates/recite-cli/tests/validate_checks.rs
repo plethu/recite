@@ -11,7 +11,7 @@ fn validate_reports_diagnostics_and_success() {
     let valid = write_recite(
         temp.path(),
         "valid.recite",
-        ":: start default\n> intro\n  Hello.\n-> END\n",
+        ":: start default\n> intro@11111111111111111111\n  Hello.\n-> END\n",
     );
     recite()
         .arg("validate")
@@ -46,19 +46,20 @@ fn check_ids_reports_only_id_diagnostics() {
     let source = write_recite(
         temp.path(),
         "ids.recite",
-        ":: start\n>\n  Missing id and missing default.\n> repeated\n  First.\n> repeated\n  Second.\n",
+        ":: start\n>\n  Missing id and missing default.\n> repeated\n  Plain IDs are malformed.\n> first@22222222222222222222\n  First.\n> second@22222222222222222222\n  Duplicate anchor.\n",
     );
 
     let output = run(recite().arg("check-ids").arg(&source));
     assert_diagnostic_failure(&output);
     output.assert_stderr_contains("RECITE_ID001");
+    output.assert_stderr_contains("RECITE_ID007");
     output.assert_stderr_contains("RECITE_ID003");
     output.assert_stderr_not_contains("RECITE_VALIDATE005");
 
     let unrelated = write_recite(
         temp.path(),
         "unrelated.recite",
-        ":: start\n> intro\n  IDs are present, but no default block.\n",
+        ":: start\n> intro@11111111111111111111\n  IDs are present, but no default block.\n",
     );
     recite()
         .arg("check-ids")
@@ -73,7 +74,7 @@ fn check_markup_uses_schema_when_supplied_and_skips_schema_policy_without_one() 
     let source = write_recite(
         temp.path(),
         "markup.recite",
-        ":: start default\n> intro\n  [ghost]Hello[/ghost]\n-> END\n",
+        ":: start default\n> intro@11111111111111111111\n  [ghost]Hello[/ghost]\n-> END\n",
     );
 
     recite()
@@ -85,7 +86,7 @@ fn check_markup_uses_schema_when_supplied_and_skips_schema_policy_without_one() 
     let malformed = write_recite(
         temp.path(),
         "malformed.recite",
-        ":: start default\n> intro\n  Hello.\n    Mixed indent.\n",
+        ":: start default\n> intro@11111111111111111111\n  Hello.\n    Mixed indent.\n",
     );
     let output = run(recite().arg("check-markup").arg(malformed));
     assert_diagnostic_failure(&output);
@@ -111,7 +112,7 @@ fn check_metadata_requires_schema_and_reports_schema_validation() {
     let source = write_recite(
         temp.path(),
         "metadata.recite",
-        ":: start default\n> intro mood=\"angry\"\n  Hello.\n-> END\n",
+        ":: start default\n> intro@11111111111111111111 mood=\"angry\"\n  Hello.\n-> END\n",
     );
     let schema = write_file(
         temp.path(),
@@ -129,7 +130,7 @@ fn check_metadata_requires_schema_and_reports_schema_validation() {
     let invalid_metadata = write_recite(
         temp.path(),
         "invalid-metadata.recite",
-        ":: start default\n> intro unknown=flat\n  Hello.\n-> END\n",
+        ":: start default\n> intro@11111111111111111111 unknown=flat\n  Hello.\n-> END\n",
     );
     let output = run(recite()
         .arg("check-metadata")
@@ -159,7 +160,7 @@ fn check_metadata_reports_domain_diagnostics_without_unrelated_validation() {
     let source = write_recite(
         temp.path(),
         "metadata-domain.recite",
-        ":: start\n> intro portrait=missing\n  Hello.\n",
+        ":: start\n> intro@11111111111111111111 portrait=missing\n  Hello.\n",
     );
     let schema = write_file(
         temp.path(),

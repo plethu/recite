@@ -5,12 +5,10 @@ use lsp_types::{
     DocumentChanges, OneOf, OptionalVersionedTextDocumentIdentifier, Range, TextDocumentEdit,
     TextEdit, Uri, WorkspaceEdit,
 };
-use recite_core::SourcePosition;
+use recite_core::{SourceId, SourceIdKind, SourcePosition};
 
 use crate::position::source_position_to_lsp;
-use crate::summary::{FileSummary, MissingIdKind, MissingIdSummary};
-
-const BASE32: &[u8; 32] = b"ABCDEFGHIJKLMNOPQRSTUVWXYZ234567";
+use crate::summary::{FileSummary, MissingIdInsertion, MissingIdKind, MissingIdSummary};
 
 pub(crate) struct CodeActionDocument<'a> {
     pub(crate) uri: &'a Uri,
@@ -99,15 +97,15 @@ fn missing_id_edits(
 
     let mut edits = Vec::with_capacity(missing_ids.len());
     for missing in missing_ids {
-        let stem = readable_stem(document.summary, missing, &ordinals);
-        let generated_id = unique_generated_id(
+        let label = readable_label(missing, &ordinals);
+        let generated_anchor = unique_generated_anchor(
             &mut occupied,
             document
                 .summary
                 .project_relative_path()
                 .unwrap_or(document.uri.as_str()),
             missing,
-            &stem,
+            &label,
         );
         let position = source_position_to_lsp(document.text, missing.insertion_position);
         edits.push(TextEdit {
@@ -115,7 +113,13 @@ fn missing_id_edits(
                 start: position,
                 end: position,
             },
-            new_text: insertion_text(document.text, missing.insertion_position, &generated_id),
+            new_text: insertion_text(
+                document.text,
+                missing.insertion_position,
+                missing.insertion,
+                &label,
+                &generated_anchor,
+            ),
         });
     }
 
@@ -156,14 +160,13 @@ fn missing_ordinals(summary: &FileSummary) -> BTreeMap<(u32, MissingIdKind), u32
     ordinals
 }
 
-fn readable_stem(
-    summary: &FileSummary,
+fn readable_label(
     missing: &MissingIdSummary,
     ordinals: &BTreeMap<(u32, MissingIdKind), u32>,
 ) -> String {
-    let block = enclosing_block(summary, missing)
-        .map(|block| block.name.as_str())
-        .unwrap_or("dialogue");
+    if let Some(label) = &missing.label {
+        return label.clone();
+    }
     let kind = match missing.kind {
         MissingIdKind::Line => "line",
         MissingIdKind::Choice => "choice",
@@ -173,9 +176,9 @@ fn readable_stem(
         .copied()
         .unwrap_or(1);
     if ordinal <= 1 {
-        format!("{block}_{kind}")
+        kind.to_owned()
     } else {
-        format!("{block}_{kind}_{ordinal}")
+        format!("{kind}_{ordinal}")
     }
 }
 
@@ -194,61 +197,49 @@ fn enclosing_block_line(summary: &FileSummary, missing: &MissingIdSummary) -> Op
     enclosing_block(summary, missing).map(|block| block.span.start.line())
 }
 
-fn unique_generated_id(
+fn unique_generated_anchor(
     occupied: &mut BTreeSet<String>,
     path: &str,
     missing: &MissingIdSummary,
-    stem: &str,
+    label: &str,
 ) -> String {
     for salt in 0_u32.. {
-        let hash = stable_hash(path, missing, stem, salt);
-        for suffix_len in 4..=6 {
-            let candidate = format!("{stem}_{}", base32_suffix(hash, suffix_len));
-            if occupied.insert(candidate.clone()) {
-                return candidate;
-            }
+        let candidate = SourceId::generated_anchor(
+            path,
+            source_id_kind(missing.kind),
+            missing.span.start.line(),
+            missing.span.start.column(),
+            label,
+            salt,
+        )
+        .to_string();
+        if occupied.insert(candidate.clone()) {
+            return candidate;
         }
     }
     unreachable!("unbounded salt search must find an unused generated ID")
 }
 
-fn stable_hash(path: &str, missing: &MissingIdSummary, stem: &str, salt: u32) -> u64 {
-    let mut hash = 0xcbf29ce484222325_u64;
-    for byte in path
-        .as_bytes()
-        .iter()
-        .chain([0].iter())
-        .chain(stem.as_bytes())
-        .chain([0].iter())
-        .chain(kind_name(missing.kind).as_bytes())
-        .chain([0].iter())
-        .chain(missing.span.start.line().to_le_bytes().iter())
-        .chain(missing.span.start.column().to_le_bytes().iter())
-        .chain(salt.to_le_bytes().iter())
-    {
-        hash ^= u64::from(*byte);
-        hash = hash.wrapping_mul(0x100000001b3);
-    }
-    hash
-}
-
-fn kind_name(kind: MissingIdKind) -> &'static str {
+fn source_id_kind(kind: MissingIdKind) -> SourceIdKind {
     match kind {
-        MissingIdKind::Line => "line",
-        MissingIdKind::Choice => "choice",
+        MissingIdKind::Line => SourceIdKind::Line,
+        MissingIdKind::Choice => SourceIdKind::Choice,
     }
 }
 
-fn base32_suffix(mut value: u64, len: usize) -> String {
-    let mut suffix = vec!['A'; len];
-    for slot in suffix.iter_mut().rev() {
-        *slot = BASE32[(value & 31) as usize] as char;
-        value >>= 5;
+fn insertion_text(
+    text: &str,
+    position: SourcePosition,
+    insertion: MissingIdInsertion,
+    label: &str,
+    anchor: &str,
+) -> String {
+    match insertion {
+        MissingIdInsertion::AnchorOnly => return anchor.to_owned(),
+        MissingIdInsertion::AtAnchor => return format!("@{anchor}"),
+        MissingIdInsertion::FullId => {}
     }
-    suffix.into_iter().collect()
-}
-
-fn insertion_text(text: &str, position: SourcePosition, generated_id: &str) -> String {
+    let generated_id = format!("{label}@{anchor}");
     let Some(next) = char_at_source_position(text, position) else {
         return format!(" {generated_id}");
     };

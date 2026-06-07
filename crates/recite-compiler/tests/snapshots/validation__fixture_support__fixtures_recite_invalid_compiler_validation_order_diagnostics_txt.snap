@@ -20,7 +20,7 @@ diagnostics:
   help: add a stable author-visible ID to the line header
 - code: RECITE_VALIDATE014
   severity: Error
-  message: choice `choose_path` contains a nested line statement that v0 compiled choices cannot represent
+  message: choice `ec6cbb162e05a98546b6` contains a nested line statement that v0 compiled choices cannot represent
   file: fixtures/recite/invalid/compiler_validation_order.recite
   line: 4
   column: 3
@@ -38,7 +38,7 @@ diagnostics:
   column: 3
 - code: RECITE_ID004
   severity: Error
-  message: duplicate localisable id `repeated` on choice
+  message: duplicate localisable id `2ab0264c57c2fd1a7929` on choice
   file: fixtures/recite/invalid/compiler_validation_order.recite
   line: 9
   column: 1

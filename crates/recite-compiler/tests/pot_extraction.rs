@@ -141,9 +141,9 @@ fn structured_entries_preserve_context_before_formatting() {
         "dialogue/prompt.recite",
         concat!(
             ":: start default speaker=narrator\n",
-            "> prompt_001 speaker=hazel\n",
+            "> prompt_001@39f4107f8b9cc6420e54 speaker=hazel\n",
             "  Choose.\n",
-            "  ? agree_001\n",
+            "  ? agree_001@fdd0b2c7cf75d179d1ba\n",
             "    Yes.\n",
             "    -> END\n",
         ),
@@ -152,28 +152,30 @@ fn structured_entries_preserve_context_before_formatting() {
     let document = extract_pot(inputs).catalog.expect("valid POT catalog");
 
     assert_eq!(document.entries.len(), 2);
-    assert_eq!(document.entries[0].context, "prompt_001");
+    assert_eq!(document.entries[0].context, "39f4107f8b9cc6420e54");
     assert_eq!(document.entries[0].source_text, "Choose.");
     assert_eq!(
         document.entries[0].comments,
         [
             "file: dialogue/prompt.recite",
             "block: start",
-            "speaker: hazel"
+            "speaker: hazel",
+            "source id: prompt_001@39f4107f8b9cc6420e54"
         ]
     );
     let first_reference = document.entries[0].reference.as_ref().unwrap();
     assert_eq!(first_reference.line, 3);
     assert_eq!(first_reference.column, 3);
 
-    assert_eq!(document.entries[1].context, "agree_001");
+    assert_eq!(document.entries[1].context, "fdd0b2c7cf75d179d1ba");
     assert_eq!(document.entries[1].source_text, "Yes.");
     assert_eq!(
         document.entries[1].comments,
         [
             "file: dialogue/prompt.recite",
             "block: start",
-            "speaker: hazel"
+            "speaker: hazel",
+            "source id: agree_001@fdd0b2c7cf75d179d1ba"
         ]
     );
     let second_reference = document.entries[1].reference.as_ref().unwrap();
@@ -187,9 +189,9 @@ fn extracts_inline_markup_from_recite_source_unchanged() {
         "dialogue/markup.recite",
         concat!(
             ":: start default\n",
-            "> marked_line\n",
+            "> marked_line@e9b2866e1a048bc51c36\n",
             "  [slow]Choose[/slow].\n",
-            "  ? marked_choice\n",
+            "  ? marked_choice@9ac81f995ed84dc9b753\n",
             "    [shake]Ask now[/shake].\n",
             "    -> END\n",
         ),
@@ -198,9 +200,9 @@ fn extracts_inline_markup_from_recite_source_unchanged() {
     let document = extract_pot(inputs).catalog.expect("valid POT catalog");
 
     assert_eq!(document.entries.len(), 2);
-    assert_eq!(document.entries[0].context, "marked_line");
+    assert_eq!(document.entries[0].context, "e9b2866e1a048bc51c36");
     assert_eq!(document.entries[0].source_text, "[slow]Choose[/slow].");
-    assert_eq!(document.entries[1].context, "marked_choice");
+    assert_eq!(document.entries[1].context, "9ac81f995ed84dc9b753");
     assert_eq!(document.entries[1].source_text, "[shake]Ask now[/shake].");
 }
 
@@ -288,7 +290,7 @@ fn project_inputs() -> Vec<CompileInput> {
             "dialogue/b.recite",
             concat!(
                 ":: later\n",
-                "> later_line speaker=hazel\n",
+                "> later_line@2d12c8f9e4ed2220115d speaker=hazel\n",
                 "  Later \"quoted\" text.\n",
             ),
         ),
@@ -296,23 +298,23 @@ fn project_inputs() -> Vec<CompileInput> {
             "dialogue/a.recite",
             concat!(
                 ":: start default speaker=narrator\n",
-                "> intro_001\n",
+                "> intro_001@3405f692e824dbcfeb0a\n",
                 "  Welcome\\home.\n",
-                "  ? ask_work\n",
+                "  ? ask_work@ea0500bd7f56ff76a26d\n",
                 "    Ask about work.\n",
                 "    -> dialogue/b.recite::later\n",
                 ":if trusts(player)\n",
-                "  > secret_001 speaker=hazel\n",
+                "  > secret_001@747bda8c394633508ae4 speaker=hazel\n",
                 "    I can tell you.\n",
                 ":else\n",
-                "  > fallback_001\n",
+                "  > fallback_001@10a38c94916b96109a1b\n",
                 "    Not yet.\n",
                 ":match stage(thread)\n",
                 "  :case ready\n",
-                "    > ready_001 speaker=hazel\n",
+                "    > ready_001@6fccfe013a697c7c5d3a speaker=hazel\n",
                 "      Ready.\n",
                 "  :case _\n",
-                "    > waiting_001\n",
+                "    > waiting_001@73fdf511bdf43fb5441b\n",
                 "      Waiting.\n",
             ),
         ),

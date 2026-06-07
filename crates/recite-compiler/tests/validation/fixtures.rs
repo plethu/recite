@@ -7,16 +7,20 @@ fn valid_source_files_produce_no_validation_diagnostics() {
             "dialogue/start.recite",
             concat!(
                 ":: start default\n",
-                "> intro\n",
+                "> intro@f508dc4a6d224219aa7d\n",
                 "  Hello.\n",
-                "? continue\n",
+                "? continue@809fb5fd9c42ca38b940\n",
                 "  Continue.\n",
                 "  -> dialogue/next.recite::next\n",
             ),
         ),
         lower(
             "dialogue/next.recite",
-            concat!(":: next\n", "> next_line\n", "  Next.\n",),
+            concat!(
+                ":: next\n",
+                "> next_line@11111111111111111111\n",
+                "  Next.\n",
+            ),
         ),
     ];
 

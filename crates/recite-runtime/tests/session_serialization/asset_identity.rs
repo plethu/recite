@@ -12,7 +12,7 @@ fn same_id_different_asset_content_is_rejected() {
         "dialogue/start.recite",
         concat!(
             ":: start default\n",
-            "> start_line\n",
+            "> start_line@3a011ecfcf4c5ed87289\n",
             "  First.\n",
             "-> END\n",
         ),
@@ -22,7 +22,7 @@ fn same_id_different_asset_content_is_rejected() {
         "dialogue/start.recite",
         concat!(
             ":: start default\n",
-            "> start_line\n",
+            "> start_line@8a5a460c1266a6c5f9df\n",
             "  Changed.\n",
             "-> END\n",
         ),
@@ -42,7 +42,7 @@ fn mismatched_asset_identity_returns_structured_error() {
         "dialogue/start.recite",
         concat!(
             ":: start default\n",
-            "> start_line\n",
+            "> start_line@0ee5f0964c10f6c097e2\n",
             "  Start.\n",
             "-> END\n",
         ),
@@ -52,7 +52,7 @@ fn mismatched_asset_identity_returns_structured_error() {
         "dialogue/start.recite",
         concat!(
             ":: start default\n",
-            "> start_line\n",
+            "> start_line@98291b3b81e255db8d44\n",
             "  Start.\n",
             "-> END\n",
         ),
@@ -72,7 +72,7 @@ fn mismatched_asset_version_returns_structured_error() {
         "dialogue/start.recite",
         concat!(
             ":: start default\n",
-            "> start_line\n",
+            "> start_line@c358dff16d0753a90d8b\n",
             "  Start.\n",
             "-> END\n",
         ),
@@ -97,7 +97,7 @@ fn previous_session_snapshot_format_is_rejected() {
         "dialogue/start.recite",
         concat!(
             ":: start default\n",
-            "> start_line\n",
+            "> start_line@e9a0744c9109baec57e7\n",
             "  Start.\n",
             "-> END\n",
         ),
@@ -120,7 +120,7 @@ fn previous_messagepack_snapshot_format_is_rejected_before_shape_decode() {
         "dialogue/start.recite",
         concat!(
             ":: start default\n",
-            "> start_line\n",
+            "> start_line@8c7dafa16b4a172020b1\n",
             "  Start.\n",
             "-> END\n",
         ),

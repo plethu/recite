@@ -11,4 +11,6 @@ pub enum CoreValueError {
     NonNamespacedDiagnosticCode(String),
     #[error("{kind} must not be empty")]
     EmptyId { kind: &'static str },
+    #[error("invalid {kind} `{value}`")]
+    InvalidValue { kind: &'static str, value: String },
 }

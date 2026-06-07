@@ -20,8 +20,8 @@
   "files": [
     {
       "path": "locales/en-US.po",
-      "bytes": 190318,
-      "blake3": "d597a82a9d4db176d053832256c4e996586147ca39097b9f3ca5b72ab99c8bd3"
+      "bytes": 203918,
+      "blake3": "aee6f5ae17debfa9e79f47d94d06765da4c74588ca400536b5ed7ab20aeb6871"
     },
     {
       "path": "recite.project.toml",
@@ -30,8 +30,8 @@
     },
     {
       "path": "runtime-fixture.toml",
-      "bytes": 3767,
-      "blake3": "b0529e250b7e9a0ec82ddc3b7f78c23af8c5a36a48ece003ded09f6079ed6b06"
+      "bytes": 4367,
+      "blake3": "1bb4b194bcce4f29e18a652e3069f07c894379623c216434e99cd789c6682661"
     },
     {
       "path": "schema/synthetic.schema.json",
@@ -40,24 +40,24 @@
     },
     {
       "path": "src/shard-000.recite",
-      "bytes": 45976,
-      "blake3": "5f68a4c921e28577a14e026ff45a276e94463897c3a65c6c0f48273eea03b813"
+      "bytes": 52318,
+      "blake3": "d905de691b7faae48d8efb2a8b6517c48e9442b827f8b0e06ab994f07546bcf4"
     },
     {
       "path": "src/shard-001.recite",
-      "bytes": 45361,
-      "blake3": "90c34f2a8d8b15693a6f2b99629bf7ecb40555104a279839f2dac895c41eae09"
+      "bytes": 51619,
+      "blake3": "d615ba8408f41e033ad8704bf6c4a1ff83635f120c34e873932d3343abd85492"
     },
     {
       "path": "src/shard-002.recite",
-      "bytes": 45736,
-      "blake3": "95e4975cefbe9971aad53803839714f6479d7f59c1be8d038926c3e014b8d991"
+      "bytes": 52078,
+      "blake3": "4242be59c9f0c3ec64bfbec3b81568cfae5466114c4fbd863d17a6da26410fba"
     },
     {
       "path": "src/shard-003.recite",
-      "bytes": 45236,
-      "blake3": "2b3b80eb8dba80c1d613dff9a9510a0188a8be1ff582a8fe464cd9a3052d4d3e"
+      "bytes": 51494,
+      "blake3": "966b7dd9a39e8ab7ba9c1ef34e479157b222c4bac334985b6648f96a68f63ecb"
     }
   ],
-  "summary_hash": "598dd76de7ce6eb5cf707e4fa20e3c6ff00242cd92d14ac24909985ee7ec8293"
+  "summary_hash": "e2efe470f6ad7af3b59a6d9c77d59d237fb526a60f745a28c064fbd6c2478b1f"
 }

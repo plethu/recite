@@ -4,7 +4,7 @@ use super::*;
 fn line_lowering_preserves_ordered_metadata_and_speaker() {
     let source = concat!(
         ":: tavern_arrival\n",
-        "> ta_001 speaker=innkeeper portrait=neutral sfx=door sfx=mug repeat=true count=2\n",
+        "> ta_001@a7091198ef21b28b9e4b speaker=innkeeper portrait=neutral sfx=door sfx=mug repeat=true count=2\n",
         "  Welcome.\n",
     );
 
@@ -49,7 +49,7 @@ fn line_lowering_preserves_ordered_metadata_and_speaker() {
     let first_metadata = &line.metadata.as_slice()[0];
     assert_eq!(
         first_metadata.source_span.as_ref().unwrap().start.column(),
-        28
+        49
     );
     assert_eq!(
         first_metadata
@@ -59,12 +59,12 @@ fn line_lowering_preserves_ordered_metadata_and_speaker() {
             .end
             .unwrap()
             .column(),
-        43
+        64
     );
-    assert_eq!(first_metadata.key_span.as_ref().unwrap().start.column(), 28);
+    assert_eq!(first_metadata.key_span.as_ref().unwrap().start.column(), 49);
     assert_eq!(
         first_metadata.value_span.as_ref().unwrap().start.column(),
-        37
+        58
     );
 }
 
@@ -73,7 +73,7 @@ fn malformed_block_header_fields_are_reported() {
     let source = concat!(
         ":: id=bad\n",
         ":: tavern_arrival default bare speaker=\n",
-        "> ta_001\n",
+        "> ta_001@2dfe95f5bf35d2701638\n",
         "  Hello.\n",
     );
 
@@ -93,7 +93,7 @@ fn malformed_block_header_fields_are_reported() {
 fn metadata_values_support_quotes_with_spaces_and_arrays() {
     let source = concat!(
         ":: tavern_arrival\n",
-        "> ta_001 portrait=\"neutral face\" tags=[door, \"mug clang\", true, 2, 1.5] sfx=door\n",
+        "> ta_001@c30dd0f5fc77ca33a5c2 portrait=\"neutral face\" tags=[door, \"mug clang\", true, 2, 1.5] sfx=door\n",
         "  Hello.\n",
     );
 
@@ -136,7 +136,7 @@ fn metadata_values_support_quotes_with_spaces_and_arrays() {
             .unwrap()
             .start
             .column(),
-        19
+        40
     );
     assert_eq!(
         line.metadata.as_slice()[1]
@@ -145,7 +145,7 @@ fn metadata_values_support_quotes_with_spaces_and_arrays() {
             .unwrap()
             .start
             .column(),
-        39
+        60
     );
 }
 
@@ -153,9 +153,9 @@ fn metadata_values_support_quotes_with_spaces_and_arrays() {
 fn malformed_quoted_and_array_metadata_values_are_reported() {
     let source = concat!(
         ":: tavern_arrival\n",
-        "> bad_quote mood=\"unterminated\n",
+        "> bad_quote@79a4460f7cefb74ac6ee mood=\"unterminated\n",
         "  Hello.\n",
-        "> bad_array tags=[door,]\n",
+        "> bad_array@26771660fd063c3a8d12 tags=[door,]\n",
         "  Hello.\n",
     );
 
@@ -171,11 +171,11 @@ fn malformed_quoted_and_array_metadata_values_are_reported() {
 fn malformed_bare_symbol_metadata_values_are_reported() {
     let source = concat!(
         ":: tavern_arrival\n",
-        "> bad_dollar mood=$hero\n",
+        "> bad_dollar@1c52c1e138cce69c2665 mood=$hero\n",
         "  Hello.\n",
-        "> bad_punctuation mood=hero!\n",
+        "> bad_punctuation@cd04b8c2c6bc85aa9020 mood=hero!\n",
         "  Hello.\n",
-        "> bad_comma mood=hero,alt\n",
+        "> bad_comma@03ed2d9d217af362fbea mood=hero,alt\n",
         "  Hello.\n",
     );
 

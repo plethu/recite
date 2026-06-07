@@ -51,12 +51,12 @@ pub(super) fn quick_fix_inserts_marker_only_line_and_choice_ids() {
     let line_edit = single_text_edit(&line_action);
     assert_eq!(line_action.text_document.version, Some(7));
     assert_eq!(line_edit.range, range(1, 1, 1, 1));
-    assert_generated_insert(&line_edit.new_text, "start_line");
+    assert_generated_insert(&line_edit.new_text, "line");
 
     let choice_action = single_quick_fix(&mut harness, source_uri, range(3, 0, 3, 1));
     let choice_edit = single_text_edit(&choice_action);
     assert_eq!(choice_edit.range, range(3, 1, 3, 1));
-    assert_generated_insert(&choice_edit.new_text, "start_choice");
+    assert_generated_insert(&choice_edit.new_text, "choice");
 
     harness.finish();
 }
@@ -81,26 +81,58 @@ pub(super) fn quick_fix_preserves_spacing_for_metadata_and_clauses_first_headers
     let spaced_line = single_quick_fix(&mut harness, source_uri.clone(), range(1, 0, 1, 1));
     let spaced_line_edit = single_text_edit(&spaced_line);
     assert_eq!(spaced_line_edit.range, range(1, 1, 1, 1));
-    assert!(spaced_line_edit.new_text.starts_with(" start_line_"));
+    assert!(spaced_line_edit.new_text.starts_with(" line@"));
     assert!(!spaced_line_edit.new_text.ends_with(' '));
 
     let tight_line = single_quick_fix(&mut harness, source_uri.clone(), range(3, 0, 3, 1));
     let tight_line_edit = single_text_edit(&tight_line);
     assert_eq!(tight_line_edit.range, range(3, 1, 3, 1));
-    assert!(tight_line_edit.new_text.starts_with(" start_line_2_"));
+    assert!(tight_line_edit.new_text.starts_with(" line_2@"));
     assert!(tight_line_edit.new_text.ends_with(' '));
 
     let spaced_choice = single_quick_fix(&mut harness, source_uri.clone(), range(5, 0, 5, 1));
     let spaced_choice_edit = single_text_edit(&spaced_choice);
     assert_eq!(spaced_choice_edit.range, range(5, 1, 5, 1));
-    assert!(spaced_choice_edit.new_text.starts_with(" start_choice_"));
+    assert!(spaced_choice_edit.new_text.starts_with(" choice@"));
     assert!(!spaced_choice_edit.new_text.ends_with(' '));
 
     let tight_choice = single_quick_fix(&mut harness, source_uri, range(7, 0, 7, 1));
     let tight_choice_edit = single_text_edit(&tight_choice);
     assert_eq!(tight_choice_edit.range, range(7, 1, 7, 1));
-    assert!(tight_choice_edit.new_text.starts_with(" start_choice_2_"));
+    assert!(tight_choice_edit.new_text.starts_with(" choice_2@"));
     assert!(tight_choice_edit.new_text.ends_with(' '));
+
+    harness.finish();
+}
+
+pub(super) fn quick_fix_freezes_draft_and_plain_label_headers() {
+    let mut harness = Harness::start();
+    let source_uri = uri("file:///workspace/dialogue/code-action-draft.recite");
+    let source = concat!(
+        ":: start default\n",
+        "> greeting@\n",
+        "  Hello.\n",
+        "? answer_anywhere\n",
+        "  Anywhere.\n",
+    );
+    harness.did_open(source_uri.clone(), 3, source);
+    let _ = harness.recv_publish_diagnostics();
+
+    let draft_line = single_quick_fix(&mut harness, source_uri.clone(), range(1, 0, 1, 10));
+    let draft_line_edit = single_text_edit(&draft_line);
+    assert_eq!(draft_line_edit.range, range(1, 11, 1, 11));
+    assert_anchor_only_insert(&draft_line_edit.new_text);
+    let applied = apply_edits(source, &[draft_line_edit]);
+    assert!(applied.contains("> greeting@"));
+    assert!(!applied.contains("> greeting@@"));
+
+    let plain_choice = single_quick_fix(&mut harness, source_uri, range(3, 0, 3, 17));
+    let plain_choice_edit = single_text_edit(&plain_choice);
+    assert_eq!(plain_choice_edit.range, range(3, 17, 3, 17));
+    assert_at_anchor_insert(&plain_choice_edit.new_text);
+    let applied = apply_edits(source, &[plain_choice_edit]);
+    assert!(applied.contains("? answer_anywhere@"));
+    assert!(!applied.contains("? answer_anywhere @"));
 
     harness.finish();
 }
@@ -110,11 +142,11 @@ pub(super) fn source_fix_all_orders_deterministic_multi_edits_and_preserves_exis
     let source_uri = uri("file:///workspace/dialogue/code-action-fix-all.recite");
     let source = concat!(
         ":: start default\n",
-        "> existing_line\n",
+        "> existing_line@af869b29ee4045f73952\n",
         "  Existing.\n",
         ">\n",
         "  Missing line.\n",
-        "? existing_choice\n",
+        "? existing_choice@e2b17e31e46100680de3\n",
         "  Existing choice.\n",
         "?\n",
         "  Missing choice.\n",
@@ -129,10 +161,10 @@ pub(super) fn source_fix_all_orders_deterministic_multi_edits_and_preserves_exis
     assert_eq!(edits[0].range, range(3, 1, 3, 1));
     assert_eq!(edits[1].range, range(7, 1, 7, 1));
     let applied = apply_edits(source, &edits);
-    assert!(applied.contains("> existing_line\n"));
-    assert!(applied.contains("? existing_choice\n"));
-    assert!(applied.contains("> start_line_"));
-    assert!(applied.contains("? start_choice_"));
+    assert!(applied.contains("> existing_line@af869b29ee4045f73952\n"));
+    assert!(applied.contains("? existing_choice@e2b17e31e46100680de3\n"));
+    assert!(applied.contains("> line@"));
+    assert!(applied.contains("? choice@"));
 
     harness.finish();
 }
@@ -184,7 +216,7 @@ pub(super) fn code_actions_use_utf16_crlf_and_indented_ranges() {
     let edit = single_quick_fix(&mut harness, source_uri, range(1, 2, 1, 3));
     let text_edit = single_text_edit(&edit);
     assert_eq!(text_edit.range, range(1, 3, 1, 3));
-    assert_generated_insert(&text_edit.new_text, "start_line");
+    assert_generated_insert(&text_edit.new_text, "line");
 
     harness.finish();
 }
@@ -194,9 +226,9 @@ pub(super) fn existing_and_draft_stem_ids_do_not_receive_missing_id_actions() {
     let source_uri = uri("file:///workspace/dialogue/code-action-existing.recite");
     let source = concat!(
         ":: start default\n",
-        "> hazel_rhea.small_talk\n",
+        "> hazel_rhea.small_talk@be29420d780048facdc3\n",
         "  Existing draft-stem-shaped ID remains out of scope for #33.\n",
-        "? existing_choice\n",
+        "? existing_choice@f926a9508c84a21da386\n",
         "  Existing choice.\n",
     );
     harness.did_open(source_uri.clone(), 1, source);
@@ -314,21 +346,38 @@ fn inserted_id(edit: &TextEdit) -> String {
         .to_owned()
 }
 
-fn assert_generated_insert(insert: &str, stem: &str) {
+fn assert_generated_insert(insert: &str, label: &str) {
     let id = inserted_id(&TextEdit {
         range: range(0, 0, 0, 0),
         new_text: insert.to_owned(),
     });
-    let Some(suffix) = id.strip_prefix(&format!("{stem}_")) else {
-        panic!("generated ID `{id}` did not start with `{stem}_`");
+    let Some(anchor) = id.strip_prefix(&format!("{label}@")) else {
+        panic!("generated ID `{id}` did not start with `{label}@`");
     };
-    assert!((4..=6).contains(&suffix.len()));
+    assert_eq!(anchor.len(), 20);
     assert!(
-        suffix
+        anchor
             .chars()
-            .all(|character| character.is_ascii_uppercase() || ('2'..='7').contains(&character)),
-        "suffix must be uppercase base32: {suffix}"
+            .all(|character| character.is_ascii_hexdigit() && !character.is_ascii_uppercase()),
+        "anchor must be lowercase hex: {anchor}"
     );
+}
+
+fn assert_anchor_only_insert(insert: &str) {
+    assert_eq!(insert.len(), 20);
+    assert!(
+        insert
+            .chars()
+            .all(|character| character.is_ascii_hexdigit() && !character.is_ascii_uppercase()),
+        "anchor must be lowercase hex: {insert}"
+    );
+}
+
+fn assert_at_anchor_insert(insert: &str) {
+    let Some(anchor) = insert.strip_prefix('@') else {
+        panic!("insert `{insert}` did not start with `@`");
+    };
+    assert_anchor_only_insert(anchor);
 }
 
 fn apply_edits(source: &str, edits: &[TextEdit]) -> String {

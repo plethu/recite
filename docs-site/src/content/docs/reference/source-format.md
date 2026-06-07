@@ -12,11 +12,11 @@ Indented body text carries dialogue prose.
 ```text
 :: gate_check default speaker=guard
 
-> gate_001 mood=impatient
+> gate_001@ae703fc627755242ebc7 mood=impatient
   Papers?
 
 :if has_pass(player)
-  ? gate_show_pass
+  ? gate_show_pass@7f2eb1f55623952e6434
     Here they are.
     -> open_gate
 
@@ -24,7 +24,7 @@ Indented body text carries dialogue prose.
 
 ! blocking set_gate_open(town_gate)
 
-> gate_002
+> gate_002@7cfd0149209d8e2f5359
   Go on.
 
 -> END
@@ -39,8 +39,8 @@ Recite uses a small statement vocabulary:
 
 ```text
 :: block_name default speaker=guard  # block
-> line_001 speaker=guard             # line
-? choice_001                         # choice
+> line_001@335096a87620c0ccbf2f speaker=guard             # line
+? choice_001@63e10f410e48a6773297                         # choice
 ! blocking set_gate_open(town_gate)  # effect
 -> open_gate                         # target
 :if has_pass(player)                 # conditional branch
@@ -60,7 +60,7 @@ Dialogue prose is not a quoted string. It is the indented body owned by a line
 header:
 
 ```text
-> gate_003 speaker=guard portrait=neutral
+> gate_003@68e651c6d898d7f39f00 speaker=guard portrait=neutral
   Move along.
 ```
 
@@ -75,13 +75,13 @@ A block can provide a default speaker for lines that do not name one:
 ```text
 :: gate_check default speaker=guard
 
-> gate_001
+> gate_001@258bfad65f45bd3661bc
   Papers?
 
-> gate_002 speaker=captain
+> gate_002@60ba4b9486ed20ce6735 speaker=captain
   Let them through.
 
-> gate_003 mood=impatient
+> gate_003@b13991cde6630c24fe5b mood=impatient
   Well?
 ```
 
@@ -97,7 +97,7 @@ when the project schema permits them.
 ```text
 :: gate_check default speaker=guard location=town_gate
 
-> gate_004 portrait=neutral caption="Door closes"
+> gate_004@3b654fa7ef8715d05428 portrait=neutral caption="Door closes"
   Last warning.
 ```
 
@@ -116,11 +116,11 @@ Choices are localisable records with stable IDs, body text, metadata, and a
 target:
 
 ```text
-? gate_show_pass tone=polite
+? gate_show_pass@191a4a3ecf68db47f96a tone=polite
   Here they are.
   -> open_gate
 
-? gate_leave
+? gate_leave@a8f0209d81e33a0c858f
   I'll come back later.
   -> END
 ```
@@ -138,15 +138,15 @@ trailing choice `if`.
 Choices may be nested under a line to model a prompt:
 
 ```text
-> gate_prompt_001
+> gate_prompt_001@15585b913a65e0892edb
   What do you show the guard?
 
   :if has_pass(player)
-    ? gate_show_pass
+    ? gate_show_pass@456751c5fc90888fe004
       The signed pass.
       -> open_gate
 
-  ? gate_back_away
+  ? gate_back_away@b861d38fafdf6ceab3f0
     Nothing.
     -> END
 ```
@@ -158,10 +158,10 @@ structural branches are included; they do not mutate the game:
 
 ```text
 :if reputation_at_least(town_guard, 3)
-  > gate_known_001
+  > gate_known_001@84cad7e66e4e1882cff4
     I know you. Go on.
 :else
-  > gate_unknown_001
+  > gate_unknown_001@b2fac71bc5030b065f3c
     Papers?
 ```
 
@@ -172,7 +172,7 @@ Use `:match` and `:case` for schema-declared enum state:
   :case open
     -> open_gate
   :case closed
-    > gate_closed_001
+    > gate_closed_001@a4bdc33d4c6caa81e951
       Not today.
   :case _
     -> END
@@ -197,10 +197,10 @@ The current compiler contract requires every line and choice to have a stable
 ID before compilation:
 
 ```text
-> gate_005
+> gate_005@79ab5f91ee4e42b3da54
   Keep moving.
 
-? gate_ask_news
+? gate_ask_news@70c6b181e0398ce66cfb
   Any news from the road?
   -> road_news
 ```

@@ -115,10 +115,7 @@ pub(super) fn lowered_summary(lowered: &LoweredSourceFile) -> String {
                 )),
                 Statement::Line(line) => summary.push_str(&format!(
                     "    - line {} speaker={} text={:?} metadata=[{}]\n",
-                    line.id
-                        .as_ref()
-                        .map(recite_core::LineId::as_str)
-                        .unwrap_or("<missing>"),
+                    source_id_summary(&line.source_id),
                     line.speaker
                         .as_ref()
                         .map(SpeakerId::as_str)
@@ -179,10 +176,7 @@ fn push_statement_summary(summary: &mut String, statement: &Statement, depth: us
         Statement::Line(line) => {
             summary.push_str(&format!(
                 "{indent}- line {} speaker={} text={:?} metadata=[{}]\n",
-                line.id
-                    .as_ref()
-                    .map(recite_core::LineId::as_str)
-                    .unwrap_or("<missing>"),
+                source_id_summary(&line.source_id),
                 line.speaker
                     .as_ref()
                     .map(SpeakerId::as_str)
@@ -195,11 +189,7 @@ fn push_statement_summary(summary: &mut String, statement: &Statement, depth: us
         Statement::Choice(choice) => {
             summary.push_str(&format!(
                 "{indent}- choice {} text={:?} target={} metadata=[{}]\n",
-                choice
-                    .id
-                    .as_ref()
-                    .map(recite_core::ChoiceId::as_str)
-                    .unwrap_or("<missing>"),
+                source_id_summary(&choice.source_id),
                 choice.source_text.text,
                 choice
                     .target
@@ -265,6 +255,17 @@ fn metadata_keys(metadata: &recite_core::SourceMetadata) -> String {
         .map(|entry| entry.key.as_str())
         .collect::<Vec<_>>()
         .join(", ")
+}
+
+fn source_id_summary(source_id: &recite_core::SourceId) -> String {
+    match source_id {
+        recite_core::SourceId::Missing => "<missing>".to_owned(),
+        recite_core::SourceId::Draft { label } => format!("{label}@"),
+        recite_core::SourceId::Frozen { label, anchor } => {
+            format!("{label}@{}", anchor.as_str())
+        }
+        recite_core::SourceId::Malformed { raw } => format!("<malformed {raw:?}>"),
+    }
 }
 
 fn divert_target_summary(target: &DivertTarget) -> String {

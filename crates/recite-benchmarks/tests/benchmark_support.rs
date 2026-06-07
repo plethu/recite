@@ -81,13 +81,13 @@ fn generated_project_replaces_stale_output() -> Result<(), Box<dyn std::error::E
 fn catalog_lookup_uses_msgctxt_as_stable_id() -> Result<(), Box<dyn std::error::Error>> {
     let catalog = parse_po_catalog(
         r#"
-msgctxt "line_00000_000"
+msgctxt "ab4a03e66ca89a7d2f10"
 msgid "source text"
 msgstr "translated text"
 "#,
     )?;
     assert_eq!(
-        catalog.get("line_00000_000").map(String::as_str),
+        catalog.get("ab4a03e66ca89a7d2f10").map(String::as_str),
         Some("translated text")
     );
     Ok(())
@@ -99,8 +99,8 @@ fn tiny_catalog_loads_from_runtime_fixture() -> Result<(), Box<dyn std::error::E
     let fixture = RuntimeFixture::load(&project.runtime_fixture_source()?)?;
     let catalog = CatalogProvider::load(&project, &fixture)?;
     assert_eq!(
-        catalog.get("line_00000_000"),
-        Some("line translation for line_00000_000")
+        catalog.get("44bbd8153af5a8182d93"),
+        Some("line translation for 44bbd8153af5a8182d93")
     );
     Ok(())
 }

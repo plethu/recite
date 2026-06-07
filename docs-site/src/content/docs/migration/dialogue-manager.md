@@ -63,15 +63,15 @@ Guide: Keep it lit.
 
 ```text
 :: start default
-> start_001 speaker=guide
+> start_001@d37069f78b6ac6d910bf speaker=guide
   Take this lantern.
 ! blocking grant_item(lantern)
-? start_thanks
+? start_thanks@64083accc1d568b8b3c5
   Thanks.
   -> end
 
 :: end
-> end_001 speaker=guide
+> end_001@9d4a9f6974b38d8e2392 speaker=guide
   Keep it lit.
 -> END
 ```

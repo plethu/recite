@@ -313,18 +313,18 @@
             "status": "ok",
             "event_kind": "prompt",
             "prompt_choice_ids": [
-              "ask_work",
-              "locked"
+              "3f481d9991fa22e23b0c",
+              "8706986735003ec9aaec"
             ],
             "prompt_unavailable_choice_ids": [
-              "locked"
+              "8706986735003ec9aaec"
             ]
           }
         },
         {
           "operation": {
             "kind": "choose",
-            "choice_id": "ask_work"
+            "choice_id": "3f481d9991fa22e23b0c"
           },
           "expect": {
             "status": "ok",
@@ -360,14 +360,14 @@
             "status": "ok",
             "event_kind": "prompt",
             "prompt_choice_ids": [
-              "end_now"
+              "ced14b8623bba2198c6d"
             ]
           }
         },
         {
           "operation": {
             "kind": "choose",
-            "choice_id": "end_now"
+            "choice_id": "ced14b8623bba2198c6d"
           },
           "expect": {
             "status": "ok",
@@ -388,7 +388,7 @@
         {
           "operation": {
             "kind": "choose",
-            "choice_id": "ask_work"
+            "choice_id": "3f481d9991fa22e23b0c"
           },
           "expect": {
             "status": "error",
@@ -657,14 +657,14 @@
             "status": "ok",
             "event_kind": "prompt",
             "prompt_unavailable_choice_ids": [
-              "locked"
+              "8706986735003ec9aaec"
             ]
           }
         },
         {
           "operation": {
             "kind": "choose",
-            "choice_id": "locked"
+            "choice_id": "8706986735003ec9aaec"
           },
           "expect": {
             "status": "error",
@@ -748,8 +748,8 @@
             "status": "ok",
             "event_kind": "prompt",
             "prompt_choice_ids": [
-              "ask_work",
-              "locked"
+              "3f481d9991fa22e23b0c",
+              "8706986735003ec9aaec"
             ]
           }
         },
@@ -802,7 +802,7 @@
             "status": "ok",
             "event_kind": "prompt",
             "prompt_choice_ids": [
-              "end_now"
+              "ced14b8623bba2198c6d"
             ]
           }
         },
@@ -1128,7 +1128,7 @@
         {
           "operation": {
             "kind": "choose",
-            "choice_id": "ask_work"
+            "choice_id": "3f481d9991fa22e23b0c"
           },
           "expect": {
             "status": "ok",

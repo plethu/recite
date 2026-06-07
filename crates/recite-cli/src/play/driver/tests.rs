@@ -100,9 +100,9 @@ impl PlayUiAdapter for RecordingUi {
 fn deferred_queue_updates_when_effects_are_scheduled_before_later_events() {
     let asset = asset(concat!(
         ":: start default\n",
-        "> intro\n",
+        "> intro@18c570b9af4d973ba876\n",
         "  Choose.\n",
-        "  ? go\n",
+        "  ? go@c491f4cbe1944ebc5bc5\n",
         "    Go.\n",
         "    -> branch\n",
         ":: branch\n",

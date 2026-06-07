@@ -23,7 +23,7 @@ fn validates_effects_against_generated_manifest_schema() {
             "! blocking advance_thread(hazel_intro, completed)\n",
             "! immediate scalar_effect(\"label\", 3, 1.5, true)\n",
             "! immediate speaker_effect(hazel)\n",
-            "> line\n",
+            "> line@cb8d3e9749be0a0329c9\n",
             "  Done.\n",
         ),
     )];

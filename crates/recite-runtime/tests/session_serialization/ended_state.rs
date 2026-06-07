@@ -6,14 +6,14 @@ fn restores_end_state_without_replaying_scene() {
         "dialogue/start.recite",
         concat!(
             ":: start default\n",
-            "> start_line\n",
+            "> start_line@b8b013bec1c39b26b36a\n",
             "  Start.\n",
             "! deferred finished()\n",
             "-> END\n",
         ),
     );
     let mut session = start_scene(&asset, None).expect("starts");
-    assert_line(next(&asset, &mut session), "start_line", "Start.");
+    assert_line(next(&asset, &mut session), "b8b013bec1c39b26b36a", "Start.");
     assert_end_effects(next(&asset, &mut session), ["finished"]);
 
     let mut restored =

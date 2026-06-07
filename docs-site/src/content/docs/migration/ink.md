@@ -65,16 +65,16 @@ The sound crosses the yard.
 
 ```text
 :: tower default
-> tower_001 speaker=guard
+> tower_001@72f711ddd5bfbaa55d89 speaker=guard
   The bell is silent.
-? tower_ring_bell
+? tower_ring_bell@70780f732f3234aae59c
   Ring it.
   -> ring_bell
 
 :: ring_bell
 ! blocking ring_bell(courtyard)
 ! deferred mark_flag(bell_rung)
-> tower_002
+> tower_002@f936cfc122e738cf0547
   The sound crosses the yard.
 -> END
 ```

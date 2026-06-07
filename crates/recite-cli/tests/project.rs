@@ -56,7 +56,7 @@ fn check_fresh_uses_project_relative_embedded_source_paths() {
     write_recite(
         temp.path(),
         "Source/dialogue.recite",
-        ":: start default speaker=hazel\n> intro\n  Shadow source.\n-> END\n",
+        ":: start default speaker=hazel\n> intro@11111111111111111111\n  Shadow source.\n-> END\n",
     );
     write_project_manifest(
         temp.path(),
@@ -164,7 +164,7 @@ participants = ["hazel"]
 
     fs::write(
         &source,
-        ":: start default speaker=hazel\n> intro\n  Changed.\n-> END\n",
+        ":: start default speaker=hazel\n> intro@11111111111111111111\n  Changed.\n-> END\n",
     )
     .expect("stale source");
     fs::write(&schema, schema_manifest(["hazel", "rhea"])).expect("stale schema");

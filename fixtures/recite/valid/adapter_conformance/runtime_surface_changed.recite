@@ -1,22 +1,22 @@
 :: start default
-> intro_line
+> intro_line@58aa699aec532370d2bd
   Intro line changed.
 ! immediate intro_sfx()
-? ask_work
+? ask_work@9e586a5425a988bddb4d
   Ask about work.
   -> work
-? locked requires=(trusts(player))
+? locked@7383b2665eb87a4f6bd2 requires=(trusts(player))
   Take the locked route.
   -> locked
 
 :: work
 ! deferred finished_work()
 ! blocking grant_item(map)
-? end_now
+? end_now@306fbb89be009194ee9a
   End now.
   -> END
 
 :: locked
-> locked_line
+> locked_line@7a9383a1f68bca5ea2ab
   Locked route reached.
 -> END

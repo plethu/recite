@@ -62,15 +62,15 @@ HarborMaster: Boat leaves at dawn. #mood:busy
 
 ```text
 :: dock default
-> dock_001 speaker=harbor_master mood=busy
+> dock_001@e2e84156252e1c9c83bd speaker=harbor_master mood=busy
   Boat leaves at dawn.
-? dock_ask_cargo
+? dock_ask_cargo@345edf5b882f580e0b9f
   Ask about cargo.
   -> cargo
 
 :: cargo
 ! immediate log_cargo_question()
-> cargo_001 speaker=harbor_master
+> cargo_001@5ced604f5a4aaf151e50 speaker=harbor_master
   Crates first, passengers second.
 -> END
 ```

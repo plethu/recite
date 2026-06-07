@@ -5,7 +5,7 @@ use tempfile::TempDir;
 
 use crate::tests::support::{Harness, file_uri, uri, write_file};
 
-use super::support::{authoring_schema, position_inside};
+use super::support::{authoring_schema, position_after, position_inside};
 
 pub(super) fn initialize_advertises_completion_and_hover() {
     let (harness, result) = Harness::start_with_result(json!({
@@ -28,20 +28,17 @@ pub(super) fn initialize_advertises_completion_and_hover() {
 pub(super) fn hover_distinguishes_unavailable_and_hidden_choices() {
     let mut harness = Harness::start();
     let source_uri = uri("file:///workspace/dialogue/hover.recite");
-    harness.did_open(
-        source_uri.clone(),
-        1,
-        concat!(
-            ":: start default\n",
-            "? ask requires=(trust_gte(hazel, rhea, 3))\n",
-            ":if trust_gte(hazel, rhea, 3)\n",
-        ),
+    let source = concat!(
+        ":: start default\n",
+        "? ask@72caea2ada317fd50c3e requires=(trust_gte(hazel, rhea, 3))\n",
+        ":if trust_gte(hazel, rhea, 3)\n",
     );
+    harness.did_open(source_uri.clone(), 1, source);
     let _ = harness.recv_publish_diagnostics();
 
     let requires = hover_text(
         harness
-            .hover(source_uri.clone(), Position::new(1, 9))
+            .hover(source_uri.clone(), position_inside(source, "requires"))
             .expect("requires hover"),
     );
     assert!(requires.contains("keeps the choice visible"));
@@ -59,23 +56,20 @@ pub(super) fn hover_distinguishes_unavailable_and_hidden_choices() {
 pub(super) fn hover_uses_utf16_positions_after_non_ascii_prefix() {
     let mut harness = Harness::start();
     let source_uri = uri("file:///workspace/dialogue/hover-utf16.recite");
-    harness.did_open(
-        source_uri.clone(),
-        1,
-        concat!(
-            ":: start default\n",
-            "? ask accent=é requires=(trust_gte(hazel, rhea, 3))\n",
-        ),
+    let source = concat!(
+        ":: start default\n",
+        "? ask@12a62353a44a4b0f77d4 accent=é requires=(trust_gte(hazel, rhea, 3))\n",
     );
+    harness.did_open(source_uri.clone(), 1, source);
     let _ = harness.recv_publish_diagnostics();
 
     let hover = harness
-        .hover(source_uri, Position::new(1, 16))
+        .hover(source_uri, position_inside(source, "requires"))
         .expect("requires hover after non-ascii prefix");
 
     assert_eq!(
         hover.range.expect("hover range").start,
-        Position::new(1, 15)
+        position_after(source, "accent=é ")
     );
 
     harness.finish();
@@ -102,7 +96,7 @@ pub(super) fn hover_describes_schema_and_project_symbols() {
     let source_uri = file_uri(&temp.path().join("dialogue/start.recite"));
     let source = concat!(
         ":: start default\n",
-        "> line speaker=hazel portrait=wry\n",
+        "> line@186493315915b423ae7a speaker=hazel portrait=wry\n",
         "  Hello.\n",
         "-> saved_block\n",
         ":if can_talk\n",

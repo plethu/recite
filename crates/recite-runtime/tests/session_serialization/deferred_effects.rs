@@ -7,9 +7,9 @@ fn restores_deferred_effects_collected_before_save_and_continues_in_order() {
         concat!(
             ":: start default\n",
             "! deferred entered_start(alpha, \"beta\", 3, 0.5, true)\n",
-            "> prompt_line\n",
+            "> prompt_line@fdc4caf6396ac130f27b\n",
             "  What next?\n",
-            "  ? work\n",
+            "  ? work@d32d0f33dfd989109d84\n",
             "    Work.\n",
             "    -> work\n",
             ":: work\n",
@@ -29,7 +29,7 @@ fn restores_deferred_effects_collected_before_save_and_continues_in_order() {
         choose(
             &asset,
             &mut restored,
-            ChoiceId::new("work").expect("valid choice ID"),
+            ChoiceId::new("d32d0f33dfd989109d84").expect("valid choice ID"),
         ),
         ["entered_start", "entered_work"],
     );
@@ -52,7 +52,7 @@ fn forged_deferred_effect_snapshot_must_reference_a_compiled_deferred_effect() {
         concat!(
             ":: start default\n",
             "! immediate play_sfx(snap)\n",
-            "> start_line\n",
+            "> start_line@4ea3ba655c6213a87719\n",
             "  Start.\n",
             "-> END\n",
         ),

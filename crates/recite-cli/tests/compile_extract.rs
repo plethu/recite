@@ -13,7 +13,7 @@ fn compile_writes_messagepack_only_after_clean_validation() {
     let valid = write_recite(
         temp.path(),
         "valid.recite",
-        ":: start default\n> intro\n  Hello.\n-> END\n",
+        ":: start default\n> intro@11111111111111111111\n  Hello.\n-> END\n",
     );
     let output_path = temp.path().join("dialogue.recitec");
 
@@ -57,7 +57,7 @@ fn compile_does_not_write_output_when_schema_fails_to_load() {
     let source = write_recite(
         temp.path(),
         "valid.recite",
-        ":: start default\n> intro\n  Hello.\n-> END\n",
+        ":: start default\n> intro@11111111111111111111\n  Hello.\n-> END\n",
     );
     let bad_schema = write_file(
         temp.path(),
@@ -88,7 +88,7 @@ fn compile_does_not_write_output_when_schema_fails_to_load() {
 #[test]
 fn compile_refuses_to_overwrite_input_source() {
     let temp = TempDir::new().expect("tempdir");
-    let source_text = ":: start default\n> intro\n  Hello.\n-> END\n";
+    let source_text = ":: start default\n> intro@11111111111111111111\n  Hello.\n-> END\n";
     let source = write_recite(temp.path(), "source.recite", source_text);
 
     let output = run(recite()
@@ -112,14 +112,14 @@ fn extract_emits_pot_to_stdout_or_output_after_validation() {
     let source = write_recite(
         temp.path(),
         "dialogue.recite",
-        ":: start default\n> intro\n  Hello.\n  ? ask\n    Ask?\n    -> END\n",
+        ":: start default\n> intro@11111111111111111111\n  Hello.\n  ? ask@22222222222222222222\n    Ask?\n    -> END\n",
     );
 
     let output = run(recite().arg("extract").arg(&source));
     output.assert_success();
-    output.assert_stdout_contains("msgctxt \"intro\"");
+    output.assert_stdout_contains("msgctxt \"11111111111111111111\"");
     output.assert_stdout_contains("msgid \"Hello.\"");
-    output.assert_stdout_contains("msgctxt \"ask\"");
+    output.assert_stdout_contains("msgctxt \"22222222222222222222\"");
 
     let pot_path = temp.path().join("dialogue.pot");
     recite()
@@ -161,7 +161,7 @@ fn extract_does_not_write_output_on_validation_or_schema_failure() {
     let valid = write_recite(
         temp.path(),
         "valid.recite",
-        ":: start default\n> intro\n  Hello.\n-> END\n",
+        ":: start default\n> intro@11111111111111111111\n  Hello.\n-> END\n",
     );
     let bad_schema = write_file(
         temp.path(),
@@ -191,7 +191,7 @@ fn extract_does_not_write_output_on_validation_or_schema_failure() {
 #[test]
 fn extract_refuses_to_overwrite_input_source() {
     let temp = TempDir::new().expect("tempdir");
-    let source_text = ":: start default\n> intro\n  Hello.\n-> END\n";
+    let source_text = ":: start default\n> intro@11111111111111111111\n  Hello.\n-> END\n";
     let source = write_recite(temp.path(), "source.recite", source_text);
 
     let output = run(recite()

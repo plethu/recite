@@ -89,8 +89,8 @@ The source format should be indentation-first and must not mix one-line object l
 
 ```text
 :: block_name default      # block
-> line_id                  # line
-? choice_id                # choice
+> line_id@94d299352de485ec0b23                  # line
+? choice_id@c9f4c6bbcb7103982051                # choice
 ! mode effect(...)         # effect
 -> target                  # goto
 :if condition(...)         # conditional branch
@@ -154,7 +154,7 @@ Example syntax:
 ```text
 :: tavern_arrival default
 
-> ta_001 speaker=innkeeper portrait=neutral
+> ta_001@b5960ef350446cba696b speaker=innkeeper portrait=neutral
   Welcome to the Rusty Flagon. Haven't seen you in a while.
 ```
 
@@ -182,14 +182,14 @@ Rhea: Hello.
 Instead, speaker must be structured in the line header:
 
 ```text
-> rhea_001 speaker=rhea
+> rhea_001@44b166e10a429205d903 speaker=rhea
   Hello.
 ```
 
 Multiline prose is represented by the indented body:
 
 ```text
-> rhea_014 speaker=rhea portrait=concerned
+> rhea_014@f4dc069011f35d4c1ce5 speaker=rhea portrait=concerned
   I didn't know it was that bad.
 
   I mean, I knew it was bad.
@@ -219,11 +219,11 @@ Unavailable choices must be included in runtime output by default so callers can
 Choice header clauses are dedicated syntax, not metadata:
 
 ```text
-? ask_news requires=(trust_gte(innkeeper, player, 3))
+? ask_news@b34dda3cb1fa5853566e requires=(trust_gte(innkeeper, player, 3))
   What's the news?
   -> local_news
 
-? ask_news_deeper topic=rumours requires=(trust_gte(innkeeper, player, 5)) reason=innkeeper_trust_hint
+? ask_news_deeper@3ef1d3aca256d6ad1260 topic=rumours requires=(trust_gte(innkeeper, player, 5)) reason=innkeeper_trust_hint
   What aren't you telling visitors?
   -> guarded_rumours
 ```
@@ -245,23 +245,23 @@ Examples:
 
 ```text
 # Plain single-player dialogue: disabled until trust is high enough.
-? ask_news requires=(trust_gte(innkeeper, player, 3))
+? ask_news@6a6b706d5c267f9f7da2 requires=(trust_gte(innkeeper, player, 3))
   What's the news?
   -> local_news
 
 # Visual novel: structural omission for a route-specific option.
 :if route_active(rhea_confession)
-  ? confess
+  ? confess@f6c109bab34c9529ca23
     Tell Rhea the truth.
     -> confession
 
 # Twine-like interactive fiction: disabled affordance with a reusable hint.
-? open_door requires=(has_flag(cell_key)) reason=need_cell_key
+? open_door@c268a2f7f56bab22d1e3 requires=(has_flag(cell_key)) reason=need_cell_key
   Unlock the cell door.
   -> cell_exit
 
 # CRPG-flavoured content without RPG-specific core syntax.
-? intimidate_guard requires=(trait_gte(player, presence, 4)) reason=presence_too_low
+? intimidate_guard@a2622f8e848318ad7f2b requires=(trait_gte(player, presence, 4)) reason=presence_too_low
   Make the guard stand aside.
   -> guard_intimidated
 ```
@@ -271,7 +271,7 @@ Choice echo policies:
 ```text
 echo = none
 echo = selected_text
-echo = line(choice_echo_001)
+echo = line(4b3a1d9e8c7f6a5b2c10)
 ```
 
 The default should be `none`. If a game wants the protagonist to repeat the selected choice, it should be an explicit authored output, not a runtime quirk.
@@ -341,7 +341,7 @@ For example, a chance-based skill check is authored as ordinary choice metadata
 plus host-owned resolution:
 
 ```text
-? talk_down_guard check_skill=speech check_threshold=20 check_actor=player
+? talk_down_guard@e8abb4465a68f6ad75bd check_skill=speech check_threshold=20 check_actor=player
   Talk the guard down.
   -> attempt_talk_down
 
@@ -349,10 +349,10 @@ plus host-owned resolution:
 ! blocking resolve_dialogue_check(talk_down_guard, player, speech, 20)
 :match dialogue_check_result(talk_down_guard)
   success:
-    > guard_relents
+    > guard_relents@c123e8e85bf15374cb60
       Fine. Go through.
   failure:
-    > guard_refuses
+    > guard_refuses@f64d7023a39ec8ec5345
       Not a chance.
 ```
 
@@ -365,15 +365,29 @@ structured presentation affordances without changing the underlying
 
 ### 5.4.2 ID Assignment Policy
 
-Every line and choice must reach the compiler with a stable ID. The intended workflow:
+Every line and choice must reach the compiler with a stable anchor. Source
+headers use `label@anchor`: the label is editable author-facing context, and the
+anchor is the canonical machine identity.
 
-- Authors may write line and choice headers without an ID. Example: `>` alone, or `> hazel_rhea.small_talk` with no suffix.
-- The LSP inserts a deterministic-but-unique short suffix (4–6 base32 characters) into the source file on save, producing e.g. `> hazel_rhea.small_talk_WPUQ`. The suffix is selected to be unique within the project at insertion time.
-- Once written to disk, IDs are **frozen**. The LSP never rewrites an existing ID. Renames go through the explicit `rename` code action and produce a structured rename record so translation tools can follow the change.
-- The compiler errors if any line or choice lacks an ID. `recite check-ids` enforces the same.
-- Because IDs do not encode content, translation files survive author edits to source text.
+- Authors may write line and choice headers without an ID. Example: `>` alone,
+  or draft `> hazel_rhea.small_talk@` with no anchor.
+- The LSP inserts a deterministic-but-unique 20-character lowercase hex anchor
+  into the source file, producing e.g.
+  `> hazel_rhea.small_talk@7f3a9c2e4b6d8f019a2b`. Anchors are selected to be
+  unique across the project's shared line/choice namespace at insertion time.
+- Once written to disk, anchors are **frozen**. The LSP never rewrites an
+  existing anchor. Label edits are display/context changes and do not create
+  rename records.
+- Replacing an anchor changes identity. Explicit migration records for anchor
+  replacement are future work.
+- The compiler errors if any line or choice has a missing, draft, malformed, or
+  plain unsuffixed ID. `recite check-ids` enforces the same.
+- Because anchors do not encode content, translation files survive author edits
+  to source text and label edits.
 
-This policy keeps gettext-style translation stable: an edit to source text does not invalidate `msgctxt`. Auto-rewriting IDs based on content is an explicit non-goal.
+This policy keeps gettext-style translation stable: an edit to source text or
+label text does not invalidate `msgctxt`, which stores the anchor. Auto-rewriting
+anchors based on content is an explicit non-goal.
 
 ### 5.5 Prompts
 
@@ -382,14 +396,14 @@ The runtime must be able to represent choices attached to a line. Many games pre
 The source format should support prompts as a line with nested choices:
 
 ```text
-> ta_prompt_001 speaker=innkeeper portrait=neutral
+> ta_prompt_001@573fd5e9fea65bf417b8 speaker=innkeeper portrait=neutral
   What do you need?
 
-  ? ta_opt_room
+  ? ta_opt_room@2df8dcd8991aacebed0c
     I need a room.
     -> get_room
 
-  ? ta_opt_news requires=(trust_gte(innkeeper, player, 3))
+  ? ta_opt_news@2a8f40266bfbea97f8bd requires=(trust_gte(innkeeper, player, 3))
     What's the news?
     -> local_news
 ```
@@ -397,11 +411,11 @@ The source format should support prompts as a line with nested choices:
 A prompt may also omit line text and present choices only:
 
 ```text
-? ta_opt_room
+? ta_opt_room@e777d797e41647f748ea
   I need a room.
   -> get_room
 
-? ta_opt_leave
+? ta_opt_leave@9e99c50eca0ac27500fa
   Never mind.
   -> END
 ```
@@ -851,11 +865,11 @@ Examples:
 
 ```text
 # Line metadata can project a portrait cue.
-> rhea_greeting speaker=rhea portrait=smile
+> rhea_greeting@79e8dc1d5f3af8157e85 speaker=rhea portrait=smile
   You came back.
 
 # Choice metadata can project a Fallout/Skyrim-style skill prefix.
-? talk_down_guard check_skill=speech check_threshold=20 check_actor=player
+? talk_down_guard@925d7aa147feea3e7085 check_skill=speech check_threshold=20 check_actor=player
   Talk the guard down.
   -> attempt_talk_down
 
@@ -910,10 +924,10 @@ Inline markup is allowed inside localisable text and must be preserved through e
 Examples:
 
 ```text
-> hazel_rhea.small_talk.005 speaker=rhea portrait=concerned
+> hazel_rhea.small_talk.005@42b9ac5ab7fc3ee50cac speaker=rhea portrait=concerned
   [slow]I didn't know it was that bad.[/slow]
 
-> hazel_rhea.small_talk.002 speaker=hazel portrait=flat
+> hazel_rhea.small_talk.002@70c4f1ab40a347430ba7 speaker=hazel portrait=flat
   [shake]Yeah, funny.[/shake]
 ```
 
@@ -947,10 +961,10 @@ Conditional branches gate a section of dialogue (lines, choices, effects, divert
 
 ```text
 :if familiarity_gte(hazel, rhea, 3)
-  > greet_warm_001 speaker=rhea
+  > greet_warm_001@944703ea8a80a2530044 speaker=rhea
     You again. Good.
 :else
-  > greet_cold_001 speaker=rhea
+  > greet_cold_001@096efb0a031aa3c6582c speaker=rhea
     Do I know you?
 ```
 
@@ -970,16 +984,16 @@ Pattern matching is restricted, additive sugar over `:if` chains for the case wh
 ```text
 :match thread_stage(rhea_job_response)
   :case tired
-    > rhea_tired_001 speaker=rhea
+    > rhea_tired_001@dda242f6d7cd21051a6d speaker=rhea
       I'm exhausted. Let's keep it short.
   :case angry
-    > rhea_angry_001 speaker=rhea
+    > rhea_angry_001@03f0d7a77024f6731eb4 speaker=rhea
       Don't.
   :case fine
-    > rhea_fine_001 speaker=rhea
+    > rhea_fine_001@4df2ea266529d3f1a0ff speaker=rhea
       All right, what's up?
   :case _
-    > rhea_default_001 speaker=rhea
+    > rhea_default_001@f85d3061266f7f9de56c speaker=rhea
       Hey.
 ```
 
@@ -1032,7 +1046,7 @@ Localisable text may interpolate named values supplied by the caller.
 Placeholders use curly-brace syntax. Each placeholder is `{name}`, where `name` is a lowercase ASCII identifier (letters, digits, underscores; must start with a letter). Whitespace inside the braces is not permitted.
 
 ```text
-> letters_001 speaker=narrator count=$letters_remaining
+> letters_001@c6df367933e543042076 speaker=narrator count=$letters_remaining
   You have {letters_remaining} letters.
 ```
 
@@ -1062,7 +1076,7 @@ Determinism: same line id, same declared values, same locale → same delivered 
 Lines whose text varies by count declare two source forms — singular and plural — using a continuation line prefixed with `|`. Selection between forms is governed by gettext/CLDR plural rules per locale, not by recite.
 
 ```text
-> letters_001 speaker=narrator count=$letters_remaining
+> letters_001@d6e98b87e1e0a4699603 speaker=narrator count=$letters_remaining
   You have one letter.
   | You have {letters_remaining} letters.
 ```
@@ -1536,8 +1550,9 @@ For dialogue lines and choices:
 ```po
 #. file: Dialogue/hazel_rhea/small_talk.recite
 #. block: small_talk_start
+#. source id: small_talk_001@8f1c2d3e4a5b6c708192
 #. speaker: rhea
-msgctxt "hazel_rhea.small_talk.001"
+msgctxt "8f1c2d3e4a5b6c708192"
 msgid "Oh, hey! Didn't expect to see you here."
 msgstr ""
 ```
@@ -1624,8 +1639,8 @@ The runtime never invents broader locales beyond BCP-47 truncation. Cross-locale
 IDs may support variant suffixes:
 
 ```text
-hazel_rhea.small_talk.001&formal
-hazel_rhea.small_talk.001
+8f1c2d3e4a5b6c708192&formal
+8f1c2d3e4a5b6c708192
 ```
 
 Lookup priority:
@@ -1656,8 +1671,9 @@ Plural lines (§5.11) extract to standard gettext plural entries:
 ```po
 #. file: Dialogue/town/inventory.recite
 #. block: post_courier
+#. source id: letters_001@5e4d3c2b1a0987654321
 #. speaker: narrator
-msgctxt "town.inventory.letters_001"
+msgctxt "5e4d3c2b1a0987654321"
 msgid "You have one letter."
 msgid_plural "You have {letters_remaining} letters."
 msgstr[0] ""
@@ -1930,7 +1946,7 @@ Rules:
 Example choice and schema pairing:
 
 ```text
-? ask_news requires=(trust_gte(innkeeper, player, 3)) reason=innkeeper_trust_hint
+? ask_news@c2bdeae1465bfa65bcf4 requires=(trust_gte(innkeeper, player, 3)) reason=innkeeper_trust_hint
   What's the real news?
   -> local_news_private
 ```
@@ -2876,7 +2892,7 @@ The CLI should support a fixture format for headless runs:
 "trust_gte(hazel, rhea, 3)" = true
 
 [choices]
-small_talk_start = "small_talk_start_WPUQ"
+small_talk_start = "7f3a9c2e4b6d8f019a2b"
 
 [effects]
 auto_ack_blocking = true

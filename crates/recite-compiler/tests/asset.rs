@@ -72,7 +72,11 @@ fn valid_fixture_compiles_to_runtime_facing_v0_tables() {
             .iter()
             .map(|entry| entry.id.as_str())
             .collect::<Vec<_>>(),
-        ["intro_001", "secret_001", "work_001"]
+        [
+            "2119548317bb586e3865",
+            "637b1854a7f3ed42f045",
+            "75bfa2976ec9548f608a"
+        ]
     );
     assert_eq!(
         dialogue
@@ -80,7 +84,7 @@ fn valid_fixture_compiles_to_runtime_facing_v0_tables() {
             .iter()
             .map(|entry| entry.id.as_str())
             .collect::<Vec<_>>(),
-        ["ask_work"]
+        ["b84cc9fa241a33bcdf05"]
     );
     assert_eq!(
         dialogue
@@ -123,7 +127,7 @@ fn valid_fixture_compiles_to_runtime_facing_v0_tables() {
     ));
 
     let intro = &dialogue.lines[0];
-    assert_eq!(intro.id.as_str(), "intro_001");
+    assert_eq!(intro.id.as_str(), "637b1854a7f3ed42f045");
     assert_eq!(intro.speaker.map(|index| index.as_u32()), Some(1));
     assert_eq!(
         metadata_keys_for(dialogue, intro.metadata),
@@ -154,7 +158,7 @@ fn schema_availability_reasons_compile_into_runtime_asset() {
             "dialogue/start.recite",
             concat!(
                 ":: start default\n",
-                "? ask_news requires=(trust_gte(hazel, rhea, 3)) reason=innkeeper_trust_hint\n",
+                "? ask_news@a94b83f2d8bd65101cc3 requires=(trust_gte(hazel, rhea, 3)) reason=innkeeper_trust_hint\n",
                 "  What's the news?\n",
                 "  -> END\n",
             ),
@@ -245,7 +249,7 @@ fn compile_with_programmatic_schema_rejects_non_finite_availability_reason_liter
             "dialogue/start.recite",
             concat!(
                 ":: start default\n",
-                "? blocked_choice requires=(blocked())\n",
+                "? blocked_choice@fa18ce77aacd995c1666 requires=(blocked())\n",
                 "  Blocked.\n",
                 "  -> END\n",
             ),
@@ -298,7 +302,7 @@ fn compiler_generated_messagepack_decodes_punctuation_metadata_keys() {
             "dialogue/main.recite",
             concat!(
                 ":: start default\n",
-                "> intro ui:portrait=flat\n",
+                "> intro@ddb0434d0a42138a483b ui:portrait=flat\n",
                 "  Hello.\n",
                 "-> END\n",
             ),
@@ -326,14 +330,19 @@ fn compilation_order_is_canonical_for_project_inputs() {
         "dialogue/start.recite",
         concat!(
             ":: start default\n",
-            "> start_line\n",
+            "> start_line@3ddabe33285601e01c18\n",
             "  Start.\n",
             "-> dialogue/next.recite::next\n",
         ),
     );
     let next = CompileInput::new(
         "dialogue/next.recite",
-        concat!(":: next\n", "> next_line\n", "  Next.\n", "-> END\n",),
+        concat!(
+            ":: next\n",
+            "> next_line@11111111111111111111\n",
+            "  Next.\n",
+            "-> END\n",
+        ),
     );
 
     let forward = compile_inputs([start.clone(), next.clone()], options())
@@ -361,11 +370,21 @@ fn compilation_order_is_canonical_for_project_inputs() {
 fn default_block_index_is_stable_when_default_block_is_not_first() {
     let alpha = CompileInput::new(
         "dialogue/alpha.recite",
-        concat!(":: alpha\n", "> alpha_line\n", "  Alpha.\n", "-> END\n",),
+        concat!(
+            ":: alpha\n",
+            "> alpha_line@11111111111111111111\n",
+            "  Alpha.\n",
+            "-> END\n",
+        ),
     );
     let zed = CompileInput::new(
         "dialogue/zed.recite",
-        concat!(":: zed default\n", "> zed_line\n", "  Zed.\n", "-> END\n",),
+        concat!(
+            ":: zed default\n",
+            "> zed_line@22222222222222222222\n",
+            "  Zed.\n",
+            "-> END\n",
+        ),
     );
 
     let output = compile_inputs([zed, alpha], options())
@@ -396,7 +415,7 @@ fn malformed_or_invalid_content_returns_diagnostics_without_asset() {
             "dialogue/bad.recite",
             concat!(
                 ":: start default\n",
-                "> line\n",
+                "> line@a543a786de9b562d6229\n",
                 "  Text.\n",
                 "    Mixed indent.\n",
             ),
@@ -414,7 +433,11 @@ fn malformed_or_invalid_content_returns_diagnostics_without_asset() {
     let validation_failure = compile_inputs(
         [CompileInput::new(
             "dialogue/bad.recite",
-            concat!(":: start default\n", "? missing_target\n", "  Choose.\n",),
+            concat!(
+                ":: start default\n",
+                "? missing_target@11111111111111111111\n",
+                "  Choose.\n",
+            ),
         )],
         options(),
     )
@@ -431,7 +454,7 @@ fn malformed_or_invalid_content_returns_diagnostics_without_asset() {
             "dialogue/bad.recite",
             concat!(
                 ":: start default\n",
-                "? choose echo=line(missing_echo_line)\n",
+                "? choose@8913b182d2fb5b7fe6ed echo=line(4b1b2483a1e83884c933)\n",
                 "  Choose.\n",
                 "  -> END\n",
             ),
@@ -449,7 +472,11 @@ fn malformed_or_invalid_content_returns_diagnostics_without_asset() {
     let non_finite_metadata = compile_inputs(
         [CompileInput::new(
             "dialogue/bad.recite",
-            concat!(":: start default\n", "> line score=NaN\n", "  Text.\n",),
+            concat!(
+                ":: start default\n",
+                "> line@11111111111111111111 score=NaN\n",
+                "  Text.\n",
+            ),
         )],
         options(),
     )

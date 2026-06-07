@@ -72,11 +72,11 @@ en-US = ["locales/en-US.po"]
 "relationship(speaker_00, speaker_01)" = { enum = "active" }
 
 [choices]
-line_00000_000 = "choice_00000_000"
-line_00002_000 = "choice_00002_000"
-line_00004_000 = "choice_00004_000"
-line_00006_000 = "choice_00006_000"
-line_00008_000 = "choice_00008_000"
+"44bbd8153af5a8182d93" = "7e1ba0ac8b433fb225a8"
+"9024e482a2e6a762e6ca" = "fca5b4ff1391a1de4b2c"
+"f013d0917b8124bce00d" = "461903f26f87177f2fa9"
+"811d0fd34905fd28e03a" = "8b9dbebdbee92dffcbb0"
+"df3a9a029365da2b1d67" = "53d22674f92e97362b13"
 
 [effects]
 auto_ack_blocking = true

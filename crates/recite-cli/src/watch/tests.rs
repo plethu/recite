@@ -47,7 +47,7 @@ participants = ["hazel"]
 }
 
 fn valid_source() -> &'static str {
-    ":: start default speaker=hazel\n> intro\n  Hello.\n-> END\n"
+    ":: start default speaker=hazel\n> intro@11111111111111111111\n  Hello.\n-> END\n"
 }
 
 #[test]

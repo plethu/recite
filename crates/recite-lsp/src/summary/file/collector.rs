@@ -1,11 +1,12 @@
 use recite_core::{
     Block, Choice, ConditionCall, ConditionExpression, DivertTarget, Effect, IfBranch, Line,
-    MatchBranch, SourceFile, SourceMetadata, SourcePosition, SourceSpan, Statement,
+    MatchBranch, SourceFile, SourceId, SourceMetadata, SourcePosition, SourceSpan, Statement,
+    is_valid_source_label,
 };
 
 use super::{
-    BlockReferenceSummary, FunctionReferenceSummary, MetadataKeySummary, MissingIdKind,
-    MissingIdSummary, SpannedName,
+    BlockReferenceSummary, FunctionReferenceSummary, MetadataKeySummary, MissingIdInsertion,
+    MissingIdKind, MissingIdSummary, SpannedName,
 };
 
 #[derive(Default)]
@@ -60,15 +61,40 @@ impl FileSummaryCollector {
                 name: id.as_str().to_owned(),
                 span: line.span.clone(),
             }),
-            None => self.missing_ids.push(MissingIdSummary {
-                kind: MissingIdKind::Line,
-                span: line.span.clone(),
-                insertion_position: insertion_position_after_marker(&line.span),
-            }),
+            None => self.collect_missing_line_id(line),
         }
         self.collect_metadata(&line.metadata);
         for statement in &line.statements {
             self.collect_statement(statement);
+        }
+    }
+
+    fn collect_missing_line_id(&mut self, line: &Line) {
+        match &line.source_id {
+            SourceId::Missing => self.missing_ids.push(MissingIdSummary {
+                kind: MissingIdKind::Line,
+                label: None,
+                insertion: MissingIdInsertion::FullId,
+                span: line.span.clone(),
+                insertion_position: insertion_position_after_marker(&line.span),
+            }),
+            SourceId::Draft { label } => self.missing_ids.push(MissingIdSummary {
+                kind: MissingIdKind::Line,
+                label: Some(label.clone()),
+                insertion: MissingIdInsertion::AnchorOnly,
+                span: line.span.clone(),
+                insertion_position: insertion_position_after_source_id(&line.span, label, "@"),
+            }),
+            SourceId::Malformed { raw } if is_valid_source_label(raw) => {
+                self.missing_ids.push(MissingIdSummary {
+                    kind: MissingIdKind::Line,
+                    label: Some(raw.clone()),
+                    insertion: MissingIdInsertion::AtAnchor,
+                    span: line.span.clone(),
+                    insertion_position: insertion_position_after_source_id(&line.span, raw, ""),
+                });
+            }
+            SourceId::Malformed { .. } | SourceId::Frozen { .. } => {}
         }
     }
 
@@ -78,11 +104,7 @@ impl FileSummaryCollector {
                 name: id.as_str().to_owned(),
                 span: choice.span.clone(),
             }),
-            None => self.missing_ids.push(MissingIdSummary {
-                kind: MissingIdKind::Choice,
-                span: choice.span.clone(),
-                insertion_position: insertion_position_after_marker(&choice.span),
-            }),
+            None => self.collect_missing_choice_id(choice),
         }
         self.collect_metadata(&choice.metadata);
         if let Some(requirement) = &choice.availability_requirement {
@@ -93,6 +115,35 @@ impl FileSummaryCollector {
         }
         for statement in &choice.statements {
             self.collect_statement(statement);
+        }
+    }
+
+    fn collect_missing_choice_id(&mut self, choice: &Choice) {
+        match &choice.source_id {
+            SourceId::Missing => self.missing_ids.push(MissingIdSummary {
+                kind: MissingIdKind::Choice,
+                label: None,
+                insertion: MissingIdInsertion::FullId,
+                span: choice.span.clone(),
+                insertion_position: insertion_position_after_marker(&choice.span),
+            }),
+            SourceId::Draft { label } => self.missing_ids.push(MissingIdSummary {
+                kind: MissingIdKind::Choice,
+                label: Some(label.clone()),
+                insertion: MissingIdInsertion::AnchorOnly,
+                span: choice.span.clone(),
+                insertion_position: insertion_position_after_source_id(&choice.span, label, "@"),
+            }),
+            SourceId::Malformed { raw } if is_valid_source_label(raw) => {
+                self.missing_ids.push(MissingIdSummary {
+                    kind: MissingIdKind::Choice,
+                    label: Some(raw.clone()),
+                    insertion: MissingIdInsertion::AtAnchor,
+                    span: choice.span.clone(),
+                    insertion_position: insertion_position_after_source_id(&choice.span, raw, ""),
+                });
+            }
+            SourceId::Malformed { .. } | SourceId::Frozen { .. } => {}
         }
     }
 
@@ -173,4 +224,19 @@ impl FileSummaryCollector {
 fn insertion_position_after_marker(span: &SourceSpan) -> SourcePosition {
     SourcePosition::new(span.start.line(), span.start.column().saturating_add(1))
         .unwrap_or(span.start)
+}
+
+fn insertion_position_after_source_id(
+    span: &SourceSpan,
+    label: &str,
+    suffix: &str,
+) -> SourcePosition {
+    let offset = 2_u32
+        .saturating_add(u32::try_from(label.chars().count()).unwrap_or(u32::MAX))
+        .saturating_add(u32::try_from(suffix.chars().count()).unwrap_or(u32::MAX));
+    SourcePosition::new(
+        span.start.line(),
+        span.start.column().saturating_add(offset),
+    )
+    .unwrap_or(span.start)
 }

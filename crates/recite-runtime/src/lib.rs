@@ -28,7 +28,7 @@
 //! #     };
 //! #     let source = concat!(
 //! #         ":: start default\n",
-//! #         "> intro_001\n",
+//! #         "> intro_001@8843fd6f53f020a12b31\n",
 //! #         "  Hello.\n",
 //! #         "-> END\n",
 //! #     );
@@ -55,7 +55,7 @@
 //!
 //! match event {
 //!     DialogueEvent::Line(line) => {
-//!         assert_eq!(line.id.as_str(), "intro_001");
+//!         assert_eq!(line.id.as_str(), "8843fd6f53f020a12b31");
 //!         assert_eq!(line.text, "Hello.");
 //!     }
 //!     other => panic!("expected line event, got {other:?}"),

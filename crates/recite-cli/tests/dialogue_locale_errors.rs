@@ -11,7 +11,7 @@ fn simple_asset(temp: &TempDir) -> PathBuf {
     let source = write_recite(
         temp.path(),
         "dialogue.recite",
-        ":: start default\n> intro\n  Hello.\n-> END\n",
+        ":: start default\n> intro@11111111111111111111\n  Hello.\n-> END\n",
     );
     compile_project_asset(temp.path(), &source, "dialogue.recitec", None)
 }
@@ -62,7 +62,7 @@ fn malformed_catalog_reports_catalog_path_and_line() {
     let malformed_catalog = write_file(
         temp.path(),
         "malformed.po",
-        "msgctxt \"intro\"\nmsgid \"Hello.\"\nmsgstr \"Bonjour.\n",
+        "msgctxt \"11111111111111111111\"\nmsgid \"Hello.\"\nmsgstr \"Bonjour.\n",
     );
     let fixture = write_file(
         temp.path(),
@@ -92,12 +92,12 @@ fn conflicting_catalog_entries_are_rejected() {
     let first = write_file(
         temp.path(),
         "first.po",
-        "msgctxt \"intro\"\nmsgid \"Hello.\"\nmsgstr \"Bonjour.\"\n",
+        "msgctxt \"11111111111111111111\"\nmsgid \"Hello.\"\nmsgstr \"Bonjour.\"\n",
     );
     let second = write_file(
         temp.path(),
         "second.po",
-        "msgctxt \"intro\"\nmsgid \"Hello.\"\nmsgstr \"Salut.\"\n",
+        "msgctxt \"11111111111111111111\"\nmsgid \"Hello.\"\nmsgstr \"Salut.\"\n",
     );
     let fixture = write_file(
         temp.path(),
@@ -163,7 +163,7 @@ fn plural_catalog_entries_are_rejected() {
         temp.path(),
         "plural.po",
         concat!(
-            "msgctxt \"intro\"\n",
+            "msgctxt \"11111111111111111111\"\n",
             "msgid \"Hello.\"\n",
             "msgid_plural \"Hello.\"\n",
             "msgstr[0] \"Bonjour.\"\n",

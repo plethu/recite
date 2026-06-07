@@ -13,26 +13,26 @@ fn trace_metrics_are_opt_in_and_run_rejects_metrics_flag() {
         "dialogue.recite",
         concat!(
             ":: start default\n",
-            "> intro\n",
+            "> intro@fce67ff0d8b068a2cb73\n",
             "  Welcome.\n",
-            "  ? help requires=(trusts(player))\n",
+            "  ? help@2fcfd0ee8b3c89204054 requires=(trusts(player))\n",
             "    Help.\n",
             "    -> help\n",
-            "  ? leave\n",
+            "  ? leave@9f0992b4c86988172012\n",
             "    Leave.\n",
             "    -> leave\n",
             ":: help\n",
             "! blocking grant_item(map)\n",
             ":if has_bonus(player)\n",
-            "  > bonus\n",
+            "  > bonus@e4c5739e9cb26a6c8285\n",
             "    Bonus.\n",
             ":else\n",
-            "  > helped\n",
+            "  > helped@d091346090c64fe74279\n",
             "    Helped.\n",
             "! deferred finish(help)\n",
             "-> END\n",
             ":: leave\n",
-            "> left\n",
+            "> left@06fc902ff50f443a7fcc\n",
             "  Left.\n",
             "-> END\n",
         ),
@@ -46,7 +46,7 @@ fn trace_metrics_are_opt_in_and_run_rejects_metrics_flag() {
 "has_bonus(player)" = false
 
 [choices]
-intro = "help"
+fce67ff0d8b068a2cb73 = "2fcfd0ee8b3c89204054"
 
 [effects]
 auto_ack_blocking = true

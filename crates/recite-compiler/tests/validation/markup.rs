@@ -50,9 +50,9 @@ fn accepts_schema_declared_inline_markup_on_lines_and_choices() {
         "dialogue/start.recite",
         concat!(
             ":: start default\n",
-            "> prompt\n",
+            "> prompt@099f908852bbbcc90296\n",
             "  [slow]Hello [em]there[/em][/slow]\n",
-            "  ? ask\n",
+            "  ? ask@40f78a1bf92a5059ac4c\n",
             "    [pause]Ask now.\n",
             "    -> END\n",
         ),
@@ -70,7 +70,7 @@ fn reports_unknown_inline_markup_tags_on_tag_names() {
         "dialogue/start.recite",
         concat!(
             ":: start default\n",
-            "> prompt\n",
+            "> prompt@7ed07c3e34c0ca877555\n",
             "  [ghost]Hello[/ghost]\n",
         ),
     )];
@@ -88,7 +88,7 @@ fn reports_multiline_inline_markup_spans_at_author_visible_columns() {
         "dialogue/start.recite",
         concat!(
             ":: start default\n",
-            "> prompt\n",
+            "> prompt@684c457f63157546ac21\n",
             "  First line.\n",
             "  [ghost]Second line.\n",
         ),
@@ -105,7 +105,11 @@ fn reports_missing_required_inline_markup_closing_tag_on_opening_name() {
     let schema = markup_schema();
     let files = vec![lower(
         "dialogue/start.recite",
-        concat!(":: start default\n", "> prompt\n", "  [slow]Hello\n",),
+        concat!(
+            ":: start default\n",
+            "> prompt@11111111111111111111\n",
+            "  [slow]Hello\n",
+        ),
     )];
 
     let report = validate_source_files_with_schema(&files, &schema);
@@ -119,7 +123,11 @@ fn reports_unexpected_inline_markup_closing_tag_on_closing_name() {
     let schema = markup_schema();
     let files = vec![lower(
         "dialogue/start.recite",
-        concat!(":: start default\n", "> prompt\n", "  Hello[/slow]\n",),
+        concat!(
+            ":: start default\n",
+            "> prompt@11111111111111111111\n",
+            "  Hello[/slow]\n",
+        ),
     )];
 
     let report = validate_source_files_with_schema(&files, &schema);
@@ -135,7 +143,7 @@ fn reports_mismatched_inline_markup_closing_tag_on_closing_name() {
         "dialogue/start.recite",
         concat!(
             ":: start default\n",
-            "> prompt\n",
+            "> prompt@264be2851d3c4e5aece6\n",
             "  [slow]Hello[/shake][/slow]\n",
         ),
     )];
@@ -153,7 +161,7 @@ fn reports_nested_inline_markup_inside_non_nesting_tag() {
         "dialogue/start.recite",
         concat!(
             ":: start default\n",
-            "> prompt\n",
+            "> prompt@16d57c9a758d714a1cf5\n",
             "  [shake]Hello [slow]there[/slow][/shake]\n",
         ),
     )];
@@ -171,7 +179,7 @@ fn reports_closing_tag_for_standalone_inline_markup() {
         "dialogue/start.recite",
         concat!(
             ":: start default\n",
-            "> prompt\n",
+            "> prompt@99f1284aca47a1ccfa25\n",
             "  [pause]Wait[/pause]\n",
         ),
     )];
@@ -188,7 +196,7 @@ fn skips_inline_markup_validation_without_schema_definitions() {
         "dialogue/start.recite",
         concat!(
             ":: start default\n",
-            "> prompt\n",
+            "> prompt@1312dfa7366087564ca0\n",
             "  [ghost]Hello[/ghost]\n",
         ),
     )];
@@ -205,7 +213,7 @@ fn explicit_schema_without_markup_definitions_reports_unknown_tags() {
         "dialogue/start.recite",
         concat!(
             ":: start default\n",
-            "> prompt\n",
+            "> prompt@d6f282ffcc0a15e67dd6\n",
             "  [ghost]Hello[/ghost]\n",
         ),
     )];

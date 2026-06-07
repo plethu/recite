@@ -6,16 +6,16 @@ fn restores_pending_prompt_and_selects_choice_using_matching_asset() {
         "dialogue/start.recite",
         concat!(
             ":: start default\n",
-            "> prompt_line\n",
+            "> prompt_line@87262b29c62cbd5e039d\n",
             "  What next?\n",
-            "  ? ask_work\n",
+            "  ? ask_work@9c9d3a385f3d2f73d105\n",
             "    Ask about work.\n",
             "    -> work\n",
-            "  ? leave\n",
+            "  ? leave@49bf893f86107eba6990\n",
             "    Leave.\n",
             "    -> END\n",
             ":: work\n",
-            "> work_line\n",
+            "> work_line@a248167d24afe69ed5ed\n",
             "  Work waits.\n",
             "-> END\n",
         ),
@@ -31,7 +31,7 @@ fn restores_pending_prompt_and_selects_choice_using_matching_asset() {
             .iter()
             .map(|choice| choice.id.as_str())
             .collect::<Vec<_>>(),
-        ["ask_work", "leave"]
+        ["9c9d3a385f3d2f73d105", "49bf893f86107eba6990"]
     );
 
     let snapshot = snapshot_session(&session);
@@ -44,7 +44,7 @@ fn restores_pending_prompt_and_selects_choice_using_matching_asset() {
             .iter()
             .map(|choice| choice.id.as_str())
             .collect::<Vec<_>>(),
-        ["ask_work", "leave"]
+        ["9c9d3a385f3d2f73d105", "49bf893f86107eba6990"]
     );
 
     let mut restored = restore_session(&asset, snapshot).expect("restores pending prompt");
@@ -52,9 +52,9 @@ fn restores_pending_prompt_and_selects_choice_using_matching_asset() {
         choose(
             &asset,
             &mut restored,
-            ChoiceId::new("ask_work").expect("valid choice ID"),
+            ChoiceId::new("9c9d3a385f3d2f73d105").expect("valid choice ID"),
         ),
-        "work_line",
+        "a248167d24afe69ed5ed",
         "Work waits.",
     );
 }
@@ -71,9 +71,9 @@ fn restores_pending_prompt_choice_availability_reasons() {
         "dialogue/start.recite",
         concat!(
             ":: start default\n",
-            "> prompt_line\n",
+            "> prompt_line@b3e7889a570fec166769\n",
             "  What next?\n",
-            "  ? ask_news requires=(trust_gte(hazel, rhea, 3)) reason=innkeeper_trust_hint\n",
+            "  ? ask_news@705a9c980adc29875933 requires=(trust_gte(hazel, rhea, 3)) reason=innkeeper_trust_hint\n",
             "    Ask for private news.\n",
             "    -> END\n",
         ),
@@ -156,13 +156,13 @@ fn restores_selected_choice_history_after_choice_continuation() {
         "dialogue/start.recite",
         concat!(
             ":: start default\n",
-            "> prompt_line\n",
+            "> prompt_line@85daba18ac6920654eb8\n",
             "  What next?\n",
-            "  ? work\n",
+            "  ? work@b2135e46d6825d504149\n",
             "    Work.\n",
             "    -> work\n",
             ":: work\n",
-            "> work_line\n",
+            "> work_line@d100aa1a09e300b0f35d\n",
             "  Work waits.\n",
             "-> END\n",
         ),
@@ -173,9 +173,9 @@ fn restores_selected_choice_history_after_choice_continuation() {
         choose(
             &asset,
             &mut session,
-            ChoiceId::new("work").expect("valid choice ID"),
+            ChoiceId::new("b2135e46d6825d504149").expect("valid choice ID"),
         ),
-        "work_line",
+        "d100aa1a09e300b0f35d",
         "Work waits.",
     );
 
@@ -187,7 +187,7 @@ fn restores_selected_choice_history_after_choice_continuation() {
             .iter()
             .map(ChoiceId::as_str)
             .collect::<Vec<_>>(),
-        ["work"]
+        ["b2135e46d6825d504149"]
     );
     assert_eq!(next(&asset, &mut restored), Ok(empty_end()));
 }

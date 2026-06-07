@@ -1,6 +1,6 @@
 use recite_core::{
     AvailabilityReasonId, Choice, ChoiceAvailabilityReasonOverride, ChoiceAvailabilityRequirement,
-    ChoiceId, ChoiceTarget, SourceSpan, SourceText, Statement,
+    ChoiceTarget, SourceId, SourceSpan, SourceText, Statement,
 };
 
 use crate::condition::parse_condition_expression;
@@ -31,15 +31,15 @@ impl Lowerer<'_, '_> {
         };
 
         let mut field_start = 0;
-        let choice_id = if let Some(first) = choice_fields.first().copied() {
+        let source_id = if let Some(first) = choice_fields.first().copied() {
             if first.key_value(self.path).is_none() {
                 field_start = 1;
-                ChoiceId::new(first.text).ok()
+                SourceId::parse(Some(first.text))
             } else {
-                None
+                SourceId::Missing
             }
         } else {
-            None
+            SourceId::Missing
         };
 
         let ChoiceClauses {
@@ -61,10 +61,11 @@ impl Lowerer<'_, '_> {
         }
 
         let mut choice = Choice::new(
-            choice_id,
+            None,
             SourceText::new(body.text, body.text_span),
             choice_span,
         )
+        .with_source_id(source_id)
         .with_metadata(metadata)
         .with_echo(echo)
         .with_statements(statements);

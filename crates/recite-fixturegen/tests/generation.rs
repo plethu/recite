@@ -312,12 +312,13 @@ impl GeneratedCatalog {
             } else if let Some(value) = line.strip_prefix("msgstr ") {
                 let context = context.take().expect("context before msgstr");
                 let source_text = source_text.take().expect("msgid before msgstr");
-                let domain = if context.starts_with("choice_") {
+                let translated = unquote(value);
+                let domain = if translated.starts_with("choice translation for ") {
                     TextDomain::Choice
                 } else {
                     TextDomain::Line
                 };
-                entries.insert((context, source_text, domain), unquote(value));
+                entries.insert((context, source_text, domain), translated);
             }
         }
 
