@@ -214,7 +214,24 @@ impl LspWorkspace {
 
     pub(crate) fn code_action(&self, params: &CodeActionParams) -> Option<CodeActionResponse> {
         let documents = self.code_action_documents();
-        features::code_action(params, &documents)
+        let schema_is_open = self
+            .schema
+            .uri()
+            .is_some_and(|uri| self.documents.document(uri).is_some())
+            || self.schema.path().is_some_and(|path| {
+                self.documents.documents().any(|document| {
+                    document
+                        .summary()
+                        .saved_path()
+                        .is_some_and(|open| open == path)
+                })
+            });
+        let schema_document = if schema_is_open {
+            None
+        } else {
+            self.schema.code_action_document()
+        };
+        features::code_action(params, &documents, schema_document)
     }
 
     pub(crate) fn open_document_diagnostics_except(

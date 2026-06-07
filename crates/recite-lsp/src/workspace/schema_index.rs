@@ -7,7 +7,7 @@ use recite_core::{
 };
 
 use super::{DiagnosticRefresh, DocumentDiagnostics, SnapshotGeneration};
-use crate::paths::file_path_to_uri;
+use crate::paths::{file_path_to_uri, uri_to_file_path};
 use crate::summary::SchemaSummary;
 
 const SCHEMA_LOAD_ERROR: DiagnosticCode = DiagnosticCode::new_static("RECITE_SCHEMA001");
@@ -34,6 +34,7 @@ impl SchemaIndex {
                 text: None,
             };
         };
+        let path = fs::canonicalize(&path).unwrap_or(path);
         let uri = file_path_to_uri(&path);
         let display_path = path.display().to_string();
         let source = match fs::read_to_string(&path) {
@@ -71,6 +72,25 @@ impl SchemaIndex {
         self.schema.as_ref()
     }
 
+    pub(crate) fn uri(&self) -> Option<&Uri> {
+        self.uri.as_ref()
+    }
+
+    pub(crate) fn path(&self) -> Option<&std::path::Path> {
+        self.path.as_deref()
+    }
+
+    pub(crate) fn code_action_document(
+        &self,
+    ) -> Option<crate::features::SchemaCodeActionDocument<'_>> {
+        Some(crate::features::SchemaCodeActionDocument {
+            uri: self.uri.as_ref()?,
+            text: self.text.as_deref()?,
+            summary: self.summary.as_ref()?,
+            version: None,
+        })
+    }
+
     #[allow(dead_code)]
     pub(crate) fn diagnostics(&self) -> &[Diagnostic] {
         &self.diagnostics
@@ -98,13 +118,22 @@ impl SchemaIndex {
         let Some(schema_uri) = &self.uri else {
             return false;
         };
-        if schema_uri != uri {
+        if schema_uri != uri && !self.path_matches_uri(uri) {
             return false;
         }
 
         let path = self.path.clone();
         *self = Self::load(path);
         true
+    }
+
+    fn path_matches_uri(&self, uri: &Uri) -> bool {
+        let Some(schema_path) = &self.path else {
+            return false;
+        };
+        uri_to_file_path(uri)
+            .and_then(|path| fs::canonicalize(path).ok())
+            .is_some_and(|path| path == *schema_path)
     }
 
     pub(super) fn refresh_or_clear(
