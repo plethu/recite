@@ -34,6 +34,8 @@ These issues have no unmet dependencies.
 | #166 Targeted compiler phase benchmarks | scale proof | algorithmic hot-spot visibility |
 | #167 Runtime allocation/clone pressure | scale proof | allocation-sensitive runtime evidence |
 | #168 Watch rebuild latency stress | scale proof | authoring refresh evidence |
+| #204 Profiling and optimisation workflow | scale proof | repeatable perf investigation playbook |
+| #205 Comparative benchmark corpus | scale/adoption proof | evidence-backed external comparisons |
 | #159 Import report/provenance model | migration | source-family importer prototypes |
 | #84 VS Code LSP client scaffold | editor extensions | VS Code authoring workflow |
 | #85 Neovim setup documentation | editor extensions | Neovim authoring workflow |
@@ -89,6 +91,8 @@ flowchart LR
     i166 --> i169
     i167 --> i169
     i168 --> i169
+    i204["#204 profiling workflow"] --> i169
+    i205["#205 comparative corpus"] --> i169
   end
 
   subgraph LANG["Language foundations"]
@@ -147,6 +151,7 @@ flowchart LR
   i94 -- adapters --> REL
   i74 -- scale proof --> REL
   i169 -- release benchmark baseline --> REL
+  i205 -- comparison evidence --> DLATER
   i164 -- migration notes --> REL
   DLATER -- adoption docs --> REL
 ```
@@ -179,9 +184,12 @@ checks (#104), and realistic benchmark fixtures (#165) are closed. The
 performance track can now move into memory and known-limit reporting (#105), the
 user-facing `recite bench` command (#126), the compact ID storage follow-up
 (#156), targeted compiler phase benchmarks (#166), runtime allocation/clone
-pressure measurement (#167), and watch rebuild latency stress checks (#168).
-Those remaining measurement and coverage issues feed the blocked release
-benchmark baseline profile (#169).
+pressure measurement (#167), watch rebuild latency stress checks (#168), the
+profiling and optimisation workflow (#204), and comparative benchmark corpus
+design (#205). Those remaining measurement, profiling, and comparison issues
+feed the blocked release benchmark baseline profile (#169). The comparative
+benchmark corpus also feeds later adoption documentation by making external
+performance claims evidence-backed rather than marketing copy.
 
 The docs site scaffold (#88), Rustdoc API examples (#91), migration transition
 guides (#96), and importer-boundary design (#95) are closed. The broad
