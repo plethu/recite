@@ -1,3 +1,13 @@
+//! MessagePack v0 row encoders.
+//!
+//! The `Msg*` tuple structs here are the encode half of the v0 wire format;
+//! their field order and arity must match the decoder mirrors in
+//! `crates/recite-core/src/compiled/messagepack/wire.rs`, the arity constants
+//! in `recite_core::compiled::wire`, and the field tables in
+//! `docs/recite-production-spec.md` §12.2. Update all of them together; the
+//! tag-surface round-trip and golden wire-byte tests in
+//! `recite-compiler/tests/asset/` fail when one drifts.
+
 use recite_core::{
     ChoiceIndex, CompiledDialogue, MatchArmIndex, MetadataIndex, SourceMapIndex, SpeakerIndex,
     StatementIndex, TableRange,
