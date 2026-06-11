@@ -2300,13 +2300,15 @@ trace output, and adapter export during traversal.
 IDs and bound argument values so runtime traversal can emit unavailable-choice
 reasons without reparsing the schema manifest.
 
-v0 fixed array arity is not append-compatible. The v0 shape may still be
-corrected before the runtime reader and compatibility gate are implemented, but
-once a v0 reader ships, field additions, removals, reordering, tag changes, or
-semantic changes require a `format_version` or `compiler_compatibility_version`
-change. A v0 reader must reject unexpected array lengths, unknown tags, invalid
-indexes, malformed lookup order, and algorithm-specific fingerprint length
-mismatches as malformed compiled assets.
+v0 fixed array arity is not append-compatible. While the project is
+pre-release, the v0 shape may still be corrected: until the first tagged
+release publishes compiled assets to external consumers, wire-shape corrections
+may land as a coordinated update of the writer, reader, and fixtures without a
+version bump. From the first tagged release onward, field additions, removals,
+reordering, tag changes, or semantic changes require a `format_version` or
+`compiler_compatibility_version` change. A v0 reader must reject unexpected
+array lengths, unknown tags, invalid indexes, malformed lookup order, and
+algorithm-specific fingerprint length mismatches as malformed compiled assets.
 
 Compiled assets must include:
 

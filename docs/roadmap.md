@@ -5,7 +5,7 @@ can start now, what's blocked, and what's on the critical path.
 
 This is a planning aid. The live Codeberg board and
 `docs/recite-production-spec.md` §22–23 are authoritative; the issue numbers and
-edges here were refreshed from the "Depends on" lines in issue bodies on 2026-06-07,
+edges here were refreshed from the "Depends on" lines in issue bodies on 2026-06-11,
 and will drift as work lands.
 
 ## v1 scope
@@ -28,6 +28,10 @@ These issues have no unmet dependencies.
 
 | Issue | Role | Unlocks |
 | --- | --- | --- |
+| #80 Godot adapter MVP | adapter critical path | #120 refresh workflow, first-adapter evidence for #108/#109 and the C ABI design |
+| #107 Cross-engine acceptance matrix | adapter contract | conformance scope for adapter MVPs |
+| #178 Availability conformance fixtures | adapter contract | adapter conformance coverage (#123) |
+| #181 Projection schema declarations | schema/projection | #183 CLI/LSP surfacing; #182 stays gated on adapter proof |
 | #105 Memory profiles and known limits | scale proof | release known-limits docs |
 | #126 `recite bench` command | scale proof | user-facing benchmark reports |
 | #156 Compact ID storage switch | performance follow-up | reduced ID allocation pressure |
@@ -68,12 +72,16 @@ flowchart LR
     i80["#80 Godot MVP"] --> i120["#120"]
     i119["#119 watch loop"] --> i120
     iBevy["Bevy MVP"] --> i121["#121"]
-    iUnity["Unity MVP"] --> i122["#122"]
+    i80 --> iCabi["#207 C ABI design"]
+    iCabi --> i108["#108 Unity MVP"]
+    i108 --> i122["#122"]
     i120 --> i123["#123"]
     i121 --> i123
     i122 --> i123
+    i107["#107 acceptance matrix"] --> i123
+    i178["#178 availability conformance"] --> i123
     i123 --> i94["#94 adapter docs"]
-    i80 --> i108["#108 Unity MVP"]
+    i123 --> i109["#109 future engine criteria"]
   end
 
   subgraph PERF["Perf track"]
@@ -107,6 +115,8 @@ flowchart LR
     iProjectionDesign --> iProjectionSchema["#181 projection schema"]
     iProjectionSchema --> iProjectionWire["#182 projection compiled wire"]
     iProjectionSchema --> iProjectionCliLsp["#183 projection CLI/LSP"]
+    i80 -. projection demo .-> iProjectionWire
+    iBevy -. projection demo .-> iProjectionWire
     iProjectionWire --> iProjectionConformance["#184 projection conformance"]
     iAvailImpl --> i90Source["#90 source-format wording"]
   end
@@ -167,6 +177,24 @@ current open chain is:
 per-engine adapter MVPs + watch/editor refresh prerequisites → per-engine refresh workflows → adapter docs → release verification
 ```
 
+The head of that chain is no longer blocked: #80 (Godot adapter MVP) depends
+only on the closed adapter-contract design issue #78, and the 2026-06-11 audit
+cleared its stale `status/blocked` label along with the same stale label on
+#107 (acceptance matrix, depends on closed #78), #178 (availability
+conformance fixtures, depends on closed #177), and #181 (projection schema
+declarations, depends on closed #172). The C ABI design issue (#207) sits
+between the first adapter MVP and the Unity MVP (#108): Rust-native adapters
+(Bevy, Godot via gdext) consume `recite-runtime` directly, but the first
+non-Rust adapter must not improvise its own FFI boundary.
+
+Presentation projection wire work is now explicitly gated: #182 (compiled wire
+data) waits until a first adapter MVP demonstrates projection end-to-end,
+because v0 wire rows are fixed-arity and should not freeze an unexercised
+shape. #181 (schema) and #183 (CLI/LSP) may proceed ahead of it. Relatedly,
+spec §12.2 now records that the v0 wire shape stays correctable — with
+coordinated writer/reader/fixture updates — until the first tagged release,
+after which any change requires a format or compatibility version bump.
+
 The metadata-domain design gate (#137), metadata value syntax issue (#138),
 metadata value-domain implementation (#139), LSP project/schema index issue
 (#76), LSP semantic diagnostics (#30), LSP completion/hover authoring support
@@ -216,12 +244,12 @@ lines, choices, blocks, and project inputs drive structured adapter-visible
 affordances without committing RPG-specific syntax or runtime semantics to core
 Recite.
 
-The projection implementation follow-ups remain split by surface. #181 adds
-schema-owned projection declarations and label-template extraction but remains
-blocked until its live dependencies and labels are resolved. #182 compiles
-projection declarations into self-contained wire data, #183 surfaces the schema
-declarations through CLI/LSP diagnostics and authoring support, and #184 adds
-adapter conformance coverage for projection-capable adapters.
+The projection implementation follow-ups remain split by surface. #181 can now
+add schema-owned projection declarations and label-template extraction, which
+unblocks #183's CLI/LSP diagnostics and authoring support. #182 remains gated on
+a first-adapter projection proof before it freezes projection declarations into
+self-contained wire data; #184 follows that compiled-wire work with adapter
+conformance coverage for projection-capable adapters.
 
 The source-format page under #90 may now include final choice-availability
 wording for `requires=(...)` and `reason=...` alongside stable sections such as
@@ -239,4 +267,5 @@ start until scale, adapters, and adoption docs are in place.
 Issues #134 and #136 are pre-release hardening tasks that can start earlier
 because they reduce compatibility and review-surface risk before the final
 release checklist work. Issue #135 has already landed the project-facing gate
-script that release issue #112 can build on.
+script that release issue #112 can build on; #206 has also landed Forgejo
+Actions remote gate verification for every PR.
