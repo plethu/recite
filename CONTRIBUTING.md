@@ -12,4 +12,4 @@ After the v1 shape is stable, I'll review and publish fuller contribution guidel
 - Recite is dual-licensed public open source under MIT OR Apache-2.0. Do not submit proprietary content, copied private material, or dependency code that is incompatible with that distribution.
 - The production spec is in `docs/recite-production-spec.md`.
 - Current development is issue-led and branch-based, using short-lived branches from `main`.
-- Until CI is wired up, the canonical local quality gate is `scripts/check-project-gates.sh`.
+- The canonical quality gate is `scripts/check-project-gates.sh`. Forgejo Actions runs the same script on every push to `main` and on pull requests (`.forgejo/workflows/ci.yml`); run it locally before pushing.

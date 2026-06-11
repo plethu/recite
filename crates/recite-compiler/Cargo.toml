@@ -2,6 +2,7 @@
 name = "recite-compiler"
 version.workspace = true
 edition.workspace = true
+rust-version.workspace = true
 description = "Recite compiler, validator, POT extractor, and compiled asset writer."
 license.workspace = true
 repository.workspace = true
