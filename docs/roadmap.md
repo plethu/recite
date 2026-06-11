@@ -247,10 +247,10 @@ affordances without committing RPG-specific syntax or runtime semantics to core
 Recite.
 
 The projection implementation follow-ups remain split by surface. #181 can now
-add schema-owned projection declarations and label-template extraction. #182
-remains the adapter-projection proof point by compiling projection declarations
-into self-contained wire data before #183 surfaces the schema declarations
-through CLI/LSP diagnostics and authoring support and #184 adds adapter
+add schema-owned projection declarations and label-template extraction, which
+unblocks #183's CLI/LSP diagnostics and authoring support. #182 remains gated on
+a first-adapter projection proof before it freezes projection declarations into
+self-contained wire data; #184 follows that compiled-wire work with adapter
 conformance coverage for projection-capable adapters.
 
 The source-format page under #90 may now include final choice-availability
