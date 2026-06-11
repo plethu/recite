@@ -40,7 +40,8 @@ Validates metadata keys and values against a schema manifest.
 ### `recite compile --output <OUTPUT> [--schema <SCHEMA>] <PATHS>...`
 
 Compiles source dialogue into a deterministic MessagePack `.recitec` asset.
-Identical validated input produces identical bytes.
+Identical validated input produces identical bytes when compile options,
+including the output asset ID/path, are the same.
 
 ### `recite validate-project <PROJECT_ROOT>`
 
@@ -75,8 +76,9 @@ fixture entry fails with the exact key the prompt expects.
 
 ### `recite trace [--metrics] --block <BLOCK> --fixture <FIXTURE> <ASSET>`
 
-The same headless run emitted as deterministic JSON — the format for snapshot
-tests, conformance checks, and CI. `--metrics` adds trace counters.
+The same headless run emitted as deterministic JSON — the default format for
+snapshot tests, conformance checks, and CI. `--metrics` adds instrumentation,
+including timing fields that are not snapshot-stable.
 
 ### `recite play [OPTIONS] --block <BLOCK> <ASSET>`
 
