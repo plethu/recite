@@ -2,6 +2,7 @@
 name = "recite-lsp"
 version.workspace = true
 edition.workspace = true
+rust-version.workspace = true
 description = "Language server for Recite source files."
 license.workspace = true
 repository.workspace = true

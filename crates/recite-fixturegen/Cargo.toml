@@ -2,6 +2,7 @@
 name = "recite-fixturegen"
 version.workspace = true
 edition.workspace = true
+rust-version.workspace = true
 description = "Deterministic synthetic fixture generator for Recite benchmark profiles."
 license.workspace = true
 repository.workspace = true

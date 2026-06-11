@@ -2,6 +2,7 @@
 name = "recite-runtime"
 version.workspace = true
 edition.workspace = true
+rust-version.workspace = true
 description = "Deterministic Recite runtime with no engine dependencies."
 license.workspace = true
 repository.workspace = true

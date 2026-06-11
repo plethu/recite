@@ -2,6 +2,7 @@
 name = "recite-parser"
 version.workspace = true
 edition.workspace = true
+rust-version.workspace = true
 description = "Recite DSL parser and source mapping."
 license.workspace = true
 repository.workspace = true

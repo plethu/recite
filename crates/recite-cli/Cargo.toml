@@ -2,6 +2,7 @@
 name = "recite-cli"
 version.workspace = true
 edition.workspace = true
+rust-version.workspace = true
 description = "Command-line interface for Recite projects."
 license.workspace = true
 repository.workspace = true
