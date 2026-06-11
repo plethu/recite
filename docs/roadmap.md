@@ -32,7 +32,6 @@ These issues have no unmet dependencies.
 | #107 Cross-engine acceptance matrix | adapter contract | conformance scope for adapter MVPs |
 | #178 Availability conformance fixtures | adapter contract | adapter conformance coverage (#123) |
 | #181 Projection schema declarations | schema/projection | #183 CLI/LSP surfacing; #182 stays gated on adapter proof |
-| #206 Forgejo Actions CI | hardening | remote gate verification for every PR |
 | #105 Memory profiles and known limits | scale proof | release known-limits docs |
 | #126 `recite bench` command | scale proof | user-facing benchmark reports |
 | #156 Compact ID storage switch | performance follow-up | reduced ID allocation pressure |
@@ -73,7 +72,9 @@ flowchart LR
     i80["#80 Godot MVP"] --> i120["#120"]
     i119["#119 watch loop"] --> i120
     iBevy["Bevy MVP"] --> i121["#121"]
-    iUnity["Unity MVP"] --> i122["#122"]
+    i80 --> iCabi["#207 C ABI design"]
+    iCabi --> i108["#108 Unity MVP"]
+    i108 --> i122["#122"]
     i120 --> i123["#123"]
     i121 --> i123
     i122 --> i123
@@ -81,8 +82,6 @@ flowchart LR
     i178["#178 availability conformance"] --> i123
     i123 --> i94["#94 adapter docs"]
     i123 --> i109["#109 future engine criteria"]
-    i80 --> iCabi["#207 C ABI design"]
-    iCabi --> i108["#108 Unity MVP"]
   end
 
   subgraph PERF["Perf track"]
@@ -146,7 +145,6 @@ flowchart LR
 
   subgraph REL["Release hardening (M14)"]
     direction LR
-    i206["#206 Forgejo Actions CI"]
     i134["#134"]
     i136["#136"]
     i112["#112"]
@@ -266,8 +264,8 @@ blocked on scale evidence and credible adapter paths.
 The M14 "Release:" issues (#112–#116) sit at the end of the graph. They can't
 start until scale, adapters, and adoption docs are in place.
 
-Issues #134, #136, and #206 are pre-release hardening tasks that can start
-earlier because they reduce compatibility and review-surface risk before the
-final release checklist work. Issue #135 has already landed the project-facing
-gate script that release issue #112 can build on; #206 wires that script into
-Forgejo Actions so every PR gets remote gate verification.
+Issues #134 and #136 are pre-release hardening tasks that can start earlier
+because they reduce compatibility and review-surface risk before the final
+release checklist work. Issue #135 has already landed the project-facing gate
+script that release issue #112 can build on; #206 has also landed Forgejo
+Actions remote gate verification for every PR.
