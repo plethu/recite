@@ -246,12 +246,12 @@ lines, choices, blocks, and project inputs drive structured adapter-visible
 affordances without committing RPG-specific syntax or runtime semantics to core
 Recite.
 
-The projection implementation follow-ups remain split by surface. #181 adds
-schema-owned projection declarations and label-template extraction but remains
-blocked until its live dependencies and labels are resolved. #182 compiles
-projection declarations into self-contained wire data, #183 surfaces the schema
-declarations through CLI/LSP diagnostics and authoring support, and #184 adds
-adapter conformance coverage for projection-capable adapters.
+The projection implementation follow-ups remain split by surface. #181 can now
+add schema-owned projection declarations and label-template extraction. #182
+remains the adapter-projection proof point by compiling projection declarations
+into self-contained wire data before #183 surfaces the schema declarations
+through CLI/LSP diagnostics and authoring support and #184 adds adapter
+conformance coverage for projection-capable adapters.
 
 The source-format page under #90 may now include final choice-availability
 wording for `requires=(...)` and `reason=...` alongside stable sections such as
