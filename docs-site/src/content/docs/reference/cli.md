@@ -10,8 +10,9 @@ This page documents the shipped commands; design rationale lives in the
 
 Path arguments accept one or more `.recite` files or directories containing
 them. Commands taking `<PROJECT_ROOT>` expect a directory containing
-`recite.project.toml`. All commands exit non-zero on failure and report
-structured diagnostics with stable codes.
+`recite.project.toml`. Validation-style commands report structured diagnostics
+with stable codes; runtime and filesystem failures exit non-zero with a CLI error
+message.
 
 ## Authoring checks
 
