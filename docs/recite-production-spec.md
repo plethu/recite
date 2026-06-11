@@ -2239,9 +2239,9 @@ Scalar wire rules:
 Top-level and row arrays use this field order:
 
 - `CompiledDialogue`: `[header, default_block, sources, blocks, statements,
-  match_arms, lines, choices, availability_reasons, presentation_projection,
-  speakers, metadata, effects, source_maps, block_lookup, line_lookup,
-  choice_lookup]`.
+  match_arms, lines, choices, availability_reasons,
+  condition_availability_reasons, speakers, metadata, effects, source_maps,
+  block_lookup, line_lookup, choice_lookup]`.
 - `CompiledAssetHeader`: `[format_version, compiler_compatibility_version,
   primary_encoding, inspection_encoding, compiler_version, asset_id,
   source_map_id, schema_fingerprint]`.
@@ -2254,24 +2254,10 @@ Top-level and row arrays use this field order:
 - `CompiledChoice`: `[id, source_text, metadata, requirement,
   requirement_source_text, availability_reason_override, target, echo,
   source_map]`.
-- `CompiledAvailabilityReason`: `[id, template_source_text, params,
-  source_map]`.
-- `CompiledAvailabilityReasonParam`: `[name, type]`.
-- `CompiledPresentationProjection`: `[query_functions, projectors,
-  label_templates]`.
-- `CompiledProjectionQueryFunction`: `[name, params, returns,
-  max_calls_per_event]`.
-- `CompiledPresentationProjector`: `[id, candidates, inputs, queries,
-  outputs]`.
-- `CompiledProjectionInput`: `[name, source, type, required]`.
-- `CompiledProjectionQuery`: `[name, function, args]`.
-- `CompiledProjectionInputRef`: `[tag, payload]`.
-- `CompiledPresentationOutput`: `[id, target, kind, slot, label_template,
-  fields]`.
-- `CompiledPresentationLabelTemplate`: `[id, source_text, params,
-  source_map]`.
-- `CompiledPresentationLabelArg`: `[name, source, type]`.
-- `CompiledPresentationField`: `[name, source, type]`.
+- `CompiledAvailabilityReason`: `[id, template_source_text]`.
+- `CompiledConditionAvailabilityReason`: `[function, reason, args]`.
+- `CompiledAvailabilityReasonArgBinding`: `[name, value]`.
+- `CompiledAvailabilityReasonArgValue`: `[tag, payload]`.
 - `CompiledSpeaker`: `[id]`.
 - `CompiledMetadataEntry`: `[key, value, source_map]`.
 - `CompiledEffect`: `[id, mode, function, args, source_map]`.
@@ -2292,30 +2278,13 @@ in which case the payload is nil. v0 tags are:
 - effect mode: `0 = deferred`, `1 = immediate`, `2 = blocking`;
 - condition expression: `0 = call`, `1 = and`, `2 = or`, `3 = not`;
 - argument: `0 = identifier`, `1 = value`;
-- projection selector: `0 = runtime_event`, `1 = metadata_key`,
-  `2 = metadata_set`, `3 = availability_reason`;
-- dialogue event kind: `0 = line`, `1 = prompt`, `2 = effect`, `3 = end`;
-- projection input source: `0 = event_kind`, `1 = candidate_line_id`,
-  `2 = candidate_choice_id`, `3 = candidate_effect_request_id`,
-  `4 = candidate_block_id`, `5 = candidate_project`,
-  `6 = candidate_metadata`, `7 = availability_reason_arg`, `8 = literal`;
-- metadata occurrence: `0 = only`, `1 = first`, `2 = last`, `3 = index`,
-  `4 = all`;
-- projection input reference: `0 = input`, `1 = query_result`;
-- projection output target: `0 = candidate`, `1 = event`, `2 = prompt`;
-- presentation affordance kind: `0 = prefix`, `1 = badge`,
-  `2 = requirement_summary`, `3 = cost`, `4 = chance_estimate`, `5 = risk`,
-  `6 = consequence_hint`, `7 = presentation_cue`, `8 = custom`;
-- presentation slot: `0 = before_text`, `1 = after_text`,
-  `2 = secondary_line`, `3 = tooltip`, `4 = icon`, `5 = disabled_reason`,
-  `6 = transcript_cue`, `7 = container`;
-- presentation affordance field source: `0 = input`, `1 = query_result`,
-  `2 = literal`.
+- availability reason argument value: `"ConditionArg"`, `"LiteralString"`,
+  `"LiteralInt"`, `"LiteralFloat"`, or `"LiteralBool"`.
 
-Projection enum payloads encode variant fields in the declaration order shown
-in §5.6.1. Single-field variants use the field value directly as payload;
-multi-field variants use a fixed array of field values; no-payload variants use
-nil. Custom presentation affordance kinds use the custom string as payload.
+Presentation projection rows and projection-specific tags are not encoded in the
+current v0 wire shape. Issue #182 adds them by extending this table and the
+encoder/decoder mirrors before the first v0 reader ships; after that point the
+versioning policy below applies.
 
 The compiled `requirement` tree stores condition calls plus schema-derived
 availability reason mappings for positive boolean condition leaves.
@@ -2327,11 +2296,9 @@ template source text, parameter definitions, bound argument values, source
 condition identity, or the full requirement expression identity.
 `availability_reasons` is the compiled reason table used for localisation,
 trace output, and adapter export during traversal.
-`presentation_projection` is the compiled projection declaration table used for
-adapter projection export, projection label localisation, and conformance
-fixtures. The core runtime is not required to execute projectors in v1, but the
-compiled data must preserve enough structured declarations for adapters and
-tools to project without reparsing the original schema manifest.
+`condition_availability_reasons` maps condition functions to compiled reason
+IDs and bound argument values so runtime traversal can emit unavailable-choice
+reasons without reparsing the schema manifest.
 
 v0 fixed array arity is not append-compatible. The v0 shape may still be
 corrected before the runtime reader and compatibility gate are implemented, but
@@ -2357,6 +2324,8 @@ Compiled assets must include:
 - match arm table;
 - line table;
 - choice table;
+- availability reason table;
+- condition availability reason table;
 - speaker table;
 - metadata table;
 - effect table;

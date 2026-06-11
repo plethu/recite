@@ -1,3 +1,20 @@
+//! v0 wire arity and tag constant registry.
+//!
+//! This file is the single source of truth for v0 fixed-array field counts
+//! and `[tag, payload]` tag values. Three places must stay in sync with it:
+//! the compiler encoder (`crates/recite-compiler/src/wire/messagepack*`), the
+//! core decoder (`crate::compiled::messagepack`), and the documented field
+//! tables in `docs/recite-production-spec.md` §12.2. Any new compiled row,
+//! field, tag, or enum variant updates all of them together.
+//!
+//! Drift fails close to the change: the tag-surface round-trip test
+//! (`recite-compiler/tests/asset/tag_surface.rs`) catches one-sided
+//! encoder/decoder drift, and the golden wire-byte snapshot
+//! (`recite-compiler/tests/asset/wire_golden.rs`) catches mirrored drift away
+//! from the documented layout. Per spec §12.2 the v0 shape stays correctable
+//! until the first tagged release; after that, changes here require a
+//! `format_version` or `compiler_compatibility_version` bump.
+
 pub const V0_COMPILED_DIALOGUE_FIELDS: u8 = 17;
 pub const V0_ASSET_HEADER_FIELDS: u8 = 8;
 pub const V0_SOURCE_FILE_FIELDS: u8 = 2;

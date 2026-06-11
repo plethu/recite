@@ -1,4 +1,6 @@
-use recite_compiler::{CompileInput, CompileOptions, compile_inputs, compile_inputs_with_schema};
+use recite_compiler::{
+    CompileInput, CompileOptions, CompiledAssetOutput, compile_inputs, compile_inputs_with_schema,
+};
 use recite_core::{
     BLAKE3_DIGEST_LEN, CompiledArgument, CompiledAssetEncoding, CompiledAssetId,
     CompiledChoiceEcho, CompiledConditionExpression, CompiledDialogue, CompiledDivertTarget,
@@ -10,8 +12,61 @@ use std::collections::BTreeSet;
 
 use super::options;
 
-#[test]
-fn compiler_generated_messagepack_round_trips_the_v0_tag_surface() {
+/// Dialogue source that exercises every v0 statement kind, divert target,
+/// condition expression, argument and scalar variant, choice echo mode,
+/// effect mode, and match pattern. Shared with the golden wire-byte snapshot
+/// in `wire_golden.rs` so byte-level coverage tracks tag-surface coverage.
+pub(super) const SCHEMA_TAG_SURFACE_SOURCE: &str = concat!(
+    ":: start default speaker=hazel\n",
+    "> prompt_line@117cd96e845fd7b67928 portrait=\"neutral\"\n",
+    "  Choose.\n",
+    "  ? choose_none@9eb1b8bc2a5ab6bd4097\n",
+    "    No echo.\n",
+    "    -> END\n",
+    "  ? choose_selected@f9dee73f2b0a91e4d9ab echo=selected_text requires=(trust_gte(hazel, rhea, 1) or not trust_gte(rhea, hazel, 2))\n",
+    "    Selected.\n",
+    "    -> branch\n",
+    "  ? choose_explicit@e9a4139cbd30c6b475aa echo=line(be3a8f50b0ca138235a3)\n",
+    "    Explicit.\n",
+    "    -> END\n",
+    ":if not trust_gte(hazel, rhea, 3) and trust_gte(rhea, hazel, 1)\n",
+    "  > then_line@d82ab92d36cff571f7b4\n",
+    "    Then.\n",
+    ":else\n",
+    "  > else_line@98b638d974409fc75445\n",
+    "    Else.\n",
+    "! immediate play_sfx(snap)\n",
+    "! deferred advance_thread(hazel_intro, tired)\n",
+    "! blocking advance_thread(hazel_intro, completed)\n",
+    "! immediate scalar_effect(\"label\", 3, 1.5, true)\n",
+    ":match thread_stage(hazel_intro)\n",
+    "  :case fresh\n",
+    "    > fresh_line@dac5dd50a2adf8d6b63d\n",
+    "      Fresh.\n",
+    "  :case tired\n",
+    "    > tired_line@c224cdf2bc8074261910\n",
+    "      Tired.\n",
+    "  :case angry\n",
+    "    > angry_line@2a6342fb365600ef4865\n",
+    "      Angry.\n",
+    "  :case fine\n",
+    "    > fine_line@79e881b563e4ce97af8c\n",
+    "      Fine.\n",
+    "  :case _\n",
+    "    > fallback_line@b9b0e264727f54154dac\n",
+    "      Fallback.\n",
+    "-> branch\n",
+    "\n",
+    ":: branch\n",
+    "> echo_line@be3a8f50b0ca138235a3\n",
+    "  Echo text.\n",
+    "-> END\n",
+);
+
+/// Compile [`SCHEMA_TAG_SURFACE_SOURCE`] against the generated schema
+/// manifest fixture and assert it compiles clean. Shared with
+/// `wire_golden.rs`.
+pub(super) fn compile_schema_tag_surface_asset() -> CompiledAssetOutput {
     let schema = load_schema_manifest_str(
         "fixtures/schema/valid/generated_manifest.json",
         include_str!("../../../../fixtures/schema/valid/generated_manifest.json"),
@@ -19,68 +74,26 @@ fn compiler_generated_messagepack_round_trips_the_v0_tag_surface() {
     .schema
     .expect("valid generated manifest fixture");
 
-    let schema_tag_report = compile_inputs_with_schema(
+    let report = compile_inputs_with_schema(
         [CompileInput::new(
             "dialogue/tag-surface.recite",
-            concat!(
-                ":: start default speaker=hazel\n",
-                "> prompt_line@117cd96e845fd7b67928 portrait=\"neutral\"\n",
-                "  Choose.\n",
-                "  ? choose_none@9eb1b8bc2a5ab6bd4097\n",
-                "    No echo.\n",
-                "    -> END\n",
-                "  ? choose_selected@f9dee73f2b0a91e4d9ab echo=selected_text requires=(trust_gte(hazel, rhea, 1) or not trust_gte(rhea, hazel, 2))\n",
-                "    Selected.\n",
-                "    -> branch\n",
-                "  ? choose_explicit@e9a4139cbd30c6b475aa echo=line(be3a8f50b0ca138235a3)\n",
-                "    Explicit.\n",
-                "    -> END\n",
-                ":if not trust_gte(hazel, rhea, 3) and trust_gte(rhea, hazel, 1)\n",
-                "  > then_line@d82ab92d36cff571f7b4\n",
-                "    Then.\n",
-                ":else\n",
-                "  > else_line@98b638d974409fc75445\n",
-                "    Else.\n",
-                "! immediate play_sfx(snap)\n",
-                "! deferred advance_thread(hazel_intro, tired)\n",
-                "! blocking advance_thread(hazel_intro, completed)\n",
-                "! immediate scalar_effect(\"label\", 3, 1.5, true)\n",
-                ":match thread_stage(hazel_intro)\n",
-                "  :case fresh\n",
-                "    > fresh_line@dac5dd50a2adf8d6b63d\n",
-                "      Fresh.\n",
-                "  :case tired\n",
-                "    > tired_line@c224cdf2bc8074261910\n",
-                "      Tired.\n",
-                "  :case angry\n",
-                "    > angry_line@2a6342fb365600ef4865\n",
-                "      Angry.\n",
-                "  :case fine\n",
-                "    > fine_line@79e881b563e4ce97af8c\n",
-                "      Fine.\n",
-                "  :case _\n",
-                "    > fallback_line@b9b0e264727f54154dac\n",
-                "      Fallback.\n",
-                "-> branch\n",
-                "\n",
-                ":: branch\n",
-                "> echo_line@be3a8f50b0ca138235a3\n",
-                "  Echo text.\n",
-                "-> END\n",
-            ),
+            SCHEMA_TAG_SURFACE_SOURCE,
         )],
         options_with_schema_fingerprint(),
         &schema,
     )
     .expect("schema tag-surface compile does not hard-fail");
     assert!(
-        schema_tag_report.diagnostics.is_empty(),
+        report.diagnostics.is_empty(),
         "tag-surface fixture should compile without diagnostics: {:?}",
-        schema_tag_report.diagnostics
+        report.diagnostics
     );
-    let schema_tag_asset = schema_tag_report
-        .asset
-        .expect("valid fixture emits an asset");
+    report.asset.expect("valid fixture emits an asset")
+}
+
+#[test]
+fn compiler_generated_messagepack_round_trips_the_v0_tag_surface() {
+    let schema_tag_asset = compile_schema_tag_surface_asset();
     let decoded_schema_tag_asset =
         decode_compiled_dialogue_messagepack(&schema_tag_asset.messagepack)
             .expect("compiler-generated MessagePack tag surface decodes");
