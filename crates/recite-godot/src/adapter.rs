@@ -13,7 +13,9 @@ use recite_runtime::{
     encode_session_messagepack, next_with, start_scene_with_options,
 };
 
-pub(crate) use crate::adapter_error::{AdapterError, AdapterErrorKind, AdapterResult};
+pub(crate) use crate::adapter_error::{
+    AdapterError, AdapterErrorKind, AdapterResult, encode_condition_error,
+};
 
 pub type ConditionHandlerResult = Result<ConditionValue, AdapterError>;
 type ConditionHandler = dyn Fn(ConditionCall<'_>) -> ConditionHandlerResult;
@@ -254,13 +256,14 @@ impl DialogueContext for ReciteDialogueDriver {
         query: ConditionQuery<'_>,
     ) -> Result<ConditionValue, ConditionEvaluationError> {
         let Some(handler) = self.conditions.get(query.function()) else {
-            return Err(ConditionEvaluationError::new(
-                AdapterError::new(AdapterErrorKind::MissingConditionHandler).to_string(),
-            ));
+            let error = AdapterError::new(AdapterErrorKind::MissingConditionHandler);
+            return Err(ConditionEvaluationError::new(encode_condition_error(
+                &error,
+            )));
         };
 
         handler(ConditionCall { query })
-            .map_err(|error| ConditionEvaluationError::new(error.to_string()))
+            .map_err(|error| ConditionEvaluationError::new(encode_condition_error(&error)))
     }
 }
 
@@ -291,6 +294,7 @@ impl<'a> ConditionCall<'a> {
     }
 }
 
+#[non_exhaustive]
 #[derive(Clone, Debug, PartialEq)]
 pub enum AdapterValue {
     Identifier(String),
@@ -312,6 +316,7 @@ impl From<ConditionArgument<'_>> for AdapterValue {
     }
 }
 
+#[non_exhaustive]
 #[derive(Clone, Debug, PartialEq)]
 pub enum ReciteOutput {
     Line(DialogueLine),

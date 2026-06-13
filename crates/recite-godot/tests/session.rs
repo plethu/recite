@@ -115,6 +115,18 @@ fn changed_asset_is_used_for_next_session_only() {
     assert_line(&outputs[0], "99999999999999999993", "New asset.");
 }
 
+#[test]
+fn divert_loop_uses_dialogue_fault_error_category() {
+    let asset = compile_asset(
+        "dialogue/loop.recite",
+        "dialogue/loop.recitec",
+        concat!(":: start default\n", "-> start\n",),
+    );
+    let mut driver = ReciteDialogueDriver::new();
+
+    assert_error_code(driver.start(&asset, None, None), "dialogue_fault_error");
+}
+
 fn changed_asset_source(line: &str) -> String {
     format!(
         "{}{}{}",

@@ -79,17 +79,17 @@ impl ReciteOperationResult {
 }
 
 #[derive(GodotClass)]
-#[class(init, base=RefCounted)]
-pub struct ReciteOutput {
+#[class(init, rename=ReciteOutput, base=RefCounted)]
+pub struct ReciteOutputObject {
     base: Base<RefCounted>,
     data: VarDictionary,
 }
 
 #[godot_api]
-impl IRefCounted for ReciteOutput {}
+impl IRefCounted for ReciteOutputObject {}
 
 #[godot_api]
-impl ReciteOutput {
+impl ReciteOutputObject {
     pub(crate) fn new(data: VarDictionary) -> Gd<Self> {
         Gd::from_init_fn(|base| Self { base, data })
     }

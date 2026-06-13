@@ -7,7 +7,7 @@ use crate::adapter::{
     AdapterError, AdapterErrorKind, AdapterResult, ConditionCall, ReciteDialogueAsset,
     ReciteDialogueDriver, ReciteOutput as AdapterOutput,
 };
-use crate::binding_types::{ReciteAdapterError, ReciteOperationResult, ReciteOutput};
+use crate::binding_types::{ReciteAdapterError, ReciteOperationResult, ReciteOutputObject};
 use crate::convert::{error_dictionary, output_dictionary};
 
 #[derive(GodotClass)]
@@ -98,7 +98,7 @@ impl INode for ReciteDialogueNode {}
 #[godot_api]
 impl ReciteDialogueNode {
     #[signal]
-    fn output(output: Gd<ReciteOutput>);
+    fn output(output: Gd<ReciteOutputObject>);
 
     #[signal]
     fn adapter_error(error: Gd<ReciteAdapterError>);
@@ -205,7 +205,7 @@ impl ReciteDialogueNode {
     }
 
     fn emit_output(&mut self, output: &AdapterOutput) {
-        let output = ReciteOutput::new(output_dictionary(output));
+        let output = ReciteOutputObject::new(output_dictionary(output));
         self.base_mut()
             .emit_signal("output", &[output.clone().to_variant()]);
     }

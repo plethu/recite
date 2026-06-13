@@ -152,5 +152,6 @@ fn output_kind(output: &ReciteOutput) -> &'static str {
         ReciteOutput::Prompt { .. } => "prompt",
         ReciteOutput::Effect(_) => "effect",
         ReciteOutput::End { .. } => "end",
+        _ => panic!("unrecognised ReciteOutput variant: {output:?}"),
     }
 }

@@ -1,6 +1,7 @@
 use recite_core::CompiledAssetDecodeError;
 use recite_runtime::DialogueError;
 
+#[non_exhaustive]
 #[derive(Clone, Copy, Debug, Eq, PartialEq)]
 pub enum AdapterErrorKind {
     AssetLoadOrDecode,
@@ -17,6 +18,10 @@ pub enum AdapterErrorKind {
     EffectAcknowledgement,
     SaveLoadIncompatibility,
     Localisation,
+    /// Dialogue content caused a runtime fault (e.g. an infinite divert loop
+    /// that exceeded the traversal safety cap). This is a dialogue authoring
+    /// bug, not an asset compatibility problem.
+    DialogueFault,
 }
 
 impl AdapterErrorKind {
@@ -37,8 +42,47 @@ impl AdapterErrorKind {
             Self::EffectAcknowledgement => "effect_acknowledgement_error",
             Self::SaveLoadIncompatibility => "save_load_incompatibility_error",
             Self::Localisation => "localisation_error",
+            Self::DialogueFault => "dialogue_fault_error",
         }
     }
+
+    pub(crate) fn from_code(code: &str) -> Option<Self> {
+        match code {
+            "asset_load_or_decode_error" => Some(Self::AssetLoadOrDecode),
+            "stale_or_incompatible_asset_error" => Some(Self::StaleOrIncompatibleAsset),
+            "no_active_session_error" => Some(Self::NoActiveSession),
+            "session_already_active_error" => Some(Self::SessionAlreadyActive),
+            "unknown_start_block_error" => Some(Self::UnknownStartBlock),
+            "invalid_choice_error" => Some(Self::InvalidChoice),
+            "stale_choice_error" => Some(Self::StaleChoice),
+            "unavailable_choice_error" => Some(Self::UnavailableChoice),
+            "missing_condition_handler_error" => Some(Self::MissingConditionHandler),
+            "condition_evaluation_error" => Some(Self::ConditionEvaluationFailed),
+            "invalid_condition_result_error" => Some(Self::InvalidConditionResult),
+            "effect_acknowledgement_error" => Some(Self::EffectAcknowledgement),
+            "save_load_incompatibility_error" => Some(Self::SaveLoadIncompatibility),
+            "localisation_error" => Some(Self::Localisation),
+            "dialogue_fault_error" => Some(Self::DialogueFault),
+            _ => None,
+        }
+    }
+}
+
+/// Encodes a condition error for propagation through [`recite_runtime::ConditionEvaluationError`].
+///
+/// `ConditionEvaluationError` carries only a `String`, so we embed the kind
+/// code as a `[code]` prefix. [`decode_condition_error_kind`] recovers it on
+/// the other side in `From<DialogueError>`.
+pub(crate) fn encode_condition_error(error: &AdapterError) -> String {
+    format!("[{}] {}", error.kind().code(), error)
+}
+
+/// Recovers an [`AdapterErrorKind`] from a reason string written by
+/// [`encode_condition_error`].
+pub(crate) fn decode_condition_error_kind(reason: &str) -> Option<AdapterErrorKind> {
+    let rest = reason.strip_prefix('[')?;
+    let (code, _) = rest.split_once(']')?;
+    AdapterErrorKind::from_code(code)
 }
 
 #[derive(Clone, Debug, Eq, PartialEq, thiserror::Error)]
@@ -99,10 +143,10 @@ impl From<DialogueError> for AdapterError {
             DialogueError::UnknownBlock { .. } => AdapterErrorKind::UnknownStartBlock,
             DialogueError::UnsupportedCompiledFormat { .. }
             | DialogueError::AssetMismatch { .. }
-            | DialogueError::AssetContentMismatch { .. }
-            | DialogueError::TraversalLimitExceeded { .. } => {
+            | DialogueError::AssetContentMismatch { .. } => {
                 AdapterErrorKind::StaleOrIncompatibleAsset
             }
+            DialogueError::TraversalLimitExceeded { .. } => AdapterErrorKind::DialogueFault,
             DialogueError::MalformedCompiledAsset { .. } => AdapterErrorKind::AssetLoadOrDecode,
             DialogueError::InvalidChoice { .. } => AdapterErrorKind::InvalidChoice,
             DialogueError::NoPromptPending { .. } | DialogueError::PromptPending { .. } => {
@@ -113,11 +157,8 @@ impl From<DialogueError> for AdapterError {
             | DialogueError::NoEffectPending { .. }
             | DialogueError::EffectPending { .. } => AdapterErrorKind::EffectAcknowledgement,
             DialogueError::ConditionEvaluationFailed { ref reason, .. } => {
-                if reason.contains(AdapterErrorKind::MissingConditionHandler.code()) {
-                    AdapterErrorKind::MissingConditionHandler
-                } else {
-                    AdapterErrorKind::ConditionEvaluationFailed
-                }
+                decode_condition_error_kind(reason)
+                    .unwrap_or(AdapterErrorKind::ConditionEvaluationFailed)
             }
             DialogueError::ConditionResultTypeMismatch { .. } => {
                 AdapterErrorKind::InvalidConditionResult

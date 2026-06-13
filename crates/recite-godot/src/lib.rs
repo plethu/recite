@@ -16,9 +16,7 @@ pub use adapter::{
     ReciteOutput,
 };
 pub use adapter_error::{AdapterError, AdapterErrorKind, AdapterResult};
-pub use binding_types::{
-    ReciteAdapterError, ReciteOperationResult, ReciteOutput as GodotReciteOutput,
-};
+pub use binding_types::{ReciteAdapterError, ReciteOperationResult, ReciteOutputObject};
 pub use bindings::{ReciteDialogueNode, ReciteDialogueResource};
 
 struct ReciteGodotExtension;
