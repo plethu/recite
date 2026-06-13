@@ -1,6 +1,6 @@
 use std::io::Write;
 
-use crate::args::{Command, CompileArgs, ExtractArgs, RuntimeArgs, TraceArgs};
+use crate::args::{Command, CompileArgs, ExplainArgs, ExtractArgs, RuntimeArgs, TraceArgs};
 use crate::diagnostics::{report_diagnostics, report_targeted_diagnostics};
 use crate::dialogue_locale::LoadedDialoguePreview;
 use crate::error::CliError;
@@ -18,7 +18,9 @@ use crate::watch::run_watch_command;
 use recite_compiler::{
     compile_inputs, compile_inputs_with_schema, extract_pot, extract_pot_with_schema,
 };
-use recite_core::DiagnosticCategory;
+use recite_core::{
+    DiagnosticCategory, DiagnosticCode, explain_diagnostic_code, suggest_diagnostic_code,
+};
 
 pub(crate) fn run_command(
     command: Command,
@@ -69,11 +71,42 @@ pub(crate) fn run_command(
                 .then_some(())
                 .ok_or(CliError::Diagnostics)
         }
+        Command::Explain(args) => explain_command(args, stdout),
         Command::Watch(args) => run_watch_command(args, stderr),
         Command::Run(args) => runtime_command(args, RuntimeOutput::Run, stdout),
         Command::Trace(args) => trace_command(args, stdout),
         Command::Play(args) => run_play_command(args, stdout, stderr),
     }
+}
+
+fn explain_command(args: ExplainArgs, stdout: &mut dyn Write) -> Result<(), CliError> {
+    let code =
+        DiagnosticCode::new(args.code.clone()).map_err(|_| CliError::DiagnosticCodeMalformed {
+            suggestion: diagnostic_code_suggestion(&args.code),
+            code: args.code.clone(),
+        })?;
+    let explanation =
+        explain_diagnostic_code(&code).ok_or_else(|| CliError::DiagnosticCodeUnknown {
+            suggestion: diagnostic_code_suggestion(&args.code),
+            code: args.code.clone(),
+        })?;
+
+    writeln!(stdout, "Code: {}", explanation.code.as_str())?;
+    writeln!(stdout, "Category: {}", explanation.category.as_str())?;
+    writeln!(stdout, "Meaning: {}", explanation.meaning)?;
+    writeln!(stdout, "Common causes:")?;
+    for cause in explanation.common_causes {
+        writeln!(stdout, "- {cause}")?;
+    }
+    writeln!(stdout, "How to fix:")?;
+    for remediation in explanation.remediation {
+        writeln!(stdout, "- {remediation}")?;
+    }
+    Ok(())
+}
+
+fn diagnostic_code_suggestion(input: &str) -> Option<String> {
+    suggest_diagnostic_code(input).map(|explanation| explanation.code.as_str().to_owned())
 }
 
 fn compile_command(args: CompileArgs, stderr: &mut dyn Write) -> Result<(), CliError> {

@@ -36,6 +36,14 @@ pub(crate) enum CliError {
         field: &'static str,
         locale: String,
     },
+    DiagnosticCodeMalformed {
+        code: String,
+        suggestion: Option<String>,
+    },
+    DiagnosticCodeUnknown {
+        code: String,
+        suggestion: Option<String>,
+    },
     FixtureChoiceIndexOutOfRange {
         index: usize,
         choice_count: usize,
@@ -154,6 +162,26 @@ impl std::fmt::Display for CliError {
                 formatter,
                 "invalid dialogue locale in {field}: `{locale}`; expected a BCP-47 locale such as \"en-US\""
             ),
+            Self::DiagnosticCodeMalformed {
+                code,
+                suggestion,
+            } => {
+                write!(
+                    formatter,
+                    "malformed diagnostic code `{code}`: expected an uppercase namespaced code such as RECITE_PARSE001"
+                )?;
+                if let Some(suggestion) = suggestion {
+                    write!(formatter, "; did you mean `{suggestion}`?")?;
+                }
+                Ok(())
+            }
+            Self::DiagnosticCodeUnknown { code, suggestion } => {
+                write!(formatter, "unknown diagnostic code `{code}`")?;
+                if let Some(suggestion) = suggestion {
+                    write!(formatter, "; did you mean `{suggestion}`?")?;
+                }
+                Ok(())
+            }
             Self::FixtureChoiceIndexOutOfRange {
                 index,
                 choice_count,

@@ -124,7 +124,8 @@ pub use compiled::{
     canonical_source_fingerprint, decode_compiled_dialogue_messagepack,
 };
 pub use diagnostic::{
-    Diagnostic, DiagnosticCategory, DiagnosticCode, DiagnosticSeverity, RelatedSpan,
+    Diagnostic, DiagnosticCategory, DiagnosticCode, DiagnosticExplanation, DiagnosticSeverity,
+    RelatedSpan, explain_diagnostic_code, known_diagnostic_explanations, suggest_diagnostic_code,
 };
 pub use error::CoreValueError;
 pub use ids::{AvailabilityReasonId, BlockId, ChoiceId, EffectId, LineId, LocaleId, SpeakerId};

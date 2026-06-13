@@ -24,6 +24,7 @@ pub(crate) enum Command {
     ValidateProject(ProjectRootArgs),
     #[command(name = "check-fresh")]
     CheckFresh(ProjectRootArgs),
+    Explain(ExplainArgs),
     Watch(WatchArgs),
     Run(RuntimeArgs),
     Trace(TraceArgs),
@@ -60,6 +61,11 @@ pub(crate) struct ProjectRootArgs {
 #[derive(Debug, Args)]
 pub(crate) struct WatchArgs {
     pub(crate) project_root: PathBuf,
+}
+
+#[derive(Debug, Args)]
+pub(crate) struct ExplainArgs {
+    pub(crate) code: String,
 }
 
 #[derive(Debug, Args)]

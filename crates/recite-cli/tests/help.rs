@@ -18,6 +18,7 @@ fn help_covers_issue_25_commands_and_options() {
         "check-metadata",
         "validate-project",
         "check-fresh",
+        "explain",
         "watch",
         "run",
         "trace",
@@ -47,6 +48,12 @@ fn help_covers_issue_25_commands_and_options() {
     let fresh = run(recite().arg("check-fresh").arg("--help"));
     fresh.assert_success().assert_stderr("");
     fresh.assert_stdout_contains("compiled assets are fresh");
+
+    let explain = run(recite().arg("explain").arg("--help"));
+    explain.assert_success().assert_stderr("");
+    explain.assert_stdout_contains("Usage: recite explain <CODE>");
+    assert!(stdout(&explain).contains("Arguments:\n  <CODE>"));
+    explain.assert_stdout_contains("Stable diagnostic code");
 
     let watch = run(recite().arg("watch").arg("--help"));
     watch.assert_success().assert_stderr("");
