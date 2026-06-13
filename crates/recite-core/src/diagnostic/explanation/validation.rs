@@ -117,9 +117,11 @@ pub(super) const EXPLANATIONS: &[DiagnosticExplanation] = &[
     DiagnosticExplanation::new(
         "RECITE_VALIDATE021",
         DiagnosticCategory::Validation,
-        "An effect call violates the effect declaration contract.",
-        &["The call shape is valid syntax but not valid for the schema effect."],
-        &["Compare the call with the schema effect declaration and adjust it."],
+        "An effect call argument names a value that the schema does not export.",
+        &[
+            "An effect argument refers to an enum, registry, speaker, or other schema value that is unknown.",
+        ],
+        &["Use a value exported in the project schema manifest."],
     ),
     DiagnosticExplanation::new(
         "RECITE_VALIDATE022",
@@ -187,23 +189,23 @@ pub(super) const EXPLANATIONS: &[DiagnosticExplanation] = &[
     DiagnosticExplanation::new(
         "RECITE_VALIDATE031",
         DiagnosticCategory::Metadata,
-        "A contextual metadata selector cannot resolve its required context.",
-        &["The schema asks for context that is not available at this metadata location."],
-        &["Move the metadata or update the contextual selector."],
+        "A metadata value is outside a metadata domain snapshot.",
+        &["The value is not one of the symbols exported by the resolved metadata domain."],
+        &["Use a symbol exported in the metadata domain snapshot or update the domain."],
     ),
     DiagnosticExplanation::new(
         "RECITE_VALIDATE032",
         DiagnosticCategory::Metadata,
-        "A metadata domain fallback could not produce a valid value set.",
-        &["The selector fallback refers to a missing or incompatible domain."],
-        &["Fix the fallback domain or provide the required context."],
+        "A metadata domain selector is missing required context.",
+        &["The metadata location does not provide the context needed to resolve the selector."],
+        &["Provide the selector context, move the metadata, or update the missing-context policy."],
     ),
     DiagnosticExplanation::new(
         "RECITE_VALIDATE033",
         DiagnosticCategory::Metadata,
-        "A metadata value has an invalid shape for its domain.",
-        &["The value shape does not match the domain rules even if the scalar type is valid."],
-        &["Rewrite the metadata value in the shape required by the domain."],
+        "A metadata domain selector has ambiguous or non-symbol context.",
+        &["The selector context resolves to zero, multiple, or non-symbol scalar values."],
+        &["Change the context so the selector resolves to exactly one scalar symbol value."],
     ),
     DiagnosticExplanation::new(
         "RECITE_VALIDATE034",

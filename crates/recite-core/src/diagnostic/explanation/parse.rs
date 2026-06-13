@@ -42,9 +42,11 @@ pub(super) const EXPLANATIONS: &[DiagnosticExplanation] = &[
     DiagnosticExplanation::new(
         "RECITE_PARSE008",
         DiagnosticCategory::Parse,
-        "A block header is malformed.",
-        &["The header text after `::` contains unsupported syntax."],
-        &["Rewrite the header with a valid block ID and supported modifiers."],
+        "A statement header field is malformed.",
+        &[
+            "A block, choice, metadata, or condition header contains a field the parser cannot read.",
+        ],
+        &["Rewrite the reported header field using the supported Recite statement syntax."],
     ),
     DiagnosticExplanation::new(
         "RECITE_PARSE010",
