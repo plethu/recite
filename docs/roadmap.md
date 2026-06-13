@@ -28,7 +28,6 @@ These issues have no unmet dependencies.
 
 | Issue | Role | Unlocks |
 | --- | --- | --- |
-| #80 Godot adapter MVP | adapter critical path | #120 refresh workflow, first-adapter evidence for #108/#109 and the C ABI design |
 | #107 Cross-engine acceptance matrix | adapter contract | conformance scope for adapter MVPs |
 | #178 Availability conformance fixtures | adapter contract | adapter conformance coverage (#123) |
 | #181 Projection schema declarations | schema/projection | #183 CLI/LSP surfacing; #182 stays gated on adapter proof |
@@ -69,7 +68,7 @@ flowchart LR
 
   subgraph ADP["Adapter track (critical path)"]
     direction LR
-    i80["#80 Godot MVP"] --> i120["#120"]
+    i80["#80 Godot MVP ✓"] --> i120["#120"]
     i119["#119 watch loop"] --> i120
     iBevy["Bevy MVP"] --> i121["#121"]
     i80 --> iCabi["#207 C ABI design"]
@@ -177,15 +176,17 @@ current open chain is:
 per-engine adapter MVPs + watch/editor refresh prerequisites → per-engine refresh workflows → adapter docs → release verification
 ```
 
-The head of that chain is no longer blocked: #80 (Godot adapter MVP) depends
-only on the closed adapter-contract design issue #78, and the 2026-06-11 audit
-cleared its stale `status/blocked` label along with the same stale label on
-#107 (acceptance matrix, depends on closed #78), #178 (availability
-conformance fixtures, depends on closed #177), and #181 (projection schema
-declarations, depends on closed #172). The C ABI design issue (#207) sits
-between the first adapter MVP and the Unity MVP (#108): Rust-native adapters
-(Bevy, Godot via gdext) consume `recite-runtime` directly, but the first
-non-Rust adapter must not improvise its own FFI boundary.
+#80 (Godot adapter MVP) is now closed (2026-06-14, PR #215). It delivers
+`recite-godot`: a GDExtension crate with `ReciteDialogueResource`,
+`ReciteDialogueNode`, session snapshot/restore, condition handlers via
+GDScript `Callable`, and full effect acknowledgement. This unblocks #120
+(Godot refresh workflow) and provides the first-adapter evidence required
+before freezing the C ABI boundary (#207) and the Unity MVP (#108).
+
+The C ABI design issue (#207) sits between the first adapter MVP and the
+Unity MVP (#108): Rust-native adapters (Bevy, Godot via gdext) consume
+`recite-runtime` directly, but the first non-Rust adapter must not improvise
+its own FFI boundary.
 
 Presentation projection wire work is now explicitly gated: #182 (compiled wire
 data) waits until a first adapter MVP demonstrates projection end-to-end,
