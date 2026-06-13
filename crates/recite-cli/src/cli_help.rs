@@ -109,6 +109,15 @@ fn localise_subcommand(command: &mut clap::Command, messages: &Messages) {
                 messages,
             );
         }
+        "explain" => {
+            set_about(command, messages.text(MsgId::CliHelpCommandExplain));
+            set_arg_help(
+                command,
+                "code",
+                messages.text(MsgId::CliHelpArgDiagnosticCode),
+                messages,
+            );
+        }
         "watch" => {
             set_about(command, messages.text(MsgId::CliHelpCommandWatch));
             set_arg_help(
@@ -199,7 +208,7 @@ fn localise_runtime_args(command: &mut clap::Command, messages: &Messages, asset
 }
 
 fn set_arg_help(command: &mut clap::Command, id: &'static str, help: String, messages: &Messages) {
-    let heading = if id == "paths" || id == "project_root" || id == "asset" {
+    let heading = if id == "paths" || id == "project_root" || id == "asset" || id == "code" {
         messages.text(MsgId::CliHelpArgumentsHeading)
     } else {
         messages.text(MsgId::CliHelpOptionsHeading)

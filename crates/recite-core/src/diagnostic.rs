@@ -3,6 +3,13 @@ use std::fmt;
 
 use crate::{CoreValueError, SourceSpan};
 
+mod explanation;
+
+pub use explanation::{
+    DiagnosticExplanation, explain_diagnostic_code, known_diagnostic_explanations,
+    suggest_diagnostic_code,
+};
+
 /// Stable diagnostic severity shared by compiler, CLI, and LSP surfaces.
 #[derive(Clone, Copy, Debug, Eq, PartialEq, Hash)]
 pub enum DiagnosticSeverity {
@@ -24,6 +31,23 @@ pub enum DiagnosticCategory {
     Schema,
     Validation,
     Unknown,
+}
+
+impl DiagnosticCategory {
+    #[must_use]
+    pub const fn as_str(self) -> &'static str {
+        match self {
+            Self::Freshness => "freshness",
+            Self::Identifier => "identifier",
+            Self::Markup => "markup",
+            Self::Metadata => "metadata",
+            Self::Parse => "parse",
+            Self::Project => "project",
+            Self::Schema => "schema",
+            Self::Validation => "validation",
+            Self::Unknown => "unknown",
+        }
+    }
 }
 
 /// A stable diagnostic code, for example `RECITE_PARSE001`.

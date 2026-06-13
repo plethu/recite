@@ -13,10 +13,12 @@ semantics, diagnostics, validation ownership, and file-size triggers.
 
 ## Quick Audit
 
-When reviewing uncommitted Rust changes, inspect the changed files and run a line-count pass over the touched surface:
+When reviewing uncommitted Rust changes, inspect the changed files and run a
+line-count pass over both modified tracked Rust files and untracked Rust files:
 
 ```bash
 git diff --name-only --diff-filter=ACMRT HEAD -- '*.rs' | xargs -r wc -l | sort -nr
+git ls-files --others --exclude-standard -- '*.rs' | xargs -r wc -l | sort -nr
 ```
 
 When reviewing a committed branch, compare against the branch base:
@@ -31,23 +33,32 @@ For branch-wide cleanup or review, use tracked files:
 git ls-files '*.rs' | xargs wc -l | sort -nr | head -50
 ```
 
-Ignore generated files, lockfiles, docs, build output, and data/tag tables unless they also mix responsibilities.
+Ignore generated files, lockfiles, docs, and build output. Do not ignore
+hand-written data/tag/catalog tables by default; count them, then decide whether
+their lookup behavior, grouping, and update pattern justify one file.
 
 ## File-Size Triggers
 
-Line count is a triage trigger, not an automatic split rule. The real question is whether a file owns multiple independently changing concerns.
+Line count is a triage trigger, not an automatic split rule, but large files
+must be scrutinized before accepting them. The real question is whether a file
+owns multiple independently changing concerns, data groups, or test scenarios.
 
 | File kind | Cohesion check | Split rationale or follow-up |
 | --- | ---: | ---: |
 | Production Rust | >250 LOC | >400 LOC |
 | Test/support Rust | >350 LOC | >500 LOC |
 
-Accept a large file only when it is cohesive and splitting would make the code harder to understand. Split smaller files when responsibilities are mixed.
+Accept a large file only when it is cohesive and splitting would make the code
+harder to understand. For new production Rust over 400 LOC or new test/support
+Rust over 500 LOC, start from a split-first assumption: the review must identify
+why category, namespace, fixture, behavior, or helper-module boundaries would be
+worse than one file. "It is mostly data" is not enough by itself. Split smaller
+files when responsibilities are mixed.
 
 A clean Rust implementation review is not complete until every touched production Rust file over 250 LOC and every touched test/support Rust file over 350 LOC is listed with one of:
 
 - Split now.
-- Cohesive; keep as-is, with the reason.
+- Cohesive; keep as-is, with the reason and the split alternatives considered.
 - Follow-up needed, with the issue or handoff note.
 
 ## Recite Checks
