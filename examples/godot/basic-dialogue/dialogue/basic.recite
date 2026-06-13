@@ -1,0 +1,21 @@
+:: start default
+> intro@10000000000000000001
+  The signal clears.
+> prompt@10000000000000000002
+  Where next?
+  ? inspect_relay@10000000000000000003
+    Inspect the relay.
+    -> relay
+  ? leave@10000000000000000004
+    Leave.
+    -> END
+
+:: relay
+! immediate focus_camera(relay)
+> relay_line@10000000000000000005
+  The relay is warm.
+! blocking grant_item(relay_key)
+> after_key@10000000000000000006
+  The relay key clicks free.
+! deferred mark_seen(relay)
+-> END

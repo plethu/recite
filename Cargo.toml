@@ -5,6 +5,7 @@ members = [
     "crates/recite-compiler",
     "crates/recite-core",
     "crates/recite-fixturegen",
+    "crates/recite-godot",
     "crates/recite-lsp",
     "crates/recite-parser",
     "crates/recite-runtime",
@@ -34,6 +35,7 @@ recite-core = { version = "0.0.1", path = "crates/recite-core" }
 recite-parser = { version = "0.0.1", path = "crates/recite-parser" }
 recite-compiler = { version = "0.0.1", path = "crates/recite-compiler" }
 recite-fixturegen = { version = "0.0.1", path = "crates/recite-fixturegen" }
+recite-godot = { version = "0.0.1", path = "crates/recite-godot" }
 recite-lsp = { version = "0.0.1", path = "crates/recite-lsp" }
 recite-runtime = { version = "0.0.1", path = "crates/recite-runtime" }
 blake3 = "1.8.5"
