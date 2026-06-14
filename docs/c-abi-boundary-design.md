@@ -497,3 +497,13 @@ note merges:
   should confirm whether this category needs a dedicated `DialogueError` variant
   or whether it is always raised at the FFI-layer asset-validation step before
   session start.
+
+- **IL2CPP allocator mismatch:** `recite_buffer_free` must call the same
+  allocator that allocated the buffer — i.e. Rust's allocator inside
+  `recite-ffi`. If a Unity IL2CPP build links against a different copy of
+  `recite-ffi` than the one that produced the buffer (e.g. a statically linked
+  runtime vs a pre-built `.dll`), the free call goes to the wrong allocator and
+  is undefined behaviour. The implementation issue and Unity MVP (#108) must
+  document that `recite-ffi` is always distributed as a single pre-built
+  `.dll`/`.so` that both Mono and IL2CPP P/Invoke load at runtime — never
+  recompiled per backend or statically linked into the Unity player separately.
