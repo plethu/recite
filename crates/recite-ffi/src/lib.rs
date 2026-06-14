@@ -561,9 +561,13 @@ pub unsafe extern "C" fn recite_session_acknowledge_effect(
         let reason = if failure_reason.is_null() {
             String::new()
         } else {
-            unsafe { CStr::from_ptr(failure_reason) }
-                .to_string_lossy()
-                .into_owned()
+            match unsafe { CStr::from_ptr(failure_reason) }.to_str() {
+                Ok(reason) => reason.to_owned(),
+                Err(_) => {
+                    set_last_error("failure_reason is not valid UTF-8");
+                    return ReciteStatus::Validation;
+                }
+            }
         };
         EffectAck::Failed { reason }
     };
