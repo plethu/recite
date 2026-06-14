@@ -15,7 +15,7 @@ Per spec §23, v1 is broader than "core + CLI + LSP." It requires all of:
 - core runtime, CLI, and LSP authoring support;
 - a scale and performance proof;
 - a stable engine-adapter contract;
-- at least one production-quality engine adapter;
+- production-quality Godot, Bevy, and Unity adapter paths;
 - adoption and migration documentation that lets a team evaluate Recite against
   established dialogue tooling.
 

@@ -842,6 +842,11 @@ preserve. The serious v1 gate (spec §16.5) requires all three adapters to be
 production-quality and to pass the §13 conformance coverage; one adapter does
 not satisfy the gate on its own.
 
+The review checklist for those targets lives in
+`docs/adapter-acceptance-matrix.md`. It does not replace this contract; it maps
+the shared requirements below to the minimum Godot, Bevy, and Unity surfaces,
+examples, changed-asset behavior, and verification expected for v1.
+
 ### 14.1 Godot
 
 Godot adapters should expose compiled dialogue as resources or imported assets

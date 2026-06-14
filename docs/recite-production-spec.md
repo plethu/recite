@@ -2787,6 +2787,13 @@ three adapters to be production-quality and to pass the engine-independent
 conformance coverage in `docs/engine-adapter-contract.md` §13, including
 contract-aligned asset refresh and active-session behavior.
 
+The v1 review checklist for those adapters lives in
+`docs/adapter-acceptance-matrix.md`. The checklist maps the shared contract to
+Godot, Bevy, and Unity acceptance rows for asset loading, authoring refresh,
+active-session changed-asset behavior, runtime operations, conditions, effects,
+save/load, localisation, errors, lifecycle, examples, conformance, and
+performance.
+
 No adapter may weaken the engine-independent core contract.
 
 Unreal and GameMaker remain post-v1 evaluation targets.
@@ -3407,8 +3414,7 @@ Initial non-goals:
 
 ### Milestone 9: First Production Adapters
 
-- at least one engine adapter, selected from active project pressure;
-- credible adapter stories for the v1 target engines;
+- production-quality adapter paths for Godot, Bevy, and Unity;
 - compiled asset loading;
 - native authoring asset refresh loops for Godot, Bevy, and Unity;
 - start/select/ack integration;
@@ -3481,14 +3487,22 @@ The project is not production-credible until all of the following are true:
   extraction, and snapshot restore at narrative scale comparable to serious
   dialogue-heavy games.
 - Performance and memory characteristics are measured, documented, and protected by regression smoke checks.
-- At least one production-quality engine adapter can load compiled assets, traverse dialogue, evaluate conditions, emit effects without executing them, and participate in save/load workflows.
-- Each v1 adapter has a documented asset refresh/import workflow and an
-  explicit active-session behavior for changed compiled assets.
+- Godot, Bevy, and Unity adapters can load compiled assets, traverse dialogue,
+  evaluate conditions, emit effects without executing them, and participate in
+  save/load workflows.
+- Each v1 adapter has a documented asset refresh/import workflow, an explicit
+  active-session behavior for changed compiled assets, and coverage against
+  the v1 adapter acceptance matrix.
 - The adapter contract is stable enough that additional engines can be implemented without changing core runtime semantics.
-- Public docs and examples demonstrate both headless CLI workflows and at least one real engine integration path.
+- Public docs and examples demonstrate headless CLI workflows and real Godot,
+  Bevy, and Unity integration paths.
 - Adoption and migration guidance makes a credible case for teams evaluating Recite against established tools such as Dialogue System for Unity, Dialogue Manager, Dialogic, Yarn Spinner, and Ink.
 
-Shipping a credible v1 means more than proving the core can run headlessly. The core runtime, CLI, LSP, scale proof, adapter contract, at least one production adapter, and adoption documentation must work together well enough for a serious narrative-heavy game team to evaluate Recite as a practical replacement for established dialogue tooling.
+Shipping a credible v1 means more than proving the core can run headlessly. The
+core runtime, CLI, LSP, scale proof, adapter contract, Godot/Bevy/Unity adapter
+paths, and adoption documentation must work together well enough for a serious
+narrative-heavy game team to evaluate Recite as a practical replacement for
+established dialogue tooling.
 
 ## 24. Design Summary
 
