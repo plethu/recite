@@ -1,0 +1,15 @@
+:: start default
+> availability_prompt@b9a847d551662c504b9b
+  Who do you ask?
+  ? ask_news@a94b83f2d8bd65101cc3 requires=(trust_gte(hazel, rhea, 3)) reason=innkeeper_trust_hint
+    Ask for private news.
+    -> END
+  ? group_all@abd0c7bb22d0c75e6e6d requires=(trust_gte(hazel, rhea, 3) and trust_gte(rhea, hazel, 2))
+    Try the double-check path.
+    -> END
+  ? group_any@d8c8e35c29738f402acb requires=(trust_gte(hazel, rhea, 3) or trust_gte(rhea, hazel, 2))
+    Try either trust path.
+    -> END
+  ? available@d8a10a641d08d677e37c
+    Ask about the weather.
+    -> END

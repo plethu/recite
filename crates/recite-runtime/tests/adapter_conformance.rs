@@ -1,16 +1,20 @@
 #![cfg(test)]
 
+#[path = "adapter_conformance/availability.rs"]
+mod availability;
 #[path = "adapter_conformance/driver.rs"]
 mod driver;
 #[path = "adapter_conformance/manifest.rs"]
 mod manifest;
 
 use std::collections::BTreeSet;
+use std::fs;
 
 use driver::{ReferenceDriver, StepResult};
 use manifest::{
-    Capability, ExecutionMode, RequirementLevel, StepStatus, load_contract_error_categories,
-    load_manifest, load_manifest_schema_error_categories, load_operation_schema_error_categories,
+    AvailabilityReasonTreeExpectation, Capability, ExecutionMode, RequirementLevel, StepStatus,
+    load_contract_error_categories, load_manifest, load_manifest_schema_error_categories,
+    load_operation_schema_error_categories,
 };
 
 const PROJECTION_ERROR_CATEGORIES: [&str; 3] = [
@@ -40,6 +44,70 @@ fn stable_error_category_table_stays_in_sync_with_contract_and_schema_artifacts(
     assert_eq!(
         operation_schema_categories, contract_categories,
         "operation/result schema stable_error_category enum drifted from docs/engine-adapter-contract.md §12"
+    );
+}
+
+#[test]
+fn availability_reason_fields_stay_in_sync_across_schema_manifest_and_reference_driver() {
+    let schema_source = fs::read_to_string(manifest::workspace_path(
+        "fixtures/adapter-conformance/v1/adapter-conformance-operation-result-v1.schema.json",
+    ))
+    .expect("operation/result schema reads");
+    let schema: serde_json::Value =
+        serde_json::from_str(&schema_source).expect("operation/result schema parses");
+    for pointer in [
+        "/$defs/operation/oneOf/0/properties/schema_fixture",
+        "/$defs/step_expectation/properties/prompt_choice_availability",
+        "/$defs/choice_availability",
+        "/$defs/availability_reason",
+        "/$defs/availability_reason_origin",
+        "/$defs/availability_reason_tree",
+        "/$defs/availability_reason_arg",
+        "/$defs/availability_reason_value",
+    ] {
+        assert!(
+            schema.pointer(pointer).is_some(),
+            "operation/result schema is missing `{pointer}`"
+        );
+    }
+
+    let manifest = load_manifest().expect("conformance manifest loads");
+    let scenario = manifest
+        .scenarios
+        .iter()
+        .find(|scenario| scenario.id == "unavailable_choice_error_conditioned_choice")
+        .expect("availability reason scenario is present");
+    let availability = scenario
+        .steps
+        .iter()
+        .find_map(|step| step.expect.prompt_choice_availability.as_ref())
+        .expect("availability reason scenario asserts prompt_choice_availability");
+
+    assert!(
+        availability
+            .iter()
+            .any(|choice| choice.is_available && choice.primary_reason.is_none()),
+        "availability scenario must keep at least one available choice in the structured output"
+    );
+    assert!(
+        availability
+            .iter()
+            .any(|choice| !choice.is_available && choice.primary_reason.is_some()),
+        "availability scenario must assert an explicit primary reason"
+    );
+    assert!(
+        availability.iter().any(|choice| matches!(
+            choice.reason_tree.as_ref(),
+            Some(AvailabilityReasonTreeExpectation::All { .. })
+        )),
+        "availability scenario must assert an all-group reason tree"
+    );
+    assert!(
+        availability.iter().any(|choice| matches!(
+            choice.reason_tree.as_ref(),
+            Some(AvailabilityReasonTreeExpectation::Any { .. })
+        )),
+        "availability scenario must assert an any-group reason tree"
     );
 }
 
@@ -167,6 +235,16 @@ fn reference_driver_runs_reference_scenarios_and_checks_mandatory_category_cover
                             scenario.id,
                             step_index + 1,
                             expected_unavailable_ids
+                        );
+                    }
+                    if let Some(expected_availability) = &step.expect.prompt_choice_availability {
+                        assert_eq!(
+                            outcome.prompt_choice_availability.as_ref(),
+                            Some(expected_availability),
+                            "scenario `{}` step {} expected prompt choice availability {:?}",
+                            scenario.id,
+                            step_index + 1,
+                            expected_availability
                         );
                     }
                     if let Some(expected_effect_function) = &step.expect.effect_function {

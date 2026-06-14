@@ -114,6 +114,9 @@
             "asset_id": {
               "type": "string"
             },
+            "schema_fixture": {
+              "type": "string"
+            },
             "schema_fingerprint": {
               "type": "string"
             }
@@ -500,6 +503,226 @@
         "blocking"
       ]
     },
+    "availability_reason_value": {
+      "type": "object",
+      "required": [
+        "kind",
+        "value"
+      ],
+      "properties": {
+        "kind": {
+          "type": "string",
+          "enum": [
+            "identifier",
+            "string",
+            "integer",
+            "float",
+            "boolean"
+          ]
+        },
+        "value": {
+          "oneOf": [
+            {
+              "type": "string"
+            },
+            {
+              "type": "number"
+            },
+            {
+              "type": "boolean"
+            }
+          ]
+        }
+      },
+      "additionalProperties": false
+    },
+    "availability_reason_arg": {
+      "type": "object",
+      "required": [
+        "name",
+        "value"
+      ],
+      "properties": {
+        "name": {
+          "type": "string"
+        },
+        "value": {
+          "$ref": "#/$defs/availability_reason_value"
+        }
+      },
+      "additionalProperties": false
+    },
+    "availability_reason_origin": {
+      "oneOf": [
+        {
+          "type": "object",
+          "required": [
+            "kind",
+            "function",
+            "args"
+          ],
+          "properties": {
+            "kind": {
+              "const": "condition_call"
+            },
+            "function": {
+              "type": "string"
+            },
+            "args": {
+              "type": "array",
+              "items": {
+                "$ref": "#/$defs/availability_reason_value"
+              }
+            }
+          },
+          "additionalProperties": false
+        },
+        {
+          "type": "object",
+          "required": [
+            "kind",
+            "source_text"
+          ],
+          "properties": {
+            "kind": {
+              "const": "requirement_expression"
+            },
+            "source_text": {
+              "type": "string"
+            }
+          },
+          "additionalProperties": false
+        }
+      ]
+    },
+    "availability_reason": {
+      "type": "object",
+      "required": [
+        "id",
+        "source_text",
+        "text",
+        "args"
+      ],
+      "properties": {
+        "id": {
+          "type": "string"
+        },
+        "source_text": {
+          "type": "string"
+        },
+        "text": {
+          "type": "string"
+        },
+        "origin": {
+          "$ref": "#/$defs/availability_reason_origin"
+        },
+        "args": {
+          "type": "array",
+          "items": {
+            "$ref": "#/$defs/availability_reason_arg"
+          }
+        }
+      },
+      "additionalProperties": false
+    },
+    "availability_reason_tree": {
+      "oneOf": [
+        {
+          "type": "object",
+          "required": [
+            "kind",
+            "children"
+          ],
+          "properties": {
+            "kind": {
+              "const": "all"
+            },
+            "children": {
+              "type": "array",
+              "items": {
+                "$ref": "#/$defs/availability_reason_tree"
+              },
+              "minItems": 1
+            }
+          },
+          "additionalProperties": false
+        },
+        {
+          "type": "object",
+          "required": [
+            "kind",
+            "children"
+          ],
+          "properties": {
+            "kind": {
+              "const": "any"
+            },
+            "children": {
+              "type": "array",
+              "items": {
+                "$ref": "#/$defs/availability_reason_tree"
+              },
+              "minItems": 1
+            }
+          },
+          "additionalProperties": false
+        },
+        {
+          "type": "object",
+          "required": [
+            "kind",
+            "reason"
+          ],
+          "properties": {
+            "kind": {
+              "const": "reason"
+            },
+            "reason": {
+              "$ref": "#/$defs/availability_reason"
+            }
+          },
+          "additionalProperties": false
+        },
+        {
+          "type": "object",
+          "required": [
+            "kind",
+            "source_text"
+          ],
+          "properties": {
+            "kind": {
+              "const": "requirement_source_text"
+            },
+            "source_text": {
+              "type": "string"
+            }
+          },
+          "additionalProperties": false
+        }
+      ]
+    },
+    "choice_availability": {
+      "type": "object",
+      "required": [
+        "choice_id",
+        "is_available"
+      ],
+      "properties": {
+        "choice_id": {
+          "type": "string"
+        },
+        "is_available": {
+          "type": "boolean"
+        },
+        "primary_reason": {
+          "$ref": "#/$defs/availability_reason"
+        },
+        "reason_tree": {
+          "$ref": "#/$defs/availability_reason_tree"
+        }
+      },
+      "additionalProperties": false
+    },
     "step_expectation": {
       "type": "object",
       "required": [
@@ -529,6 +752,12 @@
           "type": "array",
           "items": {
             "type": "string"
+          }
+        },
+        "prompt_choice_availability": {
+          "type": "array",
+          "items": {
+            "$ref": "#/$defs/choice_availability"
           }
         },
         "effect_function": {

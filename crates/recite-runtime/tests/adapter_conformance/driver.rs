@@ -1,7 +1,7 @@
 use std::collections::{BTreeMap, BTreeSet};
 use std::fs;
 
-use recite_compiler::{CompileInput, CompileOptions, compile_inputs};
+use recite_compiler::{CompileInput, CompileOptions, compile_inputs, compile_inputs_with_schema};
 use recite_core::{
     ChoiceId, CompiledAssetId, CompiledDialogue, CompilerVersion, ContentFingerprint, EffectId,
     LocaleId, SchemaFingerprint, SourceMapId, canonical_source_fingerprint,
@@ -14,10 +14,12 @@ use recite_runtime::{
     restore_session, snapshot_session, start_scene, start_scene_with_options,
 };
 
+use super::availability::choice_availability_expectation;
 use super::manifest::workspace_path;
 use super::manifest::{
-    AckKind, BytesCase, Capability, ChangedAssetPolicy, ConditionBehaviorKind, EffectMode,
-    EventKind, Operation, ProjectionFailureKind, ReferenceDriverConfig,
+    AckKind, BytesCase, Capability, ChangedAssetPolicy, ChoiceAvailabilityExpectation,
+    ConditionBehaviorKind, EffectMode, EventKind, Operation, ProjectionFailureKind,
+    ReferenceDriverConfig,
 };
 
 const CATEGORY_VALIDATION_ERROR: &str = "validation_error";
@@ -66,19 +68,20 @@ enum ConditionBehavior {
     Failure(String),
 }
 
-#[derive(Clone, Debug, Default, Eq, PartialEq)]
+#[derive(Clone, Debug, Default, PartialEq)]
 pub(crate) struct StepOutcome {
     pub(crate) event_kind: Option<EventKind>,
     pub(crate) line_text: Option<String>,
     pub(crate) prompt_choice_ids: Option<Vec<String>>,
     pub(crate) prompt_unavailable_choice_ids: Option<Vec<String>>,
+    pub(crate) prompt_choice_availability: Option<Vec<ChoiceAvailabilityExpectation>>,
     pub(crate) effect_function: Option<String>,
     pub(crate) effect_mode: Option<EffectMode>,
     pub(crate) deferred_effect_functions: Option<Vec<String>>,
     pub(crate) pending_effect_id: Option<String>,
 }
 
-#[derive(Clone, Debug, Eq, PartialEq)]
+#[derive(Clone, Debug, PartialEq)]
 pub(crate) enum StepResult {
     Ok(StepOutcome),
     Error { category: String, detail: String },
@@ -131,8 +134,15 @@ impl ReferenceDriver {
                 fixture,
                 asset_slot,
                 asset_id,
+                schema_fixture,
                 schema_fingerprint,
-            } => self.compile_fixture(fixture, asset_slot, asset_id.as_deref(), schema_fingerprint),
+            } => self.compile_fixture(
+                fixture,
+                asset_slot,
+                asset_id.as_deref(),
+                schema_fixture.as_deref(),
+                schema_fingerprint,
+            ),
             Operation::CompileInvalidFixture { fixture } => self.compile_invalid_fixture(fixture),
             Operation::DecodeCompiledBytes { bytes_case } => {
                 self.decode_compiled_bytes(*bytes_case)
@@ -222,6 +232,7 @@ impl ReferenceDriver {
         fixture: &str,
         asset_slot: &str,
         asset_id: Option<&str>,
+        schema_fixture: Option<&str>,
         schema_fingerprint_token: &Option<String>,
     ) -> StepResult {
         let source = match fs::read_to_string(workspace_path(fixture)) {
@@ -255,18 +266,44 @@ impl ReferenceDriver {
                 return self.error(CATEGORY_VALIDATION_ERROR, error.to_string());
             }
         };
+        let schema = match schema_fixture {
+            Some(path) => {
+                let schema_source = match fs::read_to_string(workspace_path(path)) {
+                    Ok(source) => source,
+                    Err(error) => {
+                        return self.error(
+                            CATEGORY_VALIDATION_ERROR,
+                            format!("failed to read schema fixture `{path}`: {error}"),
+                        );
+                    }
+                };
+                match recite_core::load_schema_manifest_str(path, &schema_source).schema {
+                    Some(schema) => Some(schema),
+                    None => {
+                        return self.error(
+                            CATEGORY_VALIDATION_ERROR,
+                            format!("schema fixture `{path}` did not load a schema"),
+                        );
+                    }
+                }
+            }
+            None => None,
+        };
         let (schema_fingerprint, schema_fingerprint_label) =
-            schema_fingerprint_from_token(schema_fingerprint_token.as_deref());
+            schema_fingerprint_from_token(schema_fingerprint_token.as_deref(), schema.as_ref());
 
-        let report = match compile_inputs(
-            [CompileInput::new(fixture, source)],
-            CompileOptions::new(
-                compiler_version,
-                asset_id,
-                source_map_id,
-                schema_fingerprint,
-            ),
-        ) {
+        let options = CompileOptions::new(
+            compiler_version,
+            asset_id,
+            source_map_id,
+            schema_fingerprint,
+        );
+        let input = [CompileInput::new(fixture, source)];
+        let report = match if let Some(schema) = &schema {
+            compile_inputs_with_schema(input, options, schema)
+        } else {
+            compile_inputs(input, options)
+        } {
             Ok(report) => report,
             Err(error) => {
                 return self.error(
@@ -906,6 +943,12 @@ impl ReferenceDriver {
                         .map(|choice| choice.id.as_str().to_owned())
                         .collect(),
                 );
+                outcome.prompt_choice_availability = Some(
+                    choices
+                        .iter()
+                        .map(choice_availability_expectation)
+                        .collect(),
+                );
             }
             DialogueEvent::Effect(effect) => {
                 outcome.event_kind = Some(EventKind::Effect);
@@ -1047,12 +1090,21 @@ impl DialogueContext for DriverContext<'_> {
     }
 }
 
-fn schema_fingerprint_from_token(token: Option<&str>) -> (SchemaFingerprint, String) {
+fn schema_fingerprint_from_token(
+    token: Option<&str>,
+    schema: Option<&recite_core::ProjectSchema>,
+) -> (SchemaFingerprint, String) {
     if let Some(token) = token {
         let fingerprint = canonical_source_fingerprint(token);
         return (
             SchemaFingerprint::Fingerprint(fingerprint),
             token.to_owned(),
+        );
+    }
+    if let Some(schema) = schema {
+        return (
+            schema.canonical_fingerprint(),
+            "schema_fixture_canonical".to_owned(),
         );
     }
     (SchemaFingerprint::NoSchema, "no_schema".to_owned())
