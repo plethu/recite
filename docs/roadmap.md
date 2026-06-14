@@ -16,6 +16,8 @@ Per spec §23, v1 is broader than "core + CLI + LSP." It requires all of:
 - a scale and performance proof;
 - a stable engine-adapter contract;
 - production-quality Godot, Bevy, and Unity adapter paths;
+- ecosystem-native adapter distribution plans for Godot, Bevy, and Unity before
+  1.0;
 - adoption and migration documentation that lets a team evaluate Recite against
   established dialogue tooling.
 
@@ -127,6 +129,9 @@ flowchart LR
       i90Docs["#90 core workflow guides"]
       i92["#92"]
       i93["#93"]
+      i224["#224 Godot distribution"]
+      i225["#225 Unity distribution"]
+      i226["#226 Bevy distribution"]
     end
   end
 
@@ -158,6 +163,9 @@ flowchart LR
   i134 --> i113
   i135 --> i112
   i94 -- adapters --> REL
+  i224 -- adapter distribution --> REL
+  i225 -- adapter distribution --> REL
+  i226 -- adapter distribution --> REL
   i74 -- scale proof --> REL
   i169 -- release benchmark baseline --> REL
   i205 -- comparison evidence --> DLATER
@@ -286,6 +294,12 @@ stable IDs, and related links. The broader #90 core workflow guides remain in
 the docs/adoption lane and keep their existing scale, adapter-contract, #119,
 and adapter-detail blockers. Release-positioning docs such as #89 remain
 blocked on scale evidence and credible adapter paths.
+
+#224 (Godot Asset Library/addon bundle), #225 (Unity Asset Store or
+UPM-friendly package), and #226 (Bevy crates.io/plugin bundle) track the future
+distribution work that must not be forgotten once Recite starts making tagged
+releases. These are Milestone 10 items because they affect adoption and release
+readiness; they feed the Milestone 14 release-hardening checks before 1.0.
 
 ## Release hardening
 

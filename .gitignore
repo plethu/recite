@@ -29,6 +29,7 @@ nvim.log
 *~
 
 # Local/private agent overlays
+.claude/settings.local.json
 .agents/local/
 .agents/private/
 .agents/tmp/

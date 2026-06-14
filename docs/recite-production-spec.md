@@ -2796,6 +2796,17 @@ performance.
 
 No adapter may weaken the engine-independent core contract.
 
+The source-tree adapter packages are acceptable while Recite is pre-release,
+but the release path must not leave engine users integrating from ad hoc repo
+paths. Once Recite starts making tagged releases, and certainly before declaring
+1.0, the v1-facing adapters should have store- or ecosystem-native
+distribution plans: Godot Asset Library/addon packaging for Godot, Unity Asset
+Store or Unity Package Manager-friendly distribution for Unity, and crates.io
+plus Bevy plugin/example packaging for Bevy. Those bundles should include the
+runtime assets, editor/import tooling, examples, version compatibility notes,
+and conformance evidence needed for a game team to install or upgrade Recite
+without reverse-engineering the repository layout.
+
 Unreal and GameMaker remain post-v1 evaluation targets.
 
 ### 16.6 Shared Conformance Artifacts

@@ -30,6 +30,7 @@ as production-quality.
 | ADP-SURF-03 | Output delivery | Signals, typed C# events, GDScript-callable values, or pull-style methods. | Events/messages/resources/systems using Bevy idioms. | C# events, UnityEvent hooks where useful, service responses, or DOTS events/buffers. |
 | ADP-SURF-04 | Schema producer fit | Godot resources, project settings, C#/GDScript registration, or editor plugin export. | Rust builders, derives, resources, asset collections, or editor-side export commands. | ScriptableObjects, importers, GUID-addressed assets, C# attributes/builders, Addressables, or editor tooling. |
 | ADP-SURF-05 | Host independence | Adapter code may discover host inputs only inside producer/import tooling; compiler, CLI, LSP, and runtime validation must consume generated Recite artifacts. | Same. | Same. |
+| ADP-SURF-06 | Release distribution | Before 1.0, provide a Godot Asset Library/addon-ready bundle with setup docs and examples. | Before 1.0, publish an ecosystem-native crate and Bevy plugin/example bundle that does not require copying repo internals. | Before 1.0, provide a Unity Asset Store or Unity Package Manager-friendly package with runtime/editor separation, examples, native library packaging, and upgrade notes. |
 
 ## Asset Loading and Authoring Refresh
 
