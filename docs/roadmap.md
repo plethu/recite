@@ -28,7 +28,7 @@ These issues have no unmet dependencies.
 
 | Issue | Role | Unlocks |
 | --- | --- | --- |
-| #217 FFI cbindgen header generation | adapter critical path | Unity adapter native binding surface |
+| #108 Unity adapter MVP | adapter critical path | Unity editor/import workflow (#122) |
 | #107 Cross-engine acceptance matrix | adapter contract | conformance scope for adapter MVPs |
 | #178 Availability conformance fixtures | adapter contract | adapter conformance coverage (#123) |
 | #181 Projection schema declarations | schema/projection | #183 CLI/LSP surfacing; #182 stays gated on adapter proof |
@@ -74,7 +74,7 @@ flowchart LR
     iBevy["Bevy MVP"] --> i121["#121"]
     i80 --> iCabi["#207 C ABI design ✓"]
     iCabi --> i216["#216 recite-ffi crate ✓"]
-    i216 --> i217["#217 C header"]
+    i216 --> i217["#217 C header ✓"]
     i217 --> i108["#108 Unity MVP"]
     i108 --> i122["#122"]
     i120 --> i123["#123"]
@@ -197,11 +197,13 @@ snapshot/restore, blocking-effect acknowledgement, AddressSanitizer-checked
 buffer ownership paths, and the full start → choose → snapshot → restore →
 choose → end lifecycle.
 
-#217 (cbindgen header generation and packaging) is now ready and is the next
-C ABI step before the Unity MVP (#108) can proceed. The C ABI is also the stable
+#217 (cbindgen header generation and packaging) is closed (2026-06-14, PR
+#220). It delivers `include/recite.h`, pinned `cbindgen` configuration, a
+stale-header project gate, and the documented ABI version policy. The Unity MVP
+(#108) is now ready to implement against the generated header, the `recite-ffi`
+native library, and the C ABI design note. The C ABI is also the stable
 substrate for any future non-Rust adapter (Unreal, GameMaker — post-v1) and the
-deferred `generate-bindings` direction (spec §13.9). The Unity MVP remains
-blocked until the generated header is available.
+deferred `generate-bindings` direction (spec §13.9).
 
 Presentation projection wire work is now explicitly gated: #182 (compiled wire
 data) waits until a first adapter MVP demonstrates projection end-to-end,
