@@ -1211,6 +1211,18 @@ dependencies = [
 ]
 
 [[package]]
+name = "recite-ffi"
+version = "0.0.1"
+dependencies = [
+ "recite-compiler",
+ "recite-core",
+ "recite-runtime",
+ "rmp-serde",
+ "serde",
+ "serde_json",
+]
+
+[[package]]
 name = "recite-fixturegen"
 version = "0.0.1"
 dependencies = [
