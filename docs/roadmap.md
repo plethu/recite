@@ -28,9 +28,6 @@ These issues have no unmet dependencies.
 
 | Issue | Role | Unlocks |
 | --- | --- | --- |
-| #108 Unity adapter MVP | adapter critical path | Unity editor/import workflow (#122) |
-| #107 Cross-engine acceptance matrix | adapter contract | conformance scope for adapter MVPs |
-| #178 Availability conformance fixtures | adapter contract | adapter conformance coverage (#123) |
 | #181 Projection schema declarations | schema/projection | #183 CLI/LSP surfacing; #182 stays gated on adapter proof |
 | #105 Memory profiles and known limits | scale proof | release known-limits docs |
 | #126 `recite bench` command | scale proof | user-facing benchmark reports |
@@ -75,13 +72,13 @@ flowchart LR
     i80 --> iCabi["#207 C ABI design ✓"]
     iCabi --> i216["#216 recite-ffi crate ✓"]
     i216 --> i217["#217 C header ✓"]
-    i217 --> i108["#108 Unity MVP"]
+    i217 --> i108["#108 Unity MVP ✓"]
     i108 --> i122["#122"]
     i120 --> i123["#123"]
     i121 --> i123
     i122 --> i123
-    i107["#107 acceptance matrix"] --> i123
-    i178["#178 availability conformance"] --> i123
+    i107["#107 acceptance matrix ✓"] --> i123
+    i178["#178 availability conformance ✓"] --> i123
     i123 --> i94["#94 adapter docs"]
     i123 --> i109["#109 future engine criteria"]
   end
@@ -172,11 +169,12 @@ flowchart LR
 
 The adapter chain is still the longest release chain. The original adapter
 contract design issue (#78), conformance-fixture issue (#79), Unity adapter
-design issue (#81), and schema-domain export issue (#140) are now closed. The
-current open chain is:
+design issue (#81), schema-domain export issue (#140), cross-engine acceptance
+matrix (#107), Unity adapter MVP (#108), and availability conformance fixture
+update (#178) are now closed. The current open chain is:
 
 ```
-per-engine adapter MVPs + watch/editor refresh prerequisites → per-engine refresh workflows → adapter docs → release verification
+per-engine refresh workflows → adapter conformance/docs → release verification
 ```
 
 #80 (Godot adapter MVP) is now closed (2026-06-14, PR #215). It delivers
@@ -199,11 +197,23 @@ choose → end lifecycle.
 
 #217 (cbindgen header generation and packaging) is closed (2026-06-14, PR
 #220). It delivers `include/recite.h`, pinned `cbindgen` configuration, a
-stale-header project gate, and the documented ABI version policy. The Unity MVP
-(#108) is now ready to implement against the generated header, the `recite-ffi`
-native library, and the C ABI design note. The C ABI is also the stable
-substrate for any future non-Rust adapter (Unreal, GameMaker — post-v1) and the
-deferred `generate-bindings` direction (spec §13.9).
+stale-header project gate, and the documented ABI version policy. #108 (Unity
+adapter MVP) is closed (2026-06-14, PR #221). It delivers a Unity package under
+`Packages/com.recite.dialogue`, C ABI-backed runtime wrapper, sample scene and
+assets, condition/effect/save-load coverage, and `scripts/check-unity-adapter.sh`.
+This unblocks #122 (Unity editor import and refresh workflow). The C ABI is
+also the stable substrate for any future non-Rust adapter (Unreal, GameMaker —
+post-v1) and the deferred `generate-bindings` direction (spec §13.9).
+
+#107 (cross-engine acceptance matrix) is closed (2026-06-14, PR #222). It
+delivers `docs/adapter-acceptance-matrix.md` and aligns the spec/roadmap around
+Godot, Bevy, and Unity adapter paths, changed-asset behavior, runtime
+operations, save/load, localisation, structured errors, examples, conformance,
+and performance evidence. #178 (availability conformance fixtures) is closed
+(2026-06-14, PR #223). It adds schema-backed adapter conformance expectations
+for structured choice availability reasons, including explicit primary reasons,
+`all`/`any` reason trees, condition-call origins, requirement-expression
+origins, available choices, and unavailable-choice errors.
 
 Presentation projection wire work is now explicitly gated: #182 (compiled wire
 data) waits until a first adapter MVP demonstrates projection end-to-end,
@@ -256,11 +266,11 @@ and now emits structured runtime availability reasons through compiled assets,
 prompt events, unavailable-choice errors, session snapshots, CLI/play fixtures,
 and trace output. Issue #179 is closed and surfaces choice availability parser
 and schema diagnostics, completion, and hover through the LSP authoring surface.
-The adapter conformance follow-up can now start. Issue #172 is closed; it
-settled the broader presentation projection contract that lets metadata on
-lines, choices, blocks, and project inputs drive structured adapter-visible
-affordances without committing RPG-specific syntax or runtime semantics to core
-Recite.
+Issue #178 is closed and now carries those structured availability reason
+expectations into adapter conformance fixtures. Issue #172 is closed; it settled
+the broader presentation projection contract that lets metadata on lines,
+choices, blocks, and project inputs drive structured adapter-visible affordances
+without committing RPG-specific syntax or runtime semantics to core Recite.
 
 The projection implementation follow-ups remain split by surface. #181 can now
 add schema-owned projection declarations and label-template extraction, which
