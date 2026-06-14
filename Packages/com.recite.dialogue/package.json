@@ -1,0 +1,17 @@
+{
+  "name": "com.recite.dialogue",
+  "version": "0.0.1",
+  "displayName": "Recite Dialogue",
+  "description": "Unity runtime adapter for Recite compiled dialogue assets.",
+  "unity": "2022.3",
+  "author": {
+    "name": "Recite contributors"
+  },
+  "samples": [
+    {
+      "displayName": "Basic Dialogue",
+      "description": "Minimal GameObject flow using ReciteDialogueRunner.",
+      "path": "Samples~/BasicDialogue"
+    }
+  ]
+}

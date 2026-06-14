@@ -9,9 +9,10 @@ Usage:
 Runs Recite's canonical local project gates:
   1. scripts/check-test-organization.sh
   2. scripts/generate-ffi-header.sh
-  3. cargo fmt --check
-  4. cargo test
-  5. cargo clippy --all-targets --all-features -- -D warnings
+  3. scripts/check-unity-adapter.sh
+  4. cargo fmt --check
+  5. cargo test
+  6. cargo clippy --all-targets --all-features -- -D warnings
 EOF
 }
 
@@ -43,12 +44,23 @@ if [[ ! -x "$repo_root/scripts/generate-ffi-header.sh" ]]; then
   exit 2
 fi
 
+if [[ -e "$repo_root/scripts/check-unity-adapter.sh" && ! -x "$repo_root/scripts/check-unity-adapter.sh" ]]; then
+  echo "non-executable gate: $repo_root/scripts/check-unity-adapter.sh" >&2
+  exit 2
+fi
+
 echo "== test organization =="
 "$repo_root/scripts/check-test-organization.sh" "$repo_root"
 
 echo
 echo "== generated ffi header =="
 "$repo_root/scripts/generate-ffi-header.sh" "$repo_root"
+
+if [[ -x "$repo_root/scripts/check-unity-adapter.sh" ]]; then
+  echo
+  echo "== unity adapter package =="
+  "$repo_root/scripts/check-unity-adapter.sh" "$repo_root"
+fi
 
 echo
 echo "== cargo fmt --check =="
