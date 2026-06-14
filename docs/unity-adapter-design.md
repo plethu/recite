@@ -149,6 +149,10 @@ Generated C# bindings may become useful later for typed conditions, effects, or
 schema records, but they must remain wrappers around canonical compiled assets
 and runtime semantics.
 
+The managed wrapper should define its P/Invoke declarations from the generated
+`include/recite.h` header shipped by `recite-ffi`; do not hand-maintain a
+parallel ABI table in the Unity package.
+
 The native boundary should expose operations equivalent to the adapter
 contract:
 

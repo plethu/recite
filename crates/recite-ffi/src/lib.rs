@@ -26,6 +26,15 @@ use condition::{ConditionEntry, FfiContext, SendPtr};
 use error::set_last_error;
 use output::{encode_batch, should_continue};
 
+/// ABI major version for the generated C header.
+///
+/// Increment this for breaking C ABI changes.
+pub const RECITE_FFI_VERSION_MAJOR: u32 = 0;
+/// ABI minor version for additive, backwards-compatible C ABI changes.
+pub const RECITE_FFI_VERSION_MINOR: u32 = 0;
+/// ABI patch version for documentation-only or implementation-only releases.
+pub const RECITE_FFI_VERSION_PATCH: u32 = 1;
+
 // ---------------------------------------------------------------------------
 // Handle registry
 // ---------------------------------------------------------------------------
@@ -653,7 +662,7 @@ pub unsafe extern "C" fn recite_session_snapshot(
 /// batch is empty when the restored session is at a pending-prompt or
 /// pending-effect boundary (the host re-presents state from its own copy).
 /// If the snapshot encoded an ended session, `recite_session_restore` returns
-/// `RECITE_NO_ACTIVE_SESSION`.
+/// `RECITE_ERR_NO_ACTIVE_SESSION`.
 ///
 /// # Safety
 /// All non-null pointer arguments must be valid for the duration of the call.
