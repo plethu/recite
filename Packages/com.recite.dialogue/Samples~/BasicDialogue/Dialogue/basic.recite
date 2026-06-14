@@ -1,0 +1,26 @@
+:: start default
+> intro@10000000000000000001
+  The relay wakes.
+! immediate focus_camera(relay)
+> prompt@10000000000000000002
+  What do you do?
+  ? inspect_relay@10000000000000000003
+    Inspect the relay.
+    -> relay
+  ? locked_route@10000000000000000004 requires=(has_key(relay_key))
+    Open the locked relay cabinet.
+    -> locked
+
+:: relay
+> relay_line@10000000000000000005
+  The relay is warm.
+! blocking grant_item(relay_key)
+> after_key@10000000000000000006
+  The relay key clicks free.
+! deferred mark_seen(relay)
+-> END
+
+:: locked
+> locked_line@10000000000000000007
+  The cabinet opens.
+-> END
