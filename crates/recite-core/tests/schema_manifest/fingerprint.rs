@@ -6,7 +6,12 @@ use recite_core::{
     ConditionReturnType, ContextualMetadataDomain, EffectDefinition, EffectMode,
     EnumTypeDefinition, FlatMetadataDomain, MarkupDefinition, MetadataContextSelector,
     MetadataDefinition, MetadataDomainDefinition, MetadataTarget, MissingMetadataContextPolicy,
-    ParameterDefinition, ProjectSchema, RegistryDefinition, SchemaFingerprint, SchemaLiteralValue,
+    ParameterDefinition, PresentationAffordanceFieldDefinition, PresentationAffordanceFieldSource,
+    PresentationAffordanceOutputDefinition, PresentationLabelArgDefinition,
+    PresentationLabelDefinition, ProjectSchema, ProjectionInput, ProjectionInputRef,
+    ProjectionOutputTarget, ProjectionQueryDefinition, ProjectionQueryFunctionDefinition,
+    RegistryDefinition, SchemaFingerprint, SchemaLiteralValue,
+    SchemaPresentationProjectorDefinition, SchemaProjectionInputSource, SchemaProjectionSelector,
     SchemaTypeDefinition, SchemaTypeRef, SpeakerDefinition, canonical_schema_fingerprint,
 };
 
@@ -201,6 +206,34 @@ fn schema_fingerprint_changes_when_freshness_relevant_fields_change() {
         .expect("markup exists")
         .allows_nesting = false;
     assert_ne!(base_fingerprint, canonical_schema_fingerprint(&markup));
+
+    let mut projection_query = base.clone();
+    projection_query
+        .projection_queries
+        .get_mut("actor_skill")
+        .expect("projection query exists")
+        .returns = SchemaTypeRef::Float;
+    assert_ne!(
+        base_fingerprint,
+        canonical_schema_fingerprint(&projection_query)
+    );
+
+    let mut projector_label = base.clone();
+    projector_label
+        .presentation_projectors
+        .get_mut("choice_skill_prefix")
+        .expect("projector exists")
+        .outputs
+        .get_mut("prefix")
+        .expect("output exists")
+        .label
+        .as_mut()
+        .expect("label exists")
+        .source_text = "[{skill}]".to_owned();
+    assert_ne!(
+        base_fingerprint,
+        canonical_schema_fingerprint(&projector_label)
+    );
 }
 
 #[derive(Clone, Copy)]
@@ -407,6 +440,101 @@ fn schema_with_order(order: Order) -> ProjectSchema {
                 },
             ),
         ],
+    );
+    insert_entries_str(
+        &mut schema.projection_queries,
+        order,
+        [(
+            "actor_skill",
+            ProjectionQueryFunctionDefinition {
+                params: vec![param("skill", SchemaTypeRef::String)],
+                returns: SchemaTypeRef::Int,
+                max_calls_per_event: Some(1),
+            },
+        )],
+    );
+    insert_entries_str(
+        &mut schema.presentation_projectors,
+        order,
+        [(
+            "choice_skill_prefix",
+            SchemaPresentationProjectorDefinition {
+                candidates: SchemaProjectionSelector::MetadataKey {
+                    target: MetadataTarget::Choice,
+                    key: "sfx".to_owned(),
+                },
+                inputs: vec![ProjectionInput {
+                    name: "skill".to_owned(),
+                    source: SchemaProjectionInputSource::Literal(SchemaLiteralValue::String(
+                        "speech".to_owned(),
+                    )),
+                    type_ref: SchemaTypeRef::String,
+                    required: true,
+                }],
+                queries: map(
+                    order,
+                    [(
+                        "current",
+                        ProjectionQueryDefinition {
+                            function: "actor_skill".to_owned(),
+                            args: vec![ProjectionInputRef::Input {
+                                name: "skill".to_owned(),
+                            }],
+                        },
+                    )],
+                ),
+                outputs: map(
+                    order,
+                    [(
+                        "prefix",
+                        PresentationAffordanceOutputDefinition {
+                            target: ProjectionOutputTarget::Candidate,
+                            kind: "badge".to_owned(),
+                            slot: "prefix".to_owned(),
+                            label: Some(PresentationLabelDefinition {
+                                template_id: "skill_check_prefix".to_owned(),
+                                source_text: "[{skill} {current}]".to_owned(),
+                                args: map(
+                                    order,
+                                    [
+                                        (
+                                            "skill",
+                                            PresentationLabelArgDefinition {
+                                                source: ProjectionInputRef::Input {
+                                                    name: "skill".to_owned(),
+                                                },
+                                                type_ref: SchemaTypeRef::String,
+                                            },
+                                        ),
+                                        (
+                                            "current",
+                                            PresentationLabelArgDefinition {
+                                                source: ProjectionInputRef::QueryResult {
+                                                    name: "current".to_owned(),
+                                                },
+                                                type_ref: SchemaTypeRef::Int,
+                                            },
+                                        ),
+                                    ],
+                                ),
+                            }),
+                            fields: map(
+                                order,
+                                [(
+                                    "current",
+                                    PresentationAffordanceFieldDefinition {
+                                        source: PresentationAffordanceFieldSource::QueryResult {
+                                            name: "current".to_owned(),
+                                        },
+                                        type_ref: SchemaTypeRef::Int,
+                                    },
+                                )],
+                            ),
+                        },
+                    )],
+                ),
+            },
+        )],
     );
     insert_entries_str(
         &mut schema.markup,

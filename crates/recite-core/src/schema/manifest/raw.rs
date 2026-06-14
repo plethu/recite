@@ -26,6 +26,10 @@ pub(crate) struct RawManifest {
     #[serde(default, deserialize_with = "deserialize_named_entries")]
     pub(crate) metadata: Vec<Named<RawMetadataDefinition>>,
     #[serde(default, deserialize_with = "deserialize_named_entries")]
+    pub(crate) projection_queries: Vec<Named<RawProjectionQueryFunctionDefinition>>,
+    #[serde(default, deserialize_with = "deserialize_named_entries")]
+    pub(crate) presentation_projectors: Vec<Named<RawPresentationProjectorDefinition>>,
+    #[serde(default, deserialize_with = "deserialize_named_entries")]
     pub(crate) markup: Vec<Named<RawMarkupDefinition>>,
 }
 
@@ -126,6 +130,147 @@ pub(crate) struct RawMetadataDomainDefinition {
     pub(crate) values_by_context: Option<Vec<Named<Vec<String>>>>,
     #[serde(default, deserialize_with = "deserialize_optional_non_null")]
     pub(crate) missing_context: Option<RawMissingMetadataContext>,
+}
+
+#[derive(Debug, Deserialize)]
+#[serde(deny_unknown_fields)]
+pub(crate) struct RawProjectionQueryFunctionDefinition {
+    #[serde(default)]
+    pub(crate) params: Vec<RawParameterDefinition>,
+    pub(crate) returns: String,
+    #[serde(default, deserialize_with = "deserialize_optional_non_null")]
+    pub(crate) max_calls_per_event: Option<u32>,
+}
+
+#[derive(Debug, Deserialize)]
+#[serde(deny_unknown_fields)]
+pub(crate) struct RawPresentationProjectorDefinition {
+    pub(crate) candidates: RawProjectionSelector,
+    #[serde(default)]
+    pub(crate) inputs: Vec<RawProjectionInput>,
+    #[serde(default, deserialize_with = "deserialize_named_entries")]
+    pub(crate) queries: Vec<Named<RawProjectionQueryDefinition>>,
+    #[serde(default, deserialize_with = "deserialize_named_entries")]
+    pub(crate) outputs: Vec<Named<RawPresentationAffordanceOutputDefinition>>,
+}
+
+#[derive(Debug, Deserialize)]
+#[serde(tag = "kind", rename_all = "snake_case", deny_unknown_fields)]
+pub(crate) enum RawProjectionSelector {
+    RuntimeEvent {
+        event: String,
+    },
+    MetadataKey {
+        target: String,
+        key: String,
+    },
+    MetadataSet {
+        target: String,
+        required_keys: Vec<String>,
+    },
+    AvailabilityReason {
+        reason: String,
+    },
+}
+
+#[derive(Debug, Deserialize)]
+#[serde(deny_unknown_fields)]
+pub(crate) struct RawProjectionInput {
+    pub(crate) name: String,
+    pub(crate) source: RawProjectionInputSource,
+    #[serde(rename = "type")]
+    pub(crate) type_ref: String,
+    #[serde(default)]
+    pub(crate) required: bool,
+}
+
+#[derive(Debug, Deserialize)]
+#[serde(tag = "kind", rename_all = "snake_case", deny_unknown_fields)]
+pub(crate) enum RawProjectionInputSource {
+    EventKind,
+    CandidateLineId,
+    CandidateChoiceId,
+    CandidateEffectRequestId,
+    CandidateBlockId,
+    CandidateProject,
+    CandidateMetadata {
+        key: String,
+        #[serde(default, deserialize_with = "deserialize_optional_non_null")]
+        occurrence: Option<RawMetadataOccurrence>,
+    },
+    AvailabilityReasonArg {
+        name: String,
+    },
+    Literal {
+        value: Value,
+    },
+}
+
+#[derive(Debug, Deserialize)]
+#[serde(untagged)]
+pub(crate) enum RawMetadataOccurrence {
+    Named(String),
+    Index { index: u32 },
+}
+
+#[derive(Debug, Deserialize)]
+#[serde(deny_unknown_fields)]
+pub(crate) struct RawProjectionQueryDefinition {
+    pub(crate) function: String,
+    #[serde(default)]
+    pub(crate) args: Vec<RawProjectionInputRef>,
+}
+
+#[derive(Debug, Deserialize)]
+#[serde(untagged)]
+pub(crate) enum RawProjectionInputRef {
+    Input { input: String },
+    QueryResult { query_result: String },
+}
+
+#[derive(Debug, Deserialize)]
+#[serde(deny_unknown_fields)]
+pub(crate) struct RawPresentationAffordanceOutputDefinition {
+    pub(crate) target: String,
+    pub(crate) kind: String,
+    pub(crate) slot: String,
+    #[serde(default, deserialize_with = "deserialize_optional_non_null")]
+    pub(crate) label: Option<RawPresentationLabelDefinition>,
+    #[serde(default, deserialize_with = "deserialize_named_entries")]
+    pub(crate) fields: Vec<Named<RawPresentationAffordanceFieldDefinition>>,
+}
+
+#[derive(Debug, Deserialize)]
+#[serde(deny_unknown_fields)]
+pub(crate) struct RawPresentationLabelDefinition {
+    pub(crate) template_id: String,
+    pub(crate) source_text: String,
+    #[serde(default, deserialize_with = "deserialize_named_entries")]
+    pub(crate) args: Vec<Named<RawPresentationLabelArgDefinition>>,
+}
+
+#[derive(Debug, Deserialize)]
+#[serde(deny_unknown_fields)]
+pub(crate) struct RawPresentationLabelArgDefinition {
+    pub(crate) source: RawProjectionInputRef,
+    #[serde(rename = "type")]
+    pub(crate) type_ref: String,
+}
+
+#[derive(Debug, Deserialize)]
+#[serde(deny_unknown_fields)]
+pub(crate) struct RawPresentationAffordanceFieldDefinition {
+    pub(crate) source: RawPresentationAffordanceFieldSource,
+    #[serde(rename = "type")]
+    pub(crate) type_ref: String,
+}
+
+#[derive(Debug, Deserialize)]
+#[serde(tag = "kind", rename_all = "snake_case", deny_unknown_fields)]
+pub(crate) enum RawPresentationAffordanceFieldSource {
+    Input { name: String },
+    QueryResult { name: String },
+    Literal { value: Value },
 }
 
 #[derive(Debug, Deserialize)]

@@ -119,6 +119,7 @@ impl<'a> Validator<'a> {
                 }
                 return;
             }
+            SchemaTypeRef::Array(_) => false,
         };
 
         if !valid {

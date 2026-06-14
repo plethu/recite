@@ -1,7 +1,8 @@
 use recite_core::{
     AvailabilityReasonArgBinding, ConditionReturnType, EffectMode, MetadataContextSelector,
-    MetadataDomainDefinition, MetadataTarget, MissingMetadataContextPolicy, SchemaLiteralValue,
-    SchemaTypeDefinition, SchemaTypeRef, load_schema_manifest_str,
+    MetadataDomainDefinition, MetadataOccurrence, MetadataTarget, MissingMetadataContextPolicy,
+    ProjectionInputRef, ProjectionOutputTarget, SchemaLiteralValue, SchemaProjectionInputSource,
+    SchemaProjectionSelector, SchemaTypeDefinition, SchemaTypeRef, load_schema_manifest_str,
 };
 
 use crate::diagnostic_codes;
@@ -271,5 +272,108 @@ fn metadata_domains_load_into_canonical_schema() {
         MissingMetadataContextPolicy::Fallback {
             domain: "portrait_all".to_owned()
         }
+    );
+}
+
+#[test]
+fn presentation_projection_declarations_load_into_canonical_schema() {
+    let report = load_schema_manifest_str(
+        "fixtures/schema/valid/presentation_projection.json",
+        r#"{
+  "schema_version": 1,
+  "metadata": {
+    "skill": {
+      "targets": ["choice"],
+      "type": "string"
+    },
+    "threshold": {
+      "targets": ["choice"],
+      "type": "int"
+    },
+    "tag": {
+      "targets": ["choice"],
+      "type": "symbol",
+      "repeatable": true
+    }
+  },
+  "projection_queries": {
+    "actor_skill": {
+      "params": [{ "name": "skill", "type": "string" }],
+      "returns": "int",
+      "max_calls_per_event": 1
+    }
+  },
+  "presentation_projectors": {
+    "choice_skill_prefix": {
+      "candidates": { "kind": "metadata_set", "target": "choice", "required_keys": ["skill", "threshold"] },
+      "inputs": [
+        { "name": "skill", "source": { "kind": "candidate_metadata", "key": "skill" }, "type": "string", "required": true },
+        { "name": "threshold", "source": { "kind": "candidate_metadata", "key": "threshold" }, "type": "int", "required": true },
+        { "name": "tags", "source": { "kind": "candidate_metadata", "key": "tag", "occurrence": "all" }, "type": "array:symbol" }
+      ],
+      "queries": {
+        "current": { "function": "actor_skill", "args": [{ "input": "skill" }] }
+      },
+      "outputs": {
+        "prefix": {
+          "target": "candidate",
+          "kind": "badge",
+          "slot": "prefix",
+          "label": {
+            "template_id": "skill_check_prefix",
+            "source_text": "[{skill} {current}/{threshold}]",
+            "args": {
+              "skill": { "source": { "input": "skill" }, "type": "string" },
+              "current": { "source": { "query_result": "current" }, "type": "int" },
+              "threshold": { "source": { "input": "threshold" }, "type": "int" }
+            }
+          },
+          "fields": {
+            "current": { "source": { "kind": "query_result", "name": "current" }, "type": "int" },
+            "threshold": { "source": { "kind": "input", "name": "threshold" }, "type": "int" }
+          }
+        }
+      }
+    }
+  }
+}"#,
+    );
+
+    assert_eq!(diagnostic_codes(&report), Vec::<&str>::new());
+    let schema = report.schema.expect("valid projection schema");
+    assert_eq!(
+        schema.projection_queries["actor_skill"].returns,
+        SchemaTypeRef::Int
+    );
+    let projector = &schema.presentation_projectors["choice_skill_prefix"];
+    assert_eq!(
+        projector.candidates,
+        SchemaProjectionSelector::MetadataSet {
+            target: MetadataTarget::Choice,
+            required_keys: vec!["skill".to_owned(), "threshold".to_owned()]
+        }
+    );
+    assert_eq!(
+        projector.inputs[2].source,
+        SchemaProjectionInputSource::CandidateMetadata {
+            key: "tag".to_owned(),
+            occurrence: MetadataOccurrence::All
+        }
+    );
+    assert_eq!(
+        projector.inputs[2].type_ref,
+        SchemaTypeRef::Array(Box::new(SchemaTypeRef::Symbol))
+    );
+    assert_eq!(
+        projector.queries["current"].args,
+        [ProjectionInputRef::Input {
+            name: "skill".to_owned()
+        }]
+    );
+    let output = &projector.outputs["prefix"];
+    assert_eq!(output.target, ProjectionOutputTarget::Candidate);
+    assert_eq!(
+        output.label.as_ref().expect("label").template_id.as_str(),
+        "skill_check_prefix"
     );
 }

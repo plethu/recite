@@ -6,9 +6,15 @@ use crate::{AvailabilityReasonId, ContentFingerprint, EffectMode};
 use super::{
     AvailabilityReasonArgBinding, AvailabilityReasonDefinition, ConditionAvailabilityReasonMapping,
     ConditionDefinition, ConditionReturnType, EffectDefinition, MarkupDefinition,
-    MetadataContextSelector, MetadataDefinition, MetadataDomainDefinition, MetadataTarget,
-    MissingMetadataContextPolicy, ParameterDefinition, ProjectSchema, RegistryDefinition,
-    SchemaLiteralValue, SchemaTypeDefinition, SchemaTypeRef, SpeakerDefinition,
+    MetadataContextSelector, MetadataDefinition, MetadataDomainDefinition, MetadataOccurrence,
+    MetadataTarget, MissingMetadataContextPolicy, ParameterDefinition,
+    PresentationAffordanceFieldDefinition, PresentationAffordanceFieldSource,
+    PresentationAffordanceOutputDefinition, PresentationLabelArgDefinition,
+    PresentationLabelDefinition, ProjectSchema, ProjectionInput, ProjectionInputRef,
+    ProjectionOutputTarget, ProjectionQueryDefinition, ProjectionQueryFunctionDefinition,
+    RegistryDefinition, SchemaLiteralValue, SchemaPresentationProjectorDefinition,
+    SchemaProjectionInputSource, SchemaProjectionSelector, SchemaTypeDefinition, SchemaTypeRef,
+    SpeakerDefinition,
 };
 
 pub(super) fn compute_canonical_fingerprint(schema: &ProjectSchema) -> ContentFingerprint {
@@ -22,6 +28,8 @@ pub(super) fn compute_canonical_fingerprint(schema: &ProjectSchema) -> ContentFi
     bytes.effects(&schema.effects);
     bytes.metadata_domains(&schema.metadata_domains);
     bytes.metadata(&schema.metadata);
+    bytes.projection_queries(&schema.projection_queries);
+    bytes.presentation_projectors(&schema.presentation_projectors);
     bytes.markup(&schema.markup);
     canonical_blake3_fingerprint(bytes.as_bytes())
 }
@@ -185,6 +193,122 @@ impl CanonicalSchemaBytes {
         }
     }
 
+    fn projection_queries(
+        &mut self,
+        queries: &BTreeMap<String, ProjectionQueryFunctionDefinition>,
+    ) {
+        self.section("projection_queries", queries.len());
+        for (name, definition) in queries {
+            self.entry(name);
+            self.params("params", &definition.params);
+            self.field("returns");
+            self.type_ref(&definition.returns);
+            self.field("max_calls_per_event");
+            match definition.max_calls_per_event {
+                Some(value) => {
+                    self.token("some");
+                    self.u32(value);
+                }
+                None => self.token("none"),
+            }
+        }
+    }
+
+    fn presentation_projectors(
+        &mut self,
+        projectors: &BTreeMap<String, SchemaPresentationProjectorDefinition>,
+    ) {
+        self.section("presentation_projectors", projectors.len());
+        for (name, definition) in projectors {
+            self.entry(name);
+            self.field("candidates");
+            self.schema_projection_selector(&definition.candidates);
+            self.projection_inputs(&definition.inputs);
+            self.projection_query_definitions(&definition.queries);
+            self.presentation_outputs(&definition.outputs);
+        }
+    }
+
+    fn projection_inputs(&mut self, inputs: &[ProjectionInput]) {
+        self.field("inputs");
+        self.usize(inputs.len());
+        for input in inputs {
+            self.entry(&input.name);
+            self.field("source");
+            self.schema_projection_input_source(&input.source);
+            self.field("type");
+            self.type_ref(&input.type_ref);
+            self.field_bool("required", input.required);
+        }
+    }
+
+    fn projection_query_definitions(
+        &mut self,
+        queries: &BTreeMap<String, ProjectionQueryDefinition>,
+    ) {
+        self.field("queries");
+        self.usize(queries.len());
+        for (name, query) in queries {
+            self.entry(name);
+            self.field_string("function", &query.function);
+            self.projection_input_refs("args", &query.args);
+        }
+    }
+
+    fn presentation_outputs(
+        &mut self,
+        outputs: &BTreeMap<String, PresentationAffordanceOutputDefinition>,
+    ) {
+        self.field("outputs");
+        self.usize(outputs.len());
+        for (name, output) in outputs {
+            self.entry(name);
+            self.field("target");
+            self.projection_output_target(&output.target);
+            self.field_string("kind", &output.kind);
+            self.field_string("slot", &output.slot);
+            self.field("label");
+            match &output.label {
+                Some(label) => {
+                    self.token("some");
+                    self.presentation_label(label);
+                }
+                None => self.token("none"),
+            }
+            self.field("fields");
+            self.usize(output.fields.len());
+            for (name, field) in &output.fields {
+                self.entry(name);
+                self.presentation_field(field);
+            }
+        }
+    }
+
+    fn presentation_label(&mut self, label: &PresentationLabelDefinition) {
+        self.field_string("template_id", &label.template_id);
+        self.field_string("source_text", &label.source_text);
+        self.field("args");
+        self.usize(label.args.len());
+        for (name, arg) in &label.args {
+            self.entry(name);
+            self.presentation_label_arg(arg);
+        }
+    }
+
+    fn presentation_label_arg(&mut self, arg: &PresentationLabelArgDefinition) {
+        self.field("source");
+        self.projection_input_ref(&arg.source);
+        self.field("type");
+        self.type_ref(&arg.type_ref);
+    }
+
+    fn presentation_field(&mut self, field: &PresentationAffordanceFieldDefinition) {
+        self.field("source");
+        self.presentation_field_source(&field.source);
+        self.field("type");
+        self.type_ref(&field.type_ref);
+    }
+
     fn markup(&mut self, markup: &BTreeMap<String, MarkupDefinition>) {
         self.section("markup", markup.len());
         for (name, definition) in markup {
@@ -298,6 +422,128 @@ impl CanonicalSchemaBytes {
                 self.token("registry");
                 self.string(name);
             }
+            SchemaTypeRef::Array(inner) => {
+                self.token("array");
+                self.type_ref(inner);
+            }
+        }
+    }
+
+    fn schema_projection_selector(&mut self, selector: &SchemaProjectionSelector) {
+        match selector {
+            SchemaProjectionSelector::RuntimeEvent { kind } => {
+                self.token("runtime_event");
+                self.string(kind);
+            }
+            SchemaProjectionSelector::MetadataKey { target, key } => {
+                self.token("metadata_key");
+                self.metadata_target(*target);
+                self.string(key);
+            }
+            SchemaProjectionSelector::MetadataSet {
+                target,
+                required_keys,
+            } => {
+                self.token("metadata_set");
+                self.metadata_target(*target);
+                self.usize(required_keys.len());
+                for key in required_keys {
+                    self.string(key);
+                }
+            }
+            SchemaProjectionSelector::AvailabilityReason { reason_id } => {
+                self.token("availability_reason");
+                self.string(reason_id.as_str());
+            }
+        }
+    }
+
+    fn schema_projection_input_source(&mut self, source: &SchemaProjectionInputSource) {
+        match source {
+            SchemaProjectionInputSource::EventKind => self.string("event_kind"),
+            SchemaProjectionInputSource::CandidateLineId => self.string("candidate_line_id"),
+            SchemaProjectionInputSource::CandidateChoiceId => self.string("candidate_choice_id"),
+            SchemaProjectionInputSource::CandidateEffectRequestId => {
+                self.string("candidate_effect_request_id");
+            }
+            SchemaProjectionInputSource::CandidateBlockId => self.string("candidate_block_id"),
+            SchemaProjectionInputSource::CandidateProject => self.string("candidate_project"),
+            SchemaProjectionInputSource::CandidateMetadata { key, occurrence } => {
+                self.token("candidate_metadata");
+                self.string(key);
+                self.metadata_occurrence(occurrence);
+            }
+            SchemaProjectionInputSource::AvailabilityReasonArg { name } => {
+                self.token("availability_reason_arg");
+                self.string(name);
+            }
+            SchemaProjectionInputSource::Literal(value) => {
+                self.token("literal");
+                self.schema_literal_value(value);
+            }
+        }
+    }
+
+    fn projection_input_refs(&mut self, name: &str, refs: &[ProjectionInputRef]) {
+        self.field(name);
+        self.usize(refs.len());
+        for input_ref in refs {
+            self.projection_input_ref(input_ref);
+        }
+    }
+
+    fn projection_input_ref(&mut self, input_ref: &ProjectionInputRef) {
+        match input_ref {
+            ProjectionInputRef::Input { name } => {
+                self.token("input");
+                self.string(name);
+            }
+            ProjectionInputRef::QueryResult { name } => {
+                self.token("query_result");
+                self.string(name);
+            }
+        }
+    }
+
+    fn presentation_field_source(&mut self, source: &PresentationAffordanceFieldSource) {
+        match source {
+            PresentationAffordanceFieldSource::Input { name } => {
+                self.token("input");
+                self.string(name);
+            }
+            PresentationAffordanceFieldSource::QueryResult { name } => {
+                self.token("query_result");
+                self.string(name);
+            }
+            PresentationAffordanceFieldSource::Literal(value) => {
+                self.token("literal");
+                self.schema_literal_value(value);
+            }
+        }
+    }
+
+    fn projection_output_target(&mut self, target: &ProjectionOutputTarget) {
+        match target {
+            ProjectionOutputTarget::Candidate => self.string("candidate"),
+            ProjectionOutputTarget::Event => self.string("event"),
+            ProjectionOutputTarget::Prompt => self.string("prompt"),
+        }
+    }
+
+    fn metadata_target(&mut self, target: MetadataTarget) {
+        self.string(metadata_target_name(target));
+    }
+
+    fn metadata_occurrence(&mut self, occurrence: &MetadataOccurrence) {
+        match occurrence {
+            MetadataOccurrence::Only => self.string("only"),
+            MetadataOccurrence::First => self.string("first"),
+            MetadataOccurrence::Last => self.string("last"),
+            MetadataOccurrence::Index(index) => {
+                self.token("index");
+                self.u32(*index);
+            }
+            MetadataOccurrence::All => self.string("all"),
         }
     }
 

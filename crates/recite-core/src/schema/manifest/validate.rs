@@ -82,6 +82,15 @@ fn validate_type_ref(
                 pending.span.clone(),
             ));
         }
+        SchemaTypeRef::Array(inner) => validate_type_ref(
+            schema,
+            diagnostics,
+            &PendingTypeReference {
+                owner: pending.owner.clone(),
+                type_ref: (**inner).clone(),
+                span: pending.span.clone(),
+            },
+        ),
         _ => {}
     }
 }
@@ -152,6 +161,12 @@ pub(crate) fn parse_type_ref(value: &str) -> Option<SchemaTypeRef> {
                     .strip_prefix("registry:")
                     .filter(|name| is_manifest_name(name))
                     .map(|name| SchemaTypeRef::Registry(name.to_owned()))
+            })
+            .or_else(|| {
+                value
+                    .strip_prefix("array:")
+                    .and_then(parse_type_ref)
+                    .map(|inner| SchemaTypeRef::Array(Box::new(inner)))
             }),
     }
 }

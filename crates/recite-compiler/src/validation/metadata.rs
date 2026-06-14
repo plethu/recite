@@ -158,6 +158,9 @@ impl<'a> Validator<'a> {
                     }
                 }
             }
+            SchemaTypeRef::Array(_) => {
+                self.wrong_metadata_value_type(entry, &definition.type_ref, span);
+            }
         }
     }
 

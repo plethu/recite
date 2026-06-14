@@ -168,6 +168,18 @@ fn collect_pot(source_files: &[SourceFile], schema: Option<&ProjectSchema>) -> P
                 reference: None,
             });
         }
+        for projector in schema.presentation_projectors.values() {
+            for (output_id, output) in &projector.outputs {
+                if let Some(label) = &output.label {
+                    entries.push(PotEntry {
+                        context: format!("presentation_label:{}", label.template_id),
+                        source_text: label.source_text.clone(),
+                        comments: vec![format!("presentation label template: {output_id}")],
+                        reference: None,
+                    });
+                }
+            }
+        }
     }
 
     PotDocument { entries }
