@@ -85,9 +85,8 @@ A handle value of `0` is reserved to mean "null / no handle." Every
 Mapping to contract obligations:
 - §2 compiled asset identity: the asset handle owns the decoded data; its
   lifetime is explicit and host-managed.
-- §3 session ownership: one session handle per declared owner; `recite_session_start`
-  returns `session_already_active_error` if the host attempts to create a second
-  session without freeing the first.
+- §3 session ownership: one session handle per declared owner; `recite_session_begin`
+  returns `session_already_active_error` if called more than once on the same handle.
 - §16.3 (spec): single active session per owner enforced at the FFI boundary.
 
 ## Output Payload Encoding
@@ -143,21 +142,34 @@ ReciteStatus recite_asset_load(
 );
 void recite_asset_free(uint64_t asset_handle);
 
-// Session lifecycle
+// Session lifecycle — two-step form (use when conditions appear in opening block)
+ReciteStatus recite_session_create(
+    uint64_t asset_handle,
+    const char *start_block,    // nullable; UTF-8 NUL-terminated; borrowed
+    const char *locale,         // nullable; UTF-8 NUL-terminated; borrowed
+    uint64_t *session_handle_out
+);
+ReciteStatus recite_session_begin(
+    uint64_t session_handle,
+    ReciteBuffer *batch_out     // first output batch
+);
+
+// Condition registration (call after recite_session_create, before recite_session_begin)
+ReciteStatus recite_session_register_condition(
+    uint64_t session_handle,
+    const char *name,           // UTF-8 NUL-terminated; borrowed
+    ReciteConditionFn handler,  // function pointer; see Conditions section
+    void *userdata              // passed back to handler; host owns
+);
+
+// Convenience: create + register nothing + begin in one call.
+// Use only when no conditions appear in the opening block.
 ReciteStatus recite_session_start(
     uint64_t asset_handle,
     const char *start_block,    // nullable; UTF-8 NUL-terminated; borrowed
     const char *locale,         // nullable; UTF-8 NUL-terminated; borrowed
     uint64_t *session_handle_out,
     ReciteBuffer *batch_out     // first output batch
-);
-
-// Condition registration (must be called before recite_session_start)
-ReciteStatus recite_session_register_condition(
-    uint64_t session_handle,
-    const char *name,           // UTF-8 NUL-terminated; borrowed
-    ReciteConditionFn handler,  // function pointer; see Conditions section
-    void *userdata              // passed back to handler; host owns
 );
 
 // Traversal
@@ -182,7 +194,8 @@ ReciteStatus recite_session_snapshot(
 ReciteStatus recite_session_restore(
     uint64_t asset_handle,
     const uint8_t *snapshot_bytes, uintptr_t snapshot_len,
-    uint64_t *session_handle_out
+    uint64_t *session_handle_out,
+    ReciteBuffer *batch_out     // resumption batch; empty when at a pending boundary
 );
 
 // Teardown
@@ -194,11 +207,13 @@ void recite_buffer_free(ReciteBuffer *buf);
 
 Runtime function mapping:
 - `recite_asset_load` → `decode_compiled_dialogue_messagepack`
-- `recite_session_start` → `start_scene_with_options` then drain via `next_with`
+- `recite_session_create` → `start_scene_with_options` (no traversal; stores session with `begun: false`)
+- `recite_session_begin` → drain via `next_with` (sets `begun: true`; errors if called twice)
+- `recite_session_start` → `recite_session_create` + `recite_session_begin` in one call
 - `recite_session_choose` → `choose_with` then drain via `next_with`
 - `recite_session_acknowledge_effect` → `acknowledge_effect` then drain via `next_with`
-- `recite_session_snapshot` → `snapshot_session` + `encode_session_messagepack`
-- `recite_session_restore` → `decode_session_messagepack` + `restore_session`
+- `recite_session_snapshot` → `encode_session_messagepack`
+- `recite_session_restore` → `decode_session_messagepack` then drain (empty batch at pending boundaries; `NoActiveSession` for ended-session snapshots)
 
 `EffectAck::Completed` maps to `ack_completed = 1`; `EffectAck::Failed { reason }` maps
 to `ack_completed = 0` with the failure reason in `failure_reason`. Both paths

@@ -129,12 +129,15 @@ pub(crate) fn set_last_error(message: &str) {
 
 /// Returns a pointer to the last error message set on the current thread.
 /// The pointer is valid until the next `recite-ffi` call on this thread.
-/// Returns a null-terminated empty string if no error has been set.
+/// Returns a pointer to a NUL-terminated empty string (never null) if no error
+/// has been set, so callers can always safely pass the result to C string APIs.
 #[unsafe(no_mangle)]
 pub extern "C" fn recite_last_error_message() -> *const std::ffi::c_char {
+    // Static empty string so we never return null.
+    static EMPTY: &[u8] = b"\0";
     LAST_ERROR.with(|cell| {
         cell.borrow()
             .as_ref()
-            .map_or(std::ptr::null(), |s| s.as_ptr())
+            .map_or(EMPTY.as_ptr().cast(), |s| s.as_ptr())
     })
 }
