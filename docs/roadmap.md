@@ -5,7 +5,7 @@ can start now, what's blocked, and what's on the critical path.
 
 This is a planning aid. The live Codeberg board and
 `docs/recite-production-spec.md` §22–23 are authoritative; the issue numbers and
-edges here were refreshed from the "Depends on" lines in issue bodies on 2026-06-11,
+edges here were refreshed from the "Depends on" lines in issue bodies on 2026-06-14,
 and will drift as work lands.
 
 ## v1 scope
@@ -28,7 +28,7 @@ These issues have no unmet dependencies.
 
 | Issue | Role | Unlocks |
 | --- | --- | --- |
-| #108 Unity adapter MVP | adapter critical path | #122 Unity refresh; #123 adapter docs; release |
+| #217 FFI cbindgen header generation | adapter critical path | Unity adapter native binding surface |
 | #107 Cross-engine acceptance matrix | adapter contract | conformance scope for adapter MVPs |
 | #178 Availability conformance fixtures | adapter contract | adapter conformance coverage (#123) |
 | #181 Projection schema declarations | schema/projection | #183 CLI/LSP surfacing; #182 stays gated on adapter proof |
@@ -73,7 +73,9 @@ flowchart LR
     i119["#119 watch loop"] --> i120
     iBevy["Bevy MVP"] --> i121["#121"]
     i80 --> iCabi["#207 C ABI design ✓"]
-    iCabi --> i108["#108 Unity MVP"]
+    iCabi --> i216["#216 recite-ffi crate ✓"]
+    i216 --> i217["#217 C header"]
+    i217 --> i108["#108 Unity MVP"]
     i108 --> i122["#122"]
     i120 --> i123["#123"]
     i121 --> i123
@@ -184,19 +186,22 @@ GDScript `Callable`, and full effect acknowledgement. This unblocked #120
 (Godot refresh workflow) and provided the first-adapter evidence required to
 freeze the C ABI boundary (#207).
 
-#207 (C ABI boundary design) is now closed (2026-06-14). It delivers
+#207 (C ABI boundary design) is closed (2026-06-14). It delivers
 `docs/c-abi-boundary-design.md` (handle model, MessagePack output payloads,
 buffer ownership rules, error-code mapping for all `DialogueError` variants,
 synchronous condition callback protocol, threading constraints, save/load
-handoff) and the `recite-ffi` crate: a working `cdylib`/`staticlib` wrapping
-`recite-runtime` behind the designed C ABI, with 9 integration tests covering
-the full session lifecycle. `cbindgen` header generation and packaging remain
-as follow-up work before the Unity MVP (#108) ships. The C ABI is also the
-stable substrate for any future non-Rust adapter (Unreal, GameMaker — post-v1)
-and the deferred `generate-bindings` direction (spec §13.9).
+handoff). #216 (recite-ffi crate) is closed (2026-06-14, PR #219). It delivers
+a working `cdylib`/`staticlib` wrapping `recite-runtime` behind the designed C
+ABI, with integration coverage for status-code stability, condition callbacks,
+snapshot/restore, blocking-effect acknowledgement, AddressSanitizer-checked
+buffer ownership paths, and the full start → choose → snapshot → restore →
+choose → end lifecycle.
 
-The Unity MVP (#108) is now unblocked. It is size/L and is the next critical
-step before the adapter docs (#123) and release-verification gate can close.
+#217 (cbindgen header generation and packaging) is now ready and is the next
+C ABI step before the Unity MVP (#108) can proceed. The C ABI is also the stable
+substrate for any future non-Rust adapter (Unreal, GameMaker — post-v1) and the
+deferred `generate-bindings` direction (spec §13.9). The Unity MVP remains
+blocked until the generated header is available.
 
 Presentation projection wire work is now explicitly gated: #182 (compiled wire
 data) waits until a first adapter MVP demonstrates projection end-to-end,
