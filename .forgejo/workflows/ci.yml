@@ -32,6 +32,9 @@ jobs:
           echo "$HOME/.cargo/bin" >> "$GITHUB_PATH"
           "$HOME/.cargo/bin/rustc" --version
 
+      - name: Install cbindgen
+        run: "$HOME/.cargo/bin/cargo install cbindgen --version 0.29.4 --locked"
+
       - name: Cache cargo registry and build artifacts
         uses: actions/cache@v4
         with:

@@ -8,9 +8,10 @@ Usage:
 
 Runs Recite's canonical local project gates:
   1. scripts/check-test-organization.sh
-  2. cargo fmt --check
-  3. cargo test
-  4. cargo clippy --all-targets --all-features -- -D warnings
+  2. scripts/generate-ffi-header.sh
+  3. cargo fmt --check
+  4. cargo test
+  5. cargo clippy --all-targets --all-features -- -D warnings
 EOF
 }
 
@@ -37,8 +38,17 @@ if [[ ! -x "$repo_root/scripts/check-test-organization.sh" ]]; then
   exit 2
 fi
 
+if [[ ! -x "$repo_root/scripts/generate-ffi-header.sh" ]]; then
+  echo "missing executable gate: $repo_root/scripts/generate-ffi-header.sh" >&2
+  exit 2
+fi
+
 echo "== test organization =="
 "$repo_root/scripts/check-test-organization.sh" "$repo_root"
+
+echo
+echo "== generated ffi header =="
+"$repo_root/scripts/generate-ffi-header.sh" "$repo_root"
 
 echo
 echo "== cargo fmt --check =="

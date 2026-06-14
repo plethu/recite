@@ -247,6 +247,24 @@ termination is used only for the host-facing error detail string (see Error Code
 All UTF-8. The host must not pass non-UTF-8 bytes in string inputs; `recite-ffi`
 validates and returns `validation_error` if encoding is invalid.
 
+## Generated C Header
+
+The committed C header lives at `include/recite.h` and is generated from
+`crates/recite-ffi` with `cbindgen.toml`. Downstream adapters, including the
+Unity MVP, should consume this header rather than hand-maintaining type or
+function declarations.
+
+Run `scripts/generate-ffi-header.sh --write` after changing the FFI surface.
+The project gate runs `scripts/generate-ffi-header.sh` without `--write`, which
+fails if the committed header is stale.
+
+Header version constants (`RECITE_FFI_VERSION_MAJOR`,
+`RECITE_FFI_VERSION_MINOR`, and `RECITE_FFI_VERSION_PATCH`) match the
+`recite-ffi` crate version. A major version bump is required for breaking C ABI
+changes, including renumbering or removing stable `ReciteStatus` codes. Minor
+versions are for additive ABI-compatible symbols, and patch versions are for
+documentation or implementation-only changes.
+
 ## Error Codes
 
 Every `extern "C"` function returns a `ReciteStatus` (i32). Zero means success;
@@ -480,9 +498,9 @@ note merges:
    (Engine Adapter Contract). Depends on: this design note.
 
 2. **C header generation and packaging** — `cbindgen` configuration to emit a
-   stable C header from `recite-ffi`. Covers header install, versioning, and
-   `pkg-config` or CMake find-module for downstream use. Milestone: Milestone 8.
-   Depends on: `recite-ffi` crate implementation.
+   stable C header from `recite-ffi`. Delivered by #217 at `include/recite.h`;
+   `pkg-config` or CMake find-module support remains out of scope for v1 unless
+   a downstream package needs it.
 
 3. **Update #108 (Unity MVP) to reference this design note** — #108 acceptance
    criteria must confirm the Unity adapter's P/Invoke layer matches the handle
