@@ -71,6 +71,41 @@ fn asset_load_and_free_round_trip() {
 }
 
 #[test]
+fn status_codes_match_c_abi_design() {
+    let cases = [
+        (ReciteStatus::Ok, 0),
+        (ReciteStatus::Validation, -1),
+        (ReciteStatus::AssetLoadOrDecode, -2),
+        (ReciteStatus::StaleOrIncompatible, -3),
+        (ReciteStatus::SchemaMismatch, -4),
+        (ReciteStatus::NoActiveSession, -5),
+        (ReciteStatus::SessionAlreadyActive, -6),
+        (ReciteStatus::UnknownStartBlock, -7),
+        (ReciteStatus::InvalidChoice, -8),
+        (ReciteStatus::UnavailableChoice, -9),
+        (ReciteStatus::StaleChoice, -10),
+        (ReciteStatus::MissingConditionHandler, -11),
+        (ReciteStatus::ConditionEvaluation, -12),
+        (ReciteStatus::InvalidConditionResult, -13),
+        (ReciteStatus::EffectAcknowledgement, -14),
+        (ReciteStatus::RejectedRefresh, -15),
+        (ReciteStatus::SaveLoadIncompatibility, -16),
+        (ReciteStatus::Localisation, -17),
+        (ReciteStatus::MissingProjectionHandler, -18),
+        (ReciteStatus::ProjectionEvaluation, -19),
+        (ReciteStatus::InvalidProjectionResult, -20),
+        (ReciteStatus::InvalidHandle, -21),
+        (ReciteStatus::DialogueFault, -22),
+    ];
+
+    for (status, code) in cases {
+        assert_eq!(status as i32, code);
+        assert_eq!(ReciteStatus::try_from(code), Ok(status));
+    }
+    assert_eq!(ReciteStatus::try_from(-23), Err(()));
+}
+
+#[test]
 fn invalid_bytes_returns_asset_load_error() {
     let garbage = b"not a compiled asset";
     let mut handle: u64 = 0;
@@ -269,6 +304,90 @@ fn snapshot_restore_round_trip() {
 }
 
 #[test]
+fn start_choose_snapshot_restore_choose_end_lifecycle() {
+    let bytes = compile_to_bytes(concat!(
+        ":: start default\n",
+        "> first_prompt@4a000000000000000001\n",
+        "  First choice.\n",
+        "  ? left@4a000000000000000002\n",
+        "    Left.\n",
+        "    -> second\n",
+        ":: second\n",
+        "> second_prompt@4a000000000000000003\n",
+        "  Second choice.\n",
+        "  ? finish@4a000000000000000004\n",
+        "    Finish.\n",
+        "    -> done\n",
+        ":: done\n",
+        "> done_line@4a000000000000000005\n",
+        "  Done.\n",
+        "-> END\n",
+    ));
+    let mut asset: u64 = 0;
+    unsafe { recite_asset_load(bytes.as_ptr(), bytes.len(), &raw mut asset) };
+
+    let mut session1: u64 = 0;
+    let mut batch1 = ReciteBuffer::null();
+    let start_status = unsafe {
+        recite_session_start(
+            asset,
+            std::ptr::null(),
+            std::ptr::null(),
+            &raw mut session1,
+            &raw mut batch1,
+        )
+    };
+    assert_eq!(start_status, ReciteStatus::Ok);
+    assert_eq!(event_kinds(&decode_batch(&batch1)), ["prompt"]);
+    unsafe { recite_buffer_free(&raw mut batch1) };
+
+    let first_choice = cstr("4a000000000000000002");
+    let mut batch2 = ReciteBuffer::null();
+    let choose_status =
+        unsafe { recite_session_choose(session1, first_choice.as_ptr(), &raw mut batch2) };
+    assert_eq!(choose_status, ReciteStatus::Ok);
+    assert_eq!(event_kinds(&decode_batch(&batch2)), ["prompt"]);
+    unsafe { recite_buffer_free(&raw mut batch2) };
+
+    let mut snapshot = ReciteBuffer::null();
+    assert_eq!(
+        unsafe { recite_session_snapshot(session1, &raw mut snapshot) },
+        ReciteStatus::Ok
+    );
+    recite_session_free(session1);
+
+    let mut session2: u64 = 0;
+    let mut restore_batch = ReciteBuffer::null();
+    let restore_status = unsafe {
+        recite_session_restore(
+            asset,
+            snapshot.data,
+            snapshot.len,
+            &raw mut session2,
+            &raw mut restore_batch,
+        )
+    };
+    assert_eq!(restore_status, ReciteStatus::Ok);
+    assert_eq!(
+        event_kinds(&decode_batch(&restore_batch)),
+        Vec::<&str>::new()
+    );
+    unsafe { recite_buffer_free(&raw mut restore_batch) };
+
+    let second_choice = cstr("4a000000000000000004");
+    let mut final_batch = ReciteBuffer::null();
+    let final_choose_status =
+        unsafe { recite_session_choose(session2, second_choice.as_ptr(), &raw mut final_batch) };
+    assert_eq!(final_choose_status, ReciteStatus::Ok);
+    assert_eq!(event_kinds(&decode_batch(&final_batch)), ["line", "end"]);
+
+    unsafe { recite_buffer_free(&raw mut snapshot) };
+    unsafe { recite_buffer_free(&raw mut final_batch) };
+    recite_session_free(session2);
+    recite_asset_free(asset);
+}
+
+#[test]
 fn missing_condition_handler_returns_error_at_start() {
     // Conditions that appear during the start drain require a registered handler.
     let bytes = compile_to_bytes(concat!(
@@ -364,6 +483,70 @@ fn blocking_effect_acknowledge() {
     );
 
     unsafe { recite_buffer_free(&raw mut batch2) };
+    recite_session_free(session);
+    recite_asset_free(asset);
+}
+
+#[test]
+fn effect_acknowledge_rejects_invalid_utf8_failure_reason() {
+    let bytes = compile_to_bytes(concat!(
+        ":: start default\n",
+        "! blocking play_sound(chime)\n",
+        "> after@6a000000000000000001\n",
+        "  After.\n",
+        "-> END\n",
+    ));
+    let mut asset: u64 = 0;
+    unsafe { recite_asset_load(bytes.as_ptr(), bytes.len(), &raw mut asset) };
+
+    let mut session: u64 = 0;
+    let mut batch = ReciteBuffer::null();
+    unsafe {
+        recite_session_start(
+            asset,
+            std::ptr::null(),
+            std::ptr::null(),
+            &raw mut session,
+            &raw mut batch,
+        )
+    };
+    let value = decode_batch(&batch);
+    let effect_id = value["events"][0]["id"].as_str().unwrap().to_owned();
+    unsafe { recite_buffer_free(&raw mut batch) };
+
+    let effect_id = cstr(&effect_id);
+    let invalid_reason = [0xff_u8, 0];
+    let mut invalid_batch = ReciteBuffer::null();
+    let invalid_status = unsafe {
+        recite_session_acknowledge_effect(
+            session,
+            effect_id.as_ptr(),
+            0,
+            invalid_reason.as_ptr().cast(),
+            &raw mut invalid_batch,
+        )
+    };
+    assert_eq!(invalid_status, ReciteStatus::Validation);
+    unsafe { recite_buffer_free(&raw mut invalid_batch) };
+
+    let mut ok_batch = ReciteBuffer::null();
+    let ok_status = unsafe {
+        recite_session_acknowledge_effect(
+            session,
+            effect_id.as_ptr(),
+            1,
+            std::ptr::null(),
+            &raw mut ok_batch,
+        )
+    };
+    assert_eq!(
+        ok_status,
+        ReciteStatus::Ok,
+        "invalid UTF-8 failure reason must not consume the pending effect"
+    );
+    assert_eq!(event_kinds(&decode_batch(&ok_batch)), ["line", "end"]);
+
+    unsafe { recite_buffer_free(&raw mut ok_batch) };
     recite_session_free(session);
     recite_asset_free(asset);
 }
