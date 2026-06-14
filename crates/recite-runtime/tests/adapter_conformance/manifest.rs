@@ -118,6 +118,7 @@ pub(crate) enum Operation {
         fixture: String,
         asset_slot: String,
         asset_id: Option<String>,
+        schema_fixture: Option<String>,
         schema_fingerprint: Option<String>,
     },
     CompileInvalidFixture {
@@ -227,12 +228,85 @@ pub(crate) struct StepExpectation {
     pub(crate) line_text: Option<String>,
     pub(crate) prompt_choice_ids: Option<Vec<String>>,
     pub(crate) prompt_unavailable_choice_ids: Option<Vec<String>>,
+    pub(crate) prompt_choice_availability: Option<Vec<ChoiceAvailabilityExpectation>>,
     pub(crate) effect_function: Option<String>,
     pub(crate) effect_mode: Option<EffectMode>,
     pub(crate) deferred_effect_functions: Option<Vec<String>>,
     pub(crate) pending_effect_slot: Option<String>,
     pub(crate) error_category: Option<String>,
     pub(crate) allowed_error_categories: Option<Vec<String>>,
+}
+
+#[derive(Clone, Debug, Deserialize, PartialEq)]
+#[serde(deny_unknown_fields)]
+pub(crate) struct ChoiceAvailabilityExpectation {
+    pub(crate) choice_id: String,
+    pub(crate) is_available: bool,
+    pub(crate) primary_reason: Option<AvailabilityReasonExpectation>,
+    pub(crate) reason_tree: Option<AvailabilityReasonTreeExpectation>,
+}
+
+#[derive(Clone, Debug, Deserialize, PartialEq)]
+#[serde(deny_unknown_fields)]
+pub(crate) struct AvailabilityReasonExpectation {
+    pub(crate) id: String,
+    pub(crate) source_text: String,
+    pub(crate) text: String,
+    pub(crate) origin: Option<AvailabilityReasonOriginExpectation>,
+    pub(crate) args: Vec<AvailabilityReasonArgExpectation>,
+}
+
+#[derive(Clone, Debug, Deserialize, PartialEq)]
+#[serde(tag = "kind", rename_all = "snake_case")]
+pub(crate) enum AvailabilityReasonOriginExpectation {
+    ConditionCall {
+        function: String,
+        args: Vec<AvailabilityReasonValueExpectation>,
+    },
+    RequirementExpression {
+        source_text: String,
+    },
+}
+
+#[derive(Clone, Debug, Deserialize, PartialEq)]
+#[serde(deny_unknown_fields)]
+pub(crate) struct AvailabilityReasonArgExpectation {
+    pub(crate) name: String,
+    pub(crate) value: AvailabilityReasonValueExpectation,
+}
+
+#[derive(Clone, Debug, Deserialize, PartialEq)]
+#[serde(deny_unknown_fields)]
+pub(crate) struct AvailabilityReasonValueExpectation {
+    pub(crate) kind: AvailabilityReasonValueKind,
+    pub(crate) value: Value,
+}
+
+#[derive(Clone, Copy, Debug, Deserialize, Eq, PartialEq)]
+#[serde(rename_all = "snake_case")]
+pub(crate) enum AvailabilityReasonValueKind {
+    Identifier,
+    String,
+    Integer,
+    Float,
+    Boolean,
+}
+
+#[derive(Clone, Debug, Deserialize, PartialEq)]
+#[serde(tag = "kind", rename_all = "snake_case")]
+pub(crate) enum AvailabilityReasonTreeExpectation {
+    All {
+        children: Vec<AvailabilityReasonTreeExpectation>,
+    },
+    Any {
+        children: Vec<AvailabilityReasonTreeExpectation>,
+    },
+    Reason {
+        reason: AvailabilityReasonExpectation,
+    },
+    RequirementSourceText {
+        source_text: String,
+    },
 }
 
 impl StepExpectation {

@@ -583,7 +583,7 @@
     },
     {
       "id": "unavailable_choice_error_conditioned_choice",
-      "title": "Unavailable prompt choices map to unavailable_choice_error",
+      "title": "Unavailable prompt choices preserve structured availability reasons and reject selection",
       "requirement_level": "mandatory",
       "execution_mode": "reference_driver",
       "capability_gates": [],
@@ -594,8 +594,9 @@
         {
           "operation": {
             "kind": "compile_fixture",
-            "fixture": "fixtures/recite/valid/adapter_conformance/runtime_surface.recite",
-            "asset_slot": "main"
+            "fixture": "fixtures/recite/valid/adapter_conformance/availability_reasons.recite",
+            "asset_slot": "main",
+            "schema_fixture": "fixtures/schema/valid/generated_manifest.json"
           },
           "expect": {
             "status": "ok"
@@ -613,7 +614,7 @@
         {
           "operation": {
             "kind": "set_condition_behavior",
-            "function": "trusts",
+            "function": "trust_gte",
             "behavior_kind": "bool",
             "bool_value": false
           },
@@ -636,35 +637,301 @@
           },
           "expect": {
             "status": "ok",
-            "event_kind": "line",
-            "line_text": "Intro line."
-          }
-        },
-        {
-          "operation": {
-            "kind": "advance"
-          },
-          "expect": {
-            "status": "ok",
-            "event_kind": "effect"
-          }
-        },
-        {
-          "operation": {
-            "kind": "advance"
-          },
-          "expect": {
-            "status": "ok",
             "event_kind": "prompt",
             "prompt_unavailable_choice_ids": [
-              "8706986735003ec9aaec"
+              "a94b83f2d8bd65101cc3",
+              "abd0c7bb22d0c75e6e6d",
+              "d8c8e35c29738f402acb"
+            ],
+            "prompt_choice_availability": [
+              {
+                "choice_id": "a94b83f2d8bd65101cc3",
+                "is_available": false,
+                "primary_reason": {
+                  "id": "innkeeper_trust_hint",
+                  "source_text": "The innkeeper is not ready to share that.",
+                  "text": "The innkeeper is not ready to share that.",
+                  "origin": {
+                    "kind": "requirement_expression",
+                    "source_text": "requires=(trust_gte(hazel, rhea, 3))"
+                  },
+                  "args": []
+                },
+                "reason_tree": {
+                  "kind": "reason",
+                  "reason": {
+                    "id": "trust_too_low",
+                    "source_text": "{subject} does not trust {target} enough ({threshold}).",
+                    "text": "hazel does not trust rhea enough (3).",
+                    "origin": {
+                      "kind": "condition_call",
+                      "function": "trust_gte",
+                      "args": [
+                        {
+                          "kind": "identifier",
+                          "value": "hazel"
+                        },
+                        {
+                          "kind": "identifier",
+                          "value": "rhea"
+                        },
+                        {
+                          "kind": "integer",
+                          "value": 3
+                        }
+                      ]
+                    },
+                    "args": [
+                      {
+                        "name": "subject",
+                        "value": {
+                          "kind": "identifier",
+                          "value": "hazel"
+                        }
+                      },
+                      {
+                        "name": "target",
+                        "value": {
+                          "kind": "identifier",
+                          "value": "rhea"
+                        }
+                      },
+                      {
+                        "name": "threshold",
+                        "value": {
+                          "kind": "integer",
+                          "value": 3
+                        }
+                      }
+                    ]
+                  }
+                }
+              },
+              {
+                "choice_id": "abd0c7bb22d0c75e6e6d",
+                "is_available": false,
+                "reason_tree": {
+                  "kind": "all",
+                  "children": [
+                    {
+                      "kind": "reason",
+                      "reason": {
+                        "id": "trust_too_low",
+                        "source_text": "{subject} does not trust {target} enough ({threshold}).",
+                        "text": "hazel does not trust rhea enough (3).",
+                        "origin": {
+                          "kind": "condition_call",
+                          "function": "trust_gte",
+                          "args": [
+                            {
+                              "kind": "identifier",
+                              "value": "hazel"
+                            },
+                            {
+                              "kind": "identifier",
+                              "value": "rhea"
+                            },
+                            {
+                              "kind": "integer",
+                              "value": 3
+                            }
+                          ]
+                        },
+                        "args": [
+                          {
+                            "name": "subject",
+                            "value": {
+                              "kind": "identifier",
+                              "value": "hazel"
+                            }
+                          },
+                          {
+                            "name": "target",
+                            "value": {
+                              "kind": "identifier",
+                              "value": "rhea"
+                            }
+                          },
+                          {
+                            "name": "threshold",
+                            "value": {
+                              "kind": "integer",
+                              "value": 3
+                            }
+                          }
+                        ]
+                      }
+                    },
+                    {
+                      "kind": "reason",
+                      "reason": {
+                        "id": "trust_too_low",
+                        "source_text": "{subject} does not trust {target} enough ({threshold}).",
+                        "text": "rhea does not trust hazel enough (2).",
+                        "origin": {
+                          "kind": "condition_call",
+                          "function": "trust_gte",
+                          "args": [
+                            {
+                              "kind": "identifier",
+                              "value": "rhea"
+                            },
+                            {
+                              "kind": "identifier",
+                              "value": "hazel"
+                            },
+                            {
+                              "kind": "integer",
+                              "value": 2
+                            }
+                          ]
+                        },
+                        "args": [
+                          {
+                            "name": "subject",
+                            "value": {
+                              "kind": "identifier",
+                              "value": "rhea"
+                            }
+                          },
+                          {
+                            "name": "target",
+                            "value": {
+                              "kind": "identifier",
+                              "value": "hazel"
+                            }
+                          },
+                          {
+                            "name": "threshold",
+                            "value": {
+                              "kind": "integer",
+                              "value": 2
+                            }
+                          }
+                        ]
+                      }
+                    }
+                  ]
+                }
+              },
+              {
+                "choice_id": "d8c8e35c29738f402acb",
+                "is_available": false,
+                "reason_tree": {
+                  "kind": "any",
+                  "children": [
+                    {
+                      "kind": "reason",
+                      "reason": {
+                        "id": "trust_too_low",
+                        "source_text": "{subject} does not trust {target} enough ({threshold}).",
+                        "text": "hazel does not trust rhea enough (3).",
+                        "origin": {
+                          "kind": "condition_call",
+                          "function": "trust_gte",
+                          "args": [
+                            {
+                              "kind": "identifier",
+                              "value": "hazel"
+                            },
+                            {
+                              "kind": "identifier",
+                              "value": "rhea"
+                            },
+                            {
+                              "kind": "integer",
+                              "value": 3
+                            }
+                          ]
+                        },
+                        "args": [
+                          {
+                            "name": "subject",
+                            "value": {
+                              "kind": "identifier",
+                              "value": "hazel"
+                            }
+                          },
+                          {
+                            "name": "target",
+                            "value": {
+                              "kind": "identifier",
+                              "value": "rhea"
+                            }
+                          },
+                          {
+                            "name": "threshold",
+                            "value": {
+                              "kind": "integer",
+                              "value": 3
+                            }
+                          }
+                        ]
+                      }
+                    },
+                    {
+                      "kind": "reason",
+                      "reason": {
+                        "id": "trust_too_low",
+                        "source_text": "{subject} does not trust {target} enough ({threshold}).",
+                        "text": "rhea does not trust hazel enough (2).",
+                        "origin": {
+                          "kind": "condition_call",
+                          "function": "trust_gte",
+                          "args": [
+                            {
+                              "kind": "identifier",
+                              "value": "rhea"
+                            },
+                            {
+                              "kind": "identifier",
+                              "value": "hazel"
+                            },
+                            {
+                              "kind": "integer",
+                              "value": 2
+                            }
+                          ]
+                        },
+                        "args": [
+                          {
+                            "name": "subject",
+                            "value": {
+                              "kind": "identifier",
+                              "value": "rhea"
+                            }
+                          },
+                          {
+                            "name": "target",
+                            "value": {
+                              "kind": "identifier",
+                              "value": "hazel"
+                            }
+                          },
+                          {
+                            "name": "threshold",
+                            "value": {
+                              "kind": "integer",
+                              "value": 2
+                            }
+                          }
+                        ]
+                      }
+                    }
+                  ]
+                }
+              },
+              {
+                "choice_id": "d8a10a641d08d677e37c",
+                "is_available": true
+              }
             ]
           }
         },
         {
           "operation": {
             "kind": "choose",
-            "choice_id": "8706986735003ec9aaec"
+            "choice_id": "a94b83f2d8bd65101cc3"
           },
           "expect": {
             "status": "error",
