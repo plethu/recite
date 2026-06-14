@@ -4,6 +4,7 @@ members = [
     "crates/recite-cli",
     "crates/recite-compiler",
     "crates/recite-core",
+    "crates/recite-ffi",
     "crates/recite-fixturegen",
     "crates/recite-godot",
     "crates/recite-lsp",
@@ -32,6 +33,7 @@ unimplemented = "warn"
 
 [workspace.dependencies]
 recite-core = { version = "0.0.1", path = "crates/recite-core" }
+recite-ffi = { version = "0.0.1", path = "crates/recite-ffi" }
 recite-parser = { version = "0.0.1", path = "crates/recite-parser" }
 recite-compiler = { version = "0.0.1", path = "crates/recite-compiler" }
 recite-fixturegen = { version = "0.0.1", path = "crates/recite-fixturegen" }

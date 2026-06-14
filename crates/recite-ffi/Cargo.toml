@@ -1,0 +1,29 @@
+[package]
+name = "recite-ffi"
+version = "0.0.1"
+edition = "2024"
+
+[lib]
+crate-type = ["cdylib", "staticlib", "rlib"]
+
+[dependencies]
+recite-core = { workspace = true }
+recite-runtime = { workspace = true }
+rmp-serde = { workspace = true }
+serde = { workspace = true }
+
+[dev-dependencies]
+recite-compiler = { workspace = true }
+rmp-serde = { workspace = true }
+serde_json = { workspace = true }
+serde = { workspace = true }
+
+[lints.rust]
+unsafe_code = "allow"
+unreachable_pub = "warn"
+
+[lints.clippy]
+unwrap_used = "warn"
+expect_used = "warn"
+todo = "warn"
+unimplemented = "warn"

@@ -28,6 +28,7 @@ These issues have no unmet dependencies.
 
 | Issue | Role | Unlocks |
 | --- | --- | --- |
+| #108 Unity adapter MVP | adapter critical path | #122 Unity refresh; #123 adapter docs; release |
 | #107 Cross-engine acceptance matrix | adapter contract | conformance scope for adapter MVPs |
 | #178 Availability conformance fixtures | adapter contract | adapter conformance coverage (#123) |
 | #181 Projection schema declarations | schema/projection | #183 CLI/LSP surfacing; #182 stays gated on adapter proof |
@@ -71,7 +72,7 @@ flowchart LR
     i80["#80 Godot MVP ✓"] --> i120["#120"]
     i119["#119 watch loop"] --> i120
     iBevy["Bevy MVP"] --> i121["#121"]
-    i80 --> iCabi["#207 C ABI design"]
+    i80 --> iCabi["#207 C ABI design ✓"]
     iCabi --> i108["#108 Unity MVP"]
     i108 --> i122["#122"]
     i120 --> i123["#123"]
@@ -179,14 +180,22 @@ per-engine adapter MVPs + watch/editor refresh prerequisites → per-engine refr
 #80 (Godot adapter MVP) is now closed (2026-06-14, PR #215). It delivers
 `recite-godot`: a GDExtension crate with `ReciteDialogueResource`,
 `ReciteDialogueNode`, session snapshot/restore, condition handlers via
-GDScript `Callable`, and full effect acknowledgement. This unblocks #120
-(Godot refresh workflow) and provides the first-adapter evidence required
-before freezing the C ABI boundary (#207) and the Unity MVP (#108).
+GDScript `Callable`, and full effect acknowledgement. This unblocked #120
+(Godot refresh workflow) and provided the first-adapter evidence required to
+freeze the C ABI boundary (#207).
 
-The C ABI design issue (#207) sits between the first adapter MVP and the
-Unity MVP (#108): Rust-native adapters (Bevy, Godot via gdext) consume
-`recite-runtime` directly, but the first non-Rust adapter must not improvise
-its own FFI boundary.
+#207 (C ABI boundary design) is now closed (2026-06-14). It delivers
+`docs/c-abi-boundary-design.md`: handle model, MessagePack output payloads,
+buffer ownership rules, error-code mapping for all `DialogueError` variants,
+synchronous condition callback protocol, threading constraints, and
+save/load handoff — everything the Unity MVP (#108) needs to implement a
+correct P/Invoke boundary. Follow-up implementation issues (the `recite-ffi`
+crate, `cbindgen` packaging) were filed as part of #207's acceptance criteria.
+The C ABI is also the stable substrate for any future non-Rust adapter (Unreal,
+GameMaker — post-v1) and the deferred `generate-bindings` direction (spec §13.9).
+
+The Unity MVP (#108) is now unblocked. It is size/L and is the next critical
+step before the adapter docs (#123) and release-verification gate can close.
 
 Presentation projection wire work is now explicitly gated: #182 (compiled wire
 data) waits until a first adapter MVP demonstrates projection end-to-end,
