@@ -185,14 +185,15 @@ GDScript `Callable`, and full effect acknowledgement. This unblocked #120
 freeze the C ABI boundary (#207).
 
 #207 (C ABI boundary design) is now closed (2026-06-14). It delivers
-`docs/c-abi-boundary-design.md`: handle model, MessagePack output payloads,
+`docs/c-abi-boundary-design.md` (handle model, MessagePack output payloads,
 buffer ownership rules, error-code mapping for all `DialogueError` variants,
-synchronous condition callback protocol, threading constraints, and
-save/load handoff — everything the Unity MVP (#108) needs to implement a
-correct P/Invoke boundary. Follow-up implementation issues (the `recite-ffi`
-crate, `cbindgen` packaging) were filed as part of #207's acceptance criteria.
-The C ABI is also the stable substrate for any future non-Rust adapter (Unreal,
-GameMaker — post-v1) and the deferred `generate-bindings` direction (spec §13.9).
+synchronous condition callback protocol, threading constraints, save/load
+handoff) and the `recite-ffi` crate: a working `cdylib`/`staticlib` wrapping
+`recite-runtime` behind the designed C ABI, with 9 integration tests covering
+the full session lifecycle. `cbindgen` header generation and packaging remain
+as follow-up work before the Unity MVP (#108) ships. The C ABI is also the
+stable substrate for any future non-Rust adapter (Unreal, GameMaker — post-v1)
+and the deferred `generate-bindings` direction (spec §13.9).
 
 The Unity MVP (#108) is now unblocked. It is size/L and is the next critical
 step before the adapter docs (#123) and release-verification gate can close.
