@@ -184,6 +184,12 @@ impl FixtureGenerator {
             "\"relationship(speaker_00, speaker_01)\" = {{ enum = \"active\" }}\n"
         )
         .expect("write string");
+        writeln!(
+            &mut fixture,
+            "[anchors]\nchoice_anchor_line = \"{}\"\n",
+            self.entry_id(SourceIdKind::Line, 0, 0)
+        )
+        .expect("write string");
         writeln!(&mut fixture, "[choices]").expect("write string");
         for block in 0..self.profile.blocks {
             if self.block_has_choices(block) {

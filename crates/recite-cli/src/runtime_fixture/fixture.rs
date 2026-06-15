@@ -77,6 +77,8 @@ pub(crate) struct RuntimeFixture {
     pub(super) choices: BTreeMap<String, FixtureChoice>,
     #[serde(default)]
     pub(super) effects: FixtureEffects,
+    #[serde(default, rename = "anchors")]
+    _anchors: BTreeMap<String, String>,
 }
 
 #[derive(Clone, Debug, Deserialize)]

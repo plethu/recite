@@ -30,8 +30,8 @@
     },
     {
       "path": "runtime-fixture.toml",
-      "bytes": 121967,
-      "blake3": "8f39c56c20597c49356cbf22fe02739b421887cefdb5af7534060ee2b8bd8c82"
+      "bytes": 122022,
+      "blake3": "45f541ad468523feb19992c04bfe17127209d97069ff46256f0bd8fc9ca54e7c"
     },
     {
       "path": "schema/synthetic.schema.json",
@@ -139,5 +139,5 @@
       "blake3": "ad688f9f31f1bd58a8c5228a79676cb1e6823383905d38d96f725693452bd88c"
     }
   ],
-  "summary_hash": "8104ffc0ff0f2b22e9d4bf27228a8215ef9b499ecec171bf486d264eb407f855"
+  "summary_hash": "ec76b7bed15aa557d6ccac11691cf0e48d9fc745fe1aa54290729ed10e770186"
 }

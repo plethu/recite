@@ -71,6 +71,9 @@ en-US = ["locales/en-US.po"]
 "counter_gte(\"counter_00\", 2)" = true
 "relationship(speaker_00, speaker_01)" = { enum = "active" }
 
+[anchors]
+choice_anchor_line = "44bbd8153af5a8182d93"
+
 [choices]
 "44bbd8153af5a8182d93" = "7e1ba0ac8b433fb225a8"
 "9024e482a2e6a762e6ca" = "fca5b4ff1391a1de4b2c"
