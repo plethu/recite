@@ -610,6 +610,20 @@ fn play_plain_accepts_piped_input_and_keeps_run_trace_stable() {
     output.assert_stdout_contains("acknowledged effect");
     output.assert_stdout_contains("line 97b6222c6841cf9b4788: Helped.");
     output.assert_stdout_contains("deferred effects:");
+    assert_stdout_sequence(
+        &output,
+        [
+            "play asset=",
+            "condition trusts(player) = true",
+            "prompt b9be382cc070fa4ffa18: Welcome.",
+            "selected choice bc8fdb2ff18171b53d0a",
+            "effect blocking id=",
+            "acknowledged effect",
+            "line 97b6222c6841cf9b4788: Helped.",
+            "end",
+            "deferred effects:",
+        ],
+    );
 
     let mut child = recite()
         .arg("play")
@@ -643,6 +657,17 @@ fn play_plain_accepts_piped_input_and_keeps_run_trace_stable() {
         .arg("tui"));
     output.assert_failure();
     output.assert_stderr_contains("use --ui plain");
+}
+
+fn assert_stdout_sequence<const N: usize>(output: &std::process::Output, snippets: [&str; N]) {
+    let stdout = stdout(output);
+    let mut cursor = 0;
+    for snippet in snippets {
+        let Some(offset) = stdout[cursor..].find(snippet) else {
+            panic!("stdout did not contain {snippet:?} after byte {cursor}\nstdout:\n{stdout}");
+        };
+        cursor += offset + snippet.len();
+    }
 }
 
 #[test]

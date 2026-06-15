@@ -1,10 +1,7 @@
-use ratatui::{
-    style::{Color, Modifier, Style},
-    text::{Line, Span},
-};
+use ratatui::text::{Line, Span};
 
 use crate::i18n::{Messages, MsgId};
-use crate::tui::{Keymap, TextBuffer};
+use crate::tui::{Keymap, TextBuffer, TuiPalette};
 
 use super::super::state::{
     TuiDeferredEffectRow, TuiDeferredQueueState, TuiPrompt, TuiState, TuiTranscriptKind,
@@ -16,11 +13,12 @@ pub(super) fn render_prompt<'a>(
     keymap: Keymap,
     width: u16,
     messages: &'a Messages,
+    palette: TuiPalette,
 ) -> Vec<Line<'a>> {
     match prompt {
         TuiPrompt::None => vec![Line::from(Span::styled(
             messages.text(MsgId::TuiWaiting),
-            Style::default().fg(Color::DarkGray),
+            palette.muted(),
         ))],
         TuiPrompt::Finished { .. } => vec![Line::from("")],
         TuiPrompt::Condition {
@@ -30,10 +28,15 @@ pub(super) fn render_prompt<'a>(
             ..
         } => {
             vec![
-                prompt_header_line(TuiTranscriptKind::Condition, Some(query.as_str()), messages),
-                condition_row(*selected, true, keymap, messages),
-                condition_row(!*selected, false, keymap, messages),
-                command_line(interaction.command()),
+                prompt_header_line(
+                    TuiTranscriptKind::Condition,
+                    Some(query.as_str()),
+                    messages,
+                    palette,
+                ),
+                condition_row(*selected, true, keymap, messages, palette),
+                condition_row(!*selected, false, keymap, messages, palette),
+                command_line(interaction.command(), palette),
             ]
         }
         TuiPrompt::EnumCondition {
@@ -43,15 +46,21 @@ pub(super) fn render_prompt<'a>(
             ..
         } => {
             vec![
-                prompt_header_line(TuiTranscriptKind::Condition, Some(query.as_str()), messages),
+                prompt_header_line(
+                    TuiTranscriptKind::Condition,
+                    Some(query.as_str()),
+                    messages,
+                    palette,
+                ),
                 Line::from(Span::styled(
                     messages.text(MsgId::TuiEnumConditionHint),
-                    Style::default().fg(Color::DarkGray),
+                    palette.muted(),
                 )),
                 input_line(
                     messages.text(MsgId::TuiInputEnumVariant),
                     input,
                     interaction.command(),
+                    palette,
                 ),
             ]
         }
@@ -65,23 +74,31 @@ pub(super) fn render_prompt<'a>(
             ..
         } => {
             vec![
-                prompt_header_line(TuiTranscriptKind::Effect, Some(id.as_str()), messages),
-                metadata_line(messages.text(MsgId::TuiMetadataMode), mode),
-                metadata_line(messages.text(MsgId::TuiMetadataRuntimeEffectId), id),
-                metadata_line(messages.text(MsgId::TuiMetadataFunction), function),
-                metadata_line(messages.text(MsgId::TuiMetadataArgs), args),
+                prompt_header_line(
+                    TuiTranscriptKind::Effect,
+                    Some(id.as_str()),
+                    messages,
+                    palette,
+                ),
+                metadata_line(messages.text(MsgId::TuiMetadataMode), mode, palette),
+                metadata_line(
+                    messages.text(MsgId::TuiMetadataRuntimeEffectId),
+                    id,
+                    palette,
+                ),
+                metadata_line(messages.text(MsgId::TuiMetadataFunction), function, palette),
+                metadata_line(messages.text(MsgId::TuiMetadataArgs), args, palette),
                 if interaction.command().is_empty() {
                     Line::from(Span::styled(
                         messages.text(MsgId::TuiAckEnterHint),
-                        Style::default()
-                            .fg(Color::Magenta)
-                            .add_modifier(Modifier::BOLD),
+                        palette.emphasis(),
                     ))
                 } else {
                     input_line(
                         messages.text(MsgId::TuiInputAck),
                         input,
                         interaction.command(),
+                        palette,
                     )
                 },
             ]
@@ -99,6 +116,7 @@ pub(super) fn render_prompt<'a>(
                     TuiTranscriptKind::Prompt,
                     Some(line.id.as_str()),
                     messages,
+                    palette,
                 ));
                 lines.extend(wrap_continuation(line.text.as_str(), width as usize, 2));
             } else {
@@ -106,18 +124,19 @@ pub(super) fn render_prompt<'a>(
                     TuiTranscriptKind::Prompt,
                     None,
                     messages,
+                    palette,
                 ));
             }
             let selected_index = choices.get(*selected).map(|choice| choice.index);
             for choice in choices.iter().filter(|choice| choice.is_visible) {
                 let style = if choice.is_available {
-                    Style::default()
+                    palette.plain()
                 } else {
-                    Style::default().fg(Color::DarkGray)
+                    palette.muted()
                 };
                 let is_selected = Some(choice.index) == selected_index;
                 let marker = if is_selected { ">" } else { " " };
-                let choice_chrome_style = choice_chrome_style(is_selected, choice.is_available);
+                let choice_chrome_style = palette.choice_chrome(is_selected, choice.is_available);
                 let suffix = choice
                     .unavailable_reason
                     .as_deref()
@@ -142,10 +161,10 @@ pub(super) fn render_prompt<'a>(
                     Span::raw("  "),
                     Span::styled(format!("{:<16}", choice.id), choice_chrome_style),
                     Span::styled(choice.text.as_str(), style),
-                    Span::styled(suffix, Style::default().fg(Color::DarkGray)),
+                    Span::styled(suffix, palette.muted()),
                 ]));
             }
-            lines.push(command_line(interaction.command()));
+            lines.push(command_line(interaction.command(), palette));
             lines
         }
     }
@@ -164,34 +183,25 @@ pub(super) fn render_deferred_queue<'a>(
     let mut lines = vec![Line::from(vec![
         Span::styled(
             messages.text(MsgId::TuiDeferredQueueTitle),
-            Style::default()
-                .fg(Color::Magenta)
-                .add_modifier(Modifier::BOLD),
+            state.palette.emphasis(),
         ),
         Span::raw(" "),
-        Span::styled(status, Style::default().fg(Color::DarkGray)),
+        Span::styled(status, state.palette.muted()),
     ])];
-    lines.extend(state.deferred_queue.iter().map(deferred_queue_row).take(5));
+    lines.extend(
+        state
+            .deferred_queue
+            .iter()
+            .map(|effect| deferred_queue_row(effect, state.palette))
+            .take(5),
+    );
     lines
 }
 
-fn choice_chrome_style(is_selected: bool, is_available: bool) -> Style {
-    let style = if is_available {
-        Style::default().fg(Color::Cyan)
-    } else {
-        Style::default().fg(Color::DarkGray)
-    };
-    if is_selected {
-        style.add_modifier(Modifier::BOLD)
-    } else {
-        style
-    }
-}
-
-fn deferred_queue_row(effect: &TuiDeferredEffectRow) -> Line<'_> {
+fn deferred_queue_row(effect: &TuiDeferredEffectRow, palette: TuiPalette) -> Line<'_> {
     Line::from(vec![
-        Span::styled("  ", Style::default().fg(Color::DarkGray)),
-        Span::styled(effect.id.as_str(), Style::default().fg(Color::DarkGray)),
+        Span::styled("  ", palette.muted()),
+        Span::styled(effect.id.as_str(), palette.muted()),
         Span::raw(" "),
         Span::raw(effect.function.as_str()),
         Span::raw(" "),
@@ -204,13 +214,12 @@ fn condition_row<'a>(
     value: bool,
     keymap: Keymap,
     messages: &'a Messages,
+    palette: TuiPalette,
 ) -> Line<'a> {
     let marker_style = if is_selected {
-        Style::default()
-            .fg(Color::Yellow)
-            .add_modifier(Modifier::BOLD)
+        palette.selected_marker()
     } else {
-        Style::default().fg(Color::DarkGray)
+        palette.muted()
     };
     let label = match (keymap, value) {
         (Keymap::Standard, true) => messages.text(MsgId::TuiConditionYesShortcutRow),
@@ -225,32 +234,37 @@ fn condition_row<'a>(
     ])
 }
 
-fn command_line(command: &str) -> Line<'_> {
+fn command_line(command: &str, palette: TuiPalette) -> Line<'_> {
     if command.is_empty() {
         return Line::from("");
     }
     Line::from(vec![
-        Span::styled(":", Style::default().fg(Color::DarkGray)),
+        Span::styled(":", palette.muted()),
         Span::raw(command.to_owned()),
     ])
 }
 
-fn input_line<'a>(label: String, input: &'a TextBuffer, command: &str) -> Line<'a> {
+fn input_line<'a>(
+    label: String,
+    input: &'a TextBuffer,
+    command: &str,
+    palette: TuiPalette,
+) -> Line<'a> {
     if !command.is_empty() {
         return Line::from(vec![
-            Span::styled(":", Style::default().fg(Color::DarkGray)),
+            Span::styled(":", palette.muted()),
             Span::raw(command.to_owned()),
         ]);
     }
     Line::from(vec![
-        Span::styled(format!("{label:<8}"), Style::default().fg(Color::DarkGray)),
+        Span::styled(format!("{label:<8}"), palette.muted()),
         Span::raw(input.as_str()),
     ])
 }
 
-fn metadata_line<'a>(label: String, value: &'a str) -> Line<'a> {
+fn metadata_line<'a>(label: String, value: &'a str, palette: TuiPalette) -> Line<'a> {
     Line::from(vec![
-        Span::styled(format!("{label:<18}"), Style::default().fg(Color::DarkGray)),
+        Span::styled(format!("{label:<18}"), palette.muted()),
         Span::raw(value),
     ])
 }

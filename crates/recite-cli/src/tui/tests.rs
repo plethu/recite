@@ -2,6 +2,7 @@ use std::fs;
 
 use crossterm::event::{KeyCode, KeyEvent, KeyModifiers};
 
+use super::config::TuiColorMode;
 use super::*;
 
 #[test]
@@ -163,6 +164,8 @@ fn settings_default_to_standard_contextual_hints_and_visible_unavailable_choices
 
     assert_eq!(settings.keymap, Keymap::Standard);
     assert_eq!(settings.key_hints, KeyHints::Contextual);
+    assert_eq!(settings.color, TuiColorMode::Auto);
+    assert_eq!(settings.contrast, TuiContrast::Standard);
     assert_eq!(settings.locale.to_string(), "en-US");
     assert!(settings.show_unavailable_choices);
 }
@@ -177,6 +180,8 @@ fn settings_parse_toml_config() {
 locale = "en-GB"
 keymap = "vim"
 key_hints = "compact"
+color = "always"
+contrast = "accessible"
 
 [play]
 show_unavailable_choices = false
@@ -189,7 +194,45 @@ show_unavailable_choices = false
     assert_eq!(settings.locale.to_string(), "en-GB");
     assert_eq!(settings.keymap, Keymap::Vim);
     assert_eq!(settings.key_hints, KeyHints::Compact);
+    assert_eq!(settings.color, TuiColorMode::Always);
+    assert_eq!(settings.contrast, TuiContrast::Accessible);
     assert!(!settings.show_unavailable_choices);
+}
+
+#[test]
+fn settings_parse_color_and_contrast_values() {
+    let temp = tempfile::tempdir().expect("tempdir");
+    for (color, contrast, expected_color, expected_contrast) in [
+        (
+            "auto",
+            "standard",
+            TuiColorMode::Auto,
+            TuiContrast::Standard,
+        ),
+        (
+            "never",
+            "accessible",
+            TuiColorMode::Never,
+            TuiContrast::Accessible,
+        ),
+    ] {
+        let path = temp.path().join(format!("{color}-{contrast}.toml"));
+        fs::write(
+            &path,
+            format!(
+                r#"[ui]
+color = "{color}"
+contrast = "{contrast}"
+"#
+            ),
+        )
+        .expect("write config");
+
+        let settings = TuiSettings::load_path(&path).expect("config loads");
+
+        assert_eq!(settings.color, expected_color);
+        assert_eq!(settings.contrast, expected_contrast);
+    }
 }
 
 #[test]
@@ -207,6 +250,59 @@ keymap = "emacs"
     let error = TuiSettings::load_path(&path).expect_err("config fails");
 
     assert!(error.to_string().contains("failed to parse UI config"));
+}
+
+#[test]
+fn settings_reject_unknown_color_and_contrast_values() {
+    let temp = tempfile::tempdir().expect("tempdir");
+    for (name, config) in [
+        ("color", "color = \"sometimes\""),
+        ("contrast", "contrast = \"maximum\""),
+    ] {
+        let path = temp.path().join(format!("{name}.toml"));
+        fs::write(&path, format!("[ui]\n{config}\n")).expect("write config");
+
+        let error = TuiSettings::load_path(&path).expect_err("config fails");
+
+        assert!(error.to_string().contains("failed to parse UI config"));
+    }
+}
+
+#[test]
+fn color_auto_respects_terminal_color_environment() {
+    let settings = TuiSettings {
+        color: TuiColorMode::Auto,
+        ..TuiSettings::default()
+    };
+
+    assert!(settings.color_enabled_with_env(|_| None));
+    assert!(!settings.color_enabled_with_env(|name| { (name == "NO_COLOR").then(|| "1".into()) }));
+    assert!(!settings.color_enabled_with_env(|name| { (name == "CLICOLOR").then(|| "0".into()) }));
+    assert!(settings.color_enabled_with_env(|name| { (name == "CLICOLOR").then(|| "1".into()) }));
+}
+
+#[test]
+fn color_always_and_never_override_terminal_color_environment() {
+    let disabled_env = |name: &str| {
+        (name == "NO_COLOR")
+            .then(|| "1".into())
+            .or_else(|| (name == "CLICOLOR").then(|| "0".into()))
+    };
+
+    assert!(
+        TuiSettings {
+            color: TuiColorMode::Always,
+            ..TuiSettings::default()
+        }
+        .color_enabled_with_env(disabled_env)
+    );
+    assert!(
+        !TuiSettings {
+            color: TuiColorMode::Never,
+            ..TuiSettings::default()
+        }
+        .color_enabled_with_env(|_| None)
+    );
 }
 
 #[test]

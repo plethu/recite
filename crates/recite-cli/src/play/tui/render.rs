@@ -1,12 +1,12 @@
 use ratatui::{
     layout::{Constraint, Direction, Layout},
-    style::{Color, Modifier, Style},
+    style::Modifier,
     text::{Line, Span},
     widgets::{Paragraph, Wrap},
 };
 
 use crate::i18n::{Messages, MsgId};
-use crate::tui::PromptMode;
+use crate::tui::{PromptMode, TuiPalette};
 
 use super::state::{TuiPrompt, TuiState, prompt_mode};
 
@@ -41,13 +41,17 @@ pub(super) fn render_tui(frame: &mut ratatui::Frame<'_>, state: &TuiState, messa
         ])
         .split(area);
 
-    frame.render_widget(Paragraph::new(header_lines(state, messages)), chunks[0]);
+    frame.render_widget(
+        Paragraph::new(header_lines(state, messages, state.palette)),
+        chunks[0],
+    );
 
     let transcript = transcript::render_transcript(
         &state.transcript,
         chunks[1].width,
         chunks[1].height,
         messages,
+        state.palette,
     );
     frame.render_widget(
         Paragraph::new(transcript).wrap(Wrap { trim: false }),
@@ -67,6 +71,7 @@ pub(super) fn render_tui(frame: &mut ratatui::Frame<'_>, state: &TuiState, messa
             state.keymap,
             chunks[3].width,
             messages,
+            state.palette,
         ))
         .wrap(Wrap { trim: false }),
         chunks[3],
@@ -75,29 +80,28 @@ pub(super) fn render_tui(frame: &mut ratatui::Frame<'_>, state: &TuiState, messa
     frame.render_widget(Paragraph::new(render_footer(state, messages)), chunks[4]);
 }
 
-fn header_lines<'a>(state: &'a TuiState, messages: &Messages) -> Vec<Line<'a>> {
+fn header_lines<'a>(
+    state: &'a TuiState,
+    messages: &Messages,
+    palette: TuiPalette,
+) -> Vec<Line<'a>> {
     vec![
         Line::from(vec![
-            Span::styled(
-                messages.text(MsgId::TuiHeaderTitle),
-                Style::default()
-                    .fg(Color::Cyan)
-                    .add_modifier(Modifier::BOLD),
-            ),
+            Span::styled(messages.text(MsgId::TuiHeaderTitle), palette.title()),
             Span::raw("  "),
             Span::styled(
                 format!("{} ", messages.text(MsgId::TuiHeaderAsset)),
-                Style::default().fg(Color::DarkGray),
+                palette.muted(),
             ),
             Span::raw(state.asset.as_str()),
             Span::raw("  "),
             Span::styled(
                 format!("{} ", messages.text(MsgId::TuiHeaderBlock)),
-                Style::default().fg(Color::DarkGray),
+                palette.muted(),
             ),
             Span::styled(
                 state.block.as_str(),
-                Style::default().add_modifier(Modifier::BOLD),
+                palette.plain().add_modifier(Modifier::BOLD),
             ),
         ]),
         Line::from(""),

@@ -2470,7 +2470,7 @@ Interactive REPL for writers. Loads a compiled asset, starts a scene, prints or 
 
 `play` is a live authoring surface, distinct from the deterministic fixture runner. `run` and `trace` remain scriptable commands driven by fixture data; `play` is allowed to prompt the author and maintain an interactive transcript.
 
-The default `--ui auto` mode should use a TUI when stdin and stdout are interactive terminals, and should fall back to the line-oriented plain mode for pipes, CI, and accessibility tooling. `--ui tui` must fail clearly when no interactive terminal is available and suggest `--ui plain`. `--ui plain` must preserve the same runtime event flow as the TUI with line-oriented prompts and responses.
+The default `--ui auto` mode should use a TUI when stdin and stdout are interactive terminals, and should fall back to the line-oriented plain mode for pipes, CI, and accessibility tooling. `--ui tui` must fail clearly when no interactive terminal is available and suggest `--ui plain`. `--ui plain` must preserve the same runtime event flow as the TUI with line-oriented prompts and responses, and is the screen-reader- and script-friendly play surface.
 
 Interactive UI preferences are user preferences, not project content. The CLI may read `$RECITE_CONFIG`, then `$XDG_CONFIG_HOME/recite/config.toml`, then `~/.config/recite/config.toml`. Missing config uses defaults. UI preferences must not be stored in `recite.project.toml`. Malformed UI config must not affect `run` or `trace`.
 
@@ -2481,10 +2481,14 @@ Initial UI config:
 locale = "en-US"        # BCP-47 locale, or "system"
 keymap = "standard"      # "standard" or "vim"
 key_hints = "contextual" # "contextual", "compact", or "hidden"
+color = "auto"           # "auto", "always", or "never"
+contrast = "standard"    # "standard" or "accessible"
 
 [play]
 show_unavailable_choices = true
 ```
+
+When `color = "auto"`, TUI color is disabled if `NO_COLOR` is present or `CLICOLOR=0`; otherwise color may be used. `color = "always"` enables TUI color regardless of those environment variables, and `color = "never"` disables TUI color. `contrast = "accessible"` selects a higher-contrast, color-vision-friendlier palette when color is enabled. Color must never be the sole carrier of meaning: selected choices keep a `>` marker, unavailable choices keep textual unavailable/reason text, condition rows keep `yes`/`no` labels, and prompt, effect, transcript, and footer labels remain visible without color.
 
 When `show_unavailable_choices` is true, `play` should render unavailable choices as disabled and may show a compact primary reason. The full structured reason tree remains available through trace/test output and adapter conformance fixtures. When the setting is false, `play` may hide unavailable choices as a UI preference only; runtime prompt output and previous-prompt state are unchanged.
 
@@ -2506,7 +2510,7 @@ catalog path.
 
 Locale fallback for CLI/TUI text is deterministic: requested locale, then language-only locale, then `en-US`. Missing or malformed non-default catalogs fall back to `en-US`. The default `en-US` catalog is a test-gated resource.
 
-The default keymap is `standard`: arrows move choices, printable keys enter a choice ID/index, Enter submits typed input or the highlighted choice, and Ctrl-C/Esc/`:q`/`:quit` quit cleanly. Vim mode is opt-in: choices start in normal mode, `j`/`k` and arrows move, `i` enters text input, `:` opens command mode, and Esc leaves insert/command/help before quitting at the root prompt.
+The default keymap is `standard`: arrows move choices, printable keys enter a choice ID/index, Enter submits typed input or the highlighted choice, and Ctrl-C/Esc/`:q`/`:quit` quit cleanly. Vim mode is opt-in: choices start in normal mode, `j`/`k` and arrows move, `i` enters text input, `:` opens command mode, and Esc leaves insert/command/help before quitting at the root prompt. No required play action may be reachable only through arrow-key navigation: plain mode accepts choices by ID/index, condition answers by typed values, and blocking-effect acknowledgement by Enter/`ack`; TUI mode keeps typed choice ID/index entry in standard mode and insert-mode typed entry in vim mode.
 
 The TUI should include:
 

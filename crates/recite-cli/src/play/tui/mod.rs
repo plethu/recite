@@ -74,6 +74,7 @@ impl<'a, B: Backend> TuiPlayUi<'a, B> {
         let state = TuiState {
             key_hints: settings.key_hints,
             keymap: settings.keymap,
+            palette: crate::tui::TuiPalette::from_settings(&settings),
             ..TuiState::default()
         };
         Self {

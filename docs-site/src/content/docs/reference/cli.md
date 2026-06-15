@@ -87,6 +87,39 @@ Interactive playback for writers. `--ui auto|tui|plain` selects the surface,
 repeatable `--dialogue-catalog LOCALE=PATH` preview translations through the
 runtime locale provider.
 
+`--ui auto` uses the TUI only when stdin and stdout are interactive terminals;
+otherwise it falls back to `--ui plain`. Use `--ui plain` for screen readers,
+scripts, pipes, and CI. Plain mode keeps the same ordered runtime event stream
+as the TUI and emits prompts, choices, conditions, effects, acknowledgements,
+deferred effects, and end state as line-oriented text.
+
+Interactive UI preferences live in `$RECITE_CONFIG`,
+`$XDG_CONFIG_HOME/recite/config.toml`, or `~/.config/recite/config.toml`, not in
+project manifests:
+
+```toml
+[ui]
+keymap = "standard"      # "standard" or "vim"
+key_hints = "contextual" # "contextual", "compact", or "hidden"
+color = "auto"           # "auto", "always", or "never"
+contrast = "standard"    # "standard" or "accessible"
+
+[play]
+show_unavailable_choices = true
+```
+
+With `color = "auto"`, the TUI disables color when `NO_COLOR` is present or
+`CLICOLOR=0`. `color = "always"` overrides those environment variables, and
+`color = "never"` disables color. `contrast = "accessible"` selects a
+higher-contrast TUI palette when color is enabled. Color is never the only
+meaning carrier: selected choices keep a `>` marker, unavailable choices keep
+textual unavailable/reason text, condition rows keep `yes`/`no` labels, and
+prompt, effect, transcript, and footer labels remain visible without color.
+
+Required play actions are reachable through typed input: choices accept ID or
+index, conditions accept typed values, and blocking effects accept Enter or
+`ack`.
+
 ## A typical CI sequence
 
 ```bash
