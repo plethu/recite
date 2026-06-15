@@ -76,6 +76,13 @@ impl SchemaIndex {
         self.uri.as_ref()
     }
 
+    pub(crate) fn matches_uri(&self, uri: &Uri) -> bool {
+        self.uri
+            .as_ref()
+            .is_some_and(|schema_uri| schema_uri == uri)
+            || self.path_matches_uri(uri)
+    }
+
     pub(crate) fn path(&self) -> Option<&std::path::Path> {
         self.path.as_deref()
     }

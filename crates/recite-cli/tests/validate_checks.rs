@@ -192,3 +192,69 @@ fn check_metadata_reports_domain_diagnostics_without_unrelated_validation() {
     output.assert_stderr_contains("RECITE_VALIDATE031");
     output.assert_stderr_not_contains("RECITE_VALIDATE005");
 }
+
+#[test]
+fn check_metadata_reports_projection_schema_diagnostics_with_spans() {
+    let temp = TempDir::new().expect("tempdir");
+    let source = write_recite(
+        temp.path(),
+        "metadata.recite",
+        ":: start default\n> intro@11111111111111111111\n  Hello.\n-> END\n",
+    );
+    let schema = write_file(
+        temp.path(),
+        "projection-schema.json",
+        r#"{
+  "schema_version": 1,
+  "metadata": {
+    "skill": { "targets": ["line"], "type": "string" },
+    "tag": { "targets": ["choice"], "type": "symbol" }
+  },
+  "projection_queries": {
+    "actor_skill": {
+      "params": [{ "name": "skill", "type": "string" }],
+      "returns": "int"
+    }
+  },
+  "presentation_projectors": {
+    "choice_skill_prefix": {
+      "candidates": { "kind": "metadata_key", "target": "choice", "key": "skill" },
+      "inputs": [
+        { "name": "skill", "source": { "kind": "candidate_metadata", "key": "skill" }, "type": "int" },
+        { "name": "tags", "source": { "kind": "candidate_metadata", "key": "tag", "occurrence": "all" }, "type": "symbol" }
+      ],
+      "queries": {
+        "current": { "function": "missing", "args": [{ "input": "skill" }] }
+      },
+      "outputs": {
+        "prefix": {
+          "target": "candidate",
+          "kind": "badge",
+          "slot": "prefix",
+          "label": {
+            "template_id": "skill_check_prefix",
+            "source_text": "[{skill} {current}]",
+            "args": {
+              "skill": { "source": { "input": "skill" }, "type": "string" }
+            }
+          },
+          "fields": {
+            "current": { "source": { "kind": "query_result", "name": "current" }, "type": "int" }
+          }
+        }
+      }
+    }
+  }
+}"#,
+    );
+
+    let output = run(recite()
+        .arg("check-metadata")
+        .arg("--schema")
+        .arg(schema)
+        .arg(source));
+    assert_diagnostic_failure(&output);
+    output.assert_stderr_contains("RECITE_SCHEMA001");
+    output.assert_stderr_contains("projection-schema.json:15:");
+    output.assert_stderr_contains("unknown projection query function 'missing'");
+}

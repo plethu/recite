@@ -173,6 +173,42 @@ pub(super) fn initialized_publishes_schema_load_diagnostics() {
     harness.finish();
 }
 
+pub(super) fn schema_projection_diagnostics_publish_and_clear_after_save() {
+    let temp = TempDir::new().unwrap_or_else(|error| panic!("tempdir: {error}"));
+    let schema_path = temp.path().join("schema.json");
+    write_file(temp.path(), "schema.json", invalid_projection_schema());
+    let root_uri = file_uri(temp.path());
+    let schema_uri = file_uri(&schema_path);
+    let harness = Harness::start_with_result(json!({
+        "capabilities": {
+            "general": {
+                "positionEncodings": ["utf-16"]
+            }
+        },
+        "rootUri": root_uri.as_str(),
+        "initializationOptions": {
+            "schema": schema_path.display().to_string()
+        }
+    }))
+    .0;
+
+    let published = harness.recv_publish_diagnostics();
+    assert_eq!(published.uri, schema_uri);
+    assert!(published.diagnostics.iter().any(|diagnostic| {
+        diagnostic.code.as_ref() == Some(&NumberOrString::String("RECITE_SCHEMA004".to_owned()))
+            && diagnostic
+                .message
+                .contains("unknown projection query function 'missing'")
+    }));
+
+    write_file(temp.path(), "schema.json", valid_projection_schema());
+    harness.did_save(schema_uri);
+    let cleared = harness.recv_publish_diagnostics();
+    assert!(cleared.diagnostics.is_empty());
+
+    harness.finish();
+}
+
 pub(super) fn metadata_domain_schema_summary_preserves_available_provenance() {
     let mut schema = ProjectSchema::empty_v1();
     schema.registries.insert(
@@ -276,6 +312,98 @@ pub(super) fn metadata_domain_schema_summary_preserves_available_provenance() {
         }
         other => panic!("unexpected metadata domain summary: {other:?}"),
     }
+}
+
+pub(super) fn projection_schema_summary_exposes_queries_projectors_and_labels() {
+    let (_temp, schema_path) = write_schema_temp(valid_projection_schema());
+    let workspace =
+        LspWorkspace::new(WorkspaceConfig::for_roots(Vec::new()).with_schema_path(schema_path));
+    let summary = workspace.schema().summary().expect("schema summary");
+
+    assert_eq!(summary.projection_queries[0].name, "actor_skill");
+    assert_eq!(summary.projection_queries[0].returns, "int");
+    assert_eq!(
+        summary.presentation_projectors[0].name,
+        "choice_skill_prefix"
+    );
+    assert_eq!(summary.presentation_projectors[0].inputs[0].name, "skill");
+    assert_eq!(
+        summary.presentation_projectors[0].queries[0].name,
+        "current"
+    );
+    assert_eq!(summary.presentation_projectors[0].outputs[0].name, "prefix");
+    assert_eq!(
+        summary.presentation_projectors[0].outputs[0].label_template,
+        Some("skill_check_prefix".to_owned())
+    );
+}
+
+fn write_schema_temp(source: &str) -> (TempDir, std::path::PathBuf) {
+    let temp = TempDir::new().unwrap_or_else(|error| panic!("tempdir: {error}"));
+    let path = temp.path().join("schema.json");
+    write_file(temp.path(), "schema.json", source);
+    (temp, path)
+}
+
+fn invalid_projection_schema() -> &'static str {
+    r#"{
+  "schema_version": 1,
+  "metadata": {
+    "skill": { "targets": ["choice"], "type": "string" }
+  },
+  "presentation_projectors": {
+    "choice_skill_prefix": {
+      "candidates": { "kind": "metadata_key", "target": "choice", "key": "skill" },
+      "queries": {
+        "current": { "function": "missing", "args": [] }
+      }
+    }
+  }
+}"#
+}
+
+fn valid_projection_schema() -> &'static str {
+    r#"{
+  "schema_version": 1,
+  "metadata": {
+    "skill": { "targets": ["choice"], "type": "string" },
+    "threshold": { "targets": ["choice"], "type": "int" }
+  },
+  "projection_queries": {
+    "actor_skill": {
+      "params": [{ "name": "skill", "type": "string" }],
+      "returns": "int"
+    }
+  },
+  "presentation_projectors": {
+    "choice_skill_prefix": {
+      "candidates": { "kind": "metadata_set", "target": "choice", "required_keys": ["skill", "threshold"] },
+      "inputs": [
+        { "name": "skill", "source": { "kind": "candidate_metadata", "key": "skill" }, "type": "string" },
+        { "name": "threshold", "source": { "kind": "candidate_metadata", "key": "threshold" }, "type": "int" }
+      ],
+      "queries": {
+        "current": { "function": "actor_skill", "args": [{ "input": "skill" }] }
+      },
+      "outputs": {
+        "prefix": {
+          "target": "candidate",
+          "kind": "badge",
+          "slot": "prefix",
+          "label": {
+            "template_id": "skill_check_prefix",
+            "source_text": "[{skill} {current}/{threshold}]",
+            "args": {
+              "skill": { "source": { "input": "skill" }, "type": "string" },
+              "current": { "source": { "query_result": "current" }, "type": "int" },
+              "threshold": { "source": { "input": "threshold" }, "type": "int" }
+            }
+          }
+        }
+      }
+    }
+  }
+}"#
 }
 
 pub(super) fn stale_change_does_not_bump_snapshot_generation() {

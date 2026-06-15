@@ -114,6 +114,26 @@ fn completes_metadata_domain_values_from_schema_context() {
 }
 
 #[test]
+fn completes_projection_schema_authoring_symbols() {
+    availability::completes_projection_schema_authoring_symbols();
+}
+
+#[test]
+fn scopes_projection_schema_authoring_symbols_to_current_projector() {
+    availability::scopes_projection_schema_authoring_symbols_to_current_projector();
+}
+
+#[test]
+fn does_not_complete_projection_outputs_in_sibling_objects() {
+    availability::does_not_complete_projection_outputs_in_sibling_objects();
+}
+
+#[test]
+fn does_not_complete_projection_projectors_in_sibling_objects() {
+    availability::does_not_complete_projection_projectors_in_sibling_objects();
+}
+
+#[test]
 fn completion_ignores_non_metadata_authoring_positions() {
     availability::completion_ignores_non_metadata_authoring_positions();
 }
@@ -324,8 +344,18 @@ fn initialized_publishes_schema_load_diagnostics() {
 }
 
 #[test]
+fn schema_projection_diagnostics_publish_and_clear_after_save() {
+    project_indexes::schema_projection_diagnostics_publish_and_clear_after_save();
+}
+
+#[test]
 fn metadata_domain_schema_summary_preserves_available_provenance() {
     project_indexes::metadata_domain_schema_summary_preserves_available_provenance();
+}
+
+#[test]
+fn projection_schema_summary_exposes_queries_projectors_and_labels() {
+    project_indexes::projection_schema_summary_exposes_queries_projectors_and_labels();
 }
 
 #[test]

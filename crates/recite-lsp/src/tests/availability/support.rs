@@ -84,7 +84,7 @@ pub(super) fn authoring_schema() -> &'static str {
   },
   "metadata": {
     "mood": {
-      "targets": ["line"],
+      "targets": ["line", "choice"],
       "type": "symbol",
       "domain": "mood_by_tone"
     },
@@ -94,9 +94,48 @@ pub(super) fn authoring_schema() -> &'static str {
       "domain": "portrait_by_speaker"
     },
     "stage": {
-      "targets": ["line"],
+      "targets": ["line", "choice"],
       "type": "symbol",
       "domain": "stage_by_mood"
+    }
+  },
+  "projection_queries": {
+    "actor_skill": {
+      "params": [{ "name": "skill", "type": "string" }],
+      "returns": "int",
+      "max_calls_per_event": 1
+    }
+  },
+  "presentation_projectors": {
+    "choice_skill_prefix": {
+      "candidates": { "kind": "metadata_set", "target": "choice", "required_keys": ["mood", "stage"] },
+      "inputs": [
+        { "name": "skill", "source": { "kind": "literal", "value": "speech" }, "type": "string" },
+        { "name": "threshold", "source": { "kind": "literal", "value": 3 }, "type": "int" }
+      ],
+      "queries": {
+        "current": { "function": "actor_skill", "args": [{ "input": "skill" }] }
+      },
+      "outputs": {
+        "prefix": {
+          "target": "candidate",
+          "kind": "badge",
+          "slot": "prefix",
+          "label": {
+            "template_id": "skill_check_prefix",
+            "source_text": "[{skill} {current}/{threshold}]",
+            "args": {
+              "skill": { "source": { "input": "skill" }, "type": "string" },
+              "current": { "source": { "query_result": "current" }, "type": "int" },
+              "threshold": { "source": { "input": "threshold" }, "type": "int" }
+            }
+          },
+          "fields": {
+            "current": { "source": { "kind": "query_result", "name": "current" }, "type": "int" },
+            "threshold": { "source": { "kind": "input", "name": "threshold" }, "type": "int" }
+          }
+        }
+      }
     }
   }
 }"#
