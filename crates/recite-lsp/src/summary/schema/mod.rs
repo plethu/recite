@@ -6,15 +6,20 @@ use recite_core::ProjectSchema;
 
 #[allow(unused_imports)]
 pub(crate) use items::{
-    ConditionSummary, EffectSummary, MarkupSummary, ParameterSummary, ProvenanceSummary,
-    RegistrySummary, SchemaMetadataSummary, SpeakerSummary, TypeKindSummary, TypeSummary,
+    ConditionSummary, EffectSummary, MarkupSummary, ParameterSummary, PresentationOutputSummary,
+    PresentationProjectorSummary, ProjectionInputSummary, ProjectionQuerySummary,
+    ProjectorQuerySummary, ProvenanceSummary, RegistrySummary, SchemaMetadataSummary,
+    SpeakerSummary, TypeKindSummary, TypeSummary,
 };
 #[allow(unused_imports)]
 pub(crate) use metadata::{
     ContextualDomainValuesSummary, MetadataContextSelectorSummary, MetadataDomainKindSummary,
     MetadataDomainSummary, MissingMetadataContextPolicySummary,
 };
-use render::{effect_mode_name, metadata_target_name, type_ref_summary};
+use render::{
+    effect_mode_name, metadata_target_name, projection_output_target_name,
+    projection_selector_summary, type_ref_summary,
+};
 
 #[derive(Clone, Debug, Eq, PartialEq)]
 pub(crate) struct SchemaSummary {
@@ -24,6 +29,8 @@ pub(crate) struct SchemaSummary {
     pub(crate) speakers: Vec<SpeakerSummary>,
     pub(crate) conditions: Vec<ConditionSummary>,
     pub(crate) effects: Vec<EffectSummary>,
+    pub(crate) projection_queries: Vec<ProjectionQuerySummary>,
+    pub(crate) presentation_projectors: Vec<PresentationProjectorSummary>,
     pub(crate) metadata_domains: Vec<MetadataDomainSummary>,
     pub(crate) metadata: Vec<SchemaMetadataSummary>,
     pub(crate) markup: Vec<MarkupSummary>,
@@ -89,6 +96,62 @@ impl SchemaSummary {
                         .map(|param| ParameterSummary {
                             name: param.name.clone(),
                             type_ref: type_ref_summary(&param.type_ref),
+                        })
+                        .collect(),
+                })
+                .collect(),
+            projection_queries: schema
+                .projection_queries
+                .iter()
+                .map(|(name, definition)| ProjectionQuerySummary {
+                    name: name.clone(),
+                    params: definition
+                        .params
+                        .iter()
+                        .map(|param| ParameterSummary {
+                            name: param.name.clone(),
+                            type_ref: type_ref_summary(&param.type_ref),
+                        })
+                        .collect(),
+                    returns: type_ref_summary(&definition.returns),
+                    max_calls_per_event: definition.max_calls_per_event,
+                })
+                .collect(),
+            presentation_projectors: schema
+                .presentation_projectors
+                .iter()
+                .map(|(name, definition)| PresentationProjectorSummary {
+                    name: name.clone(),
+                    candidates: projection_selector_summary(&definition.candidates),
+                    inputs: definition
+                        .inputs
+                        .iter()
+                        .map(|input| ProjectionInputSummary {
+                            name: input.name.clone(),
+                            type_ref: type_ref_summary(&input.type_ref),
+                            required: input.required,
+                        })
+                        .collect(),
+                    queries: definition
+                        .queries
+                        .iter()
+                        .map(|(name, query)| ProjectorQuerySummary {
+                            name: name.clone(),
+                            function: query.function.clone(),
+                        })
+                        .collect(),
+                    outputs: definition
+                        .outputs
+                        .iter()
+                        .map(|(name, output)| PresentationOutputSummary {
+                            name: name.clone(),
+                            target: projection_output_target_name(&output.target).to_owned(),
+                            kind: output.kind.clone(),
+                            slot: output.slot.clone(),
+                            label_template: output
+                                .label
+                                .as_ref()
+                                .map(|label| label.template_id.clone()),
                         })
                         .collect(),
                 })

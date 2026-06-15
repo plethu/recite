@@ -4,7 +4,9 @@ use lsp_types::{
     CodeActionParams, CodeActionResponse, CompletionResponse, Hover, HoverContents, MarkupContent,
     MarkupKind, Position, Range,
 };
-use recite_core::{ConditionReturnType, EffectMode, ProjectSchema};
+use recite_core::{
+    ConditionReturnType, EffectMode, ProjectSchema, ProjectionOutputTarget, SchemaTypeRef,
+};
 
 use crate::workspace::LiveProjectSnapshot;
 
@@ -21,9 +23,10 @@ pub(crate) fn completion(
     text: &str,
     position: Position,
     schema: &ProjectSchema,
+    schema_authoring: bool,
     snapshot: &LiveProjectSnapshot,
 ) -> Option<CompletionResponse> {
-    completion::completion(text, position, schema, snapshot)
+    completion::completion(text, position, schema, schema_authoring, snapshot)
 }
 
 pub(crate) use code_action::{CodeActionDocument, SchemaCodeActionDocument};
@@ -79,6 +82,32 @@ pub(crate) fn hover(
         if let Some(definition) = schema.effects.get(word) {
             return Some(hover_response(&effect_detail(&definition.modes), range));
         }
+        if let Some(definition) = schema.projection_queries.get(word) {
+            return Some(hover_response(
+                &format!(
+                    "projection query `{word}` -> {}",
+                    schema_type_detail(&definition.returns)
+                ),
+                range,
+            ));
+        }
+        if let Some(definition) = schema.presentation_projectors.get(word) {
+            return Some(hover_response(
+                &format!(
+                    "presentation projector `{word}` with {} inputs, {} queries, and {} outputs.",
+                    definition.inputs.len(),
+                    definition.queries.len(),
+                    definition.outputs.len()
+                ),
+                range,
+            ));
+        }
+        if let Some(value) = projection_output_hover(schema, word) {
+            return Some(hover_response(&value, range));
+        }
+        if let Some(value) = presentation_label_hover(schema, word) {
+            return Some(hover_response(&value, range));
+        }
     }
     if block_names(snapshot).contains(word) {
         return Some(hover_response(
@@ -88,6 +117,45 @@ pub(crate) fn hover(
     }
 
     None
+}
+
+fn projection_output_hover(schema: &ProjectSchema, word: &str) -> Option<String> {
+    schema
+        .presentation_projectors
+        .iter()
+        .find_map(|(projector_id, projector)| {
+            projector.outputs.get(word).map(|output| {
+                format!(
+                    "presentation output `{word}` from projector `{projector_id}` -> {} {}.",
+                    projection_output_target_detail(&output.target),
+                    output.kind
+                )
+            })
+        })
+}
+
+fn presentation_label_hover(schema: &ProjectSchema, word: &str) -> Option<String> {
+    schema
+        .presentation_projectors
+        .values()
+        .flat_map(|projector| projector.outputs.values())
+        .filter_map(|output| output.label.as_ref())
+        .find(|label| label.template_id == word)
+        .map(|label| {
+            format!(
+                "presentation label `{word}` with {} placeholder bindings.",
+                label.args.len()
+            )
+        })
+}
+
+fn projection_output_target_detail(target: &ProjectionOutputTarget) -> &'static str {
+    match target {
+        ProjectionOutputTarget::Candidate => "candidate",
+        ProjectionOutputTarget::Event => "event",
+        ProjectionOutputTarget::Prompt => "prompt",
+        _ => "unknown",
+    }
 }
 
 pub(super) fn block_names(snapshot: &LiveProjectSnapshot) -> BTreeSet<String> {
@@ -210,4 +278,18 @@ pub(super) fn effect_detail(modes: &BTreeSet<EffectMode>) -> String {
         .collect::<Vec<_>>()
         .join(", ");
     format!("effect request -> {modes}")
+}
+
+pub(super) fn schema_type_detail(type_ref: &SchemaTypeRef) -> String {
+    match type_ref {
+        SchemaTypeRef::String => "string".to_owned(),
+        SchemaTypeRef::Symbol => "symbol".to_owned(),
+        SchemaTypeRef::Int => "int".to_owned(),
+        SchemaTypeRef::Float => "float".to_owned(),
+        SchemaTypeRef::Bool => "bool".to_owned(),
+        SchemaTypeRef::Speaker => "speaker".to_owned(),
+        SchemaTypeRef::Enum(name) => format!("enum:{name}"),
+        SchemaTypeRef::Registry(name) => format!("registry:{name}"),
+        SchemaTypeRef::Array(inner) => format!("array:{}", schema_type_detail(inner)),
+    }
 }

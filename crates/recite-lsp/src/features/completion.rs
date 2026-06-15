@@ -7,13 +7,21 @@ use recite_core::{
 
 use crate::workspace::LiveProjectSnapshot;
 
+mod projection;
+
 pub(super) fn completion(
     text: &str,
     position: Position,
     schema: &ProjectSchema,
+    schema_authoring: bool,
     snapshot: &LiveProjectSnapshot,
 ) -> Option<CompletionResponse> {
     let line = super::line_prefix(text, position)?;
+    if schema_authoring
+        && let Some(items) = projection::schema_json_completion_items(text, position, line, schema)
+    {
+        return Some(items);
+    }
     match completion_context(line) {
         CompletionContext::BlockReference => Some(items(block_completion_items(snapshot))),
         CompletionContext::Speaker => Some(items(speaker_completion_items(schema))),

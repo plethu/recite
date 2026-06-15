@@ -1,6 +1,7 @@
 mod authoring;
 mod completion;
 mod diagnostics;
+mod projection_completion;
 mod support;
 
 pub(super) fn initialize_advertises_completion_and_hover() {
@@ -33,6 +34,22 @@ pub(super) fn completes_project_and_schema_authoring_symbols() {
 
 pub(super) fn completes_metadata_domain_values_from_schema_context() {
     completion::completes_metadata_domain_values_from_schema_context();
+}
+
+pub(super) fn completes_projection_schema_authoring_symbols() {
+    projection_completion::completes_projection_schema_authoring_symbols();
+}
+
+pub(super) fn scopes_projection_schema_authoring_symbols_to_current_projector() {
+    projection_completion::scopes_projection_schema_authoring_symbols_to_current_projector();
+}
+
+pub(super) fn does_not_complete_projection_outputs_in_sibling_objects() {
+    projection_completion::does_not_complete_projection_outputs_in_sibling_objects();
+}
+
+pub(super) fn does_not_complete_projection_projectors_in_sibling_objects() {
+    projection_completion::does_not_complete_projection_projectors_in_sibling_objects();
 }
 
 pub(super) fn completion_ignores_non_metadata_authoring_positions() {

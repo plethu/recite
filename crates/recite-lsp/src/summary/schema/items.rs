@@ -54,6 +54,46 @@ pub(crate) struct EffectSummary {
     pub(crate) modes: Vec<String>,
     pub(crate) params: Vec<ParameterSummary>,
 }
+
+#[derive(Clone, Debug, Eq, PartialEq)]
+pub(crate) struct ProjectionQuerySummary {
+    pub(crate) name: String,
+    pub(crate) params: Vec<ParameterSummary>,
+    pub(crate) returns: String,
+    pub(crate) max_calls_per_event: Option<u32>,
+}
+
+#[derive(Clone, Debug, Eq, PartialEq)]
+pub(crate) struct PresentationProjectorSummary {
+    pub(crate) name: String,
+    pub(crate) candidates: String,
+    pub(crate) inputs: Vec<ProjectionInputSummary>,
+    pub(crate) queries: Vec<ProjectorQuerySummary>,
+    pub(crate) outputs: Vec<PresentationOutputSummary>,
+}
+
+#[derive(Clone, Debug, Eq, PartialEq)]
+pub(crate) struct ProjectionInputSummary {
+    pub(crate) name: String,
+    pub(crate) type_ref: String,
+    pub(crate) required: bool,
+}
+
+#[derive(Clone, Debug, Eq, PartialEq)]
+pub(crate) struct ProjectorQuerySummary {
+    pub(crate) name: String,
+    pub(crate) function: String,
+}
+
+#[derive(Clone, Debug, Eq, PartialEq)]
+pub(crate) struct PresentationOutputSummary {
+    pub(crate) name: String,
+    pub(crate) target: String,
+    pub(crate) kind: String,
+    pub(crate) slot: String,
+    pub(crate) label_template: Option<String>,
+}
+
 #[derive(Clone, Debug, Eq, PartialEq)]
 pub(crate) struct SchemaMetadataSummary {
     pub(crate) name: String,

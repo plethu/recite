@@ -101,6 +101,8 @@ pub(super) fn hover_describes_schema_and_project_symbols() {
         "-> saved_block\n",
         ":if can_talk\n",
         "! immediate play_sfx\n",
+        "> projection_terms@06a9ba6082698e2a3a77\n",
+        "  actor_skill choice_skill_prefix prefix skill_check_prefix\n",
     );
     harness.did_open(source_uri.clone(), 1, source);
     let _ = harness.recv_publish_diagnostics();
@@ -135,10 +137,41 @@ pub(super) fn hover_describes_schema_and_project_symbols() {
 
     let effect = hover_text(
         harness
-            .hover(source_uri, position_inside(source, "play_sfx"))
+            .hover(source_uri.clone(), position_inside(source, "play_sfx"))
             .expect("effect hover"),
     );
     assert!(effect.contains("effect request"));
+
+    let projection_query = hover_text(
+        harness
+            .hover(source_uri.clone(), position_inside(source, "actor_skill"))
+            .expect("projection query hover"),
+    );
+    assert!(projection_query.contains("projection query `actor_skill`"));
+
+    let projector = hover_text(
+        harness
+            .hover(
+                source_uri.clone(),
+                position_inside(source, "choice_skill_prefix"),
+            )
+            .expect("presentation projector hover"),
+    );
+    assert!(projector.contains("presentation projector `choice_skill_prefix`"));
+
+    let output = hover_text(
+        harness
+            .hover(source_uri.clone(), position_inside(source, " prefix "))
+            .expect("presentation output hover"),
+    );
+    assert!(output.contains("presentation output `prefix`"));
+
+    let label = hover_text(
+        harness
+            .hover(source_uri, position_inside(source, "skill_check_prefix"))
+            .expect("presentation label hover"),
+    );
+    assert!(label.contains("presentation label `skill_check_prefix`"));
 
     harness.finish();
 }

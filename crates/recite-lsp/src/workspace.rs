@@ -166,7 +166,13 @@ impl LspWorkspace {
     pub(crate) fn completion(&self, uri: &Uri, position: Position) -> Option<CompletionResponse> {
         let text = self.documents.document(uri)?.text();
         let schema = self.schema.schema()?;
-        features::completion(text, position, schema, &self.snapshot)
+        features::completion(
+            text,
+            position,
+            schema,
+            self.schema.matches_uri(uri),
+            &self.snapshot,
+        )
     }
 
     pub(crate) fn hover(&self, uri: &Uri, position: Position) -> Option<Hover> {

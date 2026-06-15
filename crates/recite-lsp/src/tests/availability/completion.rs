@@ -296,6 +296,7 @@ pub(super) fn ignores_non_metadata_authoring_positions() {
         ":: start default\n",
         "> li@cc29a2bf4d2fcbf3ce96\n",
         "  prose por\n",
+        "  \"function\": \"act\n",
         "? ch@d5b763017bd6c66a9a53\n",
         ":else por\n",
         ":: start def\n",
@@ -311,6 +312,14 @@ pub(super) fn ignores_non_metadata_authoring_positions() {
     assert!(
         harness
             .completion(source_uri.clone(), position_after(source, "prose por"))
+            .is_none()
+    );
+    assert!(
+        harness
+            .completion(
+                source_uri.clone(),
+                position_after(source, "\"function\": \"act")
+            )
             .is_none()
     );
     assert!(
