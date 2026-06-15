@@ -1,4 +1,6 @@
-use crate::tui::{KeyHints, Keymap, PromptMode, TextBuffer, TuiIntent, TuiInteractionState};
+use crate::tui::{
+    KeyHints, Keymap, PromptMode, TextBuffer, TuiIntent, TuiInteractionState, TuiPalette,
+};
 
 #[derive(Default)]
 pub(super) struct TuiState {
@@ -12,6 +14,7 @@ pub(super) struct TuiState {
     pub(super) status: String,
     pub(super) key_hints: KeyHints,
     pub(super) keymap: Keymap,
+    pub(super) palette: TuiPalette,
 }
 
 #[derive(Clone, Debug, Eq, PartialEq)]

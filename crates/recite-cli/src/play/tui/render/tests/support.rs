@@ -1,4 +1,4 @@
-use ratatui::Terminal;
+use ratatui::{Terminal, buffer::Buffer};
 
 use crate::i18n::Messages;
 use crate::tui::{KeyHints, Keymap, PromptMode, TextBuffer, TuiInteractionState};
@@ -84,6 +84,14 @@ pub(super) fn control_keys(prompt: &TuiPrompt, keymap: Keymap) -> Vec<&'static s
 }
 
 pub(super) fn render_tui_content(state: &TuiState, width: u16, height: u16) -> String {
+    render_tui_buffer(state, width, height)
+        .content
+        .iter()
+        .map(|cell| cell.symbol())
+        .collect::<String>()
+}
+
+pub(super) fn render_tui_buffer(state: &TuiState, width: u16, height: u16) -> Buffer {
     let backend = ratatui::backend::TestBackend::new(width, height);
     let mut terminal = Terminal::new(backend).expect("terminal");
     let messages = Messages::load(&crate::i18n::UiLocale::default()).expect("messages");
@@ -91,11 +99,5 @@ pub(super) fn render_tui_content(state: &TuiState, width: u16, height: u16) -> S
     terminal
         .draw(|frame| render_tui(frame, state, &messages))
         .expect("draw");
-    terminal
-        .backend()
-        .buffer()
-        .content
-        .iter()
-        .map(|cell| cell.symbol())
-        .collect::<String>()
+    terminal.backend().buffer().clone()
 }

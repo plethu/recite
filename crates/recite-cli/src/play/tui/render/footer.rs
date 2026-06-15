@@ -1,7 +1,4 @@
-use ratatui::{
-    style::{Color, Style},
-    text::{Line, Span},
-};
+use ratatui::text::{Line, Span};
 
 use crate::i18n::{Messages, MsgId};
 use crate::tui::{KeyHints, Keymap, PromptMode};
@@ -36,16 +33,13 @@ pub(super) fn render_footer<'a>(state: &'a TuiState, messages: &'a Messages) -> 
         }
     }
     if help.is_empty() {
-        return Line::from(Span::styled(
-            state.status.as_str(),
-            Style::default().fg(Color::DarkGray),
-        ));
+        return Line::from(Span::styled(state.status.as_str(), state.palette.muted()));
     }
     if state.status.is_empty() {
         return Line::from(help);
     }
     Line::from(vec![
-        Span::styled(state.status.as_str(), Style::default().fg(Color::DarkGray)),
+        Span::styled(state.status.as_str(), state.palette.muted()),
         Span::raw("  "),
         Span::raw(help),
     ])
