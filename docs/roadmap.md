@@ -245,16 +245,16 @@ completion/hover, navigation/rename, code actions, and scale evidence in place.
 
 The benchmark suite (#73), trace counters (#75), benchmark smoke/regression
 policy (#74), measured ID small-string evaluation (#36), large/epic CLI stress
-checks (#104), and realistic benchmark fixtures (#165) are closed. The
-performance track can now move into memory and known-limit reporting (#105), the
-user-facing `recite bench` command (#126), the compact ID storage follow-up
-(#156), targeted compiler phase benchmarks (#166), runtime allocation/clone
-pressure measurement (#167), watch rebuild latency stress checks (#168), the
-profiling and optimisation workflow (#204), and comparative benchmark corpus
-design (#205). Those remaining measurement, profiling, and comparison issues
-feed the blocked release benchmark baseline profile (#169). The comparative
-benchmark corpus also feeds later adoption documentation by making external
-performance claims evidence-backed rather than marketing copy.
+checks (#104), realistic benchmark fixtures (#165), and profiling workflow
+(#204) are closed. The performance track can now move into memory and
+known-limit reporting (#105), the user-facing `recite bench` command (#126), the
+compact ID storage follow-up (#156), targeted compiler phase benchmarks (#166),
+runtime allocation/clone pressure measurement (#167), watch rebuild latency
+stress checks (#168), and comparative benchmark corpus design (#205). Those
+remaining measurement and comparison issues feed the blocked release benchmark
+baseline profile (#169). The comparative benchmark corpus also feeds later
+adoption documentation by making external performance claims evidence-backed
+rather than marketing copy.
 
 The docs site scaffold (#88), Rustdoc API examples (#91), migration transition
 guides (#96), and importer-boundary design (#95) are closed. The broad
