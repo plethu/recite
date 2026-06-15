@@ -3,6 +3,7 @@ mod content;
 mod definitions;
 mod domains;
 mod functions;
+mod projection;
 mod types;
 mod version;
 
@@ -19,6 +20,7 @@ use content::{PendingReferences, lower_markup, lower_metadata};
 use definitions::{lower_registries, lower_speakers, lower_types};
 use domains::lower_metadata_domains;
 use functions::{FunctionPendingReferences, lower_conditions, lower_effects};
+use projection::{lower_presentation_projectors, lower_projection_queries};
 use version::{SchemaVersion, schema_version};
 
 pub(crate) fn lower_manifest(file: String, source: &str, raw: RawManifest) -> SchemaLoadReport {
@@ -134,6 +136,26 @@ pub(crate) fn lower_manifest(file: String, source: &str, raw: RawManifest) -> Sc
             type_refs: &mut pending_type_refs,
             domain_refs: &mut pending_domain_refs,
         },
+    );
+    spans.enter_section(source, "projection_queries");
+    lower_projection_queries(
+        &file,
+        source,
+        &mut spans,
+        raw.projection_queries,
+        &mut schema,
+        &mut diagnostics,
+        &mut pending_type_refs,
+    );
+    spans.enter_section(source, "presentation_projectors");
+    lower_presentation_projectors(
+        &file,
+        source,
+        &mut spans,
+        raw.presentation_projectors,
+        &mut schema,
+        &mut diagnostics,
+        &mut pending_type_refs,
     );
     spans.enter_section(source, "markup");
     lower_markup(

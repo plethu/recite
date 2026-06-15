@@ -26,5 +26,6 @@ pub(crate) fn display_schema_type_ref(type_ref: &SchemaTypeRef) -> String {
         SchemaTypeRef::Speaker => "speaker".to_owned(),
         SchemaTypeRef::Enum(name) => format!("enum:{name}"),
         SchemaTypeRef::Registry(name) => format!("registry:{name}"),
+        SchemaTypeRef::Array(inner) => format!("array:{}", display_schema_type_ref(inner)),
     }
 }

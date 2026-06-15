@@ -7,8 +7,10 @@ use recite_compiler::{
 };
 use recite_core::{
     AvailabilityReasonDefinition, AvailabilityReasonId, ConditionDefinition, ConditionReturnType,
-    EnumTypeDefinition, ParameterDefinition, ProjectSchema, SchemaTypeDefinition, SchemaTypeRef,
-    SpeakerDefinition,
+    EnumTypeDefinition, ParameterDefinition, PresentationAffordanceOutputDefinition,
+    PresentationLabelArgDefinition, PresentationLabelDefinition, ProjectSchema, ProjectionInputRef,
+    ProjectionOutputTarget, SchemaPresentationProjectorDefinition, SchemaProjectionSelector,
+    SchemaTypeDefinition, SchemaTypeRef, SpeakerDefinition,
 };
 
 #[path = "../../../tests/support/fixtures.rs"]
@@ -102,6 +104,86 @@ fn extracts_availability_reason_templates_to_pot_in_schema_order() {
         "{subject} does not trust {target} enough."
     );
     assert_eq!(reason_entries[0].comments, ["availability reason template"]);
+}
+
+#[test]
+fn extracts_presentation_label_templates_to_pot() {
+    let mut schema = ProjectSchema::empty_v1();
+    schema.presentation_projectors = BTreeMap::from([(
+        "choice_skill_prefix".to_owned(),
+        SchemaPresentationProjectorDefinition {
+            candidates: SchemaProjectionSelector::RuntimeEvent {
+                kind: "prompt".to_owned(),
+            },
+            inputs: Vec::new(),
+            queries: BTreeMap::new(),
+            outputs: BTreeMap::from([(
+                "prefix".to_owned(),
+                PresentationAffordanceOutputDefinition {
+                    target: ProjectionOutputTarget::Candidate,
+                    kind: "badge".to_owned(),
+                    slot: "prefix".to_owned(),
+                    label: Some(PresentationLabelDefinition {
+                        template_id: "skill_check_prefix".to_owned(),
+                        source_text: "[{skill} {current}/{threshold}]".to_owned(),
+                        args: BTreeMap::from([
+                            (
+                                "skill".to_owned(),
+                                PresentationLabelArgDefinition {
+                                    source: ProjectionInputRef::Input {
+                                        name: "skill".to_owned(),
+                                    },
+                                    type_ref: SchemaTypeRef::String,
+                                },
+                            ),
+                            (
+                                "current".to_owned(),
+                                PresentationLabelArgDefinition {
+                                    source: ProjectionInputRef::QueryResult {
+                                        name: "current".to_owned(),
+                                    },
+                                    type_ref: SchemaTypeRef::Int,
+                                },
+                            ),
+                            (
+                                "threshold".to_owned(),
+                                PresentationLabelArgDefinition {
+                                    source: ProjectionInputRef::Input {
+                                        name: "threshold".to_owned(),
+                                    },
+                                    type_ref: SchemaTypeRef::Int,
+                                },
+                            ),
+                        ]),
+                    }),
+                    fields: BTreeMap::new(),
+                },
+            )]),
+        },
+    )]);
+    add_project_input_conditions(&mut schema);
+
+    let report = extract_pot_with_schema(project_inputs(), &schema);
+    let pot = report.catalog.expect("valid inputs produce a POT catalog");
+    let label_entries = pot
+        .entries
+        .iter()
+        .filter(|entry| entry.context.starts_with("presentation_label:"))
+        .collect::<Vec<_>>();
+
+    assert_eq!(label_entries.len(), 1);
+    assert_eq!(
+        label_entries[0].context,
+        "presentation_label:skill_check_prefix"
+    );
+    assert_eq!(
+        label_entries[0].source_text,
+        "[{skill} {current}/{threshold}]"
+    );
+    assert_eq!(
+        label_entries[0].comments,
+        ["presentation label template: prefix"]
+    );
 }
 
 fn add_project_input_conditions(schema: &mut ProjectSchema) {

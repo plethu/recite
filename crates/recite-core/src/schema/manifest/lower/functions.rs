@@ -242,18 +242,44 @@ fn validate_parameter_type_ref(
     type_ref: &mut SchemaTypeRef,
     type_ref_span: &crate::SourceSpan,
 ) -> bool {
-    if !matches!(type_ref, SchemaTypeRef::Symbol) {
+    if !contains_symbol_type_ref(type_ref)
+        && (!matches!(type_ref, SchemaTypeRef::Array(_))
+            || owner.starts_with("projection query function "))
+    {
         return true;
     }
 
     diagnostics.push(Diagnostic::error(
         INVALID_TYPE_REFERENCE,
         format!(
-            "{owner} parameter '{}' uses metadata-only type reference 'symbol'",
-            param.name
+            "{owner} parameter '{}' uses projection-only or metadata-only type reference '{}'",
+            param.name,
+            type_ref_name(type_ref)
         ),
         type_ref_span.clone(),
     ));
     *type_ref = SchemaTypeRef::String;
     false
+}
+
+fn contains_symbol_type_ref(type_ref: &SchemaTypeRef) -> bool {
+    match type_ref {
+        SchemaTypeRef::Symbol => true,
+        SchemaTypeRef::Array(inner) => contains_symbol_type_ref(inner),
+        _ => false,
+    }
+}
+
+fn type_ref_name(type_ref: &SchemaTypeRef) -> String {
+    match type_ref {
+        SchemaTypeRef::String => "string".to_owned(),
+        SchemaTypeRef::Symbol => "symbol".to_owned(),
+        SchemaTypeRef::Int => "int".to_owned(),
+        SchemaTypeRef::Float => "float".to_owned(),
+        SchemaTypeRef::Bool => "bool".to_owned(),
+        SchemaTypeRef::Speaker => "speaker".to_owned(),
+        SchemaTypeRef::Enum(name) => format!("enum:{name}"),
+        SchemaTypeRef::Registry(name) => format!("registry:{name}"),
+        SchemaTypeRef::Array(inner) => format!("array:{}", type_ref_name(inner)),
+    }
 }

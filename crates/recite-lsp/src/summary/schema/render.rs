@@ -10,6 +10,7 @@ pub(super) fn type_ref_summary(type_ref: &SchemaTypeRef) -> String {
         SchemaTypeRef::Speaker => "speaker".to_owned(),
         SchemaTypeRef::Enum(name) => format!("enum:{name}"),
         SchemaTypeRef::Registry(name) => format!("registry:{name}"),
+        SchemaTypeRef::Array(inner) => format!("array:{}", type_ref_summary(inner)),
     }
 }
 

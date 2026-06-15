@@ -75,8 +75,18 @@ pub(super) fn lower_metadata(
             pending_refs.type_refs.push(PendingTypeReference {
                 owner: format!("metadata '{}'", entry.name),
                 type_ref: type_ref.clone(),
-                span: type_ref_span,
+                span: type_ref_span.clone(),
             });
+        }
+        if matches!(type_ref, crate::schema::SchemaTypeRef::Array(_)) {
+            diagnostics.push(Diagnostic::error(
+                MALFORMED_SHAPE,
+                format!(
+                    "metadata '{}' uses projection-only array type '{}'",
+                    entry.name, entry.value.type_ref
+                ),
+                type_ref_span,
+            ));
         }
 
         if let Some(domain) = &entry.value.domain {

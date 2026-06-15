@@ -232,3 +232,102 @@ fn manifest_loader_rejects_explicit_null_optionals() {
     assert!(report.schema.is_none());
     assert_eq!(diagnostic_codes(&report), ["RECITE_SCHEMA001"]);
 }
+
+#[test]
+fn manifest_loader_rejects_invalid_projection_declarations() {
+    let report = load_schema_manifest_str(
+        "fixtures/schema/invalid/presentation_projection.json",
+        r#"{
+  "schema_version": 1,
+  "metadata": {
+    "skill": {
+      "targets": ["line"],
+      "type": "string"
+    },
+    "tag": {
+      "targets": ["choice"],
+      "type": "symbol"
+    }
+  },
+  "projection_queries": {
+    "actor_skill": {
+      "params": [{ "name": "skill", "type": "string" }],
+      "returns": "int"
+    }
+  },
+  "presentation_projectors": {
+    "choice_skill_prefix": {
+      "candidates": { "kind": "metadata_key", "target": "choice", "key": "skill" },
+      "inputs": [
+        { "name": "skill", "source": { "kind": "candidate_metadata", "key": "skill" }, "type": "int" },
+        { "name": "tags", "source": { "kind": "candidate_metadata", "key": "tag", "occurrence": "all" }, "type": "symbol" }
+      ],
+      "queries": {
+        "current": { "function": "missing", "args": [{ "input": "skill" }] }
+      },
+      "outputs": {
+        "prefix": {
+          "target": "candidate",
+          "kind": "badge",
+          "slot": "prefix",
+          "label": {
+            "template_id": "skill_check_prefix",
+            "source_text": "[{skill} {current}]",
+            "args": {
+              "skill": { "source": { "input": "skill" }, "type": "string" }
+            }
+          },
+          "fields": {
+            "current": { "source": { "kind": "query_result", "name": "current" }, "type": "int" }
+          }
+        }
+      }
+    }
+  }
+}"#,
+    );
+
+    assert!(report.schema.is_none());
+    assert_eq!(
+        diagnostic_codes(&report),
+        [
+            "RECITE_SCHEMA001",
+            "RECITE_SCHEMA001",
+            "RECITE_SCHEMA001",
+            "RECITE_SCHEMA001",
+            "RECITE_SCHEMA001",
+            "RECITE_SCHEMA004",
+            "RECITE_SCHEMA001",
+            "RECITE_SCHEMA001",
+            "RECITE_SCHEMA004"
+        ]
+    );
+}
+
+#[test]
+fn manifest_loader_rejects_projection_all_with_wrong_array_inner_type() {
+    let report = load_schema_manifest_str(
+        "fixtures/schema/invalid/projection_all_wrong_array_inner.json",
+        r#"{
+  "schema_version": 1,
+  "metadata": {
+    "tag": {
+      "targets": ["choice"],
+      "type": "symbol",
+      "repeatable": true
+    }
+  },
+  "presentation_projectors": {
+    "choice_tags": {
+      "candidates": { "kind": "metadata_key", "target": "choice", "key": "tag" },
+      "inputs": [
+        { "name": "tags", "source": { "kind": "candidate_metadata", "key": "tag", "occurrence": "all" }, "type": "array:int" }
+      ]
+    }
+  }
+}"#,
+    );
+
+    assert!(report.schema.is_none());
+    assert_eq!(diagnostic_codes(&report), ["RECITE_SCHEMA001"]);
+}

@@ -22,6 +22,8 @@ pub struct ProjectSchema {
     pub effects: BTreeMap<String, EffectDefinition>,
     pub metadata_domains: BTreeMap<String, MetadataDomainDefinition>,
     pub metadata: BTreeMap<String, MetadataDefinition>,
+    pub projection_queries: BTreeMap<String, ProjectionQueryFunctionDefinition>,
+    pub presentation_projectors: BTreeMap<String, SchemaPresentationProjectorDefinition>,
     pub markup: BTreeMap<String, MarkupDefinition>,
 }
 
@@ -38,6 +40,8 @@ impl ProjectSchema {
             effects: BTreeMap::new(),
             metadata_domains: BTreeMap::new(),
             metadata: BTreeMap::new(),
+            projection_queries: BTreeMap::new(),
+            presentation_projectors: BTreeMap::new(),
             markup: BTreeMap::new(),
         }
     }
@@ -76,6 +80,7 @@ pub enum SchemaTypeRef {
     Speaker,
     Enum(String),
     Registry(String),
+    Array(Box<SchemaTypeRef>),
 }
 
 /// A generated snapshot of stable project content IDs.
@@ -211,4 +216,146 @@ pub struct MarkupDefinition {
     pub requires_closing: bool,
     pub translatable: bool,
     pub allows_nesting: bool,
+}
+
+/// A schema-global pure host query available to presentation projectors.
+#[derive(Clone, Debug, Eq, PartialEq)]
+pub struct ProjectionQueryFunctionDefinition {
+    pub params: Vec<ParameterDefinition>,
+    pub returns: SchemaTypeRef,
+    pub max_calls_per_event: Option<u32>,
+}
+
+/// A schema-owned presentation projector declaration.
+#[derive(Clone, Debug, Eq, PartialEq)]
+pub struct SchemaPresentationProjectorDefinition {
+    pub candidates: SchemaProjectionSelector,
+    pub inputs: Vec<ProjectionInput>,
+    pub queries: BTreeMap<String, ProjectionQueryDefinition>,
+    pub outputs: BTreeMap<String, PresentationAffordanceOutputDefinition>,
+}
+
+/// Candidate set selected by a schema-owned projector.
+#[derive(Clone, Debug, Eq, PartialEq)]
+#[non_exhaustive]
+pub enum SchemaProjectionSelector {
+    RuntimeEvent {
+        kind: String,
+    },
+    MetadataKey {
+        target: MetadataTarget,
+        key: String,
+    },
+    MetadataSet {
+        target: MetadataTarget,
+        required_keys: Vec<String>,
+    },
+    AvailabilityReason {
+        reason_id: AvailabilityReasonId,
+    },
+}
+
+/// A typed projector input.
+#[derive(Clone, Debug, Eq, PartialEq)]
+pub struct ProjectionInput {
+    pub name: String,
+    pub source: SchemaProjectionInputSource,
+    pub type_ref: SchemaTypeRef,
+    pub required: bool,
+}
+
+/// Schema-manifest input sources for presentation projection.
+#[derive(Clone, Debug, Eq, PartialEq)]
+#[non_exhaustive]
+pub enum SchemaProjectionInputSource {
+    EventKind,
+    CandidateLineId,
+    CandidateChoiceId,
+    CandidateEffectRequestId,
+    CandidateBlockId,
+    CandidateProject,
+    CandidateMetadata {
+        key: String,
+        occurrence: MetadataOccurrence,
+    },
+    AvailabilityReasonArg {
+        name: String,
+    },
+    Literal(SchemaLiteralValue),
+}
+
+/// How a projector reads repeated candidate metadata.
+#[derive(Clone, Debug, Eq, PartialEq)]
+#[non_exhaustive]
+pub enum MetadataOccurrence {
+    Only,
+    First,
+    Last,
+    Index(u32),
+    All,
+}
+
+/// A named projector query call.
+#[derive(Clone, Debug, Eq, PartialEq)]
+pub struct ProjectionQueryDefinition {
+    pub function: String,
+    pub args: Vec<ProjectionInputRef>,
+}
+
+/// Reference to a projector input or query result.
+#[derive(Clone, Debug, Eq, PartialEq)]
+#[non_exhaustive]
+pub enum ProjectionInputRef {
+    Input { name: String },
+    QueryResult { name: String },
+}
+
+/// A schema-owned output affordance declaration.
+#[derive(Clone, Debug, Eq, PartialEq)]
+pub struct PresentationAffordanceOutputDefinition {
+    pub target: ProjectionOutputTarget,
+    pub kind: String,
+    pub slot: String,
+    pub label: Option<PresentationLabelDefinition>,
+    pub fields: BTreeMap<String, PresentationAffordanceFieldDefinition>,
+}
+
+/// Runtime presentation target for an output affordance.
+#[derive(Clone, Debug, Eq, PartialEq)]
+#[non_exhaustive]
+pub enum ProjectionOutputTarget {
+    Candidate,
+    Event,
+    Prompt,
+}
+
+/// Schema-owned localisable template for presentation labels.
+#[derive(Clone, Debug, Eq, PartialEq)]
+pub struct PresentationLabelDefinition {
+    pub template_id: String,
+    pub source_text: String,
+    pub args: BTreeMap<String, PresentationLabelArgDefinition>,
+}
+
+/// A typed presentation label placeholder binding.
+#[derive(Clone, Debug, Eq, PartialEq)]
+pub struct PresentationLabelArgDefinition {
+    pub source: ProjectionInputRef,
+    pub type_ref: SchemaTypeRef,
+}
+
+/// A typed output field binding.
+#[derive(Clone, Debug, Eq, PartialEq)]
+pub struct PresentationAffordanceFieldDefinition {
+    pub source: PresentationAffordanceFieldSource,
+    pub type_ref: SchemaTypeRef,
+}
+
+/// Source for a typed output field.
+#[derive(Clone, Debug, Eq, PartialEq)]
+#[non_exhaustive]
+pub enum PresentationAffordanceFieldSource {
+    Input { name: String },
+    QueryResult { name: String },
+    Literal(SchemaLiteralValue),
 }
