@@ -5,7 +5,7 @@ description: Commands and policy for Recite benchmark smoke checks and regressio
 
 Recite benchmarks live in `crates/recite-benchmarks` and use Criterion against
 the shared synthetic fixture profiles and checked-in realistic fixture packs.
-The suite is split into explicit compiler and runtime bench targets.
+The suite is split into explicit compiler, runtime, and LSP bench targets.
 
 ## Fast smoke
 
@@ -30,7 +30,7 @@ enforce regression thresholds.
 
 ## Full suites
 
-Run both bench targets with the local default scale set:
+Run all bench targets with the local default scale set:
 
 ```bash
 cargo bench -p recite-benchmarks
@@ -57,6 +57,7 @@ Target one side of the suite when isolating a change:
 ```bash
 RECITE_BENCH_SCALES=tiny cargo bench -p recite-benchmarks --bench compiler
 RECITE_BENCH_SCALES=tiny cargo bench -p recite-benchmarks --bench runtime
+RECITE_BENCH_SCALES=tiny cargo bench -p recite-benchmarks --bench lsp
 ```
 
 ## Regression policy
@@ -80,3 +81,7 @@ locale lookup, session encode/decode, and full traversal. Compiler and LSP paths
 include parsing, lowering, validation, schema validation, compilation, POT
 extraction, project indexing, open-file parse, diagnostics refresh, completion,
 and go-to-definition.
+
+For maintainer profiling workflow, Linux profiler guidance, memory investigation
+commands, and the planned `recite bench` mapping, see the
+[profiling and optimisation playbook](https://codeberg.org/plethu/recite/src/branch/main/docs/profiling-and-optimisation.md).

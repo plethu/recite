@@ -107,6 +107,9 @@ fn realistic_v1_pack_compiles_extracts_catalog_and_traverses()
     let mut prompt_session = driver.session_before_first_prompt()?;
     let _prompt = driver.next_prompt(&mut prompt_session)?;
 
+    let mut choice_session = driver.session_with_prompt()?;
+    let _selected = driver.choose_first(&mut choice_session)?;
+
     let mut deferred_session = driver.session_before_deferred_effect()?;
     let _deferred = driver.deferred_effect(&mut deferred_session)?;
 
