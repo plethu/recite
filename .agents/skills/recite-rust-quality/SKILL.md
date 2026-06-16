@@ -77,6 +77,12 @@ A clean Rust implementation review is not complete until every touched productio
 - Do not grow a signature with stacked optional parameters or `_with_a_and_b` suffixes. At the third knob, take an options/resolution struct and keep a zero-config entry point (precedents: `LocaleResolution` behind `next_with`/`choose_with`, `DialogueSessionOptions` behind `start_scene_with_options`).
 - Mark consumer-facing public enums and structs `#[non_exhaustive]` when they may gain variants or fields, so downstream code (e.g. the Bevy adapter) keeps compiling when one is added. Apply it to errors, events, and effect/condition kinds; do not apply it to internal compiled-row enums, where same-crate exhaustive matching is the intended contract and wire compatibility is governed by tag mapping and format version.
 
+## FFI Surface
+
+- `unsafe impl Send` for raw pointer wrappers at a C ABI boundary requires runtime enforcement, not only a prose contract. For Recite's cdylib session model, the single-thread-per-session guarantee must be enforced by recording the owner thread ID at session creation and rejecting any session operation that fires callbacks from a different thread. Documentation alone is not sufficient.
+
+- Do not encode structured error categories into a free-form string carried through an opaque error type (e.g. packing a status code into a `reason` string so it can be decoded later at the FFI mapping layer). Store the category as a typed thread-local or a structured field and recover it from there. The string-encoding pattern silently degrades when the carrying type modifies or truncates the string, and it can misinterpret host-supplied error messages that happen to match the encoding format.
+
 ## Handoff
 
 Before handoff, state:
