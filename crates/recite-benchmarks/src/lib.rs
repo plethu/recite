@@ -28,6 +28,7 @@ pub mod compiler;
 pub mod fixture_context;
 pub mod id_metrics;
 pub mod lsp;
+pub mod memory_profiles;
 pub mod project;
 pub mod runtime;
 pub mod scale;

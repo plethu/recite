@@ -1,8 +1,10 @@
 use std::fs;
 
+use serde::Serialize;
+
 use crate::workspace::LspWorkspace;
 
-#[derive(Clone, Debug, Eq, PartialEq)]
+#[derive(Clone, Debug, Eq, PartialEq, Serialize)]
 pub struct LspMemoryReport {
     pub source_files: usize,
     pub indexed_source_bytes: usize,
