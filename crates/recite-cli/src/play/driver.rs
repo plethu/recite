@@ -109,6 +109,10 @@ fn notify_scheduled_deferred_queue<U: PlayUiAdapter>(
 }
 
 struct InteractiveContext<'a, U> {
+    // DialogueContext is an `&self` runtime trait, while the interactive CLI
+    // adapter is stateful. PlayDriver never holds a `ui` borrow across
+    // traversal calls (`next`/`choose`), and evaluate_condition borrows only
+    // for the callback frame before recording any error state.
     ui: RefCell<&'a mut U>,
     interrupted: RefCell<bool>,
     ui_error: RefCell<Option<CliError>>,

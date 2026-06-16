@@ -11,6 +11,7 @@ use std::collections::BTreeMap;
 use std::ffi::{CStr, c_char};
 use std::sync::atomic::{AtomicU64, Ordering};
 use std::sync::{Mutex, OnceLock};
+use std::thread::{self, ThreadId};
 
 use recite_core::{CompiledDialogue, decode_compiled_dialogue_messagepack};
 use recite_runtime::{
@@ -23,7 +24,7 @@ pub use condition::{ReciteConditionFn, ReciteConditionQuery, ReciteConditionResu
 pub use error::{ReciteStatus, recite_last_error_message};
 
 use condition::{ConditionEntry, FfiContext, SendPtr};
-use error::set_last_error;
+use error::{clear_condition_status, set_last_error};
 use output::{encode_batch, should_continue};
 
 /// ABI major version for the generated C header.
@@ -74,6 +75,7 @@ struct FfiSession {
     dialogue: std::sync::Arc<CompiledDialogue>,
     session: DialogueSession,
     handlers: BTreeMap<String, ConditionEntry>,
+    owner_thread: ThreadId,
     /// False until `recite_session_begin` (or the `recite_session_start` shorthand) runs the
     /// initial drain. Guards against double-begin on a session created with
     /// `recite_session_create`.
@@ -298,6 +300,7 @@ pub unsafe extern "C" fn recite_session_create(
             dialogue,
             session,
             handlers: BTreeMap::new(),
+            owner_thread: thread::current().id(),
             begun: false,
         },
     );
@@ -332,6 +335,9 @@ pub unsafe extern "C" fn recite_session_begin(
             return ReciteStatus::InvalidHandle;
         }
     };
+    if let Err(status) = ensure_session_thread(ffi_session) {
+        return status;
+    }
 
     if ffi_session.begun {
         set_last_error("recite_session_begin called twice on the same handle");
@@ -342,6 +348,7 @@ pub unsafe extern "C" fn recite_session_begin(
     let context = FfiContext {
         handlers: &ffi_session.handlers,
     };
+    clear_condition_status();
     match drain_to_batch(&ffi_session.dialogue, &mut ffi_session.session, &context) {
         Ok(batch) => {
             unsafe { *batch_out = batch };
@@ -433,6 +440,9 @@ pub unsafe extern "C" fn recite_session_register_condition(
     let mut guard = lock_sessions();
     match guard.get_mut(&session_handle) {
         Some(ffi_session) => {
+            if let Err(status) = ensure_session_thread(ffi_session) {
+                return status;
+            }
             ffi_session.handlers.insert(
                 name_str,
                 ConditionEntry {
@@ -489,11 +499,15 @@ pub unsafe extern "C" fn recite_session_choose(
             return ReciteStatus::InvalidHandle;
         }
     };
+    if let Err(status) = ensure_session_thread(ffi_session) {
+        return status;
+    }
 
     let context = FfiContext {
         handlers: &ffi_session.handlers,
     };
     let session_checkpoint = ffi_session.session.clone();
+    clear_condition_status();
     let result = match choose_with(
         &ffi_session.dialogue,
         &mut ffi_session.session,
@@ -589,11 +603,15 @@ pub unsafe extern "C" fn recite_session_acknowledge_effect(
             return ReciteStatus::InvalidHandle;
         }
     };
+    if let Err(status) = ensure_session_thread(ffi_session) {
+        return status;
+    }
 
     let context = FfiContext {
         handlers: &ffi_session.handlers,
     };
     let session_checkpoint = ffi_session.session.clone();
+    clear_condition_status();
     let result = match acknowledge_effect(&mut ffi_session.session, effect_id, ack) {
         Ok(()) => drain_to_batch(&ffi_session.dialogue, &mut ffi_session.session, &context),
         Err(e) => {
@@ -641,6 +659,9 @@ pub unsafe extern "C" fn recite_session_snapshot(
             return ReciteStatus::InvalidHandle;
         }
     };
+    if let Err(status) = ensure_session_thread(ffi_session) {
+        return status;
+    }
     match encode_session_messagepack(&ffi_session.session) {
         Ok(bytes) => {
             unsafe { *snapshot_out = ReciteBuffer::from_bytes(bytes) };
@@ -700,6 +721,7 @@ pub unsafe extern "C" fn recite_session_restore(
     let context = FfiContext {
         handlers: &BTreeMap::new(),
     };
+    clear_condition_status();
     let batch = match drain_restored(&dialogue, &mut session, &context) {
         Ok(b) => b,
         Err((status, msg)) => {
@@ -715,6 +737,7 @@ pub unsafe extern "C" fn recite_session_restore(
             dialogue,
             session,
             handlers: BTreeMap::new(),
+            owner_thread: thread::current().id(),
             begun: true,
         },
     );
@@ -794,6 +817,16 @@ fn empty_batch() -> Result<ReciteBuffer, (ReciteStatus, String)> {
                 format!("empty batch serialization failed: {e}"),
             )
         })
+}
+
+fn ensure_session_thread(ffi_session: &FfiSession) -> Result<(), ReciteStatus> {
+    let current = thread::current().id();
+    if current == ffi_session.owner_thread {
+        return Ok(());
+    }
+
+    set_last_error("session handle used from a different thread than the one that created it");
+    Err(ReciteStatus::Validation)
 }
 
 fn is_boundary_error(e: &recite_runtime::DialogueError) -> bool {

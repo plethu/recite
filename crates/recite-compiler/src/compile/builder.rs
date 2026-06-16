@@ -23,6 +23,9 @@ pub(super) fn build_dialogue(
     options: CompileOptions,
     schema: Option<&ProjectSchema>,
 ) -> Result<CompiledDialogue, CompileError> {
+    // Caller must pass only lowered inputs whose source files have passed
+    // validation. Statement builders rely on that phase ordering for AST shape
+    // invariants such as line children containing only choices.
     AssetBuilder::new(inputs, options, schema).compile()
 }
 

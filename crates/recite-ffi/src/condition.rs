@@ -4,7 +4,7 @@ use std::ffi::{CStr, c_char, c_void};
 use recite_runtime::{ConditionEvaluationError, ConditionQuery, ConditionValue, DialogueContext};
 use serde::{Deserialize, Serialize};
 
-use crate::error::{ReciteStatus, encode_condition_status};
+use crate::error::{ReciteStatus, set_condition_status};
 
 /// Msgpack-encoded condition argument passed to a host condition handler.
 #[derive(Serialize)]
@@ -67,11 +67,11 @@ pub type ReciteConditionFn = unsafe extern "C" fn(
 /// Wraps `*mut c_void` so it can be stored in a `Send`-able map.
 ///
 /// # Safety
-/// The host guarantees single-threaded access per session handle, and that
-/// the userdata pointer remains valid for the session's lifetime.
+/// `FfiSession` records its owner thread and rejects session operations from
+/// other threads before callbacks can observe the pointer.
 pub(crate) struct SendPtr(pub *mut c_void);
-// SAFETY: recite-ffi documents single-threaded access per session handle.
-// Condition callbacks are invoked on the calling thread only.
+// SAFETY: condition callbacks only run after the owning session verifies that
+// the current thread matches the thread that created or restored the session.
 unsafe impl Send for SendPtr {}
 
 pub(crate) struct ConditionEntry {
@@ -90,11 +90,10 @@ impl DialogueContext for FfiContext<'_> {
         query: ConditionQuery<'_>,
     ) -> Result<ConditionValue, ConditionEvaluationError> {
         let Some(entry) = self.handlers.get(query.function()) else {
-            let msg = encode_condition_status(
+            return Err(condition_error(
                 ReciteStatus::MissingConditionHandler,
-                &format!("no handler registered for `{}`", query.function()),
-            );
-            return Err(ConditionEvaluationError::new(msg));
+                format!("no handler registered for `{}`", query.function()),
+            ));
         };
 
         // Encode arguments as msgpack.
@@ -119,19 +118,19 @@ impl DialogueContext for FfiContext<'_> {
             .collect();
 
         let args_bytes = rmp_serde::to_vec_named(&args).map_err(|e| {
-            ConditionEvaluationError::new(encode_condition_status(
+            condition_error(
                 ReciteStatus::ConditionEvaluation,
-                &format!("failed to encode condition args: {e}"),
-            ))
+                format!("failed to encode condition args: {e}"),
+            )
         })?;
 
         // Build the NUL-terminated function name.
         let function_cstring = std::ffi::CString::new(query.function().replace('\0', "?"))
             .map_err(|_| {
-                ConditionEvaluationError::new(encode_condition_status(
+                condition_error(
                     ReciteStatus::ConditionEvaluation,
                     "condition function name contains NUL",
-                ))
+                )
             })?;
 
         let c_query = ReciteConditionQuery {
@@ -147,19 +146,19 @@ impl DialogueContext for FfiContext<'_> {
 
         if result.ok != 0 {
             if result.value_msgpack.is_null() {
-                return Err(ConditionEvaluationError::new(encode_condition_status(
+                return Err(condition_error(
                     ReciteStatus::ConditionEvaluation,
                     "condition handler returned ok but null value pointer",
-                )));
+                ));
             }
             // SAFETY: The host guarantees the bytes are valid for this call.
             let bytes =
                 unsafe { std::slice::from_raw_parts(result.value_msgpack, result.value_len) };
             let ffi_value: FfiConditionValue = rmp_serde::from_slice(bytes).map_err(|e| {
-                ConditionEvaluationError::new(encode_condition_status(
+                condition_error(
                     ReciteStatus::InvalidConditionResult,
-                    &format!("failed to decode condition result: {e}"),
-                ))
+                    format!("failed to decode condition result: {e}"),
+                )
             })?;
             Ok(match ffi_value {
                 FfiConditionValue::Bool { value } => ConditionValue::Bool(value),
@@ -174,10 +173,12 @@ impl DialogueContext for FfiContext<'_> {
                     .to_string_lossy()
                     .into_owned()
             };
-            Err(ConditionEvaluationError::new(encode_condition_status(
-                ReciteStatus::ConditionEvaluation,
-                &msg,
-            )))
+            Err(condition_error(ReciteStatus::ConditionEvaluation, msg))
         }
     }
+}
+
+fn condition_error(status: ReciteStatus, message: impl Into<String>) -> ConditionEvaluationError {
+    set_condition_status(status);
+    ConditionEvaluationError::new(message)
 }

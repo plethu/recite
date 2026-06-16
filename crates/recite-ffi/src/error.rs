@@ -1,4 +1,4 @@
-use std::cell::RefCell;
+use std::cell::{Cell, RefCell};
 use std::ffi::CString;
 
 use recite_runtime::DialogueError;
@@ -88,8 +88,8 @@ impl From<DialogueError> for ReciteStatus {
             }
             DialogueError::InvalidChoice { .. } => Self::InvalidChoice,
             DialogueError::UnavailableChoice { .. } => Self::UnavailableChoice,
-            DialogueError::ConditionEvaluationFailed { ref reason, .. } => {
-                decode_condition_status(reason).unwrap_or(Self::ConditionEvaluation)
+            DialogueError::ConditionEvaluationFailed { .. } => {
+                take_condition_status().unwrap_or(Self::ConditionEvaluation)
             }
             DialogueError::ConditionResultTypeMismatch { .. } => Self::InvalidConditionResult,
             DialogueError::ConditionDepthLimitExceeded { .. } => Self::ConditionEvaluation,
@@ -103,27 +103,35 @@ impl From<DialogueError> for ReciteStatus {
     }
 }
 
-/// Encodes a condition error status into the reason string so `From<DialogueError>`
-/// can recover it after the runtime wraps it in `ConditionEvaluationFailed`.
-pub(crate) fn encode_condition_status(status: ReciteStatus, message: &str) -> String {
-    format!("[{}] {}", status as i32, message)
-}
-
-pub(crate) fn decode_condition_status(reason: &str) -> Option<ReciteStatus> {
-    let rest = reason.strip_prefix('[')?;
-    let (code_str, _) = rest.split_once(']')?;
-    let code: i32 = code_str.parse().ok()?;
-    ReciteStatus::try_from(code).ok()
-}
-
 thread_local! {
+    static CONDITION_STATUS: Cell<Option<ReciteStatus>> = const { Cell::new(None) };
     static LAST_ERROR: RefCell<Option<CString>> = const { RefCell::new(None) };
+}
+
+pub(crate) fn clear_condition_status() {
+    CONDITION_STATUS.with(|cell| cell.set(None));
+}
+
+pub(crate) fn set_condition_status(status: ReciteStatus) {
+    CONDITION_STATUS.with(|cell| cell.set(Some(status)));
+}
+
+fn take_condition_status() -> Option<ReciteStatus> {
+    CONDITION_STATUS.with(Cell::take)
 }
 
 /// Sets the thread-local error message. The stored `CString` is valid until the
 /// next `recite-ffi` call on the same thread.
 pub(crate) fn set_last_error(message: &str) {
-    let cstring = CString::new(message.replace('\0', "?")).unwrap_or_default();
+    let message = message.replace('\0', "?");
+    debug_assert!(
+        !message.as_bytes().contains(&0),
+        "interior NULs are replaced before constructing CString"
+    );
+    let cstring = match CString::new(message) {
+        Ok(cstring) => cstring,
+        Err(error) => unreachable!("interior NULs were not replaced: {error}"),
+    };
     LAST_ERROR.with(|cell| *cell.borrow_mut() = Some(cstring));
 }
 
