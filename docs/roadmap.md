@@ -223,13 +223,16 @@ for structured choice availability reasons, including explicit primary reasons,
 origins, available choices, and unavailable-choice errors.
 
 Presentation projection schema declarations (#181) are closed (2026-06-15, PR
-#227), so #183 (CLI/LSP diagnostics and authoring support) can proceed.
-Presentation projection wire work remains explicitly gated: #182 (compiled wire
-data) waits until a first adapter MVP demonstrates projection end-to-end,
-because v0 wire rows are fixed-arity and should not freeze an unexercised
-shape. Relatedly, spec §12.2 now records that the v0 wire shape stays
-correctable — with coordinated writer/reader/fixture updates — until the first
-tagged release, after which any change requires a format or compatibility
+#227), and the CLI/LSP diagnostics and authoring support follow-up (#183) is
+closed (2026-06-16, PR #230). Milestone 7 is now closed: the LSP and text
+authoring readiness lane has schema-backed diagnostics, completion/hover,
+navigation/rename, code actions, stable ID handling, and scale evidence in
+place. Presentation projection wire work remains explicitly gated: #182
+(compiled wire data) waits until a first adapter MVP demonstrates projection
+end-to-end, because v0 wire rows are fixed-arity and should not freeze an
+unexercised shape. Relatedly, spec §12.2 now records that the v0 wire shape
+stays correctable — with coordinated writer/reader/fixture updates — until the
+first tagged release, after which any change requires a format or compatibility
 version bump.
 
 The metadata-domain design gate (#137), metadata value syntax issue (#138),
@@ -281,13 +284,13 @@ the broader presentation projection contract that lets metadata on lines,
 choices, blocks, and project inputs drive structured adapter-visible affordances
 without committing RPG-specific syntax or runtime semantics to core Recite.
 
-The projection implementation follow-ups remain split by surface. Issue #181 is
-closed and now provides schema-owned projection declarations and label-template
-extraction. Issue #183 can build the CLI/LSP diagnostics and authoring support
-on that schema surface. #182 remains gated on a first-adapter projection proof
-before it freezes projection declarations into self-contained wire data; #184
-follows that compiled-wire work with adapter conformance coverage for
-projection-capable adapters.
+The remaining projection implementation follow-ups stay split by surface. Issue
+#181 is closed and now provides schema-owned projection declarations and
+label-template extraction. Issue #183 is closed and surfaces those declarations
+through CLI schema diagnostics and LSP authoring support. #182 remains gated on
+a first-adapter projection proof before it freezes projection declarations into
+self-contained wire data; #184 follows that compiled-wire work with adapter
+conformance coverage for projection-capable adapters.
 
 The source-format page under #90 may now include final choice-availability
 wording for `requires=(...)` and `reason=...` alongside stable sections such as
