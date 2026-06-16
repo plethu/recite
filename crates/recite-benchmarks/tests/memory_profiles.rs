@@ -18,6 +18,8 @@ fn tiny_memory_profile_reports_core_size_metrics() -> Result<(), Box<dyn std::er
     assert!(fixture.project_bytes.sources > 0);
     assert!(fixture.project_bytes.schema > 0);
     assert!(fixture.project_bytes.runtime_fixture > 0);
+    assert_eq!(fixture.counts.locale_catalogs, 1);
+    assert!(fixture.project_bytes.locale_catalogs > 0);
     assert!(fixture.project_bytes.total >= fixture.project_bytes.sources);
     assert!(fixture.compiled_asset.messagepack_bytes > 0);
     assert_eq!(fixture.compiled_asset.blocks, 10);

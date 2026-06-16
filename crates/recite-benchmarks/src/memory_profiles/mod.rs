@@ -178,7 +178,7 @@ fn build_fixture_profile(
 }
 
 pub fn compiler_peak_child(fixture: BenchmarkFixture) -> BenchmarkResult<Option<u64>> {
-    let project = BenchmarkProject::load_fixture(fixture)?;
+    let project = BenchmarkProject::load_materialized_fixture(fixture)?;
     let compiler = CompilerProject::load(&project)?;
     let compiled = compiler.compile_with_schema()?;
     std::hint::black_box(compiled);
@@ -235,7 +235,7 @@ fn fixture_counts(
         source_files: project.source_files()?.len() as u64,
         schema_files: 1,
         runtime_fixtures: 1,
-        locale_catalogs: directory_file_count(&project.root().join("locale"))?,
+        locale_catalogs: directory_file_count(&project.root().join("locales"))?,
         recite_lines: u64::from(counts.lines),
         dialogue_lines: dialogue.lines.len() as u64,
         choices: u64::from(counts.choices),
@@ -266,7 +266,7 @@ fn project_byte_report(project: &BenchmarkProject) -> BenchmarkResult<ProjectByt
         .sum::<u64>();
     let schema_bytes = project.schema_file()?.source.len() as u64;
     let runtime_fixture_bytes = project.runtime_fixture_source()?.len() as u64;
-    let locale_catalog_bytes = directory_bytes(&project.root().join("locale"))?;
+    let locale_catalog_bytes = directory_bytes(&project.root().join("locales"))?;
     let total = source_bytes
         .saturating_add(schema_bytes)
         .saturating_add(runtime_fixture_bytes)
