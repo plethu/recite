@@ -141,6 +141,10 @@ growth rather than elapsed time. Keep these tools optional and external:
 Start with existing commands:
 
 ```bash
+cargo run -p recite-benchmarks --release --bin memory_profile_report -- \
+  --fixtures tiny,small,medium,large,epic,realistic:v1-pack \
+  --format markdown \
+  --output docs/benchmark-reports/issue-105-memory-profiles-known-limits.md
 cargo run -p recite-benchmarks --release --bin id_memory_report -- --scales tiny,small
 RECITE_BENCH_SCALES=medium cargo bench -p recite-benchmarks --bench lsp -- lsp/initial_index
 ```
@@ -156,9 +160,10 @@ RECITE_BENCH_SCALES=medium \
   cargo bench -p recite-benchmarks --bench compiler -- compiler/compile_with_schema
 ```
 
-Issue #105 owns release-facing memory profiles and known scale limits. Use this
-playbook to collect evidence for #105, but do not turn one local heap profile
-into a release limit.
+Issue #105 owns release-facing memory profiles and known scale limits. Keep
+`docs/benchmark-reports/issue-105-memory-profiles-known-limits.md` generated
+from `memory_profile_report`, and do not turn one local heap profile into a
+release limit.
 
 ## Surface-Specific Commands
 

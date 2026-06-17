@@ -25,6 +25,13 @@ impl BenchmarkProject {
         }
     }
 
+    pub fn load_materialized_fixture(fixture: BenchmarkFixture) -> BenchmarkResult<Self> {
+        match fixture {
+            BenchmarkFixture::Synthetic(scale) => Self::load_materialized_synthetic(scale),
+            BenchmarkFixture::RealisticV1Pack => Self::load_realistic_v1_pack(),
+        }
+    }
+
     fn load_synthetic(scale: BenchmarkScale) -> BenchmarkResult<Self> {
         let workspace = workspace_root();
         let profiles =
@@ -33,11 +40,9 @@ impl BenchmarkProject {
         let expected = read_summary(&workspace, scale)?;
 
         let root = if scale == BenchmarkScale::Tiny {
-            workspace.join("fixtures/synthetic/tiny")
+            synthetic_root(&workspace, scale)
         } else {
-            let output = workspace
-                .join("target/recite-benchmarks/generated")
-                .join(scale.as_str());
+            let output = synthetic_root(&workspace, scale);
             if output.exists() {
                 fs::remove_dir_all(&output)?;
             }
@@ -50,6 +55,25 @@ impl BenchmarkProject {
             }
             output
         };
+
+        verify_summary_files(&root, &expected)?;
+        Ok(Self {
+            fixture: BenchmarkFixture::Synthetic(scale),
+            root,
+            summary: ProjectSummary::Synthetic(expected),
+        })
+    }
+
+    fn load_materialized_synthetic(scale: BenchmarkScale) -> BenchmarkResult<Self> {
+        let workspace = workspace_root();
+        let expected = read_summary(&workspace, scale)?;
+        let root = synthetic_root(&workspace, scale);
+        if !root.exists() {
+            return Err(error(format!(
+                "generated `{scale}` fixture does not exist at `{}`; materialize it before measuring compiler peak RSS",
+                root.display()
+            )));
+        }
 
         verify_summary_files(&root, &expected)?;
         Ok(Self {
@@ -190,6 +214,16 @@ fn workspace_root() -> PathBuf {
         .and_then(Path::parent)
         .map(Path::to_path_buf)
         .unwrap_or_else(|| PathBuf::from("."))
+}
+
+fn synthetic_root(workspace: &Path, scale: BenchmarkScale) -> PathBuf {
+    if scale == BenchmarkScale::Tiny {
+        workspace.join("fixtures/synthetic/tiny")
+    } else {
+        workspace
+            .join("target/recite-benchmarks/generated")
+            .join(scale.as_str())
+    }
 }
 
 fn read_summary(workspace: &Path, scale: BenchmarkScale) -> BenchmarkResult<FixtureSummary> {
