@@ -32,6 +32,7 @@ pub mod memory_profiles;
 pub mod project;
 pub mod report;
 pub mod runtime;
+pub mod runtime_allocations;
 pub mod scale;
 
 pub use scale::{BenchmarkFixture, BenchmarkScale};
