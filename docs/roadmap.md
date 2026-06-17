@@ -30,7 +30,6 @@ These issues have no unmet dependencies.
 
 | Issue | Role | Unlocks |
 | --- | --- | --- |
-| #105 Memory profiles and known limits | scale proof | release known-limits docs |
 | #126 `recite bench` command | scale proof | user-facing benchmark reports |
 | #156 Compact ID storage switch | performance follow-up | reduced ID allocation pressure |
 | #166 Targeted compiler phase benchmarks | scale proof | algorithmic hot-spot visibility |
@@ -248,9 +247,9 @@ completion/hover, navigation/rename, code actions, and scale evidence in place.
 
 The benchmark suite (#73), trace counters (#75), benchmark smoke/regression
 policy (#74), measured ID small-string evaluation (#36), large/epic CLI stress
-checks (#104), realistic benchmark fixtures (#165), and profiling workflow
-(#204) are closed. The performance track can now move into memory and
-known-limit reporting (#105), the user-facing `recite bench` command (#126), the
+checks (#104), realistic benchmark fixtures (#165), profiling workflow (#204),
+and memory/known-limit reporting (#105, PR #232) are closed. The performance
+track can now move into the user-facing `recite bench` command (#126), the
 compact ID storage follow-up (#156), targeted compiler phase benchmarks (#166),
 runtime allocation/clone pressure measurement (#167), watch rebuild latency
 stress checks (#168), and comparative benchmark corpus design (#205). Those
