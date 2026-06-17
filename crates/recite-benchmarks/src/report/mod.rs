@@ -2,7 +2,7 @@ use std::collections::{BTreeMap, BTreeSet};
 use std::path::PathBuf;
 use std::time::{Duration, Instant};
 
-use serde::{Deserialize, Serialize};
+use serde::{Deserialize, Deserializer, Serialize};
 
 use crate::{BenchmarkFixture, BenchmarkResult, BenchmarkScale, error};
 
@@ -119,9 +119,33 @@ pub struct BuildMetadata {
     pub features: FeatureMetadata,
 }
 
-#[derive(Clone, Debug, Deserialize, Serialize)]
+#[derive(Clone, Debug, Serialize)]
 pub struct FeatureMetadata {
-    pub small_ids: bool,
+    pub id_storage: String,
+}
+
+impl<'de> Deserialize<'de> for FeatureMetadata {
+    fn deserialize<D>(deserializer: D) -> Result<Self, D::Error>
+    where
+        D: Deserializer<'de>,
+    {
+        #[derive(Deserialize)]
+        struct RawFeatureMetadata {
+            id_storage: Option<String>,
+            small_ids: Option<bool>,
+        }
+
+        let raw = RawFeatureMetadata::deserialize(deserializer)?;
+        let id_storage = raw.id_storage.unwrap_or_else(|| {
+            if raw.small_ids.unwrap_or(false) {
+                "compact_str"
+            } else {
+                "string"
+            }
+            .to_owned()
+        });
+        Ok(Self { id_storage })
+    }
 }
 
 #[derive(Clone, Debug, Deserialize, Serialize)]
@@ -208,7 +232,7 @@ pub fn build_bench_report(options: &BenchReportOptions) -> BenchmarkResult<Bench
         build: BuildMetadata {
             profile: build_profile().to_owned(),
             features: FeatureMetadata {
-                small_ids: cfg!(feature = "small-ids"),
+                id_storage: "compact_str".to_owned(),
             },
         },
         sample_count: samples,

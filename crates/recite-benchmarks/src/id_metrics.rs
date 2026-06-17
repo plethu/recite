@@ -119,11 +119,7 @@ pub fn runtime_fixture_id_metrics(fixture: &RuntimeFixture) -> IdMetricSet {
 
 #[must_use]
 pub const fn active_storage() -> &'static str {
-    if cfg!(feature = "small-ids") {
-        "compact_str"
-    } else {
-        "string"
-    }
+    "compact_str"
 }
 
 #[must_use]

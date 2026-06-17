@@ -14,6 +14,7 @@ fn tiny_report_includes_deterministic_operation_shape() -> Result<(), Box<dyn st
     )?;
 
     assert_eq!(report.generated_by, "recite bench");
+    assert_eq!(report.build.features.id_storage, "compact_str");
     assert_eq!(report.sample_count, 1);
     assert_eq!(report.selected_groups, [BenchGroup::Compiler]);
     let target = report.targets.first().expect("tiny target report");
@@ -106,6 +107,36 @@ fn baseline_comparison_attaches_matching_operation_deltas() -> Result<(), Box<dy
         delta.baseline_median_ns,
         baseline.targets[0].operations[0].summary.median_ns
     );
+    Ok(())
+}
+
+#[test]
+fn baseline_comparison_accepts_legacy_small_ids_metadata() -> Result<(), Box<dyn std::error::Error>>
+{
+    let baseline = build_bench_report(
+        &BenchReportOptions::new(BenchTarget::Fixtures(vec![BenchmarkFixture::Synthetic(
+            BenchmarkScale::Tiny,
+        )]))
+        .with_groups(vec![BenchGroup::Compiler])
+        .with_samples(1),
+    )?;
+    let mut baseline_json = serde_json::to_value(&baseline)?;
+    baseline_json["build"]["features"] = serde_json::json!({ "small_ids": false });
+    let legacy_baseline =
+        serde_json::from_value::<recite_benchmarks::report::BenchReport>(baseline_json)?;
+
+    assert_eq!(legacy_baseline.build.features.id_storage, "string");
+
+    let report = build_bench_report(
+        &BenchReportOptions::new(BenchTarget::Fixtures(vec![BenchmarkFixture::Synthetic(
+            BenchmarkScale::Tiny,
+        )]))
+        .with_groups(vec![BenchGroup::Compiler])
+        .with_samples(1)
+        .with_baseline(legacy_baseline),
+    )?;
+
+    assert!(report.targets[0].operations[0].baseline.is_some());
     Ok(())
 }
 

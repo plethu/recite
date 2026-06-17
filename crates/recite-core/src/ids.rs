@@ -1,17 +1,12 @@
 use std::{borrow::Borrow, fmt};
 
 use crate::CoreValueError;
-
-#[cfg(feature = "small-ids")]
-use compact_str::CompactString as IdStorage;
-
-#[cfg(not(feature = "small-ids"))]
-type IdStorage = String;
+use compact_str::CompactString;
 
 macro_rules! define_id {
     ($name:ident) => {
         #[derive(Clone, Debug, Eq, PartialEq, Hash, Ord, PartialOrd)]
-        pub struct $name(IdStorage);
+        pub struct $name(CompactString);
 
         impl $name {
             pub fn new(value: impl Into<String>) -> Result<Self, CoreValueError> {
@@ -22,7 +17,7 @@ macro_rules! define_id {
                     });
                 }
 
-                Ok(Self(IdStorage::from(value)))
+                Ok(Self(CompactString::from(value)))
             }
 
             #[must_use]
