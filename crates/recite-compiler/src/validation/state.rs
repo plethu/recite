@@ -6,9 +6,9 @@ use super::ids::collect_line_ids;
 use super::project::{collect_blocks, first_source_span, source_files_in_project_order};
 use crate::diagnostics;
 
-pub(super) struct Validator<'a> {
-    pub(super) source_files: Vec<&'a SourceFile>,
-    pub(super) diagnostics: Vec<Diagnostic>,
+pub(crate) struct Validator<'a> {
+    pub(crate) source_files: Vec<&'a SourceFile>,
+    pub(crate) diagnostics: Vec<Diagnostic>,
     pub(super) schema: Option<&'a ProjectSchema>,
     pub(super) blocks: BTreeMap<&'a str, BTreeSet<&'a str>>,
     pub(super) source_paths: BTreeMap<&'a str, SourceSpan>,
@@ -21,7 +21,7 @@ pub(super) struct Validator<'a> {
 }
 
 impl<'a> Validator<'a> {
-    pub(super) fn new(source_files: &'a [SourceFile], schema: Option<&'a ProjectSchema>) -> Self {
+    pub(crate) fn new(source_files: &'a [SourceFile], schema: Option<&'a ProjectSchema>) -> Self {
         let source_files = source_files_in_project_order(source_files);
         let blocks = collect_blocks(&source_files);
         let line_ids = collect_line_ids(&source_files);
@@ -35,6 +35,51 @@ impl<'a> Validator<'a> {
             block_ids: BTreeMap::new(),
             compiled_block_ids: BTreeMap::new(),
             line_ids,
+            localisable_ids: BTreeMap::new(),
+            first_default: None,
+            default_count: 0,
+        }
+    }
+    #[cfg(feature = "bench-support")]
+    pub(crate) fn for_block_reference_probe(source_files: &'a [SourceFile]) -> Self {
+        let source_files = source_files_in_project_order(source_files);
+        let blocks = collect_blocks(&source_files);
+        Self {
+            source_files,
+            blocks,
+            ..Self::empty_probe_state(None)
+        }
+    }
+    #[cfg(feature = "bench-support")]
+    pub(crate) fn for_localisable_id_probe(source_files: &'a [SourceFile]) -> Self {
+        let source_files = source_files_in_project_order(source_files);
+        Self {
+            source_files,
+            ..Self::empty_probe_state(None)
+        }
+    }
+    #[cfg(feature = "bench-support")]
+    pub(crate) fn for_markup_probe(
+        source_files: &'a [SourceFile],
+        schema: &'a ProjectSchema,
+    ) -> Self {
+        let source_files = source_files_in_project_order(source_files);
+        Self {
+            source_files,
+            ..Self::empty_probe_state(Some(schema))
+        }
+    }
+    #[cfg(feature = "bench-support")]
+    fn empty_probe_state(schema: Option<&'a ProjectSchema>) -> Self {
+        Self {
+            source_files: Vec::new(),
+            diagnostics: Vec::new(),
+            schema,
+            blocks: BTreeMap::new(),
+            source_paths: BTreeMap::new(),
+            block_ids: BTreeMap::new(),
+            compiled_block_ids: BTreeMap::new(),
+            line_ids: BTreeSet::new(),
             localisable_ids: BTreeMap::new(),
             first_default: None,
             default_count: 0,

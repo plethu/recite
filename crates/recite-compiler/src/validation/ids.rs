@@ -59,7 +59,7 @@ impl<'a> Validator<'a> {
                 .push(diagnostics::unknown_choice_echo_line(choice, line_id));
         }
     }
-    pub(super) fn validate_reference(
+    pub(crate) fn validate_reference(
         &mut self,
         source_file: &'a SourceFile,
         target: &'a DivertTarget,

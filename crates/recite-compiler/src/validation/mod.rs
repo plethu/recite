@@ -7,7 +7,7 @@ mod markup;
 mod metadata;
 mod metadata_domains;
 mod spans;
-mod state;
+pub(crate) mod state;
 mod statements;
 mod values;
 

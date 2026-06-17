@@ -80,13 +80,31 @@ fn build_fixture_report(
         }
     }
 
+    let mut counts = fixture_counts(&project)?;
+    if groups
+        .iter()
+        .any(|group| matches!(group, BenchGroup::Compiler))
+    {
+        let compiled_asset_bytes = match &compiled {
+            Some(compiled) => compiled.asset().messagepack.len() as u64,
+            None => compiler_project
+                .as_ref()
+                .ok_or_else(|| error("compiler project was not loaded"))?
+                .compile_with_schema()?
+                .asset()
+                .messagepack
+                .len() as u64,
+        };
+        counts.compiled_asset_bytes = Some(compiled_asset_bytes);
+    }
+
     Ok(BenchTargetReport {
         target: project.fixture_label().to_owned(),
         kind: BenchTargetKind::Fixture,
         metadata: TargetMetadata {
             fixture: Some(project.fixture_label().to_owned()),
             project_root: None,
-            counts: fixture_counts(&project)?,
+            counts,
             notes: fixture_notes(project.fixture()),
         },
         operations,

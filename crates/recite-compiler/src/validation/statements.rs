@@ -114,6 +114,9 @@ impl<'a> Validator<'a> {
             },
         );
 
+        self.validate_line_localisable_id(line);
+    }
+    pub(crate) fn validate_line_localisable_id(&mut self, line: &'a Line) {
         let SourceId::Frozen { .. } = &line.source_id else {
             self.diagnostics.push(match &line.source_id {
                 SourceId::Missing => diagnostics::missing_line_id(line),
@@ -169,6 +172,17 @@ impl<'a> Validator<'a> {
         }
         self.validate_choice_availability_reason(choice);
 
+        self.validate_choice_localisable_id(choice);
+
+        if let Some(target) = &choice.target {
+            self.validate_span(source_file, &target.span, "choice target");
+            self.validate_reference(source_file, &target.target, &target.span);
+        } else {
+            self.diagnostics
+                .push(diagnostics::missing_choice_target(choice));
+        }
+    }
+    pub(crate) fn validate_choice_localisable_id(&mut self, choice: &'a Choice) {
         if let SourceId::Frozen { .. } = &choice.source_id {
             let Some(id) = choice.id.as_ref() else {
                 return;
@@ -192,14 +206,6 @@ impl<'a> Validator<'a> {
                 }
                 SourceId::Frozen { .. } => unreachable!("frozen ID matched earlier"),
             });
-        }
-
-        if let Some(target) = &choice.target {
-            self.validate_span(source_file, &target.span, "choice target");
-            self.validate_reference(source_file, &target.target, &target.span);
-        } else {
-            self.diagnostics
-                .push(diagnostics::missing_choice_target(choice));
         }
     }
     pub(super) fn validate_divert(&mut self, source_file: &'a SourceFile, divert: &'a Divert) {

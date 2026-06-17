@@ -57,6 +57,10 @@ mod pot;
 mod validation;
 mod wire;
 
+#[cfg(feature = "bench-support")]
+#[doc(hidden)]
+pub mod bench_support;
+
 pub use compile::{
     CompileError, CompileInput, CompileOptions, CompileReport, CompiledAssetOutput, compile_inputs,
     compile_inputs_with_schema,
