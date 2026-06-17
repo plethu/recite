@@ -257,6 +257,40 @@ fn tiny_compiler_smoke_builds_asset() -> Result<(), Box<dyn std::error::Error>> 
 }
 
 #[test]
+fn tiny_compiler_phase_probes_are_clean_and_count_expected_items()
+-> Result<(), Box<dyn std::error::Error>> {
+    let project = BenchmarkProject::load(BenchmarkScale::Tiny)?;
+    let compiler = CompilerProject::load(&project)?;
+    let source_files = compiler.source_files();
+
+    let references = compiler::resolve_block_references(&source_files);
+    assert_eq!(references.checked_items, 22);
+    assert!(references.diagnostics.is_empty());
+
+    let ids = compiler::validate_localisable_id_uniqueness(&source_files);
+    assert_eq!(ids.checked_items, 120);
+    assert!(ids.diagnostics.is_empty());
+
+    let markup = compiler::validate_markup(&source_files, compiler.schema());
+    assert_eq!(markup.checked_items, 120);
+    assert!(markup.diagnostics.is_empty());
+    Ok(())
+}
+
+#[test]
+fn tiny_compiled_asset_serialization_probe_matches_compiler_output()
+-> Result<(), Box<dyn std::error::Error>> {
+    let project = BenchmarkProject::load(BenchmarkScale::Tiny)?;
+    let compiler = CompilerProject::load(&project)?;
+    let compiled = compiler.compile_with_schema()?;
+    let bytes = compiler::serialize_compiled_asset(&compiled)?;
+
+    assert_eq!(bytes, compiled.asset().messagepack);
+    assert!(!bytes.is_empty());
+    Ok(())
+}
+
+#[test]
 fn tiny_id_metrics_cover_source_compiled_and_runtime_fixture_ids()
 -> Result<(), Box<dyn std::error::Error>> {
     let project = BenchmarkProject::load(BenchmarkScale::Tiny)?;

@@ -49,13 +49,14 @@ RECITE_BENCH_SCALES=tiny cargo bench -p recite-benchmarks --bench runtime
 RECITE_BENCH_SCALES=tiny cargo bench -p recite-benchmarks --bench lsp
 ```
 
-Use larger scales only after the tiny or small result identifies the candidate
-path:
+Use `RECITE_BENCH_SCALES=tiny,small` as the quick smoke path when validating a
+compiler benchmark change locally. Move to medium or large only after the small
+run identifies a candidate path or the issue is explicitly about scale shape:
 
 ```bash
+RECITE_BENCH_SCALES=tiny,small cargo bench -p recite-benchmarks --bench compiler
 RECITE_BENCH_SCALES=medium cargo bench -p recite-benchmarks --bench compiler
-RECITE_BENCH_SCALES=medium cargo bench -p recite-benchmarks --bench runtime
-RECITE_BENCH_SCALES=medium cargo bench -p recite-benchmarks --bench lsp
+RECITE_BENCH_SCALES=large cargo bench -p recite-benchmarks --bench compiler
 ```
 
 For quick build/execution smoke, use:
@@ -167,14 +168,24 @@ release limit.
 
 ## Surface-Specific Commands
 
-Compiler investigations usually start with validation, schema validation,
-reference resolution, and full compilation:
+Compiler investigations usually start with validation, targeted compiler phase
+checks, serialization size, and full compilation:
 
 ```bash
-RECITE_BENCH_SCALES=tiny cargo bench -p recite-benchmarks --bench compiler -- compiler/validate
-RECITE_BENCH_SCALES=tiny cargo bench -p recite-benchmarks --bench compiler -- compiler/validate_with_schema
-RECITE_BENCH_SCALES=tiny cargo bench -p recite-benchmarks --bench compiler -- compiler/compile_with_schema
+RECITE_BENCH_SCALES=tiny,small cargo bench -p recite-benchmarks --bench compiler -- compiler/validate
+RECITE_BENCH_SCALES=tiny,small cargo bench -p recite-benchmarks --bench compiler -- compiler/validate_with_schema
+RECITE_BENCH_SCALES=tiny,small cargo bench -p recite-benchmarks --bench compiler -- compiler/block_reference_resolution
+RECITE_BENCH_SCALES=tiny,small cargo bench -p recite-benchmarks --bench compiler -- compiler/id_uniqueness
+RECITE_BENCH_SCALES=tiny,small cargo bench -p recite-benchmarks --bench compiler -- compiler/markup_validation
+RECITE_BENCH_SCALES=tiny,small cargo bench -p recite-benchmarks --bench compiler -- compiler/pot_extraction_pressure
+RECITE_BENCH_SCALES=tiny,small cargo bench -p recite-benchmarks --bench compiler -- compiler/compiled_asset_serialization
+RECITE_BENCH_SCALES=tiny,small cargo bench -p recite-benchmarks --bench compiler -- compiler/compile_with_schema
 ```
+
+Use medium or large for those targeted compiler checks when the smoke run points
+at ID uniqueness, block reference resolution, markup validation, POT extraction,
+or asset serialization. Do not add hard pass/fail thresholds from local timing
+runs; record the fixture selector, command, commit, and machine profile instead.
 
 Runtime investigations usually start with traversal, choice selection,
 condition dispatch, effect emission, localisation lookup, and session

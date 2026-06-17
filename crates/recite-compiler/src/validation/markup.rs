@@ -24,7 +24,7 @@ struct OpenTag<'a> {
 }
 
 impl<'a> Validator<'a> {
-    pub(super) fn validate_markup(&mut self, source_text: &'a SourceText) {
+    pub(crate) fn validate_markup(&mut self, source_text: &'a SourceText) {
         let Some(schema) = self.schema else {
             return;
         };

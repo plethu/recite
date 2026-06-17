@@ -60,6 +60,7 @@ fn fixture_count_metadata_makes_scale_shape_concrete() -> Result<(), Box<dyn std
     assert_eq!(counts.choices, 20);
     assert_eq!(counts.generated_words, Some(1080));
     assert!(counts.project_bytes.expect("project bytes") > 0);
+    assert!(counts.compiled_asset_bytes.expect("asset bytes") > 0);
     Ok(())
 }
 

@@ -1,6 +1,6 @@
 use recite_compiler::{
     CompileInput, CompileOptions, CompiledAssetOutput, PotDocument, ValidationReport,
-    compile_inputs_with_schema, extract_pot_with_schema, validate_source_files,
+    bench_support, compile_inputs_with_schema, extract_pot_with_schema, validate_source_files,
     validate_source_files_with_schema,
 };
 use recite_core::{
@@ -133,6 +133,23 @@ pub fn validate_with_schema(
     validate_source_files_with_schema(source_files, schema)
 }
 
+pub fn resolve_block_references(source_files: &[SourceFile]) -> bench_support::CompilerPhaseProbe {
+    bench_support::resolve_block_references(source_files)
+}
+
+pub fn validate_localisable_id_uniqueness(
+    source_files: &[SourceFile],
+) -> bench_support::CompilerPhaseProbe {
+    bench_support::validate_localisable_id_uniqueness(source_files)
+}
+
+pub fn validate_markup(
+    source_files: &[SourceFile],
+    schema: &ProjectSchema,
+) -> bench_support::CompilerPhaseProbe {
+    bench_support::validate_markup(source_files, schema)
+}
+
 pub fn compile_with_schema(project: &CompilerProject) -> BenchmarkResult<CompiledProject> {
     project.compile_with_schema()
 }
@@ -148,6 +165,10 @@ pub fn extract_pot(project: &CompilerProject) -> BenchmarkResult<PotDocument> {
     report
         .catalog
         .ok_or_else(|| error("POT extraction did not produce a catalog"))
+}
+
+pub fn serialize_compiled_asset(project: &CompiledProject) -> BenchmarkResult<Vec<u8>> {
+    bench_support::serialize_compiled_asset(&project.asset.dialogue).map_err(Into::into)
 }
 
 fn lower_sources(inputs: &[CompileInput]) -> BenchmarkResult<Vec<SourceFile>> {
