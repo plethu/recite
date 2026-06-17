@@ -1,6 +1,6 @@
 //! Shared support for Recite Criterion benchmark targets.
 //!
-//! This unpublished crate contains reusable loaders, fixture drivers, and scale
+//! This crate contains reusable loaders, fixture drivers, and scale
 //! selection helpers for the workspace benchmark targets. It is documented so
 //! maintainers can extend the benchmark suite without duplicating compiler and
 //! runtime setup code.

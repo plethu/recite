@@ -21,7 +21,7 @@ ratatui.workspace = true
 recite-core.workspace = true
 recite-parser.workspace = true
 recite-compiler.workspace = true
-recite-benchmarks = { path = "../recite-benchmarks" }
+recite-benchmarks = { version = "0.0.1", path = "../recite-benchmarks" }
 recite-runtime.workspace = true
 serde.workspace = true
 serde_json.workspace = true

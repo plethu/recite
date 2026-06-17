@@ -176,7 +176,12 @@ impl ProjectRootBenchProject {
             counts.effects += dialogue.effects.len() as u64;
             counts.conditions += dialogue.condition_availability_reasons.len() as u64;
             for source in &dialogue.sources {
-                source_paths.insert(project_root.join(&source.path));
+                let resolved_source =
+                    project_source_candidates(project_root, &asset_path, &source.path)
+                        .into_iter()
+                        .find(|path| path.is_file())
+                        .unwrap_or_else(|| project_root.join(&source.path));
+                source_paths.insert(resolved_source);
             }
             assets.push(ProjectAsset { bytes });
         }
@@ -206,4 +211,39 @@ impl ProjectRootBenchProject {
             counts,
         })
     }
+}
+
+fn project_source_candidates(
+    project_root: &Path,
+    asset_path: &Path,
+    source_path: &str,
+) -> Vec<PathBuf> {
+    let source_path = Path::new(source_path);
+    if source_path.is_absolute() {
+        return vec![source_path.to_owned()];
+    }
+
+    let mut candidates = Vec::new();
+    let mut ancestor = asset_path.parent();
+    while let Some(directory) = ancestor {
+        let candidate = directory.join(source_path);
+        if !candidates.iter().any(|existing| existing == &candidate) {
+            candidates.push(candidate);
+        }
+
+        if directory == project_root {
+            break;
+        }
+        ancestor = directory.parent();
+    }
+
+    let project_candidate = project_root.join(source_path);
+    if !candidates
+        .iter()
+        .any(|existing| existing == &project_candidate)
+    {
+        candidates.push(project_candidate);
+    }
+
+    candidates
 }

@@ -178,8 +178,6 @@ block = "start"
     let output = run(recite()
         .arg("bench")
         .arg(temp.path())
-        .arg("--group")
-        .arg("compiler")
         .arg("--format")
         .arg("json")
         .arg("--samples")
@@ -194,6 +192,61 @@ block = "start"
         "project_manifest_load"
     );
     assert_eq!(report["targets"][0]["metadata"]["counts"]["blocks"], 1);
+}
+
+#[test]
+fn bench_project_root_resolves_sources_relative_to_asset_ancestors() {
+    let temp = TempDir::new().expect("tempdir");
+    let source = write_recite(
+        temp.path(),
+        "Dialogue/Source/dialogue.recite",
+        project_source(),
+    );
+    let asset = compile_project_asset(
+        temp.path(),
+        &source,
+        "Dialogue/Compiled/dialogue.recitec",
+        None,
+    );
+    let asset_name = asset
+        .strip_prefix(temp.path())
+        .expect("asset under temp root")
+        .to_string_lossy()
+        .replace('\\', "/");
+    write_project_manifest(
+        temp.path(),
+        &format!(
+            r#"[project]
+content_set = "bench-smoke"
+version = "1"
+
+[[scenes]]
+id = "start"
+asset = "{asset_name}"
+block = "start"
+"#
+        ),
+    );
+
+    let output = run(recite()
+        .arg("bench")
+        .arg(temp.path())
+        .arg("--format")
+        .arg("json")
+        .arg("--samples")
+        .arg("1"));
+
+    output.assert_success().assert_stderr("");
+    let report: serde_json::Value =
+        serde_json::from_slice(&output.stdout).expect("benchmark report JSON");
+    assert_eq!(
+        report["targets"][0]["metadata"]["counts"]["source_files"],
+        1
+    );
+    assert_eq!(
+        report["targets"][0]["operations"][2]["operation"],
+        "project_source_parse"
+    );
 }
 
 #[test]

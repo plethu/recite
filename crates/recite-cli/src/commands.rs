@@ -232,7 +232,7 @@ fn runtime_command_with_options(
 
 fn bench_command(args: BenchArgs, stdout: &mut dyn Write) -> Result<(), CliError> {
     let target = bench_target(&args.target, &args.scale)?;
-    let groups = bench_groups(&args.group)?;
+    let groups = bench_groups_for_target(&target, &args.group)?;
     let mut options = BenchReportOptions::new(target)
         .with_groups(groups)
         .with_samples(args.samples);
@@ -318,6 +318,16 @@ fn bench_groups(groups: &[String]) -> Result<Vec<BenchGroup>, CliError> {
         }
     }
     Ok(selected)
+}
+
+fn bench_groups_for_target(
+    target: &BenchTarget,
+    groups: &[String],
+) -> Result<Vec<BenchGroup>, CliError> {
+    if groups.is_empty() && matches!(target, BenchTarget::ProjectRoot(_)) {
+        return Ok(vec![BenchGroup::Compiler]);
+    }
+    bench_groups(groups)
 }
 
 #[derive(Clone, Copy, Debug, Eq, PartialEq)]
