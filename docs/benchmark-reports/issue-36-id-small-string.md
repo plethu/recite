@@ -2,6 +2,10 @@
 
 Date: 2026-06-01
 
+This is an archived evaluation report from before #156 made compact ID storage
+the default. Commands below that use `--features small-ids` reproduce the
+original branch shape only; current `main` no longer has that feature.
+
 ## Decision
 
 Recommend a follow-up implementation issue to switch the shared `recite-core`

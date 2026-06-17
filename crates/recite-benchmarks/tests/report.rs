@@ -111,6 +111,36 @@ fn baseline_comparison_attaches_matching_operation_deltas() -> Result<(), Box<dy
 }
 
 #[test]
+fn baseline_comparison_accepts_legacy_small_ids_metadata() -> Result<(), Box<dyn std::error::Error>>
+{
+    let baseline = build_bench_report(
+        &BenchReportOptions::new(BenchTarget::Fixtures(vec![BenchmarkFixture::Synthetic(
+            BenchmarkScale::Tiny,
+        )]))
+        .with_groups(vec![BenchGroup::Compiler])
+        .with_samples(1),
+    )?;
+    let mut baseline_json = serde_json::to_value(&baseline)?;
+    baseline_json["build"]["features"] = serde_json::json!({ "small_ids": false });
+    let legacy_baseline =
+        serde_json::from_value::<recite_benchmarks::report::BenchReport>(baseline_json)?;
+
+    assert_eq!(legacy_baseline.build.features.id_storage, "string");
+
+    let report = build_bench_report(
+        &BenchReportOptions::new(BenchTarget::Fixtures(vec![BenchmarkFixture::Synthetic(
+            BenchmarkScale::Tiny,
+        )]))
+        .with_groups(vec![BenchGroup::Compiler])
+        .with_samples(1)
+        .with_baseline(legacy_baseline),
+    )?;
+
+    assert!(report.targets[0].operations[0].baseline.is_some());
+    Ok(())
+}
+
+#[test]
 fn timing_summary_sorts_samples_for_stable_summary() {
     let summary = TimingSummary::from_samples(vec![30, 10, 20]);
     assert_eq!(summary.samples_ns, [10, 20, 30]);
