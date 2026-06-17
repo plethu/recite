@@ -14,6 +14,7 @@ fn tiny_report_includes_deterministic_operation_shape() -> Result<(), Box<dyn st
     )?;
 
     assert_eq!(report.generated_by, "recite bench");
+    assert_eq!(report.build.features.id_storage, "compact_str");
     assert_eq!(report.sample_count, 1);
     assert_eq!(report.selected_groups, [BenchGroup::Compiler]);
     let target = report.targets.first().expect("tiny target report");

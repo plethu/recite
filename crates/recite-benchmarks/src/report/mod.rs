@@ -121,7 +121,7 @@ pub struct BuildMetadata {
 
 #[derive(Clone, Debug, Deserialize, Serialize)]
 pub struct FeatureMetadata {
-    pub small_ids: bool,
+    pub id_storage: String,
 }
 
 #[derive(Clone, Debug, Deserialize, Serialize)]
@@ -208,7 +208,7 @@ pub fn build_bench_report(options: &BenchReportOptions) -> BenchmarkResult<Bench
         build: BuildMetadata {
             profile: build_profile().to_owned(),
             features: FeatureMetadata {
-                small_ids: cfg!(feature = "small-ids"),
+                id_storage: "compact_str".to_owned(),
             },
         },
         sample_count: samples,

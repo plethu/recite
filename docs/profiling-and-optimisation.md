@@ -230,12 +230,13 @@ Optimisations in these paths must preserve deterministic traversal, stable IDs,
 structured diagnostics, and typed effect requests. Runtime code still must not
 perform game-side effects.
 
-## Future `recite bench` Mapping
+## `recite bench` Mapping
 
-Issue #126 owns the user-facing `recite bench` command. Until it lands, all
-commands in this playbook use `cargo bench`, helper scripts, or `recite trace`.
+Issue #126 added the user-facing `recite bench` command. Maintainers should
+still use `cargo bench`, helper scripts, and low-level profilers for focused
+investigation; `recite bench` is the stable project and fixture report surface.
 
-The intended mapping for #126 is:
+The command maps the common report flows to:
 
 ```bash
 recite bench <fixture-or-project> --group runtime --scale medium --format json --output target/recite-benchmarks/runtime.json
@@ -251,7 +252,7 @@ It should not make profiling tools linked project dependencies.
 ## Issue Links
 
 - #105 owns memory profiles and release known-limit reporting.
-- #126 owns `recite bench`.
+- #126 closed the user-facing `recite bench` report surface.
 - #166 owns targeted compiler phase benchmark expansion.
 - #167 owns runtime allocation and clone-pressure measurement.
 - #168 owns watch rebuild latency stress checks.

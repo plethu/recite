@@ -281,6 +281,7 @@ fn tiny_id_metrics_cover_source_compiled_and_runtime_fixture_ids()
 fn id_storage_report_keeps_id_wrappers_string_sized() {
     let report = id_storage_report();
 
+    assert_eq!(report.active_storage, "compact_str");
     assert_eq!(report.id_size_bytes, report.string_size_bytes);
     assert_eq!(
         report.compact_inline_capacity_bytes,
