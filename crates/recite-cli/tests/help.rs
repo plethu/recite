@@ -23,6 +23,7 @@ fn help_covers_issue_25_commands_and_options() {
         "run",
         "trace",
         "play",
+        "bench",
     ] {
         output.assert_stdout_contains(command);
     }

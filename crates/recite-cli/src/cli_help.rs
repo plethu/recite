@@ -169,6 +169,12 @@ fn localise_subcommand(command: &mut clap::Command, messages: &Messages) {
                 messages,
             );
         }
+        "bench" => {
+            set_about(
+                command,
+                "Generate benchmark scale reports for fixtures or a project root".to_owned(),
+            );
+        }
         _ => {}
     }
 }

@@ -88,6 +88,11 @@ pub(crate) enum CliError {
     BlockingEffectNeedsAcknowledgement {
         effect: String,
     },
+    Bench {
+        message: String,
+    },
+    Benchmark(recite_benchmarks::BenchmarkError),
+    BenchJson(serde_json::Error),
     TraceJson(serde_json::Error),
     TuiConfigRead {
         path: PathBuf,
@@ -250,6 +255,9 @@ impl std::fmt::Display for CliError {
                 formatter,
                 "blocking effect `{effect}` requires [effects].auto_ack_blocking = true in the fixture"
             ),
+            Self::Bench { message } => formatter.write_str(message),
+            Self::Benchmark(error) => write!(formatter, "{error}"),
+            Self::BenchJson(error) => write!(formatter, "failed to read or write benchmark JSON: {error}"),
             Self::TraceJson(error) => write!(formatter, "failed to encode trace JSON: {error}"),
             Self::TuiConfigRead { path, source } => write!(
                 formatter,
@@ -376,5 +384,11 @@ impl From<recite_compiler::CompileError> for CliError {
 impl From<recite_runtime::DialogueError> for CliError {
     fn from(error: recite_runtime::DialogueError) -> Self {
         Self::Runtime(error)
+    }
+}
+
+impl From<recite_benchmarks::BenchmarkError> for CliError {
+    fn from(error: recite_benchmarks::BenchmarkError) -> Self {
+        Self::Benchmark(error)
     }
 }

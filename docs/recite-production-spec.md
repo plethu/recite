@@ -2987,13 +2987,34 @@ cargo bench
 recite bench <fixture-or-project>
 ```
 
+`cargo bench` is the maintainer microbenchmark harness. It may use Criterion
+warmup, sampling, plots, local profiler integration, and maintainer-only target
+selection without treating its output format as a product contract.
+
+`recite bench` is the stable product-facing report surface. It exists for
+adoption evidence, release notes, CI-readable JSON, and local comparison
+against an explicitly supplied baseline snapshot. It must not replace or weaken
+the maintainer benchmark harness.
+
 The CLI benchmark command should support:
 
 - JSON output for CI comparison;
 - Markdown summary output for release notes;
-- baseline comparison against a checked-in or downloaded benchmark snapshot;
+- baseline comparison against a checked-in, downloaded, or otherwise local
+  benchmark snapshot;
 - filtering by benchmark group;
 - fixture scale selection.
+
+Synthetic names such as `tiny`, `small`, `medium`, `large`, and `epic` are
+fixture IDs, not self-explanatory performance claims. Every user-facing report
+must include concrete project-shape counts such as source files, blocks,
+dialogue lines, choices, effects, conditions, generated words, and relevant
+byte sizes where available.
+
+Timing deltas are evidence for the named run profile that produced them. They
+are not absolute performance guarantees, cross-machine promises, or hard
+release gates unless a separate regression policy explicitly defines a baseline,
+runner profile, threshold, and enforcement point.
 
 ### 19.2 Benchmark Fixtures
 

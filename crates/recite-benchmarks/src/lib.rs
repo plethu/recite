@@ -30,6 +30,7 @@ pub mod id_metrics;
 pub mod lsp;
 pub mod memory_profiles;
 pub mod project;
+pub mod report;
 pub mod runtime;
 pub mod scale;
 
@@ -53,6 +54,8 @@ pub enum BenchmarkError {
     Runtime(#[from] recite_runtime::DialogueError),
     #[error(transparent)]
     Toml(#[from] toml::de::Error),
+    #[error(transparent)]
+    Json(#[from] serde_json::Error),
 }
 
 pub type BenchmarkResult<T> = Result<T, BenchmarkError>;

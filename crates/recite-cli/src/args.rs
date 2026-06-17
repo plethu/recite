@@ -29,6 +29,7 @@ pub(crate) enum Command {
     Run(RuntimeArgs),
     Trace(TraceArgs),
     Play(PlayArgs),
+    Bench(BenchArgs),
 }
 
 #[derive(Debug, Args)]
@@ -131,4 +132,27 @@ pub(crate) struct PlayArgs {
     pub(crate) dialogue_locale: Option<String>,
     #[arg(long)]
     pub(crate) dialogue_catalog: Vec<String>,
+}
+
+#[derive(Clone, Copy, Debug, Eq, PartialEq, clap::ValueEnum)]
+pub(crate) enum BenchFormat {
+    Json,
+    Markdown,
+}
+
+#[derive(Debug, Args)]
+pub(crate) struct BenchArgs {
+    pub(crate) target: String,
+    #[arg(long)]
+    pub(crate) scale: Vec<String>,
+    #[arg(long)]
+    pub(crate) group: Vec<String>,
+    #[arg(long, value_enum, default_value_t = BenchFormat::Markdown)]
+    pub(crate) format: BenchFormat,
+    #[arg(long)]
+    pub(crate) output: Option<PathBuf>,
+    #[arg(long)]
+    pub(crate) baseline: Option<PathBuf>,
+    #[arg(long, default_value_t = 3)]
+    pub(crate) samples: usize,
 }
