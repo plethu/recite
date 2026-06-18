@@ -1,6 +1,7 @@
 ---
 title: Godot
 description: Placeholder for Godot adapter setup and refresh workflow.
+draft: true
 ---
 
 This page will document Godot adapter setup once the adapter implementation is available.

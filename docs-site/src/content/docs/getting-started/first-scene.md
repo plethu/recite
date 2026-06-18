@@ -4,8 +4,8 @@ description: Write, validate, compile, play, and headlessly run a minimal Recite
 ---
 
 This walkthrough takes one scene from source to a deterministic headless run
-using only the CLI — no engine, no adapter. Every command below is the real
-invocation against the file shown.
+using only the CLI. It does not need an engine or adapter. Every command below is
+the real invocation against the file shown.
 
 ## Write the scene
 
@@ -38,7 +38,7 @@ Each line and choice header is a `label@anchor` pair: the label
 frozen ID that localisation and saves key on. When you author with the LSP you
 write headers without anchors and an on-save code action fills them in; when
 hand-writing, any unique 20-hex value works. The `! deferred` statement is a
-typed effect request — the runtime never executes it, it hands it to your game
+typed effect request. The runtime never executes it; it hands it to your game
 when the scene ends.
 
 ## Validate and compile
@@ -48,8 +48,8 @@ recite validate dialogue/crossroads.recite
 recite compile dialogue/crossroads.recite -o crossroads.recitec
 ```
 
-`validate` exits non-zero with structured diagnostics if the scene is
-malformed — wrong indentation, duplicate anchors, a divert to a missing block.
+`validate` exits non-zero with structured diagnostics if the scene is malformed:
+wrong indentation, duplicate anchors, or a divert to a missing block.
 `compile` writes the deterministic MessagePack asset the runtime consumes.
 
 ## Play it interactively
@@ -97,8 +97,8 @@ snapshot tests and CI.
 recite extract dialogue/crossroads.recite
 ```
 
-This produces gettext POT entries whose `msgctxt` is the anchor — so editing
-prose or labels later never invalidates a translation.
+This produces gettext POT entries whose `msgctxt` is the anchor. Editing prose or
+labels later never invalidates a translation.
 
 From here: the
 [source format reference](/reference/source-format/) covers the full statement

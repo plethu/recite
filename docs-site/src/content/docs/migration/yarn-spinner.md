@@ -86,5 +86,5 @@ recite compile --output build/dialogue.recitec dialogue/dock.recite
 
 - [Importer Boundaries](/migration/importer-boundaries/)
 - [Source Format](/reference/source-format/)
-- [Schema](/reference/schema/)
-- [Localisation](/guides/localisation/)
+- [Production specification](https://codeberg.org/plethu/recite/src/branch/main/docs/recite-production-spec.md)
+- [CLI](/reference/cli/)

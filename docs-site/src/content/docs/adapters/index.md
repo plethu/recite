@@ -1,6 +1,7 @@
 ---
 title: Adapters
 description: Entry point for engine adapter documentation.
+draft: true
 ---
 
 Adapter pages should explain how Recite's engine-independent runtime contract is integrated into game engines.

@@ -1,6 +1,7 @@
 ---
 title: Schema
 description: Placeholder for schema manifest and validation reference.
+draft: true
 ---
 
 This page will document schema manifests, validation behavior, and metadata domains.

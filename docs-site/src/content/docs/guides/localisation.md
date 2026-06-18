@@ -1,6 +1,7 @@
 ---
 title: Localisation
 description: Guide placeholder for stable IDs, POT extraction, and dialogue catalogs.
+draft: true
 ---
 
 This guide will cover stable IDs, extraction, translator context, and dialogue locale preview rules.

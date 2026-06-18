@@ -1159,7 +1159,7 @@ Validation must reject:
 
 ### 7.1 Effect Model
 
-The previous term “mutation” is too narrow. The production system should use **effects**.
+The previous term "mutation" is too narrow. The production system should use **effects**.
 
 Effects are typed intents emitted by dialogue. The runtime never executes them.
 
@@ -1221,7 +1221,7 @@ Blocking effects are yielded immediately and pause dialogue traversal until expl
 
 Use cases:
 
-- “Here, I’ll mark it on your map.”
+- "Here, I'll mark it on your map."
 - wait for camera pan to complete;
 - wait for item grant animation;
 - open a UI overlay and resume after close.
@@ -3542,9 +3542,7 @@ established dialogue tooling.
 
 ## 24. Design Summary
 
-The core value is not “branching dialogue.” Many tools already do that.
-
-The core value is a deterministic dialogue/effect protocol:
+Recite's core value is a deterministic dialogue/effect protocol:
 
 - authored in a small domain language that names narrative structure directly;
 - validated before runtime;

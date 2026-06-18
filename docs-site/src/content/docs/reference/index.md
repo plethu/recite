@@ -1,6 +1,7 @@
 ---
 title: Reference
 description: Entry point for Recite reference material.
+draft: true
 ---
 
 Reference pages should provide stable entry points for CLI, Rust API, benchmarks, source format, schema, and adapter contract material.

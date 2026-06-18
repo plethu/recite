@@ -86,6 +86,6 @@ recite compile --output build/dialogue.recitec dialogue/start.recite
 ## Related docs
 
 - [Importer Boundaries](/migration/importer-boundaries/)
-- [Godot Adapter](/adapters/godot/)
+- [Engine Adapter Contract](https://codeberg.org/plethu/recite/src/branch/main/docs/engine-adapter-contract.md)
 - [Source Format](/reference/source-format/)
-- [Testing Dialogue](/guides/testing-dialogue/)
+- [CLI](/reference/cli/)

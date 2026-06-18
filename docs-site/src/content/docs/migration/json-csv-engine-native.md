@@ -88,6 +88,6 @@ recite compile --output build/dialogue.recitec dialogue/market.recite
 ## Related docs
 
 - [Importer Boundaries](/migration/importer-boundaries/)
-- [Schema](/reference/schema/)
-- [Testing Dialogue](/guides/testing-dialogue/)
-- [Headless CLI Example](/examples/headless-cli/)
+- [Production specification](https://codeberg.org/plethu/recite/src/branch/main/docs/recite-production-spec.md)
+- [CLI](/reference/cli/)
+- [First Scene](/getting-started/first-scene/)

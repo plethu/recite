@@ -88,6 +88,6 @@ recite compile --output build/dialogue.recitec dialogue/lift.recite
 ## Related docs
 
 - [Importer Boundaries](/migration/importer-boundaries/)
-- [Godot Adapter](/adapters/godot/)
-- [Schema](/reference/schema/)
-- [Authoring Loop](/guides/authoring-loop/)
+- [Engine Adapter Contract](https://codeberg.org/plethu/recite/src/branch/main/docs/engine-adapter-contract.md)
+- [Production specification](https://codeberg.org/plethu/recite/src/branch/main/docs/recite-production-spec.md)
+- [CLI](/reference/cli/)

@@ -1,6 +1,7 @@
 ---
 title: Release Notes
 description: Entry point for release notes and compatibility notes.
+draft: true
 ---
 
 Release note pages should capture user-visible changes, compatibility boundaries, and known limits as releases approach.

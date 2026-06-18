@@ -90,5 +90,5 @@ recite compile --output build/dialogue.recitec dialogue/tower.recite
 
 - [Importer Boundaries](/migration/importer-boundaries/)
 - [Source Format](/reference/source-format/)
-- [Testing Dialogue](/guides/testing-dialogue/)
+- [CLI](/reference/cli/)
 - [CLI](/reference/cli/)

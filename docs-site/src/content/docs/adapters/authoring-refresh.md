@@ -1,6 +1,7 @@
 ---
 title: Authoring Refresh
 description: Placeholder for adapter asset refresh and active-session behavior.
+draft: true
 ---
 
 This page will compare adapter refresh policies and document known reload limits.

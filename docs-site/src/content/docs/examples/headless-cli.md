@@ -1,6 +1,7 @@
 ---
 title: Headless CLI Example
 description: Placeholder for validating, compiling, running, and tracing dialogue from the CLI.
+draft: true
 ---
 
 This example will demonstrate a headless CLI workflow for validation, compilation, run, and trace commands.

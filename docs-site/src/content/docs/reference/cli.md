@@ -18,8 +18,8 @@ message.
 
 ### `recite validate <PATHS>...`
 
-Validates dialogue source — syntax, structure, references — without writing
-compiled output.
+Validates dialogue source without writing compiled output: syntax, structure, and
+references.
 
 ### `recite check-ids <PATHS>...`
 
@@ -55,8 +55,8 @@ Wire this into CI to catch stale assets.
 
 ### `recite watch <PROJECT_ROOT>`
 
-Watches project inputs and rebuilds manifest assets on change — the authoring
-loop companion to editor diagnostics.
+Watches project inputs and rebuilds manifest assets on change. This is the
+authoring loop companion to editor diagnostics.
 
 ## Localisation
 
@@ -76,7 +76,7 @@ fixture entry fails with the exact key the prompt expects.
 
 ### `recite trace [--metrics] --block <BLOCK> --fixture <FIXTURE> <ASSET>`
 
-The same headless run emitted as deterministic JSON — the default format for
+Emits the same headless run as deterministic JSON, the default format for
 snapshot tests, conformance checks, and CI. `--metrics` adds instrumentation,
 including timing fields that are not snapshot-stable.
 

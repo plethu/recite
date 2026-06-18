@@ -67,6 +67,5 @@ recite compile --output build/dialogue.recitec dialogue/pier_intro.recite
 ## Related docs
 
 - [Source Format](/reference/source-format/)
-- [Schema](/reference/schema/)
+- [Production specification](https://codeberg.org/plethu/recite/src/branch/main/docs/recite-production-spec.md)
 - [CLI](/reference/cli/)
-- [Authoring Loop](/guides/authoring-loop/)

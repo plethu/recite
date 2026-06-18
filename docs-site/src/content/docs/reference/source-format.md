@@ -216,8 +216,5 @@ depend on stable identifiers.
 ## Related docs
 
 - [Production specification](https://codeberg.org/plethu/recite/src/branch/main/docs/recite-production-spec.md)
-- [Schema reference](/reference/schema/)
 - [CLI reference](/reference/cli/)
-- [Authoring loop](/guides/authoring-loop/)
-- [Localisation guide](/guides/localisation/)
 - [Migration overview](/migration/)

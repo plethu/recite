@@ -84,6 +84,6 @@ recite compile --output build/dialogue.recitec dialogue/gate_check.recite
 ## Related docs
 
 - [Importer Boundaries](/migration/importer-boundaries/)
-- [Unity Adapter](/adapters/unity/)
-- [Schema](/reference/schema/)
-- [Authoring Loop](/guides/authoring-loop/)
+- [Engine Adapter Contract](https://codeberg.org/plethu/recite/src/branch/main/docs/engine-adapter-contract.md)
+- [Production specification](https://codeberg.org/plethu/recite/src/branch/main/docs/recite-production-spec.md)
+- [CLI](/reference/cli/)
