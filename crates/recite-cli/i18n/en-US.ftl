@@ -16,6 +16,7 @@ cli-help-command-watch = Watch project inputs and rebuild manifest assets
 cli-help-command-run = Run a compiled asset headlessly with fixture data
 cli-help-command-trace = Emit deterministic JSON for a headless fixture run
 cli-help-command-play = Play a compiled asset interactively
+cli-help-command-bench = Generate benchmark scale reports for fixtures or a project root
 cli-help-arg-paths = One or more .recite files, or directories containing .recite files
 cli-help-arg-schema = Generated schema manifest JSON
 cli-help-arg-project-root = Project root containing recite.project.toml
@@ -32,6 +33,21 @@ cli-help-arg-dialogue-locale = Dialogue content locale to preview through the ru
 cli-help-arg-dialogue-catalog = Dialogue gettext catalog mapping in LOCALE=PATH form. Repeatable
 cli-help-arg-help = Print help
 cli-help-arg-version = Print version
+
+explain-code = Code: {$code}
+explain-category = Category: {$category}
+explain-meaning = Meaning: {$meaning}
+explain-common-causes = Common causes:
+explain-how-to-fix = How to fix:
+explain-list-item = - {$item}
+
+watch-building = watch: building {$path}
+watch-waiting-for-changes = watch: waiting for changes
+watch-rebuilding = watch: rebuilding
+watch-build-succeeded = watch: build succeeded ({$count} assets)
+watch-build-failed-waiting = watch: build failed; waiting for changes
+watch-build-failed = watch: build failed: {$error}
+watch-event-error = watch: watcher event error: {$error}
 
 play-tui-starting = starting recite play TUI; use --ui plain for line-oriented output
 

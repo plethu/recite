@@ -6,6 +6,7 @@ use std::str::FromStr;
 use crate::args::{
     BenchArgs, BenchFormat, Command, CompileArgs, ExplainArgs, ExtractArgs, RuntimeArgs, TraceArgs,
 };
+use crate::i18n::{Messages, MsgId};
 use crate::diagnostics::{report_diagnostics, report_targeted_diagnostics};
 use crate::dialogue_locale::LoadedDialoguePreview;
 use crate::error::CliError;
@@ -35,6 +36,7 @@ pub(crate) fn run_command(
     command: Command,
     stdout: &mut dyn Write,
     stderr: &mut dyn Write,
+    messages: &Messages,
 ) -> Result<(), CliError> {
     match command {
         Command::Validate(args) => {
@@ -80,8 +82,8 @@ pub(crate) fn run_command(
                 .then_some(())
                 .ok_or(CliError::Diagnostics)
         }
-        Command::Explain(args) => explain_command(args, stdout),
-        Command::Watch(args) => run_watch_command(args, stderr),
+        Command::Explain(args) => explain_command(args, stdout, messages),
+        Command::Watch(args) => run_watch_command(args, stderr, messages),
         Command::Run(args) => runtime_command(args, RuntimeOutput::Run, stdout),
         Command::Trace(args) => trace_command(args, stdout),
         Command::Play(args) => run_play_command(args, stdout, stderr),
@@ -89,7 +91,11 @@ pub(crate) fn run_command(
     }
 }
 
-fn explain_command(args: ExplainArgs, stdout: &mut dyn Write) -> Result<(), CliError> {
+fn explain_command(
+    args: ExplainArgs,
+    stdout: &mut dyn Write,
+    messages: &Messages,
+) -> Result<(), CliError> {
     let code =
         DiagnosticCode::new(args.code.clone()).map_err(|_| CliError::DiagnosticCodeMalformed {
             suggestion: diagnostic_code_suggestion(&args.code),
@@ -101,16 +107,28 @@ fn explain_command(args: ExplainArgs, stdout: &mut dyn Write) -> Result<(), CliE
             code: args.code.clone(),
         })?;
 
-    writeln!(stdout, "Code: {}", explanation.code.as_str())?;
-    writeln!(stdout, "Category: {}", explanation.category.as_str())?;
-    writeln!(stdout, "Meaning: {}", explanation.meaning)?;
-    writeln!(stdout, "Common causes:")?;
+    writeln!(
+        stdout,
+        "{}",
+        messages.format(MsgId::ExplainCode, [("code", explanation.code.as_str().to_owned())])
+    )?;
+    writeln!(
+        stdout,
+        "{}",
+        messages.format(MsgId::ExplainCategory, [("category", explanation.category.as_str().to_owned())])
+    )?;
+    writeln!(
+        stdout,
+        "{}",
+        messages.format(MsgId::ExplainMeaning, [("meaning", explanation.meaning.to_owned())])
+    )?;
+    writeln!(stdout, "{}", messages.text(MsgId::ExplainCommonCauses))?;
     for cause in explanation.common_causes {
-        writeln!(stdout, "- {cause}")?;
+        writeln!(stdout, "{}", messages.format(MsgId::ExplainListItem, [("item", cause.to_string())]))?;
     }
-    writeln!(stdout, "How to fix:")?;
+    writeln!(stdout, "{}", messages.text(MsgId::ExplainHowToFix))?;
     for remediation in explanation.remediation {
-        writeln!(stdout, "- {remediation}")?;
+        writeln!(stdout, "{}", messages.format(MsgId::ExplainListItem, [("item", remediation.to_string())]))?;
     }
     Ok(())
 }

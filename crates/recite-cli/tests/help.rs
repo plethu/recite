@@ -121,6 +121,13 @@ locale = "en-GB"
     play.assert_stdout_contains("--dialogue-locale <DIALOGUE_LOCALE>");
     play.assert_stdout_contains("-h, --help");
 
+    let bench = run(recite()
+        .arg("bench")
+        .arg("--help")
+        .env("RECITE_CONFIG", &config));
+    bench.assert_success().assert_stderr("");
+    bench.assert_stdout_contains("Generate benchmark scale reports for fixtures or a project root");
+
     let help_compile = run(recite()
         .arg("help")
         .arg("compile")

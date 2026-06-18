@@ -8,6 +8,7 @@ use notify::Event;
 use super::PROJECT_MANIFEST_FILE;
 use super::inputs::{is_generated_output_path, is_project_recite_source};
 use crate::error::CliError;
+use crate::i18n::{Messages, MsgId};
 
 const DEBOUNCE: Duration = Duration::from_millis(250);
 
@@ -20,6 +21,7 @@ pub(super) fn drain_debounce(
     receiver: &mpsc::Receiver<notify::Result<Event>>,
     state: &WatchState,
     stderr: &mut dyn Write,
+    messages: &Messages,
 ) -> Result<(), CliError> {
     let mut deadline = Instant::now() + DEBOUNCE;
     loop {
@@ -37,7 +39,11 @@ pub(super) fn drain_debounce(
                 }
             }
             Ok(Err(error)) => {
-                writeln!(stderr, "watch: watcher event error: {error}")?;
+                writeln!(
+                    stderr,
+                    "{}",
+                    messages.format(MsgId::WatchEventError, [("error", error.to_string())])
+                )?;
             }
             Err(mpsc::RecvTimeoutError::Timeout) => return Ok(()),
             Err(mpsc::RecvTimeoutError::Disconnected) => {

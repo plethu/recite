@@ -56,7 +56,7 @@ pub fn run(args: impl IntoIterator<Item = OsString>) -> ExitCode {
     let mut stderr = io::stderr().lock();
     let error_messages = error_messages_for_command(&cli.command);
 
-    match commands::run_command(cli.command, &mut stdout, &mut stderr) {
+    match commands::run_command(cli.command, &mut stdout, &mut stderr, &error_messages) {
         Ok(()) => SUCCESS,
         Err(CliError::Diagnostics) => ExitCode::from(1),
         Err(error) => {
@@ -68,12 +68,13 @@ pub fn run(args: impl IntoIterator<Item = OsString>) -> ExitCode {
 }
 
 fn error_messages_for_command(command: &Command) -> Messages {
-    match command {
-        Command::Play(args) => TuiSettings::load(args.keymap)
-            .and_then(|settings| Messages::load(&settings.locale))
-            .unwrap_or_else(|_| default_messages()),
-        _ => default_messages(),
-    }
+    let keymap = match command {
+        Command::Play(args) => args.keymap,
+        _ => None,
+    };
+    TuiSettings::load(keymap)
+        .and_then(|settings| Messages::load(&settings.locale))
+        .unwrap_or_else(|_| default_messages())
 }
 
 // Invariant: the embedded default UI catalog is bundled with the CLI binary.

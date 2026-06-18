@@ -258,3 +258,22 @@ fn check_metadata_reports_projection_schema_diagnostics_with_spans() {
     output.assert_stderr_contains("projection-schema.json:15:");
     output.assert_stderr_contains("unknown projection query function 'missing'");
 }
+
+#[test]
+fn watch_with_bad_ui_locale_falls_back_to_default() {
+    let temp = TempDir::new().expect("tempdir");
+    let bad_config = write_file(
+        temp.path(),
+        "config.toml",
+        "[ui]\nlocale = \"not a locale\"\n",
+    );
+
+    let output = run(recite()
+        .arg("watch")
+        .arg(temp.path().join("nonexistent"))
+        .env("RECITE_CONFIG", &bad_config));
+
+    output.assert_failure();
+    output.assert_stderr_contains("error:");
+    output.assert_stderr_contains("does not exist");
+}

@@ -7,6 +7,7 @@ use notify::{RecursiveMode, Watcher, recommended_watcher};
 use crate::args::WatchArgs;
 use crate::error::CliError;
 use crate::fs::display_path;
+use crate::i18n::{Messages, MsgId};
 
 mod build;
 mod events;
@@ -20,7 +21,11 @@ mod tests;
 
 pub(super) const PROJECT_MANIFEST_FILE: &str = "recite.project.toml";
 
-pub(crate) fn run_watch_command(args: WatchArgs, stderr: &mut dyn Write) -> Result<(), CliError> {
+pub(crate) fn run_watch_command(
+    args: WatchArgs,
+    stderr: &mut dyn Write,
+    messages: &Messages,
+) -> Result<(), CliError> {
     if !args.project_root.is_dir() {
         return Err(CliError::MissingPath(args.project_root));
     }
@@ -42,12 +47,15 @@ pub(crate) fn run_watch_command(args: WatchArgs, stderr: &mut dyn Write) -> Resu
     let mut state = WatchState::new(project_root);
     writeln!(
         stderr,
-        "watch: building {}",
-        display_path(&state.project_root)
+        "{}",
+        messages.format(
+            MsgId::WatchBuilding,
+            [("path", display_path(&state.project_root))]
+        )
     )?;
     let result = build_once(&mut state, stderr);
-    report_build_result(stderr, result)?;
-    writeln!(stderr, "watch: waiting for changes")?;
+    report_build_result(stderr, result, messages)?;
+    writeln!(stderr, "{}", messages.text(MsgId::WatchWaitingForChanges))?;
 
     loop {
         let event = receiver.recv().map_err(|_| CliError::Watch {
@@ -56,7 +64,11 @@ pub(crate) fn run_watch_command(args: WatchArgs, stderr: &mut dyn Write) -> Resu
         let event = match event {
             Ok(event) => event,
             Err(error) => {
-                writeln!(stderr, "watch: watcher event error: {error}")?;
+                writeln!(
+                    stderr,
+                    "{}",
+                    messages.format(MsgId::WatchEventError, [("error", error.to_string())])
+                )?;
                 continue;
             }
         };
@@ -65,26 +77,38 @@ pub(crate) fn run_watch_command(args: WatchArgs, stderr: &mut dyn Write) -> Resu
             continue;
         }
 
-        drain_debounce(&receiver, &state, stderr)?;
-        writeln!(stderr, "watch: rebuilding")?;
+        drain_debounce(&receiver, &state, stderr, messages)?;
+        writeln!(stderr, "{}", messages.text(MsgId::WatchRebuilding))?;
         let result = build_once(&mut state, stderr);
-        report_build_result(stderr, result)?;
+        report_build_result(stderr, result, messages)?;
     }
 }
 
 fn report_build_result(
     stderr: &mut dyn Write,
     result: Result<BuildStatus, CliError>,
+    messages: &Messages,
 ) -> Result<(), CliError> {
     match result {
         Ok(BuildStatus::Fresh { asset_count }) => {
-            writeln!(stderr, "watch: build succeeded ({asset_count} assets)")?;
+            writeln!(
+                stderr,
+                "{}",
+                messages.format(
+                    MsgId::WatchBuildSucceeded,
+                    [("count", asset_count.to_string())]
+                )
+            )?;
         }
         Ok(BuildStatus::Diagnostics) => {
-            writeln!(stderr, "watch: build failed; waiting for changes")?;
+            writeln!(stderr, "{}", messages.text(MsgId::WatchBuildFailedWaiting))?;
         }
         Err(error) => {
-            writeln!(stderr, "watch: build failed: {error}")?;
+            writeln!(
+                stderr,
+                "{}",
+                messages.format(MsgId::WatchBuildFailed, [("error", error.to_string())])
+            )?;
         }
     }
     Ok(())
