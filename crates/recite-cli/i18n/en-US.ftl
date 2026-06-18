@@ -122,6 +122,8 @@ tui-transcript-deferred = deferred
 tui-transcript-end = end
 tui-transcript-completed = completed
 tui-transcript-deferred-effects = deferred effects
+tui-transcript-effect-text = {$mode} {$function} {$args}
+tui-transcript-deferred-effect-text = {$function} {$args}
 
 tui-help-title = Help
 tui-help-key-heading = Key

@@ -7,7 +7,7 @@ use ratatui::{
 };
 use recite_core::{ChoiceId, CompiledDialogue};
 use recite_runtime::{
-    ConditionExpectedType, ConditionQuery, ConditionValue, DialogueChoice, DialogueEffectMode,
+    ConditionExpectedType, ConditionQuery, ConditionValue, DialogueChoice,
     DialogueEffectRequest, DialogueLine,
 };
 
@@ -263,7 +263,14 @@ impl<B: Backend> PlayUiAdapter for TuiPlayUi<'_, B> {
         self.push(
             TuiTranscriptKind::Effect,
             Some(effect.id.as_str().to_owned()),
-            format!("{} {} {}", effect.mode, effect.function, args),
+            self.messages.format(
+                MsgId::TuiTranscriptEffectText,
+                [
+                    ("mode", effect.mode.to_string()),
+                    ("function", effect.function.clone()),
+                    ("args", args.clone()),
+                ],
+            ),
         )
     }
 
@@ -313,11 +320,12 @@ impl<B: Backend> PlayUiAdapter for TuiPlayUi<'_, B> {
                 self.state.transcript.push(TuiTranscriptEntry {
                     kind: TuiTranscriptKind::Deferred,
                     id: Some(effect.id.as_str().to_owned()),
-                    text: format!(
-                        "{} {} {}",
-                        DialogueEffectMode::Deferred,
-                        effect.function,
-                        format_effect_arguments(&effect.args)
+                    text: self.messages.format(
+                        MsgId::TuiTranscriptDeferredEffectText,
+                        [
+                            ("function", effect.function.clone()),
+                            ("args", format_effect_arguments(&effect.args)),
+                        ],
                     ),
                 });
             }

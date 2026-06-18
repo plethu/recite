@@ -163,6 +163,8 @@ message_ids! {
     TuiTranscriptDeferred => "tui-transcript-deferred",
     TuiTranscriptEnd => "tui-transcript-end",
     TuiTranscriptCompleted => "tui-transcript-completed",
+    TuiTranscriptEffectText => "tui-transcript-effect-text",
+    TuiTranscriptDeferredEffectText => "tui-transcript-deferred-effect-text",
     TuiTranscriptDeferredEffects => "tui-transcript-deferred-effects",
     TuiHelpTitle => "tui-help-title",
     TuiHelpKeyHeading => "tui-help-key-heading",
