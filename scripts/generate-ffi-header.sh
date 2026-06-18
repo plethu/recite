@@ -54,8 +54,40 @@ fi
 header="$repo_root/include/recite.h"
 mkdir -p "$repo_root/include"
 
-crate_version="$(awk -F ' *= *' '/^version/ { gsub(/"/, "", $2); print $2; exit }' \
-  "$repo_root/crates/recite-ffi/Cargo.toml")"
+crate_version="$(awk -F ' *= *' '
+  /^version[[:space:]]*=/ {
+    gsub(/"/, "", $2)
+    print $2
+    exit
+  }
+  /^version\.workspace[[:space:]]*=/ {
+    workspace = 1
+  }
+  END {
+    if (workspace) {
+      exit 42
+    }
+  }
+' "$repo_root/crates/recite-ffi/Cargo.toml")" || {
+  status="$?"
+  if [[ "$status" != "42" ]]; then
+    exit "$status"
+  fi
+  crate_version="$(awk -F ' *= *' '
+    /^\[workspace\.package\]/ {
+      in_workspace_package = 1
+      next
+    }
+    /^\[/ {
+      in_workspace_package = 0
+    }
+    in_workspace_package && /^version[[:space:]]*=/ {
+      gsub(/"/, "", $2)
+      print $2
+      exit
+    }
+  ' "$repo_root/Cargo.toml")"
+}
 IFS=. read -r crate_major crate_minor crate_patch extra_version <<<"$crate_version"
 if [[ -z "${crate_major:-}" || -z "${crate_minor:-}" || -z "${crate_patch:-}" || -n "${extra_version:-}" ]]; then
   echo "unable to parse recite-ffi crate version: $crate_version" >&2

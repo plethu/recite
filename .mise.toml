@@ -1,0 +1,6 @@
+[tools]
+rust = "1.96.0"
+pnpm = "11.3.0"
+
+[env]
+RUST_BACKTRACE = "1"
