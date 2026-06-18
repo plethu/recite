@@ -7,8 +7,8 @@ use ratatui::{
 };
 use recite_core::{ChoiceId, CompiledDialogue};
 use recite_runtime::{
-    ConditionExpectedType, ConditionQuery, ConditionValue, DialogueChoice,
-    DialogueEffectRequest, DialogueLine,
+    ConditionExpectedType, ConditionQuery, ConditionValue, DialogueChoice, DialogueEffectRequest,
+    DialogueLine,
 };
 
 use crate::dialogue_locale::DialogueTraversalPreview;

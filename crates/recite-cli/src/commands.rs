@@ -6,7 +6,6 @@ use std::str::FromStr;
 use crate::args::{
     BenchArgs, BenchFormat, Command, CompileArgs, ExplainArgs, ExtractArgs, RuntimeArgs, TraceArgs,
 };
-use crate::i18n::{Messages, MsgId};
 use crate::diagnostics::{report_diagnostics, report_targeted_diagnostics};
 use crate::dialogue_locale::LoadedDialoguePreview;
 use crate::error::CliError;
@@ -15,6 +14,7 @@ use crate::fs::{
     read_compile_inputs_for_output, read_compile_inputs_from_files, reject_output_input_alias,
     validate_inputs, validate_project, write_staged,
 };
+use crate::i18n::{Messages, MsgId};
 use crate::play::run_play_command;
 use crate::runtime_fixture::{
     RuntimeFixtureOptions, dialogue_preview_from_fixture, execute_runtime_fixture,
@@ -110,25 +110,42 @@ fn explain_command(
     writeln!(
         stdout,
         "{}",
-        messages.format(MsgId::ExplainCode, [("code", explanation.code.as_str().to_owned())])
+        messages.format(
+            MsgId::ExplainCode,
+            [("code", explanation.code.as_str().to_owned())]
+        )
     )?;
     writeln!(
         stdout,
         "{}",
-        messages.format(MsgId::ExplainCategory, [("category", explanation.category.as_str().to_owned())])
+        messages.format(
+            MsgId::ExplainCategory,
+            [("category", explanation.category.as_str().to_owned())]
+        )
     )?;
     writeln!(
         stdout,
         "{}",
-        messages.format(MsgId::ExplainMeaning, [("meaning", explanation.meaning.to_owned())])
+        messages.format(
+            MsgId::ExplainMeaning,
+            [("meaning", explanation.meaning.to_owned())]
+        )
     )?;
     writeln!(stdout, "{}", messages.text(MsgId::ExplainCommonCauses))?;
     for cause in explanation.common_causes {
-        writeln!(stdout, "{}", messages.format(MsgId::ExplainListItem, [("item", cause.to_string())]))?;
+        writeln!(
+            stdout,
+            "{}",
+            messages.format(MsgId::ExplainListItem, [("item", cause.to_string())])
+        )?;
     }
     writeln!(stdout, "{}", messages.text(MsgId::ExplainHowToFix))?;
     for remediation in explanation.remediation {
-        writeln!(stdout, "{}", messages.format(MsgId::ExplainListItem, [("item", remediation.to_string())]))?;
+        writeln!(
+            stdout,
+            "{}",
+            messages.format(MsgId::ExplainListItem, [("item", remediation.to_string())])
+        )?;
     }
     Ok(())
 }
