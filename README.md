@@ -5,15 +5,8 @@
 > **Pre-release.** APIs and on-disk formats are in flux while the v1 shape
 > settles. External code contributions aren't open yet; see
 > [`CONTRIBUTING.md`](CONTRIBUTING.md). Issues, questions, and design feedback
-> are welcome, especially from real authoring, localisation, runtime, or tooling
+> are welcome, especially from authoring, localisation, runtime, or tooling
 > work.
-
-## Repository
-
-The canonical repository, issues, and pull requests live on
-[Codeberg](https://codeberg.org/plethu/recite). The
-[GitHub mirror](https://github.com/plethu/recite) is read-only, for
-discoverability.
 
 ## What it is
 
@@ -33,7 +26,7 @@ What the core gives you:
 - deterministic traversal across replay, save/load, and tests;
 - pure conditions and typed effect requests, with no game-side mutation inside the runtime;
 - stable IDs, localisation extraction, and validation before runtime;
-- editor tooling that helps authors without owning the workflow;
+- editor tooling that helps authors without taking over the workflow;
 - structured runtime output, with headless tests, traces, and fixtures.
 
 ## Why
@@ -49,8 +42,8 @@ dialogue runtime responsible for game state. It is the tool I wanted while
 authoring dialogue for my own game, where stable IDs, localisation, fixtures, and
 typed integration mattered more than another embedded scripting layer.
 
-Inspired by the narrative ambition on show in games like 1000xRESIST, Disco
-Elysium, Citizen Sleeper, Planescape: Torment, TES III: Morrowind, and Pillars of
+Inspired by the narrative ambition of games like 1000xRESIST, Disco Elysium,
+Citizen Sleeper, Planescape: Torment, TES III: Morrowind, and Pillars of
 Eternity.
 
 ## Example
@@ -83,44 +76,26 @@ The source format reads like prose with rails:
 -> END
 ```
 
-Metadata values use source-aware scalar syntax: bare identifier-like tokens are
-symbols (`portrait=grin`, `sfx=door_close`), while quoted values are string
-literals (`caption="Door closes"`).
-
 This adapts a public-domain exchange from [*Alice's Adventures in
 Wonderland*](https://www.gutenberg.org/ebooks/11).
 
 `mark_thread` is a schema-declared effect request for the game to observe and
 handle. The runtime never executes it.
 
-## Direction
+## Repository
 
-The production spec, [`docs/recite-production-spec.md`](docs/recite-production-spec.md),
-covers the source format, schema, compiler, runtime, CLI, editor tooling, and
-the engine adapters that keep the core dialogue contract intact.
+Canonical repo, issues, and pull requests live on
+[Codeberg](https://codeberg.org/plethu/recite); the
+[GitHub mirror](https://github.com/plethu/recite) is read-only.
 
 ## Documentation
 
-The Astro/Starlight documentation site lives in
-[`docs-site`](docs-site). It is the game-developer-facing manual and examples
-surface; Rustdoc remains the Rust API reference.
-
-The initial docs-site target is local static output only. No hosted deployment is
-configured yet.
-
-Run the docs site locally with:
-
-```bash
-pnpm install
-pnpm docs:dev
-```
-
-Build and check it with:
-
-```bash
-pnpm docs:check
-pnpm docs:build
-```
+The production spec,
+[`docs/recite-production-spec.md`](docs/recite-production-spec.md), covers the
+source format, schema, compiler, runtime, CLI, editor tooling, and the engine
+adapters. The [`docs-site`](docs-site) Astro/Starlight build is the
+game-developer-facing manual; Rustdoc remains the Rust API reference. It
+currently produces local static output only, with no hosted deployment yet.
 
 ## AI usage
 
