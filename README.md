@@ -1,54 +1,34 @@
-# Recite
+# recite
 
-> Dialogue tooling for narrative-driven games.
+> Words are events, they do things, change things.
+>
+> — Ursula K. Le Guin, "Telling Is Listening," *The Wave in the Mind* (2004)
 
-> **Pre-release.** APIs and on-disk formats are in flux while the v1 shape
-> settles. External code contributions aren't open yet; see
-> [`CONTRIBUTING.md`](CONTRIBUTING.md). Issues, questions, and design feedback
-> are welcome, especially from authoring, localisation, runtime, or tooling
-> work.
-
-## What it is
-
-Recite is a dialogue compiler, runtime, and toolchain for narrative-driven
-games. It keeps authored conversation separate from game logic, then hands the
+`recite` is a dialogue compiler, runtime, and toolchain for narrative-driven
+games. It keeps authored conversation separate from game logic and hands the
 game structured output to observe and handle: lines, choices, and typed effect
-requests. It's written in Rust, with Godot and Bevy as the first adapter targets
-and an engine-independent dialogue contract underneath.
+requests. The core is engine-agnostic, with per-engine adapters layered on top.
 
-A scene is made of prose, speakers, choices, guards, fallthrough, localisation
-IDs, and effect requests. Usually those are scattered across editor state, engine
-scripts, and prose conventions; Recite keeps them in one plain-text format you
-own and can inspect, validate, translate, and test.
+> **Pre-release.** APIs and on-disk formats are in flux while v1 settles. Code
+> contributions aren't open yet (see [`CONTRIBUTING.md`](CONTRIBUTING.md)), but
+> issues, questions, and design feedback are welcome, especially from authoring,
+> localisation, runtime, or tooling work.
 
-What the core gives you:
+## Where it fits
 
-- deterministic traversal across replay, save/load, and tests;
-- pure conditions and typed effect requests, with no game-side mutation inside the runtime;
-- stable IDs, localisation extraction, and validation before runtime;
-- editor tooling that helps authors without taking over the workflow;
-- structured runtime output, with headless tests, traces, and fixtures.
+Reach for Recite when you author narrative dialogue and want it kept apart from
+engine logic. A scene holds prose, speakers, choices, guards,
+fallthrough, localisation IDs, and effect requests in one plain-text format you
+can inspect, validate, translate, and test, instead of spreading them across
+editor state and engine scripts.
 
-## Why
-
-Dialogue tools such as Yarn Spinner, ink, and engine-native editors all make
-different tradeoffs around scripting, editor ownership, localisation, and runtime
-integration. Recite's tradeoff is strict boundaries: dialogue is validated before
-runtime, conditions are pure queries, and effects are typed requests handled by
-the game.
-
-That gives narrative content the same kind of checks as code without making the
-dialogue runtime responsible for game state. It is the tool I wanted while
-authoring dialogue for my own game, where stable IDs, localisation, fixtures, and
-typed integration mattered more than another embedded scripting layer.
-
-Inspired by the narrative ambition of games like 1000xRESIST, Disco Elysium,
-Citizen Sleeper, Planescape: Torment, TES III: Morrowind, and Pillars of
-Eternity.
+The runtime is narrow. Traversal is deterministic across replay, save/load, and
+tests; conditions are pure queries; effects are typed, schema-checked requests.
+It never mutates game state or executes those effects; it emits them as
+structured output for the game to handle, alongside lines and choices.
+Validation catches malformed content before any engine runs.
 
 ## Example
-
-The source format reads like prose with rails:
 
 ```text
 # A referenceable block of prose.
@@ -82,6 +62,19 @@ Wonderland*](https://www.gutenberg.org/ebooks/11).
 `mark_thread` is a schema-declared effect request for the game to observe and
 handle. The runtime never executes it.
 
+## Why it exists
+
+Yarn Spinner, ink, and engine-native editors each make different tradeoffs
+around scripting, editor ownership, localisation, and runtime integration.
+Recite's bet is strict boundaries, so narrative content gets the same checks as
+code without the dialogue runtime taking on game state.
+
+I built it while authoring dialogue for my own game, where stable IDs,
+localisation, fixtures, and typed integration mattered more than another
+embedded scripting layer. Inspired by the narrative ambition of games like
+1000xRESIST, Disco Elysium, Citizen Sleeper, Planescape: Torment, TES III:
+Morrowind, and Pillars of Eternity.
+
 ## Repository
 
 Canonical repo, issues, and pull requests live on
@@ -92,14 +85,21 @@ Canonical repo, issues, and pull requests live on
 
 The production spec,
 [`docs/recite-production-spec.md`](docs/recite-production-spec.md), covers the
-source format, schema, compiler, runtime, CLI, editor tooling, and the engine
-adapters. The [`docs-site`](docs-site) Astro/Starlight build is the
-game-developer-facing manual; Rustdoc remains the Rust API reference. It
-currently produces local static output only, with no hosted deployment yet.
+source format, schema, compiler, runtime, CLI, editor tooling, and engine
+adapters. The [`docs-site`](docs-site) Starlight build is the developer-facing
+manual (local output only for now); Rustdoc is the API reference.
 
 ## AI usage
 
-Agentic AI tools are part of the development workflow: drafting, implementation,
-refactoring, and review. Direction, architecture, taste, and final review stay
-human-led. Recite is a deterministic dialogue toolchain, and it isn't pursuing
+AI tools assist development: drafting, implementation, and review. Direction,
+architecture, and final review stay human-led. Recite does not pursue
 AI-authored dialogue features.
+
+## License
+
+Licensed under either of:
+
+- Apache License, Version 2.0
+- MIT license
+
+at your option.
