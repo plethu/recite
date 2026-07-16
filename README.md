@@ -13,6 +13,18 @@ requests. The core is engine-agnostic, with per-engine adapters layered on top.
 > contributions aren't open yet (see [`CONTRIBUTING.md`](CONTRIBUTING.md)), but
 > issues, questions, and design feedback are welcome, especially from authoring,
 > localisation, runtime, or tooling work.
+>
+> **Status (2026-07).** I've been taking a short break from active work to spend
+> time on smaller projects —
+> [keepsake](https://codeberg.org/plethu/keepsake),
+> [gatekeep](https://codeberg.org/plethu/gatekeep), and
+> [tend](https://codeberg.org/plethu/tend) (coming to open source soon). The
+> project was/is getting complicated and ambitious enough that I wanted a
+> breather to improve at Rust, day-to-day development workflow, and open-source
+> library publishing. I'm planning on shifting my main focus back to this
+> project in the coming weeks/~month or so. Aiming for a v1 release by the end
+> of 2026; more detail is in the pinned
+> [status issue](https://codeberg.org/plethu/recite/issues/238).
 
 ## Where it fits
 
