@@ -6,13 +6,15 @@ usage() {
 Usage:
   check-project-gates.sh [repo-root]
 
-Runs Recite's canonical local project gates:
+Runs Recite's Rust and adapter project gates (the full local suite is
+scripts/verify.sh or `mise run verify`):
   1. scripts/check-test-organization.sh
   2. scripts/generate-ffi-header.sh
   3. scripts/check-unity-adapter.sh
   4. cargo fmt --check
-  5. cargo test
-  6. cargo clippy --all-targets --all-features -- -D warnings
+  5. cargo test --locked
+  6. cargo clippy --locked --all-targets --all-features -- -D warnings
+  7. RUSTDOCFLAGS=-Dwarnings cargo doc --locked --workspace --all-features --no-deps
 EOF
 }
 
@@ -73,14 +75,21 @@ echo
 echo "== cargo test =="
 (
   cd "$repo_root"
-  cargo test
+  cargo test --locked
 )
 
 echo
 echo "== cargo clippy =="
 (
   cd "$repo_root"
-  cargo clippy --all-targets --all-features -- -D warnings
+  cargo clippy --locked --all-targets --all-features -- -D warnings
+)
+
+echo
+echo "== cargo doc =="
+(
+  cd "$repo_root"
+  RUSTDOCFLAGS=-Dwarnings cargo doc --locked --workspace --all-features --no-deps
 )
 
 echo

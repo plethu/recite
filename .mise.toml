@@ -1,6 +1,16 @@
 [tools]
+"cargo:cbindgen" = "0.29.4"
+dotnet = "8.0.421"
 rust = "1.96.0"
+node = "22.12.0"
 pnpm = "11.3.0"
 
 [env]
 RUST_BACKTRACE = "1"
+
+[settings]
+dotnet.isolated = true
+
+[tasks.verify]
+description = "Run the complete local verification suite"
+run = "scripts/verify.sh"
