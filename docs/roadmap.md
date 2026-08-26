@@ -43,7 +43,7 @@ durable API decision without review.
 
 | Issue | Role | Unlocks or reduces risk |
 | --- | --- | --- |
-| [#108 Watch rebuild stress](https://github.com/plethu/recite/issues/108) | authoring-loop scale proof | release benchmark baseline and refresh evidence |
+| [#109 Release benchmark baseline](https://github.com/plethu/recite/issues/109) | release performance evidence | reviewable baseline profile and trend comparisons |
 | [#51 VS Code LSP client](https://github.com/plethu/recite/issues/51) | IDE-first authoring | VS Code highlighting and command integration |
 | [#52 Neovim setup](https://github.com/plethu/recite/issues/52) | IDE-first authoring | Neovim highlighting and command integration |
 | [#99 Import report and provenance](https://github.com/plethu/recite/issues/99) | migration foundation | source-family importer prototypes and compatibility notes |
@@ -105,8 +105,7 @@ flowchart LR
 
   subgraph PERF["Scale and performance"]
     direction LR
-    i108p["#108 watch rebuild stress"] --> i109["#109 release baseline"]
-    i109 --> release["v1 release hardening"]
+    i109["#109 release baseline"] --> release["v1 release hardening"]
   end
 
   subgraph MIGRATION["Migration and interop"]
@@ -152,22 +151,22 @@ flowchart LR
 ### Authoring loop
 
 The core LSP, missing-ID code action, `recite play`, and `recite watch` are
-implemented. The remaining text-authoring work is to expose those capabilities
-through real editor entry points and prove the refresh loop under load:
+implemented, and generated-project stress now covers source, schema, and
+manifest rebuilds. The remaining text-authoring work is to expose those
+capabilities through real editor entry points and document engine refresh:
 
 1. [#51 VS Code](https://github.com/plethu/recite/issues/51) and
    [#52 Neovim](https://github.com/plethu/recite/issues/52) expose the LSP;
 2. [#53 editor command integration](https://github.com/plethu/recite/issues/53)
    follows the VS Code scaffold, while [#97](https://github.com/plethu/recite/issues/97)
    and [#98](https://github.com/plethu/recite/issues/98) own highlighting;
-3. [#108 watch stress](https://github.com/plethu/recite/issues/108) proves the
-   existing watch loop under generated-project edits;
-4. [#37 authoring workflow documentation](https://github.com/plethu/recite/issues/37)
+3. [#37 authoring workflow documentation](https://github.com/plethu/recite/issues/37)
    waits on the delivered watch command plus the three engine refresh paths and
    their shared documentation in #86.
 
 The public authoring-loop page is still a placeholder. IDE integration and
-refresh evidence should precede claims that this workflow is production-ready.
+engine-refresh evidence should precede claims that this workflow is
+production-ready.
 
 ### Engine adapters
 
@@ -190,13 +189,10 @@ promise arbitrary mid-session patch reload.
 
 Compiler/runtime benchmarks, realistic fixtures, profiling guidance, memory
 reports, compact IDs, compiler phase probes, and runtime allocation evidence
-are delivered. Open work is:
-
-- [#108](https://github.com/plethu/recite/issues/108), measuring watch rebuild
-  latency and stale-output behavior;
-- [#109](https://github.com/plethu/recite/issues/109), the release baseline
-  profile. All of its historical prerequisites except #108 map to delivered
-  GitHub issues.
+are delivered, including generated-project watch rebuild stress and
+stale-output proof. Open work is
+[#109](https://github.com/plethu/recite/issues/109), the now-unblocked release
+baseline profile; all of its verified prerequisites are delivered.
 
 [#126](https://github.com/plethu/recite/issues/126) is a separate human-led
 comparative-corpus decision. Its issue explicitly avoids making external
