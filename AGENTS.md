@@ -20,8 +20,9 @@ Recite is a Rust-first deterministic dialogue compiler, runtime, and tooling pro
   live GitHub issue and PR state before handoff. If the merge closed, unblocked,
   or superseded roadmap items, update the roadmap on `main`, commit, and push
   that follow-through.
-- For non-trivial Rust changes, load the global `rust-quality` skill and the
-  relevant Recite overlay, especially `.agents/skills/recite-rust-quality/SKILL.md`.
+- For non-trivial Rust changes, use the relevant Recite overlay, especially
+  `.agents/skills/recite-rust-quality/SKILL.md`, and load the global
+  `rust-quality` skill when it is available.
 - The complete local gate is `mise run verify`; use a narrower documented check
   only when the changed surface makes that sufficient.
 - Follow the Rust test organization policy in `.agents/skills/recite-testing-diagnostics/SKILL.md`; PR gates fail if tests are added in the wrong location.

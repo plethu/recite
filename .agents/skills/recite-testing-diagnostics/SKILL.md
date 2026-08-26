@@ -8,7 +8,8 @@ description: Use for Recite fixtures, snapshot-style tests, diagnostics, CLI val
 Load the relevant sections of `docs/recite-production-spec.md` for the surface
 under test; the section map is in `AGENTS.md`. This overlay records Recite's
 fixture, diagnostic, and test-layout conventions. Load the global
-`language-tooling` and `rust-quality` skills for general testing guidance.
+`language-tooling` and `rust-quality` skills for general testing guidance when
+they are available.
 
 ## Test placement
 

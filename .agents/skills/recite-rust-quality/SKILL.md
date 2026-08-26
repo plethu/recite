@@ -5,8 +5,9 @@ description: Use for Recite Rust maintainability review: module boundaries, vali
 
 # Recite Rust Quality
 
-Load the global `rust-quality` skill for general Rust implementation and review.
-This overlay records Recite-specific maintainability and compatibility checks.
+When available, load the global `rust-quality` skill for general Rust
+implementation and review. This overlay records the Recite-specific
+maintainability and compatibility checks required in any environment.
 
 ## File-size review
 

@@ -7,8 +7,8 @@ description: Use for Recite parser, AST, compiler, runtime, schema, effects, loc
 
 Use this overlay for changes to Recite's language and execution semantics. Load
 the relevant section of `docs/recite-production-spec.md` before implementation;
-the section map is in `AGENTS.md`. Load the global `language-tooling` and
-`rust-quality` skills for their general guidance.
+the section map is in `AGENTS.md`. When available, load the global
+`language-tooling` and `rust-quality` skills for general guidance.
 
 ## Recite invariants
 
