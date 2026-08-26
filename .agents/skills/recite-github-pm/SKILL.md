@@ -80,13 +80,14 @@ Nearby work not included.
 - `docs/recite-production-spec.md` §<section>
 ```
 
-Recite issues are human-directed co-work. When the user's/task's authorized
-delivery target includes repository mutations, a delegated implementer may own
-a bounded issue or vertical slice end-to-end, including its commit, push, and
-PR updates; product direction, subjective decisions, integration review, and
-final acceptance remain with the coordinating maintainer. Keep task packets
-compact and return review findings to the implementer rather than having the
-coordinator patch its files.
+Recite issues are human-directed co-work. A delegated implementer may own a
+bounded issue or vertical slice through only the stages explicitly named in the
+authorized delivery target: local edits, commit, push, and PR updates are
+separate authorizations and must not be inferred from one another. Product
+direction, subjective decisions, integration review, and final acceptance
+remain with the coordinating maintainer. Keep task packets compact and return
+review findings to the implementer rather than having the coordinator patch its
+files.
 
 ## Review and protected merge
 
