@@ -4,49 +4,34 @@
 >
 > — Ursula K. Le Guin, "Telling Is Listening," *The Wave in the Mind* (2004)
 
-`recite` is a dialogue compiler, runtime, and toolchain for narrative-driven
-games. It keeps authored conversation separate from game logic and hands the
-game structured output to observe and handle: lines, choices, and typed effect
-requests. The core is engine-agnostic, with per-engine adapters layered on top.
+`recite` is a dialogue language and toolchain for games. You write scenes as
+plain text, check them locally or in CI, compile them into assets, and feed
+those assets to a small runtime. The runtime produces lines, choices, and
+typed effect requests; the game decides how to present them and what those
+effects mean.
 
-> **Pre-release.** APIs and on-disk formats are in flux while v1 settles. Code
-> contributions aren't open yet (see [`CONTRIBUTING.md`](CONTRIBUTING.md)), but
-> issues, questions, and design feedback are welcome, especially from authoring,
-> localisation, runtime, or tooling work.
->
-> **Status.** Active development has resumed while the v1 architecture settles.
-> Recite is still pre-release and deliberately keeps its APIs and on-disk
-> formats in flux. More detail is in the pinned
-> [status issue](https://github.com/plethu/recite/issues/137).
+> [!WARNING]
+> Recite is pre-release (`0.0.1`) and is not published to crates.io. The source
+> format, compiled assets, and public APIs may change before v1. External code
+> contributions are not open yet, but issues, questions, and design feedback
+> are welcome. See [`CONTRIBUTING.md`](CONTRIBUTING.md) and the
+> [current roadmap](docs/roadmap.md).
 
-## Where it fits
+## Source
 
-Reach for Recite when you author narrative dialogue and want it kept apart from
-engine logic. A scene holds prose, speakers, choices, guards,
-fallthrough, localisation IDs, and effect requests in one plain-text format you
-can inspect, validate, translate, and test, instead of spreading them across
-editor state and engine scripts.
-
-The runtime is narrow. Traversal is deterministic across replay, save/load, and
-tests; conditions are pure queries; effects are typed, schema-checked requests.
-It never mutates game state or executes those effects; it emits them as
-structured output for the game to handle, alongside lines and choices.
-Validation catches malformed content before any engine runs.
-
-## Example
+Scenes are organised into named blocks. Lines and choices carry stable,
+author-visible IDs, while speaker data, metadata, conditions, and effects stay
+structured rather than being inferred from prose.
 
 ```text
-# A referenceable block of prose.
 :: which_way default
 
-# A line with a stable anchor for localisation, plus speaker metadata.
 > alice_way_001@7701ceab59d2adfa057a speaker=alice
   Would you tell me, please, which way I ought to go from here?
 
 > cat_way_001@e26ae3e6834c21c1b716 speaker=cheshire_cat portrait=grin
   That depends a good deal on where you want to get to.
 
-# A choice: a branch in the dialogue with a stable anchor.
 ? answer_anywhere@a6f46c2edbe8466b9bfd
   I don't much care where.
   -> anywhere
@@ -56,54 +41,67 @@ Validation catches malformed content before any engine runs.
 > cat_anywhere_001@a11b4b64dceda892c08e speaker=cheshire_cat
   Then it doesn't matter which way you go.
 
-# Scene's done. Flag a quest thread, deferred until the scene finishes.
 ! deferred mark_thread(alice_crossroads, direction_unsettled)
 -> END
 ```
 
 This adapts a public-domain exchange from [*Alice's Adventures in
-Wonderland*](https://www.gutenberg.org/ebooks/11).
+Wonderland*](https://www.gutenberg.org/ebooks/11). `mark_thread` is a
+schema-declared effect request. The runtime returns it when the scene ends; it
+does not execute it.
 
-`mark_thread` is a schema-declared effect request for the game to observe and
-handle. The runtime never executes it.
+## Runtime boundary
 
-## Why it exists
+The core runtime has no engine dependency or game-side effects. Traversal is
+deterministic across replay, save/load, and tests. Conditions are caller-
+provided pure queries. Effects are typed, schema-checked requests, and runtime
+state is serialisable without game state. Validation can catch malformed
+content before an engine runs.
 
-Yarn Spinner, ink, and engine-native editors each make different tradeoffs
-around scripting, editor ownership, localisation, and runtime integration.
-Recite's bet is strict boundaries, so narrative content gets the same checks as
-code without the dialogue runtime taking on game state.
+Authoring is primarily an IDE workflow: `recite-lsp` provides diagnostics,
+completion, hover, navigation, rename, and stable-ID code actions to an LSP
+client. The CLI provides validation, compilation, localisation extraction,
+interactive `play`, and fixture-driven `run` and `trace` commands for local
+checks and CI.
 
-I built it while authoring dialogue for my own game, where stable IDs,
-localisation, fixtures, and typed integration mattered more than another
-embedded scripting layer. Inspired by the narrative ambition of games like
-1000xRESIST, Disco Elysium, Citizen Sleeper, Planescape: Torment, TES III:
-Morrowind, and Pillars of Eternity.
+`recite watch` rebuilds compiled assets when project inputs change. It is an
+authoring and build loop, not a universal mid-session hot-reload contract;
+each engine adapter owns its refresh policy.
 
-## Repository
+## Try it
 
-The canonical repository, issues, and pull requests live on
-[GitHub](https://github.com/plethu/recite).
+The CLI currently installs from a checkout:
+
+```sh
+git clone https://github.com/plethu/recite
+cd recite
+cargo install --path crates/recite-cli
+```
+
+Install the language server as well when your editor supports LSP:
+
+```sh
+cargo install --path crates/recite-lsp
+```
+
+The [first-scene guide](docs-site/src/content/docs/getting-started/first-scene.md)
+takes a scene through validation, compilation, interactive play, a headless
+run, and localisation extraction. The
+[install guide](docs-site/src/content/docs/getting-started/install.md) covers
+installing from Git without a clone.
+
+## Why I built it
+
+I built Recite while authoring dialogue for my own game. I wanted prose that
+could live in Git, IDs that would survive localisation, validation before
+starting the game, and an explicit boundary between dialogue and game logic.
+The language and toolchain follow from those requirements.
 
 ## Documentation
 
-The production spec,
-[`docs/recite-production-spec.md`](docs/recite-production-spec.md), covers the
-source format, schema, compiler, runtime, CLI, editor tooling, and engine
-adapters. The [`docs-site`](docs-site) Starlight build is the developer-facing
-manual (local output only for now); Rustdoc is the API reference.
+- [`docs/recite-production-spec.md`](docs/recite-production-spec.md) — source
+  format, schema, compiler, runtime, CLI, LSP, and adapter contracts
+- [`docs/roadmap.md`](docs/roadmap.md) — current v1 work and dependencies
+- [`docs-site/`](docs-site) — the developer-facing manual source
 
-## AI usage
-
-AI tools assist development: drafting, implementation, and review. Direction,
-architecture, and final review stay human-led. Recite does not pursue
-AI-authored dialogue features.
-
-## License
-
-Licensed under either of:
-
-- Apache License, Version 2.0
-- MIT license
-
-at your option.
+Licensed under `MIT OR Apache-2.0`.
