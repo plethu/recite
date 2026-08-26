@@ -1,91 +1,64 @@
 ---
 name: recite-parallel-issue-orchestration
-description: Use when orchestrating Recite roadmap or milestone work across multiple independent issues, branches, worktrees, reviews, pull requests, and protected merges.
+description: Use when coordinating multiple independent Recite issues, worktrees, reviews, and protected GitHub merges.
 ---
 
 # Recite Parallel Issue Orchestration
 
-## Why
+This is a small Recite-specific overlay, not a role registry or launcher. Use
+the global `workflow-roles` skill and `~/.config/agents/roles.toml` for the
+portable explorer, researcher, architect, implementer, reviewer, verifier, and
+editor contracts, context policy, harness mappings, and diagnostics. Use
+`recite-github-pm` for GitHub issue, pull-request, review, and merge procedure.
 
-Use the global `parallel-issue-orchestration` skill for the generic
-supervisor/worker loop. This skill adds Recite-specific roadmap, issue, review,
-and merge requirements.
+## Routing
 
-For ordinary one-off GitHub issue or PR work, use
-`.agents/skills/recite-github-pm/SKILL.md` instead.
+- Ordinary single-issue work uses `recite-github-pm` and an implementer in the
+  current task worktree.
+- Parallel issue work uses a coordinator/main session plus one implementer
+  worktree per independent issue. Select disjoint write scopes and resolve
+  dependencies before delegation; do not create a project-specific launcher or
+  second role registry.
+- Clean review uses a fresh read-only reviewer context with `code-review` and
+  the relevant domain/language skills. Verification uses a separate verifier
+  context where practical; an editor handles voice-preserving documentation
+  changes.
+- The coordinator owns roadmap refreshes, issue-state mutations, worktree
+  lifecycle, and the final protected merge. Workers do not edit
+  `docs/roadmap.md` unless their issue explicitly includes it.
 
-If the user says only "orchestrate", apply this workflow without asking for a
-longer prompt.
+## Recite guardrails
 
-## Recite Guardrails
+- GitHub is canonical. Pass `--repo plethu/recite` to each `gh` issue, project,
+  pull-request, review, and merge subcommand.
+- Branches are purpose-first: `<kind>/<short-kebab-topic>` using the kinds in
+  `AGENTS.md`; never put an issue number first. Keep each worker branch and
+  worktree outside the main checkout, and never share a writable worktree.
+- Pass each delegated worker the issue, acceptance criteria, write scope,
+  worktree/branch, relevant spec and skills, and current evidence. Do not rely
+  on parent conclusions, loaded skills, or undocumented child-context
+  inheritance; a child must be able to rediscover the repository instructions.
+- Workers report changed behaviour, decisions, exact checks, failures, and
+  residual risk. Reviewers receive the actual diff and surrounding code in a
+  clean context, not an implementer's conclusions as facts.
+- Use standard GitHub reviews and the configured protected-branch gate. Official
+  Codex Code Review is an optional independent signal when enabled; it is
+  advisory and never a replacement for human authority, CI, or branch
+  protection. Do not parse custom review comments, bot usernames, or marker
+  blocks.
+- Before merge, use the read-only gate and require `mise run verify` on the
+  current pull-request head. Keep the main checkout clean for merge
+  orchestration; after merge, verify the linked issue/PR and refresh the
+  roadmap against live GitHub state. Follow `recite-github-pm` for the exact
+  commands.
 
-- The supervisor owns `docs/roadmap.md`; workers treat it as read-only unless their issue explicitly includes roadmap editing.
-- Use purpose-first branch names as `<kind>/<short-kebab-topic>`, with `kind`
-  chosen from `feat`, `fix`, `refactor`, `perf`, `ci`, `docs`, `test`, `build`,
-  `chore`, `spike`, `release`, or `security`; never prefix them with an issue
-  number.
-- Keep worktrees outside the main checkout, for example
-  `../recite-worktrees/<kind>-<short-kebab-topic>` for branch
-  `<kind>/<short-kebab-topic>`.
-- Use `.agents/skills/recite-github-pm/SKILL.md` for Recite labels, PR creation,
-  review gates, and issue closeout.
-- For Rust changes, run the `recite-rust-quality` quick audit before review and include size-triggered files with a split/cohesion/follow-up decision in the worker handoff.
+## Handoff boundary
 
-## Supervisor Setup
+The coordinator decides which issues may run together and whether evidence is
+strong enough to merge. An implementer may propose a split or follow-up, but
+must not expand the product direction. Subjective language/runtime/API choices
+remain with the human-led coordinator; this overlay only constrains execution.
 
-1. Read `.agents/skills/recite-github-pm/SKILL.md`.
-2. Refresh `docs/roadmap.md` once from live GitHub state before selecting
-   work. Keep the existing structure, but update stale issue state, dependency
-   edges, and "can start now" entries.
-3. Commit and push the roadmap refresh before spawning workers if it changed.
-4. Select issues with disjoint write scopes and no unresolved dependency chain.
-5. Report the selected issues, independence reason, expected write scope,
-   branch/worktree names, and any terminal-worker usage approval needed.
-6. Claim each issue sequentially through the GitHub CLI:
-
-```bash
-gh issue edit <issue> --repo plethu/recite \
-  --remove-label "status/ready" --remove-label "status/design-needed" \
-  --add-label "status/in-progress"
-
-.agents/skills/recite-github-pm/scripts/recite-pm-check.sh issue <issue>
-```
-
-## Recite Worktree
-
-```bash
-git fetch origin main
-git worktree add ../recite-worktrees/<kind>-<short-kebab-topic> \
-  -b <kind>/<short-kebab-topic> origin/main
-```
-
-Give each worker the issue number, branch, worktree path, expected write scope,
-the relevant roadmap excerpt, and this rule: other agents may be working
-elsewhere, so do not revert unrelated changes. Workers may read their assigned
-issue live, but they should not re-audit the full issue graph.
-
-## PR And Merge
-
-Push each branch, open the PR through `gh pr create`, and move the issue to
-`status/review`; use
-`.agents/skills/recite-github-pm/references/issue-pr-examples.md` for command
-shape. Before merge, satisfy the configured human maintainer policy through
-standard GitHub reviews for the exact PR head SHA; see
-`.agents/skills/recite-github-pm/references/github-merge-details.md`.
-
-Merge one PR at a time from a clean main worktree after the read-only gate and
-full project verification. Codex Code Review findings are advisory review input,
-not a substitute for human authority or protected-branch gates:
-
-```bash
-.agents/skills/recite-github-pm/scripts/check-pr-review-gates.sh <pr> <branch> main
-mise run verify
-gh pr merge <pr> --repo plethu/recite --squash --delete-branch
-```
-
-After merge, verify the PR and linked issue, explicitly close the issue if the
-merge did not auto-close it, then remove the worktree and branch.
-
-When all worker PRs are merged, refresh `docs/roadmap.md` again from the final
-issue/PR state, commit and push it if it changed, and mention the roadmap commit
-in the handoff.
+For the bounded evidence exercise that validated this overlay, read
+`references/two-issue-exercise.md`. It records observed results, not a second
+procedure to keep in sync.
