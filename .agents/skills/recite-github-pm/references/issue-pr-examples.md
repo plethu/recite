@@ -36,7 +36,7 @@ Diverts, choices, runtime traversal, and LSP diagnostics.
 - `docs/recite-production-spec.md` §5.2
 
 ## Suggested Branch
-`issue-N-parser-block-headers`
+`feat/parser-block-headers`
 EOF
 
 gh issue create --repo plethu/recite \
@@ -68,7 +68,7 @@ Adds parser support for block headers with source spans.
 EOF
 
 gh pr create --repo plethu/recite \
-  --head issue-17-parser-block-headers \
+  --head feat/parser-block-headers \
   --base main \
   --title "Parser: parse block headers" \
   --body-file "$tmp_body"

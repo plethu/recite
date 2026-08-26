@@ -9,7 +9,7 @@ not require an approving review until another human maintainer is added.
 ## Normal Helper Path
 
 ```bash
-.agents/skills/recite-github-pm/scripts/check-pr-review-gates.sh 34 issue-1-workspace-split main
+.agents/skills/recite-github-pm/scripts/check-pr-review-gates.sh 34 feat/workspace-split main
 gh pr merge 34 --repo plethu/recite --squash --delete-branch
 ```
 

@@ -5,6 +5,11 @@ on:
     branches:
       - main
   pull_request:
+    types:
+      - opened
+      - synchronize
+      - reopened
+      - edited
 
 permissions:
   contents: read
@@ -14,6 +19,25 @@ concurrency:
   cancel-in-progress: true
 
 jobs:
+  git-policy:
+    name: Git workflow policy
+    runs-on: ubuntu-24.04
+    timeout-minutes: 5
+    env:
+      RECITE_PR_TITLE: ${{ github.event.pull_request.title }}
+    steps:
+      - name: Check out source change
+        uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          # pull_request's default checkout is a synthetic merge commit. The
+          # policy must inspect the source branch's actual commit range.
+          ref: ${{ github.event.pull_request.head.sha || github.sha }}
+          fetch-depth: 0
+          persist-credentials: false
+
+      - name: Check branch and commit policy
+        run: scripts/check-git-policy.sh
+
   rust:
     name: Rust gates
     runs-on: ubuntu-24.04
@@ -74,6 +98,7 @@ jobs:
     name: required-check
     if: always()
     needs:
+      - git-policy
       - rust
       - docs
       - benchmark-smoke
@@ -84,8 +109,10 @@ jobs:
         env:
           BENCHMARK_RESULT: ${{ needs.benchmark-smoke.result }}
           DOCS_RESULT: ${{ needs.docs.result }}
+          GIT_POLICY_RESULT: ${{ needs.git-policy.result }}
           RUST_RESULT: ${{ needs.rust.result }}
         run: |
+          test "$GIT_POLICY_RESULT" = success
           test "$RUST_RESULT" = success
           test "$DOCS_RESULT" = success
           test "$BENCHMARK_RESULT" = success

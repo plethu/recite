@@ -1,0 +1,3 @@
+[REC-143] docs: explain the Git workflow
+
+Keep branch intent visible. Keep commit intent visible.

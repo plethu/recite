@@ -7,9 +7,10 @@ Usage:
   verify.sh [repo-root]
 
 Runs the complete local verification suite:
-  1. scripts/check-project-gates.sh
-  2. scripts/check-docs.sh
-  3. scripts/benchmark-smoke.sh
+  1. scripts/check-git-policy.sh
+  2. scripts/check-project-gates.sh
+  3. scripts/check-docs.sh
+  4. scripts/benchmark-smoke.sh
 
 Use `mise run verify` from the repository root when mise is available.
 `mise install` provisions the pinned Rust, Node, pnpm, .NET, and cbindgen tools.
@@ -39,12 +40,15 @@ else
   fi
 fi
 
-for gate in check-project-gates.sh check-docs.sh benchmark-smoke.sh; do
+for gate in check-git-policy.sh check-project-gates.sh check-docs.sh benchmark-smoke.sh; do
   if [[ ! -x "$repo_root/scripts/$gate" ]]; then
     echo "missing executable verification gate: $repo_root/scripts/$gate" >&2
     exit 2
   fi
 done
+
+echo "== Git workflow policy =="
+"$repo_root/scripts/check-git-policy.sh" "$repo_root"
 
 echo "== Rust and adapter gates =="
 "$repo_root/scripts/check-project-gates.sh" "$repo_root"
