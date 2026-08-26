@@ -51,6 +51,10 @@ patterns that make an ownership split difficult to assess.
   `DiagnosticCategory`, not duplicated raw strings.
 - Preserve source spans, diagnostic codes, stable IDs, and serialisation
   compatibility when touching those surfaces.
+- Do not grow public entry points through stacked optional parameters or
+  `_with_a_and_b` variants. At the third configuration knob, introduce an
+  options/resolution struct and retain a zero-configuration entry point;
+  precedents include `LocaleResolution` and `DialogueSessionOptions`.
 - Keep consumer-facing structs and enums that may grow `#[non_exhaustive]`,
   especially errors, events, and effect/condition kinds. Do not apply it to
   internal compiled-row enums, where same-crate exhaustive matching is
