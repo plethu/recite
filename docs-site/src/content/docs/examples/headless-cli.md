@@ -6,4 +6,4 @@ draft: true
 
 This example will demonstrate a headless CLI workflow for validation, compilation, run, and trace commands.
 
-Command names should stay aligned with the [CLI spec](https://codeberg.org/plethu/recite/src/branch/main/docs/recite-production-spec.md).
+Command names should stay aligned with the [CLI spec](https://github.com/plethu/recite/blob/main/docs/recite-production-spec.md).

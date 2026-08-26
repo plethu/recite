@@ -128,12 +128,12 @@ target:
 Targets jump to another block or end traversal with `END`. Unknown targets are
 validation errors.
 
-Visible-but-unavailable choices are v1 scope and are tracked by
-[#170](https://codeberg.org/plethu/recite/issues/170),
-[#171](https://codeberg.org/plethu/recite/issues/171), and
-[#172](https://codeberg.org/plethu/recite/issues/172). Until the final
-availability syntax lands, use `:if` for structural omission instead of a
-trailing choice `if`.
+Use `requires=(...)` to keep a choice visible while making its availability
+conditional, with `reason=...` for the schema-owned player-facing explanation.
+Use `:if` when the choice should be structurally absent instead. The distinction
+was settled in [#110](https://github.com/plethu/recite/issues/110),
+[#111](https://github.com/plethu/recite/issues/111), and
+[#112](https://github.com/plethu/recite/issues/112).
 
 Choices may be nested under a line to model a prompt:
 
@@ -215,6 +215,6 @@ depend on stable identifiers.
 
 ## Related docs
 
-- [Production specification](https://codeberg.org/plethu/recite/src/branch/main/docs/recite-production-spec.md)
+- [Production specification](https://github.com/plethu/recite/blob/main/docs/recite-production-spec.md)
 - [CLI reference](/reference/cli/)
 - [Migration overview](/migration/)

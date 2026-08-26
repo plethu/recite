@@ -72,5 +72,5 @@ recite compile --output build/dialogue.recitec dialogue/migrated/*.recite
 
 - [Importer Boundaries](/migration/importer-boundaries/)
 - [Source Format](/reference/source-format/)
-- [Production specification](https://codeberg.org/plethu/recite/src/branch/main/docs/recite-production-spec.md)
+- [Production specification](https://github.com/plethu/recite/blob/main/docs/recite-production-spec.md)
 - [CLI](/reference/cli/)

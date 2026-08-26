@@ -88,6 +88,6 @@ recite compile --output build/dialogue.recitec dialogue/market.recite
 ## Related docs
 
 - [Importer Boundaries](/migration/importer-boundaries/)
-- [Production specification](https://codeberg.org/plethu/recite/src/branch/main/docs/recite-production-spec.md)
+- [Production specification](https://github.com/plethu/recite/blob/main/docs/recite-production-spec.md)
 - [CLI](/reference/cli/)
 - [First Scene](/getting-started/first-scene/)

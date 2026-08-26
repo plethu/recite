@@ -86,6 +86,6 @@ recite compile --output build/dialogue.recitec dialogue/start.recite
 ## Related docs
 
 - [Importer Boundaries](/migration/importer-boundaries/)
-- [Engine Adapter Contract](https://codeberg.org/plethu/recite/src/branch/main/docs/engine-adapter-contract.md)
+- [Engine Adapter Contract](https://github.com/plethu/recite/blob/main/docs/engine-adapter-contract.md)
 - [Source Format](/reference/source-format/)
 - [CLI](/reference/cli/)

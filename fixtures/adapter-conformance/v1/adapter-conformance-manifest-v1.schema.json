@@ -1,6 +1,6 @@
 {
   "$schema": "https://json-schema.org/draft/2020-12/schema",
-  "$id": "https://codeberg.org/plethu/recite/fixtures/adapter-conformance/v1/adapter-conformance-manifest-v1.schema.json",
+  "$id": "https://raw.githubusercontent.com/plethu/recite/main/fixtures/adapter-conformance/v1/adapter-conformance-manifest-v1.schema.json",
   "title": "Recite Adapter Conformance Manifest v1",
   "type": "object",
   "required": [

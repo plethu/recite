@@ -3,7 +3,7 @@
 A snapshot of how the open v1 milestones and issues depend on each other: what
 can start now, what's blocked, and what's on the critical path.
 
-This is a planning aid. The live Codeberg board and
+This is a planning aid. The live GitHub board and
 `docs/recite-production-spec.md` §22–23 are authoritative; the issue numbers and
 edges here were refreshed from the "Depends on" lines in issue bodies on 2026-06-14,
 and will drift as work lands.
@@ -309,5 +309,5 @@ start until scale, adapters, and adoption docs are in place.
 Issues #134 and #136 are pre-release hardening tasks that can start earlier
 because they reduce compatibility and review-surface risk before the final
 release checklist work. Issue #135 has already landed the project-facing gate
-script that release issue #112 can build on; #206 has also landed Forgejo
-Actions remote gate verification for every PR.
+script that release issue #112 can build on. GitHub Actions coverage is being
+re-established after the forge migration.
