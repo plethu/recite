@@ -36,7 +36,7 @@ Recite is a Rust-first deterministic dialogue compiler, runtime, and tooling pro
 - If implementation fails, retry once with the concrete error. On a second failure, replace it with a fresh worker/context and diagnose the environment or boundary; do not silently take over the implementation.
 - Reviewers and auditors remain independent and read-only. Send actionable findings back to the implementer for a correction pass; do not turn review into orchestrator-authored patching.
 - Verify in proportion to change: targeted checks in the inner loop, one appropriate full gate when a coherent slice stabilises, and broader checks at milestone or release boundaries. Batch review fixes and do not rerun the whole gate after every tiny correction. Codex review is advisory and asynchronous; continue useful work rather than making it a critical path.
-- A delivery handoff names the resulting behaviour, commit SHA, pushed branch/PR, checks and outcomes, and residual uncertainty. “Changes exist in a temporary worktree” is not completion.
+- A delivery handoff reports the resulting behaviour, the authorized delivery stages actually completed, checks and outcomes, and residual uncertainty. Report a commit SHA, pushed branch, or PR only when that stage was both authorized and completed. Treat temporary-worktree-only changes as incomplete only when the delivery target required a commit, push, or PR; local-edit-only tasks may complete without those stages.
 
 ## Agent Workflow Routing
 
