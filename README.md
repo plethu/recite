@@ -43,9 +43,10 @@ Scenes are plain text, organised into named blocks:
 
 This adapts a public-domain exchange from [*Alice's Adventures in
 Wonderland*](https://www.gutenberg.org/ebooks/11). The text after each `@` is a
-stable ID used by localisation and saved sessions. `speaker` and `portrait` are
-metadata. `mark_thread` must be declared in the project schema; the runtime
-queues it and returns it when the scene ends without executing it.
+stable ID used by localisation and saved sessions. `speaker` is the line's
+dedicated speaker field; `portrait` remains metadata. `mark_thread` must be
+declared in the project schema; the runtime queues it and returns it when the
+scene ends without executing it.
 
 Recite sits between scene files and the game engine. The compiler turns those
 files into assets. The runtime asks the game for condition values and returns
