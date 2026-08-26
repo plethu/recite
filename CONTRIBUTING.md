@@ -17,4 +17,4 @@ After the v1 shape is stable, I'll review and publish fuller contribution guidel
   or `security/`; do not prefix a branch with an issue number. Commit subjects
   begin with `[REC-N]` and a concise conventional-commit-style subject, with at
   most one explanatory body sentence and no agent-attribution trailers.
-- The canonical quality gate is `mise run verify` (`scripts/verify.sh`). GitHub Actions runs the same gate on every push to `main` and on pull requests (`.github/workflows/ci.yml`); run it locally before pushing. `scripts/check-project-gates.sh` remains the focused Rust and adapter subset.
+- The canonical quality gate is `mise run verify` (`scripts/verify.sh`). GitHub Actions runs the same gate on every push to `main` and on pull requests (`.github/workflows/ci.yml`); required CI and branch protection remain authoritative. Focused checks are acceptable for narrow documentation or instruction-only changes; run the full gate locally for broad or high-risk code changes. `scripts/check-project-gates.sh` remains the focused Rust and adapter subset.

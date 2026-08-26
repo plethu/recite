@@ -15,9 +15,11 @@ gh pr merge 34 --repo plethu/recite --squash --delete-branch
 
 The gate reads the pull request's base/head, review decision, current head SHA,
 standard GitHub reviews, review threads, and reported checks. The merge command
-must be run from a clean worktree after `mise run verify` and the gate pass;
-protected `main` remains the authority for its configured review policy,
-aggregate status check, linear history, and signed commits.
+must be run from a clean worktree after checks appropriate to the changed
+surface and the gate pass: focused checks for documentation or instruction-only
+changes, and `mise run verify` for broad or high-risk code changes. Required
+GitHub CI and protected `main` remain authoritative for merge policy, aggregate
+status, linear history, and signed commits.
 
 ## Maintainer Review
 
@@ -58,17 +60,16 @@ required checks, or tests. See the [official Codex GitHub review
 documentation](https://learn.chatgpt.com/docs/third-party/github) for current
 setup and availability details.
 
-The review may take several minutes. Treat the initial pending or `👀` state as
-normal: continue local work and do not repost the request while it is pending.
-Poll the pull request at increasing intervals, such as two minutes, four
-minutes, eight minutes, and then fifteen minutes, capped there while useful
-work remains. Once a standard review appears, inspect it against the exact
-current head SHA, resolve or explicitly reject each thread, and run the gate
-again. Fall back to the normal human/manual review path only on an explicit
-terminal failure or a genuinely task-blocking timeout; never revive custom
-comment parsing.
+Treat the review as an optional asynchronous signal. Continue useful local or
+disjoint work; do not make waiting for it a critical path. When a
+standard review is available, inspect it against the exact current head SHA,
+return actionable findings to the owning implementer, resolve or explicitly
+reject each thread, and run the gate again after the correction pass. If the
+head changes, treat an earlier review as stale. Fall back to the normal
+human/manual review path when the optional service is unavailable; never revive
+custom comment parsing.
 
-The gate blocks failed or errored reported checks when any are present; if checks
-have not reported yet, local checks remain mandatory.
+The gate blocks failed or errored reported checks when any are present; if
+checks have not reported yet, risk-appropriate local checks remain mandatory.
 
 Do not use direct pushes to `main` or bypass the protected pull-request path.

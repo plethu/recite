@@ -28,6 +28,16 @@ Recite is a Rust-first deterministic dialogue compiler, runtime, and tooling pro
 - Follow the Rust test organization policy in `.agents/skills/recite-testing-diagnostics/SKILL.md`; PR gates fail if tests are added in the wrong location.
 - Repo-local skills must be Recite-specific overlays or Recite domain guidance. Put reusable personal workflow skills in the global agent config instead.
 
+## Multi-Agent Execution Contract
+
+- The coordinating Sol session owns scope, product direction, subjective decisions, integration review, and final acceptance. A delegated Luna implementer may own a bounded change through only the stages explicitly named in the authorized delivery target: local edits, commit, push, and pull-request updates are separate authorizations and must not be inferred from one another. Sol does not absorb implementation fixes; return findings to the owning implementer, except for mechanical conflict resolution.
+- Task packets stay compact: outcome, write scope, settled constraints, permitted decisions, stop-and-ask categories, acceptance evidence, and delivery target. Keep assumptions bounded: agents may choose reversible local details, but must stop for semantics, public compatibility, destructive changes, or scope expansion.
+- Parallel writable implementers, or workers with potentially conflicting writable scopes, use isolated branches/worktrees at the stated base SHA. Read-only workers and a lone worker with an available clean checkout may use it after the same preflight for clean state, repository/remote, branch policy, and required tools or GitHub access. Concurrent writable workers must have disjoint scopes; never share a writable worktree.
+- If implementation fails, retry once with the concrete error. On a second failure, replace it with a fresh worker/context and diagnose the environment or boundary; do not silently take over the implementation.
+- Reviewers and auditors remain independent and read-only. Send actionable findings back to the implementer for a correction pass; do not turn review into orchestrator-authored patching.
+- Verify in proportion to change: targeted checks in the inner loop, one appropriate full gate when a coherent slice stabilises, and broader checks at milestone or release boundaries. Batch review fixes and do not rerun the whole gate after every tiny correction. Codex review is advisory and asynchronous; continue useful work rather than making it a critical path.
+- A delivery handoff reports the resulting behaviour, the authorized delivery stages actually completed, checks and outcomes, and residual uncertainty. Report a commit SHA, pushed branch, or PR only when that stage was both authorized and completed. Treat temporary-worktree-only changes as incomplete only when the delivery target required a commit, push, or PR; local-edit-only tasks may complete without those stages.
+
 ## Agent Workflow Routing
 
 - Ordinary issue work routes through `.agents/skills/recite-github-pm/SKILL.md`.

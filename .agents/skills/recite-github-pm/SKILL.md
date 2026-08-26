@@ -73,28 +73,39 @@ Questions that must be answered during co-work.
 Nearby work not included.
 
 ## Test/Check Commands
-- `mise run verify`
+- List focused checks appropriate to the changed surface.
+- Use `mise run verify` for broad or high-risk code changes.
 
 ## Spec References
 - `docs/recite-production-spec.md` §<section>
 ```
 
-Recite issues are maintainer and agent co-work by default; do not encode an
-assumption that an issue will be fully autonomous.
+Recite issues are human-directed co-work. A delegated implementer may own a
+bounded issue or vertical slice through only the stages explicitly named in the
+authorized delivery target: local edits, commit, push, and PR updates are
+separate authorizations and must not be inferred from one another. Product
+direction, subjective decisions, integration review, and final acceptance
+remain with the coordinating maintainer. Keep task packets compact and return
+review findings to the implementer rather than having the coordinator patch its
+files.
 
 ## Review and protected merge
 
 Recite's protected `main` policy and the read-only helper are the repository
 sources of truth. Before merging, inspect the pull request's current head,
 standard GitHub reviews and threads, resolve or explicitly reject each review
-comment, run `mise run verify`, and pass:
+comment, and run checks appropriate to the changed surface. Use focused checks
+for documentation or instruction-only changes and `mise run verify` for broad
+or high-risk code changes. Required GitHub CI and branch protection remain
+authoritative at merge. Then pass:
 
 ```bash
 .agents/skills/recite-github-pm/scripts/check-pr-review-gates.sh <pr> <branch> main
 gh pr merge <pr> --repo plethu/recite --squash --delete-branch
 ```
 
-Human maintainer approval remains authoritative. Codex Code Review is advisory:
+Human maintainer approval remains authoritative. Codex Code Review is advisory
+and asynchronous:
 it does not replace human approval, branch protection, required checks, or
 tests. The current solo-maintainer policy permits the allowlisted maintainer's
 self-review; once another human maintainer exists, require their independent
@@ -103,9 +114,8 @@ unresolved review threads.
 
 For the official Codex GitHub integration, including automatic review setup,
 see the [official Codex GitHub review documentation](https://learn.chatgpt.com/docs/third-party/github).
-For review details and patient polling behavior, read
-`references/github-merge-details.md`. Do not parse custom review comments,
-bot usernames, or marker blocks.
+For review details, read `references/github-merge-details.md`. Do not parse
+custom review comments, bot usernames, or marker blocks.
 
 After merging, verify the linked issue/PR and refresh `docs/roadmap.md` against
 live GitHub state. If the merge closed, unblocked, or superseded a roadmap item,
