@@ -4,24 +4,21 @@
 >
 > — Ursula K. Le Guin, "Telling Is Listening," *The Wave in the Mind* (2004)
 
-`recite` is a dialogue language and toolchain for games. You write scenes as
-plain text, check them locally or in CI, compile them into assets, and feed
-those assets to a small runtime. The runtime produces lines, choices, and
-typed effect requests; the game decides how to present them and what those
-effects mean.
+`recite` is a small dialogue language and toolchain for games. I started
+building it while writing my own game: I wanted plain-text scenes in Git,
+localisation IDs that survived nearby edits, and broken dialogue to fail before
+I opened the engine.
 
 > [!WARNING]
-> Recite is pre-release (`0.0.1`) and is not published to crates.io. The source
-> format, compiled assets, and public APIs may change before v1. External code
-> contributions are not open yet, but issues, questions, and design feedback
-> are welcome. See [`CONTRIBUTING.md`](CONTRIBUTING.md) and the
-> [current roadmap](docs/roadmap.md).
+> Recite is pre-release (`0.0.1`). An old `recite` snapshot exists on crates.io;
+> the current `recite-cli` and `recite-lsp` packages are not published. Install
+> them from this repository for now. The language, compiled assets, and Rust
+> APIs may change before v1. Code contributions are not open yet, but issues,
+> questions, and design feedback are welcome.
 
-## Source
+## A scene
 
-Scenes are organised into named blocks. Lines and choices carry stable,
-author-visible IDs, while speaker data, metadata, conditions, and effects stay
-structured rather than being inferred from prose.
+Scenes are plain text, organised into named blocks:
 
 ```text
 :: which_way default
@@ -46,63 +43,48 @@ structured rather than being inferred from prose.
 ```
 
 This adapts a public-domain exchange from [*Alice's Adventures in
-Wonderland*](https://www.gutenberg.org/ebooks/11). `mark_thread` is a
-schema-declared effect request. The runtime returns it when the scene ends; it
-does not execute it.
+Wonderland*](https://www.gutenberg.org/ebooks/11). The text after each `@` is a
+stable, author-visible ID used by localisation. `speaker` is the line's dedicated
+speaker field; `portrait` remains metadata. `mark_thread` must be declared in
+the project schema; the runtime queues it and returns it when the scene ends
+without executing it.
 
-## Runtime boundary
+Recite sits between scene files and the game engine. The compiler turns those
+files into assets. The runtime asks the game for condition values and returns
+lines, choices, and typed effect requests; presentation and game state remain
+in game code. Given the same asset, session state, and condition answers,
+traversal order is deterministic across tests, save/load, and replay.
 
-The core runtime has no engine dependency or game-side effects. Traversal is
-deterministic across replay, save/load, and tests. Conditions are caller-
-provided pure queries. Effects are typed, schema-checked requests, and runtime
-state is serialisable without game state. Validation can catch malformed
-content before an engine runs.
+Most authoring should happen in your editor. Today, `recite-lsp` reports
+diagnostics and provides completion, hover, definition navigation, block
+rename, and code actions for missing stable IDs through compatible LSP clients.
+The packaged VS Code extension and documented Neovim setup are still in
+progress.
 
-Recite is designed for an IDE-first authoring workflow. Today, `recite-lsp`
-provides diagnostics, completion, hover, navigation, rename, and stable-ID code
-actions to compatible LSP clients; the VS Code extension and documented Neovim
-setup are still in progress. The CLI provides validation, compilation,
-localisation extraction, interactive `play`, and fixture-driven `run` and
-`trace` commands for local checks and CI.
-
-`recite watch` rebuilds compiled assets when project inputs change. It is an
-authoring and build loop, not a universal mid-session hot-reload contract;
-each engine adapter owns its refresh policy.
+`recite watch` rebuilds when project inputs change. Engine adapters own how a
+running game imports or refreshes those assets. In CI, the CLI can validate and
+compile without an engine, then run scenes against repeatable fixtures. You do
+not need to start the game to find a malformed scene.
 
 ## Try it
 
-The CLI currently installs from a checkout:
+Install the current CLI and language server from a checkout:
 
 ```sh
 git clone https://github.com/plethu/recite
 cd recite
 cargo install --path crates/recite-cli
-```
-
-Install the language server as well when your editor supports LSP:
-
-```sh
 cargo install --path crates/recite-lsp
 ```
 
-The [first-scene guide](docs-site/src/content/docs/getting-started/first-scene.md)
-takes a scene through validation, compilation, interactive play, a headless
-run, and localisation extraction. The
-[install guide](docs-site/src/content/docs/getting-started/install.md) covers
-installing from Git without a clone.
+Start with the [first-scene
+guide](docs-site/src/content/docs/getting-started/first-scene.md). The [install
+guide](docs-site/src/content/docs/getting-started/install.md) also covers
+installing directly from Git.
 
-## Why I built it
-
-I built Recite while authoring dialogue for my own game. I wanted prose that
-could live in Git, IDs that would survive localisation, validation before
-starting the game, and an explicit boundary between dialogue and game logic.
-The language and toolchain follow from those requirements.
-
-## Documentation
-
-- [`docs/recite-production-spec.md`](docs/recite-production-spec.md) — source
-  format, schema, compiler, runtime, CLI, LSP, and adapter contracts
-- [`docs/roadmap.md`](docs/roadmap.md) — current v1 work and dependencies
-- [`docs-site/`](docs-site) — the developer-facing manual source
+The [production spec](docs/recite-production-spec.md) is the detailed contract,
+and the [v1 roadmap](docs/roadmap.md) records what is still missing.
+[`CONTRIBUTING.md`](CONTRIBUTING.md) has the current contribution status and
+project notes.
 
 Licensed under `MIT OR Apache-2.0`.
