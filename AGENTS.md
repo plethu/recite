@@ -29,6 +29,18 @@ Recite is a Rust-first deterministic dialogue compiler, runtime, and tooling pro
 - Follow the Rust test organization policy in `.agents/skills/recite-testing-diagnostics/SKILL.md`; PR gates fail if tests are added in the wrong location.
 - Repo-local skills must be Recite-specific overlays or Recite domain guidance. Put reusable personal workflow skills in the global agent config instead.
 
+## Agent Workflow Routing
+
+- Ordinary issue work routes through `.agents/skills/recite-github-pm/SKILL.md`.
+- Parallel issue work routes through
+  `.agents/skills/recite-parallel-issue-orchestration/SKILL.md`, with the
+  global `workflow-roles` skill supplying portable role contracts.
+- Clean diff review uses the global `code-review` skill plus the relevant
+  Recite domain or language skill in a fresh reviewer context.
+- Roadmap ownership and final protected merges remain with the coordinating
+  main session; workers keep `docs/roadmap.md` read-only unless their issue
+  explicitly includes it.
+
 ## Product Invariants
 
 - Runtime traversal must be deterministic.
