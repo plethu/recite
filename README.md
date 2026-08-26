@@ -58,11 +58,12 @@ provided pure queries. Effects are typed, schema-checked requests, and runtime
 state is serialisable without game state. Validation can catch malformed
 content before an engine runs.
 
-Authoring is primarily an IDE workflow: `recite-lsp` provides diagnostics,
-completion, hover, navigation, rename, and stable-ID code actions to an LSP
-client. The CLI provides validation, compilation, localisation extraction,
-interactive `play`, and fixture-driven `run` and `trace` commands for local
-checks and CI.
+Recite is designed for an IDE-first authoring workflow. Today, `recite-lsp`
+provides diagnostics, completion, hover, navigation, rename, and stable-ID code
+actions to compatible LSP clients; the VS Code extension and documented Neovim
+setup are still in progress. The CLI provides validation, compilation,
+localisation extraction, interactive `play`, and fixture-driven `run` and
+`trace` commands for local checks and CI.
 
 `recite watch` rebuilds compiled assets when project inputs change. It is an
 authoring and build loop, not a universal mid-session hot-reload contract;
