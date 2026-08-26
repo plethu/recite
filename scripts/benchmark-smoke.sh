@@ -7,8 +7,8 @@ Usage:
   benchmark-smoke.sh [repo-root]
 
 Runs Recite's fast, non-comparative benchmark smoke:
-  1. RECITE_BENCH_SCALES=tiny cargo bench -p recite-benchmarks --bench compiler -- 'compiler/.*/tiny' --test
-  2. RECITE_BENCH_SCALES=tiny cargo bench -p recite-benchmarks --bench runtime -- 'runtime/.*/tiny' --test
+  1. RECITE_BENCH_SCALES=tiny cargo bench --locked -p recite-benchmarks --bench compiler -- 'compiler/.*/tiny' --test
+  2. RECITE_BENCH_SCALES=tiny cargo bench --locked -p recite-benchmarks --bench runtime -- 'runtime/.*/tiny' --test
 
 The smoke only proves that the tiny compiler and runtime Criterion benchmarks
 build and execute. It does not compare timings or enforce regression thresholds.
@@ -53,7 +53,7 @@ run_smoke_target() {
   echo "== ${bench_name} benchmark smoke =="
   (
     cd "$repo_root"
-    "$cargo_cmd" bench -p recite-benchmarks --bench "$bench_name" -- "$filter" --test
+    "$cargo_cmd" bench --locked -p recite-benchmarks --bench "$bench_name" -- "$filter" --test
   )
 }
 

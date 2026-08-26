@@ -1,6 +1,6 @@
 {
   "$schema": "https://json-schema.org/draft/2020-12/schema",
-  "$id": "https://codeberg.org/plethu/recite/raw/branch/main/schemas/recite-schema-manifest-v1.schema.json",
+  "$id": "https://raw.githubusercontent.com/plethu/recite/main/schemas/recite-schema-manifest-v1.schema.json",
   "title": "Recite generated schema manifest v1",
   "type": "object",
   "additionalProperties": false,

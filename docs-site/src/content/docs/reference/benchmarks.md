@@ -84,4 +84,4 @@ and go-to-definition.
 
 For maintainer profiling workflow, Linux profiler guidance, memory investigation
 commands, and the planned `recite bench` mapping, see the
-[profiling and optimisation playbook](https://codeberg.org/plethu/recite/src/branch/main/docs/profiling-and-optimisation.md).
+[profiling and optimisation playbook](https://github.com/plethu/recite/blob/main/docs/profiling-and-optimisation.md).

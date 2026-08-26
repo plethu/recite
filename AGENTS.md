@@ -4,14 +4,18 @@ Recite is a Rust-first deterministic dialogue compiler, runtime, and tooling pro
 
 ## Project Workflow
 
-- Use Codeberg as the forge. Do not use or suggest GitHub workflows for this project.
+- Use GitHub as the canonical forge. Use the GitHub CLI (`gh`) with explicit
+  `--repo plethu/recite` for issue, milestone, label, and pull-request work.
 - Work from `main` on short-lived branches.
-- For Codeberg issue work, name branches `issue-<number>-<short-topic>`.
+- For issue work, name branches `issue-<number>-<short-topic>`.
 - For non-issue maintenance, use `chore/<short-topic>`, `docs/<short-topic>`, or `spike/<short-topic>`.
 - Keep patches scoped to the issue or user request.
 - Do not revert unrelated user changes.
 - Prefer small, reviewable changes over broad refactors.
-- After merging issue or PR work into `main`, verify `docs/roadmap.md` against live Codeberg issue and PR state before handoff. If the merge closed, unblocked, or superseded roadmap items, update the roadmap on `main`, commit, and push that follow-through.
+- After merging issue or PR work into `main`, verify `docs/roadmap.md` against
+  live GitHub issue and PR state before handoff. If the merge closed, unblocked,
+  or superseded roadmap items, update the roadmap on `main`, commit, and push
+  that follow-through.
 - For non-trivial Rust changes, use `.agents/skills/recite-rust-quality/SKILL.md` to review maintainability, module boundaries, duplication, visibility, validation ownership, and file-size triggers before handoff.
 - Test the crate(s) or workspace surface changed. The current repo is a workspace; use `cargo test` for broad changes unless a narrower crate check is clearly sufficient.
 - Follow the Rust test organization policy in `.agents/skills/recite-testing-diagnostics/SKILL.md`; PR gates fail if tests are added in the wrong location.
@@ -54,7 +58,8 @@ Do not copy large sections of the spec into agent guidance. Read the relevant sp
 
 Use the relevant skill for procedural details:
 
-- Codeberg issues, milestones, labels, pull requests, and project planning: `.agents/skills/recite-codeberg-pm/SKILL.md`
+- GitHub issues, milestones, labels, pull requests, and project planning:
+  `.agents/skills/recite-github-pm/SKILL.md`
 - Multi-agent roadmap or milestone orchestration: `.agents/skills/recite-parallel-issue-orchestration/SKILL.md`
 - Rust maintainability, architecture, DRY, visibility, validation ownership, and file-size review triggers: `.agents/skills/recite-rust-quality/SKILL.md`
 - Parser, AST, compiler, runtime, schema, effects, localisation IDs, and deterministic dialogue semantics: `.agents/skills/recite-core-language/SKILL.md`

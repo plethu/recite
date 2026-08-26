@@ -6,4 +6,4 @@ draft: true
 
 This guide will cover stable IDs, extraction, translator context, and dialogue locale preview rules.
 
-The normative localisation behavior is in the [production spec](https://codeberg.org/plethu/recite/src/branch/main/docs/recite-production-spec.md).
+The normative localisation behavior is in the [production spec](https://github.com/plethu/recite/blob/main/docs/recite-production-spec.md).

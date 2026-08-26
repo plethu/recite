@@ -33,7 +33,8 @@ Use a small number of predictable test locations:
 - Do not put `#[test]` bodies inline in production source files.
 - Do not use source-side `*_test.rs` or `*_tests.rs` files.
 - Keep shared cross-crate fixtures under top-level `tests/support`.
-- Run `.agents/skills/recite-codeberg-pm/scripts/check-test-organization.sh` before handoff when test files move or new tests are added.
+- Run `scripts/check-test-organization.sh` before handoff when test files move
+  or new tests are added.
 
 ## Fixture Shape
 
@@ -102,4 +103,4 @@ Before handoff, state blockers or confirm:
 | Determinism | Tests avoid host paths and wall-clock time. |
 | Structured output | Direct assertions are used where possible. |
 | Stable IDs/effects/locales | Stable IDs, effect order, locale fallback, and markup preservation are asserted when touched. |
-| Commands | `.agents/skills/recite-codeberg-pm/scripts/check-test-organization.sh`, `cargo fmt --check`, `cargo test`, and `cargo clippy --all-targets --all-features -- -D warnings`. |
+| Commands | `scripts/check-test-organization.sh`, `cargo fmt --check`, `cargo test`, and `cargo clippy --all-targets --all-features -- -D warnings`. |

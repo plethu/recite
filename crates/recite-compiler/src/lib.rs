@@ -14,7 +14,7 @@
 //! [docs site][guides] as they are filled in. This Rustdoc focuses on the
 //! library API.
 //!
-//! [guides]: https://codeberg.org/plethu/recite/src/branch/main/docs-site/src/content/docs
+//! [guides]: https://github.com/plethu/recite/tree/main/docs-site/src/content/docs
 //!
 //! # Example: Compile An In-Memory Scene
 //!
