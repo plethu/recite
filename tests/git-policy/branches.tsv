@@ -1,0 +1,21 @@
+# expected result<TAB>branch name
+valid	feat/dialogue-parser
+valid	fix/runtime-crash
+valid	refactor/compiler-boundaries
+valid	perf/asset-loading
+valid	ci/git-policy
+valid	docs/release-notes
+valid	test/fixture-coverage
+valid	build/toolchain-pins
+valid	chore/dependency-refresh
+valid	spike/new-parser
+valid	release/v1-0-0
+valid	security/ffi-boundary
+invalid	issue-143-git-policy
+invalid	143-git-policy
+invalid	feature/dialogue-parser
+invalid	ci/143-git-policy
+invalid	ci/git_policy
+invalid	ci/git--policy
+invalid	ci/git-policy-
+invalid	CI/git-policy

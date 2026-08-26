@@ -86,7 +86,14 @@ Nearby work not included.
 - `docs/recite-production-spec.md` §<section>
 
 ## Suggested Branch
-`issue-<number>-<short-topic>`
+`<kind>/<short-kebab-topic>`
+
+Use one of `feat`, `fix`, `refactor`, `perf`, `ci`, `docs`, `test`, `build`,
+`chore`, `spike`, `release`, or `security` for `kind`; do not put the issue
+number at the start of a branch. Commit subjects begin with `[REC-N]` followed
+by a concise conventional-commit-style subject. Keep commit bodies to at most
+one explanatory sentence and do not add `Co-Authored-By:` or other
+agent-attribution trailers. Run `scripts/check-git-policy.sh` before handoff.
 ```
 
 ## Review And Merge Pipeline

@@ -1,0 +1,5 @@
+[REC-143] ci: enforce Git workflow policy
+
+Keep the check deterministic.
+
+Co-Authored-By: Codex <codex@example.invalid>

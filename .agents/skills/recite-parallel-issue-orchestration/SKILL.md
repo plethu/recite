@@ -20,8 +20,13 @@ longer prompt.
 ## Recite Guardrails
 
 - The supervisor owns `docs/roadmap.md`; workers treat it as read-only unless their issue explicitly includes roadmap editing.
-- Use branch names as `issue-<number>-<short-topic>`.
-- Keep worktrees outside the main checkout, for example `../recite-worktrees/issue-<number>-<short-topic>`.
+- Use purpose-first branch names as `<kind>/<short-kebab-topic>`, with `kind`
+  chosen from `feat`, `fix`, `refactor`, `perf`, `ci`, `docs`, `test`, `build`,
+  `chore`, `spike`, `release`, or `security`; never prefix them with an issue
+  number.
+- Keep worktrees outside the main checkout, for example
+  `../recite-worktrees/<kind>-<short-kebab-topic>` for branch
+  `<kind>/<short-kebab-topic>`.
 - Use `.agents/skills/recite-github-pm/SKILL.md` for Recite labels, PR creation,
   review gates, and issue closeout.
 - For Rust changes, run the `recite-rust-quality` quick audit before review and include size-triggered files with a split/cohesion/follow-up decision in the worker handoff.
@@ -50,7 +55,8 @@ gh issue edit <issue> --repo plethu/recite \
 
 ```bash
 git fetch origin main
-git worktree add ../recite-worktrees/<branch> -b <branch> origin/main
+git worktree add ../recite-worktrees/<kind>-<short-kebab-topic> \
+  -b <kind>/<short-kebab-topic> origin/main
 ```
 
 Give each worker the issue number, branch, worktree path, expected write scope,

@@ -7,8 +7,16 @@ Recite is a Rust-first deterministic dialogue compiler, runtime, and tooling pro
 - Use GitHub as the canonical forge. Use the GitHub CLI (`gh`) with explicit
   `--repo plethu/recite` for issue, milestone, label, and pull-request work.
 - Work from `main` on short-lived branches.
-- For issue work, name branches `issue-<number>-<short-topic>`.
-- For non-issue maintenance, use `chore/<short-topic>`, `docs/<short-topic>`, or `spike/<short-topic>`.
+- Name branches purpose-first as `<kind>/<short-kebab-topic>`, where `kind` is
+  one of `feat`, `fix`, `refactor`, `perf`, `ci`, `docs`, `test`, `build`,
+  `chore`, `spike`, `release`, or `security`. Never prefix a branch with an
+  issue number.
+- Begin every commit subject with its Recite issue code, then use a concise
+  conventional-commit-style subject, for example `[REC-143] ci: enforce Git
+  workflow policy`. Keep the body to at most one explanatory sentence and
+  never add `Co-Authored-By:` or other agent-attribution trailers.
+- Run `scripts/check-git-policy.sh` locally; it is part of the complete
+  verification gate and checks the relevant change range on pull requests.
 - Keep patches scoped to the issue or user request.
 - Do not revert unrelated user changes.
 - Prefer small, reviewable changes over broad refactors.
