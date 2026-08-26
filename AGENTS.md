@@ -32,6 +32,14 @@ Recite is a Rust-first deterministic dialogue compiler, runtime, and tooling pro
 - Validation should catch malformed project content without running a game engine.
 - Semantic changes should include tests unless the work is explicitly exploratory.
 
+## Code Review Rules
+
+- Preserve deterministic runtime traversal and keep game-side effects outside
+  runtime code; effects remain typed, schema-checked requests for the caller.
+- Treat serialisable runtime state, structured dialogue outputs, and
+  author-visible line and choice IDs as compatibility surfaces. Flag changes
+  that weaken those boundaries and identify the safe migration path.
+
 ## Spec Authority
 
 The production spec lives at `docs/recite-production-spec.md`. Route work to these sections:

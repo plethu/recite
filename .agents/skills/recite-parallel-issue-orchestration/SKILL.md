@@ -63,12 +63,13 @@ issue live, but they should not re-audit the full issue graph.
 Push each branch, open the PR through `gh pr create`, and move the issue to
 `status/review`; use
 `.agents/skills/recite-github-pm/references/issue-pr-examples.md` for command
-shape. Before merge, require a current clean-context review comment for the
-exact PR head SHA; see
+shape. Before merge, satisfy the configured human maintainer policy through
+standard GitHub reviews for the exact PR head SHA; see
 `.agents/skills/recite-github-pm/references/github-merge-details.md`.
 
 Merge one PR at a time from a clean main worktree after the read-only gate and
-full project verification:
+full project verification. Codex Code Review findings are advisory review input,
+not a substitute for human authority or protected-branch gates:
 
 ```bash
 .agents/skills/recite-github-pm/scripts/check-pr-review-gates.sh <pr> <branch> main

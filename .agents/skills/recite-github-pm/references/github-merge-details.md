@@ -14,10 +14,10 @@ gh pr merge 34 --repo plethu/recite --squash --delete-branch
 ```
 
 The gate reads the pull request's base/head, review decision, current head SHA,
-review comments, and reported checks. The merge command must be run from a
-clean worktree after `mise run verify` and the gate pass; protected `main`
-remains the authority for its configured review policy, aggregate status check,
-linear history, and signed commits.
+standard GitHub reviews, review threads, and reported checks. The merge command
+must be run from a clean worktree after `mise run verify` and the gate pass;
+protected `main` remains the authority for its configured review policy,
+aggregate status check, linear history, and signed commits.
 
 ## Maintainer Review
 
@@ -34,31 +34,31 @@ gh pr review 34 --repo plethu/recite --approve --body "Approved for merge."
 ```
 
 GitHub does not permit an author to approve their own pull request. While Recite
-has one human maintainer, the helper instead requires that the PR author is the
-allowlisted maintainer plus a current clean-context agent review. Once another
-human maintainer is added, the helper requires their independent approval and
-rejects stale approvals or outstanding requested changes.
+has one human maintainer, the helper permits the allowlisted maintainer's
+self-review path. Once another human maintainer is added, the helper requires
+their independent approval and rejects stale approvals or outstanding requested
+changes. Approval must be a standard GitHub pull-request review for the exact
+current head SHA.
 
-## Clean-Context Agent Review
+## Codex Code Review
 
-A clean-context agent review is represented by a structured pull-request
-comment for the current head SHA. Its GitHub author must be in the explicit
-`RECITE_REVIEWERS` allowlist, which defaults to the maintainer allowlist. The
-reviewing agent must start from a clean context, review the pull request
-independently, and post this exact shape:
+When Codex cloud Code Review is enabled for the repository, request a review in
+the pull request by commenting:
 
-```bash
-gh pr comment 34 --repo plethu/recite --body '<!-- recite-agent-review:v1 -->
-Agent-Review: approved
-Head-SHA: 5b1c198ce742c81b3010eec0307e9d2cbcd1af92
-Context: clean
-Checks:
-- mise run verify'
+```
+@codex review
 ```
 
-If the pull-request head changes, the clean-context review is stale and must be
-repeated for the new head SHA. The gate blocks failed or errored reported checks
-when any are present; if checks have not reported yet, local checks remain
-mandatory.
+Repository owners may enable automatic reviews in Codex settings instead. Codex
+posts a standard GitHub review; inspect its findings against the current diff,
+then resolve or explicitly reject each review thread. The local gate does not
+parse review-comment payloads or rely on a bot username. Codex findings are
+advisory and do not replace human maintainer approval, branch protection,
+required checks, or tests. See the [official OpenAI Codex GitHub integration
+documentation](https://developers.openai.com/codex/integrations/github/) for
+current setup and availability details.
+
+The gate blocks failed or errored reported checks when any are present; if checks
+have not reported yet, local checks remain mandatory.
 
 Do not use direct pushes to `main` or bypass the protected pull-request path.
