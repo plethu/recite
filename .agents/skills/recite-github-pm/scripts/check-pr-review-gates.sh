@@ -70,6 +70,7 @@ pr_head="$(printf '%s\n' "$pr_json" | jq -r '.headRefName // empty')"
 pr_author="$(printf '%s\n' "$pr_json" | jq -r '.author.login // empty')"
 head_sha="$(printf '%s\n' "$pr_json" | jq -r '.headRefOid // empty')"
 mergeable="$(printf '%s\n' "$pr_json" | jq -r '.mergeable // empty')"
+review_decision="$(printf '%s\n' "$pr_json" | jq -r '.reviewDecision // empty' | tr '[:lower:]' '[:upper:]')"
 
 [[ "$pr_state" == "OPEN" ]] || fail "PR state is ${pr_state:-missing}, expected OPEN"
 [[ "$pr_base" == "$expected_base" ]] || fail "PR base is ${pr_base:-missing}, expected ${expected_base}"
@@ -78,6 +79,7 @@ if [[ -n "$expected_head" ]]; then
 fi
 [[ "$mergeable" == "MERGEABLE" ]] || fail "PR mergeability is ${mergeable:-missing}, expected MERGEABLE"
 [[ -n "$head_sha" ]] || fail "PR head SHA is missing"
+[[ "$review_decision" != "CHANGES_REQUESTED" ]] || fail "GitHub reports blocking requested changes"
 
 echo
 echo "== base branch protection =="
@@ -118,7 +120,7 @@ fi
 echo
 echo "== maintainer approval =="
 reviews_json="$(gh api --paginate --slurp "repos/${repo}/pulls/${pr_number}/reviews")"
-latest_approvers="$(printf '%s\n' "$reviews_json" | jq -r '[.[][]? | {user:(.user.login // empty),state:(.state // "" | ascii_upcase),submitted:(.submitted_at // .updated_at // .created_at // "")}] | map(select(.user != "")) | sort_by(.user,.submitted) | group_by(.user)[] | last | select(.state == "APPROVED") | .user' | sort -u)"
+latest_approvers="$(printf '%s\n' "$reviews_json" | jq -r --arg sha "$head_sha" '[.[][]? | {user:(.user.login // empty),state:(.state // "" | ascii_upcase),commit:(.commit_id // empty),submitted:(.submitted_at // .updated_at // .created_at // "")}] | map(select(.user != "")) | sort_by(.user,.submitted) | group_by(.user)[] | last | select(.state == "APPROVED" and .commit == $sha) | .user' | sort -u)"
 approved_maintainers="$(comm -12 <(printf '%s\n' "$maintainers" | sort -u) <(printf '%s\n' "$latest_approvers" | awk 'NF' | sort -u) || true)"
 non_author_approved_maintainers="$(printf '%s\n' "$approved_maintainers" | awk -v author="$pr_author" 'NF && $0 != author')"
 trusted_author="$(comm -12 <(printf '%s\n' "$maintainers" | sort -u) <(printf '%s\n' "$pr_author" | awk 'NF' | sort -u) || true)"

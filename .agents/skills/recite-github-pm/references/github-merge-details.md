@@ -27,7 +27,7 @@ collaborator: read-only contributors and automation accounts are not
 maintainers.
 
 When a second human maintainer exists, approval must be recorded as a GitHub
-pull-request review:
+pull-request review for the current head commit:
 
 ```bash
 gh pr review 34 --repo plethu/recite --approve --body "Approved for merge."
@@ -36,7 +36,8 @@ gh pr review 34 --repo plethu/recite --approve --body "Approved for merge."
 GitHub does not permit an author to approve their own pull request. While Recite
 has one human maintainer, the helper instead requires that the PR author is the
 allowlisted maintainer plus a current clean-context agent review. Once another
-human maintainer is added, the helper requires their independent approval.
+human maintainer is added, the helper requires their independent approval and
+rejects stale approvals or outstanding requested changes.
 
 ## Clean-Context Agent Review
 
