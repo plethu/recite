@@ -51,6 +51,10 @@ patterns that make an ownership split difficult to assess.
   `DiagnosticCategory`, not duplicated raw strings.
 - Preserve source spans, diagnostic codes, stable IDs, and serialisation
   compatibility when touching those surfaces.
+- Keep consumer-facing structs and enums that may grow `#[non_exhaustive]`,
+  especially errors, events, and effect/condition kinds. Do not apply it to
+  internal compiled-row enums, where same-crate exhaustive matching is
+  intentional and wire compatibility is governed by format mapping/versioning.
 - Add a dependency only when it removes material local complexity, fits Recite's
   determinism and MIT licensing constraints, and crosses a boundary the project
   does not want to own.
