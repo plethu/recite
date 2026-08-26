@@ -97,9 +97,11 @@ protected `main` policy requires a pull request, the aggregate project check,
 linear history, and signed commits. Recite is currently solo-maintained, so the
 temporary review path permits maintainer self-review; once another human
 maintainer exists, require independent approval. Before merging, run the
-read-only gate, record a current clean-context agent review, resolve or
-explicitly reject every review comment, and run `mise run verify` (or
-`scripts/verify.sh`). For Rust changes, run the
+read-only gate, inspect the standard GitHub reviews, resolve or explicitly
+reject every review comment, and run `mise run verify` (or `scripts/verify.sh`).
+Human maintainer approval remains authoritative; Codex Code Review is advisory
+and does not replace human approval, branch protection, required checks, or
+tests. For Rust changes, run the
 `.agents/skills/recite-rust-quality/SKILL.md` quick audit and include its
 size-triggered split/cohesion/follow-up handoff in review notes.
 
@@ -112,9 +114,8 @@ gh pr merge <pr> --repo plethu/recite --squash --delete-branch
 
 Do not merge until the gate and local checks pass. Use GitHub's protected pull
 request path so the configured review policy, checks, linear-history, and
-commit-signing requirements remain visible and enforceable. For clean-context
-review comment shape and approval details, read
-`references/github-merge-details.md`.
+commit-signing requirements remain visible and enforceable. For standard review
+and approval details, read `references/github-merge-details.md`.
 
 ## API Courtesy Rules
 

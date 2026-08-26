@@ -9,8 +9,7 @@ Usage:
 Read-only gate for Recite pull-request merges. GitHub branch protection is the
 canonical project policy. This helper verifies that policy through the GitHub
 CLI, then applies Recite-local gates that protection cannot express:
-  - clean-context agent review for the current head SHA;
-  - maintainer approval, with the current solo-maintainer self-review path;
+  - human maintainer approval, with the current solo-maintainer self-review path;
   - no unresolved review threads;
   - no failed or errored reported checks.
 
@@ -19,8 +18,6 @@ Environment:
                       plethu/recite.
   RECITE_MAINTAINERS  Comma-separated fallback/additional maintainer logins.
                       Default: plethu
-  RECITE_REVIEWERS    Comma-separated GitHub logins allowed to record the
-                      clean-context agent review. Default: RECITE_MAINTAINERS.
   RECITE_REQUIRED_CHECK Required aggregate check context. Default:
                         required-check.
 EOF
@@ -107,7 +104,6 @@ repo_json="$(gh repo view "$repo" --json owner,name)"
 repo_owner="$(printf '%s\n' "$repo_json" | jq -r '.owner.login // empty')"
 repo_name="$(printf '%s\n' "$repo_json" | jq -r '.name // empty')"
 maintainers="$(printf '%s\n' "${RECITE_MAINTAINERS:-plethu}" | tr ',' '\n' | sed 's/^[[:space:]]*//;s/[[:space:]]*$//' | awk 'NF' | sort -u)"
-reviewers="$(printf '%s\n' "${RECITE_REVIEWERS:-${RECITE_MAINTAINERS:-plethu}}" | tr ',' '\n' | sed 's/^[[:space:]]*//;s/[[:space:]]*$//' | awk 'NF' | sort -u)"
 maintainer_count="$(printf '%s\n' "$maintainers" | awk 'NF' | wc -l | tr -d ' ')"
 
 if [[ -z "$maintainers" ]]; then
@@ -137,17 +133,6 @@ elif [[ -n "$trusted_author" ]]; then
   printf '%s (temporary single-maintainer self-review; revisit when another maintainer is added)\n' "$trusted_author"
 else
   fail "no GitHub approval review or trusted single-maintainer author self-review"
-fi
-
-echo
-echo "== clean-context agent review =="
-comments_json="$(gh api --paginate --slurp "repos/${repo}/issues/${pr_number}/comments")"
-reviewers_json="$(printf '%s\n' "$reviewers" | jq -Rsc 'split("\n") | map(select(length > 0))')"
-agent_review_count="$(printf '%s\n' "$comments_json" | jq --arg sha "$head_sha" --argjson reviewers "$reviewers_json" '[.[][]? | select(.user.login as $login | $reviewers | index($login)) | select((.body // "") | contains("<!-- recite-agent-review:v1 -->")) | select((.body // "") | test("Agent-Review:[[:space:]]*approved"; "i")) | select((.body // "") | test("Context:[[:space:]]*clean"; "i")) | select((.body // "") | contains("Head-SHA: " + $sha)) | select((.body // "") | contains("mise run verify"))] | length')"
-if (( agent_review_count > 0 )); then
-  echo "found clean-context agent review for ${head_sha}"
-else
-  fail "missing clean-context agent review comment for ${head_sha} with mise run verify"
 fi
 
 echo
