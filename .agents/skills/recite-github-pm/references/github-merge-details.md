@@ -54,9 +54,19 @@ posts a standard GitHub review; inspect its findings against the current diff,
 then resolve or explicitly reject each review thread. The local gate does not
 parse review-comment payloads or rely on a bot username. Codex findings are
 advisory and do not replace human maintainer approval, branch protection,
-required checks, or tests. See the [official OpenAI Codex GitHub integration
-documentation](https://developers.openai.com/codex/integrations/github/) for
-current setup and availability details.
+required checks, or tests. See the [official Codex GitHub review
+documentation](https://learn.chatgpt.com/docs/third-party/github) for current
+setup and availability details.
+
+The review may take several minutes. Treat the initial pending or `👀` state as
+normal: continue local work and do not repost the request while it is pending.
+Poll the pull request at increasing intervals, such as two minutes, four
+minutes, eight minutes, and then fifteen minutes, capped there while useful
+work remains. Once a standard review appears, inspect it against the exact
+current head SHA, resolve or explicitly reject each thread, and run the gate
+again. Fall back to the normal human/manual review path only on an explicit
+terminal failure or a genuinely task-blocking timeout; never revive custom
+comment parsing.
 
 The gate blocks failed or errored reported checks when any are present; if checks
 have not reported yet, local checks remain mandatory.

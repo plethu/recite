@@ -1,91 +1,80 @@
 ---
 name: recite-rust-quality
-description: "Use for Recite Rust maintainability review: module boundaries, validation ownership, deterministic surfaces, diagnostics, dependency judgment, and file-size triggers."
+description: Use for Recite Rust maintainability review: module boundaries, validation ownership, deterministic surfaces, diagnostics, FFI, and file-size triggers.
 ---
 
 # Recite Rust Quality
 
-## Why
+When available, load the global `rust-quality` skill for general Rust
+implementation and review. This overlay records the Recite-specific
+maintainability and compatibility checks required in any environment.
 
-Use the global `rust-quality` skill for generic Rust architecture and review.
-This skill adds Recite-specific maintainability checks for deterministic dialogue
-semantics, diagnostics, validation ownership, and file-size triggers.
+## File-size review
 
-## Quick Audit
+Line count is a triage signal, not an automatic split rule. Inspect whether a
+file owns multiple independently changing concerns, data groups, or test
+scenarios.
 
-When reviewing uncommitted Rust changes, inspect the changed files and run a
-line-count pass over both modified tracked Rust files and untracked Rust files:
-
-```bash
-git diff --name-only --diff-filter=ACMRT HEAD -- '*.rs' | xargs -r wc -l | sort -nr
-git ls-files --others --exclude-standard -- '*.rs' | xargs -r wc -l | sort -nr
-```
-
-When reviewing a committed branch, compare against the branch base:
-
-```bash
-git diff --name-only --diff-filter=ACMRT main...HEAD -- '*.rs' | xargs -r wc -l | sort -nr
-```
-
-For branch-wide cleanup or review, use tracked files:
-
-```bash
-git ls-files '*.rs' | xargs wc -l | sort -nr | head -50
-```
-
-Ignore generated files, lockfiles, docs, and build output. Do not ignore
-hand-written data/tag/catalog tables by default; count them, then decide whether
-their lookup behavior, grouping, and update pattern justify one file.
-
-## File-Size Triggers
-
-Line count is a triage trigger, not an automatic split rule, but large files
-must be scrutinized before accepting them. The real question is whether a file
-owns multiple independently changing concerns, data groups, or test scenarios.
-
-| File kind | Cohesion check | Split rationale or follow-up |
+| File kind | Scrutinise above | Split or follow up above |
 | --- | ---: | ---: |
-| Production Rust | >250 LOC | >400 LOC |
-| Test/support Rust | >350 LOC | >500 LOC |
+| Production Rust | 250 LOC | 400 LOC |
+| Test/support Rust | 350 LOC | 500 LOC |
 
-Accept a large file only when it is cohesive and splitting would make the code
-harder to understand. For new production Rust over 400 LOC or new test/support
-Rust over 500 LOC, start from a split-first assumption: the review must identify
-why category, namespace, fixture, behavior, or helper-module boundaries would be
-worse than one file. "It is mostly data" is not enough by itself. Split smaller
-files when responsibilities are mixed.
+For a touched file above the scrutiny threshold, record one of:
 
-A clean Rust implementation review is not complete until every touched production Rust file over 250 LOC and every touched test/support Rust file over 350 LOC is listed with one of:
+- split now;
+- cohesive, with the reason and alternatives considered; or
+- follow-up needed, with the issue or handoff note.
 
-- Split now.
-- Cohesive; keep as-is, with the reason and the split alternatives considered.
-- Follow-up needed, with the issue or handoff note.
+For a branch-wide pass, count tracked Rust files. Include staged and untracked
+hand-written files when reviewing a working tree; ignore generated output,
+lockfiles, and build output. Do not dismiss hand-written data/tag/catalog tables
+as “mostly data” without checking their ownership and update pattern. Use
+`ast-grep` or an equivalent structural search when a large file has repeated
+patterns that make an ownership split difficult to assess.
 
-## Recite Checks
+## Recite checks
 
-- Keep parser, AST/model, compiler/validation, runtime traversal, serialization, CLI/TUI, and LSP responsibilities separate.
-- Put validation policy at the boundary that owns the invalid state: constructors, typed models, loader/lowerer, compiler validation, runtime asset checks, or a named future issue.
-- Avoid widening public API, `pub(crate)`, or module visibility just to make a local implementation convenient.
-- Keep deterministic ordering explicit with source order or stable sorting where output can be observed.
-- Prefer structured types, enums, and diagnostics over string conventions callers must parse.
-- Build diagnostics through the shared `recite-core` constructor (`Diagnostic::error`) and the per-crate code constants; do not re-create a module-local `diagnostic()`/`*_diagnostic()` helper. Codes are static and namespaced: validate them at compile time with `DiagnosticCode::new_static`. Select or group diagnostics by `DiagnosticCategory`, never by matching or duplicating raw code strings across crates.
-- Preserve source spans, diagnostic codes, stable IDs, and serialization compatibility when touching those surfaces.
-- Add a dependency only when it (1) removes error-prone or voluminous local code, (2) does not weaken a product invariant — determinism, stable IDs/codes, serialization compatibility, MIT licensing — and (3) covers a boundary the project does not want to own. A crate being well-regarded or popular is not itself a reason; reject it when std or a small local path already suffices. Worked judgment: `thiserror` earns its place on the library error enums (it deletes hand-rolled `Display`/`Error`/`From`) but not on `CliError`, whose rendering the Fluent i18n table owns.
+- Keep parser, AST/model, compiler/validation, runtime traversal, serialisation,
+  CLI/TUI, and LSP responsibilities separate.
+- Put validation policy at the boundary that owns the invalid state: a
+  constructor, typed model, loader/lowerer, compiler validation, runtime asset
+  check, or named future issue.
+- Keep deterministic ordering explicit with source order or stable sorting where
+  output can be observed.
+- Prefer structured types, enums, and diagnostics over string conventions that
+  callers must parse.
+- Build diagnostics through the shared `recite-core` constructor
+  (`Diagnostic::error`) and per-crate code constants. Do not re-create a
+  module-local diagnostic helper. Codes are static and namespaced; validate them
+  with `DiagnosticCode::new_static` and select/group them by
+  `DiagnosticCategory`, not duplicated raw strings.
+- Preserve source spans, diagnostic codes, stable IDs, and serialisation
+  compatibility when touching those surfaces.
+- Do not grow public entry points through stacked optional parameters or
+  `_with_a_and_b` variants. At the third configuration knob, introduce an
+  options/resolution struct and retain a zero-configuration entry point;
+  precedents include `LocaleResolution` and `DialogueSessionOptions`.
+- Keep consumer-facing structs and enums that may grow `#[non_exhaustive]`,
+  especially errors, events, and effect/condition kinds. Do not apply it to
+  internal compiled-row enums, where same-crate exhaustive matching is
+  intentional and wire compatibility is governed by format mapping/versioning.
+- Add a dependency only when it removes material local complexity, fits Recite's
+  determinism and MIT licensing constraints, and crosses a boundary the project
+  does not want to own.
 
-## Public API and Extensibility
+## FFI surface
 
-- Do not grow a signature with stacked optional parameters or `_with_a_and_b` suffixes. At the third knob, take an options/resolution struct and keep a zero-config entry point (precedents: `LocaleResolution` behind `next_with`/`choose_with`, `DialogueSessionOptions` behind `start_scene_with_options`).
-- Mark consumer-facing public enums and structs `#[non_exhaustive]` when they may gain variants or fields, so downstream code (e.g. the Bevy adapter) keeps compiling when one is added. Apply it to errors, events, and effect/condition kinds; do not apply it to internal compiled-row enums, where same-crate exhaustive matching is the intended contract and wire compatibility is governed by tag mapping and format version.
-
-## FFI Surface
-
-- `unsafe impl Send` for raw pointer wrappers at a C ABI boundary requires runtime enforcement, not only a prose contract. For Recite's cdylib session model, the single-thread-per-session guarantee must be enforced by recording the owner thread ID at session creation and rejecting any session operation that fires callbacks from a different thread. Documentation alone is not sufficient.
-
-- Do not encode structured error categories into a free-form string carried through an opaque error type (e.g. packing a status code into a `reason` string so it can be decoded later at the FFI mapping layer). Store the category as a typed thread-local or a structured field and recover it from there. The string-encoding pattern silently degrades when the carrying type modifies or truncates the string, and it can misinterpret host-supplied error messages that happen to match the encoding format.
+- `unsafe impl Send` for raw pointer wrappers at a C ABI boundary requires
+  runtime enforcement, not only a prose contract. For Recite's cdylib session
+  model, record the owner thread ID at session creation and reject session
+  operations that fire callbacks from a different thread.
+- Do not encode structured error categories into a free-form string carried
+  through an opaque error type. Store the category as a typed thread-local or
+  structured field and recover it from there.
 
 ## Handoff
 
-Before handoff, state:
-
-- Size-triggered files and their cohesion or split rationale.
-- Checks run, usually `cargo fmt --check`, `cargo test`, `cargo clippy --all-targets --all-features -- -D warnings`, and any focused crate/test command.
+State the size-triggered files and their cohesion/split decision. Run the
+repository's documented gate (`mise run verify`) or name the focused checks and
+any blocker.
