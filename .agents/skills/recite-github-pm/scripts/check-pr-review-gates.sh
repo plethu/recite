@@ -5,6 +5,7 @@ usage() {
   cat <<'EOF'
 Usage:
   check-pr-review-gates.sh <pr-number> [head-branch] [base-branch]
+  check-pr-review-gates.sh --check-rollup <json-file> [required-check]
 
 Read-only gate for Recite pull-request merges. GitHub branch protection is the
 canonical project policy. This helper verifies that policy through the GitHub
@@ -20,8 +21,120 @@ Environment:
                       Default: plethu
   RECITE_REQUIRED_CHECK Required aggregate check context. Default:
                         required-check.
+
+The --check-rollup mode is a local deterministic fixture hook. It reads a
+statusCheckRollup array from a JSON file, reduces duplicate check identities to
+their newest result, and applies the required and blocking-state checks.
 EOF
 }
+
+reduce_check_rollup() {
+  jq -c '
+    if type != "array" then
+      error("expected a statusCheckRollup array")
+    else
+      map(
+        . as $check
+        | ($check.name // $check.context // "") as $identity
+        | ($check.startedAt // $check.createdAt // $check.completedAt // "") as $timestamp
+        | (($check.conclusion // $check.state // $check.status // "") | ascii_downcase) as $result
+        | {
+            identity: $identity,
+            timestamp: $timestamp,
+            completedAt: ($check.completedAt // ""),
+            detailsUrl: ($check.detailsUrl // ""),
+            workflowName: ($check.workflowName // ""),
+            orderable: (
+              $identity != ""
+              and $timestamp != ""
+              and (($timestamp | startswith("0001-")) | not)
+            ),
+            resultRank: (if ($result | IN("success", "neutral", "skipped")) then 0 else 1 end),
+            check: $check
+          }
+      )
+      | sort_by(.identity)
+      | group_by(.identity)
+      | map(
+          if any(.[]; (.orderable | not)) then
+            {
+              name: (.[0].identity | if . == "" then "<unnamed>" else . end),
+              status: "RECITE_AMBIGUOUS"
+            }
+          else
+            sort_by([
+              .timestamp,
+              .resultRank,
+              .completedAt,
+              .detailsUrl,
+              .workflowName,
+              (.check.status // .check.state // "")
+            ])
+            | last.check
+          end
+        )
+    end
+  '
+}
+
+evaluate_check_rollup() {
+  local checks_json="$1"
+  local required="$2"
+  local required_state blocking_checks
+
+  required_state="$(printf '%s\n' "$checks_json" | jq -r --arg required "$required" '
+    [.[]
+     | select((.name // .context // "") == $required)
+     | (.conclusion // .state // .status // "")
+     | ascii_downcase]
+    | if length == 1 then .[0] else "" end
+  ')"
+  if [[ "$required_state" != "success" ]]; then
+    echo "required aggregate check ${required} is missing, pending, or unsuccessful" >&2
+    return 1
+  fi
+
+  blocking_checks="$(printf '%s\n' "$checks_json" | jq -r '
+    .[]
+    | . as $check
+    | (($check.conclusion // $check.state // $check.status // "") | ascii_downcase) as $result
+    | select(($result | IN("success", "neutral", "skipped")) | not)
+    | "\($check.name // $check.context // "<unnamed>"): \($result)"
+  ')"
+  if [[ -n "$blocking_checks" ]]; then
+    echo "$blocking_checks" >&2
+    return 1
+  fi
+
+  return 0
+}
+
+if [[ "${1:-}" == "--check-rollup" ]]; then
+  rollup_file="${2:-}"
+  rollup_required="${3:-required-check}"
+
+  if [[ -z "$rollup_file" || ! -f "$rollup_file" ]]; then
+    echo "status-check rollup fixture is missing: ${rollup_file:-<path>}" >&2
+    exit 2
+  fi
+  if ! command -v jq >/dev/null 2>&1; then
+    echo "jq not installed; install it before checking status-rollup fixtures" >&2
+    exit 2
+  fi
+
+  if ! reduced_rollup="$(reduce_check_rollup <"$rollup_file")"; then
+    echo "unable to reduce status-check rollup fixture: $rollup_file" >&2
+    exit 2
+  fi
+
+  if evaluate_check_rollup "$reduced_rollup" "$rollup_required"; then
+    echo "status-check rollup passed: $rollup_file"
+    exit 0
+  fi
+
+  echo "status-check rollup blocked: $rollup_file" >&2
+  exit 1
+fi
 
 if [[ "${1:-}" == "-h" || "${1:-}" == "--help" || "${1:-}" == "help" ]]; then
   usage
@@ -155,18 +268,15 @@ fi
 
 echo
 echo "== reported checks =="
-required_check_success="$(printf '%s\n' "$pr_json" | jq --arg required "$required_check" '[.statusCheckRollup[]? | select((.name // .context // "") == $required) | select((.conclusion // .state // "") | ascii_downcase == "success")] | length')"
-if (( required_check_success == 0 )); then
-  fail "required aggregate check ${required_check} is missing, pending, or unsuccessful"
+if ! reduced_rollup="$(printf '%s\n' "$pr_json" | jq -c '.statusCheckRollup // []' | reduce_check_rollup)"; then
+  fail "unable to reduce reported status checks"
 else
-  echo "${required_check}: success"
-fi
-
-blocking_checks="$(printf '%s\n' "$pr_json" | jq '[.statusCheckRollup[]? | select((.conclusion // .state // "") | ascii_downcase | IN("failure","error","cancelled","timed_out","action_required","stale"))] | length')"
-if (( blocking_checks > 0 )); then
-  fail "${blocking_checks} failed or cancelled GitHub check(s) are present"
-else
-  echo "no failed or cancelled checks reported"
+  if evaluate_check_rollup "$reduced_rollup" "$required_check"; then
+    echo "${required_check}: success"
+    echo "no failed, cancelled, or pending checks reported"
+  else
+    fail "newest result for a required or blocking check is not successful"
+  fi
 fi
 
 if (( failures > 0 )); then

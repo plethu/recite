@@ -1,0 +1,23 @@
+[
+  {
+    "name": "Lint",
+    "startedAt": "2026-08-26T18:13:39Z",
+    "completedAt": "2026-08-26T18:15:15Z",
+    "conclusion": "FAILURE",
+    "status": "COMPLETED"
+  },
+  {
+    "name": "Documentation",
+    "startedAt": "2026-08-26T18:14:39Z",
+    "completedAt": "2026-08-26T18:15:15Z",
+    "conclusion": "SUCCESS",
+    "status": "COMPLETED"
+  },
+  {
+    "name": "required-check",
+    "startedAt": "2026-08-26T18:15:17Z",
+    "completedAt": "2026-08-26T18:15:20Z",
+    "conclusion": "SUCCESS",
+    "status": "COMPLETED"
+  }
+]

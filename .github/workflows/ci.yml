@@ -38,6 +38,9 @@ jobs:
       - name: Check branch and commit policy
         run: scripts/check-git-policy.sh
 
+      - name: Check pull-request rollup policy
+        run: tests/check-pr-review-gates/check-rollup-fixtures.sh
+
   rust:
     name: Rust gates
     runs-on: ubuntu-24.04

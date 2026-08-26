@@ -1,0 +1,19 @@
+[
+  {
+    "context": "Lint",
+    "createdAt": "2026-08-26T18:12:26Z",
+    "state": "FAILURE"
+  },
+  {
+    "name": "Lint",
+    "startedAt": "2026-08-26T18:13:39Z",
+    "completedAt": "2026-08-26T18:15:15Z",
+    "conclusion": "SUCCESS",
+    "status": "COMPLETED"
+  },
+  {
+    "context": "required-check",
+    "createdAt": "2026-08-26T18:15:20Z",
+    "state": "SUCCESS"
+  }
+]

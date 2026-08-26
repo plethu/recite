@@ -1,0 +1,32 @@
+[
+  {
+    "name": "Rust gates",
+    "startedAt": "2026-08-26T18:13:39Z",
+    "completedAt": "2026-08-26T18:15:15Z",
+    "conclusion": "SUCCESS",
+    "status": "COMPLETED",
+    "detailsUrl": "https://example.invalid/rust/new"
+  },
+  {
+    "name": "Rust gates",
+    "startedAt": "2026-08-26T18:12:26Z",
+    "completedAt": "2026-08-26T18:13:31Z",
+    "conclusion": "FAILURE",
+    "status": "COMPLETED",
+    "detailsUrl": "https://example.invalid/rust/old"
+  },
+  {
+    "name": "required-check",
+    "startedAt": "2026-08-26T18:15:17Z",
+    "completedAt": "2026-08-26T18:15:20Z",
+    "conclusion": "SUCCESS",
+    "status": "COMPLETED"
+  },
+  {
+    "name": "Documentation",
+    "startedAt": "2026-08-26T18:13:40Z",
+    "completedAt": "2026-08-26T18:14:27Z",
+    "conclusion": "SUCCESS",
+    "status": "COMPLETED"
+  }
+]

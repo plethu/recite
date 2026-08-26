@@ -1,6 +1,7 @@
 [tools]
 "cargo:cbindgen" = "0.29.4"
 "aqua:BurntSushi/ripgrep" = "15.2.0"
+"aqua:jqlang/jq" = "1.8.2"
 dotnet = "8.0.421"
 rust = { version = "1.96.0", components = ["rustfmt", "clippy"] }
 node = "22.12.0"
