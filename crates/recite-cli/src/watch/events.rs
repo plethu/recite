@@ -3,7 +3,7 @@ use std::path::{Path, PathBuf};
 use std::sync::mpsc;
 use std::time::{Duration, Instant};
 
-use notify::Event;
+use notify::{Event, EventKind};
 
 use super::PROJECT_MANIFEST_FILE;
 use super::inputs::{is_generated_output_path, is_project_recite_source};
@@ -80,7 +80,9 @@ impl WatchState {
     }
 
     pub(super) fn is_relevant_event(&self, event: &Event) -> bool {
-        event.paths.is_empty() || event.paths.iter().any(|path| self.is_relevant_path(path))
+        !matches!(event.kind, EventKind::Access(_))
+            && (event.paths.is_empty()
+                || event.paths.iter().any(|path| self.is_relevant_path(path)))
     }
 
     pub(super) fn is_relevant_path(&self, path: &Path) -> bool {

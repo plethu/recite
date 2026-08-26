@@ -16,3 +16,7 @@ dotnet.isolated = true
 [tasks.verify]
 description = "Run the complete local verification suite"
 run = "scripts/verify.sh"
+
+[tasks.watch-stress]
+description = "Measure real watch rebuilds on generated fixture scales"
+run = "cargo test --locked -p recite-cli --test watch_stress -- --ignored --nocapture"
