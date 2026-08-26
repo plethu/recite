@@ -14,7 +14,7 @@ use super::inputs::collect_project_sources;
 use crate::diagnostics::report_diagnostics;
 use crate::error::CliError;
 use crate::fs::{
-    display_path, load_schema, read_compile_inputs_for_output, reject_output_input_alias,
+    display_path, load_schema, read_compile_inputs_relative_to, reject_output_input_alias,
     resolve_project_path, validate_project, write_staged,
 };
 
@@ -64,7 +64,7 @@ pub(super) fn build_once(
     let mut compiled_assets = Vec::new();
     for target in unique_asset_targets(&state.project_root, &manifest) {
         reject_output_input_alias(&target.write_path, &input_files)?;
-        let inputs = read_compile_inputs_for_output(&target.write_path, input_files.clone())?;
+        let inputs = read_compile_inputs_relative_to(&state.project_root, input_files.clone())?;
         let options =
             compile_options_for_asset_id(&target.asset_id, loaded_schema.schema.as_ref())?;
         let report = if let Some(schema) = &loaded_schema.schema {

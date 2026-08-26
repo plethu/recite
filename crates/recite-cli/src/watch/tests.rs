@@ -2,6 +2,8 @@ use std::fs;
 use std::path::{Path, PathBuf};
 use std::time::Duration;
 
+use notify::event::{AccessKind, AccessMode};
+use notify::{Event, EventKind};
 use recite_core::decode_compiled_dialogue_messagepack;
 use tempfile::TempDir;
 
@@ -98,6 +100,31 @@ participants = ["hazel"]
 
     assert_eq!(status, BuildStatus::Fresh { asset_count: 1 });
     assert!(temp.path().join("compiled/shared.recitec").is_file());
+}
+
+#[test]
+fn initial_build_resolves_project_relative_cross_file_targets() {
+    let temp = TempDir::new().expect("tempdir");
+    write_project(temp.path());
+    write_file(
+        temp.path(),
+        "src/first.recite",
+        ":: start default speaker=hazel\n-> src/second.recite::finish\n",
+    );
+    write_file(
+        temp.path(),
+        "src/second.recite",
+        ":: finish speaker=hazel\n> ending@22222222222222222222\n  Finished.\n-> END\n",
+    );
+
+    let mut stderr = Vec::new();
+    let aliased_root = temp.path().join("src/..");
+    let mut state = WatchState::new(aliased_root);
+    let status = build_once(&mut state, &mut stderr).expect("build");
+
+    assert_eq!(status, BuildStatus::Fresh { asset_count: 1 });
+    assert!(temp.path().join("compiled/dialogue.recitec").is_file());
+    assert_eq!(String::from_utf8(stderr).expect("stderr"), "");
 }
 
 #[test]
@@ -214,6 +241,13 @@ fn relevant_events_include_manifest_sources_and_schema_but_ignore_outputs() {
     assert!(!state.is_relevant_path(&temp.path().join("compiled/.dialogue.recitec.42.tmp")));
     assert!(!state.is_relevant_path(&temp.path().join(".hidden/main.recite")));
     assert!(!state.is_relevant_path(&temp.path().join("target/main.recite")));
+
+    let access = Event {
+        kind: EventKind::Access(AccessKind::Close(AccessMode::Read)),
+        paths: vec![temp.path().join("dialogue/main.recite")],
+        attrs: Default::default(),
+    };
+    assert!(!state.is_relevant_event(&access));
 }
 
 #[test]
