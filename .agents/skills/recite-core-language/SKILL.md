@@ -3,80 +3,43 @@ name: recite-core-language
 description: Use for Recite parser, AST, compiler, runtime, schema, effects, localisation ID, and deterministic dialogue semantics work.
 ---
 
-# Recite Core Language Work
+# Recite Core Language
 
-## Why
+Use this overlay for changes to Recite's language and execution semantics. Load
+the relevant section of `docs/recite-production-spec.md` before implementation;
+the section map is in `AGENTS.md`. Load the global `language-tooling` and
+`rust-quality` skills for their general guidance.
 
-Core language work defines Recite's durable semantics. Prefer small changes that preserve deterministic behavior and leave game-specific meaning outside the core runtime.
-
-Apply this guidance across the Rust workspace, especially `recite-parser`, `recite-core`, `recite-compiler`, `recite-runtime`, and related crates.
-
-## Spec Routing
-
-Read the relevant section of `docs/recite-production-spec.md` before implementation. Section numbers live in the Spec Authority table in `AGENTS.md`; for core work the relevant subsystems are source format/parser, conditions, effects, runtime, localisation and stable IDs, schema, manifests/compiler, and the milestones/v1 gate.
-
-## Core Invariants
-
-The canonical project invariants are the Product Invariants list in `AGENTS.md`. Core work adds these subsystem-specific invariants:
+## Recite invariants
 
 - Conditions are evaluated through caller-provided context.
 - Source-backed diagnostics carry spans.
 - Metadata preserves repeated keys and source order.
-- Blocking effects pause traversal and must resume with the same effect ID after save/load.
+- Blocking effects pause traversal and resume with the same effect ID after
+  save/load.
+- Runtime traversal remains deterministic, emits structured events, and never
+  performs game-side effects.
 
-## Implementation Guidance
+## Ownership boundaries
 
-- Keep parser, AST, compiler, and runtime responsibilities separate.
-- Parser code should describe syntax and spans, not runtime policy.
-- Compiler code should validate references, IDs, schema use, and deterministic compiled output.
-- Runtime code should consume compiled structures and expose structured events.
-- Keep public API and generic Rust quality checks aligned with `.agents/skills/recite-rust-quality/SKILL.md`.
+- Parser code describes syntax and spans, not runtime policy.
+- AST and model types represent source structure without performing execution.
+- Compiler code validates references, IDs, schema use, and deterministic
+  compiled output.
+- Runtime code consumes compiled structures and exposes structured events.
+- Keep parser, AST/model, compiler/validation, runtime traversal,
+  serialisation, and host-facing tooling responsibilities separate.
 
-## Parser/AST Issue Example
+## Blocking effects
 
-Good acceptance criteria:
+When touching blocking effects, verify that:
 
-```markdown
-## Acceptance Criteria
-- Parses named blocks and default block markers.
-- Preserves source spans for block names and malformed headers.
-- Rejects mixed indentation inside a block body.
-- Adds parser tests for valid and invalid examples.
-```
+- the runtime emits a structured effect event;
+- traversal pauses until acknowledgement;
+- serialised session state records the pending effect;
+- deserialising and resuming re-emits the same effect ID; and
+- acknowledging the wrong or missing effect returns a structured error.
 
-## Runtime Test Shape Example
-
-```rust
-#[test]
-fn traversal_is_deterministic() {
-    let asset = fixture_asset("simple_choice");
-    let first = run_trace(&asset, ["choice_a"]);
-    let second = run_trace(&asset, ["choice_a"]);
-
-    assert_eq!(first.events, second.events);
-    assert_eq!(first.deferred_effects, second.deferred_effects);
-}
-```
-
-## Blocking Effect Checklist
-
-When touching blocking effects, verify:
-
-- The runtime emits a structured effect event.
-- Traversal pauses until acknowledgement.
-- Serialized session state records the pending effect.
-- Deserializing and resuming re-emits the same effect ID.
-- Acknowledging the wrong or missing effect returns a structured error.
-
-## Quality Gate
-
-Before handoff:
-
-- Acceptance criteria are implemented or explicitly called out.
-- New public model types and constructors have a clear validation policy: invalid states are prevented, represented explicitly, or deliberately deferred to a named validation pass or issue.
-- Public API changes are reviewed for long-term correctness, maintainability, extensibility, and preservation of Recite's core invariants, not only for immediate issue scope.
-- Semantic changes include tests unless the issue is exploratory.
-- Error paths are covered for malformed source or invalid compiled content.
-- Source-backed errors include spans.
-- Source-order behavior is asserted where meaningful.
-- `cargo fmt --check`, `cargo test`, and `cargo clippy --all-targets --all-features -- -D warnings` were run, or the blocker is stated.
+Semantic changes require tests unless the issue is explicitly exploratory. Keep
+source order, stable IDs, spans, diagnostics, serialisation, and public API
+compatibility visible in the review.

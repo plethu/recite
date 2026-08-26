@@ -5,16 +5,15 @@ description: "Use for Recite-specific GitHub project management: labels, milesto
 
 # Recite GitHub Project Management
 
-## Why
+Use the GitHub CLI for Recite project management. Pass `--repo plethu/recite`
+to every issue, pull-request, review, label, milestone, and project command so a
+stale local remote cannot direct a mutation elsewhere. This skill contains only
+Recite's project shape and protected-merge requirements; use the global Git and
+review skills for general workflow guidance.
 
-Use the GitHub CLI (`gh`) for Recite project management. Always pass
-`--repo plethu/recite` so a stale local remote cannot send an operation to the
-wrong repository. This skill adds Recite-specific labels, issue shape,
-milestone/spec routing, and review gates.
+## Preflight and verification
 
-## Recite Preflight
-
-For single-issue work, prefer the lightweight checker and a targeted issue read:
+For single-issue work, run the lightweight checker and read the target issue:
 
 ```bash
 .agents/skills/recite-github-pm/scripts/recite-pm-check.sh quick
@@ -22,15 +21,18 @@ gh issue view 17 --repo plethu/recite --json number,title,state,milestone,labels
 ```
 
 Use `recite-pm-check.sh full` for broad planning or label/milestone audits, not
-as a routine before every mutation. If a command would create or edit many
-remote objects, write an idempotent script that checks current state first and
-skips existing objects.
+before every mutation. After a single issue mutation, verify that issue:
 
-For detailed issue and PR command examples, read
-`references/issue-pr-examples.md`. For multi-agent roadmap or milestone
-orchestration, use `.agents/skills/recite-parallel-issue-orchestration/SKILL.md`.
+```bash
+.agents/skills/recite-github-pm/scripts/recite-pm-check.sh issue 17
+```
 
-## Labels
+The helper scripts are read-only checks. Check current state before creating or
+editing remote objects, keep remote mutations sequential, and make broad
+mutations idempotent. Stop a mutation pass on a GitHub rate-limit or server
+failure and respect the server-provided retry window.
+
+## Recite project shape
 
 Use these labels when useful:
 
@@ -42,21 +44,11 @@ Use these labels when useful:
 | Size | `size/s`, `size/m`, `size/l` |
 | Risk | `risk/high`, `risk/cross-cutting` |
 
-Recite issues are Mari + agent co-work by default. Do not encode assumptions
-that an issue will be fully autonomous.
+Use milestone names from `docs/recite-production-spec.md` §22. The serious v1
+boundary is §23; do not automatically defer adapter, performance, or editor
+work without checking that section and the issue milestone.
 
-## Milestones
-
-Use the milestone names from `docs/recite-production-spec.md` §22. The serious
-v1 boundary is defined by §23 and is broad: it covers the core runtime, CLI,
-LSP, scale proof, the engine-adapter contract, production-quality Godot, Unity,
-and Bevy adapters, and adoption/migration docs. Do not treat adapter,
-performance, or editor work as automatically post-v1; defer to §23 and the
-issue's milestone.
-
-## Issue Shape
-
-Use this body structure for implementation issues:
+Implementation issues should state:
 
 ```markdown
 ## Goal
@@ -66,7 +58,7 @@ One concrete outcome.
 What behavior, crate, or surface is in bounds.
 
 ## Known Decisions
-Project decisions that should not be reopened in this issue.
+Decisions that should not be reopened in this issue.
 
 ## Open Questions
 Questions that must be answered during co-work.
@@ -84,72 +76,36 @@ Nearby work not included.
 
 ## Spec References
 - `docs/recite-production-spec.md` §<section>
-
-## Suggested Branch
-`<kind>/<short-kebab-topic>`
-
-Use one of `feat`, `fix`, `refactor`, `perf`, `ci`, `docs`, `test`, `build`,
-`chore`, `spike`, `release`, or `security` for `kind`; do not put the issue
-number at the start of a branch. Commit subjects begin with `[REC-N]` followed
-by a concise conventional-commit-style subject. Keep commit bodies to at most
-one explanatory sentence and do not add `Co-Authored-By:` or other
-agent-attribution trailers. Run `scripts/check-git-policy.sh` before handoff.
 ```
 
-## Review And Merge Pipeline
+Recite issues are maintainer and agent co-work by default; do not encode an
+assumption that an issue will be fully autonomous.
 
-Recite requires signed commits and explicit review gates. Treat GitHub branch
-protection and required checks as the repository-level source of truth. The
-protected `main` policy requires a pull request, the aggregate project check,
-linear history, and signed commits. Recite is currently solo-maintained, so the
-temporary review path permits maintainer self-review; once another human
-maintainer exists, require independent approval. Before merging, run the
-read-only gate, inspect the standard GitHub reviews, resolve or explicitly
-reject every review comment, and run `mise run verify` (or `scripts/verify.sh`).
-Human maintainer approval remains authoritative; Codex Code Review is advisory
-and does not replace human approval, branch protection, required checks, or
-tests. For Rust changes, run the
-`.agents/skills/recite-rust-quality/SKILL.md` quick audit and include its
-size-triggered split/cohesion/follow-up handoff in review notes.
+## Review and protected merge
 
-Normal read-only gate and GitHub merge commands are:
+Recite's protected `main` policy and the read-only helper are the repository
+sources of truth. Before merging, inspect the pull request's current head,
+standard GitHub reviews and threads, resolve or explicitly reject each review
+comment, run `mise run verify`, and pass:
 
 ```bash
 .agents/skills/recite-github-pm/scripts/check-pr-review-gates.sh <pr> <branch> main
 gh pr merge <pr> --repo plethu/recite --squash --delete-branch
 ```
 
-Do not merge until the gate and local checks pass. Use GitHub's protected pull
-request path so the configured review policy, checks, linear-history, and
-commit-signing requirements remain visible and enforceable. For standard review
-and approval details, read `references/github-merge-details.md`.
+Human maintainer approval remains authoritative. Codex Code Review is advisory:
+it does not replace human approval, branch protection, required checks, or
+tests. The current solo-maintainer policy permits the allowlisted maintainer's
+self-review; once another human maintainer exists, require their independent
+standard GitHub approval. The gate requires the exact current head SHA and no
+unresolved review threads.
 
-## API Courtesy Rules
+For the official Codex GitHub integration, including automatic review setup,
+see the [official Codex GitHub review documentation](https://learn.chatgpt.com/docs/third-party/github).
+For review details and patient polling behavior, read
+`references/github-merge-details.md`. Do not parse custom review comments,
+bot usernames, or marker blocks.
 
-- Use `gh` with an explicit `--repo plethu/recite` for every remote mutation.
-- Keep remote mutations sequential and check current state before creating or
-  editing issues, labels, milestones, or pull requests.
-- Use `.agents/skills/recite-github-pm/scripts/recite-pm-check.sh issue
-  <number>` after a single-issue mutation.
-- Use `.agents/skills/recite-github-pm/scripts/recite-pm-check.sh full`
-  sparingly for planning or project-wide
-  audits. Full mode caches labels and milestones under `/tmp/recite-pm-cache`
-  for 30 minutes by default; adjust with `RECITE_PM_CACHE_DIR` and
-  `RECITE_PM_CACHE_TTL_SECONDS` if needed.
-- GitHub rate-limit or server failures are authoritative. Stop the current
-  remote-mutation pass, surface the failure, and resume only after checking
-  the response and waiting for any server-provided retry window.
-
-## Verification
-
-After a single issue mutation, verify only that issue:
-
-```bash
-.agents/skills/recite-github-pm/scripts/recite-pm-check.sh issue 17
-```
-
-After broad label, milestone, or planning work, run the full audit once:
-
-```bash
-.agents/skills/recite-github-pm/scripts/recite-pm-check.sh full
-```
+After merging, verify the linked issue/PR and refresh `docs/roadmap.md` against
+live GitHub state. If the merge closed, unblocked, or superseded a roadmap item,
+update the roadmap on `main` and complete its own policy-checked follow-up.

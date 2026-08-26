@@ -6,17 +6,13 @@ Recite is a Rust-first deterministic dialogue compiler, runtime, and tooling pro
 
 - Use GitHub as the canonical forge. Use the GitHub CLI (`gh`) with explicit
   `--repo plethu/recite` for issue, milestone, label, and pull-request work.
-- Work from `main` on short-lived branches.
-- Name branches purpose-first as `<kind>/<short-kebab-topic>`, where `kind` is
-  one of `feat`, `fix`, `refactor`, `perf`, `ci`, `docs`, `test`, `build`,
-  `chore`, `spike`, `release`, or `security`. Never prefix a branch with an
-  issue number.
-- Begin every commit subject with its Recite issue code, then use a concise
-  conventional-commit-style subject, for example `[REC-143] ci: enforce Git
-  workflow policy`. Keep the body to at most one explanatory sentence and
-  never add `Co-Authored-By:` or other agent-attribution trailers.
-- Run `scripts/check-git-policy.sh` locally; it is part of the complete
-  verification gate and checks the relevant change range on pull requests.
+- Work from `main` on short-lived, purpose-first branches and follow the
+  machine-wide branch naming convention; never prefix a branch with an issue
+  number. Recite commit subjects begin with `[REC-N]`, followed by a concise
+  conventional-commit-style subject.
+- Run `scripts/check-git-policy.sh` locally. It is part of the complete
+  verification gate and checks the relevant change range on pull requests;
+  never add agent-attribution trailers.
 - Keep patches scoped to the issue or user request.
 - Do not revert unrelated user changes.
 - Prefer small, reviewable changes over broad refactors.
@@ -24,22 +20,21 @@ Recite is a Rust-first deterministic dialogue compiler, runtime, and tooling pro
   live GitHub issue and PR state before handoff. If the merge closed, unblocked,
   or superseded roadmap items, update the roadmap on `main`, commit, and push
   that follow-through.
-- For non-trivial Rust changes, use `.agents/skills/recite-rust-quality/SKILL.md` to review maintainability, module boundaries, duplication, visibility, validation ownership, and file-size triggers before handoff.
-- Test the crate(s) or workspace surface changed. The current repo is a workspace; use `cargo test` for broad changes unless a narrower crate check is clearly sufficient.
+- For non-trivial Rust changes, load the global `rust-quality` skill and the
+  relevant Recite overlay, especially `.agents/skills/recite-rust-quality/SKILL.md`.
+- The complete local gate is `mise run verify`; use a narrower documented check
+  only when the changed surface makes that sufficient.
 - Follow the Rust test organization policy in `.agents/skills/recite-testing-diagnostics/SKILL.md`; PR gates fail if tests are added in the wrong location.
 - Repo-local skills must be Recite-specific overlays or Recite domain guidance. Put reusable personal workflow skills in the global agent config instead.
 
 ## Agent Workflow Routing
 
 - Ordinary issue work routes through `.agents/skills/recite-github-pm/SKILL.md`.
-- Parallel issue work routes through
-  `.agents/skills/recite-parallel-issue-orchestration/SKILL.md`, with the
-  global `workflow-roles` skill supplying portable role contracts.
 - Clean diff review uses the global `code-review` skill plus the relevant
   Recite domain or language skill in a fresh reviewer context.
 - Roadmap ownership and final protected merges remain with the coordinating
-  main session; workers keep `docs/roadmap.md` read-only unless their issue
-  explicitly includes it.
+  main session; delegated work keeps `docs/roadmap.md` read-only unless its
+  issue explicitly includes it.
 
 ## Product Invariants
 
@@ -88,8 +83,8 @@ Use the relevant skill for procedural details:
 
 - GitHub issues, milestones, labels, pull requests, and project planning:
   `.agents/skills/recite-github-pm/SKILL.md`
-- Multi-agent roadmap or milestone orchestration: `.agents/skills/recite-parallel-issue-orchestration/SKILL.md`
-- Rust maintainability, architecture, DRY, visibility, validation ownership, and file-size review triggers: `.agents/skills/recite-rust-quality/SKILL.md`
+- Recite-specific Rust maintainability, diagnostics, FFI, and file-size review
+  triggers: `.agents/skills/recite-rust-quality/SKILL.md`
 - Parser, AST, compiler, runtime, schema, effects, localisation IDs, and deterministic dialogue semantics: `.agents/skills/recite-core-language/SKILL.md`
 - Fixtures, snapshots, diagnostics, CLI checks, LSP behavior, and headless runtime tests: `.agents/skills/recite-testing-diagnostics/SKILL.md`
 
