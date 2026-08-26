@@ -1,0 +1,23 @@
+[
+  {
+    "name": "Rust gates",
+    "startedAt": "2026-08-26T18:13:39Z",
+    "completedAt": "2026-08-26T18:15:15Z",
+    "conclusion": "FAILURE",
+    "status": "COMPLETED"
+  },
+  {
+    "name": "Rust gates",
+    "startedAt": "2026-08-26T18:12:26Z",
+    "completedAt": "2026-08-26T18:13:31Z",
+    "conclusion": "SUCCESS",
+    "status": "COMPLETED"
+  },
+  {
+    "name": "required-check",
+    "startedAt": "2026-08-26T18:15:17Z",
+    "completedAt": "2026-08-26T18:15:20Z",
+    "conclusion": "SUCCESS",
+    "status": "COMPLETED"
+  }
+]
