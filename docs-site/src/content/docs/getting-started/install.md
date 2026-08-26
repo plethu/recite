@@ -3,10 +3,11 @@ title: Install
 description: Build the Recite CLI from source and verify the toolchain.
 ---
 
-Recite is pre-release and not yet published to crates.io or package managers,
-so the CLI installs from source. You need a Rust toolchain at or above the
-current stable release with Rust 2024 edition support; [rustup](https://rustup.rs/)
-is the usual way to get one.
+Recite is pre-release. An old `recite` 0.0.1 snapshot exists on crates.io, but
+the current `recite-cli` and `recite-lsp` packages are not published, so install
+them from source. You need a Rust toolchain at or above the current stable
+release with Rust 2024 edition support; [rustup](https://rustup.rs/) is the usual
+way to get one.
 
 Install the `recite` binary straight from the repository:
 
