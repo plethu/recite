@@ -6,10 +6,11 @@ description: "Use for Recite-specific GitHub project management: labels, milesto
 # Recite GitHub Project Management
 
 Use the GitHub CLI for Recite project management. Pass `--repo plethu/recite`
-to every issue, pull-request, review, label, milestone, and project command so a
-stale local remote cannot direct a mutation elsewhere. This skill contains only
-Recite's project shape and protected-merge requirements; use the global Git and
-review skills for general workflow guidance.
+to issue, pull-request, review, label, and milestone commands so a stale local
+remote cannot direct a mutation elsewhere. GitHub Projects commands use
+`--owner plethu` and the explicit project number instead. This skill contains
+only Recite's project shape and protected-merge requirements; use the global
+Git and review skills for general workflow guidance.
 
 ## Preflight and verification
 
