@@ -13,6 +13,7 @@ internal static class ReciteUnityHeadless
             RejectUnknownBatchVersion();
             PreserveTypedConditionArguments();
             RegisterTypedConditionApi();
+            PreserveSchemaMismatchStatus();
             return 0;
         }
         catch (Exception error)
@@ -80,6 +81,12 @@ internal static class ReciteUnityHeadless
                 ReciteConditionValue.Enum(args[0].StringValue));
             service.RegisterCondition("legacy", args => args.Count == 0);
         }
+    }
+
+    private static void PreserveSchemaMismatchStatus()
+    {
+        var error = new ReciteAdapterException(ReciteStatus.SchemaMismatch, "schema mismatch");
+        Assert((int)error.Status == -4, "Unity schema mismatch status changed");
     }
 
     private static void ExpectFormatException(Action action, string name)
