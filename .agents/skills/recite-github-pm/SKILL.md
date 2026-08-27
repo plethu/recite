@@ -105,8 +105,13 @@ slice.
 
 The coordinator reviews the slice diff and its focused checks. Findings go back
 to the owning implementer for a correction pass. Once accepted, the coordinator
-cherry-picks or merges the worker's commits mechanically into the integration
-branch; do not rewrite implementation work in the coordinator's worktree.
+cherry-picks the worker's commits mechanically into the integration branch; use
+`--ff-only` only when the accepted branch is a direct fast-forward. Do not use
+a default non-fast-forward merge, which creates a `Merge branch ...` commit
+that fails the commit policy. If an exceptional merge commit is unavoidable,
+the coordinator must review it and give it an explicit policy-compliant
+`[REC-N] <type>: <subject>` message; prefer cherry-picking instead. Do not
+rewrite implementation work in the coordinator's worktree.
 Workers keep the normal `[REC-N]` conventional commit subject and attribution
 policy.
 
