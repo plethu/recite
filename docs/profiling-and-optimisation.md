@@ -149,7 +149,7 @@ Start with existing commands:
 cargo run -p recite-benchmarks --release --bin memory_profile_report -- \
   --fixtures tiny,small,medium,large,epic,realistic:v1-pack \
   --format markdown \
-  --output docs/benchmark-reports/issue-105-memory-profiles-known-limits.md
+  --output docs/benchmark-reports/memory-profiles-known-limits.md
 cargo run -p recite-benchmarks --release --bin id_memory_report -- --scales tiny,small
 RECITE_BENCH_SCALES=medium cargo bench -p recite-benchmarks --bench lsp -- lsp/initial_index
 ```
@@ -167,7 +167,7 @@ RECITE_BENCH_SCALES=medium \
 
 [#70 Perf: report memory profiles and known scale limits](https://github.com/plethu/recite/issues/70)
 owns release-facing memory profiles and known scale limits. Keep
-`docs/benchmark-reports/issue-105-memory-profiles-known-limits.md` generated
+`docs/benchmark-reports/memory-profiles-known-limits.md` generated
 from `memory_profile_report`, and do not turn one local heap profile into a
 release limit.
 
@@ -214,14 +214,19 @@ RECITE_BENCH_SCALES=tiny cargo bench -p recite-benchmarks --bench lsp -- lsp/dia
 RECITE_BENCH_SCALES=tiny cargo bench -p recite-benchmarks --bench lsp -- lsp/completion
 ```
 
-Watch/build refresh investigations are owned by [#108 CLI: add watch rebuild
-latency stress checks](https://github.com/plethu/recite/issues/108). The dedicated
-stress command is available as `mise run watch-stress`; measure the whole
-command externally as supplementary evidence and profile the compiler path that
-dominates the refresh:
+Watch/build refresh investigations and the generated-fixture stress command are
+owned by [#108 CLI: add watch rebuild latency stress
+checks](https://github.com/plethu/recite/issues/108). Run the dedicated stress
+check through the repository task:
 
 ```bash
 mise run watch-stress
+```
+
+For supplementary whole-command timing, or when an external profiler needs the
+real watch process, use:
+
+```bash
 /usr/bin/time -v cargo run -p recite-cli -- watch <project-root>
 RECITE_BENCH_SCALES=medium cargo bench -p recite-benchmarks --bench compiler -- compiler/compile_with_schema
 ```

@@ -19,13 +19,13 @@ fn tiny_scale_cli_stress_smoke() -> Result<(), Box<dyn std::error::Error>> {
 }
 
 #[test]
-#[ignore = "large generated fixture stress check; run explicitly for issue #104"]
+#[ignore = "large generated fixture stress check; run explicitly for issue #69"]
 fn large_scale_cli_stress() -> Result<(), Box<dyn std::error::Error>> {
     run_scale_cli_stress(BenchmarkScale::Large)
 }
 
 #[test]
-#[ignore = "epic generated fixture stress check; run explicitly for issue #104"]
+#[ignore = "epic generated fixture stress check; run explicitly for issue #69"]
 fn epic_scale_cli_stress() -> Result<(), Box<dyn std::error::Error>> {
     run_scale_cli_stress(BenchmarkScale::Epic)
 }

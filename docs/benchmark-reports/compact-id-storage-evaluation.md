@@ -1,11 +1,14 @@
-# Issue 36: ID Small-String Evaluation
+# Compact ID Storage Evaluation
 
 Date: 2026-06-01
 
-This is an archived evaluation report from before [#96 Core: switch shared ID
-newtypes to compact string storage](https://github.com/plethu/recite/issues/96)
-made compact ID storage the default. Commands below that use `--features small-ids` reproduce the
-original branch shape only; current `main` no longer has that feature.
+This is an archived evaluation for historical issue [#34](https://github.com/plethu/recite/issues/34),
+from before [#96 Core: switch shared ID newtypes to compact string
+storage](https://github.com/plethu/recite/issues/96) made compact ID storage
+the default. The report keeps its historical results, but uses a durable
+filename rather than an old tracker number. Commands below
+that use `--features small-ids` reproduce the original branch shape only;
+current `main` no longer has that feature.
 
 ## Decision
 
@@ -16,7 +19,8 @@ retained heap-payload reduction for ID-heavy AST and compiled-dialogue data, no
 increase in ID wrapper or compiled row sizes on this target, and no clear timing
 regression in the one-sample release measurements.
 
-This branch keeps the change reversible through the `small-ids` feature:
+At the time of this evaluation, the change was kept reversible through the
+`small-ids` feature:
 
 - default build: `String`-backed IDs;
 - experimental build: `compact_str`-backed IDs through
@@ -114,7 +118,11 @@ in a one-sample run. The `epic` compile delta was about 0.05% slower. Full
 traversal was slightly faster in the larger fixtures. Treat these as noise until
 Criterion baselines are collected on a stable runner.
 
-## Follow-Up Issue Shape
+## Historical Follow-Up Issue Shape
+
+The following issue shape is retained as historical context. The implementation
+it described is now tracked by [#96 Core: switch shared ID newtypes to compact
+string storage](https://github.com/plethu/recite/issues/96).
 
 Title: Switch shared ID newtypes to compact string storage
 
