@@ -1,9 +1,14 @@
 # LSP Project Index Design
 
 This document records the initial project-index design for Recite's LSP work.
-It is the design input for milestone 7 implementation issues, especially the
-first LSP lifecycle and document-sync issue. The production requirements remain
-in `docs/recite-production-spec.md` sections 14, 18, 19.5, and 22.
+Its shared indexing and project-model work now feeds [milestone 19, Shared
+Authoring Kernel and Preview](https://github.com/plethu/recite/milestone/19),
+especially [#168](https://github.com/plethu/recite/issues/168). Client-facing
+LSP/editor parity follows [milestone 20, Editor Integration
+Parity](https://github.com/plethu/recite/milestone/20), especially
+[#169](https://github.com/plethu/recite/issues/169). The production
+requirements remain in `docs/recite-production-spec.md` sections 14, 18, 19.5,
+and 22.
 
 ## Goals
 
@@ -307,7 +312,9 @@ snapshots.
 
 ## Follow-Up Issue Routing
 
-After this design is approved, update milestone 7 issues only.
+After this design is approved, update the shared indexing and project-model
+work under milestone 19 / #168. Route editor-client wiring and parity work to
+milestone 20 / #169 rather than reviving the historical milestone numbering.
 
 Issue 29 should become ready for:
 
