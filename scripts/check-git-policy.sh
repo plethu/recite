@@ -89,7 +89,7 @@ closing_issue_matches_body() {
   local issue_code="$2"
 
   grep -Eiq -- \
-    "(^|[^[:alnum:]])(close[sd]?|fix(e[sd])?|resolve[sd]?)[[:space:]]+#[[:space:]]*${issue_code}([^0-9]|$)" \
+    "(^|[^[:alnum:]])(close[sd]?|fix(e[sd])?|resolve[sd]?)[[:space:]]+#[[:space:]]*${issue_code}([^[:alnum:]_]|$)" \
     <<<"$body"
 }
 
@@ -239,6 +239,12 @@ fi
 
 if (( pr_context )) && [[ -z "${RECITE_PR_TITLE:-}" ]]; then
   echo "pull-request context requires RECITE_PR_TITLE" >&2
+  exit 1
+fi
+
+if (( pr_context )) && [[ -z "${RECITE_BRANCH_NAME:-}" &&
+  -z "${RECITE_HEAD_BRANCH:-}" && -z "${GITHUB_HEAD_REF:-}" ]]; then
+  echo "pull-request context requires source/head branch metadata" >&2
   exit 1
 fi
 

@@ -104,6 +104,23 @@ if run_policy "[REC-163] chore: integrate milestone" 0 1 integration/milestone-i
   exit 1
 fi
 
+if run_policy "[REC-163] chore: integrate milestone" 0 1 integration/milestone-integration main "Closes #163." >/dev/null 2>&1; then
+  :
+else
+  echo "integration PR with valid punctuation after its closing issue was rejected" >&2
+  exit 1
+fi
+
+if run_policy "[REC-163] chore: integrate milestone" 0 1 integration/milestone-integration main "Closes #163abc" >/dev/null 2>&1; then
+  echo "integration PR with an alphanumeric closing-issue suffix was accepted" >&2
+  exit 1
+fi
+
+if run_policy "[REC-163] chore: integrate milestone" 0 1 integration/milestone-integration main "Closes #163_issue" >/dev/null 2>&1; then
+  echo "integration PR with an underscored closing-issue suffix was accepted" >&2
+  exit 1
+fi
+
 if run_policy "[REC-163] chore: integrate milestone" 0 0 >/dev/null 2>&1; then
   echo "integration branch without its label was accepted in PR context" >&2
   exit 1
@@ -136,6 +153,21 @@ fi
 
 if run_policy "" 0 0 feat/milestone-integration >/dev/null 2>&1; then
   echo "pull request without a title was accepted" >&2
+  exit 1
+fi
+
+if env -u GITHUB_HEAD_REF -u GITHUB_REF_NAME \
+  RECITE_PR_TITLE="[REC-163] chore: integrate milestone" \
+  RECITE_PR_BODY="Closes #163" \
+  RECITE_INTEGRATION_PR=0 \
+  RECITE_INTEGRATION_LABEL=0 \
+  RECITE_PR_BASE_REF=main \
+  RECITE_BASE_REF="$base_sha" \
+  RECITE_HEAD_REF=HEAD \
+  GITHUB_EVENT_NAME=pull_request \
+  GITHUB_BASE_REF=main \
+  "$clone_root/scripts/check-git-policy.sh" "$clone_root" >/dev/null 2>&1; then
+  echo "pull request without source/head metadata was accepted" >&2
   exit 1
 fi
 
