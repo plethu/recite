@@ -27,6 +27,7 @@ grep -Fq 'pull-requests: read' "$workflow" || fail_static 'read-only pull-reques
 grep -Fq 'ref: main' "$workflow" || fail_static 'base checkout ref'
 grep -Fq "refs/pull/\${pr_number}/head" "$wrapper" || fail_static 'PR object fetch'
 grep -Fq 'refs/recite/trusted-pr-head' "$wrapper" || fail_static 'non-checkout PR ref'
+grep -Fq -- '--filter=blob:none' "$wrapper" || fail_static 'blob-filtered PR object fetch'
 grep -Fq 'check-git-policy.sh' "$wrapper" || fail_static 'base policy delegation'
 if grep -Eq '^  pull_request:$|secrets\.|permissions:.*write|gh[[:space:]]+pr[[:space:]]+checkout|git[[:space:]]+checkout|github\.event\.pull_request\.head\.sha' "$workflow" "$wrapper"; then
   fail_static 'untrusted checkout, secret, write permission, or event-head execution'
@@ -69,7 +70,19 @@ git -C "$repo" switch --quiet --detach main
 cat > "$fake_bin/gh" <<'EOF'
 #!/usr/bin/env bash
 set -euo pipefail
-cat "${GH_FIXTURE_JSON:?}"
+fixture="${GH_FIXTURE_JSON:?}"
+if [[ -n "${GH_CALL_COUNT_FILE:-}" ]]; then
+  call_count=0
+  if [[ -f "$GH_CALL_COUNT_FILE" ]]; then
+    call_count="$(<"$GH_CALL_COUNT_FILE")"
+  fi
+  call_count=$((call_count + 1))
+  printf '%s\n' "$call_count" > "$GH_CALL_COUNT_FILE"
+  if [[ "$call_count" -gt 1 && -n "${GH_FINAL_FIXTURE_JSON:-}" ]]; then
+    fixture="$GH_FINAL_FIXTURE_JSON"
+  fi
+fi
+cat "$fixture"
 EOF
 chmod +x "$fake_bin/gh"
 cat > "$test_root/event.json" <<EOF
@@ -94,6 +107,17 @@ if ! PATH="$fake_bin:$PATH" \
 fi
 [[ "$(<"$marker")" == base-policy ]] || { echo 'base policy did not execute' >&2; exit 1; }
 [[ ! -e "$untrusted_marker" ]] || { echo 'untrusted policy executed' >&2; exit 1; }
+
+jq '.title = "[REC-164] ci: metadata changed after validation"' "$test_root/live.json" > "$test_root/raced-live.json"
+rm -f "$test_root/gh-call-count"
+if PATH="$fake_bin:$PATH" GH_FIXTURE_JSON="$test_root/live.json" \
+  GH_FINAL_FIXTURE_JSON="$test_root/raced-live.json" GH_CALL_COUNT_FILE="$test_root/gh-call-count" \
+  GITHUB_EVENT_NAME=pull_request_target GITHUB_EVENT_PATH="$test_root/event.json" \
+  GITHUB_REPOSITORY=plethu/recite TRUSTED_POLICY_MARKER="$test_root/race.marker" \
+  bash -c 'cd "$1" && ./scripts/check-trusted-pr-policy.sh' trusted-policy "$repo" >/dev/null 2>&1; then
+  echo 'metadata changed on final read was accepted' >&2
+  exit 1
+fi
 
 jq '.base.ref = "release"' "$test_root/live.json" > "$test_root/invalid-live.json"
 if PATH="$fake_bin:$PATH" GH_FIXTURE_JSON="$test_root/invalid-live.json" \

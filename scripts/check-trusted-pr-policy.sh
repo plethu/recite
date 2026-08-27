@@ -52,7 +52,11 @@ if [[ ! "$pr_number" =~ ^[1-9][0-9]*$ ]]; then
   exit 2
 fi
 
-live_pr="$(gh api --method GET "repos/${repository}/pulls/${pr_number}")" || {
+read_live_pr() {
+  gh api --method GET "repos/${repository}/pulls/${pr_number}"
+}
+
+live_pr="$(read_live_pr)" || {
   echo "unable to read live pull-request metadata" >&2
   exit 2
 }
@@ -60,6 +64,27 @@ live_pr="$(gh api --method GET "repos/${repository}/pulls/${pr_number}")" || {
 json_value() {
   local filter="$1"
   jq -er "$filter" <<<"$live_pr"
+}
+
+policy_snapshot() {
+  jq -cS '{
+    number: .number,
+    state: .state,
+    title: .title,
+    body: .body,
+    base_ref: .base.ref,
+    base_sha: .base.sha,
+    base_repo: .base.repo.full_name,
+    head_ref: .head.ref,
+    head_sha: .head.sha,
+    head_repo: .head.repo.full_name,
+    integration_label: any(.labels[]?; .name == "workflow/integration")
+  }'
+}
+
+initial_policy_snapshot="$(policy_snapshot <<<"$live_pr")" || {
+  echo "live pull request metadata cannot be snapshotted" >&2
+  exit 1
 }
 
 live_number="$(json_value '.number')" || { echo "live pull request has no number" >&2; exit 1; }
@@ -117,8 +142,9 @@ if ! git -C "$repo_root" cat-file -e "${base_sha}^{commit}" 2>/dev/null; then
 fi
 
 # GitHub exposes refs/pull/N/head on the repository remote even when the PR
-# originates in a fork. Fetch only the ref as objects; never check it out.
-git -C "$repo_root" fetch --no-tags --no-write-fetch-head origin \
+# originates in a fork. Fetch only the ref as filtered objects; never check it
+# out. The blob filter keeps untrusted file contents out of this trusted job.
+git -C "$repo_root" fetch --filter=blob:none --no-tags --no-write-fetch-head origin \
   "refs/pull/${pr_number}/head:refs/recite/trusted-pr-head"
 fetched_head="$(git -C "$repo_root" rev-parse --verify "refs/recite/trusted-pr-head^{commit}")"
 if [[ "$fetched_head" != "$head_sha" ]]; then
@@ -145,5 +171,18 @@ GITHUB_EVENT_NAME=pull_request \
 GITHUB_HEAD_REF="$head_ref" \
 GITHUB_BASE_REF="$base_ref" \
   "$repo_root/scripts/check-git-policy.sh" "$repo_root"
+
+final_pr="$(read_live_pr)" || {
+  echo "unable to reread live pull-request metadata" >&2
+  exit 2
+}
+final_policy_snapshot="$(policy_snapshot <<<"$final_pr")" || {
+  echo "final pull-request metadata cannot be snapshotted" >&2
+  exit 1
+}
+if [[ "$final_policy_snapshot" != "$initial_policy_snapshot" ]]; then
+  echo "pull-request policy metadata changed during validation; refusing success" >&2
+  exit 1
+fi
 
 echo "Trusted Git workflow policy passed for pull request #${pr_number}."
