@@ -67,10 +67,14 @@ is_valid_integration_branch_name() {
   [[ "$1" =~ ^integration/[a-z][a-z0-9]*(\-[a-z0-9]+)*$ ]]
 }
 
+is_valid_recite_subject() {
+  [[ "$1" =~ ^\[REC-[1-9][0-9]*\]\ [a-z][a-z0-9-]*(\([^[:space:]]+\))?!?:\ [^[:space:]].*$ ]]
+}
+
 issue_code_from_pr_title() {
   local title="$1"
 
-  if [[ "$title" =~ ^\[REC-([1-9][0-9]*)\][[:space:]] ]]; then
+  if is_valid_recite_subject "$title" && [[ "$title" =~ ^\[REC-([1-9][0-9]*)\][[:space:]] ]]; then
     printf 'REC-%s\n' "${BASH_REMATCH[1]}"
     return 0
   fi
@@ -116,7 +120,7 @@ validate_commit_message() {
     body=""
   fi
 
-  if [[ ! "$subject" =~ ^\[REC-[1-9][0-9]*\]\ [a-z][a-z0-9-]*(\([^[:space:]]+\))?!?:\ [^[:space:]].*$ ]]; then
+  if ! is_valid_recite_subject "$subject"; then
     return 1
   fi
 
@@ -184,8 +188,20 @@ run_fixture_checks() {
     failures=$((failures + 1))
   fi
 
-  if [[ "$(issue_code_from_pr_title '[REC-143] CI: enforce Git workflow policy')" != 'REC-143' ]]; then
-    echo "fixture pull-request title expectation failed: valid title was rejected" >&2
+  if [[ "$(issue_code_from_pr_title '[REC-143] ci: enforce Git workflow policy')" != 'REC-143' ]]; then
+    echo "fixture pull-request title expectation failed: valid unscoped title was rejected" >&2
+    failures=$((failures + 1))
+  fi
+  if [[ "$(issue_code_from_pr_title '[REC-143] ci(policy): enforce Git workflow policy')" != 'REC-143' ]]; then
+    echo "fixture pull-request title expectation failed: valid scoped title was rejected" >&2
+    failures=$((failures + 1))
+  fi
+  if [[ "$(issue_code_from_pr_title '[REC-163] docs: close integration contract gaps')" != 'REC-163' ]]; then
+    echo "fixture pull-request title expectation failed: current integration title was rejected" >&2
+    failures=$((failures + 1))
+  fi
+  if issue_code_from_pr_title '[REC-163] integrate milestone' >/dev/null; then
+    echo "fixture pull-request title expectation failed: missing conventional separator was accepted" >&2
     failures=$((failures + 1))
   fi
   if issue_code_from_pr_title 'CI: enforce Git workflow policy' >/dev/null; then
@@ -278,7 +294,7 @@ fi
 if [[ -n "${RECITE_PR_TITLE:-}" ]]; then
   if ! title_issue_code="$(issue_code_from_pr_title "$RECITE_PR_TITLE")"; then
     echo "invalid pull-request title: $RECITE_PR_TITLE" >&2
-    echo "expected the title to begin with [REC-N]" >&2
+    echo "expected [REC-N] <type>(optional-scope): <concise subject>" >&2
     exit 1
   fi
 

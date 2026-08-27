@@ -19,7 +19,9 @@ must be run from a clean worktree after checks appropriate to the changed
 surface and the gate pass: focused checks for documentation or instruction-only
 changes, and `mise run verify` for broad or high-risk code changes. Required
 GitHub CI and protected `main` remain authoritative for merge policy, aggregate
-status, linear history, and signed commits.
+status, linear history, and signed commits. The Git policy validates the full
+pull-request title before this step, so GitHub's squash merge inherits the
+validated title without a redundant subject override.
 
 ## Milestone integration path
 
