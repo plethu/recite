@@ -93,7 +93,8 @@ session and must not change the single-session v1 contract.
 
 Every adapter must expose host-native equivalents of these operations:
 
-- start a session from a compiled asset, optional start block, and locale;
+- start a session from a compiled asset, optional start block, and optional
+  locale; an absent locale selects source-text-only mode;
 - select a prompt choice by `ChoiceId`;
 - acknowledge a pending blocking effect by `EffectRequestId` and `EffectAck`;
 - end or dispose the active session through an explicit host-visible operation;
@@ -605,7 +606,9 @@ Adapters must start sessions with an explicit locale, a stable
 project-configured locale, or source-text fallback. Adapters must not silently
 derive the dialogue locale from the OS, editor, or engine environment; those
 inputs may be used only when the project or author explicitly opts into that
-policy. Locale fallback must be deterministic and must preserve the same
+policy. When no locale is selected, the adapter must preserve source-text-only
+mode and bypass locale-provider lookup. Locale fallback must be deterministic
+and must preserve the same
 localized text, source text, line IDs, choice IDs, metadata, and markup that
 the runtime exposes.
 
@@ -917,7 +920,7 @@ CompiledAssetIdentity
   compiler_compatibility_version
 
 AdapterSessionOwner
-  start(asset, block?, locale) -> OutputBatch | AdapterError
+  start(asset, block?, locale?) -> OutputBatch | AdapterError
   select(choice_id) -> OutputBatch | AdapterError
   acknowledge(effect_request_id, effect_ack) -> OutputBatch | AdapterError
   snapshot() -> SessionSnapshot | AdapterError
@@ -933,7 +936,11 @@ fn start_dialogue(
     asset: Res<Assets<ReciteDialogueAsset>>,
     mut output: EventWriter<ReciteOutput>,
 ) -> Result<(), ReciteAdapterError> {
-    let events = session.start(asset.id(), Some(BlockId::new("intro")), Locale::new("en-US"))?;
+    let events = session.start(
+        asset.id(),
+        Some(BlockId::new("intro")),
+        Some(Locale::new("en-US")),
+    )?;
     output.send_batch(events);
     Ok(())
 }
@@ -959,7 +966,7 @@ public partial class ReciteDialogueNode : Node
     [Signal] public delegate void OutputEventHandler(ReciteOutput output);
     [Signal] public delegate void AdapterErrorEventHandler(ReciteAdapterError error);
 
-    public Error Start(ReciteDialogueResource asset, string block, string locale);
+    public Error Start(ReciteDialogueResource asset, string block, string? locale);
     public Error SelectChoice(string choiceId);
     public Error AcknowledgeEffect(string effectRequestId, ReciteEffectAck ack);
     public ReciteSessionSnapshot Snapshot();
@@ -975,7 +982,7 @@ public sealed class ReciteDialogueService
     public event Action<ReciteOutput> Output;
     public event Action<ReciteAdapterError> Error;
 
-    public Result Start(ReciteDialogueAsset asset, string block, CultureInfo locale);
+    public Result Start(ReciteDialogueAsset asset, string block, CultureInfo? locale);
     public Result SelectChoice(ChoiceId choiceId);
     public Result AcknowledgeEffect(EffectRequestId effectRequestId, EffectAck ack);
     public ReciteSessionSnapshot Snapshot();
@@ -991,13 +998,22 @@ A future shared helper crate may be justified if Godot, Bevy, and Unity adapter
 MVPs repeat the same stable concepts, such as compiled asset identity,
 freshness checks, adapter error categories, changed-asset policy names, or
 session snapshot handoff helpers. That decision belongs in follow-up adapter
-implementation work, not this contract document.
+implementation work, not [#45 Adapter: design engine-adapter contract and crate
+boundaries](https://github.com/plethu/recite/issues/45).
 
 ## 17. Follow-up Prerequisites
 
-This contract unblocks adapter implementation and refresh planning for #79,
-#80, #82, #107, #108, #120, #121, #122, #123, and #94. Follow-up issues should
-reference this document when choosing:
+This contract unblocks adapter implementation and refresh planning for [#46
+host-agnostic conformance tests](https://github.com/plethu/recite/issues/46),
+[#47 Godot adapter MVP](https://github.com/plethu/recite/issues/47), [#49 Bevy
+adapter MVP](https://github.com/plethu/recite/issues/49), [#72 cross-engine
+acceptance matrix](https://github.com/plethu/recite/issues/72), [#73 Unity
+adapter MVP](https://github.com/plethu/recite/issues/73), [#83 Godot refresh
+workflow](https://github.com/plethu/recite/issues/83), [#84 Bevy refresh
+workflow](https://github.com/plethu/recite/issues/84), [#85 Unity refresh
+workflow](https://github.com/plethu/recite/issues/85), and [#86 Docs: document
+engine authoring refresh workflows and reload limits](https://github.com/plethu/recite/issues/86).
+Follow-up issues should reference this document when choosing:
 
 - their host asset import and freshness behavior;
 - their active-session owner shape;

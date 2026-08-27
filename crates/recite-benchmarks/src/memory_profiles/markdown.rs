@@ -85,7 +85,7 @@ fn write_known_limits(output: &mut String) -> fmt::Result {
     writeln!(output)?;
     writeln!(
         output,
-        "- Numeric budgets remain evidence, not release contracts, until #169 establishes the release baseline."
+        "- Numeric budgets remain evidence, not release contracts, until [#109 Perf: establish release benchmark baseline profile](https://github.com/plethu/recite/issues/109) establishes the release baseline."
     )?;
     writeln!(
         output,

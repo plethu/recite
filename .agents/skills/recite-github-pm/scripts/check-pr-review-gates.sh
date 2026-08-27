@@ -6,6 +6,7 @@ usage() {
 Usage:
   check-pr-review-gates.sh <pr-number> [head-branch] [base-branch]
   check-pr-review-gates.sh --check-rollup <json-file> [required-check]
+  check-pr-review-gates.sh --check-metadata <json-file> [head-branch] [base-branch]
 
 Read-only gate for Recite pull-request merges. GitHub branch protection is the
 canonical project policy. This helper verifies that policy through the GitHub
@@ -25,6 +26,7 @@ Environment:
 The --check-rollup mode is a local deterministic fixture hook. It reads a
 statusCheckRollup array from a JSON file, reduces duplicate check identities to
 their newest result, and applies the required and blocking-state checks.
+The --check-metadata mode validates the live PR metadata contract offline.
 EOF
 }
 
@@ -109,6 +111,110 @@ evaluate_check_rollup() {
   return 0
 }
 
+is_valid_recite_title() {
+  [[ "$1" =~ ^\[REC-[1-9][0-9]*\]\ [a-z][a-z0-9-]*(\([^[:space:]]+\))?!?:\ [^[:space:]].*$ ]]
+}
+
+issue_code_from_recite_title() {
+  local title="$1"
+
+  if is_valid_recite_title "$title" && [[ "$title" =~ ^\[REC-([1-9][0-9]*)\][[:space:]] ]]; then
+    printf '%s\n' "${BASH_REMATCH[1]}"
+    return 0
+  fi
+
+  return 1
+}
+
+closing_issue_matches_body() {
+  local body="$1"
+  local issue_code="$2"
+
+  grep -Eiq -- \
+    "(^|[^[:alnum:]])(close[sd]?|fix(e[sd])?|resolve[sd]?)[[:space:]]+#${issue_code}([^[:alnum:]_]|$)" \
+    <<<"$body"
+}
+
+validate_pr_metadata() {
+  local pr_json="$1"
+  local expected_head="$2"
+  local expected_base="$3"
+  local title body pr_base pr_head label_count title_issue
+  local failures=0
+
+  title="$(printf '%s\n' "$pr_json" | jq -r '.title // empty')"
+  body="$(printf '%s\n' "$pr_json" | jq -r '.body // empty')"
+  pr_base="$(printf '%s\n' "$pr_json" | jq -r '.baseRefName // empty')"
+  pr_head="$(printf '%s\n' "$pr_json" | jq -r '.headRefName // empty')"
+  label_count="$(printf '%s\n' "$pr_json" | jq '[.labels[]?.name | select(. == "workflow/integration")] | length')"
+
+  if ! title_issue="$(issue_code_from_recite_title "$title")"; then
+    echo "invalid live pull-request title: ${title:-<missing>}" >&2
+    failures=$((failures + 1))
+  elif [[ -z "$body" ]] || ! closing_issue_matches_body "$body" "$title_issue"; then
+    echo "live pull-request body must contain Closes/Fixes/Resolves #${title_issue}" >&2
+    failures=$((failures + 1))
+  fi
+
+  if [[ "$pr_base" != "$expected_base" ]]; then
+    echo "live pull-request base is ${pr_base:-<missing>}, expected ${expected_base}" >&2
+    failures=$((failures + 1))
+  fi
+  if [[ -n "$expected_head" && "$pr_head" != "$expected_head" ]]; then
+    echo "live pull-request head is ${pr_head:-<missing>}, expected ${expected_head}" >&2
+    failures=$((failures + 1))
+  fi
+  if [[ -z "$pr_head" || "$pr_head" == "main" ]]; then
+    echo "live pull-request head must not be protected main or missing" >&2
+    failures=$((failures + 1))
+  fi
+
+  if [[ "$pr_head" == integration/* ]]; then
+    if [[ ! "$pr_head" =~ ^integration/[a-z][a-z0-9]*(\-[a-z0-9]+)*$ ]]; then
+      echo "live integration pull-request head is not purpose-first: $pr_head" >&2
+      failures=$((failures + 1))
+    elif [[ "$label_count" != "1" ]]; then
+      echo "live integration pull-request head requires workflow/integration label" >&2
+      failures=$((failures + 1))
+    fi
+  elif [[ "$label_count" == "1" ]]; then
+    echo "live workflow/integration label requires an integration head branch" >&2
+    failures=$((failures + 1))
+  fi
+  if [[ "$label_count" == "1" && "$pr_base" != "main" ]]; then
+    echo "live integration pull-request must target main" >&2
+    failures=$((failures + 1))
+  fi
+
+  (( failures == 0 ))
+}
+
+if [[ "${1:-}" == "--check-metadata" ]]; then
+  metadata_file="${2:-}"
+  metadata_head="${3:-}"
+  metadata_base="${4:-main}"
+
+  if [[ -z "$metadata_file" || ! -f "$metadata_file" ]]; then
+    echo "pull-request metadata fixture is missing: ${metadata_file:-<path>}" >&2
+    exit 2
+  fi
+  if ! command -v jq >/dev/null 2>&1; then
+    echo "jq not installed; install it before checking PR metadata fixtures" >&2
+    exit 2
+  fi
+  if ! jq -e 'type == "object"' "$metadata_file" >/dev/null; then
+    echo "pull-request metadata fixture is not a JSON object: $metadata_file" >&2
+    exit 2
+  fi
+  metadata_json="$(<"$metadata_file")"
+  if validate_pr_metadata "$metadata_json" "$metadata_head" "$metadata_base"; then
+    echo "pull-request metadata passed: $metadata_file"
+    exit 0
+  fi
+  echo "pull-request metadata blocked: $metadata_file" >&2
+  exit 1
+fi
+
 if [[ "${1:-}" == "--check-rollup" ]]; then
   rollup_file="${2:-}"
   rollup_required="${3:-required-check}"
@@ -170,9 +276,31 @@ fail() {
   failures=$((failures + 1))
 }
 
+maintainer_approval_passes() {
+  local reviews_json="$1"
+  local review_head_sha="$2"
+  local review_author="$3"
+  local latest_approvers approved_maintainers non_author_approved trusted_author
+
+  latest_approvers="$(printf '%s\n' "$reviews_json" | jq -r --arg sha "$review_head_sha" '[.[][]? | {user:(.user.login // empty),state:(.state // "" | ascii_upcase),commit:(.commit_id // empty),submitted:(.submitted_at // .updated_at // .created_at // "")}] | map(select(.user != "")) | sort_by(.user,.submitted) | group_by(.user)[] | last | select(.state == "APPROVED" and .commit == $sha) | .user' | sort -u)"
+  approved_maintainers="$(comm -12 <(printf '%s\n' "$maintainers" | sort -u) <(printf '%s\n' "$latest_approvers" | awk 'NF' | sort -u) || true)"
+  non_author_approved="$(printf '%s\n' "$approved_maintainers" | awk -v author="$review_author" 'NF && $0 != author')"
+  trusted_author="$(comm -12 <(printf '%s\n' "$maintainers" | sort -u) <(printf '%s\n' "$review_author" | awk 'NF' | sort -u) || true)"
+
+  if (( maintainer_count > 1 )); then
+    [[ -n "$non_author_approved" ]]
+  else
+    [[ -n "$approved_maintainers" || -n "$trusted_author" ]]
+  fi
+}
+
 echo "== pull request #${pr_number} (${repo}) =="
-pr_json="$(gh pr view "$pr_number" --repo "$repo" --json number,title,state,url,baseRefName,headRefName,headRefOid,author,mergeable,reviewDecision,statusCheckRollup)"
+pr_json="$(gh pr view "$pr_number" --repo "$repo" --json number,title,body,labels,state,url,baseRefName,headRefName,headRefOid,author,mergeable,mergeStateStatus,reviewDecision,statusCheckRollup)"
 printf '%s\n' "$pr_json" | jq '{number,title,state,url,base:.baseRefName,head:.headRefName,author:.author.login,headSha:.headRefOid,mergeable,reviewDecision}'
+
+if ! validate_pr_metadata "$pr_json" "$expected_head" "$expected_base"; then
+  fail "live pull-request title, head, base, label, or body metadata is invalid"
+fi
 
 pr_state="$(printf '%s\n' "$pr_json" | jq -r '.state // empty')"
 pr_base="$(printf '%s\n' "$pr_json" | jq -r '.baseRefName // empty')"
@@ -180,6 +308,7 @@ pr_head="$(printf '%s\n' "$pr_json" | jq -r '.headRefName // empty')"
 pr_author="$(printf '%s\n' "$pr_json" | jq -r '.author.login // empty')"
 head_sha="$(printf '%s\n' "$pr_json" | jq -r '.headRefOid // empty')"
 mergeable="$(printf '%s\n' "$pr_json" | jq -r '.mergeable // empty')"
+merge_state_status="$(printf '%s\n' "$pr_json" | jq -r '.mergeStateStatus // empty')"
 review_decision="$(printf '%s\n' "$pr_json" | jq -r '.reviewDecision // empty' | tr '[:lower:]' '[:upper:]')"
 
 [[ "$pr_state" == "OPEN" ]] || fail "PR state is ${pr_state:-missing}, expected OPEN"
@@ -188,6 +317,9 @@ if [[ -n "$expected_head" ]]; then
   [[ "$pr_head" == "$expected_head" ]] || fail "PR head is ${pr_head:-missing}, expected ${expected_head}"
 fi
 [[ "$mergeable" == "MERGEABLE" ]] || fail "PR mergeability is ${mergeable:-missing}, expected MERGEABLE"
+if [[ -n "$merge_state_status" ]]; then
+  [[ "$merge_state_status" == "CLEAN" ]] || fail "PR merge state is $merge_state_status, expected CLEAN"
+fi
 [[ -n "$head_sha" ]] || fail "PR head SHA is missing"
 [[ "$review_decision" != "CHANGES_REQUESTED" ]] || fail "GitHub reports blocking requested changes"
 
@@ -276,6 +408,55 @@ else
     echo "no failed, cancelled, or pending checks reported"
   else
     fail "newest result for a required or blocking check is not successful"
+  fi
+fi
+
+if (( failures > 0 )); then
+  echo
+  echo "PR #${pr_number} failed ${failures} review gate(s)." >&2
+  exit 1
+fi
+
+echo
+echo "== final live metadata recheck =="
+if ! latest_pr_json="$(gh pr view "$pr_number" --repo "$repo" --json number,title,body,labels,state,url,baseRefName,headRefName,headRefOid,author,mergeable,mergeStateStatus,reviewDecision,statusCheckRollup 2>/dev/null)"; then
+  fail "unable to refresh live pull-request metadata"
+else
+  if ! validate_pr_metadata "$latest_pr_json" "$expected_head" "$expected_base"; then
+    fail "live pull-request metadata changed or is invalid"
+  fi
+  latest_head_sha="$(printf '%s\n' "$latest_pr_json" | jq -r '.headRefOid // empty')"
+  [[ "$latest_head_sha" == "$head_sha" ]] || fail "pull-request head SHA changed during gate evaluation"
+  latest_state="$(printf '%s\n' "$latest_pr_json" | jq -r '.state // empty')"
+  latest_mergeable="$(printf '%s\n' "$latest_pr_json" | jq -r '.mergeable // empty')"
+  latest_merge_state_status="$(printf '%s\n' "$latest_pr_json" | jq -r '.mergeStateStatus // empty')"
+  latest_review_decision="$(printf '%s\n' "$latest_pr_json" | jq -r '.reviewDecision // empty' | tr '[:lower:]' '[:upper:]')"
+  [[ "$latest_state" == "OPEN" ]] || fail "PR state changed to ${latest_state:-missing}, expected OPEN"
+  [[ "$latest_mergeable" == "MERGEABLE" ]] || fail "PR mergeability changed to ${latest_mergeable:-missing}, expected MERGEABLE"
+  if [[ -n "$latest_merge_state_status" ]]; then
+    [[ "$latest_merge_state_status" == "CLEAN" ]] || fail "PR merge state changed to $latest_merge_state_status, expected CLEAN"
+  fi
+  [[ "$latest_review_decision" != "CHANGES_REQUESTED" ]] || fail "GitHub reports newly requested changes"
+
+  latest_author="$(printf '%s\n' "$latest_pr_json" | jq -r '.author.login // empty')"
+  if ! latest_reviews_json="$(gh api --paginate --slurp "repos/${repo}/pulls/${pr_number}/reviews" 2>/dev/null)"; then
+    fail "unable to refresh maintainer approvals"
+  elif ! maintainer_approval_passes "$latest_reviews_json" "$latest_head_sha" "$latest_author"; then
+    fail "maintainer approval is no longer valid for the current PR head"
+  fi
+
+  # shellcheck disable=SC2016
+  latest_threads_json="$(gh api graphql --paginate --slurp \
+    -f query='query($owner:String!,$name:String!,$number:Int!,$endCursor:String){repository(owner:$owner,name:$name){pullRequest(number:$number){reviewThreads(first:100,after:$endCursor){nodes{isResolved}pageInfo{hasNextPage endCursor}}}}}' \
+    -F owner="$repo_owner" -F name="$repo_name" -F number="$pr_number" 2>/dev/null || true)"
+  if [[ -z "$latest_threads_json" ]] || ! printf '%s\n' "$latest_threads_json" | jq -e 'all(.[]; ((.errors // []) | length) == 0)' >/dev/null; then
+    fail "unable to refresh GitHub review threads"
+  else
+    latest_unresolved_count="$(printf '%s\n' "$latest_threads_json" | jq '[.[].data.repository.pullRequest.reviewThreads.nodes[]? | select(.isResolved == false)] | length')"
+    (( latest_unresolved_count == 0 )) || fail "${latest_unresolved_count} unresolved review thread(s) remain"
+  fi
+  if ! latest_reduced_rollup="$(printf '%s\n' "$latest_pr_json" | jq -c '.statusCheckRollup // []' | reduce_check_rollup)" || ! evaluate_check_rollup "$latest_reduced_rollup" "$required_check"; then
+    fail "reported checks changed or are no longer successful"
   fi
 fi
 

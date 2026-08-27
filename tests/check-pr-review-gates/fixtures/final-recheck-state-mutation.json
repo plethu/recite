@@ -1,0 +1,42 @@
+{
+  "initial": {
+    "number": 163,
+    "title": "[REC-163] docs: validate PR metadata",
+    "body": "Closes #163",
+    "labels": [{"name": "workflow/integration"}],
+    "state": "OPEN",
+    "url": "https://github.com/plethu/recite/pull/163",
+    "baseRefName": "main",
+    "headRefName": "integration/milestone-integration",
+    "headRefOid": "0123456789abcdef0123456789abcdef01234567",
+    "author": {"login": "plethu"},
+    "mergeable": "MERGEABLE",
+    "mergeStateStatus": "CLEAN",
+    "reviewDecision": "APPROVED",
+    "statusCheckRollup": [{"name": "required-check", "conclusion": "success", "completedAt": "2026-08-27T00:00:00Z"}]
+  },
+  "latest": {
+    "number": 163,
+    "title": "[REC-163] docs: validate PR metadata",
+    "body": "Closes #163",
+    "labels": [{"name": "workflow/integration"}],
+    "state": "CLOSED",
+    "url": "https://github.com/plethu/recite/pull/163",
+    "baseRefName": "main",
+    "headRefName": "integration/milestone-integration",
+    "headRefOid": "0123456789abcdef0123456789abcdef01234567",
+    "author": {"login": "plethu"},
+    "mergeable": "MERGEABLE",
+    "mergeStateStatus": "CLEAN",
+    "reviewDecision": "APPROVED",
+    "statusCheckRollup": [{"name": "required-check", "conclusion": "success", "completedAt": "2026-08-27T00:00:00Z"}]
+  },
+  "protection": {
+    "required_pull_request_reviews": {"required_approving_review_count": 0},
+    "required_status_checks": {"contexts": ["required-check"]},
+    "enforce_admins": {"enabled": true}
+  },
+  "repo": {"owner": {"login": "plethu"}, "name": "recite"},
+  "reviews": [[]],
+  "threads": [{"data": {"repository": {"pullRequest": {"reviewThreads": {"nodes": []}}}}}]
+}

@@ -85,9 +85,46 @@ bounded issue or vertical slice through only the stages explicitly named in the
 authorized delivery target: local edits, commit, push, and PR updates are
 separate authorizations and must not be inferred from one another. Product
 direction, subjective decisions, integration review, and final acceptance
-remain with the coordinating maintainer. Keep task packets compact and return
-review findings to the implementer rather than having the coordinator patch its
-files.
+remain with the coordinating maintainer. Keep task packets compact. Delegated
+slices use isolated purpose-first branches or worktrees and do not open
+issue-slice pull requests. The coordinator reviews each slice, returns findings
+to its implementer for correction, and mechanically integrates accepted
+commits; the coordinator does not patch implementer work except for mechanical
+conflict resolution.
+
+## Milestone integration workflow
+
+For a milestone pass, the coordinator creates one purpose-first
+`integration/<short-kebab-topic>` branch from `main`. Each bounded slice is
+assigned to an isolated normal purpose-first branch or worktree based on that
+integration branch. The packet names the
+slice, base revision, write scope, acceptance checks, stop-and-ask categories,
+and authorized delivery stages. A worker may commit or push only when those
+stages are explicitly authorized, but does not open a pull request for the
+slice.
+
+The coordinator reviews the slice diff and its focused checks. Findings go back
+to the owning implementer for a correction pass. Once accepted, the coordinator
+cherry-picks the worker's commits mechanically into the integration branch; use
+`--ff-only` only when the accepted branch is a direct fast-forward. Do not use
+a default non-fast-forward merge, which creates a `Merge branch ...` commit
+that fails the commit policy. If an exceptional merge commit is unavoidable,
+the coordinator must review it and give it an explicit policy-compliant
+`[REC-N] <type>: <subject>` message; prefer cherry-picking instead. Do not
+rewrite implementation work in the coordinator's worktree.
+Workers keep the normal `[REC-N]` conventional commit subject and attribution
+policy.
+
+At a stable checkpoint, the coordinator opens exactly one protected integration
+pull request from the integration branch to `main`. Apply the
+`workflow/integration` label and use an `integration/<short-kebab-topic>` head
+branch targeting `main`; CI requires all three before enabling integration mode.
+Use the milestone tracking issue in the PR title. The final integration PR may
+contain multiple valid `[REC-N]` issue codes; its title code identifies the
+milestone tracking issue, and its body must explicitly close that issue with a
+`Closes`, `Fixes`, or `Resolves #N` token. The protected GitHub checks and review
+gate apply to this PR. After it merges, verify live GitHub state and refresh
+`docs/roadmap.md` on `main`.
 
 ## Review and protected merge
 
@@ -97,7 +134,9 @@ standard GitHub reviews and threads, resolve or explicitly reject each review
 comment, and run checks appropriate to the changed surface. Use focused checks
 for documentation or instruction-only changes and `mise run verify` for broad
 or high-risk code changes. Required GitHub CI and branch protection remain
-authoritative at merge. Then pass:
+authoritative at merge. The helper below is for a standalone PR or the one
+coordinator-owned integration PR targeting protected `main`; delegated slices
+are reviewed and integrated without issue-slice PRs. Then pass:
 
 ```bash
 .agents/skills/recite-github-pm/scripts/check-pr-review-gates.sh <pr> <branch> main

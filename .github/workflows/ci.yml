@@ -10,6 +10,8 @@ on:
       - synchronize
       - reopened
       - edited
+      - labeled
+      - unlabeled
 
 permissions:
   contents: read
@@ -25,6 +27,22 @@ jobs:
     timeout-minutes: 5
     env:
       RECITE_PR_TITLE: ${{ github.event.pull_request.title }}
+      RECITE_PR_BODY: ${{ github.event.pull_request.body }}
+      # Only the coordinator's final milestone PR carries this label and uses
+      # an integration/<topic> head branch targeting main. Local checks may
+      # set RECITE_INTEGRATION_PR=1 explicitly instead.
+      RECITE_INTEGRATION_LABEL: >-
+        ${{ github.event_name == 'pull_request' &&
+            contains(github.event.pull_request.labels.*.name, 'workflow/integration') &&
+            '1' || '0' }}
+      RECITE_PR_BASE_REF: >-
+        ${{ github.event_name == 'pull_request' &&
+            github.event.pull_request.base.ref || '' }}
+      RECITE_INTEGRATION_PR: >-
+        ${{ github.event_name == 'pull_request' &&
+            contains(github.event.pull_request.labels.*.name, 'workflow/integration') &&
+            startsWith(github.event.pull_request.head.ref, 'integration/') &&
+            '1' || '0' }}
     steps:
       - name: Check out source change
         uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
@@ -37,6 +55,9 @@ jobs:
 
       - name: Check branch and commit policy
         run: scripts/check-git-policy.sh
+
+      - name: Check integration-mode policy fixtures
+        run: bash tests/git-policy/check-integration.sh
 
       - name: Check pull-request rollup policy
         run: tests/check-pr-review-gates/check-rollup-fixtures.sh

@@ -57,7 +57,23 @@ The following invariants define the project and must not be weakened for conveni
 
 ## 4. Product Shape
 
-The reference implementation should be delivered as a Rust workspace. Rust is the implementation language for the core toolchain, not a requirement that users build Rust-first games.
+The reference implementation should be delivered as a Rust workspace for the
+language, compiler, runtime, schema, localisation, CLI, LSP, and shared
+authoring kernel. Rust is the implementation language for those core
+capabilities, not a requirement that users build Rust-first games.
+
+The product also includes a standalone GUI workbench. Its frontend technology
+is a deliberate decision made by the native GUI strategy and accessibility
+proof, not a premise of the language or runtime. A selected strategy may use a
+single cross-platform frontend or platform-appropriate frontends, but all
+frontends must call the same authoring kernel and preserve the same source,
+schema, localisation, preview, and diagnostic semantics.
+
+Linux, Windows, and macOS are first-class v1 desktop platforms for the core
+CLI, LSP, editor integrations, and standalone workbench. Engine companions may
+declare narrower supported combinations of engine version, host platform, and
+toolchain; v1 does not require testing every Cartesian product of desktop and
+engine targets.
 
 The workspace should contain:
 
@@ -67,13 +83,25 @@ The workspace should contain:
 - `recite-runtime`: deterministic runtime with no engine dependencies.
 - `recite-cli`: project CLI, exposing the `recite` binary.
 - `recite-lsp`: language server.
+- shared authoring-kernel and configuration capabilities used by the CLI, LSP,
+  editor clients, preview, and GUI workbench. These may begin in existing crates
+  and become a crate only when the ownership boundary is proven.
 - engine adapter crates as integrations mature, such as `recite-godot`,
   `recite-bevy`, or `recite-unity`.
-- `recite-vscode`: VS Code extension.
+- editor integrations for VS Code/VSCodium, Neovim, and Zed.
+- the standalone GUI workbench and any platform-specific frontend projects
+  selected by the bake-off.
 
-Visual-editor surfaces are deferred until text tooling is mature; the crate split (`recite-editor-core`, `recite-visual-editor`) will be designed when that work begins, not pre-declared here.
+The GUI workbench is source-first. It may show a graph and provide safe
+structured edits, but source, comments, unknown metadata, and stable IDs remain
+authoritative. A general lossless visual-node authoring format is not required
+for v1. Generated host-language bindings are also not part of the v1 product
+shape.
 
-Neovim support ships as documented LSP-client config and an optional Tree-sitter grammar, not a Rust crate.
+The shared configuration contract covers user-owned UI preferences and
+cross-platform paths. Project content and generated schema manifests remain
+separate from those preferences. Neovim support ships as editor-native LSP and
+highlighting integration, not a Rust crate.
 
 ## 5. Source Format
 
@@ -1346,20 +1374,20 @@ Illustrative API:
 pub fn start_scene(
     asset: &CompiledDialogue,
     block: Option<&str>,
-    locale: LocaleId,
+    locale: Option<LocaleId>,
 ) -> Result<DialogueSession, DialogueError>;
 
 pub fn next(
     session: &mut DialogueSession,
     context: &dyn DialogueContext,
-    locale: &dyn LocaleProvider,
+    locale_provider: &dyn LocaleProvider,
 ) -> Result<DialogueEvent, DialogueError>;
 
 pub fn choose(
     session: &mut DialogueSession,
     choice_id: ChoiceId,
     context: &dyn DialogueContext,
-    locale: &dyn LocaleProvider,
+    locale_provider: &dyn LocaleProvider,
 ) -> Result<DialogueEvent, DialogueError>;
 
 pub fn acknowledge_effect(
@@ -1373,7 +1401,12 @@ pub fn end_scene(
 ) -> Result<Vec<DialogueEffectRequest>, DialogueError>;
 ```
 
-The concrete API may differ, but the semantics must hold.
+The concrete API may differ, but the semantics must hold. `None` starts a
+source-text-only session. The runtime may still receive a locale provider for a
+caller that can localise dialogue, but it must bypass that provider entirely
+when the session locale is `None` and emit the compiled source text. A provider
+must not be required to represent an absent locale or infer one from the host
+environment.
 
 ### 8.3 Event Model
 
@@ -1483,7 +1516,7 @@ data. A v1 API must not expose only a flat `Option<String>` reason.
 - collected deferred effects;
 - pending blocking effect;
 - previous prompt choices;
-- locale;
+- optional dialogue locale, serialized as `None` in source-text-only mode;
 - deterministic trace counters;
 - selected choice history.
 
@@ -1516,13 +1549,46 @@ The runtime must not panic on malformed project content.
 Recite has two localisation domains:
 
 - dialogue content localisation, owned by compiled project content and runtime locale providers;
-- Recite-owned tool UI text, owned by CLI/TUI catalog resources.
+- Recite-owned UI text across the CLI/TUI, standalone GUI, LSP, and editor
+  extensions, owned by one canonical shared Fluent resource set.
 
-Dialogue content uses the gettext/POT workflow in this section. CLI/TUI helper text, labels, footer hints, status messages, and Recite-owned human error text use Fluent resources inside `recite-cli` so UI strings can carry variables, future plural/select rules, and deterministic fallback behavior. These catalogs must not be used as a substitute for translated dialogue text. Future content preview work must load explicit dialogue catalogs through the runtime/provider path rather than mixing dialogue content into the tool UI catalog.
+Dialogue content uses the gettext/POT and PO workflow in this section. Every
+Recite-owned UI string—CLI/TUI helper text, GUI labels and status, LSP messages,
+and editor-extension text—must use the shared Fluent resource contract so
+variables, future plural/select rules, and deterministic fallback behavior are
+available in every client. The shared set need not become a new crate before
+the ownership boundary is proven. It includes stable resource IDs, English
+source resources, extraction, and completeness checks across every client;
+generated host-specific projections are allowed where a host manifest or
+metadata surface cannot consume Fluent directly. Host-required metadata remains
+owned by that host and is distinct from Recite-owned strings. Hard-coded UI
+strings are not a second path. Published non-English UI locales require human
+authorship and review; machine-generated translations are not supported locale
+claims. Fluent UI resources must not substitute for translated dialogue text,
+which remains on the explicit runtime/provider path.
+
+Dialogue localisation is an opt-in project capability, distinct from the
+mandatory localisation of Recite-owned authoring text. A project may remain
+source-text-only: when no dialogue locale is supplied, the CLI's
+`--dialogue-locale` remains unset (`Option<String>`), the runtime session and
+its serialized locale field are unset (`None`), and source text is delivered
+without preview translation. A project that enables dialogue localisation must declare its
+default locale and fallback locale/catalog policy at its project or fixture
+configuration boundary; neither mode may infer a dialogue locale from the host
+environment. This does not make `--dialogue-locale` mandatory for source-only
+play or preview.
 
 ### 9.1 Requirements
 
 The project must support gettext/POT workflows as a first-class path.
+
+The standalone GUI must provide gettext PO catalogue editing as the required
+v1 editable dialogue-catalogue path. It must preserve comments, context,
+unknown fields, stable IDs, placeholders, and markup, and write changes through
+safe atomic replacement. Other catalogue formats are explicitly read-only or
+import/export-only in v1; they must not be presented as editable authoring
+surfaces. PO editing must remain separate from the Fluent resource contract for
+Recite-owned UI text.
 
 Localisable strings:
 
@@ -1606,6 +1672,10 @@ adapter registries during traversal.
 ### 9.3 Locale Provider
 
 The runtime locale provider must receive both stable ID and source text.
+
+The runtime calls the provider only when the session has an explicit dialogue
+locale. Source-text-only sessions have no locale to pass to `lookup`; they
+bypass the provider and use the source text directly.
 
 ```rust
 pub trait LocaleProvider {
@@ -1752,13 +1822,14 @@ The schema has three separate surfaces:
    `recite-lsp`;
 3. producer-specific authoring surfaces that create the manifest.
 
-The preferred producer is adapter or game code, not hand-authored schema
-configuration. Game projects already define typed handles, effect handlers,
-condition queries, enum state, speakers, and registries near their adapter
-code. Presentation projection query functions, projector definitions, and label
-templates may also originate in adapter or game code. Recite should reuse that
-existing typed surface instead of asking
-developers to maintain a parallel string-based schema file.
+For engine projects, the preferred producer is adapter or game code, not a
+parallel hand-authored schema configuration. Game projects already define typed
+handles, effect handlers, condition queries, enum state, speakers, and
+registries near their adapter code. Presentation projection query functions,
+projector definitions, and label templates may also originate in adapter or
+game code. Standalone projects without an engine producer must instead have a
+source-owning declarative producer path; the GUI edits that source and invokes
+deterministic generation rather than editing the manifest.
 
 Producer APIs should be native to their host ecosystem. A Bevy adapter should
 feel like Rust, Godot adapters should support Godot-facing C# and/or GDScript
@@ -1804,6 +1875,20 @@ struct PlaySfx {
 The generated manifest is a deterministic, language-neutral data artifact.
 It is the only schema surface the compiler and LSP must understand. Compiler
 and editor tooling must not execute game code to validate dialogue.
+
+Generated manifests are compiler and LSP truth, but they are read-only derived
+artifacts: neither the GUI nor an editor may edit them directly. The shared
+authoring kernel must expose a source-owning schema-authoring capability. It
+must define at least one source-owning, kernel-editable declarative producer
+path suitable for GUI integration for standalone projects and producer-backed
+actions for engine-owned schemas. Those actions open the source declaration,
+invoke/regenerate through the producer, report stale output, surface structured
+failure and retry, and never write generated manifests directly. Unsupported
+producers are explicitly read-only and must not be counted as schema editing.
+The exact standalone schema-source syntax is a Milestone 2 decision, provided
+it lowers to the same canonical model and keeps producer provenance and
+deterministic regeneration visible. Milestone 6 must ship the GUI realization
+of at least one standalone path.
 
 The host-agnostic export contract for adapter-produced manifests, including
 resource-backed metadata domains, presentation projection declarations,
@@ -1934,7 +2019,9 @@ Rules:
 - `availability_reasons` is a schema-level map keyed by stable reason ID.
 - Each reason declares localisable source template text and typed parameters.
 - Generated schema manifests must include enough reason-template data, parameter types, and provenance for compiler, LSP, CLI/TUI, runtime, and adapter tooling to validate and present reasons without executing game code.
-- Template text is dialogue/project content, not Recite-owned UI text. It follows the dialogue localisation path, not the CLI/TUI Fluent catalog path.
+- Template text is dialogue/project content, not Recite-owned UI text. It follows
+  the dialogue localisation path, not the shared Recite UI Fluent resource
+  contract used by CLI/TUI, GUI, LSP, and editor extensions.
 - Boolean condition definitions may declare an `availability_reason` mapping. Mapping values bind reason parameters from condition arguments using `$<condition_param>` references or literal values valid for the target parameter type.
 - The compiler validates that condition reason mappings reference existing reason IDs, bind every required reason parameter exactly once, do not bind unknown parameters, and produce values compatible with the reason parameter types.
 - A choice-level `reason=<id>` primary reason override must reference an
@@ -2282,9 +2369,11 @@ in which case the payload is nil. v0 tags are:
   `"LiteralInt"`, `"LiteralFloat"`, or `"LiteralBool"`.
 
 Presentation projection rows and projection-specific tags are not encoded in the
-current v0 wire shape. Issue #182 adds them by extending this table and the
-encoder/decoder mirrors before the first v0 reader ships; after that point the
-versioning policy below applies.
+current v0 wire shape. A coordinated pre-release wire change may extend this
+table and the encoder/decoder mirrors before the first v0 reader ships; after
+that point the versioning policy below applies. The change must be treated as a
+format decision with fixtures and compatibility evidence, not as an implicit
+encoder-only addition.
 
 The compiled `requirement` tree stores condition calls plus schema-derived
 availability reason mappings for positive boolean condition leaves.
@@ -2387,7 +2476,10 @@ recite play <asset> --block <block> [--ui auto|tui|plain] [--keymap standard|vim
   [--dialogue-locale <locale>] [--dialogue-catalog <locale=path>]...
 ```
 
-`recite play` is an interactive REPL for writers (Milestone 5.5). Future commands include `recite generate-bindings --schema <schema> --lang <lang>` once the schema and adapter contracts stabilise; it is not part of the v1 CLI surface.
+`recite play` is an interactive REPL for writers and a reference consumer of
+the shared preview loop (Milestone 3). Future commands include `recite
+generate-bindings --schema <schema> --lang <lang>` once the schema and adapter
+contracts stabilise; it is not part of the v1 CLI surface.
 
 ### 13.1 `compile`
 
@@ -2441,7 +2533,8 @@ Must be able to:
 `run` may preview translated dialogue content only when the fixture opts in with
 `[dialogue].locale`. Dialogue catalog paths in fixtures are resolved relative to
 the fixture file directory. Without `[dialogue].locale`, line and choice output
-must remain source text. Catalogs without a dialogue locale are an error.
+must remain source text, and the runtime session locale remains unset. Catalogs
+without a dialogue locale are an error.
 
 ### 13.6 `trace`
 
@@ -2472,13 +2565,24 @@ Interactive REPL for writers. Loads a compiled asset, starts a scene, prints or 
 
 The default `--ui auto` mode should use a TUI when stdin and stdout are interactive terminals, and should fall back to the line-oriented plain mode for pipes, CI, and accessibility tooling. `--ui tui` must fail clearly when no interactive terminal is available and suggest `--ui plain`. `--ui plain` must preserve the same runtime event flow as the TUI with line-oriented prompts and responses, and is the screen-reader- and script-friendly play surface.
 
-Interactive UI preferences are user preferences, not project content. The CLI may read `$RECITE_CONFIG`, then `$XDG_CONFIG_HOME/recite/config.toml`, then `~/.config/recite/config.toml`. Missing config uses defaults. UI preferences must not be stored in `recite.project.toml`. Malformed UI config must not affect `run` or `trace`.
+Interactive UI preferences are user preferences, not project content. The
+shared authoring configuration contract must use `$RECITE_CONFIG` when it is
+set, then an OS-aware user configuration base chosen by a platform strategy
+(for example, `etcetera::choose_base_strategy()`), rather than assembling
+`$HOME` paths in each frontend. That strategy resolves to
+`$XDG_CONFIG_HOME/recite/config.toml` or `~/.config/recite/config.toml` on Linux
+and other XDG systems, `~/Library/Application Support/Recite/config.toml` on
+macOS, and the user's `AppData` Recite configuration path on Windows. Missing
+config uses defaults.
+UI preferences must not be stored in `recite.project.toml`. Window geometry,
+recent-file lists, and other shell state are user-owned and must not become
+project semantics. Malformed UI config must not affect `run` or `trace`.
 
 Initial UI config:
 
 ```toml
 [ui]
-locale = "en-US"        # BCP-47 locale, or "system"
+locale = "en-US"        # Recite UI BCP-47 locale, or "system"
 keymap = "standard"      # "standard" or "vim"
 key_hints = "contextual" # "contextual", "compact", or "hidden"
 color = "auto"           # "auto", "always", or "never"
@@ -2492,7 +2596,17 @@ When `color = "auto"`, TUI color is disabled if `NO_COLOR` is present or `CLICOL
 
 When `show_unavailable_choices` is true, `play` should render unavailable choices as disabled and may show a compact primary reason. The full structured reason tree remains available through trace/test output and adapter conformance fixtures. When the setting is false, `play` may hide unavailable choices as a UI preference only; runtime prompt output and previous-prompt state are unchanged.
 
-The UI locale controls only Recite-owned CLI/TUI text: pane titles, transcript labels, footer hints, prompts, status messages, invalid input text, blocking-effect acknowledgement labels, and human CLI errors owned by `recite-cli`. It does not control dialogue line or choice translation for `play`, `run`, or `trace`; those remain runtime/provider concerns (§9). There is no `--ui-locale` flag.
+When dialogue localisation is enabled, `play`, preview, and engine-facing
+runtime operations must receive a locale from the caller or fixture and must
+not infer it from the host environment. Without one, source-text-only mode is
+valid and the optional runtime/session locale remains `None`. The Recite UI
+locale is a separate preference; `system` is allowed for it and resolves
+through the deterministic UI fallback chain. It controls Recite-owned text
+across the CLI/TUI, GUI, LSP, and editor extensions—pane titles, labels,
+prompts, status, diagnostics, and human errors—through the shared Fluent
+resource contract. It never controls dialogue line or choice translation for
+`play`, `run`, or `trace`; those remain runtime/provider concerns (§9). There
+is no `--ui-locale` flag.
 
 Dialogue content preview for `play` is separately opt in:
 
@@ -2508,7 +2622,11 @@ error. Missing or empty catalog translations fall back to source text through
 the runtime locale-provider path; Recite-owned UI text remains on the Fluent UI
 catalog path.
 
-Locale fallback for CLI/TUI text is deterministic: requested locale, then language-only locale, then `en-US`. Missing or malformed non-default catalogs fall back to `en-US`. The default `en-US` catalog is a test-gated resource.
+Locale fallback for Recite-owned UI text is deterministic: an explicit UI
+locale, or the resolved system UI locale, then language-only locale, then
+`en-US`. Missing or malformed non-default Fluent resources fall back to
+`en-US`. The default `en-US` resources are test-gated and must be complete
+across the CLI/TUI, GUI, LSP, and editor extensions.
 
 The default keymap is `standard`: arrows move choices, printable keys enter a choice ID/index, Enter submits typed input or the highlighted choice, and Ctrl-C/Esc/`:q`/`:quit` quit cleanly. Vim mode is opt-in: choices start in normal mode, `j`/`k` and arrows move, `i` enters text input, `:` opens command mode, and Esc leaves insert/command/help before quitting at the root prompt. No required play action may be reachable only through arrow-key navigation: plain mode accepts choices by ID/index, condition answers by typed values, and blocking-effect acknowledgement by Enter/`ack`; TUI mode keeps typed choice ID/index entry in standard mode and insert-mode typed entry in vim mode.
 
@@ -2522,7 +2640,10 @@ The TUI should include:
 
 `play` must not execute game-side effects. Immediate and blocking effects remain typed runtime requests emitted to the authoring surface.
 
-`play` is part of Milestone 5.5 (Authoring Polish) and is not on the v1 acceptance gate, but the runtime API must accommodate it.
+The exact CLI TUI is not itself a serious-v1 acceptance gate. It must consume
+the same shared preview operations as the standalone workbench, remain usable
+in plain mode, and preserve the runtime's structured event and effect
+boundaries. The shared preview loop and the workbench preview are v1 gates.
 
 ### 13.8 `watch`
 
@@ -2552,9 +2673,19 @@ The expected authoring loop is:
 `watch` must not imply mid-session patch reload for v1. It is a fast rebuild
 surface for authoring, CI-adjacent local checks, and editor/engine integration.
 
+The authoring kernel must expose the watch/build result as structured state so
+the GUI and editor integrations do not parse human CLI output. The result must
+identify the affected project inputs, diagnostics, output assets, freshness
+state, and whether an active session must be restarted according to the
+adapter's declared policy.
+
 ### 13.9 Future: `generate-bindings`
 
-Deferred past v1. Will generate typed host-language bindings (condition stubs, effect records/enums, runtime conversions, test helpers, optional engine event/signal wrappers) from schema once the schema and adapter contracts stabilise.
+Deferred past v1. Will generate typed host-language bindings (condition stubs,
+effect records/enums, runtime conversions, test helpers, optional engine
+event/signal wrappers) from schema once the schema and adapter contracts
+stabilise. This direction has no current tracker owner; assign one before it is
+promoted into planned work.
 
 ## 14. LSP
 
@@ -2604,12 +2735,20 @@ Nice-to-have:
 
 ## 15. Editor Support
 
-The first syntax highlighting implementation uses a staged, editor-native
-strategy:
+Editor integrations are first-class authoring surfaces. VS Code/VSCodium,
+Neovim, and Zed must all use the same LSP and shared authoring-kernel semantics;
+their syntax grammars and commands are host-specific projections, not alternate
+language implementations.
 
-- VS Code starts with a TextMate grammar and `.recite` language contribution.
-- Neovim starts with `recite` filetype detection, documented LSP setup, and a
-  Tree-sitter grammar if that grammar can remain a syntax-only highlighter.
+The first syntax highlighting implementation uses an editor-native strategy:
+
+- VS Code and VSCodium start with a TextMate grammar and `.recite` language
+  contribution.
+- Neovim starts with `recite` filetype detection, documented LSP setup, and
+  tested syntax highlighting through Tree-sitter or a named Vim regex fallback.
+- Zed starts with its language-server integration, file association, syntax
+  highlighting, tasks, and diagnostic surface supported by its extension
+  model.
 - LSP semantic tokens may later layer richer classification on top of syntax
   highlighting, but they are not the first highlighting path and are not
   required for basic highlighting.
@@ -2656,15 +2795,14 @@ Follow-up implementation work should be split into at least two issues:
   `.recite` file association, TextMate grammar, representative grammar fixtures
   or snapshots, and a clear boundary between grammar highlighting and LSP
   diagnostics.
-- Neovim highlighting: add filetype detection and documented LSP setup, then add
-  a Tree-sitter grammar and capture queries if feasible without duplicating
-  semantic validation. If Tree-sitter proves too large for the first Neovim
-  pass, keep filetype detection plus LSP setup as the initial deliverable and
-  track Tree-sitter separately.
+- Neovim highlighting: add filetype detection, documented LSP setup, and
+  tested syntax highlighting through Tree-sitter or the named Vim regex
+  fallback, without duplicating semantic validation. Record the selected
+  implementation and any host limitation in the editor acceptance evidence.
 
-### 15.1 VS Code
+### 15.1 VS Code and VSCodium
 
-The VS Code extension must provide:
+The VS Code/VSCodium extension must provide:
 
 - TextMate syntax highlighting;
 - LSP client wiring;
@@ -2679,32 +2817,121 @@ The VS Code extension must provide:
 Neovim support must include:
 
 - documented LSP setup;
-- Tree-sitter grammar if feasible;
+- tested syntax highlighting through a Recite Tree-sitter grammar, or a named
+  tested fallback using Neovim's Vim regex syntax engine;
 - `recite` filetype detection for `.recite` files;
-- command examples for validation and extraction.
+- command examples for validation, extraction, watch, and preview;
+- semantic parity with the other first-class editors, with any Neovim host
+  limitations recorded rather than used to weaken the contract.
 
-### 15.3 Visual Editor
+### 15.3 Zed
 
-The visual editor should be built after the source format, compiler, runtime, and LSP are stable enough to avoid designing the project around a premature UI.
+The Zed integration must provide:
 
-The visual editor should:
+- `.recite` language detection and syntax highlighting;
+- LSP diagnostics, completion, hover, navigation, rename, and code actions;
+- a named minimum task/command surface for validation, extraction, watch, and
+  preview, with host limitations recorded if a command is unavailable;
+- setup documentation that keeps the language server and project configuration
+  explicit; semantic parity remains mandatory for the supported operations.
 
-- operate on the same source or a lossless structured representation;
-- never lock users out of text workflows;
-- show block graphs;
-- edit lines, choices, metadata, conditions, and effects;
-- surface validation diagnostics;
-- preview localized text;
-- preview effect traces;
-- integrate with schema completions.
+### 15.4 GUI Workbench
 
-The visual editor is part of the long-term value proposition, but v1 should prove the text-first deterministic workflow first.
+The GUI workbench is a standalone, source-first authoring surface. It is built
+against the shared authoring kernel after the native GUI strategy and
+accessibility proof, not as a second semantic implementation.
+
+The workbench must:
+
+- operate on source or a lossless source-preserving edit representation;
+- never lock users out of text workflows or silently rewrite stable IDs;
+- show block graphs with an equivalent accessible list or outline;
+- edit lines, choices, metadata, conditions, and effects through explicit,
+  undoable source edits;
+- surface parser, compiler, schema, localisation, and freshness diagnostics;
+- inspect schema domains, producer provenance, and explicit regenerate/stale
+  actions without making a generated manifest a second source of truth; edit
+  the standalone declarative schema source or open/edit declarations through
+  the engine producer, while unsupported producers remain explicitly
+  read-only;
+- provide gettext PO catalogue browsing and editing as the required v1 editable
+  dialogue-catalogue path, preserving comments, context, unknown data, stable
+  IDs, placeholders, markup, and fallback visibility with safe atomic writes;
+  other catalogue formats are explicitly read-only or import/export-only;
+- preview localized text and deterministic effect traces through the runtime;
+- integrate with schema completions and the same LSP features as text editors;
+- expose keyboard, focus, screen-reader, IME, BiDi/RTL, zoom, text-scaling,
+  high-contrast, and non-colour paths for every essential operation;
+- handle external file changes and save conflicts explicitly;
+- represent stale generations and cancellation, announce progress and status,
+  offer failure/retry, retain or restore focus, support reduced motion, and
+  provide manual assistive-technology verification where automation is
+  insufficient.
+
+The GUI workbench is required for serious v1. A fully general visual node editor
+with a separately persisted or losslessly round-trippable graph format is not.
+Automatic layout is the default. Viewport state is transient and local; an
+optional checked-in open sidecar may preserve layout keyed by stable IDs. Graph
+layout and viewport state must never become dialogue semantics or make the GUI
+the only authoring path.
+
+### 15.5 Native GUI Strategy and Accessibility Proof
+
+Before committing to a workbench frontend, Recite must compare these strategy
+families using one shared fixture and one shared authoring contract. Linux,
+Windows, and macOS are first-class v1 desktop platforms for the core CLI, LSP,
+editor integrations, and standalone workbench; companion matrices may be
+narrower by engine version and host platform:
+
+The bake-off must include an explicit candidate-by-platform applicability
+matrix. Each claimed candidate/platform cell is tested; candidates are not
+required to run on every operating system. The decision record names selected
+cells, unsupported cells, and the reason for each unsupported claim.
+
+- unified Rust candidates including Freya 0.5 RC, Floem, GPUI, and
+  Xilem/Masonry;
+- platform-appropriate frontends: SwiftUI/AppKit on macOS, WinUI 3 including a
+  separate `windows-reactor` Rust evaluation and an experimental C#
+  `Microsoft.UI.Reactor` fallback on Windows, and
+  GTK/GtkSourceView where a Linux-native path is selected;
+- Avalonia with code-first C# as the primary non-Rust cross-platform candidate;
+- Qt, Flutter, Compose, Slint, and wxWidgets as comparison baselines only until
+  authoring, accessibility, governance, and maintenance evidence earns a
+  commitment.
+
+The fixture must cover source editing, stable-ID insertion, diagnostics,
+completion, schema inspection/editing, PO catalogue editing, localisation
+preview, graph navigation, undo/redo, external changes, and runtime preview.
+For non-Rust/native candidates, evidence must name the kernel crossing
+(in-process binding or local process protocol), protocol/versioning, structured
+requests/errors, cancellation, stale generations, source edits, and packaging.
+The proof must cover keyboard-only workflows, focus order, screen readers on
+each declared platform, IME composition, BiDi/RTL text, zoom/text scaling, high
+contrast, non-colour meaning, progress/status announcements, failure/retry,
+focus retention/restoration, save conflicts, reduced motion, and
+startup/memory/packaging evidence. The exact `windows-reactor` Rust repository
+and version, and the experimental C# Reactor repository and version, must be
+recorded as bake-off evidence rather than conflated.
+
+The decision record must name the selected strategy, supported platforms,
+fallback route, framework versions, native dependencies, maintenance burden,
+known limitations, and reconsideration triggers. No candidate is accepted on
+renderer reach or visual polish alone.
 
 ## 16. Engine Adapters
 
 The normative adapter contract lives in
 `docs/engine-adapter-contract.md`. This section records the product-level
 requirements that the contract expands.
+
+The standalone GUI workbench is a first-class authoring surface. IDE and text
+editing remain first-class and are expected primary workflows. Engine adapters
+are thin companions: they integrate the compiled asset and shared authoring
+workflow into an engine's asset, schema, event, and editor conventions, but do
+not become alternate dialogue authoring applications or runtimes. A companion
+may provide host-native import, schema production, refresh, and presentation
+hooks; the standalone workbench and text editors remain useful without an engine
+project.
 
 Schema-manifest export, including resource-backed metadata-domain snapshots and
 stale-schema checks, is part of that adapter contract (§7). Engine-specific
@@ -2732,7 +2959,8 @@ Adapters must:
 
 Every adapter should expose host-native equivalents of these operations:
 
-- start dialogue from a compiled asset, optional block, and locale;
+- start dialogue from a compiled asset, optional block, and optional locale;
+  `None` selects source-text-only mode;
 - select a dialogue choice by `ChoiceId`;
 - acknowledge a blocking effect by `EffectRequestId`;
 - observe structured dialogue output:
@@ -2768,7 +2996,9 @@ validation, and pending blocking-effect semantics.
 Adapters should make the edit-source -> LSP diagnostics -> on-save IDs ->
 `recite watch` rebuild -> engine import/refresh -> restart scene loop practical
 for their host engine. A richer mid-session patch reload can be explored after
-v1, but it is not required for the serious v1 gate.
+v1, but it is not required for the serious v1 gate. The standalone workbench
+must expose the same source, schema, localisation, freshness, and preview
+states without requiring an engine to be open.
 
 Future versions may support multiple sessions keyed by entity/session ID.
 
@@ -2778,7 +3008,9 @@ Adapters should support:
 
 - registering condition handlers through the host's normal extension points;
 - emitting generic effect requests;
-- optional generated typed effect events, signals, or records from schema;
+- optional generated typed effect events, signals, or records from schema may
+  remain post-v1; v1 adapters may provide handwritten typed wrappers, but must
+  always expose the generic structured effect-request contract;
 - test fixtures independent of the host engine runtime where possible.
 
 Conditions must remain pure queries. Effects must remain typed requests emitted to the game. Adapter convenience APIs must not move game-side mutation into the Recite runtime.
@@ -2802,8 +3034,8 @@ No adapter may weaken the engine-independent core contract.
 
 The source-tree adapter packages are acceptable while Recite is pre-release,
 but the release path must not leave engine users integrating from ad hoc repo
-paths. Once Recite starts making tagged releases, and certainly before declaring
-1.0, the v1-facing adapters should have store- or ecosystem-native
+paths. Before declaring 1.0, the v1-facing adapters must have store- or
+ecosystem-native
 distribution plans: Godot Asset Library/addon packaging for Godot, Unity Asset
 Store or Unity Package Manager-friendly distribution for Unity, and crates.io
 plus Bevy plugin/example packaging for Bevy. Those bundles should include the
@@ -2905,7 +3137,9 @@ runtime dialogue locale for preview, and `catalogs` maps locale IDs to gettext
 PO files. Catalog entries use singular gettext records with `msgctxt` as the
 stable line or choice ID, `msgid` as source text, and `msgstr` as translated
 text. Variant-specific entries may use `id&variant` contexts and should fall
-back to `id` before source text.
+back to `id` before source text. Omitting the table is the valid source-text-only
+mode; enabling project dialogue localisation requires the project's declared
+default and fallback locale/catalog policy.
 
 ### 17.4 Adapter Conformance Fixtures
 
@@ -2956,7 +3190,14 @@ Diagnostic codes should be namespaced, for example:
 
 Performance is part of the product contract. Recite is intended for games that validate dialogue in CI, run headless tests frequently, and may load large narrative projects during editor workflows. Benchmarks must cover authoring, compilation, runtime traversal, localization, and adapter overhead.
 
-All numeric budgets in this section are **aspirational targets, not contracts**, until a baseline exists from realistic fixtures. They will be re-evaluated against measured numbers; failing to hit a target is a benchmark report, not an acceptance failure. Benchmarks are tracked under Milestone 6 and are not part of the §23 v1 acceptance gate.
+All numeric budgets in this section are **aspirational targets, not contracts**,
+until a baseline exists from realistic fixtures. They will be re-evaluated
+against measured numbers; failing to hit a target is a benchmark report, not an
+automatic acceptance failure. Evidence is nevertheless required at the
+strategy, workbench, and release gates: each release baseline must name its
+fixture, runner, build profile, measurement method, and regression policy.
+Benchmarks are part of the serious-v1 evidence package even where a target is
+not yet a hard threshold.
 
 #### Authoring refresh layers
 
@@ -3161,7 +3402,16 @@ Initial target budgets:
 - completion response under 50 ms for small/medium projects;
 - diagnostics update under 100 ms for typical single-file edits;
 - large project indexing should be incremental and cancellable;
-- editor operations must avoid reparsing the entire project when a file-local edit is sufficient.
+- editor operations must avoid reparsing the entire project when a file-local
+  edit is sufficient.
+
+The standalone GUI workbench must be measured on every declared platform using
+the same representative fixture and authoring operations. Its evidence must
+cover cold and warm startup, project open and index, source edit to diagnostics,
+schema and localisation view refresh, preview transition, graph navigation,
+and idle/active memory. These measurements inform the native strategy bake-off
+and the release baseline; cross-platform timing claims must identify the host
+profile rather than presenting one operating system as universal evidence.
 
 ### 19.6 Engine Adapter Benchmarks
 
@@ -3200,6 +3450,13 @@ bench target commands. It proves that the tiny compiler and runtime benchmarks
 build and execute quickly; it does not compare timings or enforce regression
 thresholds.
 
+The current pull-request and main-branch workflow owns only that fast smoke
+check. Issue #109 owns the named release/scheduled benchmark baseline and fuller
+regression suite; issue #77 owns the evidence ledger and release-gate decision
+that consume its results. The fuller suite must not be implied by the PR smoke
+check before those release owners publish the runner, fixture, profile,
+threshold, and rerun policy.
+
 Regression thresholds must be explicit and reviewable. They become blocking
 only when measured against an agreed baseline and execution profile, such as a
 stable Linux runner or documented release-measurement profile. Before those
@@ -3213,7 +3470,12 @@ Initial regression review thresholds:
 - any accidental O(n^2) behaviour on medium or large fixtures;
 - unexpected allocation increases in allocation-sensitive runtime benchmarks.
 
-Benchmark thresholds must be adjustable as the implementation matures, but changes to thresholds should be reviewed explicitly.
+Benchmark thresholds must be adjustable as the implementation matures, but
+changes to thresholds should be reviewed explicitly. GUI performance and
+accessibility evidence must also record blocking regressions (for example,
+keyboard/focus loss, screen-reader dead ends, unusable zoom, or an interaction
+that becomes impossible under high contrast), even where no numeric threshold
+is enforced.
 
 ### 19.9 Trace Metrics
 
@@ -3235,7 +3497,8 @@ This makes real project dialogue scenes measurable without requiring users to wr
 
 Full ink/Yarn/Clyde import compatibility is not a v1 goal. Importers exist to
 help teams inspect and migrate existing content, not to make Recite execute
-another tool's runtime model.
+another tool's runtime model. Clyde is a guidance-only comparison target for
+v1; no Clyde importer or compatibility runtime is promised.
 
 Importer design must follow these boundaries:
 
@@ -3327,7 +3590,8 @@ The likely implementation order is:
 3. prototype a small Twee/Twine-style subset because passages and links map
    cleanly to blocks and choices;
 4. add ink and Yarn Spinner inspection or subset importers only after the report
-   model has proven useful for skipped and lossy constructs.
+   model has proven useful for skipped and lossy constructs. Clyde remains on
+   the compatibility-guidance path rather than becoming another importer family.
 
 Importer follow-up issues should stay separate from the native language design.
 The branchable work units are: shared import report/provenance model, custom
@@ -3345,7 +3609,8 @@ Initial non-goals:
 - hidden arbitrary code execution;
 - result-dependent branching from blocking effects;
 - full CLDR/pluralization engine in core runtime;
-- mandatory visual node editor for v1;
+- a fully general visual node editor or graph-first authoring format for v1;
+- generated host-language bindings unless a later decision promotes them;
 - tying the authoring model to one engine's scripting language;
 - engine adapters that move game logic into the Recite runtime;
 - network/cloud collaboration;
@@ -3363,149 +3628,180 @@ Initial non-goals:
 
 ## 22. Recommended Milestones
 
-### Milestone 1: Core Language Spike
+These are outcome milestones rather than a list of isolated implementation
+issues. The tracker may split or reorder work inside a milestone, but a
+milestone is not complete until its exit evidence exists. The dependency order
+is: 1 -> 2 -> 3; milestones 4, 5, and 7 can then proceed in parallel from the
+milestone-2/3 contracts and fixtures; 5 -> 6; and 4, 6, and 7 -> 8 -> 9. Milestone
+1 supplies maintainability and verification gates throughout.
+The current tracker milestones 17 through 25 correspond to these nine outcomes;
+issue links remain secondary to this specification.
 
-- AST;
-- rowan syntax parser and source AST lowering;
-- line/choice/block syntax;
-- source spans;
-- simple compiler;
-- basic validation.
+### Milestone 1: Product Foundation and Maintainability
 
-### Milestone 2: Runtime MVP
+**Outcome:** the project has explicit ownership boundaries and a dependable
+verification baseline.
 
-- compiled asset;
-- deterministic session;
-- line/prompt/end events;
-- choice selection by ID;
-- deferred effects;
-- condition evaluation through context;
-- serialisable session state.
+**Entry gate:** the current parser, compiler, runtime, CLI, LSP, schema, FFI,
+benchmark, and adapter surfaces have been inventoried.
 
-### Milestone 3: Production Effect Model
+**Exit gate:** a checked-in cohesion/maintainability audit assigns ownership for
+syntax, semantic lowering, schema, compiled wire data, snapshots, diagnostics,
+FFI, and adapters; duplicate semantic authority and file-size risks have an
+action plan; Batten-derived ast-grep structural gates cover sprawling
+constructs, test placement, module ownership, generated boundaries,
+documented exemptions, and checks close to the change; compatibility policy,
+fixtures, and the complete local gate are documented and passing. Line count is
+a review trigger, not the maintainability rule.
 
-- immediate effects;
-- blocking effects;
-- acknowledgements;
-- save/load while blocked;
-- effect schema validation;
-- effect trace tests.
+### Milestone 2: Language, Schema, and Localisation Readiness
 
-### Milestone 4: Localisation and IDs
+**Outcome:** authors can write stable, schema-checked, localisable source while
+the implementation remains ready for more than one locale.
 
-- stable ID checks;
-- POT extraction;
-- gettext-compatible lookup API;
-- speaker extraction;
-- markup preservation checks.
+**Entry gate:** the foundation audit names the source, schema, compiler, and
+stable-ID authorities.
 
-### Milestone 5: CLI and Test Harness
+**Exit gate:** representative projects compile and validate deterministically;
+the source-owning schema-authoring capability and fixtures define at least one
+source-owning, kernel-editable declarative producer path suitable for GUI
+integration for standalone projects and producer-backed edit/open-declaration
+actions for engine-owned schemas; generated manifests remain read-only and
+unsupported producers are explicitly read-only. The shipped GUI realization is
+gated by milestone 6.
+Schema manifests have producer provenance and stale/regeneration behavior;
+source IDs, extraction, PO catalogue lookup, fallback, placeholders, markup, and
+translator context are tested. Dialogue localisation is optional: source-only
+projects retain an unset locale, while projects that enable it declare and test
+their default and fallback locale/catalog policy. Recite-owned authoring text
+still requires complete Fluent-backed default `en-US` resources. English-only
+launch is explicit rather than an architectural assumption, and exact
+standalone schema-source syntax remains a milestone decision.
 
-- `compile`;
-- `validate`;
-- `extract`;
-- `check-ids`;
-- `check-fresh`;
-- `run`;
-- `trace`;
-- fixture support.
+### Milestone 3: Shared Authoring Kernel and Preview
 
-### Milestone 5.5: Authoring Polish
+**Outcome:** every authoring surface consumes one project/index/edit/diagnostic/
+preview model.
 
-- `recite play` interactive REPL;
-- `recite watch` authoring build loop for source/schema/project changes;
-- LSP code action that auto-fills missing IDs on save;
-- documented editor and engine authoring refresh loop.
+**Entry gate:** source, schema, localisation, and runtime contracts from
+milestone 2 are stable enough to expose operations.
 
-### Milestone 6: Scale and Performance Proof
+**Exit gate:** a shared kernel provides project discovery, source-preserving
+edit transactions, source-owning schema edits, and producer-backed declaration
+actions that open source, invoke/regenerate through the producer, report stale
+output, and return structured failure/retry outcomes; structured
+diagnostics/completion/navigation, schema and catalogue summaries,
+cross-platform user configuration, typed watch/build freshness state, and
+deterministic preview/traces. CLI, LSP, and fixtures use those operations;
+preview never executes game-side effects, and generated manifests are never
+written by the kernel.
 
-- deterministic large-project fixture generator;
-- compiler and runtime benchmark suite;
-- trace performance counters;
-- validation, compile, run, trace, and snapshot stress tests;
-- memory/profile notes for realistic project shapes;
-- documented scale limits and regression policy;
-- CI benchmark smoke suite.
+### Milestone 4: Editor Integration Parity
 
-### Milestone 7: LSP and Text Authoring Readiness
+**Outcome:** VS Code/VSCodium, Neovim, and Zed are first-class text-authoring
+surfaces rather than syntax-only examples.
 
-- diagnostics;
-- completions;
-- go-to definition;
-- rename block;
-- hover from schema;
-- code action for missing IDs;
-- saved/live project indexing that remains useful on large projects.
+**Entry gate:** the shared kernel and parity fixture set exist.
 
-### Milestone 8: Engine Adapter Contract
+**Exit gate:** each editor has tested setup, highlighting/file detection, LSP
+diagnostics, completion, hover, navigation, rename, code actions, and command
+integration for the supported workflow. The same malformed, schema, ID,
+localisation, and UTF-16 fixtures produce equivalent semantic answers.
 
-- host-agnostic adapter contract;
-- compiled asset loading boundary;
-- start/select/ack integration shape;
-- structured output events, messages, signals, or callbacks;
-- condition handler integration;
-- save/load handoff rules;
-- adapter asset refresh and active-session reload policy;
-- adapter conformance tests.
+### Milestone 5: Native GUI Strategy and Accessibility Proof
 
-### Milestone 9: First Production Adapters
+**Outcome:** the standalone workbench strategy is selected from comparable
+authoring and accessibility evidence.
 
-- production-quality adapter paths for Godot, Bevy, and Unity;
-- compiled asset loading;
-- native authoring asset refresh loops for Godot, Bevy, and Unity;
-- start/select/ack integration;
-- condition handler integration;
-- example project;
-- engine integration tests.
+**Entry gate:** the kernel, reusable editor-parity fixtures, and preview loop can
+be reused without reimplementing language semantics in each candidate; completed
+editor clients are not a prerequisite.
 
-### Milestone 10: v1 Adoption Documentation and Release Readiness
+**Exit gate:** the same fixture has been exercised across the candidate lanes
+(Freya 0.5 RC, Floem, GPUI, Xilem/Masonry, platform-native SwiftUI/AppKit and
+WinUI 3 including a separate `windows-reactor` Rust evaluation or experimental
+C# `Microsoft.UI.Reactor` fallback, GTK/GtkSourceView, and code-first Avalonia,
+with other toolkits as documented baselines). A decision record names support,
+fallbacks, dependencies, maintenance burden, known limits, and reconsideration
+triggers. The decision record includes the candidate-by-platform applicability
+matrix, tests every claimed cell, and names unsupported cells. Keyboard-only,
+focus, screen-reader, IME, BiDi/RTL, zoom/text scaling,
+high-contrast, non-colour, stale-generation, cancellation, progress/status
+announcement, failure/retry, focus retention/restoration, external-file/save
+conflict, reduced-motion, startup, memory, and packaging evidence exists for
+every declared platform. The exact repositories and versions for both Reactor
+evaluations are recorded in the decision evidence.
 
-- public documentation site;
-- Rustdoc crate examples;
-- complete workflow demo project;
-- install, publishing, compatibility, and release policy;
-- game-developer guides for core CLI, LSP, localisation, testing, and adapter workflows;
-- engine-facing authoring refresh docs and examples, including known reload limits;
-- alternatives and adoption guide grounded in the shipped v1 shape.
+### Milestone 6: GUI Workbench
 
-### Milestone 11: Migration and Interop
+**Outcome:** writers can use an accessible standalone source-first workbench
+for the complete v1 authoring loop.
 
-- transition guides from established dialogue systems;
-- best-effort importer boundary design;
-- unsupported-construct inspection prototype;
-- honest compatibility notes for Ink, Yarn Spinner, Dialogic, Dialogue Manager, Dialogue System for Unity, and adjacent tools.
+**Entry gate:** the strategy decision and accessibility proof are accepted.
 
-### Milestone 12: Editor Extensions
+**Exit gate:** project open, source editing, search/outline/graph navigation,
+diagnostics, completion, stable-ID actions, undo/redo, atomic save and conflict
+handling, source-owning standalone schema editing, producer-backed
+schema-declaration actions, schema inspection/provenance/staleness actions,
+required gettext PO catalogue editing with safe atomic writes, and deterministic
+preview are all available through the kernel. Graphs have an equivalent
+list/outline path, with automatic layout by default, transient/local viewport
+state, and optional stable-ID open sidecar state only. Full general visual node
+authoring and generated bindings are not required for this exit.
 
-- VS Code extension;
-- Neovim setup;
-- syntax highlighting;
-- command integration, including `recite watch`.
+### Milestone 7: Engine Companions
 
-### Milestone 13: Visual Editor
+**Outcome:** Godot, Unity, and Bevy companions integrate with the same compiled
+asset, schema, localisation, and refresh contracts without becoming alternate
+authoring runtimes.
 
-- block graph;
-- structured editing;
-- schema-backed controls;
-- trace preview;
-- localization preview.
+**Entry gate:** adapter, schema, localisation, and FFI contracts plus kernel
+preview/runtime semantics are stable. The GUI is not a prerequisite.
 
-### Milestone 14: v1 Release Hardening
+**Exit gate:** each companion has conformance and integration coverage for
+loading, stable identities, conditions, typed effects, save/load, localisation,
+errors, asset freshness, import/refresh, and changed-asset session behavior.
+Host-native schema producers and package paths are documented; companions stay
+thin and the runtime remains game-side-effect free.
 
-- release candidate checklist;
-- compatibility audit across compiled assets, runtime snapshots, schema manifests, and CLI output;
-- packaging and installation smoke tests;
-- final documentation review against shipped commands and adapter workflows;
-- final verification that docs, examples, adapter behavior, and known limits
-  describe the same shipped authoring refresh workflow;
-- known-limits document for scale, migration, editor support, engine integration,
-  and active-session reload behavior.
+### Milestone 8: Distribution, Adoption, and Migration
+
+**Outcome:** a new team can install, learn, evaluate, and migrate toward Recite
+with honest boundaries.
+
+**Entry gate:** the authoring loop and companion acceptance matrix are stable.
+
+**Exit gate:** CLI/LSP/GUI/editor integrations and companion artifacts have
+reproducible package, upgrade, signing, and support instructions; examples and
+guides cover the source-first loop; bounded subset importers for custom JSON/CSV,
+Twee/Twine, Ink, and Yarn Spinner preserve provenance and report losses;
+Clyde, Dialogic, Dialogue Manager, Dialogue System for Unity, and related tools
+receive compatibility and migration guidance under the import-report work
+without an unowned importer promise; known limits and alternatives are
+published without implying compatibility that does not exist.
+
+### Milestone 9: Serious v1 Release
+
+**Outcome:** Recite can make a bounded, supportable compatibility promise.
+
+**Entry gate:** milestones 1–8 have passed, the compiled format and snapshot
+policy are frozen for the release, and all required reviews are resolved.
+
+**Exit gate:** §23 passes; all declared platforms have Rust, CLI, LSP,
+editor-integration, GUI, and companion verification; accessibility, scale,
+memory, preview, watch, and
+adapter evidence has named profiles and regression policies; release artifacts
+install and run; known limits, migration boundaries, and active-session rules
+are published; and a clean release candidate is reproducible from the stated
+toolchain.
 
 ## 23. Acceptance Criteria for a Serious v1
 
 The project is not production-credible until all of the following are true:
 
-- A dialogue scene can be compiled, validated, run, snapshotted, localized, and replayed headlessly.
+- A dialogue scene can be compiled, validated, run, snapshotted, and replayed
+  headlessly in source-only mode or with an explicitly configured locale;
+  enabled localisation has tested default and fallback locale/catalog policy.
 - All runtime outputs are structured and deterministic.
 - Effects are schema-checked and never executed by the runtime.
 - Blocking effects can pause and resume across save/load, including re-emission of the pending effect with the same `EffectRequestId`.
@@ -3516,13 +3812,45 @@ The project is not production-credible until all of the following are true:
 - POT extraction produces translator-usable context.
 - The LSP catches common mistakes before runtime, including auto-filling missing IDs on save.
 - CI can verify compiled assets are fresh relative to source and schema.
+- The CLI, LSP, editor integrations, standalone GUI, and preview surface use
+  the shared authoring kernel for project discovery, diagnostics, edits,
+  schema/localisation state, and freshness; they do not maintain competing
+  semantic models.
+- VS Code/VSCodium, Neovim, and Zed are first-class supported text-authoring
+  surfaces with tested setup and parity for the declared LSP and command
+  workflow.
+- A standalone, source-first GUI workbench supports source editing, stable-ID
+  actions, diagnostics, source-owning editing for the standalone declarative
+  schema producer, producer-backed schema edit/open-declaration actions,
+  schema inspection and stale/regeneration reporting, required gettext PO
+  catalogue editing with comments/context/unknown-data preservation and safe
+  atomic writes, and deterministic preview. Generated manifests are never
+  edited directly; unsupported schema producers are explicitly read-only.
+- The standalone workbench handles stale generations and cancellation, announces
+  progress and status, supports failure/retry, retains or restores focus,
+  handles external-file and save conflicts, supports reduced motion, and has
+  manual assistive-technology verification where automation is insufficient.
+  It also provides keyboard, screen-reader, IME, BiDi/RTL, zoom/text-scaling,
+  high-contrast, and non-colour paths for every essential operation, with an
+  equivalent accessible list/outline for graph navigation.
+- The native GUI strategy has a checked-in bake-off decision and accessibility
+  evidence for every declared platform, including its fallback path and known
+  maintenance limits.
+- Linux, Windows, and macOS are first-class desktop platforms for the CLI, LSP,
+  editor integrations, and standalone workbench. Engine companions may publish
+  narrower engine/platform matrices.
 - Authors have a fast documented loop from source edit to LSP diagnostics,
   on-save stable ID insertion, `recite watch` rebuild, engine adapter
   import/refresh, and scene restart or documented active-session behavior.
+- Shared authoring configuration resolves an explicit `$RECITE_CONFIG` override
+  or the platform strategy location, stays separate from project and generated
+  files, and behaves consistently on Linux, macOS, and Windows.
 - Large-project fixtures exercise compile, validate, run, trace, localisation
   extraction, and snapshot restore at narrative scale comparable to serious
   dialogue-heavy games.
-- Performance and memory characteristics are measured, documented, and protected by regression smoke checks.
+- Performance and memory characteristics for authoring, preview, GUI startup,
+  editing, and runtime are measured on named profiles, documented, and
+  protected by regression smoke checks.
 - Godot, Bevy, and Unity adapters can load compiled assets, traverse dialogue,
   evaluate conditions, emit effects without executing them, and participate in
   save/load workflows.
@@ -3532,25 +3860,47 @@ The project is not production-credible until all of the following are true:
 - The adapter contract is stable enough that additional engines can be implemented without changing core runtime semantics.
 - Public docs and examples demonstrate headless CLI workflows and real Godot,
   Bevy, and Unity integration paths.
-- Adoption and migration guidance makes a credible case for teams evaluating Recite against established tools such as Dialogue System for Unity, Dialogue Manager, Dialogic, Yarn Spinner, and Ink.
+- Adoption and migration guidance makes a credible case for teams evaluating Recite against established tools such as Dialogue System for Unity, Dialogue Manager, Dialogic, Clyde, Yarn Spinner, and Ink; Clyde is explicitly guidance-only and has no v1 importer or compatibility runtime.
 
 Shipping a credible v1 means more than proving the core can run headlessly. The
-core runtime, CLI, LSP, scale proof, adapter contract, Godot/Bevy/Unity adapter
-paths, and adoption documentation must work together well enough for a serious
-narrative-heavy game team to evaluate Recite as a practical replacement for
-established dialogue tooling.
+core runtime, shared authoring kernel, CLI, first-class text editors, accessible
+source-first GUI, schema/localisation workflow, scale proof, adapter contract,
+Godot/Bevy/Unity companion paths, and adoption documentation must work together
+well enough for a serious narrative-heavy game team to evaluate Recite as a
+practical replacement for established dialogue tooling. A fully general visual
+node editor and generated host bindings remain post-v1 options unless a later
+decision explicitly promotes them.
 
 ## 24. Design Summary
 
-Recite's core value is a deterministic dialogue/effect protocol:
+Recite's core value is a deterministic dialogue/effect protocol with a humane,
+inspectable authoring workflow:
 
 - authored in a small domain language that names narrative structure directly;
 - validated before runtime;
 - compiled into deterministic assets;
 - run as a pure state machine;
 - integrated with games through explicit typed effects;
+- authored through one shared kernel by CLI, LSP, VS Code/VSCodium, Neovim,
+  Zed, and an accessible standalone source-first GUI;
+- ready for schema-backed localisation even when the first release ships
+  English-only content;
+- previewed through the same deterministic runtime loop before an engine is
+  involved;
+- accompanied by thin Godot, Unity, and Bevy integrations rather than parallel
+  semantic runtimes;
 - tested with normal programmatic assertions.
 
-The source format is small. It is a way to describe dialogue structure, not a second general-purpose scripting layer. Conditions are pure queries. Effects are typed requests. Game logic stays in the game.
+The source format is small. It is a way to describe dialogue structure, not a
+second general-purpose scripting layer. Conditions are pure queries. Effects
+are typed requests. Game logic stays in the game. The GUI is source-first and
+never becomes a second source of semantic truth; a general visual node editor
+and generated host bindings are deliberately left for post-v1 evaluation.
+
+The native GUI strategy is a product decision earned through comparable
+authoring, accessibility, performance, packaging, and maintenance evidence.
+Cross-platform user configuration is explicit and separate from project
+content. The release promise is therefore about a complete, reproducible
+authoring-to-preview-to-engine loop, not just a runtime library.
 
 That is the standard the project should optimise for.

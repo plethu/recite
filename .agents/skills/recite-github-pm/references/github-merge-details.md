@@ -19,7 +19,31 @@ must be run from a clean worktree after checks appropriate to the changed
 surface and the gate pass: focused checks for documentation or instruction-only
 changes, and `mise run verify` for broad or high-risk code changes. Required
 GitHub CI and protected `main` remain authoritative for merge policy, aggregate
-status, linear history, and signed commits.
+status, linear history, and signed commits. The Git policy validates the full
+pull-request title before this step, so GitHub's squash merge inherits the
+validated title without a redundant subject override.
+
+## Milestone integration path
+
+The coordinator creates one purpose-first `integration/<short-kebab-topic>`
+branch from `main` for a milestone. Bounded implementers work in isolated
+normal purpose-first branches or worktrees based on that branch. They do not
+open issue-slice pull requests.
+The coordinator reviews each slice, returns actionable findings to its owning
+implementer, and mechanically cherry-picks accepted commits. A direct
+fast-forward may use `--ff-only`; do not create default non-fast-forward merge
+commits because their generated subject fails Recite's commit policy. Any
+exceptional merge commit requires coordinator review and an explicit
+policy-compliant `[REC-N] <type>: <subject>` message. Only mechanical conflict
+resolution belongs in the coordinator's worktree.
+
+At a stable checkpoint, open exactly one integration pull request to protected
+`main`, label it `workflow/integration`, and put the milestone tracking issue
+in its `[REC-N]` title. Integration mode allows multiple valid issue codes in
+the commit range while still requiring every commit's normal subject and
+no-attribution rules. Use this helper and the normal GitHub review path for
+that final PR. After the merge, refresh the roadmap on `main` against live
+GitHub state.
 
 ## Maintainer Review
 

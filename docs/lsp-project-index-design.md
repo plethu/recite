@@ -1,9 +1,14 @@
 # LSP Project Index Design
 
 This document records the initial project-index design for Recite's LSP work.
-It is the design input for milestone 7 implementation issues, especially the
-first LSP lifecycle and document-sync issue. The production requirements remain
-in `docs/recite-production-spec.md` sections 14, 18, 19.5, and 22.
+Its shared indexing and project-model work now feeds [milestone 19, Shared
+Authoring Kernel and Preview](https://github.com/plethu/recite/milestone/19),
+especially [#168](https://github.com/plethu/recite/issues/168). Client-facing
+LSP/editor parity follows [milestone 20, Editor Integration
+Parity](https://github.com/plethu/recite/milestone/20), especially
+[#169](https://github.com/plethu/recite/issues/169). The production
+requirements remain in `docs/recite-production-spec.md` sections 14, 18, 19.5,
+and 22-23.
 
 ## Goals
 
@@ -287,9 +292,17 @@ live snapshot. If a file summary marks a symbol class incomplete, suppress
 cross-file diagnostics that depend on that class while still publishing the
 file-local syntax diagnostics that explain why the summary is incomplete.
 
-## Testing Direction for Issue 29
+## Historical Testing Direction for Issue 29
 
-The first implementation issue should test:
+The following issue-29 decomposition is retained as historical design context,
+not as current tracker routing. Its shared indexing and project-model scope is
+now owned by [#168](https://github.com/plethu/recite/issues/168) in milestone 19;
+the editor-client and semantic parity follow-up is owned by
+[#169](https://github.com/plethu/recite/issues/169) in milestone 20. The #168
+kernel/index work must precede the #169 client-parity work where the latter
+needs a live server or shared snapshot.
+
+The historical first implementation issue should test:
 
 - initialize capabilities advertise full sync;
 - `didOpen`, full-sync `didChange`, and `didClose`;
@@ -307,9 +320,11 @@ snapshots.
 
 ## Follow-Up Issue Routing
 
-After this design is approved, update milestone 7 issues only.
+Do not revive or update the historical issue-29-through-33 tracker entries.
+Update the shared indexing and project-model work under milestone 19 / #168;
+route editor-client wiring and parity work to milestone 20 / #169.
 
-Issue 29 should become ready for:
+The historical issue-29 scope, now a #168 input, covered:
 
 - LSP lifecycle and initialize capabilities;
 - full document sync;
@@ -325,9 +340,9 @@ Issue 29 should become ready for:
 - incomplete-summary diagnostic suppression;
 - per-file summary replacement tests.
 
-Issues 30 through 33 should remain blocked on issue 29 where they need a live
-server, but they should cite this design instead of a vague architecture
-blocker.
+Historical issues 30 through 33 covered later client-facing work, now a #169
+input. Where that work needs a live server or shared snapshot, retain the
+historical dependency on the #168 kernel rather than reopening the old issues.
 
 ## Research Notes
 

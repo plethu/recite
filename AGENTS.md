@@ -6,9 +6,12 @@ Recite is a Rust-first deterministic dialogue compiler, runtime, and tooling pro
 
 - Use GitHub as the canonical forge. Use the GitHub CLI (`gh`) with explicit
   `--repo plethu/recite` for issue, milestone, label, and pull-request work.
-- Work from `main` on short-lived, purpose-first branches and follow the
-  machine-wide branch naming convention; never prefix a branch with an issue
-  number. Recite commit subjects begin with `[REC-N]`, followed by a concise
+- Standalone work starts from `main` on a short-lived, purpose-first branch and
+  follows the machine-wide branch naming convention; never prefix a branch
+  with an issue number. Milestone work uses a coordinator-owned
+  `integration/<short-kebab-topic>` branch; its delegated slices follow the
+  GitHub PM skill and do not open issue-slice pull requests. Recite commit
+  subjects begin with `[REC-N]`, followed by a concise
   conventional-commit-style subject.
 - Run `scripts/check-git-policy.sh` locally. It is part of the complete
   verification gate and checks the relevant change range on pull requests;
@@ -16,10 +19,11 @@ Recite is a Rust-first deterministic dialogue compiler, runtime, and tooling pro
 - Keep patches scoped to the issue or user request.
 - Do not revert unrelated user changes.
 - Prefer small, reviewable changes over broad refactors.
-- After merging issue or PR work into `main`, verify `docs/roadmap.md` against
-  live GitHub issue and PR state before handoff. If the merge closed, unblocked,
-  or superseded roadmap items, update the roadmap on `main`, commit, and push
-  that follow-through.
+- After a standalone pull request or the single stable-checkpoint milestone
+  integration pull request merges into `main`, verify `docs/roadmap.md`
+  against live GitHub issue and PR state before handoff. If the merge closed,
+  unblocked, or superseded roadmap items, update the roadmap on `main`, commit,
+  and push that follow-through.
 - For non-trivial Rust changes, use the relevant Recite overlay, especially
   `.agents/skills/recite-rust-quality/SKILL.md`, and load the global
   `rust-quality` skill when it is available.
@@ -30,17 +34,33 @@ Recite is a Rust-first deterministic dialogue compiler, runtime, and tooling pro
 
 ## Multi-Agent Execution Contract
 
-- The coordinating Sol session owns scope, product direction, subjective decisions, integration review, and final acceptance. A delegated Luna implementer may own a bounded change through only the stages explicitly named in the authorized delivery target: local edits, commit, push, and pull-request updates are separate authorizations and must not be inferred from one another. Sol does not absorb implementation fixes; return findings to the owning implementer, except for mechanical conflict resolution.
+- The coordinating session owns scope, product direction, subjective decisions,
+  integration review, and final acceptance. A delegated implementer may own a
+  bounded slice only through explicitly authorized stages; local edits,
+  commits, pushes, and forge updates are separate authorizations. Slices do
+  not open pull requests. The coordinator returns slice findings to the owner
+  and mechanically integrates accepted commits; only mechanical conflict
+  resolution belongs in the coordinator's worktree.
 - Task packets stay compact: outcome, write scope, settled constraints, permitted decisions, stop-and-ask categories, acceptance evidence, and delivery target. Keep assumptions bounded: agents may choose reversible local details, but must stop for semantics, public compatibility, destructive changes, or scope expansion.
-- Parallel writable implementers, or workers with potentially conflicting writable scopes, use isolated branches/worktrees at the stated base SHA. Read-only workers and a lone worker with an available clean checkout may use it after the same preflight for clean state, repository/remote, branch policy, and required tools or GitHub access. Concurrent writable workers must have disjoint scopes; never share a writable worktree.
+- Parallel writable implementers, or workers with potentially conflicting
+  scopes, use isolated branches/worktrees at the stated base SHA. Read-only
+  workers and a lone worker with an available clean checkout may use it after
+  the same preflight for clean state, repository/remote, branch policy, and
+  required tools or GitHub access. Concurrent writable workers must have
+  disjoint scopes; never share a writable worktree.
 - If implementation fails, retry once with the concrete error. On a second failure, replace it with a fresh worker/context and diagnose the environment or boundary; do not silently take over the implementation.
-- Reviewers and auditors remain independent and read-only. Send actionable findings back to the implementer for a correction pass; do not turn review into orchestrator-authored patching.
-- Verify in proportion to change: targeted checks in the inner loop, one appropriate full gate when a coherent slice stabilises, and broader checks at milestone or release boundaries. Batch review fixes and do not rerun the whole gate after every tiny correction. Codex review is advisory and asynchronous; continue useful work rather than making it a critical path.
+- Reviewers and auditors remain independent and read-only; return actionable
+  findings to the owning implementer rather than patching their work.
+- Verify in proportion to change: targeted checks in the inner loop, one
+  appropriate full gate for a coherent slice, and broader checks at milestone
+  or release boundaries. Codex review is a standard GitHub review, advisory and
+  asynchronous; continue useful work rather than making it a critical path.
 - A delivery handoff reports the resulting behaviour, the authorized delivery stages actually completed, checks and outcomes, and residual uncertainty. Report a commit SHA, pushed branch, or PR only when that stage was both authorized and completed. Treat temporary-worktree-only changes as incomplete only when the delivery target required a commit, push, or PR; local-edit-only tasks may complete without those stages.
 
 ## Agent Workflow Routing
 
-- Ordinary issue work routes through `.agents/skills/recite-github-pm/SKILL.md`.
+- Issue planning and milestone integration route through
+  `.agents/skills/recite-github-pm/SKILL.md`.
 - Clean diff review uses the global `code-review` skill plus the relevant
   Recite domain or language skill in a fresh reviewer context.
 - Roadmap ownership and final protected merges remain with the coordinating

@@ -1,0 +1,28 @@
+#!/usr/bin/env bash
+set -euo pipefail
+
+fixture="${RECITE_FAKE_GH_FIXTURE:?RECITE_FAKE_GH_FIXTURE is required}"
+state_file="${RECITE_FAKE_GH_STATE:?RECITE_FAKE_GH_STATE is required}"
+
+case "$*" in
+  *"pr view"*)
+    view_count=0
+    if [[ -f "$state_file" ]]; then
+      view_count="$(<"$state_file")"
+    fi
+    if (( view_count == 0 )); then
+      jq -c '.initial' "$fixture"
+    else
+      jq -c '.latest' "$fixture"
+    fi
+    printf '%s\n' "$((view_count + 1))" >"$state_file"
+    ;;
+  *"branches/main/protection"*) jq -c '.protection' "$fixture" ;;
+  *"repo view"*) jq -c '.repo' "$fixture" ;;
+  *"pulls/"*"/reviews"*) jq -c '.reviews' "$fixture" ;;
+  *"graphql"*) jq -c '.threads' "$fixture" ;;
+  *)
+    echo "unexpected fake gh invocation: $*" >&2
+    exit 1
+    ;;
+esac

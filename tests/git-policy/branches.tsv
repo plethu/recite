@@ -1,5 +1,7 @@
 # expected result<TAB>branch name
 valid	feat/dialogue-parser
+valid	feat/milestone-integration
+valid	integration/milestone-integration
 valid	fix/runtime-crash
 valid	refactor/compiler-boundaries
 valid	perf/asset-loading

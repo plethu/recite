@@ -8,10 +8,11 @@ Usage:
 
 Runs the complete local verification suite:
   1. scripts/check-git-policy.sh
-  2. tests/check-pr-review-gates/check-rollup-fixtures.sh
-  3. scripts/check-project-gates.sh
-  4. scripts/check-docs.sh
-  5. scripts/benchmark-smoke.sh
+  2. tests/git-policy/check-integration.sh
+  3. tests/check-pr-review-gates/check-rollup-fixtures.sh
+  4. scripts/check-project-gates.sh
+  5. scripts/check-docs.sh
+  6. scripts/benchmark-smoke.sh
 
 Use `mise run verify` from the repository root when mise is available.
 `mise install` provisions the pinned Rust, Node, pnpm, .NET, and cbindgen tools.
@@ -51,9 +52,17 @@ if [[ ! -x "$repo_root/tests/check-pr-review-gates/check-rollup-fixtures.sh" ]];
   echo "missing executable verification fixture gate: $repo_root/tests/check-pr-review-gates/check-rollup-fixtures.sh" >&2
   exit 2
 fi
+if [[ ! -f "$repo_root/tests/git-policy/check-integration.sh" ]]; then
+  echo "missing Git policy integration fixture gate: $repo_root/tests/git-policy/check-integration.sh" >&2
+  exit 2
+fi
 
 echo "== Git workflow policy =="
 "$repo_root/scripts/check-git-policy.sh" "$repo_root"
+
+echo
+echo "== Git workflow integration policy fixtures =="
+bash "$repo_root/tests/git-policy/check-integration.sh" "$repo_root"
 
 echo
 echo "== pull-request check rollup fixtures =="
