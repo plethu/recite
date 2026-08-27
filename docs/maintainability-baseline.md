@@ -87,7 +87,6 @@ wire compatibility fixtures, and focused reviews for each subsystem.
 
 | Path | Lines | Kind | Owner | Disposition | Issue/reason |
 | --- | ---: | --- | --- | --- | --- |
-| `crates/recite-core/src/schema/manifest/lower/projection.rs` | 1551 | production | core/schema | follow-up | #164: split projection lowering by authored responsibility |
 | `crates/recite-ffi/src/lib.rs` | 838 | production | ffi | follow-up | #164/#171: separate ABI façade only after symbol and threading inventory |
 | `crates/recite-core/src/schema/model/canonical.rs` | 621 | production | core/schema | review | Canonical model boundary; preserve public fingerprints |
 | `crates/recite-core/src/schema/manifest/lower/availability.rs` | 560 | production | core/schema | review | Reassess mapping and domain-validation ownership |
