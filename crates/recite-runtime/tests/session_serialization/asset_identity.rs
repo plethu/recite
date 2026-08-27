@@ -52,6 +52,8 @@ fn schema_fingerprint_mismatch_returns_structured_error() {
     let mut incompatible_asset = asset.clone();
     incompatible_asset.header.schema_fingerprint =
         SchemaFingerprint::Fingerprint(canonical_source_fingerprint("different schema"));
+    incompatible_asset.header.compiler_version =
+        recite_core::CompilerVersion::new("0.0.2").expect("valid compiler version");
 
     let error = restore_session(&incompatible_asset, snapshot_session(&session))
         .expect_err("schema mismatch is rejected");

@@ -211,7 +211,23 @@ namespace Recite.Unity
 
         private static ReciteOutputBatch DecodeBatch(ref ReciteNativeBridge.ReciteBuffer batch)
         {
-            return ReciteMessagePack.DecodeOutputBatch(ReciteNativeBridge.CopyAndFree(ref batch));
+            return DecodeBatchBytes(ReciteNativeBridge.CopyAndFree(ref batch));
+        }
+
+        internal static ReciteOutputBatch DecodeBatchBytes(byte[] bytes)
+        {
+            try
+            {
+                return ReciteMessagePack.DecodeOutputBatch(bytes);
+            }
+            catch (FormatException error)
+            {
+                throw new ReciteAdapterException(ReciteStatus.Validation, error.Message);
+            }
+            catch (OverflowException error)
+            {
+                throw new ReciteAdapterException(ReciteStatus.Validation, error.Message);
+            }
         }
 
         private ReciteNativeBridge.ReciteConditionResult EvaluateCondition(IntPtr queryPtr, IntPtr userdata)

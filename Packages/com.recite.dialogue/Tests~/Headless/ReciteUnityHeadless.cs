@@ -1,5 +1,6 @@
 using System;
 using System.Collections.Generic;
+using System.Runtime.InteropServices;
 using Recite.Unity;
 using Recite.Unity.Native;
 
@@ -12,6 +13,8 @@ internal static class ReciteUnityHeadless
             DecodeV0Batch();
             RejectUnknownBatchVersion();
             PreserveTypedConditionArguments();
+            RejectMalformedTypedConditionArguments();
+            RejectInvalidConditionPointers();
             RegisterTypedConditionApi();
             PreserveSchemaMismatchStatus();
             return 0;
@@ -47,7 +50,18 @@ internal static class ReciteUnityHeadless
             0xa6, (byte)'e', (byte)'v', (byte)'e', (byte)'n', (byte)'t', (byte)'s', 0x90
         };
 
-        ExpectFormatException(() => ReciteMessagePack.DecodeOutputBatch(bytes), "unsupported batch version");
+        try
+        {
+            ReciteDialogueService.DecodeBatchBytes(bytes);
+        }
+        catch (ReciteAdapterException error)
+        {
+            Assert(error.Status == ReciteStatus.Validation, "unknown batch version was not projected as validation");
+            Assert((int)error.Status == -1, "validation status changed");
+            return;
+        }
+
+        throw new InvalidOperationException("unsupported batch version was accepted");
     }
 
     private static void PreserveTypedConditionArguments()
@@ -69,6 +83,63 @@ internal static class ReciteUnityHeadless
         Assert(arguments[2].Kind == ReciteConditionArgumentKind.Integer && arguments[2].IntegerValue == 3, "integer kind was not preserved");
         Assert(arguments[3].Kind == ReciteConditionArgumentKind.Float && arguments[3].FloatValue == 1.5, "float kind was not preserved");
         Assert(arguments[4].Kind == ReciteConditionArgumentKind.Boolean && arguments[4].BooleanValue, "boolean kind was not preserved");
+    }
+
+    private static void RejectMalformedTypedConditionArguments()
+    {
+        ExpectFormatException(() => ReciteMessagePack.DecodeTypedConditionArgs(new byte[] { 0x90, 0x00 }), "trailing bytes");
+        ExpectFormatException(() => ReciteMessagePack.DecodeTypedConditionArgs(new byte[] { 0x00 }), "non-array root");
+        ExpectFormatException(() => ReciteMessagePack.DecodeTypedConditionArgs(new byte[]
+        {
+            0x91, 0x81, 0xa4, (byte)'k', (byte)'i', (byte)'n', (byte)'d',
+            0xa7, (byte)'b', (byte)'o', (byte)'o', (byte)'l', (byte)'e', (byte)'a', (byte)'n'
+        }), "missing value");
+        ExpectFormatException(() => ReciteMessagePack.DecodeTypedConditionArgs(new byte[]
+        {
+            0x91, 0x83, 0xa4, (byte)'k', (byte)'i', (byte)'n', (byte)'d',
+            0xa7, (byte)'b', (byte)'o', (byte)'o', (byte)'l', (byte)'e', (byte)'a', (byte)'n',
+            0xa5, (byte)'v', (byte)'a', (byte)'l', (byte)'u', (byte)'e', 0xc3,
+            0xa5, (byte)'e', (byte)'x', (byte)'t', (byte)'r', (byte)'a', 0xc0
+        }), "unknown field");
+        ExpectFormatException(() => ReciteMessagePack.DecodeTypedConditionArgs(new byte[]
+        {
+            0x91, 0x83, 0xa4, (byte)'k', (byte)'i', (byte)'n', (byte)'d',
+            0xa7, (byte)'b', (byte)'o', (byte)'o', (byte)'l', (byte)'e', (byte)'a', (byte)'n',
+            0xa5, (byte)'v', (byte)'a', (byte)'l', (byte)'u', (byte)'e', 0xc3,
+            0xa5, (byte)'v', (byte)'a', (byte)'l', (byte)'u', (byte)'e', 0xc2
+        }), "duplicate field");
+        ExpectFormatException(() => ReciteMessagePack.DecodeTypedConditionArgs(new byte[]
+        {
+            0x91, 0x82, 0xa4, (byte)'k', (byte)'i', (byte)'n', (byte)'d',
+            0xa7, (byte)'b', (byte)'o', (byte)'o', (byte)'l', (byte)'e', (byte)'a', (byte)'n',
+            0xa5, (byte)'v', (byte)'a', (byte)'l', (byte)'u', (byte)'e', 0xa5, (byte)'t', (byte)'r', (byte)'u', (byte)'e'
+        }), "wrong value type");
+        ExpectFormatException(() => ReciteMessagePack.DecodeTypedConditionArgs(new byte[]
+        {
+            0x91, 0x82, 0xa4, (byte)'k', (byte)'i', (byte)'n', (byte)'d',
+            0xa5, (byte)'f', (byte)'l', (byte)'o', (byte)'a', (byte)'t',
+            0xa5, (byte)'v', (byte)'a', (byte)'l', (byte)'u', (byte)'e', 0xcb,
+            0x7f, 0xf8, 0, 0, 0, 0, 0, 0
+        }), "nonfinite value");
+    }
+
+    private static void RejectInvalidConditionPointers()
+    {
+        ExpectFormatException(() => ReciteNativeBridge.ReadTypedConditionArgs(IntPtr.Zero, new UIntPtr(1)), "null pointer with nonzero length");
+        ExpectFormatException(() => ReciteNativeBridge.ReadTypedConditionArgs(new IntPtr(1), UIntPtr.Zero), "nonnull pointer with zero length");
+        ExpectFormatException(() => ReciteNativeBridge.ReadTypedConditionArgs(IntPtr.Zero, UIntPtr.Zero), "zero pointer and length");
+
+        var payload = new byte[] { 0x90 };
+        var handle = GCHandle.Alloc(payload, GCHandleType.Pinned);
+        try
+        {
+            var arguments = ReciteNativeBridge.ReadTypedConditionArgs(handle.AddrOfPinnedObject(), new UIntPtr(1));
+            Assert(arguments.Count == 0, "canonical empty condition args were not accepted");
+        }
+        finally
+        {
+            handle.Free();
+        }
     }
 
     private static void RegisterTypedConditionApi()

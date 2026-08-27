@@ -499,10 +499,12 @@ game save data, reads it back, and passes it to `recite_session_restore` later.
 `recite_session_restore` reconstructs the session by validating the snapshot
 against the supplied asset handle (via `decode_session_messagepack` +
 `restore_session`). A schema-fingerprint difference returns
-`RECITE_ERR_SCHEMA_MISMATCH`; all other asset identity/content differences
-during restore return `RECITE_ERR_SAVE_LOAD_INCOMPATIBILITY`. This operation-
-specific mapping keeps schema drift actionable without changing ordinary
-runtime stale-asset handling. The call still enforces the contract §9
+`RECITE_ERR_SCHEMA_MISMATCH`; schema comparison is performed first, so a
+snapshot that differs in both schema and another identity/content field still
+returns `RECITE_ERR_SCHEMA_MISMATCH`. All other asset identity/content
+differences during restore return `RECITE_ERR_SAVE_LOAD_INCOMPATIBILITY`. This
+operation-specific mapping keeps schema drift actionable without changing
+ordinary runtime stale-asset handling. The call still enforces the contract §9
 requirement that session state is tied to a specific compiled asset.
 
 The host must not deserialize, modify, or re-serialize the snapshot bytes.

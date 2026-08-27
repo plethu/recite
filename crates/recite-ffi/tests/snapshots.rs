@@ -160,11 +160,12 @@ fn restore_schema_fingerprint_mismatch_returns_schema_mismatch_status() {
             "schema-a",
         )),
     );
-    let second_bytes = compile_to_bytes_with_schema(
+    let second_bytes = compile_to_bytes_with_schema_and_compiler(
         source,
         recite_core::SchemaFingerprint::Fingerprint(recite_core::canonical_source_fingerprint(
             "schema-b",
         )),
+        "0.0.2",
     );
 
     let mut first_asset = 0;
