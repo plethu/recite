@@ -8,11 +8,13 @@ Usage:
 
 Checks the branch name and commit messages in the relevant change range.
 
-The pull-request workflow supplies GITHUB_HEAD_REF, GITHUB_BASE_REF, and
-RECITE_PR_TITLE. For local runs, the current branch is checked against
-origin/main. Set RECITE_BASE_REF, RECITE_HEAD_REF, RECITE_HEAD_BRANCH,
-RECITE_PR_TITLE, or RECITE_ISSUE_CODE to override those inputs for a focused
-check.
+The pull-request workflow supplies GITHUB_HEAD_REF, GITHUB_BASE_REF,
+RECITE_PR_TITLE, and RECITE_INTEGRATION_PR. For local runs, the current branch
+is checked against origin/main. Set RECITE_BASE_REF, RECITE_HEAD_REF,
+RECITE_HEAD_BRANCH, RECITE_PR_TITLE, or RECITE_ISSUE_CODE to override those
+inputs for a focused check. Set RECITE_INTEGRATION_PR=1 for the coordinator's
+milestone integration PR; CI sets it when that PR has the
+workflow/integration label.
 EOF
 }
 
@@ -41,10 +43,20 @@ fi
 
 fixture_root="$repo_root/tests/git-policy"
 
-allowed_branch_kinds='feat|fix|refactor|perf|ci|docs|test|build|chore|spike|release|security'
+integration_pr="${RECITE_INTEGRATION_PR:-0}"
+if [[ "$integration_pr" != "0" && "$integration_pr" != "1" ]]; then
+  echo "RECITE_INTEGRATION_PR must be 0 or 1: $integration_pr" >&2
+  exit 2
+fi
+
+allowed_branch_kinds='feat|fix|refactor|perf|ci|docs|test|build|chore|spike|release|security|integration'
 
 is_valid_branch_name() {
   [[ "$1" =~ ^(${allowed_branch_kinds})/[a-z][a-z0-9]*(\-[a-z0-9]+)*$ ]]
+}
+
+is_valid_integration_branch_name() {
+  [[ "$1" =~ ^integration/[a-z][a-z0-9]*(\-[a-z0-9]+)*$ ]]
 }
 
 issue_code_from_pr_title() {
@@ -190,13 +202,24 @@ if [[ -n "${RECITE_PR_TITLE:-}" ]]; then
     exit 1
   fi
 
-  if [[ -n "${RECITE_ISSUE_CODE:-}" && "${RECITE_ISSUE_CODE#REC-}" != "${title_issue_code#REC-}" ]]; then
+  if [[ "$integration_pr" != "1" && -n "${RECITE_ISSUE_CODE:-}" && "${RECITE_ISSUE_CODE#REC-}" != "${title_issue_code#REC-}" ]]; then
     echo "pull-request title issue code does not match RECITE_ISSUE_CODE: $title_issue_code != $RECITE_ISSUE_CODE" >&2
     exit 1
   fi
 
-  RECITE_ISSUE_CODE="$title_issue_code"
-  export RECITE_ISSUE_CODE
+  if [[ "$integration_pr" == "1" ]]; then
+    echo "integration pull-request title issue code accepted: $title_issue_code"
+  else
+    RECITE_ISSUE_CODE="$title_issue_code"
+    export RECITE_ISSUE_CODE
+  fi
+fi
+
+# A milestone integration PR is allowed to contain several valid issue codes.
+# Keep the title code as the milestone tracking code, but do not use it as the
+# expected code for every commit in the range.
+if [[ "$integration_pr" == "1" ]]; then
+  unset RECITE_ISSUE_CODE
 fi
 
 branch_name="${RECITE_HEAD_BRANCH:-${GITHUB_HEAD_REF:-}}"
@@ -207,7 +230,7 @@ fi
 if [[ -n "$branch_name" && "$branch_name" != "main" ]]; then
   if ! is_valid_branch_name "$branch_name"; then
     echo "invalid branch name: $branch_name" >&2
-    echo "use <kind>/<short-kebab-topic> with kind in: feat, fix, refactor, perf, ci, docs, test, build, chore, spike, release, security" >&2
+    echo "use <kind>/<short-kebab-topic> with kind in: feat, fix, refactor, perf, ci, docs, test, build, chore, spike, release, security, integration" >&2
     exit 1
   fi
   echo "branch name passed: $branch_name"
@@ -215,6 +238,11 @@ elif [[ "$branch_name" == "main" ]]; then
   echo "branch name check skipped for protected branch: main"
 else
   echo "branch name check skipped: detached HEAD without pull-request branch metadata"
+fi
+
+if [[ "$integration_pr" == "1" ]] && ! is_valid_integration_branch_name "$branch_name"; then
+  echo "integration mode requires an integration/<short-kebab-topic> head branch: ${branch_name:-<unset>}" >&2
+  exit 1
 fi
 
 # A push to protected main is not a pull-request change range. This also lets

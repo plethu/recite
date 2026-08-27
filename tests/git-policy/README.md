@@ -4,6 +4,8 @@
 invocation before checking the current repository. `branches.tsv` records
 expected branch-name results. Files under `commit-messages/` use the filename
 prefix `valid-` or `invalid-` to record expected commit-message results,
-including the issue prefix, body-sentence, and attribution-trailer rules. The
-script also checks that the pull-request title supplies the expected issue code
-and that every commit uses that same code.
+including the issue prefix, body-sentence, and attribution-trailer rules. An
+ordinary pull-request title supplies one issue code that every commit must
+use. Run the integration fixture with `bash tests/git-policy/check-integration.sh`;
+it proves that a labelled integration PR may contain multiple valid issue codes
+while retaining the subject and attribution rules.

@@ -21,6 +21,24 @@ changes, and `mise run verify` for broad or high-risk code changes. Required
 GitHub CI and protected `main` remain authoritative for merge policy, aggregate
 status, linear history, and signed commits.
 
+## Milestone integration path
+
+The coordinator creates one purpose-first `integration/<short-kebab-topic>`
+branch from `main` for a milestone. Bounded implementers work in isolated
+normal purpose-first branches or worktrees based on that branch. They do not
+open issue-slice pull requests.
+The coordinator reviews each slice, returns actionable findings to its owning
+implementer, and mechanically cherry-picks or merges accepted commits. Only
+mechanical conflict resolution belongs in the coordinator's worktree.
+
+At a stable checkpoint, open exactly one integration pull request to protected
+`main`, label it `workflow/integration`, and put the milestone tracking issue
+in its `[REC-N]` title. Integration mode allows multiple valid issue codes in
+the commit range while still requiring every commit's normal subject and
+no-attribution rules. Use this helper and the normal GitHub review path for
+that final PR. After the merge, refresh the roadmap on `main` against live
+GitHub state.
+
 ## Maintainer Review
 
 Known maintainers come from the explicit `RECITE_MAINTAINERS` allowlist,
