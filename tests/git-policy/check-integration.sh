@@ -39,40 +39,85 @@ git -C "$clone_root" commit --quiet --allow-empty -m "[REC-144] docs: second acc
 run_policy() {
   local title="$1"
   local integration="$2"
-  local branch="${3:-integration/milestone-integration}"
+  local label="$3"
+  local branch="${4:-integration/milestone-integration}"
 
+  # The clone is detached like actions/checkout; GITHUB_HEAD_REF is the only
+  # branch metadata available to the pull-request policy in this fixture.
   RECITE_PR_TITLE="$title" \
     RECITE_INTEGRATION_PR="$integration" \
+    RECITE_INTEGRATION_LABEL="$label" \
     RECITE_BASE_REF="$base_sha" \
     RECITE_HEAD_REF=HEAD \
-    RECITE_HEAD_BRANCH="$branch" \
+    GITHUB_EVENT_NAME=pull_request \
+    GITHUB_HEAD_REF="$branch" \
     "$clone_root/scripts/check-git-policy.sh" "$clone_root"
 }
 
-if run_policy "[REC-163] chore: integrate milestone" 0 >/dev/null 2>&1; then
+run_policy_without_label() {
+  local title="$1"
+  local branch="${2:-integration/milestone-integration}"
+
+  env -u RECITE_INTEGRATION_LABEL \
+    RECITE_PR_TITLE="$title" \
+    RECITE_INTEGRATION_PR=0 \
+    RECITE_BASE_REF="$base_sha" \
+    RECITE_HEAD_REF=HEAD \
+    GITHUB_EVENT_NAME=pull_request \
+    GITHUB_HEAD_REF="$branch" \
+    "$clone_root/scripts/check-git-policy.sh" "$clone_root"
+}
+
+if run_policy "[REC-163] chore: integrate milestone" 0 0 feat/milestone-integration >/dev/null 2>&1; then
   echo "ordinary policy unexpectedly accepted a mixed-code commit range" >&2
   exit 1
 fi
 
-if ! run_policy "[REC-163] chore: integrate milestone" 1; then
-  echo "integration policy rejected a valid mixed-code commit range" >&2
+if ! run_policy "[REC-163] chore: integrate milestone" 0 1; then
+  echo "matching integration label and branch rejected a valid mixed-code commit range" >&2
   exit 1
 fi
 
-if run_policy "[REC-163] chore: integrate milestone" 1 feat/milestone-integration >/dev/null 2>&1; then
-  echo "integration policy accepted a non-integration head branch" >&2
+if run_policy "[REC-163] chore: integrate milestone" 0 0 >/dev/null 2>&1; then
+  echo "integration branch without its label was accepted in PR context" >&2
   exit 1
 fi
 
-if run_policy "chore: integrate milestone" 1 >/dev/null 2>&1; then
+if run_policy_without_label "[REC-163] chore: integrate milestone" >/dev/null 2>&1; then
+  echo "integration branch without label metadata was accepted in PR context" >&2
+  exit 1
+fi
+
+if run_policy "[REC-163] chore: integrate milestone" 0 1 feat/milestone-integration >/dev/null 2>&1; then
+  echo "integration label on a non-integration head branch was accepted" >&2
+  exit 1
+fi
+
+if run_policy "[REC-163] chore: integrate milestone" 1 0 >/dev/null 2>&1; then
+  echo "explicit integration mode overrode an explicit missing label" >&2
+  exit 1
+fi
+
+if run_policy "chore: integrate milestone" 0 1 >/dev/null 2>&1; then
   echo "integration policy accepted a title without the milestone issue code" >&2
+  exit 1
+fi
+
+if ! env -u RECITE_INTEGRATION_LABEL -u GITHUB_EVENT_NAME -u GITHUB_HEAD_REF \
+  RECITE_PR_TITLE="[REC-163] chore: integrate milestone" \
+  RECITE_INTEGRATION_PR=1 \
+  RECITE_BASE_REF="$base_sha" \
+  RECITE_HEAD_REF=HEAD \
+  RECITE_HEAD_BRANCH=integration/milestone-integration \
+  "$clone_root/scripts/check-git-policy.sh" "$clone_root" >/dev/null; then
+  echo "local explicit integration mode without label metadata was rejected" >&2
   exit 1
 fi
 
 git -C "$clone_root" commit --quiet --allow-empty \
   -m "[REC-145] docs: preserve attribution rule" \
   -m "Co-Authored-By: fixture <fixture@example.invalid>"
-if run_policy "[REC-163] chore: integrate milestone" 1 >/dev/null 2>&1; then
+if run_policy "[REC-163] chore: integrate milestone" 0 1 >/dev/null 2>&1; then
   echo "integration policy accepted an attribution trailer" >&2
   exit 1
 fi

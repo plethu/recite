@@ -30,6 +30,10 @@ jobs:
       # Only the coordinator's final milestone PR carries this label and uses
       # an integration/<topic> head branch. Local checks may set
       # RECITE_INTEGRATION_PR=1 explicitly instead.
+      RECITE_INTEGRATION_LABEL: >-
+        ${{ github.event_name == 'pull_request' &&
+            contains(github.event.pull_request.labels.*.name, 'workflow/integration') &&
+            '1' || '0' }}
       RECITE_INTEGRATION_PR: >-
         ${{ github.event_name == 'pull_request' &&
             contains(github.event.pull_request.labels.*.name, 'workflow/integration') &&

@@ -9,12 +9,13 @@ Usage:
 Checks the branch name and commit messages in the relevant change range.
 
 The pull-request workflow supplies GITHUB_HEAD_REF, GITHUB_BASE_REF,
-RECITE_PR_TITLE, and RECITE_INTEGRATION_PR. For local runs, the current branch
-is checked against origin/main. Set RECITE_BASE_REF, RECITE_HEAD_REF,
-RECITE_HEAD_BRANCH, RECITE_PR_TITLE, or RECITE_ISSUE_CODE to override those
-inputs for a focused check. Set RECITE_INTEGRATION_PR=1 for the coordinator's
-milestone integration PR; CI sets it when that PR has the
-workflow/integration label.
+RECITE_PR_TITLE, RECITE_INTEGRATION_LABEL, and RECITE_INTEGRATION_PR. For
+local runs, the current branch is checked against origin/main. Set
+RECITE_BASE_REF, RECITE_HEAD_REF, RECITE_HEAD_BRANCH, RECITE_PR_TITLE, or
+RECITE_ISSUE_CODE to override those inputs for a focused check. Set
+RECITE_INTEGRATION_PR=1 for a coordinator's milestone integration PR when
+label metadata is unavailable locally; CI enables it only when the
+workflow/integration label and integration/<topic> branch both match.
 EOF
 }
 
@@ -46,6 +47,12 @@ fixture_root="$repo_root/tests/git-policy"
 integration_pr="${RECITE_INTEGRATION_PR:-0}"
 if [[ "$integration_pr" != "0" && "$integration_pr" != "1" ]]; then
   echo "RECITE_INTEGRATION_PR must be 0 or 1: $integration_pr" >&2
+  exit 2
+fi
+
+integration_label="${RECITE_INTEGRATION_LABEL:-}"
+if [[ -n "$integration_label" && "$integration_label" != "0" && "$integration_label" != "1" ]]; then
+  echo "RECITE_INTEGRATION_LABEL must be 0 or 1 when set: $integration_label" >&2
   exit 2
 fi
 
@@ -195,6 +202,57 @@ run_fixture_checks() {
 
 run_fixture_checks
 
+branch_name="${RECITE_HEAD_BRANCH:-${GITHUB_HEAD_REF:-}}"
+if [[ -z "$branch_name" ]]; then
+  branch_name="$(git -C "$repo_root" branch --show-current)"
+fi
+
+if [[ -n "$branch_name" && "$branch_name" != "main" ]]; then
+  if ! is_valid_branch_name "$branch_name"; then
+    echo "invalid branch name: $branch_name" >&2
+    echo "use <kind>/<short-kebab-topic> with kind in: feat, fix, refactor, perf, ci, docs, test, build, chore, spike, release, security, integration" >&2
+    exit 1
+  fi
+  echo "branch name passed: $branch_name"
+elif [[ "$branch_name" == "main" ]]; then
+  echo "branch name check skipped for protected branch: main"
+else
+  echo "branch name check skipped: detached HEAD without pull-request branch metadata"
+fi
+
+pr_context=0
+if [[ "${GITHUB_EVENT_NAME:-}" == "pull_request" || -n "${GITHUB_HEAD_REF:-}" || -n "${RECITE_PR_TITLE:-}" ]]; then
+  pr_context=1
+fi
+
+# CI passes label presence separately so a branch/label mismatch cannot fall
+# through as an ordinary PR. Local explicit integration mode remains available
+# only when CI label metadata is absent.
+if [[ "$integration_label" == "1" ]]; then
+  if ! is_valid_integration_branch_name "$branch_name"; then
+    echo "workflow/integration label requires an integration/<short-kebab-topic> head branch: ${branch_name:-<unset>}" >&2
+    exit 1
+  fi
+  integration_pr=1
+elif [[ "$integration_label" == "0" ]]; then
+  if [[ "$integration_pr" == "1" ]]; then
+    echo "explicit integration mode conflicts with missing workflow/integration label" >&2
+    exit 1
+  fi
+  if (( pr_context )) && is_valid_integration_branch_name "$branch_name"; then
+    echo "integration/<short-kebab-topic> pull requests require the workflow/integration label" >&2
+    exit 1
+  fi
+elif [[ "$integration_pr" == "1" ]]; then
+  if ! is_valid_integration_branch_name "$branch_name"; then
+    echo "integration mode requires an integration/<short-kebab-topic> head branch: ${branch_name:-<unset>}" >&2
+    exit 1
+  fi
+elif (( pr_context )) && is_valid_integration_branch_name "$branch_name"; then
+  echo "integration/<short-kebab-topic> pull requests require the workflow/integration label" >&2
+  exit 1
+fi
+
 if [[ -n "${RECITE_PR_TITLE:-}" ]]; then
   if ! title_issue_code="$(issue_code_from_pr_title "$RECITE_PR_TITLE")"; then
     echo "invalid pull-request title: $RECITE_PR_TITLE" >&2
@@ -220,29 +278,6 @@ fi
 # expected code for every commit in the range.
 if [[ "$integration_pr" == "1" ]]; then
   unset RECITE_ISSUE_CODE
-fi
-
-branch_name="${RECITE_HEAD_BRANCH:-${GITHUB_HEAD_REF:-}}"
-if [[ -z "$branch_name" ]]; then
-  branch_name="$(git -C "$repo_root" branch --show-current)"
-fi
-
-if [[ -n "$branch_name" && "$branch_name" != "main" ]]; then
-  if ! is_valid_branch_name "$branch_name"; then
-    echo "invalid branch name: $branch_name" >&2
-    echo "use <kind>/<short-kebab-topic> with kind in: feat, fix, refactor, perf, ci, docs, test, build, chore, spike, release, security, integration" >&2
-    exit 1
-  fi
-  echo "branch name passed: $branch_name"
-elif [[ "$branch_name" == "main" ]]; then
-  echo "branch name check skipped for protected branch: main"
-else
-  echo "branch name check skipped: detached HEAD without pull-request branch metadata"
-fi
-
-if [[ "$integration_pr" == "1" ]] && ! is_valid_integration_branch_name "$branch_name"; then
-  echo "integration mode requires an integration/<short-kebab-topic> head branch: ${branch_name:-<unset>}" >&2
-  exit 1
 fi
 
 # A push to protected main is not a pull-request change range. This also lets

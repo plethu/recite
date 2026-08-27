@@ -112,11 +112,12 @@ policy.
 
 At a stable checkpoint, the coordinator opens exactly one protected integration
 pull request from the integration branch to `main`. Apply the
-`workflow/integration` label and use the milestone tracking issue in the PR
-title. The final integration PR may contain multiple valid `[REC-N]` issue
-codes; its title code identifies the milestone tracking issue. The protected
-GitHub checks and review gate apply to this PR. After it merges, verify live
-GitHub state and refresh `docs/roadmap.md` on `main`.
+`workflow/integration` label and use an `integration/<short-kebab-topic>` head
+branch; CI requires both before enabling integration mode. Use the milestone
+tracking issue in the PR title. The final integration PR may contain multiple
+valid `[REC-N]` issue codes; its title code identifies the milestone tracking
+issue. The protected GitHub checks and review gate apply to this PR. After it
+merges, verify live GitHub state and refresh `docs/roadmap.md` on `main`.
 
 ## Review and protected merge
 
