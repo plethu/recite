@@ -3609,7 +3609,7 @@ These are outcome milestones rather than a list of isolated implementation
 issues. The tracker may split or reorder work inside a milestone, but a
 milestone is not complete until its exit evidence exists. The dependency order
 is: 1 -> 2 -> 3; milestones 4, 5, and 7 can then proceed in parallel from the
-milestone-2/3 contracts and fixtures; 5 -> 6; and 6 and 7 -> 8 -> 9. Milestone
+milestone-2/3 contracts and fixtures; 5 -> 6; and 4, 6, and 7 -> 8 -> 9. Milestone
 1 supplies maintainability and verification gates throughout.
 The current tracker milestones 17 through 25 correspond to these nine outcomes;
 issue links remain secondary to this specification.
