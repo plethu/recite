@@ -87,7 +87,7 @@ wire compatibility fixtures, and focused reviews for each subsystem.
 
 | Path | Lines | Kind | Owner | Disposition | Issue/reason |
 | --- | ---: | --- | --- | --- | --- |
-| `crates/recite-ffi/src/lib.rs` | 841 | production | ffi | exception | #135/#164/#171: retain the private encoder seam until the ABI façade split follows the symbol and threading inventory |
+| `crates/recite-ffi/src/lib.rs` | 845 | production | ffi | exception | #135/#164/#171: retain the private encoder seam until the ABI façade split follows the symbol and threading inventory |
 | `crates/recite-core/src/schema/model/canonical.rs` | 621 | production | core/schema | review | Canonical model boundary; preserve public fingerprints |
 | `crates/recite-core/src/schema/manifest/lower/availability.rs` | 560 | production | core/schema | review | Reassess mapping and domain-validation ownership |
 | `crates/recite-core/src/compiled/messagepack/tags.rs` | 506 | production | core/wire | cohesive | #89: explicit wire tag table |
@@ -151,6 +151,7 @@ wire compatibility fixtures, and focused reviews for each subsystem.
 | `crates/recite-runtime/tests/adapter_conformance/manifest.rs` | 571 | test/support | runtime/tests | cohesive | Adapter manifest contract |
 | `crates/recite-ffi/tests/conditions.rs` | 498 | test/support | ffi/tests | cohesive | #171: condition callback protocol coverage |
 | `crates/recite-compiler/tests/asset.rs` | 564 | test/support | compiler/tests | exception | #89: retain the shared compiled-asset fixture entry point for the wire contract guard |
+| `crates/recite-ffi/tests/snapshots.rs` | 422 | test/support | ffi/tests | cohesive | #171: session snapshot and restore contract coverage |
 | `crates/recite-lsp/src/tests/support.rs` | 423 | test/support | lsp/tests | review | Test support ownership; retain private access where required |
 | `crates/recite-lsp/src/tests/project_indexes.rs` | 422 | test/support | lsp/tests | review | Private index behavior |
 | `crates/recite-core/tests/compiled_model.rs` | 419 | test/support | core/tests | cohesive | Compiled model behavior |
@@ -160,6 +161,7 @@ wire compatibility fixtures, and focused reviews for each subsystem.
 | `crates/recite-compiler/tests/pot_extraction.rs` | 404 | test/support | compiler/tests | follow-up | #166: shared localisation extraction fixtures |
 | `crates/recite-lsp/src/tests/diagnostics.rs` | 402 | test/support | lsp/tests | review | Private diagnostic projection tests |
 | `crates/recite-fixturegen/tests/generation.rs` | 395 | test/support | fixturegen/tests | cohesive | Deterministic generation contract |
+| `crates/recite-ffi/tests/lifecycle.rs` | 399 | test/support | ffi/tests | cohesive | #171: session lifecycle and begin retry coverage |
 | `crates/recite-runtime/tests/adapter_conformance.rs` | 383 | test/support | runtime/tests | cohesive | Adapter conformance entry point |
 | `crates/recite-core/tests/schema_manifest/load_valid.rs` | 379 | test/support | core/tests | cohesive | Valid manifest coverage |
 | `crates/recite-runtime/tests/session_serialization/invalid_snapshots.rs` | 478 | test/support | runtime/tests | cohesive | Snapshot failure contract |

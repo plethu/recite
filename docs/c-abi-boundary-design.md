@@ -95,7 +95,8 @@ Mapping to contract obligations:
 
 **Decision: MessagePack length-prefixed byte buffers.**
 
-After each session operation (`recite_session_start`, `recite_session_choose`,
+After each session operation (`recite_session_start`, `recite_session_begin`,
+`recite_session_choose`,
 `recite_session_acknowledge_effect`) the crate writes
 a single serialized output batch into a caller-supplied buffer slot (see Buffer
 Ownership below). The batch has its own MessagePack envelope and encoder in
@@ -200,7 +201,8 @@ ReciteStatus recite_session_restore(
     uint64_t asset_handle,
     const uint8_t *snapshot_bytes, uintptr_t snapshot_len,
     uint64_t *session_handle_out,
-    ReciteBuffer *batch_out     // resumption batch; empty when at a pending boundary
+    ReciteBuffer *batch_out     // resumption batch; empty only at pending prompt
+                              // boundary; pending effect re-emits once
 );
 
 // Teardown
