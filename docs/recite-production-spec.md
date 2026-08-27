@@ -3731,10 +3731,12 @@ with honest boundaries.
 
 **Exit gate:** CLI/LSP/GUI/editor integrations and companion artifacts have
 reproducible package, upgrade, signing, and support instructions; examples and
-guides cover the source-first loop; import reports preserve provenance and
-losses for useful subsets of Ink, Yarn Spinner, Dialogic, Dialogue Manager,
-Dialogue System for Unity, and related tools; known limits and alternatives are
-published without implying compatibility that does not exist.
+guides cover the source-first loop; bounded subset importers for custom JSON/CSV,
+Twee/Twine, Ink, and Yarn Spinner preserve provenance and report losses;
+Dialogic, Dialogue Manager, Dialogue System for Unity, and related tools receive
+compatibility and migration guidance under the import-report work without an
+unowned importer promise; known limits and alternatives are published without
+implying compatibility that does not exist.
 
 ### Milestone 9: Serious v1 Release
 
