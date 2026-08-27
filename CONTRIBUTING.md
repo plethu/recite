@@ -27,9 +27,11 @@ After the v1 shape is stable, I'll review and publish fuller contribution guidel
   conventional-commit-style subject, with at most one explanatory body
   sentence and no agent-attribution trailers.
 - The canonical local quality gate is `mise run verify`
-  (`scripts/verify.sh`). GitHub Actions runs the corresponding policy, Rust,
-  documentation, benchmark, and required-check lanes on every push to `main`
-  and on pull requests (`.github/workflows/ci.yml`); required CI and branch
-  protection remain authoritative for the final protected PR. Focused checks
-  are acceptable for narrow documentation or instruction-only changes; run the
-  full gate locally for broad or high-risk code changes.
+  (`scripts/verify.sh`). It loads the scoped `maintainability` mise
+  environment for the pinned ast-grep check. GitHub Actions runs separate Git
+  policy, Rust, documentation, benchmark, and maintainability lanes, followed
+  by the required-check rollup, on every push to `main` and on pull requests
+  (`.github/workflows/ci.yml`); required CI and branch protection remain
+  authoritative for the final protected PR. Focused checks are acceptable for
+  narrow documentation or instruction-only changes; run the full gate locally
+  for broad or high-risk code changes.

@@ -17,9 +17,10 @@ Runs the complete local verification suite:
   8. scripts/check-docs.sh
   9. scripts/benchmark-smoke.sh
 
-Use `mise run verify` from the repository root when mise is available.
-`mise install` provisions the pinned Rust, Node, pnpm, .NET, cbindgen, and
-ast-grep tools.
+Use `mise run verify` from the repository root when mise is available. That
+task loads the scoped `maintainability` mise environment for ast-grep;
+ordinary project commands do not install it.
+`mise install` provisions the pinned Rust, Node, pnpm, .NET, and cbindgen tools.
 EOF
 }
 

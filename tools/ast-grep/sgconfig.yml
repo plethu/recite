@@ -5,3 +5,4 @@ testConfigs:
 languageGlobs:
   rust:
     - "crates/**/src/**/*.rs"
+    - "crates/**/benches/**/*.rs"

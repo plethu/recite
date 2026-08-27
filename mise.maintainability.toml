@@ -1,0 +1,3 @@
+[tools]
+# Keep ast-grep scoped to the maintainability gate and local structural checks.
+"cargo:ast-grep" = "0.44.1"

@@ -123,9 +123,11 @@ jobs:
     runs-on: ubuntu-24.04
     timeout-minutes: 10
     env:
+      # The scoped environment is the only CI lane that installs ast-grep.
+      MISE_ENV: maintainability
       RECITE_BASE_REF: >-
         ${{ github.event_name == 'pull_request' &&
-            format('origin/{0}', github.base_ref) || 'HEAD^' }}
+            format('origin/{0}', github.base_ref) || github.event.before }}
       RECITE_HEAD_REF: >-
         ${{ github.event_name == 'pull_request' &&
             github.event.pull_request.head.sha || github.sha }}
