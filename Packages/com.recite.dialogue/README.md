@@ -23,7 +23,11 @@ against the generated `include/recite.h` header by
 Use `ReciteDialogueService` as the semantic owner for one active Recite session:
 
 1. Construct a `ReciteDialogueAsset` from compiled Recite bytes.
-2. Register pure C# condition handlers with `RegisterCondition`.
+2. Register pure C# condition handlers with `RegisterCondition`, or use the
+   additive `RegisterTypedCondition` API when identifier and string arguments
+   must remain distinct. Typed callbacks receive `ReciteConditionArgument`
+   values for all five ABI kinds: identifier, string, integer, float, and
+   boolean. The original `IReadOnlyList<object>` API remains available.
 3. Call `Start` with an optional start block and locale.
 4. Present the returned `ReciteOutputBatch` values in the game's UI.
 5. Call `SelectChoice` with the stable choice ID from the current prompt.

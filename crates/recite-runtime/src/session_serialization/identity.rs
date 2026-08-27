@@ -35,12 +35,13 @@ pub(super) fn ensure_snapshot_matches_asset(
             "source map id differs from the provided compiled asset",
         );
     }
-    if snapshot.schema_fingerprint != schema_fingerprint_snapshot(&asset.header.schema_fingerprint)
-    {
-        return asset_content_mismatch(
-            snapshot,
-            "schema fingerprint differs from the provided compiled asset",
-        );
+    let actual_schema_fingerprint = schema_fingerprint_snapshot(&asset.header.schema_fingerprint);
+    if snapshot.schema_fingerprint != actual_schema_fingerprint {
+        return Err(DialogueError::SchemaMismatch {
+            asset_id: snapshot.asset_id.clone(),
+            expected_schema_fingerprint: snapshot.schema_fingerprint.clone(),
+            actual_schema_fingerprint,
+        });
     }
     let sources = asset
         .sources

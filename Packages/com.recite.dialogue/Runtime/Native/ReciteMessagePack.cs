@@ -1,5 +1,6 @@
 using System;
 using System.Collections.Generic;
+using Recite.Unity;
 
 namespace Recite.Unity.Native
 {
@@ -9,8 +10,14 @@ namespace Recite.Unity.Native
         {
             var reader = new ReciteMessagePackReader(bytes);
             var root = reader.ReadMap();
-            var version = Convert.ToUInt16(root["batch_format_version"]);
-            var rawEvents = (IReadOnlyList<object>)root["events"];
+            reader.EnsureEnd();
+            var version = RequiredUInt16(root, "batch_format_version");
+            if (version != 0)
+            {
+                throw new FormatException("unsupported Recite batch format version: " + version);
+            }
+
+            var rawEvents = RequiredArray(root, "events");
             var events = new List<ReciteOutput>(rawEvents.Count);
             foreach (var raw in rawEvents)
             {
@@ -22,13 +29,31 @@ namespace Recite.Unity.Native
 
         internal static IReadOnlyList<object> DecodeConditionArgs(byte[] bytes)
         {
+            var typed = DecodeTypedConditionArgs(bytes);
+            var args = new List<object>(typed.Count);
+            foreach (var argument in typed)
+            {
+                args.Add(argument.LegacyValue);
+            }
+
+            return args;
+        }
+
+        internal static IReadOnlyList<ReciteConditionArgument> DecodeTypedConditionArgs(byte[] bytes)
+        {
             var reader = new ReciteMessagePackReader(bytes);
             var rawArgs = reader.ReadArray();
-            var args = new List<object>(rawArgs.Count);
+            var args = new List<ReciteConditionArgument>(rawArgs.Count);
             foreach (var raw in rawArgs)
             {
-                args.Add(ReadTaggedScalar((IReadOnlyDictionary<string, object>)raw).Value);
+                if (!(raw is IReadOnlyDictionary<string, object> map))
+                {
+                    throw new FormatException("condition argument must be a MessagePack map");
+                }
+
+                args.Add(ReadConditionArgument(map));
             }
+            reader.EnsureEnd();
 
             return args;
         }
@@ -168,6 +193,32 @@ namespace Recite.Unity.Native
             return new ReciteTaggedValue(kind, map.TryGetValue("value", out var value) ? value : null);
         }
 
+        private static ReciteConditionArgument ReadConditionArgument(IReadOnlyDictionary<string, object> map)
+        {
+            EnsureExactKeys(map, "kind", "value");
+            var kind = RequiredString(map, "kind");
+            switch (kind)
+            {
+                case "identifier":
+                    return ReciteConditionArgument.Identifier(RequiredString(map, "value"));
+                case "string":
+                    return ReciteConditionArgument.String(RequiredString(map, "value"));
+                case "integer":
+                    return ReciteConditionArgument.Integer(RequiredInt64(map, "value"));
+                case "float":
+                    var floatValue = RequiredDouble(map, "value");
+                    if (double.IsNaN(floatValue) || double.IsInfinity(floatValue))
+                    {
+                        throw new FormatException("condition float argument must be finite");
+                    }
+                    return ReciteConditionArgument.Float(floatValue);
+                case "boolean":
+                    return ReciteConditionArgument.Boolean(RequiredBool(map, "value"));
+                default:
+                    throw new FormatException("unknown Recite condition argument kind: " + kind);
+            }
+        }
+
         private static IReadOnlyList<T> ReadList<T>(IReadOnlyDictionary<string, object> map, string key, Func<IReadOnlyDictionary<string, object>, T> read)
         {
             var rawItems = (IReadOnlyList<object>)map[key];
@@ -180,9 +231,72 @@ namespace Recite.Unity.Native
             return items;
         }
 
+        private static IReadOnlyList<object> RequiredArray(IReadOnlyDictionary<string, object> map, string key)
+        {
+            if (!map.TryGetValue(key, out var value) || !(value is IReadOnlyList<object> array))
+            {
+                throw new FormatException("Recite MessagePack field `" + key + "` must be an array");
+            }
+
+            return array;
+        }
+
         private static string RequiredString(IReadOnlyDictionary<string, object> map, string key)
         {
-            return (string)map[key];
+            if (!map.TryGetValue(key, out var value) || !(value is string text))
+            {
+                throw new FormatException("Recite MessagePack field `" + key + "` must be a string");
+            }
+
+            return text;
+        }
+
+        private static long RequiredInt64(IReadOnlyDictionary<string, object> map, string key)
+        {
+            if (!map.TryGetValue(key, out var value) || !(value is long integer))
+            {
+                throw new FormatException("Recite MessagePack field `" + key + "` must be an integer");
+            }
+
+            return integer;
+        }
+
+        private static ushort RequiredUInt16(IReadOnlyDictionary<string, object> map, string key)
+        {
+            if (!map.TryGetValue(key, out var value) || !(value is long integer) || integer < 0 || integer > ushort.MaxValue)
+            {
+                throw new FormatException("Recite MessagePack field `" + key + "` must be a uint16");
+            }
+
+            return (ushort)integer;
+        }
+
+        private static double RequiredDouble(IReadOnlyDictionary<string, object> map, string key)
+        {
+            if (!map.TryGetValue(key, out var value) || !(value is double number))
+            {
+                throw new FormatException("Recite MessagePack field `" + key + "` must be a float64");
+            }
+
+            return number;
+        }
+
+        private static bool RequiredBool(IReadOnlyDictionary<string, object> map, string key)
+        {
+            if (!map.TryGetValue(key, out var value) || !(value is bool boolean))
+            {
+                throw new FormatException("Recite MessagePack field `" + key + "` must be a boolean");
+            }
+
+            return boolean;
+        }
+
+        private static void EnsureExactKeys(IReadOnlyDictionary<string, object> map, string first, string second)
+        {
+            if (map.Count != 2 || !map.ContainsKey(first) || !map.ContainsKey(second))
+            {
+                throw new FormatException("condition argument must contain exactly `kind` and `value` fields");
+            }
         }
 
         private static string OptionalString(IReadOnlyDictionary<string, object> map, string key)

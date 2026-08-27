@@ -169,7 +169,8 @@ impl ReciteDialogueDriver {
             return Err(AdapterError::new(AdapterErrorKind::SessionAlreadyActive));
         }
 
-        let mut session = decode_session_messagepack(asset.dialogue(), snapshot_bytes)?;
+        let mut session = decode_session_messagepack(asset.dialogue(), snapshot_bytes)
+            .map_err(AdapterError::from_restore_error)?;
         let dialogue = asset.shared_dialogue();
         let outputs = self.drain_restored(&dialogue, &mut session)?;
         self.session = Some(ActiveSession { dialogue, session });

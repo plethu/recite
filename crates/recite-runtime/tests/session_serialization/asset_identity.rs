@@ -1,4 +1,5 @@
 use super::*;
+use recite_core::{SchemaFingerprint, canonical_source_fingerprint};
 use recite_runtime::{
     DialogueSchemaFingerprintSnapshot, DialogueSessionFrameSnapshot,
     DialogueSessionPendingPromptSnapshot, DialogueSessionRangeSnapshot, DialogueSessionSnapshot,
@@ -33,6 +34,43 @@ fn same_id_different_asset_content_is_rejected() {
     assert!(matches!(
         restore_session(&second, snapshot_session(&session)),
         Err(DialogueError::AssetContentMismatch { .. })
+    ));
+}
+
+#[test]
+fn schema_fingerprint_mismatch_returns_structured_error() {
+    let asset = compile_asset(
+        "dialogue/start.recite",
+        concat!(
+            ":: start default\n",
+            "> start_line@3a011ecfcf4c5ed87289\n",
+            "  Start.\n",
+            "-> END\n",
+        ),
+    );
+    let session = start_scene(&asset, None).expect("starts");
+    let mut incompatible_asset = asset.clone();
+    incompatible_asset.header.schema_fingerprint =
+        SchemaFingerprint::Fingerprint(canonical_source_fingerprint("different schema"));
+
+    let error = restore_session(&incompatible_asset, snapshot_session(&session))
+        .expect_err("schema mismatch is rejected");
+    let DialogueError::SchemaMismatch {
+        asset_id,
+        expected_schema_fingerprint,
+        actual_schema_fingerprint,
+    } = error
+    else {
+        panic!("expected a structured schema mismatch");
+    };
+    assert_eq!(asset_id, "dialogue/main.recitec");
+    assert_eq!(
+        expected_schema_fingerprint,
+        DialogueSchemaFingerprintSnapshot::NoSchema
+    );
+    assert!(matches!(
+        actual_schema_fingerprint,
+        DialogueSchemaFingerprintSnapshot::Fingerprint(_)
     ));
 }
 

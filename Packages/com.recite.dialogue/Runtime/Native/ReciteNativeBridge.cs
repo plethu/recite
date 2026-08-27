@@ -2,6 +2,7 @@ using System;
 using System.Collections.Generic;
 using System.Runtime.InteropServices;
 using System.Text;
+using Recite.Unity;
 
 namespace Recite.Unity.Native
 {
@@ -127,14 +128,26 @@ namespace Recite.Unity.Native
 
         internal static IReadOnlyList<object> ReadConditionArgs(IntPtr data, UIntPtr len)
         {
+            var typed = ReadTypedConditionArgs(data, len);
+            var args = new List<object>(typed.Count);
+            foreach (var argument in typed)
+            {
+                args.Add(argument.LegacyValue);
+            }
+
+            return args;
+        }
+
+        internal static IReadOnlyList<ReciteConditionArgument> ReadTypedConditionArgs(IntPtr data, UIntPtr len)
+        {
             if (data == IntPtr.Zero || len == UIntPtr.Zero)
             {
-                return Array.Empty<object>();
+                return Array.Empty<ReciteConditionArgument>();
             }
 
             var bytes = new byte[checked((int)len.ToUInt64())];
             Marshal.Copy(data, bytes, 0, bytes.Length);
-            return ReciteMessagePack.DecodeConditionArgs(bytes);
+            return ReciteMessagePack.DecodeTypedConditionArgs(bytes);
         }
     }
 }

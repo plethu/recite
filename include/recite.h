@@ -116,23 +116,26 @@ typedef struct {
 /**
  * Result returned by a `ReciteConditionFn` callback.
  *
- * When `ok != 0`, `value_msgpack` must point to a msgpack-encoded
- * `FfiConditionValue` valid for the duration of the callback frame.
- * When `ok == 0`, `error_message` must point to a UTF-8 NUL-terminated string
- * valid for the duration of the callback frame.
+ * `ok` must be exactly 0 or 1. When `ok == 1`, `value_msgpack` must point to a
+ * complete msgpack-encoded `FfiConditionValue` valid for the duration of the
+ * callback frame. When `ok == 0`, `error_message` may be null (the runtime
+ * uses a stable fallback) or point to a UTF-8 NUL-terminated string valid for
+ * the duration of the callback frame.
  */
 typedef struct {
     /**
-     * 1 = success, 0 = failure.
+     * Exactly 1 = success, 0 = failure.
      */
     uint8_t ok;
     /**
-     * Host-owned msgpack bytes encoding a `FfiConditionValue`. Valid when `ok != 0`.
+     * Host-owned msgpack bytes encoding a `FfiConditionValue`. Borrowed by
+     * Recite only until callback return; valid when `ok == 1`.
      */
     const uint8_t *value_msgpack;
     size_t value_len;
     /**
-     * Host-owned UTF-8 NUL-terminated error message. Valid when `ok == 0`.
+     * Host-owned UTF-8 NUL-terminated error message. Borrowed by Recite only
+     * until callback return; valid when `ok == 0`.
      */
     const char *error_message;
 } ReciteConditionResult;
@@ -145,11 +148,13 @@ typedef struct {
  */
 typedef struct {
     /**
-     * UTF-8 NUL-terminated condition function name. Borrowed for the call.
+     * Recite-owned UTF-8 NUL-terminated condition function name. Borrowed by
+     * the host only for the callback call.
      */
     const char *function_name;
     /**
-     * Msgpack-encoded array of `FfiConditionArg` values. Borrowed for the call.
+     * Recite-owned msgpack-encoded array of `FfiConditionArg` values. Borrowed
+     * by the host only for the callback call.
      */
     const uint8_t *args_msgpack;
     size_t args_len;

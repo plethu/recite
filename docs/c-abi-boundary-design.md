@@ -101,8 +101,13 @@ a single serialized output batch into a caller-supplied buffer slot (see Buffer
 Ownership below). The batch is encoded using MessagePack, reusing the existing
 `encode_session_messagepack` / `decode_session_messagepack` infrastructure in
 `recite-runtime` and the session snapshot serialization path
-(`session_snapshot.rs`, `session_serialization/restore.rs`). The batch schema
-follows the same wire versioning used for compiled assets and session snapshots.
+(`session_snapshot.rs`, `session_serialization/restore.rs`). The current batch
+envelope has `batch_format_version = 0`. Condition callback payloads have no
+independent version field: their shape is fixed by this ABI v0 contract and the
+major-version policy below. A future callback or batch format change requires
+an explicitly designed compatibility mechanism (an ABI-major reset, an additive
+versioned entrypoint, or a versioned envelope); there is no negotiation in the
+current ABI.
 
 **Why not C structs?**
 Contract §5 structured output is deeply nested: choice availability reason trees
@@ -325,6 +330,7 @@ that do not expose presentation projection never emit them (contract §12).
 | `UnsupportedCompiledFormat` | `RECITE_ERR_STALE_OR_INCOMPATIBLE` |
 | `AssetMismatch` | `RECITE_ERR_STALE_OR_INCOMPATIBLE` |
 | `AssetContentMismatch` | `RECITE_ERR_STALE_OR_INCOMPATIBLE` |
+| `SchemaMismatch` | `RECITE_ERR_SCHEMA_MISMATCH` |
 | `MalformedCompiledAsset` | `RECITE_ERR_ASSET_LOAD_OR_DECODE` |
 | `EffectPending` | `RECITE_ERR_EFFECT_ACKNOWLEDGEMENT` |
 | `NoEffectPending` | `RECITE_ERR_EFFECT_ACKNOWLEDGEMENT` |
@@ -350,6 +356,11 @@ The FFI layer re-uses the same logic; it must not diverge. If a new `DialogueErr
 variant is added, both the Godot `From` impl and this table must be updated
 together.
 
+`recite_session_restore` applies the operation-specific override described in
+Save and Load Handoff: `AssetMismatch` and `AssetContentMismatch` become
+`RECITE_ERR_SAVE_LOAD_INCOMPATIBILITY`, while the typed `SchemaMismatch`
+remains `RECITE_ERR_SCHEMA_MISMATCH`.
+
 Each function that returns a non-zero status also writes a NUL-terminated,
 UTF-8 detail string into a thread-local that the host can retrieve with
 `recite_last_error_message() -> const char*`. The pointer is valid until the
@@ -362,16 +373,16 @@ further functions.
 
 ```c
 typedef struct {
-    const char *function_name;   // UTF-8 NUL-terminated
-    const uint8_t *args_msgpack; // msgpack-encoded argument list; borrowed
+    const char *function_name;   // Recite-owned callback borrow; UTF-8 NUL-terminated
+    const uint8_t *args_msgpack; // Recite-owned callback borrow; msgpack argument list
     uintptr_t args_len;
 } ReciteConditionQuery;
 
 typedef struct {
     uint8_t ok;                  // 1 = success, 0 = error
-    const uint8_t *value_msgpack;// msgpack-encoded ConditionValue; host-allocated; borrowed
+    const uint8_t *value_msgpack;// host-owned; Recite-borrowed until callback return
     uintptr_t value_len;         // valid when ok = 1
-    const char *error_message;   // UTF-8 NUL-terminated; borrowed; valid when ok = 0
+    const char *error_message;   // host-owned borrow; valid until callback return when ok = 0
 } ReciteConditionResult;
 
 typedef ReciteConditionResult (*ReciteConditionFn)(
@@ -417,6 +428,49 @@ variant string). Arguments are a msgpack-encoded list of `ConditionArgument`
 values. The host-side msgpack representation must match the schema-declared
 parameter types; mismatches produce `RECITE_ERR_INVALID_CONDITION_RESULT`.
 
+### Condition callback MessagePack v0
+
+The callback argument payload is frozen as one MessagePack array. Every item is
+an exact two-entry named map with the producer's canonical key order `kind`
+followed by `value`. Map key order is not semantically significant to a host
+decoder, but duplicate and unknown keys are invalid. The runtime argument order
+is the array order; an empty call is encoded as an empty array (`90`). The five
+records are:
+
+| Runtime argument | `kind` | `value` |
+| --- | --- | --- |
+| `Identifier(&str)` | `identifier` | UTF-8 string |
+| `String(&str)` | `string` | UTF-8 string |
+| `Integer(i64)` | `integer` | signed i64 using the shortest MessagePack integer marker |
+| `Float(f64)` | `float` | finite float64 |
+| `Boolean(bool)` | `boolean` | MessagePack boolean |
+
+For example, `[identifier("sword"), string("hazel"), integer(3),
+float(1.5), boolean(true)]` is produced as the following canonical bytes:
+
+```text
+95
+82 a4 6b696e64 aa 6964656e746966696572 a5 76616c7565 a5 73776f7264
+82 a4 6b696e64 a6 737472696e67     a5 76616c7565 a5 68617a656c
+82 a4 6b696e64 a7 696e7465676572   a5 76616c7565 03
+82 a4 6b696e64 a5 666c6f6174       a5 76616c7565 cb 3ff8000000000000
+82 a4 6b696e64 a7 626f6f6c65616e   a5 76616c7565 c3
+```
+
+The result map uses the same named-map convention and is exactly either
+`{"kind":"bool","value":<bool>}` or
+`{"kind":"enum","variant":<UTF-8 string>}`. The producer emits the keys
+in that order. On the result side, `ok` is exactly `0` or `1`: `0` reports
+`RECITE_ERR_CONDITION_EVALUATION` (a null error pointer uses a stable fallback),
+and `1` requires a non-null, non-empty, complete result map. Scalars, maps with
+missing, duplicate, or unknown keys, wrong field types, truncated payloads, and
+trailing bytes are rejected as `RECITE_ERR_INVALID_CONDITION_RESULT`.
+
+The native query bytes and function-name pointer are Rust-owned borrows valid
+only during the synchronous callback. Host result bytes and error strings are
+host-owned borrows valid only until callback return. Hosts must copy anything
+they retain, and callbacks must not re-enter `recite-ffi`.
+
 ## Threading and Reentrancy
 
 A session handle is not thread-safe. The host must not call `recite-ffi`
@@ -444,11 +498,12 @@ game save data, reads it back, and passes it to `recite_session_restore` later.
 
 `recite_session_restore` reconstructs the session by validating the snapshot
 against the supplied asset handle (via `decode_session_messagepack` +
-`restore_session`). If the asset identity embedded in the snapshot does not
-match the supplied asset handle, the call returns
-`RECITE_ERR_SAVE_LOAD_INCOMPATIBILITY` (mapping `AssetMismatch` /
-`AssetContentMismatch`). This enforces the contract §9 requirement that session
-state is tied to a specific compiled asset.
+`restore_session`). A schema-fingerprint difference returns
+`RECITE_ERR_SCHEMA_MISMATCH`; all other asset identity/content differences
+during restore return `RECITE_ERR_SAVE_LOAD_INCOMPATIBILITY`. This operation-
+specific mapping keeps schema drift actionable without changing ordinary
+runtime stale-asset handling. The call still enforces the contract §9
+requirement that session state is tied to a specific compiled asset.
 
 The host must not deserialize, modify, or re-serialize the snapshot bytes.
 Doing so silently breaks deterministic resume (contract §9 — the snapshot
@@ -518,29 +573,12 @@ owned by the current [Milestone 23: 7 Engine Companions](https://github.com/plet
 
 ## Open Items
 
-- **Condition argument encoding:** `ConditionArgument` variants in
-  `recite-runtime` should be audited against the msgpack encoding used in
-  session snapshots to confirm the same serialization path can carry condition
-  arguments without introducing a second encoding scheme. If not, a small
-  dedicated msgpack schema for `ReciteConditionQuery` args must be defined by
-  [#171 Resolve C ABI condition arguments and schema mismatch contract](https://github.com/plethu/recite/issues/171)
-  before downstream adapter/package integration.
-
 - **`validation_error` category coverage:** the contract §12 category
   `validation_error` has no direct `DialogueError` variant (it is raised by
   host-level checks such as invalid UTF-8 input, malformed handle, or
   unsupported batch format version). The mapping table above covers all current
   `DialogueError` variants; if future variants add a `Validation` case, the
   table and the `RECITE_ERR_VALIDATION` code are already in place.
-
-- **Spec gap — §12 `schema_mismatch_error`:** the contract §12 lists
-  `schema_mismatch_error` as a required category, but no current `DialogueError`
-  variant maps to it directly (schema mismatch is typically caught at compile
-  time or as part of `StaleOrIncompatibleAsset`). [#171 Resolve C ABI condition
-  arguments and schema mismatch contract](https://github.com/plethu/recite/issues/171)
-  should confirm whether this category needs a dedicated `DialogueError`
-  variant or whether it is always raised at the FFI-layer asset-validation step
-  before session start; #85 and #133 consume that decision downstream.
 
 - **IL2CPP allocator mismatch:** `recite_buffer_free` must call the same
   allocator that allocated the buffer — i.e. Rust's allocator inside

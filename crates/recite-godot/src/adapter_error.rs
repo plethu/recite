@@ -6,6 +6,7 @@ use recite_runtime::DialogueError;
 pub enum AdapterErrorKind {
     AssetLoadOrDecode,
     StaleOrIncompatibleAsset,
+    SchemaMismatch,
     NoActiveSession,
     SessionAlreadyActive,
     UnknownStartBlock,
@@ -30,6 +31,7 @@ impl AdapterErrorKind {
         match self {
             Self::AssetLoadOrDecode => "asset_load_or_decode_error",
             Self::StaleOrIncompatibleAsset => "stale_or_incompatible_asset_error",
+            Self::SchemaMismatch => "schema_mismatch_error",
             Self::NoActiveSession => "no_active_session_error",
             Self::SessionAlreadyActive => "session_already_active_error",
             Self::UnknownStartBlock => "unknown_start_block_error",
@@ -50,6 +52,7 @@ impl AdapterErrorKind {
         match code {
             "asset_load_or_decode_error" => Some(Self::AssetLoadOrDecode),
             "stale_or_incompatible_asset_error" => Some(Self::StaleOrIncompatibleAsset),
+            "schema_mismatch_error" => Some(Self::SchemaMismatch),
             "no_active_session_error" => Some(Self::NoActiveSession),
             "session_already_active_error" => Some(Self::SessionAlreadyActive),
             "unknown_start_block_error" => Some(Self::UnknownStartBlock),
@@ -146,6 +149,7 @@ impl From<DialogueError> for AdapterError {
             | DialogueError::AssetContentMismatch { .. } => {
                 AdapterErrorKind::StaleOrIncompatibleAsset
             }
+            DialogueError::SchemaMismatch { .. } => AdapterErrorKind::SchemaMismatch,
             DialogueError::TraversalLimitExceeded { .. } => AdapterErrorKind::DialogueFault,
             DialogueError::MalformedCompiledAsset { .. } => AdapterErrorKind::AssetLoadOrDecode,
             DialogueError::InvalidChoice { .. } => AdapterErrorKind::InvalidChoice,
@@ -175,5 +179,20 @@ impl From<DialogueError> for AdapterError {
             DialogueError::SessionEnded => AdapterErrorKind::NoActiveSession,
         };
         AdapterError::with_detail(kind, error.to_string())
+    }
+}
+
+impl AdapterError {
+    pub(crate) fn from_restore_error(error: DialogueError) -> Self {
+        let kind = match &error {
+            DialogueError::AssetMismatch { .. } | DialogueError::AssetContentMismatch { .. } => {
+                Some(AdapterErrorKind::SaveLoadIncompatibility)
+            }
+            _ => None,
+        };
+        match kind {
+            Some(kind) => Self::with_detail(kind, error.to_string()),
+            None => Self::from(error),
+        }
     }
 }

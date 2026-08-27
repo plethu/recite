@@ -1,6 +1,9 @@
 use recite_core::{ChoiceId, EffectId};
 
-use crate::{ChoiceAvailability, ConditionExpectedType, DialogueEffectMode};
+use crate::{
+    ChoiceAvailability, ConditionExpectedType, DialogueEffectMode,
+    DialogueSchemaFingerprintSnapshot,
+};
 
 /// Runtime error for deterministic traversal over compiled dialogue assets.
 #[derive(Clone, Debug, PartialEq, thiserror::Error)]
@@ -27,6 +30,14 @@ pub enum DialogueError {
     },
     #[error("session is for a different compiled asset payload `{asset_id}`: {reason}")]
     AssetContentMismatch { asset_id: String, reason: String },
+    #[error(
+        "session for asset `{asset_id}` has schema fingerprint {expected_schema_fingerprint:?}, but the provided asset has {actual_schema_fingerprint:?}"
+    )]
+    SchemaMismatch {
+        asset_id: String,
+        expected_schema_fingerprint: DialogueSchemaFingerprintSnapshot,
+        actual_schema_fingerprint: DialogueSchemaFingerprintSnapshot,
+    },
     #[error("malformed compiled asset: {reason}")]
     MalformedCompiledAsset { reason: String },
     #[error("session is waiting for effect `{effect}` to be acknowledged")]

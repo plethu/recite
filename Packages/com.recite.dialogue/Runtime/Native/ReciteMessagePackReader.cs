@@ -16,12 +16,30 @@ namespace Recite.Unity.Native
 
         internal IReadOnlyDictionary<string, object> ReadMap()
         {
-            return (IReadOnlyDictionary<string, object>)Read();
+            if (!(Read() is IReadOnlyDictionary<string, object> map))
+            {
+                throw new FormatException("expected a MessagePack map");
+            }
+
+            return map;
         }
 
         internal IReadOnlyList<object> ReadArray()
         {
-            return (IReadOnlyList<object>)Read();
+            if (!(Read() is IReadOnlyList<object> array))
+            {
+                throw new FormatException("expected a MessagePack array");
+            }
+
+            return array;
+        }
+
+        internal void EnsureEnd()
+        {
+            if (offset != bytes.Length)
+            {
+                throw new FormatException("trailing bytes after MessagePack payload");
+            }
         }
 
         private object Read()
@@ -71,7 +89,13 @@ namespace Recite.Unity.Native
                 case 0xce:
                     return (long)ReadUInt32();
                 case 0xcf:
-                    return unchecked((long)ReadUInt64());
+                    var unsignedValue = ReadUInt64();
+                    if (unsignedValue > long.MaxValue)
+                    {
+                        throw new FormatException("MessagePack unsigned integer exceeds Int64");
+                    }
+
+                    return (long)unsignedValue;
                 case 0xd0:
                     return (long)(sbyte)ReadByte();
                 case 0xd1:
@@ -115,7 +139,17 @@ namespace Recite.Unity.Native
             var values = new Dictionary<string, object>(StringComparer.Ordinal);
             for (var i = 0; i < len; i++)
             {
-                values.Add((string)Read(), Read());
+                if (!(Read() is string key))
+                {
+                    throw new FormatException("MessagePack map keys must be strings");
+                }
+
+                if (values.ContainsKey(key))
+                {
+                    throw new FormatException("duplicate MessagePack map key: " + key);
+                }
+
+                values.Add(key, Read());
             }
 
             return values;
@@ -124,7 +158,7 @@ namespace Recite.Unity.Native
         private string ReadString(int len)
         {
             Ensure(len);
-            var text = Encoding.UTF8.GetString(bytes, offset, len);
+            var text = new UTF8Encoding(false, true).GetString(bytes, offset, len);
             offset += len;
             return text;
         }
@@ -184,7 +218,7 @@ namespace Recite.Unity.Native
 
         private void Ensure(int len)
         {
-            if (offset + len > bytes.Length)
+            if (len < 0 || offset > bytes.Length - len)
             {
                 throw new FormatException("truncated MessagePack payload");
             }

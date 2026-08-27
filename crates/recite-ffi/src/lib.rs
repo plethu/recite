@@ -4,6 +4,7 @@
 //! Normative adapter semantics are in `docs/engine-adapter-contract.md`.
 
 mod condition;
+mod condition_codec;
 mod error;
 mod output;
 
@@ -24,7 +25,7 @@ pub use condition::{ReciteConditionFn, ReciteConditionQuery, ReciteConditionResu
 pub use error::{ReciteStatus, recite_last_error_message};
 
 use condition::{ConditionEntry, FfiContext, SendPtr};
-use error::{clear_condition_status, set_last_error};
+use error::{clear_condition_status, restore_status, set_last_error};
 use output::{encode_batch, should_continue};
 
 /// ABI major version for the generated C header.
@@ -714,7 +715,7 @@ pub unsafe extern "C" fn recite_session_restore(
         Ok(s) => s,
         Err(e) => {
             set_last_error(&e.to_string());
-            return ReciteStatus::from(e);
+            return restore_status(&e);
         }
     };
 

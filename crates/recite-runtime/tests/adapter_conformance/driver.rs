@@ -833,7 +833,7 @@ impl ReferenceDriver {
                 StepResult::Ok(self.outcome_without_event())
             }
             Err(error) => {
-                let category = self.map_runtime_error(&error, None);
+                let category = self.map_restore_runtime_error(&error);
                 self.error(category, error.to_string())
             }
         }
@@ -1003,6 +1003,7 @@ impl ReferenceDriver {
             | DialogueError::AssetContentMismatch { .. } => {
                 CATEGORY_STALE_OR_INCOMPATIBLE_ASSET_ERROR
             }
+            DialogueError::SchemaMismatch { .. } => CATEGORY_SCHEMA_MISMATCH_ERROR,
             DialogueError::MalformedCompiledAsset { .. } => CATEGORY_ASSET_LOAD_OR_DECODE_ERROR,
             DialogueError::EffectPending { .. }
             | DialogueError::NoEffectPending { .. }
@@ -1043,6 +1044,15 @@ impl ReferenceDriver {
             DialogueError::TraversalLimitExceeded { .. } => {
                 CATEGORY_STALE_OR_INCOMPATIBLE_ASSET_ERROR
             }
+        }
+    }
+
+    fn map_restore_runtime_error(&self, error: &DialogueError) -> &'static str {
+        match error {
+            DialogueError::AssetMismatch { .. } | DialogueError::AssetContentMismatch { .. } => {
+                CATEGORY_SAVE_LOAD_INCOMPATIBILITY_ERROR
+            }
+            _ => self.map_runtime_error(error, None),
         }
     }
 

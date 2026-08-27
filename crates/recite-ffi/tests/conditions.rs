@@ -341,3 +341,158 @@ fn condition_args_msgpack_decoded_in_callback() {
     recite_session_free(session);
     recite_asset_free(asset);
 }
+
+#[test]
+fn condition_args_named_maps_have_canonical_order_and_preserve_kinds() {
+    let bytes = compile_to_bytes(concat!(
+        ":: start default\n",
+        ":if inspect(sword, \"sword\", 3, 1.5, true)\n",
+        "  > yes@81000000000000000001\n",
+        "    Yes.\n",
+        ":else\n",
+        "  > no@81000000000000000002\n",
+        "    No.\n",
+        "-> END\n",
+    ));
+    let mut asset = 0;
+    assert_eq!(
+        unsafe { recite_asset_load(bytes.as_ptr(), bytes.len(), &raw mut asset) },
+        ReciteStatus::Ok
+    );
+
+    let mut session = 0;
+    let create_status = unsafe {
+        recite_session_create(asset, std::ptr::null(), std::ptr::null(), &raw mut session)
+    };
+    assert_eq!(create_status, ReciteStatus::Ok);
+
+    struct Capture {
+        bytes: [u8; 256],
+        len: usize,
+    }
+
+    unsafe extern "C" fn inspect(
+        query: *const ReciteConditionQuery,
+        userdata: *mut std::ffi::c_void,
+    ) -> ReciteConditionResult {
+        let query = unsafe { &*query };
+        let capture = unsafe { &mut *(userdata as *mut Capture) };
+        let bytes = unsafe { std::slice::from_raw_parts(query.args_msgpack, query.args_len) };
+        capture.len = bytes.len();
+        capture.bytes[..bytes.len()].copy_from_slice(bytes);
+        static RESULT: &[u8] = &[
+            0x82, 0xa4, b'k', b'i', b'n', b'd', 0xa4, b'b', b'o', b'o', b'l', 0xa5, b'v', b'a',
+            b'l', b'u', b'e', 0xc3,
+        ];
+        ReciteConditionResult {
+            ok: 1,
+            value_msgpack: RESULT.as_ptr(),
+            value_len: RESULT.len(),
+            error_message: std::ptr::null(),
+        }
+    }
+
+    let mut capture = Capture {
+        bytes: [0; 256],
+        len: 0,
+    };
+    let name = cstr("inspect");
+    assert_eq!(
+        unsafe {
+            recite_session_register_condition(
+                session,
+                name.as_ptr(),
+                inspect,
+                (&raw mut capture).cast(),
+            )
+        },
+        ReciteStatus::Ok
+    );
+
+    let mut batch = ReciteBuffer::null();
+    assert_eq!(
+        unsafe { recite_session_begin(session, &raw mut batch) },
+        ReciteStatus::Ok
+    );
+
+    let expected = [
+        0x95, // five arguments
+        0x82, 0xa4, b'k', b'i', b'n', b'd', 0xaa, b'i', b'd', b'e', b'n', b't', b'i', b'f', b'i',
+        b'e', b'r', 0xa5, b'v', b'a', b'l', b'u', b'e', 0xa5, b's', b'w', b'o', b'r', b'd', 0x82,
+        0xa4, b'k', b'i', b'n', b'd', 0xa6, b's', b't', b'r', b'i', b'n', b'g', 0xa5, b'v', b'a',
+        b'l', b'u', b'e', 0xa5, b's', b'w', b'o', b'r', b'd', 0x82, 0xa4, b'k', b'i', b'n', b'd',
+        0xa7, b'i', b'n', b't', b'e', b'g', b'e', b'r', 0xa5, b'v', b'a', b'l', b'u', b'e', 0x03,
+        0x82, 0xa4, b'k', b'i', b'n', b'd', 0xa5, b'f', b'l', b'o', b'a', b't', 0xa5, b'v', b'a',
+        b'l', b'u', b'e', 0xcb, 0x3f, 0xf8, 0, 0, 0, 0, 0, 0, 0x82, 0xa4, b'k', b'i', b'n', b'd',
+        0xa7, b'b', b'o', b'o', b'l', b'e', b'a', b'n', 0xa5, b'v', b'a', b'l', b'u', b'e', 0xc3,
+    ];
+    assert_eq!(capture.len, expected.len());
+    assert_eq!(&capture.bytes[..capture.len], &expected);
+
+    unsafe { recite_buffer_free(&raw mut batch) };
+    recite_session_free(session);
+    recite_asset_free(asset);
+}
+
+#[test]
+fn empty_condition_args_are_encoded_as_an_empty_array() {
+    let bytes = compile_to_bytes(concat!(
+        ":: start default\n",
+        ":if ready()\n",
+        "  > yes@82000000000000000001\n",
+        "    Yes.\n",
+        ":else\n",
+        "  > no@82000000000000000002\n",
+        "    No.\n",
+        "-> END\n",
+    ));
+    let mut asset = 0;
+    assert_eq!(
+        unsafe { recite_asset_load(bytes.as_ptr(), bytes.len(), &raw mut asset) },
+        ReciteStatus::Ok
+    );
+    let mut session = 0;
+    assert_eq!(
+        unsafe {
+            recite_session_create(asset, std::ptr::null(), std::ptr::null(), &raw mut session)
+        },
+        ReciteStatus::Ok
+    );
+
+    unsafe extern "C" fn ready(
+        query: *const ReciteConditionQuery,
+        _userdata: *mut std::ffi::c_void,
+    ) -> ReciteConditionResult {
+        let query = unsafe { &*query };
+        assert_eq!(
+            unsafe { std::slice::from_raw_parts(query.args_msgpack, query.args_len) },
+            &[0x90]
+        );
+        static RESULT: &[u8] = &[
+            0x82, 0xa4, b'k', b'i', b'n', b'd', 0xa4, b'b', b'o', b'o', b'l', 0xa5, b'v', b'a',
+            b'l', b'u', b'e', 0xc3,
+        ];
+        ReciteConditionResult {
+            ok: 1,
+            value_msgpack: RESULT.as_ptr(),
+            value_len: RESULT.len(),
+            error_message: std::ptr::null(),
+        }
+    }
+
+    let name = cstr("ready");
+    assert_eq!(
+        unsafe {
+            recite_session_register_condition(session, name.as_ptr(), ready, std::ptr::null_mut())
+        },
+        ReciteStatus::Ok
+    );
+    let mut batch = ReciteBuffer::null();
+    assert_eq!(
+        unsafe { recite_session_begin(session, &raw mut batch) },
+        ReciteStatus::Ok
+    );
+    unsafe { recite_buffer_free(&raw mut batch) };
+    recite_session_free(session);
+    recite_asset_free(asset);
+}

@@ -2,28 +2,9 @@ use std::collections::BTreeMap;
 use std::ffi::{CStr, c_char, c_void};
 
 use recite_runtime::{ConditionEvaluationError, ConditionQuery, ConditionValue, DialogueContext};
-use serde::{Deserialize, Serialize};
 
+use crate::condition_codec::{decode_condition_value, encode_condition_args};
 use crate::error::{ReciteStatus, set_condition_status};
-
-/// Msgpack-encoded condition argument passed to a host condition handler.
-#[derive(Serialize)]
-#[serde(tag = "kind", rename_all = "snake_case")]
-pub(crate) enum FfiConditionArg {
-    Identifier { value: String },
-    String { value: String },
-    Integer { value: i64 },
-    Float { value: f64 },
-    Boolean { value: bool },
-}
-
-/// Msgpack-encoded condition result value returned by a host condition handler.
-#[derive(Deserialize)]
-#[serde(tag = "kind", rename_all = "snake_case")]
-pub(crate) enum FfiConditionValue {
-    Bool { value: bool },
-    Enum { variant: String },
-}
 
 /// Query passed to a `ReciteConditionFn` callback.
 ///
@@ -31,27 +12,32 @@ pub(crate) enum FfiConditionValue {
 /// stored by the host.
 #[repr(C)]
 pub struct ReciteConditionQuery {
-    /// UTF-8 NUL-terminated condition function name. Borrowed for the call.
+    /// Recite-owned UTF-8 NUL-terminated condition function name. Borrowed by
+    /// the host only for the callback call.
     pub function_name: *const c_char,
-    /// Msgpack-encoded array of `FfiConditionArg` values. Borrowed for the call.
+    /// Recite-owned msgpack-encoded array of `FfiConditionArg` values. Borrowed
+    /// by the host only for the callback call.
     pub args_msgpack: *const u8,
     pub args_len: usize,
 }
 
 /// Result returned by a `ReciteConditionFn` callback.
 ///
-/// When `ok != 0`, `value_msgpack` must point to a msgpack-encoded
-/// `FfiConditionValue` valid for the duration of the callback frame.
-/// When `ok == 0`, `error_message` must point to a UTF-8 NUL-terminated string
-/// valid for the duration of the callback frame.
+/// `ok` must be exactly 0 or 1. When `ok == 1`, `value_msgpack` must point to a
+/// complete msgpack-encoded `FfiConditionValue` valid for the duration of the
+/// callback frame. When `ok == 0`, `error_message` may be null (the runtime
+/// uses a stable fallback) or point to a UTF-8 NUL-terminated string valid for
+/// the duration of the callback frame.
 #[repr(C)]
 pub struct ReciteConditionResult {
-    /// 1 = success, 0 = failure.
+    /// Exactly 1 = success, 0 = failure.
     pub ok: u8,
-    /// Host-owned msgpack bytes encoding a `FfiConditionValue`. Valid when `ok != 0`.
+    /// Host-owned msgpack bytes encoding a `FfiConditionValue`. Borrowed by
+    /// Recite only until callback return; valid when `ok == 1`.
     pub value_msgpack: *const u8,
     pub value_len: usize,
-    /// Host-owned UTF-8 NUL-terminated error message. Valid when `ok == 0`.
+    /// Host-owned UTF-8 NUL-terminated error message. Borrowed by Recite only
+    /// until callback return; valid when `ok == 0`.
     pub error_message: *const c_char,
 }
 
@@ -96,31 +82,10 @@ impl DialogueContext for FfiContext<'_> {
             ));
         };
 
-        // Encode arguments as msgpack.
-        let args: Vec<FfiConditionArg> = query
-            .arguments()
-            .iter()
-            .map(|arg| match arg {
-                recite_runtime::ConditionArgument::Identifier(v) => FfiConditionArg::Identifier {
-                    value: v.to_owned(),
-                },
-                recite_runtime::ConditionArgument::String(v) => FfiConditionArg::String {
-                    value: v.to_owned(),
-                },
-                recite_runtime::ConditionArgument::Integer(v) => {
-                    FfiConditionArg::Integer { value: v }
-                }
-                recite_runtime::ConditionArgument::Float(v) => FfiConditionArg::Float { value: v },
-                recite_runtime::ConditionArgument::Boolean(v) => {
-                    FfiConditionArg::Boolean { value: v }
-                }
-            })
-            .collect();
-
-        let args_bytes = rmp_serde::to_vec_named(&args).map_err(|e| {
+        let args_bytes = encode_condition_args(query).map_err(|error| {
             condition_error(
                 ReciteStatus::ConditionEvaluation,
-                format!("failed to encode condition args: {e}"),
+                format!("failed to encode condition args: {error}"),
             )
         })?;
 
@@ -144,36 +109,50 @@ impl DialogueContext for FfiContext<'_> {
         // c_query fields are valid for this call's stack frame.
         let result = unsafe { (entry.handler)(&c_query, entry.userdata.0) };
 
-        if result.ok != 0 {
-            if result.value_msgpack.is_null() {
-                return Err(condition_error(
-                    ReciteStatus::ConditionEvaluation,
-                    "condition handler returned ok but null value pointer",
-                ));
+        match result.ok {
+            1 => {
+                if result.value_msgpack.is_null()
+                    || result.value_len == 0
+                    || result.value_len > isize::MAX as usize
+                {
+                    return Err(condition_error(
+                        ReciteStatus::InvalidConditionResult,
+                        "condition handler returned an invalid value payload",
+                    ));
+                }
+                // SAFETY: The host guarantees the bytes are valid for this call.
+                let bytes =
+                    unsafe { std::slice::from_raw_parts(result.value_msgpack, result.value_len) };
+                let ffi_value = decode_condition_value(bytes).map_err(|error| {
+                    condition_error(
+                        ReciteStatus::InvalidConditionResult,
+                        format!("failed to decode condition result: {error}"),
+                    )
+                })?;
+                Ok(match ffi_value {
+                    crate::condition_codec::FfiConditionValue::Bool { value } => {
+                        ConditionValue::Bool(value)
+                    }
+                    crate::condition_codec::FfiConditionValue::Enum { variant } => {
+                        ConditionValue::EnumVariant(variant)
+                    }
+                })
             }
-            // SAFETY: The host guarantees the bytes are valid for this call.
-            let bytes =
-                unsafe { std::slice::from_raw_parts(result.value_msgpack, result.value_len) };
-            let ffi_value: FfiConditionValue = rmp_serde::from_slice(bytes).map_err(|e| {
-                condition_error(
-                    ReciteStatus::InvalidConditionResult,
-                    format!("failed to decode condition result: {e}"),
-                )
-            })?;
-            Ok(match ffi_value {
-                FfiConditionValue::Bool { value } => ConditionValue::Bool(value),
-                FfiConditionValue::Enum { variant } => ConditionValue::EnumVariant(variant),
-            })
-        } else {
-            let msg = if result.error_message.is_null() {
-                "condition handler failed with no message".to_owned()
-            } else {
-                // SAFETY: The host guarantees the string is valid NUL-terminated UTF-8.
-                unsafe { CStr::from_ptr(result.error_message) }
-                    .to_string_lossy()
-                    .into_owned()
-            };
-            Err(condition_error(ReciteStatus::ConditionEvaluation, msg))
+            0 => {
+                let msg = if result.error_message.is_null() {
+                    "condition handler failed with no message".to_owned()
+                } else {
+                    // SAFETY: The host guarantees the string is valid NUL-terminated UTF-8.
+                    unsafe { CStr::from_ptr(result.error_message) }
+                        .to_string_lossy()
+                        .into_owned()
+                };
+                Err(condition_error(ReciteStatus::ConditionEvaluation, msg))
+            }
+            _ => Err(condition_error(
+                ReciteStatus::InvalidConditionResult,
+                format!("condition handler returned invalid ok value {}", result.ok),
+            )),
         }
     }
 }
