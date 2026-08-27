@@ -89,7 +89,7 @@ closing_issue_matches_body() {
   local issue_code="$2"
 
   grep -Eiq -- \
-    "(^|[^[:alnum:]])(close[sd]?|fix(e[sd])?|resolve[sd]?)[[:space:]]+#[[:space:]]*${issue_code}([^[:alnum:]_]|$)" \
+    "(^|[^[:alnum:]])(close[sd]?|fix(e[sd])?|resolve[sd]?)[[:space:]]+#${issue_code}([^[:alnum:]_]|$)" \
     <<<"$body"
 }
 

@@ -131,7 +131,7 @@ closing_issue_matches_body() {
   local issue_code="$2"
 
   grep -Eiq -- \
-    "(^|[^[:alnum:]])(close[sd]?|fix(e[sd])?|resolve[sd]?)[[:space:]]+#[[:space:]]*${issue_code}([^[:alnum:]_]|$)" \
+    "(^|[^[:alnum:]])(close[sd]?|fix(e[sd])?|resolve[sd]?)[[:space:]]+#${issue_code}([^[:alnum:]_]|$)" \
     <<<"$body"
 }
 
@@ -458,6 +458,12 @@ else
   if ! latest_reduced_rollup="$(printf '%s\n' "$latest_pr_json" | jq -c '.statusCheckRollup // []' | reduce_check_rollup)" || ! evaluate_check_rollup "$latest_reduced_rollup" "$required_check"; then
     fail "reported checks changed or are no longer successful"
   fi
+fi
+
+if (( failures > 0 )); then
+  echo
+  echo "PR #${pr_number} failed ${failures} review gate(s)." >&2
+  exit 1
 fi
 
 echo

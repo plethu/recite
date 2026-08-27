@@ -65,6 +65,7 @@ run_policy_without_label() {
 
   env -u RECITE_INTEGRATION_LABEL \
     RECITE_PR_TITLE="$title" \
+    RECITE_PR_BODY="Closes #163" \
     RECITE_INTEGRATION_PR=0 \
     RECITE_BASE_REF="$base_sha" \
     RECITE_HEAD_REF=HEAD \
@@ -118,6 +119,11 @@ fi
 
 if run_policy "[REC-163] chore: integrate milestone" 0 1 integration/milestone-integration main "Closes #163_issue" >/dev/null 2>&1; then
   echo "integration PR with an underscored closing-issue suffix was accepted" >&2
+  exit 1
+fi
+
+if run_policy "[REC-163] chore: integrate milestone" 0 1 integration/milestone-integration main "Closes # 163" >/dev/null 2>&1; then
+  echo "integration PR with whitespace after the closing-issue marker was accepted" >&2
   exit 1
 fi
 

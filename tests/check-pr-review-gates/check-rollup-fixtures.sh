@@ -72,9 +72,36 @@ run_metadata_fixture 0 "$fixture_root/metadata-valid-integration.json" integrati
 run_metadata_fixture 0 "$fixture_root/metadata-valid-ordinary.json" docs/policy-metadata
 run_metadata_fixture 1 "$fixture_root/metadata-invalid-title.json" docs/policy-metadata
 run_metadata_fixture 1 "$fixture_root/metadata-invalid-body.json" docs/policy-metadata
+run_metadata_fixture 1 "$fixture_root/metadata-invalid-body-whitespace.json" docs/policy-metadata
 run_metadata_fixture 1 "$fixture_root/metadata-invalid-integration.json" integration/milestone-integration
 run_metadata_fixture 1 "$fixture_root/metadata-invalid-label.json" docs/policy-metadata
 run_metadata_fixture 1 "$fixture_root/metadata-invalid-head.json" main
 run_metadata_fixture 1 "$fixture_root/metadata-invalid-integration-label.json" integration/milestone-integration
+
+run_final_recheck_fixture() {
+  local fixture="$1"
+  local temp_dir output status
+
+  temp_dir="$(mktemp -d)"
+  set +e
+  output="$(PATH="$repo_root/tests/check-pr-review-gates:$PATH" \
+    RECITE_FAKE_GH_FIXTURE="$fixture" \
+    RECITE_FAKE_GH_STATE="$temp_dir/gh-view-count" \
+    RECITE_GITHUB_REPO=plethu/recite \
+    RECITE_MAINTAINERS=plethu \
+    "$gate" 163 integration/milestone-integration main 2>&1)"
+  status=$?
+  set -e
+  rm -f "$temp_dir/gh-view-count"
+  rmdir "$temp_dir" 2>/dev/null || true
+
+  if [[ "$status" == 0 || "$output" == *"passed Recite review gates."* ]]; then
+    echo "final live recheck mutation fixture did not fail closed" >&2
+    echo "$output" >&2
+    return 1
+  fi
+}
+
+run_final_recheck_fixture "$fixture_root/final-recheck-state-mutation.json"
 
 echo "check-pr-review-gates rollup and metadata fixtures passed."
