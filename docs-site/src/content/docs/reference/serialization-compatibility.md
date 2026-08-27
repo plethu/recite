@@ -21,4 +21,4 @@ Compact JSON is inspection-only. A future encoding needs a named artifact,
 measured Recite evidence, an explicit versioned boundary, typed-model
 migration, and conformance for every shipped host. New FFI encodings first
 need a separate ABI design under [#171](https://github.com/plethu/recite/issues/171);
-Unity v0 batch rejection is required there and is not claimed as passing here.
+Unity v0 batch rejection is required and tracked by #171.

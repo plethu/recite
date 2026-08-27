@@ -83,15 +83,17 @@ There is no current Bevy serialization consumer, and no candidate has shown a
 Recite-level size, allocation, load, or cross-host advantage that repays a
 second codec and its migration surface.
 
-## The current v0 correction window
+## The compiled-asset v0 correction window
 
-Before the first tagged release, [§12.2 of the production spec](recite-production-spec.md#122-compiled-format)
-permits an intentional v0 wire-shape correction. It must update the model,
-writer, reader, validator, inspection projection, wire matrix, and focused
-fixtures together, with the byte change reviewed as evidence. That is a
-coordinated decision, never a silent encoder change. After the first tagged
-release, field or tag changes require the format or compatibility-version rule
-below.
+For compiled assets only, [§12.2 of the production spec](recite-production-spec.md#122-compiled-format)
+permits an intentional v0 wire-shape correction before the first tagged
+release. It must update the model, writer, reader, validator, inspection
+projection, wire matrix, and focused fixtures together, with the byte change
+reviewed as evidence. That is a coordinated decision, never a silent encoder
+change. Runtime snapshots, FFI batches, and condition payloads keep their own
+contracts; this window does not authorise changes to them. After the first
+tagged release, compiled-asset field or tag changes require the format or
+compatibility-version rule below.
 
 ## Future format gate
 
@@ -141,13 +143,17 @@ No alternate encoding is being added by this decision.
 ## Migration and deprecation
 
 When a future format is accepted, migration goes through typed Recite models,
-not byte-to-byte translation. The conversion must preserve stable IDs, source
-maps, fingerprints, repeated metadata order, reason trees, effect IDs, locale,
-trace counters, and traversal pointers. A decoder rejects unknown encoding or
-compatibility values before interpreting the payload.
+not byte-to-byte translation. The conversion must preserve the stable IDs,
+source maps, fingerprints, repeated metadata order, reason trees, effect IDs,
+locale, trace counters, and traversal pointers that the named artifact carries.
+A decoder rejects unknown encoding or compatibility values before interpreting
+the payload.
 
 Retirement is artifact-specific; there is no universal same-major support
-window or indefinite support promise:
+window or indefinite support promise. Before any old reader is removed, each
+published artifact and host must be rebuilt, converted, explicitly retired, or
+covered by a supported reader. The deprecation and removal decision is then
+documented for that artifact:
 
 - Compiled assets are rebuildable. Retire the old reader only after supported
   toolchains and hosts, plus published assets, are accounted for and the
@@ -156,11 +162,12 @@ window or indefinite support promise:
   release guidance, asset-identity and snapshot validation, and a breaking
   compatibility decision before the old path is retired. Hosts must not
   rewrite opaque snapshot bytes merely to inspect them.
-- FFI v0 remains through its ABI-major contract unless an additive versioned
-  surface is accepted. A separate design must define host rejection and
-  ownership before any new batch or condition encoding is interpreted. Unity
-  v0 batch rejection is required and is being implemented under [#171](https://github.com/plethu/recite/issues/171);
-  this branch does not claim that check already passes.
+- FFI v0 remains through its ABI-major contract. An additive versioned surface
+  does not silently authorise removal of v0; the accounting rule above and an
+  explicit ABI-boundary deprecation/removal decision still apply. A separate
+  design must define host rejection and ownership before any new batch or
+  condition encoding is interpreted. Unity v0 batch rejection is required and
+  tracked by [#171](https://github.com/plethu/recite/issues/171).
 
 Length-prefixed buffers, allocator ownership, statuses, callback
 non-reentrancy, and condition error categories remain part of the ABI migration
