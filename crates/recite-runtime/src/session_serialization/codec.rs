@@ -1,4 +1,6 @@
 use recite_core::CompiledDialogue;
+use serde::Deserialize;
+use std::io::Cursor;
 
 use crate::session_snapshot::{DialogueSessionSnapshot, snapshot_session};
 use crate::{DialogueError, DialogueSession};
@@ -26,11 +28,22 @@ pub fn decode_session_messagepack(
 ) -> Result<DialogueSession, DialogueError> {
     reject_unsupported_messagepack_snapshot_format(bytes)?;
 
-    let snapshot: DialogueSessionSnapshot = rmp_serde::from_slice(bytes).map_err(|error| {
+    let mut cursor = Cursor::new(bytes);
+    let mut deserializer = rmp_serde::Deserializer::new(&mut cursor);
+    let snapshot = DialogueSessionSnapshot::deserialize(&mut deserializer).map_err(|error| {
         DialogueError::SessionSnapshotDecodeFailed {
             reason: error.to_string(),
         }
     })?;
+    let consumed = cursor.position() as usize;
+    if consumed != bytes.len() {
+        return Err(DialogueError::SessionSnapshotDecodeFailed {
+            reason: format!(
+                "MessagePack snapshot has {} trailing bytes",
+                bytes.len() - consumed
+            ),
+        });
+    }
 
     restore_session(asset, snapshot)
 }

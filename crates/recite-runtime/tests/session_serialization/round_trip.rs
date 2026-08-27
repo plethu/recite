@@ -63,3 +63,27 @@ fn structured_snapshot_records_locale_and_compact_runtime_location() {
     let restored = restore_session(&asset, snapshot).expect("restores snapshot");
     assert_eq!(restored.locale(), Some(&locale));
 }
+
+#[test]
+fn messagepack_decoder_rejects_trailing_bytes_as_typed_failure() {
+    let asset = compile_asset(
+        "dialogue/start.recite",
+        concat!(
+            ":: start default\n",
+            "> line@cfe6f9b87b58303a0a8b\n",
+            "  Start.\n",
+            "-> END\n",
+        ),
+    );
+    let session = start_scene(&asset, None).expect("starts");
+    let mut bytes = encode_session_messagepack(&session).expect("encodes session");
+    bytes.push(0xc0);
+
+    let error = decode_session_messagepack(&asset, &bytes)
+        .expect_err("trailing MessagePack bytes are not part of the snapshot");
+    assert!(matches!(
+        error,
+        DialogueError::SessionSnapshotDecodeFailed { reason }
+            if reason.contains("trailing bytes")
+    ));
+}
