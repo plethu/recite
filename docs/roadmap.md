@@ -344,6 +344,10 @@ and migrate content without reverse-engineering the repository.
 - structured import reporting and provenance, with honest compatibility notes
   for Ink, Yarn Spinner, Dialogic, Dialogue Manager, Dialogue System for Unity,
   and adjacent tools;
+- bounded subset importer work tracked by #99–#104: #99 owns the shared import
+  report/provenance model, #100–#103 own source-family subset importers, and
+  #104 owns compatibility notes. This is provenance-preserving migration help,
+  not full runtime compatibility with another tool.
 - alternatives and adoption guidance based on shipped behavior rather than
   aspirational framework comparisons.
 
@@ -391,10 +395,10 @@ remain authoritative if the tracker is split again.
 | Native GUI strategy and accessibility proof | [#54 GUI strategy](https://github.com/plethu/recite/issues/54), [#123 accessibility requirements](https://github.com/plethu/recite/issues/123) (2 open) | 21 |
 | GUI workbench | [#170 GUI workbench](https://github.com/plethu/recite/issues/170) (1 open) | 22 |
 | Engine companions | #49, #83–#86, #132–#134 (8 open) | 23 |
-| Distribution, adoption, and migration | #38, #56, #57, #60, #99, #104 (6 open) | 24 |
+| Distribution, adoption, and migration | #38, #56, #57, #60, #99, #100–#103 (bounded subset importers), #104 (10 open) | 24 |
 | Serious v1 release | #77–#81, #109 (6 open) | 25 |
 | Integration workflow | [#163 integration workflow](https://github.com/plethu/recite/issues/163) | 17 |
-| Post-v1 / no milestone | #74, #100–#103, #119, #121, #126 (8 open) | — |
+| Post-v1 / no milestone | #74, #119, #121, #126 (4 open) | — |
 
 Issue #163 starts in milestone 17 and applies across the full 17–25 outcome
 sequence. Issues #59 and #61 are closed and superseded, so they are omitted;
