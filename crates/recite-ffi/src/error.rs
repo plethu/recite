@@ -79,6 +79,7 @@ impl From<DialogueError> for ReciteStatus {
             DialogueError::UnsupportedCompiledFormat { .. }
             | DialogueError::AssetMismatch { .. }
             | DialogueError::AssetContentMismatch { .. } => Self::StaleOrIncompatible,
+            DialogueError::SchemaMismatch { .. } => Self::SchemaMismatch,
             DialogueError::MalformedCompiledAsset { .. } => Self::AssetLoadOrDecode,
             DialogueError::EffectPending { .. }
             | DialogueError::NoEffectPending { .. }
@@ -100,6 +101,19 @@ impl From<DialogueError> for ReciteStatus {
             DialogueError::SessionEnded => Self::NoActiveSession,
             DialogueError::TraversalLimitExceeded { .. } => Self::DialogueFault,
         }
+    }
+}
+
+/// Maps a runtime restore error to the save/load operation's status vocabulary.
+///
+/// Asset identity/content mismatches are stale-asset faults in ordinary runtime
+/// traversal, but a restore operation reports them as an incompatible save.
+pub(crate) fn restore_status(error: &DialogueError) -> ReciteStatus {
+    match error {
+        DialogueError::AssetMismatch { .. } | DialogueError::AssetContentMismatch { .. } => {
+            ReciteStatus::SaveLoadIncompatibility
+        }
+        _ => ReciteStatus::from(error.clone()),
     }
 }
 

@@ -1,0 +1,33 @@
+id: rust-inline-test-module
+valid:
+  - |
+    #[cfg(test)]
+    mod tests;
+  - |
+    fn production() {
+        let first = Some(1);
+        let second = Some(2);
+        if let Some(value) = first {
+            assert_eq!(value, 1);
+        }
+        if let Some(value) = second {
+            assert_eq!(value, 2);
+        }
+    }
+  - |
+    fn ordered_parser_branch(input: &str) -> usize {
+        if input.starts_with('"') {
+            1
+        } else if input.ends_with('"') {
+            2
+        } else {
+            0
+        }
+    }
+invalid:
+  - |
+    #[cfg(test)]
+    mod tests {
+        #[test]
+        fn inline_test() {}
+    }

@@ -285,7 +285,7 @@ impl Serialize for MsgAvailabilityReasonArgValue<'_> {
     where
         S: serde::Serializer,
     {
-        let mut tuple = serializer.serialize_tuple(2)?;
+        let mut tuple = serializer.serialize_tuple(recite_core::V0_TAGGED_VALUE_FIELDS as usize)?;
         match self.0 {
             recite_core::CompiledAvailabilityReasonArgValue::ConditionArg(value) => {
                 tuple.serialize_element("ConditionArg")?;
@@ -327,7 +327,7 @@ impl Serialize for MsgSpeaker<'_> {
     where
         S: serde::Serializer,
     {
-        let mut tuple = serializer.serialize_tuple(1)?;
+        let mut tuple = serializer.serialize_tuple(recite_core::V0_SPEAKER_FIELDS as usize)?;
         tuple.serialize_element(&self.0)?;
         tuple.end()
     }

@@ -24,6 +24,18 @@ namespace Recite.Unity.Native
             WriteUInt16((ushort)len);
         }
 
+        internal void WriteArrayHeader(int len)
+        {
+            if (len < 16)
+            {
+                bytes.Add((byte)(0x90 | len));
+                return;
+            }
+
+            bytes.Add(0xdc);
+            WriteUInt16((ushort)len);
+        }
+
         internal void WriteString(string value)
         {
             var data = Encoding.UTF8.GetBytes(value ?? string.Empty);
@@ -36,10 +48,15 @@ namespace Recite.Unity.Native
                 bytes.Add(0xd9);
                 bytes.Add((byte)data.Length);
             }
-            else
+            else if (data.Length <= ushort.MaxValue)
             {
                 bytes.Add(0xda);
                 WriteUInt16((ushort)data.Length);
+            }
+            else
+            {
+                bytes.Add(0xdb);
+                WriteUInt32((uint)data.Length);
             }
 
             bytes.AddRange(data);
@@ -50,8 +67,26 @@ namespace Recite.Unity.Native
             bytes.Add(value ? (byte)0xc3 : (byte)0xc2);
         }
 
+        internal void WriteNull()
+        {
+            bytes.Add(0xc0);
+        }
+
+        internal void WriteRaw(byte[] value)
+        {
+            bytes.AddRange(value ?? new byte[0]);
+        }
+
         private void WriteUInt16(ushort value)
         {
+            bytes.Add((byte)(value >> 8));
+            bytes.Add((byte)value);
+        }
+
+        private void WriteUInt32(uint value)
+        {
+            bytes.Add((byte)(value >> 24));
+            bytes.Add((byte)(value >> 16));
             bytes.Add((byte)(value >> 8));
             bytes.Add((byte)value);
         }

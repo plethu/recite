@@ -13,13 +13,28 @@ pub(crate) use recite_ffi::{
 };
 
 pub(crate) fn compile_to_bytes(source: &str) -> Vec<u8> {
+    compile_to_bytes_with_schema(source, SchemaFingerprint::NoSchema)
+}
+
+pub(crate) fn compile_to_bytes_with_schema(
+    source: &str,
+    schema_fingerprint: SchemaFingerprint,
+) -> Vec<u8> {
+    compile_to_bytes_with_schema_and_compiler(source, schema_fingerprint, "0.0.1")
+}
+
+pub(crate) fn compile_to_bytes_with_schema_and_compiler(
+    source: &str,
+    schema_fingerprint: SchemaFingerprint,
+    compiler_version: &str,
+) -> Vec<u8> {
     let report = compile_inputs(
         [CompileInput::new("test.recite", source)],
         CompileOptions::new(
-            CompilerVersion::new("0.0.1").unwrap(),
+            CompilerVersion::new(compiler_version).unwrap(),
             CompiledAssetId::new("test/main.recitec").unwrap(),
             SourceMapId::new("test/main.recitec.map").unwrap(),
-            SchemaFingerprint::NoSchema,
+            schema_fingerprint,
         ),
     )
     .expect("compile does not hard fail");

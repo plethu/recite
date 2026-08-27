@@ -9,6 +9,14 @@ pub(super) fn ensure_snapshot_matches_asset(
     asset: &CompiledDialogue,
     snapshot: &DialogueSessionSnapshot,
 ) -> Result<(), DialogueError> {
+    let actual_schema_fingerprint = schema_fingerprint_snapshot(&asset.header.schema_fingerprint);
+    if snapshot.schema_fingerprint != actual_schema_fingerprint {
+        return Err(DialogueError::SchemaMismatch {
+            asset_id: snapshot.asset_id.clone(),
+            expected_schema_fingerprint: snapshot.schema_fingerprint.clone(),
+            actual_schema_fingerprint,
+        });
+    }
     if snapshot.asset_id != asset.header.asset_id.as_str()
         || snapshot.asset_format_version != asset.header.format_version
         || snapshot.asset_compiler_compatibility_version
@@ -33,13 +41,6 @@ pub(super) fn ensure_snapshot_matches_asset(
         return asset_content_mismatch(
             snapshot,
             "source map id differs from the provided compiled asset",
-        );
-    }
-    if snapshot.schema_fingerprint != schema_fingerprint_snapshot(&asset.header.schema_fingerprint)
-    {
-        return asset_content_mismatch(
-            snapshot,
-            "schema fingerprint differs from the provided compiled asset",
         );
     }
     let sources = asset

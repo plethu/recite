@@ -37,7 +37,8 @@ pub(super) struct MsgSourceSpan<'a>(pub(super) &'a SourceSpan);
 
 macro_rules! serialize_tagged {
     ($serializer:expr, $tag:expr, $payload:expr) => {{
-        let mut tuple = $serializer.serialize_tuple(2)?;
+        let mut tuple =
+            $serializer.serialize_tuple(recite_core::V0_TAGGED_VALUE_FIELDS as usize)?;
         tuple.serialize_element(&$tag)?;
         tuple.serialize_element(&$payload)?;
         tuple.end()
@@ -99,7 +100,7 @@ impl Serialize for MsgFingerprint<'_> {
     where
         S: serde::Serializer,
     {
-        let mut tuple = serializer.serialize_tuple(2)?;
+        let mut tuple = serializer.serialize_tuple(recite_core::V0_FINGERPRINT_FIELDS as usize)?;
         tuple.serialize_element(self.0.algorithm().as_str())?;
         tuple.serialize_element(serde_bytes::Bytes::new(self.0.digest().as_bytes()))?;
         tuple.end()
@@ -290,7 +291,8 @@ impl Serialize for MsgConditionCall<'_> {
     where
         S: serde::Serializer,
     {
-        let mut tuple = serializer.serialize_tuple(2)?;
+        let mut tuple =
+            serializer.serialize_tuple(recite_core::V0_CONDITION_CALL_FIELDS as usize)?;
         tuple.serialize_element(self.0.function.as_str())?;
         tuple.serialize_element(&self.0.args.iter().map(MsgArgument).collect::<Vec<_>>())?;
         tuple.end()

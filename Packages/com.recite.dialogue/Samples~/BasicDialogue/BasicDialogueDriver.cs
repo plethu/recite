@@ -53,9 +53,9 @@ public sealed class BasicDialogueDriver : MonoBehaviour
         if (output is ReciteEffectOutput effectOutput)
         {
             Debug.Log(effectOutput.Effect.Mode + " effect: " + effectOutput.Effect.Function);
-            if (effectOutput.Effect.Function == "grant_item")
+            if (effectOutput.Effect.Mode == "blocking" && effectOutput.Effect.Function == "grant_item")
             {
-                hasRelayKey = true;
+                ReconcileGrantItem(effectOutput.Effect);
                 runner.AcknowledgeEffect(effectOutput.Effect.Id);
             }
         }
@@ -66,5 +66,20 @@ public sealed class BasicDialogueDriver : MonoBehaviour
     public void OnReciteError(ReciteAdapterException error)
     {
         Debug.LogError(error.Status + ": " + error.Message);
+    }
+
+    private void ReconcileGrantItem(ReciteEffect effect)
+    {
+        // A restored pending request is allowed to be emitted again with the
+        // same ID. Reconcile against gameplay state before acknowledging it so
+        // an already-granted item is not applied twice.
+        if (hasRelayKey)
+        {
+            Debug.Log("Reconciled already-applied grant_item request " + effect.Id);
+            return;
+        }
+
+        hasRelayKey = true;
+        Debug.Log("Applied grant_item request " + effect.Id);
     }
 }

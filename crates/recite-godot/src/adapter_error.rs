@@ -6,6 +6,7 @@ use recite_runtime::DialogueError;
 pub enum AdapterErrorKind {
     AssetLoadOrDecode,
     StaleOrIncompatibleAsset,
+    SchemaMismatch,
     NoActiveSession,
     SessionAlreadyActive,
     UnknownStartBlock,
@@ -30,6 +31,7 @@ impl AdapterErrorKind {
         match self {
             Self::AssetLoadOrDecode => "asset_load_or_decode_error",
             Self::StaleOrIncompatibleAsset => "stale_or_incompatible_asset_error",
+            Self::SchemaMismatch => "schema_mismatch_error",
             Self::NoActiveSession => "no_active_session_error",
             Self::SessionAlreadyActive => "session_already_active_error",
             Self::UnknownStartBlock => "unknown_start_block_error",
@@ -45,44 +47,6 @@ impl AdapterErrorKind {
             Self::DialogueFault => "dialogue_fault_error",
         }
     }
-
-    pub(crate) fn from_code(code: &str) -> Option<Self> {
-        match code {
-            "asset_load_or_decode_error" => Some(Self::AssetLoadOrDecode),
-            "stale_or_incompatible_asset_error" => Some(Self::StaleOrIncompatibleAsset),
-            "no_active_session_error" => Some(Self::NoActiveSession),
-            "session_already_active_error" => Some(Self::SessionAlreadyActive),
-            "unknown_start_block_error" => Some(Self::UnknownStartBlock),
-            "invalid_choice_error" => Some(Self::InvalidChoice),
-            "stale_choice_error" => Some(Self::StaleChoice),
-            "unavailable_choice_error" => Some(Self::UnavailableChoice),
-            "missing_condition_handler_error" => Some(Self::MissingConditionHandler),
-            "condition_evaluation_error" => Some(Self::ConditionEvaluationFailed),
-            "invalid_condition_result_error" => Some(Self::InvalidConditionResult),
-            "effect_acknowledgement_error" => Some(Self::EffectAcknowledgement),
-            "save_load_incompatibility_error" => Some(Self::SaveLoadIncompatibility),
-            "localisation_error" => Some(Self::Localisation),
-            "dialogue_fault_error" => Some(Self::DialogueFault),
-            _ => None,
-        }
-    }
-}
-
-/// Encodes a condition error for propagation through [`recite_runtime::ConditionEvaluationError`].
-///
-/// `ConditionEvaluationError` carries only a `String`, so we embed the kind
-/// code as a `[code]` prefix. [`decode_condition_error_kind`] recovers it on
-/// the other side in `From<DialogueError>`.
-pub(crate) fn encode_condition_error(error: &AdapterError) -> String {
-    format!("[{}] {}", error.kind().code(), error)
-}
-
-/// Recovers an [`AdapterErrorKind`] from a reason string written by
-/// [`encode_condition_error`].
-pub(crate) fn decode_condition_error_kind(reason: &str) -> Option<AdapterErrorKind> {
-    let rest = reason.strip_prefix('[')?;
-    let (code, _) = rest.split_once(']')?;
-    AdapterErrorKind::from_code(code)
 }
 
 #[derive(Clone, Debug, Eq, PartialEq, thiserror::Error)]
@@ -146,6 +110,7 @@ impl From<DialogueError> for AdapterError {
             | DialogueError::AssetContentMismatch { .. } => {
                 AdapterErrorKind::StaleOrIncompatibleAsset
             }
+            DialogueError::SchemaMismatch { .. } => AdapterErrorKind::SchemaMismatch,
             DialogueError::TraversalLimitExceeded { .. } => AdapterErrorKind::DialogueFault,
             DialogueError::MalformedCompiledAsset { .. } => AdapterErrorKind::AssetLoadOrDecode,
             DialogueError::InvalidChoice { .. } => AdapterErrorKind::InvalidChoice,
@@ -156,9 +121,8 @@ impl From<DialogueError> for AdapterError {
             DialogueError::WrongEffectAcknowledgement { .. }
             | DialogueError::NoEffectPending { .. }
             | DialogueError::EffectPending { .. } => AdapterErrorKind::EffectAcknowledgement,
-            DialogueError::ConditionEvaluationFailed { ref reason, .. } => {
-                decode_condition_error_kind(reason)
-                    .unwrap_or(AdapterErrorKind::ConditionEvaluationFailed)
+            DialogueError::ConditionEvaluationFailed { .. } => {
+                AdapterErrorKind::ConditionEvaluationFailed
             }
             DialogueError::ConditionResultTypeMismatch { .. } => {
                 AdapterErrorKind::InvalidConditionResult
@@ -175,5 +139,20 @@ impl From<DialogueError> for AdapterError {
             DialogueError::SessionEnded => AdapterErrorKind::NoActiveSession,
         };
         AdapterError::with_detail(kind, error.to_string())
+    }
+}
+
+impl AdapterError {
+    pub(crate) fn from_restore_error(error: DialogueError) -> Self {
+        let kind = match &error {
+            DialogueError::AssetMismatch { .. } | DialogueError::AssetContentMismatch { .. } => {
+                Some(AdapterErrorKind::SaveLoadIncompatibility)
+            }
+            _ => None,
+        };
+        match kind {
+            Some(kind) => Self::with_detail(kind, error.to_string()),
+            None => Self::from(error),
+        }
     }
 }

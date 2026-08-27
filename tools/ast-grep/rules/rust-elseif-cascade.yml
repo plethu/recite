@@ -1,0 +1,29 @@
+id: rust-elseif-cascade
+language: Rust
+severity: error
+message: Four or more equality branches over one value may hide policy ownership; prefer an enum match or an explicit dispatch table.
+note: |
+  Matches one equality `if` followed by at least three `else if` branches over
+  the same value. This is deliberately narrower than a three-branch heuristic
+  because small classifiers are common in Recite. Suppress an intentional
+  true positive next to the chain with
+  `// ast-grep-ignore: rust-elseif-cascade` and a reason explaining why the
+  branch order is the local policy. The root-only constraint reports a longer
+  chain once rather than once for each matching suffix.
+rule:
+  all:
+    - pattern: |
+        if $VALUE == $A {
+          $$$THEN0
+        } else if $VALUE == $B {
+          $$$THEN1
+        } else if $VALUE == $C {
+          $$$THEN2
+        } else if $VALUE == $D {
+          $$$THEN3
+        }
+    # An else-if suffix also parses as an if-expression. Only report the
+    # outer chain root so a five- or six-branch chain emits one diagnostic.
+    - not:
+        inside:
+          kind: else_clause

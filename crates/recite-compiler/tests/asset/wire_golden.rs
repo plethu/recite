@@ -18,7 +18,10 @@ use std::fmt::Write as _;
 use recite_core::decode_compiled_dialogue_messagepack;
 
 use super::fixture_support::assert_text_snapshot;
-use super::tag_surface::compile_schema_tag_surface_asset;
+use super::tag_surface::{
+    compile_literal_reason_tag_surface_asset, compile_schema_tag_surface_asset,
+    compile_value_tag_surface_asset,
+};
 
 #[test]
 fn schema_tag_surface_messagepack_matches_the_golden_v0_wire_bytes() {
@@ -39,6 +42,55 @@ fn schema_tag_surface_messagepack_matches_the_golden_v0_wire_bytes() {
     assert_text_snapshot(
         &hex_dump(&asset.messagepack),
         "compiled_asset_v0_tag_surface_messagepack_hex".to_owned(),
+    );
+}
+
+#[test]
+fn value_tag_surface_messagepack_matches_the_golden_v0_wire_bytes() {
+    let asset = compile_value_tag_surface_asset();
+
+    let decoded = decode_compiled_dialogue_messagepack(&asset.messagepack)
+        .expect("value golden asset decodes");
+    assert_eq!(decoded, asset.dialogue);
+
+    assert_text_snapshot(
+        &hex_dump(&asset.messagepack),
+        "compiled_asset_v0_value_tag_surface_messagepack_hex".to_owned(),
+    );
+}
+
+#[test]
+fn literal_reason_tag_surface_messagepack_matches_the_golden_v0_wire_bytes() {
+    let asset = compile_literal_reason_tag_surface_asset();
+
+    let decoded = decode_compiled_dialogue_messagepack(&asset.messagepack)
+        .expect("literal-reason golden asset decodes");
+    assert_eq!(decoded, asset.dialogue);
+    assert_eq!(
+        asset.dialogue.condition_availability_reasons[0]
+            .args
+            .iter()
+            .map(|binding| &binding.value)
+            .collect::<Vec<_>>(),
+        [
+            &recite_core::CompiledAvailabilityReasonArgValue::Literal(
+                recite_core::ScalarValue::Boolean(true)
+            ),
+            &recite_core::CompiledAvailabilityReasonArgValue::Literal(
+                recite_core::ScalarValue::Float(1.25)
+            ),
+            &recite_core::CompiledAvailabilityReasonArgValue::Literal(
+                recite_core::ScalarValue::Integer(7)
+            ),
+            &recite_core::CompiledAvailabilityReasonArgValue::Literal(
+                recite_core::ScalarValue::String("literal".to_owned())
+            ),
+        ]
+    );
+
+    assert_text_snapshot(
+        &hex_dump(&asset.messagepack),
+        "compiled_asset_v0_literal_reason_tag_surface_messagepack_hex".to_owned(),
     );
 }
 

@@ -8,6 +8,7 @@ namespace Recite.Unity
     public sealed class ReciteDialogueService : IDisposable
     {
         private readonly Dictionary<string, Func<IReadOnlyList<object>, ReciteConditionValue>> conditions = new Dictionary<string, Func<IReadOnlyList<object>, ReciteConditionValue>>(StringComparer.Ordinal);
+        private readonly Dictionary<string, Func<IReadOnlyList<ReciteConditionArgument>, ReciteConditionValue>> typedConditions = new Dictionary<string, Func<IReadOnlyList<ReciteConditionArgument>, ReciteConditionValue>>(StringComparer.Ordinal);
         private readonly ReciteNativeBridge.ReciteConditionFn conditionCallback;
         private GCHandle pinnedConditionValue;
         private GCHandle pinnedConditionError;
@@ -40,6 +41,28 @@ namespace Recite.Unity
             }
 
             conditions[name] = handler ?? throw new ArgumentNullException(nameof(handler));
+            typedConditions.Remove(name);
+        }
+
+        public void RegisterTypedCondition(string name, Func<IReadOnlyList<ReciteConditionArgument>, bool> handler)
+        {
+            if (handler == null)
+            {
+                throw new ArgumentNullException(nameof(handler));
+            }
+
+            RegisterTypedConditionValue(name, args => ReciteConditionValue.Bool(handler(args)));
+        }
+
+        public void RegisterTypedConditionValue(string name, Func<IReadOnlyList<ReciteConditionArgument>, ReciteConditionValue> handler)
+        {
+            if (string.IsNullOrWhiteSpace(name))
+            {
+                throw new ArgumentException("condition name is required", nameof(name));
+            }
+
+            typedConditions[name] = handler ?? throw new ArgumentNullException(nameof(handler));
+            conditions.Remove(name);
         }
 
         public ReciteOutputBatch Start(ReciteDialogueAsset asset, string startBlock = null, string locale = null)
@@ -176,7 +199,11 @@ namespace Recite.Unity
 
         private void RegisterNativeConditions()
         {
-            foreach (var name in new List<string>(conditions.Keys))
+            var names = new HashSet<string>(conditions.Keys, StringComparer.Ordinal);
+            names.UnionWith(typedConditions.Keys);
+            var registeredNames = new List<string>(names);
+            registeredNames.Sort(StringComparer.Ordinal);
+            foreach (var name in registeredNames)
             {
                 ReciteNativeBridge.ThrowIfError(ReciteNativeBridge.SessionRegisterCondition(sessionHandle, ReciteNativeBridge.ToUtf8NullTerminated(name), conditionCallback, IntPtr.Zero));
             }
@@ -184,10 +211,40 @@ namespace Recite.Unity
 
         private static ReciteOutputBatch DecodeBatch(ref ReciteNativeBridge.ReciteBuffer batch)
         {
-            return ReciteMessagePack.DecodeOutputBatch(ReciteNativeBridge.CopyAndFree(ref batch));
+            return DecodeBatchBytes(ReciteNativeBridge.CopyAndFree(ref batch));
         }
 
-        private ReciteNativeBridge.ReciteConditionResult EvaluateCondition(IntPtr queryPtr, IntPtr userdata)
+        internal static ReciteOutputBatch DecodeBatchBytes(byte[] bytes)
+        {
+            try
+            {
+                return ReciteMessagePack.DecodeOutputBatch(bytes);
+            }
+            catch (FormatException error)
+            {
+                throw new ReciteAdapterException(ReciteStatus.Validation, error.Message);
+            }
+            catch (OverflowException error)
+            {
+                throw new ReciteAdapterException(ReciteStatus.Validation, error.Message);
+            }
+            catch (InvalidCastException error)
+            {
+                throw new ReciteAdapterException(ReciteStatus.Validation, error.Message);
+            }
+            catch (System.Collections.Generic.KeyNotFoundException error)
+            {
+                throw new ReciteAdapterException(ReciteStatus.Validation, error.Message);
+            }
+            catch (ArgumentException error)
+            {
+                throw new ReciteAdapterException(ReciteStatus.Validation, error.Message);
+            }
+        }
+
+        // Internal so the managed headless fixture can exercise the same callback
+        // boundary used by the native bridge without requiring a Unity binary.
+        internal ReciteNativeBridge.ReciteConditionResult EvaluateCondition(IntPtr queryPtr, IntPtr userdata)
         {
             if (queryPtr == IntPtr.Zero)
             {
@@ -196,14 +253,18 @@ namespace Recite.Unity
 
             var query = Marshal.PtrToStructure<ReciteNativeBridge.ReciteConditionQuery>(queryPtr);
             var name = Marshal.PtrToStringUTF8(query.FunctionName) ?? string.Empty;
-            if (!conditions.TryGetValue(name, out var handler))
+            conditions.TryGetValue(name, out var handler);
+            typedConditions.TryGetValue(name, out var typedHandler);
+            if (handler == null && typedHandler == null)
             {
                 return ConditionFailure("no Unity condition handler registered for `" + name + "`");
             }
 
             try
             {
-                var value = handler(ReciteNativeBridge.ReadConditionArgs(query.ArgsMsgpack, query.ArgsLen));
+                var value = typedHandler != null
+                    ? typedHandler(ReciteNativeBridge.ReadTypedConditionArgs(query.ArgsMsgpack, query.ArgsLen))
+                    : handler(ReciteNativeBridge.ReadConditionArgs(query.ArgsMsgpack, query.ArgsLen));
                 var encoded = value != null && value.IsEnum
                     ? ReciteMessagePack.EncodeConditionEnum(value.EnumVariant)
                     : ReciteMessagePack.EncodeConditionBool(value != null && value.BoolValue);

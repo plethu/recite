@@ -1,6 +1,7 @@
 mod support;
 
 use recite_godot::{ReciteDialogueAsset, ReciteDialogueDriver};
+use recite_runtime::{DialogueError, DialogueSchemaFingerprintSnapshot};
 
 use support::{
     assert_deferred_effects, assert_effect, assert_line, assert_prompt_choice_ids, compile_asset,
@@ -86,4 +87,15 @@ fn malformed_messagepack_uses_contract_error_category() {
     };
 
     assert_eq!(error.code(), "asset_load_or_decode_error");
+}
+
+#[test]
+fn schema_mismatch_uses_dedicated_adapter_error_category() {
+    let error = recite_godot::AdapterError::from(DialogueError::SchemaMismatch {
+        asset_id: "dialogue/main.recitec".to_owned(),
+        expected_schema_fingerprint: DialogueSchemaFingerprintSnapshot::NoSchema,
+        actual_schema_fingerprint: DialogueSchemaFingerprintSnapshot::NoSchema,
+    });
+
+    assert_eq!(error.code(), "schema_mismatch_error");
 }

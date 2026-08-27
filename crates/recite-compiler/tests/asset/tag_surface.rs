@@ -91,6 +91,71 @@ pub(super) fn compile_schema_tag_surface_asset() -> CompiledAssetOutput {
     report.asset.expect("valid fixture emits an asset")
 }
 
+/// Compile an isolated schema mapping whose reason arguments cover every
+/// string-tagged availability-reason value variant. Keeping this separate
+/// preserves the established schema tag-surface golden bytes.
+pub(super) fn compile_literal_reason_tag_surface_asset() -> CompiledAssetOutput {
+    let schema = load_schema_manifest_str(
+        "fixtures/schema/inline-literal-reason.json",
+        INLINE_LITERAL_REASON_SCHEMA,
+    )
+    .schema
+    .expect("valid inline literal-reason schema fixture");
+
+    let report = compile_inputs_with_schema(
+        [CompileInput::new(
+            "dialogue/literal-reason.recite",
+            concat!(
+                ":: literals default\n",
+                "? gated@c42cae1db1b80b26c8f9 requires=(literal_reason())\n",
+                "  Gated.\n",
+                "  -> END\n",
+            ),
+        )],
+        options_with_schema_fingerprint(),
+        &schema,
+    )
+    .expect("literal-reason tag-surface compile does not hard-fail");
+    assert!(
+        report.diagnostics.is_empty(),
+        "literal-reason tag-surface fixture should compile without diagnostics: {:?}",
+        report.diagnostics
+    );
+    report.asset.expect("valid fixture emits an asset")
+}
+
+const INLINE_LITERAL_REASON_SCHEMA: &str = r#"
+{
+  "schema_version": 1,
+  "conditions": {
+    "literal_reason": {
+      "params": [],
+      "returns": "bool",
+      "availability_reason": {
+        "reason": "literal_reason",
+        "args": {
+          "bool_value": true,
+          "float_value": 1.25,
+          "int_value": 7,
+          "string_value": "literal"
+        }
+      }
+    }
+  },
+  "availability_reasons": {
+    "literal_reason": {
+      "template": "Literal values: {string_value}, {int_value}, {float_value}, {bool_value}.",
+      "params": [
+        { "name": "bool_value", "type": "bool" },
+        { "name": "float_value", "type": "float" },
+        { "name": "int_value", "type": "int" },
+        { "name": "string_value", "type": "string" }
+      ]
+    }
+  }
+}
+"#;
+
 #[test]
 fn compiler_generated_messagepack_round_trips_the_v0_tag_surface() {
     let schema_tag_asset = compile_schema_tag_surface_asset();
@@ -100,6 +165,15 @@ fn compiler_generated_messagepack_round_trips_the_v0_tag_surface() {
     assert_eq!(decoded_schema_tag_asset, schema_tag_asset.dialogue);
     assert_schema_tag_surface_is_covered(&decoded_schema_tag_asset);
 
+    let value_tag_asset = compile_value_tag_surface_asset();
+    let decoded_value_tag_asset =
+        decode_compiled_dialogue_messagepack(&value_tag_asset.messagepack)
+            .expect("compiler-generated MessagePack value tags decode");
+    assert_eq!(decoded_value_tag_asset, value_tag_asset.dialogue);
+    assert_value_tag_surface_is_covered(&decoded_value_tag_asset);
+}
+
+pub(super) fn compile_value_tag_surface_asset() -> CompiledAssetOutput {
     let value_tag_report = compile_inputs(
         [CompileInput::new(
             "dialogue/value-tags.recite",
@@ -118,14 +192,9 @@ fn compiler_generated_messagepack_round_trips_the_v0_tag_surface() {
         "value tag-surface fixture should compile without diagnostics: {:?}",
         value_tag_report.diagnostics
     );
-    let value_tag_asset = value_tag_report
+    value_tag_report
         .asset
-        .expect("valid fixture emits an asset");
-    let decoded_value_tag_asset =
-        decode_compiled_dialogue_messagepack(&value_tag_asset.messagepack)
-            .expect("compiler-generated MessagePack value tags decode");
-    assert_eq!(decoded_value_tag_asset, value_tag_asset.dialogue);
-    assert_value_tag_surface_is_covered(&decoded_value_tag_asset);
+        .expect("valid fixture emits an asset")
 }
 
 fn options_with_schema_fingerprint() -> CompileOptions {

@@ -5,6 +5,8 @@ use recite_runtime::{
     DialogueEffectRequest, DialogueEvent, DialogueLine,
 };
 use serde::Serialize;
+use std::fmt;
+use std::io::Write;
 
 pub(crate) const BATCH_FORMAT_VERSION: u16 = 0;
 
@@ -12,6 +14,31 @@ pub(crate) const BATCH_FORMAT_VERSION: u16 = 0;
 pub(crate) struct FfiOutputBatch {
     pub batch_format_version: u16,
     pub events: Vec<FfiEvent>,
+}
+
+/// Serialization failed while building a host-facing output batch.
+///
+/// This remains private to the FFI implementation. The C ABI flattens it to
+/// the stable dialogue-fault status only after the encoder has returned.
+#[derive(Debug)]
+pub(crate) struct FfiOutputEncodeError {
+    source: rmp_serde::encode::Error,
+}
+
+impl fmt::Display for FfiOutputEncodeError {
+    fn fmt(&self, formatter: &mut fmt::Formatter<'_>) -> fmt::Result {
+        write!(
+            formatter,
+            "failed to encode FFI output batch: {}",
+            self.source
+        )
+    }
+}
+
+impl std::error::Error for FfiOutputEncodeError {
+    fn source(&self) -> Option<&(dyn std::error::Error + 'static)> {
+        Some(&self.source)
+    }
 }
 
 #[derive(Serialize)]
@@ -139,14 +166,26 @@ pub(crate) enum FfiEffectArg {
     Boolean { value: bool },
 }
 
-pub(crate) fn encode_batch(events: Vec<DialogueEvent>) -> Result<Vec<u8>, String> {
+pub(crate) fn encode_batch(events: Vec<DialogueEvent>) -> Result<Vec<u8>, FfiOutputEncodeError> {
+    let mut bytes = Vec::new();
+    encode_batch_to_writer(events, &mut bytes)?;
+    Ok(bytes)
+}
+
+fn encode_batch_to_writer<W: Write + ?Sized>(
+    events: Vec<DialogueEvent>,
+    writer: &mut W,
+) -> Result<(), FfiOutputEncodeError> {
     let ffi_events: Vec<FfiEvent> = events.into_iter().map(ffi_event).collect();
     let batch = FfiOutputBatch {
         batch_format_version: BATCH_FORMAT_VERSION,
         events: ffi_events,
     };
-    rmp_serde::to_vec_named(&batch).map_err(|e| e.to_string())
+    rmp_serde::encode::write_named(writer, &batch).map_err(|source| FfiOutputEncodeError { source })
 }
+
+#[cfg(test)]
+mod tests;
 
 fn ffi_event(event: DialogueEvent) -> FfiEvent {
     match event {

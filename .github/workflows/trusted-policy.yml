@@ -1,0 +1,47 @@
+name: Trusted PR policy
+
+on:
+  pull_request_target:
+    branches:
+      - main
+    types:
+      - opened
+      - edited
+      - labeled
+      - unlabeled
+      - synchronize
+      - reopened
+      - ready_for_review
+
+# This workflow intentionally has no path filters. A required check must be
+# created for every pull request, including documentation-only changes.
+permissions:
+  contents: read
+  pull-requests: read
+
+concurrency:
+  group: trusted-policy-${{ github.event.pull_request.number }}
+  cancel-in-progress: true
+
+jobs:
+  trusted-policy:
+    name: Trusted Git workflow policy
+    runs-on: ubuntu-24.04
+    timeout-minutes: 5
+    steps:
+      # pull_request_target runs this workflow from the default branch. Keep
+      # the explicit ref as a visible assertion of the trust boundary.
+      - name: Check out base policy
+        uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          ref: main
+          fetch-depth: 0
+          persist-credentials: false
+
+      - name: Check trusted Git workflow policy
+        env:
+          GH_TOKEN: ${{ github.token }}
+          GITHUB_EVENT_PATH: ${{ github.event_path }}
+          GITHUB_EVENT_NAME: ${{ github.event_name }}
+          GITHUB_REPOSITORY: ${{ github.repository }}
+        run: scripts/check-trusted-pr-policy.sh

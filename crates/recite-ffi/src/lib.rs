@@ -4,6 +4,7 @@
 //! Normative adapter semantics are in `docs/engine-adapter-contract.md`.
 
 mod condition;
+mod condition_codec;
 mod error;
 mod output;
 
@@ -24,8 +25,8 @@ pub use condition::{ReciteConditionFn, ReciteConditionQuery, ReciteConditionResu
 pub use error::{ReciteStatus, recite_last_error_message};
 
 use condition::{ConditionEntry, FfiContext, SendPtr};
-use error::{clear_condition_status, set_last_error};
-use output::{encode_batch, should_continue};
+use error::{clear_condition_status, restore_status, set_last_error};
+use output::{FfiOutputEncodeError, encode_batch, should_continue};
 
 /// ABI major version for the generated C header.
 ///
@@ -343,18 +344,19 @@ pub unsafe extern "C" fn recite_session_begin(
         set_last_error("recite_session_begin called twice on the same handle");
         return ReciteStatus::SessionAlreadyActive;
     }
-    ffi_session.begun = true;
-
     let context = FfiContext {
         handlers: &ffi_session.handlers,
     };
+    let session_checkpoint = ffi_session.session.clone();
     clear_condition_status();
     match drain_to_batch(&ffi_session.dialogue, &mut ffi_session.session, &context) {
         Ok(batch) => {
+            ffi_session.begun = true;
             unsafe { *batch_out = batch };
             ReciteStatus::Ok
         }
         Err((status, msg)) => {
+            ffi_session.session = session_checkpoint;
             set_last_error(&msg);
             status
         }
@@ -680,8 +682,9 @@ pub unsafe extern "C" fn recite_session_snapshot(
 /// The snapshot must have been produced against the same compiled asset
 /// identified by `asset_handle`. On success writes a new session handle to
 /// `*session_handle_out` and a resumption output batch to `*batch_out`. The
-/// batch is empty when the restored session is at a pending-prompt or
-/// pending-effect boundary (the host re-presents state from its own copy).
+/// batch is empty when the restored session is at a pending-prompt boundary.
+/// A pending blocking effect is re-emitted once in the resumption batch with
+/// the same request ID so the host can reconcile or re-present it.
 /// If the snapshot encoded an ended session, `recite_session_restore` returns
 /// `RECITE_ERR_NO_ACTIVE_SESSION`.
 ///
@@ -714,7 +717,7 @@ pub unsafe extern "C" fn recite_session_restore(
         Ok(s) => s,
         Err(e) => {
             set_last_error(&e.to_string());
-            return ReciteStatus::from(e);
+            return restore_status(&e);
         }
     };
 
@@ -773,8 +776,10 @@ fn drain_restored(
     session: &mut DialogueSession,
     context: &FfiContext<'_>,
 ) -> Result<ReciteBuffer, (ReciteStatus, String)> {
-    // After restore, a pending prompt or blocking effect is valid — return an
-    // empty batch rather than an error so the host can re-display its own state.
+    // After restore, a pending prompt is valid — return an empty batch rather
+    // than an error so the host can re-display its own state. A pending
+    // blocking effect is re-emitted once by `next_with` so the host receives
+    // its stable request ID for reconciliation.
     // A restored ended session propagates NoActiveSession to the caller.
     drain_to_batch(dialogue, session, context)
 }
@@ -799,24 +804,26 @@ fn drain_after_event(
             Err(e) => return Err((ReciteStatus::from(e.clone()), e.to_string())),
         }
     }
-    encode_batch(events)
-        .map(ReciteBuffer::from_bytes)
-        .map_err(|msg| (ReciteStatus::Validation, msg))
+    encode_batch_output(events, encode_batch)
 }
 
 fn empty_batch() -> Result<ReciteBuffer, (ReciteStatus, String)> {
-    let batch = output::FfiOutputBatch {
-        batch_format_version: output::BATCH_FORMAT_VERSION,
-        events: Vec::new(),
-    };
-    rmp_serde::to_vec_named(&batch)
+    encode_batch_output(Vec::new(), encode_batch)
+}
+
+fn encode_batch_output(
+    events: Vec<DialogueEvent>,
+    encoder: fn(Vec<DialogueEvent>) -> Result<Vec<u8>, FfiOutputEncodeError>,
+) -> Result<ReciteBuffer, (ReciteStatus, String)> {
+    encoder(events)
         .map(ReciteBuffer::from_bytes)
-        .map_err(|e| {
-            (
-                ReciteStatus::DialogueFault,
-                format!("empty batch serialization failed: {e}"),
-            )
-        })
+        .map_err(flatten_output_encode_error)
+}
+
+fn flatten_output_encode_error(error: FfiOutputEncodeError) -> (ReciteStatus, String) {
+    // This is the C ABI boundary: preserve the typed encoder error internally,
+    // then expose the existing stable status and thread-local detail string.
+    (ReciteStatus::DialogueFault, error.to_string())
 }
 
 fn ensure_session_thread(ffi_session: &FfiSession) -> Result<(), ReciteStatus> {

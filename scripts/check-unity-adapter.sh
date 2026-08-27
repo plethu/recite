@@ -12,6 +12,7 @@ package_dir="$repo_root/Packages/com.recite.dialogue"
 runtime_dir="$package_dir/Runtime"
 bridge="$runtime_dir/Native/ReciteNativeBridge.cs"
 header="$repo_root/include/recite.h"
+headless_test="$package_dir/Tests~/Headless/ReciteUnityHeadless.cs"
 
 failures=0
 fail() {
@@ -136,18 +137,25 @@ if command -v dotnet >/dev/null 2>&1; then
     printf '%s\n' '    <TargetFramework>net8.0</TargetFramework>'
     printf '%s\n' '    <Nullable>disable</Nullable>'
     printf '%s\n' '    <EnableDefaultCompileItems>false</EnableDefaultCompileItems>'
+    printf '%s\n' '    <OutputType>Exe</OutputType>'
     printf '%s\n' '  </PropertyGroup>'
     printf '%s\n' '  <ItemGroup>'
     find "$runtime_dir" -path "$runtime_dir/GameObjects" -prune -o -name '*.cs' -type f -print | sort | while IFS= read -r file; do
       printf '    <Compile Include="%s" />\n' "$file"
     done
+    printf '    <Compile Include="%s" />\n' "$headless_test"
     printf '%s\n' '  </ItemGroup>'
     printf '%s\n' '</Project>'
   } > "$tmpdir/UnityRuntimeSubset.csproj"
 
-  if ! DOTNET_CLI_HOME=/tmp/recite-dotnet-home NUGET_PACKAGES=/tmp/recite-nuget DOTNET_CLI_TELEMETRY_OPTOUT=1 DOTNET_SKIP_FIRST_TIME_EXPERIENCE=1 dotnet build "$tmpdir/UnityRuntimeSubset.csproj" --nologo -v:minimal >/tmp/recite-unity-dotnet-build.log 2>&1; then
+  if [[ ! -f "$headless_test" ]]; then
+    fail "missing Unity headless package test"
+  elif ! DOTNET_CLI_HOME=/tmp/recite-dotnet-home NUGET_PACKAGES=/tmp/recite-nuget DOTNET_CLI_TELEMETRY_OPTOUT=1 DOTNET_SKIP_FIRST_TIME_EXPERIENCE=1 dotnet build "$tmpdir/UnityRuntimeSubset.csproj" --nologo -v:minimal >/tmp/recite-unity-dotnet-build.log 2>&1; then
     cat /tmp/recite-unity-dotnet-build.log >&2
     fail "Unity runtime subset dotnet build failed"
+  elif ! DOTNET_CLI_HOME=/tmp/recite-dotnet-home NUGET_PACKAGES=/tmp/recite-nuget DOTNET_CLI_TELEMETRY_OPTOUT=1 DOTNET_SKIP_FIRST_TIME_EXPERIENCE=1 dotnet run --project "$tmpdir/UnityRuntimeSubset.csproj" --no-build --no-restore >/tmp/recite-unity-headless-test.log 2>&1; then
+    cat /tmp/recite-unity-headless-test.log >&2
+    fail "Unity headless package test failed"
   fi
 else
   fail "dotnet is required for the Unity runtime subset build"

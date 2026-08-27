@@ -97,8 +97,9 @@ pub use session_snapshot::{
     DialogueDeferredEffectSnapshot, DialogueSchemaFingerprintSnapshot,
     DialogueSessionFrameSnapshot, DialogueSessionPendingChoiceSnapshot,
     DialogueSessionPendingEffectSnapshot, DialogueSessionPendingPromptSnapshot,
-    DialogueSessionRangeSnapshot, DialogueSessionSnapshot, DialogueSessionSourceSnapshot,
-    SESSION_SNAPSHOT_FORMAT_VERSION_V0, SESSION_SNAPSHOT_FORMAT_VERSION_V1, snapshot_session,
+    DialogueSessionRangeSnapshot, DialogueSessionSnapshot, DialogueSessionSnapshotConversionError,
+    DialogueSessionSourceSnapshot, SESSION_SNAPSHOT_FORMAT_VERSION_V0,
+    SESSION_SNAPSHOT_FORMAT_VERSION_V1, snapshot_session,
 };
 pub use traversal::{
     LocaleResolution, acknowledge_effect, choose, choose_with, next, next_with, start_scene,
