@@ -87,7 +87,7 @@ wire compatibility fixtures, and focused reviews for each subsystem.
 
 | Path | Lines | Kind | Owner | Disposition | Issue/reason |
 | --- | ---: | --- | --- | --- | --- |
-| `crates/recite-ffi/src/lib.rs` | 838 | production | ffi | follow-up | #164/#171: separate ABI façade only after symbol and threading inventory |
+| `crates/recite-ffi/src/lib.rs` | 839 | production | ffi | follow-up | #164/#171: separate ABI façade only after symbol and threading inventory |
 | `crates/recite-core/src/schema/model/canonical.rs` | 621 | production | core/schema | review | Canonical model boundary; preserve public fingerprints |
 | `crates/recite-core/src/schema/manifest/lower/availability.rs` | 560 | production | core/schema | review | Reassess mapping and domain-validation ownership |
 | `crates/recite-core/src/compiled/messagepack/tags.rs` | 506 | production | core/wire | cohesive | #89: explicit wire tag table |
@@ -107,7 +107,7 @@ wire compatibility fixtures, and focused reviews for each subsystem.
 | `crates/recite-benchmarks/src/memory_profiles/mod.rs` | 373 | production | benchmarks | cohesive | Maintainer-only profile orchestration |
 | `crates/recite-cli/src/commands.rs` | 372 | production | cli | review | Command orchestration boundary |
 | `crates/recite-compiler/src/wire/messagepack/tags.rs` | 373 | production | compiler/wire | cohesive | #89: encoder tag mirror |
-| `crates/recite-godot/src/adapter.rs` | 363 | production | godot | review | Host adapter lifecycle boundary |
+| `crates/recite-godot/src/adapter.rs` | 364 | production | godot | review | Host adapter lifecycle boundary |
 | `crates/recite-core/src/schema/model/mod.rs` | 361 | production | core/schema | review | Schema module exports and model grouping |
 | `crates/recite-cli/src/play/driver.rs` | 350 | production | cli/play | cohesive | Shared preview driver seam |
 | `crates/recite-runtime/src/traversal/availability.rs` | 349 | production | runtime/traversal | cohesive | Deterministic availability traversal |
@@ -142,7 +142,7 @@ wire compatibility fixtures, and focused reviews for each subsystem.
 | `crates/recite-benchmarks/src/runtime.rs` | 265 | production | benchmarks | cohesive | Runtime benchmark harness |
 | `crates/recite-lsp/src/summary/file/collector.rs` | 256 | production | lsp/summary | review | File summary projection |
 
-| `crates/recite-runtime/tests/adapter_conformance/driver.rs` | 1143 | test/support | runtime/tests | cohesive | Shared adapter conformance driver |
+| `crates/recite-runtime/tests/adapter_conformance/driver.rs` | 1153 | test/support | runtime/tests | cohesive | Shared adapter conformance driver |
 | `crates/recite-cli/src/play/tui/render/tests.rs` | 811 | test/support | cli/tui/tests | cohesive | Private rendering contract tests |
 | `crates/recite-cli/tests/runtime.rs` | 759 | test/support | cli/tests | cohesive | Runtime command behavior suite |
 | `crates/recite-core/tests/compiled_messagepack.rs` | 693 | test/support | core/tests | cohesive | Wire compatibility contract |
