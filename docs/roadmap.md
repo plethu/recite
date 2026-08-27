@@ -394,7 +394,7 @@ remain authoritative if the tracker is split again.
 
 | Outcome | Current GitHub owner group (open count) | GitHub milestone |
 | --- | --- | --- |
-| Product Foundation and Maintainability | [#89](https://github.com/plethu/recite/issues/89), [#91](https://github.com/plethu/recite/issues/91), and [#135](https://github.com/plethu/recite/issues/135) (absorbed by [#164](https://github.com/plethu/recite/issues/164)); [#138](https://github.com/plethu/recite/issues/138) (retained maintainer decision); [#153](https://github.com/plethu/recite/issues/153) and [#163](https://github.com/plethu/recite/issues/163) (closing in PR #172); [#164](https://github.com/plethu/recite/issues/164); [#171](https://github.com/plethu/recite/issues/171) (8 open at this revision) | 17 |
+| Product Foundation and Maintainability | [#89](https://github.com/plethu/recite/issues/89), [#91](https://github.com/plethu/recite/issues/91), and [#135](https://github.com/plethu/recite/issues/135) (absorbed by [#164](https://github.com/plethu/recite/issues/164)); [#138](https://github.com/plethu/recite/issues/138) (retained maintainer decision); [#164](https://github.com/plethu/recite/issues/164); [#171](https://github.com/plethu/recite/issues/171) (6 open) | 17 |
 | Language, schema, and localisation readiness | [#165](https://github.com/plethu/recite/issues/165), [#166](https://github.com/plethu/recite/issues/166) (2 open) | 18 |
 | Shared authoring kernel and preview | [#167](https://github.com/plethu/recite/issues/167), [#168](https://github.com/plethu/recite/issues/168) (2 open) | 19 |
 | Editor integration parity | [#169 editor trio parity](https://github.com/plethu/recite/issues/169) (6 open) | 20 |
@@ -403,15 +403,12 @@ remain authoritative if the tracker is split again.
 | Engine companions | #49, #83–#86, #132–#134 (8 open) | 23 |
 | Distribution, adoption, and migration | #38, #56, #57, #60, #99, #100–#103 (bounded subset importers), #104 (10 open) | 24 |
 | Serious v1 release | #77–#81, #109 (6 open) | 25 |
-| Integration workflow | [#163 integration workflow](https://github.com/plethu/recite/issues/163) | 17 |
 | Post-v1 / no milestone (non-exhaustive tracker group) | #74, #119, #121, #126 (4 open); generated host-language bindings and other deferred directions still need future ownership | — |
 
-At this revision M17 has eight open issues. The three issues absorbed by #164
-remain live tracker records until their own closure, while #138 remains retained
-maintainer design work. #153 and #163 are still counted as open because PR #172
-has not merged; the table does not claim their planned post-merge state. Issues
-#59 and #61 are closed and superseded, so they are omitted. Issue #163 applies
-across the full 17–25 outcome sequence while it remains open.
+M17 has six open issues. The three issues absorbed by #164 remain live tracker
+records until their own closure, while #138 remains retained maintainer design
+work. PR #172 closed #153 and #163; issues #59 and #61 are also closed and
+superseded, so they are omitted.
 
 The post-v1 row is deliberately non-exhaustive: it records current open issues
 without a milestone, not every deferred capability. Generated host-language
