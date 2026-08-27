@@ -41,16 +41,19 @@ run_policy() {
   local integration="$2"
   local label="$3"
   local branch="${4:-integration/milestone-integration}"
+  local base_branch="${5-main}"
 
-  # The clone is detached like actions/checkout; GITHUB_HEAD_REF is the only
-  # branch metadata available to the pull-request policy in this fixture.
+  # The clone is detached like actions/checkout; the explicit environment
+  # values carry the pull-request metadata that Actions would provide.
   RECITE_PR_TITLE="$title" \
     RECITE_INTEGRATION_PR="$integration" \
     RECITE_INTEGRATION_LABEL="$label" \
+    RECITE_PR_BASE_REF="$base_branch" \
     RECITE_BASE_REF="$base_sha" \
     RECITE_HEAD_REF=HEAD \
     GITHUB_EVENT_NAME=pull_request \
     GITHUB_HEAD_REF="$branch" \
+    GITHUB_BASE_REF="$base_branch" \
     "$clone_root/scripts/check-git-policy.sh" "$clone_root"
 }
 
@@ -65,6 +68,7 @@ run_policy_without_label() {
     RECITE_HEAD_REF=HEAD \
     GITHUB_EVENT_NAME=pull_request \
     GITHUB_HEAD_REF="$branch" \
+    GITHUB_BASE_REF=main \
     "$clone_root/scripts/check-git-policy.sh" "$clone_root"
 }
 
@@ -75,6 +79,16 @@ fi
 
 if ! run_policy "[REC-163] chore: integrate milestone" 0 1; then
   echo "matching integration label and branch rejected a valid mixed-code commit range" >&2
+  exit 1
+fi
+
+if run_policy "[REC-163] chore: integrate milestone" 0 1 integration/milestone-integration release >/dev/null 2>&1; then
+  echo "integration PR targeting a non-main base was accepted" >&2
+  exit 1
+fi
+
+if run_policy "[REC-163] chore: integrate milestone" 0 1 integration/milestone-integration '' >/dev/null 2>&1; then
+  echo "integration PR without base metadata was accepted" >&2
   exit 1
 fi
 
@@ -103,7 +117,7 @@ if run_policy "chore: integrate milestone" 0 1 >/dev/null 2>&1; then
   exit 1
 fi
 
-if ! env -u RECITE_INTEGRATION_LABEL -u GITHUB_EVENT_NAME -u GITHUB_HEAD_REF \
+if ! env -u RECITE_INTEGRATION_LABEL -u RECITE_PR_BASE_REF -u GITHUB_EVENT_NAME -u GITHUB_HEAD_REF -u GITHUB_BASE_REF \
   RECITE_PR_TITLE="[REC-163] chore: integrate milestone" \
   RECITE_INTEGRATION_PR=1 \
   RECITE_BASE_REF="$base_sha" \

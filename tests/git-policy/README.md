@@ -8,5 +8,5 @@ including the issue prefix, body-sentence, and attribution-trailer rules. An
 ordinary pull-request title supplies one issue code that every commit must
 use. Run the integration fixture with `bash tests/git-policy/check-integration.sh`;
 it proves that only a matching `workflow/integration` label and
-`integration/<short-kebab-topic>` branch may contain multiple valid issue codes,
-while retaining the subject and attribution rules.
+`integration/<short-kebab-topic>` branch targeting `main` may contain multiple
+valid issue codes, while retaining the subject and attribution rules.

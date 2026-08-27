@@ -1511,7 +1511,7 @@ data. A v1 API must not expose only a flat `Option<String>` reason.
 - collected deferred effects;
 - pending blocking effect;
 - previous prompt choices;
-- locale;
+- optional dialogue locale, serialized as `None` in source-text-only mode;
 - deterministic trace counters;
 - selected choice history.
 
@@ -1561,6 +1561,17 @@ strings are not a second path. Published non-English UI locales require human
 authorship and review; machine-generated translations are not supported locale
 claims. Fluent UI resources must not substitute for translated dialogue text,
 which remains on the explicit runtime/provider path.
+
+Dialogue localisation is an opt-in project capability, distinct from the
+mandatory localisation of Recite-owned authoring text. A project may remain
+source-text-only: when no dialogue locale is supplied, the CLI's
+`--dialogue-locale` remains unset (`Option<String>`), the runtime session and
+its serialized locale field are unset (`None`), and source text is delivered
+without preview translation. A project that enables dialogue localisation must declare its
+default locale and fallback locale/catalog policy at its project or fixture
+configuration boundary; neither mode may infer a dialogue locale from the host
+environment. This does not make `--dialogue-locale` mandatory for source-only
+play or preview.
 
 ### 9.1 Requirements
 
@@ -2513,7 +2524,8 @@ Must be able to:
 `run` may preview translated dialogue content only when the fixture opts in with
 `[dialogue].locale`. Dialogue catalog paths in fixtures are resolved relative to
 the fixture file directory. Without `[dialogue].locale`, line and choice output
-must remain source text. Catalogs without a dialogue locale are an error.
+must remain source text, and the runtime session locale remains unset. Catalogs
+without a dialogue locale are an error.
 
 ### 13.6 `trace`
 
@@ -2575,15 +2587,17 @@ When `color = "auto"`, TUI color is disabled if `NO_COLOR` is present or `CLICOL
 
 When `show_unavailable_choices` is true, `play` should render unavailable choices as disabled and may show a compact primary reason. The full structured reason tree remains available through trace/test output and adapter conformance fixtures. When the setting is false, `play` may hide unavailable choices as a UI preference only; runtime prompt output and previous-prompt state are unchanged.
 
-The dialogue locale is always explicit: `play`, preview, and engine-facing
+When dialogue localisation is enabled, `play`, preview, and engine-facing
 runtime operations must receive a locale from the caller or fixture and must
-not infer it from the host environment. The Recite UI locale is a separate
-preference; `system` is allowed for it and resolves through the deterministic
-UI fallback chain. It controls Recite-owned text across the CLI/TUI, GUI, LSP,
-and editor extensions—pane titles, labels, prompts, status, diagnostics, and
-human errors—through the shared Fluent resource contract. It never controls
-dialogue line or choice translation for `play`, `run`, or `trace`; those remain
-runtime/provider concerns (§9). There is no `--ui-locale` flag.
+not infer it from the host environment. Without one, source-text-only mode is
+valid and the optional runtime/session locale remains `None`. The Recite UI
+locale is a separate preference; `system` is allowed for it and resolves
+through the deterministic UI fallback chain. It controls Recite-owned text
+across the CLI/TUI, GUI, LSP, and editor extensions—pane titles, labels,
+prompts, status, diagnostics, and human errors—through the shared Fluent
+resource contract. It never controls dialogue line or choice translation for
+`play`, `run`, or `trace`; those remain runtime/provider concerns (§9). There
+is no `--ui-locale` flag.
 
 Dialogue content preview for `play` is separately opt in:
 
@@ -3109,7 +3123,9 @@ runtime dialogue locale for preview, and `catalogs` maps locale IDs to gettext
 PO files. Catalog entries use singular gettext records with `msgctxt` as the
 stable line or choice ID, `msgid` as source text, and `msgstr` as translated
 text. Variant-specific entries may use `id&variant` contexts and should fall
-back to `id` before source text.
+back to `id` before source text. Omitting the table is the valid source-text-only
+mode; enabling project dialogue localisation requires the project's declared
+default and fallback locale/catalog policy.
 
 ### 17.4 Adapter Conformance Fixtures
 
@@ -3632,9 +3648,12 @@ unsupported producers are explicitly read-only. The shipped GUI realization is
 gated by milestone 6.
 Schema manifests have producer provenance and stale/regeneration behavior;
 source IDs, extraction, PO catalogue lookup, fallback, placeholders, markup, and
-translator context are tested. English-only launch is explicit rather than an
-architectural assumption, and exact standalone schema-source syntax remains a
-milestone decision.
+translator context are tested. Dialogue localisation is optional: source-only
+projects retain an unset locale, while projects that enable it declare and test
+their default and fallback locale/catalog policy. Recite-owned authoring text
+still requires complete Fluent-backed default `en-US` resources. English-only
+launch is explicit rather than an architectural assumption, and exact
+standalone schema-source syntax remains a milestone decision.
 
 ### Milestone 3: Shared Authoring Kernel and Preview
 
@@ -3757,7 +3776,9 @@ toolchain.
 
 The project is not production-credible until all of the following are true:
 
-- A dialogue scene can be compiled, validated, run, snapshotted, localized, and replayed headlessly.
+- A dialogue scene can be compiled, validated, run, snapshotted, and replayed
+  headlessly in source-only mode or with an explicitly configured locale;
+  enabled localisation has tested default and fallback locale/catalog policy.
 - All runtime outputs are structured and deterministic.
 - Effects are schema-checked and never executed by the runtime.
 - Blocking effects can pause and resume across save/load, including re-emission of the pending effect with the same `EffectRequestId`.

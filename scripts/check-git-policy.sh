@@ -9,13 +9,14 @@ Usage:
 Checks the branch name and commit messages in the relevant change range.
 
 The pull-request workflow supplies GITHUB_HEAD_REF, GITHUB_BASE_REF,
-RECITE_PR_TITLE, RECITE_INTEGRATION_LABEL, and RECITE_INTEGRATION_PR. For
-local runs, the current branch is checked against origin/main. Set
-RECITE_BASE_REF, RECITE_HEAD_REF, RECITE_HEAD_BRANCH, RECITE_PR_TITLE, or
-RECITE_ISSUE_CODE to override those inputs for a focused check. Set
-RECITE_INTEGRATION_PR=1 for a coordinator's milestone integration PR when
-label metadata is unavailable locally; CI enables it only when the
-workflow/integration label and integration/<topic> branch both match.
+RECITE_PR_BASE_REF, RECITE_PR_TITLE, RECITE_INTEGRATION_LABEL, and
+RECITE_INTEGRATION_PR. For local runs, the current branch is checked against
+origin/main. Set RECITE_BASE_REF, RECITE_HEAD_REF, RECITE_HEAD_BRANCH,
+RECITE_PR_TITLE, or RECITE_ISSUE_CODE to override those inputs for a focused
+check. Set RECITE_INTEGRATION_PR=1 for a coordinator's milestone integration
+PR when label metadata is unavailable locally; in PR context, integration mode
+requires the workflow/integration label, an integration/<topic> branch, and a
+main base branch.
 EOF
 }
 
@@ -221,8 +222,18 @@ else
 fi
 
 pr_context=0
-if [[ "${GITHUB_EVENT_NAME:-}" == "pull_request" || -n "${GITHUB_HEAD_REF:-}" || -n "${RECITE_PR_TITLE:-}" ]]; then
+if [[ "${GITHUB_EVENT_NAME:-}" == "pull_request" ||
+  -n "${GITHUB_HEAD_REF:-}" || -n "${RECITE_PR_TITLE:-}" ||
+  -n "${RECITE_PR_BASE_REF:-}" ]]; then
   pr_context=1
+fi
+
+pr_base_ref="${RECITE_PR_BASE_REF:-${GITHUB_BASE_REF:-}}"
+pr_base_context=0
+if [[ "${GITHUB_EVENT_NAME:-}" == "pull_request" ||
+  -n "${GITHUB_HEAD_REF:-}" || -n "${RECITE_PR_BASE_REF:-}" ||
+  -n "${GITHUB_BASE_REF:-}" ]]; then
+  pr_base_context=1
 fi
 
 # CI passes label presence separately so a branch/label mismatch cannot fall
@@ -251,6 +262,17 @@ elif [[ "$integration_pr" == "1" ]]; then
 elif (( pr_context )) && is_valid_integration_branch_name "$branch_name"; then
   echo "integration/<short-kebab-topic> pull requests require the workflow/integration label" >&2
   exit 1
+fi
+
+if [[ "$integration_pr" == "1" && "$pr_base_context" == "1" ]]; then
+  if [[ -z "$pr_base_ref" ]]; then
+    echo "integration pull requests require an explicit main base branch" >&2
+    exit 1
+  fi
+  if [[ "$pr_base_ref" != "main" ]]; then
+    echo "integration pull requests must target main: $pr_base_ref" >&2
+    exit 1
+  fi
 fi
 
 if [[ -n "${RECITE_PR_TITLE:-}" ]]; then
