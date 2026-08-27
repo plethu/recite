@@ -1,246 +1,410 @@
-# Recite v1 Dependency Roadmap
+# Recite serious-v1 roadmap
 
-This is the current dependency map for the work required by a serious Recite
-v1. It was rebuilt from live GitHub issues on 2026-08-26 after the
-Codeberg-to-GitHub migration.
+This roadmap describes the outcomes that must exist before Recite can call its
+authoring and integration story serious v1. It is deliberately organised around
+product boundaries and evidence rather than a sequence of issue numbers. The
+production specification is the normative contract; this document explains the
+order in which that contract becomes a usable product.
 
-The live [GitHub issue tracker](https://github.com/plethu/recite/issues) and
-`docs/recite-production-spec.md` sections 22-23 are authoritative. This file is
-a planning aid and must be refreshed when merged work closes, unblocks, or
-supersedes an item.
+Recite is still pre-release. The compiled asset, runtime snapshot, schema
+manifest, CLI, LSP, editor integration, GUI, and adapter surfaces are all
+compatibility decisions until the first tagged release. Existing work should be
+mapped into these milestones without preserving an older milestone merely
+because it has already been named.
 
-## Numbering after the forge migration
+## The v1 product
 
-Codeberg issue numbers are not GitHub issue numbers. GitHub also shares one
-number sequence between issues and pull requests. Migration markers in issue
-bodies (`migrated-from-codeberg-issue:<number>`) are the source of truth for
-the old-to-new mapping; a matching bare number is not evidence of identity.
+Serious v1 is a local-first dialogue authoring product with:
 
-All numbers below are current GitHub issue numbers and link to the intended
-issue. Historical Codeberg pull-request numbers have been omitted because they
-do not identify GitHub pull requests.
+- a deterministic Rust language, compiler, runtime, schema model, and
+  localisation pipeline;
+- a shared authoring kernel used by the CLI, LSP, editor clients, preview, and
+  standalone GUI;
+- first-class VS Code/VSCodium, Neovim, and Zed text-authoring paths;
+- IDE/text editing is expected to be the primary workflow, with an accessible,
+  source-first GUI workbench as a first-class complementary surface providing
+  schema and localisation views, structured preview, diagnostics, and graph
+  navigation;
+- thin, engine-native Godot, Unity, and Bevy companions that preserve the same
+  runtime contract;
+- Linux, Windows, and macOS as first-class desktop platforms for the core CLI,
+  LSP, editor integrations, and standalone workbench; companion matrices may
+  declare narrower engine/platform combinations;
+- documented distribution, migration, support, and compatibility boundaries.
 
-## v1 scope
+The GUI workbench is required for serious v1, but a fully general visual node
+editor is not. Source remains authoritative. Graphs may navigate and explain
+the source before they become a second authoring representation, and any
+structured edit must preserve source, comments, unknown metadata, and stable
+IDs. Generated host-language bindings and arbitrary mid-session patch reload
+remain post-v1 unless a later decision promotes them.
 
-Per specification section 23, v1 requires all of:
-
-- core runtime, CLI, and LSP authoring support;
-- a scale and performance proof;
-- a stable engine-adapter contract;
-- production-quality Godot, Bevy, and Unity adapter paths;
-- ecosystem-native distribution plans for those three adapters;
-- adoption and migration documentation that lets a team evaluate Recite
-  against established dialogue tooling.
-
-The release-hardening milestone cannot complete until scale, adapters, and
-adoption documentation have all landed.
-
-## Work that can start now
-
-These issues are open and have no confirmed unmet dependency. `status/ready`
-is still a co-work signal, not permission to settle a subjective product or
-durable API decision without review.
-
-| Issue | Role | Unlocks or reduces risk |
-| --- | --- | --- |
-| [#109 Release benchmark baseline](https://github.com/plethu/recite/issues/109) | release performance evidence | reviewable baseline profile and trend comparisons |
-| [#51 VS Code LSP client](https://github.com/plethu/recite/issues/51) | IDE-first authoring | VS Code highlighting and command integration |
-| [#52 Neovim setup](https://github.com/plethu/recite/issues/52) | IDE-first authoring | Neovim highlighting and command integration |
-| [#99 Import report and provenance](https://github.com/plethu/recite/issues/99) | migration foundation | source-family importer prototypes and compatibility notes |
-| [#91 Large-file cohesion audit](https://github.com/plethu/recite/issues/91) | maintainability | focused subsystem refactors where evidence warrants them |
-| [#135 Typed serialization-boundary errors](https://github.com/plethu/recite/issues/135) | compatibility hardening | clearer snapshot and FFI error ownership |
-| [#117 Generic condition/effect evaluation](https://github.com/plethu/recite/issues/117) | schema maintainability | a keep-or-refactor decision grounded in current duplication |
-| [#140 Native Codex review acceptance](https://github.com/plethu/recite/issues/140) | review workflow | confirmation on the next genuine pull request |
-
-Two `status/ready` issues need a residue or scope audit before implementation:
-
-- [#89 v0 MessagePack wire sync risk](https://github.com/plethu/recite/issues/89)
-  overlaps work already delivered by the shared tag surface and golden fixtures;
-- [#136 unused LSP snapshot surface](https://github.com/plethu/recite/issues/136)
-  describes accessors that now have test, benchmark, or feature consumers.
-
-The following issues deliberately remain human-led design work:
-
-- [#126 comparative benchmark corpus](https://github.com/plethu/recite/issues/126);
-- [#138 serialization alternatives](https://github.com/plethu/recite/issues/138);
-- [#123 visual-editor accessibility requirements](https://github.com/plethu/recite/issues/123).
-
-## Dependency tracks
-
-Closed foundations are shown where they explain an open edge. The graph avoids
-inventing dependencies that are not supported by the specification, current
-issue bodies, or delivered code.
+## Dependency shape
 
 ```mermaid
 flowchart LR
-  subgraph EDITOR["IDE-first authoring"]
-    direction LR
-    i51["#51 VS Code LSP client"] --> i97["#97 VS Code highlighting"]
-    i51 --> i53["#53 editor command integration"]
-    i52["#52 Neovim setup"] --> i98["#98 Neovim highlighting"]
-    i37["#37 authoring/on-save guide"]
-  end
-
-  subgraph ADAPTERS["Production adapters and refresh"]
-    direction LR
-    i47["#47 Godot MVP closed"] --> i83["#83 Godot refresh"]
-    i82["#82 watch loop closed"] --> i83
-    i49["#49 Bevy MVP"] --> i84["#84 Bevy refresh"]
-    i82 --> i84
-    i73["#73 Unity MVP closed"] --> i85["#85 Unity refresh"]
-    i82 --> i85
-    i83 --> i86["#86 refresh docs and limits"]
-    i84 --> i86
-    i85 --> i86
-    i86 --> i61["#61 adapter getting-started examples"]
-  end
-
-  subgraph PROJECTION["Presentation projection"]
-    direction LR
-    i118["#118 projection schema closed"] --> i119["#119 compiled projection wire"]
-    i119 --> i121["#121 projection conformance"]
-    i47 -. adapter proof .-> i119
-    i49 -. adapter proof .-> i119
-  end
-
-  subgraph PERF["Scale and performance"]
-    direction LR
-    i109["#109 release baseline"] --> release["v1 release hardening"]
-  end
-
-  subgraph MIGRATION["Migration and interop"]
-    direction LR
-    i99["#99 report and provenance"] --> i100["#100 JSON and CSV"]
-    i99 --> i101["#101 Twee and Twine"]
-    i99 --> i104["#104 compatibility notes"]
-    i100 --> i102["#102 ink"]
-    i101 --> i102
-    i100 --> i103["#103 Yarn Spinner"]
-    i101 --> i103
-  end
-
-  subgraph ADOPTION["Adoption and distribution"]
-    direction LR
-    i132["#132 Godot distribution"]
-    i133["#133 Unity distribution"]
-    i134["#134 Bevy distribution"]
-    i38["#38 complete workflow demo"]
-    i56["#56 landing and alternatives"]
-    i57["#57 developer guides"]
-    i59["#59 install and compatibility"]
-    i60["#60 templates and CI examples"]
-  end
-
-  i82 --> i37
-  i86 --> i37
-  i83 --> i132
-  i85 --> i133
-  i84 --> i134
-  i61 --> i57
-  i109 --> i56
-  i82 --> i56
-  i86 --> i56
-  i104 --> release
-  i138["#138 serialization decision"] --> release
-  ADOPTION --> release
-  ADAPTERS --> release
+  foundation["1 Foundation and maintainability"] --> language["2 Language, schema, localisation"]
+  language --> kernel["3 Shared authoring kernel and preview"]
+  kernel --> editors["4 Editor integration parity"]
+  kernel --> bakeoff["5 Native GUI strategy and accessibility proof"]
+  bakeoff --> workbench["6 GUI workbench"]
+  kernel --> companions["7 Engine companions"]
+  language --> companions
+  workbench --> distribution["8 Distribution, adoption, migration"]
+  companions --> distribution
+  distribution --> release["9 Serious v1 release"]
+  foundation --> distribution
 ```
 
-## Critical path
+Milestones 4, 5, and 7 may proceed in parallel after the shared kernel and
+milestone-2/3 contracts and fixtures are stable. Milestone 6 starts only after
+the GUI strategy has earned its decision. Distribution work can prepare in
+parallel, but release cannot close until every declared platform and companion
+has passed its acceptance gate.
 
-### Authoring loop
+## Milestones
 
-The core LSP, missing-ID code action, `recite play`, and `recite watch` are
-implemented, and generated-project stress now covers source, schema, and
-manifest rebuilds. The remaining text-authoring work is to expose those
-capabilities through real editor entry points and document engine refresh:
+### 1. Product Foundation and Maintainability
 
-1. [#51 VS Code](https://github.com/plethu/recite/issues/51) and
-   [#52 Neovim](https://github.com/plethu/recite/issues/52) expose the LSP;
-2. [#53 editor command integration](https://github.com/plethu/recite/issues/53)
-   follows the VS Code scaffold, while [#97](https://github.com/plethu/recite/issues/97)
-   and [#98](https://github.com/plethu/recite/issues/98) own highlighting;
-3. [#37 authoring workflow documentation](https://github.com/plethu/recite/issues/37)
-   waits on the delivered watch command plus the three engine refresh paths and
-   their shared documentation in #86.
+**Outcome:** the codebase has explicit ownership boundaries that can support a
+language toolchain, multiple authoring surfaces, and external adapters without
+duplicating semantics.
 
-The public authoring-loop page is still a placeholder. IDE integration and
-engine-refresh evidence should precede claims that this workflow is
-production-ready.
+**Scope:**
 
-### Engine adapters
+- audit large and cross-cutting modules by cohesion and ownership, not line
+  count alone; use Batten-derived ast-grep structural gates for sprawling
+  constructs, test placement, module ownership, generated boundaries,
+  documented exemptions, and checks close to the change;
+- keep parser, compiler, schema, runtime, wire, snapshot, FFI, diagnostics, and
+  adapter responsibilities explicit;
+- resolve typed error ownership at serialization, FFI, schema, and host
+  boundaries;
+- settle the pre-release compiled-asset and snapshot compatibility policy;
+- establish shared fixtures for deterministic IDs, source maps, errors,
+  localisation, and adapter traces;
+- record which projection capabilities are schema-only, adapter-capable, or
+  outside v1; line count remains a trigger for review, not the maintainability
+  rule.
 
-Godot and Unity have runtime MVPs. Bevy remains the largest open v1 adapter gap:
-[issue #49](https://github.com/plethu/recite/issues/49) must establish the Bevy
-adapter before [#84](https://github.com/plethu/recite/issues/84) can provide its
-asset-refresh path.
+**Entry gate:** current pre-release implementation and its existing tests.
 
-Godot [#83](https://github.com/plethu/recite/issues/83) and Unity
-[#85](https://github.com/plethu/recite/issues/85) still carry `status/blocked`,
-but their historical prerequisites map to delivered GitHub issues. Their issue
-status and host-tooling choices should be refreshed before implementation.
+**Exit gate:** the ownership audit has actionable results, no known duplicate
+semantic authority remains, compatibility decisions are written down, and the
+full repository verification gate passes.
 
-All three refresh paths feed [#86](https://github.com/plethu/recite/issues/86),
-which documents edit to LSP diagnostics to `recite watch` to adapter import or
-refresh to scene restart or the explicit active-session policy. V1 does not
-promise arbitrary mid-session patch reload.
+### 2. Language, Schema, and Localisation Readiness
 
-### Scale and performance
+**Outcome:** authors and host integrations can rely on one stable semantic model
+for source, schema, IDs, localisation, diagnostics, and generated artifacts.
 
-Compiler/runtime benchmarks, realistic fixtures, profiling guidance, memory
-reports, compact IDs, compiler phase probes, and runtime allocation evidence
-are delivered, including generated-project watch rebuild stress and
-stale-output proof. Open work is
-[#109](https://github.com/plethu/recite/issues/109), the now-unblocked release
-baseline profile; all of its verified prerequisites are delivered.
+**Scope:**
 
-[#126](https://github.com/plethu/recite/issues/126) is a separate human-led
-comparative-corpus decision. Its issue explicitly avoids making external
-comparison availability a v1 blocker.
+- finish the source-format, schema, metadata-domain, effect, and stable-ID
+  contract needed by authoring clients;
+- define a source-owning schema-authoring capability while keeping generated
+  manifests as read-only compiler/LSP input; define at least one source-owning,
+  kernel-editable declarative producer path suitable for GUI integration for
+  standalone projects and producer-backed edit/open-declaration actions for
+  engine-owned schemas;
+- preserve producer provenance and explicit stale-schema actions; unsupported
+  producers are explicitly read-only, not counted as schema editing;
+- choose the exact standalone schema-source syntax as a milestone decision,
+  provided it lowers to the canonical model deterministically;
+- provide source-preserving localisation extraction, catalog loading, fallback,
+  placeholder validation, markup validation, and a required editable gettext PO
+  path with lossless comments/context/unknown-data handling and safe atomic
+  writes; other catalogues are read-only or import/export-only;
+- define one canonical shared Fluent resource set (not necessarily a new crate)
+  for all Recite-owned CLI/TUI, GUI, LSP, and editor-extension UI text, with
+  extraction/completeness checks; generate host-specific projections where a
+  host manifest or metadata surface cannot consume Fluent directly, and keep
+  host-required metadata distinct from Recite-owned strings; published locales
+  require human authorship and review;
+- keep English-only launch behavior explicit without counting machine-generated
+  translations as supported locales;
+- make locale selection and variant selection explicit rather than inferred from
+  the host environment;
+- keep compiled assets and runtime state self-contained at their declared
+  boundaries.
 
-### Migration and adoption
+**Entry gate:** the foundation has identified the compatibility surfaces and
+remaining semantic gaps.
 
-The importer boundary and transition guides are delivered. The next foundation
-is [#99](https://github.com/plethu/recite/issues/99), which defines structured
-import reporting and provenance without committing Recite to source-specific
-semantics. It feeds the v1 compatibility guidance in
-[#104](https://github.com/plethu/recite/issues/104) and separately unlocks
-optional source-specific prototypes in [#100](https://github.com/plethu/recite/issues/100),
-[#101](https://github.com/plethu/recite/issues/101),
-[#102](https://github.com/plethu/recite/issues/102), and
-[#103](https://github.com/plethu/recite/issues/103). Serious-v1 acceptance
-requires honest transition and compatibility guidance; it does not require
-every source-family prototype to ship.
+**Exit gate:** representative projects compile, validate, extract, load schema,
+check IDs and localisation, and produce deterministic assets and diagnostics;
+the source-owning schema capability and fixtures define at least one
+source-owning, kernel-editable standalone declarative producer path suitable for
+GUI integration plus producer-backed edit/open-declaration actions for
+engine-owned schemas. Generated manifests remain read-only; the shipped GUI
+realization is gated by milestone 6. English is the launch locale, but the
+public contracts and tests exercise catalog and fallback behavior.
 
-Adoption documentation must remain evidence-backed. Landing-page alternatives,
-workflow guides, templates, distribution, and compatibility claims should
-follow the adapter, scale, and migration surfaces they describe.
+### 3. Shared Authoring Kernel and Preview
 
-## Maintainability and compatibility hardening
+**Outcome:** CLI, LSP, text clients, GUI, and future tooling call the same
+host-neutral authoring operations.
 
-- [#91](https://github.com/plethu/recite/issues/91) owns the large-Rust-file
-  cohesion audit. Line count is a triage signal; cohesive wire, snapshot, and
-  conformance surfaces should not be split merely to reduce a number.
-- [#135](https://github.com/plethu/recite/issues/135) owns typed errors at the
-  snapshot and FFI serialization boundaries.
-- [#89](https://github.com/plethu/recite/issues/89) must first audit what remains
-  after the delivered shared wire-tag and golden-fixture work.
-- [#138](https://github.com/plethu/recite/issues/138) is the explicit human-led
-  decision boundary for any pre-1.0 serialization-format change. It must close
-  with a format and migration-policy decision before the v1 compatibility
-  boundary hardens.
+**Scope:**
 
-## Release hardening
+- project discovery, source roots, excludes, canonical paths, and deterministic
+  file ordering;
+- saved-project indexes overlaid by unsaved documents;
+- source-preserving edit transactions for stable-ID insertion, rename, block
+  stubs, metadata edits, and future structured edits;
+- structured diagnostics, completions, navigation, schema summaries, and
+  localisation/catalog summaries;
+- source-owning schema edits for the standalone declarative producer and
+  producer-backed edit/open-declaration actions for engine-owned schemas,
+  concretely covering open source declaration, invoke/regenerate through the
+  producer, stale-output status, structured failure and retry, and never writing
+  generated manifests directly;
+- cross-platform user configuration for UI locale, keymap, contrast, theme,
+  workspace preferences, and preview defaults, kept separate from project
+  content and generated artifacts; resolve platform locations through one
+  OS-aware strategy (for example, `etcetera::choose_base_strategy()`), with
+  `$RECITE_CONFIG` as the explicit override;
+- distinguish explicit dialogue locale selection from Recite UI locale, where
+  `system` may resolve through a deterministic fallback chain;
+- typed watch/build/freshness status and cancellation rather than GUI code
+  parsing CLI prose;
+- one preview driver over the real runtime event stream, fixture state, locale
+  providers, and effect requests.
 
-The final milestone is represented by current GitHub issues:
+The first implementation may remain in existing crates where extraction would
+add indirection without reducing duplication. A new authoring crate is earned
+only when the shared ownership and API are clear.
 
-- [#77 release candidate checklist](https://github.com/plethu/recite/issues/77);
-- [#78 compatibility audit](https://github.com/plethu/recite/issues/78);
-- [#79 packaging and installation smoke tests](https://github.com/plethu/recite/issues/79);
-- [#80 final documentation/examples verification](https://github.com/plethu/recite/issues/80);
-- [#81 known-limits and support policy](https://github.com/plethu/recite/issues/81).
+**Entry gate:** language, schema, and localisation models are ready enough to
+be queried without reinterpreting source in each client.
 
-They sit at the end of the graph. Pre-release hardening such as #91 and #135 can
-land earlier, but the release checklist cannot honestly close until the
-authoring loop, scale proof, adapter paths, distribution, migration, and
-adoption documentation agree on the shipped product.
+**Exit gate:** CLI and LSP consume the shared operations; unsaved overlays,
+source edits, source-owning schema edits, diagnostics, schema/localisation
+views, watch status, and preview traces have fixture coverage; preview never
+executes game-side effects.
+
+### 4. Editor Integration Parity
+
+**Outcome:** text authoring is safe and discoverable in the editors users
+already choose.
+
+**Scope:**
+
+- VS Code and VSCodium extension/client wiring, highlighting, commands,
+  problem matcher, outline, and quick preview/trace;
+- Neovim filetype, documented LSP setup, highlighting, and command examples;
+- Zed language integration and task/diagnostic wiring through its supported
+  language-server surface;
+- one parity fixture set for diagnostics, completion, hover, definition,
+  references, rename, code actions, UTF-16 positions, malformed buffers,
+  schema changes, and localisation-aware information;
+- tested semantic parity and syntax highlighting in each editor; Neovim uses
+  Tree-sitter or a named tested fallback, and Zed documents its minimum
+  command/diagnostic surface and any host limitations;
+- documentation that distinguishes syntax grammars from semantic authority.
+
+**Entry gate:** the shared authoring kernel, reusable parity fixtures, and LSP
+contract are stable; clients need not be complete before the bake-off starts.
+
+**Exit gate:** the same source and schema fixtures give equivalent semantic
+answers in VS Code/VSCodium, Neovim, and Zed; required keyboard workflows work
+without a GUI workbench; editor docs contain tested setup instructions.
+
+### 5. Native GUI Strategy and Accessibility Proof
+
+**Outcome:** Recite chooses its GUI strategy from evidence rather than
+framework enthusiasm.
+
+**Candidate lanes:**
+
+- unified Rust frontends, including Freya 0.5 RC, Floem, GPUI, and
+  Xilem/Masonry candidates;
+- platform-appropriate frontends: SwiftUI/AppKit on macOS, WinUI 3 including a
+  separate `windows-reactor` Rust evaluation and experimental C#
+  `Microsoft.UI.Reactor` fallback on Windows, and a
+  Linux-native GTK/GtkSourceView path where that is the chosen host;
+- Avalonia using code-first C# as the primary non-Rust cross-platform control;
+- Qt, Flutter, Compose, Slint, and wxWidgets remain comparison baselines, not
+  commitments. A candidate must earn its place through authoring and
+  accessibility evidence, not only renderer reach or feature lists.
+
+The bake-off uses the same project, source, schema, catalog, and preview
+fixtures. It measures source editing, undo/redo, external changes, diagnostics,
+schema completion, localisation preview, graph navigation, startup, memory,
+packaging, and maintenance boundaries. Non-Rust/native candidates must also
+document the kernel crossing (in-process binding or local process protocol),
+protocol/versioning, structured requests/errors, cancellation, stale
+generations, source edits, and packaging. No candidate may introduce a second
+semantic implementation. Accessibility proof includes keyboard-only operation,
+focus order, screen readers, IME composition, BiDi/RTL text, zoom/text scaling,
+high contrast, non-colour cues, live diagnostics, progress/status announcements,
+failure/retry, focus retention/restoration, external-file/save conflicts,
+reduced motion, and manual assistive-technology verification where automation
+is insufficient.
+
+The bake-off includes an explicit candidate-by-platform applicability matrix.
+Each claimed candidate/platform cell is tested; candidates are not required to
+run on every operating system. The decision record names selected cells,
+unsupported cells, and the reason for each unsupported claim.
+
+**Entry gate:** the shared kernel, reusable editor-parity fixtures, and preview
+loop exist well enough to compare hosts without rebuilding Recite semantics in
+each one; completed editor clients are not a prerequisite.
+
+**Exit gate:** a checked-in decision record names the chosen frontend strategy,
+declared platform support, fallback path, known limitations, maintenance cost,
+and reconsideration triggers. No production workbench implementation is the
+default merely because it was easiest to prototype.
+
+### 6. GUI Workbench
+
+**Outcome:** writers can use an accessible standalone workbench without losing
+the text-first workflow.
+
+**Scope:**
+
+- project open/discovery, source tree, tabs, search, outline, and graph
+  navigation;
+- source editor with diagnostics, completion, navigation, rename, stable-ID
+  actions, undo/redo, atomic saves, and external-change conflict handling;
+- schema browser and completion/provenance views, with explicit source-owning
+  schema editing for the standalone declarative producer and producer-backed
+  edit/open-declaration actions for engine-owned schemas. Actions open the
+  source declaration, invoke/regenerate through the producer, report stale
+  output, surface structured failures and retry, and never write generated
+  manifests directly; unsupported producers are visibly read-only;
+- gettext PO catalog browser and editor as the required v1 editable catalogue
+  path, preserving comments, context, unknown data, source IDs, placeholders,
+  markup, fallback, and preview locale with safe atomic writes; other catalog
+  formats are explicitly read-only or import/export-only;
+- structured preview and trace views driven by the shared runtime loop;
+- accessible list/table alternatives for graph information and every essential
+  action; automatic layout is the default, viewport state is transient/local,
+  and an optional checked-in open sidecar keyed by stable IDs may preserve
+  layout without becoming dialogue semantics;
+- user configuration stored through the shared cross-platform configuration
+  contract, not in project content;
+- asynchronous status with stale-generation handling, cancellation,
+  progress/status announcements, failure and retry, focus retention/restoration,
+  external-file and save-conflict recovery, and reduced-motion behavior.
+
+**Entry gate:** the selected strategy has passed the bake-off and the shared
+preview/editor contracts are available.
+
+**Exit gate:** a writer can edit a scene, repair a diagnostic, author supported
+schema declarations without touching generated manifests, edit gettext PO
+catalogues safely, preview a condition/effect path, rebuild, and recover from
+an external change using keyboard and screen-reader workflows on Linux, Windows,
+and macOS. The workbench has no independent parser, compiler, runtime, or
+schema truth.
+
+### 7. Engine Companions
+
+**Outcome:** Godot, Unity, and Bevy users get thin, idiomatic companions rather
+than three divergent dialogue implementations.
+
+**Scope:**
+
+- compiled asset loading, compatibility/freshness checks, session ownership,
+  start/select/ack/end, conditions, effects, save/load, localisation, and
+  structured errors;
+- host-native schema producers that lower to the canonical generated manifest,
+  with producer-backed edit/open-declaration actions rather than direct
+  manifest editing;
+- the edit → diagnostics → watch → import/refresh → restart or explicit
+  active-session policy loop;
+- host-independent conformance traces plus host-specific integration tests and
+  small examples;
+- ecosystem-shaped packages: Godot addon/Asset Library path, Unity Package
+  Manager path with runtime/editor separation and native-library packaging, and
+  crates.io/Bevy plugin/example path.
+
+**Entry gate:** the adapter contract, schema and localisation models, FFI
+boundary where needed, and shared preview/runtime semantics are stable. The
+GUI is not a prerequisite.
+
+**Exit gate:** each companion passes the adapter acceptance matrix, declares and
+tests exactly one changed-asset policy, demonstrates localisation and save/load,
+and can be installed without copying internal repository paths. Bevy's adapter
+must exist before its refresh workflow is counted complete.
+
+### 8. Distribution, Adoption, and Migration
+
+**Outcome:** a team can install Recite, understand its boundaries, evaluate it,
+and migrate content without reverse-engineering the repository.
+
+**Scope:**
+
+- release channels for CLI, LSP, GUI, editor integrations, and companions;
+- platform compatibility, package metadata, native library distribution,
+  checksums/signing, upgrade notes, and known support limits;
+- complete headless, workbench, and engine workflow examples;
+- authoring, schema, localisation, testing, preview, refresh, and save/load
+  guides;
+- structured import reporting and provenance, with honest compatibility notes
+  for Ink, Yarn Spinner, Dialogic, Dialogue Manager, Dialogue System for Unity,
+  and adjacent tools;
+- alternatives and adoption guidance based on shipped behavior rather than
+  aspirational framework comparisons.
+
+**Entry gate:** the first-class desktop workflow and all declared companion
+paths have stable installation and authoring workflows.
+
+**Exit gate:** public docs, examples, package instructions, migration reports,
+and support policy agree with the actual release artifacts; no core adoption
+path depends on a draft page or an unverified claim.
+
+### 9. Serious v1 Release
+
+**Outcome:** Recite can make a bounded, supportable compatibility promise.
+
+**Entry gate:** milestones 1–8 are complete, the compiled format and snapshot
+policy are frozen for the release, and all required reviews are resolved.
+
+**Exit gate:**
+
+- the serious-v1 acceptance criteria in specification §23 pass;
+- Rust, CLI, LSP, editor-integration, GUI, and companion verification passes on
+  every declared platform;
+- accessibility evidence covers the declared GUI platforms and essential
+  authoring workflows;
+- scale, memory, preview, watch, and adapter measurements have a named profile
+  and regression policy;
+- release artifacts install and run from their published distribution paths;
+- known limits, migration boundaries, active-session behavior, and future
+  non-goals are published;
+- a clean release candidate can be rebuilt from the repository and its
+  documented toolchain.
+
+## Secondary issue mapping
+
+Issue links are deliberately secondary to this outcome map. The table records
+the verified current GitHub owner groups and open counts; the outcome gates
+remain authoritative if the tracker is split again.
+
+| Outcome | Current GitHub owner group (open count) | GitHub milestone |
+| --- | --- | --- |
+| Product Foundation and Maintainability | [#164 maintainability](https://github.com/plethu/recite/issues/164), [#171 Resolve C ABI condition arguments and schema mismatch contract](https://github.com/plethu/recite/issues/171) (8 open) | 17 |
+| Language, schema, and localisation readiness | [#165](https://github.com/plethu/recite/issues/165), [#166](https://github.com/plethu/recite/issues/166) (2 open) | 18 |
+| Shared authoring kernel and preview | [#167](https://github.com/plethu/recite/issues/167), [#168](https://github.com/plethu/recite/issues/168) (2 open) | 19 |
+| Editor integration parity | [#169 editor trio parity](https://github.com/plethu/recite/issues/169) (6 open) | 20 |
+| Native GUI strategy and accessibility proof | [#54 GUI strategy](https://github.com/plethu/recite/issues/54), [#123 accessibility requirements](https://github.com/plethu/recite/issues/123) (2 open) | 21 |
+| GUI workbench | [#170 GUI workbench](https://github.com/plethu/recite/issues/170) (1 open) | 22 |
+| Engine companions | #49, #83–#86, #132–#134 (8 open) | 23 |
+| Distribution, adoption, and migration | #38, #56, #57, #60, #99, #104 (6 open) | 24 |
+| Serious v1 release | #77–#81, #109 (6 open) | 25 |
+| Integration workflow | [#163 integration workflow](https://github.com/plethu/recite/issues/163) | 17 |
+| Post-v1 / no milestone | #74, #100–#103, #119, #121, #126 (8 open) | — |
+
+Issue #163 starts in milestone 17 and applies across the full 17–25 outcome
+sequence. Issues #59 and #61 are closed and superseded, so they are omitted;
+the post-v1 group remains outside the serious-v1 gates.
+
+## Current work classification
+
+The repository already contains substantial language, runtime, CLI, LSP,
+benchmark, FFI, Godot, and Unity work. That work should be evaluated against
+the milestone exit gates rather than treated as automatically complete. The
+largest structural gaps are the shared authoring kernel, first-class editor
+parity, the native GUI/accessibility decision, the GUI workbench, and a Bevy
+companion with a real distribution path.
