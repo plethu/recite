@@ -8,15 +8,22 @@ note: |
   because small classifiers are common in Recite. Suppress an intentional
   true positive next to the chain with
   `// ast-grep-ignore: rust-elseif-cascade` and a reason explaining why the
-  branch order is the local policy.
+  branch order is the local policy. The root-only constraint reports a longer
+  chain once rather than once for each matching suffix.
 rule:
-  pattern: |
-    if $VALUE == $A {
-      $$$THEN0
-    } else if $VALUE == $B {
-      $$$THEN1
-    } else if $VALUE == $C {
-      $$$THEN2
-    } else if $VALUE == $D {
-      $$$THEN3
-    }
+  all:
+    - pattern: |
+        if $VALUE == $A {
+          $$$THEN0
+        } else if $VALUE == $B {
+          $$$THEN1
+        } else if $VALUE == $C {
+          $$$THEN2
+        } else if $VALUE == $D {
+          $$$THEN3
+        }
+    # An else-if suffix also parses as an if-expression. Only report the
+    # outer chain root so a five- or six-branch chain emits one diagnostic.
+    - not:
+        inside:
+          kind: else_clause

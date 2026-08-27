@@ -69,3 +69,46 @@ git -C "$test_root/repo" commit -q -m structural-exemption
 )
 
 echo "ast-grep structural exemption fixture passed"
+
+check_single_cascade_diagnostic() {
+  local branch_count="$1"
+  local fixture="$test_root/repo/crates/demo/src/lib.rs"
+  local branch output result_code diagnostics
+
+  {
+    printf '%s\n' 'fn sprawling_classifier(value: usize) -> usize {'
+    for ((branch = 0; branch < branch_count; branch++)); do
+      if (( branch == 0 )); then
+        printf '    if value == %d {\n' "$branch"
+      else
+        printf '    } else if value == %d {\n' "$branch"
+      fi
+      printf '        %d\n' "$branch"
+    done
+    printf '%s\n' '    } else {' '        99' '    }' '}'
+  } > "$fixture"
+  git -C "$test_root/repo" add crates/demo/src/lib.rs
+  git -C "$test_root/repo" commit -q -m "structural-${branch_count}-branch"
+
+  set +e
+  output="$(
+    cd "$test_root/repo"
+    scripts/check-ast-grep.sh HEAD^ HEAD 2>&1
+  )"
+  result_code=$?
+  set -e
+  if (( result_code == 0 )); then
+    echo "ast-grep ${branch_count}-branch fixture unexpectedly passed" >&2
+    exit 1
+  fi
+  diagnostics="$(printf '%s\n' "$output" | grep -c 'error\[rust-elseif-cascade\]' || true)"
+  if [[ "$diagnostics" -ne 1 ]]; then
+    echo "ast-grep ${branch_count}-branch fixture reported ${diagnostics} diagnostics" >&2
+    printf '%s\n' "$output" >&2
+    exit 1
+  fi
+  echo "ast-grep ${branch_count}-branch fixture reported one diagnostic"
+}
+
+check_single_cascade_diagnostic 5
+check_single_cascade_diagnostic 6
