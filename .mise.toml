@@ -1,5 +1,6 @@
 [tools]
 "cargo:cbindgen" = "0.29.4"
+"cargo:ast-grep" = "0.44.1"
 "aqua:BurntSushi/ripgrep" = "15.2.0"
 "aqua:jqlang/jq" = "1.8.2"
 dotnet = "8.0.421"

@@ -1,0 +1,7 @@
+ruleDirs:
+  - rules
+testConfigs:
+  - testDir: tests
+languageGlobs:
+  rust:
+    - "crates/**/src/**/*.rs"

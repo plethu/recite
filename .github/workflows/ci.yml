@@ -118,6 +118,34 @@ jobs:
       - name: Run benchmark smoke
         run: scripts/benchmark-smoke.sh
 
+  maintainability:
+    name: Maintainability
+    runs-on: ubuntu-24.04
+    timeout-minutes: 10
+    env:
+      RECITE_BASE_REF: >-
+        ${{ github.event_name == 'pull_request' &&
+            format('origin/{0}', github.base_ref) || 'HEAD^' }}
+      RECITE_HEAD_REF: >-
+        ${{ github.event_name == 'pull_request' &&
+            github.event.pull_request.head.sha || github.sha }}
+    steps:
+      - name: Check out source change
+        uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          ref: ${{ github.event.pull_request.head.sha || github.sha }}
+          fetch-depth: 0
+          persist-credentials: false
+
+      - name: Install repository toolchain
+        uses: jdx/mise-action@3c2e0cf82a5b2e5249f0d3635a4d83d0ae861518 # v4.2.5
+
+      - name: Run maintainability checks
+        run: |
+          tests/maintainability/check.sh
+          scripts/check-maintainability.sh
+          scripts/check-ast-grep.sh
+
   required-check:
     name: required-check
     if: always()
@@ -126,17 +154,20 @@ jobs:
       - rust
       - docs
       - benchmark-smoke
+      - maintainability
     runs-on: ubuntu-24.04
     timeout-minutes: 5
     steps:
-      - name: Require Rust, documentation, and benchmark lanes
+      - name: Require project lanes
         env:
           BENCHMARK_RESULT: ${{ needs.benchmark-smoke.result }}
           DOCS_RESULT: ${{ needs.docs.result }}
           GIT_POLICY_RESULT: ${{ needs.git-policy.result }}
+          MAINTAINABILITY_RESULT: ${{ needs.maintainability.result }}
           RUST_RESULT: ${{ needs.rust.result }}
         run: |
           test "$GIT_POLICY_RESULT" = success
           test "$RUST_RESULT" = success
           test "$DOCS_RESULT" = success
           test "$BENCHMARK_RESULT" = success
+          test "$MAINTAINABILITY_RESULT" = success

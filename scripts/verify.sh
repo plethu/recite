@@ -9,13 +9,17 @@ Usage:
 Runs the complete local verification suite:
   1. scripts/check-git-policy.sh
   2. tests/git-policy/check-integration.sh
-  3. tests/check-pr-review-gates/check-rollup-fixtures.sh
-  4. scripts/check-project-gates.sh
-  5. scripts/check-docs.sh
-  6. scripts/benchmark-smoke.sh
+  3. tests/maintainability/check.sh
+  4. scripts/check-maintainability.sh
+  5. scripts/check-ast-grep.sh
+  6. tests/check-pr-review-gates/check-rollup-fixtures.sh
+  7. scripts/check-project-gates.sh
+  8. scripts/check-docs.sh
+  9. scripts/benchmark-smoke.sh
 
 Use `mise run verify` from the repository root when mise is available.
-`mise install` provisions the pinned Rust, Node, pnpm, .NET, and cbindgen tools.
+`mise install` provisions the pinned Rust, Node, pnpm, .NET, cbindgen, and
+ast-grep tools.
 EOF
 }
 
@@ -42,7 +46,7 @@ else
   fi
 fi
 
-for gate in check-git-policy.sh check-project-gates.sh check-docs.sh benchmark-smoke.sh; do
+for gate in check-git-policy.sh check-maintainability.sh check-ast-grep.sh check-project-gates.sh check-docs.sh benchmark-smoke.sh; do
   if [[ ! -x "$repo_root/scripts/$gate" ]]; then
     echo "missing executable verification gate: $repo_root/scripts/$gate" >&2
     exit 2
@@ -63,6 +67,15 @@ echo "== Git workflow policy =="
 echo
 echo "== Git workflow integration policy fixtures =="
 bash "$repo_root/tests/git-policy/check-integration.sh" "$repo_root"
+
+echo
+echo "== maintainability fixtures and changed-surface check =="
+(
+  cd "$repo_root"
+  tests/maintainability/check.sh
+  scripts/check-maintainability.sh
+  scripts/check-ast-grep.sh
+)
 
 echo
 echo "== pull-request check rollup fixtures =="
