@@ -214,10 +214,11 @@ RECITE_BENCH_SCALES=tiny cargo bench -p recite-benchmarks --bench lsp -- lsp/dia
 RECITE_BENCH_SCALES=tiny cargo bench -p recite-benchmarks --bench lsp -- lsp/completion
 ```
 
-Watch/build refresh investigations and the generated-fixture stress command are
-owned by [#108 CLI: add watch rebuild latency stress
+Watch/build refresh investigations now use the generated-fixture stress command
+implemented by closed issue [#108 CLI: add watch rebuild latency stress
 checks](https://github.com/plethu/recite/issues/108). Run the dedicated stress
-check through the repository task:
+check through the repository task; any new investigations follow the current
+benchmark ownership below:
 
 ```bash
 mise run watch-stress
@@ -295,8 +296,8 @@ It should not make profiling tools linked project dependencies.
   phase benchmark expansion.
 - [#107](https://github.com/plethu/recite/issues/107) owns runtime allocation
   and clone-pressure measurement.
-- [#108](https://github.com/plethu/recite/issues/108) owns watch rebuild latency
-  stress checks through `mise run watch-stress`.
+- [#108](https://github.com/plethu/recite/issues/108) implemented the watch
+  rebuild latency stress checks through `mise run watch-stress` and is closed.
 - [#109](https://github.com/plethu/recite/issues/109) owns the release benchmark
   baseline profile, the fuller release/scheduled suite, and any blocking trend
   claims.
