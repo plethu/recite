@@ -59,7 +59,7 @@ pub(super) fn restore_pending_prompt(
             )));
         }
         let availability = availability_from_snapshot(snapshot_choice.availability.clone())
-            .map_err(invalid_snapshot)?;
+            .map_err(|error| invalid_snapshot(error.to_string()))?;
         pending_choices.push(PendingPromptChoice {
             id: choice_id,
             target: compiled_choice.target.clone(),

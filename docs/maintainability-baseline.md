@@ -92,7 +92,7 @@ wire compatibility fixtures, and focused reviews for each subsystem.
 | `crates/recite-core/src/schema/manifest/lower/availability.rs` | 560 | production | core/schema | review | Reassess mapping and domain-validation ownership |
 | `crates/recite-core/src/compiled/messagepack/tags.rs` | 506 | production | core/wire | cohesive | #89: explicit wire tag table |
 | `crates/recite-core/src/compiled/messagepack/wire.rs` | 505 | production | core/wire | exception | #89: retain the explicit decoder boundary while the v0 wire contract is synchronized |
-| `crates/recite-runtime/src/session_snapshot.rs` | 482 | production | runtime/snapshot | follow-up | #135: typed snapshot-boundary errors |
+| `crates/recite-runtime/src/session_snapshot.rs` | 293 | production | runtime/snapshot | follow-up | #135: typed snapshot-boundary errors |
 | `crates/recite-core/src/compiled/messagepack/validate.rs` | 479 | production | core/wire | cohesive | #89: validation is part of the decoder boundary |
 | `crates/recite-lsp/src/workspace.rs` | 479 | production | lsp/workspace | follow-up | #164: separate document state, saved indexes, and analysis snapshots |
 | `crates/recite-compiler/src/wire/messagepack.rs` | 397 | production | compiler/wire | cohesive | #89: encoder mirror of the explicit decoder wire surface |
