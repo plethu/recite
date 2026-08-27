@@ -4,7 +4,7 @@ use std::io::{self, Write};
 use recite_runtime::DialogueEvent;
 
 use super::{encode_batch, encode_batch_to_writer};
-use crate::{ReciteStatus, flatten_output_encode_error};
+use crate::{FfiOutputEncodeError, ReciteStatus, encode_batch_output};
 
 struct FailingWriter;
 
@@ -35,9 +35,16 @@ fn output_encoder_retains_messagepack_source_error() {
             .contains("failed to encode FFI output batch")
     );
 
-    let (status, message) = flatten_output_encode_error(error);
+    let Err((status, message)) = encode_batch_output(Vec::new(), failing_encode) else {
+        panic!("the production output seam must map encoder failures");
+    };
     assert_eq!(status, ReciteStatus::DialogueFault);
     assert!(message.contains("failed to encode FFI output batch"));
+}
+
+fn failing_encode(events: Vec<DialogueEvent>) -> Result<Vec<u8>, FfiOutputEncodeError> {
+    let mut writer = FailingWriter;
+    encode_batch_to_writer(events, &mut writer).map(|()| Vec::new())
 }
 
 #[test]

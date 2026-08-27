@@ -800,15 +800,18 @@ fn drain_after_event(
             Err(e) => return Err((ReciteStatus::from(e.clone()), e.to_string())),
         }
     }
-    encode_batch_output(events)
+    encode_batch_output(events, encode_batch)
 }
 
 fn empty_batch() -> Result<ReciteBuffer, (ReciteStatus, String)> {
-    encode_batch_output(Vec::new())
+    encode_batch_output(Vec::new(), encode_batch)
 }
 
-fn encode_batch_output(events: Vec<DialogueEvent>) -> Result<ReciteBuffer, (ReciteStatus, String)> {
-    encode_batch(events)
+fn encode_batch_output(
+    events: Vec<DialogueEvent>,
+    encoder: fn(Vec<DialogueEvent>) -> Result<Vec<u8>, FfiOutputEncodeError>,
+) -> Result<ReciteBuffer, (ReciteStatus, String)> {
+    encoder(events)
         .map(ReciteBuffer::from_bytes)
         .map_err(flatten_output_encode_error)
 }
