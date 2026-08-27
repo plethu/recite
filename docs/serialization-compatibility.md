@@ -10,21 +10,24 @@ codec, a benchmark spike, or a new wire version.
 
 ## Decision
 
-Keep MessagePack v0 for each current surface:
+Keep the current MessagePack contracts, with each surface governed separately:
 
 | Surface | Current contract | Boundary |
 | --- | --- | --- |
 | Compiled assets | Deterministic MessagePack v0 (`format_version = 0`, `compiler_compatibility_version = 0`) with fixed arrays and an explicit encoding tag | The compiler, core decoder, adapters, and the [wire synchronization matrix](compiled-wire-synchronization.md) share this contract. |
-| Runtime snapshots | MessagePack encoding of `DialogueSessionSnapshot`, independently versioned; the current snapshot format is v1 | Hosts store snapshot bytes as opaque save data. Restore validates the snapshot against the compiled asset, including pending-effect identity. |
+| Runtime snapshots | MessagePack encoding of `DialogueSessionSnapshot` with its own `snapshot_format_version = 1` | Hosts store snapshot bytes as opaque save data. Restore validates the snapshot against the compiled asset, including pending-effect identity. |
 | FFI output batches | Named-map MessagePack with `batch_format_version = 0` | The [C ABI boundary](c-abi-boundary-design.md#output-payload-encoding) owns buffer, status, ordering, and host-copy rules; the batch is not the compiled-asset wire. |
-| FFI condition payloads | MessagePack argument arrays and tagged result maps | The callback owns the borrowed input and result bytes under the existing C ABI contract. A future encoding change needs an explicit negotiated version. |
+| FFI condition payloads | MessagePack argument arrays and tagged result maps; no independent format version | The current ABI contract fixes this payload. Recite owns the query, name, and argument bytes and lends them to the callback; the host owns result and error bytes, which Recite borrows only until the callback returns. |
 
 These are four compatibility surfaces, even where they currently use the same
-codec. Their format and compatibility versions are independent. Existing
-fields and values remain as shipped; a compiler, crate, or host version does
-not silently select a different reader. Compact JSON remains an inspection
-encoding for fixtures, debugging, and CLI tooling. It is not a second runtime
-asset, snapshot, or FFI format.
+codec. They are not one shared version: compiled assets expose their format and
+compiler-compatibility versions, snapshots expose their snapshot format and
+carry asset identity, and batches expose their batch format. Condition
+payloads have no independent version and are fixed by the current ABI
+contract. Existing fields and values remain as shipped; a compiler, crate, or
+host version does not silently select a different reader. Compact JSON remains
+an inspection encoding for fixtures, debugging, and CLI tooling. It is not a
+second runtime asset, snapshot, or FFI format.
 
 ## Why MessagePack remains
 
@@ -59,22 +62,36 @@ The alternatives were considered with these weights: compatibility and
 migration 25%; host and platform portability 20%; deterministic
 inspectability and recovery 20%; maintainability and authoring ergonomics
 15%; measured performance and size potential 10%; and FOSS governance,
-licensing, and ecosystem 10%. The resulting ordinal totals (out of 100, not
-benchmark results) are:
+licensing, and ecosystem 10%. These weights informed the qualitative record
+below; they are not benchmark scores.
 
-| Candidate | Compiled assets | Snapshots | FFI batches and conditions |
-| --- | ---: | ---: | ---: |
-| MessagePack | 92 | 92 | 88 |
-| Deterministic CBOR | 79 | 79 | 79 |
-| FlatBuffers | 76 | 66 | 66 |
-| Protocol Buffers | 70 | 70 | 71 |
-| Cap'n Proto | 67 | 65 | 65 |
-| BSON | 52 | 52 | 52 |
+| Candidate | Decision record and primary evidence |
+| --- | --- |
+| MessagePack | Retain. The existing deterministic asset profile, strict readers, fixtures, snapshot restore, and host paths are the only complete Recite implementation. |
+| [Deterministic CBOR](https://www.rfc-editor.org/rfc/rfc8949.html#section-4.2) | General future escape hatch. Its deterministic profile is credible, but Recite would still own mapping, limits, validation, and migration. External save inspection does not currently justify that work. |
+| [FlatBuffers](https://flatbuffers.dev/evolution/) | Asset-only measured hypothesis. Its direct-read benefit must be demonstrated on Recite's large immutable assets; it is not a snapshot or FFI default. |
+| [Protocol Buffers](https://protobuf.dev/programming-guides/serialization-not-canonical/) | Conditional on generated bindings becoming a product requirement. Non-canonical deterministic output makes it a poor default for asset fingerprints. |
+| [BSON](https://bsonspec.org/spec.html) | Reject as a default: its document/Mongo ecosystem and duplicate-key behavior do not answer Recite's compatibility problem. |
+| [Cap'n Proto](https://capnproto.org/otherlang.html) | Reject as a default: schema/toolchain and cross-language support costs are not justified by an unmeasured layout benefit. |
 
-The evidence does not justify format churn for external save inspection. There
-is no current Bevy serialization consumer, and no candidate has yet shown a
+For compiled assets and snapshots, MessagePack's existing validation and typed
+restore paths outweigh a second codec. For FFI batches, named maps and the host
+boundary matter more than a schema generator. For condition payloads, the
+current ABI ownership and strictness are the contract; no alternate encoding
+is implied.
+There is no current Bevy serialization consumer, and no candidate has shown a
 Recite-level size, allocation, load, or cross-host advantage that repays a
 second codec and its migration surface.
+
+## The current v0 correction window
+
+Before the first tagged release, [§12.2 of the production spec](recite-production-spec.md#122-compiled-format)
+permits an intentional v0 wire-shape correction. It must update the model,
+writer, reader, validator, inspection projection, wire matrix, and focused
+fixtures together, with the byte change reviewed as evidence. That is a
+coordinated decision, never a silent encoder change. After the first tagged
+release, field or tag changes require the format or compatibility-version rule
+below.
 
 ## Future format gate
 
@@ -94,6 +111,12 @@ accepted candidate must provide:
   relevant load or memory behavior on the named fixtures;
 - malformed-input, round-trip, determinism, and old/new reader tests; and
 - conformance evidence for every shipped host that claims the artifact.
+
+For FFI, this gate starts with a separate ABI design. It must choose an
+ABI-major change, an additive versioned entrypoint, or a versioned envelope,
+then define capability/version handling and host rejection against the current
+v0 strictness in [#171](https://github.com/plethu/recite/issues/171). This
+decision does not claim that negotiation exists today.
 
 The first rollout is additive or dual-read: a new reader may understand the
 old format and the new format, while writers continue to produce the old
@@ -123,24 +146,26 @@ maps, fingerprints, repeated metadata order, reason trees, effect IDs, locale,
 trace counters, and traversal pointers. A decoder rejects unknown encoding or
 compatibility values before interpreting the payload.
 
-Every accepted replacement names a documented same-major migration window and
-its end condition. The old reader remains available during that window; this
-is a bounded release obligation, not an indefinite support promise.
+Retirement is artifact-specific; there is no universal same-major support
+window or indefinite support promise:
 
-Compiled assets are rebuildable: regeneration from source is the preferred
-path, with the old reader retained while published assets and declared hosts
-move across the window. Durable runtime saves require more care: the release
-must document backup and conversion behavior, validate asset identity and
-snapshot state, and test restore at line, prompt, and pending-blocking-effect
-boundaries before deprecating the old reader. Hosts must not rewrite opaque
-snapshot bytes merely to inspect them.
+- Compiled assets are rebuildable. Retire the old reader only after supported
+  toolchains and hosts, plus published assets, are accounted for and the
+  breaking release is documented.
+- Durable runtime saves require an old-reader or conversion path, backup and
+  release guidance, asset-identity and snapshot validation, and a breaking
+  compatibility decision before the old path is retired. Hosts must not
+  rewrite opaque snapshot bytes merely to inspect them.
+- FFI v0 remains through its ABI-major contract unless an additive versioned
+  surface is accepted. A separate design must define host rejection and
+  ownership before any new batch or condition encoding is interpreted. Unity
+  v0 batch rejection is required and is being implemented under [#171](https://github.com/plethu/recite/issues/171);
+  this branch does not claim that check already passes.
 
-FFI changes are negotiated explicitly. A host either advertises and selects a
-supported batch or condition-payload version, or Recite rejects the operation
-with a structured compatibility error. Existing hosts keep using v0 or reject
-the newer contract; they never infer support from payload shape. Length-
-prefixed buffers, allocator ownership, statuses, callback non-reentrancy, and
-condition error categories remain part of the ABI migration test.
+Length-prefixed buffers, allocator ownership, statuses, callback
+non-reentrancy, and condition error categories remain part of the ABI migration
+test. Existing hosts keep using the current contract or reject the newer one;
+they never infer support from payload shape.
 
 ## Evidence required to revisit this decision
 

@@ -20,6 +20,10 @@ export default defineConfig({
             { label: "Rust API", slug: "reference/rust-api" },
             { label: "Benchmarks", slug: "reference/benchmarks" },
             { label: "Source Format", slug: "reference/source-format" },
+            {
+              label: "Serialization Compatibility",
+              slug: "reference/serialization-compatibility",
+            },
           ],
         },
         {
