@@ -52,6 +52,7 @@ flowchart LR
   language --> companions
   workbench --> distribution["8 Distribution, adoption, migration"]
   companions --> distribution
+  editors --> distribution
   distribution --> release["9 Serious v1 release"]
   foundation --> distribution
 ```
