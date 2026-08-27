@@ -94,7 +94,14 @@ duplicating semantics.
 semantic authority remains, compatibility decisions are written down, and the
 full repository verification gate passes.
 
+**Status:** Complete as of 2026-08-27. PR #174 merged as `d8f9f7d`, delivering
+the ownership and maintainability gates, typed boundary corrections,
+compatibility decisions, shared fixtures, and CI evidence for this outcome.
+Trusted-policy activation remains a post-merge operational follow-up.
+
 ### 2. Language, Schema, and Localisation Readiness
+
+**Status:** Active next outcome.
 
 **Outcome:** authors and host integrations can rely on one stable semantic model
 for source, schema, IDs, localisation, diagnostics, and generated artifacts.
@@ -394,7 +401,7 @@ remain authoritative if the tracker is split again.
 
 | Outcome | Current GitHub owner group (open count) | GitHub milestone |
 | --- | --- | --- |
-| Product Foundation and Maintainability | [#89](https://github.com/plethu/recite/issues/89), [#91](https://github.com/plethu/recite/issues/91), and [#135](https://github.com/plethu/recite/issues/135) (absorbed by [#164](https://github.com/plethu/recite/issues/164)); [#138](https://github.com/plethu/recite/issues/138) (retained maintainer decision); [#164](https://github.com/plethu/recite/issues/164); [#171](https://github.com/plethu/recite/issues/171) (6 open) | 17 |
+| Product Foundation and Maintainability | Complete (0 open; 8 closed; delivered by PR #174) | 17 |
 | Language, schema, and localisation readiness | [#165](https://github.com/plethu/recite/issues/165), [#166](https://github.com/plethu/recite/issues/166) (2 open) | 18 |
 | Shared authoring kernel and preview | [#167](https://github.com/plethu/recite/issues/167), [#168](https://github.com/plethu/recite/issues/168) (2 open) | 19 |
 | Editor integration parity | [#169 editor trio parity](https://github.com/plethu/recite/issues/169) (6 open) | 20 |
@@ -405,10 +412,9 @@ remain authoritative if the tracker is split again.
 | Serious v1 release | #77–#81, #109 (6 open) | 25 |
 | Post-v1 / no milestone (non-exhaustive tracker group) | #74, #119, #121, #126 (4 open); generated host-language bindings and other deferred directions still need future ownership | — |
 
-M17 has six open issues. The three issues absorbed by #164 remain live tracker
-records until their own closure, while #138 remains retained maintainer design
-work. PR #172 closed #153 and #163; issues #59 and #61 are also closed and
-superseded, so they are omitted.
+M17 is complete with 0 open and 8 closed issues. PR #174 delivered the
+foundation outcome; trusted-policy activation remains a post-merge operational
+follow-up. Issues #59 and #61 are closed and superseded, so they are omitted.
 
 The post-v1 row is deliberately non-exhaustive: it records current open issues
 without a milestone, not every deferred capability. Generated host-language
