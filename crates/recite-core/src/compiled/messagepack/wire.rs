@@ -27,7 +27,7 @@ use crate::compiled::{
     CompiledSourceFile, CompiledSourceMapEntry, CompiledSpeaker, CompiledStatement,
     CompilerVersion, LineIndex, LineLookupEntry, LineLookupTable, MatchArmIndex, MatchArmRange,
     MetadataIndex, MetadataRange, SourceFileIndex, SourceMapId, SourceMapIndex, SpeakerIndex,
-    StatementIndex, StatementRange, TableRange,
+    StatementIndex, StatementRange, TableRange, V0_TAGGED_VALUE_FIELDS,
 };
 
 #[derive(Deserialize)]
@@ -298,7 +298,10 @@ impl<'de> Deserialize<'de> for MsgAvailabilityReasonArgValueWrapper {
     where
         D: serde::Deserializer<'de>,
     {
-        deserializer.deserialize_tuple(2, MsgAvailabilityReasonArgValueVisitor)
+        deserializer.deserialize_tuple(
+            V0_TAGGED_VALUE_FIELDS as usize,
+            MsgAvailabilityReasonArgValueVisitor,
+        )
     }
 }
 

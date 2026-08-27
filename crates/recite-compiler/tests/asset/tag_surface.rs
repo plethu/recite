@@ -100,6 +100,15 @@ fn compiler_generated_messagepack_round_trips_the_v0_tag_surface() {
     assert_eq!(decoded_schema_tag_asset, schema_tag_asset.dialogue);
     assert_schema_tag_surface_is_covered(&decoded_schema_tag_asset);
 
+    let value_tag_asset = compile_value_tag_surface_asset();
+    let decoded_value_tag_asset =
+        decode_compiled_dialogue_messagepack(&value_tag_asset.messagepack)
+            .expect("compiler-generated MessagePack value tags decode");
+    assert_eq!(decoded_value_tag_asset, value_tag_asset.dialogue);
+    assert_value_tag_surface_is_covered(&decoded_value_tag_asset);
+}
+
+pub(super) fn compile_value_tag_surface_asset() -> CompiledAssetOutput {
     let value_tag_report = compile_inputs(
         [CompileInput::new(
             "dialogue/value-tags.recite",
@@ -118,14 +127,9 @@ fn compiler_generated_messagepack_round_trips_the_v0_tag_surface() {
         "value tag-surface fixture should compile without diagnostics: {:?}",
         value_tag_report.diagnostics
     );
-    let value_tag_asset = value_tag_report
+    value_tag_report
         .asset
-        .expect("valid fixture emits an asset");
-    let decoded_value_tag_asset =
-        decode_compiled_dialogue_messagepack(&value_tag_asset.messagepack)
-            .expect("compiler-generated MessagePack value tags decode");
-    assert_eq!(decoded_value_tag_asset, value_tag_asset.dialogue);
-    assert_value_tag_surface_is_covered(&decoded_value_tag_asset);
+        .expect("valid fixture emits an asset")
 }
 
 fn options_with_schema_fingerprint() -> CompileOptions {

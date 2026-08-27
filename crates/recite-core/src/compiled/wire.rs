@@ -1,7 +1,9 @@
 //! v0 wire arity and tag constant registry.
 //!
-//! This file is the single source of truth for v0 fixed-array field counts
-//! and `[tag, payload]` tag values. Three places must stay in sync with it:
+//! This file is the shared code registry for v0 fixed-array field counts and
+//! `[tag, payload]` tag values. The production spec remains the wire
+//! authority; three code/projection surfaces must stay in sync with this
+//! registry:
 //! the compiler encoder (`crates/recite-compiler/src/wire/messagepack*`), the
 //! core decoder (`crate::compiled::messagepack`), and the documented field
 //! tables in `docs/recite-production-spec.md` §12.2. Any new compiled row,
@@ -23,6 +25,9 @@ pub const V0_STATEMENT_FIELDS: u8 = 2;
 pub const V0_MATCH_ARM_FIELDS: u8 = 3;
 pub const V0_LINE_FIELDS: u8 = 5;
 pub const V0_CHOICE_FIELDS: u8 = 9;
+pub const V0_AVAILABILITY_REASON_FIELDS: u8 = 2;
+pub const V0_CONDITION_AVAILABILITY_REASON_FIELDS: u8 = 3;
+pub const V0_AVAILABILITY_REASON_ARG_BINDING_FIELDS: u8 = 2;
 pub const V0_SPEAKER_FIELDS: u8 = 1;
 pub const V0_METADATA_ENTRY_FIELDS: u8 = 3;
 pub const V0_EFFECT_FIELDS: u8 = 5;
@@ -31,6 +36,12 @@ pub const V0_SOURCE_SPAN_FIELDS: u8 = 5;
 pub const V0_LOOKUP_ENTRY_FIELDS: u8 = 2;
 pub const V0_RANGE_FIELDS: u8 = 2;
 pub const V0_FINGERPRINT_FIELDS: u8 = 2;
+pub const V0_TAGGED_VALUE_FIELDS: u8 = 2;
+pub const V0_CONDITION_CALL_FIELDS: u8 = 2;
+// Payloads of the tagged statement variants are fixed tuples too.
+pub const V0_PROMPT_STATEMENT_PAYLOAD_FIELDS: u8 = 2;
+pub const V0_IF_STATEMENT_PAYLOAD_FIELDS: u8 = 3;
+pub const V0_MATCH_STATEMENT_PAYLOAD_FIELDS: u8 = 2;
 
 pub const V0_ASSET_ENCODING_MESSAGEPACK: u8 = 0;
 pub const V0_INSPECTION_ENCODING_COMPACT_JSON: u8 = 0;

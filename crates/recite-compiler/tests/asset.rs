@@ -23,6 +23,9 @@ mod tag_surface;
 #[path = "asset/wire_golden.rs"]
 mod wire_golden;
 
+#[path = "asset/wire_contract.rs"]
+mod wire_contract;
+
 #[test]
 fn valid_fixture_compiles_to_runtime_facing_v0_tables() {
     let asset = compile_fixture("fixtures/recite/valid/core_language_spike.recite");

@@ -2285,6 +2285,10 @@ decoded compact JSON inspection form for fixtures, debugging, and CLI tooling.
 The MessagePack bytes are the runtime-facing asset; the JSON form is
 non-authoritative and must be produced from the same structured model.
 
+The checked-in [v0 compiled-wire synchronization matrix](compiled-wire-synchronization.md)
+maps this shape and its numeric tags to the typed model, explicit encoder and
+decoder/validator, inspection projection, fixtures, and conformance checks.
+
 v0 uses:
 
 - `format_version = 0`;

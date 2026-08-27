@@ -91,7 +91,7 @@ wire compatibility fixtures, and focused reviews for each subsystem.
 | `crates/recite-core/src/schema/model/canonical.rs` | 621 | production | core/schema | review | Canonical model boundary; preserve public fingerprints |
 | `crates/recite-core/src/schema/manifest/lower/availability.rs` | 560 | production | core/schema | review | Reassess mapping and domain-validation ownership |
 | `crates/recite-core/src/compiled/messagepack/tags.rs` | 506 | production | core/wire | cohesive | #89: explicit wire tag table |
-| `crates/recite-core/src/compiled/messagepack/wire.rs` | 502 | production | core/wire | cohesive | #89: decoder wire boundary |
+| `crates/recite-core/src/compiled/messagepack/wire.rs` | 505 | production | core/wire | exception | #89: retain the explicit decoder boundary while the v0 wire contract is synchronized |
 | `crates/recite-runtime/src/session_snapshot.rs` | 482 | production | runtime/snapshot | follow-up | #135: typed snapshot-boundary errors |
 | `crates/recite-core/src/compiled/messagepack/validate.rs` | 479 | production | core/wire | cohesive | #89: validation is part of the decoder boundary |
 | `crates/recite-lsp/src/workspace.rs` | 479 | production | lsp/workspace | follow-up | #164: separate document state, saved indexes, and analysis snapshots |
@@ -106,7 +106,7 @@ wire compatibility fixtures, and focused reviews for each subsystem.
 | `crates/recite-lsp/src/server.rs` | 383 | production | lsp/server | follow-up | #164: make request dispatch and workspace ownership explicit |
 | `crates/recite-benchmarks/src/memory_profiles/mod.rs` | 373 | production | benchmarks | cohesive | Maintainer-only profile orchestration |
 | `crates/recite-cli/src/commands.rs` | 372 | production | cli | review | Command orchestration boundary |
-| `crates/recite-compiler/src/wire/messagepack/tags.rs` | 371 | production | compiler/wire | cohesive | #89: encoder tag mirror |
+| `crates/recite-compiler/src/wire/messagepack/tags.rs` | 373 | production | compiler/wire | cohesive | #89: encoder tag mirror |
 | `crates/recite-godot/src/adapter.rs` | 363 | production | godot | review | Host adapter lifecycle boundary |
 | `crates/recite-core/src/schema/model/mod.rs` | 361 | production | core/schema | review | Schema module exports and model grouping |
 | `crates/recite-cli/src/play/driver.rs` | 350 | production | cli/play | cohesive | Shared preview driver seam |
@@ -149,11 +149,11 @@ wire compatibility fixtures, and focused reviews for each subsystem.
 | `crates/recite-core/tests/schema_manifest/fingerprint.rs` | 638 | test/support | core/tests | cohesive | Canonical fingerprint contract |
 | `crates/recite-core/tests/support/mod.rs` | 605 | test/support | core/tests | cohesive | Shared model and wire constructors |
 | `crates/recite-runtime/tests/adapter_conformance/manifest.rs` | 571 | test/support | runtime/tests | cohesive | Adapter manifest contract |
-| `crates/recite-compiler/tests/asset.rs` | 561 | test/support | compiler/tests | cohesive | Compiled asset behavior suite |
+| `crates/recite-compiler/tests/asset.rs` | 564 | test/support | compiler/tests | exception | #89: retain the shared compiled-asset fixture entry point for the wire contract guard |
 | `crates/recite-lsp/src/tests/support.rs` | 423 | test/support | lsp/tests | review | Test support ownership; retain private access where required |
 | `crates/recite-lsp/src/tests/project_indexes.rs` | 422 | test/support | lsp/tests | review | Private index behavior |
 | `crates/recite-core/tests/compiled_model.rs` | 419 | test/support | core/tests | cohesive | Compiled model behavior |
-| `crates/recite-compiler/tests/asset/tag_surface.rs` | 417 | test/support | compiler/tests | cohesive | Wire tag surface |
+| `crates/recite-compiler/tests/asset/tag_surface.rs` | 421 | test/support | compiler/tests | cohesive | Wire tag surface |
 | `crates/recite-runtime/tests/traversal/localisation.rs` | 411 | test/support | runtime/tests | cohesive | Locale traversal contract |
 | `crates/recite-parser/tests/parser/lowering.rs` | 406 | test/support | parser/tests | cohesive | Lowering behavior suite |
 | `crates/recite-compiler/tests/pot_extraction.rs` | 404 | test/support | compiler/tests | follow-up | #166: shared localisation extraction fixtures |
