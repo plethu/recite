@@ -1374,20 +1374,20 @@ Illustrative API:
 pub fn start_scene(
     asset: &CompiledDialogue,
     block: Option<&str>,
-    locale: LocaleId,
+    locale: Option<LocaleId>,
 ) -> Result<DialogueSession, DialogueError>;
 
 pub fn next(
     session: &mut DialogueSession,
     context: &dyn DialogueContext,
-    locale: &dyn LocaleProvider,
+    locale_provider: &dyn LocaleProvider,
 ) -> Result<DialogueEvent, DialogueError>;
 
 pub fn choose(
     session: &mut DialogueSession,
     choice_id: ChoiceId,
     context: &dyn DialogueContext,
-    locale: &dyn LocaleProvider,
+    locale_provider: &dyn LocaleProvider,
 ) -> Result<DialogueEvent, DialogueError>;
 
 pub fn acknowledge_effect(
@@ -1401,7 +1401,12 @@ pub fn end_scene(
 ) -> Result<Vec<DialogueEffectRequest>, DialogueError>;
 ```
 
-The concrete API may differ, but the semantics must hold.
+The concrete API may differ, but the semantics must hold. `None` starts a
+source-text-only session. The runtime may still receive a locale provider for a
+caller that can localise dialogue, but it must bypass that provider entirely
+when the session locale is `None` and emit the compiled source text. A provider
+must not be required to represent an absent locale or infer one from the host
+environment.
 
 ### 8.3 Event Model
 
@@ -1667,6 +1672,10 @@ adapter registries during traversal.
 ### 9.3 Locale Provider
 
 The runtime locale provider must receive both stable ID and source text.
+
+The runtime calls the provider only when the session has an explicit dialogue
+locale. Source-text-only sessions have no locale to pass to `lookup`; they
+bypass the provider and use the source text directly.
 
 ```rust
 pub trait LocaleProvider {
@@ -2672,7 +2681,11 @@ adapter's declared policy.
 
 ### 13.9 Future: `generate-bindings`
 
-Deferred past v1. Will generate typed host-language bindings (condition stubs, effect records/enums, runtime conversions, test helpers, optional engine event/signal wrappers) from schema once the schema and adapter contracts stabilise.
+Deferred past v1. Will generate typed host-language bindings (condition stubs,
+effect records/enums, runtime conversions, test helpers, optional engine
+event/signal wrappers) from schema once the schema and adapter contracts
+stabilise. This direction has no current tracker owner; assign one before it is
+promoted into planned work.
 
 ## 14. LSP
 
@@ -2946,7 +2959,8 @@ Adapters must:
 
 Every adapter should expose host-native equivalents of these operations:
 
-- start dialogue from a compiled asset, optional block, and locale;
+- start dialogue from a compiled asset, optional block, and optional locale;
+  `None` selects source-text-only mode;
 - select a dialogue choice by `ChoiceId`;
 - acknowledge a blocking effect by `EffectRequestId`;
 - observe structured dialogue output:
@@ -3436,6 +3450,13 @@ bench target commands. It proves that the tiny compiler and runtime benchmarks
 build and execute quickly; it does not compare timings or enforce regression
 thresholds.
 
+The current pull-request and main-branch workflow owns only that fast smoke
+check. Issue #109 owns the named release/scheduled benchmark baseline and fuller
+regression suite; issue #77 owns the evidence ledger and release-gate decision
+that consume its results. The fuller suite must not be implied by the PR smoke
+check before those release owners publish the runner, fixture, profile,
+threshold, and rerun policy.
+
 Regression thresholds must be explicit and reviewable. They become blocking
 only when measured against an agreed baseline and execution profile, such as a
 stable Linux runner or documented release-measurement profile. Before those
@@ -3476,7 +3497,8 @@ This makes real project dialogue scenes measurable without requiring users to wr
 
 Full ink/Yarn/Clyde import compatibility is not a v1 goal. Importers exist to
 help teams inspect and migrate existing content, not to make Recite execute
-another tool's runtime model.
+another tool's runtime model. Clyde is a guidance-only comparison target for
+v1; no Clyde importer or compatibility runtime is promised.
 
 Importer design must follow these boundaries:
 
@@ -3568,7 +3590,8 @@ The likely implementation order is:
 3. prototype a small Twee/Twine-style subset because passages and links map
    cleanly to blocks and choices;
 4. add ink and Yarn Spinner inspection or subset importers only after the report
-   model has proven useful for skipped and lossy constructs.
+   model has proven useful for skipped and lossy constructs. Clyde remains on
+   the compatibility-guidance path rather than becoming another importer family.
 
 Importer follow-up issues should stay separate from the native language design.
 The branchable work units are: shared import report/provenance model, custom
@@ -3752,10 +3775,10 @@ with honest boundaries.
 reproducible package, upgrade, signing, and support instructions; examples and
 guides cover the source-first loop; bounded subset importers for custom JSON/CSV,
 Twee/Twine, Ink, and Yarn Spinner preserve provenance and report losses;
-Dialogic, Dialogue Manager, Dialogue System for Unity, and related tools receive
-compatibility and migration guidance under the import-report work without an
-unowned importer promise; known limits and alternatives are published without
-implying compatibility that does not exist.
+Clyde, Dialogic, Dialogue Manager, Dialogue System for Unity, and related tools
+receive compatibility and migration guidance under the import-report work
+without an unowned importer promise; known limits and alternatives are
+published without implying compatibility that does not exist.
 
 ### Milestone 9: Serious v1 Release
 
@@ -3837,7 +3860,7 @@ The project is not production-credible until all of the following are true:
 - The adapter contract is stable enough that additional engines can be implemented without changing core runtime semantics.
 - Public docs and examples demonstrate headless CLI workflows and real Godot,
   Bevy, and Unity integration paths.
-- Adoption and migration guidance makes a credible case for teams evaluating Recite against established tools such as Dialogue System for Unity, Dialogue Manager, Dialogic, Yarn Spinner, and Ink.
+- Adoption and migration guidance makes a credible case for teams evaluating Recite against established tools such as Dialogue System for Unity, Dialogue Manager, Dialogic, Clyde, Yarn Spinner, and Ink; Clyde is explicitly guidance-only and has no v1 importer or compatibility runtime.
 
 Shipping a credible v1 means more than proving the core can run headlessly. The
 core runtime, shared authoring kernel, CLI, first-class text editors, accessible

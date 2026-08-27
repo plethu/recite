@@ -8,7 +8,7 @@ LSP/editor parity follows [milestone 20, Editor Integration
 Parity](https://github.com/plethu/recite/milestone/20), especially
 [#169](https://github.com/plethu/recite/issues/169). The production
 requirements remain in `docs/recite-production-spec.md` sections 14, 18, 19.5,
-and 22.
+and 22-23.
 
 ## Goals
 

@@ -343,8 +343,9 @@ and migrate content without reverse-engineering the repository.
 - authoring, schema, localisation, testing, preview, refresh, and save/load
   guides;
 - structured import reporting and provenance, with honest compatibility notes
-  for Ink, Yarn Spinner, Dialogic, Dialogue Manager, Dialogue System for Unity,
-  and adjacent tools;
+  for Ink, Yarn Spinner, Clyde, Dialogic, Dialogue Manager, Dialogue System for
+  Unity, and adjacent tools. Clyde is guidance-only in v1: it has no promised
+  importer or compatibility runtime;
 - bounded subset importer work tracked by #99–#104: #99 owns the shared import
   report/provenance model, #100–#103 own source-family subset importers, and
   #104 owns compatibility notes. This is provenance-preserving migration help,
@@ -375,6 +376,10 @@ policy are frozen for the release, and all required reviews are resolved.
   authoring workflows;
 - scale, memory, preview, watch, and adapter measurements have a named profile
   and regression policy;
+- the pull-request and main-branch benchmark smoke remains a fast build and
+  execution check; #109 owns the fuller named release/scheduled benchmark
+  baseline and regression suite, while #77 owns its evidence ledger and release
+  gate decision;
 - release artifacts install and run from their published distribution paths;
 - known limits, migration boundaries, active-session behavior, and future
   non-goals are published;
@@ -389,7 +394,7 @@ remain authoritative if the tracker is split again.
 
 | Outcome | Current GitHub owner group (open count) | GitHub milestone |
 | --- | --- | --- |
-| Product Foundation and Maintainability | [#164 maintainability](https://github.com/plethu/recite/issues/164), [#171 Resolve C ABI condition arguments and schema mismatch contract](https://github.com/plethu/recite/issues/171) (8 open) | 17 |
+| Product Foundation and Maintainability | [#89](https://github.com/plethu/recite/issues/89), [#91](https://github.com/plethu/recite/issues/91), and [#135](https://github.com/plethu/recite/issues/135) (absorbed by [#164](https://github.com/plethu/recite/issues/164)); [#138](https://github.com/plethu/recite/issues/138) (retained maintainer decision); [#153](https://github.com/plethu/recite/issues/153) and [#163](https://github.com/plethu/recite/issues/163) (closing in PR #172); [#164](https://github.com/plethu/recite/issues/164); [#171](https://github.com/plethu/recite/issues/171) (8 open at this revision) | 17 |
 | Language, schema, and localisation readiness | [#165](https://github.com/plethu/recite/issues/165), [#166](https://github.com/plethu/recite/issues/166) (2 open) | 18 |
 | Shared authoring kernel and preview | [#167](https://github.com/plethu/recite/issues/167), [#168](https://github.com/plethu/recite/issues/168) (2 open) | 19 |
 | Editor integration parity | [#169 editor trio parity](https://github.com/plethu/recite/issues/169) (6 open) | 20 |
@@ -399,11 +404,21 @@ remain authoritative if the tracker is split again.
 | Distribution, adoption, and migration | #38, #56, #57, #60, #99, #100–#103 (bounded subset importers), #104 (10 open) | 24 |
 | Serious v1 release | #77–#81, #109 (6 open) | 25 |
 | Integration workflow | [#163 integration workflow](https://github.com/plethu/recite/issues/163) | 17 |
-| Post-v1 / no milestone | #74, #119, #121, #126 (4 open) | — |
+| Post-v1 / no milestone (non-exhaustive tracker group) | #74, #119, #121, #126 (4 open); generated host-language bindings and other deferred directions still need future ownership | — |
 
-Issue #163 starts in milestone 17 and applies across the full 17–25 outcome
-sequence. Issues #59 and #61 are closed and superseded, so they are omitted;
-the post-v1 group remains outside the serious-v1 gates.
+At this revision M17 has eight open issues. The three issues absorbed by #164
+remain live tracker records until their own closure, while #138 remains retained
+maintainer design work. #153 and #163 are still counted as open because PR #172
+has not merged; the table does not claim their planned post-merge state. Issues
+#59 and #61 are closed and superseded, so they are omitted. Issue #163 applies
+across the full 17–25 outcome sequence while it remains open.
+
+The post-v1 row is deliberately non-exhaustive: it records current open issues
+without a milestone, not every deferred capability. Generated host-language
+bindings (specification §13.9) have no current tracker owner and need one if
+that direction is promoted; arbitrary mid-session patch reload remains an
+explicit non-goal unless similarly promoted. Clyde is intentionally covered by
+the v1 compatibility guidance under #104, not by a Clyde importer or runtime.
 
 ## Current work classification
 

@@ -215,11 +215,13 @@ RECITE_BENCH_SCALES=tiny cargo bench -p recite-benchmarks --bench lsp -- lsp/com
 ```
 
 Watch/build refresh investigations are owned by [#108 CLI: add watch rebuild
-latency stress checks](https://github.com/plethu/recite/issues/108) until dedicated stress
-commands exist. For now, measure the whole command externally and profile the
-compiler path that dominates the refresh:
+latency stress checks](https://github.com/plethu/recite/issues/108). The dedicated
+stress command is available as `mise run watch-stress`; measure the whole
+command externally as supplementary evidence and profile the compiler path that
+dominates the refresh:
 
 ```bash
+mise run watch-stress
 /usr/bin/time -v cargo run -p recite-cli -- watch <project-root>
 RECITE_BENCH_SCALES=medium cargo bench -p recite-benchmarks --bench compiler -- compiler/compile_with_schema
 ```
@@ -260,8 +262,19 @@ The command maps the common report flows to:
 recite bench <fixture-or-project> --group runtime --scale medium --format json --output target/recite-benchmarks/runtime.json
 recite bench <fixture-or-project> --group compiler --scale medium --format markdown --baseline baselines/release.json
 recite bench <fixture-or-project> --group lsp --scale tiny
-recite bench <fixture-or-project> --group watch --scale medium
 ```
+
+`recite bench` currently supports `compiler`, `runtime`, and `lsp` groups.
+Watch/build stress is a separate integration check through
+`mise run watch-stress`, not a fourth benchmark group.
+
+The PR and main-branch workflow keeps the tiny benchmark smoke check fast and
+non-comparative. Issue [#109 Perf: establish release benchmark baseline
+profile](https://github.com/plethu/recite/issues/109) owns the fuller
+release/scheduled benchmark suite and named regression profile; issue [#77
+Release: define v1 release candidate checklist and gate
+matrix](https://github.com/plethu/recite/issues/77) owns the evidence ledger and
+release-gate decision that consume it.
 
 The command should keep JSON output suitable for CI comparison, Markdown output
 for release notes, group filtering, scale selection, and baseline comparison.
@@ -278,7 +291,9 @@ It should not make profiling tools linked project dependencies.
 - [#107](https://github.com/plethu/recite/issues/107) owns runtime allocation
   and clone-pressure measurement.
 - [#108](https://github.com/plethu/recite/issues/108) owns watch rebuild latency
-  stress checks.
+  stress checks through `mise run watch-stress`.
 - [#109](https://github.com/plethu/recite/issues/109) owns the release benchmark
-  baseline profile and any blocking trend
+  baseline profile, the fuller release/scheduled suite, and any blocking trend
   claims.
+- [#77](https://github.com/plethu/recite/issues/77) owns the release evidence
+  ledger and gate decision for the benchmark results.

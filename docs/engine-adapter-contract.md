@@ -93,7 +93,8 @@ session and must not change the single-session v1 contract.
 
 Every adapter must expose host-native equivalents of these operations:
 
-- start a session from a compiled asset, optional start block, and locale;
+- start a session from a compiled asset, optional start block, and optional
+  locale; an absent locale selects source-text-only mode;
 - select a prompt choice by `ChoiceId`;
 - acknowledge a pending blocking effect by `EffectRequestId` and `EffectAck`;
 - end or dispose the active session through an explicit host-visible operation;
@@ -605,7 +606,9 @@ Adapters must start sessions with an explicit locale, a stable
 project-configured locale, or source-text fallback. Adapters must not silently
 derive the dialogue locale from the OS, editor, or engine environment; those
 inputs may be used only when the project or author explicitly opts into that
-policy. Locale fallback must be deterministic and must preserve the same
+policy. When no locale is selected, the adapter must preserve source-text-only
+mode and bypass locale-provider lookup. Locale fallback must be deterministic
+and must preserve the same
 localized text, source text, line IDs, choice IDs, metadata, and markup that
 the runtime exposes.
 
@@ -917,7 +920,7 @@ CompiledAssetIdentity
   compiler_compatibility_version
 
 AdapterSessionOwner
-  start(asset, block?, locale) -> OutputBatch | AdapterError
+  start(asset, block?, locale?) -> OutputBatch | AdapterError
   select(choice_id) -> OutputBatch | AdapterError
   acknowledge(effect_request_id, effect_ack) -> OutputBatch | AdapterError
   snapshot() -> SessionSnapshot | AdapterError
@@ -933,7 +936,11 @@ fn start_dialogue(
     asset: Res<Assets<ReciteDialogueAsset>>,
     mut output: EventWriter<ReciteOutput>,
 ) -> Result<(), ReciteAdapterError> {
-    let events = session.start(asset.id(), Some(BlockId::new("intro")), Locale::new("en-US"))?;
+    let events = session.start(
+        asset.id(),
+        Some(BlockId::new("intro")),
+        Some(Locale::new("en-US")),
+    )?;
     output.send_batch(events);
     Ok(())
 }
@@ -959,7 +966,7 @@ public partial class ReciteDialogueNode : Node
     [Signal] public delegate void OutputEventHandler(ReciteOutput output);
     [Signal] public delegate void AdapterErrorEventHandler(ReciteAdapterError error);
 
-    public Error Start(ReciteDialogueResource asset, string block, string locale);
+    public Error Start(ReciteDialogueResource asset, string block, string? locale);
     public Error SelectChoice(string choiceId);
     public Error AcknowledgeEffect(string effectRequestId, ReciteEffectAck ack);
     public ReciteSessionSnapshot Snapshot();
@@ -975,7 +982,7 @@ public sealed class ReciteDialogueService
     public event Action<ReciteOutput> Output;
     public event Action<ReciteAdapterError> Error;
 
-    public Result Start(ReciteDialogueAsset asset, string block, CultureInfo locale);
+    public Result Start(ReciteDialogueAsset asset, string block, CultureInfo? locale);
     public Result SelectChoice(ChoiceId choiceId);
     public Result AcknowledgeEffect(EffectRequestId effectRequestId, EffectAck ack);
     public ReciteSessionSnapshot Snapshot();
