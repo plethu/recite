@@ -98,9 +98,12 @@ update_baseline_lines() {
 run_check_with_base() {
   local base_ref="$1"
   git -C "$test_root/repo" -c core.pager=cat show-ref --verify --quiet refs/heads/main
+  # CI supplies these refs for the real checkout; fixture refs are explicit and
+  # must not resolve against the coordinator's repository.
   (
     cd "$test_root/repo"
-    scripts/check-maintainability.sh "$base_ref" HEAD
+    env -u RECITE_BASE_REF -u RECITE_HEAD_REF \
+      scripts/check-maintainability.sh "$base_ref" HEAD
   )
 }
 
@@ -111,7 +114,8 @@ run_check() {
 run_full_check() {
   (
     cd "$test_root/repo"
-    scripts/check-maintainability.sh --full
+    env -u RECITE_BASE_REF -u RECITE_HEAD_REF \
+      scripts/check-maintainability.sh --full
   )
 }
 
@@ -163,7 +167,14 @@ expect_initial_push_pass() {
 
 new_fixture
 commit_fixture baseline
-expect_full_pass complete baseline inventory
+RECITE_BASE_REF=hostile-base RECITE_HEAD_REF=hostile-head \
+  expect_full_pass "hostile inherited refs do not affect full fixture"
+
+new_fixture
+commit_fixture baseline
+commit_fixture changed
+RECITE_BASE_REF=hostile-base RECITE_HEAD_REF=hostile-head \
+  expect_pass "hostile inherited refs do not affect changed fixture"
 
 new_fixture
 commit_fixture baseline
