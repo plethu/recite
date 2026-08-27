@@ -1,5 +1,6 @@
 use recite_core::{ChoiceId, EffectId};
 
+use crate::session_snapshot::DialogueSessionSnapshotConversionError;
 use crate::{
     ChoiceAvailability, ConditionExpectedType, DialogueEffectMode,
     DialogueSchemaFingerprintSnapshot,
@@ -80,7 +81,11 @@ pub enum DialogueError {
     #[error("failed to decode session snapshot: {reason}")]
     SessionSnapshotDecodeFailed { reason: String },
     #[error("invalid session snapshot: {reason}")]
-    InvalidSessionSnapshot { reason: String },
+    InvalidSessionSnapshot {
+        reason: String,
+        #[source]
+        source: Option<Box<DialogueSessionSnapshotConversionError>>,
+    },
     #[error("session has already ended")]
     SessionEnded,
     #[error("runtime traversal exceeded {limit} internal steps")]

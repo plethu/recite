@@ -2,7 +2,9 @@ use recite_core::{ChoiceId, EffectId, LocaleId};
 
 use crate::DialogueError;
 use crate::event::DialogueEffectRequest;
-use crate::session_snapshot::DialogueDeferredEffectSnapshot;
+use crate::session_snapshot::{
+    DialogueDeferredEffectSnapshot, DialogueSessionSnapshotConversionError,
+};
 use crate::traversal::{AssetView, dialogue_effect_request};
 
 pub(super) fn restore_choice_ids(
@@ -84,5 +86,16 @@ fn core_error(error: impl std::fmt::Display) -> DialogueError {
 pub(super) fn invalid_snapshot(reason: impl Into<String>) -> DialogueError {
     DialogueError::InvalidSessionSnapshot {
         reason: reason.into(),
+        source: None,
+    }
+}
+
+pub(super) fn invalid_snapshot_with_source(
+    error: DialogueSessionSnapshotConversionError,
+) -> DialogueError {
+    let reason = error.to_string();
+    DialogueError::InvalidSessionSnapshot {
+        reason,
+        source: Some(Box::new(error)),
     }
 }

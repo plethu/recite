@@ -87,12 +87,12 @@ wire compatibility fixtures, and focused reviews for each subsystem.
 
 | Path | Lines | Kind | Owner | Disposition | Issue/reason |
 | --- | ---: | --- | --- | --- | --- |
-| `crates/recite-ffi/src/lib.rs` | 839 | production | ffi | follow-up | #164/#171: separate ABI façade only after symbol and threading inventory |
+| `crates/recite-ffi/src/lib.rs` | 838 | production | ffi | follow-up | #164/#171: separate ABI façade only after symbol and threading inventory |
 | `crates/recite-core/src/schema/model/canonical.rs` | 621 | production | core/schema | review | Canonical model boundary; preserve public fingerprints |
 | `crates/recite-core/src/schema/manifest/lower/availability.rs` | 560 | production | core/schema | review | Reassess mapping and domain-validation ownership |
 | `crates/recite-core/src/compiled/messagepack/tags.rs` | 506 | production | core/wire | cohesive | #89: explicit wire tag table |
 | `crates/recite-core/src/compiled/messagepack/wire.rs` | 505 | production | core/wire | exception | #89: retain the explicit decoder boundary while the v0 wire contract is synchronized |
-| `crates/recite-runtime/src/session_snapshot.rs` | 293 | production | runtime/snapshot | follow-up | #135: typed snapshot-boundary errors |
+| `crates/recite-runtime/src/session_snapshot.rs` | 294 | production | runtime/snapshot | follow-up | #135: typed snapshot-boundary errors |
 | `crates/recite-core/src/compiled/messagepack/validate.rs` | 479 | production | core/wire | cohesive | #89: validation is part of the decoder boundary |
 | `crates/recite-lsp/src/workspace.rs` | 479 | production | lsp/workspace | follow-up | #164: separate document state, saved indexes, and analysis snapshots |
 | `crates/recite-compiler/src/wire/messagepack.rs` | 397 | production | compiler/wire | cohesive | #89: encoder mirror of the explicit decoder wire surface |
@@ -116,7 +116,7 @@ wire compatibility fixtures, and focused reviews for each subsystem.
 | `crates/recite-compiler/src/compile/builder/rows.rs` | 337 | production | compiler | cohesive | Compiled row construction |
 | `crates/recite-compiler/src/pot.rs` | 333 | production | compiler/localisation | follow-up | #164: consume shared authoring analysis |
 | `crates/recite-benchmarks/src/id_metrics.rs` | 332 | production | benchmarks | cohesive | Maintainer metric calculations |
-| `crates/recite-ffi/src/output.rs` | 328 | production | ffi | follow-up | #135: preserve typed failures to the C boundary |
+| `crates/recite-ffi/src/output.rs` | 367 | production | ffi | follow-up | #135: preserve typed failures to the C boundary |
 | `crates/recite-runtime/src/traversal/asset.rs` | 328 | production | runtime/traversal | cohesive | Asset validation and traversal boundary |
 | `crates/recite-cli/src/i18n/messages.rs` | 323 | production | cli/i18n | follow-up | #166: shared Fluent resource ownership |
 | `crates/recite-compiler/src/wire/inspection.rs` | 312 | production | compiler/wire | review | Structured wire inspection projection |
@@ -142,13 +142,14 @@ wire compatibility fixtures, and focused reviews for each subsystem.
 | `crates/recite-benchmarks/src/runtime.rs` | 265 | production | benchmarks | cohesive | Runtime benchmark harness |
 | `crates/recite-lsp/src/summary/file/collector.rs` | 256 | production | lsp/summary | review | File summary projection |
 
-| `crates/recite-runtime/tests/adapter_conformance/driver.rs` | 1153 | test/support | runtime/tests | cohesive | Shared adapter conformance driver |
+| `crates/recite-runtime/tests/adapter_conformance/driver.rs` | 1153 | test/support | runtime/tests | exception | #171: shared conformance driver grows with typed callback scenarios; retain until adapter conformance split |
 | `crates/recite-cli/src/play/tui/render/tests.rs` | 811 | test/support | cli/tui/tests | cohesive | Private rendering contract tests |
 | `crates/recite-cli/tests/runtime.rs` | 759 | test/support | cli/tests | cohesive | Runtime command behavior suite |
 | `crates/recite-core/tests/compiled_messagepack.rs` | 693 | test/support | core/tests | cohesive | Wire compatibility contract |
 | `crates/recite-core/tests/schema_manifest/fingerprint.rs` | 638 | test/support | core/tests | cohesive | Canonical fingerprint contract |
 | `crates/recite-core/tests/support/mod.rs` | 605 | test/support | core/tests | cohesive | Shared model and wire constructors |
 | `crates/recite-runtime/tests/adapter_conformance/manifest.rs` | 571 | test/support | runtime/tests | cohesive | Adapter manifest contract |
+| `crates/recite-ffi/tests/conditions.rs` | 498 | test/support | ffi/tests | cohesive | #171: condition callback protocol coverage |
 | `crates/recite-compiler/tests/asset.rs` | 564 | test/support | compiler/tests | exception | #89: retain the shared compiled-asset fixture entry point for the wire contract guard |
 | `crates/recite-lsp/src/tests/support.rs` | 423 | test/support | lsp/tests | review | Test support ownership; retain private access where required |
 | `crates/recite-lsp/src/tests/project_indexes.rs` | 422 | test/support | lsp/tests | review | Private index behavior |
@@ -161,7 +162,7 @@ wire compatibility fixtures, and focused reviews for each subsystem.
 | `crates/recite-fixturegen/tests/generation.rs` | 395 | test/support | fixturegen/tests | cohesive | Deterministic generation contract |
 | `crates/recite-runtime/tests/adapter_conformance.rs` | 383 | test/support | runtime/tests | cohesive | Adapter conformance entry point |
 | `crates/recite-core/tests/schema_manifest/load_valid.rs` | 379 | test/support | core/tests | cohesive | Valid manifest coverage |
-| `crates/recite-runtime/tests/session_serialization/invalid_snapshots.rs` | 378 | test/support | runtime/tests | cohesive | Snapshot failure contract |
+| `crates/recite-runtime/tests/session_serialization/invalid_snapshots.rs` | 478 | test/support | runtime/tests | cohesive | Snapshot failure contract |
 | `crates/recite-parser/tests/parser/statements.rs` | 374 | test/support | parser/tests | cohesive | Statement parser coverage |
 | `crates/recite-cli/tests/watch_stress.rs` | 366 | test/support | cli/tests | cohesive | Watch stress harness |
 | `crates/recite-runtime/tests/traversal/conditions/choice_conditions.rs` | 365 | test/support | runtime/tests | cohesive | Choice condition coverage |

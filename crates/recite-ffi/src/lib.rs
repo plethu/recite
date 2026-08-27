@@ -26,7 +26,7 @@ pub use error::{ReciteStatus, recite_last_error_message};
 
 use condition::{ConditionEntry, FfiContext, SendPtr};
 use error::{clear_condition_status, restore_status, set_last_error};
-use output::{encode_batch, should_continue};
+use output::{FfiOutputEncodeError, encode_batch, should_continue};
 
 /// ABI major version for the generated C header.
 ///
@@ -800,24 +800,23 @@ fn drain_after_event(
             Err(e) => return Err((ReciteStatus::from(e.clone()), e.to_string())),
         }
     }
-    encode_batch(events)
-        .map(ReciteBuffer::from_bytes)
-        .map_err(|msg| (ReciteStatus::Validation, msg))
+    encode_batch_output(events)
 }
 
 fn empty_batch() -> Result<ReciteBuffer, (ReciteStatus, String)> {
-    let batch = output::FfiOutputBatch {
-        batch_format_version: output::BATCH_FORMAT_VERSION,
-        events: Vec::new(),
-    };
-    rmp_serde::to_vec_named(&batch)
+    encode_batch_output(Vec::new())
+}
+
+fn encode_batch_output(events: Vec<DialogueEvent>) -> Result<ReciteBuffer, (ReciteStatus, String)> {
+    encode_batch(events)
         .map(ReciteBuffer::from_bytes)
-        .map_err(|e| {
-            (
-                ReciteStatus::DialogueFault,
-                format!("empty batch serialization failed: {e}"),
-            )
-        })
+        .map_err(flatten_output_encode_error)
+}
+
+fn flatten_output_encode_error(error: FfiOutputEncodeError) -> (ReciteStatus, String) {
+    // This is the C ABI boundary: preserve the typed encoder error internally,
+    // then expose the existing stable status and thread-local detail string.
+    (ReciteStatus::DialogueFault, error.to_string())
 }
 
 fn ensure_session_thread(ffi_session: &FfiSession) -> Result<(), ReciteStatus> {

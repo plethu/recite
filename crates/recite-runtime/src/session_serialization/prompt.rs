@@ -6,7 +6,9 @@ use crate::session_snapshot::{DialogueSessionPendingPromptSnapshot, availability
 use crate::traversal::AssetView;
 
 use super::pending_position::validate_pending_statement_position;
-use super::references::{choice_id, invalid_snapshot, snapshot_reference};
+use super::references::{
+    choice_id, invalid_snapshot, invalid_snapshot_with_source, snapshot_reference,
+};
 
 pub(super) fn restore_pending_prompt(
     asset: AssetView<'_>,
@@ -59,7 +61,7 @@ pub(super) fn restore_pending_prompt(
             )));
         }
         let availability = availability_from_snapshot(snapshot_choice.availability.clone())
-            .map_err(|error| invalid_snapshot(error.to_string()))?;
+            .map_err(invalid_snapshot_with_source)?;
         pending_choices.push(PendingPromptChoice {
             id: choice_id,
             target: compiled_choice.target.clone(),

@@ -15,10 +15,10 @@ use super::{
 ///
 /// Snapshot restoration adds the context that is lost when a core value
 /// constructor is converted directly into a display string. The enclosing
-/// restore operation may still adapt this error to its public runtime error
-/// category, but conversion itself remains typed and inspectable.
+/// restore operation wraps this error in its public runtime error category,
+/// while conversion itself remains typed and inspectable.
 #[derive(Clone, Debug, Eq, PartialEq, thiserror::Error)]
-pub(crate) enum DialogueSessionSnapshotConversionError {
+pub enum DialogueSessionSnapshotConversionError {
     #[error("invalid availability reason id `{id}`: {source}")]
     InvalidAvailabilityReasonId {
         id: String,

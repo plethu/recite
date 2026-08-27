@@ -14,6 +14,7 @@ pub const CURRENT_SESSION_SNAPSHOT_FORMAT_VERSION: u16 = SESSION_SNAPSHOT_FORMAT
 
 mod conversion;
 
+pub use conversion::DialogueSessionSnapshotConversionError;
 pub(crate) use conversion::{availability_from_snapshot, availability_snapshot};
 
 /// Versioned structural save data for a dialogue session.
