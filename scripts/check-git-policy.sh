@@ -9,14 +9,16 @@ Usage:
 Checks the branch name and commit messages in the relevant change range.
 
 The pull-request workflow supplies GITHUB_HEAD_REF, GITHUB_BASE_REF,
-RECITE_PR_BASE_REF, RECITE_PR_TITLE, RECITE_INTEGRATION_LABEL, and
-RECITE_INTEGRATION_PR. For local runs, the current branch is checked against
-origin/main. Set RECITE_BASE_REF, RECITE_HEAD_REF, RECITE_HEAD_BRANCH,
-RECITE_PR_TITLE, or RECITE_ISSUE_CODE to override those inputs for a focused
-check. Set RECITE_INTEGRATION_PR=1 for a coordinator's milestone integration
-PR when label metadata is unavailable locally; in PR context, integration mode
-requires the workflow/integration label, an integration/<topic> branch, and a
-main base branch.
+RECITE_PR_BASE_REF, RECITE_PR_TITLE, RECITE_PR_BODY,
+RECITE_INTEGRATION_LABEL, and RECITE_INTEGRATION_PR. For local runs, the
+current branch is checked against origin/main. Set RECITE_BRANCH_NAME for a
+detached local checkout. Set RECITE_BASE_REF, RECITE_HEAD_REF,
+RECITE_BRANCH_NAME, RECITE_HEAD_BRANCH, RECITE_PR_TITLE, or RECITE_ISSUE_CODE
+to override those inputs for a focused check. Set
+RECITE_INTEGRATION_PR=1 for a coordinator's local milestone integration check;
+in pull-request context, every PR requires title/body metadata with a closing
+issue token matching the title code. Integration mode additionally requires
+label, branch, and main base metadata.
 EOF
 }
 
@@ -80,6 +82,15 @@ issue_code_from_pr_title() {
   fi
 
   return 1
+}
+
+closing_issue_matches_body() {
+  local body="$1"
+  local issue_code="$2"
+
+  grep -Eiq -- \
+    "(^|[^[:alnum:]])(close[sd]?|fix(e[sd])?|resolve[sd]?)[[:space:]]+#[[:space:]]*${issue_code}([^0-9]|$)" \
+    <<<"$body"
 }
 
 is_attribution_trailer() {
@@ -219,9 +230,31 @@ run_fixture_checks() {
 
 run_fixture_checks
 
-branch_name="${RECITE_HEAD_BRANCH:-${GITHUB_HEAD_REF:-}}"
+pr_context=0
+if [[ "${GITHUB_EVENT_NAME:-}" == "pull_request" ||
+  -n "${GITHUB_HEAD_REF:-}" || -n "${RECITE_PR_BASE_REF:-}" ||
+  -n "${GITHUB_BASE_REF:-}" ]]; then
+  pr_context=1
+fi
+
+if (( pr_context )) && [[ -z "${RECITE_PR_TITLE:-}" ]]; then
+  echo "pull-request context requires RECITE_PR_TITLE" >&2
+  exit 1
+fi
+
+branch_name="${RECITE_BRANCH_NAME:-${RECITE_HEAD_BRANCH:-${GITHUB_HEAD_REF:-${GITHUB_REF_NAME:-}}}}"
 if [[ -z "$branch_name" ]]; then
   branch_name="$(git -C "$repo_root" branch --show-current)"
+fi
+
+if (( pr_context )) && [[ "$branch_name" == "main" ]]; then
+  echo "pull-request head branch must not be protected main" >&2
+  exit 1
+fi
+
+if (( ! pr_context )) && [[ -z "$branch_name" ]]; then
+  echo "detached Git policy checks require explicit branch or pull-request metadata" >&2
+  exit 1
 fi
 
 if [[ -n "$branch_name" && "$branch_name" != "main" ]]; then
@@ -237,24 +270,16 @@ else
   echo "branch name check skipped: detached HEAD without pull-request branch metadata"
 fi
 
-pr_context=0
-if [[ "${GITHUB_EVENT_NAME:-}" == "pull_request" ||
-  -n "${GITHUB_HEAD_REF:-}" || -n "${RECITE_PR_TITLE:-}" ||
-  -n "${RECITE_PR_BASE_REF:-}" ]]; then
-  pr_context=1
-fi
-
 pr_base_ref="${RECITE_PR_BASE_REF:-${GITHUB_BASE_REF:-}}"
-pr_base_context=0
-if [[ "${GITHUB_EVENT_NAME:-}" == "pull_request" ||
-  -n "${GITHUB_HEAD_REF:-}" || -n "${RECITE_PR_BASE_REF:-}" ||
-  -n "${GITHUB_BASE_REF:-}" ]]; then
-  pr_base_context=1
-fi
 
 # CI passes label presence separately so a branch/label mismatch cannot fall
 # through as an ordinary PR. Local explicit integration mode remains available
 # only when CI label metadata is absent.
+if (( pr_context )) && [[ "$integration_pr" == "1" && -z "$integration_label" ]]; then
+  echo "pull-request integration mode requires workflow/integration label metadata" >&2
+  exit 1
+fi
+
 if [[ "$integration_label" == "1" ]]; then
   if ! is_valid_integration_branch_name "$branch_name"; then
     echo "workflow/integration label requires an integration/<short-kebab-topic> head branch: ${branch_name:-<unset>}" >&2
@@ -280,7 +305,7 @@ elif (( pr_context )) && is_valid_integration_branch_name "$branch_name"; then
   exit 1
 fi
 
-if [[ "$integration_pr" == "1" && "$pr_base_context" == "1" ]]; then
+if [[ "$integration_pr" == "1" && "$pr_context" == "1" ]]; then
   if [[ -z "$pr_base_ref" ]]; then
     echo "integration pull requests require an explicit main base branch" >&2
     exit 1
@@ -296,6 +321,17 @@ if [[ -n "${RECITE_PR_TITLE:-}" ]]; then
     echo "invalid pull-request title: $RECITE_PR_TITLE" >&2
     echo "expected [REC-N] <type>(optional-scope): <concise subject>" >&2
     exit 1
+  fi
+
+  if (( pr_context )); then
+    if [[ -z "${RECITE_PR_BODY:-}" ]]; then
+      echo "pull-request context requires RECITE_PR_BODY with a closing issue" >&2
+      exit 1
+    fi
+    if ! closing_issue_matches_body "$RECITE_PR_BODY" "${title_issue_code#REC-}"; then
+      echo "pull-request body must contain Closes/Fixes/Resolves #${title_issue_code#REC-}" >&2
+      exit 1
+    fi
   fi
 
   if [[ "$integration_pr" != "1" && -n "${RECITE_ISSUE_CODE:-}" && "${RECITE_ISSUE_CODE#REC-}" != "${title_issue_code#REC-}" ]]; then

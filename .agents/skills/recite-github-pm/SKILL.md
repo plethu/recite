@@ -121,8 +121,9 @@ pull request from the integration branch to `main`. Apply the
 branch targeting `main`; CI requires all three before enabling integration mode.
 Use the milestone tracking issue in the PR title. The final integration PR may
 contain multiple valid `[REC-N]` issue codes; its title code identifies the
-milestone tracking issue. The protected GitHub checks and review gate apply to
-this PR. After it merges, verify live GitHub state and refresh
+milestone tracking issue, and its body must explicitly close that issue with a
+`Closes`, `Fixes`, or `Resolves #N` token. The protected GitHub checks and review
+gate apply to this PR. After it merges, verify live GitHub state and refresh
 `docs/roadmap.md` on `main`.
 
 ## Review and protected merge

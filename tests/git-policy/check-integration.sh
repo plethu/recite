@@ -42,10 +42,12 @@ run_policy() {
   local label="$3"
   local branch="${4:-integration/milestone-integration}"
   local base_branch="${5-main}"
+  local body="${6-Closes #163}"
 
   # The clone is detached like actions/checkout; the explicit environment
   # values carry the pull-request metadata that Actions would provide.
   RECITE_PR_TITLE="$title" \
+    RECITE_PR_BODY="$body" \
     RECITE_INTEGRATION_PR="$integration" \
     RECITE_INTEGRATION_LABEL="$label" \
     RECITE_PR_BASE_REF="$base_branch" \
@@ -82,6 +84,11 @@ if ! run_policy "[REC-163] chore: integrate milestone" 0 1; then
   exit 1
 fi
 
+if ! run_policy "[REC-163] docs: close integration contract gaps" 0 1; then
+  echo "current integration PR title/body was rejected" >&2
+  exit 1
+fi
+
 if run_policy "[REC-163] chore: integrate milestone" 0 1 integration/milestone-integration release >/dev/null 2>&1; then
   echo "integration PR targeting a non-main base was accepted" >&2
   exit 1
@@ -89,6 +96,11 @@ fi
 
 if run_policy "[REC-163] chore: integrate milestone" 0 1 integration/milestone-integration '' >/dev/null 2>&1; then
   echo "integration PR without base metadata was accepted" >&2
+  exit 1
+fi
+
+if run_policy "[REC-163] chore: integrate milestone" 0 1 integration/milestone-integration main "Closes #164" >/dev/null 2>&1; then
+  echo "integration PR with a mismatched closing issue was accepted" >&2
   exit 1
 fi
 
@@ -112,12 +124,27 @@ if run_policy "[REC-163] chore: integrate milestone" 1 0 >/dev/null 2>&1; then
   exit 1
 fi
 
+if run_policy "[REC-163] chore: integrate milestone" 1 '' >/dev/null 2>&1; then
+  echo "integration mode without label metadata was accepted in PR context" >&2
+  exit 1
+fi
+
+if run_policy "[REC-163] chore: integrate milestone" 0 0 main >/dev/null 2>&1; then
+  echo "pull request with protected main as its head branch was accepted" >&2
+  exit 1
+fi
+
+if run_policy "" 0 0 feat/milestone-integration >/dev/null 2>&1; then
+  echo "pull request without a title was accepted" >&2
+  exit 1
+fi
+
 if run_policy "chore: integrate milestone" 0 1 >/dev/null 2>&1; then
   echo "integration policy accepted a title without the milestone issue code" >&2
   exit 1
 fi
 
-if ! env -u RECITE_INTEGRATION_LABEL -u RECITE_PR_BASE_REF -u GITHUB_EVENT_NAME -u GITHUB_HEAD_REF -u GITHUB_BASE_REF \
+if ! env -u RECITE_INTEGRATION_LABEL -u RECITE_PR_BASE_REF -u GITHUB_EVENT_NAME -u GITHUB_HEAD_REF -u GITHUB_REF_NAME -u GITHUB_BASE_REF \
   RECITE_PR_TITLE="[REC-163] chore: integrate milestone" \
   RECITE_INTEGRATION_PR=1 \
   RECITE_BASE_REF="$base_sha" \
@@ -125,6 +152,29 @@ if ! env -u RECITE_INTEGRATION_LABEL -u RECITE_PR_BASE_REF -u GITHUB_EVENT_NAME 
   RECITE_HEAD_BRANCH=integration/milestone-integration \
   "$clone_root/scripts/check-git-policy.sh" "$clone_root" >/dev/null; then
   echo "local explicit integration mode without label metadata was rejected" >&2
+  exit 1
+fi
+
+if env -u RECITE_INTEGRATION_LABEL -u RECITE_PR_TITLE -u RECITE_PR_BODY \
+  -u RECITE_BRANCH_NAME -u RECITE_HEAD_BRANCH -u GITHUB_EVENT_NAME \
+  -u GITHUB_HEAD_REF -u GITHUB_REF_NAME -u GITHUB_BASE_REF -u RECITE_PR_BASE_REF \
+  RECITE_INTEGRATION_PR=0 \
+  RECITE_BASE_REF="$base_sha" \
+  RECITE_HEAD_REF=HEAD \
+  "$clone_root/scripts/check-git-policy.sh" "$clone_root" >/dev/null 2>&1; then
+  echo "detached commit-range check without branch metadata was accepted" >&2
+  exit 1
+fi
+
+if ! env -u RECITE_INTEGRATION_LABEL -u RECITE_PR_TITLE -u RECITE_PR_BODY \
+  -u RECITE_HEAD_BRANCH -u GITHUB_EVENT_NAME -u GITHUB_HEAD_REF \
+  -u GITHUB_REF_NAME -u GITHUB_BASE_REF -u RECITE_PR_BASE_REF \
+  RECITE_INTEGRATION_PR=0 \
+  RECITE_BRANCH_NAME=chore/local-detached-check \
+  RECITE_BASE_REF="$base_sha" \
+  RECITE_HEAD_REF=HEAD \
+  "$clone_root/scripts/check-git-policy.sh" "$clone_root" >/dev/null; then
+  echo "detached local check with RECITE_BRANCH_NAME was rejected" >&2
   exit 1
 fi
 

@@ -27,6 +27,7 @@ jobs:
     timeout-minutes: 5
     env:
       RECITE_PR_TITLE: ${{ github.event.pull_request.title }}
+      RECITE_PR_BODY: ${{ github.event.pull_request.body }}
       # Only the coordinator's final milestone PR carries this label and uses
       # an integration/<topic> head branch targeting main. Local checks may
       # set RECITE_INTEGRATION_PR=1 explicitly instead.

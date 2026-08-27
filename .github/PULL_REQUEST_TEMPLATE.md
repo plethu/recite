@@ -15,6 +15,8 @@ not open issue-slice pull requests.
 Use a purpose-first `<kind>/<short-kebab-topic>` branch (never an
 `issue-<number>-...` branch), and include the checks you ran below. The title
 must match `[REC-N] <type>(optional-scope): <concise subject>`.
+The body must include a `Closes`, `Fixes`, or `Resolves #N` token matching the
+title's issue code.
 For a standalone pull request, that code must match the one issue addressed by
 every commit. For an integration pull request, apply the `workflow/integration`
 label, use the coordinator's `integration/<short-kebab-topic>` branch, put the
