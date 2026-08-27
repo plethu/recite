@@ -2288,6 +2288,8 @@ non-authoritative and must be produced from the same structured model.
 The checked-in [v0 compiled-wire synchronization matrix](compiled-wire-synchronization.md)
 maps this shape and its numeric tags to the typed model, explicit encoder and
 decoder/validator, inspection projection, fixtures, and conformance checks.
+The accepted retention and migration policy is recorded in the
+[serialization compatibility decision](serialization-compatibility.md).
 
 v0 uses:
 
@@ -2434,9 +2436,11 @@ values are compiler and tooling inputs only. Runtime traversal consumes compiled
 tables, source maps, fingerprints, and compact lookup indexes.
 
 Custom binary, FlatBuffers, Cap'n Proto, bincode, postcard, CBOR, and other
-encodings remain possible future versions if benchmark evidence or adapter
-requirements justify them. They must not be introduced as v0 alternatives after
-assets exist without a format or compatibility version change.
+encodings remain possible future versions only under the
+[serialization compatibility decision](serialization-compatibility.md), when
+artifact-specific benchmark evidence or adapter requirements justify them.
+They must not be introduced as v0 alternatives after assets exist without a
+format or compatibility version change.
 
 ### 12.3 Freshness
 
@@ -3816,6 +3820,9 @@ The project is not production-credible until all of the following are true:
 - POT extraction produces translator-usable context.
 - The LSP catches common mistakes before runtime, including auto-filling missing IDs on save.
 - CI can verify compiled assets are fresh relative to source and schema.
+- The [serialization compatibility decision](serialization-compatibility.md)
+  is accepted, and the compiled asset, snapshot, FFI, and condition-payload
+  migration boundaries are documented per artifact.
 - The CLI, LSP, editor integrations, standalone GUI, and preview surface use
   the shared authoring kernel for project discovery, diagnostics, edits,
   schema/localisation state, and freshness; they do not maintain competing
