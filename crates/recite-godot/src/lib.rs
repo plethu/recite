@@ -7,6 +7,7 @@
 mod adapter;
 mod adapter_error;
 mod adapter_model;
+mod adapter_policy;
 mod binding_types;
 mod bindings;
 mod convert;

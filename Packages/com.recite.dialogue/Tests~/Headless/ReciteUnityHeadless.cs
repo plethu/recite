@@ -14,8 +14,14 @@ internal static class ReciteUnityHeadless
             RejectUnknownBatchVersion();
             PreserveTypedConditionArguments();
             RejectMalformedTypedConditionArguments();
+            RejectMalformedNestedOutput();
+            RejectUnknownTaggedScalarKind();
+            RejectMalformedChoiceOutput();
+            PreserveRestoredBlockingRequestId();
             RejectInvalidConditionPointers();
             RegisterTypedConditionApi();
+            PreserveEnumConditionResult();
+            PreserveConditionEnumStringBoundaries();
             PreserveSchemaMismatchStatus();
             return 0;
         }
@@ -123,6 +129,67 @@ internal static class ReciteUnityHeadless
         }), "nonfinite value");
     }
 
+    private static void RejectMalformedNestedOutput()
+    {
+        var bytes = BuildBatch(writer =>
+        {
+            WriteLine(writer);
+            writer.WriteString("metadata");
+            writer.WriteArrayHeader(1);
+            writer.WriteBool(true);
+        });
+
+        ExpectValidation(() => ReciteDialogueService.DecodeBatchBytes(bytes), "nested output value");
+    }
+
+    private static void RejectUnknownTaggedScalarKind()
+    {
+        var bytes = BuildBatch(writer =>
+        {
+            WriteLine(writer);
+            writer.WriteString("metadata");
+            writer.WriteArrayHeader(1);
+            writer.WriteMapHeader(2);
+            writer.WriteString("key");
+            writer.WriteString("colour");
+            writer.WriteString("value");
+            writer.WriteMapHeader(2);
+            writer.WriteString("kind");
+            writer.WriteString("colour");
+            writer.WriteString("value");
+            writer.WriteString("red");
+        });
+
+        ExpectValidation(() => ReciteDialogueService.DecodeBatchBytes(bytes), "unknown tagged scalar kind");
+    }
+
+    private static void RejectMalformedChoiceOutput()
+    {
+        var bytes = BuildBatch(writer =>
+        {
+            writer.WriteMapHeader(3);
+            writer.WriteString("kind");
+            writer.WriteString("prompt");
+            writer.WriteString("line");
+            writer.WriteNull();
+            writer.WriteString("choices");
+            writer.WriteArrayHeader(1);
+            writer.WriteBool(false);
+        });
+
+        ExpectValidation(() => ReciteDialogueService.DecodeBatchBytes(bytes), "malformed choice output");
+    }
+
+    private static void PreserveRestoredBlockingRequestId()
+    {
+        var first = ReciteDialogueService.DecodeBatchBytes(BuildBatch(WriteBlockingEffect));
+        var restored = ReciteDialogueService.DecodeBatchBytes(BuildBatch(WriteBlockingEffect));
+        var firstEffect = GetEffect(first);
+        var restoredEffect = GetEffect(restored);
+        Assert(firstEffect.Effect.Id == restoredEffect.Effect.Id, "restored blocking request ID changed");
+        Assert(firstEffect.Effect.Mode == "blocking", "fixture effect was not blocking");
+    }
+
     private static void RejectInvalidConditionPointers()
     {
         ExpectFormatException(() => ReciteNativeBridge.ReadTypedConditionArgs(IntPtr.Zero, new UIntPtr(1)), "null pointer with nonzero length");
@@ -154,6 +221,167 @@ internal static class ReciteUnityHeadless
         }
     }
 
+    private static void PreserveEnumConditionResult()
+    {
+        using (var service = new ReciteDialogueService())
+        {
+            service.RegisterTypedConditionValue("mood", args =>
+            {
+                Assert(args.Count == 0, "enum condition arguments were not decoded");
+                return ReciteConditionValue.Enum("calm");
+            });
+
+            var functionName = ReciteNativeBridge.ToUtf8NullTerminated("mood");
+            var argumentBytes = new byte[] { 0x90 };
+            var functionHandle = GCHandle.Alloc(functionName, GCHandleType.Pinned);
+            var argumentHandle = GCHandle.Alloc(argumentBytes, GCHandleType.Pinned);
+            try
+            {
+                var query = new ReciteNativeBridge.ReciteConditionQuery
+                {
+                    FunctionName = functionHandle.AddrOfPinnedObject(),
+                    ArgsMsgpack = argumentHandle.AddrOfPinnedObject(),
+                    ArgsLen = new UIntPtr((ulong)argumentBytes.Length)
+                };
+                var queryHandle = GCHandle.Alloc(query, GCHandleType.Pinned);
+                try
+                {
+                    var result = service.EvaluateCondition(queryHandle.AddrOfPinnedObject(), IntPtr.Zero);
+                    Assert(result.Ok == 1, "enum condition result was not successful");
+                    Assert(result.ValueMsgpack != IntPtr.Zero, "enum condition result payload was null");
+                    var actual = new byte[checked((int)result.ValueLen.ToUInt64())];
+                    Marshal.Copy(result.ValueMsgpack, actual, 0, actual.Length);
+                    AssertBytesEqual(
+                        ReciteMessagePack.EncodeConditionEnum("calm"),
+                        actual,
+                        "enum condition result payload");
+                }
+                finally
+                {
+                    queryHandle.Free();
+                }
+            }
+            finally
+            {
+                argumentHandle.Free();
+                functionHandle.Free();
+            }
+        }
+    }
+
+    private static void PreserveConditionEnumStringBoundaries()
+    {
+        AssertConditionEnumVariant(new string('a', ushort.MaxValue), 0xda, ushort.MaxValue);
+        AssertConditionEnumVariant(new string('b', ushort.MaxValue + 1), 0xdb, ushort.MaxValue + 1);
+        // 32,768 two-byte UTF-8 characters are exactly 65,536 encoded bytes.
+        AssertConditionEnumVariant(new string('\u00e9', 32768), 0xdb, 65536);
+    }
+
+    private static void AssertConditionEnumVariant(string expected, byte stringMarker, int expectedByteLength)
+    {
+        var encoded = ReciteMessagePack.EncodeConditionEnum(expected);
+        var reader = new ReciteMessagePackReader(encoded);
+        var map = reader.ReadMap();
+        reader.EnsureEnd();
+        Assert(map.TryGetValue("variant", out var value) && value is string && (string)value == expected,
+            "condition enum variant did not round-trip");
+
+        var markerIndex = FindVariantStringMarker(encoded);
+        Assert(encoded[markerIndex] == stringMarker, "condition enum string used the wrong MessagePack width");
+        if (stringMarker == 0xda)
+        {
+            var length = (encoded[markerIndex + 1] << 8) | encoded[markerIndex + 2];
+            Assert(length == expectedByteLength, "str16 length was truncated");
+        }
+        else
+        {
+            var length = ((uint)encoded[markerIndex + 1] << 24)
+                | ((uint)encoded[markerIndex + 2] << 16)
+                | ((uint)encoded[markerIndex + 3] << 8)
+                | encoded[markerIndex + 4];
+            Assert(length == (uint)expectedByteLength, "str32 length was truncated");
+        }
+    }
+
+    private static int FindVariantStringMarker(byte[] encoded)
+    {
+        for (var index = 0; index + 8 < encoded.Length; index++)
+        {
+            if (encoded[index] == 0xa7
+                && encoded[index + 1] == (byte)'v'
+                && encoded[index + 2] == (byte)'a'
+                && encoded[index + 3] == (byte)'r'
+                && encoded[index + 4] == (byte)'i'
+                && encoded[index + 5] == (byte)'a'
+                && encoded[index + 6] == (byte)'n'
+                && encoded[index + 7] == (byte)'t')
+            {
+                return index + 8;
+            }
+        }
+
+        throw new InvalidOperationException("condition enum variant key was not encoded");
+    }
+
+    private static byte[] BuildBatch(Action<ReciteMessagePackWriter> writeEvent)
+    {
+        var writer = new ReciteMessagePackWriter();
+        writer.WriteMapHeader(2);
+        writer.WriteString("batch_format_version");
+        writer.WriteRaw(new byte[] { 0 });
+        writer.WriteString("events");
+        writer.WriteArrayHeader(1);
+        writeEvent(writer);
+        return writer.ToArray();
+    }
+
+    private static void WriteLine(ReciteMessagePackWriter writer)
+    {
+        writer.WriteMapHeader(6);
+        writer.WriteString("kind");
+        writer.WriteString("line");
+        writer.WriteString("id");
+        writer.WriteString("line-id");
+        writer.WriteString("source_text");
+        writer.WriteString("Line.");
+        writer.WriteString("text");
+        writer.WriteString("Line.");
+        writer.WriteString("speaker");
+        writer.WriteNull();
+    }
+
+    private static void WriteBlockingEffect(ReciteMessagePackWriter writer)
+    {
+        writer.WriteMapHeader(8);
+        writer.WriteString("kind");
+        writer.WriteString("effect");
+        writer.WriteString("id");
+        writer.WriteString("grant_item#1");
+        writer.WriteString("mode");
+        writer.WriteString("blocking");
+        writer.WriteString("function");
+        writer.WriteString("grant_item");
+        writer.WriteString("args");
+        writer.WriteArrayHeader(0);
+        writer.WriteString("source_file");
+        writer.WriteString("sample.recite");
+        writer.WriteString("source_line");
+        writer.WriteRaw(new byte[] { 1 });
+        writer.WriteString("source_col");
+        writer.WriteRaw(new byte[] { 1 });
+    }
+
+    private static ReciteEffectOutput GetEffect(ReciteOutputBatch batch)
+    {
+        Assert(batch.Events.Count == 1, "blocking effect fixture had unexpected output count");
+        if (!(batch.Events[0] is ReciteEffectOutput effect))
+        {
+            throw new InvalidOperationException("blocking effect fixture did not decode as an effect");
+        }
+
+        return effect;
+    }
+
     private static void PreserveSchemaMismatchStatus()
     {
         var error = new ReciteAdapterException(ReciteStatus.SchemaMismatch, "schema mismatch");
@@ -172,6 +400,34 @@ internal static class ReciteUnityHeadless
         }
 
         throw new InvalidOperationException(name + " was accepted");
+    }
+
+    private static void ExpectValidation(Action action, string name)
+    {
+        try
+        {
+            action();
+        }
+        catch (ReciteAdapterException error)
+        {
+            Assert(error.Status == ReciteStatus.Validation, name + " was not projected as validation");
+            return;
+        }
+        catch (Exception error)
+        {
+            throw new InvalidOperationException(name + " leaked " + error.GetType().Name, error);
+        }
+
+        throw new InvalidOperationException(name + " was accepted");
+    }
+
+    private static void AssertBytesEqual(byte[] expected, byte[] actual, string name)
+    {
+        Assert(expected.Length == actual.Length, name + " length changed");
+        for (var index = 0; index < expected.Length; index++)
+        {
+            Assert(expected[index] == actual[index], name + " changed at byte " + index);
+        }
     }
 
     private static void Assert(bool condition, string message)

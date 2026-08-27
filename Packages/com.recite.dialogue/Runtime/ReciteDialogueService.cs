@@ -228,9 +228,23 @@ namespace Recite.Unity
             {
                 throw new ReciteAdapterException(ReciteStatus.Validation, error.Message);
             }
+            catch (InvalidCastException error)
+            {
+                throw new ReciteAdapterException(ReciteStatus.Validation, error.Message);
+            }
+            catch (System.Collections.Generic.KeyNotFoundException error)
+            {
+                throw new ReciteAdapterException(ReciteStatus.Validation, error.Message);
+            }
+            catch (ArgumentException error)
+            {
+                throw new ReciteAdapterException(ReciteStatus.Validation, error.Message);
+            }
         }
 
-        private ReciteNativeBridge.ReciteConditionResult EvaluateCondition(IntPtr queryPtr, IntPtr userdata)
+        // Internal so the managed headless fixture can exercise the same callback
+        // boundary used by the native bridge without requiring a Unity binary.
+        internal ReciteNativeBridge.ReciteConditionResult EvaluateCondition(IntPtr queryPtr, IntPtr userdata)
         {
             if (queryPtr == IntPtr.Zero)
             {

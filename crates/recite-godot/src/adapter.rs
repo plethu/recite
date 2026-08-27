@@ -1,21 +1,20 @@
+use std::cell::Cell;
 use std::collections::BTreeMap;
 use std::path::Path;
 use std::sync::Arc;
 
-use recite_core::{
-    ChoiceId, CompiledDialogue, EffectId, LocaleId, decode_compiled_dialogue_messagepack,
-};
+use recite_core::{ChoiceId, CompiledDialogue, EffectId, decode_compiled_dialogue_messagepack};
 use recite_runtime::{
     ConditionArgument, ConditionEvaluationError, ConditionExpectedType, ConditionQuery,
-    ConditionValue, DialogueChoice, DialogueContext, DialogueEffectMode, DialogueEffectRequest,
-    DialogueError, DialogueEvent, DialogueLine, DialogueSession, DialogueSessionOptions, EffectAck,
-    LocaleResolution, acknowledge_effect, choose_with, decode_session_messagepack,
-    encode_session_messagepack, next_with, start_scene_with_options,
+    ConditionValue, DialogueChoice, DialogueContext, DialogueEffectRequest, DialogueError,
+    DialogueEvent, DialogueLine, DialogueSession, EffectAck, LocaleResolution, acknowledge_effect,
+    choose_with, decode_session_messagepack, encode_session_messagepack, next_with,
+    start_scene_with_options,
 };
 
-pub(crate) use crate::adapter_error::{
-    AdapterError, AdapterErrorKind, AdapterResult, encode_condition_error,
-};
+use crate::adapter_policy::{session_options, should_continue_after_event};
+
+pub(crate) use crate::adapter_error::{AdapterError, AdapterErrorKind, AdapterResult};
 
 pub type ConditionHandlerResult = Result<ConditionValue, AdapterError>;
 type ConditionHandler = dyn Fn(ConditionCall<'_>) -> ConditionHandlerResult;
@@ -64,6 +63,10 @@ impl ReciteDialogueAsset {
 pub struct ReciteDialogueDriver {
     session: Option<ActiveSession>,
     conditions: BTreeMap<String, Box<ConditionHandler>>,
+    // Runtime errors carry display text only, so this state keeps the adapter
+    // category separate while a traversal call is in progress.
+    // It is consumed when the runtime returns that condition failure.
+    condition_error: Cell<Option<AdapterErrorKind>>,
 }
 
 impl ReciteDialogueDriver {
@@ -94,7 +97,8 @@ impl ReciteDialogueDriver {
         }
 
         let options = session_options(locale)?;
-        let mut session = start_scene_with_options(asset.dialogue(), block_id, options)?;
+        let mut session = start_scene_with_options(asset.dialogue(), block_id, options)
+            .map_err(|error| self.map_dialogue_error(error))?;
         let dialogue = asset.shared_dialogue();
         let outputs = self.drain_from_next(&dialogue, &mut session)?;
         self.session = Some(ActiveSession { dialogue, session });
@@ -117,7 +121,7 @@ impl ReciteDialogueDriver {
             Ok(first_event) => {
                 self.drain_after_event(&active.dialogue, &mut active.session, first_event)
             }
-            Err(error) => Err(AdapterError::from(error)),
+            Err(error) => Err(self.map_dialogue_error(error)),
         };
         if result.is_err() {
             active.session = session_checkpoint;
@@ -195,6 +199,21 @@ impl ReciteDialogueDriver {
             .ok_or_else(|| AdapterError::new(AdapterErrorKind::NoActiveSession))
     }
 
+    fn record_condition_error(&self, kind: AdapterErrorKind) {
+        self.condition_error.set(Some(kind));
+    }
+
+    fn map_dialogue_error(&self, error: DialogueError) -> AdapterError {
+        if matches!(&error, DialogueError::ConditionEvaluationFailed { .. }) {
+            if let Some(kind) = self.condition_error.take() {
+                return AdapterError::with_detail(kind, error.to_string());
+            }
+        } else {
+            self.condition_error.take();
+        }
+        AdapterError::from(error)
+    }
+
     fn active_session(&self) -> AdapterResult<&ActiveSession> {
         self.session
             .as_ref()
@@ -211,7 +230,7 @@ impl ReciteDialogueDriver {
             Err(DialogueError::PromptPending { .. } | DialogueError::EffectPending { .. }) => {
                 Ok(Vec::new())
             }
-            Err(error) => Err(AdapterError::from(error)),
+            Err(error) => Err(self.map_dialogue_error(error)),
         }
     }
 
@@ -220,7 +239,8 @@ impl ReciteDialogueDriver {
         dialogue: &CompiledDialogue,
         session: &mut DialogueSession,
     ) -> AdapterResult<Vec<ReciteOutput>> {
-        let first_event = next_with(dialogue, session, self, LocaleResolution::new())?;
+        let first_event = next_with(dialogue, session, self, LocaleResolution::new())
+            .map_err(|error| self.map_dialogue_error(error))?;
         self.drain_after_event(dialogue, session, first_event)
     }
 
@@ -245,7 +265,7 @@ impl ReciteDialogueDriver {
                 Err(DialogueError::PromptPending { .. } | DialogueError::EffectPending { .. }) => {
                     return Ok(outputs);
                 }
-                Err(error) => return Err(AdapterError::from(error)),
+                Err(error) => return Err(self.map_dialogue_error(error)),
             }
         }
     }
@@ -258,13 +278,14 @@ impl DialogueContext for ReciteDialogueDriver {
     ) -> Result<ConditionValue, ConditionEvaluationError> {
         let Some(handler) = self.conditions.get(query.function()) else {
             let error = AdapterError::new(AdapterErrorKind::MissingConditionHandler);
-            return Err(ConditionEvaluationError::new(encode_condition_error(
-                &error,
-            )));
+            self.record_condition_error(error.kind());
+            return Err(ConditionEvaluationError::new(error.message()));
         };
 
-        handler(ConditionCall { query })
-            .map_err(|error| ConditionEvaluationError::new(encode_condition_error(&error)))
+        handler(ConditionCall { query }).map_err(|error| {
+            self.record_condition_error(error.kind());
+            ConditionEvaluationError::new(error.message())
+        })
     }
 }
 
@@ -340,25 +361,4 @@ impl From<DialogueEvent> for ReciteOutput {
             DialogueEvent::End { deferred_effects } => Self::End { deferred_effects },
         }
     }
-}
-
-fn session_options(locale: Option<&str>) -> AdapterResult<DialogueSessionOptions> {
-    let Some(locale) = locale.filter(|locale| !locale.is_empty()) else {
-        return Ok(DialogueSessionOptions::new());
-    };
-    let locale = LocaleId::new(locale).map_err(|error| {
-        AdapterError::with_detail(AdapterErrorKind::Localisation, error.to_string())
-    })?;
-    Ok(DialogueSessionOptions::new().with_locale(locale))
-}
-
-fn should_continue_after_event(event: &DialogueEvent) -> bool {
-    matches!(
-        event,
-        DialogueEvent::Line(_)
-            | DialogueEvent::Effect(DialogueEffectRequest {
-                mode: DialogueEffectMode::Immediate,
-                ..
-            })
-    )
 }

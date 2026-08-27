@@ -34,7 +34,10 @@ Use `ReciteDialogueService` as the semantic owner for one active Recite session:
 6. For blocking effects, perform game-side work and call `AcknowledgeEffect`
    with the exact effect request ID.
 7. Store `Snapshot()` bytes beside game save data, and pass them back to
-   `Restore` with the same compiled asset identity.
+   `Restore` with the same compiled asset identity. If the snapshot contains a
+   pending blocking effect, restore may emit that effect again with the same
+   request ID; reconcile the game-side operation idempotently before calling
+   `AcknowledgeEffect`.
 
 `ReciteDialogueRunner` is a `MonoBehaviour` facade for inspector-wired scenes.
 It emits structured `ReciteOutput` and `ReciteAdapterException` values through
@@ -57,6 +60,10 @@ scripts/check-unity-adapter.sh
 scripts/check-project-gates.sh
 ```
 
+The repository's headless package check exercises managed MessagePack decoding,
+condition callback encoding, and malformed-payload projection. It does not
+load a native Unity plugin or claim full Unity editor/player integration.
+
 Manual Unity checks for this MVP:
 
 - Package imports in Unity 2022.3 LTS.
@@ -64,7 +71,8 @@ Manual Unity checks for this MVP:
 - Start/select/blocking-effect acknowledge emits ordered structured output.
 - Registered C# conditions are called synchronously and missing handlers report
   `ReciteStatus.MissingConditionHandler`.
-- `Snapshot` and `Restore` preserve a pending prompt or pending blocking effect.
+- `Snapshot` and `Restore` preserve a pending prompt or pending blocking effect;
+  a restored blocking request may be re-emitted with its original stable ID.
 
 Editor import/refresh tooling, schema export, native binary distribution, DOTS,
 and package-manager release automation are tracked separately from this runtime
