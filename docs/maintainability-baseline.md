@@ -32,13 +32,16 @@ future change should reassess ownership before adding responsibility. None of
 these dispositions permit a file to grow past its follow-up threshold. The
 only growth exemption is a row explicitly marked `exception`, with a positive
 issue reference such as `#164` and a concrete reason. Baseline validation is
-syntax-only and never queries GitHub.
+syntax-only and never queries GitHub. The inventory is intentionally one
+pipe-delimited Markdown table: keep six cells, use backticks around paths, do
+not put `|` in reasons, and keep issue references in `#N` syntax. The checker
+rejects malformed rows rather than attempting Markdown escaping.
 
 When an intentional shrink takes a file to or below its scrutiny threshold,
 remove its row in the same change. If it remains above scrutiny, update the
-recorded line count and reassess its disposition. Full validation rejects stale
-rows, missing paths, and line-count drift so the inventory cannot silently
-become historical fiction.
+recorded line count and reassess its disposition. Every validation run rejects
+stale rows, missing paths, missing oversized-file rows, and line-count drift so
+the inventory cannot silently become historical fiction.
 
 The changed-surface check compares a pull request's source head with its
 merge base. For a push to `main`, CI passes `github.event.before` through the
@@ -51,7 +54,7 @@ existing private-test sidecar placement policy. File size, cohesion, generated
 boundaries, and issue-backed exceptions are enforced by the companion
 maintainability script. No broad style or nesting rules are enabled.
 
-## Production surfaces
+## Inventory
 
 | Path | Lines | Kind | Owner | Disposition | Issue/reason |
 | --- | ---: | --- | --- | --- | --- |
@@ -111,10 +114,6 @@ maintainability script. No broad style or nesting rules are enabled.
 | `crates/recite-benchmarks/src/runtime.rs` | 265 | production | benchmarks | cohesive | Runtime benchmark harness |
 | `crates/recite-lsp/src/summary/file/collector.rs` | 256 | production | lsp/summary | review | File summary projection |
 
-## Test and support surfaces
-
-| Path | Lines | Kind | Owner | Disposition | Issue/reason |
-| --- | ---: | --- | --- | --- | --- |
 | `crates/recite-runtime/tests/adapter_conformance/driver.rs` | 1143 | test/support | runtime/tests | cohesive | Shared adapter conformance driver |
 | `crates/recite-cli/src/play/tui/render/tests.rs` | 811 | test/support | cli/tui/tests | cohesive | Private rendering contract tests |
 | `crates/recite-cli/tests/runtime.rs` | 759 | test/support | cli/tests | cohesive | Runtime command behavior suite |

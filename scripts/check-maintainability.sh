@@ -15,8 +15,8 @@ Unchanged oversized files are reported as legacy debt and pass. New or newly
 triggered files must be recorded in docs/maintainability-baseline.md. A file
 that crosses or grows above its follow-up threshold fails unless its baseline
 row explicitly uses the local `exception` disposition with an issue and
-reason. Baseline rows are validated against the checked-out head; use --full
-for a repository-wide inventory and complete baseline validation.
+reason. Baseline rows and oversized-file coverage are validated against the
+checked-out head on every run; use --full for a repository-wide trigger report.
 EOF
 }
 
@@ -98,8 +98,19 @@ is_excluded_path() {
   esac
 }
 
+is_valid_handwritten_path() {
+  local path="$1"
+  [[ "$path" =~ ^(crates|tests)/[A-Za-z0-9._/-]+\.rs$ ]] || return 1
+  case "$path" in
+    */../*|*/..|../*|./*|*/./*)
+      return 1
+      ;;
+  esac
+  is_rust_source_path "$path" && ! is_excluded_path "$path"
+}
+
 classify_path() {
-  if ! is_rust_source_path "$1" || is_excluded_path "$1"; then
+  if ! is_valid_handwritten_path "$1"; then
     return 1
   fi
   if is_test_path "$1"; then
@@ -125,7 +136,7 @@ parse_baseline_rows() {
       gsub(/^[[:space:]]+|[[:space:]]+$/, "", value)
       return value
     }
-    /^## (Production|Test and support) surfaces$/ {
+    /^## Inventory$/ {
       in_baseline = 1
       next
     }
@@ -201,13 +212,6 @@ validate_baseline() {
       validation_failures=$((validation_failures + 1))
       continue
     fi
-    if [[ ! "$path" =~ ^crates/[A-Za-z0-9._/-]+\.rs$ \
-      || "$path" == */../* || "$path" == */.. \
-      || "$path" == ../* || "$path" == ./* || "$path" == */./* ]]; then
-      echo "invalid maintainability baseline path at line $line_number: $path" >&2
-      validation_failures=$((validation_failures + 1))
-      continue
-    fi
     if [[ -n "${baseline_seen["$path"]+present}" ]]; then
       echo "duplicate maintainability baseline row at line $line_number: $path" >&2
       validation_failures=$((validation_failures + 1))
@@ -238,7 +242,7 @@ validate_baseline() {
 
     expected_kind="$(classify_path "$path" || true)"
     if [[ -z "$expected_kind" ]]; then
-      echo "baseline path is outside handwritten Rust surfaces at line $line_number: $path" >&2
+      echo "invalid maintainability baseline path at line $line_number: $path" >&2
       validation_failures=$((validation_failures + 1))
       continue
     fi
@@ -278,10 +282,13 @@ if ! validate_baseline; then
 fi
 
 declare -a paths=()
+declare -a all_paths=()
+while IFS= read -r -d '' path; do
+  all_paths+=("$path")
+done < <(git -C "$repo_root" ls-tree -r --name-only -z "$head_sha")
+
 if (( full_scan )); then
-  while IFS= read -r -d '' path; do
-    paths+=("$path")
-  done < <(git -C "$repo_root" ls-tree -r --name-only -z "$head_sha")
+  paths=("${all_paths[@]}")
   echo "== full maintainability inventory at $head_sha =="
 else
   if (( empty_base )); then
@@ -299,6 +306,23 @@ fi
 
 failures=0
 triggered=0
+
+for path in "${all_paths[@]}"; do
+  [[ "$path" == *.rs ]] || continue
+  kind="$(classify_path "$path" || true)"
+  [[ -n "$kind" ]] || continue
+  if [[ "$kind" == production ]]; then
+    scrutiny=250
+  else
+    scrutiny=350
+  fi
+  head_lines="$(line_count_at "$head_sha" "$path")"
+  if (( head_lines > scrutiny )) && [[ -z "${baseline_seen["$path"]+present}" ]]; then
+    echo "missing baseline row for $path ($kind, $head_lines lines; scrutiny threshold $scrutiny)" >&2
+    failures=$((failures + 1))
+  fi
+done
+
 for path in "${paths[@]}"; do
   [[ "$path" == *.rs ]] || continue
   kind="$(classify_path "$path" || true)"
@@ -322,10 +346,6 @@ for path in "${paths[@]}"; do
   fi
 
   triggered=$((triggered + 1))
-  if [[ -z "${baseline_seen["$path"]+present}" ]]; then
-    echo "missing baseline row for $path ($kind, $head_lines lines; scrutiny threshold $scrutiny)" >&2
-    failures=$((failures + 1))
-  fi
   if (( full_scan )); then
     echo "legacy trigger: $path ($kind, $head_lines lines; threshold $scrutiny)"
     continue

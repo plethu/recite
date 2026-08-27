@@ -14,7 +14,7 @@ trap cleanup EXIT
 new_fixture() {
   cleanup
   test_root="$(mktemp -d)"
-  mkdir -p "$test_root/repo/crates/demo/src" "$test_root/repo/crates/demo/tests" "$test_root/repo/crates/demo/benches" "$test_root/repo/docs" "$test_root/repo/scripts"
+  mkdir -p "$test_root/repo/crates/demo/src" "$test_root/repo/crates/demo/tests" "$test_root/repo/crates/demo/benches" "$test_root/repo/tests" "$test_root/repo/docs" "$test_root/repo/scripts"
   cp "$repo_root/scripts/check-maintainability.sh" "$test_root/repo/scripts/check-maintainability.sh"
   chmod +x "$test_root/repo/scripts/check-maintainability.sh"
   # These literals intentionally contain Markdown code ticks.
@@ -22,24 +22,23 @@ new_fixture() {
   printf '%s\n' \
     '# Maintainability fixture baseline' \
     '' \
-    '## Production surfaces' \
+    '## Inventory' \
     '' \
     '| Path | Lines | Kind | Owner | Disposition | Issue/reason |' \
     '| --- | ---: | --- | --- | --- | --- |' \
     '| `crates/demo/src/large.rs` | 401 | production | demo | cohesive | fixture |' \
     '| `crates/demo/tests/large.rs` | 501 | test/support | demo/tests | cohesive | fixture |' \
     '| `crates/demo/benches/large.rs` | 501 | test/support | demo/benches | cohesive | fixture |' \
+    '| `tests/large.rs` | 501 | test/support | top-level-tests | cohesive | fixture |' \
     '| `crates/demo/src/new.rs` | 300 | production | demo | cohesive | fixture |' \
     '| `crates/demo/src/exception.rs` | 401 | production | demo | exception | #164: fixture exception reason |' \
-    '' \
-    '## Test and support surfaces' \
-    '' \
     '| `crates/demo/src/tests.rs` | 351 | test/support | demo/tests | cohesive | fixture sidecar |' \
     '| `crates/demo/src/tests/support.rs` | 351 | test/support | demo/tests | cohesive | fixture support |' \
     > "$test_root/repo/docs/maintainability-baseline.md"
   write_lines crates/demo/src/large.rs 401
   write_lines crates/demo/tests/large.rs 501
   write_lines crates/demo/benches/large.rs 501
+  write_lines tests/large.rs 501
   write_lines crates/demo/src/new.rs 300
   write_lines crates/demo/src/exception.rs 401
   write_lines crates/demo/src/tests.rs 351
@@ -69,7 +68,7 @@ initial_push_fixture() {
   printf '%s\n' \
     '# Maintainability fixture baseline' \
     '' \
-    '## Production surfaces' \
+    '## Inventory' \
     '' \
     '| Path | Lines | Kind | Owner | Disposition | Issue/reason |' \
     '| --- | ---: | --- | --- | --- | --- |' \
@@ -168,6 +167,13 @@ expect_full_pass complete baseline inventory
 
 new_fixture
 commit_fixture baseline
+write_lines tests/large.rs 502
+update_baseline_lines tests/large.rs 501 502
+commit_fixture grow
+expect_fail growing oversized top-level test/support file
+
+new_fixture
+commit_fixture baseline
 # This literal intentionally contains Markdown code ticks.
 # shellcheck disable=SC2016
 printf '%s\n' '| `crates/demo/src/new.rs` | 300 | production | demo | cohesive | duplicate fixture |' \
@@ -179,6 +185,13 @@ commit_fixture baseline
 sed -i 's#crates/demo/src/new.rs#crates/demo/src/missing.rs#' \
   "$test_root/repo/docs/maintainability-baseline.md"
 expect_full_fail baseline path missing at head
+
+new_fixture
+commit_fixture baseline
+sed -i '\#crates/demo/src/large.rs#d' \
+  "$test_root/repo/docs/maintainability-baseline.md"
+commit_fixture docs-only
+expect_fail docs-only removal of unchanged oversized row
 
 new_fixture
 write_lines crates/demo/src/new.rs 200
@@ -232,6 +245,22 @@ write_lines crates/demo/src/large.rs 400
 update_baseline_lines crates/demo/src/large.rs 401 400
 commit_fixture shrink
 expect_pass shrinking oversized production file
+
+new_fixture
+commit_fixture base
+mv "$test_root/repo/crates/demo/src/new.rs" "$test_root/repo/crates/demo/src/renamed.rs"
+sed -i 's#crates/demo/src/new.rs#crates/demo/src/renamed.rs#' \
+  "$test_root/repo/docs/maintainability-baseline.md"
+commit_fixture rename
+expect_pass explicit source rename with updated inventory
+
+new_fixture
+commit_fixture base
+rm "$test_root/repo/crates/demo/src/new.rs"
+sed -i '\#crates/demo/src/new.rs#d' \
+  "$test_root/repo/docs/maintainability-baseline.md"
+commit_fixture deletion
+expect_pass explicit source deletion with removed inventory row
 
 new_fixture
 write_lines crates/demo/src/large.rs 401

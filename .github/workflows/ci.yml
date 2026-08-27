@@ -145,6 +145,7 @@ jobs:
       - name: Run maintainability checks
         run: |
           tests/maintainability/check.sh
+          tests/ast-grep/check.sh
           scripts/check-maintainability.sh
           scripts/check-ast-grep.sh
 
