@@ -56,6 +56,33 @@ existing private-test sidecar placement policy. File size, cohesion, generated
 boundaries, and issue-backed exceptions are enforced by the companion
 maintainability script. No broad style or nesting rules are enabled.
 
+## Prior maintenance decisions
+
+The evidence recorded while re-founding the v1 roadmap changes how these gates
+should be used:
+
+- #117's generic condition/effect model remains rejected as an implicit
+  refactor target. The current schema keeps conditions as pure queries and
+  effects as typed requests; the issue's accepted follow-up says any internal
+  deduplication needs current duplication and readability evidence. This gate
+  therefore records pressure and catches accidental boundary drift, but does
+  not demand a generic abstraction.
+- #136's original unused-LSP-snapshot premise is stale. `features.rs` consumes
+  `LiveProjectSnapshot::summaries()`, `server.rs` consumes workspace generation,
+  and the benchmark and test support paths exercise both accessors. No change
+  is warranted for that issue; any remaining `allow(dead_code)` is a separate,
+  evidence-backed review item rather than a reason to delete the live snapshot.
+
+The gates cover maintainability evidence across the public schema and runtime
+surfaces, the FFI boundary, generated-artifact exclusions, test placement and
+module boundaries, and deterministic wire/serialization files. They do so by
+classifying paths, requiring explicit baseline ownership, checking the focused
+private-test placement pattern, and retaining existing project/API/FFI,
+serialization, and test gates. They do not prove semantics, API compatibility,
+FFI safety, or deterministic behaviour from line counts or ast-grep alone;
+those claims remain the responsibility of the typed tests, compile gates,
+wire compatibility fixtures, and focused reviews for each subsystem.
+
 ## Inventory
 
 | Path | Lines | Kind | Owner | Disposition | Issue/reason |

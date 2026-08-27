@@ -11,6 +11,15 @@ After the v1 shape is stable, I'll review and publish fuller contribution guidel
 - Recite is hosted on GitHub. Use `gh` with `--repo plethu/recite` for issue and pull-request operations.
 - Recite is dual-licensed public open source under MIT OR Apache-2.0. Do not submit proprietary content, copied private material, or dependency code that is incompatible with that distribution.
 - The production spec is in `docs/recite-production-spec.md`.
+- The trusted pull-request policy in `.github/workflows/trusted-policy.yml`
+  runs base-owned policy code with read-only permissions. It fetches proposed
+  commits as Git objects for metadata checks and never checks out or executes
+  pull-request files. Keep that boundary intact when changing workflow or
+  policy files; ordinary CI remains a separate, untrusted pull-request lane.
+  The repository's deterministic fixture gate also performs static workflow
+  assertions. Run `actionlint` locally when it is available; it is not
+  installed by the repository toolchain, so CI records static coverage rather
+  than downloading an unpinned validator.
 - Current development is issue-led and branch-based, using short-lived,
   purpose-first branches from `main` under `feat/`, `fix/`, `refactor/`,
   `perf/`, `ci/`, `docs/`, `test/`, `build/`, `chore/`, `spike/`, `release/`,
@@ -31,7 +40,9 @@ After the v1 shape is stable, I'll review and publish fuller contribution guidel
   environment for the pinned ast-grep check. GitHub Actions runs separate Git
   policy, Rust, documentation, benchmark, and maintainability lanes, followed
   by the required-check rollup, on every push to `main` and on pull requests
-  (`.github/workflows/ci.yml`); required CI and branch protection remain
-  authoritative for the final protected PR. Focused checks are acceptable for
-  narrow documentation or instruction-only changes; run the full gate locally
-  for broad or high-risk code changes.
+  (`.github/workflows/ci.yml`). The base-owned trusted policy lane is a separate
+  `pull_request_target` check (`.github/workflows/trusted-policy.yml`);
+  required CI and branch protection remain authoritative for the final
+  protected PR. Focused checks are acceptable for narrow documentation or
+  instruction-only changes; run the full gate locally for broad or high-risk
+  code changes.

@@ -13,10 +13,11 @@ Runs the complete local verification suite:
   4. tests/ast-grep/check.sh
   5. scripts/check-maintainability.sh
   6. scripts/check-ast-grep.sh
-  7. tests/check-pr-review-gates/check-rollup-fixtures.sh
-  8. scripts/check-project-gates.sh
-  9. scripts/check-docs.sh
- 10. scripts/benchmark-smoke.sh
+  7. tests/trusted-policy/check.sh
+  8. tests/check-pr-review-gates/check-rollup-fixtures.sh
+  9. scripts/check-project-gates.sh
+ 10. scripts/check-docs.sh
+ 11. scripts/benchmark-smoke.sh
 
 Use `mise run verify` from the repository root when mise is available. That
 task loads the scoped `maintainability` mise environment for ast-grep;
@@ -62,6 +63,10 @@ if [[ ! -x "$repo_root/tests/ast-grep/check.sh" ]]; then
   echo "missing ast-grep verification fixture gate: $repo_root/tests/ast-grep/check.sh" >&2
   exit 2
 fi
+if [[ ! -x "$repo_root/tests/trusted-policy/check.sh" ]]; then
+  echo "missing trusted policy verification fixture gate: $repo_root/tests/trusted-policy/check.sh" >&2
+  exit 2
+fi
 if [[ ! -f "$repo_root/tests/git-policy/check-integration.sh" ]]; then
   echo "missing Git policy integration fixture gate: $repo_root/tests/git-policy/check-integration.sh" >&2
   exit 2
@@ -83,6 +88,10 @@ echo "== maintainability fixtures and changed-surface check =="
   scripts/check-maintainability.sh
   scripts/check-ast-grep.sh
 )
+
+echo
+echo "== trusted pull-request policy fixtures =="
+bash "$repo_root/tests/trusted-policy/check.sh" "$repo_root"
 
 echo
 echo "== pull-request check rollup fixtures =="
