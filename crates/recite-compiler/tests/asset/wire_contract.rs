@@ -34,6 +34,44 @@ fn compiler_output_matches_the_v0_fixed_array_shape() {
     let value_wire: WireValue = rmp_serde::from_slice(&value_asset.messagepack)
         .expect("value-tag output decodes as an untyped MessagePack value");
     assert_dialogue_shape(&value_wire);
+
+    let literal_reason_asset = super::tag_surface::compile_literal_reason_tag_surface_asset();
+    let literal_reason_wire: WireValue = rmp_serde::from_slice(&literal_reason_asset.messagepack)
+        .expect("literal-reason output decodes as an untyped MessagePack value");
+    assert_dialogue_shape(&literal_reason_wire);
+    assert_literal_reason_tags(&literal_reason_wire);
+}
+
+fn assert_literal_reason_tags(value: &WireValue) {
+    let dialogue = tuple(value, V0_COMPILED_DIALOGUE_FIELDS, "CompiledDialogue");
+    let mapping = table(&dialogue[9], "condition availability reasons")
+        .first()
+        .expect("literal-reason fixture emits one condition mapping");
+    let mapping = tuple(
+        mapping,
+        V0_CONDITION_AVAILABILITY_REASON_FIELDS,
+        "CompiledConditionAvailabilityReason",
+    );
+    let bindings = table(&mapping[2], "literal-reason arguments");
+    let tags = bindings
+        .iter()
+        .map(|binding| {
+            let binding = tuple(
+                binding,
+                V0_AVAILABILITY_REASON_ARG_BINDING_FIELDS,
+                "CompiledAvailabilityReasonArgBinding",
+            );
+            let tagged = tuple(&binding[1], V0_TAGGED_VALUE_FIELDS, "reason argument value");
+            match &tagged[0] {
+                WireValue::String(tag) => tag.as_str(),
+                other => panic!("reason argument tag must be a string, got {other:?}"),
+            }
+        })
+        .collect::<Vec<_>>();
+    assert_eq!(
+        tags,
+        ["LiteralBool", "LiteralFloat", "LiteralInt", "LiteralString"]
+    );
 }
 
 fn assert_dialogue_shape(value: &WireValue) {

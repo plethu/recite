@@ -153,7 +153,7 @@ wire compatibility fixtures, and focused reviews for each subsystem.
 | `crates/recite-lsp/src/tests/support.rs` | 423 | test/support | lsp/tests | review | Test support ownership; retain private access where required |
 | `crates/recite-lsp/src/tests/project_indexes.rs` | 422 | test/support | lsp/tests | review | Private index behavior |
 | `crates/recite-core/tests/compiled_model.rs` | 419 | test/support | core/tests | cohesive | Compiled model behavior |
-| `crates/recite-compiler/tests/asset/tag_surface.rs` | 421 | test/support | compiler/tests | cohesive | Wire tag surface |
+| `crates/recite-compiler/tests/asset/tag_surface.rs` | 486 | test/support | compiler/tests | cohesive | Wire tag surface |
 | `crates/recite-runtime/tests/traversal/localisation.rs` | 411 | test/support | runtime/tests | cohesive | Locale traversal contract |
 | `crates/recite-parser/tests/parser/lowering.rs` | 406 | test/support | parser/tests | cohesive | Lowering behavior suite |
 | `crates/recite-compiler/tests/pot_extraction.rs` | 404 | test/support | compiler/tests | follow-up | #166: shared localisation extraction fixtures |

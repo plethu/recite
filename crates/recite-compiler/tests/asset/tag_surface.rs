@@ -91,6 +91,71 @@ pub(super) fn compile_schema_tag_surface_asset() -> CompiledAssetOutput {
     report.asset.expect("valid fixture emits an asset")
 }
 
+/// Compile an isolated schema mapping whose reason arguments cover every
+/// string-tagged availability-reason value variant. Keeping this separate
+/// preserves the established schema tag-surface golden bytes.
+pub(super) fn compile_literal_reason_tag_surface_asset() -> CompiledAssetOutput {
+    let schema = load_schema_manifest_str(
+        "fixtures/schema/inline-literal-reason.json",
+        INLINE_LITERAL_REASON_SCHEMA,
+    )
+    .schema
+    .expect("valid inline literal-reason schema fixture");
+
+    let report = compile_inputs_with_schema(
+        [CompileInput::new(
+            "dialogue/literal-reason.recite",
+            concat!(
+                ":: literals default\n",
+                "? gated@c42cae1db1b80b26c8f9 requires=(literal_reason())\n",
+                "  Gated.\n",
+                "  -> END\n",
+            ),
+        )],
+        options_with_schema_fingerprint(),
+        &schema,
+    )
+    .expect("literal-reason tag-surface compile does not hard-fail");
+    assert!(
+        report.diagnostics.is_empty(),
+        "literal-reason tag-surface fixture should compile without diagnostics: {:?}",
+        report.diagnostics
+    );
+    report.asset.expect("valid fixture emits an asset")
+}
+
+const INLINE_LITERAL_REASON_SCHEMA: &str = r#"
+{
+  "schema_version": 1,
+  "conditions": {
+    "literal_reason": {
+      "params": [],
+      "returns": "bool",
+      "availability_reason": {
+        "reason": "literal_reason",
+        "args": {
+          "bool_value": true,
+          "float_value": 1.25,
+          "int_value": 7,
+          "string_value": "literal"
+        }
+      }
+    }
+  },
+  "availability_reasons": {
+    "literal_reason": {
+      "template": "Literal values: {string_value}, {int_value}, {float_value}, {bool_value}.",
+      "params": [
+        { "name": "bool_value", "type": "bool" },
+        { "name": "float_value", "type": "float" },
+        { "name": "int_value", "type": "int" },
+        { "name": "string_value", "type": "string" }
+      ]
+    }
+  }
+}
+"#;
+
 #[test]
 fn compiler_generated_messagepack_round_trips_the_v0_tag_surface() {
     let schema_tag_asset = compile_schema_tag_surface_asset();
