@@ -85,6 +85,99 @@ fn snapshot_restore_round_trip() {
     recite_session_free(session2);
     recite_asset_free(asset);
 }
+
+#[test]
+fn snapshot_restore_reemits_pending_effect_with_same_request_id() {
+    let bytes = compile_to_bytes(concat!(
+        ":: start default\n",
+        "! blocking play_sound(chime)\n",
+        "> after@41000000000000000001\n",
+        "  After.\n",
+        "-> END\n",
+    ));
+    let mut asset: u64 = 0;
+    assert_eq!(
+        unsafe { recite_asset_load(bytes.as_ptr(), bytes.len(), &raw mut asset) },
+        ReciteStatus::Ok
+    );
+
+    let mut session1 = 0;
+    let mut batch1 = ReciteBuffer::null();
+    assert_eq!(
+        unsafe {
+            recite_session_start(
+                asset,
+                std::ptr::null(),
+                std::ptr::null(),
+                &raw mut session1,
+                &raw mut batch1,
+            )
+        },
+        ReciteStatus::Ok
+    );
+    let first_batch = decode_batch(&batch1);
+    assert_eq!(event_kinds(&first_batch), ["effect"]);
+    assert_eq!(first_batch["events"][0]["mode"], "blocking");
+    let effect_id = first_batch["events"][0]["id"]
+        .as_str()
+        .expect("effect request ID")
+        .to_owned();
+    unsafe { recite_buffer_free(&raw mut batch1) };
+
+    let mut snapshot = ReciteBuffer::null();
+    assert_eq!(
+        unsafe { recite_session_snapshot(session1, &raw mut snapshot) },
+        ReciteStatus::Ok
+    );
+    recite_session_free(session1);
+
+    let mut session2 = 0;
+    let mut restore_batch = ReciteBuffer::null();
+    assert_eq!(
+        unsafe {
+            recite_session_restore(
+                asset,
+                snapshot.data,
+                snapshot.len,
+                &raw mut session2,
+                &raw mut restore_batch,
+            )
+        },
+        ReciteStatus::Ok
+    );
+    let restored_batch = decode_batch(&restore_batch);
+    assert_eq!(event_kinds(&restored_batch), ["effect"]);
+    assert_eq!(restored_batch["events"][0]["mode"], "blocking");
+    assert_eq!(
+        restored_batch["events"][0]["id"].as_str(),
+        Some(effect_id.as_str())
+    );
+    unsafe { recite_buffer_free(&raw mut restore_batch) };
+
+    let effect_id = cstr(&effect_id);
+    let mut after_ack = ReciteBuffer::null();
+    assert_eq!(
+        unsafe {
+            recite_session_acknowledge_effect(
+                session2,
+                effect_id.as_ptr(),
+                1,
+                std::ptr::null(),
+                &raw mut after_ack,
+            )
+        },
+        ReciteStatus::Ok
+    );
+    assert_eq!(event_kinds(&decode_batch(&after_ack)), ["line", "end"]);
+
+    unsafe {
+        recite_buffer_free(&raw mut after_ack);
+        recite_buffer_free(&raw mut snapshot);
+    }
+    recite_session_free(session2);
+    recite_asset_free(asset);
+}
+
 #[test]
 fn restore_from_ended_session_returns_no_active_session() {
     let bytes = compile_to_bytes(concat!(

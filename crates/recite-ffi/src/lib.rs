@@ -344,18 +344,19 @@ pub unsafe extern "C" fn recite_session_begin(
         set_last_error("recite_session_begin called twice on the same handle");
         return ReciteStatus::SessionAlreadyActive;
     }
-    ffi_session.begun = true;
-
     let context = FfiContext {
         handlers: &ffi_session.handlers,
     };
+    let session_checkpoint = ffi_session.session.clone();
     clear_condition_status();
     match drain_to_batch(&ffi_session.dialogue, &mut ffi_session.session, &context) {
         Ok(batch) => {
+            ffi_session.begun = true;
             unsafe { *batch_out = batch };
             ReciteStatus::Ok
         }
         Err((status, msg)) => {
+            ffi_session.session = session_checkpoint;
             set_last_error(&msg);
             status
         }
@@ -681,8 +682,9 @@ pub unsafe extern "C" fn recite_session_snapshot(
 /// The snapshot must have been produced against the same compiled asset
 /// identified by `asset_handle`. On success writes a new session handle to
 /// `*session_handle_out` and a resumption output batch to `*batch_out`. The
-/// batch is empty when the restored session is at a pending-prompt or
-/// pending-effect boundary (the host re-presents state from its own copy).
+/// batch is empty when the restored session is at a pending-prompt boundary.
+/// A pending blocking effect is re-emitted once in the resumption batch with
+/// the same request ID so the host can reconcile or re-present it.
 /// If the snapshot encoded an ended session, `recite_session_restore` returns
 /// `RECITE_ERR_NO_ACTIVE_SESSION`.
 ///
@@ -774,8 +776,10 @@ fn drain_restored(
     session: &mut DialogueSession,
     context: &FfiContext<'_>,
 ) -> Result<ReciteBuffer, (ReciteStatus, String)> {
-    // After restore, a pending prompt or blocking effect is valid — return an
-    // empty batch rather than an error so the host can re-display its own state.
+    // After restore, a pending prompt is valid — return an empty batch rather
+    // than an error so the host can re-display its own state. A pending
+    // blocking effect is re-emitted once by `next_with` so the host receives
+    // its stable request ID for reconciliation.
     // A restored ended session propagates NoActiveSession to the caller.
     drain_to_batch(dialogue, session, context)
 }

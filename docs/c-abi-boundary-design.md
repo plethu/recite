@@ -95,19 +95,17 @@ Mapping to contract obligations:
 
 **Decision: MessagePack length-prefixed byte buffers.**
 
-After each session operation (`recite_session_start`, `recite_session_next`,
-`recite_session_choose`, `recite_session_acknowledge_effect`) the crate writes
+After each session operation (`recite_session_start`, `recite_session_choose`,
+`recite_session_acknowledge_effect`) the crate writes
 a single serialized output batch into a caller-supplied buffer slot (see Buffer
-Ownership below). The batch is encoded using MessagePack, reusing the existing
-`encode_session_messagepack` / `decode_session_messagepack` infrastructure in
-`recite-runtime` and the session snapshot serialization path
-(`session_snapshot.rs`, `session_serialization/restore.rs`). The current batch
-envelope has `batch_format_version = 0`. Condition callback payloads have no
-independent version field: their shape is fixed by this ABI v0 contract and the
-major-version policy below. A future callback or batch format change requires
-an explicitly designed compatibility mechanism (an ABI-major reset, an additive
-versioned entrypoint, or a versioned envelope); there is no negotiation in the
-current ABI.
+Ownership below). The batch has its own MessagePack envelope and encoder in
+`recite-ffi`; it is distinct from the runtime session snapshot codec. The
+current batch envelope has `batch_format_version = 0`. Condition callback
+payloads have no independent version field: their shape is fixed by this ABI v0
+contract and the major-version policy below. A future callback or batch format
+change requires an explicitly designed compatibility mechanism (an ABI-major
+reset, an additive versioned entrypoint, or a versioned envelope); there is no
+negotiation in the current ABI.
 
 **Why not C structs?**
 Contract §5 structured output is deeply nested: choice availability reason trees
@@ -220,7 +218,7 @@ Runtime function mapping:
 - `recite_session_choose` → `choose_with` then drain via `next_with`
 - `recite_session_acknowledge_effect` → `acknowledge_effect` then drain via `next_with`
 - `recite_session_snapshot` → `encode_session_messagepack`
-- `recite_session_restore` → `decode_session_messagepack` then drain (empty batch at pending boundaries; `NoActiveSession` for ended-session snapshots)
+- `recite_session_restore` → `decode_session_messagepack` then drain (re-emits a pending blocking effect once; empty batch at a pending-prompt boundary; `NoActiveSession` for ended-session snapshots)
 
 `EffectAck::Completed` maps to `ack_completed = 1`; `EffectAck::Failed { reason }` maps
 to `ack_completed = 0` with the failure reason in `failure_reason`. Both paths
@@ -513,8 +511,11 @@ includes trace counters, the divert stack, pending blocking effects, and other
 determinism-critical state).
 
 If a blocking effect was pending when the snapshot was taken, restoring the
-session leaves it pending. The host decides whether to replay, fast-forward, or
-treat the effect as complete (contract §9).
+session re-emits that effect once in the resumption batch with the same request
+ID, and leaves it pending until the host acknowledges it. The stable ID lets the
+host reconcile, replay, fast-forward, or treat the effect as complete; the
+runtime does not know whether the game-side operation happened before the save
+(contract §9).
 
 ## Schema Manifest and Projection
 

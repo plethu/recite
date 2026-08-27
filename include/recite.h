@@ -308,8 +308,9 @@ ReciteStatus recite_session_register_condition(uint64_t session_handle,
  * The snapshot must have been produced against the same compiled asset
  * identified by `asset_handle`. On success writes a new session handle to
  * `*session_handle_out` and a resumption output batch to `*batch_out`. The
- * batch is empty when the restored session is at a pending-prompt or
- * pending-effect boundary (the host re-presents state from its own copy).
+ * batch is empty when the restored session is at a pending-prompt boundary.
+ * A pending blocking effect is re-emitted once in the resumption batch with
+ * the same request ID so the host can reconcile or re-present it.
  * If the snapshot encoded an ended session, `recite_session_restore` returns
  * `RECITE_ERR_NO_ACTIVE_SESSION`.
  *

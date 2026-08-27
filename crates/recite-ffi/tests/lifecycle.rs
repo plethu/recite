@@ -274,6 +274,98 @@ fn session_create_register_begin_sequence() {
     recite_session_free(session);
     recite_asset_free(asset);
 }
+
+#[test]
+fn session_begin_failure_rolls_back_and_allows_retry() {
+    let bytes = compile_to_bytes(concat!(
+        ":: start default\n",
+        "> before@ab000000000000000001\n",
+        "  Before.\n",
+        ":if ready()\n",
+        "  > yes@ab000000000000000002\n",
+        "    Ready.\n",
+        ":else\n",
+        "  > no@ab000000000000000003\n",
+        "    Not ready.\n",
+        "-> END\n",
+    ));
+    let mut asset: u64 = 0;
+    assert_eq!(
+        unsafe { recite_asset_load(bytes.as_ptr(), bytes.len(), &raw mut asset) },
+        ReciteStatus::Ok
+    );
+
+    let mut session = 0;
+    assert_eq!(
+        unsafe {
+            recite_session_create(asset, std::ptr::null(), std::ptr::null(), &raw mut session)
+        },
+        ReciteStatus::Ok
+    );
+
+    // The opening line is emitted before the missing condition handler fails.
+    // Begin must discard that partial traversal so it can be retried.
+    let mut failed_batch = ReciteBuffer::null();
+    assert_eq!(
+        unsafe { recite_session_begin(session, &raw mut failed_batch) },
+        ReciteStatus::MissingConditionHandler
+    );
+    assert!(failed_batch.data.is_null());
+    assert_eq!(failed_batch.len, 0);
+
+    unsafe extern "C" fn ready_true(
+        _query: *const ReciteConditionQuery,
+        userdata: *mut std::ffi::c_void,
+    ) -> ReciteConditionResult {
+        let buffer = unsafe { &mut *(userdata.cast::<[u8; 32]>()) };
+        #[derive(serde::Serialize)]
+        struct ResultValue {
+            kind: &'static str,
+            value: bool,
+        }
+        let bytes = rmp_serde::to_vec_named(&ResultValue {
+            kind: "bool",
+            value: true,
+        })
+        .expect("condition result encodes");
+        buffer[..bytes.len()].copy_from_slice(&bytes);
+        ReciteConditionResult {
+            ok: 1,
+            value_msgpack: buffer.as_ptr(),
+            value_len: bytes.len(),
+            error_message: std::ptr::null(),
+        }
+    }
+
+    let condition_name = cstr("ready");
+    let mut result_buffer = [0u8; 32];
+    assert_eq!(
+        unsafe {
+            recite_session_register_condition(
+                session,
+                condition_name.as_ptr(),
+                ready_true,
+                result_buffer.as_mut_ptr().cast(),
+            )
+        },
+        ReciteStatus::Ok
+    );
+
+    let mut retry_batch = ReciteBuffer::null();
+    assert_eq!(
+        unsafe { recite_session_begin(session, &raw mut retry_batch) },
+        ReciteStatus::Ok
+    );
+    assert_eq!(
+        event_kinds(&decode_batch(&retry_batch)),
+        ["line", "line", "end"]
+    );
+
+    unsafe { recite_buffer_free(&raw mut retry_batch) };
+    recite_session_free(session);
+    recite_asset_free(asset);
+}
+
 #[test]
 fn session_begin_twice_returns_already_active() {
     let bytes = compile_to_bytes(concat!(
