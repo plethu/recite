@@ -47,7 +47,9 @@ The changed-surface check compares a pull request's source head with its
 merge base. For a push to `main`, CI passes `github.event.before` through the
 `RECITE_BASE_REF` environment variable. An all-zero initial-push SHA is
 treated as Git's empty tree, so the first push is checked without relying on
-`HEAD^`. Local runs default to `origin/main` unless explicit refs are passed.
+`HEAD^`. Rename and copy changes compare the destination against the original
+base path, so moving a large file without changing it is not mistaken for new
+growth. Local runs default to `origin/main` unless explicit refs are passed.
 
 The first structural ast-grep rule is intentionally narrow: it enforces the
 existing private-test sidecar placement policy. File size, cohesion, generated

@@ -283,6 +283,7 @@ fi
 
 declare -a paths=()
 declare -a all_paths=()
+declare -A base_paths=()
 while IFS= read -r -d '' path; do
   all_paths+=("$path")
 done < <(git -C "$repo_root" ls-tree -r --name-only -z "$head_sha")
@@ -293,13 +294,29 @@ if (( full_scan )); then
 else
   if (( empty_base )); then
     diff_range="$base_sha $head_sha"
-    diff_command=(git -C "$repo_root" diff --name-only -z --diff-filter=ACMR "$base_sha" "$head_sha" -- '*.rs')
+    diff_command=(git -C "$repo_root" diff --name-status -z -M --diff-filter=ACMR "$base_sha" "$head_sha" -- '*.rs')
   else
     diff_range="$base_sha...$head_sha"
-    diff_command=(git -C "$repo_root" diff --name-only -z --diff-filter=ACMR "${base_sha}...${head_sha}" -- '*.rs')
+    diff_command=(git -C "$repo_root" diff --name-status -z -M --diff-filter=ACMR "${base_sha}...${head_sha}" -- '*.rs')
   fi
-  while IFS= read -r -d '' path; do
+  while IFS= read -r -d '' status; do
+    case "$status" in
+      R*|C*)
+        if ! IFS= read -r -d '' base_path || ! IFS= read -r -d '' path; then
+          echo "malformed changed-path record from git diff: $status" >&2
+          exit 2
+        fi
+        ;;
+      *)
+        if ! IFS= read -r -d '' path; then
+          echo "malformed changed-path record from git diff: $status" >&2
+          exit 2
+        fi
+        base_path="$path"
+        ;;
+    esac
     paths+=("$path")
+    base_paths["$path"]="$base_path"
   done < <("${diff_command[@]}")
   echo "== changed maintainability inventory: $diff_range =="
 fi
@@ -339,7 +356,7 @@ for path in "${paths[@]}"; do
   head_lines="$(line_count_at "$head_sha" "$path")"
   base_lines=0
   if (( ! full_scan )); then
-    base_lines="$(line_count_at "$base_sha" "$path")"
+    base_lines="$(line_count_at "$base_sha" "${base_paths["$path"]-$path}")"
   fi
   if (( head_lines <= scrutiny )); then
     continue

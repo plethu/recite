@@ -248,11 +248,21 @@ expect_pass shrinking oversized production file
 
 new_fixture
 commit_fixture base
-mv "$test_root/repo/crates/demo/src/new.rs" "$test_root/repo/crates/demo/src/renamed.rs"
-sed -i 's#crates/demo/src/new.rs#crates/demo/src/renamed.rs#' \
+mv "$test_root/repo/crates/demo/src/large.rs" "$test_root/repo/crates/demo/src/renamed.rs"
+sed -i 's#crates/demo/src/large.rs#crates/demo/src/renamed.rs#' \
   "$test_root/repo/docs/maintainability-baseline.md"
 commit_fixture rename
-expect_pass explicit source rename with updated inventory
+expect_pass unchanged oversized source rename with updated inventory
+
+new_fixture
+commit_fixture base
+mv "$test_root/repo/crates/demo/src/large.rs" "$test_root/repo/crates/demo/src/renamed.rs"
+sed -i 's#crates/demo/src/large.rs#crates/demo/src/renamed.rs#' \
+  "$test_root/repo/docs/maintainability-baseline.md"
+write_lines crates/demo/src/renamed.rs 402
+update_baseline_lines crates/demo/src/renamed.rs 401 402
+commit_fixture rename-grow
+expect_fail renamed and grown oversized source file
 
 new_fixture
 commit_fixture base
