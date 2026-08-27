@@ -1,7 +1,8 @@
 # Unity Adapter Design
 
 This document records the initial Unity adapter and schema-export strategy for
-#81. It is a design input for follow-up implementation issues, not a committed
+[#48 Unity: design adapter and schema-export strategy](https://github.com/plethu/recite/issues/48).
+It is a design input for follow-up implementation issues, not a committed
 v1 public C# API or Rust API change.
 
 Normative behavior remains in `docs/recite-production-spec.md` and
@@ -413,8 +414,10 @@ allowing staged delivery:
 5. Unity conformance and documentation: adapter conformance fixtures, EditMode
    and PlayMode coverage, setup guide, troubleshooting, and known limitations.
 
-Issue #108 should use this design as input for the Unity MVP. Issue #122 should
-use the same shared-core and active-session decisions for Unity refresh work.
+[#73 Unity: implement Recite adapter MVP](https://github.com/plethu/recite/issues/73)
+should use this design as input for the Unity MVP. [#85 Unity: add editor import
+and refresh workflow](https://github.com/plethu/recite/issues/85) should use the
+same shared-core and active-session decisions for Unity refresh work.
 If the first implementation only ships the GameObject/OO facade, it must still
 leave the shared adapter core and asset/session model suitable for the DOTS
 facade.

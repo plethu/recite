@@ -25,7 +25,8 @@ Use the same sequence for compiler, runtime, LSP, watch, and memory work:
 
 Do not tune against a single laptop timing. Local runs are useful for finding a
 cause. Trend claims and release comparisons should come from one documented
-Linux runner or the release baseline profile tracked by #169.
+Linux runner or the release baseline profile tracked by [#109 Perf: establish
+release benchmark baseline profile](https://github.com/plethu/recite/issues/109).
 
 ## Measurement Profiles
 
@@ -36,7 +37,9 @@ Use two profiles deliberately:
   selector, git commit, and whether the machine was on AC power and otherwise
   idle.
 - Stable trend profile: the only source for release notes, blocking regression
-  claims, and cross-PR trend comparisons. Until #169 defines it, treat trend
+claims, and cross-PR trend comparisons. Until [#109 Perf: establish release
+benchmark baseline profile](https://github.com/plethu/recite/issues/109) defines
+it, treat trend
   numbers as provisional.
 
 Criterion is the first timing surface. Prefer the existing benchmark targets
@@ -81,7 +84,8 @@ Treat Criterion output as a statistical signal, not a verdict:
 - Use tiny fixtures to localise failures quickly; use medium, large, or
   realistic fixtures to expose algorithmic shape and memory pressure.
 - Regression thresholds from the benchmark reference are review triggers until
-  #169 establishes the release baseline profile.
+  [#109 Perf: establish release benchmark baseline profile](https://github.com/plethu/recite/issues/109)
+  establishes the release baseline profile.
 
 If a run is noisy, lower the claim instead of overfitting the result. For
 example, say "runtime/condition_dispatch on medium should be profiled" rather
@@ -161,7 +165,8 @@ RECITE_BENCH_SCALES=medium \
   cargo bench -p recite-benchmarks --bench compiler -- compiler/compile_with_schema
 ```
 
-Issue #105 owns release-facing memory profiles and known scale limits. Keep
+[#70 Perf: report memory profiles and known scale limits](https://github.com/plethu/recite/issues/70)
+owns release-facing memory profiles and known scale limits. Keep
 `docs/benchmark-reports/issue-105-memory-profiles-known-limits.md` generated
 from `memory_profile_report`, and do not turn one local heap profile into a
 release limit.
@@ -209,7 +214,8 @@ RECITE_BENCH_SCALES=tiny cargo bench -p recite-benchmarks --bench lsp -- lsp/dia
 RECITE_BENCH_SCALES=tiny cargo bench -p recite-benchmarks --bench lsp -- lsp/completion
 ```
 
-Watch/build refresh investigations are owned by #168 until dedicated stress
+Watch/build refresh investigations are owned by [#108 CLI: add watch rebuild
+latency stress checks](https://github.com/plethu/recite/issues/108) until dedicated stress
 commands exist. For now, measure the whole command externally and profile the
 compiler path that dominates the refresh:
 
@@ -243,7 +249,8 @@ perform game-side effects.
 
 ## `recite bench` Mapping
 
-Issue #126 added the user-facing `recite bench` command. Maintainers should
+[#87 CLI: add recite bench command](https://github.com/plethu/recite/issues/87)
+added the user-facing `recite bench` command. Maintainers should
 still use `cargo bench`, helper scripts, and low-level profilers for focused
 investigation; `recite bench` is the stable project and fixture report surface.
 
@@ -262,10 +269,16 @@ It should not make profiling tools linked project dependencies.
 
 ## Issue Links
 
-- #105 owns memory profiles and release known-limit reporting.
-- #126 closed the user-facing `recite bench` report surface.
-- #166 owns targeted compiler phase benchmark expansion.
-- #167 owns runtime allocation and clone-pressure measurement.
-- #168 owns watch rebuild latency stress checks.
-- #169 owns the release benchmark baseline profile and any blocking trend
+- [#70](https://github.com/plethu/recite/issues/70) owns memory profiles and
+  release known-limit reporting.
+- [#87](https://github.com/plethu/recite/issues/87) closed the user-facing
+  `recite bench` report surface.
+- [#106](https://github.com/plethu/recite/issues/106) owns targeted compiler
+  phase benchmark expansion.
+- [#107](https://github.com/plethu/recite/issues/107) owns runtime allocation
+  and clone-pressure measurement.
+- [#108](https://github.com/plethu/recite/issues/108) owns watch rebuild latency
+  stress checks.
+- [#109](https://github.com/plethu/recite/issues/109) owns the release benchmark
+  baseline profile and any blocking trend
   claims.

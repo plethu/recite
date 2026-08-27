@@ -73,7 +73,7 @@ Peak compiler RSS is best-effort evidence from the local machine. On Linux the r
 
 ## Known Limits
 
-- Numeric budgets remain evidence, not release contracts, until #169 establishes the release baseline.
+- Numeric budgets remain evidence, not release contracts, until [#109 Perf: establish release benchmark baseline profile](https://github.com/plethu/recite/issues/109) establishes the release baseline.
 - Peak RSS depends on allocator, operating system, build profile, and measurement environment.
 - Generated `medium`, `large`, and `epic` fixtures are produced on demand under `target/recite-benchmarks/generated` and are not checked in.
 - LSP memory is an estimated index-summary size, not a retained-heap profiler result.

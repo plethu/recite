@@ -1,7 +1,8 @@
 # Recite C ABI Boundary Design
 
 Design note for `recite-ffi`: the shared C ABI surface used by non-Rust engine
-adapters. Closes issue #207.
+adapters. This is the design record for [#128 Adapters: design the C ABI
+boundary for non-Rust engine adapters](https://github.com/plethu/recite/issues/128).
 
 Normative adapter semantics live in `docs/engine-adapter-contract.md` and are
 **not** repeated here — this note maps each obligation to a concrete ABI
@@ -12,17 +13,18 @@ for how those requirements cross the language boundary.
 
 **Goals:**
 - Settle handle model, payload encoding, string/buffer ownership, error codes,
-  and condition protocol — the decisions that a Unity MVP (#108) must implement
-  consistently.
+  and condition protocol — the decisions implemented by the [Unity adapter MVP
+  (#73)](https://github.com/plethu/recite/issues/73).
 - Produce a stable, narrow surface that future non-Rust adapters (Unreal,
   GameMaker — post-v1) and the deferred `generate-bindings` direction (spec
   §13.9) can layer on without renegotiating the ABI.
 
 **Non-goals:**
-- Implementing the `recite-ffi` crate. That is a follow-up issue.
-- C header generation (`cbindgen`). Follow-up.
+- Implementing the `recite-ffi` crate, delivered by [#130](https://github.com/plethu/recite/issues/130).
+- C header generation (`cbindgen`), delivered by [#131](https://github.com/plethu/recite/issues/131).
 - Typed binding generation (spec §13.9). Post-v1.
-- Any adapter MVP work. Each adapter (Unity #108, etc.) implements against this
+- Any adapter MVP work. Each adapter, including the completed Unity MVP in
+  [#73](https://github.com/plethu/recite/issues/73), implements against this
   note; they do not live here.
 - Changing normative adapter-contract semantics. The contract is authoritative
   and unchanged.
@@ -490,22 +492,29 @@ typed structs; they are a generation-time concern.
 
 ## Follow-Up Issues
 
-These implementation issues must be filed and linked to #207 after this design
-note merges:
+The C ABI design and its implementation follow-ups were completed under the
+historical `Milestone 8: Engine Adapter Contract`:
 
-1. **Implement `recite-ffi` crate** — the actual `extern "C"` surface described
-   here. New workspace member at `crates/recite-ffi`. Milestone: Milestone 8
-   (Engine Adapter Contract). Depends on: this design note.
+1. [#128 Adapters: design the C ABI boundary for non-Rust engine adapters](https://github.com/plethu/recite/issues/128)
+   records this design.
 
-2. **C header generation and packaging** — `cbindgen` configuration to emit a
-   stable C header from `recite-ffi`. Delivered by #217 at `include/recite.h`;
-   `pkg-config` or CMake find-module support remains out of scope for v1 unless
-   a downstream package needs it.
+2. [#130 FFI: implement recite-ffi crate (extern C surface)](https://github.com/plethu/recite/issues/130)
+   delivered the `recite-ffi` workspace member.
 
-3. **Update #108 (Unity MVP) to reference this design note** — #108 acceptance
-   criteria must confirm the Unity adapter's P/Invoke layer matches the handle
-   model, error codes, buffer ownership, and condition callback protocol defined
-   here.
+3. [#131 FFI: cbindgen header generation and packaging](https://github.com/plethu/recite/issues/131)
+   delivered the stable `include/recite.h` header. `pkg-config` or CMake
+   find-module support remains out of scope for v1 unless a downstream package
+   needs it.
+
+The remaining Unity-facing ABI, refresh, documentation, and packaging work is
+owned by the current [Milestone 23: 7 Engine Companions](https://github.com/plethu/recite/milestone/23):
+
+- [#85 Unity: add editor import and refresh workflow](https://github.com/plethu/recite/issues/85)
+  applies the ABI and changed-asset policy to the editor workflow.
+- [#86 Docs: document engine authoring refresh workflows and reload limits](https://github.com/plethu/recite/issues/86)
+  records the supported refresh and ABI distribution boundaries.
+- [#133 Unity: prepare Asset Store and UPM distribution package](https://github.com/plethu/recite/issues/133)
+  owns the Unity package and native artifact distribution surface.
 
 ## Open Items
 
@@ -513,8 +522,9 @@ note merges:
   `recite-runtime` should be audited against the msgpack encoding used in
   session snapshots to confirm the same serialization path can carry condition
   arguments without introducing a second encoding scheme. If not, a small
-  dedicated msgpack schema for `ReciteConditionQuery` args must be defined in the
-  `recite-ffi` implementation issue.
+  dedicated msgpack schema for `ReciteConditionQuery` args must be defined by
+  [#171 Resolve C ABI condition arguments and schema mismatch contract](https://github.com/plethu/recite/issues/171)
+  before downstream adapter/package integration.
 
 - **`validation_error` category coverage:** the contract §12 category
   `validation_error` has no direct `DialogueError` variant (it is raised by
@@ -526,17 +536,19 @@ note merges:
 - **Spec gap — §12 `schema_mismatch_error`:** the contract §12 lists
   `schema_mismatch_error` as a required category, but no current `DialogueError`
   variant maps to it directly (schema mismatch is typically caught at compile
-  time or as part of `StaleOrIncompatibleAsset`). The implementation issue
-  should confirm whether this category needs a dedicated `DialogueError` variant
-  or whether it is always raised at the FFI-layer asset-validation step before
-  session start.
+  time or as part of `StaleOrIncompatibleAsset`). [#171 Resolve C ABI condition
+  arguments and schema mismatch contract](https://github.com/plethu/recite/issues/171)
+  should confirm whether this category needs a dedicated `DialogueError`
+  variant or whether it is always raised at the FFI-layer asset-validation step
+  before session start; #85 and #133 consume that decision downstream.
 
 - **IL2CPP allocator mismatch:** `recite_buffer_free` must call the same
   allocator that allocated the buffer — i.e. Rust's allocator inside
   `recite-ffi`. If a Unity IL2CPP build links against a different copy of
   `recite-ffi` than the one that produced the buffer (e.g. a statically linked
   runtime vs a pre-built `.dll`), the free call goes to the wrong allocator and
-  is undefined behaviour. The implementation issue and Unity MVP (#108) must
-  document that `recite-ffi` is always distributed as a single pre-built
+  is undefined behaviour. The current Unity refresh and packaging work in
+  [#85](https://github.com/plethu/recite/issues/85) and [#133](https://github.com/plethu/recite/issues/133)
+  must document that `recite-ffi` is always distributed as a single pre-built
   `.dll`/`.so` that both Mono and IL2CPP P/Invoke load at runtime — never
   recompiled per backend or statically linked into the Unity player separately.

@@ -2,8 +2,9 @@
 
 Date: 2026-06-01
 
-This is an archived evaluation report from before #156 made compact ID storage
-the default. Commands below that use `--features small-ids` reproduce the
+This is an archived evaluation report from before [#96 Core: switch shared ID
+newtypes to compact string storage](https://github.com/plethu/recite/issues/96)
+made compact ID storage the default. Commands below that use `--features small-ids` reproduce the
 original branch shape only; current `main` no longer has that feature.
 
 ## Decision

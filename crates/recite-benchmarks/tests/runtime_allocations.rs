@@ -77,7 +77,7 @@ fn runtime_allocation_markdown_contains_caveats_and_operation_table()
     assert!(markdown.contains("| Operation | Allocations | Allocated bytes |"));
     assert!(markdown.contains("| start_scene |"));
     assert!(markdown.contains("Clone pressure is inferred"));
-    assert!(markdown.contains("#169 establishes the release benchmark baseline profile"));
+    assert!(markdown.contains("#109 establishes the release benchmark baseline profile"));
     Ok(())
 }
 

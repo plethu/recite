@@ -75,7 +75,7 @@ pub fn build_runtime_allocation_report(
             "Each operation measures the runtime hot-path body after fixture, asset, and setup-session preparation where possible.",
             "Returned events, sessions, and buffers are dropped after the measured region, so deallocation counts do not necessarily mirror allocation counts.",
             "Clone pressure is inferred from allocation and byte spikes; this report does not count individual Clone calls.",
-            "Thresholds remain review evidence only until #169 establishes the release benchmark baseline profile.",
+            "Thresholds remain review evidence only until #109 establishes the release benchmark baseline profile.",
         ],
     })
 }
