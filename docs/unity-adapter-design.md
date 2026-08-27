@@ -158,7 +158,8 @@ The native boundary should expose operations equivalent to the adapter
 contract:
 
 - load or decode a compiled asset and report structured load errors;
-- start a session from a compiled asset identity, optional block, and locale;
+- start a session from a compiled asset identity, optional block, and optional
+  locale; absent locale selects source-text-only mode;
 - select a choice by stable `ChoiceId`;
 - acknowledge a blocking effect by stable `EffectRequestId`;
 - snapshot and restore the opaque Recite session state;
