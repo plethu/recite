@@ -51,10 +51,19 @@ treated as Git's empty tree, so the first push is checked without relying on
 base path, so moving a large file without changing it is not mistaken for new
 growth. Local runs default to `origin/main` unless explicit refs are passed.
 
-The first structural ast-grep rule is intentionally narrow: it enforces the
-existing private-test sidecar placement policy. File size, cohesion, generated
-boundaries, and issue-backed exceptions are enforced by the companion
-maintainability script. No broad style or nesting rules are enabled.
+The structural ast-grep rules are intentionally narrow. `rust-inline-test-module`
+enforces the existing private-test sidecar placement policy. The
+`rust-elseif-cascade` rule catches four or more equality branches over the same
+value, where policy ownership can become difficult to see; three-way
+classifiers stay allowed because they are common and usually remain local.
+Neither rule uses file size as a proxy for cohesion, and no broad style or
+nesting rules are enabled. File size, cohesion, generated boundaries, and
+issue-backed exceptions are enforced by the companion maintainability script.
+
+An intentionally ordered four-equality-branch chain can use a local
+`// ast-grep-ignore: rust-elseif-cascade` comment. Keep the comment adjacent to
+the chain and explain why its order is the local policy; do not disable the
+rule for a directory or repository-wide.
 
 ## Prior maintenance decisions
 

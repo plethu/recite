@@ -3,16 +3,21 @@
 This is the maintenance map for the v0 compiled MessagePack document. It does
 not define a second format: `docs/recite-production-spec.md` §12.2 remains the
 wire authority, and the shared constants in
-`crates/recite-core/src/compiled/wire.rs` are the checked-in code registry for
-the numeric arities and tags. The matrix makes the owners and evidence easy to
-find when a row or enum changes.
+`crates/recite-core/src/compiled/wire.rs` are the checked-in registry for the
+numeric tags and arity assertions. Tag constants are consumed by both codec
+halves; arity constants are primarily consumed by the focused wire-contract
+tests, with a few generic tuple codec paths sharing them. They are not a
+complete schema source from which both production codecs derive every tuple
+length. The matrix makes the owners and evidence easy to find when a row or
+enum changes.
 
 The three checks have deliberately different jobs:
 
 1. `recite-compiler/tests/asset/wire_contract.rs` decodes compiler output as
    an untyped MessagePack sequence and checks the fixed array shape against the
-   shared arity constants. This catches encoder shape drift without relying on
-   the typed decoder mirror.
+   shared arity assertions. This catches encoder shape drift without relying on
+   the typed decoder mirror; it does not mean every production codec tuple
+   declaration consumes the registry constant.
 2. `recite-compiler/tests/asset/tag_surface.rs` compiles a source that reaches
    every v0 enum variant and round-trips it through the core decoder. This
    catches one-sided encoder/decoder or tag handling drift.
@@ -28,7 +33,7 @@ the field column are the JSON inspection names; their order is the wire order.
 `messagepack/validate.rs` is the shared post-decode validator unless a more
 specific tag validator is named.
 
-| Wire value and fields, in order | Arity registry | Encoder | Decoder / validator | Inspection and evidence | Authority |
+| Wire value and fields, in order | Arity assertion registry | Encoder | Decoder / validator | Inspection and evidence | Authority |
 | --- | --- | --- | --- | --- | --- |
 | `CompiledDialogue`: `header`, `default_block`, `sources`, `blocks`, `statements`, `match_arms`, `lines`, `choices`, `availability_reasons`, `condition_availability_reasons`, `speakers`, `metadata`, `effects`, `source_maps`, `block_lookup`, `line_lookup`, `choice_lookup` | `V0_COMPILED_DIALOGUE_FIELDS` (17) | `compiler/src/wire/messagepack.rs` `MsgDialogue` | `core/src/compiled/messagepack/wire.rs` `MsgDialogue`; `validate_dialogue` | `compiler/src/wire/inspection.rs` `json_dialogue`; valid fixture JSON snapshot; wire-contract and golden tests | §12.2 `CompiledDialogue` |
 | `CompiledAssetHeader`: `format_version`, `compiler_compatibility_version`, `primary_encoding`, `inspection_encoding`, `compiler_version`, `asset_id`, `source_map_id`, `schema_fingerprint` | `V0_ASSET_HEADER_FIELDS` (8) | `MsgHeader` | `MsgHeader`; header version check | `json_header`; tag-surface fixture | §12.2 `CompiledAssetHeader` |
@@ -65,8 +70,8 @@ runtime behavior is part of this issue.
 
 The compiled enum/model type is the update point for the semantic variant. The
 named constants are the only numeric wire values; both codec halves consume
-them. A new variant must be represented in the model, encoder, decoder,
-validator, tag-surface source, and this table together.
+the tag constants. A new variant must be represented in the model, encoder,
+decoder, validator, tag-surface source, and this table together.
 
 | Wire family and variants | Tag constants | Compiled enum/model update point | Encoder | Decoder / validator | Inspection and evidence | Authority |
 | --- | --- | --- | --- | --- | --- | --- |
@@ -87,12 +92,13 @@ validator, tag-surface source, and this table together.
 ## Change rule
 
 Before the first tagged release, an intentional v0 correction updates the
-model, the shared arity/tag registry, encoder, decoder/validator, inspection
-projection, this matrix, and the focused fixtures together. The golden snapshot
-must be reviewed as evidence of the byte change. After the first tagged
-release, field additions/removals/reordering, tag changes, or semantic changes
-require the `format_version` or `compiler_compatibility_version` policy in
-§12.2 instead of silently updating the v0 snapshot.
+model, the shared arity-assertion/tag registry, encoder, decoder/validator,
+inspection projection, this matrix, and the focused fixtures together. The
+golden snapshot must be reviewed as evidence of the byte change. After the
+first tagged release, field additions/removals/reordering, tag changes, or
+semantic changes require the `format_version` or
+`compiler_compatibility_version` policy in §12.2 instead of silently updating
+the v0 snapshot.
 
 Do not make `docs/recite-production-spec.md` depend on the matrix for its
 meaning, and do not add a generated serialization abstraction here. The matrix

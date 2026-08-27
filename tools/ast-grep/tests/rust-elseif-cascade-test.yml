@@ -1,0 +1,51 @@
+id: rust-elseif-cascade
+valid:
+  - |
+    fn three_way_classifier(value: usize) -> usize {
+        if value == 0 {
+            0
+        } else if value == 1 {
+            1
+        } else if value == 2 {
+            2
+        } else {
+            3
+        }
+    }
+  - |
+    fn enum_classifier(value: Value) -> usize {
+        match value {
+            Value::One => 1,
+            Value::Two => 2,
+            Value::Other => 3,
+        }
+    }
+  - |
+    fn independent_guards(first: usize, second: usize) -> usize {
+        if first == 0 {
+            0
+        } else if second == 1 {
+            1
+        } else if first == 2 {
+            2
+        } else if second == 3 {
+            3
+        } else {
+            4
+        }
+    }
+invalid:
+  - |
+    fn four_way_classifier(value: usize) -> usize {
+        if value == 0 {
+            0
+        } else if value == 1 {
+            1
+        } else if value == 2 {
+            2
+        } else if value == 3 {
+            3
+        } else {
+            4
+        }
+    }
