@@ -47,5 +47,7 @@ wall-clock values, nondeterministic ordering, and debug-only formatting.
 - Runtime tests execute headlessly without an engine and assert structured
   events, deterministic order, serialisation/recovery, and effects when those
   surfaces are involved.
-- Benchmarks belong to Milestone 6 and are outside the serious v1 acceptance
-  gate unless the issue explicitly changes that boundary.
+- Benchmark and scale evidence support the serious-v1 release outcome (roadmap
+  milestone 9 / GitHub milestone 25). Issue #109 owns the release benchmark
+  baseline; benchmark smoke remains a required pull-request check, while
+  numeric budgets remain evidence until that baseline is established.
