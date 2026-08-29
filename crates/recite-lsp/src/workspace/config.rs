@@ -135,7 +135,7 @@ impl WorkspaceConfig {
         }
     }
 
-    #[allow(dead_code)]
+    #[cfg(any(test, feature = "bench-support"))]
     pub(crate) fn with_schema_path(mut self, schema_path: PathBuf) -> Self {
         self.schema_path = Some(schema_path);
         self

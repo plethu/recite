@@ -122,7 +122,9 @@ impl ConfigError {
 }
 
 fn config_span(path: &Path) -> SourceSpan {
-    #[allow(clippy::expect_used)]
-    let position = SourcePosition::new(1, 1).expect("one-based config diagnostic span");
+    let position = match SourcePosition::new(1, 1) {
+        Ok(position) => position,
+        Err(error) => unreachable!("one-based config diagnostic span: {error}"),
+    };
     SourceSpan::point(path.to_string_lossy().into_owned(), position)
 }

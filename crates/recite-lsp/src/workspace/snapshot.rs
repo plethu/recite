@@ -7,9 +7,11 @@ use crate::documents::OpenDocumentStore;
 use crate::summary::FileSummary;
 
 pub(crate) struct LiveProjectSnapshot {
-    #[allow(dead_code)]
+    #[allow(
+        dead_code,
+        reason = "snapshot generation is exposed only for LSP lifecycle assertions"
+    )]
     generation: SnapshotGeneration,
-    #[allow(dead_code)]
     summaries: Vec<FileSummary>,
 }
 
@@ -50,12 +52,14 @@ impl LiveProjectSnapshot {
         }
     }
 
-    #[allow(dead_code)]
+    #[allow(
+        dead_code,
+        reason = "snapshot generation is exposed only for LSP lifecycle assertions"
+    )]
     pub(crate) fn generation(&self) -> SnapshotGeneration {
         self.generation
     }
 
-    #[allow(dead_code)]
     pub(crate) fn summaries(&self) -> &[FileSummary] {
         &self.summaries
     }
