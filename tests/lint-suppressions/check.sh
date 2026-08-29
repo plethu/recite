@@ -191,6 +191,20 @@ trait FirstTrait {
 trait SecondTrait {
     fn duplicate(&self);
 }
+impl Foo for Bar {
+    #[allow(dead_code)]
+    fn collision() {}
+}
+impl Foo_for_Bar {
+    fn collision() {}
+}
+trait Foo: Bar {
+    #[allow(dead_code)]
+    fn collision(&self);
+}
+trait Foo_Bar {
+    fn collision(&self);
+}
 EOF
 git -C "$test_root/repo" add .
 git -C "$test_root/repo" commit -q -m add-qualified-owner-baselines
@@ -219,16 +233,34 @@ trait SecondTrait {
     #[allow(dead_code)]
     fn duplicate(&self);
 }
+impl Foo for Bar {
+    fn collision() {}
+}
+impl Foo_for_Bar {
+    #[allow(dead_code)]
+    fn collision() {}
+}
+trait Foo: Bar {
+    fn collision(&self);
+}
+trait Foo_Bar {
+    #[allow(dead_code)]
+    fn collision(&self);
+}
 EOF
 git -C "$test_root/repo" add .
 git -C "$test_root/repo" commit -q -m reject-unqualified-owner-reuse
 qualified_owner_sha="$(git -C "$test_root/repo" rev-parse HEAD)"
 check_fails "$qualified_owner_base_sha" "$qualified_owner_sha" \
-  "owner=mod:parent::mod:beta::fn:duplicate"
+  "owner=mod:[6:parent]::mod:[4:beta]::fn:duplicate"
 check_fails "$qualified_owner_base_sha" "$qualified_owner_sha" \
-  "owner=impl:SecondType::fn:duplicate"
+  "owner=impl:[10:SecondType]::fn:duplicate"
 check_fails "$qualified_owner_base_sha" "$qualified_owner_sha" \
-  "owner=trait:SecondTrait::fn:duplicate"
+  "owner=trait:[11:SecondTrait]::fn:duplicate"
+check_fails "$qualified_owner_base_sha" "$qualified_owner_sha" \
+  "owner=impl:[11:Foo_for_Bar]::fn:collision"
+check_fails "$qualified_owner_base_sha" "$qualified_owner_sha" \
+  "owner=trait:[7:Foo_Bar]::fn:collision"
 git -C "$test_root/repo" rm -q crates/demo/src/nested_owners.rs
 git -C "$test_root/repo" commit -q -m remove-qualified-owner-fixture
 clean_before_exceptions="$(git -C "$test_root/repo" rev-parse HEAD)"

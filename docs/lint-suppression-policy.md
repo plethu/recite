@@ -68,7 +68,8 @@ literal `reason`, `rationale` status (`missing`, `present`, or `scoped`), and
 `baseline_status`. Use `--full` when reviewing the current debt inventory;
 full mode is reporting-only and marks records as `current`. The normal range
 is the pull request base to the actual source head, not a synthetic merge
-commit:
+commit. Qualified module, impl, and trait owners use stable length-prefixed
+components so similarly named declarations cannot collide:
 
 ```text
 scripts/check-lint-suppressions.sh origin/main HEAD

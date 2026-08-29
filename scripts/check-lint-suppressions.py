@@ -385,26 +385,16 @@ def category_for(path: str, source: str, offset: int, generated_paths: set[str])
 def declaration_owner(tokens: list[str]) -> str | None:
     """Return the owner introduced by a module, impl, or trait brace."""
 
+    def structured(kind: str, components: list[str]) -> str:
+        encoded = ','.join(f"{len(component)}:{component}" for component in components)
+        return f"{kind}:[{encoded}]"
+
     for index, token in enumerate(tokens):
-        if token == "mod" and index + 1 < len(tokens):
-            names = []
-            for candidate in tokens[index + 1:]:
-                if candidate == ":":
-                    continue
-                if candidate and is_ident_start(candidate[0]):
-                    names.append(candidate)
-                else:
-                    break
-            if names:
-                return f"mod:{'::'.join(names)}"
-        if token == "trait" and index + 1 < len(tokens):
-            names = [candidate for candidate in tokens[index + 1:] if is_ident_start(candidate[0])]
-            if names:
-                return f"trait:{'_'.join(names)}"
-        if token == "impl" and index + 1 < len(tokens):
-            names = [candidate for candidate in tokens[index + 1:] if is_ident_start(candidate[0])]
-            if names:
-                return f"impl:{'_'.join(names)}"
+        if token not in {"mod", "trait", "impl"} or index + 1 >= len(tokens):
+            continue
+        components = tokens[index + 1:]
+        if any(component and is_ident_start(component[0]) for component in components):
+            return structured(token, components)
     return None
 
 
@@ -428,7 +418,7 @@ class OwnerTracker:
             self.segment.clear()
         elif token == ";":
             self.segment.clear()
-        elif token in {":", "<", ">"}:
+        else:
             self.segment.append(token)
 
     def prefix(self) -> str:
@@ -467,7 +457,9 @@ def scan_source(path: str, source: str, generated_paths: set[str]) -> list[Suppr
                 owners.word(source[index:end])
                 index = end
                 continue
-            if source[index] in '{};:<>':
+            if source[index] in '{};':
+                owners.punctuation(source[index])
+            elif not source[index].isspace():
                 owners.punctuation(source[index])
             index += 1
             continue
