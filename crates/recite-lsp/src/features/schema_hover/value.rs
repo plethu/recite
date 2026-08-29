@@ -27,7 +27,9 @@ pub(crate) fn schema_value_hover(
     position: &AuthoringPosition<'_>,
     catalog: &UiCatalog,
 ) -> SchemaValueHover {
-    if metadata_key == "speaker" {
+    if metadata_key == "speaker"
+        && matches!(position.site, SelectorSite::Block | SelectorSite::Line)
+    {
         return schema
             .speakers
             .get(word)

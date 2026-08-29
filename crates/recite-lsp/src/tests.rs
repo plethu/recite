@@ -174,6 +174,11 @@ fn hover_preserves_choice_reason_clause_resolution() {
 }
 
 #[test]
+fn hover_resolves_choice_speaker_metadata_before_builtin_speakers() {
+    availability::hover_resolves_choice_speaker_metadata_before_builtin_speakers();
+}
+
+#[test]
 fn schema_hover_preserves_freshness_without_producer_identity() {
     let mut schema = recite_core::ProjectSchema::empty_v1();
     schema.producer_metadata = Some(recite_core::ProducerMetadata {

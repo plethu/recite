@@ -101,7 +101,7 @@ fn completion_context(line_prefix: &str) -> CompletionContext {
 
     let site = selector_site(line_prefix);
     if let Some(token) = current_token(line_prefix) {
-        if token.starts_with("speaker=") && site.is_some() {
+        if token.starts_with("speaker=") && !matches!(site, Some(SelectorSite::Choice) | None) {
             return CompletionContext::Speaker;
         }
         if let Some((key, _)) = token.split_once('=')
@@ -191,7 +191,7 @@ fn metadata_value_completion_items(
     site: SelectorSite,
     catalog: &UiCatalog,
 ) -> Vec<CompletionItem> {
-    if key == "speaker" {
+    if key == "speaker" && !matches!(site, SelectorSite::Choice) {
         return speaker_completion_items(schema, catalog);
     }
     let Some(metadata) = schema.metadata.get(key) else {

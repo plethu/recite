@@ -3,6 +3,7 @@ mod completion;
 mod diagnostics;
 mod metadata;
 mod projection_completion;
+mod speaker;
 mod support;
 
 pub(super) fn initialize_advertises_completion_and_hover() {
@@ -72,6 +73,10 @@ pub(super) fn hover_describes_schema_and_project_symbols() {
 
 pub(super) fn hover_preserves_choice_reason_clause_resolution() {
     metadata::hover_preserves_choice_reason_clause_resolution();
+}
+
+pub(super) fn hover_resolves_choice_speaker_metadata_before_builtin_speakers() {
+    speaker::hover_resolves_choice_speaker_metadata_before_builtin_speakers();
 }
 
 pub(super) fn malformed_completion_and_hover_params_return_invalid_params() {
