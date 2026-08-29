@@ -92,6 +92,12 @@ FFI safety, or deterministic behaviour from line counts or ast-grep alone;
 those claims remain the responsibility of the typed tests, compile gates,
 wire compatibility fixtures, and focused reviews for each subsystem.
 
+Lint suppressions have a separate diff-aware inventory and policy in
+[`docs/lint-suppression-policy.md`](lint-suppression-policy.md). Keep that
+policy's baseline/current distinction separate from this line-count inventory:
+unchanged suppression debt is reported, while new or expanded handwritten
+production suppressions must carry a narrow scope and rationale.
+
 ## Inventory
 
 | Path | Lines | Kind | Owner | Disposition | Issue/reason |

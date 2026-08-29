@@ -66,10 +66,18 @@ jobs:
     name: Rust gates
     runs-on: ubuntu-24.04
     timeout-minutes: 30
+    env:
+      RECITE_BASE_REF: >-
+        ${{ github.event_name == 'pull_request' &&
+            format('origin/{0}', github.base_ref) || github.event.before }}
+      RECITE_HEAD_REF: >-
+        ${{ github.event_name == 'pull_request' &&
+            github.event.pull_request.head.sha || github.sha }}
     steps:
       - name: Check out source
         uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
         with:
+          fetch-depth: 0
           persist-credentials: false
 
       - name: Install repository toolchain
@@ -146,8 +154,10 @@ jobs:
         run: |
           tests/maintainability/check.sh
           tests/ast-grep/check.sh
+          tests/lint-suppressions/check.sh
           scripts/check-maintainability.sh
           scripts/check-ast-grep.sh
+          scripts/check-lint-suppressions.sh
 
   required-check:
     name: required-check
