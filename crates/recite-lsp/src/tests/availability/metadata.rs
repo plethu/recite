@@ -229,7 +229,10 @@ pub(super) fn hover_preserves_choice_reason_clause_resolution() {
         harness
             .hover(
                 source_uri.clone(),
-                position_after(source, "reason=innkeeper_trust_hint,"),
+                position_after(
+                    source,
+                    "punctuation_reason@c1d2e3f405162738495a requires=(trust_gte(hazel, rhea, 3)) reason=innkeeper_trust",
+                ),
             )
             .is_none(),
         "a compiler-invalid choice reason must not resolve as a complete reason ID",
