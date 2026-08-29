@@ -14,8 +14,8 @@ pub(crate) fn hover_detail(
         detail.push_str(&catalog.format_args(
             MsgId::LspHoverSchemaProducer,
             &UiArgs::from([
-                ("kind".to_owned(), UiArg::from(producer.kind.to_string())),
-                ("id".to_owned(), UiArg::from(producer.id.to_string())),
+                ("kind".to_owned(), UiArg::from(producer.kind().to_string())),
+                ("id".to_owned(), UiArg::from(producer.id().to_string())),
             ]),
         ));
     }
