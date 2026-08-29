@@ -9,7 +9,6 @@ use crate::ProjectSchema;
 /// The exporter is intentionally read-only. The canonical model has no
 /// unserialisable values, so a serialization failure is an invariant breach,
 /// not a reason to return a misleading empty manifest.
-#[allow(clippy::expect_used)]
 pub(super) fn export_json(schema: &ProjectSchema) -> String {
     let mut root = serde_json::Map::new();
     root.insert(
@@ -27,8 +26,16 @@ pub(super) fn export_json(schema: &ProjectSchema) -> String {
     }
     basic::insert_sections(&mut root, schema);
     projection::insert_sections(&mut root, schema);
-    let json = serde_json::to_string_pretty(&serde_json::Value::Object(root))
-        .expect("canonical schema JSON export must contain only serializable values");
+    let json = {
+        #[expect(
+            clippy::expect_used,
+            reason = "the canonical schema JSON value contains only serde_json values"
+        )]
+        {
+            serde_json::to_string_pretty(&serde_json::Value::Object(root))
+                .expect("canonical schema JSON export must contain only serializable values")
+        }
+    };
     format!("{json}\n")
 }
 

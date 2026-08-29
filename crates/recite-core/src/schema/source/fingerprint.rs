@@ -14,7 +14,10 @@ pub(super) fn source_fingerprint(schema: &ProjectSchema) -> ContentFingerprint {
     }
     bytes.push(0);
     bytes.extend_from_slice(schema.canonical_content_fingerprint().digest().as_bytes());
-    #[allow(clippy::expect_used)]
+    #[expect(
+        clippy::expect_used,
+        reason = "BLAKE3 produces the exact non-empty digest required by ContentFingerprint"
+    )]
     {
         ContentFingerprint::blake3(blake3::hash(&bytes).as_bytes().to_vec())
             .expect("BLAKE3 always produces a valid content fingerprint")

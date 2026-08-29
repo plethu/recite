@@ -222,16 +222,21 @@ fn extract_statement_entries(
             let speaker = line.speaker.as_ref().or(speaker_context);
             if let Some(id) = &line.id {
                 entries.push(source_entry(
-                    id.as_str(),
-                    line.source_id.display_text().as_deref(),
-                    &line.source_text.text,
-                    line.plural_source_text
-                        .as_ref()
-                        .map(|text| text.text.as_str()),
-                    source_file,
-                    block,
-                    speaker,
-                    &line.source_text.span,
+                    PotEntryInput {
+                        context: id.as_str(),
+                        source_id_display: line.source_id.display_text().as_deref(),
+                        source_text: &line.source_text.text,
+                        plural_source_text: line
+                            .plural_source_text
+                            .as_ref()
+                            .map(|text| text.text.as_str()),
+                    },
+                    PotEntryContext {
+                        source_file,
+                        block,
+                        speaker,
+                        span: &line.source_text.span,
+                    },
                 ));
             }
 
@@ -242,14 +247,18 @@ fn extract_statement_entries(
         Statement::Choice(choice) => {
             if let Some(id) = &choice.id {
                 entries.push(source_entry(
-                    id.as_str(),
-                    choice.source_id.display_text().as_deref(),
-                    &choice.source_text.text,
-                    None,
-                    source_file,
-                    block,
-                    speaker_context,
-                    &choice.source_text.span,
+                    PotEntryInput {
+                        context: id.as_str(),
+                        source_id_display: choice.source_id.display_text().as_deref(),
+                        source_text: &choice.source_text.text,
+                        plural_source_text: None,
+                    },
+                    PotEntryContext {
+                        source_file,
+                        block,
+                        speaker: speaker_context,
+                        span: &choice.source_text.span,
+                    },
                 ));
             }
 
@@ -282,37 +291,41 @@ fn extract_statement_entries(
     }
 }
 
-#[allow(clippy::too_many_arguments)]
-fn source_entry(
-    context: &str,
-    source_id_display: Option<&str>,
-    source_text: &str,
-    plural_source_text: Option<&str>,
-    source_file: &SourceFile,
-    block: &Block,
-    speaker: Option<&SpeakerId>,
-    span: &SourceSpan,
-) -> PotEntry {
+struct PotEntryInput<'a> {
+    context: &'a str,
+    source_id_display: Option<&'a str>,
+    source_text: &'a str,
+    plural_source_text: Option<&'a str>,
+}
+
+struct PotEntryContext<'a> {
+    source_file: &'a SourceFile,
+    block: &'a Block,
+    speaker: Option<&'a SpeakerId>,
+    span: &'a SourceSpan,
+}
+
+fn source_entry(input: PotEntryInput<'_>, context: PotEntryContext<'_>) -> PotEntry {
     let mut comments = vec![
-        format!("file: {}", source_file.path),
-        format!("block: {}", block.id),
+        format!("file: {}", context.source_file.path),
+        format!("block: {}", context.block.id),
     ];
-    if let Some(speaker) = speaker {
+    if let Some(speaker) = context.speaker {
         comments.push(format!("speaker: {speaker}"));
     }
-    if let Some(source_id_display) = source_id_display {
+    if let Some(source_id_display) = input.source_id_display {
         comments.push(format!("source id: {source_id_display}"));
     }
 
     PotEntry {
-        context: context.to_owned(),
-        source_text: source_text.to_owned(),
-        plural_source_text: plural_source_text.map(str::to_owned),
+        context: input.context.to_owned(),
+        source_text: input.source_text.to_owned(),
+        plural_source_text: input.plural_source_text.map(str::to_owned),
         comments,
         reference: Some(PotReference {
-            file: span.file.clone(),
-            line: span.start.line(),
-            column: span.start.column(),
+            file: context.span.file.clone(),
+            line: context.span.start.line(),
+            column: context.span.start.column(),
         }),
     }
 }

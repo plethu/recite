@@ -133,7 +133,7 @@ wire compatibility fixtures, and focused reviews for each subsystem.
 | `crates/recite-cli/src/play/tui/mod.rs` | 352 | production | cli/tui | review | TUI integration boundary |
 | `crates/recite-core/src/schema/manifest/raw.rs` | 391 | production | core/schema | cohesive | Lossless raw manifest model |
 | `crates/recite-compiler/src/compile/builder/rows.rs` | 353 | production | compiler | cohesive | Compiled row construction |
-| `crates/recite-compiler/src/pot.rs` | 353 | production | compiler/localisation | follow-up | #164: consume shared authoring analysis |
+| `crates/recite-compiler/src/pot.rs` | 366 | production | compiler/localisation | follow-up | #164: consume shared authoring analysis |
 | `crates/recite-benchmarks/src/id_metrics.rs` | 332 | production | benchmarks | cohesive | Maintainer metric calculations |
 | `crates/recite-runtime/src/traversal/asset.rs` | 328 | production | runtime/traversal | cohesive | Asset validation and traversal boundary |
 | `crates/recite-runtime/src/traversal/output.rs` | 270 | production | runtime/traversal | review | #180: structured plural output construction remains beside traversal until the output boundary settles |
