@@ -247,6 +247,88 @@ pub(super) fn rejects_builtin_speaker_candidates_for_unrelated_choice_metadata_t
     harness.finish();
 }
 
+pub(super) fn completes_registry_and_enum_choice_metadata_values() {
+    let temp = TempDir::new().unwrap_or_else(|error| panic!("tempdir: {error}"));
+    let mut schema: serde_json::Value =
+        serde_json::from_str(authoring_schema()).expect("authoring schema JSON");
+    schema["types"]["mood_kind"] = json!({
+        "kind": "enum",
+        "values": ["calm", "angry"]
+    });
+    schema["metadata"]["item"] = json!({
+        "targets": ["choice"],
+        "type": "registry:item"
+    });
+    schema["metadata"]["mood_kind"] = json!({
+        "targets": ["choice"],
+        "type": "enum:mood_kind"
+    });
+    let schema_text = serde_json::to_string_pretty(&schema).expect("serialise typed schema");
+    write_file(temp.path(), "schema.json", &schema_text);
+    let root_uri = file_uri(temp.path());
+    let schema_path = temp.path().join("schema.json");
+    let mut harness = Harness::start_with_result(json!({
+        "capabilities": { "general": { "positionEncodings": ["utf-16"] } },
+        "rootUri": root_uri.as_str(),
+        "initializationOptions": { "schema": schema_path.display().to_string() }
+    }))
+    .0;
+    let source_uri = file_uri(&temp.path().join("dialogue/start.recite"));
+    let source = concat!(
+        ":: start default speaker=hazel\n",
+        "? registry@e1f2031425364758697a item=\n",
+        "? enum@f102031425364758697a mood_kind=\n",
+        "? resolved@0123456789abcdef0123 item=map mood_kind=calm\n",
+    );
+    harness.did_open(source_uri.clone(), 1, source);
+    let _ = harness.recv_publish_diagnostics();
+
+    assert_eq!(
+        completion_labels(
+            harness
+                .completion(
+                    source_uri.clone(),
+                    position_after(source, "registry@e1f2031425364758697a item="),
+                )
+                .expect("registry metadata completion"),
+        ),
+        ["map"],
+    );
+    assert_eq!(
+        completion_labels(
+            harness
+                .completion(
+                    source_uri.clone(),
+                    position_after(source, "enum@f102031425364758697a mood_kind="),
+                )
+                .expect("enum metadata completion"),
+        ),
+        ["angry", "calm"],
+    );
+
+    assert!(
+        hover_text(
+            harness
+                .hover(
+                    source_uri.clone(),
+                    position_after(source, "resolved@0123456789abcdef0123 item=map"),
+                )
+                .expect("registry metadata hover"),
+        )
+        .contains("map")
+    );
+    assert!(
+        hover_text(
+            harness
+                .hover(source_uri, position_after(source, "mood_kind=calm"),)
+                .expect("enum metadata hover"),
+        )
+        .contains("calm")
+    );
+
+    harness.finish();
+}
+
 fn hover_text(hover: lsp_types::Hover) -> String {
     match hover.contents {
         HoverContents::Markup(content) => content.value,

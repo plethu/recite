@@ -87,6 +87,10 @@ pub(super) fn rejects_builtin_speaker_candidates_for_unrelated_choice_metadata_t
     speaker::rejects_builtin_speaker_candidates_for_unrelated_choice_metadata_type();
 }
 
+pub(super) fn completes_registry_and_enum_choice_metadata_values() {
+    speaker::completes_registry_and_enum_choice_metadata_values();
+}
+
 pub(super) fn malformed_completion_and_hover_params_return_invalid_params() {
     authoring::malformed_completion_and_hover_params_return_invalid_params();
 }
