@@ -101,7 +101,9 @@ Trusted-policy activation remains a post-merge operational follow-up.
 
 ### 2. Language, Schema, and Localisation Readiness
 
-**Status:** Active next outcome.
+**Status:** Complete as of 2026-08-29. PR #183 merged as `5881976`, with
+correction PR #184 merged as `c023f26`; together they deliver this outcome,
+including the corrected contextual metadata resolution semantics.
 
 **Outcome:** authors and host integrations can rely on one stable semantic model
 for source, schema, IDs, localisation, diagnostics, and generated artifacts.
@@ -149,6 +151,8 @@ realization is gated by milestone 6. English is the launch locale, but the
 public contracts and tests exercise catalog and fallback behavior.
 
 ### 3. Shared Authoring Kernel and Preview
+
+**Status:** Active next outcome.
 
 **Outcome:** CLI, LSP, text clients, GUI, and future tooling call the same
 host-neutral authoring operations.
@@ -402,8 +406,8 @@ remain authoritative if the tracker is split again.
 | Outcome | Current GitHub owner group (open count) | GitHub milestone |
 | --- | --- | --- |
 | Product Foundation and Maintainability | Complete (0 open; 8 closed; delivered by PR #174) | 17 |
-| Language, schema, and localisation readiness | [#165](https://github.com/plethu/recite/issues/165), [#166](https://github.com/plethu/recite/issues/166) (2 open) | 18 |
-| Shared authoring kernel and preview | [#167](https://github.com/plethu/recite/issues/167), [#168](https://github.com/plethu/recite/issues/168) (2 open) | 19 |
+| Language, schema, and localisation readiness | Complete (0 open; 11 closed; delivered by PR #183 and correction PR #184) | 18 |
+| Shared authoring kernel and preview | [#167](https://github.com/plethu/recite/issues/167), [#168](https://github.com/plethu/recite/issues/168), [#185](https://github.com/plethu/recite/issues/185) (3 open) | 19 |
 | Editor integration parity | [#169 editor trio parity](https://github.com/plethu/recite/issues/169) (6 open) | 20 |
 | Native GUI strategy and accessibility proof | [#54 GUI strategy](https://github.com/plethu/recite/issues/54), [#123 accessibility requirements](https://github.com/plethu/recite/issues/123) (2 open) | 21 |
 | GUI workbench | [#170 GUI workbench](https://github.com/plethu/recite/issues/170) (1 open) | 22 |
@@ -425,9 +429,12 @@ the v1 compatibility guidance under #104, not by a Clyde importer or runtime.
 
 ## Current work classification
 
-The repository already contains substantial language, runtime, CLI, LSP,
-benchmark, FFI, Godot, and Unity work. That work should be evaluated against
-the milestone exit gates rather than treated as automatically complete. The
-largest structural gaps are the shared authoring kernel, first-class editor
-parity, the native GUI/accessibility decision, the GUI workbench, and a Bevy
-companion with a real distribution path.
+The language, schema, and localisation readiness outcome is complete as of
+2026-08-29, delivered by PR #183 and correction PR #184. The next active
+outcome is the shared authoring kernel and preview, whose current owner group
+is #167, #168, and #185. The repository already contains substantial language,
+runtime, CLI, LSP, benchmark, FFI, Godot, and Unity work. That work should be
+evaluated against the milestone exit gates rather than treated as automatically
+complete. The largest remaining structural gaps are the shared authoring
+kernel, first-class editor parity, the native GUI/accessibility decision, the
+GUI workbench, and a Bevy companion with a real distribution path.
