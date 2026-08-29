@@ -1,6 +1,7 @@
 use std::collections::BTreeMap;
 
 use crate::ContentFingerprint;
+use serde::{Deserialize, Serialize};
 use serde_json::Value;
 
 mod fingerprint;
@@ -39,7 +40,7 @@ impl ProducerMetadataValue {
 }
 
 /// Stable identity of the host producer that owns a generated manifest.
-#[derive(Clone, Debug, Eq, PartialEq)]
+#[derive(Clone, Debug, Eq, PartialEq, Serialize, Deserialize)]
 pub struct ProducerIdentity {
     pub kind: String,
     pub id: String,

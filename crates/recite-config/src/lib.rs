@@ -19,9 +19,13 @@ pub use path::{
     ResolvedConfigPath, production_config_path, resolve_config_path,
 };
 pub use user::{
-    CONFIG_VERSION, ConfigAuthority, ConfigDiagnostic, ConfigError, ConfigFormat, ConfigProvenance,
-    KeyHints, Keymap, LoadedUserConfig, PlayConfig, TuiColorMode, TuiContrast, UiConfig,
-    UserConfig, UserConfigField, load_user_config, load_user_config_from, load_user_config_path,
+    AuthorityValue, CONFIG_VERSION, ColorPolicy, ConfigAuthority, ConfigDiagnostic, ConfigError,
+    ConfigFormat, ConfigProvenance, ContrastPolicy, FieldPolicy, FieldProvenance,
+    FieldResolutionError, InvocationOverrides, KeyHints, KeyHintsPolicy, Keymap, KeymapPolicy,
+    LoadedUserConfig, PlayConfig, ResolvedField, ResolvedUiConfig, ResolvedUserConfig,
+    ShowUnavailableChoicesPolicy, TuiColorMode, TuiContrast, UiConfig, UiLocalePolicy, UserConfig,
+    UserConfigField, load_user_config, load_user_config_from, load_user_config_path, resolve_field,
+    resolve_user_config,
 };
 
 /// The user-facing locale type used by the existing UI resource contract.

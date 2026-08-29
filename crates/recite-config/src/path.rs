@@ -117,6 +117,7 @@ impl ResolvedConfigPath {
 
 /// Failure while interpreting the explicit path or platform inputs.
 #[derive(Clone, Debug, Eq, PartialEq, thiserror::Error)]
+#[non_exhaustive]
 pub enum PathResolutionError {
     /// `$RECITE_CONFIG` was present but empty.
     #[error("{CONFIG_ENVIRONMENT_VARIABLE} is set but empty")]

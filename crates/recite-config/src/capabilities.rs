@@ -1,12 +1,14 @@
 use std::{collections::BTreeMap, fmt, str::FromStr};
 
-use recite_core::{DiagnosticCode, ProducerIdentity};
+use recite_core::{DiagnosticRecord, ProducerIdentity};
+use serde::{Deserialize, Deserializer, Serialize};
 
 /// Version of the shared capability report contract.
 pub const CAPABILITY_REPORT_VERSION: u16 = 1;
 
 /// A validated, namespaced capability name.
-#[derive(Clone, Debug, Eq, Hash, Ord, PartialEq, PartialOrd)]
+#[derive(Clone, Debug, Eq, Hash, Ord, PartialEq, PartialOrd, Serialize)]
+#[serde(transparent)]
 pub struct CapabilityName(String);
 
 /// Alias emphasizing that a capability name is an authoring-visible ID.
@@ -67,8 +69,18 @@ impl FromStr for CapabilityName {
     }
 }
 
+impl<'de> Deserialize<'de> for CapabilityName {
+    fn deserialize<D>(deserializer: D) -> Result<Self, D::Error>
+    where
+        D: Deserializer<'de>,
+    {
+        Self::new(String::deserialize(deserializer)?).map_err(serde::de::Error::custom)
+    }
+}
+
 /// Failure to construct a namespaced capability name.
 #[derive(Clone, Debug, Eq, PartialEq, thiserror::Error)]
+#[non_exhaustive]
 pub enum CapabilityNameError {
     /// The name did not satisfy the stable namespace grammar.
     #[error("invalid capability name {value:?}: {reason}")]
@@ -81,36 +93,49 @@ pub enum CapabilityNameError {
 }
 
 /// Availability advertised for one capability.
-#[derive(Clone, Debug, Eq, PartialEq)]
+#[derive(Clone, Debug, Eq, PartialEq, Serialize, Deserialize)]
+#[serde(tag = "status", rename_all = "snake_case")]
+#[non_exhaustive]
 pub enum CapabilityStatus {
     /// The producer supports the capability.
     Supported,
     /// The producer exposes the capability for inspection but cannot edit it.
     ReadOnly,
     /// The capability is known but unavailable, with a structured diagnostic
-    /// identity for the caller's presentation layer.
+    /// record for the caller's presentation layer and durable evidence.
     Unavailable {
-        /// Core diagnostic code explaining unavailability.
-        diagnostic: DiagnosticCode,
+        /// Structured diagnostic explaining unavailability and its context.
+        diagnostic: Box<DiagnosticRecord>,
     },
 }
 
 impl CapabilityStatus {
-    /// Creates a structured unavailable status without introducing a prose-only
-    /// reason convention.
+    /// Creates an unavailable status with recordable structured context.
     #[must_use]
-    pub const fn unavailable(diagnostic: DiagnosticCode) -> Self {
-        Self::Unavailable { diagnostic }
+    pub fn unavailable(diagnostic: DiagnosticRecord) -> Self {
+        Self::Unavailable {
+            diagnostic: Box::new(diagnostic),
+        }
+    }
+
+    /// Returns the structured diagnostic for an unavailable capability.
+    #[must_use]
+    pub const fn diagnostic(&self) -> Option<&DiagnosticRecord> {
+        match self {
+            Self::Unavailable { diagnostic } => Some(diagnostic),
+            Self::Supported | Self::ReadOnly => None,
+        }
     }
 }
 
 /// One deterministic capability entry.
-#[derive(Clone, Debug, Eq, PartialEq)]
+#[derive(Clone, Debug, Eq, PartialEq, Serialize, Deserialize)]
+#[non_exhaustive]
 pub struct Capability {
     /// Stable namespaced capability ID.
-    pub name: CapabilityName,
+    name: CapabilityName,
     /// Availability state.
-    pub status: CapabilityStatus,
+    status: CapabilityStatus,
 }
 
 impl Capability {
@@ -119,6 +144,18 @@ impl Capability {
     pub const fn new(name: CapabilityName, status: CapabilityStatus) -> Self {
         Self { name, status }
     }
+
+    /// Returns the stable capability ID.
+    #[must_use]
+    pub const fn name(&self) -> &CapabilityName {
+        &self.name
+    }
+
+    /// Returns the advertised availability.
+    #[must_use]
+    pub const fn status(&self) -> &CapabilityStatus {
+        &self.status
+    }
 }
 
 /// Versioned, producer-owned capability data for shared authoring surfaces.
@@ -126,14 +163,15 @@ impl Capability {
 /// This is deliberately not an LSP `ServerCapabilities` projection. It is a
 /// small local contract that can be consumed by CLI, LSP, GUI, and adapters
 /// without making any one transport authoritative.
-#[derive(Clone, Debug, Eq, PartialEq)]
+#[derive(Clone, Debug, Eq, PartialEq, Serialize)]
+#[non_exhaustive]
 pub struct CapabilityReport {
     /// Wire/report contract version.
-    pub version: u16,
+    version: u16,
     /// Typed identity of the producer that owns this report.
-    pub producer: ProducerIdentity,
+    producer: ProducerIdentity,
     /// Sorted and de-duplicated capabilities.
-    pub capabilities: Vec<Capability>,
+    capabilities: Vec<Capability>,
 }
 
 impl CapabilityReport {
@@ -145,11 +183,11 @@ impl CapabilityReport {
         let mut unique = BTreeMap::<CapabilityName, CapabilityStatus>::new();
         for entry in entries {
             if let Some(existing) = unique.get(&entry.name) {
-                if existing != &entry.status {
+                if existing != entry.status() {
                     return Err(CapabilityReportError::ConflictingDuplicate {
                         name: entry.name,
-                        existing: existing.clone(),
-                        incoming: entry.status,
+                        existing: Box::new(existing.clone()),
+                        incoming: Box::new(entry.status),
                     });
                 }
                 continue;
@@ -167,6 +205,24 @@ impl CapabilityReport {
         })
     }
 
+    /// Returns the report wire version.
+    #[must_use]
+    pub const fn version(&self) -> u16 {
+        self.version
+    }
+
+    /// Returns the typed producer identity.
+    #[must_use]
+    pub const fn producer(&self) -> &ProducerIdentity {
+        &self.producer
+    }
+
+    /// Returns sorted, de-duplicated capability entries.
+    #[must_use]
+    pub fn capabilities(&self) -> &[Capability] {
+        &self.capabilities
+    }
+
     /// Returns whether a capability is advertised as supported.
     #[must_use]
     pub fn supports(&self, name: &CapabilityName) -> bool {
@@ -176,8 +232,35 @@ impl CapabilityReport {
     }
 }
 
+#[derive(Deserialize)]
+#[serde(deny_unknown_fields)]
+struct CapabilityReportWire {
+    version: u16,
+    producer: ProducerIdentity,
+    capabilities: Vec<Capability>,
+}
+
+impl<'de> Deserialize<'de> for CapabilityReport {
+    fn deserialize<D>(deserializer: D) -> Result<Self, D::Error>
+    where
+        D: Deserializer<'de>,
+    {
+        let wire = CapabilityReportWire::deserialize(deserializer)?;
+        if wire.version != CAPABILITY_REPORT_VERSION {
+            return Err(serde::de::Error::custom(
+                CapabilityReportError::UnsupportedVersion {
+                    found: wire.version,
+                    expected: CAPABILITY_REPORT_VERSION,
+                },
+            ));
+        }
+        Self::new(wire.producer, wire.capabilities).map_err(serde::de::Error::custom)
+    }
+}
+
 /// Failure while constructing a deterministic capability report.
 #[derive(Clone, Debug, Eq, PartialEq, thiserror::Error)]
+#[non_exhaustive]
 pub enum CapabilityReportError {
     /// The same capability was supplied with incompatible availability states.
     #[error("capability {name} was supplied with conflicting statuses")]
@@ -185,8 +268,16 @@ pub enum CapabilityReportError {
         /// Conflicting capability name.
         name: CapabilityName,
         /// First status observed.
-        existing: CapabilityStatus,
+        existing: Box<CapabilityStatus>,
         /// Later status observed.
-        incoming: CapabilityStatus,
+        incoming: Box<CapabilityStatus>,
+    },
+    /// A report used a wire version this crate cannot interpret.
+    #[error("unsupported capability report version {found}; expected {expected}")]
+    UnsupportedVersion {
+        /// Version found on the wire.
+        found: u16,
+        /// Only version currently understood by this crate.
+        expected: u16,
     },
 }

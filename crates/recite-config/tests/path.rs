@@ -71,16 +71,14 @@ fn macos_and_windows_use_roaming_platform_locations() {
 
 #[test]
 fn explicit_override_is_absolute_and_has_precedence() {
+    let directory = tempfile::tempdir().expect("temporary directory");
+    let explicit = directory.path().join("explicit.toml");
     let roots = PlatformRoots::new().with_home("/synthetic/home");
-    let resolved = resolve_config_path(
-        Platform::Linux,
-        &roots,
-        Some(Path::new("/synthetic/explicit.toml")),
-    )
-    .expect("absolute explicit path")
-    .expect("explicit path");
+    let resolved = resolve_config_path(Platform::Linux, &roots, Some(&explicit))
+        .expect("absolute explicit path")
+        .expect("explicit path");
 
-    assert_eq!(resolved.path(), Path::new("/synthetic/explicit.toml"));
+    assert_eq!(resolved.path(), explicit);
     assert_eq!(resolved.source(), ConfigPathSource::ExplicitOverride);
     assert!(resolved.is_explicit());
 }

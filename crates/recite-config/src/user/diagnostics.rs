@@ -14,6 +14,7 @@ const INVALID_LOCALE: DiagnosticCode = DiagnosticCode::new_static("RECITE_CONFIG
 
 /// A structured identity for one configuration failure.
 #[derive(Clone, Copy, Debug, Eq, Ord, PartialEq, PartialOrd)]
+#[non_exhaustive]
 pub enum ConfigDiagnostic {
     /// Empty explicit override.
     EmptyExplicitOverride,
@@ -49,6 +50,7 @@ impl ConfigDiagnostic {
 
 /// Typed failure from path resolution or user configuration loading.
 #[derive(Debug, Eq, PartialEq, thiserror::Error)]
+#[non_exhaustive]
 pub enum ConfigError {
     /// Explicit path interpretation failed.
     #[error(transparent)]
