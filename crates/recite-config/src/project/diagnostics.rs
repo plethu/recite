@@ -7,6 +7,11 @@ use recite_core::{
 
 use super::manifest::PROJECT_MANIFEST_FILE;
 
+#[path = "diagnostic_error.rs"]
+mod diagnostic_error;
+#[path = "diagnostic_render.rs"]
+mod diagnostic_render;
+
 pub(super) const MISSING_MANIFEST: DiagnosticCode = DiagnosticCode::new_static("RECITE_CONFIG101");
 pub(super) const MANIFEST_READ: DiagnosticCode = DiagnosticCode::new_static("RECITE_CONFIG102");
 pub(super) const MANIFEST_MALFORMED: DiagnosticCode =
@@ -47,123 +52,6 @@ pub enum DiscoveryDiagnostic {
     NonUtf8Source { path: PathBuf },
 }
 
-impl DiscoveryDiagnostic {
-    #[must_use]
-    pub fn code(&self) -> DiagnosticCode {
-        match self {
-            Self::InvalidSourceRoot { .. } => INVALID_ROOT,
-            Self::InvalidExclude { .. } => INVALID_EXCLUDE,
-            Self::RootMissing { .. } => ROOT_MISSING,
-            Self::RootRead { .. } => ROOT_READ,
-            Self::RootOutsideProject { .. } => ROOT_OUTSIDE_PROJECT,
-            Self::DuplicateRoot { .. } => DUPLICATE_ROOT,
-            Self::OverlappingRoot { .. } => OVERLAPPING_ROOT,
-            Self::RootNotDirectory { .. } => ROOT_NOT_DIRECTORY,
-            Self::ReadDirectory { .. } => DISCOVERY_READ,
-            Self::NonUtf8Path { .. } => NON_UTF8_PATH,
-            Self::FileOutsideProject { .. } => FILE_OUTSIDE_PROJECT,
-            Self::NonUtf8Source { .. } => NON_UTF8_SOURCE,
-        }
-    }
-
-    #[must_use]
-    pub const fn is_warning(&self) -> bool {
-        matches!(self, Self::OverlappingRoot { .. })
-    }
-
-    #[must_use]
-    pub fn as_core_diagnostic(&self) -> Diagnostic {
-        let (path, message) = self.path_and_message();
-        let severity = if self.is_warning() {
-            DiagnosticSeverity::Warning
-        } else {
-            DiagnosticSeverity::Error
-        };
-        structured_diagnostic(self.code(), severity, message, path)
-    }
-
-    fn path_and_message(&self) -> (&Path, String) {
-        match self {
-            Self::InvalidSourceRoot { root, reason } => (
-                Path::new(root),
-                format!("invalid project source root {root:?}: {reason}"),
-            ),
-            Self::InvalidExclude { pattern, reason } => (
-                Path::new(pattern),
-                format!("invalid project exclude {pattern:?}: {reason}"),
-            ),
-            Self::RootMissing { path } => (
-                path,
-                format!("project source root does not exist: {}", display(path)),
-            ),
-            Self::RootRead { path, message } => (
-                path,
-                format!(
-                    "could not read project source root {}: {message}",
-                    display(path)
-                ),
-            ),
-            Self::RootOutsideProject { path } => (
-                path,
-                format!("project source root escapes the project: {}", display(path)),
-            ),
-            Self::DuplicateRoot { path, .. } => (
-                path,
-                format!(
-                    "project source root is listed more than once: {}",
-                    display(path)
-                ),
-            ),
-            Self::OverlappingRoot { path, owner } => (
-                path,
-                format!(
-                    "project source root {} overlaps earlier root {}; earlier root owns shared documents",
-                    display(path),
-                    display(owner)
-                ),
-            ),
-            Self::RootNotDirectory { path } => (
-                path,
-                format!("project source root is not a directory: {}", display(path)),
-            ),
-            Self::ReadDirectory { path, message } => (
-                path,
-                format!(
-                    "could not read project source directory {}: {message}",
-                    display(path)
-                ),
-            ),
-            Self::NonUtf8Path { path } => (
-                path,
-                format!(
-                    "project discovery cannot represent a non-UTF-8 path near {}",
-                    display(path)
-                ),
-            ),
-            Self::FileOutsideProject { path, target } => (
-                path,
-                format!(
-                    "project source symlink {} resolves outside its configured source root or project to {}",
-                    display(path),
-                    display(target)
-                ),
-            ),
-            Self::NonUtf8Source { path } => (
-                path,
-                format!("project source is not valid UTF-8: {}", display(path)),
-            ),
-        }
-    }
-}
-
-impl std::fmt::Display for DiscoveryDiagnostic {
-    fn fmt(&self, formatter: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
-        formatter.write_str(&self.path_and_message().1)
-    }
-}
-
-impl std::error::Error for DiscoveryDiagnostic {}
-
 /// Failure that prevents a project index from being constructed.
 #[derive(Clone, Debug, Eq, PartialEq, thiserror::Error)]
 #[non_exhaustive]
@@ -202,70 +90,6 @@ pub enum ProjectDiscoveryError {
     },
     #[error("project source roots contain duplicate canonical path {path}")]
     DuplicateRoot { path: PathBuf, manifest: PathBuf },
-}
-
-impl ProjectDiscoveryError {
-    /// The manifest path involved in this failure, when a manifest was found.
-    #[must_use]
-    pub fn manifest_path(&self) -> Option<&Path> {
-        match self {
-            Self::NotFound { .. } => None,
-            Self::Read { path, .. }
-            | Self::NonUtf8 { path }
-            | Self::Malformed { path, .. }
-            | Self::MissingFormatVersion { path, .. }
-            | Self::UnsupportedFormatVersion { path, .. }
-            | Self::InvalidSourceRoot { path, .. }
-            | Self::InvalidExclude { path, .. } => Some(path),
-            Self::DuplicateRoot { manifest, .. } => Some(manifest),
-        }
-    }
-
-    /// Diagnostics suitable for an editor after a failed discovery attempt.
-    /// Parser diagnostics retain their source-backed spans and stable codes.
-    #[must_use]
-    pub fn diagnostics(&self) -> Vec<Diagnostic> {
-        match self {
-            Self::Malformed { diagnostics, .. } if !diagnostics.is_empty() => diagnostics.clone(),
-            _ => vec![self.as_core_diagnostic()],
-        }
-    }
-
-    #[must_use]
-    pub fn diagnostic(&self) -> DiagnosticCode {
-        match self {
-            Self::NotFound { .. } => MISSING_MANIFEST,
-            Self::Read { .. } | Self::NonUtf8 { .. } => MANIFEST_READ,
-            Self::Malformed { .. } => MANIFEST_MALFORMED,
-            Self::MissingFormatVersion { .. } | Self::UnsupportedFormatVersion { .. } => {
-                MANIFEST_VERSION
-            }
-            Self::InvalidSourceRoot { .. } => INVALID_ROOT,
-            Self::InvalidExclude { .. } => INVALID_EXCLUDE,
-            Self::DuplicateRoot { .. } => DUPLICATE_ROOT,
-        }
-    }
-
-    #[must_use]
-    pub fn as_core_diagnostic(&self) -> Diagnostic {
-        let path = match self {
-            Self::NotFound { start } => start,
-            Self::Read { path, .. }
-            | Self::NonUtf8 { path }
-            | Self::Malformed { path, .. }
-            | Self::MissingFormatVersion { path, .. }
-            | Self::UnsupportedFormatVersion { path, .. }
-            | Self::InvalidSourceRoot { path, .. }
-            | Self::InvalidExclude { path, .. }
-            | Self::DuplicateRoot { path, .. } => path,
-        };
-        structured_diagnostic(
-            self.diagnostic(),
-            DiagnosticSeverity::Error,
-            self.to_string(),
-            path,
-        )
-    }
 }
 
 fn structured_diagnostic(

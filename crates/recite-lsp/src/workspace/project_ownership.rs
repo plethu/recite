@@ -13,22 +13,17 @@ impl SavedProjectIndex {
         let Some(lexical_path) = uri_to_file_path(uri) else {
             return false;
         };
-        let canonical_before = fs::canonicalize(&lexical_path).ok();
-        let direct_source = self
-            .documents
-            .get(&lexical_path)
-            .is_some_and(|document| document.summary.saved_path() == Some(lexical_path.as_path()));
-        let direct_target =
-            canonical_before.as_deref() == Some(lexical_path.as_path()) || direct_source;
-        let removed = if direct_target {
-            self.remove_canonical_document(if direct_source {
-                &lexical_path
-            } else {
-                canonical_before.as_deref().unwrap_or(&lexical_path)
-            })
-        } else {
-            self.remove_uri(uri, &lexical_path, canonical_before.as_deref())
-        };
+        // Reconcile the lexical source first. The path may have changed from
+        // an alias to a regular file (or a directory), so classifying it from
+        // the new filesystem state would otherwise strand the old canonical
+        // document and its source ownership.
+        let had_canonical_document = self.documents.contains_key(&lexical_path);
+        let mut removed = self.remove_uri(uri, &lexical_path);
+        // A direct target event must invalidate the canonical document even
+        // when canonicalization now fails (for example after deletion).
+        if had_canonical_document {
+            removed = self.remove_canonical_document(&lexical_path) || removed;
+        }
         if self.discovery_failed {
             return removed;
         }
@@ -41,20 +36,12 @@ impl SavedProjectIndex {
         self.refresh_path(&path, &lexical_path) || removed
     }
 
-    fn remove_uri(
-        &mut self,
-        uri: &Uri,
-        lexical_path: &Path,
-        canonical_path: Option<&Path>,
-    ) -> bool {
+    fn remove_uri(&mut self, uri: &Uri, lexical_path: &Path) -> bool {
         let before = self.documents.len();
         self.documents.retain(|_, document| {
             let owns_source = document.source_paths.remove(lexical_path);
             let matches_uri = document.summary.uri() == uri;
-            let matches_canonical = canonical_path == document.summary.saved_path()
-                && lexical_path == document.summary.saved_path().unwrap_or(lexical_path);
-            let remove_document = (owns_source || matches_uri || matches_canonical)
-                && document.source_paths.is_empty();
+            let remove_document = (owns_source || matches_uri) && document.source_paths.is_empty();
             !remove_document
         });
         before != self.documents.len()
