@@ -190,5 +190,5 @@ wire compatibility fixtures, and focused reviews for each subsystem.
 | `crates/recite-parser/tests/parser/statements.rs` | 379 | test/support | parser/tests | cohesive | Statement parser coverage |
 | `crates/recite-cli/tests/watch_stress.rs` | 366 | test/support | cli/tests | cohesive | Watch stress harness |
 | `crates/recite-runtime/tests/traversal/conditions/choice_conditions.rs` | 365 | test/support | runtime/tests | cohesive | Choice condition coverage |
-| `crates/recite-lsp/src/tests.rs` | 478 | test/support | lsp/tests | cohesive | Module aggregator, not production implementation |
+| `crates/recite-lsp/src/tests.rs` | 483 | test/support | lsp/tests | cohesive | Module aggregator, not production implementation |
 | `crates/recite-lsp/src/tests/code_action/schema_entry.rs` | 357 | test/support | lsp/tests | review | Private code-action behavior |

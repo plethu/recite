@@ -37,25 +37,32 @@ pub(crate) fn schema_value_candidates(
 
     match &metadata.type_ref {
         SchemaTypeRef::Speaker => schema.speakers.keys().cloned().collect(),
-        SchemaTypeRef::Registry(name) => {
-            schema
-                .registries
-                .get(name)
-                .map_or_else(BTreeSet::new, |definition| {
-                    definition
-                        .values
-                        .iter()
-                        .filter(|value| recite_parser::is_metadata_symbol(value))
-                        .cloned()
-                        .collect()
-                })
-        }
+        SchemaTypeRef::Registry(name) => schema
+            .registries
+            .get(name)
+            .map_or_else(BTreeSet::new, |definition| {
+                authorable_symbol_candidates(&definition.values)
+            }),
         SchemaTypeRef::Enum(name) => match schema.types.get(name) {
-            Some(recite_core::SchemaTypeDefinition::Enum(definition)) => definition.values.clone(),
+            Some(recite_core::SchemaTypeDefinition::Enum(definition)) => {
+                authorable_symbol_candidates(&definition.values)
+            }
             _ => BTreeSet::new(),
         },
         _ => BTreeSet::new(),
     }
+}
+
+/// Manifest registries and enums may contain arbitrary semantic strings, but
+/// completion must only offer values that can be inserted as source symbols.
+/// Speakers and domains intentionally do not use this projection: their
+/// canonical models already guarantee authored values at their boundaries.
+fn authorable_symbol_candidates(values: &BTreeSet<String>) -> BTreeSet<String> {
+    values
+        .iter()
+        .filter(|value| recite_parser::is_metadata_symbol(value))
+        .cloned()
+        .collect()
 }
 
 /// Return provenance hover only for a value valid for the metadata key at the
