@@ -420,12 +420,39 @@ git -C "$test_root/repo" rm -q crates/demo/src/macro_owner.rs
 git -C "$test_root/repo" commit -q -m remove-macro-owner-fixture
 clean_before_exceptions="$(git -C "$test_root/repo" rev-parse HEAD)"
 
+# `_` in parameters, generic arguments, or named const values is not the
+# declaration identity and must remain baseline-matchable.
+cat > "$test_root/repo/crates/demo/src/named_owners.rs" <<'EOF'
+#[allow(dead_code)]
+fn named_with_placeholder(_: i32) {}
+#[allow(dead_code)]
+impl<'a, T> Generic<'a, T, _> {
+    fn method() {}
+}
+#[allow(dead_code)]
+const NAMED_VALUE: i32 = 1_000;
+EOF
+git -C "$test_root/repo" add .
+git -C "$test_root/repo" commit -q -m add-named-owner-baselines
+named_owner_base_sha="$(git -C "$test_root/repo" rev-parse HEAD)"
+sed -i '1i// unrelated named-owner movement' \
+  "$test_root/repo/crates/demo/src/named_owners.rs"
+git -C "$test_root/repo" add .
+git -C "$test_root/repo" commit -q -m preserve-named-owner-identities
+named_owner_sha="$(git -C "$test_root/repo" rev-parse HEAD)"
+check_passes "$named_owner_base_sha" "$named_owner_sha"
+git -C "$test_root/repo" rm -q crates/demo/src/named_owners.rs
+git -C "$test_root/repo" commit -q -m remove-named-owner-fixture
+
 # Anonymous declaration owners are never identity evidence. Swapping the
 # suppression between identical anonymous consts must remain a new record.
 cat > "$test_root/repo/crates/demo/src/anonymous_owners.rs" <<'EOF'
 #[allow(dead_code)]
 const _: i32 = 0;
 const _: i32 = 0;
+#[allow(dead_code)]
+use crate::old::Thing as _;
+use crate::new::Thing as _;
 EOF
 git -C "$test_root/repo" add .
 git -C "$test_root/repo" commit -q -m add-anonymous-owner-baseline
@@ -434,6 +461,9 @@ cat > "$test_root/repo/crates/demo/src/anonymous_owners.rs" <<'EOF'
 const _: i32 = 0;
 #[allow(dead_code)]
 const _: i32 = 0;
+use crate::old::Thing as _;
+#[allow(dead_code)]
+use crate::new::Thing as _;
 EOF
 git -C "$test_root/repo" add .
 git -C "$test_root/repo" commit -q -m reject-anonymous-owner-reuse

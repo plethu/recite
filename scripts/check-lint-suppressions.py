@@ -381,6 +381,37 @@ def structured_owner(kind: str, components: list[str]) -> str:
     return f"{kind}:[{encoded}]"
 
 
+def first_identifier(components: list[str]) -> str | None:
+    return next((component for component in components
+                 if component and is_ident_start(component[0])), None)
+
+
+def anonymous_identity(kind: str, components: list[str]) -> bool:
+    """Detect `_` only where it is the declaration's identity, not its data."""
+
+    if kind == "use":
+        return any(component == "as" and position + 1 < len(components)
+                   and components[position + 1] in {"_", "r#_"}
+                   for position, component in enumerate(components))
+    if kind == "impl":
+        if "for" in components:
+            identity = components[components.index("for") + 1:]
+        else:
+            identity = components
+            angle_depth = 0
+            while identity and angle_depth >= 0:
+                token = identity[0]
+                if token == "<":
+                    angle_depth += 1
+                elif token == ">":
+                    angle_depth -= 1
+                identity = identity[1:]
+                if angle_depth == 0:
+                    break
+        return first_identifier(identity) in {"_", "r#_"}
+    return first_identifier(components) in {"_", "r#_"}
+
+
 def next_scope(source: str, start: int, inner: bool) -> tuple[str, str, int, bool]:
     if inner:
         return "crate", "crate", start, True
@@ -412,7 +443,7 @@ def next_scope(source: str, start: int, inner: bool) -> tuple[str, str, int, boo
     components = tokens[declaration_index + 1:]
     if not any(component and is_ident_start(component[0]) for component in components):
         return "item", "unstable", index, False
-    if any(component in {"_", "r#_"} for component in components):
+    if anonymous_identity(kind, components):
         return "item", "unstable", index, False
     if kind == "mod":
         return "module", structured_owner(kind, components), index, True
