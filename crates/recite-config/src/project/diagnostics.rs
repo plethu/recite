@@ -1,8 +1,8 @@
 use std::path::{Path, PathBuf};
 
 use recite_core::{
-    Diagnostic, DiagnosticArgumentValue, DiagnosticCode, DiagnosticPresentationId,
-    DiagnosticSeverity, SourcePosition, SourceSpan,
+    Diagnostic, DiagnosticArgumentValue, DiagnosticCode, DiagnosticSeverity, SourcePosition,
+    SourceSpan,
 };
 
 use super::manifest::PROJECT_MANIFEST_FILE;
@@ -107,7 +107,7 @@ impl DiscoveryDiagnostic {
                 path,
                 format!("project source root escapes the project: {}", display(path)),
             ),
-            Self::DuplicateRoot { path } => (
+            Self::DuplicateRoot { path, .. } => (
                 path,
                 format!(
                     "project source root is listed more than once: {}",
@@ -201,10 +201,36 @@ pub enum ProjectDiscoveryError {
         reason: String,
     },
     #[error("project source roots contain duplicate canonical path {path}")]
-    DuplicateRoot { path: PathBuf },
+    DuplicateRoot { path: PathBuf, manifest: PathBuf },
 }
 
 impl ProjectDiscoveryError {
+    /// The manifest path involved in this failure, when a manifest was found.
+    #[must_use]
+    pub fn manifest_path(&self) -> Option<&Path> {
+        match self {
+            Self::NotFound { .. } => None,
+            Self::Read { path, .. }
+            | Self::NonUtf8 { path }
+            | Self::Malformed { path, .. }
+            | Self::MissingFormatVersion { path, .. }
+            | Self::UnsupportedFormatVersion { path, .. }
+            | Self::InvalidSourceRoot { path, .. }
+            | Self::InvalidExclude { path, .. } => Some(path),
+            Self::DuplicateRoot { manifest, .. } => Some(manifest),
+        }
+    }
+
+    /// Diagnostics suitable for an editor after a failed discovery attempt.
+    /// Parser diagnostics retain their source-backed spans and stable codes.
+    #[must_use]
+    pub fn diagnostics(&self) -> Vec<Diagnostic> {
+        match self {
+            Self::Malformed { diagnostics, .. } if !diagnostics.is_empty() => diagnostics.clone(),
+            _ => vec![self.as_core_diagnostic()],
+        }
+    }
+
     #[must_use]
     pub fn diagnostic(&self) -> DiagnosticCode {
         match self {
@@ -231,7 +257,7 @@ impl ProjectDiscoveryError {
             | Self::UnsupportedFormatVersion { path, .. }
             | Self::InvalidSourceRoot { path, .. }
             | Self::InvalidExclude { path, .. }
-            | Self::DuplicateRoot { path } => path,
+            | Self::DuplicateRoot { path, .. } => path,
         };
         structured_diagnostic(
             self.diagnostic(),
@@ -242,42 +268,22 @@ impl ProjectDiscoveryError {
     }
 }
 
-#[allow(
-    clippy::expect_used,
-    reason = "the config diagnostic inventory is defined alongside these producers"
-)]
 fn structured_diagnostic(
     code: DiagnosticCode,
     severity: DiagnosticSeverity,
     message: String,
     path: &Path,
 ) -> Diagnostic {
-    let presentation_id = match code.as_str() {
-        "RECITE_CONFIG101" => DiagnosticPresentationId::new_static("diagnostic-config-101"),
-        "RECITE_CONFIG102" => DiagnosticPresentationId::new_static("diagnostic-config-102"),
-        "RECITE_CONFIG103" => DiagnosticPresentationId::new_static("diagnostic-config-103"),
-        "RECITE_CONFIG104" => DiagnosticPresentationId::new_static("diagnostic-config-104"),
-        "RECITE_CONFIG105" => DiagnosticPresentationId::new_static("diagnostic-config-105"),
-        "RECITE_CONFIG106" => DiagnosticPresentationId::new_static("diagnostic-config-106"),
-        "RECITE_CONFIG107" => DiagnosticPresentationId::new_static("diagnostic-config-107"),
-        "RECITE_CONFIG108" => DiagnosticPresentationId::new_static("diagnostic-config-108"),
-        "RECITE_CONFIG109" => DiagnosticPresentationId::new_static("diagnostic-config-109"),
-        "RECITE_CONFIG110" => DiagnosticPresentationId::new_static("diagnostic-config-110"),
-        "RECITE_CONFIG111" => DiagnosticPresentationId::new_static("diagnostic-config-111"),
-        "RECITE_CONFIG112" => DiagnosticPresentationId::new_static("diagnostic-config-112"),
-        "RECITE_CONFIG113" => DiagnosticPresentationId::new_static("diagnostic-config-113"),
-        "RECITE_CONFIG114" => DiagnosticPresentationId::new_static("diagnostic-config-114"),
-        "RECITE_CONFIG115" => DiagnosticPresentationId::new_static("diagnostic-config-115"),
-        "RECITE_CONFIG116" => DiagnosticPresentationId::new_static("diagnostic-config-116"),
-        _ => panic!("unknown config diagnostic code: {code}"),
+    let diagnostic = Diagnostic::new(code.clone(), severity, message.clone(), point_span(path));
+    let Some(contract) = recite_core::config_contract_for(&code) else {
+        return diagnostic;
     };
-    let presentation = recite_core::presentation_for(
-        &code,
-        &presentation_id,
-        [("detail", DiagnosticArgumentValue::String(message.clone()))],
-    )
-    .expect("config diagnostic presentation contract must exist");
-    Diagnostic::new(code, severity, message, point_span(path)).with_presentation(presentation)
+    let Ok(presentation) =
+        contract.presentation([("detail", DiagnosticArgumentValue::String(message))])
+    else {
+        return diagnostic;
+    };
+    diagnostic.with_presentation(presentation)
 }
 
 fn point_span(path: &Path) -> SourceSpan {

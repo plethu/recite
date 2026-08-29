@@ -3,7 +3,7 @@ use recite_ui::DEFAULT_RESOURCE;
 use serde_json::json;
 use tempfile::TempDir;
 
-use crate::workspace::{LspWorkspace, WorkspaceChangeResult, WorkspaceConfig};
+use crate::workspace::{DiagnosticRefresh, LspWorkspace, WorkspaceChangeResult, WorkspaceConfig};
 
 use super::support::{Harness, block_names, file_uri, full_change, harness_for_root, write_file};
 
@@ -62,6 +62,111 @@ pub(super) fn manifest_discovery_uses_shared_source_roots() {
         .collect::<Vec<_>>();
 
     assert_eq!(paths, ["src/kept.recite"]);
+}
+
+pub(super) fn malformed_manifest_does_not_fall_back_to_saved_walker() {
+    let temp = TempDir::new().unwrap_or_else(|error| panic!("tempdir: {error}"));
+    let manifest = temp.path().join("recite.project.toml");
+    write_file(temp.path(), "recite.project.toml", "format_version = [\n");
+    write_file(temp.path(), "source.recite", ":: saved\n");
+
+    let params = serde_json::from_value(json!({
+        "rootUri": file_uri(temp.path()).as_str(),
+        "capabilities": {},
+    }))
+    .unwrap_or_else(|error| panic!("initialize params: {error}"));
+    let workspace = LspWorkspace::new(WorkspaceConfig::from_initialize_params(&params));
+
+    assert!(workspace.snapshot().summaries().is_empty());
+    let diagnostics = workspace
+        .project_diagnostics()
+        .expect("manifest diagnostics");
+    let DiagnosticRefresh::Publish(diagnostics) = diagnostics else {
+        panic!("expected manifest diagnostics")
+    };
+    assert_eq!(diagnostics.uri, file_uri(&manifest));
+    assert_eq!(
+        diagnostics.diagnostics[0].code.as_str(),
+        "RECITE_PROJECT001"
+    );
+}
+
+pub(super) fn manifest_refresh_is_atomic_and_preserves_open_overlay() {
+    let temp = TempDir::new().unwrap_or_else(|error| panic!("tempdir: {error}"));
+    let manifest = temp.path().join("recite.project.toml");
+    write_file(temp.path(), "recite.project.toml", "format_version = 1\n");
+    let source = temp.path().join("source.recite");
+    write_file(temp.path(), "source.recite", ":: saved\n");
+    let uri = file_uri(&source);
+    let manifest_uri = file_uri(&manifest);
+    let mut workspace = LspWorkspace::new(WorkspaceConfig::from_initialize_params(
+        &serde_json::from_value(json!({
+            "rootUri": file_uri(temp.path()).as_str(),
+            "capabilities": {},
+        }))
+        .expect("initialize params"),
+    ));
+
+    workspace.open(uri.clone(), 1, ":: overlay\n".to_owned());
+    write_file(temp.path(), "recite.project.toml", "format_version = [\n");
+    let refreshes = workspace.save(manifest_uri.clone());
+    assert_eq!(refreshes.len(), 1);
+    assert_eq!(block_names(&workspace), ["overlay"]);
+    assert_eq!(workspace.snapshot().summaries().len(), 1);
+    assert_eq!(workspace.snapshot().summaries()[0].version, Some(1));
+
+    write_file(temp.path(), "recite.project.toml", "format_version = 1\n");
+    workspace.save(manifest_uri);
+    assert_eq!(block_names(&workspace), ["overlay"]);
+    assert!(workspace.project_diagnostics().is_none());
+    workspace.close(uri);
+    assert_eq!(block_names(&workspace), ["saved"]);
+}
+
+#[cfg(unix)]
+pub(super) fn saved_uri_replacement_removes_old_canonical_entry() {
+    use std::os::unix::fs::symlink;
+
+    let temp = TempDir::new().unwrap_or_else(|error| panic!("tempdir: {error}"));
+    write_file(temp.path(), "recite.project.toml", "format_version = 1\n");
+    write_file(temp.path(), "inside.recite", ":: inside\n");
+    let outside = TempDir::new().unwrap_or_else(|error| panic!("outside: {error}"));
+    write_file(outside.path(), "outside.recite", ":: outside\n");
+    let link = temp.path().join("inside.recite");
+    let uri = file_uri(&link);
+    let mut workspace = LspWorkspace::new(WorkspaceConfig::from_initialize_params(
+        &serde_json::from_value(json!({
+            "rootUri": file_uri(temp.path()).as_str(),
+            "capabilities": {},
+        }))
+        .expect("initialize params"),
+    ));
+    workspace.save(uri.clone());
+    assert_eq!(workspace.snapshot().summaries().len(), 1);
+
+    std::fs::remove_file(&link).expect("remove inside source");
+    symlink(outside.path().join("outside.recite"), &link).expect("outside link");
+    workspace.save(uri);
+    assert!(workspace.snapshot().summaries().is_empty());
+}
+
+pub(super) fn watched_files_refresh_saved_index_for_create_and_delete() {
+    let temp = TempDir::new().unwrap_or_else(|error| panic!("tempdir: {error}"));
+    write_file(temp.path(), "recite.project.toml", "format_version = 1\n");
+    let params = serde_json::from_value(json!({
+        "rootUri": file_uri(temp.path()).as_str(),
+        "capabilities": {},
+    }))
+    .unwrap_or_else(|error| panic!("initialize params: {error}"));
+    let mut workspace = LspWorkspace::new(WorkspaceConfig::from_initialize_params(&params));
+    let source = temp.path().join("created.recite");
+    write_file(temp.path(), "created.recite", ":: created\n");
+    assert_eq!(workspace.refresh_watched_uri(&file_uri(&source)).len(), 1);
+    assert_eq!(block_names(&workspace), ["created"]);
+
+    std::fs::remove_file(&source).expect("remove source");
+    assert_eq!(workspace.refresh_watched_uri(&file_uri(&source)).len(), 1);
+    assert!(workspace.snapshot().summaries().is_empty());
 }
 
 pub(super) fn open_summary_overlays_saved_project_summary() {

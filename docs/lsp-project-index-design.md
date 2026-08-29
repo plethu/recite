@@ -95,15 +95,19 @@ The project manifest is indexed once. The LSP owns URI, version, overlay, and
 protocol state; `recite-config` owns path resolution, filesystem traversal,
 exclusion, and coverage semantics.
 
-The saved index must have a refresh path after initial load. On save or file
-watch notifications for a `.recite` file, re-read that file from disk, replace
-its saved summary, and rebuild the saved merged indexes. On create, add the file
-if it is inside configured discovery roots. On delete, remove the saved summary
-and clear diagnostics for that URI unless an open buffer still overlays it. On
-rename, remove the old URI and index the new URI as a create. If file watching
-is not available from a client, the implementation should still update saved
-state on `didSave` and on `didClose` by re-reading the file before falling back
-from open state.
+The saved index must have a refresh path after initial load. The server
+dynamically registers `workspace/didChangeWatchedFiles` when the client permits
+it, and also handles clients that send the notification through a static
+registration. On save or file-watch notifications for a `.recite` file,
+re-read that file from disk, replace its saved summary, and rebuild the saved
+merged indexes. Manifest refreshes replace the complete discovery result
+atomically: malformed intermediate TOML clears saved documents but preserves
+open overlays and publishes the source-backed manifest diagnostics. On create,
+add the file if it is inside configured discovery roots. On delete, remove the
+saved summary and clear diagnostics for that URI unless an open buffer still
+overlays it. On rename, remove the old URI before canonicalizing and indexing
+the new URI as a create. If file watching is unavailable, `didSave` and
+`didClose` still refresh saved state where the protocol provides those events.
 
 ### `OpenDocumentStore`
 

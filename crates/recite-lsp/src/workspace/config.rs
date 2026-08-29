@@ -14,6 +14,12 @@ pub(crate) struct WorkspaceConfig {
     pub(super) schema_path: Option<PathBuf>,
     pub(super) discovery: Option<ProjectDiscoveryReport>,
     pub(super) discovery_diagnostics: Vec<recite_core::Diagnostic>,
+    /// True when a manifest was found but could not be interpreted. This is
+    /// intentionally distinct from a workspace with no manifest: a broken
+    /// manifest must never silently widen the project to the legacy walker.
+    pub(super) discovery_failed: bool,
+    pub(super) discovery_start: Option<PathBuf>,
+    pub(super) discovery_manifest_path: Option<PathBuf>,
 }
 
 impl WorkspaceConfig {
@@ -23,18 +29,41 @@ impl WorkspaceConfig {
             .filter_map(|root| resolve_config_path(&root, None))
             .filter_map(|root| fs::canonicalize(root).ok())
             .collect::<Vec<_>>();
-        let (discovery, discovery_diagnostics) = match fallback_roots.first() {
+        let (
+            discovery,
+            discovery_diagnostics,
+            discovery_failed,
+            discovery_start,
+            discovery_manifest_path,
+        ) = match fallback_roots.first() {
             Some(root) => match discover_project(root) {
-                Ok(report) => (Some(report), Vec::new()),
+                Ok(report) => (
+                    Some(report.clone()),
+                    Vec::new(),
+                    false,
+                    Some(report.manifest().project_root().to_owned()),
+                    Some(report.manifest().manifest_path().to_owned()),
+                ),
                 Err(recite_config::ProjectDiscoveryError::NotFound { .. }) => {
                     // A workspace without a Recite manifest remains usable for
                     // source-only editor features; explicit project commands
                     // still report this typed failure.
-                    (None, Vec::new())
+                    (None, Vec::new(), false, Some(root.clone()), None)
                 }
-                Err(error) => (None, vec![error.as_core_diagnostic()]),
+                Err(error) => (
+                    None,
+                    error.diagnostics(),
+                    true,
+                    Some(
+                        error
+                            .manifest_path()
+                            .and_then(|path| path.parent())
+                            .map_or_else(|| root.clone(), PathBuf::from),
+                    ),
+                    error.manifest_path().map(PathBuf::from),
+                ),
             },
-            None => (None, Vec::new()),
+            None => (None, Vec::new(), false, None, None),
         };
         let roots = discovery
             .as_ref()
@@ -72,19 +101,26 @@ impl WorkspaceConfig {
             schema_path,
             discovery,
             discovery_diagnostics,
+            discovery_failed,
+            discovery_start,
+            discovery_manifest_path,
         }
     }
 
     #[allow(dead_code)]
     pub(crate) fn for_roots(roots: Vec<PathBuf>) -> Self {
+        let roots = roots
+            .into_iter()
+            .filter_map(|root| fs::canonicalize(root).ok())
+            .collect::<Vec<_>>();
         Self {
-            roots: roots
-                .into_iter()
-                .filter_map(|root| fs::canonicalize(root).ok())
-                .collect(),
+            discovery_start: roots.first().cloned(),
+            roots,
             schema_path: None,
             discovery: None,
             discovery_diagnostics: Vec::new(),
+            discovery_failed: false,
+            discovery_manifest_path: None,
         }
     }
 

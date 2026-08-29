@@ -1,10 +1,11 @@
+use std::collections::BTreeSet;
 use std::path::{Path, PathBuf};
 
 use recite_core::ProjectManifestSource;
 
 use super::diagnostics::{DiscoveryDiagnostic, ProjectDiscoveryError};
 use super::enumerate::{Coverage, DiscoveredDocument, DiscoveredRoot, enumerate_root};
-use super::glob::{GlobPattern, validate_relative_pattern};
+use super::glob::{GlobPattern, normalize_relative_pattern, validate_relative_pattern};
 
 pub const PROJECT_MANIFEST_FILE: &str = "recite.project.toml";
 pub const PROJECT_MANIFEST_FORMAT_VERSION: u32 = 1;
@@ -50,21 +51,33 @@ impl ProjectManifest {
     /// manifest's built-in and configured exclusion rules.
     #[must_use]
     pub fn allows_path(&self, path: &Path) -> bool {
+        self.allows_event_path(path)
+            && path
+                .file_name()
+                .and_then(|name| name.to_str())
+                .is_some_and(|name| name.ends_with(".recite"))
+    }
+
+    /// Whether a watcher event is inside a configured root and not excluded.
+    /// Unlike [`Self::allows_path`], this also accepts directories and missing
+    /// paths so delete/rename events can wake a rebuild.
+    #[must_use]
+    pub fn allows_event_path(&self, path: &Path) -> bool {
         let Ok(relative) = path.strip_prefix(&self.project_root) else {
             return false;
         };
         let relative = relative.to_string_lossy().replace('\\', "/");
-        let Some(name) = path.file_name().and_then(|name| name.to_str()) else {
-            return false;
-        };
-        name.ends_with(".recite")
-            && !name.starts_with('.')
+        !relative.is_empty()
+            && !relative.split('/').any(|name| name.starts_with('.'))
             && !relative.split('/').any(is_builtin_excluded)
             && !self
                 .exclude_patterns
                 .iter()
                 .any(|pattern| pattern.matches(&relative))
-            && self.roots.iter().any(|root| path.starts_with(root.path()))
+            && self
+                .roots
+                .iter()
+                .any(|root| path.starts_with(root.path()) || root.path().starts_with(path))
     }
 }
 
@@ -137,7 +150,6 @@ pub fn discover_project(
             diagnostics: loaded.diagnostics,
         })?;
     let manifest = source.manifest();
-    let manifest_excludes = manifest.discovery.excludes.clone();
     match manifest.format_version {
         Some(PROJECT_MANIFEST_FORMAT_VERSION) => {}
         Some(found) => {
@@ -201,7 +213,10 @@ pub fn discover_project(
             .iter()
             .any(|root: &DiscoveredRoot| root.path() == canonical)
         {
-            return Err(ProjectDiscoveryError::DuplicateRoot { path: canonical });
+            return Err(ProjectDiscoveryError::DuplicateRoot {
+                path: canonical,
+                manifest: manifest_path.clone(),
+            });
         }
         roots.push(DiscoveredRoot {
             index,
@@ -211,6 +226,7 @@ pub fn discover_project(
     }
 
     let mut excludes = Vec::new();
+    let mut normalized_excludes = Vec::new();
     for pattern in &manifest.discovery.excludes {
         if let Err(reason) = validate_relative_pattern(pattern) {
             return Err(ProjectDiscoveryError::InvalidExclude {
@@ -219,13 +235,15 @@ pub fn discover_project(
                 reason,
             });
         }
-        excludes.push(GlobPattern::parse(pattern).map_err(|reason| {
+        let pattern = normalize_relative_pattern(pattern);
+        excludes.push(GlobPattern::parse(&pattern).map_err(|reason| {
             ProjectDiscoveryError::InvalidExclude {
                 path: manifest_path.clone(),
                 pattern: pattern.clone(),
                 reason,
             }
         })?);
+        normalized_excludes.push(pattern);
     }
 
     let mut diagnostics = Vec::new();
@@ -241,6 +259,7 @@ pub fn discover_project(
     }
 
     let mut documents = Vec::new();
+    let mut seen = BTreeSet::new();
     for root in &roots {
         enumerate_root(
             &project_root,
@@ -248,6 +267,7 @@ pub fn discover_project(
             &excludes,
             &mut documents,
             &mut diagnostics,
+            &mut seen,
         );
     }
     documents.sort_by(|left, right| left.key().cmp(right.key()));
@@ -267,7 +287,7 @@ pub fn discover_project(
             manifest_path,
             source,
             roots,
-            excludes: manifest_excludes,
+            excludes: normalized_excludes,
             exclude_patterns: excludes,
         },
         documents,

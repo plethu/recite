@@ -1,16 +1,18 @@
 use lsp_server::{Connection, ErrorCode, Message, Notification, Request, Response};
 use lsp_types::notification::{
-    DidChangeTextDocument, DidCloseTextDocument, DidOpenTextDocument, DidSaveTextDocument, Exit,
-    Initialized, LogMessage, Notification as LspNotification, PublishDiagnostics,
+    DidChangeTextDocument, DidChangeWatchedFiles, DidCloseTextDocument, DidOpenTextDocument,
+    DidSaveTextDocument, Exit, Initialized, LogMessage, Notification as LspNotification,
+    PublishDiagnostics,
 };
 use lsp_types::request::{
     CodeActionRequest, Completion, GotoDefinition, HoverRequest, PrepareRenameRequest, References,
     Rename, Request as LspRequest, Shutdown,
 };
 use lsp_types::{
-    CodeActionParams, CompletionParams, DidChangeTextDocumentParams, DidCloseTextDocumentParams,
-    DidOpenTextDocumentParams, DidSaveTextDocumentParams, GotoDefinitionParams, HoverParams,
-    LogMessageParams, MessageType, ReferenceParams, RenameParams, TextDocumentPositionParams,
+    CodeActionParams, CompletionParams, DidChangeTextDocumentParams, DidChangeWatchedFilesParams,
+    DidCloseTextDocumentParams, DidOpenTextDocumentParams, DidSaveTextDocumentParams,
+    GotoDefinitionParams, HoverParams, LogMessageParams, MessageType, ReferenceParams,
+    RenameParams, TextDocumentPositionParams,
 };
 
 use crate::diagnostics::{clear_diagnostics, publish_diagnostics};
@@ -18,39 +20,19 @@ use crate::workspace::{DiagnosticRefresh, LspWorkspace, WorkspaceChangeResult, W
 use recite_ui::UiCatalog;
 
 mod bootstrap;
+mod error;
 #[allow(unused_imports, reason = "used by in-crate lifecycle harness")]
 pub(crate) use bootstrap::run_connection_with_user_config;
 #[allow(unused_imports, reason = "used by in-crate protocol harness")]
 pub(crate) use bootstrap::{run_connection, run_connection_with_catalog};
 pub use bootstrap::{run_stdio, run_stdio_with_catalog, run_stdio_with_locale};
-
-#[derive(Debug, thiserror::Error)]
-#[non_exhaustive]
-pub enum ServerError {
-    #[error("LSP protocol error: {0}")]
-    Protocol(#[from] lsp_server::ProtocolError),
-    #[error("LSP transport disconnected")]
-    Disconnected,
-    #[error("client exited before shutdown")]
-    ExitWithoutShutdown,
-    #[error("failed to send LSP message")]
-    Send,
-    #[error("failed to join LSP stdio threads: {0}")]
-    Io(#[from] std::io::Error),
-    #[error("failed to serialize initialize result: {0}")]
-    InitializeResult(#[from] serde_json::Error),
-    #[error("failed to load UI catalog: {0}")]
-    UiCatalog(String),
-    #[error("failed to publish LSP diagnostics: {0}")]
-    Diagnostics(String),
-}
+pub use error::ServerError;
 
 struct Server {
     connection: Connection,
     workspace: LspWorkspace,
     shutdown_requested: bool,
 }
-
 impl Server {
     fn new(connection: Connection, workspace_config: WorkspaceConfig, catalog: UiCatalog) -> Self {
         Self {
@@ -91,7 +73,6 @@ impl Server {
             self.shutdown_requested = true;
             return Ok(false);
         }
-
         if request.method == Completion::METHOD {
             let id = request.id.clone();
             let result = match request.extract::<CompletionParams>(Completion::METHOD) {
@@ -109,7 +90,6 @@ impl Server {
             self.send(Response::new_ok(id, result).into())?;
             return Ok(false);
         }
-
         if request.method == CodeActionRequest::METHOD {
             let id = request.id.clone();
             let result = match request.extract::<CodeActionParams>(CodeActionRequest::METHOD) {
@@ -124,7 +104,6 @@ impl Server {
             self.send(Response::new_ok(id, result).into())?;
             return Ok(false);
         }
-
         if request.method == HoverRequest::METHOD {
             let id = request.id.clone();
             let result = match request.extract::<HoverParams>(HoverRequest::METHOD) {
@@ -142,7 +121,6 @@ impl Server {
             self.send(Response::new_ok(id, result).into())?;
             return Ok(false);
         }
-
         if request.method == GotoDefinition::METHOD {
             let id = request.id.clone();
             let result = match request.extract::<GotoDefinitionParams>(GotoDefinition::METHOD) {
@@ -160,7 +138,6 @@ impl Server {
             self.send(Response::new_ok(id, result).into())?;
             return Ok(false);
         }
-
         if request.method == References::METHOD {
             let id = request.id.clone();
             let result = match request.extract::<ReferenceParams>(References::METHOD) {
@@ -179,7 +156,6 @@ impl Server {
             self.send(Response::new_ok(id, result).into())?;
             return Ok(false);
         }
-
         if request.method == PrepareRenameRequest::METHOD {
             let id = request.id.clone();
             let result = match request
@@ -198,7 +174,6 @@ impl Server {
             self.send(Response::new_ok(id, result).into())?;
             return Ok(false);
         }
-
         if request.method == Rename::METHOD {
             let id = request.id.clone();
             let result = match request.extract::<RenameParams>(Rename::METHOD) {
@@ -226,7 +201,6 @@ impl Server {
         self.send(response.into())?;
         Ok(false)
     }
-
     fn handle_notification(&mut self, notification: Notification) -> Result<bool, ServerError> {
         match notification.method.as_str() {
             Initialized::METHOD => {}
@@ -240,13 +214,13 @@ impl Server {
             }
             DidOpenTextDocument::METHOD => self.handle_did_open(notification)?,
             DidChangeTextDocument::METHOD => self.handle_did_change(notification)?,
+            DidChangeWatchedFiles::METHOD => self.handle_did_change_watched_files(notification)?,
             DidCloseTextDocument::METHOD => self.handle_did_close(notification)?,
             _ => {}
         }
 
         Ok(false)
     }
-
     fn publish_schema_diagnostics(&mut self) -> Result<(), ServerError> {
         if let Some(refresh) = self.workspace.project_diagnostics() {
             self.publish_refresh(refresh)?;
@@ -257,7 +231,6 @@ impl Server {
 
         Ok(())
     }
-
     fn publish_startup_warning(&self, message: String) -> Result<(), ServerError> {
         self.send(
             Notification::new(
@@ -270,7 +243,6 @@ impl Server {
             .into(),
         )
     }
-
     fn handle_did_open(&mut self, notification: Notification) -> Result<(), ServerError> {
         let Ok(params) =
             notification.extract::<DidOpenTextDocumentParams>(DidOpenTextDocument::METHOD)
@@ -285,7 +257,6 @@ impl Server {
         self.publish_refresh(refresh)?;
         self.publish_open_document_refreshes(Some(&params.text_document.uri))
     }
-
     fn handle_did_change(&mut self, notification: Notification) -> Result<(), ServerError> {
         let Ok(params) =
             notification.extract::<DidChangeTextDocumentParams>(DidChangeTextDocument::METHOD)
@@ -304,7 +275,6 @@ impl Server {
 
         Ok(())
     }
-
     fn handle_did_save(&mut self, notification: Notification) -> Result<(), ServerError> {
         let Ok(params) =
             notification.extract::<DidSaveTextDocumentParams>(DidSaveTextDocument::METHOD)
@@ -312,18 +282,39 @@ impl Server {
             return Ok(());
         };
         let uri = params.text_document.uri;
-        if let Some(refresh) = self.workspace.save_schema(&uri) {
+        let schema_refreshed = if let Some(refresh) = self.workspace.save_schema(&uri) {
             self.publish_refresh(refresh)?;
             self.publish_open_document_refreshes(None)?;
-        }
-        if let Some(refresh) = self.workspace.save(uri.clone()) {
+            true
+        } else {
+            false
+        };
+        for refresh in self.workspace.save(uri.clone()) {
             self.publish_refresh(refresh)?;
+        }
+        if !schema_refreshed {
             self.publish_open_document_refreshes(Some(&uri))?;
         }
 
         Ok(())
     }
-
+    fn handle_did_change_watched_files(
+        &mut self,
+        notification: Notification,
+    ) -> Result<(), ServerError> {
+        let Ok(params) =
+            notification.extract::<DidChangeWatchedFilesParams>(DidChangeWatchedFiles::METHOD)
+        else {
+            return Ok(());
+        };
+        for event in params.changes {
+            for refresh in self.workspace.refresh_watched_uri(&event.uri) {
+                self.publish_refresh(refresh)?;
+            }
+            self.publish_open_document_refreshes(None)?;
+        }
+        Ok(())
+    }
     fn handle_did_close(&mut self, notification: Notification) -> Result<(), ServerError> {
         let Ok(params) =
             notification.extract::<DidCloseTextDocumentParams>(DidCloseTextDocument::METHOD)
@@ -337,7 +328,6 @@ impl Server {
 
         Ok(())
     }
-
     fn publish_refresh(&self, refresh: DiagnosticRefresh) -> Result<(), ServerError> {
         if !self.workspace.is_current_generation(refresh.generation()) {
             return Ok(());
@@ -374,7 +364,6 @@ impl Server {
             ),
         }
     }
-
     fn publish_open_document_refreshes(
         &self,
         exclude: Option<&lsp_types::Uri>,
@@ -385,7 +374,6 @@ impl Server {
 
         Ok(())
     }
-
     fn send(&self, message: Message) -> Result<(), ServerError> {
         self.connection
             .sender

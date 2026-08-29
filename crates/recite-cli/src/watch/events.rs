@@ -109,7 +109,7 @@ impl WatchState {
         }
         self.manifest.as_ref().map_or_else(
             || is_project_recite_source(&self.project_root, &path),
-            |manifest| manifest.allows_path(&path),
+            |manifest| manifest.allows_event_path(&path),
         )
     }
 }

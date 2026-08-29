@@ -155,6 +155,30 @@ fn builtins_custom_excludes_and_unicode_are_deterministic() {
 }
 
 #[test]
+fn exclude_dot_segments_are_normalized_before_matching() {
+    let temp = TempDir::new().expect("tempdir");
+    write(
+        temp.path(),
+        "recite.project.toml",
+        &manifest(r#"["."]"#, r#"["./generated/**", "nested/./ignored/**"]"#),
+    );
+    write(temp.path(), "kept.recite", ":: kept\n");
+    write(temp.path(), "generated/ignored.recite", ":: ignored\n");
+    write(temp.path(), "nested/ignored/ignored.recite", ":: ignored\n");
+    let report = discover_project(temp.path()).expect("project discovery");
+    assert_eq!(
+        report
+            .manifest()
+            .excludes()
+            .iter()
+            .map(String::as_str)
+            .collect::<Vec<_>>(),
+        ["generated/**", "nested/ignored/**"]
+    );
+    assert_eq!(report.documents().len(), 1);
+}
+
+#[test]
 fn invalid_utf8_source_is_retained_as_partial_coverage() {
     let temp = TempDir::new().expect("tempdir");
     write(temp.path(), "recite.project.toml", "format_version = 1\n");

@@ -248,6 +248,35 @@ fn source_collection_skips_hidden_directories_and_target() {
 }
 
 #[test]
+fn directory_delete_events_rebuild_configured_roots_but_not_excludes() {
+    let temp = TempDir::new().expect("tempdir");
+    write_file(
+        temp.path(),
+        "recite.project.toml",
+        "format_version = 1\n\n[discovery]\nsource_roots = [\"src\"]\nexcludes = [\"scratch/**\"]\n",
+    );
+    write_file(temp.path(), "src/main.recite", valid_source());
+    fs::create_dir_all(temp.path().join("src/removed")).expect("source directory");
+    fs::create_dir_all(temp.path().join("scratch/removed")).expect("excluded directory");
+    let mut state = WatchState::new(temp.path().to_owned());
+    let mut stderr = Vec::new();
+    build_once(&mut state, &mut stderr).expect("initial build");
+
+    let removed = Event {
+        kind: EventKind::Remove(notify::event::RemoveKind::Any),
+        paths: vec![temp.path().join("src/removed")],
+        attrs: Default::default(),
+    };
+    let excluded = Event {
+        kind: EventKind::Remove(notify::event::RemoveKind::Any),
+        paths: vec![temp.path().join("scratch/removed")],
+        attrs: Default::default(),
+    };
+    assert!(state.is_relevant_event(&removed));
+    assert!(!state.is_relevant_event(&excluded));
+}
+
+#[test]
 fn relevant_events_include_manifest_sources_and_schema_but_ignore_outputs() {
     let temp = TempDir::new().expect("tempdir");
     let mut state = WatchState::new(temp.path().to_owned());

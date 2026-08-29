@@ -82,6 +82,8 @@ pub(super) struct SavedProjectIndex {
     diagnostics: Vec<recite_core::Diagnostic>,
     manifest_path: Option<PathBuf>,
     manifest_text: String,
+    discovery_start: Option<PathBuf>,
+    discovery_failed: bool,
 }
 
 impl SavedProjectIndex {
@@ -98,17 +100,20 @@ impl SavedProjectIndex {
                 .discovery
                 .as_ref()
                 .map(|report| report.manifest().manifest_path().to_owned())
-                .or_else(|| {
-                    config
-                        .roots
-                        .first()
-                        .map(|root| root.join("recite.project.toml"))
-                }),
+                .or_else(|| config.discovery_manifest_path.clone()),
             manifest_text: config
                 .discovery
                 .as_ref()
                 .map(|report| report.manifest().source().source_text())
+                .or_else(|| {
+                    config
+                        .discovery_manifest_path
+                        .as_deref()
+                        .and_then(|path| fs::read_to_string(path).ok())
+                })
                 .unwrap_or_default(),
+            discovery_start: config.discovery_start.clone(),
+            discovery_failed: config.discovery_failed,
         };
         if let Some(report) = config.discovery.as_ref() {
             index.diagnostics.extend(
@@ -120,29 +125,35 @@ impl SavedProjectIndex {
             for document in report.documents() {
                 index.insert_discovered(document);
             }
-        } else {
-            let mut paths = Vec::new();
+        } else if !index.discovery_failed {
             for root in &config.roots {
-                collect_recite_files(root, &mut paths);
-            }
-            paths.sort();
-            paths.dedup();
-            for path in paths {
-                index.refresh_path(&path);
+                let (documents, diagnostics) = recite_config::discover_unscoped_sources(root);
+                index.diagnostics.extend(
+                    diagnostics
+                        .iter()
+                        .map(recite_config::DiscoveryDiagnostic::as_core_diagnostic),
+                );
+                for document in documents {
+                    index.insert_discovered(&document);
+                }
             }
         }
         index
     }
 
     pub(super) fn refresh_uri(&mut self, uri: &Uri) -> bool {
+        // Remove the old canonical entry before resolving the replacement.
+        // A URI can be retargeted through a symlink, and retaining the old key
+        // would leave stale or duplicate summaries in the project snapshot.
+        let removed = self.remove_uri(uri);
         let Some(path) = uri_to_file_path(uri) else {
-            return false;
+            return removed;
         };
         let Some(path) = canonical_or_existing_parent_path(&path) else {
-            return false;
+            return removed;
         };
         if !has_recite_extension(&path) {
-            return false;
+            return removed;
         }
         if self
             .manifest
@@ -153,7 +164,83 @@ impl SavedProjectIndex {
             return true;
         }
 
-        self.refresh_path(&path)
+        self.refresh_path(&path) || removed
+    }
+
+    fn remove_uri(&mut self, uri: &Uri) -> bool {
+        let before = self.documents.len();
+        self.documents
+            .retain(|_, document| document.summary.uri() != uri);
+        before != self.documents.len()
+    }
+
+    /// Re-read the manifest and replace the saved project state atomically.
+    /// A failed manifest leaves no saved documents; callers may still layer
+    /// open editor buffers on top of the diagnostic-only state.
+    pub(super) fn refresh_manifest(&mut self) {
+        let Some(start) = self.discovery_start.clone() else {
+            return;
+        };
+        self.apply_discovery(recite_config::discover_project(start));
+    }
+
+    fn apply_discovery(
+        &mut self,
+        result: Result<recite_config::ProjectDiscoveryReport, recite_config::ProjectDiscoveryError>,
+    ) {
+        self.documents.clear();
+        match result {
+            Ok(report) => {
+                self.roots = report
+                    .manifest()
+                    .roots()
+                    .iter()
+                    .map(|root| root.path().to_owned())
+                    .collect();
+                self.discovery_start = Some(report.manifest().project_root().to_owned());
+                self.manifest = Some(report.manifest().clone());
+                self.manifest_path = Some(report.manifest().manifest_path().to_owned());
+                self.manifest_text = report.manifest().source().source_text();
+                self.diagnostics = report
+                    .diagnostics()
+                    .iter()
+                    .map(recite_config::DiscoveryDiagnostic::as_core_diagnostic)
+                    .collect();
+                self.discovery_failed = false;
+                for document in report.documents() {
+                    self.insert_discovered(document);
+                }
+            }
+            Err(recite_config::ProjectDiscoveryError::NotFound { .. }) => {
+                self.manifest = None;
+                self.manifest_path = None;
+                self.manifest_text.clear();
+                self.diagnostics.clear();
+                self.discovery_failed = false;
+                for root in self.roots.clone() {
+                    let (documents, diagnostics) = recite_config::discover_unscoped_sources(&root);
+                    self.diagnostics.extend(
+                        diagnostics
+                            .iter()
+                            .map(recite_config::DiscoveryDiagnostic::as_core_diagnostic),
+                    );
+                    for document in documents {
+                        self.insert_discovered(&document);
+                    }
+                }
+            }
+            Err(error) => {
+                self.manifest = None;
+                self.manifest_path = error.manifest_path().map(Path::to_owned);
+                self.manifest_text = self
+                    .manifest_path
+                    .as_deref()
+                    .and_then(|path| fs::read_to_string(path).ok())
+                    .unwrap_or_default();
+                self.diagnostics = error.diagnostics();
+                self.discovery_failed = true;
+            }
+        }
     }
 
     fn refresh_path(&mut self, path: &Path) -> bool {
@@ -249,44 +336,6 @@ impl SavedProjectIndex {
 pub(super) struct SavedDocument {
     pub(super) text: String,
     pub(super) summary: FileSummary,
-}
-
-fn collect_recite_files(root: &Path, paths: &mut Vec<PathBuf>) {
-    let Ok(entries) = fs::read_dir(root) else {
-        return;
-    };
-    let mut entries = entries.filter_map(Result::ok).collect::<Vec<_>>();
-    entries.sort_by_key(|entry| entry.path());
-
-    for entry in entries {
-        let path = entry.path();
-        let Ok(file_type) = entry.file_type() else {
-            continue;
-        };
-        if file_type.is_dir() {
-            if should_skip_directory(&path) {
-                continue;
-            }
-            collect_recite_files(&path, paths);
-        } else if file_type.is_file()
-            && has_recite_extension(&path)
-            && let Ok(path) = fs::canonicalize(path)
-        {
-            paths.push(path);
-        }
-    }
-}
-
-fn should_skip_directory(path: &Path) -> bool {
-    let Some(name) = path.file_name().and_then(|name| name.to_str()) else {
-        return false;
-    };
-
-    name.starts_with('.')
-        || matches!(
-            name,
-            "target" | "build" | "dist" | "out" | "generated" | "vendor" | "node_modules"
-        )
 }
 
 fn has_recite_extension(path: &Path) -> bool {

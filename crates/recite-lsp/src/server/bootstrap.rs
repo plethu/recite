@@ -1,5 +1,7 @@
-use lsp_server::Connection;
+use lsp_server::{Connection, Request};
 use lsp_types::InitializeParams;
+use lsp_types::notification::Notification as _;
+use lsp_types::request::Request as _;
 use recite_config::{
     ConfigError, InvocationOverrides, LoadedUserConfig, load_user_config, resolve_user_config,
 };
@@ -77,11 +79,51 @@ fn run_connection_with_startup(
         WorkspaceConfig::from_initialize_params(&initialize_params),
         startup.catalog,
     );
+    if initialize_params
+        .capabilities
+        .workspace
+        .as_ref()
+        .and_then(|workspace| workspace.did_change_watched_files.as_ref())
+        .and_then(|capability| capability.dynamic_registration)
+        .unwrap_or(false)
+    {
+        register_watched_files(&server)?;
+    }
     if let Some(warning) = startup.warning {
         server.publish_startup_warning(warning)?;
     }
     server.publish_schema_diagnostics()?;
     server.run()
+}
+
+fn register_watched_files(server: &Server) -> Result<(), ServerError> {
+    let options = lsp_types::DidChangeWatchedFilesRegistrationOptions {
+        watchers: vec![lsp_types::FileSystemWatcher {
+            glob_pattern: lsp_types::GlobPattern::String("**/*".to_owned()),
+            kind: Some(
+                lsp_types::WatchKind::Create
+                    | lsp_types::WatchKind::Change
+                    | lsp_types::WatchKind::Delete,
+            ),
+        }],
+    };
+    let registration = lsp_types::Registration {
+        id: "recite-project-discovery".to_owned(),
+        method: lsp_types::notification::DidChangeWatchedFiles::METHOD.to_owned(),
+        register_options: Some(
+            serde_json::to_value(options).map_err(ServerError::InitializeResult)?,
+        ),
+    };
+    server.send(
+        Request::new(
+            lsp_server::RequestId::from(-167),
+            lsp_types::request::RegisterCapability::METHOD.to_owned(),
+            lsp_types::RegistrationParams {
+                registrations: vec![registration],
+            },
+        )
+        .into(),
+    )
 }
 
 struct Startup {

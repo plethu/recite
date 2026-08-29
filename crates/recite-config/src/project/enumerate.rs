@@ -1,3 +1,4 @@
+use std::collections::BTreeSet;
 use std::path::{Path, PathBuf};
 
 use super::diagnostics::DiscoveryDiagnostic;
@@ -100,6 +101,7 @@ pub(super) fn enumerate_root(
     excludes: &[GlobPattern],
     documents: &mut Vec<DiscoveredDocument>,
     diagnostics: &mut Vec<DiscoveryDiagnostic>,
+    seen: &mut BTreeSet<PathBuf>,
 ) {
     collect_directory(
         project_root,
@@ -108,7 +110,46 @@ pub(super) fn enumerate_root(
         excludes,
         documents,
         diagnostics,
+        seen,
     );
+}
+
+/// Enumerate a source-only workspace without inventing a project manifest.
+/// This is retained for editor compatibility when no manifest exists; callers
+/// must not use it after a manifest was found and failed to load.
+pub fn discover_unscoped_sources(
+    project_root: &Path,
+) -> (Vec<DiscoveredDocument>, Vec<DiscoveryDiagnostic>) {
+    let canonical_root = match std::fs::canonicalize(project_root) {
+        Ok(path) => path,
+        Err(error) => {
+            return (
+                Vec::new(),
+                vec![DiscoveryDiagnostic::ReadDirectory {
+                    path: project_root.to_owned(),
+                    message: error.to_string(),
+                }],
+            );
+        }
+    };
+    let root = DiscoveredRoot {
+        index: 0,
+        relative: ".".to_owned(),
+        path: canonical_root.clone(),
+    };
+    let mut documents = Vec::new();
+    let mut diagnostics = Vec::new();
+    let mut seen = BTreeSet::new();
+    enumerate_root(
+        &canonical_root,
+        &root,
+        &[],
+        &mut documents,
+        &mut diagnostics,
+        &mut seen,
+    );
+    documents.sort_by(|left, right| left.key().cmp(right.key()));
+    (documents, diagnostics)
 }
 
 fn collect_directory(
@@ -118,6 +159,7 @@ fn collect_directory(
     excludes: &[GlobPattern],
     documents: &mut Vec<DiscoveredDocument>,
     diagnostics: &mut Vec<DiscoveryDiagnostic>,
+    seen: &mut BTreeSet<PathBuf>,
 ) {
     let entries = match std::fs::read_dir(directory) {
         Ok(entries) => entries,
@@ -195,6 +237,7 @@ fn collect_directory(
                 excludes,
                 documents,
                 diagnostics,
+                seen,
             );
             continue;
         } else if !file_type.is_file() {
@@ -240,7 +283,7 @@ fn collect_directory(
                 continue;
             }
         };
-        if !documents.iter().any(|document| document.path == canonical) {
+        if seen.insert(canonical.clone()) {
             documents.push(DiscoveredDocument {
                 key: DocumentKey::new(key),
                 path: canonical,

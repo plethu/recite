@@ -19,6 +19,27 @@ fn manifest_discovery_uses_shared_source_roots() {
 }
 
 #[test]
+fn malformed_manifest_does_not_fall_back_to_saved_walker() {
+    project_indexes::malformed_manifest_does_not_fall_back_to_saved_walker();
+}
+
+#[test]
+fn manifest_refresh_is_atomic_and_preserves_open_overlay() {
+    project_indexes::manifest_refresh_is_atomic_and_preserves_open_overlay();
+}
+
+#[cfg(unix)]
+#[test]
+fn saved_uri_replacement_removes_old_canonical_entry() {
+    project_indexes::saved_uri_replacement_removes_old_canonical_entry();
+}
+
+#[test]
+fn watched_files_refresh_saved_index_for_create_and_delete() {
+    project_indexes::watched_files_refresh_saved_index_for_create_and_delete();
+}
+
+#[test]
 fn initialize_advertises_completion_and_hover() {
     availability::initialize_advertises_completion_and_hover();
 }

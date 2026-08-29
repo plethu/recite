@@ -12,7 +12,7 @@ mod explanation;
 pub use contract::{
     DiagnosticArgumentSpec, DiagnosticArgumentType, DiagnosticAuxiliaryPresentationContract,
     DiagnosticPresentationContract, DiagnosticPresentationContractRegistryError,
-    auxiliary_contract_for, contract_for, contracts_for_code,
+    auxiliary_contract_for, config_contract_for, contract_for, contracts_for_code,
     migrated_diagnostic_auxiliary_presentation_contracts,
     migrated_diagnostic_presentation_contracts, presentation_for,
     validate_auxiliary_diagnostic_presentation_contracts,
