@@ -1,8 +1,8 @@
-use std::fs;
 use std::io::Write;
 use std::sync::mpsc;
 
 use notify::{RecursiveMode, Watcher, recommended_watcher};
+use recite_config::discover_project;
 
 use crate::args::WatchArgs;
 use crate::error::CliError;
@@ -29,11 +29,9 @@ pub(crate) fn run_watch_command(
     if !args.project_root.is_dir() {
         return Err(CliError::MissingPath(args.project_root));
     }
-    let project_root =
-        fs::canonicalize(&args.project_root).map_err(|source| CliError::ReadDir {
-            path: args.project_root,
-            source,
-        })?;
+    let discovery = discover_project(&args.project_root)
+        .map_err(|source| CliError::ProjectDiscovery { source })?;
+    let project_root = discovery.manifest().project_root().to_owned();
 
     let (sender, receiver) = mpsc::channel();
     let mut watcher = recommended_watcher(move |event| {
@@ -45,6 +43,7 @@ pub(crate) fn run_watch_command(
         .map_err(watch_error)?;
 
     let mut state = WatchState::new(project_root);
+    state.manifest = Some(discovery.manifest().clone());
     writeln!(
         stderr,
         "{}",

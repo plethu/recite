@@ -1,7 +1,9 @@
 # LSP Project Index Design
 
-This document records the initial project-index design for Recite's LSP work.
-Its shared indexing and project-model work now feeds [milestone 19, Shared
+This document records the project-index design for Recite's LSP work. The
+cross-platform project-discovery contract is now owned by `recite-config` and
+implemented under [#167](https://github.com/plethu/recite/issues/167). Its
+shared indexing and project-model work now feeds [milestone 19, Shared
 Authoring Kernel and Preview](https://github.com/plethu/recite/milestone/19),
 especially [#168](https://github.com/plethu/recite/issues/168). Client-facing
 LSP/editor parity follows [milestone 20, Editor Integration
@@ -22,9 +24,10 @@ and 22-23.
 
 ## Non-Goals
 
-- This design does not add Rust code, Cargo dependencies, CLI behavior, parser
-  behavior, compiler behavior, runtime behavior, or schema behavior.
-- Scene manifest discovery is out of scope for the first LSP project index.
+- Parser, compiler, runtime, and schema semantics remain owned by their
+  existing contracts; this document covers their LSP-facing project index.
+- Project-manifest discovery is shared; scene compilation and generated-asset
+  freshness remain separate project-validation concerns.
 - Incremental text patches, `ropey`, and Salsa are deferred.
 - Visual editor behavior is out of scope.
 
@@ -69,21 +72,28 @@ The LSP state is split into four durable concepts.
 project files and stores one summary per saved `.recite` file, plus project-wide
 merged indexes derived from those summaries.
 
-The first project discovery pass should include:
+The saved index consumes `recite_config::discover_project`, which is the single
+filesystem contract for project discovery. It includes:
 
-- workspace `.recite` files under the opened root, excluding hidden
-  directories, `target`, build output, vendored dependency directories, and
-  generated output directories;
+- the first `recite.project.toml` found from the opened path, with required
+  `format_version = 1`;
+- the manifest's ordered, project-relative `discovery.source_roots` (default
+  `["."]`), excluding hidden components and built-in output/vendor paths;
+- project-relative slash globs from `discovery.excludes`, which augment the
+  built-ins;
+- canonical paths, deterministic project-relative slash `DocumentKey`s, and
+  structured complete/partial coverage diagnostics;
 - one explicit schema manifest path supplied by initialization options or
   server configuration.
 
-If the client supplies explicit Recite source roots, use those instead of
-walking the entire workspace root. Until scene manifests land, this fallback
-discovery stays conservative: source roots and excludes should be configuration,
-not hard-coded assumptions about a game repository.
+Initialization `sourceRoots` are not a second discovery configuration. The LSP
+uses the shared manifest roots when a project manifest exists and retains its
+source-only fallback only for workspaces without one. A malformed nearest
+manifest is reported rather than silently falling through to a parent project.
 
-The first pass should not invent scene manifest discovery. That belongs in a
-later issue after the production manifest shape is implemented.
+The project manifest is indexed once. The LSP owns URI, version, overlay, and
+protocol state; `recite-config` owns path resolution, filesystem traversal,
+exclusion, and coverage semantics.
 
 The saved index must have a refresh path after initial load. On save or file
 watch notifications for a `.recite` file, re-read that file from disk, replace
@@ -321,7 +331,8 @@ snapshots.
 ## Follow-Up Issue Routing
 
 Do not revive or update the historical issue-29-through-33 tracker entries.
-Update the shared indexing and project-model work under milestone 19 / #168;
+Keep manifest discovery and shared filesystem semantics under #167; update the
+shared indexing and project-model work under milestone 19 / #168;
 route editor-client wiring and parity work to milestone 20 / #169.
 
 The historical issue-29 scope, now a #168 input, covered:

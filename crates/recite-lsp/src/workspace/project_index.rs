@@ -4,10 +4,11 @@ use std::path::{Path, PathBuf};
 
 use lsp_types::Uri;
 
-use super::SnapshotGeneration;
+use super::{SnapshotGeneration, WorkspaceConfig};
 use crate::documents::OpenDocumentStore;
 use crate::paths::{file_path_to_uri, project_relative_path, uri_to_file_path};
 use crate::summary::{FileIdentity, FileSummary, SavedFileIdentity};
+use recite_config::DiscoveredDocument;
 
 pub(crate) struct LiveProjectSnapshot {
     #[allow(dead_code)]
@@ -77,22 +78,58 @@ fn summary_sort_key(left: &FileSummary, right: &FileSummary) -> std::cmp::Orderi
 pub(super) struct SavedProjectIndex {
     roots: Vec<PathBuf>,
     documents: BTreeMap<PathBuf, SavedDocument>,
+    manifest: Option<recite_config::ProjectManifest>,
+    diagnostics: Vec<recite_core::Diagnostic>,
+    manifest_path: Option<PathBuf>,
+    manifest_text: String,
 }
 
 impl SavedProjectIndex {
-    pub(super) fn discover(roots: &[PathBuf]) -> Self {
+    pub(super) fn discover(config: &WorkspaceConfig) -> Self {
         let mut index = Self {
-            roots: roots.to_vec(),
+            roots: config.roots.clone(),
             documents: BTreeMap::new(),
+            manifest: config
+                .discovery
+                .as_ref()
+                .map(|report| report.manifest().clone()),
+            diagnostics: config.discovery_diagnostics.clone(),
+            manifest_path: config
+                .discovery
+                .as_ref()
+                .map(|report| report.manifest().manifest_path().to_owned())
+                .or_else(|| {
+                    config
+                        .roots
+                        .first()
+                        .map(|root| root.join("recite.project.toml"))
+                }),
+            manifest_text: config
+                .discovery
+                .as_ref()
+                .map(|report| report.manifest().source().source_text())
+                .unwrap_or_default(),
         };
-        let mut paths = Vec::new();
-        for root in roots {
-            collect_recite_files(root, &mut paths);
-        }
-        paths.sort();
-        paths.dedup();
-        for path in paths {
-            index.refresh_path(&path);
+        if let Some(report) = config.discovery.as_ref() {
+            index.diagnostics.extend(
+                report
+                    .diagnostics()
+                    .iter()
+                    .map(recite_config::DiscoveryDiagnostic::as_core_diagnostic),
+            );
+            for document in report.documents() {
+                index.insert_discovered(document);
+            }
+        } else {
+            let mut paths = Vec::new();
+            for root in &config.roots {
+                collect_recite_files(root, &mut paths);
+            }
+            paths.sort();
+            paths.dedup();
+            for path in paths {
+                index.refresh_path(&path);
+            }
         }
         index
     }
@@ -107,6 +144,14 @@ impl SavedProjectIndex {
         if !has_recite_extension(&path) {
             return false;
         }
+        if self
+            .manifest
+            .as_ref()
+            .is_some_and(|manifest| !manifest.allows_path(&path))
+        {
+            self.documents.remove(&path);
+            return true;
+        }
 
         self.refresh_path(&path)
     }
@@ -115,6 +160,14 @@ impl SavedProjectIndex {
         let Some(root) = self.root_for_path(path) else {
             return false;
         };
+        if self
+            .manifest
+            .as_ref()
+            .is_some_and(|manifest| !manifest.allows_path(path))
+        {
+            self.documents.remove(path);
+            return true;
+        }
         if !path.exists() {
             self.documents.remove(path);
             return true;
@@ -158,6 +211,37 @@ impl SavedProjectIndex {
 
     pub(super) fn documents(&self) -> impl Iterator<Item = &SavedDocument> {
         self.documents.values()
+    }
+
+    pub(super) fn diagnostics(&self) -> &[recite_core::Diagnostic] {
+        &self.diagnostics
+    }
+
+    pub(super) fn manifest_path(&self) -> Option<&Path> {
+        self.manifest_path.as_deref()
+    }
+
+    pub(super) fn manifest_text(&self) -> &str {
+        &self.manifest_text
+    }
+
+    fn insert_discovered(&mut self, document: &DiscoveredDocument) {
+        let Some(uri) = file_path_to_uri(document.path()) else {
+            return;
+        };
+        let identity = FileIdentity::Saved(SavedFileIdentity {
+            uri,
+            canonical_path: document.path().to_owned(),
+            project_relative_path: document.key().as_str().to_owned(),
+        });
+        let summary = FileSummary::from_text(identity, None, document.text());
+        self.documents.insert(
+            document.path().to_owned(),
+            SavedDocument {
+                text: document.text().to_owned(),
+                summary,
+            },
+        );
     }
 }
 

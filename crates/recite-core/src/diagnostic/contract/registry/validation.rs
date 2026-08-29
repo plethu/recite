@@ -1,6 +1,6 @@
 use super::{
-    DiagnosticAuxiliaryPresentationContract, DiagnosticPresentationContract, compiler, freshness,
-    parser, po, project, schema,
+    DiagnosticAuxiliaryPresentationContract, DiagnosticPresentationContract, compiler, config,
+    freshness, parser, po, project, schema,
 };
 use crate::diagnostic_presentation_record::is_valid_argument_name;
 use std::collections::BTreeSet;
@@ -75,6 +75,7 @@ pub fn validate_migrated_diagnostic_presentation_contracts()
     let primary = parser::contracts()
         .chain(po::contracts())
         .chain(compiler::contracts())
+        .chain(config::contracts())
         .chain(project::contracts())
         .chain(freshness::contracts())
         .chain(schema::contracts())

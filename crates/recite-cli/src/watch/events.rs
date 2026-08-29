@@ -65,6 +65,7 @@ pub(super) fn watch_error(error: notify::Error) -> CliError {
 pub(super) struct WatchState {
     pub(super) project_root: PathBuf,
     pub(super) schema_path: Option<PathBuf>,
+    pub(super) manifest: Option<recite_config::ProjectManifest>,
 }
 
 impl WatchState {
@@ -72,6 +73,7 @@ impl WatchState {
         Self {
             project_root,
             schema_path: None,
+            manifest: None,
         }
     }
 
@@ -105,6 +107,9 @@ impl WatchState {
         {
             return true;
         }
-        is_project_recite_source(&self.project_root, &path)
+        self.manifest.as_ref().map_or_else(
+            || is_project_recite_source(&self.project_root, &path),
+            |manifest| manifest.allows_path(&path),
+        )
     }
 }

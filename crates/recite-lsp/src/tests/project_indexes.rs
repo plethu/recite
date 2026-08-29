@@ -33,6 +33,37 @@ pub(super) fn saved_project_discovery_is_deterministically_sorted() {
     assert_eq!(paths, ["a.recite", "nested/m.recite", "z.recite"]);
 }
 
+pub(super) fn manifest_discovery_uses_shared_source_roots() {
+    let temp = TempDir::new().unwrap_or_else(|error| panic!("tempdir: {error}"));
+    write_file(
+        temp.path(),
+        "recite.project.toml",
+        "format_version = 1\n\n[discovery]\nsource_roots = [\"src\"]\n",
+    );
+    write_file(temp.path(), "src/kept.recite", ":: kept\n");
+    write_file(temp.path(), "ignored.recite", ":: ignored\n");
+
+    let params = serde_json::from_value(json!({
+        "rootUri": file_uri(temp.path()).as_str(),
+        "capabilities": {},
+    }))
+    .unwrap_or_else(|error| panic!("initialize params: {error}"));
+    let workspace = LspWorkspace::new(WorkspaceConfig::from_initialize_params(&params));
+    let paths = workspace
+        .snapshot()
+        .summaries()
+        .iter()
+        .map(|summary| {
+            summary
+                .project_relative_path()
+                .unwrap_or("<none>")
+                .to_owned()
+        })
+        .collect::<Vec<_>>();
+
+    assert_eq!(paths, ["src/kept.recite"]);
+}
+
 pub(super) fn open_summary_overlays_saved_project_summary() {
     let temp = TempDir::new().unwrap_or_else(|error| panic!("tempdir: {error}"));
     let source = temp.path().join("scene.recite");

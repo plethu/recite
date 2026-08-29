@@ -248,6 +248,9 @@ impl Server {
     }
 
     fn publish_schema_diagnostics(&mut self) -> Result<(), ServerError> {
+        if let Some(refresh) = self.workspace.project_diagnostics() {
+            self.publish_refresh(refresh)?;
+        }
         if let Some(refresh) = self.workspace.schema_diagnostics() {
             self.publish_refresh(refresh)?;
         }

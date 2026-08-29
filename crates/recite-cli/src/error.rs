@@ -114,6 +114,9 @@ pub(crate) enum CliError {
     UserConfig {
         source: recite_config::ConfigError,
     },
+    ProjectDiscovery {
+        source: recite_config::ProjectDiscoveryError,
+    },
     UiCatalog {
         source: String,
     },
@@ -291,6 +294,7 @@ impl std::fmt::Display for CliError {
             Self::BenchJson(error) => write!(formatter, "failed to read or write benchmark JSON: {error}"),
             Self::TraceJson(error) => write!(formatter, "failed to encode trace JSON: {error}"),
             Self::UserConfig { source } => write!(formatter, "{source}"),
+            Self::ProjectDiscovery { source } => write!(formatter, "{source}"),
             Self::UiCatalog { source } => write!(formatter, "failed to load UI text catalog: {source}"),
             Self::UnknownPrompt { line, choices } => write!(
                 formatter,

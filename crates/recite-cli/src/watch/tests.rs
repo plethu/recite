@@ -9,7 +9,6 @@ use tempfile::TempDir;
 
 use super::build::{BuildStatus, build_once as build_once_with_messages};
 use super::events::WatchState;
-use super::inputs::collect_project_sources;
 use crate::error::CliError;
 use crate::i18n::{Messages, UiLocale};
 
@@ -31,7 +30,9 @@ fn write_project(root: &Path) {
     write_file(
         root,
         "recite.project.toml",
-        r#"[[scenes]]
+        r#"format_version = 1
+
+[[scenes]]
 id = "scene.start"
 asset = "compiled/dialogue.recitec"
 block = "start"
@@ -44,7 +45,9 @@ fn write_project_with_schema(root: &Path) {
     write_file(
         root,
         "recite.project.toml",
-        r#"[project]
+        r#"format_version = 1
+
+[project]
 schema = "schema.json"
 
 [[scenes]]
@@ -87,7 +90,9 @@ fn duplicate_manifest_asset_paths_are_built_once() {
     write_file(
         temp.path(),
         "recite.project.toml",
-        r#"[[scenes]]
+        r#"format_version = 1
+
+[[scenes]]
 id = "scene.start"
 asset = "compiled/shared.recitec"
 block = "start"
@@ -227,11 +232,17 @@ fn fixing_invalid_source_allows_later_rebuild_to_recover() {
 #[test]
 fn source_collection_skips_hidden_directories_and_target() {
     let temp = TempDir::new().expect("tempdir");
+    write_project(temp.path());
     let kept = write_file(temp.path(), "dialogue/main.recite", valid_source());
     write_file(temp.path(), ".hidden/hidden.recite", valid_source());
     write_file(temp.path(), "target/generated.recite", valid_source());
 
-    let sources = collect_project_sources(temp.path()).expect("sources");
+    let sources = recite_config::discover_project(temp.path())
+        .expect("project discovery")
+        .documents()
+        .iter()
+        .map(|document| document.path().to_owned())
+        .collect::<Vec<_>>();
 
     assert_eq!(sources, vec![kept]);
 }

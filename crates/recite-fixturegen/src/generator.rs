@@ -144,6 +144,8 @@ impl FixtureGenerator {
 
     fn emit_project_manifest(&mut self) {
         let mut manifest = String::new();
+        writeln!(&mut manifest, "format_version = 1").expect("write string");
+        writeln!(&mut manifest).expect("write string");
         writeln!(&mut manifest, "[project]").expect("write string");
         writeln!(
             &mut manifest,

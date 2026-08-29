@@ -1,6 +1,6 @@
 use super::{
-    DiagnosticAuxiliaryPresentationContract, DiagnosticPresentationContract, compiler, freshness,
-    parser, po, project, schema,
+    DiagnosticAuxiliaryPresentationContract, DiagnosticPresentationContract, compiler, config,
+    freshness, parser, po, project, schema,
 };
 use std::sync::OnceLock;
 
@@ -28,6 +28,7 @@ pub fn migrated_diagnostic_presentation_contracts()
     parser::contracts()
         .chain(po::contracts())
         .chain(compiler::contracts())
+        .chain(config::contracts())
         .chain(project::contracts())
         .chain(freshness::contracts())
         .chain(schema::contracts())

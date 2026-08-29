@@ -8,6 +8,7 @@
 
 mod capabilities;
 mod path;
+mod project;
 mod user;
 
 pub use capabilities::{
@@ -17,6 +18,11 @@ pub use capabilities::{
 pub use path::{
     CONFIG_ENVIRONMENT_VARIABLE, ConfigPathSource, PathResolutionError, Platform, PlatformRoots,
     ResolvedConfigPath, production_config_path, resolve_config_path,
+};
+pub use project::{
+    Coverage, DiscoveredDocument, DiscoveredRoot, DiscoveryDiagnostic, DocumentKey,
+    PROJECT_MANIFEST_FILE, PROJECT_MANIFEST_FORMAT_VERSION, ProjectDiscoveryError,
+    ProjectDiscoveryReport, ProjectManifest, discover_project,
 };
 pub use user::{
     AuthorityValue, CONFIG_VERSION, ColorPolicy, ConfigAuthority, ConfigDiagnostic, ConfigError,

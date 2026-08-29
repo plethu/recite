@@ -10,7 +10,6 @@ use recite_core::{
 };
 
 use super::events::WatchState;
-use super::inputs::collect_project_sources;
 use crate::diagnostics::report_diagnostics;
 use crate::error::CliError;
 use crate::fs::{
@@ -18,27 +17,29 @@ use crate::fs::{
     resolve_project_path, validate_project_asset_freshness, write_staged,
 };
 use crate::i18n::Messages;
+use recite_config::discover_project;
 
 pub(super) fn build_once(
     state: &mut WatchState,
     stderr: &mut dyn Write,
     messages: &Messages,
 ) -> Result<BuildStatus, CliError> {
-    let manifest_path = state.manifest_path();
-    let manifest_text = fs::read_to_string(&manifest_path).map_err(|source| CliError::Read {
-        path: manifest_path.clone(),
-        source,
-    })?;
-    let manifest_file = display_path(&manifest_path);
-    let report = ProjectManifest::load_str_with_spans(manifest_file.clone(), &manifest_text);
-    if !report.diagnostics.is_empty() {
-        report_diagnostics(stderr, messages, report.diagnostics.iter())?;
+    let report = discover_project(&state.project_root)
+        .map_err(|source| CliError::ProjectDiscovery { source })?;
+    let discovered = report.manifest();
+    state.project_root = discovered.project_root().to_owned();
+    state.manifest = Some(discovered.clone());
+    let manifest_source = discovered.source();
+    let discovery_diagnostics = report
+        .diagnostics()
+        .iter()
+        .map(recite_config::DiscoveryDiagnostic::as_core_diagnostic)
+        .collect::<Vec<_>>();
+    report_diagnostics(stderr, messages, discovery_diagnostics.iter())?;
+    if !report.is_complete() {
         state.schema_path = None;
         return Ok(BuildStatus::Diagnostics);
     }
-    let Some(manifest_source) = report.source else {
-        return Ok(BuildStatus::Diagnostics);
-    };
     let manifest = manifest_source.manifest();
 
     state.schema_path = project_schema_path(&state.project_root, manifest);
@@ -49,13 +50,17 @@ pub(super) fn build_once(
     }
 
     let manifest_diagnostics =
-        validate_project_manifest_source(&manifest_source, loaded_schema.schema.as_ref());
+        validate_project_manifest_source(manifest_source, loaded_schema.schema.as_ref());
     if !manifest_diagnostics.is_empty() {
         report_diagnostics(stderr, messages, manifest_diagnostics.iter())?;
         return Ok(BuildStatus::Diagnostics);
     }
 
-    let input_files = collect_project_sources(&state.project_root)?;
+    let input_files = report
+        .documents()
+        .iter()
+        .map(|document| document.path().to_owned())
+        .collect::<Vec<_>>();
     if input_files.is_empty() {
         return Err(CliError::NoInputs);
     }
@@ -91,7 +96,7 @@ pub(super) fn build_once(
 
     let diagnostics = validate_project_asset_freshness(
         &state.project_root,
-        &manifest_source,
+        manifest_source,
         Some(loaded_schema.schema.as_ref().map_or(
             SchemaFingerprint::NoSchema,
             ProjectSchema::canonical_fingerprint,

@@ -14,6 +14,11 @@ fn initialize_advertises_full_sync_save_and_utf16() {
 }
 
 #[test]
+fn manifest_discovery_uses_shared_source_roots() {
+    project_indexes::manifest_discovery_uses_shared_source_roots();
+}
+
+#[test]
 fn initialize_advertises_completion_and_hover() {
     availability::initialize_advertises_completion_and_hover();
 }

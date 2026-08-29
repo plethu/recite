@@ -4,6 +4,7 @@ use crate::diagnostic_presentation::DiagnosticPresentationId;
 use crate::diagnostic_presentation_record::DiagnosticPresentation;
 
 mod compiler;
+mod config;
 mod freshness;
 mod parser;
 mod po;

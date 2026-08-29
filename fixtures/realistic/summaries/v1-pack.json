@@ -12,7 +12,7 @@
     "effects": 8,
     "conditions": 7
   },
-  "bytes": 13700,
+  "bytes": 13720,
   "files": [
     {
       "path": "locales/en-US.po",
@@ -21,8 +21,8 @@
     },
     {
       "path": "recite.project.toml",
-      "bytes": 138,
-      "blake3": "0334c339b8a0883a3d6de6fb612c1d65825d425c43d0642471f6629ab3eb36d9"
+      "bytes": 158,
+      "blake3": "b509c31cc717302c1a37a076d33876dbb8c5cd396c7c73a0b78c9ef3a265dd7b"
     },
     {
       "path": "runtime-fixture.toml",

@@ -78,7 +78,8 @@ pub(crate) fn run_command(
             let diagnostics = validate_project(args.project_root)?;
             report_diagnostics(stderr, messages, diagnostics.iter())?;
             diagnostics
-                .is_empty()
+                .iter()
+                .all(|diagnostic| diagnostic.severity != recite_core::DiagnosticSeverity::Error)
                 .then_some(())
                 .ok_or(CliError::Diagnostics)
         }

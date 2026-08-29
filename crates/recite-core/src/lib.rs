@@ -170,10 +170,10 @@ pub use po::{
     evaluate_plural_form, validate_plural_rule,
 };
 pub use project::{
-    ProjectFreshnessInput, ProjectManifest, ProjectManifestLoadReport, ProjectManifestMetadata,
-    ProjectManifestSource, ProjectManifestSourceLoadReport, ProjectScene, project_scene_key_span,
-    validate_project_freshness, validate_project_freshness_source, validate_project_manifest,
-    validate_project_manifest_source,
+    ProjectDiscovery, ProjectFreshnessInput, ProjectManifest, ProjectManifestLoadReport,
+    ProjectManifestMetadata, ProjectManifestSource, ProjectManifestSourceLoadReport, ProjectScene,
+    project_scene_key_span, validate_project_freshness, validate_project_freshness_source,
+    validate_project_manifest, validate_project_manifest_source,
 };
 pub use schema::{
     AvailabilityReasonArgBinding, AvailabilityReasonDefinition, ConditionAvailabilityReasonMapping,

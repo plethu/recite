@@ -20,6 +20,9 @@ impl CliError {
             Self::PlayInterrupted => messages.text(MsgId::CliErrorPlayInterrupted),
             Self::PlayTuiRequiresTerminal => messages.text(MsgId::CliErrorPlayTuiRequiresTerminal),
             Self::UserConfig { source } => user_config_message(source, messages),
+            Self::ProjectDiscovery { source } => {
+                messages.format(MsgId::CliErrorGeneric, [("message", source.to_string())])
+            }
             Self::DialogueCatalogConflict {
                 path,
                 locale,

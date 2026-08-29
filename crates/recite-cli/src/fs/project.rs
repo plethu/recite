@@ -2,6 +2,7 @@ use std::collections::BTreeMap;
 use std::fs;
 use std::path::{Path, PathBuf};
 
+use recite_config::discover_project;
 use recite_core::{
     Diagnostic, DiagnosticArgumentValue, ProjectFreshnessInput, ProjectManifest,
     ProjectManifestSource, ProjectSchema, SchemaFingerprint,
@@ -10,38 +11,50 @@ use recite_core::{
     },
 };
 
-use super::paths::{display_path, resolve_project_path};
+use super::paths::resolve_project_path;
 use super::project_asset::decode_project_asset;
 use super::project_diagnostics::project_diagnostic;
 use super::project_sources::read_project_sources;
 use super::schema::{LoadedSchema, load_schema};
 use crate::error::CliError;
 
-const PROJECT_MANIFEST_FILE: &str = "recite.project.toml";
-
 pub(crate) fn validate_project(project_root: PathBuf) -> Result<Vec<Diagnostic>, CliError> {
-    let manifest_path = project_root.join(PROJECT_MANIFEST_FILE);
-    let manifest_source = fs::read_to_string(&manifest_path).map_err(|source| CliError::Read {
-        path: manifest_path.clone(),
-        source,
-    })?;
-    let manifest_file = display_path(&manifest_path);
-    let report = ProjectManifest::load_str_with_spans(manifest_file, &manifest_source);
-    let mut diagnostics = report.diagnostics;
-    let Some(manifest_source) = report.source else {
-        return Ok(diagnostics);
+    let report = match discover_project(&project_root) {
+        Ok(report) => report,
+        Err(recite_config::ProjectDiscoveryError::Malformed { diagnostics, .. }) => {
+            return Ok(diagnostics);
+        }
+        Err(source) => return Ok(vec![source.as_core_diagnostic()]),
     };
+    let discovered = report.manifest();
+    let project_root = discovered.project_root().to_owned();
+    let manifest_source = discovered.source();
+    let mut diagnostics = report
+        .diagnostics()
+        .iter()
+        .map(recite_config::DiscoveryDiagnostic::as_core_diagnostic)
+        .collect::<Vec<_>>();
+
+    let contains_invalid_utf8_source = report.diagnostics().iter().any(|diagnostic| {
+        matches!(
+            diagnostic,
+            recite_config::DiscoveryDiagnostic::NonUtf8Source { .. }
+        )
+    });
+    if !report.is_complete() && !contains_invalid_utf8_source {
+        return Ok(diagnostics);
+    }
 
     let loaded_schema = load_project_schema(&project_root, manifest_source.manifest())?;
     diagnostics.extend(loaded_schema.diagnostics.iter().cloned());
     diagnostics.extend(validate_project_manifest_source(
-        &manifest_source,
+        manifest_source,
         loaded_schema.schema.as_ref(),
     ));
 
     diagnostics.extend(validate_project_asset_freshness(
         &project_root,
-        &manifest_source,
+        manifest_source,
         match (
             loaded_schema.schema.as_ref(),
             loaded_schema.diagnostics.is_empty(),

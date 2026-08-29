@@ -3,7 +3,7 @@ use recite_ui::{UiCatalog, UiLocale};
 use super::SnapshotGeneration;
 use super::project_index::{LiveProjectSnapshot, SavedProjectIndex};
 use super::schema_index::SchemaIndex;
-use super::{LspWorkspace, WorkspaceConfig};
+use super::{DiagnosticRefresh, LspWorkspace, WorkspaceConfig};
 use crate::diagnostics::DiagnosticSource;
 use crate::documents::OpenDocumentStore;
 
@@ -14,7 +14,7 @@ impl LspWorkspace {
     }
 
     pub(crate) fn with_ui_catalog(config: WorkspaceConfig, ui_catalog: UiCatalog) -> Self {
-        let saved = SavedProjectIndex::discover(&config.roots);
+        let saved = SavedProjectIndex::discover(&config);
         let schema = SchemaIndex::load(config.schema_path);
         let documents = OpenDocumentStore::default();
         let generation = SnapshotGeneration(0);
@@ -45,6 +45,23 @@ impl LspWorkspace {
                 })
             })
             .collect()
+    }
+
+    pub(crate) fn project_diagnostics(&self) -> Option<DiagnosticRefresh> {
+        let uri = self
+            .saved
+            .manifest_path()
+            .and_then(crate::paths::file_path_to_uri)?;
+        if self.saved.diagnostics().is_empty() {
+            return None;
+        }
+        Some(DiagnosticRefresh::Publish(super::DocumentDiagnostics {
+            uri,
+            text: self.saved.manifest_text().to_owned(),
+            version: None,
+            diagnostics: self.saved.diagnostics().to_vec(),
+            generation: self.generation,
+        }))
     }
 }
 
