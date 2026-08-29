@@ -24,20 +24,9 @@ fn malformed_manifest_does_not_fall_back_to_saved_walker() {
 }
 
 #[test]
-fn project_discovery_correction_regressions() {
-    project_indexes::discovery_transitions::malformed_manifest_stays_fail_closed_across_file_lifecycle();
-    project_indexes::discovery_transitions::manifestless_refresh_preserves_discovery_candidate();
-    project_indexes::discovery_transitions::multi_root_documents_keep_project_relative_keys();
-    #[cfg(unix)]
-    project_indexes::discovery_transitions::symlink_alias_replacement_reconciles_canonical_identity(
-    );
-    project_indexes::discovery_transitions::manifest_refresh_clears_removed_saved_diagnostics_only(
-    );
-}
-
-#[test]
 fn manifest_refresh_is_atomic_and_preserves_open_overlay() {
     project_indexes::manifest_refresh_is_atomic_and_preserves_open_overlay();
+    project_indexes::discovery_transitions::all();
 }
 
 #[cfg(unix)]

@@ -5,6 +5,7 @@ mod project_refresh;
 mod schema_index;
 #[path = "semantic.rs"]
 mod semantic;
+mod snapshot;
 mod ui;
 
 use std::fs;
@@ -17,9 +18,9 @@ use recite_core::Diagnostic;
 use recite_ui::UiCatalog;
 
 pub(crate) use config::WorkspaceConfig;
-pub(crate) use project_index::LiveProjectSnapshot;
 use project_index::{SavedDocument, SavedProjectIndex};
 use schema_index::SchemaIndex;
+pub(crate) use snapshot::LiveProjectSnapshot;
 
 use crate::documents::{DocumentChangeResult, OpenDocument, OpenDocumentStore};
 use crate::features;

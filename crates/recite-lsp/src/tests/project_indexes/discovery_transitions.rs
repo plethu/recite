@@ -5,6 +5,15 @@ use crate::workspace::{DiagnosticRefresh, LspWorkspace, WorkspaceConfig};
 
 use super::super::support::{block_names, file_uri, write_file};
 
+pub(crate) fn all() {
+    malformed_manifest_stays_fail_closed_across_file_lifecycle();
+    manifestless_refresh_preserves_discovery_candidate();
+    multi_root_documents_keep_project_relative_keys();
+    #[cfg(unix)]
+    symlink_alias_replacement_reconciles_canonical_identity();
+    manifest_refresh_clears_removed_saved_diagnostics_only();
+}
+
 pub(crate) fn malformed_manifest_stays_fail_closed_across_file_lifecycle() {
     let temp = TempDir::new().unwrap_or_else(|error| panic!("tempdir: {error}"));
     write_file(temp.path(), "recite.project.toml", "format_version = [\n");

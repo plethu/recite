@@ -1,8 +1,9 @@
 use recite_ui::{UiCatalog, UiLocale};
 
 use super::SnapshotGeneration;
-use super::project_index::{LiveProjectSnapshot, SavedProjectIndex};
+use super::project_index::SavedProjectIndex;
 use super::schema_index::SchemaIndex;
+use super::snapshot::LiveProjectSnapshot;
 use super::{DiagnosticRefresh, LspWorkspace, WorkspaceConfig};
 use crate::diagnostics::DiagnosticSource;
 use crate::documents::OpenDocumentStore;
