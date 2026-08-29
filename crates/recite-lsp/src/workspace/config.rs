@@ -48,7 +48,7 @@ impl WorkspaceConfig {
                         Some(report.clone()),
                         Vec::new(),
                         false,
-                        Some(report.manifest().project_root().to_owned()),
+                        Some(start.clone()),
                         Some(report.manifest().manifest_path().to_owned()),
                     ),
                     Err(recite_config::ProjectDiscoveryError::NotFound { .. }) => {
@@ -67,12 +67,7 @@ impl WorkspaceConfig {
                         None,
                         error.diagnostics(),
                         true,
-                        Some(
-                            error
-                                .manifest_path()
-                                .and_then(|path| path.parent())
-                                .map_or_else(|| start.clone(), PathBuf::from),
-                        ),
+                        Some(start.clone()),
                         error.manifest_path().map(PathBuf::from),
                     ),
                 }

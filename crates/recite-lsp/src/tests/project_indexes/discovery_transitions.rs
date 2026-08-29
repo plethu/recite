@@ -8,6 +8,7 @@ use super::super::support::{block_names, file_uri, write_file};
 pub(crate) fn all() {
     malformed_manifest_stays_fail_closed_across_file_lifecycle();
     manifestless_refresh_preserves_discovery_candidate();
+    nested_discovery_start_survives_manifest_transitions();
     manifestless_multi_root_documents_keep_project_relative_keys();
     multi_root_documents_keep_project_relative_keys();
     #[cfg(unix)]
@@ -202,6 +203,44 @@ pub(crate) fn manifestless_multi_root_documents_keep_project_relative_keys() {
         .filter_map(|summary| summary.project_relative_path())
         .collect::<Vec<_>>();
     assert_eq!(keys, ["first/a.recite", "second/a.recite"]);
+}
+
+pub(crate) fn nested_discovery_start_survives_manifest_transitions() {
+    let temp = TempDir::new().unwrap_or_else(|error| panic!("tempdir: {error}"));
+    let nested = temp.path().join("nested");
+    write_file(temp.path(), "nested/a.recite", ":: nested\n");
+    let parent_manifest = temp.path().join("recite.project.toml");
+    write_file(
+        temp.path(),
+        "recite.project.toml",
+        "format_version = 1\n[discovery]\nsource_roots = [\"nested\"]\n",
+    );
+    let params = serde_json::from_value(json!({
+        "rootUri": file_uri(&nested).as_str(),
+        "capabilities": {},
+    }))
+    .unwrap_or_else(|error| panic!("initialize params: {error}"));
+    let mut workspace = LspWorkspace::new(WorkspaceConfig::from_initialize_params(&params));
+    assert_eq!(block_names(&workspace), ["nested"]);
+
+    workspace.refresh_watched_uri(&file_uri(&parent_manifest));
+    std::fs::remove_file(&parent_manifest).expect("remove parent manifest");
+    workspace.refresh_watched_uri(&file_uri(&parent_manifest));
+
+    let nested_manifest = nested.join("recite.project.toml");
+    write_file(
+        temp.path(),
+        "nested/recite.project.toml",
+        "format_version = 1\n",
+    );
+    workspace.refresh_watched_uri(&file_uri(&nested_manifest));
+    let keys = workspace
+        .snapshot()
+        .summaries()
+        .iter()
+        .filter_map(|summary| summary.project_relative_path())
+        .collect::<Vec<_>>();
+    assert_eq!(keys, ["a.recite"]);
 }
 
 pub(crate) fn multi_root_documents_keep_project_relative_keys() {

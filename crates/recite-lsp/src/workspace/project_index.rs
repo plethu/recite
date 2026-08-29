@@ -148,7 +148,6 @@ impl SavedProjectIndex {
                     .iter()
                     .map(|root| root.path().to_owned())
                     .collect();
-                self.discovery_start = Some(report.manifest().project_root().to_owned());
                 self.manifest = Some(report.manifest().clone());
                 self.manifest_path = Some(report.manifest().manifest_path().to_owned());
                 self.manifest_text = report.manifest().source().source_text();
@@ -166,11 +165,10 @@ impl SavedProjectIndex {
                 self.project_root = common_project_root(&self.fallback_roots);
                 self.roots = self.fallback_roots.clone();
                 self.manifest = None;
-                self.manifest_path = self.manifest_path.clone().or_else(|| {
-                    self.discovery_start
-                        .as_deref()
-                        .map(|path| path.join(recite_config::PROJECT_MANIFEST_FILE))
-                });
+                self.manifest_path = self
+                    .discovery_start
+                    .as_deref()
+                    .map(|path| path.join(recite_config::PROJECT_MANIFEST_FILE));
                 self.manifest_text.clear();
                 self.diagnostics.clear();
                 self.discovery_failed = false;
