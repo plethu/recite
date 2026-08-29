@@ -209,6 +209,11 @@ fn filters_enum_metadata_completion_to_source_symbols() {
 }
 
 #[test]
+fn filters_contextual_domain_completion_to_source_symbols() {
+    availability::filters_contextual_domain_completion_to_source_symbols();
+}
+
+#[test]
 fn schema_hover_preserves_freshness_without_producer_identity() {
     let mut schema = recite_core::ProjectSchema::empty_v1();
     schema.producer_metadata = Some(recite_core::ProducerMetadata {

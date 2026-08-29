@@ -105,6 +105,10 @@ pub(super) fn filters_enum_metadata_completion_to_source_symbols() {
     registry::filters_enum_metadata_completion_to_source_symbols();
 }
 
+pub(super) fn filters_contextual_domain_completion_to_source_symbols() {
+    registry::filters_contextual_domain_completion_to_source_symbols();
+}
+
 pub(super) fn malformed_completion_and_hover_params_return_invalid_params() {
     authoring::malformed_completion_and_hover_params_return_invalid_params();
 }

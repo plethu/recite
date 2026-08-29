@@ -125,6 +125,9 @@ pub(super) fn completes_choice_speaker_metadata_by_schema_type() {
     let temp = TempDir::new().unwrap_or_else(|error| panic!("tempdir: {error}"));
     let mut schema: serde_json::Value =
         serde_json::from_str(authoring_schema()).expect("authoring schema JSON");
+    schema["speakers"]["true"] = json!({});
+    schema["speakers"]["NaN"] = json!({});
+    schema["speakers"]["valid.face"] = json!({});
     schema["metadata"]["speaker"] = json!({
         "targets": ["choice"],
         "type": "speaker"
@@ -164,7 +167,7 @@ pub(super) fn completes_choice_speaker_metadata_by_schema_type() {
                 )
                 .expect("ordinary speaker completion"),
         ),
-        ["hazel", "rhea"],
+        ["NaN", "hazel", "rhea", "true", "valid.face"],
     );
     assert_eq!(
         completion_labels(
@@ -175,7 +178,7 @@ pub(super) fn completes_choice_speaker_metadata_by_schema_type() {
                 )
                 .expect("choice speaker metadata completion"),
         ),
-        ["hazel", "rhea"],
+        ["hazel", "rhea", "valid.face"],
     );
 
     let hover = harness

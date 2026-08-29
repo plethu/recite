@@ -32,11 +32,12 @@ pub(crate) fn schema_value_candidates(
         return BTreeSet::new();
     };
     if let Some(domain_name) = &metadata.domain {
-        return metadata_domain_values(schema, domain_name, text, line, line_index, site);
+        let values = metadata_domain_values(schema, domain_name, text, line, line_index, site);
+        return authorable_symbol_candidates(values.iter());
     }
 
     match &metadata.type_ref {
-        SchemaTypeRef::Speaker => schema.speakers.keys().cloned().collect(),
+        SchemaTypeRef::Speaker => authorable_symbol_candidates(schema.speakers.keys()),
         SchemaTypeRef::Registry(name) => schema
             .registries
             .get(name)
@@ -53,13 +54,15 @@ pub(crate) fn schema_value_candidates(
     }
 }
 
-/// Manifest registries and enums may contain arbitrary semantic strings, but
+/// Schema value collections may contain arbitrary semantic strings, but
 /// completion must only offer values that can be inserted as source symbols.
-/// Speakers and domains intentionally do not use this projection: their
-/// canonical models already guarantee authored values at their boundaries.
-fn authorable_symbol_candidates(values: &BTreeSet<String>) -> BTreeSet<String> {
+/// The ordinary speaker completion path intentionally does not use this
+/// projection: it exposes the canonical speaker registry directly.
+fn authorable_symbol_candidates<'a>(
+    values: impl IntoIterator<Item = &'a String>,
+) -> BTreeSet<String> {
     values
-        .iter()
+        .into_iter()
         .filter(|value| recite_parser::is_metadata_symbol(value))
         .cloned()
         .collect()
