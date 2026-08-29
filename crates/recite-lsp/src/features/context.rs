@@ -73,10 +73,6 @@ fn block_default_speaker(text: &str, line_index: usize) -> SelectorResolution {
 }
 
 fn scalar_symbol(value: &str) -> Option<String> {
-    let value = value
-        .trim_end_matches(',')
-        .trim_end_matches(')')
-        .trim_end_matches(']');
     let mut characters = value.chars();
     let first = characters.next()?;
     ((first.is_ascii_alphabetic() || first == '_')

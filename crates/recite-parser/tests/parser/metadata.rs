@@ -177,16 +177,28 @@ fn malformed_bare_symbol_metadata_values_are_reported() {
         "  Hello.\n",
         "> bad_comma@03ed2d9d217af362fbea mood=hero,alt\n",
         "  Hello.\n",
+        "> bad_paren@14ed2d9d217af362fbea mood=hero)\n",
+        "  Hello.\n",
+        "> bad_bracket@25ed2d9d217af362fbea mood=hero]\n",
+        "  Hello.\n",
     );
 
     let lowered = lower(source);
 
     assert_diagnostic_codes(
         &lowered,
-        ["RECITE_PARSE008", "RECITE_PARSE008", "RECITE_PARSE008"],
+        [
+            "RECITE_PARSE008",
+            "RECITE_PARSE008",
+            "RECITE_PARSE008",
+            "RECITE_PARSE008",
+            "RECITE_PARSE008",
+        ],
     );
     let block = single_block(&lowered);
     assert_eq!(line_statement(block, 0).metadata.len(), 0);
     assert_eq!(line_statement(block, 1).metadata.len(), 0);
     assert_eq!(line_statement(block, 2).metadata.len(), 0);
+    assert_eq!(line_statement(block, 3).metadata.len(), 0);
+    assert_eq!(line_statement(block, 4).metadata.len(), 0);
 }

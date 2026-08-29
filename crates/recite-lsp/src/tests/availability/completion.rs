@@ -193,7 +193,7 @@ pub(super) fn completes_metadata_domain_values_from_schema_context() {
             )
             .expect("inherited speaker contextual metadata completion"),
     );
-    assert_eq!(inherited_speaker, ["flat"]);
+    assert_eq!(inherited_speaker, ["flat", "rhea.face"]);
 
     let metadata_key_context = completion_labels(
         harness

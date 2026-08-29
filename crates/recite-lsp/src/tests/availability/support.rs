@@ -68,7 +68,7 @@ pub(super) fn authoring_schema() -> &'static str {
       "selector": "field:speaker",
       "values_by_context": {
         "hazel": ["smile", "wry", "hazel", "hazel_only"],
-        "rhea": ["flat"]
+        "rhea": ["flat", "rhea.face"]
       },
       "missing_context": { "policy": "fallback", "domain": "portrait_all" },
       "producer_fingerprints": [

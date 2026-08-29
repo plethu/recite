@@ -41,7 +41,7 @@ pub(super) fn word_at(line: &str, line_index: usize, byte_index: usize) -> Optio
 }
 
 fn is_symbol_character(character: char) -> bool {
-    character.is_ascii_alphanumeric() || matches!(character, '_' | '-' | ':')
+    character.is_ascii_alphanumeric() || matches!(character, '_' | '-' | ':' | '.')
 }
 
 pub(super) fn metadata_value_key_at(line: &str, byte_index: usize) -> Option<&str> {
@@ -59,15 +59,9 @@ pub(super) fn metadata_value_key_at(line: &str, byte_index: usize) -> Option<&st
         .find(char::is_whitespace)
         .map_or(line.len(), |index| byte_index + index);
     let token = line.get(token_start..token_end)?;
-    let (key, value) = token.split_once('=')?;
+    let (key, _) = token.split_once('=')?;
     let value_start = token_start + key.len() + 1;
-    let first = value.as_bytes().first().copied()?;
-    (key != "speaker"
-        && !key.is_empty()
-        && !value.is_empty()
-        && (first.is_ascii_alphabetic() || first == b'_')
-        && byte_index >= value_start)
-        .then_some(key)
+    (key != "speaker" && !key.is_empty() && byte_index >= value_start).then_some(key)
 }
 
 pub(super) fn hover_response(value: &str, range: Range) -> Hover {

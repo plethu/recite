@@ -35,9 +35,9 @@ pub(super) fn hover(
 
     let (word, range) = word_at(line, line_index, byte_index)?;
     if let Some(schema) = schema {
-        if let Some(metadata_key) = metadata_value_key_at(line, byte_index)
-            && let Some(site) = selector_site(line)
-            && let Some(value_detail) = super::schema_hover::schema_value_hover(
+        if let Some(metadata_key) = metadata_value_key_at(line, byte_index) {
+            let site = selector_site(line)?;
+            let value_detail = super::schema_hover::schema_value_hover(
                 schema,
                 metadata_key,
                 word,
@@ -48,9 +48,9 @@ pub(super) fn hover(
                     site,
                 },
                 catalog,
-            )
-        {
-            return Some(hover_response(&value_detail, range));
+            );
+
+            return value_detail.map(|value| hover_response(&value, range));
         }
         if let Some(definition) = schema.speakers.get(word) {
             let value = definition.display_name.as_ref().map_or_else(
