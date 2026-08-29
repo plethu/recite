@@ -420,6 +420,29 @@ git -C "$test_root/repo" rm -q crates/demo/src/macro_owner.rs
 git -C "$test_root/repo" commit -q -m remove-macro-owner-fixture
 clean_before_exceptions="$(git -C "$test_root/repo" rev-parse HEAD)"
 
+# Anonymous declaration owners are never identity evidence. Swapping the
+# suppression between identical anonymous consts must remain a new record.
+cat > "$test_root/repo/crates/demo/src/anonymous_owners.rs" <<'EOF'
+#[allow(dead_code)]
+const _: i32 = 0;
+const _: i32 = 0;
+EOF
+git -C "$test_root/repo" add .
+git -C "$test_root/repo" commit -q -m add-anonymous-owner-baseline
+anonymous_owner_base_sha="$(git -C "$test_root/repo" rev-parse HEAD)"
+cat > "$test_root/repo/crates/demo/src/anonymous_owners.rs" <<'EOF'
+const _: i32 = 0;
+#[allow(dead_code)]
+const _: i32 = 0;
+EOF
+git -C "$test_root/repo" add .
+git -C "$test_root/repo" commit -q -m reject-anonymous-owner-reuse
+anonymous_owner_sha="$(git -C "$test_root/repo" rev-parse HEAD)"
+check_fails "$anonymous_owner_base_sha" "$anonymous_owner_sha" "owner=unstable"
+git -C "$test_root/repo" rm -q crates/demo/src/anonymous_owners.rs
+git -C "$test_root/repo" commit -q -m remove-anonymous-owner-fixture
+clean_before_exceptions="$(git -C "$test_root/repo" rev-parse HEAD)"
+
 # Matching candidates are partitioned by path and category, and lint-list
 # changes retain the lexical owner. These hostile pairs must remain `new`
 # rather than laundering through a broad/module or test baseline elsewhere.

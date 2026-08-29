@@ -412,6 +412,8 @@ def next_scope(source: str, start: int, inner: bool) -> tuple[str, str, int, boo
     components = tokens[declaration_index + 1:]
     if not any(component and is_ident_start(component[0]) for component in components):
         return "item", "unstable", index, False
+    if any(component in {"_", "r#_"} for component in components):
+        return "item", "unstable", index, False
     if kind == "mod":
         return "module", structured_owner(kind, components), index, True
     if kind == "fn":
