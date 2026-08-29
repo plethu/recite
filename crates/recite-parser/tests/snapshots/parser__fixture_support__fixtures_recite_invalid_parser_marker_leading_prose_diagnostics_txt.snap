@@ -1,0 +1,21 @@
+---
+source: crates/recite-parser/tests/../../../tests/support/fixtures.rs
+expression: actual
+---
+diagnostics:
+- code: RECITE_PARSE011
+  severity: Error
+  message: malformed divert target
+  file: fixtures/recite/invalid/parser_marker_leading_prose.recite
+  line: 3
+  column: 12
+  end_line: 3
+  end_column: 13
+- code: RECITE_PARSE013
+  severity: Error
+  message: malformed condition expression: expected '(' after function name
+  file: fixtures/recite/invalid/parser_marker_leading_prose.recite
+  line: 4
+  column: 12
+  end_line: 4
+  end_column: 13

@@ -2,6 +2,8 @@ use recite_core::{
     AvailabilityReasonId, ChoiceId, EffectId, LineId, MetadataEntry, SourceSpan, SpeakerId,
 };
 
+use crate::locale::PluralResolutionAttempt;
+
 /// Structured output emitted by runtime traversal.
 #[derive(Clone, Debug, PartialEq)]
 pub enum DialogueEvent {
@@ -23,6 +25,37 @@ pub struct DialogueLine {
     pub text: String,
     pub speaker: Option<SpeakerId>,
     pub metadata: Vec<MetadataEntry>,
+    pub plural: Option<DialoguePlural>,
+}
+
+/// Structured plural provenance attached to a delivered line.
+///
+/// This contains source forms and resolution metadata only. Localized
+/// templates remain available through [`crate::DialogueTrace`].
+#[derive(Clone, Debug, PartialEq)]
+pub struct DialoguePlural {
+    pub singular_source_text: String,
+    pub plural_source_text: String,
+    pub count: i64,
+    pub selected_arm: usize,
+    pub resolution: DialoguePluralResolution,
+}
+
+#[derive(Clone, Debug, Eq, PartialEq)]
+pub struct DialoguePluralResolution {
+    pub attempts: Vec<PluralResolutionAttempt>,
+    pub matched_locale: Option<String>,
+    pub matched_context: Option<String>,
+    pub matched_key: Option<String>,
+    pub matched_arm: Option<usize>,
+    pub source_fallback_arm: Option<usize>,
+    pub outcome: DialoguePluralResolutionOutcome,
+}
+
+#[derive(Clone, Debug, Eq, PartialEq)]
+pub enum DialoguePluralResolutionOutcome {
+    Translated,
+    EnglishSourceFallback,
 }
 
 #[derive(Clone, Debug, PartialEq)]

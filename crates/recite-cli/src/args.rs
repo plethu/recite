@@ -24,6 +24,8 @@ pub(crate) enum Command {
     ValidateProject(ProjectRootArgs),
     #[command(name = "check-fresh")]
     CheckFresh(ProjectRootArgs),
+    #[command(name = "check-schema-producer-freshness")]
+    CheckSchemaProducerFreshness(ProducerFreshnessArgs),
     Explain(ExplainArgs),
     Watch(WatchArgs),
     Run(RuntimeArgs),
@@ -57,6 +59,16 @@ pub(crate) struct RequiredSchemaInputArgs {
 #[derive(Debug, Args)]
 pub(crate) struct ProjectRootArgs {
     pub(crate) project_root: PathBuf,
+}
+
+#[derive(Debug, Args)]
+pub(crate) struct ProducerFreshnessArgs {
+    /// Previously exported manifest containing expected producer fingerprints.
+    #[arg(long)]
+    pub(crate) expected: PathBuf,
+    /// Current producer export to compare with the expected manifest.
+    #[arg(long)]
+    pub(crate) actual: PathBuf,
 }
 
 #[derive(Debug, Args)]

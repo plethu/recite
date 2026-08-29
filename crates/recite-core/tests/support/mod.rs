@@ -1,6 +1,9 @@
 #![allow(dead_code)]
 #![cfg(test)]
 
+mod wire_rows;
+pub(crate) use wire_rows::*;
+
 use recite_core::{
     BLAKE3_DIGEST_LEN, COMPILED_ASSET_FORMAT_VERSION_V0, COMPILER_COMPATIBILITY_VERSION_V0,
     CompiledAssetDecodeError, decode_compiled_dialogue_messagepack,
@@ -296,60 +299,6 @@ impl Serialize for WireStatementKind {
             }
             Self::Unknown(tag) => Tagged::<u8>::nil(*tag).serialize(serializer),
         }
-    }
-}
-
-pub(crate) struct WireLine<'a> {
-    pub(crate) id: &'a str,
-    pub(crate) source_text: &'a str,
-    pub(crate) speaker: Option<u32>,
-    pub(crate) metadata: WireRange,
-    pub(crate) source_map: u32,
-}
-
-impl Serialize for WireLine<'_> {
-    fn serialize<S>(&self, serializer: S) -> Result<S::Ok, S::Error>
-    where
-        S: serde::Serializer,
-    {
-        let mut tuple = serializer.serialize_tuple(5)?;
-        tuple.serialize_element(&self.id)?;
-        tuple.serialize_element(&self.source_text)?;
-        tuple.serialize_element(&self.speaker)?;
-        tuple.serialize_element(&self.metadata)?;
-        tuple.serialize_element(&self.source_map)?;
-        tuple.end()
-    }
-}
-
-pub(crate) struct WireChoice<'a> {
-    pub(crate) id: &'a str,
-    pub(crate) source_text: &'a str,
-    pub(crate) metadata: WireRange,
-    pub(crate) availability_requirement: Option<WireConditionExpression<'a>>,
-    pub(crate) availability_requirement_source_text: Option<&'a str>,
-    pub(crate) availability_reason_override: Option<&'a str>,
-    pub(crate) target: Tagged<u32>,
-    pub(crate) echo: Tagged<&'a str>,
-    pub(crate) source_map: u32,
-}
-
-impl Serialize for WireChoice<'_> {
-    fn serialize<S>(&self, serializer: S) -> Result<S::Ok, S::Error>
-    where
-        S: serde::Serializer,
-    {
-        let mut tuple = serializer.serialize_tuple(9)?;
-        tuple.serialize_element(&self.id)?;
-        tuple.serialize_element(&self.source_text)?;
-        tuple.serialize_element(&self.metadata)?;
-        tuple.serialize_element(&self.availability_requirement)?;
-        tuple.serialize_element(&self.availability_requirement_source_text)?;
-        tuple.serialize_element(&self.availability_reason_override)?;
-        tuple.serialize_element(&self.target)?;
-        tuple.serialize_element(&self.echo)?;
-        tuple.serialize_element(&self.source_map)?;
-        tuple.end()
     }
 }
 

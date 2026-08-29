@@ -1,0 +1,33 @@
+msgid ""
+msgstr ""
+"Language: fr\n"
+"Project-Id-Version: recite\n"
+"PO-Revision-Date: 2026-08-27 00:00+0000\n"
+"Last-Translator: Recite\n"
+"Language-Team: Recite\n"
+"MIME-Version: 1.0\n"
+"Content-Type: text/plain; charset=UTF-8\n"
+"Content-Transfer-Encoding: 8bit\n"
+"Plural-Forms: nplurals=2; plural=(n != 1 && n % 10 == 1 ? 0 : 1);\n"
+
+# translator note
+msgctxt "11111111111111111111"
+msgid "First"
+msgstr "Premier"
+msgctxt "22222222222222222222"
+msgid "Second"
+msgid_plural "Seconds"
+msgstr[0] "Deuxième"
+msgstr[1] "Deuxièmes"
+msgctxt "33333333333333333333"
+msgid ""
+msgstr "Empty-source"
+#, fuzzy
+msgctxt "44444444444444444444"
+msgid "Fuzzy"
+msgstr "Fuzzy"
+#~ #. obsolete note
+#~ #: old.po:7
+#~ msgctxt "55555555555555555555"
+#~ msgid "Gone"
+#~ msgstr "Gone"

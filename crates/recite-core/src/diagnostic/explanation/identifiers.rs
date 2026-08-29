@@ -58,4 +58,20 @@ pub(super) const EXPLANATIONS: &[DiagnosticExplanation] = &[
         &["The ID contains unsupported characters or does not match the stable ID format."],
         &["Rename the choice ID to the supported stable ID shape."],
     ),
+    DiagnosticExplanation::new(
+        "RECITE_ID034",
+        DiagnosticCategory::Identifier,
+        "A PO catalogue stable ID is malformed.",
+        &["A PO context or extracted source-ID comment is not a frozen Recite ID."],
+        &["Restore the stable ID and keep its source anchor unchanged."],
+    ),
+    DiagnosticExplanation::new(
+        "RECITE_ID035",
+        DiagnosticCategory::Identifier,
+        "A PO catalogue contains duplicate active durable keys.",
+        &["Two active entries use the same stable context and source text."],
+        &[
+            "Keep one active entry per stable catalogue key; retain stale history as fuzzy or obsolete.",
+        ],
+    ),
 ];

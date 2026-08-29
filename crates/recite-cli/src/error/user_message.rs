@@ -1,0 +1,233 @@
+use crate::error::CliError;
+use crate::fs::display_path;
+use crate::i18n::{Messages, MsgId};
+use recite_ui::{UiArg, UiArgs};
+
+#[cfg(test)]
+mod tests;
+
+impl CliError {
+    pub(crate) fn to_user_message(&self, messages: &Messages) -> String {
+        match self {
+            Self::PlayEof { field } => {
+                messages.format(MsgId::CliErrorPlayEof, [("field", (*field).to_owned())])
+            }
+            Self::PlayInvalidInput(message) => messages.format(
+                MsgId::CliErrorPlayInvalidInput,
+                [("message", message.clone())],
+            ),
+            Self::PlayInterrupted => messages.text(MsgId::CliErrorPlayInterrupted),
+            Self::PlayTuiRequiresTerminal => messages.text(MsgId::CliErrorPlayTuiRequiresTerminal),
+            Self::TuiConfigRead { path, source } => messages.format(
+                MsgId::CliErrorUiConfigRead,
+                [("path", display_path(path)), ("source", source.to_string())],
+            ),
+            Self::TuiConfigToml { path, source } => messages.format(
+                MsgId::CliErrorUiConfigToml,
+                [("path", display_path(path)), ("source", source.to_string())],
+            ),
+            Self::UiLocaleInvalid { path, locale } => messages.format(
+                MsgId::CliErrorUiLocaleInvalid,
+                [("path", display_path(path)), ("locale", locale.clone())],
+            ),
+            Self::DialogueCatalogConflict {
+                path,
+                locale,
+                context,
+                source_text,
+            } => messages.format(
+                MsgId::CliErrorDialogueCatalogConflict,
+                [
+                    ("path", display_path(path)),
+                    ("locale", locale.clone()),
+                    ("context", context.clone()),
+                    ("source_text", source_text.clone()),
+                ],
+            ),
+            Self::DialogueCatalogPluralFormsConflict {
+                path,
+                locale,
+                existing,
+                provided,
+            } => messages.format(
+                MsgId::CliErrorDialogueCatalogPluralFormsConflict,
+                [
+                    ("path", display_path(path)),
+                    ("locale", locale.clone()),
+                    ("existing", existing.clone()),
+                    ("provided", provided.clone()),
+                ],
+            ),
+            Self::DialogueCatalogMalformed { path, line, reason } => {
+                let args = UiArgs::from([
+                    ("path".to_owned(), UiArg::from(display_path(path))),
+                    ("line".to_owned(), UiArg::from(*line)),
+                    (
+                        "reason".to_owned(),
+                        UiArg::from(reason.user_message(messages)),
+                    ),
+                ]);
+                messages.format_args(MsgId::CliErrorDialogueCatalogMalformed, &args)
+            }
+            Self::DialogueCatalogMissingLocale => {
+                messages.text(MsgId::CliErrorDialogueCatalogMissingLocale)
+            }
+            Self::DialogueCatalogSpecInvalid { spec } => messages.format(
+                MsgId::CliErrorDialogueCatalogSpecInvalid,
+                [("spec", spec.clone())],
+            ),
+            Self::DialogueLocaleInvalid { field, locale } => messages.format(
+                MsgId::CliErrorDialogueLocaleInvalid,
+                [("field", (*field).to_owned()), ("locale", locale.clone())],
+            ),
+            Self::Bench { message } => {
+                messages.format(MsgId::CliErrorBench, [("message", message.clone())])
+            }
+            Self::Benchmark(error) => {
+                messages.format(MsgId::CliErrorBenchmark, [("message", error.to_string())])
+            }
+            Self::DecodeAsset { path, source } => messages.format(
+                MsgId::CliErrorDecodeAsset,
+                [("path", display_path(path)), ("source", source.to_string())],
+            ),
+            Self::Diagnostics => messages.text(MsgId::CliErrorDiagnostics),
+            Self::DiagnosticRendering { source } => messages.format(
+                MsgId::CliErrorDiagnosticRendering,
+                [("source", source.clone())],
+            ),
+            Self::FixtureChoiceIndexOutOfRange {
+                index,
+                choice_count,
+                prompt_keys,
+            } => {
+                let args = UiArgs::from([
+                    ("index".to_owned(), UiArg::from(*index)),
+                    ("prompt_keys".to_owned(), UiArg::from(prompt_keys.join("|"))),
+                    ("choice_count".to_owned(), UiArg::from(*choice_count)),
+                ]);
+                messages.format_args(MsgId::CliErrorFixtureChoiceIndex, &args)
+            }
+            Self::FixtureChoiceNotInPrompt {
+                choice,
+                prompt_keys,
+            } => messages.format(
+                MsgId::CliErrorFixtureChoiceNotInPrompt,
+                [
+                    ("choice", choice.clone()),
+                    ("prompt_keys", prompt_keys.join("|")),
+                ],
+            ),
+            Self::FixtureToml { path, source } => messages.format(
+                MsgId::CliErrorFixtureToml,
+                [("path", display_path(path)), ("source", source.to_string())],
+            ),
+            Self::AssetMetadata { path, source } => messages.format(
+                MsgId::CliErrorAssetMetadata,
+                [("path", display_path(path)), ("source", source.to_string())],
+            ),
+            Self::AssetNotFile { path } => {
+                messages.format(MsgId::CliErrorAssetNotFile, [("path", display_path(path))])
+            }
+            Self::MissingPath(path) => {
+                messages.format(MsgId::CliErrorMissingPath, [("path", display_path(path))])
+            }
+            Self::MissingFixtureChoice { prompt_keys } => messages.format(
+                MsgId::CliErrorMissingFixtureChoice,
+                [("prompt_keys", prompt_keys.join("|"))],
+            ),
+            Self::NoInputs => messages.text(MsgId::CliErrorNoInputs),
+            Self::OutputOverwritesInput { output, input } => messages.format(
+                MsgId::CliErrorOutputOverwritesInput,
+                [
+                    ("input", display_path(input)),
+                    ("output", display_path(output)),
+                ],
+            ),
+            Self::BlockingEffectNeedsAcknowledgement { effect } => {
+                messages.format(MsgId::CliErrorBlockingEffect, [("effect", effect.clone())])
+            }
+            Self::BenchJson(error) => {
+                messages.format(MsgId::CliErrorBenchJson, [("error", error.to_string())])
+            }
+            Self::TraceJson(error) => {
+                messages.format(MsgId::CliErrorTraceJson, [("error", error.to_string())])
+            }
+            Self::UnknownPrompt { line, choices } => messages.format(
+                MsgId::CliErrorUnknownPrompt,
+                [
+                    ("line", line.clone().unwrap_or_else(|| "<none>".to_owned())),
+                    ("choices", choices.join(", ")),
+                ],
+            ),
+            Self::Read { path, source } => messages.format(
+                MsgId::CliErrorRead,
+                [("path", display_path(path)), ("source", source.to_string())],
+            ),
+            Self::ReadDir { path, source } => messages.format(
+                MsgId::CliErrorReadDir,
+                [("path", display_path(path)), ("source", source.to_string())],
+            ),
+            Self::Write { path, source } => messages.format(
+                MsgId::CliErrorWrite,
+                [("path", display_path(path)), ("source", source.to_string())],
+            ),
+            // Domain diagnostic payloads and OS-provided detail strings are
+            // intentionally opaque here. #182 owns their structured
+            // diagnostic templates; keeping these arms explicit prevents a
+            // newly added CLI variant from silently bypassing this boundary.
+            Self::Core(error) => {
+                messages.format(MsgId::CliErrorGeneric, [("message", error.to_string())])
+            }
+            Self::Compile(error) => {
+                messages.format(MsgId::CliErrorGeneric, [("message", error.to_string())])
+            }
+            Self::CompiledValue(error) => {
+                messages.format(MsgId::CliErrorGeneric, [("message", error.to_string())])
+            }
+            Self::Runtime(error) => {
+                messages.format(MsgId::CliErrorGeneric, [("message", error.to_string())])
+            }
+            Self::Io(error) => {
+                messages.format(MsgId::CliErrorGeneric, [("message", error.to_string())])
+            }
+            Self::MalformedCompiledAsset { reason } => messages.format(
+                MsgId::CliErrorMalformedCompiledAsset,
+                [("reason", reason.clone())],
+            ),
+            Self::DiagnosticCodeMalformed { code, suggestion } => {
+                let args = UiArgs::from([
+                    ("code".to_owned(), UiArg::from(code.clone())),
+                    (
+                        "suggestion".to_owned(),
+                        UiArg::from(suggestion.clone().unwrap_or_default()),
+                    ),
+                    (
+                        "has_suggestion".to_owned(),
+                        UiArg::Boolean(suggestion.is_some()),
+                    ),
+                ]);
+                messages.format_args(MsgId::CliErrorDiagnosticCodeMalformed, &args)
+            }
+            Self::DiagnosticCodeUnknown { code, suggestion } => {
+                let args = UiArgs::from([
+                    ("code".to_owned(), UiArg::from(code.clone())),
+                    (
+                        "suggestion".to_owned(),
+                        UiArg::from(suggestion.clone().unwrap_or_default()),
+                    ),
+                    (
+                        "has_suggestion".to_owned(),
+                        UiArg::Boolean(suggestion.is_some()),
+                    ),
+                ]);
+                messages.format_args(MsgId::CliErrorDiagnosticCodeUnknown, &args)
+            }
+            Self::UiCatalog { source } => {
+                messages.format(MsgId::CliErrorUiCatalog, [("source", source.clone())])
+            }
+            Self::Watch { message } => {
+                messages.format(MsgId::CliErrorWatch, [("message", message.clone())])
+            }
+        }
+    }
+}

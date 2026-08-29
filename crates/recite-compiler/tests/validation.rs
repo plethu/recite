@@ -3,7 +3,8 @@
 use recite_compiler::{ValidationReport, validate_source_files, validate_source_files_with_schema};
 use recite_core::{
     Block, BlockId, Choice, ChoiceId, ChoiceTarget, Diagnostic, DivertTarget, Line, LineId,
-    SourceFile, SourcePosition, SourceSpan, SourceText, Statement,
+    SourceFile, SourceMetadata, SourceMetadataEntry, SourceMetadataScalar, SourcePosition,
+    SourceSpan, SourceText, Statement,
 };
 use recite_parser::parse;
 
@@ -19,6 +20,8 @@ mod fixture_support;
 mod fixtures;
 #[path = "validation/ids_blocks_and_references.rs"]
 mod ids_blocks_and_references;
+#[path = "validation/interpolation.rs"]
+mod interpolation;
 #[path = "validation/markup.rs"]
 mod markup;
 #[path = "validation/metadata_schema/mod.rs"]
@@ -52,6 +55,12 @@ fn diagnostic_snapshot_name(source_path: &str) -> String {
 }
 
 fn assert_codes<const N: usize>(report: &ValidationReport, expected: [&str; N]) {
+    for diagnostic in &report.diagnostics {
+        assert!(
+            diagnostic.record().is_ok(),
+            "compiler diagnostic must satisfy its structured record contract: {diagnostic:?}"
+        );
+    }
     assert_eq!(
         report
             .diagnostics

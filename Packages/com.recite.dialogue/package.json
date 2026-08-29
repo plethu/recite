@@ -1,6 +1,6 @@
 {
   "name": "com.recite.dialogue",
-  "version": "0.0.1",
+  "version": "0.1.0",
   "displayName": "Recite Dialogue",
   "description": "Unity runtime adapter for Recite compiled dialogue assets.",
   "unity": "2022.3",

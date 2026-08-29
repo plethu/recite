@@ -130,6 +130,11 @@ impl From<DialogueError> for AdapterError {
             DialogueError::ConditionDepthLimitExceeded { .. } => {
                 AdapterErrorKind::ConditionEvaluationFailed
             }
+            DialogueError::InterpolationValueFailed { .. }
+            | DialogueError::MissingInterpolationValue { .. }
+            | DialogueError::InvalidInterpolationSyntax { .. }
+            | DialogueError::InvalidPluralCount { .. }
+            | DialogueError::LocaleLookupFailed { .. } => AdapterErrorKind::Localisation,
             DialogueError::UnsupportedSessionSnapshotFormat { .. }
             | DialogueError::SessionSnapshotEncodeFailed { .. }
             | DialogueError::SessionSnapshotDecodeFailed { .. }

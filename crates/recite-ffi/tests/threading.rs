@@ -40,7 +40,12 @@ fn session_begin_from_non_owner_thread_is_rejected() {
 
     let name = cstr("ready");
     let register_status = unsafe {
-        recite_session_register_condition(session, name.as_ptr(), ready_true, std::ptr::null_mut())
+        recite_session_register_condition(
+            session,
+            name.as_ptr(),
+            Some(ready_true),
+            std::ptr::null_mut(),
+        )
     };
     assert_eq!(register_status, ReciteStatus::Ok);
 
@@ -95,7 +100,7 @@ fn session_register_condition_from_non_owner_thread_is_rejected() {
             recite_session_register_condition(
                 session,
                 name.as_ptr(),
-                unused_handler,
+                Some(unused_handler),
                 std::ptr::null_mut(),
             )
         }

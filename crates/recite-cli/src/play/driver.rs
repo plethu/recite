@@ -10,6 +10,7 @@ use recite_runtime::{
 use crate::dialogue_locale::{DialogueTraversal, DialogueTraversalPreview};
 use crate::error::CliError;
 use crate::i18n::{Messages, MsgId};
+use recite_ui::{UiArg, UiArgs};
 
 pub(super) struct PlayDriver<'a> {
     asset: &'a CompiledDialogue,
@@ -166,12 +167,12 @@ impl<U: PlayUiAdapter> InteractiveContext<'_, U> {
                         continue;
                     }
                     if index == 0 || index > choices.len() {
-                        let message = self.ui.borrow().message(
+                        let message = self.ui.borrow().message_typed(
                             MsgId::PlayErrorChoiceIndexOutOfRange,
-                            [
-                                ("index", index.to_string()),
-                                ("count", choices.len().to_string()),
-                            ],
+                            UiArgs::from([
+                                ("index".to_owned(), UiArg::from(index)),
+                                ("count".to_owned(), UiArg::from(choices.len())),
+                            ]),
                         );
                         self.ui.borrow_mut().invalid_input(message)?;
                         continue;
@@ -279,6 +280,15 @@ impl<U: PlayUiAdapter> DialogueContext for InteractiveContext<'_, U> {
 
 pub(super) trait PlayUiAdapter {
     fn message(&self, id: MsgId, args: impl IntoIterator<Item = (&'static str, String)>) -> String;
+    fn message_typed(&self, id: MsgId, args: UiArgs) -> String {
+        self.message(
+            id,
+            args.into_iter().map(|(name, value)| {
+                let name: &'static str = Box::leak(name.into_boxed_str());
+                (name, value.to_string())
+            }),
+        )
+    }
     fn start(&mut self, asset: &CompiledDialogue, block: &str) -> Result<(), CliError>;
     fn line(&mut self, line: &DialogueLine) -> Result<(), CliError>;
     fn choice(

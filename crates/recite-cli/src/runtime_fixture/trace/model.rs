@@ -127,6 +127,32 @@ pub(in crate::runtime_fixture) struct TraceLine {
     pub(in crate::runtime_fixture) text: String,
     pub(in crate::runtime_fixture) speaker: Option<String>,
     pub(in crate::runtime_fixture) metadata: Vec<TraceMetadata>,
+    #[serde(skip_serializing_if = "Option::is_none")]
+    pub(in crate::runtime_fixture) plural: Option<TracePlural>,
+}
+
+#[derive(Clone, Debug, Serialize)]
+pub(in crate::runtime_fixture) struct TracePlural {
+    pub(in crate::runtime_fixture) singular_source_text: String,
+    pub(in crate::runtime_fixture) plural_source_text: String,
+    pub(in crate::runtime_fixture) count: i64,
+    pub(in crate::runtime_fixture) selected_arm: usize,
+    pub(in crate::runtime_fixture) attempts: Vec<TracePluralAttempt>,
+    pub(in crate::runtime_fixture) matched_locale: Option<String>,
+    pub(in crate::runtime_fixture) matched_context: Option<String>,
+    pub(in crate::runtime_fixture) matched_key: Option<String>,
+    pub(in crate::runtime_fixture) matched_arm: Option<usize>,
+    pub(in crate::runtime_fixture) source_fallback_arm: Option<usize>,
+    pub(in crate::runtime_fixture) outcome: &'static str,
+}
+
+#[derive(Clone, Debug, Serialize)]
+pub(in crate::runtime_fixture) struct TracePluralAttempt {
+    pub(in crate::runtime_fixture) locale: String,
+    pub(in crate::runtime_fixture) context: String,
+    pub(in crate::runtime_fixture) key: String,
+    pub(in crate::runtime_fixture) selected_arm: Option<usize>,
+    pub(in crate::runtime_fixture) outcome: &'static str,
 }
 
 #[derive(Clone, Debug, Serialize)]
@@ -151,6 +177,7 @@ pub(in crate::runtime_fixture) struct TraceChoiceAvailability {
 pub(in crate::runtime_fixture) struct TraceChoiceAvailabilityReason {
     pub(in crate::runtime_fixture) id: String,
     pub(in crate::runtime_fixture) source_text: String,
+    pub(in crate::runtime_fixture) localized_template: String,
     pub(in crate::runtime_fixture) text: String,
     pub(in crate::runtime_fixture) origin: Option<TraceChoiceAvailabilityReasonOrigin>,
     pub(in crate::runtime_fixture) args: Vec<TraceChoiceAvailabilityReasonArg>,

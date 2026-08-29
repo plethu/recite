@@ -19,8 +19,10 @@ pub(super) const EXPLANATIONS: &[DiagnosticExplanation] = &[
     DiagnosticExplanation::new(
         "RECITE_FRESH003",
         DiagnosticCategory::Freshness,
-        "A compiled asset was produced by an incompatible compiler version or format.",
-        &["The asset predates the supported compiler compatibility boundary."],
+        "A compiled asset was produced with a compiler compatibility version that this Recite version cannot use.",
+        &[
+            "The asset's compiler compatibility version is older or newer than the supported boundary.",
+        ],
         &["Recompile the source with the current Recite compiler."],
     ),
 ];

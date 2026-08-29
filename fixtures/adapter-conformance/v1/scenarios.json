@@ -1750,6 +1750,120 @@
       ]
     },
     {
+      "id": "plural_line_structured_metadata_adapter_runner_required",
+      "title": "Plural line output preserves structured resolution metadata",
+      "requirement_level": "mandatory",
+      "execution_mode": "adapter_runner_required",
+      "capability_gates": [],
+      "adapter_runner_notes": "Adapter suites must compile fixtures/recite/valid/adapter_conformance/plural_runtime.recite, provide the declared non-negative integer count binding, and advance a session with a locale catalogue. Assert that the line output carries both source forms, count, selected arm, matched locale/context/arm when translated, ordered lookup attempts, and explicit English source-fallback provenance when no translation matches. The localized template belongs in trace/debug output only and must not be copied into the structured output metadata.",
+      "steps": [
+        {
+          "operation": {
+            "kind": "compile_fixture",
+            "fixture": "fixtures/recite/valid/adapter_conformance/plural_runtime.recite",
+            "asset_slot": "main"
+          },
+          "expect": {
+            "status": "ok"
+          }
+        },
+        {
+          "operation": {
+            "kind": "start_session",
+            "asset_slot": "main",
+            "locale": "fr-FR"
+          },
+          "expect": {
+            "status": "ok"
+          }
+        },
+        {
+          "operation": {
+            "kind": "advance",
+            "asset_slot": "main"
+          },
+          "expect": {
+            "status": "ok",
+            "event_kind": "line",
+            "line_plural": {
+              "singular_source_text": "You have one letter.",
+              "plural_source_text": "You have {count} letters.",
+              "count": 2,
+              "selected_arm": 1,
+              "resolution": {
+                "attempts": [
+                  {
+                    "locale": "fr-FR",
+                    "context": "5fcf9a1f7b20211f4a92",
+                    "key": "5fcf9a1f7b20211f4a92",
+                    "selected_arm": 1,
+                    "outcome": "matched"
+                  }
+                ],
+                "matched_locale": "fr-FR",
+                "matched_context": "5fcf9a1f7b20211f4a92",
+                "matched_key": "5fcf9a1f7b20211f4a92",
+                "matched_arm": 1,
+                "source_fallback_arm": null,
+                "outcome": "translated"
+              }
+            }
+          }
+        }
+      ]
+    },
+    {
+      "id": "plural_line_reference_driver_source_fallback",
+      "title": "Reference driver executes plural line source fallback with a caller count",
+      "requirement_level": "mandatory",
+      "execution_mode": "reference_driver",
+      "capability_gates": [],
+      "steps": [
+        {
+          "operation": {
+            "kind": "compile_fixture",
+            "fixture": "fixtures/recite/valid/adapter_conformance/plural_runtime.recite",
+            "asset_slot": "main"
+          },
+          "expect": {
+            "status": "ok"
+          }
+        },
+        {
+          "operation": {
+            "kind": "import_asset",
+            "asset_slot": "main"
+          },
+          "expect": {
+            "status": "ok"
+          }
+        },
+        {
+          "operation": {
+            "kind": "start_session",
+            "asset_slot": "main",
+            "interpolation_values": {
+              "count": 2
+            }
+          },
+          "expect": {
+            "status": "ok"
+          }
+        },
+        {
+          "operation": {
+            "kind": "advance",
+            "asset_slot": "main"
+          },
+          "expect": {
+            "status": "ok",
+            "event_kind": "line",
+            "line_text": "You have 2 letters."
+          }
+        }
+      ]
+    },
+    {
       "id": "localisation_error_adapter_runner_required",
       "title": "Localisation import/load failures map to localisation_error",
       "requirement_level": "mandatory",

@@ -101,6 +101,16 @@ source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "7c02d123df017efcdfbd739ef81735b36c5ba83ec3c59c80a9d7ecc718f92e50"
 
 [[package]]
+name = "atomic-write-file"
+version = "0.3.1"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "ae67d5c03ee972c101a1d8db3ddbf8a9c819ad1ea9d6fd9cd385605547b60edb"
+dependencies = [
+ "nix",
+ "rand",
+]
+
+[[package]]
 name = "autocfg"
 version = "1.5.0"
 source = "registry+https://github.com/rust-lang/crates.io-index"
@@ -174,6 +184,23 @@ name = "cfg-if"
 version = "1.0.4"
 source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "9330f8b2ff13f34540b44e946ef35111825727b38d33286ef986142615121801"
+
+[[package]]
+name = "cfg_aliases"
+version = "0.2.2"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "f079e83a288787bcd14a6aea84cee5c87a67c5a3e660c30f557a3d24761b3527"
+
+[[package]]
+name = "chacha20"
+version = "0.10.1"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "d524456ba66e72eb8b115ff89e01e497f8e6d11d78b70b1aa13c0fbd97540a81"
+dependencies = [
+ "cfg-if",
+ "cpufeatures",
+ "rand_core",
+]
 
 [[package]]
 name = "ciborium"
@@ -539,6 +566,7 @@ dependencies = [
  "cfg-if",
  "libc",
  "r-efi",
+ "rand_core",
  "wasip2",
  "wasip3",
 ]
@@ -920,6 +948,18 @@ source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "a846cbc04412cf509efcd8f3694b114fc700a035fb5a37f21517f9fb019f1ebc"
 
 [[package]]
+name = "nix"
+version = "0.31.3"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "cf20d2fde8ff38632c426f1165ed7436270b44f199fc55284c38276f9db47c3d"
+dependencies = [
+ "bitflags 2.11.1",
+ "cfg-if",
+ "cfg_aliases",
+ "libc",
+]
+
+[[package]]
 name = "notify"
 version = "8.2.0"
 source = "registry+https://github.com/rust-lang/crates.io-index"
@@ -1105,6 +1145,17 @@ source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "f8dcc9c7d52a811697d2151c701e0d08956f92b0e24136cf4cf27b57a6a0d9bf"
 
 [[package]]
+name = "rand"
+version = "0.10.2"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "c7f5fa3a058cd35567ef9bfa5e75732bee0f9e4c55fa90477bef2dfcdbc4be80"
+dependencies = [
+ "chacha20",
+ "getrandom",
+ "rand_core",
+]
+
+[[package]]
 name = "rand_chacha"
 version = "0.10.0"
 source = "registry+https://github.com/rust-lang/crates.io-index"
@@ -1143,7 +1194,7 @@ dependencies = [
 
 [[package]]
 name = "recite-benchmarks"
-version = "0.0.1"
+version = "0.1.0"
 dependencies = [
  "blake3",
  "criterion",
@@ -1162,11 +1213,10 @@ dependencies = [
 
 [[package]]
 name = "recite-cli"
-version = "0.0.1"
+version = "0.1.0"
 dependencies = [
  "clap",
  "crossterm",
- "fluent-bundle",
  "notify",
  "ratatui",
  "recite-benchmarks",
@@ -1174,6 +1224,7 @@ dependencies = [
  "recite-core",
  "recite-parser",
  "recite-runtime",
+ "recite-ui",
  "serde",
  "serde_json",
  "tempfile",
@@ -1183,11 +1234,12 @@ dependencies = [
 
 [[package]]
 name = "recite-compiler"
-version = "0.0.1"
+version = "0.1.0"
 dependencies = [
  "insta",
  "recite-core",
  "recite-parser",
+ "recite-ui",
  "rmp-serde",
  "serde",
  "serde-value",
@@ -1198,8 +1250,9 @@ dependencies = [
 
 [[package]]
 name = "recite-core"
-version = "0.0.1"
+version = "0.1.0"
 dependencies = [
+ "atomic-write-file",
  "blake3",
  "compact_str",
  "rmp-serde",
@@ -1207,14 +1260,16 @@ dependencies = [
  "serde-value",
  "serde_bytes",
  "serde_json",
+ "tempfile",
  "thiserror 2.0.18",
  "toml",
+ "toml_edit",
  "unicode-ident",
 ]
 
 [[package]]
 name = "recite-ffi"
-version = "0.0.1"
+version = "0.5.0"
 dependencies = [
  "recite-compiler",
  "recite-core",
@@ -1226,7 +1281,7 @@ dependencies = [
 
 [[package]]
 name = "recite-fixturegen"
-version = "0.0.1"
+version = "0.1.0"
 dependencies = [
  "blake3",
  "clap",
@@ -1242,7 +1297,7 @@ dependencies = [
 
 [[package]]
 name = "recite-godot"
-version = "0.0.1"
+version = "0.1.0"
 dependencies = [
  "godot",
  "recite-compiler",
@@ -1253,13 +1308,14 @@ dependencies = [
 
 [[package]]
 name = "recite-lsp"
-version = "0.0.1"
+version = "0.1.0"
 dependencies = [
  "lsp-server",
  "lsp-types",
  "recite-compiler",
  "recite-core",
  "recite-parser",
+ "recite-ui",
  "serde",
  "serde_json",
  "tempfile",
@@ -1268,23 +1324,38 @@ dependencies = [
 
 [[package]]
 name = "recite-parser"
-version = "0.0.1"
+version = "0.1.0"
 dependencies = [
  "insta",
  "recite-core",
+ "recite-ui",
  "rowan",
 ]
 
 [[package]]
 name = "recite-runtime"
-version = "0.0.1"
+version = "0.1.0"
 dependencies = [
  "recite-compiler",
  "recite-core",
  "rmp-serde",
  "serde",
+ "serde-value",
  "serde_json",
  "thiserror 2.0.18",
+]
+
+[[package]]
+name = "recite-ui"
+version = "0.1.0"
+dependencies = [
+ "fluent-bundle",
+ "fluent-syntax",
+ "recite-core",
+ "serde",
+ "thiserror 2.0.18",
+ "toml",
+ "unic-langid",
 ]
 
 [[package]]
@@ -1498,6 +1569,7 @@ version = "1.0.149"
 source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "83fc039473c5595ace860d8c4fafa220ff474b3fc6bfdb4293327f1a37e94d86"
 dependencies = [
+ "indexmap",
  "itoa",
  "memchr",
  "serde",
@@ -1720,7 +1792,7 @@ dependencies = [
  "indexmap",
  "serde_core",
  "serde_spanned",
- "toml_datetime",
+ "toml_datetime 0.7.5+spec-1.1.0",
  "toml_parser",
  "toml_writer",
  "winnow 0.7.15",
@@ -1733,6 +1805,30 @@ source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "92e1cfed4a3038bc5a127e35a2d360f145e1f4b971b551a2ba5fd7aedf7e1347"
 dependencies = [
  "serde_core",
+]
+
+[[package]]
+name = "toml_datetime"
+version = "1.1.1+spec-1.1.0"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "3165f65f62e28e0115a00b2ebdd37eb6f3b641855f9d636d3cd4103767159ad7"
+dependencies = [
+ "serde_core",
+]
+
+[[package]]
+name = "toml_edit"
+version = "0.25.12+spec-1.1.0"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "d2153edc6955a6c354fad8f5efd38b6a8769bdccf9fe50f8e1329f81b0baa5d7"
+dependencies = [
+ "indexmap",
+ "serde_core",
+ "serde_spanned",
+ "toml_datetime 1.1.1+spec-1.1.0",
+ "toml_parser",
+ "toml_writer",
+ "winnow 1.0.3",
 ]
 
 [[package]]
@@ -2186,6 +2282,9 @@ name = "winnow"
 version = "1.0.3"
 source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "0592e1c9d151f854e6fd382574c3a0855250e1d9b2f99d9281c6e6391af352f1"
+dependencies = [
+ "memchr",
+]
 
 [[package]]
 name = "wit-bindgen"

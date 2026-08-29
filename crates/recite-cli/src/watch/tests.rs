@@ -7,9 +7,17 @@ use notify::{Event, EventKind};
 use recite_core::decode_compiled_dialogue_messagepack;
 use tempfile::TempDir;
 
-use super::build::{BuildStatus, build_once};
+use super::build::{BuildStatus, build_once as build_once_with_messages};
 use super::events::WatchState;
 use super::inputs::collect_project_sources;
+use crate::error::CliError;
+use crate::i18n::{Messages, UiLocale};
+
+fn build_once(state: &mut WatchState, stderr: &mut Vec<u8>) -> Result<BuildStatus, CliError> {
+    let messages = Messages::load(&UiLocale::default()).expect("messages");
+    build_once_with_messages(state, stderr, &messages)
+}
+
 fn write_file(root: &Path, name: &str, source: &str) -> PathBuf {
     let path = root.join(name);
     if let Some(parent) = path.parent() {

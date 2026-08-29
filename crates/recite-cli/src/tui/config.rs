@@ -161,7 +161,7 @@ impl RawConfig {
     fn into_settings(self, path: &Path) -> Result<TuiSettings, CliError> {
         let defaults = TuiSettings::default();
         let locale = match self.ui.locale {
-            Some(locale) => UiLocale::parse(&locale).map_err(|()| CliError::UiLocaleInvalid {
+            Some(locale) => UiLocale::parse(&locale).map_err(|_| CliError::UiLocaleInvalid {
                 path: path.to_owned(),
                 locale,
             })?,

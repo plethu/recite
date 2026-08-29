@@ -13,7 +13,8 @@ pub use condition::{Argument, ConditionCall, ConditionExpression, ConditionGroup
 pub use effect::{Effect, EffectMode};
 pub use source::{
     Block, BlockReference, Choice, ChoiceAvailabilityReasonOverride, ChoiceAvailabilityRequirement,
-    ChoiceEcho, ChoiceTarget, Comment, Divert, DivertTarget, END_DIVERT_TARGET, IfBranch, Line,
-    MatchArm, MatchBranch, MatchPattern, SourceFile, SourceMetadata, SourceMetadataEntry,
-    SourceMetadataScalar, SourceMetadataValue, SourceText, Statement, StatementKind,
+    ChoiceEcho, ChoiceTarget, Comment, Divert, DivertTarget, END_DIVERT_TARGET, IfBranch,
+    InterpolationBinding, InterpolationType, Line, MatchArm, MatchBranch, MatchPattern, SourceFile,
+    SourceMetadata, SourceMetadataEntry, SourceMetadataScalar, SourceMetadataValue, SourceText,
+    Statement, StatementKind,
 };

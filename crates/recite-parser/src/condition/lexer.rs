@@ -2,8 +2,8 @@ use recite_core::SourceSpan;
 
 use crate::source::span_for_text;
 
-use super::ParseError;
 use super::token::{Token, TokenKind};
+use super::{ParseError, ParseErrorKind};
 
 pub(super) struct Lexer<'a> {
     path: &'a str,
@@ -43,7 +43,7 @@ impl<'a> Lexer<'a> {
                 _ => {
                     return Err(ParseError::new(
                         self.span_at_current(),
-                        format!("unexpected character {character:?}"),
+                        ParseErrorKind::UnexpectedCharacter(character),
                     ));
                 }
             }
@@ -112,7 +112,7 @@ impl<'a> Lexer<'a> {
                     let Some(escaped) = self.current_char() else {
                         return Err(ParseError::new(
                             self.span_for_range(start, self.cursor),
-                            "unterminated string literal",
+                            ParseErrorKind::UnterminatedString,
                         ));
                     };
                     match escaped {
@@ -133,7 +133,7 @@ impl<'a> Lexer<'a> {
 
         Err(ParseError::new(
             self.span_for_range(start, self.cursor),
-            "unterminated string literal",
+            ParseErrorKind::UnterminatedString,
         ))
     }
 
@@ -182,7 +182,7 @@ impl<'a> Lexer<'a> {
             let value = text.parse::<f64>().map_err(|_| {
                 ParseError::new(
                     self.span_for_range(start, self.cursor),
-                    "invalid float literal",
+                    ParseErrorKind::InvalidFloat,
                 )
             })?;
             return Ok(self.token(TokenKind::Float(value), start, self.cursor));
@@ -191,7 +191,7 @@ impl<'a> Lexer<'a> {
         let value = text.parse::<i64>().map_err(|_| {
             ParseError::new(
                 self.span_for_range(start, self.cursor),
-                "invalid integer literal",
+                ParseErrorKind::InvalidInteger,
             )
         })?;
         Ok(self.token(TokenKind::Integer(value), start, self.cursor))

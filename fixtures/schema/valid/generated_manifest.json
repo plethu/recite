@@ -12,7 +12,10 @@
     },
     "dialogue_sound_effect": {
       "values": ["snap", "door_close", "rain_window"],
-      "origin": "data/content/dialogue-sound-effects.toml"
+      "origin": {
+        "kind": "asset_path",
+        "id": "data/content/dialogue-sound-effects.toml"
+      }
     }
   },
   "speakers": {
@@ -50,7 +53,10 @@
         { "name": "target", "type": "speaker" },
         { "name": "threshold", "type": "int" }
       ],
-      "origin": "schema/availability.rs"
+      "origin": {
+        "kind": "script_member",
+        "id": "schema/availability.rs"
+      }
     },
     "innkeeper_trust_hint": {
       "template": "The innkeeper is not ready to share that.",

@@ -9,11 +9,12 @@ use super::super::super::validate::{
 use super::field::lower_fields;
 use super::label::lower_label;
 use super::reference::query_result_types;
-use crate::Diagnostic;
+use crate::schema::schema_diagnostic;
 use crate::schema::{
     PresentationAffordanceOutputDefinition, ProjectSchema, ProjectionInput, ProjectionOutputTarget,
     ProjectionQueryDefinition,
 };
+use crate::{Diagnostic, DiagnosticArgumentValue};
 
 #[expect(
     clippy::too_many_arguments,
@@ -31,6 +32,7 @@ pub(super) fn lower_outputs(
     raw_outputs: Vec<Named<RawPresentationAffordanceOutputDefinition>>,
     seen_label_ids: &mut BTreeSet<String>,
     pending_type_refs: &mut Vec<PendingTypeReference>,
+    projector_path: &[String],
 ) -> BTreeMap<String, PresentationAffordanceOutputDefinition> {
     let mut seen = BTreeSet::new();
     let mut lowered = BTreeMap::new();
@@ -41,7 +43,9 @@ pub(super) fn lower_outputs(
     let query_types = query_result_types(schema, queries);
 
     for raw_output in raw_outputs {
-        let output_span = spans.next_key_span(file, source, &raw_output.name);
+        let mut output_path = projector_path.to_vec();
+        output_path.extend(["outputs".to_owned(), raw_output.name.clone()]);
+        let output_span = spans.key_span_at(file, source, &output_path, &raw_output.name);
         validate_manifest_name(
             diagnostics,
             "projection output id",
@@ -49,31 +53,48 @@ pub(super) fn lower_outputs(
             output_span.clone(),
         );
         if !seen.insert(raw_output.name.clone()) {
-            diagnostics.push(Diagnostic::error(
+            diagnostics.push(schema_diagnostic(
                 DUPLICATE_DEFINITION,
+                "diagnostic-schema-003-projection-output",
                 format!(
                     "projector '{projector}' repeats output '{}'",
                     raw_output.name
                 ),
                 output_span,
+                [
+                    (
+                        "projector",
+                        DiagnosticArgumentValue::String(projector.to_owned()),
+                    ),
+                    (
+                        "output",
+                        DiagnosticArgumentValue::String(raw_output.name.clone()),
+                    ),
+                ],
             ));
             continue;
         }
+        let mut target_path = output_path.clone();
+        target_path.push("target".to_owned());
         let target = lower_output_target(
             diagnostics,
             projector,
             &raw_output.name,
             &raw_output.value.target,
-            spans.next_value_span(file, source, &raw_output.value.target),
+            spans.value_span_at(file, source, &target_path, &raw_output.value.target),
         );
-        let kind_span = spans.next_value_span(file, source, &raw_output.value.kind);
+        let mut kind_path = output_path.clone();
+        kind_path.push("kind".to_owned());
+        let kind_span = spans.value_span_at(file, source, &kind_path, &raw_output.value.kind);
         validate_non_empty_string(
             diagnostics,
             "projection output kind",
             &raw_output.value.kind,
             kind_span,
         );
-        let slot_span = spans.next_value_span(file, source, &raw_output.value.slot);
+        let mut slot_path = output_path.clone();
+        slot_path.push("slot".to_owned());
+        let slot_span = spans.value_span_at(file, source, &slot_path, &raw_output.value.slot);
         validate_non_empty_string(
             diagnostics,
             "projection output slot",
@@ -93,6 +114,7 @@ pub(super) fn lower_outputs(
                 &query_types,
                 seen_label_ids,
                 pending_type_refs,
+                &output_path,
             )
         });
         let fields = lower_fields(
@@ -107,6 +129,7 @@ pub(super) fn lower_outputs(
             &input_types,
             &query_types,
             pending_type_refs,
+            &output_path,
         );
         lowered.insert(
             raw_output.name,
@@ -135,12 +158,21 @@ fn lower_output_target(
         "event" => ProjectionOutputTarget::Event,
         "prompt" => ProjectionOutputTarget::Prompt,
         _ => {
-            diagnostics.push(Diagnostic::error(
+            diagnostics.push(schema_diagnostic(
                 MALFORMED_SHAPE,
+                "diagnostic-schema-001-projection-output-target",
                 format!(
                     "projector '{projector}' output '{output}' uses unsupported target '{raw}'"
                 ),
                 span,
+                [
+                    (
+                        "projector",
+                        DiagnosticArgumentValue::String(projector.to_owned()),
+                    ),
+                    ("output", DiagnosticArgumentValue::String(output.to_owned())),
+                    ("target", DiagnosticArgumentValue::String(raw.to_owned())),
+                ],
             ));
             ProjectionOutputTarget::Candidate
         }

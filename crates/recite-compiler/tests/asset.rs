@@ -26,6 +26,9 @@ mod wire_golden;
 #[path = "asset/wire_contract.rs"]
 mod wire_contract;
 
+#[path = "asset/shared_pressure.rs"]
+mod shared_pressure;
+
 #[test]
 fn valid_fixture_compiles_to_runtime_facing_v0_tables() {
     let asset = compile_fixture("fixtures/recite/valid/core_language_spike.recite");
@@ -152,6 +155,50 @@ fn valid_fixture_compiles_to_runtime_facing_v0_tables() {
 }
 
 #[test]
+fn plural_lines_round_trip_both_source_forms_through_wire_and_inspection() {
+    let report = compile_inputs(
+        [CompileInput::new(
+            "dialogue/plural.recite",
+            concat!(
+                ":: start default\n",
+                "> letters@22222222222222222222 bind=(count:int=$remaining)\n",
+                "  You have one letter.\n",
+                "  | You have {count} letters.\n",
+                "-> END\n",
+            ),
+        )],
+        options(),
+    )
+    .expect("plural source compiles");
+    assert!(report.diagnostics.is_empty(), "{:?}", report.diagnostics);
+    let asset = report.asset.expect("plural source emits an asset");
+    let line = &asset.dialogue.lines[0];
+    assert_eq!(line.source_text, "You have one letter.");
+    assert_eq!(
+        line.plural_source_text.as_deref(),
+        Some("You have {count} letters.")
+    );
+    assert_eq!(
+        line.authored_plural_source_text.as_deref(),
+        Some("You have {count} letters.")
+    );
+
+    let decoded = decode_compiled_dialogue_messagepack(&asset.messagepack)
+        .expect("plural asset decodes through the v0 wire mirror");
+    assert_eq!(decoded.lines, asset.dialogue.lines);
+    let inspection: serde_json::Value =
+        serde_json::from_str(&asset.inspection_json).expect("inspection JSON parses");
+    assert_eq!(
+        inspection["lines"][0]["plural_source_text"],
+        "You have {count} letters."
+    );
+    assert_eq!(
+        inspection["lines"][0]["authored_plural_source_text"],
+        "You have {count} letters."
+    );
+}
+
+#[test]
 fn schema_availability_reasons_compile_into_runtime_asset() {
     let schema = load_schema_manifest_str(
         "fixtures/schema/valid/generated_manifest.json",
@@ -214,6 +261,35 @@ fn schema_availability_reasons_compile_into_runtime_asset() {
     assert_eq!(
         asset.dialogue.condition_availability_reasons[0].args[2].value,
         CompiledAvailabilityReasonArgValue::ConditionArg(2)
+    );
+}
+
+#[test]
+fn compiler_consumes_full_manifest_without_mixing_producer_metadata_into_schema_identity() {
+    let schema = load_schema_manifest_str(
+        "fixtures/schema/valid/full_manifest.json",
+        include_str!("../../../fixtures/schema/valid/full_manifest.json"),
+    )
+    .schema
+    .expect("full manifest fixture is valid");
+    let report = compile_inputs_with_schema(
+        [CompileInput::new(
+            "dialogue/start.recite",
+            ":: start default\n> intro@637b1854a7f3ed42f045\n  Hello.\n-> END\n",
+        )],
+        CompileOptions::new(
+            CompilerVersion::new("0.0.1").expect("valid compiler version"),
+            CompiledAssetId::new("dialogue/main.recitec").expect("valid asset id"),
+            SourceMapId::new("dialogue/main.recitec.map").expect("valid source map id"),
+            schema.canonical_fingerprint(),
+        ),
+        &schema,
+    )
+    .expect("compile succeeds");
+    assert!(report.diagnostics.is_empty(), "{:?}", report.diagnostics);
+    assert!(
+        report.asset.is_some(),
+        "producer metadata must not block compile"
     );
 }
 

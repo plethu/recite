@@ -150,6 +150,77 @@ fn valid_fixture_snapshots_lowered_source_shape() {
 }
 
 #[test]
+fn shared_language_pressure_fixture_round_trips_and_lowers_without_diagnostics() {
+    const FIXTURE: &str = "fixtures/recite/valid/language_pressure.recite";
+
+    let source = fixture_source(FIXTURE);
+    let parse = parse(FIXTURE, source.as_str());
+    let lowered = parse.lower_source_file();
+
+    assert_eq!(parse.syntax().text().to_string(), source);
+    assert!(parse.diagnostics().is_empty(), "{:?}", parse.diagnostics());
+    assert!(lowered.diagnostics.is_empty(), "{:?}", lowered.diagnostics);
+    assert_eq!(lowered.source_file.blocks.len(), 2);
+    assert_eq!(lowered.source_file.blocks[0].id.as_str(), "marche.default");
+    assert_eq!(
+        lowered.source_file.blocks[0]
+            .default_speaker
+            .as_ref()
+            .map(|speaker| speaker.as_str()),
+        Some("élise")
+    );
+
+    let Statement::Line(line) = &lowered.source_file.blocks[0].statements[1] else {
+        panic!("expected interpolated line after the fixture comment");
+    };
+    assert_eq!(line.source_id.label(), Some("arrivée.interpolée"));
+    assert_eq!(
+        line.source_id.anchor().map(|anchor| anchor.as_str()),
+        Some("55667788990011223344")
+    );
+    assert_eq!(
+        line.source_text.text,
+        "[slow]The tide is turning, {traveller_name}.[/slow]"
+    );
+    assert_eq!(line.interpolation_bindings.len(), 1);
+    assert_eq!(line.interpolation_bindings[0].name, "traveller_name");
+    assert_eq!(
+        line.metadata
+            .iter()
+            .map(|entry| entry.key.as_str())
+            .collect::<Vec<_>>(),
+        ["mood", "mood"]
+    );
+
+    let Statement::Choice(choice) = &line.statements[0] else {
+        panic!("expected the interpolated nested choice");
+    };
+    assert_eq!(
+        choice.source_id.anchor().map(|anchor| anchor.as_str()),
+        Some("66778899001122334455")
+    );
+    assert_eq!(choice.source_text.text, "Tell me about {topic}.");
+    assert_eq!(choice.interpolation_bindings[0].name, "topic");
+
+    let Statement::Line(plural) = &lowered.source_file.blocks[1].statements[0] else {
+        panic!("expected plural line in the letters block");
+    };
+    assert_eq!(
+        plural
+            .plural_source_text
+            .as_ref()
+            .map(|text| text.text.as_str()),
+        Some("You have {count} letters.")
+    );
+    assert_eq!(plural.interpolation_bindings[0].name, "count");
+    assert_diagnostic_snapshot(&lowered.diagnostics, diagnostic_snapshot_name(FIXTURE));
+    fixture_support::assert_text_snapshot(
+        &lowered_fixture_summary(&lowered),
+        lowered_snapshot_name(FIXTURE),
+    );
+}
+
+#[test]
 fn fixture_snapshots_capture_directive_boundary_diagnostics() {
     const FIXTURE: &str = "fixtures/recite/invalid/parser_directive_boundaries.recite";
 
@@ -198,4 +269,18 @@ fn fixture_snapshots_capture_recoverable_malformed_source() {
     assert_eq!(parse.syntax().text().to_string(), source);
     assert_eq!(single_block(&lowered).id.as_str(), "start");
     assert_diagnostic_snapshot(&lowered.diagnostics, diagnostic_snapshot_name(FIXTURE));
+}
+
+#[test]
+fn fixture_snapshots_record_current_marker_leading_prose_recovery() {
+    const FIXTURE: &str = "fixtures/recite/invalid/parser_marker_leading_prose.recite";
+
+    let source = fixture_source(FIXTURE);
+    let parse = parse(FIXTURE, source.as_str());
+    let lowered = parse.lower_source_file();
+
+    assert_eq!(parse.syntax().text().to_string(), source);
+    assert_diagnostic_snapshot(&lowered.diagnostics, diagnostic_snapshot_name(FIXTURE));
+    assert_eq!(lowered.source_file.blocks.len(), 1);
+    assert_eq!(lowered.source_file.blocks[0].statements.len(), 1);
 }

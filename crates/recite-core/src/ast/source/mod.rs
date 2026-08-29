@@ -2,6 +2,7 @@ mod branch;
 mod choice;
 mod divert;
 mod document;
+mod interpolation;
 mod line;
 mod metadata;
 mod statement;
@@ -13,6 +14,7 @@ pub use choice::{
 };
 pub use divert::{BlockReference, Divert, DivertTarget, END_DIVERT_TARGET};
 pub use document::{Block, SourceFile};
+pub use interpolation::{InterpolationBinding, InterpolationType};
 pub use line::{Line, SourceText};
 pub use metadata::{
     SourceMetadata, SourceMetadataEntry, SourceMetadataScalar, SourceMetadataValue,

@@ -31,6 +31,7 @@
 
 mod body;
 mod condition;
+mod diagnostic_presentation;
 mod diagnostics;
 mod header;
 mod layout;

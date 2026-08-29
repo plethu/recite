@@ -53,7 +53,7 @@ pub(crate) fn run_watch_command(
             [("path", display_path(&state.project_root))]
         )
     )?;
-    let result = build_once(&mut state, stderr);
+    let result = build_once(&mut state, stderr, messages);
     report_build_result(stderr, result, messages)?;
     writeln!(stderr, "{}", messages.text(MsgId::WatchWaitingForChanges))?;
 
@@ -79,7 +79,7 @@ pub(crate) fn run_watch_command(
 
         drain_debounce(&receiver, &state, stderr, messages)?;
         writeln!(stderr, "{}", messages.text(MsgId::WatchRebuilding))?;
-        let result = build_once(&mut state, stderr);
+        let result = build_once(&mut state, stderr, messages);
         report_build_result(stderr, result, messages)?;
     }
 }
@@ -94,10 +94,7 @@ fn report_build_result(
             writeln!(
                 stderr,
                 "{}",
-                messages.format(
-                    MsgId::WatchBuildSucceeded,
-                    [("count", asset_count.to_string())]
-                )
+                messages.format(MsgId::WatchBuildSucceeded, [("count", asset_count)])
             )?;
         }
         Ok(BuildStatus::Diagnostics) => {

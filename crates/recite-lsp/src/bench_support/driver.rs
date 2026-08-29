@@ -104,7 +104,10 @@ impl LspBenchmarkDriver {
             &text,
             diagnostics.version,
             &diagnostics.diagnostics,
+            &self.workspace.ui_catalog,
+            &self.workspace.diagnostic_sources(),
         )
+        .unwrap_or_else(|error| panic!("LSP benchmark diagnostic publication failed: {error}"))
         .diagnostics
         .len()
     }

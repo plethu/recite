@@ -1074,14 +1074,14 @@ Localisable text may interpolate named values supplied by the caller.
 Placeholders use curly-brace syntax. Each placeholder is `{name}`, where `name` is a lowercase ASCII identifier (letters, digits, underscores; must start with a letter). Whitespace inside the braces is not permitted.
 
 ```text
-> letters_001@c6df367933e543042076 speaker=narrator count=$letters_remaining
+> letters_001@c6df367933e543042076 speaker=narrator bind=(letters_remaining:int=$letters_remaining)
   You have {letters_remaining} letters.
 ```
 
-Placeholders must be declared on the line header using `name=$value_name` attributes. Each attribute binds a placeholder name to a caller-supplied value at delivery time.
+Placeholders must be declared on the line header using grouped `bind=(name:type=$value_name)` attributes. Each attribute binds a placeholder name to a caller-supplied typed value at delivery time. The same clause is accepted on choice headers. `type` is one of `string`, `int`, `float`, or `bool`; grouped binding syntax is the only v1 binding form.
 
 - An undeclared placeholder is a validation error.
-- A declared attribute that is not referenced in the line's text is a warning; the caller must still provide the value.
+- A declared attribute that is not referenced in the line's text is a validation error; remove the unused binding before compiling.
 - The `$` sigil distinguishes runtime-bound references from metadata symbols
   and literal strings (`portrait=flat`, `caption="Door closes"`). `$name`
   metadata values remain reserved until explicit runtime-bound metadata support
@@ -1095,28 +1095,28 @@ Interpolation rules:
 - The runtime substitutes placeholders after locale lookup, before delivering the line text on `DialogueLine.text`. `DialogueLine.source_text` retains the unsubstituted source for diagnostics and fallback.
 - Literal `{` and `}` in source text must be escaped as `\{` and `\}`. Escapes are preserved through extraction; the runtime emits literal braces in `text` and `source_text`.
 
-Caller-supplied values are threaded through `DialogueContext`. Missing values for declared attributes are a structured runtime error, not silent omission.
+Caller-supplied values are supplied through an explicit typed interpolation value provider/map separate from `DialogueContext` and serialised session state. Missing values for declared attributes are a structured runtime error, not silent omission.
 
 Determinism: same line id, same declared values, same locale → same delivered text.
 
 ### 5.11 Plural Lines
 
-Lines whose text varies by count declare two source forms — singular and plural — using a continuation line prefixed with `|`. Selection between forms is governed by gettext/CLDR plural rules per locale, not by recite.
+Lines whose text varies by count declare two source forms — singular and plural — using a continuation line prefixed with `|`. Selection between forms is governed by the locale's validated gettext `Plural-Forms` expression, not by recite source syntax.
 
 ```text
-> letters_001@d6e98b87e1e0a4699603 speaker=narrator count=$letters_remaining
+> letters_001@d6e98b87e1e0a4699603 speaker=narrator bind=(count:int=$letters_remaining)
   You have one letter.
-  | You have {letters_remaining} letters.
+  | You have {count} letters.
 ```
 
 Plural line rules:
 
-- The line header must include a `count=$<name>` attribute. The bound value must resolve to an integer.
+- The line header must include a grouped `bind=(count:int=$<name>)` attribute. The bound value must resolve to a non-negative integer at delivery time.
 - The singular form is the first body line. The plural form is the immediately following body line prefixed with `|`. Exactly two source forms are permitted; additional plural arms for translated locales live in `.po` (see §9.7).
 - Both forms must be valid localisable text and may contain interpolation placeholders and inline markup.
 - The placeholder bound by `count` may, but need not, appear in either form.
 - POT extraction emits the line as a single entry with `msgid`, `msgid_plural`, and `msgstr[N]` arms (§9.7).
-- The runtime resolves which form to deliver via the locale provider's plural lookup, supplying the count value. If the locale provider returns no translation, the runtime falls back to the source forms using English CLDR rules (`n == 1 → singular`, otherwise plural).
+- The runtime resolves which form to deliver via the locale provider's plural lookup, supplying the count value. If the locale provider returns no translation, the runtime falls back to the source forms using the English rule (`n == 1 → singular`, otherwise plural).
 - Plurals compose with variants (§9.5): `id&formal` may be a plural line.
 
 Multiline body prose is not permitted on plural lines in v1. If a plural line needs more than one paragraph, split it into separate adjacent lines.
@@ -1439,13 +1439,19 @@ pub struct DialogueLine {
     pub text: String,
     pub speaker: Option<SpeakerId>,
     pub metadata: Vec<MetadataEntry>,
+    pub plural: Option<DialoguePlural>,
     pub pending_deferred_effects: Vec<DialogueEffectRequest>,
 }
 ```
 
 `text` is the resolved localized text.
 
-`source_text` is retained for diagnostics, fallback, tests, and gettext semantics.
+`source_text` is the selected decoded source form, retained for diagnostics,
+fallback, tests, and gettext semantics. For a plural line, the optional
+`DialoguePlural.singular_source_text` and
+`DialoguePlural.plural_source_text` fields are the authored/raw source forms;
+they are not localized templates and are not replaced by the selected decoded
+compatibility form in `DialogueLine.source_text`.
 
 ### 8.5 Choice Model
 
@@ -1686,7 +1692,7 @@ pub trait LocaleProvider {
         domain: TextDomain,
         locale: &LocaleId,
         variant: Option<&str>,
-    ) -> Option<String>;
+    ) -> Result<Option<String>, LocaleError>;
 }
 ```
 
@@ -1698,7 +1704,7 @@ If no translation is found for the requested locale, the locale provider must at
 
 The chain is the responsibility of the locale provider implementation. The spec requires:
 
-- The terminal fallback is always the source text (`msgid`, or for plural lines `msgid` / `msgid_plural` selected by English CLDR rules).
+- The terminal fallback is always the source text (`msgid`, or for plural lines `msgid` / `msgid_plural` selected by the English rule `n == 1`).
 - Each step in the chain — including the terminal source fallback — must be observable in diagnostics or trace mode so missing translations and unintended fallbacks can be caught in tests.
 - Fallback resolution must be deterministic for a given `(id, source, locale, variant, count)` tuple.
 
@@ -1721,7 +1727,7 @@ Lookup priority:
 
 Variant selection must be explicit and deterministic. The caller selects a variant either via a session-level setter (`session.set_variant("formal")`) or via a per-call override threaded through `next` / `choose`. The runtime never infers a variant. Lookup priority remains `id&variant` → `id` → source text.
 
-Variants are recite's mechanism for grammatical or register selection (formal/informal, masculine/feminine, polite/casual). They deliberately do not overload `msgctxt` semantically; `msgctxt` carries the full `id&variant` string and remains the stable lookup key. Counts (plural forms, §9.7) are a separate axis resolved by CLDR rules, not by variant lookup.
+Variants are recite's mechanism for grammatical or register selection (formal/informal, masculine/feminine, polite/casual). They deliberately do not overload `msgctxt` semantically; `msgctxt` carries the full `id&variant` string and remains the stable lookup key. Counts (plural forms, §9.7) are a separate axis resolved by the locale's validated gettext rule, not by variant lookup.
 
 ### 9.6 Inline Markup in Translation
 
@@ -1745,14 +1751,22 @@ Plural lines (§5.11) extract to standard gettext plural entries:
 #. speaker: narrator
 msgctxt "5e4d3c2b1a0987654321"
 msgid "You have one letter."
-msgid_plural "You have {letters_remaining} letters."
+msgid_plural "You have {count} letters."
 msgstr[0] ""
 msgstr[1] ""
 ```
 
 The number of `msgstr[N]` arms per locale is determined by the locale's `nplurals` header in the `.po` file. Translators use standard po editors (poedit, weblate, crowdin) without recite-specific tooling.
 
-The locale provider must expose a plural lookup alongside the singular one:
+POT is a locale-neutral template: plural entries always contain exactly two
+empty `msgstr` arms for extraction and deliberately do not contain a
+`Plural-Forms` header. A translated PO catalogue must carry its own validated
+locale header and the number of arms declared there. Editing a POT and loading
+the resulting translated PO are separate operations; the latter cannot borrow
+plural metadata from another catalogue or from the source language.
+
+The locale provider must expose one structured plural resolution alongside the
+singular lookup:
 
 ```rust
 pub trait LocaleProvider {
@@ -1763,9 +1777,9 @@ pub trait LocaleProvider {
         domain: TextDomain,
         locale: &LocaleId,
         variant: Option<&str>,
-    ) -> Option<String>;
+    ) -> Result<Option<String>, LocaleError>;
 
-    fn lookup_plural(
+    fn resolve_plural(
         &self,
         id: &str,
         source_singular: &str,
@@ -1774,14 +1788,21 @@ pub trait LocaleProvider {
         domain: TextDomain,
         locale: &LocaleId,
         variant: Option<&str>,
-    ) -> Option<String>;
+    ) -> Result<PluralResolution, LocaleError>;
 }
 ```
 
+`PluralResolution` carries the optional translated template, matched locale,
+context, and source key, matched arm, and deterministic candidate attempts. An
+attempt records its candidate locale, context, source key, arm selected by
+that candidate's validated header, and outcome. A provider-selected arm is
+authoritative only when that exact catalogue entry supplied the translated
+template.
+
 Lookup priority for plurals mirrors §9.5:
 
-1. `id&variant` plural arm matching the locale's CLDR rule for `count`;
-2. `id` plural arm matching the locale's CLDR rule for `count`;
+1. `id&variant` plural entry matching the locale's validated gettext rule for `count`;
+2. `id` plural entry matching the locale's validated gettext rule for `count`;
 3. source singular (if `count == 1`) or source plural (otherwise).
 
 The fallback chain in §9.4 applies between steps 1 and 2 and between step 2 and step 3.
@@ -1791,6 +1812,11 @@ Plural translation validation must additionally detect:
 - missing required `msgstr[N]` arms for the locale's declared `nplurals`;
 - placeholder mismatch between any `msgstr[N]` and the corresponding source form;
 - locales missing the `Plural-Forms` header in their `.po`.
+
+The provider and catalogue loader share one bounded gettext expression parser
+and evaluator. A catalogue's validated `Plural-Forms` expression is the only
+source of locale-specific arm selection; clients do not embed separate
+locale-specific evaluators.
 
 ## 10. Schema
 
@@ -1830,6 +1856,36 @@ projector definitions, and label templates may also originate in adapter or
 game code. Standalone projects without an engine producer must instead have a
 source-owning declarative producer path; the GUI edits that source and invokes
 deterministic generation rather than editing the manifest.
+
+#### 10.2.1 Standalone TOML source contract
+
+The standalone source-owning producer uses a versioned, map-shaped TOML
+document. Its root `schema_version` is the numeric marker `1`; named schema
+declarations use TOML tables keyed by declaration name, while arrays are
+ordered only where the canonical model gives them semantic order. A
+`[producer]` table with a non-empty `id` is mandatory. Standalone TOML has the
+fixed producer kind `standalone` (an explicit `kind` is validated, not chosen
+by the author). For availability-reason arguments, TOML uses explicit tagged
+values, for example `{ kind = "binding", name = "actor" }` or
+`{ kind = "literal", value = "calm" }`; the JSON `$name` shorthand is not a
+TOML form. For availability-reason mapping literals, generated JSON escapes a
+leading `$` by doubling that character (`$name` remains a binding and `$$name`
+is a literal `$name`); other JSON literal fields retain their existing exact
+string semantics. This is a format boundary, not a tagged JSON form.
+
+TOML duplicate keys or tables are syntax errors from the TOML frontend.
+Declaration/table order is nonsemantic. The source owner retains the CST and
+source spans: an unedited `source_text()` is the exact input, including line
+endings and final-newline policy, and typed edits preserve that policy and
+untouched trivia. TOML lowers directly through the canonical manifest raw and
+validation path; it is not converted through JSON or a second mutable schema
+model. Generated JSON is deterministic, read-only, retains provenance and
+producer freshness metadata, and is accepted by the existing manifest loader.
+The source fingerprint includes producer identity and source-owned semantic
+content while ignoring trivia, map order, generated fields, and diagnostic-only
+provenance; the semantic schema fingerprint remains distinct and provenance
+safe. Producer IDs and fingerprints are the linkage used for stale-output
+comparisons.
 
 Producer APIs should be native to their host ecosystem. A Bevy adapter should
 feel like Rust, Godot adapters should support Godot-facing C# and/or GDScript
@@ -1919,6 +1975,15 @@ for diagnostics, hovers, and stale-schema tooling or explicitly ignore
 non-canonical producer metadata; it must not accidentally treat diagnostic-only
 metadata as semantic validation input.
 
+The v1 pre-1.0 contract deliberately resets producer-origin syntax: origins
+are structured objects containing `kind` and `id` (and optional `label`), not
+legacy strings. This intentional migration break is reported directly by the
+loader so a producer can regenerate its export. Namespaced producer-origin
+extension fields are retained as diagnostic-only JSON values and never affect
+the semantic schema fingerprint. Generated contextual domains must carry
+their resolved `missing_context` policy explicitly; a source-owning producer
+may resolve an omitted authoring option to `diagnostic` before exporting JSON.
+
 JSON Schema is not the authority for Recite semantics. After document-shape
 validation, Recite must lower the manifest into the canonical Rust model and
 run semantic validation there. Semantic validation owns duplicate definitions,
@@ -1930,6 +1995,9 @@ placeholders, diagnostics, and deterministic fingerprinting.
 The Rust schema model should live in `recite-core::schema` and include:
 
 - `ProjectSchema`;
+- `ProducerMetadata`, including optional typed producer identity, overall
+  content fingerprint, export version, inclusion policy, and content freshness
+  fingerprints kept outside the semantic schema fingerprint;
 - `SchemaTypeDefinition`, including enum definitions;
 - `SchemaTypeRef`, covering built-in scalar types, speaker IDs, enum types, and
   registry-backed IDs, and the metadata-only `symbol` scalar;
@@ -2022,7 +2090,7 @@ Rules:
 - Template text is dialogue/project content, not Recite-owned UI text. It follows
   the dialogue localisation path, not the shared Recite UI Fluent resource
   contract used by CLI/TUI, GUI, LSP, and editor extensions.
-- Boolean condition definitions may declare an `availability_reason` mapping. Mapping values bind reason parameters from condition arguments using `$<condition_param>` references or literal values valid for the target parameter type.
+- Boolean condition definitions may declare an `availability_reason` mapping. Mapping values bind reason parameters from condition arguments using `$<condition_param>` references or literal values valid for the target parameter type. In generated JSON, a literal leading dollar is escaped as `$$`; TOML uses the explicit `literal` tag instead.
 - The compiler validates that condition reason mappings reference existing reason IDs, bind every required reason parameter exactly once, do not bind unknown parameters, and produce values compatible with the reason parameter types.
 - A choice-level `reason=<id>` primary reason override must reference an
   existing parameterless availability reason in v1. Referencing a parameterised
@@ -2054,7 +2122,10 @@ Example generated manifest excerpt:
   "registries": {
     "dialogue_sound_effect": {
       "values": ["snap", "door_close", "rain_window"],
-      "origin": "data/content/dialogue-sound-effects.toml"
+      "origin": {
+        "kind": "asset_path",
+        "id": "data/content/dialogue-sound-effects.toml"
+      }
     }
   },
   "speakers": {
@@ -2343,10 +2414,13 @@ Top-level and row arrays use this field order:
   source_map]`.
 - `CompiledStatement`: `[kind, source_map]`.
 - `CompiledMatchArm`: `[pattern, statements, source_map]`.
-- `CompiledLine`: `[id, source_text, speaker, metadata, source_map]`.
+- `CompiledLine`: `[id, source_text, speaker, metadata, source_map,
+  authored_source_text, interpolation_bindings, plural_source_text,
+  authored_plural_source_text]`. The final two values are optional and are
+  appended to the pre-release v0 row for plural source support.
 - `CompiledChoice`: `[id, source_text, metadata, requirement,
   requirement_source_text, availability_reason_override, target, echo,
-  source_map]`.
+  source_map, authored_source_text, interpolation_bindings]`.
 - `CompiledAvailabilityReason`: `[id, template_source_text]`.
 - `CompiledConditionAvailabilityReason`: `[function, reason, args]`.
 - `CompiledAvailabilityReasonArgBinding`: `[name, value]`.
@@ -3183,6 +3257,18 @@ Each diagnostic should include:
 - optional related spans;
 - optional help text.
 
+The core structured diagnostic contract is authoritative for new producers.
+Each structured record has an explicit wire version, stable machine code,
+severity, source span, a canonical kebab-case presentation ID, deterministic
+named typed arguments, ordered related presentations, optional structured help,
+and optional structured explanation/remediation guidance. Core records are
+locale-neutral and do not depend on Fluent; clients resolve presentation IDs at
+their own presentation boundary. The legacy `message` field is retained only
+as an explicitly supplied deterministic en-US compatibility fallback while
+producers migrate. A record's version and closed field shape are compatibility
+boundaries: unsupported versions, unknown fields, and duplicate named
+arguments are rejected rather than silently overwritten.
+
 Diagnostic codes should be namespaced, for example:
 
 - `RECITE_PARSE001`;
@@ -3616,7 +3702,7 @@ Initial non-goals:
 - implementing a full scripting language;
 - hidden arbitrary code execution;
 - result-dependent branching from blocking effects;
-- full CLDR/pluralization engine in core runtime;
+- a full CLDR pluralization engine beyond the bounded gettext `Plural-Forms` rules;
 - a fully general visual node editor or graph-first authoring format for v1;
 - generated host-language bindings unless a later decision promotes them;
 - tying the authoring model to one engine's scripting language;

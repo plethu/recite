@@ -41,51 +41,54 @@ pub(crate) fn run_command(
     match command {
         Command::Validate(args) => {
             let diagnostics = validate_inputs(&args.paths, None)?.into_all();
-            report_diagnostics(stderr, diagnostics.iter())?;
+            report_diagnostics(stderr, messages, diagnostics.iter())?;
             diagnostics
                 .is_empty()
                 .then_some(())
                 .ok_or(CliError::Diagnostics)
         }
-        Command::Compile(args) => compile_command(args, stderr),
-        Command::Extract(args) => extract_command(args, stdout, stderr),
+        Command::Compile(args) => compile_command(args, stderr, messages),
+        Command::Extract(args) => extract_command(args, stdout, stderr, messages),
         Command::CheckIds(args) => {
             let diagnostics = validate_inputs(&args.paths, None)?;
-            report_targeted_diagnostics(stderr, diagnostics, |diagnostic| {
+            report_targeted_diagnostics(stderr, messages, diagnostics, |diagnostic| {
                 diagnostic.code.category() == DiagnosticCategory::Identifier
             })
         }
         Command::CheckMarkup(args) => {
-            let schema = load_optional_schema(args.schema.as_deref(), stderr)?;
+            let schema = load_optional_schema(args.schema.as_deref(), stderr, messages)?;
             let diagnostics = validate_inputs(&args.paths, schema.as_ref())?;
-            report_targeted_diagnostics(stderr, diagnostics, |diagnostic| {
+            report_targeted_diagnostics(stderr, messages, diagnostics, |diagnostic| {
                 diagnostic.code.category() == DiagnosticCategory::Markup
             })
         }
         Command::CheckMetadata(args) => {
             let schema = load_schema(&args.schema)?;
             if !schema.diagnostics.is_empty() {
-                report_diagnostics(stderr, schema.diagnostics.iter())?;
+                report_diagnostics(stderr, messages, schema.diagnostics.iter())?;
                 return Err(CliError::Diagnostics);
             }
 
             let diagnostics = validate_inputs(&args.paths, schema.schema.as_ref())?;
-            report_targeted_diagnostics(stderr, diagnostics, |diagnostic| {
+            report_targeted_diagnostics(stderr, messages, diagnostics, |diagnostic| {
                 diagnostic.code.category() == DiagnosticCategory::Metadata
             })
         }
         Command::ValidateProject(args) | Command::CheckFresh(args) => {
             let diagnostics = validate_project(args.project_root)?;
-            report_diagnostics(stderr, diagnostics.iter())?;
+            report_diagnostics(stderr, messages, diagnostics.iter())?;
             diagnostics
                 .is_empty()
                 .then_some(())
                 .ok_or(CliError::Diagnostics)
         }
+        Command::CheckSchemaProducerFreshness(args) => {
+            crate::schema_freshness::check(args, stdout, stderr, messages)
+        }
         Command::Explain(args) => explain_command(args, stdout, messages),
         Command::Watch(args) => run_watch_command(args, stderr, messages),
-        Command::Run(args) => runtime_command(args, RuntimeOutput::Run, stdout),
-        Command::Trace(args) => trace_command(args, stdout),
+        Command::Run(args) => runtime_command(args, RuntimeOutput::Run, stdout, messages),
+        Command::Trace(args) => trace_command(args, stdout, messages),
         Command::Play(args) => run_play_command(args, stdout, stderr),
         Command::Bench(args) => bench_command(args, stdout),
     }
@@ -154,11 +157,15 @@ fn diagnostic_code_suggestion(input: &str) -> Option<String> {
     suggest_diagnostic_code(input).map(|explanation| explanation.code.as_str().to_owned())
 }
 
-fn compile_command(args: CompileArgs, stderr: &mut dyn Write) -> Result<(), CliError> {
+fn compile_command(
+    args: CompileArgs,
+    stderr: &mut dyn Write,
+    messages: &Messages,
+) -> Result<(), CliError> {
     let input_files = collect_input_files(&args.paths)?;
     reject_output_input_alias(&args.output, &input_files)?;
     let inputs = read_compile_inputs_for_output(&args.output, input_files)?;
-    let schema = load_optional_schema(args.schema.as_deref(), stderr)?;
+    let schema = load_optional_schema(args.schema.as_deref(), stderr, messages)?;
     let options = compile_options(&args.output, schema.as_ref())?;
     let report = if let Some(schema) = &schema {
         compile_inputs_with_schema(inputs, options, schema)?
@@ -166,7 +173,7 @@ fn compile_command(args: CompileArgs, stderr: &mut dyn Write) -> Result<(), CliE
         compile_inputs(inputs, options)?
     };
 
-    report_diagnostics(stderr, report.diagnostics.iter())?;
+    report_diagnostics(stderr, messages, report.diagnostics.iter())?;
     let Some(asset) = report.asset else {
         return Err(CliError::Diagnostics);
     };
@@ -179,20 +186,21 @@ fn extract_command(
     args: ExtractArgs,
     stdout: &mut dyn Write,
     stderr: &mut dyn Write,
+    messages: &Messages,
 ) -> Result<(), CliError> {
     let input_files = collect_input_files(&args.paths)?;
     if let Some(output) = &args.output {
         reject_output_input_alias(output, &input_files)?;
     }
     let inputs = read_compile_inputs_from_files(input_files)?;
-    let schema = load_optional_schema(args.schema.as_deref(), stderr)?;
+    let schema = load_optional_schema(args.schema.as_deref(), stderr, messages)?;
     let report = if let Some(schema) = &schema {
         extract_pot_with_schema(inputs, schema)
     } else {
         extract_pot(inputs)
     };
 
-    report_diagnostics(stderr, report.diagnostics.iter())?;
+    report_diagnostics(stderr, messages, report.diagnostics.iter())?;
     let Some(catalog) = report.catalog else {
         return Err(CliError::Diagnostics);
     };
@@ -210,11 +218,22 @@ fn runtime_command(
     args: RuntimeArgs,
     output: RuntimeOutput,
     stdout: &mut dyn Write,
+    messages: &Messages,
 ) -> Result<(), CliError> {
-    runtime_command_with_options(args, output, RuntimeFixtureOptions::default(), stdout)
+    runtime_command_with_options(
+        args,
+        output,
+        RuntimeFixtureOptions::default(),
+        stdout,
+        messages,
+    )
 }
 
-fn trace_command(args: TraceArgs, stdout: &mut dyn Write) -> Result<(), CliError> {
+fn trace_command(
+    args: TraceArgs,
+    stdout: &mut dyn Write,
+    messages: &Messages,
+) -> Result<(), CliError> {
     runtime_command_with_options(
         args.runtime,
         RuntimeOutput::Trace,
@@ -222,6 +241,7 @@ fn trace_command(args: TraceArgs, stdout: &mut dyn Write) -> Result<(), CliError
             metrics: args.metrics,
         },
         stdout,
+        messages,
     )
 }
 
@@ -230,6 +250,7 @@ fn runtime_command_with_options(
     output: RuntimeOutput,
     options: RuntimeFixtureOptions,
     stdout: &mut dyn Write,
+    messages: &Messages,
 ) -> Result<(), CliError> {
     let asset = load_compiled_asset(&args.asset)?;
     let fixture = load_runtime_fixture(&args.fixture)?;
@@ -247,6 +268,7 @@ fn runtime_command_with_options(
             .as_ref()
             .map(LoadedDialoguePreview::locale_fallbacks),
         options,
+        messages,
     )?;
 
     match output {

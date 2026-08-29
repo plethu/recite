@@ -1,5 +1,8 @@
 use super::*;
 
+#[path = "localisation/shared_pressure.rs"]
+mod shared_pressure;
+
 #[derive(Debug, Default)]
 struct RecordingLocaleProvider {
     translations: BTreeMap<(String, TextDomain, String), String>,
@@ -34,7 +37,7 @@ impl LocaleProvider for RecordingLocaleProvider {
         domain: TextDomain,
         locale: &LocaleId,
         variant: Option<&str>,
-    ) -> Option<String> {
+    ) -> Result<Option<String>, recite_runtime::LocaleError> {
         self.calls.borrow_mut().push(LocaleCall {
             id: id.to_owned(),
             source_text: source_text.to_owned(),
@@ -43,7 +46,7 @@ impl LocaleProvider for RecordingLocaleProvider {
             variant: variant.map(str::to_owned),
         });
 
-        variant
+        Ok(variant
             .and_then(|variant| {
                 self.translations.get(&(
                     lookup_key(id, Some(variant)),
@@ -55,7 +58,27 @@ impl LocaleProvider for RecordingLocaleProvider {
                 self.translations
                     .get(&(lookup_key(id, None), domain, locale.as_str().to_owned()))
             })
-            .cloned()
+            .cloned())
+    }
+
+    fn resolve_plural(
+        &self,
+        _id: &str,
+        _source_singular: &str,
+        _source_plural: &str,
+        _count: i64,
+        _domain: TextDomain,
+        _locale: &LocaleId,
+        _variant: Option<&str>,
+    ) -> Result<recite_runtime::PluralResolution, recite_runtime::LocaleError> {
+        Ok(recite_runtime::PluralResolution {
+            template: None,
+            selected_arm: None,
+            matched_locale: None,
+            matched_context: None,
+            matched_key: None,
+            attempts: Vec::new(),
+        })
     }
 }
 
@@ -298,12 +321,13 @@ fn availability_reasons_are_localised_and_rendered_with_args() {
         DialogueSessionOptions::new().with_locale(locale("en-GB")),
     )
     .expect("starts");
+    let trace = DialogueTrace::new();
 
     let DialogueEvent::Prompt { choices, .. } = runtime_next_with(
         &asset,
         &mut session,
         &context,
-        variant_locale_resolution(&provider, "formal"),
+        variant_locale_resolution(&provider, "formal").with_trace(&trace),
     )
     .expect("emits prompt") else {
         panic!("expected prompt");
@@ -318,6 +342,12 @@ fn availability_reasons_are_localised_and_rendered_with_args() {
         "{subject} does not trust {target} enough ({threshold})."
     );
     assert_eq!(reason.text, "hazel ne fait pas assez confiance a rhea (3).");
+    assert_eq!(
+        trace
+            .localized_availability_template("trust_too_low")
+            .as_deref(),
+        Some("{subject} ne fait pas assez confiance a {target} ({threshold}).")
+    );
     assert_eq!(
         provider
             .calls()

@@ -1,0 +1,11 @@
+{
+  "schema_version": 1,
+  "producer_fingerprints": [
+    {
+      "id": "",
+      "kind": "directory",
+      "algorithm": "blake3",
+      "value": "6f1d"
+    }
+  ]
+}

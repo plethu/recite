@@ -5,8 +5,10 @@ mod choice;
 mod condition;
 mod effect;
 mod flow;
+mod interpolation;
 mod output;
 mod start;
+mod trace;
 
 pub use self::advance::{next, next_with};
 pub(crate) use self::asset::{AssetView, malformed};
@@ -16,3 +18,4 @@ pub(crate) use self::effect::runtime_effect_request_for_trace_counter;
 pub use self::output::LocaleResolution;
 pub(crate) use self::output::dialogue_effect_request;
 pub use self::start::{start_scene, start_scene_with_options};
+pub use self::trace::{DialogueTrace, PluralLineTrace};

@@ -10,8 +10,8 @@ use recite_runtime::{
     ChoiceAvailabilityReasonOrigin, ChoiceAvailabilityReasonTree, ChoiceAvailabilityReasonValue,
     ConditionArgument, ConditionEvaluationError, ConditionExpectedType, ConditionQuery,
     DialogueEffectArgument, DialogueEffectMode, DialogueEffectRequest, DialogueError,
-    DialogueEvent, DialogueSessionOptions, EffectAck, EmptyDialogueContext, LocaleProvider,
-    LocaleResolution, TextDomain, acknowledge_effect, choose as runtime_choose,
+    DialogueEvent, DialogueSessionOptions, DialogueTrace, EffectAck, EmptyDialogueContext,
+    LocaleProvider, LocaleResolution, TextDomain, acknowledge_effect, choose as runtime_choose,
     choose_with as runtime_choose_with, next as runtime_next, next_with as runtime_next_with,
     start_scene, start_scene_with_options,
 };

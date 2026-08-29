@@ -1,6 +1,6 @@
 use crate::{
-    AvailabilityReasonId, BlockId, ChoiceId, EffectId, LineId, ScalarValue, SourceSpan, SpeakerId,
-    Value,
+    AvailabilityReasonId, BlockId, ChoiceId, EffectId, InterpolationType, LineId, ScalarValue,
+    SourceSpan, SpeakerId, Value,
 };
 
 use super::{
@@ -93,6 +93,11 @@ pub enum CompiledDivertTarget {
 pub struct CompiledLine {
     pub id: LineId,
     pub source_text: String,
+    pub plural_source_text: Option<String>,
+    pub authored_source_text: String,
+    pub authored_plural_source_text: Option<String>,
+    pub interpolation_bindings: Vec<CompiledInterpolationBinding>,
+    pub interpolation_mode: CompiledInterpolationMode,
     pub speaker: Option<SpeakerIndex>,
     pub metadata: MetadataRange,
     pub source_map: SourceMapIndex,
@@ -102,6 +107,9 @@ pub struct CompiledLine {
 pub struct CompiledChoice {
     pub id: ChoiceId,
     pub source_text: String,
+    pub authored_source_text: String,
+    pub interpolation_bindings: Vec<CompiledInterpolationBinding>,
+    pub interpolation_mode: CompiledInterpolationMode,
     pub metadata: MetadataRange,
     pub availability_requirement: Option<CompiledConditionExpression>,
     pub availability_requirement_source_text: Option<String>,
@@ -109,6 +117,20 @@ pub struct CompiledChoice {
     pub target: CompiledDivertTarget,
     pub echo: CompiledChoiceEcho,
     pub source_map: SourceMapIndex,
+}
+
+/// Identifies the interpolation wire contract used by a compiled row.
+#[derive(Clone, Copy, Debug, Eq, PartialEq)]
+pub enum CompiledInterpolationMode {
+    Current,
+    Legacy,
+}
+
+#[derive(Clone, Debug, Eq, PartialEq)]
+pub struct CompiledInterpolationBinding {
+    pub name: String,
+    pub value: String,
+    pub value_type: InterpolationType,
 }
 
 #[derive(Clone, Debug, Eq, PartialEq)]

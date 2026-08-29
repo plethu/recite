@@ -47,8 +47,8 @@ impl Lowerer<'_, '_> {
             availability_requirement,
             availability_reason_override,
         } = self.lower_choice_clauses(&choice_fields[field_start..]);
-        let (metadata, echo) = self.lower_choice_metadata(&metadata_fields);
-        let body = self.lower_prose_body(choice_index, true);
+        let (metadata, echo, bindings) = self.lower_choice_metadata(&metadata_fields);
+        let body = self.lower_prose_body(choice_index, true, false);
         let mut target = None;
         let mut statements = Vec::new();
         for statement in body.statements {
@@ -67,6 +67,7 @@ impl Lowerer<'_, '_> {
         )
         .with_source_id(source_id)
         .with_metadata(metadata)
+        .with_interpolation_bindings(bindings)
         .with_echo(echo)
         .with_statements(statements);
         if let Some(requirement) = availability_requirement {
@@ -134,8 +135,7 @@ impl Lowerer<'_, '_> {
                 kv.field_span.clone(),
             )),
             Err(error) => {
-                self.diagnostics
-                    .push(malformed_condition(error.span, error.message));
+                self.diagnostics.push(malformed_condition(error));
                 None
             }
         }

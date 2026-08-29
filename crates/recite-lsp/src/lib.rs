@@ -24,14 +24,14 @@ pub mod bench_support;
 mod capabilities;
 mod diagnostics;
 mod documents;
-mod features;
+pub(crate) mod features;
 mod paths;
 mod position;
 mod server;
 mod summary;
 mod workspace;
 
-pub use server::{ServerError, run_stdio};
+pub use server::{ServerError, run_stdio, run_stdio_with_catalog, run_stdio_with_locale};
 
 #[cfg(test)]
 mod tests;

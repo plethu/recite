@@ -42,6 +42,8 @@ pub(super) struct Lowerer<'source, 'diagnostics> {
 pub(super) struct LoweredProseBody {
     pub(super) text: String,
     pub(super) text_span: SourceSpan,
+    pub(super) plural_text: Option<String>,
+    pub(super) plural_text_span: Option<SourceSpan>,
     pub(super) statements: Vec<Statement>,
     pub(super) next_index: usize,
 }

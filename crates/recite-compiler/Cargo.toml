@@ -23,6 +23,7 @@ thiserror.workspace = true
 
 [dev-dependencies]
 insta.workspace = true
+recite-ui.workspace = true
 serde-value.workspace = true
 
 [lints]

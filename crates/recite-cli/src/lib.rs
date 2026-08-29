@@ -34,6 +34,7 @@ mod i18n;
 mod play;
 mod runtime_fixture;
 mod runtime_format;
+mod schema_freshness;
 mod tui;
 mod watch;
 

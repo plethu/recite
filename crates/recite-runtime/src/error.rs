@@ -74,6 +74,16 @@ pub enum DialogueError {
     },
     #[error("condition expression exceeded maximum evaluation depth {limit}")]
     ConditionDepthLimitExceeded { limit: usize },
+    #[error("interpolation value `{name}` failed: {reason}")]
+    InterpolationValueFailed { name: String, reason: String },
+    #[error("missing interpolation value `{name}`")]
+    MissingInterpolationValue { name: String },
+    #[error("invalid interpolation syntax: {reason}")]
+    InvalidInterpolationSyntax { reason: String },
+    #[error("locale lookup for `{id}` failed: {reason}")]
+    LocaleLookupFailed { id: String, reason: String },
+    #[error("plural count value `{name}` is invalid: {reason}")]
+    InvalidPluralCount { name: String, reason: String },
     #[error("unsupported session snapshot format {snapshot_format_version}")]
     UnsupportedSessionSnapshotFormat { snapshot_format_version: u16 },
     #[error("failed to encode session snapshot: {reason}")]

@@ -1,18 +1,20 @@
 use recite_core::{
     BlockIndex, BlockLookupEntry, BlockLookupTable, Choice, ChoiceIndex, ChoiceLookupEntry,
     ChoiceLookupTable, ChoiceRange, CompiledChoice, CompiledDivertTarget, CompiledEffect,
-    CompiledLine, CompiledMatchArm, CompiledMetadataEntry, CompiledSourceMapEntry, CompiledSpeaker,
-    DivertTarget, Effect, EffectIndex, Line, LineIndex, LineLookupEntry, LineLookupTable, MatchArm,
-    MatchArmIndex, MatchArmRange, MetadataIndex, MetadataRange, ScalarValue, SourceFileIndex,
-    SourceMapIndex, SourceMetadata, SourceMetadataScalar, SourceMetadataValue, SourceSpan,
-    SpeakerId, SpeakerIndex, Value,
+    CompiledInterpolationMode, CompiledLine, CompiledMatchArm, CompiledMetadataEntry,
+    CompiledSourceMapEntry, CompiledSpeaker, DivertTarget, Effect, EffectIndex, Line, LineIndex,
+    LineLookupEntry, LineLookupTable, MatchArm, MatchArmIndex, MatchArmRange, MetadataIndex,
+    MetadataRange, ScalarValue, SourceFileIndex, SourceMapIndex, SourceMetadata,
+    SourceMetadataScalar, SourceMetadataValue, SourceSpan, SpeakerId, SpeakerIndex, Value,
+    decode_interpolation_text,
 };
 
 use super::AssetBuilder;
 use crate::compile::CompileError;
 use crate::compile::convert::{
     compile_argument, compile_choice_echo, compile_condition_expression, compile_effect_mode,
-    compile_match_pattern, effect_id_for, required_choice_id, required_line_id,
+    compile_interpolation_bindings, compile_match_pattern, effect_id_for, required_choice_id,
+    required_line_id,
 };
 use crate::compile::table::{increment_u32_len, usize_to_u32};
 
@@ -30,7 +32,18 @@ impl AssetBuilder<'_> {
 
         self.lines.push(CompiledLine {
             id,
-            source_text: line.source_text.text.clone(),
+            source_text: decode_interpolation_text(&line.source_text.text),
+            plural_source_text: line
+                .plural_source_text
+                .as_ref()
+                .map(|text| decode_interpolation_text(&text.text)),
+            authored_source_text: line.source_text.text.clone(),
+            authored_plural_source_text: line
+                .plural_source_text
+                .as_ref()
+                .map(|text| text.text.clone()),
+            interpolation_bindings: compile_interpolation_bindings(&line.interpolation_bindings),
+            interpolation_mode: CompiledInterpolationMode::Current,
             speaker,
             metadata,
             source_map,
@@ -78,7 +91,10 @@ impl AssetBuilder<'_> {
 
         self.choices.push(CompiledChoice {
             id,
-            source_text: choice.source_text.text.clone(),
+            source_text: decode_interpolation_text(&choice.source_text.text),
+            authored_source_text: choice.source_text.text.clone(),
+            interpolation_bindings: compile_interpolation_bindings(&choice.interpolation_bindings),
+            interpolation_mode: CompiledInterpolationMode::Current,
             metadata,
             availability_requirement,
             availability_requirement_source_text,

@@ -1,8 +1,8 @@
-use recite_core::{MetadataEntry, ScalarValue, SourceSpan, Value};
+use recite_core::{MetadataEntry, SourceSpan, Value};
 use recite_runtime::{
     ChoiceAvailability, ChoiceAvailabilityReason, ChoiceAvailabilityReasonArg,
     ChoiceAvailabilityReasonOrigin, ChoiceAvailabilityReasonTree, ChoiceAvailabilityReasonValue,
-    ChoiceEchoMode, DialogueEffectArgument, DialogueEffectMode,
+    DialogueEffectArgument, DialogueEffectMode,
 };
 
 use crate::adapter::AdapterValue;
@@ -14,15 +14,6 @@ pub(crate) fn source_span_parts(span: &SourceSpan) -> (&str, u32, u32, Option<(u
         span.start.column(),
         span.end.map(|end| (end.line(), end.column())),
     )
-}
-
-pub(crate) fn scalar_value_kind(value: &ScalarValue) -> &'static str {
-    match value {
-        ScalarValue::String(_) => "string",
-        ScalarValue::Integer(_) => "integer",
-        ScalarValue::Float(_) => "float",
-        ScalarValue::Boolean(_) => "boolean",
-    }
 }
 
 pub(crate) fn metadata_entries(entries: &[MetadataEntry]) -> Vec<(&str, &Value)> {
@@ -47,14 +38,6 @@ pub(crate) fn effect_arg_value(argument: &DialogueEffectArgument) -> AdapterValu
         DialogueEffectArgument::Integer(value) => AdapterValue::Integer(*value),
         DialogueEffectArgument::Float(value) => AdapterValue::Float(*value),
         DialogueEffectArgument::Boolean(value) => AdapterValue::Boolean(*value),
-    }
-}
-
-pub(crate) fn choice_echo_name(echo: &ChoiceEchoMode) -> (&'static str, Option<&str>) {
-    match echo {
-        ChoiceEchoMode::None => ("none", None),
-        ChoiceEchoMode::SelectedText => ("selected_text", None),
-        ChoiceEchoMode::ExplicitLine(line_id) => ("explicit_line", Some(line_id.as_str())),
     }
 }
 

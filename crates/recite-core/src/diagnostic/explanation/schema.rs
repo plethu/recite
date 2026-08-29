@@ -6,7 +6,7 @@ pub(super) const EXPLANATIONS: &[DiagnosticExplanation] = &[
         "RECITE_SCHEMA001",
         DiagnosticCategory::Schema,
         "A schema manifest has a malformed shape.",
-        &["The JSON is valid enough to read but does not match the Recite schema model."],
+        &["The manifest is valid enough to read but does not match the Recite schema model."],
         &["Fix the schema field shape reported by the diagnostic."],
     ),
     DiagnosticExplanation::new(

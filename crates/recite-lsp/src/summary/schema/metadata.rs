@@ -3,10 +3,23 @@ pub(crate) struct MetadataDomainSummary {
     pub(crate) name: String,
     pub(crate) kind: MetadataDomainKindSummary,
     pub(crate) provenance: ProvenanceSummary,
+    pub(crate) context_provenance: std::collections::BTreeMap<String, ProvenanceSummary>,
+    pub(crate) flat_value_provenance: std::collections::BTreeMap<String, ProvenanceSummary>,
+    pub(crate) contextual_value_provenance:
+        std::collections::BTreeMap<String, std::collections::BTreeMap<String, ProvenanceSummary>>,
+    pub(crate) producer_fingerprints: Vec<recite_core::ProducerFingerprint>,
 }
 
 impl MetadataDomainSummary {
     pub(super) fn from_definition(name: &str, definition: &MetadataDomainDefinition) -> Self {
+        let provenance = match definition {
+            MetadataDomainDefinition::Flat(domain) => {
+                ProvenanceSummary::from_optional_origin(domain.provenance.origin.as_ref())
+            }
+            MetadataDomainDefinition::Contextual(domain) => {
+                ProvenanceSummary::from_optional_origin(domain.provenance.origin.as_ref())
+            }
+        };
         let kind = match definition {
             MetadataDomainDefinition::Flat(domain) => MetadataDomainKindSummary::Flat {
                 values: domain.values.iter().cloned().collect(),
@@ -30,7 +43,65 @@ impl MetadataDomainSummary {
         Self {
             name: name.to_owned(),
             kind,
-            provenance: ProvenanceSummary::Absent,
+            provenance,
+            context_provenance: match definition {
+                MetadataDomainDefinition::Flat(_) => std::collections::BTreeMap::new(),
+                MetadataDomainDefinition::Contextual(domain) => domain
+                    .provenance
+                    .context_origins
+                    .iter()
+                    .map(|(key, origin)| {
+                        (
+                            key.clone(),
+                            ProvenanceSummary::from_optional_origin(Some(origin)),
+                        )
+                    })
+                    .collect(),
+            },
+            flat_value_provenance: match definition {
+                MetadataDomainDefinition::Flat(domain) => domain
+                    .provenance
+                    .value_origins
+                    .iter()
+                    .map(|(key, origin)| {
+                        (
+                            key.clone(),
+                            ProvenanceSummary::from_optional_origin(Some(origin)),
+                        )
+                    })
+                    .collect(),
+                MetadataDomainDefinition::Contextual(_) => std::collections::BTreeMap::new(),
+            },
+            contextual_value_provenance: match definition {
+                MetadataDomainDefinition::Flat(_) => std::collections::BTreeMap::new(),
+                MetadataDomainDefinition::Contextual(domain) => domain
+                    .provenance
+                    .value_origins
+                    .iter()
+                    .map(|(context, origins)| {
+                        (
+                            context.clone(),
+                            origins
+                                .iter()
+                                .map(|(key, origin)| {
+                                    (
+                                        key.clone(),
+                                        ProvenanceSummary::from_optional_origin(Some(origin)),
+                                    )
+                                })
+                                .collect(),
+                        )
+                    })
+                    .collect(),
+            },
+            producer_fingerprints: match definition {
+                MetadataDomainDefinition::Flat(domain) => {
+                    domain.provenance.producer_fingerprints.clone()
+                }
+                MetadataDomainDefinition::Contextual(domain) => {
+                    domain.provenance.producer_fingerprints.clone()
+                }
+            },
         }
     }
 }

@@ -1,68 +1,33 @@
 use std::cell::Cell;
 use std::collections::BTreeMap;
-use std::path::Path;
 use std::sync::Arc;
 
-use recite_core::{ChoiceId, CompiledDialogue, EffectId, decode_compiled_dialogue_messagepack};
+use recite_core::{ChoiceId, CompiledDialogue, EffectId};
 use recite_runtime::{
-    ConditionArgument, ConditionEvaluationError, ConditionExpectedType, ConditionQuery,
-    ConditionValue, DialogueChoice, DialogueContext, DialogueEffectRequest, DialogueError,
-    DialogueEvent, DialogueLine, DialogueSession, EffectAck, LocaleResolution, acknowledge_effect,
-    choose_with, decode_session_messagepack, encode_session_messagepack, next_with,
-    start_scene_with_options,
+    ConditionEvaluationError, ConditionQuery, ConditionValue, DialogueContext, DialogueError,
+    DialogueEvent, DialogueSession, EffectAck, InterpolationValues, LocaleResolution,
+    acknowledge_effect, choose_with, decode_session_messagepack, encode_session_messagepack,
+    next_with, start_scene_with_options,
 };
 
 use crate::adapter_policy::{session_options, should_continue_after_event};
+pub(crate) use crate::adapter_surface::{
+    AdapterValue, ConditionCall, ReciteDialogueAsset, ReciteOutput,
+};
+use crate::catalog::ReciteDialogueCatalog;
 
 pub(crate) use crate::adapter_error::{AdapterError, AdapterErrorKind, AdapterResult};
 
 pub type ConditionHandlerResult = Result<ConditionValue, AdapterError>;
 type ConditionHandler = dyn Fn(ConditionCall<'_>) -> ConditionHandlerResult;
 
-#[derive(Clone, Debug)]
-pub struct ReciteDialogueAsset {
-    dialogue: Arc<CompiledDialogue>,
-}
-
-impl ReciteDialogueAsset {
-    pub fn load_from_bytes(bytes: &[u8]) -> AdapterResult<Self> {
-        let dialogue = decode_compiled_dialogue_messagepack(bytes).map_err(AdapterError::from)?;
-        Ok(Self {
-            dialogue: Arc::new(dialogue),
-        })
-    }
-
-    pub fn load_from_path(path: impl AsRef<Path>) -> AdapterResult<Self> {
-        let path = path.as_ref();
-        let bytes = std::fs::read(path).map_err(|error| {
-            AdapterError::with_detail(
-                AdapterErrorKind::AssetLoadOrDecode,
-                format!("failed to read `{}`: {error}", path.display()),
-            )
-        })?;
-        Self::load_from_bytes(&bytes)
-    }
-
-    #[must_use]
-    pub fn dialogue(&self) -> &CompiledDialogue {
-        &self.dialogue
-    }
-
-    #[must_use]
-    pub fn shared_dialogue(&self) -> Arc<CompiledDialogue> {
-        Arc::clone(&self.dialogue)
-    }
-
-    #[must_use]
-    pub fn asset_id(&self) -> &str {
-        self.dialogue.header.asset_id.as_str()
-    }
-}
-
 #[derive(Default)]
 pub struct ReciteDialogueDriver {
     session: Option<ActiveSession>,
     conditions: BTreeMap<String, Box<ConditionHandler>>,
+    interpolation_values: InterpolationValues,
+    locale_catalog: Option<ReciteDialogueCatalog>,
+    locale_variant: Option<String>,
     // Runtime errors carry display text only, so this state keeps the adapter
     // category separate while a traversal call is in progress.
     // It is consumed when the runtime returns that condition failure.
@@ -86,21 +51,71 @@ impl ReciteDialogueDriver {
         self.conditions.remove(name);
     }
 
+    /// Replaces the caller-owned typed values used for line and choice
+    /// interpolation. Values are copied into the driver and are not part of a
+    /// serialised runtime session snapshot.
+    pub fn set_interpolation_values(&mut self, values: InterpolationValues) {
+        self.interpolation_values = values;
+    }
+
+    /// Replaces the owned catalogue used by subsequent traversal calls. The
+    /// session locale remains explicit: an absent locale bypasses the
+    /// catalogue and emits authored source text.
+    pub fn set_locale_catalog(&mut self, catalog: ReciteDialogueCatalog) {
+        self.locale_catalog = Some(catalog);
+    }
+
+    pub fn clear_locale_catalog(&mut self) {
+        self.locale_catalog = None;
+    }
+
+    /// Sets the grammatical variant used by subsequent locale lookups. The
+    /// value is adapter-owned and is deliberately not part of runtime save
+    /// state; restore callers must supply it again when needed.
+    pub fn set_locale_variant(&mut self, variant: Option<&str>) -> AdapterResult<()> {
+        self.locale_variant = validate_variant(variant)?;
+        Ok(())
+    }
+
     pub fn start(
         &mut self,
         asset: &ReciteDialogueAsset,
         block_id: Option<&str>,
         locale: Option<&str>,
     ) -> AdapterResult<Vec<ReciteOutput>> {
+        self.start_with_variant(asset, block_id, locale, None)
+    }
+
+    pub fn start_with_variant(
+        &mut self,
+        asset: &ReciteDialogueAsset,
+        block_id: Option<&str>,
+        locale: Option<&str>,
+        variant: Option<&str>,
+    ) -> AdapterResult<Vec<ReciteOutput>> {
         if self.session.is_some() {
             return Err(AdapterError::new(AdapterErrorKind::SessionAlreadyActive));
         }
 
+        let variant = validate_variant(variant)?;
+        let previous_variant = self.locale_variant.clone();
         let options = session_options(locale)?;
-        let mut session = start_scene_with_options(asset.dialogue(), block_id, options)
-            .map_err(|error| self.map_dialogue_error(error))?;
+        self.locale_variant = variant;
+        let mut session = match start_scene_with_options(asset.dialogue(), block_id, options) {
+            Ok(session) => session,
+            Err(error) => {
+                self.locale_variant = previous_variant;
+                return Err(self.map_dialogue_error(error));
+            }
+        };
         let dialogue = asset.shared_dialogue();
-        let outputs = self.drain_from_next(&dialogue, &mut session)?;
+        let outputs = match self.drain_from_next(&dialogue, &mut session) {
+            Ok(outputs) => outputs,
+            Err(error) => {
+                self.locale_variant = previous_variant;
+                return Err(error);
+            }
+        };
         self.session = Some(ActiveSession { dialogue, session });
         Ok(outputs)
     }
@@ -116,7 +131,7 @@ impl ReciteDialogueDriver {
             &mut active.session,
             choice_id,
             self,
-            LocaleResolution::new(),
+            self.locale_resolution(),
         ) {
             Ok(first_event) => {
                 self.drain_after_event(&active.dialogue, &mut active.session, first_event)
@@ -169,14 +184,37 @@ impl ReciteDialogueDriver {
         asset: &ReciteDialogueAsset,
         snapshot_bytes: &[u8],
     ) -> AdapterResult<Vec<ReciteOutput>> {
+        self.restore_with_variant(asset, snapshot_bytes, None)
+    }
+
+    pub fn restore_with_variant(
+        &mut self,
+        asset: &ReciteDialogueAsset,
+        snapshot_bytes: &[u8],
+        variant: Option<&str>,
+    ) -> AdapterResult<Vec<ReciteOutput>> {
         if self.session.is_some() {
             return Err(AdapterError::new(AdapterErrorKind::SessionAlreadyActive));
         }
 
-        let mut session = decode_session_messagepack(asset.dialogue(), snapshot_bytes)
-            .map_err(AdapterError::from_restore_error)?;
+        let variant = validate_variant(variant)?;
+        let previous_variant = self.locale_variant.clone();
+        self.locale_variant = variant;
+        let mut session = match decode_session_messagepack(asset.dialogue(), snapshot_bytes) {
+            Ok(session) => session,
+            Err(error) => {
+                self.locale_variant = previous_variant;
+                return Err(AdapterError::from_restore_error(error));
+            }
+        };
         let dialogue = asset.shared_dialogue();
-        let outputs = self.drain_restored(&dialogue, &mut session)?;
+        let outputs = match self.drain_restored(&dialogue, &mut session) {
+            Ok(outputs) => outputs,
+            Err(error) => {
+                self.locale_variant = previous_variant;
+                return Err(error);
+            }
+        };
         self.session = Some(ActiveSession { dialogue, session });
         Ok(outputs)
     }
@@ -225,7 +263,7 @@ impl ReciteDialogueDriver {
         dialogue: &CompiledDialogue,
         session: &mut DialogueSession,
     ) -> AdapterResult<Vec<ReciteOutput>> {
-        match next_with(dialogue, session, self, LocaleResolution::new()) {
+        match next_with(dialogue, session, self, self.locale_resolution()) {
             Ok(event) => self.drain_after_event(dialogue, session, event),
             Err(DialogueError::PromptPending { .. } | DialogueError::EffectPending { .. }) => {
                 Ok(Vec::new())
@@ -239,7 +277,7 @@ impl ReciteDialogueDriver {
         dialogue: &CompiledDialogue,
         session: &mut DialogueSession,
     ) -> AdapterResult<Vec<ReciteOutput>> {
-        let first_event = next_with(dialogue, session, self, LocaleResolution::new())
+        let first_event = next_with(dialogue, session, self, self.locale_resolution())
             .map_err(|error| self.map_dialogue_error(error))?;
         self.drain_after_event(dialogue, session, first_event)
     }
@@ -260,7 +298,7 @@ impl ReciteDialogueDriver {
                 return Ok(outputs);
             }
 
-            match next_with(dialogue, session, self, LocaleResolution::new()) {
+            match next_with(dialogue, session, self, self.locale_resolution()) {
                 Ok(next_event) => event = next_event,
                 Err(DialogueError::PromptPending { .. } | DialogueError::EffectPending { .. }) => {
                     return Ok(outputs);
@@ -269,6 +307,33 @@ impl ReciteDialogueDriver {
             }
         }
     }
+
+    fn locale_resolution(&self) -> LocaleResolution<'_> {
+        let resolution = LocaleResolution::new().with_values(&self.interpolation_values);
+        let resolution = self
+            .locale_variant
+            .as_deref()
+            .map_or(resolution, |variant| resolution.with_variant(variant));
+        self.locale_catalog
+            .as_ref()
+            .map_or(resolution, |catalog| resolution.with_provider(catalog))
+    }
+}
+
+fn validate_variant(variant: Option<&str>) -> AdapterResult<Option<String>> {
+    let Some(variant) = variant else {
+        return Ok(None);
+    };
+    if variant.is_empty() {
+        return Ok(None);
+    }
+    if variant.contains('\0') {
+        return Err(AdapterError::with_detail(
+            AdapterErrorKind::Localisation,
+            "locale variant must not contain NUL",
+        ));
+    }
+    Ok(Some(variant.to_owned()))
 }
 
 impl DialogueContext for ReciteDialogueDriver {
@@ -293,72 +358,4 @@ impl DialogueContext for ReciteDialogueDriver {
 struct ActiveSession {
     dialogue: Arc<CompiledDialogue>,
     session: DialogueSession,
-}
-
-#[derive(Clone, Copy, Debug, PartialEq)]
-pub struct ConditionCall<'a> {
-    query: ConditionQuery<'a>,
-}
-
-impl<'a> ConditionCall<'a> {
-    #[must_use]
-    pub fn function(self) -> &'a str {
-        self.query.function()
-    }
-
-    #[must_use]
-    pub fn expected_type(self) -> ConditionExpectedType {
-        self.query.expected_type()
-    }
-
-    pub fn arguments(self) -> impl Iterator<Item = AdapterValue> + 'a {
-        self.query.arguments().into_iter().map(AdapterValue::from)
-    }
-}
-
-#[non_exhaustive]
-#[derive(Clone, Debug, PartialEq)]
-pub enum AdapterValue {
-    Identifier(String),
-    String(String),
-    Integer(i64),
-    Float(f64),
-    Boolean(bool),
-}
-
-impl From<ConditionArgument<'_>> for AdapterValue {
-    fn from(argument: ConditionArgument<'_>) -> Self {
-        match argument {
-            ConditionArgument::Identifier(value) => Self::Identifier(value.to_owned()),
-            ConditionArgument::String(value) => Self::String(value.to_owned()),
-            ConditionArgument::Integer(value) => Self::Integer(value),
-            ConditionArgument::Float(value) => Self::Float(value),
-            ConditionArgument::Boolean(value) => Self::Boolean(value),
-        }
-    }
-}
-
-#[non_exhaustive]
-#[derive(Clone, Debug, PartialEq)]
-pub enum ReciteOutput {
-    Line(DialogueLine),
-    Prompt {
-        line: Option<DialogueLine>,
-        choices: Vec<DialogueChoice>,
-    },
-    Effect(DialogueEffectRequest),
-    End {
-        deferred_effects: Vec<DialogueEffectRequest>,
-    },
-}
-
-impl From<DialogueEvent> for ReciteOutput {
-    fn from(event: DialogueEvent) -> Self {
-        match event {
-            DialogueEvent::Line(line) => Self::Line(line),
-            DialogueEvent::Prompt { line, choices } => Self::Prompt { line, choices },
-            DialogueEvent::Effect(effect) => Self::Effect(effect),
-            DialogueEvent::End { deferred_effects } => Self::End { deferred_effects },
-        }
-    }
 }

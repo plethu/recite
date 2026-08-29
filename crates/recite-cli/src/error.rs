@@ -5,7 +5,8 @@ use recite_core::CompiledAssetDecodeError;
 
 use crate::dialogue_locale::DialogueCatalogMalformedReason;
 use crate::fs::display_path;
-use crate::i18n::{Messages, MsgId};
+
+mod user_message;
 
 #[derive(Debug)]
 pub(crate) enum CliError {
@@ -17,11 +18,20 @@ pub(crate) enum CliError {
         source: CompiledAssetDecodeError,
     },
     Diagnostics,
+    DiagnosticRendering {
+        source: String,
+    },
     DialogueCatalogConflict {
         path: PathBuf,
         locale: String,
         context: String,
         source_text: String,
+    },
+    DialogueCatalogPluralFormsConflict {
+        path: PathBuf,
+        locale: String,
+        existing: String,
+        provided: String,
     },
     DialogueCatalogMalformed {
         path: PathBuf,
@@ -56,6 +66,13 @@ pub(crate) enum CliError {
     FixtureToml {
         path: PathBuf,
         source: toml::de::Error,
+    },
+    AssetMetadata {
+        path: PathBuf,
+        source: io::Error,
+    },
+    AssetNotFile {
+        path: PathBuf,
     },
     Io(io::Error),
     MalformedCompiledAsset {
@@ -136,6 +153,9 @@ impl std::fmt::Display for CliError {
                 )
             }
             Self::Diagnostics => formatter.write_str("diagnostics reported"),
+            Self::DiagnosticRendering { source } => {
+                write!(formatter, "failed to render diagnostic: {source}")
+            }
             Self::DialogueCatalogConflict {
                 path,
                 locale,
@@ -144,6 +164,16 @@ impl std::fmt::Display for CliError {
             } => write!(
                 formatter,
                 "dialogue catalog {} has conflicting translations for locale `{locale}`, context `{context}`, source text `{source_text}`",
+                display_path(path)
+            ),
+            Self::DialogueCatalogPluralFormsConflict {
+                path,
+                locale,
+                existing,
+                provided,
+            } => write!(
+                formatter,
+                "dialogue catalog {} has conflicting Plural-Forms headers for locale `{locale}` (existing `{existing}`, provided `{provided}`)",
                 display_path(path)
             ),
             Self::DialogueCatalogMalformed {
@@ -211,6 +241,16 @@ impl std::fmt::Display for CliError {
                     display_path(path)
                 )
             }
+            Self::AssetMetadata { path, source } => write!(
+                formatter,
+                "failed to inspect compiled asset {}: {source}",
+                display_path(path)
+            ),
+            Self::AssetNotFile { path } => write!(
+                formatter,
+                "compiled asset path {} is not a regular file",
+                display_path(path)
+            ),
             Self::Io(error) => write!(formatter, "{error}"),
             Self::MalformedCompiledAsset { reason } => {
                 write!(formatter, "malformed compiled asset: {reason}")
@@ -294,68 +334,6 @@ impl std::fmt::Display for CliError {
 }
 
 impl std::error::Error for CliError {}
-
-impl CliError {
-    pub(crate) fn to_user_message(&self, messages: &Messages) -> String {
-        match self {
-            Self::PlayEof { field } => {
-                messages.format(MsgId::CliErrorPlayEof, [("field", (*field).to_owned())])
-            }
-            Self::PlayInvalidInput(message) => messages.format(
-                MsgId::CliErrorPlayInvalidInput,
-                [("message", message.clone())],
-            ),
-            Self::PlayInterrupted => messages.text(MsgId::CliErrorPlayInterrupted),
-            Self::PlayTuiRequiresTerminal => messages.text(MsgId::CliErrorPlayTuiRequiresTerminal),
-            Self::TuiConfigRead { path, source } => messages.format(
-                MsgId::CliErrorUiConfigRead,
-                [("path", display_path(path)), ("source", source.to_string())],
-            ),
-            Self::TuiConfigToml { path, source } => messages.format(
-                MsgId::CliErrorUiConfigToml,
-                [("path", display_path(path)), ("source", source.to_string())],
-            ),
-            Self::UiLocaleInvalid { path, locale } => messages.format(
-                MsgId::CliErrorUiLocaleInvalid,
-                [("path", display_path(path)), ("locale", locale.clone())],
-            ),
-            Self::DialogueCatalogConflict {
-                path,
-                locale,
-                context,
-                source_text,
-            } => messages.format(
-                MsgId::CliErrorDialogueCatalogConflict,
-                [
-                    ("path", display_path(path)),
-                    ("locale", locale.clone()),
-                    ("context", context.clone()),
-                    ("source_text", source_text.clone()),
-                ],
-            ),
-            Self::DialogueCatalogMalformed { path, line, reason } => messages.format(
-                MsgId::CliErrorDialogueCatalogMalformed,
-                [
-                    ("path", display_path(path)),
-                    ("line", line.to_string()),
-                    ("reason", reason.user_message(messages)),
-                ],
-            ),
-            Self::DialogueCatalogMissingLocale => {
-                messages.text(MsgId::CliErrorDialogueCatalogMissingLocale)
-            }
-            Self::DialogueCatalogSpecInvalid { spec } => messages.format(
-                MsgId::CliErrorDialogueCatalogSpecInvalid,
-                [("spec", spec.clone())],
-            ),
-            Self::DialogueLocaleInvalid { field, locale } => messages.format(
-                MsgId::CliErrorDialogueLocaleInvalid,
-                [("field", (*field).to_owned()), ("locale", locale.clone())],
-            ),
-            _ => self.to_string(),
-        }
-    }
-}
 
 impl From<io::Error> for CliError {
     fn from(error: io::Error) -> Self {

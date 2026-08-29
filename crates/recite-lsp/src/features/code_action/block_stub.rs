@@ -1,6 +1,7 @@
 use lsp_types::{
     CodeAction, CodeActionKind, CodeActionOrCommand, CodeActionParams, Range, TextEdit,
 };
+use recite_ui::{MsgId, UiCatalog};
 
 use super::{CodeActionDocument, end_position, newline_for, ranges_intersect, workspace_edit};
 use crate::summary::BlockReferenceSummary;
@@ -9,6 +10,7 @@ pub(super) fn actions(
     params: &CodeActionParams,
     document: &CodeActionDocument<'_>,
     documents: &[CodeActionDocument<'_>],
+    catalog: &UiCatalog,
 ) -> Vec<CodeActionOrCommand> {
     if !document.summary.completeness.block_references {
         return Vec::new();
@@ -22,7 +24,7 @@ pub(super) fn actions(
             let reference_range = crate::position::span_to_range(document.text, &reference.span);
             ranges_intersect(params.range, reference_range)
         })
-        .filter_map(|reference| action(params, reference, document, documents))
+        .filter_map(|reference| action(params, reference, document, documents, catalog))
         .collect()
 }
 
@@ -31,6 +33,7 @@ fn action(
     reference: &BlockReferenceSummary,
     document: &CodeActionDocument<'_>,
     documents: &[CodeActionDocument<'_>],
+    catalog: &UiCatalog,
 ) -> Option<CodeActionOrCommand> {
     let target = target_document(reference, document, documents)?;
     if !target.summary.completeness.block_definitions {
@@ -47,7 +50,10 @@ fn action(
 
     let position = end_position(target.text);
     Some(CodeActionOrCommand::CodeAction(CodeAction {
-        title: format!("Create block stub `{}`", reference.block_id),
+        title: catalog.format_pairs(
+            MsgId::LspCodeActionCreateBlockStub,
+            [("block", reference.block_id.as_str())],
+        ),
         kind: Some(CodeActionKind::QUICKFIX),
         diagnostics: Some(params.context.diagnostics.clone()),
         edit: Some(workspace_edit(

@@ -1,25 +1,24 @@
 use std::collections::BTreeSet;
 
-use super::super::diagnostics::{DUPLICATE_DEFINITION, INVALID_TYPE_REFERENCE, MALFORMED_SHAPE};
 use super::super::raw::{
     Named, RawConditionAvailabilityReasonMapping, RawConditionDefinition, RawEffectDefinition,
-    RawParameterDefinition,
 };
 use super::super::spans::ManifestSpans;
 use super::super::validate::{
     PendingTypeReference, duplicate_definition, parse_effect_mode, parse_enum_return,
-    validate_manifest_name, validate_non_empty_string,
+    validate_manifest_name,
 };
-use super::types::lower_type_reference;
-use crate::Diagnostic;
+pub(super) use super::parameters::lower_params_at;
 use crate::schema::{
-    ConditionDefinition, ConditionReturnType, EffectDefinition, ParameterDefinition, ProjectSchema,
-    SchemaTypeRef,
+    ConditionDefinition, ConditionReturnType, EffectDefinition, ProjectSchema, SchemaTypeRef,
+    schema_diagnostic,
 };
+use crate::{Diagnostic, DiagnosticArgumentValue};
 
 pub(super) struct PendingConditionAvailabilityReasonMapping {
     pub(super) condition: String,
     pub(super) raw: RawConditionAvailabilityReasonMapping,
+    pub(super) path: Vec<String>,
 }
 
 pub(super) struct FunctionPendingReferences<'a> {
@@ -38,7 +37,8 @@ pub(super) fn lower_conditions(
 ) {
     let mut seen = BTreeSet::new();
     for entry in entries {
-        let name_span = spans.next_key_span(file, source, &entry.name);
+        let entry_path = vec!["conditions".to_owned(), entry.name.clone()];
+        let name_span = spans.key_span_at(file, source, &entry_path, &entry.name);
         if !validate_manifest_name(
             diagnostics,
             "condition name",
@@ -52,7 +52,7 @@ pub(super) fn lower_conditions(
             continue;
         }
 
-        let params = lower_params(
+        let params = lower_params_at(
             file,
             source,
             spans,
@@ -60,11 +60,14 @@ pub(super) fn lower_conditions(
             &format!("condition '{}'", entry.name),
             &entry.value.params,
             pending_refs.type_refs,
+            &entry_path,
         );
         let returns = match entry.value.returns.as_deref() {
             None | Some("bool") => ConditionReturnType::Bool,
             Some(value) => {
-                let return_span = spans.next_value_span(file, source, value);
+                let mut return_path = entry_path.clone();
+                return_path.push("returns".to_owned());
+                let return_span = spans.value_span_at(file, source, &return_path, value);
                 match parse_enum_return(value) {
                     Some(name) => {
                         pending_refs.type_refs.push(PendingTypeReference {
@@ -75,13 +78,24 @@ pub(super) fn lower_conditions(
                         ConditionReturnType::Enum(name)
                     }
                     None => {
-                        diagnostics.push(Diagnostic::error(
-                            INVALID_TYPE_REFERENCE,
+                        diagnostics.push(schema_diagnostic(
+                            super::super::diagnostics::INVALID_TYPE_REFERENCE,
+                            "diagnostic-schema-004-invalid-condition-return",
                             format!(
                                 "condition '{}' has invalid return type '{}'",
                                 entry.name, value
                             ),
                             return_span,
+                            [
+                                (
+                                    "condition",
+                                    DiagnosticArgumentValue::String(entry.name.clone()),
+                                ),
+                                (
+                                    "return_type",
+                                    DiagnosticArgumentValue::String(value.to_owned()),
+                                ),
+                            ],
                         ));
                         ConditionReturnType::Bool
                     }
@@ -94,6 +108,7 @@ pub(super) fn lower_conditions(
                 PendingConditionAvailabilityReasonMapping {
                     condition: entry.name.clone(),
                     raw: mapping,
+                    path: entry_path.clone(),
                 },
             );
         }
@@ -120,7 +135,8 @@ pub(super) fn lower_effects(
 ) {
     let mut seen = BTreeSet::new();
     for entry in entries {
-        let name_span = spans.next_key_span(file, source, &entry.name);
+        let entry_path = vec!["effects".to_owned(), entry.name.clone()];
+        let name_span = spans.key_span_at(file, source, &entry_path, &entry.name);
         if !validate_manifest_name(diagnostics, "effect name", &entry.name, name_span.clone()) {
             continue;
         }
@@ -130,27 +146,45 @@ pub(super) fn lower_effects(
         }
 
         let mut modes = BTreeSet::new();
-        for mode in &entry.value.modes {
-            let mode_span = spans.next_value_span(file, source, mode);
+        for (index, mode) in entry.value.modes.iter().enumerate() {
+            let mut mode_path = entry_path.clone();
+            mode_path.extend(["modes".to_owned(), format!("[{index}]")]);
+            let mode_span = spans.value_span_at(file, source, &mode_path, mode);
             let Some(effect_mode) = parse_effect_mode(mode) else {
-                diagnostics.push(Diagnostic::error(
-                    MALFORMED_SHAPE,
+                diagnostics.push(schema_diagnostic(
+                    super::super::diagnostics::MALFORMED_SHAPE,
+                    "diagnostic-schema-001-effect-mode",
                     format!("effect '{}' uses unsupported mode '{}'", entry.name, mode),
                     mode_span,
+                    [
+                        (
+                            "effect",
+                            DiagnosticArgumentValue::String(entry.name.clone()),
+                        ),
+                        ("mode", DiagnosticArgumentValue::String(mode.clone())),
+                    ],
                 ));
                 continue;
             };
 
             if !modes.insert(effect_mode) {
-                diagnostics.push(Diagnostic::error(
-                    DUPLICATE_DEFINITION,
+                diagnostics.push(schema_diagnostic(
+                    super::super::diagnostics::DUPLICATE_DEFINITION,
+                    "diagnostic-schema-003-effect-mode",
                     format!("effect '{}' repeats mode '{}'", entry.name, mode),
                     mode_span,
+                    [
+                        (
+                            "effect",
+                            DiagnosticArgumentValue::String(entry.name.clone()),
+                        ),
+                        ("mode", DiagnosticArgumentValue::String(mode.clone())),
+                    ],
                 ));
             }
         }
 
-        let params = lower_params(
+        let params = lower_params_at(
             file,
             source,
             spans,
@@ -158,128 +192,10 @@ pub(super) fn lower_effects(
             &format!("effect '{}'", entry.name),
             &entry.value.params,
             pending_type_refs,
+            &entry_path,
         );
         schema
             .effects
             .insert(entry.name, EffectDefinition { modes, params });
-    }
-}
-
-pub(super) fn lower_params(
-    file: &str,
-    source: &str,
-    spans: &mut ManifestSpans,
-    diagnostics: &mut Vec<Diagnostic>,
-    owner: &str,
-    params: &[RawParameterDefinition],
-    pending_type_refs: &mut Vec<PendingTypeReference>,
-) -> Vec<ParameterDefinition> {
-    let mut seen = BTreeSet::new();
-    params
-        .iter()
-        .map(|param| {
-            let name_span = spans.next_value_span(file, source, &param.name);
-            if validate_non_empty_string(
-                diagnostics,
-                "parameter name",
-                &param.name,
-                name_span.clone(),
-            ) {
-                validate_manifest_name(
-                    diagnostics,
-                    "parameter name",
-                    &param.name,
-                    name_span.clone(),
-                );
-            }
-            if !seen.insert(param.name.clone()) {
-                diagnostics.push(Diagnostic::error(
-                    DUPLICATE_DEFINITION,
-                    format!("{owner} repeats parameter '{}'", param.name),
-                    name_span,
-                ));
-            }
-
-            let (mut type_ref, type_ref_span, type_ref_is_valid) = lower_type_reference(
-                file,
-                source,
-                spans,
-                diagnostics,
-                &param.type_ref,
-                format!(
-                    "parameter '{}' has invalid type reference '{}'",
-                    param.name, param.type_ref
-                ),
-            );
-            let type_ref_is_valid = type_ref_is_valid
-                && validate_parameter_type_ref(
-                    diagnostics,
-                    owner,
-                    param,
-                    &mut type_ref,
-                    &type_ref_span,
-                );
-            if type_ref_is_valid {
-                pending_type_refs.push(PendingTypeReference {
-                    owner: format!("{owner} parameter '{}'", param.name),
-                    type_ref: type_ref.clone(),
-                    span: type_ref_span,
-                });
-            }
-
-            ParameterDefinition {
-                name: param.name.clone(),
-                type_ref,
-            }
-        })
-        .collect()
-}
-
-fn validate_parameter_type_ref(
-    diagnostics: &mut Vec<Diagnostic>,
-    owner: &str,
-    param: &RawParameterDefinition,
-    type_ref: &mut SchemaTypeRef,
-    type_ref_span: &crate::SourceSpan,
-) -> bool {
-    if !contains_symbol_type_ref(type_ref)
-        && (!matches!(type_ref, SchemaTypeRef::Array(_))
-            || owner.starts_with("projection query function "))
-    {
-        return true;
-    }
-
-    diagnostics.push(Diagnostic::error(
-        INVALID_TYPE_REFERENCE,
-        format!(
-            "{owner} parameter '{}' uses projection-only or metadata-only type reference '{}'",
-            param.name,
-            type_ref_name(type_ref)
-        ),
-        type_ref_span.clone(),
-    ));
-    *type_ref = SchemaTypeRef::String;
-    false
-}
-
-fn contains_symbol_type_ref(type_ref: &SchemaTypeRef) -> bool {
-    match type_ref {
-        SchemaTypeRef::Symbol => true,
-        SchemaTypeRef::Array(inner) => contains_symbol_type_ref(inner),
-        _ => false,
-    }
-}
-
-fn type_ref_name(type_ref: &SchemaTypeRef) -> String {
-    match type_ref {
-        SchemaTypeRef::String => "string".to_owned(),
-        SchemaTypeRef::Symbol => "symbol".to_owned(),
-        SchemaTypeRef::Int => "int".to_owned(),
-        SchemaTypeRef::Float => "float".to_owned(),
-        SchemaTypeRef::Bool => "bool".to_owned(),
-        SchemaTypeRef::Speaker => "speaker".to_owned(),
-        SchemaTypeRef::Enum(name) => format!("enum:{name}"),
-        SchemaTypeRef::Registry(name) => format!("registry:{name}"),
-        SchemaTypeRef::Array(inner) => format!("array:{}", type_ref_name(inner)),
     }
 }

@@ -1,7 +1,7 @@
 use recite_core::{Argument, ConditionCall, ConditionExpression, ScalarValue, SourceSpan};
 
-use super::ParseError;
 use super::token::{Token, TokenKind, TokenKindDiscriminant};
+use super::{ParseError, ParseErrorKind};
 
 pub(super) struct Parser<'a> {
     path: &'a str,
@@ -76,7 +76,10 @@ impl<'a> Parser<'a> {
             let left = self.bump().clone();
             let expression = self.parse_or()?;
             let right = self
-                .expect(TokenKindDiscriminant::RightParen, "expected ')'")?
+                .expect(
+                    TokenKindDiscriminant::RightParen,
+                    ParseErrorKind::ExpectedRightParen,
+                )?
                 .clone();
             let span = join_spans(self.path, &left.span, &right.span);
             return Ok(ConditionExpression::grouped(expression, span));
@@ -92,20 +95,20 @@ impl<'a> Parser<'a> {
             TokenKind::End => {
                 return Err(ParseError::new(
                     self.current().span.clone(),
-                    "expected function call",
+                    ParseErrorKind::ExpectedFunctionCall,
                 ));
             }
             _ => {
                 return Err(ParseError::new(
                     self.current().span.clone(),
-                    "expected function call",
+                    ParseErrorKind::ExpectedFunctionCall,
                 ));
             }
         };
         let function_span = self.bump().span.clone();
         self.expect(
             TokenKindDiscriminant::LeftParen,
-            "expected '(' after function name",
+            ParseErrorKind::ExpectedFunctionNameParen,
         )?;
 
         let mut args = Vec::new();
@@ -123,7 +126,10 @@ impl<'a> Parser<'a> {
         }
 
         let right = self
-            .expect(TokenKindDiscriminant::RightParen, "expected ')'")?
+            .expect(
+                TokenKindDiscriminant::RightParen,
+                ParseErrorKind::ExpectedRightParen,
+            )?
             .clone();
         let span = join_spans(self.path, &function_span, &right.span);
         Ok(ConditionCall::new(function, args, span).with_source_spans(function_span, arg_spans))
@@ -153,7 +159,10 @@ impl<'a> Parser<'a> {
                 self.bump();
                 Ok((ScalarValue::from(value).into(), span))
             }
-            _ => Err(ParseError::new(span, "expected scalar argument")),
+            _ => Err(ParseError::new(
+                span,
+                ParseErrorKind::ExpectedScalarArgument,
+            )),
         }
     }
 
@@ -164,20 +173,20 @@ impl<'a> Parser<'a> {
 
         Err(ParseError::new(
             self.current().span.clone(),
-            "unexpected trailing tokens",
+            ParseErrorKind::UnexpectedTrailingTokens,
         ))
     }
 
     fn expect(
         &mut self,
-        kind: TokenKindDiscriminant,
-        message: &'static str,
+        expected: TokenKindDiscriminant,
+        error_kind: ParseErrorKind,
     ) -> Result<&Token, ParseError> {
-        if self.at(kind) {
+        if self.at(expected) {
             return Ok(self.bump());
         }
 
-        Err(ParseError::new(self.current().span.clone(), message))
+        Err(ParseError::new(self.current().span.clone(), error_kind))
     }
 
     fn at(&self, kind: TokenKindDiscriminant) -> bool {

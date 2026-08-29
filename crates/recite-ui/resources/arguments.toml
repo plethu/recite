@@ -1,0 +1,293 @@
+# This is the independent typed argument contract. It is intentionally kept
+# separate from the Fluent resource so that resource edits cannot redefine the
+# call-site API by themselves.
+[arguments."explain-code"]
+code = "string"
+[arguments."explain-category"]
+category = "string"
+[arguments."explain-meaning"]
+meaning = "string"
+[arguments."explain-list-item"]
+item = "string"
+[arguments."watch-building"]
+path = "string"
+[arguments."watch-build-succeeded"]
+count = "integer"
+[arguments."watch-build-failed"]
+error = "string"
+[arguments."watch-event-error"]
+error = "string"
+[arguments."play-start"]
+asset = "string"
+block = "string"
+[arguments."play-line"]
+id = "string"
+text = "string"
+[arguments."play-prompt-line"]
+id = "string"
+text = "string"
+[arguments."play-choice-row"]
+index = "integer"
+id = "string"
+text = "string"
+available = "boolean"
+[arguments."play-condition-prompt"]
+query = "string"
+[arguments."play-condition-result"]
+query = "string"
+result = "string"
+[arguments."play-selected-choice"]
+id = "string"
+[arguments."play-effect"]
+mode = "string"
+id = "string"
+function = "string"
+args = "string"
+[arguments."run-effect"]
+mode = "string"
+function = "string"
+args = "string"
+[arguments."play-ack-prompt"]
+id = "string"
+[arguments."play-ack-completed"]
+id = "string"
+[arguments."play-deferred-effect-row"]
+function = "string"
+args = "string"
+[arguments."play-invalid-input"]
+message = "string"
+[arguments."play-error-choice-index-out-of-range"]
+index = "integer"
+count = "integer"
+[arguments."play-error-choice-id-invalid"]
+id = "string"
+error = "string"
+[arguments."play-error-choice-id-unavailable"]
+id = "string"
+[arguments."play-error-choice-unavailable"]
+id = "string"
+[arguments."play-error-choice-unavailable-reason"]
+id = "string"
+reason = "string"
+[arguments."tui-command-with-value"]
+command = "string"
+[arguments."tui-unknown-command"]
+command = "string"
+[arguments."tui-choice-input"]
+input = "string"
+[arguments."tui-enum-variant-input"]
+input = "string"
+[arguments."tui-choice-unavailable-reason"]
+reason = "string"
+[arguments."tui-transcript-effect-text"]
+mode = "string"
+function = "string"
+args = "string"
+[arguments."tui-transcript-deferred-effect-text"]
+function = "string"
+args = "string"
+[arguments."cli-error-play-eof"]
+field = "string"
+[arguments."cli-error-play-invalid-input"]
+message = "string"
+[arguments."cli-error-ui-config-read"]
+path = "string"
+source = "string"
+[arguments."cli-error-ui-config-toml"]
+path = "string"
+source = "string"
+[arguments."cli-error-ui-locale-invalid"]
+path = "string"
+locale = "string"
+[arguments."cli-error-dialogue-catalog-conflict"]
+path = "string"
+locale = "string"
+context = "string"
+source_text = "string"
+[arguments."cli-error-dialogue-catalog-plural-forms-conflict"]
+path = "string"
+locale = "string"
+existing = "string"
+provided = "string"
+[arguments."cli-error-dialogue-catalog-malformed"]
+path = "string"
+line = "integer"
+reason = "string"
+[arguments."cli-error-dialogue-catalog-spec-invalid"]
+spec = "string"
+[arguments."cli-error-dialogue-locale-invalid"]
+field = "string"
+locale = "string"
+[arguments."cli-error-generic"]
+message = "string"
+[arguments."cli-error-diagnostic-rendering"]
+source = "string"
+[arguments."cli-error-diagnostic-code-malformed"]
+code = "string"
+suggestion = "string"
+has_suggestion = "boolean"
+[arguments."cli-error-diagnostic-code-unknown"]
+code = "string"
+suggestion = "string"
+has_suggestion = "boolean"
+[arguments."cli-error-ui-catalog"]
+source = "string"
+[arguments."cli-error-bench"]
+message = "string"
+[arguments."cli-error-benchmark"]
+message = "string"
+[arguments."cli-error-decode-asset"]
+path = "string"
+source = "string"
+[arguments."cli-error-asset-metadata"]
+path = "string"
+source = "string"
+[arguments."cli-error-asset-not-file"]
+path = "string"
+[arguments."cli-error-malformed-compiled-asset"]
+reason = "string"
+[arguments."cli-error-fixture-choice-index"]
+index = "integer"
+prompt_keys = "string"
+choice_count = "integer"
+[arguments."cli-error-fixture-choice-not-in-prompt"]
+choice = "string"
+prompt_keys = "string"
+[arguments."cli-error-fixture-toml"]
+path = "string"
+source = "string"
+[arguments."cli-error-missing-path"]
+path = "string"
+[arguments."cli-error-missing-fixture-choice"]
+prompt_keys = "string"
+[arguments."cli-error-output-overwrites-input"]
+input = "string"
+output = "string"
+[arguments."cli-error-blocking-effect"]
+effect = "string"
+[arguments."cli-error-bench-json"]
+error = "string"
+[arguments."cli-error-trace-json"]
+error = "string"
+[arguments."cli-error-unknown-prompt"]
+line = "string"
+choices = "string"
+[arguments."cli-error-read"]
+path = "string"
+source = "string"
+[arguments."cli-error-read-dir"]
+path = "string"
+source = "string"
+[arguments."cli-error-write"]
+path = "string"
+source = "string"
+[arguments."cli-error-watch"]
+message = "string"
+[arguments."cli-error-dialogue-catalog-reason-invalid-header"]
+detail = "string"
+[arguments."cli-error-dialogue-catalog-reason-invalid-plural-rule"]
+detail = "string"
+[arguments."cli-error-dialogue-catalog-reason-invalid-stable-id"]
+value = "string"
+[arguments."cli-error-dialogue-catalog-reason-duplicate-field"]
+field = "string"
+[arguments."cli-error-dialogue-catalog-reason-duplicate-entry"]
+key = "string"
+[arguments."cli-error-dialogue-catalog-reason-invalid-field-order"]
+detail = "string"
+[arguments."cli-error-dialogue-catalog-reason-placeholder-mismatch"]
+detail = "string"
+[arguments."cli-error-dialogue-catalog-reason-unsupported-escape"]
+escape = "string"
+[arguments."lsp-hover-speaker"]
+name = "string"
+[arguments."lsp-hover-speaker-with-display-name"]
+name = "string"
+display_name = "string"
+[arguments."lsp-hover-metadata"]
+name = "string"
+detail = "string"
+[arguments."lsp-hover-metadata-with-domain"]
+name = "string"
+domain = "string"
+detail = "string"
+[arguments."lsp-hover-condition"]
+returns = "string"
+[arguments."lsp-hover-effect"]
+modes = "string"
+[arguments."lsp-hover-projection-query"]
+name = "string"
+returns = "string"
+[arguments."lsp-hover-presentation-projector"]
+name = "string"
+inputs = "integer"
+queries = "integer"
+outputs = "integer"
+[arguments."lsp-hover-presentation-output"]
+name = "string"
+projector = "string"
+target = "string"
+kind = "string"
+[arguments."lsp-hover-presentation-label"]
+name = "string"
+count = "integer"
+[arguments."lsp-hover-block"]
+name = "string"
+[arguments."lsp-hover-registry"]
+name = "string"
+detail = "string"
+[arguments."lsp-hover-metadata-domain"]
+name = "string"
+detail = "string"
+[arguments."lsp-hover-availability-reason"]
+name = "string"
+detail = "string"
+[arguments."lsp-hover-registry-value"]
+word = "string"
+name = "string"
+detail = "string"
+[arguments."lsp-hover-enum-value"]
+word = "string"
+name = "string"
+[arguments."lsp-hover-domain-value"]
+word = "string"
+name = "string"
+context = "string"
+detail = "string"
+[arguments."lsp-hover-produced-by"]
+kind = "string"
+id = "string"
+label = "string"
+[arguments."lsp-hover-schema-producer"]
+kind = "string"
+id = "string"
+[arguments."lsp-hover-schema-freshness"]
+fingerprint = "string"
+inputs = "integer"
+scope = "string"
+[arguments."lsp-hover-schema-scoped-fingerprints"]
+fingerprints = "string"
+[arguments."lsp-completion-metadata-key-with-domain"]
+domain = "string"
+[arguments."lsp-completion-metadata-domain"]
+domain = "string"
+[arguments."lsp-completion-condition"]
+returns = "string"
+[arguments."lsp-completion-effect"]
+modes = "string"
+[arguments."lsp-completion-projection-query"]
+function = "string"
+[arguments."lsp-completion-projection-query-function"]
+returns = "string"
+[arguments."lsp-completion-projection-query-call"]
+function = "string"
+[arguments."lsp-completion-projection-input"]
+type = "string"
+[arguments."lsp-completion-output"]
+kind = "string"
+[arguments."lsp-code-action-create-block-stub"]
+block = "string"
+[arguments."lsp-code-action-add-condition"]
+name = "string"
+[arguments."lsp-code-action-add-effect"]
+name = "string"

@@ -10,11 +10,12 @@ members = [
     "crates/recite-lsp",
     "crates/recite-parser",
     "crates/recite-runtime",
+    "crates/recite-ui",
 ]
 resolver = "3"
 
 [workspace.package]
-version = "0.0.1"
+version = "0.1.0"
 edition = "2024"
 rust-version = "1.96"
 license = "MIT OR Apache-2.0"
@@ -32,20 +33,24 @@ todo = "warn"
 unimplemented = "warn"
 
 [workspace.dependencies]
-recite-core = { version = "0.0.1", path = "crates/recite-core" }
-recite-ffi = { version = "0.0.1", path = "crates/recite-ffi" }
-recite-parser = { version = "0.0.1", path = "crates/recite-parser" }
-recite-compiler = { version = "0.0.1", path = "crates/recite-compiler" }
-recite-fixturegen = { version = "0.0.1", path = "crates/recite-fixturegen" }
-recite-godot = { version = "0.0.1", path = "crates/recite-godot" }
-recite-lsp = { version = "0.0.1", path = "crates/recite-lsp" }
-recite-runtime = { version = "0.0.1", path = "crates/recite-runtime" }
+recite-core = { version = "0.1.0", path = "crates/recite-core" }
+recite-ffi = { version = "0.5.0", path = "crates/recite-ffi" }
+recite-parser = { version = "0.1.0", path = "crates/recite-parser" }
+recite-compiler = { version = "0.1.0", path = "crates/recite-compiler" }
+recite-fixturegen = { version = "0.1.0", path = "crates/recite-fixturegen" }
+recite-godot = { version = "0.1.0", path = "crates/recite-godot" }
+recite-lsp = { version = "0.1.0", path = "crates/recite-lsp" }
+recite-runtime = { version = "0.1.0", path = "crates/recite-runtime" }
+recite-ui = { version = "0.1.0", path = "crates/recite-ui" }
 blake3 = "1.8.5"
+# Maintained BSD-3-Clause atomic replacement primitive for Unix and Windows.
+atomic-write-file = "0.3.1"
 clap = { version = "4.5.51", features = ["derive", "string"] }
 compact_str = "0.8.1"
 criterion = { version = "0.8.2", default-features = false, features = ["plotters"] }
 crossterm = "0.28.1"
 fluent-bundle = "0.15.3"
+fluent-syntax = "0.11.1"
 insta = { version = "1.47.2", default-features = false }
 notify = "8.2.0"
 ratatui = "0.29.0"
@@ -54,9 +59,10 @@ rmp-serde = "1.3.1"
 serde = { version = "1.0.228", features = ["derive"] }
 serde_bytes = "0.11.19"
 serde-value = "0.7.0"
-serde_json = "1.0.149"
+serde_json = { version = "1.0.149", features = ["arbitrary_precision", "preserve_order"] }
 tempfile = "3.23.0"
 thiserror = "2"
 toml = "0.9.8"
+toml_edit = { version = "0.25.12", features = ["serde"] }
 unic-langid = { version = "0.9.6", features = ["macros"] }
 unicode-ident = "1.0.22"

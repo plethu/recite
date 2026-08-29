@@ -8,9 +8,10 @@ use crate::event::{
     ChoiceAvailability, ChoiceEchoMode, DialogueChoice, DialogueEffectArgument, DialogueEffectMode,
     DialogueEffectRequest, DialogueLine,
 };
-use crate::locale::{LocaleProvider, TextDomain};
+use crate::locale::{InterpolationValueProvider, LocaleProvider, TextDomain};
 
 use super::asset::AssetView;
+use super::trace::DialogueTrace;
 
 /// Options used to resolve localised runtime output.
 ///
@@ -26,6 +27,8 @@ use super::asset::AssetView;
 pub struct LocaleResolution<'a> {
     provider: Option<&'a dyn LocaleProvider>,
     variant: Option<&'a str>,
+    values: Option<&'a dyn InterpolationValueProvider>,
+    trace: Option<&'a DialogueTrace>,
 }
 
 impl<'a> LocaleResolution<'a> {
@@ -49,6 +52,20 @@ impl<'a> LocaleResolution<'a> {
         self
     }
 
+    /// Supplies typed caller-owned values for named interpolation bindings.
+    #[must_use]
+    pub fn with_values(mut self, values: &'a dyn InterpolationValueProvider) -> Self {
+        self.values = Some(values);
+        self
+    }
+
+    /// Captures selected localized templates for trace/debug consumers.
+    #[must_use]
+    pub fn with_trace(mut self, trace: &'a DialogueTrace) -> Self {
+        self.trace = Some(trace);
+        self
+    }
+
     /// Returns the locale provider used for resolution, if any.
     #[must_use]
     pub fn provider(&self) -> Option<&'a dyn LocaleProvider> {
@@ -60,6 +77,11 @@ impl<'a> LocaleResolution<'a> {
     pub fn variant(&self) -> Option<&'a str> {
         self.variant
     }
+
+    #[must_use]
+    pub fn values(&self) -> Option<&'a dyn InterpolationValueProvider> {
+        self.values
+    }
 }
 
 #[derive(Clone, Copy)]
@@ -67,6 +89,8 @@ pub(super) struct LocaleLookup<'a> {
     pub(super) locale: Option<&'a LocaleId>,
     pub(super) variant: Option<&'a str>,
     pub(super) provider: Option<&'a dyn LocaleProvider>,
+    pub(super) values: Option<&'a dyn InterpolationValueProvider>,
+    pub(super) trace: Option<&'a super::trace::DialogueTrace>,
 }
 
 impl<'a> LocaleLookup<'a> {
@@ -75,6 +99,8 @@ impl<'a> LocaleLookup<'a> {
             locale: None,
             variant: None,
             provider: None,
+            values: None,
+            trace: None,
         }
     }
 
@@ -86,6 +112,8 @@ impl<'a> LocaleLookup<'a> {
             locale,
             variant: resolution.variant,
             provider: resolution.provider,
+            values: resolution.values,
+            trace: resolution.trace,
         }
     }
 }
@@ -97,16 +125,38 @@ pub(super) fn dialogue_line(
     locale: LocaleLookup<'_>,
 ) -> Result<DialogueLine, DialogueError> {
     let line = asset.line_at(line_index)?;
-    let text = localise_text(
-        line.id.as_str(),
-        &line.source_text,
-        TextDomain::Line,
-        locale,
-    );
+    let (text, source_text, plural) = if let (Some(plural), Some(authored_plural)) = (
+        line.plural_source_text.as_deref(),
+        line.authored_plural_source_text.as_deref(),
+    ) {
+        super::interpolation::localise_plural_text(
+            line.id.as_str(),
+            super::interpolation::PluralSource {
+                authored_singular: &line.authored_source_text,
+                authored_plural,
+                decoded_singular: &line.source_text,
+                decoded_plural: plural,
+            },
+            &line.interpolation_bindings,
+            line.interpolation_mode,
+            locale,
+        )
+        .map(|(text, source_text, plural)| (text, source_text, Some(plural)))?
+    } else {
+        let text = super::interpolation::localise_text(
+            line.id.as_str(),
+            &line.authored_source_text,
+            TextDomain::Line,
+            &line.interpolation_bindings,
+            line.interpolation_mode,
+            locale,
+        )?;
+        (text, line.source_text.clone(), None)
+    };
 
     Ok(DialogueLine {
         id: line.id.clone(),
-        source_text: line.source_text.clone(),
+        source_text,
         text,
         speaker: line
             .speaker
@@ -114,6 +164,7 @@ pub(super) fn dialogue_line(
             .map(|speaker| asset.speaker_at(speaker).map(|speaker| speaker.id.clone()))
             .transpose()?,
         metadata: metadata(asset, line.metadata)?,
+        plural,
     })
 }
 
@@ -123,12 +174,14 @@ pub(super) fn dialogue_choice(
     availability: ChoiceAvailability,
     locale: LocaleLookup<'_>,
 ) -> Result<DialogueChoice, DialogueError> {
-    let text = localise_text(
+    let text = super::interpolation::localise_text(
         choice.id.as_str(),
-        &choice.source_text,
+        &choice.authored_source_text,
         TextDomain::Choice,
+        &choice.interpolation_bindings,
+        choice.interpolation_mode,
         locale,
-    );
+    )?;
 
     Ok(DialogueChoice {
         id: choice.id.clone(),
@@ -138,21 +191,6 @@ pub(super) fn dialogue_choice(
         availability,
         echo: choice_echo(&choice.echo),
     })
-}
-
-fn localise_text(
-    id: &str,
-    source_text: &str,
-    domain: TextDomain,
-    locale: LocaleLookup<'_>,
-) -> String {
-    let Some((locale_id, provider)) = locale.locale.zip(locale.provider) else {
-        return source_text.to_owned();
-    };
-
-    provider
-        .lookup(id, source_text, domain, locale_id, locale.variant)
-        .unwrap_or_else(|| source_text.to_owned())
 }
 
 pub(crate) fn dialogue_effect_request(

@@ -1,4 +1,5 @@
-use super::super::spans::top_level_number_token;
+use super::super::raw::RawValue;
+use super::super::spans::{TomlSpanIndex, top_level_number_token, top_level_toml_number_token};
 
 #[derive(Clone, Copy, Debug, Eq, PartialEq)]
 pub(super) enum SchemaVersion<'a> {
@@ -7,8 +8,8 @@ pub(super) enum SchemaVersion<'a> {
     Malformed,
 }
 
-pub(super) fn schema_version<'a>(source: &'a str, value: &serde_json::Value) -> SchemaVersion<'a> {
-    if !value.is_number() {
+pub(super) fn schema_version<'a>(source: &'a str, value: &RawValue) -> SchemaVersion<'a> {
+    if !matches!(value, RawValue::Number(_)) {
         return SchemaVersion::Malformed;
     }
 
@@ -16,6 +17,24 @@ pub(super) fn schema_version<'a>(source: &'a str, value: &serde_json::Value) -> 
         return SchemaVersion::Malformed;
     };
 
+    if number_token_equals_one(token) {
+        SchemaVersion::One
+    } else {
+        SchemaVersion::Unsupported(token)
+    }
+}
+
+pub(super) fn toml_schema_version<'a>(
+    source: &'a str,
+    value: &RawValue,
+    spans: Option<&TomlSpanIndex>,
+) -> SchemaVersion<'a> {
+    if !matches!(value, RawValue::Number(_)) {
+        return SchemaVersion::Malformed;
+    }
+    let Some(token) = top_level_toml_number_token(source, "schema_version", spans) else {
+        return SchemaVersion::Malformed;
+    };
     if number_token_equals_one(token) {
         SchemaVersion::One
     } else {

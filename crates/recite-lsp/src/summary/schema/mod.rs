@@ -6,10 +6,10 @@ use recite_core::ProjectSchema;
 
 #[allow(unused_imports)]
 pub(crate) use items::{
-    ConditionSummary, EffectSummary, MarkupSummary, ParameterSummary, PresentationOutputSummary,
-    PresentationProjectorSummary, ProjectionInputSummary, ProjectionQuerySummary,
-    ProjectorQuerySummary, ProvenanceSummary, RegistrySummary, SchemaMetadataSummary,
-    SpeakerSummary, TypeKindSummary, TypeSummary,
+    AvailabilityReasonSummary, ConditionSummary, EffectSummary, MarkupSummary, ParameterSummary,
+    PresentationOutputSummary, PresentationProjectorSummary, ProjectionInputSummary,
+    ProjectionQuerySummary, ProjectorQuerySummary, ProvenanceSummary, RegistrySummary,
+    SchemaMetadataSummary, SpeakerSummary, TypeKindSummary, TypeSummary,
 };
 #[allow(unused_imports)]
 pub(crate) use metadata::{
@@ -24,10 +24,12 @@ use render::{
 #[derive(Clone, Debug, Eq, PartialEq)]
 pub(crate) struct SchemaSummary {
     pub(crate) schema_version: u32,
+    pub(crate) producer_metadata: Option<ProducerMetadataSummary>,
     pub(crate) types: Vec<TypeSummary>,
     pub(crate) registries: Vec<RegistrySummary>,
     pub(crate) speakers: Vec<SpeakerSummary>,
     pub(crate) conditions: Vec<ConditionSummary>,
+    pub(crate) availability_reasons: Vec<AvailabilityReasonSummary>,
     pub(crate) effects: Vec<EffectSummary>,
     pub(crate) projection_queries: Vec<ProjectionQuerySummary>,
     pub(crate) presentation_projectors: Vec<PresentationProjectorSummary>,
@@ -40,6 +42,10 @@ impl SchemaSummary {
     pub(crate) fn from_schema(schema: &ProjectSchema) -> Self {
         Self {
             schema_version: schema.schema_version,
+            producer_metadata: schema
+                .producer_metadata
+                .as_ref()
+                .map(ProducerMetadataSummary::from),
             types: schema
                 .types
                 .iter()
@@ -51,9 +57,18 @@ impl SchemaSummary {
                 .map(|(name, definition)| RegistrySummary {
                     name: name.clone(),
                     values: definition.values.iter().cloned().collect(),
-                    provenance: ProvenanceSummary::from_optional_origin(
-                        definition.origin.as_deref(),
-                    ),
+                    provenance: ProvenanceSummary::from_optional_origin(definition.origin.as_ref()),
+                    value_provenance: definition
+                        .value_origins
+                        .iter()
+                        .map(|(key, origin)| {
+                            (
+                                key.clone(),
+                                ProvenanceSummary::from_optional_origin(Some(origin)),
+                            )
+                        })
+                        .collect(),
+                    producer_fingerprints: definition.producer_fingerprints.clone(),
                 })
                 .collect(),
             speakers: schema
@@ -78,6 +93,14 @@ impl SchemaSummary {
                         })
                         .collect(),
                     returns: format!("{:?}", definition.returns),
+                })
+                .collect(),
+            availability_reasons: schema
+                .availability_reasons
+                .iter()
+                .map(|(name, definition)| AvailabilityReasonSummary {
+                    name: name.to_string(),
+                    provenance: ProvenanceSummary::from_optional_origin(definition.origin.as_ref()),
                 })
                 .collect(),
             effects: schema
@@ -186,6 +209,27 @@ impl SchemaSummary {
                     allows_nesting: definition.allows_nesting,
                 })
                 .collect(),
+        }
+    }
+}
+
+#[derive(Clone, Debug, Eq, PartialEq)]
+pub(crate) struct ProducerMetadataSummary {
+    pub(crate) producer: Option<recite_core::ProducerIdentity>,
+    pub(crate) content_fingerprint: Option<recite_core::ContentFingerprint>,
+    pub(crate) schema_export_version: Option<u32>,
+    pub(crate) inclusion_policy: Option<String>,
+    pub(crate) producer_fingerprints: Vec<recite_core::ProducerFingerprint>,
+}
+
+impl From<&recite_core::ProducerMetadata> for ProducerMetadataSummary {
+    fn from(metadata: &recite_core::ProducerMetadata) -> Self {
+        Self {
+            producer: metadata.producer.clone(),
+            content_fingerprint: metadata.content_fingerprint.clone(),
+            schema_export_version: metadata.schema_export_version,
+            inclusion_policy: metadata.inclusion_policy.clone(),
+            producer_fingerprints: metadata.producer_fingerprints.clone(),
         }
     }
 }

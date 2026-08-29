@@ -160,6 +160,10 @@ contract:
 - load or decode a compiled asset and report structured load errors;
 - start a session from a compiled asset identity, optional block, and optional
   locale; absent locale selects source-text-only mode;
+- supply typed interpolation values for line and choice bindings through the
+  generated C ABI surface; the native bridge copies these caller-owned values
+  and the managed wrapper can replace them between traversal calls (for
+  example, through a typed `ReciteInterpolationValue` list);
 - select a choice by stable `ChoiceId`;
 - acknowledge a blocking effect by stable `EffectRequestId`;
 - snapshot and restore the opaque Recite session state;
@@ -181,6 +185,7 @@ owns:
 - session start/select/acknowledge/end sequencing;
 - opaque runtime snapshot handoff for save/load;
 - locale and grammatical variant inputs;
+- typed interpolation-value input and replacement;
 - condition-handler dispatch;
 - structured effect request emission;
 - structured output and error conversion;

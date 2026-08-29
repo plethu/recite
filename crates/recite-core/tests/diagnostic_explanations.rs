@@ -59,6 +59,33 @@ fn diagnostic_explanation_lookup_returns_author_guidance() {
 }
 
 #[test]
+fn diagnostic_explanations_expose_stable_structured_presentation_references() {
+    let code = DiagnosticCode::new_static("RECITE_PARSE001");
+    let explanation = explain_diagnostic_code(&code).expect("known diagnostic");
+    let presentation = explanation.presentation();
+
+    assert_eq!(
+        explanation.default_code_presentation_id().as_str(),
+        "diagnostic-parse-001"
+    );
+    assert_eq!(
+        presentation.meaning.id().as_str(),
+        "diagnostic-parse-001-meaning"
+    );
+    assert!(presentation.meaning.arguments().is_empty());
+    assert_eq!(
+        presentation.common_causes[0].id().as_str(),
+        "diagnostic-parse-001-cause-001"
+    );
+    assert_eq!(
+        presentation.remediation[0].id().as_str(),
+        "diagnostic-parse-001-remediation-001"
+    );
+    assert!(presentation.common_causes[0].arguments().is_empty());
+    assert!(presentation.remediation[0].arguments().is_empty());
+}
+
+#[test]
 fn diagnostic_code_suggestions_accept_close_inputs() {
     let suggestion = match suggest_diagnostic_code("recite_parse001") {
         Some(suggestion) => suggestion,
@@ -83,6 +110,59 @@ fn diagnostic_explanations_match_shifted_parser_and_validation_codes() {
     assert_explanation_contains("RECITE_VALIDATE014", "choice contains a nested statement");
     assert_explanation_contains("RECITE_VALIDATE037", "argument value");
     assert_explanation_contains("RECITE_VALIDATE041", "without a requirement");
+    assert_explanation_contains("RECITE_VALIDATE046", "plural dialogue line");
+}
+
+#[test]
+fn plural_shape_explanation_preserves_stable_presentation_slots() {
+    let code = DiagnosticCode::new_static("RECITE_VALIDATE046");
+    let explanation = explain_diagnostic_code(&code).expect("known plural explanation");
+    let presentation = explanation.presentation();
+
+    assert_eq!(
+        presentation
+            .common_causes
+            .iter()
+            .map(|item| item.id().as_str())
+            .collect::<Vec<_>>(),
+        [
+            "diagnostic-validate-046-cause-001",
+            "diagnostic-validate-046-cause-002",
+            "diagnostic-validate-046-cause-003",
+            "diagnostic-validate-046-cause-004",
+        ]
+    );
+    assert_eq!(
+        presentation
+            .remediation
+            .iter()
+            .map(|item| item.id().as_str())
+            .collect::<Vec<_>>(),
+        [
+            "diagnostic-validate-046-remediation-001",
+            "diagnostic-validate-046-remediation-002",
+            "diagnostic-validate-046-remediation-003",
+            "diagnostic-validate-046-remediation-004",
+        ]
+    );
+    assert_eq!(
+        explanation.common_causes,
+        [
+            "The plural source forms do not have the required two-form body shape.",
+            "The singular or plural form contains a newline instead of exactly one body line.",
+            "A plural line has no `bind=(count:int=$value)` binding.",
+            "The `count` binding uses a type other than `int`.",
+        ]
+    );
+    assert_eq!(
+        explanation.remediation,
+        [
+            "Provide exactly one singular body line and one immediately following `|` continuation.",
+            "Keep the singular and plural forms to one body line each.",
+            "Declare the count source with `bind=(count:int=$value)`.",
+            "Change the `count` binding type to `int`.",
+        ]
+    );
 }
 
 #[test]

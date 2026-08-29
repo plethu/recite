@@ -1,8 +1,15 @@
 use super::super::super::diagnostics::{INVALID_TYPE_REFERENCE, MALFORMED_SHAPE};
 use super::super::super::raw::RawMetadataOccurrence;
 use super::selector::{selector_metadata_target, validate_metadata_key_target};
-use crate::Diagnostic;
+use crate::schema::schema_diagnostic;
 use crate::schema::{MetadataOccurrence, ProjectSchema, SchemaProjectionSelector, SchemaTypeRef};
+use crate::{Diagnostic, DiagnosticArgumentValue};
+
+macro_rules! text_args {
+    ($($name:literal => $value:expr),* $(,)?) => {
+        [$(($name, DiagnosticArgumentValue::String($value.into()))),*]
+    };
+}
 
 #[derive(Clone, Copy)]
 pub(super) enum CandidateKind {
@@ -45,12 +52,14 @@ pub(super) fn validate_candidate_source(
         _ => false,
     };
     if !valid {
-        diagnostics.push(Diagnostic::error(
+        diagnostics.push(schema_diagnostic(
             MALFORMED_SHAPE,
+            "diagnostic-schema-001-projection-candidate-source",
             format!(
                 "projector '{projector}' input '{input}' uses an incompatible candidate id source"
             ),
             span,
+            text_args!("projector" => projector, "input" => input),
         ));
     }
 }
@@ -71,10 +80,12 @@ pub(super) fn validate_candidate_metadata_source(
     span: crate::SourceSpan,
 ) {
     let Some(target) = selector_metadata_target(selector) else {
-        diagnostics.push(Diagnostic::error(
+        diagnostics.push(schema_diagnostic(
             MALFORMED_SHAPE,
+            "diagnostic-schema-001-projection-candidate-no-target",
             format!("projector '{projector}' input '{input}' reads candidate metadata but its selector has no metadata target"),
             span,
+            text_args!("projector" => projector, "input" => input),
         ));
         return;
     };
@@ -84,39 +95,49 @@ pub(super) fn validate_candidate_metadata_source(
         return;
     };
     if !metadata.repeatable && !matches!(occurrence, MetadataOccurrence::Only) {
-        diagnostics.push(Diagnostic::error(
+        diagnostics.push(schema_diagnostic(
             MALFORMED_SHAPE,
+            "diagnostic-schema-001-projection-occurrence-repeat",
             format!("projector '{projector}' input '{input}' uses repeated occurrence '{}' for non-repeatable metadata key '{key}'", occurrence_name(occurrence)),
             span.clone(),
+            text_args!("projector" => projector, "input" => input, "occurrence" => occurrence_name(occurrence), "key" => key),
         ));
     }
     match occurrence {
         MetadataOccurrence::All => {
             let SchemaTypeRef::Array(inner) = type_ref else {
-                diagnostics.push(Diagnostic::error(
+                diagnostics.push(schema_diagnostic(
                     MALFORMED_SHAPE,
+                    "diagnostic-schema-001-projection-occurrence-all-type",
                     format!("projector '{projector}' input '{input}' uses occurrence 'all' but has non-array type {}", super::reference::type_ref_name(type_ref)),
                     span,
+                    text_args!("projector" => projector, "input" => input, "type_ref" => super::reference::type_ref_name(type_ref)),
                 ));
                 return;
             };
             if **inner != metadata.type_ref {
-                diagnostics.push(Diagnostic::error(
+                diagnostics.push(schema_diagnostic(
                     MALFORMED_SHAPE,
+                    "diagnostic-schema-001-projection-candidate-type-mismatch",
                     format!("projector '{projector}' input '{input}' expects {}, but metadata key '{key}' has {}", super::reference::type_ref_name(type_ref), super::reference::type_ref_name(&metadata.type_ref)),
                     span,
+                    text_args!("projector" => projector, "input" => input, "expected" => super::reference::type_ref_name(type_ref), "key" => key, "actual" => super::reference::type_ref_name(&metadata.type_ref)),
                 ));
             }
         }
-        _ if matches!(type_ref, SchemaTypeRef::Array(_)) => diagnostics.push(Diagnostic::error(
+        _ if matches!(type_ref, SchemaTypeRef::Array(_)) => diagnostics.push(schema_diagnostic(
             MALFORMED_SHAPE,
+            "diagnostic-schema-001-projection-occurrence-array",
             format!("projector '{projector}' input '{input}' uses array type {} without occurrence 'all'", super::reference::type_ref_name(type_ref)),
             span,
+            text_args!("projector" => projector, "input" => input, "type_ref" => super::reference::type_ref_name(type_ref)),
         )),
-        _ if *type_ref != metadata.type_ref => diagnostics.push(Diagnostic::error(
+        _ if *type_ref != metadata.type_ref => diagnostics.push(schema_diagnostic(
             MALFORMED_SHAPE,
+            "diagnostic-schema-001-projection-candidate-type-mismatch",
             format!("projector '{projector}' input '{input}' expects {}, but metadata key '{key}' has {}", super::reference::type_ref_name(type_ref), super::reference::type_ref_name(&metadata.type_ref)),
             span,
+            text_args!("projector" => projector, "input" => input, "expected" => super::reference::type_ref_name(type_ref), "key" => key, "actual" => super::reference::type_ref_name(&metadata.type_ref)),
         )),
         _ => {}
     }
@@ -137,10 +158,12 @@ pub(super) fn validate_availability_reason_arg_source(
     span: crate::SourceSpan,
 ) {
     let SchemaProjectionSelector::AvailabilityReason { reason_id } = selector else {
-        diagnostics.push(Diagnostic::error(
+        diagnostics.push(schema_diagnostic(
             MALFORMED_SHAPE,
+            "diagnostic-schema-001-projection-reason-no-selector",
             format!("projector '{projector}' input '{input}' reads an availability reason argument but its selector is not availability_reason"),
             span,
+            text_args!("projector" => projector, "input" => input),
         ));
         return;
     };
@@ -148,24 +171,28 @@ pub(super) fn validate_availability_reason_arg_source(
         return;
     };
     let Some(param) = reason.params.iter().find(|param| param.name == name) else {
-        diagnostics.push(Diagnostic::error(
+        diagnostics.push(schema_diagnostic(
             INVALID_TYPE_REFERENCE,
+            "diagnostic-schema-004-projection-reason-arg",
             format!(
                 "projector '{projector}' input '{input}' references unknown availability reason argument '{name}'"
             ),
             span,
+            text_args!("projector" => projector, "input" => input, "name" => name),
         ));
         return;
     };
     if &param.type_ref != type_ref {
-        diagnostics.push(Diagnostic::error(
+        diagnostics.push(schema_diagnostic(
             MALFORMED_SHAPE,
+            "diagnostic-schema-001-projection-reason-type",
             format!(
                 "projector '{projector}' input '{input}' expects {}, but availability reason argument '{name}' has {}",
                 super::reference::type_ref_name(type_ref),
                 super::reference::type_ref_name(&param.type_ref)
             ),
             span,
+            text_args!("projector" => projector, "input" => input, "name" => name, "expected" => super::reference::type_ref_name(type_ref), "actual" => super::reference::type_ref_name(&param.type_ref)),
         ));
     }
 }
@@ -183,14 +210,16 @@ pub(super) fn lower_occurrence(
         Some(RawMetadataOccurrence::Named(name)) if name == "first" => MetadataOccurrence::First,
         Some(RawMetadataOccurrence::Named(name)) if name == "last" => MetadataOccurrence::Last,
         Some(RawMetadataOccurrence::Named(name)) if name == "all" => MetadataOccurrence::All,
-        Some(RawMetadataOccurrence::Index { index }) => MetadataOccurrence::Index(index),
+        Some(RawMetadataOccurrence::Index(index)) => MetadataOccurrence::Index(index.index),
         Some(RawMetadataOccurrence::Named(name)) => {
-            diagnostics.push(Diagnostic::error(
+            diagnostics.push(schema_diagnostic(
                 MALFORMED_SHAPE,
+                "diagnostic-schema-001-projection-occurrence",
                 format!(
                     "projector '{projector}' input '{input}' uses unsupported metadata occurrence '{name}'"
                 ),
                 span,
+                text_args!("projector" => projector, "input" => input, "name" => name),
             ));
             MetadataOccurrence::Only
         }

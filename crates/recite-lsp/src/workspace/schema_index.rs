@@ -3,7 +3,8 @@ use std::path::PathBuf;
 
 use lsp_types::Uri;
 use recite_core::{
-    Diagnostic, DiagnosticCode, ProjectSchema, SourcePosition, SourceSpan, load_schema_manifest_str,
+    Diagnostic, DiagnosticArgumentValue, DiagnosticCode, DiagnosticPresentationId, ProjectSchema,
+    SourcePosition, SourceSpan, contract_for, load_schema_manifest_str,
 };
 
 use super::{DiagnosticRefresh, DocumentDiagnostics, SnapshotGeneration};
@@ -155,13 +156,23 @@ impl SchemaIndex {
     }
 }
 
+#[allow(
+    clippy::expect_used,
+    reason = "the schema read contract is a static first-party registry invariant"
+)]
 fn schema_io_diagnostic(file: String, error: &std::io::Error) -> Vec<Diagnostic> {
     let Ok(start) = SourcePosition::new(1, 1) else {
         return Vec::new();
     };
-    vec![Diagnostic::error(
-        SCHEMA_LOAD_ERROR,
+    let presentation_id = DiagnosticPresentationId::new_static("diagnostic-schema-001-read");
+    let contract = contract_for(&SCHEMA_LOAD_ERROR, &presentation_id)
+        .expect("schema read diagnostic contract is registered");
+    let diagnostic = Diagnostic::error_from_contract(
+        contract,
         format!("failed to read schema manifest: {error}"),
         SourceSpan::new(file, start, None),
-    )]
+        [("detail", DiagnosticArgumentValue::String(error.to_string()))],
+    )
+    .expect("schema read diagnostic arguments match their contract");
+    vec![diagnostic]
 }

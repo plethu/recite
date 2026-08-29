@@ -5,11 +5,13 @@ use recite_core::{
 
 use super::metadata::MetadataValidationContext;
 use super::state::Validator;
-use crate::diagnostics;
+use crate::diagnostics::{self, ArgumentOwner as A, SourceSpanOwner as O};
+
+mod interpolation;
 
 impl<'a> Validator<'a> {
     pub(super) fn validate_block(&mut self, source_file: &'a SourceFile, block: &'a Block) {
-        self.validate_span(source_file, &block.span, "block");
+        self.validate_span(source_file, &block.span, O::Block);
         self.validate_metadata(
             source_file,
             MetadataValidationContext {
@@ -92,7 +94,7 @@ impl<'a> Validator<'a> {
             }
             Statement::Effect(effect) => self.validate_effect(source_file, effect),
             Statement::Comment(comment) => {
-                self.validate_span(source_file, &comment.span, "comment");
+                self.validate_span(source_file, &comment.span, O::Comment);
             }
         }
     }
@@ -102,8 +104,13 @@ impl<'a> Validator<'a> {
         line: &'a Line,
         block_default_speaker: Option<&'a str>,
     ) {
-        self.validate_span(source_file, &line.span, "line");
-        self.validate_source_text(source_file, &line.source_text, "line source text");
+        self.validate_span(source_file, &line.span, O::Line);
+        self.validate_source_text(source_file, &line.source_text, O::LineSourceText);
+        if let Some(plural_source_text) = &line.plural_source_text {
+            self.validate_plural_line(source_file, line, plural_source_text);
+        } else {
+            self.validate_interpolation(&line.source_text, &line.interpolation_bindings);
+        }
         self.validate_metadata(
             source_file,
             MetadataValidationContext {
@@ -116,6 +123,7 @@ impl<'a> Validator<'a> {
 
         self.validate_line_localisable_id(line);
     }
+
     pub(crate) fn validate_line_localisable_id(&mut self, line: &'a Line) {
         let SourceId::Frozen { .. } = &line.source_id else {
             self.diagnostics.push(match &line.source_id {
@@ -138,8 +146,9 @@ impl<'a> Validator<'a> {
         }
     }
     pub(super) fn validate_choice(&mut self, source_file: &'a SourceFile, choice: &'a Choice) {
-        self.validate_span(source_file, &choice.span, "choice");
-        self.validate_source_text(source_file, &choice.source_text, "choice source text");
+        self.validate_span(source_file, &choice.span, O::Choice);
+        self.validate_source_text(source_file, &choice.source_text, O::ChoiceSourceText);
+        self.validate_interpolation(&choice.source_text, &choice.interpolation_bindings);
         self.validate_metadata(
             source_file,
             MetadataValidationContext {
@@ -154,20 +163,16 @@ impl<'a> Validator<'a> {
             self.validate_span(
                 source_file,
                 &requirement.span,
-                "choice availability requirement",
+                O::ChoiceAvailabilityRequirement,
             );
             self.validate_condition_expression(source_file, &requirement.condition);
             self.validate_boolean_condition_schema(&requirement.condition);
         }
         if let Some(reason) = &choice.availability_reason_override {
-            self.validate_span(source_file, &reason.span, "choice availability reason");
-            self.validate_span(
-                source_file,
-                &reason.id_span,
-                "choice availability reason id",
-            );
+            self.validate_span(source_file, &reason.span, O::ChoiceAvailabilityReason);
+            self.validate_span(source_file, &reason.id_span, O::ChoiceAvailabilityReasonId);
             if let Some(span) = &reason.argument_span {
-                self.validate_span(source_file, span, "choice availability reason arguments");
+                self.validate_span(source_file, span, O::ChoiceAvailabilityReasonArguments);
             }
         }
         self.validate_choice_availability_reason(choice);
@@ -175,7 +180,7 @@ impl<'a> Validator<'a> {
         self.validate_choice_localisable_id(choice);
 
         if let Some(target) = &choice.target {
-            self.validate_span(source_file, &target.span, "choice target");
+            self.validate_span(source_file, &target.span, O::ChoiceTarget);
             self.validate_reference(source_file, &target.target, &target.span);
         } else {
             self.diagnostics
@@ -209,11 +214,11 @@ impl<'a> Validator<'a> {
         }
     }
     pub(super) fn validate_divert(&mut self, source_file: &'a SourceFile, divert: &'a Divert) {
-        self.validate_span(source_file, &divert.span, "divert");
+        self.validate_span(source_file, &divert.span, O::Divert);
         self.validate_reference(source_file, &divert.target, &divert.span);
     }
     pub(super) fn validate_if_branch(&mut self, source_file: &'a SourceFile, branch: &'a IfBranch) {
-        self.validate_span(source_file, &branch.span, "if branch");
+        self.validate_span(source_file, &branch.span, O::IfBranch);
         self.validate_condition_expression(source_file, &branch.condition);
         self.validate_boolean_condition_schema(&branch.condition);
     }
@@ -222,28 +227,28 @@ impl<'a> Validator<'a> {
         source_file: &'a SourceFile,
         branch: &'a MatchBranch,
     ) {
-        self.validate_span(source_file, &branch.span, "match branch");
+        self.validate_span(source_file, &branch.span, O::MatchBranch);
         self.validate_condition_call(source_file, &branch.scrutinee);
         self.validate_match_scrutinee_schema(&branch.scrutinee);
     }
     pub(super) fn validate_match_arm(&mut self, source_file: &'a SourceFile, arm: &'a MatchArm) {
-        self.validate_span(source_file, &arm.span, "match arm");
+        self.validate_span(source_file, &arm.span, O::MatchArm);
     }
     pub(super) fn validate_effect(&mut self, source_file: &'a SourceFile, effect: &'a Effect) {
-        self.validate_span(source_file, &effect.span, "effect");
+        self.validate_span(source_file, &effect.span, O::Effect);
         if let Some(span) = &effect.mode_span {
-            self.validate_span(source_file, span, "effect mode");
+            self.validate_span(source_file, span, O::EffectMode);
         }
         if let Some(span) = &effect.function_span {
-            self.validate_span(source_file, span, "effect function");
+            self.validate_span(source_file, span, O::EffectFunction);
         }
         if let Some(span) = &effect.call_span {
-            self.validate_span(source_file, span, "effect call");
+            self.validate_span(source_file, span, O::EffectCall);
         }
         for span in &effect.arg_spans {
-            self.validate_span(source_file, span, "effect argument");
+            self.validate_span(source_file, span, O::EffectArgument);
         }
-        self.validate_arguments(&effect.args, effect.span.clone(), "effect argument");
+        self.validate_arguments(&effect.args, effect.span.clone(), A::Effect);
         self.validate_effect_schema(source_file, effect);
     }
 }

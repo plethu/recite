@@ -95,6 +95,9 @@ Every adapter must expose host-native equivalents of these operations:
 
 - start a session from a compiled asset, optional start block, and optional
   locale; an absent locale selects source-text-only mode;
+- accept caller-owned typed interpolation values for line and choice bindings;
+  values are separate from serialised session state and must be supplied again
+  when a restored session needs them;
 - select a prompt choice by `ChoiceId`;
 - acknowledge a pending blocking effect by `EffectRequestId` and `EffectAck`;
 - end or dispose the active session through an explicit host-visible operation;
@@ -130,7 +133,12 @@ Adapters must surface runtime output as structured values, not host-formatted
 strings. The host-visible shape must include equivalents for:
 
 - line output with line ID, speaker, localized text, source text where useful,
-  metadata, markup, and pending deferred effects;
+  metadata, markup, and pending deferred effects. A plural line additionally
+  carries optional structured plural metadata: both source forms, the count,
+  selected arm, matched catalogue context/locale/key, ordered lookup attempts, and
+  whether English source fallback terminated resolution. Localized catalogue
+  templates remain trace/debug data and must not be smuggled into normal output
+  prose;
 - prompt output with optional line content and a list of structured choices,
   where each choice preserves its `ChoiceId`, localized text, source text,
   metadata, availability state, and structured unavailable reason data (spec
@@ -147,6 +155,13 @@ modes, line/choice metadata, locale, and error categories. Inline markup must be
 preserved as part of runtime text/source text; adapters may add a later
 presentation layer that interprets markup, but that layer is outside the core
 adapter contract.
+
+The public raw/decoded distinction is intentional: `DialogueLine.source_text`
+is the selected decoded source form delivered for compatibility and fallback,
+while `DialoguePlural.singular_source_text` and
+`DialoguePlural.plural_source_text` preserve the authored/raw source forms.
+Adapters must carry those plural fields as structured metadata and must not
+substitute localized catalogue templates into them.
 
 Choice availability data must preserve the runtime reason tree rather than
 flattening it to a single host string. Adapters should expose equivalents for:
@@ -326,6 +341,13 @@ Producer fingerprints must use a stable shape:
 manifest level for whole-export inputs or inside a domain for domain-specific
 inputs.
 
+A generated manifest may also identify its owning producer with a top-level
+`producer` object (`kind` and stable project-relative `id`) and carry an
+overall `content_fingerprint` object (`algorithm` and `value`). These are
+diagnostic and freshness metadata, not semantic schema content. Namespaced
+origin extensions are preserved as format-neutral diagnostic values; compiler
+validity must not depend on them.
+
 ### 7.3 Deterministic Snapshots and Fingerprints
 
 Generated schema manifests are snapshots. The same host state and producer
@@ -420,6 +442,23 @@ Producer metadata may support cheaper preflight checks before a full export:
 Those fields are producer stale-check inputs, not a replacement for Recite's
 canonical schema fingerprint. They are non-canonical unless the schema model
 explicitly says otherwise.
+
+Recite CLI exposes the bounded host-agnostic action
+`check-schema-producer-freshness --expected OLD.json --actual NEW.json`. It
+loads both manifests, compares their typed producer/content fingerprints, and
+prints deterministic JSON evidence with a failing status for missing,
+mismatched, unexpected, or duplicate fingerprints. It does not inspect host
+resources and is separate from the compiled-asset `check-fresh` command.
+Manifest-level `content_fingerprint` is a separate typed comparison channel;
+it is not converted into a synthetic producer fingerprint, so a producer input
+with the same `kind` and `id` remains distinct from the exported manifest
+content digest. Registry and metadata-domain input fingerprints are compared in
+their own named scope for the same reason.
+The existing core `compare_schema_producer_freshness` API remains available as
+a `ProducerFreshness` compatibility summary across the established producer
+and content channels; callers that need complete evidence for every scope
+should use the separately named `compare_schema_producer_freshness_detailed`
+API.
 
 Where the host cannot expose reliable file or asset fingerprints, the adapter
 must document the weaker check it can perform. The adapter may require an
@@ -584,7 +623,7 @@ the runtime's complete serialized session state as a single opaque unit. It must
 not re-serialize a hand-picked subset of fields, because the snapshot includes
 determinism-critical state — compiled asset identity, current block and statement
 pointer, the call/divert stack, deterministic trace counters, previous prompt
-choices, selected choice history, locale and variant, collected deferred effects,
+choices, selected choice history, locale, collected deferred effects,
 and any pending blocking effect. Dropping any of these (for example, trace
 counters or the divert stack) silently breaks deterministic resume, which the
 core contract forbids. Treat the snapshot as opaque: serialize and restore what
@@ -601,6 +640,12 @@ whether the game-side operation should be replayed, fast-forwarded, or treated
 as already complete.
 
 ## 10. Localisation
+
+The adapter's locale provider/catalog, interpolation values, and grammatical
+variant are adapter-owned inputs and are not part of the runtime snapshot. A
+restore operation must re-supply those inputs before traversal resumes; the
+snapshot preserves the runtime locale so the same lookup context can be
+reconstructed.
 
 Adapters must start sessions with an explicit locale, a stable
 project-configured locale, or source-text fallback. Adapters must not silently
@@ -619,6 +664,13 @@ derive it from host environment or locale; lookup priority remains
 `id&variant` → `id` → source text, and resolution must stay deterministic for a
 given `(id, source, locale, variant, count)` tuple. The resolved text exposed in
 §5 output reflects the selected variant.
+
+Interpolation values use the runtime's typed scalar model (`string`, `int`,
+`float`, and `bool`) and are resolved through the same binding names as the
+core runtime. Adapters must not stringify an absent or mismatched value, and
+must project the runtime's structured localisation error. Values may be
+replaced between traversal operations when host state changes; they are never
+implicitly captured in save data.
 
 Changing locale for an active session is not part of the v1 contract unless an
 adapter documents and tests the exact behavior. Restarting the session with a
@@ -738,6 +790,12 @@ schema so external suites can run the same scenarios. The contract covers:
 
 The result shape is machine-checkable. Callers must not parse prose to determine
 pass/fail.
+
+The Rust Godot conversion layer cannot be exercised by ordinary unit tests:
+Godot 4's `VarDictionary` and related built-ins require an initialized engine
+binding. The adapter conversion code is therefore compile-checked here and
+must be exercised by a Godot-hosted conformance runner before release; the
+reference Rust driver and FFI tests do not claim Godot execution evidence.
 
 ### 13.3 Stable Category Table and Drift Checks
 
@@ -966,6 +1024,7 @@ public partial class ReciteDialogueNode : Node
     [Signal] public delegate void OutputEventHandler(ReciteOutput output);
     [Signal] public delegate void AdapterErrorEventHandler(ReciteAdapterError error);
 
+    public Error SetInterpolationValues(Dictionary values);
     public Error Start(ReciteDialogueResource asset, string block, string? locale);
     public Error SelectChoice(string choiceId);
     public Error AcknowledgeEffect(string effectRequestId, ReciteEffectAck ack);
@@ -982,6 +1041,7 @@ public sealed class ReciteDialogueService
     public event Action<ReciteOutput> Output;
     public event Action<ReciteAdapterError> Error;
 
+    public Result SetInterpolationValues(IReadOnlyList<ReciteInterpolationValue> values);
     public Result Start(ReciteDialogueAsset asset, string block, CultureInfo? locale);
     public Result SelectChoice(ChoiceId choiceId);
     public Result AcknowledgeEffect(EffectRequestId effectRequestId, EffectAck ack);

@@ -4,7 +4,20 @@ use crate::compiled::SchemaFingerprint;
 use crate::{AvailabilityReasonId, ContentFingerprint, EffectMode};
 
 mod canonical;
+mod freshness;
+mod producer;
 
+pub use freshness::{
+    ContentFingerprintFreshness, SchemaProducerFreshness, compare_schema_producer_freshness,
+    compare_schema_producer_freshness_detailed,
+};
+pub use producer::{
+    ContextualMetadataProvenance, FlatMetadataProvenance, ProducerFingerprint,
+    ProducerFingerprintMismatch, ProducerFreshness, ProducerIdentity, ProducerMetadata,
+    ProducerMetadataValue, ProducerOrigin, compare_producer_fingerprints,
+    producer_content_fingerprint,
+};
+pub(crate) use producer::{ProducerContentFingerprintError, producer_content_fingerprint_detailed};
 #[must_use]
 pub fn canonical_schema_fingerprint(schema: &ProjectSchema) -> SchemaFingerprint {
     SchemaFingerprint::Fingerprint(schema.canonical_content_fingerprint())
@@ -25,6 +38,7 @@ pub struct ProjectSchema {
     pub projection_queries: BTreeMap<String, ProjectionQueryFunctionDefinition>,
     pub presentation_projectors: BTreeMap<String, SchemaPresentationProjectorDefinition>,
     pub markup: BTreeMap<String, MarkupDefinition>,
+    pub producer_metadata: Option<ProducerMetadata>,
 }
 
 impl ProjectSchema {
@@ -43,6 +57,7 @@ impl ProjectSchema {
             projection_queries: BTreeMap::new(),
             presentation_projectors: BTreeMap::new(),
             markup: BTreeMap::new(),
+            producer_metadata: None,
         }
     }
 
@@ -84,10 +99,12 @@ pub enum SchemaTypeRef {
 }
 
 /// A generated snapshot of stable project content IDs.
-#[derive(Clone, Debug, Eq, PartialEq)]
+#[derive(Clone, Debug, Default, Eq, PartialEq)]
 pub struct RegistryDefinition {
     pub values: BTreeSet<String>,
-    pub origin: Option<String>,
+    pub origin: Option<ProducerOrigin>,
+    pub value_origins: BTreeMap<String, ProducerOrigin>,
+    pub producer_fingerprints: Vec<ProducerFingerprint>,
 }
 
 /// A declared speaker ID.
@@ -123,7 +140,7 @@ pub enum ConditionReturnType {
 pub struct AvailabilityReasonDefinition {
     pub template: String,
     pub params: Vec<ParameterDefinition>,
-    pub origin: Option<String>,
+    pub origin: Option<ProducerOrigin>,
 }
 
 /// Default availability reason mapping declared on a boolean condition.
@@ -173,9 +190,10 @@ pub enum MetadataDomainDefinition {
 }
 
 /// A deterministic flat set of valid metadata symbol values.
-#[derive(Clone, Debug, Eq, PartialEq)]
+#[derive(Clone, Debug, Default, Eq, PartialEq)]
 pub struct FlatMetadataDomain {
     pub values: BTreeSet<String>,
+    pub provenance: FlatMetadataProvenance,
 }
 
 /// A deterministic context-indexed set of valid metadata symbol values.
@@ -184,6 +202,7 @@ pub struct ContextualMetadataDomain {
     pub selector: MetadataContextSelector,
     pub values_by_context: BTreeMap<String, BTreeSet<String>>,
     pub missing_context: MissingMetadataContextPolicy,
+    pub provenance: ContextualMetadataProvenance,
 }
 
 /// The v1 metadata context selector slice.

@@ -1,15 +1,14 @@
 use std::collections::BTreeSet;
 
-use super::super::diagnostics::{DUPLICATE_DEFINITION, MALFORMED_SHAPE};
 use super::super::raw::{Named, RawMarkupDefinition, RawMetadataDefinition};
 use super::super::spans::ManifestSpans;
 use super::super::validate::{
     PendingDomainReference, PendingTypeReference, duplicate_definition, parse_metadata_target,
     validate_manifest_name,
 };
-use super::types::lower_type_reference;
-use crate::Diagnostic;
-use crate::schema::{MarkupDefinition, MetadataDefinition, ProjectSchema};
+use super::types::{TypeReferenceContext, lower_type_reference_at_with_context};
+use crate::schema::{MarkupDefinition, MetadataDefinition, ProjectSchema, schema_diagnostic};
+use crate::{Diagnostic, DiagnosticArgumentValue};
 
 pub(super) struct PendingReferences<'a> {
     pub(super) type_refs: &'a mut Vec<PendingTypeReference>,
@@ -27,7 +26,8 @@ pub(super) fn lower_metadata(
 ) {
     let mut seen = BTreeSet::new();
     for entry in entries {
-        let name_span = spans.next_key_span(file, source, &entry.name);
+        let entry_path = vec!["metadata".to_owned(), entry.name.clone()];
+        let name_span = spans.key_span_at(file, source, &entry_path, &entry.name);
         if !validate_manifest_name(diagnostics, "metadata name", &entry.name, name_span.clone()) {
             continue;
         }
@@ -37,39 +37,63 @@ pub(super) fn lower_metadata(
         }
 
         let mut targets = BTreeSet::new();
-        for target in &entry.value.targets {
-            let target_span = spans.next_value_span(file, source, target);
+        for (index, target) in entry.value.targets.iter().enumerate() {
+            let mut target_path = entry_path.clone();
+            target_path.extend(["targets".to_owned(), format!("[{index}]")]);
+            let target_span = spans.value_span_at(file, source, &target_path, target);
             let Some(metadata_target) = parse_metadata_target(target) else {
-                diagnostics.push(Diagnostic::error(
-                    MALFORMED_SHAPE,
+                diagnostics.push(schema_diagnostic(
+                    super::super::diagnostics::MALFORMED_SHAPE,
+                    "diagnostic-schema-001-metadata-target",
                     format!(
                         "metadata '{}' uses unsupported target '{}'",
                         entry.name, target
                     ),
                     target_span,
+                    [
+                        (
+                            "metadata",
+                            DiagnosticArgumentValue::String(entry.name.clone()),
+                        ),
+                        ("target", DiagnosticArgumentValue::String(target.clone())),
+                    ],
                 ));
                 continue;
             };
 
             if !targets.insert(metadata_target) {
-                diagnostics.push(Diagnostic::error(
-                    DUPLICATE_DEFINITION,
+                diagnostics.push(schema_diagnostic(
+                    super::super::diagnostics::DUPLICATE_DEFINITION,
+                    "diagnostic-schema-003-metadata-target",
                     format!("metadata '{}' repeats target '{}'", entry.name, target),
                     target_span,
+                    [
+                        (
+                            "metadata",
+                            DiagnosticArgumentValue::String(entry.name.clone()),
+                        ),
+                        ("target", DiagnosticArgumentValue::String(target.clone())),
+                    ],
                 ));
             }
         }
 
-        let (type_ref, type_ref_span, type_ref_is_valid) = lower_type_reference(
+        let mut type_path = entry_path.clone();
+        type_path.push("type".to_owned());
+        let (type_ref, type_ref_span, type_ref_is_valid) = lower_type_reference_at_with_context(
             file,
             source,
             spans,
             diagnostics,
             &entry.value.type_ref,
+            &type_path,
             format!(
                 "metadata '{}' has invalid type reference '{}'",
                 entry.name, entry.value.type_ref
             ),
+            TypeReferenceContext::Metadata {
+                metadata: entry.name.clone(),
+            },
         );
         if type_ref_is_valid {
             pending_refs.type_refs.push(PendingTypeReference {
@@ -79,26 +103,50 @@ pub(super) fn lower_metadata(
             });
         }
         if matches!(type_ref, crate::schema::SchemaTypeRef::Array(_)) {
-            diagnostics.push(Diagnostic::error(
-                MALFORMED_SHAPE,
+            diagnostics.push(schema_diagnostic(
+                super::super::diagnostics::MALFORMED_SHAPE,
+                "diagnostic-schema-001-metadata-array-type",
                 format!(
                     "metadata '{}' uses projection-only array type '{}'",
                     entry.name, entry.value.type_ref
                 ),
                 type_ref_span,
+                [
+                    (
+                        "metadata",
+                        DiagnosticArgumentValue::String(entry.name.clone()),
+                    ),
+                    (
+                        "type_ref",
+                        DiagnosticArgumentValue::String(entry.value.type_ref.clone()),
+                    ),
+                ],
             ));
         }
 
         if let Some(domain) = &entry.value.domain {
-            let domain_span = spans.next_value_span(file, source, domain);
+            let mut domain_path = entry_path.clone();
+            domain_path.push("domain".to_owned());
+            let domain_span = spans.value_span_at(file, source, &domain_path, domain);
             if type_ref != crate::schema::SchemaTypeRef::Symbol {
-                diagnostics.push(Diagnostic::error(
-                    MALFORMED_SHAPE,
+                diagnostics.push(schema_diagnostic(
+                    super::super::diagnostics::MALFORMED_SHAPE,
+                    "diagnostic-schema-001-metadata-domain-type",
                     format!(
                         "metadata '{}' uses a metadata domain but has non-symbol type '{}'",
                         entry.name, entry.value.type_ref
                     ),
                     domain_span,
+                    [
+                        (
+                            "metadata",
+                            DiagnosticArgumentValue::String(entry.name.clone()),
+                        ),
+                        (
+                            "type_ref",
+                            DiagnosticArgumentValue::String(entry.value.type_ref.clone()),
+                        ),
+                    ],
                 ));
             } else {
                 pending_refs.domain_refs.push(PendingDomainReference {
@@ -132,7 +180,8 @@ pub(super) fn lower_markup(
 ) {
     let mut seen = BTreeSet::new();
     for entry in entries {
-        let name_span = spans.next_key_span(file, source, &entry.name);
+        let entry_path = vec!["markup".to_owned(), entry.name.clone()];
+        let name_span = spans.key_span_at(file, source, &entry_path, &entry.name);
         if !validate_manifest_name(diagnostics, "markup name", &entry.name, name_span.clone()) {
             continue;
         }

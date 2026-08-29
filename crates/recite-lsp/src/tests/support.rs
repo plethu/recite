@@ -22,6 +22,7 @@ use lsp_types::{
     TextDocumentPositionParams, Uri, VersionedTextDocumentIdentifier, WorkDoneProgressParams,
     WorkspaceEdit,
 };
+use recite_ui::{DEFAULT_RESOURCE, UiCatalog};
 use serde::Serialize;
 use serde_json::{Value, json};
 
@@ -49,6 +50,39 @@ impl Harness {
     pub(super) fn start_with_result(params: Value) -> (Self, InitializeResult) {
         let (server_connection, client) = Connection::memory();
         let server = thread::spawn(move || run_connection(server_connection));
+        Self::finish_start(params, client, server)
+    }
+
+    pub(super) fn start_with_result_and_resource(
+        params: Value,
+        locale: &str,
+        resource: String,
+    ) -> (Self, InitializeResult) {
+        let (server_connection, client) = Connection::memory();
+        let locale = locale.to_owned();
+        let server = thread::spawn(move || {
+            let requested = locale.parse().expect("test locale is valid");
+            let catalog = UiCatalog::from_resources(
+                requested,
+                [
+                    (
+                        "en-US".parse().expect("English locale is valid"),
+                        DEFAULT_RESOURCE.to_owned(),
+                    ),
+                    (locale.parse().expect("test locale is valid"), resource),
+                ],
+            )
+            .expect("test catalog is complete");
+            crate::server::run_connection_with_catalog(server_connection, catalog)
+        });
+        Self::finish_start(params, client, server)
+    }
+
+    fn finish_start(
+        params: Value,
+        client: Connection,
+        server: JoinHandle<Result<(), ServerError>>,
+    ) -> (Self, InitializeResult) {
         let mut harness = Self {
             client,
             server,

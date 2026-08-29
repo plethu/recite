@@ -256,9 +256,16 @@ fn reason_for_id_with_args(
         )));
     };
     let args = args.into_iter().collect::<Vec<_>>();
-    let source_text = reason.template.clone();
-    let localized_template = localise_reason_template(reason.id.as_str(), &source_text, locale);
-    let text = render_reason_template(&localized_template, &args);
+    let authored_source_text = reason.template.clone();
+    let source_text = recite_core::decode_interpolation_text(&authored_source_text);
+    let localized_template =
+        localise_reason_template(reason.id.as_str(), &authored_source_text, locale)?;
+    let text = super::interpolation::render_template(&localized_template, |name| {
+        Ok(args
+            .iter()
+            .find(|arg| arg.name == name)
+            .map(|arg| availability_value_text(&arg.value)))
+    })?;
     Ok(Some(ChoiceAvailabilityReason {
         id: reason.id.clone(),
         source_text,
@@ -311,31 +318,37 @@ fn availability_scalar(value: &ScalarValue) -> ChoiceAvailabilityReasonValue {
     }
 }
 
-fn localise_reason_template(id: &str, source_text: &str, locale: LocaleLookup<'_>) -> String {
-    let Some((locale_id, provider)) = locale.locale.zip(locale.provider) else {
-        return source_text.to_owned();
+fn localise_reason_template(
+    id: &str,
+    source_text: &str,
+    locale: LocaleLookup<'_>,
+) -> Result<String, DialogueError> {
+    let text = if let Some((locale_id, provider)) = locale.locale.zip(locale.provider) {
+        provider
+            .lookup(
+                id,
+                source_text,
+                TextDomain::AvailabilityReason,
+                locale_id,
+                locale.variant,
+            )
+            .map_err(|error| DialogueError::LocaleLookupFailed {
+                id: id.to_owned(),
+                reason: error.reason().to_owned(),
+            })?
+            .unwrap_or_else(|| source_text.to_owned())
+    } else {
+        source_text.to_owned()
     };
-
-    provider
-        .lookup(
-            id,
-            source_text,
-            TextDomain::AvailabilityReason,
-            locale_id,
-            locale.variant,
-        )
-        .unwrap_or_else(|| source_text.to_owned())
-}
-
-fn render_reason_template(template: &str, args: &[ChoiceAvailabilityReasonArg]) -> String {
-    let mut rendered = template.to_owned();
-    for arg in args {
-        rendered = rendered.replace(
-            &format!("{{{}}}", arg.name),
-            &availability_value_text(&arg.value),
-        );
+    recite_core::validate_translation_placeholders(source_text, &text).map_err(|error| {
+        DialogueError::InvalidInterpolationSyntax {
+            reason: error.message(),
+        }
+    })?;
+    if let Some(trace) = locale.trace {
+        trace.record_localized_availability_template(id, &text);
     }
-    rendered
+    Ok(text)
 }
 
 fn availability_value_text(value: &ChoiceAvailabilityReasonValue) -> String {

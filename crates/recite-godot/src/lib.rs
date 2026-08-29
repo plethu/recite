@@ -8,17 +8,20 @@ mod adapter;
 mod adapter_error;
 mod adapter_model;
 mod adapter_policy;
+mod adapter_surface;
 mod binding_types;
 mod bindings;
+mod catalog;
+mod catalog_resource;
 mod convert;
 
-pub use adapter::{
-    AdapterValue, ConditionCall, ConditionHandlerResult, ReciteDialogueAsset, ReciteDialogueDriver,
-    ReciteOutput,
-};
+pub use adapter::{ConditionHandlerResult, ReciteDialogueDriver};
 pub use adapter_error::{AdapterError, AdapterErrorKind, AdapterResult};
+pub use adapter_surface::{AdapterValue, ConditionCall, ReciteDialogueAsset, ReciteOutput};
 pub use binding_types::{ReciteAdapterError, ReciteOperationResult, ReciteOutputObject};
 pub use bindings::{ReciteDialogueNode, ReciteDialogueResource};
+pub use catalog::ReciteDialogueCatalog;
+pub use catalog_resource::ReciteDialogueCatalogResource;
 
 struct ReciteGodotExtension;
 

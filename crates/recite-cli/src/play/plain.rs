@@ -5,6 +5,7 @@ use recite_runtime::{
     ConditionExpectedType, ConditionQuery, ConditionValue, DialogueChoice, DialogueEffectRequest,
     DialogueLine,
 };
+use recite_ui::{UiArg, UiArgs};
 
 use crate::dialogue_locale::DialogueTraversalPreview;
 use crate::error::CliError;
@@ -49,6 +50,10 @@ impl<'a, R: ?Sized, W: ?Sized> PlainPlayUi<'a, R, W> {
 impl<R: Read + ?Sized, W: Write + ?Sized> PlayUiAdapter for PlainPlayUi<'_, R, W> {
     fn message(&self, id: MsgId, args: impl IntoIterator<Item = (&'static str, String)>) -> String {
         self.messages.format(id, args)
+    }
+
+    fn message_typed(&self, id: MsgId, args: UiArgs) -> String {
+        self.messages.format_args(id, &args)
     }
 
     fn start(&mut self, asset: &CompiledDialogue, block: &str) -> Result<(), CliError> {
@@ -102,23 +107,19 @@ impl<R: Read + ?Sized, W: Write + ?Sized> PlayUiAdapter for PlainPlayUi<'_, R, W
             writeln!(self.output, "{}", self.messages.text(MsgId::PlayPrompt))?;
         }
         for (index, choice) in choices.iter().enumerate() {
-            let availability = if choice.availability.is_available {
-                String::new()
-            } else {
-                self.messages.text(MsgId::PlayChoiceUnavailableSuffix)
-            };
+            let args = UiArgs::from([
+                ("index".to_owned(), UiArg::from(index + 1)),
+                ("id".to_owned(), UiArg::from(choice.id.as_str())),
+                ("text".to_owned(), UiArg::from(choice.text.as_str())),
+                (
+                    "available".to_owned(),
+                    UiArg::from(choice.availability.is_available),
+                ),
+            ]);
             writeln!(
                 self.output,
                 "{}",
-                self.messages.format(
-                    MsgId::PlayChoiceRow,
-                    [
-                        ("index", (index + 1).to_string()),
-                        ("id", choice.id.as_str().to_owned()),
-                        ("text", choice.text.clone()),
-                        ("availability", availability),
-                    ],
-                )
+                self.messages.format_args(MsgId::PlayChoiceRow, &args)
             )?;
         }
         write!(
@@ -146,7 +147,7 @@ impl<R: Read + ?Sized, W: Write + ?Sized> PlayUiAdapter for PlainPlayUi<'_, R, W
             let value = input.trim().to_owned();
             if value.is_empty() {
                 return Err(CliError::PlayInvalidInput(
-                    "enter an enum variant".to_owned(),
+                    self.messages.text(MsgId::PlayErrorEnterEnumVariant),
                 ));
             }
             writeln!(

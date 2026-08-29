@@ -40,8 +40,28 @@ impl LocaleProvider for CatalogProvider {
         _domain: TextDomain,
         _locale: &LocaleId,
         _variant: Option<&str>,
-    ) -> Option<String> {
-        self.entries.get(id).cloned()
+    ) -> Result<Option<String>, recite_runtime::LocaleError> {
+        Ok(self.entries.get(id).cloned())
+    }
+
+    fn resolve_plural(
+        &self,
+        _id: &str,
+        _source_singular: &str,
+        _source_plural: &str,
+        _count: i64,
+        _domain: TextDomain,
+        _locale: &LocaleId,
+        _variant: Option<&str>,
+    ) -> Result<recite_runtime::PluralResolution, recite_runtime::LocaleError> {
+        Ok(recite_runtime::PluralResolution {
+            template: None,
+            selected_arm: None,
+            matched_locale: None,
+            matched_context: None,
+            matched_key: None,
+            attempts: Vec::new(),
+        })
     }
 }
 

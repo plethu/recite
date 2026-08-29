@@ -1,4 +1,4 @@
-use godot::builtin::{Callable, GString, PackedByteArray, VarArray, VarDictionary};
+use godot::builtin::{Callable, GString, PackedByteArray, VarDictionary};
 use godot::classes::{FileAccess, INode, IResource, Node, Resource};
 use godot::prelude::*;
 use recite_runtime::{ConditionExpectedType, ConditionValue};
@@ -8,7 +8,8 @@ use crate::adapter::{
     ReciteDialogueDriver, ReciteOutput as AdapterOutput,
 };
 use crate::binding_types::{ReciteAdapterError, ReciteOperationResult, ReciteOutputObject};
-use crate::convert::{error_dictionary, output_dictionary};
+use crate::catalog_resource::ReciteDialogueCatalogResource;
+use crate::convert::{error_dictionary, interpolation_values, output_dictionary};
 
 #[derive(GodotClass)]
 #[class(init, base=Resource)]
@@ -110,16 +111,70 @@ impl ReciteDialogueNode {
         block_id: GString,
         locale: GString,
     ) -> Gd<ReciteOperationResult> {
+        self.start_with_variant(asset, block_id, locale, GString::new())
+    }
+
+    #[func]
+    fn start_with_variant(
+        &mut self,
+        asset: Gd<ReciteDialogueResource>,
+        block_id: GString,
+        locale: GString,
+        variant: GString,
+    ) -> Gd<ReciteOperationResult> {
         let asset = match asset.bind().cloned_asset() {
             Ok(asset) => asset,
             Err(error) => return self.emit_error_result(error),
         };
         let block_id = optional_string(block_id);
         let locale = optional_string(locale);
-        let result = self
-            .driver
-            .start(&asset, block_id.as_deref(), locale.as_deref());
+        let variant = optional_string(variant);
+        let result = self.driver.start_with_variant(
+            &asset,
+            block_id.as_deref(),
+            locale.as_deref(),
+            variant.as_deref(),
+        );
         self.apply_driver_result(result)
+    }
+
+    #[func]
+    fn set_locale_variant(&mut self, variant: GString) -> Gd<ReciteOperationResult> {
+        match self
+            .driver
+            .set_locale_variant(optional_string(variant).as_deref())
+        {
+            Ok(()) => ReciteOperationResult::success(Vec::new()),
+            Err(error) => self.emit_error_result(error),
+        }
+    }
+
+    #[func]
+    fn clear_locale_variant(&mut self) -> Gd<ReciteOperationResult> {
+        match self.driver.set_locale_variant(None) {
+            Ok(()) => ReciteOperationResult::success(Vec::new()),
+            Err(error) => self.emit_error_result(error),
+        }
+    }
+
+    #[func]
+    fn set_locale_catalog(
+        &mut self,
+        catalog: Gd<ReciteDialogueCatalogResource>,
+    ) -> Gd<ReciteOperationResult> {
+        match catalog.bind().cloned_catalog() {
+            Ok(catalog) => {
+                self.driver.set_locale_catalog(catalog);
+                ReciteOperationResult::success(Vec::new())
+            }
+            Err(error) => self.emit_error_result(error),
+        }
+    }
+
+    #[func]
+    fn clear_locale_catalog(&mut self) -> Gd<ReciteOperationResult> {
+        self.driver.clear_locale_catalog();
+        ReciteOperationResult::success(Vec::new())
     }
 
     #[func]
@@ -160,11 +215,24 @@ impl ReciteDialogueNode {
         asset: Gd<ReciteDialogueResource>,
         snapshot_bytes: PackedByteArray,
     ) -> Gd<ReciteOperationResult> {
+        self.restore_with_variant(asset, snapshot_bytes, GString::new())
+    }
+
+    #[func]
+    fn restore_with_variant(
+        &mut self,
+        asset: Gd<ReciteDialogueResource>,
+        snapshot_bytes: PackedByteArray,
+        variant: GString,
+    ) -> Gd<ReciteOperationResult> {
         let asset = match asset.bind().cloned_asset() {
             Ok(asset) => asset,
             Err(error) => return self.emit_error_result(error),
         };
-        let result = self.driver.restore(&asset, snapshot_bytes.as_slice());
+        let variant = optional_string(variant);
+        let result =
+            self.driver
+                .restore_with_variant(&asset, snapshot_bytes.as_slice(), variant.as_deref());
         self.apply_driver_result(result)
     }
 
@@ -187,6 +255,17 @@ impl ReciteDialogueNode {
     #[func]
     fn unregister_condition(&mut self, name: GString) {
         self.driver.unregister_condition(&name.to_string());
+    }
+
+    #[func]
+    fn set_interpolation_values(&mut self, values: VarDictionary) -> Gd<ReciteOperationResult> {
+        match interpolation_values(&values) {
+            Ok(values) => {
+                self.driver.set_interpolation_values(values);
+                ReciteOperationResult::success(Vec::new())
+            }
+            Err(error) => self.emit_error_result(error),
+        }
     }
 
     fn apply_driver_result(
@@ -218,9 +297,16 @@ impl ReciteDialogueNode {
     }
 }
 
-fn optional_string(value: GString) -> Option<String> {
+pub(crate) fn optional_string(value: GString) -> Option<String> {
     let value = value.to_string();
     if value.is_empty() { None } else { Some(value) }
+}
+
+pub(crate) fn catalog_result(result: AdapterResult<()>) -> Gd<ReciteOperationResult> {
+    match result {
+        Ok(()) => ReciteOperationResult::success(Vec::new()),
+        Err(error) => ReciteOperationResult::failure(error),
+    }
 }
 
 fn evaluate_callable_condition(

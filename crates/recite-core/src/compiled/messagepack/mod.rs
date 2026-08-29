@@ -73,6 +73,7 @@ pub fn decode_compiled_dialogue_messagepack(
     Ok(dialogue)
 }
 
+mod interpolation;
 mod probe;
 mod tags;
 mod validate;

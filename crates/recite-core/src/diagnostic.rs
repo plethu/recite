@@ -1,115 +1,37 @@
-use std::borrow::Cow;
-use std::fmt;
+use serde::{Deserialize, Serialize};
 
-use crate::{CoreValueError, SourceSpan};
+use crate::{
+    DiagnosticCode, DiagnosticExplanationPresentation, DiagnosticPresentation,
+    DiagnosticPresentationError, DiagnosticRecord, DiagnosticRecordError,
+    DiagnosticRelatedPresentation, SourceSpan,
+};
 
+mod contract;
 mod explanation;
 
+pub use contract::{
+    DiagnosticArgumentSpec, DiagnosticArgumentType, DiagnosticAuxiliaryPresentationContract,
+    DiagnosticPresentationContract, DiagnosticPresentationContractRegistryError,
+    auxiliary_contract_for, contract_for, contracts_for_code,
+    migrated_diagnostic_auxiliary_presentation_contracts,
+    migrated_diagnostic_presentation_contracts, presentation_for,
+    validate_auxiliary_diagnostic_presentation_contracts,
+    validate_diagnostic_presentation_contracts,
+    validate_migrated_diagnostic_presentation_contracts,
+};
 pub use explanation::{
-    DiagnosticExplanation, explain_diagnostic_code, known_diagnostic_explanations,
-    suggest_diagnostic_code,
+    DiagnosticExplanation, default_presentation_id_for_code, explain_diagnostic_code,
+    known_diagnostic_explanations, suggest_diagnostic_code,
 };
 
 /// Stable diagnostic severity shared by compiler, CLI, and LSP surfaces.
-#[derive(Clone, Copy, Debug, Eq, PartialEq, Hash)]
+#[derive(Clone, Copy, Debug, Eq, PartialEq, Hash, Serialize, Deserialize)]
+#[serde(rename_all = "snake_case")]
 pub enum DiagnosticSeverity {
     Error,
     Warning,
     Information,
     Hint,
-}
-
-/// A stable diagnostic category used by CLI and editor tooling.
-#[derive(Clone, Copy, Debug, Eq, PartialEq, Hash)]
-pub enum DiagnosticCategory {
-    Freshness,
-    Identifier,
-    Markup,
-    Metadata,
-    Parse,
-    Project,
-    Schema,
-    Validation,
-    Unknown,
-}
-
-impl DiagnosticCategory {
-    #[must_use]
-    pub const fn as_str(self) -> &'static str {
-        match self {
-            Self::Freshness => "freshness",
-            Self::Identifier => "identifier",
-            Self::Markup => "markup",
-            Self::Metadata => "metadata",
-            Self::Parse => "parse",
-            Self::Project => "project",
-            Self::Schema => "schema",
-            Self::Validation => "validation",
-            Self::Unknown => "unknown",
-        }
-    }
-}
-
-/// A stable diagnostic code, for example `RECITE_PARSE001`.
-#[derive(Clone, Debug, Eq, PartialEq, Hash)]
-pub struct DiagnosticCode(Cow<'static, str>);
-
-impl DiagnosticCode {
-    pub fn new(value: impl Into<String>) -> Result<Self, CoreValueError> {
-        let value = value.into();
-        if value.is_empty() {
-            return Err(CoreValueError::EmptyDiagnosticCode);
-        }
-
-        if !is_namespaced_diagnostic_code(&value) {
-            return Err(CoreValueError::NonNamespacedDiagnosticCode(value));
-        }
-
-        Ok(Self(Cow::Owned(value)))
-    }
-
-    #[must_use]
-    pub const fn new_static(value: &'static str) -> Self {
-        assert!(!value.is_empty(), "diagnostic code must not be empty");
-        assert!(
-            is_namespaced_diagnostic_code_const(value),
-            "diagnostic code must be uppercase and namespaced"
-        );
-
-        Self(Cow::Borrowed(value))
-    }
-
-    #[must_use]
-    pub fn as_str(&self) -> &str {
-        &self.0
-    }
-
-    #[must_use]
-    pub fn category(&self) -> DiagnosticCategory {
-        diagnostic_category(self.0.as_bytes())
-    }
-}
-
-impl fmt::Display for DiagnosticCode {
-    fn fmt(&self, formatter: &mut fmt::Formatter<'_>) -> fmt::Result {
-        formatter.write_str(&self.0)
-    }
-}
-
-impl TryFrom<&str> for DiagnosticCode {
-    type Error = CoreValueError;
-
-    fn try_from(value: &str) -> Result<Self, Self::Error> {
-        Self::new(value)
-    }
-}
-
-impl TryFrom<String> for DiagnosticCode {
-    type Error = CoreValueError;
-
-    fn try_from(value: String) -> Result<Self, Self::Error> {
-        Self::new(value)
-    }
 }
 
 /// Additional source location related to a primary diagnostic.
@@ -134,13 +56,32 @@ impl RelatedSpan {
 pub struct Diagnostic {
     pub code: DiagnosticCode,
     pub severity: DiagnosticSeverity,
+    /// Explicitly supplied deterministic en-US compatibility fallback for
+    /// [`Self::presentation`].
+    ///
+    /// New producers should treat the structured presentation as authoritative
+    /// and populate this field only for compatibility with existing clients.
     pub message: String,
     pub span: SourceSpan,
     pub related: Vec<RelatedSpan>,
     pub help: Option<String>,
+    /// Locale-neutral primary presentation. This remains optional while the
+    /// existing diagnostic constructor families migrate to the structured
+    /// contract.
+    pub presentation: Option<DiagnosticPresentation>,
+    /// Structured related presentations in source order.
+    pub related_presentations: Vec<DiagnosticRelatedPresentation>,
+    /// Locale-neutral help presentation.
+    pub help_presentation: Option<DiagnosticPresentation>,
+    /// Structured explanation and guidance hooks for the diagnostic inventory.
+    pub explanation_presentation: Option<DiagnosticExplanationPresentation>,
 }
 
 impl Diagnostic {
+    /// Construct a diagnostic without checking that `code` has a registered
+    /// structured presentation contract. Extension producers may use this
+    /// unchecked constructor when they own a separate presentation boundary;
+    /// first-party producers should prefer [`Self::error_from_contract`].
     #[must_use]
     pub fn new(
         code: DiagnosticCode,
@@ -155,9 +96,55 @@ impl Diagnostic {
             span,
             related: Vec::new(),
             help: None,
+            presentation: None,
+            related_presentations: Vec::new(),
+            help_presentation: None,
+            explanation_presentation: None,
         }
     }
 
+    /// Construct an error from a first-party contract and validate its exact
+    /// presentation arguments before returning it.
+    pub fn error_from_contract<I, K>(
+        contract: &DiagnosticPresentationContract,
+        message: impl Into<String>,
+        span: SourceSpan,
+        arguments: I,
+    ) -> Result<Self, DiagnosticPresentationError>
+    where
+        I: IntoIterator<Item = (K, crate::DiagnosticArgumentValue)>,
+        K: Into<String>,
+    {
+        Self::from_contract(
+            DiagnosticSeverity::Error,
+            contract,
+            message,
+            span,
+            arguments,
+        )
+    }
+
+    /// Construct a diagnostic at any severity from a first-party contract and
+    /// validate its exact presentation arguments before returning it.
+    pub fn from_contract<I, K>(
+        severity: DiagnosticSeverity,
+        contract: &DiagnosticPresentationContract,
+        message: impl Into<String>,
+        span: SourceSpan,
+        arguments: I,
+    ) -> Result<Self, DiagnosticPresentationError>
+    where
+        I: IntoIterator<Item = (K, crate::DiagnosticArgumentValue)>,
+        K: Into<String>,
+    {
+        let presentation = contract.presentation(arguments)?;
+        Ok(Self::new(contract.code().clone(), severity, message, span)
+            .with_presentation(presentation))
+    }
+
+    /// Construct an unchecked error diagnostic. The code is not resolved
+    /// against the central presentation registry; first-party producers
+    /// should prefer [`Self::error_from_contract`].
     #[must_use]
     pub fn error(code: DiagnosticCode, message: impl Into<String>, span: SourceSpan) -> Self {
         Self::new(code, DiagnosticSeverity::Error, message, span)
@@ -174,116 +161,71 @@ impl Diagnostic {
         self.help = Some(help.into());
         self
     }
-}
 
-fn is_namespaced_diagnostic_code(value: &str) -> bool {
-    let Some((namespace, code)) = value.split_once('_') else {
-        return false;
-    };
-
-    !namespace.is_empty()
-        && !code.is_empty()
-        && value.chars().all(|character| {
-            character.is_ascii_uppercase() || character.is_ascii_digit() || character == '_'
-        })
-}
-
-const fn is_namespaced_diagnostic_code_const(value: &str) -> bool {
-    let bytes = value.as_bytes();
-    if bytes.is_empty() {
-        return false;
+    /// Attach a locale-neutral primary presentation without checking its ID
+    /// against `self.code`. Extension producers may use this unchecked
+    /// builder; first-party producers should prefer [`Self::error_from_contract`].
+    #[must_use]
+    pub fn with_presentation(mut self, presentation: DiagnosticPresentation) -> Self {
+        self.presentation = Some(presentation);
+        self
     }
 
-    let mut index = 0;
-    let mut has_separator = false;
-    let mut has_prefix = false;
-    let mut has_code = false;
-    while index < bytes.len() {
-        let byte = bytes[index];
-        if byte == b'_' {
-            has_separator = true;
-        } else if is_uppercase_letter_or_digit(byte) {
-            if has_separator {
-                has_code = true;
-            } else {
-                has_prefix = true;
-            }
-        } else {
-            return false;
+    /// Append structured related presentations while preserving source order.
+    #[must_use]
+    pub fn with_related_presentations(
+        mut self,
+        related: impl IntoIterator<Item = DiagnosticRelatedPresentation>,
+    ) -> Self {
+        self.related_presentations.extend(related);
+        self
+    }
+
+    /// Attach a locale-neutral help presentation.
+    #[must_use]
+    pub fn with_help_presentation(mut self, help: DiagnosticPresentation) -> Self {
+        self.help_presentation = Some(help);
+        self
+    }
+
+    /// Attach structured explanation and guidance presentations.
+    #[must_use]
+    pub fn with_explanation_presentation(
+        mut self,
+        explanation: DiagnosticExplanationPresentation,
+    ) -> Self {
+        self.explanation_presentation = Some(explanation);
+        self
+    }
+
+    /// Convert this diagnostic to its structured record without discarding
+    /// legacy context.
+    ///
+    /// Legacy diagnostics return an error until their producer is migrated. A
+    /// producer that mixes legacy related/help fields with structured fields
+    /// also returns an error carrying the original ordered context rather than
+    /// silently dropping it.
+    #[must_use = "the structured conversion result reports incomplete or mixed legacy state"]
+    pub fn record(&self) -> Result<DiagnosticRecord, DiagnosticRecordError> {
+        if !self.related.is_empty() || self.help.is_some() {
+            return Err(DiagnosticRecordError::LegacyContext {
+                related: self.related.clone(),
+                help: self.help.clone(),
+            });
         }
-        index += 1;
+        let Some(presentation) = self.presentation.clone() else {
+            return Err(DiagnosticRecordError::MissingPresentation);
+        };
+
+        Ok(DiagnosticRecord::new(
+            self.code.clone(),
+            self.severity,
+            self.span.clone(),
+            presentation,
+        )
+        .with_related(self.related_presentations.clone())
+        .with_help(self.help_presentation.clone())
+        .with_explanation(self.explanation_presentation.clone())
+        .with_compatibility_message(self.message.clone()))
     }
-
-    has_separator && has_prefix && has_code
-}
-
-const fn diagnostic_category(value: &[u8]) -> DiagnosticCategory {
-    if starts_with(value, b"RECITE_ID") {
-        DiagnosticCategory::Identifier
-    } else if starts_with(value, b"RECITE_PARSE") {
-        DiagnosticCategory::Parse
-    } else if starts_with(value, b"RECITE_PROJECT") {
-        DiagnosticCategory::Project
-    } else if starts_with(value, b"RECITE_FRESH") {
-        DiagnosticCategory::Freshness
-    } else if starts_with(value, b"RECITE_SCHEMA") {
-        DiagnosticCategory::Schema
-    } else if starts_with(value, b"RECITE_VALIDATE") {
-        validation_category(value)
-    } else {
-        DiagnosticCategory::Unknown
-    }
-}
-
-const fn validation_category(value: &[u8]) -> DiagnosticCategory {
-    let Some(number) = trailing_three_digit_number(value) else {
-        return DiagnosticCategory::Validation;
-    };
-
-    if number >= 22 && number <= 25 {
-        DiagnosticCategory::Markup
-    } else if number >= 26 && number <= 33 {
-        DiagnosticCategory::Metadata
-    } else {
-        DiagnosticCategory::Validation
-    }
-}
-
-const fn trailing_three_digit_number(value: &[u8]) -> Option<u16> {
-    if value.len() < 3 {
-        return None;
-    }
-
-    let hundreds = value[value.len() - 3];
-    let tens = value[value.len() - 2];
-    let ones = value[value.len() - 1];
-    if !is_digit(hundreds) || !is_digit(tens) || !is_digit(ones) {
-        return None;
-    }
-
-    Some(((hundreds - b'0') as u16 * 100) + ((tens - b'0') as u16 * 10) + (ones - b'0') as u16)
-}
-
-const fn starts_with(value: &[u8], prefix: &[u8]) -> bool {
-    if value.len() < prefix.len() {
-        return false;
-    }
-
-    let mut index = 0;
-    while index < prefix.len() {
-        if value[index] != prefix[index] {
-            return false;
-        }
-        index += 1;
-    }
-
-    true
-}
-
-const fn is_uppercase_letter_or_digit(byte: u8) -> bool {
-    byte.is_ascii_uppercase() || is_digit(byte)
-}
-
-const fn is_digit(byte: u8) -> bool {
-    byte >= b'0' && byte <= b'9'
 }

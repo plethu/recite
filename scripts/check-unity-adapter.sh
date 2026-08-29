@@ -56,6 +56,9 @@ if [[ -f "$bridge" && -f "$header" ]]; then
     "internal IntPtr ErrorMessage;"
     "UnmanagedFunctionPointer(CallingConvention.Cdecl)"
     "delegate ReciteConditionResult ReciteConditionFn(IntPtr query, IntPtr userdata);"
+    "delegate ReciteLocaleResult ReciteLocaleFn(IntPtr query, IntPtr userdata);"
+    "EntryPoint = \"recite_locale_evaluate_plural_rule\""
+    "EntryPoint = \"recite_locale_validate_translation_placeholders\""
     "AssetLoad(byte[] bytes, UIntPtr len, out ulong assetHandle)"
     "AssetFree(ulong assetHandle)"
     "SessionCreate(ulong assetHandle, byte[] startBlock, byte[] locale, out ulong sessionHandle)"
@@ -110,6 +113,19 @@ if [[ -f "$bridge" && -f "$header" ]]; then
   done < <(grep -E '^[[:space:]]*RECITE_STATUS_[A-Z_]+ = -?[0-9]+,' "$header")
 fi
 
+service="$runtime_dir/ReciteDialogueService.cs"
+for pattern in \
+  "private static readonly ReciteNativeBridge.ReciteConditionFn conditionCallback" \
+  "private static readonly ReciteNativeBridge.ReciteLocaleFn localeCallback" \
+  "GCHandleType.Normal" \
+  "ConditionCallbackEntry" \
+  "LocaleCallbackEntry" \
+  "MonoPInvokeCallback"; do
+  if [[ ! -f "$service" ]] || ! grep -qF "$pattern" "$service"; then
+    fail "Unity callbacks are missing IL2CPP-safe static/context pattern: $pattern"
+  fi
+done
+
 while IFS= read -r file; do
   if grep -q 'UnityEditor' "$file"; then
     fail "$file imports UnityEditor in runtime code"
@@ -130,6 +146,9 @@ if [[ -f "$sample_dir/BasicDialogue.unity" ]]; then
 fi
 
 if command -v dotnet >/dev/null 2>&1; then
+  if ! cargo build -p recite-ffi --quiet; then
+    fail "recite-ffi native library build failed"
+  fi
   tmpdir="$(mktemp -d /tmp/recite-unity-check.XXXXXX)"
   {
     printf '%s\n' '<Project Sdk="Microsoft.NET.Sdk">'
@@ -153,12 +172,17 @@ if command -v dotnet >/dev/null 2>&1; then
   elif ! DOTNET_CLI_HOME=/tmp/recite-dotnet-home NUGET_PACKAGES=/tmp/recite-nuget DOTNET_CLI_TELEMETRY_OPTOUT=1 DOTNET_SKIP_FIRST_TIME_EXPERIENCE=1 dotnet build "$tmpdir/UnityRuntimeSubset.csproj" --nologo -v:minimal >/tmp/recite-unity-dotnet-build.log 2>&1; then
     cat /tmp/recite-unity-dotnet-build.log >&2
     fail "Unity runtime subset dotnet build failed"
-  elif ! DOTNET_CLI_HOME=/tmp/recite-dotnet-home NUGET_PACKAGES=/tmp/recite-nuget DOTNET_CLI_TELEMETRY_OPTOUT=1 DOTNET_SKIP_FIRST_TIME_EXPERIENCE=1 dotnet run --project "$tmpdir/UnityRuntimeSubset.csproj" --no-build --no-restore >/tmp/recite-unity-headless-test.log 2>&1; then
+  elif ! RECITE_UNITY_SAMPLE_ASSET="$sample_dir/Dialogue/basic.recitec" DOTNET_CLI_HOME=/tmp/recite-dotnet-home NUGET_PACKAGES=/tmp/recite-nuget DOTNET_CLI_TELEMETRY_OPTOUT=1 DOTNET_SKIP_FIRST_TIME_EXPERIENCE=1 LD_LIBRARY_PATH="$repo_root/target/debug${LD_LIBRARY_PATH:+:$LD_LIBRARY_PATH}" dotnet run --project "$tmpdir/UnityRuntimeSubset.csproj" --no-build --no-restore >/tmp/recite-unity-headless-test.log 2>&1; then
     cat /tmp/recite-unity-headless-test.log >&2
     fail "Unity headless package test failed"
   fi
 else
   fail "dotnet is required for the Unity runtime subset build"
+fi
+
+runner="$runtime_dir/GameObjects/ReciteDialogueRunner.cs"
+if [[ -f "$runner" ]] && ! grep -q 'service.Restore(asset, snapshot, string.IsNullOrEmpty(localeVariant) ? null : localeVariant)' "$runner"; then
+  fail "Unity runner restore does not re-supply its configured locale variant"
 fi
 
 if (( failures > 0 )); then

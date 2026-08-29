@@ -33,6 +33,14 @@ fn position_for_byte_index(source: &str, byte_index: usize) -> Position {
 pub(super) fn authoring_schema() -> &'static str {
     r#"{
   "schema_version": 1,
+  "producer": { "kind": "adapter", "id": "authoring-fixtures" },
+  "content_fingerprint": {
+    "algorithm": "blake3",
+    "value": "0000000000000000000000000000000000000000000000000000000000000000"
+  },
+  "producer_fingerprints": [
+    { "id": "fixtures", "kind": "file", "algorithm": "blake3", "value": "fixture-v1" }
+  ],
   "speakers": {
     "hazel": { "display_name": "Hazel" },
     "rhea": {}
@@ -46,19 +54,33 @@ pub(super) fn authoring_schema() -> &'static str {
       "params": []
     }
   },
+  "registries": {
+    "item": {
+      "values": ["map"],
+      "producer_fingerprints": [
+        { "id": "items", "kind": "fixture", "algorithm": "blake3", "value": "items-v1" }
+      ]
+    }
+  },
   "metadata_domains": {
     "portrait_by_speaker": {
       "kind": "contextual",
       "selector": "field:speaker",
       "values_by_context": {
-        "hazel": ["smile", "wry"],
+        "hazel": ["smile", "wry", "hazel_only"],
         "rhea": ["flat"]
       },
-      "missing_context": { "policy": "fallback", "domain": "portrait_all" }
+      "missing_context": { "policy": "fallback", "domain": "portrait_all" },
+      "producer_fingerprints": [
+        { "id": "portraits", "kind": "fixture", "algorithm": "blake3", "value": "portraits-v1" }
+      ]
     },
     "portrait_all": {
       "kind": "flat",
-      "values": ["flat", "smile", "wry"]
+      "values": ["flat", "smile", "wry"],
+      "value_origins": {
+        "wry": { "kind": "fixture", "id": "schema.json#portrait_all/wry" }
+      }
     },
     "stage_by_mood": {
       "kind": "contextual",
@@ -71,7 +93,10 @@ pub(super) fn authoring_schema() -> &'static str {
     },
     "stage_all": {
       "kind": "flat",
-      "values": ["fallback_stage"]
+      "values": ["fallback_stage"],
+      "value_origins": {
+        "fallback_stage": { "kind": "fixture", "id": "schema.json#stage_all/fallback_stage" }
+      }
     },
     "mood_by_tone": {
       "kind": "contextual",
@@ -89,7 +114,7 @@ pub(super) fn authoring_schema() -> &'static str {
       "domain": "mood_by_tone"
     },
     "portrait": {
-      "targets": ["line"],
+      "targets": ["line", "choice"],
       "type": "symbol",
       "domain": "portrait_by_speaker"
     },

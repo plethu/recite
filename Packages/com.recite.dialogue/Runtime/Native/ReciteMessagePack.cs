@@ -110,7 +110,59 @@ namespace Recite.Unity.Native
                 RequiredString(map, "source_text"),
                 RequiredString(map, "text"),
                 RequiredNullableString(map, "speaker"),
-                ReadList(map, "metadata", ReadMetadata));
+                ReadList(map, "metadata", ReadMetadata),
+                ReadPlural(map));
+        }
+
+        private static RecitePlural ReadPlural(IReadOnlyDictionary<string, object> map)
+        {
+            // The plural field was added to the v0 output projection. Treat
+            // its absence like an explicit null so older non-plural batches
+            // remain valid for managed hosts.
+            if (!map.TryGetValue("plural", out var value) || value == null)
+            {
+                return null;
+            }
+
+            var raw = RequiredMapValue(value, "plural");
+
+            var resolution = RequiredMap(raw, "resolution");
+            var outcome = RequiredString(resolution, "outcome");
+            if (outcome != "translated" && outcome != "english_source_fallback")
+            {
+                throw new FormatException("unknown Recite plural resolution outcome: " + outcome);
+            }
+
+            return new RecitePlural(
+                RequiredString(raw, "singular_source_text"),
+                RequiredString(raw, "plural_source_text"),
+                RequiredInt64(raw, "count"),
+                RequiredInt32(raw, "selected_arm"),
+                new RecitePluralResolution(
+                    ReadList(resolution, "attempts", ReadPluralAttempt),
+                    RequiredNullableString(resolution, "matched_locale"),
+                    RequiredNullableString(resolution, "matched_context"),
+                    RequiredNullableString(resolution, "matched_key"),
+                    RequiredNullableInt32(resolution, "matched_arm"),
+                    RequiredNullableInt32(resolution, "source_fallback_arm"),
+                    outcome));
+        }
+
+        private static RecitePluralAttempt ReadPluralAttempt(IReadOnlyDictionary<string, object> map)
+        {
+            var outcome = RequiredString(map, "outcome");
+            if (outcome != "missing_plural_forms" && outcome != "missing_entry" &&
+                outcome != "missing_translation" && outcome != "matched")
+            {
+                throw new FormatException("unknown Recite plural attempt outcome: " + outcome);
+            }
+
+            return new RecitePluralAttempt(
+                RequiredString(map, "locale"),
+                RequiredString(map, "context"),
+                RequiredString(map, "key"),
+                RequiredNullableInt32(map, "selected_arm"),
+                outcome);
         }
 
         private static ReciteChoice ReadChoice(IReadOnlyDictionary<string, object> map)
@@ -331,6 +383,36 @@ namespace Recite.Unity.Native
             }
 
             return (uint)integer;
+        }
+
+        private static int RequiredInt32(IReadOnlyDictionary<string, object> map, string key)
+        {
+            if (!map.TryGetValue(key, out var value) || !(value is long integer) || integer < int.MinValue || integer > int.MaxValue)
+            {
+                throw new FormatException("Recite MessagePack field `" + key + "` must be an int32");
+            }
+
+            return (int)integer;
+        }
+
+        private static int? RequiredNullableInt32(IReadOnlyDictionary<string, object> map, string key)
+        {
+            if (!map.TryGetValue(key, out var value))
+            {
+                throw new FormatException("Recite MessagePack field `" + key + "` is required");
+            }
+
+            if (value == null)
+            {
+                return null;
+            }
+
+            if (!(value is long integer) || integer < int.MinValue || integer > int.MaxValue)
+            {
+                throw new FormatException("Recite MessagePack field `" + key + "` must be an int32 or null");
+            }
+
+            return (int)integer;
         }
 
         private static ushort RequiredUInt16(IReadOnlyDictionary<string, object> map, string key)

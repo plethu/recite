@@ -103,7 +103,6 @@ impl CanonicalSchemaBytes {
         for (name, definition) in registries {
             self.entry(name);
             self.string_set("values", &definition.values);
-            self.field_option_string("origin", definition.origin.as_deref());
         }
     }
 
@@ -142,7 +141,6 @@ impl CanonicalSchemaBytes {
             self.entry(id.as_str());
             self.field_string("template", &definition.template);
             self.params("params", &definition.params);
-            self.field_option_string("origin", definition.origin.as_deref());
         }
     }
 

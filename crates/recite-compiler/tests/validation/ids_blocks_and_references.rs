@@ -38,8 +38,20 @@ fn validates_missing_and_duplicate_line_and_choice_ids_in_source_order() {
         ],
     );
     assert_spans(&report, [(2, 1), (8, 3), (14, 3), (17, 1)]);
-    assert_eq!(report.diagnostics[2].related[0].span.start.line(), 11);
-    assert_eq!(report.diagnostics[3].related[0].span.start.line(), 4);
+    assert_eq!(
+        report.diagnostics[2].related_presentations[0]
+            .span
+            .start
+            .line(),
+        11
+    );
+    assert_eq!(
+        report.diagnostics[3].related_presentations[0]
+            .span
+            .start
+            .line(),
+        4
+    );
 }
 
 #[test]
@@ -79,7 +91,7 @@ fn validates_missing_and_ambiguous_default_blocks() {
     assert_eq!(ambiguous.diagnostics[0].span.file, "dialogue/start.recite");
     assert_eq!(ambiguous.diagnostics[0].span.start.line(), 1);
     assert_eq!(
-        ambiguous.diagnostics[0].related[0].span.file,
+        ambiguous.diagnostics[0].related_presentations[0].span.file,
         "dialogue/other.recite"
     );
 }
@@ -145,5 +157,11 @@ fn validates_duplicate_block_ids() {
 
     assert_codes(&report, ["RECITE_VALIDATE009"]);
     assert_eq!(report.diagnostics[0].span.start.line(), 4);
-    assert_eq!(report.diagnostics[0].related[0].span.start.line(), 1);
+    assert_eq!(
+        report.diagnostics[0].related_presentations[0]
+            .span
+            .start
+            .line(),
+        1
+    );
 }

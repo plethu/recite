@@ -19,6 +19,12 @@ pub(crate) fn parse(args: impl IntoIterator<Item = OsString>) -> Result<Cli, Err
     Cli::from_arg_matches(&matches).map_err(|error| error.format(&mut command))
 }
 
+// Clap owns the syntax-error renderer (including its English labels and
+// punctuation); its public API lets us localise command metadata and help,
+// but not replace those built-in error templates. The CLI deliberately keeps
+// this narrow host-owned residual rather than treating `Error::to_string()`
+// as a Recite UI resource.
+
 // Invariant: the embedded default UI catalog is bundled with the CLI binary.
 #[allow(clippy::expect_used)]
 fn help_messages() -> Messages {
@@ -171,6 +177,42 @@ fn localise_subcommand(command: &mut clap::Command, messages: &Messages) {
         }
         "bench" => {
             set_about(command, messages.text(MsgId::CliHelpCommandBench));
+            set_arg_help(
+                command,
+                "scale",
+                messages.text(MsgId::CliHelpArgBenchScale),
+                messages,
+            );
+            set_arg_help(
+                command,
+                "group",
+                messages.text(MsgId::CliHelpArgBenchGroup),
+                messages,
+            );
+            set_arg_help(
+                command,
+                "format",
+                messages.text(MsgId::CliHelpArgBenchFormat),
+                messages,
+            );
+            set_arg_help(
+                command,
+                "output",
+                messages.text(MsgId::CliHelpArgBenchOutput),
+                messages,
+            );
+            set_arg_help(
+                command,
+                "baseline",
+                messages.text(MsgId::CliHelpArgBenchBaseline),
+                messages,
+            );
+            set_arg_help(
+                command,
+                "samples",
+                messages.text(MsgId::CliHelpArgBenchSamples),
+                messages,
+            );
         }
         _ => {}
     }

@@ -58,8 +58,17 @@ impl PotDocument {
             output.push('\n');
             output.push_str("msgid ");
             push_po_string(&mut output, &entry.source_text);
-            output.push('\n');
-            output.push_str("msgstr \"\"\n");
+            if let Some(plural_source_text) = &entry.plural_source_text {
+                output.push('\n');
+                output.push_str("msgid_plural ");
+                push_po_string(&mut output, plural_source_text);
+                output.push('\n');
+                output.push_str("msgstr[0] \"\"\n");
+                output.push_str("msgstr[1] \"\"\n");
+            } else {
+                output.push('\n');
+                output.push_str("msgstr \"\"\n");
+            }
         }
 
         output
@@ -71,6 +80,7 @@ impl PotDocument {
 pub struct PotEntry {
     pub context: String,
     pub source_text: String,
+    pub plural_source_text: Option<String>,
     pub comments: Vec<String>,
     pub reference: Option<PotReference>,
 }
@@ -155,6 +165,7 @@ fn collect_pot(source_files: &[SourceFile], schema: Option<&ProjectSchema>) -> P
                 entries.push(PotEntry {
                     context: format!("dialogue_speaker:{speaker_id}"),
                     source_text: display_name.clone(),
+                    plural_source_text: None,
                     comments: vec!["speaker display name".to_owned()],
                     reference: None,
                 });
@@ -164,6 +175,7 @@ fn collect_pot(source_files: &[SourceFile], schema: Option<&ProjectSchema>) -> P
             entries.push(PotEntry {
                 context: format!("availability_reason:{reason_id}"),
                 source_text: reason.template.clone(),
+                plural_source_text: None,
                 comments: vec!["availability reason template".to_owned()],
                 reference: None,
             });
@@ -174,6 +186,7 @@ fn collect_pot(source_files: &[SourceFile], schema: Option<&ProjectSchema>) -> P
                     entries.push(PotEntry {
                         context: format!("presentation_label:{}", label.template_id),
                         source_text: label.source_text.clone(),
+                        plural_source_text: None,
                         comments: vec![format!("presentation label template: {output_id}")],
                         reference: None,
                     });
@@ -212,6 +225,9 @@ fn extract_statement_entries(
                     id.as_str(),
                     line.source_id.display_text().as_deref(),
                     &line.source_text.text,
+                    line.plural_source_text
+                        .as_ref()
+                        .map(|text| text.text.as_str()),
                     source_file,
                     block,
                     speaker,
@@ -229,6 +245,7 @@ fn extract_statement_entries(
                     id.as_str(),
                     choice.source_id.display_text().as_deref(),
                     &choice.source_text.text,
+                    None,
                     source_file,
                     block,
                     speaker_context,
@@ -265,10 +282,12 @@ fn extract_statement_entries(
     }
 }
 
+#[allow(clippy::too_many_arguments)]
 fn source_entry(
     context: &str,
     source_id_display: Option<&str>,
     source_text: &str,
+    plural_source_text: Option<&str>,
     source_file: &SourceFile,
     block: &Block,
     speaker: Option<&SpeakerId>,
@@ -288,6 +307,7 @@ fn source_entry(
     PotEntry {
         context: context.to_owned(),
         source_text: source_text.to_owned(),
+        plural_source_text: plural_source_text.map(str::to_owned),
         comments,
         reference: Some(PotReference {
             file: span.file.clone(),

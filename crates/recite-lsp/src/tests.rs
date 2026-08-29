@@ -59,8 +59,23 @@ fn did_open_publishes_schema_less_semantic_diagnostics() {
 }
 
 #[test]
+fn shared_language_pressure_fixture_publishes_no_diagnostics() {
+    diagnostics::shared_language_pressure_fixture_publishes_no_diagnostics();
+}
+
+#[test]
+fn shared_language_pressure_fixture_projects_marker_diagnostics() {
+    diagnostics::shared_language_pressure_fixture_projects_marker_diagnostics();
+}
+
+#[test]
 fn did_open_publishes_schema_backed_semantic_diagnostics() {
     diagnostics::did_open_publishes_schema_backed_semantic_diagnostics();
+}
+
+#[test]
+fn related_spans_resolve_project_files_and_target_text() {
+    diagnostics::related_spans_resolve_project_files_and_target_text();
 }
 
 #[test]
@@ -151,6 +166,65 @@ fn hover_uses_utf16_positions_after_non_ascii_prefix() {
 #[test]
 fn hover_describes_schema_and_project_symbols() {
     availability::hover_describes_schema_and_project_symbols();
+}
+
+#[test]
+fn schema_hover_preserves_freshness_without_producer_identity() {
+    let mut schema = recite_core::ProjectSchema::empty_v1();
+    schema.producer_metadata = Some(recite_core::ProducerMetadata {
+        producer: None,
+        content_fingerprint: Some(
+            recite_core::producer_content_fingerprint(
+                "blake3",
+                "0000000000000000000000000000000000000000000000000000000000000000",
+            )
+            .expect("valid content fingerprint"),
+        ),
+        schema_export_version: None,
+        inclusion_policy: None,
+        producer_fingerprints: Vec::new(),
+    });
+    let scoped = vec![recite_core::ProducerFingerprint {
+        id: "items".to_owned(),
+        kind: "fixture".to_owned(),
+        algorithm: "blake3".to_owned(),
+        value: "items-v1".to_owned(),
+    }];
+    let catalog =
+        recite_ui::UiCatalog::load(&recite_ui::UiLocale::default()).expect("default UI catalog");
+    let detail = crate::features::schema_hover::hover_detail(None, &schema, &scoped, &catalog);
+    assert!(detail.contains("Content fingerprint blake3:"));
+    assert!(detail.contains("items-v1"));
+    assert!(!detail.contains("Schema producer"));
+}
+
+#[test]
+fn schema_hover_uses_choice_selector_site_with_injected_catalog() {
+    let localized = recite_ui::DEFAULT_RESOURCE.replace(
+        "lsp-hover-schema-scoped-fingerprints =  (scoped: {$fingerprints})",
+        "lsp-hover-schema-scoped-fingerprints =  (scope localisé: {$fingerprints})",
+    );
+    let catalog = recite_ui::UiCatalog::from_resources(
+        "fr".parse().expect("locale"),
+        [
+            (
+                "en-US".parse().expect("locale"),
+                recite_ui::DEFAULT_RESOURCE.to_owned(),
+            ),
+            ("fr".parse().expect("locale"), localized),
+        ],
+    )
+    .expect("catalog");
+    let schema = recite_core::ProjectSchema::empty_v1();
+    let scoped = vec![recite_core::ProducerFingerprint {
+        id: "items".to_owned(),
+        kind: "fixture".to_owned(),
+        algorithm: "blake3".to_owned(),
+        value: "items-v1".to_owned(),
+    }];
+    let detail = crate::features::schema_hover::hover_detail(None, &schema, &scoped, &catalog);
+    assert!(detail.contains("scope localisé:"));
+    assert!(!detail.contains("(scoped:"));
 }
 
 #[test]

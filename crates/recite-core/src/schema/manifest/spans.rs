@@ -5,6 +5,12 @@ use crate::{
     source_location::{point_one, position_for_byte_offset},
 };
 
+mod paths;
+
+pub(crate) use crate::toml_spans::TomlSpanIndex;
+pub(crate) use paths::top_level_toml_number_token;
+
+// Shared schema span state keeps JSON and TOML format handling cohesive.
 // Invariant: JSON error positions are clamped to non-zero before construction.
 #[allow(clippy::expect_used)]
 pub(crate) fn json_error_span(file: &str, error: &serde_json::Error) -> SourceSpan {
@@ -26,6 +32,42 @@ pub(crate) fn top_level_key_span(file: &str, source: &str, key: &str) -> SourceS
             )
         })
         .unwrap_or_else(|| document_start_span(file))
+}
+
+pub(crate) fn top_level_object_value_span(
+    file: &str,
+    source: &str,
+    object_key: &str,
+    value_key: &str,
+) -> SourceSpan {
+    let Some(object_key_range) = top_level_key_range(source, object_key) else {
+        return document_start_span(file);
+    };
+    let Some(value_start) = section_value_start(source, object_key_range.end) else {
+        return top_level_key_span(file, source, object_key);
+    };
+    let Some(value_end) = value_end(source, value_start) else {
+        return top_level_key_span(file, source, object_key);
+    };
+    let object_range = SourceRange {
+        start: value_start,
+        end: value_end,
+    };
+    next_json_string_range(
+        source,
+        object_range,
+        value_start,
+        value_key,
+        StringRole::Value,
+    )
+    .map(|range| {
+        SourceSpan::new(
+            file,
+            position_for_byte_offset(source, range.start),
+            Some(position_for_byte_offset(source, range.end)),
+        )
+    })
+    .unwrap_or_else(|| top_level_key_span(file, source, object_key))
 }
 
 pub(crate) fn top_level_number_token<'a>(source: &'a str, key: &str) -> Option<&'a str> {
@@ -108,30 +150,16 @@ fn json_number_token(source: &str, value_start: usize) -> &str {
     &source[value_start..value_end]
 }
 
-#[derive(Debug, Default)]
+#[derive(Debug)]
 pub(crate) struct ManifestSpans {
     next_offsets: BTreeMap<String, usize>,
     active_range: Option<SourceRange>,
+    active_section: Option<String>,
+    format: super::lower::ManifestSourceFormat,
+    toml_spans: Option<TomlSpanIndex>,
 }
 
 impl ManifestSpans {
-    pub(crate) fn new() -> Self {
-        Self::default()
-    }
-
-    pub(crate) fn enter_section(&mut self, source: &str, section: &str) {
-        self.active_range = source_section_range(source, section);
-        self.next_offsets.clear();
-    }
-
-    pub(crate) fn next_key_span(&mut self, file: &str, source: &str, needle: &str) -> SourceSpan {
-        self.next_string_span(file, source, needle, StringRole::Key)
-    }
-
-    pub(crate) fn next_value_span(&mut self, file: &str, source: &str, needle: &str) -> SourceSpan {
-        self.next_string_span(file, source, needle, StringRole::Value)
-    }
-
     fn next_string_span(
         &mut self,
         file: &str,
@@ -139,6 +167,9 @@ impl ManifestSpans {
         needle: &str,
         role: StringRole,
     ) -> SourceSpan {
+        if self.format == super::lower::ManifestSourceFormat::Toml {
+            return self.toml_next_string_span(file, source, needle, role);
+        }
         let range = self.active_range.unwrap_or(SourceRange {
             start: 0,
             end: source.len(),
@@ -169,14 +200,15 @@ impl ManifestSpans {
 }
 
 #[derive(Clone, Copy, Debug)]
-struct SourceRange {
+pub(super) struct SourceRange {
     start: usize,
     end: usize,
 }
 
-#[derive(Clone, Copy, Debug)]
-enum StringRole {
+#[derive(Clone, Copy, Debug, Eq, PartialEq)]
+pub(super) enum StringRole {
     Key,
+    AnyKey,
     Value,
 }
 
@@ -233,6 +265,7 @@ fn string_role_matches(source: &str, after_string: usize, role: StringRole, dept
         == Some(&b':');
     match role {
         StringRole::Key => is_key && depth == 1,
+        StringRole::AnyKey => is_key,
         StringRole::Value => !is_key,
     }
 }

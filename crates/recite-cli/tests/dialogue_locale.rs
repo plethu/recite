@@ -8,6 +8,9 @@ use tempfile::TempDir;
 mod support;
 use support::*;
 
+#[path = "dialogue_locale/shared_pressure.rs"]
+mod shared_pressure;
+
 #[test]
 fn run_trace_and_play_plain_preview_dialogue_locale_catalogs() {
     let temp = TempDir::new().expect("tempdir");
@@ -286,5 +289,192 @@ zh = ["locale/zh.po"]
     assert_eq!(
         trace["dialogue_locale_fallbacks"],
         serde_json::json!(["zh-Hant-TW", "zh-Hant", "zh"])
+    );
+}
+
+#[test]
+fn plural_dialogue_uses_gettext_arms_and_records_resolution_trace() {
+    let temp = TempDir::new().expect("tempdir");
+    let source = write_recite(
+        temp.path(),
+        "dialogue.recite",
+        concat!(
+            ":: start default\n",
+            "> letters@22222222222222222222 bind=(count:int=$remaining)\n",
+            "  You have one letter.\n",
+            "  | You have {count} letters.\n",
+            "-> END\n",
+        ),
+    );
+    let asset = compile_project_asset(temp.path(), &source, "dialogue.recitec", None);
+    write_file(
+        temp.path(),
+        "locale/fr.po",
+        concat!(
+            "msgid \"\"\n",
+            "msgstr \"\"\n",
+            "\"Language: fr\\n\"\n",
+            "\"Plural-Forms: nplurals=3; plural=(n == 0 ? 0 : n == 1 ? 1 : 2);\\n\"\n",
+            "\n",
+            "msgctxt \"22222222222222222222\"\n",
+            "msgid \"You have one letter.\"\n",
+            "msgid_plural \"You have {count} letters.\"\n",
+            "msgstr[0] \"Vous avez une lettre.\"\n",
+            "msgstr[1] \"Vous avez {count} lettre.\"\n",
+            "msgstr[2] \"Vous avez {count} lettres.\"\n",
+        ),
+    );
+    let fixture = write_file(
+        temp.path(),
+        "fixture.toml",
+        r#"[dialogue]
+locale = "fr-CA"
+
+[dialogue.catalogs]
+fr = ["locale/fr.po"]
+
+[interpolation_values]
+remaining = { int = 2 }
+"#,
+    );
+
+    let run_output = run(recite()
+        .arg("run")
+        .arg(&asset)
+        .arg("--block")
+        .arg("start")
+        .arg("--fixture")
+        .arg(&fixture));
+    run_output.assert_success().assert_stderr("");
+    run_output.assert_stdout_contains("line 22222222222222222222: Vous avez 2 lettres.");
+
+    let trace_output = run(recite()
+        .arg("trace")
+        .arg(&asset)
+        .arg("--block")
+        .arg("start")
+        .arg("--fixture")
+        .arg(&fixture));
+    trace_output.assert_success().assert_stderr("");
+    let trace: serde_json::Value =
+        serde_json::from_slice(&trace_output.stdout).expect("trace is JSON");
+    assert_eq!(
+        trace["events"][0]["line"],
+        serde_json::json!({
+            "id": "22222222222222222222",
+            "source_text": "You have {count} letters.",
+            "text": "Vous avez 2 lettres.",
+            "speaker": null,
+            "metadata": [],
+            "plural": {
+                "singular_source_text": "You have one letter.",
+                "plural_source_text": "You have {count} letters.",
+                "count": 2,
+                "selected_arm": 2,
+                "attempts": [
+                    {
+                        "locale": "fr-CA",
+                        "context": "22222222222222222222",
+                        "key": "22222222222222222222",
+                        "selected_arm": null,
+                        "outcome": "missing_plural_forms"
+                    },
+                    {
+                        "locale": "fr",
+                        "context": "22222222222222222222",
+                        "key": "22222222222222222222",
+                        "selected_arm": 2,
+                        "outcome": "matched"
+                    }
+                ],
+                "matched_locale": "fr",
+                "matched_context": "22222222222222222222",
+                "matched_key": "22222222222222222222",
+                "matched_arm": 2,
+                "source_fallback_arm": null,
+                "outcome": "translated"
+            }
+        })
+    );
+}
+
+#[test]
+fn plural_trace_records_no_match_and_all_empty_source_fallbacks() {
+    let temp = TempDir::new().expect("tempdir");
+    let source = write_recite(
+        temp.path(),
+        "dialogue.recite",
+        concat!(
+            ":: start default\n",
+            "> missing@33333333333333333333 bind=(count:int=$remaining)\n",
+            "  One missing letter.\n",
+            "  | Many missing letters.\n",
+            "> empty@44444444444444444444 bind=(count:int=$remaining)\n",
+            "  One empty letter.\n",
+            "  | Many empty letters.\n",
+            "-> END\n",
+        ),
+    );
+    let asset = compile_project_asset(temp.path(), &source, "dialogue.recitec", None);
+    write_file(
+        temp.path(),
+        "locale/fr.po",
+        concat!(
+            "msgid \"\"\n",
+            "msgstr \"\"\n",
+            "\"Language: fr\\n\"\n",
+            "\"Plural-Forms: nplurals=2; plural=(n != 1);\\n\"\n\n",
+            "msgctxt \"44444444444444444444\"\n",
+            "msgid \"One empty letter.\"\n",
+            "msgid_plural \"Many empty letters.\"\n",
+            "msgstr[0] \"\"\n",
+            "msgstr[1] \"\"\n",
+        ),
+    );
+    let fixture = write_file(
+        temp.path(),
+        "fixture.toml",
+        r#"[dialogue]
+locale = "fr"
+
+[dialogue.catalogs]
+fr = ["locale/fr.po"]
+
+[interpolation_values]
+remaining = { int = 2 }
+"#,
+    );
+
+    let trace_output = run(recite()
+        .arg("trace")
+        .arg(&asset)
+        .arg("--block")
+        .arg("start")
+        .arg("--fixture")
+        .arg(&fixture));
+    trace_output.assert_success().assert_stderr("");
+    let trace: serde_json::Value =
+        serde_json::from_slice(&trace_output.stdout).expect("trace is JSON");
+    let events = trace["events"].as_array().expect("events array");
+    let missing = events
+        .iter()
+        .find(|event| event["line"]["id"] == "33333333333333333333")
+        .expect("missing-entry line trace");
+    assert_eq!(missing["line"]["text"], "Many missing letters.");
+    assert_eq!(missing["line"]["plural"]["source_fallback_arm"], 1);
+    assert_eq!(
+        missing["line"]["plural"]["attempts"][0]["outcome"],
+        "missing_entry"
+    );
+
+    let empty = events
+        .iter()
+        .find(|event| event["line"]["id"] == "44444444444444444444")
+        .expect("all-empty line trace");
+    assert_eq!(empty["line"]["text"], "Many empty letters.");
+    assert_eq!(empty["line"]["plural"]["source_fallback_arm"], 1);
+    assert_eq!(
+        empty["line"]["plural"]["attempts"][0]["outcome"],
+        "missing_translation"
     );
 }

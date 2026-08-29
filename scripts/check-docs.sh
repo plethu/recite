@@ -58,6 +58,13 @@ echo "== install documentation packages (frozen lockfile) =="
 )
 
 echo
+echo "== generated schema fixtures =="
+(
+  cd "$repo_root"
+  node scripts/check-schema-manifest.mjs "$repo_root"
+)
+
+echo
 echo "== documentation verification =="
 (
   cd "$repo_root"

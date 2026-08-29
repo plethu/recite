@@ -42,7 +42,7 @@ impl<'a> Validator<'a> {
             if !definition.targets.contains(&context.target) {
                 self.diagnostics.push(diagnostics::invalid_metadata_target(
                     &entry.key,
-                    display_metadata_target(context.target),
+                    context.target,
                     key_span.clone(),
                 ));
             }
@@ -272,14 +272,5 @@ fn display_metadata_value_type(value: &SourceMetadataValue) -> &'static str {
         SourceMetadataValue::Scalar(SourceMetadataScalar::Float(_)) => "float",
         SourceMetadataValue::Scalar(SourceMetadataScalar::Bool(_)) => "bool",
         SourceMetadataValue::Array(_) => "array",
-    }
-}
-
-fn display_metadata_target(target: MetadataTarget) -> &'static str {
-    match target {
-        MetadataTarget::Block => "block",
-        MetadataTarget::Line => "line",
-        MetadataTarget::Choice => "choice",
-        MetadataTarget::Project => "project",
     }
 }

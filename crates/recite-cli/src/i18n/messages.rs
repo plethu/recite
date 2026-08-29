@@ -1,323 +1,72 @@
-use std::{borrow::Cow, collections::BTreeMap};
-
-use fluent_bundle::{FluentArgs, FluentBundle, FluentResource, FluentValue};
+use recite_core::DiagnosticPresentation;
+use recite_core::DiagnosticRecord;
+use recite_ui::{RenderedDiagnostic, UiArg, UiArgs, UiCatalog};
 use unic_langid::LanguageIdentifier;
 
 use crate::error::CliError;
 
-use super::locale::{DEFAULT_LOCALE, UiLocale, fallback_chain};
+use super::locale::UiLocale;
 
-pub(crate) const DEFAULT_RESOURCE: &str = include_str!("../../i18n/en-US.ftl");
-const EN_GB_RESOURCE: &str = include_str!("../../i18n/en-GB.ftl");
-
-struct EmbeddedCatalog {
-    locale: &'static str,
-    source: &'static str,
-}
-
-const EMBEDDED_CATALOGS: &[EmbeddedCatalog] = &[
-    EmbeddedCatalog {
-        locale: DEFAULT_LOCALE,
-        source: DEFAULT_RESOURCE,
-    },
-    EmbeddedCatalog {
-        locale: "en-GB",
-        source: EN_GB_RESOURCE,
-    },
-];
-
-macro_rules! message_ids {
-    ($($variant:ident => $key:literal,)+) => {
-        #[derive(Clone, Copy, Debug, Eq, PartialEq)]
-        pub(crate) enum MsgId {
-            $($variant,)+
-        }
-
-        impl MsgId {
-            pub(crate) const ALL: &'static [Self] = &[
-                $(Self::$variant,)+
-            ];
-
-            pub(crate) fn key(self) -> &'static str {
-                match self {
-                    $(Self::$variant => $key,)+
-                }
-            }
-        }
-    };
-}
-
-message_ids! {
-    CliHelpAbout => "cli-help-about",
-    CliHelpUsageHeading => "cli-help-usage-heading",
-    CliHelpCommandsHeading => "cli-help-commands-heading",
-    CliHelpArgumentsHeading => "cli-help-arguments-heading",
-    CliHelpOptionsHeading => "cli-help-options-heading",
-    CliHelpCommandValidate => "cli-help-command-validate",
-    CliHelpCommandCompile => "cli-help-command-compile",
-    CliHelpCommandExtract => "cli-help-command-extract",
-    CliHelpCommandCheckIds => "cli-help-command-check-ids",
-    CliHelpCommandCheckMarkup => "cli-help-command-check-markup",
-    CliHelpCommandCheckMetadata => "cli-help-command-check-metadata",
-    CliHelpCommandValidateProject => "cli-help-command-validate-project",
-    CliHelpCommandCheckFresh => "cli-help-command-check-fresh",
-    CliHelpCommandExplain => "cli-help-command-explain",
-    CliHelpCommandWatch => "cli-help-command-watch",
-    CliHelpCommandRun => "cli-help-command-run",
-    CliHelpCommandTrace => "cli-help-command-trace",
-    CliHelpCommandPlay => "cli-help-command-play",
-    CliHelpCommandBench => "cli-help-command-bench",
-    CliHelpArgPaths => "cli-help-arg-paths",
-    CliHelpArgSchema => "cli-help-arg-schema",
-    CliHelpArgProjectRoot => "cli-help-arg-project-root",
-    CliHelpArgDiagnosticCode => "cli-help-arg-diagnostic-code",
-    CliHelpArgOutputCompile => "cli-help-arg-output-compile",
-    CliHelpArgOutputExtract => "cli-help-arg-output-extract",
-    CliHelpArgAssetRun => "cli-help-arg-asset-run",
-    CliHelpArgAssetPlay => "cli-help-arg-asset-play",
-    CliHelpArgBlock => "cli-help-arg-block",
-    CliHelpArgFixture => "cli-help-arg-fixture",
-    CliHelpArgUi => "cli-help-arg-ui",
-    CliHelpArgKeymap => "cli-help-arg-keymap",
-    CliHelpArgDialogueLocale => "cli-help-arg-dialogue-locale",
-    CliHelpArgDialogueCatalog => "cli-help-arg-dialogue-catalog",
-    ExplainCode => "explain-code",
-    ExplainCategory => "explain-category",
-    ExplainMeaning => "explain-meaning",
-    ExplainCommonCauses => "explain-common-causes",
-    ExplainHowToFix => "explain-how-to-fix",
-    ExplainListItem => "explain-list-item",
-    WatchBuilding => "watch-building",
-    WatchWaitingForChanges => "watch-waiting-for-changes",
-    WatchRebuilding => "watch-rebuilding",
-    WatchBuildSucceeded => "watch-build-succeeded",
-    WatchBuildFailedWaiting => "watch-build-failed-waiting",
-    WatchBuildFailed => "watch-build-failed",
-    WatchEventError => "watch-event-error",
-    CliHelpArgHelp => "cli-help-arg-help",
-    CliHelpArgVersion => "cli-help-arg-version",
-    PlayTuiStarting => "play-tui-starting",
-    PlayStart => "play-start",
-    PlayLine => "play-line",
-    PlayPromptLine => "play-prompt-line",
-    PlayPrompt => "play-prompt",
-    PlayChoiceRow => "play-choice-row",
-    PlayChoiceUnavailableSuffix => "play-choice-unavailable-suffix",
-    PlayChoicePrompt => "play-choice-prompt",
-    PlayConditionPrompt => "play-condition-prompt",
-    PlayConditionResult => "play-condition-result",
-    PlaySelectedChoice => "play-selected-choice",
-    PlayEffect => "play-effect",
-    PlayAckPrompt => "play-ack-prompt",
-    PlayAckCompleted => "play-ack-completed",
-    PlayEnd => "play-end",
-    PlayDeferredEffects => "play-deferred-effects",
-    PlayDeferredEffectRow => "play-deferred-effect-row",
-    PlayInvalidInput => "play-invalid-input",
-    PlayErrorEnterYOrN => "play-error-enter-y-or-n",
-    PlayErrorEnterEnumVariant => "play-error-enter-enum-variant",
-    PlayErrorPressEnterOrAck => "play-error-press-enter-or-ack",
-    PlayErrorEmptyChoice => "play-error-empty-choice",
-    PlayErrorChoiceIndexOutOfRange => "play-error-choice-index-out-of-range",
-    PlayErrorChoiceIdInvalid => "play-error-choice-id-invalid",
-    PlayErrorChoiceIdUnavailable => "play-error-choice-id-unavailable",
-    PlayErrorChoiceUnavailable => "play-error-choice-unavailable",
-    PlayErrorChoiceUnavailableReason => "play-error-choice-unavailable-reason",
-    TuiReady => "tui-ready",
-    TuiFinished => "tui-finished",
-    TuiCommand => "tui-command",
-    TuiCommandWithValue => "tui-command-with-value",
-    TuiUnknownCommand => "tui-unknown-command",
-    TuiChoiceInputPrefix => "tui-choice-input-prefix",
-    TuiChoiceInput => "tui-choice-input",
-    TuiEnumVariantInput => "tui-enum-variant-input",
-    TuiConditionYesRow => "tui-condition-yes-row",
-    TuiConditionNoRow => "tui-condition-no-row",
-    TuiConditionYesShortcutRow => "tui-condition-yes-shortcut-row",
-    TuiConditionNoShortcutRow => "tui-condition-no-shortcut-row",
-    TuiEnumConditionHint => "tui-enum-condition-hint",
-    TuiAckEnterHint => "tui-ack-enter-hint",
-    TuiHeaderTitle => "tui-header-title",
-    TuiHeaderAsset => "tui-header-asset",
-    TuiHeaderBlock => "tui-header-block",
-    TuiWaiting => "tui-waiting",
-    TuiMetadataMode => "tui-metadata-mode",
-    TuiMetadataRuntimeEffectId => "tui-metadata-runtime-effect-id",
-    TuiMetadataFunction => "tui-metadata-function",
-    TuiMetadataArgs => "tui-metadata-args",
-    TuiInputAnswer => "tui-input-answer",
-    TuiInputEnumVariant => "tui-input-enum-variant",
-    TuiInputAck => "tui-input-ack",
-    TuiInputChoice => "tui-input-choice",
-    TuiChoiceUnavailable => "tui-choice-unavailable",
-    TuiChoiceUnavailableReason => "tui-choice-unavailable-reason",
-    TuiDeferredQueueTitle => "tui-deferred-queue-title",
-    TuiDeferredQueueScheduled => "tui-deferred-queue-scheduled",
-    TuiDeferredQueueReadyAtEnd => "tui-deferred-queue-ready-at-end",
-    TuiTranscriptLine => "tui-transcript-line",
-    TuiTranscriptPrompt => "tui-transcript-prompt",
-    TuiTranscriptChoice => "tui-transcript-choice",
-    TuiTranscriptCondition => "tui-transcript-condition",
-    TuiTranscriptEffect => "tui-transcript-effect",
-    TuiTranscriptAck => "tui-transcript-ack",
-    TuiTranscriptDeferred => "tui-transcript-deferred",
-    TuiTranscriptEnd => "tui-transcript-end",
-    TuiTranscriptCompleted => "tui-transcript-completed",
-    TuiTranscriptEffectText => "tui-transcript-effect-text",
-    TuiTranscriptDeferredEffectText => "tui-transcript-deferred-effect-text",
-    TuiTranscriptDeferredEffects => "tui-transcript-deferred-effects",
-    TuiHelpTitle => "tui-help-title",
-    TuiHelpKeyHeading => "tui-help-key-heading",
-    TuiHelpActionHeading => "tui-help-action-heading",
-    TuiHelpDescriptionHeading => "tui-help-description-heading",
-    TuiHelpActionClose => "tui-help-action-close",
-    TuiHelpActionQuit => "tui-help-action-quit",
-    TuiHelpActionMove => "tui-help-action-move",
-    TuiHelpActionSubmit => "tui-help-action-submit",
-    TuiHelpActionInput => "tui-help-action-input",
-    TuiHelpActionShortcut => "tui-help-action-shortcut",
-    TuiHelpActionCommand => "tui-help-action-command",
-    TuiHelpActionHelp => "tui-help-action-help",
-    TuiHelpActionQueue => "tui-help-action-queue",
-    TuiHelpDescriptionClose => "tui-help-description-close",
-    TuiHelpDescriptionOpenHelp => "tui-help-description-open-help",
-    TuiHelpDescriptionQuit => "tui-help-description-quit",
-    TuiHelpDescriptionInterrupt => "tui-help-description-interrupt",
-    TuiHelpDescriptionMoveChoice => "tui-help-description-move-choice",
-    TuiHelpDescriptionSubmitChoice => "tui-help-description-submit-choice",
-    TuiHelpDescriptionInputChoice => "tui-help-description-input-choice",
-    TuiHelpDescriptionMoveCondition => "tui-help-description-move-condition",
-    TuiHelpDescriptionShortcutCondition => "tui-help-description-shortcut-condition",
-    TuiHelpDescriptionSubmitCondition => "tui-help-description-submit-condition",
-    TuiHelpDescriptionInputEnumCondition => "tui-help-description-input-enum-condition",
-    TuiHelpDescriptionSubmitEnumCondition => "tui-help-description-submit-enum-condition",
-    TuiHelpDescriptionSubmitEffect => "tui-help-description-submit-effect",
-    TuiHelpDescriptionFinished => "tui-help-description-finished",
-    TuiHelpDescriptionCommand => "tui-help-description-command",
-    TuiHelpDescriptionQueue => "tui-help-description-queue",
-    TuiFooterCommand => "tui-footer-command",
-    CliErrorPlayEof => "cli-error-play-eof",
-    CliErrorPlayInvalidInput => "cli-error-play-invalid-input",
-    CliErrorPlayInterrupted => "cli-error-play-interrupted",
-    CliErrorPlayTuiRequiresTerminal => "cli-error-play-tui-requires-terminal",
-    CliErrorUiConfigRead => "cli-error-ui-config-read",
-    CliErrorUiConfigToml => "cli-error-ui-config-toml",
-    CliErrorUiLocaleInvalid => "cli-error-ui-locale-invalid",
-    CliErrorDialogueCatalogConflict => "cli-error-dialogue-catalog-conflict",
-    CliErrorDialogueCatalogMalformed => "cli-error-dialogue-catalog-malformed",
-    CliErrorDialogueCatalogMissingLocale => "cli-error-dialogue-catalog-missing-locale",
-    CliErrorDialogueCatalogSpecInvalid => "cli-error-dialogue-catalog-spec-invalid",
-    CliErrorDialogueLocaleInvalid => "cli-error-dialogue-locale-invalid",
-    CliErrorDialogueCatalogReasonExpectedDirective => "cli-error-dialogue-catalog-reason-expected-directive",
-    CliErrorDialogueCatalogReasonExpectedQuotedString => "cli-error-dialogue-catalog-reason-expected-quoted-string",
-    CliErrorDialogueCatalogReasonMissingContext => "cli-error-dialogue-catalog-reason-missing-context",
-    CliErrorDialogueCatalogReasonMissingId => "cli-error-dialogue-catalog-reason-missing-id",
-    CliErrorDialogueCatalogReasonMissingTranslation => "cli-error-dialogue-catalog-reason-missing-translation",
-    CliErrorDialogueCatalogReasonPlaceholderMismatch => "cli-error-dialogue-catalog-reason-placeholder-mismatch",
-    CliErrorDialogueCatalogReasonPluralEntriesUnsupported => "cli-error-dialogue-catalog-reason-plural-entries-unsupported",
-    CliErrorDialogueCatalogReasonQuotedContinuationWithoutField => "cli-error-dialogue-catalog-reason-quoted-continuation-without-field",
-    CliErrorDialogueCatalogReasonUnexpectedTextAfterQuotedString => "cli-error-dialogue-catalog-reason-unexpected-text-after-quoted-string",
-    CliErrorDialogueCatalogReasonUnterminatedQuotedString => "cli-error-dialogue-catalog-reason-unterminated-quoted-string",
-    CliErrorDialogueCatalogReasonUnsupportedEscape => "cli-error-dialogue-catalog-reason-unsupported-escape",
-}
-
+/// Compatibility facade for the CLI's existing call sites. Resource parsing,
+/// fallback, and typed inventory ownership live in `recite-ui`.
 pub(crate) struct Messages {
-    pub(super) requested: LanguageIdentifier,
-    pub(super) bundles: BTreeMap<String, FluentBundle<FluentResource>>,
+    catalog: UiCatalog,
 }
+
+pub(crate) use recite_ui::MsgId;
 
 impl Messages {
     pub(crate) fn load(locale: &UiLocale) -> Result<Self, CliError> {
-        let resources = embedded_resources().map_err(|source| CliError::UiCatalog { source })?;
-        Self::from_resources(locale.resolve(), resources)
-            .map_err(|source| CliError::UiCatalog { source })
+        UiCatalog::load(locale)
+            .map(|catalog| Self { catalog })
+            .map_err(|source| CliError::UiCatalog {
+                source: source.to_string(),
+            })
     }
 
-    pub(super) fn from_resources(
+    #[allow(dead_code, reason = "used only by compatibility tests")]
+    pub(crate) fn from_resources(
         requested: LanguageIdentifier,
         resources: impl IntoIterator<Item = (LanguageIdentifier, String)>,
     ) -> Result<Self, String> {
-        let mut bundles = BTreeMap::new();
-        for (locale, source) in resources {
-            let locale_key = locale.to_string();
-            let resource = match FluentResource::try_new(source) {
-                Ok(resource) => resource,
-                Err((_, errors)) if locale_key == DEFAULT_LOCALE => {
-                    return Err(format!(
-                        "failed to parse default Fluent resource: {errors:?}"
-                    ));
-                }
-                Err(_) => continue,
-            };
-            let mut bundle = FluentBundle::new(vec![locale.clone()]);
-            bundle.set_use_isolating(false);
-            match bundle.add_resource(resource) {
-                Ok(()) => {
-                    bundles.insert(locale_key, bundle);
-                }
-                Err(errors) if locale_key == DEFAULT_LOCALE => {
-                    return Err(format!("failed to add default Fluent resource: {errors:?}"));
-                }
-                Err(_) => continue,
-            }
-        }
-
-        let default_key = DEFAULT_LOCALE.to_owned();
-        let default = bundles
-            .get(&default_key)
-            .ok_or_else(|| format!("missing default Fluent catalog {DEFAULT_LOCALE}"))?;
-        for id in MsgId::ALL {
-            if default.get_message(id.key()).is_none() {
-                return Err(format!("default Fluent catalog is missing {}", id.key()));
-            }
-        }
-
-        Ok(Self { requested, bundles })
+        UiCatalog::from_resources(requested, resources)
+            .map(|catalog| Self { catalog })
+            .map_err(|error| error.to_string())
     }
 
     pub(crate) fn text(&self, id: MsgId) -> String {
-        self.format(id, [])
+        self.catalog.text(id)
     }
 
-    pub(crate) fn format(
+    pub(crate) fn format_args(&self, id: MsgId, args: &UiArgs) -> String {
+        self.catalog.format(id, args)
+    }
+
+    pub(crate) fn render_diagnostic(
         &self,
-        id: MsgId,
-        args: impl IntoIterator<Item = (&'static str, String)>,
-    ) -> String {
-        let args = args.into_iter().collect::<Vec<_>>();
-        for locale in fallback_chain(&self.requested) {
-            let Some(bundle) = self.bundles.get(&locale.to_string()) else {
-                continue;
-            };
-            let Some(message) = bundle.get_message(id.key()) else {
-                continue;
-            };
-            let Some(pattern) = message.value() else {
-                continue;
-            };
-            let mut fluent_args = FluentArgs::new();
-            for (name, value) in &args {
-                fluent_args.set(*name, FluentValue::String(Cow::Owned(value.clone())));
-            }
-            let mut errors = Vec::new();
-            let formatted = bundle.format_pattern(pattern, Some(&fluent_args), &mut errors);
-            if errors.is_empty() {
-                return formatted.into_owned();
-            }
-        }
-        id.key().to_owned()
+        record: &DiagnosticRecord,
+    ) -> Result<RenderedDiagnostic, recite_ui::CatalogError> {
+        self.catalog.render_diagnostic(record)
     }
-}
 
-pub(super) fn embedded_resources() -> Result<Vec<(LanguageIdentifier, String)>, String> {
-    EMBEDDED_CATALOGS
-        .iter()
-        .map(|catalog| {
-            catalog
-                .locale
-                .parse::<LanguageIdentifier>()
-                .map(|locale| (locale, catalog.source.to_owned()))
-                .map_err(|error| format!("invalid embedded locale {}: {error}", catalog.locale))
-        })
-        .collect()
+    pub(crate) fn format_presentation(&self, presentation: &DiagnosticPresentation) -> String {
+        self.catalog
+            .format_presentation(presentation)
+            .unwrap_or_else(|error| {
+                format!("[UI text unavailable: {} ({error})]", presentation.id())
+            })
+    }
+
+    pub(crate) fn format<I, K, V>(&self, id: MsgId, args: I) -> String
+    where
+        I: IntoIterator<Item = (K, V)>,
+        K: Into<String>,
+        V: Into<UiArg>,
+    {
+        let args = args
+            .into_iter()
+            .map(|(name, value)| (name.into(), value.into()))
+            .collect::<UiArgs>();
+        self.catalog.format(id, &args)
+    }
 }
