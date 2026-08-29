@@ -119,7 +119,7 @@ wire compatibility fixtures, and focused reviews for each subsystem.
 | `crates/recite-cli/src/runtime_fixture/trace/convert.rs` | 271 | production | cli/runtime-fixture | review | #180: structured trace conversion preserves plural resolution provenance |
 | `crates/recite-cli/src/runtime_fixture/trace/model.rs` | 263 | production | cli/runtime-fixture | review | #180: trace output model keeps localized templates and structured metadata distinct |
 | `crates/recite-godot/src/adapter.rs` | 361 | production | godot | review | Host adapter lifecycle boundary |
-| `crates/recite-lsp/src/server.rs` | 395 | production | lsp/server | follow-up | #164: make request dispatch and workspace ownership explicit |
+| `crates/recite-lsp/src/server.rs` | 383 | production | lsp/server | review | #164: request dispatch and protocol lifecycle remain the server boundary; error taxonomy and watcher registration are split into focused modules |
 | `crates/recite-benchmarks/src/memory_profiles/mod.rs` | 373 | production | benchmarks | cohesive | Maintainer-only profile orchestration |
 | `crates/recite-cli/src/commands.rs` | 395 | production | cli | review | Command orchestration boundary |
 | `crates/recite-compiler/src/wire/messagepack/tags.rs` | 373 | production | compiler/wire | cohesive | #89: encoder tag mirror |
@@ -151,9 +151,6 @@ wire compatibility fixtures, and focused reviews for each subsystem.
 | `crates/recite-core/src/schema/manifest/validate.rs` | 278 | production | core/schema | review | Shared schema reference and name validation boundary |
 | `crates/recite-compiler/src/validation/conditions.rs` | 282 | production | compiler/validation | cohesive | Condition validation |
 | `crates/recite-core/src/diagnostic/explanation/validation.rs` | 352 | production | core/diagnostics | cohesive | Diagnostic explanation catalog |
-| `crates/recite-config/src/project/diagnostics.rs` | 291 | production | config/project | cohesive | #167: shared project-discovery diagnostics projection |
-| `crates/recite-config/src/project/enumerate.rs` | 260 | production | config/project | cohesive | #167: deterministic project-root enumeration |
-| `crates/recite-config/src/project/manifest.rs` | 367 | production | config/project | review | #167: project manifest loading and metadata boundary |
 | `crates/recite-cli/src/play/tui/render/prompt.rs` | 270 | production | cli/tui | cohesive | Prompt rendering |
 | `crates/recite-cli/src/cli_help.rs` | 309 | production | cli | cohesive | CLI help presentation |
 | `crates/recite-godot/src/bindings.rs` | 353 | production | godot | review | Host binding declarations |
