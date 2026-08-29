@@ -7,32 +7,33 @@ use super::super::LoweringContext;
 use super::field::lower_fields;
 use super::label::lower_label;
 use super::reference::query_result_types;
-use super::{LabelLoweringState, ProjectionTypeTables, ProjectorContext};
-use crate::schema::schema_diagnostic;
-use crate::schema::{
-    PresentationAffordanceOutputDefinition, ProjectionInput, ProjectionOutputTarget,
-    ProjectionQueryDefinition,
+use super::{
+    LabelContext, LabelIdState, OutputSources, PendingTypeRefs, ProjectionTypeTables,
+    ProjectorContext,
 };
+use crate::schema::schema_diagnostic;
+use crate::schema::{PresentationAffordanceOutputDefinition, ProjectionOutputTarget};
 use crate::{Diagnostic, DiagnosticArgumentValue};
 
 pub(super) fn lower_outputs(
     lowering: &mut LoweringContext<'_>,
     projector_context: ProjectorContext<'_>,
-    inputs: &[ProjectionInput],
-    queries: &BTreeMap<String, ProjectionQueryDefinition>,
+    sources: &OutputSources<'_>,
     raw_outputs: Vec<Named<RawPresentationAffordanceOutputDefinition>>,
-    state: &mut LabelLoweringState<'_>,
+    label_ids: &mut LabelIdState<'_>,
+    pending_type_refs: &mut PendingTypeRefs<'_>,
     projector_path: &[String],
 ) -> BTreeMap<String, PresentationAffordanceOutputDefinition> {
     let mut seen = BTreeSet::new();
     let mut lowered = BTreeMap::new();
-    let input_types = inputs
+    let input_types = sources
+        .inputs
         .iter()
-        .map(|input| (input.name.clone(), input.type_ref.clone()))
+        .map(|input| (input.name.as_str(), input.type_ref.clone()))
         .collect::<BTreeMap<_, _>>();
     let types = ProjectionTypeTables {
         input_types,
-        query_types: query_result_types(projector_context.schema, queries),
+        query_types: query_result_types(projector_context.schema, sources.queries),
     };
 
     for raw_output in raw_outputs {
@@ -67,6 +68,11 @@ pub(super) fn lower_outputs(
             ));
             continue;
         }
+        let label_context = LabelContext {
+            projector: projector_context.projector,
+            output: &raw_output.name,
+            types: &types,
+        };
         let mut target_path = output_path.clone();
         target_path.push("target".to_owned());
         let target_span = lowering.value_span_at(&target_path, &raw_output.value.target);
@@ -98,11 +104,10 @@ pub(super) fn lower_outputs(
         let label = raw_output.value.label.map(|label| {
             lower_label(
                 lowering,
-                &projector_context,
-                &raw_output.name,
+                &label_context,
                 label,
-                &types,
-                state,
+                label_ids,
+                pending_type_refs,
                 &output_path,
             )
         });
@@ -112,7 +117,7 @@ pub(super) fn lower_outputs(
             &raw_output.name,
             raw_output.value.fields,
             &types,
-            state.pending_type_refs,
+            pending_type_refs,
             &output_path,
         );
         lowered.insert(

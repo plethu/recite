@@ -7,7 +7,7 @@ use super::super::super::raw::{
 use super::super::super::validate::validate_manifest_name;
 use super::super::LoweringContext;
 use super::reference::{lower_input_ref, lower_output_type_ref, validate_ref_type};
-use super::{LabelLoweringState, ProjectionBinding, ProjectionTypeTables, ProjectorContext};
+use super::{LabelContext, LabelIdState, PendingTypeRefs, ProjectionBinding};
 use crate::schema::schema_diagnostic;
 use crate::schema::{PresentationLabelArgDefinition, PresentationLabelDefinition};
 use crate::{
@@ -23,11 +23,10 @@ macro_rules! text_args {
 
 pub(super) fn lower_label(
     lowering: &mut LoweringContext<'_>,
-    projector_context: &ProjectorContext<'_>,
-    output: &str,
+    context: &LabelContext<'_>,
     raw_label: RawPresentationLabelDefinition,
-    types: &ProjectionTypeTables,
-    state: &mut LabelLoweringState<'_>,
+    label_ids: &mut LabelIdState<'_>,
+    pending_type_refs: &mut PendingTypeRefs<'_>,
     output_path: &[String],
 ) -> PresentationLabelDefinition {
     let mut label_path = output_path.to_vec();
@@ -41,7 +40,10 @@ pub(super) fn lower_label(
         &raw_label.template_id,
         template_id_span,
     );
-    if !state.seen_label_ids.insert(raw_label.template_id.clone()) {
+    if !label_ids
+        .seen_label_ids
+        .insert(raw_label.template_id.clone())
+    {
         let duplicate_span = lowering.value_span_at(&template_id_path, &raw_label.template_id);
         lowering.diagnostics.push(schema_diagnostic(
             DUPLICATE_DEFINITION,
@@ -65,17 +67,15 @@ pub(super) fn lower_label(
     );
     let args = lower_label_args(
         lowering,
-        projector_context,
-        output,
+        context,
         raw_label.args,
-        types,
-        state,
+        pending_type_refs,
         &label_path,
     );
     validate_label_placeholders(
         lowering.diagnostics,
-        projector_context.projector,
-        output,
+        context.projector,
+        context.output,
         &raw_label.template_id,
         &raw_label.source_text,
         &args,
@@ -90,11 +90,9 @@ pub(super) fn lower_label(
 
 fn lower_label_args(
     lowering: &mut LoweringContext<'_>,
-    projector_context: &ProjectorContext<'_>,
-    output: &str,
+    context: &LabelContext<'_>,
     raw_args: Vec<Named<RawPresentationLabelArgDefinition>>,
-    types: &ProjectionTypeTables,
-    state: &mut LabelLoweringState<'_>,
+    pending_type_refs: &mut PendingTypeRefs<'_>,
     label_path: &[String],
 ) -> BTreeMap<String, PresentationLabelArgDefinition> {
     let mut seen = BTreeSet::new();
@@ -115,12 +113,12 @@ fn lower_label_args(
                 "diagnostic-schema-003-label-argument",
                 format!(
                     "projector '{}' output '{}' repeats label argument '{}'",
-                    projector_context.projector,
-                    output,
+                    context.projector,
+                    context.output,
                     raw_arg.name
                 ),
                 arg_span,
-            text_args!("projector" => projector_context.projector, "output" => output, "argument" => raw_arg.name.clone()),
+            text_args!("projector" => context.projector, "output" => context.output, "argument" => raw_arg.name.clone()),
             ));
             continue;
         }
@@ -129,23 +127,26 @@ fn lower_label_args(
         let type_ref = lower_output_type_ref(
             lowering,
             ProjectionBinding {
-                projector: projector_context.projector,
-                output,
+                projector: context.projector,
+                output: context.output,
                 name: &raw_arg.name,
             },
             &raw_arg.value.type_ref,
-            state.pending_type_refs,
+            pending_type_refs,
             &type_path,
         );
         let source_ref = lower_input_ref(raw_arg.value.source);
         validate_ref_type(
             lowering.diagnostics,
             super::ReferenceTypeContext {
-                projector: projector_context.projector,
-                owner: &format!("output '{output}' label argument '{}'", raw_arg.name),
+                projector: context.projector,
+                owner: &format!(
+                    "output '{}' label argument '{}'",
+                    context.output, raw_arg.name
+                ),
                 expected: &type_ref,
-                input_types: &types.input_types,
-                query_types: &types.query_types,
+                input_types: &context.types.input_types,
+                query_types: &context.types.query_types,
             },
             &source_ref,
             arg_span,

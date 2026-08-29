@@ -22,8 +22,8 @@ use super::super::validate::{PendingTypeReference, duplicate_definition, validat
 use super::LoweringContext;
 use crate::Diagnostic;
 use crate::schema::{
-    ParameterDefinition, ProjectSchema, SchemaPresentationProjectorDefinition,
-    SchemaProjectionSelector, SchemaTypeRef,
+    ParameterDefinition, ProjectSchema, ProjectionInput, ProjectionQueryDefinition,
+    SchemaPresentationProjectorDefinition, SchemaProjectionSelector, SchemaTypeRef,
 };
 
 pub(super) struct ProjectorContext<'a> {
@@ -31,9 +31,20 @@ pub(super) struct ProjectorContext<'a> {
     pub(super) projector: &'a str,
 }
 
-pub(super) struct ProjectionTypeTables {
-    pub(super) input_types: BTreeMap<String, SchemaTypeRef>,
+pub(super) struct ProjectionTypeTables<'a> {
+    pub(super) input_types: BTreeMap<&'a str, SchemaTypeRef>,
     pub(super) query_types: BTreeMap<String, SchemaTypeRef>,
+}
+
+pub(super) struct OutputSources<'a> {
+    pub(super) inputs: &'a [ProjectionInput],
+    pub(super) queries: &'a BTreeMap<String, ProjectionQueryDefinition>,
+}
+
+pub(super) struct LabelContext<'a> {
+    pub(super) projector: &'a str,
+    pub(super) output: &'a str,
+    pub(super) types: &'a ProjectionTypeTables<'a>,
 }
 
 pub(super) struct InputSourceContext<'a> {
@@ -67,7 +78,7 @@ pub(super) struct ReferenceTypeContext<'a, T> {
     pub(super) projector: &'a str,
     pub(super) owner: &'a str,
     pub(super) expected: &'a SchemaTypeRef,
-    pub(super) input_types: &'a BTreeMap<String, T>,
+    pub(super) input_types: &'a BTreeMap<&'a str, T>,
     pub(super) query_types: &'a BTreeMap<String, SchemaTypeRef>,
 }
 
@@ -76,7 +87,7 @@ pub(super) struct QueryArgumentContext<'a> {
     pub(super) query: &'a str,
     pub(super) function: &'a str,
     pub(super) params: &'a [ParameterDefinition],
-    pub(super) input_types: &'a BTreeMap<String, SchemaTypeRef>,
+    pub(super) input_types: &'a BTreeMap<&'a str, &'a SchemaTypeRef>,
     pub(super) query_types: &'a BTreeMap<String, SchemaTypeRef>,
 }
 
@@ -97,12 +108,15 @@ pub(super) struct FieldSourceContext<'a> {
     pub(super) output: &'a str,
     pub(super) field: &'a str,
     pub(super) type_ref: &'a SchemaTypeRef,
-    pub(super) types: &'a ProjectionTypeTables,
+    pub(super) types: &'a ProjectionTypeTables<'a>,
     pub(super) spans: FieldSpans,
 }
 
-pub(super) struct LabelLoweringState<'a> {
+pub(super) struct LabelIdState<'a> {
     pub(super) seen_label_ids: &'a mut BTreeSet<String>,
+}
+
+pub(super) struct PendingTypeRefs<'a> {
     pub(super) pending_type_refs: &'a mut Vec<super::super::validate::PendingTypeReference>,
 }
 
@@ -189,17 +203,21 @@ pub(super) fn lower_presentation_projectors(
             entry.value.queries,
             &entry_path,
         );
-        let mut state = LabelLoweringState {
+        let mut label_ids = LabelIdState {
             seen_label_ids: &mut seen_label_ids,
-            pending_type_refs,
+        };
+        let mut pending_type_refs = PendingTypeRefs { pending_type_refs };
+        let output_sources = OutputSources {
+            inputs: &inputs,
+            queries: &queries,
         };
         let outputs = lower_outputs(
             &mut lowering,
             projector_context,
-            &inputs,
-            &queries,
+            &output_sources,
             entry.value.outputs,
-            &mut state,
+            &mut label_ids,
+            &mut pending_type_refs,
             &entry_path,
         );
 

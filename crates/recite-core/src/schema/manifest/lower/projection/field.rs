@@ -4,7 +4,7 @@ use super::super::super::diagnostics::DUPLICATE_DEFINITION;
 use super::super::super::raw::{
     Named, RawPresentationAffordanceFieldDefinition, RawPresentationAffordanceFieldSource,
 };
-use super::super::super::validate::{PendingTypeReference, validate_manifest_name};
+use super::super::super::validate::validate_manifest_name;
 use super::super::LoweringContext;
 use super::literal::lower_literal_for_type;
 use super::reference::{lower_output_type_ref, validate_ref_type};
@@ -21,7 +21,7 @@ pub(super) fn lower_fields(
     output: &str,
     raw_fields: Vec<Named<RawPresentationAffordanceFieldDefinition>>,
     types: &ProjectionTypeTables,
-    pending_type_refs: &mut Vec<PendingTypeReference>,
+    pending_type_refs: &mut super::PendingTypeRefs<'_>,
     output_path: &[String],
 ) -> BTreeMap<String, PresentationAffordanceFieldDefinition> {
     let mut seen = std::collections::BTreeSet::new();

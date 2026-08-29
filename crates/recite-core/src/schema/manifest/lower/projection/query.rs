@@ -128,7 +128,7 @@ pub(super) fn lower_projector_queries(
 ) -> BTreeMap<String, ProjectionQueryDefinition> {
     let input_types = inputs
         .iter()
-        .map(|input| (input.name.clone(), input.type_ref.clone()))
+        .map(|input| (input.name.as_str(), &input.type_ref))
         .collect::<BTreeMap<_, _>>();
     let mut query_types = BTreeMap::new();
     let mut seen = BTreeSet::new();

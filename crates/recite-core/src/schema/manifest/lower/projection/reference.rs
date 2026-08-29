@@ -4,7 +4,7 @@ use super::super::super::diagnostics::{INVALID_TYPE_REFERENCE, MALFORMED_SHAPE};
 use super::super::super::raw::RawProjectionInputRef;
 use super::super::super::validate::PendingTypeReference;
 use super::super::LoweringContext;
-use super::{ProjectionBinding, ReferenceTypeContext};
+use super::{PendingTypeRefs, ProjectionBinding, ReferenceTypeContext};
 use crate::schema::schema_diagnostic;
 use crate::schema::{ProjectSchema, ProjectionInputRef, ProjectionQueryDefinition, SchemaTypeRef};
 use crate::{Diagnostic, DiagnosticArgumentValue, SourceSpan};
@@ -26,7 +26,7 @@ pub(super) fn lower_output_type_ref(
     lowering: &mut LoweringContext<'_>,
     binding: ProjectionBinding<'_>,
     raw_type: &str,
-    pending_type_refs: &mut Vec<PendingTypeReference>,
+    pending_type_refs: &mut PendingTypeRefs<'_>,
     path: &[String],
 ) -> SchemaTypeRef {
     let (type_ref, type_ref_span, valid) =
@@ -45,14 +45,16 @@ pub(super) fn lower_output_type_ref(
             },
         );
     if valid {
-        pending_type_refs.push(PendingTypeReference {
-            owner: format!(
-                "projector '{}' output '{}' binding '{}'",
-                binding.projector, binding.output, binding.name
-            ),
-            type_ref: type_ref.clone(),
-            span: type_ref_span,
-        });
+        pending_type_refs
+            .pending_type_refs
+            .push(PendingTypeReference {
+                owner: format!(
+                    "projector '{}' output '{}' binding '{}'",
+                    binding.projector, binding.output, binding.name
+                ),
+                type_ref: type_ref.clone(),
+                span: type_ref_span,
+            });
     }
     type_ref
 }
