@@ -70,7 +70,7 @@ documents the preserved boundary; `#[allow]` remains item-scoped.
 The output distinguishes `baseline`, `new`, `expanded`, `narrowed`, and
 `reason-*` records. Each record includes `scope`, lexical `owner`, category,
 literal `reason`, `rationale` status (`missing`, `present`, or `scoped`), and
-`baseline_status`. Use `--full` when reviewing the current debt inventory;
+`baseline_status`, plus whether the owner is stable and matchable. Use `--full` when reviewing the current debt inventory;
 full mode is reporting-only and marks records as `current`. The normal range
 is the pull request base to the actual source head, not a synthetic merge
 commit. Qualified module, impl, and trait owners use stable length-prefixed

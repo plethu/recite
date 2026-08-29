@@ -367,6 +367,59 @@ git -C "$test_root/repo" rm -q crates/demo/src/ambiguous_owners.rs
 git -C "$test_root/repo" commit -q -m remove-ambiguous-owner-fixture
 clean_before_exceptions="$(git -C "$test_root/repo" rev-parse HEAD)"
 
+# Macro token trees are not real item/module scope, regardless of the macro
+# name or delimiter. Their nested declarations must remain non-matchable.
+cat > "$test_root/repo/crates/demo/src/macro_owner.rs" <<'EOF'
+old_paren!({
+    mod nested_module {
+        #[allow(dead_code)]
+        fn nested() {}
+    }
+});
+old_bracket!([
+    impl NestedType {
+        #[allow(dead_code)]
+        fn nested() {}
+    }
+]);
+old_brace! {
+    trait NestedTrait {
+        #[allow(dead_code)]
+        fn nested(&self);
+    }
+}
+EOF
+git -C "$test_root/repo" add .
+git -C "$test_root/repo" commit -q -m add-macro-owner-baselines
+macro_owner_base_sha="$(git -C "$test_root/repo" rev-parse HEAD)"
+cat > "$test_root/repo/crates/demo/src/macro_owner.rs" <<'EOF'
+new_paren!({
+    mod nested_module {
+        #[allow(dead_code)]
+        fn nested() {}
+    }
+});
+new_bracket!([
+    impl NestedType {
+        #[allow(dead_code)]
+        fn nested() {}
+    }
+]);
+new_brace! {
+    trait NestedTrait {
+        #[allow(dead_code)]
+        fn nested(&self);
+    }
+}
+EOF
+git -C "$test_root/repo" add .
+git -C "$test_root/repo" commit -q -m reject-macro-owner-reuse
+macro_owner_sha="$(git -C "$test_root/repo" rev-parse HEAD)"
+check_fails "$macro_owner_base_sha" "$macro_owner_sha" "owner_stable=false"
+git -C "$test_root/repo" rm -q crates/demo/src/macro_owner.rs
+git -C "$test_root/repo" commit -q -m remove-macro-owner-fixture
+clean_before_exceptions="$(git -C "$test_root/repo" rev-parse HEAD)"
+
 # Matching candidates are partitioned by path and category, and lint-list
 # changes retain the lexical owner. These hostile pairs must remain `new`
 # rather than laundering through a broad/module or test baseline elsewhere.

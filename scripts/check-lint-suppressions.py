@@ -467,27 +467,49 @@ class OwnerTracker:
 
     def __init__(self) -> None:
         self.contexts: list[str | None] = []
+        self.delimiters: list[tuple[str, bool, bool]] = []
         self.segment: list[str] = []
+        self.macro_pending = False
 
     def word(self, token: str) -> None:
+        self.macro_pending = False
         self.segment.append(token)
 
     def punctuation(self, token: str) -> None:
-        if token == "{":
-            self.contexts.append(declaration_owner(self.segment))
+        if token == "!":
+            self.macro_pending = True
+            self.segment.append(token)
+        elif token in OPEN:
+            if token == "{":
+                owner = declaration_owner(self.segment)
+                in_macro = self.macro_pending or any(entry[2] for entry in self.delimiters)
+                self.contexts.append(None if in_macro else owner)
+                self.delimiters.append((token, owner is not None and not in_macro, in_macro))
+                self.segment.clear()
+            else:
+                self.delimiters.append((token, False, self.macro_pending))
+                self.segment.append(token)
+            self.macro_pending = False
+        elif token in CLOSE:
+            if self.delimiters:
+                opener, _, _ = self.delimiters[-1]
+                if PAIRS[token] == opener:
+                    self.delimiters.pop()
+                    if token == "}" and self.contexts:
+                        self.contexts.pop()
             self.segment.clear()
-        elif token == "}":
-            if self.contexts:
-                self.contexts.pop()
-            self.segment.clear()
+            self.macro_pending = False
         elif token == ";":
             self.segment.clear()
+            self.macro_pending = False
         else:
             self.segment.append(token)
+            self.macro_pending = False
 
-    def prefix(self) -> str:
-        return "::".join(context for context in self.contexts if context is not None)
-
+    def prefix(self) -> tuple[str, bool]:
+        stable = all(entry[1] for entry in self.delimiters)
+        prefix = "::".join(context for context in self.contexts if context is not None)
+        return prefix, stable
 
 def scan_source(path: str, source: str, generated_paths: set[str]) -> list[Suppression]:
     suppressions: list[Suppression] = []
@@ -540,7 +562,8 @@ def scan_source(path: str, source: str, generated_paths: set[str]) -> list[Suppr
         parsed = parse_attr(source, index, bracket, close, path)
         for kind, lints, reason, inner in parsed:
             scope, target, _, owner_stable = next_scope(source, close + 1, inner)
-            prefix = owners.prefix()
+            prefix, context_stable = owners.prefix()
+            owner_stable = owner_stable and context_stable
             if prefix:
                 target = f"{prefix}::{target}"
             line = source.count('\n', 0, index) + 1
@@ -736,6 +759,7 @@ def display(item: Suppression) -> str:
             rationale = "present"
     return (f"{item.path}:{item.line}: {item.status} {item.kind}({lints}) "
             f"scope={item.scope} owner={item.target} category={item.category} "
+            f"owner_stable={'true' if item.owner_stable else 'false'} "
             f"reason={reason} rationale={rationale} baseline_status={item.status}")
 
 
