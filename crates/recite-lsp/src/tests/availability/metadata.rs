@@ -122,7 +122,10 @@ pub(super) fn hover_prioritizes_contextual_metadata_values() {
     ] {
         assert!(
             harness
-                .hover(source_uri.clone(), position_after(source, target))
+                .hover(
+                    source_uri.clone(),
+                    position_after(source, &format!("{target}fl")),
+                )
                 .is_none(),
             "metadata value with trailing punctuation must not resolve: {target:?}",
         );
