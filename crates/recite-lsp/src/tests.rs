@@ -69,6 +69,11 @@ fn explicit_missing_user_config_warns_with_stable_code() {
 }
 
 #[test]
+fn translated_config_warning_uses_exact_code_and_detail_once() {
+    lifecycle::translated_config_warning_uses_exact_code_and_detail_once();
+}
+
+#[test]
 fn did_open_publishes_source_diagnostics_with_stable_shape() {
     diagnostics::did_open_publishes_source_diagnostics_with_stable_shape();
 }

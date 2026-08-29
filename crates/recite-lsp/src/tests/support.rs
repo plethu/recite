@@ -123,6 +123,36 @@ impl Harness {
         Self::finish_start(params, client, server)
     }
 
+    pub(super) fn start_with_user_config_and_resource(
+        params: Value,
+        loaded: Result<LoadedUserConfig, ConfigError>,
+        locale: &str,
+        resource: String,
+    ) -> (Self, InitializeResult) {
+        let (server_connection, client) = Connection::memory();
+        let locale = locale.to_owned();
+        let server = thread::spawn(move || {
+            let requested = UiLocale::parse(&locale)
+                .expect("test locale is valid")
+                .resolve();
+            let catalog = UiCatalog::from_resources(
+                requested.clone(),
+                [
+                    (
+                        UiLocale::parse("en-US").expect("locale").resolve(),
+                        DEFAULT_RESOURCE.to_owned(),
+                    ),
+                    (requested, resource),
+                ],
+            )
+            .expect("complete alternate catalog");
+            run_connection_with_user_config(server_connection, loaded, catalog, |_| {
+                Err("test catalog loader should not run".to_owned())
+            })
+        });
+        Self::finish_start(params, client, server)
+    }
+
     fn finish_start(
         params: Value,
         client: Connection,

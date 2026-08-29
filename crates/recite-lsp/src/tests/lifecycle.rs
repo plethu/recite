@@ -184,3 +184,29 @@ pub(super) fn explicit_missing_user_config_warns_with_stable_code() {
     harness.assert_no_message();
     harness.finish();
 }
+
+pub(super) fn translated_config_warning_uses_exact_code_and_detail_once() {
+    let localized = DEFAULT_RESOURCE.replace(
+        "lsp-warning-ui-config = UI configuration could not be loaded (code {$code}): {$detail}; using embedded en-US UI text.",
+        "lsp-warning-ui-config = localized config warning [{$code}] {$detail}",
+    );
+    let error = ConfigError::Malformed {
+        path: PathBuf::from("/synthetic/recite-config.toml"),
+        message: "invalid TOML".to_owned(),
+    };
+    let detail = error.to_string();
+    let (harness, _) = super::support::Harness::start_with_user_config_and_resource(
+        json!({"capabilities": ClientCapabilities::default()}),
+        Err(error),
+        "fr-FR",
+        localized,
+    );
+
+    let warning = harness.recv_log_message();
+    assert_eq!(
+        warning.message,
+        format!("localized config warning [RECITE_CONFIG005] {detail}")
+    );
+    harness.assert_no_message();
+    harness.finish();
+}
