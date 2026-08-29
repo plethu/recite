@@ -107,7 +107,7 @@ wire compatibility fixtures, and focused reviews for each subsystem.
 | `crates/recite-core/src/compiled/messagepack/validate.rs` | 372 | production | core/wire | cohesive | #89: validation is part of the decoder boundary |
 | `crates/recite-lsp/src/workspace.rs` | 473 | production | lsp/workspace | follow-up | #164: separate document state, saved indexes, and analysis snapshots |
 | `crates/recite-compiler/src/wire/messagepack.rs` | 347 | production | compiler/wire | cohesive | #89: encoder mirror of the explicit decoder wire surface |
-| `crates/recite-cli/src/error.rs` | 355 | production | cli | review | Keep user-facing error projection separate from typed domain errors |
+| `crates/recite-cli/src/error.rs` | 359 | production | cli | review | Keep user-facing error projection separate from typed domain errors |
 | `crates/recite-ui/tests/diagnostics.rs` | 371 | test/support | ui/tests | review | Structured diagnostic resource and compatibility-message coverage |
 | `crates/recite-lsp/src/features/navigation.rs` | 394 | production | lsp/features | review | Feature-specific navigation projection |
 | `crates/recite-lsp/src/features/hover.rs` | 260 | production | lsp/features | review | Feature-specific hover projection |
@@ -119,9 +119,9 @@ wire compatibility fixtures, and focused reviews for each subsystem.
 | `crates/recite-cli/src/runtime_fixture/trace/convert.rs` | 271 | production | cli/runtime-fixture | review | #180: structured trace conversion preserves plural resolution provenance |
 | `crates/recite-cli/src/runtime_fixture/trace/model.rs` | 263 | production | cli/runtime-fixture | review | #180: trace output model keeps localized templates and structured metadata distinct |
 | `crates/recite-godot/src/adapter.rs` | 361 | production | godot | review | Host adapter lifecycle boundary |
-| `crates/recite-lsp/src/server.rs` | 377 | production | lsp/server | follow-up | #164: make request dispatch and workspace ownership explicit |
+| `crates/recite-lsp/src/server.rs` | 395 | production | lsp/server | follow-up | #164: make request dispatch and workspace ownership explicit |
 | `crates/recite-benchmarks/src/memory_profiles/mod.rs` | 373 | production | benchmarks | cohesive | Maintainer-only profile orchestration |
-| `crates/recite-cli/src/commands.rs` | 394 | production | cli | review | Command orchestration boundary |
+| `crates/recite-cli/src/commands.rs` | 395 | production | cli | review | Command orchestration boundary |
 | `crates/recite-compiler/src/wire/messagepack/tags.rs` | 373 | production | compiler/wire | cohesive | #89: encoder tag mirror |
 | `crates/recite-core/src/schema/model/mod.rs` | 380 | production | core/schema | review | Schema module exports and model grouping |
 | `crates/recite-core/src/schema/source/edit.rs` | 359 | production | core/schema | review | Source-owned typed edits and CST-preserving layout updates |
@@ -190,5 +190,5 @@ wire compatibility fixtures, and focused reviews for each subsystem.
 | `crates/recite-cli/tests/watch_stress.rs` | 366 | test/support | cli/tests | cohesive | Watch stress harness |
 | `crates/recite-runtime/tests/traversal/conditions/choice_conditions.rs` | 365 | test/support | runtime/tests | cohesive | Choice condition coverage |
 | `crates/recite-lsp/src/tests/availability/speaker.rs` | 351 | test/support | lsp/tests | review | Typed and ordinary speaker completion coverage |
-| `crates/recite-lsp/src/tests.rs` | 488 | test/support | lsp/tests | cohesive | Module aggregator, not production implementation |
+| `crates/recite-lsp/src/tests.rs` | 518 | test/support | lsp/tests | cohesive | Module aggregator, not production implementation |
 | `crates/recite-lsp/src/tests/code_action/schema_entry.rs` | 357 | test/support | lsp/tests | review | Private code-action behavior |
