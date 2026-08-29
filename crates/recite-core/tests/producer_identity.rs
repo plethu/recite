@@ -32,3 +32,13 @@ fn producer_identity_rejects_unknown_wire_fields() {
     let wire = r#"{"kind":"adapter","id":"example","label":"extra"}"#;
     assert!(serde_json::from_str::<ProducerIdentity>(wire).is_err());
 }
+
+#[test]
+fn manifest_lowering_rejects_whitespace_identity_components() {
+    let report = recite_core::load_schema_manifest_str(
+        "whitespace-producer.json",
+        r#"{"schema_version":1,"producer":{"kind":" \t ","id":"valid"}}"#,
+    );
+    assert!(report.schema.is_none());
+    assert_eq!(report.diagnostics[0].code.as_str(), "RECITE_SCHEMA001");
+}
