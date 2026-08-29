@@ -1,18 +1,19 @@
 mod config;
 mod project_index;
+#[path = "project_refresh.rs"]
+mod project_refresh;
 mod schema_index;
+#[path = "semantic.rs"]
+mod semantic;
 mod ui;
 
-use std::collections::BTreeSet;
 use std::fs;
-use std::path::{Path, PathBuf};
 
 use lsp_types::{
     CodeActionParams, CodeActionResponse, CompletionResponse, GotoDefinitionResponse, Hover,
     Location, Position, PrepareRenameResponse, TextDocumentContentChangeEvent, Uri, WorkspaceEdit,
 };
-use recite_core::{Diagnostic, SourceFile};
-use recite_parser::parse;
+use recite_core::Diagnostic;
 use recite_ui::UiCatalog;
 
 pub(crate) use config::WorkspaceConfig;
@@ -66,123 +67,6 @@ impl LspWorkspace {
         }
     }
 
-    pub(crate) fn save(&mut self, uri: Uri) -> Vec<DiagnosticRefresh> {
-        let mut refreshes = Vec::new();
-        if self
-            .saved
-            .manifest_path()
-            .and_then(crate::paths::file_path_to_uri)
-            .as_ref()
-            == Some(&uri)
-        {
-            refreshes.extend(self.refresh_project_manifest());
-        }
-        let touched_saved = self.saved.refresh_uri(&uri);
-        let open_identity = self.open_identity(uri.clone());
-        let open_refresh = self.documents.refresh_identity(open_identity);
-
-        if touched_saved
-            || open_refresh
-                .as_ref()
-                .is_some_and(|refresh| refresh.identity_changed)
-        {
-            self.rebuild_next_generation();
-        }
-
-        if let Some(open_refresh) = open_refresh {
-            refreshes.push(DiagnosticRefresh::publish_open(
-                &open_refresh.document,
-                self.generation,
-            ));
-            return refreshes;
-        }
-
-        if let Some(refresh) = self
-            .saved
-            .document_by_uri(&uri)
-            .map(|document| DiagnosticRefresh::publish_saved(document, self.generation))
-        {
-            refreshes.push(refresh);
-        } else if touched_saved {
-            refreshes.push(DiagnosticRefresh::Clear {
-                uri,
-                generation: self.generation,
-            });
-        }
-        refreshes
-    }
-
-    /// Refresh the shared project manifest and saved index as one state
-    /// transition. Open buffers are deliberately owned by `documents` and
-    /// therefore survive malformed intermediate manifest edits.
-    pub(crate) fn refresh_project_manifest(&mut self) -> Vec<DiagnosticRefresh> {
-        let old_uri = self
-            .saved
-            .manifest_path()
-            .and_then(crate::paths::file_path_to_uri);
-        let old_had_diagnostics = !self.saved.diagnostics().is_empty();
-        self.saved.refresh_manifest();
-        self.rebuild_next_generation();
-
-        if let Some(refresh) = self.project_diagnostics() {
-            return vec![refresh];
-        }
-        if old_had_diagnostics && let Some(uri) = old_uri {
-            return vec![DiagnosticRefresh::Clear {
-                uri,
-                generation: self.generation,
-            }];
-        }
-        Vec::new()
-    }
-
-    pub(crate) fn refresh_watched_uri(&mut self, uri: &Uri) -> Vec<DiagnosticRefresh> {
-        if self
-            .saved
-            .manifest_path()
-            .and_then(crate::paths::file_path_to_uri)
-            .as_ref()
-            == Some(uri)
-        {
-            return self.refresh_project_manifest();
-        }
-        if self.schema.matches_uri(uri)
-            && let Some(refresh) = self.save_schema(uri)
-        {
-            return vec![refresh];
-        }
-        if self.saved.refresh_uri(uri) {
-            self.rebuild_next_generation();
-            return self
-                .saved
-                .document_by_uri(uri)
-                .map(|document| vec![DiagnosticRefresh::publish_saved(document, self.generation)])
-                .unwrap_or_else(|| {
-                    vec![DiagnosticRefresh::Clear {
-                        uri: uri.clone(),
-                        generation: self.generation,
-                    }]
-                });
-        }
-        Vec::new()
-    }
-
-    pub(crate) fn close(&mut self, uri: Uri) -> Option<DiagnosticRefresh> {
-        self.documents.close(&uri)?;
-        self.saved.refresh_uri(&uri);
-        self.rebuild_next_generation();
-
-        Some(
-            self.saved
-                .document_by_uri(&uri)
-                .map(|document| DiagnosticRefresh::publish_saved(document, self.generation))
-                .unwrap_or(DiagnosticRefresh::Clear {
-                    uri,
-                    generation: self.generation,
-                }),
-        )
-    }
-
     pub(crate) fn schema_diagnostics(&self) -> Option<DiagnosticRefresh> {
         self.schema.diagnostics_refresh(self.generation)
     }
@@ -193,31 +77,6 @@ impl LspWorkspace {
         }
         self.rebuild_next_generation();
         self.schema.refresh_or_clear(self.generation)
-    }
-
-    pub(crate) fn with_semantic_diagnostics(
-        &self,
-        mut diagnostics: DocumentDiagnostics,
-    ) -> DocumentDiagnostics {
-        if !diagnostics.diagnostics.is_empty() {
-            return diagnostics;
-        }
-        let Some(source_files) = self.live_source_files() else {
-            return diagnostics;
-        };
-        let validation_path = self.validation_path_for_uri(&diagnostics.uri);
-
-        diagnostics.diagnostics = match self.schema.schema() {
-            Some(schema) => {
-                recite_compiler::validate_source_files_with_schema(&source_files, schema)
-                    .diagnostics
-            }
-            None => recite_compiler::validate_source_files(&source_files).diagnostics,
-        };
-        diagnostics
-            .diagnostics
-            .retain(|diagnostic| diagnostic.span.file == validation_path);
-        diagnostics
     }
 
     pub(crate) fn completion(&self, uri: &Uri, position: Position) -> Option<CompletionResponse> {
@@ -382,63 +241,6 @@ impl LspWorkspace {
                     .document_by_uri(summary.uri())
                     .map(|document| document.text.as_str())
             })
-    }
-
-    fn live_source_files(&self) -> Option<Vec<SourceFile>> {
-        let open_saved_paths = self
-            .documents
-            .documents()
-            .filter_map(|document| document.summary().saved_path().map(Path::to_owned))
-            .collect::<BTreeSet<PathBuf>>();
-        let open_uris = self
-            .documents
-            .documents()
-            .map(|document| document.summary().uri().as_str().to_owned())
-            .collect::<BTreeSet<_>>();
-
-        let mut inputs = self
-            .saved
-            .documents()
-            .filter(|document| {
-                !document
-                    .summary
-                    .saved_path()
-                    .is_some_and(|path| open_saved_paths.contains(path))
-                    && !open_uris.contains(document.summary.uri().as_str())
-            })
-            .map(|document| {
-                (
-                    document
-                        .summary
-                        .project_relative_path()
-                        .unwrap_or(document.summary.uri().as_str())
-                        .to_owned(),
-                    document.text.as_str(),
-                )
-            })
-            .collect::<Vec<_>>();
-        inputs.extend(self.documents.documents().map(|document| {
-            (
-                document
-                    .summary()
-                    .project_relative_path()
-                    .unwrap_or(document.identity().uri.as_str())
-                    .to_owned(),
-                document.text(),
-            )
-        }));
-        inputs.sort_by(|left, right| left.0.cmp(&right.0));
-
-        let mut source_files = Vec::with_capacity(inputs.len());
-        for (uri, text) in inputs {
-            let lowered = parse(uri.as_str(), text).lower_source_file();
-            if !lowered.diagnostics.is_empty() {
-                return None;
-            }
-            source_files.push(lowered.source_file);
-        }
-
-        Some(source_files)
     }
 
     fn validation_path_for_uri(&self, uri: &Uri) -> String {
