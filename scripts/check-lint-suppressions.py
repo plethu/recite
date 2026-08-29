@@ -606,6 +606,10 @@ def main() -> int:
     parser = argparse.ArgumentParser(description=__doc__)
     parser.add_argument("refs", nargs="*", help="base and head Git refs")
     parser.add_argument("--full", action="store_true", help="inventory all tracked Rust source")
+    parser.add_argument(
+        "--policy-revision",
+        help="revision supplying repository-owned policy files such as the generated allowlist",
+    )
     args = parser.parse_args()
     if len(args.refs) > 2:
         parser.error("expected at most base-ref and head-ref")
@@ -617,13 +621,16 @@ def main() -> int:
         head_ref = args.refs[1] if len(args.refs) > 1 else os.environ.get("RECITE_HEAD_REF", "HEAD")
         head = resolve(repo, head_ref)
         base = None if args.full else (base_ref if is_zero_sha(base_ref) else resolve(repo, base_ref))
+        policy_revision = (
+            head if args.policy_revision is None else resolve(repo, args.policy_revision)
+        )
         if args.full:
             paths = [path for path in tracked_paths(repo, head) if rust_path(path)]
         else:
             paths = changed_paths(repo, base, head)
             paths = [path for path in paths if rust_path(path)]
-        generated_paths = generated_allowlist(repo, head)
-    except (OSError, RuntimeError, subprocess.CalledProcessError) as error:
+        generated_paths = generated_allowlist(repo, policy_revision)
+    except (OSError, RuntimeError, ParseError, subprocess.CalledProcessError) as error:
         print(f"lint suppression policy setup failed: {error}", file=sys.stderr)
         return 2
 

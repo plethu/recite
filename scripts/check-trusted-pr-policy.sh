@@ -177,7 +177,8 @@ GITHUB_EVENT_NAME=pull_request \
 # suppression policy that evaluates its own Rust changes.
 RECITE_BASE_REF="$base_sha" \
 RECITE_HEAD_REF=refs/recite/trusted-pr-head \
-  "$repo_root/scripts/check-lint-suppressions.sh" "$base_sha" refs/recite/trusted-pr-head
+  "$repo_root/scripts/check-lint-suppressions.sh" "$base_sha" refs/recite/trusted-pr-head \
+  --policy-revision "$base_sha"
 
 final_pr="$(read_live_pr)" || {
   echo "unable to reread live pull-request metadata" >&2

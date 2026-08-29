@@ -231,6 +231,15 @@ git -C "$test_root/repo" commit -q -m explicit-generated-allowlist
 allowlisted_generated_sha="$(git -C "$test_root/repo" rev-parse HEAD)"
 check_passes "$fake_generated_sha" "$allowlisted_generated_sha"
 
+# A malformed repository-owned allowlist fails closed during setup instead of
+# producing a traceback or silently treating the entry as policy.
+printf '%s\n' '../escape.rs' > "$test_root/repo/scripts/generated-rust-allowlist.txt"
+git -C "$test_root/repo" add scripts/generated-rust-allowlist.txt
+git -C "$test_root/repo" commit -q -m malformed-generated-allowlist
+malformed_allowlist_sha="$(git -C "$test_root/repo" rev-parse HEAD)"
+check_fails "$allowlisted_generated_sha" "$malformed_allowlist_sha" \
+  "invalid generated Rust allowlist"
+
 git -C "$test_root/repo" rm -q fixtures/generated.rs scripts/generated-rust-allowlist.txt
 git -C "$test_root/repo" commit -q -m remove-generated-fixture
 clean_sha="$(git -C "$test_root/repo" rev-parse HEAD)"

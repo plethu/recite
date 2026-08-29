@@ -69,6 +69,12 @@ scripts/check-lint-suppressions.sh origin/main HEAD
 scripts/check-lint-suppressions.sh --full
 ```
 
+The trusted pull-request policy supplies `--policy-revision` for repository
+policy files. This keeps the generated allowlist owned by the already-reviewed
+base checkout: changing the allowlist and adding a generated-looking file in
+one pull request cannot grant that file an exemption. The allowlist change
+becomes effective only after a later base review.
+
 For a new production violation, first ask whether the warning indicates a
 missing boundary or an overly large function. Prefer extracting a cohesive
 helper or introducing a small options/context value. If the warning is a

@@ -4,7 +4,7 @@ set -euo pipefail
 usage() {
   cat <<'EOF'
 Usage:
-  check-lint-suppressions.sh [base-ref [head-ref]] [--full]
+  check-lint-suppressions.sh [base-ref [head-ref]] [--full] [--policy-revision ref]
 
 Inventories handwritten Rust #[allow]/#[expect] attributes and rejects only
 new or expanded production suppressions that do not follow the local policy.

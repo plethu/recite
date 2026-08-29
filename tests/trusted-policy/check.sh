@@ -12,7 +12,9 @@ workflow="$repo_root/.github/workflows/trusted-policy.yml"
 wrapper="$repo_root/scripts/check-trusted-pr-policy.sh"
 fixture="$repo_root/tests/trusted-policy/fixtures/base-policy.sh"
 lint_fixture="$repo_root/tests/trusted-policy/fixtures/base-lint-suppression-policy.sh"
-for required_file in "$workflow" "$wrapper" "$fixture" "$lint_fixture"; do
+lint_checker="$repo_root/scripts/check-lint-suppressions.py"
+lint_allowlist="$repo_root/scripts/generated-rust-allowlist.txt"
+for required_file in "$workflow" "$wrapper" "$fixture" "$lint_fixture" "$lint_checker" "$lint_allowlist"; do
   [[ -f "$required_file" ]] || { echo "missing trusted-policy fixture file: $required_file" >&2; exit 1; }
 done
 
@@ -31,6 +33,7 @@ grep -Fq 'refs/recite/trusted-pr-head' "$wrapper" || fail_static 'non-checkout P
 grep -Fq -- '--filter=blob:none' "$wrapper" || fail_static 'blob-filtered PR object fetch'
 grep -Fq 'check-git-policy.sh' "$wrapper" || fail_static 'base policy delegation'
 grep -Fq 'check-lint-suppressions.sh' "$wrapper" || fail_static 'base lint suppression delegation'
+grep -Fq -- '--policy-revision' "$wrapper" || fail_static 'base-owned lint policy revision'
 if grep -Eq '^  pull_request:$|secrets\.|permissions:.*write|gh[[:space:]]+pr[[:space:]]+checkout|git[[:space:]]+checkout|github\.event\.pull_request\.head\.sha' "$workflow" "$wrapper"; then
   fail_static 'untrusted checkout, secret, write permission, or event-head execution'
 fi
@@ -46,9 +49,11 @@ fake_bin="$test_root/bin"
 mkdir -p "$fake_bin"
 git init --bare --quiet "$origin"
 git clone --quiet "$origin" "$repo"
-mkdir -p "$repo/scripts"
+mkdir -p "$repo/scripts" "$repo/crates/demo/src"
 cp -- "$fixture" "$repo/scripts/check-git-policy.sh"
 cp -- "$lint_fixture" "$repo/scripts/check-lint-suppressions.sh"
+cp -- "$lint_checker" "$repo/scripts/check-lint-suppressions.py"
+cp -- "$lint_allowlist" "$repo/scripts/generated-rust-allowlist.txt"
 cp -- "$wrapper" "$repo/scripts/check-trusted-pr-policy.sh"
 chmod +x "$repo/scripts/check-git-policy.sh"
 chmod +x "$repo/scripts/check-lint-suppressions.sh"
@@ -57,7 +62,9 @@ git -C "$repo" switch --quiet -c main
 git -C "$repo" config user.name 'Trusted policy fixture'
 git -C "$repo" config user.email 'trusted-policy-fixture@example.invalid'
 git -C "$repo" config commit.gpgsign false
-git -C "$repo" add scripts/check-git-policy.sh scripts/check-lint-suppressions.sh scripts/check-trusted-pr-policy.sh
+git -C "$repo" add scripts/check-git-policy.sh scripts/check-lint-suppressions.sh \
+  scripts/check-lint-suppressions.py scripts/generated-rust-allowlist.txt \
+  scripts/check-trusted-pr-policy.sh
 git -C "$repo" commit --quiet -m '[REC-164] ci: fixture base policy'
 git -C "$repo" push --quiet origin HEAD:refs/heads/main
 base_sha="$(git -C "$repo" rev-parse HEAD)"
@@ -120,6 +127,38 @@ fi
 [[ ! -e "$untrusted_marker" ]] || { echo 'untrusted policy executed' >&2; exit 1; }
 [[ "$(<"$lint_marker")" == base-lint-policy ]] || { echo 'base lint policy did not execute' >&2; exit 1; }
 [[ ! -e "$untrusted_lint_marker" ]] || { echo 'untrusted lint policy executed' >&2; exit 1; }
+
+# A pull request cannot grant a new exemption by changing the generated
+# allowlist in the same change. The trusted base checker must read its policy
+# files at the base revision while inspecting the fetched PR tree.
+git -C "$repo" switch --quiet pr
+cat > "$repo/crates/demo/src/generated.rs" <<'EOF'
+#[allow(dead_code)]
+fn fake_generated_from_pr() {}
+EOF
+printf '%s\n' 'crates/demo/src/generated.rs' > "$repo/scripts/generated-rust-allowlist.txt"
+git -C "$repo" add crates/demo/src/generated.rs scripts/generated-rust-allowlist.txt
+git -C "$repo" commit --quiet -m '[REC-185] fixture: tamper with generated allowlist'
+tampered_head_sha="$(git -C "$repo" rev-parse HEAD)"
+git -C "$repo" push --quiet --force origin HEAD:refs/pull/164/head
+git -C "$repo" switch --quiet --detach main
+git -C "$repo" update-ref -d refs/recite/trusted-pr-head
+jq --arg sha "$tampered_head_sha" '.pull_request.head.sha = $sha' "$test_root/event.json" > "$test_root/tampered-event.json"
+jq --arg sha "$tampered_head_sha" '.head.sha = $sha' "$test_root/live.json" > "$test_root/tampered-live.json"
+if PATH="$fake_bin:$PATH" GH_FIXTURE_JSON="$test_root/tampered-live.json" \
+  GITHUB_EVENT_NAME=pull_request_target GITHUB_EVENT_PATH="$test_root/tampered-event.json" \
+  GITHUB_REPOSITORY=plethu/recite TRUSTED_POLICY_MARKER="$test_root/tampered.marker" \
+  TRUSTED_LINT_POLICY_MARKER="$test_root/tampered-lint.marker" \
+  bash -c 'cd "$1" && ./scripts/check-trusted-pr-policy.sh' trusted-policy "$repo" >"$test_root/tampered-output" 2>&1; then
+  echo 'PR-modified generated allowlist granted an exemption' >&2
+  cat "$test_root/tampered-output" >&2
+  exit 1
+fi
+grep -Fq 'non-empty literal reason' "$test_root/tampered-output" || {
+  echo 'tampered allowlist rejection missed the production reason diagnostic' >&2
+  cat "$test_root/tampered-output" >&2
+  exit 1
+}
 
 jq '.title = "[REC-164] ci: metadata changed after validation"' "$test_root/live.json" > "$test_root/raced-live.json"
 rm -f "$test_root/gh-call-count"
