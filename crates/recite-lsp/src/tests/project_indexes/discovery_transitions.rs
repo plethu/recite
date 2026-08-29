@@ -90,6 +90,18 @@ pub(crate) fn source_ownership_is_order_independent() {
     std::fs::remove_file(&alias).expect("remove alias again");
     workspace.refresh_watched_uri(&alias_uri);
     assert_eq!(block_names(&workspace), ["changed"]);
+
+    // A direct target deletion invalidates the canonical document even when a
+    // stale alias ownership has not emitted its own watcher event.
+    symlink(temp.path().join("one.recite"), &alias).expect("alias third time");
+    std::fs::remove_file(temp.path().join("one.recite")).expect("remove target");
+    workspace.refresh_watched_uri(&file_uri(&temp.path().join("one.recite")));
+    assert!(workspace.snapshot().summaries().is_empty());
+
+    // The alias can repopulate the document only after its target is valid.
+    write_file(temp.path(), "one.recite", ":: restored\n");
+    workspace.refresh_watched_uri(&alias_uri);
+    assert_eq!(block_names(&workspace), ["restored"]);
 }
 
 #[cfg(unix)]
@@ -241,6 +253,22 @@ pub(crate) fn nested_discovery_start_survives_manifest_transitions() {
         .filter_map(|summary| summary.project_relative_path())
         .collect::<Vec<_>>();
     assert_eq!(keys, ["a.recite"]);
+
+    std::fs::remove_file(&nested_manifest).expect("remove nested manifest");
+    workspace.refresh_watched_uri(&file_uri(&nested_manifest));
+    write_file(
+        temp.path(),
+        "recite.project.toml",
+        "format_version = 1\n[discovery]\nsource_roots = [\"nested\"]\n",
+    );
+    workspace.refresh_watched_uri(&file_uri(&parent_manifest));
+    let keys = workspace
+        .snapshot()
+        .summaries()
+        .iter()
+        .filter_map(|summary| summary.project_relative_path())
+        .collect::<Vec<_>>();
+    assert_eq!(keys, ["nested/a.recite"]);
 }
 
 pub(crate) fn multi_root_documents_keep_project_relative_keys() {

@@ -9,6 +9,11 @@ use crate::paths::{file_path_to_uri, project_relative_path, uri_to_file_path};
 use crate::summary::{FileIdentity, FileSummary, SavedFileIdentity};
 use recite_config::DiscoveredDocument;
 
+#[path = "project_manifest.rs"]
+mod project_manifest;
+#[path = "project_ownership.rs"]
+mod project_ownership;
+
 pub(super) struct SavedProjectIndex {
     project_root: PathBuf,
     fallback_roots: Vec<PathBuf>,
@@ -83,200 +88,11 @@ impl SavedProjectIndex {
         index
     }
 
-    pub(super) fn refresh_uri(&mut self, uri: &Uri) -> bool {
-        // Remove the old canonical entry before resolving the replacement.
-        // A URI can be retargeted through a symlink, and retaining the old key
-        // would leave stale or duplicate summaries in the project snapshot.
-        let Some(path) = uri_to_file_path(uri) else {
-            return false;
-        };
-        let lexical_path = path.clone();
-        let canonical_before = fs::canonicalize(&path).ok();
-        let removed = self.remove_uri(uri, &lexical_path, canonical_before.as_deref());
-        if self.discovery_failed {
-            return removed;
-        }
-        let Some(path) = canonical_or_existing_parent_path(&path) else {
-            return removed;
-        };
-        if !has_recite_extension(&path) {
-            return removed;
-        }
-        self.refresh_path(&path, &lexical_path) || removed
-    }
-
-    fn remove_uri(
-        &mut self,
-        uri: &Uri,
-        lexical_path: &Path,
-        canonical_path: Option<&Path>,
-    ) -> bool {
-        let before = self.documents.len();
-        self.documents.retain(|_, document| {
-            let owns_source = document.source_paths.remove(lexical_path);
-            let matches_uri = document.summary.uri() == uri;
-            let matches_canonical = canonical_path == document.summary.saved_path()
-                && lexical_path == document.summary.saved_path().unwrap_or(lexical_path);
-            let remove_document = (owns_source || matches_uri || matches_canonical)
-                && document.source_paths.is_empty();
-            !remove_document
-        });
-        before != self.documents.len()
-    }
-
-    /// Re-read the manifest and replace the saved project state atomically.
-    /// A failed manifest leaves no saved documents; callers may still layer
-    /// open editor buffers on top of the diagnostic-only state.
-    pub(super) fn refresh_manifest(&mut self) {
-        let Some(start) = self.discovery_start.clone() else {
-            return;
-        };
-        self.apply_discovery(recite_config::discover_project(start));
-    }
-
-    fn apply_discovery(
-        &mut self,
-        result: Result<recite_config::ProjectDiscoveryReport, recite_config::ProjectDiscoveryError>,
-    ) {
-        self.documents.clear();
-        match result {
-            Ok(report) => {
-                self.project_root = report.manifest().project_root().to_owned();
-                self.roots = report
-                    .manifest()
-                    .roots()
-                    .iter()
-                    .map(|root| root.path().to_owned())
-                    .collect();
-                self.manifest = Some(report.manifest().clone());
-                self.manifest_path = Some(report.manifest().manifest_path().to_owned());
-                self.manifest_text = report.manifest().source().source_text();
-                self.diagnostics = report
-                    .diagnostics()
-                    .iter()
-                    .map(recite_config::DiscoveryDiagnostic::as_core_diagnostic)
-                    .collect();
-                self.discovery_failed = false;
-                for document in report.documents() {
-                    self.insert_discovered(document);
-                }
-            }
-            Err(recite_config::ProjectDiscoveryError::NotFound { .. }) => {
-                self.project_root = common_project_root(&self.fallback_roots);
-                self.roots = self.fallback_roots.clone();
-                self.manifest = None;
-                self.manifest_path = self
-                    .discovery_start
-                    .as_deref()
-                    .map(|path| path.join(recite_config::PROJECT_MANIFEST_FILE));
-                self.manifest_text.clear();
-                self.diagnostics.clear();
-                self.discovery_failed = false;
-                for root in self.fallback_roots.clone() {
-                    let (documents, diagnostics) = recite_config::discover_unscoped_sources(&root);
-                    self.diagnostics.extend(
-                        diagnostics
-                            .iter()
-                            .map(recite_config::DiscoveryDiagnostic::as_core_diagnostic),
-                    );
-                    for document in documents {
-                        self.insert_discovered(&document);
-                    }
-                }
-            }
-            Err(error) => {
-                self.manifest = None;
-                self.manifest_path = error.manifest_path().map(Path::to_owned);
-                self.manifest_text = self
-                    .manifest_path
-                    .as_deref()
-                    .and_then(|path| fs::read_to_string(path).ok())
-                    .unwrap_or_default();
-                self.diagnostics = error.diagnostics();
-                self.discovery_failed = true;
-            }
-        }
-    }
-
-    fn refresh_path(&mut self, path: &Path, source_path: &Path) -> bool {
-        if self.discovery_failed {
-            return false;
-        }
-        if !self.paths_share_source_root(source_path, path) {
-            return false;
-        }
-        let allowed = self.manifest.as_ref().map_or(
-            recite_config::allows_unscoped_source_path(&self.project_root, source_path)
-                && recite_config::allows_unscoped_source_path(&self.project_root, path),
-            |manifest| manifest.allows_path(source_path) && manifest.allows_path(path),
-        );
-        if !allowed {
-            self.remove_unowned_document(path);
-            return true;
-        }
-        if !path.exists() {
-            return true;
-        }
-
-        let Ok(text) = fs::read_to_string(path) else {
-            self.remove_unowned_document(path);
-            return true;
-        };
-        let Some(uri) = file_path_to_uri(path) else {
-            self.remove_unowned_document(path);
-            return true;
-        };
-        let Some(project_relative_path) = project_relative_path(&self.project_root, path) else {
-            self.remove_unowned_document(path);
-            return true;
-        };
-        let identity = FileIdentity::Saved(SavedFileIdentity {
-            uri,
-            canonical_path: path.to_owned(),
-            project_relative_path,
-        });
-        let summary = FileSummary::from_text(identity, None, &text);
-        let source_paths = self
-            .documents
-            .get(path)
-            .map(|document| {
-                let mut paths = document.source_paths.clone();
-                paths.insert(source_path.to_owned());
-                paths
-            })
-            .unwrap_or_else(|| BTreeSet::from([source_path.to_owned()]));
-        self.documents.insert(
-            path.to_owned(),
-            SavedDocument {
-                text,
-                summary,
-                source_paths,
-            },
-        );
-        true
-    }
-
-    fn remove_unowned_document(&mut self, path: &Path) {
-        if self
-            .documents
-            .get(path)
-            .is_some_and(|document| document.source_paths.is_empty())
-        {
-            self.documents.remove(path);
-        }
-    }
-
     pub(super) fn root_for_path(&self, path: &Path) -> Option<&Path> {
         self.roots
             .iter()
             .find(|root| path == root.as_path() || path.starts_with(root))
             .map(PathBuf::as_path)
-    }
-
-    fn paths_share_source_root(&self, source_path: &Path, canonical_path: &Path) -> bool {
-        self.roots
-            .iter()
-            .any(|root| source_path.starts_with(root) && canonical_path.starts_with(root))
     }
 
     pub(super) fn document_by_uri(&self, uri: &Uri) -> Option<&SavedDocument> {
@@ -364,12 +180,6 @@ fn common_project_root(roots: &[PathBuf]) -> PathBuf {
         }
     }
     common
-}
-
-fn has_recite_extension(path: &Path) -> bool {
-    path.extension()
-        .and_then(|extension| extension.to_str())
-        .is_some_and(|extension| extension == "recite")
 }
 
 fn canonical_or_existing_parent_path(path: &Path) -> Option<PathBuf> {

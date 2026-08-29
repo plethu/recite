@@ -5,12 +5,8 @@ use super::{DiagnosticRefresh, LspWorkspace};
 impl LspWorkspace {
     pub(crate) fn save(&mut self, uri: Uri) -> Vec<DiagnosticRefresh> {
         let mut refreshes = Vec::new();
-        if self
-            .saved
-            .manifest_path()
-            .and_then(crate::paths::file_path_to_uri)
-            .as_ref()
-            == Some(&uri)
+        if crate::paths::uri_to_file_path(&uri)
+            .is_some_and(|path| self.saved.is_manifest_candidate(&path))
         {
             refreshes.extend(self.refresh_project_manifest());
         }
@@ -77,12 +73,8 @@ impl LspWorkspace {
     }
 
     pub(crate) fn refresh_watched_uri(&mut self, uri: &Uri) -> Vec<DiagnosticRefresh> {
-        if self
-            .saved
-            .manifest_path()
-            .and_then(crate::paths::file_path_to_uri)
-            .as_ref()
-            == Some(uri)
+        if crate::paths::uri_to_file_path(uri)
+            .is_some_and(|path| self.saved.is_manifest_candidate(&path))
         {
             return self.refresh_project_manifest();
         }
