@@ -7,15 +7,18 @@ use recite_compiler::{
 };
 use recite_core::{
     AvailabilityReasonDefinition, AvailabilityReasonId, ConditionDefinition, ConditionReturnType,
-    EnumTypeDefinition, ParameterDefinition, PresentationAffordanceOutputDefinition,
-    PresentationLabelArgDefinition, PresentationLabelDefinition, ProjectSchema, ProjectionInputRef,
-    ProjectionOutputTarget, SchemaPresentationProjectorDefinition, SchemaProjectionSelector,
-    SchemaTypeDefinition, SchemaTypeRef, SpeakerDefinition,
+    EnumTypeDefinition, ParameterDefinition, PoDocument, PresentationAffordanceOutputDefinition,
+    PresentationLabelArgDefinition, PresentationLabelDefinition, ProducerOrigin, ProjectSchema,
+    ProjectionInputRef, ProjectionOutputTarget, SchemaPresentationProjectorDefinition,
+    SchemaProjectionSelector, SchemaTypeDefinition, SchemaTypeRef, SpeakerDefinition,
 };
 
 #[path = "../../../tests/support/fixtures.rs"]
 #[allow(dead_code)]
 mod fixture_support;
+
+#[path = "pot_extraction/shared_pressure.rs"]
+mod shared_pressure;
 
 #[test]
 fn extracts_lines_choices_and_speaker_display_names_to_pot() {
@@ -50,6 +53,53 @@ fn extracts_lines_choices_and_speaker_display_names_to_pot() {
 }
 
 #[test]
+fn extracts_plural_source_forms_as_one_gettext_entry() {
+    let inputs = [CompileInput::new(
+        "dialogue/letters.recite",
+        concat!(
+            ":: start default\n",
+            "> letters_001@8843fd6f53f020a12b31 bind=(count:int=$remaining) bind=(name:string=$name)\n",
+            "  {name} has one letter.\n",
+            "  | You have {count} letters.\n",
+            "-> END\n",
+        ),
+    )];
+    let report = extract_pot(inputs);
+    assert!(report.is_ok(), "{:?}", report.diagnostics);
+    let document = report.catalog.expect("POT");
+    let entry = &document.entries[0];
+    assert_eq!(entry.source_text, "{name} has one letter.");
+    assert_eq!(
+        entry.plural_source_text.as_deref(),
+        Some("You have {count} letters.")
+    );
+    assert_eq!(
+        document.to_pot_string(),
+        concat!(
+            "#. file: dialogue/letters.recite\n",
+            "#. block: start\n",
+            "#. source id: letters_001@8843fd6f53f020a12b31\n",
+            "#: dialogue/letters.recite:3:3\n",
+            "msgctxt \"8843fd6f53f020a12b31\"\n",
+            "msgid \"{name} has one letter.\"\n",
+            "msgid_plural \"You have {count} letters.\"\n",
+            "msgstr[0] \"\"\n",
+            "msgstr[1] \"\"\n",
+        )
+    );
+    let pot = document.to_pot_string();
+    assert!(!pot.contains("Plural-Forms:"));
+    let template = PoDocument::parse(pot).expect("locale-neutral POT loads as a template");
+    assert!(template.headers().is_empty());
+    assert!(
+        template.entries()[0]
+            .plural_translations()
+            .iter()
+            .all(|translation| translation.text().is_empty())
+    );
+}
+
+#[test]
 fn extracts_availability_reason_templates_to_pot_in_schema_order() {
     let mut schema = ProjectSchema::empty_v1();
     schema.availability_reasons = BTreeMap::from([
@@ -75,7 +125,12 @@ fn extracts_availability_reason_templates_to_pot_in_schema_order() {
                         type_ref: SchemaTypeRef::Speaker,
                     },
                 ],
-                origin: Some("schema/reasons.rs".to_owned()),
+                origin: Some(ProducerOrigin {
+                    kind: "script_member".to_owned(),
+                    id: "schema/reasons.rs".to_owned(),
+                    label: None,
+                    ..Default::default()
+                }),
             },
         ),
     ]);
@@ -330,6 +385,7 @@ fn pot_formatter_escapes_gettext_strings() {
             context: "escape_context".to_owned(),
             source_text: "Quote \" backslash \\ tab\t newline\nplaceholder {name} [slow]x[/slow]"
                 .to_owned(),
+            plural_source_text: None,
             comments: Vec::new(),
             reference: Some(PotReference {
                 file: "dialogue/escape.recite".to_owned(),
@@ -351,6 +407,7 @@ fn pot_formatter_sanitizes_comments_and_references() {
         entries: vec![PotEntry {
             context: "safe".to_owned(),
             source_text: "Text.".to_owned(),
+            plural_source_text: None,
             comments: vec!["file: dialogue\nbad.recite".to_owned()],
             reference: Some(PotReference {
                 file: "dialogue/bad\nname:part.recite".to_owned(),

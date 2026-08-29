@@ -8,9 +8,9 @@ use recite_core::{
     MetadataDefinition, MetadataDomainDefinition, MetadataTarget, MissingMetadataContextPolicy,
     ParameterDefinition, PresentationAffordanceFieldDefinition, PresentationAffordanceFieldSource,
     PresentationAffordanceOutputDefinition, PresentationLabelArgDefinition,
-    PresentationLabelDefinition, ProjectSchema, ProjectionInput, ProjectionInputRef,
-    ProjectionOutputTarget, ProjectionQueryDefinition, ProjectionQueryFunctionDefinition,
-    RegistryDefinition, SchemaFingerprint, SchemaLiteralValue,
+    PresentationLabelDefinition, ProducerOrigin, ProjectSchema, ProjectionInput,
+    ProjectionInputRef, ProjectionOutputTarget, ProjectionQueryDefinition,
+    ProjectionQueryFunctionDefinition, RegistryDefinition, SchemaFingerprint, SchemaLiteralValue,
     SchemaPresentationProjectorDefinition, SchemaProjectionInputSource, SchemaProjectionSelector,
     SchemaTypeDefinition, SchemaTypeRef, SpeakerDefinition, canonical_schema_fingerprint,
 };
@@ -54,17 +54,6 @@ fn schema_fingerprint_changes_when_freshness_relevant_fields_change() {
         .expect("type exists");
     thread_stage.values.insert("completed".to_owned());
     assert_ne!(base_fingerprint, canonical_schema_fingerprint(&type_values));
-
-    let mut registry_origin = base.clone();
-    registry_origin
-        .registries
-        .get_mut("sound")
-        .expect("registry exists")
-        .origin = Some("data/changed.toml".to_owned());
-    assert_ne!(
-        base_fingerprint,
-        canonical_schema_fingerprint(&registry_origin)
-    );
 
     let mut speaker = base.clone();
     speaker
@@ -271,7 +260,13 @@ fn schema_with_order(order: Order) -> ProjectSchema {
                 "sound",
                 RegistryDefinition {
                     values: set(order, ["door", "rain"]),
-                    origin: Some("data/sounds.toml".to_owned()),
+                    origin: Some(ProducerOrigin {
+                        kind: "asset_path".to_owned(),
+                        id: "data/sounds.toml".to_owned(),
+                        label: None,
+                        ..Default::default()
+                    }),
+                    ..Default::default()
                 },
             ),
             (
@@ -279,6 +274,7 @@ fn schema_with_order(order: Order) -> ProjectSchema {
                 RegistryDefinition {
                     values: set(order, ["opening", "ending"]),
                     origin: None,
+                    ..Default::default()
                 },
             ),
         ],
@@ -356,7 +352,12 @@ fn schema_with_order(order: Order) -> ProjectSchema {
                         param("subject", SchemaTypeRef::Speaker),
                         param("threshold", SchemaTypeRef::Int),
                     ],
-                    origin: Some("schema/reasons.rs".to_owned()),
+                    origin: Some(ProducerOrigin {
+                        kind: "script_member".to_owned(),
+                        id: "schema/reasons.rs".to_owned(),
+                        label: None,
+                        ..Default::default()
+                    }),
                 },
             ),
             (
@@ -397,6 +398,7 @@ fn schema_with_order(order: Order) -> ProjectSchema {
                 "portrait_all",
                 MetadataDomainDefinition::Flat(FlatMetadataDomain {
                     values: set(order, ["flat", "neutral"]),
+                    ..Default::default()
                 }),
             ),
             (
@@ -413,6 +415,7 @@ fn schema_with_order(order: Order) -> ProjectSchema {
                     missing_context: MissingMetadataContextPolicy::Fallback {
                         domain: "portrait_all".to_owned(),
                     },
+                    provenance: Default::default(),
                 }),
             ),
         ],

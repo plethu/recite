@@ -3,7 +3,7 @@ use recite_core::Statement;
 use crate::body::{BodyBoundary, BodyCursor, BodyStep};
 use crate::diagnostics::{expected_statement_or_prose, prose_after_nested_statement};
 use crate::layout::{ClassifiedLine, classify_line};
-use crate::source::span_for_line;
+use crate::source::{span_for_line, span_for_text};
 
 use super::{LoweredProseBody, Lowerer};
 
@@ -12,6 +12,7 @@ impl Lowerer<'_, '_> {
         &mut self,
         header_index: usize,
         emit_mixed_indent: bool,
+        allow_plural: bool,
     ) -> LoweredProseBody {
         let header = self.lines[header_index];
         let header_indent = header.indent_len();
@@ -20,6 +21,9 @@ impl Lowerer<'_, '_> {
         let mut text_lines = Vec::new();
         let mut statements = Vec::new();
         let mut saw_statement = false;
+        let mut plural_text = None;
+        let mut plural_text_span = None;
+        let mut blank_after_text = false;
         let mut cursor = BodyCursor::new(&self.lines, header_index, BodyBoundary::HeaderIndent);
 
         while cursor.index() < self.lines.len() {
@@ -30,6 +34,7 @@ impl Lowerer<'_, '_> {
                 BodyStep::Blank => {
                     if !text_lines.is_empty() && !saw_statement {
                         text_lines.push(String::new());
+                        blank_after_text = true;
                     }
                     continue;
                 }
@@ -38,6 +43,28 @@ impl Lowerer<'_, '_> {
 
             let trimmed = line.trimmed_content();
             let indent = line.indent_len();
+
+            if allow_plural
+                && plural_text.is_none()
+                && text_lines.len() == 1
+                && !blank_after_text
+                && trimmed.starts_with('|')
+            {
+                let continuation = trimmed.strip_prefix('|').unwrap_or_default();
+                let content = continuation
+                    .strip_prefix([' ', '\t'])
+                    .unwrap_or(continuation);
+                let content_column = indent + 2 + continuation.len() - content.len();
+                plural_text = Some(content.to_owned());
+                plural_text_span = Some(span_for_text(
+                    self.path,
+                    line.number,
+                    content_column,
+                    content,
+                ));
+                cursor.advance();
+                continue;
+            }
 
             if matches!(classify_line(line), ClassifiedLine::Statement(_)) {
                 trim_trailing_blank_lines(&mut text_lines);
@@ -74,6 +101,8 @@ impl Lowerer<'_, '_> {
         LoweredProseBody {
             text: text_lines.join("\n"),
             text_span: span_for_line(self.path, text_start_line, text_start_column),
+            plural_text,
+            plural_text_span,
             statements,
             next_index: cursor.index(),
         }

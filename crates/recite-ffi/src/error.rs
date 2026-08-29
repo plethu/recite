@@ -94,6 +94,11 @@ impl From<DialogueError> for ReciteStatus {
             }
             DialogueError::ConditionResultTypeMismatch { .. } => Self::InvalidConditionResult,
             DialogueError::ConditionDepthLimitExceeded { .. } => Self::ConditionEvaluation,
+            DialogueError::InterpolationValueFailed { .. }
+            | DialogueError::MissingInterpolationValue { .. }
+            | DialogueError::InvalidInterpolationSyntax { .. }
+            | DialogueError::InvalidPluralCount { .. }
+            | DialogueError::LocaleLookupFailed { .. } => Self::Localisation,
             DialogueError::UnsupportedSessionSnapshotFormat { .. }
             | DialogueError::SessionSnapshotEncodeFailed { .. }
             | DialogueError::SessionSnapshotDecodeFailed { .. }

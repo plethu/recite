@@ -44,7 +44,12 @@ pub struct ReciteConditionResult {
 /// Host-provided condition handler function pointer.
 ///
 /// Invoked synchronously on the same thread as the `recite_session_*` call
-/// that triggers condition evaluation. Must not call back into `recite-ffi`.
+/// that triggers condition evaluation. The host must not panic, throw, or
+/// unwind across this C ABI; it must return `ok = 0` for a failed evaluation,
+/// avoid calling back into `recite-ffi`, and not retain borrowed pointers.
+/// Rust panics from an `extern "C"` callback abort before Recite can handle
+/// them. C++ hosts need an `extern "C"` wrapper that catches C++ exceptions
+/// before entering Recite.
 pub type ReciteConditionFn = unsafe extern "C" fn(
     query: *const ReciteConditionQuery,
     userdata: *mut c_void,
@@ -107,6 +112,9 @@ impl DialogueContext for FfiContext<'_> {
         // Call the host handler.
         // SAFETY: The host registered a valid function pointer. Lifetimes of
         // c_query fields are valid for this call's stack frame.
+        // SAFETY: the callback is an `extern "C"` function pointer supplied by
+        // the host. Its strict no-panic/no-throw/no-unwind contract is part of
+        // this ABI; Rust cannot recover a panic after it crosses this ABI.
         let result = unsafe { (entry.handler)(&c_query, entry.userdata.0) };
 
         match result.ok {

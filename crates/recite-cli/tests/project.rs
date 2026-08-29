@@ -40,6 +40,68 @@ participants = ["hazel"]
 }
 
 #[test]
+fn check_schema_producer_freshness_reports_structured_stale_content() {
+    let temp = TempDir::new().expect("tempdir");
+    let expected = write_file(
+        temp.path(),
+        "expected.json",
+        r#"{"schema_version":1,"producer":{"kind":"adapter","id":"items"},"content_fingerprint":{"algorithm":"blake3","value":"0000000000000000000000000000000000000000000000000000000000000000"}}"#,
+    );
+    let actual = write_file(
+        temp.path(),
+        "actual.json",
+        r#"{"schema_version":1,"producer":{"kind":"adapter","id":"items"},"content_fingerprint":{"algorithm":"blake3","value":"1111111111111111111111111111111111111111111111111111111111111111"}}"#,
+    );
+    let output = run(recite()
+        .current_dir(temp.path())
+        .arg("check-schema-producer-freshness")
+        .arg("--expected")
+        .arg(&expected)
+        .arg("--actual")
+        .arg(&actual));
+    output.assert_failure().assert_exit_code(1);
+    output.assert_stdout_contains("\"status\":\"mismatch\"");
+    output.assert_stdout_contains("\"expected\"");
+}
+
+#[test]
+fn check_schema_producer_freshness_reports_duplicate_fingerprints_as_invalid_json() {
+    let temp = TempDir::new().expect("tempdir");
+    let expected = write_file(
+        temp.path(),
+        "expected.json",
+        r#"{
+  "schema_version": 1,
+  "producer_fingerprints": [
+    { "id": "items", "kind": "directory", "algorithm": "blake3", "value": "one" },
+    { "id": "items", "kind": "directory", "algorithm": "blake3", "value": "two" }
+  ]
+}"#,
+    );
+    let actual = write_file(
+        temp.path(),
+        "actual.json",
+        r#"{
+  "schema_version": 1,
+  "producer_fingerprints": [
+    { "id": "items", "kind": "directory", "algorithm": "blake3", "value": "one" }
+  ]
+}"#,
+    );
+    let output = run(recite()
+        .current_dir(temp.path())
+        .arg("check-schema-producer-freshness")
+        .arg("--expected")
+        .arg(&expected)
+        .arg("--actual")
+        .arg(&actual));
+    output.assert_failure().assert_exit_code(1);
+    output.assert_stdout_contains("\"status\":\"invalid\"");
+    output.assert_stdout_contains("expected_duplicates");
+    output.assert_stderr("");
+}
+
+#[test]
 fn check_fresh_uses_project_relative_embedded_source_paths() {
     let temp = TempDir::new().expect("tempdir");
     let source = write_recite(
@@ -180,6 +242,50 @@ participants = ["hazel"]
     let output = run(recite().arg("check-fresh").arg(temp.path()));
     assert_diagnostic_failure(&output);
     output.assert_stderr_contains("RECITE_FRESH003");
+}
+
+#[test]
+fn check_fresh_keeps_producer_metadata_out_of_schema_identity() {
+    let temp = TempDir::new().expect("tempdir");
+    let source = write_recite(
+        temp.path(),
+        "dialogue.recite",
+        ":: start default\n> intro@637b1854a7f3ed42f045\n  Hello.\n-> END\n",
+    );
+    let schema = write_file(
+        temp.path(),
+        "schema.json",
+        include_str!("../../../fixtures/schema/valid/full_manifest.json"),
+    );
+    compile_project_asset(temp.path(), &source, "dialogue.recitec", Some(&schema));
+    write_project_manifest(
+        temp.path(),
+        r#"[project]
+schema = "schema.json"
+
+[[scenes]]
+id = "scene.start"
+asset = "dialogue.recitec"
+block = "start"
+participants = ["rhea"]
+"#,
+    );
+
+    recite()
+        .arg("check-fresh")
+        .arg(temp.path())
+        .assert_success()
+        .assert_stderr("");
+
+    let mut changed_schema = include_str!("../../../fixtures/schema/valid/full_manifest.json")
+        .replace("dialogue-export-v1", "dialogue-export-v2");
+    changed_schema = changed_schema.replace("\"value\": \"6f1d\"", "\"value\": \"changed\"");
+    fs::write(&schema, changed_schema).expect("change producer metadata");
+    recite()
+        .arg("check-fresh")
+        .arg(temp.path())
+        .assert_success()
+        .assert_stderr("");
 }
 
 #[test]

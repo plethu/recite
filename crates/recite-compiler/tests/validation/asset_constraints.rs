@@ -25,7 +25,13 @@ fn validates_source_paths_are_unique_before_asset_output() {
 
     assert_codes(&report, ["RECITE_VALIDATE010"]);
     assert_eq!(report.diagnostics[0].span.start.line(), 1);
-    assert_eq!(report.diagnostics[0].related[0].span.start.line(), 1);
+    assert_eq!(
+        report.diagnostics[0].related_presentations[0]
+            .span
+            .start
+            .line(),
+        1
+    );
 }
 
 #[test]
@@ -54,7 +60,7 @@ fn validates_compiled_block_ids_are_globally_unambiguous_for_v0_lookup() {
     assert_codes(&report, ["RECITE_VALIDATE011"]);
     assert_eq!(report.diagnostics[0].span.file, "dialogue/b.recite");
     assert_eq!(
-        report.diagnostics[0].related[0].span.file,
+        report.diagnostics[0].related_presentations[0].span.file,
         "dialogue/a.recite"
     );
 }
@@ -92,7 +98,13 @@ fn validates_prompt_line_children_are_choices_only_for_v0_assets() {
 
     assert_codes(&report, ["RECITE_VALIDATE013"]);
     assert_eq!(report.diagnostics[0].span.start.line(), 4);
-    assert_eq!(report.diagnostics[0].related[0].span.start.line(), 2);
+    assert_eq!(
+        report.diagnostics[0].related_presentations[0]
+            .span
+            .start
+            .line(),
+        2
+    );
 }
 
 #[test]
@@ -112,7 +124,13 @@ fn validates_choice_bodies_do_not_leave_runtime_unrepresentable_children() {
 
     assert_codes(&report, ["RECITE_VALIDATE014"]);
     assert_eq!(report.diagnostics[0].span.start.line(), 5);
-    assert_eq!(report.diagnostics[0].related[0].span.start.line(), 2);
+    assert_eq!(
+        report.diagnostics[0].related_presentations[0]
+            .span
+            .start
+            .line(),
+        2
+    );
 }
 
 #[test]

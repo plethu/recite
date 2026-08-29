@@ -1,5 +1,6 @@
 mod inspection;
 mod messagepack;
+mod rows;
 mod shared;
 
 pub(crate) use inspection::serialize_inspection_json;

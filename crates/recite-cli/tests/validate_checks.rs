@@ -31,6 +31,48 @@ fn validate_reports_diagnostics_and_success() {
 }
 
 #[test]
+fn validate_preserves_structured_parser_help_in_cli_output() {
+    let temp = TempDir::new().expect("tempdir");
+    let source = write_recite(
+        temp.path(),
+        "trailing-choice-if.recite",
+        ":: tavern\n? ask_news@a74221348f0e47548c59 if trust_gte(hazel, rhea, 3)\n  What's the news?\n",
+    );
+
+    let output = run(recite().arg("validate").arg(&source));
+    assert_diagnostic_failure(&output);
+    output.assert_stderr_contains("RECITE_PARSE018");
+    output.assert_stderr_contains(
+        "help: Use Recite's supported `requires` availability clause instead.",
+    );
+}
+
+#[test]
+fn validate_renders_structured_compiler_related_diagnostics() {
+    let temp = TempDir::new().expect("tempdir");
+    let source = write_recite(
+        temp.path(),
+        "duplicate.recite",
+        concat!(
+            ":: start default\n",
+            "> first@11111111111111111111\n",
+            "  First.\n",
+            "> second@11111111111111111111\n",
+            "  Second.\n",
+        ),
+    );
+
+    let output = run(recite().arg("validate").arg(&source));
+    assert_diagnostic_failure(&output);
+    output.assert_stderr_contains("RECITE_ID003");
+    output.assert_stderr_contains(&format!(
+        "related {}:2:1 first localisable ID is here",
+        source.display()
+    ));
+    output.assert_stderr_contains("help: rename one of the duplicate localisable IDs");
+}
+
+#[test]
 fn operational_failures_keep_error_prefix() {
     let temp = TempDir::new().expect("tempdir");
     let output = run(recite().arg("validate").arg(temp.path()));

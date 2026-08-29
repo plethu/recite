@@ -27,6 +27,8 @@ pub(crate) struct RegistrySummary {
     pub(crate) name: String,
     pub(crate) values: Vec<String>,
     pub(crate) provenance: ProvenanceSummary,
+    pub(crate) value_provenance: std::collections::BTreeMap<String, ProvenanceSummary>,
+    pub(crate) producer_fingerprints: Vec<recite_core::ProducerFingerprint>,
 }
 
 #[derive(Clone, Debug, Eq, PartialEq)]
@@ -46,6 +48,12 @@ pub(crate) struct ConditionSummary {
     pub(crate) name: String,
     pub(crate) params: Vec<ParameterSummary>,
     pub(crate) returns: String,
+}
+
+#[derive(Clone, Debug, Eq, PartialEq)]
+pub(crate) struct AvailabilityReasonSummary {
+    pub(crate) name: String,
+    pub(crate) provenance: ProvenanceSummary,
 }
 
 #[derive(Clone, Debug, Eq, PartialEq)]
@@ -113,15 +121,15 @@ pub(crate) struct MarkupSummary {
 
 #[derive(Clone, Debug, Eq, PartialEq)]
 pub(crate) enum ProvenanceSummary {
-    Present { origin: String },
+    Present { origin: recite_core::ProducerOrigin },
     Absent,
 }
 
 impl ProvenanceSummary {
-    pub(super) fn from_optional_origin(origin: Option<&str>) -> Self {
+    pub(super) fn from_optional_origin(origin: Option<&recite_core::ProducerOrigin>) -> Self {
         match origin {
             Some(origin) => Self::Present {
-                origin: origin.to_owned(),
+                origin: origin.clone(),
             },
             None => Self::Absent,
         }

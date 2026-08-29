@@ -244,7 +244,7 @@ fn session_create_register_begin_sequence() {
         recite_session_register_condition(
             session,
             name.as_ptr(),
-            ready_true,
+            Some(ready_true),
             result_buf.as_mut_ptr().cast(),
         )
     };
@@ -344,7 +344,7 @@ fn session_begin_failure_rolls_back_and_allows_retry() {
             recite_session_register_condition(
                 session,
                 condition_name.as_ptr(),
-                ready_true,
+                Some(ready_true),
                 result_buffer.as_mut_ptr().cast(),
             )
         },

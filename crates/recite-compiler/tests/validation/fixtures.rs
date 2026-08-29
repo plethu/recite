@@ -38,6 +38,20 @@ fn valid_fixture_can_be_reused_by_compiler_validation() {
 }
 
 #[test]
+fn shared_language_pressure_fixture_can_be_reused_by_compiler_validation() {
+    const FIXTURE: &str = "fixtures/recite/valid/language_pressure.recite";
+
+    let files = vec![lower_fixture(FIXTURE)];
+    let report = validate_source_files(&files);
+
+    assert!(
+        report.is_ok(),
+        "shared pressure fixture should validate: {report:?}"
+    );
+    assert_diagnostic_snapshot(&report.diagnostics, diagnostic_snapshot_name(FIXTURE));
+}
+
+#[test]
 fn fixture_snapshot_captures_validation_ordering_related_spans_and_help() {
     const FIXTURE: &str = "fixtures/recite/invalid/compiler_validation_order.recite";
 

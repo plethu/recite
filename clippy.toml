@@ -7,5 +7,8 @@ disallowed-types = [
 disallowed-methods = [
   { path = "std::time::SystemTime::now", reason = "no wall-clock in deterministic crates" },
   { path = "std::time::Instant::now", reason = "no wall-clock in deterministic crates" },
-  { path = "rand::thread_rng", reason = "use a seeded rng (rand_chacha)" },
 ]
+# There is no unseeded or non-deterministic production RNG call site today.
+# The fixture generator intentionally uses a seeded ChaCha8Rng. Add a concrete
+# disallowed-method rule only alongside a deterministic fixture that exercises
+# it; an inactive rule would claim a guarantee the gate does not enforce.

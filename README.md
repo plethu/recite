@@ -10,7 +10,7 @@ localisation IDs that survived nearby edits, and broken dialogue to fail before
 I opened the engine.
 
 > [!WARNING]
-> Recite is pre-release (`0.0.1`). An old `recite` snapshot exists on crates.io;
+> Recite is pre-release (`0.1.0`). An old `recite` 0.0.1 snapshot exists on crates.io;
 > the current `recite-cli` and `recite-lsp` packages are not published. Install
 > them from this repository for now. The language, compiled assets, and Rust
 > APIs may change before v1. Code contributions are not open yet, but issues,

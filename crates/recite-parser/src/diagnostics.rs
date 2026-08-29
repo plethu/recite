@@ -1,5 +1,10 @@
 use recite_core::{Diagnostic, DiagnosticCode, SourceSpan};
 
+use crate::condition::ParseError;
+use crate::diagnostic_presentation::{
+    DiagnosticSelector, dynamic_diagnostic, explanation_remediation, static_diagnostic,
+};
+
 pub(crate) const EXPECTED_STATEMENT_OR_PROSE: DiagnosticCode =
     DiagnosticCode::new_static("RECITE_PARSE001");
 pub(crate) const STATEMENT_BEFORE_BLOCK: DiagnosticCode =
@@ -23,7 +28,7 @@ pub(crate) const PROSE_AFTER_NESTED_STATEMENT: DiagnosticCode =
 pub(crate) const TRAILING_CHOICE_IF: DiagnosticCode = DiagnosticCode::new_static("RECITE_PARSE018");
 
 pub(crate) fn expected_statement_or_prose(span: SourceSpan) -> Diagnostic {
-    Diagnostic::error(
+    static_diagnostic(
         EXPECTED_STATEMENT_OR_PROSE,
         "expected a Recite statement header or indented prose",
         span,
@@ -31,7 +36,7 @@ pub(crate) fn expected_statement_or_prose(span: SourceSpan) -> Diagnostic {
 }
 
 pub(crate) fn statement_before_block(span: SourceSpan) -> Diagnostic {
-    Diagnostic::error(
+    static_diagnostic(
         STATEMENT_BEFORE_BLOCK,
         "statement appears before a block header",
         span,
@@ -39,7 +44,7 @@ pub(crate) fn statement_before_block(span: SourceSpan) -> Diagnostic {
 }
 
 pub(crate) fn missing_block_id(span: SourceSpan) -> Diagnostic {
-    Diagnostic::error(
+    static_diagnostic(
         MISSING_BLOCK_ID,
         "block header must include a block id",
         span,
@@ -47,11 +52,11 @@ pub(crate) fn missing_block_id(span: SourceSpan) -> Diagnostic {
 }
 
 pub(crate) fn empty_block_id(span: SourceSpan) -> Diagnostic {
-    Diagnostic::error(EMPTY_BLOCK_ID, "block id must not be empty", span)
+    static_diagnostic(EMPTY_BLOCK_ID, "block id must not be empty", span)
 }
 
 pub(crate) fn mixed_indent(span: SourceSpan) -> Diagnostic {
-    Diagnostic::error(
+    static_diagnostic(
         MIXED_INDENT,
         "mixed indentation inside statement body",
         span,
@@ -59,11 +64,11 @@ pub(crate) fn mixed_indent(span: SourceSpan) -> Diagnostic {
 }
 
 pub(crate) fn malformed_header(span: SourceSpan) -> Diagnostic {
-    Diagnostic::error(MALFORMED_HEADER, "malformed statement header field", span)
+    static_diagnostic(MALFORMED_HEADER, "malformed statement header field", span)
 }
 
 pub(crate) fn missing_divert_target(span: SourceSpan) -> Diagnostic {
-    Diagnostic::error(
+    static_diagnostic(
         MISSING_DIVERT_TARGET,
         "divert header must include a target",
         span,
@@ -71,36 +76,65 @@ pub(crate) fn missing_divert_target(span: SourceSpan) -> Diagnostic {
 }
 
 pub(crate) fn malformed_divert_target(span: SourceSpan) -> Diagnostic {
-    Diagnostic::error(MALFORMED_DIVERT_TARGET, "malformed divert target", span)
+    static_diagnostic(MALFORMED_DIVERT_TARGET, "malformed divert target", span)
 }
 
-pub(crate) fn malformed_effect(span: SourceSpan, detail: impl AsRef<str>) -> Diagnostic {
-    Diagnostic::error(
+pub(crate) fn malformed_effect_missing_mode(span: SourceSpan) -> Diagnostic {
+    dynamic_diagnostic(
         MALFORMED_EFFECT,
-        format!("malformed effect statement: {}", detail.as_ref()),
+        "malformed effect statement: missing effect mode".to_owned(),
         span,
+        DiagnosticSelector::MissingEffectMode,
     )
 }
 
-pub(crate) fn malformed_condition(span: SourceSpan, detail: impl AsRef<str>) -> Diagnostic {
-    Diagnostic::error(
-        MALFORMED_CONDITION,
-        format!("malformed condition expression: {}", detail.as_ref()),
+pub(crate) fn malformed_effect_invalid_mode(span: SourceSpan) -> Diagnostic {
+    dynamic_diagnostic(
+        MALFORMED_EFFECT,
+        "malformed effect statement: expected deferred, immediate, or blocking".to_owned(),
         span,
+        DiagnosticSelector::InvalidEffectMode,
+    )
+}
+
+pub(crate) fn malformed_effect(error: ParseError) -> Diagnostic {
+    dynamic_diagnostic(
+        MALFORMED_EFFECT,
+        format!(
+            "malformed effect statement: {}",
+            error.compatibility_message()
+        ),
+        error.span,
+        DiagnosticSelector::ParseError(error.kind),
+    )
+}
+
+pub(crate) fn malformed_condition(error: ParseError) -> Diagnostic {
+    dynamic_diagnostic(
+        MALFORMED_CONDITION,
+        format!(
+            "malformed condition expression: {}",
+            error.compatibility_message()
+        ),
+        error.span,
+        DiagnosticSelector::ParseError(error.kind),
     )
 }
 
 pub(crate) fn trailing_choice_if(span: SourceSpan) -> Diagnostic {
-    Diagnostic::error(
+    let mut diagnostic = static_diagnostic(
         TRAILING_CHOICE_IF,
         "old trailing choice if syntax is not valid Recite v1 syntax",
         span,
-    )
-    .with_help("use requires=(...) for visible unavailable choices or :if for hidden choices")
+    );
+    if let Some(help) = explanation_remediation(TRAILING_CHOICE_IF) {
+        diagnostic = diagnostic.with_help_presentation(help);
+    }
+    diagnostic
 }
 
 pub(crate) fn malformed_case(span: SourceSpan) -> Diagnostic {
-    Diagnostic::error(
+    static_diagnostic(
         MALFORMED_CASE,
         "case header must include a variant or _",
         span,
@@ -108,7 +142,7 @@ pub(crate) fn malformed_case(span: SourceSpan) -> Diagnostic {
 }
 
 pub(crate) fn misplaced_else(span: SourceSpan) -> Diagnostic {
-    Diagnostic::error(
+    static_diagnostic(
         MISPLACED_ELSE,
         ":else must immediately follow a sibling :if body",
         span,
@@ -116,7 +150,7 @@ pub(crate) fn misplaced_else(span: SourceSpan) -> Diagnostic {
 }
 
 pub(crate) fn misplaced_case(span: SourceSpan) -> Diagnostic {
-    Diagnostic::error(
+    static_diagnostic(
         MISPLACED_CASE,
         ":case must appear inside a :match body",
         span,
@@ -124,7 +158,7 @@ pub(crate) fn misplaced_case(span: SourceSpan) -> Diagnostic {
 }
 
 pub(crate) fn prose_after_nested_statement(span: SourceSpan) -> Diagnostic {
-    Diagnostic::error(
+    static_diagnostic(
         PROSE_AFTER_NESTED_STATEMENT,
         "prose cannot follow nested statements in the same body",
         span,

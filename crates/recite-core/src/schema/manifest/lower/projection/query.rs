@@ -1,24 +1,31 @@
 use std::collections::{BTreeMap, BTreeSet};
 
+mod args;
+
+use self::args::lower_and_validate_query_args;
 use super::super::super::diagnostics::{
     DUPLICATE_DEFINITION, INVALID_TYPE_REFERENCE, MALFORMED_SHAPE,
 };
 use super::super::super::raw::{
-    Named, RawProjectionInputRef, RawProjectionQueryDefinition,
-    RawProjectionQueryFunctionDefinition,
+    Named, RawProjectionQueryDefinition, RawProjectionQueryFunctionDefinition,
 };
 use super::super::super::spans::ManifestSpans;
 use super::super::super::validate::{
     PendingTypeReference, duplicate_definition, validate_manifest_name,
 };
-use super::super::functions::lower_params;
-use super::super::types::lower_type_reference;
-use super::reference::{lower_input_ref, lower_input_refs, validate_ref_type};
+use super::super::functions::lower_params_at;
+use super::reference::lower_input_refs;
+use crate::schema::schema_diagnostic;
 use crate::schema::{
-    ParameterDefinition, ProjectSchema, ProjectionInput, ProjectionInputRef,
-    ProjectionQueryDefinition, ProjectionQueryFunctionDefinition, SchemaTypeRef,
+    ProjectSchema, ProjectionInput, ProjectionQueryDefinition, ProjectionQueryFunctionDefinition,
 };
-use crate::{Diagnostic, SourceSpan};
+use crate::{Diagnostic, DiagnosticArgumentValue};
+
+macro_rules! text_args {
+    ($($name:literal => $value:expr),* $(,)?) => {
+        [$(($name, DiagnosticArgumentValue::String($value.into()))),*]
+    };
+}
 
 pub(super) fn lower_projection_queries(
     file: &str,
@@ -31,7 +38,8 @@ pub(super) fn lower_projection_queries(
 ) {
     let mut seen = BTreeSet::new();
     for entry in entries {
-        let name_span = spans.next_key_span(file, source, &entry.name);
+        let entry_path = vec!["projection_queries".to_owned(), entry.name.clone()];
+        let name_span = spans.key_span_at(file, source, &entry_path, &entry.name);
         if !validate_manifest_name(
             diagnostics,
             "projection query function name",
@@ -50,7 +58,7 @@ pub(super) fn lower_projection_queries(
             continue;
         }
 
-        let params = lower_params(
+        let params = lower_params_at(
             file,
             source,
             spans,
@@ -58,18 +66,26 @@ pub(super) fn lower_projection_queries(
             &format!("projection query function '{}'", entry.name),
             &entry.value.params,
             pending_type_refs,
+            &entry_path,
         );
-        let (returns, returns_span, returns_valid) = lower_type_reference(
-            file,
-            source,
-            spans,
-            diagnostics,
-            &entry.value.returns,
-            format!(
-                "projection query function '{}' has invalid return type '{}'",
-                entry.name, entry.value.returns
-            ),
-        );
+        let mut returns_path = entry_path.clone();
+        returns_path.push("returns".to_owned());
+        let (returns, returns_span, returns_valid) =
+            super::super::types::lower_type_reference_at_with_context(
+                file,
+                source,
+                spans,
+                diagnostics,
+                &entry.value.returns,
+                &returns_path,
+                format!(
+                    "projection query function '{}' has invalid return type '{}'",
+                    entry.name, entry.value.returns
+                ),
+                super::super::types::TypeReferenceContext::QueryReturn {
+                    function: entry.name.clone(),
+                },
+            );
         if returns_valid {
             pending_type_refs.push(PendingTypeReference {
                 owner: format!("projection query function '{}' return type", entry.name),
@@ -80,13 +96,18 @@ pub(super) fn lower_projection_queries(
         if let Some(max_calls) = entry.value.max_calls_per_event
             && max_calls == 0
         {
-            diagnostics.push(Diagnostic::error(
+            diagnostics.push(schema_diagnostic(
                 MALFORMED_SHAPE,
+                "diagnostic-schema-001-query-max-calls",
                 format!(
                     "projection query function '{}' max_calls_per_event must be greater than zero",
                     entry.name
                 ),
                 name_span,
+                [(
+                    "function",
+                    DiagnosticArgumentValue::String(entry.name.clone()),
+                )],
             ));
         }
 
@@ -114,6 +135,7 @@ pub(super) fn lower_projector_queries(
     projector: &str,
     inputs: &[ProjectionInput],
     raw_queries: Vec<Named<RawProjectionQueryDefinition>>,
+    projector_path: &[String],
 ) -> BTreeMap<String, ProjectionQueryDefinition> {
     let input_types = inputs
         .iter()
@@ -124,7 +146,9 @@ pub(super) fn lower_projector_queries(
     let mut lowered = BTreeMap::new();
 
     for raw_query in raw_queries {
-        let query_span = spans.next_key_span(file, source, &raw_query.name);
+        let mut query_path = projector_path.to_vec();
+        query_path.extend(["queries".to_owned(), raw_query.name.clone()]);
+        let query_span = spans.key_span_at(file, source, &query_path, &raw_query.name);
         validate_manifest_name(
             diagnostics,
             "projection query name",
@@ -132,23 +156,30 @@ pub(super) fn lower_projector_queries(
             query_span.clone(),
         );
         if !seen.insert(raw_query.name.clone()) {
-            diagnostics.push(Diagnostic::error(
+            diagnostics.push(schema_diagnostic(
                 DUPLICATE_DEFINITION,
+                "diagnostic-schema-003-projection-query",
                 format!("projector '{projector}' repeats query '{}'", raw_query.name),
                 query_span,
+                text_args!("projector" => projector, "query" => raw_query.name.clone()),
             ));
             continue;
         }
-        let function_span = spans.next_value_span(file, source, &raw_query.value.function);
+        let mut function_path = query_path.clone();
+        function_path.push("function".to_owned());
+        let function_span =
+            spans.value_span_at(file, source, &function_path, &raw_query.value.function);
         let function = schema.projection_queries.get(&raw_query.value.function);
         let Some(function) = function else {
-            diagnostics.push(Diagnostic::error(
+            diagnostics.push(schema_diagnostic(
                 INVALID_TYPE_REFERENCE,
+                "diagnostic-schema-004-unknown-query-function",
                 format!(
                     "projector '{projector}' query '{}' references unknown projection query function '{}'",
                     raw_query.name, raw_query.value.function
                 ),
                 function_span,
+                text_args!("projector" => projector, "query" => raw_query.name.clone(), "function" => raw_query.value.function.clone()),
             ));
             lowered.insert(
                 raw_query.name,
@@ -182,52 +213,4 @@ pub(super) fn lower_projector_queries(
     }
 
     lowered
-}
-
-#[expect(
-    clippy::too_many_arguments,
-    reason = "manifest lowering helpers carry shared JSON span, schema, and type context"
-)]
-fn lower_and_validate_query_args(
-    diagnostics: &mut Vec<Diagnostic>,
-    projector: &str,
-    query: &str,
-    function: &str,
-    params: &[ParameterDefinition],
-    raw_args: Vec<RawProjectionInputRef>,
-    input_types: &BTreeMap<&str, &SchemaTypeRef>,
-    query_types: &BTreeMap<String, SchemaTypeRef>,
-    span: SourceSpan,
-) -> Vec<ProjectionInputRef> {
-    if raw_args.len() != params.len() {
-        diagnostics.push(Diagnostic::error(
-            MALFORMED_SHAPE,
-            format!(
-                "projector '{projector}' query '{query}' passes {} args to projection query function '{function}', expected {}",
-                raw_args.len(),
-                params.len()
-            ),
-            span.clone(),
-        ));
-    }
-    raw_args
-        .into_iter()
-        .enumerate()
-        .map(|(index, raw)| {
-            let input_ref = lower_input_ref(raw);
-            if let Some(param) = params.get(index) {
-                validate_ref_type(
-                    diagnostics,
-                    projector,
-                    &format!("query '{query}' argument '{}'", param.name),
-                    &input_ref,
-                    &param.type_ref,
-                    input_types,
-                    query_types,
-                    span.clone(),
-                );
-            }
-            input_ref
-        })
-        .collect()
 }

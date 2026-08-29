@@ -1,15 +1,19 @@
 use std::collections::BTreeSet;
 
-use super::super::diagnostics::{DUPLICATE_DEFINITION, MALFORMED_SHAPE};
 use super::super::raw::{Named, RawRegistryDefinition, RawSpeakerDefinition, RawTypeDefinition};
 use super::super::spans::ManifestSpans;
 use super::super::validate::{
     duplicate_definition, validate_manifest_name, validate_non_empty_string,
 };
-use crate::Diagnostic;
+use super::producer::{
+    ProvenanceLocation, lower_origin, lower_origin_value_map, lower_producer_fingerprints,
+    validate_origin_keys,
+};
 use crate::schema::{
     EnumTypeDefinition, ProjectSchema, RegistryDefinition, SchemaTypeDefinition, SpeakerDefinition,
+    schema_diagnostic,
 };
+use crate::{Diagnostic, DiagnosticArgumentValue};
 
 pub(super) fn lower_types(
     file: &str,
@@ -21,7 +25,8 @@ pub(super) fn lower_types(
 ) {
     let mut seen = BTreeSet::new();
     for entry in entries {
-        let name_span = spans.next_key_span(file, source, &entry.name);
+        let entry_path = vec!["types".to_owned(), entry.name.clone()];
+        let name_span = spans.key_span_at(file, source, &entry_path, &entry.name);
         if !validate_manifest_name(diagnostics, "type name", &entry.name, name_span.clone()) {
             continue;
         }
@@ -30,26 +35,37 @@ pub(super) fn lower_types(
             continue;
         }
 
-        let kind_span = spans.next_value_span(file, source, &entry.value.kind);
+        let mut kind_path = entry_path.clone();
+        kind_path.push("kind".to_owned());
+        let kind_span = spans.value_span_at(file, source, &kind_path, &entry.value.kind);
         if entry.value.kind != "enum" {
-            diagnostics.push(Diagnostic::error(
-                MALFORMED_SHAPE,
+            diagnostics.push(schema_diagnostic(
+                super::super::diagnostics::MALFORMED_SHAPE,
+                "diagnostic-schema-001-type-kind",
                 format!(
                     "type '{}' uses unsupported kind '{}'",
                     entry.name, entry.value.kind
                 ),
                 kind_span,
+                [
+                    ("type", DiagnosticArgumentValue::String(entry.name.clone())),
+                    (
+                        "kind",
+                        DiagnosticArgumentValue::String(entry.value.kind.clone()),
+                    ),
+                ],
             ));
             continue;
         }
 
-        let values = canonical_string_values(
+        let values = canonical_string_values_at(
             file,
             source,
             spans,
             diagnostics,
             &format!("enum '{}'", entry.name),
             &entry.value.values,
+            &entry_path,
         );
         schema.types.insert(
             entry.name,
@@ -65,10 +81,12 @@ pub(super) fn lower_registries(
     entries: Vec<Named<RawRegistryDefinition>>,
     schema: &mut ProjectSchema,
     diagnostics: &mut Vec<Diagnostic>,
+    allow_duplicate_fingerprints: bool,
 ) {
     let mut seen = BTreeSet::new();
     for entry in entries {
-        let name_span = spans.next_key_span(file, source, &entry.name);
+        let entry_path = vec!["registries".to_owned(), entry.name.clone()];
+        let name_span = spans.key_span_at(file, source, &entry_path, &entry.name);
         if !validate_manifest_name(diagnostics, "registry name", &entry.name, name_span.clone()) {
             continue;
         }
@@ -77,23 +95,77 @@ pub(super) fn lower_registries(
             continue;
         }
 
-        let values = canonical_string_values(
+        let values = canonical_string_values_at(
             file,
             source,
             spans,
             diagnostics,
             &format!("registry '{}'", entry.name),
             &entry.value.values,
+            &entry_path,
         );
-        if let Some(origin) = &entry.value.origin {
-            let origin_span = spans.next_value_span(file, source, origin);
-            validate_non_empty_string(diagnostics, "registry origin", origin, origin_span);
-        }
+        let origin_path = {
+            let mut path = entry_path.clone();
+            path.push("origin".to_owned());
+            path
+        };
+        let origin = lower_origin(
+            spans,
+            file,
+            source,
+            diagnostics,
+            entry.value.origin,
+            ProvenanceLocation {
+                owner: &format!("registry '{}'", entry.name),
+                span: name_span.clone(),
+                path: &origin_path,
+            },
+        );
+        let value_origins = lower_origin_value_map(
+            spans,
+            file,
+            source,
+            diagnostics,
+            entry.value.value_origins,
+            ProvenanceLocation {
+                owner: &format!("registry '{}' value", entry.name),
+                span: name_span.clone(),
+                path: &entry_path,
+            },
+        );
+        validate_origin_keys(
+            spans,
+            file,
+            source,
+            diagnostics,
+            &format!("registry '{}'", entry.name),
+            &values,
+            value_origins.keys().cloned(),
+            name_span.clone(),
+            &{
+                let mut path = entry_path.clone();
+                path.push("value_origins".to_owned());
+                path
+            },
+        );
+        let producer_fingerprints = lower_producer_fingerprints(
+            spans,
+            file,
+            source,
+            diagnostics,
+            entry.value.producer_fingerprints,
+            &entry_path,
+            &format!("registry '{}'", entry.name),
+            name_span.clone(),
+            allow_duplicate_fingerprints,
+        );
         schema.registries.insert(
             entry.name,
             RegistryDefinition {
                 values,
-                origin: entry.value.origin,
+                origin,
+                value_origins,
+                producer_fingerprints,
             },
         );
     }
@@ -109,7 +181,8 @@ pub(super) fn lower_speakers(
 ) {
     let mut seen = BTreeSet::new();
     for entry in entries {
-        let name_span = spans.next_key_span(file, source, &entry.name);
+        let entry_path = vec!["speakers".to_owned(), entry.name.clone()];
+        let name_span = spans.key_span_at(file, source, &entry_path, &entry.name);
         if !validate_manifest_name(diagnostics, "speaker name", &entry.name, name_span.clone()) {
             continue;
         }
@@ -119,7 +192,9 @@ pub(super) fn lower_speakers(
         }
 
         if let Some(display_name) = &entry.value.display_name {
-            let display_name_span = spans.next_value_span(file, source, display_name);
+            let mut display_path = entry_path.clone();
+            display_path.push("display_name".to_owned());
+            let display_name_span = spans.value_span_at(file, source, &display_path, display_name);
             validate_non_empty_string(
                 diagnostics,
                 "speaker display_name",
@@ -136,25 +211,33 @@ pub(super) fn lower_speakers(
     }
 }
 
-pub(super) fn canonical_string_values(
+pub(super) fn canonical_string_values_at(
     file: &str,
     source: &str,
     spans: &mut ManifestSpans,
     diagnostics: &mut Vec<Diagnostic>,
     owner: &str,
     values: &[String],
+    parent_path: &[String],
 ) -> BTreeSet<String> {
     let mut canonical = BTreeSet::new();
-    for value in values {
-        let value_span = spans.next_value_span(file, source, value);
+    for (index, value) in values.iter().enumerate() {
+        let mut value_path = parent_path.to_vec();
+        value_path.extend(["values".to_owned(), format!("[{index}]")]);
+        let value_span = spans.value_span_at(file, source, &value_path, value);
         if !validate_non_empty_string(diagnostics, "schema value", value, value_span.clone()) {
             continue;
         }
         if !canonical.insert(value.clone()) {
-            diagnostics.push(Diagnostic::error(
-                DUPLICATE_DEFINITION,
+            diagnostics.push(schema_diagnostic(
+                super::super::diagnostics::DUPLICATE_DEFINITION,
+                "diagnostic-schema-003-value",
                 format!("{owner} repeats value '{value}'"),
                 value_span,
+                [
+                    ("owner", DiagnosticArgumentValue::String(owner.to_owned())),
+                    ("value", DiagnosticArgumentValue::String(value.clone())),
+                ],
             ));
         }
     }

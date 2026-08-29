@@ -1,7 +1,8 @@
-use crate::{Diagnostic, EffectMode, SourceSpan};
+use crate::{Diagnostic, DiagnosticArgumentValue, EffectMode, SourceSpan};
 
 use crate::schema::{
-    MetadataContextSelector, MetadataDomainDefinition, MetadataTarget, ProjectSchema, SchemaTypeRef,
+    MetadataContextSelector, MetadataDomainDefinition, MetadataTarget, ProjectSchema,
+    SchemaTypeRef, schema_diagnostic,
 };
 
 use super::diagnostics::{DUPLICATE_DEFINITION, INVALID_TYPE_REFERENCE, MALFORMED_SHAPE};
@@ -40,23 +41,45 @@ pub(crate) fn validate_domain_references(
         match schema.metadata_domains.get(&pending.domain) {
             Some(MetadataDomainDefinition::Flat(_)) => {}
             Some(MetadataDomainDefinition::Contextual(_)) if pending.require_flat => {
-                diagnostics.push(Diagnostic::error(
+                diagnostics.push(schema_diagnostic(
                     INVALID_TYPE_REFERENCE,
+                    "diagnostic-schema-004-contextual-domain-for-flat",
                     format!(
                         "{} references contextual metadata domain '{}', but a flat domain is required",
                         pending.owner, pending.domain
                     ),
                     pending.span.clone(),
+                    [
+                        (
+                            "owner",
+                            DiagnosticArgumentValue::String(pending.owner.clone()),
+                        ),
+                        (
+                            "domain",
+                            DiagnosticArgumentValue::String(pending.domain.clone()),
+                        ),
+                    ],
                 ));
             }
             Some(MetadataDomainDefinition::Contextual(_)) => {}
-            None => diagnostics.push(Diagnostic::error(
+            None => diagnostics.push(schema_diagnostic(
                 INVALID_TYPE_REFERENCE,
+                "diagnostic-schema-004-unknown-metadata-domain",
                 format!(
                     "{} references unknown metadata domain '{}'",
                     pending.owner, pending.domain
                 ),
                 pending.span.clone(),
+                [
+                    (
+                        "owner",
+                        DiagnosticArgumentValue::String(pending.owner.clone()),
+                    ),
+                    (
+                        "domain",
+                        DiagnosticArgumentValue::String(pending.domain.clone()),
+                    ),
+                ],
             )),
         }
     }
@@ -69,17 +92,33 @@ fn validate_type_ref(
 ) {
     match &pending.type_ref {
         SchemaTypeRef::Enum(name) if !schema.types.contains_key(name) => {
-            diagnostics.push(Diagnostic::error(
+            diagnostics.push(schema_diagnostic(
                 INVALID_TYPE_REFERENCE,
+                "diagnostic-schema-004-unknown-enum",
                 format!("{} references unknown enum type '{name}'", pending.owner),
                 pending.span.clone(),
+                [
+                    (
+                        "owner",
+                        DiagnosticArgumentValue::String(pending.owner.clone()),
+                    ),
+                    ("name", DiagnosticArgumentValue::String(name.clone())),
+                ],
             ));
         }
         SchemaTypeRef::Registry(name) if !schema.registries.contains_key(name) => {
-            diagnostics.push(Diagnostic::error(
+            diagnostics.push(schema_diagnostic(
                 INVALID_TYPE_REFERENCE,
+                "diagnostic-schema-004-unknown-registry",
                 format!("{} references unknown registry '{name}'", pending.owner),
                 pending.span.clone(),
+                [
+                    (
+                        "owner",
+                        DiagnosticArgumentValue::String(pending.owner.clone()),
+                    ),
+                    ("name", DiagnosticArgumentValue::String(name.clone())),
+                ],
             ));
         }
         SchemaTypeRef::Array(inner) => validate_type_ref(
@@ -101,10 +140,15 @@ pub(crate) fn duplicate_definition(
     name: &str,
     span: SourceSpan,
 ) {
-    diagnostics.push(Diagnostic::error(
+    diagnostics.push(schema_diagnostic(
         DUPLICATE_DEFINITION,
+        "diagnostic-schema-003-duplicate-definition",
         format!("duplicate {kind} definition '{name}'"),
         span,
+        [
+            ("kind", DiagnosticArgumentValue::String(kind.to_owned())),
+            ("name", DiagnosticArgumentValue::String(name.to_owned())),
+        ],
     ));
 }
 
@@ -115,10 +159,12 @@ pub(crate) fn validate_non_empty_string(
     span: SourceSpan,
 ) -> bool {
     if value.is_empty() {
-        diagnostics.push(Diagnostic::error(
+        diagnostics.push(schema_diagnostic(
             MALFORMED_SHAPE,
+            "diagnostic-schema-001-empty-value",
             format!("{field} must not be empty"),
             span,
+            [("field", DiagnosticArgumentValue::String(field.to_owned()))],
         ));
         return false;
     }
@@ -136,15 +182,23 @@ pub(crate) fn validate_manifest_name(
         return true;
     }
 
-    diagnostics.push(Diagnostic::error(
+    diagnostics.push(schema_diagnostic(
         MALFORMED_SHAPE,
+        "diagnostic-schema-001-invalid-name",
         format!("{field} must be an identifier-like schema name"),
         span,
+        [("field", DiagnosticArgumentValue::String(field.to_owned()))],
     ));
     false
 }
 
 pub(crate) fn parse_type_ref(value: &str) -> Option<SchemaTypeRef> {
+    parse_type_ref_at_depth(value, 0)
+}
+
+const MAX_TYPE_REF_ARRAY_DEPTH: usize = 8;
+
+fn parse_type_ref_at_depth(value: &str, depth: usize) -> Option<SchemaTypeRef> {
     match value {
         "string" => Some(SchemaTypeRef::String),
         "symbol" => Some(SchemaTypeRef::Symbol),
@@ -165,7 +219,8 @@ pub(crate) fn parse_type_ref(value: &str) -> Option<SchemaTypeRef> {
             .or_else(|| {
                 value
                     .strip_prefix("array:")
-                    .and_then(parse_type_ref)
+                    .filter(|_| depth < MAX_TYPE_REF_ARRAY_DEPTH)
+                    .and_then(|inner| parse_type_ref_at_depth(inner, depth + 1))
                     .map(|inner| SchemaTypeRef::Array(Box::new(inner)))
             }),
     }
@@ -188,7 +243,7 @@ pub(crate) fn parse_enum_return(value: &str) -> Option<String> {
         .map(ToOwned::to_owned)
 }
 
-fn is_manifest_name(value: &str) -> bool {
+pub(crate) fn is_manifest_name(value: &str) -> bool {
     let mut chars = value.chars();
     let Some(first) = chars.next() else {
         return false;

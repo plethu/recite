@@ -8,6 +8,7 @@ use lsp_types::{
     DocumentChanges, OneOf, OptionalVersionedTextDocumentIdentifier, Position, Range,
     TextDocumentEdit, TextEdit, Uri, WorkspaceEdit,
 };
+use recite_ui::{MsgId, UiCatalog};
 
 use crate::summary::{FileSummary, SchemaSummary};
 
@@ -28,6 +29,7 @@ pub(crate) fn code_action(
     params: &CodeActionParams,
     documents: &[CodeActionDocument<'_>],
     schema: Option<SchemaCodeActionDocument<'_>>,
+    catalog: &UiCatalog,
 ) -> Option<CodeActionResponse> {
     let document = documents
         .iter()
@@ -44,7 +46,7 @@ pub(crate) fn code_action(
     };
     if quick_fix_edits.len() == 1 {
         actions.push(CodeActionOrCommand::CodeAction(CodeAction {
-            title: "Insert missing stable ID".to_owned(),
+            title: catalog.text(MsgId::LspCodeActionInsertMissingId),
             kind: Some(CodeActionKind::QUICKFIX),
             diagnostics: Some(params.context.diagnostics.clone()),
             edit: Some(workspace_edit(
@@ -56,9 +58,11 @@ pub(crate) fn code_action(
         }));
     }
     if include_quick_fix {
-        actions.extend(block_stub::actions(params, document, documents));
+        actions.extend(block_stub::actions(params, document, documents, catalog));
         if let Some(schema) = schema {
-            actions.extend(schema_entry::actions(params, document, documents, schema));
+            actions.extend(schema_entry::actions(
+                params, document, documents, schema, catalog,
+            ));
         }
     }
 
@@ -69,7 +73,7 @@ pub(crate) fn code_action(
     };
     if !fix_all_edits.is_empty() {
         actions.push(CodeActionOrCommand::CodeAction(CodeAction {
-            title: "Insert all missing stable IDs in file".to_owned(),
+            title: catalog.text(MsgId::LspCodeActionInsertAllMissingIds),
             kind: Some(CodeActionKind::SOURCE_FIX_ALL),
             edit: Some(workspace_edit(
                 document.uri.clone(),

@@ -1,0 +1,174 @@
+# Standalone source fixture: every declaration family, including provenance.
+schema_version = 1
+
+[producer]
+id = "standalone-example"
+
+[types.mood]
+kind = "enum"
+values = ["calm", "tense"]
+
+[types.actor_kind]
+kind = "enum"
+values = ["rhea", "hazel"]
+
+[registries.item]
+values = ["brass_key", "silver_key"]
+producer_fingerprints = [
+  { id = "content/items", kind = "directory", algorithm = "blake3", value = "items-v1" },
+]
+
+[registries.item.origin]
+kind = "asset_path"
+id = "content/items"
+label = "Items"
+
+[registries.item.value_origins.brass_key]
+kind = "asset_path"
+id = "content/items/brass_key.item"
+
+[registries.item.value_origins.silver_key]
+kind = "asset_path"
+id = "content/items/silver_key.item"
+
+[speakers.rhea]
+display_name = "Rhea"
+
+[speakers.hazel]
+display_name = "Hazel"
+
+[conditions.can_open]
+params = [{ name = "item", type = "registry:item" }]
+returns = "bool"
+
+[conditions.can_open.availability_reason]
+reason = "missing_key"
+
+[conditions.can_open.availability_reason.args.item]
+kind = "binding"
+name = "item"
+
+[conditions.can_speak]
+params = [{ name = "actor", type = "speaker" }]
+returns = "bool"
+
+[availability_reasons.missing_key]
+template = "You need {item}."
+params = [{ name = "item", type = "registry:item" }]
+
+[availability_reasons.missing_key.origin]
+kind = "script_member"
+id = "schema/reasons.rs"
+
+[effects.open]
+modes = ["immediate", "blocking"]
+params = [{ name = "item", type = "registry:item" }]
+
+[metadata_domains.tone]
+kind = "flat"
+values = ["calm", "tense"]
+producer_fingerprints = [
+  { id = "content/tone.toml", kind = "file", algorithm = "blake3", value = "tone-v1" },
+]
+
+[metadata_domains.tone.origin]
+kind = "data_table"
+id = "content/tone.toml"
+
+[metadata_domains.tone.value_origins.calm]
+kind = "data_cell"
+id = "content/tone.toml#calm"
+
+[metadata_domains.tone.value_origins.tense]
+kind = "data_cell"
+id = "content/tone.toml#tense"
+
+[metadata_domains.tone_by_speaker]
+kind = "contextual"
+selector = "field:speaker"
+values_by_context = { rhea = ["calm"], hazel = ["tense"] }
+missing_context = { policy = "fallback", domain = "tone" }
+producer_fingerprints = [
+  { id = "content/tone.csv", kind = "file", algorithm = "blake3", value = "tone-v1" },
+]
+
+[metadata_domains.tone_by_speaker.origin]
+kind = "data_table"
+id = "content/tone.csv"
+
+[metadata_domains.tone_by_speaker.context_origins.rhea]
+kind = "data_row"
+id = "content/tone.csv#rhea"
+
+[metadata_domains.tone_by_speaker.context_origins.hazel]
+kind = "data_row"
+id = "content/tone.csv#hazel"
+
+[metadata_domains.tone_by_speaker.value_origins.rhea.calm]
+kind = "data_cell"
+id = "content/tone.csv#rhea/calm"
+
+[metadata_domains.tone_by_speaker.value_origins.hazel.tense]
+kind = "data_cell"
+id = "content/tone.csv#hazel/tense"
+
+[metadata.skill]
+targets = ["choice"]
+type = "string"
+
+[metadata.threshold]
+targets = ["choice"]
+type = "int"
+
+[metadata.tone]
+targets = ["line"]
+type = "symbol"
+domain = "tone"
+
+[projection_queries.actor_skill]
+params = [{ name = "skill", type = "string" }]
+returns = "int"
+max_calls_per_event = 1
+
+[presentation_projectors.choice_badge]
+candidates = { kind = "metadata_set", target = "choice", required_keys = ["skill", "threshold"] }
+inputs = [
+  { name = "skill", source = { kind = "candidate_metadata", key = "skill" }, type = "string", required = true },
+  { name = "threshold", source = { kind = "candidate_metadata", key = "threshold" }, type = "int", required = true },
+  { name = "event", source = { kind = "event_kind" }, type = "string" },
+  { name = "literal", source = { kind = "literal", value = 3 }, type = "int" },
+]
+
+[presentation_projectors.choice_badge.queries.current]
+function = "actor_skill"
+args = [{ input = "skill" }]
+
+[presentation_projectors.choice_badge.outputs.badge]
+target = "candidate"
+kind = "badge"
+slot = "prefix"
+
+[presentation_projectors.choice_badge.outputs.badge.label]
+template_id = "skill_badge"
+source_text = "[{skill}]"
+args = { skill = { source = { input = "skill" }, type = "string" } }
+
+[presentation_projectors.choice_badge.outputs.badge.fields.current]
+source = { kind = "query_result", name = "current" }
+type = "int"
+
+[presentation_projectors.reason_badge]
+candidates = { kind = "availability_reason", reason = "missing_key" }
+inputs = [
+  { name = "item", source = { kind = "availability_reason_arg", name = "item" }, type = "registry:item" },
+]
+
+[presentation_projectors.reason_badge.outputs.badge]
+target = "event"
+kind = "reason"
+slot = "prefix"
+
+[markup.em]
+requires_closing = true
+translatable = true
+allows_nesting = false

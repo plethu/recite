@@ -1,5 +1,6 @@
 mod support;
 
+use recite_core::{ProducerFingerprint, ProducerFreshness, compare_producer_fingerprints};
 use recite_godot::{ReciteDialogueAsset, ReciteDialogueDriver};
 use recite_runtime::{DialogueError, DialogueSchemaFingerprintSnapshot};
 
@@ -7,6 +8,24 @@ use support::{
     assert_deferred_effects, assert_effect, assert_line, assert_prompt_choice_ids, compile_asset,
     compile_bytes, must_ok, output_kinds, temp_asset_path,
 };
+
+#[test]
+fn adapter_preflight_reports_stale_producer_content_without_host_scanning() {
+    let expected = [ProducerFingerprint {
+        id: "dialogue-schema".to_owned(),
+        kind: "adapter".to_owned(),
+        algorithm: "blake3".to_owned(),
+        value: "expected".to_owned(),
+    }];
+    let actual = [ProducerFingerprint {
+        value: "stale".to_owned(),
+        ..expected[0].clone()
+    }];
+    assert!(matches!(
+        compare_producer_fingerprints(&expected, &actual),
+        ProducerFreshness::Mismatch { .. }
+    ));
+}
 
 #[test]
 fn loads_messagepack_bytes_and_runs_full_scene_flow() {

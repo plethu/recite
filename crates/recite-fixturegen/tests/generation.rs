@@ -334,10 +334,31 @@ impl LocaleProvider for GeneratedCatalog {
         domain: TextDomain,
         _locale: &LocaleId,
         _variant: Option<&str>,
-    ) -> Option<String> {
-        self.entries
+    ) -> Result<Option<String>, recite_runtime::LocaleError> {
+        Ok(self
+            .entries
             .get(&(id.to_owned(), source_text.to_owned(), domain))
-            .cloned()
+            .cloned())
+    }
+
+    fn resolve_plural(
+        &self,
+        _id: &str,
+        _source_singular: &str,
+        _source_plural: &str,
+        _count: i64,
+        _domain: TextDomain,
+        _locale: &LocaleId,
+        _variant: Option<&str>,
+    ) -> Result<recite_runtime::PluralResolution, recite_runtime::LocaleError> {
+        Ok(recite_runtime::PluralResolution {
+            template: None,
+            selected_arm: None,
+            matched_locale: None,
+            matched_context: None,
+            matched_key: None,
+            attempts: Vec::new(),
+        })
     }
 }
 

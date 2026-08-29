@@ -5,10 +5,24 @@ use serde::Deserialize;
 use serde::de::{Deserializer, MapAccess, Visitor};
 use serde_json::Value;
 
+use super::producer::{
+    RawContentFingerprint, RawProducerFingerprint, RawProducerIdentity, RawProducerOrigin,
+};
+pub(crate) use super::raw_value::RawValue;
 #[derive(Debug, Deserialize)]
 #[serde(deny_unknown_fields)]
 pub(crate) struct RawManifest {
-    pub(crate) schema_version: Value,
+    pub(crate) schema_version: RawValue,
+    #[serde(default, deserialize_with = "deserialize_optional_non_null")]
+    pub(crate) producer: Option<RawProducerIdentity>,
+    #[serde(default, deserialize_with = "deserialize_optional_non_null")]
+    pub(crate) content_fingerprint: Option<RawContentFingerprint>,
+    #[serde(default, deserialize_with = "deserialize_optional_non_null")]
+    pub(crate) schema_export_version: Option<u32>,
+    #[serde(default, deserialize_with = "deserialize_optional_non_null")]
+    pub(crate) inclusion_policy: Option<String>,
+    #[serde(default)]
+    pub(crate) producer_fingerprints: Vec<RawProducerFingerprint>,
     #[serde(default, deserialize_with = "deserialize_named_entries")]
     pub(crate) types: Vec<Named<RawTypeDefinition>>,
     #[serde(default, deserialize_with = "deserialize_named_entries")]
@@ -51,7 +65,11 @@ pub(crate) struct RawTypeDefinition {
 pub(crate) struct RawRegistryDefinition {
     pub(crate) values: Vec<String>,
     #[serde(default, deserialize_with = "deserialize_optional_non_null")]
-    pub(crate) origin: Option<String>,
+    pub(crate) origin: Option<RawProducerOrigin>,
+    #[serde(default, deserialize_with = "deserialize_optional_non_null")]
+    pub(crate) value_origins: Option<Value>,
+    #[serde(default)]
+    pub(crate) producer_fingerprints: Vec<RawProducerFingerprint>,
 }
 
 #[derive(Debug, Deserialize)]
@@ -85,7 +103,7 @@ pub(crate) struct RawConditionDefinition {
 pub(crate) struct RawConditionAvailabilityReasonMapping {
     pub(crate) reason: String,
     #[serde(default, deserialize_with = "deserialize_named_entries")]
-    pub(crate) args: Vec<Named<Value>>,
+    pub(crate) args: Vec<Named<RawValue>>,
 }
 
 #[derive(Debug, Deserialize)]
@@ -95,7 +113,7 @@ pub(crate) struct RawAvailabilityReasonDefinition {
     #[serde(default)]
     pub(crate) params: Vec<RawParameterDefinition>,
     #[serde(default, deserialize_with = "deserialize_optional_non_null")]
-    pub(crate) origin: Option<String>,
+    pub(crate) origin: Option<RawProducerOrigin>,
 }
 
 #[derive(Debug, Deserialize)]
@@ -130,6 +148,14 @@ pub(crate) struct RawMetadataDomainDefinition {
     pub(crate) values_by_context: Option<Vec<Named<Vec<String>>>>,
     #[serde(default, deserialize_with = "deserialize_optional_non_null")]
     pub(crate) missing_context: Option<RawMissingMetadataContext>,
+    #[serde(default, deserialize_with = "deserialize_optional_non_null")]
+    pub(crate) origin: Option<RawProducerOrigin>,
+    #[serde(default, deserialize_with = "deserialize_optional_non_null")]
+    pub(crate) value_origins: Option<Value>,
+    #[serde(default, deserialize_with = "deserialize_optional_non_null")]
+    pub(crate) context_origins: Option<Value>,
+    #[serde(default)]
+    pub(crate) producer_fingerprints: Vec<RawProducerFingerprint>,
 }
 
 #[derive(Debug, Deserialize)]
@@ -202,7 +228,7 @@ pub(crate) enum RawProjectionInputSource {
         name: String,
     },
     Literal {
-        value: Value,
+        value: RawValue,
     },
 }
 
@@ -210,7 +236,13 @@ pub(crate) enum RawProjectionInputSource {
 #[serde(untagged)]
 pub(crate) enum RawMetadataOccurrence {
     Named(String),
-    Index { index: u32 },
+    Index(RawMetadataOccurrenceIndex),
+}
+
+#[derive(Debug, Deserialize)]
+#[serde(deny_unknown_fields)]
+pub(crate) struct RawMetadataOccurrenceIndex {
+    pub(crate) index: u32,
 }
 
 #[derive(Debug, Deserialize)]
@@ -224,8 +256,20 @@ pub(crate) struct RawProjectionQueryDefinition {
 #[derive(Debug, Deserialize)]
 #[serde(untagged)]
 pub(crate) enum RawProjectionInputRef {
-    Input { input: String },
-    QueryResult { query_result: String },
+    Input(RawInputRefInput),
+    QueryResult(RawInputRefQueryResult),
+}
+
+#[derive(Debug, Deserialize)]
+#[serde(deny_unknown_fields)]
+pub(crate) struct RawInputRefInput {
+    pub(crate) input: String,
+}
+
+#[derive(Debug, Deserialize)]
+#[serde(deny_unknown_fields)]
+pub(crate) struct RawInputRefQueryResult {
+    pub(crate) query_result: String,
 }
 
 #[derive(Debug, Deserialize)]
@@ -270,7 +314,7 @@ pub(crate) struct RawPresentationAffordanceFieldDefinition {
 pub(crate) enum RawPresentationAffordanceFieldSource {
     Input { name: String },
     QueryResult { name: String },
-    Literal { value: Value },
+    Literal { value: RawValue },
 }
 
 #[derive(Debug, Deserialize)]
@@ -290,7 +334,9 @@ pub(crate) struct RawMarkupDefinition {
     pub(crate) allows_nesting: Option<bool>,
 }
 
-fn deserialize_optional_non_null<'de, D, T>(deserializer: D) -> Result<Option<T>, D::Error>
+pub(crate) fn deserialize_optional_non_null<'de, D, T>(
+    deserializer: D,
+) -> Result<Option<T>, D::Error>
 where
     D: Deserializer<'de>,
     T: Deserialize<'de>,

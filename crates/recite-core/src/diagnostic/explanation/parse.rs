@@ -113,4 +113,11 @@ pub(super) const EXPLANATIONS: &[DiagnosticExplanation] = &[
         &["Condition syntax from another dialogue format was used after a choice."],
         &["Use Recite's supported `requires` availability clause instead."],
     ),
+    DiagnosticExplanation::new(
+        "RECITE_PARSE034",
+        DiagnosticCategory::Parse,
+        "A gettext PO record is not structurally valid.",
+        &["A PO directive, quoted string, continuation, or field boundary is malformed."],
+        &["Fix the reported PO record while preserving its surrounding comments and fields."],
+    ),
 ];

@@ -8,11 +8,12 @@ use super::super::super::spans::ManifestSpans;
 use super::super::super::validate::{PendingTypeReference, validate_manifest_name};
 use super::literal::lower_literal_for_type;
 use super::reference::{lower_output_type_ref, validate_ref_type};
-use crate::Diagnostic;
+use crate::schema::schema_diagnostic;
 use crate::schema::{
     PresentationAffordanceFieldDefinition, PresentationAffordanceFieldSource, ProjectSchema,
     ProjectionInputRef, SchemaTypeRef,
 };
+use crate::{Diagnostic, DiagnosticArgumentValue};
 
 #[expect(
     clippy::too_many_arguments,
@@ -30,11 +31,14 @@ pub(super) fn lower_fields(
     input_types: &BTreeMap<&str, SchemaTypeRef>,
     query_types: &BTreeMap<String, SchemaTypeRef>,
     pending_type_refs: &mut Vec<PendingTypeReference>,
+    output_path: &[String],
 ) -> BTreeMap<String, PresentationAffordanceFieldDefinition> {
     let mut seen = std::collections::BTreeSet::new();
     let mut lowered = BTreeMap::new();
     for raw_field in raw_fields {
-        let field_span = spans.next_key_span(file, source, &raw_field.name);
+        let mut field_path = output_path.to_vec();
+        field_path.extend(["fields".to_owned(), raw_field.name.clone()]);
+        let field_span = spans.key_span_at(file, source, &field_path, &raw_field.name);
         validate_manifest_name(
             diagnostics,
             "projection output field name",
@@ -42,16 +46,30 @@ pub(super) fn lower_fields(
             field_span.clone(),
         );
         if !seen.insert(raw_field.name.clone()) {
-            diagnostics.push(Diagnostic::error(
+            diagnostics.push(schema_diagnostic(
                 DUPLICATE_DEFINITION,
+                "diagnostic-schema-003-projection-field",
                 format!(
                     "projector '{projector}' output '{output}' repeats field '{}'",
                     raw_field.name
                 ),
                 field_span,
+                [
+                    (
+                        "projector",
+                        DiagnosticArgumentValue::String(projector.to_owned()),
+                    ),
+                    ("output", DiagnosticArgumentValue::String(output.to_owned())),
+                    (
+                        "field",
+                        DiagnosticArgumentValue::String(raw_field.name.clone()),
+                    ),
+                ],
             ));
             continue;
         }
+        let mut type_path = field_path.clone();
+        type_path.push("type".to_owned());
         let type_ref = lower_output_type_ref(
             file,
             source,
@@ -62,7 +80,16 @@ pub(super) fn lower_fields(
             &raw_field.name,
             &raw_field.value.type_ref,
             pending_type_refs,
+            &type_path,
         );
+        let literal_span = match &raw_field.value.source {
+            RawPresentationAffordanceFieldSource::Literal { .. } => {
+                let mut value_path = field_path.clone();
+                value_path.extend(["source".to_owned(), "value".to_owned()]);
+                spans.value_span_at(file, source, &value_path, "literal")
+            }
+            _ => field_span.clone(),
+        };
         let source = lower_field_source(
             diagnostics,
             schema,
@@ -74,6 +101,7 @@ pub(super) fn lower_fields(
             input_types,
             query_types,
             field_span,
+            literal_span,
         );
         lowered.insert(
             raw_field.name,
@@ -98,6 +126,7 @@ fn lower_field_source(
     input_types: &BTreeMap<&str, SchemaTypeRef>,
     query_types: &BTreeMap<String, SchemaTypeRef>,
     span: crate::SourceSpan,
+    literal_span: crate::SourceSpan,
 ) -> PresentationAffordanceFieldSource {
     match raw {
         RawPresentationAffordanceFieldSource::Input { name } => {
@@ -135,7 +164,7 @@ fn lower_field_source(
                 &format!("projector '{projector}' output '{output}' field '{field}'"),
                 type_ref,
                 value,
-                span,
+                literal_span,
             )
             .unwrap_or_else(|| crate::schema::SchemaLiteralValue::String(String::new()));
             PresentationAffordanceFieldSource::Literal(literal)

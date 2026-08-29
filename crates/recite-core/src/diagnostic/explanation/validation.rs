@@ -275,4 +275,78 @@ pub(super) const EXPLANATIONS: &[DiagnosticExplanation] = &[
         ],
         &["Add the required choice condition or remove the unused reason override."],
     ),
+    DiagnosticExplanation::new(
+        "RECITE_VALIDATE042",
+        DiagnosticCategory::Validation,
+        "A PO translation does not preserve the source placeholders.",
+        &["A translated value is missing a named interpolation or introduces an extra one."],
+        &["Keep the same placeholder names in the corresponding PO translation."],
+    ),
+    DiagnosticExplanation::new(
+        "RECITE_VALIDATE043",
+        DiagnosticCategory::Validation,
+        "A PO plural record has invalid translation arms.",
+        &["Plural arms are missing, out of order, duplicated, or inconsistent with the header."],
+        &["Provide contiguous `msgstr[N]` arms matching the locale's declared plural count."],
+    ),
+    DiagnosticExplanation::new(
+        "RECITE_VALIDATE044",
+        DiagnosticCategory::Validation,
+        "A PO header is malformed.",
+        &[
+            "A header line is missing its key/value separator, is duplicated, or has invalid plural metadata.",
+        ],
+        &["Correct the header while retaining the rest of the catalogue source."],
+    ),
+    DiagnosticExplanation::new(
+        "RECITE_VALIDATE045",
+        DiagnosticCategory::Validation,
+        "A source interpolation binding is malformed or does not match its text.",
+        &[
+            "A placeholder is undeclared, a binding is unused or duplicated, or the text contains invalid brace syntax; all are blocking v1 validation errors.",
+        ],
+        &["Declare each placeholder with `bind=(name:type=$value)` and escape literal braces."],
+    ),
+    DiagnosticExplanation::new(
+        "RECITE_VALIDATE046",
+        DiagnosticCategory::Validation,
+        "A plural dialogue line does not meet the source shape required for plural selection.",
+        &[
+            "The plural source forms do not have the required two-form body shape.",
+            "The singular or plural form contains a newline instead of exactly one body line.",
+            "A plural line has no `bind=(count:int=$value)` binding.",
+            "The `count` binding uses a type other than `int`.",
+        ],
+        &[
+            "Provide exactly one singular body line and one immediately following `|` continuation.",
+            "Keep the singular and plural forms to one body line each.",
+            "Declare the count source with `bind=(count:int=$value)`.",
+            "Change the `count` binding type to `int`.",
+        ],
+    ),
+    DiagnosticExplanation::new(
+        "RECITE_VALIDATE047",
+        DiagnosticCategory::Validation,
+        "A PO translation changes an inline markup tag's attributes.",
+        &["Translated markup must preserve the attributes authored in the source value."],
+        &["Keep each translated tag's attributes identical to its source tag."],
+    ),
+    DiagnosticExplanation::new(
+        "RECITE_VALIDATE048",
+        DiagnosticCategory::Validation,
+        "A PO translation introduces an inline markup tag that is absent from the source value.",
+        &["Translated markup may not add tag occurrences that the source value did not author."],
+        &[
+            "Remove the introduced tag or add the tag to the source value before extracting translations.",
+        ],
+    ),
+    DiagnosticExplanation::new(
+        "RECITE_VALIDATE049",
+        DiagnosticCategory::Validation,
+        "A PO translation omits an inline markup tag required by the source value.",
+        &[
+            "Translated markup must preserve every source tag occurrence, even when prose is reordered.",
+        ],
+        &["Restore the missing tag occurrence in the translated value."],
+    ),
 ];

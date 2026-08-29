@@ -24,9 +24,10 @@ pub use rows::{
     CompiledArgument, CompiledAvailabilityReason, CompiledAvailabilityReasonArgBinding,
     CompiledAvailabilityReasonArgValue, CompiledBlock, CompiledChoice, CompiledChoiceEcho,
     CompiledConditionAvailabilityReason, CompiledConditionCall, CompiledConditionExpression,
-    CompiledDialogue, CompiledDivertTarget, CompiledEffect, CompiledEffectMode, CompiledLine,
-    CompiledMatchArm, CompiledMatchPattern, CompiledMetadataEntry, CompiledSourceFile,
-    CompiledSourceMapEntry, CompiledSpeaker, CompiledStatement, CompiledStatementKind,
+    CompiledDialogue, CompiledDivertTarget, CompiledEffect, CompiledEffectMode,
+    CompiledInterpolationBinding, CompiledInterpolationMode, CompiledLine, CompiledMatchArm,
+    CompiledMatchPattern, CompiledMetadataEntry, CompiledSourceFile, CompiledSourceMapEntry,
+    CompiledSpeaker, CompiledStatement, CompiledStatementKind,
 };
 pub use table::{
     BlockIndex, ChoiceIndex, ChoiceRange, EffectIndex, LineIndex, MatchArmIndex, MatchArmRange,

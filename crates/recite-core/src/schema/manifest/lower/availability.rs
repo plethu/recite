@@ -1,19 +1,24 @@
-use std::collections::{BTreeMap, BTreeSet};
+use std::collections::BTreeSet;
 
-use serde_json::Value;
+mod mapping;
+mod templates;
 
-use super::super::diagnostics::{DUPLICATE_DEFINITION, INVALID_TYPE_REFERENCE, MALFORMED_SHAPE};
+use self::mapping::{MappingLowerer, lower_mapping_args};
+use self::templates::validate_template_placeholders;
+use super::super::diagnostics::{INVALID_TYPE_REFERENCE, MALFORMED_SHAPE};
 use super::super::raw::{Named, RawAvailabilityReasonDefinition};
 use super::super::spans::ManifestSpans;
 use super::super::validate::{
     PendingTypeReference, duplicate_definition, validate_manifest_name, validate_non_empty_string,
 };
-use super::functions::{PendingConditionAvailabilityReasonMapping, lower_params};
+use super::ManifestSourceFormat;
+use super::functions::{PendingConditionAvailabilityReasonMapping, lower_params_at};
+use super::producer::{ProvenanceLocation, lower_origin};
 use crate::schema::{
-    AvailabilityReasonArgBinding, AvailabilityReasonDefinition, ConditionAvailabilityReasonMapping,
-    ConditionReturnType, ParameterDefinition, ProjectSchema, SchemaLiteralValue, SchemaTypeRef,
+    AvailabilityReasonDefinition, ConditionAvailabilityReasonMapping, ConditionReturnType,
+    ProjectSchema, schema_diagnostic,
 };
-use crate::{AvailabilityReasonId, Diagnostic, SourceSpan, extract_placeholder_names};
+use crate::{AvailabilityReasonId, Diagnostic, DiagnosticArgumentValue};
 
 pub(super) fn lower_availability_reasons(
     file: &str,
@@ -26,7 +31,8 @@ pub(super) fn lower_availability_reasons(
 ) {
     let mut seen = BTreeSet::new();
     for entry in entries {
-        let name_span = spans.next_key_span(file, source, &entry.name);
+        let entry_path = vec!["availability_reasons".to_owned(), entry.name.clone()];
+        let name_span = spans.key_span_at(file, source, &entry_path, &entry.name);
         if !validate_manifest_name(
             diagnostics,
             "availability reason id",
@@ -40,14 +46,17 @@ pub(super) fn lower_availability_reasons(
             continue;
         }
 
-        let template_span = spans.next_value_span(file, source, &entry.value.template);
+        let mut template_path = entry_path.clone();
+        template_path.push("template".to_owned());
+        let template_span =
+            spans.value_span_at(file, source, &template_path, &entry.value.template);
         validate_non_empty_string(
             diagnostics,
             "availability reason template",
             &entry.value.template,
             template_span.clone(),
         );
-        let params = lower_params(
+        let params = lower_params_at(
             file,
             source,
             spans,
@@ -55,6 +64,7 @@ pub(super) fn lower_availability_reasons(
             &format!("availability reason '{}'", entry.name),
             &entry.value.params,
             pending_type_refs,
+            &entry_path,
         );
         validate_template_placeholders(
             diagnostics,
@@ -64,15 +74,23 @@ pub(super) fn lower_availability_reasons(
             template_span,
         );
 
-        if let Some(origin) = &entry.value.origin {
-            let origin_span = spans.next_value_span(file, source, origin);
-            validate_non_empty_string(
-                diagnostics,
-                "availability reason origin",
-                origin,
-                origin_span,
-            );
-        }
+        let origin_path = {
+            let mut path = entry_path.clone();
+            path.push("origin".to_owned());
+            path
+        };
+        let origin = lower_origin(
+            spans,
+            file,
+            source,
+            diagnostics,
+            entry.value.origin,
+            ProvenanceLocation {
+                owner: &format!("availability reason '{}'", entry.name),
+                span: name_span.clone(),
+                path: &origin_path,
+            },
+        );
 
         let Ok(reason_id) = AvailabilityReasonId::new(entry.name) else {
             continue;
@@ -82,7 +100,7 @@ pub(super) fn lower_availability_reasons(
             AvailabilityReasonDefinition {
                 template: entry.value.template,
                 params,
-                origin: entry.value.origin,
+                origin,
             },
         );
     }
@@ -95,25 +113,33 @@ pub(super) fn validate_condition_availability_reason_mappings(
     mappings: Vec<PendingConditionAvailabilityReasonMapping>,
     schema: &mut ProjectSchema,
     diagnostics: &mut Vec<Diagnostic>,
+    format: ManifestSourceFormat,
 ) {
     for pending in mappings {
-        let condition_span = spans.next_key_span(file, source, &pending.condition);
+        let condition_span = spans.key_span_at(file, source, &pending.path, &pending.condition);
         let Some(condition) = schema.conditions.get(&pending.condition).cloned() else {
             continue;
         };
 
         if condition.returns != ConditionReturnType::Bool {
-            diagnostics.push(Diagnostic::error(
+            diagnostics.push(schema_diagnostic(
                 MALFORMED_SHAPE,
+                "diagnostic-schema-001-availability-non-bool-mapping",
                 format!(
                     "condition '{}' availability_reason mapping is only allowed on bool-returning conditions",
                     pending.condition
                 ),
                 condition_span.clone(),
+                [(
+                    "condition",
+                    DiagnosticArgumentValue::String(pending.condition.clone()),
+                )],
             ));
         }
 
-        let reason_span = spans.next_value_span(file, source, &pending.raw.reason);
+        let mut reason_path = pending.path.clone();
+        reason_path.extend(["availability_reason".to_owned(), "reason".to_owned()]);
+        let reason_span = spans.value_span_at(file, source, &reason_path, &pending.raw.reason);
         if !validate_manifest_name(
             diagnostics,
             "availability reason id",
@@ -126,26 +152,43 @@ pub(super) fn validate_condition_availability_reason_mappings(
             continue;
         };
         let Some(reason) = schema.availability_reasons.get(&reason_id).cloned() else {
-            diagnostics.push(Diagnostic::error(
+            diagnostics.push(schema_diagnostic(
                 INVALID_TYPE_REFERENCE,
+                "diagnostic-schema-004-unknown-availability-reason",
                 format!(
                     "condition '{}' availability_reason references unknown reason '{}'",
                     pending.condition, pending.raw.reason
                 ),
                 reason_span.clone(),
+                [
+                    (
+                        "condition",
+                        DiagnosticArgumentValue::String(pending.condition.clone()),
+                    ),
+                    (
+                        "reason",
+                        DiagnosticArgumentValue::String(pending.raw.reason.clone()),
+                    ),
+                ],
             ));
             continue;
         };
 
-        let mut lowerer = MappingLowerer::new(
+        let mut lowerer = MappingLowerer {
             file,
             source,
             spans,
             diagnostics,
             schema,
-            &pending.condition,
-            &condition.params,
-        );
+            condition_name: &pending.condition,
+            mapping_path: &pending.path,
+            condition_params_by_name: condition
+                .params
+                .iter()
+                .map(|param| (param.name.as_str(), param))
+                .collect(),
+            format,
+        };
         if let Some(args) =
             lower_mapping_args(&mut lowerer, &reason.params, pending.raw.args, reason_span)
             && let Some(condition) = schema.conditions.get_mut(&pending.condition)
@@ -155,406 +198,5 @@ pub(super) fn validate_condition_availability_reason_mappings(
                 args,
             });
         }
-    }
-}
-
-fn validate_template_placeholders(
-    diagnostics: &mut Vec<Diagnostic>,
-    reason: &str,
-    template: &str,
-    params: &[ParameterDefinition],
-    span: SourceSpan,
-) {
-    let placeholders = match extract_placeholder_names(template) {
-        Ok(placeholders) => placeholders,
-        Err(error) => {
-            diagnostics.push(Diagnostic::error(
-                MALFORMED_SHAPE,
-                format!(
-                    "availability reason '{reason}' template has invalid placeholder syntax: {}",
-                    error.message()
-                ),
-                span,
-            ));
-            return;
-        }
-    };
-    let param_names = params
-        .iter()
-        .map(|param| param.name.as_str())
-        .collect::<BTreeSet<_>>();
-
-    for placeholder in &placeholders {
-        if !param_names.contains(placeholder.as_str()) {
-            diagnostics.push(Diagnostic::error(
-                MALFORMED_SHAPE,
-                format!(
-                    "availability reason '{reason}' template references unknown parameter '{placeholder}'"
-                ),
-                span.clone(),
-            ));
-        }
-    }
-    for param in params {
-        if !placeholders.contains(&param.name) {
-            diagnostics.push(Diagnostic::error(
-                MALFORMED_SHAPE,
-                format!(
-                    "availability reason '{reason}' parameter '{}' is not used in its template",
-                    param.name
-                ),
-                span.clone(),
-            ));
-        }
-    }
-}
-
-struct MappingLowerer<'a, 'b> {
-    file: &'a str,
-    source: &'a str,
-    spans: &'a mut ManifestSpans,
-    diagnostics: &'a mut Vec<Diagnostic>,
-    schema: &'a ProjectSchema,
-    condition_name: &'a str,
-    condition_params_by_name: BTreeMap<&'b str, &'b ParameterDefinition>,
-}
-
-impl<'a, 'b> MappingLowerer<'a, 'b> {
-    fn new(
-        file: &'a str,
-        source: &'a str,
-        spans: &'a mut ManifestSpans,
-        diagnostics: &'a mut Vec<Diagnostic>,
-        schema: &'a ProjectSchema,
-        condition_name: &'a str,
-        condition_params: &'b [ParameterDefinition],
-    ) -> Self {
-        Self {
-            file,
-            source,
-            spans,
-            diagnostics,
-            schema,
-            condition_name,
-            condition_params_by_name: condition_params
-                .iter()
-                .map(|param| (param.name.as_str(), param))
-                .collect(),
-        }
-    }
-}
-
-fn lower_mapping_args(
-    lowerer: &mut MappingLowerer<'_, '_>,
-    reason_params: &[ParameterDefinition],
-    raw_args: Vec<Named<Value>>,
-    mapping_span: SourceSpan,
-) -> Option<BTreeMap<String, AvailabilityReasonArgBinding>> {
-    let reason_params_by_name = reason_params
-        .iter()
-        .map(|param| (param.name.as_str(), param))
-        .collect::<BTreeMap<_, _>>();
-    let mut seen = BTreeSet::new();
-    let mut lowered = BTreeMap::new();
-    let mut valid = true;
-
-    for raw_arg in raw_args {
-        let arg_span = lowerer
-            .spans
-            .next_key_span(lowerer.file, lowerer.source, &raw_arg.name);
-        if !seen.insert(raw_arg.name.clone()) {
-            lowerer.diagnostics.push(Diagnostic::error(
-                DUPLICATE_DEFINITION,
-                format!(
-                    "condition '{}' availability_reason repeats argument '{}'",
-                    lowerer.condition_name, raw_arg.name
-                ),
-                arg_span,
-            ));
-            valid = false;
-            continue;
-        }
-        let Some(reason_param) = reason_params_by_name.get(raw_arg.name.as_str()) else {
-            lowerer.diagnostics.push(Diagnostic::error(
-                MALFORMED_SHAPE,
-                format!(
-                    "condition '{}' availability_reason binds unknown reason parameter '{}'",
-                    lowerer.condition_name, raw_arg.name
-                ),
-                arg_span,
-            ));
-            valid = false;
-            continue;
-        };
-
-        let Some(binding) = lower_arg_binding(lowerer, reason_param, raw_arg.value, arg_span)
-        else {
-            valid = false;
-            continue;
-        };
-        lowered.insert(raw_arg.name, binding);
-    }
-
-    for reason_param in reason_params {
-        if !lowered.contains_key(&reason_param.name) {
-            lowerer.diagnostics.push(Diagnostic::error(
-                MALFORMED_SHAPE,
-                format!(
-                    "condition '{}' availability_reason is missing argument '{}'",
-                    lowerer.condition_name, reason_param.name
-                ),
-                mapping_span.clone(),
-            ));
-            valid = false;
-        }
-    }
-
-    valid.then_some(lowered)
-}
-
-fn lower_arg_binding(
-    lowerer: &mut MappingLowerer<'_, '_>,
-    reason_param: &ParameterDefinition,
-    value: Value,
-    fallback_span: SourceSpan,
-) -> Option<AvailabilityReasonArgBinding> {
-    if let Some(value) = value.as_str() {
-        let value_span = lowerer
-            .spans
-            .next_value_span(lowerer.file, lowerer.source, value);
-        if let Some(condition_param_name) = value.strip_prefix('$') {
-            return lower_condition_param_binding(
-                lowerer.diagnostics,
-                lowerer.condition_name,
-                &lowerer.condition_params_by_name,
-                reason_param,
-                condition_param_name,
-                value_span,
-            );
-        }
-        return literal_string_binding(
-            lowerer.diagnostics,
-            lowerer.schema,
-            lowerer.condition_name,
-            reason_param,
-            value,
-            value_span,
-        );
-    }
-
-    literal_non_string_binding(
-        lowerer.diagnostics,
-        lowerer.condition_name,
-        reason_param,
-        value,
-        fallback_span,
-    )
-}
-
-fn lower_condition_param_binding(
-    diagnostics: &mut Vec<Diagnostic>,
-    condition_name: &str,
-    condition_params_by_name: &BTreeMap<&str, &ParameterDefinition>,
-    reason_param: &ParameterDefinition,
-    condition_param_name: &str,
-    span: SourceSpan,
-) -> Option<AvailabilityReasonArgBinding> {
-    let Some(condition_param) = condition_params_by_name.get(condition_param_name) else {
-        diagnostics.push(Diagnostic::error(
-            INVALID_TYPE_REFERENCE,
-            format!(
-                "condition '{condition_name}' availability_reason references unknown condition parameter '{condition_param_name}'"
-            ),
-            span,
-        ));
-        return None;
-    };
-
-    if condition_param.type_ref != reason_param.type_ref {
-        diagnostics.push(Diagnostic::error(
-            MALFORMED_SHAPE,
-            format!(
-                "condition '{condition_name}' availability_reason argument '{}' expects {}, but condition parameter '{}' has {}",
-                reason_param.name,
-                type_ref_name(&reason_param.type_ref),
-                condition_param_name,
-                type_ref_name(&condition_param.type_ref)
-            ),
-            span,
-        ));
-        return None;
-    }
-
-    Some(AvailabilityReasonArgBinding::ConditionParam(
-        condition_param_name.to_owned(),
-    ))
-}
-
-fn literal_string_binding(
-    diagnostics: &mut Vec<Diagnostic>,
-    schema: &ProjectSchema,
-    condition_name: &str,
-    reason_param: &ParameterDefinition,
-    value: &str,
-    span: SourceSpan,
-) -> Option<AvailabilityReasonArgBinding> {
-    match &reason_param.type_ref {
-        SchemaTypeRef::String | SchemaTypeRef::Speaker => {
-            validate_string_domain(
-                diagnostics,
-                schema,
-                condition_name,
-                reason_param,
-                value,
-                span,
-            )?;
-            Some(AvailabilityReasonArgBinding::Literal(
-                SchemaLiteralValue::String(value.to_owned()),
-            ))
-        }
-        SchemaTypeRef::Enum(_) | SchemaTypeRef::Registry(_) => {
-            validate_string_domain(
-                diagnostics,
-                schema,
-                condition_name,
-                reason_param,
-                value,
-                span,
-            )?;
-            Some(AvailabilityReasonArgBinding::Literal(
-                SchemaLiteralValue::String(value.to_owned()),
-            ))
-        }
-        _ => {
-            diagnostics.push(Diagnostic::error(
-                MALFORMED_SHAPE,
-                format!(
-                    "condition '{condition_name}' availability_reason argument '{}' expects {}, but got string literal",
-                    reason_param.name,
-                    type_ref_name(&reason_param.type_ref)
-                ),
-                span,
-            ));
-            None
-        }
-    }
-}
-
-fn literal_non_string_binding(
-    diagnostics: &mut Vec<Diagnostic>,
-    condition_name: &str,
-    reason_param: &ParameterDefinition,
-    value: Value,
-    span: SourceSpan,
-) -> Option<AvailabilityReasonArgBinding> {
-    match (&reason_param.type_ref, value) {
-        (SchemaTypeRef::Bool, Value::Bool(value)) => Some(AvailabilityReasonArgBinding::Literal(
-            SchemaLiteralValue::Bool(value),
-        )),
-        (SchemaTypeRef::Int, Value::Number(number)) => {
-            number.as_i64().map_or_else(
-                || {
-                    diagnostics.push(Diagnostic::error(
-                        MALFORMED_SHAPE,
-                        format!(
-                            "condition '{condition_name}' availability_reason argument '{}' expects int, but got non-integer number",
-                            reason_param.name
-                        ),
-                        span,
-                    ));
-                    None
-                },
-                |value| {
-                    Some(AvailabilityReasonArgBinding::Literal(
-                        SchemaLiteralValue::Int(value),
-                    ))
-                },
-            )
-        }
-        (SchemaTypeRef::Float, Value::Number(number)) => Some(
-            AvailabilityReasonArgBinding::Literal(SchemaLiteralValue::Float(number.to_string())),
-        ),
-        (type_ref, value) => {
-            diagnostics.push(Diagnostic::error(
-                MALFORMED_SHAPE,
-                format!(
-                    "condition '{condition_name}' availability_reason argument '{}' expects {}, but got {} literal",
-                    reason_param.name,
-                    type_ref_name(type_ref),
-                    literal_kind(&value)
-                ),
-                span,
-            ));
-            None
-        }
-    }
-}
-
-fn validate_string_domain(
-    diagnostics: &mut Vec<Diagnostic>,
-    schema: &ProjectSchema,
-    condition_name: &str,
-    reason_param: &ParameterDefinition,
-    value: &str,
-    span: SourceSpan,
-) -> Option<()> {
-    let known = match &reason_param.type_ref {
-        SchemaTypeRef::Speaker => schema.speakers.contains_key(value),
-        SchemaTypeRef::Enum(name) => {
-            schema
-                .types
-                .get(name)
-                .is_none_or(|definition| match definition {
-                    crate::schema::SchemaTypeDefinition::Enum(definition) => {
-                        definition.values.contains(value)
-                    }
-                })
-        }
-        SchemaTypeRef::Registry(name) => schema
-            .registries
-            .get(name)
-            .is_none_or(|definition| definition.values.contains(value)),
-        _ => true,
-    };
-
-    if known {
-        return Some(());
-    }
-
-    diagnostics.push(Diagnostic::error(
-        MALFORMED_SHAPE,
-        format!(
-            "condition '{condition_name}' availability_reason argument '{}' uses unknown {} value '{}'",
-            reason_param.name,
-            type_ref_name(&reason_param.type_ref),
-            value
-        ),
-        span,
-    ));
-    None
-}
-
-fn literal_kind(value: &Value) -> &'static str {
-    match value {
-        Value::Null => "null",
-        Value::Bool(_) => "bool",
-        Value::Number(_) => "number",
-        Value::String(_) => "string",
-        Value::Array(_) => "array",
-        Value::Object(_) => "object",
-    }
-}
-
-fn type_ref_name(type_ref: &SchemaTypeRef) -> String {
-    match type_ref {
-        SchemaTypeRef::String => "string".to_owned(),
-        SchemaTypeRef::Symbol => "symbol".to_owned(),
-        SchemaTypeRef::Int => "int".to_owned(),
-        SchemaTypeRef::Float => "float".to_owned(),
-        SchemaTypeRef::Bool => "bool".to_owned(),
-        SchemaTypeRef::Speaker => "speaker".to_owned(),
-        SchemaTypeRef::Enum(name) => format!("enum:{name}"),
-        SchemaTypeRef::Registry(name) => format!("registry:{name}"),
-        SchemaTypeRef::Array(inner) => format!("array:{}", type_ref_name(inner)),
     }
 }

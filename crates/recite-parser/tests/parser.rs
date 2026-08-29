@@ -11,6 +11,8 @@ const TEST_PATH: &str = "dialogue/tavern.recite";
 
 #[path = "parser/branches_and_recovery.rs"]
 mod branches_and_recovery;
+#[path = "parser/diagnostic_contract.rs"]
+mod diagnostic_contract;
 #[path = "../../../tests/support/fixtures.rs"]
 mod fixture_support;
 #[path = "parser/lowering.rs"]

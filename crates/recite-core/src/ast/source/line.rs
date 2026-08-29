@@ -1,6 +1,6 @@
 use crate::{LineId, SourceAnchor, SourceId, SourceSpan, SpeakerId};
 
-use super::{SourceMetadata, Statement};
+use super::{InterpolationBinding, SourceMetadata, Statement};
 
 /// Localisable source text with its own span.
 #[derive(Clone, Debug, Eq, PartialEq)]
@@ -27,6 +27,9 @@ pub struct Line {
     pub id: Option<LineId>,
     pub speaker: Option<SpeakerId>,
     pub source_text: SourceText,
+    /// Optional second source form selected by gettext plural rules.
+    pub plural_source_text: Option<SourceText>,
+    pub interpolation_bindings: Vec<InterpolationBinding>,
     pub metadata: SourceMetadata,
     pub statements: Vec<Statement>,
     pub span: SourceSpan,
@@ -44,6 +47,8 @@ impl Line {
             id,
             speaker: None,
             source_text,
+            plural_source_text: None,
+            interpolation_bindings: Vec::new(),
             metadata: SourceMetadata::new(),
             statements: Vec::new(),
             span,
@@ -58,6 +63,12 @@ impl Line {
     }
 
     #[must_use]
+    pub fn with_plural_source_text(mut self, source_text: SourceText) -> Self {
+        self.plural_source_text = Some(source_text);
+        self
+    }
+
+    #[must_use]
     pub fn with_speaker(mut self, speaker: SpeakerId) -> Self {
         self.speaker = Some(speaker);
         self
@@ -66,6 +77,12 @@ impl Line {
     #[must_use]
     pub fn with_metadata(mut self, metadata: SourceMetadata) -> Self {
         self.metadata = metadata;
+        self
+    }
+
+    #[must_use]
+    pub fn with_interpolation_bindings(mut self, bindings: Vec<InterpolationBinding>) -> Self {
+        self.interpolation_bindings = bindings;
         self
     }
 

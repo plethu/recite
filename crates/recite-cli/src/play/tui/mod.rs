@@ -10,6 +10,7 @@ use recite_runtime::{
     ConditionExpectedType, ConditionQuery, ConditionValue, DialogueChoice, DialogueEffectRequest,
     DialogueLine,
 };
+use recite_ui::UiArgs;
 
 use crate::dialogue_locale::DialogueTraversalPreview;
 use crate::error::CliError;
@@ -148,6 +149,10 @@ fn condition_prompt(
 impl<B: Backend> PlayUiAdapter for TuiPlayUi<'_, B> {
     fn message(&self, id: MsgId, args: impl IntoIterator<Item = (&'static str, String)>) -> String {
         self.messages.format(id, args)
+    }
+
+    fn message_typed(&self, id: MsgId, args: UiArgs) -> String {
+        self.messages.format_args(id, &args)
     }
 
     fn start(&mut self, asset: &CompiledDialogue, block: &str) -> Result<(), CliError> {

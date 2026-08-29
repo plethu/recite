@@ -1,0 +1,6 @@
+{
+  "schema_version": 1,
+  "metadata": {
+    "bad": { "targets": ["line"], "type": "array:array:not-a-type" }
+  }
+}

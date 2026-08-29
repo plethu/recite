@@ -19,6 +19,7 @@ pub(super) fn metadata_schema() -> ProjectSchema {
         RegistryDefinition {
             values: BTreeSet::from(["door_close".to_owned(), "snap".to_owned()]),
             origin: None,
+            ..Default::default()
         },
     )]);
     schema.speakers = BTreeMap::from([
@@ -127,6 +128,7 @@ pub(super) fn metadata_domain_schema() -> ProjectSchema {
             "portrait_all".to_owned(),
             MetadataDomainDefinition::Flat(FlatMetadataDomain {
                 values: BTreeSet::from(["flat".to_owned(), "neutral".to_owned()]),
+                ..Default::default()
             }),
         ),
         (
@@ -143,6 +145,7 @@ pub(super) fn metadata_domain_schema() -> ProjectSchema {
                 missing_context: MissingMetadataContextPolicy::Fallback {
                     domain: "portrait_all".to_owned(),
                 },
+                provenance: Default::default(),
             }),
         ),
         (
@@ -160,6 +163,7 @@ pub(super) fn metadata_domain_schema() -> ProjectSchema {
                     ),
                 ]),
                 missing_context: MissingMetadataContextPolicy::Diagnostic,
+                provenance: Default::default(),
             }),
         ),
         (
@@ -171,6 +175,7 @@ pub(super) fn metadata_domain_schema() -> ProjectSchema {
                     BTreeSet::from(["flat".to_owned()]),
                 )]),
                 missing_context: MissingMetadataContextPolicy::Diagnostic,
+                provenance: Default::default(),
             }),
         ),
     ]);

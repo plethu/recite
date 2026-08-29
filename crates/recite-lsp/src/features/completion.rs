@@ -1,12 +1,13 @@
 use std::collections::BTreeSet;
 
 use lsp_types::{CompletionItem, CompletionItemKind, CompletionResponse, Documentation, Position};
-use recite_core::{
-    MetadataContextSelector, MetadataDomainDefinition, MissingMetadataContextPolicy, ProjectSchema,
-};
+use recite_core::{MetadataDomainDefinition, MissingMetadataContextPolicy, ProjectSchema};
+use recite_ui::{MsgId, UiCatalog};
 
+use super::context::{SelectorResolution, SelectorSite, resolve_selector, selector_site};
 use crate::workspace::LiveProjectSnapshot;
 
+mod presentation;
 mod projection;
 
 pub(super) fn completion(
@@ -15,31 +16,34 @@ pub(super) fn completion(
     schema: &ProjectSchema,
     schema_authoring: bool,
     snapshot: &LiveProjectSnapshot,
+    catalog: &UiCatalog,
 ) -> Option<CompletionResponse> {
     let line = super::line_prefix(text, position)?;
     if schema_authoring
-        && let Some(items) = projection::schema_json_completion_items(text, position, line, schema)
+        && let Some(items) =
+            projection::schema_json_completion_items(text, position, line, schema, catalog)
     {
         return Some(items);
     }
     match completion_context(line) {
-        CompletionContext::BlockReference => Some(items(block_completion_items(snapshot))),
-        CompletionContext::Speaker => Some(items(speaker_completion_items(schema))),
-        CompletionContext::MetadataKey => Some(items(metadata_key_completion_items(schema))),
-        CompletionContext::MetadataValue { key, header_kind } => {
+        CompletionContext::BlockReference => Some(items(block_completion_items(snapshot, catalog))),
+        CompletionContext::Speaker => Some(items(speaker_completion_items(schema, catalog))),
+        CompletionContext::MetadataKey => {
+            Some(items(metadata_key_completion_items(schema, catalog)))
+        }
+        CompletionContext::MetadataValue { key, site } => {
             let line_index = usize::try_from(position.line).ok()?;
             let line_text = text.lines().nth(line_index)?;
             Some(items(metadata_value_completion_items(
-                schema,
-                text,
-                line_text,
-                line_index,
-                &key,
-                header_kind,
+                schema, text, line_text, line_index, &key, site, catalog,
             )))
         }
-        CompletionContext::Condition => Some(items(condition_completion_items(schema))),
-        CompletionContext::Effect => Some(items(effect_completion_items(schema))),
+        CompletionContext::Condition => Some(items(presentation::condition_completion_items(
+            schema, catalog,
+        ))),
+        CompletionContext::Effect => Some(items(presentation::effect_completion_items(
+            schema, catalog,
+        ))),
         CompletionContext::Reason => Some(CompletionResponse::Array(
             schema
                 .availability_reasons
@@ -48,7 +52,7 @@ pub(super) fn completion(
                 .map(|(id, definition)| CompletionItem {
                     label: id.as_str().to_owned(),
                     kind: Some(CompletionItemKind::CONSTANT),
-                    detail: Some("parameterless availability reason".to_owned()),
+                    detail: Some(catalog.text(MsgId::LspCompletionAvailabilityReason)),
                     documentation: Some(Documentation::String(definition.template.clone())),
                     ..CompletionItem::default()
                 })
@@ -62,27 +66,11 @@ enum CompletionContext {
     BlockReference,
     Speaker,
     MetadataKey,
-    MetadataValue {
-        key: String,
-        header_kind: HeaderKind,
-    },
+    MetadataValue { key: String, site: SelectorSite },
     Condition,
     Effect,
     Reason,
     None,
-}
-
-#[derive(Clone, Copy)]
-enum HeaderKind {
-    Block,
-    Line,
-    Choice,
-}
-
-enum SelectorContext {
-    Value(String),
-    Missing,
-    Malformed,
 }
 
 fn completion_context(line_prefix: &str) -> CompletionContext {
@@ -111,23 +99,23 @@ fn completion_context(line_prefix: &str) -> CompletionContext {
         }
     }
 
-    let header_kind = header_kind(line_prefix);
+    let site = selector_site(line_prefix);
     if let Some(token) = current_token(line_prefix) {
-        if token.starts_with("speaker=") && header_kind.is_some() {
+        if token.starts_with("speaker=") && site.is_some() {
             return CompletionContext::Speaker;
         }
         if let Some((key, _)) = token.split_once('=')
             && !key.is_empty()
-            && let Some(header_kind) = header_kind
+            && let Some(site) = site
         {
             return CompletionContext::MetadataValue {
                 key: key.to_owned(),
-                header_kind,
+                site,
             };
         }
     }
 
-    if is_metadata_key_position(line_prefix, header_kind) {
+    if is_metadata_key_position(line_prefix, site) {
         return CompletionContext::MetadataKey;
     }
 
@@ -138,26 +126,29 @@ fn items(items: Vec<CompletionItem>) -> CompletionResponse {
     CompletionResponse::Array(items)
 }
 
-fn block_completion_items(snapshot: &LiveProjectSnapshot) -> Vec<CompletionItem> {
+fn block_completion_items(
+    snapshot: &LiveProjectSnapshot,
+    catalog: &UiCatalog,
+) -> Vec<CompletionItem> {
     super::block_names(snapshot)
         .into_iter()
         .map(|name| CompletionItem {
             label: name,
             kind: Some(CompletionItemKind::REFERENCE),
-            detail: Some("Recite block".to_owned()),
+            detail: Some(catalog.text(MsgId::LspCompletionBlock)),
             ..CompletionItem::default()
         })
         .collect()
 }
 
-fn speaker_completion_items(schema: &ProjectSchema) -> Vec<CompletionItem> {
+fn speaker_completion_items(schema: &ProjectSchema, catalog: &UiCatalog) -> Vec<CompletionItem> {
     schema
         .speakers
         .iter()
         .map(|(id, definition)| CompletionItem {
             label: id.clone(),
             kind: Some(CompletionItemKind::CONSTANT),
-            detail: Some("Recite speaker".to_owned()),
+            detail: Some(catalog.text(MsgId::LspCompletionSpeaker)),
             documentation: definition
                 .display_name
                 .as_ref()
@@ -167,7 +158,10 @@ fn speaker_completion_items(schema: &ProjectSchema) -> Vec<CompletionItem> {
         .collect()
 }
 
-fn metadata_key_completion_items(schema: &ProjectSchema) -> Vec<CompletionItem> {
+fn metadata_key_completion_items(
+    schema: &ProjectSchema,
+    catalog: &UiCatalog,
+) -> Vec<CompletionItem> {
     schema
         .metadata
         .iter()
@@ -175,8 +169,13 @@ fn metadata_key_completion_items(schema: &ProjectSchema) -> Vec<CompletionItem> 
             label: key.clone(),
             kind: Some(CompletionItemKind::FIELD),
             detail: Some(definition.domain.as_ref().map_or_else(
-                || "Recite metadata key".to_owned(),
-                |domain| format!("Recite metadata key -> {domain}"),
+                || catalog.text(MsgId::LspCompletionMetadataKey),
+                |domain| {
+                    catalog.format_pairs(
+                        MsgId::LspCompletionMetadataKeyWithDomain,
+                        [("domain", domain.as_str())],
+                    )
+                },
             )),
             ..CompletionItem::default()
         })
@@ -189,10 +188,11 @@ fn metadata_value_completion_items(
     line: &str,
     line_index: usize,
     key: &str,
-    header_kind: HeaderKind,
+    site: SelectorSite,
+    catalog: &UiCatalog,
 ) -> Vec<CompletionItem> {
     if key == "speaker" {
-        return speaker_completion_items(schema);
+        return speaker_completion_items(schema, catalog);
     }
     let Some(metadata) = schema.metadata.get(key) else {
         return Vec::new();
@@ -200,12 +200,15 @@ fn metadata_value_completion_items(
     let Some(domain_name) = &metadata.domain else {
         return Vec::new();
     };
-    metadata_domain_values(schema, domain_name, text, line, line_index, header_kind)
+    metadata_domain_values(schema, domain_name, text, line, line_index, site)
         .into_iter()
         .map(|value| CompletionItem {
             label: value,
             kind: Some(CompletionItemKind::VALUE),
-            detail: Some(format!("metadata domain `{domain_name}`")),
+            detail: Some(catalog.format_pairs(
+                MsgId::LspCompletionMetadataDomain,
+                [("domain", domain_name)],
+            )),
             ..CompletionItem::default()
         })
         .collect()
@@ -217,7 +220,7 @@ fn metadata_domain_values(
     text: &str,
     line: &str,
     line_index: usize,
-    header_kind: HeaderKind,
+    site: SelectorSite,
 ) -> BTreeSet<String> {
     let Some(domain) = schema.metadata_domains.get(domain_name) else {
         return BTreeSet::new();
@@ -225,14 +228,16 @@ fn metadata_domain_values(
     match domain {
         MetadataDomainDefinition::Flat(domain) => domain.values.clone(),
         MetadataDomainDefinition::Contextual(domain) => {
-            match metadata_domain_context(&domain.selector, text, line, line_index, header_kind) {
-                SelectorContext::Value(context) => domain
+            match resolve_selector(&domain.selector, text, line, line_index, site) {
+                SelectorResolution::Value(context) => domain
                     .values_by_context
                     .get(context.as_str())
                     .cloned()
                     .unwrap_or_else(|| missing_context_values(schema, &domain.missing_context)),
-                SelectorContext::Missing => missing_context_values(schema, &domain.missing_context),
-                SelectorContext::Malformed => BTreeSet::new(),
+                SelectorResolution::Missing => {
+                    missing_context_values(schema, &domain.missing_context)
+                }
+                SelectorResolution::Malformed => BTreeSet::new(),
             }
         }
     }
@@ -255,80 +260,12 @@ fn missing_context_values(
     }
 }
 
-fn metadata_domain_context(
-    selector: &MetadataContextSelector,
-    text: &str,
-    line: &str,
-    line_index: usize,
-    header_kind: HeaderKind,
-) -> SelectorContext {
-    match selector {
-        MetadataContextSelector::FieldSpeaker => match header_kind {
-            HeaderKind::Line => metadata_symbol(line, "speaker")
-                .or_else(|| block_default_speaker(text, line_index))
-                .map_or(SelectorContext::Missing, SelectorContext::Value),
-            HeaderKind::Block | HeaderKind::Choice => SelectorContext::Missing,
-        },
-        MetadataContextSelector::MetadataKey(key) => {
-            let matches = metadata_selector_values(line, key);
-            match matches.as_slice() {
-                [] => SelectorContext::Missing,
-                [Some(value)] => SelectorContext::Value(value.clone()),
-                [_] | [_, ..] => SelectorContext::Malformed,
-            }
-        }
-    }
-}
-
-fn condition_completion_items(schema: &ProjectSchema) -> Vec<CompletionItem> {
-    schema
-        .conditions
-        .iter()
-        .map(|(name, definition)| CompletionItem {
-            label: name.clone(),
-            kind: Some(CompletionItemKind::FUNCTION),
-            detail: Some(super::condition_detail(&definition.returns)),
-            documentation: Some(Documentation::String(
-                "Recite condition function".to_owned(),
-            )),
-            ..CompletionItem::default()
-        })
-        .collect()
-}
-
-fn effect_completion_items(schema: &ProjectSchema) -> Vec<CompletionItem> {
-    schema
-        .effects
-        .iter()
-        .map(|(name, definition)| CompletionItem {
-            label: name.clone(),
-            kind: Some(CompletionItemKind::FUNCTION),
-            detail: Some(super::effect_detail(&definition.modes)),
-            documentation: Some(Documentation::String("Recite effect request".to_owned())),
-            ..CompletionItem::default()
-        })
-        .collect()
-}
-
 fn current_token(line_prefix: &str) -> Option<&str> {
     line_prefix.split_whitespace().last()
 }
 
-fn header_kind(line_prefix: &str) -> Option<HeaderKind> {
-    let trimmed = line_prefix.trim_start();
-    if trimmed.starts_with("::") {
-        Some(HeaderKind::Block)
-    } else if trimmed.starts_with('>') {
-        Some(HeaderKind::Line)
-    } else if trimmed.starts_with('?') {
-        Some(HeaderKind::Choice)
-    } else {
-        None
-    }
-}
-
-fn is_metadata_key_position(line_prefix: &str, header_kind: Option<HeaderKind>) -> bool {
-    let Some(header_kind) = header_kind else {
+fn is_metadata_key_position(line_prefix: &str, site: Option<SelectorSite>) -> bool {
+    let Some(site) = site else {
         return false;
     };
     let Some(token) = current_token(line_prefix) else {
@@ -338,9 +275,9 @@ fn is_metadata_key_position(line_prefix: &str, header_kind: Option<HeaderKind>) 
         return false;
     }
     let field_count = line_prefix.split_whitespace().count();
-    match header_kind {
-        HeaderKind::Block => field_count >= 3 && !("default".starts_with(token)),
-        HeaderKind::Line | HeaderKind::Choice => field_count >= 3,
+    match site {
+        SelectorSite::Block => field_count >= 3 && !("default".starts_with(token)),
+        SelectorSite::Line | SelectorSite::Choice => field_count >= 3,
     }
 }
 
@@ -349,45 +286,4 @@ fn effect_prefix_is_completing_function(line_prefix: &str) -> bool {
     matches!(parts.next(), Some("!"))
         && parts.next().is_some()
         && parts.next().is_none_or(|function| !function.contains('('))
-}
-
-fn metadata_symbol(line: &str, key: &str) -> Option<String> {
-    let mut values = metadata_selector_values(line, key);
-    if values.len() == 1 {
-        values.remove(0)
-    } else {
-        None
-    }
-}
-
-fn metadata_selector_values(line: &str, key: &str) -> Vec<Option<String>> {
-    line.split_whitespace()
-        .filter_map(|token| token.split_once('='))
-        .filter(|(candidate, _)| *candidate == key)
-        .map(|(_, value)| scalar_symbol(value))
-        .collect()
-}
-
-fn scalar_symbol(value: &str) -> Option<String> {
-    let value = value
-        .trim_end_matches(',')
-        .trim_end_matches(')')
-        .trim_end_matches(']');
-    let mut characters = value.chars();
-    let first = characters.next()?;
-    ((first.is_ascii_alphabetic() || first == '_')
-        && characters.all(|character| {
-            character.is_ascii_alphanumeric() || matches!(character, '_' | '.' | '-')
-        }))
-    .then(|| value.to_owned())
-}
-
-fn block_default_speaker(text: &str, line_index: usize) -> Option<String> {
-    text.lines()
-        .take(line_index.saturating_add(1))
-        .collect::<Vec<_>>()
-        .into_iter()
-        .rev()
-        .find(|line| line.trim_start().starts_with("::"))
-        .and_then(|line| metadata_symbol(line, "speaker"))
 }

@@ -95,9 +95,11 @@ Mapping to contract obligations:
 
 **Decision: MessagePack length-prefixed byte buffers.**
 
-After each session operation (`recite_session_start`, `recite_session_begin`,
-`recite_session_choose`,
-`recite_session_acknowledge_effect`) the crate writes
+After each session operation that drains traversal (`recite_session_start`,
+`recite_session_start_with_values`, the provider-aware start forms,
+`recite_session_begin`,
+`recite_session_choose`, `recite_session_acknowledge_effect`, and
+the restore forms) the crate writes
 a single serialized output batch into a caller-supplied buffer slot (see Buffer
 Ownership below). The batch has its own MessagePack envelope and encoder in
 `recite-ffi`; it is distinct from the runtime session snapshot codec. The
@@ -155,6 +157,14 @@ ReciteStatus recite_session_create(
     const char *locale,         // nullable; UTF-8 NUL-terminated; borrowed
     uint64_t *session_handle_out
 );
+ReciteStatus recite_session_create_with_values(
+    uint64_t asset_handle,
+    const char *start_block,    // nullable; UTF-8 NUL-terminated; borrowed
+    const char *locale,         // nullable; UTF-8 NUL-terminated; borrowed
+    const ReciteInterpolationValue *values, // nullable when values_len == 0; borrowed
+    uintptr_t values_len,
+    uint64_t *session_handle_out
+);
 ReciteStatus recite_session_begin(
     uint64_t session_handle,
     ReciteBuffer *batch_out     // first output batch
@@ -176,6 +186,112 @@ ReciteStatus recite_session_start(
     const char *locale,         // nullable; UTF-8 NUL-terminated; borrowed
     uint64_t *session_handle_out,
     ReciteBuffer *batch_out     // first output batch
+);
+ReciteStatus recite_session_start_with_values(
+    uint64_t asset_handle,
+    const char *start_block,    // nullable; UTF-8 NUL-terminated; borrowed
+    const char *locale,         // nullable; UTF-8 NUL-terminated; borrowed
+    const ReciteInterpolationValue *values, // nullable when values_len == 0; borrowed
+    uintptr_t values_len,
+    uint64_t *session_handle_out,
+    ReciteBuffer *batch_out     // first output batch
+);
+
+// Convenience forms that install a locale callback before the first drain.
+ReciteStatus recite_session_start_with_locale_provider(
+    uint64_t asset_handle,
+    const char *start_block, const char *locale,
+    ReciteLocaleFn callback, void *userdata,
+    uint64_t *session_handle_out, ReciteBuffer *batch_out
+);
+ReciteStatus recite_session_start_with_locale_provider_and_variant(
+    uint64_t asset_handle,
+    const char *start_block, const char *locale, const char *locale_variant,
+    ReciteLocaleFn callback, void *userdata,
+    uint64_t *session_handle_out, ReciteBuffer *batch_out
+);
+ReciteStatus recite_session_start_with_values_and_locale_provider(
+    uint64_t asset_handle,
+    const char *start_block, const char *locale,
+    const ReciteInterpolationValue *values, uintptr_t values_len,
+    ReciteLocaleFn callback, void *userdata,
+    uint64_t *session_handle_out, ReciteBuffer *batch_out
+);
+ReciteStatus recite_session_start_with_values_and_locale_provider_and_variant(
+    uint64_t asset_handle,
+    const char *start_block, const char *locale, const char *locale_variant,
+    const ReciteInterpolationValue *values, uintptr_t values_len,
+    ReciteLocaleFn callback, void *userdata,
+    uint64_t *session_handle_out, ReciteBuffer *batch_out
+);
+
+// Replace values used by subsequent begin/choose/acknowledge drains.
+ReciteStatus recite_session_set_interpolation_values(
+    uint64_t session_handle,
+    const ReciteInterpolationValue *values, // nullable when values_len == 0; borrowed
+    uintptr_t values_len
+);
+
+// Locale provider callback. The callback is synchronous. The host-owned result
+// pointer tree must remain immutable until the enclosing Recite API call
+// returns; recite-ffi copies it before that call returns.
+typedef struct {
+    uint32_t kind;                 // 0 = singular, 1 = plural
+    const char *id;                // stable localisable ID; borrowed
+    const char *source_text;       // source or singular form; borrowed
+    const char *plural_source_text;// non-null for plural requests; borrowed
+    int64_t count;                 // plural count, -1 for singular
+    uint32_t domain;               // line, choice, availability reason, label
+    const char *locale;            // explicit session locale; borrowed
+    const char *variant;           // nullable explicit variant; borrowed
+} ReciteLocaleQuery;
+
+typedef struct {
+    const char *locale;
+    const char *context;
+    const char *key;
+    int32_t selected_arm;          // -1 when no arm was selected
+    uint32_t outcome;              // missing_plural_forms, missing_entry,
+                                   // missing_translation, or matched
+} ReciteLocaleAttempt;
+
+typedef struct {
+    uint8_t ok;                    // exactly 1 for a valid result, 0 for error
+    const char *text;              // nullable: request authored source fallback
+    int32_t selected_arm;          // plural arm, or -1 for singular/fallback
+    const char *matched_locale;    // nullable plural match provenance
+    const char *matched_context;   // nullable plural match provenance
+    const char *matched_key;       // nullable plural match provenance
+    const ReciteLocaleAttempt *attempts;
+    uintptr_t attempts_len;
+    const char *error_message;     // nullable when ok == 0
+} ReciteLocaleResult;
+
+typedef ReciteLocaleResult (*ReciteLocaleFn)(
+    const ReciteLocaleQuery *query,
+    void *userdata
+);
+
+ReciteStatus recite_session_set_locale_provider(
+    uint64_t session_handle,
+    ReciteLocaleFn callback,
+    void *userdata
+);
+ReciteStatus recite_session_clear_locale_provider(uint64_t session_handle);
+ReciteStatus recite_session_set_locale_variant(
+    uint64_t session_handle,
+    const char *locale_variant // nullable; copied, not serialized
+);
+
+// Complete gettext Plural-Forms validation shared with recite-core.
+ReciteStatus recite_locale_validate_plural_rule(
+    const char *header, size_t *nplurals_out
+);
+ReciteStatus recite_locale_evaluate_plural_rule(
+    const char *header, int64_t count, size_t *arm_out
+);
+ReciteStatus recite_locale_validate_translation_placeholders(
+    const char *source, const char *translation
 );
 
 // Traversal
@@ -204,6 +320,31 @@ ReciteStatus recite_session_restore(
     ReciteBuffer *batch_out     // resumption batch; empty only at pending prompt
                               // boundary; pending effect re-emits once
 );
+ReciteStatus recite_session_restore_with_values(
+    uint64_t asset_handle,
+    const uint8_t *snapshot_bytes, uintptr_t snapshot_len,
+    const ReciteInterpolationValue *values, // nullable when values_len == 0; borrowed
+    uintptr_t values_len,
+    uint64_t *session_handle_out,
+    ReciteBuffer *batch_out
+);
+
+ReciteStatus recite_session_restore_with_values_and_locale_provider(
+    uint64_t asset_handle,
+    const uint8_t *snapshot_bytes, uintptr_t snapshot_len,
+    const ReciteInterpolationValue *values, uintptr_t values_len,
+    ReciteLocaleFn callback, void *userdata,
+    uint64_t *session_handle_out,
+    ReciteBuffer *batch_out
+);
+ReciteStatus recite_session_restore_with_values_and_locale_provider_and_variant(
+    uint64_t asset_handle,
+    const uint8_t *snapshot_bytes, uintptr_t snapshot_len,
+    const ReciteInterpolationValue *values, uintptr_t values_len,
+    const char *locale_variant, ReciteLocaleFn callback, void *userdata,
+    uint64_t *session_handle_out,
+    ReciteBuffer *batch_out
+);
 
 // Teardown
 void recite_session_free(uint64_t session_handle);
@@ -215,17 +356,114 @@ void recite_buffer_free(ReciteBuffer *buf);
 Runtime function mapping:
 - `recite_asset_load` → `decode_compiled_dialogue_messagepack`
 - `recite_session_create` → `start_scene_with_options` (no traversal; stores session with `begun: false`)
+- `recite_session_create_with_values` → the same operation plus a copied
+  caller-owned interpolation map
 - `recite_session_begin` → drain via `next_with` (sets `begun: true`; errors if called twice)
 - `recite_session_start` → `recite_session_create` + `recite_session_begin` in one call
+- `recite_session_start_with_values` →
+  `recite_session_create_with_values` + `recite_session_begin` in one call
+- `recite_session_start_with_locale_provider` and
+  `recite_session_start_with_values_and_locale_provider` → the matching create
+  operation, callback registration, and `recite_session_begin` in one call;
+  failure removes the newly-created session
+- The `*_and_variant` provider-aware start forms additionally copy the caller's
+  explicit grammatical variant before the first drain. The variant is not
+  serialized and must be supplied again on restore.
+- `recite_session_set_interpolation_values` → replaces the copied map used by
+  subsequent traversal calls
+- `recite_session_set_locale_variant` → replaces the copied variant used by
+  subsequent traversal calls; an invalid input leaves the prior value intact
 - `recite_session_choose` → `choose_with` then drain via `next_with`
 - `recite_session_acknowledge_effect` → `acknowledge_effect` then drain via `next_with`
 - `recite_session_snapshot` → `encode_session_messagepack`
 - `recite_session_restore` → `decode_session_messagepack` then drain (re-emits a pending blocking effect once; empty batch at a pending-prompt boundary; `NoActiveSession` for ended-session snapshots)
+- `recite_session_restore_with_values` → the same restore operation with a
+  copied map available to its resumption drain
+- `recite_session_restore_with_values_and_locale_provider` → the same restore
+  operation with copied interpolation values and a locale callback available
+  to its resumption drain; failure does not publish a session handle
+- `recite_session_restore_with_values_and_locale_provider_and_variant` → the
+  same operation with the caller-supplied grammatical variant installed before
+  its resumption drain
 
 `EffectAck::Completed` maps to `ack_completed = 1`; `EffectAck::Failed { reason }` maps
 to `ack_completed = 0` with the failure reason in `failure_reason`. Both paths
 are required by contract §4; hosts that cannot surface failure must pass
 `ack_completed = 0, failure_reason = null` rather than silently dropping the error.
+
+### Locale provider callback
+
+`ReciteLocaleFn` is a typed, synchronous callback rather than a Rust trait
+object. Recite supplies a borrowed `ReciteLocaleQuery` for each line, choice,
+or plural lookup. The host returns `ReciteLocaleResult` with a translated
+template, or `text = NULL` to request the authored source fallback. Plural
+results include the selected arm, matched locale/context/key, and ordered
+candidate attempts so adapters can preserve resolution traces. The host owns
+the complete returned pointer tree—`text`, `error_message`, every matched
+string, the attempts array, and each attempt string—and must keep it immutable
+and valid from callback return until the enclosing Recite API call returns.
+Recite copies the tree before that call returns. Stack or callback-local
+temporaries are forbidden, and the host must release owner storage only after
+the enclosing call has returned. This lifetime rule applies independently to
+every synchronous call that can traverse (`start`, `choose`, `acknowledge`,
+and `restore`); there is no callback-level release point. Hosts must also keep
+the callback and `userdata` valid until the session is freed or the provider is
+cleared. A null session locale bypasses the callback entirely.
+For each plural query, hosts must enumerate candidates in this exact order:
+the requested variant context (`context&variant`) across the locale's
+most-specific-to-base fallback chain, followed by the base context across the
+same chain. Missing plural rules, missing entries, empty translations, and
+fuzzy translations continue to the next candidate; represent empty or fuzzy
+catalogue records as `RECITE_LOCALE_ATTEMPT_MISSING_TRANSLATION`. A catalogue
+conflict must not be reported as a match. `RECITE_LOCALE_ATTEMPT_MATCHED`
+terminates the sequence, and its selected arm and matched provenance must come
+from the validated plural rule and matching candidate. If no candidate
+matches, return `text = NULL`, `selected_arm = -1`, and null match provenance
+so traversal applies the authored English source fallback. Violating this
+ordering is a host contract violation: Recite copies and reports the supplied
+attempt sequence but cannot enforce lookup order inside a custom callback.
+Callbacks must not re-enter Recite, panic, unwind, or throw across the C ABI.
+Because these callback types use `extern "C"`, a Rust panic in a callback
+aborts before Recite can catch it. C and C++ hosts must enforce the strict
+non-null, synchronous, no-panic/no-throw/no-unwind contract; C++ hosts should
+call through an `extern "C"` wrapper that catches C++ exceptions and returns
+`ok = 0`. C++ exceptions cannot be caught by Rust. The Unity managed wrapper
+catches managed exceptions and returns the same failure result.
+
+For example, a callback that returns plural attempts can use session-owned or
+heap-owned storage. It must release that owner only after the enclosing native
+call returns (including error and rollback paths):
+
+```c
+struct LocaleOwner {
+    char text[64];
+    char locale[16];
+    char context[64];
+    char key[32];
+    ReciteLocaleAttempt attempts[1];
+};
+
+static ReciteLocaleResult locale_callback(
+    const ReciteLocaleQuery *query, void *userdata)
+{
+    struct LocaleOwner *owner = userdata; /* not callback-local storage */
+    (void)query;
+    /* Fill owner->... before returning and do not mutate it until the call
+       that invoked Recite has returned. */
+    owner->attempts[0] = (ReciteLocaleAttempt){
+        owner->locale, owner->context, owner->key, 0,
+        RECITE_LOCALE_ATTEMPT_MATCHED};
+    return (ReciteLocaleResult){
+        1, owner->text, 0, owner->locale, owner->context, owner->key,
+        owner->attempts, 1, NULL};
+}
+```
+
+Returning pointers to arrays, strings, or error messages allocated on the
+callback stack, or freeing them when the callback returns, violates the host
+contract. C++ wrappers should use equivalent owner storage and catch C++
+exceptions before entering the `extern "C"` callback; Rust cannot catch a C++
+exception or an `extern "C"` Rust panic.
 
 ## String and Buffer Ownership
 
@@ -254,6 +492,34 @@ termination is used only for the host-facing error detail string (see Error Code
 All UTF-8. The host must not pass non-UTF-8 bytes in string inputs; `recite-ffi`
 validates and returns `validation_error` if encoding is invalid.
 
+Interpolation inputs use the same explicit typed scalar model as the canonical
+runtime `InterpolationValues` map:
+
+```c
+typedef enum {
+    RECITE_INTERPOLATION_VALUE_KIND_STRING = 0,
+    RECITE_INTERPOLATION_VALUE_KIND_INTEGER = 1,
+    RECITE_INTERPOLATION_VALUE_KIND_FLOAT = 2,
+    RECITE_INTERPOLATION_VALUE_KIND_BOOLEAN = 3,
+} ReciteInterpolationValueKind;
+
+typedef struct {
+    const char *name;             // UTF-8 NUL-terminated; borrowed
+    uint32_t kind;               // RECITE_INTERPOLATION_VALUE_KIND_* constant
+    const char *string_value;    // borrowed; used for STRING
+    int64_t integer_value;       // used for INTEGER
+    double float_value;          // finite; used for FLOAT
+    uint8_t boolean_value;       // exactly 0 or 1; used for BOOLEAN
+} ReciteInterpolationValue;
+```
+
+The records and string payloads are borrowed only for the call and copied into
+session-owned storage. Duplicate names, invalid UTF-8, unknown kind constants,
+non-finite floats, and invalid boolean payloads return `RECITE_ERR_VALIDATION`
+without changing the existing map. Passing zero records clears the map.
+Interpolation values are deliberately not part of the opaque session snapshot;
+hosts must provide them again on restore when the resumption drain needs them.
+
 ## Generated C Header
 
 The committed C header lives at `include/recite.h` and is generated from
@@ -270,7 +536,14 @@ Header version constants (`RECITE_FFI_VERSION_MAJOR`,
 `recite-ffi` crate version. A major version bump is required for breaking C ABI
 changes, including renumbering or removing stable `ReciteStatus` codes. Minor
 versions are for additive ABI-compatible symbols, and patch versions are for
-documentation or implementation-only changes.
+documentation or implementation-only changes. The value-capable ABI introduced
+by `ReciteInterpolationValue` and the `*_with_values` entrypoints is version
+`0.1.0`. The additive typed locale callback surface (`ReciteLocaleFn`, locale
+result/attempt records, and provider-aware start/restore operations) is version
+`0.2.0`. The additive grammatical-variant entrypoints and complete
+plural-rule validator are version `0.3.0`. The additive native plural
+evaluator and placeholder-preservation validator are version `0.5.0`; hosts
+can inspect the three constants before using those symbols.
 
 ## Error Codes
 
@@ -396,6 +669,13 @@ session. During traversal, `recite-ffi` invokes the matching handler
 synchronously — the call is inline with `next_with` traversal, exactly as in
 the Godot adapter (`adapter.rs` — `BTreeMap<String, Box<ConditionHandler>>`
 with `Fn(ConditionCall<'_>) -> ConditionHandlerResult`).
+
+The function pointer must be non-null, synchronous, and non-panicking. Host
+wrappers must enforce the no-panic/no-throw/no-unwind contract and return
+`ok = 0` for an evaluation failure; they must not unwind across `extern "C"`,
+re-enter Recite, or retain borrowed query/result pointers. A Rust panic in an
+`extern "C"` callback aborts before Recite can catch it, and a C++ exception
+must be caught by the host wrapper before entering Recite.
 
 **Why callbacks, not pre-resolved query batches?**
 The alternative (pause traversal, return the pending condition set to the host,

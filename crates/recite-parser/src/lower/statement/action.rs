@@ -1,7 +1,10 @@
 use recite_core::{Divert, Effect};
 
 use crate::condition::parse_condition_call;
-use crate::diagnostics::{malformed_divert_target, malformed_effect, missing_divert_target};
+use crate::diagnostics::{
+    malformed_divert_target, malformed_effect, malformed_effect_invalid_mode,
+    malformed_effect_missing_mode, missing_divert_target,
+};
 use crate::header::rest_after_field;
 use crate::markers::StatementMarker;
 use crate::source::span_for_line;
@@ -41,15 +44,12 @@ impl Lowerer<'_, '_> {
         let span = span_for_line(self.path, line.number, base_column);
         let fields = header_fields(trimmed, StatementMarker::Effect, line, base_column);
         let Some(mode_field) = fields.first().copied() else {
-            self.diagnostics
-                .push(malformed_effect(span, "missing effect mode"));
+            self.diagnostics.push(malformed_effect_missing_mode(span));
             return None;
         };
         let Some(mode) = effect_mode(mode_field.text) else {
-            self.diagnostics.push(malformed_effect(
-                mode_field.span(self.path),
-                "expected deferred, immediate, or blocking",
-            ));
+            self.diagnostics
+                .push(malformed_effect_invalid_mode(mode_field.span(self.path)));
             return None;
         };
 
@@ -72,8 +72,7 @@ impl Lowerer<'_, '_> {
                 )
             }
             Err(error) => {
-                self.diagnostics
-                    .push(malformed_effect(error.span, error.message));
+                self.diagnostics.push(malformed_effect(error));
                 None
             }
         }

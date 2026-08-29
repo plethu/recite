@@ -1,4 +1,5 @@
 use crate::i18n::{Messages, MsgId};
+use recite_core::DiagnosticPresentation;
 
 #[derive(Clone, Debug, Eq, PartialEq)]
 pub(crate) enum DialogueCatalogMalformedReason {
@@ -7,12 +8,37 @@ pub(crate) enum DialogueCatalogMalformedReason {
     MissingContext,
     MissingId,
     MissingTranslation,
-    PlaceholderMismatch { detail: String },
-    PluralEntriesUnsupported,
+    InvalidHeader {
+        detail: String,
+    },
+    InvalidPluralRule {
+        detail: String,
+    },
+    InvalidStableId {
+        value: String,
+    },
+    DuplicateField {
+        field: String,
+    },
+    DuplicateEntry {
+        key: String,
+    },
+    InvalidFieldOrder {
+        detail: String,
+    },
+    PlaceholderMismatch {
+        detail: String,
+    },
+    Markup {
+        presentation: DiagnosticPresentation,
+        compatibility_message: String,
+    },
     QuotedContinuationWithoutField,
     UnexpectedTextAfterQuotedString,
     UnterminatedQuotedString,
-    UnsupportedEscape { escape: String },
+    UnsupportedEscape {
+        escape: String,
+    },
 }
 
 impl DialogueCatalogMalformedReason {
@@ -31,13 +57,35 @@ impl DialogueCatalogMalformedReason {
             Self::MissingTranslation => {
                 messages.text(MsgId::CliErrorDialogueCatalogReasonMissingTranslation)
             }
+            Self::InvalidHeader { detail } => messages.format(
+                MsgId::CliErrorDialogueCatalogReasonInvalidHeader,
+                [("detail", detail.clone())],
+            ),
+            Self::InvalidPluralRule { detail } => messages.format(
+                MsgId::CliErrorDialogueCatalogReasonInvalidPluralRule,
+                [("detail", detail.clone())],
+            ),
+            Self::InvalidStableId { value } => messages.format(
+                MsgId::CliErrorDialogueCatalogReasonInvalidStableId,
+                [("value", value.clone())],
+            ),
+            Self::DuplicateField { field } => messages.format(
+                MsgId::CliErrorDialogueCatalogReasonDuplicateField,
+                [("field", field.clone())],
+            ),
+            Self::DuplicateEntry { key } => messages.format(
+                MsgId::CliErrorDialogueCatalogReasonDuplicateEntry,
+                [("key", key.clone())],
+            ),
+            Self::InvalidFieldOrder { detail } => messages.format(
+                MsgId::CliErrorDialogueCatalogReasonInvalidFieldOrder,
+                [("detail", detail.clone())],
+            ),
             Self::PlaceholderMismatch { detail } => messages.format(
                 MsgId::CliErrorDialogueCatalogReasonPlaceholderMismatch,
                 [("detail", detail.clone())],
             ),
-            Self::PluralEntriesUnsupported => {
-                messages.text(MsgId::CliErrorDialogueCatalogReasonPluralEntriesUnsupported)
-            }
+            Self::Markup { presentation, .. } => messages.format_presentation(presentation),
             Self::QuotedContinuationWithoutField => {
                 messages.text(MsgId::CliErrorDialogueCatalogReasonQuotedContinuationWithoutField)
             }
@@ -61,8 +109,19 @@ impl DialogueCatalogMalformedReason {
             Self::MissingContext => "entry is missing msgctxt".to_owned(),
             Self::MissingId => "entry is missing msgid".to_owned(),
             Self::MissingTranslation => "entry is missing msgstr".to_owned(),
+            Self::InvalidHeader { detail } => format!("invalid PO header: {detail}"),
+            Self::InvalidPluralRule { detail } => {
+                format!("invalid PO Plural-Forms rule: {detail}")
+            }
+            Self::InvalidStableId { value } => format!("invalid stable PO context `{value}`"),
+            Self::DuplicateField { field } => format!("duplicate PO field {field}"),
+            Self::DuplicateEntry { key } => format!("duplicate PO catalogue entry `{key}`"),
+            Self::InvalidFieldOrder { detail } => detail.clone(),
             Self::PlaceholderMismatch { detail } => detail.clone(),
-            Self::PluralEntriesUnsupported => "plural entries are not supported".to_owned(),
+            Self::Markup {
+                compatibility_message,
+                ..
+            } => compatibility_message.clone(),
             Self::QuotedContinuationWithoutField => {
                 "quoted continuation without msgctxt, msgid, or msgstr".to_owned()
             }

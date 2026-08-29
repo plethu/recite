@@ -1,6 +1,6 @@
-use super::locale::DEFAULT_LOCALE;
-use super::messages::DEFAULT_RESOURCE;
 use super::*;
+
+const DEFAULT_RESOURCE: &str = recite_ui::DEFAULT_RESOURCE;
 
 fn messages_with(
     requested: &str,
@@ -18,17 +18,9 @@ fn messages_with(
 #[test]
 fn default_catalog_parses_and_contains_all_typed_messages() {
     let messages = Messages::load(&UiLocale::default()).expect("messages load");
-    let default = messages
-        .bundles
-        .get(DEFAULT_LOCALE)
-        .expect("default bundle exists");
-
+    recite_ui::validate_default_resource().expect("complete default catalog");
     for id in MsgId::ALL {
-        assert!(
-            default.get_message(id.key()).is_some(),
-            "missing {}",
-            id.key()
-        );
+        assert!(!messages.text(*id).is_empty(), "missing {}", id.key());
     }
 }
 

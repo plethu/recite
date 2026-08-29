@@ -16,14 +16,14 @@ use serde::Serialize;
 use serde::ser::SerializeTuple;
 
 use self::tags::{
-    MsgArgument, MsgAssetEncoding, MsgChoiceEcho, MsgConditionExpression, MsgDivertTarget,
-    MsgEffectMode, MsgFingerprint, MsgInspectionEncoding, MsgMatchPattern, MsgSchemaFingerprint,
-    MsgSourceSpan, MsgStatementKind, MsgValue,
+    MsgArgument, MsgAssetEncoding, MsgEffectMode, MsgFingerprint, MsgInspectionEncoding,
+    MsgMatchPattern, MsgSchemaFingerprint, MsgSourceSpan, MsgStatementKind, MsgValue,
 };
 use super::shared::range_to_u32;
 use crate::compile::CompileError;
 
-mod tags;
+pub(super) mod tags;
+use super::rows::{MsgChoice, MsgLine};
 
 pub(crate) fn serialize_messagepack(dialogue: &CompiledDialogue) -> Result<Vec<u8>, CompileError> {
     rmp_serde::to_vec(&MsgDialogue::from(dialogue)).map_err(|error| {
@@ -183,56 +183,6 @@ impl<'a> From<&'a recite_core::CompiledMatchArm> for MsgMatchArm<'a> {
 }
 
 #[derive(Serialize)]
-struct MsgLine<'a>(&'a str, &'a str, Option<u32>, MsgRange, u32);
-
-impl<'a> From<&'a recite_core::CompiledLine> for MsgLine<'a> {
-    fn from(line: &'a recite_core::CompiledLine) -> Self {
-        Self(
-            line.id.as_str(),
-            line.source_text.as_str(),
-            line.speaker.map(SpeakerIndex::as_u32),
-            metadata_range(line.metadata),
-            line.source_map.as_u32(),
-        )
-    }
-}
-
-#[derive(Serialize)]
-struct MsgChoice<'a>(
-    &'a str,
-    &'a str,
-    MsgRange,
-    Option<MsgConditionExpression<'a>>,
-    Option<&'a str>,
-    Option<&'a str>,
-    MsgDivertTarget<'a>,
-    MsgChoiceEcho<'a>,
-    u32,
-);
-
-impl<'a> From<&'a recite_core::CompiledChoice> for MsgChoice<'a> {
-    fn from(choice: &'a recite_core::CompiledChoice) -> Self {
-        Self(
-            choice.id.as_str(),
-            choice.source_text.as_str(),
-            metadata_range(choice.metadata),
-            choice
-                .availability_requirement
-                .as_ref()
-                .map(MsgConditionExpression),
-            choice.availability_requirement_source_text.as_deref(),
-            choice
-                .availability_reason_override
-                .as_ref()
-                .map(recite_core::AvailabilityReasonId::as_str),
-            MsgDivertTarget(&choice.target),
-            MsgChoiceEcho(&choice.echo),
-            choice.source_map.as_u32(),
-        )
-    }
-}
-
-#[derive(Serialize)]
 struct MsgAvailabilityReason<'a>(&'a str, &'a str);
 
 impl<'a> From<&'a recite_core::CompiledAvailabilityReason> for MsgAvailabilityReason<'a> {
@@ -374,7 +324,7 @@ impl<'a> From<&'a recite_core::CompiledSourceMapEntry> for MsgSourceMapEntry<'a>
 struct MsgLookupEntry<'a>(&'a str, u32);
 
 #[derive(Serialize)]
-struct MsgRange(u32, u32);
+pub(super) struct MsgRange(pub(super) u32, pub(super) u32);
 
 fn statement_range(range: TableRange<StatementIndex>) -> MsgRange {
     let (start, len) = range_to_u32(range, StatementIndex::as_u32);
@@ -391,7 +341,7 @@ fn choice_range(range: TableRange<ChoiceIndex>) -> MsgRange {
     MsgRange(start, len)
 }
 
-fn metadata_range(range: TableRange<MetadataIndex>) -> MsgRange {
+pub(super) fn metadata_range(range: TableRange<MetadataIndex>) -> MsgRange {
     let (start, len) = range_to_u32(range, MetadataIndex::as_u32);
     MsgRange(start, len)
 }

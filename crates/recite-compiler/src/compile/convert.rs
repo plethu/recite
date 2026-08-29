@@ -1,7 +1,8 @@
 use recite_core::{
     Argument, Choice, ChoiceEcho, ChoiceId, CompiledArgument, CompiledChoiceEcho,
-    CompiledConditionCall, CompiledConditionExpression, CompiledEffectMode, CompiledMatchPattern,
-    Effect, EffectId, EffectMode, Line, LineId, MatchPattern,
+    CompiledConditionCall, CompiledConditionExpression, CompiledEffectMode,
+    CompiledInterpolationBinding, CompiledMatchPattern, Effect, EffectId, EffectMode,
+    InterpolationBinding, Line, LineId, MatchPattern,
 };
 
 use super::CompileError;
@@ -24,6 +25,19 @@ pub(in crate::compile) fn compile_choice_echo(echo: &ChoiceEcho) -> CompiledChoi
         ChoiceEcho::SelectedText => CompiledChoiceEcho::SelectedText,
         ChoiceEcho::Line(line_id) => CompiledChoiceEcho::ExplicitLine(line_id.clone()),
     }
+}
+
+pub(in crate::compile) fn compile_interpolation_bindings(
+    bindings: &[InterpolationBinding],
+) -> Vec<CompiledInterpolationBinding> {
+    bindings
+        .iter()
+        .map(|binding| CompiledInterpolationBinding {
+            name: binding.name.clone(),
+            value: binding.value.clone(),
+            value_type: binding.value_type,
+        })
+        .collect()
 }
 
 pub(in crate::compile) fn compile_effect_mode(mode: EffectMode) -> CompiledEffectMode {

@@ -7,6 +7,14 @@
   "required": ["schema_version"],
   "properties": {
     "schema_version": { "const": 1 },
+    "producer": { "$ref": "#/$defs/producerIdentity" },
+    "content_fingerprint": { "$ref": "#/$defs/contentFingerprint" },
+    "schema_export_version": { "type": "integer", "minimum": 1, "maximum": 4294967295 },
+    "inclusion_policy": { "type": "string", "minLength": 1 },
+    "producer_fingerprints": {
+      "type": "array",
+      "items": { "$ref": "#/$defs/producerFingerprint" }
+    },
     "types": {
       "type": "object",
       "propertyNames": { "$ref": "#/$defs/definitionName" },
@@ -27,6 +35,11 @@
       "propertyNames": { "$ref": "#/$defs/definitionName" },
       "additionalProperties": { "$ref": "#/$defs/conditionDefinition" }
     },
+    "availability_reasons": {
+      "type": "object",
+      "propertyNames": { "$ref": "#/$defs/definitionName" },
+      "additionalProperties": { "$ref": "#/$defs/availabilityReasonDefinition" }
+    },
     "effects": {
       "type": "object",
       "propertyNames": { "$ref": "#/$defs/definitionName" },
@@ -42,6 +55,16 @@
       "propertyNames": { "$ref": "#/$defs/definitionName" },
       "additionalProperties": { "$ref": "#/$defs/metadataDefinition" }
     },
+    "projection_queries": {
+      "type": "object",
+      "propertyNames": { "$ref": "#/$defs/definitionName" },
+      "additionalProperties": { "$ref": "#/$defs/projectionQueryFunctionDefinition" }
+    },
+    "presentation_projectors": {
+      "type": "object",
+      "propertyNames": { "$ref": "#/$defs/definitionName" },
+      "additionalProperties": { "$ref": "#/$defs/presentationProjectorDefinition" }
+    },
     "markup": {
       "type": "object",
       "propertyNames": { "$ref": "#/$defs/definitionName" },
@@ -54,8 +77,59 @@
       "pattern": "^[A-Za-z_][A-Za-z0-9_.-]*$"
     },
     "typeReference": {
-      "type": "string",
-      "pattern": "^(string|symbol|int|float|bool|speaker|enum:[A-Za-z_][A-Za-z0-9_.-]*|registry:[A-Za-z_][A-Za-z0-9_.-]*)$"
+      "oneOf": [
+        { "enum": ["string", "symbol", "int", "float", "bool", "speaker"] },
+        {
+          "type": "string",
+          "pattern": "^(enum|registry):[A-Za-z_][A-Za-z0-9_.-]*$"
+        },
+        {
+          "type": "string",
+          "pattern": "^(array:){1,8}(string|symbol|int|float|bool|speaker|enum:[A-Za-z_][A-Za-z0-9_.-]*|registry:[A-Za-z_][A-Za-z0-9_.-]*)$"
+        }
+      ]
+    },
+    "producerOrigin": {
+      "type": "object",
+      "additionalProperties": false,
+      "patternProperties": {
+        "^[A-Za-z][A-Za-z0-9_.-]*:[A-Za-z][A-Za-z0-9_.-]*$": {}
+      },
+      "required": ["kind", "id"],
+      "properties": {
+        "kind": { "type": "string", "minLength": 1 },
+        "id": { "type": "string", "minLength": 1 },
+        "label": { "type": "string", "minLength": 1 }
+      }
+    },
+    "producerIdentity": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["kind", "id"],
+      "properties": {
+        "kind": { "type": "string", "minLength": 1 },
+        "id": { "type": "string", "minLength": 1 }
+      }
+    },
+    "contentFingerprint": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["algorithm", "value"],
+      "properties": {
+        "algorithm": { "type": "string", "minLength": 1 },
+        "value": { "type": "string", "minLength": 1 }
+      }
+    },
+    "producerFingerprint": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["id", "kind", "algorithm", "value"],
+      "properties": {
+        "id": { "type": "string", "minLength": 1 },
+        "kind": { "type": "string", "minLength": 1 },
+        "algorithm": { "type": "string", "minLength": 1 },
+        "value": { "type": "string", "minLength": 1 }
+      }
     },
     "parameter": {
       "type": "object",
@@ -87,7 +161,16 @@
           "type": "array",
           "items": { "type": "string", "minLength": 1 }
         },
-        "origin": { "type": "string", "minLength": 1 }
+        "origin": { "$ref": "#/$defs/producerOrigin" },
+        "value_origins": {
+          "type": "object",
+          "propertyNames": { "type": "string", "minLength": 1 },
+          "additionalProperties": { "$ref": "#/$defs/producerOrigin" }
+        },
+        "producer_fingerprints": {
+          "type": "array",
+          "items": { "$ref": "#/$defs/producerFingerprint" }
+        }
       }
     },
     "speakerDefinition": {
@@ -95,6 +178,19 @@
       "additionalProperties": false,
       "properties": {
         "display_name": { "type": "string", "minLength": 1 }
+      }
+    },
+    "conditionAvailabilityReason": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["reason"],
+      "properties": {
+        "reason": { "$ref": "#/$defs/definitionName" },
+        "args": {
+          "type": "object",
+          "propertyNames": { "$ref": "#/$defs/definitionName" },
+          "additionalProperties": { "type": ["string", "number", "boolean"] }
+        }
       }
     },
     "conditionDefinition": {
@@ -110,7 +206,22 @@
           "type": "string",
           "pattern": "^(bool|enum:[A-Za-z_][A-Za-z0-9_.-]*)$",
           "default": "bool"
-        }
+        },
+        "availability_reason": { "$ref": "#/$defs/conditionAvailabilityReason" }
+      }
+    },
+    "availabilityReasonDefinition": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["template"],
+      "properties": {
+        "template": { "type": "string", "minLength": 1 },
+        "params": {
+          "type": "array",
+          "items": { "$ref": "#/$defs/parameter" },
+          "default": []
+        },
+        "origin": { "$ref": "#/$defs/producerOrigin" }
       }
     },
     "effectDefinition": {
@@ -143,12 +254,6 @@
         "domain": { "$ref": "#/$defs/definitionName" }
       }
     },
-    "metadataDomainDefinition": {
-      "oneOf": [
-        { "$ref": "#/$defs/flatMetadataDomainDefinition" },
-        { "$ref": "#/$defs/contextualMetadataDomainDefinition" }
-      ]
-    },
     "flatMetadataDomainDefinition": {
       "type": "object",
       "additionalProperties": false,
@@ -158,13 +263,23 @@
         "values": {
           "type": "array",
           "items": { "type": "string", "minLength": 1 }
+        },
+        "origin": { "$ref": "#/$defs/producerOrigin" },
+        "value_origins": {
+          "type": "object",
+          "propertyNames": { "type": "string", "minLength": 1 },
+          "additionalProperties": { "$ref": "#/$defs/producerOrigin" }
+        },
+        "producer_fingerprints": {
+          "type": "array",
+          "items": { "$ref": "#/$defs/producerFingerprint" }
         }
       }
     },
     "contextualMetadataDomainDefinition": {
       "type": "object",
       "additionalProperties": false,
-      "required": ["kind", "selector", "values_by_context"],
+      "required": ["kind", "selector", "values_by_context", "missing_context"],
       "properties": {
         "kind": { "const": "contextual" },
         "selector": {
@@ -179,8 +294,33 @@
             "items": { "type": "string", "minLength": 1 }
           }
         },
-        "missing_context": { "$ref": "#/$defs/missingMetadataContext" }
+        "missing_context": { "$ref": "#/$defs/missingMetadataContext" },
+        "origin": { "$ref": "#/$defs/producerOrigin" },
+        "context_origins": {
+          "type": "object",
+          "propertyNames": { "$ref": "#/$defs/definitionName" },
+          "additionalProperties": { "$ref": "#/$defs/producerOrigin" }
+        },
+        "value_origins": {
+          "type": "object",
+          "propertyNames": { "$ref": "#/$defs/definitionName" },
+          "additionalProperties": {
+            "type": "object",
+            "propertyNames": { "type": "string", "minLength": 1 },
+            "additionalProperties": { "$ref": "#/$defs/producerOrigin" }
+          }
+        },
+        "producer_fingerprints": {
+          "type": "array",
+          "items": { "$ref": "#/$defs/producerFingerprint" }
+        }
       }
+    },
+    "metadataDomainDefinition": {
+      "oneOf": [
+        { "$ref": "#/$defs/flatMetadataDomainDefinition" },
+        { "$ref": "#/$defs/contextualMetadataDomainDefinition" }
+      ]
     },
     "missingMetadataContext": {
       "oneOf": [
@@ -202,6 +342,261 @@
           }
         }
       ]
+    },
+    "projectionQueryFunctionDefinition": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["returns"],
+      "properties": {
+        "params": {
+          "type": "array",
+          "items": { "$ref": "#/$defs/parameter" },
+          "default": []
+        },
+        "returns": { "$ref": "#/$defs/typeReference" },
+        "max_calls_per_event": { "type": "integer", "minimum": 1, "maximum": 4294967295 }
+      }
+    },
+    "projectionSelector": {
+      "oneOf": [
+        {
+          "type": "object",
+          "additionalProperties": false,
+          "required": ["kind", "event"],
+          "properties": {
+            "kind": { "const": "runtime_event" },
+            "event": { "type": "string", "minLength": 1 }
+          }
+        },
+        {
+          "type": "object",
+          "additionalProperties": false,
+          "required": ["kind", "target", "key"],
+          "properties": {
+            "kind": { "const": "metadata_key" },
+            "target": { "enum": ["block", "choice", "line", "project"] },
+            "key": { "$ref": "#/$defs/definitionName" }
+          }
+        },
+        {
+          "type": "object",
+          "additionalProperties": false,
+          "required": ["kind", "target", "required_keys"],
+          "properties": {
+            "kind": { "const": "metadata_set" },
+            "target": { "enum": ["block", "choice", "line", "project"] },
+            "required_keys": {
+              "type": "array",
+              "items": { "$ref": "#/$defs/definitionName" }
+            }
+          }
+        },
+        {
+          "type": "object",
+          "additionalProperties": false,
+          "required": ["kind", "reason"],
+          "properties": {
+            "kind": { "const": "availability_reason" },
+            "reason": { "$ref": "#/$defs/definitionName" }
+          }
+        }
+      ]
+    },
+    "metadataOccurrence": {
+      "oneOf": [
+        { "enum": ["only", "first", "last", "all"] },
+        {
+          "type": "object",
+          "additionalProperties": false,
+          "required": ["index"],
+          "properties": {
+            "index": { "type": "integer", "minimum": 0, "maximum": 4294967295 }
+          }
+        }
+      ]
+    },
+    "projectionInputSource": {
+      "oneOf": [
+        { "type": "object", "additionalProperties": false, "required": ["kind"], "properties": { "kind": { "const": "event_kind" } } },
+        { "type": "object", "additionalProperties": false, "required": ["kind"], "properties": { "kind": { "const": "candidate_line_id" } } },
+        { "type": "object", "additionalProperties": false, "required": ["kind"], "properties": { "kind": { "const": "candidate_choice_id" } } },
+        { "type": "object", "additionalProperties": false, "required": ["kind"], "properties": { "kind": { "const": "candidate_effect_request_id" } } },
+        { "type": "object", "additionalProperties": false, "required": ["kind"], "properties": { "kind": { "const": "candidate_block_id" } } },
+        { "type": "object", "additionalProperties": false, "required": ["kind"], "properties": { "kind": { "const": "candidate_project" } } },
+        {
+          "type": "object",
+          "additionalProperties": false,
+          "required": ["kind", "key"],
+          "properties": {
+            "kind": { "const": "candidate_metadata" },
+            "key": { "$ref": "#/$defs/definitionName" },
+            "occurrence": { "$ref": "#/$defs/metadataOccurrence" }
+          }
+        },
+        {
+          "type": "object",
+          "additionalProperties": false,
+          "required": ["kind", "name"],
+          "properties": {
+            "kind": { "const": "availability_reason_arg" },
+            "name": { "$ref": "#/$defs/definitionName" }
+          }
+        },
+        {
+          "type": "object",
+          "additionalProperties": false,
+          "required": ["kind", "value"],
+          "properties": {
+            "kind": { "const": "literal" },
+            "value": {}
+          }
+        }
+      ]
+    },
+    "projectionInput": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["name", "source", "type"],
+      "properties": {
+        "name": { "$ref": "#/$defs/definitionName" },
+        "source": { "$ref": "#/$defs/projectionInputSource" },
+        "type": { "$ref": "#/$defs/typeReference" },
+        "required": { "type": "boolean", "default": false }
+      }
+    },
+    "projectionInputRef": {
+      "oneOf": [
+        {
+          "type": "object",
+          "additionalProperties": false,
+          "required": ["input"],
+          "properties": { "input": { "$ref": "#/$defs/definitionName" } }
+        },
+        {
+          "type": "object",
+          "additionalProperties": false,
+          "required": ["query_result"],
+          "properties": { "query_result": { "$ref": "#/$defs/definitionName" } }
+        }
+      ]
+    },
+    "projectionQueryDefinition": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["function"],
+      "properties": {
+        "function": { "$ref": "#/$defs/definitionName" },
+        "args": {
+          "type": "array",
+          "items": { "$ref": "#/$defs/projectionInputRef" },
+          "default": []
+        }
+      }
+    },
+    "presentationLabelDefinition": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["template_id", "source_text"],
+      "properties": {
+        "template_id": { "$ref": "#/$defs/definitionName" },
+        "source_text": { "type": "string", "minLength": 1 },
+        "args": {
+          "type": "object",
+          "propertyNames": { "$ref": "#/$defs/definitionName" },
+          "additionalProperties": { "$ref": "#/$defs/presentationLabelArgDefinition" },
+          "default": {}
+        }
+      }
+    },
+    "presentationLabelArgDefinition": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["source", "type"],
+      "properties": {
+        "source": { "$ref": "#/$defs/projectionInputRef" },
+        "type": { "$ref": "#/$defs/typeReference" }
+      }
+    },
+    "presentationFieldDefinition": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["source", "type"],
+      "properties": {
+        "source": {
+          "oneOf": [
+            {
+              "type": "object",
+              "additionalProperties": false,
+              "required": ["kind", "name"],
+              "properties": {
+                "kind": { "const": "input" },
+                "name": { "$ref": "#/$defs/definitionName" }
+              }
+            },
+            {
+              "type": "object",
+              "additionalProperties": false,
+              "required": ["kind", "name"],
+              "properties": {
+                "kind": { "const": "query_result" },
+                "name": { "$ref": "#/$defs/definitionName" }
+              }
+            },
+            {
+              "type": "object",
+              "additionalProperties": false,
+              "required": ["kind", "value"],
+              "properties": {
+                "kind": { "const": "literal" },
+                "value": {}
+              }
+            }
+          ]
+        },
+        "type": { "$ref": "#/$defs/typeReference" }
+      }
+    },
+    "presentationOutputDefinition": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["target", "kind", "slot"],
+      "properties": {
+        "target": { "enum": ["candidate", "event", "prompt"] },
+        "kind": { "type": "string", "minLength": 1 },
+        "slot": { "type": "string", "minLength": 1 },
+        "label": { "$ref": "#/$defs/presentationLabelDefinition" },
+        "fields": {
+          "type": "object",
+          "propertyNames": { "$ref": "#/$defs/definitionName" },
+          "additionalProperties": { "$ref": "#/$defs/presentationFieldDefinition" },
+          "default": {}
+        }
+      }
+    },
+    "presentationProjectorDefinition": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["candidates"],
+      "properties": {
+        "candidates": { "$ref": "#/$defs/projectionSelector" },
+        "inputs": {
+          "type": "array",
+          "items": { "$ref": "#/$defs/projectionInput" },
+          "default": []
+        },
+        "queries": {
+          "type": "object",
+          "propertyNames": { "$ref": "#/$defs/definitionName" },
+          "additionalProperties": { "$ref": "#/$defs/projectionQueryDefinition" },
+          "default": {}
+        },
+        "outputs": {
+          "type": "object",
+          "propertyNames": { "$ref": "#/$defs/definitionName" },
+          "additionalProperties": { "$ref": "#/$defs/presentationOutputDefinition" },
+          "default": {}
+        }
+      }
     },
     "markupDefinition": {
       "type": "object",

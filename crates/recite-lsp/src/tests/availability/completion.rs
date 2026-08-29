@@ -166,6 +166,10 @@ pub(super) fn completes_metadata_domain_values_from_schema_context() {
         "  Repeated.\n",
         "> malformed@bd10c23e35161e49f8bd mood=\"warm\" stage=\n",
         "  Malformed.\n",
+        "> quoted_speaker@a1b2c3d4e5f60718293a speaker=\"rhea\" portrait=\n",
+        "  Quoted speaker.\n",
+        "> repeated_speaker@b1c2d3e4f5061728394a speaker=hazel speaker=rhea portrait=\n",
+        "  Repeated speaker.\n",
         ":: block speaker=hazel portrait=\n",
     );
     harness.did_open(source_uri.clone(), 1, source);
@@ -179,7 +183,7 @@ pub(super) fn completes_metadata_domain_values_from_schema_context() {
             )
             .expect("speaker contextual metadata completion"),
     );
-    assert_eq!(speaker_context, ["smile", "wry"]);
+    assert_eq!(speaker_context, ["hazel_only", "smile", "wry"]);
 
     let inherited_speaker = completion_labels(
         harness
@@ -260,6 +264,26 @@ pub(super) fn completes_metadata_domain_values_from_schema_context() {
             .expect("malformed selector metadata completion"),
     );
     assert!(malformed_selector.is_empty());
+
+    let quoted_speaker = completion_labels(
+        harness
+            .completion(
+                source_uri.clone(),
+                position_after(source, "speaker=\"rhea\" portrait="),
+            )
+            .expect("quoted speaker completion"),
+    );
+    assert!(quoted_speaker.is_empty());
+
+    let repeated_speaker = completion_labels(
+        harness
+            .completion(
+                source_uri.clone(),
+                position_after(source, "speaker=hazel speaker=rhea portrait="),
+            )
+            .expect("repeated speaker completion"),
+    );
+    assert!(repeated_speaker.is_empty());
 
     let block_speaker_context = completion_labels(
         harness

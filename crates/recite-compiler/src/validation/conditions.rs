@@ -95,7 +95,7 @@ impl Validator<'_> {
                 .diagnostics
                 .push(diagnostics::wrong_condition_return_type(
                     &call.function,
-                    "bool",
+                    diagnostics::ConditionReturnRequirement::Bool,
                     actual,
                     condition_function_span(call),
                 )),
@@ -103,7 +103,7 @@ impl Validator<'_> {
                 .diagnostics
                 .push(diagnostics::wrong_condition_return_type(
                     &call.function,
-                    "enum",
+                    diagnostics::ConditionReturnRequirement::Enum,
                     actual,
                     condition_function_span(call),
                 )),

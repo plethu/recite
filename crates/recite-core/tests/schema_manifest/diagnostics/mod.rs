@@ -1,4 +1,9 @@
 mod diagnostic_spans;
 mod manifest_loader;
+mod manifest_shapes;
 mod schema_version;
+mod structured_availability_domains;
+mod structured_basic;
+mod structured_projection;
+mod validate_structured;
 mod validation_errors;

@@ -25,12 +25,16 @@ impl Lowerer<'_, '_> {
             SourceId::Missing
         };
 
-        let (speaker, metadata) = self.lower_speaker_metadata(&fields[field_start..]);
-        let body = self.lower_prose_body(line_index, false);
+        let (speaker, metadata, bindings) = self.lower_speaker_metadata(&fields[field_start..]);
+        let body = self.lower_prose_body(line_index, false, true);
         let mut line = Line::new(None, SourceText::new(body.text, body.text_span), line_span)
             .with_source_id(source_id)
             .with_metadata(metadata)
+            .with_interpolation_bindings(bindings)
             .with_statements(body.statements);
+        if let (Some(text), Some(span)) = (body.plural_text, body.plural_text_span) {
+            line = line.with_plural_source_text(SourceText::new(text, span));
+        }
         if let Some(speaker) = speaker {
             line = line.with_speaker(speaker);
         }

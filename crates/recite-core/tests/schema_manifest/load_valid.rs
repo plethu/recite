@@ -1,8 +1,9 @@
 use recite_core::{
     AvailabilityReasonArgBinding, ConditionReturnType, EffectMode, MetadataContextSelector,
     MetadataDomainDefinition, MetadataOccurrence, MetadataTarget, MissingMetadataContextPolicy,
-    ProjectionInputRef, ProjectionOutputTarget, SchemaLiteralValue, SchemaProjectionInputSource,
-    SchemaProjectionSelector, SchemaTypeDefinition, SchemaTypeRef, load_schema_manifest_str,
+    ProducerFingerprint, ProducerOrigin, ProjectionInputRef, ProjectionOutputTarget,
+    SchemaLiteralValue, SchemaProjectionInputSource, SchemaProjectionSelector,
+    SchemaTypeDefinition, SchemaTypeRef, load_schema_manifest_str,
 };
 
 use crate::diagnostic_codes;
@@ -50,10 +51,13 @@ fn valid_generated_manifest_loads_into_canonical_schema() {
         "{subject} does not trust {target} enough ({threshold})."
     );
     assert_eq!(
-        schema.availability_reasons["trust_too_low"]
-            .origin
-            .as_deref(),
-        Some("schema/availability.rs")
+        schema.availability_reasons["trust_too_low"].origin,
+        Some(ProducerOrigin {
+            kind: "script_member".to_owned(),
+            id: "schema/availability.rs".to_owned(),
+            label: None,
+            ..Default::default()
+        })
     );
     assert_eq!(
         schema.conditions["thread_stage"].returns,
@@ -76,6 +80,75 @@ fn valid_generated_manifest_loads_into_canonical_schema() {
         [MetadataTarget::Choice, MetadataTarget::Line]
     );
     assert!(!schema.markup["shake"].allows_nesting);
+}
+
+#[test]
+fn full_generated_manifest_loads_producer_metadata_and_projection_features() {
+    let report = load_schema_manifest_str(
+        "fixtures/schema/valid/full_manifest.json",
+        include_str!("../../../../fixtures/schema/valid/full_manifest.json"),
+    );
+
+    assert_eq!(diagnostic_codes(&report), Vec::<&str>::new());
+    let schema = report.schema.expect("full schema manifest");
+    assert_eq!(
+        schema.producer_metadata,
+        Some(recite_core::ProducerMetadata {
+            producer: Some(recite_core::ProducerIdentity {
+                kind: "adapter".to_owned(),
+                id: "example".to_owned(),
+            }),
+            content_fingerprint: Some(
+                recite_core::producer_content_fingerprint(
+                    "blake3",
+                    "0000000000000000000000000000000000000000000000000000000000000000",
+                )
+                .expect("valid content fingerprint"),
+            ),
+            schema_export_version: Some(1),
+            inclusion_policy: Some("dialogue-export-v1".to_owned()),
+            producer_fingerprints: vec![ProducerFingerprint {
+                id: "content/items".to_owned(),
+                kind: "directory".to_owned(),
+                algorithm: "blake3".to_owned(),
+                value: "6f1d".to_owned(),
+            }],
+        })
+    );
+    assert_eq!(
+        schema.registries["item"]
+            .origin
+            .as_ref()
+            .expect("registry provenance")
+            .id,
+        "content/items/brass_key.item"
+    );
+    assert_eq!(
+        schema.registries["item"]
+            .origin
+            .as_ref()
+            .expect("registry provenance")
+            .extensions["engine:resource_kind"],
+        recite_core::ProducerMetadataValue::String("item".to_owned())
+    );
+    let MetadataDomainDefinition::Flat(domain) = &schema.metadata_domains["tone"] else {
+        panic!("tone is a flat domain");
+    };
+    assert_eq!(domain.provenance.value_origins["calm"].kind, "data_row");
+    let MetadataDomainDefinition::Contextual(domain) = &schema.metadata_domains["tone_by_speaker"]
+    else {
+        panic!("tone_by_speaker is contextual");
+    };
+    assert_eq!(domain.provenance.context_origins["rhea"].kind, "data_row");
+    assert_eq!(
+        domain.provenance.value_origins["rhea"]["calm"].kind,
+        "data_cell"
+    );
+    assert_eq!(domain.provenance.producer_fingerprints.len(), 1);
+    assert_eq!(
+        schema.presentation_projectors["choice_skill_prefix"].inputs[2].type_ref,
+        SchemaTypeRef::Array(Box::new(SchemaTypeRef::Symbol))
+    );
 }
 
 #[test]

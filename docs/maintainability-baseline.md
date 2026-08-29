@@ -96,86 +96,100 @@ wire compatibility fixtures, and focused reviews for each subsystem.
 
 | Path | Lines | Kind | Owner | Disposition | Issue/reason |
 | --- | ---: | --- | --- | --- | --- |
-| `crates/recite-ffi/src/lib.rs` | 845 | production | ffi | exception | #135/#164/#171: retain the private encoder seam until the ABI façade split follows the symbol and threading inventory |
-| `crates/recite-core/src/schema/model/canonical.rs` | 621 | production | core/schema | review | Canonical model boundary; preserve public fingerprints |
-| `crates/recite-core/src/schema/manifest/lower/availability.rs` | 560 | production | core/schema | review | Reassess mapping and domain-validation ownership |
+| `crates/recite-core/src/schema/model/canonical.rs` | 619 | production | core/schema | review | Canonical model boundary; preserve public fingerprints |
+| `crates/recite-core/src/schema/manifest/lower/availability_bindings.rs` | 304 | production | core/schema | review | #182/#183: typed availability reason literal and condition-parameter bindings |
+| `crates/recite-core/src/schema/manifest/lower/availability/mapping.rs` | 298 | production | core/schema | review | #182: availability reason mapping validation and source-aware lowering |
+| `crates/recite-core/src/schema/manifest/lower/domains_provenance.rs` | 279 | production | core/schema | review | Domain provenance lowering owns flat and contextual provenance shapes |
+| `crates/recite-core/src/schema/manifest/lower/producer_provenance.rs` | 346 | production | core/schema | review | Producer origin and fingerprint lowering owns source-aware provenance paths |
 | `crates/recite-core/src/compiled/messagepack/tags.rs` | 506 | production | core/wire | cohesive | #89: explicit wire tag table |
-| `crates/recite-core/src/compiled/messagepack/wire.rs` | 505 | production | core/wire | exception | #89: retain the explicit decoder boundary while the v0 wire contract is synchronized |
+| `crates/recite-core/src/compiled/messagepack/wire.rs` | 692 | production | core/wire | exception | #89: retain the explicit decoder boundary while the v0 wire contract is synchronized |
 | `crates/recite-runtime/src/session_snapshot.rs` | 294 | production | runtime/snapshot | follow-up | #135: typed snapshot-boundary errors |
-| `crates/recite-core/src/compiled/messagepack/validate.rs` | 479 | production | core/wire | cohesive | #89: validation is part of the decoder boundary |
-| `crates/recite-lsp/src/workspace.rs` | 479 | production | lsp/workspace | follow-up | #164: separate document state, saved indexes, and analysis snapshots |
-| `crates/recite-compiler/src/wire/messagepack.rs` | 397 | production | compiler/wire | cohesive | #89: encoder mirror of the explicit decoder wire surface |
-| `crates/recite-cli/src/error.rs` | 394 | production | cli | review | Keep user-facing error projection separate from typed domain errors |
+| `crates/recite-core/src/compiled/messagepack/validate.rs` | 372 | production | core/wire | cohesive | #89: validation is part of the decoder boundary |
+| `crates/recite-lsp/src/workspace.rs` | 473 | production | lsp/workspace | follow-up | #164: separate document state, saved indexes, and analysis snapshots |
+| `crates/recite-compiler/src/wire/messagepack.rs` | 347 | production | compiler/wire | cohesive | #89: encoder mirror of the explicit decoder wire surface |
+| `crates/recite-cli/src/error.rs` | 372 | production | cli | review | Keep user-facing error projection separate from typed domain errors |
+| `crates/recite-ui/tests/diagnostics.rs` | 371 | test/support | ui/tests | review | Structured diagnostic resource and compatibility-message coverage |
 | `crates/recite-lsp/src/features/navigation.rs` | 394 | production | lsp/features | review | Feature-specific navigation projection |
-| `crates/recite-lsp/src/features/completion.rs` | 393 | production | lsp/features | review | Feature-specific completion and precedence handling |
+| `crates/recite-lsp/src/features/completion.rs` | 289 | production | lsp/features | review | Feature-specific completion and precedence handling |
+| `crates/recite-lsp/src/features/hover.rs` | 258 | production | lsp/features | review | Feature-specific hover projection |
+| `crates/recite-lsp/src/tests/availability/completion.rs` | 373 | test/support | lsp/tests | review | #176: contextual selector completion coverage |
 | `crates/recite-benchmarks/src/report/mod.rs` | 389 | production | benchmarks | cohesive | Report aggregation boundary |
 | `crates/recite-benchmarks/src/report/fixture.rs` | 387 | production | benchmarks | cohesive | Fixture report model |
-| `crates/recite-cli/src/runtime_fixture/execute.rs` | 383 | production | cli/runtime-fixture | review | Keep headless execution separate from rendering |
-| `crates/recite-godot/src/convert.rs` | 383 | production | godot | review | Host conversion boundary |
-| `crates/recite-lsp/src/server.rs` | 383 | production | lsp/server | follow-up | #164: make request dispatch and workspace ownership explicit |
+| `crates/recite-cli/src/runtime_fixture/execute.rs` | 323 | production | cli/runtime-fixture | review | Keep headless execution separate from rendering |
+| `crates/recite-cli/src/dialogue_locale/catalog.rs` | 267 | production | cli/localisation | review | #180: catalogue loading and one-call plural resolution remain a cohesive provider boundary |
+| `crates/recite-cli/src/runtime_fixture/trace/convert.rs` | 271 | production | cli/runtime-fixture | review | #180: structured trace conversion preserves plural resolution provenance |
+| `crates/recite-cli/src/runtime_fixture/trace/model.rs` | 263 | production | cli/runtime-fixture | review | #180: trace output model keeps localized templates and structured metadata distinct |
+| `crates/recite-godot/src/adapter.rs` | 361 | production | godot | review | Host adapter lifecycle boundary |
+| `crates/recite-lsp/src/server.rs` | 377 | production | lsp/server | follow-up | #164: make request dispatch and workspace ownership explicit |
 | `crates/recite-benchmarks/src/memory_profiles/mod.rs` | 373 | production | benchmarks | cohesive | Maintainer-only profile orchestration |
-| `crates/recite-cli/src/commands.rs` | 372 | production | cli | review | Command orchestration boundary |
+| `crates/recite-cli/src/commands.rs` | 394 | production | cli | review | Command orchestration boundary |
 | `crates/recite-compiler/src/wire/messagepack/tags.rs` | 373 | production | compiler/wire | cohesive | #89: encoder tag mirror |
-| `crates/recite-godot/src/adapter.rs` | 364 | production | godot | review | Host adapter lifecycle boundary |
-| `crates/recite-core/src/schema/model/mod.rs` | 361 | production | core/schema | review | Schema module exports and model grouping |
-| `crates/recite-cli/src/play/driver.rs` | 350 | production | cli/play | cohesive | Shared preview driver seam |
-| `crates/recite-runtime/src/traversal/availability.rs` | 349 | production | runtime/traversal | cohesive | Deterministic availability traversal |
-| `crates/recite-cli/src/play/tui/mod.rs` | 347 | production | cli/tui | review | TUI integration boundary |
-| `crates/recite-core/src/schema/manifest/raw.rs` | 345 | production | core/schema | cohesive | Lossless raw manifest model |
-| `crates/recite-compiler/src/compile/builder/rows.rs` | 337 | production | compiler | cohesive | Compiled row construction |
-| `crates/recite-compiler/src/pot.rs` | 333 | production | compiler/localisation | follow-up | #164: consume shared authoring analysis |
+| `crates/recite-core/src/schema/model/mod.rs` | 380 | production | core/schema | review | Schema module exports and model grouping |
+| `crates/recite-core/src/schema/source/edit.rs` | 359 | production | core/schema | review | Source-owned typed edits and CST-preserving layout updates |
+| `crates/recite-core/src/schema/source/export/basic.rs` | 284 | production | core/schema | cohesive | Deterministic JSON export for basic schema declarations |
+| `crates/recite-core/src/schema/source/lower/mod.rs` | 306 | production | core/schema | review | TOML source normalization and shared canonical lowering entrypoint |
+| `crates/recite-cli/src/play/driver.rs` | 360 | production | cli/play | cohesive | Shared preview driver seam |
+| `crates/recite-runtime/src/traversal/availability.rs` | 362 | production | runtime/traversal | cohesive | Deterministic availability traversal |
+| `crates/recite-runtime/src/traversal/interpolation.rs` | 398 | production | runtime/traversal | cohesive | #179/#180: typed interpolation and plural localisation after provider lookup |
+| `crates/recite-cli/src/play/tui/mod.rs` | 352 | production | cli/tui | review | TUI integration boundary |
+| `crates/recite-core/src/schema/manifest/raw.rs` | 391 | production | core/schema | cohesive | Lossless raw manifest model |
+| `crates/recite-compiler/src/compile/builder/rows.rs` | 353 | production | compiler | cohesive | Compiled row construction |
+| `crates/recite-compiler/src/pot.rs` | 353 | production | compiler/localisation | follow-up | #164: consume shared authoring analysis |
 | `crates/recite-benchmarks/src/id_metrics.rs` | 332 | production | benchmarks | cohesive | Maintainer metric calculations |
-| `crates/recite-ffi/src/output.rs` | 367 | production | ffi | follow-up | #135: preserve typed failures to the C boundary |
 | `crates/recite-runtime/src/traversal/asset.rs` | 328 | production | runtime/traversal | cohesive | Asset validation and traversal boundary |
-| `crates/recite-cli/src/i18n/messages.rs` | 323 | production | cli/i18n | follow-up | #166: shared Fluent resource ownership |
-| `crates/recite-compiler/src/wire/inspection.rs` | 312 | production | compiler/wire | review | Structured wire inspection projection |
+| `crates/recite-runtime/src/traversal/output.rs` | 270 | production | runtime/traversal | review | #180: structured plural output construction remains beside traversal until the output boundary settles |
+| `crates/recite-compiler/src/wire/inspection.rs` | 337 | production | compiler/wire | review | Structured wire inspection projection |
 | `crates/recite-benchmarks/src/project.rs` | 310 | production | benchmarks | cohesive | Synthetic project model |
-| `crates/recite-cli/src/play/plain.rs` | 309 | production | cli/play | cohesive | Plain preview adapter |
+| `crates/recite-cli/src/play/plain.rs` | 310 | production | cli/play | cohesive | Plain preview adapter |
 | `crates/recite-cli/src/play/tui/state.rs` | 307 | production | cli/tui | cohesive | TUI reducer state |
 | `crates/recite-compiler/src/compile/builder.rs` | 306 | production | compiler | cohesive | Compiled asset builder |
-| `crates/recite-lsp/src/features/completion/projection.rs` | 296 | production | lsp/features | review | Completion projection |
-| `crates/recite-core/src/schema/manifest/spans.rs` | 295 | production | core/schema | cohesive | Source-span calculation |
-| `crates/recite-lsp/src/features.rs` | 295 | production | lsp/features | review | Intentional ordered feature lookup |
+| `crates/recite-lsp/src/features/completion/projection.rs` | 317 | production | lsp/features | review | Completion projection |
+| `crates/recite-core/src/schema/manifest/spans.rs` | 328 | production | core/schema | cohesive | JSON span calculation and shared span state |
 | `crates/recite-cli/src/play/tui/interaction.rs` | 293 | production | cli/tui | cohesive | Input-to-intent translation |
-| `crates/recite-core/src/diagnostic.rs` | 289 | production | core/diagnostics | cohesive | Shared structured diagnostic surface |
-| `crates/recite-compiler/src/validation/metadata.rs` | 285 | production | compiler/validation | review | Metadata validation ownership |
-| `crates/recite-core/src/schema/manifest/lower/functions.rs` | 285 | production | core/schema | review | Function declaration lowering |
+| `crates/recite-compiler/src/validation/metadata.rs` | 276 | production | compiler/validation | review | Metadata validation ownership |
+| `crates/recite-compiler/src/validation/statements.rs` | 254 | production | compiler/validation | cohesive | Statement traversal remains separate from interpolation and plural validation seams |
+| `crates/recite-core/src/schema/manifest/lower/domains.rs` | 362 | production | core/schema | review | Strict domain shape and declaration lowering |
+| `crates/recite-core/src/schema/manifest/validate.rs` | 278 | production | core/schema | review | Shared schema reference and name validation boundary |
 | `crates/recite-compiler/src/validation/conditions.rs` | 282 | production | compiler/validation | cohesive | Condition validation |
-| `crates/recite-core/src/diagnostic/explanation/validation.rs` | 278 | production | core/diagnostics | cohesive | Diagnostic explanation catalog |
+| `crates/recite-core/src/diagnostic/explanation/validation.rs` | 352 | production | core/diagnostics | cohesive | Diagnostic explanation catalog |
 | `crates/recite-cli/src/play/tui/render/prompt.rs` | 270 | production | cli/tui | cohesive | Prompt rendering |
 | `crates/recite-cli/src/tui/config.rs` | 268 | production | cli/tui | follow-up | #167: replace manual config locations with OS-aware loading |
-| `crates/recite-cli/src/cli_help.rs` | 267 | production | cli | cohesive | CLI help presentation |
-| `crates/recite-godot/src/bindings.rs` | 267 | production | godot | review | Host binding declarations |
-| `crates/recite-cli/src/dialogue_locale/po.rs` | 266 | production | cli/localisation | follow-up | #166: source-preserving PO ownership |
-| `crates/recite-cli/src/runtime_fixture/prompt.rs` | 266 | production | cli/runtime-fixture | cohesive | Fixture prompt projection |
+| `crates/recite-cli/src/cli_help.rs` | 309 | production | cli | cohesive | CLI help presentation |
+| `crates/recite-godot/src/bindings.rs` | 353 | production | godot | review | Host binding declarations |
+| `crates/recite-cli/src/runtime_fixture/prompt.rs` | 276 | production | cli/runtime-fixture | cohesive | Fixture prompt projection |
 | `crates/recite-benchmarks/src/runtime.rs` | 265 | production | benchmarks | cohesive | Runtime benchmark harness |
 | `crates/recite-lsp/src/summary/file/collector.rs` | 256 | production | lsp/summary | review | File summary projection |
 
-| `crates/recite-runtime/tests/adapter_conformance/driver.rs` | 1153 | test/support | runtime/tests | exception | #171: shared conformance driver grows with typed callback scenarios; retain until adapter conformance split |
+| `crates/recite-runtime/tests/adapter_conformance/driver.rs` | 1179 | test/support | runtime/tests | exception | #171: shared conformance driver grows with typed callback scenarios; retain until adapter conformance split |
 | `crates/recite-cli/src/play/tui/render/tests.rs` | 811 | test/support | cli/tui/tests | cohesive | Private rendering contract tests |
-| `crates/recite-cli/tests/runtime.rs` | 759 | test/support | cli/tests | cohesive | Runtime command behavior suite |
-| `crates/recite-core/tests/compiled_messagepack.rs` | 693 | test/support | core/tests | cohesive | Wire compatibility contract |
-| `crates/recite-core/tests/schema_manifest/fingerprint.rs` | 638 | test/support | core/tests | cohesive | Canonical fingerprint contract |
-| `crates/recite-core/tests/support/mod.rs` | 605 | test/support | core/tests | cohesive | Shared model and wire constructors |
-| `crates/recite-runtime/tests/adapter_conformance/manifest.rs` | 571 | test/support | runtime/tests | cohesive | Adapter manifest contract |
-| `crates/recite-ffi/tests/conditions.rs` | 498 | test/support | ffi/tests | cohesive | #171: condition callback protocol coverage |
-| `crates/recite-compiler/tests/asset.rs` | 564 | test/support | compiler/tests | exception | #89: retain the shared compiled-asset fixture entry point for the wire contract guard |
+| `crates/recite-cli/tests/runtime.rs` | 659 | test/support | cli/tests | cohesive | Runtime command behavior suite |
+| `crates/recite-cli/tests/dialogue_locale.rs` | 480 | test/support | cli/tests | review | #180: end-to-end locale, plural, and trace scenarios remain grouped by the CLI contract |
+| `crates/recite-core/tests/support/mod.rs` | 554 | test/support | core/tests | cohesive | Shared model and wire constructors |
+| `crates/recite-core/tests/schema_manifest/fingerprint.rs` | 641 | test/support | core/tests | exception | #176: retain the canonical fingerprint fixture while typed provenance constructors migrate; producer-specific assertions are split into a dedicated test |
+| `crates/recite-ffi/tests/conditions.rs` | 437 | test/support | ffi/tests | cohesive | #171: condition callback protocol coverage |
+| `crates/recite-ffi/tests/interpolation.rs` | 402 | test/support | ffi/tests | cohesive | #179: typed interpolation adapter traversal coverage |
+| `crates/recite-ffi/tests/localisation.rs` | 368 | test/support | ffi/tests | cohesive | #166: shared locale callback fixtures and translated/fallback traversal coverage |
+| `crates/recite-ffi/src/session/start.rs` | 343 | production | ffi/session | cohesive | #166: provider-backed start ownership and rollback remain one cohesive session boundary |
+| `crates/recite-ffi/src/locale/provider.rs` | 273 | production | ffi/locale | cohesive | #166: owned callback provider request and result parsing remain one cohesive FFI boundary |
+| `crates/recite-ffi/src/session/restore.rs` | 284 | production | ffi/session | review | #166: provider-backed restore ownership and rollback boundary |
+| `crates/recite-godot/src/catalog.rs` | 313 | production | godot | review | #166: owned locale catalogue and deterministic provider resolution |
+| `crates/recite-godot/src/catalog_resource.rs` | 389 | production | godot | review | #166: serializable Resource catalogue boundary and validated rebuild |
+| `crates/recite-runtime/tests/interpolation.rs` | 496 | test/support | runtime/tests | review | #180: typed interpolation and plural provider scenarios remain grouped around runtime delivery |
+| `crates/recite-compiler/tests/asset.rs` | 640 | test/support | compiler/tests | exception | #89: retain the shared compiled-asset fixture entry point for the wire contract guard |
 | `crates/recite-ffi/tests/snapshots.rs` | 422 | test/support | ffi/tests | cohesive | #171: session snapshot and restore contract coverage |
-| `crates/recite-lsp/src/tests/support.rs` | 423 | test/support | lsp/tests | review | Test support ownership; retain private access where required |
-| `crates/recite-lsp/src/tests/project_indexes.rs` | 422 | test/support | lsp/tests | review | Private index behavior |
-| `crates/recite-core/tests/compiled_model.rs` | 419 | test/support | core/tests | cohesive | Compiled model behavior |
+| `crates/recite-lsp/src/tests/support.rs` | 457 | test/support | lsp/tests | review | Test support ownership; retain private access where required |
+| `crates/recite-core/tests/compiled_model.rs` | 427 | test/support | core/tests | cohesive | Compiled model behavior |
 | `crates/recite-compiler/tests/asset/tag_surface.rs` | 486 | test/support | compiler/tests | cohesive | Wire tag surface |
-| `crates/recite-runtime/tests/traversal/localisation.rs` | 411 | test/support | runtime/tests | cohesive | Locale traversal contract |
+| `crates/recite-runtime/tests/traversal/localisation.rs` | 441 | test/support | runtime/tests | cohesive | Locale traversal contract |
 | `crates/recite-parser/tests/parser/lowering.rs` | 406 | test/support | parser/tests | cohesive | Lowering behavior suite |
-| `crates/recite-compiler/tests/pot_extraction.rs` | 404 | test/support | compiler/tests | follow-up | #166: shared localisation extraction fixtures |
-| `crates/recite-lsp/src/tests/diagnostics.rs` | 402 | test/support | lsp/tests | review | Private diagnostic projection tests |
-| `crates/recite-fixturegen/tests/generation.rs` | 395 | test/support | fixturegen/tests | cohesive | Deterministic generation contract |
+| `crates/recite-compiler/tests/pot_extraction.rs` | 461 | test/support | compiler/tests | follow-up | #166: shared localisation extraction fixtures |
+| `crates/recite-fixturegen/tests/generation.rs` | 416 | test/support | fixturegen/tests | cohesive | Deterministic generation contract |
 | `crates/recite-ffi/tests/lifecycle.rs` | 399 | test/support | ffi/tests | cohesive | #171: session lifecycle and begin retry coverage |
-| `crates/recite-runtime/tests/adapter_conformance.rs` | 383 | test/support | runtime/tests | cohesive | Adapter conformance entry point |
-| `crates/recite-core/tests/schema_manifest/load_valid.rs` | 379 | test/support | core/tests | cohesive | Valid manifest coverage |
+| `crates/recite-runtime/tests/adapter_conformance.rs` | 426 | test/support | runtime/tests | cohesive | Adapter conformance entry point |
+| `crates/recite-core/tests/schema_manifest/load_valid.rs` | 452 | test/support | core/tests | cohesive | Valid manifest coverage |
 | `crates/recite-runtime/tests/session_serialization/invalid_snapshots.rs` | 478 | test/support | runtime/tests | cohesive | Snapshot failure contract |
-| `crates/recite-parser/tests/parser/statements.rs` | 374 | test/support | parser/tests | cohesive | Statement parser coverage |
+| `crates/recite-parser/tests/parser/statements.rs` | 379 | test/support | parser/tests | cohesive | Statement parser coverage |
 | `crates/recite-cli/tests/watch_stress.rs` | 366 | test/support | cli/tests | cohesive | Watch stress harness |
 | `crates/recite-runtime/tests/traversal/conditions/choice_conditions.rs` | 365 | test/support | runtime/tests | cohesive | Choice condition coverage |
-| `crates/recite-lsp/src/tests.rs` | 369 | test/support | lsp/tests | cohesive | Module aggregator, not production implementation |
+| `crates/recite-lsp/src/tests.rs` | 443 | test/support | lsp/tests | cohesive | Module aggregator, not production implementation |
 | `crates/recite-lsp/src/tests/code_action/schema_entry.rs` | 357 | test/support | lsp/tests | review | Private code-action behavior |

@@ -47,15 +47,21 @@ pub(super) const EXPLANATIONS: &[DiagnosticExplanation] = &[
     DiagnosticExplanation::new(
         "RECITE_PROJECT007",
         DiagnosticCategory::Project,
-        "A referenced compiled asset could not be decoded as Recite dialogue.",
-        &["The file is not a Recite asset or it was produced with an unsupported format."],
-        &["Recompile the asset from source and verify the manifest path."],
+        "A referenced compiled asset is malformed, not a Recite asset, or uses an unsupported format.",
+        &[
+            "The file cannot be decoded as a valid Recite asset because it is malformed, from another format, or from an unsupported version.",
+        ],
+        &["Recompile the asset from source with the current Recite compiler."],
     ),
     DiagnosticExplanation::new(
         "RECITE_PROJECT008",
         DiagnosticCategory::Project,
-        "A project scene references a participant that is not declared.",
-        &["The participant name is misspelled or missing from the project manifest."],
-        &["Declare the participant or update the scene reference."],
+        "A project participant reference does not match the declared participant contract.",
+        &[
+            "The scene manifest omits the participant, or the compiled asset and schema participant sets differ.",
+        ],
+        &[
+            "Declare the participant in the manifest and schema, or recompile the asset from the current participant contract.",
+        ],
     ),
 ];

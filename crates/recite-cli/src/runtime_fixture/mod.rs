@@ -1,5 +1,6 @@
 mod execute;
 mod fixture;
+mod metrics;
 mod prompt;
 mod trace;
 

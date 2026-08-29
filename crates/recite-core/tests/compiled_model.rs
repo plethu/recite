@@ -5,21 +5,21 @@ use recite_core::{
     COMPILED_ASSET_FORMAT_VERSION_V0, COMPILER_COMPATIBILITY_VERSION_V0, ChoiceId, ChoiceIndex,
     ChoiceLookupEntry, ChoiceLookupTable, ChoiceRange, CompiledAssetEncoding, CompiledAssetHeader,
     CompiledAssetId, CompiledChoice, CompiledChoiceEcho, CompiledDialogue, CompiledDivertTarget,
-    CompiledInspectionEncoding, CompiledLine, CompiledMatchArm, CompiledMatchPattern,
-    CompiledMetadataEntry, CompiledSourceMapEntry, CompiledStatement, CompiledStatementKind,
-    CompiledValueError, CompilerVersion, ContentFingerprint, LineId, LineIndex, LineLookupEntry,
-    LineLookupTable, MatchArmIndex, MatchArmRange, MetadataIndex, MetadataRange, ScalarValue,
-    SchemaFingerprint, SourceFileIndex, SourceMapId, SourceMapIndex, SourcePosition, SourceSpan,
-    SpeakerIndex, StatementIndex, StatementRange, V0_ARGUMENT_TAG_IDENTIFIER,
-    V0_ARGUMENT_TAG_VALUE, V0_ASSET_ENCODING_MESSAGEPACK, V0_ASSET_HEADER_FIELDS,
-    V0_CHOICE_ECHO_TAG_EXPLICIT_LINE, V0_CHOICE_ECHO_TAG_NONE, V0_CHOICE_ECHO_TAG_SELECTED_TEXT,
-    V0_CHOICE_FIELDS, V0_COMPILED_DIALOGUE_FIELDS, V0_CONDITION_TAG_AND, V0_CONDITION_TAG_CALL,
-    V0_CONDITION_TAG_NOT, V0_CONDITION_TAG_OR, V0_DIVERT_TARGET_TAG_BLOCK,
-    V0_DIVERT_TARGET_TAG_END, V0_EFFECT_MODE_TAG_BLOCKING, V0_EFFECT_MODE_TAG_DEFERRED,
-    V0_EFFECT_MODE_TAG_IMMEDIATE, V0_INSPECTION_ENCODING_COMPACT_JSON, V0_LOOKUP_ENTRY_FIELDS,
-    V0_MATCH_ARM_FIELDS, V0_MATCH_PATTERN_TAG_VARIANT, V0_MATCH_PATTERN_TAG_WILDCARD,
-    V0_RANGE_FIELDS, V0_SCALAR_TAG_BOOLEAN, V0_SCALAR_TAG_FLOAT, V0_SCALAR_TAG_INTEGER,
-    V0_SCALAR_TAG_STRING, V0_SCHEMA_FINGERPRINT_TAG_FINGERPRINT,
+    CompiledInspectionEncoding, CompiledInterpolationMode, CompiledLine, CompiledMatchArm,
+    CompiledMatchPattern, CompiledMetadataEntry, CompiledSourceMapEntry, CompiledStatement,
+    CompiledStatementKind, CompiledValueError, CompilerVersion, ContentFingerprint, LineId,
+    LineIndex, LineLookupEntry, LineLookupTable, MatchArmIndex, MatchArmRange, MetadataIndex,
+    MetadataRange, ScalarValue, SchemaFingerprint, SourceFileIndex, SourceMapId, SourceMapIndex,
+    SourcePosition, SourceSpan, SpeakerIndex, StatementIndex, StatementRange,
+    V0_ARGUMENT_TAG_IDENTIFIER, V0_ARGUMENT_TAG_VALUE, V0_ASSET_ENCODING_MESSAGEPACK,
+    V0_ASSET_HEADER_FIELDS, V0_CHOICE_ECHO_TAG_EXPLICIT_LINE, V0_CHOICE_ECHO_TAG_NONE,
+    V0_CHOICE_ECHO_TAG_SELECTED_TEXT, V0_CHOICE_FIELDS, V0_COMPILED_DIALOGUE_FIELDS,
+    V0_CONDITION_TAG_AND, V0_CONDITION_TAG_CALL, V0_CONDITION_TAG_NOT, V0_CONDITION_TAG_OR,
+    V0_DIVERT_TARGET_TAG_BLOCK, V0_DIVERT_TARGET_TAG_END, V0_EFFECT_MODE_TAG_BLOCKING,
+    V0_EFFECT_MODE_TAG_DEFERRED, V0_EFFECT_MODE_TAG_IMMEDIATE, V0_INSPECTION_ENCODING_COMPACT_JSON,
+    V0_LOOKUP_ENTRY_FIELDS, V0_MATCH_ARM_FIELDS, V0_MATCH_PATTERN_TAG_VARIANT,
+    V0_MATCH_PATTERN_TAG_WILDCARD, V0_RANGE_FIELDS, V0_SCALAR_TAG_BOOLEAN, V0_SCALAR_TAG_FLOAT,
+    V0_SCALAR_TAG_INTEGER, V0_SCALAR_TAG_STRING, V0_SCHEMA_FINGERPRINT_TAG_FINGERPRINT,
     V0_SCHEMA_FINGERPRINT_TAG_NO_SCHEMA, V0_SOURCE_SPAN_FIELDS, V0_STATEMENT_TAG_DIVERT,
     V0_STATEMENT_TAG_EFFECT, V0_STATEMENT_TAG_END, V0_STATEMENT_TAG_IF, V0_STATEMENT_TAG_LINE,
     V0_STATEMENT_TAG_MATCH, V0_STATEMENT_TAG_PROMPT, V0_VALUE_TAG_ARRAY, V0_VALUE_TAG_SCALAR,
@@ -30,7 +30,7 @@ use recite_core::{
 fn v0_wire_constants_lock_main_tuple_and_tag_decisions() {
     assert_eq!(V0_COMPILED_DIALOGUE_FIELDS, 17);
     assert_eq!(V0_ASSET_HEADER_FIELDS, 8);
-    assert_eq!(V0_CHOICE_FIELDS, 9);
+    assert_eq!(V0_CHOICE_FIELDS, 11);
     assert_eq!(V0_MATCH_ARM_FIELDS, 3);
     assert_eq!(V0_RANGE_FIELDS, 2);
     assert_eq!(V0_LOOKUP_ENTRY_FIELDS, 2);
@@ -161,6 +161,11 @@ fn compiled_rows_require_stable_line_and_choice_ids() {
     let line = CompiledLine {
         id: LineId::new("intro_001").expect("valid line id"),
         source_text: "Welcome.".to_owned(),
+        plural_source_text: None,
+        authored_source_text: "Welcome.".to_owned(),
+        authored_plural_source_text: None,
+        interpolation_bindings: Vec::new(),
+        interpolation_mode: CompiledInterpolationMode::Current,
         speaker: Some(SpeakerIndex::new(0)),
         metadata: MetadataRange::new(MetadataIndex::new(0), 0),
         source_map: SourceMapIndex::new(0),
@@ -168,6 +173,9 @@ fn compiled_rows_require_stable_line_and_choice_ids() {
     let choice = CompiledChoice {
         id: ChoiceId::new("ask_work").expect("valid choice id"),
         source_text: "Ask about work.".to_owned(),
+        authored_source_text: "Ask about work.".to_owned(),
+        interpolation_bindings: Vec::new(),
+        interpolation_mode: CompiledInterpolationMode::Current,
         metadata: MetadataRange::new(MetadataIndex::new(0), 0),
         availability_requirement: None,
         availability_requirement_source_text: None,

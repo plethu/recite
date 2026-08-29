@@ -260,9 +260,14 @@ fn trailing_choice_if_reports_targeted_help_without_condition_cascade() {
 
     assert_diagnostic_codes(&lowered, ["RECITE_PARSE018"]);
     assert_eq!(
-        lowered.diagnostics[0].help.as_deref(),
-        Some("use requires=(...) for visible unavailable choices or :if for hidden choices")
+        lowered.diagnostics[0]
+            .help_presentation
+            .as_ref()
+            .map(|presentation| presentation.id().as_str()),
+        Some("diagnostic-parse-018-remediation-001")
     );
+    assert!(lowered.diagnostics[0].help.is_none());
+    assert!(lowered.diagnostics[0].record().is_ok());
     let choice = choice_statement(single_block(&lowered), 0);
     assert!(choice.availability_requirement.is_none());
 }

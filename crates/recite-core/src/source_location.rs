@@ -1,9 +1,11 @@
 use std::num::NonZeroU32;
 
+use serde::{Deserialize, Serialize};
+
 use crate::CoreValueError;
 
 /// A 1-based position in an author-visible source file.
-#[derive(Clone, Copy, Debug, Eq, PartialEq, Hash, Ord, PartialOrd)]
+#[derive(Clone, Copy, Debug, Eq, PartialEq, Hash, Ord, PartialOrd, Serialize, Deserialize)]
 pub struct SourcePosition {
     line: NonZeroU32,
     column: NonZeroU32,
@@ -33,7 +35,7 @@ impl SourcePosition {
 }
 
 /// A span in a source file, suitable for diagnostics and editor surfaces.
-#[derive(Clone, Debug, Eq, PartialEq, Hash)]
+#[derive(Clone, Debug, Eq, PartialEq, Hash, Serialize, Deserialize)]
 pub struct SourceSpan {
     pub file: String,
     pub start: SourcePosition,

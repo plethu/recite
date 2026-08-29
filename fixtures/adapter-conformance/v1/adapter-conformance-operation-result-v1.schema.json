@@ -198,6 +198,12 @@
             },
             "locale": {
               "type": "string"
+            },
+            "interpolation_values": {
+              "type": "object",
+              "additionalProperties": {
+                "type": "integer"
+              }
             }
           },
           "additionalProperties": false
@@ -723,6 +729,139 @@
       },
       "additionalProperties": false
     },
+    "plural_resolution_outcome": {
+      "type": "string",
+      "enum": [
+        "translated",
+        "english_source_fallback"
+      ]
+    },
+    "plural_attempt_outcome": {
+      "type": "string",
+      "enum": [
+        "missing_plural_forms",
+        "missing_entry",
+        "missing_translation",
+        "matched"
+      ]
+    },
+    "plural_attempt": {
+      "type": "object",
+      "required": [
+        "locale",
+        "context",
+        "key",
+        "selected_arm",
+        "outcome"
+      ],
+      "properties": {
+        "locale": {
+          "type": "string"
+        },
+        "context": {
+          "type": "string"
+        },
+        "key": {
+          "type": "string"
+        },
+        "selected_arm": {
+          "type": [
+            "integer",
+            "null"
+          ],
+          "minimum": 0
+        },
+        "outcome": {
+          "$ref": "#/$defs/plural_attempt_outcome"
+        }
+      },
+      "additionalProperties": false
+    },
+    "plural_resolution": {
+      "type": "object",
+      "required": [
+        "attempts",
+        "matched_locale",
+        "matched_context",
+        "matched_key",
+        "matched_arm",
+        "source_fallback_arm",
+        "outcome"
+      ],
+      "properties": {
+        "attempts": {
+          "type": "array",
+          "items": {
+            "$ref": "#/$defs/plural_attempt"
+          }
+        },
+        "matched_locale": {
+          "type": [
+            "string",
+            "null"
+          ]
+        },
+        "matched_context": {
+          "type": [
+            "string",
+            "null"
+          ]
+        },
+        "matched_key": {
+          "type": [
+            "string",
+            "null"
+          ]
+        },
+        "matched_arm": {
+          "type": [
+            "integer",
+            "null"
+          ],
+          "minimum": 0
+        },
+        "source_fallback_arm": {
+          "type": [
+            "integer",
+            "null"
+          ],
+          "minimum": 0
+        },
+        "outcome": {
+          "$ref": "#/$defs/plural_resolution_outcome"
+        }
+      },
+      "additionalProperties": false
+    },
+    "plural_line": {
+      "type": "object",
+      "required": [
+        "singular_source_text",
+        "plural_source_text",
+        "count",
+        "selected_arm",
+        "resolution"
+      ],
+      "properties": {
+        "singular_source_text": {
+          "type": "string"
+        },
+        "plural_source_text": {
+          "type": "string"
+        },
+        "count": {
+          "type": "integer"
+        },
+        "selected_arm": {
+          "type": "integer",
+          "minimum": 0
+        },
+        "resolution": {
+          "$ref": "#/$defs/plural_resolution"
+        }
+      },
+      "additionalProperties": false
+    },
     "step_expectation": {
       "type": "object",
       "required": [
@@ -747,6 +886,9 @@
         },
         "line_text": {
           "type": "string"
+        },
+        "line_plural": {
+          "$ref": "#/$defs/plural_line"
         },
         "prompt_unavailable_choice_ids": {
           "type": "array",

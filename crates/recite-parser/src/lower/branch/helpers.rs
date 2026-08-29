@@ -38,7 +38,7 @@ pub(super) fn parse_condition_expression_header(
     match parse_condition_expression(path, header.line, header.column, header.text) {
         Ok(condition) => Some(condition),
         Err(error) => {
-            diagnostics.push(malformed_condition(error.span, error.message));
+            diagnostics.push(malformed_condition(error));
             None
         }
     }
@@ -52,7 +52,7 @@ pub(super) fn parse_condition_call_header(
     match parse_condition_call(path, header.line, header.column, header.text) {
         Ok(call) => Some(call),
         Err(error) => {
-            diagnostics.push(malformed_condition(error.span, error.message));
+            diagnostics.push(malformed_condition(error));
             None
         }
     }

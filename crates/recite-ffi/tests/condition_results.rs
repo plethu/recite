@@ -42,7 +42,7 @@ fn invalid_condition_result_returns_invalid_condition_result_status() {
         recite_session_register_condition(
             session,
             name.as_ptr(),
-            invalid_msgpack_result,
+            Some(invalid_msgpack_result),
             std::ptr::null_mut(),
         )
     };
@@ -205,7 +205,7 @@ fn condition_results_require_exact_ok_and_complete_named_maps() {
             recite_session_register_condition(
                 session,
                 name.as_ptr(),
-                handler,
+                Some(handler),
                 (&raw mut case).cast(),
             )
         };

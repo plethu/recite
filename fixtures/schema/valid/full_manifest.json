@@ -1,0 +1,217 @@
+{
+  "schema_version": 1,
+  "producer": {
+    "kind": "adapter",
+    "id": "example"
+  },
+  "content_fingerprint": {
+    "algorithm": "blake3",
+    "value": "0000000000000000000000000000000000000000000000000000000000000000"
+  },
+  "schema_export_version": 1,
+  "inclusion_policy": "dialogue-export-v1",
+  "producer_fingerprints": [
+    {
+      "id": "content/items",
+      "kind": "directory",
+      "algorithm": "blake3",
+      "value": "6f1d"
+    }
+  ],
+  "types": {
+    "mood": {
+      "kind": "enum",
+      "values": ["calm", "hurt"]
+    }
+  },
+  "registries": {
+    "item": {
+      "values": ["brass_key"],
+      "origin": {
+        "kind": "asset_path",
+        "id": "content/items/brass_key.item",
+        "label": "Brass Key",
+        "engine:resource_kind": "item"
+      },
+      "value_origins": {
+        "brass_key": {
+          "kind": "asset_path",
+          "id": "content/items/brass_key.item"
+        }
+      },
+      "producer_fingerprints": [
+        {
+          "id": "content/items",
+          "kind": "directory",
+          "algorithm": "blake3",
+          "value": "6f1d"
+        }
+      ]
+    }
+  },
+  "speakers": {
+    "rhea": {}
+  },
+  "conditions": {
+    "can_open": {
+      "params": [{"name": "item", "type": "registry:item"}],
+      "availability_reason": {
+        "reason": "missing_key",
+        "args": {"item": "$item"}
+      }
+    }
+  },
+  "availability_reasons": {
+    "missing_key": {
+      "template": "You need {item}.",
+      "params": [{"name": "item", "type": "registry:item"}],
+      "origin": {
+        "kind": "script_member",
+        "id": "schema/reasons.rs"
+      }
+    }
+  },
+  "effects": {
+    "open": {
+      "modes": ["immediate"],
+      "params": [{"name": "item", "type": "registry:item"}]
+    }
+  },
+  "metadata_domains": {
+    "tone": {
+      "kind": "flat",
+      "values": ["calm", "hurt"],
+      "origin": {
+        "kind": "data_row",
+        "id": "content/tone.toml#tone"
+      },
+      "value_origins": {
+        "calm": {"kind": "data_row", "id": "content/tone.toml#calm"}
+      },
+      "producer_fingerprints": [
+        {
+          "id": "content/tone.toml",
+          "kind": "file",
+          "algorithm": "blake3",
+          "value": "tone-v1"
+        }
+      ]
+    },
+    "tone_by_speaker": {
+      "kind": "contextual",
+      "selector": "field:speaker",
+      "values_by_context": {
+        "rhea": ["calm"]
+      },
+      "missing_context": {
+        "policy": "fallback",
+        "domain": "tone"
+      },
+      "origin": {
+        "kind": "data_table",
+        "id": "content/tone.csv"
+      },
+      "context_origins": {
+        "rhea": {
+          "kind": "data_row",
+          "id": "content/tone.csv#rhea"
+        }
+      },
+      "value_origins": {
+        "rhea": {
+          "calm": {
+            "kind": "data_cell",
+            "id": "content/tone.csv#rhea/calm"
+          }
+        }
+      },
+      "producer_fingerprints": [
+        {
+          "id": "content/tone.csv",
+          "kind": "file",
+          "algorithm": "blake3",
+          "value": "tone-v1"
+        }
+      ]
+    }
+  },
+  "metadata": {
+    "skill": {"targets": ["choice"], "type": "string"},
+    "threshold": {"targets": ["choice"], "type": "int"},
+    "tag": {"targets": ["choice"], "type": "symbol", "repeatable": true}
+  },
+  "projection_queries": {
+    "actor_skill": {
+      "params": [{"name": "skill", "type": "string"}],
+      "returns": "int",
+      "max_calls_per_event": 1
+    }
+  },
+  "presentation_projectors": {
+    "choice_skill_prefix": {
+      "candidates": {
+        "kind": "metadata_set",
+        "target": "choice",
+        "required_keys": ["skill", "threshold"]
+      },
+      "inputs": [
+        {
+          "name": "skill",
+          "source": {"kind": "candidate_metadata", "key": "skill"},
+          "type": "string",
+          "required": true
+        },
+        {
+          "name": "threshold",
+          "source": {"kind": "candidate_metadata", "key": "threshold"},
+          "type": "int",
+          "required": true
+        },
+        {
+          "name": "tags",
+          "source": {
+            "kind": "candidate_metadata",
+            "key": "tag",
+            "occurrence": "all"
+          },
+          "type": "array:symbol"
+        }
+      ],
+      "queries": {
+        "current": {
+          "function": "actor_skill",
+          "args": [{"input": "skill"}]
+        }
+      },
+      "outputs": {
+        "prefix": {
+          "target": "candidate",
+          "kind": "badge",
+          "slot": "prefix",
+          "label": {
+            "template_id": "skill_check_prefix",
+            "source_text": "[{skill} {current}/{threshold}]",
+            "args": {
+              "skill": {"source": {"input": "skill"}, "type": "string"},
+              "current": {"source": {"query_result": "current"}, "type": "int"},
+              "threshold": {"source": {"input": "threshold"}, "type": "int"}
+            }
+          },
+          "fields": {
+            "current": {
+              "source": {"kind": "query_result", "name": "current"},
+              "type": "int"
+            },
+            "threshold": {
+              "source": {"kind": "input", "name": "threshold"},
+              "type": "int"
+            }
+          }
+        }
+      }
+    }
+  },
+  "markup": {
+    "slow": {"requires_closing": true, "translatable": true}
+  }
+}

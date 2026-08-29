@@ -1,6 +1,8 @@
 use crate::{AvailabilityReasonId, ChoiceId, LineId, SourceAnchor, SourceId, SourceSpan};
 
-use super::{ConditionExpression, DivertTarget, SourceMetadata, SourceText, Statement};
+use super::{
+    ConditionExpression, DivertTarget, InterpolationBinding, SourceMetadata, SourceText, Statement,
+};
 
 /// A player-selectable choice. Missing IDs are represented for later
 /// compiler/LSP validation.
@@ -9,6 +11,7 @@ pub struct Choice {
     pub source_id: SourceId,
     pub id: Option<ChoiceId>,
     pub source_text: SourceText,
+    pub interpolation_bindings: Vec<InterpolationBinding>,
     pub metadata: SourceMetadata,
     pub availability_requirement: Option<ChoiceAvailabilityRequirement>,
     pub availability_reason_override: Option<ChoiceAvailabilityReasonOverride>,
@@ -29,6 +32,7 @@ impl Choice {
                 .unwrap_or(SourceId::Missing),
             id,
             source_text,
+            interpolation_bindings: Vec::new(),
             metadata: SourceMetadata::new(),
             availability_requirement: None,
             availability_reason_override: None,
@@ -49,6 +53,12 @@ impl Choice {
     #[must_use]
     pub fn with_metadata(mut self, metadata: SourceMetadata) -> Self {
         self.metadata = metadata;
+        self
+    }
+
+    #[must_use]
+    pub fn with_interpolation_bindings(mut self, bindings: Vec<InterpolationBinding>) -> Self {
+        self.interpolation_bindings = bindings;
         self
     }
 

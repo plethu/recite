@@ -1,0 +1,16 @@
+:: marche.default default speaker=élise location=quai location=night
+# Shared pressure fixture: stable IDs, interpolation, plural source forms, and markup.
+> arrivée.interpolée@55667788990011223344 speaker=élise mood=calm mood=urgent bind=(traveller_name:string=$traveller_name)
+  [slow]The tide is turning, {traveller_name}.[/slow]
+  ? ask_news@66778899001122334455 bind=(topic:string=$topic) tone=plain
+    Tell me about {topic}.
+    -> letters
+-> END
+
+:: letters
+> letters.ledger@0a1b2c3d4e5f60718293 speaker=élise bind=(count:int=$letters_remaining)
+  You have one letter.
+  | You have {count} letters.
+> letters.close@77889900112233445566 speaker=archivist
+  The ledger closes.
+-> END

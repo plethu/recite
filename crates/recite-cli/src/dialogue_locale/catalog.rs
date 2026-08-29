@@ -3,14 +3,17 @@ use std::fs;
 use std::path::PathBuf;
 
 use recite_core::LocaleId;
-use recite_runtime::{LocaleProvider, TextDomain};
+use recite_runtime::{
+    LocaleProvider, PluralResolution, PluralResolutionAttempt, PluralResolutionOutcome, TextDomain,
+};
 
 use super::po::parse_po_catalog;
 use crate::error::CliError;
 
 #[derive(Debug, Default)]
 pub(crate) struct DialogueCatalogProvider {
-    translations: BTreeMap<CatalogKey, String>,
+    translations: BTreeMap<CatalogKey, CatalogValue>,
+    plural_forms: BTreeMap<String, String>,
 }
 
 impl DialogueCatalogProvider {
@@ -27,16 +30,34 @@ impl DialogueCatalogProvider {
             path: catalog.path.clone(),
             source,
         })?;
-        let entries = parse_po_catalog(&catalog.path, &source)?;
+        let parsed = parse_po_catalog(&catalog.path, &source)?;
+        if let Some(plural_forms) = parsed.plural_forms {
+            let locale = catalog.locale.as_str().to_owned();
+            if let Some(existing) = self.plural_forms.get(&locale)
+                && existing != &plural_forms
+            {
+                return Err(CliError::DialogueCatalogPluralFormsConflict {
+                    path: catalog.path,
+                    locale,
+                    existing: existing.clone(),
+                    provided: plural_forms,
+                });
+            }
+            self.plural_forms.insert(locale, plural_forms);
+        }
 
-        for entry in entries {
+        for entry in parsed.entries {
             let key = CatalogKey {
                 locale: catalog.locale.as_str().to_owned(),
                 context: entry.context,
                 source_text: entry.source_text,
+                plural_source_text: entry.plural_source_text,
+            };
+            let value = CatalogValue {
+                translations: entry.translations,
             };
             if let Some(existing) = self.translations.get(&key) {
-                if existing != &entry.translation {
+                if existing != &value {
                     return Err(CliError::DialogueCatalogConflict {
                         path: catalog.path,
                         locale: key.locale,
@@ -46,7 +67,7 @@ impl DialogueCatalogProvider {
                 }
                 continue;
             }
-            self.translations.insert(key, entry.translation);
+            self.translations.insert(key, value);
         }
 
         Ok(())
@@ -58,9 +79,26 @@ impl DialogueCatalogProvider {
                 locale: locale.to_owned(),
                 context: context.to_owned(),
                 source_text: source_text.to_owned(),
+                plural_source_text: None,
             })
+            .and_then(|value| value.translations.first())
             .filter(|translation| !translation.is_empty())
             .cloned()
+    }
+
+    fn plural_entry(
+        &self,
+        locale: &str,
+        context: &str,
+        source_singular: &str,
+        source_plural: &str,
+    ) -> Option<&CatalogValue> {
+        self.translations.get(&CatalogKey {
+            locale: locale.to_owned(),
+            context: context.to_owned(),
+            source_text: source_singular.to_owned(),
+            plural_source_text: Some(source_plural.to_owned()),
+        })
     }
 }
 
@@ -69,21 +107,128 @@ impl LocaleProvider for DialogueCatalogProvider {
         &self,
         id: &str,
         source_text: &str,
-        _domain: TextDomain,
+        domain: TextDomain,
         locale: &LocaleId,
         variant: Option<&str>,
-    ) -> Option<String> {
-        for locale in locale_fallbacks(locale.as_str()) {
-            if let Some(translation) = variant.and_then(|variant| {
-                self.lookup_context(&locale, &format!("{id}&{variant}"), source_text)
-            }) {
-                return Some(translation);
-            }
-            if let Some(translation) = self.lookup_context(&locale, id, source_text) {
-                return Some(translation);
+    ) -> Result<Option<String>, recite_runtime::LocaleError> {
+        let context = gettext_context(id, domain);
+        let locales = locale_fallbacks(locale.as_str());
+        for candidate_context in gettext_contexts(&context, variant) {
+            for candidate_locale in &locales {
+                if let Some(translation) =
+                    self.lookup_context(candidate_locale, &candidate_context, source_text)
+                {
+                    return Ok(Some(translation));
+                }
             }
         }
-        None
+        Ok(None)
+    }
+
+    fn resolve_plural(
+        &self,
+        id: &str,
+        source_singular: &str,
+        source_plural: &str,
+        count: i64,
+        domain: TextDomain,
+        locale: &LocaleId,
+        variant: Option<&str>,
+    ) -> Result<PluralResolution, recite_runtime::LocaleError> {
+        let context = gettext_context(id, domain);
+        let mut attempts = Vec::new();
+        let locales = locale_fallbacks(locale.as_str());
+        for candidate_context in gettext_contexts(&context, variant) {
+            for candidate in &locales {
+                let Some(header) = self.plural_forms.get(candidate) else {
+                    attempts.push(PluralResolutionAttempt {
+                        locale: candidate.clone(),
+                        context: candidate_context.clone(),
+                        key: id.to_owned(),
+                        selected_arm: None,
+                        outcome: PluralResolutionOutcome::MissingPluralForms,
+                    });
+                    continue;
+                };
+                let arm = recite_core::evaluate_plural_form(header, count)
+                    .map_err(|error| recite_runtime::LocaleError::new(error.to_string()))?;
+                let Some(entry) = self.plural_entry(
+                    candidate,
+                    &candidate_context,
+                    source_singular,
+                    source_plural,
+                ) else {
+                    attempts.push(PluralResolutionAttempt {
+                        locale: candidate.clone(),
+                        context: candidate_context.clone(),
+                        key: id.to_owned(),
+                        selected_arm: Some(arm),
+                        outcome: PluralResolutionOutcome::MissingEntry,
+                    });
+                    continue;
+                };
+                let Some(translation) = entry.translations.get(arm) else {
+                    attempts.push(PluralResolutionAttempt {
+                        locale: candidate.clone(),
+                        context: candidate_context.clone(),
+                        key: id.to_owned(),
+                        selected_arm: Some(arm),
+                        outcome: PluralResolutionOutcome::MissingTranslation,
+                    });
+                    continue;
+                };
+                if translation.is_empty() {
+                    attempts.push(PluralResolutionAttempt {
+                        locale: candidate.clone(),
+                        context: candidate_context.clone(),
+                        key: id.to_owned(),
+                        selected_arm: Some(arm),
+                        outcome: PluralResolutionOutcome::MissingTranslation,
+                    });
+                    continue;
+                }
+                let matched_context = candidate_context.clone();
+                attempts.push(PluralResolutionAttempt {
+                    locale: candidate.clone(),
+                    context: candidate_context.clone(),
+                    key: id.to_owned(),
+                    selected_arm: Some(arm),
+                    outcome: PluralResolutionOutcome::Matched,
+                });
+                return Ok(PluralResolution {
+                    template: Some(translation.clone()),
+                    selected_arm: Some(arm),
+                    matched_locale: Some(candidate.clone()),
+                    matched_context: Some(matched_context),
+                    matched_key: Some(id.to_owned()),
+                    attempts,
+                });
+            }
+        }
+        Ok(PluralResolution {
+            template: None,
+            selected_arm: None,
+            matched_locale: None,
+            matched_context: None,
+            matched_key: None,
+            attempts,
+        })
+    }
+}
+
+fn gettext_contexts(context: &str, variant: Option<&str>) -> Vec<String> {
+    variant
+        .map(|variant| format!("{context}&{variant}"))
+        .into_iter()
+        .chain(std::iter::once(context.to_owned()))
+        .collect()
+}
+
+fn gettext_context(id: &str, domain: TextDomain) -> String {
+    match domain {
+        TextDomain::Line | TextDomain::Choice => id.to_owned(),
+        TextDomain::AvailabilityReason => format!("availability_reason:{id}"),
+        TextDomain::PresentationLabel => format!("presentation_label:{id}"),
     }
 }
 
@@ -113,4 +258,10 @@ struct CatalogKey {
     locale: String,
     context: String,
     source_text: String,
+    plural_source_text: Option<String>,
+}
+
+#[derive(Clone, Debug, Eq, PartialEq)]
+struct CatalogValue {
+    translations: Vec<String>,
 }

@@ -1,6 +1,31 @@
-use recite_core::load_schema_manifest_str;
+use std::collections::BTreeMap;
+
+use recite_core::{Diagnostic, DiagnosticArgumentValue, load_schema_manifest_str};
 
 use crate::diagnostic_codes;
+
+fn string(value: &str) -> DiagnosticArgumentValue {
+    DiagnosticArgumentValue::String(value.to_owned())
+}
+
+fn assert_presentation(
+    diagnostic: &Diagnostic,
+    presentation_id: &str,
+    arguments: impl IntoIterator<Item = (&'static str, DiagnosticArgumentValue)>,
+) {
+    let presentation = diagnostic
+        .presentation
+        .as_ref()
+        .expect("schema diagnostic presentation");
+    assert_eq!(presentation.id().as_str(), presentation_id);
+    assert_eq!(
+        presentation.arguments(),
+        &arguments
+            .into_iter()
+            .map(|(name, value)| (name.to_owned(), value))
+            .collect::<BTreeMap<_, _>>()
+    );
+}
 
 #[test]
 fn duplicate_definitions_and_values_report_stable_diagnostics() {
@@ -45,9 +70,16 @@ fn invalid_enum_and_registry_type_references_report_stable_diagnostics() {
             "RECITE_SCHEMA004"
         ]
     );
-    assert_eq!(
-        report.diagnostics[0].message,
-        "condition 'thread_stage' parameter 'thread_id' references unknown registry 'thread'"
+    assert_presentation(
+        &report.diagnostics[0],
+        "diagnostic-schema-004-unknown-registry",
+        [
+            (
+                "owner",
+                string("condition 'thread_stage' parameter 'thread_id'"),
+            ),
+            ("name", string("thread")),
+        ],
     );
     assert_eq!(report.diagnostics[0].span.start.line(), 5);
     assert_eq!(report.diagnostics[1].span.start.line(), 6);
@@ -180,28 +212,52 @@ fn malformed_condition_availability_reason_mappings_report_schema_diagnostics() 
             "RECITE_SCHEMA004"
         ]
     );
-    assert_eq!(
-        report
-            .diagnostics
-            .iter()
-            .find(|diagnostic| diagnostic.message.contains("stage_is")
-                && diagnostic.message.contains("missing argument 'threshold'"))
-            .expect("missing stage_is threshold diagnostic")
-            .span
-            .start
-            .line(),
-        13
+    let stage_is = report
+        .diagnostics
+        .iter()
+        .find(|diagnostic| {
+            diagnostic
+                .presentation
+                .as_ref()
+                .is_some_and(|presentation| {
+                    presentation.id().as_str()
+                        == "diagnostic-schema-001-availability-missing-reason-arg"
+                        && presentation.arguments().get("condition") == Some(&string("stage_is"))
+                        && presentation.arguments().get("argument") == Some(&string("threshold"))
+                })
+        })
+        .expect("missing stage_is threshold diagnostic");
+    assert_presentation(
+        stage_is,
+        "diagnostic-schema-001-availability-missing-reason-arg",
+        [
+            ("condition", string("stage_is")),
+            ("argument", string("threshold")),
+        ],
     );
-    assert_eq!(
-        report
-            .diagnostics
-            .iter()
-            .find(|diagnostic| diagnostic.message.contains("trust_gte")
-                && diagnostic.message.contains("missing argument 'subject'"))
-            .expect("missing trust_gte subject diagnostic")
-            .span
-            .start
-            .line(),
-        20
+    assert_eq!(stage_is.span.start.line(), 13);
+    let trust_gte = report
+        .diagnostics
+        .iter()
+        .find(|diagnostic| {
+            diagnostic
+                .presentation
+                .as_ref()
+                .is_some_and(|presentation| {
+                    presentation.id().as_str() == "diagnostic-schema-004-unknown-condition-param"
+                        && presentation.arguments().get("condition") == Some(&string("trust_gte"))
+                        && presentation.arguments().get("condition_param")
+                            == Some(&string("missing"))
+                })
+        })
+        .expect("missing trust_gte condition parameter diagnostic");
+    assert_presentation(
+        trust_gte,
+        "diagnostic-schema-004-unknown-condition-param",
+        [
+            ("condition", string("trust_gte")),
+            ("condition_param", string("missing")),
+        ],
     );
+    assert_eq!(trust_gte.span.start.line(), 22);
 }

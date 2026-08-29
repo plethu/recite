@@ -82,9 +82,13 @@ pub use event::{
     ChoiceAvailability, ChoiceAvailabilityReason, ChoiceAvailabilityReasonArg,
     ChoiceAvailabilityReasonOrigin, ChoiceAvailabilityReasonTree, ChoiceAvailabilityReasonValue,
     ChoiceEchoMode, DialogueChoice, DialogueEffectArgument, DialogueEffectMode,
-    DialogueEffectRequest, DialogueEvent, DialogueLine, EffectAck,
+    DialogueEffectRequest, DialogueEvent, DialogueLine, DialoguePlural, DialoguePluralResolution,
+    DialoguePluralResolutionOutcome, EffectAck,
 };
-pub use locale::{LocaleProvider, TextDomain};
+pub use locale::{
+    InterpolationValueProvider, InterpolationValues, LocaleError, LocaleProvider, PluralResolution,
+    PluralResolutionAttempt, PluralResolutionOutcome, TextDomain,
+};
 pub use session::{DialogueSession, DialogueSessionOptions};
 pub use session_serialization::{
     decode_session_messagepack, encode_session_messagepack, restore_session,
@@ -102,6 +106,6 @@ pub use session_snapshot::{
     SESSION_SNAPSHOT_FORMAT_VERSION_V1, snapshot_session,
 };
 pub use traversal::{
-    LocaleResolution, acknowledge_effect, choose, choose_with, next, next_with, start_scene,
-    start_scene_with_options,
+    DialogueTrace, LocaleResolution, PluralLineTrace, acknowledge_effect, choose, choose_with,
+    next, next_with, start_scene, start_scene_with_options,
 };

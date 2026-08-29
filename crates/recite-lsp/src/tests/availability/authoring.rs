@@ -1,5 +1,5 @@
 use lsp_types::request::{Completion, HoverRequest, Request as LspRequest};
-use lsp_types::{HoverContents, Position};
+use lsp_types::{CompletionResponse, HoverContents, Position};
 use serde_json::json;
 use tempfile::TempDir;
 
@@ -95,14 +95,22 @@ pub(super) fn hover_describes_schema_and_project_symbols() {
     .0;
     let source_uri = file_uri(&temp.path().join("dialogue/start.recite"));
     let source = concat!(
-        ":: start default\n",
+        ":: start default speaker=hazel\n",
         "> line@186493315915b423ae7a speaker=hazel portrait=wry\n",
+        "> inherited@5c2f4a0a59d5b8f4d9e1 portrait=smile\n",
+        "> line-choice-site@1a2b3c4d5e6f708192a3 speaker=hazel portrait=hazel_only\n",
+        "? choice@0a1b2c3d4e5f60718293 portrait=hazel_only\n",
+        "> malformed-mood@b8ddf7c38a39af4d9be2 mood=\"warm\" stage=fallback_stage\n",
+        "> repeated-mood@47c4b31a79f6e8d0c2a1 mood=warm mood=cold stage=fallback_stage\n",
+        "> unmapped-mood@6ee55288cd8572cabeba mood=cold stage=fallback_stage\n",
+        "> quoted-speaker@0d3a9c5e7f1b2d4a6c8e speaker=\"rhea\" portrait=flat\n",
         "  Hello.\n",
+        "  smile in prose.\n",
         "-> saved_block\n",
         ":if can_talk\n",
         "! immediate play_sfx\n",
         "> projection_terms@06a9ba6082698e2a3a77\n",
-        "  actor_skill choice_skill_prefix prefix skill_check_prefix\n",
+        "  actor_skill choice_skill_prefix prefix skill_check_prefix item portrait_by_speaker\n",
     );
     harness.did_open(source_uri.clone(), 1, source);
     let _ = harness.recv_publish_diagnostics();
@@ -120,6 +128,125 @@ pub(super) fn hover_describes_schema_and_project_symbols() {
             .expect("metadata hover"),
     );
     assert!(metadata.contains("metadata key `portrait`"));
+
+    assert!(metadata.contains("Schema producer adapter 'authoring-fixtures'"));
+
+    let metadata_domain = hover_text(
+        harness
+            .hover(
+                source_uri.clone(),
+                position_inside(source, "portrait_by_speaker"),
+            )
+            .expect("metadata domain hover"),
+    );
+    assert!(metadata_domain.contains("portraits-v1"));
+
+    let registry = hover_text(
+        harness
+            .hover(source_uri.clone(), position_inside(source, "item"))
+            .expect("registry hover"),
+    );
+    assert!(registry.contains("items-v1"));
+
+    let value = hover_text(
+        harness
+            .hover(source_uri.clone(), position_inside(source, "wry"))
+            .expect("metadata value hover"),
+    );
+    assert!(value.contains("Produced by fixture"));
+
+    let inherited_value = hover_text(
+        harness
+            .hover(source_uri.clone(), position_inside(source, "smile"))
+            .expect("inherited metadata value hover"),
+    );
+    assert!(inherited_value.contains("portrait_by_speaker' (hazel)"));
+
+    let line_value = hover_text(
+        harness
+            .hover(
+                source_uri.clone(),
+                position_after(
+                    source,
+                    "line-choice-site@1a2b3c4d5e6f708192a3 speaker=hazel portrait=haz",
+                ),
+            )
+            .expect("line selector contextual metadata value hover"),
+    );
+    assert!(line_value.contains("hazel_only"));
+
+    assert!(
+        harness
+            .hover(
+                source_uri.clone(),
+                position_after(source, "choice@0a1b2c3d4e5f60718293 portrait=haz",),
+            )
+            .is_none(),
+        "choice selector must not inherit the block speaker context"
+    );
+
+    let fallback_value = hover_text(
+        harness
+            .hover(
+                source_uri.clone(),
+                position_after(
+                    source,
+                    "unmapped-mood@6ee55288cd8572cabeba mood=cold stage=",
+                ),
+            )
+            .expect("fallback contextual metadata value hover"),
+    );
+    assert!(fallback_value.contains("stage_all/fallback_stage"));
+    let fallback_completion = completion_labels(
+        harness
+            .completion(
+                source_uri.clone(),
+                position_after(
+                    source,
+                    "unmapped-mood@6ee55288cd8572cabeba mood=cold stage=",
+                ),
+            )
+            .expect("fallback contextual metadata completion"),
+    );
+    assert_eq!(fallback_completion, ["fallback_stage"]);
+
+    assert!(
+        harness
+            .hover(
+                source_uri.clone(),
+                position_after(source, "mood=\"warm\" stage=")
+            )
+            .is_none(),
+        "quoted metadata selector must not use configured fallback"
+    );
+    assert!(
+        harness
+            .hover(
+                source_uri.clone(),
+                position_after(source, "mood=warm mood=cold stage=")
+            )
+            .is_none(),
+        "repeated metadata selectors must not use configured fallback"
+    );
+    assert!(
+        harness
+            .hover(
+                source_uri.clone(),
+                position_after(source, "speaker=\"rhea\" portrait=")
+            )
+            .is_none(),
+        "quoted speaker must not inherit the block default"
+    );
+
+    assert!(
+        harness
+            .hover(
+                source_uri.clone(),
+                position_inside(source, "smile in prose"),
+            )
+            .is_none(),
+        "ordinary prose tokens must not receive schema-value hover"
+    );
 
     let block = hover_text(
         harness
@@ -198,5 +325,12 @@ fn hover_text(hover: lsp_types::Hover) -> String {
     match hover.contents {
         HoverContents::Markup(content) => content.value,
         other => panic!("unexpected hover contents: {other:?}"),
+    }
+}
+
+fn completion_labels(response: CompletionResponse) -> Vec<String> {
+    match response {
+        CompletionResponse::Array(items) => items.into_iter().map(|item| item.label).collect(),
+        CompletionResponse::List(list) => list.items.into_iter().map(|item| item.label).collect(),
     }
 }

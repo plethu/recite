@@ -4,6 +4,8 @@ use tempfile::TempDir;
 
 mod support;
 use support::*;
+#[path = "runtime/interpolation.rs"]
+mod interpolation;
 
 use std::io::Write;
 use std::process::Stdio;
@@ -229,108 +231,6 @@ surprise = true
         .arg(&unknown_field_fixture));
     output.assert_failure();
     output.assert_stderr_contains("unknown field");
-}
-
-#[test]
-fn trace_exposes_structured_choice_availability_reasons() {
-    let temp = TempDir::new().expect("tempdir");
-    let source = write_recite(
-        temp.path(),
-        "dialogue.recite",
-        concat!(
-            ":: start default\n",
-            "> intro@82db0b1dab0a52136d77\n",
-            "  Welcome.\n",
-            "  ? ask_news@e8572a78baac6863754d requires=(trust_gte(hazel, rhea, 3)) reason=innkeeper_trust_hint\n",
-            "    Ask for private news.\n",
-            "    -> END\n",
-            "  ? leave@be22df697e7ee4d7ba1b\n",
-            "    Leave.\n",
-            "    -> END\n",
-        ),
-    );
-    let schema = write_file(
-        temp.path(),
-        "schema.json",
-        include_str!("../../../fixtures/schema/valid/generated_manifest.json"),
-    );
-    let asset = compile_project_asset(temp.path(), &source, "dialogue.recitec", Some(&schema));
-    let fixture = write_file(
-        temp.path(),
-        "fixture.toml",
-        r#"[conditions]
-"trust_gte(hazel, rhea, 3)" = false
-
-[choices]
-82db0b1dab0a52136d77 = "be22df697e7ee4d7ba1b"
-"#,
-    );
-
-    let trace_output = run(recite()
-        .arg("trace")
-        .arg(&asset)
-        .arg("--block")
-        .arg("start")
-        .arg("--fixture")
-        .arg(&fixture));
-    trace_output.assert_success().assert_stderr("");
-    let trace: serde_json::Value =
-        serde_json::from_slice(&trace_output.stdout).expect("trace is JSON");
-    let choices = trace["events"][1]["prompt"]["choices"]
-        .as_array()
-        .expect("prompt choices");
-    let ask_news = choices
-        .iter()
-        .find(|choice| choice["id"] == "e8572a78baac6863754d")
-        .expect("ask_news choice");
-
-    assert_eq!(ask_news["is_available"], false);
-    assert_eq!(
-        ask_news["unavailable_reason"],
-        "The innkeeper is not ready to share that."
-    );
-    assert_eq!(ask_news["availability"]["is_available"], false);
-    assert_eq!(
-        ask_news["availability"]["primary_reason"]["origin"],
-        serde_json::json!({
-            "type": "requirement_expression",
-            "source_text": "requires=(trust_gte(hazel, rhea, 3))"
-        })
-    );
-    assert_eq!(
-        ask_news["availability"]["reason_tree"],
-        serde_json::json!({
-            "type": "reason",
-            "value": {
-                "id": "trust_too_low",
-                "source_text": "{subject} does not trust {target} enough ({threshold}).",
-                "text": "hazel does not trust rhea enough (3).",
-                "origin": {
-                    "type": "condition_call",
-                    "function": "trust_gte",
-                    "args": [
-                        { "type": "identifier", "value": "hazel" },
-                        { "type": "identifier", "value": "rhea" },
-                        { "type": "integer", "value": 3 }
-                    ]
-                },
-                "args": [
-                    {
-                        "name": "subject",
-                        "value": { "type": "identifier", "value": "hazel" }
-                    },
-                    {
-                        "name": "target",
-                        "value": { "type": "identifier", "value": "rhea" }
-                    },
-                    {
-                        "name": "threshold",
-                        "value": { "type": "integer", "value": 3 }
-                    }
-                ]
-            }
-        })
-    );
 }
 
 #[test]

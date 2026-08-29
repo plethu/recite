@@ -98,7 +98,9 @@ locale = "en-GB"
     top.assert_stdout_contains("compile");
     top.assert_stdout_contains("check-metadata");
     top.assert_stdout_contains("-h, --help");
-    top.assert_stdout_contains("Show help");
+    // en-GB is a test-only fixture, not a launch-locale support claim. The
+    // incomplete fixture therefore falls back to the human-authored en-US UI.
+    top.assert_stdout_contains("Print help");
 
     let compile = run(recite()
         .arg("compile")
@@ -106,7 +108,7 @@ locale = "en-GB"
         .env("RECITE_CONFIG", &config));
     compile.assert_success().assert_stderr("");
     compile.assert_stdout_contains("Usage: recite compile [OPTIONS] --output <OUTPUT> <PATHS>...");
-    compile.assert_stdout_contains("Compile dialogue source to a MessagePack .recitec artefact");
+    compile.assert_stdout_contains("Compile dialogue source to a MessagePack .recitec asset");
     compile.assert_stdout_contains("--output <OUTPUT>");
     compile.assert_stdout_contains("--schema <SCHEMA>");
 
@@ -133,9 +135,8 @@ locale = "en-GB"
         .arg("compile")
         .env("RECITE_CONFIG", &config));
     help_compile.assert_success().assert_stderr("");
-    help_compile
-        .assert_stdout_contains("Compile dialogue source to a MessagePack .recitec artefact");
-    help_compile.assert_stdout_contains("Show help");
+    help_compile.assert_stdout_contains("Compile dialogue source to a MessagePack .recitec asset");
+    help_compile.assert_stdout_contains("Print help");
 }
 
 #[test]

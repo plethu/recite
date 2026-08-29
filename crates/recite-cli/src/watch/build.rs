@@ -6,7 +6,7 @@ use std::path::{Path, PathBuf};
 use recite_compiler::{CompileOptions, compile_inputs, compile_inputs_with_schema};
 use recite_core::{
     CompiledAssetId, CompilerVersion, Diagnostic, ProjectManifest, ProjectSchema,
-    SchemaFingerprint, SourceMapId, project::validate_project_manifest,
+    SchemaFingerprint, SourceMapId, project::validate_project_manifest_source,
 };
 
 use super::events::WatchState;
@@ -15,44 +15,43 @@ use crate::diagnostics::report_diagnostics;
 use crate::error::CliError;
 use crate::fs::{
     display_path, load_schema, read_compile_inputs_relative_to, reject_output_input_alias,
-    resolve_project_path, validate_project, write_staged,
+    resolve_project_path, validate_project_asset_freshness, write_staged,
 };
+use crate::i18n::Messages;
 
 pub(super) fn build_once(
     state: &mut WatchState,
     stderr: &mut dyn Write,
+    messages: &Messages,
 ) -> Result<BuildStatus, CliError> {
     let manifest_path = state.manifest_path();
-    let manifest_source = fs::read_to_string(&manifest_path).map_err(|source| CliError::Read {
+    let manifest_text = fs::read_to_string(&manifest_path).map_err(|source| CliError::Read {
         path: manifest_path.clone(),
         source,
     })?;
     let manifest_file = display_path(&manifest_path);
-    let report = ProjectManifest::load_str(manifest_file.clone(), &manifest_source);
+    let report = ProjectManifest::load_str_with_spans(manifest_file.clone(), &manifest_text);
     if !report.diagnostics.is_empty() {
-        report_diagnostics(stderr, report.diagnostics.iter())?;
+        report_diagnostics(stderr, messages, report.diagnostics.iter())?;
         state.schema_path = None;
         return Ok(BuildStatus::Diagnostics);
     }
-    let Some(manifest) = report.manifest else {
+    let Some(manifest_source) = report.source else {
         return Ok(BuildStatus::Diagnostics);
     };
+    let manifest = manifest_source.manifest();
 
-    state.schema_path = project_schema_path(&state.project_root, &manifest);
+    state.schema_path = project_schema_path(&state.project_root, manifest);
     let loaded_schema = load_project_schema(state.schema_path.as_deref())?;
     if !loaded_schema.diagnostics.is_empty() {
-        report_diagnostics(stderr, loaded_schema.diagnostics.iter())?;
+        report_diagnostics(stderr, messages, loaded_schema.diagnostics.iter())?;
         return Ok(BuildStatus::Diagnostics);
     }
 
-    let manifest_diagnostics = validate_project_manifest(
-        &manifest_file,
-        &manifest_source,
-        &manifest,
-        loaded_schema.schema.as_ref(),
-    );
+    let manifest_diagnostics =
+        validate_project_manifest_source(&manifest_source, loaded_schema.schema.as_ref());
     if !manifest_diagnostics.is_empty() {
-        report_diagnostics(stderr, manifest_diagnostics.iter())?;
+        report_diagnostics(stderr, messages, manifest_diagnostics.iter())?;
         return Ok(BuildStatus::Diagnostics);
     }
 
@@ -62,7 +61,7 @@ pub(super) fn build_once(
     }
 
     let mut compiled_assets = Vec::new();
-    for target in unique_asset_targets(&state.project_root, &manifest) {
+    for target in unique_asset_targets(&state.project_root, manifest) {
         reject_output_input_alias(&target.write_path, &input_files)?;
         let inputs = read_compile_inputs_relative_to(&state.project_root, input_files.clone())?;
         let options =
@@ -73,7 +72,7 @@ pub(super) fn build_once(
             compile_inputs(inputs, options)?
         };
 
-        report_diagnostics(stderr, report.diagnostics.iter())?;
+        report_diagnostics(stderr, messages, report.diagnostics.iter())?;
         let Some(asset) = report.asset else {
             return Ok(BuildStatus::Diagnostics);
         };
@@ -90,8 +89,15 @@ pub(super) fn build_once(
         write_staged(output, bytes)?;
     }
 
-    let diagnostics = validate_project(state.project_root.clone())?;
-    report_diagnostics(stderr, diagnostics.iter())?;
+    let diagnostics = validate_project_asset_freshness(
+        &state.project_root,
+        &manifest_source,
+        Some(loaded_schema.schema.as_ref().map_or(
+            SchemaFingerprint::NoSchema,
+            ProjectSchema::canonical_fingerprint,
+        )),
+    )?;
+    report_diagnostics(stderr, messages, diagnostics.iter())?;
     if diagnostics.is_empty() {
         Ok(BuildStatus::Fresh {
             asset_count: compiled_assets.len(),

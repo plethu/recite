@@ -54,7 +54,8 @@ pub(super) fn lower_presentation_projectors(
     let mut seen = BTreeSet::new();
     let mut seen_label_ids = BTreeSet::new();
     for entry in entries {
-        let name_span = spans.next_key_span(file, source, &entry.name);
+        let entry_path = vec!["presentation_projectors".to_owned(), entry.name.clone()];
+        let name_span = spans.key_span_at(file, source, &entry_path, &entry.name);
         if !validate_manifest_name(diagnostics, "projector id", &entry.name, name_span.clone()) {
             continue;
         }
@@ -76,6 +77,7 @@ pub(super) fn lower_presentation_projectors(
             schema,
             &entry.name,
             entry.value.candidates,
+            &entry_path,
         ) else {
             continue;
         };
@@ -89,6 +91,7 @@ pub(super) fn lower_presentation_projectors(
             &candidates,
             entry.value.inputs,
             pending_type_refs,
+            &entry_path,
         );
         let queries = lower_projector_queries(
             file,
@@ -99,6 +102,7 @@ pub(super) fn lower_presentation_projectors(
             &entry.name,
             &inputs,
             entry.value.queries,
+            &entry_path,
         );
         let outputs = lower_outputs(
             file,
@@ -112,6 +116,7 @@ pub(super) fn lower_presentation_projectors(
             entry.value.outputs,
             &mut seen_label_ids,
             pending_type_refs,
+            &entry_path,
         );
 
         schema.presentation_projectors.insert(

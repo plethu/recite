@@ -10,8 +10,9 @@ use recite_core::{
 use recite_runtime::{
     ConditionEvaluationError, ConditionQuery, ConditionValue, DialogueContentFingerprintSnapshot,
     DialogueContext, DialogueError, DialogueEvent, DialogueSchemaFingerprintSnapshot,
-    DialogueSession, DialogueSessionOptions, EffectAck, acknowledge_effect, choose, next,
-    restore_session, snapshot_session, start_scene, start_scene_with_options,
+    DialogueSession, DialogueSessionOptions, EffectAck, InterpolationValues, LocaleResolution,
+    acknowledge_effect, choose, next_with, restore_session, snapshot_session, start_scene,
+    start_scene_with_options,
 };
 
 use super::availability::choice_availability_expectation;
@@ -100,6 +101,7 @@ pub(crate) struct ReferenceDriver {
     seen_choice_ids: BTreeSet<String>,
     current_prompt_choice_ids: BTreeSet<String>,
     last_event: Option<DialogueEvent>,
+    interpolation_values: InterpolationValues,
 }
 
 impl ReferenceDriver {
@@ -117,6 +119,7 @@ impl ReferenceDriver {
             seen_choice_ids: BTreeSet::new(),
             current_prompt_choice_ids: BTreeSet::new(),
             last_event: None,
+            interpolation_values: InterpolationValues::new(),
         }
     }
 
@@ -160,7 +163,13 @@ impl ReferenceDriver {
                 asset_slot,
                 block,
                 locale,
-            } => self.start_session(asset_slot, block.as_deref(), locale.as_deref()),
+                interpolation_values,
+            } => self.start_session(
+                asset_slot,
+                block.as_deref(),
+                locale.as_deref(),
+                interpolation_values,
+            ),
             Operation::ExerciseLocalisationFailure { asset_slot, locale } => {
                 self.exercise_localisation_failure(asset_slot, locale)
             }
@@ -496,6 +505,7 @@ impl ReferenceDriver {
         asset_slot: &str,
         block: Option<&str>,
         locale: Option<&str>,
+        interpolation_values: &Option<BTreeMap<String, i64>>,
     ) -> StepResult {
         if self.active_session.is_some() {
             return self.error(
@@ -539,6 +549,12 @@ impl ReferenceDriver {
             asset_slot: asset_slot.to_owned(),
             session,
         });
+        self.interpolation_values = interpolation_values
+            .as_ref()
+            .into_iter()
+            .flat_map(|values| values.iter())
+            .map(|(name, value)| (name.clone(), (*value).into()))
+            .collect();
         self.last_event = None;
         self.current_prompt_choice_ids.clear();
         StepResult::Ok(self.outcome_without_event())
@@ -605,7 +621,12 @@ impl ReferenceDriver {
                     "active session disappeared before advance".to_owned(),
                 );
             };
-            next(&asset.dialogue, &mut active_session.session, &context)
+            next_with(
+                &asset.dialogue,
+                &mut active_session.session,
+                &context,
+                LocaleResolution::new().with_values(&self.interpolation_values),
+            )
         };
 
         match runtime_result {
@@ -1034,6 +1055,11 @@ impl ReferenceDriver {
             DialogueError::ConditionDepthLimitExceeded { .. } => {
                 CATEGORY_CONDITION_EVALUATION_ERROR
             }
+            DialogueError::InterpolationValueFailed { .. }
+            | DialogueError::MissingInterpolationValue { .. }
+            | DialogueError::InvalidInterpolationSyntax { .. }
+            | DialogueError::InvalidPluralCount { .. }
+            | DialogueError::LocaleLookupFailed { .. } => CATEGORY_LOCALISATION_ERROR,
             DialogueError::UnsupportedSessionSnapshotFormat { .. }
             | DialogueError::SessionSnapshotEncodeFailed { .. }
             | DialogueError::SessionSnapshotDecodeFailed { .. }

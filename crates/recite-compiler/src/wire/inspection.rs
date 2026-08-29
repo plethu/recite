@@ -13,7 +13,13 @@ use crate::compile::CompileError;
 pub(crate) fn serialize_inspection_json(
     dialogue: &CompiledDialogue,
 ) -> Result<String, CompileError> {
-    serde_json::to_string(&json_dialogue(dialogue)).map_err(|error| {
+    let mut inspection = json_dialogue(dialogue);
+    // Compact JSON is a compatibility-facing inspection projection. Keep its
+    // established lexicographic object-key order independently of the
+    // preserve_order feature needed by schema parsing.
+    inspection.sort_all_objects();
+
+    serde_json::to_string(&inspection).map_err(|error| {
         CompileError::Serialization(format!("failed to encode inspection JSON: {error}"))
     })
 }
@@ -46,6 +52,10 @@ fn json_dialogue(dialogue: &CompiledDialogue) -> JsonValue {
         "lines": dialogue.lines.iter().map(|line| json!({
             "id": line.id.as_str(),
             "source_text": line.source_text.as_str(),
+            "authored_source_text": line.authored_source_text.as_str(),
+            "plural_source_text": line.plural_source_text.as_deref(),
+            "authored_plural_source_text": line.authored_plural_source_text.as_deref(),
+            "interpolation_bindings": line.interpolation_bindings.iter().map(json_interpolation_binding).collect::<Vec<_>>(),
             "speaker": line.speaker.map(SpeakerIndex::as_u32),
             "metadata": json_range(line.metadata, MetadataIndex::as_u32),
             "source_map": line.source_map.as_u32(),
@@ -53,6 +63,8 @@ fn json_dialogue(dialogue: &CompiledDialogue) -> JsonValue {
         "choices": dialogue.choices.iter().map(|choice| json!({
             "id": choice.id.as_str(),
             "source_text": choice.source_text.as_str(),
+            "authored_source_text": choice.authored_source_text.as_str(),
+            "interpolation_bindings": choice.interpolation_bindings.iter().map(json_interpolation_binding).collect::<Vec<_>>(),
             "metadata": json_range(choice.metadata, MetadataIndex::as_u32),
             "availability_requirement": choice.availability_requirement.as_ref().map(json_condition_expression),
             "availability_requirement_source_text": choice.availability_requirement_source_text.as_deref(),
@@ -101,6 +113,19 @@ fn json_dialogue(dialogue: &CompiledDialogue) -> JsonValue {
             "id": entry.id.as_str(),
             "index": entry.index.as_u32(),
         })).collect::<Vec<_>>(),
+    })
+}
+
+fn json_interpolation_binding(binding: &recite_core::CompiledInterpolationBinding) -> JsonValue {
+    json!({
+        "name": binding.name,
+        "value": binding.value,
+        "type": match binding.value_type {
+            recite_core::InterpolationType::String => "string",
+            recite_core::InterpolationType::Integer => "int",
+            recite_core::InterpolationType::Float => "float",
+            recite_core::InterpolationType::Boolean => "bool",
+        },
     })
 }
 

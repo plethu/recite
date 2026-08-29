@@ -1,8 +1,17 @@
 use lsp_types::{DiagnosticSeverity, NumberOrString, Position, Range};
+use recite_core::{
+    Diagnostic, DiagnosticArgumentValue, DiagnosticCode, DiagnosticPresentation,
+    DiagnosticPresentationId, DiagnosticRelatedPresentation, SourcePosition, SourceSpan,
+    contract_for,
+};
 use serde_json::json;
 use tempfile::TempDir;
 
 use super::support::{Harness, file_uri, full_change, uri, write_file};
+use crate::diagnostics::publish_diagnostics;
+use crate::workspace::{LspWorkspace, WorkspaceConfig};
+
+mod schema;
 
 pub(super) fn did_open_publishes_source_diagnostics_with_stable_shape() {
     let harness = Harness::start();
@@ -134,6 +143,12 @@ pub(super) fn did_open_publishes_schema_less_semantic_diagnostics() {
     );
     assert_eq!(published.diagnostics[0].range.start, Position::new(1, 0));
     assert_eq!(published.diagnostics[1].range.start, Position::new(9, 4));
+    let related = published.diagnostics[2]
+        .related_information
+        .as_ref()
+        .expect("duplicate choice ID has a related source span");
+    assert_eq!(related.len(), 1);
+    assert_eq!(related[0].message, "first localisable ID is here");
 
     harness.did_change(
         uri,
@@ -151,152 +166,164 @@ pub(super) fn did_open_publishes_schema_less_semantic_diagnostics() {
     harness.finish();
 }
 
-pub(super) fn did_open_publishes_schema_backed_semantic_diagnostics() {
-    let temp = TempDir::new().unwrap_or_else(|error| panic!("tempdir: {error}"));
-    write_file(temp.path(), "schema.json", semantic_schema());
-    let harness = harness_for_schema(&temp);
-    let source_uri = file_uri(&temp.path().join("dialogue/start.recite"));
+pub(super) fn shared_language_pressure_fixture_publishes_no_diagnostics() {
+    let harness = Harness::start();
+    let source_uri = uri("file:///workspace/fixtures/recite/valid/language_pressure.recite");
+    let source = include_str!("../../../../fixtures/recite/valid/language_pressure.recite");
 
-    harness.did_open(
-        source_uri,
-        1,
-        concat!(
-            ":: start default\n",
-            "> intro@d0c93b6fa28cacf4b1b0 speaker=rhea talker=ghost sfx=missing portrait=neutral\n",
-            "  [ghost]Hello[/ghost]\n",
-            "> missing_context@6e9cc3e62c1b68602ec8 portrait=neutral\n",
-            "  Missing context.\n",
-            "? ask@8d454f8d90909d59c202 requires=(missing_condition(hazel))\n",
-            "  Ask?\n",
-            "  -> END\n",
-            "! immediate missing_effect(snap)\n",
-        ),
-    );
+    harness.did_open(source_uri, 1, source);
+    let published = harness.recv_publish_diagnostics();
+
+    assert!(published.diagnostics.is_empty(), "{published:?}");
+    harness.finish();
+}
+
+pub(super) fn shared_language_pressure_fixture_projects_marker_diagnostics() {
+    let harness = Harness::start();
+    let source_uri =
+        uri("file:///workspace/fixtures/recite/invalid/parser_marker_leading_prose.recite");
+    let source =
+        include_str!("../../../../fixtures/recite/invalid/parser_marker_leading_prose.recite");
+
+    harness.did_open(source_uri, 1, source);
     let published = harness.recv_publish_diagnostics();
 
     assert_eq!(
         diagnostic_codes(&published.diagnostics),
-        [
-            "RECITE_VALIDATE030",
-            "RECITE_VALIDATE030",
-            "RECITE_VALIDATE031",
-            "RECITE_VALIDATE022",
-            "RECITE_VALIDATE022",
-            "RECITE_VALIDATE032",
-            "RECITE_VALIDATE034",
-            "RECITE_VALIDATE017"
-        ]
+        ["RECITE_PARSE011", "RECITE_PARSE013"]
     );
-    assert_eq!(published.diagnostics[0].range.start, Position::new(1, 49));
-    assert_eq!(published.diagnostics[2].range.start, Position::new(1, 76));
-    assert_eq!(published.diagnostics[5].range.start, Position::new(3, 48));
+    assert_eq!(
+        published.diagnostics[0].range,
+        Range {
+            start: Position::new(2, 11),
+            end: Position::new(2, 13),
+        }
+    );
+    assert_eq!(
+        published.diagnostics[1].range,
+        Range {
+            start: Position::new(3, 11),
+            end: Position::new(3, 13),
+        }
+    );
+
+    harness.finish();
+}
+
+pub(super) fn did_open_publishes_schema_backed_semantic_diagnostics() {
+    schema::did_open_publishes_schema_backed_semantic_diagnostics();
+}
+
+fn diagnostic_codes(diagnostics: &[lsp_types::Diagnostic]) -> Vec<&str> {
+    diagnostics
+        .iter()
+        .map(|diagnostic| match diagnostic.code.as_ref() {
+            Some(NumberOrString::String(code)) => code.as_str(),
+            _ => "<missing>",
+        })
+        .collect()
+}
+
+pub(super) fn related_spans_resolve_project_files_and_target_text() {
+    let temp = TempDir::new().unwrap_or_else(|error| panic!("tempdir: {error}"));
+    let first_path = temp.path().join("dialogue/first.recite");
+    write_file(
+        temp.path(),
+        "dialogue/first.recite",
+        ":: first\n> shared@83709c28414d0ce4659c\n  😀First.\n",
+    );
+    let first_uri = file_uri(&first_path);
+    let second_uri = file_uri(&temp.path().join("dialogue/second.recite"));
+    let root_uri = file_uri(temp.path());
+    let harness = Harness::start_with_result(json!({
+        "capabilities": {
+            "general": { "positionEncodings": ["utf-16"] }
+        },
+        "rootUri": root_uri.as_str(),
+    }))
+    .0;
+
+    harness.did_open(
+        second_uri.clone(),
+        1,
+        ":: second\n> shared@83709c28414d0ce4659c\n  Second.\n",
+    );
+    let published = harness.recv_publish_diagnostics();
+    let duplicate = published
+        .diagnostics
+        .iter()
+        .find(|diagnostic| {
+            diagnostic.code == Some(NumberOrString::String("RECITE_ID003".to_owned()))
+        })
+        .expect("duplicate line ID diagnostic");
+    let related = duplicate
+        .related_information
+        .as_ref()
+        .expect("duplicate line ID has related source");
+    assert_eq!(related.len(), 1);
+    assert_eq!(related[0].location.uri, first_uri);
+    assert_eq!(related[0].location.range.start, Position::new(1, 0));
+    assert_eq!(related[0].location.range.end, Position::new(1, 0));
+
+    let workspace = LspWorkspace::new(WorkspaceConfig::for_roots(vec![temp.path().to_owned()]));
+    let primary_span = SourceSpan::point(
+        "dialogue/second.recite",
+        SourcePosition::new(1, 1).expect("valid test position"),
+    );
+    let related_span = SourceSpan::new(
+        "dialogue/first.recite",
+        SourcePosition::new(3, 3).expect("valid test position"),
+        Some(SourcePosition::new(3, 8).expect("valid test position")),
+    );
+    let code = DiagnosticCode::new_static("RECITE_ID003");
+    let contract = contract_for(
+        &code,
+        &DiagnosticPresentationId::new_static("diagnostic-id-003"),
+    )
+    .expect("duplicate ID contract");
+    let diagnostic = Diagnostic::error_from_contract(
+        contract,
+        "compatibility message",
+        primary_span,
+        [("id", DiagnosticArgumentValue::String("shared".to_owned()))],
+    )
+    .expect("duplicate ID arguments match contract")
+    .with_related_presentations([DiagnosticRelatedPresentation::new(
+        related_span,
+        DiagnosticPresentation::new(DiagnosticPresentationId::new_static(
+            "diagnostic-id-003-related",
+        )),
+    )]);
+    let published = publish_diagnostics(
+        second_uri,
+        ":: second\n> shared@83709c28414d0ce4659c\n  Second.\n",
+        Some(1),
+        &[diagnostic],
+        &workspace.ui_catalog,
+        &workspace.diagnostic_sources(),
+    )
+    .expect("recordable diagnostic");
+    let related = published.diagnostics[0]
+        .related_information
+        .as_ref()
+        .expect("synthetic diagnostic has related source");
+    assert_eq!(related[0].location.uri, first_uri);
+    assert_eq!(related[0].location.range.start, Position::new(2, 2));
+    assert_eq!(related[0].location.range.end, Position::new(2, 9));
 
     harness.finish();
 }
 
 pub(super) fn did_save_publishes_schema_backed_diagnostics_for_closed_project_files() {
-    let temp = TempDir::new().unwrap_or_else(|error| panic!("tempdir: {error}"));
-    write_file(temp.path(), "schema.json", semantic_schema());
-    write_file(
-        temp.path(),
-        "dialogue/saved.recite",
-        concat!(":: start default\n", "! immediate missing_effect(snap)\n"),
-    );
-    let saved_uri = file_uri(&temp.path().join("dialogue/saved.recite"));
-    let harness = harness_for_schema(&temp);
-
-    harness.did_save(saved_uri.clone());
-    let published = harness.recv_publish_diagnostics();
-
-    assert_eq!(published.uri, saved_uri);
-    assert_eq!(published.version, None);
-    assert_eq!(
-        diagnostic_codes(&published.diagnostics),
-        ["RECITE_VALIDATE017"]
-    );
-
-    harness.finish();
+    schema::did_save_publishes_schema_backed_diagnostics_for_closed_project_files();
 }
 
 pub(super) fn did_save_schema_reloads_and_republishes_source_diagnostics() {
-    let temp = TempDir::new().unwrap_or_else(|error| panic!("tempdir: {error}"));
-    write_file(temp.path(), "schema.json", semantic_schema());
-    let schema_uri = file_uri(&temp.path().join("schema.json"));
-    let harness = harness_for_schema(&temp);
-    let source_uri = file_uri(&temp.path().join("dialogue/start.recite"));
-
-    harness.did_open(
-        source_uri.clone(),
-        1,
-        concat!(
-            ":: start default\n",
-            "> intro@e3ca7d7cd6e07208a608\n",
-            "  Hello.\n",
-            "! immediate play_sfx(missing)\n",
-        ),
-    );
-    let published = harness.recv_publish_diagnostics();
-    assert_eq!(
-        diagnostic_codes(&published.diagnostics),
-        ["RECITE_VALIDATE021"]
-    );
-
-    let updated_schema = semantic_schema().replace(
-        "\"sound\": { \"values\": [\"snap\"] }",
-        "\"sound\": { \"values\": [\"snap\", \"missing\"] }",
-    );
-    write_file(temp.path(), "schema.json", &updated_schema);
-    harness.did_save(schema_uri.clone());
-
-    let schema_clear = harness.recv_publish_diagnostics();
-    assert_eq!(schema_clear.uri, schema_uri);
-    assert!(schema_clear.diagnostics.is_empty());
-
-    let source_refresh = harness.recv_publish_diagnostics();
-    assert_eq!(source_refresh.uri, source_uri);
-    assert!(source_refresh.diagnostics.is_empty());
-
-    harness.finish();
+    schema::did_save_schema_reloads_and_republishes_source_diagnostics();
 }
 
 pub(super) fn did_save_schema_reloads_from_non_canonical_schema_uri() {
-    let temp = TempDir::new().unwrap_or_else(|error| panic!("tempdir: {error}"));
-    write_file(temp.path(), "schema.json", semantic_schema());
-    let schema_uri = file_uri(&temp.path().join(".").join("schema.json"));
-    let harness = harness_for_schema(&temp);
-    let source_uri = file_uri(&temp.path().join("dialogue/start.recite"));
-
-    harness.did_open(
-        source_uri.clone(),
-        1,
-        concat!(
-            ":: start default\n",
-            "> intro@e3ca7d7cd6e07208a608\n",
-            "  Hello.\n",
-            "! immediate play_sfx(missing)\n",
-        ),
-    );
-    let published = harness.recv_publish_diagnostics();
-    assert_eq!(
-        diagnostic_codes(&published.diagnostics),
-        ["RECITE_VALIDATE021"]
-    );
-
-    let updated_schema = semantic_schema().replace(
-        "\"sound\": { \"values\": [\"snap\"] }",
-        "\"sound\": { \"values\": [\"snap\", \"missing\"] }",
-    );
-    write_file(temp.path(), "schema.json", &updated_schema);
-    harness.did_save(schema_uri);
-
-    let schema_clear = harness.recv_publish_diagnostics();
-    assert!(schema_clear.diagnostics.is_empty());
-
-    let source_refresh = harness.recv_publish_diagnostics();
-    assert_eq!(source_refresh.uri, source_uri);
-    assert!(source_refresh.diagnostics.is_empty());
-
-    harness.finish();
+    schema::did_save_schema_reloads_from_non_canonical_schema_uri();
 }
 
 pub(super) fn did_close_removes_state_and_clears_diagnostics() {
@@ -312,91 +339,4 @@ pub(super) fn did_close_removes_state_and_clears_diagnostics() {
     assert!(published.diagnostics.is_empty());
 
     harness.finish();
-}
-
-fn diagnostic_codes(diagnostics: &[lsp_types::Diagnostic]) -> Vec<&str> {
-    diagnostics
-        .iter()
-        .map(|diagnostic| match diagnostic.code.as_ref() {
-            Some(NumberOrString::String(code)) => code.as_str(),
-            _ => "<missing>",
-        })
-        .collect()
-}
-
-fn harness_for_schema(temp: &TempDir) -> Harness {
-    let root_uri = file_uri(temp.path());
-    let schema_path = temp.path().join("schema.json");
-    Harness::start_with_result(json!({
-        "capabilities": {
-            "general": {
-                "positionEncodings": ["utf-16"]
-            }
-        },
-        "rootUri": root_uri.as_str(),
-        "initializationOptions": {
-            "schema": schema_path.display().to_string()
-        }
-    }))
-    .0
-}
-
-fn semantic_schema() -> &'static str {
-    r#"{
-  "schema_version": 1,
-  "registries": {
-    "sound": { "values": ["snap"] }
-  },
-  "speakers": {
-    "hazel": {},
-    "rhea": {}
-  },
-  "conditions": {
-    "trust_gte": {
-      "params": [
-        { "name": "actor_a", "type": "speaker" },
-        { "name": "actor_b", "type": "speaker" },
-        { "name": "threshold", "type": "int" }
-      ]
-    }
-  },
-  "effects": {
-    "play_sfx": {
-      "modes": ["immediate"],
-      "params": [{ "name": "sound_effect", "type": "registry:sound" }]
-    }
-  },
-  "metadata_domains": {
-    "portrait_by_speaker": {
-      "kind": "contextual",
-      "selector": "field:speaker",
-      "values_by_context": {
-        "hazel": ["neutral"],
-        "rhea": ["flat"]
-      },
-      "missing_context": { "policy": "diagnostic" }
-    }
-  },
-  "metadata": {
-    "talker": {
-      "targets": ["line"],
-      "type": "speaker"
-    },
-    "sfx": {
-      "targets": ["line"],
-      "type": "registry:sound"
-    },
-    "portrait": {
-      "targets": ["line"],
-      "type": "symbol",
-      "domain": "portrait_by_speaker"
-    }
-  },
-  "markup": {
-    "slow": {
-      "requires_closing": true,
-      "translatable": true
-    }
-  }
-}"#
 }

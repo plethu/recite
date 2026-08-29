@@ -76,12 +76,18 @@ namespace Recite.Unity
     public sealed class ReciteLine
     {
         public ReciteLine(string id, string sourceText, string text, string speaker, IReadOnlyList<ReciteMetadata> metadata)
+            : this(id, sourceText, text, speaker, metadata, null)
+        {
+        }
+
+        public ReciteLine(string id, string sourceText, string text, string speaker, IReadOnlyList<ReciteMetadata> metadata, RecitePlural plural)
         {
             Id = id ?? string.Empty;
             SourceText = sourceText ?? string.Empty;
             Text = text ?? string.Empty;
             Speaker = speaker;
             Metadata = metadata ?? Array.Empty<ReciteMetadata>();
+            Plural = plural;
         }
 
         public string Id { get; }
@@ -93,6 +99,87 @@ namespace Recite.Unity
         public string Speaker { get; }
 
         public IReadOnlyList<ReciteMetadata> Metadata { get; }
+
+        public RecitePlural Plural { get; }
+    }
+
+    public sealed class RecitePlural
+    {
+        public RecitePlural(string singularSourceText, string pluralSourceText, long count, int selectedArm, RecitePluralResolution resolution)
+        {
+            SingularSourceText = singularSourceText ?? string.Empty;
+            PluralSourceText = pluralSourceText ?? string.Empty;
+            Count = count;
+            SelectedArm = selectedArm;
+            Resolution = resolution;
+        }
+
+        public string SingularSourceText { get; }
+
+        public string PluralSourceText { get; }
+
+        public long Count { get; }
+
+        public int SelectedArm { get; }
+
+        public RecitePluralResolution Resolution { get; }
+    }
+
+    public sealed class RecitePluralResolution
+    {
+        public RecitePluralResolution(
+            IReadOnlyList<RecitePluralAttempt> attempts,
+            string matchedLocale,
+            string matchedContext,
+            string matchedKey,
+            int? matchedArm,
+            int? sourceFallbackArm,
+            string outcome)
+        {
+            Attempts = attempts ?? Array.Empty<RecitePluralAttempt>();
+            MatchedLocale = matchedLocale;
+            MatchedContext = matchedContext;
+            MatchedKey = matchedKey;
+            MatchedArm = matchedArm;
+            SourceFallbackArm = sourceFallbackArm;
+            Outcome = outcome ?? string.Empty;
+        }
+
+        public IReadOnlyList<RecitePluralAttempt> Attempts { get; }
+
+        public string MatchedLocale { get; }
+
+        public string MatchedContext { get; }
+
+        public string MatchedKey { get; }
+
+        public int? MatchedArm { get; }
+
+        public int? SourceFallbackArm { get; }
+
+        public string Outcome { get; }
+    }
+
+    public sealed class RecitePluralAttempt
+    {
+        public RecitePluralAttempt(string locale, string context, string key, int? selectedArm, string outcome)
+        {
+            Locale = locale ?? string.Empty;
+            Context = context ?? string.Empty;
+            Key = key ?? string.Empty;
+            SelectedArm = selectedArm;
+            Outcome = outcome ?? string.Empty;
+        }
+
+        public string Locale { get; }
+
+        public string Context { get; }
+
+        public string Key { get; }
+
+        public int? SelectedArm { get; }
+
+        public string Outcome { get; }
     }
 
     public sealed class ReciteChoice

@@ -1,0 +1,5 @@
+:: start default
+> plural_line@5fcf9a1f7b20211f4a92 bind=(count:int=$count)
+  You have one letter.
+  | You have {count} letters.
+-> END

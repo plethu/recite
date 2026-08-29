@@ -59,11 +59,11 @@ fn validation_is_independent_of_caller_file_order() {
     assert_eq!(forward, reverse);
     assert_codes(&forward, ["RECITE_VALIDATE006", "RECITE_ID004"]);
     assert_eq!(
-        forward.diagnostics[0].related[0].span.file,
+        forward.diagnostics[0].related_presentations[0].span.file,
         "dialogue/a.recite"
     );
     assert_eq!(
-        forward.diagnostics[1].related[0].span.file,
+        forward.diagnostics[1].related_presentations[0].span.file,
         "dialogue/a.recite"
     );
 }
@@ -86,5 +86,11 @@ fn line_and_choice_ids_share_one_localisable_namespace() {
 
     assert_codes(&report, ["RECITE_ID004"]);
     assert_eq!(report.diagnostics[0].span.start.line(), 4);
-    assert_eq!(report.diagnostics[0].related[0].span.start.line(), 2);
+    assert_eq!(
+        report.diagnostics[0].related_presentations[0]
+            .span
+            .start
+            .line(),
+        2
+    );
 }

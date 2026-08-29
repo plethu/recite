@@ -45,12 +45,32 @@
 /**
  * ABI minor version for additive, backwards-compatible C ABI changes.
  */
-#define RECITE_FFI_VERSION_MINOR 0
+#define RECITE_FFI_VERSION_MINOR 5
 
 /**
  * ABI patch version for documentation-only or implementation-only releases.
  */
-#define RECITE_FFI_VERSION_PATCH 1
+#define RECITE_FFI_VERSION_PATCH 0
+
+#define RECITE_LOCALE_REQUEST_SINGULAR 0
+
+#define RECITE_LOCALE_REQUEST_PLURAL 1
+
+#define RECITE_LOCALE_DOMAIN_LINE 0
+
+#define RECITE_LOCALE_DOMAIN_CHOICE 1
+
+#define RECITE_LOCALE_DOMAIN_AVAILABILITY_REASON 2
+
+#define RECITE_LOCALE_DOMAIN_PRESENTATION_LABEL 3
+
+#define RECITE_LOCALE_ATTEMPT_MISSING_PLURAL_FORMS 0
+
+#define RECITE_LOCALE_ATTEMPT_MISSING_ENTRY 1
+
+#define RECITE_LOCALE_ATTEMPT_MISSING_TRANSLATION 2
+
+#define RECITE_LOCALE_ATTEMPT_MATCHED 3
 
 /**
  * Stable C error codes. Matches the category table in docs/c-abi-boundary-design.md.
@@ -96,6 +116,91 @@ typedef int32_t ReciteStatus;
 #endif // __cplusplus
 
 /**
+ * Scalar type carried by one caller-provided interpolation value.
+ *
+ * The numeric discriminants are part of the C ABI. The associated payload is
+ * selected by [`ReciteInterpolationValue::kind`].
+ */
+enum ReciteInterpolationValueKind
+#if defined(__cplusplus) || __STDC_VERSION__ >= 202311L
+  : uint32_t
+#endif // defined(__cplusplus) || __STDC_VERSION__ >= 202311L
+ {
+    RECITE_INTERPOLATION_VALUE_KIND_STRING = 0,
+    RECITE_INTERPOLATION_VALUE_KIND_INTEGER = 1,
+    RECITE_INTERPOLATION_VALUE_KIND_FLOAT = 2,
+    RECITE_INTERPOLATION_VALUE_KIND_BOOLEAN = 3,
+};
+#ifndef __cplusplus
+#if __STDC_VERSION__ >= 202311L
+typedef enum ReciteInterpolationValueKind ReciteInterpolationValueKind;
+#else
+typedef uint32_t ReciteInterpolationValueKind;
+#endif // __STDC_VERSION__ >= 202311L
+#endif // __cplusplus
+
+/**
+ * Outcome for one locale-catalog candidate attempt.
+ */
+enum ReciteLocaleAttemptOutcome
+#if defined(__cplusplus) || __STDC_VERSION__ >= 202311L
+  : uint32_t
+#endif // defined(__cplusplus) || __STDC_VERSION__ >= 202311L
+ {
+    RECITE_LOCALE_ATTEMPT_OUTCOME_MISSING_PLURAL_FORMS = 0,
+    RECITE_LOCALE_ATTEMPT_OUTCOME_MISSING_ENTRY = 1,
+    RECITE_LOCALE_ATTEMPT_OUTCOME_MISSING_TRANSLATION = 2,
+    RECITE_LOCALE_ATTEMPT_OUTCOME_MATCHED = 3,
+};
+#ifndef __cplusplus
+#if __STDC_VERSION__ >= 202311L
+typedef enum ReciteLocaleAttemptOutcome ReciteLocaleAttemptOutcome;
+#else
+typedef uint32_t ReciteLocaleAttemptOutcome;
+#endif // __STDC_VERSION__ >= 202311L
+#endif // __cplusplus
+
+/**
+ * Operation requested from a locale callback.
+ */
+enum ReciteLocaleRequestKind
+#if defined(__cplusplus) || __STDC_VERSION__ >= 202311L
+  : uint32_t
+#endif // defined(__cplusplus) || __STDC_VERSION__ >= 202311L
+ {
+    RECITE_LOCALE_REQUEST_KIND_SINGULAR = 0,
+    RECITE_LOCALE_REQUEST_KIND_PLURAL = 1,
+};
+#ifndef __cplusplus
+#if __STDC_VERSION__ >= 202311L
+typedef enum ReciteLocaleRequestKind ReciteLocaleRequestKind;
+#else
+typedef uint32_t ReciteLocaleRequestKind;
+#endif // __STDC_VERSION__ >= 202311L
+#endif // __cplusplus
+
+/**
+ * Localisable text domain passed to a locale callback.
+ */
+enum ReciteLocaleTextDomain
+#if defined(__cplusplus) || __STDC_VERSION__ >= 202311L
+  : uint32_t
+#endif // defined(__cplusplus) || __STDC_VERSION__ >= 202311L
+ {
+    RECITE_LOCALE_TEXT_DOMAIN_LINE = 0,
+    RECITE_LOCALE_TEXT_DOMAIN_CHOICE = 1,
+    RECITE_LOCALE_TEXT_DOMAIN_AVAILABILITY_REASON = 2,
+    RECITE_LOCALE_TEXT_DOMAIN_PRESENTATION_LABEL = 3,
+};
+#ifndef __cplusplus
+#if __STDC_VERSION__ >= 202311L
+typedef enum ReciteLocaleTextDomain ReciteLocaleTextDomain;
+#else
+typedef uint32_t ReciteLocaleTextDomain;
+#endif // __STDC_VERSION__ >= 202311L
+#endif // __cplusplus
+
+/**
  * Heap-allocated byte buffer returned by `recite-ffi`.
  *
  * The host must call `recite_buffer_free` exactly once after consuming the
@@ -112,6 +217,45 @@ typedef struct {
     uint8_t *data;
     size_t len;
 } ReciteBuffer;
+
+/**
+ * One caller-provided typed interpolation value.
+ *
+ * The record and any string it points to are borrowed only for the duration
+ * of the `recite_session_*_with_values` or
+ * `recite_session_set_interpolation_values` call. Recite copies every value
+ * into its session-owned [`InterpolationValues`] map before returning, so a
+ * host may release or reuse the input records afterwards.
+ */
+typedef struct {
+    /**
+     * UTF-8 NUL-terminated binding name, such as `player_name`.
+     */
+    const char *name;
+    /**
+     * Selects which payload field is read. Use the numeric discriminants from
+     * [`ReciteInterpolationValueKind`]; unknown values are rejected.
+     */
+    uint32_t kind;
+    /**
+     * UTF-8 NUL-terminated string payload; used for
+     * [`ReciteInterpolationValueKind::String`].
+     */
+    const char *string_value;
+    /**
+     * Integer payload; used for [`ReciteInterpolationValueKind::Integer`].
+     */
+    int64_t integer_value;
+    /**
+     * Finite floating-point payload; used for [`ReciteInterpolationValueKind::Float`].
+     */
+    double float_value;
+    /**
+     * Boolean payload, which must be exactly `0` or `1`; used for
+     * [`ReciteInterpolationValueKind::Boolean`].
+     */
+    uint8_t boolean_value;
+} ReciteInterpolationValue;
 
 /**
  * Result returned by a `ReciteConditionFn` callback.
@@ -161,12 +305,105 @@ typedef struct {
 } ReciteConditionQuery;
 
 /**
+ * One callback-provided plural candidate attempt.
+ *
+ * Strings are host-owned and must remain immutable and valid until the
+ * enclosing Recite API call returns. A negative `selected_arm` means that the
+ * candidate had no selected arm.
+ *
+ * Hosts must enumerate candidates in this exact order: first the requested
+ * variant context (`context&variant`) across the locale's most-specific to
+ * least-specific fallback chain, then the base context across that same
+ * chain. A missing plural rule, missing entry, empty translation, or fuzzy
+ * translation continues to the next candidate. Fuzzy and empty catalogue
+ * records use `RECITE_LOCALE_ATTEMPT_MISSING_TRANSLATION`; a catalogue
+ * conflict must not be reported as a match. `RECITE_LOCALE_ATTEMPT_MATCHED`
+ * terminates the sequence. The selected arm and matched provenance must come
+ * from the validated rule and candidate that produced the match. Violating
+ * this order is a host contract violation; Recite records the supplied
+ * sequence but cannot enforce a custom provider's catalogue lookup.
+ */
+typedef struct {
+    const char *locale;
+    const char *context;
+    const char *key;
+    int32_t selected_arm;
+    uint32_t outcome;
+} ReciteLocaleAttempt;
+
+/**
+ * Result returned synchronously by a locale callback.
+ *
+ * `text` is nullable to request the runtime's authored source fallback. For
+ * plural requests, a non-null `text` requires a non-negative `selected_arm`.
+ * The complete returned pointer tree is host-owned and must remain valid and
+ * immutable from callback return until the enclosing Recite API call returns:
+ * this includes `text`, `error_message`, every `matched_*` string, the
+ * `attempts` array, and every string in every attempt. Stack or callback-local
+ * storage is invalid. Recite copies the tree while processing the enclosing
+ * call, then the host may release its owner storage. For a plural match,
+ * `attempts` must end with the matching candidate and the three `matched_*`
+ * fields must describe that same candidate. For an unresolved plural lookup,
+ * return `text = NULL`, `selected_arm = -1`, and null matching provenance
+ * after reporting every attempted candidate; traversal then uses the
+ * authored English source form and rule. An attempt with an empty or fuzzy
+ * translation must continue rather than terminate resolution.
+ */
+typedef struct {
+    uint8_t ok;
+    const char *text;
+    int32_t selected_arm;
+    const char *matched_locale;
+    const char *matched_context;
+    const char *matched_key;
+    const ReciteLocaleAttempt *attempts;
+    size_t attempts_len;
+    const char *error_message;
+} ReciteLocaleResult;
+
+/**
+ * Query passed synchronously to a locale callback.
+ *
+ * All pointers are Recite-owned borrows valid until the callback returns.
+ */
+typedef struct {
+    uint32_t kind;
+    const char *id;
+    const char *source_text;
+    const char *plural_source_text;
+    int64_t count;
+    uint32_t domain;
+    const char *locale;
+    const char *variant;
+} ReciteLocaleQuery;
+
+/**
  * Host-provided condition handler function pointer.
  *
  * Invoked synchronously on the same thread as the `recite_session_*` call
- * that triggers condition evaluation. Must not call back into `recite-ffi`.
+ * that triggers condition evaluation. The host must not panic, throw, or
+ * unwind across this C ABI; it must return `ok = 0` for a failed evaluation,
+ * avoid calling back into `recite-ffi`, and not retain borrowed pointers.
+ * Rust panics from an `extern "C"` callback abort before Recite can handle
+ * them. C++ hosts need an `extern "C"` wrapper that catches C++ exceptions
+ * before entering Recite.
  */
 typedef ReciteConditionResult (*ReciteConditionFn)(const ReciteConditionQuery *query, void *userdata);
+
+/**
+ * Host-provided locale callback.
+ *
+ * The callback runs synchronously on the session owner thread and must obey
+ * the strict non-null, no-throw/no-panic/no-unwind, and no-re-entry contract.
+ * It must return `ok = 0` for a failed lookup. A Rust panic from an
+ * `extern "C"` callback aborts before Recite can catch it; C++ hosts must
+ * catch exceptions in their own wrapper before entering Recite.
+ * The host owns the complete result pointer tree until the enclosing Recite
+ * API call returns, not merely until this callback returns. It must not use
+ * stack or callback-local storage, and must not mutate or release the result
+ * tree before that call returns.
+ */
+typedef ReciteLocaleResult (*ReciteLocaleFn)(const ReciteLocaleQuery *query, void *userdata);
 
 #ifdef __cplusplus
 extern "C" {
@@ -214,6 +451,39 @@ void recite_buffer_free(ReciteBuffer *buf);
 const char *recite_last_error_message(void);
 
 /**
+ * Evaluates one count with a complete, previously validated gettext rule.
+ * The native core remains the authority for arm selection; hosts must not
+ * provide a competing selector.
+ *
+ * # Safety
+ * `header` must point to a valid NUL-terminated UTF-8 string and
+ * `arm_out` must be a valid non-null pointer for the duration of the call.
+ */
+ReciteStatus recite_locale_evaluate_plural_rule(const char *header, int64_t count, size_t *arm_out);
+
+/**
+ * Validates a complete gettext `Plural-Forms` header using Recite's shared
+ * bounded expression validator and returns its declared arm count.
+ *
+ * # Safety
+ * `header` must point to a valid NUL-terminated UTF-8 string and
+ * `nplurals_out` must be a valid non-null pointer for the duration of the
+ * call.
+ */
+ReciteStatus recite_locale_validate_plural_rule(const char *header, size_t *nplurals_out);
+
+/**
+ * Validates that a non-empty translated string preserves the source's
+ * interpolation placeholder names and multiplicities.
+ *
+ * # Safety
+ * Both arguments must point to valid NUL-terminated UTF-8 strings for the
+ * duration of the call.
+ */
+ReciteStatus recite_locale_validate_translation_placeholders(const char *source,
+                                                             const char *translation);
+
+/**
  * Acknowledges the currently pending blocking effect.
  *
  * `effect_request_id` is a UTF-8 NUL-terminated string matching the effect ID
@@ -257,6 +527,15 @@ ReciteStatus recite_session_choose(uint64_t session_handle,
                                    ReciteBuffer *batch_out);
 
 /**
+ * Removes the locale callback from a session. A session with an explicit
+ * locale then uses the runtime's source-text fallback.
+ *
+ * # Safety
+ * The session handle must be used only from the thread that created it.
+ */
+ReciteStatus recite_session_clear_locale_provider(uint64_t session_handle);
+
+/**
  * Creates a session handle without running any traversal.
  *
  * Use this instead of `recite_session_start` when conditions appear in the
@@ -276,6 +555,25 @@ ReciteStatus recite_session_create(uint64_t asset_handle,
                                    uint64_t *session_handle_out);
 
 /**
+ * Creates a session handle without running traversal and stores typed
+ * interpolation values for the session.
+ *
+ * The input records are borrowed only for this call. Recite copies them into
+ * session-owned storage before returning. Call
+ * `recite_session_set_interpolation_values` to replace the values later.
+ *
+ * # Safety
+ * All non-null pointer arguments, including each record's string pointers,
+ * must be valid for the duration of the call.
+ */
+ReciteStatus recite_session_create_with_values(uint64_t asset_handle,
+                                               const char *start_block,
+                                               const char *locale,
+                                               const ReciteInterpolationValue *values,
+                                               size_t values_len,
+                                               uint64_t *session_handle_out);
+
+/**
  * Frees a session handle. Does nothing if the handle is unknown.
  */
 void recite_session_free(uint64_t session_handle);
@@ -293,12 +591,15 @@ void recite_session_free(uint64_t session_handle);
  *
  * # Safety
  * `name` must be valid NUL-terminated UTF-8 for the duration of the call.
- * `userdata` must remain valid and accessible from the calling thread for the
- * session's lifetime.
+ * `handler` must be a valid non-null callback function pointer. Passing NULL
+ * returns `RECITE_STATUS_VALIDATION` before the session or handler table is
+ * accessed. `userdata` must remain valid and accessible from the calling
+ * thread for the session's lifetime.
  */
 ReciteStatus recite_session_register_condition(uint64_t session_handle,
                                                const char *name,
-                                               ReciteConditionFn handler,
+                                               ReciteConditionResult (*handler)(const ReciteConditionQuery*,
+                                                                                void*),
                                                void *userdata);
 
 /**
@@ -322,6 +623,125 @@ ReciteStatus recite_session_restore(uint64_t asset_handle,
                                     size_t snapshot_len,
                                     uint64_t *session_handle_out,
                                     ReciteBuffer *batch_out);
+
+/**
+ * Restores a session and supplies typed interpolation values for its first
+ * resumption drain.
+ *
+ * Input records are borrowed only for this call and copied into the restored
+ * session. Use `recite_session_set_interpolation_values` to replace them for a
+ * later traversal operation.
+ *
+ * # Safety
+ * All non-null pointer arguments, including each record's string pointers,
+ * must be valid for the duration of the call.
+ */
+ReciteStatus recite_session_restore_with_values(uint64_t asset_handle,
+                                                const uint8_t *snapshot_bytes,
+                                                size_t snapshot_len,
+                                                const ReciteInterpolationValue *values,
+                                                size_t values_len,
+                                                uint64_t *session_handle_out,
+                                                ReciteBuffer *batch_out);
+
+/**
+ * Restores a session and supplies both interpolation values and a typed
+ * locale callback before the first resumption drain.
+ *
+ * The callback is copied into the new session. Its complete result pointer
+ * tree must remain immutable and valid until this restore call returns;
+ * Recite copies it before returning the resumption batch.
+ *
+ * # Safety
+ * All non-null pointers must be valid for the duration of the call. The
+ * callback must be a valid non-null function pointer, and `userdata` must
+ * remain valid for the restored session lifetime. Passing NULL as `callback`
+ * returns `RECITE_STATUS_VALIDATION` before a session is created.
+ */
+ReciteStatus recite_session_restore_with_values_and_locale_provider(uint64_t asset_handle,
+                                                                    const uint8_t *snapshot_bytes,
+                                                                    size_t snapshot_len,
+                                                                    const ReciteInterpolationValue *values,
+                                                                    size_t values_len,
+                                                                    ReciteLocaleResult (*callback)(const ReciteLocaleQuery*,
+                                                                                                   void*),
+                                                                    void *userdata,
+                                                                    uint64_t *session_handle_out,
+                                                                    ReciteBuffer *batch_out);
+
+/**
+ * Restores a session with interpolation values, a locale callback, and an
+ * explicit grammatical variant before the first resumption drain.
+ *
+ * The variant is copied into the restored session and is not part of the
+ * serialized snapshot. Callers must supply it again whenever restoring a
+ * snapshot that needs a variant-specific catalog entry.
+ *
+ * # Safety
+ * All non-null pointers must be valid for the duration of the call. The
+ * callback must be a valid non-null function pointer, and `userdata` must
+ * remain valid for the restored session lifetime. Passing NULL as `callback`
+ * returns `RECITE_STATUS_VALIDATION` before a session is created.
+ */
+ReciteStatus recite_session_restore_with_values_and_locale_provider_and_variant(uint64_t asset_handle,
+                                                                                const uint8_t *snapshot_bytes,
+                                                                                size_t snapshot_len,
+                                                                                const ReciteInterpolationValue *values,
+                                                                                size_t values_len,
+                                                                                const char *locale_variant,
+                                                                                ReciteLocaleResult (*callback)(const ReciteLocaleQuery*,
+                                                                                                               void*),
+                                                                                void *userdata,
+                                                                                uint64_t *session_handle_out,
+                                                                                ReciteBuffer *batch_out);
+
+/**
+ * Replaces the typed interpolation values attached to a session.
+ *
+ * Values are copied before this function returns and are therefore safe for
+ * a host to keep in temporary input buffers. Passing a null pointer with a
+ * length of zero clears the map. Updating values never changes serialised
+ * session state; the next traversal operation observes the replacement map.
+ *
+ * # Safety
+ * All non-null pointer arguments, including each record's string pointers,
+ * must be valid for the duration of the call.
+ */
+ReciteStatus recite_session_set_interpolation_values(uint64_t session_handle,
+                                                     const ReciteInterpolationValue *values,
+                                                     size_t values_len);
+
+/**
+ * Installs the typed host locale callback used by subsequent traversal.
+ *
+ * The callback and userdata are copied into the session. The callback is
+ * invoked synchronously on the session owner thread and must not panic,
+ * unwind, re-enter Recite, or throw across the ABI boundary. Passing a
+ * callback does not change the session's explicit locale; a null locale
+ * remains source-text-only and bypasses the callback. Null callbacks are
+ * rejected before they are stored.
+ *
+ * # Safety
+ * `callback` must remain a valid non-null function pointer and `userdata` must
+ * remain valid and accessible on the session owner thread for the session
+ * lifetime.
+ */
+ReciteStatus recite_session_set_locale_provider(uint64_t session_handle,
+                                                ReciteLocaleResult (*callback)(const ReciteLocaleQuery*,
+                                                                               void*),
+                                                void *userdata);
+
+/**
+ * Sets or clears the explicit grammatical variant used by subsequent locale
+ * lookups. The value is copied into the session and is not serialized; a
+ * restored session must receive it again before its first resumption drain.
+ *
+ * # Safety
+ * `variant`, when non-null, must point to a valid NUL-terminated UTF-8 string
+ * for the duration of the call. The session handle must be used only from
+ * the thread that created it.
+ */
+ReciteStatus recite_session_set_locale_variant(uint64_t session_handle, const char *variant);
 
 /**
  * Encodes the current session state as an opaque msgpack snapshot.
@@ -353,6 +773,115 @@ ReciteStatus recite_session_start(uint64_t asset_handle,
                                   const char *locale,
                                   uint64_t *session_handle_out,
                                   ReciteBuffer *batch_out);
+
+/**
+ * Convenience that creates a session, installs a locale callback, and runs
+ * the initial traversal drain.
+ *
+ * The callback result is copied during the enclosing synchronous call. Every
+ * result pointer must remain immutable and valid until that call returns; a
+ * null locale still selects source-text-only mode and bypasses the callback.
+ *
+ * # Safety
+ * All non-null pointers must be valid for the duration of the call. The
+ * callback must be a valid non-null function pointer, and `userdata` must
+ * remain valid for the session lifetime. Passing NULL as `callback` returns
+ * `RECITE_STATUS_VALIDATION` before a session is created.
+ */
+ReciteStatus recite_session_start_with_locale_provider(uint64_t asset_handle,
+                                                       const char *start_block,
+                                                       const char *locale,
+                                                       ReciteLocaleResult (*callback)(const ReciteLocaleQuery*,
+                                                                                      void*),
+                                                       void *userdata,
+                                                       uint64_t *session_handle_out,
+                                                       ReciteBuffer *batch_out);
+
+/**
+ * Convenience that creates a session, installs a locale callback and
+ * grammatical variant, and runs the initial traversal drain.
+ *
+ * The variant is copied into the session and is not part of serialized state.
+ * It therefore has to be supplied again when restoring a snapshot.
+ *
+ * # Safety
+ * All non-null pointers must be valid for the duration of the call. The
+ * callback must be a valid non-null function pointer, and `userdata` must
+ * remain valid for the session lifetime. Passing NULL as `callback` returns
+ * `RECITE_STATUS_VALIDATION` before a session is created.
+ */
+ReciteStatus recite_session_start_with_locale_provider_and_variant(uint64_t asset_handle,
+                                                                   const char *start_block,
+                                                                   const char *locale,
+                                                                   const char *locale_variant,
+                                                                   ReciteLocaleResult (*callback)(const ReciteLocaleQuery*,
+                                                                                                  void*),
+                                                                   void *userdata,
+                                                                   uint64_t *session_handle_out,
+                                                                   ReciteBuffer *batch_out);
+
+/**
+ * Convenience that combines session creation and the initial traversal drain
+ * while supplying typed interpolation values.
+ *
+ * Input records are borrowed only for this call and copied into session-owned
+ * storage. Use `recite_session_set_interpolation_values` to replace them for a
+ * later traversal operation.
+ *
+ * # Safety
+ * All non-null pointer arguments, including each record's string pointers,
+ * must be valid for the duration of the call.
+ */
+ReciteStatus recite_session_start_with_values(uint64_t asset_handle,
+                                              const char *start_block,
+                                              const char *locale,
+                                              const ReciteInterpolationValue *values,
+                                              size_t values_len,
+                                              uint64_t *session_handle_out,
+                                              ReciteBuffer *batch_out);
+
+/**
+ * Convenience that creates a session, installs a locale callback, stores
+ * typed interpolation values, and runs the initial traversal drain.
+ *
+ * # Safety
+ * All non-null pointers must be valid for the duration of the call. The
+ * callback must be a valid non-null function pointer, and `userdata` must
+ * remain valid for the session lifetime. Passing NULL as `callback` returns
+ * `RECITE_STATUS_VALIDATION` before a session is created.
+ */
+ReciteStatus recite_session_start_with_values_and_locale_provider(uint64_t asset_handle,
+                                                                  const char *start_block,
+                                                                  const char *locale,
+                                                                  const ReciteInterpolationValue *values,
+                                                                  size_t values_len,
+                                                                  ReciteLocaleResult (*callback)(const ReciteLocaleQuery*,
+                                                                                                 void*),
+                                                                  void *userdata,
+                                                                  uint64_t *session_handle_out,
+                                                                  ReciteBuffer *batch_out);
+
+/**
+ * Convenience that creates a session, installs typed interpolation values,
+ * a locale callback, and a grammatical variant before the initial drain.
+ *
+ * # Safety
+ * All non-null pointers must be valid for the duration of the call. The
+ * callback must be a valid non-null function pointer, and `userdata` must
+ * remain valid for the session lifetime. Passing NULL as `callback` returns
+ * `RECITE_STATUS_VALIDATION` before a session is created.
+ */
+ReciteStatus recite_session_start_with_values_and_locale_provider_and_variant(uint64_t asset_handle,
+                                                                              const char *start_block,
+                                                                              const char *locale,
+                                                                              const char *locale_variant,
+                                                                              const ReciteInterpolationValue *values,
+                                                                              size_t values_len,
+                                                                              ReciteLocaleResult (*callback)(const ReciteLocaleQuery*,
+                                                                                                             void*),
+                                                                              void *userdata,
+                                                                              uint64_t *session_handle_out,
+                                                                              ReciteBuffer *batch_out);
 
 #ifdef __cplusplus
 }  // extern "C"

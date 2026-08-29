@@ -1,6 +1,7 @@
 mod config;
 mod project_index;
 mod schema_index;
+mod ui;
 
 use std::collections::BTreeSet;
 use std::fs;
@@ -12,6 +13,7 @@ use lsp_types::{
 };
 use recite_core::{Diagnostic, SourceFile};
 use recite_parser::parse;
+use recite_ui::UiCatalog;
 
 pub(crate) use config::WorkspaceConfig;
 pub(crate) use project_index::LiveProjectSnapshot;
@@ -32,25 +34,10 @@ pub(crate) struct LspWorkspace {
     snapshot: LiveProjectSnapshot,
     schema: SchemaIndex,
     generation: SnapshotGeneration,
+    pub(crate) ui_catalog: UiCatalog,
 }
 
 impl LspWorkspace {
-    pub(crate) fn new(config: WorkspaceConfig) -> Self {
-        let saved = SavedProjectIndex::discover(&config.roots);
-        let schema = SchemaIndex::load(config.schema_path);
-        let documents = OpenDocumentStore::default();
-        let generation = SnapshotGeneration(0);
-        let snapshot = LiveProjectSnapshot::rebuild(generation, &saved, &documents);
-
-        Self {
-            saved,
-            documents,
-            snapshot,
-            schema,
-            generation,
-        }
-    }
-
     pub(crate) fn open(&mut self, uri: Uri, version: i32, text: String) -> DiagnosticRefresh {
         let identity = self.open_identity(uri);
         let document = self.documents.open(identity, version, text);
@@ -172,12 +159,19 @@ impl LspWorkspace {
             schema,
             self.schema.matches_uri(uri),
             &self.snapshot,
+            &self.ui_catalog,
         )
     }
 
     pub(crate) fn hover(&self, uri: &Uri, position: Position) -> Option<Hover> {
         let text = self.documents.document(uri)?.text();
-        features::hover(text, position, self.schema.schema(), &self.snapshot)
+        features::hover(
+            text,
+            position,
+            self.schema.schema(),
+            &self.snapshot,
+            &self.ui_catalog,
+        )
     }
 
     pub(crate) fn definition(
@@ -237,7 +231,7 @@ impl LspWorkspace {
         } else {
             self.schema.code_action_document()
         };
-        features::code_action(params, &documents, schema_document)
+        features::code_action(params, &documents, schema_document, &self.ui_catalog)
     }
 
     pub(crate) fn open_document_diagnostics_except(

@@ -4,8 +4,9 @@ use super::super::super::diagnostics::{INVALID_TYPE_REFERENCE, MALFORMED_SHAPE};
 use super::super::super::raw::RawProjectionInputRef;
 use super::super::super::spans::ManifestSpans;
 use super::super::super::validate::PendingTypeReference;
+use crate::schema::schema_diagnostic;
 use crate::schema::{ProjectSchema, ProjectionInputRef, ProjectionQueryDefinition, SchemaTypeRef};
-use crate::{Diagnostic, SourceSpan};
+use crate::{Diagnostic, DiagnosticArgumentValue, SourceSpan};
 
 pub(super) fn lower_input_refs(raw_refs: Vec<RawProjectionInputRef>) -> Vec<ProjectionInputRef> {
     raw_refs.into_iter().map(lower_input_ref).collect()
@@ -13,10 +14,10 @@ pub(super) fn lower_input_refs(raw_refs: Vec<RawProjectionInputRef>) -> Vec<Proj
 
 pub(super) fn lower_input_ref(raw: RawProjectionInputRef) -> ProjectionInputRef {
     match raw {
-        RawProjectionInputRef::Input { input } => ProjectionInputRef::Input { name: input },
-        RawProjectionInputRef::QueryResult { query_result } => {
-            ProjectionInputRef::QueryResult { name: query_result }
-        }
+        RawProjectionInputRef::Input(input) => ProjectionInputRef::Input { name: input.input },
+        RawProjectionInputRef::QueryResult(query_result) => ProjectionInputRef::QueryResult {
+            name: query_result.query_result,
+        },
     }
 }
 
@@ -34,17 +35,25 @@ pub(super) fn lower_output_type_ref(
     name: &str,
     raw_type: &str,
     pending_type_refs: &mut Vec<PendingTypeReference>,
+    path: &[String],
 ) -> SchemaTypeRef {
-    let (type_ref, type_ref_span, valid) = super::super::types::lower_type_reference(
-        file,
-        source,
-        spans,
-        diagnostics,
-        raw_type,
-        format!(
-            "projector '{projector}' output '{output}' binding '{name}' has invalid type reference '{raw_type}'"
-        ),
-    );
+    let (type_ref, type_ref_span, valid) =
+        super::super::types::lower_type_reference_at_with_context(
+            file,
+            source,
+            spans,
+            diagnostics,
+            raw_type,
+            path,
+            format!(
+                "projector '{projector}' output '{output}' binding '{name}' has invalid type reference '{raw_type}'"
+            ),
+            super::super::types::TypeReferenceContext::ProjectionOutput {
+                projector: projector.to_owned(),
+                output: output.to_owned(),
+                binding: name.to_owned(),
+            },
+        );
     if valid {
         pending_type_refs.push(PendingTypeReference {
             owner: format!("projector '{projector}' output '{output}' binding '{name}'"),
@@ -78,19 +87,29 @@ pub(super) fn validate_ref_type<T>(
         ProjectionInputRef::QueryResult { name } => query_types.get(name),
     };
     let Some(actual) = actual else {
-        diagnostics.push(Diagnostic::error(
+        diagnostics.push(schema_diagnostic(
             INVALID_TYPE_REFERENCE,
+            "diagnostic-schema-004-unknown-projection-ref",
             format!(
                 "projector '{projector}' {owner} references unknown {}",
                 ref_name(input_ref)
             ),
             span,
+            [
+                (
+                    "projector",
+                    DiagnosticArgumentValue::String(projector.to_owned()),
+                ),
+                ("owner", DiagnosticArgumentValue::String(owner.to_owned())),
+                ("ref", DiagnosticArgumentValue::String(ref_name(input_ref))),
+            ],
         ));
         return;
     };
     if actual != expected {
-        diagnostics.push(Diagnostic::error(
+        diagnostics.push(schema_diagnostic(
             MALFORMED_SHAPE,
+            "diagnostic-schema-001-projection-ref-type",
             format!(
                 "projector '{projector}' {owner} expects {}, but {} has {}",
                 type_ref_name(expected),
@@ -98,6 +117,22 @@ pub(super) fn validate_ref_type<T>(
                 type_ref_name(actual)
             ),
             span,
+            [
+                (
+                    "projector",
+                    DiagnosticArgumentValue::String(projector.to_owned()),
+                ),
+                ("owner", DiagnosticArgumentValue::String(owner.to_owned())),
+                (
+                    "expected",
+                    DiagnosticArgumentValue::String(type_ref_name(expected)),
+                ),
+                ("ref", DiagnosticArgumentValue::String(ref_name(input_ref))),
+                (
+                    "actual",
+                    DiagnosticArgumentValue::String(type_ref_name(actual)),
+                ),
+            ],
         ));
     }
 }

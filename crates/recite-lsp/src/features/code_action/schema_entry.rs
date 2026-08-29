@@ -1,6 +1,7 @@
 use lsp_types::{
     CodeAction, CodeActionKind, CodeActionOrCommand, CodeActionParams, Range, TextEdit,
 };
+use recite_ui::{MsgId, UiCatalog};
 
 use super::{
     CodeActionDocument, SchemaCodeActionDocument, json_edit, ranges_intersect, workspace_edit,
@@ -12,6 +13,7 @@ pub(super) fn actions(
     document: &CodeActionDocument<'_>,
     documents: &[CodeActionDocument<'_>],
     schema: SchemaCodeActionDocument<'_>,
+    catalog: &UiCatalog,
 ) -> Vec<CodeActionOrCommand> {
     if documents.iter().any(|document| {
         !document.summary.completeness.condition_functions
@@ -27,7 +29,7 @@ pub(super) fn actions(
             .condition_functions
             .iter()
             .filter(|function| function_intersects(document.text, function, params.range))
-            .filter_map(|function| condition_action(params, function, documents, &schema)),
+            .filter_map(|function| condition_action(params, function, documents, &schema, catalog)),
     );
     actions.extend(
         document
@@ -35,7 +37,7 @@ pub(super) fn actions(
             .effect_functions
             .iter()
             .filter(|function| function_intersects(document.text, function, params.range))
-            .filter_map(|function| effect_action(params, function, documents, &schema)),
+            .filter_map(|function| effect_action(params, function, documents, &schema, catalog)),
     );
     actions
 }
@@ -49,6 +51,7 @@ fn condition_action(
     function: &FunctionReferenceSummary,
     documents: &[CodeActionDocument<'_>],
     schema: &SchemaCodeActionDocument<'_>,
+    catalog: &UiCatalog,
 ) -> Option<CodeActionOrCommand> {
     if function.argument_count != 0 || function.kind != FunctionReferenceKind::BoolCondition {
         return None;
@@ -75,7 +78,10 @@ fn condition_action(
     Some(schema_code_action(
         params,
         schema,
-        format!("Add condition `{}` to schema", function.name),
+        catalog.format_pairs(
+            MsgId::LspCodeActionAddCondition,
+            [("name", function.name.as_str())],
+        ),
         edit,
     ))
 }
@@ -85,6 +91,7 @@ fn effect_action(
     function: &FunctionReferenceSummary,
     documents: &[CodeActionDocument<'_>],
     schema: &SchemaCodeActionDocument<'_>,
+    catalog: &UiCatalog,
 ) -> Option<CodeActionOrCommand> {
     if function.argument_count != 0 {
         return None;
@@ -108,7 +115,10 @@ fn effect_action(
     Some(schema_code_action(
         params,
         schema,
-        format!("Add effect `{}` to schema", function.name),
+        catalog.format_pairs(
+            MsgId::LspCodeActionAddEffect,
+            [("name", function.name.as_str())],
+        ),
         edit,
     ))
 }

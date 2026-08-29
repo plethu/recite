@@ -10,11 +10,12 @@ Runs Recite's Rust and adapter project gates (the full local suite is
 scripts/verify.sh or `mise run verify`):
   1. scripts/check-test-organization.sh
   2. scripts/generate-ffi-header.sh
-  3. scripts/check-unity-adapter.sh
-  4. cargo fmt --check
-  5. cargo test --locked
-  6. cargo clippy --locked --all-targets --all-features -- -D warnings
-  7. RUSTDOCFLAGS=-Dwarnings cargo doc --locked --workspace --all-features --no-deps
+  3. scripts/check-ffi-header.sh
+  4. scripts/check-unity-adapter.sh
+  5. cargo fmt --check
+  6. cargo test --locked
+  7. cargo clippy --locked --all-targets --all-features -- -D warnings
+  8. RUSTDOCFLAGS=-Dwarnings cargo doc --locked --workspace --all-features --no-deps
 EOF
 }
 
@@ -46,6 +47,11 @@ if [[ ! -x "$repo_root/scripts/generate-ffi-header.sh" ]]; then
   exit 2
 fi
 
+if [[ ! -x "$repo_root/scripts/check-ffi-header.sh" ]]; then
+  echo "missing executable gate: $repo_root/scripts/check-ffi-header.sh" >&2
+  exit 2
+fi
+
 if [[ -e "$repo_root/scripts/check-unity-adapter.sh" && ! -x "$repo_root/scripts/check-unity-adapter.sh" ]]; then
   echo "non-executable gate: $repo_root/scripts/check-unity-adapter.sh" >&2
   exit 2
@@ -57,6 +63,10 @@ echo "== test organization =="
 echo
 echo "== generated ffi header =="
 "$repo_root/scripts/generate-ffi-header.sh" "$repo_root"
+
+echo
+echo "== ffi header C/C++ probes =="
+"$repo_root/scripts/check-ffi-header.sh" "$repo_root"
 
 if [[ -x "$repo_root/scripts/check-unity-adapter.sh" ]]; then
   echo

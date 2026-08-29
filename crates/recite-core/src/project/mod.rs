@@ -1,3 +1,4 @@
+mod diagnostics;
 mod freshness;
 mod manifest;
 mod spans;
@@ -7,9 +8,9 @@ use std::collections::BTreeMap;
 
 use crate::{CompiledDialogue, DiagnosticCode, SchemaFingerprint};
 
-pub use freshness::validate_project_freshness;
+pub use freshness::{validate_project_freshness, validate_project_freshness_source};
 pub use spans::project_scene_key_span;
-pub use validate::validate_project_manifest;
+pub use validate::{validate_project_manifest, validate_project_manifest_source};
 
 pub const MALFORMED_MANIFEST: DiagnosticCode = DiagnosticCode::new_static("RECITE_PROJECT001");
 pub const DUPLICATE_SCENE_ID: DiagnosticCode = DiagnosticCode::new_static("RECITE_PROJECT002");
@@ -18,6 +19,8 @@ pub const UNKNOWN_START_BLOCK: DiagnosticCode = DiagnosticCode::new_static("RECI
 pub const MISSING_PARTICIPANTS: DiagnosticCode = DiagnosticCode::new_static("RECITE_PROJECT005");
 pub const MISSING_SOURCE_ASSET: DiagnosticCode = DiagnosticCode::new_static("RECITE_PROJECT006");
 pub const MALFORMED_COMPILED_ASSET: DiagnosticCode =
+    DiagnosticCode::new_static("RECITE_PROJECT007");
+pub const UNSUPPORTED_ASSET_VERSION: DiagnosticCode =
     DiagnosticCode::new_static("RECITE_PROJECT007");
 pub const UNKNOWN_PARTICIPANT: DiagnosticCode = DiagnosticCode::new_static("RECITE_PROJECT008");
 
@@ -37,6 +40,33 @@ pub struct ProjectManifest {
 #[derive(Clone, Debug, Eq, PartialEq)]
 pub struct ProjectManifestLoadReport {
     pub manifest: Option<ProjectManifest>,
+    pub diagnostics: Vec<crate::Diagnostic>,
+}
+
+/// A successfully parsed project manifest together with its source-backed
+/// TOML ranges.
+#[derive(Clone, Debug)]
+pub struct ProjectManifestSource {
+    pub(super) file: String,
+    pub(super) source_text: String,
+    pub(super) manifest: ProjectManifest,
+    pub(super) spans: crate::toml_spans::TomlSpanIndex,
+}
+
+impl PartialEq for ProjectManifestSource {
+    fn eq(&self, other: &Self) -> bool {
+        self.file == other.file
+            && self.source_text == other.source_text
+            && self.manifest == other.manifest
+    }
+}
+
+impl Eq for ProjectManifestSource {}
+
+/// Result of loading a source-backed project manifest.
+#[derive(Clone, Debug, Eq, PartialEq)]
+pub struct ProjectManifestSourceLoadReport {
+    pub source: Option<ProjectManifestSource>,
     pub diagnostics: Vec<crate::Diagnostic>,
 }
 

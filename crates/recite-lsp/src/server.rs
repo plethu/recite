@@ -10,12 +10,17 @@ use lsp_types::request::{
 use lsp_types::{
     CodeActionParams, CompletionParams, DidChangeTextDocumentParams, DidCloseTextDocumentParams,
     DidOpenTextDocumentParams, DidSaveTextDocumentParams, GotoDefinitionParams, HoverParams,
-    InitializeParams, ReferenceParams, RenameParams, TextDocumentPositionParams,
+    ReferenceParams, RenameParams, TextDocumentPositionParams,
 };
 
-use crate::capabilities::initialize_result;
 use crate::diagnostics::{clear_diagnostics, publish_diagnostics};
 use crate::workspace::{DiagnosticRefresh, LspWorkspace, WorkspaceChangeResult, WorkspaceConfig};
+use recite_ui::UiCatalog;
+
+mod bootstrap;
+#[allow(unused_imports, reason = "used by in-crate protocol harness")]
+pub(crate) use bootstrap::{run_connection, run_connection_with_catalog};
+pub use bootstrap::{run_stdio, run_stdio_with_catalog, run_stdio_with_locale};
 
 #[derive(Debug, thiserror::Error)]
 #[non_exhaustive]
@@ -32,29 +37,10 @@ pub enum ServerError {
     Io(#[from] std::io::Error),
     #[error("failed to serialize initialize result: {0}")]
     InitializeResult(#[from] serde_json::Error),
-}
-
-pub fn run_stdio() -> Result<(), ServerError> {
-    let (connection, io_threads) = Connection::stdio();
-    run_connection(connection)?;
-    io_threads.join()?;
-
-    Ok(())
-}
-
-pub(crate) fn run_connection(connection: Connection) -> Result<(), ServerError> {
-    let (initialize_id, initialize_params) = connection.initialize_start()?;
-    let initialize_params = serde_json::from_value::<InitializeParams>(initialize_params)
-        .unwrap_or_else(|_| InitializeParams::default());
-    let initialize_result = initialize_result(&initialize_params);
-    connection.initialize_finish(initialize_id, serde_json::to_value(initialize_result)?)?;
-
-    let mut server = Server::new(
-        connection,
-        WorkspaceConfig::from_initialize_params(&initialize_params),
-    );
-    server.publish_schema_diagnostics()?;
-    server.run()
+    #[error("failed to load UI catalog: {0}")]
+    UiCatalog(String),
+    #[error("failed to publish LSP diagnostics: {0}")]
+    Diagnostics(String),
 }
 
 struct Server {
@@ -64,10 +50,10 @@ struct Server {
 }
 
 impl Server {
-    fn new(connection: Connection, workspace_config: WorkspaceConfig) -> Self {
+    fn new(connection: Connection, workspace_config: WorkspaceConfig, catalog: UiCatalog) -> Self {
         Self {
             connection,
-            workspace: LspWorkspace::new(workspace_config),
+            workspace: LspWorkspace::with_ui_catalog(workspace_config, catalog),
             shutdown_requested: false,
         }
     }
@@ -348,7 +334,15 @@ impl Server {
                     diagnostics,
                     ..
                 } = self.workspace.with_semantic_diagnostics(diagnostics);
-                let publish_params = publish_diagnostics(uri, text.as_str(), version, &diagnostics);
+                let publish_params = publish_diagnostics(
+                    uri,
+                    text.as_str(),
+                    version,
+                    &diagnostics,
+                    &self.workspace.ui_catalog,
+                    &self.workspace.diagnostic_sources(),
+                )
+                .map_err(|error| ServerError::Diagnostics(error.to_string()))?;
                 self.send(
                     Notification::new(PublishDiagnostics::METHOD.to_owned(), publish_params).into(),
                 )

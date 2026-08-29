@@ -1,0 +1,10 @@
+{
+  "schema_version": 1,
+  "metadata_domains": {
+    "tone_by_speaker": {
+      "kind": "contextual",
+      "selector": "field:speaker",
+      "values_by_context": { "rhea": ["calm"] }
+    }
+  }
+}

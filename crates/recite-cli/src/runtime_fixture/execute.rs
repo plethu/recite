@@ -5,23 +5,25 @@ use std::time::Instant;
 use recite_core::CompiledDialogue;
 use recite_runtime::{
     ConditionEvaluationError, ConditionExpectedType, ConditionQuery, ConditionValue,
-    DialogueContext, DialogueEffectMode, DialogueEvent, EffectAck, acknowledge_effect,
-    encode_session_messagepack,
+    DialogueContext, DialogueEffectMode, DialogueEvent, DialogueTrace, EffectAck,
+    acknowledge_effect,
 };
-use recite_runtime::{LocaleProvider, TextDomain};
+use recite_ui::UiArg;
 
 use super::fixture::{FixtureConditionValue, RuntimeFixture};
+use super::metrics::{CountingLocaleProvider, RuntimeMetricsCollector, record_session_size};
 use super::prompt::{
     PromptCatalog, select_fixture_choice, trace_prompt, trace_prompt_identity,
     write_prompt_run_lines,
 };
 use super::trace::{
-    TraceCondition, TraceConditionValue, TraceDocument, TraceEffect, TraceEffectCounts, TraceEvent,
-    TraceMetrics, condition_query_text, format_effect_arguments, trace_condition_argument,
-    trace_effect, trace_line,
+    TraceCondition, TraceConditionValue, TraceDocument, TraceEffect, TraceEvent,
+    condition_query_text, format_effect_arguments, trace_condition_argument, trace_effect,
+    trace_line,
 };
 use crate::dialogue_locale::{DialogueTraversal, DialogueTraversalPreview};
 use crate::error::CliError;
+use crate::i18n::{Messages, MsgId};
 
 pub(crate) struct RuntimeExecution {
     pub(crate) run_lines: Vec<String>,
@@ -40,6 +42,7 @@ pub(crate) fn execute_runtime_fixture(
     dialogue_preview: Option<DialogueTraversalPreview<'_>>,
     dialogue_locale_fallbacks: Option<Vec<String>>,
     options: RuntimeFixtureOptions,
+    messages: &Messages,
 ) -> Result<RuntimeExecution, CliError> {
     let prompt_catalog = PromptCatalog::new(asset)?;
     let context = FixtureContext::new(&fixture.conditions);
@@ -53,7 +56,10 @@ pub(crate) fn execute_runtime_fixture(
         (preview, None) => preview,
         (None, Some(_)) => None,
     };
-    let traversal = DialogueTraversal::new(asset, traversal_preview);
+    let dialogue_trace = DialogueTrace::new();
+    let traversal = DialogueTraversal::new(asset, traversal_preview)
+        .with_values(fixture.interpolation_values())
+        .with_trace(&dialogue_trace);
     // Wall-clock duration is intentionally opt-in trace instrumentation; the
     // default deterministic trace output does not include it.
     #[allow(clippy::disallowed_methods)]
@@ -77,6 +83,7 @@ pub(crate) fn execute_runtime_fixture(
                     &mut run_lines,
                     &mut trace_events,
                     metrics.as_mut(),
+                    messages,
                 );
                 event
             }
@@ -84,17 +91,23 @@ pub(crate) fn execute_runtime_fixture(
 
         match event {
             DialogueEvent::Line(line) => {
-                run_lines.push(format!("line {}: {}", line.id.as_str(), line.text));
+                run_lines.push(messages.format(
+                    MsgId::PlayLine,
+                    [
+                        ("id", UiArg::from(line.id.as_str())),
+                        ("text", UiArg::from(line.text.as_str())),
+                    ],
+                ));
                 if let Some(metrics) = metrics.as_mut() {
                     metrics.line_count += 1;
                 }
                 trace_events.push(TraceEvent::Line {
-                    line: trace_line(&line),
+                    line: trace_line(&line, &dialogue_trace),
                 });
             }
             DialogueEvent::Prompt { line, choices } => {
                 let prompt = prompt_catalog.identify(line.as_ref(), &choices)?;
-                write_prompt_run_lines(&mut run_lines, &prompt, line.as_ref(), &choices);
+                write_prompt_run_lines(&mut run_lines, &prompt, line.as_ref(), &choices, messages);
                 if let Some(metrics) = metrics.as_mut() {
                     metrics.prompt_count += 1;
                     metrics.choice_count += choices.len();
@@ -103,11 +116,14 @@ pub(crate) fn execute_runtime_fixture(
                     }
                 }
                 trace_events.push(TraceEvent::Prompt {
-                    prompt: trace_prompt(&prompt, line.as_ref(), &choices),
+                    prompt: trace_prompt(&prompt, line.as_ref(), &choices, &dialogue_trace),
                 });
 
                 let choice_id = select_fixture_choice(fixture, &prompt, &choices)?;
-                run_lines.push(format!("selected choice {}", choice_id.as_str()));
+                run_lines.push(messages.format(
+                    MsgId::PlaySelectedChoice,
+                    [("id", UiArg::from(choice_id.as_str()))],
+                ));
                 trace_events.push(TraceEvent::ChoiceSelected {
                     prompt: trace_prompt_identity(&prompt),
                     choice: choice_id.as_str().to_owned(),
@@ -120,15 +136,18 @@ pub(crate) fn execute_runtime_fixture(
                     &mut run_lines,
                     &mut trace_events,
                     metrics.as_mut(),
+                    messages,
                 );
                 pending_event = Some(event);
             }
             DialogueEvent::Effect(effect) => {
-                run_lines.push(format!(
-                    "effect {} {} {}",
-                    effect.mode,
-                    effect.function,
-                    format_effect_arguments(&effect.args)
+                run_lines.push(messages.format(
+                    MsgId::RunEffect,
+                    [
+                        ("mode", UiArg::from(effect.mode.to_string())),
+                        ("function", UiArg::from(effect.function.clone())),
+                        ("args", UiArg::from(format_effect_arguments(&effect.args))),
+                    ],
                 ));
                 if let Some(metrics) = metrics.as_mut() {
                     metrics.record_effect(effect.mode);
@@ -146,9 +165,9 @@ pub(crate) fn execute_runtime_fixture(
 
                     acknowledge_effect(&mut session, effect.id.clone(), EffectAck::Completed)?;
                     record_session_size(metrics.as_mut(), &session)?;
-                    run_lines.push(format!(
-                        "acknowledged effect {} completed",
-                        effect.id.as_str()
+                    run_lines.push(messages.format(
+                        MsgId::PlayAckCompleted,
+                        [("id", UiArg::from(effect.id.as_str()))],
                     ));
                     trace_events.push(TraceEvent::Acknowledgement {
                         effect_id: effect.id.as_str().to_owned(),
@@ -157,14 +176,16 @@ pub(crate) fn execute_runtime_fixture(
                 }
             }
             DialogueEvent::End { deferred_effects } => {
-                run_lines.push("end".to_owned());
+                run_lines.push(messages.text(MsgId::PlayEnd));
                 if !deferred_effects.is_empty() {
-                    run_lines.push("deferred effects:".to_owned());
+                    run_lines.push(messages.text(MsgId::PlayDeferredEffects));
                     for effect in &deferred_effects {
-                        run_lines.push(format!(
-                            "  {} {}",
-                            effect.function,
-                            format_effect_arguments(&effect.args)
+                        run_lines.push(messages.format(
+                            MsgId::PlayDeferredEffectRow,
+                            [
+                                ("function", UiArg::from(effect.function.clone())),
+                                ("args", UiArg::from(format_effect_arguments(&effect.args))),
+                            ],
                         ));
                     }
                 }
@@ -215,102 +236,21 @@ fn record_conditions(
     run_lines: &mut Vec<String>,
     trace_events: &mut Vec<TraceEvent>,
     metrics: Option<&mut RuntimeMetricsCollector>,
+    messages: &Messages,
 ) {
     let mut metrics = metrics;
     for condition in context.take_records() {
-        run_lines.push(format!(
-            "condition {} = {}",
-            condition.query, condition.result
+        run_lines.push(messages.format(
+            MsgId::PlayConditionResult,
+            [
+                ("query", UiArg::from(condition.query.clone())),
+                ("result", UiArg::from(condition.result.to_string())),
+            ],
         ));
         trace_events.push(TraceEvent::Condition { condition });
         if let Some(metrics) = metrics.as_deref_mut() {
             metrics.condition_evaluation_count += 1;
         }
-    }
-}
-
-fn record_session_size(
-    metrics: Option<&mut RuntimeMetricsCollector>,
-    session: &recite_runtime::DialogueSession,
-) -> Result<(), CliError> {
-    let Some(metrics) = metrics else {
-        return Ok(());
-    };
-    metrics.max_serialized_session_size_bytes = metrics
-        .max_serialized_session_size_bytes
-        .max(encode_session_messagepack(session)?.len());
-    Ok(())
-}
-
-#[derive(Default)]
-struct RuntimeMetricsCollector {
-    line_count: usize,
-    prompt_count: usize,
-    choice_count: usize,
-    condition_evaluation_count: usize,
-    effect_count: TraceEffectCounts,
-    max_serialized_session_size_bytes: usize,
-}
-
-impl RuntimeMetricsCollector {
-    fn record_effect(&mut self, mode: DialogueEffectMode) {
-        match mode {
-            DialogueEffectMode::Deferred => self.effect_count.deferred += 1,
-            DialogueEffectMode::Immediate => self.effect_count.immediate += 1,
-            DialogueEffectMode::Blocking => self.effect_count.blocking += 1,
-        }
-    }
-
-    fn finish(
-        self,
-        event_count: usize,
-        localization_lookup_count: usize,
-        elapsed_traversal_time_ns: u128,
-    ) -> TraceMetrics {
-        TraceMetrics {
-            event_count,
-            line_count: self.line_count,
-            prompt_count: self.prompt_count,
-            choice_count: self.choice_count,
-            condition_evaluation_count: self.condition_evaluation_count,
-            effect_count: self.effect_count,
-            localization_lookup_count,
-            elapsed_traversal_time_ns,
-            max_serialized_session_size_bytes: self.max_serialized_session_size_bytes,
-        }
-    }
-}
-
-struct CountingLocaleProvider<'a> {
-    provider: &'a dyn LocaleProvider,
-    lookup_count: std::cell::Cell<usize>,
-}
-
-impl<'a> CountingLocaleProvider<'a> {
-    fn new(provider: &'a dyn LocaleProvider) -> Self {
-        Self {
-            provider,
-            lookup_count: std::cell::Cell::new(0),
-        }
-    }
-
-    fn lookup_count(&self) -> usize {
-        self.lookup_count.get()
-    }
-}
-
-impl LocaleProvider for CountingLocaleProvider<'_> {
-    fn lookup(
-        &self,
-        id: &str,
-        source_text: &str,
-        domain: TextDomain,
-        locale: &recite_core::LocaleId,
-        variant: Option<&str>,
-    ) -> Option<String> {
-        self.lookup_count.set(self.lookup_count.get() + 1);
-        self.provider
-            .lookup(id, source_text, domain, locale, variant)
     }
 }
 

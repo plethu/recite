@@ -1,260 +1,149 @@
 use std::path::Path;
 
+use recite_core::{PoDiagnosticKind, PoDocument, PoParseError};
+
 use super::DialogueCatalogMalformedReason;
 use crate::error::CliError;
-use recite_core::{extract_placeholder_names, validate_translation_placeholders};
 
+/// Runtime lookup's narrow view of a shared PO entry.
+///
+/// Parsing, preservation, and editing remain owned by `recite-core`; the CLI
+/// projects only the fields its current preview path can consume.
 #[derive(Debug)]
 pub(super) struct PoEntry {
     pub(super) context: String,
     pub(super) source_text: String,
-    pub(super) translation: String,
+    pub(super) plural_source_text: Option<String>,
+    pub(super) translations: Vec<String>,
 }
 
-#[derive(Clone, Copy, Debug, Eq, PartialEq)]
-enum PoField {
-    Context,
-    Id,
-    Translation,
+pub(super) struct ParsedPoCatalog {
+    pub(super) entries: Vec<PoEntry>,
+    pub(super) plural_forms: Option<String>,
 }
 
-#[derive(Default)]
-struct PoEntryBuilder {
-    context: Option<String>,
-    source_text: Option<String>,
-    translation: Option<String>,
-    active: Option<PoField>,
-    start_line: usize,
-}
-
-pub(super) fn parse_po_catalog(path: &Path, source: &str) -> Result<Vec<PoEntry>, CliError> {
+pub(super) fn parse_po_catalog(path: &Path, source: &str) -> Result<ParsedPoCatalog, CliError> {
+    let document = PoDocument::parse_with_path(path.display().to_string(), source)
+        .map_err(|error| malformed(path, error.line(), map_reason(&error)))?;
     let mut entries = Vec::new();
-    let mut builder = PoEntryBuilder::default();
-
-    for (line_index, line) in source.lines().enumerate() {
-        let line_number = line_index + 1;
-        let trimmed = line.trim();
-        if trimmed.is_empty() {
-            finish_entry(path, &mut builder, &mut entries)?;
+    let plural_forms = document
+        .headers()
+        .iter()
+        .find(|header| header.key().eq_ignore_ascii_case("Plural-Forms"))
+        .map(|header| header.value().to_owned());
+    for entry in document.entries() {
+        if entry.is_header() {
             continue;
         }
-        if trimmed.starts_with('#') {
+        if entry.is_obsolete() || entry.flags().iter().any(|flag| flag == "fuzzy") {
             continue;
         }
-        if trimmed.starts_with('"') {
-            let value = parse_po_quoted(path, line_number, trimmed)?;
-            match builder.active {
-                Some(PoField::Context) => append_field(&mut builder.context, value),
-                Some(PoField::Id) => append_field(&mut builder.source_text, value),
-                Some(PoField::Translation) => append_field(&mut builder.translation, value),
-                None => {
-                    return Err(malformed(
-                        path,
-                        line_number,
-                        DialogueCatalogMalformedReason::QuotedContinuationWithoutField,
-                    ));
-                }
-            }
-            continue;
-        }
-
-        let Some((field, value)) = parse_directive(path, line_number, trimmed)? else {
-            return Err(malformed(
+        let context = entry.context().ok_or_else(|| {
+            malformed(
                 path,
-                line_number,
-                DialogueCatalogMalformedReason::ExpectedDirective,
-            ));
-        };
-        if builder.start_line == 0 {
-            builder.start_line = line_number;
-        }
-        match field {
-            PoField::Context => builder.context = Some(value),
-            PoField::Id => builder.source_text = Some(value),
-            PoField::Translation => builder.translation = Some(value),
-        }
-        builder.active = Some(field);
-    }
-
-    finish_entry(path, &mut builder, &mut entries)?;
-    Ok(entries)
-}
-
-fn parse_directive(
-    path: &Path,
-    line_number: usize,
-    trimmed: &str,
-) -> Result<Option<(PoField, String)>, CliError> {
-    if trimmed.starts_with("msgid_plural") || trimmed.starts_with("msgstr[") {
-        return Err(malformed(
-            path,
-            line_number,
-            DialogueCatalogMalformedReason::PluralEntriesUnsupported,
-        ));
-    }
-
-    for (keyword, field) in [
-        ("msgctxt", PoField::Context),
-        ("msgid", PoField::Id),
-        ("msgstr", PoField::Translation),
-    ] {
-        let Some(rest) = trimmed.strip_prefix(keyword) else {
-            continue;
-        };
-        let rest = rest.trim_start();
-        if rest.starts_with('[') {
-            return Err(malformed(
-                path,
-                line_number,
-                DialogueCatalogMalformedReason::PluralEntriesUnsupported,
-            ));
-        }
-        return Ok(Some((field, parse_po_quoted(path, line_number, rest)?)));
-    }
-
-    Ok(None)
-}
-
-fn append_field(field: &mut Option<String>, value: String) {
-    field.get_or_insert_with(String::new).push_str(&value);
-}
-
-fn finish_entry(
-    path: &Path,
-    builder: &mut PoEntryBuilder,
-    entries: &mut Vec<PoEntry>,
-) -> Result<(), CliError> {
-    if builder.context.is_none() && builder.source_text.is_none() && builder.translation.is_none() {
-        builder.active = None;
-        builder.start_line = 0;
-        return Ok(());
-    }
-
-    let line = builder.start_line.max(1);
-    let context = builder.context.take();
-    let source_text = builder
-        .source_text
-        .take()
-        .ok_or_else(|| malformed(path, line, DialogueCatalogMalformedReason::MissingId))?;
-    let translation = builder.translation.take().ok_or_else(|| {
-        malformed(
-            path,
-            line,
-            DialogueCatalogMalformedReason::MissingTranslation,
-        )
-    })?;
-    if context.is_none() && source_text.is_empty() {
-        builder.active = None;
-        builder.start_line = 0;
-        return Ok(());
-    }
-    validate_placeholders(path, line, &source_text, &translation)?;
-    let context = context
-        .ok_or_else(|| malformed(path, line, DialogueCatalogMalformedReason::MissingContext))?;
-
-    entries.push(PoEntry {
-        context,
-        source_text,
-        translation,
-    });
-    builder.active = None;
-    builder.start_line = 0;
-    Ok(())
-}
-
-fn validate_placeholders(
-    path: &Path,
-    line: usize,
-    source_text: &str,
-    translation: &str,
-) -> Result<(), CliError> {
-    if translation.is_empty() {
-        return Ok(());
-    }
-
-    extract_placeholder_names(source_text).map_err(|error| {
-        malformed(
-            path,
-            line,
-            DialogueCatalogMalformedReason::PlaceholderMismatch {
-                detail: format!("msgid has invalid placeholder syntax: {}", error.message()),
+                entry.line(),
+                DialogueCatalogMalformedReason::MissingContext,
+            )
+        })?;
+        entries.push(PoEntry {
+            context: context.to_owned(),
+            source_text: entry.source_text().to_owned(),
+            plural_source_text: entry.plural_source_text().map(str::to_owned),
+            translations: if entry.is_plural() {
+                entry
+                    .plural_translations()
+                    .iter()
+                    .map(|translation| translation.text().to_owned())
+                    .collect()
+            } else {
+                vec![entry.translation().unwrap_or_default().to_owned()]
             },
-        )
-    })?;
-    extract_placeholder_names(translation).map_err(|error| {
-        malformed(
-            path,
-            line,
-            DialogueCatalogMalformedReason::PlaceholderMismatch {
-                detail: format!("msgstr has invalid placeholder syntax: {}", error.message()),
-            },
-        )
-    })?;
-    validate_translation_placeholders(source_text, translation).map_err(|error| {
-        malformed(
-            path,
-            line,
-            DialogueCatalogMalformedReason::PlaceholderMismatch {
-                detail: error.message(),
-            },
-        )
+        });
+    }
+    Ok(ParsedPoCatalog {
+        entries,
+        plural_forms,
     })
 }
 
-fn parse_po_quoted(path: &Path, line_number: usize, input: &str) -> Result<String, CliError> {
-    let mut chars = input.chars();
-    if chars.next() != Some('"') {
-        return Err(malformed(
-            path,
-            line_number,
-            DialogueCatalogMalformedReason::ExpectedQuotedString,
-        ));
-    }
-
-    let mut output = String::new();
-    let mut escaped = false;
-    while let Some(character) = chars.next() {
-        if escaped {
-            output.push(match character {
-                'n' => '\n',
-                'r' => '\r',
-                't' => '\t',
-                '"' => '"',
-                '\\' => '\\',
-                other => {
-                    return Err(malformed(
-                        path,
-                        line_number,
-                        DialogueCatalogMalformedReason::UnsupportedEscape {
-                            escape: format!("\\{other}"),
-                        },
-                    ));
-                }
-            });
-            escaped = false;
-            continue;
+fn map_reason(error: &PoParseError) -> DialogueCatalogMalformedReason {
+    match error.kind() {
+        PoDiagnosticKind::ExpectedDirective => DialogueCatalogMalformedReason::ExpectedDirective,
+        PoDiagnosticKind::ExpectedQuotedString => {
+            DialogueCatalogMalformedReason::ExpectedQuotedString
         }
-        match character {
-            '\\' => escaped = true,
-            '"' => {
-                if chars.as_str().trim().is_empty() {
-                    return Ok(output);
-                }
-                return Err(malformed(
-                    path,
-                    line_number,
-                    DialogueCatalogMalformedReason::UnexpectedTextAfterQuotedString,
-                ));
+        PoDiagnosticKind::MissingField("msgid") => DialogueCatalogMalformedReason::MissingId,
+        PoDiagnosticKind::MissingField("msgstr") => {
+            DialogueCatalogMalformedReason::MissingTranslation
+        }
+        PoDiagnosticKind::MissingField(_) => DialogueCatalogMalformedReason::ExpectedDirective,
+        PoDiagnosticKind::QuotedContinuationWithoutField => {
+            DialogueCatalogMalformedReason::QuotedContinuationWithoutField
+        }
+        PoDiagnosticKind::UnexpectedTextAfterQuotedString => {
+            DialogueCatalogMalformedReason::UnexpectedTextAfterQuotedString
+        }
+        PoDiagnosticKind::UnterminatedQuotedString => {
+            DialogueCatalogMalformedReason::UnterminatedQuotedString
+        }
+        PoDiagnosticKind::UnsupportedEscape(escape) => {
+            DialogueCatalogMalformedReason::UnsupportedEscape {
+                escape: escape.clone(),
             }
-            other => output.push(other),
         }
+        PoDiagnosticKind::InvalidPluralArms(detail) => {
+            DialogueCatalogMalformedReason::InvalidHeader {
+                detail: format!("plural entry has invalid arms: {detail}"),
+            }
+        }
+        PoDiagnosticKind::InvalidPluralRule(reason) => {
+            DialogueCatalogMalformedReason::InvalidPluralRule {
+                detail: reason.to_string(),
+            }
+        }
+        PoDiagnosticKind::PlaceholderMismatch(detail) => {
+            DialogueCatalogMalformedReason::PlaceholderMismatch {
+                detail: detail.clone(),
+            }
+        }
+        PoDiagnosticKind::InvalidStableId(value) => {
+            DialogueCatalogMalformedReason::InvalidStableId {
+                value: value.clone(),
+            }
+        }
+        PoDiagnosticKind::DuplicateField(field) => DialogueCatalogMalformedReason::DuplicateField {
+            field: field.clone(),
+        },
+        PoDiagnosticKind::DuplicateKey(key) => {
+            DialogueCatalogMalformedReason::DuplicateEntry { key: key.clone() }
+        }
+        PoDiagnosticKind::InvalidFieldOrder(detail) => {
+            DialogueCatalogMalformedReason::InvalidFieldOrder {
+                detail: detail.clone(),
+            }
+        }
+        PoDiagnosticKind::InvalidHeader(detail) if detail.contains("active plural entries") => {
+            DialogueCatalogMalformedReason::InvalidHeader {
+                detail: detail.clone(),
+            }
+        }
+        PoDiagnosticKind::InvalidHeader(detail) => DialogueCatalogMalformedReason::InvalidHeader {
+            detail: detail.clone(),
+        },
+        PoDiagnosticKind::MarkupUnknownTag(_)
+        | PoDiagnosticKind::MarkupUnbalancedTag(_)
+        | PoDiagnosticKind::MarkupMissingTag(_)
+        | PoDiagnosticKind::MarkupAttributeChange { .. } => {
+            let Some(presentation) = error.diagnostic().presentation.clone() else {
+                unreachable!("PO markup diagnostics have structured presentations");
+            };
+            DialogueCatalogMalformedReason::Markup {
+                presentation,
+                compatibility_message: error.diagnostic().message.clone(),
+            }
+        }
+        _ => DialogueCatalogMalformedReason::ExpectedDirective,
     }
-
-    Err(malformed(
-        path,
-        line_number,
-        DialogueCatalogMalformedReason::UnterminatedQuotedString,
-    ))
 }
 
 fn malformed(path: &Path, line: usize, reason: DialogueCatalogMalformedReason) -> CliError {

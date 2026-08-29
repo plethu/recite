@@ -18,6 +18,9 @@ namespace Recite.Unity.GameObjects
         private string locale;
 
         [SerializeField]
+        private string localeVariant;
+
+        [SerializeField]
         private ReciteOutputEvent output;
 
         [SerializeField]
@@ -36,7 +39,7 @@ namespace Recite.Unity.GameObjects
             try
             {
                 var asset = new ReciteDialogueAsset(compiledAsset.bytes, compiledAsset.name, compiledAsset.name);
-                Emit(service.Start(asset, string.IsNullOrEmpty(startBlock) ? null : startBlock, string.IsNullOrEmpty(locale) ? null : locale));
+                Emit(service.Start(asset, string.IsNullOrEmpty(startBlock) ? null : startBlock, string.IsNullOrEmpty(locale) ? null : locale, string.IsNullOrEmpty(localeVariant) ? null : localeVariant));
             }
             catch (ReciteAdapterException ex)
             {
@@ -96,7 +99,7 @@ namespace Recite.Unity.GameObjects
             try
             {
                 var asset = new ReciteDialogueAsset(compiledAsset.bytes, compiledAsset.name, compiledAsset.name);
-                Emit(service.Restore(asset, snapshot));
+                Emit(service.Restore(asset, snapshot, string.IsNullOrEmpty(localeVariant) ? null : localeVariant));
             }
             catch (ReciteAdapterException ex)
             {

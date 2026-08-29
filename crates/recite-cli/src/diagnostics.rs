@@ -2,36 +2,50 @@ use std::io::Write;
 
 use recite_core::Diagnostic;
 
-use crate::error::CliError;
+use crate::{error::CliError, i18n::Messages};
+
+#[cfg(test)]
+mod tests;
 
 pub(crate) fn report_diagnostics<'a>(
     writer: &mut dyn Write,
+    messages: &Messages,
     diagnostics: impl Iterator<Item = &'a Diagnostic>,
 ) -> Result<usize, CliError> {
     let mut count = 0;
     for diagnostic in diagnostics {
+        let record = diagnostic
+            .record()
+            .map_err(|source| CliError::DiagnosticRendering {
+                source: source.to_string(),
+            })?;
+        let rendered = messages.render_diagnostic(&record).map_err(|source| {
+            CliError::DiagnosticRendering {
+                source: source.to_string(),
+            }
+        })?;
         count += 1;
         writeln!(
             writer,
             "{} {} {}:{}:{} {}",
-            severity_name(diagnostic.severity),
-            diagnostic.code.as_str(),
-            diagnostic.span.file,
-            diagnostic.span.start.line(),
-            diagnostic.span.start.column(),
-            diagnostic.message
+            severity_name(record.severity),
+            record.code.as_str(),
+            record.span.file,
+            record.span.start.line(),
+            record.span.start.column(),
+            rendered.primary_text
         )?;
-        for related in &diagnostic.related {
+        for related in rendered.related {
             writeln!(
                 writer,
                 "  related {}:{}:{} {}",
                 related.span.file,
                 related.span.start.line(),
                 related.span.start.column(),
-                related.message
+                related.text
             )?;
         }
-        if let Some(help) = &diagnostic.help {
+        if let Some(help) = rendered.help {
             writeln!(writer, "  help: {help}")?;
         }
     }
@@ -54,11 +68,12 @@ impl InputDiagnostics {
 
 pub(crate) fn report_targeted_diagnostics(
     writer: &mut dyn Write,
+    messages: &Messages,
     diagnostics: InputDiagnostics,
     is_target: impl Fn(&Diagnostic) -> bool,
 ) -> Result<(), CliError> {
     if !diagnostics.parse_diagnostics.is_empty() {
-        report_diagnostics(writer, diagnostics.parse_diagnostics.iter())?;
+        report_diagnostics(writer, messages, diagnostics.parse_diagnostics.iter())?;
         return Err(CliError::Diagnostics);
     }
 
@@ -71,7 +86,7 @@ pub(crate) fn report_targeted_diagnostics(
         return Ok(());
     }
 
-    report_diagnostics(writer, targeted.into_iter())?;
+    report_diagnostics(writer, messages, targeted.into_iter())?;
     Err(CliError::Diagnostics)
 }
 

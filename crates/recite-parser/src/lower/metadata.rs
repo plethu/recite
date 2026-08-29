@@ -1,6 +1,6 @@
 use recite_core::{
-    BlockId, BlockReference, ChoiceEcho, DivertTarget, EffectMode, LineId, SourceMetadata,
-    SourceMetadataEntry, SourceSpan, SpeakerId,
+    BlockId, BlockReference, ChoiceEcho, DivertTarget, EffectMode, InterpolationBinding,
+    InterpolationType, LineId, SourceMetadata, SourceMetadataEntry, SourceSpan, SpeakerId,
 };
 
 use crate::diagnostics::{malformed_divert_target, malformed_header};
@@ -12,9 +12,10 @@ impl Lowerer<'_, '_> {
     pub(super) fn lower_speaker_metadata(
         &mut self,
         fields: &[HeaderField<'_>],
-    ) -> (Option<SpeakerId>, SourceMetadata) {
+    ) -> (Option<SpeakerId>, SourceMetadata, Vec<InterpolationBinding>) {
         let mut speaker = None;
         let mut metadata = SourceMetadata::new();
+        let mut bindings = Vec::new();
 
         for field in fields.iter().copied() {
             let Some(kv) = self.valid_key_value(field) else {
@@ -26,20 +27,28 @@ impl Lowerer<'_, '_> {
                 continue;
             }
 
+            if kv.key == "bind" {
+                if let Some(binding) = self.interpolation_binding(&kv) {
+                    bindings.push(binding);
+                }
+                continue;
+            }
+
             if let Some(entry) = self.metadata_entry(kv) {
                 metadata.push(entry);
             }
         }
 
-        (speaker, metadata)
+        (speaker, metadata, bindings)
     }
 
     pub(super) fn lower_choice_metadata(
         &mut self,
         fields: &[HeaderField<'_>],
-    ) -> (SourceMetadata, ChoiceEcho) {
+    ) -> (SourceMetadata, ChoiceEcho, Vec<InterpolationBinding>) {
         let mut metadata = SourceMetadata::new();
         let mut echo = ChoiceEcho::None;
+        let mut bindings = Vec::new();
 
         for field in fields.iter().copied() {
             let Some(kv) = self.valid_key_value(field) else {
@@ -55,12 +64,65 @@ impl Lowerer<'_, '_> {
                 continue;
             }
 
+            if kv.key == "bind" {
+                if let Some(binding) = self.interpolation_binding(&kv) {
+                    bindings.push(binding);
+                }
+                continue;
+            }
+
             if let Some(entry) = self.metadata_entry(kv) {
                 metadata.push(entry);
             }
         }
 
-        (metadata, echo)
+        (metadata, echo, bindings)
+    }
+
+    fn interpolation_binding(&mut self, kv: &HeaderKeyValue<'_>) -> Option<InterpolationBinding> {
+        let Some(value) = kv
+            .value
+            .strip_prefix("(")
+            .and_then(|value| value.strip_suffix(')'))
+        else {
+            self.diagnostics
+                .push(malformed_header(kv.value_span.clone()));
+            return None;
+        };
+        let Some((name, value)) = value.split_once(':') else {
+            self.diagnostics
+                .push(malformed_header(kv.value_span.clone()));
+            return None;
+        };
+        let Some((value_type, value)) = value.split_once("=$") else {
+            self.diagnostics
+                .push(malformed_header(kv.value_span.clone()));
+            return None;
+        };
+        let value_type = match value_type {
+            "string" => InterpolationType::String,
+            "int" => InterpolationType::Integer,
+            "float" => InterpolationType::Float,
+            "bool" => InterpolationType::Boolean,
+            _ => {
+                let type_column =
+                    kv.value_span.start.column() as usize + 1 + name.chars().count() + 1;
+                self.diagnostics
+                    .push(malformed_header(crate::source::span_for_text(
+                        self.path,
+                        kv.value_span.start.line(),
+                        type_column,
+                        value_type,
+                    )));
+                return None;
+            }
+        };
+        if !is_placeholder_name(name) || !is_placeholder_name(value) {
+            self.diagnostics
+                .push(malformed_header(kv.value_span.clone()));
+            return None;
+        }
+        Some(InterpolationBinding::new(name, value, value_type))
     }
 
     pub(super) fn valid_key_value<'a>(
@@ -162,4 +224,15 @@ fn choice_echo(value: &str) -> Option<ChoiceEcho> {
             Some(ChoiceEcho::Line(LineId::new(line_id).ok()?))
         }
     }
+}
+
+fn is_placeholder_name(value: &str) -> bool {
+    let mut chars = value.chars();
+    let Some(first) = chars.next() else {
+        return false;
+    };
+    first.is_ascii_lowercase()
+        && chars.all(|character| {
+            character.is_ascii_lowercase() || character.is_ascii_digit() || character == '_'
+        })
 }

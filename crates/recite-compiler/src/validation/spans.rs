@@ -14,7 +14,7 @@ impl<'a> Validator<'a> {
         &mut self,
         source_file: &'a SourceFile,
         source_text: &'a SourceText,
-        owner: &'static str,
+        owner: diagnostics::SourceSpanOwner,
     ) {
         self.validate_span(source_file, &source_text.span, owner);
         self.validate_markup(source_text);
@@ -26,13 +26,21 @@ impl<'a> Validator<'a> {
     ) {
         for entry in context.metadata {
             if let Some(span) = &entry.source_span {
-                self.validate_span(source_file, span, "metadata entry");
+                self.validate_span(
+                    source_file,
+                    span,
+                    diagnostics::SourceSpanOwner::MetadataEntry,
+                );
             }
             if let Some(span) = &entry.key_span {
-                self.validate_span(source_file, span, "metadata key");
+                self.validate_span(source_file, span, diagnostics::SourceSpanOwner::MetadataKey);
             }
             if let Some(span) = &entry.value_span {
-                self.validate_span(source_file, span, "metadata value");
+                self.validate_span(
+                    source_file,
+                    span,
+                    diagnostics::SourceSpanOwner::MetadataValue,
+                );
             }
             self.validate_metadata_value(source_file, entry);
         }
@@ -46,13 +54,21 @@ impl<'a> Validator<'a> {
         match condition {
             ConditionExpression::Call(call) => self.validate_condition_call(source_file, call),
             ConditionExpression::And(group) | ConditionExpression::Or(group) => {
-                self.validate_span(source_file, &group.span, "condition expression");
+                self.validate_span(
+                    source_file,
+                    &group.span,
+                    diagnostics::SourceSpanOwner::ConditionExpression,
+                );
                 for expression in &group.expressions {
                     self.validate_condition_expression(source_file, expression);
                 }
             }
             ConditionExpression::Not(unary) | ConditionExpression::Grouped(unary) => {
-                self.validate_span(source_file, &unary.span, "condition expression");
+                self.validate_span(
+                    source_file,
+                    &unary.span,
+                    diagnostics::SourceSpanOwner::ConditionExpression,
+                );
                 self.validate_condition_expression(source_file, &unary.expression);
             }
         }
@@ -62,14 +78,30 @@ impl<'a> Validator<'a> {
         source_file: &'a SourceFile,
         call: &'a ConditionCall,
     ) {
-        self.validate_span(source_file, &call.span, "condition call");
+        self.validate_span(
+            source_file,
+            &call.span,
+            diagnostics::SourceSpanOwner::ConditionCall,
+        );
         if let Some(span) = &call.function_span {
-            self.validate_span(source_file, span, "condition function");
+            self.validate_span(
+                source_file,
+                span,
+                diagnostics::SourceSpanOwner::ConditionFunction,
+            );
         }
         for span in &call.arg_spans {
-            self.validate_span(source_file, span, "condition argument");
+            self.validate_span(
+                source_file,
+                span,
+                diagnostics::SourceSpanOwner::ConditionArgument,
+            );
         }
-        self.validate_arguments(&call.args, call.span.clone(), "condition argument");
+        self.validate_arguments(
+            &call.args,
+            call.span.clone(),
+            diagnostics::ArgumentOwner::Condition,
+        );
     }
     pub(super) fn validate_metadata_value(
         &mut self,
@@ -87,31 +119,40 @@ impl<'a> Validator<'a> {
             .unwrap_or_else(|| project::first_source_span(&[source_file]));
         self.diagnostics.push(diagnostics::non_finite_float_value(
             span,
-            format!("metadata value `{}`", entry.key),
+            diagnostics::NonFiniteFloatOwner::MetadataValue(entry.key.clone()),
         ));
     }
     pub(super) fn validate_arguments(
         &mut self,
         arguments: &'a [Argument],
         span: SourceSpan,
-        owner: &'static str,
+        owner: diagnostics::ArgumentOwner,
     ) {
         if arguments.iter().any(argument_has_non_finite_float) {
-            self.diagnostics
-                .push(diagnostics::non_finite_float_value(span, owner));
+            self.diagnostics.push(diagnostics::non_finite_float_value(
+                span,
+                match owner {
+                    diagnostics::ArgumentOwner::Condition => {
+                        diagnostics::NonFiniteFloatOwner::ConditionArgument
+                    }
+                    diagnostics::ArgumentOwner::Effect => {
+                        diagnostics::NonFiniteFloatOwner::EffectArgument
+                    }
+                },
+            ));
         }
     }
     pub(super) fn validate_span(
         &mut self,
         source_file: &'a SourceFile,
         span: &SourceSpan,
-        owner: &'static str,
+        owner: diagnostics::SourceSpanOwner,
     ) {
         if span.file != source_file.path {
             self.diagnostics.push(diagnostics::invalid_source_span(
                 span.clone(),
                 owner,
-                "span file does not match source file",
+                diagnostics::SourceSpanError::FileMismatch,
             ));
         }
 
@@ -119,7 +160,7 @@ impl<'a> Validator<'a> {
             self.diagnostics.push(diagnostics::invalid_source_span(
                 span.clone(),
                 owner,
-                "span end precedes span start",
+                diagnostics::SourceSpanError::EndPrecedesStart,
             ));
         }
     }

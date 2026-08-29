@@ -1,31 +1,33 @@
 use lsp_types::{CompletionItem, CompletionItemKind, CompletionResponse, Documentation};
 use recite_core::ProjectSchema;
+use recite_ui::{MsgId, UiCatalog};
 
 pub(super) fn schema_json_completion_items(
     text: &str,
     position: lsp_types::Position,
     line_prefix: &str,
     schema: &ProjectSchema,
+    catalog: &UiCatalog,
 ) -> Option<CompletionResponse> {
     if json_field_value_is_completing(line_prefix, "function") {
-        return Some(items(projection_query_function_items(schema)));
+        return Some(items(projection_query_function_items(schema, catalog)));
     }
     if object_key_is_completing(line_prefix) && completing_projector_key(text, position) {
-        return Some(items(presentation_projector_items(schema)));
+        return Some(items(presentation_projector_items(schema, catalog)));
     }
     let projector_id = current_projector_id(text, position)?;
     let projector = schema.presentation_projectors.get(&projector_id)?;
     if json_field_value_is_completing(line_prefix, "query_result") {
-        return Some(items(projector_query_items(projector)));
+        return Some(items(projector_query_items(projector, catalog)));
     }
     if json_field_value_is_completing(line_prefix, "input") {
-        return Some(items(projector_input_items(projector)));
+        return Some(items(projector_input_items(projector, catalog)));
     }
     if object_key_is_completing(line_prefix) && completing_output_key(text, position) {
-        return Some(items(presentation_output_items(projector)));
+        return Some(items(presentation_output_items(projector, catalog)));
     }
     if json_field_value_is_completing(line_prefix, "template_id") {
-        return Some(items(presentation_label_template_items(projector)));
+        return Some(items(presentation_label_template_items(projector, catalog)));
     }
     None
 }
@@ -34,33 +36,42 @@ fn items(items: Vec<CompletionItem>) -> CompletionResponse {
     CompletionResponse::Array(items)
 }
 
-fn projection_query_function_items(schema: &ProjectSchema) -> Vec<CompletionItem> {
+fn projection_query_function_items(
+    schema: &ProjectSchema,
+    catalog: &UiCatalog,
+) -> Vec<CompletionItem> {
     schema
         .projection_queries
         .iter()
         .map(|(name, definition)| CompletionItem {
             label: name.clone(),
             kind: Some(CompletionItemKind::FUNCTION),
-            detail: Some(format!(
-                "projection query -> {}",
-                super::super::schema_type_detail(&definition.returns)
+            detail: Some(catalog.format_pairs(
+                MsgId::LspCompletionProjectionQueryFunction,
+                [(
+                    "returns",
+                    super::super::schema_type_detail(&definition.returns),
+                )],
             )),
             documentation: Some(Documentation::String(
-                "Schema-owned presentation projection query function".to_owned(),
+                catalog.text(MsgId::LspCompletionProjectionQueryDocumentation),
             )),
             ..CompletionItem::default()
         })
         .collect()
 }
 
-fn presentation_projector_items(schema: &ProjectSchema) -> Vec<CompletionItem> {
+fn presentation_projector_items(
+    schema: &ProjectSchema,
+    catalog: &UiCatalog,
+) -> Vec<CompletionItem> {
     schema
         .presentation_projectors
         .keys()
         .map(|id| CompletionItem {
             label: id.clone(),
             kind: Some(CompletionItemKind::REFERENCE),
-            detail: Some("presentation projector".to_owned()),
+            detail: Some(catalog.text(MsgId::LspCompletionProjector)),
             ..CompletionItem::default()
         })
         .collect()
@@ -68,6 +79,7 @@ fn presentation_projector_items(schema: &ProjectSchema) -> Vec<CompletionItem> {
 
 fn projector_input_items(
     projector: &recite_core::SchemaPresentationProjectorDefinition,
+    catalog: &UiCatalog,
 ) -> Vec<CompletionItem> {
     projector
         .inputs
@@ -75,9 +87,9 @@ fn projector_input_items(
         .map(|input| CompletionItem {
             label: input.name.clone(),
             kind: Some(CompletionItemKind::VARIABLE),
-            detail: Some(format!(
-                "projection input -> {}",
-                super::super::schema_type_detail(&input.type_ref)
+            detail: Some(catalog.format_pairs(
+                MsgId::LspCompletionProjectionInput,
+                [("type", super::super::schema_type_detail(&input.type_ref))],
             )),
             ..CompletionItem::default()
         })
@@ -86,6 +98,7 @@ fn projector_input_items(
 
 fn projector_query_items(
     projector: &recite_core::SchemaPresentationProjectorDefinition,
+    catalog: &UiCatalog,
 ) -> Vec<CompletionItem> {
     projector
         .queries
@@ -93,7 +106,10 @@ fn projector_query_items(
         .map(|(name, query)| CompletionItem {
             label: name.clone(),
             kind: Some(CompletionItemKind::VARIABLE),
-            detail: Some(format!("projection query call -> {}", query.function)),
+            detail: Some(catalog.format_pairs(
+                MsgId::LspCompletionProjectionQueryCall,
+                [("function", query.function.as_str())],
+            )),
             ..CompletionItem::default()
         })
         .collect()
@@ -101,6 +117,7 @@ fn projector_query_items(
 
 fn presentation_output_items(
     projector: &recite_core::SchemaPresentationProjectorDefinition,
+    catalog: &UiCatalog,
 ) -> Vec<CompletionItem> {
     projector
         .outputs
@@ -108,7 +125,10 @@ fn presentation_output_items(
         .map(|(id, output)| CompletionItem {
             label: id.clone(),
             kind: Some(CompletionItemKind::VALUE),
-            detail: Some(format!("presentation output -> {}", output.kind)),
+            detail: Some(catalog.format_pairs(
+                MsgId::LspCompletionOutput,
+                [("kind", output.kind.to_string())],
+            )),
             ..CompletionItem::default()
         })
         .collect()
@@ -116,6 +136,7 @@ fn presentation_output_items(
 
 fn presentation_label_template_items(
     projector: &recite_core::SchemaPresentationProjectorDefinition,
+    catalog: &UiCatalog,
 ) -> Vec<CompletionItem> {
     projector
         .outputs
@@ -124,7 +145,7 @@ fn presentation_label_template_items(
         .map(|label| CompletionItem {
             label: label.template_id.clone(),
             kind: Some(CompletionItemKind::CONSTANT),
-            detail: Some("presentation label template".to_owned()),
+            detail: Some(catalog.text(MsgId::LspCompletionLabel)),
             documentation: Some(Documentation::String(label.source_text.clone())),
             ..CompletionItem::default()
         })

@@ -51,6 +51,14 @@ fn status_codes_match_c_abi_design() {
     }
     assert_eq!(ReciteStatus::try_from(-23), Err(()));
 }
+
+#[test]
+fn locale_provider_api_has_distinguishable_abi_version() {
+    assert_eq!(recite_ffi::RECITE_FFI_VERSION_MAJOR, 0);
+    assert_eq!(recite_ffi::RECITE_FFI_VERSION_MINOR, 5);
+    assert_eq!(recite_ffi::RECITE_FFI_VERSION_PATCH, 0);
+}
+
 #[test]
 fn invalid_bytes_returns_asset_load_error() {
     let garbage = b"not a compiled asset";

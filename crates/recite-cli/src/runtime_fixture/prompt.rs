@@ -1,11 +1,13 @@
 use std::collections::BTreeMap;
 
 use recite_core::{ChoiceId, CompiledDialogue, CompiledStatementKind, StatementRange};
-use recite_runtime::{DialogueChoice, DialogueLine};
+use recite_runtime::{DialogueChoice, DialogueLine, DialogueTrace};
+use recite_ui::UiArg;
 
 use super::fixture::{FixtureChoice, RuntimeFixture};
 use super::trace::{TracePrompt, TracePromptIdentity, trace_choice, trace_line};
 use crate::error::CliError;
+use crate::i18n::{Messages, MsgId};
 
 #[derive(Clone, Debug)]
 pub(super) struct PromptIdentity {
@@ -220,27 +222,31 @@ pub(super) fn select_fixture_choice(
 
 pub(super) fn write_prompt_run_lines(
     run_lines: &mut Vec<String>,
-    prompt: &PromptIdentity,
+    _prompt: &PromptIdentity,
     line: Option<&DialogueLine>,
     choices: &[DialogueChoice],
+    messages: &Messages,
 ) {
     match line {
-        Some(line) => run_lines.push(format!("prompt {}: {}", line.id.as_str(), line.text)),
-        None => run_lines.push(format!("prompt {}", prompt.fixture_keys.join("|"))),
+        Some(line) => run_lines.push(messages.format(
+            MsgId::PlayPromptLine,
+            [
+                ("id", UiArg::from(line.id.as_str())),
+                ("text", UiArg::from(line.text.as_str())),
+            ],
+        )),
+        None => run_lines.push(messages.text(MsgId::PlayPrompt)),
     }
 
     for (index, choice) in choices.iter().enumerate() {
-        let availability = if choice.availability.is_available {
-            ""
-        } else {
-            " (unavailable)"
-        };
-        run_lines.push(format!(
-            "  [{}] {}: {}{}",
-            index + 1,
-            choice.id.as_str(),
-            choice.text,
-            availability
+        run_lines.push(messages.format(
+            MsgId::PlayChoiceRow,
+            [
+                ("index", UiArg::from(index + 1)),
+                ("id", UiArg::from(choice.id.as_str())),
+                ("text", UiArg::from(choice.text.as_str())),
+                ("available", UiArg::from(choice.availability.is_available)),
+            ],
         ));
     }
 }
@@ -249,11 +255,15 @@ pub(super) fn trace_prompt(
     prompt: &PromptIdentity,
     line: Option<&DialogueLine>,
     choices: &[DialogueChoice],
+    dialogue_trace: &DialogueTrace,
 ) -> TracePrompt {
     TracePrompt {
         identity: trace_prompt_identity(prompt),
-        line: line.map(trace_line),
-        choices: choices.iter().map(trace_choice).collect(),
+        line: line.map(|line| trace_line(line, dialogue_trace)),
+        choices: choices
+            .iter()
+            .map(|choice| trace_choice(choice, dialogue_trace))
+            .collect(),
     }
 }
 
