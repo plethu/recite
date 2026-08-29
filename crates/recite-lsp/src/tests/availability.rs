@@ -1,3 +1,4 @@
+mod arrays;
 mod authoring;
 mod completion;
 mod diagnostics;
@@ -8,6 +9,10 @@ mod support;
 
 pub(super) fn initialize_advertises_completion_and_hover() {
     authoring::initialize_advertises_completion_and_hover();
+}
+
+pub(super) fn resolves_metadata_array_elements_by_declared_type() {
+    arrays::resolves_metadata_array_elements_by_declared_type();
 }
 
 pub(super) fn publishes_choice_availability_parser_diagnostics() {

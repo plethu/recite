@@ -1,13 +1,20 @@
 use lsp_types::{Hover, HoverContents, MarkupContent, MarkupKind, Position, Range};
 use recite_core::ProjectSchema;
+use recite_core::{SourceMetadataScalar, SourceMetadataValue};
 use recite_ui::UiCatalog;
 
 use super::super::context::selector_site;
 use super::super::schema_hover::{AuthoringPosition, SchemaValueHover, schema_value_hover};
 
 pub(super) enum ValuePosition<'a> {
-    Metadata { key: &'a str, complete_symbol: bool },
-    DedicatedChoiceClause { complete_symbol: bool },
+    Metadata {
+        key: &'a str,
+        value: &'a str,
+        complete_symbol: bool,
+    },
+    DedicatedChoiceClause {
+        complete_symbol: bool,
+    },
 }
 
 pub(super) enum MetadataHover {
@@ -42,11 +49,12 @@ pub(super) fn metadata_hover(input: MetadataHoverInput<'_>) -> MetadataHover {
     let Some(value_position) = value_position_at(line, byte_index) else {
         return MetadataHover::NotMetadataPosition;
     };
-    let (key, complete_symbol) = match value_position {
+    let (key, value, complete_symbol) = match value_position {
         ValuePosition::Metadata {
             key,
+            value,
             complete_symbol,
-        } => (key, complete_symbol),
+        } => (key, value, complete_symbol),
         ValuePosition::DedicatedChoiceClause { complete_symbol } => {
             return if complete_symbol {
                 MetadataHover::DedicatedChoiceClause
@@ -65,6 +73,7 @@ pub(super) fn metadata_hover(input: MetadataHoverInput<'_>) -> MetadataHover {
         schema,
         key,
         word,
+        value,
         &AuthoringPosition {
             text,
             line_index,
@@ -149,8 +158,23 @@ pub(super) fn value_position_at(line: &str, byte_index: usize) -> Option<ValuePo
     }
     Some(ValuePosition::Metadata {
         key,
-        complete_symbol: is_symbol(value),
+        value,
+        complete_symbol: is_complete_symbol_value(value),
     })
+}
+
+fn is_complete_symbol_value(value: &str) -> bool {
+    if is_symbol(value) {
+        return true;
+    }
+    let Some(SourceMetadataValue::Array(values)) = recite_parser::parse_metadata_value(value)
+    else {
+        return false;
+    };
+    !values.is_empty()
+        && values
+            .iter()
+            .all(|value| matches!(value, SourceMetadataScalar::Symbol(_)))
 }
 
 fn is_symbol(value: &str) -> bool {

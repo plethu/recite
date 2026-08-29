@@ -56,6 +56,7 @@ pub(crate) fn schema_value_hover(
     schema: &ProjectSchema,
     metadata_key: &str,
     word: &str,
+    value: &str,
     position: &AuthoringPosition<'_>,
     catalog: &UiCatalog,
 ) -> SchemaValueHover {
@@ -73,6 +74,12 @@ pub(crate) fn schema_value_hover(
     let Some(metadata) = schema.metadata.get(metadata_key) else {
         return SchemaValueHover::Invalid;
     };
+    let Some(values) = metadata_symbol_values(value) else {
+        return SchemaValueHover::Invalid;
+    };
+    if !values.iter().any(|value| value == word) {
+        return SchemaValueHover::Invalid;
+    }
     if let Some(domain_name) = &metadata.domain {
         return schema_domain_value_hover(schema, domain_name, word, position, catalog)
             .map_or(SchemaValueHover::Invalid, SchemaValueHover::Resolved);
@@ -136,6 +143,22 @@ pub(crate) fn schema_value_hover(
             })
             .unwrap_or(SchemaValueHover::Invalid),
         _ => SchemaValueHover::Invalid,
+    }
+}
+
+fn metadata_symbol_values(value: &str) -> Option<Vec<String>> {
+    match recite_parser::parse_metadata_value(value)? {
+        recite_core::SourceMetadataValue::Scalar(recite_core::SourceMetadataScalar::Symbol(
+            value,
+        )) => Some(vec![value]),
+        recite_core::SourceMetadataValue::Array(values) => values
+            .into_iter()
+            .map(|value| match value {
+                recite_core::SourceMetadataScalar::Symbol(value) => Some(value),
+                _ => None,
+            })
+            .collect(),
+        recite_core::SourceMetadataValue::Scalar(_) => None,
     }
 }
 

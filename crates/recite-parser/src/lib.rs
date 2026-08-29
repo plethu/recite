@@ -44,3 +44,10 @@ mod syntax;
 pub use lower::LoweredSourceFile;
 pub use parser::{Parse, parse};
 pub use syntax::{ReciteLanguage, ReciteSyntaxKind, ReciteSyntaxNode};
+
+/// Parses one metadata value with the same scalar and array rules used by
+/// source lowering.
+#[must_use]
+pub fn parse_metadata_value(value: &str) -> Option<recite_core::SourceMetadataValue> {
+    header::parse_value(value).ok()
+}

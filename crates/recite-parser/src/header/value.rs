@@ -1,6 +1,6 @@
 use recite_core::{SourceMetadataScalar, SourceMetadataValue};
 
-pub(super) fn parse_value(value: &str) -> Result<SourceMetadataValue, ()> {
+pub(crate) fn parse_value(value: &str) -> Result<SourceMetadataValue, ()> {
     if value.starts_with('[') {
         return parse_array(value).map(SourceMetadataValue::Array);
     }

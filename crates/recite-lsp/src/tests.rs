@@ -19,6 +19,11 @@ fn initialize_advertises_completion_and_hover() {
 }
 
 #[test]
+fn resolves_metadata_array_elements_by_declared_type() {
+    availability::resolves_metadata_array_elements_by_declared_type();
+}
+
+#[test]
 fn initialize_advertises_missing_id_code_actions() {
     code_action::initialize_advertises_missing_id_code_actions();
 }
