@@ -160,16 +160,38 @@ grep -Fq 'non-empty literal reason' "$test_root/tampered-output" || {
   exit 1
 }
 
-jq '.title = "[REC-164] ci: metadata changed after validation"' "$test_root/live.json" > "$test_root/raced-live.json"
+# Use a fresh valid PR head for the race fixture. The initial event, live API
+# response, and fetched ref are therefore consistent; only the final API read
+# changes, proving the post-validation re-read is what rejects the run.
+git -C "$repo" switch --quiet pr
+git -C "$repo" rm -q crates/demo/src/generated.rs
+git -C "$repo" show "$base_sha:scripts/generated-rust-allowlist.txt" > \
+  "$repo/scripts/generated-rust-allowlist.txt"
+git -C "$repo" add scripts/generated-rust-allowlist.txt
+git -C "$repo" commit --quiet -m '[REC-185] fixture: prepare metadata race'
+race_head_sha="$(git -C "$repo" rev-parse HEAD)"
+git -C "$repo" push --quiet --force origin HEAD:refs/pull/164/head
+git -C "$repo" switch --quiet --detach main
+git -C "$repo" update-ref -d refs/recite/trusted-pr-head
+jq --arg sha "$race_head_sha" '.pull_request.head.sha = $sha' "$test_root/event.json" > "$test_root/race-event.json"
+jq --arg sha "$race_head_sha" '.head.sha = $sha' "$test_root/live.json" > "$test_root/race-live.json"
+jq '.title = "[REC-164] ci: metadata changed after validation"' "$test_root/race-live.json" > "$test_root/raced-live.json"
 rm -f "$test_root/gh-call-count"
-if PATH="$fake_bin:$PATH" GH_FIXTURE_JSON="$test_root/live.json" \
+if PATH="$fake_bin:$PATH" GH_FIXTURE_JSON="$test_root/race-live.json" \
   GH_FINAL_FIXTURE_JSON="$test_root/raced-live.json" GH_CALL_COUNT_FILE="$test_root/gh-call-count" \
-  GITHUB_EVENT_NAME=pull_request_target GITHUB_EVENT_PATH="$test_root/event.json" \
+  GITHUB_EVENT_NAME=pull_request_target GITHUB_EVENT_PATH="$test_root/race-event.json" \
   GITHUB_REPOSITORY=plethu/recite TRUSTED_POLICY_MARKER="$test_root/race.marker" \
-  bash -c 'cd "$1" && ./scripts/check-trusted-pr-policy.sh' trusted-policy "$repo" >/dev/null 2>&1; then
+  TRUSTED_LINT_POLICY_MARKER="$test_root/race-lint.marker" \
+  bash -c 'cd "$1" && ./scripts/check-trusted-pr-policy.sh' trusted-policy "$repo" >"$test_root/race-output" 2>&1; then
   echo 'metadata changed on final read was accepted' >&2
+  cat "$test_root/race-output" >&2
   exit 1
 fi
+grep -Fq 'policy metadata changed during validation' "$test_root/race-output" || {
+  echo 'metadata race missed the final reread diagnostic' >&2
+  cat "$test_root/race-output" >&2
+  exit 1
+}
 
 jq '.base.ref = "release"' "$test_root/live.json" > "$test_root/invalid-live.json"
 if PATH="$fake_bin:$PATH" GH_FIXTURE_JSON="$test_root/invalid-live.json" \

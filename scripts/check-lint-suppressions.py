@@ -10,6 +10,7 @@ authority for the meaning of a lint or attribute.
 from __future__ import annotations
 
 import argparse
+import json
 import os
 import subprocess
 import sys
@@ -544,13 +545,19 @@ def match_suppressions(base: list[Suppression], current: list[Suppression]) -> l
             result.append(Suppression(**{**item.__dict__, "status": "scope-changed"}))
             continue
 
-        matched = take(lambda candidate: candidate.kind == item.kind
+        matched = take(lambda candidate: candidate.path == item.path
+                       and candidate.category == item.category
+                       and candidate.kind == item.kind
+                       and candidate.target == item.target
                        and set(candidate.lints).issubset(item.lints))
         if matched is not None:
             result.append(Suppression(**{**item.__dict__, "status": "expanded"}))
             continue
 
-        matched = take(lambda candidate: candidate.kind == item.kind
+        matched = take(lambda candidate: candidate.path == item.path
+                       and candidate.category == item.category
+                       and candidate.kind == item.kind
+                       and candidate.target == item.target
                        and set(item.lints).issubset(candidate.lints))
         if matched is not None:
             result.append(Suppression(**{**item.__dict__, "status": "narrowed"}))
@@ -567,7 +574,7 @@ def reason_ok(item: Suppression, prefix: str | None = None) -> bool:
 
 
 def violation(item: Suppression) -> str | None:
-    if item.category == "generated" or item.status in {"baseline", "reason-changed", "narrowed"}:
+    if item.category == "generated" or item.status == "baseline":
         return None
     if item.category in {"tests", "fixtures", "benchmarks"}:
         return None
@@ -592,8 +599,18 @@ def violation(item: Suppression) -> str | None:
 
 def display(item: Suppression) -> str:
     lints = ','.join(item.lints)
+    reason = "null" if item.reason is None else json.dumps(item.reason, ensure_ascii=False)
+    rationale = "missing"
+    if item.reason is not None and item.reason.strip():
+        if item.category == "ffi" and item.reason.startswith("ffi:"):
+            rationale = "scoped"
+        elif item.category == "compatibility" and item.reason.startswith("compatibility:"):
+            rationale = "scoped"
+        else:
+            rationale = "present"
     return (f"{item.path}:{item.line}: {item.status} {item.kind}({lints}) "
-            f"scope={item.scope} category={item.category}")
+            f"scope={item.scope} owner={item.target} category={item.category} "
+            f"reason={reason} rationale={rationale} baseline_status={item.status}")
 
 
 def rust_path(path: str) -> bool:
@@ -669,7 +686,7 @@ def main() -> int:
     failures = 0
     for item in records:
         message = violation(item)
-        if message is not None and item.status in {"new", "expanded", "scope-changed", "reason-removed"}:
+        if message is not None and item.status != "baseline":
             print(f"lint suppression policy violation: {item.path}:{item.line}: {message}", file=sys.stderr)
             failures += 1
     if failures:

@@ -14,8 +14,11 @@ the base. Moving such an attribute as code shifts does not create a false
 positive, but moving it to another file or category is new at the destination.
 Adding a lint, changing an item into a broader scope, removing an existing
 reason, or adding a new attribute is reported as an expanded/new suppression.
-Narrowing a list of lints is retained in the inventory but does not fail the
-gate.
+Narrowing a list of lints is retained in the inventory as a changed record;
+its current reason and scope still have to satisfy the policy. Only an
+unchanged baseline record bypasses current-reason validation. Matching never
+crosses paths or categories, and lint-list changes must retain the same
+lexical owner.
 
 The parser is a small deterministic Rust lexer. It handles multiline
 attributes, multiple lints, nested delimiters, comments, ordinary strings,
@@ -60,9 +63,12 @@ documents the preserved boundary; `#[allow]` remains item-scoped.
 ## Reading and remediating the inventory
 
 The output distinguishes `baseline`, `new`, `expanded`, `narrowed`, and
-`reason-*` records. Use `--full` when reviewing the current debt inventory;
-full mode is reporting-only. The normal range is the pull request base to the
-actual source head, not a synthetic merge commit:
+`reason-*` records. Each record includes `scope`, lexical `owner`, category,
+literal `reason`, `rationale` status (`missing`, `present`, or `scoped`), and
+`baseline_status`. Use `--full` when reviewing the current debt inventory;
+full mode is reporting-only and marks records as `current`. The normal range
+is the pull request base to the actual source head, not a synthetic merge
+commit:
 
 ```text
 scripts/check-lint-suppressions.sh origin/main HEAD

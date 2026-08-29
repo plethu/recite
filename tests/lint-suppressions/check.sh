@@ -165,6 +165,48 @@ git -C "$test_root/repo" rm -q crates/demo/src/duplicate.rs
 git -C "$test_root/repo" commit -q -m remove-duplicate-lint
 clean_before_exceptions="$(git -C "$test_root/repo" rev-parse HEAD)"
 
+# Matching candidates are partitioned by path and category, and lint-list
+# changes retain the lexical owner. These hostile pairs must remain `new`
+# rather than laundering through a broad/module or test baseline elsewhere.
+cat > "$test_root/repo/crates/demo/src/cross_file_baseline.rs" <<'EOF'
+#[allow(dead_code)]
+mod broad_baseline_owner {}
+EOF
+cat > "$test_root/repo/tests/cross_category_baseline.rs" <<'EOF'
+#[allow(dead_code)]
+mod test_baseline_owner {}
+EOF
+cat > "$test_root/repo/crates/demo/src/target_baseline.rs" <<'EOF'
+#[allow(dead_code)]
+fn baseline_owner() {}
+EOF
+git -C "$test_root/repo" add .
+git -C "$test_root/repo" commit -q -m add-matching-baselines
+matching_baselines_sha="$(git -C "$test_root/repo" rev-parse HEAD)"
+cat > "$test_root/repo/crates/demo/src/cross_file_new.rs" <<'EOF'
+#[allow(dead_code)]
+fn cross_file_new() {}
+EOF
+cat > "$test_root/repo/crates/demo/src/cross_category_new.rs" <<'EOF'
+#[allow(dead_code)]
+fn cross_category_new() {}
+EOF
+sed -i 's/baseline_owner/new_owner/' "$test_root/repo/crates/demo/src/target_baseline.rs"
+git -C "$test_root/repo" add .
+git -C "$test_root/repo" commit -q -m reject-baseline-laundering
+laundering_sha="$(git -C "$test_root/repo" rev-parse HEAD)"
+check_fails "$matching_baselines_sha" "$laundering_sha" \
+  "crates/demo/src/cross_file_new.rs:1: new allow(dead_code)"
+check_fails "$matching_baselines_sha" "$laundering_sha" \
+  "crates/demo/src/cross_category_new.rs:1: new allow(dead_code)"
+check_fails "$matching_baselines_sha" "$laundering_sha" \
+  "crates/demo/src/target_baseline.rs:1: new allow(dead_code)"
+git -C "$test_root/repo" rm -q crates/demo/src/cross_file_baseline.rs \
+  crates/demo/src/cross_category_new.rs tests/cross_category_baseline.rs \
+  crates/demo/src/cross_file_new.rs crates/demo/src/target_baseline.rs
+git -C "$test_root/repo" commit -q -m remove-baseline-laundering-fixtures
+clean_before_exceptions="$(git -C "$test_root/repo" rev-parse HEAD)"
+
 # Exceptional production categories still need a rationale scoped to the
 # boundary; a plain suppression does not become acceptable merely by moving
 # into an FFI or compatibility-named file.
@@ -210,6 +252,36 @@ check_fails "$clean_sha" "$broad_sha" "crate/module-wide suppressions are not pe
 git -C "$test_root/repo" rm -q crates/demo/src/broad.rs
 git -C "$test_root/repo" commit -q -m remove-broad-debt
 clean_after_broad="$(git -C "$test_root/repo" rev-parse HEAD)"
+
+# A changed reason is still validated against the current category. It cannot
+# turn into a whitespace production rationale or an unscoped FFI rationale.
+cat > "$test_root/repo/crates/demo/src/reason_changed.rs" <<'EOF'
+#[allow(dead_code, reason = "keep this production helper narrow")]
+fn reason_changed_helper() {}
+EOF
+cat > "$test_root/repo/crates/demo/src/ffi_reason_changed.rs" <<'EOF'
+#[allow(dead_code, reason = "ffi: preserve the bridge boundary")]
+pub fn reason_changed_bridge() {}
+EOF
+git -C "$test_root/repo" add .
+git -C "$test_root/repo" commit -q -m add-reason-baselines
+reason_base_sha="$(git -C "$test_root/repo" rev-parse HEAD)"
+sed -i 's/reason = "keep this production helper narrow"/reason = "   "/' \
+  "$test_root/repo/crates/demo/src/reason_changed.rs"
+sed -i 's/reason = "ffi: preserve the bridge boundary"/reason = "bridge boundary"/' \
+  "$test_root/repo/crates/demo/src/ffi_reason_changed.rs"
+git -C "$test_root/repo" add .
+git -C "$test_root/repo" commit -q -m reject-invalid-reason-change
+invalid_reason_sha="$(git -C "$test_root/repo" rev-parse HEAD)"
+check_fails "$reason_base_sha" "$invalid_reason_sha" \
+  "new production suppressions must carry a non-empty literal reason"
+check_fails "$reason_base_sha" "$invalid_reason_sha" \
+  "FFI-boundary suppressions must carry"
+git -C "$test_root/repo" rm -q crates/demo/src/reason_changed.rs \
+  crates/demo/src/ffi_reason_changed.rs
+git -C "$test_root/repo" commit -q -m remove-invalid-reason-fixtures
+clean_after_reason="$(git -C "$test_root/repo" rev-parse HEAD)"
+
 cat > "$test_root/repo/crates/demo/src/generated.rs" <<'EOF'
 // A generated-looking name is not an exemption.
 #[allow(dead_code)]
@@ -218,7 +290,7 @@ EOF
 git -C "$test_root/repo" add .
 git -C "$test_root/repo" commit -q -m fake-generated-name
 fake_generated_sha="$(git -C "$test_root/repo" rev-parse HEAD)"
-check_fails "$clean_after_broad" "$fake_generated_sha" "non-empty literal reason"
+check_fails "$clean_after_reason" "$fake_generated_sha" "non-empty literal reason"
 
 git -C "$test_root/repo" rm -q crates/demo/src/generated.rs
 cat > "$test_root/repo/fixtures/generated.rs" <<'EOF'
@@ -302,7 +374,13 @@ fi
 # debt without turning the first adoption into a blanket failure.
 full_output="$(cd "$test_root/repo" && scripts/check-lint-suppressions.sh --full)"
 if [[ "$full_output" != *"full inventory mode is reporting-only"* \
-  || "$full_output" != *"crates/demo/src/lib.rs"* ]]; then
+  || "$full_output" != *"crates/demo/src/lib.rs"* \
+  || "$full_output" != *"scope=item"* \
+  || "$full_output" != *"owner=fn:baseline_helper"* \
+  || "$full_output" != *"reason=null"* \
+  || "$full_output" != *"owner=fn:production_fixture"* \
+  || "$full_output" != *"rationale=present"* \
+  || "$full_output" != *"baseline_status=current"* ]]; then
   echo "full lint suppression inventory fixture failed" >&2
   printf '%s\n' "$full_output" >&2
   exit 1
