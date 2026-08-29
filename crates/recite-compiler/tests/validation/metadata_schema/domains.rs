@@ -23,6 +23,29 @@ fn validates_flat_and_contextual_metadata_domains() {
 }
 
 #[test]
+fn contextual_value_names_are_resolved_by_context_and_fallback_policy() {
+    let schema = metadata_domain_schema();
+    let files = vec![lower(
+        "dialogue/start.recite",
+        concat!(
+            ":: contextual default speaker=hazel\n",
+            "> same_name@11111111111111111111 speaker=hazel portrait_domain=hazel\n",
+            "  Same name is valid in the hazel context.\n",
+            "> rejected@22222222222222222222 speaker=rhea portrait_domain=hazel\n",
+            "  Same name is not valid in the rhea context.\n",
+            ":: fallback\n",
+            "> fallback@33333333333333333333 portrait_domain=neutral\n",
+            "  Missing context uses the declared flat fallback.\n",
+        ),
+    )];
+
+    let report = validate_source_files_with_schema(&files, &schema);
+
+    assert_codes(&report, ["RECITE_VALIDATE031"]);
+    assert_spans(&report, [(4, 62)]);
+}
+
+#[test]
 fn reports_invalid_metadata_domain_values_on_value_spans() {
     let schema = metadata_domain_schema();
     let files = vec![lower(

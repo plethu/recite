@@ -2,7 +2,6 @@ use lsp_types::{Hover, Position};
 use recite_core::{MetadataDomainDefinition, ProjectSchema, ProjectionOutputTarget};
 use recite_ui::{MsgId, UiArg, UiArgs, UiCatalog};
 
-use super::context::selector_site;
 use super::{block_names, condition_detail, effect_detail, schema_type_detail};
 use crate::workspace::LiveProjectSnapshot;
 
@@ -10,7 +9,8 @@ mod position;
 
 pub(crate) use position::byte_index_for_utf16_character;
 use position::{
-    find_if_range, find_requires_range, hover_response, metadata_value_key_at, word_at,
+    MetadataHover, MetadataHoverInput, find_if_range, find_requires_range, hover_response,
+    metadata_hover, word_at,
 };
 
 pub(super) fn hover(
@@ -35,16 +35,25 @@ pub(super) fn hover(
 
     let (word, range) = word_at(line, line_index, byte_index)?;
     if let Some(schema) = schema {
+        match metadata_hover(MetadataHoverInput {
+            text,
+            line,
+            line_index,
+            byte_index,
+            word,
+            range,
+            schema,
+            catalog,
+        }) {
+            MetadataHover::Resolved(value) => return Some(value),
+            MetadataHover::DedicatedChoiceClause => {
+                return availability_reason_hover(schema, word, range, catalog);
+            }
+            MetadataHover::Invalid => return None,
+            MetadataHover::NotMetadataPosition => {}
+        }
         if let Some(definition) = schema.speakers.get(word) {
-            let value = definition.display_name.as_ref().map_or_else(
-                || catalog.format_pairs(MsgId::LspHoverSpeaker, [("name", word)]),
-                |display_name| {
-                    catalog.format_pairs(
-                        MsgId::LspHoverSpeakerWithDisplayName,
-                        [("name", word), ("display_name", display_name.as_str())],
-                    )
-                },
-            );
+            let value = super::schema_hover::speaker_hover_text(word, definition, catalog);
             return Some(hover_response(&value, range));
         }
         if let Some(definition) = schema.registries.get(word) {
@@ -85,23 +94,6 @@ pub(super) fn hover(
             );
             return Some(hover_response(&value, range));
         }
-        if let Some(metadata_key) = metadata_value_key_at(line, byte_index)
-            && let Some(site) = selector_site(line)
-            && let Some(value_detail) = super::schema_hover::schema_value_hover(
-                schema,
-                metadata_key,
-                word,
-                &super::schema_hover::AuthoringPosition {
-                    text,
-                    line_index,
-                    line,
-                    site,
-                },
-                catalog,
-            )
-        {
-            return Some(hover_response(&value_detail, range));
-        }
         if let Some(definition) = schema.metadata.get(word) {
             let detail = super::schema_hover::hover_detail(None, schema, &[], catalog);
             let value = definition.domain.as_ref().map_or_else(
@@ -127,17 +119,8 @@ pub(super) fn hover(
             );
             return Some(hover_response(&value, range));
         }
-        if let Some(definition) = schema.availability_reasons.get(word) {
-            let detail =
-                super::schema_hover::hover_detail(definition.origin.as_ref(), schema, &[], catalog);
-            let value = catalog.format_args(
-                MsgId::LspHoverAvailabilityReason,
-                &UiArgs::from([
-                    ("name".to_owned(), UiArg::from(word)),
-                    ("detail".to_owned(), UiArg::from(detail)),
-                ]),
-            );
-            return Some(hover_response(&value, range));
+        if let Some(value) = availability_reason_hover(schema, word, range, catalog) {
+            return Some(value);
         }
         if let Some(definition) = schema.conditions.get(word) {
             return Some(hover_response(
@@ -198,6 +181,25 @@ pub(super) fn hover(
         ));
     }
     None
+}
+
+fn availability_reason_hover(
+    schema: &ProjectSchema,
+    word: &str,
+    range: lsp_types::Range,
+    catalog: &UiCatalog,
+) -> Option<Hover> {
+    let definition = schema.availability_reasons.get(word)?;
+    let detail =
+        super::schema_hover::hover_detail(definition.origin.as_ref(), schema, &[], catalog);
+    let value = catalog.format_args(
+        MsgId::LspHoverAvailabilityReason,
+        &UiArgs::from([
+            ("name".to_owned(), UiArg::from(word)),
+            ("detail".to_owned(), UiArg::from(detail)),
+        ]),
+    );
+    Some(hover_response(&value, range))
 }
 
 fn projection_output_hover(

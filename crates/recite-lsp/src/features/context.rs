@@ -47,11 +47,10 @@ pub(super) fn resolve_selector(
 }
 
 fn selector_symbol(line: &str, key: &str) -> SelectorResolution {
-    let values = line
-        .split_whitespace()
-        .filter_map(|token| token.split_once('='))
-        .filter(|(candidate, _)| *candidate == key)
-        .map(|(_, value)| scalar_symbol(value))
+    let values = recite_parser::metadata_assignments(line)
+        .into_iter()
+        .filter(|assignment| assignment.key == key)
+        .map(|assignment| scalar_symbol(assignment.value))
         .collect::<Vec<_>>();
     match values.as_slice() {
         [] => SelectorResolution::Missing,
@@ -73,10 +72,6 @@ fn block_default_speaker(text: &str, line_index: usize) -> SelectorResolution {
 }
 
 fn scalar_symbol(value: &str) -> Option<String> {
-    let value = value
-        .trim_end_matches(',')
-        .trim_end_matches(')')
-        .trim_end_matches(']');
     let mut characters = value.chars();
     let first = characters.next()?;
     ((first.is_ascii_alphabetic() || first == '_')

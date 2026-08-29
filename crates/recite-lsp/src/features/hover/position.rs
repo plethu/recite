@@ -1,4 +1,91 @@
 use lsp_types::{Hover, HoverContents, MarkupContent, MarkupKind, Position, Range};
+use recite_core::ProjectSchema;
+use recite_core::{SourceMetadataScalar, SourceMetadataValue};
+use recite_ui::UiCatalog;
+
+use super::super::context::selector_site;
+use super::super::schema_hover::{AuthoringPosition, SchemaValueHover, schema_value_hover};
+
+pub(super) enum ValuePosition<'a> {
+    Metadata {
+        key: &'a str,
+        value: &'a str,
+        complete_symbol: bool,
+    },
+    DedicatedChoiceClause {
+        complete_symbol: bool,
+    },
+}
+
+pub(super) enum MetadataHover {
+    NotMetadataPosition,
+    DedicatedChoiceClause,
+    Resolved(Hover),
+    Invalid,
+}
+
+pub(super) struct MetadataHoverInput<'a> {
+    pub(super) text: &'a str,
+    pub(super) line: &'a str,
+    pub(super) line_index: usize,
+    pub(super) byte_index: usize,
+    pub(super) word: &'a str,
+    pub(super) range: Range,
+    pub(super) schema: &'a ProjectSchema,
+    pub(super) catalog: &'a UiCatalog,
+}
+
+pub(super) fn metadata_hover(input: MetadataHoverInput<'_>) -> MetadataHover {
+    let MetadataHoverInput {
+        text,
+        line,
+        line_index,
+        byte_index,
+        word,
+        range,
+        schema,
+        catalog,
+    } = input;
+    let Some(value_position) = value_position_at(line, byte_index) else {
+        return MetadataHover::NotMetadataPosition;
+    };
+    let (key, value, complete_symbol) = match value_position {
+        ValuePosition::Metadata {
+            key,
+            value,
+            complete_symbol,
+        } => (key, value, complete_symbol),
+        ValuePosition::DedicatedChoiceClause { complete_symbol } => {
+            return if complete_symbol {
+                MetadataHover::DedicatedChoiceClause
+            } else {
+                MetadataHover::Invalid
+            };
+        }
+    };
+    let Some(site) = selector_site(line) else {
+        return MetadataHover::NotMetadataPosition;
+    };
+    if !complete_symbol {
+        return MetadataHover::Invalid;
+    }
+    match schema_value_hover(
+        schema,
+        key,
+        word,
+        value,
+        &AuthoringPosition {
+            text,
+            line_index,
+            line,
+            site,
+        },
+        catalog,
+    ) {
+        SchemaValueHover::Resolved(value) => MetadataHover::Resolved(hover_response(&value, range)),
+        SchemaValueHover::Invalid => MetadataHover::Invalid,
+    }
+}
 
 pub(super) fn find_requires_range(
     line: &str,
@@ -41,10 +128,10 @@ pub(super) fn word_at(line: &str, line_index: usize, byte_index: usize) -> Optio
 }
 
 fn is_symbol_character(character: char) -> bool {
-    character.is_ascii_alphanumeric() || matches!(character, '_' | '-' | ':')
+    character.is_ascii_alphanumeric() || matches!(character, '_' | '-' | ':' | '.')
 }
 
-pub(super) fn metadata_value_key_at(line: &str, byte_index: usize) -> Option<&str> {
+pub(super) fn value_position_at(line: &str, byte_index: usize) -> Option<ValuePosition<'_>> {
     let trimmed = line.trim_start();
     if !(trimmed.starts_with("::") || trimmed.starts_with('>') || trimmed.starts_with('?')) {
         return None;
@@ -52,22 +139,45 @@ pub(super) fn metadata_value_key_at(line: &str, byte_index: usize) -> Option<&st
     if byte_index > line.len() {
         return None;
     }
-    let token_start = line[..byte_index]
-        .rfind(char::is_whitespace)
-        .map_or(0, |index| index + 1);
-    let token_end = line[byte_index..]
-        .find(char::is_whitespace)
-        .map_or(line.len(), |index| byte_index + index);
-    let token = line.get(token_start..token_end)?;
-    let (key, value) = token.split_once('=')?;
-    let value_start = token_start + key.len() + 1;
-    let first = value.as_bytes().first().copied()?;
-    (key != "speaker"
-        && !key.is_empty()
-        && !value.is_empty()
-        && (first.is_ascii_alphabetic() || first == b'_')
-        && byte_index >= value_start)
-        .then_some(key)
+    let assignment = recite_parser::metadata_assignment_at(line, byte_index)?;
+    if assignment.key.is_empty() || byte_index < assignment.value_start {
+        return None;
+    }
+    if trimmed.starts_with('?') && assignment.key == "reason" {
+        return Some(ValuePosition::DedicatedChoiceClause {
+            complete_symbol: is_symbol(assignment.value),
+        });
+    }
+    Some(ValuePosition::Metadata {
+        key: assignment.key,
+        value: assignment.value,
+        complete_symbol: is_complete_symbol_value(assignment.value),
+    })
+}
+
+fn is_complete_symbol_value(value: &str) -> bool {
+    if is_symbol(value) {
+        return true;
+    }
+    let Some(SourceMetadataValue::Array(values)) = recite_parser::parse_metadata_value(value)
+    else {
+        return false;
+    };
+    !values.is_empty()
+        && values
+            .iter()
+            .all(|value| matches!(value, SourceMetadataScalar::Symbol(_)))
+}
+
+fn is_symbol(value: &str) -> bool {
+    let mut characters = value.chars();
+    let Some(first) = characters.next() else {
+        return false;
+    };
+    (first.is_ascii_alphabetic() || first == '_')
+        && characters.all(|character| {
+            character.is_ascii_alphanumeric() || matches!(character, '_' | '.' | '-')
+        })
 }
 
 pub(super) fn hover_response(value: &str, range: Range) -> Hover {

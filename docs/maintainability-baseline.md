@@ -110,8 +110,7 @@ wire compatibility fixtures, and focused reviews for each subsystem.
 | `crates/recite-cli/src/error.rs` | 372 | production | cli | review | Keep user-facing error projection separate from typed domain errors |
 | `crates/recite-ui/tests/diagnostics.rs` | 371 | test/support | ui/tests | review | Structured diagnostic resource and compatibility-message coverage |
 | `crates/recite-lsp/src/features/navigation.rs` | 394 | production | lsp/features | review | Feature-specific navigation projection |
-| `crates/recite-lsp/src/features/completion.rs` | 289 | production | lsp/features | review | Feature-specific completion and precedence handling |
-| `crates/recite-lsp/src/features/hover.rs` | 258 | production | lsp/features | review | Feature-specific hover projection |
+| `crates/recite-lsp/src/features/hover.rs` | 260 | production | lsp/features | review | Feature-specific hover projection |
 | `crates/recite-lsp/src/tests/availability/completion.rs` | 373 | test/support | lsp/tests | review | #176: contextual selector completion coverage |
 | `crates/recite-benchmarks/src/report/mod.rs` | 389 | production | benchmarks | cohesive | Report aggregation boundary |
 | `crates/recite-benchmarks/src/report/fixture.rs` | 387 | production | benchmarks | cohesive | Fixture report model |
@@ -191,5 +190,6 @@ wire compatibility fixtures, and focused reviews for each subsystem.
 | `crates/recite-parser/tests/parser/statements.rs` | 379 | test/support | parser/tests | cohesive | Statement parser coverage |
 | `crates/recite-cli/tests/watch_stress.rs` | 366 | test/support | cli/tests | cohesive | Watch stress harness |
 | `crates/recite-runtime/tests/traversal/conditions/choice_conditions.rs` | 365 | test/support | runtime/tests | cohesive | Choice condition coverage |
-| `crates/recite-lsp/src/tests.rs` | 443 | test/support | lsp/tests | cohesive | Module aggregator, not production implementation |
+| `crates/recite-lsp/src/tests/availability/speaker.rs` | 351 | test/support | lsp/tests | review | Typed and ordinary speaker completion coverage |
+| `crates/recite-lsp/src/tests.rs` | 488 | test/support | lsp/tests | cohesive | Module aggregator, not production implementation |
 | `crates/recite-lsp/src/tests/code_action/schema_entry.rs` | 357 | test/support | lsp/tests | review | Private code-action behavior |

@@ -67,8 +67,8 @@ pub(super) fn authoring_schema() -> &'static str {
       "kind": "contextual",
       "selector": "field:speaker",
       "values_by_context": {
-        "hazel": ["smile", "wry", "hazel_only"],
-        "rhea": ["flat"]
+        "hazel": ["smile", "wry", "hazel", "hazel_only"],
+        "rhea": ["flat", "rhea.face"]
       },
       "missing_context": { "policy": "fallback", "domain": "portrait_all" },
       "producer_fingerprints": [
@@ -108,6 +108,10 @@ pub(super) fn authoring_schema() -> &'static str {
     }
   },
   "metadata": {
+    "talker": {
+      "targets": ["line"],
+      "type": "speaker"
+    },
     "mood": {
       "targets": ["line", "choice"],
       "type": "symbol",

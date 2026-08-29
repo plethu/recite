@@ -19,6 +19,11 @@ fn initialize_advertises_completion_and_hover() {
 }
 
 #[test]
+fn resolves_metadata_array_elements_by_declared_type() {
+    availability::resolves_metadata_array_elements_by_declared_type();
+}
+
+#[test]
 fn initialize_advertises_missing_id_code_actions() {
     code_action::initialize_advertises_missing_id_code_actions();
 }
@@ -166,6 +171,46 @@ fn hover_uses_utf16_positions_after_non_ascii_prefix() {
 #[test]
 fn hover_describes_schema_and_project_symbols() {
     availability::hover_describes_schema_and_project_symbols();
+}
+
+#[test]
+fn hover_preserves_choice_reason_clause_resolution() {
+    availability::hover_preserves_choice_reason_clause_resolution();
+}
+
+#[test]
+fn hover_resolves_choice_speaker_metadata_before_builtin_speakers() {
+    availability::hover_resolves_choice_speaker_metadata_before_builtin_speakers();
+}
+
+#[test]
+fn completes_choice_speaker_metadata_by_schema_type() {
+    availability::completes_choice_speaker_metadata_by_schema_type();
+}
+
+#[test]
+fn rejects_builtin_speaker_candidates_for_unrelated_choice_metadata_type() {
+    availability::rejects_builtin_speaker_candidates_for_unrelated_choice_metadata_type();
+}
+
+#[test]
+fn completes_registry_and_enum_choice_metadata_values() {
+    availability::completes_registry_and_enum_choice_metadata_values();
+}
+
+#[test]
+fn filters_registry_metadata_completion_to_source_symbols() {
+    availability::filters_registry_metadata_completion_to_source_symbols();
+}
+
+#[test]
+fn filters_enum_metadata_completion_to_source_symbols() {
+    availability::filters_enum_metadata_completion_to_source_symbols();
+}
+
+#[test]
+fn filters_contextual_domain_completion_to_source_symbols() {
+    availability::filters_contextual_domain_completion_to_source_symbols();
 }
 
 #[test]

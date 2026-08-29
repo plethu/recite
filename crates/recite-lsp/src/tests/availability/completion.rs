@@ -123,7 +123,7 @@ pub(super) fn completes_project_and_schema_authoring_symbols() {
             )
             .expect("metadata key completion"),
     );
-    assert_eq!(metadata_keys, ["mood", "portrait", "stage"]);
+    assert_eq!(metadata_keys, ["mood", "portrait", "stage", "talker"]);
 
     harness.finish();
 }
@@ -183,7 +183,7 @@ pub(super) fn completes_metadata_domain_values_from_schema_context() {
             )
             .expect("speaker contextual metadata completion"),
     );
-    assert_eq!(speaker_context, ["hazel_only", "smile", "wry"]);
+    assert_eq!(speaker_context, ["hazel", "hazel_only", "smile", "wry"]);
 
     let inherited_speaker = completion_labels(
         harness
@@ -193,7 +193,7 @@ pub(super) fn completes_metadata_domain_values_from_schema_context() {
             )
             .expect("inherited speaker contextual metadata completion"),
     );
-    assert_eq!(inherited_speaker, ["flat"]);
+    assert_eq!(inherited_speaker, ["flat", "rhea.face"]);
 
     let metadata_key_context = completion_labels(
         harness

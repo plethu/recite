@@ -1,11 +1,19 @@
+mod arrays;
 mod authoring;
 mod completion;
 mod diagnostics;
+mod metadata;
 mod projection_completion;
+mod registry;
+mod speaker;
 mod support;
 
 pub(super) fn initialize_advertises_completion_and_hover() {
     authoring::initialize_advertises_completion_and_hover();
+}
+
+pub(super) fn resolves_metadata_array_elements_by_declared_type() {
+    arrays::resolves_metadata_array_elements_by_declared_type();
 }
 
 pub(super) fn publishes_choice_availability_parser_diagnostics() {
@@ -66,6 +74,39 @@ pub(super) fn hover_uses_utf16_positions_after_non_ascii_prefix() {
 
 pub(super) fn hover_describes_schema_and_project_symbols() {
     authoring::hover_describes_schema_and_project_symbols();
+    metadata::hover_prioritizes_contextual_metadata_values();
+}
+
+pub(super) fn hover_preserves_choice_reason_clause_resolution() {
+    metadata::hover_preserves_choice_reason_clause_resolution();
+}
+
+pub(super) fn hover_resolves_choice_speaker_metadata_before_builtin_speakers() {
+    speaker::hover_resolves_choice_speaker_metadata_before_builtin_speakers();
+}
+
+pub(super) fn completes_choice_speaker_metadata_by_schema_type() {
+    speaker::completes_choice_speaker_metadata_by_schema_type();
+}
+
+pub(super) fn rejects_builtin_speaker_candidates_for_unrelated_choice_metadata_type() {
+    speaker::rejects_builtin_speaker_candidates_for_unrelated_choice_metadata_type();
+}
+
+pub(super) fn completes_registry_and_enum_choice_metadata_values() {
+    speaker::completes_registry_and_enum_choice_metadata_values();
+}
+
+pub(super) fn filters_registry_metadata_completion_to_source_symbols() {
+    registry::filters_registry_metadata_completion_to_source_symbols();
+}
+
+pub(super) fn filters_enum_metadata_completion_to_source_symbols() {
+    registry::filters_enum_metadata_completion_to_source_symbols();
+}
+
+pub(super) fn filters_contextual_domain_completion_to_source_symbols() {
+    registry::filters_contextual_domain_completion_to_source_symbols();
 }
 
 pub(super) fn malformed_completion_and_hover_params_return_invalid_params() {
