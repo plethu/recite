@@ -38,6 +38,17 @@ def is_ident_continue(char: str) -> bool:
     return bool(char) and char in IDENT_CONT
 
 
+def identifier_end(source: str, start: int) -> int:
+    """Return the end of a normal or raw Rust identifier."""
+
+    index = start + 1
+    if source.startswith("r#", start):
+        index = start + 2
+    while index < len(source) and is_ident_continue(source[index]):
+        index += 1
+    return index
+
+
 def raw_string_end(source: str, start: int) -> int | None:
     """Return the exclusive end of a Rust raw string starting at *start*."""
 
@@ -306,16 +317,20 @@ def parse_attr(source: str, hash_index: int, bracket_index: int, close: int,
             for kind, lints, reason, nested_inner in parsed]
 
 
-def declaration_tokens(source: str, start: int) -> list[str]:
+def declaration_tokens(source: str, start: int) -> list[tuple[str, int]]:
     """Lex one declaration head without interpreting its Rust semantics."""
 
-    tokens: list[str] = []
+    tokens: list[tuple[str, int]] = []
     index = start
     stack: list[str] = []
+
+    def add(token: str) -> None:
+        tokens.append((token, len(stack)))
+
     while index < len(source):
         raw_end = raw_string_end(source, index)
         if raw_end is not None:
-            tokens.append(source[index:raw_end])
+            add(source[index:raw_end])
             index = raw_end
             continue
         if source.startswith('//', index):
@@ -327,20 +342,18 @@ def declaration_tokens(source: str, start: int) -> list[str]:
             continue
         if source[index] == '"':
             end = quoted_string_end(source, index)
-            tokens.append(source[index:end])
+            add(source[index:end])
             index = end
             continue
         if source[index] == "'":
             end = quoted_string_end(source, index, "'")
             if end <= index + 8 and end > index + 1:
-                tokens.append(source[index:end])
+                add(source[index:end])
                 index = end
                 continue
         if is_ident_start(source[index]):
-            end = index + 1
-            while end < len(source) and is_ident_continue(source[end]):
-                end += 1
-            tokens.append(source[index:end])
+            end = identifier_end(source, index)
+            add(source[index:end])
             index = end
             continue
         char = source[index]
@@ -348,17 +361,17 @@ def declaration_tokens(source: str, start: int) -> list[str]:
             if char == '{' and not stack:
                 break
             stack.append(char)
-            tokens.append(char)
+            add(char)
         elif char in CLOSE:
             if char == '}' and not stack:
                 break
             if stack and PAIRS[char] == stack[-1]:
                 stack.pop()
-            tokens.append(char)
+            add(char)
         elif char == ';' and not stack:
             break
         elif not char.isspace():
-            tokens.append(char)
+            add(char)
         index += 1
     return tokens
 
@@ -386,11 +399,13 @@ def next_scope(source: str, start: int, inner: bool) -> tuple[str, str, int, boo
                 continue
         break
 
-    tokens = declaration_tokens(source, index)
+    token_data = declaration_tokens(source, index)
+    tokens = [token for token, _ in token_data]
+    token_depths = [depth for _, depth in token_data]
     declarations = {"mod", "impl", "trait", "use", "fn", "struct", "enum",
                     "union", "type", "const", "static", "macro_rules", "macro"}
     declaration_index = next((position for position, token in enumerate(tokens)
-                              if token in declarations), None)
+                              if token in declarations and token_depths[position] == 0), None)
     if declaration_index is None:
         return "item", "unstable", index, False
     kind = tokens[declaration_index]
@@ -436,12 +451,14 @@ def category_for(path: str, source: str, offset: int, generated_paths: set[str])
 def declaration_owner(tokens: list[str]) -> str | None:
     """Return the owner introduced by a module, impl, or trait brace."""
 
-    for index, token in enumerate(tokens):
-        if token not in {"mod", "trait", "impl"} or index + 1 >= len(tokens):
-            continue
-        components = tokens[index + 1:]
-        if any(component and is_ident_start(component[0]) for component in components):
-            return structured_owner(token, components)
+    declaration_kinds = {"mod", "trait", "impl", "fn", "struct", "enum",
+                         "union", "type", "const", "static", "use", "macro_rules", "macro"}
+    first = next((index for index, token in enumerate(tokens) if token in declaration_kinds), None)
+    if first is None or tokens[first] not in {"mod", "trait", "impl"}:
+        return None
+    components = tokens[first + 1:]
+    if any(component and is_ident_start(component[0]) for component in components):
+        return structured_owner(tokens[first], components)
     return None
 
 
@@ -498,9 +515,7 @@ def scan_source(path: str, source: str, generated_paths: set[str]) -> list[Suppr
                 continue
         if source[index] != '#':
             if is_ident_start(source[index]):
-                end = index + 1
-                while end < len(source) and is_ident_continue(source[end]):
-                    end += 1
+                end = identifier_end(source, index)
                 owners.word(source[index:end])
                 index = end
                 continue

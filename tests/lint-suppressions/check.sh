@@ -291,6 +291,19 @@ pub extern "C" fn new_name() {}
 #[allow(dead_code)]
 {}
 {}
+#[allow(dead_code)]
+old_macro!(fn nested);
+new_macro!(fn nested);
+fn outer() -> impl Foo {
+    #[allow(dead_code)]
+    fn moved() {}
+}
+impl Foo {
+    fn moved() {}
+}
+#[allow(dead_code)]
+fn r#old() {}
+fn r#new() {}
 EOF
 git -C "$test_root/repo" add .
 git -C "$test_root/repo" commit -q -m add-ambiguous-owner-baselines
@@ -319,6 +332,19 @@ pub extern "C" fn new_name() {}
 {}
 #[allow(dead_code)]
 {}
+old_macro!(fn nested);
+#[allow(dead_code)]
+new_macro!(fn nested);
+fn outer() -> impl Foo {
+    fn moved() {}
+}
+impl Foo {
+    #[allow(dead_code)]
+    fn moved() {}
+}
+fn r#old() {}
+#[allow(dead_code)]
+fn r#new() {}
 EOF
 git -C "$test_root/repo" add .
 git -C "$test_root/repo" commit -q -m reject-ambiguous-owner-reuse
@@ -333,6 +359,10 @@ check_fails "$ambiguous_owner_base_sha" "$ambiguous_owner_sha" \
   "owner=fn:new_name"
 check_fails "$ambiguous_owner_base_sha" "$ambiguous_owner_sha" \
   "owner=unstable"
+check_fails "$ambiguous_owner_base_sha" "$ambiguous_owner_sha" \
+  "owner=impl:[3:Foo]::fn:moved"
+check_fails "$ambiguous_owner_base_sha" "$ambiguous_owner_sha" \
+  "owner=fn:r#new"
 git -C "$test_root/repo" rm -q crates/demo/src/ambiguous_owners.rs
 git -C "$test_root/repo" commit -q -m remove-ambiguous-owner-fixture
 clean_before_exceptions="$(git -C "$test_root/repo" rev-parse HEAD)"
