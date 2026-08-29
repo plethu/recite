@@ -169,6 +169,11 @@ fn hover_describes_schema_and_project_symbols() {
 }
 
 #[test]
+fn hover_preserves_choice_reason_clause_resolution() {
+    availability::hover_preserves_choice_reason_clause_resolution();
+}
+
+#[test]
 fn schema_hover_preserves_freshness_without_producer_identity() {
     let mut schema = recite_core::ProjectSchema::empty_v1();
     schema.producer_metadata = Some(recite_core::ProducerMetadata {

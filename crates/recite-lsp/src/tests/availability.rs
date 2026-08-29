@@ -70,6 +70,10 @@ pub(super) fn hover_describes_schema_and_project_symbols() {
     metadata::hover_prioritizes_contextual_metadata_values();
 }
 
+pub(super) fn hover_preserves_choice_reason_clause_resolution() {
+    metadata::hover_preserves_choice_reason_clause_resolution();
+}
+
 pub(super) fn malformed_completion_and_hover_params_return_invalid_params() {
     authoring::malformed_completion_and_hover_params_return_invalid_params();
 }

@@ -179,6 +179,74 @@ pub(super) fn hover_prioritizes_contextual_metadata_values() {
     harness.finish();
 }
 
+pub(super) fn hover_preserves_choice_reason_clause_resolution() {
+    let temp = TempDir::new().unwrap_or_else(|error| panic!("tempdir: {error}"));
+    write_file(
+        temp.path(),
+        "schema.json",
+        include_str!("../../../../../fixtures/schema/valid/generated_manifest.json"),
+    );
+    let root_uri = file_uri(temp.path());
+    let schema_path = temp.path().join("schema.json");
+    let mut harness = Harness::start_with_result(json!({
+        "capabilities": {
+            "general": {
+                "positionEncodings": ["utf-16"]
+            }
+        },
+        "rootUri": root_uri.as_str(),
+        "initializationOptions": {
+            "schema": schema_path.display().to_string()
+        }
+    }))
+    .0;
+    let source_uri = file_uri(&temp.path().join("dialogue/start.recite"));
+    let source = concat!(
+        ":: start default speaker=hazel\n",
+        "? explicit_reason@a1b2c3d4e5f60718293a requires=(trust_gte(hazel, rhea, 3)) reason=innkeeper_trust_hint\n",
+        "? collision_reason@b1c2d3e4f5061728394a requires=(trust_gte(hazel, rhea, 3)) reason=hazel\n",
+        "? punctuation_reason@c1d2e3f405162738495a requires=(trust_gte(hazel, rhea, 3)) reason=innkeeper_trust_hint,\n",
+    );
+    harness.did_open(source_uri.clone(), 1, source);
+    let _ = harness.recv_publish_diagnostics();
+
+    let reason_hover = harness
+        .hover(
+            source_uri.clone(),
+            position_after(source, "reason=innkeeper_trust_hint"),
+        )
+        .expect("choice reason hover");
+    assert!(hover_text(reason_hover).contains("Availability reason 'innkeeper_trust_hint'"));
+
+    assert!(
+        harness
+            .hover(source_uri.clone(), position_after(source, "reason=hazel"))
+            .is_none(),
+        "an unknown choice reason must not fall through to the same-named speaker",
+    );
+
+    assert!(
+        harness
+            .hover(
+                source_uri.clone(),
+                position_after(source, "reason=innkeeper_trust_hint,"),
+            )
+            .is_none(),
+        "a compiler-invalid choice reason must not resolve as a complete reason ID",
+    );
+
+    assert_eq!(
+        completion_labels(
+            harness
+                .completion(source_uri, position_after(source, "reason=inn"))
+                .expect("choice reason completion"),
+        ),
+        ["innkeeper_trust_hint"],
+    );
+
+    harness.finish();
+}
+
 fn hover_text(hover: lsp_types::Hover) -> String {
     match hover.contents {
         HoverContents::Markup(content) => content.value,
