@@ -265,6 +265,78 @@ git -C "$test_root/repo" rm -q crates/demo/src/nested_owners.rs
 git -C "$test_root/repo" commit -q -m remove-qualified-owner-fixture
 clean_before_exceptions="$(git -C "$test_root/repo" rev-parse HEAD)"
 
+# Declaration identity must remain complete through impl headers, use trees,
+# function modifiers, generics, and unknown/bare item fallbacks.
+cat > "$test_root/repo/crates/demo/src/ambiguous_owners.rs" <<'EOF'
+impl Foo for Bar {
+    #[allow(dead_code)]
+    fn moved_impl() {}
+}
+impl Foo for Baz {
+    fn moved_impl() {}
+}
+impl<T> Foo<T> for Bar<T> {
+    #[allow(dead_code)]
+    fn moved_generic() {}
+}
+impl<T> Foo<T> for Baz<T> {
+    fn moved_generic() {}
+}
+#[allow(dead_code)]
+use crate::old::Thing;
+use crate::new::Thing;
+#[allow(dead_code)]
+pub extern "C" fn old_name() {}
+pub extern "C" fn new_name() {}
+#[allow(dead_code)]
+{}
+{}
+EOF
+git -C "$test_root/repo" add .
+git -C "$test_root/repo" commit -q -m add-ambiguous-owner-baselines
+ambiguous_owner_base_sha="$(git -C "$test_root/repo" rev-parse HEAD)"
+cat > "$test_root/repo/crates/demo/src/ambiguous_owners.rs" <<'EOF'
+impl Foo for Bar {
+    fn moved_impl() {}
+}
+impl Foo for Baz {
+    #[allow(dead_code)]
+    fn moved_impl() {}
+}
+impl<T> Foo<T> for Bar<T> {
+    fn moved_generic() {}
+}
+impl<T> Foo<T> for Baz<T> {
+    #[allow(dead_code)]
+    fn moved_generic() {}
+}
+use crate::old::Thing;
+#[allow(dead_code)]
+use crate::new::Thing;
+pub extern "C" fn old_name() {}
+#[allow(dead_code)]
+pub extern "C" fn new_name() {}
+{}
+#[allow(dead_code)]
+{}
+EOF
+git -C "$test_root/repo" add .
+git -C "$test_root/repo" commit -q -m reject-ambiguous-owner-reuse
+ambiguous_owner_sha="$(git -C "$test_root/repo" rev-parse HEAD)"
+check_fails "$ambiguous_owner_base_sha" "$ambiguous_owner_sha" \
+  "owner=impl:[3:Foo,3:for,3:Baz]::fn:moved_impl"
+check_fails "$ambiguous_owner_base_sha" "$ambiguous_owner_sha" \
+  "owner=impl:[1:<,1:T,1:>,3:Foo"
+check_fails "$ambiguous_owner_base_sha" "$ambiguous_owner_sha" \
+  "owner=use:[5:crate"
+check_fails "$ambiguous_owner_base_sha" "$ambiguous_owner_sha" \
+  "owner=fn:new_name"
+check_fails "$ambiguous_owner_base_sha" "$ambiguous_owner_sha" \
+  "owner=unstable"
+git -C "$test_root/repo" rm -q crates/demo/src/ambiguous_owners.rs
+git -C "$test_root/repo" commit -q -m remove-ambiguous-owner-fixture
+clean_before_exceptions="$(git -C "$test_root/repo" rev-parse HEAD)"
+
 # Matching candidates are partitioned by path and category, and lint-list
 # changes retain the lexical owner. These hostile pairs must remain `new`
 # rather than laundering through a broad/module or test baseline elsewhere.

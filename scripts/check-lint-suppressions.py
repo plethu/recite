@@ -232,6 +232,7 @@ class Suppression:
     target: str
     category: str
     status: str = "current"
+    owner_stable: bool = True
 
     @property
     def broad(self) -> bool:
@@ -305,9 +306,71 @@ def parse_attr(source: str, hash_index: int, bracket_index: int, close: int,
             for kind, lints, reason, nested_inner in parsed]
 
 
-def next_scope(source: str, start: int, inner: bool) -> tuple[str, str, int]:
+def declaration_tokens(source: str, start: int) -> list[str]:
+    """Lex one declaration head without interpreting its Rust semantics."""
+
+    tokens: list[str] = []
+    index = start
+    stack: list[str] = []
+    while index < len(source):
+        raw_end = raw_string_end(source, index)
+        if raw_end is not None:
+            tokens.append(source[index:raw_end])
+            index = raw_end
+            continue
+        if source.startswith('//', index):
+            newline = source.find('\n', index + 2)
+            index = len(source) if newline < 0 else newline + 1
+            continue
+        if source.startswith('/*', index):
+            index = block_comment_end(source, index)
+            continue
+        if source[index] == '"':
+            end = quoted_string_end(source, index)
+            tokens.append(source[index:end])
+            index = end
+            continue
+        if source[index] == "'":
+            end = quoted_string_end(source, index, "'")
+            if end <= index + 8 and end > index + 1:
+                tokens.append(source[index:end])
+                index = end
+                continue
+        if is_ident_start(source[index]):
+            end = index + 1
+            while end < len(source) and is_ident_continue(source[end]):
+                end += 1
+            tokens.append(source[index:end])
+            index = end
+            continue
+        char = source[index]
+        if char in OPEN:
+            if char == '{' and not stack:
+                break
+            stack.append(char)
+            tokens.append(char)
+        elif char in CLOSE:
+            if char == '}' and not stack:
+                break
+            if stack and PAIRS[char] == stack[-1]:
+                stack.pop()
+            tokens.append(char)
+        elif char == ';' and not stack:
+            break
+        elif not char.isspace():
+            tokens.append(char)
+        index += 1
+    return tokens
+
+
+def structured_owner(kind: str, components: list[str]) -> str:
+    encoded = ','.join(f"{len(component)}:{component}" for component in components)
+    return f"{kind}:[{encoded}]"
+
+
+def next_scope(source: str, start: int, inner: bool) -> tuple[str, str, int, bool]:
     if inner:
-        return "crate", "crate", start
+        return "crate", "crate", start, True
     index = start
     while True:
         index = skip_space_comments(source, index)
@@ -317,44 +380,32 @@ def next_scope(source: str, start: int, inner: bool) -> tuple[str, str, int]:
                 bracket += 1
             if bracket < len(source) and source[bracket] == '[':
                 close = matching_delimiter(source, bracket)
-                if close is not None:
-                    index = close + 1
-                    continue
+                if close is None:
+                    return "item", "unstable", index, False
+                index = close + 1
+                continue
         break
-    modifiers = {"async", "const", "default", "extern", "pub", "safe", "unsafe"}
-    while index < len(source) and is_ident_start(source[index]):
-        end = index + 1
-        while end < len(source) and is_ident_continue(source[end]):
-            end += 1
-        word = source[index:end]
-        if word == "mod":
-            name_start = skip_space_comments(source, end)
-            name_end = name_start
-            if name_start < len(source) and is_ident_start(source[name_start]):
-                name_end += 1
-                while name_end < len(source) and is_ident_continue(source[name_end]):
-                    name_end += 1
-            target = source[name_start:name_end] or "mod"
-            return "module", f"mod:{target}", index
-        if word not in modifiers:
-            name_start = skip_space_comments(source, end)
-            if word == "macro_rules" and name_start < len(source) and source[name_start] == '!':
-                name_start = skip_space_comments(source, name_start + 1)
-            name_end = name_start
-            if name_start < len(source) and is_ident_start(source[name_start]):
-                name_end += 1
-                while name_end < len(source) and is_ident_continue(source[name_end]):
-                    name_end += 1
-            target = source[name_start:name_end] or word
-            return "item", f"{word}:{target}", index
-        index = skip_space_comments(source, end)
-        if index < len(source) and source[index] == '(':
-            close = matching_delimiter(source, index)
-            if close is None:
-                return "item", "item", index
-            index = close + 1
-            index = skip_space_comments(source, index)
-    return "item", "item", index
+
+    tokens = declaration_tokens(source, index)
+    declarations = {"mod", "impl", "trait", "use", "fn", "struct", "enum",
+                    "union", "type", "const", "static", "macro_rules", "macro"}
+    declaration_index = next((position for position, token in enumerate(tokens)
+                              if token in declarations), None)
+    if declaration_index is None:
+        return "item", "unstable", index, False
+    kind = tokens[declaration_index]
+    components = tokens[declaration_index + 1:]
+    if not any(component and is_ident_start(component[0]) for component in components):
+        return "item", "unstable", index, False
+    if kind == "mod":
+        return "module", structured_owner(kind, components), index, True
+    if kind == "fn":
+        name = next((component for component in components
+                     if component and is_ident_start(component[0])), None)
+        if name is None:
+            return "item", "unstable", index, False
+        return "item", f"fn:{name}", index, True
+    return "item", structured_owner(kind, components), index, True
 
 
 def category_for(path: str, source: str, offset: int, generated_paths: set[str]) -> str:
@@ -385,16 +436,12 @@ def category_for(path: str, source: str, offset: int, generated_paths: set[str])
 def declaration_owner(tokens: list[str]) -> str | None:
     """Return the owner introduced by a module, impl, or trait brace."""
 
-    def structured(kind: str, components: list[str]) -> str:
-        encoded = ','.join(f"{len(component)}:{component}" for component in components)
-        return f"{kind}:[{encoded}]"
-
     for index, token in enumerate(tokens):
         if token not in {"mod", "trait", "impl"} or index + 1 >= len(tokens):
             continue
         components = tokens[index + 1:]
         if any(component and is_ident_start(component[0]) for component in components):
-            return structured(token, components)
+            return structured_owner(token, components)
     return None
 
 
@@ -477,7 +524,7 @@ def scan_source(path: str, source: str, generated_paths: set[str]) -> list[Suppr
             )
         parsed = parse_attr(source, index, bracket, close, path)
         for kind, lints, reason, inner in parsed:
-            scope, target, _ = next_scope(source, close + 1, inner)
+            scope, target, _, owner_stable = next_scope(source, close + 1, inner)
             prefix = owners.prefix()
             if prefix:
                 target = f"{prefix}::{target}"
@@ -492,6 +539,7 @@ def scan_source(path: str, source: str, generated_paths: set[str]) -> list[Suppr
                 scope=scope,
                 target=target,
                 category=category_for(path, source, index, generated_paths),
+                owner_stable=owner_stable,
             ))
         index = close + 1
     return suppressions
@@ -575,7 +623,9 @@ def generated_allowlist(repo: str, revision: str) -> set[str]:
 
 
 def match_suppressions(base: list[Suppression], current: list[Suppression]) -> list[Suppression]:
-    remaining = list(base)
+    # Unknown/bare owners are deliberately never eligible to consume a
+    # baseline: sharing the fallback `item` target is not identity evidence.
+    remaining = [candidate for candidate in base if candidate.owner_stable]
     result: list[Suppression] = []
 
     def take(predicate):
@@ -588,6 +638,9 @@ def match_suppressions(base: list[Suppression], current: list[Suppression]) -> l
         return candidate
 
     for item in current:
+        if not item.owner_stable:
+            result.append(Suppression(**{**item.__dict__, "status": "new"}))
+            continue
         matched = take(lambda candidate: candidate.semantic_key == item.semantic_key)
         if matched is not None:
             status = "baseline"

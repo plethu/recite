@@ -20,6 +20,11 @@ unchanged baseline record bypasses current-reason validation. Matching never
 crosses paths or categories, and lint-list changes must retain the same
 lexical owner.
 
+Known declaration owners retain their complete token sequence (including impl
+`for`/self types and use-tree paths). Function modifiers are parsed before the
+function name. Bare blocks and declarations that cannot be identified
+unambiguously receive an unstable owner and never consume a baseline.
+
 The parser is a small deterministic Rust lexer. It handles multiline
 attributes, multiple lints, nested delimiters, comments, ordinary strings,
 character literals, and raw strings. It does not claim to verify Rust
