@@ -269,6 +269,7 @@ resource_ids = [
 "lsp-code-action-create-block-stub",
 "lsp-code-action-add-condition",
 "lsp-code-action-add-effect",
+"lsp-warning-ui-config",
 ]
 
 # The complete future default-code presentation registry is explicit. Parser

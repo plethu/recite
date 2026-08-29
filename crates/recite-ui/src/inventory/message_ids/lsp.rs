@@ -62,6 +62,7 @@ pub(super) const fn key(id: super::MsgId) -> Option<&'static str> {
         super::MsgId::LspCodeActionCreateBlockStub => Some("lsp-code-action-create-block-stub"),
         super::MsgId::LspCodeActionAddCondition => Some("lsp-code-action-add-condition"),
         super::MsgId::LspCodeActionAddEffect => Some("lsp-code-action-add-effect"),
+        super::MsgId::LspWarningUiConfig => Some("lsp-warning-ui-config"),
         _ => None,
     }
 }

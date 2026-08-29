@@ -141,6 +141,20 @@ fn launch_resource_matches_the_typed_inventory() {
         .find(|resource| resource.id.as_str() == "lsp-hover-requires")
         .expect("LSP resource");
     assert_eq!(lsp.clients, BTreeSet::from([Client::Lsp]));
+
+    let warning = contract
+        .resources
+        .iter()
+        .find(|resource| resource.id.as_str() == "lsp-warning-ui-config")
+        .expect("LSP config warning resource");
+    assert_eq!(warning.clients, BTreeSet::from([Client::Lsp]));
+    assert_eq!(
+        warning.arguments,
+        BTreeMap::from([
+            ("code".to_owned(), UiArgType::String),
+            ("detail".to_owned(), UiArgType::String),
+        ])
+    );
 }
 
 #[test]

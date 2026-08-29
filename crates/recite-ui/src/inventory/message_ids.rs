@@ -50,5 +50,5 @@ message_ids! {
     LspCompletionConditionDocumentation, LspCompletionEffect, LspCompletionEffectDocumentation, LspCompletionProjectionQuery, LspCompletionProjectionQueryDocumentation,
     LspCompletionProjectionQueryFunction, LspCompletionProjectionQueryCall, LspCompletionProjectionInput, LspCompletionProjector, LspCompletionOutput,
     LspCompletionLabel, LspCodeActionInsertMissingId, LspCodeActionInsertAllMissingIds, LspCodeActionCreateBlockStub, LspCodeActionAddCondition,
-    LspCodeActionAddEffect,
+    LspCodeActionAddEffect, LspWarningUiConfig,
 }

@@ -46,5 +46,6 @@ macro_rules! lsp_message_ids {
         | MsgId::LspCodeActionCreateBlockStub
         | MsgId::LspCodeActionAddCondition
         | MsgId::LspCodeActionAddEffect
+        | MsgId::LspWarningUiConfig
     };
 }

@@ -1,7 +1,7 @@
 use lsp_server::{Connection, ErrorCode, Message, Notification, Request, Response};
 use lsp_types::notification::{
     DidChangeTextDocument, DidCloseTextDocument, DidOpenTextDocument, DidSaveTextDocument, Exit,
-    Initialized, Notification as LspNotification, PublishDiagnostics,
+    Initialized, LogMessage, Notification as LspNotification, PublishDiagnostics,
 };
 use lsp_types::request::{
     CodeActionRequest, Completion, GotoDefinition, HoverRequest, PrepareRenameRequest, References,
@@ -10,7 +10,7 @@ use lsp_types::request::{
 use lsp_types::{
     CodeActionParams, CompletionParams, DidChangeTextDocumentParams, DidCloseTextDocumentParams,
     DidOpenTextDocumentParams, DidSaveTextDocumentParams, GotoDefinitionParams, HoverParams,
-    ReferenceParams, RenameParams, TextDocumentPositionParams,
+    LogMessageParams, MessageType, ReferenceParams, RenameParams, TextDocumentPositionParams,
 };
 
 use crate::diagnostics::{clear_diagnostics, publish_diagnostics};
@@ -18,6 +18,8 @@ use crate::workspace::{DiagnosticRefresh, LspWorkspace, WorkspaceChangeResult, W
 use recite_ui::UiCatalog;
 
 mod bootstrap;
+#[allow(unused_imports, reason = "used by in-crate lifecycle harness")]
+pub(crate) use bootstrap::run_connection_with_user_config;
 #[allow(unused_imports, reason = "used by in-crate protocol harness")]
 pub(crate) use bootstrap::{run_connection, run_connection_with_catalog};
 pub use bootstrap::{run_stdio, run_stdio_with_catalog, run_stdio_with_locale};
@@ -251,6 +253,19 @@ impl Server {
         }
 
         Ok(())
+    }
+
+    fn publish_startup_warning(&self, message: String) -> Result<(), ServerError> {
+        self.send(
+            Notification::new(
+                LogMessage::METHOD.to_owned(),
+                LogMessageParams {
+                    typ: MessageType::WARNING,
+                    message,
+                },
+            )
+            .into(),
+        )
     }
 
     fn handle_did_open(&mut self, notification: Notification) -> Result<(), ServerError> {

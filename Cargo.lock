@@ -1375,6 +1375,7 @@ dependencies = [
  "lsp-server",
  "lsp-types",
  "recite-compiler",
+ "recite-config",
  "recite-core",
  "recite-parser",
  "recite-ui",

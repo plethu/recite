@@ -8,17 +8,9 @@ use crate::diagnostics::DiagnosticSource;
 use crate::documents::OpenDocumentStore;
 
 impl LspWorkspace {
+    #[allow(dead_code, reason = "used by unit tests and benchmark support")]
     pub(crate) fn new(config: WorkspaceConfig) -> Self {
         Self::with_ui_catalog(config, default_ui_catalog())
-    }
-
-    #[allow(dead_code)]
-    pub(crate) fn with_ui_locale(
-        config: WorkspaceConfig,
-        locale: &UiLocale,
-    ) -> Result<Self, String> {
-        let catalog = UiCatalog::load(locale).map_err(|error| error.to_string())?;
-        Ok(Self::with_ui_catalog(config, catalog))
     }
 
     pub(crate) fn with_ui_catalog(config: WorkspaceConfig, ui_catalog: UiCatalog) -> Self {
@@ -56,7 +48,11 @@ impl LspWorkspace {
     }
 }
 
-#[allow(clippy::expect_used)]
+#[allow(
+    dead_code,
+    clippy::expect_used,
+    reason = "used by the default workspace constructor"
+)]
 fn default_ui_catalog() -> UiCatalog {
     UiCatalog::load(&UiLocale::default()).expect("embedded default UI catalog must load")
 }

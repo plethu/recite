@@ -49,6 +49,26 @@ fn exit_before_shutdown_terminates_with_error() {
 }
 
 #[test]
+fn valid_ui_config_changes_presentation_only() {
+    lifecycle::valid_ui_config_changes_presentation_only();
+}
+
+#[test]
+fn absent_platform_default_uses_defaults_without_warning() {
+    lifecycle::absent_platform_default_uses_defaults_without_warning();
+}
+
+#[test]
+fn malformed_user_config_warns_without_blocking_initialize() {
+    lifecycle::malformed_user_config_warns_without_blocking_initialize();
+}
+
+#[test]
+fn explicit_missing_user_config_warns_with_stable_code() {
+    lifecycle::explicit_missing_user_config_warns_with_stable_code();
+}
+
+#[test]
 fn did_open_publishes_source_diagnostics_with_stable_shape() {
     diagnostics::did_open_publishes_source_diagnostics_with_stable_shape();
 }

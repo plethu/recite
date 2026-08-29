@@ -6,7 +6,7 @@ use std::time::Duration;
 use lsp_server::{Connection, Message, Notification, Request, RequestId, Response};
 use lsp_types::notification::{
     DidChangeTextDocument, DidCloseTextDocument, DidOpenTextDocument, DidSaveTextDocument, Exit,
-    Initialized, Notification as LspNotification, PublishDiagnostics,
+    Initialized, LogMessage, Notification as LspNotification, PublishDiagnostics,
 };
 use lsp_types::request::{
     CodeActionRequest, Completion, GotoDefinition, HoverRequest, PrepareRenameRequest, References,
@@ -16,17 +16,18 @@ use lsp_types::{CodeActionParams, CodeActionResponse, RenameParams};
 use lsp_types::{
     CompletionParams, CompletionResponse, DidChangeTextDocumentParams, DidCloseTextDocumentParams,
     DidOpenTextDocumentParams, DidSaveTextDocumentParams, GotoDefinitionParams,
-    GotoDefinitionResponse, Hover, HoverParams, InitializeResult, Location, PartialResultParams,
-    Position, PrepareRenameResponse, PublishDiagnosticsParams, ReferenceContext, ReferenceParams,
-    TextDocumentContentChangeEvent, TextDocumentIdentifier, TextDocumentItem,
-    TextDocumentPositionParams, Uri, VersionedTextDocumentIdentifier, WorkDoneProgressParams,
-    WorkspaceEdit,
+    GotoDefinitionResponse, Hover, HoverParams, InitializeResult, Location, LogMessageParams,
+    MessageType, PartialResultParams, Position, PrepareRenameResponse, PublishDiagnosticsParams,
+    ReferenceContext, ReferenceParams, TextDocumentContentChangeEvent, TextDocumentIdentifier,
+    TextDocumentItem, TextDocumentPositionParams, Uri, VersionedTextDocumentIdentifier,
+    WorkDoneProgressParams, WorkspaceEdit,
 };
+use recite_config::{ConfigError, LoadedUserConfig, UiLocale};
 use recite_ui::{DEFAULT_RESOURCE, UiCatalog};
 use serde::Serialize;
 use serde_json::{Value, json};
 
-use crate::server::{ServerError, run_connection};
+use crate::server::{ServerError, run_connection, run_connection_with_user_config};
 use crate::workspace::LspWorkspace;
 
 pub(super) struct Harness {
@@ -61,7 +62,9 @@ impl Harness {
         let (server_connection, client) = Connection::memory();
         let locale = locale.to_owned();
         let server = thread::spawn(move || {
-            let requested = locale.parse().expect("test locale is valid");
+            let requested = UiLocale::parse(&locale)
+                .expect("test locale is valid")
+                .resolve();
             let catalog = UiCatalog::from_resources(
                 requested,
                 [
@@ -69,11 +72,53 @@ impl Harness {
                         "en-US".parse().expect("English locale is valid"),
                         DEFAULT_RESOURCE.to_owned(),
                     ),
-                    (locale.parse().expect("test locale is valid"), resource),
+                    (
+                        UiLocale::parse(&locale)
+                            .expect("test locale is valid")
+                            .resolve(),
+                        resource,
+                    ),
                 ],
             )
             .expect("test catalog is complete");
             crate::server::run_connection_with_catalog(server_connection, catalog)
+        });
+        Self::finish_start(params, client, server)
+    }
+
+    pub(super) fn start_with_user_config(
+        params: Value,
+        loaded: Result<LoadedUserConfig, ConfigError>,
+        locale: &str,
+        resource: String,
+    ) -> (Self, InitializeResult) {
+        let (server_connection, client) = Connection::memory();
+        let locale = locale.to_owned();
+        let server = thread::spawn(move || {
+            let default_catalog =
+                UiCatalog::load(&UiLocale::default()).expect("test default catalog is complete");
+            let requested = UiLocale::parse(&locale)
+                .expect("test locale is valid")
+                .resolve();
+            run_connection_with_user_config(
+                server_connection,
+                loaded,
+                default_catalog,
+                move |resolved| {
+                    assert_eq!(resolved.resolve(), requested);
+                    UiCatalog::from_resources(
+                        requested.clone(),
+                        [
+                            (
+                                "en-US".parse().expect("English locale is valid"),
+                                DEFAULT_RESOURCE.to_owned(),
+                            ),
+                            (requested.clone(), resource),
+                        ],
+                    )
+                    .map_err(|error| error.to_string())
+                },
+            )
         });
         Self::finish_start(params, client, server)
     }
@@ -107,6 +152,19 @@ impl Harness {
             }
             Ok(other) => panic!("expected diagnostics notification, got {other:?}"),
             Err(error) => panic!("timed out or failed waiting for diagnostics: {error}"),
+        }
+    }
+
+    pub(super) fn recv_log_message(&self) -> LogMessageParams {
+        match self.client.receiver.recv_timeout(Duration::from_secs(1)) {
+            Ok(Message::Notification(notification)) => {
+                assert_eq!(notification.method, LogMessage::METHOD);
+                let params: LogMessageParams = from_value(notification.params);
+                assert_eq!(params.typ, MessageType::WARNING);
+                params
+            }
+            Ok(other) => panic!("expected log message notification, got {other:?}"),
+            Err(error) => panic!("timed out or failed waiting for log message: {error}"),
         }
     }
 
