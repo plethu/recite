@@ -14,12 +14,18 @@ impl SavedProjectIndex {
             return false;
         };
         let canonical_before = fs::canonicalize(&lexical_path).ok();
-        let direct_target = canonical_before.as_deref() == Some(lexical_path.as_path())
-            || self.documents.get(&lexical_path).is_some_and(|document| {
-                document.summary.saved_path() == Some(lexical_path.as_path())
-            });
+        let direct_source = self
+            .documents
+            .get(&lexical_path)
+            .is_some_and(|document| document.summary.saved_path() == Some(lexical_path.as_path()));
+        let direct_target =
+            canonical_before.as_deref() == Some(lexical_path.as_path()) || direct_source;
         let removed = if direct_target {
-            self.remove_canonical_document(canonical_before.as_deref().unwrap_or(&lexical_path))
+            self.remove_canonical_document(if direct_source {
+                &lexical_path
+            } else {
+                canonical_before.as_deref().unwrap_or(&lexical_path)
+            })
         } else {
             self.remove_uri(uri, &lexical_path, canonical_before.as_deref())
         };
