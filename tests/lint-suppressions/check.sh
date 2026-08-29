@@ -165,6 +165,74 @@ git -C "$test_root/repo" rm -q crates/demo/src/duplicate.rs
 git -C "$test_root/repo" commit -q -m remove-duplicate-lint
 clean_before_exceptions="$(git -C "$test_root/repo" rev-parse HEAD)"
 
+# Owner identity includes nested module, impl, and trait ancestry. Reusing an
+# unreasoned `fn:duplicate` in a sibling owner must be a new suppression.
+cat > "$test_root/repo/crates/demo/src/nested_owners.rs" <<'EOF'
+mod parent {
+    mod alpha {
+        #[allow(dead_code)]
+        fn duplicate() {}
+    }
+    mod beta {
+        fn duplicate() {}
+    }
+}
+impl FirstType {
+    #[allow(dead_code)]
+    fn duplicate() {}
+}
+impl SecondType {
+    fn duplicate() {}
+}
+trait FirstTrait {
+    #[allow(dead_code)]
+    fn duplicate(&self);
+}
+trait SecondTrait {
+    fn duplicate(&self);
+}
+EOF
+git -C "$test_root/repo" add .
+git -C "$test_root/repo" commit -q -m add-qualified-owner-baselines
+qualified_owner_base_sha="$(git -C "$test_root/repo" rev-parse HEAD)"
+cat > "$test_root/repo/crates/demo/src/nested_owners.rs" <<'EOF'
+mod parent {
+    mod alpha {
+        fn duplicate() {}
+    }
+    mod beta {
+        #[allow(dead_code)]
+        fn duplicate() {}
+    }
+}
+impl FirstType {
+    fn duplicate() {}
+}
+impl SecondType {
+    #[allow(dead_code)]
+    fn duplicate() {}
+}
+trait FirstTrait {
+    fn duplicate(&self);
+}
+trait SecondTrait {
+    #[allow(dead_code)]
+    fn duplicate(&self);
+}
+EOF
+git -C "$test_root/repo" add .
+git -C "$test_root/repo" commit -q -m reject-unqualified-owner-reuse
+qualified_owner_sha="$(git -C "$test_root/repo" rev-parse HEAD)"
+check_fails "$qualified_owner_base_sha" "$qualified_owner_sha" \
+  "owner=mod:parent::mod:beta::fn:duplicate"
+check_fails "$qualified_owner_base_sha" "$qualified_owner_sha" \
+  "owner=impl:SecondType::fn:duplicate"
+check_fails "$qualified_owner_base_sha" "$qualified_owner_sha" \
+  "owner=trait:SecondTrait::fn:duplicate"
+git -C "$test_root/repo" rm -q crates/demo/src/nested_owners.rs
+git -C "$test_root/repo" commit -q -m remove-qualified-owner-fixture
+clean_before_exceptions="$(git -C "$test_root/repo" rev-parse HEAD)"
+
 # Matching candidates are partitioned by path and category, and lint-list
 # changes retain the lexical owner. These hostile pairs must remain `new`
 # rather than laundering through a broad/module or test baseline elsewhere.

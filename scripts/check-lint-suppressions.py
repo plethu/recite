@@ -382,8 +382,62 @@ def category_for(path: str, source: str, offset: int, generated_paths: set[str])
     return "production"
 
 
+def declaration_owner(tokens: list[str]) -> str | None:
+    """Return the owner introduced by a module, impl, or trait brace."""
+
+    for index, token in enumerate(tokens):
+        if token == "mod" and index + 1 < len(tokens):
+            names = []
+            for candidate in tokens[index + 1:]:
+                if candidate == ":":
+                    continue
+                if candidate and is_ident_start(candidate[0]):
+                    names.append(candidate)
+                else:
+                    break
+            if names:
+                return f"mod:{'::'.join(names)}"
+        if token == "trait" and index + 1 < len(tokens):
+            names = [candidate for candidate in tokens[index + 1:] if is_ident_start(candidate[0])]
+            if names:
+                return f"trait:{'_'.join(names)}"
+        if token == "impl" and index + 1 < len(tokens):
+            names = [candidate for candidate in tokens[index + 1:] if is_ident_start(candidate[0])]
+            if names:
+                return f"impl:{'_'.join(names)}"
+    return None
+
+
+class OwnerTracker:
+    """Track lexical module/impl/trait ancestry while scanning one source file."""
+
+    def __init__(self) -> None:
+        self.contexts: list[str | None] = []
+        self.segment: list[str] = []
+
+    def word(self, token: str) -> None:
+        self.segment.append(token)
+
+    def punctuation(self, token: str) -> None:
+        if token == "{":
+            self.contexts.append(declaration_owner(self.segment))
+            self.segment.clear()
+        elif token == "}":
+            if self.contexts:
+                self.contexts.pop()
+            self.segment.clear()
+        elif token == ";":
+            self.segment.clear()
+        elif token in {":", "<", ">"}:
+            self.segment.append(token)
+
+    def prefix(self) -> str:
+        return "::".join(context for context in self.contexts if context is not None)
+
+
 def scan_source(path: str, source: str, generated_paths: set[str]) -> list[Suppression]:
     suppressions: list[Suppression] = []
+    owners = OwnerTracker()
     index = 0
     while index < len(source):
         raw_end = raw_string_end(source, index)
@@ -406,6 +460,15 @@ def scan_source(path: str, source: str, generated_paths: set[str]) -> list[Suppr
                 index = candidate
                 continue
         if source[index] != '#':
+            if is_ident_start(source[index]):
+                end = index + 1
+                while end < len(source) and is_ident_continue(source[end]):
+                    end += 1
+                owners.word(source[index:end])
+                index = end
+                continue
+            if source[index] in '{};:<>':
+                owners.punctuation(source[index])
             index += 1
             continue
 
@@ -423,6 +486,9 @@ def scan_source(path: str, source: str, generated_paths: set[str]) -> list[Suppr
         parsed = parse_attr(source, index, bracket, close, path)
         for kind, lints, reason, inner in parsed:
             scope, target, _ = next_scope(source, close + 1, inner)
+            prefix = owners.prefix()
+            if prefix:
+                target = f"{prefix}::{target}"
             line = source.count('\n', 0, index) + 1
             suppressions.append(Suppression(
                 path=path,
