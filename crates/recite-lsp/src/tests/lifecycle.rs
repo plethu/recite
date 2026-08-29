@@ -194,7 +194,6 @@ pub(super) fn translated_config_warning_uses_exact_code_and_detail_once() {
         path: PathBuf::from("/synthetic/recite-config.toml"),
         message: "invalid TOML".to_owned(),
     };
-    let detail = error.to_string();
     let (harness, _) = super::support::Harness::start_with_user_config_and_resource(
         json!({"capabilities": ClientCapabilities::default()}),
         Err(error),
@@ -205,7 +204,7 @@ pub(super) fn translated_config_warning_uses_exact_code_and_detail_once() {
     let warning = harness.recv_log_message();
     assert_eq!(
         warning.message,
-        format!("localized config warning [RECITE_CONFIG005] {detail}")
+        "localized config warning [RECITE_CONFIG005] could not parse user config /synthetic/recite-config.toml: invalid TOML"
     );
     harness.assert_no_message();
     harness.finish();
