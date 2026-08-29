@@ -1,4 +1,7 @@
-#![allow(clippy::expect_used)]
+#![expect(
+    clippy::expect_used,
+    reason = "project discovery integration tests fail fast on filesystem fixture setup and report assertions; standalone test targets are outside clippy.toml's test allowance"
+)]
 
 use std::fs;
 

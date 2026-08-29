@@ -1,6 +1,9 @@
-#![allow(clippy::expect_used)]
+#![expect(
+    clippy::expect_used,
+    reason = "resolution integration tests fail fast on temporary config and typed-value fixture setup; standalone test targets are outside clippy.toml's test allowance"
+)]
 
-use std::fs;
+use std::{fs, path::Path};
 
 use recite_config::{
     AuthorityValue, ConfigAuthority, ConfigFormat, ConfigProvenance, FieldProvenance,
@@ -10,13 +13,14 @@ use recite_config::{
 };
 use tempfile::tempdir;
 
+fn load_config(path: Option<&Path>) -> recite_config::LoadedUserConfig {
+    load_user_config_from(Platform::Linux, &PlatformRoots::new(), path)
+        .expect("test config fixture is valid")
+}
+
 #[test]
 fn defaults_have_explicit_default_provenance() {
-    let resolved = resolve_user_config(
-        &load_user_config_from(Platform::Linux, &PlatformRoots::new(), None)
-            .expect("absent default"),
-        &InvocationOverrides::new(),
-    );
+    let resolved = resolve_user_config(&load_config(None), &InvocationOverrides::new());
 
     assert_eq!(
         resolved.ui().keymap().provenance(),
@@ -59,8 +63,7 @@ fn partial_and_default_equal_values_preserve_field_presence() {
     )
     .expect("config file");
 
-    let loaded = load_user_config_from(Platform::Linux, &PlatformRoots::new(), Some(&path))
-        .expect("explicit values");
+    let loaded = load_config(Some(&path));
     let resolved = resolve_user_config(&loaded, &InvocationOverrides::new());
 
     assert_eq!(
@@ -86,8 +89,7 @@ fn legacy_presence_and_programmatic_explicit_values_are_distinct_from_defaults()
     let directory = tempdir().expect("temporary directory");
     let path = directory.path().join("legacy.toml");
     fs::write(&path, "[ui]\nkeymap = \"standard\"\n").expect("legacy config");
-    let legacy = load_user_config_from(Platform::Linux, &PlatformRoots::new(), Some(&path))
-        .expect("legacy config");
+    let legacy = load_config(Some(&path));
     let legacy_resolved = resolve_user_config(&legacy, &InvocationOverrides::new());
     assert_eq!(
         legacy_resolved.ui().keymap().provenance(),

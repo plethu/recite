@@ -1,4 +1,7 @@
-#![allow(clippy::expect_used)]
+#![expect(
+    clippy::expect_used,
+    reason = "config integration tests fail fast on temporary-file and parsed-fixture setup; standalone test targets are outside clippy.toml's test allowance"
+)]
 
 use std::fs;
 
@@ -14,6 +17,10 @@ fn roots_for(directory: &std::path::Path) -> PlatformRoots {
 
 fn config_path(directory: &std::path::Path) -> std::path::PathBuf {
     directory.join("recite/config.toml")
+}
+
+fn locale(value: &str) -> UiLocale {
+    UiLocale::parse(value).expect("test locale fixture is valid")
 }
 
 #[test]
@@ -54,10 +61,7 @@ show_unavailable_choices = false
         .expect("version 1 config");
     assert_eq!(loaded.provenance, ConfigProvenance::PlatformDefault);
     assert_eq!(loaded.format, ConfigFormat::Versioned);
-    assert_eq!(
-        loaded.config.ui.locale,
-        UiLocale::parse("fr-CA").expect("locale")
-    );
+    assert_eq!(loaded.config.ui.locale, locale("fr-CA"));
     assert_eq!(loaded.config.ui.keymap, Keymap::Vim);
     assert_eq!(loaded.config.ui.key_hints, KeyHints::Compact);
     assert_eq!(loaded.config.ui.color, TuiColorMode::Never);
@@ -78,10 +82,7 @@ fn legacy_config_is_read_compatibly_without_being_rewritten() {
     assert_eq!(loaded.format, ConfigFormat::LegacyPreVersioned);
     assert!(loaded.is_legacy());
     assert_eq!(loaded.config.config_version, CONFIG_VERSION);
-    assert_eq!(
-        loaded.config.ui.locale,
-        UiLocale::parse("system").expect("system locale")
-    );
+    assert_eq!(loaded.config.ui.locale, locale("system"));
     assert_eq!(
         fs::read_to_string(path).expect("read unchanged config"),
         source

@@ -1,4 +1,7 @@
-#![allow(clippy::expect_used)]
+#![expect(
+    clippy::expect_used,
+    reason = "capability integration tests fail fast on typed wire-fixture setup and round-trip assertions; standalone test targets are outside clippy.toml's test allowance"
+)]
 
 use recite_config::{
     CAPABILITY_REPORT_VERSION, Capability, CapabilityName, CapabilityReport, CapabilityReportError,
