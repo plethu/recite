@@ -1,6 +1,6 @@
 use super::super::diagnostics::INVALID_TYPE_REFERENCE;
-use super::super::spans::ManifestSpans;
 use super::super::validate::parse_type_ref;
+use super::LoweringContext;
 use crate::schema::{SchemaTypeRef, schema_diagnostic};
 use crate::{Diagnostic, DiagnosticArgumentValue, SourceSpan};
 
@@ -26,22 +26,21 @@ pub(super) enum TypeReferenceContext {
     },
 }
 
-#[expect(
-    clippy::too_many_arguments,
-    reason = "typed type-reference lowering carries shared source span and semantic context"
-)]
 pub(super) fn lower_type_reference_at_with_context(
-    file: &str,
-    source: &str,
-    spans: &mut ManifestSpans,
-    diagnostics: &mut Vec<Diagnostic>,
+    lowering: &mut LoweringContext<'_>,
     value: &str,
     path: &[String],
     invalid_message: String,
-    context: TypeReferenceContext,
+    reference_context: TypeReferenceContext,
 ) -> (SchemaTypeRef, SourceSpan, bool) {
-    let type_ref_span = spans.value_span_at(file, source, path, value);
-    lower_type_reference_with_context(diagnostics, value, type_ref_span, invalid_message, context)
+    let type_ref_span = lowering.value_span_at(path, value);
+    lower_type_reference_with_context(
+        lowering.diagnostics,
+        value,
+        type_ref_span,
+        invalid_message,
+        reference_context,
+    )
 }
 
 fn lower_type_reference_with_context(

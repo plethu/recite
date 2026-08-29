@@ -6,6 +6,7 @@ use super::super::validate::{
     PendingDomainReference, PendingTypeReference, duplicate_definition, parse_metadata_target,
     validate_manifest_name,
 };
+use super::LoweringContext;
 use super::types::{TypeReferenceContext, lower_type_reference_at_with_context};
 use crate::schema::{MarkupDefinition, MetadataDefinition, ProjectSchema, schema_diagnostic};
 use crate::{Diagnostic, DiagnosticArgumentValue};
@@ -81,10 +82,7 @@ pub(super) fn lower_metadata(
         let mut type_path = entry_path.clone();
         type_path.push("type".to_owned());
         let (type_ref, type_ref_span, type_ref_is_valid) = lower_type_reference_at_with_context(
-            file,
-            source,
-            spans,
-            diagnostics,
+            &mut LoweringContext::new(file, source, spans, diagnostics),
             &entry.value.type_ref,
             &type_path,
             format!(

@@ -1,6 +1,7 @@
 mod availability;
 mod availability_bindings;
 mod content;
+mod context;
 mod definitions;
 mod domains;
 mod domains_context;
@@ -24,9 +25,11 @@ use crate::schema::{ProjectSchema, schema_diagnostic};
 
 use availability::{lower_availability_reasons, validate_condition_availability_reason_mappings};
 use content::{PendingReferences, lower_markup, lower_metadata};
+use context::LoweringContext;
 use definitions::{lower_registries, lower_speakers, lower_types};
 use domains::lower_metadata_domains;
 use functions::{FunctionPendingReferences, lower_conditions, lower_effects};
+use producer::ProducerMetadataInput;
 use projection::{lower_presentation_projectors, lower_projection_queries};
 use version::{SchemaVersion, schema_version, toml_schema_version};
 
@@ -66,16 +69,15 @@ pub(crate) fn lower_manifest_with_format(
     let mut pending_availability_reason_mappings = Vec::new();
 
     schema.producer_metadata = producer::lower_producer_metadata(
-        &mut spans,
-        &file,
-        source,
-        raw.producer,
-        raw.content_fingerprint,
-        raw.schema_export_version,
-        raw.inclusion_policy,
-        raw.producer_fingerprints,
-        options.allow_duplicate_producer_fingerprints,
-        &mut diagnostics,
+        &mut LoweringContext::new(&file, source, &mut spans, &mut diagnostics),
+        ProducerMetadataInput {
+            producer: raw.producer,
+            content_fingerprint: raw.content_fingerprint,
+            schema_export_version: raw.schema_export_version,
+            inclusion_policy: raw.inclusion_policy,
+            producer_fingerprints: raw.producer_fingerprints,
+            allow_duplicate_fingerprints: options.allow_duplicate_producer_fingerprints,
+        },
     );
 
     let source_version = match format {
@@ -176,12 +178,9 @@ pub(crate) fn lower_manifest_with_format(
     );
     spans.enter_section(source, "metadata_domains");
     lower_metadata_domains(
-        &file,
-        source,
-        &mut spans,
+        &mut LoweringContext::new(&file, source, &mut spans, &mut diagnostics),
         raw.metadata_domains,
         &mut schema,
-        &mut diagnostics,
         &mut pending_domain_refs,
         options.allow_duplicate_producer_fingerprints,
     );

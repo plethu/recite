@@ -2,69 +2,62 @@ use std::collections::{BTreeMap, BTreeSet};
 
 use super::super::super::diagnostics::{DUPLICATE_DEFINITION, MALFORMED_SHAPE};
 use super::super::super::raw::{Named, RawPresentationAffordanceOutputDefinition};
-use super::super::super::spans::ManifestSpans;
-use super::super::super::validate::{
-    PendingTypeReference, validate_manifest_name, validate_non_empty_string,
-};
+use super::super::super::validate::{validate_manifest_name, validate_non_empty_string};
+use super::super::LoweringContext;
 use super::field::lower_fields;
 use super::label::lower_label;
 use super::reference::query_result_types;
+use super::{LabelLoweringState, ProjectionTypeTables, ProjectorContext};
 use crate::schema::schema_diagnostic;
 use crate::schema::{
-    PresentationAffordanceOutputDefinition, ProjectSchema, ProjectionInput, ProjectionOutputTarget,
+    PresentationAffordanceOutputDefinition, ProjectionInput, ProjectionOutputTarget,
     ProjectionQueryDefinition,
 };
 use crate::{Diagnostic, DiagnosticArgumentValue};
 
-#[expect(
-    clippy::too_many_arguments,
-    reason = "manifest lowering helpers carry shared JSON span, schema, and diagnostic context"
-)]
 pub(super) fn lower_outputs(
-    file: &str,
-    source: &str,
-    spans: &mut ManifestSpans,
-    diagnostics: &mut Vec<Diagnostic>,
-    schema: &ProjectSchema,
-    projector: &str,
+    lowering: &mut LoweringContext<'_>,
+    projector_context: ProjectorContext<'_>,
     inputs: &[ProjectionInput],
     queries: &BTreeMap<String, ProjectionQueryDefinition>,
     raw_outputs: Vec<Named<RawPresentationAffordanceOutputDefinition>>,
-    seen_label_ids: &mut BTreeSet<String>,
-    pending_type_refs: &mut Vec<PendingTypeReference>,
+    state: &mut LabelLoweringState<'_>,
     projector_path: &[String],
 ) -> BTreeMap<String, PresentationAffordanceOutputDefinition> {
     let mut seen = BTreeSet::new();
     let mut lowered = BTreeMap::new();
     let input_types = inputs
         .iter()
-        .map(|input| (input.name.as_str(), input.type_ref.clone()))
+        .map(|input| (input.name.clone(), input.type_ref.clone()))
         .collect::<BTreeMap<_, _>>();
-    let query_types = query_result_types(schema, queries);
+    let types = ProjectionTypeTables {
+        input_types,
+        query_types: query_result_types(projector_context.schema, queries),
+    };
 
     for raw_output in raw_outputs {
         let mut output_path = projector_path.to_vec();
         output_path.extend(["outputs".to_owned(), raw_output.name.clone()]);
-        let output_span = spans.key_span_at(file, source, &output_path, &raw_output.name);
+        let output_span = lowering.key_span_at(&output_path, &raw_output.name);
         validate_manifest_name(
-            diagnostics,
+            lowering.diagnostics,
             "projection output id",
             &raw_output.name,
             output_span.clone(),
         );
         if !seen.insert(raw_output.name.clone()) {
-            diagnostics.push(schema_diagnostic(
+            lowering.diagnostics.push(schema_diagnostic(
                 DUPLICATE_DEFINITION,
                 "diagnostic-schema-003-projection-output",
                 format!(
-                    "projector '{projector}' repeats output '{}'",
-                    raw_output.name
+                    "projector '{}' repeats output '{}'",
+                    projector_context.projector, raw_output.name
                 ),
                 output_span,
                 [
                     (
                         "projector",
-                        DiagnosticArgumentValue::String(projector.to_owned()),
+                        DiagnosticArgumentValue::String(projector_context.projector.to_owned()),
                     ),
                     (
                         "output",
@@ -76,59 +69,50 @@ pub(super) fn lower_outputs(
         }
         let mut target_path = output_path.clone();
         target_path.push("target".to_owned());
+        let target_span = lowering.value_span_at(&target_path, &raw_output.value.target);
         let target = lower_output_target(
-            diagnostics,
-            projector,
+            lowering.diagnostics,
+            projector_context.projector,
             &raw_output.name,
             &raw_output.value.target,
-            spans.value_span_at(file, source, &target_path, &raw_output.value.target),
+            target_span,
         );
         let mut kind_path = output_path.clone();
         kind_path.push("kind".to_owned());
-        let kind_span = spans.value_span_at(file, source, &kind_path, &raw_output.value.kind);
+        let kind_span = lowering.value_span_at(&kind_path, &raw_output.value.kind);
         validate_non_empty_string(
-            diagnostics,
+            lowering.diagnostics,
             "projection output kind",
             &raw_output.value.kind,
             kind_span,
         );
         let mut slot_path = output_path.clone();
         slot_path.push("slot".to_owned());
-        let slot_span = spans.value_span_at(file, source, &slot_path, &raw_output.value.slot);
+        let slot_span = lowering.value_span_at(&slot_path, &raw_output.value.slot);
         validate_non_empty_string(
-            diagnostics,
+            lowering.diagnostics,
             "projection output slot",
             &raw_output.value.slot,
             slot_span,
         );
         let label = raw_output.value.label.map(|label| {
             lower_label(
-                file,
-                source,
-                spans,
-                diagnostics,
-                projector,
+                lowering,
+                &projector_context,
                 &raw_output.name,
                 label,
-                &input_types,
-                &query_types,
-                seen_label_ids,
-                pending_type_refs,
+                &types,
+                state,
                 &output_path,
             )
         });
         let fields = lower_fields(
-            file,
-            source,
-            spans,
-            diagnostics,
-            projector,
+            lowering,
+            &projector_context,
             &raw_output.name,
             raw_output.value.fields,
-            schema,
-            &input_types,
-            &query_types,
-            pending_type_refs,
+            &types,
+            state.pending_type_refs,
             &output_path,
         );
         lowered.insert(

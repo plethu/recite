@@ -8,6 +8,7 @@ use super::super::validate::{
     PendingTypeReference, duplicate_definition, parse_effect_mode, parse_enum_return,
     validate_manifest_name,
 };
+use super::LoweringContext;
 pub(super) use super::parameters::lower_params_at;
 use crate::schema::{
     ConditionDefinition, ConditionReturnType, EffectDefinition, ProjectSchema, SchemaTypeRef,
@@ -53,10 +54,7 @@ pub(super) fn lower_conditions(
         }
 
         let params = lower_params_at(
-            file,
-            source,
-            spans,
-            diagnostics,
+            &mut LoweringContext::new(file, source, spans, diagnostics),
             &format!("condition '{}'", entry.name),
             &entry.value.params,
             pending_refs.type_refs,
@@ -185,10 +183,7 @@ pub(super) fn lower_effects(
         }
 
         let params = lower_params_at(
-            file,
-            source,
-            spans,
-            diagnostics,
+            &mut LoweringContext::new(file, source, spans, diagnostics),
             &format!("effect '{}'", entry.name),
             &entry.value.params,
             pending_type_refs,

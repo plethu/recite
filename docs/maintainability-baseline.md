@@ -99,8 +99,8 @@ wire compatibility fixtures, and focused reviews for each subsystem.
 | `crates/recite-core/src/schema/model/canonical.rs` | 619 | production | core/schema | review | Canonical model boundary; preserve public fingerprints |
 | `crates/recite-core/src/schema/manifest/lower/availability_bindings.rs` | 304 | production | core/schema | review | #182/#183: typed availability reason literal and condition-parameter bindings |
 | `crates/recite-core/src/schema/manifest/lower/availability/mapping.rs` | 298 | production | core/schema | review | #182: availability reason mapping validation and source-aware lowering |
-| `crates/recite-core/src/schema/manifest/lower/domains_provenance.rs` | 279 | production | core/schema | review | Domain provenance lowering owns flat and contextual provenance shapes |
-| `crates/recite-core/src/schema/manifest/lower/producer_provenance.rs` | 346 | production | core/schema | review | Producer origin and fingerprint lowering owns source-aware provenance paths |
+| `crates/recite-core/src/schema/manifest/lower/domains_provenance.rs` | 285 | production | core/schema | review | Domain provenance lowering owns flat and contextual provenance shapes |
+| `crates/recite-core/src/schema/manifest/lower/producer_provenance.rs` | 318 | production | core/schema | review | Producer origin and fingerprint lowering owns source-aware provenance paths |
 | `crates/recite-core/src/compiled/messagepack/tags.rs` | 506 | production | core/wire | cohesive | #89: explicit wire tag table |
 | `crates/recite-core/src/compiled/messagepack/wire.rs` | 692 | production | core/wire | exception | #89: retain the explicit decoder boundary while the v0 wire contract is synchronized |
 | `crates/recite-runtime/src/session_snapshot.rs` | 294 | production | runtime/snapshot | follow-up | #135: typed snapshot-boundary errors |
@@ -147,7 +147,7 @@ wire compatibility fixtures, and focused reviews for each subsystem.
 | `crates/recite-cli/src/play/tui/interaction.rs` | 293 | production | cli/tui | cohesive | Input-to-intent translation |
 | `crates/recite-compiler/src/validation/metadata.rs` | 276 | production | compiler/validation | review | Metadata validation ownership |
 | `crates/recite-compiler/src/validation/statements.rs` | 254 | production | compiler/validation | cohesive | Statement traversal remains separate from interpolation and plural validation seams |
-| `crates/recite-core/src/schema/manifest/lower/domains.rs` | 362 | production | core/schema | review | Strict domain shape and declaration lowering |
+| `crates/recite-core/src/schema/manifest/lower/domains.rs` | 342 | production | core/schema | review | Strict domain shape and declaration lowering |
 | `crates/recite-core/src/schema/manifest/validate.rs` | 278 | production | core/schema | review | Shared schema reference and name validation boundary |
 | `crates/recite-compiler/src/validation/conditions.rs` | 282 | production | compiler/validation | cohesive | Condition validation |
 | `crates/recite-core/src/diagnostic/explanation/validation.rs` | 352 | production | core/diagnostics | cohesive | Diagnostic explanation catalog |

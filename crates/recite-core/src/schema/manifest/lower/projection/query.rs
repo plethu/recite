@@ -13,7 +13,9 @@ use super::super::super::spans::ManifestSpans;
 use super::super::super::validate::{
     PendingTypeReference, duplicate_definition, validate_manifest_name,
 };
+use super::super::LoweringContext;
 use super::super::functions::lower_params_at;
+use super::QueryArgumentContext;
 use super::reference::lower_input_refs;
 use crate::schema::schema_diagnostic;
 use crate::schema::{
@@ -59,10 +61,7 @@ pub(super) fn lower_projection_queries(
         }
 
         let params = lower_params_at(
-            file,
-            source,
-            spans,
-            diagnostics,
+            &mut LoweringContext::new(file, source, spans, diagnostics),
             &format!("projection query function '{}'", entry.name),
             &entry.value.params,
             pending_type_refs,
@@ -72,10 +71,7 @@ pub(super) fn lower_projection_queries(
         returns_path.push("returns".to_owned());
         let (returns, returns_span, returns_valid) =
             super::super::types::lower_type_reference_at_with_context(
-                file,
-                source,
-                spans,
-                diagnostics,
+                &mut LoweringContext::new(file, source, spans, diagnostics),
                 &entry.value.returns,
                 &returns_path,
                 format!(
@@ -122,15 +118,8 @@ pub(super) fn lower_projection_queries(
     }
 }
 
-#[expect(
-    clippy::too_many_arguments,
-    reason = "manifest lowering helpers carry shared JSON span, schema, and diagnostic context"
-)]
 pub(super) fn lower_projector_queries(
-    file: &str,
-    source: &str,
-    spans: &mut ManifestSpans,
-    diagnostics: &mut Vec<Diagnostic>,
+    lowering: &mut LoweringContext<'_>,
     schema: &ProjectSchema,
     projector: &str,
     inputs: &[ProjectionInput],
@@ -139,7 +128,7 @@ pub(super) fn lower_projector_queries(
 ) -> BTreeMap<String, ProjectionQueryDefinition> {
     let input_types = inputs
         .iter()
-        .map(|input| (input.name.as_str(), &input.type_ref))
+        .map(|input| (input.name.clone(), input.type_ref.clone()))
         .collect::<BTreeMap<_, _>>();
     let mut query_types = BTreeMap::new();
     let mut seen = BTreeSet::new();
@@ -148,15 +137,15 @@ pub(super) fn lower_projector_queries(
     for raw_query in raw_queries {
         let mut query_path = projector_path.to_vec();
         query_path.extend(["queries".to_owned(), raw_query.name.clone()]);
-        let query_span = spans.key_span_at(file, source, &query_path, &raw_query.name);
+        let query_span = lowering.key_span_at(&query_path, &raw_query.name);
         validate_manifest_name(
-            diagnostics,
+            lowering.diagnostics,
             "projection query name",
             &raw_query.name,
             query_span.clone(),
         );
         if !seen.insert(raw_query.name.clone()) {
-            diagnostics.push(schema_diagnostic(
+            lowering.diagnostics.push(schema_diagnostic(
                 DUPLICATE_DEFINITION,
                 "diagnostic-schema-003-projection-query",
                 format!("projector '{projector}' repeats query '{}'", raw_query.name),
@@ -167,11 +156,10 @@ pub(super) fn lower_projector_queries(
         }
         let mut function_path = query_path.clone();
         function_path.push("function".to_owned());
-        let function_span =
-            spans.value_span_at(file, source, &function_path, &raw_query.value.function);
+        let function_span = lowering.value_span_at(&function_path, &raw_query.value.function);
         let function = schema.projection_queries.get(&raw_query.value.function);
         let Some(function) = function else {
-            diagnostics.push(schema_diagnostic(
+            lowering.diagnostics.push(schema_diagnostic(
                 INVALID_TYPE_REFERENCE,
                 "diagnostic-schema-004-unknown-query-function",
                 format!(
@@ -192,14 +180,16 @@ pub(super) fn lower_projector_queries(
         };
 
         let args = lower_and_validate_query_args(
-            diagnostics,
-            projector,
-            &raw_query.name,
-            &raw_query.value.function,
-            &function.params,
+            lowering.diagnostics,
+            QueryArgumentContext {
+                projector,
+                query: &raw_query.name,
+                function: &raw_query.value.function,
+                params: &function.params,
+                input_types: &input_types,
+                query_types: &query_types,
+            },
             raw_query.value.args,
-            &input_types,
-            &query_types,
             function_span.clone(),
         );
         query_types.insert(raw_query.name.clone(), function.returns.clone());

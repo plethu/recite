@@ -2,8 +2,9 @@ use std::collections::BTreeMap;
 
 use super::super::super::diagnostics::{INVALID_TYPE_REFERENCE, MALFORMED_SHAPE};
 use super::super::super::raw::RawProjectionInputRef;
-use super::super::super::spans::ManifestSpans;
 use super::super::super::validate::PendingTypeReference;
+use super::super::LoweringContext;
+use super::{ProjectionBinding, ReferenceTypeContext};
 use crate::schema::schema_diagnostic;
 use crate::schema::{ProjectSchema, ProjectionInputRef, ProjectionQueryDefinition, SchemaTypeRef};
 use crate::{Diagnostic, DiagnosticArgumentValue, SourceSpan};
@@ -21,42 +22,34 @@ pub(super) fn lower_input_ref(raw: RawProjectionInputRef) -> ProjectionInputRef 
     }
 }
 
-#[expect(
-    clippy::too_many_arguments,
-    reason = "manifest lowering helpers carry shared JSON span, schema, and diagnostic context"
-)]
 pub(super) fn lower_output_type_ref(
-    file: &str,
-    source: &str,
-    spans: &mut ManifestSpans,
-    diagnostics: &mut Vec<Diagnostic>,
-    projector: &str,
-    output: &str,
-    name: &str,
+    lowering: &mut LoweringContext<'_>,
+    binding: ProjectionBinding<'_>,
     raw_type: &str,
     pending_type_refs: &mut Vec<PendingTypeReference>,
     path: &[String],
 ) -> SchemaTypeRef {
     let (type_ref, type_ref_span, valid) =
         super::super::types::lower_type_reference_at_with_context(
-            file,
-            source,
-            spans,
-            diagnostics,
+            lowering,
             raw_type,
             path,
             format!(
-                "projector '{projector}' output '{output}' binding '{name}' has invalid type reference '{raw_type}'"
+                "projector '{}' output '{}' binding '{}' has invalid type reference '{raw_type}'",
+                binding.projector, binding.output, binding.name
             ),
             super::super::types::TypeReferenceContext::ProjectionOutput {
-                projector: projector.to_owned(),
-                output: output.to_owned(),
-                binding: name.to_owned(),
+                projector: binding.projector.to_owned(),
+                output: binding.output.to_owned(),
+                binding: binding.name.to_owned(),
             },
         );
     if valid {
         pending_type_refs.push(PendingTypeReference {
-            owner: format!("projector '{projector}' output '{output}' binding '{name}'"),
+            owner: format!(
+                "projector '{}' output '{}' binding '{}'",
+                binding.projector, binding.output, binding.name
+            ),
             type_ref: type_ref.clone(),
             span: type_ref_span,
         });
@@ -64,55 +57,55 @@ pub(super) fn lower_output_type_ref(
     type_ref
 }
 
-#[expect(
-    clippy::too_many_arguments,
-    reason = "projection reference validation carries owner, expected type, and source maps"
-)]
 pub(super) fn validate_ref_type<T>(
     diagnostics: &mut Vec<Diagnostic>,
-    projector: &str,
-    owner: &str,
+    context: ReferenceTypeContext<'_, T>,
     input_ref: &ProjectionInputRef,
-    expected: &SchemaTypeRef,
-    input_types: &BTreeMap<&str, T>,
-    query_types: &BTreeMap<String, SchemaTypeRef>,
     span: SourceSpan,
 ) where
     T: std::borrow::Borrow<SchemaTypeRef>,
 {
     let actual = match input_ref {
-        ProjectionInputRef::Input { name } => input_types
+        ProjectionInputRef::Input { name } => context
+            .input_types
             .get(name.as_str())
             .map(std::borrow::Borrow::borrow),
-        ProjectionInputRef::QueryResult { name } => query_types.get(name),
+        ProjectionInputRef::QueryResult { name } => context.query_types.get(name),
     };
     let Some(actual) = actual else {
         diagnostics.push(schema_diagnostic(
             INVALID_TYPE_REFERENCE,
             "diagnostic-schema-004-unknown-projection-ref",
             format!(
-                "projector '{projector}' {owner} references unknown {}",
+                "projector '{}' {} references unknown {}",
+                context.projector,
+                context.owner,
                 ref_name(input_ref)
             ),
             span,
             [
                 (
                     "projector",
-                    DiagnosticArgumentValue::String(projector.to_owned()),
+                    DiagnosticArgumentValue::String(context.projector.to_owned()),
                 ),
-                ("owner", DiagnosticArgumentValue::String(owner.to_owned())),
+                (
+                    "owner",
+                    DiagnosticArgumentValue::String(context.owner.to_owned()),
+                ),
                 ("ref", DiagnosticArgumentValue::String(ref_name(input_ref))),
             ],
         ));
         return;
     };
-    if actual != expected {
+    if actual != context.expected {
         diagnostics.push(schema_diagnostic(
             MALFORMED_SHAPE,
             "diagnostic-schema-001-projection-ref-type",
             format!(
-                "projector '{projector}' {owner} expects {}, but {} has {}",
-                type_ref_name(expected),
+                "projector '{}' {} expects {}, but {} has {}",
+                context.projector,
+                context.owner,
+                type_ref_name(context.expected),
                 ref_name(input_ref),
                 type_ref_name(actual)
             ),
@@ -120,12 +113,15 @@ pub(super) fn validate_ref_type<T>(
             [
                 (
                     "projector",
-                    DiagnosticArgumentValue::String(projector.to_owned()),
+                    DiagnosticArgumentValue::String(context.projector.to_owned()),
                 ),
-                ("owner", DiagnosticArgumentValue::String(owner.to_owned())),
+                (
+                    "owner",
+                    DiagnosticArgumentValue::String(context.owner.to_owned()),
+                ),
                 (
                     "expected",
-                    DiagnosticArgumentValue::String(type_ref_name(expected)),
+                    DiagnosticArgumentValue::String(type_ref_name(context.expected)),
                 ),
                 ("ref", DiagnosticArgumentValue::String(ref_name(input_ref))),
                 (

@@ -2,29 +2,23 @@ use std::collections::BTreeSet;
 
 use super::super::super::diagnostics::DUPLICATE_DEFINITION;
 use super::super::super::raw::{RawProjectionInput, RawProjectionInputSource};
-use super::super::super::spans::ManifestSpans;
 use super::super::super::validate::{PendingTypeReference, validate_manifest_name};
+use super::super::LoweringContext;
 use super::candidate::{
     CandidateKind, lower_occurrence, validate_availability_reason_arg_source,
     validate_candidate_metadata_source, validate_candidate_source,
 };
 use super::literal::lower_literal_for_type;
+use super::{AvailabilityReasonContext, CandidateMetadataContext, InputSourceContext};
+use crate::DiagnosticArgumentValue;
 use crate::schema::schema_diagnostic;
 use crate::schema::{
     ProjectSchema, ProjectionInput, SchemaLiteralValue, SchemaProjectionInputSource,
-    SchemaProjectionSelector, SchemaTypeRef,
+    SchemaProjectionSelector,
 };
-use crate::{Diagnostic, DiagnosticArgumentValue};
 
-#[expect(
-    clippy::too_many_arguments,
-    reason = "manifest lowering helpers carry shared JSON span, schema, and diagnostic context"
-)]
 pub(super) fn lower_inputs(
-    file: &str,
-    source: &str,
-    spans: &mut ManifestSpans,
-    diagnostics: &mut Vec<Diagnostic>,
+    lowering: &mut LoweringContext<'_>,
     schema: &ProjectSchema,
     projector: &str,
     selector: &SchemaProjectionSelector,
@@ -41,15 +35,15 @@ pub(super) fn lower_inputs(
             input_path.extend(["inputs".to_owned(), format!("[{index}]")]);
             let mut name_path = input_path.clone();
             name_path.push("name".to_owned());
-            let name_span = spans.value_span_at(file, source, &name_path, &raw.name);
+            let name_span = lowering.value_span_at(&name_path, &raw.name);
             validate_manifest_name(
-                diagnostics,
+                lowering.diagnostics,
                 "projection input name",
                 &raw.name,
                 name_span.clone(),
             );
             if !seen.insert(raw.name.clone()) {
-                diagnostics.push(schema_diagnostic(
+                lowering.diagnostics.push(schema_diagnostic(
                     DUPLICATE_DEFINITION,
                     "diagnostic-schema-003-projection-input",
                     format!("projector '{projector}' repeats input '{}'", raw.name),
@@ -67,10 +61,7 @@ pub(super) fn lower_inputs(
             type_path.push("type".to_owned());
             let (type_ref, type_ref_span, type_ref_valid) =
                 super::super::types::lower_type_reference_at_with_context(
-                    file,
-                    source,
-                    spans,
-                    diagnostics,
+                    lowering,
                     &raw.type_ref,
                     &type_path,
                     format!(
@@ -90,15 +81,14 @@ pub(super) fn lower_inputs(
                 });
             }
             let source = lower_input_source(
-                file,
-                source,
-                spans,
-                diagnostics,
-                schema,
-                projector,
-                selector,
-                &raw.name,
-                &type_ref,
+                lowering,
+                InputSourceContext {
+                    schema,
+                    projector,
+                    selector,
+                    input: &raw.name,
+                    type_ref: &type_ref,
+                },
                 raw.source,
                 &input_path,
             );
@@ -111,20 +101,9 @@ pub(super) fn lower_inputs(
         })
         .collect()
 }
-#[expect(
-    clippy::too_many_arguments,
-    reason = "manifest lowering helpers carry shared JSON span, schema, and diagnostic context"
-)]
 fn lower_input_source(
-    file: &str,
-    source_text: &str,
-    spans: &mut ManifestSpans,
-    diagnostics: &mut Vec<Diagnostic>,
-    schema: &ProjectSchema,
-    projector: &str,
-    selector: &SchemaProjectionSelector,
-    input: &str,
-    type_ref: &SchemaTypeRef,
+    lowering: &mut LoweringContext<'_>,
+    context: InputSourceContext<'_>,
     raw: RawProjectionInputSource,
     input_path: &[String],
 ) -> SchemaProjectionInputSource {
@@ -133,83 +112,95 @@ fn lower_input_source(
         RawProjectionInputSource::CandidateLineId => {
             let mut path = input_path.to_vec();
             path.extend(["source".to_owned(), "kind".to_owned()]);
+            let span = lowering.value_span_at(&path, "candidate_line_id");
             validate_candidate_source(
-                diagnostics,
-                projector,
-                input,
-                selector,
+                lowering.diagnostics,
+                context.projector,
+                context.input,
+                context.selector,
                 CandidateKind::Line,
-                spans.value_span_at(file, source_text, &path, "candidate_line_id"),
+                span,
             );
             SchemaProjectionInputSource::CandidateLineId
         }
         RawProjectionInputSource::CandidateChoiceId => {
             let mut path = input_path.to_vec();
             path.extend(["source".to_owned(), "kind".to_owned()]);
+            let span = lowering.value_span_at(&path, "candidate_choice_id");
             validate_candidate_source(
-                diagnostics,
-                projector,
-                input,
-                selector,
+                lowering.diagnostics,
+                context.projector,
+                context.input,
+                context.selector,
                 CandidateKind::Choice,
-                spans.value_span_at(file, source_text, &path, "candidate_choice_id"),
+                span,
             );
             SchemaProjectionInputSource::CandidateChoiceId
         }
         RawProjectionInputSource::CandidateEffectRequestId => {
             let mut path = input_path.to_vec();
             path.extend(["source".to_owned(), "kind".to_owned()]);
+            let span = lowering.value_span_at(&path, "candidate_effect_request_id");
             validate_candidate_source(
-                diagnostics,
-                projector,
-                input,
-                selector,
+                lowering.diagnostics,
+                context.projector,
+                context.input,
+                context.selector,
                 CandidateKind::Effect,
-                spans.value_span_at(file, source_text, &path, "candidate_effect_request_id"),
+                span,
             );
             SchemaProjectionInputSource::CandidateEffectRequestId
         }
         RawProjectionInputSource::CandidateBlockId => {
             let mut path = input_path.to_vec();
             path.extend(["source".to_owned(), "kind".to_owned()]);
+            let span = lowering.value_span_at(&path, "candidate_block_id");
             validate_candidate_source(
-                diagnostics,
-                projector,
-                input,
-                selector,
+                lowering.diagnostics,
+                context.projector,
+                context.input,
+                context.selector,
                 CandidateKind::Block,
-                spans.value_span_at(file, source_text, &path, "candidate_block_id"),
+                span,
             );
             SchemaProjectionInputSource::CandidateBlockId
         }
         RawProjectionInputSource::CandidateProject => {
             let mut path = input_path.to_vec();
             path.extend(["source".to_owned(), "kind".to_owned()]);
+            let span = lowering.value_span_at(&path, "candidate_project");
             validate_candidate_source(
-                diagnostics,
-                projector,
-                input,
-                selector,
+                lowering.diagnostics,
+                context.projector,
+                context.input,
+                context.selector,
                 CandidateKind::Project,
-                spans.value_span_at(file, source_text, &path, "candidate_project"),
+                span,
             );
             SchemaProjectionInputSource::CandidateProject
         }
         RawProjectionInputSource::CandidateMetadata { key, occurrence } => {
             let mut key_path = input_path.to_vec();
             key_path.extend(["source".to_owned(), "key".to_owned()]);
-            let key_span = spans.value_span_at(file, source_text, &key_path, &key);
-            let occurrence =
-                lower_occurrence(diagnostics, projector, input, occurrence, key_span.clone());
+            let key_span = lowering.value_span_at(&key_path, &key);
+            let occurrence = lower_occurrence(
+                lowering.diagnostics,
+                context.projector,
+                context.input,
+                occurrence,
+                key_span.clone(),
+            );
             validate_candidate_metadata_source(
-                diagnostics,
-                schema,
-                projector,
-                input,
-                selector,
-                &key,
-                &occurrence,
-                type_ref,
+                lowering.diagnostics,
+                CandidateMetadataContext {
+                    schema: context.schema,
+                    projector: context.projector,
+                    input: context.input,
+                    selector: context.selector,
+                    key: &key,
+                    occurrence: &occurrence,
+                    type_ref: context.type_ref,
+                },
                 key_span,
             );
             SchemaProjectionInputSource::CandidateMetadata { key, occurrence }
@@ -217,31 +208,35 @@ fn lower_input_source(
         RawProjectionInputSource::AvailabilityReasonArg { name } => {
             let mut name_path = input_path.to_vec();
             name_path.extend(["source".to_owned(), "name".to_owned()]);
-            let name_span = spans.value_span_at(file, source_text, &name_path, &name);
+            let name_span = lowering.value_span_at(&name_path, &name);
             validate_availability_reason_arg_source(
-                diagnostics,
-                schema,
-                projector,
-                input,
-                selector,
-                &name,
-                type_ref,
+                lowering.diagnostics,
+                AvailabilityReasonContext {
+                    schema: context.schema,
+                    projector: context.projector,
+                    input: context.input,
+                    selector: context.selector,
+                    name: &name,
+                    type_ref: context.type_ref,
+                },
                 name_span,
             );
             SchemaProjectionInputSource::AvailabilityReasonArg { name }
         }
         RawProjectionInputSource::Literal { value } => {
+            let mut value_path = input_path.to_vec();
+            value_path.extend(["source".to_owned(), "value".to_owned()]);
+            let literal_span = lowering.value_span_at(&value_path, "literal");
             let literal = lower_literal_for_type(
-                diagnostics,
-                schema,
-                &format!("projector '{projector}' input '{input}'"),
-                type_ref,
+                lowering.diagnostics,
+                context.schema,
+                &format!(
+                    "projector '{}' input '{}'",
+                    context.projector, context.input
+                ),
+                context.type_ref,
                 value,
-                {
-                    let mut value_path = input_path.to_vec();
-                    value_path.extend(["source".to_owned(), "value".to_owned()]);
-                    spans.value_span_at(file, source_text, &value_path, "literal")
-                },
+                literal_span,
             )
             .unwrap_or_else(|| SchemaLiteralValue::String(String::new()));
             SchemaProjectionInputSource::Literal(literal)

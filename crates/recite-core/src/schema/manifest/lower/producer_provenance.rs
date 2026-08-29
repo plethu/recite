@@ -2,11 +2,11 @@ use std::collections::{BTreeMap, BTreeSet};
 
 use super::super::diagnostics::{DUPLICATE_DEFINITION, MALFORMED_SHAPE};
 use super::super::producer::{RawProducerFingerprint, RawProducerOrigin};
-use super::super::spans::ManifestSpans;
 use super::super::validate::validate_non_empty_string;
+use super::LoweringContext;
 use crate::schema::schema_diagnostic;
 use crate::schema::{ProducerFingerprint, ProducerMetadataValue, ProducerOrigin};
-use crate::{Diagnostic, DiagnosticArgumentValue, SourceSpan};
+use crate::{DiagnosticArgumentValue, SourceSpan};
 use serde_json::Value;
 
 pub(super) struct ProvenanceLocation<'a> {
@@ -16,10 +16,7 @@ pub(super) struct ProvenanceLocation<'a> {
 }
 
 pub(super) fn lower_origin(
-    spans: &mut ManifestSpans,
-    file: &str,
-    source: &str,
-    diagnostics: &mut Vec<Diagnostic>,
+    context: &mut LoweringContext<'_>,
     raw: Option<RawProducerOrigin>,
     location: ProvenanceLocation<'_>,
 ) -> Option<ProducerOrigin> {
@@ -30,26 +27,29 @@ pub(super) fn lower_origin(
     let mut id_path = location.path.to_vec();
     id_path.push("id".to_owned());
 
+    let kind_span = context.value_span_at(&kind_path, &raw.kind);
     let kind_valid = validate_non_empty_string(
-        diagnostics,
+        context.diagnostics,
         &format!("{} origin kind", location.owner),
         &raw.kind,
-        spans.value_span_at(file, source, &kind_path, &raw.kind),
+        kind_span,
     );
+    let id_span = context.value_span_at(&id_path, &raw.id);
     let id_valid = validate_non_empty_string(
-        diagnostics,
+        context.diagnostics,
         &format!("{} origin id", location.owner),
         &raw.id,
-        spans.value_span_at(file, source, &id_path, &raw.id),
+        id_span,
     );
     let label_valid = raw.label.as_ref().is_none_or(|label| {
         let mut label_path = location.path.to_vec();
         label_path.push("label".to_owned());
+        let label_span = context.value_span_at(&label_path, label);
         validate_non_empty_string(
-            diagnostics,
+            context.diagnostics,
             &format!("{} origin label", location.owner),
             label,
-            spans.value_span_at(file, source, &label_path, label),
+            label_span,
         )
     });
 
@@ -61,14 +61,15 @@ pub(super) fn lower_origin(
         if !namespaced {
             let mut extension_path = location.path.to_vec();
             extension_path.push(key.clone());
-            diagnostics.push(schema_diagnostic(
+            let extension_span = context.nested_key_span_at(&extension_path, key);
+            context.diagnostics.push(schema_diagnostic(
                 MALFORMED_SHAPE,
                 "diagnostic-schema-001-origin-extension",
                 format!(
                     "{} origin extension '{key}' must be namespaced",
                     location.owner
                 ),
-                spans.nested_key_span_at(file, source, &extension_path, key),
+                extension_span,
                 [
                     (
                         "owner",
@@ -104,10 +105,7 @@ fn is_extension_segment(segment: &str) -> bool {
 }
 
 pub(super) fn lower_origin_map(
-    spans: &mut ManifestSpans,
-    file: &str,
-    source: &str,
-    diagnostics: &mut Vec<Diagnostic>,
+    context: &mut LoweringContext<'_>,
     raw: impl IntoIterator<Item = (String, RawProducerOrigin)>,
     location: ProvenanceLocation<'_>,
 ) -> BTreeMap<String, ProducerOrigin> {
@@ -115,19 +113,17 @@ pub(super) fn lower_origin_map(
         .filter_map(|(key, origin)| {
             let mut origin_path = location.path.to_vec();
             origin_path.push(key.clone());
+            let key_span = context.nested_key_span_at(&origin_path, &key);
             if !validate_non_empty_string(
-                diagnostics,
+                context.diagnostics,
                 &format!("{} provenance key", location.owner),
                 &key,
-                spans.nested_key_span_at(file, source, &origin_path, &key),
+                key_span,
             ) {
                 return None;
             }
             lower_origin(
-                spans,
-                file,
-                source,
-                diagnostics,
+                context,
                 Some(origin),
                 ProvenanceLocation {
                     owner: &format!("{} '{key}'", location.owner),
@@ -141,10 +137,7 @@ pub(super) fn lower_origin_map(
 }
 
 pub(super) fn lower_origin_value_map(
-    spans: &mut ManifestSpans,
-    file: &str,
-    source: &str,
-    diagnostics: &mut Vec<Diagnostic>,
+    context: &mut LoweringContext<'_>,
     raw: Option<Value>,
     location: ProvenanceLocation<'_>,
 ) -> BTreeMap<String, ProducerOrigin> {
@@ -154,7 +147,7 @@ pub(super) fn lower_origin_value_map(
     let origins = match origin_entries(value) {
         Ok(origins) => origins,
         Err(_) => {
-            diagnostics.push(schema_diagnostic(
+            context.diagnostics.push(schema_diagnostic(
                 MALFORMED_SHAPE,
                 "diagnostic-schema-001-value-origins",
                 format!(
@@ -173,10 +166,7 @@ pub(super) fn lower_origin_value_map(
     let mut value_origins_path = location.path.to_vec();
     value_origins_path.push("value_origins".to_owned());
     lower_origin_map(
-        spans,
-        file,
-        source,
-        diagnostics,
+        context,
         origins,
         ProvenanceLocation {
             owner: location.owner,
@@ -186,19 +176,11 @@ pub(super) fn lower_origin_value_map(
     )
 }
 
-#[allow(
-    clippy::too_many_arguments,
-    reason = "fingerprint lowering carries shared span and validation state"
-)]
 pub(super) fn lower_producer_fingerprints(
-    spans: &mut ManifestSpans,
-    file: &str,
-    source: &str,
-    diagnostics: &mut Vec<Diagnostic>,
+    context: &mut LoweringContext<'_>,
     raw: Vec<RawProducerFingerprint>,
     parent_path: &[String],
     owner: &str,
-    _span: SourceSpan,
     allow_duplicate_fingerprints: bool,
 ) -> Vec<ProducerFingerprint> {
     let mut seen = BTreeSet::new();
@@ -210,45 +192,42 @@ pub(super) fn lower_producer_fingerprints(
             fingerprint_path.extend(["producer_fingerprints".to_owned(), format!("[{index}]")]);
             let mut id_path = fingerprint_path.clone();
             id_path.push("id".to_owned());
-            let id_span = spans.value_span_at(file, source, &id_path, &fingerprint.id);
+            let id_span = context.value_span_at(&id_path, &fingerprint.id);
             let id_valid = validate_non_empty_string(
-                diagnostics,
+                context.diagnostics,
                 &format!("{owner} producer fingerprint id"),
                 &fingerprint.id,
                 id_span.clone(),
             );
+            let kind_span = context.value_span_at(
+                &fingerprint_field_path(&fingerprint_path, "kind"),
+                &fingerprint.kind,
+            );
             let kind_valid = validate_non_empty_string(
-                diagnostics,
+                context.diagnostics,
                 &format!("{owner} producer fingerprint kind"),
                 &fingerprint.kind,
-                spans.value_span_at(
-                    file,
-                    source,
-                    &fingerprint_field_path(&fingerprint_path, "kind"),
-                    &fingerprint.kind,
-                ),
+                kind_span,
+            );
+            let algorithm_span = context.value_span_at(
+                &fingerprint_field_path(&fingerprint_path, "algorithm"),
+                &fingerprint.algorithm,
             );
             let algorithm_valid = validate_non_empty_string(
-                diagnostics,
+                context.diagnostics,
                 &format!("{owner} producer fingerprint algorithm"),
                 &fingerprint.algorithm,
-                spans.value_span_at(
-                    file,
-                    source,
-                    &fingerprint_field_path(&fingerprint_path, "algorithm"),
-                    &fingerprint.algorithm,
-                ),
+                algorithm_span,
+            );
+            let value_span = context.value_span_at(
+                &fingerprint_field_path(&fingerprint_path, "value"),
+                &fingerprint.value,
             );
             let value_valid = validate_non_empty_string(
-                diagnostics,
+                context.diagnostics,
                 &format!("{owner} producer fingerprint value"),
                 &fingerprint.value,
-                spans.value_span_at(
-                    file,
-                    source,
-                    &fingerprint_field_path(&fingerprint_path, "value"),
-                    &fingerprint.value,
-                ),
+                value_span,
             );
             if !(id_valid && kind_valid && algorithm_valid && value_valid) {
                 return None;
@@ -257,7 +236,7 @@ pub(super) fn lower_producer_fingerprints(
             if !seen.insert((fingerprint.kind.clone(), fingerprint.id.clone()))
                 && !allow_duplicate_fingerprints
             {
-                diagnostics.push(schema_diagnostic(
+                context.diagnostics.push(schema_diagnostic(
                     DUPLICATE_DEFINITION,
                     "diagnostic-schema-003-producer-fingerprint",
                     format!(
@@ -306,30 +285,23 @@ pub(super) fn origin_entries(value: Value) -> Result<Vec<(String, RawProducerOri
         .collect()
 }
 
-#[allow(
-    clippy::too_many_arguments,
-    reason = "the helper needs shared JSON span state plus owner and allowed-key context"
-)]
 pub(super) fn validate_origin_keys(
-    spans: &mut ManifestSpans,
-    file: &str,
-    source: &str,
-    diagnostics: &mut Vec<Diagnostic>,
+    context: &mut LoweringContext<'_>,
     owner: &str,
     allowed: &BTreeSet<String>,
     origins: impl IntoIterator<Item = String>,
-    _span: SourceSpan,
     path: &[String],
 ) {
     for key in origins {
         if !allowed.contains(&key) {
             let mut origin_path = path.to_vec();
             origin_path.push(key.clone());
-            diagnostics.push(schema_diagnostic(
+            let unknown_span = context.nested_key_span_at(&origin_path, &key);
+            context.diagnostics.push(schema_diagnostic(
                 MALFORMED_SHAPE,
                 "diagnostic-schema-001-provenance-unknown-value",
                 format!("{owner} provenance key '{key}' is not a declared value"),
-                spans.nested_key_span_at(file, source, &origin_path, &key),
+                unknown_span,
                 [
                     ("owner", DiagnosticArgumentValue::String(owner.to_owned())),
                     ("key", DiagnosticArgumentValue::String(key.clone())),

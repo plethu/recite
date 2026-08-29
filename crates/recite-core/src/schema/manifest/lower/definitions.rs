@@ -5,6 +5,7 @@ use super::super::spans::ManifestSpans;
 use super::super::validate::{
     duplicate_definition, validate_manifest_name, validate_non_empty_string,
 };
+use super::LoweringContext;
 use super::producer::{
     ProvenanceLocation, lower_origin, lower_origin_value_map, lower_producer_fingerprints,
     validate_origin_keys,
@@ -59,10 +60,7 @@ pub(super) fn lower_types(
         }
 
         let values = canonical_string_values_at(
-            file,
-            source,
-            spans,
-            diagnostics,
+            &mut LoweringContext::new(file, source, spans, diagnostics),
             &format!("enum '{}'", entry.name),
             &entry.value.values,
             &entry_path,
@@ -96,10 +94,7 @@ pub(super) fn lower_registries(
         }
 
         let values = canonical_string_values_at(
-            file,
-            source,
-            spans,
-            diagnostics,
+            &mut LoweringContext::new(file, source, spans, diagnostics),
             &format!("registry '{}'", entry.name),
             &entry.value.values,
             &entry_path,
@@ -110,10 +105,7 @@ pub(super) fn lower_registries(
             path
         };
         let origin = lower_origin(
-            spans,
-            file,
-            source,
-            diagnostics,
+            &mut LoweringContext::new(file, source, spans, diagnostics),
             entry.value.origin,
             ProvenanceLocation {
                 owner: &format!("registry '{}'", entry.name),
@@ -122,10 +114,7 @@ pub(super) fn lower_registries(
             },
         );
         let value_origins = lower_origin_value_map(
-            spans,
-            file,
-            source,
-            diagnostics,
+            &mut LoweringContext::new(file, source, spans, diagnostics),
             entry.value.value_origins,
             ProvenanceLocation {
                 owner: &format!("registry '{}' value", entry.name),
@@ -134,14 +123,10 @@ pub(super) fn lower_registries(
             },
         );
         validate_origin_keys(
-            spans,
-            file,
-            source,
-            diagnostics,
+            &mut LoweringContext::new(file, source, spans, diagnostics),
             &format!("registry '{}'", entry.name),
             &values,
             value_origins.keys().cloned(),
-            name_span.clone(),
             &{
                 let mut path = entry_path.clone();
                 path.push("value_origins".to_owned());
@@ -149,14 +134,10 @@ pub(super) fn lower_registries(
             },
         );
         let producer_fingerprints = lower_producer_fingerprints(
-            spans,
-            file,
-            source,
-            diagnostics,
+            &mut LoweringContext::new(file, source, spans, diagnostics),
             entry.value.producer_fingerprints,
             &entry_path,
             &format!("registry '{}'", entry.name),
-            name_span.clone(),
             allow_duplicate_fingerprints,
         );
         schema.registries.insert(
@@ -212,10 +193,7 @@ pub(super) fn lower_speakers(
 }
 
 pub(super) fn canonical_string_values_at(
-    file: &str,
-    source: &str,
-    spans: &mut ManifestSpans,
-    diagnostics: &mut Vec<Diagnostic>,
+    context: &mut LoweringContext<'_>,
     owner: &str,
     values: &[String],
     parent_path: &[String],
@@ -224,12 +202,17 @@ pub(super) fn canonical_string_values_at(
     for (index, value) in values.iter().enumerate() {
         let mut value_path = parent_path.to_vec();
         value_path.extend(["values".to_owned(), format!("[{index}]")]);
-        let value_span = spans.value_span_at(file, source, &value_path, value);
-        if !validate_non_empty_string(diagnostics, "schema value", value, value_span.clone()) {
+        let value_span = context.value_span_at(&value_path, value);
+        if !validate_non_empty_string(
+            context.diagnostics,
+            "schema value",
+            value,
+            value_span.clone(),
+        ) {
             continue;
         }
         if !canonical.insert(value.clone()) {
-            diagnostics.push(schema_diagnostic(
+            context.diagnostics.push(schema_diagnostic(
                 super::super::diagnostics::DUPLICATE_DEFINITION,
                 "diagnostic-schema-003-value",
                 format!("{owner} repeats value '{value}'"),

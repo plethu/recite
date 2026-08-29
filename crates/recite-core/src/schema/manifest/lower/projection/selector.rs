@@ -4,23 +4,16 @@ use super::super::super::diagnostics::{
     DUPLICATE_DEFINITION, INVALID_TYPE_REFERENCE, MALFORMED_SHAPE,
 };
 use super::super::super::raw::RawProjectionSelector;
-use super::super::super::spans::ManifestSpans;
 use super::super::super::validate::{
     parse_metadata_target, validate_manifest_name, validate_non_empty_string,
 };
+use super::super::LoweringContext;
 use crate::schema::schema_diagnostic;
 use crate::schema::{MetadataDefinition, MetadataTarget, ProjectSchema, SchemaProjectionSelector};
 use crate::{AvailabilityReasonId, Diagnostic, DiagnosticArgumentValue};
 
-#[expect(
-    clippy::too_many_arguments,
-    reason = "selector lowering carries shared span, validation, schema, and semantic path context"
-)]
 pub(super) fn lower_selector(
-    file: &str,
-    source: &str,
-    spans: &mut ManifestSpans,
-    diagnostics: &mut Vec<Diagnostic>,
+    lowering: &mut LoweringContext<'_>,
     schema: &ProjectSchema,
     projector: &str,
     raw: RawProjectionSelector,
@@ -30,30 +23,29 @@ pub(super) fn lower_selector(
         RawProjectionSelector::RuntimeEvent { event } => {
             let mut path = projector_path.to_vec();
             path.extend(["candidates".to_owned(), "event".to_owned()]);
-            let span = spans.value_span_at(file, source, &path, &event);
-            validate_non_empty_string(diagnostics, "projection runtime event kind", &event, span);
+            let span = lowering.value_span_at(&path, &event);
+            validate_non_empty_string(
+                lowering.diagnostics,
+                "projection runtime event kind",
+                &event,
+                span,
+            );
             Some(SchemaProjectionSelector::RuntimeEvent { kind: event })
         }
         RawProjectionSelector::MetadataKey { target, key } => {
             let mut target_path = projector_path.to_vec();
             target_path.extend(["candidates".to_owned(), "target".to_owned()]);
-            let target = lower_projector_metadata_target(
-                file,
-                source,
-                spans,
-                diagnostics,
-                &target,
-                &target_path,
-            )?;
+            let target = lower_projector_metadata_target(lowering, &target, &target_path)?;
             let mut key_path = projector_path.to_vec();
             key_path.extend(["candidates".to_owned(), "key".to_owned()]);
+            let key_span = lowering.value_span_at(&key_path, &key);
             validate_metadata_key_target(
-                diagnostics,
+                lowering.diagnostics,
                 schema,
                 projector,
                 &key,
                 target,
-                spans.value_span_at(file, source, &key_path, &key),
+                key_span,
             );
             Some(SchemaProjectionSelector::MetadataKey { target, key })
         }
@@ -63,14 +55,7 @@ pub(super) fn lower_selector(
         } => {
             let mut target_path = projector_path.to_vec();
             target_path.extend(["candidates".to_owned(), "target".to_owned()]);
-            let target = lower_projector_metadata_target(
-                file,
-                source,
-                spans,
-                diagnostics,
-                &target,
-                &target_path,
-            )?;
+            let target = lower_projector_metadata_target(lowering, &target, &target_path)?;
             let mut seen_keys = BTreeSet::new();
             for (index, key) in required_keys.iter().enumerate() {
                 let mut key_path = projector_path.to_vec();
@@ -79,9 +64,9 @@ pub(super) fn lower_selector(
                     "required_keys".to_owned(),
                     format!("[{index}]"),
                 ]);
-                let key_span = spans.value_span_at(file, source, &key_path, key);
+                let key_span = lowering.value_span_at(&key_path, key);
                 validate_metadata_key_target(
-                    diagnostics,
+                    lowering.diagnostics,
                     schema,
                     projector,
                     key,
@@ -89,7 +74,7 @@ pub(super) fn lower_selector(
                     key_span.clone(),
                 );
                 if !seen_keys.insert(key.clone()) {
-                    diagnostics.push(schema_diagnostic(
+                    lowering.diagnostics.push(schema_diagnostic(
                         DUPLICATE_DEFINITION,
                         "diagnostic-schema-003-required-metadata",
                         format!("projector '{projector}' repeats required metadata key '{key}'"),
@@ -112,9 +97,9 @@ pub(super) fn lower_selector(
         RawProjectionSelector::AvailabilityReason { reason } => {
             let mut reason_path = projector_path.to_vec();
             reason_path.extend(["candidates".to_owned(), "reason".to_owned()]);
-            let reason_span = spans.value_span_at(file, source, &reason_path, &reason);
+            let reason_span = lowering.value_span_at(&reason_path, &reason);
             if !validate_manifest_name(
-                diagnostics,
+                lowering.diagnostics,
                 "availability reason id",
                 &reason,
                 reason_span.clone(),
@@ -125,7 +110,7 @@ pub(super) fn lower_selector(
                 return None;
             };
             if !schema.availability_reasons.contains_key(&reason_id) {
-                diagnostics.push(schema_diagnostic(
+                lowering.diagnostics.push(schema_diagnostic(
                     INVALID_TYPE_REFERENCE,
                     "diagnostic-schema-004-unknown-projection-reason",
                     format!(
@@ -147,16 +132,13 @@ pub(super) fn lower_selector(
 }
 
 fn lower_projector_metadata_target(
-    file: &str,
-    source: &str,
-    spans: &mut ManifestSpans,
-    diagnostics: &mut Vec<Diagnostic>,
+    lowering: &mut LoweringContext<'_>,
     raw: &str,
     path: &[String],
 ) -> Option<MetadataTarget> {
-    let span = spans.value_span_at(file, source, path, raw);
+    let span = lowering.value_span_at(path, raw);
     parse_metadata_target(raw).or_else(|| {
-        diagnostics.push(schema_diagnostic(
+        lowering.diagnostics.push(schema_diagnostic(
             MALFORMED_SHAPE,
             "diagnostic-schema-001-projection-selector-target",
             format!("presentation projector uses unsupported metadata target '{raw}'"),

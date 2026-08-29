@@ -2,7 +2,7 @@ use std::collections::BTreeMap;
 
 use super::super::diagnostics::MALFORMED_SHAPE;
 use super::super::producer::{RawProducerFingerprint, RawProducerOrigin};
-use super::super::spans::ManifestSpans;
+use super::LoweringContext;
 use super::producer::{
     ProvenanceLocation, lower_origin, lower_origin_map, lower_producer_fingerprints, origin_entries,
 };
@@ -12,26 +12,46 @@ use crate::SourceSpan;
 use crate::schema::{ContextualMetadataProvenance, FlatMetadataProvenance, schema_diagnostic};
 use serde_json::Value;
 
-#[allow(clippy::too_many_arguments)]
+pub(super) struct DomainKindFields<'a> {
+    pub(super) kind: &'a str,
+    pub(super) has_values: bool,
+    pub(super) has_selector: bool,
+    pub(super) has_values_by_context: bool,
+    pub(super) has_missing_context: bool,
+    pub(super) has_context_origins: bool,
+    pub(super) owner: &'a str,
+    pub(super) span: SourceSpan,
+}
+
+pub(super) struct FlatDomainProvenanceInput<'a> {
+    pub(super) origin: Option<RawProducerOrigin>,
+    pub(super) value_origins: Option<Value>,
+    pub(super) producer_fingerprints: Vec<RawProducerFingerprint>,
+    pub(super) location: ProvenanceLocation<'a>,
+    pub(super) allow_duplicate_fingerprints: bool,
+}
+
+pub(super) struct ContextualDomainProvenanceInput<'a> {
+    pub(super) origin: Option<RawProducerOrigin>,
+    pub(super) context_origins: Option<Value>,
+    pub(super) value_origins: Option<Value>,
+    pub(super) producer_fingerprints: Vec<RawProducerFingerprint>,
+    pub(super) location: ProvenanceLocation<'a>,
+    pub(super) allow_duplicate_fingerprints: bool,
+}
+
 pub(super) fn validate_domain_kind_fields(
     diagnostics: &mut Vec<Diagnostic>,
-    kind: &str,
-    has_values: bool,
-    has_selector: bool,
-    has_values_by_context: bool,
-    has_missing_context: bool,
-    has_context_origins: bool,
-    owner: &str,
-    span: SourceSpan,
+    fields: DomainKindFields<'_>,
 ) -> bool {
-    let wrong_fields: &[(bool, &str)] = match kind {
+    let wrong_fields: &[(bool, &str)] = match fields.kind {
         "flat" => &[
-            (has_selector, "selector"),
-            (has_values_by_context, "values_by_context"),
-            (has_missing_context, "missing_context"),
-            (has_context_origins, "context_origins"),
+            (fields.has_selector, "selector"),
+            (fields.has_values_by_context, "values_by_context"),
+            (fields.has_missing_context, "missing_context"),
+            (fields.has_context_origins, "context_origins"),
         ],
-        "contextual" => &[(has_values, "values")],
+        "contextual" => &[(fields.has_values, "values")],
         _ => &[],
     };
     for &(present, field) in wrong_fields {
@@ -39,12 +59,21 @@ pub(super) fn validate_domain_kind_fields(
             diagnostics.push(schema_diagnostic(
                 MALFORMED_SHAPE,
                 "diagnostic-schema-001-domain-kind-field",
-                format!("metadata domain '{owner}' does not allow '{field}' for kind '{kind}'"),
-                span.clone(),
+                format!(
+                    "metadata domain '{}' does not allow '{field}' for kind '{}'",
+                    fields.owner, fields.kind
+                ),
+                fields.span.clone(),
                 [
-                    ("domain", DiagnosticArgumentValue::String(owner.to_owned())),
+                    (
+                        "domain",
+                        DiagnosticArgumentValue::String(fields.owner.to_owned()),
+                    ),
                     ("field", DiagnosticArgumentValue::String(field.to_owned())),
-                    ("kind", DiagnosticArgumentValue::String(kind.to_owned())),
+                    (
+                        "kind",
+                        DiagnosticArgumentValue::String(fields.kind.to_owned()),
+                    ),
                 ],
             ));
         }
@@ -52,20 +81,20 @@ pub(super) fn validate_domain_kind_fields(
     !wrong_fields.iter().any(|(present, _)| *present)
 }
 
-#[allow(clippy::too_many_arguments)]
 pub(super) fn lower_flat_domain_provenance(
-    spans: &mut ManifestSpans,
-    file: &str,
-    source: &str,
-    diagnostics: &mut Vec<Diagnostic>,
-    origin: Option<RawProducerOrigin>,
-    value_origins: Option<Value>,
-    producer_fingerprints: Vec<RawProducerFingerprint>,
-    owner: &str,
-    span: SourceSpan,
-    allow_duplicate_fingerprints: bool,
-    parent_path: &[String],
+    context: &mut LoweringContext<'_>,
+    input: FlatDomainProvenanceInput<'_>,
 ) -> FlatMetadataProvenance {
+    let FlatDomainProvenanceInput {
+        origin,
+        value_origins,
+        producer_fingerprints,
+        location,
+        allow_duplicate_fingerprints,
+    } = input;
+    let owner = location.owner;
+    let span = location.span;
+    let parent_path = location.path;
     let value_origins = match value_origins {
         None => BTreeMap::new(),
         Some(value) => match origin_entries(value) {
@@ -73,10 +102,7 @@ pub(super) fn lower_flat_domain_provenance(
                 let mut value_origins_path = parent_path.to_vec();
                 value_origins_path.push("value_origins".to_owned());
                 lower_origin_map(
-                    spans,
-                    file,
-                    source,
-                    diagnostics,
+                    context,
                     origins,
                     ProvenanceLocation {
                         owner: &format!("{owner} value"),
@@ -86,7 +112,7 @@ pub(super) fn lower_flat_domain_provenance(
                 )
             }
             Err(_) => {
-                diagnostics.push(schema_diagnostic(
+                context.diagnostics.push(schema_diagnostic(
                     MALFORMED_SHAPE,
                     "diagnostic-schema-001-flat-value-origins",
                     format!("{owner} flat value_origins must map values to origins"),
@@ -103,10 +129,7 @@ pub(super) fn lower_flat_domain_provenance(
             let mut origin_path = parent_path.to_vec();
             origin_path.push("origin".to_owned());
             lower_origin(
-                spans,
-                file,
-                source,
-                diagnostics,
+                context,
                 origin,
                 ProvenanceLocation {
                     owner,
@@ -117,42 +140,38 @@ pub(super) fn lower_flat_domain_provenance(
         },
         value_origins,
         producer_fingerprints: lower_producer_fingerprints(
-            spans,
-            file,
-            source,
-            diagnostics,
+            context,
             producer_fingerprints,
             parent_path,
             owner,
-            span,
             allow_duplicate_fingerprints,
         ),
     }
 }
 
-#[allow(clippy::too_many_arguments)]
 pub(super) fn lower_contextual_domain_provenance(
-    spans: &mut ManifestSpans,
-    file: &str,
-    source: &str,
-    diagnostics: &mut Vec<Diagnostic>,
-    origin: Option<RawProducerOrigin>,
-    context_origins: Option<Value>,
-    value_origins: Option<Value>,
-    producer_fingerprints: Vec<RawProducerFingerprint>,
-    owner: &str,
-    span: SourceSpan,
-    allow_duplicate_fingerprints: bool,
-    parent_path: &[String],
+    context: &mut LoweringContext<'_>,
+    input: ContextualDomainProvenanceInput<'_>,
 ) -> ContextualMetadataProvenance {
+    let ContextualDomainProvenanceInput {
+        origin,
+        context_origins,
+        value_origins,
+        producer_fingerprints,
+        location,
+        allow_duplicate_fingerprints,
+    } = input;
+    let owner = location.owner;
+    let span = location.span;
+    let parent_path = location.path;
     let value_origins = match value_origins {
         None => BTreeMap::new(),
         Some(value) => match object_entries(value) {
             Ok(origins) => origins
                 .into_iter()
-                .filter_map(|(context, value)| {
-                    if !crate::is_valid_source_label(&context) {
-                        diagnostics.push(schema_diagnostic(
+                .filter_map(|(context_name, value)| {
+                    if !crate::is_valid_source_label(&context_name) {
+                        context.diagnostics.push(schema_diagnostic(
                             MALFORMED_SHAPE,
                             "diagnostic-schema-001-context-origin-name",
                             format!("{owner} provenance context must be an identifier-like name"),
@@ -165,12 +184,9 @@ pub(super) fn lower_contextual_domain_provenance(
                         Ok(value_origins) => {
                             let mut value_origins_path = parent_path.to_vec();
                             value_origins_path
-                                .extend(["value_origins".to_owned(), context.clone()]);
+                                .extend(["value_origins".to_owned(), context_name.clone()]);
                             lower_origin_map(
-                                spans,
-                                file,
-                                source,
-                                diagnostics,
+                                context,
                                 value_origins,
                                 ProvenanceLocation {
                                     owner: &format!("{owner} context value"),
@@ -180,7 +196,7 @@ pub(super) fn lower_contextual_domain_provenance(
                             )
                         }
                         Err(_) => {
-                            diagnostics.push(schema_diagnostic(
+                            context.diagnostics.push(schema_diagnostic(
                                 MALFORMED_SHAPE,
                                 "diagnostic-schema-001-contextual-value-origins",
                                 format!(
@@ -192,11 +208,11 @@ pub(super) fn lower_contextual_domain_provenance(
                             BTreeMap::new()
                         }
                     };
-                    Some((context, value_origins))
+                    Some((context_name, value_origins))
                 })
                 .collect(),
             Err(_) => {
-                diagnostics.push(schema_diagnostic(
+                context.diagnostics.push(schema_diagnostic(
                     MALFORMED_SHAPE,
                     "diagnostic-schema-001-contextual-value-origins",
                     format!("{owner} contextual value_origins must map contexts to values"),
@@ -213,10 +229,7 @@ pub(super) fn lower_contextual_domain_provenance(
             let mut origin_path = parent_path.to_vec();
             origin_path.push("origin".to_owned());
             lower_origin(
-                spans,
-                file,
-                source,
-                diagnostics,
+                context,
                 origin,
                 ProvenanceLocation {
                     owner,
@@ -232,10 +245,7 @@ pub(super) fn lower_contextual_domain_provenance(
                     let mut context_origins_path = parent_path.to_vec();
                     context_origins_path.push("context_origins".to_owned());
                     lower_origin_map(
-                        spans,
-                        file,
-                        source,
-                        diagnostics,
+                        context,
                         origins,
                         ProvenanceLocation {
                             owner: &format!("{owner} context"),
@@ -245,7 +255,7 @@ pub(super) fn lower_contextual_domain_provenance(
                     )
                 }
                 Err(_) => {
-                    diagnostics.push(schema_diagnostic(
+                    context.diagnostics.push(schema_diagnostic(
                         MALFORMED_SHAPE,
                         "diagnostic-schema-001-context-origins",
                         format!("{owner} context_origins must map contexts to origins"),
@@ -258,14 +268,10 @@ pub(super) fn lower_contextual_domain_provenance(
         },
         value_origins,
         producer_fingerprints: lower_producer_fingerprints(
-            spans,
-            file,
-            source,
-            diagnostics,
+            context,
             producer_fingerprints,
             parent_path,
             owner,
-            span,
             allow_duplicate_fingerprints,
         ),
     }
