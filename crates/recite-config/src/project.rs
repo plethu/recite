@@ -11,7 +11,8 @@ mod manifest;
 
 pub use diagnostics::{DiscoveryDiagnostic, ProjectDiscoveryError};
 pub use enumerate::{
-    Coverage, DiscoveredDocument, DiscoveredRoot, DocumentKey, discover_unscoped_sources,
+    Coverage, DiscoveredDocument, DiscoveredRoot, DocumentKey, allows_unscoped_source_path,
+    discover_unscoped_sources,
 };
 pub use manifest::{
     PROJECT_MANIFEST_FILE, PROJECT_MANIFEST_FORMAT_VERSION, ProjectDiscoveryReport,

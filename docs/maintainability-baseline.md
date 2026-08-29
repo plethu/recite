@@ -196,7 +196,7 @@ wire compatibility fixtures, and focused reviews for each subsystem.
 | `crates/recite-lsp/src/tests.rs` | 540 | test/support | lsp/tests | cohesive | Module aggregator, not production implementation |
 | `crates/recite-lsp/src/tests/project_indexes.rs` | 394 | test/support | lsp/tests | cohesive | Project discovery, manifest transition, and saved-index regression coverage |
 | `crates/recite-config/src/project/diagnostics.rs` | 297 | production | config/project | cohesive | Typed discovery failures and conversion to shared diagnostic contracts |
-| `crates/recite-config/src/project/enumerate.rs` | 316 | production | config/project | cohesive | Deterministic filesystem traversal, source-only compatibility enumeration, and coverage accounting |
+| `crates/recite-config/src/project/enumerate.rs` | 356 | production | config/project | cohesive | Deterministic filesystem traversal, source-only compatibility enumeration, and coverage accounting |
 | `crates/recite-config/src/project/manifest.rs` | 387 | production | config/project | cohesive | Manifest search, validation, and discovery report orchestration |
-| `crates/recite-lsp/src/workspace/project_index.rs` | 348 | production | lsp/workspace | cohesive | Saved index, atomic manifest transitions, and shared source-only compatibility enumeration |
+| `crates/recite-lsp/src/workspace/project_index.rs` | 385 | production | lsp/workspace | cohesive | Saved index, atomic manifest transitions, and shared source-only compatibility enumeration |
 | `crates/recite-lsp/src/tests/code_action/schema_entry.rs` | 357 | test/support | lsp/tests | review | Private code-action behavior |

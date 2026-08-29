@@ -10,6 +10,7 @@ use crate::paths::uri_to_file_path;
 
 #[derive(Clone, Debug)]
 pub(crate) struct WorkspaceConfig {
+    pub(super) fallback_roots: Vec<PathBuf>,
     pub(super) roots: Vec<PathBuf>,
     pub(super) schema_path: Option<PathBuf>,
     pub(super) discovery: Option<ProjectDiscoveryReport>,
@@ -88,7 +89,7 @@ impl WorkspaceConfig {
                     .map(|root| root.path().to_owned())
                     .collect()
             })
-            .unwrap_or(fallback_roots);
+            .unwrap_or_else(|| fallback_roots.clone());
         let schema_path = initialization_schema_path(params.initialization_options.as_ref())
             .and_then(|schema| resolve_config_path(&schema, roots.first()))
             .or_else(|| {
@@ -110,6 +111,7 @@ impl WorkspaceConfig {
             });
 
         Self {
+            fallback_roots: fallback_roots.clone(),
             roots,
             schema_path,
             discovery,
@@ -127,6 +129,7 @@ impl WorkspaceConfig {
             .filter_map(|root| fs::canonicalize(root).ok())
             .collect::<Vec<_>>();
         Self {
+            fallback_roots: roots.clone(),
             discovery_start: roots.first().cloned(),
             roots,
             schema_path: None,

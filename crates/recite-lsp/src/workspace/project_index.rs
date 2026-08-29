@@ -1,4 +1,4 @@
-use std::collections::BTreeMap;
+use std::collections::{BTreeMap, BTreeSet};
 use std::fs;
 use std::path::{Path, PathBuf};
 
@@ -11,6 +11,7 @@ use recite_config::DiscoveredDocument;
 
 pub(super) struct SavedProjectIndex {
     project_root: PathBuf,
+    fallback_roots: Vec<PathBuf>,
     roots: Vec<PathBuf>,
     pub(super) documents: BTreeMap<PathBuf, SavedDocument>,
     manifest: Option<recite_config::ProjectManifest>,
@@ -19,7 +20,6 @@ pub(super) struct SavedProjectIndex {
     manifest_text: String,
     discovery_start: Option<PathBuf>,
     discovery_failed: bool,
-    aliases: BTreeMap<PathBuf, (PathBuf, bool)>,
 }
 
 impl SavedProjectIndex {
@@ -29,9 +29,8 @@ impl SavedProjectIndex {
                 .discovery
                 .as_ref()
                 .map(|report| report.manifest().project_root().to_owned())
-                .or_else(|| config.discovery_start.clone())
-                .or_else(|| config.roots.first().cloned())
-                .unwrap_or_default(),
+                .unwrap_or_else(|| common_project_root(&config.fallback_roots)),
+            fallback_roots: config.fallback_roots.clone(),
             roots: config.roots.clone(),
             documents: BTreeMap::new(),
             manifest: config
@@ -57,7 +56,6 @@ impl SavedProjectIndex {
                 .unwrap_or_default(),
             discovery_start: config.discovery_start.clone(),
             discovery_failed: config.discovery_failed,
-            aliases: BTreeMap::new(),
         };
         if let Some(report) = config.discovery.as_ref() {
             index.diagnostics.extend(
@@ -70,7 +68,7 @@ impl SavedProjectIndex {
                 index.insert_discovered(document);
             }
         } else if !index.discovery_failed {
-            for root in &config.roots {
+            for root in &config.fallback_roots {
                 let (documents, diagnostics) = recite_config::discover_unscoped_sources(root);
                 index.diagnostics.extend(
                     diagnostics
@@ -104,26 +102,7 @@ impl SavedProjectIndex {
         if !has_recite_extension(&path) {
             return removed;
         }
-        if self
-            .manifest
-            .as_ref()
-            .is_some_and(|manifest| !manifest.allows_path(&path))
-        {
-            self.documents.remove(&path);
-            return true;
-        }
-
-        if let Some(canonical) = canonical_before
-            && lexical_path != canonical
-        {
-            let direct_target = self
-                .documents
-                .values()
-                .any(|document| document.summary.saved_path() == Some(canonical.as_path()));
-            self.aliases
-                .insert(lexical_path, (canonical, direct_target));
-        }
-        self.refresh_path(&path) || removed
+        self.refresh_path(&path, &lexical_path) || removed
     }
 
     fn remove_uri(
@@ -133,17 +112,14 @@ impl SavedProjectIndex {
         canonical_path: Option<&Path>,
     ) -> bool {
         let before = self.documents.len();
-        let aliased_path = self.aliases.remove(lexical_path);
-        let lexical_is_canonical =
-            canonical_path.is_some_and(|canonical| canonical == lexical_path);
         self.documents.retain(|_, document| {
+            let owns_source = document.source_paths.remove(lexical_path);
             let matches_uri = document.summary.uri() == uri;
-            let matches_canonical =
-                lexical_is_canonical && canonical_path == document.summary.saved_path();
-            let matches_alias = aliased_path.as_ref().is_some_and(|(aliased, direct)| {
-                !direct && Some(aliased.as_path()) == document.summary.saved_path()
-            });
-            !(matches_uri || matches_canonical || matches_alias)
+            let matches_canonical = canonical_path == document.summary.saved_path()
+                && lexical_path == document.summary.saved_path().unwrap_or(lexical_path);
+            let remove_document = (owns_source || matches_uri || matches_canonical)
+                && document.source_paths.is_empty();
+            !remove_document
         });
         before != self.documents.len()
     }
@@ -163,7 +139,6 @@ impl SavedProjectIndex {
         result: Result<recite_config::ProjectDiscoveryReport, recite_config::ProjectDiscoveryError>,
     ) {
         self.documents.clear();
-        self.aliases.clear();
         match result {
             Ok(report) => {
                 self.project_root = report.manifest().project_root().to_owned();
@@ -188,6 +163,8 @@ impl SavedProjectIndex {
                 }
             }
             Err(recite_config::ProjectDiscoveryError::NotFound { .. }) => {
+                self.project_root = common_project_root(&self.fallback_roots);
+                self.roots = self.fallback_roots.clone();
                 self.manifest = None;
                 self.manifest_path = self.manifest_path.clone().or_else(|| {
                     self.discovery_start
@@ -197,7 +174,7 @@ impl SavedProjectIndex {
                 self.manifest_text.clear();
                 self.diagnostics.clear();
                 self.discovery_failed = false;
-                for root in self.roots.clone() {
+                for root in self.fallback_roots.clone() {
                     let (documents, diagnostics) = recite_config::discover_unscoped_sources(&root);
                     self.diagnostics.extend(
                         diagnostics
@@ -223,36 +200,36 @@ impl SavedProjectIndex {
         }
     }
 
-    fn refresh_path(&mut self, path: &Path) -> bool {
+    fn refresh_path(&mut self, path: &Path, source_path: &Path) -> bool {
         if self.discovery_failed {
             return false;
         }
-        let Some(_root) = self.root_for_path(path) else {
+        if !self.paths_share_source_root(source_path, path) {
             return false;
-        };
-        if self
-            .manifest
-            .as_ref()
-            .is_some_and(|manifest| !manifest.allows_path(path))
-        {
-            self.documents.remove(path);
+        }
+        let allowed = self.manifest.as_ref().map_or(
+            recite_config::allows_unscoped_source_path(&self.project_root, source_path)
+                && recite_config::allows_unscoped_source_path(&self.project_root, path),
+            |manifest| manifest.allows_path(source_path) && manifest.allows_path(path),
+        );
+        if !allowed {
+            self.remove_unowned_document(path);
             return true;
         }
         if !path.exists() {
-            self.documents.remove(path);
             return true;
         }
 
         let Ok(text) = fs::read_to_string(path) else {
-            self.documents.remove(path);
+            self.remove_unowned_document(path);
             return true;
         };
         let Some(uri) = file_path_to_uri(path) else {
-            self.documents.remove(path);
+            self.remove_unowned_document(path);
             return true;
         };
         let Some(project_relative_path) = project_relative_path(&self.project_root, path) else {
-            self.documents.remove(path);
+            self.remove_unowned_document(path);
             return true;
         };
         let identity = FileIdentity::Saved(SavedFileIdentity {
@@ -261,9 +238,34 @@ impl SavedProjectIndex {
             project_relative_path,
         });
         let summary = FileSummary::from_text(identity, None, &text);
-        self.documents
-            .insert(path.to_owned(), SavedDocument { text, summary });
+        let source_paths = self
+            .documents
+            .get(path)
+            .map(|document| {
+                let mut paths = document.source_paths.clone();
+                paths.insert(source_path.to_owned());
+                paths
+            })
+            .unwrap_or_else(|| BTreeSet::from([source_path.to_owned()]));
+        self.documents.insert(
+            path.to_owned(),
+            SavedDocument {
+                text,
+                summary,
+                source_paths,
+            },
+        );
         true
+    }
+
+    fn remove_unowned_document(&mut self, path: &Path) {
+        if self
+            .documents
+            .get(path)
+            .is_some_and(|document| document.source_paths.is_empty())
+        {
+            self.documents.remove(path);
+        }
     }
 
     pub(super) fn root_for_path(&self, path: &Path) -> Option<&Path> {
@@ -271,6 +273,12 @@ impl SavedProjectIndex {
             .iter()
             .find(|root| path == root.as_path() || path.starts_with(root))
             .map(PathBuf::as_path)
+    }
+
+    fn paths_share_source_root(&self, source_path: &Path, canonical_path: &Path) -> bool {
+        self.roots
+            .iter()
+            .any(|root| source_path.starts_with(root) && canonical_path.starts_with(root))
     }
 
     pub(super) fn document_by_uri(&self, uri: &Uri) -> Option<&SavedDocument> {
@@ -309,17 +317,30 @@ impl SavedProjectIndex {
         let Some(uri) = file_path_to_uri(document.path()) else {
             return;
         };
+        let project_relative_path = if self.manifest.is_some() {
+            document.key().as_str().to_owned()
+        } else {
+            project_relative_path(&self.project_root, document.path())
+                .unwrap_or_else(|| document.key().as_str().to_owned())
+        };
         let identity = FileIdentity::Saved(SavedFileIdentity {
             uri,
             canonical_path: document.path().to_owned(),
-            project_relative_path: document.key().as_str().to_owned(),
+            project_relative_path,
         });
         let summary = FileSummary::from_text(identity, None, document.text());
+        let mut source_paths = self
+            .documents
+            .get(document.path())
+            .map(|saved| saved.source_paths.clone())
+            .unwrap_or_default();
+        source_paths.extend(document.source_paths().iter().cloned());
         self.documents.insert(
             document.path().to_owned(),
             SavedDocument {
                 text: document.text().to_owned(),
                 summary,
+                source_paths,
             },
         );
     }
@@ -329,6 +350,22 @@ impl SavedProjectIndex {
 pub(super) struct SavedDocument {
     pub(super) text: String,
     pub(super) summary: FileSummary,
+    source_paths: BTreeSet<PathBuf>,
+}
+
+fn common_project_root(roots: &[PathBuf]) -> PathBuf {
+    let Some(first) = roots.first() else {
+        return PathBuf::new();
+    };
+    let mut common = first.clone();
+    for root in &roots[1..] {
+        while !root.starts_with(&common) {
+            if !common.pop() {
+                return PathBuf::new();
+            }
+        }
+    }
+    common
 }
 
 fn has_recite_extension(path: &Path) -> bool {

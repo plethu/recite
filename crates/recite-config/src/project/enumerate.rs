@@ -1,4 +1,4 @@
-use std::collections::BTreeSet;
+use std::collections::BTreeMap;
 use std::path::{Path, PathBuf};
 
 use super::diagnostics::DiscoveryDiagnostic;
@@ -69,6 +69,7 @@ impl std::fmt::Display for DocumentKey {
 pub struct DiscoveredDocument {
     key: DocumentKey,
     path: PathBuf,
+    source_paths: Vec<PathBuf>,
     root_index: usize,
     text: String,
 }
@@ -82,6 +83,11 @@ impl DiscoveredDocument {
     #[must_use]
     pub fn path(&self) -> &Path {
         &self.path
+    }
+
+    #[must_use]
+    pub fn source_paths(&self) -> &[PathBuf] {
+        &self.source_paths
     }
 
     #[must_use]
@@ -101,7 +107,7 @@ pub(super) fn enumerate_root(
     excludes: &[GlobPattern],
     documents: &mut Vec<DiscoveredDocument>,
     diagnostics: &mut Vec<DiscoveryDiagnostic>,
-    seen: &mut BTreeSet<PathBuf>,
+    seen: &mut BTreeMap<PathBuf, usize>,
 ) {
     let mut enumeration = Enumeration {
         project_root,
@@ -140,7 +146,7 @@ pub fn discover_unscoped_sources(
     };
     let mut documents = Vec::new();
     let mut diagnostics = Vec::new();
-    let mut seen = BTreeSet::new();
+    let mut seen = BTreeMap::new();
     enumerate_root(
         &canonical_root,
         &root,
@@ -153,6 +159,23 @@ pub fn discover_unscoped_sources(
     (documents, diagnostics)
 }
 
+/// Whether a canonical path is eligible for the built-in source-only walker.
+/// Manifest-backed callers additionally apply their configured roots and
+/// custom excludes.
+#[must_use]
+pub fn allows_unscoped_source_path(project_root: &Path, path: &Path) -> bool {
+    let Ok(relative) = path.strip_prefix(project_root) else {
+        return false;
+    };
+    let relative = relative.to_string_lossy().replace('\\', "/");
+    !relative.is_empty()
+        && path
+            .file_name()
+            .and_then(|name| name.to_str())
+            .is_some_and(|name| name.ends_with(".recite"))
+        && !is_excluded_relative(&relative, &[])
+}
+
 struct Enumeration<'a> {
     project_root: &'a Path,
     source_root: &'a Path,
@@ -160,7 +183,7 @@ struct Enumeration<'a> {
     excludes: &'a [GlobPattern],
     documents: &'a mut Vec<DiscoveredDocument>,
     diagnostics: &'a mut Vec<DiscoveryDiagnostic>,
-    seen: &'a mut BTreeSet<PathBuf>,
+    seen: &'a mut BTreeMap<PathBuf, usize>,
 }
 
 impl Enumeration<'_> {
@@ -209,9 +232,7 @@ impl Enumeration<'_> {
                     continue;
                 }
             };
-            if is_builtin_excluded(&file_name)
-                || self.excludes.iter().any(|glob| glob.matches(&relative))
-            {
+            if is_excluded_relative(&relative, self.excludes) {
                 continue;
             }
 
@@ -272,10 +293,20 @@ impl Enumeration<'_> {
                     continue;
                 }
             };
+            if !canonical
+                .file_name()
+                .and_then(|name| name.to_str())
+                .is_some_and(|name| name.ends_with(".recite"))
+            {
+                continue;
+            }
             let key = match canonical.strip_prefix(self.project_root) {
                 Ok(relative) => relative.to_string_lossy().replace('\\', "/"),
                 Err(_) => continue,
             };
+            if is_excluded_relative(&key, self.excludes) {
+                continue;
+            }
             let text = match std::fs::read(&canonical).and_then(|bytes| {
                 String::from_utf8(bytes).map_err(|error| {
                     std::io::Error::new(std::io::ErrorKind::InvalidData, error.utf8_error())
@@ -295,10 +326,14 @@ impl Enumeration<'_> {
                     continue;
                 }
             };
-            if self.seen.insert(canonical.clone()) {
+            if let Some(index) = self.seen.get(&canonical).copied() {
+                self.documents[index].source_paths.push(path);
+            } else {
+                self.seen.insert(canonical.clone(), self.documents.len());
                 self.documents.push(DiscoveredDocument {
                     key: DocumentKey::new(key),
                     path: canonical,
+                    source_paths: vec![path],
                     root_index: self.root_index,
                     text,
                 });
@@ -313,4 +348,9 @@ fn is_builtin_excluded(name: &str) -> bool {
             name,
             "target" | "build" | "dist" | "out" | "generated" | "vendor" | "node_modules"
         )
+}
+
+fn is_excluded_relative(relative: &str, excludes: &[GlobPattern]) -> bool {
+    relative.split('/').any(is_builtin_excluded)
+        || excludes.iter().any(|glob| glob.matches(relative))
 }

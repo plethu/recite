@@ -1,4 +1,4 @@
-use std::collections::BTreeSet;
+use std::collections::BTreeMap;
 use std::path::{Path, PathBuf};
 
 use recite_core::ProjectManifestSource;
@@ -259,7 +259,7 @@ pub fn discover_project(
     }
 
     let mut documents = Vec::new();
-    let mut seen = BTreeSet::new();
+    let mut seen = BTreeMap::new();
     for root in &roots {
         enumerate_root(
             &project_root,
