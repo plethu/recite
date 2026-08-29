@@ -107,7 +107,7 @@ wire compatibility fixtures, and focused reviews for each subsystem.
 | `crates/recite-core/src/compiled/messagepack/validate.rs` | 372 | production | core/wire | cohesive | #89: validation is part of the decoder boundary |
 | `crates/recite-lsp/src/workspace.rs` | 473 | production | lsp/workspace | follow-up | #164: separate document state, saved indexes, and analysis snapshots |
 | `crates/recite-compiler/src/wire/messagepack.rs` | 347 | production | compiler/wire | cohesive | #89: encoder mirror of the explicit decoder wire surface |
-| `crates/recite-cli/src/error.rs` | 372 | production | cli | review | Keep user-facing error projection separate from typed domain errors |
+| `crates/recite-cli/src/error.rs` | 355 | production | cli | review | Keep user-facing error projection separate from typed domain errors |
 | `crates/recite-ui/tests/diagnostics.rs` | 371 | test/support | ui/tests | review | Structured diagnostic resource and compatibility-message coverage |
 | `crates/recite-lsp/src/features/navigation.rs` | 394 | production | lsp/features | review | Feature-specific navigation projection |
 | `crates/recite-lsp/src/features/hover.rs` | 260 | production | lsp/features | review | Feature-specific hover projection |
@@ -152,7 +152,6 @@ wire compatibility fixtures, and focused reviews for each subsystem.
 | `crates/recite-compiler/src/validation/conditions.rs` | 282 | production | compiler/validation | cohesive | Condition validation |
 | `crates/recite-core/src/diagnostic/explanation/validation.rs` | 352 | production | core/diagnostics | cohesive | Diagnostic explanation catalog |
 | `crates/recite-cli/src/play/tui/render/prompt.rs` | 270 | production | cli/tui | cohesive | Prompt rendering |
-| `crates/recite-cli/src/tui/config.rs` | 268 | production | cli/tui | follow-up | #167: replace manual config locations with OS-aware loading |
 | `crates/recite-cli/src/cli_help.rs` | 309 | production | cli | cohesive | CLI help presentation |
 | `crates/recite-godot/src/bindings.rs` | 353 | production | godot | review | Host binding declarations |
 | `crates/recite-cli/src/runtime_fixture/prompt.rs` | 276 | production | cli/runtime-fixture | cohesive | Fixture prompt projection |
