@@ -3,6 +3,9 @@ use std::{fmt, path::PathBuf};
 use recite_ui::UiLocale;
 use serde::Deserialize;
 
+mod presence;
+pub(super) use presence::UserConfigFieldPresence;
+
 /// The current user configuration format.
 pub const CONFIG_VERSION: u32 = 1;
 
@@ -218,40 +221,5 @@ impl LoadedUserConfig {
     #[must_use]
     pub const fn is_legacy(&self) -> bool {
         matches!(self.format, ConfigFormat::LegacyPreVersioned)
-    }
-}
-
-/// Presence of each user-owned field after parsing or programmatic loading.
-#[derive(Clone, Copy, Debug, Default, Eq, PartialEq)]
-pub(super) struct UserConfigFieldPresence {
-    pub(super) ui_locale: bool,
-    pub(super) keymap: bool,
-    pub(super) key_hints: bool,
-    pub(super) color: bool,
-    pub(super) contrast: bool,
-    pub(super) show_unavailable_choices: bool,
-}
-
-impl UserConfigFieldPresence {
-    pub(super) const fn all_explicit() -> Self {
-        Self {
-            ui_locale: true,
-            keymap: true,
-            key_hints: true,
-            color: true,
-            contrast: true,
-            show_unavailable_choices: true,
-        }
-    }
-
-    pub(super) const fn is_explicit(self, field: UserConfigField) -> bool {
-        match field {
-            UserConfigField::UiLocale => self.ui_locale,
-            UserConfigField::Keymap => self.keymap,
-            UserConfigField::KeyHints => self.key_hints,
-            UserConfigField::Color => self.color,
-            UserConfigField::Contrast => self.contrast,
-            UserConfigField::ShowUnavailableChoices => self.show_unavailable_choices,
-        }
     }
 }
