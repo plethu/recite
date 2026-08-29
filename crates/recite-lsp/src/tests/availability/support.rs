@@ -108,6 +108,10 @@ pub(super) fn authoring_schema() -> &'static str {
     }
   },
   "metadata": {
+    "talker": {
+      "targets": ["line"],
+      "type": "speaker"
+    },
     "mood": {
       "targets": ["line", "choice"],
       "type": "symbol",

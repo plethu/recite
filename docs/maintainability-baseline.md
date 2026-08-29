@@ -111,7 +111,6 @@ wire compatibility fixtures, and focused reviews for each subsystem.
 | `crates/recite-ui/tests/diagnostics.rs` | 371 | test/support | ui/tests | review | Structured diagnostic resource and compatibility-message coverage |
 | `crates/recite-lsp/src/features/navigation.rs` | 394 | production | lsp/features | review | Feature-specific navigation projection |
 | `crates/recite-lsp/src/features/completion.rs` | 289 | production | lsp/features | review | Feature-specific completion and precedence handling |
-| `crates/recite-lsp/src/features/hover.rs` | 258 | production | lsp/features | review | Feature-specific hover projection |
 | `crates/recite-lsp/src/tests/availability/completion.rs` | 373 | test/support | lsp/tests | review | #176: contextual selector completion coverage |
 | `crates/recite-benchmarks/src/report/mod.rs` | 389 | production | benchmarks | cohesive | Report aggregation boundary |
 | `crates/recite-benchmarks/src/report/fixture.rs` | 387 | production | benchmarks | cohesive | Fixture report model |

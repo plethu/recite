@@ -123,7 +123,7 @@ pub(super) fn completes_project_and_schema_authoring_symbols() {
             )
             .expect("metadata key completion"),
     );
-    assert_eq!(metadata_keys, ["mood", "portrait", "stage"]);
+    assert_eq!(metadata_keys, ["mood", "portrait", "stage", "talker"]);
 
     harness.finish();
 }

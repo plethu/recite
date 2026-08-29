@@ -32,6 +32,14 @@ pub(super) fn hover_prioritizes_contextual_metadata_values() {
         "  Same-name invalid metadata value.\n",
         "> dotted@1a2b3c4d5e6f708192a3 speaker=rhea portrait=rhea.face\n",
         "  Dotted metadata value.\n",
+        "> typed@5a6b7c8d9e0f123b4c5d speaker=rhea talker=hazel\n",
+        "  Speaker-typed metadata value.\n",
+        "> target_comma@6a7b8c9d0e1f234c5d6e speaker=rhea portrait=flat,\n",
+        "  Trailing comma is not a metadata value.\n",
+        "> target_paren@7a8b9c0d1e2f345d6e7f speaker=rhea portrait=flat)\n",
+        "  Trailing parenthesis is not a metadata value.\n",
+        "> target_bracket@8a9b0c1d2e3f456e7f80 speaker=rhea portrait=flat]\n",
+        "  Trailing bracket is not a metadata value.\n",
         "> comma@2a3b4c5d6e7f8091a2b3 mood=warm, stage=hazel\n",
         "  Trailing comma is not a selector value.\n",
         "> paren@3a4b5c6d7e8f901a2b3c mood=warm) stage=hazel\n",
@@ -49,8 +57,8 @@ pub(super) fn hover_prioritizes_contextual_metadata_values() {
                 diagnostic.code == Some(NumberOrString::String("RECITE_PARSE008".to_owned()))
             })
             .count(),
-        3,
-        "each compiler-invalid selector punctuation must remain a diagnostic",
+        6,
+        "each compiler-invalid metadata punctuation must remain a diagnostic",
     );
 
     let hover = hover_text(
@@ -77,6 +85,17 @@ pub(super) fn hover_prioritizes_contextual_metadata_values() {
         "an invalid contextual value must not fall through to the hazel speaker",
     );
 
+    let typed_hover = harness
+        .hover(
+            source_uri.clone(),
+            position_after(
+                source,
+                "typed@5a6b7c8d9e0f123b4c5d speaker=rhea talker=hazel",
+            ),
+        )
+        .expect("speaker-typed metadata value hover");
+    assert!(hover_text(typed_hover).contains("Recite speaker `hazel`"));
+
     let dotted_hover = harness
         .hover(
             source_uri.clone(),
@@ -95,6 +114,28 @@ pub(super) fn hover_prioritizes_contextual_metadata_values() {
         )),
         "hover range must cover the complete dotted symbol",
     );
+
+    for target in [
+        "target_comma@6a7b8c9d0e1f234c5d6e speaker=rhea portrait=",
+        "target_paren@7a8b9c0d1e2f345d6e7f speaker=rhea portrait=",
+        "target_bracket@8a9b0c1d2e3f456e7f80 speaker=rhea portrait=",
+    ] {
+        assert!(
+            harness
+                .hover(source_uri.clone(), position_after(source, target))
+                .is_none(),
+            "metadata value with trailing punctuation must not resolve: {target:?}",
+        );
+        assert_eq!(
+            completion_labels(
+                harness
+                    .completion(source_uri.clone(), position_after(source, target))
+                    .expect("metadata value completion response"),
+            ),
+            ["flat", "rhea.face"],
+            "completion remains available at the editable value prefix: {target:?}",
+        );
+    }
 
     for selector in [
         "mood=warm, stage=",
