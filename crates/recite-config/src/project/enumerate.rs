@@ -106,6 +106,7 @@ pub(super) fn enumerate_root(
     collect_directory(
         project_root,
         &root.path,
+        &root.path,
         root.index,
         excludes,
         documents,
@@ -155,6 +156,7 @@ pub fn discover_unscoped_sources(
 fn collect_directory(
     project_root: &Path,
     directory: &Path,
+    source_root: &Path,
     root_index: usize,
     excludes: &[GlobPattern],
     documents: &mut Vec<DiscoveredDocument>,
@@ -218,10 +220,13 @@ fn collect_directory(
             }
         };
         // Symlink directories are intentionally never traversed. Symlink files
-        // are accepted only when their canonical target remains in the project.
+        // are accepted only when their canonical target remains in this source
+        // root and the project.
         if file_type.is_symlink() {
             match std::fs::canonicalize(&path) {
-                Ok(target) if !target.starts_with(project_root) => {
+                Ok(target)
+                    if !target.starts_with(project_root) || !target.starts_with(source_root) =>
+                {
                     diagnostics.push(DiscoveryDiagnostic::FileOutsideProject { path, target });
                     continue;
                 }
@@ -233,6 +238,7 @@ fn collect_directory(
             collect_directory(
                 project_root,
                 &path,
+                source_root,
                 root_index,
                 excludes,
                 documents,
@@ -248,7 +254,7 @@ fn collect_directory(
             continue;
         }
         let canonical = match std::fs::canonicalize(&path) {
-            Ok(path) if path.starts_with(project_root) => path,
+            Ok(path) if path.starts_with(project_root) && path.starts_with(source_root) => path,
             Ok(target) => {
                 diagnostics.push(DiscoveryDiagnostic::FileOutsideProject { path, target });
                 continue;

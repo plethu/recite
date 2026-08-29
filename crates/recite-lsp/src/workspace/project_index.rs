@@ -76,6 +76,7 @@ fn summary_sort_key(left: &FileSummary, right: &FileSummary) -> std::cmp::Orderi
 }
 
 pub(super) struct SavedProjectIndex {
+    project_root: PathBuf,
     roots: Vec<PathBuf>,
     documents: BTreeMap<PathBuf, SavedDocument>,
     manifest: Option<recite_config::ProjectManifest>,
@@ -84,11 +85,19 @@ pub(super) struct SavedProjectIndex {
     manifest_text: String,
     discovery_start: Option<PathBuf>,
     discovery_failed: bool,
+    aliases: BTreeMap<PathBuf, (PathBuf, bool)>,
 }
 
 impl SavedProjectIndex {
     pub(super) fn discover(config: &WorkspaceConfig) -> Self {
         let mut index = Self {
+            project_root: config
+                .discovery
+                .as_ref()
+                .map(|report| report.manifest().project_root().to_owned())
+                .or_else(|| config.discovery_start.clone())
+                .or_else(|| config.roots.first().cloned())
+                .unwrap_or_default(),
             roots: config.roots.clone(),
             documents: BTreeMap::new(),
             manifest: config
@@ -114,6 +123,7 @@ impl SavedProjectIndex {
                 .unwrap_or_default(),
             discovery_start: config.discovery_start.clone(),
             discovery_failed: config.discovery_failed,
+            aliases: BTreeMap::new(),
         };
         if let Some(report) = config.discovery.as_ref() {
             index.diagnostics.extend(
@@ -145,10 +155,15 @@ impl SavedProjectIndex {
         // Remove the old canonical entry before resolving the replacement.
         // A URI can be retargeted through a symlink, and retaining the old key
         // would leave stale or duplicate summaries in the project snapshot.
-        let removed = self.remove_uri(uri);
         let Some(path) = uri_to_file_path(uri) else {
-            return removed;
+            return false;
         };
+        let lexical_path = path.clone();
+        let canonical_before = fs::canonicalize(&path).ok();
+        let removed = self.remove_uri(uri, &lexical_path, canonical_before.as_deref());
+        if self.discovery_failed {
+            return removed;
+        }
         let Some(path) = canonical_or_existing_parent_path(&path) else {
             return removed;
         };
@@ -164,13 +179,38 @@ impl SavedProjectIndex {
             return true;
         }
 
+        if let Some(canonical) = canonical_before
+            && lexical_path != canonical
+        {
+            let direct_target = self
+                .documents
+                .values()
+                .any(|document| document.summary.saved_path() == Some(canonical.as_path()));
+            self.aliases
+                .insert(lexical_path, (canonical, direct_target));
+        }
         self.refresh_path(&path) || removed
     }
 
-    fn remove_uri(&mut self, uri: &Uri) -> bool {
+    fn remove_uri(
+        &mut self,
+        uri: &Uri,
+        lexical_path: &Path,
+        canonical_path: Option<&Path>,
+    ) -> bool {
         let before = self.documents.len();
-        self.documents
-            .retain(|_, document| document.summary.uri() != uri);
+        let aliased_path = self.aliases.remove(lexical_path);
+        let lexical_is_canonical =
+            canonical_path.is_some_and(|canonical| canonical == lexical_path);
+        self.documents.retain(|_, document| {
+            let matches_uri = document.summary.uri() == uri;
+            let matches_canonical =
+                lexical_is_canonical && canonical_path == document.summary.saved_path();
+            let matches_alias = aliased_path.as_ref().is_some_and(|(aliased, direct)| {
+                !direct && Some(aliased.as_path()) == document.summary.saved_path()
+            });
+            !(matches_uri || matches_canonical || matches_alias)
+        });
         before != self.documents.len()
     }
 
@@ -189,8 +229,10 @@ impl SavedProjectIndex {
         result: Result<recite_config::ProjectDiscoveryReport, recite_config::ProjectDiscoveryError>,
     ) {
         self.documents.clear();
+        self.aliases.clear();
         match result {
             Ok(report) => {
+                self.project_root = report.manifest().project_root().to_owned();
                 self.roots = report
                     .manifest()
                     .roots()
@@ -213,7 +255,11 @@ impl SavedProjectIndex {
             }
             Err(recite_config::ProjectDiscoveryError::NotFound { .. }) => {
                 self.manifest = None;
-                self.manifest_path = None;
+                self.manifest_path = self.manifest_path.clone().or_else(|| {
+                    self.discovery_start
+                        .as_deref()
+                        .map(|path| path.join(recite_config::PROJECT_MANIFEST_FILE))
+                });
                 self.manifest_text.clear();
                 self.diagnostics.clear();
                 self.discovery_failed = false;
@@ -244,7 +290,10 @@ impl SavedProjectIndex {
     }
 
     fn refresh_path(&mut self, path: &Path) -> bool {
-        let Some(root) = self.root_for_path(path) else {
+        if self.discovery_failed {
+            return false;
+        }
+        let Some(_root) = self.root_for_path(path) else {
             return false;
         };
         if self
@@ -268,7 +317,7 @@ impl SavedProjectIndex {
             self.documents.remove(path);
             return true;
         };
-        let Some(project_relative_path) = project_relative_path(root, path) else {
+        let Some(project_relative_path) = project_relative_path(&self.project_root, path) else {
             self.documents.remove(path);
             return true;
         };
@@ -310,6 +359,16 @@ impl SavedProjectIndex {
 
     pub(super) fn manifest_text(&self) -> &str {
         &self.manifest_text
+    }
+
+    pub(super) fn document_uris(&self) -> impl Iterator<Item = &Uri> {
+        self.documents
+            .values()
+            .map(|document| document.summary.uri())
+    }
+
+    pub(super) fn project_key_for_path(&self, path: &Path) -> Option<String> {
+        project_relative_path(&self.project_root, path)
     }
 
     fn insert_discovered(&mut self, document: &DiscoveredDocument) {

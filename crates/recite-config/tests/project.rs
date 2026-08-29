@@ -253,3 +253,32 @@ fn symlink_directories_are_not_recurred_and_outside_files_are_reported() {
     );
     assert_eq!(report.coverage(), Coverage::Partial);
 }
+
+#[cfg(unix)]
+#[test]
+fn symlink_files_must_remain_inside_their_configured_source_root() {
+    use std::os::unix::fs::symlink;
+
+    let temp = TempDir::new().expect("tempdir");
+    write(
+        temp.path(),
+        "recite.project.toml",
+        &manifest(r#"["src"]"#, "[]"),
+    );
+    write(temp.path(), "docs/outside.recite", ":: outside\n");
+    fs::create_dir_all(temp.path().join("src")).expect("source root");
+    symlink(
+        temp.path().join("docs/outside.recite"),
+        temp.path().join("src/link.recite"),
+    )
+    .expect("source link");
+
+    let report = discover_project(temp.path()).expect("project discovery");
+    assert!(report.documents().is_empty());
+    assert!(report.diagnostics().iter().any(|diagnostic| matches!(
+        diagnostic,
+        DiscoveryDiagnostic::FileOutsideProject { path, target }
+            if path.ends_with("src/link.recite") && target.ends_with("docs/outside.recite")
+    )));
+    assert_eq!(report.coverage(), Coverage::Partial);
+}

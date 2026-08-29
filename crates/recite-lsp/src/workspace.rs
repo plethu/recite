@@ -23,7 +23,7 @@ use schema_index::SchemaIndex;
 
 use crate::documents::{DocumentChangeResult, OpenDocument, OpenDocumentStore};
 use crate::features;
-use crate::paths::{project_relative_path, uri_to_file_path};
+use crate::paths::uri_to_file_path;
 use crate::summary::{FileSummary, OpenFileIdentity};
 
 #[derive(Clone, Copy, Debug, Eq, PartialEq)]
@@ -269,14 +269,14 @@ impl LspWorkspace {
         let Some(canonical_path) = fs::canonicalize(path).ok() else {
             return uri_keyed_open_identity(uri);
         };
-        let Some(root) = self.saved.root_for_path(&canonical_path) else {
+        if self.saved.root_for_path(&canonical_path).is_none() {
             return uri_keyed_open_identity(uri);
-        };
+        }
 
         OpenFileIdentity {
             uri,
             saved_path: Some(canonical_path.clone()),
-            project_relative_path: project_relative_path(root, &canonical_path),
+            project_relative_path: self.saved.project_key_for_path(&canonical_path),
         }
     }
 }

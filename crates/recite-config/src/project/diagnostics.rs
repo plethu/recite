@@ -143,7 +143,7 @@ impl DiscoveryDiagnostic {
             Self::FileOutsideProject { path, target } => (
                 path,
                 format!(
-                    "project source symlink {} resolves outside the project to {}",
+                    "project source symlink {} resolves outside its configured source root or project to {}",
                     display(path),
                     display(target)
                 ),

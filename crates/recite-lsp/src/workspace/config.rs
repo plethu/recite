@@ -36,33 +36,46 @@ impl WorkspaceConfig {
             discovery_start,
             discovery_manifest_path,
         ) = match fallback_roots.first() {
-            Some(root) => match discover_project(root) {
-                Ok(report) => (
-                    Some(report.clone()),
-                    Vec::new(),
-                    false,
-                    Some(report.manifest().project_root().to_owned()),
-                    Some(report.manifest().manifest_path().to_owned()),
-                ),
-                Err(recite_config::ProjectDiscoveryError::NotFound { .. }) => {
-                    // A workspace without a Recite manifest remains usable for
-                    // source-only editor features; explicit project commands
-                    // still report this typed failure.
-                    (None, Vec::new(), false, Some(root.clone()), None)
-                }
-                Err(error) => (
-                    None,
-                    error.diagnostics(),
-                    true,
-                    Some(
-                        error
-                            .manifest_path()
-                            .and_then(|path| path.parent())
-                            .map_or_else(|| root.clone(), PathBuf::from),
+            Some(root) => {
+                let start = if root.is_dir() {
+                    root.clone()
+                } else {
+                    root.parent().map_or_else(|| root.clone(), PathBuf::from)
+                };
+                match discover_project(root) {
+                    Ok(report) => (
+                        Some(report.clone()),
+                        Vec::new(),
+                        false,
+                        Some(report.manifest().project_root().to_owned()),
+                        Some(report.manifest().manifest_path().to_owned()),
                     ),
-                    error.manifest_path().map(PathBuf::from),
-                ),
-            },
+                    Err(recite_config::ProjectDiscoveryError::NotFound { .. }) => {
+                        // A workspace without a Recite manifest remains usable for
+                        // source-only editor features; explicit project commands
+                        // still report this typed failure.
+                        (
+                            None,
+                            Vec::new(),
+                            false,
+                            Some(start.clone()),
+                            Some(start.join(recite_config::PROJECT_MANIFEST_FILE)),
+                        )
+                    }
+                    Err(error) => (
+                        None,
+                        error.diagnostics(),
+                        true,
+                        Some(
+                            error
+                                .manifest_path()
+                                .and_then(|path| path.parent())
+                                .map_or_else(|| start.clone(), PathBuf::from),
+                        ),
+                        error.manifest_path().map(PathBuf::from),
+                    ),
+                }
+            }
             None => (None, Vec::new(), false, None, None),
         };
         let roots = discovery

@@ -47,6 +47,7 @@ impl LspWorkspace {
     }
 
     pub(crate) fn refresh_project_manifest(&mut self) -> Vec<DiagnosticRefresh> {
+        let old_document_uris = self.saved.document_uris().cloned().collect::<Vec<_>>();
         let old_uri = self
             .saved
             .manifest_path()
@@ -54,16 +55,25 @@ impl LspWorkspace {
         let old_had_diagnostics = !self.saved.diagnostics().is_empty();
         self.saved.refresh_manifest();
         self.rebuild_next_generation();
+        let mut refreshes = Vec::new();
         if let Some(refresh) = self.project_diagnostics() {
-            return vec![refresh];
-        }
-        if old_had_diagnostics && let Some(uri) = old_uri {
-            return vec![DiagnosticRefresh::Clear {
+            refreshes.push(refresh);
+        } else if old_had_diagnostics && let Some(uri) = old_uri {
+            refreshes.push(DiagnosticRefresh::Clear {
                 uri,
                 generation: self.generation,
-            }];
+            });
         }
-        Vec::new()
+        for uri in old_document_uris {
+            if self.saved.document_by_uri(&uri).is_none() && self.documents.document(&uri).is_none()
+            {
+                refreshes.push(DiagnosticRefresh::Clear {
+                    uri,
+                    generation: self.generation,
+                });
+            }
+        }
+        refreshes
     }
 
     pub(crate) fn refresh_watched_uri(&mut self, uri: &Uri) -> Vec<DiagnosticRefresh> {
