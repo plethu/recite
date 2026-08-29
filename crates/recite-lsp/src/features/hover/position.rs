@@ -139,27 +139,19 @@ pub(super) fn value_position_at(line: &str, byte_index: usize) -> Option<ValuePo
     if byte_index > line.len() {
         return None;
     }
-    let token_start = line[..byte_index]
-        .rfind(char::is_whitespace)
-        .map_or(0, |index| index + 1);
-    let token_end = line[byte_index..]
-        .find(char::is_whitespace)
-        .map_or(line.len(), |index| byte_index + index);
-    let token = line.get(token_start..token_end)?;
-    let (key, value) = token.split_once('=')?;
-    let value_start = token_start + key.len() + 1;
-    if key.is_empty() || byte_index < value_start {
+    let assignment = recite_parser::metadata_assignment_at(line, byte_index)?;
+    if assignment.key.is_empty() || byte_index < assignment.value_start {
         return None;
     }
-    if trimmed.starts_with('?') && key == "reason" {
+    if trimmed.starts_with('?') && assignment.key == "reason" {
         return Some(ValuePosition::DedicatedChoiceClause {
-            complete_symbol: is_symbol(value),
+            complete_symbol: is_symbol(assignment.value),
         });
     }
     Some(ValuePosition::Metadata {
-        key,
-        value,
-        complete_symbol: is_complete_symbol_value(value),
+        key: assignment.key,
+        value: assignment.value,
+        complete_symbol: is_complete_symbol_value(assignment.value),
     })
 }
 

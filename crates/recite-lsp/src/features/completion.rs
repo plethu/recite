@@ -99,19 +99,16 @@ fn completion_context(line_prefix: &str) -> CompletionContext {
     }
 
     let site = selector_site(line_prefix);
-    if let Some(token) = current_token(line_prefix) {
-        if token.starts_with("speaker=") && !matches!(site, Some(SelectorSite::Choice) | None) {
+    if let Some(assignment) = recite_parser::metadata_assignment_at(line_prefix, line_prefix.len())
+        && let Some(site) = site
+    {
+        if assignment.key == "speaker" && !matches!(site, SelectorSite::Choice) {
             return CompletionContext::Speaker;
         }
-        if let Some((key, _)) = token.split_once('=')
-            && !key.is_empty()
-            && let Some(site) = site
-        {
-            return CompletionContext::MetadataValue {
-                key: key.to_owned(),
-                site,
-            };
-        }
+        return CompletionContext::MetadataValue {
+            key: assignment.key.to_owned(),
+            site,
+        };
     }
 
     if is_metadata_key_position(line_prefix, site) {
