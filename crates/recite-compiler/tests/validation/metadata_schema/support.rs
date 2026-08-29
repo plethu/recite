@@ -138,7 +138,11 @@ pub(super) fn metadata_domain_schema() -> ProjectSchema {
                 values_by_context: BTreeMap::from([
                     (
                         "hazel".to_owned(),
-                        BTreeSet::from(["flat".to_owned(), "neutral".to_owned()]),
+                        BTreeSet::from([
+                            "flat".to_owned(),
+                            "hazel".to_owned(),
+                            "neutral".to_owned(),
+                        ]),
                     ),
                     ("rhea".to_owned(), BTreeSet::from(["flat".to_owned()])),
                 ]),

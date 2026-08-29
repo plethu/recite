@@ -1,6 +1,7 @@
 mod authoring;
 mod completion;
 mod diagnostics;
+mod metadata;
 mod projection_completion;
 mod support;
 
@@ -66,6 +67,7 @@ pub(super) fn hover_uses_utf16_positions_after_non_ascii_prefix() {
 
 pub(super) fn hover_describes_schema_and_project_symbols() {
     authoring::hover_describes_schema_and_project_symbols();
+    metadata::hover_prioritizes_contextual_metadata_values();
 }
 
 pub(super) fn malformed_completion_and_hover_params_return_invalid_params() {

@@ -67,7 +67,7 @@ pub(super) fn authoring_schema() -> &'static str {
       "kind": "contextual",
       "selector": "field:speaker",
       "values_by_context": {
-        "hazel": ["smile", "wry", "hazel_only"],
+        "hazel": ["smile", "wry", "hazel", "hazel_only"],
         "rhea": ["flat"]
       },
       "missing_context": { "policy": "fallback", "domain": "portrait_all" },

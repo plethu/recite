@@ -183,7 +183,7 @@ pub(super) fn completes_metadata_domain_values_from_schema_context() {
             )
             .expect("speaker contextual metadata completion"),
     );
-    assert_eq!(speaker_context, ["hazel_only", "smile", "wry"]);
+    assert_eq!(speaker_context, ["hazel", "hazel_only", "smile", "wry"]);
 
     let inherited_speaker = completion_labels(
         harness

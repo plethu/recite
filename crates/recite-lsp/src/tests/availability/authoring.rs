@@ -1,5 +1,5 @@
 use lsp_types::request::{Completion, HoverRequest, Request as LspRequest};
-use lsp_types::{CompletionResponse, HoverContents, Position};
+use lsp_types::{HoverContents, Position};
 use serde_json::json;
 use tempfile::TempDir;
 
@@ -328,9 +328,13 @@ fn hover_text(hover: lsp_types::Hover) -> String {
     }
 }
 
-fn completion_labels(response: CompletionResponse) -> Vec<String> {
+fn completion_labels(response: lsp_types::CompletionResponse) -> Vec<String> {
     match response {
-        CompletionResponse::Array(items) => items.into_iter().map(|item| item.label).collect(),
-        CompletionResponse::List(list) => list.items.into_iter().map(|item| item.label).collect(),
+        lsp_types::CompletionResponse::Array(items) => {
+            items.into_iter().map(|item| item.label).collect()
+        }
+        lsp_types::CompletionResponse::List(list) => {
+            list.items.into_iter().map(|item| item.label).collect()
+        }
     }
 }
