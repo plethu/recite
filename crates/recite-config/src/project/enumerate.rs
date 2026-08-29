@@ -103,16 +103,16 @@ pub(super) fn enumerate_root(
     diagnostics: &mut Vec<DiscoveryDiagnostic>,
     seen: &mut BTreeSet<PathBuf>,
 ) {
-    collect_directory(
+    let mut enumeration = Enumeration {
         project_root,
-        &root.path,
-        &root.path,
-        root.index,
+        source_root: &root.path,
+        root_index: root.index,
         excludes,
         documents,
         diagnostics,
         seen,
-    );
+    };
+    enumeration.collect_directory(&root.path);
 }
 
 /// Enumerate a source-only workspace without inventing a project manifest.
@@ -153,149 +153,156 @@ pub fn discover_unscoped_sources(
     (documents, diagnostics)
 }
 
-fn collect_directory(
-    project_root: &Path,
-    directory: &Path,
-    source_root: &Path,
+struct Enumeration<'a> {
+    project_root: &'a Path,
+    source_root: &'a Path,
     root_index: usize,
-    excludes: &[GlobPattern],
-    documents: &mut Vec<DiscoveredDocument>,
-    diagnostics: &mut Vec<DiscoveryDiagnostic>,
-    seen: &mut BTreeSet<PathBuf>,
-) {
-    let entries = match std::fs::read_dir(directory) {
-        Ok(entries) => entries,
-        Err(error) => {
-            diagnostics.push(DiscoveryDiagnostic::ReadDirectory {
-                path: directory.to_owned(),
-                message: error.to_string(),
-            });
-            return;
-        }
-    };
-    let mut readable_entries = Vec::new();
-    for entry in entries {
-        match entry {
-            Ok(entry) => readable_entries.push(entry),
-            Err(error) => diagnostics.push(DiscoveryDiagnostic::ReadDirectory {
-                path: directory.to_owned(),
-                message: error.to_string(),
-            }),
-        }
-    }
-    let mut entries = readable_entries;
-    entries.sort_by_key(|entry| entry.file_name());
+    excludes: &'a [GlobPattern],
+    documents: &'a mut Vec<DiscoveredDocument>,
+    diagnostics: &'a mut Vec<DiscoveryDiagnostic>,
+    seen: &'a mut BTreeSet<PathBuf>,
+}
 
-    for entry in entries {
-        let path = entry.path();
-        let file_name = match entry.file_name().to_str() {
-            Some(name) => name.to_owned(),
-            None => {
-                diagnostics.push(DiscoveryDiagnostic::NonUtf8Path { path });
-                continue;
-            }
-        };
-        let relative = match path.strip_prefix(project_root) {
-            Ok(path) => path.to_string_lossy().replace('\\', "/"),
-            Err(_) => {
-                diagnostics.push(DiscoveryDiagnostic::FileOutsideProject {
-                    path: path.clone(),
-                    target: path,
-                });
-                continue;
-            }
-        };
-        if is_builtin_excluded(&file_name) || excludes.iter().any(|glob| glob.matches(&relative)) {
-            continue;
-        }
-
-        let file_type = match entry.file_type() {
-            Ok(file_type) => file_type,
+impl Enumeration<'_> {
+    fn collect_directory(&mut self, directory: &Path) {
+        let entries = match std::fs::read_dir(directory) {
+            Ok(entries) => entries,
             Err(error) => {
-                diagnostics.push(DiscoveryDiagnostic::ReadDirectory {
-                    path: path.clone(),
+                self.diagnostics.push(DiscoveryDiagnostic::ReadDirectory {
+                    path: directory.to_owned(),
                     message: error.to_string(),
                 });
-                continue;
+                return;
             }
         };
-        // Symlink directories are intentionally never traversed. Symlink files
-        // are accepted only when their canonical target remains in this source
-        // root and the project.
-        if file_type.is_symlink() {
-            match std::fs::canonicalize(&path) {
-                Ok(target)
-                    if !target.starts_with(project_root) || !target.starts_with(source_root) =>
-                {
-                    diagnostics.push(DiscoveryDiagnostic::FileOutsideProject { path, target });
+        let mut readable_entries = Vec::new();
+        for entry in entries {
+            match entry {
+                Ok(entry) => readable_entries.push(entry),
+                Err(error) => self.diagnostics.push(DiscoveryDiagnostic::ReadDirectory {
+                    path: directory.to_owned(),
+                    message: error.to_string(),
+                }),
+            }
+        }
+        let mut entries = readable_entries;
+        entries.sort_by_key(|entry| entry.file_name());
+
+        for entry in entries {
+            let path = entry.path();
+            let file_name = match entry.file_name().to_str() {
+                Some(name) => name.to_owned(),
+                None => {
+                    self.diagnostics
+                        .push(DiscoveryDiagnostic::NonUtf8Path { path });
                     continue;
                 }
-                Ok(target) if target.is_dir() => continue,
-                Ok(_) => {}
-                Err(_) => {}
+            };
+            let relative = match path.strip_prefix(self.project_root) {
+                Ok(path) => path.to_string_lossy().replace('\\', "/"),
+                Err(_) => {
+                    self.diagnostics
+                        .push(DiscoveryDiagnostic::FileOutsideProject {
+                            path: path.clone(),
+                            target: path,
+                        });
+                    continue;
+                }
+            };
+            if is_builtin_excluded(&file_name)
+                || self.excludes.iter().any(|glob| glob.matches(&relative))
+            {
+                continue;
             }
-        } else if file_type.is_dir() {
-            collect_directory(
-                project_root,
-                &path,
-                source_root,
-                root_index,
-                excludes,
-                documents,
-                diagnostics,
-                seen,
-            );
-            continue;
-        } else if !file_type.is_file() {
-            continue;
-        }
 
-        if !file_name.ends_with(".recite") {
-            continue;
-        }
-        let canonical = match std::fs::canonicalize(&path) {
-            Ok(path) if path.starts_with(project_root) && path.starts_with(source_root) => path,
-            Ok(target) => {
-                diagnostics.push(DiscoveryDiagnostic::FileOutsideProject { path, target });
+            let file_type = match entry.file_type() {
+                Ok(file_type) => file_type,
+                Err(error) => {
+                    self.diagnostics.push(DiscoveryDiagnostic::ReadDirectory {
+                        path: path.clone(),
+                        message: error.to_string(),
+                    });
+                    continue;
+                }
+            };
+            // Symlink directories are intentionally never traversed. Symlink files
+            // are accepted only when their canonical target remains in this source
+            // root and the project.
+            if file_type.is_symlink() {
+                match std::fs::canonicalize(&path) {
+                    Ok(target)
+                        if !target.starts_with(self.project_root)
+                            || !target.starts_with(self.source_root) =>
+                    {
+                        self.diagnostics
+                            .push(DiscoveryDiagnostic::FileOutsideProject { path, target });
+                        continue;
+                    }
+                    Ok(target) if target.is_dir() => continue,
+                    Ok(_) => {}
+                    Err(_) => {}
+                }
+            } else if file_type.is_dir() {
+                self.collect_directory(&path);
+                continue;
+            } else if !file_type.is_file() {
                 continue;
             }
-            Err(error) => {
-                diagnostics.push(DiscoveryDiagnostic::ReadDirectory {
-                    path,
-                    message: error.to_string(),
-                });
+
+            if !file_name.ends_with(".recite") {
                 continue;
             }
-        };
-        let key = match canonical.strip_prefix(project_root) {
-            Ok(relative) => relative.to_string_lossy().replace('\\', "/"),
-            Err(_) => continue,
-        };
-        let text = match std::fs::read(&canonical).and_then(|bytes| {
-            String::from_utf8(bytes).map_err(|error| {
-                std::io::Error::new(std::io::ErrorKind::InvalidData, error.utf8_error())
-            })
-        }) {
-            Ok(text) => text,
-            Err(error) if error.kind() == std::io::ErrorKind::InvalidData => {
-                diagnostics.push(DiscoveryDiagnostic::NonUtf8Source { path: canonical });
-                continue;
-            }
-            Err(error) => {
-                diagnostics.push(DiscoveryDiagnostic::ReadDirectory {
+            let canonical = match std::fs::canonicalize(&path) {
+                Ok(path)
+                    if path.starts_with(self.project_root)
+                        && path.starts_with(self.source_root) =>
+                {
+                    path
+                }
+                Ok(target) => {
+                    self.diagnostics
+                        .push(DiscoveryDiagnostic::FileOutsideProject { path, target });
+                    continue;
+                }
+                Err(error) => {
+                    self.diagnostics.push(DiscoveryDiagnostic::ReadDirectory {
+                        path,
+                        message: error.to_string(),
+                    });
+                    continue;
+                }
+            };
+            let key = match canonical.strip_prefix(self.project_root) {
+                Ok(relative) => relative.to_string_lossy().replace('\\', "/"),
+                Err(_) => continue,
+            };
+            let text = match std::fs::read(&canonical).and_then(|bytes| {
+                String::from_utf8(bytes).map_err(|error| {
+                    std::io::Error::new(std::io::ErrorKind::InvalidData, error.utf8_error())
+                })
+            }) {
+                Ok(text) => text,
+                Err(error) if error.kind() == std::io::ErrorKind::InvalidData => {
+                    self.diagnostics
+                        .push(DiscoveryDiagnostic::NonUtf8Source { path: canonical });
+                    continue;
+                }
+                Err(error) => {
+                    self.diagnostics.push(DiscoveryDiagnostic::ReadDirectory {
+                        path: canonical,
+                        message: error.to_string(),
+                    });
+                    continue;
+                }
+            };
+            if self.seen.insert(canonical.clone()) {
+                self.documents.push(DiscoveredDocument {
+                    key: DocumentKey::new(key),
                     path: canonical,
-                    message: error.to_string(),
+                    root_index: self.root_index,
+                    text,
                 });
-                continue;
             }
-        };
-        if seen.insert(canonical.clone()) {
-            documents.push(DiscoveredDocument {
-                key: DocumentKey::new(key),
-                path: canonical,
-                root_index,
-                text,
-            });
         }
     }
 }
