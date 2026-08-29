@@ -1,5 +1,6 @@
+use super::super::LoadedUserConfig;
 use super::super::model::{
-    ConfigAuthority, KeyHints, Keymap, PlayConfig, TuiColorMode, TuiContrast, UserConfig,
+    ConfigAuthority, KeyHints, Keymap, PlayConfig, TuiColorMode, TuiContrast, UserConfigField,
 };
 use super::policy::{
     AuthorityValue, ColorPolicy, ContrastPolicy, KeyHintsPolicy, KeymapPolicy, ResolvedField,
@@ -101,25 +102,31 @@ impl ResolvedUiConfig<'_> {
 /// Apply the named user-field policies. No project or generated values enter
 /// this resolution graph, keeping dialogue semantics outside user config.
 pub fn resolve_user_config(
-    config: &UserConfig,
+    loaded: &LoadedUserConfig,
     invocation: &InvocationOverrides,
 ) -> ResolvedUserConfig {
-    let ui = &config.ui;
-    let play = &config.play;
+    let ui = &loaded.config.ui;
+    let play = &loaded.config.play;
     ResolvedUserConfig {
         ui_locale: resolve_field(
             UiLocalePolicy,
             UiLocale::default(),
-            [AuthorityValue::new(
-                ConfigAuthority::User,
-                ui.locale.clone(),
-            )],
+            [loaded
+                .field_is_explicit(UserConfigField::UiLocale)
+                .then(|| AuthorityValue::new(ConfigAuthority::User, ui.locale.clone()))]
+            .into_iter()
+            .flatten(),
         )
         .unwrap_or_else(|_| unreachable!("the named user policy permits user values")),
         keymap: resolve_field(
             KeymapPolicy,
             Keymap::default(),
-            std::iter::once(AuthorityValue::new(ConfigAuthority::User, ui.keymap)).chain(
+            [loaded
+                .field_is_explicit(UserConfigField::Keymap)
+                .then(|| AuthorityValue::new(ConfigAuthority::User, ui.keymap))]
+            .into_iter()
+            .flatten()
+            .chain(
                 invocation
                     .keymap
                     .into_iter()
@@ -132,28 +139,43 @@ pub fn resolve_user_config(
         key_hints: resolve_field(
             KeyHintsPolicy,
             KeyHints::default(),
-            [AuthorityValue::new(ConfigAuthority::User, ui.key_hints)],
+            [loaded
+                .field_is_explicit(UserConfigField::KeyHints)
+                .then(|| AuthorityValue::new(ConfigAuthority::User, ui.key_hints))]
+            .into_iter()
+            .flatten(),
         )
         .unwrap_or_else(|_| unreachable!("the named user policy permits user values")),
         color: resolve_field(
             ColorPolicy,
             TuiColorMode::default(),
-            [AuthorityValue::new(ConfigAuthority::User, ui.color)],
+            [loaded
+                .field_is_explicit(UserConfigField::Color)
+                .then(|| AuthorityValue::new(ConfigAuthority::User, ui.color))]
+            .into_iter()
+            .flatten(),
         )
         .unwrap_or_else(|_| unreachable!("the named user policy permits user values")),
         contrast: resolve_field(
             ContrastPolicy,
             TuiContrast::default(),
-            [AuthorityValue::new(ConfigAuthority::User, ui.contrast)],
+            [loaded
+                .field_is_explicit(UserConfigField::Contrast)
+                .then(|| AuthorityValue::new(ConfigAuthority::User, ui.contrast))]
+            .into_iter()
+            .flatten(),
         )
         .unwrap_or_else(|_| unreachable!("the named user policy permits user values")),
         show_unavailable_choices: resolve_field(
             ShowUnavailableChoicesPolicy,
             PlayConfig::default().show_unavailable_choices,
-            [AuthorityValue::new(
-                ConfigAuthority::User,
-                play.show_unavailable_choices,
-            )],
+            [loaded
+                .field_is_explicit(UserConfigField::ShowUnavailableChoices)
+                .then(|| {
+                    AuthorityValue::new(ConfigAuthority::User, play.show_unavailable_choices)
+                })]
+            .into_iter()
+            .flatten(),
         )
         .unwrap_or_else(|_| unreachable!("the named user policy permits user values")),
     }

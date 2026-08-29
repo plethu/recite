@@ -20,7 +20,7 @@ pub(super) fn export_json(schema: &ProjectSchema) -> String {
         if let Some(producer) = &metadata.producer {
             root.insert(
                 "producer".to_owned(),
-                serde_json::json!({ "kind": producer.kind, "id": producer.id }),
+                serde_json::json!({ "kind": producer.kind(), "id": producer.id() }),
             );
         }
         provenance::insert_manifest_metadata(&mut root, Some(metadata));

@@ -30,13 +30,14 @@ fn diagnostic() -> DiagnosticRecord {
     )
 }
 
+fn producer(kind: &str, id: &str) -> ProducerIdentity {
+    ProducerIdentity::new(kind, id).expect("valid producer identity")
+}
+
 #[test]
 fn names_are_namespaced_and_reports_are_sorted_and_deduplicated() {
     let report = CapabilityReport::new(
-        ProducerIdentity {
-            kind: "recite-cli".to_owned(),
-            id: "local".to_owned(),
-        },
+        producer("recite-cli", "local"),
         [
             capability("recite.preview", CapabilityStatus::Supported),
             capability("recite.compile", CapabilityStatus::ReadOnly),
@@ -62,10 +63,7 @@ fn names_are_namespaced_and_reports_are_sorted_and_deduplicated() {
 fn unavailable_status_retains_a_core_diagnostic_identity() {
     let diagnostic = diagnostic();
     let report = CapabilityReport::new(
-        ProducerIdentity {
-            kind: "recite-lsp".to_owned(),
-            id: "workspace".to_owned(),
-        },
+        producer("recite-lsp", "workspace"),
         [capability(
             "recite.schema.edit",
             CapabilityStatus::unavailable(diagnostic.clone()),
@@ -84,10 +82,7 @@ fn unavailable_status_retains_a_core_diagnostic_identity() {
 #[test]
 fn reports_round_trip_with_stable_wire_shape_and_order() {
     let report = CapabilityReport::new(
-        ProducerIdentity {
-            kind: "recite-cli".to_owned(),
-            id: "local".to_owned(),
-        },
+        producer("recite-cli", "local"),
         [capability(
             "recite.schema.edit",
             CapabilityStatus::unavailable(diagnostic()),
@@ -134,10 +129,7 @@ fn deserialization_revalidates_version_and_duplicate_policy() {
 #[test]
 fn conflicting_duplicate_statuses_fail_instead_of_last_write_wins() {
     let error = CapabilityReport::new(
-        ProducerIdentity {
-            kind: "recite-gui".to_owned(),
-            id: "standalone".to_owned(),
-        },
+        producer("recite-gui", "standalone"),
         [
             capability("recite.schema", CapabilityStatus::Supported),
             capability("recite.schema", CapabilityStatus::ReadOnly),
@@ -155,5 +147,21 @@ fn conflicting_duplicate_statuses_fail_instead_of_last_write_wins() {
 fn malformed_capability_names_are_rejected() {
     for name in ["compile", "Recite.compile", "recite.", "recite/compile"] {
         assert!(CapabilityName::new(name).is_err(), "{name} should fail");
+    }
+}
+
+#[test]
+fn capability_reports_reject_invalid_producer_identity_on_the_wire() {
+    for producer in [
+        r#"{"kind":"","id":"local"}"#,
+        r#"{"kind":"   ","id":"local"}"#,
+        r#"{"kind":"recite-cli","id":""}"#,
+        r#"{"kind":"recite-cli","id":"\t"}"#,
+    ] {
+        let wire = format!(r#"{{"version":1,"producer":{producer},"capabilities":[]}}"#);
+        assert!(
+            serde_json::from_str::<CapabilityReport>(&wire).is_err(),
+            "invalid producer should fail: {wire}"
+        );
     }
 }

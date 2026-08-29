@@ -158,11 +158,16 @@ pub(crate) fn validate_non_empty_string(
     value: &str,
     span: SourceSpan,
 ) -> bool {
-    if value.is_empty() {
+    if value.is_empty() || value.trim().is_empty() {
+        let reason = if value.is_empty() {
+            "must not be empty"
+        } else {
+            "must not contain only whitespace"
+        };
         diagnostics.push(schema_diagnostic(
             MALFORMED_SHAPE,
             "diagnostic-schema-001-empty-value",
-            format!("{field} must not be empty"),
+            format!("{field} {reason}"),
             span,
             [("field", DiagnosticArgumentValue::String(field.to_owned()))],
         ));

@@ -6,6 +6,7 @@ use std::{
 use recite_ui::UiLocale;
 use serde::Deserialize;
 
+use super::model::UserConfigFieldPresence;
 use super::{
     CONFIG_VERSION, ConfigError, ConfigFormat, ConfigProvenance, KeyHints, Keymap,
     LoadedUserConfig, PlayConfig, TuiColorMode, TuiContrast, UiConfig, UserConfig,
@@ -120,6 +121,14 @@ fn parse_user_config(
         }
     };
 
+    let field_presence = UserConfigFieldPresence {
+        ui_locale: raw.ui.locale.is_some(),
+        keymap: raw.ui.keymap.is_some(),
+        key_hints: raw.ui.key_hints.is_some(),
+        color: raw.ui.color.is_some(),
+        contrast: raw.ui.contrast.is_some(),
+        show_unavailable_choices: raw.play.show_unavailable_choices.is_some(),
+    };
     let defaults = UserConfig::default();
     let locale = match raw.ui.locale {
         Some(locale) => UiLocale::parse(&locale).map_err(|_| ConfigError::InvalidLocale {
@@ -150,5 +159,6 @@ fn parse_user_config(
         provenance,
         format,
         path: Some(PathBuf::from(path)),
+        field_presence,
     })
 }

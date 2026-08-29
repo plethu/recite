@@ -13,9 +13,9 @@ pub use freshness::{
 };
 pub use producer::{
     ContextualMetadataProvenance, FlatMetadataProvenance, ProducerFingerprint,
-    ProducerFingerprintMismatch, ProducerFreshness, ProducerIdentity, ProducerMetadata,
-    ProducerMetadataValue, ProducerOrigin, compare_producer_fingerprints,
-    producer_content_fingerprint,
+    ProducerFingerprintMismatch, ProducerFreshness, ProducerIdentity, ProducerIdentityError,
+    ProducerIdentityPart, ProducerMetadata, ProducerMetadataValue, ProducerOrigin,
+    compare_producer_fingerprints, producer_content_fingerprint,
 };
 pub(crate) use producer::{ProducerContentFingerprintError, producer_content_fingerprint_detailed};
 #[must_use]

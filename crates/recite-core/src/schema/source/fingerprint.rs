@@ -8,9 +8,9 @@ pub(super) fn source_fingerprint(schema: &ProjectSchema) -> ContentFingerprint {
     if let Some(metadata) = &schema.producer_metadata
         && let Some(producer) = &metadata.producer
     {
-        bytes.extend_from_slice(producer.kind.as_bytes());
+        bytes.extend_from_slice(producer.kind().as_bytes());
         bytes.push(0);
-        bytes.extend_from_slice(producer.id.as_bytes());
+        bytes.extend_from_slice(producer.id().as_bytes());
     }
     bytes.push(0);
     bytes.extend_from_slice(schema.canonical_content_fingerprint().digest().as_bytes());
@@ -27,8 +27,8 @@ pub(super) fn source_producer_fingerprint(
 ) -> Option<ProducerFingerprint> {
     let producer = schema.producer_metadata.as_ref()?.producer.as_ref()?;
     Some(ProducerFingerprint {
-        id: producer.id.clone(),
-        kind: producer.kind.clone(),
+        id: producer.id().to_owned(),
+        kind: producer.kind().to_owned(),
         algorithm: source_fingerprint.algorithm().as_str().to_owned(),
         value: source_fingerprint
             .digest()

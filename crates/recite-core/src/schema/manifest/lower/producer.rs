@@ -47,10 +47,15 @@ pub(super) fn lower_producer_metadata(
             &raw.id,
             spans.root_object_value_span(file, source, "producer", "id"),
         );
-        (kind_valid && id_valid).then_some(ProducerIdentity {
-            kind: raw.kind,
-            id: raw.id,
-        })
+        if !(kind_valid && id_valid) {
+            return None;
+        }
+        match ProducerIdentity::new(raw.kind, raw.id) {
+            Ok(identity) => Some(identity),
+            Err(_) => {
+                unreachable!("producer identity validation must match manifest field validation")
+            }
+        }
     });
     let content_fingerprint = content_fingerprint.and_then(|raw| {
         match producer_content_fingerprint_detailed(raw.algorithm, &raw.value) {

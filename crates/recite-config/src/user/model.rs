@@ -36,14 +36,6 @@ pub enum UserConfigField {
     ShowUnavailableChoices,
 }
 
-impl UserConfigField {
-    /// Returns the sole authority allowed to provide this field.
-    #[must_use]
-    pub const fn authority(self) -> ConfigAuthority {
-        ConfigAuthority::User
-    }
-}
-
 /// A typed, read-only user presentation configuration.
 #[derive(Clone, Debug, Eq, PartialEq)]
 pub struct UserConfig {
@@ -187,6 +179,7 @@ pub struct LoadedUserConfig {
     pub format: ConfigFormat,
     /// Selected path, if a platform or explicit path was available.
     pub path: Option<PathBuf>,
+    pub(super) field_presence: UserConfigFieldPresence,
 }
 
 impl LoadedUserConfig {
@@ -196,12 +189,69 @@ impl LoadedUserConfig {
             provenance,
             format: ConfigFormat::Defaults,
             path,
+            field_presence: UserConfigFieldPresence::default(),
         }
+    }
+
+    /// Creates a loaded representation for programmatically explicit values.
+    /// Every field is marked explicit so a value equal to its default is not
+    /// mistaken for an absent setting during resolution.
+    #[must_use]
+    pub fn from_explicit(config: UserConfig) -> Self {
+        Self {
+            config,
+            provenance: ConfigProvenance::Defaults,
+            format: ConfigFormat::Defaults,
+            path: None,
+            field_presence: UserConfigFieldPresence::all_explicit(),
+        }
+    }
+
+    /// Returns whether a user file or programmatic caller explicitly supplied
+    /// this field.
+    #[must_use]
+    pub const fn field_is_explicit(&self, field: UserConfigField) -> bool {
+        self.field_presence.is_explicit(field)
     }
 
     /// Whether the input was a legacy pre-versioned config file.
     #[must_use]
     pub const fn is_legacy(&self) -> bool {
         matches!(self.format, ConfigFormat::LegacyPreVersioned)
+    }
+}
+
+/// Presence of each user-owned field after parsing or programmatic loading.
+#[derive(Clone, Copy, Debug, Default, Eq, PartialEq)]
+pub(super) struct UserConfigFieldPresence {
+    pub(super) ui_locale: bool,
+    pub(super) keymap: bool,
+    pub(super) key_hints: bool,
+    pub(super) color: bool,
+    pub(super) contrast: bool,
+    pub(super) show_unavailable_choices: bool,
+}
+
+impl UserConfigFieldPresence {
+    pub(super) const fn all_explicit() -> Self {
+        Self {
+            ui_locale: true,
+            keymap: true,
+            key_hints: true,
+            color: true,
+            contrast: true,
+            show_unavailable_choices: true,
+        }
+    }
+
+    pub(super) const fn is_explicit(self, field: UserConfigField) -> bool {
+        match field {
+            UserConfigField::UiLocale => self.ui_locale,
+            UserConfigField::Keymap => self.keymap,
+            UserConfigField::KeyHints => self.key_hints,
+            UserConfigField::Color => self.color,
+            UserConfigField::Contrast => self.contrast,
+            UserConfigField::ShowUnavailableChoices => self.show_unavailable_choices,
+        }
     }
 }

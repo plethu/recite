@@ -60,10 +60,10 @@ fn producer_metadata_does_not_change_semantic_schema_fingerprint() {
 
     let mut changed = base.clone();
     changed.producer_metadata = Some(ProducerMetadata {
-        producer: Some(recite_core::ProducerIdentity {
-            kind: "changed".to_owned(),
-            id: "producer".to_owned(),
-        }),
+        producer: Some(
+            recite_core::ProducerIdentity::new("changed", "producer")
+                .expect("valid producer identity"),
+        ),
         content_fingerprint: Some(
             recite_core::producer_content_fingerprint(
                 "blake3",

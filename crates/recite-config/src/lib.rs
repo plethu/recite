@@ -34,4 +34,4 @@ pub use recite_ui::{UiLocale, UiLocaleError};
 /// The existing core producer identity used by generated schema and capability
 /// reports. Re-exporting it keeps this crate from inventing a second identity
 /// type at the shared boundary.
-pub use recite_core::ProducerIdentity;
+pub use recite_core::{ProducerIdentity, ProducerIdentityError, ProducerIdentityPart};
