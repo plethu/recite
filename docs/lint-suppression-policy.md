@@ -9,11 +9,13 @@ head with the supplied Git base.
 ## What the gate checks
 
 The default invocation is diff-aware. An attribute is considered baseline when
-its lint names, kind, and item/module scope still match the base. Moving such
-an attribute as code shifts does not create a false positive. Adding a lint,
-changing an item into a broader scope, removing an existing reason, or adding
-a new attribute is reported as an expanded/new suppression. Narrowing a list
-of lints is retained in the inventory but does not fail the gate.
+its path, category, lint names, kind, target, and item/module scope still match
+the base. Moving such an attribute as code shifts does not create a false
+positive, but moving it to another file or category is new at the destination.
+Adding a lint, changing an item into a broader scope, removing an existing
+reason, or adding a new attribute is reported as an expanded/new suppression.
+Narrowing a list of lints is retained in the inventory but does not fail the
+gate.
 
 The parser is a small deterministic Rust lexer. It handles multiline
 attributes, multiple lints, nested delimiters, comments, ordinary strings,
@@ -23,8 +25,8 @@ human review retain those responsibilities.
 
 New or expanded handwritten production suppressions must:
 
-- be item-scoped when they use `allow`; crate- and module-wide production
-  `#[allow]`/`#![allow]` attributes are rejected;
+- be item-scoped; crate- and module-wide production `#[allow]`/`#[expect]`
+  attributes are rejected;
 - contain a non-empty literal `reason = "..."` argument;
 - keep the lint list narrow enough that a reviewer can identify the local
   ownership boundary.
@@ -41,15 +43,19 @@ The path classification is deliberately visible in the inventory:
 | --- | --- | --- |
 | `tests`, `fixtures` | Test/support inputs | No mandatory reason; keep the exception local to the fixture. |
 | `benchmarks` | Benchmark targets and support | No mandatory reason; benchmark-only APIs should not leak into production. |
-| `generated` | Generated output | Not scanned/enforced; fix the generator or its checked-in template. |
+| `generated` | Exact paths in `scripts/generated-rust-allowlist.txt` | Only allowlisted generated output is exempt; path/name conventions alone never exempt a file. |
 | `ffi` | `recite-ffi` or an explicit `ffi` path | `reason = "ffi: ..."` describing the boundary/ownership contract. |
 | `compatibility` | Compatibility-named paths or an adjacent marker | `reason = "compatibility: ..."` naming the preserved public contract. |
 
 An adjacent marker is a single comment containing
 `recite-lint-suppression: compatibility` or `recite-lint-suppression: ffi`.
 It is only a classification hint; it is not semantic or cryptographic proof.
-Existing exceptions in any category remain baseline debt and are not blanket
-failed by this gate.
+Generated exemptions use the exact repository-owned allowlist, whose entries
+must be relative `.rs` paths; `generated.rs`, `target/`, or a generated
+directory name is not evidence by itself. Existing exceptions in any category
+remain baseline debt and are not blanket failed by this gate. A compatibility
+`#[expect]` may be module-wide only when its scoped `compatibility:` reason
+documents the preserved boundary; `#[allow]` remains item-scoped.
 
 ## Reading and remediating the inventory
 

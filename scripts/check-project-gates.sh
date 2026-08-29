@@ -68,7 +68,10 @@ echo "== test organization =="
 
 echo
 echo "== lint suppression policy =="
-"$repo_root/scripts/check-lint-suppressions.sh"
+(
+  cd "$repo_root"
+  scripts/check-lint-suppressions.sh
+)
 
 echo
 echo "== generated ffi header =="

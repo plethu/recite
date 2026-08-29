@@ -22,6 +22,11 @@ IDENT_CONT = IDENT_START + "0123456789"
 OPEN = "([{"
 CLOSE = ")] }".replace(" ", "")
 PAIRS = {')': '(', ']': '[', '}': '{'}
+ALLOWLIST_PATH = "scripts/generated-rust-allowlist.txt"
+
+
+class ParseError(ValueError):
+    """The source contains a suppression-shaped attribute we cannot parse."""
 
 
 def is_ident_start(char: str) -> bool:
@@ -232,27 +237,37 @@ class Suppression:
         return self.scope in {"crate", "module"}
 
     @property
-    def semantic_key(self) -> tuple[str, tuple[str, ...], str, str]:
-        return (self.kind, self.lints, self.scope, self.target)
+    def semantic_key(self) -> tuple[str, tuple[str, ...], str, str, str, str]:
+        return (self.path, self.category, self.kind, self.lints, self.scope, self.target)
 
     @property
-    def lint_key(self) -> tuple[str, tuple[str, ...], str]:
-        return (self.kind, self.lints, self.target)
+    def lint_key(self) -> tuple[str, tuple[str, ...], str, str, str]:
+        return (self.path, self.category, self.kind, self.lints, self.target)
 
 
-def parse_attr(source: str, hash_index: int, bracket_index: int, close: int,
-               path: str) -> tuple[str, tuple[str, ...], str | None, bool] | None:
-    inner = source[hash_index + 1] == '!'
-    body = strip_comments(source[bracket_index + 1:close]).strip()
+def parse_attribute_body(body: str) -> list[tuple[str, tuple[str, ...], str | None, bool]]:
+    """Parse direct suppressions and suppressions nested in cfg_attr."""
+
+    body = strip_comments(body).strip()
     index = 0
     while index < len(body) and is_ident_continue(body[index]):
         index += 1
     kind = body[:index]
-    if kind not in {"allow", "expect"}:
-        return None
     remainder = body[index:].strip()
+    if kind == "cfg_attr":
+        if not remainder.startswith('(') or not remainder.endswith(')'):
+            raise ParseError("malformed cfg_attr suppression attribute")
+        pieces = split_top_level(remainder[1:-1])
+        if len(pieces) < 2:
+            raise ParseError("malformed cfg_attr suppression attribute")
+        nested: list[tuple[str, tuple[str, ...], str | None, bool]] = []
+        for piece in pieces[1:]:
+            nested.extend(parse_attribute_body(piece))
+        return nested
+    if kind not in {"allow", "expect"}:
+        return []
     if not remainder.startswith('(') or not remainder.endswith(')'):
-        return None
+        raise ParseError(f"malformed {kind} suppression attribute")
     payload = remainder[1:-1]
     lints: list[str] = []
     reason: str | None = None
@@ -263,21 +278,30 @@ def parse_attr(source: str, hash_index: int, bracket_index: int, close: int,
         if piece.startswith("reason"):
             equals = piece.find('=')
             if equals < 0 or piece[:equals].strip() != "reason":
-                return None
+                raise ParseError(f"malformed {kind} suppression reason")
             parsed_reason = parse_double_string(piece[equals + 1:])
             if parsed_reason is None:
-                return None
+                raise ParseError(f"malformed {kind} suppression reason")
             reason = parsed_reason
             continue
         lint = ''.join(piece.split())
         components = lint.split('::')
         if not components or any(not part or not all(is_ident_continue(char) for char in part)
                                  or not is_ident_start(part[0]) for part in components):
-            return None
+            raise ParseError(f"malformed {kind} suppression lint")
         lints.append(lint)
     if not lints:
-        return None
-    return kind, tuple(sorted(set(lints))), reason, inner
+        raise ParseError(f"malformed {kind} suppression attribute")
+    return [(kind, tuple(sorted(set(lints))), reason, False)]
+
+
+def parse_attr(source: str, hash_index: int, bracket_index: int, close: int,
+               path: str) -> list[tuple[str, tuple[str, ...], str | None, bool]]:
+    inner = source[hash_index + 1] == '!'
+    body = strip_comments(source[bracket_index + 1:close]).strip()
+    parsed = parse_attribute_body(body)
+    return [(kind, lints, reason, inner if inner else nested_inner)
+            for kind, lints, reason, nested_inner in parsed]
 
 
 def next_scope(source: str, start: int, inner: bool) -> tuple[str, str, int]:
@@ -332,12 +356,10 @@ def next_scope(source: str, start: int, inner: bool) -> tuple[str, str, int]:
     return "item", "item", index
 
 
-def category_for(path: str, source: str, offset: int) -> str:
+def category_for(path: str, source: str, offset: int, generated_paths: set[str]) -> str:
     normalized = path.lower()
     parts = PurePosixPath(normalized).parts
-    if ("target" in parts or "generated" in parts
-            or normalized.endswith("/generated.rs")
-            or normalized.endswith(".generated.rs")):
+    if path in generated_paths:
         return "generated"
     if "fixtures" in parts:
         return "fixtures"
@@ -359,7 +381,7 @@ def category_for(path: str, source: str, offset: int) -> str:
     return "production"
 
 
-def scan_source(path: str, source: str) -> list[Suppression]:
+def scan_source(path: str, source: str, generated_paths: set[str]) -> list[Suppression]:
     suppressions: list[Suppression] = []
     index = 0
     while index < len(source):
@@ -394,11 +416,11 @@ def scan_source(path: str, source: str) -> list[Suppression]:
             continue
         close = matching_delimiter(source, bracket)
         if close is None:
-            index += 1
-            continue
+            raise ParseError(
+                f"malformed Rust attribute in {path}:{source.count(chr(10), 0, index) + 1}"
+            )
         parsed = parse_attr(source, index, bracket, close, path)
-        if parsed is not None:
-            kind, lints, reason, inner = parsed
+        for kind, lints, reason, inner in parsed:
             scope, target, _ = next_scope(source, close + 1, inner)
             line = source.count('\n', 0, index) + 1
             suppressions.append(Suppression(
@@ -410,7 +432,7 @@ def scan_source(path: str, source: str) -> list[Suppression]:
                 inner=inner,
                 scope=scope,
                 target=target,
-                category=category_for(path, source, index),
+                category=category_for(path, source, index, generated_paths),
             ))
         index = close + 1
     return suppressions
@@ -429,20 +451,23 @@ def resolve(repo: str, reference: str) -> str:
     return git(repo, "rev-parse", "--verify", f"{reference}^{{commit}}").decode().strip()
 
 
+def is_zero_sha(reference: str) -> bool:
+    return len(reference) == 40 and set(reference) == {'0'}
+
+
 def tracked_paths(repo: str, revision: str) -> list[str]:
     return [path.decode("utf-8", "replace") for path in git(
         repo, "ls-tree", "-r", "--name-only", "-z", revision).split(b'\0') if path]
 
 
-def changed_paths(repo: str, base: str, head: str) -> tuple[list[str], dict[str, str]]:
-    if set(base) == {'0'} and len(base) == 40:
+def changed_paths(repo: str, base: str, head: str) -> list[str]:
+    if is_zero_sha(base):
         empty_tree = git(repo, "hash-object", "-t", "tree", "/dev/null").decode().strip()
         arguments = [empty_tree, head]
     else:
         arguments = [f"{base}...{head}"]
     fields = git(repo, "diff", "--name-status", "-z", "-M", *arguments, "--", "*.rs").split(b'\0')
     paths: list[str] = []
-    old_for: dict[str, str] = {}
     index = 0
     while index < len(fields) and fields[index]:
         status = fields[index].decode("ascii", "replace")
@@ -450,11 +475,9 @@ def changed_paths(repo: str, base: str, head: str) -> tuple[list[str], dict[str,
         if status.startswith(('R', 'C')):
             if index + 1 >= len(fields):
                 break
-            old = fields[index].decode("utf-8", "replace")
             new = fields[index + 1].decode("utf-8", "replace")
             index += 2
             paths.append(new)
-            old_for[new] = old
         else:
             if index >= len(fields):
                 break
@@ -462,14 +485,34 @@ def changed_paths(repo: str, base: str, head: str) -> tuple[list[str], dict[str,
             index += 1
             if status[0] != 'D':
                 paths.append(path)
-    return paths, old_for
+    return paths
 
 
 def file_at(repo: str, revision: str, path: str) -> str | None:
-    try:
-        return git(repo, "show", f"{revision}:{path}").decode("utf-8", "replace")
-    except RuntimeError:
+    # ls-tree distinguishes a legitimately absent path from an object or Git
+    # failure. Do not turn a missing head blob into an empty source file.
+    entries = git(repo, "ls-tree", "-r", "--name-only", revision, "--", path)
+    if not entries.strip():
         return None
+    return git(repo, "show", f"{revision}:{path}").decode("utf-8", "replace")
+
+
+def generated_allowlist(repo: str, revision: str) -> set[str]:
+    content = file_at(repo, revision, ALLOWLIST_PATH)
+    if content is None:
+        return set()
+    allowed: set[str] = set()
+    for line_number, line in enumerate(content.splitlines(), 1):
+        value = line.strip()
+        if not value or value.startswith('#'):
+            continue
+        if (value.startswith('/') or '..' in PurePosixPath(value).parts
+                or not value.endswith('.rs')):
+            raise ParseError(f"invalid generated Rust allowlist entry at line {line_number}")
+        if file_at(repo, revision, value) is None:
+            raise ParseError(f"generated Rust allowlist path is missing: {value}")
+        allowed.add(value)
+    return allowed
 
 
 def match_suppressions(base: list[Suppression], current: list[Suppression]) -> list[Suppression]:
@@ -528,16 +571,20 @@ def violation(item: Suppression) -> str | None:
         return None
     if item.category in {"tests", "fixtures", "benchmarks"}:
         return None
+    if item.broad and item.category == "production":
+        return "new production crate/module-wide suppressions are not permitted"
     if item.category == "ffi":
+        if item.broad:
+            return "FFI suppressions must be item-scoped"
         if not reason_ok(item, "ffi:"):
             return "FFI-boundary suppressions must carry reason = \"ffi: ...\""
         return None
     if item.category == "compatibility":
+        if item.broad and item.kind == "allow":
+            return "compatibility #[allow] must be item-scoped"
         if not reason_ok(item, "compatibility:"):
             return "public compatibility suppressions must carry reason = \"compatibility: ...\""
         return None
-    if item.kind == "allow" and item.broad:
-        return "new production #[allow] must be item-scoped; crate/module-wide allows are not permitted"
     if not reason_ok(item):
         return "new production suppressions must carry a non-empty literal reason = \"...\""
     return None
@@ -550,11 +597,9 @@ def display(item: Suppression) -> str:
 
 
 def rust_path(path: str) -> bool:
-    if not path.endswith('.rs'):
-        return False
-    if path.startswith(('target/', 'fixtures/generated/')):
-        return False
-    return path.startswith(('crates/', 'tests/', 'examples/', 'fixtures/'))
+    # Every tracked Rust file is reviewable. Generated output is exempt only
+    # when its exact path appears in the repository-owned allowlist.
+    return path.endswith('.rs')
 
 
 def main() -> int:
@@ -571,28 +616,34 @@ def main() -> int:
         base_ref = args.refs[0] if args.refs else os.environ.get("RECITE_BASE_REF", "origin/main")
         head_ref = args.refs[1] if len(args.refs) > 1 else os.environ.get("RECITE_HEAD_REF", "HEAD")
         head = resolve(repo, head_ref)
-        base = None if args.full else resolve(repo, base_ref)
+        base = None if args.full else (base_ref if is_zero_sha(base_ref) else resolve(repo, base_ref))
         if args.full:
             paths = [path for path in tracked_paths(repo, head) if rust_path(path)]
-            old_for: dict[str, str] = {}
         else:
-            paths, old_for = changed_paths(repo, base, head)
+            paths = changed_paths(repo, base, head)
             paths = [path for path in paths if rust_path(path)]
+        generated_paths = generated_allowlist(repo, head)
     except (OSError, RuntimeError, subprocess.CalledProcessError) as error:
         print(f"lint suppression policy setup failed: {error}", file=sys.stderr)
         return 2
 
     current: list[Suppression] = []
     baseline: list[Suppression] = []
-    for path in sorted(set(paths)):
-        source = file_at(repo, head, path)
-        if source is None:
-            continue
-        current.extend(scan_source(path, source))
-        if base is not None:
-            baseline_source = file_at(repo, base, old_for.get(path, path))
-            if baseline_source is not None:
-                baseline.extend(scan_source(path, baseline_source))
+    try:
+        for path in sorted(set(paths)):
+            source = file_at(repo, head, path)
+            if source is None:
+                raise RuntimeError(f"head path is missing from the checked-out tree: {path}")
+            current.extend(scan_source(path, source, generated_paths))
+            if base is not None and not is_zero_sha(base):
+                # A rename or split is deliberately new at its destination;
+                # never consume an attribute from the old path.
+                baseline_source = file_at(repo, base, path)
+                if baseline_source is not None:
+                    baseline.extend(scan_source(path, baseline_source, generated_paths))
+    except (OSError, RuntimeError, ParseError) as error:
+        print(f"lint suppression policy setup failed: {error}", file=sys.stderr)
+        return 2
 
     if base is None:
         records = [Suppression(**{**item.__dict__, "status": "current"}) for item in current]
