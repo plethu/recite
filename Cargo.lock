@@ -1268,6 +1268,7 @@ dependencies = [
  "ratatui",
  "recite-benchmarks",
  "recite-compiler",
+ "recite-config",
  "recite-core",
  "recite-parser",
  "recite-runtime",

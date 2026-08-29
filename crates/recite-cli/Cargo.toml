@@ -21,6 +21,7 @@ recite-core.workspace = true
 recite-parser.workspace = true
 recite-compiler.workspace = true
 recite-benchmarks = { version = "0.1.0", path = "../recite-benchmarks" }
+recite-config.workspace = true
 recite-runtime.workspace = true
 recite-ui.workspace = true
 serde.workspace = true

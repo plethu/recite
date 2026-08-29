@@ -1,6 +1,7 @@
 use crate::error::CliError;
 use crate::fs::display_path;
 use crate::i18n::{Messages, MsgId};
+use recite_config::ConfigError;
 use recite_ui::{UiArg, UiArgs};
 
 #[cfg(test)]
@@ -18,18 +19,7 @@ impl CliError {
             ),
             Self::PlayInterrupted => messages.text(MsgId::CliErrorPlayInterrupted),
             Self::PlayTuiRequiresTerminal => messages.text(MsgId::CliErrorPlayTuiRequiresTerminal),
-            Self::TuiConfigRead { path, source } => messages.format(
-                MsgId::CliErrorUiConfigRead,
-                [("path", display_path(path)), ("source", source.to_string())],
-            ),
-            Self::TuiConfigToml { path, source } => messages.format(
-                MsgId::CliErrorUiConfigToml,
-                [("path", display_path(path)), ("source", source.to_string())],
-            ),
-            Self::UiLocaleInvalid { path, locale } => messages.format(
-                MsgId::CliErrorUiLocaleInvalid,
-                [("path", display_path(path)), ("locale", locale.clone())],
-            ),
+            Self::UserConfig { source } => user_config_message(source, messages),
             Self::DialogueCatalogConflict {
                 path,
                 locale,
@@ -229,5 +219,23 @@ impl CliError {
                 messages.format(MsgId::CliErrorWatch, [("message", message.clone())])
             }
         }
+    }
+}
+
+fn user_config_message(error: &ConfigError, messages: &Messages) -> String {
+    match error {
+        ConfigError::Read { path, message } => messages.format(
+            MsgId::CliErrorUiConfigRead,
+            [("path", display_path(path)), ("source", message.clone())],
+        ),
+        ConfigError::Malformed { path, message } => messages.format(
+            MsgId::CliErrorUiConfigToml,
+            [("path", display_path(path)), ("source", message.clone())],
+        ),
+        ConfigError::InvalidLocale { path, locale } => messages.format(
+            MsgId::CliErrorUiLocaleInvalid,
+            [("path", display_path(path)), ("locale", locale.clone())],
+        ),
+        _ => messages.format(MsgId::CliErrorGeneric, [("message", error.to_string())]),
     }
 }

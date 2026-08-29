@@ -111,20 +111,11 @@ pub(crate) enum CliError {
     Benchmark(recite_benchmarks::BenchmarkError),
     BenchJson(serde_json::Error),
     TraceJson(serde_json::Error),
-    TuiConfigRead {
-        path: PathBuf,
-        source: io::Error,
-    },
-    TuiConfigToml {
-        path: PathBuf,
-        source: toml::de::Error,
+    UserConfig {
+        source: recite_config::ConfigError,
     },
     UiCatalog {
         source: String,
-    },
-    UiLocaleInvalid {
-        path: PathBuf,
-        locale: String,
     },
     UnknownPrompt {
         line: Option<String>,
@@ -299,22 +290,8 @@ impl std::fmt::Display for CliError {
             Self::Benchmark(error) => write!(formatter, "{error}"),
             Self::BenchJson(error) => write!(formatter, "failed to read or write benchmark JSON: {error}"),
             Self::TraceJson(error) => write!(formatter, "failed to encode trace JSON: {error}"),
-            Self::TuiConfigRead { path, source } => write!(
-                formatter,
-                "failed to read UI config {}: {source}",
-                display_path(path)
-            ),
-            Self::TuiConfigToml { path, source } => write!(
-                formatter,
-                "failed to parse UI config {}: {source}",
-                display_path(path)
-            ),
+            Self::UserConfig { source } => write!(formatter, "{source}"),
             Self::UiCatalog { source } => write!(formatter, "failed to load UI text catalog: {source}"),
-            Self::UiLocaleInvalid { path, locale } => write!(
-                formatter,
-                "failed to parse UI config {}: invalid [ui].locale `{locale}`; expected a BCP-47 locale such as \"en-US\" or \"system\"",
-                display_path(path)
-            ),
             Self::UnknownPrompt { line, choices } => write!(
                 formatter,
                 "runtime emitted an unknown prompt line={} choices=[{}]",
@@ -368,5 +345,11 @@ impl From<recite_runtime::DialogueError> for CliError {
 impl From<recite_benchmarks::BenchmarkError> for CliError {
     fn from(error: recite_benchmarks::BenchmarkError) -> Self {
         Self::Benchmark(error)
+    }
+}
+
+impl From<recite_config::ConfigError> for CliError {
+    fn from(source: recite_config::ConfigError) -> Self {
+        Self::UserConfig { source }
     }
 }
