@@ -175,7 +175,7 @@ wire compatibility fixtures, and focused reviews for each subsystem.
 | `crates/recite-runtime/tests/interpolation.rs` | 496 | test/support | runtime/tests | review | #180: typed interpolation and plural provider scenarios remain grouped around runtime delivery |
 | `crates/recite-compiler/tests/asset.rs` | 640 | test/support | compiler/tests | exception | #89: retain the shared compiled-asset fixture entry point for the wire contract guard |
 | `crates/recite-ffi/tests/snapshots.rs` | 422 | test/support | ffi/tests | cohesive | #171: session snapshot and restore contract coverage |
-| `crates/recite-lsp/src/tests/support.rs` | 457 | test/support | lsp/tests | review | Test support ownership; retain private access where required |
+| `crates/recite-lsp/src/tests/support.rs` | 467 | test/support | lsp/tests | review | Test support ownership; retain private access where required |
 | `crates/recite-core/tests/compiled_model.rs` | 427 | test/support | core/tests | cohesive | Compiled model behavior |
 | `crates/recite-compiler/tests/asset/tag_surface.rs` | 486 | test/support | compiler/tests | cohesive | Wire tag surface |
 | `crates/recite-runtime/tests/traversal/localisation.rs` | 441 | test/support | runtime/tests | cohesive | Locale traversal contract |
