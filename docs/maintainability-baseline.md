@@ -193,8 +193,8 @@ wire compatibility fixtures, and focused reviews for each subsystem.
 | `crates/recite-cli/tests/watch_stress.rs` | 366 | test/support | cli/tests | cohesive | Watch stress harness |
 | `crates/recite-runtime/tests/traversal/conditions/choice_conditions.rs` | 365 | test/support | runtime/tests | cohesive | Choice condition coverage |
 | `crates/recite-lsp/src/tests/availability/speaker.rs` | 351 | test/support | lsp/tests | review | Typed and ordinary speaker completion coverage |
-| `crates/recite-lsp/src/tests.rs` | 539 | test/support | lsp/tests | cohesive | Module aggregator, not production implementation |
-| `crates/recite-lsp/src/tests/project_indexes.rs` | 393 | test/support | lsp/tests | cohesive | Project discovery, manifest transition, and saved-index regression coverage |
+| `crates/recite-lsp/src/tests.rs` | 551 | test/support | lsp/tests | cohesive | Module aggregator, not production implementation |
+| `crates/recite-lsp/src/tests/project_indexes.rs` | 394 | test/support | lsp/tests | cohesive | Project discovery, manifest transition, and saved-index regression coverage |
 | `crates/recite-config/src/project/diagnostics.rs` | 297 | production | config/project | cohesive | Typed discovery failures and conversion to shared diagnostic contracts |
 | `crates/recite-config/src/project/enumerate.rs` | 303 | production | config/project | cohesive | Deterministic filesystem traversal, source-only compatibility enumeration, and coverage accounting |
 | `crates/recite-config/src/project/manifest.rs` | 387 | production | config/project | cohesive | Manifest search, validation, and discovery report orchestration |

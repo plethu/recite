@@ -24,18 +24,15 @@ fn malformed_manifest_does_not_fall_back_to_saved_walker() {
 }
 
 #[test]
-fn malformed_manifest_stays_fail_closed_across_file_lifecycle() {
-    project_indexes::malformed_manifest_stays_fail_closed_across_file_lifecycle();
-}
-
-#[test]
-fn manifestless_refresh_preserves_discovery_candidate() {
-    project_indexes::manifestless_refresh_preserves_discovery_candidate();
-}
-
-#[test]
-fn multi_root_documents_keep_project_relative_keys() {
-    project_indexes::multi_root_documents_keep_project_relative_keys();
+fn project_discovery_correction_regressions() {
+    project_indexes::discovery_transitions::malformed_manifest_stays_fail_closed_across_file_lifecycle();
+    project_indexes::discovery_transitions::manifestless_refresh_preserves_discovery_candidate();
+    project_indexes::discovery_transitions::multi_root_documents_keep_project_relative_keys();
+    #[cfg(unix)]
+    project_indexes::discovery_transitions::symlink_alias_replacement_reconciles_canonical_identity(
+    );
+    project_indexes::discovery_transitions::manifest_refresh_clears_removed_saved_diagnostics_only(
+    );
 }
 
 #[test]
@@ -47,17 +44,6 @@ fn manifest_refresh_is_atomic_and_preserves_open_overlay() {
 #[test]
 fn saved_uri_replacement_removes_old_canonical_entry() {
     project_indexes::saved_uri_replacement_removes_old_canonical_entry();
-}
-
-#[cfg(unix)]
-#[test]
-fn symlink_alias_replacement_reconciles_canonical_identity() {
-    project_indexes::symlink_alias_replacement_reconciles_canonical_identity();
-}
-
-#[test]
-fn manifest_refresh_clears_removed_saved_diagnostics_only() {
-    project_indexes::manifest_refresh_clears_removed_saved_diagnostics_only();
 }
 
 #[test]
