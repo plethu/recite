@@ -97,3 +97,17 @@ pub fn metadata_assignment_at(line: &str, byte_index: usize) -> Option<MetadataA
 pub fn parse_metadata_value(value: &str) -> Option<recite_core::SourceMetadataValue> {
     header::parse_value(value).ok()
 }
+
+/// Returns whether a value can be inserted as a bare metadata symbol.
+///
+/// This is intentionally defined in terms of the source parser so editor
+/// features do not grow a second, subtly different symbol grammar.
+#[must_use]
+pub fn is_metadata_symbol(value: &str) -> bool {
+    matches!(
+        parse_metadata_value(value),
+        Some(recite_core::SourceMetadataValue::Scalar(
+            recite_core::SourceMetadataScalar::Symbol(_)
+        ))
+    )
+}

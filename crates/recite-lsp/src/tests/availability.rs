@@ -4,6 +4,7 @@ mod completion;
 mod diagnostics;
 mod metadata;
 mod projection_completion;
+mod registry;
 mod speaker;
 mod support;
 
@@ -94,6 +95,10 @@ pub(super) fn rejects_builtin_speaker_candidates_for_unrelated_choice_metadata_t
 
 pub(super) fn completes_registry_and_enum_choice_metadata_values() {
     speaker::completes_registry_and_enum_choice_metadata_values();
+}
+
+pub(super) fn filters_registry_metadata_completion_to_source_symbols() {
+    registry::filters_registry_metadata_completion_to_source_symbols();
 }
 
 pub(super) fn malformed_completion_and_hover_params_return_invalid_params() {

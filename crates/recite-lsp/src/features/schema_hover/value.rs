@@ -37,10 +37,19 @@ pub(crate) fn schema_value_candidates(
 
     match &metadata.type_ref {
         SchemaTypeRef::Speaker => schema.speakers.keys().cloned().collect(),
-        SchemaTypeRef::Registry(name) => schema
-            .registries
-            .get(name)
-            .map_or_else(BTreeSet::new, |definition| definition.values.clone()),
+        SchemaTypeRef::Registry(name) => {
+            schema
+                .registries
+                .get(name)
+                .map_or_else(BTreeSet::new, |definition| {
+                    definition
+                        .values
+                        .iter()
+                        .filter(|value| recite_parser::is_metadata_symbol(value))
+                        .cloned()
+                        .collect()
+                })
+        }
         SchemaTypeRef::Enum(name) => match schema.types.get(name) {
             Some(recite_core::SchemaTypeDefinition::Enum(definition)) => definition.values.clone(),
             _ => BTreeSet::new(),

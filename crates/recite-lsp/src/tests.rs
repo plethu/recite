@@ -199,6 +199,11 @@ fn completes_registry_and_enum_choice_metadata_values() {
 }
 
 #[test]
+fn filters_registry_metadata_completion_to_source_symbols() {
+    availability::filters_registry_metadata_completion_to_source_symbols();
+}
+
+#[test]
 fn schema_hover_preserves_freshness_without_producer_identity() {
     let mut schema = recite_core::ProjectSchema::empty_v1();
     schema.producer_metadata = Some(recite_core::ProducerMetadata {
