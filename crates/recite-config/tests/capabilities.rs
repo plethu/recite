@@ -165,3 +165,19 @@ fn capability_reports_reject_invalid_producer_identity_on_the_wire() {
         );
     }
 }
+
+#[test]
+fn capability_reports_reject_unknown_fields_in_nested_wire_records() {
+    for capability in [
+        r#"{"name":"recite.compile","status":{"status":"supported","extra":true}}"#,
+        r#"{"name":"recite.compile","extra":true,"status":{"status":"supported"}}"#,
+    ] {
+        let wire = format!(
+            r#"{{"version":1,"producer":{{"kind":"recite","id":"test"}},"capabilities":[{capability}]}}"#
+        );
+        assert!(
+            serde_json::from_str::<CapabilityReport>(&wire).is_err(),
+            "nested unknown field should fail: {wire}"
+        );
+    }
+}

@@ -3,9 +3,10 @@
 use std::fs;
 
 use recite_config::{
-    AuthorityValue, ConfigAuthority, FieldProvenance, FieldResolutionError, InvocationOverrides,
-    Keymap, KeymapPolicy, Platform, PlatformRoots, UiLocale, UiLocalePolicy, UserConfig,
-    load_user_config_from, resolve_field, resolve_user_config,
+    AuthorityValue, ConfigAuthority, ConfigFormat, ConfigProvenance, FieldProvenance,
+    FieldResolutionError, InvocationOverrides, Keymap, KeymapPolicy, Platform, PlatformRoots,
+    UiLocale, UiLocalePolicy, UserConfig, load_user_config_from, resolve_field,
+    resolve_user_config,
 };
 use tempfile::tempdir;
 
@@ -98,6 +99,9 @@ fn legacy_presence_and_programmatic_explicit_values_are_distinct_from_defaults()
     );
 
     let programmatic = recite_config::LoadedUserConfig::from_explicit(UserConfig::default());
+    assert_eq!(programmatic.provenance, ConfigProvenance::Programmatic);
+    assert_eq!(programmatic.format, ConfigFormat::Defaults);
+    assert_eq!(programmatic.path, None);
     let programmatic_resolved = resolve_user_config(&programmatic, &InvocationOverrides::new());
     assert_eq!(
         programmatic_resolved.ui().locale().provenance(),

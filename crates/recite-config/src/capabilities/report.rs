@@ -9,7 +9,7 @@ use super::name::CapabilityName;
 pub const CAPABILITY_REPORT_VERSION: u16 = 1;
 
 /// Availability advertised for one capability.
-#[derive(Clone, Debug, Eq, PartialEq, Serialize, Deserialize)]
+#[derive(Clone, Debug, Eq, PartialEq, Serialize)]
 #[serde(tag = "status", rename_all = "snake_case")]
 #[non_exhaustive]
 pub enum CapabilityStatus {
@@ -23,6 +23,37 @@ pub enum CapabilityStatus {
         /// Structured diagnostic explaining unavailability and its context.
         diagnostic: Box<DiagnosticRecord>,
     },
+}
+
+#[derive(Deserialize)]
+#[serde(deny_unknown_fields)]
+struct CapabilityStatusWire {
+    status: String,
+    #[serde(default)]
+    diagnostic: Option<Box<DiagnosticRecord>>,
+}
+
+impl<'de> Deserialize<'de> for CapabilityStatus {
+    fn deserialize<D>(deserializer: D) -> Result<Self, D::Error>
+    where
+        D: Deserializer<'de>,
+    {
+        let wire = CapabilityStatusWire::deserialize(deserializer)?;
+        match (wire.status.as_str(), wire.diagnostic) {
+            ("supported", None) => Ok(Self::Supported),
+            ("read_only", None) => Ok(Self::ReadOnly),
+            ("unavailable", Some(diagnostic)) => Ok(Self::Unavailable { diagnostic }),
+            ("supported" | "read_only", Some(_)) => Err(serde::de::Error::custom(
+                "supported capability statuses cannot include a diagnostic",
+            )),
+            ("unavailable", None) => Err(serde::de::Error::custom(
+                "unavailable capability status requires a diagnostic",
+            )),
+            (status, _) => Err(serde::de::Error::custom(format!(
+                "unknown capability status {status:?}"
+            ))),
+        }
+    }
 }
 
 impl CapabilityStatus {
@@ -46,6 +77,7 @@ impl CapabilityStatus {
 
 /// One deterministic capability entry.
 #[derive(Clone, Debug, Eq, PartialEq, Serialize, Deserialize)]
+#[serde(deny_unknown_fields)]
 #[non_exhaustive]
 pub struct Capability {
     /// Stable namespaced capability ID.

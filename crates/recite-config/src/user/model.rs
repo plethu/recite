@@ -144,6 +144,8 @@ pub enum TuiContrast {
 pub enum ConfigProvenance {
     /// No usable default path existed, so in-memory defaults were used.
     Defaults,
+    /// Values were supplied by a programmatic caller without a config file.
+    Programmatic,
     /// The platform path was selected and loaded (or was absent).
     PlatformDefault,
     /// An explicit `$RECITE_CONFIG` path was selected and loaded.
@@ -154,6 +156,7 @@ impl fmt::Display for ConfigProvenance {
     fn fmt(&self, formatter: &mut fmt::Formatter<'_>) -> fmt::Result {
         match self {
             Self::Defaults => formatter.write_str("defaults"),
+            Self::Programmatic => formatter.write_str("programmatic"),
             Self::PlatformDefault => formatter.write_str("platform default"),
             Self::ExplicitOverride => formatter.write_str("explicit override"),
         }
@@ -203,7 +206,7 @@ impl LoadedUserConfig {
     pub fn from_explicit(config: UserConfig) -> Self {
         Self {
             config,
-            provenance: ConfigProvenance::Defaults,
+            provenance: ConfigProvenance::Programmatic,
             format: ConfigFormat::Defaults,
             path: None,
             field_presence: UserConfigFieldPresence::all_explicit(),
