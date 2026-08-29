@@ -190,6 +190,6 @@ wire compatibility fixtures, and focused reviews for each subsystem.
 | `crates/recite-cli/tests/watch_stress.rs` | 366 | test/support | cli/tests | cohesive | Watch stress harness |
 | `crates/recite-runtime/tests/traversal/conditions/choice_conditions.rs` | 365 | test/support | runtime/tests | cohesive | Choice condition coverage |
 | `crates/recite-lsp/src/tests/availability/speaker.rs` | 351 | test/support | lsp/tests | review | Typed and ordinary speaker completion coverage |
-| `crates/recite-lsp/src/tests.rs` | 540 | test/support | lsp/tests | cohesive | Module aggregator, not production implementation |
+| `crates/recite-lsp/src/tests.rs` | 540 | test/support | lsp/tests | exception | #167: retain the LSP test aggregator while discovery and metadata coverage move into focused modules |
 | `crates/recite-lsp/src/tests/project_indexes.rs` | 394 | test/support | lsp/tests | cohesive | Project discovery, manifest transition, and saved-index regression coverage |
 | `crates/recite-lsp/src/tests/code_action/schema_entry.rs` | 357 | test/support | lsp/tests | review | Private code-action behavior |
