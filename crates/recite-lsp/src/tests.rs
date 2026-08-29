@@ -179,6 +179,16 @@ fn hover_resolves_choice_speaker_metadata_before_builtin_speakers() {
 }
 
 #[test]
+fn completes_choice_speaker_metadata_by_schema_type() {
+    availability::completes_choice_speaker_metadata_by_schema_type();
+}
+
+#[test]
+fn rejects_builtin_speaker_candidates_for_unrelated_choice_metadata_type() {
+    availability::rejects_builtin_speaker_candidates_for_unrelated_choice_metadata_type();
+}
+
+#[test]
 fn schema_hover_preserves_freshness_without_producer_identity() {
     let mut schema = recite_core::ProjectSchema::empty_v1();
     schema.producer_metadata = Some(recite_core::ProducerMetadata {

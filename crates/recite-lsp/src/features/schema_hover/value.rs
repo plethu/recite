@@ -1,9 +1,12 @@
+use std::collections::BTreeSet;
+
 use recite_core::{ProjectSchema, SchemaTypeRef, SpeakerDefinition};
 use recite_ui::{MsgId, UiArg, UiArgs, UiCatalog};
 
-use super::super::context::SelectorSite;
+use super::super::context::{SelectorResolution, SelectorSite, resolve_selector};
 use super::domain::schema_domain_value_hover;
 use super::provenance::origin_detail;
+use recite_core::{MetadataDomainDefinition, MissingMetadataContextPolicy};
 
 pub(crate) enum SchemaValueHover {
     Resolved(String),
@@ -15,6 +18,35 @@ pub(crate) struct AuthoringPosition<'a> {
     pub(crate) line_index: usize,
     pub(crate) line: &'a str,
     pub(crate) site: SelectorSite,
+}
+
+pub(crate) fn schema_value_candidates(
+    schema: &ProjectSchema,
+    metadata_key: &str,
+    text: &str,
+    line: &str,
+    line_index: usize,
+    site: SelectorSite,
+) -> BTreeSet<String> {
+    let Some(metadata) = schema.metadata.get(metadata_key) else {
+        return BTreeSet::new();
+    };
+    if let Some(domain_name) = &metadata.domain {
+        return metadata_domain_values(schema, domain_name, text, line, line_index, site);
+    }
+
+    match &metadata.type_ref {
+        SchemaTypeRef::Speaker => schema.speakers.keys().cloned().collect(),
+        SchemaTypeRef::Registry(name) => schema
+            .registries
+            .get(name)
+            .map_or_else(BTreeSet::new, |definition| definition.values.clone()),
+        SchemaTypeRef::Enum(name) => match schema.types.get(name) {
+            Some(recite_core::SchemaTypeDefinition::Enum(definition)) => definition.values.clone(),
+            _ => BTreeSet::new(),
+        },
+        _ => BTreeSet::new(),
+    }
 }
 
 /// Return provenance hover only for a value valid for the metadata key at the
@@ -121,4 +153,50 @@ pub(crate) fn speaker_hover_text(
             )
         },
     )
+}
+
+fn metadata_domain_values(
+    schema: &ProjectSchema,
+    domain_name: &str,
+    text: &str,
+    line: &str,
+    line_index: usize,
+    site: SelectorSite,
+) -> BTreeSet<String> {
+    let Some(domain) = schema.metadata_domains.get(domain_name) else {
+        return BTreeSet::new();
+    };
+    match domain {
+        MetadataDomainDefinition::Flat(domain) => domain.values.clone(),
+        MetadataDomainDefinition::Contextual(domain) => {
+            match resolve_selector(&domain.selector, text, line, line_index, site) {
+                SelectorResolution::Value(context) => domain
+                    .values_by_context
+                    .get(context.as_str())
+                    .cloned()
+                    .unwrap_or_else(|| missing_context_values(schema, &domain.missing_context)),
+                SelectorResolution::Missing => {
+                    missing_context_values(schema, &domain.missing_context)
+                }
+                SelectorResolution::Malformed => BTreeSet::new(),
+            }
+        }
+    }
+}
+
+fn missing_context_values(
+    schema: &ProjectSchema,
+    policy: &MissingMetadataContextPolicy,
+) -> BTreeSet<String> {
+    match policy {
+        MissingMetadataContextPolicy::Diagnostic | MissingMetadataContextPolicy::Empty => {
+            BTreeSet::new()
+        }
+        MissingMetadataContextPolicy::Fallback { domain } => {
+            match schema.metadata_domains.get(domain) {
+                Some(MetadataDomainDefinition::Flat(domain)) => domain.values.clone(),
+                _ => BTreeSet::new(),
+            }
+        }
+    }
 }

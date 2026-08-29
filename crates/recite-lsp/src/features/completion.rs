@@ -1,10 +1,9 @@
-use std::collections::BTreeSet;
-
 use lsp_types::{CompletionItem, CompletionItemKind, CompletionResponse, Documentation, Position};
-use recite_core::{MetadataDomainDefinition, MissingMetadataContextPolicy, ProjectSchema};
+use recite_core::{ProjectSchema, SchemaTypeRef};
 use recite_ui::{MsgId, UiCatalog};
 
-use super::context::{SelectorResolution, SelectorSite, resolve_selector, selector_site};
+use super::context::{SelectorSite, selector_site};
+use super::schema_hover::schema_value_candidates;
 use crate::workspace::LiveProjectSnapshot;
 
 mod presentation;
@@ -191,73 +190,29 @@ fn metadata_value_completion_items(
     site: SelectorSite,
     catalog: &UiCatalog,
 ) -> Vec<CompletionItem> {
-    if key == "speaker" && !matches!(site, SelectorSite::Choice) {
-        return speaker_completion_items(schema, catalog);
-    }
-    let Some(metadata) = schema.metadata.get(key) else {
-        return Vec::new();
-    };
-    let Some(domain_name) = &metadata.domain else {
-        return Vec::new();
-    };
-    metadata_domain_values(schema, domain_name, text, line, line_index, site)
+    let detail = schema.metadata.get(key).map_or_else(
+        || catalog.text(MsgId::LspCompletionMetadataKey),
+        |metadata| {
+            metadata.domain.as_deref().map_or_else(
+                || match metadata.type_ref {
+                    SchemaTypeRef::Speaker => catalog.text(MsgId::LspCompletionSpeaker),
+                    _ => catalog.text(MsgId::LspCompletionMetadataKey),
+                },
+                |domain| {
+                    catalog.format_pairs(MsgId::LspCompletionMetadataDomain, [("domain", domain)])
+                },
+            )
+        },
+    );
+    schema_value_candidates(schema, key, text, line, line_index, site)
         .into_iter()
         .map(|value| CompletionItem {
             label: value,
             kind: Some(CompletionItemKind::VALUE),
-            detail: Some(catalog.format_pairs(
-                MsgId::LspCompletionMetadataDomain,
-                [("domain", domain_name)],
-            )),
+            detail: Some(detail.clone()),
             ..CompletionItem::default()
         })
         .collect()
-}
-
-fn metadata_domain_values(
-    schema: &ProjectSchema,
-    domain_name: &str,
-    text: &str,
-    line: &str,
-    line_index: usize,
-    site: SelectorSite,
-) -> BTreeSet<String> {
-    let Some(domain) = schema.metadata_domains.get(domain_name) else {
-        return BTreeSet::new();
-    };
-    match domain {
-        MetadataDomainDefinition::Flat(domain) => domain.values.clone(),
-        MetadataDomainDefinition::Contextual(domain) => {
-            match resolve_selector(&domain.selector, text, line, line_index, site) {
-                SelectorResolution::Value(context) => domain
-                    .values_by_context
-                    .get(context.as_str())
-                    .cloned()
-                    .unwrap_or_else(|| missing_context_values(schema, &domain.missing_context)),
-                SelectorResolution::Missing => {
-                    missing_context_values(schema, &domain.missing_context)
-                }
-                SelectorResolution::Malformed => BTreeSet::new(),
-            }
-        }
-    }
-}
-
-fn missing_context_values(
-    schema: &ProjectSchema,
-    policy: &MissingMetadataContextPolicy,
-) -> BTreeSet<String> {
-    match policy {
-        MissingMetadataContextPolicy::Diagnostic | MissingMetadataContextPolicy::Empty => {
-            BTreeSet::new()
-        }
-        MissingMetadataContextPolicy::Fallback { domain } => {
-            match schema.metadata_domains.get(domain) {
-                Some(MetadataDomainDefinition::Flat(domain)) => domain.values.clone(),
-                _ => BTreeSet::new(),
-            }
-        }
-    }
 }
 
 fn current_token(line_prefix: &str) -> Option<&str> {

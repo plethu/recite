@@ -121,6 +121,132 @@ pub(super) fn hover_resolves_choice_speaker_metadata_before_builtin_speakers() {
     harness.finish();
 }
 
+pub(super) fn completes_choice_speaker_metadata_by_schema_type() {
+    let temp = TempDir::new().unwrap_or_else(|error| panic!("tempdir: {error}"));
+    let mut schema: serde_json::Value =
+        serde_json::from_str(authoring_schema()).expect("authoring schema JSON");
+    schema["metadata"]["speaker"] = json!({
+        "targets": ["choice"],
+        "type": "speaker"
+    });
+    let schema_text = serde_json::to_string_pretty(&schema).expect("serialise choice schema");
+    write_file(temp.path(), "schema.json", &schema_text);
+    let root_uri = file_uri(temp.path());
+    let schema_path = temp.path().join("schema.json");
+    let mut harness = Harness::start_with_result(json!({
+        "capabilities": {
+            "general": {
+                "positionEncodings": ["utf-16"]
+            }
+        },
+        "rootUri": root_uri.as_str(),
+        "initializationOptions": {
+            "schema": schema_path.display().to_string()
+        }
+    }))
+    .0;
+    let source_uri = file_uri(&temp.path().join("dialogue/start.recite"));
+    let source = concat!(
+        ":: start default speaker=hazel\n",
+        "> ordinary@d1e2f30415263748596a speaker=\n",
+        "? typed@e1f2031425364758697a speaker=\n",
+        "? resolved@f102031425364758697a speaker=hazel\n",
+    );
+    harness.did_open(source_uri.clone(), 1, source);
+    let _ = harness.recv_publish_diagnostics();
+
+    assert_eq!(
+        completion_labels(
+            harness
+                .completion(
+                    source_uri.clone(),
+                    position_after(source, "ordinary@d1e2f30415263748596a speaker="),
+                )
+                .expect("ordinary speaker completion"),
+        ),
+        ["hazel", "rhea"],
+    );
+    assert_eq!(
+        completion_labels(
+            harness
+                .completion(
+                    source_uri.clone(),
+                    position_after(source, "typed@e1f2031425364758697a speaker="),
+                )
+                .expect("choice speaker metadata completion"),
+        ),
+        ["hazel", "rhea"],
+    );
+
+    let hover = harness
+        .hover(
+            source_uri,
+            position_after(source, "resolved@f102031425364758697a speaker=hazel"),
+        )
+        .expect("choice speaker metadata hover");
+    assert!(hover_text(hover).contains("Recite speaker `hazel`"));
+
+    harness.finish();
+}
+
+pub(super) fn rejects_builtin_speaker_candidates_for_unrelated_choice_metadata_type() {
+    let temp = TempDir::new().unwrap_or_else(|error| panic!("tempdir: {error}"));
+    let mut schema: serde_json::Value =
+        serde_json::from_str(authoring_schema()).expect("authoring schema JSON");
+    schema["metadata"]["speaker"] = json!({
+        "targets": ["choice"],
+        "type": "string"
+    });
+    let schema_text = serde_json::to_string_pretty(&schema).expect("serialise choice schema");
+    write_file(temp.path(), "schema.json", &schema_text);
+    let root_uri = file_uri(temp.path());
+    let schema_path = temp.path().join("schema.json");
+    let mut harness = Harness::start_with_result(json!({
+        "capabilities": {
+            "general": {
+                "positionEncodings": ["utf-16"]
+            }
+        },
+        "rootUri": root_uri.as_str(),
+        "initializationOptions": {
+            "schema": schema_path.display().to_string()
+        }
+    }))
+    .0;
+    let source_uri = file_uri(&temp.path().join("dialogue/start.recite"));
+    let source = concat!(
+        ":: start default speaker=hazel\n",
+        "? unrelated@e1f2031425364758697a speaker=\n",
+        "? invalid@f102031425364758697a speaker=hazel\n",
+    );
+    harness.did_open(source_uri.clone(), 1, source);
+    let _ = harness.recv_publish_diagnostics();
+
+    assert!(
+        completion_labels(
+            harness
+                .completion(
+                    source_uri.clone(),
+                    position_after(source, "unrelated@e1f2031425364758697a speaker="),
+                )
+                .expect("unrelated metadata completion"),
+        )
+        .is_empty(),
+        "an unrelated metadata type must not inherit builtin speaker candidates",
+    );
+    assert!(
+        harness
+            .hover(
+                source_uri,
+                position_after(source, "invalid@f102031425364758697a speaker=hazel"),
+            )
+            .is_none(),
+        "an invalid choice metadata value must not fall through to builtin speaker hover",
+    );
+
+    harness.finish();
+}
+
 fn hover_text(hover: lsp_types::Hover) -> String {
     match hover.contents {
         HoverContents::Markup(content) => content.value,
