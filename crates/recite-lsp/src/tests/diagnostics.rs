@@ -7,9 +7,9 @@ use recite_core::{
 use serde_json::json;
 use tempfile::TempDir;
 
-use super::support::{Harness, file_uri, full_change, uri, write_file};
+use super::support::{Harness, file_uri, full_change, test_workspace, uri, write_file};
 use crate::diagnostics::publish_diagnostics;
-use crate::workspace::{LspWorkspace, WorkspaceConfig};
+use crate::workspace::WorkspaceConfig;
 
 mod schema;
 
@@ -265,7 +265,7 @@ pub(super) fn related_spans_resolve_project_files_and_target_text() {
     assert_eq!(related[0].location.range.start, Position::new(1, 0));
     assert_eq!(related[0].location.range.end, Position::new(1, 0));
 
-    let workspace = LspWorkspace::new(WorkspaceConfig::for_roots(vec![temp.path().to_owned()]));
+    let workspace = test_workspace(WorkspaceConfig::for_roots(vec![temp.path().to_owned()]));
     let primary_span = SourceSpan::point(
         "dialogue/second.recite",
         SourcePosition::new(1, 1).expect("valid test position"),

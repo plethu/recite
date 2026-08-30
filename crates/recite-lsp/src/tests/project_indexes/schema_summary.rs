@@ -8,9 +8,9 @@ use crate::summary::{
     MetadataContextSelectorSummary, MetadataDomainKindSummary, MissingMetadataContextPolicySummary,
     ProvenanceSummary, SchemaSummary,
 };
-use crate::workspace::{LspWorkspace, WorkspaceConfig};
+use crate::workspace::WorkspaceConfig;
 
-use super::super::support::write_file;
+use super::super::support::{test_workspace, write_file};
 
 pub(super) fn metadata_domain_schema_summary_preserves_available_provenance() {
     let mut schema = ProjectSchema::empty_v1();
@@ -190,7 +190,7 @@ pub(super) fn metadata_domain_schema_summary_preserves_available_provenance() {
 pub(super) fn projection_schema_summary_exposes_queries_projectors_and_labels() {
     let (_temp, schema_path) = write_schema_temp(valid_projection_schema());
     let workspace =
-        LspWorkspace::new(WorkspaceConfig::for_roots(Vec::new()).with_schema_path(schema_path));
+        test_workspace(WorkspaceConfig::for_roots(Vec::new()).with_schema_path(schema_path));
     let summary = workspace.schema().summary().expect("schema summary");
 
     assert_eq!(summary.projection_queries[0].name, "actor_skill");

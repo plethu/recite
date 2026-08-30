@@ -1,9 +1,9 @@
 use serde_json::json;
 use tempfile::TempDir;
 
-use crate::workspace::{DiagnosticRefresh, LspWorkspace, WorkspaceConfig};
+use crate::workspace::{DiagnosticRefresh, WorkspaceConfig};
 
-use super::super::super::support::{block_names, file_uri, write_file};
+use super::super::super::support::{block_names, file_uri, test_workspace, write_file};
 
 pub(crate) fn all() {
     malformed_manifest_stays_fail_closed_across_file_lifecycle();
@@ -19,7 +19,7 @@ pub(crate) fn malformed_manifest_stays_fail_closed_across_file_lifecycle() {
     write_file(temp.path(), "source.recite", ":: saved\n");
     let manifest_uri = file_uri(&temp.path().join("recite.project.toml"));
     let source_uri = file_uri(&source);
-    let mut workspace = LspWorkspace::new(WorkspaceConfig::from_initialize_params(
+    let mut workspace = test_workspace(WorkspaceConfig::from_initialize_params(
         &serde_json::from_value(json!({
             "rootUri": file_uri(temp.path()).as_str(),
             "capabilities": {},
@@ -47,7 +47,7 @@ pub(crate) fn manifestless_refresh_preserves_discovery_candidate() {
         "capabilities": {},
     }))
     .unwrap_or_else(|error| panic!("initialize params: {error}"));
-    let mut workspace = LspWorkspace::new(WorkspaceConfig::from_initialize_params(&params));
+    let mut workspace = test_workspace(WorkspaceConfig::from_initialize_params(&params));
     assert_eq!(block_names(&workspace), ["source"]);
 
     write_file(temp.path(), "recite.project.toml", "format_version = 1\n");
@@ -78,7 +78,7 @@ pub(crate) fn nested_discovery_start_survives_manifest_transitions() {
         "capabilities": {},
     }))
     .unwrap_or_else(|error| panic!("initialize params: {error}"));
-    let mut workspace = LspWorkspace::new(WorkspaceConfig::from_initialize_params(&params));
+    let mut workspace = test_workspace(WorkspaceConfig::from_initialize_params(&params));
     assert_eq!(block_names(&workspace), ["nested"]);
 
     workspace.refresh_watched_uri(&file_uri(&parent_manifest));
@@ -132,7 +132,7 @@ pub(crate) fn manifest_refresh_clears_removed_saved_diagnostics_only() {
         "capabilities": {},
     }))
     .unwrap_or_else(|error| panic!("initialize params: {error}"));
-    let mut workspace = LspWorkspace::new(WorkspaceConfig::from_initialize_params(&params));
+    let mut workspace = test_workspace(WorkspaceConfig::from_initialize_params(&params));
     workspace.open(open_uri.clone(), 1, ":: overlay\n".to_owned());
     write_file(
         temp.path(),

@@ -3,6 +3,7 @@ use std::path::PathBuf;
 use lsp_types::{
     CompletionResponse, GotoDefinitionResponse, TextDocumentContentChangeEvent, WorkspaceEdit,
 };
+use recite_ui::{UiCatalog, UiLocale};
 
 use super::memory::LspMemoryReport;
 use super::probes::{
@@ -48,8 +49,12 @@ pub struct LspBenchmarkDriver {
 impl LspBenchmarkDriver {
     #[must_use]
     pub fn new(config: &LspBenchmarkConfig) -> Self {
+        let catalog = match UiCatalog::load(&UiLocale::default()) {
+            Ok(catalog) => catalog,
+            Err(error) => panic!("benchmark default UI catalog is invalid: {error}"),
+        };
         Self {
-            workspace: LspWorkspace::new(config.workspace_config()),
+            workspace: LspWorkspace::with_ui_catalog(config.workspace_config(), catalog),
         }
     }
 

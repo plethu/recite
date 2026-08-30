@@ -1,5 +1,7 @@
+use std::collections::BTreeMap;
+
 use recite_compiler::AuthoringKernel;
-use recite_ui::{UiCatalog, UiLocale};
+use recite_ui::UiCatalog;
 
 use super::SnapshotGeneration;
 use super::project_index::SavedProjectIndex;
@@ -10,11 +12,6 @@ use crate::diagnostics::DiagnosticSource;
 use crate::documents::OpenDocumentStore;
 
 impl LspWorkspace {
-    #[allow(dead_code, reason = "used by unit tests and benchmark support")]
-    pub(crate) fn new(config: WorkspaceConfig) -> Self {
-        Self::with_ui_catalog(config, default_ui_catalog())
-    }
-
     pub(crate) fn with_ui_catalog(config: WorkspaceConfig, ui_catalog: UiCatalog) -> Self {
         let saved = SavedProjectIndex::discover(&config);
         let schema = SchemaIndex::load(config.schema_path);
@@ -28,6 +25,7 @@ impl LspWorkspace {
             saved,
             documents,
             kernel,
+            kernel_open_owners: BTreeMap::new(),
             snapshot: LiveProjectSnapshot::empty(generation),
             schema,
             generation,
@@ -73,13 +71,5 @@ impl LspWorkspace {
             diagnostics: self.saved.diagnostics().to_vec(),
             generation: self.generation,
         }))
-    }
-}
-
-#[allow(dead_code, reason = "used by the default workspace constructor")]
-fn default_ui_catalog() -> UiCatalog {
-    match UiCatalog::load(&UiLocale::default()) {
-        Ok(catalog) => catalog,
-        Err(error) => panic!("embedded default UI catalog must load: {error}"),
     }
 }

@@ -30,12 +30,19 @@ use serde::Serialize;
 use serde_json::{Value, json};
 
 use crate::server::{ServerError, run_connection};
-use crate::workspace::LspWorkspace;
+use crate::workspace::{LspWorkspace, WorkspaceConfig};
 
 pub(super) struct Harness {
     client: Connection,
     server: JoinHandle<Result<(), ServerError>>,
     next_id: i32,
+}
+
+pub(super) fn test_workspace(config: WorkspaceConfig) -> LspWorkspace {
+    match UiCatalog::load(&UiLocale::default()) {
+        Ok(catalog) => LspWorkspace::with_ui_catalog(config, catalog),
+        Err(error) => panic!("test default UI catalog is invalid: {error}"),
+    }
 }
 
 impl Harness {

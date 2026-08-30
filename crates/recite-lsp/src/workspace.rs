@@ -7,6 +7,7 @@ mod schema_index;
 mod snapshot;
 mod ui;
 
+use std::collections::BTreeMap;
 use std::fs;
 use std::path::{Component, Path, PathBuf};
 
@@ -15,7 +16,7 @@ use lsp_types::{
     Location, Position, PrepareRenameResponse, TextDocumentContentChangeEvent, Uri, WorkspaceEdit,
 };
 use recite_compiler::AuthoringKernel;
-use recite_core::Diagnostic;
+use recite_core::{Diagnostic, DocumentKey};
 use recite_ui::UiCatalog;
 
 pub(crate) use config::WorkspaceConfig;
@@ -36,6 +37,7 @@ pub(crate) struct LspWorkspace {
     saved: SavedProjectIndex,
     documents: OpenDocumentStore,
     kernel: AuthoringKernel,
+    kernel_open_owners: BTreeMap<DocumentKey, Uri>,
     snapshot: LiveProjectSnapshot,
     schema: SchemaIndex,
     generation: SnapshotGeneration,

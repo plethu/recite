@@ -22,8 +22,27 @@ impl LspWorkspace {
     }
 
     pub(crate) fn rebuild_kernel(&mut self) {
-        let request = self.authoring_request();
+        let open_documents = self.effective_open_documents();
+        let owners = open_documents
+            .iter()
+            .map(|(key, document)| (key.clone(), document.identity().uri.clone()))
+            .collect::<BTreeMap<_, _>>();
+        if owners != self.kernel_open_owners {
+            let mut kernel = self.new_kernel();
+            let expected = kernel.snapshot().generation();
+            let request = self.authoring_request(&open_documents, expected);
+            if let Err(error) = kernel.apply(request) {
+                panic!(
+                    "LSP authoring request invariant violated at generation {expected}: {error}"
+                );
+            }
+            self.kernel = kernel;
+            self.kernel_open_owners = owners;
+            return;
+        }
+
         let expected = self.kernel.snapshot().generation();
+        let request = self.authoring_request(&open_documents, expected);
         if let Err(error) = self.kernel.apply(request) {
             panic!("LSP authoring request invariant violated at generation {expected}: {error}");
         }
@@ -36,7 +55,11 @@ impl LspWorkspace {
             .map_or_else(AuthoringKernel::new, AuthoringKernel::with_schema)
     }
 
-    fn authoring_request(&self) -> AuthoringRequest {
+    fn authoring_request(
+        &self,
+        open_documents: &BTreeMap<DocumentKey, &OpenDocument>,
+        expected_generation: recite_compiler::SnapshotGeneration,
+    ) -> AuthoringRequest {
         let saved = self
             .saved
             .documents
@@ -48,6 +71,20 @@ impl LspWorkspace {
                 ))
             })
             .collect::<Vec<_>>();
+        let open = open_documents
+            .iter()
+            .map(|(key, document)| {
+                KernelOpenDocument::new(
+                    key.clone(),
+                    recite_compiler::DocumentVersion::new(i64::from(document.version())),
+                    document.text().to_owned(),
+                )
+            })
+            .collect::<Vec<_>>();
+        AuthoringRequest::new(expected_generation, saved, open)
+    }
+
+    fn effective_open_documents(&self) -> BTreeMap<DocumentKey, &OpenDocument> {
         let mut open_by_key = BTreeMap::new();
         for document in self.documents.documents() {
             let Some(key) = document_key_for_open(document) else {
@@ -57,17 +94,7 @@ impl LspWorkspace {
             // document key when multiple aliases are open concurrently.
             open_by_key.entry(key).or_insert(document);
         }
-        let open = open_by_key
-            .into_iter()
-            .map(|(key, document)| {
-                KernelOpenDocument::new(
-                    key,
-                    recite_compiler::DocumentVersion::new(i64::from(document.version())),
-                    document.text().to_owned(),
-                )
-            })
-            .collect::<Vec<_>>();
-        AuthoringRequest::new(self.kernel.snapshot().generation(), saved, open)
+        open_by_key
     }
 
     pub(crate) fn publish_open_document(&self, document: &OpenDocument) -> DiagnosticRefresh {
@@ -86,10 +113,17 @@ impl LspWorkspace {
     }
 
     fn is_effective_open(&self, document: &OpenDocument, key: &DocumentKey) -> bool {
+        self.effective_open_document_for_key(key)
+            .is_some_and(|candidate| candidate.identity().uri == document.identity().uri)
+    }
+
+    pub(crate) fn effective_open_document_for_key(
+        &self,
+        key: &DocumentKey,
+    ) -> Option<&OpenDocument> {
         self.documents
             .documents()
-            .find(|candidate| document_key_for_open(candidate).as_ref() == Some(key))
-            .is_some_and(|candidate| candidate.identity().uri == document.identity().uri)
+            .find(|document| document_key_for_open(document).as_ref() == Some(key))
     }
 }
 

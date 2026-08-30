@@ -131,6 +131,17 @@ fn open_nonexistent_aliases_share_one_fallback_key() {
     super::project_indexes::open_nonexistent_aliases_share_one_fallback_key();
 }
 
+#[cfg(unix)]
+#[test]
+fn open_alias_owner_switch_reseeds_kernel_version_state() {
+    super::project_indexes::open_alias_owner_switch_reseeds_kernel_version_state();
+}
+
+#[test]
+fn watched_refresh_publishes_effective_open_payload() {
+    super::project_indexes::watched_refresh_publishes_effective_open_payload();
+}
+
 #[test]
 fn did_save_refreshes_saved_summary_for_closed_files() {
     super::project_indexes::did_save_refreshes_saved_summary_for_closed_files();

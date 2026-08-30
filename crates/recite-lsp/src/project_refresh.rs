@@ -1,3 +1,5 @@
+use std::collections::BTreeSet;
+
 use lsp_types::Uri;
 
 use super::{DiagnosticRefresh, LspWorkspace};
@@ -80,8 +82,15 @@ impl LspWorkspace {
         {
             return vec![refresh];
         }
+        let watched_keys = self.watched_document_keys(uri);
         if self.saved.refresh_uri(uri) {
             self.rebuild_next_generation();
+            if let Some(document) = watched_keys
+                .iter()
+                .find_map(|key| self.effective_open_document_for_key(key))
+            {
+                return vec![self.publish_open_document(document)];
+            }
             return self
                 .saved
                 .document_by_uri(uri)
@@ -96,10 +105,30 @@ impl LspWorkspace {
         Vec::new()
     }
 
+    fn watched_document_keys(&self, uri: &Uri) -> BTreeSet<recite_core::DocumentKey> {
+        self.documents
+            .document(uri)
+            .and_then(super::document_key_for_open)
+            .into_iter()
+            .chain(
+                self.saved
+                    .document_by_uri(uri)
+                    .and_then(super::document_key_for_saved),
+            )
+            .collect()
+    }
+
     pub(crate) fn close(&mut self, uri: Uri) -> Option<DiagnosticRefresh> {
-        self.documents.close(&uri)?;
+        let closed = self.documents.close(&uri)?;
+        let closed_key = super::document_key_for_open(&closed);
         self.saved.refresh_uri(&uri);
         self.rebuild_next_generation();
+        if let Some(document) = closed_key
+            .as_ref()
+            .and_then(|key| self.effective_open_document_for_key(key))
+        {
+            return Some(self.publish_open_document(document));
+        }
         Some(
             self.saved
                 .document_by_uri(&uri)

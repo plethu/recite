@@ -123,7 +123,13 @@ fn related_spans_resolve_open_project_file_text() {
     let first_uri = file_path_to_uri(&first_path).expect("valid first URI");
     let second_uri =
         file_path_to_uri(&temp.path().join("dialogue/second.recite")).expect("valid second URI");
-    let mut workspace = LspWorkspace::new(WorkspaceConfig::for_roots(vec![temp.path().to_owned()]));
+    let mut workspace = match UiCatalog::load(&UiLocale::default()) {
+        Ok(catalog) => LspWorkspace::with_ui_catalog(
+            WorkspaceConfig::for_roots(vec![temp.path().to_owned()]),
+            catalog,
+        ),
+        Err(error) => panic!("test default UI catalog is invalid: {error}"),
+    };
     workspace.open(
         first_uri.clone(),
         1,

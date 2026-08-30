@@ -1,9 +1,9 @@
 use serde_json::json;
 use tempfile::TempDir;
 
-use crate::workspace::{LspWorkspace, WorkspaceConfig};
+use crate::workspace::WorkspaceConfig;
 
-use super::super::super::support::{block_names, file_uri, write_file};
+use super::super::super::support::{block_names, file_uri, test_workspace, write_file};
 
 pub(crate) fn all() {
     #[cfg(unix)]
@@ -28,7 +28,7 @@ pub(crate) fn source_ownership_is_order_independent() {
         "capabilities": {},
     }))
     .unwrap_or_else(|error| panic!("initialize params: {error}"));
-    let mut workspace = LspWorkspace::new(WorkspaceConfig::from_initialize_params(&params));
+    let mut workspace = test_workspace(WorkspaceConfig::from_initialize_params(&params));
 
     // Alias-first creation and deletion must leave the independently owned
     // canonical source intact.
@@ -82,7 +82,7 @@ pub(crate) fn canonical_symlink_excludes_apply_to_refreshes() {
         "capabilities": {},
     }))
     .unwrap_or_else(|error| panic!("initialize params: {error}"));
-    let mut workspace = LspWorkspace::new(WorkspaceConfig::from_initialize_params(&params));
+    let mut workspace = test_workspace(WorkspaceConfig::from_initialize_params(&params));
     assert_eq!(block_names(&workspace), ["kept"]);
 
     workspace.refresh_watched_uri(&file_uri(&temp.path().join("alias.recite")));
@@ -105,7 +105,7 @@ pub(crate) fn symlink_alias_replacement_reconciles_canonical_identity() {
         "capabilities": {},
     }))
     .unwrap_or_else(|error| panic!("initialize params: {error}"));
-    let mut workspace = LspWorkspace::new(WorkspaceConfig::from_initialize_params(&params));
+    let mut workspace = test_workspace(WorkspaceConfig::from_initialize_params(&params));
     workspace.save(uri.clone());
 
     std::fs::remove_file(&alias).expect("remove alias");
@@ -129,7 +129,7 @@ pub(crate) fn symlink_identity_replacements_remove_stale_documents() {
     let target = temp.path().join("target.recite");
     let alias_uri = file_uri(&alias);
     let workspace_config = WorkspaceConfig::for_roots(vec![temp.path().to_owned()]);
-    let mut workspace = LspWorkspace::new(workspace_config);
+    let mut workspace = test_workspace(workspace_config);
 
     write_file(temp.path(), "target.recite", ":: target\n");
     symlink(&target, &alias).expect("target alias");

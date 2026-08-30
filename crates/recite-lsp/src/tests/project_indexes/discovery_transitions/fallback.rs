@@ -1,9 +1,9 @@
 use serde_json::json;
 use tempfile::TempDir;
 
-use crate::workspace::{LspWorkspace, WorkspaceConfig};
+use crate::workspace::WorkspaceConfig;
 
-use super::super::super::support::{block_names, file_uri, write_file};
+use super::super::super::support::{block_names, file_uri, test_workspace, write_file};
 
 pub(crate) fn all() {
     manifestless_watcher_keeps_builtin_exclusions();
@@ -19,7 +19,7 @@ pub(crate) fn manifestless_watcher_keeps_builtin_exclusions() {
         "capabilities": {},
     }))
     .unwrap_or_else(|error| panic!("initialize params: {error}"));
-    let mut workspace = LspWorkspace::new(WorkspaceConfig::from_initialize_params(&params));
+    let mut workspace = test_workspace(WorkspaceConfig::from_initialize_params(&params));
 
     write_file(temp.path(), "target/new.recite", ":: target\n");
     write_file(temp.path(), ".hidden/new.recite", ":: hidden\n");
@@ -55,7 +55,7 @@ pub(crate) fn manifestless_multi_root_documents_keep_project_relative_keys() {
     write_file(temp.path(), "first/a.recite", ":: first\n");
     write_file(temp.path(), "second/a.recite", ":: second\n");
     let config = WorkspaceConfig::for_roots(vec![first.clone(), second.clone()]);
-    let mut workspace = LspWorkspace::new(config);
+    let mut workspace = test_workspace(config);
 
     workspace.open(
         file_uri(&first.join("a.recite")),
@@ -97,7 +97,7 @@ pub(crate) fn multi_root_documents_keep_project_relative_keys() {
         "capabilities": {},
     }))
     .unwrap_or_else(|error| panic!("initialize params: {error}"));
-    let mut workspace = LspWorkspace::new(WorkspaceConfig::from_initialize_params(&params));
+    let mut workspace = test_workspace(WorkspaceConfig::from_initialize_params(&params));
     workspace.open(file_uri(&src), 1, ":: live src\n".to_owned());
     workspace.open(file_uri(&other), 1, ":: live other\n".to_owned());
     let keys = workspace
