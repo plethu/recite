@@ -15,7 +15,7 @@ pub use evidence::{
     ProducerCapabilityStatus, ProducerFailureEvidence, SchemaSummaryEvidence,
     SchemaSummaryEvidenceBuilder,
 };
-pub use freshness::SchemaFreshnessEvidence;
+pub use freshness::{SchemaFreshnessEvidence, SchemaFreshnessSnapshotIdentity};
 pub use functions::{AvailabilityReasonSummary, ConditionSummary, EffectSummary, MarkupSummary};
 pub use identity::{
     ProducerMetadataSummary, SchemaAction, SchemaCapability, SchemaCapabilityUnavailableReason,

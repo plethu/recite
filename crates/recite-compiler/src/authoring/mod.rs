@@ -43,9 +43,9 @@ pub use schema_summary::{
     ProducerMetadataSummary, ProjectionQueryFunctionSummary, RegistrySummary, SchemaAction,
     SchemaCapability, SchemaCapabilityUnavailableReason, SchemaDeclarationProvenance,
     SchemaDeclarationSummary, SchemaFingerprintSummary, SchemaFreshness, SchemaFreshnessEvidence,
-    SchemaFreshnessUnavailableReason, SchemaOwnership, SchemaSourceSummary, SchemaSummary,
-    SchemaSummaryBuildError, SchemaSummaryEvidence, SchemaSummaryEvidenceBuilder,
-    SchemaSummaryEvidenceError, SchemaTypeSummary, SpeakerSummary,
+    SchemaFreshnessSnapshotIdentity, SchemaFreshnessUnavailableReason, SchemaOwnership,
+    SchemaSourceSummary, SchemaSummary, SchemaSummaryBuildError, SchemaSummaryEvidence,
+    SchemaSummaryEvidenceBuilder, SchemaSummaryEvidenceError, SchemaTypeSummary, SpeakerSummary,
 };
 pub use snapshot::{
     AnalysisDelta, AuthoringSnapshot, DiagnosticCollection, DiagnosticIter, DocumentDelta,

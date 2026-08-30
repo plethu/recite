@@ -2,7 +2,7 @@ use recite_core::{ContentFingerprint, ProjectSchema, SchemaSource};
 
 use super::dialogue::{RegistrySummary, SchemaTypeSummary, SpeakerSummary};
 use super::evidence::SchemaSummaryEvidence;
-use super::freshness::SchemaFreshnessEvidence;
+use super::freshness::{SchemaFreshnessEvidence, SchemaFreshnessSnapshotIdentity};
 use super::functions::{AvailabilityReasonSummary, ConditionSummary, EffectSummary, MarkupSummary};
 use super::helpers::{
     capability, domain_origin, freshness, ownership, provenance, sorted_fingerprints,
@@ -232,11 +232,15 @@ fn validate_evidence(
             });
         }
         if let Some(freshness) = evidence.freshness() {
-            let summarized = schema.canonical_fingerprint();
-            if freshness.expected_schema_fingerprint() != &summarized {
+            let summarized = SchemaFreshnessSnapshotIdentity::from_schema(
+                schema,
+                super::errors::FreshnessSnapshotSide::Expected,
+            )
+            .map_err(|_| SchemaSummaryBuildError::EvidenceWithoutProducer)?;
+            if freshness.expected_identity() != &summarized {
                 return Err(SchemaSummaryBuildError::FreshnessSchemaMismatch {
-                    expected: freshness.expected_schema_fingerprint().clone(),
-                    summarized,
+                    expected: Box::new(freshness.expected_identity().clone()),
+                    summarized: Box::new(summarized),
                 });
             }
         }

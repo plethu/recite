@@ -138,12 +138,6 @@ impl SchemaSummaryEvidenceBuilder {
         Ok(self)
     }
 
-    #[must_use]
-    pub fn freshness(mut self, freshness: SchemaFreshnessEvidence) -> Self {
-        self.freshness = Some(freshness);
-        self
-    }
-
     /// Validate producer identity and capability/failure consistency.
     pub fn build(self) -> Result<SchemaSummaryEvidence, SchemaSummaryEvidenceError> {
         if let Some(failure) = &self.current_failure {

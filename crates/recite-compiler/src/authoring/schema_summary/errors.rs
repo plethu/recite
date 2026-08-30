@@ -1,4 +1,6 @@
-use recite_core::{ProducerIdentity, SchemaFingerprint};
+use recite_core::ProducerIdentity;
+
+use super::freshness::SchemaFreshnessSnapshotIdentity;
 
 /// Which side of a freshness comparison lacked producer identity.
 #[derive(Clone, Copy, Debug, Eq, PartialEq)]
@@ -36,9 +38,9 @@ pub enum SchemaSummaryBuildError {
     },
     #[error("evidence was supplied for a schema without producer metadata")]
     EvidenceWithoutProducer,
-    #[error("freshness expected fingerprint does not match the summarized schema")]
+    #[error("freshness expected snapshot identity does not match the summarized schema")]
     FreshnessSchemaMismatch {
-        expected: SchemaFingerprint,
-        summarized: SchemaFingerprint,
+        expected: Box<SchemaFreshnessSnapshotIdentity>,
+        summarized: Box<SchemaFreshnessSnapshotIdentity>,
     },
 }
