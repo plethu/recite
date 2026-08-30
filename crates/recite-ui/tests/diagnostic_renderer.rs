@@ -196,3 +196,38 @@ fn rendering_same_record_against_different_catalogs_does_not_cache_strings() {
     assert_eq!(first.primary_text, "first");
     assert_eq!(second.primary_text, "second");
 }
+
+#[test]
+fn config_document_key_uses_default_resource_for_an_alternate_locale() {
+    let catalog = UiCatalog::from_resources(
+        locale("fr-FR"),
+        [(locale("en-US"), DEFAULT_RESOURCE.to_owned())],
+    )
+    .expect("default catalog");
+    let contract =
+        recite_core::config_contract_for(&DiagnosticCode::new_static("RECITE_CONFIG117"))
+            .expect("invalid document key contract");
+    let presentation = contract
+        .presentation([(
+            "detail",
+            DiagnosticArgumentValue::String(
+                "dir\\start.recite: document key must use slash separators".to_owned(),
+            ),
+        )])
+        .expect("config presentation arguments");
+    let record = DiagnosticRecord::new(
+        DiagnosticCode::new_static("RECITE_CONFIG117"),
+        DiagnosticSeverity::Error,
+        point("dir\\start.recite", 1, 1),
+        presentation,
+    )
+    .with_compatibility_message("compatibility fallback");
+
+    assert_eq!(
+        catalog
+            .render_diagnostic(&record)
+            .expect("default fallback rendering")
+            .primary_text,
+        "project source has an invalid document key: dir\\start.recite: document key must use slash separators"
+    );
+}

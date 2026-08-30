@@ -5,6 +5,9 @@ use super::super::diagnostics::DiscoveryDiagnostic;
 use super::super::glob::GlobPattern;
 use super::{DiscoveredDocument, DiscoveredRoot, DocumentKey, is_excluded_relative};
 
+#[cfg(test)]
+mod tests;
+
 pub(super) fn collect_root(
     project_root: &Path,
     root: &DiscoveredRoot,
@@ -71,7 +74,14 @@ impl Enumeration<'_> {
                 }
             };
             let relative = match path.strip_prefix(self.project_root) {
-                Ok(path) => path.to_string_lossy().replace('\\', "/"),
+                Ok(_) => match project_relative_key(self.project_root, &path) {
+                    Some(relative) => relative,
+                    None => {
+                        self.diagnostics
+                            .push(DiscoveryDiagnostic::NonUtf8Path { path });
+                        continue;
+                    }
+                },
                 Err(_) => {
                     self.diagnostics
                         .push(DiscoveryDiagnostic::FileOutsideProject {
@@ -149,9 +159,13 @@ impl Enumeration<'_> {
             {
                 continue;
             }
-            let key = match canonical.strip_prefix(self.project_root) {
-                Ok(relative) => relative.to_string_lossy().replace('\\', "/"),
-                Err(_) => continue,
+            let key = match project_relative_key(self.project_root, &canonical) {
+                Some(key) => key,
+                None => {
+                    self.diagnostics
+                        .push(DiscoveryDiagnostic::NonUtf8Path { path: canonical });
+                    continue;
+                }
             };
             if is_excluded_relative(&key, self.excludes) {
                 continue;
@@ -200,4 +214,17 @@ impl Enumeration<'_> {
             }
         }
     }
+}
+
+fn project_relative_key(project_root: &Path, path: &Path) -> Option<String> {
+    let relative = path.strip_prefix(project_root).ok()?;
+    let mut key = String::new();
+    for component in relative.components() {
+        let component = component.as_os_str().to_str()?;
+        if !key.is_empty() {
+            key.push('/');
+        }
+        key.push_str(component);
+    }
+    Some(key)
 }

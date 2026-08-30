@@ -95,4 +95,20 @@ fn diagnostic_contract_matches_registry_and_resources() {
     diagnostic_contract
         .validate(include_str!("../resources/diagnostics.ftl"))
         .expect("diagnostic resource file is complete independently");
+
+    let invalid_document_key = contract
+        .resources
+        .iter()
+        .find(|resource| resource.id.as_str() == "diagnostic-config-117")
+        .expect("invalid document key resource is registered");
+    assert_eq!(
+        invalid_document_key.arguments,
+        BTreeMap::from([("detail".to_owned(), UiArgType::String)])
+    );
+    assert_eq!(
+        invalid_document_key.clients,
+        [Client::Cli, Client::Tui, Client::Lsp]
+            .into_iter()
+            .collect()
+    );
 }
