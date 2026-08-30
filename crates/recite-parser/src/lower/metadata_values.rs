@@ -22,7 +22,16 @@ fn array_element_spans(value: &str, value_span: &SourceSpan) -> Vec<SourceSpan> 
     let mut spans = Vec::new();
     let mut start = 0;
     let mut quote = false;
+    let mut escaped = false;
     for (index, character) in inner.char_indices() {
+        if escaped {
+            escaped = false;
+            continue;
+        }
+        if quote && character == '\\' {
+            escaped = true;
+            continue;
+        }
         match character {
             '"' => quote = !quote,
             ',' if !quote => {

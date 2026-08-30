@@ -59,12 +59,14 @@ impl Lowerer<'_, '_> {
         let fields = header_fields(trimmed, StatementMarker::Block, line, base_column);
         let Some(id_field) = fields.first().copied() else {
             self.mark(SourceRecoveryClass::BlockDefinitions);
+            self.mark(SourceRecoveryClass::AstStructure);
             self.diagnostics.push(missing_block_id(span));
             return None;
         };
 
         if id_field.key_value(self.path).is_some() {
             self.mark(SourceRecoveryClass::BlockDefinitions);
+            self.mark(SourceRecoveryClass::AstStructure);
             self.diagnostics
                 .push(missing_block_id(id_field.span(self.path)));
             return None;
@@ -72,6 +74,7 @@ impl Lowerer<'_, '_> {
 
         let Ok(id) = BlockId::new(id_field.text) else {
             self.mark(SourceRecoveryClass::BlockDefinitions);
+            self.mark(SourceRecoveryClass::AstStructure);
             self.diagnostics
                 .push(empty_block_id(id_field.span(self.path)));
             return None;

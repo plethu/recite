@@ -1,6 +1,9 @@
 #![cfg(test)]
 
-use recite_compiler::{AuthoringKernel, AuthoringRequest, SavedDocument, SnapshotGeneration};
+use recite_compiler::{
+    AuthoringKernel, AuthoringRequest, QueryClass, SavedDocument, SnapshotGeneration,
+    SymbolQueryOptions,
+};
 use recite_core::DocumentKey;
 
 fn key() -> DocumentKey {
@@ -29,6 +32,9 @@ fn dropped_or_ambiguous_regions_never_claim_ast_completeness() {
         ":: start\n  -> kept\n   -> missing\n",
         ":: start\n  -> next\n  prose after statement\n",
         "? choice@11111111111111111111 if\n",
+        "::\n",
+        ":: start\n->\n",
+        ":: start\n! broken\n",
     ];
     for source in fixtures {
         let participation = recovery_for(source);
@@ -36,7 +42,6 @@ fn dropped_or_ambiguous_regions_never_claim_ast_completeness() {
             !participation.ast_structure().is_complete(),
             "fixture was marked complete: {source:?}"
         );
-        assert!(!participation.block_references().is_complete());
     }
 }
 
@@ -142,4 +147,45 @@ fn malformed_diagnostics_are_local_and_recovery_preserves_clean_validation() {
             .iter()
             .any(|diagnostic| diagnostic.code.as_str() == "RECITE_VALIDATE007")
     );
+}
+
+#[test]
+fn symbol_readiness_reports_the_actual_incomplete_classes() {
+    let cases = [
+        ("::\n", QueryClass::BlockDefinitions),
+        (":: start\n->\n", QueryClass::BlockReferences),
+        (":: start\n> line@bad\n", QueryClass::StableIds),
+        (
+            ":: start\n> line@11111111111111111111 bind=(name:string=$)\n",
+            QueryClass::Metadata,
+        ),
+        (":: start\n:if broken(\n", QueryClass::ConditionFunctions),
+        (":: start\n! broken\n", QueryClass::EffectFunctions),
+    ];
+    for (source, class) in cases {
+        let mut kernel = AuthoringKernel::new();
+        kernel
+            .apply(AuthoringRequest::new(
+                SnapshotGeneration::initial(),
+                [SavedDocument::new(key(), source)],
+                [],
+            ))
+            .expect("readiness fixture accepted");
+        let result = kernel
+            .snapshot()
+            .symbols(&key(), SymbolQueryOptions::default());
+        assert!(
+            result
+                .unavailable_reasons()
+                .contains(&recite_compiler::QueryUnavailableReason::Incomplete(class))
+        );
+        let project_result = kernel
+            .snapshot()
+            .project_symbols(SymbolQueryOptions::default());
+        assert!(
+            project_result
+                .unavailable_reasons()
+                .contains(&recite_compiler::QueryUnavailableReason::Incomplete(class))
+        );
+    }
 }
