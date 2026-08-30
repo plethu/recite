@@ -74,3 +74,72 @@ fn unrelated_clean_files_keep_their_local_participation() {
     assert!(clean.participation().block_definitions().is_complete());
     assert!(clean.participation().block_references().is_complete());
 }
+
+#[test]
+fn malformed_diagnostics_are_local_and_recovery_preserves_clean_validation() {
+    let mut kernel = AuthoringKernel::new();
+    kernel
+        .apply(AuthoringRequest::new(
+            SnapshotGeneration::initial(),
+            [
+                SavedDocument::new(
+                    DocumentKey::new("clean.recite").expect("valid key"),
+                    ":: start\n>\n  A line without an ID.\n-> malformed.recite::missing\n",
+                ),
+                SavedDocument::new(
+                    DocumentKey::new("malformed.recite").expect("valid key"),
+                    "oops\n",
+                ),
+            ],
+            [],
+        ))
+        .expect("recoverable source request accepted");
+    let clean = kernel
+        .snapshot()
+        .document(&DocumentKey::new("clean.recite").expect("valid key"))
+        .expect("clean document is present");
+    let malformed = kernel
+        .snapshot()
+        .document(&DocumentKey::new("malformed.recite").expect("valid key"))
+        .expect("malformed document is present");
+    assert!(
+        malformed
+            .diagnostics()
+            .iter()
+            .any(|diagnostic| diagnostic.code.as_str().starts_with("RECITE_PARSE"))
+    );
+    assert!(!malformed.participation().ast_structure().is_complete());
+    assert!(
+        clean
+            .diagnostics()
+            .iter()
+            .any(|diagnostic| diagnostic.code.as_str() == "RECITE_ID001")
+    );
+
+    kernel
+        .apply(AuthoringRequest::new(
+            kernel.snapshot().generation(),
+            [
+                SavedDocument::new(
+                    DocumentKey::new("clean.recite").expect("valid key"),
+                    ":: start\n> line@11111111111111111111\n  A line with an ID.\n-> malformed.recite::missing\n",
+                ),
+                SavedDocument::new(
+                    DocumentKey::new("malformed.recite").expect("valid key"),
+                    ":: known\n",
+                ),
+            ],
+            [],
+        ))
+        .expect("complete replacement accepted");
+    let clean = kernel
+        .snapshot()
+        .document(&DocumentKey::new("clean.recite").expect("valid key"))
+        .expect("clean document remains present");
+    assert!(
+        clean
+            .diagnostics()
+            .iter()
+            .any(|diagnostic| diagnostic.code.as_str() == "RECITE_VALIDATE007")
+    );
+}
