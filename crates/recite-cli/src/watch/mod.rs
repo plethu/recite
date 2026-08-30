@@ -14,12 +14,17 @@ mod engine;
 mod events;
 mod inputs;
 mod preparation;
+mod publisher;
 mod request;
+mod staging;
+mod targets;
 
 pub use engine::ProjectBuildEngine;
+pub use publisher::{ProjectBuildPublisher, ProjectBuildPublisherError, ProjectPreparedBuild};
 pub use request::{
     ProjectBuildPreparation, ProjectBuildPreparationError, ProjectBuildRequest, ProjectBuildTarget,
 };
+pub use targets::{TargetMapError, TargetPathError};
 
 use build::{BuildStatus, build_once};
 use events::{WatchState, drain_debounce, watch_error};
