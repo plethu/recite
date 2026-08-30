@@ -1,4 +1,4 @@
-use lsp_types::CodeActionKind;
+use lsp_types::{CodeActionKind, CodeActionOrCommand, DocumentChanges};
 use tempfile::TempDir;
 
 use super::support::{
@@ -42,6 +42,33 @@ pub(super) fn block_stub_quick_fix_targets_unique_external_file() {
     let target_uri = file_uri(&temp.path().join("dialogue/next.recite"));
     let mut harness = harness_for_root(temp.path());
 
+    let guarded = code_actions(
+        &mut harness,
+        source_uri.clone(),
+        range(1, 24, 1, 29),
+        Some(vec![CodeActionKind::QUICKFIX]),
+    );
+    let Some(CodeActionOrCommand::CodeAction(action)) = guarded.into_iter().next() else {
+        panic!("expected external stub action");
+    };
+    let Some(DocumentChanges::Edits(changes)) = action.edit.and_then(|edit| edit.document_changes)
+    else {
+        panic!("expected guarded external stub changes");
+    };
+    assert_eq!(changes.len(), 2);
+    let source_change = changes
+        .iter()
+        .find(|change| change.text_document.uri == source_uri);
+    let target_change = changes
+        .iter()
+        .find(|change| change.text_document.uri == target_uri);
+    assert_eq!(source_change.map(|change| change.edits.len()), Some(0));
+    assert_eq!(target_change.map(|change| change.edits.len()), Some(1));
+    assert_eq!(
+        target_change.and_then(|change| change.text_document.version),
+        None
+    );
+
     let edit = single_quick_fix_with_title(
         &mut harness,
         source_uri,
@@ -55,6 +82,24 @@ pub(super) fn block_stub_quick_fix_targets_unique_external_file() {
     assert_eq!(text_edit.range, range(1, 0, 1, 0));
     assert_eq!(text_edit.new_text, ":: later\n");
 
+    harness.finish();
+}
+
+pub(super) fn block_stub_full_document_range_uses_bounded_candidates() {
+    let mut harness = Harness::start();
+    let source_uri = uri("file:///workspace/dialogue/block-stub-large-range.recite");
+    let prose = "# ordinary prose\n".repeat(1_000);
+    let source = format!(":: start default\n-> missing_block\n{prose}");
+    harness.did_open(source_uri.clone(), 5, &source);
+    let _ = harness.recv_publish_diagnostics();
+
+    let edit = single_quick_fix_with_title(
+        &mut harness,
+        source_uri,
+        range(0, 0, 1_002, 0),
+        "Create block stub `missing_block`",
+    );
+    assert_eq!(single_text_edit(&edit).new_text, ":: missing_block\n");
     harness.finish();
 }
 

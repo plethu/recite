@@ -98,8 +98,12 @@ fn single_document_edit(edit: lsp_types::WorkspaceEdit) -> TextDocumentEdit {
     let Some(DocumentChanges::Edits(changes)) = edit.document_changes else {
         panic!("expected document changes");
     };
-    assert_eq!(changes.len(), 1);
-    changes.into_iter().next().expect("document edit")
+    let edited = changes
+        .into_iter()
+        .filter(|change| !change.edits.is_empty())
+        .collect::<Vec<_>>();
+    assert_eq!(edited.len(), 1);
+    edited.into_iter().next().expect("edited document")
 }
 
 pub(super) fn single_text_edit(edit: &TextDocumentEdit) -> TextEdit {

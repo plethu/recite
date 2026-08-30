@@ -15,7 +15,7 @@ use crate::edit_projection::EditDocument;
 use crate::summary::{FileSummary, SchemaSummary};
 
 pub(crate) struct CodeActionDocument<'a> {
-    pub(crate) source: EditDocument,
+    pub(crate) source: EditDocument<'a>,
     pub(crate) summary: &'a FileSummary,
 }
 
@@ -35,10 +35,10 @@ pub(crate) fn code_action(
 ) -> Option<CodeActionResponse> {
     let document = documents
         .iter()
-        .find(|document| document.source.uri == params.text_document.uri)?;
+        .find(|document| *document.source.uri == params.text_document.uri)?;
     let edit_documents = documents
         .iter()
-        .map(|document| document.source.clone())
+        .map(|document| document.source)
         .collect::<Vec<_>>();
 
     let mut actions = Vec::new();
@@ -75,7 +75,7 @@ pub(crate) fn code_action(
     }
 
     let fix_all_edit = if include_fix_all {
-        missing_id::fix_all(snapshot, &edit_documents)
+        missing_id::fix_all(document, snapshot, &edit_documents)
     } else {
         None
     };

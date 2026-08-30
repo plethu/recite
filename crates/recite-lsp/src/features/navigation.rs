@@ -8,13 +8,13 @@ use recite_core::{DocumentKey, SourcePosition};
 use crate::edit_projection::{EditDocument, project_plan};
 use crate::position::span_to_range;
 
-pub(crate) type NavigationDocument = EditDocument;
+pub(crate) type NavigationDocument<'a> = EditDocument<'a>;
 
 pub(crate) fn definition(
     key: &DocumentKey,
     position: SourcePosition,
     snapshot: &AuthoringSnapshot,
-    documents: &[NavigationDocument],
+    documents: &[NavigationDocument<'_>],
 ) -> Option<GotoDefinitionResponse> {
     let result = snapshot.navigate(key, position);
     let (QueryResult::Ready(NavigationResult::Unique(symbol))
@@ -35,7 +35,7 @@ pub(crate) fn references(
     position: SourcePosition,
     include_declaration: bool,
     snapshot: &AuthoringSnapshot,
-    documents: &[NavigationDocument],
+    documents: &[NavigationDocument<'_>],
 ) -> Option<Vec<Location>> {
     let QueryResult::Ready(NavigationResult::Unique(_)) = snapshot.navigate(key, position) else {
         return None;
@@ -107,7 +107,7 @@ pub(crate) fn rename(
     position: SourcePosition,
     new_name: &str,
     snapshot: &AuthoringSnapshot,
-    documents: &[NavigationDocument],
+    documents: &[NavigationDocument<'_>],
 ) -> Option<WorkspaceEdit> {
     let plan = snapshot.plan_rename_block(key, position, new_name).ok()?;
     project_plan(&plan, snapshot, documents)
@@ -133,14 +133,14 @@ fn unique_navigation(
 
 fn location_for_symbol(
     symbol: &SymbolLocation,
-    documents: &[NavigationDocument],
+    documents: &[NavigationDocument<'_>],
 ) -> Option<Location> {
     let document = documents
         .iter()
-        .find(|document| &document.key == symbol.document())?;
+        .find(|document| document.key == symbol.document())?;
     Some(Location {
         uri: document.uri.clone(),
-        range: span_to_range(&document.text, symbol.span()),
+        range: span_to_range(document.text, symbol.span()),
     })
 }
 

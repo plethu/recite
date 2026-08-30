@@ -1,14 +1,14 @@
 use lsp_types::Range;
-use recite_compiler::{AuthoringEditError, AuthoringEditPlan, AuthoringSnapshot};
+use recite_compiler::{AuthoringEditError, AuthoringEditPlan, AuthoringSnapshot, SourceRange};
 
 use super::CodeActionDocument;
 use crate::edit_projection::{EditDocument, project_plan};
-use crate::position::source_positions_in_lsp_range;
+use crate::position::lsp_position_to_source;
 
 pub(super) fn edit(
     document: &CodeActionDocument<'_>,
     snapshot: &AuthoringSnapshot,
-    documents: &[EditDocument],
+    documents: &[EditDocument<'_>],
     range: Range,
 ) -> Option<lsp_types::WorkspaceEdit> {
     let plan = plan_for_range(snapshot, document, range)?;
@@ -20,25 +20,23 @@ fn plan_for_range(
     document: &CodeActionDocument<'_>,
     range: Range,
 ) -> Option<AuthoringEditPlan> {
-    let mut selected = None;
-    for position in source_positions_in_lsp_range(&document.source.text, range)? {
-        match snapshot.plan_insert_missing_id(&document.source.key, position) {
-            Ok(plan) => match &selected {
-                None => selected = Some(plan),
-                Some(existing) if existing == &plan => {}
-                Some(_) => return None,
-            },
-            Err(AuthoringEditError::NoSymbol { .. }) => continue,
-            Err(_) => return None,
-        }
+    let start = lsp_position_to_source(document.source.text, range.start)?;
+    let end = lsp_position_to_source(document.source.text, range.end)?;
+    let source_range = SourceRange::new(start, end);
+    match snapshot.plan_insert_missing_ids_in_range(document.source.key, source_range) {
+        Ok(plan) => Some(plan),
+        Err(AuthoringEditError::NoEdits | AuthoringEditError::NoSymbol { .. }) => None,
+        Err(_) => None,
     }
-    selected
 }
 
 pub(super) fn fix_all(
+    document: &CodeActionDocument<'_>,
     snapshot: &AuthoringSnapshot,
-    documents: &[EditDocument],
+    documents: &[EditDocument<'_>],
 ) -> Option<lsp_types::WorkspaceEdit> {
-    let plan = snapshot.plan_insert_missing_ids().ok()?;
+    let plan = snapshot
+        .plan_insert_missing_ids_for_document(document.source.key)
+        .ok()?;
     project_plan(&plan, snapshot, documents)
 }

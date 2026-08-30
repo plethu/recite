@@ -169,6 +169,51 @@ fn stable_id_plans_are_deterministic_and_preserve_source_bytes() {
 }
 
 #[test]
+fn stable_id_batch_and_range_plans_scope_edits_but_guard_project_state() {
+    let main = concat!(
+        ":: start\n",
+        ">\n",
+        "  Missing line.\n",
+        "?\n",
+        "  Missing choice.\n",
+    );
+    let other = ":: other\n>\n  Other missing line.\n";
+    let mut kernel = AuthoringKernel::new();
+    kernel
+        .apply(AuthoringRequest::new(
+            SnapshotGeneration::initial(),
+            [
+                SavedDocument::new(key("main.recite"), main),
+                SavedDocument::new(key("other.recite"), other),
+            ],
+            [],
+        ))
+        .expect("source accepted");
+
+    let batch = kernel
+        .snapshot()
+        .plan_insert_missing_ids_for_document(&key("main.recite"))
+        .expect("document batch is planable");
+    assert_eq!(batch.preconditions().len(), 2);
+    assert_eq!(batch.edits().len(), 2);
+    assert!(
+        batch
+            .edits()
+            .iter()
+            .all(|edit| edit.document() == &key("main.recite"))
+    );
+
+    let range = SourceRange::new(position(2, 1), position(3, 1));
+    let ranged = kernel
+        .snapshot()
+        .plan_insert_missing_ids_in_range(&key("main.recite"), range)
+        .expect("range batch is planable");
+    assert_eq!(ranged.preconditions().len(), 2);
+    assert_eq!(ranged.edits().len(), 1);
+    assert_eq!(ranged.edits()[0].document(), &key("main.recite"));
+}
+
+#[test]
 fn rename_plan_edits_only_definition_and_resolved_references() {
     let main = concat!(
         ":: start\r\n",

@@ -5,7 +5,7 @@ use super::helpers::{
 };
 use super::{AuthoringEditError, AuthoringEditOperation, AuthoringEditPlan, SourceEdit};
 use crate::authoring::{
-    AuthoringSnapshot, BlockTarget, CompletionSiteKind, NavigationResult, QueryResult,
+    AuthoringSnapshot, BlockTarget, CompletionSiteKind, NavigationResult, QueryResult, SourceRange,
     SymbolIdentity, SymbolQueryOptions, SymbolRole,
 };
 
@@ -104,6 +104,52 @@ pub fn plan_create_block_stub(
     )
 }
 
+/// Plans the block stub selected by a source range.
+///
+/// Candidate locations come from the compiler's typed symbol summary, so a
+/// host can pass a wide diagnostic range without walking its source text.
+pub fn plan_create_block_stub_in_range(
+    snapshot: &AuthoringSnapshot,
+    key: &DocumentKey,
+    range: SourceRange,
+) -> Result<AuthoringEditPlan, AuthoringEditError> {
+    document(snapshot, key)?;
+    if range.start() > range.end() {
+        return Err(AuthoringEditError::UnmappableRange {
+            document: key.clone(),
+        });
+    }
+    let symbols = match snapshot.symbols(key, SymbolQueryOptions::default()) {
+        QueryResult::Ready(symbols) => symbols,
+        QueryResult::Partial { unavailable, .. } | QueryResult::Unavailable(unavailable) => {
+            return Err(incomplete_from_query(key, unavailable));
+        }
+        QueryResult::NoMatch => return Err(no_symbol(key, range.start())),
+    };
+    let mut selected = None;
+    for symbol in symbols.into_iter().filter(|symbol| {
+        matches!(symbol.identity(), SymbolIdentity::Block(_))
+            && symbol.role() == SymbolRole::Reference
+            && span_selected_by_range(symbol.span(), range)
+    }) {
+        match plan_create_block_stub(snapshot, key, symbol.span().start) {
+            Ok(plan) => match &selected {
+                None => selected = Some(plan),
+                Some(existing) if existing == &plan => {}
+                Some(_) => {
+                    return Err(AuthoringEditError::AmbiguousSymbol {
+                        document: key.clone(),
+                        line: symbol.span().start.line(),
+                        column: symbol.span().start.column(),
+                    });
+                }
+            },
+            Err(error) => return Err(error),
+        }
+    }
+    selected.ok_or_else(|| no_symbol(key, range.start()))
+}
+
 impl AuthoringSnapshot {
     /// Plans a block stub for the missing reference at `position`.
     pub fn plan_create_block_stub(
@@ -113,6 +159,25 @@ impl AuthoringSnapshot {
     ) -> Result<AuthoringEditPlan, AuthoringEditError> {
         plan_create_block_stub(self, key, position)
     }
+
+    /// Plans the block stub selected by a source range.
+    pub fn plan_create_block_stub_in_range(
+        &self,
+        key: &DocumentKey,
+        range: SourceRange,
+    ) -> Result<AuthoringEditPlan, AuthoringEditError> {
+        plan_create_block_stub_in_range(self, key, range)
+    }
+}
+
+fn span_selected_by_range(span: &recite_core::SourceSpan, range: SourceRange) -> bool {
+    let Some(end) = span.end else {
+        return false;
+    };
+    if range.start() == range.end() {
+        return range.start() >= span.start && range.start() <= end;
+    }
+    range.start() <= end && range.end() > span.start
 }
 
 fn newline_for(source: &str) -> &'static str {

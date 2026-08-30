@@ -194,6 +194,16 @@ fn source_fix_all_orders_deterministic_multi_edits_and_preserves_existing_ids() 
 }
 
 #[test]
+fn source_fix_all_scopes_edits_and_guards_sibling_documents() {
+    super::code_action::source_fix_all_scopes_edits_and_guards_sibling_documents();
+}
+
+#[test]
+fn quick_fix_full_document_range_uses_bounded_candidates() {
+    super::code_action::quick_fix_full_document_range_uses_bounded_candidates();
+}
+
+#[test]
 fn generated_ids_are_deterministic_and_avoid_line_choice_namespace_collisions() {
     super::code_action::generated_ids_are_deterministic_and_avoid_line_choice_namespace_collisions(
     );
@@ -217,6 +227,11 @@ fn block_stub_quick_fix_inserts_local_eof_stub() {
 #[test]
 fn block_stub_quick_fix_targets_unique_external_file() {
     super::code_action::block_stub_quick_fix_targets_unique_external_file();
+}
+
+#[test]
+fn block_stub_full_document_range_uses_bounded_candidates() {
+    super::code_action::block_stub_full_document_range_uses_bounded_candidates();
 }
 
 #[test]
@@ -280,6 +295,11 @@ fn malformed_code_action_params_return_invalid_params() {
 }
 
 #[test]
+fn projector_refuses_mismatched_precondition_documents() {
+    super::edit_projection::projector_refuses_mismatched_precondition_documents();
+}
+
+#[test]
 fn definition_resolves_block_references() {
     super::navigation::definition_resolves_block_references();
 }
@@ -321,10 +341,10 @@ fn references_require_unique_navigation() {
 
 #[test]
 fn typed_clause_and_schema_ranges_exclude_delimiters() {
-    super::navigation_corrections::typed_clause_and_schema_ranges_exclude_delimiters();
+    super::navigation_ranges::typed_clause_and_schema_ranges_exclude_delimiters();
 }
 
 #[test]
 fn condition_marker_completion_and_hover_follow_parser_boundaries() {
-    super::navigation_corrections::condition_marker_completion_and_hover_follow_parser_boundaries();
+    super::navigation_ranges::condition_marker_completion_and_hover_follow_parser_boundaries();
 }

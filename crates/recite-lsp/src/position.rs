@@ -65,51 +65,6 @@ pub(crate) fn lsp_position_to_source(text: &str, position: Position) -> Option<S
     SourcePosition::new(position.line.saturating_add(1), column).ok()
 }
 
-/// Returns source cursor positions represented by an LSP action range.
-///
-/// The compiler edit planner remains the authority for whether a position is
-/// meaningful.  This helper only walks the exact scalar cursor locations in
-/// the protocol range, which accommodates diagnostic ranges that begin on a
-/// delimiter immediately before the semantic token.
-pub(crate) fn source_positions_in_lsp_range(
-    text: &str,
-    range: Range,
-) -> Option<Vec<SourcePosition>> {
-    let start = lsp_position_to_source(text, range.start)?;
-    let end = lsp_position_to_source(text, range.end)?;
-    if start > end {
-        return None;
-    }
-    if start == end {
-        return Some(vec![start]);
-    }
-
-    let mut positions = Vec::new();
-    let mut current = start;
-    while current < end {
-        positions.push(current);
-        current = next_source_position(text, current)?;
-    }
-    Some(positions)
-}
-
-fn next_source_position(text: &str, position: SourcePosition) -> Option<SourcePosition> {
-    let line_index = usize::try_from(position.line().checked_sub(1)?).ok()?;
-    let raw_line = text.split('\n').nth(line_index)?;
-    let line = raw_line.strip_suffix('\r').unwrap_or(raw_line);
-    let scalar_count = u32::try_from(line.chars().count()).ok()?;
-    if position.column() <= scalar_count {
-        return SourcePosition::new(position.line(), position.column().checked_add(1)?).ok();
-    }
-    if position.column() == scalar_count.checked_add(1)? {
-        return text
-            .split('\n')
-            .nth(line_index.checked_add(1)?)
-            .and_then(|_| SourcePosition::new(position.line().checked_add(1)?, 1).ok());
-    }
-    None
-}
-
 fn scalar_column_for_utf16(line: &str, character: u32) -> Option<u32> {
     let mut utf16 = 0_u32;
     let mut scalar = 1_u32;

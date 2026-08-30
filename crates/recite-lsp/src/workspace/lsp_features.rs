@@ -136,17 +136,17 @@ impl LspWorkspace {
             .collect()
     }
 
-    fn navigation_documents(&self) -> Vec<features::NavigationDocument> {
-        self.kernel
-            .snapshot()
+    fn navigation_documents(&self) -> Vec<features::NavigationDocument<'_>> {
+        let snapshot = self.kernel.snapshot();
+        snapshot
             .documents()
             .iter()
             .filter_map(|document| {
                 let uri = self.uri_for_document_key(document.key())?;
                 Some(features::NavigationDocument {
-                    uri: uri.clone(),
-                    key: document.key().clone(),
-                    text: document.source_text().to_owned(),
+                    uri,
+                    key: document.key(),
+                    text: document.source_text(),
                     layer: document.layer(),
                     version: document.version(),
                 })
@@ -177,21 +177,22 @@ impl LspWorkspace {
     }
 
     fn code_action_documents(&self) -> Vec<features::CodeActionDocument<'_>> {
+        let compiler_snapshot = self.kernel.snapshot();
         self.snapshot
             .summaries()
             .iter()
             .filter_map(|summary| {
                 let key = document_key_for_identity(&summary.identity)?;
-                let source = self.kernel.snapshot().document(&key)?;
+                let source = compiler_snapshot.document(&key)?;
                 let text = self.text_for_summary(summary)?;
                 if text != source.source_text() {
                     return None;
                 }
                 Some(features::CodeActionDocument {
                     source: EditDocument {
-                        key,
-                        uri: summary.uri().clone(),
-                        text: source.source_text().to_owned(),
+                        key: source.key(),
+                        uri: summary.uri(),
+                        text: source.source_text(),
                         layer: source.layer(),
                         version: source.version(),
                     },

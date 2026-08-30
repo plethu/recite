@@ -85,7 +85,9 @@ pub use authoring::{
     RestartGuidance, SavedDocument, SemanticFact, SemanticSymbolKind, SnapshotGeneration,
     SourceEdit, SourceFingerprint, SourceRange, StableIdKind, StableIdSummary, StaleReason,
     SymbolIdentity, SymbolKind, SymbolLocation, SymbolQueryOptions, SymbolRole,
-    plan_create_block_stub, plan_insert_missing_id, plan_insert_missing_ids, plan_rename_block,
+    plan_create_block_stub, plan_create_block_stub_in_range, plan_insert_missing_id,
+    plan_insert_missing_ids, plan_insert_missing_ids_for_document,
+    plan_insert_missing_ids_in_range, plan_rename_block,
 };
 pub use compile::{
     CompileError, CompileInput, CompileOptions, CompileReport, CompiledAssetOutput, compile_inputs,

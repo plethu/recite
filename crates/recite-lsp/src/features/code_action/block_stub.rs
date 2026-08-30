@@ -1,18 +1,16 @@
 use lsp_types::{CodeAction, CodeActionKind, CodeActionOrCommand, CodeActionParams};
-use recite_compiler::{
-    AuthoringEditError, AuthoringEditOperation, AuthoringEditPlan, AuthoringSnapshot,
-};
+use recite_compiler::{AuthoringEditOperation, AuthoringEditPlan, AuthoringSnapshot, SourceRange};
 use recite_ui::{MsgId, UiCatalog};
 
 use super::CodeActionDocument;
 use crate::edit_projection::{EditDocument, project_plan};
-use crate::position::source_positions_in_lsp_range;
+use crate::position::lsp_position_to_source;
 
 pub(super) fn actions(
     params: &CodeActionParams,
     document: &CodeActionDocument<'_>,
     snapshot: &AuthoringSnapshot,
-    documents: &[EditDocument],
+    documents: &[EditDocument<'_>],
     catalog: &UiCatalog,
 ) -> Vec<CodeActionOrCommand> {
     let Some(plan) = plan_for_range(snapshot, document, params.range) else {
@@ -41,17 +39,10 @@ fn plan_for_range(
     document: &CodeActionDocument<'_>,
     range: lsp_types::Range,
 ) -> Option<AuthoringEditPlan> {
-    let mut selected = None;
-    for position in source_positions_in_lsp_range(&document.source.text, range)? {
-        match snapshot.plan_create_block_stub(&document.source.key, position) {
-            Ok(plan) => match &selected {
-                None => selected = Some(plan),
-                Some(existing) if existing == &plan => {}
-                Some(_) => return None,
-            },
-            Err(AuthoringEditError::NoSymbol { .. }) => continue,
-            Err(_) => return None,
-        }
-    }
-    selected
+    let start = lsp_position_to_source(document.source.text, range.start)?;
+    let end = lsp_position_to_source(document.source.text, range.end)?;
+    let source_range = SourceRange::new(start, end);
+    snapshot
+        .plan_create_block_stub_in_range(document.source.key, source_range)
+        .ok()
 }

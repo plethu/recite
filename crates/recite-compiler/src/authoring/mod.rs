@@ -23,8 +23,9 @@ pub use build::{
 };
 pub use edit::{
     AuthoringEditError, AuthoringEditOperation, AuthoringEditPlan, EditPrecondition, SourceEdit,
-    SourceFingerprint, SourceRange, plan_create_block_stub, plan_insert_missing_id,
-    plan_insert_missing_ids, plan_rename_block,
+    SourceFingerprint, SourceRange, plan_create_block_stub, plan_create_block_stub_in_range,
+    plan_insert_missing_id, plan_insert_missing_ids, plan_insert_missing_ids_for_document,
+    plan_insert_missing_ids_in_range, plan_rename_block,
 };
 pub use input::{AuthoringRequest, DocumentVersion, OpenDocument, SavedDocument};
 pub use query::{

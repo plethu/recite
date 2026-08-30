@@ -1,5 +1,8 @@
 use lsp_types::request::{CodeActionRequest, Request as LspRequest};
-use lsp_types::{CodeActionKind, CodeActionProviderCapability, TextEdit};
+use lsp_types::{
+    CodeActionKind, CodeActionOrCommand, CodeActionProviderCapability, DocumentChanges, OneOf,
+    TextEdit,
+};
 use serde_json::json;
 use tempfile::TempDir;
 
@@ -166,6 +169,77 @@ pub(super) fn source_fix_all_orders_deterministic_multi_edits_and_preserves_exis
     assert!(applied.contains("> line@"));
     assert!(applied.contains("? choice@"));
 
+    harness.finish();
+}
+
+pub(super) fn source_fix_all_scopes_edits_and_guards_sibling_documents() {
+    let temp = TempDir::new().unwrap_or_else(|error| panic!("tempdir: {error}"));
+    write_file(temp.path(), "a.recite", ":: a\n>\n  Missing.\n");
+    write_file(
+        temp.path(),
+        "b.recite",
+        ":: b\n> existing@0123456789abcdef0123\n  Existing.\n",
+    );
+    let a_uri = file_uri(&temp.path().join("a.recite"));
+    let b_uri = file_uri(&temp.path().join("b.recite"));
+    let mut harness = harness_for_root(temp.path());
+    harness.did_open(
+        b_uri.clone(),
+        9,
+        ":: b\n> existing@0123456789abcdef0123\n  Existing.\n",
+    );
+    let _ = harness.recv_publish_diagnostics();
+    let actions = code_actions(
+        &mut harness,
+        a_uri.clone(),
+        range(0, 0, 3, 10),
+        Some(vec![CodeActionKind::SOURCE_FIX_ALL]),
+    );
+    let Some(CodeActionOrCommand::CodeAction(action)) = actions.into_iter().next() else {
+        panic!("expected source.fixAll action");
+    };
+    let Some(DocumentChanges::Edits(changes)) = action.edit.and_then(|edit| edit.document_changes)
+    else {
+        panic!("expected guarded document changes");
+    };
+    assert_eq!(changes.len(), 2);
+    let a_change = changes
+        .iter()
+        .find(|change| change.text_document.uri == a_uri);
+    let b_change = changes
+        .iter()
+        .find(|change| change.text_document.uri == b_uri);
+    assert_eq!(
+        a_change.and_then(|change| change.text_document.version),
+        None
+    );
+    assert_eq!(
+        b_change.and_then(|change| change.text_document.version),
+        Some(9)
+    );
+    assert_eq!(a_change.map(|change| change.edits.len()), Some(1));
+    assert_eq!(b_change.map(|change| change.edits.len()), Some(0));
+    assert!(matches!(
+        a_change.and_then(|change| change.edits.first()),
+        Some(OneOf::Left(_))
+    ));
+    harness.finish();
+}
+
+pub(super) fn quick_fix_full_document_range_uses_bounded_candidates() {
+    let mut harness = Harness::start();
+    let source_uri = uri("file:///workspace/dialogue/code-action-large-range.recite");
+    let prose = "ordinary prose ".repeat(4_000);
+    let source = format!(":: start default\n>\n  {prose}\n");
+    harness.did_open(source_uri.clone(), 6, &source);
+    let _ = harness.recv_publish_diagnostics();
+
+    let action = single_quick_fix(
+        &mut harness,
+        source_uri,
+        range(0, 0, 2, (prose.len() + 2) as u32),
+    );
+    assert_generated_insert(&single_text_edit(&action).new_text, "line");
     harness.finish();
 }
 

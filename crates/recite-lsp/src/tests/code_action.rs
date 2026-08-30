@@ -23,6 +23,14 @@ pub(super) fn source_fix_all_orders_deterministic_multi_edits_and_preserves_exis
     missing_id::source_fix_all_orders_deterministic_multi_edits_and_preserves_existing_ids();
 }
 
+pub(super) fn source_fix_all_scopes_edits_and_guards_sibling_documents() {
+    missing_id::source_fix_all_scopes_edits_and_guards_sibling_documents();
+}
+
+pub(super) fn quick_fix_full_document_range_uses_bounded_candidates() {
+    missing_id::quick_fix_full_document_range_uses_bounded_candidates();
+}
+
 pub(super) fn generated_ids_are_deterministic_and_avoid_line_choice_namespace_collisions() {
     missing_id::generated_ids_are_deterministic_and_avoid_line_choice_namespace_collisions();
 }
@@ -41,6 +49,10 @@ pub(super) fn block_stub_quick_fix_inserts_local_eof_stub() {
 
 pub(super) fn block_stub_quick_fix_targets_unique_external_file() {
     block_stub::block_stub_quick_fix_targets_unique_external_file();
+}
+
+pub(super) fn block_stub_full_document_range_uses_bounded_candidates() {
+    block_stub::block_stub_full_document_range_uses_bounded_candidates();
 }
 
 pub(super) fn block_stub_quick_fix_rejects_unresolved_target_and_target_collision() {
