@@ -2,6 +2,7 @@ use recite_core::{ContentFingerprint, ProjectSchema, SchemaSource};
 
 use super::dialogue::{RegistrySummary, SchemaTypeSummary, SpeakerSummary};
 use super::evidence::SchemaSummaryEvidence;
+use super::freshness::SchemaFreshnessEvidence;
 use super::functions::{AvailabilityReasonSummary, ConditionSummary, EffectSummary, MarkupSummary};
 use super::helpers::{
     capability, domain_origin, freshness, ownership, provenance, sorted_fingerprints,
@@ -53,6 +54,7 @@ impl SchemaSummary {
         let producer = schema.producer_metadata.as_ref();
         let freshness = evidence
             .and_then(SchemaSummaryEvidence::freshness)
+            .map(SchemaFreshnessEvidence::comparison)
             .cloned()
             .map(|freshness| SchemaFreshness::Compared(Box::new(freshness)))
             .unwrap_or_else(|| freshness(producer.is_some()));
@@ -228,6 +230,15 @@ fn validate_evidence(
                 expected: expected.clone(),
                 actual: evidence.producer().clone(),
             });
+        }
+        if let Some(freshness) = evidence.freshness() {
+            let summarized = schema.canonical_fingerprint();
+            if freshness.expected_schema_fingerprint() != &summarized {
+                return Err(SchemaSummaryBuildError::FreshnessSchemaMismatch {
+                    expected: freshness.expected_schema_fingerprint().clone(),
+                    summarized,
+                });
+            }
         }
     }
     Ok(())

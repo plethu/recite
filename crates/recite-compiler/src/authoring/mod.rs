@@ -38,13 +38,14 @@ pub use query::{
 };
 pub use schema_summary::{
     AuthoringSchemaSummary, AvailabilityReasonSummary, ConditionSummary, EffectSummary,
-    MarkupSummary, MetadataDomainSummary, MetadataKeySummary, PresentationProjectorSummary,
-    ProducerCapabilityStatus, ProducerFailureEvidence, ProducerMetadataSummary,
-    ProjectionQueryFunctionSummary, RegistrySummary, SchemaAction, SchemaCapability,
-    SchemaCapabilityUnavailableReason, SchemaDeclarationProvenance, SchemaDeclarationSummary,
-    SchemaFingerprintSummary, SchemaFreshness, SchemaFreshnessUnavailableReason, SchemaOwnership,
-    SchemaSourceSummary, SchemaSummary, SchemaSummaryBuildError, SchemaSummaryEvidence,
-    SchemaSummaryEvidenceBuilder, SchemaSummaryEvidenceError, SchemaTypeSummary, SpeakerSummary,
+    FreshnessSnapshotSide, MarkupSummary, MetadataDomainSummary, MetadataKeySummary,
+    PresentationProjectorSummary, ProducerCapabilityStatus, ProducerFailureEvidence,
+    ProducerMetadataSummary, ProjectionQueryFunctionSummary, RegistrySummary, SchemaAction,
+    SchemaCapability, SchemaCapabilityUnavailableReason, SchemaDeclarationProvenance,
+    SchemaDeclarationSummary, SchemaFingerprintSummary, SchemaFreshness, SchemaFreshnessEvidence,
+    SchemaFreshnessUnavailableReason, SchemaOwnership, SchemaSourceSummary, SchemaSummary,
+    SchemaSummaryBuildError, SchemaSummaryEvidence, SchemaSummaryEvidenceBuilder,
+    SchemaSummaryEvidenceError, SchemaTypeSummary, SpeakerSummary,
 };
 pub use snapshot::{
     AnalysisDelta, AuthoringSnapshot, DiagnosticCollection, DiagnosticIter, DocumentDelta,

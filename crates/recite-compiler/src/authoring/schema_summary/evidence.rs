@@ -1,7 +1,7 @@
-use recite_core::{
-    ProducerIdentity, ProjectSchema, SchemaProducerFreshness,
-    compare_schema_producer_freshness_detailed,
-};
+use recite_core::{ProducerIdentity, ProjectSchema};
+
+use super::errors::SchemaSummaryEvidenceError;
+use super::freshness::SchemaFreshnessEvidence;
 
 /// Producer capability evidence supplied by a host or producer report.
 #[derive(Clone, Copy, Debug, Eq, PartialEq)]
@@ -63,7 +63,7 @@ pub struct SchemaSummaryEvidence {
     pub(super) producer: ProducerIdentity,
     pub(super) capability: Option<ProducerCapabilityStatus>,
     pub(super) current_failure: Option<ProducerFailureEvidence>,
-    pub(super) freshness: Option<SchemaProducerFreshness>,
+    pub(super) freshness: Option<SchemaFreshnessEvidence>,
 }
 
 impl SchemaSummaryEvidence {
@@ -93,7 +93,7 @@ impl SchemaSummaryEvidence {
     }
 
     #[must_use]
-    pub const fn freshness(&self) -> Option<&SchemaProducerFreshness> {
+    pub const fn freshness(&self) -> Option<&SchemaFreshnessEvidence> {
         self.freshness.as_ref()
     }
 }
@@ -104,7 +104,7 @@ pub struct SchemaSummaryEvidenceBuilder {
     producer: ProducerIdentity,
     capability: Option<ProducerCapabilityStatus>,
     current_failure: Option<ProducerFailureEvidence>,
-    freshness: Option<SchemaProducerFreshness>,
+    freshness: Option<SchemaFreshnessEvidence>,
 }
 
 impl SchemaSummaryEvidenceBuilder {
@@ -127,25 +127,19 @@ impl SchemaSummaryEvidenceBuilder {
         expected: &ProjectSchema,
         actual: &ProjectSchema,
     ) -> Result<Self, SchemaSummaryEvidenceError> {
-        for schema in [expected, actual] {
-            if let Some(identity) = schema
-                .producer_metadata
-                .as_ref()
-                .and_then(|metadata| metadata.producer.as_ref())
-                && identity != &self.producer
-            {
-                return Err(SchemaSummaryEvidenceError::ProducerIdentityMismatch {
-                    expected: self.producer.clone(),
-                    actual: identity.clone(),
-                });
-            }
+        let freshness = SchemaFreshnessEvidence::from_snapshots(expected, actual)?;
+        if freshness.expected_producer() != &self.producer {
+            return Err(SchemaSummaryEvidenceError::ProducerIdentityMismatch {
+                expected: self.producer.clone(),
+                actual: freshness.expected_producer().clone(),
+            });
         }
-        self.freshness = Some(compare_schema_producer_freshness_detailed(expected, actual));
+        self.freshness = Some(freshness);
         Ok(self)
     }
 
     #[must_use]
-    pub fn freshness(mut self, freshness: SchemaProducerFreshness) -> Self {
+    pub fn freshness(mut self, freshness: SchemaFreshnessEvidence) -> Self {
         self.freshness = Some(freshness);
         self
     }
@@ -170,32 +164,4 @@ impl SchemaSummaryEvidenceBuilder {
             freshness: self.freshness,
         })
     }
-}
-
-/// Failure while constructing host evidence for a schema summary.
-#[derive(Clone, Debug, Eq, PartialEq, thiserror::Error)]
-#[non_exhaustive]
-pub enum SchemaSummaryEvidenceError {
-    #[error("producer identity mismatch: expected {expected:?}, got {actual:?}")]
-    ProducerIdentityMismatch {
-        expected: ProducerIdentity,
-        actual: ProducerIdentity,
-    },
-    #[error("a producer failure requires supported capability evidence")]
-    ContradictoryStates,
-    #[error("producer failure code must not be empty")]
-    EmptyFailureCode,
-}
-
-/// Failure while applying evidence to a canonical schema.
-#[derive(Clone, Debug, Eq, PartialEq, thiserror::Error)]
-#[non_exhaustive]
-pub enum SchemaSummaryBuildError {
-    #[error("producer identity mismatch: expected {expected:?}, got {actual:?}")]
-    ProducerIdentityMismatch {
-        expected: ProducerIdentity,
-        actual: ProducerIdentity,
-    },
-    #[error("evidence was supplied for a schema without producer metadata")]
-    EvidenceWithoutProducer,
 }

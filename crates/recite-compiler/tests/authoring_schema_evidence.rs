@@ -2,7 +2,8 @@
 
 use recite_compiler::{
     ProducerCapabilityStatus, ProducerFailureEvidence, SchemaAction, SchemaFreshness,
-    SchemaSummary, SchemaSummaryBuildError, SchemaSummaryEvidence, SchemaSummaryEvidenceError,
+    SchemaFreshnessEvidence, SchemaSummary, SchemaSummaryBuildError, SchemaSummaryEvidence,
+    SchemaSummaryEvidenceError,
 };
 use recite_core::{
     ContentFingerprintFreshness, ProducerFreshness, ProjectSchema, SchemaProducerFreshness,
@@ -192,5 +193,81 @@ fn freshness_comparison_retains_simultaneous_stale_channels() {
     assert!(matches!(
         metadata_domains["tone"],
         ProducerFreshness::Missing { .. }
+    ));
+}
+
+#[test]
+fn freshness_requires_both_snapshot_producer_identities() {
+    let generated = generated_schema();
+    let empty = ProjectSchema::empty_v1();
+    assert!(matches!(
+        SchemaFreshnessEvidence::from_snapshots(&empty, &generated),
+        Err(SchemaSummaryEvidenceError::MissingSnapshotProducer { .. })
+    ));
+    assert!(matches!(
+        SchemaFreshnessEvidence::from_snapshots(&generated, &empty),
+        Err(SchemaSummaryEvidenceError::MissingSnapshotProducer { .. })
+    ));
+    let mut other = generated.clone();
+    other
+        .producer_metadata
+        .as_mut()
+        .expect("producer metadata")
+        .producer = Some(recite_core::ProducerIdentity::new("adapter", "other").expect("identity"));
+    assert!(matches!(
+        SchemaFreshnessEvidence::from_snapshots(&generated, &other),
+        Err(SchemaSummaryEvidenceError::ProducerIdentityMismatch { .. })
+    ));
+}
+
+#[test]
+fn freshness_evidence_cannot_be_attached_to_another_schema_with_same_producer() {
+    let expected = generated_schema();
+    let actual = expected.clone();
+    let producer = expected
+        .producer_metadata
+        .as_ref()
+        .and_then(|metadata| metadata.producer.clone())
+        .expect("producer identity");
+    let freshness = SchemaFreshnessEvidence::from_snapshots(&expected, &actual)
+        .expect("matching snapshot identities");
+    let evidence = SchemaSummaryEvidence::builder(producer)
+        .freshness(freshness)
+        .build()
+        .expect("bound freshness evidence");
+    let mut unrelated = expected.clone();
+    if let Some(recite_core::SchemaTypeDefinition::Enum(definition)) =
+        unrelated.types.get_mut("mood")
+    {
+        definition.values.insert("unrelated".to_owned());
+    }
+    assert!(matches!(
+        SchemaSummary::from_schema_with_evidence(&unrelated, Some(&evidence)),
+        Err(SchemaSummaryBuildError::FreshnessSchemaMismatch { .. })
+    ));
+}
+
+#[test]
+fn mismatched_expected_fingerprint_is_rejected() {
+    let expected = generated_schema();
+    let mut actual = expected.clone();
+    if let Some(recite_core::SchemaTypeDefinition::Enum(definition)) = actual.types.get_mut("mood")
+    {
+        definition.values.insert("current-only".to_owned());
+    }
+    let producer = expected
+        .producer_metadata
+        .as_ref()
+        .and_then(|metadata| metadata.producer.clone())
+        .expect("producer identity");
+    let freshness = SchemaFreshnessEvidence::from_snapshots(&expected, &actual)
+        .expect("matching snapshot identities");
+    let evidence = SchemaSummaryEvidence::builder(producer)
+        .freshness(freshness)
+        .build()
+        .expect("bound freshness evidence");
+    assert!(matches!(
+        SchemaSummary::from_schema_with_evidence(&actual, Some(&evidence)),
+        Err(SchemaSummaryBuildError::FreshnessSchemaMismatch { .. })
     ));
 }

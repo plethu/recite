@@ -1,6 +1,8 @@
 mod builder;
 mod dialogue;
+mod errors;
 mod evidence;
+mod freshness;
 mod functions;
 mod helpers;
 mod identity;
@@ -8,10 +10,12 @@ mod metadata;
 mod projections;
 
 pub use dialogue::{RegistrySummary, SchemaTypeSummary, SpeakerSummary};
+pub use errors::{FreshnessSnapshotSide, SchemaSummaryBuildError, SchemaSummaryEvidenceError};
 pub use evidence::{
-    ProducerCapabilityStatus, ProducerFailureEvidence, SchemaSummaryBuildError,
-    SchemaSummaryEvidence, SchemaSummaryEvidenceBuilder, SchemaSummaryEvidenceError,
+    ProducerCapabilityStatus, ProducerFailureEvidence, SchemaSummaryEvidence,
+    SchemaSummaryEvidenceBuilder,
 };
+pub use freshness::SchemaFreshnessEvidence;
 pub use functions::{AvailabilityReasonSummary, ConditionSummary, EffectSummary, MarkupSummary};
 pub use identity::{
     ProducerMetadataSummary, SchemaAction, SchemaCapability, SchemaCapabilityUnavailableReason,
