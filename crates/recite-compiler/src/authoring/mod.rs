@@ -1,4 +1,5 @@
 mod edit;
+mod build;
 mod engine;
 mod input;
 mod input_state;
@@ -7,6 +8,17 @@ mod snapshot;
 mod state;
 mod summary;
 
+pub use build::{
+    AffectedInput, AffectedInputReason, BuildAuthority, BuildCancellation, BuildCandidate,
+    BuildCheck, BuildControl, BuildCoordinator, BuildEngine, BuildEventKind, BuildFailure,
+    BuildFailureReason, BuildFingerprintSet, BuildGeneration, BuildGenerationError, BuildInput,
+    BuildInputAuthority, BuildInputFingerprint, BuildInputKind, BuildInputPolicy, BuildLifecycle,
+    BuildPhase, BuildPublisher, BuildRequest, BuildRequestError, BuildResult, BuildRunError,
+    BuildState, BuildTarget, BuildTargetError, BuildTelemetry, BuildTerminalStatus,
+    BuildTransition, BuildTransitionError, FreshnessAssessment, FreshnessStatus, PublishFailure,
+    PublishFailureReason, PublishNotAttemptedReason, PublishOutcome, PublishRefusal,
+    RecoveryNeeded, RestartGuidance, StaleReason,
+};
 pub use edit::{
     AuthoringEditError, AuthoringEditOperation, AuthoringEditPlan, EditPrecondition, SourceEdit,
     SourceFingerprint, SourceRange, plan_create_block_stub, plan_insert_missing_id,
