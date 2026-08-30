@@ -5,7 +5,7 @@ use crate::{DialogueEffectRequest, DialogueLine, EffectAck};
 use super::{ConditionAnswer, PreviewConditionResult, PreviewEvent, PreviewPrompt};
 
 /// User-facing transcript projection. Condition control traffic and runtime
-/// errors remain in [`PreviewTrace`] rather than being duplicated here.
+/// errors remain in [`crate::PreviewTrace`] rather than being duplicated here.
 #[non_exhaustive]
 #[derive(Clone, Debug, Default, PartialEq)]
 pub struct PreviewTranscript {
