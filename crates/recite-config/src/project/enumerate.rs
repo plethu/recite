@@ -1,6 +1,8 @@
 use std::collections::BTreeMap;
 use std::path::{Path, PathBuf};
 
+use recite_core::DocumentKey;
+
 use super::diagnostics::DiscoveryDiagnostic;
 use super::glob::GlobPattern;
 
@@ -43,27 +45,6 @@ impl DiscoveredRoot {
     #[must_use]
     pub fn path(&self) -> &Path {
         &self.path
-    }
-}
-
-/// Stable project-relative key used by all source consumers.
-#[derive(Clone, Debug, Eq, Ord, PartialEq, PartialOrd, Hash)]
-pub struct DocumentKey(String);
-
-impl DocumentKey {
-    pub(super) fn new(value: String) -> Self {
-        Self(value)
-    }
-
-    #[must_use]
-    pub fn as_str(&self) -> &str {
-        &self.0
-    }
-}
-
-impl std::fmt::Display for DocumentKey {
-    fn fmt(&self, formatter: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
-        formatter.write_str(self.as_str())
     }
 }
 

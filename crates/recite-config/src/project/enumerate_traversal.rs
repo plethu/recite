@@ -178,9 +178,20 @@ impl Enumeration<'_> {
             if let Some(index) = self.seen.get(&canonical).copied() {
                 self.documents[index].source_paths.push(path);
             } else {
+                let key = match DocumentKey::new(key) {
+                    Ok(key) => key,
+                    Err(error) => {
+                        self.diagnostics
+                            .push(DiscoveryDiagnostic::InvalidDocumentKey {
+                                path: canonical,
+                                reason: error.to_string(),
+                            });
+                        continue;
+                    }
+                };
                 self.seen.insert(canonical.clone(), self.documents.len());
                 self.documents.push(DiscoveredDocument {
-                    key: DocumentKey::new(key),
+                    key,
                     path: canonical,
                     source_paths: vec![path],
                     root_index: self.root_index,

@@ -32,6 +32,8 @@ pub(super) const FILE_OUTSIDE_PROJECT: DiagnosticCode =
 pub(super) const NON_UTF8_SOURCE: DiagnosticCode = DiagnosticCode::new_static("RECITE_CONFIG115");
 pub(super) const ROOT_NOT_DIRECTORY: DiagnosticCode =
     DiagnosticCode::new_static("RECITE_CONFIG116");
+pub(super) const INVALID_DOCUMENT_KEY: DiagnosticCode =
+    DiagnosticCode::new_static("RECITE_CONFIG117");
 
 /// A typed, deterministic discovery diagnostic. Warnings remain in the report
 /// so callers can present overlap policy without reconstructing it from text.
@@ -50,6 +52,7 @@ pub enum DiscoveryDiagnostic {
     NonUtf8Path { path: PathBuf },
     FileOutsideProject { path: PathBuf, target: PathBuf },
     NonUtf8Source { path: PathBuf },
+    InvalidDocumentKey { path: PathBuf, reason: String },
 }
 
 /// Failure that prevents a project index from being constructed.

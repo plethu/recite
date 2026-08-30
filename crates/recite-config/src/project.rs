@@ -11,10 +11,11 @@ mod manifest;
 
 pub use diagnostics::{DiscoveryDiagnostic, ProjectDiscoveryError};
 pub use enumerate::{
-    Coverage, DiscoveredDocument, DiscoveredRoot, DocumentKey, allows_unscoped_source_path,
+    Coverage, DiscoveredDocument, DiscoveredRoot, allows_unscoped_source_path,
     discover_unscoped_sources,
 };
 pub use manifest::{
     PROJECT_MANIFEST_FILE, PROJECT_MANIFEST_FORMAT_VERSION, ProjectDiscoveryReport,
     ProjectManifest, discover_project,
 };
+pub use recite_core::{DocumentKey, DocumentKeyError};

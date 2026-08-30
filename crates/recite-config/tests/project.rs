@@ -5,7 +5,10 @@
 
 use std::fs;
 
-use recite_config::{Coverage, DiscoveryDiagnostic, ProjectDiscoveryError, discover_project};
+use recite_config::{
+    Coverage, DiscoveryDiagnostic, DocumentKey, DocumentKeyError, ProjectDiscoveryError,
+    discover_project,
+};
 use tempfile::TempDir;
 
 fn manifest(source_roots: &str, excludes: &str) -> String {
@@ -32,6 +35,29 @@ fn version_and_default_discovery_are_explicit() {
     assert_eq!(report.documents().len(), 1);
     assert_eq!(report.documents()[0].key().as_str(), "dialogue.recite");
     assert_eq!(report.coverage(), Coverage::Complete);
+}
+
+#[test]
+fn discovered_keys_use_core_validation_without_changing_values() {
+    let temp = TempDir::new().expect("tempdir");
+    write(temp.path(), "recite.project.toml", "format_version = 1\n");
+    write(temp.path(), "nested/dialogue.recite", ":: start\n");
+
+    let report = discover_project(temp.path()).expect("project discovery");
+    assert_eq!(
+        report.documents()[0].key().as_str(),
+        "nested/dialogue.recite"
+    );
+    assert_eq!(
+        DocumentKey::new("nested/dialogue.recite")
+            .expect("discovered key is valid")
+            .as_str(),
+        report.documents()[0].key().as_str()
+    );
+    assert!(matches!(
+        DocumentKey::new("nested/../dialogue.recite"),
+        Err(DocumentKeyError::ParentDirectoryComponent { .. })
+    ));
 }
 
 #[test]

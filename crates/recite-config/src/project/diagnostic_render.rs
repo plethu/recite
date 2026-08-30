@@ -20,6 +20,7 @@ impl DiscoveryDiagnostic {
             Self::NonUtf8Path { .. } => super::NON_UTF8_PATH,
             Self::FileOutsideProject { .. } => super::FILE_OUTSIDE_PROJECT,
             Self::NonUtf8Source { .. } => super::NON_UTF8_SOURCE,
+            Self::InvalidDocumentKey { .. } => super::INVALID_DOCUMENT_KEY,
         }
     }
 
@@ -108,6 +109,10 @@ impl DiscoveryDiagnostic {
             Self::NonUtf8Source { path } => (
                 path,
                 format!("project source is not valid UTF-8: {}", display(path)),
+            ),
+            Self::InvalidDocumentKey { path, reason } => (
+                path,
+                format!("project source has an invalid document key: {reason}"),
             ),
         }
     }

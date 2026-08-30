@@ -86,6 +86,7 @@ mod diagnostic_presentation_guidance;
 mod diagnostic_presentation_record;
 mod diagnostic_presentation_wire;
 mod diagnostic_record;
+mod document_key;
 mod error;
 mod ids;
 mod source_id;
@@ -157,6 +158,7 @@ pub use diagnostic_presentation_guidance::{
 };
 pub use diagnostic_presentation_record::{DiagnosticArguments, DiagnosticPresentation};
 pub use diagnostic_record::{DIAGNOSTIC_RECORD_VERSION, DiagnosticRecord, DiagnosticRecordError};
+pub use document_key::{DocumentKey, DocumentKeyError};
 pub use error::CoreValueError;
 pub use ids::{AvailabilityReasonId, BlockId, ChoiceId, EffectId, LineId, LocaleId, SpeakerId};
 pub use markup::{
