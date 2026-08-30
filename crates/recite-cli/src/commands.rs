@@ -32,6 +32,9 @@ use recite_core::{
     DiagnosticCategory, DiagnosticCode, explain_diagnostic_code, suggest_diagnostic_code,
 };
 
+mod project;
+use project::project_check;
+
 pub(crate) fn run_command(
     command: Command,
     stdout: &mut dyn Write,
@@ -75,22 +78,10 @@ pub(crate) fn run_command(
             })
         }
         Command::ValidateProject(args) => {
-            let diagnostics = validate_project(args.project_root)?;
-            report_diagnostics(stderr, messages, diagnostics.iter())?;
-            diagnostics
-                .iter()
-                .all(|diagnostic| diagnostic.severity != recite_core::DiagnosticSeverity::Error)
-                .then_some(())
-                .ok_or(CliError::Diagnostics)
+            project_check(args.project_root, validate_project, stderr, messages)
         }
         Command::CheckFresh(args) => {
-            let diagnostics = check_fresh(args.project_root)?;
-            report_diagnostics(stderr, messages, diagnostics.iter())?;
-            diagnostics
-                .iter()
-                .all(|diagnostic| diagnostic.severity != recite_core::DiagnosticSeverity::Error)
-                .then_some(())
-                .ok_or(CliError::Diagnostics)
+            project_check(args.project_root, check_fresh, stderr, messages)
         }
         Command::CheckSchemaProducerFreshness(args) => {
             crate::schema_freshness::check(args, stdout, stderr, messages)
