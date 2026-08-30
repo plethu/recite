@@ -26,6 +26,7 @@ pub enum DivertTarget {
 
 /// A same-file or cross-file block reference.
 #[derive(Clone, Debug, Eq, PartialEq)]
+#[non_exhaustive]
 pub struct BlockReference {
     pub file: Option<String>,
     pub file_span: Option<SourceSpan>,

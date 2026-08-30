@@ -25,3 +25,7 @@ Initial pre-release development of the deterministic dialogue toolchain:
   navigation/rename, ID code actions, and availability-aware authoring.
 - Benchmark suite with synthetic and realistic fixtures, smoke regression
   policy, and benchmark reports under `docs/benchmark-reports/`.
+- `recite-core` source AST and `recite-parser` lowering remain pre-1.0 APIs:
+  authoring span and recovery fields must be constructed through the published
+  constructors/builders and read through their accessors; direct struct
+  literals are not a compatibility promise.

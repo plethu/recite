@@ -25,6 +25,7 @@ impl From<SourceMetadataScalar> for SourceMetadataValue {
 
 /// One source metadata annotation, preserving spans when available.
 #[derive(Clone, Debug, PartialEq)]
+#[non_exhaustive]
 pub struct SourceMetadataEntry {
     pub key: String,
     pub value: SourceMetadataValue,

@@ -27,6 +27,7 @@ impl SourceFile {
 
 /// A named dialogue block.
 #[derive(Clone, Debug, PartialEq)]
+#[non_exhaustive]
 pub struct Block {
     pub id: BlockId,
     pub id_span: Option<SourceSpan>,

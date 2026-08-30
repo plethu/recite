@@ -15,6 +15,7 @@ use crate::markers::StatementMarker;
 use crate::source::{LogicalLine, LogicalLines};
 
 #[derive(Clone, Debug, PartialEq)]
+#[non_exhaustive]
 pub struct LoweredSourceFile {
     pub source_file: SourceFile,
     pub diagnostics: Vec<Diagnostic>,

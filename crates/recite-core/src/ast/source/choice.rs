@@ -7,6 +7,7 @@ use super::{
 /// A player-selectable choice. Missing IDs are represented for later
 /// compiler/LSP validation.
 #[derive(Clone, Debug, PartialEq)]
+#[non_exhaustive]
 pub struct Choice {
     pub source_id: SourceId,
     pub source_id_span: Option<SourceSpan>,
