@@ -262,3 +262,34 @@ fn freshness_identity_normalizes_input_order_without_dropping_entries() {
         2
     );
 }
+
+#[test]
+fn freshness_rejects_same_semantic_schema_with_different_content_metadata() {
+    let expected = generated_schema();
+    let mut actual = expected.clone();
+    actual
+        .producer_metadata
+        .as_mut()
+        .expect("producer metadata")
+        .content_fingerprint = None;
+    assert_eq!(
+        expected.canonical_fingerprint(),
+        actual.canonical_fingerprint()
+    );
+    let producer = expected
+        .producer_metadata
+        .as_ref()
+        .and_then(|metadata| metadata.producer.clone())
+        .expect("producer identity");
+    let evidence = SchemaSummaryEvidence::builder(producer)
+        .compare_freshness(&expected, &actual)
+        .expect("matching snapshot identities")
+        .build()
+        .expect("bound freshness evidence");
+    let freshness = evidence.freshness().expect("freshness evidence");
+    assert_ne!(freshness.expected_identity(), freshness.actual_identity());
+    assert!(matches!(
+        SchemaSummary::from_schema_with_evidence(&actual, Some(&evidence)),
+        Err(SchemaSummaryBuildError::FreshnessSchemaMismatch { .. })
+    ));
+}
