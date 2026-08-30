@@ -69,6 +69,10 @@ pub use pot::{
     PotDocument, PotEntry, PotExtractionReport, PotReference, extract_pot, extract_pot_with_schema,
 };
 pub use validation::{
-    ValidationReport, validate_source_file, validate_source_files,
-    validate_source_files_with_schema,
+    Participation, SourceFileValidationInput, ValidationCompleteness, ValidationInput,
+    ValidationParticipation, ValidationReport, ValidationSourceFile, validate_source_file,
+    validate_source_file_with_participation, validate_source_file_with_participation_with_schema,
+    validate_source_files, validate_source_files_with_participation,
+    validate_source_files_with_participation_and_schema,
+    validate_source_files_with_participation_with_schema, validate_source_files_with_schema,
 };

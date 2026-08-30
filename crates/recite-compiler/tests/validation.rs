@@ -28,6 +28,8 @@ mod markup;
 mod metadata_schema;
 #[path = "validation/ordering.rs"]
 mod ordering;
+#[path = "validation/participation.rs"]
+mod participation;
 #[path = "validation/source_spans.rs"]
 mod source_spans;
 

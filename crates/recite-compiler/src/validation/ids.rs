@@ -4,6 +4,7 @@ use recite_core::{
     Block, BlockReference, Choice, ChoiceEcho, DivertTarget, SourceFile, SourceSpan, Statement,
 };
 
+use super::participation::{ValidationCompleteness, ValidationSourceFile};
 use super::state::Validator;
 use crate::diagnostics;
 
@@ -54,6 +55,9 @@ impl<'a> Validator<'a> {
             return;
         };
 
+        if self.stable_ids_incomplete() {
+            return;
+        }
         if !self.line_ids.contains(line_id.as_str()) {
             self.diagnostics
                 .push(diagnostics::unknown_choice_echo_line(choice, line_id));
@@ -69,41 +73,72 @@ impl<'a> Validator<'a> {
             return;
         };
 
-        if !self.contains_block_reference(source_file, reference) {
+        if matches!(
+            self.resolve_block_reference(source_file, reference),
+            BlockLookup::Missing
+        ) {
             self.diagnostics.push(diagnostics::unknown_block_reference(
                 reference,
                 span.clone(),
             ));
         }
     }
-    pub(super) fn contains_block_reference(
+    fn resolve_block_reference(
         &self,
         source_file: &'a SourceFile,
         reference: &'a BlockReference,
-    ) -> bool {
+    ) -> BlockLookup {
         let file = reference
             .file
             .as_deref()
             .unwrap_or(source_file.path.as_str());
+        let Some(completeness) = self.block_definition_completeness.get(file) else {
+            return BlockLookup::Missing;
+        };
+        if *completeness == ValidationCompleteness::Incomplete {
+            return BlockLookup::Indeterminate;
+        }
         let Some(blocks) = self.blocks.get(file) else {
-            return false;
+            return BlockLookup::Missing;
         };
 
-        blocks.contains(reference.block_id.as_str())
+        if blocks.contains(reference.block_id.as_str()) {
+            BlockLookup::Resolved
+        } else {
+            BlockLookup::Missing
+        }
+    }
+
+    fn stable_ids_incomplete(&self) -> bool {
+        self.source_files.iter().any(|source_file| {
+            source_file.participation.stable_ids == ValidationCompleteness::Incomplete
+        })
     }
 }
 
-pub(super) fn collect_line_ids<'a>(source_files: &[&'a SourceFile]) -> BTreeSet<&'a str> {
+#[derive(Clone, Copy, Debug, Eq, PartialEq)]
+enum BlockLookup {
+    Resolved,
+    Missing,
+    Indeterminate,
+}
+
+pub(super) fn collect_line_ids<'a>(source_files: &[ValidationSourceFile<'a>]) -> BTreeSet<&'a str> {
     let mut line_ids = BTreeSet::new();
 
     for source_file in source_files {
-        source_file.visit_statements_depth_first(&mut |statement| {
-            if let Statement::Line(line) = statement
-                && let Some(id) = &line.id
-            {
-                line_ids.insert(id.as_str());
-            }
-        });
+        if source_file.participation.stable_ids != ValidationCompleteness::Complete {
+            continue;
+        }
+        source_file
+            .source_file
+            .visit_statements_depth_first(&mut |statement| {
+                if let Statement::Line(line) = statement
+                    && let Some(id) = &line.id
+                {
+                    line_ids.insert(id.as_str());
+                }
+            });
     }
 
     line_ids

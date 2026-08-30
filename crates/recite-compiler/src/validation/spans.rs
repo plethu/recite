@@ -4,6 +4,7 @@ use recite_core::{
 };
 
 use super::metadata::MetadataValidationContext;
+use super::participation::{ValidationCompleteness, ValidationParticipation};
 use super::project;
 use super::state::Validator;
 use super::values::{argument_has_non_finite_float, source_metadata_value_has_non_finite_float};
@@ -15,9 +16,12 @@ impl<'a> Validator<'a> {
         source_file: &'a SourceFile,
         source_text: &'a SourceText,
         owner: diagnostics::SourceSpanOwner,
+        participation: ValidationParticipation,
     ) {
         self.validate_span(source_file, &source_text.span, owner);
-        self.validate_markup(source_text);
+        if participation.inline_markup == ValidationCompleteness::Complete {
+            self.validate_markup(source_text);
+        }
     }
     pub(super) fn validate_metadata(
         &mut self,
