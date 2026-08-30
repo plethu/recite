@@ -36,6 +36,13 @@ fn analysis_is_reused_for_queries_and_unchanged_documents() {
     let _ = kernel.snapshot().diagnostics();
     let _ = kernel.snapshot().document_diagnostics(&a_key);
     let _ = kernel.snapshot().symbols(&a_key, Default::default());
+    let _ = kernel.snapshot().project_symbols(Default::default());
+    let _ = kernel.snapshot().complete(&a_key, position);
+    let _ = kernel.snapshot().navigate(&a_key, position);
+    let _ = kernel
+        .snapshot()
+        .references(&a_key, position, Default::default());
+    let _ = kernel.snapshot().projection_candidates("missing");
     let _ = kernel.snapshot().hover(&a_key, position);
     assert_eq!(ANALYZE_COUNT.with(Cell::get), 2);
 
