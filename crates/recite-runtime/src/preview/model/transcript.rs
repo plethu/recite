@@ -74,6 +74,7 @@ impl PreviewTranscript {
             PreviewEvent::RestartRequired {
                 active_asset,
                 replacement_asset,
+                ..
             } => PreviewTranscriptEvent::RestartRequired {
                 active_asset: active_asset.clone(),
                 replacement_asset: replacement_asset.clone(),

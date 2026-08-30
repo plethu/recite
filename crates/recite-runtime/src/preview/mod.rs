@@ -20,12 +20,12 @@ use self::condition::PendingOperation;
 use crate::DialogueSession;
 
 pub use model::{
-    ConditionAnswer, PREVIEW_SNAPSHOT_FORMAT_VERSION, PreviewCommand, PreviewConditionArgument,
-    PreviewConditionQuery, PreviewConditionRequest, PreviewConditionRequestId,
-    PreviewConditionResult, PreviewError, PreviewEvent, PreviewInputRevision, PreviewInputs,
-    PreviewOptions, PreviewOutput, PreviewPrompt, PreviewPromptIdentity, PreviewRestartRequirement,
-    PreviewSessionState, PreviewSnapshot, PreviewState, PreviewStatus, PreviewTrace,
-    PreviewTranscript, PreviewTranscriptEvent,
+    ConditionAnswer, PREVIEW_SNAPSHOT_FORMAT_VERSION, PreviewAssetRevision, PreviewCommand,
+    PreviewConditionArgument, PreviewConditionQuery, PreviewConditionRequest,
+    PreviewConditionRequestId, PreviewConditionResult, PreviewError, PreviewEvent,
+    PreviewInputRevision, PreviewInputs, PreviewOptions, PreviewOutput, PreviewPrompt,
+    PreviewPromptIdentity, PreviewRestartRequirement, PreviewSessionState, PreviewSnapshot,
+    PreviewState, PreviewStatus, PreviewTrace, PreviewTranscript, PreviewTranscriptEvent,
 };
 
 /// A structured preview over one borrowed compiled dialogue asset.

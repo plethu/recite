@@ -2,7 +2,8 @@ use recite_core::{BlockId, CompiledDialogue, EffectId};
 
 use super::PreviewSession;
 use super::model::{
-    PreviewConditionRequestId, PreviewEvent, PreviewOptions, PreviewOutput, PreviewState,
+    PreviewAssetRevision, PreviewConditionRequestId, PreviewEvent, PreviewOptions, PreviewOutput,
+    PreviewState,
 };
 use crate::{
     DialogueError, DialogueSessionOptions, EffectAck, PreviewError, PreviewPromptIdentity,
@@ -38,11 +39,16 @@ impl<'asset> PreviewSession<'asset> {
     /// The active asset is never silently replaced.
     pub fn assess_asset(&mut self, candidate: &CompiledDialogue) -> PreviewOutput {
         if self.asset == candidate {
+            self.state.restart_required = None;
             return PreviewOutput::new(Vec::new(), self.state.clone());
         }
+        let active_revision = PreviewAssetRevision::from_asset(self.asset);
+        let replacement_revision = PreviewAssetRevision::from_asset(candidate);
         self.append_events(vec![PreviewEvent::RestartRequired {
             active_asset: self.asset.header.asset_id.clone(),
             replacement_asset: candidate.header.asset_id.clone(),
+            active_revision,
+            replacement_revision,
         }])
     }
 

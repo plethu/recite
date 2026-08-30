@@ -1,11 +1,13 @@
 use recite_core::{ChoiceId, EffectId, LineId};
 
 use super::super::model::PreviewError;
-use super::super::model::{PreviewPrompt, PreviewPromptIdentity, PreviewRestartRequirement};
+use super::super::model::{
+    PreviewAssetRevision, PreviewPrompt, PreviewPromptIdentity, PreviewRestartRequirement,
+};
 use super::span::SpanWire;
 use super::wire::{
-    ArgumentWire, ChoiceWire, DialogueEffectModeWire, EffectWire, LineWire, PromptWire,
-    RequirementWire,
+    ArgumentWire, AssetRevisionWire, ChoiceWire, DialogueEffectModeWire, EffectWire, LineWire,
+    PromptWire, RequirementWire,
 };
 use crate::{
     ChoiceEchoMode, DialogueChoice, DialogueEffectArgument, DialogueEffectMode,
@@ -175,13 +177,63 @@ impl RequirementWire {
         Self {
             active_asset: requirement.active_asset().as_str().to_owned(),
             replacement_asset: requirement.replacement_asset().as_str().to_owned(),
+            active_revision: Some(AssetRevisionWire::from_revision(
+                requirement.active_revision(),
+            )),
+            replacement_revision: Some(AssetRevisionWire::from_revision(
+                requirement.replacement_revision(),
+            )),
         }
     }
 
     pub(super) fn into_requirement(self) -> Result<PreviewRestartRequirement, PreviewError> {
+        let active_asset = recite_core::CompiledAssetId::new(self.active_asset).map_err(invalid)?;
+        let replacement_asset =
+            recite_core::CompiledAssetId::new(self.replacement_asset).map_err(invalid)?;
+        let active_revision = self
+            .active_revision
+            .ok_or_else(|| invalid("restart requirement is missing active revision"))?
+            .into_revision()?;
+        let replacement_revision = self
+            .replacement_revision
+            .ok_or_else(|| invalid("restart requirement is missing replacement revision"))?
+            .into_revision()?;
+        if active_revision.asset_id() != &active_asset
+            || replacement_revision.asset_id() != &replacement_asset
+        {
+            return Err(invalid("restart requirement revision asset ID mismatch"));
+        }
         Ok(PreviewRestartRequirement::new(
-            recite_core::CompiledAssetId::new(self.active_asset).map_err(invalid)?,
-            recite_core::CompiledAssetId::new(self.replacement_asset).map_err(invalid)?,
+            active_asset,
+            replacement_asset,
+            active_revision,
+            replacement_revision,
+        ))
+    }
+}
+
+impl AssetRevisionWire {
+    fn from_revision(revision: &PreviewAssetRevision) -> Self {
+        Self {
+            asset_id: revision.asset_id().as_str().to_owned(),
+            format_version: revision.format_version(),
+            compiler_compatibility_version: revision.compiler_compatibility_version(),
+            compiler_version: revision.compiler_version().as_str().to_owned(),
+            source_map_id: revision.source_map_id().as_str().to_owned(),
+            schema_fingerprint: revision.schema_fingerprint().clone(),
+            sources: revision.sources().to_vec(),
+        }
+    }
+
+    fn into_revision(self) -> Result<PreviewAssetRevision, PreviewError> {
+        Ok(PreviewAssetRevision::from_parts(
+            recite_core::CompiledAssetId::new(self.asset_id).map_err(invalid)?,
+            self.format_version,
+            self.compiler_compatibility_version,
+            recite_core::CompilerVersion::new(self.compiler_version).map_err(invalid)?,
+            recite_core::SourceMapId::new(self.source_map_id).map_err(invalid)?,
+            self.schema_fingerprint,
+            self.sources,
         ))
     }
 }

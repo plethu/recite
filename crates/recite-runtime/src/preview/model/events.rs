@@ -5,6 +5,7 @@ use crate::{LocalizedLookupTrace, PluralLineTrace};
 
 use super::api::{PreviewConditionRequest, PreviewConditionResult, PreviewPromptIdentity};
 use super::errors::PreviewError;
+use super::revision::PreviewAssetRevision;
 
 #[non_exhaustive]
 #[derive(Clone, Debug, PartialEq)]
@@ -74,6 +75,8 @@ pub enum PreviewEvent {
     RestartRequired {
         active_asset: CompiledAssetId,
         replacement_asset: CompiledAssetId,
+        active_revision: PreviewAssetRevision,
+        replacement_revision: PreviewAssetRevision,
     },
     Error(PreviewError),
 }

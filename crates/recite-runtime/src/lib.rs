@@ -92,12 +92,13 @@ pub use locale::{
     PluralResolutionAttempt, PluralResolutionOutcome, TextDomain,
 };
 pub use preview::{
-    ConditionAnswer, PREVIEW_SNAPSHOT_FORMAT_VERSION, PreviewCommand, PreviewConditionArgument,
-    PreviewConditionQuery, PreviewConditionRequest, PreviewConditionRequestId,
-    PreviewConditionResult, PreviewError, PreviewEvent, PreviewInputRevision, PreviewInputs,
-    PreviewOptions, PreviewOutput, PreviewPrompt, PreviewPromptIdentity, PreviewRestartRequirement,
-    PreviewSession, PreviewSessionState, PreviewSnapshot, PreviewState, PreviewStatus,
-    PreviewTrace, PreviewTranscript, PreviewTranscriptEvent,
+    ConditionAnswer, PREVIEW_SNAPSHOT_FORMAT_VERSION, PreviewAssetRevision, PreviewCommand,
+    PreviewConditionArgument, PreviewConditionQuery, PreviewConditionRequest,
+    PreviewConditionRequestId, PreviewConditionResult, PreviewError, PreviewEvent,
+    PreviewInputRevision, PreviewInputs, PreviewOptions, PreviewOutput, PreviewPrompt,
+    PreviewPromptIdentity, PreviewRestartRequirement, PreviewSession, PreviewSessionState,
+    PreviewSnapshot, PreviewState, PreviewStatus, PreviewTrace, PreviewTranscript,
+    PreviewTranscriptEvent,
 };
 pub use session::{DialogueSession, DialogueSessionOptions};
 pub use session_serialization::{
@@ -115,6 +116,7 @@ pub use session_snapshot::{
     DialogueSessionSourceSnapshot, SESSION_SNAPSHOT_FORMAT_VERSION_V0,
     SESSION_SNAPSHOT_FORMAT_VERSION_V1, snapshot_session,
 };
+pub(crate) use session_snapshot::{schema_fingerprint_snapshot, source_snapshot};
 pub use traversal::{
     DialogueTrace, LocaleResolution, LocalizedLookupTrace, PluralLineTrace, acknowledge_effect,
     choose, choose_with, next, next_with, start_scene, start_scene_with_options,

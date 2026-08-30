@@ -13,10 +13,11 @@ pub(super) fn state_matches_session(
         .blocks
         .get(session.active_block_index().as_u32() as usize)
         .map(|block| block.id.clone());
-    if state
-        .restart_required()
-        .is_some_and(|requirement| requirement.active_asset() != state.asset_id())
-    {
+    if state.restart_required().is_some_and(|requirement| {
+        requirement.active_asset() != state.asset_id()
+            || requirement.active_revision()
+                != &super::model::PreviewAssetRevision::from_asset(asset)
+    }) {
         return false;
     }
     if state.block() != active_block.as_ref()

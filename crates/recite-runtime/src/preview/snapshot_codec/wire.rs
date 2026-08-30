@@ -1,6 +1,8 @@
 use serde::{Deserialize, Serialize};
 
-use crate::DialogueSessionSnapshot;
+use crate::{
+    DialogueSchemaFingerprintSnapshot, DialogueSessionSnapshot, DialogueSessionSourceSnapshot,
+};
 
 #[derive(Clone, Debug, Deserialize, Serialize)]
 #[serde(deny_unknown_fields)]
@@ -39,6 +41,20 @@ pub(super) enum StatusWire {
 pub(super) struct RequirementWire {
     pub(super) active_asset: String,
     pub(super) replacement_asset: String,
+    pub(super) active_revision: Option<AssetRevisionWire>,
+    pub(super) replacement_revision: Option<AssetRevisionWire>,
+}
+
+#[derive(Clone, Debug, Deserialize, Serialize)]
+#[serde(deny_unknown_fields)]
+pub(super) struct AssetRevisionWire {
+    pub(super) asset_id: String,
+    pub(super) format_version: u16,
+    pub(super) compiler_compatibility_version: u16,
+    pub(super) compiler_version: String,
+    pub(super) source_map_id: String,
+    pub(super) schema_fingerprint: DialogueSchemaFingerprintSnapshot,
+    pub(super) sources: Vec<DialogueSessionSourceSnapshot>,
 }
 
 #[derive(Clone, Debug, Deserialize, Serialize)]

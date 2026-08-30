@@ -1,26 +1,38 @@
 use recite_core::{BlockId, ChoiceId, CompiledAssetId, LocaleId};
 
+use super::revision::PreviewAssetRevision;
 use crate::{DialogueEffectRequest, DialogueSession, DialogueSessionSnapshot};
 
 use super::api::PreviewConditionRequest;
 use super::events::PreviewPrompt;
 
-/// The first persisted preview snapshot format. Runtime event values are not
-/// wire types and are intentionally excluded from this versioned contract.
-pub const PREVIEW_SNAPSHOT_FORMAT_VERSION: u16 = 1;
+/// The persisted preview snapshot format containing explicit asset revisions.
+/// Runtime event values are not wire types and are intentionally excluded from
+/// this versioned contract. Version 1 is rejected because its restart
+/// requirement did not persist those revisions.
+pub const PREVIEW_SNAPSHOT_FORMAT_VERSION: u16 = 2;
 
 #[non_exhaustive]
 #[derive(Clone, Debug, Eq, PartialEq)]
 pub struct PreviewRestartRequirement {
     active_asset: CompiledAssetId,
     replacement_asset: CompiledAssetId,
+    active_revision: PreviewAssetRevision,
+    replacement_revision: PreviewAssetRevision,
 }
 
 impl PreviewRestartRequirement {
-    pub(crate) fn new(active_asset: CompiledAssetId, replacement_asset: CompiledAssetId) -> Self {
+    pub(crate) fn new(
+        active_asset: CompiledAssetId,
+        replacement_asset: CompiledAssetId,
+        active_revision: PreviewAssetRevision,
+        replacement_revision: PreviewAssetRevision,
+    ) -> Self {
         Self {
             active_asset,
             replacement_asset,
+            active_revision,
+            replacement_revision,
         }
     }
 
@@ -32,6 +44,16 @@ impl PreviewRestartRequirement {
     #[must_use]
     pub fn replacement_asset(&self) -> &CompiledAssetId {
         &self.replacement_asset
+    }
+
+    #[must_use]
+    pub fn active_revision(&self) -> &PreviewAssetRevision {
+        &self.active_revision
+    }
+
+    #[must_use]
+    pub fn replacement_revision(&self) -> &PreviewAssetRevision {
+        &self.replacement_revision
     }
 }
 

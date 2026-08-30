@@ -39,10 +39,14 @@ impl<'asset> PreviewSession<'asset> {
             PreviewEvent::RestartRequired {
                 active_asset,
                 replacement_asset,
+                active_revision,
+                replacement_revision,
             } => {
                 self.state.restart_required = Some(PreviewRestartRequirement::new(
                     active_asset.clone(),
                     replacement_asset.clone(),
+                    active_revision.clone(),
+                    replacement_revision.clone(),
                 ));
             }
             PreviewEvent::Error(_) => {}
