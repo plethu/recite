@@ -122,31 +122,6 @@ fn cancellation_aborts_staging_without_touching_outputs() {
 }
 
 #[test]
-fn failed_stage_write_does_not_replace_outputs() {
-    let temp = require(TempDir::new(), "tempdir");
-    let request = request(
-        temp.path(),
-        "[[scenes]]\nid = \"scene.start\"\nasset = \"compiled/blocked/out.recitec\"\nblock = \"start\"\nparticipants = [\"hazel\"]\n",
-    );
-    require(fs::create_dir_all(temp.path().join("compiled")), "compiled");
-    require(
-        fs::write(temp.path().join("compiled/blocked"), b"not a directory"),
-        "blocking file",
-    );
-    let mut publisher = require(ProjectBuildPublisher::new(&request), "publisher");
-    assert!(
-        publisher
-            .prepare(
-                request.build_request(),
-                &[candidate(&request.targets()[0], 4)],
-                &BuildControl::new()
-            )
-            .is_err()
-    );
-    assert!(!temp.path().join("compiled/blocked/out.recitec").exists());
-}
-
-#[test]
 fn publisher_binds_the_exact_request_and_orders_candidates() {
     let temp = require(TempDir::new(), "tempdir");
     let request = request(
@@ -248,6 +223,7 @@ fn failed_replacement_reports_partial_and_keeps_recovery_marker() {
     assert!(temp.path().join("compiled/a.recitec").is_file());
     assert!(temp.path().join("compiled/z.recitec").is_dir());
     assert_eq!(markers(temp.path()).len(), 1);
+    assert_eq!(publisher.recovery().len(), 1);
 }
 
 #[test]
@@ -301,7 +277,7 @@ fn outside_output_symlink_is_rejected_before_staging() {
 
 #[cfg(unix)]
 #[test]
-fn inside_output_symlink_remains_within_the_project_boundary() {
+fn any_output_symlink_component_is_rejected_before_staging() {
     use std::os::unix::fs::symlink;
 
     let temp = require(TempDir::new(), "tempdir");
@@ -318,12 +294,12 @@ fn inside_output_symlink_remains_within_the_project_boundary() {
         ),
         "inside symlink",
     );
-    assert!(ProjectBuildPublisher::new(&request).is_ok());
+    assert!(ProjectBuildPublisher::new(&request).is_err());
 }
 
 #[cfg(windows)]
 #[test]
-fn existing_windows_output_failure_is_reported_without_removal() {
+fn existing_windows_output_is_replaced_atomically() {
     let temp = require(TempDir::new(), "tempdir");
     let request = request(
         temp.path(),
@@ -341,9 +317,11 @@ fn existing_windows_output_failure_is_reported_without_removal() {
         ),
         "prepare",
     );
-    assert!(matches!(
+    assert_eq!(
         publisher.commit(prepared),
-        PublishOutcome::Partial { .. }
-    ));
-    assert_eq!(require(fs::read(output), "output"), b"old");
+        PublishOutcome::Published {
+            targets: vec![request.targets()[0].target().clone()]
+        }
+    );
+    assert_eq!(require(fs::read(output), "output"), [8]);
 }

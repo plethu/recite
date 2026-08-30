@@ -10,17 +10,20 @@ use crate::fs::display_path;
 use crate::i18n::{Messages, MsgId};
 
 mod build;
+mod commit;
 mod engine;
 mod events;
 mod inputs;
 mod preparation;
 mod publisher;
+mod recovery;
 mod request;
 mod staging;
 mod targets;
 
 pub use engine::ProjectBuildEngine;
-pub use publisher::{ProjectBuildPublisher, ProjectBuildPublisherError, ProjectPreparedBuild};
+pub use publisher::{ProjectBuildPublisher, ProjectPreparedBuild};
+pub use recovery::{ProjectBuildPublisherError, ProjectBuildRecovery};
 pub use request::{
     ProjectBuildPreparation, ProjectBuildPreparationError, ProjectBuildRequest, ProjectBuildTarget,
 };

@@ -1,38 +1,42 @@
-use std::fs;
 use std::path::PathBuf;
 
 use recite_compiler::{
     BuildCandidate, BuildControl, BuildPreparedHandle, BuildPublisher, BuildRequest, BuildTarget,
     PreparedPublishIdentity, PublishAbortReason, PublishFailure, PublishFailureReason,
-    PublishOutcome, RecoveryNeeded,
+    PublishOutcome,
 };
 
+use super::recovery::{ProjectBuildPublisherError, ProjectBuildRecovery};
 use super::request::ProjectBuildRequest;
 use super::staging::{self, StagedOutput};
-use super::targets::{TargetMap, TargetMapError};
+use super::targets::{TargetMap, reject_symlink_components};
 
 /// Filesystem publisher for one exact prepared project request.
 ///
 /// Preparation writes only adjacent Recite-owned stage markers. Published
 /// targets change only during `commit`, under the compiler authority fence.
+/// Preparation may create missing output directories. Rename replacement is
+/// process-visible per-file atomicity where the platform supports it; this
+/// publisher does not claim crash durability or global batch atomicity.
 #[derive(Debug)]
 pub struct ProjectBuildPublisher {
     root: PathBuf,
     request: BuildRequest,
     targets: TargetMap,
+    recovery: Vec<ProjectBuildRecovery>,
 }
 
 /// A staged candidate batch consumed by commit or abort.
 #[derive(Debug)]
 pub struct ProjectPreparedBuild {
-    identity: PreparedPublishIdentity,
-    staged: Vec<StagedTarget>,
+    pub(super) identity: PreparedPublishIdentity,
+    pub(super) staged: Vec<StagedTarget>,
 }
 
 #[derive(Debug)]
-struct StagedTarget {
-    target: BuildTarget,
-    file: StagedOutput,
+pub(super) struct StagedTarget {
+    pub(super) target: BuildTarget,
+    pub(super) file: StagedOutput,
 }
 
 impl ProjectBuildPublisher {
@@ -43,12 +47,18 @@ impl ProjectBuildPublisher {
             root: targets.root.clone(),
             request: request.build_request().clone(),
             targets,
+            recovery: Vec::new(),
         })
     }
 
     #[must_use]
     pub fn project_root(&self) -> &std::path::Path {
         &self.root
+    }
+
+    #[must_use]
+    pub fn recovery(&self) -> &[ProjectBuildRecovery] {
+        &self.recovery
     }
 }
 
@@ -112,37 +122,49 @@ impl BuildPublisher for ProjectBuildPublisher {
         let mut staged = Vec::with_capacity(ordered.len());
         for candidate in &ordered {
             if control.cancellation().is_some() {
-                cleanup(&staged);
+                cleanup(&staged, &mut self.recovery);
                 return Err(PublishFailure::Preparation {
                     target: candidate.target().clone(),
                     reason: PublishFailureReason::Rejected,
                 });
             }
             let Some(output) = self.targets.targets.get(candidate.target()) else {
-                cleanup(&staged);
+                cleanup(&staged, &mut self.recovery);
                 return Err(PublishFailure::Preparation {
                     target: candidate.target().clone(),
                     reason: PublishFailureReason::Rejected,
                 });
             };
             if let Err(error) = ensure_output_boundary(&self.root, output) {
-                cleanup(&staged);
+                cleanup(&staged, &mut self.recovery);
                 return Err(PublishFailure::Preparation {
                     target: candidate.target().clone(),
                     reason: error,
                 });
             }
-            let file =
-                match staging::stage(output, candidate.bytes(), request.generation().as_u64()) {
-                    Ok(file) => file,
-                    Err(_) => {
-                        cleanup(&staged);
-                        return Err(PublishFailure::Preparation {
-                            target: candidate.target().clone(),
-                            reason: PublishFailureReason::Storage,
-                        });
-                    }
-                };
+            let file = match staging::stage(output, candidate.bytes(), request) {
+                Ok(file) => file,
+                Err(_) => {
+                    cleanup(&staged, &mut self.recovery);
+                    return Err(PublishFailure::Preparation {
+                        target: candidate.target().clone(),
+                        reason: PublishFailureReason::Storage,
+                    });
+                }
+            };
+            if let Err(error) = ensure_output_boundary(&self.root, output) {
+                if let Err(cleanup_error) = staging::remove(&file) {
+                    self.recovery.push(ProjectBuildRecovery::new(
+                        file.temp.clone(),
+                        format!("stage cleanup failed: {cleanup_error}"),
+                    ));
+                }
+                cleanup(&staged, &mut self.recovery);
+                return Err(PublishFailure::Preparation {
+                    target: candidate.target().clone(),
+                    reason: error,
+                });
+            }
             staged.push(StagedTarget {
                 target: candidate.target().clone(),
                 file,
@@ -157,44 +179,23 @@ impl BuildPublisher for ProjectBuildPublisher {
 
     fn abort(&mut self, prepared: Option<Self::Prepared>, _reason: PublishAbortReason) {
         if let Some(prepared) = prepared {
-            cleanup(&prepared.staged);
+            cleanup(&prepared.staged, &mut self.recovery);
         }
     }
 
     fn commit(&mut self, prepared: Self::Prepared) -> PublishOutcome {
-        let all = prepared
-            .staged
-            .iter()
-            .map(|item| item.target.clone())
-            .collect::<Vec<_>>();
-        let mut committed = Vec::new();
-        for (index, staged) in prepared.staged.iter().enumerate() {
-            if ensure_output_boundary(&self.root, &staged.file.output).is_err()
-                || staging::replace(&staged.file).is_err()
-            {
-                let remaining = all.iter().skip(index + 1).cloned().collect();
-                return PublishOutcome::Partial {
-                    committed: committed.clone(),
-                    failed: staged.target.clone(),
-                    remaining,
-                    recovery: RecoveryNeeded::for_targets(
-                        committed
-                            .iter()
-                            .cloned()
-                            .chain([staged.target.clone()])
-                            .collect(),
-                    ),
-                };
-            }
-            committed.push(staged.target.clone());
-        }
-        PublishOutcome::Published { targets: committed }
+        super::commit::commit_prepared(&self.root, prepared, &mut self.recovery)
     }
 }
 
-fn cleanup(staged: &[StagedTarget]) {
+fn cleanup(staged: &[StagedTarget], recovery: &mut Vec<ProjectBuildRecovery>) {
     for staged in staged {
-        staging::remove(&staged.file);
+        if let Err(error) = staging::remove(&staged.file) {
+            recovery.push(ProjectBuildRecovery::new(
+                staged.file.temp.clone(),
+                format!("stage cleanup failed: {error}"),
+            ));
+        }
     }
 }
 
@@ -206,33 +207,8 @@ fn ensure_output_boundary(
     root: &std::path::Path,
     output: &std::path::Path,
 ) -> Result<(), PublishFailureReason> {
-    if fs::symlink_metadata(output)
-        .ok()
-        .is_some_and(|metadata| metadata.file_type().is_symlink())
-    {
-        let canonical = fs::canonicalize(output).map_err(|_| PublishFailureReason::Rejected)?;
-        return if canonical.starts_with(root) {
-            Ok(())
-        } else {
-            Err(PublishFailureReason::Rejected)
-        };
-    }
-    let mut existing = output.to_owned();
-    while !existing.exists() {
-        if !existing.pop() {
-            return Err(PublishFailureReason::Rejected);
-        }
-    }
-    let canonical = fs::canonicalize(existing).map_err(|_| PublishFailureReason::Storage)?;
-    if !canonical.starts_with(root) {
-        return Err(PublishFailureReason::Rejected);
-    }
-    Ok(())
-}
-
-#[derive(Clone, Debug, Eq, PartialEq, thiserror::Error)]
-#[non_exhaustive]
-pub enum ProjectBuildPublisherError {
-    #[error(transparent)]
-    Targets(#[from] TargetMapError),
+    reject_symlink_components(root, output).map_err(|error| match error {
+        super::targets::TargetPathError::Inspection(_) => PublishFailureReason::Storage,
+        _ => PublishFailureReason::Rejected,
+    })
 }

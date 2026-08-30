@@ -1263,6 +1263,7 @@ dependencies = [
 name = "recite-cli"
 version = "0.1.0"
 dependencies = [
+ "atomic-write-file",
  "clap",
  "crossterm",
  "notify",

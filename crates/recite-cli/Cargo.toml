@@ -13,6 +13,7 @@ name = "recite"
 path = "src/main.rs"
 
 [dependencies]
+atomic-write-file.workspace = true
 clap.workspace = true
 crossterm.workspace = true
 notify.workspace = true

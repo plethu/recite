@@ -20,6 +20,10 @@ pub enum TargetPathError {
     OutsideProject,
     #[error("target path names a directory")]
     Directory,
+    #[error("target path contains a symlink component")]
+    SymlinkComponent,
+    #[error("could not inspect target path: {0}")]
+    Inspection(String),
 }
 
 #[derive(Debug)]
@@ -50,6 +54,7 @@ impl TargetMap {
             .map(|input| root.join(input.key().as_str()))
             .collect::<Vec<_>>();
         let mut targets = std::collections::BTreeMap::new();
+        let mut physical_targets: Vec<(PathBuf, BuildTarget)> = Vec::new();
         for project_target in request.targets() {
             let target = project_target.target().clone();
             let relative = validate_target(target.as_str()).map_err(|reason| {
@@ -63,31 +68,51 @@ impl TargetMap {
                 target: target.clone(),
                 reason,
             })?;
+            reject_symlink_components(&root, &output).map_err(|reason| {
+                TargetMapError::InvalidTarget {
+                    target: target.clone(),
+                    reason,
+                }
+            })?;
             if output.exists() && fs::metadata(&output).is_ok_and(|metadata| metadata.is_dir()) {
                 return Err(TargetMapError::InvalidTarget {
                     target,
                     reason: TargetPathError::Directory,
                 });
             }
-            if let Some(output_canonical) = canonical_existing_path(&output) {
-                ensure_contained(&root, &output_canonical).map_err(|reason| {
-                    TargetMapError::InvalidTarget {
-                        target: target.clone(),
-                        reason,
-                    }
+            let physical =
+                physical_identity(&output).map_err(|message| TargetMapError::InvalidTarget {
+                    target: target.clone(),
+                    reason: TargetPathError::Inspection(message),
                 })?;
-                for input in &input_paths {
-                    if fs::canonicalize(input)
-                        .ok()
-                        .is_some_and(|input| input == output_canonical)
-                    {
-                        return Err(TargetMapError::AliasesInput {
-                            target,
-                            input: input.clone(),
-                        });
-                    }
+            reject_symlink_components(&root, &output).map_err(|reason| {
+                TargetMapError::InvalidTarget {
+                    target: target.clone(),
+                    reason,
+                }
+            })?;
+            if let Some((_, existing)) = physical_targets
+                .iter()
+                .find(|(identity, _)| same_physical_path(identity, &physical))
+            {
+                return Err(TargetMapError::DuplicateDestination {
+                    target,
+                    existing: existing.clone(),
+                    path: physical,
+                });
+            }
+            for input in &input_paths {
+                if fs::canonicalize(input)
+                    .ok()
+                    .is_some_and(|input| same_physical_path(&input, &physical))
+                {
+                    return Err(TargetMapError::AliasesInput {
+                        target,
+                        input: input.clone(),
+                    });
                 }
             }
+            physical_targets.push((physical, target.clone()));
             targets.insert(target, output);
         }
         if targets.is_empty() {
@@ -107,12 +132,19 @@ impl TargetMap {
 }
 
 fn validate_target(value: &str) -> Result<PathBuf, TargetPathError> {
-    if value.contains('\\')
-        || value.starts_with("//")
-        || (value.len() >= 2
-            && value.as_bytes()[0].is_ascii_alphabetic()
-            && value.as_bytes()[1] == b':')
-    {
+    let path = Path::new(value);
+    let has_drive_prefix = value.len() >= 2
+        && value.as_bytes()[0].is_ascii_alphabetic()
+        && value.as_bytes()[1] == b':';
+    #[cfg(not(windows))]
+    if path.is_absolute() {
+        return Err(TargetPathError::Absolute);
+    }
+    #[cfg(windows)]
+    if path.is_absolute() && !has_drive_prefix {
+        return Err(TargetPathError::Absolute);
+    }
+    if value.contains('\\') || value.starts_with("//") || has_drive_prefix {
         return Err(TargetPathError::PlatformAmbiguous);
     }
     if value
@@ -120,10 +152,6 @@ fn validate_target(value: &str) -> Result<PathBuf, TargetPathError> {
         .any(|component| component.is_empty() || component == ".")
     {
         return Err(TargetPathError::EmptyOrCurrent);
-    }
-    let path = Path::new(value);
-    if path.is_absolute() {
-        return Err(TargetPathError::Absolute);
     }
     let mut relative = PathBuf::new();
     for component in path.components() {
@@ -147,21 +175,50 @@ fn ensure_contained(root: &Path, path: &Path) -> Result<(), TargetPathError> {
         .map_err(|_| TargetPathError::OutsideProject)
 }
 
-fn canonical_existing_path(path: &Path) -> Option<PathBuf> {
-    if fs::symlink_metadata(path)
-        .ok()
-        .is_some_and(|metadata| metadata.file_type().is_symlink())
-    {
-        return fs::canonicalize(path).ok();
+pub(super) fn reject_symlink_components(root: &Path, output: &Path) -> Result<(), TargetPathError> {
+    let relative = output
+        .strip_prefix(root)
+        .map_err(|_| TargetPathError::OutsideProject)?;
+    let mut current = root.to_owned();
+    for component in relative.components() {
+        current.push(component);
+        match fs::symlink_metadata(&current) {
+            Ok(metadata) if metadata.file_type().is_symlink() => {
+                return Err(TargetPathError::SymlinkComponent);
+            }
+            Ok(_) => {}
+            Err(error) if error.kind() == std::io::ErrorKind::NotFound => {}
+            Err(error) => return Err(TargetPathError::Inspection(error.to_string())),
+        }
     }
-    let mut existing = path.to_owned();
-    loop {
-        if existing.exists() {
-            return fs::canonicalize(existing).ok();
-        }
-        if !existing.pop() {
-            return None;
-        }
+    Ok(())
+}
+
+fn physical_identity(path: &Path) -> Result<PathBuf, String> {
+    if path.exists() {
+        return fs::canonicalize(path).map_err(|error| error.to_string());
+    }
+    let file_name = path
+        .file_name()
+        .ok_or_else(|| "target path has no file name".to_owned())?;
+    let parent = path
+        .parent()
+        .ok_or_else(|| "target path has no parent".to_owned())?;
+    if let Ok(parent) = fs::canonicalize(parent) {
+        return Ok(parent.join(file_name));
+    }
+    Ok(path.to_owned())
+}
+
+fn same_physical_path(left: &Path, right: &Path) -> bool {
+    #[cfg(windows)]
+    {
+        left.to_string_lossy()
+            .eq_ignore_ascii_case(&right.to_string_lossy())
+    }
+    #[cfg(not(windows))]
+    {
+        left == right
     }
 }
 
@@ -179,4 +236,10 @@ pub enum TargetMapError {
     },
     #[error("project target {target} aliases source input {input}")]
     AliasesInput { target: BuildTarget, input: PathBuf },
+    #[error("project targets {target} and {existing} resolve to the same destination {path}")]
+    DuplicateDestination {
+        target: BuildTarget,
+        existing: BuildTarget,
+        path: PathBuf,
+    },
 }
