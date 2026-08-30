@@ -1,13 +1,13 @@
 use recite_compiler::{
-    Participation, ValidationCompleteness, ValidationParticipation, ValidationSourceFile,
-    validate_source_files, validate_source_files_with_participation,
-    validate_source_files_with_participation_with_schema, validate_source_files_with_schema,
+    ValidationCompleteness, ValidationInput, ValidationParticipation, validate_source_files,
+    validate_source_files_with_participation, validate_source_files_with_participation_with_schema,
+    validate_source_files_with_schema,
 };
 use recite_core::{ProjectSchema, load_schema_manifest_str};
 use recite_parser::parse;
 
-fn participated<'a>(source_file: &'a recite_core::SourceFile) -> ValidationSourceFile<'a> {
-    ValidationSourceFile::all_complete(source_file)
+fn participated<'a>(source_file: &'a recite_core::SourceFile) -> ValidationInput<'a> {
+    ValidationInput::all_complete(source_file)
 }
 
 fn lower_clean(path: &str, source: &str) -> recite_core::SourceFile {
@@ -102,12 +102,12 @@ fn incomplete_target_definitions_make_reference_lookup_indeterminate() {
         ":: start default\n-> dialogue/target.recite::missing\n",
     );
     let target = lower_clean("dialogue/target.recite", ":: target\n");
-    let mut target_participation = ValidationParticipation::all_complete();
-    target_participation.block_definitions = Participation::Incomplete;
+    let target_participation = ValidationParticipation::all_complete()
+        .with_block_definitions(ValidationCompleteness::Incomplete);
     let files = [source, target];
     let inputs = [
         participated(&files[0]),
-        ValidationSourceFile::new(&files[1], target_participation),
+        ValidationInput::new(&files[1], target_participation),
     ];
 
     assert!(
@@ -118,11 +118,39 @@ fn incomplete_target_definitions_make_reference_lookup_indeterminate() {
     );
 
     let complete = [
-        ValidationSourceFile::all_complete(&files[0]),
-        ValidationSourceFile::all_complete(&files[1]),
+        ValidationInput::all_complete(&files[0]),
+        ValidationInput::all_complete(&files[1]),
     ];
     let report = validate_source_files_with_participation(&complete);
     assert_eq!(codes(&report), ["RECITE_VALIDATE007"]);
+}
+
+#[test]
+fn same_path_incomplete_definitions_are_indeterminate_in_both_input_orders() {
+    let source = lower_clean(
+        "dialogue/start.recite",
+        ":: start default\n-> dialogue/target.recite::missing\n",
+    );
+    let complete_target = lower_clean("dialogue/target.recite", ":: known\n");
+    let incomplete_target = lower_clean("dialogue/target.recite", ":: recovered\n");
+    let incomplete = ValidationParticipation::all_complete()
+        .with_block_definitions(ValidationCompleteness::Incomplete);
+    let complete_first = [
+        participated(&source),
+        ValidationInput::all_complete(&complete_target),
+        ValidationInput::new(&incomplete_target, incomplete),
+    ];
+    let incomplete_first = [
+        participated(&source),
+        ValidationInput::new(&incomplete_target, incomplete),
+        ValidationInput::all_complete(&complete_target),
+    ];
+
+    let complete_first_report = validate_source_files_with_participation(&complete_first);
+    let incomplete_first_report = validate_source_files_with_participation(&incomplete_first);
+    assert_eq!(complete_first_report, incomplete_first_report);
+    assert!(codes(&complete_first_report).contains(&"RECITE_VALIDATE010"));
+    assert!(!codes(&complete_first_report).contains(&"RECITE_VALIDATE007"));
 }
 
 #[test]
@@ -151,15 +179,15 @@ fn incomplete_classes_do_not_suppress_unrelated_clean_file_diagnostics() {
             "! immediate missing_effect()\n",
         ),
     );
-    let mut incomplete = ValidationParticipation::all_complete();
-    incomplete.metadata = Participation::Incomplete;
-    incomplete.condition_functions = Participation::Incomplete;
-    incomplete.effect_functions = Participation::Incomplete;
-    incomplete.inline_markup = Participation::Incomplete;
+    let incomplete = ValidationParticipation::all_complete()
+        .with_metadata(ValidationCompleteness::Incomplete)
+        .with_condition_functions(ValidationCompleteness::Incomplete)
+        .with_effect_functions(ValidationCompleteness::Incomplete)
+        .with_inline_markup(ValidationCompleteness::Incomplete);
     let files = [clean, unrelated];
     let inputs = [
         participated(&files[0]),
-        ValidationSourceFile::new(&files[1], incomplete),
+        ValidationInput::new(&files[1], incomplete),
     ];
 
     let report =
@@ -191,9 +219,9 @@ fn incomplete_ast_structure_suppresses_interpolation_diagnostics() {
         ["RECITE_VALIDATE045"]
     );
 
-    let mut incomplete = ValidationParticipation::all_complete();
-    incomplete.ast_structure = Participation::Incomplete;
-    let input = [ValidationSourceFile::new(&source, incomplete)];
+    let incomplete = ValidationParticipation::all_complete()
+        .with_ast_structure(ValidationCompleteness::Incomplete);
+    let input = [ValidationInput::new(&source, incomplete)];
     assert!(
         validate_source_files_with_participation(&input)
             .diagnostics
@@ -211,12 +239,12 @@ fn incomplete_stable_ids_do_not_contribute_duplicate_or_echo_evidence() {
         "dialogue/second.recite",
         ":: second\n> same@11111111111111111111\n  Second.\n",
     );
-    let mut incomplete = ValidationParticipation::all_complete();
-    incomplete.stable_ids = Participation::Incomplete;
+    let incomplete =
+        ValidationParticipation::all_complete().with_stable_ids(ValidationCompleteness::Incomplete);
     let files = [first, second];
     let inputs = [
         participated(&files[0]),
-        ValidationSourceFile::new(&files[1], incomplete),
+        ValidationInput::new(&files[1], incomplete),
     ];
 
     let report = validate_source_files_with_participation(&inputs);
@@ -231,6 +259,36 @@ fn incomplete_stable_ids_do_not_contribute_duplicate_or_echo_evidence() {
 }
 
 #[test]
+fn same_path_incomplete_stable_ids_suppress_duplicate_evidence_in_both_input_orders() {
+    let complete_source = lower_clean(
+        "dialogue/shared.recite",
+        concat!(
+            ":: start default\n",
+            "> repeated@11111111111111111111\n",
+            "  First.\n",
+            "> repeated@11111111111111111111\n",
+            "  Second.\n",
+        ),
+    );
+    let incomplete_source = lower_clean("dialogue/shared.recite", ":: other\n");
+    let incomplete =
+        ValidationParticipation::all_complete().with_stable_ids(ValidationCompleteness::Incomplete);
+    let complete_first = [
+        ValidationInput::all_complete(&complete_source),
+        ValidationInput::new(&incomplete_source, incomplete),
+    ];
+    let incomplete_first = [
+        ValidationInput::new(&incomplete_source, incomplete),
+        ValidationInput::all_complete(&complete_source),
+    ];
+
+    let complete_first_report = validate_source_files_with_participation(&complete_first);
+    let incomplete_first_report = validate_source_files_with_participation(&incomplete_first);
+    assert_eq!(complete_first_report, incomplete_first_report);
+    assert_eq!(codes(&complete_first_report), ["RECITE_VALIDATE010"]);
+}
+
+#[test]
 fn incomplete_block_definitions_do_not_contribute_duplicate_evidence() {
     let first = lower_clean(
         "dialogue/first.recite",
@@ -240,12 +298,12 @@ fn incomplete_block_definitions_do_not_contribute_duplicate_evidence() {
         "dialogue/second.recite",
         ":: shared\n> second@22222222222222222222\n  Second.\n",
     );
-    let mut incomplete = ValidationParticipation::all_complete();
-    incomplete.block_definitions = Participation::Incomplete;
+    let incomplete = ValidationParticipation::all_complete()
+        .with_block_definitions(ValidationCompleteness::Incomplete);
     let files = [first, second];
     let inputs = [
         participated(&files[0]),
-        ValidationSourceFile::new(&files[1], incomplete),
+        ValidationInput::new(&files[1], incomplete),
     ];
 
     let report = validate_source_files_with_participation(&inputs);
@@ -266,10 +324,10 @@ fn incomplete_block_definitions_do_not_contribute_duplicate_evidence() {
 #[test]
 fn incomplete_definitions_suppress_missing_default_but_complete_defaults_conflict() {
     let source = lower_clean("dialogue/start.recite", ":: start\n");
-    let mut incomplete = ValidationParticipation::all_complete();
-    incomplete.block_definitions = Participation::Incomplete;
+    let incomplete = ValidationParticipation::all_complete()
+        .with_block_definitions(ValidationCompleteness::Incomplete);
     let files = [source];
-    let inputs = [ValidationSourceFile::new(&files[0], incomplete)];
+    let inputs = [ValidationInput::new(&files[0], incomplete)];
     assert!(validate_source_files_with_participation(&inputs).is_ok());
 
     let complete = [participated(&files[0])];
@@ -291,12 +349,12 @@ fn unknown_choice_echo_is_indeterminate_until_all_stable_ids_are_complete() {
         ),
     );
     let other = lower_clean("dialogue/other.recite", ":: other\n");
-    let mut incomplete = ValidationParticipation::all_complete();
-    incomplete.stable_ids = ValidationCompleteness::Incomplete;
+    let incomplete =
+        ValidationParticipation::all_complete().with_stable_ids(ValidationCompleteness::Incomplete);
     let files = [source, other];
     let inputs = [
         participated(&files[0]),
-        ValidationSourceFile::new(&files[1], incomplete),
+        ValidationInput::new(&files[1], incomplete),
     ];
     let report = validate_source_files_with_participation(&inputs);
     assert!(

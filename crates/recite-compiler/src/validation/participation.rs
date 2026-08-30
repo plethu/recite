@@ -1,6 +1,9 @@
+use std::collections::BTreeMap;
+
 use recite_core::SourceFile;
 
 /// Whether a source-file summary is complete enough for one validation class.
+#[non_exhaustive]
 #[derive(Clone, Copy, Debug, Eq, PartialEq)]
 pub enum ValidationCompleteness {
     /// The summary contains all information needed for this validation class.
@@ -9,10 +12,6 @@ pub enum ValidationCompleteness {
     /// validation class or its project-wide index.
     Incomplete,
 }
-
-/// Short alias for [`ValidationCompleteness`] when the surrounding API makes
-/// the validation context clear.
-pub type Participation = ValidationCompleteness;
 
 impl ValidationCompleteness {
     #[must_use]
@@ -27,16 +26,17 @@ impl ValidationCompleteness {
 /// malformed document while another part remains incomplete. Incomplete
 /// classes are suppressed at the validation boundary rather than being
 /// validated and filtered from the resulting diagnostics.
+#[non_exhaustive]
 #[derive(Clone, Copy, Debug, Eq, PartialEq)]
 pub struct ValidationParticipation {
-    pub ast_structure: ValidationCompleteness,
-    pub block_definitions: ValidationCompleteness,
-    pub block_references: ValidationCompleteness,
-    pub stable_ids: ValidationCompleteness,
-    pub metadata: ValidationCompleteness,
-    pub condition_functions: ValidationCompleteness,
-    pub effect_functions: ValidationCompleteness,
-    pub inline_markup: ValidationCompleteness,
+    ast_structure: ValidationCompleteness,
+    block_definitions: ValidationCompleteness,
+    block_references: ValidationCompleteness,
+    stable_ids: ValidationCompleteness,
+    metadata: ValidationCompleteness,
+    condition_functions: ValidationCompleteness,
+    effect_functions: ValidationCompleteness,
+    inline_markup: ValidationCompleteness,
 }
 
 impl ValidationParticipation {
@@ -55,11 +55,134 @@ impl ValidationParticipation {
         }
     }
 
-    /// Alias for [`Self::all_complete`] for callers constructing legacy-style
-    /// complete validation inputs.
+    /// Participation for a summary with no complete validation classes.
     #[must_use]
-    pub const fn complete() -> Self {
-        Self::all_complete()
+    pub const fn all_incomplete() -> Self {
+        Self {
+            ast_structure: ValidationCompleteness::Incomplete,
+            block_definitions: ValidationCompleteness::Incomplete,
+            block_references: ValidationCompleteness::Incomplete,
+            stable_ids: ValidationCompleteness::Incomplete,
+            metadata: ValidationCompleteness::Incomplete,
+            condition_functions: ValidationCompleteness::Incomplete,
+            effect_functions: ValidationCompleteness::Incomplete,
+            inline_markup: ValidationCompleteness::Incomplete,
+        }
+    }
+
+    #[must_use]
+    pub const fn ast_structure(self) -> ValidationCompleteness {
+        self.ast_structure
+    }
+
+    #[must_use]
+    pub const fn block_definitions(self) -> ValidationCompleteness {
+        self.block_definitions
+    }
+
+    #[must_use]
+    pub const fn block_references(self) -> ValidationCompleteness {
+        self.block_references
+    }
+
+    #[must_use]
+    pub const fn stable_ids(self) -> ValidationCompleteness {
+        self.stable_ids
+    }
+
+    #[must_use]
+    pub const fn metadata(self) -> ValidationCompleteness {
+        self.metadata
+    }
+
+    #[must_use]
+    pub const fn condition_functions(self) -> ValidationCompleteness {
+        self.condition_functions
+    }
+
+    #[must_use]
+    pub const fn effect_functions(self) -> ValidationCompleteness {
+        self.effect_functions
+    }
+
+    #[must_use]
+    pub const fn inline_markup(self) -> ValidationCompleteness {
+        self.inline_markup
+    }
+
+    #[must_use]
+    pub const fn with_ast_structure(mut self, completeness: ValidationCompleteness) -> Self {
+        self.ast_structure = completeness;
+        self
+    }
+
+    #[must_use]
+    pub const fn with_block_definitions(mut self, completeness: ValidationCompleteness) -> Self {
+        self.block_definitions = completeness;
+        self
+    }
+
+    #[must_use]
+    pub const fn with_block_references(mut self, completeness: ValidationCompleteness) -> Self {
+        self.block_references = completeness;
+        self
+    }
+
+    #[must_use]
+    pub const fn with_stable_ids(mut self, completeness: ValidationCompleteness) -> Self {
+        self.stable_ids = completeness;
+        self
+    }
+
+    #[must_use]
+    pub const fn with_metadata(mut self, completeness: ValidationCompleteness) -> Self {
+        self.metadata = completeness;
+        self
+    }
+
+    #[must_use]
+    pub const fn with_condition_functions(mut self, completeness: ValidationCompleteness) -> Self {
+        self.condition_functions = completeness;
+        self
+    }
+
+    #[must_use]
+    pub const fn with_effect_functions(mut self, completeness: ValidationCompleteness) -> Self {
+        self.effect_functions = completeness;
+        self
+    }
+
+    #[must_use]
+    pub const fn with_inline_markup(mut self, completeness: ValidationCompleteness) -> Self {
+        self.inline_markup = completeness;
+        self
+    }
+
+    pub(crate) const fn merge(self, other: Self) -> Self {
+        Self {
+            ast_structure: merge_completeness(self.ast_structure, other.ast_structure),
+            block_definitions: merge_completeness(self.block_definitions, other.block_definitions),
+            block_references: merge_completeness(self.block_references, other.block_references),
+            stable_ids: merge_completeness(self.stable_ids, other.stable_ids),
+            metadata: merge_completeness(self.metadata, other.metadata),
+            condition_functions: merge_completeness(
+                self.condition_functions,
+                other.condition_functions,
+            ),
+            effect_functions: merge_completeness(self.effect_functions, other.effect_functions),
+            inline_markup: merge_completeness(self.inline_markup, other.inline_markup),
+        }
+    }
+}
+
+const fn merge_completeness(
+    left: ValidationCompleteness,
+    right: ValidationCompleteness,
+) -> ValidationCompleteness {
+    if left.is_complete() && right.is_complete() {
+        ValidationCompleteness::Complete
+    } else {
+        ValidationCompleteness::Incomplete
     }
 }
 
@@ -71,13 +194,14 @@ impl Default for ValidationParticipation {
 
 /// A borrowed source file paired with the completeness of its recoverable
 /// compiler summary.
+#[non_exhaustive]
 #[derive(Clone, Copy, Debug, PartialEq)]
-pub struct ValidationSourceFile<'a> {
-    pub source_file: &'a SourceFile,
-    pub participation: ValidationParticipation,
+pub struct ValidationInput<'a> {
+    source_file: &'a SourceFile,
+    participation: ValidationParticipation,
 }
 
-impl<'a> ValidationSourceFile<'a> {
+impl<'a> ValidationInput<'a> {
     #[must_use]
     pub const fn new(source_file: &'a SourceFile, participation: ValidationParticipation) -> Self {
         Self {
@@ -90,10 +214,30 @@ impl<'a> ValidationSourceFile<'a> {
     pub const fn all_complete(source_file: &'a SourceFile) -> Self {
         Self::new(source_file, ValidationParticipation::all_complete())
     }
+
+    #[must_use]
+    pub const fn source_file(&self) -> &'a SourceFile {
+        self.source_file
+    }
+
+    #[must_use]
+    pub const fn participation(&self) -> ValidationParticipation {
+        self.participation
+    }
 }
 
-/// Short alias for the paired validation input.
-pub type ValidationInput<'a> = ValidationSourceFile<'a>;
-
-/// Descriptive alias for callers that prefer the source-file-oriented name.
-pub type SourceFileValidationInput<'a> = ValidationSourceFile<'a>;
+pub(crate) fn aggregate_participation<'a>(
+    source_files: &[ValidationInput<'a>],
+) -> BTreeMap<&'a str, ValidationParticipation> {
+    let mut effective = BTreeMap::new();
+    for source_file in source_files {
+        let path = source_file.source_file().path.as_str();
+        effective
+            .entry(path)
+            .and_modify(|participation: &mut ValidationParticipation| {
+                *participation = participation.merge(source_file.participation())
+            })
+            .or_insert(source_file.participation());
+    }
+    effective
+}

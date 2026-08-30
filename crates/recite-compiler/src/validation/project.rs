@@ -2,7 +2,7 @@ use std::collections::{BTreeMap, BTreeSet};
 
 use recite_core::{Diagnostic, SourceFile, SourcePosition, SourceSpan};
 
-use super::participation::{ValidationCompleteness, ValidationSourceFile};
+use super::participation::{ValidationCompleteness, ValidationInput, ValidationParticipation};
 
 pub(crate) fn source_files_in_project_order(source_files: &[SourceFile]) -> Vec<&SourceFile> {
     let mut ordered = source_files.iter().enumerate().collect::<Vec<_>>();
@@ -15,31 +15,28 @@ pub(crate) fn source_files_in_project_order(source_files: &[SourceFile]) -> Vec<
         .collect()
 }
 
-pub(crate) fn validation_source_files_in_project_order<'a>(
-    source_files: &[ValidationSourceFile<'a>],
-) -> Vec<ValidationSourceFile<'a>> {
-    let mut ordered = source_files.iter().enumerate().collect::<Vec<_>>();
-    ordered.sort_by(|(left_index, left), (right_index, right)| {
-        left.source_file
-            .path
-            .cmp(&right.source_file.path)
-            .then(left_index.cmp(right_index))
-    });
-    ordered
-        .into_iter()
-        .map(|(_index, source_file)| *source_file)
-        .collect()
+pub(crate) fn sort_validation_source_files_in_project_order(
+    source_files: &mut [ValidationInput<'_>],
+) {
+    source_files.sort_by_key(|source_file| source_file.source_file().path.as_str());
 }
 
 pub(super) fn collect_blocks<'a>(
-    source_files: &[ValidationSourceFile<'a>],
+    source_files: &[ValidationInput<'a>],
+    effective_participation: &BTreeMap<&'a str, ValidationParticipation>,
 ) -> BTreeMap<&'a str, BTreeSet<&'a str>> {
     let mut blocks = BTreeMap::new();
     for source_file in source_files {
-        if source_file.participation.block_definitions != ValidationCompleteness::Complete {
+        let path = source_file.source_file().path.as_str();
+        if effective_participation
+            .get(path)
+            .is_none_or(|participation| {
+                participation.block_definitions() != ValidationCompleteness::Complete
+            })
+        {
             continue;
         }
-        let source_file = source_file.source_file;
+        let source_file = source_file.source_file();
         let file_blocks = blocks
             .entry(source_file.path.as_str())
             .or_insert_with(BTreeSet::new);
@@ -68,12 +65,10 @@ pub(super) fn first_source_span(source_files: &[&SourceFile]) -> SourceSpan {
         })
 }
 
-pub(super) fn first_validation_source_span(
-    source_files: &[ValidationSourceFile<'_>],
-) -> SourceSpan {
+pub(super) fn first_validation_source_span(source_files: &[ValidationInput<'_>]) -> SourceSpan {
     let source_files = source_files
         .iter()
-        .map(|source_file| source_file.source_file)
+        .map(ValidationInput::source_file)
         .collect::<Vec<_>>();
     first_source_span(&source_files)
 }

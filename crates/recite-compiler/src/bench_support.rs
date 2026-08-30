@@ -21,7 +21,7 @@ pub fn resolve_block_references(source_files: &[SourceFile]) -> CompilerPhasePro
     let mut checked_items = 0;
     for source_file in validator.source_files.clone() {
         source_file
-            .source_file
+            .source_file()
             .visit_statements_depth_first(&mut |statement| match statement {
                 Statement::Choice(choice) => {
                     if let Some(target) = &choice.target {
@@ -29,7 +29,7 @@ pub fn resolve_block_references(source_files: &[SourceFile]) -> CompilerPhasePro
                             checked_items += 1;
                         }
                         validator.validate_reference(
-                            source_file.source_file,
+                            source_file.source_file(),
                             &target.target,
                             &target.span,
                         );
@@ -40,7 +40,7 @@ pub fn resolve_block_references(source_files: &[SourceFile]) -> CompilerPhasePro
                         checked_items += 1;
                     }
                     validator.validate_reference(
-                        source_file.source_file,
+                        source_file.source_file(),
                         &divert.target,
                         &divert.span,
                     );
@@ -57,7 +57,7 @@ pub fn validate_localisable_id_uniqueness(source_files: &[SourceFile]) -> Compil
     let mut checked_items = 0;
     for source_file in validator.source_files.clone() {
         source_file
-            .source_file
+            .source_file()
             .visit_statements_depth_first(&mut |statement| match statement {
                 Statement::Line(line) => {
                     checked_items += 1;
@@ -79,7 +79,7 @@ pub fn validate_markup(source_files: &[SourceFile], schema: &ProjectSchema) -> C
     let mut checked_items = 0;
     for source_file in validator.source_files.clone() {
         source_file
-            .source_file
+            .source_file()
             .visit_statements_depth_first(&mut |statement| match statement {
                 Statement::Line(line) => {
                     checked_items += 1;

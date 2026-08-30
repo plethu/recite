@@ -3,20 +3,22 @@ use std::collections::{BTreeMap, BTreeSet};
 use recite_core::{Block, Diagnostic, ProjectSchema, SourceFile, SourceSpan};
 
 use super::ids::collect_line_ids;
-use super::participation::{ValidationCompleteness, ValidationParticipation, ValidationSourceFile};
+use super::participation::{
+    ValidationCompleteness, ValidationInput, ValidationParticipation, aggregate_participation,
+};
 use super::project::{
     collect_blocks, first_source_span, first_validation_source_span,
-    validation_source_files_in_project_order,
+    sort_validation_source_files_in_project_order,
 };
 use crate::diagnostics;
 
 pub(crate) struct Validator<'a> {
-    pub(crate) source_files: Vec<ValidationSourceFile<'a>>,
+    pub(crate) source_files: Vec<ValidationInput<'a>>,
     pub(crate) diagnostics: Vec<Diagnostic>,
     pub(super) schema: Option<&'a ProjectSchema>,
     pub(super) participation: super::participation::ValidationParticipation,
     pub(super) blocks: BTreeMap<&'a str, BTreeSet<&'a str>>,
-    pub(super) block_definition_completeness: BTreeMap<&'a str, ValidationCompleteness>,
+    pub(super) effective_participation: BTreeMap<&'a str, ValidationParticipation>,
     pub(super) source_paths: BTreeMap<&'a str, SourceSpan>,
     pub(super) block_ids: BTreeMap<(&'a str, &'a str), SourceSpan>,
     pub(super) compiled_block_ids: BTreeMap<&'a str, (&'a str, SourceSpan)>,
@@ -28,22 +30,14 @@ pub(crate) struct Validator<'a> {
 
 impl<'a> Validator<'a> {
     pub(crate) fn new(
-        source_files: &[ValidationSourceFile<'a>],
+        source_files: impl IntoIterator<Item = ValidationInput<'a>>,
         schema: Option<&'a ProjectSchema>,
     ) -> Self {
-        let source_files = validation_source_files_in_project_order(source_files);
-        let blocks = collect_blocks(&source_files);
-        let line_ids = collect_line_ids(&source_files);
-        let mut block_definition_completeness = BTreeMap::new();
-        for source_file in &source_files {
-            let path = source_file.source_file.path.as_str();
-            let entry = block_definition_completeness
-                .entry(path)
-                .or_insert(source_file.participation.block_definitions);
-            if source_file.participation.block_definitions == ValidationCompleteness::Incomplete {
-                *entry = ValidationCompleteness::Incomplete;
-            }
-        }
+        let mut source_files = source_files.into_iter().collect::<Vec<_>>();
+        sort_validation_source_files_in_project_order(&mut source_files);
+        let effective_participation = aggregate_participation(&source_files);
+        let blocks = collect_blocks(&source_files, &effective_participation);
+        let line_ids = collect_line_ids(&source_files, &effective_participation);
 
         Self {
             source_files,
@@ -51,7 +45,7 @@ impl<'a> Validator<'a> {
             schema,
             participation: ValidationParticipation::all_complete(),
             blocks,
-            block_definition_completeness,
+            effective_participation,
             source_paths: BTreeMap::new(),
             block_ids: BTreeMap::new(),
             compiled_block_ids: BTreeMap::new(),
@@ -63,35 +57,27 @@ impl<'a> Validator<'a> {
     }
     #[cfg(feature = "bench-support")]
     pub(crate) fn for_block_reference_probe(source_files: &'a [SourceFile]) -> Self {
-        let source_files = source_files
+        let mut source_files = source_files
             .iter()
-            .map(ValidationSourceFile::all_complete)
+            .map(ValidationInput::all_complete)
             .collect::<Vec<_>>();
-        let source_files = validation_source_files_in_project_order(&source_files);
-        let blocks = collect_blocks(&source_files);
-        let block_definition_completeness = source_files
-            .iter()
-            .map(|source_file| {
-                (
-                    source_file.source_file.path.as_str(),
-                    ValidationCompleteness::Complete,
-                )
-            })
-            .collect();
+        sort_validation_source_files_in_project_order(&mut source_files);
+        let effective_participation = aggregate_participation(&source_files);
+        let blocks = collect_blocks(&source_files, &effective_participation);
         Self {
             source_files,
             blocks,
-            block_definition_completeness,
+            effective_participation,
             ..Self::empty_probe_state(None)
         }
     }
     #[cfg(feature = "bench-support")]
     pub(crate) fn for_localisable_id_probe(source_files: &'a [SourceFile]) -> Self {
-        let source_files = source_files
+        let mut source_files = source_files
             .iter()
-            .map(ValidationSourceFile::all_complete)
+            .map(ValidationInput::all_complete)
             .collect::<Vec<_>>();
-        let source_files = validation_source_files_in_project_order(&source_files);
+        sort_validation_source_files_in_project_order(&mut source_files);
         Self {
             source_files,
             ..Self::empty_probe_state(None)
@@ -102,11 +88,11 @@ impl<'a> Validator<'a> {
         source_files: &'a [SourceFile],
         schema: &'a ProjectSchema,
     ) -> Self {
-        let source_files = source_files
+        let mut source_files = source_files
             .iter()
-            .map(ValidationSourceFile::all_complete)
+            .map(ValidationInput::all_complete)
             .collect::<Vec<_>>();
-        let source_files = validation_source_files_in_project_order(&source_files);
+        sort_validation_source_files_in_project_order(&mut source_files);
         Self {
             source_files,
             ..Self::empty_probe_state(Some(schema))
@@ -120,7 +106,7 @@ impl<'a> Validator<'a> {
             schema,
             participation: ValidationParticipation::all_complete(),
             blocks: BTreeMap::new(),
-            block_definition_completeness: BTreeMap::new(),
+            effective_participation: BTreeMap::new(),
             source_paths: BTreeMap::new(),
             block_ids: BTreeMap::new(),
             compiled_block_ids: BTreeMap::new(),
@@ -136,7 +122,11 @@ impl<'a> Validator<'a> {
         }
 
         let all_block_definitions_complete = self.source_files.iter().all(|source_file| {
-            source_file.participation.block_definitions == ValidationCompleteness::Complete
+            self.effective_participation
+                .get(source_file.source_file().path.as_str())
+                .is_some_and(|participation| {
+                    participation.block_definitions() == ValidationCompleteness::Complete
+                })
         });
         if self.default_count == 0
             && !self.source_files.is_empty()
@@ -147,9 +137,13 @@ impl<'a> Validator<'a> {
             ));
         }
     }
-    pub(super) fn validate_source_file(&mut self, input: ValidationSourceFile<'a>) {
-        let source_file = input.source_file;
-        self.participation = input.participation;
+    pub(super) fn validate_source_file(&mut self, input: ValidationInput<'a>) {
+        let source_file = input.source_file();
+        self.participation = self
+            .effective_participation
+            .get(source_file.path.as_str())
+            .copied()
+            .unwrap_or_else(|| input.participation());
         self.validate_source_path(source_file);
 
         for block in &source_file.blocks {

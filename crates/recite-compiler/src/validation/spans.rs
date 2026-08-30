@@ -19,7 +19,7 @@ impl<'a> Validator<'a> {
         participation: ValidationParticipation,
     ) {
         self.validate_span(source_file, &source_text.span, owner);
-        if participation.inline_markup == ValidationCompleteness::Complete {
+        if participation.inline_markup() == ValidationCompleteness::Complete {
             self.validate_markup(source_text);
         }
     }

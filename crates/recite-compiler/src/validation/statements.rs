@@ -12,11 +12,11 @@ mod interpolation;
 
 impl<'a> Validator<'a> {
     pub(super) fn validate_block(&mut self, source_file: &'a SourceFile, block: &'a Block) {
-        if self.participation.ast_structure == ValidationCompleteness::Complete {
+        if self.participation.ast_structure() == ValidationCompleteness::Complete {
             self.validate_span(source_file, &block.span, O::Block);
         }
-        if self.participation.ast_structure == ValidationCompleteness::Complete
-            && self.participation.metadata == ValidationCompleteness::Complete
+        if self.participation.ast_structure() == ValidationCompleteness::Complete
+            && self.participation.metadata() == ValidationCompleteness::Complete
         {
             self.validate_metadata(
                 source_file,
@@ -28,7 +28,7 @@ impl<'a> Validator<'a> {
                 },
             );
         }
-        if self.participation.block_definitions == ValidationCompleteness::Complete {
+        if self.participation.block_definitions() == ValidationCompleteness::Complete {
             self.validate_block_id(source_file, block);
             self.validate_default_block(block);
         }
@@ -43,7 +43,7 @@ impl<'a> Validator<'a> {
             Statement::Line(line) => {
                 self.validate_line(source_file, line, block_default_speaker);
                 for statement in &line.statements {
-                    if self.participation.ast_structure == ValidationCompleteness::Complete
+                    if self.participation.ast_structure() == ValidationCompleteness::Complete
                         && !matches!(statement, Statement::Choice(_))
                     {
                         self.diagnostics
@@ -61,7 +61,7 @@ impl<'a> Validator<'a> {
             Statement::Choice(choice) => {
                 self.validate_choice(source_file, choice);
                 for statement in &choice.statements {
-                    if self.participation.ast_structure == ValidationCompleteness::Complete {
+                    if self.participation.ast_structure() == ValidationCompleteness::Complete {
                         self.diagnostics
                             .push(diagnostics::unsupported_choice_child_statement(
                                 choice, statement,
@@ -107,7 +107,7 @@ impl<'a> Validator<'a> {
             }
             Statement::Effect(effect) => self.validate_effect(source_file, effect),
             Statement::Comment(comment) => {
-                if self.participation.ast_structure == ValidationCompleteness::Complete {
+                if self.participation.ast_structure() == ValidationCompleteness::Complete {
                     self.validate_span(source_file, &comment.span, O::Comment);
                 }
             }
@@ -119,7 +119,7 @@ impl<'a> Validator<'a> {
         line: &'a Line,
         block_default_speaker: Option<&'a str>,
     ) {
-        if self.participation.ast_structure == ValidationCompleteness::Complete {
+        if self.participation.ast_structure() == ValidationCompleteness::Complete {
             self.validate_span(source_file, &line.span, O::Line);
             self.validate_source_text(
                 source_file,
@@ -133,8 +133,8 @@ impl<'a> Validator<'a> {
                 self.validate_interpolation(&line.source_text, &line.interpolation_bindings);
             }
         }
-        if self.participation.ast_structure == ValidationCompleteness::Complete
-            && self.participation.metadata == ValidationCompleteness::Complete
+        if self.participation.ast_structure() == ValidationCompleteness::Complete
+            && self.participation.metadata() == ValidationCompleteness::Complete
         {
             self.validate_metadata(
                 source_file,
@@ -147,7 +147,7 @@ impl<'a> Validator<'a> {
             );
         }
 
-        if self.participation.stable_ids == ValidationCompleteness::Complete {
+        if self.participation.stable_ids() == ValidationCompleteness::Complete {
             self.validate_line_localisable_id(line);
         }
     }
@@ -174,7 +174,7 @@ impl<'a> Validator<'a> {
         }
     }
     pub(super) fn validate_choice(&mut self, source_file: &'a SourceFile, choice: &'a Choice) {
-        if self.participation.ast_structure == ValidationCompleteness::Complete {
+        if self.participation.ast_structure() == ValidationCompleteness::Complete {
             self.validate_span(source_file, &choice.span, O::Choice);
             self.validate_source_text(
                 source_file,
@@ -184,8 +184,8 @@ impl<'a> Validator<'a> {
             );
             self.validate_interpolation(&choice.source_text, &choice.interpolation_bindings);
         }
-        if self.participation.ast_structure == ValidationCompleteness::Complete
-            && self.participation.metadata == ValidationCompleteness::Complete
+        if self.participation.ast_structure() == ValidationCompleteness::Complete
+            && self.participation.metadata() == ValidationCompleteness::Complete
         {
             self.validate_metadata(
                 source_file,
@@ -197,11 +197,11 @@ impl<'a> Validator<'a> {
                 },
             );
         }
-        if self.participation.stable_ids == ValidationCompleteness::Complete {
+        if self.participation.stable_ids() == ValidationCompleteness::Complete {
             self.validate_choice_echo(choice);
         }
-        if self.participation.ast_structure == ValidationCompleteness::Complete
-            && self.participation.condition_functions == ValidationCompleteness::Complete
+        if self.participation.ast_structure() == ValidationCompleteness::Complete
+            && self.participation.condition_functions() == ValidationCompleteness::Complete
         {
             if let Some(requirement) = &choice.availability_requirement {
                 self.validate_span(
@@ -222,18 +222,18 @@ impl<'a> Validator<'a> {
             self.validate_choice_availability_reason(choice);
         }
 
-        if self.participation.stable_ids == ValidationCompleteness::Complete {
+        if self.participation.stable_ids() == ValidationCompleteness::Complete {
             self.validate_choice_localisable_id(choice);
         }
 
         if let Some(target) = &choice.target {
-            if self.participation.ast_structure == ValidationCompleteness::Complete {
+            if self.participation.ast_structure() == ValidationCompleteness::Complete {
                 self.validate_span(source_file, &target.span, O::ChoiceTarget);
             }
-            if self.participation.block_references == ValidationCompleteness::Complete {
+            if self.participation.block_references() == ValidationCompleteness::Complete {
                 self.validate_reference(source_file, &target.target, &target.span);
             }
-        } else if self.participation.ast_structure == ValidationCompleteness::Complete {
+        } else if self.participation.ast_structure() == ValidationCompleteness::Complete {
             self.diagnostics
                 .push(diagnostics::missing_choice_target(choice));
         }
@@ -265,19 +265,19 @@ impl<'a> Validator<'a> {
         }
     }
     pub(super) fn validate_divert(&mut self, source_file: &'a SourceFile, divert: &'a Divert) {
-        if self.participation.ast_structure == ValidationCompleteness::Complete {
+        if self.participation.ast_structure() == ValidationCompleteness::Complete {
             self.validate_span(source_file, &divert.span, O::Divert);
         }
-        if self.participation.block_references == ValidationCompleteness::Complete {
+        if self.participation.block_references() == ValidationCompleteness::Complete {
             self.validate_reference(source_file, &divert.target, &divert.span);
         }
     }
     pub(super) fn validate_if_branch(&mut self, source_file: &'a SourceFile, branch: &'a IfBranch) {
-        if self.participation.ast_structure == ValidationCompleteness::Complete {
+        if self.participation.ast_structure() == ValidationCompleteness::Complete {
             self.validate_span(source_file, &branch.span, O::IfBranch);
         }
-        if self.participation.ast_structure == ValidationCompleteness::Complete
-            && self.participation.condition_functions == ValidationCompleteness::Complete
+        if self.participation.ast_structure() == ValidationCompleteness::Complete
+            && self.participation.condition_functions() == ValidationCompleteness::Complete
         {
             self.validate_condition_expression(source_file, &branch.condition);
             self.validate_boolean_condition_schema(&branch.condition);
@@ -288,23 +288,23 @@ impl<'a> Validator<'a> {
         source_file: &'a SourceFile,
         branch: &'a MatchBranch,
     ) {
-        if self.participation.ast_structure == ValidationCompleteness::Complete {
+        if self.participation.ast_structure() == ValidationCompleteness::Complete {
             self.validate_span(source_file, &branch.span, O::MatchBranch);
         }
-        if self.participation.ast_structure == ValidationCompleteness::Complete
-            && self.participation.condition_functions == ValidationCompleteness::Complete
+        if self.participation.ast_structure() == ValidationCompleteness::Complete
+            && self.participation.condition_functions() == ValidationCompleteness::Complete
         {
             self.validate_condition_call(source_file, &branch.scrutinee);
             self.validate_match_scrutinee_schema(&branch.scrutinee);
         }
     }
     pub(super) fn validate_match_arm(&mut self, source_file: &'a SourceFile, arm: &'a MatchArm) {
-        if self.participation.ast_structure == ValidationCompleteness::Complete {
+        if self.participation.ast_structure() == ValidationCompleteness::Complete {
             self.validate_span(source_file, &arm.span, O::MatchArm);
         }
     }
     pub(super) fn validate_effect(&mut self, source_file: &'a SourceFile, effect: &'a Effect) {
-        if self.participation.ast_structure == ValidationCompleteness::Complete {
+        if self.participation.ast_structure() == ValidationCompleteness::Complete {
             self.validate_span(source_file, &effect.span, O::Effect);
             if let Some(span) = &effect.mode_span {
                 self.validate_span(source_file, span, O::EffectMode);
@@ -319,8 +319,8 @@ impl<'a> Validator<'a> {
                 self.validate_span(source_file, span, O::EffectArgument);
             }
         }
-        if self.participation.ast_structure == ValidationCompleteness::Complete
-            && self.participation.effect_functions == ValidationCompleteness::Complete
+        if self.participation.ast_structure() == ValidationCompleteness::Complete
+            && self.participation.effect_functions() == ValidationCompleteness::Complete
         {
             self.validate_arguments(&effect.args, effect.span.clone(), A::Effect);
             self.validate_effect_schema(source_file, effect);

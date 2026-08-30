@@ -1,10 +1,10 @@
-use std::collections::BTreeSet;
+use std::collections::{BTreeMap, BTreeSet};
 
 use recite_core::{
     Block, BlockReference, Choice, ChoiceEcho, DivertTarget, SourceFile, SourceSpan, Statement,
 };
 
-use super::participation::{ValidationCompleteness, ValidationSourceFile};
+use super::participation::{ValidationCompleteness, ValidationInput, ValidationParticipation};
 use super::state::Validator;
 use crate::diagnostics;
 
@@ -92,10 +92,10 @@ impl<'a> Validator<'a> {
             .file
             .as_deref()
             .unwrap_or(source_file.path.as_str());
-        let Some(completeness) = self.block_definition_completeness.get(file) else {
+        let Some(participation) = self.effective_participation.get(file) else {
             return BlockLookup::Missing;
         };
-        if *completeness == ValidationCompleteness::Incomplete {
+        if participation.block_definitions() == ValidationCompleteness::Incomplete {
             return BlockLookup::Indeterminate;
         }
         let Some(blocks) = self.blocks.get(file) else {
@@ -110,9 +110,9 @@ impl<'a> Validator<'a> {
     }
 
     fn stable_ids_incomplete(&self) -> bool {
-        self.source_files.iter().any(|source_file| {
-            source_file.participation.stable_ids == ValidationCompleteness::Incomplete
-        })
+        self.effective_participation
+            .values()
+            .any(|participation| participation.stable_ids() == ValidationCompleteness::Incomplete)
     }
 }
 
@@ -123,15 +123,24 @@ enum BlockLookup {
     Indeterminate,
 }
 
-pub(super) fn collect_line_ids<'a>(source_files: &[ValidationSourceFile<'a>]) -> BTreeSet<&'a str> {
+pub(super) fn collect_line_ids<'a>(
+    source_files: &[ValidationInput<'a>],
+    effective_participation: &BTreeMap<&'a str, ValidationParticipation>,
+) -> BTreeSet<&'a str> {
     let mut line_ids = BTreeSet::new();
 
     for source_file in source_files {
-        if source_file.participation.stable_ids != ValidationCompleteness::Complete {
+        let path = source_file.source_file().path.as_str();
+        if effective_participation
+            .get(path)
+            .is_none_or(|participation| {
+                participation.stable_ids() != ValidationCompleteness::Complete
+            })
+        {
             continue;
         }
         source_file
-            .source_file
+            .source_file()
             .visit_statements_depth_first(&mut |statement| {
                 if let Statement::Line(line) = statement
                     && let Some(id) = &line.id
