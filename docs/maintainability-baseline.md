@@ -199,4 +199,4 @@ production suppressions must carry a narrow scope and rationale.
 | `crates/recite-lsp/src/tests/project_indexes.rs` | 394 | test/support | lsp/tests | cohesive | Project discovery, manifest transition, and saved-index regression coverage |
 | `crates/recite-lsp/src/tests/code_action/schema_entry.rs` | 357 | test/support | lsp/tests | review | Private code-action behavior |
 | `crates/recite-compiler/tests/validation/participation.rs` | 369 | test/support | compiler/tests | cohesive | #168: participation-aware validation completeness and all-complete compatibility coverage |
-| `crates/recite-compiler/tests/authoring.rs` | 474 | test/support | compiler/tests | cohesive | #168: authoring snapshot, recovery, and lifecycle coverage |
+| `crates/recite-compiler/tests/authoring.rs` | 473 | test/support | compiler/tests | cohesive | #168: authoring snapshot, recovery, and lifecycle coverage |
