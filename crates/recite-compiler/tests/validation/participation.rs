@@ -332,6 +332,7 @@ fn incomplete_definitions_suppress_missing_default_but_complete_defaults_conflic
 
     let complete = [participated(&files[0])];
     let report = validate_source_files_with_participation(&complete);
+    assert_eq!(validate_source_files(&files), report);
     assert_eq!(codes(&report), ["RECITE_VALIDATE005"]);
 }
 

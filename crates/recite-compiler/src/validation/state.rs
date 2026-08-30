@@ -161,7 +161,7 @@ impl<'a> Validator<'a> {
         }
     }
     pub(super) fn validate_source_path(&mut self, source_file: &'a SourceFile) {
-        let span = first_source_span(&[source_file]);
+        let span = first_source_span(std::iter::once(source_file));
         if let Some(first_span) = self.source_paths.get(source_file.path.as_str()) {
             self.diagnostics.push(diagnostics::duplicate_source_path(
                 source_file,

@@ -120,7 +120,7 @@ impl<'a> Validator<'a> {
             .value_span
             .clone()
             .or_else(|| entry.source_span.clone())
-            .unwrap_or_else(|| project::first_source_span(&[source_file]));
+            .unwrap_or_else(|| project::first_source_span(std::iter::once(source_file)));
         self.diagnostics.push(diagnostics::non_finite_float_value(
             span,
             diagnostics::NonFiniteFloatOwner::MetadataValue(entry.key.clone()),

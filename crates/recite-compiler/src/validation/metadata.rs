@@ -218,7 +218,7 @@ fn metadata_value_span(source_file: &SourceFile, entry: &SourceMetadataEntry) ->
         .value_span
         .clone()
         .or_else(|| entry.source_span.clone())
-        .unwrap_or_else(|| project::first_source_span(&[source_file]))
+        .unwrap_or_else(|| project::first_source_span(std::iter::once(source_file)))
 }
 
 fn metadata_symbol_values(entry: &SourceMetadataEntry) -> Option<Vec<&str>> {

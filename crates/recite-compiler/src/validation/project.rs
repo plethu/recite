@@ -50,27 +50,27 @@ pub(super) fn collect_blocks<'a>(
 
 // Invariant: 1:1 is a valid fallback source position for empty source-file sets.
 #[allow(clippy::expect_used)]
-pub(super) fn first_source_span(source_files: &[&SourceFile]) -> SourceSpan {
-    source_files
-        .iter()
-        .find_map(|source_file| source_file.blocks.first().map(|block| block.span.clone()))
-        .unwrap_or_else(|| {
-            let path = source_files
-                .first()
-                .map_or_else(String::new, |source_file| source_file.path.clone());
-            SourceSpan::point(
-                path,
-                SourcePosition::new(1, 1).expect("1:1 is a valid source position"),
-            )
-        })
+pub(super) fn first_source_span<'a>(
+    source_files: impl IntoIterator<Item = &'a SourceFile>,
+) -> SourceSpan {
+    let mut first_path = None;
+    for source_file in source_files {
+        if first_path.is_none() {
+            first_path = Some(source_file.path.clone());
+        }
+        if let Some(block) = source_file.blocks.first() {
+            return block.span.clone();
+        }
+    }
+
+    SourceSpan::point(
+        first_path.unwrap_or_default(),
+        SourcePosition::new(1, 1).expect("1:1 is a valid source position"),
+    )
 }
 
 pub(super) fn first_validation_source_span(source_files: &[ValidationInput<'_>]) -> SourceSpan {
-    let source_files = source_files
-        .iter()
-        .map(ValidationInput::source_file)
-        .collect::<Vec<_>>();
-    first_source_span(&source_files)
+    first_source_span(source_files.iter().map(ValidationInput::source_file))
 }
 
 pub(crate) fn sort_diagnostics_by_source(diagnostics: &mut [Diagnostic]) {
