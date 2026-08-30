@@ -23,13 +23,16 @@ structural owner.
 Discovery is delegated to the pinned ast-grep Rust parser in
 `scripts/lint_suppression_ast.py`. Its real syntax nodes provide attributes,
 declaration ancestry, blocks, closures, macros, comments, and parse errors.
-The policy helper only interprets the validated attribute meta and performs
-matching; it does not maintain a second Rust declaration or delimiter lexer.
+The helper keeps only a bounded interpreter for suppression metadata and
+`cfg_attr`; it does not lex Rust declarations or infer ownership from
+delimiters. Configured owners and their configured ancestors are deliberately
+unstable, so conditional siblings cannot consume one another's baseline.
 Named modules, items, impl headers, and use trees are matchable. Anonymous,
 macro, closure, malformed, or otherwise ambiguous scopes are reported as
 `owner=unstable` and never consume a baseline, which is intentionally
 fail-closed. ast-grep is supplied by the repository's `maintainability` mise
-environment.
+environment. Its `ERROR` and incomplete-node results fail the file closed;
+this is structural validity evidence, not a replacement for rustc semantics.
 
 The gate does not claim to verify whether a lint exists or whether a reason is
 true; Cargo/rustc and human review retain those responsibilities.
@@ -41,6 +44,9 @@ New or expanded handwritten production suppressions must:
 - contain a non-empty literal `reason = "..."` argument;
 - keep the lint list narrow enough that a reviewer can identify the local
   ownership boundary.
+
+Reason literals containing escapes are rejected conservatively; write the
+human-readable rationale directly in the literal.
 
 `expect` is still subject to the reason requirement. A production
 `#[expect]` may be broad only when the compatibility boundary itself is the

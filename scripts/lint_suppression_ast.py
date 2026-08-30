@@ -63,6 +63,9 @@ class AstEvent:
     text: str
 
 
+OPAQUE_SUPPRESSION = re.compile(r"#\s*!?\s*\[\s*(allow|expect)\b")
+
+
 def _rule_text() -> str:
     return "\n---\n".join(
         f"id: {rule_id}\nlanguage: Rust\nrule:\n  {rule}"
@@ -215,7 +218,7 @@ def _literal(value: str) -> str | None:
     index = 1
     while index < len(value):
         if value[index] == "\\":
-            index += 2
+            return None
         elif value[index] == '"':
             return value[1:index] if not value[index + 1:].strip() else None
         else:
@@ -271,6 +274,105 @@ def _attributes(event: AstEvent) -> list[tuple[str, tuple[str, ...], str | None,
     if not text.startswith(prefix) or not text.endswith("]"):
         raise ParseError("malformed Rust attribute")
     return [(kind, lints, reason, inner) for kind, lints, reason in _meta(text[len(prefix):-1])]
+
+
+def _is_configuration_attribute(event: AstEvent) -> bool:
+    prefix = "#![" if event.rule == "inner_attribute" else "#["
+    if not event.text.startswith(prefix):
+        return False
+    return re.match(r"(?:cfg|cfg_attr)\b", _without_comments(event.text[len(prefix):-1]).lstrip()) is not None
+
+
+def _contains_unclosed_node(events: list[AstEvent]) -> bool:
+    closed = {
+        "block", "closure", "enum_item", "function_item", "impl_item", "macro_definition",
+        "macro_invocation", "mod_item", "struct_item", "trait_item", "union_item",
+    }
+    return any(event.rule in closed and event.text.rstrip()[-1:] == "{" for event in events)
+
+
+def _validate_structure(events: list[AstEvent]) -> None:
+    if _contains_unclosed_node(events):
+        raise ParseError("ast-grep returned an incomplete Rust node")
+    signature_containers = [
+        event for event in events
+        if event.rule in {"trait_item", "foreign_mod_item", "impl_item"}
+    ]
+    for event in events:
+        if event.rule == "function_signature_item" and not any(
+            parent.start <= event.start and event.end <= parent.end
+            for parent in signature_containers
+        ):
+            raise ParseError("ast-grep returned a function without a body")
+        if event.rule == "function_item":
+            body = next(
+                (candidate for candidate in events
+                 if candidate.rule == "block" and candidate.end == event.end),
+                None,
+            )
+            if body is None:
+                body = max(
+                    (candidate for candidate in events
+                     if candidate.rule == "block" and event.start < candidate.start < candidate.end <= event.end),
+                    key=lambda candidate: candidate.start, default=None,
+                )
+            header = (
+                event.text.encode()[:body.start - event.start].decode("utf-8", "ignore")
+                if body else event.text
+            )
+            if header.count("(") != header.count(")") or header.count("[") != header.count("]"):
+                raise ParseError("ast-grep returned an incomplete function signature")
+        if event.rule == "const_item" and re.search(r"\bconst\s+[^\s:]+\s*:\s*=", event.text):
+            raise ParseError("ast-grep returned an incomplete const declaration")
+
+
+def _owner_for_attribute(
+    attr: AstEvent, nodes: list[AstEvent], source: bytes, trivia: list[tuple[int, int]]
+) -> AstEvent | None:
+    if attr.rule == "inner_attribute":
+        return min(
+            (node for node in nodes if node.start <= attr.start and attr.end <= node.end),
+            key=lambda node: (node.end - node.start, node.start), default=None,
+        )
+    return next(
+        (node for node in sorted(
+            (node for node in nodes if node.start >= attr.end),
+            key=lambda node: (node.start, node.end - node.start),
+        ) if _trivia_gap(source, attr.end, node.start, trivia)),
+        None,
+    )
+
+
+def _opaque_records(
+    path: str, event: AstEvent, source: bytes, comments: list[tuple[int, int]], generated: set[str]
+) -> list[dict[str, object]]:
+    records: list[dict[str, object]] = []
+    for match in OPAQUE_SUPPRESSION.finditer(event.text):
+        close = event.text.find("]", match.end())
+        attr_text = event.text[match.start():close + 1] if close >= 0 else ""
+        parsed: list[tuple[str, tuple[str, ...], str | None]]
+        try:
+            parsed = [
+                (kind, lints, reason)
+                for kind, lints, reason, _ in _attributes(
+                    AstEvent("outer_attribute", 0, len(attr_text), attr_text)
+                )
+            ] if attr_text else []
+        except ParseError:
+            parsed = []
+        if not parsed:
+            parsed = [(match.group(1), ("opaque_macro",), None)]
+        local_offset = len(event.text[:match.start()].encode("utf-8"))
+        offset = event.start + local_offset
+        line = source[:offset].count(b"\n") + 1
+        for kind, lints, reason in parsed:
+            records.append({
+                "path": path, "line": line, "kind": kind, "lints": lints, "reason": reason,
+                "inner": False, "scope": "item", "target": "unstable",
+                "category": _category(path, offset, source, comments, generated),
+                "owner_stable": False,
+            })
+    return records
 
 
 NAMED = {
@@ -361,6 +463,7 @@ def scan_sources(sources: list[tuple[str, str]], generated_paths: set[str]) -> l
         events = events_by_path.get(path, [])
         if any(event.rule == "rust_error" for event in events):
             raise ParseError(f"malformed Rust syntax in {path}")
+        _validate_structure(events)
         data = source.encode("utf-8")
         comments = _comments(events, data)
         attrs = [event for event in events if event.rule in {"outer_attribute", "inner_attribute"}]
@@ -371,15 +474,24 @@ def scan_sources(sources: list[tuple[str, str]], generated_paths: set[str]) -> l
         trivia = sorted(comments + [(event.start, event.end) for event in attrs])
         info = {id(node): _target(node, source, bodies) for node in nodes}
         named = [node for node in nodes if info[id(node)][0] != "unstable"]
+        attribute_owners = {
+            id(attr): _owner_for_attribute(attr, nodes, data, trivia) for attr in attrs
+        }
+        configured_nodes = {
+            id(owner) for attr in attrs
+            if _is_configuration_attribute(attr)
+            for owner in [attribute_owners[id(attr)]] if owner is not None
+        }
+        configured_crate = any(
+            attr.rule == "inner_attribute" and _is_configuration_attribute(attr)
+            and attribute_owners[id(attr)] is None for attr in attrs
+        )
 
         for attr in attrs:
             for kind, lints, reason, inner in _attributes(attr):
-                owner = None
+                owner = attribute_owners[id(attr)]
+                configuration = _is_configuration_attribute(attr) or configured_crate
                 if inner:
-                    owner = min(
-                        (node for node in nodes if node.start <= attr.start and attr.end <= node.end),
-                        key=lambda node: (node.end - node.start, node.start), default=None,
-                    )
                     if owner is None:
                         scope, target, stable, prefix_nodes = "crate", "crate", True, []
                     elif owner.rule == "mod_item":
@@ -391,10 +503,6 @@ def scan_sources(sources: list[tuple[str, str]], generated_paths: set[str]) -> l
                     else:
                         scope, target, stable, prefix_nodes = "item", "unstable", False, []
                 else:
-                    owner = next(
-                        (node for node in sorted((node for node in nodes if node.start >= attr.end), key=lambda node: (node.start, node.end - node.start))
-                         if _trivia_gap(data, attr.end, node.start, trivia)), None,
-                    )
                     if owner is None:
                         scope, target, stable, prefix_nodes = "item", "unstable", False, []
                     else:
@@ -425,10 +533,18 @@ def scan_sources(sources: list[tuple[str, str]], generated_paths: set[str]) -> l
                         target = "::".join(prefix + [target])
                     elif target != "unstable":
                         target = "::".join(prefix + [target])
+                configuration = configuration or (
+                    (owner is not None and id(owner) in configured_nodes)
+                    or any(id(node) in configured_nodes for node in prefix_nodes)
+                )
+                stable = stable and not configuration
                 records.append({
                     "path": path, "line": data[:attr.start].count(b"\n") + 1,
                     "kind": kind, "lints": lints, "reason": reason, "inner": inner,
                     "scope": scope, "target": target, "category": _category(path, attr.start, data, comments, generated_paths),
                     "owner_stable": stable,
                 })
+        for event in events:
+            if event.rule in {"macro_definition", "macro_invocation"}:
+                records.extend(_opaque_records(path, event, data, comments, generated_paths))
     return records

@@ -29,6 +29,8 @@ grep -Fq 'name: Trusted Git workflow policy' "$workflow" || fail_static 'unique 
 grep -Fq 'contents: read' "$workflow" || fail_static 'read-only contents permission'
 grep -Fq 'pull-requests: read' "$workflow" || fail_static 'read-only pull-request permission'
 grep -Fq 'ref: main' "$workflow" || fail_static 'base checkout ref'
+grep -Fq 'jdx/mise-action@3c2e0cf82a5b2e5249f0d3635a4d83d0ae861518' "$workflow" || fail_static 'pinned base toolchain action'
+grep -Fq 'MISE_ENV: maintainability' "$workflow" || fail_static 'maintainability tool environment'
 grep -Fq "refs/pull/\${pr_number}/head" "$wrapper" || fail_static 'PR object fetch'
 grep -Fq 'refs/recite/trusted-pr-head' "$wrapper" || fail_static 'non-checkout PR ref'
 grep -Fq -- '--filter=blob:none' "$wrapper" || fail_static 'blob-filtered PR object fetch'
@@ -48,6 +50,19 @@ origin="$test_root/origin.git"
 repo="$test_root/repo"
 fake_bin="$test_root/bin"
 mkdir -p "$fake_bin"
+ast_grep_bin="$(command -v ast-grep || true)"
+[[ -n "$ast_grep_bin" ]] || {
+  echo 'trusted-policy fixture requires the pinned ast-grep tool' >&2
+  exit 2
+}
+[[ "$($ast_grep_bin --version)" == 'ast-grep 0.44.1' ]] || {
+  echo "trusted-policy fixture found an unpinned ast-grep: $($ast_grep_bin --version)" >&2
+  exit 2
+}
+# Exercise the policy with only the fake GitHub CLI, the pinned parser, and
+# standard system tools. This prevents an unrelated user PATH from masking a
+# missing trusted-policy dependency.
+clean_path="$fake_bin:$(dirname "$ast_grep_bin"):/usr/bin:/bin"
 git init --bare --quiet "$origin"
 git clone --quiet "$origin" "$repo"
 mkdir -p "$repo/scripts" "$repo/crates/demo/src"
@@ -113,7 +128,7 @@ marker="$test_root/base-policy.marker"
 untrusted_marker="$test_root/untrusted-policy.marker"
 lint_marker="$test_root/base-lint-policy.marker"
 untrusted_lint_marker="$test_root/untrusted-lint-policy.marker"
-if ! PATH="$fake_bin:$PATH" \
+if ! PATH="$clean_path" \
   GH_FIXTURE_JSON="$test_root/live.json" \
   GITHUB_EVENT_NAME=pull_request_target \
   GITHUB_EVENT_PATH="$test_root/event.json" \
@@ -148,7 +163,7 @@ git -C "$repo" switch --quiet --detach main
 git -C "$repo" update-ref -d refs/recite/trusted-pr-head
 jq --arg sha "$tampered_head_sha" '.pull_request.head.sha = $sha' "$test_root/event.json" > "$test_root/tampered-event.json"
 jq --arg sha "$tampered_head_sha" '.head.sha = $sha' "$test_root/live.json" > "$test_root/tampered-live.json"
-if PATH="$fake_bin:$PATH" GH_FIXTURE_JSON="$test_root/tampered-live.json" \
+if PATH="$clean_path" GH_FIXTURE_JSON="$test_root/tampered-live.json" \
   GITHUB_EVENT_NAME=pull_request_target GITHUB_EVENT_PATH="$test_root/tampered-event.json" \
   GITHUB_REPOSITORY=plethu/recite TRUSTED_POLICY_MARKER="$test_root/tampered.marker" \
   TRUSTED_LINT_POLICY_MARKER="$test_root/tampered-lint.marker" \
@@ -180,7 +195,7 @@ jq --arg sha "$race_head_sha" '.pull_request.head.sha = $sha' "$test_root/event.
 jq --arg sha "$race_head_sha" '.head.sha = $sha' "$test_root/live.json" > "$test_root/race-live.json"
 jq '.title = "[REC-164] ci: metadata changed after validation"' "$test_root/race-live.json" > "$test_root/raced-live.json"
 rm -f "$test_root/gh-call-count"
-if PATH="$fake_bin:$PATH" GH_FIXTURE_JSON="$test_root/race-live.json" \
+if PATH="$clean_path" GH_FIXTURE_JSON="$test_root/race-live.json" \
   GH_FINAL_FIXTURE_JSON="$test_root/raced-live.json" GH_CALL_COUNT_FILE="$test_root/gh-call-count" \
   GITHUB_EVENT_NAME=pull_request_target GITHUB_EVENT_PATH="$test_root/race-event.json" \
   GITHUB_REPOSITORY=plethu/recite TRUSTED_POLICY_MARKER="$test_root/race.marker" \
@@ -197,7 +212,7 @@ grep -Fq 'policy metadata changed during validation' "$test_root/race-output" ||
 }
 
 jq '.base.ref = "release"' "$test_root/live.json" > "$test_root/invalid-live.json"
-if PATH="$fake_bin:$PATH" GH_FIXTURE_JSON="$test_root/invalid-live.json" \
+if PATH="$clean_path" GH_FIXTURE_JSON="$test_root/invalid-live.json" \
   GITHUB_EVENT_NAME=pull_request_target GITHUB_EVENT_PATH="$test_root/event.json" \
   GITHUB_REPOSITORY=plethu/recite TRUSTED_POLICY_MARKER="$test_root/invalid.marker" \
   bash -c 'cd "$1" && ./scripts/check-trusted-pr-policy.sh' trusted-policy "$repo" >/dev/null 2>&1; then
@@ -206,7 +221,7 @@ if PATH="$fake_bin:$PATH" GH_FIXTURE_JSON="$test_root/invalid-live.json" \
 fi
 
 jq '.pull_request.head.sha = "0000000000000000000000000000000000000000"' "$test_root/event.json" > "$test_root/stale-event.json"
-if PATH="$fake_bin:$PATH" GH_FIXTURE_JSON="$test_root/live.json" \
+if PATH="$clean_path" GH_FIXTURE_JSON="$test_root/live.json" \
   GITHUB_EVENT_NAME=pull_request_target GITHUB_EVENT_PATH="$test_root/stale-event.json" \
   GITHUB_REPOSITORY=plethu/recite TRUSTED_POLICY_MARKER="$test_root/stale.marker" \
   bash -c 'cd "$1" && ./scripts/check-trusted-pr-policy.sh' trusted-policy "$repo" >/dev/null 2>&1; then
