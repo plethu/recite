@@ -35,7 +35,8 @@ impl ProjectBuildTarget {
 /// A complete, validated project build request owned by the CLI boundary.
 ///
 /// The embedded compiler request carries all content-bearing inputs. The
-/// manifest and source inputs use project-relative slash [`DocumentKey`]s and
+/// manifest and source inputs use project-relative slash
+/// [`recite_core::DocumentKey`]s and
 /// `Saved` authority, while a valid schema is carried as its canonical model.
 #[derive(Clone, Debug, Eq, PartialEq)]
 #[non_exhaustive]
