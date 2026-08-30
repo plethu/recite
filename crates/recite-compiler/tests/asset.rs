@@ -29,6 +29,9 @@ mod wire_contract;
 #[path = "asset/shared_pressure.rs"]
 mod shared_pressure;
 
+#[path = "asset/fingerprint.rs"]
+mod fingerprint;
+
 #[test]
 fn valid_fixture_compiles_to_runtime_facing_v0_tables() {
     let asset = compile_fixture("fixtures/recite/valid/core_language_spike.recite");

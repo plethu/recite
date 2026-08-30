@@ -14,6 +14,25 @@ use probe::messagepack_asset_format_versions;
 use validate::validate_dialogue;
 use wire::MsgDialogue;
 
+/// Error returned when encoding a compiled dialogue into canonical v0 bytes.
+#[non_exhaustive]
+#[derive(Clone, Debug, Eq, PartialEq)]
+pub enum CompiledAssetEncodeError {
+    MessagePack(String),
+}
+
+impl fmt::Display for CompiledAssetEncodeError {
+    fn fmt(&self, formatter: &mut fmt::Formatter<'_>) -> fmt::Result {
+        match self {
+            Self::MessagePack(reason) => {
+                write!(formatter, "failed to encode MessagePack: {reason}")
+            }
+        }
+    }
+}
+
+impl std::error::Error for CompiledAssetEncodeError {}
+
 /// Error returned when decoding public v0 compiled dialogue asset bytes.
 #[derive(Clone, Debug, Eq, PartialEq)]
 pub enum CompiledAssetDecodeError {
@@ -73,6 +92,18 @@ pub fn decode_compiled_dialogue_messagepack(
     Ok(dialogue)
 }
 
+/// Encode a compiled dialogue using the canonical v0 wire contract.
+///
+/// This is the sole encoder authority for compiled dialogue bytes. The
+/// compiler delegates here, and callers may use the exact bytes for durable
+/// content identity without introducing a second semantic serialization.
+pub fn encode_compiled_dialogue_messagepack(
+    dialogue: &CompiledDialogue,
+) -> Result<Vec<u8>, CompiledAssetEncodeError> {
+    encode::serialize_messagepack(dialogue)
+}
+
+mod encode;
 mod interpolation;
 mod probe;
 mod tags;

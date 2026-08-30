@@ -34,6 +34,8 @@ impl PreviewOutput {
 pub enum PreviewError {
     #[error("preview runtime operation failed: {0}")]
     Runtime(#[from] DialogueError),
+    #[error("preview asset revision could not be computed: {reason}")]
+    AssetRevisionFailed { reason: String },
     #[error("preview is waiting for a condition answer")]
     ConditionPending,
     #[error("preview has no pending condition answer")]

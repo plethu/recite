@@ -216,25 +216,15 @@ impl AssetRevisionWire {
     fn from_revision(revision: &PreviewAssetRevision) -> Self {
         Self {
             asset_id: revision.asset_id().as_str().to_owned(),
-            format_version: revision.format_version(),
-            compiler_compatibility_version: revision.compiler_compatibility_version(),
-            compiler_version: revision.compiler_version().as_str().to_owned(),
-            source_map_id: revision.source_map_id().as_str().to_owned(),
-            schema_fingerprint: revision.schema_fingerprint().clone(),
-            sources: revision.sources().to_vec(),
+            payload_fingerprint: revision.fingerprint_snapshot(),
         }
     }
 
     fn into_revision(self) -> Result<PreviewAssetRevision, PreviewError> {
-        Ok(PreviewAssetRevision::from_parts(
+        PreviewAssetRevision::from_fingerprint_snapshot(
             recite_core::CompiledAssetId::new(self.asset_id).map_err(invalid)?,
-            self.format_version,
-            self.compiler_compatibility_version,
-            recite_core::CompilerVersion::new(self.compiler_version).map_err(invalid)?,
-            recite_core::SourceMapId::new(self.source_map_id).map_err(invalid)?,
-            self.schema_fingerprint,
-            self.sources,
-        ))
+            self.payload_fingerprint,
+        )
     }
 }
 

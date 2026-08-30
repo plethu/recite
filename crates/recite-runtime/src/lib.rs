@@ -116,7 +116,6 @@ pub use session_snapshot::{
     DialogueSessionSourceSnapshot, SESSION_SNAPSHOT_FORMAT_VERSION_V0,
     SESSION_SNAPSHOT_FORMAT_VERSION_V1, snapshot_session,
 };
-pub(crate) use session_snapshot::{schema_fingerprint_snapshot, source_snapshot};
 pub use traversal::{
     DialogueTrace, LocaleResolution, LocalizedLookupTrace, PluralLineTrace, acknowledge_effect,
     choose, choose_with, next, next_with, start_scene, start_scene_with_options,

@@ -15,8 +15,8 @@ pub(super) fn state_matches_session(
         .map(|block| block.id.clone());
     if state.restart_required().is_some_and(|requirement| {
         requirement.active_asset() != state.asset_id()
-            || requirement.active_revision()
-                != &super::model::PreviewAssetRevision::from_asset(asset)
+            || super::model::PreviewAssetRevision::from_asset(asset)
+                .map_or(true, |revision| requirement.active_revision() != &revision)
     }) {
         return false;
     }

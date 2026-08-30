@@ -1,8 +1,7 @@
 use serde::{Deserialize, Serialize};
 
-use crate::{
-    DialogueSchemaFingerprintSnapshot, DialogueSessionSnapshot, DialogueSessionSourceSnapshot,
-};
+use crate::DialogueContentFingerprintSnapshot;
+use crate::DialogueSessionSnapshot;
 
 #[derive(Clone, Debug, Deserialize, Serialize)]
 #[serde(deny_unknown_fields)]
@@ -49,12 +48,7 @@ pub(super) struct RequirementWire {
 #[serde(deny_unknown_fields)]
 pub(super) struct AssetRevisionWire {
     pub(super) asset_id: String,
-    pub(super) format_version: u16,
-    pub(super) compiler_compatibility_version: u16,
-    pub(super) compiler_version: String,
-    pub(super) source_map_id: String,
-    pub(super) schema_fingerprint: DialogueSchemaFingerprintSnapshot,
-    pub(super) sources: Vec<DialogueSessionSourceSnapshot>,
+    pub(super) payload_fingerprint: DialogueContentFingerprintSnapshot,
 }
 
 #[derive(Clone, Debug, Deserialize, Serialize)]

@@ -37,19 +37,31 @@ impl<'asset> PreviewSession<'asset> {
 
     /// Reports that a different compiled payload requires an explicit restart.
     /// The active asset is never silently replaced.
-    pub fn assess_asset(&mut self, candidate: &CompiledDialogue) -> PreviewOutput {
+    pub fn assess_asset(
+        &mut self,
+        candidate: &CompiledDialogue,
+    ) -> Result<PreviewOutput, PreviewError> {
         if self.asset == candidate {
             self.state.restart_required = None;
-            return PreviewOutput::new(Vec::new(), self.state.clone());
+            return Ok(PreviewOutput::new(Vec::new(), self.state.clone()));
         }
-        let active_revision = PreviewAssetRevision::from_asset(self.asset);
-        let replacement_revision = PreviewAssetRevision::from_asset(candidate);
-        self.append_events(vec![PreviewEvent::RestartRequired {
+        let active_revision = PreviewAssetRevision::from_asset(self.asset).map_err(|error| {
+            PreviewError::AssetRevisionFailed {
+                reason: error.to_string(),
+            }
+        })?;
+        let replacement_revision =
+            PreviewAssetRevision::from_asset(candidate).map_err(|error| {
+                PreviewError::AssetRevisionFailed {
+                    reason: error.to_string(),
+                }
+            })?;
+        Ok(self.append_events(vec![PreviewEvent::RestartRequired {
             active_asset: self.asset.header.asset_id.clone(),
             replacement_asset: candidate.header.asset_id.clone(),
             active_revision,
             replacement_revision,
-        }])
+        }]))
     }
 
     pub(super) fn acknowledge_pending(

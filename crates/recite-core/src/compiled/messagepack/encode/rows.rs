@@ -1,8 +1,8 @@
-use recite_core::{CompiledChoice, CompiledInterpolationBinding, CompiledLine, SpeakerIndex};
+use crate::{CompiledChoice, CompiledInterpolationBinding, CompiledLine, SpeakerIndex};
 use serde::Serialize;
 
-use super::messagepack::MsgRange;
-use super::messagepack::tags::{MsgChoiceEcho, MsgConditionExpression, MsgDivertTarget};
+use super::tables::MsgRange;
+use super::tags::{MsgChoiceEcho, MsgConditionExpression, MsgDivertTarget};
 
 #[derive(Serialize)]
 pub(super) struct MsgLine<'a>(
@@ -23,7 +23,7 @@ impl<'a> From<&'a CompiledLine> for MsgLine<'a> {
             line.id.as_str(),
             line.source_text.as_str(),
             line.speaker.map(SpeakerIndex::as_u32),
-            super::messagepack::metadata_range(line.metadata),
+            super::tables::metadata_range(line.metadata),
             line.source_map.as_u32(),
             line.authored_source_text.as_str(),
             line.interpolation_bindings
@@ -56,7 +56,7 @@ impl<'a> From<&'a CompiledChoice> for MsgChoice<'a> {
         Self(
             choice.id.as_str(),
             choice.source_text.as_str(),
-            super::messagepack::metadata_range(choice.metadata),
+            super::tables::metadata_range(choice.metadata),
             choice
                 .availability_requirement
                 .as_ref()
@@ -65,7 +65,7 @@ impl<'a> From<&'a CompiledChoice> for MsgChoice<'a> {
             choice
                 .availability_reason_override
                 .as_ref()
-                .map(recite_core::AvailabilityReasonId::as_str),
+                .map(crate::AvailabilityReasonId::as_str),
             MsgDivertTarget(&choice.target),
             MsgChoiceEcho(&choice.echo),
             choice.source_map.as_u32(),
@@ -85,10 +85,10 @@ pub(super) struct MsgInterpolationBinding<'a>(&'a str, &'a str, &'static str);
 impl<'a> From<&'a CompiledInterpolationBinding> for MsgInterpolationBinding<'a> {
     fn from(binding: &'a CompiledInterpolationBinding) -> Self {
         let value_type = match binding.value_type {
-            recite_core::InterpolationType::String => "string",
-            recite_core::InterpolationType::Integer => "int",
-            recite_core::InterpolationType::Float => "float",
-            recite_core::InterpolationType::Boolean => "bool",
+            crate::InterpolationType::String => "string",
+            crate::InterpolationType::Integer => "int",
+            crate::InterpolationType::Float => "float",
+            crate::InterpolationType::Boolean => "bool",
         };
         Self(&binding.name, &binding.value, value_type)
     }
