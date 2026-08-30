@@ -1,9 +1,9 @@
 #!/usr/bin/env python3
 """Diff-aware policy check for Rust lint suppressions.
 
-Rust syntax and ancestry come from :mod:`lint_suppression_ast`, which delegates
-parsing to the pinned ast-grep tool. This module owns Git ranges, matching, and
-the repository policy only.
+Rust syntax is accepted only after the pinned workspace rustfmt parse-only pass;
+ancestry then comes from :mod:`lint_suppression_ast` and the pinned ast-grep
+tool. This module owns Git ranges, matching, and the repository policy only.
 """
 
 from __future__ import annotations
@@ -165,6 +165,8 @@ def reason_ok(item: Suppression, prefix: str | None = None) -> bool:
 def violation(item: Suppression) -> str | None:
     if item.category == "generated" or item.status == "baseline" or item.category in {"tests", "fixtures", "benchmarks"}:
         return None
+    if item.kind == "opaque_macro":
+        return "opaque macro token tree contains lint-control syntax; its scope and reason cannot be verified"
     if item.broad and item.category == "production":
         return "new production crate/module-wide suppressions are not permitted"
     if item.category == "ffi":

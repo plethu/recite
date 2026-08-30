@@ -46,6 +46,11 @@ jobs:
         env:
           MISE_ENV: maintainability
 
+      - name: Check pinned Rust parse toolchain
+        run: |
+          test "$(mise current rust)" = "1.96.0"
+          command -v rustfmt
+
       - name: Check trusted Git workflow policy
         env:
           GH_TOKEN: ${{ github.token }}

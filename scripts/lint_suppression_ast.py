@@ -1,8 +1,9 @@
-"""Rust suppression discovery backed by the repository's ast-grep parser.
+"""Rust suppression discovery backed by rustfmt and ast-grep.
 
-The policy checker deliberately delegates Rust syntax and ancestry boundaries to
-ast-grep. This module turns its structural ranges into small records; it does
-not attempt to implement a Rust lexer or declaration parser.
+The policy checker first asks the pinned workspace rustfmt to parse each source
+file without writing it, then delegates structural ranges and ancestry
+boundaries to ast-grep. This module turns those ranges into small records; it
+does not attempt to implement a Rust declaration parser.
 """
 
 from __future__ import annotations
@@ -15,6 +16,8 @@ import tempfile
 from dataclasses import dataclass
 from pathlib import Path, PurePosixPath
 
+from lint_suppression_meta import MetadataError, _without_comments, attributes
+
 
 MARKERS = {
     "compatibility": "recite-lint-suppression: compatibility",
@@ -23,7 +26,6 @@ MARKERS = {
 RULES = {
     "outer_attribute": "kind: attribute_item",
     "inner_attribute": "kind: inner_attribute_item",
-    "rust_error": "kind: ERROR",
     "line_comment": 'pattern: "//"',
     "block_comment": "pattern: '/* $$$TEXT */'",
     "mod_item": "kind: mod_item",
@@ -52,7 +54,7 @@ RULES = {
 
 
 class ParseError(ValueError):
-    """ast-grep could not provide a complete structural source view."""
+    """The pinned syntax or structural parser could not provide a source view."""
 
 
 @dataclass(frozen=True)
@@ -63,7 +65,7 @@ class AstEvent:
     text: str
 
 
-OPAQUE_SUPPRESSION = re.compile(r"#\s*!?\s*\[\s*(allow|expect)\b")
+LINT_CONTROL = re.compile(r"(?<![A-Za-z0-9_])(?:r#)?(allow|expect|cfg_attr)(?![A-Za-z0-9_])")
 
 
 def _rule_text() -> str:
@@ -108,172 +110,32 @@ def ast_grep_scan(sources: list[tuple[str, str]]) -> dict[str, list[AstEvent]]:
         return parsed
 
 
-def _split_top_level(source: str) -> list[str]:
-    pieces: list[str] = []
-    start = 0
-    depth = {"(": 0, "[": 0, "{": 0}
-    matching = {")": "(", "]": "[", "}": "{",
-    }
-    quote: str | None = None
-    raw_hashes: int | None = None
-    index = 0
-    while index < len(source):
-        char = source[index]
-        if raw_hashes is not None:
-            closing = '"' + ("#" * raw_hashes)
-            if source.startswith(closing, index):
-                index += len(closing)
-                raw_hashes = None
-            else:
-                index += 1
-            continue
-        if quote is not None:
-            if char == "\\":
-                index += 2
-            elif char == quote:
-                quote = None
-                index += 1
-            else:
-                index += 1
-            continue
-        if char in {'"', "'"}:
-            quote = char
-            index += 1
-            continue
-        if char == "r" and index + 1 < len(source):
-            cursor = index + 1
-            while cursor < len(source) and source[cursor] == "#":
-                cursor += 1
-            if cursor < len(source) and source[cursor] == '"':
-                raw_hashes = cursor - index - 1
-                index = cursor + 1
-                continue
-        if char in depth:
-            depth[char] += 1
-        elif char in matching and depth[matching[char]]:
-            depth[matching[char]] -= 1
-        elif char == "," and not any(depth.values()):
-            pieces.append(source[start:index])
-            start = index + 1
-        index += 1
-    if quote is not None or raw_hashes is not None or any(depth.values()):
-        raise ParseError("malformed suppression attribute")
-    pieces.append(source[start:])
-    return pieces
-
-
-def _without_comments(source: str) -> str:
-    output: list[str] = []
-    quote: str | None = None
-    index = 0
-    while index < len(source):
-        char = source[index]
-        if quote is not None:
-            output.append(char)
-            if char == "\\" and index + 1 < len(source):
-                output.append(source[index + 1])
-                index += 2
-            elif char == quote:
-                quote = None
-                index += 1
-            else:
-                index += 1
-            continue
-        if char in {'"', "'"}:
-            quote = char
-            output.append(char)
-            index += 1
-            continue
-        if source.startswith("//", index):
-            newline = source.find("\n", index + 2)
-            index = len(source) if newline < 0 else newline
-            continue
-        if source.startswith("/*", index):
-            depth = 1
-            index += 2
-            while index < len(source) and depth:
-                if source.startswith("/*", index):
-                    depth += 1
-                    index += 2
-                elif source.startswith("*/", index):
-                    depth -= 1
-                    index += 2
-                else:
-                    output.append("\n" if source[index] == "\n" else " ")
-                    index += 1
-            if depth:
-                raise ParseError("malformed suppression attribute comment")
-            continue
-        output.append(char)
-        index += 1
-    if quote is not None:
-        raise ParseError("malformed suppression attribute literal")
-    return "".join(output)
-
-
-def _literal(value: str) -> str | None:
-    value = value.strip()
-    if len(value) < 2 or value[0] != '"':
-        return None
-    index = 1
-    while index < len(value):
-        if value[index] == "\\":
-            return None
-        elif value[index] == '"':
-            return value[1:index] if not value[index + 1:].strip() else None
-        else:
-            index += 1
-    return None
-
-
-def _meta(body: str) -> list[tuple[str, tuple[str, ...], str | None]]:
-    body = _without_comments(body).strip()
-    if "(" not in body or not body.endswith(")"):
-        if body in {"allow", "expect"}:
-            raise ParseError(f"malformed {body} suppression attribute")
-        return []
-    name, payload = body.split("(", 1)
-    name, payload = name.strip(), payload[:-1]
-    if name == "cfg_attr":
-        pieces = _split_top_level(payload)
-        if len(pieces) < 2:
-            raise ParseError("malformed cfg_attr suppression attribute")
-        records: list[tuple[str, tuple[str, ...], str | None]] = []
-        for piece in pieces[1:]:
-            records.extend(_meta(piece))
-        return records
-    if name not in {"allow", "expect"}:
-        return []
-    lints: list[str] = []
-    reason: str | None = None
-    for piece in _split_top_level(payload):
-        piece = piece.strip()
-        if not piece:
-            continue
-        if piece.startswith("reason"):
-            equals = piece.find("=")
-            if equals < 0 or piece[:equals].strip() != "reason":
-                raise ParseError(f"malformed {name} suppression reason")
-            reason = _literal(piece[equals + 1:])
-            if reason is None:
-                raise ParseError(f"malformed {name} suppression reason")
-            continue
-        normalized = "".join(piece.split())
-        if not normalized or not all(part.isidentifier() for part in normalized.split("::")):
-            raise ParseError(f"malformed {name} suppression lint")
-        lints.append(normalized)
-    if not lints:
-        raise ParseError(f"malformed {name} suppression attribute")
-    return [(name, tuple(sorted(set(lints))), reason)]
-
-
-def _attributes(event: AstEvent) -> list[tuple[str, tuple[str, ...], str | None, bool]]:
-    text = event.text
-    inner = event.rule == "inner_attribute"
-    prefix = "#![" if inner else "#["
-    if not text.startswith(prefix) or not text.endswith("]"):
-        raise ParseError("malformed Rust attribute")
-    return [(kind, lints, reason, inner) for kind, lints, reason in _meta(text[len(prefix):-1])]
+def rustfmt_parse(sources: list[tuple[str, str]]) -> None:
+    """Parse sources with rustfmt, discarding stdout and never rewriting them."""
+    if not sources:
+        return
+    executable = shutil.which("rustfmt")
+    if executable is None:
+        raise ParseError("missing required tool: rustfmt (run the pinned workspace toolchain)")
+    with tempfile.TemporaryDirectory(prefix="recite-lint-rustfmt-") as temporary:
+        root = Path(temporary)
+        for path, source in sources:
+            destination = root / path
+            destination.parent.mkdir(parents=True, exist_ok=True)
+            destination.write_text(source, encoding="utf-8")
+            result = subprocess.run(
+                [
+                    executable, "--edition", "2024", "--config", "skip_children=true",
+                    "--emit", "stdout", str(destination),
+                ],
+                stdout=subprocess.DEVNULL, stderr=subprocess.PIPE, text=True, check=False,
+            )
+            if result.returncode:
+                detail = next(
+                    (line for line in result.stderr.splitlines() if line.startswith("error:")),
+                    "parse error",
+                )
+                raise ParseError(f"rustfmt rejected Rust syntax in {path}: {detail}")
 
 
 def _is_configuration_attribute(event: AstEvent) -> bool:
@@ -283,47 +145,11 @@ def _is_configuration_attribute(event: AstEvent) -> bool:
     return re.match(r"(?:cfg|cfg_attr)\b", _without_comments(event.text[len(prefix):-1]).lstrip()) is not None
 
 
-def _contains_unclosed_node(events: list[AstEvent]) -> bool:
-    closed = {
-        "block", "closure", "enum_item", "function_item", "impl_item", "macro_definition",
-        "macro_invocation", "mod_item", "struct_item", "trait_item", "union_item",
-    }
-    return any(event.rule in closed and event.text.rstrip()[-1:] == "{" for event in events)
-
-
-def _validate_structure(events: list[AstEvent]) -> None:
-    if _contains_unclosed_node(events):
-        raise ParseError("ast-grep returned an incomplete Rust node")
-    signature_containers = [
-        event for event in events
-        if event.rule in {"trait_item", "foreign_mod_item", "impl_item"}
-    ]
-    for event in events:
-        if event.rule == "function_signature_item" and not any(
-            parent.start <= event.start and event.end <= parent.end
-            for parent in signature_containers
-        ):
-            raise ParseError("ast-grep returned a function without a body")
-        if event.rule == "function_item":
-            body = next(
-                (candidate for candidate in events
-                 if candidate.rule == "block" and candidate.end == event.end),
-                None,
-            )
-            if body is None:
-                body = max(
-                    (candidate for candidate in events
-                     if candidate.rule == "block" and event.start < candidate.start < candidate.end <= event.end),
-                    key=lambda candidate: candidate.start, default=None,
-                )
-            header = (
-                event.text.encode()[:body.start - event.start].decode("utf-8", "ignore")
-                if body else event.text
-            )
-            if header.count("(") != header.count(")") or header.count("[") != header.count("]"):
-                raise ParseError("ast-grep returned an incomplete function signature")
-        if event.rule == "const_item" and re.search(r"\bconst\s+[^\s:]+\s*:\s*=", event.text):
-            raise ParseError("ast-grep returned an incomplete const declaration")
+def _attributes(event: AstEvent) -> list[tuple[str, tuple[str, ...], str | None, bool]]:
+    try:
+        return attributes(event.text, event.rule == "inner_attribute")
+    except MetadataError as error:
+        raise ParseError(str(error)) from error
 
 
 def _owner_for_attribute(
@@ -343,36 +169,19 @@ def _owner_for_attribute(
     )
 
 
-def _opaque_records(
+def _opaque_record(
     path: str, event: AstEvent, source: bytes, comments: list[tuple[int, int]], generated: set[str]
-) -> list[dict[str, object]]:
-    records: list[dict[str, object]] = []
-    for match in OPAQUE_SUPPRESSION.finditer(event.text):
-        close = event.text.find("]", match.end())
-        attr_text = event.text[match.start():close + 1] if close >= 0 else ""
-        parsed: list[tuple[str, tuple[str, ...], str | None]]
-        try:
-            parsed = [
-                (kind, lints, reason)
-                for kind, lints, reason, _ in _attributes(
-                    AstEvent("outer_attribute", 0, len(attr_text), attr_text)
-                )
-            ] if attr_text else []
-        except ParseError:
-            parsed = []
-        if not parsed:
-            parsed = [(match.group(1), ("opaque_macro",), None)]
-        local_offset = len(event.text[:match.start()].encode("utf-8"))
-        offset = event.start + local_offset
-        line = source[:offset].count(b"\n") + 1
-        for kind, lints, reason in parsed:
-            records.append({
-                "path": path, "line": line, "kind": kind, "lints": lints, "reason": reason,
-                "inner": False, "scope": "item", "target": "unstable",
-                "category": _category(path, offset, source, comments, generated),
-                "owner_stable": False,
-            })
-    return records
+) -> dict[str, object] | None:
+    controls = tuple(sorted({match.group(1) for match in LINT_CONTROL.finditer(event.text)}))
+    if not controls:
+        return None
+    return {
+        "path": path, "line": source[:event.start].count(b"\n") + 1,
+        "kind": "opaque_macro", "lints": controls, "reason": None, "inner": False,
+        "scope": "item", "target": "unstable", "category": _category(
+            path, event.start, source, comments, generated
+        ), "owner_stable": False,
+    }
 
 
 NAMED = {
@@ -457,18 +266,16 @@ def _category(path: str, offset: int, source: bytes, comments: list[tuple[int, i
 
 
 def scan_sources(sources: list[tuple[str, str]], generated_paths: set[str]) -> list[dict[str, object]]:
+    rustfmt_parse(sources)
     events_by_path = ast_grep_scan(sources)
     records: list[dict[str, object]] = []
     for path, source in sources:
         events = events_by_path.get(path, [])
-        if any(event.rule == "rust_error" for event in events):
-            raise ParseError(f"malformed Rust syntax in {path}")
-        _validate_structure(events)
         data = source.encode("utf-8")
         comments = _comments(events, data)
         attrs = [event for event in events if event.rule in {"outer_attribute", "inner_attribute"}]
         nodes = [event for event in events if event.rule not in {
-            "outer_attribute", "inner_attribute", "rust_error", "line_comment", "block_comment", "declaration_list",
+            "outer_attribute", "inner_attribute", "line_comment", "block_comment", "declaration_list",
         }]
         bodies = [event for event in events if event.rule == "declaration_list"]
         trivia = sorted(comments + [(event.start, event.end) for event in attrs])
@@ -546,5 +353,7 @@ def scan_sources(sources: list[tuple[str, str]], generated_paths: set[str]) -> l
                 })
         for event in events:
             if event.rule in {"macro_definition", "macro_invocation"}:
-                records.extend(_opaque_records(path, event, data, comments, generated_paths))
+                opaque = _opaque_record(path, event, data, comments, generated_paths)
+                if opaque is not None:
+                    records.append(opaque)
     return records

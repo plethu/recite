@@ -14,8 +14,9 @@ fixture="$repo_root/tests/trusted-policy/fixtures/base-policy.sh"
 lint_fixture="$repo_root/tests/trusted-policy/fixtures/base-lint-suppression-policy.sh"
 lint_checker="$repo_root/scripts/check-lint-suppressions.py"
 lint_ast="$repo_root/scripts/lint_suppression_ast.py"
+lint_meta="$repo_root/scripts/lint_suppression_meta.py"
 lint_allowlist="$repo_root/scripts/generated-rust-allowlist.txt"
-for required_file in "$workflow" "$wrapper" "$fixture" "$lint_fixture" "$lint_checker" "$lint_ast" "$lint_allowlist"; do
+for required_file in "$workflow" "$wrapper" "$fixture" "$lint_fixture" "$lint_checker" "$lint_ast" "$lint_meta" "$lint_allowlist"; do
   [[ -f "$required_file" ]] || { echo "missing trusted-policy fixture file: $required_file" >&2; exit 1; }
 done
 
@@ -31,6 +32,9 @@ grep -Fq 'pull-requests: read' "$workflow" || fail_static 'read-only pull-reques
 grep -Fq 'ref: main' "$workflow" || fail_static 'base checkout ref'
 grep -Fq 'jdx/mise-action@3c2e0cf82a5b2e5249f0d3635a4d83d0ae861518' "$workflow" || fail_static 'pinned base toolchain action'
 grep -Fq 'MISE_ENV: maintainability' "$workflow" || fail_static 'maintainability tool environment'
+grep -Fq 'mise current rust' "$workflow" || fail_static 'pinned Rust toolchain check'
+grep -Fq '1.96.0' "$workflow" || fail_static 'pinned Rust toolchain version'
+grep -Fq 'command -v rustfmt' "$workflow" || fail_static 'rustfmt component check'
 grep -Fq "refs/pull/\${pr_number}/head" "$wrapper" || fail_static 'PR object fetch'
 grep -Fq 'refs/recite/trusted-pr-head' "$wrapper" || fail_static 'non-checkout PR ref'
 grep -Fq -- '--filter=blob:none' "$wrapper" || fail_static 'blob-filtered PR object fetch'
@@ -55,6 +59,16 @@ ast_grep_bin="$(command -v ast-grep || true)"
   echo 'trusted-policy fixture requires the pinned ast-grep tool' >&2
   exit 2
 }
+rustfmt_bin="$(command -v rustfmt || true)"
+rustc_bin="$(command -v rustc || true)"
+[[ -n "$rustfmt_bin" && -n "$rustc_bin" ]] || {
+  echo 'trusted-policy fixture requires the pinned Rustfmt toolchain' >&2
+  exit 2
+}
+[[ "$($rustc_bin --version)" == rustc\ 1.96.0\ \(* ]] || {
+  echo "trusted-policy fixture found an unpinned Rust toolchain: $($rustc_bin --version)" >&2
+  exit 2
+}
 [[ "$($ast_grep_bin --version)" == 'ast-grep 0.44.1' ]] || {
   echo "trusted-policy fixture found an unpinned ast-grep: $($ast_grep_bin --version)" >&2
   exit 2
@@ -62,7 +76,16 @@ ast_grep_bin="$(command -v ast-grep || true)"
 # Exercise the policy with only the fake GitHub CLI, the pinned parser, and
 # standard system tools. This prevents an unrelated user PATH from masking a
 # missing trusted-policy dependency.
-clean_path="$fake_bin:$(dirname "$ast_grep_bin"):/usr/bin:/bin"
+clean_path="$fake_bin:$(dirname "$ast_grep_bin"):$(dirname "$rustfmt_bin"):$(dirname "$rustc_bin"):/usr/bin:/bin"
+parse_probe="$test_root/rustfmt-parse-only.rs"
+printf '%s\n' 'fn parse_only( ){let _=1;}' > "$parse_probe"
+before_parse_probe="$(sha256sum "$parse_probe")"
+"$rustfmt_bin" --edition 2024 --config skip_children=true --emit stdout \
+  "$parse_probe" >/dev/null
+[[ "$before_parse_probe" == "$(sha256sum "$parse_probe")" ]] || {
+  echo 'rustfmt parse-only probe rewrote its input' >&2
+  exit 2
+}
 git init --bare --quiet "$origin"
 git clone --quiet "$origin" "$repo"
 mkdir -p "$repo/scripts" "$repo/crates/demo/src"
@@ -70,6 +93,7 @@ cp -- "$fixture" "$repo/scripts/check-git-policy.sh"
 cp -- "$lint_fixture" "$repo/scripts/check-lint-suppressions.sh"
 cp -- "$lint_checker" "$repo/scripts/check-lint-suppressions.py"
 cp -- "$lint_ast" "$repo/scripts/lint_suppression_ast.py"
+cp -- "$lint_meta" "$repo/scripts/lint_suppression_meta.py"
 cp -- "$lint_allowlist" "$repo/scripts/generated-rust-allowlist.txt"
 cp -- "$wrapper" "$repo/scripts/check-trusted-pr-policy.sh"
 chmod +x "$repo/scripts/check-git-policy.sh"
@@ -81,6 +105,7 @@ git -C "$repo" config user.email 'trusted-policy-fixture@example.invalid'
 git -C "$repo" config commit.gpgsign false
 git -C "$repo" add scripts/check-git-policy.sh scripts/check-lint-suppressions.sh \
   scripts/check-lint-suppressions.py scripts/lint_suppression_ast.py \
+  scripts/lint_suppression_meta.py \
   scripts/generated-rust-allowlist.txt \
   scripts/check-trusted-pr-policy.sh
 git -C "$repo" commit --quiet -m '[REC-164] ci: fixture base policy'

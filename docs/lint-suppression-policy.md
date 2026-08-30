@@ -20,19 +20,26 @@ unchanged baseline record bypasses current-reason validation. Matching never
 crosses paths or categories, and lint-list changes must retain the same
 structural owner.
 
-Discovery is delegated to the pinned ast-grep Rust parser in
-`scripts/lint_suppression_ast.py`. Its real syntax nodes provide attributes,
-declaration ancestry, blocks, closures, macros, comments, and parse errors.
-The helper keeps only a bounded interpreter for suppression metadata and
-`cfg_attr`; it does not lex Rust declarations or infer ownership from
-delimiters. Configured owners and their configured ancestors are deliberately
-unstable, so conditional siblings cannot consume one another's baseline.
+Every scanned Rust file is first parsed by the pinned workspace `rustfmt` with
+`--emit stdout`; its output is discarded and the source is never rewritten.
+Only after that parse-only check does `scripts/lint_suppression_ast.py` use the
+pinned ast-grep parser for attributes, declaration ancestry, blocks, closures,
+macros, and comments. The helper keeps only a bounded interpreter for
+suppression metadata and `cfg_attr`; it does not lex Rust declarations or infer
+ownership from delimiters. Configured owners and their configured ancestors
+are deliberately unstable, so conditional siblings cannot consume one
+another's baseline.
+
 Named modules, items, impl headers, and use trees are matchable. Anonymous,
-macro, closure, malformed, or otherwise ambiguous scopes are reported as
+closure, or otherwise ambiguous scopes are reported as
 `owner=unstable` and never consume a baseline, which is intentionally
-fail-closed. ast-grep is supplied by the repository's `maintainability` mise
-environment. Its `ERROR` and incomplete-node results fail the file closed;
-this is structural validity evidence, not a replacement for rustc semantics.
+fail-closed. Macro definitions and invocations are opaque token trees: if a
+tree contains a lint-control identifier (`allow`, `expect`, or `cfg_attr`), the
+gate emits an `opaque_macro` record with an unstable owner and rejects it in
+production because the scope and reason cannot be verified. The parser tools
+are supplied by the repository's pinned `maintainability` mise environment;
+this remains syntax and structure evidence, not a replacement for rustc
+semantics.
 
 The gate does not claim to verify whether a lint exists or whether a reason is
 true; Cargo/rustc and human review retain those responsibilities.

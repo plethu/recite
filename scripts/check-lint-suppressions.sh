@@ -6,10 +6,12 @@ usage() {
 Usage:
   check-lint-suppressions.sh [base-ref [head-ref]] [--full] [--policy-revision ref]
 
-Inventories handwritten Rust #[allow]/#[expect] attributes with the pinned
-ast-grep Rust parser and rejects only new or expanded production suppressions
-that do not follow the local policy. Use --full for a reporting-only inventory
-of all tracked Rust source. Run it in the maintainability mise environment.
+Parses every scanned handwritten Rust file with pinned workspace rustfmt (with
+stdout discarded), then inventories #[allow]/#[expect] attributes with the
+pinned ast-grep Rust parser. It rejects only new or expanded production
+suppressions that do not follow the local policy. Use --full for a
+reporting-only inventory of all tracked Rust source. Run it in the
+maintainability mise environment.
 EOF
 }
 

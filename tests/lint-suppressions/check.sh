@@ -8,7 +8,8 @@ mkdir -p "$test_root/repo/crates/demo/src" "$test_root/repo/tests" \
   "$test_root/repo/fixtures" "$test_root/repo/scripts"
 cp "$repo_root/scripts/check-lint-suppressions.sh" \
   "$repo_root/scripts/check-lint-suppressions.py" \
-  "$repo_root/scripts/lint_suppression_ast.py" "$test_root/repo/scripts/"
+  "$repo_root/scripts/lint_suppression_ast.py" \
+  "$repo_root/scripts/lint_suppression_meta.py" "$test_root/repo/scripts/"
 chmod +x "$test_root/repo/scripts/check-lint-suppressions.sh"
 git -C "$test_root/repo" init -q -b main
 git -C "$test_root/repo" config user.name Fixture
@@ -148,10 +149,62 @@ EOF
 git -C "$test_root/repo" add .
 git -C "$test_root/repo" commit -q -m ambiguous-scopes
 ambiguous_sha="$(git -C "$test_root/repo" rev-parse HEAD)"
-ambiguous_output="$(cd "$test_root/repo" && scripts/check-lint-suppressions.sh "$structured_sha" "$ambiguous_sha")"
-[[ "$ambiguous_output" == *"owner=unstable"* ]] || {
-  echo "macro token-tree suppression was not inventoried" >&2
+set +e
+ambiguous_output="$(cd "$test_root/repo" && scripts/check-lint-suppressions.sh "$structured_sha" "$ambiguous_sha" 2>&1)"
+ambiguous_result=$?
+set -e
+(( ambiguous_result != 0 )) || {
+  echo "macro token-tree suppressions were accepted" >&2
   printf '%s\n' "$ambiguous_output" >&2
+  exit 1
+}
+[[ "$ambiguous_output" == *"ambiguous.rs:6: new opaque_macro(allow) scope=item owner=unstable"* \
+  && "$ambiguous_output" == *"ambiguous.rs:12: new opaque_macro(allow) scope=item owner=unstable"* ]] || {
+  echo "macro token-tree suppressions were not recorded exactly" >&2
+  printf '%s\n' "$ambiguous_output" >&2
+  exit 1
+}
+# Direct attributes, cfg_attr attributes, and comments between #[ and allow are
+# parsed as ordinary attributes. Macro definitions and invocations remain raw
+# opaque token trees and are represented by explicit unstable records.
+cat > "$test_root/repo/crates/demo/src/opaque.rs" <<'EOF'
+#[allow(dead_code, reason = "direct allow remains structured")]
+fn direct_allow() {}
+#[cfg_attr(unix, allow(dead_code, reason = "cfg_attr allow remains structured"))]
+fn cfg_allow() {}
+#[ /* comment before control */ allow(dead_code, reason = "commented control remains structured")]
+fn commented_allow() {}
+macro_rules! generated {
+    () => {
+        #[allow(dead_code)]
+        fn generated_body() {}
+    };
+}
+generated! {
+    #[cfg_attr(unix, allow(dead_code))]
+    fn generated_input() {}
+}
+EOF
+git -C "$test_root/repo" add .
+git -C "$test_root/repo" commit -q -m opaque-token-tree-records
+opaque_base="$ambiguous_sha"
+opaque_head="$(git -C "$test_root/repo" rev-parse HEAD)"
+set +e
+opaque_output="$(cd "$test_root/repo" && scripts/check-lint-suppressions.sh "$opaque_base" "$opaque_head" 2>&1)"
+opaque_result=$?
+set -e
+(( opaque_result != 0 )) || {
+  echo "opaque token-tree suppressions were accepted" >&2
+  printf '%s\n' "$opaque_output" >&2
+  exit 1
+}
+[[ "$opaque_output" == *"opaque.rs:1: new allow(dead_code) scope=item owner=fn:direct_allow category=production owner_stable=true"* \
+  && "$opaque_output" == *"opaque.rs:3: new allow(dead_code) scope=item owner=fn:cfg_allow category=production owner_stable=false"* \
+  && "$opaque_output" == *"opaque.rs:5: new allow(dead_code) scope=item owner=fn:commented_allow category=production owner_stable=true"* \
+  && "$opaque_output" == *"opaque.rs:7: new opaque_macro(allow) scope=item owner=unstable category=production owner_stable=false reason=null"* \
+  && "$opaque_output" == *"opaque.rs:13: new opaque_macro(allow,cfg_attr) scope=item owner=unstable category=production owner_stable=false reason=null"* ]] || {
+  echo "opaque fixture records were not exact" >&2
+  printf '%s\n' "$opaque_output" >&2
   exit 1
 }
 # Duplicate consumption is one-to-one: one baseline use cannot legitimize two
@@ -217,11 +270,11 @@ printf '%s\n' '#[allow(' > "$test_root/repo/crates/demo/src/malformed.rs"
 git -C "$test_root/repo" add .
 git -C "$test_root/repo" commit -q -m malformed
 malformed_sha="$(git -C "$test_root/repo" rev-parse HEAD)"
-check_fails "$broad_sha" "$malformed_sha" "malformed Rust syntax"
+check_fails "$broad_sha" "$malformed_sha" "rustfmt rejected Rust syntax"
 git -C "$test_root/repo" rm -q crates/demo/src/malformed.rs
 git -C "$test_root/repo" commit -q -m remove-malformed
-# ast-grep can recover some missing Rust nodes without emitting ERROR. The
-# structural gate must still fail closed for incomplete declarations.
+# Rustfmt is the syntax authority, so incomplete declarations fail before
+# ast-grep matching regardless of its recovery behaviour.
 for malformed_source in \
   'fn f()' \
   'fn f( {}' \
@@ -233,7 +286,7 @@ for malformed_source in \
   git -C "$test_root/repo" add .
   git -C "$test_root/repo" commit -q -m malformed-structure
   malformed_structure_sha="$(git -C "$test_root/repo" rev-parse HEAD)"
-  check_fails "$broad_sha" "$malformed_structure_sha" "ast-grep returned"
+  check_fails "$broad_sha" "$malformed_structure_sha" "rustfmt rejected Rust syntax"
   git -C "$test_root/repo" rm -q crates/demo/src/malformed.rs
   git -C "$test_root/repo" commit -q -m remove-malformed-structure
 done
