@@ -1,4 +1,4 @@
-use recite_core::{Line, SourceId, SourceText};
+use recite_core::{Line, SourceId, SourceRecoveryClass, SourceText};
 
 use crate::markers::StatementMarker;
 use crate::source::span_for_line;
@@ -48,6 +48,12 @@ impl Lowerer<'_, '_> {
         };
 
         let (speaker, metadata, bindings) = self.lower_speaker_metadata(&fields[field_start..]);
+        if matches!(
+            source_id,
+            SourceId::Malformed { .. } | SourceId::Draft { .. }
+        ) {
+            self.mark(SourceRecoveryClass::StableIds);
+        }
         let body = self.lower_prose_body(line_index, false, true);
         let mut line = Line::new(None, SourceText::new(body.text, body.text_span), line_span)
             .with_source_id(source_id)

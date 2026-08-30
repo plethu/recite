@@ -6,7 +6,8 @@ mod metadata_values;
 mod statement;
 
 use recite_core::{
-    BlockId, Diagnostic, SourceFile, SourceMetadata, SourceSpan, SpeakerId, Statement,
+    BlockId, Diagnostic, SourceFile, SourceMetadata, SourceRecovery, SourceRecoveryClass,
+    SourceSpan, SpeakerId, Statement,
 };
 
 use crate::header::{HeaderField, fields_after_prefix};
@@ -17,19 +18,23 @@ use crate::source::{LogicalLine, LogicalLines};
 pub struct LoweredSourceFile {
     pub source_file: SourceFile,
     pub diagnostics: Vec<Diagnostic>,
+    pub recovery: SourceRecovery,
 }
 
 pub(crate) fn lower_source_file(
     path: &str,
     source: &str,
     parse_diagnostics: &[Diagnostic],
+    parse_recovery: SourceRecovery,
 ) -> LoweredSourceFile {
     let mut diagnostics = parse_diagnostics.to_vec();
-    let blocks = Lowerer::new(path, source, &mut diagnostics).lower_blocks();
+    let mut recovery = parse_recovery;
+    let blocks = Lowerer::new(path, source, &mut diagnostics, &mut recovery).lower_blocks();
 
     LoweredSourceFile {
         source_file: SourceFile::new(path, blocks),
         diagnostics,
+        recovery,
     }
 }
 
@@ -37,6 +42,7 @@ pub(super) struct Lowerer<'source, 'diagnostics> {
     path: &'source str,
     lines: Vec<LogicalLine<'source>>,
     diagnostics: &'diagnostics mut Vec<Diagnostic>,
+    pub(super) recovery: &'diagnostics mut SourceRecovery,
 }
 
 #[derive(Clone, Debug)]
@@ -64,12 +70,33 @@ impl<'source, 'diagnostics> Lowerer<'source, 'diagnostics> {
         path: &'source str,
         source: &'source str,
         diagnostics: &'diagnostics mut Vec<Diagnostic>,
+        recovery: &'diagnostics mut SourceRecovery,
     ) -> Self {
         Self {
             path,
             lines: LogicalLines::new(source).collect(),
             diagnostics,
+            recovery,
         }
+    }
+
+    pub(super) fn mark(&mut self, class: SourceRecoveryClass) {
+        self.recovery.mark(class);
+    }
+}
+
+pub(super) fn mark_all(recovery: &mut SourceRecovery) {
+    for class in [
+        SourceRecoveryClass::AstStructure,
+        SourceRecoveryClass::BlockDefinitions,
+        SourceRecoveryClass::BlockReferences,
+        SourceRecoveryClass::StableIds,
+        SourceRecoveryClass::Metadata,
+        SourceRecoveryClass::ConditionFunctions,
+        SourceRecoveryClass::EffectFunctions,
+        SourceRecoveryClass::InlineMarkup,
+    ] {
+        recovery.mark(class);
     }
 }
 

@@ -5,7 +5,7 @@ use crate::diagnostics::{expected_statement_or_prose, prose_after_nested_stateme
 use crate::layout::{ClassifiedLine, classify_line};
 use crate::source::{span_for_line, span_for_text};
 
-use super::{LoweredProseBody, Lowerer};
+use super::{LoweredProseBody, Lowerer, mark_all};
 
 impl Lowerer<'_, '_> {
     pub(super) fn lower_prose_body(
@@ -38,7 +38,10 @@ impl Lowerer<'_, '_> {
                     }
                     continue;
                 }
-                BodyStep::MixedIndent => continue,
+                BodyStep::MixedIndent => {
+                    mark_all(self.recovery);
+                    continue;
+                }
             };
 
             let trimmed = line.trimmed_content();
@@ -117,7 +120,11 @@ impl Lowerer<'_, '_> {
             let index = match cursor.step(self.path, line, true, self.diagnostics) {
                 BodyStep::Content { index } => index,
                 BodyStep::Boundary => break,
-                BodyStep::Blank | BodyStep::MixedIndent => continue,
+                BodyStep::Blank => continue,
+                BodyStep::MixedIndent => {
+                    mark_all(self.recovery);
+                    continue;
+                }
             };
 
             if !matches!(classify_line(line), ClassifiedLine::Statement(_)) {

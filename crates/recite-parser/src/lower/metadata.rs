@@ -1,6 +1,6 @@
 use recite_core::{
     BlockId, BlockReference, ChoiceEcho, DivertTarget, EffectMode, InterpolationBinding,
-    InterpolationType, SourceMetadata, SourceMetadataEntry, SpeakerId,
+    InterpolationType, SourceMetadata, SourceMetadataEntry, SourceRecoveryClass, SpeakerId,
 };
 
 use crate::diagnostics::{malformed_divert_target, malformed_header};
@@ -61,6 +61,7 @@ impl Lowerer<'_, '_> {
                 if let Some(parsed) = choice_echo(kv.value) {
                     echo = parsed;
                 } else {
+                    self.mark(SourceRecoveryClass::Metadata);
                     self.diagnostics.push(malformed_header(kv.value_span));
                 }
                 continue;
@@ -132,12 +133,14 @@ impl Lowerer<'_, '_> {
         field: HeaderField<'a>,
     ) -> Option<HeaderKeyValue<'a>> {
         let Some(kv) = field.key_value(self.path) else {
+            self.mark(SourceRecoveryClass::Metadata);
             self.diagnostics
                 .push(malformed_header(field.span(self.path)));
             return None;
         };
 
         if kv.key.is_empty() || kv.value.is_empty() {
+            self.mark(SourceRecoveryClass::Metadata);
             self.diagnostics
                 .push(malformed_header(kv.field_span.clone()));
             return None;
@@ -150,6 +153,7 @@ impl Lowerer<'_, '_> {
         match SpeakerId::new(kv.value) {
             Ok(speaker) => Some(speaker),
             Err(_) => {
+                self.mark(SourceRecoveryClass::Metadata);
                 self.diagnostics
                     .push(malformed_header(kv.value_span.clone()));
                 None
@@ -161,6 +165,7 @@ impl Lowerer<'_, '_> {
         match metadata_entry(kv) {
             Ok(entry) => Some(entry),
             Err(span) => {
+                self.mark(SourceRecoveryClass::Metadata);
                 self.diagnostics.push(malformed_header(span));
                 None
             }
@@ -174,12 +179,14 @@ impl Lowerer<'_, '_> {
 
         let reference = if let Some((file, block_id)) = field.text.split_once("::") {
             if file.is_empty() || block_id.is_empty() || block_id.contains("::") {
+                self.mark(SourceRecoveryClass::BlockReferences);
                 self.diagnostics
                     .push(malformed_divert_target(field.span(self.path)));
                 return None;
             }
 
             let Ok(block_id) = BlockId::new(block_id) else {
+                self.mark(SourceRecoveryClass::BlockReferences);
                 self.diagnostics
                     .push(malformed_divert_target(field.span(self.path)));
                 return None;
@@ -197,6 +204,7 @@ impl Lowerer<'_, '_> {
             )
         } else {
             let Ok(block_id) = BlockId::new(field.text) else {
+                self.mark(SourceRecoveryClass::BlockReferences);
                 self.diagnostics
                     .push(malformed_divert_target(field.span(self.path)));
                 return None;

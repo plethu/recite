@@ -32,7 +32,10 @@ fn lowering_parses_statement_vocabulary_and_conditions() {
     assert!(lowered.diagnostics.is_empty());
     let block = single_block(&lowered);
     assert_eq!(
-        (block.id_span.start.line(), block.id_span.start.column()),
+        (
+            block.id_span.as_ref().expect("parser span").start.line(),
+            block.id_span.as_ref().expect("parser span").start.column()
+        ),
         (1, 4)
     );
     assert!(block.is_default);

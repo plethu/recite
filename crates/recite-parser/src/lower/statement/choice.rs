@@ -1,6 +1,6 @@
 use recite_core::{
     AvailabilityReasonId, Choice, ChoiceAvailabilityReasonOverride, ChoiceAvailabilityRequirement,
-    ChoiceTarget, SourceId, SourceSpan, SourceText, Statement,
+    ChoiceTarget, SourceId, SourceRecoveryClass, SourceSpan, SourceText, Statement,
 };
 
 use crate::condition::parse_condition_expression;
@@ -72,6 +72,12 @@ impl Lowerer<'_, '_> {
             availability_requirement,
             availability_reason_override,
         } = self.lower_choice_clauses(&choice_fields[field_start..]);
+        if matches!(
+            source_id,
+            SourceId::Malformed { .. } | SourceId::Draft { .. }
+        ) {
+            self.mark(SourceRecoveryClass::StableIds);
+        }
         let (metadata, echo, bindings) = self.lower_choice_metadata(&metadata_fields);
         let body = self.lower_prose_body(choice_index, true, false);
         let mut target = None;
@@ -123,6 +129,7 @@ impl Lowerer<'_, '_> {
             match kv.key {
                 "requires" => {
                     if availability_requirement.is_some() {
+                        self.mark(SourceRecoveryClass::Metadata);
                         self.diagnostics.push(malformed_header(kv.key_span));
                         continue;
                     }
@@ -130,6 +137,7 @@ impl Lowerer<'_, '_> {
                 }
                 "reason" => {
                     if availability_reason_override.is_some() {
+                        self.mark(SourceRecoveryClass::Metadata);
                         self.diagnostics.push(malformed_header(kv.key_span));
                         continue;
                     }
@@ -161,6 +169,8 @@ impl Lowerer<'_, '_> {
                 kv.field_span.clone(),
             )),
             Err(error) => {
+                self.mark(SourceRecoveryClass::ConditionFunctions);
+                super::super::mark_all(self.recovery);
                 self.diagnostics.push(malformed_condition(error));
                 None
             }
@@ -172,11 +182,13 @@ impl Lowerer<'_, '_> {
         kv: &HeaderKeyValue<'_>,
     ) -> Option<ChoiceAvailabilityReasonOverride> {
         let Some(parsed) = parse_reason_override_value(self.path, kv) else {
+            self.mark(SourceRecoveryClass::Metadata);
             self.diagnostics
                 .push(malformed_header(kv.value_span.clone()));
             return None;
         };
         let Ok(reason_id) = AvailabilityReasonId::new(parsed.id) else {
+            self.mark(SourceRecoveryClass::Metadata);
             self.diagnostics.push(malformed_header(parsed.id_span));
             return None;
         };

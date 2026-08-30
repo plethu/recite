@@ -91,6 +91,7 @@ mod error;
 mod ids;
 mod source_id;
 mod source_location;
+mod source_recovery;
 mod text;
 mod toml_spans;
 mod value;
@@ -205,6 +206,7 @@ pub use source_id::{
     is_valid_source_label,
 };
 pub use source_location::{SourcePosition, SourceSpan};
+pub use source_recovery::{SourceRecovery, SourceRecoveryClass};
 pub use text::{
     PlaceholderSyntaxError, PlaceholderSyntaxKind, PlaceholderValidationError,
     decode_interpolation_text, extract_placeholder_names, extract_placeholder_occurrences,

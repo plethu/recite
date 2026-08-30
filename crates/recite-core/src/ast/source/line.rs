@@ -25,7 +25,7 @@ impl SourceText {
 pub struct Line {
     pub source_id: SourceId,
     pub source_id_span: Option<SourceSpan>,
-    pub source_id_insertion_span: SourceSpan,
+    pub source_id_insertion_span: Option<SourceSpan>,
     pub id: Option<LineId>,
     pub speaker: Option<SpeakerId>,
     pub source_text: SourceText,
@@ -47,7 +47,7 @@ impl Line {
                 .and_then(|anchor| SourceId::frozen("line", anchor))
                 .unwrap_or(SourceId::Missing),
             source_id_span: None,
-            source_id_insertion_span: span.clone(),
+            source_id_insertion_span: None,
             id,
             speaker: None,
             source_text,
@@ -73,7 +73,7 @@ impl Line {
         source_id_insertion_span: SourceSpan,
     ) -> Self {
         self.source_id_span = source_id_span;
-        self.source_id_insertion_span = source_id_insertion_span;
+        self.source_id_insertion_span = Some(source_id_insertion_span);
         self
     }
 
