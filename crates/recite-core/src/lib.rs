@@ -201,7 +201,7 @@ pub use schema::{
 };
 pub use schema::{
     SchemaDeclarationKind, SchemaSource, SchemaSourceEdit, SchemaSourceEditError,
-    SchemaSourceLoadReport, load_schema_source_str,
+    SchemaSourceEditPlan, SchemaSourceLoadReport, SchemaSourceStaleDetails, load_schema_source_str,
 };
 pub use source_id::{
     SOURCE_ID_ANCHOR_HEX_LEN, SourceAnchor, SourceId, SourceIdKind, is_valid_source_anchor,

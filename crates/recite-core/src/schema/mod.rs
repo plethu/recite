@@ -31,5 +31,5 @@ pub use model::{
 };
 pub use source::{
     SchemaDeclarationKind, SchemaSource, SchemaSourceEdit, SchemaSourceEditError,
-    SchemaSourceLoadReport, load_schema_source_str,
+    SchemaSourceEditPlan, SchemaSourceLoadReport, SchemaSourceStaleDetails, load_schema_source_str,
 };

@@ -6,6 +6,8 @@ mod schema_source_diagnostic_spans;
 mod schema_source_diagnostic_support;
 #[path = "schema_source_toml/diagnostics.rs"]
 mod schema_source_diagnostics;
+#[path = "schema_source_toml/edit_plans.rs"]
+mod schema_source_edit_plans;
 #[path = "schema_source_toml/edits.rs"]
 mod schema_source_edits;
 #[path = "schema_source_toml/freshness.rs"]

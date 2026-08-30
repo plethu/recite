@@ -130,7 +130,6 @@ production suppressions must carry a narrow scope and rationale.
 | `crates/recite-cli/src/commands.rs` | 395 | production | cli | review | Command orchestration boundary |
 | `crates/recite-compiler/src/authoring/query/schema/metadata.rs` | 269 | production | compiler/authoring | review | #168: typed metadata completion and missing-context policy projection |
 | `crates/recite-core/src/schema/model/mod.rs` | 380 | production | core/schema | review | Schema module exports and model grouping |
-| `crates/recite-core/src/schema/source/edit.rs` | 359 | production | core/schema | review | Source-owned typed edits and CST-preserving layout updates |
 | `crates/recite-core/src/schema/source/export/basic.rs` | 284 | production | core/schema | cohesive | Deterministic JSON export for basic schema declarations |
 | `crates/recite-core/src/schema/source/lower/mod.rs` | 306 | production | core/schema | review | TOML source normalization and shared canonical lowering entrypoint |
 | `crates/recite-cli/src/play/driver.rs` | 360 | production | cli/play | cohesive | Shared preview driver seam |
