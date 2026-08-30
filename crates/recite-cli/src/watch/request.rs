@@ -158,6 +158,8 @@ impl ProjectBuildPreparation {
 #[derive(Clone, Debug, Eq, PartialEq, thiserror::Error)]
 #[non_exhaustive]
 pub enum ProjectBuildPreparationError {
+    #[error(transparent)]
+    Discovery(#[from] recite_config::ProjectDiscoveryError),
     #[error("failed to read project input {path}: {message}")]
     Read { path: PathBuf, message: String },
     #[error("project contains no .recite inputs")]

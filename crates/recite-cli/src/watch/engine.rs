@@ -12,9 +12,10 @@ use super::request::ProjectBuildRequest;
 /// Preparation has already established the manifest, schema, source, and
 /// discovery validation boundary; the engine only compiles those immutable
 /// inputs into deterministic candidates for a later host publisher.
-#[derive(Clone, Debug, Default)]
+#[derive(Clone, Debug)]
 #[non_exhaustive]
 pub struct ProjectBuildEngine {
+    request: BuildRequest,
     targets: Vec<super::request::ProjectBuildTarget>,
     diagnostics: Vec<Diagnostic>,
 }
@@ -24,6 +25,7 @@ impl ProjectBuildEngine {
     #[must_use]
     pub fn new(request: &ProjectBuildRequest) -> Self {
         Self {
+            request: request.build_request().clone(),
             targets: request.targets().to_vec(),
             diagnostics: request.diagnostics().to_vec(),
         }
@@ -31,11 +33,11 @@ impl ProjectBuildEngine {
 }
 
 impl BuildEngine for ProjectBuildEngine {
-    fn check(&mut self, request: &BuildRequest, _control: &BuildControl) -> BuildCheck {
+    fn check(&mut self, _request: &BuildRequest, _control: &BuildControl) -> BuildCheck {
         BuildCheck::new(
-            request,
+            &self.request,
             self.diagnostics.clone(),
-            recite_compiler::FreshnessAssessment::fresh(request.fingerprints().clone()),
+            recite_compiler::FreshnessAssessment::not_assessed(self.request.fingerprints().clone()),
         )
     }
 
@@ -44,6 +46,11 @@ impl BuildEngine for ProjectBuildEngine {
         request: &BuildRequest,
         control: &BuildControl,
     ) -> Result<Vec<BuildCandidate>, BuildFailure> {
+        if request != &self.request {
+            return Err(BuildFailure::Engine {
+                reason: BuildFailureReason::Host,
+            });
+        }
         let schema = request
             .inputs()
             .iter()
@@ -66,12 +73,12 @@ impl BuildEngine for ProjectBuildEngine {
             .map_err(|_| BuildFailure::Engine {
                 reason: BuildFailureReason::InvalidOutput,
             })?;
-            if !report.diagnostics.is_empty() {
-                return Err(BuildFailure::Diagnostics {
-                    diagnostics: report.diagnostics,
-                });
-            }
             let Some(asset) = report.asset else {
+                if !report.diagnostics.is_empty() {
+                    return Err(BuildFailure::Diagnostics {
+                        diagnostics: report.diagnostics,
+                    });
+                }
                 return Err(BuildFailure::Engine {
                     reason: BuildFailureReason::InvalidOutput,
                 });

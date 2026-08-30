@@ -5,7 +5,7 @@ use recite_compiler::{
     AuthoringKernel, AuthoringRequest, BuildGeneration, BuildInput, BuildInputAuthority,
     BuildInputKind, BuildRequest, SnapshotGeneration,
 };
-use recite_config::discover_project;
+use recite_config::{ProjectDiscoveryError, discover_project};
 use recite_core::{Diagnostic, DiagnosticSeverity, DocumentKey, ProjectSchema};
 
 use crate::fs::{load_schema, resolve_project_path};
@@ -22,11 +22,7 @@ pub(super) fn prepare(
 ) -> Result<ProjectBuildPreparation, ProjectBuildPreparationError> {
     let discovery = match discover_project(project_root) {
         Ok(report) => report,
-        Err(error) => {
-            return Ok(ProjectBuildPreparation::Rejected {
-                diagnostics: error.diagnostics(),
-            });
-        }
+        Err(error) => return classify_discovery_error(error),
     };
     let discovered = discovery.manifest();
     let project_root = discovered.project_root().to_owned();
@@ -154,6 +150,27 @@ fn validate_sources(
         ))
         .map_err(|error| error.to_string())?;
     Ok(kernel.snapshot().diagnostics().iter().cloned().collect())
+}
+
+fn classify_discovery_error(
+    error: ProjectDiscoveryError,
+) -> Result<ProjectBuildPreparation, ProjectBuildPreparationError> {
+    match error {
+        ProjectDiscoveryError::NotFound { .. }
+        | ProjectDiscoveryError::Read { .. }
+        | ProjectDiscoveryError::NonUtf8 { .. } => {
+            Err(ProjectBuildPreparationError::Discovery(error))
+        }
+        ProjectDiscoveryError::Malformed { .. }
+        | ProjectDiscoveryError::MissingFormatVersion { .. }
+        | ProjectDiscoveryError::UnsupportedFormatVersion { .. }
+        | ProjectDiscoveryError::InvalidSourceRoot { .. }
+        | ProjectDiscoveryError::InvalidExclude { .. }
+        | ProjectDiscoveryError::DuplicateRoot { .. } => Ok(ProjectBuildPreparation::Rejected {
+            diagnostics: error.diagnostics(),
+        }),
+        _ => Err(ProjectBuildPreparationError::Discovery(error)),
+    }
 }
 
 fn schema_document_key(project_root: &Path, path: &Path) -> Result<DocumentKey, String> {

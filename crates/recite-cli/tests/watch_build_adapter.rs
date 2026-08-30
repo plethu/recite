@@ -3,7 +3,9 @@ use std::fs;
 use std::path::Path;
 
 use recite_cli::watch::{ProjectBuildEngine, ProjectBuildPreparation, ProjectBuildRequest};
-use recite_compiler::{BuildControl, BuildEngine, BuildInputAuthority, BuildInputKind};
+use recite_compiler::{
+    BuildControl, BuildEngine, BuildInputAuthority, BuildInputKind, FreshnessStatus,
+};
 use recite_core::decode_compiled_dialogue_messagepack;
 use tempfile::TempDir;
 
@@ -114,7 +116,16 @@ fn preparation_captures_saved_manifest_schema_and_sorted_sources() {
 #[test]
 fn engine_is_deterministic_and_keeps_candidates_in_memory() {
     let temp = require(TempDir::new(), "tempdir");
-    write_file(temp.path(), "recite.project.toml", &manifest(None));
+    write_file(
+        temp.path(),
+        "recite.project.toml",
+        &manifest(Some("schema.json")),
+    );
+    write_file(
+        temp.path(),
+        "schema.json",
+        r#"{"schema_version":1,"speakers":{"hazel":{"display_name":"Hazel"}}}"#,
+    );
     write_file(temp.path(), "dialogue/main.recite", valid_source());
     let request = ready(temp.path());
 
@@ -125,6 +136,11 @@ fn engine_is_deterministic_and_keeps_candidates_in_memory() {
     let second_check = second_engine.check(request.build_request(), &control);
     assert_eq!(first_check, second_check);
     assert!(first_check.is_valid());
+    assert_eq!(first_check.freshness().status(), FreshnessStatus::Unknown);
+    assert_eq!(
+        first_check.freshness().expected(),
+        request.build_request().fingerprints()
+    );
     let first = require(
         first_engine.build(request.build_request(), &control),
         "build",
@@ -140,6 +156,10 @@ fn engine_is_deterministic_and_keeps_candidates_in_memory() {
         "asset",
     );
     assert_eq!(asset.header.asset_id.as_str(), "compiled/dialogue.recitec");
+    assert_eq!(
+        asset.header.schema_fingerprint,
+        request.schema().expect("schema").canonical_fingerprint()
+    );
     assert!(!temp.path().join("compiled/dialogue.recitec").exists());
 }
 
