@@ -2,9 +2,9 @@ use std::collections::BTreeMap;
 
 use recite_compiler::{
     BuildCandidate, BuildCheck, BuildControl, BuildCoordinator, BuildEngine, BuildFailure,
-    BuildGeneration, BuildInput, BuildPublisher, BuildRequest, BuildTarget, FreshnessAssessment,
-    PreparedPublish, PublishAbortReason, PublishFailure, PublishFailureReason, PublishOutcome,
-    SnapshotGeneration,
+    BuildGeneration, BuildInput, BuildPreparedHandle, BuildPublisher, BuildRequest, BuildTarget,
+    FreshnessAssessment, PreparedPublishIdentity, PublishAbortReason, PublishFailure,
+    PublishFailureReason, PublishOutcome, SnapshotGeneration,
 };
 use recite_core::DocumentKey;
 
@@ -87,6 +87,15 @@ pub(crate) struct FakePublisher {
     pub(crate) fail_target: Option<BuildTarget>,
     pub(crate) commit_outcome: Option<PublishOutcome>,
 }
+pub(crate) struct FakePrepared {
+    pub(crate) identity: PreparedPublishIdentity,
+    pub(crate) candidates: Vec<BuildCandidate>,
+}
+impl BuildPreparedHandle for FakePrepared {
+    fn identity(&self) -> PreparedPublishIdentity {
+        self.identity.clone()
+    }
+}
 impl FakePublisher {
     pub(crate) fn new() -> Self {
         Self {
@@ -102,12 +111,13 @@ impl FakePublisher {
     }
 }
 impl BuildPublisher for FakePublisher {
+    type Prepared = FakePrepared;
     fn prepare(
         &mut self,
         request: &BuildRequest,
         candidates: &[BuildCandidate],
         control: &BuildControl,
-    ) -> Result<PreparedPublish, PublishFailure> {
+    ) -> Result<Self::Prepared, PublishFailure> {
         for candidate in candidates {
             self.prepare_calls += 1;
             if self
@@ -125,19 +135,22 @@ impl BuildPublisher for FakePublisher {
                 control.cancel();
             }
         }
-        Ok(PreparedPublish::new(request, candidates.to_vec()))
+        Ok(FakePrepared {
+            identity: PreparedPublishIdentity::for_request(request, candidates.to_vec()),
+            candidates: candidates.to_vec(),
+        })
     }
-    fn abort(&mut self, _prepared: Option<PreparedPublish>, _reason: PublishAbortReason) {
+    fn abort(&mut self, _prepared: Option<Self::Prepared>, _reason: PublishAbortReason) {
         self.abort_calls += 1;
         self.staged.clear();
     }
-    fn commit(&mut self, prepared: PreparedPublish) -> PublishOutcome {
+    fn commit(&mut self, prepared: Self::Prepared) -> PublishOutcome {
         self.commit_calls += 1;
         let outcome = match self.commit_outcome.take() {
             Some(outcome) => outcome,
             None => PublishOutcome::Published {
                 targets: prepared
-                    .candidates()
+                    .candidates
                     .iter()
                     .map(|candidate| candidate.target().clone())
                     .collect(),
@@ -146,7 +159,7 @@ impl BuildPublisher for FakePublisher {
         match &outcome {
             PublishOutcome::Published { targets } => {
                 for candidate in prepared
-                    .candidates()
+                    .candidates
                     .iter()
                     .filter(|candidate| targets.contains(candidate.target()))
                 {
@@ -158,7 +171,7 @@ impl BuildPublisher for FakePublisher {
             }
             PublishOutcome::Partial { committed, .. } => {
                 for candidate in prepared
-                    .candidates()
+                    .candidates
                     .iter()
                     .filter(|candidate| committed.contains(candidate.target()))
                 {

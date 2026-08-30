@@ -1,4 +1,4 @@
-use super::authority::BuildAuthorityFence;
+use super::authority::{BuildAuthorityCommitError, BuildAuthorityFence};
 use super::coordinator::{BuildControl, BuildEngine, BuildFailure, BuildPublisher, BuildRunError};
 use super::execution_support::{
     abort_reason, duplicate_target, fail_check, failure_detail, finish_failed, finish_publish,
@@ -8,7 +8,8 @@ use super::failure::BuildResultFailure;
 use super::freshness::FreshnessAssessment;
 use super::lifecycle::{BuildLifecycle, BuildTransition};
 use super::publish::{
-    PublishAbortReason, PublishFailure, PublishNotAttemptedReason, PublishOutcome,
+    BuildPreparedHandle, PublishAbortReason, PublishFailure, PublishNotAttemptedReason,
+    PublishOutcome,
 };
 use super::request::BuildRequest;
 use super::result::{BuildResult, BuildTerminalStatus};
@@ -117,6 +118,23 @@ pub(crate) fn build_run<E: BuildEngine, P: BuildPublisher>(
             BuildResultFailure::DuplicateTarget { target: duplicate },
         );
     }
+    if candidates.is_empty() {
+        let result = make_result(
+            &request,
+            BuildTerminalStatus::Succeeded,
+            check.diagnostics().to_vec(),
+            candidates,
+            check.freshness().clone(),
+            PublishOutcome::NotAttempted {
+                reason: PublishNotAttemptedReason::NoCandidates,
+            },
+            None,
+        );
+        lifecycle.transition(BuildTransition::NoCandidates {
+            result: result.clone(),
+        })?;
+        return Ok(result);
+    }
     let prepared = match publisher.prepare(&request, &candidates, control) {
         Ok(prepared) => prepared,
         Err(failure) => {
@@ -203,7 +221,24 @@ pub(crate) fn build_run<E: BuildEngine, P: BuildPublisher>(
     }
     // The permit holds the fence lock through commit. Cancellation is deliberately
     // ineffective once this boundary is acquired; a host syscall cannot be stopped.
-    let publish =
-        normalize_publish(permit.commit(prepared, |prepared| publisher.commit(prepared))?);
+    let publish = match permit.commit(prepared, |prepared| publisher.commit(prepared)) {
+        Ok(outcome) => normalize_publish(outcome),
+        Err(BuildAuthorityCommitError::Refused { reason, prepared }) => {
+            publisher.abort(Some(prepared), PublishAbortReason::Stale);
+            return finish_stale(
+                lifecycle,
+                &request,
+                candidates,
+                check.freshness().clone(),
+                reason,
+            );
+        }
+        Err(BuildAuthorityCommitError::Poisoned { prepared }) => {
+            publisher.abort(Some(prepared), PublishAbortReason::Invalid);
+            return Err(BuildRunError::Authority(
+                super::authority::BuildAuthorityError::Poisoned,
+            ));
+        }
+    };
     finish_publish(lifecycle, &request, &check, candidates, identity, publish)
 }

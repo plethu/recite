@@ -111,6 +111,12 @@ fn stale_fence_and_invalid_partial_are_structured_failures() {
         invalid.failure(),
         Some(BuildResultFailure::InvalidPublication(_))
     ));
+    assert!(matches!(
+        invalid.publish(),
+        PublishOutcome::Indeterminate { attempted, recovery }
+            if attempted == &[target("a.recitec"), target("b.recitec")]
+                && recovery.targets() == [target("a.recitec"), target("b.recitec")]
+    ));
     assert_eq!(publisher.published.get("a.recitec"), Some(&b"a".to_vec()));
 }
 
@@ -178,6 +184,23 @@ fn failure_detail_and_order_are_deterministic() {
     assert!(
         matches!(result.publish(), PublishOutcome::Published { targets } if targets == &[target("a.recitec"), target("z.recitec")])
     );
+}
+
+#[test]
+fn empty_candidates_complete_without_preparing_or_publishing() {
+    let request = make_request(3, [BuildInput::saved_source(key("a.recite"), "a")]);
+    let mut engine = FakeEngine::new([]);
+    let mut publisher = FakePublisher::new();
+    let result = run(request, &BuildControl::new(), &mut engine, &mut publisher);
+    assert_eq!(result.status(), BuildTerminalStatus::Succeeded);
+    assert_eq!(
+        result.publish(),
+        &PublishOutcome::NotAttempted {
+            reason: recite_compiler::PublishNotAttemptedReason::NoCandidates
+        }
+    );
+    assert_eq!(publisher.prepare_calls, 0);
+    assert_eq!(publisher.commit_calls, 0);
 }
 
 #[test]

@@ -109,14 +109,19 @@ pub(crate) fn finish_publish(
     publish: PublishOutcome,
 ) -> Result<BuildResult, BuildRunError> {
     if let Err(error) = publish.validate_against(&identity) {
+        let attempted = candidates
+            .iter()
+            .map(|candidate| candidate.target().clone())
+            .collect::<Vec<_>>();
         let result = make_result(
             request,
             BuildTerminalStatus::Failed,
             check.diagnostics().to_vec(),
             candidates,
             check.freshness().clone(),
-            PublishOutcome::NotAttempted {
-                reason: PublishNotAttemptedReason::InvalidOutcome,
+            PublishOutcome::Indeterminate {
+                attempted: attempted.clone(),
+                recovery: super::publish::RecoveryNeeded::for_targets(attempted),
             },
             Some(BuildResultFailure::InvalidPublication(error)),
         );
@@ -127,15 +132,16 @@ pub(crate) fn finish_publish(
     }
     let status = match &publish {
         PublishOutcome::Published { .. } => BuildTerminalStatus::Succeeded,
-        PublishOutcome::Partial { .. } | PublishOutcome::NotAttempted { .. } => {
-            BuildTerminalStatus::Failed
-        }
+        PublishOutcome::Partial { .. }
+        | PublishOutcome::Indeterminate { .. }
+        | PublishOutcome::NotAttempted { .. } => BuildTerminalStatus::Failed,
         PublishOutcome::Refused {
             reason:
                 PublishRefusal::StaleBuildGeneration
                 | PublishRefusal::StaleSnapshotGeneration
                 | PublishRefusal::StaleFingerprints,
         } => BuildTerminalStatus::Stale,
+        PublishOutcome::Refused { .. } => BuildTerminalStatus::Failed,
     };
     let result = make_result(
         request,

@@ -1,38 +1,26 @@
 use std::sync::{Arc, Mutex};
 
-use super::super::SnapshotGeneration;
-use super::fingerprints::BuildFingerprintSet;
 use super::identity::BuildGeneration;
-use super::publish::{PreparedPublish, PublishOutcome, PublishRefusal};
+use super::publish::{BuildPreparedHandle, PublishOutcome, PublishRefusal};
 use super::request::BuildRequest;
+use super::request_identity::BuildRequestIdentity;
+
+#[cfg(test)]
+mod tests;
 
 /// Current generation, snapshot, and fingerprint authority at publication time.
 #[derive(Clone, Debug, Eq, PartialEq)]
 #[non_exhaustive]
 pub struct BuildAuthority {
     latest_generation: BuildGeneration,
-    snapshot_generation: SnapshotGeneration,
-    fingerprints: BuildFingerprintSet,
+    request_identity: BuildRequestIdentity,
 }
 impl BuildAuthority {
     #[must_use]
     pub fn from_request(request: &BuildRequest) -> Self {
         Self {
             latest_generation: request.generation(),
-            snapshot_generation: request.snapshot_generation(),
-            fingerprints: request.fingerprints().clone(),
-        }
-    }
-    #[must_use]
-    pub fn new(
-        latest_generation: BuildGeneration,
-        snapshot_generation: SnapshotGeneration,
-        fingerprints: BuildFingerprintSet,
-    ) -> Self {
-        Self {
-            latest_generation,
-            snapshot_generation,
-            fingerprints,
+            request_identity: BuildRequestIdentity::from_request(request),
         }
     }
     #[must_use]
@@ -40,20 +28,18 @@ impl BuildAuthority {
         self.latest_generation
     }
     #[must_use]
-    pub const fn snapshot_generation(&self) -> SnapshotGeneration {
-        self.snapshot_generation
-    }
-    #[must_use]
-    pub const fn fingerprints(&self) -> &BuildFingerprintSet {
-        &self.fingerprints
+    pub const fn identity(&self) -> &BuildRequestIdentity {
+        &self.request_identity
     }
     pub(crate) fn refusal_for(&self, request: &BuildRequest) -> Option<PublishRefusal> {
         if request.generation() != self.latest_generation {
             Some(PublishRefusal::StaleBuildGeneration)
-        } else if request.snapshot_generation() != self.snapshot_generation {
+        } else if request.snapshot_generation() != self.request_identity.snapshot_generation() {
             Some(PublishRefusal::StaleSnapshotGeneration)
-        } else if request.fingerprints() != &self.fingerprints {
+        } else if request.fingerprints() != self.request_identity.fingerprints() {
             Some(PublishRefusal::StaleFingerprints)
+        } else if !self.request_identity.matches_request(request) {
+            Some(PublishRefusal::RequestIdentityMismatch)
         } else {
             None
         }
@@ -112,21 +98,21 @@ pub struct BuildPublishPermit {
     request: BuildRequest,
 }
 impl BuildPublishPermit {
-    pub(crate) fn commit<F>(
+    pub(crate) fn commit<H, F>(
         self,
-        prepared: PreparedPublish,
+        prepared: H,
         commit: F,
-    ) -> Result<PublishOutcome, BuildAuthorityError>
+    ) -> Result<PublishOutcome, BuildAuthorityCommitError<H>>
     where
-        F: FnOnce(PreparedPublish) -> PublishOutcome,
+        H: BuildPreparedHandle,
+        F: FnOnce(H) -> PublishOutcome,
     {
-        let current = self
-            .fence
-            .authority
-            .lock()
-            .map_err(|_| BuildAuthorityError::Poisoned)?;
+        let current = match self.fence.authority.lock() {
+            Ok(current) => current,
+            Err(_) => return Err(BuildAuthorityCommitError::Poisoned { prepared }),
+        };
         if let Some(reason) = current.refusal_for(&self.request) {
-            return Err(BuildAuthorityError::Refused { reason });
+            return Err(BuildAuthorityCommitError::Refused { reason, prepared });
         }
         Ok(commit(prepared))
     }
@@ -139,4 +125,11 @@ pub enum BuildAuthorityError {
     Poisoned,
     #[error("publish authority refused the request: {reason:?}")]
     Refused { reason: PublishRefusal },
+}
+
+#[derive(Debug)]
+#[non_exhaustive]
+pub(crate) enum BuildAuthorityCommitError<H> {
+    Poisoned { prepared: H },
+    Refused { reason: PublishRefusal, prepared: H },
 }

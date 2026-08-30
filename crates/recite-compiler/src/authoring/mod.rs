@@ -14,12 +14,12 @@ pub use build::{
     BuildEngine, BuildEventKind, BuildFailure, BuildFailureReason, BuildFingerprintSet,
     BuildGeneration, BuildGenerationError, BuildInput, BuildInputAuthority, BuildInputFingerprint,
     BuildInputKind, BuildInputPayload, BuildInputPolicy, BuildLifecycle, BuildPhase,
-    BuildPublishPermit, BuildPublisher, BuildRequest, BuildRequestError, BuildResult,
-    BuildResultFailure, BuildRunError, BuildState, BuildTarget, BuildTargetError, BuildTelemetry,
-    BuildTerminalStatus, BuildTransition, BuildTransitionError, FreshnessAssessment,
-    FreshnessStatus, PreparedPublish, PreparedPublishIdentity, PublishAbortReason, PublishFailure,
-    PublishFailureReason, PublishNotAttemptedReason, PublishOutcome, PublishOutcomeError,
-    PublishRefusal, RecoveryNeeded, RestartGuidance, StaleReason,
+    BuildPreparedHandle, BuildPublishPermit, BuildPublisher, BuildRequest, BuildRequestError,
+    BuildRequestIdentity, BuildResult, BuildResultFailure, BuildRunError, BuildState, BuildTarget,
+    BuildTargetError, BuildTelemetry, BuildTerminalStatus, BuildTransition, BuildTransitionError,
+    FreshnessAssessment, FreshnessStatus, PreparedPublishIdentity, PublishAbortReason,
+    PublishFailure, PublishFailureReason, PublishNotAttemptedReason, PublishOutcome,
+    PublishOutcomeError, PublishRefusal, RecoveryNeeded, RestartGuidance, StaleReason,
 };
 pub use edit::{
     AuthoringEditError, AuthoringEditOperation, AuthoringEditPlan, EditPrecondition, SourceEdit,

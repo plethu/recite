@@ -73,9 +73,10 @@ impl BuildLifecycle {
                 BuildState::Ready {
                     request,
                     candidates,
-                } if prepared.generation() == request.generation()
-                    && prepared.snapshot_generation() == request.snapshot_generation()
-                    && prepared.fingerprints() == request.fingerprints()
+                } if prepared.request_identity()
+                    == &super::super::request_identity::BuildRequestIdentity::from_request(
+                        request,
+                    )
                     && prepared.candidates() == candidates =>
                 {
                     Ok(BuildState::Publishing {
@@ -89,6 +90,12 @@ impl BuildLifecycle {
             BuildTransition::CheckFailed { result } => self.terminal(
                 BuildEventKind::CheckFailed,
                 BuildTerminalStatus::Failed,
+                result,
+                true,
+            ),
+            BuildTransition::NoCandidates { result } => self.terminal(
+                BuildEventKind::NoCandidates,
+                BuildTerminalStatus::Succeeded,
                 result,
                 true,
             ),
@@ -149,6 +156,12 @@ impl BuildLifecycle {
         if strict_phase
             && event == BuildEventKind::CheckFailed
             && !matches!(self.state, BuildState::Checking { .. })
+        {
+            return Err(invalid(&self.state, event));
+        }
+        if strict_phase
+            && event == BuildEventKind::NoCandidates
+            && !matches!(self.state, BuildState::Ready { .. })
         {
             return Err(invalid(&self.state, event));
         }

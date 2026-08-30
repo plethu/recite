@@ -1,4 +1,8 @@
 pub use super::candidates::{BuildCandidate, BuildTarget, BuildTargetError};
+use super::fingerprints::BuildFingerprintSet;
+use super::identity::BuildGeneration;
+use super::request::BuildRequest;
+use super::request_identity::BuildRequestIdentity;
 
 /// Targets requiring host-owned repair after a partial multi-target commit.
 #[derive(Clone, Debug, Eq, PartialEq)]
@@ -37,6 +41,7 @@ pub enum PublishRefusal {
     StaleBuildGeneration,
     StaleSnapshotGeneration,
     StaleFingerprints,
+    RequestIdentityMismatch,
 }
 
 /// Publication outcome. `Partial` is explicit because global atomicity is not promised.
@@ -55,81 +60,56 @@ pub enum PublishOutcome {
         remaining: Vec<BuildTarget>,
         recovery: RecoveryNeeded,
     },
+    /// Commit ran but its returned partition was not trustworthy. All listed
+    /// targets are conservatively considered attempted and require recovery.
+    Indeterminate {
+        attempted: Vec<BuildTarget>,
+        recovery: RecoveryNeeded,
+    },
     Refused {
         reason: PublishRefusal,
     },
 }
 
-/// A fully prepared batch bound to one request identity. It is consumed by commit.
-#[derive(Debug, Eq, PartialEq)]
-#[non_exhaustive]
-pub struct PreparedPublish {
-    generation: BuildGeneration,
-    snapshot_generation: SnapshotGeneration,
-    fingerprints: BuildFingerprintSet,
-    candidates: Vec<BuildCandidate>,
-}
-/// Cloneable reducer identity for a non-cloneable prepared handle.
+/// Reducer identity for a publisher-owned, non-cloneable prepared handle.
 #[derive(Clone, Debug, Eq, PartialEq)]
 #[non_exhaustive]
 pub struct PreparedPublishIdentity {
-    generation: BuildGeneration,
-    snapshot_generation: SnapshotGeneration,
-    fingerprints: BuildFingerprintSet,
+    request_identity: BuildRequestIdentity,
     candidates: Vec<BuildCandidate>,
 }
-impl PreparedPublish {
-    pub fn new(request: &BuildRequest, candidates: Vec<BuildCandidate>) -> Self {
+impl PreparedPublishIdentity {
+    /// Construct identity data; this is not a publication handle.
+    pub fn for_request(request: &BuildRequest, candidates: Vec<BuildCandidate>) -> Self {
         Self {
-            generation: request.generation(),
-            snapshot_generation: request.snapshot_generation(),
-            fingerprints: request.fingerprints().clone(),
+            request_identity: BuildRequestIdentity::from_request(request),
             candidates,
         }
     }
     #[must_use]
     pub const fn generation(&self) -> BuildGeneration {
-        self.generation
+        self.request_identity.generation()
     }
     #[must_use]
     pub const fn snapshot_generation(&self) -> SnapshotGeneration {
-        self.snapshot_generation
+        self.request_identity.snapshot_generation()
     }
     #[must_use]
     pub const fn fingerprints(&self) -> &BuildFingerprintSet {
-        &self.fingerprints
+        self.request_identity.fingerprints()
     }
     #[must_use]
     pub fn candidates(&self) -> &[BuildCandidate] {
         &self.candidates
     }
     #[must_use]
-    pub fn identity(&self) -> PreparedPublishIdentity {
-        PreparedPublishIdentity {
-            generation: self.generation,
-            snapshot_generation: self.snapshot_generation,
-            fingerprints: self.fingerprints.clone(),
-            candidates: self.candidates.clone(),
-        }
+    pub const fn request_identity(&self) -> &BuildRequestIdentity {
+        &self.request_identity
     }
 }
-impl PreparedPublishIdentity {
-    #[must_use]
-    pub const fn generation(&self) -> BuildGeneration {
-        self.generation
-    }
-    #[must_use]
-    pub const fn snapshot_generation(&self) -> SnapshotGeneration {
-        self.snapshot_generation
-    }
-    #[must_use]
-    pub const fn fingerprints(&self) -> &BuildFingerprintSet {
-        &self.fingerprints
-    }
-    #[must_use]
-    pub fn candidates(&self) -> &[BuildCandidate] {
-        &self.candidates
-    }
+/// Publisher-owned preparation handle consumed by commit or abort.
+pub trait BuildPreparedHandle {
+    fn identity(&self) -> PreparedPublishIdentity;
 }
 
 #[derive(Clone, Copy, Debug, Eq, Hash, PartialEq)]
@@ -200,6 +180,7 @@ impl PublishOutcome {
                 }
                 Ok(())
             }
+            Self::Indeterminate { .. } => Err(PublishOutcomeError::NotCommitted),
             Self::NotAttempted { .. } | Self::Refused { .. } => {
                 Err(PublishOutcomeError::NotCommitted)
             }
@@ -238,6 +219,3 @@ impl std::fmt::Display for PublishFailureReason {
     }
 }
 use super::super::SnapshotGeneration;
-use super::fingerprints::BuildFingerprintSet;
-use super::identity::BuildGeneration;
-use super::request::BuildRequest;

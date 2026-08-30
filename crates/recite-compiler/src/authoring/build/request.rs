@@ -1,4 +1,3 @@
-use super::freshness::FreshnessStatus;
 use recite_core::{Diagnostic, DiagnosticSeverity, DocumentKey};
 
 use super::super::SnapshotGeneration;
@@ -7,6 +6,7 @@ use super::freshness::{AffectedInput, RestartGuidance};
 use super::identity::{
     BuildGeneration, BuildInput, BuildInputAuthority, BuildInputKind, BuildInputPayload,
 };
+use super::request_identity::BuildRequestIdentity;
 
 /// A complete canonical build request.
 #[derive(Clone, Debug, Eq, PartialEq)]
@@ -157,9 +157,7 @@ pub enum BuildRequestError {
 #[derive(Clone, Debug, Eq, PartialEq)]
 #[non_exhaustive]
 pub struct BuildCheck {
-    generation: BuildGeneration,
-    snapshot_generation: super::super::SnapshotGeneration,
-    fingerprints: BuildFingerprintSet,
+    request_identity: BuildRequestIdentity,
     diagnostics: Vec<Diagnostic>,
     freshness: super::freshness::FreshnessAssessment,
 }
@@ -171,9 +169,7 @@ impl BuildCheck {
         freshness: super::freshness::FreshnessAssessment,
     ) -> Self {
         Self {
-            generation: request.generation(),
-            snapshot_generation: request.snapshot_generation(),
-            fingerprints: request.fingerprints().clone(),
+            request_identity: BuildRequestIdentity::from_request(request),
             diagnostics,
             freshness,
         }
@@ -202,17 +198,11 @@ impl BuildCheck {
             .any(|diagnostic| diagnostic.severity == DiagnosticSeverity::Error)
     }
     pub(crate) fn validate_for(&self, request: &BuildRequest) -> Result<(), BuildCheckError> {
-        if self.generation != request.generation()
-            || self.snapshot_generation != request.snapshot_generation()
-            || self.fingerprints != *request.fingerprints()
-        {
+        if !self.request_identity.matches_request(request) {
             return Err(BuildCheckError::RequestMismatch);
         }
         if self.freshness.expected() != request.fingerprints() {
             return Err(BuildCheckError::FreshnessMismatch);
-        }
-        if self.freshness.status() == FreshnessStatus::Stale {
-            return Err(BuildCheckError::StaleFreshness);
         }
         Ok(())
     }
@@ -225,6 +215,4 @@ pub enum BuildCheckError {
     RequestMismatch,
     #[error("build check freshness does not match its request fingerprints")]
     FreshnessMismatch,
-    #[error("a stale freshness assessment cannot pass a build check")]
-    StaleFreshness,
 }

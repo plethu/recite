@@ -5,6 +5,7 @@ use super::freshness::{AffectedInput, FreshnessAssessment, RestartGuidance};
 use super::identity::BuildGeneration;
 use super::publish::{BuildCandidate, PublishOutcome};
 use super::request::BuildRequest;
+use super::request_identity::BuildRequestIdentity;
 use recite_core::Diagnostic;
 use std::time::Duration;
 
@@ -60,6 +61,7 @@ pub struct BuildResult {
     generation: BuildGeneration,
     snapshot_generation: SnapshotGeneration,
     fingerprints: BuildFingerprintSet,
+    request_identity: BuildRequestIdentity,
     affected_inputs: Vec<AffectedInput>,
     diagnostics: Vec<Diagnostic>,
     candidates: Vec<BuildCandidate>,
@@ -89,6 +91,7 @@ impl BuildResult {
             generation: request.generation(),
             snapshot_generation: request.snapshot_generation(),
             fingerprints: request.fingerprints().clone(),
+            request_identity: BuildRequestIdentity::from_request(request),
             affected_inputs: request.affected_inputs(),
             diagnostics,
             candidates,
@@ -111,6 +114,7 @@ impl BuildResult {
             && self.generation == other.generation
             && self.snapshot_generation == other.snapshot_generation
             && self.fingerprints == other.fingerprints
+            && self.request_identity == other.request_identity
             && self.affected_inputs == other.affected_inputs
             && self.diagnostics == other.diagnostics
             && self.candidates == other.candidates
@@ -134,6 +138,10 @@ impl BuildResult {
     #[must_use]
     pub const fn fingerprints(&self) -> &BuildFingerprintSet {
         &self.fingerprints
+    }
+    #[must_use]
+    pub const fn request_identity(&self) -> &BuildRequestIdentity {
+        &self.request_identity
     }
     #[must_use]
     pub fn affected_inputs(&self) -> &[AffectedInput] {
@@ -169,8 +177,6 @@ impl BuildResult {
     }
 
     pub(crate) fn matches_request(&self, request: &BuildRequest) -> bool {
-        self.generation == request.generation()
-            && self.snapshot_generation == request.snapshot_generation()
-            && self.fingerprints == *request.fingerprints()
+        self.request_identity.matches_request(request)
     }
 }

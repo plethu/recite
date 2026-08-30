@@ -27,6 +27,16 @@ pub(crate) fn normalize_publish(outcome: PublishOutcome) -> PublishOutcome {
                 recovery: RecoveryNeeded::for_targets(recovery.targets().to_vec()),
             }
         }
+        PublishOutcome::Indeterminate {
+            mut attempted,
+            recovery,
+        } => {
+            attempted.sort();
+            PublishOutcome::Indeterminate {
+                attempted,
+                recovery: RecoveryNeeded::for_targets(recovery.targets().to_vec()),
+            }
+        }
         other => other,
     }
 }

@@ -1,8 +1,8 @@
 use super::support::*;
 use recite_compiler::{
-    BuildGeneration, BuildInput, BuildInputAuthority, BuildInputKind, BuildInputPayload,
-    BuildInputPolicy, BuildLifecycle, BuildRequest, BuildState, BuildTelemetry, BuildTransition,
-    BuildTransitionError, PreparedPublish, RestartGuidance,
+    BuildAuthority, BuildGeneration, BuildInput, BuildInputAuthority, BuildInputKind,
+    BuildInputPayload, BuildInputPolicy, BuildLifecycle, BuildRequest, BuildState, BuildTelemetry,
+    BuildTransition, BuildTransitionError, PreparedPublishIdentity, RestartGuidance,
 };
 use std::time::Duration;
 
@@ -114,6 +114,10 @@ fn schema_payload_has_one_authority_and_canonical_fingerprint() {
         )],
     )
     .unwrap_or_else(|error| panic!("schema request: {error}"));
+    assert_eq!(
+        left.fingerprints().schema(),
+        &recite_core::ProjectSchema::canonical_fingerprint(&recite_core::ProjectSchema::empty_v1())
+    );
     assert_eq!(left.fingerprints().schema(), right.fingerprints().schema());
     assert_eq!(left, right);
     let second = BuildInput::schema(
@@ -139,12 +143,48 @@ fn schema_payload_has_one_authority_and_canonical_fingerprint() {
 }
 
 #[test]
+fn authority_includes_policy_when_payload_bytes_match() {
+    let saved = BuildInput::saved_source(key("a.recite"), "a");
+    let strict = make_request(4, [saved.clone()]);
+    let permissive = BuildRequest::new_with_policy(
+        BuildGeneration::new(4),
+        recite_compiler::SnapshotGeneration::new(4),
+        [saved],
+        BuildInputPolicy::SavedAndOverlays,
+    )
+    .unwrap_or_else(|error| panic!("policy request: {error}"));
+    assert_eq!(strict.fingerprints(), permissive.fingerprints());
+    assert_ne!(
+        recite_compiler::BuildRequestIdentity::from_request(&strict),
+        recite_compiler::BuildRequestIdentity::from_request(&permissive)
+    );
+    let fence = recite_compiler::BuildAuthorityFence::new(BuildAuthority::from_request(&strict));
+    let mut engine = FakeEngine::new([candidate("a.recitec", b"a")]);
+    let mut publisher = FakePublisher::new();
+    let result = recite_compiler::BuildCoordinator::with_fence(fence)
+        .run(
+            permissive,
+            &recite_compiler::BuildControl::new(),
+            &mut engine,
+            &mut publisher,
+        )
+        .unwrap_or_else(|error| panic!("identity refusal: {error}"));
+    assert!(matches!(
+        result.publish(),
+        recite_compiler::PublishOutcome::Refused {
+            reason: recite_compiler::PublishRefusal::RequestIdentityMismatch
+        }
+    ));
+    assert_eq!(publisher.commit_calls, 0);
+}
+
+#[test]
 fn reducer_enforces_ready_and_terminal_identity_phases() {
     let request = make_request(1, [BuildInput::saved_source(key("a.recite"), "a")]);
     let mut lifecycle = BuildLifecycle::new();
     assert!(matches!(
         lifecycle.transition(BuildTransition::PublishStarted {
-            prepared: PreparedPublish::new(&request, Vec::new()).identity()
+            prepared: PreparedPublishIdentity::for_request(&request, Vec::new())
         }),
         Err(BuildTransitionError::Invalid { .. })
     ));
@@ -210,7 +250,7 @@ fn duration_is_nonsemantic_and_results_keep_request_identity() {
 }
 
 #[test]
-fn freshness_stale_assessment_cannot_pass() {
+fn freshness_stale_assessment_is_rebuildable() {
     struct StaleCheck;
     impl recite_compiler::BuildEngine for StaleCheck {
         fn check(
@@ -232,7 +272,7 @@ fn freshness_stale_assessment_cannot_pass() {
             _: &BuildRequest,
             _: &recite_compiler::BuildControl,
         ) -> Result<Vec<recite_compiler::BuildCandidate>, recite_compiler::BuildFailure> {
-            Ok(Vec::new())
+            Ok(vec![candidate("a.recitec", b"rebuilt")])
         }
     }
     let request = make_request(1, [BuildInput::saved_source(key("a.recite"), "a")]);
@@ -246,10 +286,14 @@ fn freshness_stale_assessment_cannot_pass() {
     );
     assert_eq!(
         result.status(),
-        recite_compiler::BuildTerminalStatus::Failed
+        recite_compiler::BuildTerminalStatus::Succeeded
     );
-    assert!(matches!(
-        result.failure(),
-        Some(recite_compiler::BuildResultFailure::Check(_))
-    ));
+    assert_eq!(
+        result.freshness().status(),
+        recite_compiler::FreshnessStatus::Stale
+    );
+    assert_eq!(
+        publisher.published.get("a.recitec"),
+        Some(&b"rebuilt".to_vec())
+    );
 }

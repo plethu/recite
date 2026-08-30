@@ -11,6 +11,7 @@ mod lifecycle;
 mod outcome;
 mod publish;
 mod request;
+mod request_identity;
 mod result;
 
 pub use authority::{BuildAuthority, BuildAuthorityError, BuildAuthorityFence, BuildPublishPermit};
@@ -34,9 +35,10 @@ pub use lifecycle::{
 };
 pub(crate) use outcome::{finish_cancelled, make_result, normalize_publish};
 pub use publish::{
-    BuildCandidate, BuildTarget, BuildTargetError, PreparedPublish, PreparedPublishIdentity,
+    BuildCandidate, BuildPreparedHandle, BuildTarget, BuildTargetError, PreparedPublishIdentity,
     PublishAbortReason, PublishFailure, PublishFailureReason, PublishNotAttemptedReason,
     PublishOutcome, PublishOutcomeError, PublishRefusal, RecoveryNeeded,
 };
 pub use request::{BuildCheck, BuildCheckError, BuildRequest, BuildRequestError};
+pub use request_identity::BuildRequestIdentity;
 pub use result::{BuildResult, BuildTelemetry, BuildTerminalStatus};

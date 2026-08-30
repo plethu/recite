@@ -6,7 +6,7 @@ use super::build_run;
 use super::identity::BuildGeneration;
 use super::lifecycle::{BuildLifecycle, BuildTransitionError};
 use super::publish::{
-    BuildCandidate, PreparedPublish, PublishAbortReason, PublishFailure, PublishOutcome,
+    BuildCandidate, BuildPreparedHandle, PublishAbortReason, PublishFailure, PublishOutcome,
 };
 use super::request::{BuildCheck, BuildRequest};
 use super::result::BuildResult;
@@ -77,13 +77,6 @@ impl Default for BuildControl {
         Self::new()
     }
 }
-impl PartialEq for BuildControl {
-    fn eq(&self, other: &Self) -> bool {
-        self.cancellation() == other.cancellation()
-    }
-}
-impl Eq for BuildControl {}
-
 /// The validation and compilation seam owned by a host or compiler caller.
 pub trait BuildEngine {
     /// Validate inputs and assess current freshness.
@@ -98,17 +91,18 @@ pub trait BuildEngine {
 
 /// The host-owned preparation and publication seam.
 pub trait BuildPublisher {
+    type Prepared: BuildPreparedHandle;
     /// Stage every candidate without replacing any published target.
     fn prepare(
         &mut self,
         request: &BuildRequest,
         candidates: &[BuildCandidate],
         control: &BuildControl,
-    ) -> Result<PreparedPublish, PublishFailure>;
+    ) -> Result<Self::Prepared, PublishFailure>;
     /// Discard staged data after cancellation or a failed preparation.
-    fn abort(&mut self, prepared: Option<PreparedPublish>, reason: PublishAbortReason);
+    fn abort(&mut self, prepared: Option<Self::Prepared>, reason: PublishAbortReason);
     /// Replace prepared targets; global multi-target atomicity is not promised.
-    fn commit(&mut self, prepared: PreparedPublish) -> PublishOutcome;
+    fn commit(&mut self, prepared: Self::Prepared) -> PublishOutcome;
 }
 
 /// Typed compilation failure returned by an injected engine.
