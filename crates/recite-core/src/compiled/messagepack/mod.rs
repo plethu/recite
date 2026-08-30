@@ -11,7 +11,7 @@ use super::{
 };
 
 use probe::messagepack_asset_format_versions;
-use validate::validate_dialogue;
+use validate::{ValidationMode, validate_dialogue};
 use wire::MsgDialogue;
 
 /// Error returned when encoding a compiled dialogue into canonical v0 bytes.
@@ -103,7 +103,7 @@ pub fn decode_compiled_dialogue_messagepack(
     }
 
     let dialogue = wire.try_into()?;
-    validate_dialogue(&dialogue)?;
+    validate_dialogue(&dialogue, ValidationMode::Decoded)?;
     Ok(dialogue)
 }
 
@@ -123,7 +123,8 @@ pub fn encode_compiled_dialogue_messagepack(
             compiler_compatibility_version: dialogue.header.compiler_compatibility_version,
         });
     }
-    validate_dialogue(dialogue).map_err(CompiledAssetEncodeError::from)?;
+    validate_dialogue(dialogue, ValidationMode::Canonical)
+        .map_err(CompiledAssetEncodeError::from)?;
     encode::serialize_messagepack(dialogue)
 }
 

@@ -18,7 +18,7 @@ use super::interpolation::MsgInterpolationBinding;
 use super::tags::{
     MsgArgument, MsgAssetEncoding, MsgChoiceEcho, MsgConditionExpression, MsgDivertTarget,
     MsgEffectMode, MsgFingerprint, MsgInspectionEncoding, MsgMatchPattern, MsgSchemaFingerprint,
-    MsgSourceSpan, MsgStatementKind, MsgValue, collect_wrapped, ensure_identifier_like,
+    MsgSourceSpan, MsgStatementKind, MsgValue, collect_wrapped,
 };
 use crate::compiled::{
     BlockIndex, BlockLookupEntry, BlockLookupTable, COMPILED_ASSET_FORMAT_VERSION_V0,
@@ -277,7 +277,6 @@ impl TryFrom<MsgLine> for CompiledLine {
                         .collect::<Result<_, _>>()?,
                     interpolation_mode: CompiledInterpolationMode::Current,
                 };
-                super::interpolation::validate_line_interpolation_rows(&line)?;
                 Ok(line)
             }
             MsgLine::Current(value) => {
@@ -297,11 +296,6 @@ impl TryFrom<MsgLine> for CompiledLine {
                     interpolation_mode: CompiledInterpolationMode::Current,
                     authored_plural_source_text: None,
                 };
-                super::interpolation::validate_interpolation_row(
-                    &line.source_text,
-                    &line.authored_source_text,
-                    &line.interpolation_bindings,
-                )?;
                 Ok(line)
             }
             MsgLine::Legacy(value) => Ok(Self {
@@ -404,11 +398,6 @@ impl TryFrom<MsgChoice> for CompiledChoice {
                         .collect::<Result<_, _>>()?,
                     interpolation_mode: CompiledInterpolationMode::Current,
                 };
-                super::interpolation::validate_interpolation_row(
-                    &choice.source_text,
-                    &choice.authored_source_text,
-                    &choice.interpolation_bindings,
-                )?;
                 Ok(choice)
             }
             MsgChoice::Legacy(value) => Ok(Self {
@@ -452,7 +441,6 @@ impl TryFrom<MsgConditionAvailabilityReason>
     type Error = CompiledAssetDecodeError;
 
     fn try_from(value: MsgConditionAvailabilityReason) -> Result<Self, Self::Error> {
-        ensure_non_empty("condition availability reason function", &value.0)?;
         Ok(Self {
             function: value.0,
             reason: AvailabilityReasonId::new(value.1)?,
@@ -470,7 +458,6 @@ impl TryFrom<MsgAvailabilityReasonArgBinding>
     type Error = CompiledAssetDecodeError;
 
     fn try_from(value: MsgAvailabilityReasonArgBinding) -> Result<Self, Self::Error> {
-        ensure_non_empty("availability reason argument name", &value.0)?;
         Ok(Self {
             name: value.0,
             value: value.1.0,
@@ -533,13 +520,6 @@ impl<'de> Visitor<'de> for MsgAvailabilityReasonArgValueVisitor {
                 let value = seq
                     .next_element::<f64>()?
                     .ok_or_else(|| serde::de::Error::invalid_length(1, &self))?;
-                if !value.is_finite() {
-                    return Err(serde::de::Error::custom(
-                        CompiledAssetDecodeError::MalformedAsset(
-                            "availability reason float literal must be finite".to_owned(),
-                        ),
-                    ));
-                }
                 Ok(MsgAvailabilityReasonArgValueWrapper(
                     crate::compiled::CompiledAvailabilityReasonArgValue::Literal(
                         ScalarValue::Float(value),
@@ -588,7 +568,6 @@ impl TryFrom<MsgMetadataEntry> for CompiledMetadataEntry {
     type Error = CompiledAssetDecodeError;
 
     fn try_from(value: MsgMetadataEntry) -> Result<Self, Self::Error> {
-        ensure_non_empty("metadata key", &value.0)?;
         Ok(Self {
             key: value.0,
             value: value.1.0,
@@ -604,7 +583,6 @@ impl TryFrom<MsgEffect> for CompiledEffect {
     type Error = CompiledAssetDecodeError;
 
     fn try_from(value: MsgEffect) -> Result<Self, Self::Error> {
-        ensure_identifier_like("effect function", &value.2)?;
         Ok(Self {
             id: EffectId::new(value.0)?,
             mode: value.1.0,
@@ -681,12 +659,4 @@ where
     U: TryFrom<T, Error = CompiledAssetDecodeError>,
 {
     values.into_iter().map(TryInto::try_into).collect()
-}
-
-fn ensure_non_empty(field: &'static str, value: &str) -> Result<(), CompiledAssetDecodeError> {
-    if value.is_empty() {
-        Err(super::malformed(format!("{field} must not be empty")))
-    } else {
-        Ok(())
-    }
 }

@@ -1,8 +1,10 @@
 use super::{CompiledAssetDecodeError, malformed};
 use crate::compiled::{CompiledDialogue, MetadataIndex, StatementIndex};
 
+mod rows;
 mod semantics;
 mod tables;
+use rows::{validate_choices, validate_lines};
 use semantics::{
     validate_choice_echo, validate_condition, validate_divert, validate_effect, validate_non_empty,
     validate_reason_value, validate_span, validate_statement, validate_value,
@@ -12,8 +14,15 @@ use tables::{
     validate_disjoint_ids, validate_lookup_entries,
 };
 
+#[derive(Clone, Copy, Debug, Eq, PartialEq)]
+pub(super) enum ValidationMode {
+    Decoded,
+    Canonical,
+}
+
 pub(super) fn validate_dialogue(
     dialogue: &CompiledDialogue,
+    mode: ValidationMode,
 ) -> Result<(), CompiledAssetDecodeError> {
     let block_len = dialogue.blocks.len();
     ensure_index("default block", block_len, dialogue.default_block.as_u32())?;
@@ -78,62 +87,8 @@ pub(super) fn validate_dialogue(
             arm.source_map.as_u32(),
         )?;
     }
-    for line in &dialogue.lines {
-        super::interpolation::validate_line_interpolation_rows(line)?;
-        if line.plural_source_text.is_some()
-            && !line.interpolation_bindings.iter().any(|binding| {
-                binding.name == "count" && binding.value_type == crate::InterpolationType::Integer
-            })
-        {
-            return Err(malformed(
-                "plural line requires an integer `count` interpolation binding".to_owned(),
-            ));
-        }
-        if line.plural_source_text.is_none() && line.authored_plural_source_text.is_some() {
-            return Err(malformed(
-                "compiled line has an authored plural form without its decoded form".to_owned(),
-            ));
-        }
-        if let Some(speaker) = line.speaker {
-            ensure_index("line speaker", dialogue.speakers.len(), speaker.as_u32())?;
-        }
-        ensure_range(
-            "line metadata",
-            dialogue.metadata.len(),
-            line.metadata,
-            MetadataIndex::as_u32,
-        )?;
-        ensure_index(
-            "line source map",
-            dialogue.source_maps.len(),
-            line.source_map.as_u32(),
-        )?;
-    }
-    for choice in &dialogue.choices {
-        ensure_range(
-            "choice metadata",
-            dialogue.metadata.len(),
-            choice.metadata,
-            MetadataIndex::as_u32,
-        )?;
-        if let Some(condition) = &choice.availability_requirement {
-            validate_condition(condition)?;
-        }
-        if let Some(reason_id) = &choice.availability_reason_override {
-            ensure_availability_reason(
-                dialogue,
-                "choice availability reason override",
-                reason_id.as_str(),
-            )?;
-        }
-        validate_divert(dialogue, &choice.target)?;
-        validate_choice_echo(dialogue, &choice.echo)?;
-        ensure_index(
-            "choice source map",
-            dialogue.source_maps.len(),
-            choice.source_map.as_u32(),
-        )?;
-    }
+    validate_lines(dialogue, mode)?;
+    validate_choices(dialogue, mode)?;
     for metadata in &dialogue.metadata {
         validate_non_empty("metadata key", &metadata.key)?;
         validate_value(&metadata.value)?;

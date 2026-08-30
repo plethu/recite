@@ -1,6 +1,5 @@
 use crate::{ScalarValue, SourceSpan, Value};
 
-use super::super::tags::ensure_identifier_like;
 use super::tables::{ensure_index, ensure_range};
 use super::{CompiledAssetDecodeError, malformed};
 use crate::compiled::{
@@ -198,7 +197,24 @@ pub(super) fn validate_choice_echo(
 }
 
 fn validate_identifier(field: &'static str, value: &str) -> Result<(), CompiledAssetDecodeError> {
-    ensure_identifier_like(field, value)
+    let mut chars = value.chars();
+    let Some(first) = chars.next() else {
+        return Err(malformed(format!("{field} must not be empty")));
+    };
+    if (first.is_ascii_alphabetic() || first == '_')
+        && chars.all(|character| {
+            character.is_ascii_alphanumeric()
+                || character == '_'
+                || character == '.'
+                || character == '-'
+        })
+    {
+        Ok(())
+    } else {
+        Err(malformed(format!(
+            "{field} must be an identifier-like name"
+        )))
+    }
 }
 
 fn validate_scalar(

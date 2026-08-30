@@ -123,3 +123,59 @@ fn malformed_candidate_index_fails_without_mutating_restart_state() {
     assert_eq!(preview.state(), &before);
     assert!(preview.state().restart_required().is_none());
 }
+
+#[test]
+fn mutable_candidate_interpolation_and_reason_invariants_are_transactional() {
+    let active = asset(
+        ":: start default\n> prompt@12345678901234567890\n  Prompt.\n  ? go@12345678901234567891\n    Go.\n    -> END\n",
+    );
+
+    let mut mismatched_choice = active.clone();
+    mismatched_choice.choices[0]
+        .source_text
+        .push_str(" {missing}");
+    assert_invalid_candidate(&active, &mismatched_choice);
+
+    let mut legacy_line = active.clone();
+    legacy_line.lines[0].source_text = "{missing}".to_owned();
+    legacy_line.lines[0].authored_source_text = "{missing}".to_owned();
+    legacy_line.lines[0].interpolation_mode = recite_core::CompiledInterpolationMode::Legacy;
+    assert_invalid_candidate(&active, &legacy_line);
+
+    let mut malformed_reason = active.clone();
+    malformed_reason
+        .availability_reasons
+        .push(recite_core::CompiledAvailabilityReason {
+            id: recite_core::AvailabilityReasonId::new("weight").expect("valid reason id"),
+            template: "Weight {value}.".to_owned(),
+        });
+    malformed_reason.condition_availability_reasons.push(
+        recite_core::CompiledConditionAvailabilityReason {
+            function: "can_answer".to_owned(),
+            reason: recite_core::AvailabilityReasonId::new("weight").expect("valid reason id"),
+            args: vec![recite_core::CompiledAvailabilityReasonArgBinding {
+                name: "value".to_owned(),
+                value: recite_core::CompiledAvailabilityReasonArgValue::Literal(
+                    recite_core::ScalarValue::Float(f64::NAN),
+                ),
+            }],
+        },
+    );
+    assert_invalid_candidate(&active, &malformed_reason);
+}
+
+fn assert_invalid_candidate(
+    active: &recite_core::CompiledDialogue,
+    candidate: &recite_core::CompiledDialogue,
+) {
+    let Some(mut preview) = PreviewSession::new(active, None, PreviewOptions::new()).ok() else {
+        panic!("valid test fixture must create a preview session");
+    };
+    let before = preview.state().clone();
+    let result = preview.assess_asset(candidate);
+    assert!(matches!(
+        result,
+        Err(recite_runtime::PreviewError::AssetRevisionFailed { .. })
+    ));
+    assert_eq!(preview.state(), &before);
+}
