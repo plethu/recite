@@ -16,7 +16,7 @@ use lsp_types::{
     CodeActionParams, CodeActionResponse, CompletionResponse, GotoDefinitionResponse, Hover,
     Location, Position, PrepareRenameResponse, Uri, WorkspaceEdit,
 };
-use recite_compiler::AuthoringKernel;
+use recite_compiler::{AuthoringKernel, DocumentLayer};
 use recite_core::{Diagnostic, DocumentKey};
 use recite_ui::UiCatalog;
 
@@ -28,6 +28,7 @@ pub(crate) use snapshot::LiveProjectSnapshot;
 
 use crate::documents::{OpenDocument, OpenDocumentStore};
 use crate::features;
+use crate::position::lsp_position_to_source;
 use crate::summary::{FileSummary, OpenFileIdentity};
 
 #[derive(Clone, Copy, Debug, Eq, PartialEq)]
@@ -60,25 +61,28 @@ impl LspWorkspace {
     }
 
     pub(crate) fn completion(&self, uri: &Uri, position: Position) -> Option<CompletionResponse> {
-        let text = self.documents.document(uri)?.text();
-        let schema = self.schema.schema()?;
+        let document = self.documents.document(uri)?;
+        let key = document_key_for_open(document);
         features::completion(
-            text,
+            document.text(),
             position,
-            schema,
+            key.as_ref(),
+            self.kernel.snapshot(),
+            self.schema.schema(),
             self.schema.matches_uri(uri),
-            &self.snapshot,
             &self.ui_catalog,
         )
     }
 
     pub(crate) fn hover(&self, uri: &Uri, position: Position) -> Option<Hover> {
-        let text = self.documents.document(uri)?.text();
+        let document = self.documents.document(uri)?;
+        let key = document_key_for_open(document)?;
         features::hover(
-            text,
+            document.text(),
             position,
+            &key,
+            self.kernel.snapshot(),
             self.schema.schema(),
-            &self.snapshot,
             &self.ui_catalog,
         )
     }
@@ -88,8 +92,10 @@ impl LspWorkspace {
         uri: &Uri,
         position: Position,
     ) -> Option<GotoDefinitionResponse> {
+        let (key, text) = self.source_document(uri)?;
+        let position = lsp_position_to_source(text, position)?;
         let documents = self.navigation_documents();
-        features::definition(uri, position, &documents)
+        features::definition(&key, position, self.kernel.snapshot(), &documents)
     }
 
     pub(crate) fn references(
@@ -98,8 +104,16 @@ impl LspWorkspace {
         position: Position,
         include_declaration: bool,
     ) -> Option<Vec<Location>> {
+        let (key, text) = self.source_document(uri)?;
+        let position = lsp_position_to_source(text, position)?;
         let documents = self.navigation_documents();
-        features::references(uri, position, include_declaration, &documents)
+        features::references(
+            &key,
+            position,
+            include_declaration,
+            self.kernel.snapshot(),
+            &documents,
+        )
     }
 
     pub(crate) fn prepare_rename(
@@ -107,8 +121,9 @@ impl LspWorkspace {
         uri: &Uri,
         position: Position,
     ) -> Option<PrepareRenameResponse> {
-        let documents = self.navigation_documents();
-        features::prepare_rename(uri, position, &documents)
+        let (key, text) = self.source_document(uri)?;
+        let position = lsp_position_to_source(text, position)?;
+        features::prepare_rename(&key, position, self.kernel.snapshot())
     }
 
     pub(crate) fn rename(
@@ -117,8 +132,10 @@ impl LspWorkspace {
         position: Position,
         new_name: &str,
     ) -> Option<WorkspaceEdit> {
+        let (key, text) = self.source_document(uri)?;
+        let position = lsp_position_to_source(text, position)?;
         let documents = self.navigation_documents();
-        features::rename(uri, position, new_name, &documents)
+        features::rename(&key, position, new_name, self.kernel.snapshot(), &documents)
     }
 
     pub(crate) fn code_action(&self, params: &CodeActionParams) -> Option<CodeActionResponse> {
@@ -178,19 +195,41 @@ impl LspWorkspace {
     }
 
     fn navigation_documents(&self) -> Vec<features::NavigationDocument<'_>> {
-        self.snapshot
-            .summaries()
+        self.kernel
+            .snapshot()
+            .documents()
             .iter()
-            .filter_map(|summary| {
-                let text = self.text_for_summary(summary)?;
+            .filter_map(|document| {
+                let uri = self.uri_for_document_key(document.key())?;
                 Some(features::NavigationDocument {
-                    uri: summary.uri(),
-                    project_relative_path: summary.project_relative_path(),
-                    text,
-                    summary,
+                    uri,
+                    key: document.key(),
+                    text: document.source_text(),
                 })
             })
             .collect()
+    }
+
+    fn source_document(&self, uri: &Uri) -> Option<(DocumentKey, &str)> {
+        if let Some(document) = self.documents.document(uri) {
+            return Some((document_key_for_open(document)?, document.text()));
+        }
+        let document = self.saved.document_by_uri(uri)?;
+        Some((document_key_for_saved(document)?, document.text.as_str()))
+    }
+
+    fn uri_for_document_key(&self, key: &DocumentKey) -> Option<&Uri> {
+        let document = self.kernel.snapshot().document(key)?;
+        match document.layer() {
+            DocumentLayer::Open => self.kernel_open_owners.get(key),
+            DocumentLayer::Saved => self
+                .saved
+                .documents
+                .values()
+                .find(|document| document_key_for_saved(document).as_ref() == Some(key))
+                .map(|document| &document.identity.uri),
+            _ => None,
+        }
     }
 
     fn code_action_documents(&self) -> Vec<features::CodeActionDocument<'_>> {

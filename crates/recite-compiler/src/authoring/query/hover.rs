@@ -1,4 +1,4 @@
-use recite_core::{DocumentKey, SourcePosition};
+use recite_core::{DocumentKey, SourcePosition, SourceSpan};
 
 use super::super::snapshot::AuthoringSnapshot;
 use super::context;
@@ -19,42 +19,79 @@ impl AuthoringSnapshot {
         let has_source_symbol = source_locations
             .iter()
             .any(|location| contains(location.span(), position));
-        if !has_source_symbol && context::at(key, document.source_text(), position).is_some() {
-            let completion = self.complete(key, position);
-            if let Some((name, span)) = context::token_at(key, document.source_text(), position) {
-                let candidate = match &completion {
-                    QueryResult::Ready(candidates)
-                    | QueryResult::Partial {
-                        value: candidates, ..
-                    } => candidates.iter().find(|candidate| candidate.name() == name),
-                    QueryResult::Unavailable(_) | QueryResult::NoMatch => None,
-                };
-                if let Some(candidate) = candidate {
-                    let location = super::types::SymbolLocation {
-                        document: key.clone(),
-                        identity: SymbolIdentity::Schema(name),
-                        kind: SymbolKind::Schema,
-                        role: SymbolRole::Annotation,
-                        span,
+        if !has_source_symbol {
+            if context::at(key, document.source_text(), position).is_some() {
+                let completion = self.complete(key, position);
+                if let Some((name, span)) = context::token_at(key, document.source_text(), position)
+                {
+                    let candidate = match &completion {
+                        QueryResult::Ready(candidates)
+                        | QueryResult::Partial {
+                            value: candidates, ..
+                        } => candidates.iter().find(|candidate| candidate.name() == name),
+                        QueryResult::Unavailable(_) | QueryResult::NoMatch => None,
                     };
-                    let info = HoverInfo {
-                        location,
-                        facts: vec![SemanticFact::SchemaCandidate {
-                            name: candidate.name().to_owned(),
-                            kind: candidate.kind(),
-                            detail: candidate.detail().clone(),
-                        }],
-                    };
-                    return match completion {
-                        QueryResult::Partial { unavailable, .. } => QueryResult::Partial {
-                            value: info,
-                            unavailable,
-                        },
-                        QueryResult::Ready(_) => QueryResult::Ready(info),
-                        QueryResult::Unavailable(reasons) => QueryResult::Unavailable(reasons),
-                        QueryResult::NoMatch => QueryResult::NoMatch,
-                    };
+                    if let Some(candidate) = candidate
+                        && (candidate.kind()
+                            != super::types::CompletionCandidateKind::AvailabilityReason
+                            || !cursor_inside_token(position, &span))
+                    {
+                        let location = super::types::SymbolLocation {
+                            document: key.clone(),
+                            identity: SymbolIdentity::Schema(name),
+                            kind: SymbolKind::Schema,
+                            role: SymbolRole::Annotation,
+                            span,
+                        };
+                        let fact = if candidate.kind()
+                            == super::types::CompletionCandidateKind::MetadataValue
+                        {
+                            let Some(fact) = self.metadata_candidate_fact(
+                                key,
+                                document.source_text(),
+                                position,
+                                candidate,
+                            ) else {
+                                return QueryResult::NoMatch;
+                            };
+                            fact
+                        } else {
+                            SemanticFact::SchemaCandidate {
+                                name: candidate.name().to_owned(),
+                                kind: candidate.kind(),
+                                detail: candidate.detail().clone(),
+                            }
+                        };
+                        let info = HoverInfo {
+                            location,
+                            facts: vec![fact],
+                            metadata_value: None,
+                        };
+                        return match completion {
+                            QueryResult::Partial { unavailable, .. } => QueryResult::Partial {
+                                value: info,
+                                unavailable,
+                            },
+                            QueryResult::Ready(_) => QueryResult::Ready(info),
+                            QueryResult::Unavailable(reasons) => QueryResult::Unavailable(reasons),
+                            QueryResult::NoMatch => QueryResult::NoMatch,
+                        };
+                    }
                 }
+            } else if let Some((name, span, kind)) = self.schema_symbol_at(key, document, position)
+            {
+                let location = super::types::SymbolLocation {
+                    document: key.clone(),
+                    identity: SymbolIdentity::Schema(name.clone()),
+                    kind: SymbolKind::Schema,
+                    role: SymbolRole::Annotation,
+                    span,
+                };
+                return QueryResult::Ready(HoverInfo {
+                    location,
+                    facts: vec![SemanticFact::SchemaSymbol { name, kind }],
+                    metadata_value: None,
+                });
             }
         }
         let Some(location) = source_locations
@@ -63,9 +100,9 @@ impl AuthoringSnapshot {
         else {
             return QueryResult::NoMatch;
         };
-        let facts = match location.role() {
-            SymbolRole::Definition => vec![SemanticFact::Definition],
-            SymbolRole::Reference => vec![SemanticFact::Reference],
+        let (facts, metadata_value) = match location.role() {
+            SymbolRole::Definition => (vec![SemanticFact::Definition], None),
+            SymbolRole::Reference => (vec![SemanticFact::Reference], None),
             SymbolRole::Annotation => document
                 .summary()
                 .metadata()
@@ -82,7 +119,13 @@ impl AuthoringSnapshot {
                             .iter()
                             .any(|span| span == location.span())
                 })
-                .map(|metadata| vec![SemanticFact::MetadataValue(metadata.value().clone())])
+                .map(|metadata| {
+                    let detail = self.metadata_value_detail(key, document, position, metadata);
+                    (
+                        vec![SemanticFact::MetadataValue(metadata.value().clone())],
+                        detail,
+                    )
+                })
                 .unwrap_or_default(),
             SymbolRole::Invocation => match &location.identity() {
                 SymbolIdentity::Function(name) => document
@@ -92,17 +135,20 @@ impl AuthoringSnapshot {
                     .chain(document.summary().effect_functions())
                     .find(|function| function.name() == name && function.span() == location.span())
                     .map(|function| {
-                        vec![SemanticFact::Function {
-                            name: name.clone(),
-                            kind: function.kind(),
-                            argument_count: function.argument_count(),
-                        }]
+                        (
+                            vec![SemanticFact::Function {
+                                name: name.clone(),
+                                kind: function.kind(),
+                                argument_count: function.argument_count(),
+                            }],
+                            None,
+                        )
                     })
                     .unwrap_or_default(),
                 SymbolIdentity::Block(_)
                 | SymbolIdentity::Source(_)
                 | SymbolIdentity::MetadataKey(_)
-                | SymbolIdentity::Schema(_) => Vec::new(),
+                | SymbolIdentity::Schema(_) => (Vec::new(), None),
             },
         };
         let complete = match location.kind() {
@@ -125,7 +171,11 @@ impl AuthoringSnapshot {
             super::types::SymbolKind::Schema => self.schema.is_some(),
         };
         let symbol_kind = location.kind();
-        let info = HoverInfo { location, facts };
+        let info = HoverInfo {
+            location,
+            facts,
+            metadata_value,
+        };
         if complete {
             QueryResult::Ready(info)
         } else {
@@ -143,4 +193,9 @@ impl AuthoringSnapshot {
             )
         }
     }
+}
+
+fn cursor_inside_token(position: SourcePosition, span: &SourceSpan) -> bool {
+    span.end
+        .is_some_and(|end| span.start < position && position < end)
 }

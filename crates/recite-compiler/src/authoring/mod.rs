@@ -9,8 +9,9 @@ mod summary;
 pub use input::{AuthoringRequest, DocumentVersion, OpenDocument, SavedDocument};
 pub use query::{
     CompletionCandidate, CompletionCandidateDetail, CompletionCandidateKind, CompletionItem,
-    HoverInfo, NavigationResult, QueryClass, QueryResult, QueryUnavailableReason, SemanticFact,
-    SymbolIdentity, SymbolKind, SymbolLocation, SymbolQueryOptions, SymbolRole,
+    HoverInfo, MetadataValueDetail, NavigationResult, QueryClass, QueryResult,
+    QueryUnavailableReason, SemanticFact, SemanticSymbolKind, SymbolIdentity, SymbolKind,
+    SymbolLocation, SymbolQueryOptions, SymbolRole,
 };
 pub use snapshot::{
     AnalysisDelta, AuthoringSnapshot, DiagnosticCollection, DiagnosticIter, DocumentDelta,

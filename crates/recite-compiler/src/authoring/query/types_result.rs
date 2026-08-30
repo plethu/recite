@@ -1,6 +1,7 @@
 use super::super::super::summary::{FunctionReferenceKind, MetadataValue};
 use super::completion::{CompletionCandidateDetail, CompletionCandidateKind};
 use super::symbols::SymbolLocation;
+use recite_core::{ProjectionOutputTarget, SchemaTypeRef};
 
 #[derive(Clone, Debug, PartialEq)]
 #[non_exhaustive]
@@ -68,12 +69,66 @@ pub enum SemanticFact {
         kind: CompletionCandidateKind,
         detail: CompletionCandidateDetail,
     },
+    /// A schema-owned symbol found in source prose.  The compiler resolves
+    /// which schema namespace owns the token; hosts only localise and render
+    /// the resulting fact.
+    SchemaSymbol {
+        name: String,
+        kind: SemanticSymbolKind,
+    },
+    /// A schema-validated source metadata value, including the typed
+    /// presentation context selected by the compiler.
+    MetadataValueDetail {
+        key: String,
+        value: String,
+        detail: MetadataValueDetail,
+    },
+}
+
+#[derive(Clone, Debug, PartialEq)]
+#[non_exhaustive]
+pub enum MetadataValueDetail {
+    Invalid,
+    Speaker,
+    Registry(SchemaTypeRef),
+    Enum(SchemaTypeRef),
+    Domain {
+        name: String,
+        context: Option<String>,
+    },
+}
+
+#[derive(Clone, Debug, PartialEq)]
+#[non_exhaustive]
+pub enum SemanticSymbolKind {
+    Speaker,
+    Registry,
+    MetadataDomain,
+    Metadata,
+    AvailabilityReason,
+    Condition,
+    Effect,
+    ProjectionQuery,
+    ProjectionProjector {
+        inputs: usize,
+        queries: usize,
+        outputs: usize,
+    },
+    ProjectionOutput {
+        projector: String,
+        target: ProjectionOutputTarget,
+        kind: String,
+    },
+    ProjectionLabel {
+        arguments: usize,
+    },
 }
 #[derive(Clone, Debug, PartialEq)]
 #[non_exhaustive]
 pub struct HoverInfo {
     pub(crate) location: SymbolLocation,
     pub(crate) facts: Vec<SemanticFact>,
+    pub(crate) metadata_value: Option<(String, MetadataValueDetail)>,
 }
 impl HoverInfo {
     #[must_use]
@@ -83,6 +138,13 @@ impl HoverInfo {
     #[must_use]
     pub fn facts(&self) -> &[SemanticFact] {
         &self.facts
+    }
+    /// Returns the schema detail for a source metadata value, when available.
+    #[must_use]
+    pub fn metadata_value_detail(&self) -> Option<(&str, &MetadataValueDetail)> {
+        self.metadata_value
+            .as_ref()
+            .map(|(value, detail)| (value.as_str(), detail))
     }
 }
 #[derive(Clone, Debug, PartialEq)]

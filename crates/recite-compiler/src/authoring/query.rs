@@ -2,6 +2,8 @@ mod completion;
 mod context;
 mod diagnostics;
 mod hover;
+mod hover_metadata;
+mod hover_schema;
 mod navigation;
 mod operations;
 mod schema;
@@ -10,6 +12,7 @@ mod types;
 
 pub use self::types::{
     CompletionCandidate, CompletionCandidateDetail, CompletionCandidateKind, CompletionItem,
-    HoverInfo, NavigationResult, QueryClass, QueryResult, QueryUnavailableReason, SemanticFact,
-    SymbolIdentity, SymbolKind, SymbolLocation, SymbolQueryOptions, SymbolRole,
+    HoverInfo, MetadataValueDetail, NavigationResult, QueryClass, QueryResult,
+    QueryUnavailableReason, SemanticFact, SemanticSymbolKind, SymbolIdentity, SymbolKind,
+    SymbolLocation, SymbolQueryOptions, SymbolRole,
 };

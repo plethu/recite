@@ -285,6 +285,11 @@ fn definition_resolves_block_references() {
 }
 
 #[test]
+fn typed_features_follow_open_overlay_generation() {
+    super::navigation::typed_features_follow_open_overlay_generation();
+}
+
+#[test]
 fn references_include_declaration_and_project_references() {
     super::navigation::references_include_declaration_and_project_references();
 }

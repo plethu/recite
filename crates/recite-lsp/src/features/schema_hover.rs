@@ -2,8 +2,6 @@ mod domain;
 mod provenance;
 mod value;
 
-pub(crate) use provenance::hover_detail;
-pub(super) use value::{
-    AuthoringPosition, SchemaValueHover, schema_value_candidates, schema_value_hover,
-    speaker_hover_text,
-};
+pub(crate) use domain::schema_domain_value_hover_with_context;
+pub(crate) use provenance::{hover_detail, origin_detail};
+pub(crate) use value::speaker_hover_text;

@@ -128,7 +128,11 @@ pub(super) fn value_candidates(
     let Some(definition) = schema.metadata.get(key) else {
         return;
     };
-    if !definition.targets.contains(&target) {
+    // Block metadata is already a first-class authoring site in the source
+    // language.  Keep completion useful there even for manifests produced
+    // before block targets were recorded explicitly; validation remains the
+    // authority for whether the authored key is accepted.
+    if !definition.targets.contains(&target) && !matches!(target, MetadataTarget::Block) {
         return;
     }
     if let Some(domain) = definition
@@ -154,7 +158,10 @@ pub(super) fn value_candidates(
             MetadataDomainDefinition::Contextual(domain) => {
                 let context = resolve_selector(text, &domain.selector, span.start.line(), target);
                 let values = match context {
-                    SelectorResolution::Value(value) => domain.values_by_context.get(value),
+                    SelectorResolution::Value(value) => domain
+                        .values_by_context
+                        .get(value)
+                        .or_else(|| fallback_values(schema, &domain.missing_context, unavailable)),
                     SelectorResolution::Missing => match &domain.missing_context {
                         recite_core::MissingMetadataContextPolicy::Diagnostic => {
                             unavailable.push(QueryUnavailableReason::MissingMetadataContext);
@@ -235,5 +242,28 @@ pub(super) fn value_candidates(
             }
         }
         _ => {}
+    }
+}
+
+fn fallback_values<'a>(
+    schema: &'a ProjectSchema,
+    policy: &recite_core::MissingMetadataContextPolicy,
+    unavailable: &mut Vec<QueryUnavailableReason>,
+) -> Option<&'a std::collections::BTreeSet<String>> {
+    match policy {
+        recite_core::MissingMetadataContextPolicy::Fallback { domain } => {
+            match schema.metadata_domains.get(domain) {
+                Some(MetadataDomainDefinition::Flat(domain)) => Some(&domain.values),
+                Some(MetadataDomainDefinition::Contextual(_)) | None => {
+                    unavailable.push(QueryUnavailableReason::MalformedMetadataContext);
+                    None
+                }
+            }
+        }
+        recite_core::MissingMetadataContextPolicy::Diagnostic => {
+            unavailable.push(QueryUnavailableReason::MissingMetadataContext);
+            None
+        }
+        recite_core::MissingMetadataContextPolicy::Empty => Some(empty_values()),
     }
 }

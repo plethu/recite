@@ -111,12 +111,12 @@ production suppressions must carry a narrow scope and rationale.
 | `crates/recite-core/src/compiled/messagepack/wire.rs` | 692 | production | core/wire | exception | #89: retain the explicit decoder boundary while the v0 wire contract is synchronized |
 | `crates/recite-runtime/src/session_snapshot.rs` | 294 | production | runtime/snapshot | follow-up | #135: typed snapshot-boundary errors |
 | `crates/recite-core/src/compiled/messagepack/validate.rs` | 372 | production | core/wire | cohesive | #89: validation is part of the decoder boundary |
-| `crates/recite-lsp/src/workspace.rs` | 337 | production | lsp/workspace | review | #168: transaction orchestration is split from kernel request and snapshot projection |
+| `crates/recite-lsp/src/workspace.rs` | 376 | production | lsp/workspace | review | #168: transaction orchestration is split from kernel request and snapshot projection |
 | `crates/recite-compiler/src/wire/messagepack.rs` | 347 | production | compiler/wire | cohesive | #89: encoder mirror of the explicit decoder wire surface |
 | `crates/recite-cli/src/error.rs` | 359 | production | cli | review | Keep user-facing error projection separate from typed domain errors |
 | `crates/recite-ui/tests/diagnostics.rs` | 371 | test/support | ui/tests | review | Structured diagnostic resource and compatibility-message coverage |
-| `crates/recite-lsp/src/features/navigation.rs` | 394 | production | lsp/features | review | Feature-specific navigation projection |
-| `crates/recite-lsp/src/features/hover.rs` | 260 | production | lsp/features | review | Feature-specific hover projection |
+| `crates/recite-lsp/src/features/navigation.rs` | 256 | production | lsp/features | review | Feature-specific navigation projection |
+| `crates/recite-lsp/src/features/hover/schema.rs` | 329 | production | lsp/features | review | #168: schema-backed hover presentation remains isolated from typed fact resolution |
 | `crates/recite-lsp/src/tests/availability/completion.rs` | 373 | test/support | lsp/tests | review | #176: contextual selector completion coverage |
 | `crates/recite-benchmarks/src/report/mod.rs` | 389 | production | benchmarks | cohesive | Report aggregation boundary |
 | `crates/recite-benchmarks/src/report/fixture.rs` | 387 | production | benchmarks | cohesive | Fixture report model |
@@ -129,6 +129,7 @@ production suppressions must carry a narrow scope and rationale.
 | `crates/recite-benchmarks/src/memory_profiles/mod.rs` | 373 | production | benchmarks | cohesive | Maintainer-only profile orchestration |
 | `crates/recite-cli/src/commands.rs` | 395 | production | cli | review | Command orchestration boundary |
 | `crates/recite-compiler/src/wire/messagepack/tags.rs` | 373 | production | compiler/wire | cohesive | #89: encoder tag mirror |
+| `crates/recite-compiler/src/authoring/query/schema/metadata.rs` | 269 | production | compiler/authoring | review | #168: typed metadata completion and missing-context policy projection |
 | `crates/recite-core/src/schema/model/mod.rs` | 380 | production | core/schema | review | Schema module exports and model grouping |
 | `crates/recite-core/src/schema/source/edit.rs` | 359 | production | core/schema | review | Source-owned typed edits and CST-preserving layout updates |
 | `crates/recite-core/src/schema/source/export/basic.rs` | 284 | production | core/schema | cohesive | Deterministic JSON export for basic schema declarations |

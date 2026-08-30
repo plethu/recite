@@ -1,14 +1,12 @@
 use std::collections::BTreeSet;
 
 use lsp_types::{CodeActionParams, CodeActionResponse, CompletionResponse, Hover, Position};
-use recite_core::{ConditionReturnType, EffectMode, ProjectSchema, SchemaTypeRef};
+use recite_compiler::AuthoringSnapshot;
+use recite_core::{ConditionReturnType, DocumentKey, EffectMode, ProjectSchema, SchemaTypeRef};
 use recite_ui::UiCatalog;
-
-use crate::workspace::LiveProjectSnapshot;
 
 mod code_action;
 mod completion;
-mod context;
 mod hover;
 mod navigation;
 pub(crate) mod schema_hover;
@@ -16,12 +14,21 @@ pub(crate) mod schema_hover;
 pub(crate) fn completion(
     text: &str,
     position: Position,
-    schema: &ProjectSchema,
+    key: Option<&DocumentKey>,
+    snapshot: &AuthoringSnapshot,
+    schema: Option<&ProjectSchema>,
     schema_authoring: bool,
-    snapshot: &LiveProjectSnapshot,
     catalog: &UiCatalog,
 ) -> Option<CompletionResponse> {
-    completion::completion(text, position, schema, schema_authoring, snapshot, catalog)
+    completion::completion(
+        text,
+        position,
+        key,
+        snapshot,
+        schema,
+        schema_authoring,
+        catalog,
+    )
 }
 
 pub(crate) use code_action::{CodeActionDocument, SchemaCodeActionDocument};
@@ -40,19 +47,12 @@ pub(crate) use navigation::{NavigationDocument, definition, prepare_rename, refe
 pub(crate) fn hover(
     text: &str,
     position: Position,
+    key: &DocumentKey,
+    snapshot: &AuthoringSnapshot,
     schema: Option<&ProjectSchema>,
-    snapshot: &LiveProjectSnapshot,
     catalog: &UiCatalog,
 ) -> Option<Hover> {
-    hover::hover(text, position, schema, snapshot, catalog)
-}
-
-pub(super) fn block_names(snapshot: &LiveProjectSnapshot) -> BTreeSet<String> {
-    snapshot
-        .summaries()
-        .iter()
-        .flat_map(|summary| summary.blocks.iter().map(|block| block.name.clone()))
-        .collect()
+    hover::hover(text, position, key, snapshot, schema, catalog)
 }
 
 pub(super) fn line_prefix(text: &str, position: Position) -> Option<&str> {

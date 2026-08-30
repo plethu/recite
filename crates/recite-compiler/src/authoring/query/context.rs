@@ -13,6 +13,7 @@ pub(super) enum Site {
     },
     MetadataValue {
         key: String,
+        value: String,
         token: SourceSpan,
         target: MetadataTarget,
     },
@@ -90,16 +91,18 @@ pub(super) fn at(key: &DocumentKey, text: &str, position: SourcePosition) -> Opt
         }
         return Some(Site::MetadataValue {
             key: assignment.key.to_owned(),
+            value: assignment.value.to_owned(),
             token,
             target: metadata_target(trimmed),
         });
     }
     let token = prefix.split_whitespace().last().unwrap_or_default();
     let token_start = cursor.saturating_sub(token.len());
-    if !token.is_empty()
-        && !token.contains('=')
+    if !(token.is_empty()
+        || token.contains('=')
+        || (trimmed.starts_with("::") && "default".starts_with(token)))
         && matches!(trimmed.as_bytes().first(), Some(b':' | b'>' | b'?'))
-        && prefix.split_whitespace().count() >= 2
+        && prefix.split_whitespace().count() >= 3
     {
         return Some(Site::MetadataKey {
             span: span(key, text, line_start + token_start, line_start + cursor),

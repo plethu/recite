@@ -1,103 +1,140 @@
 use lsp_types::{
     DocumentChanges, GotoDefinitionResponse, Location, OneOf,
-    OptionalVersionedTextDocumentIdentifier, Position, PrepareRenameResponse, Range,
-    TextDocumentEdit, TextEdit, Uri, WorkspaceEdit,
+    OptionalVersionedTextDocumentIdentifier, PrepareRenameResponse, Range, TextDocumentEdit,
+    TextEdit, Uri, WorkspaceEdit,
 };
+use recite_compiler::{
+    AuthoringSnapshot, NavigationResult, QueryResult, SymbolIdentity, SymbolLocation,
+    SymbolQueryOptions, SymbolRole,
+};
+use recite_core::{DocumentKey, SourcePosition, SourceSpan};
 
 use crate::position::span_to_range;
-use crate::summary::{BlockReferenceSummary, FileSummary, SpannedName};
 
 pub(crate) struct NavigationDocument<'a> {
     pub(crate) uri: &'a Uri,
-    pub(crate) project_relative_path: Option<&'a str>,
+    pub(crate) key: &'a DocumentKey,
     pub(crate) text: &'a str,
-    pub(crate) summary: &'a FileSummary,
 }
 
 pub(crate) fn definition(
-    uri: &Uri,
-    position: Position,
+    key: &DocumentKey,
+    position: SourcePosition,
+    snapshot: &AuthoringSnapshot,
     documents: &[NavigationDocument<'_>],
 ) -> Option<GotoDefinitionResponse> {
-    let symbol = symbol_at(uri, position, documents)?;
-    let definition = definition_for_symbol(&symbol, documents)?;
-    Some(GotoDefinitionResponse::Scalar(location_for_definition(
-        definition,
-    )))
+    let result = snapshot.navigate(key, position);
+    let (QueryResult::Ready(NavigationResult::Unique(symbol))
+    | QueryResult::Partial {
+        value: NavigationResult::Unique(symbol),
+        ..
+    }) = result
+    else {
+        return None;
+    };
+    Some(GotoDefinitionResponse::Scalar(location_for_symbol(
+        &symbol, documents,
+    )?))
 }
 
 pub(crate) fn references(
-    uri: &Uri,
-    position: Position,
+    key: &DocumentKey,
+    position: SourcePosition,
     include_declaration: bool,
+    snapshot: &AuthoringSnapshot,
     documents: &[NavigationDocument<'_>],
 ) -> Option<Vec<Location>> {
-    let symbol = symbol_at(uri, position, documents)?;
-    definition_for_symbol(&symbol, documents)?;
-
-    let mut locations = Vec::new();
-    if include_declaration {
-        locations.extend(
-            definitions_for_symbol(&symbol, documents)
-                .into_iter()
-                .map(location_for_definition),
-        );
+    let result = snapshot.references(key, position, SymbolQueryOptions::new(include_declaration));
+    let locations = match result {
+        QueryResult::Ready(locations)
+        | QueryResult::Partial {
+            value: locations, ..
+        } => locations,
+        QueryResult::NoMatch | QueryResult::Unavailable(_) => return None,
+        _ => return None,
+    };
+    // The former LSP projection returned declarations before references.  Keep
+    // that protocol order while the compiler owns which occurrences exist.
+    let mut declarations = Vec::new();
+    let mut references = Vec::new();
+    for symbol in locations {
+        let Some(location) = location_for_symbol(&symbol, documents) else {
+            continue;
+        };
+        if symbol.role() == SymbolRole::Definition {
+            declarations.push(location);
+        } else {
+            references.push(location);
+        }
     }
-    locations.extend(
-        references_to_symbol(&symbol, documents)
-            .into_iter()
-            .map(location_for_reference),
-    );
-
-    Some(locations)
+    declarations.extend(references);
+    Some(declarations)
 }
 
 pub(crate) fn prepare_rename(
-    uri: &Uri,
-    position: Position,
-    documents: &[NavigationDocument<'_>],
+    key: &DocumentKey,
+    position: SourcePosition,
+    snapshot: &AuthoringSnapshot,
 ) -> Option<PrepareRenameResponse> {
-    let symbol = symbol_at(uri, position, documents)?;
-    definition_for_symbol(&symbol, documents)?;
+    let symbol = block_symbol(key, position, snapshot)?;
+    unique_navigation(key, position, snapshot)?;
+    let range = span_for_symbol(&symbol, snapshot)?;
     Some(PrepareRenameResponse::RangeWithPlaceholder {
-        range: symbol.range,
-        placeholder: symbol.name,
+        range,
+        placeholder: block_name(&symbol)?.to_owned(),
     })
 }
 
 pub(crate) fn rename(
-    uri: &Uri,
-    position: Position,
+    key: &DocumentKey,
+    position: SourcePosition,
     new_name: &str,
+    snapshot: &AuthoringSnapshot,
     documents: &[NavigationDocument<'_>],
 ) -> Option<WorkspaceEdit> {
+    // The compiler's typed authoring API currently stops at symbol references;
+    // keep edit construction isolated at the LSP boundary until a typed edit
+    // plan is available.
     if !is_block_symbol(new_name) {
         return None;
     }
-
-    let symbol = symbol_at(uri, position, documents)?;
-    definition_for_symbol(&symbol, documents)?;
+    block_symbol(key, position, snapshot)?;
+    unique_navigation(key, position, snapshot)?;
+    let result = snapshot.references(key, position, SymbolQueryOptions::default());
+    let locations = match result {
+        QueryResult::Ready(locations)
+        | QueryResult::Partial {
+            value: locations, ..
+        } => locations,
+        QueryResult::NoMatch | QueryResult::Unavailable(_) => return None,
+        _ => return None,
+    };
+    if !locations
+        .iter()
+        .any(|location| location.role() == SymbolRole::Definition)
+    {
+        return None;
+    }
 
     let mut changes = Vec::<(Uri, Vec<TextEdit>)>::new();
-    for definition in definitions_for_symbol(&symbol, documents) {
+    for location in locations {
+        let Some(document) = documents
+            .iter()
+            .find(|document| document.key == location.document())
+        else {
+            continue;
+        };
         push_change(
             &mut changes,
-            definition.document.uri.clone(),
+            document.uri.clone(),
             TextEdit {
-                range: definition.range,
+                range: span_to_range(document.text, location.span()),
                 new_text: new_name.to_owned(),
             },
         );
     }
-    for reference in references_to_symbol(&symbol, documents) {
-        push_change(
-            &mut changes,
-            reference.document.uri.clone(),
-            TextEdit {
-                range: reference.range,
-                new_text: new_name.to_owned(),
-            },
-        );
+    if changes.is_empty() {
+        return None;
     }
     changes.sort_by(|left, right| left.0.as_str().cmp(right.0.as_str()));
     for (_, edits) in &mut changes {
@@ -125,189 +162,75 @@ pub(crate) fn rename(
     })
 }
 
-struct Symbol {
-    name: String,
-    target_file: Option<String>,
-    target_uri: Uri,
-    range: Range,
-    kind: SymbolKind,
+fn block_symbol(
+    key: &DocumentKey,
+    position: SourcePosition,
+    snapshot: &AuthoringSnapshot,
+) -> Option<SymbolLocation> {
+    let result = snapshot.symbols(key, SymbolQueryOptions::default());
+    let symbols = match result {
+        QueryResult::Ready(symbols) | QueryResult::Partial { value: symbols, .. } => symbols,
+        QueryResult::NoMatch | QueryResult::Unavailable(_) => return None,
+        _ => return None,
+    };
+    symbols.into_iter().find(|symbol| {
+        matches!(symbol.identity(), SymbolIdentity::Block(_))
+            && span_contains(symbol.span(), position)
+    })
 }
 
-#[derive(Clone, Copy)]
-enum SymbolKind {
-    Definition,
-    Reference,
+fn unique_navigation(
+    key: &DocumentKey,
+    position: SourcePosition,
+    snapshot: &AuthoringSnapshot,
+) -> Option<SymbolLocation> {
+    let result = snapshot.navigate(key, position);
+    match result {
+        QueryResult::Ready(NavigationResult::Unique(symbol))
+        | QueryResult::Partial {
+            value: NavigationResult::Unique(symbol),
+            ..
+        } => Some(symbol),
+        QueryResult::Ready(NavigationResult::Missing)
+        | QueryResult::Ready(NavigationResult::Ambiguous(_))
+        | QueryResult::Ready(NavigationResult::Unsupported)
+        | QueryResult::Partial { .. }
+        | QueryResult::Unavailable(_)
+        | QueryResult::NoMatch
+        | _ => None,
+    }
 }
 
-struct Definition<'a> {
-    document: &'a NavigationDocument<'a>,
-    range: Range,
-}
-
-struct Reference<'a> {
-    document: &'a NavigationDocument<'a>,
-    range: Range,
-}
-
-fn symbol_at(
-    uri: &Uri,
-    position: Position,
+fn location_for_symbol(
+    symbol: &SymbolLocation,
     documents: &[NavigationDocument<'_>],
-) -> Option<Symbol> {
-    let document = documents.iter().find(|document| document.uri == uri)?;
-    document
-        .summary
-        .blocks
+) -> Option<Location> {
+    let document = documents
         .iter()
-        .find_map(|block| symbol_for_definition(block, document, position))
-        .or_else(|| {
-            document
-                .summary
-                .block_references
-                .iter()
-                .find_map(|reference| symbol_for_reference(reference, document, position))
-        })
-}
-
-fn symbol_for_definition(
-    block: &SpannedName,
-    document: &NavigationDocument<'_>,
-    position: Position,
-) -> Option<Symbol> {
-    let range = block_identifier_range(document.text, block);
-    range_contains(range, position).then(|| Symbol {
-        name: block.name.clone(),
-        target_file: document.project_relative_path.map(str::to_owned),
-        target_uri: document.uri.clone(),
-        range,
-        kind: SymbolKind::Definition,
+        .find(|document| document.key == symbol.document())?;
+    Some(Location {
+        uri: document.uri.clone(),
+        range: span_to_range(document.text, symbol.span()),
     })
 }
 
-fn symbol_for_reference(
-    reference: &BlockReferenceSummary,
-    document: &NavigationDocument<'_>,
-    position: Position,
-) -> Option<Symbol> {
-    let range = span_to_range(document.text, &reference.span);
-    let target_file = reference
-        .file
-        .clone()
-        .or_else(|| document.project_relative_path.map(str::to_owned));
-    range_contains(range, position).then(|| Symbol {
-        name: reference.block_id.clone(),
-        target_file,
-        target_uri: document.uri.clone(),
-        range,
-        kind: SymbolKind::Reference,
-    })
+fn span_for_symbol(symbol: &SymbolLocation, snapshot: &AuthoringSnapshot) -> Option<Range> {
+    let document = snapshot.document(symbol.document())?;
+    Some(span_to_range(document.source_text(), symbol.span()))
 }
 
-fn definition_for_symbol<'a>(
-    symbol: &Symbol,
-    documents: &'a [NavigationDocument<'a>],
-) -> Option<Definition<'a>> {
-    match symbol.kind {
-        SymbolKind::Definition | SymbolKind::Reference => unique_definition(
-            &symbol.name,
-            symbol.target_file.as_deref(),
-            &symbol.target_uri,
-            documents,
-        ),
+fn block_name(symbol: &SymbolLocation) -> Option<&str> {
+    match symbol.identity() {
+        SymbolIdentity::Block(name) => Some(name.as_str()),
+        _ => None,
     }
 }
 
-fn unique_definition<'a>(
-    name: &str,
-    file: Option<&str>,
-    uri: &Uri,
-    documents: &'a [NavigationDocument<'a>],
-) -> Option<Definition<'a>> {
-    let mut definitions = definitions_matching_target(name, file, uri, documents);
-    let definition = definitions.next()?;
-    definitions.next().is_none().then_some(definition)
-}
-
-fn definitions_for_symbol<'a>(
-    symbol: &Symbol,
-    documents: &'a [NavigationDocument<'a>],
-) -> Vec<Definition<'a>> {
-    definitions_matching_target(
-        &symbol.name,
-        symbol.target_file.as_deref(),
-        &symbol.target_uri,
-        documents,
-    )
-    .collect()
-}
-
-fn definitions_matching_target<'a>(
-    name: &str,
-    file: Option<&str>,
-    uri: &Uri,
-    documents: &'a [NavigationDocument<'a>],
-) -> impl Iterator<Item = Definition<'a>> {
-    documents
-        .iter()
-        .filter(move |document| document_targets_symbol(document, file, uri))
-        .flat_map(move |document| {
-            document
-                .summary
-                .blocks
-                .iter()
-                .filter(move |block| block.name == name)
-                .map(move |block| Definition {
-                    document,
-                    range: block_identifier_range(document.text, block),
-                })
-        })
-}
-
-fn references_to_symbol<'a>(
-    symbol: &Symbol,
-    documents: &'a [NavigationDocument<'a>],
-) -> Vec<Reference<'a>> {
-    documents
-        .iter()
-        .flat_map(|document| {
-            document
-                .summary
-                .block_references
-                .iter()
-                .filter(move |reference| {
-                    reference.block_id == symbol.name
-                        && match reference.file.as_deref() {
-                            Some(file) => symbol.target_file.as_deref() == Some(file),
-                            None => unqualified_reference_targets_symbol(document, symbol),
-                        }
-                })
-                .map(move |reference| Reference {
-                    document,
-                    range: span_to_range(document.text, &reference.span),
-                })
-        })
-        .collect()
-}
-
-fn document_targets_symbol(
-    document: &NavigationDocument<'_>,
-    file: Option<&str>,
-    uri: &Uri,
-) -> bool {
-    match file {
-        Some(file) => document.project_relative_path == Some(file),
-        None => document.uri == uri,
-    }
-}
-
-fn unqualified_reference_targets_symbol(
-    document: &NavigationDocument<'_>,
-    symbol: &Symbol,
-) -> bool {
-    match symbol.target_file.as_deref() {
-        Some(file) => document.project_relative_path == Some(file),
-        None => document.uri == &symbol.target_uri,
-    }
+fn span_contains(span: &SourceSpan, position: SourcePosition) -> bool {
+    let Some(end) = span.end else {
+        return false;
+    };
+    span.start <= position && position <= end
 }
 
 fn push_change(changes: &mut Vec<(Uri, Vec<TextEdit>)>, uri: Uri, edit: TextEdit) {
@@ -321,57 +244,6 @@ fn push_change(changes: &mut Vec<(Uri, Vec<TextEdit>)>, uri: Uri, edit: TextEdit
     }
 }
 
-fn location_for_definition(definition: Definition<'_>) -> Location {
-    Location {
-        uri: definition.document.uri.clone(),
-        range: definition.range,
-    }
-}
-
-fn location_for_reference(reference: Reference<'_>) -> Location {
-    Location {
-        uri: reference.document.uri.clone(),
-        range: reference.range,
-    }
-}
-
-fn block_identifier_range(text: &str, block: &SpannedName) -> Range {
-    let line = text
-        .lines()
-        .nth(
-            block
-                .span
-                .start
-                .line()
-                .saturating_sub(1)
-                .try_into()
-                .unwrap_or(usize::MAX),
-        )
-        .unwrap_or_default();
-    let full_range = span_to_range(text, &block.span);
-    let Some(start_byte) = line.find(block.name.as_str()) else {
-        return full_range;
-    };
-    let end_byte = start_byte + block.name.len();
-    Range {
-        start: Position {
-            line: full_range.start.line,
-            character: utf16_units_for_byte_index(line, start_byte),
-        },
-        end: Position {
-            line: full_range.start.line,
-            character: utf16_units_for_byte_index(line, end_byte),
-        },
-    }
-}
-
-fn range_contains(range: Range, position: Position) -> bool {
-    position.line == range.start.line
-        && position.line == range.end.line
-        && position.character >= range.start.character
-        && position.character <= range.end.character
-}
-
 fn is_block_symbol(value: &str) -> bool {
     !value.is_empty()
         && value != recite_core::END_DIVERT_TARGET
@@ -381,14 +253,4 @@ fn is_block_symbol(value: &str) -> bool {
 
 fn is_symbol_character(character: char) -> bool {
     character.is_ascii_alphanumeric() || matches!(character, '_' | '-' | ':')
-}
-
-fn utf16_units_for_byte_index(line: &str, byte_index: usize) -> u32 {
-    line.get(..byte_index)
-        .unwrap_or(line)
-        .chars()
-        .map(char::len_utf16)
-        .fold(0_u32, |total, width| {
-            total.saturating_add(u32::try_from(width).unwrap_or(u32::MAX))
-        })
 }

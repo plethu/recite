@@ -1,241 +1,211 @@
 use lsp_types::{CompletionItem, CompletionItemKind, CompletionResponse, Documentation, Position};
-use recite_core::{ProjectSchema, SchemaTypeRef};
+use recite_compiler::{
+    AuthoringSnapshot, CompletionCandidate, CompletionCandidateDetail, CompletionCandidateKind,
+    QueryResult, SymbolIdentity, SymbolQueryOptions, SymbolRole,
+};
+use recite_core::{DocumentKey, ProjectSchema};
 use recite_ui::{MsgId, UiCatalog};
 
-use super::context::{SelectorSite, selector_site};
-use super::schema_hover::schema_value_candidates;
-use crate::workspace::LiveProjectSnapshot;
+use crate::position::lsp_position_to_source;
 
-mod presentation;
 mod projection;
 
 pub(super) fn completion(
     text: &str,
     position: Position,
-    schema: &ProjectSchema,
+    key: Option<&DocumentKey>,
+    snapshot: &AuthoringSnapshot,
+    schema: Option<&ProjectSchema>,
     schema_authoring: bool,
-    snapshot: &LiveProjectSnapshot,
     catalog: &UiCatalog,
 ) -> Option<CompletionResponse> {
-    let line = super::line_prefix(text, position)?;
-    if schema_authoring
-        && let Some(items) =
-            projection::schema_json_completion_items(text, position, line, schema, catalog)
-    {
-        return Some(items);
+    if schema_authoring {
+        let schema = schema?;
+        let line = super::line_prefix(text, position)?;
+        return projection::schema_json_completion_items(text, position, line, schema, catalog);
     }
-    match completion_context(line) {
-        CompletionContext::BlockReference => Some(items(block_completion_items(snapshot, catalog))),
-        CompletionContext::Speaker => Some(items(speaker_completion_items(schema, catalog))),
-        CompletionContext::MetadataKey => {
-            Some(items(metadata_key_completion_items(schema, catalog)))
-        }
-        CompletionContext::MetadataValue { key, site } => {
-            let line_index = usize::try_from(position.line).ok()?;
-            let line_text = text.lines().nth(line_index)?;
-            Some(items(metadata_value_completion_items(
-                schema, text, line_text, line_index, &key, site, catalog,
-            )))
-        }
-        CompletionContext::Condition => Some(items(presentation::condition_completion_items(
-            schema, catalog,
-        ))),
-        CompletionContext::Effect => Some(items(presentation::effect_completion_items(
-            schema, catalog,
-        ))),
-        CompletionContext::Reason => Some(CompletionResponse::Array(
-            schema
-                .availability_reasons
-                .iter()
-                .filter(|(_, definition)| definition.params.is_empty())
-                .map(|(id, definition)| CompletionItem {
-                    label: id.as_str().to_owned(),
-                    kind: Some(CompletionItemKind::CONSTANT),
-                    detail: Some(catalog.text(MsgId::LspCompletionAvailabilityReason)),
-                    documentation: Some(Documentation::String(definition.template.clone())),
-                    ..CompletionItem::default()
-                })
-                .collect(),
-        )),
-        CompletionContext::None => None,
+
+    let key = key?;
+    let source_position = lsp_position_to_source(text, position)?;
+    let result = snapshot.complete(key, source_position);
+    let candidates = match result {
+        QueryResult::Ready(candidates)
+        | QueryResult::Partial {
+            value: candidates, ..
+        } => candidates,
+        QueryResult::NoMatch | QueryResult::Unavailable(_) => return None,
+        _ => return None,
+    };
+    let mut items = candidates
+        .iter()
+        .filter_map(|candidate| completion_item(candidate, text, schema, catalog))
+        .collect::<Vec<_>>();
+    if is_unqualified_block_site(text, position) {
+        extend_project_block_items(snapshot, &mut items, catalog);
     }
+    items.sort_by(|left, right| left.label.cmp(&right.label));
+    items.dedup_by(|left, right| left.label == right.label);
+    Some(CompletionResponse::Array(items))
 }
 
-enum CompletionContext {
-    BlockReference,
-    Speaker,
-    MetadataKey,
-    MetadataValue { key: String, site: SelectorSite },
-    Condition,
-    Effect,
-    Reason,
-    None,
+fn is_unqualified_block_site(text: &str, position: Position) -> bool {
+    super::line_prefix(text, position).is_some_and(|prefix| {
+        let trimmed = prefix.trim_start();
+        trimmed.starts_with("->") && !trimmed.contains("::")
+    })
 }
 
-fn completion_context(line_prefix: &str) -> CompletionContext {
-    if line_prefix.trim_start().starts_with("->") {
-        return CompletionContext::BlockReference;
-    }
-
-    if let Some(index) = line_prefix.rfind("requires=(")
-        && !line_prefix[index + "requires=(".len()..].contains(')')
-    {
-        return CompletionContext::Condition;
-    }
-
-    if line_prefix.trim_start().starts_with(":if ") {
-        return CompletionContext::Condition;
-    }
-
-    if effect_prefix_is_completing_function(line_prefix) {
-        return CompletionContext::Effect;
-    }
-
-    if let Some(index) = line_prefix.rfind("reason=") {
-        let value = &line_prefix[index + "reason=".len()..];
-        if !value.chars().any(char::is_whitespace) {
-            return CompletionContext::Reason;
-        }
-    }
-
-    let site = selector_site(line_prefix);
-    if let Some(assignment) = recite_parser::metadata_assignment_at(line_prefix, line_prefix.len())
-        && let Some(site) = site
-    {
-        if assignment.key == "speaker" && !matches!(site, SelectorSite::Choice) {
-            return CompletionContext::Speaker;
-        }
-        return CompletionContext::MetadataValue {
-            key: assignment.key.to_owned(),
-            site,
-        };
-    }
-
-    if is_metadata_key_position(line_prefix, site) {
-        return CompletionContext::MetadataKey;
-    }
-
-    CompletionContext::None
-}
-
-fn items(items: Vec<CompletionItem>) -> CompletionResponse {
-    CompletionResponse::Array(items)
-}
-
-fn block_completion_items(
-    snapshot: &LiveProjectSnapshot,
+fn extend_project_block_items(
+    snapshot: &AuthoringSnapshot,
+    items: &mut Vec<CompletionItem>,
     catalog: &UiCatalog,
-) -> Vec<CompletionItem> {
-    super::block_names(snapshot)
-        .into_iter()
-        .map(|name| CompletionItem {
-            label: name,
+) {
+    let result = snapshot.project_symbols(SymbolQueryOptions::new(true));
+    let symbols = match result {
+        QueryResult::Ready(symbols) | QueryResult::Partial { value: symbols, .. } => symbols,
+        QueryResult::NoMatch | QueryResult::Unavailable(_) | _ => return,
+    };
+    items.extend(symbols.into_iter().filter_map(|symbol| {
+        let SymbolIdentity::Block(name) = symbol.identity() else {
+            return None;
+        };
+        (symbol.role() == SymbolRole::Definition).then(|| CompletionItem {
+            label: name.as_str().to_owned(),
             kind: Some(CompletionItemKind::REFERENCE),
             detail: Some(catalog.text(MsgId::LspCompletionBlock)),
             ..CompletionItem::default()
         })
-        .collect()
+    }));
 }
 
-fn speaker_completion_items(schema: &ProjectSchema, catalog: &UiCatalog) -> Vec<CompletionItem> {
-    schema
-        .speakers
-        .iter()
-        .map(|(id, definition)| CompletionItem {
-            label: id.clone(),
-            kind: Some(CompletionItemKind::CONSTANT),
-            detail: Some(catalog.text(MsgId::LspCompletionSpeaker)),
-            documentation: definition
-                .display_name
-                .as_ref()
-                .map(|display_name| Documentation::String(display_name.clone())),
-            ..CompletionItem::default()
-        })
-        .collect()
-}
-
-fn metadata_key_completion_items(
-    schema: &ProjectSchema,
+fn completion_item(
+    candidate: &CompletionCandidate,
+    _text: &str,
+    schema: Option<&ProjectSchema>,
     catalog: &UiCatalog,
-) -> Vec<CompletionItem> {
-    schema
-        .metadata
-        .iter()
-        .map(|(key, definition)| CompletionItem {
-            label: key.clone(),
-            kind: Some(CompletionItemKind::FIELD),
-            detail: Some(definition.domain.as_ref().map_or_else(
-                || catalog.text(MsgId::LspCompletionMetadataKey),
-                |domain| {
-                    catalog.format_pairs(
-                        MsgId::LspCompletionMetadataKeyWithDomain,
-                        [("domain", domain.as_str())],
-                    )
-                },
-            )),
-            ..CompletionItem::default()
-        })
-        .collect()
-}
-
-fn metadata_value_completion_items(
-    schema: &ProjectSchema,
-    text: &str,
-    line: &str,
-    line_index: usize,
-    key: &str,
-    site: SelectorSite,
-    catalog: &UiCatalog,
-) -> Vec<CompletionItem> {
-    let detail = schema.metadata.get(key).map_or_else(
-        || catalog.text(MsgId::LspCompletionMetadataKey),
-        |metadata| {
-            metadata.domain.as_deref().map_or_else(
-                || match metadata.type_ref {
-                    SchemaTypeRef::Speaker => catalog.text(MsgId::LspCompletionSpeaker),
-                    _ => catalog.text(MsgId::LspCompletionMetadataKey),
-                },
-                |domain| {
-                    catalog.format_pairs(MsgId::LspCompletionMetadataDomain, [("domain", domain)])
-                },
-            )
-        },
-    );
-    schema_value_candidates(schema, key, text, line, line_index, site)
-        .into_iter()
-        .map(|value| CompletionItem {
-            label: value,
-            kind: Some(CompletionItemKind::VALUE),
-            detail: Some(detail.clone()),
-            ..CompletionItem::default()
-        })
-        .collect()
-}
-
-fn current_token(line_prefix: &str) -> Option<&str> {
-    line_prefix.split_whitespace().last()
-}
-
-fn is_metadata_key_position(line_prefix: &str, site: Option<SelectorSite>) -> bool {
-    let Some(site) = site else {
-        return false;
+) -> Option<CompletionItem> {
+    let mut item = CompletionItem {
+        label: candidate.name().to_owned(),
+        kind: Some(candidate_kind(candidate.kind())),
+        ..CompletionItem::default()
     };
-    let Some(token) = current_token(line_prefix) else {
-        return false;
-    };
-    if token.is_empty() || token.contains('=') {
-        return false;
+    match candidate.kind() {
+        CompletionCandidateKind::Block => {
+            item.detail = Some(catalog.text(MsgId::LspCompletionBlock));
+        }
+        CompletionCandidateKind::Speaker => {
+            item.detail = Some(catalog.text(MsgId::LspCompletionSpeaker));
+            if let CompletionCandidateDetail::Speaker { display_name } = candidate.detail() {
+                item.documentation = display_name.clone().map(Documentation::String);
+            }
+        }
+        CompletionCandidateKind::MetadataKey => {
+            item.detail = Some(metadata_key_detail(candidate, catalog));
+        }
+        CompletionCandidateKind::MetadataValue => {
+            if !recite_parser::is_metadata_symbol(candidate.name()) {
+                return None;
+            }
+            item.detail = Some(metadata_value_detail(candidate, catalog));
+        }
+        CompletionCandidateKind::Condition => {
+            let definition = schema?.conditions.get(candidate.name())?;
+            item.detail = Some(catalog.format_pairs(
+                MsgId::LspCompletionCondition,
+                [("returns", super::condition_detail(&definition.returns))],
+            ));
+            item.documentation = Some(Documentation::String(
+                catalog.text(MsgId::LspCompletionConditionDocumentation),
+            ));
+        }
+        CompletionCandidateKind::Effect => {
+            let definition = schema?.effects.get(candidate.name())?;
+            item.detail = Some(catalog.format_pairs(
+                MsgId::LspCompletionEffect,
+                [("modes", super::effect_detail(&definition.modes))],
+            ));
+            item.documentation = Some(Documentation::String(
+                catalog.text(MsgId::LspCompletionEffectDocumentation),
+            ));
+        }
+        CompletionCandidateKind::AvailabilityReason => {
+            let CompletionCandidateDetail::AvailabilityReason {
+                template,
+                parameters,
+            } = candidate.detail()
+            else {
+                return None;
+            };
+            // A reason with parameters is not authorable by the source syntax's
+            // shorthand.  Keep the compiler's complete registry available to
+            // other typed consumers while preserving the LSP contract.
+            if *parameters != 0 {
+                return None;
+            }
+            item.kind = Some(CompletionItemKind::CONSTANT);
+            item.detail = Some(catalog.text(MsgId::LspCompletionAvailabilityReason));
+            item.documentation = Some(Documentation::String(template.clone()));
+        }
+        CompletionCandidateKind::ProjectionQuery
+        | CompletionCandidateKind::ProjectionProjector
+        | CompletionCandidateKind::ProjectionInput
+        | CompletionCandidateKind::ProjectionQueryResult
+        | CompletionCandidateKind::ProjectionOutput
+        | CompletionCandidateKind::ProjectionLabel => {
+            // Projection names are only completed in the schema manifest.  A
+            // source query should not leak schema-only lexical candidates.
+            return None;
+        }
+        _ => return None,
     }
-    let field_count = line_prefix.split_whitespace().count();
-    match site {
-        SelectorSite::Block => field_count >= 3 && !("default".starts_with(token)),
-        SelectorSite::Line | SelectorSite::Choice => field_count >= 3,
+    Some(item)
+}
+
+fn candidate_kind(kind: CompletionCandidateKind) -> CompletionItemKind {
+    match kind {
+        CompletionCandidateKind::Block | CompletionCandidateKind::ProjectionProjector => {
+            CompletionItemKind::REFERENCE
+        }
+        CompletionCandidateKind::Speaker | CompletionCandidateKind::AvailabilityReason => {
+            CompletionItemKind::CONSTANT
+        }
+        CompletionCandidateKind::MetadataKey => CompletionItemKind::FIELD,
+        CompletionCandidateKind::MetadataValue | CompletionCandidateKind::ProjectionOutput => {
+            CompletionItemKind::VALUE
+        }
+        CompletionCandidateKind::Condition
+        | CompletionCandidateKind::Effect
+        | CompletionCandidateKind::ProjectionQuery => CompletionItemKind::FUNCTION,
+        CompletionCandidateKind::ProjectionInput
+        | CompletionCandidateKind::ProjectionQueryResult => CompletionItemKind::VARIABLE,
+        CompletionCandidateKind::ProjectionLabel => CompletionItemKind::CONSTANT,
+        _ => CompletionItemKind::VALUE,
     }
 }
 
-fn effect_prefix_is_completing_function(line_prefix: &str) -> bool {
-    let mut parts = line_prefix.split_whitespace();
-    matches!(parts.next(), Some("!"))
-        && parts.next().is_some()
-        && parts.next().is_none_or(|function| !function.contains('('))
+fn metadata_key_detail(candidate: &CompletionCandidate, catalog: &UiCatalog) -> String {
+    match candidate.detail() {
+        CompletionCandidateDetail::Metadata { domain, .. } => domain.as_deref().map_or_else(
+            || catalog.text(MsgId::LspCompletionMetadataKey),
+            |domain| {
+                catalog.format_pairs(
+                    MsgId::LspCompletionMetadataKeyWithDomain,
+                    [("domain", domain)],
+                )
+            },
+        ),
+        _ => catalog.text(MsgId::LspCompletionMetadataKey),
+    }
+}
+
+fn metadata_value_detail(candidate: &CompletionCandidate, catalog: &UiCatalog) -> String {
+    match candidate.detail() {
+        CompletionCandidateDetail::Speaker { .. } => catalog.text(MsgId::LspCompletionSpeaker),
+        CompletionCandidateDetail::Metadata { domain, .. } => domain.as_deref().map_or_else(
+            || catalog.text(MsgId::LspCompletionMetadataKey),
+            |domain| catalog.format_pairs(MsgId::LspCompletionMetadataDomain, [("domain", domain)]),
+        ),
+        CompletionCandidateDetail::SchemaType(type_ref) => super::schema_type_detail(type_ref),
+        _ => catalog.text(MsgId::LspCompletionMetadataKey),
+    }
 }

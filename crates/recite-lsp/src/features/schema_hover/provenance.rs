@@ -80,7 +80,7 @@ fn format_scoped_fingerprints(fingerprints: &[recite_core::ProducerFingerprint])
     values.join(", ")
 }
 
-pub(super) fn origin_detail(catalog: &UiCatalog, origin: &recite_core::ProducerOrigin) -> String {
+pub(crate) fn origin_detail(catalog: &UiCatalog, origin: &recite_core::ProducerOrigin) -> String {
     catalog.format_args(
         MsgId::LspHoverProducedBy,
         &UiArgs::from([

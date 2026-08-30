@@ -26,6 +26,37 @@ pub(crate) fn source_position_to_lsp(text: &str, position: SourcePosition) -> Po
     }
 }
 
+/// Converts an LSP UTF-16 position to the compiler's 1-based scalar position.
+///
+/// LSP positions may address the middle of a UTF-16 surrogate pair.  The
+/// compiler has no such position, so those cursors snap to the containing
+/// scalar's start.  CRLF's carriage return is excluded from the logical line,
+/// matching the source spans produced by the parser.
+pub(crate) fn lsp_position_to_source(text: &str, position: Position) -> Option<SourcePosition> {
+    let line_index = usize::try_from(position.line).ok()?;
+    let raw_line = text.split('\n').nth(line_index)?;
+    let line = raw_line.strip_suffix('\r').unwrap_or(raw_line);
+    let column = scalar_column_for_utf16(line, position.character)?;
+    SourcePosition::new(position.line.saturating_add(1), column).ok()
+}
+
+fn scalar_column_for_utf16(line: &str, character: u32) -> Option<u32> {
+    let mut utf16 = 0_u32;
+    let mut scalar = 1_u32;
+    for value in line.chars() {
+        if utf16 == character {
+            return Some(scalar);
+        }
+        let next = utf16.saturating_add(u32::try_from(value.len_utf16()).ok()?);
+        if character < next {
+            return Some(scalar);
+        }
+        utf16 = next;
+        scalar = scalar.saturating_add(1);
+    }
+    (utf16 == character).then_some(scalar)
+}
+
 fn advance_inclusive_end(text: &str, position: SourcePosition) -> SourcePosition {
     let lines = DocumentLines::new(text);
     let line_index = position

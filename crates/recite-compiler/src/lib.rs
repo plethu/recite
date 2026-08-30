@@ -68,10 +68,10 @@ pub use authoring::{
     CompletionCandidateDetail, CompletionCandidateKind, CompletionItem, DiagnosticCollection,
     DiagnosticIter, DocumentDelta, DocumentLayer, DocumentMetadata, DocumentSnapshot,
     DocumentVersion, FunctionReferenceKind, FunctionReferenceSummary, HoverInfo, MetadataScalar,
-    MetadataSummary, MetadataValue, MetadataValueKind, NavigationResult, OpenDocument, QueryClass,
-    QueryResult, QueryUnavailableReason, SavedDocument, SemanticFact, SnapshotGeneration,
-    StableIdKind, StableIdSummary, SymbolIdentity, SymbolKind, SymbolLocation, SymbolQueryOptions,
-    SymbolRole,
+    MetadataSummary, MetadataValue, MetadataValueDetail, MetadataValueKind, NavigationResult,
+    OpenDocument, QueryClass, QueryResult, QueryUnavailableReason, SavedDocument, SemanticFact,
+    SemanticSymbolKind, SnapshotGeneration, StableIdKind, StableIdSummary, SymbolIdentity,
+    SymbolKind, SymbolLocation, SymbolQueryOptions, SymbolRole,
 };
 pub use compile::{
     CompileError, CompileInput, CompileOptions, CompileReport, CompiledAssetOutput, compile_inputs,

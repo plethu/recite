@@ -7,7 +7,9 @@ mod metadata_context;
 #[path = "schema/projection.rs"]
 mod projection;
 
-use recite_core::{DocumentKey, SourceSpan};
+use recite_core::{
+    DocumentKey, MetadataDomainDefinition, MetadataTarget, ProjectSchema, SourceSpan,
+};
 
 use super::super::snapshot::{AuthoringSnapshot, DocumentSnapshot};
 use super::context::Site;
@@ -68,6 +70,25 @@ pub(super) fn complete_site(
     }
     sort_candidates(&mut candidates);
     result(candidates, unavailable)
+}
+
+pub(super) fn contextual_metadata_context(
+    schema: &ProjectSchema,
+    text: &str,
+    key: &str,
+    line_number: u32,
+    target: MetadataTarget,
+) -> Option<String> {
+    let domain_name = schema.metadata.get(key)?.domain.as_ref()?;
+    let MetadataDomainDefinition::Contextual(domain) = schema.metadata_domains.get(domain_name)?
+    else {
+        return None;
+    };
+    match metadata_context::resolve_selector(text, &domain.selector, line_number, target) {
+        metadata_context::SelectorResolution::Value(value) => Some(value.to_owned()),
+        metadata_context::SelectorResolution::Missing
+        | metadata_context::SelectorResolution::Malformed => None,
+    }
 }
 
 fn sort_candidates(candidates: &mut [CompletionCandidate]) {
