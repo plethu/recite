@@ -10,7 +10,7 @@ use crate::diagnostics::{report_diagnostics, report_targeted_diagnostics};
 use crate::dialogue_locale::LoadedDialoguePreview;
 use crate::error::CliError;
 use crate::fs::{
-    collect_input_files, compile_options, load_optional_schema, load_schema,
+    check_fresh, collect_input_files, compile_options, load_optional_schema, load_schema,
     read_compile_inputs_for_output, read_compile_inputs_from_files, reject_output_input_alias,
     validate_inputs, validate_project, write_staged,
 };
@@ -74,8 +74,17 @@ pub(crate) fn run_command(
                 diagnostic.code.category() == DiagnosticCategory::Metadata
             })
         }
-        Command::ValidateProject(args) | Command::CheckFresh(args) => {
+        Command::ValidateProject(args) => {
             let diagnostics = validate_project(args.project_root)?;
+            report_diagnostics(stderr, messages, diagnostics.iter())?;
+            diagnostics
+                .iter()
+                .all(|diagnostic| diagnostic.severity != recite_core::DiagnosticSeverity::Error)
+                .then_some(())
+                .ok_or(CliError::Diagnostics)
+        }
+        Command::CheckFresh(args) => {
+            let diagnostics = check_fresh(args.project_root)?;
             report_diagnostics(stderr, messages, diagnostics.iter())?;
             diagnostics
                 .iter()
