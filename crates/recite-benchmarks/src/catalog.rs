@@ -1,6 +1,5 @@
 use std::collections::BTreeMap;
 use std::fs;
-use std::path::Path;
 
 use recite_core::LocaleId;
 use recite_runtime::{LocaleProvider, TextDomain};
@@ -120,6 +119,3 @@ fn parse_po_string(value: &str) -> BenchmarkResult<String> {
     }
     Ok(output)
 }
-
-#[allow(dead_code)]
-fn _assert_path(_: &Path) {}

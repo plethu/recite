@@ -3,7 +3,7 @@ use std::{collections::BTreeMap, fmt};
 use fluent_bundle::{FluentBundle, FluentResource};
 use unic_langid::LanguageIdentifier;
 
-use crate::{DEFAULT_LOCALE, DEFAULT_RESOURCE, MsgId, ResourceId, UiArgs};
+use crate::{DEFAULT_LOCALE, DEFAULT_RESOURCE, MsgId, UiArgs};
 
 mod diagnostics;
 mod renderer;
@@ -135,13 +135,8 @@ impl UiCatalog {
         format!("[UI text unavailable: {id} ({error})]")
     }
 
-    #[allow(
-        clippy::expect_used,
-        reason = "the static message registry guarantees valid resource IDs"
-    )]
     pub fn format_checked(&self, id: MsgId, args: &UiArgs) -> Result<String, CatalogError> {
-        let resource_id =
-            ResourceId::new(id.key()).expect("static message ID is a valid resource ID");
+        let resource_id = id.resource_id();
         self.format_resource_checked(&resource_id, args)
     }
 

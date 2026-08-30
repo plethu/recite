@@ -1,8 +1,6 @@
-use std::fmt::Write as _;
-
 use recite_core::{SourceId, SourceIdKind};
 
-use super::FixtureGenerator;
+use super::{FixtureGenerator, append_line};
 use crate::content::GeneratedText;
 
 const END_TARGET: &str = recite_core::END_DIVERT_TARGET;
@@ -27,52 +25,54 @@ impl FixtureGenerator {
     fn emit_block(&mut self, block: u32, source: &mut String) {
         let default = if block == 0 { " default" } else { "" };
         let speaker = block % 8;
-        writeln!(
+        append_line(
             source,
-            ":: block_{block:05}{default} speaker=speaker_{speaker:02} tier=\"{}\"",
-            self.profile.name
-        )
-        .expect("write string");
-        writeln!(source, "# synthetic block {block:05}").expect("write string");
+            format_args!(
+                ":: block_{block:05}{default} speaker=speaker_{speaker:02} tier=\"{}\"",
+                self.profile.name
+            ),
+        );
+        append_line(source, format_args!("# synthetic block {block:05}"));
         if block.is_multiple_of(5) {
-            writeln!(source, "! immediate play_sfx(ping)").expect("write string");
+            append_line(source, "! immediate play_sfx(ping)");
         }
         if block.is_multiple_of(7) {
-            writeln!(source, "! deferred advance_thread(main, active)").expect("write string");
+            append_line(source, "! deferred advance_thread(main, active)");
         }
         if block == 0 {
-            writeln!(source, "! blocking advance_thread(main, active)").expect("write string");
+            append_line(source, "! blocking advance_thread(main, active)");
         }
 
         let lines = self.lines_in_block(block);
         for line in 0..lines {
             if line == 0 && self.uses_relationship_match(block) {
-                writeln!(source, ":match relationship(speaker_00, speaker_01)")
-                    .expect("write string");
-                writeln!(source, "  :case active").expect("write string");
+                append_line(source, ":match relationship(speaker_00, speaker_01)");
+                append_line(source, "  :case active");
                 self.emit_line(block, line, speaker, 4, source);
             } else {
                 self.emit_line(block, line, speaker, 0, source);
             }
         }
-        writeln!(source, "-> {}\n", self.block_fallthrough_target(block)).expect("write string");
+        append_line(
+            source,
+            format_args!("-> {}\n", self.block_fallthrough_target(block)),
+        );
     }
 
     fn emit_line(&self, block: u32, line: u32, speaker: u32, indent: usize, source: &mut String) {
         let prefix = " ".repeat(indent);
         let body_prefix = " ".repeat(indent + 2);
-        writeln!(
+        append_line(
             source,
-            "{prefix}> {} speaker=speaker_{speaker:02} portrait=\"portrait_{speaker:02}\"",
-            self.entry_source_id(SourceIdKind::Line, block, line)
-        )
-        .expect("write string");
-        writeln!(
+            format_args!(
+                "{prefix}> {} speaker=speaker_{speaker:02} portrait=\"portrait_{speaker:02}\"",
+                self.entry_source_id(SourceIdKind::Line, block, line)
+            ),
+        );
+        append_line(
             source,
-            "{body_prefix}{}",
-            self.entry_text("line", block, line)
-        )
-        .expect("write string");
+            format_args!("{body_prefix}{}", self.entry_text("line", block, line)),
+        );
         if line == 0 && self.block_has_choices(block) {
             self.emit_choices(block, indent + 2, source);
         }
@@ -92,19 +92,18 @@ impl FixtureGenerator {
             } else {
                 String::new()
             };
-            writeln!(
+            append_line(
                 source,
-                "{choice_prefix}? {} sfx=chime{condition}",
-                self.entry_source_id(SourceIdKind::Choice, block, choice)
-            )
-            .expect("write string");
-            writeln!(
+                format_args!(
+                    "{choice_prefix}? {} sfx=chime{condition}",
+                    self.entry_source_id(SourceIdKind::Choice, block, choice)
+                ),
+            );
+            append_line(
                 source,
-                "{body_prefix}{}",
-                self.entry_text("choice", block, choice)
-            )
-            .expect("write string");
-            writeln!(source, "{body_prefix}-> {target}").expect("write string");
+                format_args!("{body_prefix}{}", self.entry_text("choice", block, choice)),
+            );
+            append_line(source, format_args!("{body_prefix}-> {target}"));
         }
     }
 
