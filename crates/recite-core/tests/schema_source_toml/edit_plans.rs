@@ -1,15 +1,23 @@
-use std::collections::BTreeSet;
+use std::collections::{BTreeMap, BTreeSet};
 
 use recite_core::{
-    AvailabilityReasonDefinition, ConditionDefinition, ConditionReturnType, EffectDefinition,
-    EffectMode, ParameterDefinition, SchemaSourceEdit, SchemaSourceEditError, SchemaTypeRef,
-    load_schema_source_str,
+    AvailabilityReasonArgBinding, AvailabilityReasonDefinition, AvailabilityReasonId,
+    ConditionAvailabilityReasonMapping, ConditionDefinition, ConditionReturnType, EffectDefinition,
+    EffectMode, ParameterDefinition, ProducerMetadataValue, ProducerOrigin, SchemaLiteralValue,
+    SchemaSourceEdit, SchemaSourceEditError, SchemaTypeRef, load_schema_source_str,
 };
 
 fn source(text: &str) -> recite_core::SchemaSource {
     match load_schema_source_str("schema.toml", text).source {
         Some(source) => source,
         None => panic!("valid standalone schema required"),
+    }
+}
+
+fn reason_id(name: &str) -> AvailabilityReasonId {
+    match AvailabilityReasonId::new(name) {
+        Ok(id) => id,
+        Err(error) => panic!("test reason id must be valid: {error}"),
     }
 }
 
@@ -118,4 +126,120 @@ fn malformed_typed_declaration_retains_core_diagnostic_authority() {
         },
     });
     assert!(matches!(error, Err(SchemaSourceEditError::Diagnostics(_))));
+}
+
+#[test]
+fn float_literal_lexeme_and_reason_origin_round_trip_without_loss() {
+    let original = source("schema_version = 1\n[producer]\nid = \"dialogue\"\n");
+    let origin = ProducerOrigin {
+        kind: "data_table".to_owned(),
+        id: "content/reasons.csv".to_owned(),
+        label: Some("Reasons".to_owned()),
+        extensions: BTreeMap::from([(
+            "x-recite:source".to_owned(),
+            ProducerMetadataValue::String("import-7".to_owned()),
+        )]),
+    };
+    let reason = AvailabilityReasonDefinition {
+        template: "Value is {value}".to_owned(),
+        params: vec![ParameterDefinition {
+            name: "value".to_owned(),
+            type_ref: SchemaTypeRef::Float,
+        }],
+        origin: Some(origin.clone()),
+    };
+    let exact = "1.23456789012345678901234567890".to_owned();
+    let condition = ConditionDefinition {
+        params: Vec::new(),
+        returns: ConditionReturnType::Bool,
+        availability_reason: Some(ConditionAvailabilityReasonMapping {
+            reason: reason_id("not_ready"),
+            args: BTreeMap::from([(
+                "value".to_owned(),
+                AvailabilityReasonArgBinding::Literal(SchemaLiteralValue::Float(exact.clone())),
+            )]),
+        }),
+    };
+    let mut edited = original.clone();
+    original
+        .plan_edit(SchemaSourceEdit::AddAvailabilityReason {
+            name: "not_ready".to_owned(),
+            definition: reason,
+        })
+        .expect("reason plan")
+        .apply(&mut edited)
+        .expect("reason apply");
+    edited
+        .plan_edit(SchemaSourceEdit::AddCondition {
+            name: "ready".to_owned(),
+            definition: condition.clone(),
+        })
+        .expect("condition plan")
+        .apply(&mut edited)
+        .expect("condition apply");
+
+    assert_eq!(edited.schema().conditions["ready"], condition);
+    assert_eq!(
+        edited.schema().availability_reasons[&reason_id("not_ready")].origin,
+        Some(origin)
+    );
+    assert!(edited.source_text().contains(&exact));
+    let round_trip = source(&edited.source_text());
+    assert_eq!(edited.schema_fingerprint(), round_trip.schema_fingerprint());
+    assert_eq!(edited.source_fingerprint(), round_trip.source_fingerprint());
+}
+
+#[test]
+fn declaration_plans_accept_loader_valid_empty_inline_sections() {
+    let original = source(
+        "schema_version = 1\nconditions = {} # conditions\neffects = {} # effects\navailability_reasons = {} # reasons\n[producer]\nid = \"dialogue\"\n",
+    );
+    let mut edited = original.clone();
+    edited
+        .plan_edit(SchemaSourceEdit::AddCondition {
+            name: "ready".to_owned(),
+            definition: ConditionDefinition {
+                params: Vec::new(),
+                returns: ConditionReturnType::Bool,
+                availability_reason: None,
+            },
+        })
+        .expect("condition plan from inline section")
+        .apply(&mut edited)
+        .expect("condition apply");
+    edited
+        .plan_edit(SchemaSourceEdit::AddEffect {
+            name: "spend".to_owned(),
+            definition: EffectDefinition {
+                modes: BTreeSet::from([EffectMode::Immediate]),
+                params: Vec::new(),
+            },
+        })
+        .expect("effect plan from inline section")
+        .apply(&mut edited)
+        .expect("effect apply");
+    edited
+        .plan_edit(SchemaSourceEdit::AddAvailabilityReason {
+            name: "blocked".to_owned(),
+            definition: AvailabilityReasonDefinition {
+                template: "Blocked".to_owned(),
+                params: Vec::new(),
+                origin: None,
+            },
+        })
+        .expect("reason plan from inline section")
+        .apply(&mut edited)
+        .expect("reason apply");
+
+    assert!(edited.schema().conditions.contains_key("ready"));
+    assert!(edited.schema().effects.contains_key("spend"));
+    assert!(
+        edited
+            .schema()
+            .availability_reasons
+            .contains_key(&reason_id("blocked"))
+    );
+    assert!(edited.source_text().contains("# conditions"));
+    assert!(edited.source_text().contains("# effects"));
+    assert!(edited.source_text().contains("# reasons"));
 }

@@ -99,9 +99,7 @@ pub(super) fn new_declaration<'a>(
     let section_item = root
         .entry(section)
         .or_insert(toml_edit::Item::Table(toml_edit::Table::new()));
-    let section_table = section_item.as_table_mut().ok_or_else(|| {
-        SchemaSourceEditError::InvalidArgument(format!("'{section}' is not a TOML table"))
-    })?;
+    let section_table = section_table_for_edit(section_item, section)?;
     if section_table.contains_key(name) {
         return Err(SchemaSourceEditError::InvalidArgument(format!(
             "declaration '{name}' already exists"
@@ -114,6 +112,41 @@ pub(super) fn new_declaration<'a>(
         .ok_or_else(|| {
             SchemaSourceEditError::InvalidArgument("new declaration is not a table".to_owned())
         })
+}
+
+fn section_table_for_edit<'a>(
+    item: &'a mut toml_edit::Item,
+    section: &str,
+) -> Result<&'a mut toml_edit::Table, SchemaSourceEditError> {
+    if item.is_table() {
+        return item.as_table_mut().ok_or_else(|| {
+            SchemaSourceEditError::InvalidArgument(format!("'{section}' is not a TOML table"))
+        });
+    }
+    let Some(inline) = item.as_inline_table() else {
+        return Err(SchemaSourceEditError::InvalidArgument(format!(
+            "'{section}' is not a TOML table"
+        )));
+    };
+    if !inline.is_empty() {
+        return Err(SchemaSourceEditError::InvalidArgument(format!(
+            "'{section}' is not a TOML table"
+        )));
+    }
+    let decor = item.as_value().map(|value| value.decor().clone());
+    let mut table = inline.clone().into_table();
+    if let Some(decor) = decor {
+        if let Some(prefix) = decor.prefix().cloned() {
+            table.decor_mut().set_prefix(prefix);
+        }
+        if let Some(suffix) = decor.suffix().cloned() {
+            table.decor_mut().set_suffix(suffix);
+        }
+    }
+    *item = toml_edit::Item::Table(table);
+    item.as_table_mut().ok_or_else(|| {
+        SchemaSourceEditError::InvalidArgument(format!("'{section}' is not a TOML table"))
+    })
 }
 
 pub(super) fn set_value_preserving_decor(table: &mut toml_edit::Table, key: &str, value: String) {

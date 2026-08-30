@@ -132,6 +132,7 @@ pub enum SchemaSourceEditError {
 
 /// The identities observed when a source edit plan was applied to stale input.
 #[derive(Clone, Debug, Eq, PartialEq)]
+#[non_exhaustive]
 pub struct SchemaSourceStaleDetails {
     pub expected_file: String,
     pub actual_file: String,

@@ -88,6 +88,18 @@ fn add_reason(
     let table = new_declaration(document, "availability_reasons", name)?;
     table.insert("template", toml_edit::value(&definition.template));
     insert_params(table, &definition.params);
+    if let Some(origin) = &definition.origin {
+        let mut origin_table = toml_edit::Table::new();
+        origin_table.insert("kind", toml_edit::value(&origin.kind));
+        origin_table.insert("id", toml_edit::value(&origin.id));
+        if let Some(label) = &origin.label {
+            origin_table.insert("label", toml_edit::value(label));
+        }
+        for (key, value) in &origin.extensions {
+            origin_table.insert(key, toml_edit::Item::Value(producer_value(value)?));
+        }
+        table.insert("origin", toml_edit::Item::Table(origin_table));
+    }
     Ok(())
 }
 
@@ -125,14 +137,44 @@ fn literal_value(
     match literal {
         crate::SchemaLiteralValue::String(value) => Ok(toml_edit::Value::from(value.as_str())),
         crate::SchemaLiteralValue::Int(value) => Ok(toml_edit::Value::from(*value)),
-        crate::SchemaLiteralValue::Float(value) => value
-            .parse::<f64>()
-            .map(toml_edit::Value::from)
-            .map_err(|_| {
+        crate::SchemaLiteralValue::Float(value) => {
+            value.parse::<toml_edit::Value>().map_err(|_| {
                 SchemaSourceEditError::InvalidArgument(
                     "float literal is not finite TOML".to_owned(),
                 )
-            }),
+            })
+        }
         crate::SchemaLiteralValue::Bool(value) => Ok(toml_edit::Value::from(*value)),
+    }
+}
+
+fn producer_value(
+    value: &crate::ProducerMetadataValue,
+) -> Result<toml_edit::Value, SchemaSourceEditError> {
+    match value {
+        crate::ProducerMetadataValue::Null => Err(SchemaSourceEditError::InvalidArgument(
+            "origin null values cannot be represented in TOML".to_owned(),
+        )),
+        crate::ProducerMetadataValue::Bool(value) => Ok(toml_edit::Value::from(*value)),
+        crate::ProducerMetadataValue::Number(value) => {
+            value.parse::<toml_edit::Value>().map_err(|_| {
+                SchemaSourceEditError::InvalidArgument("origin number is not valid TOML".to_owned())
+            })
+        }
+        crate::ProducerMetadataValue::String(value) => Ok(toml_edit::Value::from(value.as_str())),
+        crate::ProducerMetadataValue::Array(values) => {
+            let mut array = toml_edit::Array::new();
+            for value in values {
+                array.push(producer_value(value)?);
+            }
+            Ok(array.into())
+        }
+        crate::ProducerMetadataValue::Object(values) => {
+            let mut table = toml_edit::InlineTable::new();
+            for (key, value) in values {
+                table.insert(key, producer_value(value)?);
+            }
+            Ok(table.into())
+        }
     }
 }
