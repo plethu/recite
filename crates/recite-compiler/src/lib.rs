@@ -51,6 +51,7 @@
 //! # }
 //! ```
 
+mod authoring;
 mod compile;
 mod diagnostics;
 mod pot;
@@ -61,6 +62,13 @@ mod wire;
 #[doc(hidden)]
 pub mod bench_support;
 
+pub use authoring::{
+    AnalysisDelta, AuthoringError, AuthoringKernel, AuthoringRequest, AuthoringSnapshot,
+    AuthoringSummary, BlockDefinitionSummary, BlockReferenceSummary, DocumentDelta, DocumentLayer,
+    DocumentMetadata, DocumentSnapshot, DocumentVersion, FunctionReferenceKind,
+    FunctionReferenceSummary, MetadataSummary, MetadataValueKind, OpenDocument, SavedDocument,
+    SnapshotGeneration, StableIdKind, StableIdSummary,
+};
 pub use compile::{
     CompileError, CompileInput, CompileOptions, CompileReport, CompiledAssetOutput, compile_inputs,
     compile_inputs_with_schema,
