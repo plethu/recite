@@ -1,5 +1,5 @@
-mod edit;
 mod build;
+mod edit;
 mod engine;
 mod input;
 mod input_state;
