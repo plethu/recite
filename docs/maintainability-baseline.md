@@ -136,8 +136,8 @@ production suppressions must carry a narrow scope and rationale.
 | `crates/recite-core/src/schema/source/export/basic.rs` | 284 | production | core/schema | cohesive | Deterministic JSON export for basic schema declarations |
 | `crates/recite-core/src/schema/source/lower/mod.rs` | 306 | production | core/schema | review | TOML source normalization and shared canonical lowering entrypoint |
 | `crates/recite-cli/src/play/driver.rs` | 360 | production | cli/play | cohesive | Shared preview driver seam |
-| `crates/recite-runtime/src/traversal/availability.rs` | 362 | production | runtime/traversal | cohesive | Deterministic availability traversal |
-| `crates/recite-runtime/src/traversal/interpolation.rs` | 398 | production | runtime/traversal | cohesive | #179/#180: typed interpolation and plural localisation after provider lookup |
+| `crates/recite-runtime/src/traversal/availability.rs` | 370 | production | runtime/traversal | cohesive | Deterministic availability traversal |
+| `crates/recite-runtime/src/traversal/interpolation.rs` | 400 | production | runtime/traversal | cohesive | #179/#180: typed interpolation and plural localisation after provider lookup |
 | `crates/recite-cli/src/play/tui/mod.rs` | 352 | production | cli/tui | review | TUI integration boundary |
 | `crates/recite-core/src/schema/manifest/raw.rs` | 391 | production | core/schema | cohesive | Lossless raw manifest model |
 | `crates/recite-compiler/src/compile/builder/rows.rs` | 353 | production | compiler | cohesive | Compiled row construction |

@@ -9,8 +9,7 @@ use crate::event::{
     ChoiceAvailability, ChoiceAvailabilityReason, ChoiceAvailabilityReasonArg,
     ChoiceAvailabilityReasonOrigin, ChoiceAvailabilityReasonTree, ChoiceAvailabilityReasonValue,
 };
-use crate::locale::{LocaleLookupOutcome, TextDomain};
-use crate::traversal::trace::LocalizedLookupTrace;
+use crate::locale::TextDomain;
 
 use super::asset::AssetView;
 use super::malformed;
@@ -338,21 +337,12 @@ fn localise_reason_template(
                 reason: error.reason().to_owned(),
             })?;
         if let Some(trace) = locale.trace {
-            trace.record_localized_lookup(LocalizedLookupTrace {
-                id: id.to_owned(),
-                source_text: source_text.to_owned(),
-                resolved_text: resolved.template.clone(),
-                domain: TextDomain::AvailabilityReason,
-                attempts: resolved.attempts.clone(),
-                matched_locale: resolved.matched_locale.clone(),
-                matched_context: resolved.matched_context.clone(),
-                matched_key: resolved.matched_key.clone(),
-                outcome: if resolved.template.is_some() {
-                    LocaleLookupOutcome::Matched
-                } else {
-                    LocaleLookupOutcome::MissingEntry
-                },
-            });
+            trace.record_localized_lookup(
+                id,
+                source_text,
+                TextDomain::AvailabilityReason,
+                &resolved,
+            );
         }
         resolved.template.unwrap_or_else(|| source_text.to_owned())
     } else {

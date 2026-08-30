@@ -2,7 +2,8 @@ use std::cell::RefCell;
 use std::collections::BTreeMap;
 
 use crate::locale::{
-    LocaleLookupAttempt, LocaleLookupOutcome, PluralResolutionAttempt, TextDomain,
+    LocaleLookupAttempt, LocaleLookupOutcome, LocaleLookupProvenance, PluralResolutionAttempt,
+    TextDomain,
 };
 
 /// Trace-only data captured while resolving runtime output.
@@ -91,7 +92,28 @@ impl DialogueTrace {
         self.plural_lines.borrow_mut().insert(id.to_owned(), trace);
     }
 
-    pub(crate) fn record_localized_lookup(&self, trace: LocalizedLookupTrace) {
+    pub(crate) fn record_localized_lookup(
+        &self,
+        id: &str,
+        source_text: &str,
+        domain: TextDomain,
+        resolved: &LocaleLookupProvenance,
+    ) {
+        let trace = LocalizedLookupTrace {
+            id: id.to_owned(),
+            source_text: source_text.to_owned(),
+            resolved_text: resolved.template.clone(),
+            domain,
+            attempts: resolved.attempts.clone(),
+            matched_locale: resolved.matched_locale.clone(),
+            matched_context: resolved.matched_context.clone(),
+            matched_key: resolved.matched_key.clone(),
+            outcome: if resolved.template.is_some() {
+                LocaleLookupOutcome::Matched
+            } else {
+                LocaleLookupOutcome::MissingEntry
+            },
+        };
         let key = format!("{:?}:{}", trace.domain, trace.id);
         self.localized_lookups.borrow_mut().insert(key, trace);
     }
