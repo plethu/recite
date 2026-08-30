@@ -3,8 +3,8 @@
 use std::collections::BTreeSet;
 
 use recite_compiler::{
-    AuthoringKernel, AuthoringRequest, CompletionCandidateKind, MetadataValue, QueryResult,
-    SavedDocument, SemanticFact, SnapshotGeneration,
+    AuthoringKernel, AuthoringRequest, CompletionCandidateDetail, CompletionCandidateKind,
+    MetadataValue, QueryResult, SavedDocument, SemanticFact, SnapshotGeneration,
 };
 use recite_core::{
     ConditionDefinition, DocumentKey, FlatMetadataDomain, MetadataDefinition,
@@ -100,7 +100,12 @@ fn completion_derives_site_from_source_and_cursor() {
         panic!("speaker site is recognized");
     };
     assert!(speakers.iter().any(|candidate| {
-        candidate.name() == "hazel" && candidate.kind() == CompletionCandidateKind::Speaker
+        candidate.name() == "hazel"
+            && candidate.kind() == CompletionCandidateKind::Speaker
+            && matches!(
+                candidate.detail(),
+                CompletionCandidateDetail::Speaker { display_name: Some(name) } if name == "Hazel"
+            )
     }));
 
     let QueryResult::Ready(empty) = kernel.snapshot().complete(&key, position(2, 48)) else {
@@ -180,33 +185,89 @@ fn references_are_key_scoped_and_include_declarations_is_typed() {
 #[test]
 fn array_metadata_retains_element_spans() {
     let mut kernel = AuthoringKernel::new();
+    let source = concat!(r#":: start tags=["a\"b", "µ"]"#, "\n");
     kernel
         .apply(AuthoringRequest::new(
             SnapshotGeneration::initial(),
-            [SavedDocument::new(
-                key("main.recite"),
-                ":: start tags=[one, \"two\"]\n",
-            )],
+            [SavedDocument::new(key("main.recite"), source)],
             [],
         ))
         .expect("source accepted");
     let metadata = &kernel.snapshot().documents()[0].summary().metadata()[0];
     assert_eq!(metadata.value_element_spans().len(), 2);
     assert!(matches!(metadata.value(), MetadataValue::Array(values) if values.len() == 2));
+    assert_eq!(metadata.value_element_spans()[0].start.column(), 16);
+    assert_eq!(
+        metadata.value_element_spans()[0]
+            .end
+            .as_ref()
+            .map(|end| end.column()),
+        Some(21)
+    );
+    assert_eq!(metadata.value_element_spans()[1].start.column(), 24);
+    assert_eq!(
+        metadata.value_element_spans()[1]
+            .end
+            .as_ref()
+            .map(|end| end.column()),
+        Some(26)
+    );
 }
 
 #[test]
-fn projection_enumeration_is_explicit_and_typed() {
-    let kernel = fixture();
-    let QueryResult::Ready(candidates) = kernel.snapshot().projection_candidates("hud") else {
-        panic!("known projector is available");
+fn block_completion_and_hover_keep_project_scope_and_source_identity() {
+    let mut kernel = AuthoringKernel::new();
+    kernel
+        .apply(AuthoringRequest::new(
+            SnapshotGeneration::initial(),
+            [
+                SavedDocument::new(key("main.recite"), ":: local\n-> lo\n"),
+                SavedDocument::new(key("other.recite"), ":: local\n:: other\n"),
+            ],
+            [],
+        ))
+        .expect("project accepted");
+    let main = key("main.recite");
+    let QueryResult::Ready(candidates) = kernel.snapshot().complete(&main, position(2, 7)) else {
+        panic!("unqualified completion is ready");
     };
-    assert!(candidates.iter().any(|candidate| {
-        candidate.name() == "hud"
-            && candidate.kind() == CompletionCandidateKind::ProjectionProjector
-    }));
-    assert!(matches!(
-        kernel.snapshot().projection_candidates("missing"),
-        QueryResult::NoMatch
-    ));
+    assert_eq!(
+        candidates
+            .iter()
+            .map(|candidate| candidate.name())
+            .collect::<Vec<_>>(),
+        ["local"]
+    );
+    let QueryResult::Ready(hover) = kernel.snapshot().hover(&main, position(2, 4)) else {
+        panic!("block reference hover is ready");
+    };
+    assert_eq!(
+        hover.location().kind(),
+        recite_compiler::SymbolKind::BlockReference
+    );
+    assert!(matches!(hover.facts(), [SemanticFact::Reference]));
+}
+
+#[test]
+fn references_without_declarations_do_not_require_incomplete_definitions() {
+    let mut kernel = AuthoringKernel::new();
+    kernel
+        .apply(AuthoringRequest::new(
+            SnapshotGeneration::initial(),
+            [
+                SavedDocument::new(key("main.recite"), ":: start\n-> target\n"),
+                SavedDocument::new(key("target.recite"), "::\n"),
+            ],
+            [],
+        ))
+        .expect("recoverable project accepted");
+    let result = kernel.snapshot().references(
+        &key("main.recite"),
+        position(2, 4),
+        recite_compiler::SymbolQueryOptions::new(false),
+    );
+    let QueryResult::Ready(references) = result else {
+        panic!("reference-only query does not consume definitions: {result:?}");
+    };
+    assert_eq!(references.len(), 1);
 }

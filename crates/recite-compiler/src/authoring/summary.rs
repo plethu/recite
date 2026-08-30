@@ -144,6 +144,7 @@ impl Collector {
             file_span,
             block_id,
             block_id_span,
+            ..
         }) = target
         {
             self.block_references.push(BlockReferenceSummary {

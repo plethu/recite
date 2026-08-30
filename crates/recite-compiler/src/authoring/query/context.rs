@@ -46,13 +46,29 @@ pub(super) fn at(key: &DocumentKey, text: &str, position: SourcePosition) -> Opt
             .unwrap_or(None);
         return Some(Site::Blocks { target, token });
     }
-    if let Some(index) = prefix.rfind("requires=(")
-        && !prefix[index + "requires=(".len()..].contains(')')
+    if trimmed.starts_with('?')
+        && let Some(assignment) = assignment_at(line, cursor)
     {
-        let start = index + "requires=(".len();
-        return Some(Site::Conditions(token_span(
-            key, text, line, line_start, start, cursor,
-        )));
+        if assignment.key == "requires" {
+            return Some(Site::Conditions(token_span(
+                key,
+                text,
+                line,
+                line_start,
+                assignment.value_start,
+                cursor,
+            )));
+        }
+        if assignment.key == "reason" {
+            return Some(Site::AvailabilityReasons(token_span(
+                key,
+                text,
+                line,
+                line_start,
+                assignment.value_start,
+                cursor,
+            )));
+        }
     }
     if trimmed.starts_with(":if ") || trimmed.starts_with(":match ") {
         let start = trim_offset + trimmed.find(' ').map_or(trimmed.len(), |index| index + 1);
@@ -66,13 +82,7 @@ pub(super) fn at(key: &DocumentKey, text: &str, position: SourcePosition) -> Opt
             key, text, line, line_start, start, cursor,
         )));
     }
-    if let Some(index) = prefix.rfind("reason=") {
-        let start = index + "reason=".len();
-        return Some(Site::AvailabilityReasons(token_span(
-            key, text, line, line_start, start, cursor,
-        )));
-    }
-    if let Some(assignment) = recite_parser::metadata_assignment_at(prefix, prefix.len()) {
+    if let Some(assignment) = assignment_at(line, cursor) {
         let token_start = line_start + assignment.value_start;
         let token = span(key, text, token_start, line_start + cursor);
         if assignment.key == "speaker" && !trimmed.starts_with('?') {
@@ -97,6 +107,10 @@ pub(super) fn at(key: &DocumentKey, text: &str, position: SourcePosition) -> Opt
         });
     }
     None
+}
+
+fn assignment_at(line: &str, cursor: usize) -> Option<recite_parser::MetadataAssignment<'_>> {
+    recite_parser::metadata_assignment_at(line, cursor)
 }
 
 fn metadata_target(line: &str) -> MetadataTarget {

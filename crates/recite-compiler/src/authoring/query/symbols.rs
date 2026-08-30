@@ -3,6 +3,9 @@ use super::types::{SymbolIdentity, SymbolKind, SymbolLocation, SymbolQueryOption
 use recite_core::{DocumentKey, SourceId, SourcePosition, SourceSpan};
 
 pub(super) fn contains(span: &SourceSpan, position: SourcePosition) -> bool {
+    if span.end.is_none() {
+        return false;
+    }
     let start = (span.start.line(), span.start.column());
     let end = span
         .end
@@ -114,17 +117,27 @@ pub(super) fn symbol_locations(
                 span: function.span().clone(),
             }),
     );
-    locations.sort_by_key(|location| {
-        let span = location.span();
-        (
-            span.start.line(),
-            span.start.column(),
-            span.end
-                .map(|end| (end.line(), end.column()))
-                .unwrap_or((span.start.line(), span.start.column())),
-            symbol_kind_order(location.kind()),
-            format_identity(location.identity()),
-        )
+    locations.sort_by(|left, right| {
+        let left_span = left.span();
+        let right_span = right.span();
+        left_span
+            .start
+            .line()
+            .cmp(&right_span.start.line())
+            .then_with(|| left_span.start.column().cmp(&right_span.start.column()))
+            .then_with(|| {
+                let left_end = left_span
+                    .end
+                    .map(|end| (end.line(), end.column()))
+                    .unwrap_or((left_span.start.line(), left_span.start.column()));
+                let right_end = right_span
+                    .end
+                    .map(|end| (end.line(), end.column()))
+                    .unwrap_or((right_span.start.line(), right_span.start.column()));
+                left_end.cmp(&right_end)
+            })
+            .then_with(|| symbol_kind_order(left.kind()).cmp(&symbol_kind_order(right.kind())))
+            .then_with(|| identity_order(left.identity()).cmp(&identity_order(right.identity())))
     });
     locations
 }
@@ -139,12 +152,15 @@ fn symbol_kind_order(kind: SymbolKind) -> u8 {
         SymbolKind::Schema => 6,
     }
 }
-fn format_identity(identity: &SymbolIdentity) -> String {
-    match identity {
-        SymbolIdentity::Block(id) => format!("block:{}", id.as_str()),
-        SymbolIdentity::Source(id) => format!("source:{id:?}"),
-        SymbolIdentity::MetadataKey(key) => format!("metadata:{key}"),
-        SymbolIdentity::Function(name) => format!("function:{name}"),
-        SymbolIdentity::Schema(name) => format!("schema:{name}"),
+fn identity_order(left: &SymbolIdentity) -> (u8, &str, &str) {
+    match left {
+        SymbolIdentity::Block(id) => (0, id.as_str(), ""),
+        SymbolIdentity::Source(SourceId::Missing) => (1, "", ""),
+        SymbolIdentity::Source(SourceId::Draft { label }) => (2, label, ""),
+        SymbolIdentity::Source(SourceId::Frozen { label, anchor }) => (3, label, anchor.as_str()),
+        SymbolIdentity::Source(SourceId::Malformed { raw }) => (4, raw, ""),
+        SymbolIdentity::MetadataKey(key) => (5, key, ""),
+        SymbolIdentity::Function(name) => (6, name, ""),
+        SymbolIdentity::Schema(name) => (7, name, ""),
     }
 }

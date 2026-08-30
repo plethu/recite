@@ -1,11 +1,11 @@
 use recite_core::{
-    MetadataContextSelector, MetadataDomainDefinition, MetadataTarget, ProjectSchema,
-    SchemaTypeDefinition, SourceSpan,
+    MetadataDomainDefinition, MetadataTarget, ProjectSchema, SchemaTypeDefinition, SourceSpan,
 };
 
 use super::super::types::{
-    CompletionCandidate, CompletionCandidateDetail, CompletionCandidateKind,
+    CompletionCandidate, CompletionCandidateDetail, CompletionCandidateKind, QueryUnavailableReason,
 };
+use super::metadata_context::{SelectorResolution, empty_values, resolve_selector};
 
 fn candidate(
     name: &str,
@@ -122,6 +122,7 @@ pub(super) fn value_candidates(
     key: &str,
     target: MetadataTarget,
     span: &SourceSpan,
+    unavailable: &mut Vec<QueryUnavailableReason>,
     output: &mut Vec<CompletionCandidate>,
 ) {
     let Some(definition) = schema.metadata.get(key) else {
@@ -135,26 +136,55 @@ pub(super) fn value_candidates(
         .as_ref()
         .and_then(|name| schema.metadata_domains.get(name))
     {
+        let detail = CompletionCandidateDetail::Metadata {
+            type_ref: definition.type_ref.clone(),
+            domain: definition.domain.clone(),
+        };
         match domain {
             MetadataDomainDefinition::Flat(domain) => {
                 output.extend(domain.values.iter().map(|value| {
                     candidate(
                         value,
                         CompletionCandidateKind::MetadataValue,
-                        CompletionCandidateDetail::None,
+                        detail.clone(),
                         span,
                     )
                 }))
             }
             MetadataDomainDefinition::Contextual(domain) => {
-                if let Some(context) = selector_value(text, &domain.selector, span.start.line())
-                    .and_then(|value| domain.values_by_context.get(value))
-                {
-                    output.extend(context.iter().map(|value| {
+                let context = resolve_selector(text, &domain.selector, span.start.line(), target);
+                let values = match context {
+                    SelectorResolution::Value(value) => domain.values_by_context.get(value),
+                    SelectorResolution::Missing => match &domain.missing_context {
+                        recite_core::MissingMetadataContextPolicy::Diagnostic => {
+                            unavailable.push(QueryUnavailableReason::MissingMetadataContext);
+                            None
+                        }
+                        recite_core::MissingMetadataContextPolicy::Empty => Some(empty_values()),
+                        recite_core::MissingMetadataContextPolicy::Fallback { domain } => {
+                            match schema.metadata_domains.get(domain) {
+                                Some(MetadataDomainDefinition::Flat(domain)) => {
+                                    Some(&domain.values)
+                                }
+                                Some(MetadataDomainDefinition::Contextual(_)) | None => {
+                                    unavailable
+                                        .push(QueryUnavailableReason::MalformedMetadataContext);
+                                    None
+                                }
+                            }
+                        }
+                    },
+                    SelectorResolution::Malformed => {
+                        unavailable.push(QueryUnavailableReason::MalformedMetadataContext);
+                        None
+                    }
+                };
+                if let Some(values) = values {
+                    output.extend(values.iter().map(|value| {
                         candidate(
                             value,
                             CompletionCandidateKind::MetadataValue,
-                            CompletionCandidateDetail::None,
+                            detail.clone(),
                             span,
                         )
                     }));
@@ -164,21 +194,27 @@ pub(super) fn value_candidates(
         return;
     }
     match &definition.type_ref {
-        recite_core::SchemaTypeRef::Speaker => output.extend(schema.speakers.keys().map(|value| {
-            candidate(
-                value,
-                CompletionCandidateKind::MetadataValue,
-                CompletionCandidateDetail::None,
-                span,
-            )
-        })),
+        recite_core::SchemaTypeRef::Speaker => {
+            output.extend(schema.speakers.iter().map(|(value, definition)| {
+                candidate(
+                    value,
+                    CompletionCandidateKind::MetadataValue,
+                    CompletionCandidateDetail::Speaker {
+                        display_name: definition.display_name.clone(),
+                    },
+                    span,
+                )
+            }))
+        }
         recite_core::SchemaTypeRef::Registry(name) => {
             if let Some(registry) = schema.registries.get(name) {
                 output.extend(registry.values.iter().map(|value| {
                     candidate(
                         value,
                         CompletionCandidateKind::MetadataValue,
-                        CompletionCandidateDetail::None,
+                        CompletionCandidateDetail::SchemaType(
+                            recite_core::SchemaTypeRef::Registry(name.clone()),
+                        ),
                         span,
                     )
                 }));
@@ -190,7 +226,9 @@ pub(super) fn value_candidates(
                     candidate(
                         value,
                         CompletionCandidateKind::MetadataValue,
-                        CompletionCandidateDetail::None,
+                        CompletionCandidateDetail::SchemaType(recite_core::SchemaTypeRef::Enum(
+                            name.clone(),
+                        )),
                         span,
                     )
                 }));
@@ -198,21 +236,4 @@ pub(super) fn value_candidates(
         }
         _ => {}
     }
-}
-
-fn selector_value<'a>(
-    text: &'a str,
-    selector: &MetadataContextSelector,
-    line_number: u32,
-) -> Option<&'a str> {
-    let line = text.lines().nth(line_number.checked_sub(1)? as usize)?;
-    let wanted = match selector {
-        MetadataContextSelector::FieldSpeaker => "speaker",
-        MetadataContextSelector::MetadataKey(key) => key,
-    };
-    recite_parser::metadata_assignments(line)
-        .into_iter()
-        .rev()
-        .find(|assignment| assignment.key == wanted)
-        .map(|assignment| assignment.value)
 }

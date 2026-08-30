@@ -36,15 +36,11 @@ impl AuthoringSnapshot {
             return QueryResult::NoMatch;
         };
         let locations = symbol_locations(key, document, options);
-        if symbols_complete(document.participation()) {
+        let unavailable = incomplete_symbol_classes(document.participation());
+        if unavailable.is_empty() {
             QueryResult::Ready(locations)
         } else {
-            QueryResult::partial(
-                locations,
-                vec![QueryUnavailableReason::Incomplete(
-                    QueryClass::BlockReferences,
-                )],
-            )
+            QueryResult::partial(locations, unavailable)
         }
     }
 
@@ -52,20 +48,15 @@ impl AuthoringSnapshot {
     #[must_use]
     pub fn project_symbols(&self, options: SymbolQueryOptions) -> QueryResult<Vec<SymbolLocation>> {
         let mut locations = Vec::new();
-        let mut complete = true;
+        let mut unavailable = Vec::new();
         for document in self.documents() {
             locations.extend(symbol_locations(document.key(), document, options));
-            complete &= symbols_complete(document.participation());
+            unavailable.extend(incomplete_symbol_classes(document.participation()));
         }
-        if complete {
+        if unavailable.is_empty() {
             QueryResult::Ready(locations)
         } else {
-            QueryResult::partial(
-                locations,
-                vec![QueryUnavailableReason::Incomplete(
-                    QueryClass::BlockDefinitions,
-                )],
-            )
+            QueryResult::partial(locations, unavailable)
         }
     }
 
@@ -103,8 +94,16 @@ impl AuthoringSnapshot {
         let mut locations = Vec::new();
         let mut unavailable = Vec::new();
         for target in self.documents() {
+            let relevant_references = target.key().as_str() == target_key
+                || target
+                    .summary()
+                    .block_references()
+                    .iter()
+                    .any(|reference| reference.file().is_some_and(|file| file == target_key));
             if target.key().as_str() == target_key {
-                if !target.participation().block_definitions().is_complete() {
+                if options.include_declarations()
+                    && !target.participation().block_definitions().is_complete()
+                {
                     unavailable.push(QueryUnavailableReason::Incomplete(
                         QueryClass::BlockDefinitions,
                     ));
@@ -122,10 +121,13 @@ impl AuthoringSnapshot {
                     }));
                 }
             }
-            if !target.participation().block_references().is_complete() {
+            if relevant_references && !target.participation().block_references().is_complete() {
                 unavailable.push(QueryUnavailableReason::Incomplete(
                     QueryClass::BlockReferences,
                 ));
+                continue;
+            }
+            if !relevant_references {
                 continue;
             }
             locations.extend(
@@ -164,11 +166,35 @@ impl AuthoringSnapshot {
     }
 }
 
-fn symbols_complete(participation: crate::ValidationParticipation) -> bool {
-    participation.block_definitions().is_complete()
-        && participation.block_references().is_complete()
-        && participation.stable_ids().is_complete()
-        && participation.metadata().is_complete()
-        && participation.condition_functions().is_complete()
-        && participation.effect_functions().is_complete()
+fn incomplete_symbol_classes(
+    participation: crate::ValidationParticipation,
+) -> Vec<QueryUnavailableReason> {
+    [
+        (
+            QueryClass::BlockDefinitions,
+            participation.block_definitions().is_complete(),
+        ),
+        (
+            QueryClass::BlockReferences,
+            participation.block_references().is_complete(),
+        ),
+        (
+            QueryClass::StableIds,
+            participation.stable_ids().is_complete(),
+        ),
+        (QueryClass::Metadata, participation.metadata().is_complete()),
+        (
+            QueryClass::ConditionFunctions,
+            participation.condition_functions().is_complete(),
+        ),
+        (
+            QueryClass::EffectFunctions,
+            participation.effect_functions().is_complete(),
+        ),
+    ]
+    .into_iter()
+    .filter_map(|(class, complete)| {
+        (!complete).then_some(QueryUnavailableReason::Incomplete(class))
+    })
+    .collect()
 }

@@ -8,20 +8,21 @@ use super::super::types::{
 
 pub(super) fn block_candidates(
     snapshot: &AuthoringSnapshot,
-    _key: &DocumentKey,
+    key: &DocumentKey,
     target: Option<&DocumentKey>,
     document: &DocumentSnapshot,
     span: &SourceSpan,
     candidates: &mut Vec<CompletionCandidate>,
     unavailable: &mut Vec<QueryUnavailableReason>,
 ) {
+    let target_key = target.unwrap_or(key);
     if !document.participation().block_references().is_complete() {
         unavailable.push(QueryUnavailableReason::Incomplete(
             QueryClass::BlockReferences,
         ));
     }
     for target_document in snapshot.documents() {
-        if target.is_some_and(|target| target != target_document.key()) {
+        if target_key != target_document.key() {
             continue;
         }
         if !target_document

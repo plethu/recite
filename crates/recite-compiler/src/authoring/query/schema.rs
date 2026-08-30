@@ -2,6 +2,8 @@
 mod dialogue;
 #[path = "schema/metadata.rs"]
 mod metadata;
+#[path = "schema/metadata_context.rs"]
+mod metadata_context;
 #[path = "schema/projection.rs"]
 mod projection;
 
@@ -46,6 +48,7 @@ pub(super) fn complete_site(
         }
         Site::MetadataValue {
             key: metadata_key,
+            token,
             target,
             ..
         } => metadata::value_candidates(
@@ -53,7 +56,8 @@ pub(super) fn complete_site(
             document.source_text(),
             &metadata_key,
             target,
-            &span,
+            &token,
+            &mut unavailable,
             &mut candidates,
         ),
         Site::Conditions(_) => metadata::condition_candidates(schema, kind, &span, &mut candidates),

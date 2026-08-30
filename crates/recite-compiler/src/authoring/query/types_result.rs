@@ -48,6 +48,8 @@ pub enum QueryClass {
 #[non_exhaustive]
 pub enum QueryUnavailableReason {
     Incomplete(QueryClass),
+    MissingMetadataContext,
+    MalformedMetadataContext,
     Unsupported,
 }
 #[derive(Clone, Debug, PartialEq)]

@@ -15,7 +15,11 @@ impl AuthoringSnapshot {
         let Some(document) = self.document(key) else {
             return QueryResult::NoMatch;
         };
-        if context::at(key, document.source_text(), position).is_some() {
+        let source_locations = symbol_locations(key, document, SymbolQueryOptions::default());
+        let has_source_symbol = source_locations
+            .iter()
+            .any(|location| contains(location.span(), position));
+        if !has_source_symbol && context::at(key, document.source_text(), position).is_some() {
             let completion = self.complete(key, position);
             if let Some((name, span)) = context::token_at(key, document.source_text(), position) {
                 let candidate = match &completion {
@@ -53,8 +57,7 @@ impl AuthoringSnapshot {
                 }
             }
         }
-        let locations = symbol_locations(key, document, SymbolQueryOptions::default());
-        let Some(location) = locations
+        let Some(location) = source_locations
             .into_iter()
             .find(|location| contains(location.span(), position))
         else {
