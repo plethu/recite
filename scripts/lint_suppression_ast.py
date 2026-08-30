@@ -16,7 +16,7 @@ import tempfile
 from dataclasses import dataclass
 from pathlib import Path, PurePosixPath
 
-from lint_suppression_meta import MetadataError, _without_comments, attributes
+from lint_suppression_meta import MetadataError, _normalize_identifier, _without_comments, attributes
 
 
 MARKERS = {
@@ -143,7 +143,9 @@ def _is_configuration_attribute(event: AstEvent) -> bool:
     prefix = "#![" if event.rule == "inner_attribute" else "#["
     if not event.text.startswith(prefix):
         return False
-    return re.match(r"(?:cfg|cfg_attr)\b", _without_comments(event.text[len(prefix):-1]).lstrip()) is not None
+    body = _without_comments(event.text[len(prefix):-1]).lstrip()
+    match = re.match(r"(?:r#)?[A-Za-z_][A-Za-z0-9_]*\b", body)
+    return match is not None and _normalize_identifier(match.group()) in {"cfg", "cfg_attr"}
 
 
 def _attributes(event: AstEvent) -> list[tuple[str, tuple[str, ...], str | None, bool]]:
@@ -179,10 +181,10 @@ def _opaque_record(
     generated: set[str],
 ) -> dict[str, object] | None:
     controls = tuple(sorted({
-        identifier.text
+        _normalize_identifier(identifier.text)
         for identifier in identifiers
         if event.start <= identifier.start and identifier.end <= event.end
-        and identifier.text in LINT_CONTROLS
+        and _normalize_identifier(identifier.text) in LINT_CONTROLS
     }))
     if not controls:
         return None
@@ -268,7 +270,7 @@ def _category(path: str, offset: int, source: bytes, comments: list[tuple[int, i
     if previous:
         start, end = max(previous, key=lambda span: span[1])
         comment = source[start:end].decode("utf-8", "replace")
-        commented_attribute = re.search(r"#\s*!?\s*\[\s*(?:allow|expect)\b", comment)
+        commented_attribute = re.search(r"#\s*!?\s*\[\s*(?:r#)?(?:allow|expect)\b", comment)
         if not source[end:offset].strip() and commented_attribute is None:
             for category, marker in MARKERS.items():
                 if marker in comment:

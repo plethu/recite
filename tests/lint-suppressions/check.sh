@@ -207,12 +207,71 @@ set -e
   printf '%s\n' "$opaque_output" >&2
   exit 1
 }
+# Raw identifiers have the same lint-control names as their plain forms. The
+# attribute metadata parser, configuration check, and opaque macro inventory
+# all normalize one leading r# while keeping near-identifiers out.
+cat > "$test_root/repo/crates/demo/src/raw-identifiers.rs" <<'EOF'
+#[r#allow(dead_code, reason = "raw direct allow remains structured")]
+fn raw_allow() {}
+#[r#expect(dead_code, reason = "raw direct expect remains structured")]
+fn raw_expect() {}
+#[r#cfg_attr(unix, r#allow(dead_code, reason = "raw cfg_attr allow remains structured"), expect(unused_variables, reason = "mixed cfg_attr expect remains structured"))]
+fn raw_cfg_attr() {}
+#[r#cfg(unix)]
+#[r#allow(dead_code, reason = "raw cfg owner is configured")]
+fn raw_cfg() {}
+macro_rules! raw_controls {
+    () => {
+        #[r#allow(dead_code)]
+        #[expect(unused_variables)]
+        fn raw_generated() {}
+    };
+}
+raw_controls! {
+    #[r#cfg_attr(unix, r#allow(dead_code))]
+    fn raw_input() {}
+}
+fn r#allowé() {}
+fn r#cfg_attr値() {}
+fn r#éallow() {}
+EOF
+git -C "$test_root/repo" add .
+git -C "$test_root/repo" commit -q -m raw-identifiers
+raw_identifiers_head="$(git -C "$test_root/repo" rev-parse HEAD)"
+set +e
+raw_output="$(cd "$test_root/repo" && scripts/check-lint-suppressions.sh "$opaque_base" "$raw_identifiers_head" 2>&1)"
+raw_result=$?
+set -e
+(( raw_result != 0 )) || {
+  echo "raw token-tree suppressions were accepted" >&2
+  printf '%s\n' "$raw_output" >&2
+  exit 1
+}
+[[ "$raw_output" == *"raw-identifiers.rs:1: new allow(dead_code) scope=item owner=fn:raw_allow category=production owner_stable=true"* \
+  && "$raw_output" == *"raw-identifiers.rs:3: new expect(dead_code) scope=item owner=fn:raw_expect category=production owner_stable=true"* \
+  && "$raw_output" == *"raw-identifiers.rs:5: new allow(dead_code) scope=item owner=fn:raw_cfg_attr category=production owner_stable=false"* \
+  && "$raw_output" == *"raw-identifiers.rs:5: new expect(unused_variables) scope=item owner=fn:raw_cfg_attr category=production owner_stable=false"* \
+  && "$raw_output" == *"raw-identifiers.rs:8: new allow(dead_code) scope=item owner=fn:raw_cfg category=production owner_stable=false"* \
+  && "$raw_output" == *"raw-identifiers.rs:10: new opaque_macro(allow,expect) scope=item owner=unstable category=production owner_stable=false reason=null"* \
+  && "$raw_output" == *"raw-identifiers.rs:17: new opaque_macro(allow,cfg_attr) scope=item owner=unstable category=production owner_stable=false reason=null"* ]] || {
+  echo "raw identifier fixture records were not exact" >&2
+  printf '%s\n' "$raw_output" >&2
+  exit 1
+}
+[[ "$raw_output" != *"r#allowé"* && "$raw_output" != *"r#cfg_attr値"* && "$raw_output" != *"r#éallow"* ]] || {
+  echo "raw Unicode near-identifiers became lint controls" >&2
+  printf '%s\n' "$raw_output" >&2
+  exit 1
+}
 cat > "$test_root/repo/crates/demo/src/opaque-negative.rs" <<'EOF'
 macro_rules! strings_and_comments {
     () => {
         let _ = format!("allow");
         println!("expect");
         /* cfg_attr */
+        fn r#allowé() {}
+        fn r#cfg_attr値() {}
+        fn r#éallow() {}
     };
 }
 quote! {
@@ -226,7 +285,7 @@ EOF
 git -C "$test_root/repo" add .
 git -C "$test_root/repo" commit -q -m opaque-token-tree-negatives
 opaque_negative_head="$(git -C "$test_root/repo" rev-parse HEAD)"
-opaque_negative_output="$(cd "$test_root/repo" && scripts/check-lint-suppressions.sh "$opaque_head" "$opaque_negative_head")"
+opaque_negative_output="$(cd "$test_root/repo" && scripts/check-lint-suppressions.sh "$raw_identifiers_head" "$opaque_negative_head")"
 [[ "$opaque_negative_output" != *"opaque-negative.rs"* ]] || {
   echo "strings, comments, or Unicode near-identifiers became opaque records" >&2
   printf '%s\n' "$opaque_negative_output" >&2

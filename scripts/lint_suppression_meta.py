@@ -7,6 +7,11 @@ class MetadataError(ValueError):
     """Suppression metadata does not match the bounded attribute grammar."""
 
 
+def _normalize_identifier(value: str) -> str:
+    """Return a Rust identifier's semantic name, accepting one raw prefix."""
+    return value[2:] if value.startswith("r#") else value
+
+
 def _split_top_level(source: str) -> list[str]:
     pieces: list[str] = []
     start = 0
@@ -127,11 +132,13 @@ def _literal(value: str) -> str | None:
 def _meta(body: str) -> list[tuple[str, tuple[str, ...], str | None]]:
     body = _without_comments(body).strip()
     if "(" not in body or not body.endswith(")"):
-        if body in {"allow", "expect"}:
-            raise MetadataError(f"malformed {body} suppression attribute")
+        name = _normalize_identifier(body)
+        if name in {"allow", "expect"}:
+            raise MetadataError(f"malformed {name} suppression attribute")
         return []
     name, payload = body.split("(", 1)
-    name, payload = name.strip(), payload[:-1]
+    name = _normalize_identifier(name.strip())
+    payload = payload[:-1]
     if name == "cfg_attr":
         pieces = _split_top_level(payload)
         if len(pieces) < 2:
