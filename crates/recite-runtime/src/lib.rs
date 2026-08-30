@@ -68,6 +68,7 @@ mod context;
 mod error;
 mod event;
 mod locale;
+mod preview;
 mod session;
 mod session_serialization;
 mod session_snapshot;
@@ -88,6 +89,14 @@ pub use event::{
 pub use locale::{
     InterpolationValueProvider, InterpolationValues, LocaleError, LocaleProvider, PluralResolution,
     PluralResolutionAttempt, PluralResolutionOutcome, TextDomain,
+};
+pub use preview::{
+    ConditionAnswer, PREVIEW_SNAPSHOT_FORMAT_VERSION, PreviewCommand, PreviewConditionArgument,
+    PreviewConditionQuery, PreviewConditionRequest, PreviewConditionRequestId,
+    PreviewConditionResult, PreviewError, PreviewEvent, PreviewInputRevision, PreviewInputs,
+    PreviewOptions, PreviewOutput, PreviewPrompt, PreviewPromptIdentity, PreviewSession,
+    PreviewSessionState, PreviewSnapshot, PreviewState, PreviewStatus, PreviewTrace,
+    PreviewTranscript, PreviewTranscriptEvent,
 };
 pub use session::{DialogueSession, DialogueSessionOptions};
 pub use session_serialization::{
