@@ -56,7 +56,7 @@ pub(super) fn first_source_span<'a>(
     let mut first_path = None;
     for source_file in source_files {
         if first_path.is_none() {
-            first_path = Some(source_file.path.clone());
+            first_path = Some(source_file.path.as_str());
         }
         if let Some(block) = source_file.blocks.first() {
             return block.span.clone();
@@ -64,7 +64,7 @@ pub(super) fn first_source_span<'a>(
     }
 
     SourceSpan::point(
-        first_path.unwrap_or_default(),
+        first_path.map_or_else(String::new, str::to_owned),
         SourcePosition::new(1, 1).expect("1:1 is a valid source position"),
     )
 }
