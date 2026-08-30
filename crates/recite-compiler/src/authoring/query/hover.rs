@@ -92,9 +92,24 @@ impl AuthoringSnapshot {
                 | SymbolIdentity::MetadataKey(_) => Vec::new(),
             },
         };
-        let complete = document.participation().metadata().is_complete()
-            && document.participation().condition_functions().is_complete()
-            && document.participation().effect_functions().is_complete();
+        let complete = match location.kind() {
+            super::types::SymbolKind::Block => {
+                document.participation().block_definitions().is_complete()
+            }
+            super::types::SymbolKind::BlockReference => {
+                document.participation().block_references().is_complete()
+            }
+            super::types::SymbolKind::StableId => {
+                document.participation().stable_ids().is_complete()
+            }
+            super::types::SymbolKind::Metadata => document.participation().metadata().is_complete(),
+            super::types::SymbolKind::ConditionFunction => {
+                document.participation().condition_functions().is_complete()
+            }
+            super::types::SymbolKind::EffectFunction => {
+                document.participation().effect_functions().is_complete()
+            }
+        };
         let info = HoverInfo { location, facts };
         if complete {
             QueryResult::Ready(info)
