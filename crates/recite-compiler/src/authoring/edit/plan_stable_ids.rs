@@ -80,14 +80,23 @@ fn plan_insert(
         .map(|document| document.key().clone())
         .collect::<Vec<_>>();
     for key in &all_keys {
-        if !document(snapshot, key)?
-            .participation()
-            .ast_structure()
-            .is_complete()
-        {
+        let document = document(snapshot, key)?;
+        if !document.participation().ast_structure().is_complete() {
             return Err(AuthoringEditError::Incomplete {
                 document: key.clone(),
                 class: crate::authoring::QueryClass::Diagnostics,
+            });
+        }
+        let mut block_ids = document
+            .summary()
+            .blocks()
+            .iter()
+            .map(|block| block.id())
+            .collect::<Vec<_>>();
+        block_ids.sort();
+        if let Some(pair) = block_ids.windows(2).find(|pair| pair[0] == pair[1]) {
+            return Err(AuthoringEditError::AmbiguousBlock {
+                block: pair[0].clone(),
             });
         }
     }

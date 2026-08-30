@@ -14,10 +14,11 @@ pub use edit::{
 };
 pub use input::{AuthoringRequest, DocumentVersion, OpenDocument, SavedDocument};
 pub use query::{
-    ClauseKind, CompletionCandidate, CompletionCandidateDetail, CompletionCandidateKind,
-    CompletionItem, CompletionSite, CompletionSiteKind, HoverInfo, MetadataValueDetail,
-    NavigationResult, QueryClass, QueryResult, QueryUnavailableReason, SemanticFact,
-    SemanticSymbolKind, SymbolIdentity, SymbolKind, SymbolLocation, SymbolQueryOptions, SymbolRole,
+    BlockTarget, ClauseKind, CompletionCandidate, CompletionCandidateDetail,
+    CompletionCandidateKind, CompletionItem, CompletionSite, CompletionSiteKind, HoverInfo,
+    MetadataValueDetail, NavigationResult, QueryClass, QueryResult, QueryUnavailableReason,
+    SemanticFact, SemanticSymbolKind, SymbolIdentity, SymbolKind, SymbolLocation,
+    SymbolQueryOptions, SymbolRole,
 };
 pub use snapshot::{
     AnalysisDelta, AuthoringSnapshot, DiagnosticCollection, DiagnosticIter, DocumentDelta,

@@ -12,8 +12,9 @@ mod symbols;
 mod types;
 
 pub use self::types::{
-    ClauseKind, CompletionCandidate, CompletionCandidateDetail, CompletionCandidateKind,
-    CompletionItem, CompletionSite, CompletionSiteKind, HoverInfo, MetadataValueDetail,
-    NavigationResult, QueryClass, QueryResult, QueryUnavailableReason, SemanticFact,
-    SemanticSymbolKind, SymbolIdentity, SymbolKind, SymbolLocation, SymbolQueryOptions, SymbolRole,
+    BlockTarget, ClauseKind, CompletionCandidate, CompletionCandidateDetail,
+    CompletionCandidateKind, CompletionItem, CompletionSite, CompletionSiteKind, HoverInfo,
+    MetadataValueDetail, NavigationResult, QueryClass, QueryResult, QueryUnavailableReason,
+    SemanticFact, SemanticSymbolKind, SymbolIdentity, SymbolKind, SymbolLocation,
+    SymbolQueryOptions, SymbolRole,
 };

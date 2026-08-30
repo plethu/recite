@@ -1,6 +1,6 @@
 use recite_core::{DocumentKey, MetadataTarget, SourcePosition, SourceSpan};
 
-use super::types::{ClauseKind, CompletionSite, CompletionSiteKind};
+use super::types::{BlockTarget, ClauseKind, CompletionSite, CompletionSiteKind};
 
 mod position;
 use position::{assignment_span, byte_at_column, line_at, span, token_span};
@@ -8,7 +8,7 @@ use position::{assignment_span, byte_at_column, line_at, span, token_span};
 #[derive(Clone, Debug, Eq, PartialEq)]
 pub(super) enum Site {
     Blocks {
-        target: Option<DocumentKey>,
+        target: BlockTarget,
         token: SourceSpan,
     },
     Speakers(SourceSpan),
@@ -39,24 +39,34 @@ impl Site {
             Self::Blocks { target, token } => {
                 CompletionSite::new(CompletionSiteKind::Block, token.clone(), target.clone())
             }
-            Self::Speakers(span) => {
-                CompletionSite::new(CompletionSiteKind::Speaker, span.clone(), None)
-            }
-            Self::MetadataKey { span, .. } => {
-                CompletionSite::new(CompletionSiteKind::MetadataKey, span.clone(), None)
-            }
-            Self::MetadataValue { token, .. } => {
-                CompletionSite::new(CompletionSiteKind::MetadataValue, token.clone(), None)
-            }
-            Self::Conditions { span, .. } => {
-                CompletionSite::new(CompletionSiteKind::Condition, span.clone(), None)
-            }
+            Self::Speakers(span) => CompletionSite::new(
+                CompletionSiteKind::Speaker,
+                span.clone(),
+                BlockTarget::Local,
+            ),
+            Self::MetadataKey { span, .. } => CompletionSite::new(
+                CompletionSiteKind::MetadataKey,
+                span.clone(),
+                BlockTarget::Local,
+            ),
+            Self::MetadataValue { token, .. } => CompletionSite::new(
+                CompletionSiteKind::MetadataValue,
+                token.clone(),
+                BlockTarget::Local,
+            ),
+            Self::Conditions { span, .. } => CompletionSite::new(
+                CompletionSiteKind::Condition,
+                span.clone(),
+                BlockTarget::Local,
+            ),
             Self::Effects(span) => {
-                CompletionSite::new(CompletionSiteKind::Effect, span.clone(), None)
+                CompletionSite::new(CompletionSiteKind::Effect, span.clone(), BlockTarget::Local)
             }
-            Self::AvailabilityReasons { token, .. } => {
-                CompletionSite::new(CompletionSiteKind::AvailabilityReason, token.clone(), None)
-            }
+            Self::AvailabilityReasons { token, .. } => CompletionSite::new(
+                CompletionSiteKind::AvailabilityReason,
+                token.clone(),
+                BlockTarget::Local,
+            ),
         }
     }
 
@@ -98,10 +108,15 @@ pub(super) fn at(key: &DocumentKey, text: &str, position: SourcePosition) -> Opt
         }
         let token = span(key, text, line_start + start, line_start + cursor);
         let raw = line.get(start..cursor)?.trim();
-        let target = raw
-            .rsplit_once("::")
-            .map(|(file, _)| DocumentKey::new(file.to_owned()).ok())
-            .unwrap_or(None);
+        let target = match raw.rsplit_once("::") {
+            Some((file, _)) => match DocumentKey::new(file.to_owned()) {
+                Ok(file) => BlockTarget::Qualified(file),
+                Err(_) => BlockTarget::InvalidQualified {
+                    target: file.to_owned(),
+                },
+            },
+            None => BlockTarget::Local,
+        };
         return Some(Site::Blocks { target, token });
     }
     if trimmed.starts_with('?')

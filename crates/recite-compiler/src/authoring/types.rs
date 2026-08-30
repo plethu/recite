@@ -101,12 +101,6 @@ impl StableIdSummary {
     pub fn enclosing_block(&self) -> &BlockId {
         &self.enclosing_block
     }
-
-    /// Alias for callers that use block ownership as their lookup key.
-    #[must_use]
-    pub fn block_id(&self) -> &BlockId {
-        self.enclosing_block()
-    }
 }
 
 #[derive(Clone, Debug, PartialEq)]

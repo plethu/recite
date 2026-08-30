@@ -5,8 +5,8 @@ use super::helpers::{
 };
 use super::{AuthoringEditError, AuthoringEditOperation, AuthoringEditPlan, SourceEdit};
 use crate::authoring::{
-    AuthoringSnapshot, CompletionSiteKind, NavigationResult, QueryResult, SymbolIdentity,
-    SymbolQueryOptions, SymbolRole,
+    AuthoringSnapshot, BlockTarget, CompletionSiteKind, NavigationResult, QueryResult,
+    SymbolIdentity, SymbolQueryOptions, SymbolRole,
 };
 
 /// Plans creation of a missing block at the target document's EOF.
@@ -39,7 +39,15 @@ pub fn plan_create_block_stub(
     }) {
         return Err(no_symbol(key, position));
     }
-    let target_key = site.block_target().cloned().unwrap_or_else(|| key.clone());
+    let target_key = match site.block_target_resolution() {
+        BlockTarget::Local => key.clone(),
+        BlockTarget::Qualified(target) => target.clone(),
+        BlockTarget::InvalidQualified { target } => {
+            return Err(AuthoringEditError::InvalidTargetDocument {
+                document: target.clone(),
+            });
+        }
+    };
     let target = document(snapshot, &target_key).map_err(|error| match error {
         AuthoringEditError::UnknownDocument { .. } => AuthoringEditError::MissingTargetDocument {
             document: target_key.clone(),
@@ -71,7 +79,7 @@ pub fn plan_create_block_stub(
     let reference_range = source_range(key, reference.span())?;
     let eof = end_position(target.source_text(), &target_key)?;
     let newline = newline_for(target.source_text());
-    let prefix = if target.source_text().ends_with('\n') {
+    let prefix = if target.source_text().is_empty() || target.source_text().ends_with('\n') {
         ""
     } else {
         newline

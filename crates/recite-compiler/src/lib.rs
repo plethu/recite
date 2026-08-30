@@ -51,7 +51,7 @@
 //! # }
 //! ```
 
-pub mod authoring;
+mod authoring;
 mod compile;
 mod diagnostics;
 mod pot;
@@ -65,7 +65,7 @@ pub mod bench_support;
 pub use authoring::{
     AnalysisDelta, AuthoringEditError, AuthoringEditOperation, AuthoringEditPlan, AuthoringError,
     AuthoringKernel, AuthoringRequest, AuthoringSnapshot, AuthoringSummary, BlockDefinitionSummary,
-    BlockReferenceSummary, ClauseKind, CompletionCandidate, CompletionCandidateDetail,
+    BlockReferenceSummary, BlockTarget, ClauseKind, CompletionCandidate, CompletionCandidateDetail,
     CompletionCandidateKind, CompletionItem, CompletionSite, CompletionSiteKind,
     DiagnosticCollection, DiagnosticIter, DocumentDelta, DocumentLayer, DocumentMetadata,
     DocumentSnapshot, DocumentVersion, EditPrecondition, FunctionReferenceKind,

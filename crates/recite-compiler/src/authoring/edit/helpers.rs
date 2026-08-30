@@ -18,6 +18,21 @@ pub(super) fn document<'a>(
         })
 }
 
+pub(super) fn require_complete_block_references(
+    snapshot: &AuthoringSnapshot,
+) -> Result<(), AuthoringEditError> {
+    snapshot
+        .documents()
+        .iter()
+        .find(|document| !document.participation().block_references().is_complete())
+        .map_or(Ok(()), |document| {
+            Err(AuthoringEditError::Incomplete {
+                document: document.key().clone(),
+                class: QueryClass::BlockReferences,
+            })
+        })
+}
+
 pub(super) fn precondition(
     snapshot: &AuthoringSnapshot,
     key: &DocumentKey,

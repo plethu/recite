@@ -258,22 +258,18 @@ fn block_stub_plan_preserves_target_crlf_and_reports_provenance() {
         &plan,
         &saved_sources(&[("main.recite", source), ("target.recite", target)]),
     );
-    assert_eq!(
-        applied
-            .get(&key("target.recite"))
-            .expect("rewritten target"),
-        "# target comment\r\n:: missing\r\n"
-    );
+    let Some(rewritten_target) = applied.get(&key("target.recite")) else {
+        panic!("rewritten target is missing");
+    };
+    assert_eq!(rewritten_target, "# target comment\r\n:: missing\r\n");
+    let Some(rewritten_target) = applied.get(&key("target.recite")) else {
+        panic!("rewritten target is missing");
+    };
     assert!(
-        recite_parser::parse(
-            "target.recite",
-            applied
-                .get(&key("target.recite"))
-                .expect("rewritten target")
-        )
-        .lower_source_file()
-        .diagnostics
-        .is_empty()
+        recite_parser::parse("target.recite", rewritten_target)
+            .lower_source_file()
+            .diagnostics
+            .is_empty()
     );
 }
 

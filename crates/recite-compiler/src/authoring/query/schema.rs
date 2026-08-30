@@ -14,7 +14,8 @@ use recite_core::{
 use super::super::snapshot::{AuthoringSnapshot, DocumentSnapshot};
 use super::context::Site;
 use super::types::{
-    CompletionCandidate, CompletionCandidateKind, QueryClass, QueryResult, QueryUnavailableReason,
+    BlockTarget, CompletionCandidate, CompletionCandidateKind, QueryClass, QueryResult,
+    QueryUnavailableReason,
 };
 
 pub(super) fn complete_site(
@@ -27,6 +28,11 @@ pub(super) fn complete_site(
     let mut candidates = Vec::new();
     let mut unavailable = Vec::new();
     if let Site::Blocks { target, .. } = site {
+        let target = match target {
+            BlockTarget::Local => None,
+            BlockTarget::Qualified(target) => Some(target),
+            BlockTarget::InvalidQualified { .. } => return QueryResult::NoMatch,
+        };
         dialogue::block_candidates(
             snapshot,
             key,

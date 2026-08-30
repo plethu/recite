@@ -115,19 +115,32 @@ pub enum CompletionSiteKind {
     AvailabilityReason,
 }
 
+/// Compiler classification of a block reference target at a completion site.
+///
+/// Keeping invalid qualified targets distinct from unqualified references is
+/// important to callers which may offer source edits: an invalid path must
+/// never silently become a local-document edit.
+#[derive(Clone, Debug, Eq, PartialEq)]
+#[non_exhaustive]
+pub enum BlockTarget {
+    Local,
+    Qualified(DocumentKey),
+    InvalidQualified { target: String },
+}
+
 #[derive(Clone, Debug, PartialEq)]
 #[non_exhaustive]
 pub struct CompletionSite {
     kind: CompletionSiteKind,
     span: SourceSpan,
-    block_target: Option<DocumentKey>,
+    block_target: BlockTarget,
 }
 
 impl CompletionSite {
     pub(crate) fn new(
         kind: CompletionSiteKind,
         span: SourceSpan,
-        block_target: Option<DocumentKey>,
+        block_target: BlockTarget,
     ) -> Self {
         Self {
             kind,
@@ -148,7 +161,15 @@ impl CompletionSite {
 
     #[must_use]
     pub fn block_target(&self) -> Option<&DocumentKey> {
-        self.block_target.as_ref()
+        match &self.block_target {
+            BlockTarget::Qualified(target) => Some(target),
+            BlockTarget::Local | BlockTarget::InvalidQualified { .. } => None,
+        }
+    }
+
+    #[must_use]
+    pub fn block_target_resolution(&self) -> &BlockTarget {
+        &self.block_target
     }
 }
 

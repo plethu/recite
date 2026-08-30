@@ -1,6 +1,8 @@
 use recite_core::{BlockId, DocumentKey, SourcePosition, is_valid_source_label};
 
-use super::helpers::{incomplete_from_query, make_plan, no_symbol, source_range};
+use super::helpers::{
+    incomplete_from_query, make_plan, no_symbol, require_complete_block_references, source_range,
+};
 use super::{AuthoringEditError, AuthoringEditOperation, AuthoringEditPlan, SourceEdit};
 use crate::authoring::{
     AuthoringSnapshot, NavigationResult, QueryResult, SymbolIdentity, SymbolLocation,
@@ -23,6 +25,7 @@ pub fn plan_rename_block(
             name: new_name.as_str().to_owned(),
         });
     }
+    require_complete_block_references(snapshot)?;
 
     let declaration = unique_navigation(snapshot, key, position)?;
     let SymbolIdentity::Block(old_name) = declaration.identity() else {
