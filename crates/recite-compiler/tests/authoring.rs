@@ -2,8 +2,7 @@
 
 use recite_compiler::{
     AuthoringError, AuthoringKernel, AuthoringRequest, DocumentLayer, DocumentVersion,
-    MetadataScalar, MetadataValue, OpenDocument, QueryResult, SavedDocument, SemanticFact,
-    SnapshotGeneration, SymbolIdentity, SymbolKind, SymbolQueryOptions, SymbolRole,
+    OpenDocument, QueryResult, SavedDocument, SnapshotGeneration,
 };
 use recite_core::{DocumentKey, SourceId, SourcePosition};
 
