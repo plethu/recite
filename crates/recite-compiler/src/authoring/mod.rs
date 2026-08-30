@@ -4,6 +4,7 @@ mod engine;
 mod input;
 mod input_state;
 mod query;
+mod schema_summary;
 mod snapshot;
 mod state;
 mod summary;
@@ -34,6 +35,15 @@ pub use query::{
     MetadataValueDetail, NavigationResult, QueryClass, QueryResult, QueryUnavailableReason,
     SemanticFact, SemanticSymbolKind, SymbolIdentity, SymbolKind, SymbolLocation,
     SymbolQueryOptions, SymbolRole,
+};
+pub use schema_summary::{
+    AuthoringSchemaSummary, AvailabilityReasonSummary, ConditionSummary, EffectSummary,
+    MarkupSummary, MetadataDomainSummary, MetadataKeySummary, PresentationProjectorSummary,
+    ProducerMetadataSummary, ProjectionQueryFunctionSummary, RegistrySummary, SchemaAction,
+    SchemaCapability, SchemaCapabilityUnavailableReason, SchemaDeclarationProvenance,
+    SchemaDeclarationSummary, SchemaFingerprintSummary, SchemaFreshness,
+    SchemaFreshnessUnavailableReason, SchemaOwnership, SchemaSourceSummary, SchemaSummary,
+    SchemaTypeSummary, SpeakerSummary,
 };
 pub use snapshot::{
     AnalysisDelta, AuthoringSnapshot, DiagnosticCollection, DiagnosticIter, DocumentDelta,
