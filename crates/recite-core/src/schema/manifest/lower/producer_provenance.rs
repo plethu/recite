@@ -4,8 +4,8 @@ use super::super::diagnostics::{DUPLICATE_DEFINITION, MALFORMED_SHAPE};
 use super::super::producer::{RawProducerFingerprint, RawProducerOrigin};
 use super::super::validate::validate_non_empty_string;
 use super::LoweringContext;
-use crate::schema::schema_diagnostic;
 use crate::schema::{ProducerFingerprint, ProducerMetadataValue, ProducerOrigin};
+use crate::schema::{is_namespaced_extension_key, schema_diagnostic};
 use crate::{DiagnosticArgumentValue, SourceSpan};
 use serde_json::Value;
 
@@ -54,11 +54,7 @@ pub(super) fn lower_origin(
     });
 
     for key in raw.extensions.keys() {
-        let mut parts = key.split(':');
-        let namespaced = parts.next().is_some_and(is_extension_segment)
-            && parts.next().is_some_and(is_extension_segment)
-            && parts.next().is_none();
-        if !namespaced {
+        if !is_namespaced_extension_key(key) {
             let mut extension_path = location.path.to_vec();
             extension_path.push(key.clone());
             let extension_span = context.nested_key_span_at(&extension_path, key);
@@ -91,17 +87,6 @@ pub(super) fn lower_origin(
             .map(|(key, value)| (key, ProducerMetadataValue::from_json(value)))
             .collect(),
     })
-}
-
-fn is_extension_segment(segment: &str) -> bool {
-    let mut characters = segment.chars();
-    let Some(first) = characters.next() else {
-        return false;
-    };
-    first.is_ascii_alphabetic()
-        && characters.all(|character| {
-            character.is_ascii_alphanumeric() || matches!(character, '.' | '_' | '-')
-        })
 }
 
 pub(super) fn lower_origin_map(

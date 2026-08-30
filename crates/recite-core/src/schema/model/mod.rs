@@ -6,6 +6,7 @@ use crate::{AvailabilityReasonId, ContentFingerprint, EffectMode};
 mod canonical;
 mod freshness;
 mod producer;
+mod producer_validation;
 
 pub use freshness::{
     ContentFingerprintFreshness, SchemaProducerFreshness, compare_schema_producer_freshness,
@@ -18,6 +19,7 @@ pub use producer::{
     compare_producer_fingerprints, producer_content_fingerprint,
 };
 pub(crate) use producer::{ProducerContentFingerprintError, producer_content_fingerprint_detailed};
+pub(crate) use producer_validation::{is_json_number_lexeme, is_namespaced_extension_key};
 #[must_use]
 pub fn canonical_schema_fingerprint(schema: &ProjectSchema) -> SchemaFingerprint {
     SchemaFingerprint::Fingerprint(schema.canonical_content_fingerprint())

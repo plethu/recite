@@ -149,6 +149,17 @@ fn float_literal_lexeme_and_reason_origin_round_trip_without_loss() {
                         ProducerMetadataValue::Number("1e+2".to_owned()),
                     )])),
                 ),
+                (
+                    "integer".to_owned(),
+                    ProducerMetadataValue::Number("1234567890123456789".to_owned()),
+                ),
+                (
+                    "array".to_owned(),
+                    ProducerMetadataValue::Array(vec![
+                        ProducerMetadataValue::Number("0.25".to_owned()),
+                        ProducerMetadataValue::Number("2e-3".to_owned()),
+                    ]),
+                ),
             ])),
         )]),
     };
@@ -197,9 +208,50 @@ fn float_literal_lexeme_and_reason_origin_round_trip_without_loss() {
     );
     assert!(edited.source_text().contains(&exact));
     assert!(edited.source_text().contains("1e+2"));
+    assert!(edited.source_text().contains("1234567890123456789"));
     let round_trip = source(&edited.source_text());
     assert_eq!(edited.schema_fingerprint(), round_trip.schema_fingerprint());
     assert_eq!(edited.source_fingerprint(), round_trip.source_fingerprint());
+}
+
+#[test]
+fn origin_number_edits_reject_non_json_and_toml_only_lexemes_recursively() {
+    let original = source("schema_version = 1\n[producer]\nid = \"dialogue\"\n");
+    let hostile = [
+        ProducerMetadataValue::Number("true".to_owned()),
+        ProducerMetadataValue::Number("\"quoted\"".to_owned()),
+        ProducerMetadataValue::Number("[1, 2]".to_owned()),
+        ProducerMetadataValue::Number("1970-01-01T00:00:00Z".to_owned()),
+        ProducerMetadataValue::Number("+1".to_owned()),
+        ProducerMetadataValue::Number("1_000".to_owned()),
+        ProducerMetadataValue::Number("0x10".to_owned()),
+        ProducerMetadataValue::Number("-0".to_owned()),
+        ProducerMetadataValue::Array(vec![ProducerMetadataValue::Number("1_000".to_owned())]),
+        ProducerMetadataValue::Object(BTreeMap::from([(
+            "nested".to_owned(),
+            ProducerMetadataValue::Number("true".to_owned()),
+        )])),
+    ];
+    for value in hostile {
+        let error = original.plan_edit(SchemaSourceEdit::AddAvailabilityReason {
+            name: "blocked".to_owned(),
+            definition: AvailabilityReasonDefinition {
+                template: "Blocked".to_owned(),
+                params: Vec::new(),
+                origin: Some(ProducerOrigin {
+                    kind: "data_table".to_owned(),
+                    id: "content/reasons.csv".to_owned(),
+                    label: None,
+                    extensions: BTreeMap::from([("x-recite:value".to_owned(), value)]),
+                }),
+            },
+        });
+        assert!(matches!(
+            error,
+            Err(SchemaSourceEditError::InvalidArgument(message))
+                if message.contains("canonical JSON number lexeme")
+        ));
+    }
 }
 
 #[test]

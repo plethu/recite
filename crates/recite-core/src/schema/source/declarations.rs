@@ -3,7 +3,7 @@ use super::toml::{SchemaSourceEdit, SchemaSourceEditError};
 use crate::EffectMode;
 use crate::schema::{
     AvailabilityReasonDefinition, ConditionDefinition, ConditionReturnType, EffectDefinition,
-    ParameterDefinition, SchemaTypeRef,
+    ParameterDefinition, SchemaTypeRef, is_json_number_lexeme, is_namespaced_extension_key,
 };
 use toml_edit::DocumentMut;
 
@@ -110,27 +110,12 @@ fn validate_origin_extension_key(key: &str) -> Result<(), SchemaSourceEditError>
             "origin extension key '{key}' is reserved"
         )));
     }
-    let mut segments = key.split(':');
-    let namespaced = segments.next().is_some_and(is_extension_segment)
-        && segments.next().is_some_and(is_extension_segment)
-        && segments.next().is_none();
-    if !namespaced {
+    if !is_namespaced_extension_key(key) {
         return Err(SchemaSourceEditError::InvalidArgument(format!(
             "origin extension key '{key}' must be namespaced"
         )));
     }
     Ok(())
-}
-
-fn is_extension_segment(segment: &str) -> bool {
-    let mut characters = segment.chars();
-    let Some(first) = characters.next() else {
-        return false;
-    };
-    first.is_ascii_alphabetic()
-        && characters.all(|character| {
-            character.is_ascii_alphanumeric() || matches!(character, '.' | '_' | '-')
-        })
 }
 
 fn insert_params(table: &mut toml_edit::Table, params: &[ParameterDefinition]) {
@@ -187,6 +172,11 @@ fn producer_value(
         )),
         crate::ProducerMetadataValue::Bool(value) => Ok(toml_edit::Value::from(*value)),
         crate::ProducerMetadataValue::Number(value) => {
+            if !is_json_number_lexeme(value) {
+                return Err(SchemaSourceEditError::InvalidArgument(
+                    "origin number must use a canonical JSON number lexeme".to_owned(),
+                ));
+            }
             value.parse::<toml_edit::Value>().map_err(|_| {
                 SchemaSourceEditError::InvalidArgument("origin number is not valid TOML".to_owned())
             })

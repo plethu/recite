@@ -6,7 +6,10 @@ mod model;
 mod source;
 
 pub(super) use diagnostics::schema_diagnostic;
-pub(crate) use model::{ProducerContentFingerprintError, producer_content_fingerprint_detailed};
+pub(crate) use model::{
+    ProducerContentFingerprintError, is_json_number_lexeme, is_namespaced_extension_key,
+    producer_content_fingerprint_detailed,
+};
 
 pub use manifest::{
     SchemaLoadReport, load_schema_manifest_for_freshness_str, load_schema_manifest_str,
