@@ -18,7 +18,7 @@ mod tests;
 /// target URI and that target document's text for correct UTF-16 conversion.
 #[derive(Debug)]
 pub(crate) struct DiagnosticSource<'a> {
-    pub(crate) path: &'a str,
+    pub(crate) path: String,
     pub(crate) uri: &'a Uri,
     pub(crate) text: &'a str,
 }

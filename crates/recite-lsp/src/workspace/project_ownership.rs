@@ -6,7 +6,7 @@ use lsp_types::Uri;
 
 use super::{SavedDocument, SavedProjectIndex, canonical_or_existing_parent_path};
 use crate::paths::{file_path_to_uri, project_relative_path, uri_to_file_path};
-use crate::summary::{FileIdentity, FileSummary, SavedFileIdentity};
+use crate::summary::SavedFileIdentity;
 
 impl SavedProjectIndex {
     pub(crate) fn refresh_uri(&mut self, uri: &Uri) -> bool {
@@ -40,7 +40,7 @@ impl SavedProjectIndex {
         let before = self.documents.len();
         self.documents.retain(|_, document| {
             let owns_source = document.source_paths.remove(lexical_path);
-            let matches_uri = document.summary.uri() == uri;
+            let matches_uri = document.identity.uri == *uri;
             let remove_document = (owns_source || matches_uri) && document.source_paths.is_empty();
             !remove_document
         });
@@ -76,12 +76,11 @@ impl SavedProjectIndex {
             self.documents.remove(path);
             return true;
         };
-        let identity = FileIdentity::Saved(SavedFileIdentity {
+        let identity = SavedFileIdentity {
             uri,
             canonical_path: path.to_owned(),
             project_relative_path,
-        });
-        let summary = FileSummary::from_text(identity, None, &text);
+        };
         let source_paths = self
             .documents
             .get(path)
@@ -95,7 +94,7 @@ impl SavedProjectIndex {
             path.to_owned(),
             SavedDocument {
                 text,
-                summary,
+                identity,
                 source_paths,
             },
         );

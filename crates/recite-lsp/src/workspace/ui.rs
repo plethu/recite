@@ -1,3 +1,4 @@
+use recite_compiler::AuthoringKernel;
 use recite_ui::{UiCatalog, UiLocale};
 
 use super::SnapshotGeneration;
@@ -18,17 +19,28 @@ impl LspWorkspace {
         let saved = SavedProjectIndex::discover(&config);
         let schema = SchemaIndex::load(config.schema_path);
         let documents = OpenDocumentStore::default();
+        let kernel = schema
+            .schema()
+            .cloned()
+            .map_or_else(AuthoringKernel::new, AuthoringKernel::with_schema);
         let generation = SnapshotGeneration(0);
-        let snapshot = LiveProjectSnapshot::rebuild(generation, &saved, &documents);
-
-        Self {
+        let mut workspace = LspWorkspace {
             saved,
             documents,
-            snapshot,
+            kernel,
+            snapshot: LiveProjectSnapshot::empty(generation),
             schema,
             generation,
             ui_catalog,
-        }
+        };
+        workspace.rebuild_kernel();
+        workspace.snapshot = LiveProjectSnapshot::rebuild(
+            generation,
+            &workspace.saved,
+            &workspace.documents,
+            workspace.kernel.snapshot(),
+        );
+        workspace
     }
 
     pub(crate) fn diagnostic_sources(&self) -> Vec<DiagnosticSource<'_>> {
@@ -36,11 +48,9 @@ impl LspWorkspace {
             .summaries()
             .iter()
             .filter_map(|summary| {
-                let path = summary
-                    .project_relative_path()
-                    .unwrap_or_else(|| summary.uri().as_str());
+                let path = super::document_key_for_identity(&summary.identity)?;
                 Some(DiagnosticSource {
-                    path,
+                    path: path.as_str().to_owned(),
                     uri: summary.uri(),
                     text: self.text_for_summary(summary)?,
                 })

@@ -1,16 +1,14 @@
 use std::collections::BTreeMap;
 
 use lsp_types::{TextDocumentContentChangeEvent, Uri};
-use recite_core::Diagnostic;
 
-use crate::summary::{FileSummary, OpenFileIdentity};
+use crate::summary::OpenFileIdentity;
 
 #[derive(Clone, Debug)]
 pub(crate) struct OpenDocument {
     identity: OpenFileIdentity,
     version: i32,
     text: String,
-    summary: FileSummary,
 }
 
 impl OpenDocument {
@@ -24,14 +22,6 @@ impl OpenDocument {
 
     pub(crate) fn text(&self) -> &str {
         &self.text
-    }
-
-    pub(crate) fn diagnostics(&self) -> &[Diagnostic] {
-        &self.summary.diagnostics
-    }
-
-    pub(crate) fn summary(&self) -> &FileSummary {
-        &self.summary
     }
 }
 
@@ -131,16 +121,10 @@ pub(crate) struct OpenDocumentIdentityRefresh {
 }
 
 fn parse_document(identity: OpenFileIdentity, version: i32, text: String) -> OpenDocument {
-    let summary = FileSummary::from_text(
-        crate::summary::FileIdentity::Open(identity.clone()),
-        Some(version),
-        text.as_str(),
-    );
     OpenDocument {
         identity,
         version,
         text,
-        summary,
     }
 }
 

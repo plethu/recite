@@ -341,7 +341,7 @@ impl Server {
                     version,
                     diagnostics,
                     ..
-                } = self.workspace.with_semantic_diagnostics(diagnostics);
+                } = diagnostics;
                 let publish_params = publish_diagnostics(
                     uri,
                     text.as_str(),

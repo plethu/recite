@@ -125,6 +125,12 @@ fn did_save_rekeys_new_open_file_without_duplicate_summary() {
     super::project_indexes::did_save_rekeys_new_open_file_without_duplicate_summary();
 }
 
+#[cfg(unix)]
+#[test]
+fn open_nonexistent_aliases_share_one_fallback_key() {
+    super::project_indexes::open_nonexistent_aliases_share_one_fallback_key();
+}
+
 #[test]
 fn did_save_refreshes_saved_summary_for_closed_files() {
     super::project_indexes::did_save_refreshes_saved_summary_for_closed_files();

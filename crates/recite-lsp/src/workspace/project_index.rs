@@ -6,7 +6,7 @@ use lsp_types::Uri;
 
 use super::WorkspaceConfig;
 use crate::paths::{file_path_to_uri, project_relative_path, uri_to_file_path};
-use crate::summary::{FileIdentity, FileSummary, SavedFileIdentity};
+use crate::summary::SavedFileIdentity;
 use recite_config::DiscoveredDocument;
 
 #[path = "project_manifest.rs"]
@@ -88,21 +88,10 @@ impl SavedProjectIndex {
         index
     }
 
-    pub(super) fn root_for_path(&self, path: &Path) -> Option<&Path> {
-        self.roots
-            .iter()
-            .find(|root| path == root.as_path() || path.starts_with(root))
-            .map(PathBuf::as_path)
-    }
-
     pub(super) fn document_by_uri(&self, uri: &Uri) -> Option<&SavedDocument> {
         let path = uri_to_file_path(uri)?;
         let path = canonical_or_existing_parent_path(&path)?;
         self.documents.get(&path)
-    }
-
-    pub(super) fn documents(&self) -> impl Iterator<Item = &SavedDocument> {
-        self.documents.values()
     }
 
     pub(super) fn diagnostics(&self) -> &[recite_core::Diagnostic] {
@@ -120,7 +109,7 @@ impl SavedProjectIndex {
     pub(super) fn document_uris(&self) -> impl Iterator<Item = &Uri> {
         self.documents
             .values()
-            .map(|document| document.summary.uri())
+            .map(|document| &document.identity.uri)
     }
 
     pub(super) fn project_key_for_path(&self, path: &Path) -> Option<String> {
@@ -137,12 +126,11 @@ impl SavedProjectIndex {
             project_relative_path(&self.project_root, document.path())
                 .unwrap_or_else(|| document.key().as_str().to_owned())
         };
-        let identity = FileIdentity::Saved(SavedFileIdentity {
+        let identity = SavedFileIdentity {
             uri,
             canonical_path: document.path().to_owned(),
             project_relative_path,
-        });
-        let summary = FileSummary::from_text(identity, None, document.text());
+        };
         let mut source_paths = self
             .documents
             .get(document.path())
@@ -153,7 +141,7 @@ impl SavedProjectIndex {
             document.path().to_owned(),
             SavedDocument {
                 text: document.text().to_owned(),
-                summary,
+                identity,
                 source_paths,
             },
         );
@@ -161,9 +149,9 @@ impl SavedProjectIndex {
 }
 
 #[derive(Clone, Debug)]
-pub(super) struct SavedDocument {
+pub(crate) struct SavedDocument {
     pub(super) text: String,
-    pub(super) summary: FileSummary,
+    pub(super) identity: SavedFileIdentity,
     source_paths: BTreeSet<PathBuf>,
 }
 

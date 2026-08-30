@@ -1,49 +1,62 @@
-use std::collections::BTreeSet;
-use std::path::Path;
+use std::collections::{BTreeMap, BTreeSet};
+
+use recite_compiler::AuthoringSnapshot;
+use recite_core::DocumentKey;
 
 use super::SnapshotGeneration;
 use super::project_index::SavedProjectIndex;
 use crate::documents::OpenDocumentStore;
-use crate::summary::FileSummary;
+use crate::summary::{FileIdentity, FileSummary};
 
 pub(crate) struct LiveProjectSnapshot {
-    #[allow(
-        dead_code,
-        reason = "snapshot generation is exposed only for LSP lifecycle assertions"
-    )]
     generation: SnapshotGeneration,
     summaries: Vec<FileSummary>,
 }
 
 impl LiveProjectSnapshot {
+    pub(super) fn empty(generation: SnapshotGeneration) -> Self {
+        Self {
+            generation,
+            summaries: Vec::new(),
+        }
+    }
+
     pub(super) fn rebuild(
         generation: SnapshotGeneration,
         saved: &SavedProjectIndex,
         documents: &OpenDocumentStore,
+        kernel: &AuthoringSnapshot,
     ) -> Self {
-        let open_saved_paths = documents
-            .documents()
-            .filter_map(|document| document.summary().saved_path().map(Path::to_owned))
-            .collect::<BTreeSet<_>>();
-        let open_uris = documents
-            .documents()
-            .map(|document| document.summary().uri().as_str().to_owned())
-            .collect::<BTreeSet<_>>();
+        let mut identities = BTreeMap::<DocumentKey, FileIdentity>::new();
+        for document in saved.documents.values() {
+            if let Some(key) = super::document_key_for_saved(document) {
+                identities.insert(key, FileIdentity::Saved(document.identity.clone()));
+            }
+        }
+        let mut open_keys = BTreeSet::new();
+        for document in documents.documents() {
+            let Some(key) = super::document_key_for_open(document) else {
+                continue;
+            };
+            // URI iteration is deterministic. Keep the first alias for one
+            // canonical key so the kernel and every projection have one
+            // effective document.
+            if open_keys.insert(key.clone()) {
+                identities.insert(key, FileIdentity::Open(document.identity().clone()));
+            }
+        }
 
-        let mut summaries = saved
-            .documents
+        let mut summaries = kernel
+            .documents()
             .iter()
-            .filter(|(path, document)| {
-                !open_saved_paths.contains(*path)
-                    && !open_uris.contains(document.summary.uri().as_str())
+            .filter_map(|document| {
+                let identity = identities.get(document.key())?.clone();
+                let version = document
+                    .version()
+                    .and_then(|version| i32::try_from(version.as_i64()).ok());
+                Some(FileSummary::from_authoring(identity, version, document))
             })
-            .map(|(_, document)| document.summary.clone())
             .collect::<Vec<_>>();
-        summaries.extend(
-            documents
-                .documents()
-                .map(|document| document.summary().clone()),
-        );
         summaries.sort_by(summary_sort_key);
 
         Self {
@@ -52,10 +65,6 @@ impl LiveProjectSnapshot {
         }
     }
 
-    #[allow(
-        dead_code,
-        reason = "snapshot generation is exposed only for LSP lifecycle assertions"
-    )]
     pub(crate) fn generation(&self) -> SnapshotGeneration {
         self.generation
     }

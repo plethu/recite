@@ -111,7 +111,7 @@ production suppressions must carry a narrow scope and rationale.
 | `crates/recite-core/src/compiled/messagepack/wire.rs` | 692 | production | core/wire | exception | #89: retain the explicit decoder boundary while the v0 wire contract is synchronized |
 | `crates/recite-runtime/src/session_snapshot.rs` | 294 | production | runtime/snapshot | follow-up | #135: typed snapshot-boundary errors |
 | `crates/recite-core/src/compiled/messagepack/validate.rs` | 372 | production | core/wire | cohesive | #89: validation is part of the decoder boundary |
-| `crates/recite-lsp/src/workspace.rs` | 346 | production | lsp/workspace | review | #164: document state, feature projection, and generation ownership; refresh and semantic phases are split into focused modules |
+| `crates/recite-lsp/src/workspace.rs` | 374 | production | lsp/workspace | review | #168: transport lifecycle remains separate from kernel request and snapshot projection |
 | `crates/recite-compiler/src/wire/messagepack.rs` | 347 | production | compiler/wire | cohesive | #89: encoder mirror of the explicit decoder wire surface |
 | `crates/recite-cli/src/error.rs` | 359 | production | cli | review | Keep user-facing error projection separate from typed domain errors |
 | `crates/recite-ui/tests/diagnostics.rs` | 371 | test/support | ui/tests | review | Structured diagnostic resource and compatibility-message coverage |
@@ -162,7 +162,6 @@ production suppressions must carry a narrow scope and rationale.
 | `crates/recite-godot/src/bindings.rs` | 353 | production | godot | review | Host binding declarations |
 | `crates/recite-cli/src/runtime_fixture/prompt.rs` | 276 | production | cli/runtime-fixture | cohesive | Fixture prompt projection |
 | `crates/recite-benchmarks/src/runtime.rs` | 265 | production | benchmarks | cohesive | Runtime benchmark harness |
-| `crates/recite-lsp/src/summary/file/collector.rs` | 256 | production | lsp/summary | review | File summary projection |
 
 | `crates/recite-runtime/tests/adapter_conformance/driver.rs` | 1179 | test/support | runtime/tests | exception | #171: shared conformance driver grows with typed callback scenarios; retain until adapter conformance split |
 | `crates/recite-cli/src/play/tui/render/tests.rs` | 811 | test/support | cli/tui/tests | cohesive | Private rendering contract tests |
@@ -195,6 +194,6 @@ production suppressions must carry a narrow scope and rationale.
 | `crates/recite-cli/tests/watch_stress.rs` | 366 | test/support | cli/tests | cohesive | Watch stress harness |
 | `crates/recite-runtime/tests/traversal/conditions/choice_conditions.rs` | 365 | test/support | runtime/tests | cohesive | Choice condition coverage |
 | `crates/recite-lsp/src/tests/availability/speaker.rs` | 351 | test/support | lsp/tests | review | Typed and ordinary speaker completion coverage |
-| `crates/recite-lsp/src/tests/project_indexes.rs` | 394 | test/support | lsp/tests | cohesive | Project discovery, manifest transition, and saved-index regression coverage |
+| `crates/recite-lsp/src/tests/project_indexes.rs` | 418 | test/support | lsp/tests | cohesive | Project discovery, manifest transition, saved-index, and effective-key regression coverage |
 | `crates/recite-lsp/src/tests/code_action/schema_entry.rs` | 357 | test/support | lsp/tests | review | Private code-action behavior |
 | `crates/recite-compiler/tests/validation/participation.rs` | 369 | test/support | compiler/tests | cohesive | #168: participation-aware validation completeness and all-complete compatibility coverage |

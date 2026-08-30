@@ -1,23 +1,25 @@
 mod config;
+mod kernel;
 mod project_index;
 #[path = "project_refresh.rs"]
 mod project_refresh;
 mod schema_index;
-#[path = "semantic.rs"]
-mod semantic;
 mod snapshot;
 mod ui;
 
 use std::fs;
+use std::path::{Component, Path, PathBuf};
 
 use lsp_types::{
     CodeActionParams, CodeActionResponse, CompletionResponse, GotoDefinitionResponse, Hover,
     Location, Position, PrepareRenameResponse, TextDocumentContentChangeEvent, Uri, WorkspaceEdit,
 };
+use recite_compiler::AuthoringKernel;
 use recite_core::Diagnostic;
 use recite_ui::UiCatalog;
 
 pub(crate) use config::WorkspaceConfig;
+pub(crate) use kernel::{document_key_for_identity, document_key_for_open, document_key_for_saved};
 use project_index::{SavedDocument, SavedProjectIndex};
 use schema_index::SchemaIndex;
 pub(crate) use snapshot::LiveProjectSnapshot;
@@ -33,6 +35,7 @@ pub(crate) struct SnapshotGeneration(u64);
 pub(crate) struct LspWorkspace {
     saved: SavedProjectIndex,
     documents: OpenDocumentStore,
+    kernel: AuthoringKernel,
     snapshot: LiveProjectSnapshot,
     schema: SchemaIndex,
     generation: SnapshotGeneration,
@@ -44,7 +47,7 @@ impl LspWorkspace {
         let identity = self.open_identity(uri);
         let document = self.documents.open(identity, version, text);
         self.rebuild_next_generation();
-        DiagnosticRefresh::publish_open(&document, self.generation)
+        self.publish_open_document(&document)
     }
 
     pub(crate) fn change(
@@ -57,10 +60,7 @@ impl LspWorkspace {
         match self.documents.change(identity, version, changes) {
             DocumentChangeResult::Accepted(document) => {
                 self.rebuild_next_generation();
-                WorkspaceChangeResult::Accepted(DiagnosticRefresh::publish_open(
-                    &document,
-                    self.generation,
-                ))
+                WorkspaceChangeResult::Accepted(self.publish_open_document(&document))
             }
             DocumentChangeResult::Stale => WorkspaceChangeResult::Stale,
             DocumentChangeResult::Malformed => WorkspaceChangeResult::Malformed,
@@ -76,6 +76,7 @@ impl LspWorkspace {
         if !self.schema.refresh_uri(uri) {
             return None;
         }
+        self.kernel = self.new_kernel();
         self.rebuild_next_generation();
         self.schema.refresh_or_clear(self.generation)
     }
@@ -151,8 +152,9 @@ impl LspWorkspace {
             || self.schema.path().is_some_and(|path| {
                 self.documents.documents().any(|document| {
                     document
-                        .summary()
-                        .saved_path()
+                        .identity()
+                        .saved_path
+                        .as_ref()
                         .is_some_and(|open| open == path)
                 })
             });
@@ -174,20 +176,20 @@ impl LspWorkspace {
                 Some(uri) => document.identity().uri != *uri,
                 None => true,
             })
-            .map(|document| DiagnosticRefresh::publish_open(document, self.generation))
+            .map(|document| self.publish_open_document(document))
             .collect()
     }
 
     pub(crate) fn is_current_generation(&self, generation: SnapshotGeneration) -> bool {
-        self.generation == generation
+        self.generation == generation && self.snapshot.generation() == generation
     }
 
-    #[allow(dead_code)]
+    #[cfg(any(test, feature = "bench-support"))]
     pub(crate) fn generation(&self) -> SnapshotGeneration {
         self.generation
     }
 
-    #[allow(dead_code)]
+    #[cfg(any(test, feature = "bench-support"))]
     pub(crate) fn snapshot(&self) -> &LiveProjectSnapshot {
         &self.snapshot
     }
@@ -195,11 +197,6 @@ impl LspWorkspace {
     #[allow(dead_code)]
     pub(crate) fn schema(&self) -> &SchemaIndex {
         &self.schema
-    }
-
-    fn rebuild_next_generation(&mut self) {
-        self.generation = SnapshotGeneration(self.generation.0.saturating_add(1));
-        self.snapshot = LiveProjectSnapshot::rebuild(self.generation, &self.saved, &self.documents);
     }
 
     fn navigation_documents(&self) -> Vec<features::NavigationDocument<'_>> {
@@ -244,42 +241,65 @@ impl LspWorkspace {
             })
     }
 
-    fn validation_path_for_uri(&self, uri: &Uri) -> String {
-        if let Some(document) = self.documents.document(uri) {
-            return document
-                .summary()
-                .project_relative_path()
-                .unwrap_or(uri.as_str())
-                .to_owned();
-        }
-        if let Some(document) = self.saved.document_by_uri(uri) {
-            return document
-                .summary
-                .project_relative_path()
-                .unwrap_or(uri.as_str())
-                .to_owned();
-        }
-
-        uri.as_str().to_owned()
-    }
-
     fn open_identity(&self, uri: Uri) -> OpenFileIdentity {
         let Some(path) = uri_to_file_path(&uri) else {
             return uri_keyed_open_identity(uri);
         };
-        let Some(canonical_path) = fs::canonicalize(path).ok() else {
-            return uri_keyed_open_identity(uri);
-        };
-        if self.saved.root_for_path(&canonical_path).is_none() {
-            return uri_keyed_open_identity(uri);
-        }
+        let (canonical_path, path_exists) = canonical_or_normalized_path(&path);
+        let project_relative_path = path_exists
+            .then(|| self.saved.project_key_for_path(&canonical_path))
+            .flatten();
 
         OpenFileIdentity {
             uri,
             saved_path: Some(canonical_path.clone()),
-            project_relative_path: self.saved.project_key_for_path(&canonical_path),
+            project_relative_path,
         }
     }
+}
+
+fn canonical_or_normalized_path(path: &Path) -> (PathBuf, bool) {
+    if let Ok(canonical_path) = fs::canonicalize(path) {
+        return (canonical_path, true);
+    }
+
+    let normalized = lexically_normalized_path(path);
+    let mut missing_components = Vec::new();
+    let mut cursor = normalized.as_path();
+    loop {
+        if let Ok(canonical_parent) = fs::canonicalize(cursor) {
+            let mut path = canonical_parent;
+            for component in missing_components.iter().rev() {
+                path.push(component);
+            }
+            return (path, false);
+        }
+
+        let Some(component) = cursor.file_name() else {
+            return (normalized, false);
+        };
+        missing_components.push(component.to_owned());
+        let Some(parent) = cursor.parent() else {
+            return (normalized, false);
+        };
+        cursor = parent;
+    }
+}
+
+fn lexically_normalized_path(path: &Path) -> PathBuf {
+    let mut normalized = PathBuf::new();
+    for component in path.components() {
+        match component {
+            Component::Prefix(prefix) => normalized.push(prefix.as_os_str()),
+            Component::RootDir => normalized.push(Path::new(std::path::MAIN_SEPARATOR_STR)),
+            Component::CurDir => {}
+            Component::ParentDir => {
+                normalized.pop();
+            }
+            Component::Normal(component) => normalized.push(component),
+        }
+    }
+    normalized
 }
 
 fn uri_keyed_open_identity(uri: Uri) -> OpenFileIdentity {
@@ -308,22 +328,30 @@ pub(crate) enum DiagnosticRefresh {
 }
 
 impl DiagnosticRefresh {
-    fn publish_open(document: &OpenDocument, generation: SnapshotGeneration) -> Self {
+    fn publish_open(
+        document: &OpenDocument,
+        diagnostics: Vec<Diagnostic>,
+        generation: SnapshotGeneration,
+    ) -> Self {
         Self::Publish(DocumentDiagnostics {
             uri: document.identity().uri.clone(),
             text: document.text().to_owned(),
             version: Some(document.version()),
-            diagnostics: document.diagnostics().to_vec(),
+            diagnostics,
             generation,
         })
     }
 
-    fn publish_saved(document: &SavedDocument, generation: SnapshotGeneration) -> Self {
+    fn publish_saved(
+        document: &SavedDocument,
+        diagnostics: Vec<Diagnostic>,
+        generation: SnapshotGeneration,
+    ) -> Self {
         Self::Publish(DocumentDiagnostics {
-            uri: document.summary.uri().clone(),
+            uri: document.identity.uri.clone(),
             text: document.text.clone(),
             version: None,
-            diagnostics: document.summary.diagnostics.clone(),
+            diagnostics,
             generation,
         })
     }

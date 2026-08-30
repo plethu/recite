@@ -173,7 +173,7 @@ fn localized_primary_related_and_help_use_shared_renderer_at_lsp_boundary() {
         .parse::<Uri>()
         .expect("valid related URI");
     let sources = [DiagnosticSource {
-        path: "dialogue/related.recite",
+        path: "dialogue/related.recite".to_owned(),
         uri: &related_uri,
         text: "😀first\nsecond\n",
     }];

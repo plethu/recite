@@ -209,6 +209,30 @@ pub(super) fn did_save_rekeys_new_open_file_without_duplicate_summary() {
     assert!(summaries[0].saved_path().is_some());
 }
 
+#[cfg(unix)]
+pub(super) fn open_nonexistent_aliases_share_one_fallback_key() {
+    use std::os::unix::fs::symlink;
+
+    let temp = TempDir::new().unwrap_or_else(|error| panic!("tempdir: {error}"));
+    let real = temp.path().join("real");
+    let alias = temp.path().join("alias");
+    std::fs::create_dir(&real).expect("real directory");
+    symlink(&real, &alias).expect("directory alias");
+    let real_uri = file_uri(&real.join("draft.recite"));
+    let alias_uri = file_uri(&alias.join("draft.recite"));
+    let mut workspace = LspWorkspace::new(WorkspaceConfig::for_roots(vec![temp.path().to_owned()]));
+
+    workspace.open(real_uri, 1, ":: draft\n".to_owned());
+    workspace.open(alias_uri, 1, ":: draft\n".to_owned());
+
+    assert_eq!(workspace.snapshot().summaries().len(), 1);
+    assert!(
+        workspace.snapshot().summaries()[0]
+            .project_relative_path()
+            .is_none()
+    );
+}
+
 pub(super) fn did_save_refreshes_saved_summary_for_closed_files() {
     let temp = TempDir::new().unwrap_or_else(|error| panic!("tempdir: {error}"));
     let source = temp.path().join("scene.recite");

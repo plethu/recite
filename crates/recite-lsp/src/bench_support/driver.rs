@@ -91,13 +91,14 @@ impl LspBenchmarkDriver {
 
     #[must_use]
     pub fn diagnostics_refresh(&mut self, probe: &LspDocumentProbe) -> usize {
+        // Keep the synthetic refresh at the latest probe version so repeated
+        // benchmark operations satisfy the kernel's monotonic overlay guard.
         let refresh = self
             .workspace
-            .open(probe.uri.clone(), 1, read_probe_text_or_panic(probe));
+            .open(probe.uri.clone(), 2, read_probe_text_or_panic(probe));
         let DiagnosticRefresh::Publish(diagnostics) = refresh else {
             return 0;
         };
-        let diagnostics = self.workspace.with_semantic_diagnostics(diagnostics);
         let text = read_probe_text_or_panic(probe);
         publish_diagnostics(
             diagnostics.uri,

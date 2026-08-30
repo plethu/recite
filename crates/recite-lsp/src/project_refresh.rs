@@ -21,16 +21,13 @@ impl LspWorkspace {
             self.rebuild_next_generation();
         }
         if let Some(open_refresh) = open_refresh {
-            refreshes.push(DiagnosticRefresh::publish_open(
-                &open_refresh.document,
-                self.generation,
-            ));
+            refreshes.push(self.publish_open_document(&open_refresh.document));
             return refreshes;
         }
         if let Some(refresh) = self
             .saved
             .document_by_uri(&uri)
-            .map(|document| DiagnosticRefresh::publish_saved(document, self.generation))
+            .map(|document| self.publish_saved_document(document))
         {
             refreshes.push(refresh);
         } else if touched_saved {
@@ -88,7 +85,7 @@ impl LspWorkspace {
             return self
                 .saved
                 .document_by_uri(uri)
-                .map(|document| vec![DiagnosticRefresh::publish_saved(document, self.generation)])
+                .map(|document| vec![self.publish_saved_document(document)])
                 .unwrap_or_else(|| {
                     vec![DiagnosticRefresh::Clear {
                         uri: uri.clone(),
@@ -106,7 +103,7 @@ impl LspWorkspace {
         Some(
             self.saved
                 .document_by_uri(&uri)
-                .map(|document| DiagnosticRefresh::publish_saved(document, self.generation))
+                .map(|document| self.publish_saved_document(document))
                 .unwrap_or(DiagnosticRefresh::Clear {
                     uri,
                     generation: self.generation,
