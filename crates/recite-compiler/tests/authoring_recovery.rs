@@ -188,4 +188,19 @@ fn symbol_readiness_reports_the_actual_incomplete_classes() {
                 .contains(&recite_compiler::QueryUnavailableReason::Incomplete(class))
         );
     }
+
+    let mut kernel = AuthoringKernel::new();
+    kernel
+        .apply(AuthoringRequest::new(
+            SnapshotGeneration::initial(),
+            [SavedDocument::new(key(), "::\n")],
+            [],
+        ))
+        .expect("definition recovery fixture accepted");
+    let options = SymbolQueryOptions::new(false);
+    let local = kernel.snapshot().symbols(&key(), options);
+    let project = kernel.snapshot().project_symbols(options);
+    let reason = recite_compiler::QueryUnavailableReason::Incomplete(QueryClass::BlockDefinitions);
+    assert!(!local.unavailable_reasons().contains(&reason));
+    assert!(!project.unavailable_reasons().contains(&reason));
 }

@@ -101,3 +101,28 @@ fn missing_ids_keep_typed_identity_and_exact_insertion_points_across_crlf_utf8()
         recite_core::SourcePosition::new(4, 3).expect("valid insertion position")
     );
 }
+
+#[test]
+fn declaration_navigation_ignores_unrelated_reference_recovery() {
+    let mut kernel = AuthoringKernel::new();
+    kernel
+        .apply(AuthoringRequest::new(
+            recite_compiler::SnapshotGeneration::initial(),
+            [SavedDocument::new(
+                key("main.recite"),
+                ":: start\n->\n:: target\n",
+            )],
+            [],
+        ))
+        .expect("declaration fixture accepted");
+    let result = kernel
+        .snapshot()
+        .navigate(&key("main.recite"), SourcePosition::new(3, 4).unwrap());
+    assert!(matches!(
+        result,
+        QueryResult::Ready(NavigationResult::Unique(location))
+            if location.identity() == &recite_compiler::SymbolIdentity::Block(
+                recite_core::BlockId::new("target").unwrap()
+            )
+    ));
+}

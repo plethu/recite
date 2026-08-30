@@ -27,6 +27,7 @@ impl AuthoringSnapshot {
         let SymbolIdentity::Block(block_id) = symbol.identity() else {
             return QueryResult::Ready(NavigationResult::Unsupported);
         };
+        let reference_origin = symbol.kind() == SymbolKind::BlockReference;
         let qualified_file = document
             .summary()
             .block_references()
@@ -76,7 +77,7 @@ impl AuthoringSnapshot {
                 QueryClass::BlockDefinitions,
             ));
         }
-        if document.participation().block_references().is_complete() {
+        if !reference_origin || document.participation().block_references().is_complete() {
             QueryResult::Ready(result)
         } else {
             QueryResult::partial(

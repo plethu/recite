@@ -192,7 +192,6 @@ production suppressions must carry a narrow scope and rationale.
 | `crates/recite-runtime/tests/adapter_conformance.rs` | 426 | test/support | runtime/tests | cohesive | Adapter conformance entry point |
 | `crates/recite-core/tests/schema_manifest/load_valid.rs` | 452 | test/support | core/tests | cohesive | Valid manifest coverage |
 | `crates/recite-runtime/tests/session_serialization/invalid_snapshots.rs` | 478 | test/support | runtime/tests | cohesive | Snapshot failure contract |
-| `crates/recite-parser/tests/parser/statements.rs` | 438 | test/support | parser/tests | cohesive | Statement parser coverage and exact authoring spans |
 | `crates/recite-cli/tests/watch_stress.rs` | 366 | test/support | cli/tests | cohesive | Watch stress harness |
 | `crates/recite-runtime/tests/traversal/conditions/choice_conditions.rs` | 365 | test/support | runtime/tests | cohesive | Choice condition coverage |
 | `crates/recite-lsp/src/tests/availability/speaker.rs` | 351 | test/support | lsp/tests | review | Typed and ordinary speaker completion coverage |

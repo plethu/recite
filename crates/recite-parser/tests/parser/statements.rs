@@ -31,13 +31,6 @@ fn lowering_parses_statement_vocabulary_and_conditions() {
 
     assert!(lowered.diagnostics.is_empty());
     let block = single_block(&lowered);
-    assert_eq!(
-        (
-            block.id_span.as_ref().expect("parser span").start.line(),
-            block.id_span.as_ref().expect("parser span").start.column()
-        ),
-        (1, 4)
-    );
     assert!(block.is_default);
     assert_eq!(
         block.default_speaker.as_ref().map(SpeakerId::as_str),
@@ -68,13 +61,6 @@ fn lowering_parses_statement_vocabulary_and_conditions() {
     );
 
     let prompt = line_statement(block, 1);
-    assert_eq!(
-        prompt
-            .source_id_span
-            .as_ref()
-            .map(|span| (span.start.line(), span.start.column())),
-        Some((3, 3))
-    );
     assert_eq!(prompt.source_text.text, "What do you need?");
     assert_eq!(
         prompt
@@ -87,34 +73,12 @@ fn lowering_parses_statement_vocabulary_and_conditions() {
 
     let choice = nested_choice(prompt, 0);
     assert_eq!(
-        choice
-            .source_id_span
-            .as_ref()
-            .map(|span| (span.start.line(), span.start.column())),
-        Some((6, 5))
-    );
-    assert_eq!(
         choice.id.as_ref().map(recite_core::ChoiceId::as_str),
         Some("8d398d18dbde0d7303c2")
     );
     assert_eq!(choice.echo, ChoiceEcho::SelectedText);
     assert_eq!(choice.source_text.text, "What's the news?");
     assert!(choice.availability_requirement.is_some());
-    let Some(ChoiceTarget {
-        target: DivertTarget::Block(reference),
-        ..
-    }) = choice.target.as_ref()
-    else {
-        panic!("expected local choice target");
-    };
-    assert_eq!(reference.block_id.as_str(), "local_news");
-    assert_eq!(
-        reference
-            .block_id_span
-            .as_ref()
-            .map(|span| (span.start.line(), span.start.column())),
-        Some((8, 8))
-    );
     assert_eq!(
         choice
             .target
@@ -330,67 +294,6 @@ fn effect_arguments_preserve_scalar_types() {
 }
 
 #[test]
-fn diverts_parse_external_targets_and_extra_token_spans() {
-    let source = concat!(
-        ":: tavern_arrival\n",
-        "-> local_news\n",
-        "-> dialogue/market.recite::market_intro\n",
-        "-> local_news extra\n",
-        "-> dialogue/market.recite::\n",
-    );
-
-    let lowered = lower(source);
-
-    assert_diagnostic_codes(&lowered, ["RECITE_PARSE011", "RECITE_PARSE011"]);
-    assert_eq!(lowered.diagnostics[0].span.start.line(), 4);
-    assert_eq!(lowered.diagnostics[0].span.start.column(), 15);
-    assert_eq!(lowered.diagnostics[1].span.start.line(), 5);
-    assert_eq!(lowered.diagnostics[1].span.start.column(), 4);
-
-    let block = single_block(&lowered);
-    let Statement::Divert(local) = &block.statements[0] else {
-        panic!("expected local divert");
-    };
-    let DivertTarget::Block(local_reference) = &local.target else {
-        panic!("expected local block target");
-    };
-    assert_eq!(local_reference.block_id.as_str(), "local_news");
-    assert_eq!(
-        local_reference
-            .block_id_span
-            .as_ref()
-            .map(|span| (span.start.line(), span.start.column())),
-        Some((2, 4))
-    );
-
-    let Statement::Divert(external) = &block.statements[1] else {
-        panic!("expected external divert");
-    };
-    let DivertTarget::Block(external_reference) = &external.target else {
-        panic!("expected external block target");
-    };
-    assert_eq!(
-        external_reference.file.as_deref(),
-        Some("dialogue/market.recite")
-    );
-    assert_eq!(
-        external_reference
-            .file_span
-            .as_ref()
-            .map(|span| (span.start.line(), span.start.column())),
-        Some((3, 4))
-    );
-    assert_eq!(external_reference.block_id.as_str(), "market_intro");
-    assert_eq!(
-        external_reference
-            .block_id_span
-            .as_ref()
-            .map(|span| (span.start.line(), span.start.column())),
-        Some((3, 28))
-    );
-}
-
-#[test]
 fn choice_extracts_first_divert_as_target_and_preserves_later_statement_order() {
     let source = concat!(
         ":: tavern_arrival\n",
@@ -413,13 +316,6 @@ fn choice_extracts_first_divert_as_target_and_preserves_later_statement_order() 
         panic!("expected local choice target");
     };
     assert_eq!(reference.block_id.as_str(), "road_intro");
-    assert_eq!(
-        reference
-            .block_id_span
-            .as_ref()
-            .map(|span| (span.start.line(), span.start.column())),
-        Some((4, 6))
-    );
     assert_eq!(
         choice
             .target

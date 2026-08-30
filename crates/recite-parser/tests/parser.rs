@@ -19,6 +19,8 @@ mod fixture_support;
 mod lowering;
 #[path = "parser/metadata.rs"]
 mod metadata;
+#[path = "parser/spans.rs"]
+mod spans;
 #[path = "parser/statements.rs"]
 mod statements;
 #[path = "parser/support.rs"]

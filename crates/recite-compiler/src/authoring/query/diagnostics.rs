@@ -36,7 +36,7 @@ impl AuthoringSnapshot {
             return QueryResult::NoMatch;
         };
         let locations = symbol_locations(key, document, options);
-        let unavailable = incomplete_symbol_classes(document.participation());
+        let unavailable = incomplete_symbol_classes(document.participation(), options);
         if unavailable.is_empty() {
             QueryResult::Ready(locations)
         } else {
@@ -51,7 +51,7 @@ impl AuthoringSnapshot {
         let mut unavailable = Vec::new();
         for document in self.documents() {
             locations.extend(symbol_locations(document.key(), document, options));
-            unavailable.extend(incomplete_symbol_classes(document.participation()));
+            unavailable.extend(incomplete_symbol_classes(document.participation(), options));
         }
         if unavailable.is_empty() {
             QueryResult::Ready(locations)
@@ -168,12 +168,9 @@ impl AuthoringSnapshot {
 
 fn incomplete_symbol_classes(
     participation: crate::ValidationParticipation,
+    options: SymbolQueryOptions,
 ) -> Vec<QueryUnavailableReason> {
-    [
-        (
-            QueryClass::BlockDefinitions,
-            participation.block_definitions().is_complete(),
-        ),
+    let mut classes = vec![
         (
             QueryClass::BlockReferences,
             participation.block_references().is_complete(),
@@ -191,10 +188,17 @@ fn incomplete_symbol_classes(
             QueryClass::EffectFunctions,
             participation.effect_functions().is_complete(),
         ),
-    ]
-    .into_iter()
-    .filter_map(|(class, complete)| {
-        (!complete).then_some(QueryUnavailableReason::Incomplete(class))
-    })
-    .collect()
+    ];
+    if options.include_declarations() {
+        classes.push((
+            QueryClass::BlockDefinitions,
+            participation.block_definitions().is_complete(),
+        ));
+    }
+    classes
+        .into_iter()
+        .filter_map(|(class, complete)| {
+            (!complete).then_some(QueryUnavailableReason::Incomplete(class))
+        })
+        .collect()
 }
