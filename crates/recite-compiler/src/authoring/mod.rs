@@ -9,15 +9,17 @@ mod state;
 mod summary;
 
 pub use build::{
-    AffectedInput, AffectedInputReason, BuildAuthority, BuildCancellation, BuildCandidate,
-    BuildCheck, BuildControl, BuildCoordinator, BuildEngine, BuildEventKind, BuildFailure,
-    BuildFailureReason, BuildFingerprintSet, BuildGeneration, BuildGenerationError, BuildInput,
-    BuildInputAuthority, BuildInputFingerprint, BuildInputKind, BuildInputPolicy, BuildLifecycle,
-    BuildPhase, BuildPublisher, BuildRequest, BuildRequestError, BuildResult, BuildRunError,
-    BuildState, BuildTarget, BuildTargetError, BuildTelemetry, BuildTerminalStatus,
-    BuildTransition, BuildTransitionError, FreshnessAssessment, FreshnessStatus, PublishFailure,
-    PublishFailureReason, PublishNotAttemptedReason, PublishOutcome, PublishRefusal,
-    RecoveryNeeded, RestartGuidance, StaleReason,
+    AffectedInput, AffectedInputReason, BuildAuthority, BuildAuthorityError, BuildAuthorityFence,
+    BuildCancellation, BuildCandidate, BuildCheck, BuildCheckError, BuildControl, BuildCoordinator,
+    BuildEngine, BuildEventKind, BuildFailure, BuildFailureReason, BuildFingerprintSet,
+    BuildGeneration, BuildGenerationError, BuildInput, BuildInputAuthority, BuildInputFingerprint,
+    BuildInputKind, BuildInputPayload, BuildInputPolicy, BuildLifecycle, BuildPhase,
+    BuildPublishPermit, BuildPublisher, BuildRequest, BuildRequestError, BuildResult,
+    BuildResultFailure, BuildRunError, BuildState, BuildTarget, BuildTargetError, BuildTelemetry,
+    BuildTerminalStatus, BuildTransition, BuildTransitionError, FreshnessAssessment,
+    FreshnessStatus, PreparedPublish, PreparedPublishIdentity, PublishAbortReason, PublishFailure,
+    PublishFailureReason, PublishNotAttemptedReason, PublishOutcome, PublishOutcomeError,
+    PublishRefusal, RecoveryNeeded, RestartGuidance, StaleReason,
 };
 pub use edit::{
     AuthoringEditError, AuthoringEditOperation, AuthoringEditPlan, EditPrecondition, SourceEdit,

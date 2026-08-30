@@ -1,10 +1,11 @@
+use super::freshness::FreshnessStatus;
 use recite_core::{Diagnostic, DiagnosticSeverity, DocumentKey};
 
 use super::super::SnapshotGeneration;
+use super::fingerprints::{BuildFingerprintSet, BuildInputFingerprint, default_fingerprints};
 use super::freshness::{AffectedInput, RestartGuidance};
 use super::identity::{
-    BuildFingerprintSet, BuildGeneration, BuildInput, BuildInputAuthority, BuildInputKind,
-    default_fingerprints,
+    BuildGeneration, BuildInput, BuildInputAuthority, BuildInputKind, BuildInputPayload,
 };
 
 /// A complete canonical build request.
@@ -39,6 +40,15 @@ impl BuildRequest {
         policy: super::identity::BuildInputPolicy,
     ) -> Result<Self, BuildRequestError> {
         let mut inputs = inputs.into_iter().collect::<Vec<_>>();
+        for input in &inputs {
+            if (input.kind() == &BuildInputKind::Schema)
+                != matches!(input.payload(), BuildInputPayload::Schema(_))
+            {
+                return Err(BuildRequestError::SchemaPayloadMismatch {
+                    key: input.key().clone(),
+                });
+            }
+        }
         if policy == super::identity::BuildInputPolicy::SavedOnly
             && let Some(input) = inputs
                 .iter()
@@ -73,13 +83,12 @@ impl BuildRequest {
                 effective.push(input);
             }
         }
-        if let Some(input) = effective
+        let schema_count = effective
             .iter()
-            .find(|input| input.kind == BuildInputKind::Schema && input.schema_model().is_none())
-        {
-            return Err(BuildRequestError::SchemaModelRequired {
-                key: input.key.clone(),
-            });
+            .filter(|input| input.kind() == &BuildInputKind::Schema)
+            .count();
+        if schema_count > 1 {
+            return Err(BuildRequestError::MultipleSchemaInputs);
         }
         Ok(Self {
             generation,
@@ -115,9 +124,7 @@ impl BuildRequest {
     pub fn affected_inputs(&self) -> Vec<AffectedInput> {
         self.inputs
             .iter()
-            .map(|input| {
-                AffectedInput::new(super::identity::BuildInputFingerprint::from_input(input))
-            })
+            .map(|input| AffectedInput::new(BuildInputFingerprint::from_input(input)))
             .collect()
     }
     #[must_use]
@@ -140,31 +147,44 @@ pub enum BuildRequestError {
         key: DocumentKey,
         kind: BuildInputKind,
     },
-    #[error("schema input {key} requires a parsed canonical schema model")]
-    SchemaModelRequired { key: DocumentKey },
+    #[error("schema input {key} must carry exactly one canonical schema payload")]
+    SchemaPayloadMismatch { key: DocumentKey },
+    #[error("a build request cannot contain multiple schema inputs")]
+    MultipleSchemaInputs,
 }
 
 /// Validation and freshness output supplied by an injected check seam.
 #[derive(Clone, Debug, Eq, PartialEq)]
 #[non_exhaustive]
 pub struct BuildCheck {
+    generation: BuildGeneration,
+    snapshot_generation: super::super::SnapshotGeneration,
+    fingerprints: BuildFingerprintSet,
     diagnostics: Vec<Diagnostic>,
     freshness: super::freshness::FreshnessAssessment,
 }
 impl BuildCheck {
     #[must_use]
     pub fn new(
+        request: &BuildRequest,
         diagnostics: Vec<Diagnostic>,
         freshness: super::freshness::FreshnessAssessment,
     ) -> Self {
         Self {
+            generation: request.generation(),
+            snapshot_generation: request.snapshot_generation(),
+            fingerprints: request.fingerprints().clone(),
             diagnostics,
             freshness,
         }
     }
     #[must_use]
-    pub fn passed(freshness: super::freshness::FreshnessAssessment) -> Self {
-        Self::new(Vec::new(), freshness)
+    pub fn passed(request: &BuildRequest) -> Self {
+        Self::new(
+            request,
+            Vec::new(),
+            super::freshness::FreshnessAssessment::fresh(request.fingerprints().clone()),
+        )
     }
     #[must_use]
     pub fn diagnostics(&self) -> &[Diagnostic] {
@@ -181,4 +201,30 @@ impl BuildCheck {
             .iter()
             .any(|diagnostic| diagnostic.severity == DiagnosticSeverity::Error)
     }
+    pub(crate) fn validate_for(&self, request: &BuildRequest) -> Result<(), BuildCheckError> {
+        if self.generation != request.generation()
+            || self.snapshot_generation != request.snapshot_generation()
+            || self.fingerprints != *request.fingerprints()
+        {
+            return Err(BuildCheckError::RequestMismatch);
+        }
+        if self.freshness.expected() != request.fingerprints() {
+            return Err(BuildCheckError::FreshnessMismatch);
+        }
+        if self.freshness.status() == FreshnessStatus::Stale {
+            return Err(BuildCheckError::StaleFreshness);
+        }
+        Ok(())
+    }
+}
+
+#[derive(Clone, Copy, Debug, Eq, PartialEq, thiserror::Error)]
+#[non_exhaustive]
+pub enum BuildCheckError {
+    #[error("build check identity does not match its request")]
+    RequestMismatch,
+    #[error("build check freshness does not match its request fingerprints")]
+    FreshnessMismatch,
+    #[error("a stale freshness assessment cannot pass a build check")]
+    StaleFreshness,
 }

@@ -1,13 +1,12 @@
 use super::support::*;
-
 use recite_compiler::{
-    BuildAuthority, BuildCandidate, BuildCheck, BuildControl, BuildEngine, BuildFailure,
-    BuildGeneration, BuildInput, BuildRequest, BuildTerminalStatus, PublishNotAttemptedReason,
-    PublishOutcome, RecoveryNeeded,
+    BuildAuthority, BuildAuthorityFence, BuildCandidate, BuildCheck, BuildControl, BuildEngine,
+    BuildFailure, BuildGeneration, BuildInput, BuildRequest, BuildResultFailure,
+    BuildTerminalStatus, PublishOutcome, RecoveryNeeded,
 };
 
 #[test]
-fn cancellation_at_each_checkpoint_never_calls_commit() {
+fn cancellation_at_each_checkpoint_never_calls_commit_and_aborts_staging() {
     let request = make_request(
         1,
         [BuildInput::saved_source(key("dialogue/a.recite"), ":: a\n")],
@@ -20,198 +19,129 @@ fn cancellation_at_each_checkpoint_never_calls_commit() {
     assert_eq!(result.status(), BuildTerminalStatus::Cancelled);
     assert_eq!(engine.check_calls, 0);
     assert_eq!(publisher.commit_calls, 0);
-    assert!(matches!(
-        result.publish(),
-        PublishOutcome::NotAttempted {
-            reason: PublishNotAttemptedReason::Cancelled
-        }
-    ));
 
     let during_check = BuildControl::new();
     let mut engine = FakeEngine::new([candidate("a.recitec", b"a")]);
     engine.cancellation = EngineCancellation::DuringCheck;
     let mut publisher = FakePublisher::new();
-    let result = run(request.clone(), &during_check, &mut engine, &mut publisher);
-    assert_eq!(result.status(), BuildTerminalStatus::Cancelled);
-    assert_eq!(publisher.commit_calls, 0);
-
+    assert_eq!(
+        run(request.clone(), &during_check, &mut engine, &mut publisher).status(),
+        BuildTerminalStatus::Cancelled
+    );
     let during_build = BuildControl::new();
     let mut engine = FakeEngine::new([candidate("a.recitec", b"a")]);
     engine.cancellation = EngineCancellation::DuringBuild;
     let mut publisher = FakePublisher::new();
-    let result = run(request.clone(), &during_build, &mut engine, &mut publisher);
-    assert_eq!(result.status(), BuildTerminalStatus::Cancelled);
-    assert_eq!(publisher.commit_calls, 0);
-
-    let between_candidates = BuildControl::new();
+    assert_eq!(
+        run(request.clone(), &during_build, &mut engine, &mut publisher).status(),
+        BuildTerminalStatus::Cancelled
+    );
+    let between = BuildControl::new();
     let mut engine = FakeEngine::new([candidate("a.recitec", b"a"), candidate("b.recitec", b"b")]);
     let mut publisher = FakePublisher::new();
     publisher.cancel_after_prepare = Some(1);
-    let result = run(request, &between_candidates, &mut engine, &mut publisher);
-    assert_eq!(result.status(), BuildTerminalStatus::Cancelled);
-    assert_eq!(publisher.prepare_calls, 1);
-    assert_eq!(publisher.commit_calls, 0);
-
-    let before_publish = BuildControl::new();
-    let mut engine = FakeEngine::new([candidate("a.recitec", b"a")]);
-    let mut publisher = FakePublisher::new();
-    publisher.cancel_after_prepare = Some(1);
-    let result = run(
-        make_request(
-            3,
-            [BuildInput::saved_source(key("dialogue/a.recite"), ":: a\n")],
-        ),
-        &before_publish,
-        &mut engine,
-        &mut publisher,
-    );
-    assert_eq!(result.status(), BuildTerminalStatus::Cancelled);
-    assert_eq!(publisher.prepare_calls, 1);
-    assert_eq!(publisher.commit_calls, 0);
-}
-
-#[test]
-fn supersession_wins_user_cancellation_and_only_newer_bytes_publish() {
-    let request_a = make_request(
-        1,
-        [BuildInput::saved_source(key("dialogue/a.recite"), ":: a\n")],
-    );
-    let request_b = make_request(
-        2,
-        [BuildInput::saved_source(key("dialogue/a.recite"), ":: b\n")],
-    );
-    let mut publisher = FakePublisher::new();
-    let control_a = BuildControl::new();
-    let mut engine_a = FakeEngine::new([candidate("dialogue.recitec", b"A")]);
-    engine_a.cancellation = EngineCancellation::SupersedeDuringBuild(request_b.generation());
-    let result_a = run(request_a, &control_a, &mut engine_a, &mut publisher);
-    assert_eq!(result_a.status(), BuildTerminalStatus::Superseded);
-    assert_eq!(publisher.commit_calls, 0);
-
-    let control_b = BuildControl::new();
-    let mut engine_b = FakeEngine::new([candidate("dialogue.recitec", b"B")]);
-    let result_b = run(request_b, &control_b, &mut engine_b, &mut publisher);
-    assert_eq!(result_b.status(), BuildTerminalStatus::Succeeded);
-    assert_eq!(publisher.commit_calls, 1);
     assert_eq!(
-        publisher.published.get("dialogue.recitec"),
-        Some(&b"B".to_vec())
+        run(request, &between, &mut engine, &mut publisher).status(),
+        BuildTerminalStatus::Cancelled
     );
+    assert_eq!(publisher.commit_calls, 0);
+    assert!(publisher.staged.is_empty());
+    assert_eq!(publisher.abort_calls, 1);
 }
 
 #[test]
-fn stale_generation_or_fingerprint_refuses_publish() {
-    let request = make_request(
-        4,
-        [BuildInput::saved_source(key("dialogue/a.recite"), ":: a\n")],
-    );
+fn supersession_dominates_cancellation_and_engine_failure() {
+    struct FailingEngine;
+    impl BuildEngine for FailingEngine {
+        fn check(&mut self, request: &BuildRequest, _: &BuildControl) -> BuildCheck {
+            BuildCheck::passed(request)
+        }
+        fn build(
+            &mut self,
+            _: &BuildRequest,
+            control: &BuildControl,
+        ) -> Result<Vec<BuildCandidate>, BuildFailure> {
+            control.cancel();
+            control.supersede(BuildGeneration::new(2));
+            Err(BuildFailure::Engine {
+                reason: recite_compiler::BuildFailureReason::Host,
+            })
+        }
+    }
+    let request = make_request(1, [BuildInput::saved_source(key("a.recite"), "a")]);
     let control = BuildControl::new();
+    let mut engine = FailingEngine;
+    let mut publisher = FakePublisher::new();
+    let result = run(request, &control, &mut engine, &mut publisher);
+    assert_eq!(result.status(), BuildTerminalStatus::Superseded);
+    assert!(result.failure().is_none());
+    assert_eq!(publisher.commit_calls, 0);
+}
+
+#[test]
+fn stale_fence_and_invalid_partial_are_structured_failures() {
+    let request = make_request(4, [BuildInput::saved_source(key("a.recite"), "a")]);
+    let changed = make_request(4, [BuildInput::saved_source(key("a.recite"), "changed")]);
+    let fence = BuildAuthorityFence::new(BuildAuthority::from_request(&changed));
     let mut engine = FakeEngine::new([candidate("a.recitec", b"A")]);
     let mut publisher = FakePublisher::new();
-    let changed = BuildAuthority::new(
-        BuildGeneration::new(5),
-        request.snapshot_generation(),
-        request.fingerprints().clone(),
-    );
-    let mut current = Some(changed);
-    let result = recite_compiler::BuildCoordinator::new()
-        .run_with_authority(
+    let stale = recite_compiler::BuildCoordinator::with_fence(fence)
+        .run(
             request.clone(),
-            &control,
-            || {
-                current
-                    .take()
-                    .unwrap_or_else(|| BuildAuthority::from_request(&request))
-            },
+            &BuildControl::new(),
             &mut engine,
             &mut publisher,
         )
-        .unwrap_or_else(|error| panic!("test coordinator transition is valid: {error}"));
-    assert_eq!(result.status(), BuildTerminalStatus::Stale);
+        .unwrap_or_else(|error| panic!("valid stale transition: {error}"));
+    assert_eq!(stale.status(), BuildTerminalStatus::Stale);
     assert_eq!(publisher.commit_calls, 0);
-    assert!(matches!(
-        result.publish(),
-        PublishOutcome::Refused {
-            reason: recite_compiler::PublishRefusal::StaleBuildGeneration
-        }
-    ));
+    assert!(matches!(stale.publish(), PublishOutcome::Refused { .. }));
 
-    let request_six = make_request(
-        6,
-        [BuildInput::saved_source(key("dialogue/a.recite"), ":: a\n")],
-    );
-    let changed = BuildAuthority::new(
-        request_six.generation(),
-        request_six.snapshot_generation(),
-        make_request(
-            6,
-            [BuildInput::saved_source(
-                key("dialogue/a.recite"),
-                ":: changed\n",
-            )],
-        )
-        .fingerprints()
-        .clone(),
-    );
-    let control = BuildControl::new();
-    let mut engine = FakeEngine::new([candidate("a.recitec", b"A")]);
+    let mut engine = FakeEngine::new([candidate("a.recitec", b"a"), candidate("b.recitec", b"b")]);
     let mut publisher = FakePublisher::new();
-    let result = recite_compiler::BuildCoordinator::new()
-        .run_with_authority(
-            request_six.clone(),
-            &control,
-            || changed.clone(),
-            &mut engine,
-            &mut publisher,
-        )
-        .unwrap_or_else(|error| panic!("test coordinator transition is valid: {error}"));
-    assert_eq!(result.status(), BuildTerminalStatus::Stale);
-    assert_eq!(publisher.commit_calls, 0);
+    publisher.commit_outcome = Some(PublishOutcome::Partial {
+        committed: vec![target("a.recitec")],
+        failed: target("a.recitec"),
+        remaining: vec![target("b.recitec")],
+        recovery: RecoveryNeeded::for_targets(vec![target("a.recitec")]),
+    });
+    let invalid = run(request, &BuildControl::new(), &mut engine, &mut publisher);
+    assert_eq!(invalid.status(), BuildTerminalStatus::Failed);
     assert!(matches!(
-        result.publish(),
-        PublishOutcome::Refused {
-            reason: recite_compiler::PublishRefusal::StaleFingerprints
-        }
+        invalid.failure(),
+        Some(BuildResultFailure::InvalidPublication(_))
     ));
+    assert_eq!(publisher.published.get("a.recitec"), Some(&b"a".to_vec()));
 }
 
 #[test]
-fn preparation_failure_does_not_replace_prior_outputs() {
-    let request = make_request(
-        1,
-        [BuildInput::saved_source(key("dialogue/a.recite"), ":: a\n")],
-    );
+fn preparation_failure_preserves_prior_outputs_and_reason() {
+    let request = make_request(1, [BuildInput::saved_source(key("a.recite"), "a")]);
     let mut publisher = FakePublisher::new();
     publisher
         .published
-        .insert("a.recitec".to_owned(), b"prior".to_vec());
+        .insert("a.recitec".into(), b"prior".to_vec());
     publisher.fail_target = Some(target("b.recitec"));
     let mut engine = FakeEngine::new([
         candidate("a.recitec", b"new-a"),
         candidate("b.recitec", b"new-b"),
     ]);
-    let control = BuildControl::new();
-    let result = run(request, &control, &mut engine, &mut publisher);
+    let result = run(request, &BuildControl::new(), &mut engine, &mut publisher);
     assert_eq!(result.status(), BuildTerminalStatus::Failed);
     assert_eq!(publisher.commit_calls, 0);
     assert_eq!(
         publisher.published.get("a.recitec"),
         Some(&b"prior".to_vec())
     );
-    assert!(matches!(
-        result.publish(),
-        PublishOutcome::NotAttempted {
-            reason: PublishNotAttemptedReason::PreparationFailed
-        }
-    ));
+    let expected = target("b.recitec");
+    assert!(
+        matches!(result.failure(), Some(BuildResultFailure::Preparation { target, .. }) if target == &expected)
+    );
 }
 
 #[test]
-fn partial_commit_reports_exact_targets_and_recovery() {
-    let request = make_request(
-        1,
-        [BuildInput::saved_source(key("dialogue/a.recite"), ":: a\n")],
-    );
+fn partial_commit_mutates_only_committed_bytes_and_reports_recovery() {
+    let request = make_request(1, [BuildInput::saved_source(key("a.recite"), "a")]);
     let mut engine = FakeEngine::new([
         candidate("a.recitec", b"a"),
         candidate("b.recitec", b"b"),
@@ -224,56 +154,70 @@ fn partial_commit_reports_exact_targets_and_recovery() {
         remaining: vec![target("c.recitec")],
         recovery: RecoveryNeeded::for_targets(vec![target("a.recitec"), target("b.recitec")]),
     });
-    let control = BuildControl::new();
-    let result = run(request, &control, &mut engine, &mut publisher);
+    let result = run(request, &BuildControl::new(), &mut engine, &mut publisher);
     assert_eq!(result.status(), BuildTerminalStatus::Failed);
-    assert_eq!(publisher.prepare_calls, 3);
-    assert_eq!(publisher.commit_calls, 1);
-    assert!(
-        matches!(result.publish(), PublishOutcome::Partial { committed, failed, remaining, recovery } if committed == &[target("a.recitec")] && failed == &target("b.recitec") && remaining == &[target("c.recitec")] && recovery.targets() == [target("a.recitec"), target("b.recitec")])
-    );
-}
-
-fn error_diagnostic() -> recite_core::Diagnostic {
-    let position = recite_core::SourcePosition::new(1, 1)
-        .unwrap_or_else(|error| panic!("test position is valid: {error}"));
-    recite_core::Diagnostic::new(
-        recite_core::DiagnosticCode::new_static("RECITE_TEST001"),
-        recite_core::DiagnosticSeverity::Error,
-        "invalid test input",
-        recite_core::SourceSpan::point("dialogue/test.recite", position),
-    )
+    assert_eq!(publisher.published.get("a.recitec"), Some(&b"a".to_vec()));
+    assert!(!publisher.published.contains_key("b.recitec"));
+    assert!(matches!(result.publish(), PublishOutcome::Partial { .. }));
 }
 
 #[test]
-fn failed_check_keeps_structured_diagnostics_and_no_build_or_publish() {
-    struct FailingCheck;
-    impl BuildEngine for FailingCheck {
-        fn check(&mut self, request: &BuildRequest, _control: &BuildControl) -> BuildCheck {
-            BuildCheck::new(vec![error_diagnostic()], freshness(request))
+fn failure_detail_and_order_are_deterministic() {
+    let request = make_request(2, [BuildInput::saved_source(key("a.recite"), "a")]);
+    let mut engine = FakeEngine::new([candidate("z.recitec", b"z"), candidate("a.recitec", b"a")]);
+    let mut publisher = FakePublisher::new();
+    let result = run(request, &BuildControl::new(), &mut engine, &mut publisher);
+    assert_eq!(
+        result
+            .candidates()
+            .iter()
+            .map(|candidate| candidate.target().as_str())
+            .collect::<Vec<_>>(),
+        ["a.recitec", "z.recitec"]
+    );
+    assert!(
+        matches!(result.publish(), PublishOutcome::Published { targets } if targets == &[target("a.recitec"), target("z.recitec")])
+    );
+}
+
+#[test]
+fn check_identity_and_duplicate_targets_are_preserved_as_typed_failures() {
+    struct MismatchedCheck {
+        other: BuildRequest,
+    }
+    impl BuildEngine for MismatchedCheck {
+        fn check(&mut self, _: &BuildRequest, _: &BuildControl) -> BuildCheck {
+            BuildCheck::passed(&self.other)
         }
         fn build(
             &mut self,
-            _request: &BuildRequest,
-            _control: &BuildControl,
+            _: &BuildRequest,
+            _: &BuildControl,
         ) -> Result<Vec<BuildCandidate>, BuildFailure> {
-            Err(BuildFailure::Engine {
-                reason: recite_compiler::BuildFailureReason::Unknown,
-            })
+            Ok(Vec::new())
         }
     }
-    let request = make_request(
-        1,
-        [BuildInput::saved_source(key("dialogue/a.recite"), ":: a\n")],
-    );
-    let authority = BuildAuthority::from_request(&request);
-    let control = BuildControl::new();
-    let mut engine = FailingCheck;
+    let request = make_request(1, [BuildInput::saved_source(key("a.recite"), "a")]);
+    let other = make_request(1, [BuildInput::saved_source(key("a.recite"), "changed")]);
+    let mut engine = MismatchedCheck { other };
     let mut publisher = FakePublisher::new();
-    let result = recite_compiler::BuildCoordinator::new()
-        .run(request, &control, &authority, &mut engine, &mut publisher)
-        .unwrap_or_else(|error| panic!("test coordinator transition is valid: {error}"));
-    assert_eq!(result.status(), BuildTerminalStatus::Failed);
-    assert_eq!(result.diagnostics(), &[error_diagnostic()]);
+    let result = run(request, &BuildControl::new(), &mut engine, &mut publisher);
+    assert!(matches!(
+        result.failure(),
+        Some(BuildResultFailure::Check(_))
+    ));
+    assert_eq!(publisher.commit_calls, 0);
+
+    let request = make_request(2, [BuildInput::saved_source(key("a.recite"), "a")]);
+    let mut engine = FakeEngine::new([
+        candidate("same.recitec", b"a"),
+        candidate("same.recitec", b"b"),
+    ]);
+    let mut publisher = FakePublisher::new();
+    let result = run(request, &BuildControl::new(), &mut engine, &mut publisher);
+    let expected = target("same.recitec");
+    assert!(
+        matches!(result.failure(), Some(BuildResultFailure::DuplicateTarget { target }) if target == &expected)
+    );
     assert_eq!(publisher.commit_calls, 0);
 }

@@ -1,251 +1,255 @@
-use std::time::Duration;
-
 use super::support::*;
 use recite_compiler::{
-    BuildInput, BuildInputAuthority, BuildInputKind, BuildInputPolicy, BuildLifecycle,
-    BuildRequest, BuildState, BuildTelemetry, BuildTransition, BuildTransitionError,
-    RestartGuidance,
+    BuildGeneration, BuildInput, BuildInputAuthority, BuildInputKind, BuildInputPayload,
+    BuildInputPolicy, BuildLifecycle, BuildRequest, BuildState, BuildTelemetry, BuildTransition,
+    BuildTransitionError, PreparedPublish, RestartGuidance,
 };
+use std::time::Duration;
 
 #[test]
-fn request_rejects_implicit_overlay_and_sorts_effective_inputs() {
-    let overlay = BuildInput::overlay_source(key("dialogue/z.recite"), ":: overlay\n");
-    let error = BuildRequest::new(
-        recite_compiler::BuildGeneration::initial(),
-        recite_compiler::SnapshotGeneration::initial(),
-        [overlay],
-    )
-    .expect_err("saved-only request rejects an overlay");
+fn request_requires_explicit_overlays_and_has_stable_order() {
+    let overlay = BuildInput::overlay_source(key("z.recite"), "overlay");
     assert!(matches!(
-        error,
-        recite_compiler::BuildRequestError::OverlayNotAllowed { .. }
+        BuildRequest::new(
+            BuildGeneration::initial(),
+            recite_compiler::SnapshotGeneration::initial(),
+            [overlay]
+        ),
+        Err(recite_compiler::BuildRequestError::OverlayNotAllowed { .. })
     ));
-
-    let saved = BuildInput::saved_source(key("dialogue/z.recite"), ":: saved\n");
-    let overlay = BuildInput::overlay_source(key("dialogue/z.recite"), ":: overlay\n");
     let request = BuildRequest::new_with_policy(
-        recite_compiler::BuildGeneration::new(1),
+        BuildGeneration::new(1),
         recite_compiler::SnapshotGeneration::new(1),
         [
-            saved,
-            overlay,
-            BuildInput::saved_source(key("dialogue/a.recite"), ":: a\n"),
+            BuildInput::saved_source(key("z.recite"), "saved"),
+            BuildInput::overlay_source(key("z.recite"), "overlay"),
+            BuildInput::saved_source(key("a.recite"), "a"),
         ],
         BuildInputPolicy::SavedAndOverlays,
     )
-    .unwrap_or_else(|error| panic!("explicit overlay request is valid: {error}"));
-    assert_eq!(request.inputs().len(), 2);
-    assert_eq!(request.inputs()[0].key().as_str(), "dialogue/a.recite");
-    assert_eq!(request.inputs()[1].key().as_str(), "dialogue/z.recite");
-    assert_eq!(
-        request.inputs()[1].authority(),
-        recite_compiler::BuildInputAuthority::Overlay
-    );
+    .unwrap_or_else(|error| panic!("explicit overlay request: {error}"));
     assert_eq!(
         request
-            .affected_inputs()
+            .inputs()
             .iter()
-            .map(|input| input.input().key().as_str())
+            .map(|input| input.key().as_str())
             .collect::<Vec<_>>(),
-        ["dialogue/a.recite", "dialogue/z.recite"]
+        ["a.recite", "z.recite"]
     );
+    assert_eq!(request.inputs()[0].content(), Some("a"));
 }
 
 #[test]
-fn identical_payloads_are_order_invariant_for_requests_and_results() {
-    let request_left = make_request(
+fn input_order_does_not_change_candidates_or_fingerprints() {
+    let left = make_request(
         2,
         [
-            BuildInput::saved_source(key("dialogue/z.recite"), ":: z\n"),
-            BuildInput::saved_source(key("dialogue/a.recite"), ":: a\n"),
+            BuildInput::saved_source(key("z.recite"), "z"),
+            BuildInput::saved_source(key("a.recite"), "a"),
         ],
     );
-    let request_right = make_request(
+    let right = make_request(
         2,
         [
-            BuildInput::saved_source(key("dialogue/a.recite"), ":: a\n"),
-            BuildInput::saved_source(key("dialogue/z.recite"), ":: z\n"),
+            BuildInput::saved_source(key("a.recite"), "a"),
+            BuildInput::saved_source(key("z.recite"), "z"),
         ],
     );
-    assert_eq!(request_left, request_right);
-    assert_eq!(request_left.fingerprints(), request_right.fingerprints());
-    assert_eq!(request_left.inputs()[0].content(), ":: a\n");
-
-    let mut engine_left =
+    let mut left_engine =
         FakeEngine::new([candidate("z.recitec", b"z"), candidate("a.recitec", b"a")]);
-    let mut publisher_left = FakePublisher::new();
-    let mut engine_right =
+    let mut left_publisher = FakePublisher::new();
+    let mut right_engine =
         FakeEngine::new([candidate("z.recitec", b"z"), candidate("a.recitec", b"a")]);
-    let mut publisher_right = FakePublisher::new();
-    let control_left = recite_compiler::BuildControl::new();
-    let control_right = recite_compiler::BuildControl::new();
-    let result_left = run(
-        request_left,
-        &control_left,
-        &mut engine_left,
-        &mut publisher_left,
+    let mut right_publisher = FakePublisher::new();
+    let left_result = run(
+        left,
+        &recite_compiler::BuildControl::new(),
+        &mut left_engine,
+        &mut left_publisher,
     );
-    let result_right = run(
-        request_right,
-        &control_right,
-        &mut engine_right,
-        &mut publisher_right,
+    let right_result = run(
+        right,
+        &recite_compiler::BuildControl::new(),
+        &mut right_engine,
+        &mut right_publisher,
     );
-    assert!(result_left.semantic_eq(&result_right));
-    assert_eq!(result_left.candidates(), result_right.candidates());
+    assert_eq!(left_result.fingerprints(), right_result.fingerprints());
+    assert_eq!(left_result.candidates(), right_result.candidates());
 }
 
 #[test]
-fn schema_freshness_uses_the_parsed_canonical_model() {
-    let missing_model = BuildRequest::new(
-        recite_compiler::BuildGeneration::new(2),
-        recite_compiler::SnapshotGeneration::new(2),
-        [BuildInput::new(
-            key("schema/project.toml"),
-            BuildInputKind::Schema,
-            BuildInputAuthority::Saved,
-            "schema_version = 1\n",
-        )],
-    )
-    .expect_err("raw schema text cannot provide a semantic schema fingerprint");
+fn schema_payload_has_one_authority_and_canonical_fingerprint() {
+    let raw = BuildInput::new(
+        key("schema.toml"),
+        BuildInputKind::Schema,
+        BuildInputAuthority::Saved,
+        BuildInputPayload::Text("schema_version = 1".to_owned()),
+    );
     assert!(matches!(
-        missing_model,
-        recite_compiler::BuildRequestError::SchemaModelRequired { .. }
+        BuildRequest::new(
+            BuildGeneration::new(1),
+            recite_compiler::SnapshotGeneration::new(1),
+            [raw]
+        ),
+        Err(recite_compiler::BuildRequestError::SchemaPayloadMismatch { .. })
     ));
-
     let model = recite_core::ProjectSchema::empty_v1();
-    let request_left = BuildRequest::new(
-        recite_compiler::BuildGeneration::new(3),
-        recite_compiler::SnapshotGeneration::new(3),
+    let left = BuildRequest::new(
+        BuildGeneration::new(2),
+        recite_compiler::SnapshotGeneration::new(2),
         [BuildInput::schema(
-            key("schema/project.toml"),
+            key("schema"),
             BuildInputAuthority::Saved,
-            "schema_version = 1\n",
             model.clone(),
         )],
     )
-    .unwrap_or_else(|error| panic!("schema request is valid: {error}"));
-    let request_right = BuildRequest::new(
-        recite_compiler::BuildGeneration::new(3),
-        recite_compiler::SnapshotGeneration::new(3),
+    .unwrap_or_else(|error| panic!("schema request: {error}"));
+    let right = BuildRequest::new(
+        BuildGeneration::new(2),
+        recite_compiler::SnapshotGeneration::new(2),
         [BuildInput::schema(
-            key("schema/project.toml"),
+            key("schema"),
             BuildInputAuthority::Saved,
-            "# formatting and comments differ\nschema_version = 1\n",
             model,
         )],
     )
-    .unwrap_or_else(|error| panic!("schema request is valid: {error}"));
-    assert_ne!(request_left, request_right);
-    assert_eq!(request_left.fingerprints(), request_right.fingerprints());
-    assert_eq!(
-        request_left.fingerprints().schema(),
-        request_right.fingerprints().schema()
+    .unwrap_or_else(|error| panic!("schema request: {error}"));
+    assert_eq!(left.fingerprints().schema(), right.fingerprints().schema());
+    assert_eq!(left, right);
+    let second = BuildInput::schema(
+        key("other-schema"),
+        BuildInputAuthority::Saved,
+        recite_core::ProjectSchema::empty_v1(),
     );
-
-    let mut engine = FakeEngine::new([candidate("dialogue.recitec", b"A")]);
-    let mut publisher = FakePublisher::new();
-    let control = recite_compiler::BuildControl::new();
-    let authority = recite_compiler::BuildAuthority::from_request(&request_right);
-    let result = recite_compiler::BuildCoordinator::new()
-        .run(
-            request_left,
-            &control,
-            &authority,
-            &mut engine,
-            &mut publisher,
-        )
-        .unwrap_or_else(|error| panic!("schema request transitions: {error}"));
-    assert_eq!(
-        result.status(),
-        recite_compiler::BuildTerminalStatus::Succeeded
-    );
-    assert_eq!(publisher.commit_calls, 1);
+    assert!(matches!(
+        BuildRequest::new(
+            BuildGeneration::new(3),
+            recite_compiler::SnapshotGeneration::new(3),
+            [
+                BuildInput::schema(
+                    key("schema"),
+                    BuildInputAuthority::Saved,
+                    recite_core::ProjectSchema::empty_v1()
+                ),
+                second
+            ]
+        ),
+        Err(recite_compiler::BuildRequestError::MultipleSchemaInputs)
+    ));
 }
 
 #[test]
-fn lifecycle_rejects_illegal_events_and_accepts_terminal_result() {
-    let request = make_request(
-        1,
-        [BuildInput::saved_source(key("dialogue/a.recite"), ":: a\n")],
-    );
+fn reducer_enforces_ready_and_terminal_identity_phases() {
+    let request = make_request(1, [BuildInput::saved_source(key("a.recite"), "a")]);
     let mut lifecycle = BuildLifecycle::new();
-    let error = lifecycle
-        .transition(BuildTransition::PublishStarted)
-        .expect_err("publishing cannot begin while idle");
-    assert!(matches!(error, BuildTransitionError::Invalid { .. }));
-    let mut engine = FakeEngine::new([candidate("a.recitec", b"a")]);
-    let mut publisher = FakePublisher::new();
-    let control = recite_compiler::BuildControl::new();
-    let result = run(request.clone(), &control, &mut engine, &mut publisher);
+    assert!(matches!(
+        lifecycle.transition(BuildTransition::PublishStarted {
+            prepared: PreparedPublish::new(&request, Vec::new()).identity()
+        }),
+        Err(BuildTransitionError::Invalid { .. })
+    ));
     lifecycle
         .transition(BuildTransition::Start {
             request: request.clone(),
         })
-        .unwrap_or_else(|error| panic!("start is legal: {error}"));
+        .unwrap_or_else(|error| panic!("start: {error}"));
     lifecycle
         .transition(BuildTransition::CheckPassed {
             freshness: freshness(&request),
         })
-        .unwrap_or_else(|error| panic!("check is legal: {error}"));
+        .unwrap_or_else(|error| panic!("check: {error}"));
+    assert!(
+        matches!(
+            lifecycle.transition(BuildTransition::CheckFailed {
+                result: run(
+                    request.clone(),
+                    &recite_compiler::BuildControl::new(),
+                    &mut FakeEngine::new([]),
+                    &mut FakePublisher::new()
+                )
+            }),
+            Err(BuildTransitionError::Invalid { .. })
+        ),
+        "check failure is legal only from checking"
+    );
     lifecycle
         .transition(BuildTransition::BuildCompleted {
-            candidates: result.candidates().to_vec(),
+            candidates: Vec::new(),
         })
-        .unwrap_or_else(|error| panic!("build is legal: {error}"));
-    lifecycle
-        .transition(BuildTransition::PublishStarted)
-        .unwrap_or_else(|error| panic!("publish is legal: {error}"));
-    lifecycle
-        .transition(BuildTransition::PublishCompleted { result })
-        .unwrap_or_else(|error| panic!("completion is legal: {error}"));
-    assert!(matches!(lifecycle.state(), BuildState::Succeeded { .. }));
+        .unwrap_or_else(|error| panic!("build: {error}"));
+    assert!(matches!(lifecycle.state(), BuildState::Ready { .. }));
+    assert!(matches!(
+        lifecycle.transition(BuildTransition::BuildCompleted {
+            candidates: Vec::new()
+        }),
+        Err(BuildTransitionError::Invalid { .. })
+    ));
 }
 
 #[test]
-fn duration_does_not_change_semantic_result_equality() {
-    let request = make_request(
-        1,
-        [BuildInput::saved_source(key("dialogue/a.recite"), ":: a\n")],
-    );
-    let mut engine_a = FakeEngine::new([candidate("a.recitec", b"a")]);
-    let mut publisher_a = FakePublisher::new();
-    let control_a = recite_compiler::BuildControl::new();
-    let result_a = run(request.clone(), &control_a, &mut engine_a, &mut publisher_a)
-        .with_telemetry(BuildTelemetry::from_duration(Duration::from_millis(1)));
-    let mut engine_b = FakeEngine::new([candidate("a.recitec", b"a")]);
-    let mut publisher_b = FakePublisher::new();
-    let control_b = recite_compiler::BuildControl::new();
-    let result_b = run(request, &control_b, &mut engine_b, &mut publisher_b)
-        .with_telemetry(BuildTelemetry::from_duration(Duration::from_millis(2)));
+fn duration_is_nonsemantic_and_results_keep_request_identity() {
+    let request = make_request(1, [BuildInput::saved_source(key("a.recite"), "a")]);
+    let result_a = run(
+        request.clone(),
+        &recite_compiler::BuildControl::new(),
+        &mut FakeEngine::new([candidate("a.recitec", b"a")]),
+        &mut FakePublisher::new(),
+    )
+    .with_telemetry(BuildTelemetry::from_duration(Duration::from_millis(1)));
+    let result_b = run(
+        request,
+        &recite_compiler::BuildControl::new(),
+        &mut FakeEngine::new([candidate("a.recitec", b"a")]),
+        &mut FakePublisher::new(),
+    )
+    .with_telemetry(BuildTelemetry::from_duration(Duration::from_millis(2)));
     assert!(result_a.semantic_eq(&result_b));
     assert_eq!(result_a, result_b);
     assert_eq!(result_a.restart_guidance(), RestartGuidance::NotApplicable);
-    assert!(result_a.telemetry().duration() == Some(Duration::from_millis(1)));
+    assert_eq!(result_a.fingerprints(), result_b.fingerprints());
 }
 
 #[test]
-fn result_candidates_and_published_targets_are_sorted() {
-    let request = make_request(
-        2,
-        [BuildInput::saved_source(key("dialogue/a.recite"), ":: a\n")],
-    );
-    let mut engine = FakeEngine::new([candidate("z.recitec", b"z"), candidate("a.recitec", b"a")]);
-    let mut publisher = FakePublisher::new();
-    let control = recite_compiler::BuildControl::new();
-    let result = run(request, &control, &mut engine, &mut publisher);
-    assert_eq!(
-        result
-            .candidates()
-            .iter()
-            .map(|candidate| candidate.target().as_str())
-            .collect::<Vec<_>>(),
-        ["a.recitec", "z.recitec"]
-    );
-    assert_eq!(
-        result.publish(),
-        &recite_compiler::PublishOutcome::Published {
-            targets: vec![target("a.recitec"), target("z.recitec")]
+fn freshness_stale_assessment_cannot_pass() {
+    struct StaleCheck;
+    impl recite_compiler::BuildEngine for StaleCheck {
+        fn check(
+            &mut self,
+            request: &BuildRequest,
+            _: &recite_compiler::BuildControl,
+        ) -> recite_compiler::BuildCheck {
+            recite_compiler::BuildCheck::new(
+                request,
+                Vec::new(),
+                recite_compiler::FreshnessAssessment::stale(
+                    request.fingerprints().clone(),
+                    vec![recite_compiler::StaleReason::Fingerprints],
+                ),
+            )
         }
+        fn build(
+            &mut self,
+            _: &BuildRequest,
+            _: &recite_compiler::BuildControl,
+        ) -> Result<Vec<recite_compiler::BuildCandidate>, recite_compiler::BuildFailure> {
+            Ok(Vec::new())
+        }
+    }
+    let request = make_request(1, [BuildInput::saved_source(key("a.recite"), "a")]);
+    let mut publisher = FakePublisher::new();
+    let mut engine = StaleCheck;
+    let result = run(
+        request,
+        &recite_compiler::BuildControl::new(),
+        &mut engine,
+        &mut publisher,
     );
+    assert_eq!(
+        result.status(),
+        recite_compiler::BuildTerminalStatus::Failed
+    );
+    assert!(matches!(
+        result.failure(),
+        Some(recite_compiler::BuildResultFailure::Check(_))
+    ));
 }

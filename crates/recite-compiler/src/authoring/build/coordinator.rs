@@ -1,12 +1,15 @@
 use std::sync::Arc;
 use std::sync::atomic::{AtomicBool, AtomicU64, Ordering};
 
+use super::authority::{BuildAuthority, BuildAuthorityError, BuildAuthorityFence};
 use super::build_run;
 use super::identity::BuildGeneration;
 use super::lifecycle::{BuildLifecycle, BuildTransitionError};
-use super::publish::{BuildCandidate, PublishFailure, PublishOutcome};
+use super::publish::{
+    BuildCandidate, PreparedPublish, PublishAbortReason, PublishFailure, PublishOutcome,
+};
 use super::request::{BuildCheck, BuildRequest};
-use super::result::{BuildAuthority, BuildResult};
+use super::result::BuildResult;
 
 /// Cooperative cancellation and supersession state for one build invocation.
 #[derive(Clone, Copy, Debug, Eq, Hash, PartialEq)]
@@ -95,14 +98,17 @@ pub trait BuildEngine {
 
 /// The host-owned preparation and publication seam.
 pub trait BuildPublisher {
-    /// Stage a candidate without replacing any published target.
+    /// Stage every candidate without replacing any published target.
     fn prepare(
         &mut self,
-        candidate: &BuildCandidate,
+        request: &BuildRequest,
+        candidates: &[BuildCandidate],
         control: &BuildControl,
-    ) -> Result<(), PublishFailure>;
+    ) -> Result<PreparedPublish, PublishFailure>;
+    /// Discard staged data after cancellation or a failed preparation.
+    fn abort(&mut self, prepared: Option<PreparedPublish>, reason: PublishAbortReason);
     /// Replace prepared targets; global multi-target atomicity is not promised.
-    fn commit(&mut self, candidates: &[BuildCandidate]) -> PublishOutcome;
+    fn commit(&mut self, prepared: PreparedPublish) -> PublishOutcome;
 }
 
 /// Typed compilation failure returned by an injected engine.
@@ -147,13 +153,18 @@ pub enum BuildRunError {
     /// The coordinator could not apply an expected legal transition.
     #[error(transparent)]
     Transition(#[from] BuildTransitionError),
+    #[error(transparent)]
+    Authority(#[from] BuildAuthorityError),
+    #[error("coordinator has no publication authority")]
+    MissingAuthority,
 }
 
 /// Synchronous orchestration around the pure lifecycle reducer.
 #[non_exhaustive]
-#[derive(Clone, Debug, Default, Eq, PartialEq)]
+#[derive(Clone, Debug, Default)]
 pub struct BuildCoordinator {
     lifecycle: BuildLifecycle,
+    authority: Option<BuildAuthorityFence>,
 }
 impl BuildCoordinator {
     /// Construct an idle coordinator.
@@ -161,6 +172,15 @@ impl BuildCoordinator {
     pub const fn new() -> Self {
         Self {
             lifecycle: BuildLifecycle::new(),
+            authority: None,
+        }
+    }
+    /// Construct a coordinator sharing a live publication authority.
+    #[must_use]
+    pub fn with_fence(fence: BuildAuthorityFence) -> Self {
+        Self {
+            lifecycle: BuildLifecycle::new(),
+            authority: Some(fence),
         }
     }
     /// Borrow the reducer state after the most recent run.
@@ -168,32 +188,29 @@ impl BuildCoordinator {
     pub const fn state(&self) -> &super::lifecycle::BuildState {
         self.lifecycle.state()
     }
-    /// Run against one fixed authority snapshot.
+    /// Run a request under this coordinator's live publication authority.
     pub fn run<E: BuildEngine, P: BuildPublisher>(
         &mut self,
         request: BuildRequest,
         control: &BuildControl,
-        authority: &BuildAuthority,
         engine: &mut E,
         publisher: &mut P,
     ) -> Result<BuildResult, BuildRunError> {
-        let authority = authority.clone();
-        self.run_with_authority(request, control, || authority.clone(), engine, publisher)
-    }
-    /// Run while obtaining current authority at the publish boundary.
-    pub fn run_with_authority<E: BuildEngine, P: BuildPublisher, A: FnMut() -> BuildAuthority>(
-        &mut self,
-        request: BuildRequest,
-        control: &BuildControl,
-        authority: A,
-        engine: &mut E,
-        publisher: &mut P,
-    ) -> Result<BuildResult, BuildRunError> {
+        if self.authority.is_none() {
+            self.authority = Some(BuildAuthorityFence::new(BuildAuthority::from_request(
+                &request,
+            )));
+        }
+        let fence = match self.authority.as_ref() {
+            Some(fence) => fence,
+            None => return Err(BuildRunError::MissingAuthority),
+        };
+        fence.install_if_newer(BuildAuthority::from_request(&request))?;
         build_run(
             &mut self.lifecycle,
             request,
             control,
-            authority,
+            fence,
             engine,
             publisher,
         )

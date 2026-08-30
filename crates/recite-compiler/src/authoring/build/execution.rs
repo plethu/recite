@@ -1,22 +1,24 @@
+use super::authority::BuildAuthorityFence;
 use super::coordinator::{BuildControl, BuildEngine, BuildFailure, BuildPublisher, BuildRunError};
+use super::execution_support::{
+    abort_reason, duplicate_target, fail_check, failure_detail, finish_failed, finish_publish,
+    finish_stale,
+};
+use super::failure::BuildResultFailure;
 use super::freshness::FreshnessAssessment;
 use super::lifecycle::{BuildLifecycle, BuildTransition};
-use super::publish::{PublishFailure, PublishNotAttemptedReason, PublishOutcome, PublishRefusal};
+use super::publish::{
+    PublishAbortReason, PublishFailure, PublishNotAttemptedReason, PublishOutcome,
+};
 use super::request::BuildRequest;
 use super::result::{BuildResult, BuildTerminalStatus};
-use super::{
-    authority_refusal, cancellation_result, finish_cancelled, make_result, normalize_publish,
-};
+use super::{finish_cancelled, make_result, normalize_publish};
 
-pub(crate) fn build_run<
-    E: BuildEngine,
-    P: BuildPublisher,
-    A: FnMut() -> super::result::BuildAuthority,
->(
+pub(crate) fn build_run<E: BuildEngine, P: BuildPublisher>(
     lifecycle: &mut BuildLifecycle,
     request: BuildRequest,
     control: &BuildControl,
-    mut authority: A,
+    fence: &BuildAuthorityFence,
     engine: &mut E,
     publisher: &mut P,
 ) -> Result<BuildResult, BuildRunError> {
@@ -25,9 +27,8 @@ pub(crate) fn build_run<
         request: request.clone(),
     })?;
     if let Some(reason) = control.cancellation() {
-        return finish_cancelled(lifecycle, &request, reason, Vec::new(), not_assessed);
+        return finish_cancelled(lifecycle, &request, reason, Vec::new(), not_assessed, None);
     }
-
     let check = engine.check(&request, control);
     if let Some(reason) = control.cancellation() {
         return finish_cancelled(
@@ -36,7 +37,11 @@ pub(crate) fn build_run<
             reason,
             Vec::new(),
             check.freshness().clone(),
+            None,
         );
+    }
+    if let Err(error) = check.validate_for(&request) {
+        return fail_check(lifecycle, &request, check.freshness().clone(), error);
     }
     if !check.is_valid() {
         let result = make_result(
@@ -48,6 +53,9 @@ pub(crate) fn build_run<
             PublishOutcome::NotAttempted {
                 reason: PublishNotAttemptedReason::BuildFailed,
             },
+            Some(BuildResultFailure::Diagnostics {
+                diagnostics: check.diagnostics().to_vec(),
+            }),
         );
         lifecycle.transition(BuildTransition::CheckFailed {
             result: result.clone(),
@@ -57,102 +65,38 @@ pub(crate) fn build_run<
     lifecycle.transition(BuildTransition::CheckPassed {
         freshness: check.freshness().clone(),
     })?;
-
     let mut candidates = match engine.build(&request, control) {
         Ok(candidates) => candidates,
         Err(failure) => {
-            let diagnostics = match failure {
-                BuildFailure::Diagnostics { diagnostics } => diagnostics,
-                BuildFailure::Engine { .. } | BuildFailure::DuplicateTarget { .. } => Vec::new(),
+            if let Some(reason) = control.cancellation() {
+                return finish_cancelled(
+                    lifecycle,
+                    &request,
+                    reason,
+                    Vec::new(),
+                    check.freshness().clone(),
+                    None,
+                );
+            }
+            let detail = failure_detail(&failure);
+            let diagnostics = match &failure {
+                BuildFailure::Diagnostics { diagnostics } => diagnostics.clone(),
+                _ => Vec::new(),
             };
-            let result = make_result(
+            return finish_failed(
+                lifecycle,
                 &request,
-                BuildTerminalStatus::Failed,
                 diagnostics,
                 Vec::new(),
                 check.freshness().clone(),
-                PublishOutcome::NotAttempted {
-                    reason: PublishNotAttemptedReason::BuildFailed,
-                },
+                detail,
             );
-            lifecycle.transition(BuildTransition::Failed {
-                result: result.clone(),
-            })?;
-            return Ok(result);
         }
     };
     candidates.sort_by(|left, right| left.target().cmp(right.target()));
-    if candidates
-        .windows(2)
-        .any(|window| window[0].target() == window[1].target())
-    {
-        let result = make_result(
-            &request,
-            BuildTerminalStatus::Failed,
-            Vec::new(),
-            candidates,
-            check.freshness().clone(),
-            PublishOutcome::NotAttempted {
-                reason: PublishNotAttemptedReason::BuildFailed,
-            },
-        );
-        lifecycle.transition(BuildTransition::Failed {
-            result: result.clone(),
-        })?;
-        return Ok(result);
-    }
-    if let Some(reason) = control.cancellation() {
-        return finish_cancelled(
-            lifecycle,
-            &request,
-            reason,
-            candidates,
-            check.freshness().clone(),
-        );
-    }
     lifecycle.transition(BuildTransition::BuildCompleted {
         candidates: candidates.clone(),
     })?;
-
-    for candidate in &candidates {
-        if let Some(reason) = control.cancellation() {
-            return finish_cancelled(
-                lifecycle,
-                &request,
-                reason,
-                candidates,
-                check.freshness().clone(),
-            );
-        }
-        let preparation = publisher.prepare(candidate, control);
-        if let Some(reason) = control.cancellation() {
-            return finish_cancelled(
-                lifecycle,
-                &request,
-                reason,
-                candidates,
-                check.freshness().clone(),
-            );
-        }
-        if let Err(failure) = preparation {
-            let reason = match failure {
-                PublishFailure::Preparation { .. } => PublishNotAttemptedReason::PreparationFailed,
-            };
-            let result = make_result(
-                &request,
-                BuildTerminalStatus::Failed,
-                Vec::new(),
-                candidates,
-                check.freshness().clone(),
-                PublishOutcome::NotAttempted { reason },
-            );
-            lifecycle.transition(BuildTransition::Failed {
-                result: result.clone(),
-            })?;
-            return Ok(result);
-        }
-    }
-    lifecycle.transition(BuildTransition::PublishStarted)?;
     if let Some(reason) = control.cancellation() {
         return finish_cancelled(
             lifecycle,
@@ -160,90 +104,106 @@ pub(crate) fn build_run<
             reason,
             candidates,
             check.freshness().clone(),
+            None,
         );
     }
-    if candidates.is_empty() {
-        let result = make_result(
+    if let Some(duplicate) = duplicate_target(&candidates) {
+        return finish_failed(
+            lifecycle,
             &request,
-            BuildTerminalStatus::Succeeded,
-            check.diagnostics().to_vec(),
+            Vec::new(),
             candidates,
             check.freshness().clone(),
-            PublishOutcome::NotAttempted {
-                reason: PublishNotAttemptedReason::NoCandidates,
-            },
+            BuildResultFailure::DuplicateTarget { target: duplicate },
         );
-        lifecycle.transition(BuildTransition::PublishCompleted {
-            result: result.clone(),
-        })?;
-        return Ok(result);
     }
-    if let Some(refusal) = authority_refusal(&mut authority, &request) {
-        let result = make_result(
+    let prepared = match publisher.prepare(&request, &candidates, control) {
+        Ok(prepared) => prepared,
+        Err(failure) => {
+            publisher.abort(None, PublishAbortReason::PreparationFailed);
+            if let Some(reason) = control.cancellation() {
+                return finish_cancelled(
+                    lifecycle,
+                    &request,
+                    reason,
+                    candidates,
+                    check.freshness().clone(),
+                    None,
+                );
+            }
+            let (target, reason) = match failure {
+                PublishFailure::Preparation { target, reason } => (target, reason),
+            };
+            return finish_failed(
+                lifecycle,
+                &request,
+                Vec::new(),
+                candidates,
+                check.freshness().clone(),
+                BuildResultFailure::Preparation { target, reason },
+            );
+        }
+    };
+    if let Some(reason) = control.cancellation() {
+        publisher.abort(Some(prepared), abort_reason(reason));
+        return finish_cancelled(
+            lifecycle,
             &request,
-            BuildTerminalStatus::Stale,
-            check.diagnostics().to_vec(),
+            reason,
             candidates,
             check.freshness().clone(),
-            PublishOutcome::Refused { reason: refusal },
+            None,
         );
-        lifecycle.transition(BuildTransition::Stale {
-            result: result.clone(),
-        })?;
-        return Ok(result);
     }
-    if let Some(result) = cancellation_result(
-        lifecycle,
-        &request,
-        control,
-        &candidates,
-        check.freshness().clone(),
-    )? {
-        return Ok(result);
+    let identity = prepared.identity();
+    if let Err(error) = lifecycle.transition(BuildTransition::PublishStarted {
+        prepared: identity.clone(),
+    }) {
+        publisher.abort(Some(prepared), PublishAbortReason::Invalid);
+        return Err(error.into());
     }
-    let publish = normalize_publish(publisher.commit(&candidates));
-    let status = match publish {
-        PublishOutcome::Published { .. } => BuildTerminalStatus::Succeeded,
-        PublishOutcome::Refused {
-            reason:
-                PublishRefusal::StaleBuildGeneration
-                | PublishRefusal::StaleSnapshotGeneration
-                | PublishRefusal::StaleFingerprints,
-        } => BuildTerminalStatus::Stale,
-        PublishOutcome::NotAttempted {
-            reason: PublishNotAttemptedReason::Stale,
-        } => BuildTerminalStatus::Stale,
-        PublishOutcome::NotAttempted { .. } | PublishOutcome::Partial { .. } => {
-            BuildTerminalStatus::Failed
+    if let Some(reason) = control.cancellation() {
+        publisher.abort(Some(prepared), abort_reason(reason));
+        return finish_cancelled(
+            lifecycle,
+            &request,
+            reason,
+            candidates,
+            check.freshness().clone(),
+            None,
+        );
+    }
+    let permit = match fence.acquire(&request) {
+        Ok(permit) => permit,
+        Err(error) => {
+            publisher.abort(Some(prepared), PublishAbortReason::Stale);
+            let reason = match error {
+                super::authority::BuildAuthorityError::Refused { reason } => reason,
+                error => return Err(error.into()),
+            };
+            return finish_stale(
+                lifecycle,
+                &request,
+                candidates,
+                check.freshness().clone(),
+                reason,
+            );
         }
     };
-    let result = make_result(
-        &request,
-        status,
-        check.diagnostics().to_vec(),
-        candidates,
-        check.freshness().clone(),
-        publish,
-    );
-    let transition = match status {
-        BuildTerminalStatus::Succeeded => BuildTransition::PublishCompleted {
-            result: result.clone(),
-        },
-        BuildTerminalStatus::Stale => BuildTransition::Stale {
-            result: result.clone(),
-        },
-        BuildTerminalStatus::Failed => BuildTransition::Failed {
-            result: result.clone(),
-        },
-        BuildTerminalStatus::Cancelled | BuildTerminalStatus::Superseded => {
-            return Err(super::coordinator::BuildRunError::Transition(
-                super::lifecycle::BuildTransitionError::ResultStatusMismatch {
-                    expected: BuildTerminalStatus::Failed,
-                    status,
-                },
-            ));
-        }
-    };
-    lifecycle.transition(transition)?;
-    Ok(result)
+    if let Some(reason) = control.cancellation() {
+        publisher.abort(Some(prepared), abort_reason(reason));
+        return finish_cancelled(
+            lifecycle,
+            &request,
+            reason,
+            candidates,
+            check.freshness().clone(),
+            None,
+        );
+    }
+    // The permit holds the fence lock through commit. Cancellation is deliberately
+    // ineffective once this boundary is acquired; a host syscall cannot be stopped.
+    let publish =
+        normalize_publish(permit.commit(prepared, |prepared| publisher.commit(prepared))?);
+    finish_publish(lifecycle, &request, &check, candidates, identity, publish)
 }

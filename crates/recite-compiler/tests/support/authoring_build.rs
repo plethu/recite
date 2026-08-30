@@ -1,9 +1,10 @@
 use std::collections::BTreeMap;
 
 use recite_compiler::{
-    BuildAuthority, BuildCandidate, BuildCheck, BuildControl, BuildCoordinator, BuildEngine,
-    BuildFailure, BuildGeneration, BuildInput, BuildPublisher, BuildRequest, BuildTarget,
-    FreshnessAssessment, PublishFailure, PublishFailureReason, PublishOutcome, SnapshotGeneration,
+    BuildCandidate, BuildCheck, BuildControl, BuildCoordinator, BuildEngine, BuildFailure,
+    BuildGeneration, BuildInput, BuildPublisher, BuildRequest, BuildTarget, FreshnessAssessment,
+    PreparedPublish, PublishAbortReason, PublishFailure, PublishFailureReason, PublishOutcome,
+    SnapshotGeneration,
 };
 use recite_core::DocumentKey;
 
@@ -36,7 +37,6 @@ pub(crate) enum EngineCancellation {
     None,
     DuringCheck,
     DuringBuild,
-    SupersedeDuringBuild(BuildGeneration),
 }
 
 pub(crate) struct FakeEngine {
@@ -61,7 +61,7 @@ impl BuildEngine for FakeEngine {
         if self.cancellation == EngineCancellation::DuringCheck {
             control.cancel();
         }
-        BuildCheck::passed(freshness(request))
+        BuildCheck::passed(request)
     }
     fn build(
         &mut self,
@@ -71,10 +71,6 @@ impl BuildEngine for FakeEngine {
         self.build_calls += 1;
         match self.cancellation {
             EngineCancellation::DuringBuild => control.cancel(),
-            EngineCancellation::SupersedeDuringBuild(by) => {
-                control.cancel();
-                control.supersede(by);
-            }
             EngineCancellation::None | EngineCancellation::DuringCheck => {}
         }
         Ok(self.candidates.clone())
@@ -86,6 +82,7 @@ pub(crate) struct FakePublisher {
     pub(crate) published: BTreeMap<String, Vec<u8>>,
     pub(crate) prepare_calls: usize,
     pub(crate) commit_calls: usize,
+    pub(crate) abort_calls: usize,
     pub(crate) cancel_after_prepare: Option<usize>,
     pub(crate) fail_target: Option<BuildTarget>,
     pub(crate) commit_outcome: Option<PublishOutcome>,
@@ -97,6 +94,7 @@ impl FakePublisher {
             published: BTreeMap::new(),
             prepare_calls: 0,
             commit_calls: 0,
+            abort_calls: 0,
             cancel_after_prepare: None,
             fail_target: None,
             commit_outcome: None,
@@ -106,43 +104,75 @@ impl FakePublisher {
 impl BuildPublisher for FakePublisher {
     fn prepare(
         &mut self,
-        candidate: &BuildCandidate,
+        request: &BuildRequest,
+        candidates: &[BuildCandidate],
         control: &BuildControl,
-    ) -> Result<(), PublishFailure> {
-        self.prepare_calls += 1;
-        if self
-            .fail_target
-            .as_ref()
-            .is_some_and(|failed| failed == candidate.target())
-        {
-            return Err(PublishFailure::Preparation {
-                target: candidate.target().clone(),
-                reason: PublishFailureReason::Storage,
-            });
-        }
-        self.staged.push(candidate.target().clone());
-        if self.cancel_after_prepare == Some(self.prepare_calls) {
-            control.cancel();
-        }
-        Ok(())
-    }
-    fn commit(&mut self, candidates: &[BuildCandidate]) -> PublishOutcome {
-        self.commit_calls += 1;
-        if let Some(outcome) = &self.commit_outcome {
-            return outcome.clone();
-        }
+    ) -> Result<PreparedPublish, PublishFailure> {
         for candidate in candidates {
-            self.published.insert(
-                candidate.target().as_str().to_owned(),
-                candidate.bytes().to_vec(),
-            );
+            self.prepare_calls += 1;
+            if self
+                .fail_target
+                .as_ref()
+                .is_some_and(|failed| failed == candidate.target())
+            {
+                return Err(PublishFailure::Preparation {
+                    target: candidate.target().clone(),
+                    reason: PublishFailureReason::Storage,
+                });
+            }
+            self.staged.push(candidate.target().clone());
+            if self.cancel_after_prepare == Some(self.prepare_calls) {
+                control.cancel();
+            }
         }
-        PublishOutcome::Published {
-            targets: candidates
-                .iter()
-                .map(|candidate| candidate.target().clone())
-                .collect(),
+        Ok(PreparedPublish::new(request, candidates.to_vec()))
+    }
+    fn abort(&mut self, _prepared: Option<PreparedPublish>, _reason: PublishAbortReason) {
+        self.abort_calls += 1;
+        self.staged.clear();
+    }
+    fn commit(&mut self, prepared: PreparedPublish) -> PublishOutcome {
+        self.commit_calls += 1;
+        let outcome = match self.commit_outcome.take() {
+            Some(outcome) => outcome,
+            None => PublishOutcome::Published {
+                targets: prepared
+                    .candidates()
+                    .iter()
+                    .map(|candidate| candidate.target().clone())
+                    .collect(),
+            },
+        };
+        match &outcome {
+            PublishOutcome::Published { targets } => {
+                for candidate in prepared
+                    .candidates()
+                    .iter()
+                    .filter(|candidate| targets.contains(candidate.target()))
+                {
+                    self.published.insert(
+                        candidate.target().as_str().to_owned(),
+                        candidate.bytes().to_vec(),
+                    );
+                }
+            }
+            PublishOutcome::Partial { committed, .. } => {
+                for candidate in prepared
+                    .candidates()
+                    .iter()
+                    .filter(|candidate| committed.contains(candidate.target()))
+                {
+                    self.published.insert(
+                        candidate.target().as_str().to_owned(),
+                        candidate.bytes().to_vec(),
+                    );
+                }
+            }
+            PublishOutcome::NotAttempted { .. } | PublishOutcome::Refused { .. } => {}
+            _ => {}
         }
+        self.staged.clear();
+        outcome
     }
 }
 
@@ -152,8 +182,7 @@ pub(crate) fn run<E: BuildEngine, P: BuildPublisher>(
     engine: &mut E,
     publisher: &mut P,
 ) -> recite_compiler::BuildResult {
-    let authority = BuildAuthority::from_request(&request);
     BuildCoordinator::new()
-        .run(request, control, &authority, engine, publisher)
+        .run(request, control, engine, publisher)
         .unwrap_or_else(|error| panic!("test coordinator transition is valid: {error}"))
 }

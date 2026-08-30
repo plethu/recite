@@ -1,4 +1,4 @@
-use super::identity::{BuildFingerprintSet, BuildInputFingerprint};
+use super::fingerprints::{BuildFingerprintSet, BuildInputFingerprint};
 
 /// Why a canonical input is affected by a build.
 #[derive(Clone, Copy, Debug, Eq, Hash, Ord, PartialEq, PartialOrd)]

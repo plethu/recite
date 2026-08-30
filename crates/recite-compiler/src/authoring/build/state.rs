@@ -1,7 +1,6 @@
-use super::super::super::SnapshotGeneration;
 use super::super::freshness::FreshnessAssessment;
 use super::super::identity::BuildGeneration;
-use super::super::publish::BuildCandidate;
+use super::super::publish::{BuildCandidate, PreparedPublishIdentity};
 use super::super::request::BuildRequest;
 use super::super::result::{BuildResult, BuildTerminalStatus};
 
@@ -12,18 +11,19 @@ pub enum BuildState {
     #[default]
     Idle,
     Checking {
-        generation: BuildGeneration,
-        snapshot_generation: SnapshotGeneration,
+        request: BuildRequest,
     },
     Building {
-        generation: BuildGeneration,
-        snapshot_generation: SnapshotGeneration,
+        request: BuildRequest,
+        candidates: Vec<BuildCandidate>,
+    },
+    Ready {
+        request: BuildRequest,
         candidates: Vec<BuildCandidate>,
     },
     Publishing {
-        generation: BuildGeneration,
-        snapshot_generation: SnapshotGeneration,
-        candidates: Vec<BuildCandidate>,
+        request: BuildRequest,
+        prepared: PreparedPublishIdentity,
     },
     Succeeded {
         result: BuildResult,
@@ -46,9 +46,10 @@ impl BuildState {
     pub const fn generation(&self) -> Option<BuildGeneration> {
         match self {
             Self::Idle => None,
-            Self::Checking { generation, .. }
-            | Self::Building { generation, .. }
-            | Self::Publishing { generation, .. } => Some(*generation),
+            Self::Checking { request }
+            | Self::Building { request, .. }
+            | Self::Ready { request, .. }
+            | Self::Publishing { request, .. } => Some(request.generation()),
             Self::Succeeded { result }
             | Self::Failed { result }
             | Self::Stale { result }
@@ -78,6 +79,7 @@ impl BuildState {
             Self::Idle
             | Self::Checking { .. }
             | Self::Building { .. }
+            | Self::Ready { .. }
             | Self::Publishing { .. } => None,
         }
     }
@@ -91,7 +93,7 @@ pub enum BuildTransition {
     CheckPassed { freshness: FreshnessAssessment },
     CheckFailed { result: BuildResult },
     BuildCompleted { candidates: Vec<BuildCandidate> },
-    PublishStarted,
+    PublishStarted { prepared: PreparedPublishIdentity },
     PublishCompleted { result: BuildResult },
     Cancelled { result: BuildResult },
     Superseded { result: BuildResult },
@@ -123,6 +125,16 @@ pub enum BuildTransitionError {
         expected: BuildTerminalStatus,
         status: BuildTerminalStatus,
     },
+    #[error("build result identity does not match the active request")]
+    ResultIdentityMismatch,
+    #[error("build result candidates do not match the active prepared batch")]
+    ResultCandidatesMismatch,
+    #[error("build freshness does not match the active request")]
+    FreshnessMismatch,
+    #[error("prepared publication identity does not match the ready build")]
+    PreparedIdentityMismatch,
+    #[error("publish completion does not contain a published outcome")]
+    ResultPublishMismatch,
 }
 
 #[derive(Clone, Copy, Debug, Eq, Hash, PartialEq)]
@@ -132,6 +144,7 @@ pub enum BuildPhase {
     Checking,
     Building,
     Publishing,
+    Ready,
     Succeeded,
     Failed,
     Stale,
@@ -145,6 +158,7 @@ impl std::fmt::Display for BuildPhase {
             Self::Checking => "checking",
             Self::Building => "building",
             Self::Publishing => "publishing",
+            Self::Ready => "ready",
             Self::Succeeded => "succeeded",
             Self::Failed => "failed",
             Self::Stale => "stale",

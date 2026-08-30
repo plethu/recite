@@ -47,71 +47,81 @@ impl BuildLifecycle {
                     });
                 }
                 Ok(BuildState::Checking {
-                    generation: request.generation(),
-                    snapshot_generation: request.snapshot_generation(),
+                    request: request.clone(),
                 })
             }
-            BuildTransition::CheckPassed { .. } => match self.state {
-                BuildState::Checking {
-                    generation,
-                    snapshot_generation,
-                } => Ok(BuildState::Building {
-                    generation,
-                    snapshot_generation,
-                    candidates: Vec::new(),
-                }),
+            BuildTransition::CheckPassed { freshness } => match &self.state {
+                BuildState::Checking { request }
+                    if freshness.expected() == request.fingerprints() =>
+                {
+                    Ok(BuildState::Building {
+                        request: request.clone(),
+                        candidates: Vec::new(),
+                    })
+                }
+                BuildState::Checking { .. } => Err(BuildTransitionError::FreshnessMismatch),
                 _ => Err(invalid(&self.state, BuildEventKind::CheckPassed)),
             },
-            BuildTransition::BuildCompleted { candidates } => match self.state {
-                BuildState::Building {
-                    generation,
-                    snapshot_generation,
-                    ..
-                } => Ok(BuildState::Building {
-                    generation,
-                    snapshot_generation,
+            BuildTransition::BuildCompleted { candidates } => match &self.state {
+                BuildState::Building { request, .. } => Ok(BuildState::Ready {
+                    request: request.clone(),
                     candidates: candidates.clone(),
                 }),
                 _ => Err(invalid(&self.state, BuildEventKind::BuildCompleted)),
             },
-            BuildTransition::PublishStarted => match self.state {
-                BuildState::Building {
-                    generation,
-                    snapshot_generation,
-                    ref candidates,
-                } => Ok(BuildState::Publishing {
-                    generation,
-                    snapshot_generation,
-                    candidates: candidates.clone(),
-                }),
+            BuildTransition::PublishStarted { prepared } => match &self.state {
+                BuildState::Ready {
+                    request,
+                    candidates,
+                } if prepared.generation() == request.generation()
+                    && prepared.snapshot_generation() == request.snapshot_generation()
+                    && prepared.fingerprints() == request.fingerprints()
+                    && prepared.candidates() == candidates =>
+                {
+                    Ok(BuildState::Publishing {
+                        request: request.clone(),
+                        prepared: prepared.clone(),
+                    })
+                }
+                BuildState::Ready { .. } => Err(BuildTransitionError::PreparedIdentityMismatch),
                 _ => Err(invalid(&self.state, BuildEventKind::PublishStarted)),
             },
             BuildTransition::CheckFailed { result } => self.terminal(
                 BuildEventKind::CheckFailed,
                 BuildTerminalStatus::Failed,
                 result,
+                true,
             ),
             BuildTransition::PublishCompleted { result } => self.terminal(
                 BuildEventKind::PublishCompleted,
                 BuildTerminalStatus::Succeeded,
                 result,
+                true,
             ),
             BuildTransition::Cancelled { result } => self.terminal(
                 BuildEventKind::Cancelled,
                 BuildTerminalStatus::Cancelled,
                 result,
+                false,
             ),
             BuildTransition::Superseded { result } => self.terminal(
                 BuildEventKind::Superseded,
                 BuildTerminalStatus::Superseded,
                 result,
+                false,
             ),
-            BuildTransition::Stale { result } => {
-                self.terminal(BuildEventKind::Stale, BuildTerminalStatus::Stale, result)
-            }
-            BuildTransition::Failed { result } => {
-                self.terminal(BuildEventKind::Failed, BuildTerminalStatus::Failed, result)
-            }
+            BuildTransition::Stale { result } => self.terminal(
+                BuildEventKind::Stale,
+                BuildTerminalStatus::Stale,
+                result,
+                false,
+            ),
+            BuildTransition::Failed { result } => self.terminal(
+                BuildEventKind::Failed,
+                BuildTerminalStatus::Failed,
+                result,
+                false,
+            ),
         }
     }
     fn terminal(
@@ -119,24 +129,47 @@ impl BuildLifecycle {
         event: BuildEventKind,
         expected: BuildTerminalStatus,
         result: &super::super::result::BuildResult,
+        strict_phase: bool,
     ) -> Result<BuildState, BuildTransitionError> {
-        let active = self
-            .state
-            .generation()
-            .ok_or_else(|| invalid(&self.state, event))?;
-        if !matches!(
-            self.state,
-            BuildState::Checking { .. }
-                | BuildState::Building { .. }
-                | BuildState::Publishing { .. }
-        ) {
+        let (request, candidates) = match &self.state {
+            BuildState::Checking { request } => (request, Vec::new()),
+            BuildState::Building {
+                request,
+                candidates,
+            }
+            | BuildState::Ready {
+                request,
+                candidates,
+            } => (request, candidates.clone()),
+            BuildState::Publishing { request, prepared } => {
+                (request, prepared.candidates().to_vec())
+            }
+            _ => return Err(invalid(&self.state, event)),
+        };
+        if strict_phase
+            && event == BuildEventKind::CheckFailed
+            && !matches!(self.state, BuildState::Checking { .. })
+        {
             return Err(invalid(&self.state, event));
         }
-        if result.generation() != active {
-            return Err(BuildTransitionError::ResultGenerationMismatch {
-                active,
-                received: result.generation(),
-            });
+        if !result.matches_request(request) {
+            return Err(BuildTransitionError::ResultIdentityMismatch);
+        }
+        if result.candidates() != candidates {
+            return Err(BuildTransitionError::ResultCandidatesMismatch);
+        }
+        if event == BuildEventKind::PublishCompleted
+            && !matches!(self.state, BuildState::Publishing { .. })
+        {
+            return Err(invalid(&self.state, event));
+        }
+        if event == BuildEventKind::PublishCompleted
+            && !matches!(
+                result.publish(),
+                super::super::publish::PublishOutcome::Published { .. }
+            )
+        {
+            return Err(BuildTransitionError::ResultPublishMismatch);
         }
         if result.status() != expected {
             return Err(BuildTransitionError::ResultStatusMismatch {
@@ -175,6 +208,7 @@ const fn phase(state: &BuildState) -> BuildPhase {
         BuildState::Checking { .. } => BuildPhase::Checking,
         BuildState::Building { .. } => BuildPhase::Building,
         BuildState::Publishing { .. } => BuildPhase::Publishing,
+        BuildState::Ready { .. } => BuildPhase::Ready,
         BuildState::Succeeded { .. } => BuildPhase::Succeeded,
         BuildState::Failed { .. } => BuildPhase::Failed,
         BuildState::Stale { .. } => BuildPhase::Stale,

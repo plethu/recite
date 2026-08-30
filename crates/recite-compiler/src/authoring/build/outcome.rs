@@ -1,16 +1,10 @@
-use super::coordinator::{BuildCancellation, BuildControl, BuildRunError};
+use super::coordinator::{BuildCancellation, BuildRunError};
+use super::failure::BuildResultFailure;
 use super::freshness::FreshnessAssessment;
 use super::lifecycle::{BuildLifecycle, BuildTransition, BuildTransitionError};
 use super::publish::{BuildCandidate, PublishNotAttemptedReason, PublishOutcome, RecoveryNeeded};
 use super::request::BuildRequest;
-use super::result::{BuildAuthority, BuildResult, BuildTelemetry, BuildTerminalStatus};
-
-pub(crate) fn authority_refusal<A: FnMut() -> BuildAuthority>(
-    authority: &mut A,
-    request: &BuildRequest,
-) -> Option<super::publish::PublishRefusal> {
-    authority().refusal_for(request)
-}
+use super::result::{BuildResult, BuildTerminalStatus};
 
 pub(crate) fn normalize_publish(outcome: PublishOutcome) -> PublishOutcome {
     match outcome {
@@ -44,6 +38,7 @@ pub(crate) fn make_result(
     candidates: Vec<BuildCandidate>,
     freshness: FreshnessAssessment,
     publish: PublishOutcome,
+    failure: Option<BuildResultFailure>,
 ) -> BuildResult {
     BuildResult::new(
         status,
@@ -52,7 +47,7 @@ pub(crate) fn make_result(
         candidates,
         freshness,
         publish,
-        BuildTelemetry::none(),
+        failure,
     )
 }
 
@@ -62,6 +57,7 @@ pub(crate) fn finish_cancelled(
     cancellation: BuildCancellation,
     candidates: Vec<BuildCandidate>,
     freshness: FreshnessAssessment,
+    failure: Option<BuildResultFailure>,
 ) -> Result<BuildResult, BuildRunError> {
     let (status, reason) = match cancellation {
         BuildCancellation::User => (
@@ -80,6 +76,7 @@ pub(crate) fn finish_cancelled(
         candidates,
         freshness,
         PublishOutcome::NotAttempted { reason },
+        failure,
     );
     let transition = match status {
         BuildTerminalStatus::Cancelled => BuildTransition::Cancelled {
@@ -101,17 +98,4 @@ pub(crate) fn finish_cancelled(
     };
     lifecycle.transition(transition)?;
     Ok(result)
-}
-
-pub(crate) fn cancellation_result(
-    lifecycle: &mut BuildLifecycle,
-    request: &BuildRequest,
-    control: &BuildControl,
-    candidates: &[BuildCandidate],
-    freshness: FreshnessAssessment,
-) -> Result<Option<BuildResult>, BuildRunError> {
-    control
-        .cancellation()
-        .map(|reason| finish_cancelled(lifecycle, request, reason, candidates.to_vec(), freshness))
-        .transpose()
 }

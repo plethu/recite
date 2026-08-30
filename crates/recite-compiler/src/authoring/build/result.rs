@@ -1,7 +1,9 @@
 use super::super::SnapshotGeneration;
+use super::failure::BuildResultFailure;
+use super::fingerprints::BuildFingerprintSet;
 use super::freshness::{AffectedInput, FreshnessAssessment, RestartGuidance};
 use super::identity::BuildGeneration;
-use super::publish::{BuildCandidate, PublishOutcome, PublishRefusal};
+use super::publish::{BuildCandidate, PublishOutcome};
 use super::request::BuildRequest;
 use recite_core::Diagnostic;
 use std::time::Duration;
@@ -57,6 +59,7 @@ pub struct BuildResult {
     status: BuildTerminalStatus,
     generation: BuildGeneration,
     snapshot_generation: SnapshotGeneration,
+    fingerprints: BuildFingerprintSet,
     affected_inputs: Vec<AffectedInput>,
     diagnostics: Vec<Diagnostic>,
     candidates: Vec<BuildCandidate>,
@@ -64,6 +67,7 @@ pub struct BuildResult {
     publish: PublishOutcome,
     restart: RestartGuidance,
     telemetry: BuildTelemetry,
+    failure: Option<BuildResultFailure>,
 }
 impl PartialEq for BuildResult {
     fn eq(&self, other: &Self) -> bool {
@@ -78,19 +82,21 @@ impl BuildResult {
         candidates: Vec<BuildCandidate>,
         freshness: FreshnessAssessment,
         publish: PublishOutcome,
-        telemetry: BuildTelemetry,
+        failure: Option<BuildResultFailure>,
     ) -> Self {
         Self {
             status,
             generation: request.generation(),
             snapshot_generation: request.snapshot_generation(),
+            fingerprints: request.fingerprints().clone(),
             affected_inputs: request.affected_inputs(),
             diagnostics,
             candidates,
             freshness,
             publish,
             restart: request.restart_guidance(),
-            telemetry,
+            telemetry: BuildTelemetry::none(),
+            failure,
         }
     }
     /// Attach non-semantic host timing metadata after a run completes.
@@ -104,12 +110,14 @@ impl BuildResult {
         self.status == other.status
             && self.generation == other.generation
             && self.snapshot_generation == other.snapshot_generation
+            && self.fingerprints == other.fingerprints
             && self.affected_inputs == other.affected_inputs
             && self.diagnostics == other.diagnostics
             && self.candidates == other.candidates
             && self.freshness == other.freshness
             && self.publish == other.publish
             && self.restart == other.restart
+            && self.failure == other.failure
     }
     #[must_use]
     pub const fn status(&self) -> BuildTerminalStatus {
@@ -122,6 +130,10 @@ impl BuildResult {
     #[must_use]
     pub const fn snapshot_generation(&self) -> SnapshotGeneration {
         self.snapshot_generation
+    }
+    #[must_use]
+    pub const fn fingerprints(&self) -> &BuildFingerprintSet {
+        &self.fingerprints
     }
     #[must_use]
     pub fn affected_inputs(&self) -> &[AffectedInput] {
@@ -151,58 +163,14 @@ impl BuildResult {
     pub const fn telemetry(&self) -> &BuildTelemetry {
         &self.telemetry
     }
-}
+    #[must_use]
+    pub const fn failure(&self) -> Option<&BuildResultFailure> {
+        self.failure.as_ref()
+    }
 
-/// Current generation/snapshot/fingerprint authority at publication time.
-#[derive(Clone, Debug, Eq, PartialEq)]
-#[non_exhaustive]
-pub struct BuildAuthority {
-    latest_generation: BuildGeneration,
-    snapshot_generation: SnapshotGeneration,
-    fingerprints: super::identity::BuildFingerprintSet,
-}
-impl BuildAuthority {
-    #[must_use]
-    pub fn from_request(request: &BuildRequest) -> Self {
-        Self {
-            latest_generation: request.generation(),
-            snapshot_generation: request.snapshot_generation(),
-            fingerprints: request.fingerprints().clone(),
-        }
-    }
-    #[must_use]
-    pub fn new(
-        latest_generation: BuildGeneration,
-        snapshot_generation: SnapshotGeneration,
-        fingerprints: super::identity::BuildFingerprintSet,
-    ) -> Self {
-        Self {
-            latest_generation,
-            snapshot_generation,
-            fingerprints,
-        }
-    }
-    #[must_use]
-    pub const fn latest_generation(&self) -> BuildGeneration {
-        self.latest_generation
-    }
-    #[must_use]
-    pub const fn snapshot_generation(&self) -> SnapshotGeneration {
-        self.snapshot_generation
-    }
-    #[must_use]
-    pub const fn fingerprints(&self) -> &super::identity::BuildFingerprintSet {
-        &self.fingerprints
-    }
-    pub(crate) fn refusal_for(&self, request: &BuildRequest) -> Option<PublishRefusal> {
-        if request.generation() != self.latest_generation {
-            Some(PublishRefusal::StaleBuildGeneration)
-        } else if request.snapshot_generation() != self.snapshot_generation {
-            Some(PublishRefusal::StaleSnapshotGeneration)
-        } else if request.fingerprints() != &self.fingerprints {
-            Some(PublishRefusal::StaleFingerprints)
-        } else {
-            None
-        }
+    pub(crate) fn matches_request(&self, request: &BuildRequest) -> bool {
+        self.generation == request.generation()
+            && self.snapshot_generation == request.snapshot_generation()
+            && self.fingerprints == *request.fingerprints()
     }
 }
