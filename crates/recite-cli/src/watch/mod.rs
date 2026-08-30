@@ -10,8 +10,16 @@ use crate::fs::display_path;
 use crate::i18n::{Messages, MsgId};
 
 mod build;
+mod engine;
 mod events;
 mod inputs;
+mod preparation;
+mod request;
+
+pub use engine::ProjectBuildEngine;
+pub use request::{
+    ProjectBuildPreparation, ProjectBuildPreparationError, ProjectBuildRequest, ProjectBuildTarget,
+};
 
 use build::{BuildStatus, build_once};
 use events::{WatchState, drain_debounce, watch_error};
