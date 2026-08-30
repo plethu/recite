@@ -44,6 +44,85 @@ pub enum PluralResolutionOutcome {
     Matched,
 }
 
+/// Outcome for one ordinary singular lookup candidate.
+#[derive(Clone, Debug, Eq, PartialEq)]
+pub enum LocaleLookupOutcome {
+    MissingEntry,
+    Matched,
+}
+
+/// One candidate considered by an ordinary locale lookup.
+#[non_exhaustive]
+#[derive(Clone, Debug, Eq, PartialEq)]
+pub struct LocaleLookupAttempt {
+    pub locale: String,
+    pub context: String,
+    pub key: String,
+    pub outcome: LocaleLookupOutcome,
+}
+
+impl LocaleLookupAttempt {
+    #[must_use]
+    pub fn new(
+        locale: impl Into<String>,
+        context: impl Into<String>,
+        key: impl Into<String>,
+        outcome: LocaleLookupOutcome,
+    ) -> Self {
+        Self {
+            locale: locale.into(),
+            context: context.into(),
+            key: key.into(),
+            outcome,
+        }
+    }
+}
+
+/// Structured ordinary lookup result. Existing providers can keep
+/// implementing [`LocaleProvider::lookup`]; providers that know their real
+/// fallback chain may override [`LocaleProvider::lookup_with_provenance`].
+#[non_exhaustive]
+#[derive(Clone, Debug, Eq, PartialEq)]
+pub struct LocaleLookupProvenance {
+    pub template: Option<String>,
+    pub matched_locale: Option<String>,
+    pub matched_context: Option<String>,
+    pub matched_key: Option<String>,
+    pub attempts: Vec<LocaleLookupAttempt>,
+}
+
+impl LocaleLookupProvenance {
+    #[must_use]
+    pub fn new(template: Option<String>) -> Self {
+        Self {
+            template,
+            matched_locale: None,
+            matched_context: None,
+            matched_key: None,
+            attempts: Vec::new(),
+        }
+    }
+
+    #[must_use]
+    pub fn with_match(
+        mut self,
+        locale: impl Into<String>,
+        context: impl Into<String>,
+        key: impl Into<String>,
+    ) -> Self {
+        self.matched_locale = Some(locale.into());
+        self.matched_context = Some(context.into());
+        self.matched_key = Some(key.into());
+        self
+    }
+
+    #[must_use]
+    pub fn with_attempts(mut self, attempts: Vec<LocaleLookupAttempt>) -> Self {
+        self.attempts = attempts;
+        self
+    }
+}
+
 /// One deterministic candidate considered while resolving a plural entry.
 #[derive(Clone, Debug, Eq, PartialEq)]
 pub struct PluralResolutionAttempt {
@@ -99,6 +178,28 @@ pub trait LocaleProvider {
         locale: &LocaleId,
         variant: Option<&str>,
     ) -> Result<Option<String>, LocaleError>;
+
+    /// Performs an ordinary lookup while optionally returning the provider's
+    /// actual ordered fallback attempts. The default preserves the original
+    /// lookup contract and intentionally leaves provenance empty rather than
+    /// inventing a fallback chain.
+    fn lookup_with_provenance(
+        &self,
+        id: &str,
+        source_text: &str,
+        domain: TextDomain,
+        locale: &LocaleId,
+        variant: Option<&str>,
+    ) -> Result<LocaleLookupProvenance, LocaleError> {
+        self.lookup(id, source_text, domain, locale, variant)
+            .map(|template| LocaleLookupProvenance {
+                template,
+                matched_locale: None,
+                matched_context: None,
+                matched_key: None,
+                attempts: Vec::new(),
+            })
+    }
 
     /// Resolves one gettext plural entry in a single provider call.
     /// Implementations must validate each candidate locale's `Plural-Forms`

@@ -6,9 +6,9 @@ use std::cell::Cell;
 use preview_support::asset;
 use recite_core::{LocaleId, ScalarValue};
 use recite_runtime::{
-    ConditionAnswer, ConditionValue, InterpolationValues, LocaleError, LocaleProvider,
-    PluralResolution, PreviewError, PreviewEvent, PreviewInputs, PreviewOptions, PreviewSession,
-    TextDomain,
+    ConditionAnswer, ConditionValue, InterpolationValues, LocaleError, LocaleLookupAttempt,
+    LocaleLookupOutcome, LocaleLookupProvenance, LocaleProvider, PluralResolution, PreviewError,
+    PreviewEvent, PreviewInputs, PreviewOptions, PreviewSession, TextDomain,
 };
 
 struct FrenchProvider {
@@ -51,6 +51,34 @@ impl LocaleProvider for FrenchProvider {
             matched_key: Some("12345678901234567891".to_owned()),
             attempts: Vec::new(),
         })
+    }
+
+    fn lookup_with_provenance(
+        &self,
+        id: &str,
+        _source_text: &str,
+        domain: TextDomain,
+        locale: &LocaleId,
+        variant: Option<&str>,
+    ) -> Result<LocaleLookupProvenance, LocaleError> {
+        self.calls.set(self.calls.get() + 1);
+        if self.fail_lookup {
+            return Err(LocaleError::new("catalogue unavailable"));
+        }
+        Ok(
+            LocaleLookupProvenance::new(Some(if domain == TextDomain::Choice {
+                "Choisir.".to_owned()
+            } else {
+                "Bonjour, {name}.".to_owned()
+            }))
+            .with_match(locale.as_str(), variant.unwrap_or(""), id)
+            .with_attempts(vec![LocaleLookupAttempt::new(
+                locale.as_str(),
+                variant.unwrap_or(""),
+                id,
+                LocaleLookupOutcome::Matched,
+            )]),
+        )
     }
 }
 
@@ -111,6 +139,15 @@ fn explicit_locale_keeps_source_interpolation_and_plural_provenance() {
     );
     assert_eq!(preview.trace().variant(), Some("formal"));
     assert_eq!(provider.calls.get(), 2);
+    let lookups: Vec<_> = preview.trace().localized_lookups().collect();
+    assert_eq!(lookups.len(), 1);
+    assert_eq!(lookups[0].matched_locale.as_deref(), Some("fr-FR"));
+    assert_eq!(lookups[0].matched_context.as_deref(), Some("formal"));
+    assert_eq!(
+        lookups[0].resolved_text.as_deref(),
+        Some("Bonjour, {name}.")
+    );
+    assert_eq!(lookups[0].attempts[0].outcome, LocaleLookupOutcome::Matched);
 }
 
 #[test]

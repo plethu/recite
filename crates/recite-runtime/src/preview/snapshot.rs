@@ -17,6 +17,9 @@ impl<'asset> PreviewSession<'asset> {
         Ok(PreviewSnapshot {
             snapshot_format_version: PREVIEW_SNAPSHOT_FORMAT_VERSION,
             session: snapshot_session(&self.session),
+            initial_block: self.block.clone(),
+            options: self.options.clone(),
+            next_condition_id: self.next_condition_id,
             state: self.state.clone(),
         })
     }
@@ -37,6 +40,15 @@ impl<'asset> PreviewSession<'asset> {
                 actual: snapshot.state().asset_id().clone(),
             });
         }
+        if snapshot.initial_block().is_some_and(|block| {
+            !self
+                .asset
+                .blocks
+                .iter()
+                .any(|candidate| candidate.id.as_str() == block)
+        }) {
+            return Err(PreviewError::SnapshotStateMismatch);
+        }
         if snapshot.state().status().is_waiting_for_condition() {
             return Err(PreviewError::SnapshotPendingCondition);
         }
@@ -46,8 +58,24 @@ impl<'asset> PreviewSession<'asset> {
             return Err(PreviewError::SnapshotStateMismatch);
         }
         self.session = restored;
+        self.block = snapshot.initial_block.clone();
+        self.options = snapshot.options.clone();
+        self.next_condition_id = snapshot.next_condition_id;
         self.state = snapshot.state().clone();
         self.pending = None;
+        self.restored_effect_reemit = match self.state.status() {
+            PreviewStatus::WaitingForEffect { effect }
+                if effect.mode == crate::DialogueEffectMode::Blocking =>
+            {
+                Some(effect.id.clone())
+            }
+            _ => None,
+        };
+        self.trace = super::model::PreviewTrace::new(
+            self.session.locale().cloned(),
+            self.options.variant.clone(),
+        );
+        self.transcript = super::model::PreviewTranscript::default();
         Ok(self.append_events(vec![PreviewEvent::Restored]))
     }
 }
@@ -62,6 +90,12 @@ fn snapshot_state_matches_session(
         .blocks
         .get(session.active_block_index().as_u32() as usize)
         .map(|block| block.id.clone());
+    if state
+        .restart_required()
+        .is_some_and(|requirement| requirement.active_asset() != state.asset_id())
+    {
+        return false;
+    }
     if state.block() != active_block.as_ref()
         || state.locale().map(LocaleId::as_str) != snapshot.locale.as_deref()
         || state
@@ -143,6 +177,5 @@ fn snapshot_state_matches_session(
                 && snapshot.pending_effect.is_none()
                 && !snapshot.ended
         }
-        PreviewStatus::RestartRequired { .. } => !snapshot.ended,
     }
 }

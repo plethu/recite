@@ -1,7 +1,9 @@
 use std::cell::RefCell;
 use std::collections::BTreeMap;
 
-use crate::locale::PluralResolutionAttempt;
+use crate::locale::{
+    LocaleLookupAttempt, LocaleLookupOutcome, PluralResolutionAttempt, TextDomain,
+};
 
 /// Trace-only data captured while resolving runtime output.
 ///
@@ -14,6 +16,21 @@ use crate::locale::PluralResolutionAttempt;
 pub struct DialogueTrace {
     localized_availability_templates: RefCell<BTreeMap<String, String>>,
     plural_lines: RefCell<BTreeMap<String, PluralLineTrace>>,
+    localized_lookups: RefCell<BTreeMap<String, LocalizedLookupTrace>>,
+}
+
+#[non_exhaustive]
+#[derive(Clone, Debug, Eq, PartialEq)]
+pub struct LocalizedLookupTrace {
+    pub id: String,
+    pub source_text: String,
+    pub resolved_text: Option<String>,
+    pub domain: TextDomain,
+    pub attempts: Vec<LocaleLookupAttempt>,
+    pub matched_locale: Option<String>,
+    pub matched_context: Option<String>,
+    pub matched_key: Option<String>,
+    pub outcome: LocaleLookupOutcome,
 }
 
 /// Trace-only plural resolution provenance for one line delivery.
@@ -52,6 +69,18 @@ impl DialogueTrace {
         self.plural_lines.borrow().get(id).cloned()
     }
 
+    pub(crate) fn plural_lines(&self) -> Vec<(String, PluralLineTrace)> {
+        self.plural_lines
+            .borrow()
+            .iter()
+            .map(|(id, trace)| (id.clone(), trace.clone()))
+            .collect()
+    }
+
+    pub(crate) fn localized_lookups(&self) -> Vec<LocalizedLookupTrace> {
+        self.localized_lookups.borrow().values().cloned().collect()
+    }
+
     pub(crate) fn record_localized_availability_template(&self, id: &str, template: &str) {
         self.localized_availability_templates
             .borrow_mut()
@@ -60,5 +89,10 @@ impl DialogueTrace {
 
     pub(crate) fn record_plural_line(&self, id: &str, trace: PluralLineTrace) {
         self.plural_lines.borrow_mut().insert(id.to_owned(), trace);
+    }
+
+    pub(crate) fn record_localized_lookup(&self, trace: LocalizedLookupTrace) {
+        let key = format!("{:?}:{}", trace.domain, trace.id);
+        self.localized_lookups.borrow_mut().insert(key, trace);
     }
 }

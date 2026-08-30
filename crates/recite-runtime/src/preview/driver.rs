@@ -15,6 +15,7 @@ struct Trial<'a> {
     inputs: PreviewInputs<'a>,
     prior_status: PreviewStatus,
     prefix: Option<Vec<PreviewEvent>>,
+    runtime_trace: crate::DialogueTrace,
 }
 
 impl<'asset> PreviewSession<'asset> {
@@ -36,6 +37,7 @@ impl<'asset> PreviewSession<'asset> {
             inputs,
             prior_status,
             prefix: None,
+            runtime_trace: crate::DialogueTrace::new(),
         })
     }
 
@@ -97,6 +99,7 @@ impl<'asset> PreviewSession<'asset> {
             inputs,
             prior_status: pending.prior_status,
             prefix: Some(events),
+            runtime_trace: crate::DialogueTrace::new(),
         })
     }
 
@@ -109,8 +112,9 @@ impl<'asset> PreviewSession<'asset> {
             inputs,
             prior_status,
             prefix,
+            runtime_trace,
         } = trial;
-        let mut resolution = LocaleResolution::new();
+        let mut resolution = LocaleResolution::new().with_trace(&runtime_trace);
         if let Some(provider) = inputs.locale_provider {
             resolution = resolution.with_provider(provider);
         }
@@ -150,7 +154,7 @@ impl<'asset> PreviewSession<'asset> {
             );
         }
         if let Some(query) = pending_query {
-            let Some(block) = self.current_block_id_opt() else {
+            let Some(block) = self.block_id_for_session(&trial) else {
                 self.pending = None;
                 self.state.status = prior_status;
                 return self.error_with_prefix(
@@ -202,7 +206,7 @@ impl<'asset> PreviewSession<'asset> {
                 return self.error_with_prefix(prefix, PreviewError::Runtime(error));
             }
         };
-        let Some(block) = self.current_block_id_opt() else {
+        let Some(block) = self.block_id_for_session(&trial) else {
             self.pending = None;
             self.state.status = prior_status;
             return self.error_with_prefix(
@@ -215,6 +219,12 @@ impl<'asset> PreviewSession<'asset> {
 
         self.session = trial;
         self.pending = None;
+        self.trace.merge_runtime_trace(&runtime_trace);
+        if let crate::DialogueEvent::Effect(effect) = &event
+            && self.restored_effect_reemit.as_ref() == Some(&effect.id)
+        {
+            self.restored_effect_reemit = None;
+        }
         let mut events = prefix.unwrap_or_default();
         if let Operation::Choose {
             prompt: Some(prompt),

@@ -65,6 +65,10 @@ pub enum PreviewError {
     ConditionRequestIdOverflow,
     #[error("cannot snapshot while a condition answer is pending")]
     SnapshotPendingCondition,
+    #[error("failed to encode preview snapshot: {reason}")]
+    SnapshotEncodeFailed { reason: String },
+    #[error("failed to decode preview snapshot: {reason}")]
+    SnapshotDecodeFailed { reason: String },
     #[error("unsupported preview snapshot format {snapshot_format_version}")]
     UnsupportedSnapshotFormat { snapshot_format_version: u16 },
     #[error("preview snapshot belongs to asset `{actual:?}`, expected `{expected:?}`")]
@@ -74,4 +78,6 @@ pub enum PreviewError {
     },
     #[error("preview snapshot control projection does not match its runtime session")]
     SnapshotStateMismatch,
+    #[error("restored blocking effect `{effect_id}` must be re-emitted before acknowledgement")]
+    EffectRestorePending { effect_id: recite_core::EffectId },
 }

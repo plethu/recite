@@ -9,7 +9,8 @@ use crate::event::{
     ChoiceAvailability, ChoiceAvailabilityReason, ChoiceAvailabilityReasonArg,
     ChoiceAvailabilityReasonOrigin, ChoiceAvailabilityReasonTree, ChoiceAvailabilityReasonValue,
 };
-use crate::locale::TextDomain;
+use crate::locale::{LocaleLookupOutcome, TextDomain};
+use crate::traversal::trace::LocalizedLookupTrace;
 
 use super::asset::AssetView;
 use super::malformed;
@@ -324,8 +325,8 @@ fn localise_reason_template(
     locale: LocaleLookup<'_>,
 ) -> Result<String, DialogueError> {
     let text = if let Some((locale_id, provider)) = locale.locale.zip(locale.provider) {
-        provider
-            .lookup(
+        let resolved = provider
+            .lookup_with_provenance(
                 id,
                 source_text,
                 TextDomain::AvailabilityReason,
@@ -335,8 +336,25 @@ fn localise_reason_template(
             .map_err(|error| DialogueError::LocaleLookupFailed {
                 id: id.to_owned(),
                 reason: error.reason().to_owned(),
-            })?
-            .unwrap_or_else(|| source_text.to_owned())
+            })?;
+        if let Some(trace) = locale.trace {
+            trace.record_localized_lookup(LocalizedLookupTrace {
+                id: id.to_owned(),
+                source_text: source_text.to_owned(),
+                resolved_text: resolved.template.clone(),
+                domain: TextDomain::AvailabilityReason,
+                attempts: resolved.attempts.clone(),
+                matched_locale: resolved.matched_locale.clone(),
+                matched_context: resolved.matched_context.clone(),
+                matched_key: resolved.matched_key.clone(),
+                outcome: if resolved.template.is_some() {
+                    LocaleLookupOutcome::Matched
+                } else {
+                    LocaleLookupOutcome::MissingEntry
+                },
+            });
+        }
+        resolved.template.unwrap_or_else(|| source_text.to_owned())
     } else {
         source_text.to_owned()
     };

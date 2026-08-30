@@ -1,10 +1,10 @@
 use recite_core::{BlockId, ChoiceId, CompiledAssetId, EffectId, LocaleId};
 
 use crate::{DialogueChoice, DialogueEffectRequest, DialogueEvent, DialogueLine, EffectAck};
+use crate::{LocalizedLookupTrace, PluralLineTrace};
+use std::collections::BTreeMap;
 
-use super::api::{
-    ConditionAnswer, PreviewConditionRequest, PreviewConditionResult, PreviewPromptIdentity,
-};
+use super::api::{PreviewConditionRequest, PreviewConditionResult, PreviewPromptIdentity};
 use super::errors::PreviewError;
 
 #[non_exhaustive]
@@ -16,6 +16,18 @@ pub struct PreviewPrompt {
 }
 
 impl PreviewPrompt {
+    pub(crate) fn from_parts(
+        identity: PreviewPromptIdentity,
+        line: Option<DialogueLine>,
+        choices: Vec<DialogueChoice>,
+    ) -> Self {
+        Self {
+            identity,
+            line,
+            choices,
+        }
+    }
+
     #[must_use]
     pub fn identity(&self) -> &PreviewPromptIdentity {
         &self.identity
@@ -95,6 +107,8 @@ pub struct PreviewTrace {
     locale: Option<LocaleId>,
     variant: Option<String>,
     events: Vec<PreviewEvent>,
+    plural_lines: BTreeMap<String, PluralLineTrace>,
+    localized_lookups: BTreeMap<String, LocalizedLookupTrace>,
 }
 
 impl PreviewTrace {
@@ -103,6 +117,8 @@ impl PreviewTrace {
             locale,
             variant,
             events: Vec::new(),
+            plural_lines: BTreeMap::new(),
+            localized_lookups: BTreeMap::new(),
         }
     }
 
@@ -124,95 +140,23 @@ impl PreviewTrace {
     pub fn events(&self) -> &[PreviewEvent] {
         &self.events
     }
-}
-
-/// User-facing transcript projection. Condition control traffic and runtime
-/// errors remain in [`PreviewTrace`] rather than being duplicated here.
-#[non_exhaustive]
-#[derive(Clone, Debug, Default, PartialEq)]
-pub struct PreviewTranscript {
-    events: Vec<PreviewTranscriptEvent>,
-}
-
-#[non_exhaustive]
-#[derive(Clone, Debug, PartialEq)]
-pub enum PreviewTranscriptEvent {
-    Line(DialogueLine),
-    Prompt(PreviewPrompt),
-    ChoiceSelected {
-        choice_id: ChoiceId,
-    },
-    EffectRequested(DialogueEffectRequest),
-    DeferredEffectScheduled(DialogueEffectRequest),
-    EffectAcknowledged {
-        effect_id: EffectId,
-        ack: EffectAck,
-    },
-    End {
-        deferred_effects: Vec<DialogueEffectRequest>,
-    },
-    Restarted {
-        block: Option<BlockId>,
-        locale: Option<LocaleId>,
-    },
-    Restored,
-    RestartRequired {
-        active_asset: CompiledAssetId,
-        replacement_asset: CompiledAssetId,
-    },
-}
-
-impl PreviewTranscript {
-    pub(crate) fn push(&mut self, event: &PreviewEvent) {
-        let event = match event {
-            PreviewEvent::ConditionRequested(_) | PreviewEvent::ConditionResult { .. } => return,
-            PreviewEvent::Line(line) => PreviewTranscriptEvent::Line(line.clone()),
-            PreviewEvent::Prompt(prompt) => PreviewTranscriptEvent::Prompt(prompt.clone()),
-            PreviewEvent::ChoiceSelected { choice_id, .. } => {
-                PreviewTranscriptEvent::ChoiceSelected {
-                    choice_id: choice_id.clone(),
-                }
-            }
-            PreviewEvent::EffectRequested(effect) => {
-                PreviewTranscriptEvent::EffectRequested(effect.clone())
-            }
-            PreviewEvent::DeferredEffectScheduled(effect) => {
-                PreviewTranscriptEvent::DeferredEffectScheduled(effect.clone())
-            }
-            PreviewEvent::EffectAcknowledged { effect_id, ack } => {
-                PreviewTranscriptEvent::EffectAcknowledged {
-                    effect_id: effect_id.clone(),
-                    ack: ack.clone(),
-                }
-            }
-            PreviewEvent::End { deferred_effects } => PreviewTranscriptEvent::End {
-                deferred_effects: deferred_effects.clone(),
-            },
-            PreviewEvent::Restarted { block, locale } => PreviewTranscriptEvent::Restarted {
-                block: block.clone(),
-                locale: locale.clone(),
-            },
-            PreviewEvent::Restored => PreviewTranscriptEvent::Restored,
-            PreviewEvent::RestartRequired {
-                active_asset,
-                replacement_asset,
-            } => PreviewTranscriptEvent::RestartRequired {
-                active_asset: active_asset.clone(),
-                replacement_asset: replacement_asset.clone(),
-            },
-            PreviewEvent::Error(_) => return,
-        };
-        self.events.push(event);
-    }
 
     #[must_use]
-    pub fn events(&self) -> &[PreviewTranscriptEvent] {
-        &self.events
+    pub fn plural_line(&self, id: &str) -> Option<&PluralLineTrace> {
+        self.plural_lines.get(id)
     }
-}
 
-impl From<&ConditionAnswer> for PreviewConditionResult {
-    fn from(answer: &ConditionAnswer) -> Self {
-        Self::from_answer(answer)
+    pub fn localized_lookups(&self) -> impl Iterator<Item = &LocalizedLookupTrace> {
+        self.localized_lookups.values()
+    }
+
+    pub(crate) fn merge_runtime_trace(&mut self, trace: &crate::DialogueTrace) {
+        self.plural_lines.extend(trace.plural_lines());
+        self.localized_lookups.extend(
+            trace
+                .localized_lookups()
+                .into_iter()
+                .map(|entry| (format!("{:?}:{}", entry.domain, entry.id), entry)),
+        );
     }
 }

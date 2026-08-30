@@ -21,7 +21,11 @@ fn prompt_choice_effect_ack_and_snapshot_restore_keep_stable_identity() {
     ));
     let mut preview = PreviewSession::new(&asset, None, PreviewOptions::new()).expect("start");
     let prompt = preview.step(PreviewInputs::new());
+    let prompt_state = preview.state().clone();
     let snapshot = preview.snapshot().expect("prompt snapshot");
+    let encoded = snapshot.encode().expect("encode prompt snapshot");
+    let decoded =
+        recite_runtime::PreviewSnapshot::decode(&encoded).expect("decode prompt snapshot");
     assert!(matches!(prompt.events(), [PreviewEvent::Prompt(_)]));
     let choice = match &prompt.events()[0] {
         PreviewEvent::Prompt(prompt) => prompt.identity().choices()[0].clone(),
@@ -67,7 +71,8 @@ fn prompt_choice_effect_ack_and_snapshot_restore_keep_stable_identity() {
     let after = preview.step(PreviewInputs::new());
     assert!(matches!(after.events(), [PreviewEvent::End { .. }]));
     let mut restored = PreviewSession::new(&asset, None, PreviewOptions::new()).expect("start");
-    restored.restore(snapshot).expect("restore prompt");
+    restored.restore(decoded).expect("restore prompt");
+    assert_eq!(restored.state(), &prompt_state);
     let selected_again = restored.choose(choice, PreviewInputs::new());
     assert!(
         selected_again
@@ -80,6 +85,12 @@ fn prompt_choice_effect_ack_and_snapshot_restore_keep_stable_identity() {
     effect_restored
         .restore(blocked_snapshot)
         .expect("restore effect");
+    let immediate_ack = effect_restored.acknowledge(effect.id.clone(), EffectAck::Completed);
+    assert!(matches!(
+        immediate_ack.events(),
+        [PreviewEvent::Error(PreviewError::EffectRestorePending { effect_id })]
+            if effect_id == &effect.id
+    ));
     let emitted = effect_restored.step(PreviewInputs::new());
     assert!(matches!(
         emitted.events(),
@@ -92,4 +103,18 @@ fn prompt_choice_effect_ack_and_snapshot_restore_keep_stable_identity() {
             .iter()
             .any(|event| matches!(event, PreviewTranscriptEvent::EffectRequested(_)))
     );
+    let acknowledged = effect_restored.acknowledge(effect.id, EffectAck::Completed);
+    assert!(matches!(
+        acknowledged.events(),
+        [PreviewEvent::EffectAcknowledged { .. }]
+    ));
+}
+
+#[test]
+fn malformed_preview_snapshot_is_a_structured_decode_error() {
+    let error = recite_runtime::PreviewSnapshot::decode(&[
+        0x81, 0xa7, b'v', b'e', b'r', b's', b'i', b'o', b'n', 1,
+    ])
+    .expect_err("incomplete snapshot");
+    assert!(matches!(error, PreviewError::SnapshotDecodeFailed { .. }));
 }

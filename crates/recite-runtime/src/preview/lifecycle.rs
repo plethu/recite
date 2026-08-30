@@ -30,6 +30,7 @@ impl<'asset> PreviewSession<'asset> {
             transcript: super::model::PreviewTranscript::default(),
             pending: None,
             next_condition_id: PreviewConditionRequestId::new(0),
+            restored_effect_reemit: None,
         })
     }
 
@@ -50,10 +51,16 @@ impl<'asset> PreviewSession<'asset> {
         effect_id: EffectId,
         ack: EffectAck,
     ) -> PreviewOutput {
+        if let Some(restored_id) = &self.restored_effect_reemit {
+            return self.error(PreviewError::EffectRestorePending {
+                effect_id: restored_id.clone(),
+            });
+        }
         let mut trial = self.session.clone();
         match acknowledge_effect(&mut trial, effect_id.clone(), ack.clone()) {
             Ok(()) => {
                 self.session = trial;
+                self.restored_effect_reemit = None;
                 self.state.status = PreviewStatus::Ready;
                 self.append_events(vec![PreviewEvent::EffectAcknowledged { effect_id, ack }])
             }
@@ -68,9 +75,12 @@ impl<'asset> PreviewSession<'asset> {
             session_options(&self.options),
         ) {
             Ok(session) => {
+                let restart_required = self.state.restart_required.clone();
                 self.session = session;
                 self.pending = None;
+                self.restored_effect_reemit = None;
                 self.state = PreviewState::new(self.asset, &self.session, PreviewStatus::Ready);
+                self.state.restart_required = restart_required;
                 self.append_events(vec![PreviewEvent::Restarted {
                     block: self.current_block_id_opt(),
                     locale: self.session.locale().cloned(),
@@ -88,9 +98,13 @@ impl<'asset> PreviewSession<'asset> {
     }
 
     pub(super) fn current_block_id_opt(&self) -> Option<BlockId> {
+        self.block_id_for_session(&self.session)
+    }
+
+    pub(super) fn block_id_for_session(&self, session: &crate::DialogueSession) -> Option<BlockId> {
         self.asset
             .blocks
-            .get(self.session.current_block.as_u32() as usize)
+            .get(session.active_block_index().as_u32() as usize)
             .map(|block| block.id.clone())
     }
 

@@ -6,7 +6,8 @@ use recite_core::{
 
 use crate::DialogueError;
 use crate::event::{DialoguePlural, DialoguePluralResolution, DialoguePluralResolutionOutcome};
-use crate::locale::{InterpolationValueProvider, TextDomain};
+use crate::locale::{InterpolationValueProvider, LocaleLookupOutcome, TextDomain};
+use crate::traversal::trace::LocalizedLookupTrace;
 
 use super::output::LocaleLookup;
 use super::trace::PluralLineTrace;
@@ -20,13 +21,30 @@ pub(super) fn localise_text(
     locale: LocaleLookup<'_>,
 ) -> Result<String, DialogueError> {
     let template = if let Some((locale_id, provider)) = locale.locale.zip(locale.provider) {
-        let translated = provider
-            .lookup(id, authored_source_text, domain, locale_id, locale.variant)
+        let resolved = provider
+            .lookup_with_provenance(id, authored_source_text, domain, locale_id, locale.variant)
             .map_err(|error| DialogueError::LocaleLookupFailed {
                 id: id.to_owned(),
                 reason: error.reason().to_owned(),
             })?;
-        if let Some(template) = translated {
+        if let Some(trace) = locale.trace {
+            trace.record_localized_lookup(LocalizedLookupTrace {
+                id: id.to_owned(),
+                source_text: authored_source_text.to_owned(),
+                resolved_text: resolved.template.clone(),
+                domain,
+                attempts: resolved.attempts.clone(),
+                matched_locale: resolved.matched_locale.clone(),
+                matched_context: resolved.matched_context.clone(),
+                matched_key: resolved.matched_key.clone(),
+                outcome: if resolved.template.is_some() {
+                    LocaleLookupOutcome::Matched
+                } else {
+                    LocaleLookupOutcome::MissingEntry
+                },
+            });
+        }
+        if let Some(template) = resolved.template {
             if mode == CompiledInterpolationMode::Current {
                 recite_core::validate_translation_placeholders(authored_source_text, &template)
                     .map_err(|error| DialogueError::InvalidInterpolationSyntax {

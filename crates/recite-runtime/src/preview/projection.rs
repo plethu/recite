@@ -1,5 +1,7 @@
 use super::PreviewSession;
-use super::model::{PreviewError, PreviewEvent, PreviewOutput, PreviewStatus};
+use super::model::{
+    PreviewError, PreviewEvent, PreviewOutput, PreviewRestartRequirement, PreviewStatus,
+};
 
 impl<'asset> PreviewSession<'asset> {
     pub(super) fn append_events(&mut self, events: Vec<PreviewEvent>) -> PreviewOutput {
@@ -38,10 +40,10 @@ impl<'asset> PreviewSession<'asset> {
                 active_asset,
                 replacement_asset,
             } => {
-                self.state.status = PreviewStatus::RestartRequired {
-                    active_asset: active_asset.clone(),
-                    replacement_asset: replacement_asset.clone(),
-                };
+                self.state.restart_required = Some(PreviewRestartRequirement::new(
+                    active_asset.clone(),
+                    replacement_asset.clone(),
+                ));
             }
             PreviewEvent::Error(_) => {}
         }

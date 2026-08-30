@@ -9,6 +9,14 @@ pub struct PreviewPromptIdentity {
 }
 
 impl PreviewPromptIdentity {
+    pub(crate) fn from_parts(block: BlockId, line: Option<LineId>, choices: Vec<ChoiceId>) -> Self {
+        Self {
+            block,
+            line,
+            choices,
+        }
+    }
+
     #[must_use]
     pub fn block(&self) -> &BlockId {
         &self.block

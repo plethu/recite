@@ -270,3 +270,38 @@ fn availability_answer_is_in_prompt_projection_and_locked_choice_cannot_advance(
     ));
     assert_eq!(*preview.session(), before);
 }
+
+#[test]
+fn divert_prompt_provenance_uses_trial_block() {
+    let asset = asset(concat!(
+        ":: start default\n",
+        "-> target\n",
+        ":: target\n",
+        "> target_line@12345678901234567890\n  Target.\n",
+        "  ? target_choice@12345678901234567891\n    Continue.\n    -> END\n",
+    ));
+    let mut preview = PreviewSession::new(&asset, None, PreviewOptions::new()).expect("start");
+    let output = preview.step(PreviewInputs::new());
+    let PreviewEvent::Prompt(prompt) = &output.events()[0] else {
+        panic!("expected target prompt: {:?}", output.events());
+    };
+    assert_eq!(prompt.identity().block().as_str(), "target");
+}
+
+#[test]
+fn divert_condition_provenance_uses_trial_block() {
+    let asset = asset(concat!(
+        ":: start default\n",
+        "-> gated\n",
+        ":: gated\n",
+        ":if trusts(player)\n",
+        "  > yes@12345678901234567890\n    Yes.\n",
+        "-> END\n",
+    ));
+    let mut preview = PreviewSession::new(&asset, None, PreviewOptions::new()).expect("start");
+    let output = preview.step(PreviewInputs::new());
+    let PreviewEvent::ConditionRequested(request) = &output.events()[0] else {
+        panic!("expected target condition: {:?}", output.events());
+    };
+    assert_eq!(request.block().as_str(), "gated");
+}

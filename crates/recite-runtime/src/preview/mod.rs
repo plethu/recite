@@ -11,6 +11,7 @@ mod lifecycle;
 mod model;
 mod projection;
 mod snapshot;
+mod snapshot_codec;
 
 use recite_core::CompiledDialogue;
 
@@ -21,9 +22,9 @@ pub use model::{
     ConditionAnswer, PREVIEW_SNAPSHOT_FORMAT_VERSION, PreviewCommand, PreviewConditionArgument,
     PreviewConditionQuery, PreviewConditionRequest, PreviewConditionRequestId,
     PreviewConditionResult, PreviewError, PreviewEvent, PreviewInputRevision, PreviewInputs,
-    PreviewOptions, PreviewOutput, PreviewPrompt, PreviewPromptIdentity, PreviewSessionState,
-    PreviewSnapshot, PreviewState, PreviewStatus, PreviewTrace, PreviewTranscript,
-    PreviewTranscriptEvent,
+    PreviewOptions, PreviewOutput, PreviewPrompt, PreviewPromptIdentity, PreviewRestartRequirement,
+    PreviewSessionState, PreviewSnapshot, PreviewState, PreviewStatus, PreviewTrace,
+    PreviewTranscript, PreviewTranscriptEvent,
 };
 
 /// A structured preview over one borrowed compiled dialogue asset.
@@ -37,6 +38,7 @@ pub struct PreviewSession<'asset> {
     transcript: PreviewTranscript,
     pending: Option<PendingOperation>,
     next_condition_id: PreviewConditionRequestId,
+    restored_effect_reemit: Option<recite_core::EffectId>,
 }
 
 impl<'asset> PreviewSession<'asset> {

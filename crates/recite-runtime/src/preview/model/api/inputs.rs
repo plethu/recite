@@ -38,6 +38,16 @@ impl PreviewOptions {
     pub fn variant(&self) -> Option<&str> {
         self.variant.as_deref()
     }
+
+    pub(crate) fn with_optional_locale(mut self, locale: Option<LocaleId>) -> Self {
+        self.locale = locale;
+        self
+    }
+
+    pub(crate) fn with_optional_variant(mut self, variant: Option<String>) -> Self {
+        self.variant = variant;
+        self
+    }
 }
 
 /// Inputs supplied by a preview host for one operation.
@@ -68,7 +78,10 @@ impl<'a> PreviewInputs<'a> {
     }
 
     /// Identifies the immutable host inputs used by a traversal attempt. A
-    /// pending condition can only be resumed with the same revision.
+    /// pending condition can only be resumed with the same revision. The
+    /// revision is a caller-owned honesty boundary: the runtime compares the
+    /// value, but cannot detect mutation behind a provider reference that is
+    /// reused under the same revision.
     #[must_use]
     pub fn with_revision(mut self, revision: impl Into<PreviewInputRevision>) -> Self {
         self.revision = revision.into();
