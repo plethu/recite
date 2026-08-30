@@ -1,5 +1,5 @@
 use std::collections::BTreeMap;
-use std::fmt;
+use std::fmt::{self, Write as _};
 use std::fs;
 use std::path::Path;
 
@@ -9,9 +9,11 @@ use recite_core::SourceIdKind;
 
 mod source;
 
-fn append_line(output: &mut String, line: impl fmt::Display) {
-    output.push_str(&line.to_string());
-    output.push('\n');
+fn append_line(output: &mut String, line: fmt::Arguments<'_>) {
+    match output.write_fmt(line) {
+        Ok(()) => output.push('\n'),
+        Err(_) => unreachable!("writing formatted text to a String cannot fail"),
+    }
 }
 
 pub fn write_project(
@@ -148,9 +150,9 @@ impl FixtureGenerator {
 
     fn emit_project_manifest(&mut self) {
         let mut manifest = String::new();
-        append_line(&mut manifest, "format_version = 1");
-        append_line(&mut manifest, "");
-        append_line(&mut manifest, "[project]");
+        append_line(&mut manifest, format_args!("format_version = 1"));
+        append_line(&mut manifest, format_args!(""));
+        append_line(&mut manifest, format_args!("[project]"));
         append_line(
             &mut manifest,
             format_args!("content_set = \"synthetic-{}\"", self.profile.name),
@@ -159,15 +161,24 @@ impl FixtureGenerator {
             &mut manifest,
             format_args!("version = \"{}\"", self.profile.seed),
         );
-        append_line(&mut manifest, "schema = \"schema/synthetic.schema.json\"\n");
-        append_line(&mut manifest, "[[scenes]]");
+        append_line(
+            &mut manifest,
+            format_args!("schema = \"schema/synthetic.schema.json\"\n"),
+        );
+        append_line(&mut manifest, format_args!("[[scenes]]"));
         append_line(
             &mut manifest,
             format_args!("id = \"synthetic_{}\"", self.profile.name),
         );
-        append_line(&mut manifest, "asset = \"build/synthetic.recitec\"");
-        append_line(&mut manifest, "block = \"block_00000\"");
-        append_line(&mut manifest, "participants = [\"speaker_00\"]");
+        append_line(
+            &mut manifest,
+            format_args!("asset = \"build/synthetic.recitec\""),
+        );
+        append_line(&mut manifest, format_args!("block = \"block_00000\""));
+        append_line(
+            &mut manifest,
+            format_args!("participants = [\"speaker_00\"]"),
+        );
         self.insert_text("recite.project.toml", manifest);
     }
 
@@ -175,9 +186,11 @@ impl FixtureGenerator {
         let mut fixture = String::new();
         append_line(
             &mut fixture,
-            "[dialogue]\nlocale = \"en-US\"\n[dialogue.catalogs]\nen-US = [\"locales/en-US.po\"]\n",
+            format_args!(
+                "[dialogue]\nlocale = \"en-US\"\n[dialogue.catalogs]\nen-US = [\"locales/en-US.po\"]\n"
+            ),
         );
-        append_line(&mut fixture, "[conditions]");
+        append_line(&mut fixture, format_args!("[conditions]"));
         for index in 0..64 {
             append_line(
                 &mut fixture,
@@ -186,7 +199,7 @@ impl FixtureGenerator {
         }
         append_line(
             &mut fixture,
-            "\"counter_gte(\\\"counter_00\\\", 2)\" = true",
+            format_args!("\"counter_gte(\\\"counter_00\\\", 2)\" = true"),
         );
         append_line(
             &mut fixture,
@@ -199,7 +212,7 @@ impl FixtureGenerator {
                 self.entry_id(SourceIdKind::Line, 0, 0)
             ),
         );
-        append_line(&mut fixture, "[choices]");
+        append_line(&mut fixture, format_args!("[choices]"));
         for block in 0..self.profile.blocks {
             if self.block_has_choices(block) {
                 append_line(
@@ -212,7 +225,10 @@ impl FixtureGenerator {
                 );
             }
         }
-        append_line(&mut fixture, "\n[effects]\nauto_ack_blocking = true");
+        append_line(
+            &mut fixture,
+            format_args!("\n[effects]\nauto_ack_blocking = true"),
+        );
         self.insert_text("runtime-fixture.toml", fixture);
     }
 

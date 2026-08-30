@@ -34,20 +34,28 @@ impl FixtureGenerator {
         );
         append_line(source, format_args!("# synthetic block {block:05}"));
         if block.is_multiple_of(5) {
-            append_line(source, "! immediate play_sfx(ping)");
+            append_line(source, format_args!("! immediate play_sfx(ping)"));
         }
         if block.is_multiple_of(7) {
-            append_line(source, "! deferred advance_thread(main, active)");
+            append_line(
+                source,
+                format_args!("! deferred advance_thread(main, active)"),
+            );
         }
         if block == 0 {
-            append_line(source, "! blocking advance_thread(main, active)");
+            append_line(
+                source,
+                format_args!("! blocking advance_thread(main, active)"),
+            );
         }
-
         let lines = self.lines_in_block(block);
         for line in 0..lines {
             if line == 0 && self.uses_relationship_match(block) {
-                append_line(source, ":match relationship(speaker_00, speaker_01)");
-                append_line(source, "  :case active");
+                append_line(
+                    source,
+                    format_args!(":match relationship(speaker_00, speaker_01)"),
+                );
+                append_line(source, format_args!("  :case active"));
                 self.emit_line(block, line, speaker, 4, source);
             } else {
                 self.emit_line(block, line, speaker, 0, source);
@@ -58,7 +66,6 @@ impl FixtureGenerator {
             format_args!("-> {}\n", self.block_fallthrough_target(block)),
         );
     }
-
     fn emit_line(&self, block: u32, line: u32, speaker: u32, indent: usize, source: &mut String) {
         let prefix = " ".repeat(indent);
         let body_prefix = " ".repeat(indent + 2);
@@ -77,7 +84,6 @@ impl FixtureGenerator {
             self.emit_choices(block, indent + 2, source);
         }
     }
-
     fn emit_choices(&self, block: u32, indent: usize, source: &mut String) {
         let choice_prefix = " ".repeat(indent);
         let body_prefix = " ".repeat(indent + 2);
@@ -106,7 +112,6 @@ impl FixtureGenerator {
             append_line(source, format_args!("{body_prefix}-> {target}"));
         }
     }
-
     pub(super) fn lines_in_block(&self, block: u32) -> u32 {
         distributed_count(self.profile.lines, self.profile.blocks, block)
     }
