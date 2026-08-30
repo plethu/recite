@@ -70,9 +70,9 @@ pub(super) fn quick_fix_preserves_spacing_for_metadata_and_clauses_first_headers
         "  Hello.\n",
         ">speaker=rhea\n",
         "  Tight.\n",
-        "? requires=(can_talk)\n",
+        "? requires=(trusts(player))\n",
         "  Ask.\n",
-        "?requires=(can_talk)\n",
+        "?requires=(trusts(player))\n",
         "  Tight ask.\n",
     );
     harness.did_open(source_uri.clone(), 1, source);

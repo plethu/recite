@@ -24,6 +24,7 @@ pub mod bench_support;
 mod capabilities;
 mod diagnostics;
 mod documents;
+mod edit_projection;
 pub(crate) mod features;
 mod paths;
 mod position;

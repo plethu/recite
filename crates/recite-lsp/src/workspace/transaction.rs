@@ -1,3 +1,6 @@
+use std::fs;
+use std::path::{Component, Path, PathBuf};
+
 use lsp_types::{TextDocumentContentChangeEvent, Uri};
 
 use super::project_index::SavedProjectIndex;
@@ -73,9 +76,9 @@ impl LspWorkspace {
 
     fn open_identity_for(&self, saved: &SavedProjectIndex, uri: Uri) -> OpenFileIdentity {
         let Some(path) = uri_to_file_path(&uri) else {
-            return super::uri_keyed_open_identity(uri);
+            return uri_keyed_open_identity(uri);
         };
-        let (canonical_path, path_exists) = super::canonical_or_normalized_path(&path);
+        let (canonical_path, path_exists) = canonical_or_normalized_path(&path);
         let project_relative_path = path_exists
             .then(|| saved.project_key_for_path(&canonical_path))
             .flatten();
@@ -85,5 +88,57 @@ impl LspWorkspace {
             saved_path: Some(canonical_path),
             project_relative_path,
         }
+    }
+}
+
+fn canonical_or_normalized_path(path: &Path) -> (PathBuf, bool) {
+    if let Ok(canonical_path) = fs::canonicalize(path) {
+        return (canonical_path, true);
+    }
+
+    let normalized = lexically_normalized_path(path);
+    let mut missing_components = Vec::new();
+    let mut cursor = normalized.as_path();
+    loop {
+        if let Ok(canonical_parent) = fs::canonicalize(cursor) {
+            let mut path = canonical_parent;
+            for component in missing_components.iter().rev() {
+                path.push(component);
+            }
+            return (path, false);
+        }
+
+        let Some(component) = cursor.file_name() else {
+            return (normalized, false);
+        };
+        missing_components.push(component.to_owned());
+        let Some(parent) = cursor.parent() else {
+            return (normalized, false);
+        };
+        cursor = parent;
+    }
+}
+
+fn lexically_normalized_path(path: &Path) -> PathBuf {
+    let mut normalized = PathBuf::new();
+    for component in path.components() {
+        match component {
+            Component::Prefix(prefix) => normalized.push(prefix.as_os_str()),
+            Component::RootDir => normalized.push(Path::new(std::path::MAIN_SEPARATOR_STR)),
+            Component::CurDir => {}
+            Component::ParentDir => {
+                normalized.pop();
+            }
+            Component::Normal(component) => normalized.push(component),
+        }
+    }
+    normalized
+}
+
+fn uri_keyed_open_identity(uri: Uri) -> OpenFileIdentity {
+    OpenFileIdentity {
+        uri,
+        saved_path: None,
+        project_relative_path: None,
     }
 }

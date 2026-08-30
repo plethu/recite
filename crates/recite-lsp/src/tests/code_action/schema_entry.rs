@@ -149,10 +149,12 @@ pub(super) fn effect_schema_quick_fix_rejects_arguments_and_metadata() {
             metadata_range,
             Some(vec![CodeActionKind::QUICKFIX]),
         );
-        assert!(
-            metadata.is_empty(),
-            "metadata diagnostics should not produce #77 actions"
-        );
+        // The compiler-owned stable-ID action may overlap this range; the
+        // schema action remains unavailable for metadata keys.
+        for name in ["mood", "speaker", "cue"] {
+            assert_no_action_title(&metadata, &format!("Add condition `{name}` to schema"));
+            assert_no_action_title(&metadata, &format!("Add effect `{name}` to schema"));
+        }
     }
 
     harness.finish();

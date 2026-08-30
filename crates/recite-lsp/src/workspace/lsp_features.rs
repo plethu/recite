@@ -1,0 +1,214 @@
+use lsp_types::{
+    CodeActionParams, CodeActionResponse, CompletionResponse, GotoDefinitionResponse, Hover,
+    Location, Position, PrepareRenameResponse, Uri, WorkspaceEdit,
+};
+use recite_compiler::DocumentLayer;
+use recite_core::DocumentKey;
+
+use super::{
+    LspWorkspace, document_key_for_identity, document_key_for_open, document_key_for_saved,
+};
+use crate::documents::OpenDocument;
+use crate::edit_projection::EditDocument;
+use crate::features;
+use crate::position::lsp_position_to_source;
+use crate::summary::FileSummary;
+
+impl LspWorkspace {
+    pub(crate) fn completion(&self, uri: &Uri, position: Position) -> Option<CompletionResponse> {
+        let document = self.documents.document(uri)?;
+        let key = document_key_for_open(document);
+        features::completion(
+            document.text(),
+            position,
+            key.as_ref(),
+            self.kernel.snapshot(),
+            self.schema.schema(),
+            self.schema.matches_uri(uri),
+            &self.ui_catalog,
+        )
+    }
+
+    pub(crate) fn hover(&self, uri: &Uri, position: Position) -> Option<Hover> {
+        let document = self.documents.document(uri)?;
+        let key = document_key_for_open(document)?;
+        features::hover(
+            document.text(),
+            position,
+            &key,
+            self.kernel.snapshot(),
+            self.schema.schema(),
+            &self.ui_catalog,
+        )
+    }
+
+    pub(crate) fn definition(
+        &self,
+        uri: &Uri,
+        position: Position,
+    ) -> Option<GotoDefinitionResponse> {
+        let (key, text) = self.source_document(uri)?;
+        let position = lsp_position_to_source(text, position)?;
+        let documents = self.navigation_documents();
+        features::definition(&key, position, self.kernel.snapshot(), &documents)
+    }
+
+    pub(crate) fn references(
+        &self,
+        uri: &Uri,
+        position: Position,
+        include_declaration: bool,
+    ) -> Option<Vec<Location>> {
+        let (key, text) = self.source_document(uri)?;
+        let position = lsp_position_to_source(text, position)?;
+        let documents = self.navigation_documents();
+        features::references(
+            &key,
+            position,
+            include_declaration,
+            self.kernel.snapshot(),
+            &documents,
+        )
+    }
+
+    pub(crate) fn prepare_rename(
+        &self,
+        uri: &Uri,
+        position: Position,
+    ) -> Option<PrepareRenameResponse> {
+        let (key, text) = self.source_document(uri)?;
+        let position = lsp_position_to_source(text, position)?;
+        features::prepare_rename(&key, position, self.kernel.snapshot())
+    }
+
+    pub(crate) fn rename(
+        &self,
+        uri: &Uri,
+        position: Position,
+        new_name: &str,
+    ) -> Option<WorkspaceEdit> {
+        let (key, text) = self.source_document(uri)?;
+        let position = lsp_position_to_source(text, position)?;
+        let documents = self.navigation_documents();
+        features::rename(&key, position, new_name, self.kernel.snapshot(), &documents)
+    }
+
+    pub(crate) fn code_action(&self, params: &CodeActionParams) -> Option<CodeActionResponse> {
+        let documents = self.code_action_documents();
+        let schema_is_open = self
+            .schema
+            .uri()
+            .is_some_and(|uri| self.documents.document(uri).is_some())
+            || self.schema.path().is_some_and(|path| {
+                self.documents.documents().any(|document| {
+                    document
+                        .identity()
+                        .saved_path
+                        .as_ref()
+                        .is_some_and(|open| open == path)
+                })
+            });
+        let schema_document = if schema_is_open {
+            None
+        } else {
+            self.schema.code_action_document()
+        };
+        features::code_action(
+            params,
+            self.kernel.snapshot(),
+            &documents,
+            schema_document,
+            &self.ui_catalog,
+        )
+    }
+
+    pub(crate) fn open_document_diagnostics_except(
+        &self,
+        exclude: Option<&Uri>,
+    ) -> Vec<super::DiagnosticRefresh> {
+        self.documents
+            .documents()
+            .filter(|document| match exclude {
+                Some(uri) => document.identity().uri != *uri,
+                None => true,
+            })
+            .map(|document| self.publish_open_document(document))
+            .collect()
+    }
+
+    fn navigation_documents(&self) -> Vec<features::NavigationDocument> {
+        self.kernel
+            .snapshot()
+            .documents()
+            .iter()
+            .filter_map(|document| {
+                let uri = self.uri_for_document_key(document.key())?;
+                Some(features::NavigationDocument {
+                    uri: uri.clone(),
+                    key: document.key().clone(),
+                    text: document.source_text().to_owned(),
+                    layer: document.layer(),
+                    version: document.version(),
+                })
+            })
+            .collect()
+    }
+
+    fn source_document(&self, uri: &Uri) -> Option<(DocumentKey, &str)> {
+        if let Some(document) = self.documents.document(uri) {
+            return Some((document_key_for_open(document)?, document.text()));
+        }
+        let document = self.saved.document_by_uri(uri)?;
+        Some((document_key_for_saved(document)?, document.text.as_str()))
+    }
+
+    fn uri_for_document_key(&self, key: &DocumentKey) -> Option<&Uri> {
+        let document = self.kernel.snapshot().document(key)?;
+        match document.layer() {
+            DocumentLayer::Open => self.kernel_open_owners.get(key),
+            DocumentLayer::Saved => self
+                .saved
+                .documents
+                .values()
+                .find(|document| document_key_for_saved(document).as_ref() == Some(key))
+                .map(|document| &document.identity.uri),
+            _ => None,
+        }
+    }
+
+    fn code_action_documents(&self) -> Vec<features::CodeActionDocument<'_>> {
+        self.snapshot
+            .summaries()
+            .iter()
+            .filter_map(|summary| {
+                let key = document_key_for_identity(&summary.identity)?;
+                let source = self.kernel.snapshot().document(&key)?;
+                let text = self.text_for_summary(summary)?;
+                if text != source.source_text() {
+                    return None;
+                }
+                Some(features::CodeActionDocument {
+                    source: EditDocument {
+                        key,
+                        uri: summary.uri().clone(),
+                        text: source.source_text().to_owned(),
+                        layer: source.layer(),
+                        version: source.version(),
+                    },
+                    summary,
+                })
+            })
+            .collect()
+    }
+
+    pub(super) fn text_for_summary(&self, summary: &FileSummary) -> Option<&str> {
+        self.documents
+            .document(summary.uri())
+            .map(OpenDocument::text)
+            .or_else(|| {
+                self.saved
+                    .document_by_uri(summary.uri())
+                    .map(|document| document.text.as_str())
+            })
+    }
+}

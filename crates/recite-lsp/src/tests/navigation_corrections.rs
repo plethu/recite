@@ -1,4 +1,4 @@
-use lsp_types::Position;
+use lsp_types::{DocumentChanges, OneOf, Position, Range, TextEdit};
 use tempfile::TempDir;
 
 use super::support::{Harness, file_uri, harness_for_root, uri, write_file};
@@ -41,6 +41,62 @@ pub(super) fn rename_rejects_local_and_qualified_block_collisions() {
         "a qualified destination block collision must abort rename",
     );
     qualified.finish();
+}
+
+pub(super) fn rename_projects_cross_file_versions_and_order() {
+    let temp = TempDir::new().unwrap_or_else(|error| panic!("tempdir: {error}"));
+    write_file(
+        temp.path(),
+        "a.recite",
+        ":: start default\n-> b.recite::target\n",
+    );
+    write_file(temp.path(), "b.recite", ":: target\n");
+    let source_uri = file_uri(&temp.path().join("a.recite"));
+    let target_uri = file_uri(&temp.path().join("b.recite"));
+    let mut harness = harness_for_root(temp.path());
+    harness.did_open(
+        source_uri.clone(),
+        7,
+        ":: start default\n-> b.recite::target\n",
+    );
+    let _ = harness.recv_publish_diagnostics();
+
+    let edit = harness
+        .rename(source_uri, Position::new(1, 14), "renamed")
+        .expect("cross-file rename response");
+    let Some(DocumentChanges::Edits(changes)) = edit.document_changes else {
+        panic!("expected versioned document changes");
+    };
+    assert_eq!(changes.len(), 2);
+    assert_eq!(
+        changes[0].text_document.uri,
+        file_uri(&temp.path().join("a.recite"))
+    );
+    assert_eq!(changes[0].text_document.version, Some(7));
+    assert_eq!(changes[1].text_document.uri, target_uri);
+    assert_eq!(changes[1].text_document.version, None);
+    assert_eq!(
+        changes
+            .iter()
+            .flat_map(|change| change.edits.iter())
+            .map(|edit| match edit {
+                OneOf::Left(edit) => edit.clone(),
+                OneOf::Right(_) => panic!("expected plain text edit"),
+            })
+            .collect::<Vec<_>>(),
+        [
+            TextEdit {
+                range: range(1, 13, 1, 19),
+                new_text: "renamed".to_owned(),
+            },
+            TextEdit {
+                range: range(0, 3, 0, 9),
+                new_text: "renamed".to_owned(),
+            },
+        ]
+    );
+
+    harness.finish();
 }
 
 pub(super) fn references_require_unique_navigation() {
@@ -163,6 +219,13 @@ pub(super) fn typed_clause_and_schema_ranges_exclude_delimiters() {
         "schema token range must stop before the comma",
     );
     harness.finish();
+}
+
+fn range(start_line: u32, start_character: u32, end_line: u32, end_character: u32) -> Range {
+    Range {
+        start: Position::new(start_line, start_character),
+        end: Position::new(end_line, end_character),
+    }
 }
 
 pub(super) fn condition_marker_completion_and_hover_follow_parser_boundaries() {

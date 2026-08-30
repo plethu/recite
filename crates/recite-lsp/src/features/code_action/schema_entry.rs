@@ -28,7 +28,7 @@ pub(super) fn actions(
             .summary
             .condition_functions
             .iter()
-            .filter(|function| function_intersects(document.text, function, params.range))
+            .filter(|function| function_intersects(&document.source.text, function, params.range))
             .filter_map(|function| condition_action(params, function, documents, &schema, catalog)),
     );
     actions.extend(
@@ -36,7 +36,7 @@ pub(super) fn actions(
             .summary
             .effect_functions
             .iter()
-            .filter(|function| function_intersects(document.text, function, params.range))
+            .filter(|function| function_intersects(&document.source.text, function, params.range))
             .filter_map(|function| effect_action(params, function, documents, &schema, catalog)),
     );
     actions

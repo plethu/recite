@@ -290,6 +290,11 @@ fn typed_features_follow_open_overlay_generation() {
 }
 
 #[test]
+fn rename_projects_cross_file_versions_and_order() {
+    super::navigation_corrections::rename_projects_cross_file_versions_and_order();
+}
+
+#[test]
 fn references_include_declaration_and_project_references() {
     super::navigation::references_include_declaration_and_project_references();
 }

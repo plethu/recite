@@ -8,13 +8,14 @@ use lsp_types::{
     DocumentChanges, OneOf, OptionalVersionedTextDocumentIdentifier, Position, Range,
     TextDocumentEdit, TextEdit, Uri, WorkspaceEdit,
 };
+use recite_compiler::AuthoringSnapshot;
 use recite_ui::{MsgId, UiCatalog};
 
+use crate::edit_projection::EditDocument;
 use crate::summary::{FileSummary, SchemaSummary};
 
 pub(crate) struct CodeActionDocument<'a> {
-    pub(crate) uri: &'a Uri,
-    pub(crate) text: &'a str,
+    pub(crate) source: EditDocument,
     pub(crate) summary: &'a FileSummary,
 }
 
@@ -27,38 +28,45 @@ pub(crate) struct SchemaCodeActionDocument<'a> {
 
 pub(crate) fn code_action(
     params: &CodeActionParams,
+    snapshot: &AuthoringSnapshot,
     documents: &[CodeActionDocument<'_>],
     schema: Option<SchemaCodeActionDocument<'_>>,
     catalog: &UiCatalog,
 ) -> Option<CodeActionResponse> {
     let document = documents
         .iter()
-        .find(|document| *document.uri == params.text_document.uri)?;
+        .find(|document| document.source.uri == params.text_document.uri)?;
+    let edit_documents = documents
+        .iter()
+        .map(|document| document.source.clone())
+        .collect::<Vec<_>>();
 
     let mut actions = Vec::new();
     let include_quick_fix = includes_kind(params, &CodeActionKind::QUICKFIX);
     let include_fix_all = includes_kind(params, &CodeActionKind::SOURCE_FIX_ALL);
 
-    let quick_fix_edits = if include_quick_fix {
-        missing_id::edits(document, documents, Some(params.range))
+    let quick_fix_edit = if include_quick_fix {
+        missing_id::edit(document, snapshot, &edit_documents, params.range)
     } else {
-        Vec::new()
+        None
     };
-    if quick_fix_edits.len() == 1 {
+    if let Some(edit) = quick_fix_edit {
         actions.push(CodeActionOrCommand::CodeAction(CodeAction {
             title: catalog.text(MsgId::LspCodeActionInsertMissingId),
             kind: Some(CodeActionKind::QUICKFIX),
             diagnostics: Some(params.context.diagnostics.clone()),
-            edit: Some(workspace_edit(
-                document.uri.clone(),
-                document.summary.version,
-                quick_fix_edits,
-            )),
+            edit: Some(edit),
             ..CodeAction::default()
         }));
     }
     if include_quick_fix {
-        actions.extend(block_stub::actions(params, document, documents, catalog));
+        actions.extend(block_stub::actions(
+            params,
+            document,
+            snapshot,
+            &edit_documents,
+            catalog,
+        ));
         if let Some(schema) = schema {
             actions.extend(schema_entry::actions(
                 params, document, documents, schema, catalog,
@@ -66,20 +74,16 @@ pub(crate) fn code_action(
         }
     }
 
-    let fix_all_edits = if include_fix_all {
-        missing_id::edits(document, documents, None)
+    let fix_all_edit = if include_fix_all {
+        missing_id::fix_all(snapshot, &edit_documents)
     } else {
-        Vec::new()
+        None
     };
-    if !fix_all_edits.is_empty() {
+    if let Some(edit) = fix_all_edit {
         actions.push(CodeActionOrCommand::CodeAction(CodeAction {
             title: catalog.text(MsgId::LspCodeActionInsertAllMissingIds),
             kind: Some(CodeActionKind::SOURCE_FIX_ALL),
-            edit: Some(workspace_edit(
-                document.uri.clone(),
-                document.summary.version,
-                fix_all_edits,
-            )),
+            edit: Some(edit),
             ..CodeAction::default()
         }));
     }
@@ -112,10 +116,6 @@ fn ranges_intersect(left: Range, right: Range) -> bool {
 
 fn position_le(left: Position, right: Position) -> bool {
     left.line < right.line || (left.line == right.line && left.character <= right.character)
-}
-
-fn end_position(text: &str) -> Position {
-    json_edit::byte_position(text, text.len())
 }
 
 fn newline_for(text: &str) -> &'static str {

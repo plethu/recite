@@ -35,11 +35,12 @@ pub(crate) use code_action::{CodeActionDocument, SchemaCodeActionDocument};
 
 pub(crate) fn code_action(
     params: &CodeActionParams,
+    snapshot: &AuthoringSnapshot,
     documents: &[CodeActionDocument<'_>],
     schema: Option<SchemaCodeActionDocument<'_>>,
     catalog: &UiCatalog,
 ) -> Option<CodeActionResponse> {
-    code_action::code_action(params, documents, schema, catalog)
+    code_action::code_action(params, snapshot, documents, schema, catalog)
 }
 
 pub(crate) use navigation::{NavigationDocument, definition, prepare_rename, references, rename};
