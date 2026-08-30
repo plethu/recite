@@ -1,6 +1,7 @@
 use recite_core::{
-    Block, BlockReference, Choice, ConditionCall, ConditionExpression, DivertTarget, Effect,
-    EffectMode, IfBranch, Line, MatchBranch, SourceFile, SourceMetadata, SourceSpan, Statement,
+    Block, BlockId, BlockReference, Choice, ConditionCall, ConditionExpression, DivertTarget,
+    Effect, EffectMode, IfBranch, Line, MatchBranch, SourceFile, SourceMetadata, SourceSpan,
+    Statement,
 };
 
 #[path = "types.rs"]
@@ -85,43 +86,45 @@ impl Collector {
         });
         self.metadata(&block.metadata);
         for statement in &block.statements {
-            self.statement(statement);
+            self.statement(&block.id, statement);
         }
     }
 
-    fn statement(&mut self, statement: &Statement) {
+    fn statement(&mut self, enclosing_block: &BlockId, statement: &Statement) {
         match statement {
-            Statement::Line(line) => self.line(line),
-            Statement::Choice(choice) => self.choice(choice),
+            Statement::Line(line) => self.line(enclosing_block, line),
+            Statement::Choice(choice) => self.choice(enclosing_block, choice),
             Statement::Divert(divert) => self.divert(&divert.target, &divert.span),
-            Statement::If(branch) => self.if_branch(branch),
-            Statement::Match(branch) => self.match_branch(branch),
+            Statement::If(branch) => self.if_branch(enclosing_block, branch),
+            Statement::Match(branch) => self.match_branch(enclosing_block, branch),
             Statement::Effect(effect) => self.effect(effect),
             Statement::Comment(_) => {}
         }
     }
 
-    fn line(&mut self, line: &Line) {
+    fn line(&mut self, enclosing_block: &BlockId, line: &Line) {
         self.stable_ids.push(StableIdSummary {
             kind: StableIdKind::Line,
             source_id: line.source_id.clone(),
             source_id_span: line.source_id_span.clone(),
             insertion_span: line.source_id_insertion_span.clone(),
             span: line.span.clone(),
+            enclosing_block: enclosing_block.clone(),
         });
         self.metadata(&line.metadata);
         for statement in &line.statements {
-            self.statement(statement);
+            self.statement(enclosing_block, statement);
         }
     }
 
-    fn choice(&mut self, choice: &Choice) {
+    fn choice(&mut self, enclosing_block: &BlockId, choice: &Choice) {
         self.stable_ids.push(StableIdSummary {
             kind: StableIdKind::Choice,
             source_id: choice.source_id.clone(),
             source_id_span: choice.source_id_span.clone(),
             insertion_span: choice.source_id_insertion_span.clone(),
             span: choice.span.clone(),
+            enclosing_block: enclosing_block.clone(),
         });
         self.metadata(&choice.metadata);
         if let Some(requirement) = &choice.availability_requirement {
@@ -134,7 +137,7 @@ impl Collector {
             self.divert(&target.target, &target.span);
         }
         for statement in &choice.statements {
-            self.statement(statement);
+            self.statement(enclosing_block, statement);
         }
     }
 
@@ -157,21 +160,21 @@ impl Collector {
         }
     }
 
-    fn if_branch(&mut self, branch: &IfBranch) {
+    fn if_branch(&mut self, enclosing_block: &BlockId, branch: &IfBranch) {
         self.condition_expression(&branch.condition, FunctionReferenceKind::BooleanCondition);
         for statement in &branch.then_statements {
-            self.statement(statement);
+            self.statement(enclosing_block, statement);
         }
         for statement in &branch.else_statements {
-            self.statement(statement);
+            self.statement(enclosing_block, statement);
         }
     }
 
-    fn match_branch(&mut self, branch: &MatchBranch) {
+    fn match_branch(&mut self, enclosing_block: &BlockId, branch: &MatchBranch) {
         self.condition_call(&branch.scrutinee, FunctionReferenceKind::MatchCondition);
         for arm in &branch.arms {
             for statement in &arm.statements {
-                self.statement(statement);
+                self.statement(enclosing_block, statement);
             }
         }
     }

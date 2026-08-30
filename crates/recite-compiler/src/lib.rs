@@ -51,7 +51,7 @@
 //! # }
 //! ```
 
-mod authoring;
+pub mod authoring;
 mod compile;
 mod diagnostics;
 mod pot;
@@ -63,16 +63,18 @@ mod wire;
 pub mod bench_support;
 
 pub use authoring::{
-    AnalysisDelta, AuthoringError, AuthoringKernel, AuthoringRequest, AuthoringSnapshot,
-    AuthoringSummary, BlockDefinitionSummary, BlockReferenceSummary, ClauseKind,
-    CompletionCandidate, CompletionCandidateDetail, CompletionCandidateKind, CompletionItem,
-    CompletionSite, CompletionSiteKind, DiagnosticCollection, DiagnosticIter, DocumentDelta,
-    DocumentLayer, DocumentMetadata, DocumentSnapshot, DocumentVersion, FunctionReferenceKind,
+    AnalysisDelta, AuthoringEditError, AuthoringEditOperation, AuthoringEditPlan, AuthoringError,
+    AuthoringKernel, AuthoringRequest, AuthoringSnapshot, AuthoringSummary, BlockDefinitionSummary,
+    BlockReferenceSummary, ClauseKind, CompletionCandidate, CompletionCandidateDetail,
+    CompletionCandidateKind, CompletionItem, CompletionSite, CompletionSiteKind,
+    DiagnosticCollection, DiagnosticIter, DocumentDelta, DocumentLayer, DocumentMetadata,
+    DocumentSnapshot, DocumentVersion, EditPrecondition, FunctionReferenceKind,
     FunctionReferenceSummary, HoverInfo, MetadataScalar, MetadataSummary, MetadataValue,
     MetadataValueDetail, MetadataValueKind, NavigationResult, OpenDocument, QueryClass,
     QueryResult, QueryUnavailableReason, SavedDocument, SemanticFact, SemanticSymbolKind,
-    SnapshotGeneration, StableIdKind, StableIdSummary, SymbolIdentity, SymbolKind, SymbolLocation,
-    SymbolQueryOptions, SymbolRole,
+    SnapshotGeneration, SourceEdit, SourceFingerprint, SourceRange, StableIdKind, StableIdSummary,
+    SymbolIdentity, SymbolKind, SymbolLocation, SymbolQueryOptions, SymbolRole,
+    plan_create_block_stub, plan_insert_missing_id, plan_insert_missing_ids, plan_rename_block,
 };
 pub use compile::{
     CompileError, CompileInput, CompileOptions, CompileReport, CompiledAssetOutput, compile_inputs,

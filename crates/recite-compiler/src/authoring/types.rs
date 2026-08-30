@@ -56,7 +56,7 @@ impl BlockReferenceSummary {
     }
 }
 
-#[derive(Clone, Copy, Debug, Eq, PartialEq)]
+#[derive(Clone, Copy, Debug, Eq, Ord, PartialEq, PartialOrd)]
 #[non_exhaustive]
 pub enum StableIdKind {
     Line,
@@ -71,6 +71,7 @@ pub struct StableIdSummary {
     pub(super) source_id_span: Option<SourceSpan>,
     pub(super) insertion_span: Option<SourceSpan>,
     pub(super) span: SourceSpan,
+    pub(super) enclosing_block: BlockId,
 }
 
 impl StableIdSummary {
@@ -93,6 +94,18 @@ impl StableIdSummary {
     #[must_use]
     pub fn span(&self) -> &SourceSpan {
         &self.span
+    }
+
+    /// Returns the compiler-resolved block that owns this stable ID.
+    #[must_use]
+    pub fn enclosing_block(&self) -> &BlockId {
+        &self.enclosing_block
+    }
+
+    /// Alias for callers that use block ownership as their lookup key.
+    #[must_use]
+    pub fn block_id(&self) -> &BlockId {
+        self.enclosing_block()
     }
 }
 
