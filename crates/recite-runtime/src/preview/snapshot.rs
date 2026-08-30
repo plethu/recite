@@ -143,19 +143,31 @@ fn snapshot_state_matches_session(
                         return false;
                     };
                     prompt.identity().line() == prompt_line.as_ref()
-                        && prompt.line().is_none_or(|line| {
-                            asset
+                        && match (prompt_line.as_ref(), prompt.line()) {
+                            (None, None) => true,
+                            (Some(expected), Some(line)) => asset
                                 .lines
                                 .iter()
                                 .find(|candidate| candidate.id == line.id)
-                                .is_some_and(|candidate| candidate.source_text == line.source_text)
-                        })
+                                .is_some_and(|candidate| {
+                                    &candidate.id == expected
+                                        && (candidate.source_text == line.source_text
+                                            || candidate.plural_source_text.as_deref()
+                                                == Some(line.source_text.as_str()))
+                                }),
+                            _ => false,
+                        }
                         && prompt.identity().choices()
                             == compiled_choices
                                 .iter()
                                 .map(|choice| choice.id.clone())
                                 .collect::<Vec<_>>()
                         && saved.choices.len() == prompt.choices().len()
+                        && saved
+                            .choices
+                            .iter()
+                            .map(|choice| choice.id.as_str())
+                            .eq(prompt.choices().iter().map(|choice| choice.id.as_str()))
                         && saved
                             .choices
                             .iter()

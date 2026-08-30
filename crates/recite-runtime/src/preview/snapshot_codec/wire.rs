@@ -133,6 +133,7 @@ pub(super) struct ChoiceWire {
 }
 
 #[derive(Clone, Debug, Deserialize, Serialize)]
+#[serde(deny_unknown_fields)]
 pub(super) enum EchoWire {
     None,
     SelectedText,
@@ -140,6 +141,7 @@ pub(super) enum EchoWire {
 }
 
 #[derive(Clone, Debug, Deserialize, Serialize)]
+#[serde(deny_unknown_fields)]
 pub(super) struct EffectWire {
     pub(super) id: String,
     pub(super) mode: DialogueEffectModeWire,
@@ -156,6 +158,7 @@ pub(super) enum DialogueEffectModeWire {
 }
 
 #[derive(Clone, Debug, Deserialize, Serialize)]
+#[serde(deny_unknown_fields)]
 pub(super) enum ArgumentWire {
     Identifier(String),
     String(String),

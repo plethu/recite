@@ -3,8 +3,10 @@ mod preview_support;
 
 use preview_support::asset;
 use recite_core::LocaleId;
+use recite_core::ScalarValue;
 use recite_runtime::{
-    ConditionAnswer, ConditionValue, PreviewEvent, PreviewInputs, PreviewOptions, PreviewSession,
+    ConditionAnswer, ConditionValue, InterpolationValues, PreviewEvent, PreviewInputs,
+    PreviewOptions, PreviewSession,
 };
 
 #[test]
@@ -117,4 +119,28 @@ fn preview_snapshot_codec_rejects_trailing_unknown_and_unsupported_data() {
             snapshot_format_version: 9
         })
     ));
+}
+
+#[test]
+fn plural_prompt_snapshot_restores_selected_source_projection() {
+    let asset = asset(concat!(
+        ":: start default\n",
+        "> prompt@12345678901234567890 bind=(count:int=$count)\n",
+        "  One item.\n  | {count} items.\n",
+        "  ? keep@12345678901234567891\n    Keep.\n    -> END\n",
+    ));
+    let mut values = InterpolationValues::new();
+    values.insert("count".to_owned(), ScalarValue::from(2_i64));
+    let mut source = PreviewSession::new(&asset, None, PreviewOptions::new()).expect("source");
+    let prompt = source.step(PreviewInputs::new().with_interpolation_values(&values));
+    assert!(
+        matches!(prompt.events(), [PreviewEvent::Prompt(prompt)] if prompt.line().is_some_and(|line| line.text == "2 items."))
+    );
+    let state = source.state().clone();
+    let snapshot = source.snapshot().expect("snapshot");
+    let encoded = snapshot.encode().expect("encode");
+    let decoded = recite_runtime::PreviewSnapshot::decode(&encoded).expect("decode");
+    let mut restored = PreviewSession::new(&asset, None, PreviewOptions::new()).expect("receiver");
+    restored.restore(decoded).expect("restore");
+    assert_eq!(restored.state(), &state);
 }

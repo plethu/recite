@@ -32,6 +32,19 @@ fn prompt_choice_effect_ack_and_snapshot_restore_keep_stable_identity() {
         _ => unreachable!("asserted prompt"),
     };
     let selected = preview.choose(choice.clone(), PreviewInputs::new());
+    assert_eq!(selected.events().len(), 3);
+    assert!(matches!(
+        selected.events()[0],
+        PreviewEvent::ChoiceSelected { .. }
+    ));
+    assert!(matches!(
+        &selected.events()[1],
+        PreviewEvent::DeferredEffectScheduled(effect) if effect.function == "record"
+    ));
+    assert!(matches!(
+        &selected.events()[2],
+        PreviewEvent::EffectRequested(effect) if effect.mode == DialogueEffectMode::Immediate
+    ));
     assert!(selected.events().iter().any(|event| matches!(
         event,
         PreviewEvent::DeferredEffectScheduled(effect)

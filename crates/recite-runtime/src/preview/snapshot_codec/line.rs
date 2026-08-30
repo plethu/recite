@@ -165,9 +165,7 @@ impl PluralResolutionWire {
             matched_arm: self.matched_arm,
             source_fallback_arm: self.source_fallback_arm,
             outcome: match self.outcome {
-                PluralOutcomeWire::Translated | PluralOutcomeWire::Matched => {
-                    DialoguePluralResolutionOutcome::Translated
-                }
+                PluralOutcomeWire::Translated => DialoguePluralResolutionOutcome::Translated,
                 PluralOutcomeWire::EnglishSourceFallback => {
                     DialoguePluralResolutionOutcome::EnglishSourceFallback
                 }
