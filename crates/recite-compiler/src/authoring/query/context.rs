@@ -83,7 +83,7 @@ pub(super) fn at(key: &DocumentKey, text: &str, position: SourcePosition) -> Opt
     let prefix = &line[..cursor];
     let trimmed = prefix.trim_start();
     let trim_offset = prefix.len() - trimmed.len();
-    let line_trimmed = line.trim_start();
+    let line_trimmed = line.trim_start_matches([' ', '\t']);
     let line_trim_offset = line.len() - line_trimmed.len();
 
     if trimmed.starts_with("->") {
@@ -126,20 +126,23 @@ pub(super) fn at(key: &DocumentKey, text: &str, position: SourcePosition) -> Opt
             });
         }
     }
-    if line_trimmed.starts_with(":if ") || line_trimmed.starts_with(":match ") {
-        let start = line_trim_offset
-            + line_trimmed
-                .find(' ')
-                .map_or(line_trimmed.len(), |index| index + 1);
-        let clause =
-            (line_trimmed.starts_with(":if ") && cursor <= line_trim_offset + 3).then(|| {
+    if let Some(marker) = recite_parser::condition_marker(line_trimmed) {
+        let marker_start = line_trim_offset;
+        let marker_end = marker_start + marker.text().len();
+        let rest = &line_trimmed[marker.text().len()..];
+        let whitespace_len = rest.len() - rest.trim_start_matches(char::is_whitespace).len();
+        let start = marker_end + whitespace_len;
+        let clause = (matches!(marker, recite_parser::ConditionMarker::If)
+            && marker_start <= cursor
+            && cursor < marker_end)
+            .then(|| {
                 (
                     ClauseKind::If,
                     span(
                         key,
                         text,
-                        line_start + line_trim_offset,
-                        line_start + line_trim_offset + 3,
+                        line_start + marker_start,
+                        line_start + marker_end,
                     ),
                 )
             });

@@ -45,6 +45,38 @@ pub use lower::LoweredSourceFile;
 pub use parser::{Parse, parse};
 pub use syntax::{ReciteLanguage, ReciteSyntaxKind, ReciteSyntaxNode};
 
+/// A conditional branch marker recognized at the start of a source line.
+#[derive(Clone, Copy, Debug, Eq, PartialEq)]
+pub enum ConditionMarker {
+    If,
+    Match,
+}
+
+impl ConditionMarker {
+    /// Returns the source spelling of this marker.
+    #[must_use]
+    pub const fn text(self) -> &'static str {
+        match self {
+            Self::If => ":if",
+            Self::Match => ":match",
+        }
+    }
+}
+
+/// Recognizes a conditional branch marker using the parser's marker grammar.
+///
+/// The input should have leading indentation removed, as it is for the parser
+/// line classifier. A marker may be bare or followed by parser-accepted
+/// whitespace and content.
+#[must_use]
+pub fn condition_marker(trimmed: &str) -> Option<ConditionMarker> {
+    match markers::StatementMarker::parse(trimmed) {
+        Some(markers::StatementMarker::If) => Some(ConditionMarker::If),
+        Some(markers::StatementMarker::Match) => Some(ConditionMarker::Match),
+        _ => None,
+    }
+}
+
 /// One key/value assignment in a statement header, preserving its source
 /// boundaries for editor features that need to work inside collection values.
 #[derive(Clone, Copy, Debug, Eq, PartialEq)]

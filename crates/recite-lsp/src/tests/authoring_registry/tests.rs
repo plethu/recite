@@ -318,3 +318,8 @@ fn references_require_unique_navigation() {
 fn typed_clause_and_schema_ranges_exclude_delimiters() {
     super::navigation_corrections::typed_clause_and_schema_ranges_exclude_delimiters();
 }
+
+#[test]
+fn condition_marker_completion_and_hover_follow_parser_boundaries() {
+    super::navigation_corrections::condition_marker_completion_and_hover_follow_parser_boundaries();
+}

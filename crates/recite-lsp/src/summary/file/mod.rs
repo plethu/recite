@@ -6,19 +6,24 @@ use std::path::Path;
 
 use lsp_types::Uri;
 use recite_compiler::{DocumentSnapshot, FunctionReferenceKind as AuthoringFunctionReferenceKind};
-use recite_core::{Diagnostic, SourceId, SourcePosition, is_valid_source_label};
+use recite_core::{SourceId, SourcePosition, is_valid_source_label};
+
+#[cfg(any(test, feature = "bench-support"))]
+use recite_core::Diagnostic;
 
 pub(crate) use identity::{FileIdentity, OpenFileIdentity, SavedFileIdentity};
+#[cfg(feature = "bench-support")]
+pub(crate) use items::MetadataKeySummary;
 pub(crate) use items::{
     BlockReferenceSummary, FileSummaryCompleteness, FunctionReferenceKind,
-    FunctionReferenceSummary, MetadataKeySummary, MissingIdInsertion, MissingIdKind,
-    MissingIdSummary, SpannedName,
+    FunctionReferenceSummary, MissingIdInsertion, MissingIdKind, MissingIdSummary, SpannedName,
 };
 
 #[derive(Clone, Debug)]
 pub(crate) struct FileSummary {
     pub(crate) identity: FileIdentity,
     pub(crate) version: Option<i32>,
+    #[cfg(any(test, feature = "bench-support"))]
     pub(crate) diagnostics: Vec<Diagnostic>,
     pub(crate) completeness: FileSummaryCompleteness,
     pub(crate) blocks: Vec<SpannedName>,
@@ -26,6 +31,7 @@ pub(crate) struct FileSummary {
     pub(crate) line_ids: Vec<SpannedName>,
     pub(crate) choice_ids: Vec<SpannedName>,
     pub(crate) missing_ids: Vec<MissingIdSummary>,
+    #[cfg(feature = "bench-support")]
     pub(crate) metadata_keys: Vec<MetadataKeySummary>,
     pub(crate) condition_functions: Vec<FunctionReferenceSummary>,
     pub(crate) effect_functions: Vec<FunctionReferenceSummary>,
@@ -99,6 +105,7 @@ impl FileSummary {
                 SourceId::Malformed { .. } => {}
             }
         }
+        #[cfg(feature = "bench-support")]
         let metadata_keys = summary
             .metadata()
             .iter()
@@ -121,6 +128,7 @@ impl FileSummary {
         Self {
             identity,
             version,
+            #[cfg(any(test, feature = "bench-support"))]
             diagnostics: document.diagnostics().to_vec(),
             completeness: FileSummaryCompleteness {
                 block_definitions: participation.block_definitions().is_complete(),
@@ -137,6 +145,7 @@ impl FileSummary {
             line_ids,
             choice_ids,
             missing_ids,
+            #[cfg(feature = "bench-support")]
             metadata_keys,
             condition_functions,
             effect_functions,

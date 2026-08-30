@@ -45,6 +45,7 @@ pub(crate) enum MissingIdKind {
     Choice,
 }
 
+#[cfg(feature = "bench-support")]
 #[derive(Clone, Debug, Eq, PartialEq)]
 pub(crate) struct MetadataKeySummary {
     pub(crate) key: String,

@@ -114,6 +114,80 @@ fn typed_sites_and_hover_facts_preserve_parsed_spans() {
 }
 
 #[test]
+fn typed_condition_sites_follow_parser_marker_boundaries() {
+    let mut kernel = fixture();
+    let source = concat!(
+        ":: start\n",
+        "\t:if\n",
+        "\t:match\n",
+        "\t:if\tknows_\n",
+        "\tordinary prose :if knows_secret\n",
+    );
+    kernel
+        .apply(AuthoringRequest::new(
+            SnapshotGeneration::initial(),
+            [SavedDocument::new(key("main.recite"), source)],
+            [],
+        ))
+        .expect("condition marker fixture accepted");
+    let snapshot = kernel.snapshot();
+    let document = key("main.recite");
+
+    for (line, column) in [(2, 5), (3, 8)] {
+        let site = snapshot
+            .completion_site(&document, position(line, column))
+            .expect("bare condition marker site");
+        assert_eq!(site.kind(), recite_compiler::CompletionSiteKind::Condition);
+    }
+
+    let tab_site = snapshot
+        .completion_site(&document, position(4, 8))
+        .expect("tab-separated condition site");
+    assert_eq!(
+        tab_site.span().start.column(),
+        6,
+        "condition token starts after tab whitespace"
+    );
+    assert_eq!(
+        tab_site.span().end.as_ref().map(|end| end.column()),
+        Some(7)
+    );
+
+    let QueryResult::Ready(marker_hover) = snapshot.hover(&document, position(4, 3)) else {
+        panic!("hover on the exact :if marker is ready");
+    };
+    assert!(matches!(
+        marker_hover.facts(),
+        [SemanticFact::Clause {
+            kind: recite_compiler::ClauseKind::If
+        }]
+    ));
+    assert_eq!(marker_hover.location().span().start.column(), 2);
+    assert_eq!(
+        marker_hover
+            .location()
+            .span()
+            .end
+            .as_ref()
+            .map(|end| end.column()),
+        Some(4)
+    );
+
+    assert!(matches!(
+        snapshot.hover(&document, position(4, 1)),
+        QueryResult::NoMatch
+    ));
+    assert!(matches!(
+        snapshot.hover(&document, position(4, 5)),
+        QueryResult::NoMatch
+    ));
+    assert!(matches!(
+        snapshot.hover(&document, position(5, 17)),
+        QueryResult::NoMatch
+    ));
+}
+
+#[test]
 fn malformed_reason_and_partial_reference_queries_remain_conservative() {
     let mut kernel = fixture();
     let source = concat!(
