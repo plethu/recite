@@ -150,6 +150,7 @@ pub struct PreviewSnapshot {
     pub(crate) initial_block: Option<String>,
     pub(crate) options: super::api::PreviewOptions,
     pub(crate) next_condition_id: super::api::PreviewConditionRequestId,
+    pub(crate) projection_fingerprint: String,
     /// The last control/prompt projection is snapshotted while trace and
     /// transcript remain session-local diagnostic history.
     pub(crate) state: PreviewState,
@@ -184,5 +185,10 @@ impl PreviewSnapshot {
     #[must_use]
     pub fn next_condition_request_id(&self) -> super::api::PreviewConditionRequestId {
         self.next_condition_id
+    }
+
+    #[must_use]
+    pub fn projection_fingerprint(&self) -> &str {
+        &self.projection_fingerprint
     }
 }

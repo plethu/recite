@@ -305,3 +305,37 @@ fn divert_condition_provenance_uses_trial_block() {
     };
     assert_eq!(request.block().as_str(), "gated");
 }
+
+#[test]
+fn successful_enum_condition_replay_is_typed_and_deterministic() {
+    let asset = asset(concat!(
+        ":: start default\n",
+        ":match mood()\n",
+        "  :case ready\n",
+        "    > ready@12345678901234567890\n      Ready.\n",
+        "  :case _\n",
+        "    > other@12345678901234567891\n      Other.\n",
+        "-> END\n",
+    ));
+    let mut preview = PreviewSession::new(&asset, None, PreviewOptions::new()).expect("start");
+    let request = match preview.step(PreviewInputs::new()).events() {
+        [PreviewEvent::ConditionRequested(request)] => request.clone(),
+        events => panic!("expected enum query, got {events:?}"),
+    };
+    assert_eq!(
+        request.query().expected_type(),
+        recite_runtime::ConditionExpectedType::Enum
+    );
+    let output = preview.answer(
+        request.id(),
+        ConditionAnswer::Value(ConditionValue::EnumVariant("ready".to_owned())),
+        PreviewInputs::new(),
+    );
+    assert!(matches!(
+        output.events(),
+        [PreviewEvent::ConditionResult {
+            result: PreviewConditionResult::Value(ConditionValue::EnumVariant(value)),
+            ..
+        }, PreviewEvent::Line(line)] if value == "ready" && line.text == "Ready."
+    ));
+}

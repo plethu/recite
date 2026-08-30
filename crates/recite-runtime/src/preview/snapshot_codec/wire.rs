@@ -1,4 +1,3 @@
-use recite_core::SourceSpan;
 use serde::{Deserialize, Serialize};
 
 use crate::DialogueSessionSnapshot;
@@ -12,6 +11,7 @@ pub(super) struct SnapshotWire {
     pub(super) locale: Option<String>,
     pub(super) variant: Option<String>,
     pub(super) next_condition_id: u64,
+    pub(super) projection_fingerprint: String,
     pub(super) state: StateWire,
 }
 
@@ -68,9 +68,9 @@ pub(super) struct LineWire {
 pub(super) struct MetadataWire {
     pub(super) key: String,
     pub(super) value: ValueWire,
-    pub(super) source_span: Option<SourceSpan>,
-    pub(super) key_span: Option<SourceSpan>,
-    pub(super) value_span: Option<SourceSpan>,
+    pub(super) source_span: Option<super::span::SpanWire>,
+    pub(super) key_span: Option<super::span::SpanWire>,
+    pub(super) value_span: Option<super::span::SpanWire>,
 }
 
 #[derive(Clone, Debug, Deserialize, Serialize)]
@@ -147,7 +147,7 @@ pub(super) struct EffectWire {
     pub(super) mode: DialogueEffectModeWire,
     pub(super) function: String,
     pub(super) args: Vec<ArgumentWire>,
-    pub(super) source_span: SourceSpan,
+    pub(super) source_span: super::span::SpanWire,
 }
 
 #[derive(Clone, Copy, Debug, Deserialize, Serialize)]

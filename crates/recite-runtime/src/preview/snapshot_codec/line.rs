@@ -1,6 +1,7 @@
 use recite_core::{MetadataEntry, ScalarValue, SpeakerId, Value};
 
 use super::super::model::PreviewError;
+use super::span::SpanWire;
 use super::wire::{
     ArgumentWire, LineWire, MetadataWire, PluralAttemptWire, PluralOutcomeWire,
     PluralResolutionWire, PluralWire, ValueWire,
@@ -47,9 +48,9 @@ impl MetadataWire {
         Self {
             key: entry.key.clone(),
             value: ValueWire::from_value(&entry.value),
-            source_span: entry.source_span.clone(),
-            key_span: entry.key_span.clone(),
-            value_span: entry.value_span.clone(),
+            source_span: entry.source_span.as_ref().map(SpanWire::from),
+            key_span: entry.key_span.as_ref().map(SpanWire::from),
+            value_span: entry.value_span.as_ref().map(SpanWire::from),
         }
     }
 
@@ -57,9 +58,9 @@ impl MetadataWire {
         Ok(MetadataEntry {
             key: self.key,
             value: self.value.into_value()?,
-            source_span: self.source_span,
-            key_span: self.key_span,
-            value_span: self.value_span,
+            source_span: self.source_span.map(SpanWire::into_span).transpose()?,
+            key_span: self.key_span.map(SpanWire::into_span).transpose()?,
+            value_span: self.value_span.map(SpanWire::into_span).transpose()?,
         })
     }
 }
@@ -152,7 +153,7 @@ impl PluralResolutionWire {
         }
     }
 
-    fn into_resolution(self) -> Result<DialoguePluralResolution, PreviewError> {
+    pub(super) fn into_resolution(self) -> Result<DialoguePluralResolution, PreviewError> {
         Ok(DialoguePluralResolution {
             attempts: self
                 .attempts

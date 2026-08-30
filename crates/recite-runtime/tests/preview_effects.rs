@@ -107,7 +107,8 @@ fn prompt_choice_effect_ack_and_snapshot_restore_keep_stable_identity() {
     let emitted = effect_restored.step(PreviewInputs::new());
     assert!(matches!(
         emitted.events(),
-        [PreviewEvent::EffectRequested(request)] if request.id == effect.id
+        [PreviewEvent::EffectRequested(request)]
+            if request.id == effect.id && request.source_span == effect.source_span
     ));
     assert!(
         effect_restored

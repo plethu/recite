@@ -5,6 +5,7 @@ use super::model::{
     PREVIEW_SNAPSHOT_FORMAT_VERSION, PreviewError, PreviewEvent, PreviewSnapshot, PreviewState,
     PreviewStatus,
 };
+use super::snapshot_fingerprint::projection_fingerprint;
 use crate::{restore_session, snapshot_session};
 
 impl<'asset> PreviewSession<'asset> {
@@ -20,6 +21,7 @@ impl<'asset> PreviewSession<'asset> {
             initial_block: self.block.clone(),
             options: self.options.clone(),
             next_condition_id: self.next_condition_id,
+            projection_fingerprint: projection_fingerprint(&self.state),
             state: self.state.clone(),
         })
     }
@@ -51,6 +53,9 @@ impl<'asset> PreviewSession<'asset> {
         }
         if snapshot.state().status().is_waiting_for_condition() {
             return Err(PreviewError::SnapshotPendingCondition);
+        }
+        if snapshot.projection_fingerprint() != projection_fingerprint(snapshot.state()) {
+            return Err(PreviewError::SnapshotStateMismatch);
         }
         let restored = restore_session(self.asset, snapshot.session().clone())
             .map_err(PreviewError::Runtime)?;
@@ -129,12 +134,9 @@ fn snapshot_state_matches_session(
                     else {
                         return false;
                     };
-                    let prompt_line = line.and_then(|index| {
-                        asset
-                            .lines
-                            .get(index.as_u32() as usize)
-                            .map(|line| line.id.clone())
-                    });
+                    let compiled_line =
+                        line.and_then(|index| asset.lines.get(index.as_u32() as usize));
+                    let prompt_line = compiled_line.map(|line| line.id.clone());
                     let start = choices.start.as_u32() as usize;
                     let Some(end) = start.checked_add(choices.len as usize) else {
                         return false;
@@ -145,16 +147,15 @@ fn snapshot_state_matches_session(
                     prompt.identity().line() == prompt_line.as_ref()
                         && match (prompt_line.as_ref(), prompt.line()) {
                             (None, None) => true,
-                            (Some(expected), Some(line)) => asset
-                                .lines
-                                .iter()
-                                .find(|candidate| candidate.id == line.id)
-                                .is_some_and(|candidate| {
+                            (Some(expected), Some(line)) => {
+                                compiled_line.is_some_and(|candidate| {
                                     &candidate.id == expected
                                         && (candidate.source_text == line.source_text
                                             || candidate.plural_source_text.as_deref()
                                                 == Some(line.source_text.as_str()))
-                                }),
+                                        && candidate.id == line.id
+                                })
+                            }
                             _ => false,
                         }
                         && prompt.identity().choices()
@@ -177,16 +178,12 @@ fn snapshot_state_matches_session(
                             .choices
                             .iter()
                             .zip(prompt.choices())
-                            .all(|(saved, choice)| {
+                            .zip(compiled_choices)
+                            .all(|((saved, choice), compiled)| {
                                 crate::session_snapshot::availability_snapshot(&choice.availability)
                                     == saved.availability
-                                    && asset
-                                        .choices
-                                        .iter()
-                                        .find(|candidate| candidate.id == choice.id)
-                                        .is_some_and(|candidate| {
-                                            candidate.source_text == choice.source_text
-                                        })
+                                    && compiled.id == choice.id
+                                    && compiled.source_text == choice.source_text
                             })
                 })
         }

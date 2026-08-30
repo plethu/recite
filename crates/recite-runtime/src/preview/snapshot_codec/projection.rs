@@ -2,6 +2,7 @@ use recite_core::{ChoiceId, EffectId, LineId};
 
 use super::super::model::PreviewError;
 use super::super::model::{PreviewPrompt, PreviewPromptIdentity, PreviewRestartRequirement};
+use super::span::SpanWire;
 use super::wire::{
     ArgumentWire, ChoiceWire, DialogueEffectModeWire, EffectWire, LineWire, PromptWire,
     RequirementWire,
@@ -108,7 +109,7 @@ impl EffectWire {
                 .iter()
                 .map(ArgumentWire::from_argument)
                 .collect(),
-            source_span: effect.source_span.clone(),
+            source_span: SpanWire::from(&effect.source_span),
         }
     }
 
@@ -122,7 +123,7 @@ impl EffectWire {
                 .into_iter()
                 .map(ArgumentWire::into_argument)
                 .collect(),
-            source_span: self.source_span,
+            source_span: self.source_span.into_span()?,
         })
     }
 }

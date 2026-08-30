@@ -12,6 +12,7 @@ mod model;
 mod projection;
 mod snapshot;
 mod snapshot_codec;
+mod snapshot_fingerprint;
 
 use recite_core::CompiledDialogue;
 

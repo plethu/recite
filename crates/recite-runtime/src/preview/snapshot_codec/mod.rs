@@ -5,7 +5,11 @@
 
 mod line;
 mod projection;
+mod span;
 mod wire;
+
+#[cfg(test)]
+mod tests;
 
 use recite_core::{BlockId, ChoiceId, LocaleId};
 use serde::Deserialize;
@@ -64,6 +68,7 @@ impl SnapshotWire {
                 .map(|locale| locale.as_str().to_owned()),
             variant: snapshot.options.variant().map(str::to_owned),
             next_condition_id: snapshot.next_condition_request_id().get(),
+            projection_fingerprint: snapshot.projection_fingerprint().to_owned(),
             state: StateWire::from_state(snapshot.state())?,
         })
     }
@@ -84,6 +89,7 @@ impl SnapshotWire {
             initial_block: self.initial_block,
             options,
             next_condition_id: PreviewConditionRequestId::new(self.next_condition_id),
+            projection_fingerprint: self.projection_fingerprint,
             state,
         })
     }
