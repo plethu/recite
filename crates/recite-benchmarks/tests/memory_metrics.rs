@@ -4,7 +4,8 @@ use recite_lsp::bench_support::{LspBenchmarkConfig, LspBenchmarkDriver};
 use tempfile::tempdir;
 
 #[test]
-fn lsp_memory_report_counts_only_frozen_line_and_choice_ids() {
+fn lsp_memory_report_counts_only_frozen_line_and_choice_ids()
+-> Result<(), Box<dyn std::error::Error>> {
     let source = concat!(
         ":: start default\n",
         ">\n",
@@ -30,8 +31,8 @@ fn lsp_memory_report_counts_only_frozen_line_and_choice_ids() {
         "    Frozen choice.\n",
         "    -> END\n",
     );
-    let first = report_for_source(source);
-    let second = report_for_source(source);
+    let first = report_for_source(source)?;
+    let second = report_for_source(source)?;
 
     assert_eq!(first, second);
     assert_eq!(first.source_files, 1);
@@ -50,13 +51,15 @@ fn lsp_memory_report_counts_only_frozen_line_and_choice_ids() {
         .saturating_add(96)
         .saturating_add(first.diagnostics.saturating_mul(192));
     assert_eq!(first.estimated_summary_bytes, expected_estimate);
+    Ok(())
 }
 
-fn report_for_source(source: &str) -> recite_lsp::bench_support::LspMemoryReport {
-    let directory = tempdir().expect("temporary benchmark workspace");
-    fs::write(directory.path().join("metrics.recite"), source)
-        .expect("benchmark source fixture should be writable");
+fn report_for_source(
+    source: &str,
+) -> Result<recite_lsp::bench_support::LspMemoryReport, Box<dyn std::error::Error>> {
+    let directory = tempdir()?;
+    fs::write(directory.path().join("metrics.recite"), source)?;
     let driver =
         LspBenchmarkDriver::new(&LspBenchmarkConfig::new(vec![directory.path().to_owned()]));
-    driver.memory_report()
+    Ok(driver.memory_report())
 }
