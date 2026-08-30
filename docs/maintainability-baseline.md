@@ -192,11 +192,11 @@ production suppressions must carry a narrow scope and rationale.
 | `crates/recite-runtime/tests/adapter_conformance.rs` | 426 | test/support | runtime/tests | cohesive | Adapter conformance entry point |
 | `crates/recite-core/tests/schema_manifest/load_valid.rs` | 452 | test/support | core/tests | cohesive | Valid manifest coverage |
 | `crates/recite-runtime/tests/session_serialization/invalid_snapshots.rs` | 478 | test/support | runtime/tests | cohesive | Snapshot failure contract |
-| `crates/recite-parser/tests/parser/statements.rs` | 435 | test/support | parser/tests | cohesive | Statement parser coverage and exact authoring spans |
+| `crates/recite-parser/tests/parser/statements.rs` | 438 | test/support | parser/tests | cohesive | Statement parser coverage and exact authoring spans |
 | `crates/recite-cli/tests/watch_stress.rs` | 366 | test/support | cli/tests | cohesive | Watch stress harness |
 | `crates/recite-runtime/tests/traversal/conditions/choice_conditions.rs` | 365 | test/support | runtime/tests | cohesive | Choice condition coverage |
 | `crates/recite-lsp/src/tests/availability/speaker.rs` | 351 | test/support | lsp/tests | review | Typed and ordinary speaker completion coverage |
 | `crates/recite-lsp/src/tests/project_indexes.rs` | 394 | test/support | lsp/tests | cohesive | Project discovery, manifest transition, and saved-index regression coverage |
 | `crates/recite-lsp/src/tests/code_action/schema_entry.rs` | 357 | test/support | lsp/tests | review | Private code-action behavior |
 | `crates/recite-compiler/tests/validation/participation.rs` | 369 | test/support | compiler/tests | cohesive | #168: participation-aware validation completeness and all-complete compatibility coverage |
-| `crates/recite-compiler/tests/authoring.rs` | 495 | test/support | compiler/tests | cohesive | #168: authoring snapshot, query, recovery, and lifecycle coverage |
+| `crates/recite-compiler/tests/authoring.rs` | 474 | test/support | compiler/tests | cohesive | #168: authoring snapshot, recovery, and lifecycle coverage |

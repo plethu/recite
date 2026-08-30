@@ -1,5 +1,6 @@
 mod action;
 mod choice;
+mod choice_reason;
 mod line;
 
 use recite_core::{Comment, SourceRecoveryClass, Statement};

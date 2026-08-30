@@ -1,15 +1,16 @@
 use recite_core::{
     AvailabilityReasonId, Choice, ChoiceAvailabilityReasonOverride, ChoiceAvailabilityRequirement,
-    ChoiceTarget, SourceId, SourceRecoveryClass, SourceSpan, SourceText, Statement,
+    ChoiceTarget, SourceId, SourceRecoveryClass, SourceText, Statement,
 };
 
 use crate::condition::parse_condition_expression;
 use crate::diagnostics::{malformed_condition, malformed_header, trailing_choice_if};
 use crate::header::{HeaderField, HeaderKeyValue};
 use crate::markers::StatementMarker;
-use crate::source::{span_for_line, span_for_text};
+use crate::source::span_for_line;
 
 use super::super::{Lowerer, header_fields};
+use super::choice_reason::{parse_reason_override_value, source_column};
 
 impl Lowerer<'_, '_> {
     pub(super) fn lower_choice(&mut self, choice_index: usize) -> (Choice, usize) {
@@ -206,51 +207,4 @@ struct ChoiceClauses<'a> {
     metadata_fields: Vec<HeaderField<'a>>,
     availability_requirement: Option<ChoiceAvailabilityRequirement>,
     availability_reason_override: Option<ChoiceAvailabilityReasonOverride>,
-}
-
-struct ParsedReasonOverride<'a> {
-    id: &'a str,
-    id_span: SourceSpan,
-    argument_span: Option<SourceSpan>,
-}
-
-fn parse_reason_override_value<'a>(
-    path: &str,
-    kv: &HeaderKeyValue<'a>,
-) -> Option<ParsedReasonOverride<'a>> {
-    if let Some(open) = kv.value.find('(') {
-        let close = kv.value.rfind(')')?;
-        if close != kv.value.len() - 1 || open == 0 {
-            return None;
-        }
-        let id = &kv.value[..open];
-        let argument_text = &kv.value[open..=close];
-        let value_column = source_column(kv.value_span.start.column());
-        let id_span = span_for_text(path, kv.value_span.start.line(), value_column, id);
-        let argument_span = span_for_text(
-            path,
-            kv.value_span.start.line(),
-            value_column + id.chars().count(),
-            argument_text,
-        );
-        return Some(ParsedReasonOverride {
-            id,
-            id_span,
-            argument_span: Some(argument_span),
-        });
-    }
-
-    if kv.value.contains(')') {
-        return None;
-    }
-
-    Some(ParsedReasonOverride {
-        id: kv.value,
-        id_span: kv.value_span.clone(),
-        argument_span: None,
-    })
-}
-
-fn source_column(column: u32) -> usize {
-    column as usize
 }
