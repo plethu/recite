@@ -57,6 +57,9 @@ pub struct PreviewState {
     pub(crate) asset_id: CompiledAssetId,
     pub(crate) block: Option<BlockId>,
     pub(crate) locale: Option<LocaleId>,
+    /// The current control boundary. A prompt status contains the complete
+    /// rendered prompt projection, including provider-derived text and
+    /// provenance; restore treats that typed projection as authoritative.
     pub(crate) status: PreviewStatus,
     pub(crate) selected_choice_history: Vec<ChoiceId>,
     pub(crate) deferred_effects: Vec<DialogueEffectRequest>,
@@ -150,9 +153,10 @@ pub struct PreviewSnapshot {
     pub(crate) initial_block: Option<String>,
     pub(crate) options: super::api::PreviewOptions,
     pub(crate) next_condition_id: super::api::PreviewConditionRequestId,
-    pub(crate) projection_fingerprint: String,
     /// The last control/prompt projection is snapshotted while trace and
-    /// transcript remain session-local diagnostic history.
+    /// transcript remain session-local diagnostic history. Provider-derived
+    /// fields cannot be reconstructed without host inputs, so this is a
+    /// trusted/corruption-sensitive projection rather than an asset proof.
     pub(crate) state: PreviewState,
 }
 
@@ -185,10 +189,5 @@ impl PreviewSnapshot {
     #[must_use]
     pub fn next_condition_request_id(&self) -> super::api::PreviewConditionRequestId {
         self.next_condition_id
-    }
-
-    #[must_use]
-    pub fn projection_fingerprint(&self) -> &str {
-        &self.projection_fingerprint
     }
 }

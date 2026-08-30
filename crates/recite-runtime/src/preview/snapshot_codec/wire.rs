@@ -11,7 +11,6 @@ pub(super) struct SnapshotWire {
     pub(super) locale: Option<String>,
     pub(super) variant: Option<String>,
     pub(super) next_condition_id: u64,
-    pub(super) projection_fingerprint: String,
     pub(super) state: StateWire,
 }
 
