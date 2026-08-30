@@ -2,8 +2,11 @@
 
 use recite_core::{
     BlockIndex, COMPILED_ASSET_FORMAT_VERSION_V0, COMPILER_COMPATIBILITY_VERSION_V0,
-    CompiledAssetDecodeError, CompiledAssetEncodeError, canonical_compiled_dialogue_fingerprint,
-    decode_compiled_dialogue_messagepack, encode_compiled_dialogue_messagepack,
+    CompiledArgument, CompiledAssetDecodeError, CompiledAssetEncodeError, CompiledConditionCall,
+    CompiledConditionExpression, CompiledEffect, CompiledEffectMode, CompiledMetadataEntry,
+    CompiledStatement, CompiledStatementKind, ScalarValue, SourcePosition, TableRange, Value,
+    canonical_compiled_dialogue_fingerprint, decode_compiled_dialogue_messagepack,
+    encode_compiled_dialogue_messagepack,
 };
 
 mod support;
@@ -61,6 +64,74 @@ fn encode_rejects_unsupported_headers_and_invalid_dialogues() {
         canonical_compiled_dialogue_fingerprint(&invalid),
         Err(CompiledAssetEncodeError::InvalidDialogue(reason))
             if reason.contains("default block")
+    ));
+}
+
+#[test]
+fn encode_and_fingerprint_share_decode_invariants() {
+    let bytes = rmp_serde::to_vec(&valid_wire_asset()).expect("test wire encodes");
+    let valid = decode_compiled_dialogue_messagepack(&bytes).expect("valid asset decodes");
+
+    let mut metadata = valid.clone();
+    metadata.metadata.push(CompiledMetadataEntry {
+        key: "score".to_owned(),
+        value: Value::Scalar(ScalarValue::Float(f64::NAN)),
+        source_map: None,
+    });
+    assert_rejected_by_encode_and_fingerprint(metadata, "float scalar");
+
+    let mut span = valid.clone();
+    span.source_maps[0].span.start = SourcePosition::new(2, 1).expect("valid position");
+    span.source_maps[0].span.end = Some(SourcePosition::new(1, 1).expect("valid position"));
+    assert_rejected_by_encode_and_fingerprint(span, "span end precedes span start");
+
+    let mut condition = valid.clone();
+    condition.blocks[0].statements.len = 2;
+    condition.statements.push(CompiledStatement {
+        kind: CompiledStatementKind::If {
+            condition: CompiledConditionExpression::Call(CompiledConditionCall {
+                function: "bad function".to_owned(),
+                args: Vec::new(),
+            }),
+            then_statements: TableRange::new(recite_core::StatementIndex::new(0), 0),
+            else_statements: TableRange::new(recite_core::StatementIndex::new(0), 0),
+        },
+        source_map: recite_core::SourceMapIndex::new(0),
+    });
+    assert_rejected_by_encode_and_fingerprint(condition, "condition function");
+
+    let mut effect = valid.clone();
+    effect.effects.push(CompiledEffect {
+        id: recite_core::EffectId::new("effect").expect("valid effect id"),
+        mode: CompiledEffectMode::Deferred,
+        function: "bad function".to_owned(),
+        args: Vec::new(),
+        source_map: recite_core::SourceMapIndex::new(0),
+    });
+    assert_rejected_by_encode_and_fingerprint(effect, "effect function");
+
+    let mut argument = valid;
+    argument.effects.push(CompiledEffect {
+        id: recite_core::EffectId::new("effect").expect("valid effect id"),
+        mode: CompiledEffectMode::Deferred,
+        function: "advance_thread".to_owned(),
+        args: vec![CompiledArgument::Identifier("bad argument".to_owned())],
+        source_map: recite_core::SourceMapIndex::new(0),
+    });
+    assert_rejected_by_encode_and_fingerprint(argument, "argument identifier");
+}
+
+fn assert_rejected_by_encode_and_fingerprint(
+    dialogue: recite_core::CompiledDialogue,
+    expected: &str,
+) {
+    assert!(matches!(
+        encode_compiled_dialogue_messagepack(&dialogue),
+        Err(CompiledAssetEncodeError::InvalidDialogue(reason)) if reason.contains(expected)
+    ));
+    assert!(matches!(
+        canonical_compiled_dialogue_fingerprint(&dialogue),
+        Err(CompiledAssetEncodeError::InvalidDialogue(reason)) if reason.contains(expected)
     ));
 }
 

@@ -107,7 +107,7 @@ fn full_payload_fingerprint_changes_for_representative_compiled_tables() -> Resu
     );
 
     let mut effect = asset.dialogue.clone();
-    effect.effects[0].function.push('!');
+    effect.effects[0].function.push('D');
     assert_ne!(
         original,
         canonical_compiled_dialogue_fingerprint(&effect).map_err(|error| error.to_string())?
