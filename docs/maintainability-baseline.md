@@ -112,7 +112,6 @@ production suppressions must carry a narrow scope and rationale.
 | `crates/recite-core/src/compiled/messagepack/wire.rs` | 692 | production | core/wire | exception | #89: retain the explicit decoder boundary while the v0 wire contract is synchronized |
 | `crates/recite-runtime/src/session_snapshot.rs` | 294 | production | runtime/snapshot | follow-up | #135: typed snapshot-boundary errors |
 | `crates/recite-core/src/compiled/messagepack/validate.rs` | 372 | production | core/wire | cohesive | #89: validation is part of the decoder boundary |
-| `crates/recite-compiler/src/wire/messagepack.rs` | 347 | production | compiler/wire | cohesive | #89: encoder mirror of the explicit decoder wire surface |
 | `crates/recite-cli/src/error.rs` | 359 | production | cli | review | Keep user-facing error projection separate from typed domain errors |
 | `crates/recite-ui/tests/diagnostics.rs` | 371 | test/support | ui/tests | review | Structured diagnostic resource and compatibility-message coverage |
 | `crates/recite-lsp/src/features/hover/schema.rs` | 329 | production | lsp/features | review | #168: schema-backed hover presentation remains isolated from typed fact resolution |
@@ -129,7 +128,6 @@ production suppressions must carry a narrow scope and rationale.
 | `crates/recite-lsp/src/server.rs` | 390 | production | lsp/server | review | #164: request dispatch and protocol lifecycle remain the server boundary; error taxonomy and watcher registration are split into focused modules |
 | `crates/recite-benchmarks/src/memory_profiles/mod.rs` | 373 | production | benchmarks | cohesive | Maintainer-only profile orchestration |
 | `crates/recite-cli/src/commands.rs` | 395 | production | cli | review | Command orchestration boundary |
-| `crates/recite-compiler/src/wire/messagepack/tags.rs` | 373 | production | compiler/wire | cohesive | #89: encoder tag mirror |
 | `crates/recite-compiler/src/authoring/query/schema/metadata.rs` | 269 | production | compiler/authoring | review | #168: typed metadata completion and missing-context policy projection |
 | `crates/recite-core/src/schema/model/mod.rs` | 380 | production | core/schema | review | Schema module exports and model grouping |
 | `crates/recite-core/src/schema/source/edit.rs` | 359 | production | core/schema | review | Source-owned typed edits and CST-preserving layout updates |
