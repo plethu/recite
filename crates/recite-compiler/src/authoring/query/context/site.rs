@@ -1,41 +1,33 @@
-use super::super::types::{BlockTarget, ClauseKind, CompletionSite, CompletionSiteKind};
+use super::super::types::{ClauseKind, CompletionSite, CompletionSiteKind};
 use super::Site;
 use recite_core::SourceSpan;
 
 impl Site {
     pub(crate) fn completion_site(&self) -> CompletionSite {
         match self {
-            Self::Blocks { target, token } => {
-                CompletionSite::new(CompletionSiteKind::Block, token.clone(), target.clone())
-            }
-            Self::Speakers(span) => CompletionSite::new(
-                CompletionSiteKind::Speaker,
-                span.clone(),
-                BlockTarget::Local,
-            ),
-            Self::MetadataKey { span, .. } => CompletionSite::new(
-                CompletionSiteKind::MetadataKey,
-                span.clone(),
-                BlockTarget::Local,
-            ),
-            Self::MetadataValue { token, .. } => CompletionSite::new(
-                CompletionSiteKind::MetadataValue,
+            Self::Blocks { target, token } => CompletionSite::new(
+                CompletionSiteKind::Block,
                 token.clone(),
-                BlockTarget::Local,
+                Some(target.clone()),
             ),
-            Self::Conditions { span, .. } => CompletionSite::new(
-                CompletionSiteKind::Condition,
-                span.clone(),
-                BlockTarget::Local,
-            ),
+            Self::Speakers(span) => {
+                CompletionSite::new(CompletionSiteKind::Speaker, span.clone(), None)
+            }
+            Self::MetadataKey { span, .. } => {
+                CompletionSite::new(CompletionSiteKind::MetadataKey, span.clone(), None)
+            }
+            Self::MetadataValue { token, .. } => {
+                CompletionSite::new(CompletionSiteKind::MetadataValue, token.clone(), None)
+            }
+            Self::Conditions { span, .. } => {
+                CompletionSite::new(CompletionSiteKind::Condition, span.clone(), None)
+            }
             Self::Effects(span) => {
-                CompletionSite::new(CompletionSiteKind::Effect, span.clone(), BlockTarget::Local)
+                CompletionSite::new(CompletionSiteKind::Effect, span.clone(), None)
             }
-            Self::AvailabilityReasons { token, .. } => CompletionSite::new(
-                CompletionSiteKind::AvailabilityReason,
-                token.clone(),
-                BlockTarget::Local,
-            ),
+            Self::AvailabilityReasons { token, .. } => {
+                CompletionSite::new(CompletionSiteKind::AvailabilityReason, token.clone(), None)
+            }
         }
     }
 

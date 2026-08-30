@@ -133,14 +133,14 @@ pub enum BlockTarget {
 pub struct CompletionSite {
     kind: CompletionSiteKind,
     span: SourceSpan,
-    block_target: BlockTarget,
+    block_target: Option<BlockTarget>,
 }
 
 impl CompletionSite {
     pub(crate) fn new(
         kind: CompletionSiteKind,
         span: SourceSpan,
-        block_target: BlockTarget,
+        block_target: Option<BlockTarget>,
     ) -> Self {
         Self {
             kind,
@@ -161,15 +161,15 @@ impl CompletionSite {
 
     #[must_use]
     pub fn block_target(&self) -> Option<&DocumentKey> {
-        match &self.block_target {
-            BlockTarget::Qualified(target) => Some(target),
-            BlockTarget::Local | BlockTarget::InvalidQualified { .. } => None,
+        match self.block_target.as_ref() {
+            Some(BlockTarget::Qualified(target)) => Some(target),
+            Some(BlockTarget::Local | BlockTarget::InvalidQualified { .. }) | None => None,
         }
     }
 
     #[must_use]
-    pub fn block_target_resolution(&self) -> &BlockTarget {
-        &self.block_target
+    pub fn block_target_resolution(&self) -> Option<&BlockTarget> {
+        self.block_target.as_ref()
     }
 }
 

@@ -40,13 +40,14 @@ pub fn plan_create_block_stub(
         return Err(no_symbol(key, position));
     }
     let target_key = match site.block_target_resolution() {
-        BlockTarget::Local => key.clone(),
-        BlockTarget::Qualified(target) => target.clone(),
-        BlockTarget::InvalidQualified { target } => {
+        Some(BlockTarget::Local) => key.clone(),
+        Some(BlockTarget::Qualified(target)) => target.clone(),
+        Some(BlockTarget::InvalidQualified { target }) => {
             return Err(AuthoringEditError::InvalidTargetDocument {
                 document: target.clone(),
             });
         }
+        None => return Err(no_symbol(key, position)),
     };
     let target = document(snapshot, &target_key).map_err(|error| match error {
         AuthoringEditError::UnknownDocument { .. } => AuthoringEditError::MissingTargetDocument {
