@@ -30,7 +30,12 @@ impl LspBenchmarkProbes {
             .unwrap_or_else(|| {
                 panic!("LSP benchmark fixture contains at least one block reference")
             });
-        let definition = completion.clone();
+        let definition = summaries
+            .iter()
+            .find_map(block_reference_definition_probe)
+            .unwrap_or_else(|| {
+                panic!("LSP benchmark fixture contains at least one block reference")
+            });
         let rename = summaries
             .iter()
             .find_map(block_definition_probe)
@@ -87,6 +92,13 @@ fn block_reference_probe(summary: &FileSummary) -> Option<LspPositionProbe> {
     let text = read_summary_text(summary)?;
     let range = span_to_range(&text, &reference.span);
     position_probe(summary, range.end)
+}
+
+fn block_reference_definition_probe(summary: &FileSummary) -> Option<LspPositionProbe> {
+    let reference = summary.block_references.first()?;
+    let text = read_summary_text(summary)?;
+    let range = span_to_range(&text, &reference.span);
+    position_probe(summary, range.start)
 }
 
 fn block_definition_probe(summary: &FileSummary) -> Option<LspPositionProbe> {
