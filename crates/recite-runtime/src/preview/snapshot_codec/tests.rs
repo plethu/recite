@@ -70,6 +70,30 @@ fn waiting_for_choice_rejects_unknown_variant_payload_fields() {
 }
 
 #[test]
+fn status_rejects_multiple_outer_variant_entries() {
+    let payload = WaitingForChoiceWire {
+        prompt: Box::new(PromptWire {
+            block: "start".to_owned(),
+            line: None,
+            choices: Vec::new(),
+            line_projection: None,
+            choice_projection: Vec::new(),
+        }),
+    };
+    let mut bytes = tagged_status(
+        "WaitingForChoice",
+        rmp_serde::to_vec_named(&payload).expect("choice payload"),
+    );
+    assert!(rmp_serde::from_slice::<StatusWire>(&bytes).is_ok());
+
+    bytes[0] = 0x82;
+    bytes.extend_from_slice(&[
+        0xa5, b'E', b'n', b'd', b'e', b'd', 0xa5, b'E', b'n', b'd', b'e', b'd',
+    ]);
+    assert!(rmp_serde::from_slice::<StatusWire>(&bytes).is_err());
+}
+
+#[test]
 fn waiting_for_effect_rejects_unknown_variant_payload_fields() {
     let effect = DialogueEffectRequest {
         id: EffectId::new("effect").expect("effect id"),
