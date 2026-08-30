@@ -78,11 +78,8 @@ impl LspWorkspace {
 
 #[allow(dead_code, reason = "used by the default workspace constructor")]
 fn default_ui_catalog() -> UiCatalog {
-    #[expect(
-        clippy::expect_used,
-        reason = "the embedded default UI catalog is validated by the UI contract gate"
-    )]
-    {
-        UiCatalog::load(&UiLocale::default()).expect("embedded default UI catalog must load")
+    match UiCatalog::load(&UiLocale::default()) {
+        Ok(catalog) => catalog,
+        Err(error) => panic!("embedded default UI catalog must load: {error}"),
     }
 }
