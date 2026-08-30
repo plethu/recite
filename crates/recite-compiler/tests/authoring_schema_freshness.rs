@@ -214,19 +214,7 @@ fn freshness_identity_normalizes_input_order_without_dropping_entries() {
         .expect("producer metadata")
         .producer_fingerprints
         .reverse();
-    actual
-        .producer_metadata
-        .as_mut()
-        .expect("producer metadata")
-        .producer_fingerprints
-        .reverse();
     expected
-        .registries
-        .get_mut("item")
-        .expect("registry")
-        .producer_fingerprints
-        .reverse();
-    actual
         .registries
         .get_mut("item")
         .expect("registry")
@@ -246,9 +234,26 @@ fn freshness_identity_normalizes_input_order_without_dropping_entries() {
     ) = (expected_domain, actual_domain)
     {
         expected_domain.provenance.producer_fingerprints.reverse();
-        actual_domain.provenance.producer_fingerprints.reverse();
+        assert_ne!(
+            &expected_domain.provenance.producer_fingerprints,
+            &actual_domain.provenance.producer_fingerprints
+        );
     }
 
+    let Some(expected_metadata) = expected.producer_metadata.as_ref() else {
+        panic!("producer metadata");
+    };
+    let Some(actual_metadata) = actual.producer_metadata.as_ref() else {
+        panic!("producer metadata");
+    };
+    let expected_manifest = &expected_metadata.producer_fingerprints;
+    let actual_manifest = &actual_metadata.producer_fingerprints;
+    assert_ne!(expected_manifest, actual_manifest);
+    let expected_registry_definition = &expected.registries["item"];
+    let actual_registry_definition = &actual.registries["item"];
+    let expected_registry = &expected_registry_definition.producer_fingerprints;
+    let actual_registry = &actual_registry_definition.producer_fingerprints;
+    assert_ne!(expected_registry, actual_registry);
     let evidence = SchemaFreshnessEvidence::from_snapshots(&expected, &actual)
         .expect("matching snapshot identities");
     assert_eq!(evidence.expected_identity(), evidence.actual_identity());
