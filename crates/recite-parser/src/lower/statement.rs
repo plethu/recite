@@ -65,8 +65,11 @@ impl Lowerer<'_, '_> {
             }
             ClassifiedLine::Statement(StatementMarker::Block)
             | ClassifiedLine::Blank
-            | ClassifiedLine::Prose
             | ClassifiedLine::Error => (None, index + 1),
+            ClassifiedLine::Prose => {
+                super::mark_all(self.recovery);
+                (None, index + 1)
+            }
         }
     }
 

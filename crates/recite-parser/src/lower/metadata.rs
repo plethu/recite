@@ -88,16 +88,19 @@ impl Lowerer<'_, '_> {
             .strip_prefix("(")
             .and_then(|value| value.strip_suffix(')'))
         else {
+            self.mark(SourceRecoveryClass::Metadata);
             self.diagnostics
                 .push(malformed_header(kv.value_span.clone()));
             return None;
         };
         let Some((name, value)) = value.split_once(':') else {
+            self.mark(SourceRecoveryClass::Metadata);
             self.diagnostics
                 .push(malformed_header(kv.value_span.clone()));
             return None;
         };
         let Some((value_type, value)) = value.split_once("=$") else {
+            self.mark(SourceRecoveryClass::Metadata);
             self.diagnostics
                 .push(malformed_header(kv.value_span.clone()));
             return None;
@@ -108,6 +111,7 @@ impl Lowerer<'_, '_> {
             "float" => InterpolationType::Float,
             "bool" => InterpolationType::Boolean,
             _ => {
+                self.mark(SourceRecoveryClass::Metadata);
                 let type_column =
                     kv.value_span.start.column() as usize + 1 + name.chars().count() + 1;
                 self.diagnostics
@@ -121,6 +125,7 @@ impl Lowerer<'_, '_> {
             }
         };
         if !is_placeholder_name(name) || !is_placeholder_name(value) {
+            self.mark(SourceRecoveryClass::Metadata);
             self.diagnostics
                 .push(malformed_header(kv.value_span.clone()));
             return None;

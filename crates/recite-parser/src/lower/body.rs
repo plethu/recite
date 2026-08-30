@@ -81,6 +81,7 @@ impl Lowerer<'_, '_> {
             }
 
             if saw_statement {
+                mark_all(self.recovery);
                 self.diagnostics
                     .push(prose_after_nested_statement(span_for_line(
                         self.path,
@@ -128,6 +129,7 @@ impl Lowerer<'_, '_> {
             };
 
             if !matches!(classify_line(line), ClassifiedLine::Statement(_)) {
+                mark_all(self.recovery);
                 self.diagnostics
                     .push(expected_statement_or_prose(span_for_line(
                         self.path,

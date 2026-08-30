@@ -22,6 +22,8 @@ impl Lowerer<'_, '_> {
         let fields = header_fields(trimmed, StatementMarker::Choice, header, base_column);
         let if_index = fields.iter().position(|field| field.text == "if");
         if let Some(if_index) = if_index {
+            self.mark(SourceRecoveryClass::ConditionFunctions);
+            super::super::mark_all(self.recovery);
             self.diagnostics
                 .push(trailing_choice_if(fields[if_index].span(self.path)));
         }
