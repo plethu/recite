@@ -28,6 +28,31 @@ fn same_id_revisions_clear_when_the_active_payload_returns() {
 }
 
 #[test]
+fn snapshot_between_same_id_replacements_can_return_to_active_payload() {
+    let active = revision_asset("source-a", "A.");
+    let replacement = revision_asset("source-b", "B.");
+    let mut preview = PreviewSession::new(&active, None, PreviewOptions::new()).expect("active");
+
+    preview
+        .assess_asset(&replacement)
+        .expect("assess replacement");
+    let encoded = preview
+        .snapshot()
+        .expect("snapshot")
+        .encode()
+        .expect("encode");
+    let decoded = recite_runtime::PreviewSnapshot::decode(&encoded).expect("decode");
+    let mut restored = PreviewSession::new(&active, None, PreviewOptions::new()).expect("restore");
+    restored.restore(decoded).expect("restore snapshot");
+
+    let output = restored
+        .assess_asset(&active)
+        .expect("assess active payload");
+    assert!(output.events().is_empty());
+    assert!(restored.state().restart_required().is_none());
+}
+
+#[test]
 fn same_id_candidate_revision_updates_and_round_trips() {
     let active = revision_asset("source-a", "A.");
     let replacement_b = revision_asset("source-b", "B.");

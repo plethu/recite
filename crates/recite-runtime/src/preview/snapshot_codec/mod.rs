@@ -18,7 +18,7 @@ use std::io::Cursor;
 use super::model::{
     PreviewConditionRequestId, PreviewError, PreviewSnapshot, PreviewState, PreviewStatus,
 };
-use wire::{SnapshotWire, StateWire, StatusWire};
+use wire::{SnapshotWire, StateWire, StatusWire, WaitingForChoiceWire, WaitingForEffectWire};
 
 impl PreviewSnapshot {
     /// Encodes only the versioned snapshot contract; preview events remain
@@ -100,12 +100,16 @@ impl StateWire {
             PreviewStatus::WaitingForCondition { .. } => {
                 return Err(PreviewError::SnapshotPendingCondition);
             }
-            PreviewStatus::WaitingForChoice { prompt } => StatusWire::WaitingForChoice {
-                prompt: Box::new(wire::PromptWire::from_prompt(prompt)),
-            },
-            PreviewStatus::WaitingForEffect { effect } => StatusWire::WaitingForEffect {
-                effect: wire::EffectWire::from_effect(effect),
-            },
+            PreviewStatus::WaitingForChoice { prompt } => {
+                StatusWire::WaitingForChoice(WaitingForChoiceWire {
+                    prompt: Box::new(wire::PromptWire::from_prompt(prompt)),
+                })
+            }
+            PreviewStatus::WaitingForEffect { effect } => {
+                StatusWire::WaitingForEffect(WaitingForEffectWire {
+                    effect: wire::EffectWire::from_effect(effect),
+                })
+            }
             PreviewStatus::Ended => StatusWire::Ended,
         };
         Ok(Self {
@@ -154,11 +158,11 @@ impl StateWire {
             .transpose()?;
         let status = match self.status {
             StatusWire::Ready => PreviewStatus::Ready,
-            StatusWire::WaitingForChoice { prompt } => PreviewStatus::WaitingForChoice {
-                prompt: Box::new(prompt.into_prompt()?),
+            StatusWire::WaitingForChoice(payload) => PreviewStatus::WaitingForChoice {
+                prompt: Box::new(payload.prompt.into_prompt()?),
             },
-            StatusWire::WaitingForEffect { effect } => PreviewStatus::WaitingForEffect {
-                effect: effect.into_effect()?,
+            StatusWire::WaitingForEffect(payload) => PreviewStatus::WaitingForEffect {
+                effect: payload.effect.into_effect()?,
             },
             StatusWire::Ended => PreviewStatus::Ended,
         };

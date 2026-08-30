@@ -3,6 +3,11 @@ use serde::{Deserialize, Serialize};
 use crate::DialogueContentFingerprintSnapshot;
 use crate::DialogueSessionSnapshot;
 
+#[path = "status.rs"]
+mod status;
+
+pub(super) use status::{StatusWire, WaitingForChoiceWire, WaitingForEffectWire};
+
 #[derive(Clone, Debug, Deserialize, Serialize)]
 #[serde(deny_unknown_fields)]
 pub(super) struct SnapshotWire {
@@ -25,14 +30,6 @@ pub(super) struct StateWire {
     pub(super) deferred_effects: Vec<EffectWire>,
     pub(super) restart_required: Option<RequirementWire>,
     pub(super) status: StatusWire,
-}
-
-#[derive(Clone, Debug, Deserialize, Serialize)]
-pub(super) enum StatusWire {
-    Ready,
-    WaitingForChoice { prompt: Box<PromptWire> },
-    WaitingForEffect { effect: EffectWire },
-    Ended,
 }
 
 #[derive(Clone, Debug, Deserialize, Serialize)]
