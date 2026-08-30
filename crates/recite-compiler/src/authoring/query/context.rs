@@ -1,8 +1,9 @@
 use recite_core::{DocumentKey, MetadataTarget, SourcePosition, SourceSpan};
 
-use super::types::{BlockTarget, ClauseKind, CompletionSite, CompletionSiteKind};
+use super::types::{BlockTarget, ClauseKind};
 
 mod position;
+mod site;
 use position::{assignment_span, byte_at_column, line_at, span, token_span};
 
 #[derive(Clone, Debug, Eq, PartialEq)]
@@ -31,60 +32,6 @@ pub(super) enum Site {
         value: String,
         token: SourceSpan,
     },
-}
-
-impl Site {
-    pub(super) fn completion_site(&self) -> CompletionSite {
-        match self {
-            Self::Blocks { target, token } => {
-                CompletionSite::new(CompletionSiteKind::Block, token.clone(), target.clone())
-            }
-            Self::Speakers(span) => CompletionSite::new(
-                CompletionSiteKind::Speaker,
-                span.clone(),
-                BlockTarget::Local,
-            ),
-            Self::MetadataKey { span, .. } => CompletionSite::new(
-                CompletionSiteKind::MetadataKey,
-                span.clone(),
-                BlockTarget::Local,
-            ),
-            Self::MetadataValue { token, .. } => CompletionSite::new(
-                CompletionSiteKind::MetadataValue,
-                token.clone(),
-                BlockTarget::Local,
-            ),
-            Self::Conditions { span, .. } => CompletionSite::new(
-                CompletionSiteKind::Condition,
-                span.clone(),
-                BlockTarget::Local,
-            ),
-            Self::Effects(span) => {
-                CompletionSite::new(CompletionSiteKind::Effect, span.clone(), BlockTarget::Local)
-            }
-            Self::AvailabilityReasons { token, .. } => CompletionSite::new(
-                CompletionSiteKind::AvailabilityReason,
-                token.clone(),
-                BlockTarget::Local,
-            ),
-        }
-    }
-
-    pub(super) fn clause(&self) -> Option<(ClauseKind, SourceSpan)> {
-        match self {
-            Self::Conditions {
-                clause: Some(clause),
-                ..
-            } => Some(clause.clone()),
-            Self::Blocks { .. }
-            | Self::Speakers(_)
-            | Self::MetadataKey { .. }
-            | Self::MetadataValue { .. }
-            | Self::Conditions { clause: None, .. }
-            | Self::Effects(_)
-            | Self::AvailabilityReasons { .. } => None,
-        }
-    }
 }
 
 pub(super) fn at(key: &DocumentKey, text: &str, position: SourcePosition) -> Option<Site> {
