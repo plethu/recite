@@ -26,6 +26,7 @@ MARKERS = {
 RULES = {
     "outer_attribute": "kind: attribute_item",
     "inner_attribute": "kind: inner_attribute_item",
+    "identifier": "kind: identifier",
     "line_comment": 'pattern: "//"',
     "block_comment": "pattern: '/* $$$TEXT */'",
     "mod_item": "kind: mod_item",
@@ -65,7 +66,7 @@ class AstEvent:
     text: str
 
 
-LINT_CONTROL = re.compile(r"(?<![A-Za-z0-9_])(?:r#)?(allow|expect|cfg_attr)(?![A-Za-z0-9_])")
+LINT_CONTROLS = {"allow", "expect", "cfg_attr"}
 
 
 def _rule_text() -> str:
@@ -170,9 +171,19 @@ def _owner_for_attribute(
 
 
 def _opaque_record(
-    path: str, event: AstEvent, source: bytes, comments: list[tuple[int, int]], generated: set[str]
+    path: str,
+    event: AstEvent,
+    identifiers: list[AstEvent],
+    source: bytes,
+    comments: list[tuple[int, int]],
+    generated: set[str],
 ) -> dict[str, object] | None:
-    controls = tuple(sorted({match.group(1) for match in LINT_CONTROL.finditer(event.text)}))
+    controls = tuple(sorted({
+        identifier.text
+        for identifier in identifiers
+        if event.start <= identifier.start and identifier.end <= event.end
+        and identifier.text in LINT_CONTROLS
+    }))
     if not controls:
         return None
     return {
@@ -275,8 +286,10 @@ def scan_sources(sources: list[tuple[str, str]], generated_paths: set[str]) -> l
         comments = _comments(events, data)
         attrs = [event for event in events if event.rule in {"outer_attribute", "inner_attribute"}]
         nodes = [event for event in events if event.rule not in {
-            "outer_attribute", "inner_attribute", "line_comment", "block_comment", "declaration_list",
+            "outer_attribute", "inner_attribute", "identifier", "line_comment", "block_comment",
+            "declaration_list",
         }]
+        identifiers = [event for event in events if event.rule == "identifier"]
         bodies = [event for event in events if event.rule == "declaration_list"]
         trivia = sorted(comments + [(event.start, event.end) for event in attrs])
         info = {id(node): _target(node, source, bodies) for node in nodes}
@@ -353,7 +366,7 @@ def scan_sources(sources: list[tuple[str, str]], generated_paths: set[str]) -> l
                 })
         for event in events:
             if event.rule in {"macro_definition", "macro_invocation"}:
-                opaque = _opaque_record(path, event, data, comments, generated_paths)
+                opaque = _opaque_record(path, event, identifiers, data, comments, generated_paths)
                 if opaque is not None:
                     records.append(opaque)
     return records

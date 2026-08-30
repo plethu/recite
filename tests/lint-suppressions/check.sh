@@ -207,6 +207,31 @@ set -e
   printf '%s\n' "$opaque_output" >&2
   exit 1
 }
+cat > "$test_root/repo/crates/demo/src/opaque-negative.rs" <<'EOF'
+macro_rules! strings_and_comments {
+    () => {
+        let _ = format!("allow");
+        println!("expect");
+        /* cfg_attr */
+    };
+}
+quote! {
+    // expect
+}
+fn éallow() {}
+fn allowé() {}
+fn 期待expect() {}
+fn cfg_attr値() {}
+EOF
+git -C "$test_root/repo" add .
+git -C "$test_root/repo" commit -q -m opaque-token-tree-negatives
+opaque_negative_head="$(git -C "$test_root/repo" rev-parse HEAD)"
+opaque_negative_output="$(cd "$test_root/repo" && scripts/check-lint-suppressions.sh "$opaque_head" "$opaque_negative_head")"
+[[ "$opaque_negative_output" != *"opaque-negative.rs"* ]] || {
+  echo "strings, comments, or Unicode near-identifiers became opaque records" >&2
+  printf '%s\n' "$opaque_negative_output" >&2
+  exit 1
+}
 # Duplicate consumption is one-to-one: one baseline use cannot legitimize two
 # current identical records. Cross-file moves are always new at the destination.
 cat > "$test_root/repo/crates/demo/src/duplicates.rs" <<'EOF'
