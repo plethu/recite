@@ -167,6 +167,11 @@ pub enum ProjectBuildPreparationError {
     NoInputs,
     #[error("schema path {path} is not project-relative: {reason}")]
     InvalidSchemaPath { path: PathBuf, reason: String },
+    #[error("schema path {declared} resolves outside the canonical project root to {resolved}")]
+    SchemaOutsideProject {
+        declared: PathBuf,
+        resolved: PathBuf,
+    },
     #[error("schema input {path} loaded without a canonical model")]
     SchemaWithoutModel { path: PathBuf },
     #[error("invalid project input key {key:?}: {reason}")]

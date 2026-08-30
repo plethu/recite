@@ -41,13 +41,25 @@ pub(super) fn prepare(
     let (schema, schema_key) =
         match manifest.manifest().project.schema.as_deref() {
             Some(schema_path) => {
-                let path = resolve_project_path(&project_root, schema_path);
-                let key = schema_document_key(&project_root, &path).map_err(|reason| {
+                let declared_path = resolve_project_path(&project_root, schema_path);
+                let key = schema_document_key(&project_root, &declared_path).map_err(|reason| {
                     ProjectBuildPreparationError::InvalidSchemaPath {
-                        path: path.clone(),
+                        path: declared_path.clone(),
                         reason,
                     }
                 })?;
+                let path = std::fs::canonicalize(&declared_path).map_err(|error| {
+                    ProjectBuildPreparationError::Read {
+                        path: declared_path.clone(),
+                        message: error.to_string(),
+                    }
+                })?;
+                if !path.starts_with(&project_root) {
+                    return Err(ProjectBuildPreparationError::SchemaOutsideProject {
+                        declared: declared_path,
+                        resolved: path,
+                    });
+                }
                 let loaded =
                     load_schema(&path).map_err(|error| ProjectBuildPreparationError::Read {
                         path: path.clone(),
