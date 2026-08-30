@@ -1,17 +1,18 @@
 use recite_core::{MetadataDomainDefinition, ProducerFingerprint, ProducerOrigin, ProjectSchema};
 
+use super::evidence::{ProducerCapabilityStatus, SchemaSummaryEvidence};
 use super::identity::{
     SchemaAction, SchemaCapability, SchemaCapabilityUnavailableReason, SchemaDeclarationProvenance,
     SchemaFreshness, SchemaFreshnessUnavailableReason, SchemaOwnership,
 };
 
-pub(super) fn ownership(schema: &ProjectSchema) -> SchemaOwnership {
+pub(super) fn ownership(schema: &ProjectSchema, source_owned: bool) -> SchemaOwnership {
     match schema
         .producer_metadata
         .as_ref()
         .and_then(|metadata| metadata.producer.as_ref())
     {
-        Some(producer) if producer.kind() == "standalone" => SchemaOwnership::Standalone {
+        Some(producer) if source_owned => SchemaOwnership::Standalone {
             producer: producer.clone(),
         },
         Some(producer) => SchemaOwnership::Generated {
@@ -34,9 +35,11 @@ pub(super) fn provenance(
 pub(super) fn capability(
     ownership: &SchemaOwnership,
     has_explicit_origin: bool,
+    source_owned: bool,
+    evidence: Option<&SchemaSummaryEvidence>,
 ) -> SchemaCapability {
     let actions = match ownership {
-        SchemaOwnership::Standalone { .. } => {
+        SchemaOwnership::Standalone { .. } if source_owned => {
             let mut actions = Vec::new();
             if has_explicit_origin {
                 actions.push(SchemaAction::OpenSourceDeclaration);
@@ -49,20 +52,37 @@ pub(super) fn capability(
             if has_explicit_origin {
                 actions.push(SchemaAction::OpenSourceDeclaration);
             }
-            actions.extend([
-                SchemaAction::InvokeProducer {
-                    producer: producer.clone(),
-                },
-                SchemaAction::RetryProducerFailure {
-                    producer: producer.clone(),
-                },
-                SchemaAction::ReadOnlyGenerated,
-            ]);
+            let status = evidence.and_then(SchemaSummaryEvidence::capability);
+            match status {
+                Some(ProducerCapabilityStatus::Supported) => {
+                    actions.push(SchemaAction::InvokeProducer {
+                        producer: producer.clone(),
+                    });
+                    if evidence
+                        .and_then(SchemaSummaryEvidence::current_failure)
+                        .is_some()
+                    {
+                        actions.push(SchemaAction::RetryProducerFailure {
+                            producer: producer.clone(),
+                        });
+                    }
+                }
+                Some(ProducerCapabilityStatus::Unavailable) => {
+                    actions.push(SchemaAction::Unavailable {
+                        reason: SchemaCapabilityUnavailableReason::ProducerCapabilityUnavailable,
+                    });
+                }
+                Some(ProducerCapabilityStatus::ReadOnly) | None => {
+                    actions.push(SchemaAction::ReadOnlyGenerated);
+                }
+            }
             actions
         }
-        SchemaOwnership::Unavailable => vec![SchemaAction::Unavailable {
-            reason: SchemaCapabilityUnavailableReason::UnknownSourceOwner,
-        }],
+        SchemaOwnership::Standalone { .. } | SchemaOwnership::Unavailable => {
+            vec![SchemaAction::Unavailable {
+                reason: SchemaCapabilityUnavailableReason::UnknownSourceOwner,
+            }]
+        }
     };
     SchemaCapability { actions }
 }

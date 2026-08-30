@@ -1,6 +1,6 @@
 use recite_core::{
-    ContentFingerprint, ProducerFingerprint, ProducerFreshness, ProducerIdentity, ProducerOrigin,
-    SchemaFingerprint,
+    ContentFingerprint, ProducerFingerprint, ProducerIdentity, ProducerOrigin, SchemaFingerprint,
+    SchemaProducerFreshness,
 };
 
 /// Identifies who owns the declarations represented by a schema summary.
@@ -86,6 +86,7 @@ pub enum SchemaAction {
 #[non_exhaustive]
 pub enum SchemaCapabilityUnavailableReason {
     UnknownSourceOwner,
+    ProducerCapabilityUnavailable,
 }
 
 /// The action descriptors available for a schema or declaration.
@@ -118,11 +119,13 @@ impl SchemaCapability {
 ///
 /// A single `ProjectSchema` contains evidence, but not an expected/current
 /// pair to compare. Such a summary therefore reports `Unavailable` until a
-/// caller supplies the comparison snapshots to the canonical core API.
+/// caller supplies the comparison snapshots to the canonical core API. The
+/// compared value retains core's content, manifest, registry, and metadata
+/// domain channels without collapsing them to a first failure.
 #[derive(Clone, Debug, Eq, PartialEq)]
 #[non_exhaustive]
 pub enum SchemaFreshness {
-    Compared(ProducerFreshness),
+    Compared(Box<SchemaProducerFreshness>),
     Unavailable {
         reason: SchemaFreshnessUnavailableReason,
     },

@@ -1,5 +1,6 @@
 mod builder;
 mod dialogue;
+mod evidence;
 mod functions;
 mod helpers;
 mod identity;
@@ -7,6 +8,10 @@ mod metadata;
 mod projections;
 
 pub use dialogue::{RegistrySummary, SchemaTypeSummary, SpeakerSummary};
+pub use evidence::{
+    ProducerCapabilityStatus, ProducerFailureEvidence, SchemaSummaryBuildError,
+    SchemaSummaryEvidence, SchemaSummaryEvidenceBuilder, SchemaSummaryEvidenceError,
+};
 pub use functions::{AvailabilityReasonSummary, ConditionSummary, EffectSummary, MarkupSummary};
 pub use identity::{
     ProducerMetadataSummary, SchemaAction, SchemaCapability, SchemaCapabilityUnavailableReason,

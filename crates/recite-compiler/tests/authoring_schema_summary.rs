@@ -146,11 +146,17 @@ fn generated_fixture_is_typed_producer_evidence_and_read_only() {
         matches!(summary.ownership(), SchemaOwnership::Generated { producer } if producer.kind() == "adapter" && producer.id() == "example")
     );
     assert!(summary.source().generated_output_is_read_only());
-    assert!(summary.capability().actions().iter().any(|action| matches!(action, SchemaAction::InvokeProducer { producer } if producer.id() == "example")));
     assert!(
         summary
             .capability()
             .supports(&SchemaAction::ReadOnlyGenerated)
+    );
+    assert!(
+        !summary
+            .capability()
+            .actions()
+            .iter()
+            .any(|action| matches!(action, SchemaAction::InvokeProducer { .. }))
     );
     let producer_metadata = summary.producer_metadata().expect("producer metadata");
     assert_eq!(producer_metadata.schema_export_version(), Some(1));
@@ -167,6 +173,27 @@ fn generated_fixture_is_typed_producer_evidence_and_read_only() {
         .producer_content()
         .expect("content fingerprint");
     assert_eq!(producer_content.algorithm().as_str(), "blake3");
+
+    let exported = load_schema_source_str("standalone.toml", STANDALONE)
+        .source
+        .expect("source fixture")
+        .export_json();
+    let roundtrip = load_schema_manifest_str("standalone.json", &exported)
+        .schema
+        .expect("exported source reloads");
+    let roundtrip_summary = SchemaSummary::from_schema(&roundtrip);
+    assert!(matches!(
+        roundtrip_summary.ownership(),
+        SchemaOwnership::Generated { .. }
+    ));
+    assert!(roundtrip_summary.source().generated_output_is_read_only());
+    assert!(
+        !roundtrip_summary
+            .capability()
+            .actions()
+            .iter()
+            .any(|action| matches!(action, SchemaAction::EditStandaloneSource))
+    );
 }
 
 #[test]
