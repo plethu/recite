@@ -96,11 +96,41 @@ fn add_reason(
             origin_table.insert("label", toml_edit::value(label));
         }
         for (key, value) in &origin.extensions {
+            validate_origin_extension_key(key)?;
             origin_table.insert(key, toml_edit::Item::Value(producer_value(value)?));
         }
         table.insert("origin", toml_edit::Item::Table(origin_table));
     }
     Ok(())
+}
+
+fn validate_origin_extension_key(key: &str) -> Result<(), SchemaSourceEditError> {
+    if matches!(key, "kind" | "id" | "label") {
+        return Err(SchemaSourceEditError::InvalidArgument(format!(
+            "origin extension key '{key}' is reserved"
+        )));
+    }
+    let mut segments = key.split(':');
+    let namespaced = segments.next().is_some_and(is_extension_segment)
+        && segments.next().is_some_and(is_extension_segment)
+        && segments.next().is_none();
+    if !namespaced {
+        return Err(SchemaSourceEditError::InvalidArgument(format!(
+            "origin extension key '{key}' must be namespaced"
+        )));
+    }
+    Ok(())
+}
+
+fn is_extension_segment(segment: &str) -> bool {
+    let mut characters = segment.chars();
+    let Some(first) = characters.next() else {
+        return false;
+    };
+    first.is_ascii_alphabetic()
+        && characters.all(|character| {
+            character.is_ascii_alphanumeric() || matches!(character, '.' | '_' | '-')
+        })
 }
 
 fn insert_params(table: &mut toml_edit::Table, params: &[ParameterDefinition]) {

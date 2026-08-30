@@ -137,7 +137,19 @@ fn float_literal_lexeme_and_reason_origin_round_trip_without_loss() {
         label: Some("Reasons".to_owned()),
         extensions: BTreeMap::from([(
             "x-recite:source".to_owned(),
-            ProducerMetadataValue::String("import-7".to_owned()),
+            ProducerMetadataValue::Object(BTreeMap::from([
+                (
+                    "precise".to_owned(),
+                    ProducerMetadataValue::Number("1.23456789012345678901234567890".to_owned()),
+                ),
+                (
+                    "nested".to_owned(),
+                    ProducerMetadataValue::Object(BTreeMap::from([(
+                        "exponent".to_owned(),
+                        ProducerMetadataValue::Number("1e+2".to_owned()),
+                    )])),
+                ),
+            ])),
         )]),
     };
     let reason = AvailabilityReasonDefinition {
@@ -184,9 +196,38 @@ fn float_literal_lexeme_and_reason_origin_round_trip_without_loss() {
         Some(origin)
     );
     assert!(edited.source_text().contains(&exact));
+    assert!(edited.source_text().contains("1e+2"));
     let round_trip = source(&edited.source_text());
     assert_eq!(edited.schema_fingerprint(), round_trip.schema_fingerprint());
     assert_eq!(edited.source_fingerprint(), round_trip.source_fingerprint());
+}
+
+#[test]
+fn origin_extensions_reject_reserved_and_unnamespaced_keys() {
+    let original = source("schema_version = 1\n[producer]\nid = \"dialogue\"\n");
+    for key in ["kind", "id", "label", "source"] {
+        let error = original.plan_edit(SchemaSourceEdit::AddAvailabilityReason {
+            name: "blocked".to_owned(),
+            definition: AvailabilityReasonDefinition {
+                template: "Blocked".to_owned(),
+                params: Vec::new(),
+                origin: Some(ProducerOrigin {
+                    kind: "data_table".to_owned(),
+                    id: "content/reasons.csv".to_owned(),
+                    label: None,
+                    extensions: BTreeMap::from([(
+                        key.to_owned(),
+                        ProducerMetadataValue::String("value".to_owned()),
+                    )]),
+                }),
+            },
+        });
+        assert!(matches!(
+            error,
+            Err(SchemaSourceEditError::InvalidArgument(message))
+                if message.contains(key)
+        ));
+    }
 }
 
 #[test]
