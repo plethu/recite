@@ -6,9 +6,10 @@ usage() {
 Usage:
   check-lint-suppressions.sh [base-ref [head-ref]] [--full] [--policy-revision ref]
 
-Inventories handwritten Rust #[allow]/#[expect] attributes and rejects only
-new or expanded production suppressions that do not follow the local policy.
-Use --full for a reporting-only inventory of all tracked Rust source.
+Inventories handwritten Rust #[allow]/#[expect] attributes with the pinned
+ast-grep Rust parser and rejects only new or expanded production suppressions
+that do not follow the local policy. Use --full for a reporting-only inventory
+of all tracked Rust source. Run it in the maintainability mise environment.
 EOF
 }
 
@@ -24,6 +25,11 @@ repo_root="$(git rev-parse --show-toplevel 2>/dev/null)" || {
 parser="$repo_root/scripts/check-lint-suppressions.py"
 if [[ ! -f "$parser" ]]; then
   echo "missing lint suppression parser: $parser" >&2
+  exit 2
+fi
+ast_parser="$repo_root/scripts/lint_suppression_ast.py"
+if [[ ! -f "$ast_parser" ]]; then
+  echo "missing structural lint suppression parser: $ast_parser" >&2
   exit 2
 fi
 cd "$repo_root"

@@ -13,8 +13,9 @@ wrapper="$repo_root/scripts/check-trusted-pr-policy.sh"
 fixture="$repo_root/tests/trusted-policy/fixtures/base-policy.sh"
 lint_fixture="$repo_root/tests/trusted-policy/fixtures/base-lint-suppression-policy.sh"
 lint_checker="$repo_root/scripts/check-lint-suppressions.py"
+lint_ast="$repo_root/scripts/lint_suppression_ast.py"
 lint_allowlist="$repo_root/scripts/generated-rust-allowlist.txt"
-for required_file in "$workflow" "$wrapper" "$fixture" "$lint_fixture" "$lint_checker" "$lint_allowlist"; do
+for required_file in "$workflow" "$wrapper" "$fixture" "$lint_fixture" "$lint_checker" "$lint_ast" "$lint_allowlist"; do
   [[ -f "$required_file" ]] || { echo "missing trusted-policy fixture file: $required_file" >&2; exit 1; }
 done
 
@@ -53,6 +54,7 @@ mkdir -p "$repo/scripts" "$repo/crates/demo/src"
 cp -- "$fixture" "$repo/scripts/check-git-policy.sh"
 cp -- "$lint_fixture" "$repo/scripts/check-lint-suppressions.sh"
 cp -- "$lint_checker" "$repo/scripts/check-lint-suppressions.py"
+cp -- "$lint_ast" "$repo/scripts/lint_suppression_ast.py"
 cp -- "$lint_allowlist" "$repo/scripts/generated-rust-allowlist.txt"
 cp -- "$wrapper" "$repo/scripts/check-trusted-pr-policy.sh"
 chmod +x "$repo/scripts/check-git-policy.sh"
@@ -63,7 +65,8 @@ git -C "$repo" config user.name 'Trusted policy fixture'
 git -C "$repo" config user.email 'trusted-policy-fixture@example.invalid'
 git -C "$repo" config commit.gpgsign false
 git -C "$repo" add scripts/check-git-policy.sh scripts/check-lint-suppressions.sh \
-  scripts/check-lint-suppressions.py scripts/generated-rust-allowlist.txt \
+  scripts/check-lint-suppressions.py scripts/lint_suppression_ast.py \
+  scripts/generated-rust-allowlist.txt \
   scripts/check-trusted-pr-policy.sh
 git -C "$repo" commit --quiet -m '[REC-164] ci: fixture base policy'
 git -C "$repo" push --quiet origin HEAD:refs/heads/main

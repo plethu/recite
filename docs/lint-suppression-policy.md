@@ -18,18 +18,21 @@ Narrowing a list of lints is retained in the inventory as a changed record;
 its current reason and scope still have to satisfy the policy. Only an
 unchanged baseline record bypasses current-reason validation. Matching never
 crosses paths or categories, and lint-list changes must retain the same
-lexical owner.
+structural owner.
 
-Known declaration owners retain their complete token sequence (including impl
-`for`/self types and use-tree paths). Function modifiers are parsed before the
-function name. Bare blocks and declarations that cannot be identified
-unambiguously receive an unstable owner and never consume a baseline.
+Discovery is delegated to the pinned ast-grep Rust parser in
+`scripts/lint_suppression_ast.py`. Its real syntax nodes provide attributes,
+declaration ancestry, blocks, closures, macros, comments, and parse errors.
+The policy helper only interprets the validated attribute meta and performs
+matching; it does not maintain a second Rust declaration or delimiter lexer.
+Named modules, items, impl headers, and use trees are matchable. Anonymous,
+macro, closure, malformed, or otherwise ambiguous scopes are reported as
+`owner=unstable` and never consume a baseline, which is intentionally
+fail-closed. ast-grep is supplied by the repository's `maintainability` mise
+environment.
 
-The parser is a small deterministic Rust lexer. It handles multiline
-attributes, multiple lints, nested delimiters, comments, ordinary strings,
-character literals, and raw strings. It does not claim to verify Rust
-semantics, whether a lint exists, or whether a reason is true; Cargo/rustc and
-human review retain those responsibilities.
+The gate does not claim to verify whether a lint exists or whether a reason is
+true; Cargo/rustc and human review retain those responsibilities.
 
 New or expanded handwritten production suppressions must:
 
@@ -57,7 +60,10 @@ The path classification is deliberately visible in the inventory:
 
 An adjacent marker is a single comment containing
 `recite-lint-suppression: compatibility` or `recite-lint-suppression: ffi`.
-It is only a classification hint; it is not semantic or cryptographic proof.
+The marker is recognized from ast-grep comment trivia, so the same text in a
+string, raw string, or commented-out old attribute is not classification
+evidence. It is only a classification hint; it is not semantic or
+cryptographic proof.
 Generated exemptions use the exact repository-owned allowlist, whose entries
 must be relative `.rs` paths; `generated.rs`, `target/`, or a generated
 directory name is not evidence by itself. Existing exceptions in any category
@@ -68,13 +74,14 @@ documents the preserved boundary; `#[allow]` remains item-scoped.
 ## Reading and remediating the inventory
 
 The output distinguishes `baseline`, `new`, `expanded`, `narrowed`, and
-`reason-*` records. Each record includes `scope`, lexical `owner`, category,
+`reason-*` records. Each record includes `scope`, structural `owner`, category,
 literal `reason`, `rationale` status (`missing`, `present`, or `scoped`), and
-`baseline_status`, plus whether the owner is stable and matchable. Use `--full` when reviewing the current debt inventory;
+`baseline_status`, plus whether the structural owner is stable and matchable.
+Use `--full` when reviewing the current debt inventory;
 full mode is reporting-only and marks records as `current`. The normal range
 is the pull request base to the actual source head, not a synthetic merge
-commit. Qualified module, impl, and trait owners use stable length-prefixed
-components so similarly named declarations cannot collide:
+commit. Owner keys preserve module/item ancestry and the structural impl/use
+header, so similarly named declarations do not collide.
 
 ```text
 scripts/check-lint-suppressions.sh origin/main HEAD
