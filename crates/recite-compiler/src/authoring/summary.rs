@@ -229,6 +229,7 @@ impl Collector {
                 source_span: entry.source_span.clone(),
                 key_span: entry.key_span.clone(),
                 value_span: entry.value_span.clone(),
+                value_element_spans: entry.value_element_spans().to_vec(),
                 value: (&entry.value).into(),
             });
         }

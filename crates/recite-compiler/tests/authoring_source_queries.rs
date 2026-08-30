@@ -1,0 +1,212 @@
+#![cfg(test)]
+
+use std::collections::BTreeSet;
+
+use recite_compiler::{
+    AuthoringKernel, AuthoringRequest, CompletionCandidateKind, MetadataValue, QueryResult,
+    SavedDocument, SemanticFact, SnapshotGeneration,
+};
+use recite_core::{
+    ConditionDefinition, DocumentKey, FlatMetadataDomain, MetadataDefinition,
+    MetadataDomainDefinition, MetadataTarget, ProjectSchema, ProjectionQueryFunctionDefinition,
+    SchemaPresentationProjectorDefinition, SchemaProjectionSelector, SchemaTypeRef, SourcePosition,
+    SpeakerDefinition,
+};
+
+fn key(value: &str) -> DocumentKey {
+    DocumentKey::new(value).expect("valid document key")
+}
+
+fn position(line: u32, column: u32) -> SourcePosition {
+    SourcePosition::new(line, column).expect("valid source position")
+}
+
+fn fixture() -> AuthoringKernel {
+    let mut schema = ProjectSchema::empty_v1();
+    schema.speakers.insert(
+        "hazel".to_owned(),
+        SpeakerDefinition {
+            display_name: Some("Hazel".to_owned()),
+        },
+    );
+    schema.conditions.insert(
+        "knows_secret".to_owned(),
+        ConditionDefinition {
+            params: Vec::new(),
+            returns: recite_core::ConditionReturnType::Bool,
+            availability_reason: None,
+        },
+    );
+    schema.metadata.insert(
+        "mood".to_owned(),
+        MetadataDefinition {
+            targets: BTreeSet::from([MetadataTarget::Line]),
+            type_ref: SchemaTypeRef::Symbol,
+            repeatable: false,
+            domain: Some("moods".to_owned()),
+        },
+    );
+    schema.metadata_domains.insert(
+        "moods".to_owned(),
+        MetadataDomainDefinition::Flat(FlatMetadataDomain::default()),
+    );
+    schema.projection_queries.insert(
+        "is_ready".to_owned(),
+        ProjectionQueryFunctionDefinition {
+            params: Vec::new(),
+            returns: SchemaTypeRef::Bool,
+            max_calls_per_event: None,
+        },
+    );
+    schema.presentation_projectors.insert(
+        "hud".to_owned(),
+        SchemaPresentationProjectorDefinition {
+            candidates: SchemaProjectionSelector::RuntimeEvent {
+                kind: "dialogue".to_owned(),
+            },
+            inputs: Vec::new(),
+            queries: Default::default(),
+            outputs: Default::default(),
+        },
+    );
+    AuthoringKernel::with_schema(schema)
+}
+
+fn source() -> SavedDocument {
+    SavedDocument::new(
+        key("main.recite"),
+        concat!(
+            ":: start\n",
+            "> line@11111111111111111111 speaker=hazel mood=\n",
+            "  ordinary prose\n",
+            "  :if knows_\n",
+        ),
+    )
+}
+
+#[test]
+fn completion_derives_site_from_source_and_cursor() {
+    let mut kernel = fixture();
+    kernel
+        .apply(AuthoringRequest::new(
+            SnapshotGeneration::initial(),
+            [source()],
+            [],
+        ))
+        .expect("source accepted");
+    let key = key("main.recite");
+
+    let QueryResult::Ready(speakers) = kernel.snapshot().complete(&key, position(2, 38)) else {
+        panic!("speaker site is recognized");
+    };
+    assert!(speakers.iter().any(|candidate| {
+        candidate.name() == "hazel" && candidate.kind() == CompletionCandidateKind::Speaker
+    }));
+
+    let QueryResult::Ready(empty) = kernel.snapshot().complete(&key, position(2, 48)) else {
+        panic!("empty metadata domain is a ready empty result");
+    };
+    assert!(empty.is_empty(), "unexpected candidates: {empty:?}");
+
+    assert!(matches!(
+        kernel.snapshot().complete(&key, position(3, 8)),
+        QueryResult::NoMatch
+    ));
+    let QueryResult::Ready(conditions) = kernel.snapshot().complete(&key, position(4, 12)) else {
+        panic!("condition site is recognized");
+    };
+    assert_eq!(conditions[0].name(), "knows_secret");
+    assert_eq!(conditions[0].replace_span().start.column(), 7);
+    assert_eq!(
+        conditions[0]
+            .replace_span()
+            .end
+            .as_ref()
+            .map(|end| end.column()),
+        Some(12)
+    );
+}
+
+#[test]
+fn hover_resolves_the_token_without_a_caller_context() {
+    let mut kernel = fixture();
+    kernel
+        .apply(AuthoringRequest::new(
+            SnapshotGeneration::initial(),
+            [source()],
+            [],
+        ))
+        .expect("source accepted");
+    let key = key("main.recite");
+    let hover_result = kernel.snapshot().hover(&key, position(2, 39));
+    let QueryResult::Ready(hover) = hover_result.clone() else {
+        panic!("speaker hover is ready: {hover_result:?}");
+    };
+    assert!(matches!(
+        hover.facts(),
+        [SemanticFact::SchemaCandidate { name, .. }] if name == "hazel"
+    ));
+    assert!(matches!(
+        kernel.snapshot().hover(&key, position(3, 8)),
+        QueryResult::NoMatch
+    ));
+}
+
+#[test]
+fn references_are_key_scoped_and_include_declarations_is_typed() {
+    let mut kernel = fixture();
+    kernel
+        .apply(AuthoringRequest::new(
+            SnapshotGeneration::initial(),
+            [SavedDocument::new(
+                key("main.recite"),
+                ":: start\n-> target\n:: target\n",
+            )],
+            [],
+        ))
+        .expect("source accepted");
+    let result = kernel.snapshot().references(
+        &key("main.recite"),
+        position(2, 4),
+        recite_compiler::SymbolQueryOptions::new(false),
+    );
+    let QueryResult::Ready(references) = result else {
+        panic!("references are ready");
+    };
+    assert_eq!(references.len(), 1);
+    assert_eq!(references[0].document().as_str(), "main.recite");
+}
+
+#[test]
+fn array_metadata_retains_element_spans() {
+    let mut kernel = AuthoringKernel::new();
+    kernel
+        .apply(AuthoringRequest::new(
+            SnapshotGeneration::initial(),
+            [SavedDocument::new(
+                key("main.recite"),
+                ":: start tags=[one, \"two\"]\n",
+            )],
+            [],
+        ))
+        .expect("source accepted");
+    let metadata = &kernel.snapshot().documents()[0].summary().metadata()[0];
+    assert_eq!(metadata.value_element_spans().len(), 2);
+    assert!(matches!(metadata.value(), MetadataValue::Array(values) if values.len() == 2));
+}
+
+#[test]
+fn projection_enumeration_is_explicit_and_typed() {
+    let kernel = fixture();
+    let QueryResult::Ready(candidates) = kernel.snapshot().projection_candidates("hud") else {
+        panic!("known projector is available");
+    };
+    assert!(candidates.iter().any(|candidate| {
+        candidate.name() == "hud"
+            && candidate.kind() == CompletionCandidateKind::ProjectionProjector
+    }));
+    assert!(matches!(
+        kernel.snapshot().projection_candidates("missing"),
+        QueryResult::NoMatch
+    ));
+}

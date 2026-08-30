@@ -6,6 +6,7 @@ pub enum SymbolIdentity {
     Source(SourceId),
     MetadataKey(String),
     Function(String),
+    Schema(String),
 }
 #[derive(Clone, Copy, Debug, Eq, PartialEq)]
 #[non_exhaustive]
@@ -16,6 +17,7 @@ pub enum SymbolKind {
     Metadata,
     ConditionFunction,
     EffectFunction,
+    Schema,
 }
 #[derive(Clone, Copy, Debug, Eq, PartialEq)]
 #[non_exhaustive]

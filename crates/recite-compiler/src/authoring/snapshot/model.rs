@@ -51,7 +51,7 @@ impl DocumentMetadata {
         self.participation
     }
     #[must_use]
-    pub const fn is_complete(&self) -> bool {
+    pub const fn is_ast_complete(&self) -> bool {
         self.participation.ast_structure().is_complete()
     }
 }

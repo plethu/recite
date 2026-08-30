@@ -68,15 +68,28 @@ pub(super) fn symbol_locations(
             span: metadata.key_span()?.clone(),
         })
     }));
-    locations.extend(summary.metadata().iter().filter_map(|metadata| {
-        Some(SymbolLocation {
-            document: key.clone(),
-            identity: SymbolIdentity::MetadataKey(metadata.key().to_owned()),
-            kind: SymbolKind::Metadata,
-            role: SymbolRole::Annotation,
-            span: metadata.value_span()?.clone(),
-        })
-    }));
+    for metadata in summary.metadata() {
+        let element_spans = metadata.value_element_spans();
+        if element_spans.is_empty() {
+            if let Some(span) = metadata.value_span() {
+                locations.push(SymbolLocation {
+                    document: key.clone(),
+                    identity: SymbolIdentity::MetadataKey(metadata.key().to_owned()),
+                    kind: SymbolKind::Metadata,
+                    role: SymbolRole::Annotation,
+                    span: span.clone(),
+                });
+            }
+        } else {
+            locations.extend(element_spans.iter().cloned().map(|span| SymbolLocation {
+                document: key.clone(),
+                identity: SymbolIdentity::MetadataKey(metadata.key().to_owned()),
+                kind: SymbolKind::Metadata,
+                role: SymbolRole::Annotation,
+                span,
+            }));
+        }
+    }
     locations.extend(
         summary
             .condition_functions()
@@ -123,6 +136,7 @@ fn symbol_kind_order(kind: SymbolKind) -> u8 {
         SymbolKind::Metadata => 3,
         SymbolKind::ConditionFunction => 4,
         SymbolKind::EffectFunction => 5,
+        SymbolKind::Schema => 6,
     }
 }
 fn format_identity(identity: &SymbolIdentity) -> String {
@@ -131,5 +145,6 @@ fn format_identity(identity: &SymbolIdentity) -> String {
         SymbolIdentity::Source(id) => format!("source:{id:?}"),
         SymbolIdentity::MetadataKey(key) => format!("metadata:{key}"),
         SymbolIdentity::Function(name) => format!("function:{name}"),
+        SymbolIdentity::Schema(name) => format!("schema:{name}"),
     }
 }

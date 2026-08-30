@@ -65,13 +65,13 @@ pub mod bench_support;
 pub use authoring::{
     AnalysisDelta, AuthoringError, AuthoringKernel, AuthoringRequest, AuthoringSnapshot,
     AuthoringSummary, BlockDefinitionSummary, BlockReferenceSummary, CompletionCandidate,
-    CompletionCandidateDetail, CompletionCandidateKind, CompletionContext, CompletionItem,
-    DiagnosticCollection, DiagnosticIter, DocumentDelta, DocumentLayer, DocumentMetadata,
-    DocumentSnapshot, DocumentVersion, FunctionReferenceKind, FunctionReferenceSummary, HoverInfo,
-    MetadataScalar, MetadataSummary, MetadataValue, MetadataValueKind, NavigationResult,
-    OpenDocument, QueryClass, QueryResult, QueryUnavailableReason, SavedDocument, SemanticFact,
-    SnapshotGeneration, StableIdKind, StableIdSummary, SymbolIdentity, SymbolKind, SymbolLocation,
-    SymbolQueryOptions, SymbolRole,
+    CompletionCandidateDetail, CompletionCandidateKind, CompletionItem, DiagnosticCollection,
+    DiagnosticIter, DocumentDelta, DocumentLayer, DocumentMetadata, DocumentSnapshot,
+    DocumentVersion, FunctionReferenceKind, FunctionReferenceSummary, HoverInfo, MetadataScalar,
+    MetadataSummary, MetadataValue, MetadataValueKind, NavigationResult, OpenDocument, QueryClass,
+    QueryResult, QueryUnavailableReason, SavedDocument, SemanticFact, SnapshotGeneration,
+    StableIdKind, StableIdSummary, SymbolIdentity, SymbolKind, SymbolLocation, SymbolQueryOptions,
+    SymbolRole,
 };
 pub use compile::{
     CompileError, CompileInput, CompileOptions, CompileReport, CompiledAssetOutput, compile_inputs,

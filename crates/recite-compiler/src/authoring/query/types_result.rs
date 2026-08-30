@@ -6,11 +6,33 @@ use super::symbols::SymbolLocation;
 #[non_exhaustive]
 pub enum QueryResult<T> {
     Ready(T),
-    Partial(T),
-    Unavailable(QueryUnavailableReason),
+    Partial {
+        value: T,
+        unavailable: Vec<QueryUnavailableReason>,
+    },
+    Unavailable(Vec<QueryUnavailableReason>),
     NoMatch,
 }
-#[derive(Clone, Copy, Debug, Eq, PartialEq)]
+impl<T> QueryResult<T> {
+    pub(crate) fn partial(value: T, mut unavailable: Vec<QueryUnavailableReason>) -> Self {
+        unavailable.sort();
+        unavailable.dedup();
+        Self::Partial { value, unavailable }
+    }
+
+    pub(crate) fn unavailable(reason: QueryUnavailableReason) -> Self {
+        Self::Unavailable(vec![reason])
+    }
+
+    #[must_use]
+    pub fn unavailable_reasons(&self) -> &[QueryUnavailableReason] {
+        match self {
+            Self::Partial { unavailable, .. } | Self::Unavailable(unavailable) => unavailable,
+            Self::Ready(_) | Self::NoMatch => &[],
+        }
+    }
+}
+#[derive(Clone, Copy, Debug, Eq, Ord, PartialEq, PartialOrd)]
 #[non_exhaustive]
 pub enum QueryClass {
     Diagnostics,
@@ -22,7 +44,7 @@ pub enum QueryClass {
     EffectFunctions,
     Schema,
 }
-#[derive(Clone, Copy, Debug, Eq, PartialEq)]
+#[derive(Clone, Copy, Debug, Eq, Ord, PartialEq, PartialOrd)]
 #[non_exhaustive]
 pub enum QueryUnavailableReason {
     Incomplete(QueryClass),

@@ -103,6 +103,7 @@ pub struct MetadataSummary {
     pub(super) source_span: Option<SourceSpan>,
     pub(super) key_span: Option<SourceSpan>,
     pub(super) value_span: Option<SourceSpan>,
+    pub(super) value_element_spans: Vec<SourceSpan>,
     pub(super) value: MetadataValue,
 }
 
@@ -126,6 +127,10 @@ impl MetadataSummary {
     #[must_use]
     pub fn value(&self) -> &MetadataValue {
         &self.value
+    }
+    #[must_use]
+    pub fn value_element_spans(&self) -> &[SourceSpan] {
+        &self.value_element_spans
     }
 }
 

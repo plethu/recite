@@ -32,7 +32,7 @@ impl AuthoringSnapshot {
             return QueryResult::NoMatch;
         };
         if !document.participation().block_references().is_complete() {
-            return QueryResult::Unavailable(QueryUnavailableReason::Incomplete(
+            return QueryResult::unavailable(QueryUnavailableReason::Incomplete(
                 QueryClass::BlockReferences,
             ));
         }
@@ -76,11 +76,16 @@ impl AuthoringSnapshot {
             }
         }
         if incomplete_targets && items.is_empty() {
-            QueryResult::Unavailable(QueryUnavailableReason::Incomplete(
+            QueryResult::unavailable(QueryUnavailableReason::Incomplete(
                 QueryClass::BlockDefinitions,
             ))
         } else if incomplete_targets {
-            QueryResult::Partial(items)
+            QueryResult::partial(
+                items,
+                vec![QueryUnavailableReason::Incomplete(
+                    QueryClass::BlockDefinitions,
+                )],
+            )
         } else if items.is_empty() {
             QueryResult::NoMatch
         } else {

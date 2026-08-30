@@ -72,14 +72,19 @@ impl AuthoringSnapshot {
             _ => NavigationResult::Ambiguous(declarations),
         };
         if incomplete_targets {
-            return QueryResult::Unavailable(QueryUnavailableReason::Incomplete(
+            return QueryResult::unavailable(QueryUnavailableReason::Incomplete(
                 QueryClass::BlockDefinitions,
             ));
         }
         if document.participation().block_references().is_complete() {
             QueryResult::Ready(result)
         } else {
-            QueryResult::Partial(result)
+            QueryResult::partial(
+                result,
+                vec![QueryUnavailableReason::Incomplete(
+                    QueryClass::BlockReferences,
+                )],
+            )
         }
     }
 }

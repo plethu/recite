@@ -1,53 +1,58 @@
 use recite_core::{DocumentKey, SourcePosition};
 
 use super::super::snapshot::AuthoringSnapshot;
+use super::context;
 use super::symbols::{contains, symbol_locations};
 use super::types::{
-    CompletionContext, HoverInfo, QueryResult, SemanticFact, SymbolIdentity, SymbolQueryOptions,
-    SymbolRole,
+    HoverInfo, QueryClass, QueryResult, QueryUnavailableReason, SemanticFact, SymbolIdentity,
+    SymbolKind, SymbolQueryOptions, SymbolRole,
 };
 
 impl AuthoringSnapshot {
-    /// Returns typed schema facts for a caller-selected hover context.
-    #[must_use]
-    pub fn hover_context(
-        &self,
-        key: &DocumentKey,
-        position: SourcePosition,
-        context: CompletionContext,
-    ) -> QueryResult<Vec<SemanticFact>> {
-        match self.complete(key, position, context) {
-            QueryResult::Ready(candidates) => QueryResult::Ready(
-                candidates
-                    .into_iter()
-                    .map(|candidate| SemanticFact::SchemaCandidate {
-                        name: candidate.name().to_owned(),
-                        kind: candidate.kind(),
-                        detail: candidate.detail().clone(),
-                    })
-                    .collect(),
-            ),
-            QueryResult::Partial(candidates) => QueryResult::Partial(
-                candidates
-                    .into_iter()
-                    .map(|candidate| SemanticFact::SchemaCandidate {
-                        name: candidate.name().to_owned(),
-                        kind: candidate.kind(),
-                        detail: candidate.detail().clone(),
-                    })
-                    .collect(),
-            ),
-            QueryResult::Unavailable(reason) => QueryResult::Unavailable(reason),
-            QueryResult::NoMatch => QueryResult::NoMatch,
-        }
-    }
-
     /// Returns typed facts for the symbol at a source position.
     #[must_use]
     pub fn hover(&self, key: &DocumentKey, position: SourcePosition) -> QueryResult<HoverInfo> {
         let Some(document) = self.document(key) else {
             return QueryResult::NoMatch;
         };
+        if context::at(key, document.source_text(), position).is_some() {
+            let completion = self.complete(key, position);
+            if let Some((name, span)) = context::token_at(key, document.source_text(), position) {
+                let candidate = match &completion {
+                    QueryResult::Ready(candidates)
+                    | QueryResult::Partial {
+                        value: candidates, ..
+                    } => candidates.iter().find(|candidate| candidate.name() == name),
+                    QueryResult::Unavailable(_) | QueryResult::NoMatch => None,
+                };
+                if let Some(candidate) = candidate {
+                    let location = super::types::SymbolLocation {
+                        document: key.clone(),
+                        identity: SymbolIdentity::Schema(name),
+                        kind: SymbolKind::Schema,
+                        role: SymbolRole::Annotation,
+                        span,
+                    };
+                    let info = HoverInfo {
+                        location,
+                        facts: vec![SemanticFact::SchemaCandidate {
+                            name: candidate.name().to_owned(),
+                            kind: candidate.kind(),
+                            detail: candidate.detail().clone(),
+                        }],
+                    };
+                    return match completion {
+                        QueryResult::Partial { unavailable, .. } => QueryResult::Partial {
+                            value: info,
+                            unavailable,
+                        },
+                        QueryResult::Ready(_) => QueryResult::Ready(info),
+                        QueryResult::Unavailable(reasons) => QueryResult::Unavailable(reasons),
+                        QueryResult::NoMatch => QueryResult::NoMatch,
+                    };
+                }
+            }
+        }
         let locations = symbol_locations(key, document, SymbolQueryOptions::default());
         let Some(location) = locations
             .into_iter()
@@ -69,6 +74,10 @@ impl AuthoringSnapshot {
                         || metadata
                             .value_span()
                             .is_some_and(|span| span == location.span())
+                        || metadata
+                            .value_element_spans()
+                            .iter()
+                            .any(|span| span == location.span())
                 })
                 .map(|metadata| vec![SemanticFact::MetadataValue(metadata.value().clone())])
                 .unwrap_or_default(),
@@ -89,7 +98,8 @@ impl AuthoringSnapshot {
                     .unwrap_or_default(),
                 SymbolIdentity::Block(_)
                 | SymbolIdentity::Source(_)
-                | SymbolIdentity::MetadataKey(_) => Vec::new(),
+                | SymbolIdentity::MetadataKey(_)
+                | SymbolIdentity::Schema(_) => Vec::new(),
             },
         };
         let complete = match location.kind() {
@@ -109,12 +119,25 @@ impl AuthoringSnapshot {
             super::types::SymbolKind::EffectFunction => {
                 document.participation().effect_functions().is_complete()
             }
+            super::types::SymbolKind::Schema => self.schema.is_some(),
         };
+        let symbol_kind = location.kind();
         let info = HoverInfo { location, facts };
         if complete {
             QueryResult::Ready(info)
         } else {
-            QueryResult::Partial(info)
+            QueryResult::partial(
+                info,
+                vec![QueryUnavailableReason::Incomplete(match symbol_kind {
+                    super::types::SymbolKind::Block => QueryClass::BlockDefinitions,
+                    super::types::SymbolKind::BlockReference => QueryClass::BlockReferences,
+                    super::types::SymbolKind::StableId => QueryClass::StableIds,
+                    super::types::SymbolKind::Metadata => QueryClass::Metadata,
+                    super::types::SymbolKind::ConditionFunction => QueryClass::ConditionFunctions,
+                    super::types::SymbolKind::EffectFunction => QueryClass::EffectFunctions,
+                    super::types::SymbolKind::Schema => QueryClass::Schema,
+                })],
+            )
         }
     }
 }

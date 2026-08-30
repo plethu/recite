@@ -1,5 +1,5 @@
 use super::super::super::summary::MetadataValueKind;
-use recite_core::{DocumentKey, SourceSpan};
+use recite_core::{SchemaTypeRef, SourceSpan};
 
 #[derive(Clone, Debug, PartialEq)]
 #[non_exhaustive]
@@ -30,19 +30,6 @@ impl CompletionItem {
 
 #[derive(Clone, Debug, Eq, PartialEq)]
 #[non_exhaustive]
-pub enum CompletionContext {
-    Blocks { document: Option<DocumentKey> },
-    Speakers,
-    MetadataKeys,
-    MetadataValues { key: String },
-    Conditions,
-    Effects,
-    AvailabilityReasons,
-    ProjectionQueries,
-}
-
-#[derive(Clone, Debug, Eq, PartialEq)]
-#[non_exhaustive]
 pub struct CompletionCandidate {
     name: String,
     kind: CompletionCandidateKind,
@@ -60,13 +47,33 @@ pub enum CompletionCandidateKind {
     Effect,
     AvailabilityReason,
     ProjectionQuery,
+    ProjectionProjector,
+    ProjectionInput,
+    ProjectionQueryResult,
+    ProjectionOutput,
+    ProjectionLabel,
 }
 #[derive(Clone, Debug, Eq, PartialEq)]
 #[non_exhaustive]
 pub enum CompletionCandidateDetail {
     None,
     Type(MetadataValueKind),
+    SchemaType(SchemaTypeRef),
+    Speaker {
+        display_name: Option<String>,
+    },
+    Metadata {
+        type_ref: SchemaTypeRef,
+        domain: Option<String>,
+    },
     Parameters(usize),
+    AvailabilityReason {
+        template: String,
+        parameters: usize,
+    },
+    Projection {
+        parameters: usize,
+    },
 }
 impl CompletionCandidate {
     pub(crate) fn new(
