@@ -1,7 +1,7 @@
 use lsp_types::{CompletionItem, CompletionItemKind, CompletionResponse, Documentation, Position};
 use recite_compiler::{
     AuthoringSnapshot, CompletionCandidate, CompletionCandidateDetail, CompletionCandidateKind,
-    QueryResult, SymbolIdentity, SymbolQueryOptions, SymbolRole,
+    CompletionSiteKind, QueryResult, SymbolIdentity, SymbolQueryOptions, SymbolRole,
 };
 use recite_core::{DocumentKey, ProjectSchema};
 use recite_ui::{MsgId, UiCatalog};
@@ -40,19 +40,18 @@ pub(super) fn completion(
         .iter()
         .filter_map(|candidate| completion_item(candidate, text, schema, catalog))
         .collect::<Vec<_>>();
-    if is_unqualified_block_site(text, position) {
+    let unqualified_block_site =
+        snapshot
+            .completion_site(key, source_position)
+            .is_some_and(|site| {
+                site.kind() == CompletionSiteKind::Block && site.block_target().is_none()
+            });
+    if unqualified_block_site {
         extend_project_block_items(snapshot, &mut items, catalog);
     }
     items.sort_by(|left, right| left.label.cmp(&right.label));
     items.dedup_by(|left, right| left.label == right.label);
     Some(CompletionResponse::Array(items))
-}
-
-fn is_unqualified_block_site(text: &str, position: Position) -> bool {
-    super::line_prefix(text, position).is_some_and(|prefix| {
-        let trimmed = prefix.trim_start();
-        trimmed.starts_with("->") && !trimmed.contains("::")
-    })
 }
 
 fn extend_project_block_items(

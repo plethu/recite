@@ -7,11 +7,14 @@ use recite_compiler::{
     MetadataValue, QueryResult, SavedDocument, SemanticFact, SnapshotGeneration,
 };
 use recite_core::{
-    ConditionDefinition, DocumentKey, FlatMetadataDomain, MetadataDefinition,
-    MetadataDomainDefinition, MetadataTarget, ProjectSchema, ProjectionQueryFunctionDefinition,
-    SchemaPresentationProjectorDefinition, SchemaProjectionSelector, SchemaTypeRef, SourcePosition,
-    SpeakerDefinition,
+    AvailabilityReasonDefinition, ConditionDefinition, DocumentKey, FlatMetadataDomain,
+    MetadataDefinition, MetadataDomainDefinition, MetadataTarget, ProjectSchema,
+    ProjectionQueryFunctionDefinition, SchemaPresentationProjectorDefinition,
+    SchemaProjectionSelector, SchemaTypeRef, SourcePosition, SpeakerDefinition,
 };
+
+#[path = "authoring_source_queries/typed.rs"]
+mod typed_queries;
 
 fn key(value: &str) -> DocumentKey {
     DocumentKey::new(value).expect("valid document key")
@@ -35,6 +38,14 @@ fn fixture() -> AuthoringKernel {
             params: Vec::new(),
             returns: recite_core::ConditionReturnType::Bool,
             availability_reason: None,
+        },
+    );
+    schema.availability_reasons.insert(
+        recite_core::AvailabilityReasonId::new("innkeeper_trust_hint").expect("reason ID"),
+        AvailabilityReasonDefinition {
+            template: "Trust is too low.".to_owned(),
+            params: Vec::new(),
+            origin: None,
         },
     );
     schema.metadata.insert(
@@ -128,7 +139,7 @@ fn completion_derives_site_from_source_and_cursor() {
             .end
             .as_ref()
             .map(|end| end.column()),
-        Some(12)
+        Some(11)
     );
 }
 

@@ -16,7 +16,6 @@ pub(crate) use items::{
 };
 
 #[derive(Clone, Debug)]
-#[allow(dead_code)]
 pub(crate) struct FileSummary {
     pub(crate) identity: FileIdentity,
     pub(crate) version: Option<i32>,

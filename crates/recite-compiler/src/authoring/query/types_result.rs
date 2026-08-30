@@ -1,7 +1,7 @@
 use super::super::super::summary::{FunctionReferenceKind, MetadataValue};
 use super::completion::{CompletionCandidateDetail, CompletionCandidateKind};
 use super::symbols::SymbolLocation;
-use recite_core::{ProjectionOutputTarget, SchemaTypeRef};
+use recite_core::{DocumentKey, ProjectionOutputTarget, SchemaTypeRef, SourceSpan};
 
 #[derive(Clone, Debug, PartialEq)]
 #[non_exhaustive]
@@ -83,6 +83,73 @@ pub enum SemanticFact {
         value: String,
         detail: MetadataValueDetail,
     },
+    /// A source clause marker whose syntax and range were parsed by the
+    /// compiler.  Hosts only choose the localised explanation.
+    Clause {
+        kind: ClauseKind,
+    },
+    /// A schema-backed availability reason assignment parsed from source.
+    AvailabilityReason {
+        name: String,
+        template: String,
+        parameters: usize,
+    },
+}
+
+#[derive(Clone, Copy, Debug, Eq, PartialEq)]
+#[non_exhaustive]
+pub enum ClauseKind {
+    Requires,
+    If,
+}
+
+#[derive(Clone, Copy, Debug, Eq, PartialEq)]
+#[non_exhaustive]
+pub enum CompletionSiteKind {
+    Block,
+    Speaker,
+    MetadataKey,
+    MetadataValue,
+    Condition,
+    Effect,
+    AvailabilityReason,
+}
+
+#[derive(Clone, Debug, PartialEq)]
+#[non_exhaustive]
+pub struct CompletionSite {
+    kind: CompletionSiteKind,
+    span: SourceSpan,
+    block_target: Option<DocumentKey>,
+}
+
+impl CompletionSite {
+    pub(crate) fn new(
+        kind: CompletionSiteKind,
+        span: SourceSpan,
+        block_target: Option<DocumentKey>,
+    ) -> Self {
+        Self {
+            kind,
+            span,
+            block_target,
+        }
+    }
+
+    #[must_use]
+    pub const fn kind(&self) -> CompletionSiteKind {
+        self.kind
+    }
+
+    #[must_use]
+    pub fn span(&self) -> &SourceSpan {
+        &self.span
+    }
+
+    #[must_use]
+    pub fn block_target(&self) -> Option<&DocumentKey> {
+        self.block_target.as_ref()
+    }
 }
 
 #[derive(Clone, Debug, PartialEq)]

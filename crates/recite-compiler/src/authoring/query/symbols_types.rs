@@ -1,4 +1,6 @@
 use recite_core::{DocumentKey, SourceId, SourceSpan};
+
+use super::result::ClauseKind;
 #[derive(Clone, Debug, PartialEq)]
 #[non_exhaustive]
 pub enum SymbolIdentity {
@@ -7,6 +9,7 @@ pub enum SymbolIdentity {
     MetadataKey(String),
     Function(String),
     Schema(String),
+    Clause(ClauseKind),
 }
 #[derive(Clone, Copy, Debug, Eq, PartialEq)]
 #[non_exhaustive]
@@ -18,6 +21,7 @@ pub enum SymbolKind {
     ConditionFunction,
     EffectFunction,
     Schema,
+    Clause,
 }
 #[derive(Clone, Copy, Debug, Eq, PartialEq)]
 #[non_exhaustive]

@@ -7,6 +7,7 @@ mod config_registry;
 mod diagnostics;
 mod lifecycle;
 mod navigation;
+mod navigation_corrections;
 mod position;
 mod project_indexes;
 #[path = "tests/protocol_registry/tests.rs"]

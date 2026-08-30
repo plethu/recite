@@ -150,6 +150,7 @@ fn symbol_kind_order(kind: SymbolKind) -> u8 {
         SymbolKind::ConditionFunction => 4,
         SymbolKind::EffectFunction => 5,
         SymbolKind::Schema => 6,
+        SymbolKind::Clause => 7,
     }
 }
 fn identity_order(left: &SymbolIdentity) -> (u8, &str, &str) {
@@ -162,5 +163,13 @@ fn identity_order(left: &SymbolIdentity) -> (u8, &str, &str) {
         SymbolIdentity::MetadataKey(key) => (5, key, ""),
         SymbolIdentity::Function(name) => (6, name, ""),
         SymbolIdentity::Schema(name) => (7, name, ""),
+        SymbolIdentity::Clause(kind) => (8, clause_name(*kind), ""),
+    }
+}
+
+fn clause_name(kind: super::types::ClauseKind) -> &'static str {
+    match kind {
+        super::types::ClauseKind::Requires => "requires",
+        super::types::ClauseKind::If => "if",
     }
 }

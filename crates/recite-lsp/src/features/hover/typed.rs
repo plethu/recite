@@ -1,6 +1,6 @@
 use lsp_types::Hover;
 use recite_compiler::{
-    AuthoringSnapshot, FunctionReferenceKind, HoverInfo, SemanticFact, SymbolIdentity,
+    AuthoringSnapshot, ClauseKind, FunctionReferenceKind, HoverInfo, SemanticFact, SymbolIdentity,
 };
 use recite_core::{DocumentKey, ProjectSchema};
 use recite_ui::{MsgId, UiArg, UiArgs, UiCatalog};
@@ -104,6 +104,14 @@ pub(super) fn typed_hover(
                 _ => None,
             }
         }
+        SymbolIdentity::Clause(kind) => {
+            let message = match kind {
+                ClauseKind::Requires => MsgId::LspHoverRequires,
+                ClauseKind::If => MsgId::LspHoverIf,
+                _ => return None,
+            };
+            Some(hover_response(&catalog.text(message), range))
+        }
         SymbolIdentity::Source(_) => None,
         SymbolIdentity::Schema(name) => {
             let schema = schema?;
@@ -117,6 +125,13 @@ pub(super) fn typed_hover(
                 SemanticFact::SchemaSymbol { kind, .. } => {
                     Some(schema_symbol_hover(name, range, kind, schema, catalog))
                 }
+                SemanticFact::AvailabilityReason { .. } => Some(schema_symbol_hover(
+                    name,
+                    range,
+                    &recite_compiler::SemanticSymbolKind::AvailabilityReason,
+                    schema,
+                    catalog,
+                )),
                 _ => None,
             })?
         }

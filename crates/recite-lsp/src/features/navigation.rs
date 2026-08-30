@@ -44,12 +44,12 @@ pub(crate) fn references(
     snapshot: &AuthoringSnapshot,
     documents: &[NavigationDocument<'_>],
 ) -> Option<Vec<Location>> {
+    let QueryResult::Ready(NavigationResult::Unique(_)) = snapshot.navigate(key, position) else {
+        return None;
+    };
     let result = snapshot.references(key, position, SymbolQueryOptions::new(include_declaration));
     let locations = match result {
-        QueryResult::Ready(locations)
-        | QueryResult::Partial {
-            value: locations, ..
-        } => locations,
+        QueryResult::Ready(locations) => locations,
         QueryResult::NoMatch | QueryResult::Unavailable(_) => return None,
         _ => return None,
     };
@@ -58,9 +58,7 @@ pub(crate) fn references(
     let mut declarations = Vec::new();
     let mut references = Vec::new();
     for symbol in locations {
-        let Some(location) = location_for_symbol(&symbol, documents) else {
-            continue;
-        };
+        let location = location_for_symbol(&symbol, documents)?;
         if symbol.role() == SymbolRole::Definition {
             declarations.push(location);
         } else {
@@ -78,6 +76,12 @@ pub(crate) fn prepare_rename(
 ) -> Option<PrepareRenameResponse> {
     let symbol = block_symbol(key, position, snapshot)?;
     unique_navigation(key, position, snapshot)?;
+    if !matches!(
+        snapshot.references(key, position, SymbolQueryOptions::default()),
+        QueryResult::Ready(_)
+    ) {
+        return None;
+    }
     let range = span_for_symbol(&symbol, snapshot)?;
     Some(PrepareRenameResponse::RangeWithPlaceholder {
         range,
@@ -98,14 +102,15 @@ pub(crate) fn rename(
     if !is_block_symbol(new_name) {
         return None;
     }
-    block_symbol(key, position, snapshot)?;
-    unique_navigation(key, position, snapshot)?;
+    let block = block_symbol(key, position, snapshot)?;
+    let destination = unique_navigation(key, position, snapshot)?;
+    let old_name = block_name(&block)?;
+    if destination_has_collision(snapshot, &destination, old_name, new_name) {
+        return None;
+    }
     let result = snapshot.references(key, position, SymbolQueryOptions::default());
     let locations = match result {
-        QueryResult::Ready(locations)
-        | QueryResult::Partial {
-            value: locations, ..
-        } => locations,
+        QueryResult::Ready(locations) => locations,
         QueryResult::NoMatch | QueryResult::Unavailable(_) => return None,
         _ => return None,
     };
@@ -118,12 +123,9 @@ pub(crate) fn rename(
 
     let mut changes = Vec::<(Uri, Vec<TextEdit>)>::new();
     for location in locations {
-        let Some(document) = documents
+        let document = documents
             .iter()
-            .find(|document| document.key == location.document())
-        else {
-            continue;
-        };
+            .find(|document| document.key == location.document())?;
         push_change(
             &mut changes,
             document.uri.clone(),
@@ -186,11 +188,7 @@ fn unique_navigation(
 ) -> Option<SymbolLocation> {
     let result = snapshot.navigate(key, position);
     match result {
-        QueryResult::Ready(NavigationResult::Unique(symbol))
-        | QueryResult::Partial {
-            value: NavigationResult::Unique(symbol),
-            ..
-        } => Some(symbol),
+        QueryResult::Ready(NavigationResult::Unique(symbol)) => Some(symbol),
         QueryResult::Ready(NavigationResult::Missing)
         | QueryResult::Ready(NavigationResult::Ambiguous(_))
         | QueryResult::Ready(NavigationResult::Unsupported)
@@ -199,6 +197,26 @@ fn unique_navigation(
         | QueryResult::NoMatch
         | _ => None,
     }
+}
+
+fn destination_has_collision(
+    snapshot: &AuthoringSnapshot,
+    destination: &SymbolLocation,
+    old_name: &str,
+    new_name: &str,
+) -> bool {
+    if old_name == new_name {
+        return false;
+    }
+    let QueryResult::Ready(symbols) =
+        snapshot.symbols(destination.document(), SymbolQueryOptions::default())
+    else {
+        return true;
+    };
+    symbols.into_iter().any(|symbol| {
+        symbol.role() == SymbolRole::Definition
+            && matches!(symbol.identity(), SymbolIdentity::Block(name) if name.as_str() == new_name)
+    })
 }
 
 fn location_for_symbol(

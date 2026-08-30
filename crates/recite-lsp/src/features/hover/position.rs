@@ -1,23 +1,4 @@
-use lsp_types::{Hover, HoverContents, MarkupContent, MarkupKind, Position, Range};
-
-pub(super) fn find_requires_range(
-    line: &str,
-    line_index: usize,
-    byte_index: usize,
-) -> Option<Range> {
-    let start = line.find("requires=(")?;
-    let end = match line[start..].find(')') {
-        Some(relative_end) => start + relative_end + 1,
-        None => line.len(),
-    };
-    (start <= byte_index && byte_index <= end).then(|| range(line, line_index, start, end))
-}
-
-pub(super) fn find_if_range(line: &str, line_index: usize, byte_index: usize) -> Option<Range> {
-    let start = line.find(":if")?;
-    let end = start + ":if".len();
-    (start <= byte_index && byte_index <= end).then(|| range(line, line_index, start, end))
-}
+use lsp_types::{Hover, HoverContents, MarkupContent, MarkupKind, Range};
 
 pub(super) fn hover_response(value: &str, range: Range) -> Hover {
     Hover {
@@ -26,19 +7,6 @@ pub(super) fn hover_response(value: &str, range: Range) -> Hover {
             value: value.to_owned(),
         }),
         range: Some(range),
-    }
-}
-
-fn range(text_line: &str, line: usize, start: usize, end: usize) -> Range {
-    Range {
-        start: Position {
-            line: u32::try_from(line).unwrap_or(u32::MAX),
-            character: utf16_units_for_byte_index(text_line, start),
-        },
-        end: Position {
-            line: u32::try_from(line).unwrap_or(u32::MAX),
-            character: utf16_units_for_byte_index(text_line, end),
-        },
     }
 }
 
@@ -54,14 +22,4 @@ pub(crate) fn byte_index_for_utf16_character(line: &str, character: u32) -> Opti
         }
     }
     (utf16_units == character).then_some(line.len())
-}
-
-fn utf16_units_for_byte_index(line: &str, byte_index: usize) -> u32 {
-    line.get(..byte_index)
-        .unwrap_or(line)
-        .chars()
-        .map(char::len_utf16)
-        .fold(0_u32, |total, width| {
-            total.saturating_add(u32::try_from(width).unwrap_or(u32::MAX))
-        })
 }

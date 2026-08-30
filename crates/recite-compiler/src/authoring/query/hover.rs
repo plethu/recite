@@ -1,4 +1,4 @@
-use recite_core::{DocumentKey, SourcePosition, SourceSpan};
+use recite_core::{DocumentKey, SourcePosition};
 
 use super::super::snapshot::AuthoringSnapshot;
 use super::context;
@@ -20,7 +20,13 @@ impl AuthoringSnapshot {
             .iter()
             .any(|location| contains(location.span(), position));
         if !has_source_symbol {
-            if context::at(key, document.source_text(), position).is_some() {
+            if let Some(site) = context::at(key, document.source_text(), position) {
+                if let Some((kind, span)) = site.clause() {
+                    return QueryResult::Ready(super::hover_reason::clause_hover(key, kind, span));
+                }
+                if let context::Site::AvailabilityReasons { value, token } = site {
+                    return self.availability_reason_hover(key, value, token);
+                }
                 let completion = self.complete(key, position);
                 if let Some((name, span)) = context::token_at(key, document.source_text(), position)
                 {
@@ -31,11 +37,7 @@ impl AuthoringSnapshot {
                         } => candidates.iter().find(|candidate| candidate.name() == name),
                         QueryResult::Unavailable(_) | QueryResult::NoMatch => None,
                     };
-                    if let Some(candidate) = candidate
-                        && (candidate.kind()
-                            != super::types::CompletionCandidateKind::AvailabilityReason
-                            || !cursor_inside_token(position, &span))
-                    {
+                    if let Some(candidate) = candidate {
                         let location = super::types::SymbolLocation {
                             document: key.clone(),
                             identity: SymbolIdentity::Schema(name),
@@ -148,7 +150,8 @@ impl AuthoringSnapshot {
                 SymbolIdentity::Block(_)
                 | SymbolIdentity::Source(_)
                 | SymbolIdentity::MetadataKey(_)
-                | SymbolIdentity::Schema(_) => (Vec::new(), None),
+                | SymbolIdentity::Schema(_)
+                | SymbolIdentity::Clause(_) => (Vec::new(), None),
             },
         };
         let complete = match location.kind() {
@@ -169,6 +172,7 @@ impl AuthoringSnapshot {
                 document.participation().effect_functions().is_complete()
             }
             super::types::SymbolKind::Schema => self.schema.is_some(),
+            super::types::SymbolKind::Clause => true,
         };
         let symbol_kind = location.kind();
         let info = HoverInfo {
@@ -189,13 +193,9 @@ impl AuthoringSnapshot {
                     super::types::SymbolKind::ConditionFunction => QueryClass::ConditionFunctions,
                     super::types::SymbolKind::EffectFunction => QueryClass::EffectFunctions,
                     super::types::SymbolKind::Schema => QueryClass::Schema,
+                    super::types::SymbolKind::Clause => QueryClass::Diagnostics,
                 })],
             )
         }
     }
-}
-
-fn cursor_inside_token(position: SourcePosition, span: &SourceSpan) -> bool {
-    span.end
-        .is_some_and(|end| span.start < position && position < end)
 }

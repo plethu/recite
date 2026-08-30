@@ -64,14 +64,15 @@ pub mod bench_support;
 
 pub use authoring::{
     AnalysisDelta, AuthoringError, AuthoringKernel, AuthoringRequest, AuthoringSnapshot,
-    AuthoringSummary, BlockDefinitionSummary, BlockReferenceSummary, CompletionCandidate,
-    CompletionCandidateDetail, CompletionCandidateKind, CompletionItem, DiagnosticCollection,
-    DiagnosticIter, DocumentDelta, DocumentLayer, DocumentMetadata, DocumentSnapshot,
-    DocumentVersion, FunctionReferenceKind, FunctionReferenceSummary, HoverInfo, MetadataScalar,
-    MetadataSummary, MetadataValue, MetadataValueDetail, MetadataValueKind, NavigationResult,
-    OpenDocument, QueryClass, QueryResult, QueryUnavailableReason, SavedDocument, SemanticFact,
-    SemanticSymbolKind, SnapshotGeneration, StableIdKind, StableIdSummary, SymbolIdentity,
-    SymbolKind, SymbolLocation, SymbolQueryOptions, SymbolRole,
+    AuthoringSummary, BlockDefinitionSummary, BlockReferenceSummary, ClauseKind,
+    CompletionCandidate, CompletionCandidateDetail, CompletionCandidateKind, CompletionItem,
+    CompletionSite, CompletionSiteKind, DiagnosticCollection, DiagnosticIter, DocumentDelta,
+    DocumentLayer, DocumentMetadata, DocumentSnapshot, DocumentVersion, FunctionReferenceKind,
+    FunctionReferenceSummary, HoverInfo, MetadataScalar, MetadataSummary, MetadataValue,
+    MetadataValueDetail, MetadataValueKind, NavigationResult, OpenDocument, QueryClass,
+    QueryResult, QueryUnavailableReason, SavedDocument, SemanticFact, SemanticSymbolKind,
+    SnapshotGeneration, StableIdKind, StableIdSummary, SymbolIdentity, SymbolKind, SymbolLocation,
+    SymbolQueryOptions, SymbolRole,
 };
 pub use compile::{
     CompileError, CompileInput, CompileOptions, CompileReport, CompiledAssetOutput, compile_inputs,

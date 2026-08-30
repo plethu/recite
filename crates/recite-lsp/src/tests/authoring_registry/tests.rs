@@ -303,3 +303,18 @@ fn rename_updates_only_block_symbols() {
 fn rename_rejects_non_block_symbols_and_invalid_names() {
     super::navigation::rename_rejects_non_block_symbols_and_invalid_names();
 }
+
+#[test]
+fn rename_rejects_local_and_qualified_block_collisions() {
+    super::navigation_corrections::rename_rejects_local_and_qualified_block_collisions();
+}
+
+#[test]
+fn references_require_unique_navigation() {
+    super::navigation_corrections::references_require_unique_navigation();
+}
+
+#[test]
+fn typed_clause_and_schema_ranges_exclude_delimiters() {
+    super::navigation_corrections::typed_clause_and_schema_ranges_exclude_delimiters();
+}

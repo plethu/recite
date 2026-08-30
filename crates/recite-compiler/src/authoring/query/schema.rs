@@ -62,9 +62,11 @@ pub(super) fn complete_site(
             &mut unavailable,
             &mut candidates,
         ),
-        Site::Conditions(_) => metadata::condition_candidates(schema, kind, &span, &mut candidates),
+        Site::Conditions { .. } => {
+            metadata::condition_candidates(schema, kind, &span, &mut candidates)
+        }
         Site::Effects(_) => metadata::effect_candidates(schema, kind, &span, &mut candidates),
-        Site::AvailabilityReasons(_) => {
+        Site::AvailabilityReasons { .. } => {
             metadata::reason_candidates(schema, kind, &span, &mut candidates)
         }
     }
@@ -151,10 +153,10 @@ fn site_span_kind(site: &Site) -> (SourceSpan, CompletionCandidateKind) {
         Site::MetadataValue { token, .. } => {
             (token.clone(), CompletionCandidateKind::MetadataValue)
         }
-        Site::Conditions(span) => (span.clone(), CompletionCandidateKind::Condition),
+        Site::Conditions { span, .. } => (span.clone(), CompletionCandidateKind::Condition),
         Site::Effects(span) => (span.clone(), CompletionCandidateKind::Effect),
-        Site::AvailabilityReasons(span) => {
-            (span.clone(), CompletionCandidateKind::AvailabilityReason)
+        Site::AvailabilityReasons { token, .. } => {
+            (token.clone(), CompletionCandidateKind::AvailabilityReason)
         }
     }
 }

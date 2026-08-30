@@ -1,5 +1,10 @@
 use recite_core::{DocumentKey, MetadataTarget, SourcePosition, SourceSpan};
 
+use super::types::{ClauseKind, CompletionSite, CompletionSiteKind};
+
+mod position;
+use position::{assignment_span, byte_at_column, line_at, span, token_span};
+
 #[derive(Clone, Debug, Eq, PartialEq)]
 pub(super) enum Site {
     Blocks {
@@ -17,9 +22,59 @@ pub(super) enum Site {
         token: SourceSpan,
         target: MetadataTarget,
     },
-    Conditions(SourceSpan),
+    Conditions {
+        span: SourceSpan,
+        clause: Option<(ClauseKind, SourceSpan)>,
+    },
     Effects(SourceSpan),
-    AvailabilityReasons(SourceSpan),
+    AvailabilityReasons {
+        value: String,
+        token: SourceSpan,
+    },
+}
+
+impl Site {
+    pub(super) fn completion_site(&self) -> CompletionSite {
+        match self {
+            Self::Blocks { target, token } => {
+                CompletionSite::new(CompletionSiteKind::Block, token.clone(), target.clone())
+            }
+            Self::Speakers(span) => {
+                CompletionSite::new(CompletionSiteKind::Speaker, span.clone(), None)
+            }
+            Self::MetadataKey { span, .. } => {
+                CompletionSite::new(CompletionSiteKind::MetadataKey, span.clone(), None)
+            }
+            Self::MetadataValue { token, .. } => {
+                CompletionSite::new(CompletionSiteKind::MetadataValue, token.clone(), None)
+            }
+            Self::Conditions { span, .. } => {
+                CompletionSite::new(CompletionSiteKind::Condition, span.clone(), None)
+            }
+            Self::Effects(span) => {
+                CompletionSite::new(CompletionSiteKind::Effect, span.clone(), None)
+            }
+            Self::AvailabilityReasons { token, .. } => {
+                CompletionSite::new(CompletionSiteKind::AvailabilityReason, token.clone(), None)
+            }
+        }
+    }
+
+    pub(super) fn clause(&self) -> Option<(ClauseKind, SourceSpan)> {
+        match self {
+            Self::Conditions {
+                clause: Some(clause),
+                ..
+            } => Some(clause.clone()),
+            Self::Blocks { .. }
+            | Self::Speakers(_)
+            | Self::MetadataKey { .. }
+            | Self::MetadataValue { .. }
+            | Self::Conditions { clause: None, .. }
+            | Self::Effects(_)
+            | Self::AvailabilityReasons { .. } => None,
+        }
+    }
 }
 
 pub(super) fn at(key: &DocumentKey, text: &str, position: SourcePosition) -> Option<Site> {
@@ -28,6 +83,8 @@ pub(super) fn at(key: &DocumentKey, text: &str, position: SourcePosition) -> Opt
     let prefix = &line[..cursor];
     let trimmed = prefix.trim_start();
     let trim_offset = prefix.len() - trimmed.len();
+    let line_trimmed = line.trim_start();
+    let line_trim_offset = line.len() - line_trimmed.len();
 
     if trimmed.starts_with("->") {
         let mut start = trim_offset + 2;
@@ -48,34 +105,48 @@ pub(super) fn at(key: &DocumentKey, text: &str, position: SourcePosition) -> Opt
         return Some(Site::Blocks { target, token });
     }
     if trimmed.starts_with('?')
-        && let Some(assignment) = assignment_at(line, cursor)
+        && let Some(assignment) = assignment_covering(line, cursor)
     {
         if assignment.key == "requires" {
-            return Some(Site::Conditions(token_span(
-                key,
-                text,
-                line,
-                line_start,
-                assignment.value_start,
-                cursor,
-            )));
+            let clause = assignment_span(key, text, line, line_start, assignment);
+            return Some(Site::Conditions {
+                span: token_span(key, text, line, line_start, assignment.value_start, cursor),
+                clause: Some((ClauseKind::Requires, clause)),
+            });
         }
         if assignment.key == "reason" {
-            return Some(Site::AvailabilityReasons(token_span(
-                key,
-                text,
-                line,
-                line_start,
-                assignment.value_start,
-                cursor,
-            )));
+            return Some(Site::AvailabilityReasons {
+                value: assignment.value.to_owned(),
+                token: span(
+                    key,
+                    text,
+                    line_start + assignment.value_start,
+                    line_start + assignment.end,
+                ),
+            });
         }
     }
-    if trimmed.starts_with(":if ") || trimmed.starts_with(":match ") {
-        let start = trim_offset + trimmed.find(' ').map_or(trimmed.len(), |index| index + 1);
-        return Some(Site::Conditions(token_span(
-            key, text, line, line_start, start, cursor,
-        )));
+    if line_trimmed.starts_with(":if ") || line_trimmed.starts_with(":match ") {
+        let start = line_trim_offset
+            + line_trimmed
+                .find(' ')
+                .map_or(line_trimmed.len(), |index| index + 1);
+        let clause =
+            (line_trimmed.starts_with(":if ") && cursor <= line_trim_offset + 3).then(|| {
+                (
+                    ClauseKind::If,
+                    span(
+                        key,
+                        text,
+                        line_start + line_trim_offset,
+                        line_start + line_trim_offset + 3,
+                    ),
+                )
+            });
+        return Some(Site::Conditions {
+            span: token_span(key, text, line, line_start, start, cursor),
+            clause,
+        });
     }
     if trimmed.starts_with("!") {
         let start = trim_offset + 1;
@@ -114,6 +185,17 @@ pub(super) fn at(key: &DocumentKey, text: &str, position: SourcePosition) -> Opt
 
 fn assignment_at(line: &str, cursor: usize) -> Option<recite_parser::MetadataAssignment<'_>> {
     recite_parser::metadata_assignment_at(line, cursor)
+}
+
+fn assignment_covering(line: &str, cursor: usize) -> Option<recite_parser::MetadataAssignment<'_>> {
+    recite_parser::metadata_assignments(line)
+        .into_iter()
+        .find(|assignment| {
+            let key_start = assignment
+                .value_start
+                .saturating_sub(assignment.key.len() + 1);
+            key_start <= cursor && cursor <= assignment.end
+        })
 }
 
 fn metadata_target(line: &str) -> MetadataTarget {
@@ -155,72 +237,4 @@ pub(super) fn token_at(
         line[start..end].to_owned(),
         span(key, text, line_start + start, line_start + end),
     ))
-}
-
-fn line_at(text: &str, line_number: u32) -> Option<(&str, usize)> {
-    let mut offset = 0;
-    for (index, line) in text.split_inclusive('\n').enumerate() {
-        if u32::try_from(index + 1).ok()? == line_number {
-            let line = line.strip_suffix('\n').unwrap_or(line);
-            return Some((line.strip_suffix('\r').unwrap_or(line), offset));
-        }
-        offset += line.len();
-    }
-    if u32::try_from(text.split('\n').count()).ok()? == line_number {
-        return Some((text.rsplit('\n').next().unwrap_or_default(), offset));
-    }
-    None
-}
-
-fn byte_at_column(line: &str, column: u32) -> usize {
-    line.char_indices()
-        .nth(column.saturating_sub(1) as usize)
-        .map_or(line.len(), |(index, _)| index)
-}
-
-fn span(key: &DocumentKey, text: &str, start: usize, end: usize) -> SourceSpan {
-    SourceSpan::new(
-        key.as_str(),
-        position(text, start),
-        Some(position(text, end)),
-    )
-}
-
-fn token_span(
-    key: &DocumentKey,
-    text: &str,
-    line: &str,
-    line_start: usize,
-    start: usize,
-    cursor: usize,
-) -> SourceSpan {
-    let mut token_start = cursor;
-    while token_start > start {
-        let (index, character) = line[..token_start]
-            .char_indices()
-            .next_back()
-            .unwrap_or((start, ' '));
-        if !(character.is_alphanumeric() || matches!(character, '_' | '.' | '-')) {
-            break;
-        }
-        token_start = index;
-    }
-    span(key, text, line_start + token_start, line_start + cursor)
-}
-
-fn position(text: &str, offset: usize) -> SourcePosition {
-    let mut line = 1u32;
-    let mut column = 1u32;
-    for character in text[..offset.min(text.len())].chars() {
-        if character == '\n' {
-            line += 1;
-            column = 1;
-        } else {
-            column += 1;
-        }
-    }
-    let Ok(position) = SourcePosition::new(line, column) else {
-        unreachable!("computed source position exceeded the typed range")
-    };
-    position
 }
