@@ -17,7 +17,6 @@ const SCHEMA_LOAD_ERROR: DiagnosticCode = DiagnosticCode::new_static("RECITE_SCH
 pub(crate) struct SchemaIndex {
     uri: Option<Uri>,
     path: Option<PathBuf>,
-    #[allow(dead_code)]
     summary: Option<SchemaSummary>,
     schema: Option<ProjectSchema>,
     diagnostics: Vec<Diagnostic>,
@@ -65,7 +64,6 @@ impl SchemaIndex {
         }
     }
 
-    #[allow(dead_code)]
     pub(crate) fn summary(&self) -> Option<&SchemaSummary> {
         self.summary.as_ref()
     }
@@ -95,7 +93,7 @@ impl SchemaIndex {
         Some(crate::features::SchemaCodeActionDocument {
             uri: self.uri.as_ref()?,
             text: self.text.as_deref()?,
-            summary: self.summary.as_ref()?,
+            summary: self.summary()?,
             version: None,
         })
     }
