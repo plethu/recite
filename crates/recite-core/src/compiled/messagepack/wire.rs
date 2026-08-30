@@ -1,8 +1,8 @@
 //! MessagePack v0 row decoders.
 //!
 //! The `Msg*` types here are the decode half of the v0 wire format; their
-//! field order and arity must match the encoder mirrors in
-//! `crates/recite-compiler/src/wire/messagepack.rs`, the arity constants in
+//! field order and arity must match the canonical encoder in
+//! `crate::compiled::messagepack::encode`, the arity constants in
 //! `crate::compiled::wire`, and the field tables in
 //! `docs/recite-production-spec.md` §12.2. Update all of them together; the
 //! tag-surface round-trip and golden wire-byte tests in

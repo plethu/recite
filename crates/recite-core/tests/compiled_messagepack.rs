@@ -1,6 +1,10 @@
 #![cfg(test)]
 
-use recite_core::{CompiledAssetDecodeError, decode_compiled_dialogue_messagepack};
+use recite_core::{
+    BlockIndex, COMPILED_ASSET_FORMAT_VERSION_V0, COMPILER_COMPATIBILITY_VERSION_V0,
+    CompiledAssetDecodeError, CompiledAssetEncodeError, canonical_compiled_dialogue_fingerprint,
+    decode_compiled_dialogue_messagepack, encode_compiled_dialogue_messagepack,
+};
 
 mod support;
 use support::*;
@@ -18,6 +22,46 @@ fn decode_rejects_unexpected_top_level_array_length() {
     let error = decode_compiled_dialogue_messagepack(&bytes).expect_err("arity is rejected");
 
     assert!(matches!(error, CompiledAssetDecodeError::MalformedAsset(_)));
+}
+
+#[test]
+fn encode_rejects_unsupported_headers_and_invalid_dialogues() {
+    let bytes = rmp_serde::to_vec(&valid_wire_asset()).expect("test wire encodes");
+    let mut unsupported =
+        decode_compiled_dialogue_messagepack(&bytes).expect("valid asset decodes");
+    unsupported.header.format_version = COMPILED_ASSET_FORMAT_VERSION_V0 + 1;
+    assert!(matches!(
+        encode_compiled_dialogue_messagepack(&unsupported),
+        Err(CompiledAssetEncodeError::UnsupportedFormat {
+            format_version,
+            compiler_compatibility_version
+        }) if format_version == COMPILED_ASSET_FORMAT_VERSION_V0 + 1
+            && compiler_compatibility_version == COMPILER_COMPATIBILITY_VERSION_V0
+    ));
+
+    unsupported.header.format_version = COMPILED_ASSET_FORMAT_VERSION_V0;
+    unsupported.header.compiler_compatibility_version = COMPILER_COMPATIBILITY_VERSION_V0 + 1;
+    assert!(matches!(
+        encode_compiled_dialogue_messagepack(&unsupported),
+        Err(CompiledAssetEncodeError::UnsupportedFormat {
+            format_version,
+            compiler_compatibility_version
+        }) if format_version == COMPILED_ASSET_FORMAT_VERSION_V0
+            && compiler_compatibility_version == COMPILER_COMPATIBILITY_VERSION_V0 + 1
+    ));
+
+    let mut invalid = decode_compiled_dialogue_messagepack(&bytes).expect("valid asset decodes");
+    invalid.default_block = BlockIndex::new(1);
+    assert!(matches!(
+        encode_compiled_dialogue_messagepack(&invalid),
+        Err(CompiledAssetEncodeError::InvalidDialogue(reason))
+            if reason.contains("default block")
+    ));
+    assert!(matches!(
+        canonical_compiled_dialogue_fingerprint(&invalid),
+        Err(CompiledAssetEncodeError::InvalidDialogue(reason))
+            if reason.contains("default block")
+    ));
 }
 
 #[test]

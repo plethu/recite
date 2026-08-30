@@ -85,6 +85,7 @@ fn full_payload_fingerprint_changes_for_representative_compiled_tables() -> Resu
 
     let mut line = asset.dialogue.clone();
     line.lines[0].source_text.push('!');
+    line.lines[0].authored_source_text.push('!');
     assert_ne!(
         original,
         canonical_compiled_dialogue_fingerprint(&line).map_err(|error| error.to_string())?
@@ -92,6 +93,7 @@ fn full_payload_fingerprint_changes_for_representative_compiled_tables() -> Resu
 
     let mut choice = asset.dialogue.clone();
     choice.choices[0].source_text.push('!');
+    choice.choices[0].authored_source_text.push('!');
     assert_ne!(
         original,
         canonical_compiled_dialogue_fingerprint(&choice).map_err(|error| error.to_string())?

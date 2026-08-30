@@ -1,8 +1,8 @@
 //! MessagePack v0 tagged-value decoders.
 //!
 //! This module is the runtime/core decode half of the same wire format encoded
-//! by `crates/recite-compiler/src/wire/messagepack/tags.rs`. Both halves are
-//! keyed by the shared `V0_*` tag constants defined in
+//! by `crate::compiled::messagepack::encode::tags`. Both halves are keyed by
+//! the shared `V0_*` tag constants defined in
 //! `crate::compiled::wire`; add, remove, or renumber tags in all three places
 //! together. From the first tagged release onward, tag changes also require
 //! the versioning policy in `docs/recite-production-spec.md` §12.2.

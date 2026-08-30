@@ -6,6 +6,7 @@ use recite_runtime::{PreviewEvent, PreviewInputs, PreviewOptions, PreviewSession
 
 fn changed(mut asset: recite_core::CompiledDialogue) -> recite_core::CompiledDialogue {
     asset.lines[0].source_text.push_str(" changed");
+    asset.lines[0].authored_source_text.push_str(" changed");
     asset
 }
 
@@ -77,4 +78,24 @@ fn restarting_old_asset_does_not_clear_replacement_requirement() {
     );
     assert_eq!(preview.state().restart_required(), replacement.as_ref());
     assert!(matches!(preview.state().status(), PreviewStatus::Ready));
+}
+
+#[test]
+fn malformed_candidate_revision_fails_without_mutating_restart_state() {
+    let active = asset(":: start default\n> line@12345678901234567890\n  Line.\n-> END\n");
+    let mut malformed = active.clone();
+    malformed.default_block = recite_core::BlockIndex::new(99);
+    let mut preview = PreviewSession::new(&active, None, PreviewOptions::new()).expect("start");
+    let before = preview.state().clone();
+
+    let error = preview
+        .assess_asset(&malformed)
+        .expect_err("malformed candidate must be refused");
+
+    assert!(matches!(
+        error,
+        recite_runtime::PreviewError::AssetRevisionFailed { .. }
+    ));
+    assert_eq!(preview.state(), &before);
+    assert!(preview.state().restart_required().is_none());
 }

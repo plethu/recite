@@ -18,12 +18,27 @@ use wire::MsgDialogue;
 #[non_exhaustive]
 #[derive(Clone, Debug, Eq, PartialEq)]
 pub enum CompiledAssetEncodeError {
+    UnsupportedFormat {
+        format_version: u16,
+        compiler_compatibility_version: u16,
+    },
+    InvalidDialogue(String),
     MessagePack(String),
 }
 
 impl fmt::Display for CompiledAssetEncodeError {
     fn fmt(&self, formatter: &mut fmt::Formatter<'_>) -> fmt::Result {
         match self {
+            Self::UnsupportedFormat {
+                format_version,
+                compiler_compatibility_version,
+            } => write!(
+                formatter,
+                "unsupported compiled asset format {format_version} with compatibility version {compiler_compatibility_version}"
+            ),
+            Self::InvalidDialogue(reason) => {
+                write!(formatter, "invalid compiled dialogue: {reason}")
+            }
             Self::MessagePack(reason) => {
                 write!(formatter, "failed to encode MessagePack: {reason}")
             }
@@ -100,6 +115,15 @@ pub fn decode_compiled_dialogue_messagepack(
 pub fn encode_compiled_dialogue_messagepack(
     dialogue: &CompiledDialogue,
 ) -> Result<Vec<u8>, CompiledAssetEncodeError> {
+    if dialogue.header.format_version != COMPILED_ASSET_FORMAT_VERSION_V0
+        || dialogue.header.compiler_compatibility_version != COMPILER_COMPATIBILITY_VERSION_V0
+    {
+        return Err(CompiledAssetEncodeError::UnsupportedFormat {
+            format_version: dialogue.header.format_version,
+            compiler_compatibility_version: dialogue.header.compiler_compatibility_version,
+        });
+    }
+    validate_dialogue(dialogue).map_err(CompiledAssetEncodeError::from)?;
     encode::serialize_messagepack(dialogue)
 }
 
@@ -117,6 +141,21 @@ fn malformed(reason: String) -> CompiledAssetDecodeError {
 impl From<CompiledValueError> for CompiledAssetDecodeError {
     fn from(error: CompiledValueError) -> Self {
         malformed(error.to_string())
+    }
+}
+
+impl From<CompiledAssetDecodeError> for CompiledAssetEncodeError {
+    fn from(error: CompiledAssetDecodeError) -> Self {
+        match error {
+            CompiledAssetDecodeError::UnsupportedFormat {
+                format_version,
+                compiler_compatibility_version,
+            } => Self::UnsupportedFormat {
+                format_version,
+                compiler_compatibility_version,
+            },
+            CompiledAssetDecodeError::MalformedAsset(reason) => Self::InvalidDialogue(reason),
+        }
     }
 }
 

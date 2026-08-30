@@ -95,6 +95,7 @@ fn asset_derived_mismatch_rejects_even_with_a_consistent_projection() {
     let snapshot = source.snapshot().expect("snapshot");
     let mut changed = asset.clone();
     changed.lines[0].source_text = "Changed.".to_owned();
+    changed.lines[0].authored_source_text = "Changed.".to_owned();
     let mut receiver =
         PreviewSession::new(&changed, None, PreviewOptions::new()).expect("receiver");
     let before = receiver.session().clone();

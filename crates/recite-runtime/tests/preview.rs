@@ -93,6 +93,7 @@ fn restart_is_explicit_and_changed_payload_is_not_swapped_silently() {
 
     let mut candidate = asset.clone();
     candidate.lines[0].source_text = "A different payload.".to_owned();
+    candidate.lines[0].authored_source_text = "A different payload.".to_owned();
     let before = preview.session().clone();
     let changed = preview.assess_asset(&candidate).expect("assess");
     assert!(matches!(

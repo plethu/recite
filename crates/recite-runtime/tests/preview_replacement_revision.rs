@@ -90,5 +90,6 @@ fn revision_asset(source_revision: &str, line: &str) -> recite_core::CompiledDia
         ":: start default\n> line@12345678901234567890\n  {line}\n-> END\n"
     ));
     asset.lines[0].source_text = format!("{line} {source_revision}");
+    asset.lines[0].authored_source_text = format!("{line} {source_revision}");
     asset
 }
