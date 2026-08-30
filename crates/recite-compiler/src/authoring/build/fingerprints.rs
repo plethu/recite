@@ -1,4 +1,4 @@
-use super::identity::{BuildInput, BuildInputKind};
+use super::identity::{BuildInput, BuildInputAuthority, BuildInputKind};
 use recite_core::{
     COMPILER_COMPATIBILITY_VERSION_V0, ContentFingerprint, DocumentKey, ProjectSchema,
     SchemaFingerprint,
@@ -10,6 +10,7 @@ use recite_core::{
 pub struct BuildInputFingerprint {
     key: DocumentKey,
     kind: BuildInputKind,
+    authority: BuildInputAuthority,
     fingerprint: ContentFingerprint,
 }
 impl BuildInputFingerprint {
@@ -17,6 +18,7 @@ impl BuildInputFingerprint {
         Self {
             key: input.key.clone(),
             kind: input.kind.clone(),
+            authority: input.authority,
             fingerprint: input.fingerprint.clone(),
         }
     }
@@ -27,6 +29,10 @@ impl BuildInputFingerprint {
     #[must_use]
     pub const fn kind(&self) -> &BuildInputKind {
         &self.kind
+    }
+    #[must_use]
+    pub const fn authority(&self) -> BuildInputAuthority {
+        self.authority
     }
     #[must_use]
     pub const fn fingerprint(&self) -> &ContentFingerprint {
@@ -48,7 +54,12 @@ impl BuildFingerprintSet {
             .iter()
             .map(BuildInputFingerprint::from_input)
             .collect::<Vec<_>>();
-        entries.sort_by(|left, right| left.key.cmp(&right.key).then(left.kind.cmp(&right.kind)));
+        entries.sort_by(|left, right| {
+            left.key
+                .cmp(&right.key)
+                .then(left.kind.cmp(&right.kind))
+                .then(left.authority.cmp(&right.authority))
+        });
         Self {
             inputs: entries,
             schema: inputs
