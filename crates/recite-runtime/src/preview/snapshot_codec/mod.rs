@@ -8,6 +8,8 @@ mod projection;
 mod wire;
 
 use recite_core::{BlockId, ChoiceId, LocaleId};
+use serde::Deserialize;
+use std::io::Cursor;
 
 use super::model::{
     PreviewConditionRequestId, PreviewError, PreviewSnapshot, PreviewState, PreviewStatus,
@@ -26,10 +28,26 @@ impl PreviewSnapshot {
 
     /// Decodes a snapshot without accepting event or transcript wire shapes.
     pub fn decode(bytes: &[u8]) -> Result<Self, PreviewError> {
-        let wire: SnapshotWire =
-            rmp_serde::from_slice(bytes).map_err(|error| PreviewError::SnapshotDecodeFailed {
+        let mut cursor = Cursor::new(bytes);
+        let mut deserializer = rmp_serde::Deserializer::new(&mut cursor);
+        let wire = SnapshotWire::deserialize(&mut deserializer).map_err(|error| {
+            PreviewError::SnapshotDecodeFailed {
                 reason: error.to_string(),
-            })?;
+            }
+        })?;
+        if cursor.position() as usize != bytes.len() {
+            return Err(PreviewError::SnapshotDecodeFailed {
+                reason: format!(
+                    "preview snapshot has {} trailing bytes",
+                    bytes.len() - cursor.position() as usize
+                ),
+            });
+        }
+        if wire.version != super::model::PREVIEW_SNAPSHOT_FORMAT_VERSION {
+            return Err(PreviewError::UnsupportedSnapshotFormat {
+                snapshot_format_version: wire.version,
+            });
+        }
         wire.into_snapshot()
     }
 }

@@ -2,7 +2,6 @@ use recite_core::{BlockId, ChoiceId, CompiledAssetId, EffectId, LocaleId};
 
 use crate::{DialogueChoice, DialogueEffectRequest, DialogueEvent, DialogueLine, EffectAck};
 use crate::{LocalizedLookupTrace, PluralLineTrace};
-use std::collections::BTreeMap;
 
 use super::api::{PreviewConditionRequest, PreviewConditionResult, PreviewPromptIdentity};
 use super::errors::PreviewError;
@@ -107,8 +106,8 @@ pub struct PreviewTrace {
     locale: Option<LocaleId>,
     variant: Option<String>,
     events: Vec<PreviewEvent>,
-    plural_lines: BTreeMap<String, PluralLineTrace>,
-    localized_lookups: BTreeMap<String, LocalizedLookupTrace>,
+    plural_lines: Vec<(String, PluralLineTrace)>,
+    localized_lookups: Vec<LocalizedLookupTrace>,
 }
 
 impl PreviewTrace {
@@ -117,8 +116,8 @@ impl PreviewTrace {
             locale,
             variant,
             events: Vec::new(),
-            plural_lines: BTreeMap::new(),
-            localized_lookups: BTreeMap::new(),
+            plural_lines: Vec::new(),
+            localized_lookups: Vec::new(),
         }
     }
 
@@ -143,20 +142,23 @@ impl PreviewTrace {
 
     #[must_use]
     pub fn plural_line(&self, id: &str) -> Option<&PluralLineTrace> {
-        self.plural_lines.get(id)
+        self.plural_lines
+            .iter()
+            .rev()
+            .find(|(candidate, _)| candidate == id)
+            .map(|(_, trace)| trace)
+    }
+
+    pub fn plural_lines(&self) -> impl Iterator<Item = &(String, PluralLineTrace)> {
+        self.plural_lines.iter()
     }
 
     pub fn localized_lookups(&self) -> impl Iterator<Item = &LocalizedLookupTrace> {
-        self.localized_lookups.values()
+        self.localized_lookups.iter()
     }
 
     pub(crate) fn merge_runtime_trace(&mut self, trace: &crate::DialogueTrace) {
         self.plural_lines.extend(trace.plural_lines());
-        self.localized_lookups.extend(
-            trace
-                .localized_lookups()
-                .into_iter()
-                .map(|entry| (format!("{:?}:{}", entry.domain, entry.id), entry)),
-        );
+        self.localized_lookups.extend(trace.localized_lookups());
     }
 }

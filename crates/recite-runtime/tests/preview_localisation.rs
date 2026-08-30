@@ -152,7 +152,9 @@ fn explicit_locale_keeps_source_interpolation_and_plural_provenance() {
 
 #[test]
 fn locale_provider_failure_leaves_session_unchanged() {
-    let asset = asset(":: start default\n> hello@12345678901234567890\n  Hello.\n-> END\n");
+    let asset = asset(
+        ":: start default\n> hello@12345678901234567890 bind=(name:string=$display)\n  Hello, {name}.\n-> END\n",
+    );
     let locale = LocaleId::new("fr-FR").expect("locale");
     let provider = FrenchProvider {
         calls: Cell::new(0),
@@ -214,4 +216,41 @@ fn identical_sessions_have_identical_expected_trace_for_condition_replay() {
     assert_eq!(left_end.events(), right_end.events());
     assert_eq!(left.trace(), right.trace());
     assert_eq!(left.transcript(), right.transcript());
+}
+
+#[test]
+fn repeated_localized_occurrences_preserve_order_after_restart() {
+    let asset = asset(
+        ":: start default\n> hello@12345678901234567890 bind=(name:string=$display)\n  Hello, {name}.\n-> END\n",
+    );
+    let provider = FrenchProvider {
+        calls: Cell::new(0),
+        fail_lookup: false,
+    };
+    let mut preview = PreviewSession::new(
+        &asset,
+        None,
+        PreviewOptions::new().with_locale(LocaleId::new("fr-FR").expect("locale")),
+    )
+    .expect("start");
+    let mut values = InterpolationValues::new();
+    values.insert("display".to_owned(), ScalarValue::from("Ada"));
+    preview.step(
+        PreviewInputs::new()
+            .with_locale_provider(&provider)
+            .with_interpolation_values(&values),
+    );
+    preview.dispatch(
+        recite_runtime::PreviewCommand::Restart,
+        PreviewInputs::new(),
+    );
+    preview.step(
+        PreviewInputs::new()
+            .with_locale_provider(&provider)
+            .with_interpolation_values(&values),
+    );
+    let occurrences: Vec<_> = preview.trace().localized_lookups().collect();
+    assert_eq!(occurrences.len(), 2);
+    assert_eq!(occurrences[0].id, occurrences[1].id);
+    assert_eq!(provider.calls.get(), 2);
 }

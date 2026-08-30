@@ -1,5 +1,4 @@
 use std::cell::RefCell;
-use std::collections::BTreeMap;
 
 use crate::locale::{
     LocaleLookupAttempt, LocaleLookupOutcome, LocaleLookupProvenance, PluralResolutionAttempt,
@@ -15,9 +14,9 @@ use crate::locale::{
 /// not need to perform a second, potentially lossy lookup.
 #[derive(Default)]
 pub struct DialogueTrace {
-    localized_availability_templates: RefCell<BTreeMap<String, String>>,
-    plural_lines: RefCell<BTreeMap<String, PluralLineTrace>>,
-    localized_lookups: RefCell<BTreeMap<String, LocalizedLookupTrace>>,
+    localized_availability_templates: RefCell<Vec<(String, String)>>,
+    plural_lines: RefCell<Vec<(String, PluralLineTrace)>>,
+    localized_lookups: RefCell<Vec<LocalizedLookupTrace>>,
 }
 
 #[non_exhaustive]
@@ -61,35 +60,38 @@ impl DialogueTrace {
     pub fn localized_availability_template(&self, id: &str) -> Option<String> {
         self.localized_availability_templates
             .borrow()
-            .get(id)
-            .cloned()
+            .iter()
+            .rev()
+            .find(|(candidate, _)| candidate == id)
+            .map(|(_, template)| template.clone())
     }
 
     #[must_use]
     pub fn plural_line(&self, id: &str) -> Option<PluralLineTrace> {
-        self.plural_lines.borrow().get(id).cloned()
-    }
-
-    pub(crate) fn plural_lines(&self) -> Vec<(String, PluralLineTrace)> {
         self.plural_lines
             .borrow()
             .iter()
-            .map(|(id, trace)| (id.clone(), trace.clone()))
-            .collect()
+            .rev()
+            .find(|(candidate, _)| candidate == id)
+            .map(|(_, trace)| trace.clone())
+    }
+
+    pub(crate) fn plural_lines(&self) -> Vec<(String, PluralLineTrace)> {
+        self.plural_lines.borrow().iter().cloned().collect()
     }
 
     pub(crate) fn localized_lookups(&self) -> Vec<LocalizedLookupTrace> {
-        self.localized_lookups.borrow().values().cloned().collect()
+        self.localized_lookups.borrow().clone()
     }
 
     pub(crate) fn record_localized_availability_template(&self, id: &str, template: &str) {
         self.localized_availability_templates
             .borrow_mut()
-            .insert(id.to_owned(), template.to_owned());
+            .push((id.to_owned(), template.to_owned()));
     }
 
     pub(crate) fn record_plural_line(&self, id: &str, trace: PluralLineTrace) {
-        self.plural_lines.borrow_mut().insert(id.to_owned(), trace);
+        self.plural_lines.borrow_mut().push((id.to_owned(), trace));
     }
 
     pub(crate) fn record_localized_lookup(
@@ -114,7 +116,6 @@ impl DialogueTrace {
                 LocaleLookupOutcome::MissingEntry
             },
         };
-        let key = format!("{:?}:{}", trace.domain, trace.id);
-        self.localized_lookups.borrow_mut().insert(key, trace);
+        self.localized_lookups.borrow_mut().push(trace);
     }
 }

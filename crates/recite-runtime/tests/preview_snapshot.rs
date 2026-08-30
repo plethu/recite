@@ -23,8 +23,16 @@ fn encoded_snapshot_restores_options_block_and_condition_counter() {
         .with_variant("formal");
     let source = PreviewSession::new(&asset, Some("alternate"), options.clone()).expect("source");
     let snapshot = source.snapshot().expect("snapshot");
-    let decoded = recite_runtime::PreviewSnapshot::decode(&snapshot.encode().expect("encode"))
-        .expect("decode");
+    let encoded = snapshot.encode().expect("encode");
+    const GOLDEN_HEX: &str = "87a776657273696f6e01a773657373696f6ede0014b7736e617073686f745f666f726d61745f76657273696f6e01a861737365745f6964b86469616c6f6775652f707265766965772e72656369746563b461737365745f666f726d61745f76657273696f6e00d92461737365745f636f6d70696c65725f636f6d7061746962696c6974795f76657273696f6e00b0636f6d70696c65725f76657273696f6ea5302e302e31ad736f757263655f6d61705f6964b46469616c6f6775652f707265766965772e6d6170b2736368656d615f66696e6765727072696e74a96e6f5f736368656d61a7736f75726365739182a470617468b76469616c6f6775652f707265766965772e726563697465ab66696e6765727072696e7482a9616c676f726974686da6626c616b6533a6646967657374dc0020ccebccb53825207c2ecc9b7d2cccd753ccf5791675ccaf71cca62273186f377fccc254cc9bcc821cccfc3aad63757272656e745f626c6f636b01ad63757272656e745f72616e676582a5737461727404a36c656e02ae6e6578745f73746174656d656e7404b2636f6e74696e756174696f6e5f737461636b90ae70656e64696e675f70726f6d7074c0ae70656e64696e675f656666656374c0b770726576696f75735f70726f6d70745f63686f6963657390b773656c65637465645f63686f6963655f686973746f727990b064656665727265645f6566666563747390a66c6f63616c65a566722d4652ad74726163655f636f756e74657200a5656e646564c2ad696e697469616c5f626c6f636ba9616c7465726e617465a66c6f63616c65a566722d4652a776617269616e74a6666f726d616cb16e6578745f636f6e646974696f6e5f696400a5737461746587a861737365745f6964b86469616c6f6775652f707265766965772e72656369746563a5626c6f636ba9616c7465726e617465a66c6f63616c65a566722d4652b073656c65637465645f63686f6963657390b064656665727265645f6566666563747390b0726573746172745f7265717569726564c0a6737461747573a55265616479";
+    assert_eq!(
+        encoded
+            .iter()
+            .map(|byte| format!("{byte:02x}"))
+            .collect::<String>(),
+        GOLDEN_HEX
+    );
+    let decoded = recite_runtime::PreviewSnapshot::decode(&encoded).expect("decode");
     let mut restored = PreviewSession::new(&asset, None, PreviewOptions::new()).expect("receiver");
     restored.restore(decoded).expect("restore");
     assert_eq!(
@@ -67,4 +75,46 @@ fn encoded_snapshot_restores_options_block_and_condition_counter() {
             .answer(right_request.id(), answer, PreviewInputs::new())
             .events()
     );
+}
+
+#[test]
+fn preview_snapshot_codec_rejects_trailing_unknown_and_unsupported_data() {
+    let asset = asset(":: start default\n> line@12345678901234567890\n  Line.\n-> END\n");
+    let preview = PreviewSession::new(&asset, None, PreviewOptions::new()).expect("start");
+    let encoded = preview
+        .snapshot()
+        .expect("snapshot")
+        .encode()
+        .expect("encode");
+
+    let mut trailing = encoded.clone();
+    trailing.push(0);
+    assert!(matches!(
+        recite_runtime::PreviewSnapshot::decode(&trailing),
+        Err(recite_runtime::PreviewError::SnapshotDecodeFailed { .. })
+    ));
+
+    let mut unknown = encoded.clone();
+    unknown[0] = 0x88;
+    unknown.extend_from_slice(&[0xa7, b'u', b'n', b'k', b'n', b'o', b'w', b'n', 0xc0]);
+    assert!(matches!(
+        recite_runtime::PreviewSnapshot::decode(&unknown),
+        Err(recite_runtime::PreviewError::SnapshotDecodeFailed { .. })
+    ));
+
+    let marker = [0xa7, b'v', b'e', b'r', b's', b'i', b'o', b'n', 1];
+    let mut versioned = encoded;
+    let marker_start = versioned
+        .windows(marker.len())
+        .position(|window| window == marker)
+        .expect("version marker")
+        + marker.len()
+        - 1;
+    versioned[marker_start] = 9;
+    assert!(matches!(
+        recite_runtime::PreviewSnapshot::decode(&versioned),
+        Err(recite_runtime::PreviewError::UnsupportedSnapshotFormat {
+            snapshot_format_version: 9
+        })
+    ));
 }

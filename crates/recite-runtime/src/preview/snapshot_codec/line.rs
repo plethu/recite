@@ -158,7 +158,7 @@ impl PluralResolutionWire {
                 .attempts
                 .into_iter()
                 .map(PluralAttemptWire::into_attempt)
-                .collect(),
+                .collect::<Result<Vec<_>, _>>()?,
             matched_locale: self.matched_locale,
             matched_context: self.matched_context,
             matched_key: self.matched_key,
@@ -197,8 +197,8 @@ impl PluralAttemptWire {
         }
     }
 
-    fn into_attempt(self) -> PluralResolutionAttempt {
-        PluralResolutionAttempt {
+    fn into_attempt(self) -> Result<PluralResolutionAttempt, PreviewError> {
+        Ok(PluralResolutionAttempt {
             locale: self.locale,
             context: self.context,
             key: self.key,
@@ -211,9 +211,10 @@ impl PluralAttemptWire {
                 PluralOutcomeWire::MissingTranslation => {
                     PluralResolutionOutcome::MissingTranslation
                 }
-                _ => PluralResolutionOutcome::Matched,
+                PluralOutcomeWire::Matched => PluralResolutionOutcome::Matched,
+                _ => return Err(invalid("invalid plural attempt outcome")),
             },
-        }
+        })
     }
 }
 

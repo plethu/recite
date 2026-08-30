@@ -4,6 +4,7 @@ use serde::{Deserialize, Serialize};
 use crate::DialogueSessionSnapshot;
 
 #[derive(Clone, Debug, Deserialize, Serialize)]
+#[serde(deny_unknown_fields)]
 pub(super) struct SnapshotWire {
     pub(super) version: u16,
     pub(super) session: DialogueSessionSnapshot,
@@ -15,6 +16,7 @@ pub(super) struct SnapshotWire {
 }
 
 #[derive(Clone, Debug, Deserialize, Serialize)]
+#[serde(deny_unknown_fields)]
 pub(super) struct StateWire {
     pub(super) asset_id: String,
     pub(super) block: Option<String>,
@@ -34,12 +36,14 @@ pub(super) enum StatusWire {
 }
 
 #[derive(Clone, Debug, Deserialize, Serialize)]
+#[serde(deny_unknown_fields)]
 pub(super) struct RequirementWire {
     pub(super) active_asset: String,
     pub(super) replacement_asset: String,
 }
 
 #[derive(Clone, Debug, Deserialize, Serialize)]
+#[serde(deny_unknown_fields)]
 pub(super) struct PromptWire {
     pub(super) block: String,
     pub(super) line: Option<String>,
@@ -49,6 +53,7 @@ pub(super) struct PromptWire {
 }
 
 #[derive(Clone, Debug, Deserialize, Serialize)]
+#[serde(deny_unknown_fields)]
 pub(super) struct LineWire {
     pub(super) id: String,
     pub(super) source_text: String,
@@ -59,6 +64,7 @@ pub(super) struct LineWire {
 }
 
 #[derive(Clone, Debug, Deserialize, Serialize)]
+#[serde(deny_unknown_fields)]
 pub(super) struct MetadataWire {
     pub(super) key: String,
     pub(super) value: ValueWire,
@@ -74,6 +80,7 @@ pub(super) enum ValueWire {
 }
 
 #[derive(Clone, Debug, Deserialize, Serialize)]
+#[serde(deny_unknown_fields)]
 pub(super) struct PluralWire {
     pub(super) singular_source_text: String,
     pub(super) plural_source_text: String,
@@ -83,6 +90,7 @@ pub(super) struct PluralWire {
 }
 
 #[derive(Clone, Debug, Deserialize, Serialize)]
+#[serde(deny_unknown_fields)]
 pub(super) struct PluralResolutionWire {
     pub(super) attempts: Vec<PluralAttemptWire>,
     pub(super) matched_locale: Option<String>,
@@ -94,6 +102,7 @@ pub(super) struct PluralResolutionWire {
 }
 
 #[derive(Clone, Debug, Deserialize, Serialize)]
+#[serde(deny_unknown_fields)]
 pub(super) struct PluralAttemptWire {
     pub(super) locale: String,
     pub(super) context: String,
@@ -113,6 +122,7 @@ pub(super) enum PluralOutcomeWire {
 }
 
 #[derive(Clone, Debug, Deserialize, Serialize)]
+#[serde(deny_unknown_fields)]
 pub(super) struct ChoiceWire {
     pub(super) id: String,
     pub(super) source_text: String,

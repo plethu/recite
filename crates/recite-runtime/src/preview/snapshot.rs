@@ -54,6 +54,13 @@ impl<'asset> PreviewSession<'asset> {
         }
         let restored = restore_session(self.asset, snapshot.session().clone())
             .map_err(PreviewError::Runtime)?;
+        if snapshot.options().locale().map(LocaleId::as_str)
+            != restored.locale().map(LocaleId::as_str)
+            || snapshot.state().locale().map(LocaleId::as_str)
+                != restored.locale().map(LocaleId::as_str)
+        {
+            return Err(PreviewError::SnapshotStateMismatch);
+        }
         if !snapshot_state_matches_session(self.asset, snapshot.state(), &restored) {
             return Err(PreviewError::SnapshotStateMismatch);
         }
@@ -108,16 +115,7 @@ fn snapshot_state_matches_session(
                 .iter()
                 .map(String::as_str)
                 .collect::<Vec<_>>()
-        || state
-            .deferred_effects()
-            .iter()
-            .map(|effect| effect.id.as_str())
-            .collect::<Vec<_>>()
-            != snapshot
-                .deferred_effects
-                .iter()
-                .map(|effect| effect.id.as_str())
-                .collect::<Vec<_>>()
+        || state.deferred_effects() != session.deferred_effects()
     {
         return false;
     }
@@ -145,11 +143,19 @@ fn snapshot_state_matches_session(
                         return false;
                     };
                     prompt.identity().line() == prompt_line.as_ref()
+                        && prompt.line().is_none_or(|line| {
+                            asset
+                                .lines
+                                .iter()
+                                .find(|candidate| candidate.id == line.id)
+                                .is_some_and(|candidate| candidate.source_text == line.source_text)
+                        })
                         && prompt.identity().choices()
                             == compiled_choices
                                 .iter()
                                 .map(|choice| choice.id.clone())
                                 .collect::<Vec<_>>()
+                        && saved.choices.len() == prompt.choices().len()
                         && saved
                             .choices
                             .iter()
@@ -162,6 +168,13 @@ fn snapshot_state_matches_session(
                             .all(|(saved, choice)| {
                                 crate::session_snapshot::availability_snapshot(&choice.availability)
                                     == saved.availability
+                                    && asset
+                                        .choices
+                                        .iter()
+                                        .find(|candidate| candidate.id == choice.id)
+                                        .is_some_and(|candidate| {
+                                            candidate.source_text == choice.source_text
+                                        })
                             })
                 })
         }
