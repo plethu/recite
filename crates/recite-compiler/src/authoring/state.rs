@@ -1,4 +1,5 @@
 use std::collections::BTreeMap;
+use std::sync::Arc;
 
 use super::AuthoringSummary;
 use super::engine::{build_delta, build_documents, rebuild_analyses, validate_analyses};
@@ -80,7 +81,6 @@ pub struct AuthoringKernel {
     open: BTreeMap<DocumentKey, OpenDocument>,
     analyses: BTreeMap<DocumentKey, DocumentAnalysis>,
     snapshot: AuthoringSnapshot,
-    delta: AnalysisDelta,
     schema: Option<ProjectSchema>,
 }
 
@@ -100,7 +100,6 @@ impl AuthoringKernel {
             open: BTreeMap::new(),
             analyses: BTreeMap::new(),
             snapshot: AuthoringSnapshot::new(generation, Vec::new()),
-            delta: AnalysisDelta::new(generation, Vec::new(), Vec::new()),
             schema: None,
         }
     }
@@ -120,26 +119,24 @@ impl AuthoringKernel {
         &self.snapshot
     }
 
-    /// Returns the most recent accepted coarse metadata delta.
-    #[must_use]
-    pub const fn delta(&self) -> &AnalysisDelta {
-        &self.delta
-    }
-
     /// Replaces the complete saved and open input set transactionally.
-    pub fn apply(&mut self, request: AuthoringRequest) -> Result<(), AuthoringError> {
-        if request.expected_generation() != self.snapshot.generation() {
+    pub fn apply(&mut self, request: AuthoringRequest) -> Result<AnalysisDelta, AuthoringError> {
+        let (expected_generation, saved_documents, open_documents) = request.into_parts();
+        if expected_generation != self.snapshot.generation() {
             return Err(AuthoringError::GenerationMismatch {
-                expected: request.expected_generation(),
+                expected: expected_generation,
                 actual: self.snapshot.generation(),
             });
         }
 
-        let saved = unique_saved(request.saved_documents())?;
-        let open = unique_open(request.open_documents())?;
+        let saved = unique_saved(saved_documents)?;
+        let open = unique_open(open_documents)?;
         validate_overlay_versions(&self.open, &open)?;
         if saved == self.saved && open == self.open {
-            return Ok(());
+            return Ok(AnalysisDelta::empty(
+                self.snapshot.generation(),
+                self.snapshot.generation(),
+            ));
         }
         let generation = SnapshotGeneration(self.snapshot.generation().0.checked_add(1).ok_or(
             AuthoringError::GenerationExhausted {
@@ -156,25 +153,26 @@ impl AuthoringKernel {
             &new_effective,
         );
         let semantic = validate_analyses(&analyses, self.schema.as_ref());
-        let documents = build_documents(&new_effective, &analyses, &semantic);
+        let documents = build_documents(&new_effective, &analyses, &semantic, &self.snapshot);
         let (changed, removed) = build_delta(changed_inputs, &self.snapshot, &documents);
+        let delta = AnalysisDelta::new(self.snapshot.generation(), generation, changed, removed);
 
         self.saved = saved;
         self.open = open;
         self.analyses = analyses;
         self.snapshot = AuthoringSnapshot::new(generation, documents);
-        self.delta = AnalysisDelta::new(generation, changed, removed);
-        Ok(())
+        Ok(delta)
     }
 }
 
 #[derive(Debug, PartialEq)]
 pub(crate) struct DocumentAnalysis {
-    pub(crate) text: String,
     pub(crate) source_file: SourceFile,
-    pub(crate) parse_diagnostics: Vec<Diagnostic>,
-    pub(crate) summary: AuthoringSummary,
+    pub(crate) parse_diagnostics: Arc<[Diagnostic]>,
+    pub(crate) summary: Arc<AuthoringSummary>,
     pub(crate) participation: ValidationParticipation,
+    pub(crate) byte_len: usize,
+    pub(crate) line_count: usize,
 }
 
 #[cfg(test)]

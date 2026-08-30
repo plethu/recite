@@ -1,9 +1,10 @@
-use recite_core::{BlockId, SourceSpan};
+use recite_core::{BlockId, SourceId, SourceMetadataScalar, SourceMetadataValue, SourceSpan};
 
 #[derive(Clone, Debug, PartialEq)]
 #[non_exhaustive]
 pub struct BlockDefinitionSummary {
     pub(super) id: BlockId,
+    pub(super) id_span: SourceSpan,
     pub(super) span: SourceSpan,
 }
 
@@ -16,13 +17,19 @@ impl BlockDefinitionSummary {
     pub fn span(&self) -> &SourceSpan {
         &self.span
     }
+    #[must_use]
+    pub fn id_span(&self) -> &SourceSpan {
+        &self.id_span
+    }
 }
 
 #[derive(Clone, Debug, PartialEq)]
 #[non_exhaustive]
 pub struct BlockReferenceSummary {
     pub(super) file: Option<String>,
+    pub(super) file_span: Option<SourceSpan>,
     pub(super) block_id: BlockId,
+    pub(super) block_id_span: Option<SourceSpan>,
     pub(super) span: SourceSpan,
 }
 
@@ -34,6 +41,14 @@ impl BlockReferenceSummary {
     #[must_use]
     pub fn block_id(&self) -> &BlockId {
         &self.block_id
+    }
+    #[must_use]
+    pub fn file_span(&self) -> Option<&SourceSpan> {
+        self.file_span.as_ref()
+    }
+    #[must_use]
+    pub fn block_id_span(&self) -> Option<&SourceSpan> {
+        self.block_id_span.as_ref()
     }
     #[must_use]
     pub fn span(&self) -> &SourceSpan {
@@ -52,7 +67,9 @@ pub enum StableIdKind {
 #[non_exhaustive]
 pub struct StableIdSummary {
     pub(super) kind: StableIdKind,
-    pub(super) id: Option<String>,
+    pub(super) source_id: SourceId,
+    pub(super) source_id_span: Option<SourceSpan>,
+    pub(super) insertion_span: SourceSpan,
     pub(super) span: SourceSpan,
 }
 
@@ -62,8 +79,16 @@ impl StableIdSummary {
         self.kind
     }
     #[must_use]
-    pub fn id(&self) -> Option<&str> {
-        self.id.as_deref()
+    pub fn source_id(&self) -> &SourceId {
+        &self.source_id
+    }
+    #[must_use]
+    pub fn source_id_span(&self) -> Option<&SourceSpan> {
+        self.source_id_span.as_ref()
+    }
+    #[must_use]
+    pub fn insertion_span(&self) -> &SourceSpan {
+        &self.insertion_span
     }
     #[must_use]
     pub fn span(&self) -> &SourceSpan {
@@ -71,24 +96,14 @@ impl StableIdSummary {
     }
 }
 
-#[derive(Clone, Copy, Debug, Eq, PartialEq)]
-#[non_exhaustive]
-pub enum MetadataValueKind {
-    Symbol,
-    String,
-    Integer,
-    Float,
-    Boolean,
-    Array,
-}
-
 #[derive(Clone, Debug, PartialEq)]
 #[non_exhaustive]
 pub struct MetadataSummary {
     pub(super) key: String,
+    pub(super) source_span: Option<SourceSpan>,
     pub(super) key_span: Option<SourceSpan>,
     pub(super) value_span: Option<SourceSpan>,
-    pub(super) value_kind: MetadataValueKind,
+    pub(super) value: MetadataValue,
 }
 
 impl MetadataSummary {
@@ -101,12 +116,58 @@ impl MetadataSummary {
         self.key_span.as_ref()
     }
     #[must_use]
+    pub fn source_span(&self) -> Option<&SourceSpan> {
+        self.source_span.as_ref()
+    }
+    #[must_use]
     pub fn value_span(&self) -> Option<&SourceSpan> {
         self.value_span.as_ref()
     }
     #[must_use]
-    pub const fn value_kind(&self) -> MetadataValueKind {
-        self.value_kind
+    pub fn value(&self) -> &MetadataValue {
+        &self.value
+    }
+}
+
+/// A typed metadata value preserved from source before schema validation.
+#[derive(Clone, Debug, PartialEq)]
+#[non_exhaustive]
+pub enum MetadataValue {
+    Scalar(MetadataScalar),
+    Array(Vec<MetadataScalar>),
+}
+
+impl From<&SourceMetadataValue> for MetadataValue {
+    fn from(value: &SourceMetadataValue) -> Self {
+        match value {
+            SourceMetadataValue::Scalar(scalar) => Self::Scalar(scalar.into()),
+            SourceMetadataValue::Array(values) => {
+                Self::Array(values.iter().map(Into::into).collect())
+            }
+        }
+    }
+}
+
+/// A scalar metadata value with source-declared type preserved.
+#[derive(Clone, Debug, PartialEq)]
+#[non_exhaustive]
+pub enum MetadataScalar {
+    Symbol(String),
+    String(String),
+    Integer(i64),
+    Float(f64),
+    Boolean(bool),
+}
+
+impl From<&SourceMetadataScalar> for MetadataScalar {
+    fn from(value: &SourceMetadataScalar) -> Self {
+        match value {
+            SourceMetadataScalar::Symbol(value) => Self::Symbol(value.clone()),
+            SourceMetadataScalar::StringLiteral(value) => Self::String(value.clone()),
+            SourceMetadataScalar::Integer(value) => Self::Integer(*value),
+            SourceMetadataScalar::Float(value) => Self::Float(*value),
+            SourceMetadataScalar::Bool(value) => Self::Boolean(*value),
+        }
     }
 }
 

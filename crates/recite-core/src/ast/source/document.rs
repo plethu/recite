@@ -29,6 +29,7 @@ impl SourceFile {
 #[derive(Clone, Debug, PartialEq)]
 pub struct Block {
     pub id: BlockId,
+    pub id_span: SourceSpan,
     pub is_default: bool,
     pub default_speaker: Option<SpeakerId>,
     pub metadata: SourceMetadata,
@@ -41,12 +42,19 @@ impl Block {
     pub fn new(id: BlockId, statements: Vec<Statement>, span: SourceSpan) -> Self {
         Self {
             id,
+            id_span: span.clone(),
             is_default: false,
             default_speaker: None,
             metadata: SourceMetadata::new(),
             statements,
             span,
         }
+    }
+
+    #[must_use]
+    pub fn with_id_span(mut self, id_span: SourceSpan) -> Self {
+        self.id_span = id_span;
+        self
     }
 
     #[must_use]

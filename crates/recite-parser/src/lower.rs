@@ -2,6 +2,7 @@ mod block;
 mod body;
 mod branch;
 mod metadata;
+mod metadata_values;
 mod statement;
 
 use recite_core::{
@@ -51,6 +52,7 @@ pub(super) struct LoweredProseBody {
 #[derive(Clone, Debug)]
 pub(super) struct BlockHeader {
     pub(super) id: BlockId,
+    pub(super) id_span: SourceSpan,
     pub(super) is_default: bool,
     pub(super) default_speaker: Option<SpeakerId>,
     pub(super) metadata: SourceMetadata,
@@ -78,4 +80,19 @@ pub(super) fn header_fields<'a>(
     base_column: usize,
 ) -> Vec<HeaderField<'a>> {
     fields_after_prefix(trimmed, marker.text(), line.number, base_column).collect()
+}
+
+pub(super) fn insertion_span_after_marker(
+    path: &str,
+    line: LogicalLine<'_>,
+    marker: StatementMarker,
+) -> SourceSpan {
+    let trimmed = line.trimmed_content();
+    let rest = &trimmed[marker.text().len()..];
+    let whitespace_len = rest.len() - rest.trim_start_matches([' ', '\t']).len();
+    crate::source::span_for_line(
+        path,
+        line.number,
+        line.indent_len() + 1 + marker.text().chars().count() + whitespace_len,
+    )
 }

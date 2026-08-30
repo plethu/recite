@@ -1,116 +1,18 @@
+mod model;
+
+pub use model::{DocumentLayer, DocumentMetadata, DocumentSnapshot};
+
 use recite_core::{Diagnostic, DocumentKey};
 
-use super::{AuthoringSummary, DocumentVersion};
+use super::DocumentVersion;
 use crate::ValidationParticipation;
-
-/// Whether a snapshot document comes from saved state or an open overlay.
-#[derive(Clone, Copy, Debug, Eq, PartialEq)]
-#[non_exhaustive]
-pub enum DocumentLayer {
-    Saved,
-    Open,
-}
-
-/// Stable host-neutral metadata for one effective document.
-#[derive(Clone, Debug, Eq, PartialEq)]
-#[non_exhaustive]
-pub struct DocumentMetadata {
-    key: DocumentKey,
-    layer: DocumentLayer,
-    version: Option<DocumentVersion>,
-    byte_len: usize,
-    line_count: usize,
-    participation: ValidationParticipation,
-}
-
-impl DocumentMetadata {
-    #[must_use]
-    pub fn key(&self) -> &DocumentKey {
-        &self.key
-    }
-    #[must_use]
-    pub const fn layer(&self) -> DocumentLayer {
-        self.layer
-    }
-    #[must_use]
-    pub const fn version(&self) -> Option<DocumentVersion> {
-        self.version
-    }
-    #[must_use]
-    pub const fn byte_len(&self) -> usize {
-        self.byte_len
-    }
-    #[must_use]
-    pub const fn line_count(&self) -> usize {
-        self.line_count
-    }
-    #[must_use]
-    pub const fn participation(&self) -> ValidationParticipation {
-        self.participation
-    }
-    #[must_use]
-    pub const fn is_complete(&self) -> bool {
-        self.participation.ast_structure().is_complete()
-    }
-}
-
-/// One document and its compiler-visible analysis in an authoring snapshot.
-#[derive(Clone, Debug, PartialEq)]
-#[non_exhaustive]
-pub struct DocumentSnapshot {
-    metadata: DocumentMetadata,
-    diagnostics: Vec<Diagnostic>,
-    summary: AuthoringSummary,
-}
-
-impl DocumentSnapshot {
-    pub(crate) fn new(
-        metadata: DocumentMetadata,
-        diagnostics: Vec<Diagnostic>,
-        summary: AuthoringSummary,
-    ) -> Self {
-        Self {
-            metadata,
-            diagnostics,
-            summary,
-        }
-    }
-
-    #[must_use]
-    pub const fn metadata(&self) -> &DocumentMetadata {
-        &self.metadata
-    }
-    #[must_use]
-    pub fn key(&self) -> &DocumentKey {
-        self.metadata.key()
-    }
-    #[must_use]
-    pub const fn layer(&self) -> DocumentLayer {
-        self.metadata.layer()
-    }
-    #[must_use]
-    pub const fn version(&self) -> Option<DocumentVersion> {
-        self.metadata.version()
-    }
-    #[must_use]
-    pub const fn participation(&self) -> ValidationParticipation {
-        self.metadata.participation()
-    }
-    #[must_use]
-    pub fn diagnostics(&self) -> &[Diagnostic] {
-        &self.diagnostics
-    }
-    #[must_use]
-    pub const fn summary(&self) -> &AuthoringSummary {
-        &self.summary
-    }
-}
 
 /// Deterministically ordered view of all effective saved and open documents.
 #[derive(Clone, Debug, Default, PartialEq)]
 pub struct AuthoringSnapshot {
     generation: super::SnapshotGeneration,
     documents: Vec<DocumentSnapshot>,
+    diagnostics: Vec<Diagnostic>,
 }
 
 impl AuthoringSnapshot {
@@ -121,6 +23,10 @@ impl AuthoringSnapshot {
     ) -> Self {
         Self {
             generation,
+            diagnostics: documents
+                .iter()
+                .flat_map(|document| document.diagnostics.iter().cloned())
+                .collect(),
             documents,
         }
     }
@@ -140,11 +46,21 @@ impl AuthoringSnapshot {
             .ok()
             .map(|index| &self.documents[index])
     }
+
+    pub(super) fn diagnostic_values(&self) -> &[Diagnostic] {
+        &self.diagnostics
+    }
 }
 
 /// Coarse metadata delta produced by one accepted snapshot replacement.
+///
+/// The generation describes whole-snapshot freshness. Changed and removed
+/// entries cover input metadata only; readers should reread the snapshot when
+/// the generation changes because diagnostics may also change in unchanged
+/// documents.
 #[derive(Clone, Debug, Default, PartialEq)]
 pub struct AnalysisDelta {
+    previous_generation: super::SnapshotGeneration,
     generation: super::SnapshotGeneration,
     changed: Vec<DocumentDelta>,
     removed: Vec<DocumentDelta>,
@@ -153,15 +69,29 @@ pub struct AnalysisDelta {
 impl AnalysisDelta {
     #[must_use]
     pub(crate) fn new(
+        previous_generation: super::SnapshotGeneration,
         generation: super::SnapshotGeneration,
         changed: Vec<DocumentDelta>,
         removed: Vec<DocumentDelta>,
     ) -> Self {
         Self {
+            previous_generation,
             generation,
             changed,
             removed,
         }
+    }
+
+    pub(crate) fn empty(
+        previous_generation: super::SnapshotGeneration,
+        generation: super::SnapshotGeneration,
+    ) -> Self {
+        Self::new(previous_generation, generation, Vec::new(), Vec::new())
+    }
+
+    #[must_use]
+    pub const fn previous_generation(&self) -> super::SnapshotGeneration {
+        self.previous_generation
     }
 
     #[must_use]
@@ -222,15 +152,16 @@ pub(crate) fn metadata(
     key: DocumentKey,
     layer: DocumentLayer,
     version: Option<DocumentVersion>,
-    text: &str,
+    byte_len: usize,
+    line_count: usize,
     participation: ValidationParticipation,
 ) -> DocumentMetadata {
     DocumentMetadata {
         key,
         layer,
         version,
-        byte_len: text.len(),
-        line_count: text.lines().count(),
+        byte_len,
+        line_count,
         participation,
     }
 }

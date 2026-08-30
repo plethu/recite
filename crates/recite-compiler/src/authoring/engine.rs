@@ -1,4 +1,5 @@
 use std::collections::{BTreeMap, BTreeSet};
+use std::sync::Arc;
 
 use recite_core::{Diagnostic, ProjectSchema};
 use recite_parser::parse;
@@ -13,10 +14,16 @@ use crate::validation::{
 };
 use crate::{ValidationInput, ValidationParticipation};
 
+use std::cell::Cell;
+
+thread_local! {
+    pub(super) static ANALYZE_COUNT: Cell<usize> = const { Cell::new(0) };
+}
+
 pub(super) fn rebuild_analyses(
     mut old: BTreeMap<recite_core::DocumentKey, DocumentAnalysis>,
-    old_effective: &BTreeMap<recite_core::DocumentKey, EffectiveDocument>,
-    new_effective: &BTreeMap<recite_core::DocumentKey, EffectiveDocument>,
+    old_effective: &BTreeMap<&recite_core::DocumentKey, EffectiveDocument<'_>>,
+    new_effective: &BTreeMap<&recite_core::DocumentKey, EffectiveDocument<'_>>,
 ) -> BTreeMap<recite_core::DocumentKey, DocumentAnalysis> {
     new_effective
         .iter()
@@ -25,34 +32,64 @@ pub(super) fn rebuild_analyses(
                 .get(key)
                 .is_some_and(|old_document| old_document.text == document.text)
             {
-                match old.remove(key) {
+                match old.remove(*key) {
                     Some(analysis) => analysis,
                     None => analyze(document),
                 }
             } else {
                 analyze(document)
             };
-            (key.clone(), analysis)
+            ((*key).clone(), analysis)
         })
         .collect()
 }
 
-fn analyze(document: &EffectiveDocument) -> DocumentAnalysis {
-    let parsed = parse(document.key.as_str(), document.text.clone());
+fn analyze(document: &EffectiveDocument<'_>) -> DocumentAnalysis {
+    if cfg!(test) {
+        ANALYZE_COUNT.with(|count| count.set(count.get() + 1));
+    }
+    let parsed = parse(document.key.as_str(), document.text);
     let lowered = parsed.lower_source_file();
-    let participation = if lowered.diagnostics.is_empty() {
-        ValidationParticipation::all_complete()
-    } else {
-        ValidationParticipation::all_incomplete()
-    };
+    let participation = participation_for(&lowered.diagnostics);
     let summary = AuthoringSummary::from_source_file(&lowered.source_file);
     DocumentAnalysis {
-        text: document.text.clone(),
         source_file: lowered.source_file,
-        parse_diagnostics: lowered.diagnostics,
-        summary,
+        parse_diagnostics: lowered.diagnostics.into(),
+        summary: Arc::new(summary),
         participation,
+        byte_len: document.text.len(),
+        line_count: document.text.lines().count(),
     }
+}
+
+fn participation_for(diagnostics: &[Diagnostic]) -> ValidationParticipation {
+    diagnostics.iter().fold(
+        ValidationParticipation::all_complete(),
+        |participation, diagnostic| match diagnostic.code.as_str() {
+            "RECITE_PARSE003" | "RECITE_PARSE005" => {
+                participation.with_block_definitions(crate::ValidationCompleteness::Incomplete)
+            }
+            "RECITE_PARSE010" | "RECITE_PARSE011" => {
+                participation.with_block_references(crate::ValidationCompleteness::Incomplete)
+            }
+            "RECITE_PARSE012" => {
+                participation.with_effect_functions(crate::ValidationCompleteness::Incomplete)
+            }
+            "RECITE_PARSE013" | "RECITE_PARSE014" | "RECITE_PARSE015" | "RECITE_PARSE016"
+            | "RECITE_PARSE018" => {
+                participation.with_condition_functions(crate::ValidationCompleteness::Incomplete)
+            }
+            "RECITE_PARSE008" => {
+                participation.with_metadata(crate::ValidationCompleteness::Incomplete)
+            }
+            "RECITE_PARSE001" | "RECITE_PARSE002" | "RECITE_PARSE007" | "RECITE_PARSE017" => {
+                participation
+                    .with_ast_structure(crate::ValidationCompleteness::Incomplete)
+                    .with_block_definitions(crate::ValidationCompleteness::Incomplete)
+            }
+            _ => participation,
+        },
+    )
 }
 
 pub(super) fn validate_analyses(
@@ -79,29 +116,39 @@ pub(super) fn validate_analyses(
 }
 
 pub(super) fn build_documents(
-    effective: &BTreeMap<recite_core::DocumentKey, EffectiveDocument>,
+    effective: &BTreeMap<&recite_core::DocumentKey, EffectiveDocument<'_>>,
     analyses: &BTreeMap<recite_core::DocumentKey, DocumentAnalysis>,
     semantic: &BTreeMap<recite_core::DocumentKey, Vec<Diagnostic>>,
+    old_snapshot: &AuthoringSnapshot,
 ) -> Vec<DocumentSnapshot> {
     effective
         .iter()
         .filter_map(|(key, document)| {
-            let analysis = analyses.get(key)?;
-            let mut diagnostics = analysis.parse_diagnostics.clone();
-            if let Some(semantic) = semantic.get(key) {
-                diagnostics.extend(semantic.iter().cloned());
-            }
-            sort_diagnostics_by_source(&mut diagnostics);
-            Some(DocumentSnapshot::new(
+            let analysis = analyses.get(*key)?;
+            let diagnostics = match (semantic.get(*key), old_snapshot.document(key)) {
+                (None, Some(old)) if old.diagnostics() == analysis.parse_diagnostics.as_ref() => {
+                    Arc::clone(old.shared_diagnostics())
+                }
+                (semantic, _) => {
+                    let mut diagnostics = analysis.parse_diagnostics.to_vec();
+                    if let Some(semantic) = semantic {
+                        diagnostics.extend(semantic.iter().cloned());
+                    }
+                    sort_diagnostics_by_source(&mut diagnostics);
+                    diagnostics.into()
+                }
+            };
+            Some(DocumentSnapshot::from_shared(
                 metadata(
-                    key.clone(),
+                    (*key).clone(),
                     document.layer,
                     document.version,
-                    &analysis.text,
+                    analysis.byte_len,
+                    analysis.line_count,
                     analysis.participation,
                 ),
                 diagnostics,
-                analysis.summary.clone(),
+                Arc::clone(&analysis.summary),
             ))
         })
         .collect()
@@ -131,3 +178,6 @@ pub(super) fn build_delta(
     }
     (changed, removed)
 }
+
+#[cfg(test)]
+mod tests;

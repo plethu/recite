@@ -9,6 +9,8 @@ use super::{
 #[derive(Clone, Debug, PartialEq)]
 pub struct Choice {
     pub source_id: SourceId,
+    pub source_id_span: Option<SourceSpan>,
+    pub source_id_insertion_span: SourceSpan,
     pub id: Option<ChoiceId>,
     pub source_text: SourceText,
     pub interpolation_bindings: Vec<InterpolationBinding>,
@@ -30,6 +32,8 @@ impl Choice {
                 .and_then(|id| SourceAnchor::new(id.as_str()).ok())
                 .and_then(|anchor| SourceId::frozen("choice", anchor))
                 .unwrap_or(SourceId::Missing),
+            source_id_span: None,
+            source_id_insertion_span: span.clone(),
             id,
             source_text,
             interpolation_bindings: Vec::new(),
@@ -47,6 +51,17 @@ impl Choice {
     pub fn with_source_id(mut self, source_id: SourceId) -> Self {
         self.id = source_id.canonical_choice_id();
         self.source_id = source_id;
+        self
+    }
+
+    #[must_use]
+    pub fn with_source_id_spans(
+        mut self,
+        source_id_span: Option<SourceSpan>,
+        source_id_insertion_span: SourceSpan,
+    ) -> Self {
+        self.source_id_span = source_id_span;
+        self.source_id_insertion_span = source_id_insertion_span;
         self
     }
 

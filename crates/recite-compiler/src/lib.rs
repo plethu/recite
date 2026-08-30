@@ -64,10 +64,12 @@ pub mod bench_support;
 
 pub use authoring::{
     AnalysisDelta, AuthoringError, AuthoringKernel, AuthoringRequest, AuthoringSnapshot,
-    AuthoringSummary, BlockDefinitionSummary, BlockReferenceSummary, DocumentDelta, DocumentLayer,
-    DocumentMetadata, DocumentSnapshot, DocumentVersion, FunctionReferenceKind,
-    FunctionReferenceSummary, MetadataSummary, MetadataValueKind, OpenDocument, SavedDocument,
-    SnapshotGeneration, StableIdKind, StableIdSummary,
+    AuthoringSummary, BlockDefinitionSummary, BlockReferenceSummary, CompletionItem, DocumentDelta,
+    DocumentLayer, DocumentMetadata, DocumentSnapshot, DocumentVersion, FunctionReferenceKind,
+    FunctionReferenceSummary, HoverInfo, MetadataScalar, MetadataSummary, MetadataValue,
+    NavigationResult, OpenDocument, QueryResult, SavedDocument, SemanticFact, SnapshotGeneration,
+    StableIdKind, StableIdSummary, SymbolIdentity, SymbolKind, SymbolLocation, SymbolQueryOptions,
+    SymbolRole,
 };
 pub use compile::{
     CompileError, CompileInput, CompileOptions, CompileReport, CompiledAssetOutput, compile_inputs,

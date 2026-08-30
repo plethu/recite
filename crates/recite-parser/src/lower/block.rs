@@ -40,6 +40,7 @@ impl Lowerer<'_, '_> {
 
         let (statements, next_index) = self.lower_block_statements(header_index);
         let mut block = Block::new(header.id, statements, header.span)
+            .with_id_span(header.id_span)
             .with_default(header.is_default)
             .with_metadata(header.metadata);
         if let Some(default_speaker) = header.default_speaker {
@@ -99,6 +100,7 @@ impl Lowerer<'_, '_> {
 
         Some(BlockHeader {
             id,
+            id_span: id_field.span(self.path),
             is_default,
             default_speaker,
             metadata,

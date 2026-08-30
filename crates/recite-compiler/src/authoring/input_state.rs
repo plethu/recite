@@ -6,43 +6,35 @@ use super::input::{OpenDocument, SavedDocument};
 use super::snapshot::DocumentLayer;
 use super::state::AuthoringError;
 
-#[derive(Clone, Debug, Eq, PartialEq)]
-pub(super) struct EffectiveDocument {
-    pub(super) key: DocumentKey,
-    pub(super) text: String,
+#[derive(Clone, Copy, Debug, Eq, PartialEq)]
+pub(super) struct EffectiveDocument<'a> {
+    pub(super) key: &'a DocumentKey,
+    pub(super) text: &'a str,
     pub(super) layer: DocumentLayer,
     pub(super) version: Option<super::DocumentVersion>,
 }
 
 pub(super) fn unique_saved(
-    documents: &[SavedDocument],
+    documents: impl IntoIterator<Item = SavedDocument>,
 ) -> Result<BTreeMap<DocumentKey, SavedDocument>, AuthoringError> {
     let mut unique = BTreeMap::new();
     for document in documents {
-        if unique
-            .insert(document.key().clone(), document.clone())
-            .is_some()
-        {
-            return Err(AuthoringError::DuplicateSavedDocument {
-                key: document.key().clone(),
-            });
+        let key = document.key().clone();
+        if unique.insert(key.clone(), document).is_some() {
+            return Err(AuthoringError::DuplicateSavedDocument { key });
         }
     }
     Ok(unique)
 }
 
 pub(super) fn unique_open(
-    documents: &[OpenDocument],
+    documents: impl IntoIterator<Item = OpenDocument>,
 ) -> Result<BTreeMap<DocumentKey, OpenDocument>, AuthoringError> {
     let mut unique = BTreeMap::new();
     for document in documents {
-        if unique
-            .insert(document.key().clone(), document.clone())
-            .is_some()
-        {
-            return Err(AuthoringError::DuplicateOpenDocument {
-                key: document.key().clone(),
-            });
+        let key = document.key().clone();
+        if unique.insert(key.clone(), document).is_some() {
+            return Err(AuthoringError::DuplicateOpenDocument { key });
         }
     }
     Ok(unique)
@@ -74,18 +66,18 @@ pub(super) fn validate_overlay_versions(
     Ok(())
 }
 
-pub(super) fn effective_documents(
-    saved: &BTreeMap<DocumentKey, SavedDocument>,
-    open: &BTreeMap<DocumentKey, OpenDocument>,
-) -> BTreeMap<DocumentKey, EffectiveDocument> {
+pub(super) fn effective_documents<'a>(
+    saved: &'a BTreeMap<DocumentKey, SavedDocument>,
+    open: &'a BTreeMap<DocumentKey, OpenDocument>,
+) -> BTreeMap<&'a DocumentKey, EffectiveDocument<'a>> {
     let mut documents = saved
         .iter()
         .map(|(key, document)| {
             (
-                key.clone(),
+                key,
                 EffectiveDocument {
-                    key: key.clone(),
-                    text: document.text().to_owned(),
+                    key,
+                    text: document.text(),
                     layer: DocumentLayer::Saved,
                     version: None,
                 },
@@ -94,10 +86,10 @@ pub(super) fn effective_documents(
         .collect::<BTreeMap<_, _>>();
     for (key, document) in open {
         documents.insert(
-            key.clone(),
+            key,
             EffectiveDocument {
-                key: key.clone(),
-                text: document.text().to_owned(),
+                key,
+                text: document.text(),
                 layer: DocumentLayer::Open,
                 version: Some(document.version()),
             },

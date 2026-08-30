@@ -132,4 +132,18 @@ impl AuthoringRequest {
     pub fn open_documents(&self) -> &[OpenDocument] {
         &self.open_documents
     }
+
+    pub(crate) fn into_parts(
+        self,
+    ) -> (
+        super::SnapshotGeneration,
+        Vec<SavedDocument>,
+        Vec<OpenDocument>,
+    ) {
+        (
+            self.expected_generation,
+            self.saved_documents,
+            self.open_documents,
+        )
+    }
 }

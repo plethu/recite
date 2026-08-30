@@ -28,7 +28,9 @@ pub enum DivertTarget {
 #[derive(Clone, Debug, Eq, PartialEq)]
 pub struct BlockReference {
     pub file: Option<String>,
+    pub file_span: Option<SourceSpan>,
     pub block_id: BlockId,
+    pub block_id_span: Option<SourceSpan>,
 }
 
 impl BlockReference {
@@ -36,7 +38,9 @@ impl BlockReference {
     pub fn local(block_id: BlockId) -> Self {
         Self {
             file: None,
+            file_span: None,
             block_id,
+            block_id_span: None,
         }
     }
 
@@ -44,7 +48,16 @@ impl BlockReference {
     pub fn external(file: impl Into<String>, block_id: BlockId) -> Self {
         Self {
             file: Some(file.into()),
+            file_span: None,
             block_id,
+            block_id_span: None,
         }
+    }
+
+    #[must_use]
+    pub fn with_spans(mut self, file_span: Option<SourceSpan>, block_id_span: SourceSpan) -> Self {
+        self.file_span = file_span;
+        self.block_id_span = Some(block_id_span);
+        self
     }
 }

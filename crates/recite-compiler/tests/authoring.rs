@@ -2,9 +2,10 @@
 
 use recite_compiler::{
     AuthoringError, AuthoringKernel, AuthoringRequest, DocumentLayer, DocumentVersion,
-    OpenDocument, SavedDocument, SnapshotGeneration,
+    MetadataScalar, MetadataValue, OpenDocument, QueryResult, SavedDocument, SnapshotGeneration,
+    SymbolIdentity, SymbolKind, SymbolQueryOptions, SymbolRole,
 };
-use recite_core::DocumentKey;
+use recite_core::{DocumentKey, SourceId, SourcePosition};
 
 fn key(value: &str) -> DocumentKey {
     match DocumentKey::new(value) {
@@ -32,7 +33,7 @@ fn open(name: &str, version: i64, text: &str) -> OpenDocument {
 #[test]
 fn saved_and_overlay_inputs_are_sorted_and_overlay_wins() {
     let mut kernel = AuthoringKernel::new();
-    kernel
+    let _initial_delta = kernel
         .apply(request(
             SnapshotGeneration::initial(),
             [saved("z.recite", ":: z\n"), saved("a.recite", ":: a\n")],
@@ -54,6 +55,23 @@ fn saved_and_overlay_inputs_are_sorted_and_overlay_wins() {
         Some(-2)
     );
     assert_eq!(documents[2].metadata().byte_len(), ":: overlay\n".len());
+
+    let generation = kernel.snapshot().generation();
+    kernel
+        .apply(request(
+            generation,
+            [saved("z.recite", ":: saved\n"), saved("a.recite", ":: a\n")],
+            [],
+        ))
+        .expect("closing overlays falls back to saved inputs");
+    assert_eq!(
+        kernel
+            .snapshot()
+            .document(&key("z.recite"))
+            .map(|document| document.layer()),
+        Some(DocumentLayer::Saved)
+    );
+    assert!(kernel.snapshot().document(&key("open.recite")).is_none());
 }
 
 #[test]
@@ -66,7 +84,6 @@ fn duplicate_layers_and_versions_are_typed_and_transactional() {
     );
     kernel.apply(initial).expect("initial request accepted");
     let before = kernel.snapshot().clone();
-    let before_delta = kernel.delta().clone();
 
     let error = kernel
         .apply(request(
@@ -83,7 +100,6 @@ fn duplicate_layers_and_versions_are_typed_and_transactional() {
         AuthoringError::DuplicateSavedDocument { .. }
     ));
     assert_eq!(kernel.snapshot(), &before);
-    assert_eq!(kernel.delta(), &before_delta);
 
     let error = kernel
         .apply(request(
@@ -112,7 +128,7 @@ fn duplicate_layers_and_versions_are_typed_and_transactional() {
 #[test]
 fn equal_overlay_input_is_a_no_op_and_close_resets_lifecycle() {
     let mut kernel = AuthoringKernel::new();
-    kernel
+    let _initial_delta = kernel
         .apply(request(
             SnapshotGeneration::initial(),
             [],
@@ -120,8 +136,7 @@ fn equal_overlay_input_is_a_no_op_and_close_resets_lifecycle() {
         ))
         .expect("initial request accepted");
     let snapshot = kernel.snapshot().clone();
-    let delta = kernel.delta().clone();
-    kernel
+    let no_op_delta = kernel
         .apply(request(
             snapshot.generation(),
             [],
@@ -129,13 +144,15 @@ fn equal_overlay_input_is_a_no_op_and_close_resets_lifecycle() {
         ))
         .expect("identical request is accepted as a no-op");
     assert_eq!(kernel.snapshot(), &snapshot);
-    assert_eq!(kernel.delta(), &delta);
+    assert!(no_op_delta.is_empty());
+    assert_eq!(no_op_delta.previous_generation(), snapshot.generation());
+    assert_eq!(no_op_delta.generation(), snapshot.generation());
 
-    kernel
+    let _close_delta = kernel
         .apply(request(snapshot.generation(), [], []))
         .expect("close accepted");
     let generation = kernel.snapshot().generation();
-    kernel
+    let _reopen_delta = kernel
         .apply(request(
             generation,
             [],
@@ -171,7 +188,7 @@ fn generation_mismatch_is_transactional() {
 #[test]
 fn malformed_document_keeps_parser_diagnostics_without_poisoning_clean_validation() {
     let mut kernel = AuthoringKernel::new();
-    kernel
+    let _initial_delta = kernel
         .apply(request(
             SnapshotGeneration::initial(),
             [
@@ -185,7 +202,7 @@ fn malformed_document_keeps_parser_diagnostics_without_poisoning_clean_validatio
                         "! immediate missing_effect()\n",
                     ),
                 ),
-                saved("malformed.recite", "not a statement\n"),
+                saved("malformed.recite", "oops\n"),
             ],
             [],
         ))
@@ -205,6 +222,7 @@ fn malformed_document_keeps_parser_diagnostics_without_poisoning_clean_validatio
             .iter()
             .any(|diagnostic| diagnostic.code.as_str().starts_with("RECITE_PARSE"))
     );
+    assert!(!malformed.participation().ast_structure().is_complete());
     assert!(!malformed.participation().block_definitions().is_complete());
     assert!(
         clean
@@ -220,7 +238,7 @@ fn malformed_document_keeps_parser_diagnostics_without_poisoning_clean_validatio
     );
 
     let generation = kernel.snapshot().generation();
-    kernel
+    let _initial_delta = kernel
         .apply(request(
             generation,
             [
@@ -253,7 +271,7 @@ fn malformed_document_keeps_parser_diagnostics_without_poisoning_clean_validatio
 #[test]
 fn delta_contains_sorted_changed_and_removed_metadata() {
     let mut kernel = AuthoringKernel::new();
-    kernel
+    let initial_delta = kernel
         .apply(request(
             SnapshotGeneration::initial(),
             [saved("z.recite", ":: z\n"), saved("a.recite", ":: a\n")],
@@ -261,8 +279,7 @@ fn delta_contains_sorted_changed_and_removed_metadata() {
         ))
         .expect("initial request accepted");
     assert_eq!(
-        kernel
-            .delta()
+        initial_delta
             .changed()
             .iter()
             .map(|change| change.key().as_str())
@@ -271,12 +288,11 @@ fn delta_contains_sorted_changed_and_removed_metadata() {
     );
 
     let generation = kernel.snapshot().generation();
-    kernel
+    let delta = kernel
         .apply(request(generation, [saved("z.recite", ":: changed\n")], []))
         .expect("replacement accepted");
     assert_eq!(
-        kernel
-            .delta()
+        delta
             .removed()
             .iter()
             .map(|change| change.key().as_str())
@@ -284,15 +300,196 @@ fn delta_contains_sorted_changed_and_removed_metadata() {
         ["a.recite"]
     );
     assert_eq!(
-        kernel.delta().changed()[0]
+        delta.changed()[0]
             .previous()
             .map(|metadata| metadata.byte_len()),
         Some(":: z\n".len())
     );
     assert_eq!(
-        kernel.delta().changed()[0]
+        delta.changed()[0]
             .current()
             .map(|metadata| metadata.byte_len()),
         Some(":: changed\n".len())
+    );
+}
+
+#[test]
+fn summaries_and_queries_preserve_typed_values_spans_and_navigation() {
+    let mut kernel = AuthoringKernel::new();
+    kernel
+        .apply(request(
+            SnapshotGeneration::initial(),
+            [
+                saved(
+                    "dialogue/main.recite",
+                    concat!(
+                        ":: start scene=opening retries=3 values=[one, \"two\"]\n",
+                        "> intro@11111111111111111111\n",
+                        "  Hello.\n",
+                        "  -> dialogue/target.recite::finish\n",
+                    ),
+                ),
+                saved("dialogue/target.recite", ":: finish\n"),
+            ],
+            [],
+        ))
+        .expect("query fixture accepted");
+
+    let main = kernel
+        .snapshot()
+        .document(&key("dialogue/main.recite"))
+        .expect("main document exists");
+    assert_eq!(main.summary().blocks()[0].id_span().start.column(), 4);
+    assert_eq!(
+        main.summary().block_references()[0]
+            .file_span()
+            .map(|s| s.start.column()),
+        Some(6)
+    );
+    assert_eq!(
+        main.summary().block_references()[0]
+            .block_id_span()
+            .map(|s| s.start.column()),
+        Some(30)
+    );
+    assert!(main.summary().metadata().iter().any(|metadata| matches!(
+        metadata.value(),
+        MetadataValue::Scalar(MetadataScalar::Integer(3))
+    )));
+    assert!(
+        main.summary()
+            .metadata()
+            .iter()
+            .all(|metadata| metadata.source_span().is_some())
+    );
+    assert!(main.summary().stable_ids().iter().any(|stable| matches!(
+        stable.source_id(),
+        SourceId::Frozen { .. }
+    )
+        && stable.source_id_span().is_some()));
+
+    let position = SourcePosition::new(4, 30).expect("valid source position");
+    let QueryResult::Ready(navigation) = kernel
+        .snapshot()
+        .navigate(&key("dialogue/main.recite"), position)
+    else {
+        panic!("qualified target navigation is ready");
+    };
+    let recite_compiler::NavigationResult::Unique(declaration) = navigation else {
+        panic!("qualified target has one declaration");
+    };
+    assert_eq!(declaration.document().as_str(), "dialogue/target.recite");
+    assert_eq!(declaration.span().start.column(), 4);
+
+    let QueryResult::Ready(completions) = kernel
+        .snapshot()
+        .completions(&key("dialogue/main.recite"), position)
+    else {
+        panic!("target completion is ready");
+    };
+    assert_eq!(completions.len(), 1);
+    assert_eq!(completions[0].replace_span().start.column(), 30);
+
+    let QueryResult::Ready(symbols) = kernel
+        .snapshot()
+        .symbols(&key("dialogue/main.recite"), SymbolQueryOptions::default())
+    else {
+        panic!("symbol query is ready");
+    };
+    assert!(symbols.iter().any(|symbol| {
+        symbol.kind() == SymbolKind::BlockReference
+            && symbol.role() == SymbolRole::Reference
+            && matches!(symbol.identity(), SymbolIdentity::Block(_))
+    }));
+    let QueryResult::Ready(without_declarations) = kernel
+        .snapshot()
+        .symbols(&key("dialogue/main.recite"), SymbolQueryOptions::new(false))
+    else {
+        panic!("filtered symbol query is ready");
+    };
+    assert!(
+        without_declarations
+            .iter()
+            .all(|symbol| symbol.role() != SymbolRole::Definition)
+    );
+}
+
+#[test]
+fn navigation_reports_ambiguous_and_missing_targets_deterministically() {
+    let mut kernel = AuthoringKernel::new();
+    kernel
+        .apply(request(
+            SnapshotGeneration::initial(),
+            [
+                saved("main.recite", ":: main\n-> finish\n"),
+                saved("a.recite", ":: finish\n"),
+                saved("b.recite", ":: finish\n"),
+            ],
+            [],
+        ))
+        .expect("navigation fixture accepted");
+    let position = SourcePosition::new(2, 4).expect("valid source position");
+    let QueryResult::Ready(recited) = kernel.snapshot().navigate(&key("main.recite"), position)
+    else {
+        panic!("navigation is ready");
+    };
+    let recite_compiler::NavigationResult::Ambiguous(locations) = recited else {
+        panic!("two declarations are ambiguous");
+    };
+    assert_eq!(
+        locations
+            .iter()
+            .map(|location| location.document().as_str())
+            .collect::<Vec<_>>(),
+        ["a.recite", "b.recite"]
+    );
+
+    let generation = kernel.snapshot().generation();
+    kernel
+        .apply(request(
+            generation,
+            [saved("main.recite", ":: main\n-> absent\n")],
+            [],
+        ))
+        .expect("missing target replacement accepted");
+    let QueryResult::Ready(recited) = kernel.snapshot().navigate(&key("main.recite"), position)
+    else {
+        panic!("missing navigation is ready");
+    };
+    assert!(matches!(
+        recited,
+        recite_compiler::NavigationResult::Missing
+    ));
+}
+
+#[test]
+fn missing_ids_keep_typed_identity_and_exact_insertion_points_across_crlf_utf8() {
+    let source = ":: start\r\n> \r\n  💬\r\n? \r\n  Pick this\r\n";
+    let mut kernel = AuthoringKernel::new();
+    kernel
+        .apply(request(
+            SnapshotGeneration::initial(),
+            [saved("unicode.recite", source)],
+            [],
+        ))
+        .expect("unicode fixture accepted with recovery");
+
+    let document = kernel
+        .snapshot()
+        .document(&key("unicode.recite"))
+        .expect("unicode document exists");
+    assert_eq!(document.metadata().byte_len(), source.len());
+    assert_eq!(document.summary().stable_ids().len(), 2);
+    for stable in document.summary().stable_ids() {
+        assert!(matches!(stable.source_id(), SourceId::Missing));
+        assert!(stable.source_id_span().is_none());
+    }
+    assert_eq!(
+        document.summary().stable_ids()[0].insertion_span().start,
+        SourcePosition::new(2, 3).expect("valid insertion position")
+    );
+    assert_eq!(
+        document.summary().stable_ids()[1].insertion_span().start,
+        SourcePosition::new(4, 3).expect("valid insertion position")
     );
 }

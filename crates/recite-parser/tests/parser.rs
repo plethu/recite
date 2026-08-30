@@ -1,9 +1,9 @@
 #![cfg(test)]
 
 use recite_core::{
-    Argument, Block, Choice, ChoiceEcho, ConditionExpression, DivertTarget, EffectMode, IfBranch,
-    Line, MatchBranch, MatchPattern, ScalarValue, SourceMetadataScalar, SourceMetadataValue,
-    SpeakerId, Statement, StatementKind,
+    Argument, Block, Choice, ChoiceEcho, ChoiceTarget, ConditionExpression, DivertTarget,
+    EffectMode, IfBranch, Line, MatchBranch, MatchPattern, ScalarValue, SourceMetadataScalar,
+    SourceMetadataValue, SpeakerId, Statement, StatementKind,
 };
 use recite_parser::{LoweredSourceFile, ReciteSyntaxKind, parse};
 

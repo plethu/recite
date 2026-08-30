@@ -31,16 +31,41 @@ impl Lowerer<'_, '_> {
         };
 
         let mut field_start = 0;
-        let source_id = if let Some(first) = choice_fields.first().copied() {
-            if first.key_value(self.path).is_none() {
-                field_start = 1;
-                SourceId::parse(Some(first.text))
+        let (source_id, source_id_span, source_id_insertion_span) =
+            if let Some(first) = choice_fields.first().copied() {
+                if first.key_value(self.path).is_none() {
+                    field_start = 1;
+                    (
+                        SourceId::parse(Some(first.text)),
+                        Some(first.span(self.path)),
+                        crate::source::span_for_line(
+                            self.path,
+                            header.number,
+                            first.column + first.text.chars().count(),
+                        ),
+                    )
+                } else {
+                    (
+                        SourceId::Missing,
+                        None,
+                        super::super::insertion_span_after_marker(
+                            self.path,
+                            header,
+                            StatementMarker::Choice,
+                        ),
+                    )
+                }
             } else {
-                SourceId::Missing
-            }
-        } else {
-            SourceId::Missing
-        };
+                (
+                    SourceId::Missing,
+                    None,
+                    super::super::insertion_span_after_marker(
+                        self.path,
+                        header,
+                        StatementMarker::Choice,
+                    ),
+                )
+            };
 
         let ChoiceClauses {
             metadata_fields,
@@ -66,6 +91,7 @@ impl Lowerer<'_, '_> {
             choice_span,
         )
         .with_source_id(source_id)
+        .with_source_id_spans(source_id_span, source_id_insertion_span)
         .with_metadata(metadata)
         .with_interpolation_bindings(bindings)
         .with_echo(echo)

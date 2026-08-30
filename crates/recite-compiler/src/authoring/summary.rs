@@ -1,7 +1,6 @@
 use recite_core::{
     Block, BlockReference, Choice, ConditionCall, ConditionExpression, DivertTarget, Effect,
-    EffectMode, IfBranch, Line, MatchBranch, SourceFile, SourceMetadata, SourceMetadataValue,
-    SourceSpan, Statement,
+    EffectMode, IfBranch, Line, MatchBranch, SourceFile, SourceMetadata, SourceSpan, Statement,
 };
 
 #[path = "types.rs"]
@@ -81,6 +80,7 @@ impl Collector {
     fn block(&mut self, block: &Block) {
         self.blocks.push(BlockDefinitionSummary {
             id: block.id.clone(),
+            id_span: block.id_span.clone(),
             span: block.span.clone(),
         });
         self.metadata(&block.metadata);
@@ -104,7 +104,9 @@ impl Collector {
     fn line(&mut self, line: &Line) {
         self.stable_ids.push(StableIdSummary {
             kind: StableIdKind::Line,
-            id: line.id.as_ref().map(|id| id.as_str().to_owned()),
+            source_id: line.source_id.clone(),
+            source_id_span: line.source_id_span.clone(),
+            insertion_span: line.source_id_insertion_span.clone(),
             span: line.span.clone(),
         });
         self.metadata(&line.metadata);
@@ -116,7 +118,9 @@ impl Collector {
     fn choice(&mut self, choice: &Choice) {
         self.stable_ids.push(StableIdSummary {
             kind: StableIdKind::Choice,
-            id: choice.id.as_ref().map(|id| id.as_str().to_owned()),
+            source_id: choice.source_id.clone(),
+            source_id_span: choice.source_id_span.clone(),
+            insertion_span: choice.source_id_insertion_span.clone(),
             span: choice.span.clone(),
         });
         self.metadata(&choice.metadata);
@@ -135,10 +139,18 @@ impl Collector {
     }
 
     fn divert(&mut self, target: &DivertTarget, span: &SourceSpan) {
-        if let DivertTarget::Block(BlockReference { file, block_id }) = target {
+        if let DivertTarget::Block(BlockReference {
+            file,
+            file_span,
+            block_id,
+            block_id_span,
+        }) = target
+        {
             self.block_references.push(BlockReferenceSummary {
                 file: file.clone(),
+                file_span: file_span.clone(),
                 block_id: block_id.clone(),
+                block_id_span: block_id_span.clone(),
                 span: span.clone(),
             });
         }
@@ -214,23 +226,11 @@ impl Collector {
         for entry in metadata {
             self.metadata.push(MetadataSummary {
                 key: entry.key.clone(),
+                source_span: entry.source_span.clone(),
                 key_span: entry.key_span.clone(),
                 value_span: entry.value_span.clone(),
-                value_kind: value_kind(&entry.value),
+                value: (&entry.value).into(),
             });
         }
-    }
-}
-
-fn value_kind(value: &SourceMetadataValue) -> MetadataValueKind {
-    match value {
-        SourceMetadataValue::Array(_) => MetadataValueKind::Array,
-        SourceMetadataValue::Scalar(scalar) => match scalar {
-            recite_core::SourceMetadataScalar::Symbol(_) => MetadataValueKind::Symbol,
-            recite_core::SourceMetadataScalar::StringLiteral(_) => MetadataValueKind::String,
-            recite_core::SourceMetadataScalar::Integer(_) => MetadataValueKind::Integer,
-            recite_core::SourceMetadataScalar::Float(_) => MetadataValueKind::Float,
-            recite_core::SourceMetadataScalar::Bool(_) => MetadataValueKind::Boolean,
-        },
     }
 }
