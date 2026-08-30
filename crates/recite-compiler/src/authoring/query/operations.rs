@@ -1,249 +1,178 @@
-use std::collections::BTreeSet;
-
-use recite_core::{Diagnostic, DocumentKey, SourcePosition};
+use recite_core::{DocumentKey, SourcePosition};
 
 use super::super::snapshot::AuthoringSnapshot;
-use super::symbols::{contains, symbol_locations};
-use super::types::{
-    CompletionItem, HoverInfo, NavigationResult, QueryResult, SemanticFact, SymbolIdentity,
-    SymbolKind, SymbolLocation, SymbolQueryOptions, SymbolRole,
-};
+use super::types::{QueryClass, QueryResult, QueryUnavailableReason};
 
 impl AuthoringSnapshot {
-    /// Returns all diagnostics in deterministic document and source order.
+    /// Returns typed candidates for a caller-provided language context.
     #[must_use]
-    pub fn diagnostics(&self) -> &[Diagnostic] {
-        self.diagnostic_values()
-    }
-
-    /// Returns diagnostics for one document, preserving partial recovery.
-    #[must_use]
-    pub fn document_diagnostics(&self, key: &DocumentKey) -> QueryResult<&[Diagnostic]> {
-        let Some(document) = self.document(key) else {
-            return QueryResult::NoMatch;
-        };
-        if document.participation() == crate::ValidationParticipation::all_complete() {
-            QueryResult::Ready(document.diagnostics())
-        } else {
-            QueryResult::Partial(document.diagnostics())
-        }
-    }
-
-    /// Returns recoverable symbol occurrences for one document.
-    #[must_use]
-    pub fn symbols(
-        &self,
-        key: &DocumentKey,
-        options: SymbolQueryOptions,
-    ) -> QueryResult<Vec<SymbolLocation>> {
-        let Some(document) = self.document(key) else {
-            return QueryResult::NoMatch;
-        };
-        let locations = symbol_locations(key, document, options);
-        if document.participation() == crate::ValidationParticipation::all_complete() {
-            QueryResult::Ready(locations)
-        } else {
-            QueryResult::Partial(locations)
-        }
-    }
-
-    /// Returns block declarations relevant to a block-reference position.
-    #[must_use]
-    pub fn completions(
+    pub fn complete(
         &self,
         key: &DocumentKey,
         position: SourcePosition,
-    ) -> QueryResult<Vec<CompletionItem>> {
+        context: super::types::CompletionContext,
+    ) -> QueryResult<Vec<super::types::CompletionCandidate>> {
         let Some(document) = self.document(key) else {
             return QueryResult::NoMatch;
         };
-        let Some(reference) = document
-            .summary()
-            .block_references()
-            .iter()
-            .find(|reference| {
-                reference
-                    .block_id_span()
-                    .is_some_and(|span| contains(span, position))
-            })
-        else {
-            return QueryResult::NoMatch;
-        };
-        if !document.participation().block_references().is_complete() {
-            return QueryResult::Unavailable;
-        }
-        let mut items = Vec::new();
-        let mut seen = BTreeSet::new();
-        let mut incomplete_targets = false;
-        for target in self.documents() {
-            if reference
-                .file()
-                .is_some_and(|file| file != target.key().as_str())
-            {
-                continue;
-            }
-            if !target.participation().block_definitions().is_complete() {
-                incomplete_targets = true;
-                continue;
-            }
-            for block in target.summary().blocks() {
-                if !seen.insert((target.key().clone(), block.id().clone())) {
-                    continue;
+        let replace_span = recite_core::SourceSpan::point(key.as_str(), position);
+        let mut candidates = Vec::new();
+        match context {
+            super::types::CompletionContext::Blocks { document: target } => {
+                if !document.participation().block_references().is_complete() {
+                    return QueryResult::Unavailable(QueryUnavailableReason::Incomplete(
+                        QueryClass::BlockReferences,
+                    ));
                 }
-                let declaration = SymbolLocation {
-                    document: target.key().clone(),
-                    identity: SymbolIdentity::Block(block.id().clone()),
-                    kind: SymbolKind::Block,
-                    role: SymbolRole::Definition,
-                    span: block.id_span().clone(),
+                for target_document in self.documents() {
+                    if target
+                        .as_ref()
+                        .is_some_and(|target| target != target_document.key())
+                    {
+                        continue;
+                    }
+                    if !target_document
+                        .participation()
+                        .block_definitions()
+                        .is_complete()
+                    {
+                        continue;
+                    }
+                    for block in target_document.summary().blocks() {
+                        candidates.push(super::types::CompletionCandidate::new(
+                            block.id().as_str().to_owned(),
+                            super::types::CompletionCandidateKind::Block,
+                            super::types::CompletionCandidateDetail::None,
+                            replace_span.clone(),
+                        ));
+                    }
+                }
+            }
+            super::types::CompletionContext::Speakers => {
+                let Some(schema) = &self.schema else {
+                    return QueryResult::Unavailable(QueryUnavailableReason::Incomplete(
+                        QueryClass::Schema,
+                    ));
                 };
-                items.push(CompletionItem {
-                    identity: declaration.identity.clone(),
-                    kind: SymbolKind::Block,
-                    declaration,
-                    replace_span: reference
-                        .block_id_span()
-                        .cloned()
-                        .unwrap_or_else(|| reference.span().clone()),
-                });
+                for name in schema.speakers.keys() {
+                    candidates.push(super::types::CompletionCandidate::new(
+                        name.clone(),
+                        super::types::CompletionCandidateKind::Speaker,
+                        super::types::CompletionCandidateDetail::None,
+                        replace_span.clone(),
+                    ));
+                }
+            }
+            super::types::CompletionContext::MetadataKeys => {
+                let Some(schema) = &self.schema else {
+                    return QueryResult::Unavailable(QueryUnavailableReason::Incomplete(
+                        QueryClass::Schema,
+                    ));
+                };
+                for name in schema.metadata.keys() {
+                    candidates.push(super::types::CompletionCandidate::new(
+                        name.clone(),
+                        super::types::CompletionCandidateKind::MetadataKey,
+                        super::types::CompletionCandidateDetail::None,
+                        replace_span.clone(),
+                    ));
+                }
+            }
+            super::types::CompletionContext::MetadataValues { key: metadata_key } => {
+                let Some(schema) = &self.schema else {
+                    return QueryResult::Unavailable(QueryUnavailableReason::Incomplete(
+                        QueryClass::Schema,
+                    ));
+                };
+                let Some(definition) = schema.metadata.get(&metadata_key) else {
+                    return QueryResult::NoMatch;
+                };
+                if let Some(recite_core::MetadataDomainDefinition::Flat(domain)) = definition
+                    .domain
+                    .as_ref()
+                    .and_then(|name| schema.metadata_domains.get(name))
+                {
+                    for value in &domain.values {
+                        candidates.push(super::types::CompletionCandidate::new(
+                            value.clone(),
+                            super::types::CompletionCandidateKind::MetadataValue,
+                            super::types::CompletionCandidateDetail::None,
+                            replace_span.clone(),
+                        ));
+                    }
+                }
+            }
+            super::types::CompletionContext::Conditions => {
+                let Some(schema) = &self.schema else {
+                    return QueryResult::Unavailable(QueryUnavailableReason::Incomplete(
+                        QueryClass::Schema,
+                    ));
+                };
+                for (name, definition) in &schema.conditions {
+                    candidates.push(super::types::CompletionCandidate::new(
+                        name.clone(),
+                        super::types::CompletionCandidateKind::Condition,
+                        super::types::CompletionCandidateDetail::Parameters(
+                            definition.params.len(),
+                        ),
+                        replace_span.clone(),
+                    ));
+                }
+            }
+            super::types::CompletionContext::Effects => {
+                let Some(schema) = &self.schema else {
+                    return QueryResult::Unavailable(QueryUnavailableReason::Incomplete(
+                        QueryClass::Schema,
+                    ));
+                };
+                for (name, definition) in &schema.effects {
+                    candidates.push(super::types::CompletionCandidate::new(
+                        name.clone(),
+                        super::types::CompletionCandidateKind::Effect,
+                        super::types::CompletionCandidateDetail::Parameters(
+                            definition.params.len(),
+                        ),
+                        replace_span.clone(),
+                    ));
+                }
+            }
+            super::types::CompletionContext::AvailabilityReasons => {
+                let Some(schema) = &self.schema else {
+                    return QueryResult::Unavailable(QueryUnavailableReason::Incomplete(
+                        QueryClass::Schema,
+                    ));
+                };
+                for (name, definition) in &schema.availability_reasons {
+                    candidates.push(super::types::CompletionCandidate::new(
+                        name.as_str().to_owned(),
+                        super::types::CompletionCandidateKind::AvailabilityReason,
+                        super::types::CompletionCandidateDetail::Parameters(
+                            definition.params.len(),
+                        ),
+                        replace_span.clone(),
+                    ));
+                }
+            }
+            super::types::CompletionContext::ProjectionQueries => {
+                let Some(schema) = &self.schema else {
+                    return QueryResult::Unavailable(QueryUnavailableReason::Incomplete(
+                        QueryClass::Schema,
+                    ));
+                };
+                for name in schema.projection_queries.keys() {
+                    candidates.push(super::types::CompletionCandidate::new(
+                        name.clone(),
+                        super::types::CompletionCandidateKind::ProjectionQuery,
+                        super::types::CompletionCandidateDetail::None,
+                        replace_span.clone(),
+                    ));
+                }
             }
         }
-        if incomplete_targets && items.is_empty() {
-            QueryResult::Unavailable
-        } else if incomplete_targets {
-            QueryResult::Partial(items)
-        } else if items.is_empty() {
+        if candidates.is_empty() {
             QueryResult::NoMatch
         } else {
-            QueryResult::Ready(items)
-        }
-    }
-
-    /// Returns typed facts for the symbol at a source position.
-    #[must_use]
-    pub fn hover(&self, key: &DocumentKey, position: SourcePosition) -> QueryResult<HoverInfo> {
-        let Some(document) = self.document(key) else {
-            return QueryResult::NoMatch;
-        };
-        let (QueryResult::Partial(locations) | QueryResult::Ready(locations)) =
-            self.symbols(key, SymbolQueryOptions::default())
-        else {
-            return QueryResult::NoMatch;
-        };
-        let Some(location) = locations
-            .into_iter()
-            .find(|location| contains(&location.span, position))
-        else {
-            return QueryResult::NoMatch;
-        };
-        let facts = match location.role {
-            SymbolRole::Definition => vec![SemanticFact::Definition],
-            SymbolRole::Reference => vec![SemanticFact::Reference],
-            SymbolRole::Annotation => document
-                .summary()
-                .metadata()
-                .iter()
-                .find(|metadata| {
-                    metadata
-                        .key_span()
-                        .is_some_and(|span| span == &location.span)
-                })
-                .map(|metadata| vec![SemanticFact::MetadataValue(metadata.value().clone())])
-                .unwrap_or_default(),
-            SymbolRole::Invocation => match &location.identity {
-                SymbolIdentity::Function(name) => document
-                    .summary()
-                    .condition_functions()
-                    .iter()
-                    .chain(document.summary().effect_functions())
-                    .find(|function| function.name() == name && function.span() == &location.span)
-                    .map(|function| {
-                        vec![SemanticFact::Function {
-                            name: name.clone(),
-                            kind: function.kind(),
-                            argument_count: function.argument_count(),
-                        }]
-                    })
-                    .unwrap_or_default(),
-                SymbolIdentity::Block(_)
-                | SymbolIdentity::Source(_)
-                | SymbolIdentity::MetadataKey(_) => Vec::new(),
-            },
-        };
-        let info = HoverInfo { location, facts };
-        if document.participation() == crate::ValidationParticipation::all_complete() {
-            QueryResult::Ready(info)
-        } else {
-            QueryResult::Partial(info)
-        }
-    }
-
-    /// Resolves a block reference or declaration to deterministic declarations.
-    #[must_use]
-    pub fn navigate(
-        &self,
-        key: &DocumentKey,
-        position: SourcePosition,
-    ) -> QueryResult<NavigationResult> {
-        let Some(document) = self.document(key) else {
-            return QueryResult::NoMatch;
-        };
-        let Some(symbol) = symbol_locations(key, document, SymbolQueryOptions::default())
-            .into_iter()
-            .find(|symbol| contains(&symbol.span, position))
-        else {
-            return QueryResult::NoMatch;
-        };
-        let SymbolIdentity::Block(block_id) = &symbol.identity else {
-            return QueryResult::Ready(NavigationResult::Unique(symbol));
-        };
-        let qualified_file = document
-            .summary()
-            .block_references()
-            .iter()
-            .find(|reference| {
-                reference
-                    .block_id_span()
-                    .is_some_and(|span| span == &symbol.span)
-            })
-            .and_then(|reference| reference.file());
-        let mut declarations = Vec::new();
-        let mut incomplete_targets = false;
-        for target in self.documents() {
-            if qualified_file.is_some_and(|file| file != target.key().as_str()) {
-                continue;
-            }
-            if !target.participation().block_definitions().is_complete() {
-                incomplete_targets = true;
-                continue;
-            }
-            declarations.extend(
-                target
-                    .summary()
-                    .blocks()
-                    .iter()
-                    .filter(|block| block.id() == block_id)
-                    .map(|block| SymbolLocation {
-                        document: target.key().clone(),
-                        identity: SymbolIdentity::Block(block.id().clone()),
-                        kind: SymbolKind::Block,
-                        role: SymbolRole::Definition,
-                        span: block.id_span().clone(),
-                    }),
-            );
-        }
-        let result = match declarations.as_slice() {
-            [] => NavigationResult::Missing,
-            [declaration] => NavigationResult::Unique(declaration.clone()),
-            _ => NavigationResult::Ambiguous(declarations),
-        };
-        if incomplete_targets {
-            return QueryResult::Unavailable;
-        }
-        if document.participation().block_references().is_complete() {
-            QueryResult::Ready(result)
-        } else {
-            QueryResult::Partial(result)
+            QueryResult::Ready(candidates)
         }
     }
 }

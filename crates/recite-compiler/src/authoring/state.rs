@@ -81,7 +81,7 @@ pub struct AuthoringKernel {
     open: BTreeMap<DocumentKey, OpenDocument>,
     analyses: BTreeMap<DocumentKey, DocumentAnalysis>,
     snapshot: AuthoringSnapshot,
-    schema: Option<ProjectSchema>,
+    schema: Option<Arc<ProjectSchema>>,
 }
 
 impl Default for AuthoringKernel {
@@ -99,7 +99,7 @@ impl AuthoringKernel {
             saved: BTreeMap::new(),
             open: BTreeMap::new(),
             analyses: BTreeMap::new(),
-            snapshot: AuthoringSnapshot::new(generation, Vec::new()),
+            snapshot: AuthoringSnapshot::new(generation, Vec::new(), None),
             schema: None,
         }
     }
@@ -107,10 +107,11 @@ impl AuthoringKernel {
     /// Creates an empty kernel using a caller-owned immutable project schema.
     #[must_use]
     pub fn with_schema(schema: ProjectSchema) -> Self {
-        Self {
-            schema: Some(schema),
-            ..Self::new()
-        }
+        let mut kernel = Self::new();
+        let schema = Arc::new(schema);
+        kernel.schema = Some(Arc::clone(&schema));
+        kernel.snapshot.schema = Some(schema);
+        kernel
     }
 
     /// Returns the current deterministic snapshot.
@@ -152,7 +153,7 @@ impl AuthoringKernel {
             &old_effective,
             &new_effective,
         );
-        let semantic = validate_analyses(&analyses, self.schema.as_ref());
+        let semantic = validate_analyses(&analyses, self.schema.as_deref());
         let documents = build_documents(&new_effective, &analyses, &semantic, &self.snapshot);
         let (changed, removed) = build_delta(changed_inputs, &self.snapshot, &documents);
         let delta = AnalysisDelta::new(self.snapshot.generation(), generation, changed, removed);
@@ -160,7 +161,7 @@ impl AuthoringKernel {
         self.saved = saved;
         self.open = open;
         self.analyses = analyses;
-        self.snapshot = AuthoringSnapshot::new(generation, documents);
+        self.snapshot = AuthoringSnapshot::new(generation, documents, self.schema.clone());
         Ok(delta)
     }
 }
@@ -168,6 +169,7 @@ impl AuthoringKernel {
 #[derive(Debug, PartialEq)]
 pub(crate) struct DocumentAnalysis {
     pub(crate) source_file: SourceFile,
+    pub(crate) source_text: Arc<str>,
     pub(crate) parse_diagnostics: Arc<[Diagnostic]>,
     pub(crate) summary: Arc<AuthoringSummary>,
     pub(crate) participation: ValidationParticipation,

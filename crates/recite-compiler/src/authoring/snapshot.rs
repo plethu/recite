@@ -2,7 +2,9 @@ mod model;
 
 pub use model::{DocumentLayer, DocumentMetadata, DocumentSnapshot};
 
+use recite_core::ProjectSchema;
 use recite_core::{Diagnostic, DocumentKey};
+use std::sync::Arc;
 
 use super::DocumentVersion;
 use crate::ValidationParticipation;
@@ -12,7 +14,7 @@ use crate::ValidationParticipation;
 pub struct AuthoringSnapshot {
     generation: super::SnapshotGeneration,
     documents: Vec<DocumentSnapshot>,
-    diagnostics: Vec<Diagnostic>,
+    pub(super) schema: Option<Arc<ProjectSchema>>,
 }
 
 impl AuthoringSnapshot {
@@ -20,14 +22,12 @@ impl AuthoringSnapshot {
     pub(crate) fn new(
         generation: super::SnapshotGeneration,
         documents: Vec<DocumentSnapshot>,
+        schema: Option<Arc<ProjectSchema>>,
     ) -> Self {
         Self {
             generation,
-            diagnostics: documents
-                .iter()
-                .flat_map(|document| document.diagnostics.iter().cloned())
-                .collect(),
             documents,
+            schema,
         }
     }
 
@@ -47,8 +47,61 @@ impl AuthoringSnapshot {
             .map(|index| &self.documents[index])
     }
 
-    pub(super) fn diagnostic_values(&self) -> &[Diagnostic] {
-        &self.diagnostics
+    pub fn diagnostics(&self) -> DiagnosticCollection<'_> {
+        DiagnosticCollection {
+            documents: self.documents.iter(),
+        }
+    }
+}
+
+/// Deterministic borrowed aggregation over per-document diagnostics.
+pub struct DiagnosticCollection<'a> {
+    documents: std::slice::Iter<'a, DocumentSnapshot>,
+}
+
+impl<'a> DiagnosticCollection<'a> {
+    #[must_use]
+    pub fn iter(self) -> DiagnosticIter<'a> {
+        DiagnosticIter {
+            documents: self.documents,
+            current: None,
+        }
+    }
+
+    #[must_use]
+    pub fn len(&self) -> usize {
+        self.documents
+            .clone()
+            .map(|document| document.diagnostics().len())
+            .sum()
+    }
+
+    #[must_use]
+    pub fn is_empty(&self) -> bool {
+        self.documents
+            .clone()
+            .all(|document| document.diagnostics().is_empty())
+    }
+}
+
+pub struct DiagnosticIter<'a> {
+    documents: std::slice::Iter<'a, DocumentSnapshot>,
+    current: Option<std::slice::Iter<'a, Diagnostic>>,
+}
+
+impl<'a> Iterator for DiagnosticIter<'a> {
+    type Item = &'a Diagnostic;
+
+    fn next(&mut self) -> Option<Self::Item> {
+        loop {
+            if let Some(current) = &mut self.current
+                && let Some(diagnostic) = current.next()
+            {
+                return Some(diagnostic);
+            }
+            let document = self.documents.next()?;
+            self.current = Some(document.diagnostics().iter());
+        }
     }
 }
 

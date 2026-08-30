@@ -63,6 +63,7 @@ pub struct DocumentSnapshot {
     pub(super) metadata: DocumentMetadata,
     pub(super) diagnostics: Arc<[Diagnostic]>,
     pub(super) summary: Arc<AuthoringSummary>,
+    pub(super) source_text: Arc<str>,
 }
 
 impl DocumentSnapshot {
@@ -70,11 +71,13 @@ impl DocumentSnapshot {
         metadata: DocumentMetadata,
         diagnostics: Arc<[Diagnostic]>,
         summary: Arc<AuthoringSummary>,
+        source_text: Arc<str>,
     ) -> Self {
         Self {
             metadata,
             diagnostics,
             summary,
+            source_text,
         }
     }
 
@@ -108,5 +111,9 @@ impl DocumentSnapshot {
     #[must_use]
     pub fn summary(&self) -> &AuthoringSummary {
         &self.summary
+    }
+    #[must_use]
+    pub fn source_text(&self) -> &str {
+        &self.source_text
     }
 }

@@ -4,7 +4,7 @@ use recite_core::{BlockId, SourceId, SourceMetadataScalar, SourceMetadataValue, 
 #[non_exhaustive]
 pub struct BlockDefinitionSummary {
     pub(super) id: BlockId,
-    pub(super) id_span: SourceSpan,
+    pub(super) id_span: Option<SourceSpan>,
     pub(super) span: SourceSpan,
 }
 
@@ -18,8 +18,8 @@ impl BlockDefinitionSummary {
         &self.span
     }
     #[must_use]
-    pub fn id_span(&self) -> &SourceSpan {
-        &self.id_span
+    pub fn id_span(&self) -> Option<&SourceSpan> {
+        self.id_span.as_ref()
     }
 }
 
@@ -69,7 +69,7 @@ pub struct StableIdSummary {
     pub(super) kind: StableIdKind,
     pub(super) source_id: SourceId,
     pub(super) source_id_span: Option<SourceSpan>,
-    pub(super) insertion_span: SourceSpan,
+    pub(super) insertion_span: Option<SourceSpan>,
     pub(super) span: SourceSpan,
 }
 
@@ -87,8 +87,8 @@ impl StableIdSummary {
         self.source_id_span.as_ref()
     }
     #[must_use]
-    pub fn insertion_span(&self) -> &SourceSpan {
-        &self.insertion_span
+    pub fn insertion_span(&self) -> Option<&SourceSpan> {
+        self.insertion_span.as_ref()
     }
     #[must_use]
     pub fn span(&self) -> &SourceSpan {
@@ -135,6 +135,17 @@ impl MetadataSummary {
 pub enum MetadataValue {
     Scalar(MetadataScalar),
     Array(Vec<MetadataScalar>),
+}
+
+#[derive(Clone, Copy, Debug, Eq, PartialEq)]
+#[non_exhaustive]
+pub enum MetadataValueKind {
+    Symbol,
+    String,
+    Integer,
+    Float,
+    Boolean,
+    Array,
 }
 
 impl From<&SourceMetadataValue> for MetadataValue {

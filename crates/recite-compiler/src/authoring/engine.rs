@@ -1,7 +1,7 @@
 use std::collections::{BTreeMap, BTreeSet};
 use std::sync::Arc;
 
-use recite_core::{Diagnostic, ProjectSchema};
+use recite_core::{Diagnostic, ProjectSchema, SourceRecovery};
 use recite_parser::parse;
 
 use super::AuthoringSummary;
@@ -50,10 +50,11 @@ fn analyze(document: &EffectiveDocument<'_>) -> DocumentAnalysis {
     }
     let parsed = parse(document.key.as_str(), document.text);
     let lowered = parsed.lower_source_file();
-    let participation = participation_for(&lowered.diagnostics);
+    let participation = participation_for(lowered.recovery);
     let summary = AuthoringSummary::from_source_file(&lowered.source_file);
     DocumentAnalysis {
         source_file: lowered.source_file,
+        source_text: Arc::from(document.text),
         parse_diagnostics: lowered.diagnostics.into(),
         summary: Arc::new(summary),
         participation,
@@ -62,34 +63,25 @@ fn analyze(document: &EffectiveDocument<'_>) -> DocumentAnalysis {
     }
 }
 
-fn participation_for(diagnostics: &[Diagnostic]) -> ValidationParticipation {
-    diagnostics.iter().fold(
-        ValidationParticipation::all_complete(),
-        |participation, diagnostic| match diagnostic.code.as_str() {
-            "RECITE_PARSE003" | "RECITE_PARSE005" => {
-                participation.with_block_definitions(crate::ValidationCompleteness::Incomplete)
-            }
-            "RECITE_PARSE010" | "RECITE_PARSE011" => {
-                participation.with_block_references(crate::ValidationCompleteness::Incomplete)
-            }
-            "RECITE_PARSE012" => {
-                participation.with_effect_functions(crate::ValidationCompleteness::Incomplete)
-            }
-            "RECITE_PARSE013" | "RECITE_PARSE014" | "RECITE_PARSE015" | "RECITE_PARSE016"
-            | "RECITE_PARSE018" => {
-                participation.with_condition_functions(crate::ValidationCompleteness::Incomplete)
-            }
-            "RECITE_PARSE008" => {
-                participation.with_metadata(crate::ValidationCompleteness::Incomplete)
-            }
-            "RECITE_PARSE001" | "RECITE_PARSE002" | "RECITE_PARSE007" | "RECITE_PARSE017" => {
-                participation
-                    .with_ast_structure(crate::ValidationCompleteness::Incomplete)
-                    .with_block_definitions(crate::ValidationCompleteness::Incomplete)
-            }
-            _ => participation,
-        },
-    )
+fn participation_for(recovery: SourceRecovery) -> ValidationParticipation {
+    let complete = ValidationParticipation::all_complete();
+    complete
+        .with_ast_structure(completeness(recovery.ast_structure()))
+        .with_block_definitions(completeness(recovery.block_definitions()))
+        .with_block_references(completeness(recovery.block_references()))
+        .with_stable_ids(completeness(recovery.stable_ids()))
+        .with_metadata(completeness(recovery.metadata()))
+        .with_condition_functions(completeness(recovery.condition_functions()))
+        .with_effect_functions(completeness(recovery.effect_functions()))
+        .with_inline_markup(completeness(recovery.inline_markup()))
+}
+
+fn completeness(is_complete: bool) -> crate::ValidationCompleteness {
+    if is_complete {
+        crate::ValidationCompleteness::Complete
+    } else {
+        crate::ValidationCompleteness::Incomplete
+    }
 }
 
 pub(super) fn validate_analyses(
@@ -149,6 +141,7 @@ pub(super) fn build_documents(
                 ),
                 diagnostics,
                 Arc::clone(&analysis.summary),
+                Arc::clone(&analysis.source_text),
             ))
         })
         .collect()

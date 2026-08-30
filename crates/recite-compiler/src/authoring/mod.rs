@@ -8,16 +8,17 @@ mod summary;
 
 pub use input::{AuthoringRequest, DocumentVersion, OpenDocument, SavedDocument};
 pub use query::{
-    CompletionItem, HoverInfo, NavigationResult, QueryResult, SemanticFact, SymbolIdentity,
-    SymbolKind, SymbolLocation, SymbolQueryOptions, SymbolRole,
+    CompletionCandidate, CompletionCandidateDetail, CompletionCandidateKind, CompletionContext,
+    CompletionItem, HoverInfo, NavigationResult, QueryClass, QueryResult, QueryUnavailableReason,
+    SemanticFact, SymbolIdentity, SymbolKind, SymbolLocation, SymbolQueryOptions, SymbolRole,
 };
 pub use snapshot::{
-    AnalysisDelta, AuthoringSnapshot, DocumentDelta, DocumentLayer, DocumentMetadata,
-    DocumentSnapshot,
+    AnalysisDelta, AuthoringSnapshot, DiagnosticCollection, DiagnosticIter, DocumentDelta,
+    DocumentLayer, DocumentMetadata, DocumentSnapshot,
 };
 pub use state::{AuthoringError, AuthoringKernel, SnapshotGeneration};
 pub use summary::{
     AuthoringSummary, BlockDefinitionSummary, BlockReferenceSummary, FunctionReferenceKind,
-    FunctionReferenceSummary, MetadataScalar, MetadataSummary, MetadataValue, StableIdKind,
-    StableIdSummary,
+    FunctionReferenceSummary, MetadataScalar, MetadataSummary, MetadataValue, MetadataValueKind,
+    StableIdKind, StableIdSummary,
 };

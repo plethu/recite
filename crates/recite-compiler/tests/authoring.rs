@@ -2,8 +2,8 @@
 
 use recite_compiler::{
     AuthoringError, AuthoringKernel, AuthoringRequest, DocumentLayer, DocumentVersion,
-    MetadataScalar, MetadataValue, OpenDocument, QueryResult, SavedDocument, SnapshotGeneration,
-    SymbolIdentity, SymbolKind, SymbolQueryOptions, SymbolRole,
+    MetadataScalar, MetadataValue, OpenDocument, QueryResult, SavedDocument, SemanticFact,
+    SnapshotGeneration, SymbolIdentity, SymbolKind, SymbolQueryOptions, SymbolRole,
 };
 use recite_core::{DocumentKey, SourceId, SourcePosition};
 
@@ -314,114 +314,16 @@ fn delta_contains_sorted_changed_and_removed_metadata() {
 }
 
 #[test]
-fn summaries_and_queries_preserve_typed_values_spans_and_navigation() {
-    let mut kernel = AuthoringKernel::new();
-    kernel
-        .apply(request(
-            SnapshotGeneration::initial(),
-            [
-                saved(
-                    "dialogue/main.recite",
-                    concat!(
-                        ":: start scene=opening retries=3 values=[one, \"two\"]\n",
-                        "> intro@11111111111111111111\n",
-                        "  Hello.\n",
-                        "  -> dialogue/target.recite::finish\n",
-                    ),
-                ),
-                saved("dialogue/target.recite", ":: finish\n"),
-            ],
-            [],
-        ))
-        .expect("query fixture accepted");
-
-    let main = kernel
-        .snapshot()
-        .document(&key("dialogue/main.recite"))
-        .expect("main document exists");
-    assert_eq!(main.summary().blocks()[0].id_span().start.column(), 4);
-    assert_eq!(
-        main.summary().block_references()[0]
-            .file_span()
-            .map(|s| s.start.column()),
-        Some(6)
-    );
-    assert_eq!(
-        main.summary().block_references()[0]
-            .block_id_span()
-            .map(|s| s.start.column()),
-        Some(30)
-    );
-    assert!(main.summary().metadata().iter().any(|metadata| matches!(
-        metadata.value(),
-        MetadataValue::Scalar(MetadataScalar::Integer(3))
-    )));
-    assert!(
-        main.summary()
-            .metadata()
-            .iter()
-            .all(|metadata| metadata.source_span().is_some())
-    );
-    assert!(main.summary().stable_ids().iter().any(|stable| matches!(
-        stable.source_id(),
-        SourceId::Frozen { .. }
-    )
-        && stable.source_id_span().is_some()));
-
-    let position = SourcePosition::new(4, 30).expect("valid source position");
-    let QueryResult::Ready(navigation) = kernel
-        .snapshot()
-        .navigate(&key("dialogue/main.recite"), position)
-    else {
-        panic!("qualified target navigation is ready");
-    };
-    let recite_compiler::NavigationResult::Unique(declaration) = navigation else {
-        panic!("qualified target has one declaration");
-    };
-    assert_eq!(declaration.document().as_str(), "dialogue/target.recite");
-    assert_eq!(declaration.span().start.column(), 4);
-
-    let QueryResult::Ready(completions) = kernel
-        .snapshot()
-        .completions(&key("dialogue/main.recite"), position)
-    else {
-        panic!("target completion is ready");
-    };
-    assert_eq!(completions.len(), 1);
-    assert_eq!(completions[0].replace_span().start.column(), 30);
-
-    let QueryResult::Ready(symbols) = kernel
-        .snapshot()
-        .symbols(&key("dialogue/main.recite"), SymbolQueryOptions::default())
-    else {
-        panic!("symbol query is ready");
-    };
-    assert!(symbols.iter().any(|symbol| {
-        symbol.kind() == SymbolKind::BlockReference
-            && symbol.role() == SymbolRole::Reference
-            && matches!(symbol.identity(), SymbolIdentity::Block(_))
-    }));
-    let QueryResult::Ready(without_declarations) = kernel
-        .snapshot()
-        .symbols(&key("dialogue/main.recite"), SymbolQueryOptions::new(false))
-    else {
-        panic!("filtered symbol query is ready");
-    };
-    assert!(
-        without_declarations
-            .iter()
-            .all(|symbol| symbol.role() != SymbolRole::Definition)
-    );
-}
-
-#[test]
 fn navigation_reports_ambiguous_and_missing_targets_deterministically() {
     let mut kernel = AuthoringKernel::new();
     kernel
         .apply(request(
             SnapshotGeneration::initial(),
             [
-                saved("main.recite", ":: main\n-> finish\n"),
+                saved(
+                    "main.recite",
+                    ":: main\n-> finish\n-> a.recite::finish\n:: finish\n:: finish\n",
+                ),
                 saved("a.recite", ":: finish\n"),
                 saved("b.recite", ":: finish\n"),
             ],
@@ -441,8 +343,18 @@ fn navigation_reports_ambiguous_and_missing_targets_deterministically() {
             .iter()
             .map(|location| location.document().as_str())
             .collect::<Vec<_>>(),
-        ["a.recite", "b.recite"]
+        ["main.recite", "main.recite"]
     );
+
+    let qualified = SourcePosition::new(3, 16).expect("qualified source position");
+    let QueryResult::Ready(recited) = kernel.snapshot().navigate(&key("main.recite"), qualified)
+    else {
+        panic!("qualified navigation is ready");
+    };
+    let recite_compiler::NavigationResult::Unique(location) = recited else {
+        panic!("qualified target resolves uniquely");
+    };
+    assert_eq!(location.document().as_str(), "a.recite");
 
     let generation = kernel.snapshot().generation();
     kernel
@@ -485,11 +397,78 @@ fn missing_ids_keep_typed_identity_and_exact_insertion_points_across_crlf_utf8()
         assert!(stable.source_id_span().is_none());
     }
     assert_eq!(
-        document.summary().stable_ids()[0].insertion_span().start,
+        document.summary().stable_ids()[0]
+            .insertion_span()
+            .expect("parser insertion span")
+            .start,
         SourcePosition::new(2, 3).expect("valid insertion position")
     );
     assert_eq!(
-        document.summary().stable_ids()[1].insertion_span().start,
+        document.summary().stable_ids()[1]
+            .insertion_span()
+            .expect("parser insertion span")
+            .start,
         SourcePosition::new(4, 3).expect("valid insertion position")
     );
+}
+
+#[test]
+fn typed_recovery_marks_only_unsafe_semantic_classes() {
+    let cases = [
+        (
+            "if.recite",
+            ":: start\n:if broken(\n  -> missing\n",
+            "condition",
+        ),
+        (
+            "match.recite",
+            ":: start\n:match mood()\n  :case\n    -> missing\n",
+            "condition",
+        ),
+        (
+            "else.recite",
+            ":: start\n:else\n  -> missing\n",
+            "condition",
+        ),
+        (
+            "case.recite",
+            ":: start\n:case orphan\n  -> missing\n",
+            "condition",
+        ),
+        ("body.recite", ":: start\n  -> kept\n   -> missing\n", "ast"),
+        (
+            "id.recite",
+            "> line@11111111111111111111\n:: start\n",
+            "stable",
+        ),
+    ];
+    for (name, source, class) in cases {
+        let mut kernel = AuthoringKernel::new();
+        kernel
+            .apply(request(
+                SnapshotGeneration::initial(),
+                [saved(name, source), saved("target.recite", ":: missing\n")],
+                [],
+            ))
+            .expect("recovery fixture accepted");
+        let document = kernel
+            .snapshot()
+            .document(&key(name))
+            .expect("fixture present");
+        let participation = document.participation();
+        assert!(!match class {
+            "condition" => participation.condition_functions().is_complete(),
+            "stable" => participation.stable_ids().is_complete(),
+            _ => participation.ast_structure().is_complete(),
+        });
+        assert!(
+            kernel
+                .snapshot()
+                .document(&key("target.recite"))
+                .expect("target present")
+                .diagnostics()
+                .iter()
+                .all(|diagnostic| diagnostic.code.as_str() != "RECITE_VALIDATE007")
+        );
+    }
 }

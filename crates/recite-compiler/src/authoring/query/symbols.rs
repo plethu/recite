@@ -1,7 +1,16 @@
-use recite_core::{DocumentKey, SourceId, SourcePosition, SourceSpan};
-
 use super::super::snapshot::DocumentSnapshot;
 use super::types::{SymbolIdentity, SymbolKind, SymbolLocation, SymbolQueryOptions, SymbolRole};
+use recite_core::{DocumentKey, SourceId, SourcePosition, SourceSpan};
+
+pub(super) fn contains(span: &SourceSpan, position: SourcePosition) -> bool {
+    let start = (span.start.line(), span.start.column());
+    let end = span
+        .end
+        .map(|end| (end.line(), end.column()))
+        .unwrap_or(start);
+    let point = (position.line(), position.column());
+    start <= point && point <= end
+}
 
 pub(super) fn symbol_locations(
     key: &DocumentKey,
@@ -11,12 +20,14 @@ pub(super) fn symbol_locations(
     let summary = document.summary();
     let mut locations = Vec::new();
     if options.include_declarations() {
-        locations.extend(summary.blocks().iter().map(|block| SymbolLocation {
-            document: key.clone(),
-            identity: SymbolIdentity::Block(block.id().clone()),
-            kind: SymbolKind::Block,
-            role: SymbolRole::Definition,
-            span: block.id_span().clone(),
+        locations.extend(summary.blocks().iter().filter_map(|block| {
+            Some(SymbolLocation {
+                document: key.clone(),
+                identity: SymbolIdentity::Block(block.id().clone()),
+                kind: SymbolKind::Block,
+                role: SymbolRole::Definition,
+                span: block.id_span()?.clone(),
+            })
         }));
     }
     locations.extend(summary.block_references().iter().map(|reference| {
@@ -45,24 +56,25 @@ pub(super) fn symbol_locations(
             } else {
                 SymbolRole::Annotation
             },
-            span: stable
-                .source_id_span()
-                .cloned()
-                .unwrap_or_else(|| stable.insertion_span().clone()),
+            span: stable.source_id_span()?.clone(),
         })
     }));
     locations.extend(summary.metadata().iter().filter_map(|metadata| {
-        let span = metadata
-            .key_span()
-            .cloned()
-            .or_else(|| metadata.source_span().cloned())
-            .or_else(|| metadata.value_span().cloned())?;
         Some(SymbolLocation {
             document: key.clone(),
             identity: SymbolIdentity::MetadataKey(metadata.key().to_owned()),
             kind: SymbolKind::Metadata,
             role: SymbolRole::Annotation,
-            span,
+            span: metadata.key_span()?.clone(),
+        })
+    }));
+    locations.extend(summary.metadata().iter().filter_map(|metadata| {
+        Some(SymbolLocation {
+            document: key.clone(),
+            identity: SymbolIdentity::MetadataKey(metadata.key().to_owned()),
+            kind: SymbolKind::Metadata,
+            role: SymbolRole::Annotation,
+            span: metadata.value_span()?.clone(),
         })
     }));
     locations.extend(
@@ -97,18 +109,27 @@ pub(super) fn symbol_locations(
             span.end
                 .map(|end| (end.line(), end.column()))
                 .unwrap_or((span.start.line(), span.start.column())),
-            location.kind as u8,
+            symbol_kind_order(location.kind()),
+            format_identity(location.identity()),
         )
     });
     locations
 }
-
-pub(super) fn contains(span: &SourceSpan, position: SourcePosition) -> bool {
-    let start = (span.start.line(), span.start.column());
-    let end = span
-        .end
-        .map(|end| (end.line(), end.column()))
-        .unwrap_or(start);
-    let point = (position.line(), position.column());
-    start <= point && point <= end
+fn symbol_kind_order(kind: SymbolKind) -> u8 {
+    match kind {
+        SymbolKind::Block => 0,
+        SymbolKind::BlockReference => 1,
+        SymbolKind::StableId => 2,
+        SymbolKind::Metadata => 3,
+        SymbolKind::ConditionFunction => 4,
+        SymbolKind::EffectFunction => 5,
+    }
+}
+fn format_identity(identity: &SymbolIdentity) -> String {
+    match identity {
+        SymbolIdentity::Block(id) => format!("block:{}", id.as_str()),
+        SymbolIdentity::Source(id) => format!("source:{id:?}"),
+        SymbolIdentity::MetadataKey(key) => format!("metadata:{key}"),
+        SymbolIdentity::Function(name) => format!("function:{name}"),
+    }
 }
