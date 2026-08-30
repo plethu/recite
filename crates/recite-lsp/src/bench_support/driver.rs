@@ -54,7 +54,8 @@ impl LspBenchmarkDriver {
             Err(error) => panic!("benchmark default UI catalog is invalid: {error}"),
         };
         Self {
-            workspace: LspWorkspace::with_ui_catalog(config.workspace_config(), catalog),
+            workspace: LspWorkspace::with_ui_catalog(config.workspace_config(), catalog)
+                .unwrap_or_else(|error| panic!("benchmark authoring state is invalid: {error}")),
         }
     }
 
@@ -70,9 +71,12 @@ impl LspBenchmarkDriver {
 
     #[must_use]
     pub fn open_file(&mut self, probe: &LspDocumentProbe) -> usize {
-        let refresh = self
-            .workspace
-            .open(probe.uri.clone(), 1, read_probe_text_or_panic(probe));
+        let Some(refresh) =
+            self.workspace
+                .open(probe.uri.clone(), 1, read_probe_text_or_panic(probe))
+        else {
+            return 0;
+        };
         diagnostic_count(refresh)
     }
 
@@ -98,9 +102,12 @@ impl LspBenchmarkDriver {
     pub fn diagnostics_refresh(&mut self, probe: &LspDocumentProbe) -> usize {
         // Keep the synthetic refresh at the latest probe version so repeated
         // benchmark operations satisfy the kernel's monotonic overlay guard.
-        let refresh = self
-            .workspace
-            .open(probe.uri.clone(), 2, read_probe_text_or_panic(probe));
+        let Some(refresh) =
+            self.workspace
+                .open(probe.uri.clone(), 2, read_probe_text_or_panic(probe))
+        else {
+            return 0;
+        };
         let DiagnosticRefresh::Publish(diagnostics) = refresh else {
             return 0;
         };

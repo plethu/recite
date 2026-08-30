@@ -13,6 +13,7 @@ use crate::summary::SchemaSummary;
 
 const SCHEMA_LOAD_ERROR: DiagnosticCode = DiagnosticCode::new_static("RECITE_SCHEMA001");
 
+#[derive(Clone)]
 pub(crate) struct SchemaIndex {
     uri: Option<Uri>,
     path: Option<PathBuf>,

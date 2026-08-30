@@ -25,7 +25,7 @@ impl OpenDocument {
     }
 }
 
-#[derive(Default)]
+#[derive(Clone, Default)]
 pub(crate) struct OpenDocumentStore {
     documents: BTreeMap<Uri, OpenDocument>,
 }
@@ -63,7 +63,7 @@ impl OpenDocumentStore {
         };
         let document = parse_document(identity, version, text);
         self.documents.insert(uri, document.clone());
-        DocumentChangeResult::Accepted(Box::new(document))
+        DocumentChangeResult::Accepted(())
     }
 
     pub(crate) fn refresh_identity(
@@ -73,7 +73,6 @@ impl OpenDocumentStore {
         let existing = self.documents.get(&identity.uri)?;
         if existing.identity == identity {
             return Some(OpenDocumentIdentityRefresh {
-                document: existing.clone(),
                 identity_changed: false,
             });
         }
@@ -82,7 +81,6 @@ impl OpenDocumentStore {
         self.documents
             .insert(identity.uri.clone(), document.clone());
         Some(OpenDocumentIdentityRefresh {
-            document,
             identity_changed: true,
         })
     }
@@ -108,7 +106,7 @@ impl OpenDocumentStore {
 
 #[derive(Clone, Debug)]
 pub(crate) enum DocumentChangeResult {
-    Accepted(Box<OpenDocument>),
+    Accepted(()),
     Stale,
     Malformed,
     Unopened,
@@ -116,7 +114,6 @@ pub(crate) enum DocumentChangeResult {
 
 #[derive(Clone, Debug)]
 pub(crate) struct OpenDocumentIdentityRefresh {
-    pub(crate) document: OpenDocument,
     pub(crate) identity_changed: bool,
 }
 

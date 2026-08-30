@@ -4,52 +4,101 @@ use std::fmt::Write as _;
 use recite_compiler::{AuthoringKernel, AuthoringRequest, OpenDocument as KernelOpenDocument};
 use recite_core::DocumentKey;
 
-use super::project_index::SavedDocument;
+use super::project_index::{SavedDocument, SavedProjectIndex};
+use super::schema_index::SchemaIndex;
 use super::{DiagnosticRefresh, LspWorkspace};
 use crate::documents::OpenDocument;
+use crate::documents::OpenDocumentStore;
 use crate::summary::FileIdentity;
 
 impl LspWorkspace {
-    pub(crate) fn rebuild_next_generation(&mut self) {
-        self.generation = super::SnapshotGeneration(self.generation.0.saturating_add(1));
-        self.rebuild_kernel();
-        self.snapshot = super::LiveProjectSnapshot::rebuild(
-            self.generation,
-            &self.saved,
-            &self.documents,
-            self.kernel.snapshot(),
-        );
+    pub(crate) fn rebuild_kernel(&mut self) -> Result<(), recite_compiler::AuthoringError> {
+        let saved = self.saved.clone();
+        let documents = self.documents.clone();
+        let owners = self.rebuild_kernel_for(&saved, &documents, None)?;
+        self.kernel_open_owners = owners;
+        Ok(())
     }
 
-    pub(crate) fn rebuild_kernel(&mut self) {
-        let open_documents = self.effective_open_documents();
+    pub(super) fn rebuild_state(
+        &mut self,
+        saved: SavedProjectIndex,
+        documents: OpenDocumentStore,
+    ) -> Result<(), recite_compiler::AuthoringError> {
+        let owners = self.rebuild_kernel_for(&saved, &documents, None)?;
+        let generation = self.next_generation();
+        let snapshot = super::LiveProjectSnapshot::rebuild(
+            generation,
+            &saved,
+            &documents,
+            self.kernel.snapshot(),
+        );
+        self.saved = saved;
+        self.documents = documents;
+        self.kernel_open_owners = owners;
+        self.generation = generation;
+        self.snapshot = snapshot;
+        Ok(())
+    }
+
+    pub(super) fn rebuild_state_with_schema(
+        &mut self,
+        saved: SavedProjectIndex,
+        documents: OpenDocumentStore,
+        schema: SchemaIndex,
+    ) -> Result<(), recite_compiler::AuthoringError> {
+        let owners = self.rebuild_kernel_for(&saved, &documents, Some(&schema))?;
+        let generation = self.next_generation();
+        let snapshot = super::LiveProjectSnapshot::rebuild(
+            generation,
+            &saved,
+            &documents,
+            self.kernel.snapshot(),
+        );
+        self.saved = saved;
+        self.documents = documents;
+        self.kernel_open_owners = owners;
+        self.schema = schema;
+        self.generation = generation;
+        self.snapshot = snapshot;
+        Ok(())
+    }
+
+    fn rebuild_kernel_for(
+        &mut self,
+        saved: &SavedProjectIndex,
+        documents: &OpenDocumentStore,
+        schema: Option<&SchemaIndex>,
+    ) -> Result<BTreeMap<DocumentKey, lsp_types::Uri>, recite_compiler::AuthoringError> {
+        let open_documents = Self::effective_open_documents(documents);
         let owners = open_documents
             .iter()
             .map(|(key, document)| (key.clone(), document.identity().uri.clone()))
             .collect::<BTreeMap<_, _>>();
-        if owners != self.kernel_open_owners {
-            let mut kernel = self.new_kernel();
+        if schema.is_some() || owners != self.kernel_open_owners {
+            let mut kernel = schema.map_or_else(|| self.new_kernel(), Self::new_kernel_for_schema);
             let expected = kernel.snapshot().generation();
-            let request = self.authoring_request(&open_documents, expected);
-            if let Err(error) = kernel.apply(request) {
-                panic!(
-                    "LSP authoring request invariant violated at generation {expected}: {error}"
-                );
-            }
+            let request = self.authoring_request(saved, &open_documents, expected);
+            kernel.apply(request)?;
             self.kernel = kernel;
-            self.kernel_open_owners = owners;
-            return;
+        } else {
+            let expected = self.kernel.snapshot().generation();
+            let request = self.authoring_request(saved, &open_documents, expected);
+            self.kernel.apply(request)?;
         }
+        Ok(owners)
+    }
 
-        let expected = self.kernel.snapshot().generation();
-        let request = self.authoring_request(&open_documents, expected);
-        if let Err(error) = self.kernel.apply(request) {
-            panic!("LSP authoring request invariant violated at generation {expected}: {error}");
-        }
+    fn next_generation(&self) -> super::SnapshotGeneration {
+        super::SnapshotGeneration(self.generation.0.saturating_add(1))
     }
 
     pub(crate) fn new_kernel(&self) -> AuthoringKernel {
-        self.schema
+        Self::new_kernel_for_schema(&self.schema)
+    }
+
+    fn new_kernel_for_schema(schema: &SchemaIndex) -> AuthoringKernel {
+        schema
             .schema()
             .cloned()
             .map_or_else(AuthoringKernel::new, AuthoringKernel::with_schema)
@@ -57,11 +106,11 @@ impl LspWorkspace {
 
     fn authoring_request(
         &self,
+        saved_index: &SavedProjectIndex,
         open_documents: &BTreeMap<DocumentKey, &OpenDocument>,
         expected_generation: recite_compiler::SnapshotGeneration,
     ) -> AuthoringRequest {
-        let saved = self
-            .saved
+        let saved = saved_index
             .documents
             .values()
             .filter_map(|document| {
@@ -84,9 +133,11 @@ impl LspWorkspace {
         AuthoringRequest::new(expected_generation, saved, open)
     }
 
-    fn effective_open_documents(&self) -> BTreeMap<DocumentKey, &OpenDocument> {
+    fn effective_open_documents(
+        documents: &OpenDocumentStore,
+    ) -> BTreeMap<DocumentKey, &OpenDocument> {
         let mut open_by_key = BTreeMap::new();
-        for document in self.documents.documents() {
+        for document in documents.documents() {
             let Some(key) = document_key_for_open(document) else {
                 continue;
             };

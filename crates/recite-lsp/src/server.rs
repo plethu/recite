@@ -34,12 +34,17 @@ struct Server {
     shutdown_requested: bool,
 }
 impl Server {
-    fn new(connection: Connection, workspace_config: WorkspaceConfig, catalog: UiCatalog) -> Self {
-        Self {
+    fn new(
+        connection: Connection,
+        workspace_config: WorkspaceConfig,
+        catalog: UiCatalog,
+    ) -> Result<Self, ServerError> {
+        Ok(Self {
             connection,
-            workspace: LspWorkspace::with_ui_catalog(workspace_config, catalog),
+            workspace: LspWorkspace::with_ui_catalog(workspace_config, catalog)
+                .map_err(|error| ServerError::Authoring(error.to_string()))?,
             shutdown_requested: false,
-        }
+        })
     }
 
     fn run(&mut self) -> Result<(), ServerError> {
@@ -249,11 +254,13 @@ impl Server {
         else {
             return Ok(());
         };
-        let refresh = self.workspace.open(
+        let Some(refresh) = self.workspace.open(
             params.text_document.uri.clone(),
             params.text_document.version,
             params.text_document.text,
-        );
+        ) else {
+            return Ok(());
+        };
         self.publish_refresh(refresh)?;
         self.publish_open_document_refreshes(Some(&params.text_document.uri))
     }

@@ -12,7 +12,10 @@ use crate::diagnostics::DiagnosticSource;
 use crate::documents::OpenDocumentStore;
 
 impl LspWorkspace {
-    pub(crate) fn with_ui_catalog(config: WorkspaceConfig, ui_catalog: UiCatalog) -> Self {
+    pub(crate) fn with_ui_catalog(
+        config: WorkspaceConfig,
+        ui_catalog: UiCatalog,
+    ) -> Result<Self, recite_compiler::AuthoringError> {
         let saved = SavedProjectIndex::discover(&config);
         let schema = SchemaIndex::load(config.schema_path);
         let documents = OpenDocumentStore::default();
@@ -31,14 +34,14 @@ impl LspWorkspace {
             generation,
             ui_catalog,
         };
-        workspace.rebuild_kernel();
+        workspace.rebuild_kernel()?;
         workspace.snapshot = LiveProjectSnapshot::rebuild(
             generation,
             &workspace.saved,
             &workspace.documents,
             workspace.kernel.snapshot(),
         );
-        workspace
+        Ok(workspace)
     }
 
     pub(crate) fn diagnostic_sources(&self) -> Vec<DiagnosticSource<'_>> {

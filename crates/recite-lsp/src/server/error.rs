@@ -17,4 +17,6 @@ pub enum ServerError {
     UiCatalog(String),
     #[error("failed to publish LSP diagnostics: {0}")]
     Diagnostics(String),
+    #[error("failed to initialize LSP authoring state: {0}")]
+    Authoring(String),
 }

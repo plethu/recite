@@ -14,6 +14,7 @@ mod project_manifest;
 #[path = "project_ownership.rs"]
 mod project_ownership;
 
+#[derive(Clone)]
 pub(super) struct SavedProjectIndex {
     project_root: PathBuf,
     fallback_roots: Vec<PathBuf>,

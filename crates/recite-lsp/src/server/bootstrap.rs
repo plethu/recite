@@ -78,7 +78,7 @@ fn run_connection_with_startup(
         connection,
         WorkspaceConfig::from_initialize_params(&initialize_params),
         startup.catalog,
-    );
+    )?;
     if initialize_params
         .capabilities
         .workspace

@@ -37,14 +37,15 @@ impl SavedProjectIndex {
     }
 
     fn remove_uri(&mut self, uri: &Uri, lexical_path: &Path) -> bool {
-        let before = self.documents.len();
+        let mut changed = false;
         self.documents.retain(|_, document| {
             let owns_source = document.source_paths.remove(lexical_path);
             let matches_uri = document.identity.uri == *uri;
             let remove_document = (owns_source || matches_uri) && document.source_paths.is_empty();
+            changed |= owns_source || remove_document;
             !remove_document
         });
-        before != self.documents.len()
+        changed
     }
 
     fn refresh_path(&mut self, path: &Path, source_path: &Path) -> bool {

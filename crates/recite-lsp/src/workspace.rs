@@ -5,6 +5,7 @@ mod project_index;
 mod project_refresh;
 mod schema_index;
 mod snapshot;
+mod transaction;
 mod ui;
 
 use std::collections::BTreeMap;
@@ -13,7 +14,7 @@ use std::path::{Component, Path, PathBuf};
 
 use lsp_types::{
     CodeActionParams, CodeActionResponse, CompletionResponse, GotoDefinitionResponse, Hover,
-    Location, Position, PrepareRenameResponse, TextDocumentContentChangeEvent, Uri, WorkspaceEdit,
+    Location, Position, PrepareRenameResponse, Uri, WorkspaceEdit,
 };
 use recite_compiler::AuthoringKernel;
 use recite_core::{Diagnostic, DocumentKey};
@@ -25,9 +26,8 @@ use project_index::{SavedDocument, SavedProjectIndex};
 use schema_index::SchemaIndex;
 pub(crate) use snapshot::LiveProjectSnapshot;
 
-use crate::documents::{DocumentChangeResult, OpenDocument, OpenDocumentStore};
+use crate::documents::{OpenDocument, OpenDocumentStore};
 use crate::features;
-use crate::paths::uri_to_file_path;
 use crate::summary::{FileSummary, OpenFileIdentity};
 
 #[derive(Clone, Copy, Debug, Eq, PartialEq)]
@@ -45,41 +45,17 @@ pub(crate) struct LspWorkspace {
 }
 
 impl LspWorkspace {
-    pub(crate) fn open(&mut self, uri: Uri, version: i32, text: String) -> DiagnosticRefresh {
-        let identity = self.open_identity(uri);
-        let document = self.documents.open(identity, version, text);
-        self.rebuild_next_generation();
-        self.publish_open_document(&document)
-    }
-
-    pub(crate) fn change(
-        &mut self,
-        uri: Uri,
-        version: i32,
-        changes: Vec<TextDocumentContentChangeEvent>,
-    ) -> WorkspaceChangeResult {
-        let identity = self.open_identity(uri);
-        match self.documents.change(identity, version, changes) {
-            DocumentChangeResult::Accepted(document) => {
-                self.rebuild_next_generation();
-                WorkspaceChangeResult::Accepted(self.publish_open_document(&document))
-            }
-            DocumentChangeResult::Stale => WorkspaceChangeResult::Stale,
-            DocumentChangeResult::Malformed => WorkspaceChangeResult::Malformed,
-            DocumentChangeResult::Unopened => WorkspaceChangeResult::Unopened,
-        }
-    }
-
     pub(crate) fn schema_diagnostics(&self) -> Option<DiagnosticRefresh> {
         self.schema.diagnostics_refresh(self.generation)
     }
 
     pub(crate) fn save_schema(&mut self, uri: &Uri) -> Option<DiagnosticRefresh> {
-        if !self.schema.refresh_uri(uri) {
+        let mut schema = self.schema.clone();
+        if !schema.refresh_uri(uri) {
             return None;
         }
-        self.kernel = self.new_kernel();
-        self.rebuild_next_generation();
+        self.rebuild_state_with_schema(self.saved.clone(), self.documents.clone(), schema)
+            .ok()?;
         self.schema.refresh_or_clear(self.generation)
     }
 
@@ -242,22 +218,6 @@ impl LspWorkspace {
                     .map(|document| document.text.as_str())
             })
     }
-
-    fn open_identity(&self, uri: Uri) -> OpenFileIdentity {
-        let Some(path) = uri_to_file_path(&uri) else {
-            return uri_keyed_open_identity(uri);
-        };
-        let (canonical_path, path_exists) = canonical_or_normalized_path(&path);
-        let project_relative_path = path_exists
-            .then(|| self.saved.project_key_for_path(&canonical_path))
-            .flatten();
-
-        OpenFileIdentity {
-            uri,
-            saved_path: Some(canonical_path.clone()),
-            project_relative_path,
-        }
-    }
 }
 
 fn canonical_or_normalized_path(path: &Path) -> (PathBuf, bool) {
@@ -318,6 +278,7 @@ pub(crate) enum WorkspaceChangeResult {
     Stale,
     Malformed,
     Unopened,
+    Rejected,
 }
 
 #[derive(Clone, Debug)]

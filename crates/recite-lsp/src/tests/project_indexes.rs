@@ -10,6 +10,7 @@ use super::support::{Harness, block_names, file_uri, full_change, test_workspace
 pub(super) mod discovery_transitions;
 mod lifecycle;
 mod schema_summary;
+mod transactions;
 
 pub(super) use lifecycle::{
     did_close_refreshes_saved_summary_before_falling_back,
@@ -21,6 +22,10 @@ pub(super) use lifecycle::{
     saved_uri_replacement_removes_old_canonical_entry,
     watched_files_refresh_saved_index_for_create_and_delete,
     watched_refresh_publishes_effective_open_payload,
+};
+pub(super) use transactions::{
+    duplicate_open_is_ignored_transactionally, manifest_refresh_rekeys_open_overlay,
+    watched_creation_rekeys_open_overlay,
 };
 
 pub(super) fn saved_project_discovery_is_deterministically_sorted() {

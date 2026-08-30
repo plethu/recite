@@ -40,7 +40,8 @@ pub(super) struct Harness {
 
 pub(super) fn test_workspace(config: WorkspaceConfig) -> LspWorkspace {
     match UiCatalog::load(&UiLocale::default()) {
-        Ok(catalog) => LspWorkspace::with_ui_catalog(config, catalog),
+        Ok(catalog) => LspWorkspace::with_ui_catalog(config, catalog)
+            .unwrap_or_else(|error| panic!("test authoring state is invalid: {error}")),
         Err(error) => panic!("test default UI catalog is invalid: {error}"),
     }
 }

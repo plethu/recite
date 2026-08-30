@@ -12,18 +12,16 @@ impl LspWorkspace {
         {
             refreshes.extend(self.refresh_project_manifest());
         }
-        let touched_saved = self.saved.refresh_uri(&uri);
-        let open_identity = self.open_identity(uri.clone());
-        let open_refresh = self.documents.refresh_identity(open_identity);
-        if touched_saved
-            || open_refresh
-                .as_ref()
-                .is_some_and(|refresh| refresh.identity_changed)
+        let mut saved = self.saved.clone();
+        let mut documents = self.documents.clone();
+        let touched_saved = saved.refresh_uri(&uri);
+        let open_identity_changed = self.refresh_open_identities(&saved, &mut documents);
+        if (touched_saved || open_identity_changed) && self.rebuild_state(saved, documents).is_err()
         {
-            self.rebuild_next_generation();
+            return refreshes;
         }
-        if let Some(open_refresh) = open_refresh {
-            refreshes.push(self.publish_open_document(&open_refresh.document));
+        if let Some(document) = self.documents.document(&uri) {
+            refreshes.push(self.publish_open_document(document));
             return refreshes;
         }
         if let Some(refresh) = self
@@ -48,8 +46,13 @@ impl LspWorkspace {
             .manifest_path()
             .and_then(crate::paths::file_path_to_uri);
         let old_had_diagnostics = !self.saved.diagnostics().is_empty();
-        self.saved.refresh_manifest();
-        self.rebuild_next_generation();
+        let mut saved = self.saved.clone();
+        saved.refresh_manifest();
+        let mut documents = self.documents.clone();
+        self.refresh_open_identities(&saved, &mut documents);
+        if self.rebuild_state(saved, documents).is_err() {
+            return Vec::new();
+        }
         let mut refreshes = Vec::new();
         if let Some(refresh) = self.project_diagnostics() {
             refreshes.push(refresh);
@@ -82,9 +85,15 @@ impl LspWorkspace {
         {
             return vec![refresh];
         }
-        let watched_keys = self.watched_document_keys(uri);
-        if self.saved.refresh_uri(uri) {
-            self.rebuild_next_generation();
+        let mut saved = self.saved.clone();
+        let mut documents = self.documents.clone();
+        let touched_saved = saved.refresh_uri(uri);
+        let open_identity_changed = self.refresh_open_identities(&saved, &mut documents);
+        if touched_saved || open_identity_changed {
+            let watched_keys = self.watched_document_keys(uri, &saved, &documents);
+            if self.rebuild_state(saved, documents).is_err() {
+                return Vec::new();
+            }
             if let Some(document) = watched_keys
                 .iter()
                 .find_map(|key| self.effective_open_document_for_key(key))
@@ -105,13 +114,18 @@ impl LspWorkspace {
         Vec::new()
     }
 
-    fn watched_document_keys(&self, uri: &Uri) -> BTreeSet<recite_core::DocumentKey> {
-        self.documents
+    fn watched_document_keys(
+        &self,
+        uri: &Uri,
+        saved: &super::project_index::SavedProjectIndex,
+        documents: &crate::documents::OpenDocumentStore,
+    ) -> BTreeSet<recite_core::DocumentKey> {
+        documents
             .document(uri)
             .and_then(super::document_key_for_open)
             .into_iter()
             .chain(
-                self.saved
+                saved
                     .document_by_uri(uri)
                     .and_then(super::document_key_for_saved),
             )
@@ -119,14 +133,22 @@ impl LspWorkspace {
     }
 
     pub(crate) fn close(&mut self, uri: Uri) -> Option<DiagnosticRefresh> {
-        let closed = self.documents.close(&uri)?;
+        let mut documents = self.documents.clone();
+        let closed = documents.close(&uri)?;
         let closed_key = super::document_key_for_open(&closed);
-        self.saved.refresh_uri(&uri);
-        self.rebuild_next_generation();
-        if let Some(document) = closed_key
+        let mut saved = self.saved.clone();
+        saved.refresh_uri(&uri);
+        self.refresh_open_identities(&saved, &mut documents);
+        self.rebuild_state(saved, documents).ok()?;
+        let remaining_open = closed_key
             .as_ref()
             .and_then(|key| self.effective_open_document_for_key(key))
-        {
+            .or_else(|| {
+                self.documents
+                    .documents()
+                    .find(|document| document.identity().saved_path == closed.identity().saved_path)
+            });
+        if let Some(document) = remaining_open {
             return Some(self.publish_open_document(document));
         }
         Some(

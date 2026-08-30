@@ -125,7 +125,8 @@ fn related_spans_resolve_open_project_file_text() {
         Ok(catalog) => LspWorkspace::with_ui_catalog(
             WorkspaceConfig::for_roots(vec![temp.path().to_owned()]),
             catalog,
-        ),
+        )
+        .unwrap_or_else(|error| panic!("test authoring state is invalid: {error}")),
         Err(error) => panic!("test default UI catalog is invalid: {error}"),
     };
     workspace.open(

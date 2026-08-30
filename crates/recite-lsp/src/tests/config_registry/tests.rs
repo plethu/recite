@@ -143,6 +143,21 @@ fn watched_refresh_publishes_effective_open_payload() {
 }
 
 #[test]
+fn manifest_refresh_rekeys_open_overlay() {
+    super::project_indexes::manifest_refresh_rekeys_open_overlay();
+}
+
+#[test]
+fn watched_creation_rekeys_open_overlay() {
+    super::project_indexes::watched_creation_rekeys_open_overlay();
+}
+
+#[test]
+fn duplicate_open_is_ignored_transactionally() {
+    super::project_indexes::duplicate_open_is_ignored_transactionally();
+}
+
+#[test]
 fn did_save_refreshes_saved_summary_for_closed_files() {
     super::project_indexes::did_save_refreshes_saved_summary_for_closed_files();
 }
