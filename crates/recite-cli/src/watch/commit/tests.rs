@@ -14,6 +14,31 @@ use super::super::staging::{self, StagedOutput};
 use super::{ProjectBuildRecovery, commit_prepared_with};
 use crate::i18n::Messages;
 
+#[cfg(unix)]
+const SIMPLE_MARKER: &str = "u1~6d61726b6572";
+#[cfg(windows)]
+const SIMPLE_MARKER: &str = "w1~006d00610072006b00650072";
+#[cfg(not(any(unix, windows)))]
+const SIMPLE_MARKER: &str = "p1~006d00610072006b00650072";
+
+#[cfg(unix)]
+const FIRST_STAGE_MARKER: &str = "u1~73746167652f66697273740a2e746d70";
+#[cfg(windows)]
+const FIRST_STAGE_MARKER: &str =
+    "w1~00730074006100670065002f00660069007200730074000a002e0074006d0070";
+#[cfg(not(any(unix, windows)))]
+const FIRST_STAGE_MARKER: &str =
+    "p1~00730074006100670065002f00660069007200730074000a002e0074006d0070";
+
+#[cfg(unix)]
+const SECOND_STAGE_MARKER: &str = "u1~73746167652f7365636f6e642e746d70";
+#[cfg(windows)]
+const SECOND_STAGE_MARKER: &str =
+    "w1~00730074006100670065002f007300650063006f006e0064002e0074006d0070";
+#[cfg(not(any(unix, windows)))]
+const SECOND_STAGE_MARKER: &str =
+    "p1~00730074006100670065002f007300650063006f006e0064002e0074006d0070";
+
 #[test]
 fn coordinator_and_freshness_errors_retain_recovery_for_host() {
     let messages = Messages::load(&crate::i18n::UiLocale::default()).expect("messages");
@@ -112,7 +137,9 @@ fn freshness_recovery_localizes_nested_error_and_wrapper() {
     .expect("localized freshness report");
     assert_eq!(
         String::from_utf8(stderr).expect("stderr"),
-        "alt-failed alt-read schema.json schema missing\nalt-notice ; recovery markers: alt-record u1~6d61726b6572 alt-stage\n"
+        format!(
+            "alt-failed alt-read schema.json schema missing\nalt-notice ; recovery markers: alt-record {SIMPLE_MARKER} alt-stage\n"
+        )
     );
 }
 
@@ -130,8 +157,8 @@ fn recovery_deduplication_uses_marker_and_reason_not_io_detail() {
         &io::Error::new(io::ErrorKind::PermissionDenied, "denied"),
     );
     let output = super::super::build::format_recovery_required(&messages, 1, &[first, second]);
-    assert!(output.contains("recovery markers: u1~"));
-    assert_eq!(output.matches("u1~").count(), 1);
+    assert!(output.contains(&format!("recovery markers: {SIMPLE_MARKER}")));
+    assert_eq!(output.matches(SIMPLE_MARKER).count(), 1);
 }
 
 #[test]
@@ -311,6 +338,8 @@ fn recovery_records_use_alternate_typed_fluent_contract() {
             2,
             &[second.clone(), first.clone(), first],
         ),
-        "alt-required count=2 records=; recovery markers: alt-record marker=u1~73746167652f66697273740a2e746d70 reason=alt-stage detail=alt-io alt-permission  denied\nalt-record marker=u1~73746167652f7365636f6e642e746d70 reason=alt-uncommitted detail="
+        format!(
+            "alt-required count=2 records=; recovery markers: alt-record marker={FIRST_STAGE_MARKER} reason=alt-stage detail=alt-io alt-permission  denied\nalt-record marker={SECOND_STAGE_MARKER} reason=alt-uncommitted detail="
+        )
     );
 }

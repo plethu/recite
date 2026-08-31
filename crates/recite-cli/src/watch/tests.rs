@@ -24,7 +24,7 @@ fn write_file(root: &Path, name: &str, source: &str) -> PathBuf {
         fs::create_dir_all(parent).expect("create parent");
     }
     fs::write(&path, source).expect("write file");
-    path
+    fs::canonicalize(path).expect("canonical path")
 }
 
 fn write_project(root: &Path) {
@@ -229,7 +229,7 @@ fn missing_schema_path_is_tracked_for_later_recovery() {
     let error = build_once(&mut state, &mut stderr).expect_err("missing schema is an IO error");
 
     assert!(error.to_string().contains("schema.json"));
-    assert!(state.is_relevant_path(&temp.path().join("schema.json")));
+    assert!(state.is_relevant_path(&state.project_root.join("schema.json")));
 }
 
 #[test]
@@ -298,12 +298,12 @@ fn directory_delete_events_rebuild_configured_roots_but_not_excludes() {
 
     let removed = Event {
         kind: EventKind::Remove(notify::event::RemoveKind::Any),
-        paths: vec![temp.path().join("src/removed")],
+        paths: vec![state.project_root.join("src/removed")],
         attrs: Default::default(),
     };
     let excluded = Event {
         kind: EventKind::Remove(notify::event::RemoveKind::Any),
-        paths: vec![temp.path().join("scratch/removed")],
+        paths: vec![state.project_root.join("scratch/removed")],
         attrs: Default::default(),
     };
     assert!(state.is_relevant_event(&removed));
