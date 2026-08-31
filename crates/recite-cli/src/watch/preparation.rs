@@ -5,7 +5,7 @@ use recite_compiler::{
     AuthoringKernel, AuthoringRequest, BuildGeneration, BuildInput, BuildInputAuthority,
     BuildInputKind, BuildRequest, SnapshotGeneration,
 };
-use recite_config::{ProjectDiscoveryError, discover_project};
+use recite_config::{ProjectDiscoveryError, ProjectDiscoveryReport, discover_project};
 use recite_core::{Diagnostic, DiagnosticSeverity, DocumentKey, ProjectSchema};
 
 use crate::fs::{load_schema, resolve_project_path};
@@ -24,6 +24,14 @@ pub(super) fn prepare(
         Ok(report) => report,
         Err(error) => return classify_discovery_error(error),
     };
+    prepare_discovered(discovery, generation, snapshot_generation)
+}
+
+pub(super) fn prepare_discovered(
+    discovery: ProjectDiscoveryReport,
+    generation: BuildGeneration,
+    snapshot_generation: SnapshotGeneration,
+) -> Result<ProjectBuildPreparation, ProjectBuildPreparationError> {
     let discovered = discovery.manifest();
     let project_root = discovered.project_root().to_owned();
     let manifest = discovered.source().clone();
@@ -164,7 +172,7 @@ fn validate_sources(
     Ok(kernel.snapshot().diagnostics().iter().cloned().collect())
 }
 
-fn classify_discovery_error(
+pub(super) fn classify_discovery_error(
     error: ProjectDiscoveryError,
 ) -> Result<ProjectBuildPreparation, ProjectBuildPreparationError> {
     match error {

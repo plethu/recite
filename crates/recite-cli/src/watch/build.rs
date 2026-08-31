@@ -1,185 +1,173 @@
-use std::collections::BTreeMap;
-use std::fs;
 use std::io::Write;
-use std::path::{Path, PathBuf};
 
-use recite_compiler::{CompileOptions, compile_inputs, compile_inputs_with_schema};
-use recite_core::{
-    CompiledAssetId, CompilerVersion, Diagnostic, ProjectManifest, ProjectSchema,
-    SchemaFingerprint, SourceMapId, project::validate_project_manifest_source,
-};
+use recite_compiler::{BuildControl, BuildResultFailure, BuildTerminalStatus, PublishOutcome};
+use recite_config::discover_project;
 
 use super::events::WatchState;
+use super::{
+    ProjectBuildEngine, ProjectBuildPreparation, ProjectBuildPreparationError,
+    ProjectBuildPublisher,
+};
 use crate::diagnostics::report_diagnostics;
 use crate::error::CliError;
-use crate::fs::{
-    display_path, load_schema, read_compile_inputs_relative_to, reject_output_input_alias,
-    resolve_project_path, validate_project_asset_freshness, write_staged,
-};
 use crate::i18n::Messages;
-use recite_config::discover_project;
+
+/// The presentation boundary's compact view of one coordinated build.
+#[derive(Debug, Eq, PartialEq)]
+pub(super) enum BuildStatus {
+    Fresh {
+        asset_count: usize,
+    },
+    Diagnostics,
+    PublicationFailure {
+        status: BuildTerminalStatus,
+        failure: Option<BuildResultFailure>,
+        outcome: PublishOutcome,
+    },
+}
 
 pub(super) fn build_once(
     state: &mut WatchState,
     stderr: &mut dyn Write,
     messages: &Messages,
 ) -> Result<BuildStatus, CliError> {
-    let report = discover_project(&state.project_root)
-        .map_err(|source| CliError::ProjectDiscovery { source })?;
-    let discovered = report.manifest();
-    state.project_root = discovered.project_root().to_owned();
-    state.manifest = Some(discovered.clone());
-    let manifest_source = discovered.source();
-    let discovery_diagnostics = report
-        .diagnostics()
-        .iter()
-        .map(recite_config::DiscoveryDiagnostic::as_core_diagnostic)
-        .collect::<Vec<_>>();
-    report_diagnostics(stderr, messages, discovery_diagnostics.iter())?;
-    if !report.is_complete() {
-        state.schema_path = None;
-        return Ok(BuildStatus::Diagnostics);
-    }
-    let manifest = manifest_source.manifest();
-
-    state.schema_path = project_schema_path(&state.project_root, manifest);
-    let loaded_schema = load_project_schema(state.schema_path.as_deref())?;
-    if !loaded_schema.diagnostics.is_empty() {
-        report_diagnostics(stderr, messages, loaded_schema.diagnostics.iter())?;
-        return Ok(BuildStatus::Diagnostics);
-    }
-
-    let manifest_diagnostics =
-        validate_project_manifest_source(manifest_source, loaded_schema.schema.as_ref());
-    if !manifest_diagnostics.is_empty() {
-        report_diagnostics(stderr, messages, manifest_diagnostics.iter())?;
-        return Ok(BuildStatus::Diagnostics);
-    }
-
-    let input_files = report
-        .documents()
-        .iter()
-        .map(|document| document.path().to_owned())
-        .collect::<Vec<_>>();
-    if input_files.is_empty() {
-        return Err(CliError::NoInputs);
-    }
-
-    let mut compiled_assets = Vec::new();
-    for target in unique_asset_targets(&state.project_root, manifest) {
-        reject_output_input_alias(&target.write_path, &input_files)?;
-        let inputs = read_compile_inputs_relative_to(&state.project_root, input_files.clone())?;
-        let options =
-            compile_options_for_asset_id(&target.asset_id, loaded_schema.schema.as_ref())?;
-        let report = if let Some(schema) = &loaded_schema.schema {
-            compile_inputs_with_schema(inputs, options, schema)?
-        } else {
-            compile_inputs(inputs, options)?
-        };
-
-        report_diagnostics(stderr, messages, report.diagnostics.iter())?;
-        let Some(asset) = report.asset else {
-            return Ok(BuildStatus::Diagnostics);
-        };
-        compiled_assets.push((target.write_path, asset.messagepack));
-    }
-
-    for (output, bytes) in &compiled_assets {
-        if let Some(parent) = output.parent() {
-            fs::create_dir_all(parent).map_err(|source| CliError::Write {
-                path: parent.to_owned(),
-                source,
-            })?;
-        }
-        write_staged(output, bytes)?;
-    }
-
-    let diagnostics = validate_project_asset_freshness(
-        &state.project_root,
-        manifest_source,
-        Some(loaded_schema.schema.as_ref().map_or(
-            SchemaFingerprint::NoSchema,
-            ProjectSchema::canonical_fingerprint,
-        )),
-    )?;
-    report_diagnostics(stderr, messages, diagnostics.iter())?;
-    if diagnostics.is_empty() {
-        Ok(BuildStatus::Fresh {
-            asset_count: compiled_assets.len(),
-        })
-    } else {
-        Ok(BuildStatus::Diagnostics)
-    }
+    let control = BuildControl::new();
+    build_once_with_control(state, stderr, messages, &control)
 }
 
-fn load_project_schema(schema_path: Option<&Path>) -> Result<LoadedProjectSchema, CliError> {
-    let Some(schema_path) = schema_path else {
-        return Ok(LoadedProjectSchema {
-            schema: None,
-            diagnostics: Vec::new(),
-        });
+pub(super) fn build_once_with_control(
+    state: &mut WatchState,
+    stderr: &mut dyn Write,
+    messages: &Messages,
+    control: &BuildControl,
+) -> Result<BuildStatus, CliError> {
+    let generation = state.next_build_generation()?;
+    let discovery = match discover_project(&state.project_root) {
+        Ok(discovery) => discovery,
+        Err(error) => {
+            return match super::preparation::classify_discovery_error(error) {
+                Ok(ProjectBuildPreparation::Rejected { diagnostics }) => {
+                    report_diagnostics(stderr, messages, diagnostics.iter())?;
+                    Ok(BuildStatus::Diagnostics)
+                }
+                Ok(ProjectBuildPreparation::Ready(_)) => Err(CliError::Watch {
+                    message: "discovery error classification returned a ready request".to_owned(),
+                }),
+                Err(error) => Err(map_preparation_error(error)),
+            };
+        }
+    };
+    state.update_from_discovery(&discovery);
+    let preparation = super::preparation::prepare_discovered(
+        discovery,
+        generation,
+        recite_compiler::SnapshotGeneration::initial(),
+    )
+    .map_err(map_preparation_error)?;
+    let request = match preparation {
+        ProjectBuildPreparation::Ready(request) => *request,
+        ProjectBuildPreparation::Rejected { diagnostics } => {
+            report_diagnostics(stderr, messages, diagnostics.iter())?;
+            return Ok(BuildStatus::Diagnostics);
+        }
     };
 
-    let loaded = load_schema(schema_path)?;
-    Ok(LoadedProjectSchema {
-        schema: loaded.schema,
-        diagnostics: loaded.diagnostics,
+    if request.targets().is_empty() {
+        report_diagnostics(stderr, messages, request.diagnostics().iter())?;
+        return Ok(BuildStatus::Fresh { asset_count: 0 });
+    }
+
+    let mut engine = ProjectBuildEngine::new(&request);
+    let mut publisher = ProjectBuildPublisher::new(&request).map_err(|error| CliError::Watch {
+        message: error.to_string(),
+    })?;
+    let result = state
+        .coordinator
+        .run(
+            request.build_request().clone(),
+            control,
+            &mut engine,
+            &mut publisher,
+        )
+        .map_err(|error| CliError::Watch {
+            message: error.to_string(),
+        })?;
+
+    report_diagnostics(stderr, messages, result.diagnostics().iter())?;
+    if result.status() == BuildTerminalStatus::Succeeded {
+        return Ok(BuildStatus::Fresh {
+            asset_count: result.candidates().len(),
+        });
+    }
+    if matches!(
+        result.failure(),
+        Some(BuildResultFailure::Diagnostics { .. })
+    ) || matches!(
+        result.publish(),
+        PublishOutcome::NotAttempted {
+            reason: recite_compiler::PublishNotAttemptedReason::BuildFailed
+        }
+    ) && result
+        .diagnostics()
+        .iter()
+        .any(|diagnostic| diagnostic.severity == recite_core::DiagnosticSeverity::Error)
+    {
+        return Ok(BuildStatus::Diagnostics);
+    }
+
+    Ok(BuildStatus::PublicationFailure {
+        status: result.status(),
+        failure: result.failure().cloned(),
+        outcome: result.publish().clone(),
     })
 }
 
-fn project_schema_path(project_root: &Path, manifest: &ProjectManifest) -> Option<PathBuf> {
-    manifest
-        .project
-        .schema
-        .as_deref()
-        .map(|schema| resolve_project_path(project_root, schema))
-}
-
-fn compile_options_for_asset_id(
-    asset_id: &str,
-    schema: Option<&ProjectSchema>,
-) -> Result<CompileOptions, CliError> {
-    Ok(CompileOptions::new(
-        CompilerVersion::new(env!("CARGO_PKG_VERSION"))?,
-        CompiledAssetId::new(asset_id.to_owned())?,
-        SourceMapId::new(format!("{asset_id}.map"))?,
-        schema.map_or(
-            SchemaFingerprint::NoSchema,
-            ProjectSchema::canonical_fingerprint,
+pub(super) fn format_failure(
+    status: BuildTerminalStatus,
+    failure: Option<&BuildResultFailure>,
+    outcome: &PublishOutcome,
+) -> String {
+    let detail = match outcome {
+        PublishOutcome::Partial {
+            failed, recovery, ..
+        } => format!(
+            "partial publication; failed target {failed}; recovery targets: {}",
+            format_targets(recovery.targets())
         ),
-    ))
+        PublishOutcome::Indeterminate { recovery, .. } => format!(
+            "publication indeterminate; recovery targets: {}",
+            format_targets(recovery.targets())
+        ),
+        PublishOutcome::Refused { reason } => format!("publication refused: {reason:?}"),
+        PublishOutcome::NotAttempted { reason } => {
+            format!("publication not attempted: {reason:?}")
+        }
+        PublishOutcome::Published { .. } => "publication reported success".to_owned(),
+        _ => "publication returned an unsupported outcome".to_owned(),
+    };
+    failure.map_or_else(
+        || format!("build {status}: {detail}"),
+        |failure| format!("{failure}; {detail}"),
+    )
 }
 
-fn unique_asset_targets(project_root: &Path, manifest: &ProjectManifest) -> Vec<AssetTarget> {
-    let mut targets = BTreeMap::new();
-    for scene in &manifest.scenes {
-        targets
-            .entry(resolve_project_path(project_root, &scene.asset))
-            .or_insert_with(|| display_path(Path::new(&scene.asset)));
+fn format_targets(targets: &[recite_compiler::BuildTarget]) -> String {
+    if targets.is_empty() {
+        return "<none>".to_owned();
     }
-
     targets
-        .into_iter()
-        .map(|(write_path, asset_id)| AssetTarget {
-            write_path,
-            asset_id,
-        })
-        .collect()
+        .iter()
+        .map(ToString::to_string)
+        .collect::<Vec<_>>()
+        .join(", ")
 }
 
-#[derive(Clone, Debug, Eq, PartialEq)]
-struct AssetTarget {
-    write_path: PathBuf,
-    asset_id: String,
-}
-
-#[derive(Debug, Eq, PartialEq)]
-pub(super) enum BuildStatus {
-    Fresh { asset_count: usize },
-    Diagnostics,
-}
-
-struct LoadedProjectSchema {
-    schema: Option<ProjectSchema>,
-    diagnostics: Vec<Diagnostic>,
+fn map_preparation_error(error: ProjectBuildPreparationError) -> CliError {
+    match error {
+        ProjectBuildPreparationError::Discovery(source) => CliError::ProjectDiscovery { source },
+        ProjectBuildPreparationError::NoInputs => CliError::NoInputs,
+        error => CliError::Watch {
+            message: error.to_string(),
+        },
+    }
 }

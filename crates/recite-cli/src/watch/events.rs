@@ -4,6 +4,7 @@ use std::sync::mpsc;
 use std::time::{Duration, Instant};
 
 use notify::{Event, EventKind};
+use recite_compiler::{BuildCoordinator, BuildGeneration, BuildGenerationError};
 
 use super::PROJECT_MANIFEST_FILE;
 use super::inputs::{is_generated_output_path, is_project_recite_source};
@@ -66,6 +67,8 @@ pub(super) struct WatchState {
     pub(super) project_root: PathBuf,
     pub(super) schema_path: Option<PathBuf>,
     pub(super) manifest: Option<recite_config::ProjectManifest>,
+    pub(super) coordinator: BuildCoordinator,
+    build_generation: BuildGeneration,
 }
 
 impl WatchState {
@@ -74,7 +77,38 @@ impl WatchState {
             project_root,
             schema_path: None,
             manifest: None,
+            coordinator: BuildCoordinator::new(),
+            build_generation: BuildGeneration::initial(),
         }
+    }
+
+    pub(super) fn next_build_generation(&mut self) -> Result<BuildGeneration, CliError> {
+        let generation = self.build_generation;
+        self.build_generation = generation.next().map_err(|error| match error {
+            BuildGenerationError::Exhausted { current } => CliError::Watch {
+                message: format!("build generation {current} cannot advance"),
+            },
+            _ => CliError::Watch {
+                message: "build generation cannot advance".to_owned(),
+            },
+        })?;
+        Ok(generation)
+    }
+
+    pub(super) fn update_from_discovery(
+        &mut self,
+        discovery: &recite_config::ProjectDiscoveryReport,
+    ) {
+        self.project_root = discovery.manifest().project_root().to_owned();
+        self.manifest = Some(discovery.manifest().clone());
+        self.schema_path = discovery
+            .manifest()
+            .source()
+            .manifest()
+            .project
+            .schema
+            .as_deref()
+            .map(|schema| self.project_root.join(schema));
     }
 
     pub(super) fn manifest_path(&self) -> PathBuf {

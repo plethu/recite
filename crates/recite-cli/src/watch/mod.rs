@@ -30,7 +30,7 @@ pub use request::{
 };
 pub use targets::{TargetMapError, TargetPathError};
 
-use build::{BuildStatus, build_once};
+use build::{BuildStatus, build_once, format_failure};
 use events::{WatchState, drain_debounce, watch_error};
 
 #[cfg(test)]
@@ -115,6 +115,18 @@ fn report_build_result(
         }
         Ok(BuildStatus::Diagnostics) => {
             writeln!(stderr, "{}", messages.text(MsgId::WatchBuildFailedWaiting))?;
+        }
+        Ok(BuildStatus::PublicationFailure {
+            status,
+            failure,
+            outcome,
+        }) => {
+            let error = format_failure(status, failure.as_ref(), &outcome);
+            writeln!(
+                stderr,
+                "{}",
+                messages.format(MsgId::WatchBuildFailed, [("error", error)])
+            )?;
         }
         Err(error) => {
             writeln!(

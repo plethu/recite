@@ -86,17 +86,6 @@ pub(crate) fn read_compile_inputs_for_output(
     read_compile_inputs_with_root(files, project_root.as_deref())
 }
 
-pub(crate) fn read_compile_inputs_relative_to(
-    project_root: &Path,
-    files: Vec<PathBuf>,
-) -> Result<Vec<CompileInput>, CliError> {
-    let project_root = fs::canonicalize(project_root).map_err(|source| CliError::ReadDir {
-        path: project_root.to_owned(),
-        source,
-    })?;
-    read_compile_inputs_with_root(files, Some(&project_root))
-}
-
 fn read_compile_inputs_with_root(
     files: Vec<PathBuf>,
     project_root: Option<&Path>,
