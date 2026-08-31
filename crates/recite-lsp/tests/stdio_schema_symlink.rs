@@ -1,3 +1,5 @@
+#![cfg(unix)]
+
 #[path = "support/stdio.rs"]
 mod stdio;
 
@@ -5,7 +7,6 @@ use serde_json::json;
 use stdio::{StdioHarness, file_uri};
 use tempfile::Builder;
 
-#[cfg(unix)]
 #[test]
 fn symlink_schema_keeps_configured_uri_across_startup_overlay_and_close() {
     use std::os::unix::fs::symlink;
