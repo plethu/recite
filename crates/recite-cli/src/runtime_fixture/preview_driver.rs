@@ -2,7 +2,9 @@ use std::collections::VecDeque;
 use std::time::Instant;
 
 use recite_core::CompiledDialogue;
-use recite_runtime::{PreviewEvent, PreviewInputs, PreviewOptions, PreviewSession};
+use recite_runtime::{
+    ConditionAnswer, PreviewEvent, PreviewInputs, PreviewOptions, PreviewSession,
+};
 
 use super::condition::{condition_answer, make_inputs_revision};
 use super::fixture::RuntimeFixture;
@@ -76,6 +78,14 @@ pub(crate) fn execute_runtime_fixture(
             match event {
                 PreviewEvent::ConditionRequested(request) => {
                     let answer = condition_answer(fixture, &request)?;
+                    if let ConditionAnswer::Failed { reason } = &answer {
+                        return Err(CliError::Runtime(
+                            recite_runtime::DialogueError::ConditionEvaluationFailed {
+                                function: request.query().function().to_owned(),
+                                reason: reason.clone(),
+                            },
+                        ));
+                    }
                     let output = session.answer(request.id(), answer, inputs);
                     record_session_size(metrics.as_mut(), session.session())?;
                     pending.extend(output.events().iter().cloned());
@@ -177,6 +187,15 @@ fn preview_failure(error: recite_runtime::PreviewError) -> CliError {
             recite_runtime::DialogueError::MalformedCompiledAsset { reason },
         ) => CliError::MalformedCompiledAsset { reason },
         recite_runtime::PreviewError::Runtime(error) => CliError::Runtime(error),
+        recite_runtime::PreviewError::ConditionResultTypeMismatch {
+            function,
+            expected,
+            actual,
+        } => CliError::Runtime(recite_runtime::DialogueError::ConditionResultTypeMismatch {
+            function,
+            expected,
+            actual,
+        }),
         recite_runtime::PreviewError::AssetRevisionFailed { reason } => {
             CliError::MalformedCompiledAsset { reason }
         }
