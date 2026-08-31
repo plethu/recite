@@ -2,13 +2,15 @@ use std::fs;
 use std::path::{Path, PathBuf};
 
 #[cfg(any(windows, target_os = "macos"))]
+use unicase::UniCase;
+#[cfg(any(windows, target_os = "macos"))]
 use unicode_normalization::UnicodeNormalization;
 
 #[derive(Debug)]
 pub(super) struct PhysicalIdentity {
     pub(super) canonical: PathBuf,
     #[cfg(any(windows, target_os = "macos"))]
-    comparison_key: String,
+    comparison_key: Vec<UniCase<String>>,
 }
 
 pub(super) fn physical_identity(path: &Path) -> Result<PhysicalIdentity, String> {
@@ -47,17 +49,15 @@ pub(super) fn same_physical_path(left: &PhysicalIdentity, right: &PhysicalIdenti
 }
 
 #[cfg(any(windows, target_os = "macos"))]
-fn comparison_key(path: &Path) -> String {
+fn comparison_key(path: &Path) -> Vec<UniCase<String>> {
     path.components()
         .map(|component| {
-            let lower = component
+            let normalized = component
                 .as_os_str()
                 .to_string_lossy()
-                .chars()
-                .flat_map(char::to_lowercase)
+                .nfkc()
                 .collect::<String>();
-            lower.nfkc().collect::<String>()
+            UniCase::new(normalized)
         })
-        .collect::<Vec<_>>()
-        .join("/")
+        .collect()
 }

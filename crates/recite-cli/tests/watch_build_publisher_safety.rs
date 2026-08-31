@@ -212,20 +212,29 @@ fn output_parent_symlink_swap_is_refused_at_commit() {
 #[test]
 fn case_alias_destinations_are_rejected_before_staging() {
     let temp = require(TempDir::new(), "tempdir");
-    let request = request(
-        temp.path(),
-        "[[scenes]]\nid = \"scene.lower\"\nasset = \"compiled/café.recitec\"\nblock = \"start\"\nparticipants = [\"hazel\"]\n\n[[scenes]]\nid = \"scene.upper\"\nasset = \"compiled/CAFE\\u{301}.recitec\"\nblock = \"start\"\nparticipants = [\"hazel\"]\n",
-    );
-    assert!(ProjectBuildPublisher::new(&request).is_err());
+    assert_unicode_case_aliases_rejected(temp.path());
 }
 
 #[cfg(target_os = "macos")]
 #[test]
 fn macos_case_alias_destinations_are_rejected_before_staging() {
     let temp = require(TempDir::new(), "tempdir");
-    let request = request(
-        temp.path(),
-        "[[scenes]]\nid = \"scene.lower\"\nasset = \"compiled/café.recitec\"\nblock = \"start\"\nparticipants = [\"hazel\"]\n\n[[scenes]]\nid = \"scene.upper\"\nasset = \"compiled/CAFE\\u{301}.recitec\"\nblock = \"start\"\nparticipants = [\"hazel\"]\n",
-    );
-    assert!(ProjectBuildPublisher::new(&request).is_err());
+    assert_unicode_case_aliases_rejected(temp.path());
+}
+
+#[cfg(any(windows, target_os = "macos"))]
+fn assert_unicode_case_aliases_rejected(root: &Path) {
+    for (lower, upper) in [
+        ("café.recitec", "CAFE\u{301}.recitec"),
+        ("straße.recitec", "STRASSE.recitec"),
+        ("Σ.recitec", "ς.recitec"),
+    ] {
+        let request = request(
+            root,
+            &format!(
+                "[[scenes]]\nid = \"scene.lower\"\nasset = \"compiled/{lower}\"\nblock = \"start\"\nparticipants = [\"hazel\"]\n\n[[scenes]]\nid = \"scene.upper\"\nasset = \"compiled/{upper}\"\nblock = \"start\"\nparticipants = [\"hazel\"]\n"
+            ),
+        );
+        assert!(ProjectBuildPublisher::new(&request).is_err());
+    }
 }

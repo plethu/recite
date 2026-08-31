@@ -71,3 +71,5 @@ unic-langid = { version = "0.9.6", features = ["macros"] }
 unicode-ident = "1.0.22"
 # Unicode normalization for conservative case-insensitive output identities.
 unicode-normalization = "0.1.25"
+# Full Unicode case folding for conservative case-insensitive output identities.
+unicase = "=2.7.0"
