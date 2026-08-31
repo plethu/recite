@@ -49,7 +49,15 @@ pub(super) fn run_preview<U: PreviewPlayUi>(
 
         match event {
             PreviewEvent::ConditionRequested(request) => {
-                let answer = ui.condition(&request)?;
+                let answer = loop {
+                    match ui.condition(&request) {
+                        Ok(answer) => break answer,
+                        Err(CliError::PlayInvalidInput(message)) => {
+                            ui.invalid_input(message)?;
+                        }
+                        Err(error) => return Err(error),
+                    }
+                };
                 let output = session.dispatch(
                     PreviewCommand::Answer {
                         request_id: request.id(),
@@ -57,16 +65,24 @@ pub(super) fn run_preview<U: PreviewPlayUi>(
                     },
                     inputs,
                 );
-                pending.extend(output.events().iter().cloned());
+                enqueue_events(&mut pending, output.events());
             }
             PreviewEvent::ConditionResult { request, result } => {
                 ui.condition_result(&request, &result)?;
             }
             PreviewEvent::Line(line) => ui.line(&line)?,
             PreviewEvent::Prompt(prompt) => {
-                let choice_id = ui.choice(&prompt)?;
+                let choice_id = loop {
+                    match ui.choice(&prompt) {
+                        Ok(choice_id) => break choice_id,
+                        Err(CliError::PlayInvalidInput(message)) => {
+                            ui.invalid_input(message)?;
+                        }
+                        Err(error) => return Err(error),
+                    }
+                };
                 let output = session.dispatch(PreviewCommand::Choose { choice_id }, inputs);
-                pending.extend(output.events().iter().cloned());
+                enqueue_events(&mut pending, output.events());
             }
             PreviewEvent::ChoiceSelected { choice_id, .. } => ui.selected_choice(&choice_id)?,
             PreviewEvent::EffectRequested(effect) => {
@@ -91,9 +107,10 @@ pub(super) fn run_preview<U: PreviewPlayUi>(
                 ui.end(&deferred_effects)?;
                 return Ok(());
             }
-            PreviewEvent::DeferredEffectScheduled(_)
-            | PreviewEvent::Restarted { .. }
-            | PreviewEvent::Restored => {}
+            PreviewEvent::DeferredEffectScheduled(effect) => {
+                ui.deferred_effect_scheduled(&effect)?;
+            }
+            PreviewEvent::Restarted { .. } | PreviewEvent::Restored => {}
             PreviewEvent::Error(error) => return Err(preview_error(error)),
             _ => {
                 return Err(CliError::Preview(PreviewError::Runtime(
@@ -104,6 +121,26 @@ pub(super) fn run_preview<U: PreviewPlayUi>(
             }
         }
     }
+}
+
+/// Keeps the accepted choice visible before the branch traversal it unlocks.
+///
+/// The runtime deliberately records the condition replay prefix before the
+/// committed choice.  Interactive play has historically presented the choice
+/// first, however, so this is a presentation ordering rule over the typed
+/// events; it does not alter the runtime trace or traversal semantics.
+fn enqueue_events(pending: &mut VecDeque<PreviewEvent>, events: &[PreviewEvent]) {
+    let Some(choice_index) = events
+        .iter()
+        .position(|event| matches!(event, PreviewEvent::ChoiceSelected { .. }))
+    else {
+        pending.extend(events.iter().cloned());
+        return;
+    };
+
+    pending.push_back(events[choice_index].clone());
+    pending.extend(events[..choice_index].iter().cloned());
+    pending.extend(events[choice_index + 1..].iter().cloned());
 }
 
 fn preview_inputs(preview: Option<DialogueTraversalPreview<'_>>) -> PreviewInputs<'_> {
@@ -152,6 +189,13 @@ pub(super) trait PreviewPlayUi {
         effect: &recite_runtime::DialogueEffectRequest,
     ) -> Result<(), CliError>;
     fn acknowledged(&mut self, effect_id: &recite_core::EffectId) -> Result<(), CliError>;
+    fn deferred_effect_scheduled(
+        &mut self,
+        _effect: &recite_runtime::DialogueEffectRequest,
+    ) -> Result<(), CliError> {
+        Ok(())
+    }
+    fn invalid_input(&mut self, message: String) -> Result<(), CliError>;
     fn end(
         &mut self,
         deferred_effects: &[recite_runtime::DialogueEffectRequest],

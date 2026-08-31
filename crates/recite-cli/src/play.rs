@@ -7,10 +7,7 @@ use crate::i18n::{Messages, MsgId};
 use crate::runtime_fixture::load_compiled_asset;
 use crate::tui::TuiSettings;
 
-mod driver;
-mod driver_api;
-mod driver_context;
-mod format;
+mod choice_selection;
 mod plain;
 mod plain_choice;
 mod plain_input;

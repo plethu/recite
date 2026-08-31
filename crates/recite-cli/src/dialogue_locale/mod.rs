@@ -12,4 +12,4 @@ pub(crate) use config::{
     DialoguePreviewConfig, LoadedDialoguePreview, dialogue_preview_from_play_args,
 };
 pub(crate) use malformed::DialogueCatalogMalformedReason;
-pub(crate) use traversal::{DialogueTraversal, DialogueTraversalPreview};
+pub(crate) use traversal::DialogueTraversalPreview;

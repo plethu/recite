@@ -6,7 +6,7 @@ use recite_runtime::{DialogueChoice, PreviewPrompt};
 use crate::error::CliError;
 use crate::i18n::{Messages, MsgId};
 
-use super::driver::ChoiceSelection;
+use super::choice_selection::ChoiceSelection;
 use super::plain_input::read_line;
 use super::plain_ui::PlainPlayUi;
 

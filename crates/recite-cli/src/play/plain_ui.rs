@@ -81,6 +81,10 @@ impl<R: Read + ?Sized, W: Write + ?Sized> PreviewPlayUi for PlainPlayUi<'_, R, W
         self.write_acknowledged(effect_id)
     }
 
+    fn invalid_input(&mut self, message: String) -> Result<(), CliError> {
+        Self::invalid_input(self, message)
+    }
+
     fn end(&mut self, deferred_effects: &[DialogueEffectRequest]) -> Result<(), CliError> {
         self.write_end(deferred_effects)
     }

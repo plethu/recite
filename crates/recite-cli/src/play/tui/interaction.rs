@@ -4,7 +4,7 @@ use crate::error::CliError;
 use crate::i18n::MsgId;
 use crate::tui::{GlobalAction, Keymap, PromptMode, TuiIntent, command_quits};
 
-use super::super::driver::ChoiceSelection;
+use super::super::choice_selection::ChoiceSelection;
 use super::TuiPlayUi;
 use super::state::{
     close_help, condition_selection, move_choice_selection, move_condition_selection,
