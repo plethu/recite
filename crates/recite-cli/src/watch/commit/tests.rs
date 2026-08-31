@@ -1,3 +1,4 @@
+use std::cell::Cell;
 use std::fs;
 use std::io;
 use std::path::PathBuf;
@@ -13,6 +14,48 @@ use super::super::publisher::{ProjectPreparedBuild, StagedTarget};
 use super::super::staging::{self, StagedOutput};
 use super::{ProjectBuildRecovery, commit_prepared_with};
 use crate::i18n::Messages;
+
+#[path = "tests/recovery_contract/tests.rs"]
+mod recovery_contract;
+
+fn prepared_build(
+    temp: &TempDir,
+    target_name: &str,
+    stage_name: &str,
+) -> (ProjectPreparedBuild, PathBuf, PathBuf) {
+    let output = temp.path().join(target_name);
+    let stage = temp.path().join(stage_name);
+    if let Some(parent) = output.parent() {
+        fs::create_dir_all(parent).unwrap_or_else(|error| panic!("output parent: {error}"));
+    }
+    fs::write(&output, b"old").unwrap_or_else(|error| panic!("old output: {error}"));
+    fs::write(&stage, b"new").unwrap_or_else(|error| panic!("stage: {error}"));
+    let target = BuildTarget::new(target_name).unwrap_or_else(|error| panic!("target: {error}"));
+    let request = BuildRequest::new(
+        BuildGeneration::new(1),
+        SnapshotGeneration::new(1),
+        [BuildInput::saved_source(
+            DocumentKey::new("dialogue/main.recite").unwrap_or_else(|error| panic!("key: {error}")),
+            "source",
+        )],
+    )
+    .unwrap_or_else(|error| panic!("request: {error}"));
+    let candidate = BuildCandidate::new(target.clone(), b"new".to_vec());
+    (
+        ProjectPreparedBuild {
+            identity: PreparedPublishIdentity::for_request(&request, vec![candidate]),
+            staged: vec![StagedTarget {
+                target,
+                file: StagedOutput {
+                    temp: stage.clone(),
+                    output: output.clone(),
+                },
+            }],
+        },
+        output,
+        stage,
+    )
+}
 
 #[cfg(unix)]
 const SIMPLE_MARKER: &str = "u1~6d61726b6572";
@@ -164,32 +207,7 @@ fn recovery_deduplication_uses_marker_and_reason_not_io_detail() {
 #[test]
 fn post_rename_error_is_indeterminate_with_visible_new_bytes() {
     let temp = TempDir::new().unwrap_or_else(|error| panic!("temporary directory: {error}"));
-    let output = temp.path().join("dialogue.recitec");
-    let stage = temp.path().join("dialogue.recitec.stage");
-    fs::write(&output, b"old").unwrap_or_else(|error| panic!("old output: {error}"));
-    fs::write(&stage, b"new").unwrap_or_else(|error| panic!("stage: {error}"));
-    let target =
-        BuildTarget::new("dialogue.recitec").unwrap_or_else(|error| panic!("target: {error}"));
-    let request = BuildRequest::new(
-        BuildGeneration::new(1),
-        SnapshotGeneration::new(1),
-        [BuildInput::saved_source(
-            DocumentKey::new("dialogue/main.recite").unwrap_or_else(|error| panic!("key: {error}")),
-            "source",
-        )],
-    )
-    .unwrap_or_else(|error| panic!("request: {error}"));
-    let candidate = BuildCandidate::new(target.clone(), b"new".to_vec());
-    let prepared = ProjectPreparedBuild {
-        identity: PreparedPublishIdentity::for_request(&request, vec![candidate]),
-        staged: vec![StagedTarget {
-            target,
-            file: StagedOutput {
-                temp: stage,
-                output: output.clone(),
-            },
-        }],
-    };
+    let (prepared, output, _) = prepared_build(&temp, "dialogue.recitec", "dialogue.recitec.stage");
     let mut recovery = Vec::<ProjectBuildRecovery>::new();
     let outcome =
         commit_prepared_with(
@@ -205,8 +223,7 @@ fn post_rename_error_is_indeterminate_with_visible_new_bytes() {
         );
     assert!(matches!(outcome, PublishOutcome::Indeterminate { .. }));
     assert_eq!(
-        fs::read(temp.path().join("dialogue.recitec"))
-            .unwrap_or_else(|error| panic!("published bytes: {error}")),
+        fs::read(output).unwrap_or_else(|error| panic!("published bytes: {error}")),
         b"new"
     );
     assert_eq!(recovery.len(), 1);
@@ -219,31 +236,7 @@ fn post_rename_error_is_indeterminate_with_visible_new_bytes() {
 #[test]
 fn committed_cleanup_error_publishes_and_requires_recovery() {
     let temp = TempDir::new().expect("tempdir");
-    let output = temp.path().join("dialogue.recitec");
-    let stage = temp.path().join("dialogue.recitec.stage");
-    fs::write(&output, b"old").expect("old output");
-    fs::write(&stage, b"new").expect("stage");
-    let target = BuildTarget::new("dialogue.recitec").expect("target");
-    let request = BuildRequest::new(
-        BuildGeneration::new(1),
-        SnapshotGeneration::new(1),
-        [BuildInput::saved_source(
-            DocumentKey::new("dialogue/main.recite").expect("key"),
-            "source",
-        )],
-    )
-    .expect("request");
-    let candidate = BuildCandidate::new(target.clone(), b"new".to_vec());
-    let prepared = ProjectPreparedBuild {
-        identity: PreparedPublishIdentity::for_request(&request, vec![candidate]),
-        staged: vec![StagedTarget {
-            target,
-            file: StagedOutput {
-                temp: stage,
-                output: output.clone(),
-            },
-        }],
-    };
+    let (prepared, output, _) = prepared_build(&temp, "dialogue.recitec", "dialogue.recitec.stage");
     let mut recovery = Vec::new();
     let outcome =
         commit_prepared_with(
@@ -266,80 +259,47 @@ fn committed_cleanup_error_publishes_and_requires_recovery() {
 }
 
 #[test]
-fn recovery_records_use_alternate_typed_fluent_contract() {
-    let mut resource = recite_ui::DEFAULT_RESOURCE.to_owned();
-    for (id, replacement) in [
-        (
-            "watch-build-recovery-required",
-            "alt-required count={$count} records={$records}",
-        ),
-        (
-            "watch-build-recovery-record",
-            "alt-record marker={$marker} reason={$reason} detail={$detail}",
-        ),
-        ("watch-build-recovery-reason-stage-cleanup", "alt-stage"),
-        (
-            "watch-build-recovery-reason-publication-uncommitted",
-            "alt-uncommitted",
-        ),
-        (
-            "watch-build-recovery-detail-io",
-            "alt-io {$kind} {$raw_os_error} {$message}",
-        ),
-        (
-            "watch-build-recovery-io-permission-denied",
-            "alt-permission",
-        ),
-    ] {
-        let mut found = false;
-        let mut lines = Vec::new();
-        for line in resource.lines() {
-            if line.starts_with(&format!("{id} = ")) {
-                found = true;
-                let mut replacement_lines = replacement.lines();
-                if let Some(first) = replacement_lines.next() {
-                    lines.push(format!("{id} = {first}"));
-                    lines.extend(replacement_lines.map(str::to_owned));
-                }
-            } else {
-                lines.push(line.to_owned());
-            }
-        }
-        resource = lines.join("\n");
-        resource.push('\n');
-        assert!(found, "missing resource {id}");
-    }
-    recite_ui::UiContract::default()
-        .validate(&resource)
-        .expect("alternate resource contract");
-    let messages = Messages::from_resources(
-        "en-GB".parse().expect("locale"),
-        [
-            (
-                "en-US".parse().expect("locale"),
-                recite_ui::DEFAULT_RESOURCE.to_owned(),
-            ),
-            ("en-GB".parse().expect("locale"), resource),
-        ],
-    )
-    .expect("alternate messages");
-    let first = ProjectBuildRecovery::with_io(
-        PathBuf::from("stage/first\n.tmp"),
-        super::super::recovery::ProjectBuildRecoveryReason::StageCleanupFailed,
-        &io::Error::new(io::ErrorKind::PermissionDenied, "denied"),
+fn commit_rechecks_output_boundary_before_replacement() {
+    let temp = TempDir::new().expect("tempdir");
+    let target_name = "compiled/blocked/out.recitec";
+    let (prepared, output, stage) = prepared_build(&temp, target_name, "stage.tmp");
+    let blocked = temp.path().join("compiled/blocked");
+    let moved = temp.path().join("compiled/blocked.saved");
+    fs::rename(&blocked, &moved).expect("move staged parent");
+    fs::write(&blocked, b"not a directory").expect("blocking file");
+    let target = BuildTarget::new(target_name).expect("target");
+    let invoked = Cell::new(false);
+    let mut recovery = Vec::new();
+    let outcome = commit_prepared_with(temp.path(), prepared, &mut recovery, |_| {
+        invoked.set(true);
+        staging::ReplaceOutcome::Committed
+    });
+
+    assert!(
+        !invoked.get(),
+        "replacement must not run after boundary failure"
     );
-    let second = ProjectBuildRecovery::new(
-        PathBuf::from("stage/second.tmp"),
-        super::super::recovery::ProjectBuildRecoveryReason::PublicationUncommitted,
-    );
+    assert!(matches!(
+        outcome,
+        PublishOutcome::Partial {
+            committed,
+            failed,
+            remaining,
+            recovery,
+        } if committed.is_empty()
+            && failed == target
+            && remaining.is_empty()
+            && recovery.targets() == std::slice::from_ref(&target)
+    ));
+    assert_eq!(recovery.len(), 1);
     assert_eq!(
-        super::super::build::format_recovery_required(
-            &messages,
-            2,
-            &[second.clone(), first.clone(), first],
-        ),
-        format!(
-            "alt-required count=2 records=; recovery markers: alt-record marker={FIRST_STAGE_MARKER} reason=alt-stage detail=alt-io alt-permission  denied\nalt-record marker={SECOND_STAGE_MARKER} reason=alt-uncommitted detail="
-        )
+        recovery[0].reason(),
+        super::super::recovery::ProjectBuildRecoveryReason::PublicationUncommitted
+    );
+    assert_eq!(fs::read(&stage).expect("stage bytes"), b"new");
+    assert!(!output.exists());
+    assert_eq!(
+        fs::read_dir(&moved).expect("moved staged parent").count(),
+        1
     );
 }

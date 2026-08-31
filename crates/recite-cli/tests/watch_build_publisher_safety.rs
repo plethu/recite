@@ -8,7 +8,7 @@ use recite_cli::watch::{
 };
 use recite_compiler::{
     BuildCandidate, BuildControl, BuildPublisher, PublishAbortReason, PublishFailure,
-    PublishFailureReason, PublishOutcome,
+    PublishFailureReason,
 };
 use tempfile::TempDir;
 
@@ -153,53 +153,6 @@ fn prepare_rejects_regular_file_intermediate_created_after_new() {
         } if failed == target
     ));
     assert!(publisher.recovery().is_empty());
-    assert!(!temp.path().join("compiled/blocked/out.recitec").exists());
-    assert!(markers(temp.path()).is_empty());
-}
-
-#[test]
-fn commit_rejects_regular_file_intermediate_created_after_staging() {
-    let temp = require(TempDir::new(), "tempdir");
-    let request = blocked_request(temp.path());
-    let mut publisher = require(ProjectBuildPublisher::new(&request), "publisher");
-    let target = request.targets()[0].target().clone();
-    let candidate = BuildCandidate::new(target.clone(), [2]);
-    let prepared = require(
-        publisher.prepare(
-            request.build_request(),
-            std::slice::from_ref(&candidate),
-            &BuildControl::new(),
-        ),
-        "prepare",
-    );
-    let blocked = temp.path().join("compiled/blocked");
-    let moved = temp.path().join("compiled/blocked.saved");
-    require(fs::rename(&blocked, &moved), "move staged parent");
-    require(fs::write(&blocked, b"not a directory"), "blocking file");
-
-    let outcome = publisher.commit(prepared);
-    assert!(matches!(
-        outcome,
-        PublishOutcome::Partial {
-            committed,
-            failed,
-            remaining,
-            recovery,
-        } if committed.is_empty()
-            && failed == target
-            && remaining.is_empty()
-            && recovery.targets() == std::slice::from_ref(&target)
-    ));
-    assert_eq!(publisher.recovery().len(), 1);
-    assert_eq!(
-        publisher.recovery()[0].reason(),
-        ProjectBuildRecoveryReason::PublicationUncommitted
-    );
-    assert!(!publisher.recovery()[0].marker().exists());
-    assert_eq!(
-        fs::read_dir(&moved).expect("moved staged parent").count(),
-        1
-    );
     assert!(!temp.path().join("compiled/blocked/out.recitec").exists());
     assert!(markers(temp.path()).is_empty());
 }
