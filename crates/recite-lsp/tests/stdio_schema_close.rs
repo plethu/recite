@@ -39,7 +39,10 @@ fn stdio_schema_alias_close_clears_alias_and_refreshes_canonical() {
             }
         }),
     );
-    let invalid = harness.expect_diagnostics(&alias_uri);
+    let open_messages = harness.barrier(&alias_uri);
+    let invalid = diagnostics_for(&open_messages, &alias_uri);
+    assert_eq!(invalid.len(), 1);
+    let invalid = invalid[0];
     assert_eq!(invalid["version"], 7);
     assert!(
         !invalid["diagnostics"]
@@ -52,7 +55,11 @@ fn stdio_schema_alias_close_clears_alias_and_refreshes_canonical() {
         "textDocument/didClose",
         json!({ "textDocument": { "uri": alias_uri.clone() } }),
     );
-    let alias_clear = harness.expect_diagnostics(&alias_uri);
+    let close_messages = harness.barrier(&alias_uri);
+    assert_eq!(close_messages.len(), 2);
+    let alias_clear = diagnostics_for(&close_messages, &alias_uri);
+    assert_eq!(alias_clear.len(), 1);
+    let alias_clear = alias_clear[0];
     assert!(alias_clear["version"].is_null());
     assert!(
         alias_clear["diagnostics"]
@@ -60,7 +67,9 @@ fn stdio_schema_alias_close_clears_alias_and_refreshes_canonical() {
             .unwrap_or_else(|| panic!("diagnostics array is missing"))
             .is_empty()
     );
-    let canonical_refresh = harness.expect_diagnostics(&canonical_uri);
+    let canonical_refresh = diagnostics_for(&close_messages, &canonical_uri);
+    assert_eq!(canonical_refresh.len(), 1);
+    let canonical_refresh = canonical_refresh[0];
     assert!(canonical_refresh["version"].is_null());
     assert!(
         canonical_refresh["diagnostics"]
@@ -70,4 +79,13 @@ fn stdio_schema_alias_close_clears_alias_and_refreshes_canonical() {
     );
 
     harness.finish();
+}
+
+fn diagnostics_for<'a>(messages: &'a [serde_json::Value], uri: &str) -> Vec<&'a serde_json::Value> {
+    messages
+        .iter()
+        .filter(|message| message["method"] == "textDocument/publishDiagnostics")
+        .filter(|message| message["params"]["uri"] == uri)
+        .map(|message| &message["params"])
+        .collect()
 }

@@ -22,8 +22,19 @@ impl SchemaIndex {
         if self.diagnostics.is_empty() {
             return None;
         }
+        let uri = self.uri.clone()?;
+        if self.active_version.is_some() {
+            return Some(DiagnosticRefresh::Publish(DocumentDiagnostics {
+                uri,
+                text: self.text.clone().unwrap_or_default(),
+                version: self.active_version,
+                diagnostics: Vec::new(),
+                generation,
+            }));
+        }
         Some(DiagnosticRefresh::Clear {
-            uri: self.uri.clone()?,
+            uri,
+            version: None,
             generation,
         })
     }
@@ -72,7 +83,11 @@ impl SchemaIndex {
                     generation,
                 }))
             } else {
-                Some(DiagnosticRefresh::Clear { uri, generation })
+                Some(DiagnosticRefresh::Clear {
+                    uri,
+                    version: None,
+                    generation,
+                })
             }
         })
     }

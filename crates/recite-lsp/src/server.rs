@@ -367,10 +367,10 @@ impl Server {
                     Notification::new(PublishDiagnostics::METHOD.to_owned(), publish_params).into(),
                 )
             }
-            DiagnosticRefresh::Clear { uri, .. } => self.send(
+            DiagnosticRefresh::Clear { uri, version, .. } => self.send(
                 Notification::new(
                     PublishDiagnostics::METHOD.to_owned(),
-                    clear_diagnostics(uri),
+                    clear_diagnostics(uri, version),
                 )
                 .into(),
             ),

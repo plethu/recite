@@ -1,4 +1,4 @@
-use std::collections::BTreeMap;
+use std::collections::{BTreeMap, BTreeSet};
 use std::fmt::Write as _;
 
 use recite_compiler::{AuthoringKernel, AuthoringRequest, OpenDocument as KernelOpenDocument};
@@ -16,7 +16,8 @@ impl LspWorkspace {
     pub(crate) fn rebuild_kernel(&mut self) -> Result<(), recite_compiler::AuthoringError> {
         let saved = self.saved.clone();
         let documents = self.documents.clone();
-        let owners = self.rebuild_kernel_for(&saved, &documents, None)?;
+        let retired_schema_uris = self.retired_schema_uris.clone();
+        let owners = self.rebuild_kernel_for(&saved, &documents, None, &retired_schema_uris)?;
         self.kernel_open_owners = owners;
         Ok(())
     }
@@ -26,8 +27,10 @@ impl LspWorkspace {
         saved: SavedProjectIndex,
         documents: OpenDocumentStore,
         schema: SchemaIndex,
+        retired_schema_uris: BTreeSet<String>,
     ) -> Result<(), recite_compiler::AuthoringError> {
-        let owners = self.rebuild_kernel_for(&saved, &documents, Some(&schema))?;
+        let owners =
+            self.rebuild_kernel_for(&saved, &documents, Some(&schema), &retired_schema_uris)?;
         let generation = self.next_generation();
         let snapshot = super::LiveProjectSnapshot::rebuild(
             generation,
@@ -39,6 +42,7 @@ impl LspWorkspace {
         self.documents = documents;
         self.kernel_open_owners = owners;
         self.schema = schema;
+        self.retired_schema_uris = retired_schema_uris;
         self.generation = generation;
         self.snapshot = snapshot;
         Ok(())
@@ -49,11 +53,15 @@ impl LspWorkspace {
         saved: &SavedProjectIndex,
         documents: &OpenDocumentStore,
         schema: Option<&SchemaIndex>,
+        retired_schema_uris: &BTreeSet<String>,
     ) -> Result<BTreeMap<DocumentKey, lsp_types::Uri>, recite_compiler::AuthoringError> {
         let schema_index = schema.unwrap_or(&self.schema);
         let open_documents = Self::effective_open_documents(documents)
             .into_iter()
-            .filter(|(_, document)| !schema_index.matches_uri(&document.identity().uri))
+            .filter(|(_, document)| {
+                !schema_index.matches_uri(&document.identity().uri)
+                    && !retired_schema_uris.contains(document.identity().uri.as_str())
+            })
             .collect::<BTreeMap<_, _>>();
         let owners = open_documents
             .iter()

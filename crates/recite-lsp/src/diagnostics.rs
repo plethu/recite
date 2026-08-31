@@ -79,8 +79,8 @@ struct IndexedDiagnostic {
     record: DiagnosticRecord,
 }
 
-pub(crate) fn clear_diagnostics(uri: Uri) -> PublishDiagnosticsParams {
-    PublishDiagnosticsParams::new(uri, Vec::new(), None)
+pub(crate) fn clear_diagnostics(uri: Uri, version: Option<i32>) -> PublishDiagnosticsParams {
+    PublishDiagnosticsParams::new(uri, Vec::new(), version)
 }
 
 fn to_lsp_diagnostic(

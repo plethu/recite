@@ -35,6 +35,7 @@ impl LspWorkspace {
         } else if touched_saved {
             refreshes.push(DiagnosticRefresh::Clear {
                 uri,
+                version: None,
                 generation: self.generation,
             });
         }
@@ -49,6 +50,7 @@ impl LspWorkspace {
             .and_then(crate::paths::file_path_to_uri);
         let old_had_diagnostics = !self.saved.diagnostics().is_empty();
         let old_schema = self.schema.clone();
+        let old_documents = self.documents.clone();
         let mut saved = self.saved.clone();
         let manifest_schema_path = saved.refresh_manifest();
         let schema = self
@@ -56,10 +58,17 @@ impl LspWorkspace {
             .clone()
             .map(|path| SchemaIndex::load(Some(path)))
             .unwrap_or_else(|| SchemaIndex::load(manifest_schema_path));
+        let schema_target_changed = old_schema.configured_path() != schema.configured_path();
+        let retired_schema_uris = self.retired_schema_uris_for_refresh(&old_schema, &schema);
         let mut documents = self.documents.clone();
         self.refresh_open_identities(&saved, &mut documents);
         if self
-            .rebuild_for_documents_with_schema(saved, documents, schema)
+            .rebuild_for_documents_with_schema_and_retired(
+                saved,
+                documents,
+                schema,
+                retired_schema_uris,
+            )
             .is_err()
         {
             return Vec::new();
@@ -70,12 +79,23 @@ impl LspWorkspace {
         } else if old_had_diagnostics && let Some(uri) = old_uri {
             refreshes.push(DiagnosticRefresh::Clear {
                 uri,
+                version: None,
                 generation: self.generation,
             });
         }
-        let schema_target_changed = old_schema.configured_path() != self.schema.configured_path();
-        if schema_target_changed && let Some(refresh) = old_schema.clear_refresh(self.generation) {
-            refreshes.push(refresh);
+        if schema_target_changed {
+            let open_schema_refreshes = old_documents
+                .documents()
+                .filter(|document| old_schema.matches_uri(&document.identity().uri))
+                .map(|document| {
+                    DiagnosticRefresh::publish_open(document, Vec::new(), self.generation)
+                })
+                .collect::<Vec<_>>();
+            let has_open_schema = !open_schema_refreshes.is_empty();
+            refreshes.extend(open_schema_refreshes);
+            if !has_open_schema && let Some(refresh) = old_schema.clear_refresh(self.generation) {
+                refreshes.push(refresh);
+            }
         }
         if (self.schema.needs_refresh() || (!schema_target_changed && old_schema.needs_refresh()))
             && let Some(refresh) = self.schema.refresh_or_clear(self.generation)
@@ -87,6 +107,7 @@ impl LspWorkspace {
             {
                 refreshes.push(DiagnosticRefresh::Clear {
                     uri,
+                    version: None,
                     generation: self.generation,
                 });
             }
@@ -127,6 +148,7 @@ impl LspWorkspace {
                 .unwrap_or_else(|| {
                     vec![DiagnosticRefresh::Clear {
                         uri: uri.clone(),
+                        version: None,
                         generation: self.generation,
                     }]
                 });
@@ -161,12 +183,27 @@ impl LspWorkspace {
         let mut saved = self.saved.clone();
         saved.refresh_uri(&uri);
         self.refresh_open_identities(&saved, &mut documents);
-        if self.rebuild_for_documents(saved, documents).is_err() {
+        let retired_schema_uris = self
+            .retired_schema_uris
+            .iter()
+            .filter(|retired_uri| retired_uri.as_str() != uri.as_str())
+            .cloned()
+            .collect();
+        if self
+            .rebuild_for_documents_with_schema_and_retired(
+                saved,
+                documents,
+                self.schema.clone(),
+                retired_schema_uris,
+            )
+            .is_err()
+        {
             return Vec::new();
         }
         if self.schema.matches_uri(&uri) {
             let mut refreshes = vec![DiagnosticRefresh::Clear {
                 uri: uri.clone(),
+                version: None,
                 generation: self.generation,
             }];
             if let Some(refresh) = self.schema.refresh_or_clear(self.generation) {
@@ -199,6 +236,7 @@ impl LspWorkspace {
                 .map(|document| self.publish_saved_document(document))
                 .unwrap_or(DiagnosticRefresh::Clear {
                     uri,
+                    version: None,
                     generation: self.generation,
                 }),
         ]

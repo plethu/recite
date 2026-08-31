@@ -9,7 +9,7 @@ mod snapshot;
 mod transaction;
 mod ui;
 
-use std::collections::BTreeMap;
+use std::collections::{BTreeMap, BTreeSet};
 
 use lsp_types::Uri;
 use recite_compiler::AuthoringKernel;
@@ -35,6 +35,7 @@ pub(crate) struct LspWorkspace {
     snapshot: LiveProjectSnapshot,
     schema: SchemaIndex,
     schema_override_path: Option<std::path::PathBuf>,
+    retired_schema_uris: BTreeSet<String>,
     generation: SnapshotGeneration,
     pub(crate) ui_catalog: UiCatalog,
 }
@@ -94,8 +95,23 @@ impl LspWorkspace {
         documents: OpenDocumentStore,
         schema: SchemaIndex,
     ) -> Result<(), recite_compiler::AuthoringError> {
+        self.rebuild_for_documents_with_schema_and_retired(
+            saved,
+            documents,
+            schema,
+            self.retired_schema_uris.clone(),
+        )
+    }
+
+    pub(in crate::workspace) fn rebuild_for_documents_with_schema_and_retired(
+        &mut self,
+        saved: SavedProjectIndex,
+        documents: OpenDocumentStore,
+        schema: SchemaIndex,
+        retired_schema_uris: BTreeSet<String>,
+    ) -> Result<(), recite_compiler::AuthoringError> {
         if let Some(schema) = schema.overlay_for_documents(&documents) {
-            return self.rebuild_state_with_schema(saved, documents, schema);
+            return self.rebuild_state_with_schema(saved, documents, schema, retired_schema_uris);
         }
         if schema.has_open_match(&documents) {
             let Some(uri) = documents
@@ -103,16 +119,47 @@ impl LspWorkspace {
                 .find(|document| schema.matches_uri(&document.identity().uri))
                 .map(|document| document.identity().uri.clone())
             else {
-                return self.rebuild_for_documents_with_schema(saved, documents, schema);
+                return self.rebuild_for_documents_with_schema_and_retired(
+                    saved,
+                    documents,
+                    schema,
+                    retired_schema_uris,
+                );
             };
             return self.rebuild_state_with_schema(
                 saved,
                 documents,
                 schema.unavailable_overlay(uri),
+                retired_schema_uris,
             );
         }
         let base = schema.base();
-        self.rebuild_state_with_schema(saved, documents, base)
+        self.rebuild_state_with_schema(saved, documents, base, retired_schema_uris)
+    }
+
+    pub(crate) fn is_schema_document_uri(&self, uri: &Uri) -> bool {
+        self.schema.matches_uri(uri) || self.retired_schema_uris.contains(uri.as_str())
+    }
+
+    pub(super) fn retired_schema_uris_for_refresh(
+        &self,
+        old_schema: &SchemaIndex,
+        new_schema: &SchemaIndex,
+    ) -> BTreeSet<String> {
+        let mut retired = self.retired_schema_uris.clone();
+        if old_schema.configured_path() != new_schema.configured_path() {
+            retired.extend(
+                self.documents
+                    .documents()
+                    .filter(|document| old_schema.matches_uri(&document.identity().uri))
+                    .map(|document| document.identity().uri.as_str().to_owned()),
+            );
+        }
+        retired.retain(|uri| {
+            uri.parse::<Uri>()
+                .map_or(true, |uri| !new_schema.matches_uri(&uri))
+        });
+        retired
     }
 }
 
@@ -130,6 +177,7 @@ pub(crate) enum DiagnosticRefresh {
     Publish(DocumentDiagnostics),
     Clear {
         uri: Uri,
+        version: Option<i32>,
         generation: SnapshotGeneration,
     },
 }

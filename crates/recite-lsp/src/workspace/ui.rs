@@ -33,6 +33,7 @@ impl LspWorkspace {
             snapshot: LiveProjectSnapshot::empty(generation),
             schema,
             schema_override_path,
+            retired_schema_uris: Default::default(),
             generation,
             ui_catalog,
         };

@@ -131,7 +131,7 @@ impl LspWorkspace {
     ) -> Vec<super::DiagnosticRefresh> {
         self.documents
             .documents()
-            .filter(|document| !self.schema.matches_uri(&document.identity().uri))
+            .filter(|document| !self.is_schema_document_uri(&document.identity().uri))
             .filter(|document| match exclude {
                 Some(uri) => document.identity().uri != *uri,
                 None => true,
@@ -186,7 +186,7 @@ impl LspWorkspace {
             .summaries()
             .iter()
             .filter_map(|summary| {
-                if self.schema.matches_uri(summary.uri()) {
+                if self.is_schema_document_uri(summary.uri()) {
                     return None;
                 }
                 let key = document_key_for_identity(&summary.identity)?;
