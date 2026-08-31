@@ -35,6 +35,22 @@ enum SchemaKind {
 }
 
 impl SchemaIndex {
+    pub(crate) fn empty() -> Self {
+        Self {
+            uri: None,
+            configured_uri: None,
+            configured_path: None,
+            path: None,
+            kind: SchemaKind::Unknown,
+            active_version: None,
+            summary: None,
+            schema: None,
+            source: None,
+            diagnostics: Vec::new(),
+            text: None,
+        }
+    }
+
     pub(super) fn load(path: Option<PathBuf>) -> Self {
         let Some(path) = path else {
             return Self {
@@ -131,25 +147,32 @@ impl SchemaIndex {
         overlay
     }
 
-    pub(crate) fn overlay_for_documents(&self, documents: &OpenDocumentStore) -> Option<Self> {
+    pub(super) fn overlay_for_documents_in_partition(
+        &self,
+        documents: &OpenDocumentStore,
+        _saved: &super::project_index::SavedProjectIndex,
+        _partition: &str,
+    ) -> Option<Self> {
         let mut matches = documents
             .documents()
-            .filter(|document| self.matches_uri(&document.identity().uri))
-            .map(|document| {
-                (
-                    document.identity().uri.clone(),
-                    document.text(),
-                    document.version(),
-                )
-            });
-        let first = matches.next()?;
+            .filter(|document| self.matches_uri(&document.identity().uri));
+        let document = matches.next()?;
         if matches.next().is_some() {
             return None;
         }
-        Some(self.overlay_for_open(first.0, first.1, first.2))
+        Some(self.overlay_for_open(
+            document.identity().uri.clone(),
+            document.text(),
+            document.version(),
+        ))
     }
 
-    pub(crate) fn has_open_match(&self, documents: &OpenDocumentStore) -> bool {
+    pub(super) fn has_open_match_in_partition(
+        &self,
+        documents: &OpenDocumentStore,
+        _saved: &super::project_index::SavedProjectIndex,
+        _partition: &str,
+    ) -> bool {
         documents
             .documents()
             .any(|document| self.matches_uri(&document.identity().uri))

@@ -1,7 +1,5 @@
-use std::collections::BTreeMap;
-
-use recite_compiler::AuthoringKernel;
 use recite_ui::UiCatalog;
+use std::collections::BTreeMap;
 
 use super::SnapshotGeneration;
 use super::project_index::SavedProjectIndex;
@@ -17,41 +15,68 @@ impl LspWorkspace {
         ui_catalog: UiCatalog,
     ) -> Result<Self, recite_compiler::AuthoringError> {
         let saved = SavedProjectIndex::discover(&config);
-        let schema = SchemaIndex::load(config.schema_path);
         let schema_override_path = config.schema_override_path.clone();
         let documents = OpenDocumentStore::default();
-        let kernel = schema
-            .schema()
-            .cloned()
-            .map_or_else(AuthoringKernel::new, AuthoringKernel::with_schema);
+        let schema_paths = config.schema_paths.clone();
+        let mut schemas = BTreeMap::new();
+        let partition_ids = saved.partition_ids();
+        let partition_count = partition_ids.len();
+        for id in partition_ids {
+            let path = if id == "standalone" && partition_count > 1 {
+                schema_paths.get(&id).cloned()
+            } else {
+                schema_override_path
+                    .clone()
+                    .or_else(|| schema_paths.get(&id).cloned())
+            };
+            schemas.insert(id, SchemaIndex::load(path));
+        }
         let generation = SnapshotGeneration(0);
         let mut workspace = LspWorkspace {
-            saved,
-            documents,
-            kernel,
-            kernel_open_owners: BTreeMap::new(),
+            saved: saved.clone(),
+            documents: documents.clone(),
+            partitions: BTreeMap::new(),
             snapshot: LiveProjectSnapshot::empty(generation),
-            schema,
             schema_override_path,
-            retired_schema_uris: Default::default(),
+            schema_paths: schema_paths
+                .into_iter()
+                .map(|(id, path)| (id, Some(path)))
+                .collect(),
             generation,
             ui_catalog,
         };
-        workspace.rebuild_kernel()?;
-        workspace.snapshot = LiveProjectSnapshot::rebuild(
-            generation,
-            &workspace.saved,
-            &workspace.documents,
-            workspace.kernel.snapshot(),
-        );
+        workspace.rebuild_for_documents_with_schemas(saved, documents, schemas)?;
         Ok(workspace)
     }
 
+    #[cfg(any(test, feature = "bench-support"))]
     pub(crate) fn diagnostic_sources(&self) -> Vec<DiagnosticSource<'_>> {
+        self.diagnostic_sources_for_partition(None)
+    }
+
+    pub(crate) fn diagnostic_sources_for_uri(
+        &self,
+        uri: &lsp_types::Uri,
+    ) -> Vec<DiagnosticSource<'_>> {
+        if self.is_schema_document_uri(uri) {
+            return self.diagnostic_sources_for_partition(None);
+        }
+        self.diagnostic_sources_for_partition(self.partition_id_for_uri(uri).as_deref())
+    }
+
+    fn diagnostic_sources_for_partition(
+        &self,
+        partition: Option<&str>,
+    ) -> Vec<DiagnosticSource<'_>> {
         self.snapshot
             .summaries()
             .iter()
             .filter_map(|summary| {
+                if let Some(partition) = partition
+                    && self.partition_id_for_uri(summary.uri()).as_deref() != Some(partition)
+                {
+                    return None;
+                }
                 let path = super::document_key_for_identity(&summary.identity)?;
                 Some(DiagnosticSource {
                     path: path.as_str().to_owned(),

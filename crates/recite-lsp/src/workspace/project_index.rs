@@ -11,7 +11,7 @@ use crate::summary::SavedFileIdentity;
 use recite_config::DiscoveredDocument;
 
 #[path = "project_diagnostics.rs"]
-mod project_diagnostics;
+pub(super) mod project_diagnostics;
 #[path = "project_identity.rs"]
 mod project_identity;
 #[path = "project_manifest.rs"]
@@ -87,6 +87,32 @@ impl SavedProjectIndex {
         self.documents
             .values()
             .map(|document| &document.identity.uri)
+    }
+
+    pub(super) fn partition_ids(&self) -> BTreeSet<String> {
+        let mut partitions = BTreeSet::new();
+        for discovery in &self.discoveries {
+            match &discovery.state {
+                WorkspaceDiscoveryState::Manifest(report) => {
+                    partitions.insert(crate::paths::stable_path_identity(
+                        report.manifest().project_root(),
+                    ));
+                    if report.manifest().project_root() != discovery.root {
+                        partitions.insert(crate::paths::stable_path_identity(&discovery.root));
+                    }
+                }
+                WorkspaceDiscoveryState::Manifestless | WorkspaceDiscoveryState::Failed { .. } => {
+                    partitions.insert(crate::paths::stable_path_identity(&discovery.root));
+                }
+            }
+        }
+        partitions.insert("standalone".to_owned());
+        partitions
+    }
+
+    pub(super) fn partition_for_path(&self, path: &Path) -> Option<String> {
+        self.project_identity_for_path(path)
+            .map(|identity| identity.partition)
     }
 
     fn insert_discovered(&mut self, document: &DiscoveredDocument) {

@@ -9,6 +9,7 @@ use super::support::{Harness, block_names, file_uri, full_change, test_workspace
 
 pub(super) mod discovery_transitions;
 mod lifecycle;
+mod project_partition;
 mod schema_summary;
 mod transactions;
 
@@ -27,6 +28,9 @@ pub(super) use lifecycle::{
     open_alias_owner_switch_reseeds_kernel_version_state,
     open_nonexistent_aliases_share_one_fallback_key,
     saved_uri_replacement_removes_old_canonical_entry,
+};
+pub(super) use project_partition::{
+    identical_relative_keys_are_partitioned, identical_relative_keys_use_their_project_schema,
 };
 pub(super) use transactions::{
     duplicate_open_is_ignored_transactionally, manifest_refresh_rekeys_open_overlay,
@@ -145,7 +149,7 @@ pub(super) fn explicit_schema_override_survives_manifest_schema_change() {
     workspace.refresh_watched_uri(&manifest_uri);
 
     assert!(workspace.schema().summary().is_some());
-    assert!(workspace.schema_diagnostics().is_none());
+    assert!(workspace.schema_diagnostics_all().is_empty());
 }
 
 pub(super) fn malformed_manifest_does_not_fall_back_to_saved_walker() {
@@ -188,7 +192,7 @@ pub(super) fn schema_load_failure_keeps_source_only_snapshot() {
     );
 
     assert!(workspace.schema().summary().is_none());
-    assert!(workspace.schema_diagnostics().is_some());
+    assert!(!workspace.schema_diagnostics_all().is_empty());
     assert_eq!(block_names(&workspace), ["source"]);
 }
 

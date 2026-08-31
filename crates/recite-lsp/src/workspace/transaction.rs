@@ -24,8 +24,8 @@ impl LspWorkspace {
         documents.open(identity, version, text);
         self.rebuild_for_documents(self.saved.clone(), documents)
             .ok()?;
-        if self.schema.matches_uri(&uri) {
-            return self.schema.refresh_or_clear(self.generation);
+        if self.schema_partition_id(&uri).is_some() {
+            return self.schema_refresh_for_uri(&uri);
         }
         self.documents
             .document(&uri)
@@ -48,8 +48,8 @@ impl LspWorkspace {
                 {
                     return WorkspaceChangeResult::Rejected;
                 }
-                if self.schema.matches_uri(&uri) {
-                    if let Some(refresh) = self.schema.refresh_or_clear(self.generation) {
+                if self.schema_partition_id(&uri).is_some() {
+                    if let Some(refresh) = self.schema_refresh_for_uri(&uri) {
                         return WorkspaceChangeResult::Accepted(refresh);
                     }
                     let Some(document) = self.documents.document(&uri) else {

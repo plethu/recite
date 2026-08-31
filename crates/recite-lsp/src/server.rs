@@ -232,7 +232,7 @@ impl Server {
         for refresh in self.workspace.project_diagnostics_all() {
             self.publish_refresh(refresh)?;
         }
-        if let Some(refresh) = self.workspace.schema_diagnostics() {
+        for refresh in self.workspace.schema_diagnostics_all() {
             self.publish_refresh(refresh)?;
         }
 
@@ -356,13 +356,14 @@ impl Server {
                     diagnostics,
                     ..
                 } = diagnostics;
+                let sources = self.workspace.diagnostic_sources_for_uri(&uri);
                 let publish_params = publish_diagnostics(
                     uri,
                     text.as_str(),
                     version,
                     &diagnostics,
                     &self.workspace.ui_catalog,
-                    &self.workspace.diagnostic_sources(),
+                    &sources,
                 )
                 .map_err(|error| ServerError::Diagnostics(error.to_string()))?;
                 self.send(

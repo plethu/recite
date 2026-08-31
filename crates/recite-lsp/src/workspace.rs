@@ -1,5 +1,9 @@
 mod config;
 mod kernel;
+#[path = "workspace/kernel_rebuild.rs"]
+mod kernel_rebuild;
+#[path = "workspace/kernel_standalone.rs"]
+mod kernel_standalone;
 mod lsp_features;
 mod project_index;
 #[path = "project_refresh.rs"]
@@ -9,14 +13,14 @@ mod snapshot;
 mod transaction;
 mod ui;
 
-use std::collections::{BTreeMap, BTreeSet};
+use std::collections::BTreeMap;
 
 use lsp_types::Uri;
-use recite_compiler::AuthoringKernel;
-use recite_core::{Diagnostic, DocumentKey};
+use recite_core::Diagnostic;
 use recite_ui::UiCatalog;
 
 pub(crate) use config::WorkspaceConfig;
+pub(crate) use kernel::KernelPartition;
 pub(crate) use kernel::{document_key_for_identity, document_key_for_open, document_key_for_saved};
 use project_index::{SavedDocument, SavedProjectIndex};
 use schema_index::SchemaIndex;
@@ -30,31 +34,57 @@ pub(crate) struct SnapshotGeneration(u64);
 pub(crate) struct LspWorkspace {
     saved: SavedProjectIndex,
     documents: OpenDocumentStore,
-    kernel: AuthoringKernel,
-    kernel_open_owners: BTreeMap<DocumentKey, Uri>,
+    partitions: BTreeMap<String, KernelPartition>,
     snapshot: LiveProjectSnapshot,
-    schema: SchemaIndex,
     schema_override_path: Option<std::path::PathBuf>,
-    retired_schema_uris: BTreeSet<String>,
+    schema_paths: BTreeMap<String, Option<std::path::PathBuf>>,
     generation: SnapshotGeneration,
     pub(crate) ui_catalog: UiCatalog,
 }
 
 impl LspWorkspace {
-    pub(crate) fn schema_diagnostics(&self) -> Option<DiagnosticRefresh> {
-        self.schema.diagnostics_refresh(self.generation)
+    pub(crate) fn schema_diagnostics_all(&self) -> Vec<DiagnosticRefresh> {
+        let mut refreshes = Vec::new();
+        for partition in self.partitions.values() {
+            let Some(refresh) = partition.schema.diagnostics_refresh(self.generation) else {
+                continue;
+            };
+            let DiagnosticRefresh::Publish(published) = refresh else {
+                continue;
+            };
+            if let Some(existing) = refreshes.iter_mut().find_map(|refresh| {
+                let DiagnosticRefresh::Publish(existing) = refresh else {
+                    return None;
+                };
+                (existing.uri == published.uri).then_some(existing)
+            }) {
+                for diagnostic in published.diagnostics {
+                    if !existing.diagnostics.contains(&diagnostic) {
+                        existing.diagnostics.push(diagnostic);
+                    }
+                }
+            } else {
+                refreshes.push(DiagnosticRefresh::Publish(published));
+            }
+        }
+        refreshes
     }
 
     pub(crate) fn save_schema(&mut self, uri: &Uri) -> Option<DiagnosticRefresh> {
-        if !self.schema.matches_uri(uri) {
-            return None;
+        self.schema_partition_id(uri)?;
+        let mut schemas = self.partition_schemas();
+        for schema in schemas.values_mut() {
+            if schema.matches_uri(uri) {
+                *schema = schema.base();
+            }
         }
-        // Reload disk as the base, then let the live document store reapply
-        // the authoritative unsaved owner before rebuilding the kernel.
-        self.schema = self.schema.base();
-        self.rebuild_for_documents(self.saved.clone(), self.documents.clone())
-            .ok()?;
-        self.schema.refresh_or_clear(self.generation)
+        self.rebuild_for_documents_with_schemas(
+            self.saved.clone(),
+            self.documents.clone(),
+            schemas,
+        )
+        .ok()?;
+        self.schema_refresh_for_uri(uri)
     }
 
     pub(crate) fn is_current_generation(&self, generation: SnapshotGeneration) -> bool {
@@ -73,12 +103,23 @@ impl LspWorkspace {
 
     #[cfg(feature = "bench-support")]
     pub(crate) fn compiler_snapshot(&self) -> &recite_compiler::AuthoringSnapshot {
-        self.kernel.snapshot()
+        let Some(partition) = self.partitions.values().next() else {
+            unreachable!("workspace always has a partition")
+        };
+        partition.kernel.snapshot()
     }
 
     #[allow(dead_code)]
     pub(crate) fn schema(&self) -> &SchemaIndex {
-        &self.schema
+        let Some(partition) = self
+            .partitions
+            .values()
+            .find(|partition| partition.schema.summary().is_some())
+            .or_else(|| self.partitions.values().next())
+        else {
+            unreachable!("workspace always has a partition")
+        };
+        &partition.schema
     }
 
     pub(in crate::workspace) fn rebuild_for_documents(
@@ -86,80 +127,60 @@ impl LspWorkspace {
         saved: SavedProjectIndex,
         documents: OpenDocumentStore,
     ) -> Result<(), recite_compiler::AuthoringError> {
-        self.rebuild_for_documents_with_schema(saved, documents, self.schema.clone())
-    }
-
-    pub(in crate::workspace) fn rebuild_for_documents_with_schema(
-        &mut self,
-        saved: SavedProjectIndex,
-        documents: OpenDocumentStore,
-        schema: SchemaIndex,
-    ) -> Result<(), recite_compiler::AuthoringError> {
-        self.rebuild_for_documents_with_schema_and_retired(
-            saved,
-            documents,
-            schema,
-            self.retired_schema_uris.clone(),
-        )
-    }
-
-    pub(in crate::workspace) fn rebuild_for_documents_with_schema_and_retired(
-        &mut self,
-        saved: SavedProjectIndex,
-        documents: OpenDocumentStore,
-        schema: SchemaIndex,
-        retired_schema_uris: BTreeSet<String>,
-    ) -> Result<(), recite_compiler::AuthoringError> {
-        if let Some(schema) = schema.overlay_for_documents(&documents) {
-            return self.rebuild_state_with_schema(saved, documents, schema, retired_schema_uris);
-        }
-        if schema.has_open_match(&documents) {
-            let Some(uri) = documents
-                .documents()
-                .find(|document| schema.matches_uri(&document.identity().uri))
-                .map(|document| document.identity().uri.clone())
-            else {
-                return self.rebuild_for_documents_with_schema_and_retired(
-                    saved,
-                    documents,
-                    schema,
-                    retired_schema_uris,
-                );
-            };
-            return self.rebuild_state_with_schema(
-                saved,
-                documents,
-                schema.unavailable_overlay(uri),
-                retired_schema_uris,
-            );
-        }
-        let base = schema.base();
-        self.rebuild_state_with_schema(saved, documents, base, retired_schema_uris)
+        self.rebuild_for_documents_with_schemas(saved, documents, self.partition_schemas())
     }
 
     pub(crate) fn is_schema_document_uri(&self, uri: &Uri) -> bool {
-        self.schema.matches_uri(uri) || self.retired_schema_uris.contains(uri.as_str())
+        self.partitions.values().any(|partition| {
+            partition.schema.matches_uri(uri)
+                || partition.retired_schema_uris.contains(uri.as_str())
+        })
     }
 
-    pub(super) fn retired_schema_uris_for_refresh(
-        &self,
-        old_schema: &SchemaIndex,
-        new_schema: &SchemaIndex,
-    ) -> BTreeSet<String> {
-        let mut retired = self.retired_schema_uris.clone();
-        if old_schema.configured_path() != new_schema.configured_path() {
-            retired.extend(
-                self.documents
-                    .documents()
-                    .filter(|document| old_schema.matches_uri(&document.identity().uri))
-                    .map(|document| document.identity().uri.as_str().to_owned()),
-            );
+    pub(crate) fn schema_refresh_for_uri(&self, uri: &Uri) -> Option<DiagnosticRefresh> {
+        let mut refreshes = self
+            .partitions
+            .values()
+            .filter(|partition| partition.schema.matches_uri(uri))
+            .filter_map(|partition| partition.schema.refresh_or_clear(self.generation));
+        let first = refreshes.next()?;
+        let mut has_publish = matches!(&first, DiagnosticRefresh::Publish(_));
+        let mut merged = match first {
+            DiagnosticRefresh::Publish(published) => published,
+            DiagnosticRefresh::Clear { uri, .. } => DocumentDiagnostics {
+                uri,
+                text: String::new(),
+                version: None,
+                diagnostics: Vec::new(),
+                generation: self.generation,
+            },
+        };
+        for refresh in refreshes {
+            match refresh {
+                DiagnosticRefresh::Publish(published) => {
+                    has_publish = true;
+                    if merged.text.is_empty() {
+                        merged.text = published.text;
+                    }
+                    merged.version = merged.version.or(published.version);
+                    for diagnostic in published.diagnostics {
+                        if !merged.diagnostics.contains(&diagnostic) {
+                            merged.diagnostics.push(diagnostic);
+                        }
+                    }
+                }
+                DiagnosticRefresh::Clear { .. } => {}
+            }
         }
-        retired.retain(|uri| {
-            uri.parse::<Uri>()
-                .map_or(true, |uri| !new_schema.matches_uri(&uri))
-        });
-        retired
+        if has_publish {
+            Some(DiagnosticRefresh::Publish(merged))
+        } else {
+            Some(DiagnosticRefresh::Clear {
+                uri: merged.uri,
+                version: None,
+                generation: self.generation,
+            })
+        }
     }
 }
 

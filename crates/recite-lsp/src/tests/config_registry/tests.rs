@@ -9,6 +9,16 @@ fn malformed_workspace_root_does_not_block_independent_root() {
 }
 
 #[test]
+fn identical_relative_keys_are_partitioned() {
+    super::project_indexes::identical_relative_keys_are_partitioned();
+}
+
+#[test]
+fn identical_relative_keys_use_their_project_schema() {
+    super::project_indexes::identical_relative_keys_use_their_project_schema();
+}
+
+#[test]
 fn explicit_missing_user_config_warns_with_stable_code() {
     super::lifecycle::explicit_missing_user_config_warns_with_stable_code();
 }
