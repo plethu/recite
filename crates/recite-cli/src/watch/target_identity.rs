@@ -1,6 +1,9 @@
 use std::fs;
 use std::path::{Path, PathBuf};
 
+#[cfg(any(windows, target_os = "macos"))]
+use unicode_normalization::UnicodeNormalization;
+
 #[derive(Debug)]
 pub(super) struct PhysicalIdentity {
     pub(super) canonical: PathBuf,
@@ -47,12 +50,13 @@ pub(super) fn same_physical_path(left: &PhysicalIdentity, right: &PhysicalIdenti
 fn comparison_key(path: &Path) -> String {
     path.components()
         .map(|component| {
-            component
+            let lower = component
                 .as_os_str()
                 .to_string_lossy()
                 .chars()
                 .flat_map(char::to_lowercase)
-                .collect::<String>()
+                .collect::<String>();
+            lower.nfkc().collect::<String>()
         })
         .collect::<Vec<_>>()
         .join("/")
