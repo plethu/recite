@@ -121,8 +121,9 @@ production suppressions must carry a narrow scope and rationale.
 | `crates/recite-cli/src/dialogue_locale/catalog.rs` | 267 | production | cli/localisation | review | #180: catalogue loading and one-call plural resolution remain a cohesive provider boundary |
 | `crates/recite-cli/src/runtime_fixture/trace/model.rs` | 263 | production | cli/runtime-fixture | review | #180: trace output model keeps localized templates and structured metadata distinct |
 | `crates/recite-godot/src/adapter.rs` | 361 | production | godot | review | Host adapter lifecycle boundary |
-| `crates/recite-lsp/src/server.rs` | 397 | production | lsp/server | review | #164: request dispatch and protocol lifecycle remain the server boundary; error taxonomy and watcher registration are split into focused modules |
-| `crates/recite-lsp/src/project_refresh.rs` | 256 | production | lsp/refresh | review | #187: project, schema, and open-document refresh ordering remains one cohesive LSP transaction; split if refresh families grow materially |
+| `crates/recite-lsp/src/server.rs` | 398 | production | lsp/server | review | #164: request dispatch and protocol lifecycle remain the server boundary; error taxonomy and watcher registration are split into focused modules |
+| `crates/recite-lsp/src/project_refresh.rs` | 263 | production | lsp/refresh | review | #187: project, schema, and open-document refresh ordering remains one cohesive LSP transaction; split if refresh families grow materially |
+| `crates/recite-lsp/src/workspace/lsp_features.rs` | 253 | production | lsp/workspace | review | #187: partition-routed authoring feature projections remain a cohesive LSP boundary; split by feature family if responsibilities grow materially |
 | `crates/recite-benchmarks/src/memory_profiles/mod.rs` | 373 | production | benchmarks | cohesive | Maintainer-only profile orchestration |
 | `crates/recite-cli/src/commands.rs` | 398 | production | cli | review | Command orchestration boundary |
 | `crates/recite-compiler/src/authoring/query/schema/metadata.rs` | 269 | production | compiler/authoring | review | #168: typed metadata completion and missing-context policy projection |
