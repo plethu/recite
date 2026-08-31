@@ -2,6 +2,8 @@ use std::collections::BTreeMap;
 
 use serde::Serialize;
 
+use super::path::MachinePathProjection;
+
 /// Stable CLI projection.  The nested definition values are JSON because the
 /// canonical model owns schema semantics; this type owns only their output
 /// names, ordering, and provenance envelope.
@@ -11,6 +13,7 @@ pub(super) struct SchemaInspectionProjection {
     pub(super) schema_version: u32,
     pub(super) source: SourceProjection,
     pub(super) ownership: OwnershipProjection,
+    pub(super) capability: CapabilityProjection,
     pub(super) producer: Option<IdentityProjection>,
     pub(super) fingerprints: FingerprintsProjection,
     pub(super) freshness: FreshnessProjection,
@@ -30,7 +33,7 @@ pub(super) struct SchemaInspectionProjection {
 #[derive(Debug, Serialize)]
 pub(super) struct SourceProjection {
     pub(super) format: &'static str,
-    pub(super) path: String,
+    pub(super) path: MachinePathProjection,
     pub(super) read_only: bool,
 }
 

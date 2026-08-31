@@ -7,12 +7,13 @@ use super::definitions::*;
 use super::fingerprints::fingerprints_json;
 use super::freshness::freshness_json;
 use super::model::{DeclarationProjection, SchemaInspectionProjection, SourceProjection};
+use super::path::MachinePathProjection;
 use super::provenance::{identity_json, ownership_json, provenance_json};
 use super::{INSPECTION_FORMAT_VERSION, input::InputFormat};
 
 pub(super) fn from_source(
     source: &recite_core::SchemaSource,
-    path: String,
+    path: MachinePathProjection,
 ) -> Result<SchemaInspectionProjection, CliError> {
     let summary = SchemaSummary::from_source(source);
     from_summary(&summary, source.schema(), InputFormat::StandaloneToml, path)
@@ -20,7 +21,7 @@ pub(super) fn from_source(
 
 pub(super) fn from_generated(
     schema: &recite_core::ProjectSchema,
-    path: String,
+    path: MachinePathProjection,
 ) -> Result<SchemaInspectionProjection, CliError> {
     let summary = SchemaSummary::from_schema(schema);
     from_summary(&summary, schema, InputFormat::GeneratedJson, path)
@@ -30,7 +31,7 @@ fn from_summary(
     summary: &SchemaSummary,
     schema: &recite_core::ProjectSchema,
     format: InputFormat,
-    path: String,
+    path: MachinePathProjection,
 ) -> Result<SchemaInspectionProjection, CliError> {
     let ownership = ownership_json(summary.ownership());
     let producer = summary.ownership().producer().map(identity_json);
@@ -43,6 +44,7 @@ fn from_summary(
             read_only: matches!(format, InputFormat::GeneratedJson),
         },
         ownership,
+        capability: capability_json(summary.capability()),
         producer,
         fingerprints: fingerprints_json(summary, schema)?,
         freshness: freshness_json(summary.freshness()),

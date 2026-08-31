@@ -22,12 +22,14 @@ mod fingerprints;
 mod freshness;
 mod input;
 mod model;
+mod path;
 mod provenance;
 mod summary;
 
 use self::error::SchemaInspectionError;
 use input::InputFormat;
 use model::SchemaInspectionProjection;
+use path::machine_path;
 
 /// Version of the CLI inspection projection, independent of schema and
 /// generated-manifest versions.
@@ -56,6 +58,7 @@ pub(crate) fn run(
         source,
     })?;
     let file = display_path(&args.schema);
+    let machine_path = machine_path(&args.schema);
     let loaded = match format {
         InputFormat::StandaloneToml => {
             let report = recite_core::SchemaSource::load_str(file.clone(), &source);
@@ -76,7 +79,7 @@ pub(crate) fn run(
                     },
                 ));
             };
-            SchemaInspectionProjection::from_source(&source, file)
+            SchemaInspectionProjection::from_source(&source, machine_path.clone())
         }
         InputFormat::GeneratedJson => {
             let report = recite_core::load_schema_manifest_str(file.clone(), &source);
@@ -97,7 +100,7 @@ pub(crate) fn run(
                     },
                 ));
             };
-            SchemaInspectionProjection::from_generated(&schema, file)
+            SchemaInspectionProjection::from_generated(&schema, machine_path)
         }
     }?;
 
