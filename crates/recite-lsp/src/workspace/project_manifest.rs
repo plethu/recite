@@ -9,18 +9,19 @@ impl SavedProjectIndex {
     /// open editor buffers on top of the diagnostic-only state.
     pub(crate) fn refresh_manifest(&mut self) -> Option<PathBuf> {
         let start = self.discovery_start.clone()?;
-        let result = recite_config::discover_project(start);
+        let result = recite_config::discover_project(&start);
         let schema_path = result
             .as_ref()
             .ok()
             .and_then(super::super::config::schema_path_for_discovery);
-        self.apply_discovery(result);
+        self.apply_discovery(result, &start);
         schema_path
     }
 
     fn apply_discovery(
         &mut self,
         result: Result<recite_config::ProjectDiscoveryReport, recite_config::ProjectDiscoveryError>,
+        start: &Path,
     ) {
         self.documents.clear();
         match result {
@@ -41,7 +42,7 @@ impl SavedProjectIndex {
                     .iter()
                     .map(recite_config::DiscoveryDiagnostic::as_core_diagnostic)
                     .collect();
-                self.discovery_failed = false;
+                self.discovery_failed_roots.remove(start);
                 for document in report.documents() {
                     self.insert_discovered(document);
                 }
@@ -58,18 +59,9 @@ impl SavedProjectIndex {
                     .map(|path| path.join(recite_config::PROJECT_MANIFEST_FILE));
                 self.manifest_text.clear();
                 self.diagnostics.clear();
-                self.discovery_failed = false;
-                for root in self.fallback_roots.clone() {
-                    let (documents, diagnostics) = recite_config::discover_unscoped_sources(&root);
-                    self.diagnostics.extend(
-                        diagnostics
-                            .iter()
-                            .map(recite_config::DiscoveryDiagnostic::as_core_diagnostic),
-                    );
-                    for document in documents {
-                        self.insert_discovered(&document);
-                    }
-                }
+                self.discovery_failed_roots.remove(start);
+                let fallback_roots = self.fallback_roots.clone();
+                self.insert_fallback_documents(&fallback_roots);
             }
             Err(error) => {
                 self.manifest = None;
@@ -80,7 +72,7 @@ impl SavedProjectIndex {
                     .and_then(|path| fs::read_to_string(path).ok())
                     .unwrap_or_default();
                 self.diagnostics = error.diagnostics();
-                self.discovery_failed = true;
+                self.discovery_failed_roots.insert(start.to_owned());
             }
         }
     }

@@ -171,6 +171,7 @@ production suppressions must carry a narrow scope and rationale.
 | `crates/recite-compiler/tests/asset.rs` | 640 | test/support | compiler/tests | exception | #89: retain the shared compiled-asset fixture entry point for the wire contract guard |
 | `crates/recite-ffi/tests/snapshots.rs` | 422 | test/support | ffi/tests | cohesive | #171: session snapshot and restore contract coverage |
 | `crates/recite-lsp/src/tests/support/harness.rs` | 434 | test/support | lsp/tests | follow-up | Protocol harness ownership remains grouped for shared request, response, and lifecycle helpers; split again if protocol coverage grows materially |
+| `crates/recite-lsp/src/tests/project_indexes/discovery_transitions/fallback.rs` | 377 | test/support | lsp/tests | follow-up | Workspace discovery transition coverage remains grouped around fallback ownership; split by transition family if it grows materially |
 | `crates/recite-core/tests/compiled_model.rs` | 427 | test/support | core/tests | cohesive | Compiled model behavior |
 | `crates/recite-compiler/tests/asset/tag_surface.rs` | 486 | test/support | compiler/tests | cohesive | Wire tag surface |
 | `crates/recite-runtime/tests/traversal/localisation.rs` | 441 | test/support | runtime/tests | cohesive | Locale traversal contract |

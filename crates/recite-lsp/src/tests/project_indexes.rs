@@ -12,6 +12,7 @@ mod lifecycle;
 mod schema_summary;
 mod transactions;
 
+pub(super) use discovery_transitions::malformed_workspace_root_does_not_block_independent_root;
 pub(super) use lifecycle::{
     did_close_refreshes_saved_summary_before_falling_back,
     did_save_refreshes_saved_summary_for_closed_files,

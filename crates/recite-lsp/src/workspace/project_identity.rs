@@ -19,6 +19,13 @@ impl SavedProjectIndex {
     }
 
     pub(crate) fn path_scope(&self, path: &Path) -> PathScope {
+        if self
+            .discovery_failed_roots
+            .iter()
+            .any(|root| path.starts_with(root))
+        {
+            return PathScope::Standalone;
+        }
         let manifest_excluded = self.manifest.as_ref().is_some_and(|manifest| {
             path.starts_with(manifest.project_root()) && !manifest.allows_path(path)
         });

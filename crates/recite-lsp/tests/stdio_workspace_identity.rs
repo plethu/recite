@@ -58,6 +58,61 @@ fn stdio_workspace_folders_keep_manifest_and_fallback_saved_documents() {
 }
 
 #[test]
+fn stdio_malformed_workspace_folder_does_not_block_later_folder() {
+    let temp = Builder::new()
+        .prefix("recite % stdio malformed workspace ")
+        .tempdir()
+        .unwrap_or_else(|error| panic!("temporary workspace: {error}"));
+    let malformed_root = temp.path().join("malformed");
+    let valid_root = temp.path().join("valid");
+    std::fs::create_dir_all(&malformed_root)
+        .unwrap_or_else(|error| panic!("create malformed root: {error}"));
+    std::fs::write(
+        malformed_root.join("recite.project.toml"),
+        "format_version = [\n",
+    )
+    .unwrap_or_else(|error| panic!("write malformed manifest: {error}"));
+    std::fs::write(malformed_root.join("leaked.recite"), ":: leaked\n")
+        .unwrap_or_else(|error| panic!("write malformed source: {error}"));
+    std::fs::create_dir_all(&valid_root)
+        .unwrap_or_else(|error| panic!("create valid root: {error}"));
+    let valid = valid_root.join("later.recite");
+    std::fs::write(&valid, ":: later\n")
+        .unwrap_or_else(|error| panic!("write valid source: {error}"));
+
+    let malformed_manifest_uri = file_uri(&malformed_root.join("recite.project.toml"));
+    let mut harness = StdioHarness::start(json!({
+        "capabilities": {},
+        "workspaceFolders": workspace_folders(&[&malformed_root, &valid_root])
+    }));
+    let startup = harness.receive_message();
+    assert_eq!(startup["method"], "textDocument/publishDiagnostics");
+    assert_eq!(startup["params"]["uri"], malformed_manifest_uri);
+    assert_eq!(startup["params"]["version"], Value::Null);
+    assert_eq!(
+        startup["params"]["diagnostics"][0]["code"],
+        "RECITE_PROJECT001"
+    );
+
+    let valid_uri = file_uri(&valid);
+    harness.notify(
+        "textDocument/didOpen",
+        json!({
+            "textDocument": {
+                "uri": valid_uri,
+                "languageId": "recite",
+                "version": 1,
+                "text": "oops\n"
+            }
+        }),
+    );
+    let messages = harness.barrier(&valid_uri);
+    let diagnostics = published_diagnostics(&messages, &valid_uri, Some(1));
+    assert!(!diagnostics["diagnostics"].as_array().unwrap().is_empty());
+    harness.finish();
+}
+
+#[test]
 fn stdio_excluded_open_file_is_diagnosable_without_cross_project_diagnostics() {
     let temp = Builder::new()
         .prefix("recite % stdio excluded ")

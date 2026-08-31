@@ -4,6 +4,11 @@ fn malformed_user_config_warns_without_blocking_initialize() {
 }
 
 #[test]
+fn malformed_workspace_root_does_not_block_independent_root() {
+    super::project_indexes::malformed_workspace_root_does_not_block_independent_root();
+}
+
+#[test]
 fn explicit_missing_user_config_warns_with_stable_code() {
     super::lifecycle::explicit_missing_user_config_warns_with_stable_code();
 }

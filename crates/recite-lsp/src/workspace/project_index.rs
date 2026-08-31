@@ -30,7 +30,7 @@ pub(super) struct SavedProjectIndex {
     manifest_path: Option<PathBuf>,
     manifest_text: String,
     discovery_start: Option<PathBuf>,
-    discovery_failed: bool,
+    discovery_failed_roots: BTreeSet<PathBuf>,
 }
 
 impl SavedProjectIndex {
@@ -50,24 +50,25 @@ impl SavedProjectIndex {
                 .as_ref()
                 .map(|report| report.manifest().clone()),
             diagnostics: config.discovery_diagnostics.clone(),
-            manifest_path: config
-                .discovery
-                .as_ref()
-                .map(|report| report.manifest().manifest_path().to_owned())
-                .or_else(|| config.discovery_manifest_path.clone()),
+            manifest_path: config.discovery_manifest_path.clone().or_else(|| {
+                config
+                    .discovery
+                    .as_ref()
+                    .map(|report| report.manifest().manifest_path().to_owned())
+            }),
             manifest_text: config
-                .discovery
-                .as_ref()
-                .map(|report| report.manifest().source().source_text())
+                .discovery_manifest_path
+                .as_deref()
+                .and_then(|path| fs::read_to_string(path).ok())
                 .or_else(|| {
                     config
-                        .discovery_manifest_path
-                        .as_deref()
-                        .and_then(|path| fs::read_to_string(path).ok())
+                        .discovery
+                        .as_ref()
+                        .map(|report| report.manifest().source().source_text())
                 })
                 .unwrap_or_default(),
             discovery_start: config.discovery_start.clone(),
-            discovery_failed: config.discovery_failed,
+            discovery_failed_roots: config.discovery_failed_roots.clone(),
         };
         if let Some(report) = config.discovery.as_ref() {
             index.diagnostics.extend(
@@ -79,8 +80,8 @@ impl SavedProjectIndex {
             for document in report.documents() {
                 index.insert_discovered(document);
             }
-            index.insert_fallback_documents(&config.fallback_roots[1..]);
-        } else if !index.discovery_failed {
+            index.insert_fallback_documents(&config.fallback_roots);
+        } else {
             index.insert_fallback_documents(&config.fallback_roots);
         }
         index
@@ -140,6 +141,16 @@ impl SavedProjectIndex {
 
     fn insert_fallback_documents(&mut self, roots: &[PathBuf]) {
         for root in roots {
+            if self.discovery_failed_roots.contains(root) {
+                continue;
+            }
+            if self
+                .manifest
+                .as_ref()
+                .is_some_and(|manifest| root == manifest.project_root())
+            {
+                continue;
+            }
             let (documents, diagnostics) = recite_config::discover_unscoped_sources(root);
             self.diagnostics.extend(
                 diagnostics

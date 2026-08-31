@@ -1,3 +1,4 @@
+use std::collections::{BTreeMap, BTreeSet};
 use std::fs;
 use std::path::{Path, PathBuf};
 
@@ -16,10 +17,7 @@ pub(crate) struct WorkspaceConfig {
     pub(super) schema_override_path: Option<PathBuf>,
     pub(super) discovery: Option<ProjectDiscoveryReport>,
     pub(super) discovery_diagnostics: Vec<recite_core::Diagnostic>,
-    /// True when a manifest was found but could not be interpreted. This is
-    /// intentionally distinct from a workspace with no manifest: a broken
-    /// manifest must never silently widen the project to the legacy walker.
-    pub(super) discovery_failed: bool,
+    pub(super) discovery_failed_roots: BTreeSet<PathBuf>,
     pub(super) discovery_start: Option<PathBuf>,
     pub(super) discovery_manifest_path: Option<PathBuf>,
 }
@@ -31,50 +29,63 @@ impl WorkspaceConfig {
             .filter_map(|root| resolve_config_path(&root, None))
             .filter_map(|root| fs::canonicalize(root).ok())
             .collect::<Vec<_>>();
-        let (
-            discovery,
-            discovery_diagnostics,
-            discovery_failed,
-            discovery_start,
-            discovery_manifest_path,
-        ) = match fallback_roots.first() {
-            Some(root) => {
-                let start = if root.is_dir() {
-                    root.clone()
-                } else {
-                    root.parent().map_or_else(|| root.clone(), PathBuf::from)
-                };
-                match discover_project(root) {
-                    Ok(report) => (
-                        Some(report.clone()),
-                        Vec::new(),
-                        false,
-                        Some(start.clone()),
-                        Some(report.manifest().manifest_path().to_owned()),
-                    ),
-                    Err(recite_config::ProjectDiscoveryError::NotFound { .. }) => {
-                        // A workspace without a Recite manifest remains usable for
-                        // source-only editor features; explicit project commands
-                        // still report this typed failure.
-                        (
-                            None,
-                            Vec::new(),
-                            false,
-                            Some(start.clone()),
-                            Some(start.join(recite_config::PROJECT_MANIFEST_FILE)),
-                        )
+        let mut reports = BTreeMap::new();
+        let mut discovery_diagnostics = Vec::new();
+        let mut discovery_failed_roots = BTreeSet::new();
+        let mut discovery_starts = BTreeMap::new();
+        let mut failed_manifest_paths = BTreeSet::new();
+        for root in &fallback_roots {
+            let start = discovery_start(root);
+            discovery_starts.insert(root.clone(), start.clone());
+            match discover_project(root) {
+                Ok(report) => {
+                    reports
+                        .entry(report.manifest().manifest_path().to_owned())
+                        .or_insert((start, report));
+                }
+                Err(recite_config::ProjectDiscoveryError::NotFound { .. }) => {}
+                Err(error) => {
+                    discovery_failed_roots.insert(root.clone());
+                    let diagnostics = error.diagnostics();
+                    discovery_diagnostics.extend(diagnostics.iter().cloned());
+                    if let Some(path) = error.manifest_path() {
+                        failed_manifest_paths.insert(path.to_owned());
                     }
-                    Err(error) => (
-                        None,
-                        error.diagnostics(),
-                        true,
-                        Some(start.clone()),
-                        error.manifest_path().map(PathBuf::from),
-                    ),
                 }
             }
-            None => (None, Vec::new(), false, None, None),
-        };
+        }
+        let (discovery_start, discovery) = reports.into_values().next().map_or_else(
+            || {
+                (
+                    fallback_roots
+                        .first()
+                        .and_then(|root| discovery_starts.get(root))
+                        .cloned(),
+                    None,
+                )
+            },
+            |(start, report)| (Some(start), Some(report)),
+        );
+        let discovery_manifest_path = failed_manifest_paths
+            .iter()
+            .next()
+            .cloned()
+            .or_else(|| {
+                discovery
+                    .as_ref()
+                    .map(|report| report.manifest().manifest_path().to_owned())
+            })
+            .or_else(|| {
+                discovery_start
+                    .as_deref()
+                    .map(|start| start.join(recite_config::PROJECT_MANIFEST_FILE))
+            });
+        discovery_diagnostics.sort_by(|left, right| {
+            left.code
+                .as_str()
+                .cmp(right.code.as_str())
+                .then_with(|| left.message.cmp(&right.message))
+        });
         let roots = discovery
             .as_ref()
             .map(|report| {
@@ -104,7 +115,7 @@ impl WorkspaceConfig {
             schema_override_path,
             discovery,
             discovery_diagnostics,
-            discovery_failed,
+            discovery_failed_roots,
             discovery_start,
             discovery_manifest_path,
         }
@@ -124,7 +135,7 @@ impl WorkspaceConfig {
             schema_override_path: None,
             discovery: None,
             discovery_diagnostics: Vec::new(),
-            discovery_failed: false,
+            discovery_failed_roots: BTreeSet::new(),
             discovery_manifest_path: None,
         }
     }
@@ -134,6 +145,14 @@ impl WorkspaceConfig {
         self.schema_path = Some(schema_path.clone());
         self.schema_override_path = Some(schema_path);
         self
+    }
+}
+
+fn discovery_start(root: &Path) -> PathBuf {
+    if root.is_dir() {
+        root.to_owned()
+    } else {
+        root.parent().map_or_else(|| root.to_owned(), PathBuf::from)
     }
 }
 
