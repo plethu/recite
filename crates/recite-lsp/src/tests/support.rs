@@ -110,6 +110,10 @@ impl Harness {
         (harness, result)
     }
 
+    pub(super) fn send_initialized(&self) {
+        self.send_notification(Initialized::METHOD, ());
+    }
+
     pub(super) fn send_notification(&self, method: &str, params: impl Serialize) {
         self.send(Message::Notification(Notification {
             method: method.to_owned(),
@@ -135,6 +139,18 @@ impl Harness {
             }
             thread::sleep(Duration::from_millis(5));
         }
+    }
+
+    pub(super) fn recv_request(&self) -> Request {
+        match self.client.receiver.recv() {
+            Ok(Message::Request(request)) => request,
+            Ok(other) => panic!("expected server request, got {other:?}"),
+            Err(error) => panic!("failed to receive server request: {error}"),
+        }
+    }
+
+    pub(super) fn reply_ok(&self, id: RequestId) {
+        self.send(Message::Response(Response::new_ok(id, ())));
     }
 
     pub(super) fn did_open(&self, uri: Uri, version: i32, text: &str) {
@@ -368,7 +384,7 @@ impl Harness {
             None => panic!("initialize response did not include a result"),
         };
         let result = from_value::<InitializeResult>(result);
-        self.send_notification(Initialized::METHOD, ());
+        self.send_initialized();
         result
     }
 

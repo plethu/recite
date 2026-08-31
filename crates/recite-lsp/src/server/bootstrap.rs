@@ -9,7 +9,7 @@ use recite_ui::{UiCatalog, UiLocale};
 
 use super::{Server, ServerError};
 use crate::capabilities::initialize_result;
-use crate::workspace::WorkspaceConfig;
+use crate::workspace::{LspWorkspace, WorkspaceConfig};
 
 pub fn run_stdio() -> Result<(), ServerError> {
     let default_catalog = default_ui_catalog();
@@ -74,21 +74,20 @@ fn run_connection_with_startup(
         .unwrap_or_else(|_| InitializeParams::default());
     let initialize_result = initialize_result(&initialize_params);
     connection.initialize_finish(initialize_id, serde_json::to_value(initialize_result)?)?;
-    let mut server = Server::new(
-        connection,
-        WorkspaceConfig::from_initialize_params(&initialize_params),
-        startup.catalog,
-    )?;
-    if initialize_params
+    let dynamic_watched_files = initialize_params
         .capabilities
         .workspace
         .as_ref()
         .and_then(|workspace| workspace.did_change_watched_files.as_ref())
         .and_then(|capability| capability.dynamic_registration)
-        .unwrap_or(false)
-    {
-        register_watched_files(&server)?;
-    }
+        .unwrap_or(false);
+    let mut server = Server::new(
+        connection,
+        WorkspaceConfig::from_initialize_params(&initialize_params),
+        startup.catalog,
+        dynamic_watched_files,
+    )?;
+    server.handle_initialized()?;
     if let Some(warning) = startup.warning {
         server.publish_startup_warning(warning)?;
     }
@@ -96,7 +95,26 @@ fn run_connection_with_startup(
     server.run()
 }
 
-fn register_watched_files(server: &Server) -> Result<(), ServerError> {
+impl Server {
+    fn new(
+        connection: Connection,
+        workspace_config: WorkspaceConfig,
+        catalog: UiCatalog,
+        dynamic_watched_files: bool,
+    ) -> Result<Self, ServerError> {
+        Ok(Self {
+            connection,
+            workspace: LspWorkspace::with_ui_catalog(workspace_config, catalog)
+                .map_err(|error| ServerError::Authoring(error.to_string()))?,
+            shutdown_requested: false,
+            watched_files_registration: super::watched_files::RegistrationState::new(
+                dynamic_watched_files,
+            ),
+        })
+    }
+}
+
+pub(super) fn register_watched_files(server: &Server) -> Result<(), ServerError> {
     let options = lsp_types::DidChangeWatchedFilesRegistrationOptions {
         watchers: vec![lsp_types::FileSystemWatcher {
             glob_pattern: lsp_types::GlobPattern::String("**/*".to_owned()),
