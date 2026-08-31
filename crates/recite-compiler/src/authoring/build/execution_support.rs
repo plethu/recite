@@ -83,13 +83,14 @@ pub(crate) fn finish_stale(
     lifecycle: &mut BuildLifecycle,
     request: &BuildRequest,
     candidates: Vec<BuildCandidate>,
+    diagnostics: Vec<recite_core::Diagnostic>,
     freshness: FreshnessAssessment,
     reason: PublishRefusal,
 ) -> Result<BuildResult, BuildRunError> {
     let result = make_result(
         request,
         BuildTerminalStatus::Stale,
-        Vec::new(),
+        diagnostics,
         candidates,
         freshness,
         PublishOutcome::Refused { reason },
@@ -99,6 +100,39 @@ pub(crate) fn finish_stale(
         result: result.clone(),
     })?;
     Ok(result)
+}
+pub(crate) fn finish_cancelled_after_check(
+    lifecycle: &mut BuildLifecycle,
+    request: &BuildRequest,
+    cancellation: BuildCancellation,
+    candidates: Vec<BuildCandidate>,
+    check: &BuildCheck,
+) -> Result<BuildResult, BuildRunError> {
+    super::finish_cancelled(
+        lifecycle,
+        request,
+        cancellation,
+        candidates,
+        check.diagnostics().to_vec(),
+        check.freshness().clone(),
+        None,
+    )
+}
+pub(crate) fn finish_stale_after_check(
+    lifecycle: &mut BuildLifecycle,
+    request: &BuildRequest,
+    candidates: Vec<BuildCandidate>,
+    check: &BuildCheck,
+    reason: PublishRefusal,
+) -> Result<BuildResult, BuildRunError> {
+    finish_stale(
+        lifecycle,
+        request,
+        candidates,
+        check.diagnostics().to_vec(),
+        check.freshness().clone(),
+        reason,
+    )
 }
 pub(crate) fn finish_publish(
     lifecycle: &mut BuildLifecycle,

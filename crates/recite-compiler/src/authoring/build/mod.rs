@@ -1,4 +1,5 @@
 mod authority;
+mod candidate_order;
 mod candidates;
 mod coordinator;
 mod execution;
@@ -16,6 +17,7 @@ mod result;
 mod status;
 
 pub use authority::{BuildAuthority, BuildAuthorityError, BuildAuthorityFence, BuildPublishPermit};
+pub(crate) use candidate_order::{candidates_are_ordered, compare_candidates};
 pub use coordinator::{
     BuildCancellation, BuildControl, BuildCoordinator, BuildEngine, BuildFailure,
     BuildFailureReason, BuildPublisher, BuildRunError,

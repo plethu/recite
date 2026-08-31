@@ -66,6 +66,7 @@ pub(crate) fn finish_cancelled(
     request: &BuildRequest,
     cancellation: BuildCancellation,
     candidates: Vec<BuildCandidate>,
+    diagnostics: Vec<recite_core::Diagnostic>,
     freshness: FreshnessAssessment,
     failure: Option<BuildResultFailure>,
 ) -> Result<BuildResult, BuildRunError> {
@@ -82,7 +83,7 @@ pub(crate) fn finish_cancelled(
     let result = make_result(
         request,
         status,
-        Vec::new(),
+        diagnostics,
         candidates,
         freshness,
         PublishOutcome::NotAttempted { reason },

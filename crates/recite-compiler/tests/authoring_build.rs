@@ -6,6 +6,8 @@ mod external;
 mod identity;
 #[path = "authoring_build/policy.rs"]
 mod policy;
+#[path = "authoring_build/policy_check.rs"]
+mod policy_check;
 #[path = "authoring_build/status_projection.rs"]
 mod status_projection;
 #[path = "authoring_build/status_projection_active.rs"]

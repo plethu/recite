@@ -7,6 +7,7 @@ use recite_compiler::{
     PublishFailureReason, PublishOutcome, SnapshotGeneration,
 };
 use recite_core::DocumentKey;
+use recite_core::{Diagnostic, DiagnosticCode, DiagnosticSeverity, SourcePosition, SourceSpan};
 
 pub(crate) fn key(value: &str) -> DocumentKey {
     DocumentKey::new(value).unwrap_or_else(|error| panic!("test key is valid: {error}"))
@@ -31,6 +32,17 @@ pub(crate) fn make_request(
 pub(crate) fn freshness(request: &BuildRequest) -> FreshnessAssessment {
     FreshnessAssessment::fresh(request.fingerprints().clone())
 }
+pub(crate) fn warning(path: &str) -> Diagnostic {
+    Diagnostic::new(
+        DiagnosticCode::new_static("RECITE_VALIDATE001"),
+        DiagnosticSeverity::Warning,
+        "non-fatal test warning",
+        SourceSpan::point(
+            path,
+            SourcePosition::new(1, 1).unwrap_or_else(|error| panic!("test position: {error}")),
+        ),
+    )
+}
 
 #[derive(Clone, Copy, Debug, Eq, PartialEq)]
 pub(crate) enum EngineCancellation {
@@ -41,6 +53,7 @@ pub(crate) enum EngineCancellation {
 
 pub(crate) struct FakeEngine {
     pub(crate) candidates: Vec<BuildCandidate>,
+    pub(crate) check_diagnostics: Vec<Diagnostic>,
     pub(crate) cancellation: EngineCancellation,
     pub(crate) check_calls: usize,
     pub(crate) build_calls: usize,
@@ -49,6 +62,7 @@ impl FakeEngine {
     pub(crate) fn new(candidates: impl IntoIterator<Item = BuildCandidate>) -> Self {
         Self {
             candidates: candidates.into_iter().collect(),
+            check_diagnostics: Vec::new(),
             cancellation: EngineCancellation::None,
             check_calls: 0,
             build_calls: 0,
@@ -61,7 +75,7 @@ impl BuildEngine for FakeEngine {
         if self.cancellation == EngineCancellation::DuringCheck {
             control.cancel();
         }
-        BuildCheck::passed(request)
+        BuildCheck::new(request, self.check_diagnostics.clone(), freshness(request))
     }
     fn build(
         &mut self,

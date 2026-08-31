@@ -1,3 +1,4 @@
+use super::super::candidates_are_ordered;
 use super::super::identity::BuildGeneration;
 use super::super::result::BuildTerminalStatus;
 use super::phase::BuildEventKind;
@@ -58,20 +59,28 @@ impl BuildLifecycle {
             BuildTransition::CheckPassed {
                 freshness,
                 diagnostics,
-            } => match &self.state {
-                BuildState::Checking { request }
-                    if freshness.expected() == request.fingerprints() =>
+            } => {
+                if diagnostics
+                    .iter()
+                    .any(|diagnostic| diagnostic.severity == recite_core::DiagnosticSeverity::Error)
                 {
-                    Ok(BuildState::Building {
-                        request: request.clone(),
-                        candidates: Vec::new(),
-                        diagnostics: diagnostics.clone(),
-                        freshness: freshness.clone(),
-                    })
+                    return Err(BuildTransitionError::CheckContainsErrors);
                 }
-                BuildState::Checking { .. } => Err(BuildTransitionError::FreshnessMismatch),
-                _ => Err(invalid(&self.state, BuildEventKind::CheckPassed)),
-            },
+                match &self.state {
+                    BuildState::Checking { request }
+                        if freshness.expected() == request.fingerprints() =>
+                    {
+                        Ok(BuildState::Building {
+                            request: request.clone(),
+                            candidates: Vec::new(),
+                            diagnostics: diagnostics.clone(),
+                            freshness: freshness.clone(),
+                        })
+                    }
+                    BuildState::Checking { .. } => Err(BuildTransitionError::FreshnessMismatch),
+                    _ => Err(invalid(&self.state, BuildEventKind::CheckPassed)),
+                }
+            }
             BuildTransition::BuildCompleted { candidates } => match &self.state {
                 BuildState::Building {
                     request,
@@ -236,9 +245,4 @@ impl BuildLifecycle {
             },
         })
     }
-}
-fn candidates_are_ordered(candidates: &[super::super::publish::BuildCandidate]) -> bool {
-    candidates
-        .windows(2)
-        .all(|pair| pair[0].target() <= pair[1].target())
 }

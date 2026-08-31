@@ -1,8 +1,9 @@
 use super::authority::{BuildAuthorityCommitError, BuildAuthorityFence};
+use super::compare_candidates;
 use super::coordinator::{BuildControl, BuildEngine, BuildFailure, BuildPublisher, BuildRunError};
 use super::execution_support::{
-    abort_reason, duplicate_target, fail_check, failure_detail, finish_failed, finish_publish,
-    finish_stale,
+    abort_reason, duplicate_target, fail_check, failure_detail, finish_cancelled_after_check,
+    finish_failed, finish_publish, finish_stale_after_check,
 };
 use super::failure::BuildResultFailure;
 use super::freshness::FreshnessAssessment;
@@ -28,7 +29,15 @@ pub(crate) fn build_run<E: BuildEngine, P: BuildPublisher>(
         request: request.clone(),
     })?;
     if let Some(reason) = control.cancellation() {
-        return finish_cancelled(lifecycle, &request, reason, Vec::new(), not_assessed, None);
+        return finish_cancelled(
+            lifecycle,
+            &request,
+            reason,
+            Vec::new(),
+            Vec::new(),
+            not_assessed,
+            None,
+        );
     }
     let check = engine.check(&request, control);
     if let Some(reason) = control.cancellation() {
@@ -37,6 +46,7 @@ pub(crate) fn build_run<E: BuildEngine, P: BuildPublisher>(
             &request,
             reason,
             Vec::new(),
+            check.diagnostics().to_vec(),
             check.freshness().clone(),
             None,
         );
@@ -63,28 +73,31 @@ pub(crate) fn build_run<E: BuildEngine, P: BuildPublisher>(
         })?;
         return Ok(result);
     }
+    let check_diagnostics = check.diagnostics().to_vec();
     lifecycle.transition(BuildTransition::CheckPassed {
         freshness: check.freshness().clone(),
-        diagnostics: check.diagnostics().to_vec(),
+        diagnostics: check_diagnostics.clone(),
     })?;
     let mut candidates = match engine.build(&request, control) {
         Ok(candidates) => candidates,
         Err(failure) => {
             if let Some(reason) = control.cancellation() {
-                return finish_cancelled(
+                return finish_cancelled_after_check(
                     lifecycle,
                     &request,
                     reason,
                     Vec::new(),
-                    check.freshness().clone(),
-                    None,
+                    &check,
                 );
             }
             let detail = failure_detail(&failure);
-            let diagnostics = match &failure {
-                BuildFailure::Diagnostics { diagnostics } => diagnostics.clone(),
-                _ => Vec::new(),
-            };
+            let mut diagnostics = check_diagnostics.clone();
+            if let BuildFailure::Diagnostics {
+                diagnostics: build_diagnostics,
+            } = &failure
+            {
+                diagnostics.extend(build_diagnostics.iter().cloned());
+            }
             return finish_failed(
                 lifecycle,
                 &request,
@@ -95,25 +108,18 @@ pub(crate) fn build_run<E: BuildEngine, P: BuildPublisher>(
             );
         }
     };
-    candidates.sort_by(|left, right| left.target().cmp(right.target()));
+    candidates.sort_by(compare_candidates);
     lifecycle.transition(BuildTransition::BuildCompleted {
         candidates: candidates.clone(),
     })?;
     if let Some(reason) = control.cancellation() {
-        return finish_cancelled(
-            lifecycle,
-            &request,
-            reason,
-            candidates,
-            check.freshness().clone(),
-            None,
-        );
+        return finish_cancelled_after_check(lifecycle, &request, reason, candidates, &check);
     }
     if let Some(duplicate) = duplicate_target(&candidates) {
         return finish_failed(
             lifecycle,
             &request,
-            Vec::new(),
+            check_diagnostics.clone(),
             candidates,
             check.freshness().clone(),
             BuildResultFailure::DuplicateTarget { target: duplicate },
@@ -141,13 +147,8 @@ pub(crate) fn build_run<E: BuildEngine, P: BuildPublisher>(
         Err(failure) => {
             publisher.abort(None, PublishAbortReason::PreparationFailed);
             if let Some(reason) = control.cancellation() {
-                return finish_cancelled(
-                    lifecycle,
-                    &request,
-                    reason,
-                    candidates,
-                    check.freshness().clone(),
-                    None,
+                return finish_cancelled_after_check(
+                    lifecycle, &request, reason, candidates, &check,
                 );
             }
             let (target, reason) = match failure {
@@ -156,7 +157,7 @@ pub(crate) fn build_run<E: BuildEngine, P: BuildPublisher>(
             return finish_failed(
                 lifecycle,
                 &request,
-                Vec::new(),
+                check_diagnostics.clone(),
                 candidates,
                 check.freshness().clone(),
                 BuildResultFailure::Preparation { target, reason },
@@ -165,14 +166,7 @@ pub(crate) fn build_run<E: BuildEngine, P: BuildPublisher>(
     };
     if let Some(reason) = control.cancellation() {
         publisher.abort(Some(prepared), abort_reason(reason));
-        return finish_cancelled(
-            lifecycle,
-            &request,
-            reason,
-            candidates,
-            check.freshness().clone(),
-            None,
-        );
+        return finish_cancelled_after_check(lifecycle, &request, reason, candidates, &check);
     }
     let identity = prepared.identity();
     if let Err(error) = lifecycle.transition(BuildTransition::PublishStarted {
@@ -183,14 +177,7 @@ pub(crate) fn build_run<E: BuildEngine, P: BuildPublisher>(
     }
     if let Some(reason) = control.cancellation() {
         publisher.abort(Some(prepared), abort_reason(reason));
-        return finish_cancelled(
-            lifecycle,
-            &request,
-            reason,
-            candidates,
-            check.freshness().clone(),
-            None,
-        );
+        return finish_cancelled_after_check(lifecycle, &request, reason, candidates, &check);
     }
     let permit = match fence.acquire(&request) {
         Ok(permit) => permit,
@@ -200,25 +187,12 @@ pub(crate) fn build_run<E: BuildEngine, P: BuildPublisher>(
                 super::authority::BuildAuthorityError::Refused { reason } => reason,
                 error => return Err(error.into()),
             };
-            return finish_stale(
-                lifecycle,
-                &request,
-                candidates,
-                check.freshness().clone(),
-                reason,
-            );
+            return finish_stale_after_check(lifecycle, &request, candidates, &check, reason);
         }
     };
     if let Some(reason) = control.cancellation() {
         publisher.abort(Some(prepared), abort_reason(reason));
-        return finish_cancelled(
-            lifecycle,
-            &request,
-            reason,
-            candidates,
-            check.freshness().clone(),
-            None,
-        );
+        return finish_cancelled_after_check(lifecycle, &request, reason, candidates, &check);
     }
     // The permit holds the fence lock through commit. Cancellation is deliberately
     // ineffective once this boundary is acquired; a host syscall cannot be stopped.
@@ -226,13 +200,7 @@ pub(crate) fn build_run<E: BuildEngine, P: BuildPublisher>(
         Ok(outcome) => normalize_publish(outcome),
         Err(BuildAuthorityCommitError::Refused { reason, prepared }) => {
             publisher.abort(Some(prepared), PublishAbortReason::Stale);
-            return finish_stale(
-                lifecycle,
-                &request,
-                candidates,
-                check.freshness().clone(),
-                reason,
-            );
+            return finish_stale_after_check(lifecycle, &request, candidates, &check, reason);
         }
         Err(BuildAuthorityCommitError::Poisoned { prepared }) => {
             publisher.abort(Some(prepared), PublishAbortReason::Invalid);
