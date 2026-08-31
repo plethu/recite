@@ -4,8 +4,11 @@ use recite_core::PoDocumentFingerprint;
 
 use super::CatalogSummaryError;
 use super::coverage::{CatalogEntryKey, CatalogEntryStatus};
+use super::locale::declared_language;
+use super::record_status::CatalogRecordStatus;
 use super::resolution::{CatalogEntryResolution, CatalogResolution, CatalogResolutionPolicy};
-use super::types::{CatalogCoverageSummary, CatalogInput, CatalogSummary};
+use super::summary::CatalogCoverageSummary;
+use super::types::{CatalogInput, CatalogSummary};
 use crate::PotDocument;
 
 impl CatalogCoverageSummary {
@@ -35,15 +38,18 @@ impl CatalogCoverageSummary {
 
         let mut catalogs = catalogs.into_iter().collect::<Vec<_>>();
         catalogs.sort_by(|left, right| left.identity.cmp(&right.identity));
-        for pair in catalogs.windows(2) {
-            if pair[0].identity == pair[1].identity {
+        let mut identities = BTreeSet::new();
+        let mut locales = BTreeSet::new();
+        for catalog in &catalogs {
+            declared_language(&catalog.document, &catalog.identity)?;
+            if !identities.insert(catalog.identity.clone()) {
                 return Err(CatalogSummaryError::DuplicateCatalog {
-                    identity: pair[0].identity.clone(),
+                    identity: catalog.identity.clone(),
                 });
             }
-            if pair[0].identity.locale() == pair[1].identity.locale() {
+            if !locales.insert(catalog.identity.locale().clone()) {
                 return Err(CatalogSummaryError::DuplicateCatalogLocale {
-                    locale: pair[0].identity.locale().clone(),
+                    locale: catalog.identity.locale().clone(),
                 });
             }
         }
@@ -52,7 +58,7 @@ impl CatalogCoverageSummary {
         let summaries = catalogs
             .iter()
             .map(|catalog| CatalogSummary::build(catalog, &expected_keys))
-            .collect::<Vec<_>>();
+            .collect::<Result<Vec<_>, _>>()?;
         let entries = expected_keys
             .iter()
             .map(|key| CatalogEntryResolution::build(key, &resolution, &catalogs))
@@ -78,7 +84,11 @@ impl CatalogCoverageSummary {
 }
 
 impl CatalogSummary {
-    pub(super) fn build(input: &CatalogInput, expected: &[CatalogEntryKey]) -> Self {
+    pub(super) fn build(
+        input: &CatalogInput,
+        expected: &[CatalogEntryKey],
+    ) -> Result<Self, CatalogSummaryError> {
+        declared_language(&input.document, &input.identity)?;
         let plural_forms = input
             .document
             .headers()
@@ -89,18 +99,23 @@ impl CatalogSummary {
             .iter()
             .map(|key| CatalogEntryStatus::build(key, &input.document, plural_forms))
             .collect::<Vec<_>>();
-        let coverage = super::coverage::CatalogCoverage::from_entries(
-            expected.len(),
-            &entries,
-            input.document.entries(),
-        );
-        Self {
+        let records = input
+            .document
+            .entries()
+            .iter()
+            .filter(|entry| !entry.is_header())
+            .map(|entry| CatalogRecordStatus::build(entry, plural_forms))
+            .collect::<Vec<_>>();
+        let coverage =
+            super::coverage::CatalogCoverage::from_entries(expected.len(), &entries, &records);
+        Ok(Self {
             identity: input.identity.clone(),
             fingerprint: input.document.fingerprint(),
             plural_forms,
             coverage,
             entries,
-        }
+            records,
+        })
     }
 }
 

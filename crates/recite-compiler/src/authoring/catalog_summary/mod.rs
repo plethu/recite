@@ -7,16 +7,20 @@
 mod builder;
 mod coverage;
 mod error;
+mod locale;
+mod record_status;
 mod resolution;
+mod summary;
 mod types;
 
 pub use coverage::{CatalogCoverage, CatalogEntryKey, CatalogEntryStatus, TranslationStatus};
 pub use error::CatalogSummaryError;
+pub use record_status::CatalogRecordStatus;
 pub use resolution::{
     CatalogEntryResolution, CatalogFallbackCandidate, CatalogMatch, CatalogResolution,
     CatalogResolutionPolicy, CatalogVariant,
 };
+pub use summary::{CatalogCoverageSummary, DialogueCatalogSummary};
 pub use types::{
-    CatalogCoverageSummary, CatalogIdentity, CatalogInput, CatalogSummary, DialogueCatalog,
-    DialogueCatalogInput, DialogueCatalogSummary,
+    CatalogIdentity, CatalogInput, CatalogSummary, DialogueCatalog, DialogueCatalogInput,
 };

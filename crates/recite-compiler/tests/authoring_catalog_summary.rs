@@ -75,7 +75,7 @@ fn complete_catalogue_exposes_identity_fingerprint_and_counts() {
     assert_eq!(summary.catalogs()[0].coverage().present_count(), 2);
     assert_eq!(summary.catalogs()[0].coverage().translated_count(), 2);
     assert_eq!(summary.catalogs()[0].coverage().missing_count(), 0);
-    assert_eq!(summary.resolution().candidates().len(), 1);
+    assert_eq!(summary.resolution().candidates().len(), 2);
     assert_eq!(
         summary.entries()[0]
             .matched()
@@ -140,11 +140,13 @@ fn missing_fuzzy_obsolete_and_incomplete_plural_remain_visible() {
 #[test]
 fn variants_contexts_and_explicit_fallback_are_deterministic() {
     let variant = concat!(
+        "msgid \"\"\nmsgstr \"\"\n\"Language: fr\\n\"\n\n",
         "msgctxt \"11111111111111111111&formal\"\n",
         "msgid \"Hello\"\n",
         "msgstr \"Bonjour, formel\"\n",
     );
     let fallback = concat!(
+        "msgid \"\"\nmsgstr \"\"\n\"Language: de\\n\"\n\n",
         "msgctxt \"11111111111111111111\"\n",
         "msgid \"Hello\"\n",
         "msgstr \"Hallo\"\n",
@@ -227,14 +229,19 @@ fn duplicate_catalogues_and_candidates_are_rejected() {
         &expected(),
         [
             input(
-                "fr-a",
+                "a-fr",
                 "fr",
-                "msgctxt \"11111111111111111111\"\nmsgid \"Hello\"\nmsgstr \"A\"\n",
+                "msgid \"\"\nmsgstr \"\"\n\"Language: fr\\n\"\n\nmsgctxt \"11111111111111111111\"\nmsgid \"Hello\"\nmsgstr \"A\"\n",
             ),
             input(
-                "fr-b",
+                "m-de",
+                "de",
+                "msgid \"\"\nmsgstr \"\"\n\"Language: de\\n\"\n\nmsgctxt \"11111111111111111111\"\nmsgid \"Hello\"\nmsgstr \"B\"\n",
+            ),
+            input(
+                "z-fr",
                 "fr",
-                "msgctxt \"11111111111111111111\"\nmsgid \"Hello\"\nmsgstr \"B\"\n",
+                "msgid \"\"\nmsgstr \"\"\n\"Language: fr\\n\"\n\nmsgctxt \"11111111111111111111\"\nmsgid \"Hello\"\nmsgstr \"B\"\n",
             ),
         ],
         recite_compiler::CatalogResolutionPolicy::new(Some(locale("fr"))),

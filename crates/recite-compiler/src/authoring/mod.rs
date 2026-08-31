@@ -27,9 +27,9 @@ pub use build::{
 pub use catalog_summary::{
     CatalogCoverage, CatalogCoverageSummary, CatalogEntryKey, CatalogEntryResolution,
     CatalogEntryStatus, CatalogFallbackCandidate, CatalogIdentity, CatalogInput, CatalogMatch,
-    CatalogResolution, CatalogResolutionPolicy, CatalogSummary, CatalogSummaryError,
-    CatalogVariant, DialogueCatalog, DialogueCatalogInput, DialogueCatalogSummary,
-    TranslationStatus,
+    CatalogRecordStatus, CatalogResolution, CatalogResolutionPolicy, CatalogSummary,
+    CatalogSummaryError, CatalogVariant, DialogueCatalog, DialogueCatalogInput,
+    DialogueCatalogSummary, TranslationStatus,
 };
 pub use edit::{
     AuthoringEditError, AuthoringEditOperation, AuthoringEditPlan, EditPrecondition, SourceEdit,

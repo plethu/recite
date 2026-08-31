@@ -116,7 +116,15 @@ impl CatalogResolutionPolicy {
                 candidate: format_variant(&variant),
             });
         }
-        self.variants.push(variant);
+        if let Some(base_index) = self
+            .variants
+            .iter()
+            .position(|candidate| matches!(candidate, CatalogVariant::Base))
+        {
+            self.variants.insert(base_index, variant);
+        } else {
+            self.variants.push(variant);
+        }
         Ok(self)
     }
 

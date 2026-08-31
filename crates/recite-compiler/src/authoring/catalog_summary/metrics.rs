@@ -1,5 +1,4 @@
-use recite_core::PoEntry;
-
+use super::super::record_status::CatalogRecordStatus;
 use super::entry_status::CatalogEntryStatus;
 
 /// Aggregate expected-entry coverage for one catalogue.
@@ -21,7 +20,7 @@ impl CatalogCoverage {
     pub(crate) fn from_entries(
         expected_count: usize,
         entries: &[CatalogEntryStatus],
-        document_entries: &[PoEntry],
+        records: &[CatalogRecordStatus],
     ) -> Self {
         let present_count = entries.iter().filter(|entry| entry.present()).count();
         let translated_count = entries.iter().filter(|entry| entry.is_translated()).count();
@@ -32,19 +31,19 @@ impl CatalogCoverage {
             // "Missing" is the authoring coverage gap: fuzzy, obsolete,
             // empty, and incomplete records are not usable translations.
             missing_count: expected_count.saturating_sub(translated_count),
-            fuzzy_count: entries.iter().filter(|entry| entry.is_fuzzy()).count(),
-            obsolete_count: entries.iter().filter(|entry| entry.is_obsolete()).count(),
-            incomplete_plural_count: entries
+            fuzzy_count: records.iter().filter(|entry| entry.is_fuzzy()).count(),
+            obsolete_count: records.iter().filter(|entry| entry.is_obsolete()).count(),
+            incomplete_plural_count: records
                 .iter()
-                .filter(|entry| entry.translation().is_incomplete_plural())
+                .filter(|entry| entry.is_incomplete_plural())
                 .count(),
-            context_entry_count: document_entries
+            context_entry_count: records
                 .iter()
-                .filter(|entry| !entry.is_header() && entry.context().is_some())
+                .filter(|entry| entry.context().is_some())
                 .count(),
-            variant_entry_count: document_entries
+            variant_entry_count: records
                 .iter()
-                .filter(|entry| !entry.is_header() && entry.variant().is_some())
+                .filter(|entry| entry.variant().is_some())
                 .count(),
         }
     }

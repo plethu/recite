@@ -6,5 +6,6 @@ mod entry_status;
 mod metrics;
 
 pub use entry::CatalogEntryKey;
+pub(crate) use entry_status::translation_status;
 pub use entry_status::{CatalogEntryStatus, TranslationStatus};
 pub use metrics::CatalogCoverage;

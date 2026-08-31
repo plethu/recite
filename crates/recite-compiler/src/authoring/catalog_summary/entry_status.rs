@@ -161,7 +161,10 @@ impl CatalogEntryStatus {
     }
 }
 
-fn translation_status(entry: &PoEntry, plural_forms: Option<usize>) -> TranslationStatus {
+pub(crate) fn translation_status(
+    entry: &PoEntry,
+    plural_forms: Option<usize>,
+) -> TranslationStatus {
     if entry.is_plural() {
         let translations = entry.plural_translations();
         let translated_arms = translations

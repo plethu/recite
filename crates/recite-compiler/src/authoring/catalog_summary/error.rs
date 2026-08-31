@@ -23,6 +23,17 @@ pub enum CatalogSummaryError {
     DuplicateCatalog { identity: CatalogIdentity },
     #[error("catalogue locale `{locale}` is supplied more than once")]
     DuplicateCatalogLocale { locale: LocaleId },
+    #[error("catalogue `{identity:?}` does not declare a Language header")]
+    MissingCatalogLanguage { identity: CatalogIdentity },
+    #[error(
+        "catalogue `{identity:?}` declares Language `{language}`, which does not match its identity"
+    )]
+    CatalogLocaleMismatch {
+        identity: CatalogIdentity,
+        language: LocaleId,
+    },
+    #[error("locale `{locale}` is not a valid BCP-47 language tag")]
+    InvalidLocale { locale: String },
     #[error("catalogue fallback locale `{locale}` repeats and forms a fallback cycle")]
     FallbackCycle { locale: LocaleId },
     #[error("catalogue fallback candidate `{candidate:?}` is repeated")]

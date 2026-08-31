@@ -2,7 +2,8 @@ use recite_core::{PoDocument, PoDocumentFingerprint};
 
 use super::coverage::{CatalogCoverage, CatalogEntryStatus};
 use super::error::CatalogSummaryError;
-use super::resolution::{CatalogEntryResolution, CatalogResolution};
+use super::locale::canonicalize;
+use super::record_status::CatalogRecordStatus;
 
 /// A caller-owned identity for one dialogue PO catalogue.
 ///
@@ -25,7 +26,10 @@ impl CatalogIdentity {
         if id.trim().is_empty() {
             return Err(CatalogSummaryError::EmptyCatalogIdentity);
         }
-        Ok(Self { id, locale })
+        Ok(Self {
+            id,
+            locale: canonicalize(&locale)?,
+        })
     }
 
     #[must_use]
@@ -82,6 +86,7 @@ pub struct CatalogSummary {
     pub(super) plural_forms: Option<usize>,
     pub(super) coverage: CatalogCoverage,
     pub(super) entries: Vec<CatalogEntryStatus>,
+    pub(super) records: Vec<CatalogRecordStatus>,
 }
 
 impl CatalogSummary {
@@ -182,6 +187,13 @@ impl CatalogSummary {
     pub fn entries(&self) -> &[CatalogEntryStatus] {
         &self.entries
     }
+
+    /// Every non-header PO record, including stale records absent from the
+    /// expected POT, in lossless source order.
+    #[must_use]
+    pub fn records(&self) -> &[CatalogRecordStatus] {
+        &self.records
+    }
 }
 
 /// Alias for callers that use the shorter input name.
@@ -189,53 +201,3 @@ pub type DialogueCatalogInput = CatalogInput;
 
 /// Alias for the per-catalogue projection.
 pub type DialogueCatalog = CatalogSummary;
-
-/// Coverage and fallback information for one expected dialogue POT.
-#[derive(Clone, Debug, Eq, PartialEq)]
-#[non_exhaustive]
-pub struct CatalogCoverageSummary {
-    pub(super) expected_fingerprint: PoDocumentFingerprint,
-    pub(super) expected_count: usize,
-    pub(super) catalogs: Vec<CatalogSummary>,
-    pub(super) resolution: CatalogResolution,
-    pub(super) entries: Vec<CatalogEntryResolution>,
-}
-
-/// Dialogue-oriented name for [`CatalogCoverageSummary`].
-pub type DialogueCatalogSummary = CatalogCoverageSummary;
-
-impl CatalogCoverageSummary {
-    #[must_use]
-    pub const fn expected_fingerprint(&self) -> &PoDocumentFingerprint {
-        &self.expected_fingerprint
-    }
-
-    #[must_use]
-    pub const fn expected_content_fingerprint(&self) -> &PoDocumentFingerprint {
-        self.expected_fingerprint()
-    }
-
-    #[must_use]
-    pub const fn expected_count(&self) -> usize {
-        self.expected_count
-    }
-
-    /// Deterministically sorted catalogue projections.
-    #[must_use]
-    pub fn catalogs(&self) -> &[CatalogSummary] {
-        &self.catalogs
-    }
-
-    /// The explicit locale/variant candidate sequence used for every expected
-    /// entry. It is empty for source-only (`None`) locale policy.
-    #[must_use]
-    pub const fn resolution(&self) -> &CatalogResolution {
-        &self.resolution
-    }
-
-    /// Per-entry resolution, in expected POT order.
-    #[must_use]
-    pub fn entries(&self) -> &[CatalogEntryResolution] {
-        &self.entries
-    }
-}

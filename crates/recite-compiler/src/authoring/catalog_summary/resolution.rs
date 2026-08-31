@@ -1,98 +1,15 @@
 #[path = "policy.rs"]
 mod policy;
+#[path = "resolution_candidates.rs"]
+mod resolution_candidates;
 
-use recite_core::{LocaleId, PoDocument, PoEntry};
+use recite_core::{PoDocument, PoEntry};
 
 use super::CatalogSummaryError;
 use super::coverage::CatalogEntryKey;
 use super::types::{CatalogIdentity, CatalogInput};
 pub use policy::{CatalogResolutionPolicy, CatalogVariant};
-
-/// A concrete locale/variant candidate in policy order.
-#[derive(Clone, Debug, Eq, Hash, Ord, PartialEq, PartialOrd)]
-#[non_exhaustive]
-pub struct CatalogFallbackCandidate {
-    locale: LocaleId,
-    variant: CatalogVariant,
-}
-
-impl CatalogFallbackCandidate {
-    #[must_use]
-    pub const fn locale(&self) -> &LocaleId {
-        &self.locale
-    }
-
-    #[must_use]
-    pub const fn variant(&self) -> &CatalogVariant {
-        &self.variant
-    }
-}
-
-/// The policy and resulting ordered candidates shared by every expected entry.
-#[derive(Clone, Debug, Eq, PartialEq)]
-#[non_exhaustive]
-pub struct CatalogResolution {
-    requested_locale: Option<LocaleId>,
-    default_locale: Option<LocaleId>,
-    candidates: Vec<CatalogFallbackCandidate>,
-}
-
-impl CatalogResolution {
-    pub(super) fn new(policy: &CatalogResolutionPolicy) -> Result<Self, CatalogSummaryError> {
-        policy.validate()?;
-        let mut locales = Vec::new();
-        if let Some(locale) = &policy.requested_locale {
-            locales.push(locale.clone());
-            if let Some(default) = &policy.default_locale {
-                locales.push(default.clone());
-            }
-            locales.extend(policy.fallback_locales.iter().cloned());
-        }
-        let candidates = locales
-            .into_iter()
-            .flat_map(|locale| {
-                policy
-                    .variants
-                    .iter()
-                    .cloned()
-                    .map(move |variant| CatalogFallbackCandidate {
-                        locale: locale.clone(),
-                        variant,
-                    })
-            })
-            .collect::<Vec<_>>();
-        Ok(Self {
-            requested_locale: policy.requested_locale.clone(),
-            default_locale: policy.default_locale.clone(),
-            candidates,
-        })
-    }
-
-    #[must_use]
-    pub const fn requested_locale(&self) -> Option<&LocaleId> {
-        self.requested_locale.as_ref()
-    }
-
-    #[must_use]
-    pub const fn default_locale(&self) -> Option<&LocaleId> {
-        self.default_locale.as_ref()
-    }
-
-    #[must_use]
-    pub fn candidates(&self) -> &[CatalogFallbackCandidate] {
-        &self.candidates
-    }
-
-    #[must_use]
-    pub fn fallback_candidates(&self) -> &[CatalogFallbackCandidate] {
-        self.candidates()
-    }
-
-    #[must_use]
-    pub const fn is_source_only(&self) -> bool {
-        self.requested_locale.is_none()
-    }
-}
+pub use resolution_candidates::{CatalogFallbackCandidate, CatalogResolution};
 
 /// The catalogue selected for one expected entry, when one is usable.
 #[derive(Clone, Debug, Eq, PartialEq)]
@@ -135,7 +52,7 @@ impl CatalogEntryResolution {
         resolution: &CatalogResolution,
         catalogs: &[CatalogInput],
     ) -> Self {
-        let matched = resolution.candidates.iter().find_map(|candidate| {
+        let matched = resolution.candidates().iter().find_map(|candidate| {
             let catalog = catalogs.iter().find(|catalog| {
                 catalog.identity().locale() == candidate.locale()
                     && catalogs_entry_is_translated(catalog.document(), key, candidate.variant())
@@ -147,7 +64,7 @@ impl CatalogEntryResolution {
         });
         Self {
             key: key.clone(),
-            candidates: resolution.candidates.clone(),
+            candidates: resolution.candidates().to_vec(),
             source_fallback: matched.is_none(),
             matched,
         }
