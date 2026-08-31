@@ -196,6 +196,7 @@ fn reducer_enforces_ready_and_terminal_identity_phases() {
     lifecycle
         .transition(BuildTransition::CheckPassed {
             freshness: freshness(&request),
+            diagnostics: Vec::new(),
         })
         .unwrap_or_else(|error| panic!("check: {error}"));
     assert!(
@@ -224,6 +225,37 @@ fn reducer_enforces_ready_and_terminal_identity_phases() {
         }),
         Err(BuildTransitionError::Invalid { .. })
     ));
+}
+
+#[test]
+fn reducer_rejects_out_of_order_candidates_at_public_boundary() {
+    let request = make_request(10, [BuildInput::saved_source(key("a.recite"), "a")]);
+    let mut lifecycle = BuildLifecycle::new();
+    lifecycle
+        .transition(BuildTransition::Start {
+            request: request.clone(),
+        })
+        .unwrap_or_else(|error| panic!("start: {error}"));
+    lifecycle
+        .transition(BuildTransition::CheckPassed {
+            freshness: freshness(&request),
+            diagnostics: Vec::new(),
+        })
+        .unwrap_or_else(|error| panic!("check: {error}"));
+    let out_of_order = vec![candidate("z.recitec", b"z"), candidate("a.recitec", b"a")];
+    assert!(matches!(
+        lifecycle.transition(BuildTransition::BuildCompleted {
+            candidates: out_of_order,
+        }),
+        Err(BuildTransitionError::CandidatesOutOfOrder)
+    ));
+    assert!(matches!(lifecycle.state(), BuildState::Building { .. }));
+    lifecycle
+        .transition(BuildTransition::BuildCompleted {
+            candidates: vec![candidate("a.recitec", b"a"), candidate("z.recitec", b"z")],
+        })
+        .unwrap_or_else(|error| panic!("ordered build: {error}"));
+    assert!(matches!(lifecycle.state(), BuildState::Ready { .. }));
 }
 
 #[test]

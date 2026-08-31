@@ -87,7 +87,8 @@ pub(crate) fn finish_cancelled(
         freshness,
         PublishOutcome::NotAttempted { reason },
         failure,
-    );
+    )
+    .with_cancellation(cancellation);
     let transition = match status {
         BuildTerminalStatus::Cancelled => BuildTransition::Cancelled {
             result: result.clone(),

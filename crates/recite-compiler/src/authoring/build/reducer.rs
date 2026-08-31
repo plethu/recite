@@ -50,29 +50,48 @@ impl BuildLifecycle {
                     request: request.clone(),
                 })
             }
-            BuildTransition::CheckPassed { freshness } => match &self.state {
+            BuildTransition::CheckPassed {
+                freshness,
+                diagnostics,
+            } => match &self.state {
                 BuildState::Checking { request }
                     if freshness.expected() == request.fingerprints() =>
                 {
                     Ok(BuildState::Building {
                         request: request.clone(),
                         candidates: Vec::new(),
+                        diagnostics: diagnostics.clone(),
+                        freshness: freshness.clone(),
                     })
                 }
                 BuildState::Checking { .. } => Err(BuildTransitionError::FreshnessMismatch),
                 _ => Err(invalid(&self.state, BuildEventKind::CheckPassed)),
             },
             BuildTransition::BuildCompleted { candidates } => match &self.state {
-                BuildState::Building { request, .. } => Ok(BuildState::Ready {
-                    request: request.clone(),
-                    candidates: candidates.clone(),
-                }),
+                BuildState::Building {
+                    request,
+                    diagnostics,
+                    freshness,
+                    ..
+                } => {
+                    if !candidates_are_ordered(candidates) {
+                        return Err(BuildTransitionError::CandidatesOutOfOrder);
+                    }
+                    Ok(BuildState::Ready {
+                        request: request.clone(),
+                        candidates: candidates.clone(),
+                        diagnostics: diagnostics.clone(),
+                        freshness: freshness.clone(),
+                    })
+                }
                 _ => Err(invalid(&self.state, BuildEventKind::BuildCompleted)),
             },
             BuildTransition::PublishStarted { prepared } => match &self.state {
                 BuildState::Ready {
                     request,
                     candidates,
+                    diagnostics,
+                    freshness,
                 } if prepared.request_identity()
                     == &super::super::request_identity::BuildRequestIdentity::from_request(
                         request,
@@ -82,6 +101,8 @@ impl BuildLifecycle {
                     Ok(BuildState::Publishing {
                         request: request.clone(),
                         prepared: prepared.clone(),
+                        diagnostics: diagnostics.clone(),
+                        freshness: freshness.clone(),
                     })
                 }
                 BuildState::Ready { .. } => Err(BuildTransitionError::PreparedIdentityMismatch),
@@ -143,14 +164,16 @@ impl BuildLifecycle {
             BuildState::Building {
                 request,
                 candidates,
+                ..
             }
             | BuildState::Ready {
                 request,
                 candidates,
+                ..
             } => (request, candidates.clone()),
-            BuildState::Publishing { request, prepared } => {
-                (request, prepared.candidates().to_vec())
-            }
+            BuildState::Publishing {
+                request, prepared, ..
+            } => (request, prepared.candidates().to_vec()),
             _ => return Err(invalid(&self.state, event)),
         };
         if strict_phase
@@ -214,6 +237,12 @@ fn invalid(state: &BuildState, event: BuildEventKind) -> BuildTransitionError {
         state: phase(state),
         event,
     }
+}
+
+fn candidates_are_ordered(candidates: &[super::super::publish::BuildCandidate]) -> bool {
+    candidates
+        .windows(2)
+        .all(|pair| pair[0].target() <= pair[1].target())
 }
 const fn phase(state: &BuildState) -> BuildPhase {
     match state {

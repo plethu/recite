@@ -1,4 +1,5 @@
 use super::super::SnapshotGeneration;
+use super::coordinator::BuildCancellation;
 use super::failure::BuildResultFailure;
 use super::fingerprints::BuildFingerprintSet;
 use super::freshness::{AffectedInput, FreshnessAssessment, RestartGuidance};
@@ -70,6 +71,7 @@ pub struct BuildResult {
     restart: RestartGuidance,
     telemetry: BuildTelemetry,
     failure: Option<BuildResultFailure>,
+    cancellation: Option<BuildCancellation>,
 }
 impl PartialEq for BuildResult {
     fn eq(&self, other: &Self) -> bool {
@@ -100,6 +102,7 @@ impl BuildResult {
             restart: request.restart_guidance(),
             telemetry: BuildTelemetry::none(),
             failure,
+            cancellation: None,
         }
     }
     /// Attach non-semantic host timing metadata after a run completes.
@@ -122,6 +125,7 @@ impl BuildResult {
             && self.publish == other.publish
             && self.restart == other.restart
             && self.failure == other.failure
+            && self.cancellation == other.cancellation
     }
     #[must_use]
     pub const fn status(&self) -> BuildTerminalStatus {
@@ -174,6 +178,17 @@ impl BuildResult {
     #[must_use]
     pub const fn failure(&self) -> Option<&BuildResultFailure> {
         self.failure.as_ref()
+    }
+    /// Typed interruption provenance, distinguishing cancellation from
+    /// supersession and retaining the superseding generation.
+    #[must_use]
+    pub const fn cancellation(&self) -> Option<BuildCancellation> {
+        self.cancellation
+    }
+
+    pub(crate) fn with_cancellation(mut self, cancellation: BuildCancellation) -> Self {
+        self.cancellation = Some(cancellation);
+        self
     }
 
     pub(crate) fn matches_request(&self, request: &BuildRequest) -> bool {

@@ -65,6 +65,7 @@ pub(crate) fn build_run<E: BuildEngine, P: BuildPublisher>(
     }
     lifecycle.transition(BuildTransition::CheckPassed {
         freshness: check.freshness().clone(),
+        diagnostics: check.diagnostics().to_vec(),
     })?;
     let mut candidates = match engine.build(&request, control) {
         Ok(candidates) => candidates,

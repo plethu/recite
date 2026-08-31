@@ -1,4 +1,5 @@
 use super::super::SnapshotGeneration;
+use super::coordinator::BuildCancellation;
 use super::failure::BuildResultFailure;
 use super::freshness::{AffectedInput, FreshnessAssessment, RestartGuidance};
 use super::identity::BuildGeneration;
@@ -29,6 +30,7 @@ pub struct BuildStatusProjection {
     publish: Option<PublishOutcome>,
     restart_guidance: Option<RestartGuidance>,
     failure: Option<BuildResultFailure>,
+    cancellation: Option<BuildCancellation>,
 }
 
 impl BuildStatusProjection {
@@ -39,17 +41,44 @@ impl BuildStatusProjection {
         match state {
             BuildState::Idle => Self::idle(),
             BuildState::Checking { request } => {
-                Self::active(BuildPhase::Checking, request, state.candidates())
+                Self::active(BuildPhase::Checking, request, state.candidates(), &[], None)
             }
-            BuildState::Building { request, .. } => {
-                Self::active(BuildPhase::Building, request, state.candidates())
-            }
-            BuildState::Ready { request, .. } => {
-                Self::active(BuildPhase::Ready, request, state.candidates())
-            }
-            BuildState::Publishing { request, .. } => {
-                Self::active(BuildPhase::Publishing, request, state.candidates())
-            }
+            BuildState::Building {
+                request,
+                diagnostics,
+                freshness,
+                ..
+            } => Self::active(
+                BuildPhase::Building,
+                request,
+                state.candidates(),
+                diagnostics,
+                Some(freshness),
+            ),
+            BuildState::Ready {
+                request,
+                diagnostics,
+                freshness,
+                ..
+            } => Self::active(
+                BuildPhase::Ready,
+                request,
+                state.candidates(),
+                diagnostics,
+                Some(freshness),
+            ),
+            BuildState::Publishing {
+                request,
+                diagnostics,
+                freshness,
+                ..
+            } => Self::active(
+                BuildPhase::Publishing,
+                request,
+                state.candidates(),
+                diagnostics,
+                Some(freshness),
+            ),
             BuildState::Succeeded { result } => Self::terminal(BuildPhase::Succeeded, result),
             BuildState::Failed { result } => Self::terminal(BuildPhase::Failed, result),
             BuildState::Stale { result } => Self::terminal(BuildPhase::Stale, result),
@@ -78,6 +107,7 @@ impl BuildStatusProjection {
             publish: None,
             restart_guidance: None,
             failure: None,
+            cancellation: None,
         }
     }
 
@@ -86,18 +116,21 @@ impl BuildStatusProjection {
         phase: BuildPhase,
         request: &super::request::BuildRequest,
         candidates: &[BuildCandidate],
+        diagnostics: &[Diagnostic],
+        freshness: Option<&FreshnessAssessment>,
     ) -> Self {
         Self {
             phase,
             terminal_status: None,
             request_identity: Some(BuildRequestIdentity::from_request(request)),
             affected_inputs: request.affected_inputs(),
-            diagnostics: Vec::new(),
+            diagnostics: diagnostics.to_vec(),
             candidates: candidates.to_vec(),
-            freshness: None,
+            freshness: freshness.cloned(),
             publish: None,
             restart_guidance: Some(request.restart_guidance()),
             failure: None,
+            cancellation: None,
         }
     }
 
@@ -114,6 +147,7 @@ impl BuildStatusProjection {
             publish: Some(result.publish().clone()),
             restart_guidance: Some(result.restart_guidance()),
             failure: result.failure().cloned(),
+            cancellation: result.cancellation(),
         }
     }
 
@@ -141,7 +175,7 @@ impl BuildStatusProjection {
         &self.affected_inputs
     }
 
-    /// Structured diagnostics produced by the completed build.
+    /// Structured diagnostics retained from the build check or terminal result.
     #[must_use]
     pub fn diagnostics(&self) -> &[Diagnostic] {
         &self.diagnostics
@@ -175,6 +209,13 @@ impl BuildStatusProjection {
     #[must_use]
     pub const fn failure(&self) -> Option<&BuildResultFailure> {
         self.failure.as_ref()
+    }
+
+    /// Typed interruption provenance, distinguishing cancellation from
+    /// supersession and retaining the superseding generation.
+    #[must_use]
+    pub const fn cancellation(&self) -> Option<BuildCancellation> {
+        self.cancellation
     }
 
     /// Build generation carried by the request or terminal result.

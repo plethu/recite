@@ -3,6 +3,7 @@ use super::super::identity::BuildGeneration;
 use super::super::publish::{BuildCandidate, PreparedPublishIdentity};
 use super::super::request::BuildRequest;
 use super::super::result::{BuildResult, BuildTerminalStatus};
+use recite_core::Diagnostic;
 
 /// Current phase of the shared build lifecycle.
 #[derive(Clone, Debug, Default, Eq, PartialEq)]
@@ -16,14 +17,20 @@ pub enum BuildState {
     Building {
         request: BuildRequest,
         candidates: Vec<BuildCandidate>,
+        diagnostics: Vec<Diagnostic>,
+        freshness: FreshnessAssessment,
     },
     Ready {
         request: BuildRequest,
         candidates: Vec<BuildCandidate>,
+        diagnostics: Vec<Diagnostic>,
+        freshness: FreshnessAssessment,
     },
     Publishing {
         request: BuildRequest,
         prepared: PreparedPublishIdentity,
+        diagnostics: Vec<Diagnostic>,
+        freshness: FreshnessAssessment,
     },
     Succeeded {
         result: BuildResult,
@@ -122,17 +129,40 @@ impl BuildState {
 #[derive(Clone, Debug, Eq, PartialEq)]
 #[non_exhaustive]
 pub enum BuildTransition {
-    Start { request: BuildRequest },
-    CheckPassed { freshness: FreshnessAssessment },
-    CheckFailed { result: BuildResult },
-    BuildCompleted { candidates: Vec<BuildCandidate> },
-    NoCandidates { result: BuildResult },
-    PublishStarted { prepared: PreparedPublishIdentity },
-    PublishCompleted { result: BuildResult },
-    Cancelled { result: BuildResult },
-    Superseded { result: BuildResult },
-    Stale { result: BuildResult },
-    Failed { result: BuildResult },
+    Start {
+        request: BuildRequest,
+    },
+    CheckPassed {
+        freshness: FreshnessAssessment,
+        diagnostics: Vec<Diagnostic>,
+    },
+    CheckFailed {
+        result: BuildResult,
+    },
+    BuildCompleted {
+        candidates: Vec<BuildCandidate>,
+    },
+    NoCandidates {
+        result: BuildResult,
+    },
+    PublishStarted {
+        prepared: PreparedPublishIdentity,
+    },
+    PublishCompleted {
+        result: BuildResult,
+    },
+    Cancelled {
+        result: BuildResult,
+    },
+    Superseded {
+        result: BuildResult,
+    },
+    Stale {
+        result: BuildResult,
+    },
+    Failed {
+        result: BuildResult,
+    },
 }
 
 /// Illegal reducer event or result.
@@ -165,6 +195,8 @@ pub enum BuildTransitionError {
     ResultCandidatesMismatch,
     #[error("build freshness does not match the active request")]
     FreshnessMismatch,
+    #[error("build candidates must be ordered by target")]
+    CandidatesOutOfOrder,
     #[error("prepared publication identity does not match the ready build")]
     PreparedIdentityMismatch,
     #[error("publish completion does not contain a published outcome")]
