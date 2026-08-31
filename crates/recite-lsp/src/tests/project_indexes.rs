@@ -17,11 +17,15 @@ pub(super) use lifecycle::{
     did_save_refreshes_saved_summary_for_closed_files,
     did_save_rekeys_new_open_file_without_duplicate_summary,
     manifest_refresh_is_atomic_and_preserves_open_overlay,
-    open_alias_owner_switch_reseeds_kernel_version_state,
-    open_nonexistent_aliases_share_one_fallback_key, open_summary_overlays_saved_project_summary,
-    saved_uri_replacement_removes_old_canonical_entry,
+    open_summary_overlays_saved_project_summary,
     watched_files_refresh_saved_index_for_create_and_delete,
     watched_refresh_publishes_effective_open_payload,
+};
+#[cfg(unix)]
+pub(super) use lifecycle::{
+    open_alias_owner_switch_reseeds_kernel_version_state,
+    open_nonexistent_aliases_share_one_fallback_key,
+    saved_uri_replacement_removes_old_canonical_entry,
 };
 pub(super) use transactions::{
     duplicate_open_is_ignored_transactionally, manifest_refresh_rekeys_open_overlay,
