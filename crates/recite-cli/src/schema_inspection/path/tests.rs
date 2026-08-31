@@ -33,6 +33,7 @@ fn non_utf8_unix_path_uses_raw_bytes() {
 #[cfg(windows)]
 #[test]
 fn windows_drive_and_unc_paths_remain_exact_text() {
+    use std::ffi::OsString;
     use std::os::windows::ffi::OsStringExt;
 
     let drive = OsString::from_wide(&[b'C' as u16, b':' as u16, b'\\' as u16, b't' as u16]);
@@ -60,6 +61,7 @@ fn windows_drive_and_unc_paths_remain_exact_text() {
 #[cfg(windows)]
 #[test]
 fn unpaired_windows_units_use_wtf16_representation() {
+    use std::ffi::OsString;
     use std::os::windows::ffi::OsStringExt;
 
     let path = OsString::from_wide(&[0x0063, 0xd800, 0x0061]);
