@@ -21,6 +21,10 @@ name = "runtime"
 harness = false
 
 [[bench]]
+name = "preview"
+harness = false
+
+[[bench]]
 name = "lsp"
 harness = false
 
