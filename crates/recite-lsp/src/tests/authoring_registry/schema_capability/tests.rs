@@ -1,3 +1,5 @@
+mod freshness;
+
 #[test]
 pub(super) fn schema_hover_exposes_compared_channels_and_unavailable_reasons() {
     let catalog =
@@ -204,6 +206,7 @@ pub(super) fn schema_projection_uses_declaration_context_and_localized_selectors
             .expect("summary");
     let detail = crate::features::schema_hover::hover_detail(None, &summary, &[], &catalog);
     assert!(detail.contains("STALE CONTENT-STALE"));
+    freshness::assert_absent_content_fingerprint(&catalog);
 
     let empty =
         recite_compiler::SchemaSummary::from_schema(&recite_core::ProjectSchema::empty_v1());
@@ -229,7 +232,7 @@ pub(super) fn schema_projection_uses_declaration_context_and_localized_selectors
     );
 }
 
-fn localized_schema_catalog() -> recite_ui::UiCatalog {
+pub(super) fn localized_schema_catalog() -> recite_ui::UiCatalog {
     let action = concat!(
         "lsp-code-action-schema-action = Schema capability ({ $declaration_kind ->\n",
         "    [type] type\n",
@@ -276,6 +279,12 @@ fn localized_schema_catalog() -> recite_ui::UiCatalog {
         "   *[other] schema action is not supported by this client\n",
         "}."
     );
+    let freshness_evidence = concat!(
+        "lsp-hover-schema-freshness =  Content fingerprint { $fingerprint_state ->\n",
+        "    [present] {$fingerprint}\n",
+        "   *[absent] none {$fingerprint}\n",
+        "}; {$inputs} producer input fingerprints{$scope}."
+    );
     let freshness = concat!(
         "lsp-hover-schema-freshness-state =  Freshness { $state ->\n",
         "    [fresh] fresh\n",
@@ -315,6 +324,10 @@ fn localized_schema_catalog() -> recite_ui::UiCatalog {
         .replace(
             unavailable,
             "lsp-hover-schema-freshness-unavailable = { $reason ->\n    [no-producer-metadata] NO-PRODUCER\n   *[other] OTHER\n}."
+        )
+        .replace(
+            freshness_evidence,
+            "lsp-hover-schema-freshness = { $fingerprint_state ->\n    [present] CONTENT-PRESENT {$fingerprint}\n   *[absent] ABSENT-CONTENT {$fingerprint}\n}; {$inputs} {$scope}."
         )
         .replace(
             freshness,
