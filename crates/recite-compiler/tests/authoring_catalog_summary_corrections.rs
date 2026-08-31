@@ -113,6 +113,42 @@ fn locale_identity_is_canonical_and_po_language_must_match() {
 }
 
 #[test]
+fn same_locale_resolution_searches_later_catalogue_sources() {
+    let expected = PotDocument {
+        entries: vec![PotEntry {
+            context: "33333333333333333333".to_owned(),
+            source_text: "Later source".to_owned(),
+            plural_source_text: None,
+            comments: Vec::new(),
+            reference: None,
+        }],
+    };
+    let summary = CatalogCoverageSummary::build(
+        &expected,
+        [
+            input(
+                "a-fr",
+                "fr",
+                "msgctxt \"11111111111111111111\"\nmsgid \"Earlier source\"\nmsgstr \"Plus tôt\"\n",
+            ),
+            input(
+                "z-fr",
+                "fr",
+                "msgctxt \"33333333333333333333\"\nmsgid \"Later source\"\nmsgstr \"Plus tard\"\n",
+            ),
+        ],
+        recite_compiler::CatalogResolutionPolicy::new(Some(locale("fr"))),
+    )
+    .expect("later same-locale catalogue resolves");
+
+    let matched = summary.entries()[0].matched().expect("later source match");
+    assert_eq!(matched.catalog().id(), "z-fr");
+    assert_eq!(matched.catalog().locale().as_str(), "fr");
+    assert_eq!(summary.catalogs()[0].id(), "a-fr");
+    assert_eq!(summary.catalogs()[1].id(), "z-fr");
+}
+
+#[test]
 fn same_locale_catalogues_reject_conflicting_plural_forms() {
     let first = input(
         "first",
