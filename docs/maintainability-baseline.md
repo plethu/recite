@@ -160,7 +160,7 @@ production suppressions must carry a narrow scope and rationale.
 
 | `crates/recite-runtime/tests/adapter_conformance/driver.rs` | 1179 | test/support | runtime/tests | exception | #171: shared conformance driver grows with typed callback scenarios; retain until adapter conformance split |
 | `crates/recite-cli/src/play/tui/render/tests.rs` | 811 | test/support | cli/tui/tests | cohesive | Private rendering contract tests |
-| `crates/recite-cli/tests/runtime.rs` | 661 | test/support | cli/tests | cohesive | Runtime command behavior suite |
+| `crates/recite-cli/tests/runtime.rs` | 659 | test/support | cli/tests | cohesive | Runtime command behavior suite |
 | `crates/recite-cli/tests/dialogue_locale.rs` | 480 | test/support | cli/tests | review | #180: end-to-end locale, plural, and trace scenarios remain grouped by the CLI contract |
 | `crates/recite-core/tests/support/mod.rs` | 554 | test/support | core/tests | cohesive | Shared model and wire constructors |
 | `crates/recite-core/tests/schema_manifest/fingerprint.rs` | 641 | test/support | core/tests | exception | #176: retain the canonical fingerprint fixture while typed provenance constructors migrate; producer-specific assertions are split into a dedicated test |
