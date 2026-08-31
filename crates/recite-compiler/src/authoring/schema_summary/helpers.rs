@@ -5,7 +5,9 @@ use super::identity::{
     SchemaAction, SchemaCapability, SchemaCapabilityUnavailableReason, SchemaDeclarationProvenance,
     SchemaFreshness, SchemaFreshnessUnavailableReason, SchemaOwnership,
 };
-use super::producer::{ProducerActionDescriptor, ProducerActionEvidence, ProducerActionRequest};
+use super::producer::{
+    ProducerActionDescriptor, ProducerActionEvidence, ProducerActionRequest, ProducerLaunchSnapshot,
+};
 
 pub(super) fn ownership(schema: &ProjectSchema, source_owned: bool) -> SchemaOwnership {
     match schema
@@ -38,7 +40,8 @@ pub(super) fn capability(
     has_explicit_origin: bool,
     source_owned: bool,
     evidence: Option<&SchemaSummaryEvidence>,
-    producer_evidence: Option<&ProducerActionEvidence>,
+    producer_expected: Option<&ProducerActionEvidence>,
+    producer_launch: Option<&ProducerLaunchSnapshot>,
 ) -> SchemaCapability {
     let (actions, producer_actions) = match ownership {
         SchemaOwnership::Standalone { .. } if source_owned => {
@@ -61,8 +64,9 @@ pub(super) fn capability(
                     actions.push(SchemaAction::InvokeProducer {
                         producer: producer.clone(),
                     });
-                    if let Some(expected) = producer_evidence
-                        && let Ok(request) = ProducerActionRequest::regenerate(expected.clone())
+                    if let (Some(expected), Some(launch)) = (producer_expected, producer_launch)
+                        && let Ok(request) =
+                            ProducerActionRequest::regenerate(expected.clone(), launch.clone())
                     {
                         producer_actions.push(ProducerActionDescriptor::new(request));
                     }
@@ -74,11 +78,9 @@ pub(super) fn capability(
                         actions.push(SchemaAction::RetryProducerFailure {
                             producer: producer.clone(),
                         });
-                        if let (Some(expected), Some(failure)) = (
-                            producer_evidence,
-                            evidence.and_then(SchemaSummaryEvidence::current_failure),
-                        ) && let Ok(request) =
-                            ProducerActionRequest::retry(expected.clone(), failure.clone())
+                        if let Some(failed_result) =
+                            evidence.and_then(SchemaSummaryEvidence::failed_result)
+                            && let Ok(request) = failed_result.retry_request()
                         {
                             producer_actions.push(ProducerActionDescriptor::new(request));
                         }

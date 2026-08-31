@@ -1,8 +1,10 @@
 use recite_core::ProducerIdentity;
 
 use super::super::evidence::ProducerFailureEvidence;
-use super::evidence::ProducerActionEvidence;
-use super::request::ProducerActionRequest;
+use super::evidence::ProducerActionOutputEvidence;
+use super::identity::ProducerActionRequestIdentity;
+use super::request::{ProducerActionRequest, ProducerActionRequestError};
+use super::scopes::ProducerLaunchSnapshot;
 
 /// Terminal state of one producer action result.
 #[derive(Clone, Copy, Debug, Eq, Hash, PartialEq)]
@@ -18,31 +20,39 @@ pub enum ProducerActionStatus {
 #[derive(Clone, Debug, Eq, PartialEq)]
 #[non_exhaustive]
 pub enum ProducerActionResultOutcome {
-    Succeeded { evidence: ProducerActionEvidence },
-    Failed { failure: ProducerFailureEvidence },
+    Succeeded {
+        evidence: ProducerActionOutputEvidence,
+    },
+    Failed {
+        failure: ProducerFailureEvidence,
+    },
     Cancelled,
-    Stale { observed: ProducerActionEvidence },
+    Stale {
+        observed: ProducerLaunchSnapshot,
+    },
 }
 
-/// A producer result bound to the exact request that created it.
+/// A result bound to the complete request that created it.
 #[derive(Clone, Debug, Eq, PartialEq)]
 #[non_exhaustive]
 pub struct ProducerActionResult {
-    request_identity: super::request::ProducerActionRequestIdentity,
+    request: ProducerActionRequest,
     outcome: ProducerActionResultOutcome,
 }
 
 impl ProducerActionResult {
-    /// Record successful producer output evidence. The input fingerprints must
-    /// still match the request precondition; schema and output fingerprints may
-    /// legitimately change after regeneration.
+    /// Record reloaded output evidence. Input preconditions must be unchanged;
+    /// output and schema fingerprints may legitimately be new.
     pub fn succeeded(
         request: &ProducerActionRequest,
-        evidence: ProducerActionEvidence,
+        evidence: ProducerActionOutputEvidence,
     ) -> Result<Self, ProducerActionResultError> {
-        validate_output_evidence(request, &evidence)?;
+        validate_producer(request, evidence.producer())?;
+        if evidence.input_fingerprints() != request.launch_snapshot().input_fingerprints() {
+            return Err(ProducerActionResultError::InputFingerprintMismatch);
+        }
         Ok(Self {
-            request_identity: request.identity().clone(),
+            request: request.clone(),
             outcome: ProducerActionResultOutcome::Succeeded { evidence },
         })
     }
@@ -52,14 +62,9 @@ impl ProducerActionResult {
         request: &ProducerActionRequest,
         failure: ProducerFailureEvidence,
     ) -> Result<Self, ProducerActionResultError> {
-        if failure.producer() != request.producer() {
-            return Err(ProducerActionResultError::ProducerIdentityMismatch {
-                expected: request.producer().clone(),
-                actual: failure.producer().clone(),
-            });
-        }
+        validate_producer(request, failure.producer())?;
         Ok(Self {
-            request_identity: request.identity().clone(),
+            request: request.clone(),
             outcome: ProducerActionResultOutcome::Failed { failure },
         })
     }
@@ -68,29 +73,34 @@ impl ProducerActionResult {
     #[must_use]
     pub fn cancelled(request: &ProducerActionRequest) -> Self {
         Self {
-            request_identity: request.identity().clone(),
+            request: request.clone(),
             outcome: ProducerActionResultOutcome::Cancelled,
         }
     }
 
-    /// Record a refusal because the caller observed a changed precondition.
+    /// Record refusal because the caller observed changed launch inputs.
     pub fn stale(
         request: &ProducerActionRequest,
-        observed: ProducerActionEvidence,
+        observed: ProducerLaunchSnapshot,
     ) -> Result<Self, ProducerActionResultError> {
-        validate_observed_evidence(request, &observed)?;
-        if observed == *request.expected() {
-            return Err(ProducerActionResultError::StaleWithoutChangedEvidence);
+        validate_producer(request, observed.producer())?;
+        if observed.input_fingerprints() == request.launch_snapshot().input_fingerprints() {
+            return Err(ProducerActionResultError::StaleWithoutChangedInputs);
         }
         Ok(Self {
-            request_identity: request.identity().clone(),
+            request: request.clone(),
             outcome: ProducerActionResultOutcome::Stale { observed },
         })
     }
 
     #[must_use]
-    pub const fn request_identity(&self) -> &super::request::ProducerActionRequestIdentity {
-        &self.request_identity
+    pub const fn request(&self) -> &ProducerActionRequest {
+        &self.request
+    }
+
+    #[must_use]
+    pub const fn request_identity(&self) -> &ProducerActionRequestIdentity {
+        self.request.identity()
     }
 
     #[must_use]
@@ -109,13 +119,12 @@ impl ProducerActionResult {
     }
 
     #[must_use]
-    pub const fn evidence(&self) -> Option<&ProducerActionEvidence> {
+    pub const fn evidence(&self) -> Option<&ProducerActionOutputEvidence> {
         match &self.outcome {
-            ProducerActionResultOutcome::Succeeded { evidence }
-            | ProducerActionResultOutcome::Stale { observed: evidence } => Some(evidence),
-            ProducerActionResultOutcome::Failed { .. } | ProducerActionResultOutcome::Cancelled => {
-                None
-            }
+            ProducerActionResultOutcome::Succeeded { evidence } => Some(evidence),
+            ProducerActionResultOutcome::Failed { .. }
+            | ProducerActionResultOutcome::Cancelled
+            | ProducerActionResultOutcome::Stale { .. } => None,
         }
     }
 
@@ -130,7 +139,7 @@ impl ProducerActionResult {
     }
 
     #[must_use]
-    pub const fn observed_stale_evidence(&self) -> Option<&ProducerActionEvidence> {
+    pub const fn observed_stale_snapshot(&self) -> Option<&ProducerLaunchSnapshot> {
         match &self.outcome {
             ProducerActionResultOutcome::Stale { observed } => Some(observed),
             ProducerActionResultOutcome::Succeeded { .. }
@@ -139,19 +148,32 @@ impl ProducerActionResult {
         }
     }
 
+    /// Construct a retry only from this exact failed result.
+    pub fn retry_request(&self) -> Result<ProducerActionRequest, ProducerActionRequestError> {
+        let failure = self
+            .failure()
+            .ok_or(ProducerActionRequestError::NotFailedResult)?;
+        ProducerActionRequest::retry_from_failure(
+            self.request.producer().clone(),
+            self.request.expected().clone(),
+            self.request.launch_snapshot().clone(),
+            failure.clone(),
+            self.request.identity().clone(),
+        )
+    }
+
     /// Verify that this result belongs to the supplied request.
     pub fn validate_for(
         &self,
         request: &ProducerActionRequest,
     ) -> Result<(), ProducerActionResultError> {
-        if self.request_identity != *request.identity() {
+        if self.request_identity() != request.identity() {
             return Err(ProducerActionResultError::RequestIdentityMismatch);
         }
         Ok(())
     }
 }
 
-/// Failure while constructing or validating a producer action result.
 #[derive(Clone, Debug, Eq, PartialEq, thiserror::Error)]
 #[non_exhaustive]
 pub enum ProducerActionResultError {
@@ -164,29 +186,18 @@ pub enum ProducerActionResultError {
     },
     #[error("producer result input fingerprints do not match the request precondition")]
     InputFingerprintMismatch,
-    #[error("stale producer result has no changed evidence")]
-    StaleWithoutChangedEvidence,
+    #[error("stale producer result has no changed launch inputs")]
+    StaleWithoutChangedInputs,
 }
 
-fn validate_output_evidence(
+fn validate_producer(
     request: &ProducerActionRequest,
-    evidence: &ProducerActionEvidence,
+    actual: &ProducerIdentity,
 ) -> Result<(), ProducerActionResultError> {
-    validate_observed_evidence(request, evidence)?;
-    if evidence.input_fingerprints() != request.expected().input_fingerprints() {
-        return Err(ProducerActionResultError::InputFingerprintMismatch);
-    }
-    Ok(())
-}
-
-fn validate_observed_evidence(
-    request: &ProducerActionRequest,
-    evidence: &ProducerActionEvidence,
-) -> Result<(), ProducerActionResultError> {
-    if evidence.producer() != request.producer() {
+    if actual != request.producer() {
         return Err(ProducerActionResultError::ProducerIdentityMismatch {
             expected: request.producer().clone(),
-            actual: evidence.producer().clone(),
+            actual: actual.clone(),
         });
     }
     Ok(())

@@ -9,6 +9,9 @@ mod identity;
 mod metadata;
 mod producer;
 mod projections;
+mod validation;
+
+use recite_core::SchemaFingerprint;
 
 pub use dialogue::{RegistrySummary, SchemaTypeSummary, SpeakerSummary};
 pub use errors::{FreshnessSnapshotSide, SchemaSummaryBuildError, SchemaSummaryEvidenceError};
@@ -26,13 +29,13 @@ pub use identity::{
 pub use metadata::{MetadataDomainSummary, MetadataKeySummary};
 pub use producer::{
     ProducerActionDescriptor, ProducerActionEvidence, ProducerActionEvidenceError,
-    ProducerActionOperation, ProducerActionRequest, ProducerActionRequestError,
-    ProducerActionRequestIdentity, ProducerActionResult, ProducerActionResultError,
-    ProducerActionResultOutcome, ProducerActionStatus, ProducerRetryGuidance,
+    ProducerActionOperation, ProducerActionOutputEvidence, ProducerActionRequest,
+    ProducerActionRequestError, ProducerActionRequestIdentity, ProducerActionResult,
+    ProducerActionResultError, ProducerActionResultOutcome, ProducerActionStatus,
+    ProducerFingerprintScopes, ProducerLaunchSnapshot, ProducerLaunchSnapshotError,
+    ProducerRetryGuidance,
 };
 pub use projections::{PresentationProjectorSummary, ProjectionQueryFunctionSummary};
-
-use recite_core::SchemaFingerprint;
 
 /// A deterministic, host-neutral view of one canonical project schema.
 ///
@@ -176,21 +179,6 @@ impl SchemaSummary {
     #[must_use]
     pub fn markup(&self) -> &[MarkupSummary] {
         &self.markup
-    }
-
-    /// Return fingerprint-only evidence suitable for a producer action
-    /// request. The summary remains a projection; this method does not expose
-    /// or retain a producer-owned schema model.
-    #[must_use]
-    pub fn producer_action_evidence(&self) -> Option<ProducerActionEvidence> {
-        let producer = self.producer_metadata()?.producer()?.clone();
-        Some(ProducerActionEvidence::new(
-            producer,
-            self.fingerprints.semantic().clone(),
-            self.fingerprints.canonical_content().clone(),
-            self.fingerprints.producer_inputs().iter().cloned(),
-            self.fingerprints.producer_content().cloned(),
-        ))
     }
 }
 

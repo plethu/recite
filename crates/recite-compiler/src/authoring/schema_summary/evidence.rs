@@ -2,7 +2,7 @@ use recite_core::{ProducerIdentity, ProjectSchema};
 
 use super::errors::SchemaSummaryEvidenceError;
 use super::freshness::SchemaFreshnessEvidence;
-use super::producer::ProducerRetryGuidance;
+use super::producer::{ProducerActionResult, ProducerActionStatus, ProducerRetryGuidance};
 
 /// Producer capability evidence supplied by a host or producer report.
 #[derive(Clone, Copy, Debug, Eq, PartialEq)]
@@ -78,6 +78,7 @@ pub struct SchemaSummaryEvidence {
     pub(super) producer: ProducerIdentity,
     pub(super) capability: Option<ProducerCapabilityStatus>,
     pub(super) current_failure: Option<ProducerFailureEvidence>,
+    pub(super) failed_result: Option<ProducerActionResult>,
     pub(super) freshness: Option<SchemaFreshnessEvidence>,
 }
 
@@ -88,6 +89,7 @@ impl SchemaSummaryEvidence {
             producer,
             capability: None,
             current_failure: None,
+            failed_result: None,
             freshness: None,
         }
     }
@@ -108,6 +110,11 @@ impl SchemaSummaryEvidence {
     }
 
     #[must_use]
+    pub const fn failed_result(&self) -> Option<&ProducerActionResult> {
+        self.failed_result.as_ref()
+    }
+
+    #[must_use]
     pub const fn freshness(&self) -> Option<&SchemaFreshnessEvidence> {
         self.freshness.as_ref()
     }
@@ -119,6 +126,7 @@ pub struct SchemaSummaryEvidenceBuilder {
     producer: ProducerIdentity,
     capability: Option<ProducerCapabilityStatus>,
     current_failure: Option<ProducerFailureEvidence>,
+    failed_result: Option<ProducerActionResult>,
     freshness: Option<SchemaFreshnessEvidence>,
 }
 
@@ -132,6 +140,14 @@ impl SchemaSummaryEvidenceBuilder {
     #[must_use]
     pub fn current_failure(mut self, failure: ProducerFailureEvidence) -> Self {
         self.current_failure = Some(failure);
+        self
+    }
+
+    /// Attach the exact failed result from which a retry descriptor may be
+    /// projected. A bare current failure remains insufficient for that.
+    #[must_use]
+    pub fn failed_result(mut self, result: ProducerActionResult) -> Self {
+        self.failed_result = Some(result);
         self
     }
 
@@ -166,10 +182,27 @@ impl SchemaSummaryEvidenceBuilder {
                 return Err(SchemaSummaryEvidenceError::ContradictoryStates);
             }
         }
+        if let Some(result) = &self.failed_result {
+            if result.request().producer() != &self.producer {
+                return Err(SchemaSummaryEvidenceError::FailedResultProducerMismatch {
+                    expected: self.producer,
+                    actual: result.request().producer().clone(),
+                });
+            }
+            if result.status() != ProducerActionStatus::Failed {
+                return Err(SchemaSummaryEvidenceError::FailedResultNotFailed);
+            }
+            if let Some(current_failure) = &self.current_failure
+                && result.failure() != Some(current_failure)
+            {
+                return Err(SchemaSummaryEvidenceError::FailedResultFailureMismatch);
+            }
+        }
         Ok(SchemaSummaryEvidence {
             producer: self.producer,
             capability: self.capability,
             current_failure: self.current_failure,
+            failed_result: self.failed_result,
             freshness: self.freshness,
         })
     }

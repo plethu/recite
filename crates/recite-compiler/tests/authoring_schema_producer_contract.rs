@@ -3,12 +3,13 @@
 use recite_compiler::{
     ProducerActionEvidence, ProducerActionOperation, ProducerActionRequest,
     ProducerActionRequestError, ProducerActionResult, ProducerActionResultError,
-    ProducerActionStatus, ProducerCapabilityStatus, ProducerFailureEvidence, ProducerRetryGuidance,
-    SchemaSummary, SchemaSummaryEvidence,
+    ProducerActionStatus, ProducerCapabilityStatus, ProducerFailureEvidence,
+    ProducerFingerprintScopes, ProducerLaunchSnapshot, ProducerRetryGuidance, SchemaSummary,
+    SchemaSummaryBuildError, SchemaSummaryEvidence,
 };
 use recite_core::{
     ContentFingerprint, ProducerFingerprint, ProducerIdentity, ProjectSchema, SchemaFingerprint,
-    load_schema_manifest_str,
+    SpeakerDefinition, load_schema_manifest_str,
 };
 
 const GENERATED: &str = include_str!("../../../fixtures/schema/valid/full_manifest.json");
@@ -19,187 +20,231 @@ fn generated_schema() -> ProjectSchema {
         .expect("generated fixture lowers")
 }
 
-fn generated_evidence() -> ProducerActionEvidence {
-    SchemaSummary::from_schema(&generated_schema())
-        .producer_action_evidence()
-        .expect("generated fixture has producer evidence")
+fn launch() -> ProducerLaunchSnapshot {
+    ProducerLaunchSnapshot::from_schema(&generated_schema()).expect("producer launch evidence")
 }
 
-fn alternate_inputs() -> Vec<ProducerFingerprint> {
-    vec![ProducerFingerprint {
-        id: "content/other".to_owned(),
-        kind: "directory".to_owned(),
-        algorithm: "blake3".to_owned(),
-        value: "different".to_owned(),
-    }]
+fn output() -> ProducerActionEvidence {
+    ProducerActionEvidence::from_schema(&generated_schema()).expect("producer output evidence")
 }
 
-fn changed_inputs(evidence: &ProducerActionEvidence) -> ProducerActionEvidence {
-    ProducerActionEvidence::new(
-        evidence.producer().clone(),
-        evidence.schema_fingerprint().clone(),
-        evidence.content_fingerprint().clone(),
-        alternate_inputs(),
-        evidence.output_fingerprint().cloned(),
-    )
+fn producer() -> ProducerIdentity {
+    launch().producer().clone()
 }
 
-fn changed_output(evidence: &ProducerActionEvidence) -> ProducerActionEvidence {
-    ProducerActionEvidence::new(
-        evidence.producer().clone(),
-        evidence.schema_fingerprint().clone(),
-        evidence.content_fingerprint().clone(),
-        evidence.input_fingerprints().iter().cloned(),
-        Some(ContentFingerprint::blake3(vec![9; 32]).expect("valid digest")),
-    )
+fn request() -> ProducerActionRequest {
+    ProducerActionRequest::regenerate(output(), launch()).expect("request")
 }
 
-#[test]
-fn request_identity_is_deterministic_and_retry_is_bound_to_prior_failure() {
-    let expected = generated_evidence();
-    let first = ProducerActionRequest::regenerate(expected.clone()).expect("request");
-    let second = ProducerActionRequest::regenerate(expected.clone()).expect("request");
-    assert_eq!(first.identity(), second.identity());
-
-    let changed = ProducerActionEvidence::new(
-        expected.producer().clone(),
-        expected.schema_fingerprint().clone(),
-        ContentFingerprint::blake3(vec![8; 32]).expect("valid digest"),
-        expected.input_fingerprints().iter().cloned(),
-        expected.output_fingerprint().cloned(),
-    );
-    let changed_request = ProducerActionRequest::regenerate(changed).expect("request");
-    assert_ne!(first.identity(), changed_request.identity());
-
-    let failure = ProducerFailureEvidence::new(
-        expected.producer().clone(),
-        "producer-exit",
-        Some("producer returned a failure status".to_owned()),
-    )
-    .expect("failure")
-    .with_retry_guidance(ProducerRetryGuidance::RetryAfterCorrection);
-    let retry = ProducerActionRequest::retry(expected.clone(), failure.clone()).expect("retry");
-    assert!(matches!(
-        retry.operation(),
-        ProducerActionOperation::Retry { failure: bound } if bound == &failure
-    ));
-
-    let other = ProducerIdentity::new("adapter", "other").expect("identity");
-    let wrong_failure =
-        ProducerFailureEvidence::new(other, "producer-exit", None).expect("failure");
-    assert!(matches!(
-        ProducerActionRequest::retry(expected, wrong_failure),
-        Err(ProducerActionRequestError::RetryFailureIdentityMismatch { .. })
-    ));
-}
-
-#[test]
-fn result_rejects_wrong_request_identity_and_represents_cancellation() {
-    let expected = generated_evidence();
-    let request = ProducerActionRequest::regenerate(expected.clone()).expect("request");
-    let changed = ProducerActionEvidence::new(
-        expected.producer().clone(),
-        expected.schema_fingerprint().clone(),
-        ContentFingerprint::blake3(vec![7; 32]).expect("valid digest"),
-        expected.input_fingerprints().iter().cloned(),
-        expected.output_fingerprint().cloned(),
-    );
-    let other_request = ProducerActionRequest::regenerate(changed).expect("request");
-
-    let result = ProducerActionResult::cancelled(&request);
-    assert_eq!(result.status(), ProducerActionStatus::Cancelled);
-    assert!(matches!(
-        result.validate_for(&other_request),
-        Err(ProducerActionResultError::RequestIdentityMismatch)
-    ));
-    result.validate_for(&request).expect("matching request");
-}
-
-#[test]
-fn success_requires_current_inputs_but_returns_reloaded_output_evidence() {
-    let expected = generated_evidence();
-    let request = ProducerActionRequest::regenerate(expected.clone()).expect("request");
-
-    let drifted = changed_inputs(&expected);
-    assert!(matches!(
-        ProducerActionResult::succeeded(&request, drifted),
-        Err(ProducerActionResultError::InputFingerprintMismatch)
-    ));
-
-    let reloaded = changed_output(&expected);
-    let result = ProducerActionResult::succeeded(&request, reloaded.clone()).expect("success");
-    assert_eq!(result.status(), ProducerActionStatus::Succeeded);
-    assert_eq!(result.evidence(), Some(&reloaded));
-    assert!(result.failure().is_none());
-}
-
-#[test]
-fn stale_and_failure_results_are_structured_and_retry_guidance_is_typed() {
-    let expected = generated_evidence();
-    let request = ProducerActionRequest::regenerate(expected.clone()).expect("request");
-    let observed = changed_inputs(&expected);
-    let stale = ProducerActionResult::stale(&request, observed.clone()).expect("stale");
-    assert_eq!(stale.status(), ProducerActionStatus::Stale);
-    assert_eq!(stale.observed_stale_evidence(), Some(&observed));
-    assert!(matches!(
-        ProducerActionResult::stale(&request, expected),
-        Err(ProducerActionResultError::StaleWithoutChangedEvidence)
-    ));
-
-    let failure = ProducerFailureEvidence::new(
-        request.producer().clone(),
+fn failure() -> ProducerFailureEvidence {
+    ProducerFailureEvidence::new(
+        producer(),
         "producer-input-invalid",
         Some("input requires correction".to_owned()),
     )
     .expect("failure")
-    .with_retry_guidance(ProducerRetryGuidance::RetryAfterCorrection);
-    assert!(failure.retry_guidance().allows_retry());
-    let result = ProducerActionResult::failed(&request, failure.clone()).expect("failure result");
-    assert_eq!(result.status(), ProducerActionStatus::Failed);
-    assert_eq!(result.failure(), Some(&failure));
+    .with_retry_guidance(ProducerRetryGuidance::RetryAfterCorrection)
+}
 
-    let no_retry = failure.with_retry_guidance(ProducerRetryGuidance::DoNotRetry);
+fn changed_scopes() -> ProducerFingerprintScopes {
+    let snapshot = launch();
+    let current = snapshot.input_fingerprints();
+    let changed_manifest = vec![ProducerFingerprint {
+        id: "content/changed".to_owned(),
+        kind: "directory".to_owned(),
+        algorithm: "blake3".to_owned(),
+        value: "different".to_owned(),
+    }];
+    ProducerFingerprintScopes::new(
+        changed_manifest,
+        current
+            .registries()
+            .iter()
+            .map(|(name, values)| (name.clone(), values.clone())),
+        current
+            .metadata_domains()
+            .iter()
+            .map(|(name, values)| (name.clone(), values.clone())),
+    )
+}
+
+#[test]
+fn request_identity_is_deterministic_and_covers_every_launch_scope() {
+    let first = request();
+    let second = request();
+    assert_eq!(first.identity(), second.identity());
+    assert!(
+        !first
+            .launch_snapshot()
+            .input_fingerprints()
+            .registries()
+            .is_empty()
+    );
+    assert!(
+        !first
+            .launch_snapshot()
+            .input_fingerprints()
+            .metadata_domains()
+            .is_empty()
+    );
+
+    let omitted = ProducerLaunchSnapshot::new(
+        producer(),
+        ProducerFingerprintScopes::new(
+            launch().input_fingerprints().manifest().iter().cloned(),
+            [],
+            [],
+        ),
+    );
+    let omitted_expected = ProducerActionEvidence::new(
+        producer(),
+        output().schema_fingerprint().clone(),
+        output().content_fingerprint().clone(),
+        omitted.input_fingerprints().clone(),
+        output().output_fingerprint().cloned(),
+    )
+    .expect("omitted evidence");
+    let omitted_request =
+        ProducerActionRequest::regenerate(omitted_expected, omitted).expect("request");
+    assert_ne!(first.identity(), omitted_request.identity());
+}
+
+#[test]
+fn changed_inputs_are_stale_but_changed_outputs_are_valid_success() {
+    let request = request();
+    let observed = ProducerLaunchSnapshot::new(producer(), changed_scopes());
+    let stale = ProducerActionResult::stale(&request, observed).expect("stale");
+    assert_eq!(stale.status(), ProducerActionStatus::Stale);
+    assert!(stale.observed_stale_snapshot().is_some());
+
+    let mut reloaded_schema = generated_schema();
+    reloaded_schema.speakers.insert(
+        "new_speaker".to_owned(),
+        SpeakerDefinition {
+            display_name: Some("New speaker".to_owned()),
+        },
+    );
+    let reloaded = ProducerActionEvidence::from_schema(&reloaded_schema).expect("reloaded output");
+    assert_eq!(
+        reloaded.input_fingerprints(),
+        request.launch_snapshot().input_fingerprints()
+    );
+    let success = ProducerActionResult::succeeded(&request, reloaded).expect("success");
+    assert_eq!(success.status(), ProducerActionStatus::Succeeded);
+    assert!(success.observed_stale_snapshot().is_none());
+
     assert!(matches!(
-        ProducerActionRequest::retry(generated_evidence(), no_retry),
-        Err(ProducerActionRequestError::RetryNotAllowed)
+        ProducerActionResult::stale(&request, request.launch_snapshot().clone()),
+        Err(ProducerActionResultError::StaleWithoutChangedInputs)
     ));
 }
 
 #[test]
-fn generated_capability_exposes_typed_descriptors_without_execution() {
-    let schema = generated_schema();
-    let producer = schema
-        .producer_metadata
-        .as_ref()
-        .and_then(|metadata| metadata.producer.clone())
-        .expect("producer identity");
-    let failure =
-        ProducerFailureEvidence::new(producer.clone(), "producer-exit", None).expect("failure");
-    let evidence = SchemaSummaryEvidence::builder(producer)
+fn retry_requires_the_exact_failed_result() {
+    let request = request();
+    let failed = ProducerActionResult::failed(&request, failure()).expect("failed result");
+    let retry = failed.retry_request().expect("retry");
+    assert!(matches!(
+        retry.operation(),
+        ProducerActionOperation::Retry { originating_request, .. }
+            if originating_request == failed.request_identity()
+    ));
+    assert_eq!(retry.launch_snapshot(), request.launch_snapshot());
+
+    let fabricated = ProducerActionOperation::Retry {
+        failure: failure(),
+        originating_request: request.identity().clone(),
+    };
+    assert!(matches!(
+        ProducerActionRequest::new(producer(), fabricated, output(), launch()),
+        Err(ProducerActionRequestError::RetryRequiresFailedResult)
+    ));
+    assert!(matches!(
+        ProducerActionResult::cancelled(&request).retry_request(),
+        Err(ProducerActionRequestError::NotFailedResult)
+    ));
+}
+
+#[test]
+fn output_evidence_rejects_no_schema_and_inconsistent_content() {
+    let valid = output();
+    let no_schema = ProducerActionEvidence::new(
+        producer(),
+        SchemaFingerprint::NoSchema,
+        valid.content_fingerprint().clone(),
+        valid.input_fingerprints().clone(),
+        None,
+    );
+    assert!(matches!(
+        no_schema,
+        Err(recite_compiler::ProducerActionEvidenceError::NoSchemaFingerprint)
+    ));
+    let inconsistent = ProducerActionEvidence::new(
+        producer(),
+        valid.schema_fingerprint().clone(),
+        ContentFingerprint::blake3(vec![8; 32]).expect("digest"),
+        valid.input_fingerprints().clone(),
+        None,
+    );
+    assert!(matches!(
+        inconsistent,
+        Err(recite_compiler::ProducerActionEvidenceError::SchemaContentMismatch)
+    ));
+}
+
+#[test]
+fn failure_guidance_is_structured_and_only_bound_failures_project_retry() {
+    let request = request();
+    let failed_result = ProducerActionResult::failed(&request, failure()).expect("failed");
+    let bare_evidence = SchemaSummaryEvidence::builder(producer())
         .capability(ProducerCapabilityStatus::Supported)
-        .current_failure(failure)
+        .current_failure(failure())
         .build()
         .expect("evidence");
-    let summary =
-        SchemaSummary::from_schema_with_evidence(&schema, Some(&evidence)).expect("summary");
-    let actions = summary.capability().producer_actions();
-    assert_eq!(actions.len(), 2);
+    let bare_summary =
+        SchemaSummary::from_schema_with_evidence(&generated_schema(), Some(&bare_evidence))
+            .expect("summary");
+    assert_eq!(bare_summary.capability().producer_actions().len(), 1);
+
+    let evidence = SchemaSummaryEvidence::builder(producer())
+        .capability(ProducerCapabilityStatus::Supported)
+        .current_failure(failure())
+        .failed_result(failed_result.clone())
+        .build()
+        .expect("bound evidence");
+    let summary = SchemaSummary::from_schema_with_evidence(&generated_schema(), Some(&evidence))
+        .expect("summary");
+    assert_eq!(summary.capability().producer_actions().len(), 2);
     assert!(matches!(
-        actions[0].request().operation(),
-        ProducerActionOperation::Regenerate
+        summary.capability().producer_actions()[1].request().operation(),
+        ProducerActionOperation::Retry { originating_request, .. }
+            if originating_request == failed_result.request_identity()
     ));
+}
+
+#[test]
+fn stale_failed_results_cannot_be_attached_to_a_current_summary() {
+    let changed_launch = ProducerLaunchSnapshot::new(producer(), changed_scopes());
+    let changed_expected = ProducerActionEvidence::new(
+        producer(),
+        output().schema_fingerprint().clone(),
+        output().content_fingerprint().clone(),
+        changed_launch.input_fingerprints().clone(),
+        output().output_fingerprint().cloned(),
+    )
+    .expect("changed expected evidence");
+    let changed_request =
+        ProducerActionRequest::regenerate(changed_expected, changed_launch).expect("request");
+    let stale_failure =
+        ProducerActionResult::failed(&changed_request, failure()).expect("failed result");
+    let evidence = SchemaSummaryEvidence::builder(producer())
+        .capability(ProducerCapabilityStatus::Supported)
+        .current_failure(failure())
+        .failed_result(stale_failure)
+        .build()
+        .expect("evidence builder remains structural");
     assert!(matches!(
-        actions[1].request().operation(),
-        ProducerActionOperation::Retry { .. }
+        SchemaSummary::from_schema_with_evidence(&generated_schema(), Some(&evidence)),
+        Err(SchemaSummaryBuildError::FailedResultSnapshotMismatch)
     ));
-    assert_eq!(
-        actions[0].request().expected().schema_fingerprint(),
-        &SchemaFingerprint::Fingerprint(
-            actions[0]
-                .request()
-                .expected()
-                .content_fingerprint()
-                .clone()
-        )
-    );
 }

@@ -2,15 +2,16 @@ use recite_core::{ContentFingerprint, ProjectSchema, SchemaSource};
 
 use super::dialogue::{RegistrySummary, SchemaTypeSummary, SpeakerSummary};
 use super::evidence::SchemaSummaryEvidence;
-use super::freshness::{SchemaFreshnessEvidence, SchemaFreshnessSnapshotIdentity};
+use super::freshness::SchemaFreshnessEvidence;
 use super::functions::{AvailabilityReasonSummary, ConditionSummary, EffectSummary, MarkupSummary};
 use super::helpers::{
     capability as build_capability, domain_origin, freshness, ownership, provenance,
     sorted_fingerprints,
 };
 use super::metadata::{MetadataDomainSummary, MetadataKeySummary};
-use super::producer::ProducerActionEvidence;
+use super::producer::{ProducerActionEvidence, ProducerLaunchSnapshot};
 use super::projections::{PresentationProjectorSummary, ProjectionQueryFunctionSummary};
+use super::validation::validate_evidence;
 use super::{
     ProducerMetadataSummary, SchemaFingerprintSummary, SchemaSourceSummary, SchemaSummary,
 };
@@ -63,14 +64,16 @@ impl SchemaSummary {
         let producer_inputs = producer.map_or_else(Vec::new, |metadata| {
             sorted_fingerprints(&metadata.producer_fingerprints)
         });
-        let producer_action_evidence = ProducerActionEvidence::from_schema(schema).ok();
+        let producer_expected = ProducerActionEvidence::from_schema(schema).ok();
+        let producer_launch = ProducerLaunchSnapshot::from_schema(schema).ok();
         let capability = |has_explicit_origin| {
             build_capability(
                 &owner,
                 has_explicit_origin,
                 source_owned,
                 evidence,
-                producer_action_evidence.as_ref(),
+                producer_expected.as_ref(),
+                producer_launch.as_ref(),
             )
         };
         let fingerprints = SchemaFingerprintSummary {
@@ -210,37 +213,4 @@ impl SchemaSummary {
                 .collect(),
         }
     }
-}
-
-fn validate_evidence(
-    schema: &ProjectSchema,
-    evidence: Option<&SchemaSummaryEvidence>,
-) -> Result<(), SchemaSummaryBuildError> {
-    if let Some(evidence) = evidence {
-        let expected = schema
-            .producer_metadata
-            .as_ref()
-            .and_then(|metadata| metadata.producer.as_ref())
-            .ok_or(SchemaSummaryBuildError::EvidenceWithoutProducer)?;
-        if expected != evidence.producer() {
-            return Err(SchemaSummaryBuildError::ProducerIdentityMismatch {
-                expected: expected.clone(),
-                actual: evidence.producer().clone(),
-            });
-        }
-        if let Some(freshness) = evidence.freshness() {
-            let summarized = SchemaFreshnessSnapshotIdentity::from_schema(
-                schema,
-                super::errors::FreshnessSnapshotSide::Expected,
-            )
-            .map_err(|_| SchemaSummaryBuildError::EvidenceWithoutProducer)?;
-            if freshness.expected_identity() != &summarized {
-                return Err(SchemaSummaryBuildError::FreshnessSchemaMismatch {
-                    expected: Box::new(freshness.expected_identity().clone()),
-                    summarized: Box::new(summarized),
-                });
-            }
-        }
-    }
-    Ok(())
 }

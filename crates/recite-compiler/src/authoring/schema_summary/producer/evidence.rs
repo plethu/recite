@@ -1,6 +1,6 @@
-use recite_core::{
-    ContentFingerprint, ProducerFingerprint, ProducerIdentity, ProjectSchema, SchemaFingerprint,
-};
+use recite_core::{ContentFingerprint, ProducerIdentity, ProjectSchema, SchemaFingerprint};
+
+use super::scopes::{ProducerFingerprintScopes, ProducerLaunchSnapshot};
 
 /// Guidance attached to a producer failure for a caller deciding whether to
 /// offer a retry action.
@@ -22,47 +22,52 @@ impl ProducerRetryGuidance {
     }
 }
 
-/// Fingerprint evidence exchanged by the host-neutral producer action
-/// contract.
+/// Canonical evidence from a reloaded producer output.
 ///
-/// This value contains no schema model or host resource. The schema and
-/// content channels describe the currently loaded output, input fingerprints
-/// describe the producer precondition, and the output channel identifies the
-/// generated producer content. A caller can use a newly loaded schema plus
-/// this value to build a fresh [`super::super::SchemaSummary`].
+/// This value can only be constructed from a canonical [`ProjectSchema`] or
+/// through the fallible constructor that checks its schema/content invariant.
+/// It contains no schema model, host resource, URI, or execution handle.
 #[derive(Clone, Debug, Eq, PartialEq)]
 #[non_exhaustive]
-pub struct ProducerActionEvidence {
+pub struct ProducerActionOutputEvidence {
     producer: ProducerIdentity,
     schema_fingerprint: SchemaFingerprint,
     content_fingerprint: ContentFingerprint,
-    input_fingerprints: Vec<ProducerFingerprint>,
+    input_fingerprints: ProducerFingerprintScopes,
     output_fingerprint: Option<ContentFingerprint>,
 }
 
-impl ProducerActionEvidence {
-    /// Construct fingerprint evidence and normalise producer inputs into their
-    /// deterministic order.
-    #[must_use]
+impl ProducerActionOutputEvidence {
+    /// Construct canonical output evidence after validating that the schema
+    /// fingerprint is the fingerprint of the supplied content fingerprint.
     pub fn new(
         producer: ProducerIdentity,
         schema_fingerprint: SchemaFingerprint,
         content_fingerprint: ContentFingerprint,
-        input_fingerprints: impl IntoIterator<Item = ProducerFingerprint>,
+        input_fingerprints: ProducerFingerprintScopes,
         output_fingerprint: Option<ContentFingerprint>,
-    ) -> Self {
-        let mut input_fingerprints = input_fingerprints.into_iter().collect::<Vec<_>>();
-        input_fingerprints.sort();
-        Self {
+    ) -> Result<Self, ProducerActionEvidenceError> {
+        match &schema_fingerprint {
+            SchemaFingerprint::NoSchema => {
+                return Err(ProducerActionEvidenceError::NoSchemaFingerprint);
+            }
+            SchemaFingerprint::Fingerprint(schema_content)
+                if schema_content != &content_fingerprint =>
+            {
+                return Err(ProducerActionEvidenceError::SchemaContentMismatch);
+            }
+            SchemaFingerprint::Fingerprint(_) => {}
+        }
+        Ok(Self {
             producer,
             schema_fingerprint,
             content_fingerprint,
             input_fingerprints,
             output_fingerprint,
-        }
+        })
     }
 
-    /// Extract the producer action evidence represented by a canonical schema.
+    /// Extract canonical output evidence from a reloaded project schema.
     pub fn from_schema(schema: &ProjectSchema) -> Result<Self, ProducerActionEvidenceError> {
         let metadata = schema
             .producer_metadata
@@ -72,13 +77,13 @@ impl ProducerActionEvidence {
             .producer
             .clone()
             .ok_or(ProducerActionEvidenceError::MissingProducerIdentity)?;
-        Ok(Self::new(
+        Self::new(
             producer,
             schema.canonical_fingerprint(),
             schema.canonical_content_fingerprint(),
-            metadata.producer_fingerprints.clone(),
+            ProducerFingerprintScopes::from_schema(schema),
             metadata.content_fingerprint.clone(),
-        ))
+        )
     }
 
     #[must_use]
@@ -97,7 +102,7 @@ impl ProducerActionEvidence {
     }
 
     #[must_use]
-    pub fn input_fingerprints(&self) -> &[ProducerFingerprint] {
+    pub const fn input_fingerprints(&self) -> &ProducerFingerprintScopes {
         &self.input_fingerprints
     }
 
@@ -105,9 +110,17 @@ impl ProducerActionEvidence {
     pub const fn output_fingerprint(&self) -> Option<&ContentFingerprint> {
         self.output_fingerprint.as_ref()
     }
+
+    #[must_use]
+    pub fn launch_snapshot(&self) -> ProducerLaunchSnapshot {
+        ProducerLaunchSnapshot::new(self.producer.clone(), self.input_fingerprints.clone())
+    }
 }
 
-/// Why canonical producer action evidence could not be extracted.
+/// Compatibility-friendly name for the canonical producer output evidence.
+pub type ProducerActionEvidence = ProducerActionOutputEvidence;
+
+/// Why canonical producer action evidence could not be constructed.
 #[derive(Clone, Copy, Debug, Eq, PartialEq, thiserror::Error)]
 #[non_exhaustive]
 pub enum ProducerActionEvidenceError {
@@ -115,4 +128,8 @@ pub enum ProducerActionEvidenceError {
     MissingProducerMetadata,
     #[error("producer metadata has no producer identity")]
     MissingProducerIdentity,
+    #[error("producer output must carry a schema fingerprint")]
+    NoSchemaFingerprint,
+    #[error("producer output schema and content fingerprints do not match")]
+    SchemaContentMismatch,
 }

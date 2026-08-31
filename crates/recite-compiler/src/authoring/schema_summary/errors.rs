@@ -23,6 +23,15 @@ pub enum SchemaSummaryEvidenceError {
     ContradictoryStates,
     #[error("producer failure code must not be empty")]
     EmptyFailureCode,
+    #[error("failed result producer does not match summary producer")]
+    FailedResultProducerMismatch {
+        expected: ProducerIdentity,
+        actual: ProducerIdentity,
+    },
+    #[error("attached producer result is not failed")]
+    FailedResultNotFailed,
+    #[error("attached failed result does not carry the current failure")]
+    FailedResultFailureMismatch,
     #[error("{side:?} freshness snapshot has no producer identity")]
     MissingSnapshotProducer { side: FreshnessSnapshotSide },
 }
@@ -43,4 +52,6 @@ pub enum SchemaSummaryBuildError {
         expected: Box<SchemaFreshnessSnapshotIdentity>,
         summarized: Box<SchemaFreshnessSnapshotIdentity>,
     },
+    #[error("failed producer result launch snapshot does not match the summarized schema")]
+    FailedResultSnapshotMismatch,
 }
