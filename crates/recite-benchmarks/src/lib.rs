@@ -47,6 +47,9 @@ pub mod runtime;
 pub mod runtime_allocations;
 pub mod scale;
 
+#[cfg(test)]
+mod tests;
+
 pub use scale::{BenchmarkFixture, BenchmarkScale};
 
 #[derive(Debug, thiserror::Error)]

@@ -87,7 +87,3 @@ pub(crate) fn hash_event(event: &PreviewEvent, hasher: &mut blake3::Hasher) {
         _ => tag(hasher, 255),
     }
 }
-
-#[cfg(test)]
-#[path = "preview_hash_tests.rs"]
-mod preview_hash_tests;

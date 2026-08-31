@@ -69,7 +69,7 @@ pub(super) fn hash_line(hasher: &mut blake3::Hasher, line: &DialogueLine) {
     }
 }
 
-pub(super) fn hash_choice(hasher: &mut blake3::Hasher, choice: &DialogueChoice) {
+pub(crate) fn hash_choice(hasher: &mut blake3::Hasher, choice: &DialogueChoice) {
     hash_text(hasher, choice.id.as_str());
     hash_text(hasher, &choice.source_text);
     hash_text(hasher, &choice.text);

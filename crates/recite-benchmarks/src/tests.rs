@@ -9,11 +9,9 @@ use recite_runtime::{
     DialoguePluralResolution, EffectAck, PreviewConditionRequestId, PreviewError, PreviewEvent,
 };
 
-use super::hash_event;
-
 fn digest(event: &PreviewEvent) -> String {
     let mut hasher = blake3::Hasher::new();
-    hash_event(event, &mut hasher);
+    crate::preview_hash::hash_event(event, &mut hasher);
     hasher.finalize().to_hex().to_string()
 }
 
