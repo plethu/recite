@@ -128,10 +128,6 @@ impl CliError {
                 MsgId::CliErrorMissingFixtureChoice,
                 [("prompt_keys", prompt_keys.join("|"))],
             ),
-            Self::AmbiguousFixturePrompt { block } => messages.format(
-                MsgId::CliErrorGeneric,
-                [("message", format!("fixture block choice key `{block}` is ambiguous because the block contains multiple prompts; use a line ID"))],
-            ),
             Self::NoInputs => messages.text(MsgId::CliErrorNoInputs),
             Self::OutputOverwritesInput { output, input } => messages.format(
                 MsgId::CliErrorOutputOverwritesInput,
@@ -177,13 +173,6 @@ impl CliError {
             Self::Runtime(error) => {
                 messages.format(MsgId::CliErrorGeneric, [("message", error.to_string())])
             }
-            Self::Preview(error) => {
-                messages.format(MsgId::CliErrorGeneric, [("message", error.to_string())])
-            }
-            Self::UnsupportedPreviewEvent | Self::UnsupportedPreviewArgument => messages.format(
-                MsgId::CliErrorGeneric,
-                [("message", self.to_string())],
-            ),
             Self::Io(error) => {
                 messages.format(MsgId::CliErrorGeneric, [("message", error.to_string())])
             }

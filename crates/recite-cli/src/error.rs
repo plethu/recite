@@ -82,9 +82,6 @@ pub(crate) enum CliError {
     MissingFixtureChoice {
         prompt_keys: Vec<String>,
     },
-    AmbiguousFixturePrompt {
-        block: String,
-    },
     NoInputs,
     OutputOverwritesInput {
         output: PathBuf,
@@ -105,9 +102,6 @@ pub(crate) enum CliError {
         source: io::Error,
     },
     Runtime(recite_runtime::DialogueError),
-    Preview(recite_runtime::PreviewError),
-    UnsupportedPreviewEvent,
-    UnsupportedPreviewArgument,
     BlockingEffectNeedsAcknowledgement {
         effect: String,
     },
@@ -261,10 +255,6 @@ impl std::fmt::Display for CliError {
                 "fixture is missing a [choices] entry for prompt {}; supported keys for this prompt are listed in trace prompt.identity.fixture_keys",
                 prompt_keys.join("|")
             ),
-            Self::AmbiguousFixturePrompt { block } => write!(
-                formatter,
-                "fixture block choice key `{block}` is ambiguous because the block contains multiple prompts; use a line ID",
-            ),
             Self::NoInputs => formatter.write_str("no .recite inputs found"),
             Self::OutputOverwritesInput { output, input } => write!(
                 formatter,
@@ -291,13 +281,6 @@ impl std::fmt::Display for CliError {
                 )
             }
             Self::Runtime(error) => write!(formatter, "{error}"),
-            Self::Preview(error) => write!(formatter, "{error}"),
-            Self::UnsupportedPreviewEvent => {
-                formatter.write_str("preview emitted an unsupported structured event")
-            }
-            Self::UnsupportedPreviewArgument => {
-                formatter.write_str("preview emitted an unsupported condition argument")
-            }
             Self::BlockingEffectNeedsAcknowledgement { effect } => write!(
                 formatter,
                 "blocking effect `{effect}` requires [effects].auto_ack_blocking = true in the fixture"
@@ -350,12 +333,6 @@ impl From<recite_compiler::CompileError> for CliError {
 impl From<recite_runtime::DialogueError> for CliError {
     fn from(error: recite_runtime::DialogueError) -> Self {
         Self::Runtime(error)
-    }
-}
-
-impl From<recite_runtime::PreviewError> for CliError {
-    fn from(error: recite_runtime::PreviewError) -> Self {
-        Self::Preview(error)
     }
 }
 

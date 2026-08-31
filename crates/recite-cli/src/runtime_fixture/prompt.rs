@@ -58,13 +58,19 @@ pub(super) fn select_fixture_choice(
                 })?
         }
         None if prompt.has_line => {
-            return Err(CliError::AmbiguousFixturePrompt {
-                block: prompt.fixture_keys.last().cloned().unwrap_or_default(),
+            return Err(CliError::MalformedCompiledAsset {
+                reason: format!(
+                    "fixture block choice key `{}` is ambiguous because the block contains multiple prompts; use a line ID",
+                    prompt.fixture_keys.last().cloned().unwrap_or_default()
+                ),
             });
         }
         None => {
-            return Err(CliError::AmbiguousFixturePrompt {
-                block: prompt.fixture_keys.first().cloned().unwrap_or_default(),
+            return Err(CliError::MalformedCompiledAsset {
+                reason: format!(
+                    "fixture block choice key `{}` is ambiguous because the block contains multiple prompts; use a line ID",
+                    prompt.fixture_keys.first().cloned().unwrap_or_default()
+                ),
             });
         }
     };

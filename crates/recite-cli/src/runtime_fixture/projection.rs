@@ -157,7 +157,11 @@ pub(super) fn project_event(
         | PreviewEvent::Restored
         | PreviewEvent::RestartRequired { .. }
         | PreviewEvent::Error(_) => {}
-        _ => return Err(CliError::UnsupportedPreviewEvent),
+        _ => {
+            return Err(CliError::MalformedCompiledAsset {
+                reason: "preview emitted an unsupported structured event".to_owned(),
+            });
+        }
     }
     Ok(())
 }
@@ -209,7 +213,11 @@ fn trace_preview_condition_argument(
         PreviewConditionArgument::Integer(value) => TraceScalar::Integer(*value),
         PreviewConditionArgument::Float(value) => TraceScalar::Float(*value),
         PreviewConditionArgument::Boolean(value) => TraceScalar::Boolean(*value),
-        _ => return Err(CliError::UnsupportedPreviewArgument),
+        _ => {
+            return Err(CliError::MalformedCompiledAsset {
+                reason: "preview emitted an unsupported condition argument".to_owned(),
+            });
+        }
     };
     Ok(value)
 }

@@ -54,7 +54,7 @@ pub(crate) fn execute_runtime_fixture(
         let mut pending = VecDeque::from(output.events().to_vec());
         while let Some(event) = pending.pop_front() {
             if let PreviewEvent::Error(error) = &event {
-                return Err(CliError::Preview(error.clone()));
+                return Err(preview_failure(error.clone()));
             }
             project_event(
                 &event,
@@ -110,7 +110,11 @@ pub(crate) fn execute_runtime_fixture(
                 | PreviewEvent::Restored
                 | PreviewEvent::RestartRequired { .. }
                 | PreviewEvent::Error(_) => {}
-                _ => return Err(CliError::UnsupportedPreviewEvent),
+                _ => {
+                    return Err(CliError::MalformedCompiledAsset {
+                        reason: "preview emitted an unsupported structured event".to_owned(),
+                    });
+                }
             }
         }
     }
@@ -142,6 +146,15 @@ pub(crate) fn execute_runtime_fixture(
             metrics,
         ),
     })
+}
+
+fn preview_failure(error: recite_runtime::PreviewError) -> CliError {
+    match error {
+        recite_runtime::PreviewError::Runtime(error) => CliError::Runtime(error),
+        error => CliError::MalformedCompiledAsset {
+            reason: error.to_string(),
+        },
+    }
 }
 
 fn make_inputs<'a>(

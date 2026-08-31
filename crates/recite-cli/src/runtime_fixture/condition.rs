@@ -52,7 +52,11 @@ fn trace_preview_condition_argument(
         PreviewConditionArgument::Integer(value) => TraceScalar::Integer(*value),
         PreviewConditionArgument::Float(value) => TraceScalar::Float(*value),
         PreviewConditionArgument::Boolean(value) => TraceScalar::Boolean(*value),
-        _ => return Err(crate::error::CliError::UnsupportedPreviewArgument),
+        _ => {
+            return Err(crate::error::CliError::MalformedCompiledAsset {
+                reason: "preview emitted an unsupported condition argument".to_owned(),
+            });
+        }
     };
     Ok(value)
 }
