@@ -29,10 +29,7 @@ pub(super) struct SavedProjectIndex {
     roots: Vec<PathBuf>,
     pub(super) documents: BTreeMap<PathBuf, SavedDocument>,
     discoveries: Vec<WorkspaceDiscovery>,
-    manifest: Option<recite_config::ProjectManifest>,
     manifest_diagnostics: BTreeMap<PathBuf, ManifestDiagnostics>,
-    manifest_path: Option<PathBuf>,
-    manifest_text: String,
 }
 
 impl SavedProjectIndex {
@@ -44,26 +41,13 @@ impl SavedProjectIndex {
         fallback_roots: Vec<PathBuf>,
         discoveries: Vec<WorkspaceDiscovery>,
     ) -> Self {
-        let report = discoveries
-            .iter()
-            .filter_map(|discovery| match &discovery.state {
-                WorkspaceDiscoveryState::Manifest(report) => Some(report),
-                WorkspaceDiscoveryState::Manifestless | WorkspaceDiscoveryState::Failed { .. } => {
-                    None
-                }
-            })
-            .min_by_key(|report| report.manifest().manifest_path().to_owned())
-            .cloned();
         let mut index = Self {
             workspace_root: common_project_root(&fallback_roots),
             roots: roots_for_discoveries(&fallback_roots, &discoveries),
             fallback_roots,
             documents: BTreeMap::new(),
             discoveries,
-            manifest: report.as_ref().map(|report| report.manifest().clone()),
             manifest_diagnostics: BTreeMap::new(),
-            manifest_path: None,
-            manifest_text: String::new(),
         };
         for discovery in index.discoveries.clone() {
             match discovery.state {
@@ -86,7 +70,6 @@ impl SavedProjectIndex {
                 } => index.add_manifest_diagnostics_value(manifest_path, text, diagnostics),
             }
         }
-        index.set_primary_manifest();
         index
     }
 
@@ -142,11 +125,10 @@ impl SavedProjectIndex {
             }) {
                 continue;
             }
-            if self
-                .manifest
-                .as_ref()
-                .is_some_and(|manifest| root == manifest.project_root())
-            {
+            if self.discoveries.iter().any(|discovery| {
+                matches!(&discovery.state, WorkspaceDiscoveryState::Manifest(report)
+                    if root == report.manifest().project_root())
+            }) {
                 continue;
             }
             let (documents, _diagnostics) = recite_config::discover_unscoped_sources(root);

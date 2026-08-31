@@ -1,7 +1,7 @@
 use std::collections::BTreeMap;
 use std::path::PathBuf;
 
-use super::{SavedProjectIndex, WorkspaceDiscoveryState};
+use super::SavedProjectIndex;
 
 #[derive(Clone, Debug)]
 pub(crate) struct ManifestDiagnostics {
@@ -47,29 +47,5 @@ impl SavedProjectIndex {
                 diagnostics,
             },
         );
-    }
-
-    pub(super) fn set_primary_manifest(&mut self) {
-        let primary = self
-            .manifest_diagnostics
-            .values()
-            .next()
-            .map(|entry| (entry.path.clone(), entry.text.clone()));
-        if let Some((path, text)) = primary {
-            self.manifest_path = Some(path);
-            self.manifest_text = text;
-        } else if let Some(report) =
-            self.discoveries
-                .iter()
-                .filter_map(|discovery| match &discovery.state {
-                    WorkspaceDiscoveryState::Manifest(report) => Some(report),
-                    WorkspaceDiscoveryState::Manifestless
-                    | WorkspaceDiscoveryState::Failed { .. } => None,
-                })
-                .min_by_key(|report| report.manifest().manifest_path().to_owned())
-        {
-            self.manifest_path = Some(report.manifest().manifest_path().to_owned());
-            self.manifest_text = report.manifest().source().source_text().to_owned();
-        }
     }
 }
