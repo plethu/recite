@@ -1,3 +1,4 @@
+use lsp_types::Uri;
 use serde_json::json;
 use tempfile::TempDir;
 
@@ -7,7 +8,6 @@ pub(super) fn did_close_schema_alias_clears_exact_uri() {
     let temp = TempDir::new().unwrap_or_else(|error| panic!("tempdir: {error}"));
     let schema = "schema_version = 1\n[producer]\nid = \"dialogue\"\n";
     let schema_path = temp.path().join("standalone.toml");
-    let alias_path = temp.path().join(".").join("standalone.toml");
     write_file(temp.path(), "standalone.toml", schema);
     let harness = Harness::start_with_result(json!({
         "capabilities": {},
@@ -17,7 +17,9 @@ pub(super) fn did_close_schema_alias_clears_exact_uri() {
         }
     }))
     .0;
-    let alias_uri = file_uri(&alias_path);
+    let alias_uri = format!("{}/./standalone.toml", file_uri(temp.path()).as_str())
+        .parse::<Uri>()
+        .unwrap_or_else(|error| panic!("alias URI: {error}"));
     let canonical_uri = file_uri(&schema_path);
 
     harness.did_open(alias_uri.clone(), 7, "not a schema\n");

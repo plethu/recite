@@ -24,13 +24,13 @@ recite-config.workspace = true
 recite-ui.workspace = true
 lsp-server = "0.7.9"
 lsp-types = "0.97.0"
+url = "2.5.8"
 serde.workspace = true
 serde_json.workspace = true
 thiserror.workspace = true
 
 [dev-dependencies]
 tempfile.workspace = true
-url = "2.5.8"
 
 [lints]
 workspace = true

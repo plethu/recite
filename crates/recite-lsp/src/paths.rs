@@ -1,21 +1,42 @@
 use std::path::{Component, Path, PathBuf};
 
 use lsp_types::Uri;
+use url::Url;
+
+#[derive(Debug, Clone, Copy, PartialEq, Eq)]
+pub(crate) enum FileUriError {
+    InvalidUri,
+    NotFileUri,
+    InvalidFilePath,
+    InvalidLspUri,
+}
 
 pub(crate) fn uri_to_file_path(uri: &Uri) -> Option<PathBuf> {
-    let rest = uri.as_str().strip_prefix("file://")?;
-    if !rest.starts_with('/') {
-        return None;
-    }
-
-    percent_decode(rest).map(PathBuf::from)
+    uri_to_file_path_checked(uri).ok()
 }
 
 pub(crate) fn file_path_to_uri(path: &Path) -> Option<Uri> {
-    let path = path.to_str()?;
-    format!("file://{}", percent_encode_path(path))
-        .parse::<Uri>()
-        .ok()
+    file_path_to_uri_checked(path).ok()
+}
+
+pub(crate) fn uri_to_file_path_checked(uri: &Uri) -> Result<PathBuf, FileUriError> {
+    let parsed = Url::parse(uri.as_str()).map_err(|_| FileUriError::InvalidUri)?;
+    if parsed.scheme() != "file" {
+        return Err(FileUriError::NotFileUri);
+    }
+    if !parsed.username().is_empty() || parsed.password().is_some() || parsed.port().is_some() {
+        return Err(FileUriError::InvalidFilePath);
+    }
+    parsed
+        .to_file_path()
+        .map_err(|()| FileUriError::InvalidFilePath)
+}
+
+pub(crate) fn file_path_to_uri_checked(path: &Path) -> Result<Uri, FileUriError> {
+    let url = Url::from_file_path(path).map_err(|()| FileUriError::InvalidFilePath)?;
+    url.as_str()
+        .parse()
+        .map_err(|_| FileUriError::InvalidLspUri)
 }
 
 pub(crate) fn project_relative_path(root: &Path, path: &Path) -> Option<String> {
@@ -37,58 +58,5 @@ fn component_text(component: Component<'_>) -> Option<String> {
         Component::CurDir => Some(".".to_owned()),
         Component::ParentDir => Some("..".to_owned()),
         Component::RootDir | Component::Prefix(_) => None,
-    }
-}
-
-fn percent_decode(value: &str) -> Option<String> {
-    let bytes = value.as_bytes();
-    let mut decoded = Vec::with_capacity(bytes.len());
-    let mut index = 0;
-    while index < bytes.len() {
-        if bytes[index] == b'%' {
-            let high = bytes.get(index + 1).copied()?;
-            let low = bytes.get(index + 2).copied()?;
-            decoded.push((hex_value(high)? << 4) | hex_value(low)?);
-            index += 3;
-        } else {
-            decoded.push(bytes[index]);
-            index += 1;
-        }
-    }
-
-    String::from_utf8(decoded).ok()
-}
-
-fn hex_value(value: u8) -> Option<u8> {
-    match value {
-        b'0'..=b'9' => Some(value - b'0'),
-        b'a'..=b'f' => Some(value - b'a' + 10),
-        b'A'..=b'F' => Some(value - b'A' + 10),
-        _ => None,
-    }
-}
-
-fn percent_encode_path(path: &str) -> String {
-    let mut encoded = String::with_capacity(path.len());
-    for byte in path.bytes() {
-        match byte {
-            b'A'..=b'Z' | b'a'..=b'z' | b'0'..=b'9' | b'/' | b'.' | b'-' | b'_' | b'~' => {
-                encoded.push(char::from(byte))
-            }
-            _ => {
-                encoded.push('%');
-                encoded.push(hex_digit(byte >> 4));
-                encoded.push(hex_digit(byte & 0x0f));
-            }
-        }
-    }
-    encoded
-}
-
-fn hex_digit(value: u8) -> char {
-    match value {
-        0..=9 => char::from(b'0' + value),
-        10..=15 => char::from(b'A' + (value - 10)),
-        _ => '0',
     }
 }
