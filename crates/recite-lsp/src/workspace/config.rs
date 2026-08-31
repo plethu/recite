@@ -1,5 +1,5 @@
 use std::fs;
-use std::path::PathBuf;
+use std::path::{Path, PathBuf};
 
 use lsp_types::{InitializeParams, Uri};
 use serde_json::Value;
@@ -13,6 +13,7 @@ pub(crate) struct WorkspaceConfig {
     pub(super) fallback_roots: Vec<PathBuf>,
     pub(super) roots: Vec<PathBuf>,
     pub(super) schema_path: Option<PathBuf>,
+    pub(super) schema_override_path: Option<PathBuf>,
     pub(super) discovery: Option<ProjectDiscoveryReport>,
     pub(super) discovery_diagnostics: Vec<recite_core::Diagnostic>,
     /// True when a manifest was found but could not be interpreted. This is
@@ -85,30 +86,22 @@ impl WorkspaceConfig {
                     .collect()
             })
             .unwrap_or_else(|| fallback_roots.clone());
-        let schema_path = initialization_schema_path(params.initialization_options.as_ref())
-            .and_then(|schema| resolve_config_path(&schema, roots.first()))
-            .or_else(|| {
-                discovery.as_ref().and_then(|report| {
-                    report
-                        .manifest()
-                        .source()
-                        .manifest()
-                        .project
-                        .schema
-                        .as_deref()
-                        .and_then(|schema| {
-                            resolve_config_path(
-                                schema,
-                                Some(&report.manifest().project_root().to_owned()),
-                            )
-                        })
-                })
-            });
+        let schema_base = discovery
+            .as_ref()
+            .map(|report| report.manifest().project_root().to_owned())
+            .or_else(|| fallback_roots.first().cloned());
+        let schema_override_path =
+            initialization_schema_path(params.initialization_options.as_ref())
+                .and_then(|schema| resolve_config_path(&schema, schema_base.as_deref()));
+        let schema_path = schema_override_path
+            .clone()
+            .or_else(|| discovery.as_ref().and_then(schema_path_for_discovery));
 
         Self {
             fallback_roots: fallback_roots.clone(),
             roots,
             schema_path,
+            schema_override_path,
             discovery,
             discovery_diagnostics,
             discovery_failed,
@@ -128,6 +121,7 @@ impl WorkspaceConfig {
             discovery_start: roots.first().cloned(),
             roots,
             schema_path: None,
+            schema_override_path: None,
             discovery: None,
             discovery_diagnostics: Vec::new(),
             discovery_failed: false,
@@ -137,7 +131,8 @@ impl WorkspaceConfig {
 
     #[cfg(any(test, feature = "bench-support"))]
     pub(crate) fn with_schema_path(mut self, schema_path: PathBuf) -> Self {
-        self.schema_path = Some(schema_path);
+        self.schema_path = Some(schema_path.clone());
+        self.schema_override_path = Some(schema_path);
         self
     }
 }
@@ -175,7 +170,18 @@ fn initialization_schema_path(value: Option<&Value>) -> Option<String> {
     None
 }
 
-fn resolve_config_path(value: &str, base: Option<&PathBuf>) -> Option<PathBuf> {
+pub(super) fn schema_path_for_discovery(report: &ProjectDiscoveryReport) -> Option<PathBuf> {
+    let schema = report
+        .manifest()
+        .source()
+        .manifest()
+        .project
+        .schema
+        .as_deref()?;
+    resolve_config_path(schema, Some(report.manifest().project_root()))
+}
+
+fn resolve_config_path(value: &str, base: Option<&Path>) -> Option<PathBuf> {
     if let Ok(uri) = value.parse::<Uri>()
         && let Some(path) = uri_to_file_path(&uri)
     {

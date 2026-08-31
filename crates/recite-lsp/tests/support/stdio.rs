@@ -63,6 +63,16 @@ impl StdioHarness {
         harness
     }
 
+    pub(crate) fn start_with_schema_option(root: &Path, schema: Option<&str>) -> Self {
+        let initialization_options =
+            schema.map_or_else(|| json!({}), |schema| json!({ "schema": schema }));
+        Self::start(json!({
+            "capabilities": {},
+            "rootUri": file_uri(root),
+            "initializationOptions": initialization_options
+        }))
+    }
+
     pub(crate) fn request(&mut self, method: &str, params: Value) -> u64 {
         let id = self.next_id;
         self.next_id += 1;
@@ -100,15 +110,25 @@ impl StdioHarness {
         }
     }
 
-    pub(crate) fn expect_diagnostics(&self, uri: &str) -> Value {
+    pub(crate) fn barrier(&mut self, uri: &str) -> Vec<Value> {
+        let request_id = self.request(
+            "textDocument/completion",
+            json!({
+                "textDocument": { "uri": uri },
+                "position": { "line": 0, "character": 0 }
+            }),
+        );
+        let mut messages = Vec::new();
         loop {
             let message = self.receive();
-            if message.get("method") != Some(&json!("textDocument/publishDiagnostics")) {
-                continue;
+            if message.get("id") == Some(&json!(request_id)) {
+                assert!(
+                    message.get("error").is_none(),
+                    "barrier request failed: {message}"
+                );
+                return messages;
             }
-            if message["params"]["uri"] == uri {
-                return message["params"].clone();
-            }
+            messages.push(message);
         }
     }
 

@@ -7,6 +7,27 @@ use crate::paths::uri_to_file_path;
 use crate::workspace::{DiagnosticRefresh, DocumentDiagnostics, SnapshotGeneration};
 
 impl SchemaIndex {
+    pub(crate) fn needs_refresh(&self) -> bool {
+        !self.diagnostics.is_empty() || self.active_version.is_some()
+    }
+
+    pub(crate) fn configured_path(&self) -> Option<&std::path::Path> {
+        self.configured_path.as_deref()
+    }
+
+    pub(crate) fn clear_refresh(
+        &self,
+        generation: SnapshotGeneration,
+    ) -> Option<DiagnosticRefresh> {
+        if self.diagnostics.is_empty() {
+            return None;
+        }
+        Some(DiagnosticRefresh::Clear {
+            uri: self.uri.clone()?,
+            generation,
+        })
+    }
+
     pub(crate) fn diagnostics_refresh(
         &self,
         generation: SnapshotGeneration,

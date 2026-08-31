@@ -34,6 +34,7 @@ pub(crate) struct LspWorkspace {
     kernel_open_owners: BTreeMap<DocumentKey, Uri>,
     snapshot: LiveProjectSnapshot,
     schema: SchemaIndex,
+    schema_override_path: Option<std::path::PathBuf>,
     generation: SnapshotGeneration,
     pub(crate) ui_catalog: UiCatalog,
 }
@@ -84,24 +85,33 @@ impl LspWorkspace {
         saved: SavedProjectIndex,
         documents: OpenDocumentStore,
     ) -> Result<(), recite_compiler::AuthoringError> {
-        if let Some(schema) = self.schema.overlay_for_documents(&documents) {
+        self.rebuild_for_documents_with_schema(saved, documents, self.schema.clone())
+    }
+
+    pub(in crate::workspace) fn rebuild_for_documents_with_schema(
+        &mut self,
+        saved: SavedProjectIndex,
+        documents: OpenDocumentStore,
+        schema: SchemaIndex,
+    ) -> Result<(), recite_compiler::AuthoringError> {
+        if let Some(schema) = schema.overlay_for_documents(&documents) {
             return self.rebuild_state_with_schema(saved, documents, schema);
         }
-        if self.schema.has_open_match(&documents) {
+        if schema.has_open_match(&documents) {
             let Some(uri) = documents
                 .documents()
-                .find(|document| self.schema.matches_uri(&document.identity().uri))
+                .find(|document| schema.matches_uri(&document.identity().uri))
                 .map(|document| document.identity().uri.clone())
             else {
-                return self.rebuild_for_documents(saved, documents);
+                return self.rebuild_for_documents_with_schema(saved, documents, schema);
             };
             return self.rebuild_state_with_schema(
                 saved,
                 documents,
-                self.schema.unavailable_overlay(uri),
+                schema.unavailable_overlay(uri),
             );
         }
-        let base = self.schema.base();
+        let base = schema.base();
         self.rebuild_state_with_schema(saved, documents, base)
     }
 }

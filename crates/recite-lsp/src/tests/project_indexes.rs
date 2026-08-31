@@ -83,6 +83,66 @@ pub(super) fn manifest_discovery_uses_shared_source_roots() {
     assert_eq!(paths, ["src/kept.recite"]);
 }
 
+pub(super) fn explicit_relative_schema_uses_project_root_with_multiple_source_roots() {
+    let temp = TempDir::new().unwrap_or_else(|error| panic!("tempdir: {error}"));
+    write_file(
+        temp.path(),
+        "recite.project.toml",
+        "format_version = 1\n\n[discovery]\nsource_roots = [\"dialogue\", \"lore\"]\n",
+    );
+    write_file(temp.path(), "dialogue/scene.recite", ":: scene\n");
+    write_file(temp.path(), "lore/notes.recite", ":: notes\n");
+    write_file(temp.path(), "schema.json", "{\"schema_version\":1}\n");
+
+    let params = serde_json::from_value(json!({
+        "rootUri": file_uri(temp.path()).as_str(),
+        "capabilities": {},
+        "initializationOptions": { "schema": "schema.json" }
+    }))
+    .unwrap_or_else(|error| panic!("initialize params: {error}"));
+    let workspace = test_workspace(WorkspaceConfig::from_initialize_params(&params));
+
+    let paths = workspace
+        .snapshot()
+        .summaries()
+        .iter()
+        .filter_map(|summary| summary.project_relative_path())
+        .collect::<Vec<_>>();
+    assert_eq!(paths, ["dialogue/scene.recite", "lore/notes.recite"]);
+    assert!(workspace.schema().summary().is_some());
+}
+
+pub(super) fn explicit_schema_override_survives_manifest_schema_change() {
+    let temp = TempDir::new().unwrap_or_else(|error| panic!("tempdir: {error}"));
+    write_file(
+        temp.path(),
+        "recite.project.toml",
+        "format_version = 1\n[project]\nschema = \"manifest.json\"\n",
+    );
+    write_file(temp.path(), "manifest.json", "{\"schema_version\":1}\n");
+    write_file(temp.path(), "override.json", "{\"schema_version\":1}\n");
+
+    let params = serde_json::from_value(json!({
+        "rootUri": file_uri(temp.path()).as_str(),
+        "capabilities": {},
+        "initializationOptions": { "schema": "override.json" }
+    }))
+    .unwrap_or_else(|error| panic!("initialize params: {error}"));
+    let mut workspace = test_workspace(WorkspaceConfig::from_initialize_params(&params));
+    let manifest_uri = file_uri(&temp.path().join("recite.project.toml"));
+
+    write_file(
+        temp.path(),
+        "recite.project.toml",
+        "format_version = 1\n[project]\nschema = \"replacement.json\"\n",
+    );
+    write_file(temp.path(), "replacement.json", "{\"schema_version\":2}\n");
+    workspace.refresh_watched_uri(&manifest_uri);
+
+    assert!(workspace.schema().summary().is_some());
+    assert!(workspace.schema_diagnostics().is_none());
+}
+
 pub(super) fn malformed_manifest_does_not_fall_back_to_saved_walker() {
     let temp = TempDir::new().unwrap_or_else(|error| panic!("tempdir: {error}"));
     let manifest = temp.path().join("recite.project.toml");

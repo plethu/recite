@@ -2,6 +2,7 @@ use std::collections::BTreeSet;
 
 use lsp_types::Uri;
 
+use super::schema_index::SchemaIndex;
 use super::{DiagnosticRefresh, LspWorkspace};
 
 impl LspWorkspace {
@@ -47,11 +48,20 @@ impl LspWorkspace {
             .manifest_path()
             .and_then(crate::paths::file_path_to_uri);
         let old_had_diagnostics = !self.saved.diagnostics().is_empty();
+        let old_schema = self.schema.clone();
         let mut saved = self.saved.clone();
-        saved.refresh_manifest();
+        let manifest_schema_path = saved.refresh_manifest();
+        let schema = self
+            .schema_override_path
+            .clone()
+            .map(|path| SchemaIndex::load(Some(path)))
+            .unwrap_or_else(|| SchemaIndex::load(manifest_schema_path));
         let mut documents = self.documents.clone();
         self.refresh_open_identities(&saved, &mut documents);
-        if self.rebuild_for_documents(saved, documents).is_err() {
+        if self
+            .rebuild_for_documents_with_schema(saved, documents, schema)
+            .is_err()
+        {
             return Vec::new();
         }
         let mut refreshes = Vec::new();
@@ -62,6 +72,15 @@ impl LspWorkspace {
                 uri,
                 generation: self.generation,
             });
+        }
+        let schema_target_changed = old_schema.configured_path() != self.schema.configured_path();
+        if schema_target_changed && let Some(refresh) = old_schema.clear_refresh(self.generation) {
+            refreshes.push(refresh);
+        }
+        if (self.schema.needs_refresh() || (!schema_target_changed && old_schema.needs_refresh()))
+            && let Some(refresh) = self.schema.refresh_or_clear(self.generation)
+        {
+            refreshes.push(refresh);
         }
         for uri in old_document_uris {
             if self.saved.document_by_uri(&uri).is_none() && self.documents.document(&uri).is_none()

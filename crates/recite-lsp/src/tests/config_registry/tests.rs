@@ -109,6 +109,16 @@ fn manifest_discovery_uses_shared_source_roots() {
 }
 
 #[test]
+fn explicit_relative_schema_uses_project_root_with_multiple_source_roots() {
+    super::project_indexes::explicit_relative_schema_uses_project_root_with_multiple_source_roots();
+}
+
+#[test]
+fn explicit_schema_override_survives_manifest_schema_change() {
+    super::project_indexes::explicit_schema_override_survives_manifest_schema_change();
+}
+
+#[test]
 fn malformed_manifest_does_not_fall_back_to_saved_walker() {
     super::project_indexes::malformed_manifest_does_not_fall_back_to_saved_walker();
 }

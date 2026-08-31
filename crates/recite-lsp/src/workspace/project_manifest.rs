@@ -7,11 +7,15 @@ impl SavedProjectIndex {
     /// Re-read the manifest and replace the saved project state atomically.
     /// A failed manifest leaves no saved documents; callers may still layer
     /// open editor buffers on top of the diagnostic-only state.
-    pub(crate) fn refresh_manifest(&mut self) {
-        let Some(start) = self.discovery_start.clone() else {
-            return;
-        };
-        self.apply_discovery(recite_config::discover_project(start));
+    pub(crate) fn refresh_manifest(&mut self) -> Option<PathBuf> {
+        let start = self.discovery_start.clone()?;
+        let result = recite_config::discover_project(start);
+        let schema_path = result
+            .as_ref()
+            .ok()
+            .and_then(super::super::config::schema_path_for_discovery);
+        self.apply_discovery(result);
+        schema_path
     }
 
     fn apply_discovery(

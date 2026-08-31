@@ -18,6 +18,7 @@ impl LspWorkspace {
     ) -> Result<Self, recite_compiler::AuthoringError> {
         let saved = SavedProjectIndex::discover(&config);
         let schema = SchemaIndex::load(config.schema_path);
+        let schema_override_path = config.schema_override_path.clone();
         let documents = OpenDocumentStore::default();
         let kernel = schema
             .schema()
@@ -31,6 +32,7 @@ impl LspWorkspace {
             kernel_open_owners: BTreeMap::new(),
             snapshot: LiveProjectSnapshot::empty(generation),
             schema,
+            schema_override_path,
             generation,
             ui_catalog,
         };
