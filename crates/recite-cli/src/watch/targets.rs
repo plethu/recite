@@ -21,6 +21,8 @@ pub enum TargetPathError {
     OutsideProject,
     #[error("target path names a directory")]
     Directory,
+    #[error("target path contains a non-directory component")]
+    NonDirectoryComponent,
     #[error("target path contains a symlink component")]
     SymlinkComponent,
     #[error("could not inspect target path: {0}")]
@@ -137,6 +139,9 @@ fn validate_target(value: &str) -> Result<PathBuf, TargetPathError> {
     let has_drive_prefix = value.len() >= 2
         && value.as_bytes()[0].is_ascii_alphabetic()
         && value.as_bytes()[1] == b':';
+    if value.starts_with('/') {
+        return Err(TargetPathError::Absolute);
+    }
     #[cfg(not(windows))]
     if path.is_absolute() {
         return Err(TargetPathError::Absolute);
@@ -180,12 +185,16 @@ pub(super) fn reject_symlink_components(root: &Path, output: &Path) -> Result<()
     let relative = output
         .strip_prefix(root)
         .map_err(|_| TargetPathError::OutsideProject)?;
+    let components = relative.components().collect::<Vec<_>>();
     let mut current = root.to_owned();
-    for component in relative.components() {
-        current.push(component);
+    for (index, component) in components.iter().enumerate() {
+        current.push(component.as_os_str());
         match fs::symlink_metadata(&current) {
             Ok(metadata) if metadata.file_type().is_symlink() => {
                 return Err(TargetPathError::SymlinkComponent);
+            }
+            Ok(metadata) if index + 1 < components.len() && !metadata.is_dir() => {
+                return Err(TargetPathError::NonDirectoryComponent);
             }
             Ok(_) => {}
             Err(error) if error.kind() == std::io::ErrorKind::NotFound => {}

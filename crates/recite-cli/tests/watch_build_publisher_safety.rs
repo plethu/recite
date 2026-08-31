@@ -112,8 +112,17 @@ fn blocked_output_parent_is_rejected_without_writing() {
         fs::write(temp.path().join("compiled/blocked"), b"not a directory"),
         "blocking file",
     );
-    assert!(ProjectBuildPublisher::new(&request).is_err());
+    let error = match ProjectBuildPublisher::new(&request) {
+        Ok(_) => panic!("regular-file intermediate component was accepted"),
+        Err(error) => error,
+    };
+    assert!(matches!(
+        error,
+        ProjectBuildPublisherError::Targets(TargetMapError::InvalidTarget { reason, .. })
+            if reason == TargetPathError::NonDirectoryComponent
+    ));
     assert!(!temp.path().join("compiled/blocked/out.recitec").exists());
+    assert!(markers(temp.path()).is_empty());
 }
 
 #[test]
