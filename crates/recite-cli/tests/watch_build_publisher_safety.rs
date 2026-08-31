@@ -6,7 +6,10 @@ use recite_cli::watch::{
     ProjectBuildPreparation, ProjectBuildPublisher, ProjectBuildPublisherError,
     ProjectBuildRecoveryReason, ProjectBuildRequest, TargetMapError, TargetPathError,
 };
-use recite_compiler::{BuildCandidate, BuildControl, BuildPublisher, PublishAbortReason};
+use recite_compiler::{
+    BuildCandidate, BuildControl, BuildPublisher, PublishAbortReason, PublishFailure,
+    PublishFailureReason, PublishOutcome,
+};
 use tempfile::TempDir;
 
 fn require<T, E: Display>(result: Result<T, E>, context: &str) -> T {
@@ -42,6 +45,13 @@ fn request(root: &Path, assets: &str) -> ProjectBuildRequest {
         }
         _ => panic!("unknown preparation outcome"),
     }
+}
+
+fn blocked_request(root: &Path) -> ProjectBuildRequest {
+    request(
+        root,
+        "[[scenes]]\nid = \"scene.start\"\nasset = \"compiled/blocked/out.recitec\"\nblock = \"start\"\nparticipants = [\"hazel\"]\n",
+    )
 }
 
 fn markers(root: &Path) -> Vec<std::path::PathBuf> {
@@ -103,15 +113,8 @@ fn marker_collision_retries_and_abort_cleans_new_marker() {
 #[test]
 fn blocked_output_parent_is_rejected_without_writing() {
     let temp = require(TempDir::new(), "tempdir");
-    let request = request(
-        temp.path(),
-        "[[scenes]]\nid = \"scene.start\"\nasset = \"compiled/blocked/out.recitec\"\nblock = \"start\"\nparticipants = [\"hazel\"]\n",
-    );
-    require(fs::create_dir_all(temp.path().join("compiled")), "compiled");
-    require(
-        fs::write(temp.path().join("compiled/blocked"), b"not a directory"),
-        "blocking file",
-    );
+    let request = blocked_request(temp.path());
+    write(temp.path(), "compiled/blocked", "not a directory");
     let error = match ProjectBuildPublisher::new(&request) {
         Ok(_) => panic!("regular-file intermediate component was accepted"),
         Err(error) => error,
@@ -126,9 +129,102 @@ fn blocked_output_parent_is_rejected_without_writing() {
 }
 
 #[test]
+fn prepare_rejects_regular_file_intermediate_created_after_new() {
+    let temp = require(TempDir::new(), "tempdir");
+    let request = blocked_request(temp.path());
+    let mut publisher = require(ProjectBuildPublisher::new(&request), "publisher");
+    let target = request.targets()[0].target().clone();
+    write(temp.path(), "compiled/blocked", "not a directory");
+
+    let candidate = BuildCandidate::new(target.clone(), [1]);
+    let failure = match publisher.prepare(
+        request.build_request(),
+        std::slice::from_ref(&candidate),
+        &BuildControl::new(),
+    ) {
+        Ok(_) => panic!("regular-file intermediate component was accepted during prepare"),
+        Err(failure) => failure,
+    };
+    assert!(matches!(
+        failure,
+        PublishFailure::Preparation {
+            target: failed,
+            reason: PublishFailureReason::Rejected,
+        } if failed == target
+    ));
+    assert!(publisher.recovery().is_empty());
+    assert!(!temp.path().join("compiled/blocked/out.recitec").exists());
+    assert!(markers(temp.path()).is_empty());
+}
+
+#[test]
+fn commit_rejects_regular_file_intermediate_created_after_staging() {
+    let temp = require(TempDir::new(), "tempdir");
+    let request = blocked_request(temp.path());
+    let mut publisher = require(ProjectBuildPublisher::new(&request), "publisher");
+    let target = request.targets()[0].target().clone();
+    let candidate = BuildCandidate::new(target.clone(), [2]);
+    let prepared = require(
+        publisher.prepare(
+            request.build_request(),
+            std::slice::from_ref(&candidate),
+            &BuildControl::new(),
+        ),
+        "prepare",
+    );
+    let blocked = temp.path().join("compiled/blocked");
+    let moved = temp.path().join("compiled/blocked.saved");
+    require(fs::rename(&blocked, &moved), "move staged parent");
+    require(fs::write(&blocked, b"not a directory"), "blocking file");
+
+    let outcome = publisher.commit(prepared);
+    assert!(matches!(
+        outcome,
+        PublishOutcome::Partial {
+            committed,
+            failed,
+            remaining,
+            recovery,
+        } if committed.is_empty()
+            && failed == target
+            && remaining.is_empty()
+            && recovery.targets() == std::slice::from_ref(&target)
+    ));
+    assert_eq!(publisher.recovery().len(), 1);
+    assert_eq!(
+        publisher.recovery()[0].reason(),
+        ProjectBuildRecoveryReason::PublicationUncommitted
+    );
+    assert!(!publisher.recovery()[0].marker().exists());
+    assert_eq!(
+        fs::read_dir(&moved).expect("moved staged parent").count(),
+        1
+    );
+    assert!(!temp.path().join("compiled/blocked/out.recitec").exists());
+    assert!(markers(temp.path()).is_empty());
+}
+
+#[test]
 fn target_path_failures_keep_their_exact_typed_category() {
     for (asset, expected) in [
         ("/tmp/outside.recitec", TargetPathError::Absolute),
+        (
+            "//server/share/outside.recitec",
+            TargetPathError::PlatformAmbiguous,
+        ),
+        (
+            r"\\?\C:\outside.recitec",
+            TargetPathError::PlatformAmbiguous,
+        ),
+        (
+            r"\\.\PIPE\outside.recitec",
+            TargetPathError::PlatformAmbiguous,
+        ),
+        (r"\tmp\outside.recitec", TargetPathError::PlatformAmbiguous),
+        (
+            r"dialogue\outside.recitec",
+            TargetPathError::PlatformAmbiguous,
+        ),
         ("../outside.recitec", TargetPathError::Parent),
         ("C:/outside.recitec", TargetPathError::PlatformAmbiguous),
     ] {
@@ -136,7 +232,7 @@ fn target_path_failures_keep_their_exact_typed_category() {
         let request = request(
             temp.path(),
             &format!(
-                "[[scenes]]\nid = \"scene.start\"\nasset = \"{asset}\"\nblock = \"start\"\nparticipants = [\"hazel\"]\n"
+                "[[scenes]]\nid = \"scene.start\"\nasset = '{asset}'\nblock = \"start\"\nparticipants = [\"hazel\"]\n"
             ),
         );
         let error = match ProjectBuildPublisher::new(&request) {

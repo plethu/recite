@@ -139,6 +139,9 @@ fn validate_target(value: &str) -> Result<PathBuf, TargetPathError> {
     let has_drive_prefix = value.len() >= 2
         && value.as_bytes()[0].is_ascii_alphabetic()
         && value.as_bytes()[1] == b':';
+    if value.contains('\\') || value.starts_with("//") || has_drive_prefix {
+        return Err(TargetPathError::PlatformAmbiguous);
+    }
     if value.starts_with('/') {
         return Err(TargetPathError::Absolute);
     }
@@ -149,9 +152,6 @@ fn validate_target(value: &str) -> Result<PathBuf, TargetPathError> {
     #[cfg(windows)]
     if path.is_absolute() && !has_drive_prefix {
         return Err(TargetPathError::Absolute);
-    }
-    if value.contains('\\') || value.starts_with("//") || has_drive_prefix {
-        return Err(TargetPathError::PlatformAmbiguous);
     }
     if value
         .split('/')
