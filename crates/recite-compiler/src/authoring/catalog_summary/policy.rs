@@ -33,8 +33,10 @@ impl CatalogVariant {
 
 /// Caller-supplied locale and variant policy for authoring fallback.
 ///
-/// Locale truncation, cross-locale fallback, and variant selection are not
-/// inferred here. The ordered fields are the complete policy input.
+/// The requested locale's BCP-47 parent chain is derived first (for example,
+/// `pt-BR` then `pt`), followed by the explicitly configured default and
+/// fallback locales. Variant selection remains explicit; no host state is
+/// consulted.
 #[derive(Clone, Debug, Eq, PartialEq)]
 #[non_exhaustive]
 pub struct CatalogResolutionPolicy {
@@ -108,7 +110,7 @@ impl CatalogResolutionPolicy {
         Ok(self)
     }
 
-    /// Append a named variant to the candidate sequence.
+    /// Insert a named variant immediately before the `Base` candidate when present.
     pub fn with_variant(mut self, variant: impl Into<String>) -> Result<Self, CatalogSummaryError> {
         let variant = CatalogVariant::named(variant)?;
         if self.variants.contains(&variant) {
