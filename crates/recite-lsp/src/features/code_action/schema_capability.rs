@@ -1,7 +1,7 @@
+mod collect;
+
 use lsp_types::{CodeAction, CodeActionKind, CodeActionOrCommand};
-use recite_compiler::{
-    SchemaAction, SchemaCapability, SchemaCapabilityUnavailableReason, SchemaSummary,
-};
+use recite_compiler::{SchemaAction, SchemaCapabilityUnavailableReason, SchemaSummary};
 use recite_ui::{MsgId, UiArg, UiArgs, UiCatalog};
 
 /// Project compiler capability descriptors into standard protocol actions.
@@ -14,101 +14,7 @@ pub(crate) fn actions(
     editable_source_open: bool,
     catalog: &UiCatalog,
 ) -> Vec<CodeActionOrCommand> {
-    let mut declared = Vec::new();
-    add_capability(
-        &mut declared,
-        "schema",
-        summary.capability(),
-        summary.ownership().producer(),
-    );
-    for declaration in summary.types() {
-        add_capability(
-            &mut declared,
-            &format!("type:{}", declaration.name()),
-            declaration.capability(),
-            declaration.provenance().ownership().producer(),
-        );
-    }
-    for declaration in summary.registries() {
-        add_capability(
-            &mut declared,
-            &format!("registry:{}", declaration.name()),
-            declaration.capability(),
-            declaration.provenance().ownership().producer(),
-        );
-    }
-    for declaration in summary.speakers() {
-        add_capability(
-            &mut declared,
-            &format!("speaker:{}", declaration.name()),
-            declaration.capability(),
-            declaration.provenance().ownership().producer(),
-        );
-    }
-    for declaration in summary.conditions() {
-        add_capability(
-            &mut declared,
-            &format!("condition:{}", declaration.name()),
-            declaration.capability(),
-            declaration.provenance().ownership().producer(),
-        );
-    }
-    for declaration in summary.availability_reasons() {
-        add_capability(
-            &mut declared,
-            &format!("reason:{}", declaration.id()),
-            declaration.capability(),
-            declaration.provenance().ownership().producer(),
-        );
-    }
-    for declaration in summary.effects() {
-        add_capability(
-            &mut declared,
-            &format!("effect:{}", declaration.name()),
-            declaration.capability(),
-            declaration.provenance().ownership().producer(),
-        );
-    }
-    for declaration in summary.metadata_domains() {
-        add_capability(
-            &mut declared,
-            &format!("metadata-domain:{}", declaration.name()),
-            declaration.capability(),
-            declaration.provenance().ownership().producer(),
-        );
-    }
-    for declaration in summary.metadata() {
-        add_capability(
-            &mut declared,
-            &format!("metadata:{}", declaration.name()),
-            declaration.capability(),
-            declaration.provenance().ownership().producer(),
-        );
-    }
-    for declaration in summary.projection_queries() {
-        add_capability(
-            &mut declared,
-            &format!("projection-query:{}", declaration.name()),
-            declaration.capability(),
-            declaration.provenance().ownership().producer(),
-        );
-    }
-    for declaration in summary.presentation_projectors() {
-        add_capability(
-            &mut declared,
-            &format!("projector:{}", declaration.name()),
-            declaration.capability(),
-            declaration.provenance().ownership().producer(),
-        );
-    }
-    for declaration in summary.markup() {
-        add_capability(
-            &mut declared,
-            &format!("markup:{}", declaration.name()),
-            declaration.capability(),
-            declaration.provenance().ownership().producer(),
-        );
-    }
+    let declared = collect::collect(summary);
 
     declared
         .iter()
@@ -124,11 +30,19 @@ pub(crate) fn actions(
                         ("action".to_owned(), UiArg::from(action_name(action))),
                         (
                             "producer".to_owned(),
-                            UiArg::from(producer_name(action, declared.producer)),
+                            UiArg::from(producer_name(action, declared.producer, declared.origin)),
                         ),
                         (
-                            "declaration".to_owned(),
-                            UiArg::from(declared.context.clone()),
+                            "producer_state".to_owned(),
+                            UiArg::from(producer_state(action, declared.producer, declared.origin)),
+                        ),
+                        (
+                            "declaration_kind".to_owned(),
+                            UiArg::from(declared.context.kind),
+                        ),
+                        (
+                            "declaration_name".to_owned(),
+                            UiArg::from(declared.context.name.clone().unwrap_or_default()),
                         ),
                     ]),
                 ),
@@ -148,33 +62,6 @@ pub(crate) fn actions(
         .collect()
 }
 
-struct DeclaredAction<'a> {
-    context: String,
-    action: &'a SchemaAction,
-    producer: Option<&'a recite_core::ProducerIdentity>,
-}
-
-fn add_capability<'a>(
-    declared: &mut Vec<DeclaredAction<'a>>,
-    context: &str,
-    capability: &'a SchemaCapability,
-    producer: Option<&'a recite_core::ProducerIdentity>,
-) {
-    for action in capability.actions() {
-        if declared
-            .iter()
-            .any(|candidate| candidate.context == context && candidate.action == action)
-        {
-            continue;
-        }
-        declared.push(DeclaredAction {
-            context: context.to_owned(),
-            action,
-            producer,
-        });
-    }
-}
-
 fn action_name(action: &SchemaAction) -> &'static str {
     match action {
         SchemaAction::OpenSourceDeclaration => "open-source",
@@ -190,16 +77,37 @@ fn action_name(action: &SchemaAction) -> &'static str {
 fn producer_name(
     action: &SchemaAction,
     declaration_producer: Option<&recite_core::ProducerIdentity>,
+    declaration_origin: Option<&recite_core::ProducerOrigin>,
 ) -> String {
     match action {
         SchemaAction::InvokeProducer { producer }
         | SchemaAction::RetryProducerFailure { producer } => {
             format!("{}/{}", producer.kind(), producer.id())
         }
-        _ => declaration_producer.map_or_else(
-            || "none".to_owned(),
-            |producer| format!("{}/{}", producer.kind(), producer.id()),
-        ),
+        _ => declaration_origin
+            .map(|origin| format!("{}/{}", origin.kind, origin.id))
+            .or_else(|| {
+                declaration_producer
+                    .map(|producer| format!("{}/{}", producer.kind(), producer.id()))
+            })
+            .unwrap_or_default(),
+    }
+}
+
+fn producer_state(
+    action: &SchemaAction,
+    declaration_producer: Option<&recite_core::ProducerIdentity>,
+    declaration_origin: Option<&recite_core::ProducerOrigin>,
+) -> &'static str {
+    if matches!(
+        action,
+        SchemaAction::InvokeProducer { .. } | SchemaAction::RetryProducerFailure { .. }
+    ) || declaration_producer.is_some()
+        || declaration_origin.is_some()
+    {
+        "present"
+    } else {
+        "absent"
     }
 }
 

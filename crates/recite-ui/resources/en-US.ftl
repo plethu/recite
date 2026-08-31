@@ -302,7 +302,10 @@ lsp-hover-enum-value = Enum value '{$word}' in '{$name}'.
 lsp-hover-domain-value = Metadata domain value '{$word}' in '{$name}'{$context}.{$detail}
 lsp-hover-produced-by =  Produced by {$kind} `{$id}`{$label}.
 lsp-hover-schema-producer =  Schema producer {$kind} '{$id}'.
-lsp-hover-schema-freshness =  Content fingerprint {$fingerprint}; {$inputs} producer input fingerprints{$scope}.
+lsp-hover-schema-freshness =  Content fingerprint { $fingerprint_state ->
+    [present] {$fingerprint}
+   *[absent] none {$fingerprint}
+}; {$inputs} producer input fingerprints{$scope}.
 lsp-hover-schema-freshness-state =  Freshness { $state ->
     [fresh] fresh
     [stale] stale
@@ -324,7 +327,7 @@ lsp-hover-schema-freshness-unavailable =  Freshness unavailable: { $reason ->
 lsp-hover-schema-freshness-status = { $status ->
     [fresh] fresh
     [stale] stale
-    [none] none
+    [absent] none
    *[other] unavailable
 }
 lsp-hover-schema-scoped-fingerprints =  (scoped: {$fingerprints})
@@ -351,7 +354,20 @@ lsp-code-action-insert-all-missing-ids = Insert all missing stable IDs in file
 lsp-code-action-create-block-stub = Create block stub `{$block}`
 lsp-code-action-add-condition = Add condition `{$name}` to schema
 lsp-code-action-add-effect = Add effect `{$name}` to schema
-lsp-code-action-schema-action = Schema capability ({$declaration}): { $action ->
+lsp-code-action-schema-action = Schema capability ({ $declaration_kind ->
+    [type] type
+    [registry] registry
+    [speaker] speaker
+    [condition] condition
+    [reason] reason
+    [effect] effect
+    [metadata-domain] metadata domain
+    [metadata] metadata
+    [projection-query] projection query
+    [projector] projector
+    [markup] markup
+   *[schema] schema
+} {$declaration_name}): { $action ->
     [open-source] open source declaration
     [edit-standalone] edit standalone source
     [invoke] invoke producer
@@ -359,7 +375,10 @@ lsp-code-action-schema-action = Schema capability ({$declaration}): { $action ->
     [read-only] read-only generated schema
     [unavailable] unavailable schema action
    *[other] schema action
-} ({$producer})
+} ({ $producer_state ->
+    [present] {$producer}
+   *[absent] no producer {$producer}
+})
 lsp-code-action-schema-disabled = Schema capability unavailable: { $reason ->
     [source-location] source location is not available
     [standalone-source-closed] standalone source is not open with a version

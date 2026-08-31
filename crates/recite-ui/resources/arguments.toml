@@ -313,6 +313,7 @@ kind = "string"
 id = "string"
 [arguments."lsp-hover-schema-freshness"]
 fingerprint = "string"
+fingerprint_state = "string"
 inputs = "integer"
 scope = "string"
 [arguments."lsp-hover-schema-freshness-state"]
@@ -330,7 +331,9 @@ fingerprints = "string"
 [arguments."lsp-code-action-schema-action"]
 action = "string"
 producer = "string"
-declaration = "string"
+producer_state = "string"
+declaration_kind = "string"
+declaration_name = "string"
 [arguments."lsp-code-action-schema-disabled"]
 reason = "string"
 [arguments."lsp-completion-metadata-key-with-domain"]

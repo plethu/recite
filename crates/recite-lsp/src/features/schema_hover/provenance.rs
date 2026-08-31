@@ -48,9 +48,15 @@ pub(crate) fn hover_detail(
             &UiArgs::from([
                 (
                     "fingerprint".to_owned(),
-                    UiArg::from(
-                        content_fingerprint.map_or_else(|| "none".to_owned(), format_fingerprint),
-                    ),
+                    UiArg::from(content_fingerprint.map_or_else(String::new, format_fingerprint)),
+                ),
+                (
+                    "fingerprint_state".to_owned(),
+                    UiArg::from(if content_fingerprint.is_some() {
+                        "present"
+                    } else {
+                        "absent"
+                    }),
                 ),
                 ("inputs".to_owned(), UiArg::from(producer_fingerprints)),
                 ("scope".to_owned(), UiArg::from(scope)),
@@ -127,7 +133,7 @@ fn scope_status(
     catalog: &UiCatalog,
 ) -> String {
     if scopes.is_empty() {
-        return localized_status(catalog, "none");
+        return localized_status(catalog, "absent");
     }
     scopes
         .iter()
