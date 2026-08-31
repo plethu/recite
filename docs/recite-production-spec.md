@@ -3570,10 +3570,10 @@ The runtime should prefer shared immutable compiled data plus compact session st
 CI should run a fast, non-comparative benchmark smoke suite on every pull
 request and a fuller benchmark suite on release branches or scheduled jobs. The
 pull-request smoke suite must use the existing `crates/recite-benchmarks`
-Criterion targets with `RECITE_BENCH_SCALES=tiny` and explicit compiler/runtime
-bench target commands. It proves that the tiny compiler and runtime benchmarks
-build and execute quickly; it does not compare timings or enforce regression
-thresholds.
+Criterion targets with `RECITE_BENCH_SCALES=tiny` and explicit
+compiler/runtime/preview bench target commands. It proves that the tiny
+compiler, runtime, and preview benchmarks build and execute quickly; it does
+not compare timings or enforce regression thresholds.
 
 The current pull-request and main-branch workflow owns only that fast smoke
 check. Issue #109 owns the named release/scheduled benchmark baseline and fuller

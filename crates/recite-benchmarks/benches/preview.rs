@@ -13,6 +13,7 @@ fn preview_benchmarks(criterion: &mut Criterion) {
         bench_snapshot_encode(criterion, &fixture);
         bench_restore(criterion, &fixture);
         bench_retained_trace_shape(criterion, &fixture);
+        bench_evidence_report(criterion, &fixture);
         bench_restore_parity(criterion, &fixture);
     }
 }
@@ -91,10 +92,19 @@ fn bench_retained_trace_shape(criterion: &mut Criterion, fixture: &PreviewFixtur
                         must(fixture.project.collect_to_end(&mut preview));
                         preview
                     },
-                    |preview| black_box(must(fixture.project.retention_report(&preview))),
+                    |preview| black_box(fixture.project.retained_trace_shape(&preview)),
                     BatchSize::SmallInput,
                 );
             },
+        );
+}
+
+fn bench_evidence_report(criterion: &mut Criterion, fixture: &PreviewFixture) {
+    criterion
+        .benchmark_group("preview/evidence_report")
+        .bench_function(
+            BenchmarkId::from_parameter(fixture.fixture.as_str()),
+            |bencher| bencher.iter(|| black_box(must(fixture.project.evidence_report()))),
         );
 }
 
