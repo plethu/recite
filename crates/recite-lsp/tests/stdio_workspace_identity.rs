@@ -46,7 +46,7 @@ fn stdio_workspace_folders_keep_manifest_and_fallback_saved_documents() {
         json!({ "textDocument": { "uri": fallback_uri.clone() } }),
     );
     let messages = harness.barrier(&fallback_uri);
-    let published = published_diagnostics(&messages, &fallback_uri);
+    let published = published_diagnostics(&messages, &fallback_uri, None);
     assert!(
         !published["diagnostics"]
             .as_array()
@@ -94,7 +94,7 @@ fn stdio_excluded_open_file_is_diagnosable_without_cross_project_diagnostics() {
         }),
     );
     let messages = harness.barrier(&excluded_uri);
-    let isolated = published_diagnostics(&messages, &excluded_uri);
+    let isolated = published_diagnostics(&messages, &excluded_uri, Some(1));
     assert_eq!(
         isolated["diagnostics"]
             .as_array()
@@ -112,7 +112,7 @@ fn stdio_excluded_open_file_is_diagnosable_without_cross_project_diagnostics() {
         }),
     );
     let messages = harness.barrier(&excluded_uri);
-    let malformed = published_diagnostics(&messages, &excluded_uri);
+    let malformed = published_diagnostics(&messages, &excluded_uri, Some(2));
     assert!(
         !malformed["diagnostics"]
             .as_array()
@@ -136,22 +136,32 @@ fn workspace_folders(paths: &[&Path]) -> Vec<Value> {
         .collect()
 }
 
-fn published_diagnostics(messages: &[Value], uri: &str) -> Value {
-    let matches = messages
-        .iter()
-        .filter(|message| {
-            message["method"] == "textDocument/publishDiagnostics"
-                && message["params"]["uri"] == uri
-        })
-        .map(|message| message["params"].clone())
-        .collect::<Vec<_>>();
+fn published_diagnostics(messages: &[Value], uri: &str, version: Option<i32>) -> Value {
     assert_eq!(
-        matches.len(),
+        messages.len(),
         1,
-        "expected one diagnostics notification for {uri}, got {messages:?}"
+        "expected one notification for {uri}, got {messages:?}"
     );
-    matches
-        .into_iter()
-        .next()
-        .unwrap_or_else(|| panic!("diagnostics notification disappeared"))
+    let message = messages
+        .first()
+        .unwrap_or_else(|| panic!("notification disappeared"));
+    assert_eq!(
+        message["method"], "textDocument/publishDiagnostics",
+        "unexpected notification for {uri}: {message}"
+    );
+    let params = &message["params"];
+    assert_eq!(
+        params["uri"], uri,
+        "diagnostics notification has the wrong URI: {message}"
+    );
+    assert_eq!(
+        params["version"],
+        version.map_or(Value::Null, Value::from),
+        "diagnostics notification has the wrong version: {message}"
+    );
+    assert!(
+        params["diagnostics"].is_array(),
+        "diagnostics notification has no diagnostics array: {message}"
+    );
+    params.clone()
 }
