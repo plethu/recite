@@ -52,6 +52,4 @@ pub enum SchemaSummaryBuildError {
         expected: Box<SchemaFreshnessSnapshotIdentity>,
         summarized: Box<SchemaFreshnessSnapshotIdentity>,
     },
-    #[error("failed producer result launch snapshot does not match the summarized schema")]
-    FailedResultSnapshotMismatch,
 }

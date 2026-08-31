@@ -15,7 +15,7 @@ fn generated_schema() -> ProjectSchema {
 }
 
 #[test]
-fn supported_evidence_allows_invocation_and_only_current_failures_allow_retry() {
+fn supported_evidence_allows_invocation_and_bare_failures_do_not_allow_retry() {
     let schema = generated_schema();
     let producer = schema
         .producer_metadata
@@ -57,9 +57,11 @@ fn supported_evidence_allows_invocation_and_only_current_failures_allow_retry() 
     let failed_summary = SchemaSummary::from_schema_with_evidence(&schema, Some(&failed))
         .expect("matching failed evidence");
     assert!(
-        failed_summary
+        !failed_summary
             .capability()
-            .supports(&SchemaAction::RetryProducerFailure { producer })
+            .actions()
+            .iter()
+            .any(|action| matches!(action, SchemaAction::RetryProducerFailure { .. }))
     );
 }
 

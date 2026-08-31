@@ -70,20 +70,16 @@ pub(super) fn capability(
                     {
                         producer_actions.push(ProducerActionDescriptor::new(request));
                     }
-                    if evidence
-                        .and_then(SchemaSummaryEvidence::current_failure)
-                        .filter(|failure| failure.retry_guidance().allows_retry())
-                        .is_some()
+                    if let (Some(failed_result), Some(launch)) = (
+                        evidence.and_then(SchemaSummaryEvidence::failed_result),
+                        producer_launch,
+                    ) && let Ok(request) =
+                        failed_result.retry_request_with_launch(launch.clone())
                     {
                         actions.push(SchemaAction::RetryProducerFailure {
                             producer: producer.clone(),
                         });
-                        if let Some(failed_result) =
-                            evidence.and_then(SchemaSummaryEvidence::failed_result)
-                            && let Ok(request) = failed_result.retry_request()
-                        {
-                            producer_actions.push(ProducerActionDescriptor::new(request));
-                        }
+                        producer_actions.push(ProducerActionDescriptor::new(request));
                     }
                 }
                 Some(ProducerCapabilityStatus::Unavailable) => {

@@ -12,21 +12,19 @@ pub struct ProducerFingerprintScopes {
 }
 
 impl ProducerFingerprintScopes {
-    #[must_use]
     pub fn new(
         manifest: impl IntoIterator<Item = ProducerFingerprint>,
         registries: impl IntoIterator<Item = (String, Vec<ProducerFingerprint>)>,
         metadata_domains: impl IntoIterator<Item = (String, Vec<ProducerFingerprint>)>,
-    ) -> Self {
-        Self {
-            manifest: sorted(manifest),
-            registries: sorted_map(registries),
-            metadata_domains: sorted_map(metadata_domains),
-        }
+    ) -> Result<Self, ProducerFingerprintScopesError> {
+        Ok(Self {
+            manifest: sorted_manifest(manifest)?,
+            registries: sorted_registries(registries)?,
+            metadata_domains: sorted_metadata_domains(metadata_domains)?,
+        })
     }
 
-    #[must_use]
-    pub fn from_schema(schema: &ProjectSchema) -> Self {
+    pub fn from_schema(schema: &ProjectSchema) -> Result<Self, ProducerFingerprintScopesError> {
         let manifest = schema
             .producer_metadata
             .as_ref()
@@ -95,7 +93,7 @@ impl ProducerLaunchSnapshot {
             .ok_or(ProducerLaunchSnapshotError::MissingProducerIdentity)?;
         Ok(Self::new(
             producer,
-            ProducerFingerprintScopes::from_schema(schema),
+            ProducerFingerprintScopes::from_schema(schema)?,
         ))
     }
 
@@ -110,26 +108,101 @@ impl ProducerLaunchSnapshot {
     }
 }
 
-#[derive(Clone, Copy, Debug, Eq, PartialEq, thiserror::Error)]
+#[derive(Clone, Debug, Eq, PartialEq, thiserror::Error)]
 #[non_exhaustive]
 pub enum ProducerLaunchSnapshotError {
     #[error("schema has no producer metadata")]
     MissingProducerMetadata,
     #[error("producer metadata has no producer identity")]
     MissingProducerIdentity,
+    #[error("producer input fingerprints are invalid: {0}")]
+    InvalidInputFingerprints(#[from] ProducerFingerprintScopesError),
 }
 
-fn sorted(items: impl IntoIterator<Item = ProducerFingerprint>) -> Vec<ProducerFingerprint> {
+#[derive(Clone, Debug, Eq, PartialEq, thiserror::Error)]
+#[non_exhaustive]
+pub enum ProducerFingerprintScopesError {
+    #[error("manifest repeats fingerprint key '{kind}:{id}'")]
+    DuplicateManifestKey { kind: String, id: String },
+    #[error("registry scope name '{name}' is repeated")]
+    DuplicateRegistryName { name: String },
+    #[error("registry scope '{name}' repeats fingerprint key '{kind}:{id}'")]
+    DuplicateRegistryKey {
+        name: String,
+        kind: String,
+        id: String,
+    },
+    #[error("metadata-domain scope name '{name}' is repeated")]
+    DuplicateMetadataDomainName { name: String },
+    #[error("metadata-domain scope '{name}' repeats fingerprint key '{kind}:{id}'")]
+    DuplicateMetadataDomainKey {
+        name: String,
+        kind: String,
+        id: String,
+    },
+}
+
+fn sorted_manifest(
+    items: impl IntoIterator<Item = ProducerFingerprint>,
+) -> Result<Vec<ProducerFingerprint>, ProducerFingerprintScopesError> {
     let mut items = items.into_iter().collect::<Vec<_>>();
     items.sort();
-    items
+    for pair in items.windows(2) {
+        if pair[0].kind == pair[1].kind && pair[0].id == pair[1].id {
+            return Err(ProducerFingerprintScopesError::DuplicateManifestKey {
+                kind: pair[0].kind.clone(),
+                id: pair[0].id.clone(),
+            });
+        }
+    }
+    Ok(items)
 }
 
-fn sorted_map(
+fn sorted_registries(
     items: impl IntoIterator<Item = (String, Vec<ProducerFingerprint>)>,
-) -> BTreeMap<String, Vec<ProducerFingerprint>> {
-    items
-        .into_iter()
-        .map(|(name, fingerprints)| (name, sorted(fingerprints)))
-        .collect()
+) -> Result<BTreeMap<String, Vec<ProducerFingerprint>>, ProducerFingerprintScopesError> {
+    sorted_named(
+        items,
+        |name| ProducerFingerprintScopesError::DuplicateRegistryName { name },
+        |name, fingerprint| ProducerFingerprintScopesError::DuplicateRegistryKey {
+            name,
+            kind: fingerprint.kind.clone(),
+            id: fingerprint.id.clone(),
+        },
+    )
+}
+
+fn sorted_metadata_domains(
+    items: impl IntoIterator<Item = (String, Vec<ProducerFingerprint>)>,
+) -> Result<BTreeMap<String, Vec<ProducerFingerprint>>, ProducerFingerprintScopesError> {
+    sorted_named(
+        items,
+        |name| ProducerFingerprintScopesError::DuplicateMetadataDomainName { name },
+        |name, fingerprint| ProducerFingerprintScopesError::DuplicateMetadataDomainKey {
+            name,
+            kind: fingerprint.kind.clone(),
+            id: fingerprint.id.clone(),
+        },
+    )
+}
+
+fn sorted_named(
+    items: impl IntoIterator<Item = (String, Vec<ProducerFingerprint>)>,
+    duplicate_name: impl Fn(String) -> ProducerFingerprintScopesError,
+    duplicate_key: impl Fn(String, &ProducerFingerprint) -> ProducerFingerprintScopesError,
+) -> Result<BTreeMap<String, Vec<ProducerFingerprint>>, ProducerFingerprintScopesError> {
+    let mut result = BTreeMap::new();
+    for (name, mut fingerprints) in items {
+        if result.contains_key(&name) {
+            return Err(duplicate_name(name));
+        }
+        fingerprints.sort();
+        for pair in fingerprints.windows(2) {
+            if pair[0].kind == pair[1].kind && pair[0].id == pair[1].id {
+                return Err(duplicate_key(name, &pair[0]));
+            }
+        }
+        result.insert(name, fingerprints);
+    }
+    Ok(result)
 }

@@ -17,4 +17,7 @@ pub use result::{
     ProducerActionResult, ProducerActionResultError, ProducerActionResultOutcome,
     ProducerActionStatus,
 };
-pub use scopes::{ProducerFingerprintScopes, ProducerLaunchSnapshot, ProducerLaunchSnapshotError};
+pub use scopes::{
+    ProducerFingerprintScopes, ProducerFingerprintScopesError, ProducerLaunchSnapshot,
+    ProducerLaunchSnapshotError,
+};

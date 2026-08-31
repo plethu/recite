@@ -1,7 +1,7 @@
-use recite_core::ProducerIdentity;
+use recite_core::{ProducerIdentity, ProjectSchema};
 
 use super::super::evidence::ProducerFailureEvidence;
-use super::evidence::ProducerActionOutputEvidence;
+use super::evidence::{ProducerActionOutputEvidence, ProducerRetryGuidance};
 use super::identity::ProducerActionRequestIdentity;
 use super::request::{ProducerActionRequest, ProducerActionRequestError};
 use super::scopes::ProducerLaunchSnapshot;
@@ -45,8 +45,10 @@ impl ProducerActionResult {
     /// output and schema fingerprints may legitimately be new.
     pub fn succeeded(
         request: &ProducerActionRequest,
-        evidence: ProducerActionOutputEvidence,
+        schema: &ProjectSchema,
     ) -> Result<Self, ProducerActionResultError> {
+        let evidence = ProducerActionOutputEvidence::from_schema(schema)
+            .map_err(ProducerActionResultError::InvalidOutputEvidence)?;
         validate_producer(request, evidence.producer())?;
         if evidence.input_fingerprints() != request.launch_snapshot().input_fingerprints() {
             return Err(ProducerActionResultError::InputFingerprintMismatch);
@@ -150,13 +152,31 @@ impl ProducerActionResult {
 
     /// Construct a retry only from this exact failed result.
     pub fn retry_request(&self) -> Result<ProducerActionRequest, ProducerActionRequestError> {
+        if self.failure().is_some_and(|failure| {
+            matches!(
+                failure.retry_guidance(),
+                ProducerRetryGuidance::RetryAfterCorrection
+            )
+        }) {
+            return Err(ProducerActionRequestError::RetryRequiresCurrentLaunch);
+        }
+        self.retry_request_with_launch(self.request.launch_snapshot().clone())
+    }
+
+    /// Construct a retry using this exact failed result and a current launch
+    /// snapshot. The originating request identity remains the failed result's
+    /// identity even when corrected inputs change the retry request identity.
+    pub fn retry_request_with_launch(
+        &self,
+        launch: ProducerLaunchSnapshot,
+    ) -> Result<ProducerActionRequest, ProducerActionRequestError> {
         let failure = self
             .failure()
             .ok_or(ProducerActionRequestError::NotFailedResult)?;
         ProducerActionRequest::retry_from_failure(
             self.request.producer().clone(),
             self.request.expected().clone(),
-            self.request.launch_snapshot().clone(),
+            launch,
             failure.clone(),
             self.request.identity().clone(),
         )
@@ -186,6 +206,8 @@ pub enum ProducerActionResultError {
     },
     #[error("producer result input fingerprints do not match the request precondition")]
     InputFingerprintMismatch,
+    #[error("reloaded producer output evidence is invalid: {0}")]
+    InvalidOutputEvidence(#[source] super::evidence::ProducerActionEvidenceError),
     #[error("stale producer result has no changed launch inputs")]
     StaleWithoutChangedInputs,
 }

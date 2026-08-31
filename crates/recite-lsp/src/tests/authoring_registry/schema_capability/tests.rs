@@ -100,7 +100,7 @@ pub(super) fn schema_capability_projection_keeps_producer_actions_visible_and_di
             .any(|action| action.title.contains("invoke producer"))
     );
     assert!(
-        actions
+        !actions
             .iter()
             .any(|action| action.title.contains("retry producer failure"))
     );

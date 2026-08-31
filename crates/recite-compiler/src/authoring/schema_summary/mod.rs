@@ -32,8 +32,8 @@ pub use producer::{
     ProducerActionOperation, ProducerActionOutputEvidence, ProducerActionRequest,
     ProducerActionRequestError, ProducerActionRequestIdentity, ProducerActionResult,
     ProducerActionResultError, ProducerActionResultOutcome, ProducerActionStatus,
-    ProducerFingerprintScopes, ProducerLaunchSnapshot, ProducerLaunchSnapshotError,
-    ProducerRetryGuidance,
+    ProducerFingerprintScopes, ProducerFingerprintScopesError, ProducerLaunchSnapshot,
+    ProducerLaunchSnapshotError, ProducerRetryGuidance,
 };
 pub use projections::{PresentationProjectorSummary, ProjectionQueryFunctionSummary};
 

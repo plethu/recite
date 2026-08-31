@@ -4,7 +4,6 @@ use super::errors::FreshnessSnapshotSide;
 use super::errors::SchemaSummaryBuildError;
 use super::evidence::SchemaSummaryEvidence;
 use super::freshness::SchemaFreshnessSnapshotIdentity;
-use super::producer::ProducerLaunchSnapshot;
 
 pub(super) fn validate_evidence(
     schema: &ProjectSchema,
@@ -33,13 +32,6 @@ pub(super) fn validate_evidence(
                 expected: Box::new(freshness.expected_identity().clone()),
                 summarized: Box::new(summarized),
             });
-        }
-    }
-    if let Some(failed_result) = evidence.failed_result() {
-        let current = ProducerLaunchSnapshot::from_schema(schema)
-            .map_err(|_| SchemaSummaryBuildError::EvidenceWithoutProducer)?;
-        if failed_result.request().launch_snapshot() != &current {
-            return Err(SchemaSummaryBuildError::FailedResultSnapshotMismatch);
         }
     }
     Ok(())

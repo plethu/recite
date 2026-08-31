@@ -16,8 +16,8 @@ pub enum ProducerActionOperation {
     },
 }
 
-/// A deterministic, data-only producer request bound to expected output and
-/// the complete caller-supplied launch snapshot.
+/// A deterministic, data-only producer request bound to previous output and
+/// an independently captured current launch snapshot.
 #[derive(Clone, Debug, Eq, PartialEq)]
 #[non_exhaustive]
 pub struct ProducerActionRequest {
@@ -103,9 +103,6 @@ impl ProducerActionRequest {
                 actual: expected.producer().clone(),
             });
         }
-        if expected.input_fingerprints() != launch.input_fingerprints() {
-            return Err(ProducerActionRequestError::ExpectedInputMismatch);
-        }
         Ok(())
     }
 
@@ -160,12 +157,12 @@ pub enum ProducerActionRequestError {
         expected: ProducerIdentity,
         actual: ProducerIdentity,
     },
-    #[error("producer expected evidence does not match launch inputs")]
-    ExpectedInputMismatch,
     #[error("producer retry requests must be constructed from a validated failed result")]
     RetryRequiresFailedResult,
     #[error("producer retry requires a failed result")]
     NotFailedResult,
+    #[error("producer retry after correction requires a current launch snapshot")]
+    RetryRequiresCurrentLaunch,
     #[error("producer retry failure does not match the request producer")]
     RetryFailureIdentityMismatch {
         expected: ProducerIdentity,

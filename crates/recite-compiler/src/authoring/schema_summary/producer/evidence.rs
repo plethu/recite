@@ -1,6 +1,8 @@
 use recite_core::{ContentFingerprint, ProducerIdentity, ProjectSchema, SchemaFingerprint};
 
-use super::scopes::{ProducerFingerprintScopes, ProducerLaunchSnapshot};
+use super::scopes::{
+    ProducerFingerprintScopes, ProducerFingerprintScopesError, ProducerLaunchSnapshot,
+};
 
 /// Guidance attached to a producer failure for a caller deciding whether to
 /// offer a retry action.
@@ -24,8 +26,7 @@ impl ProducerRetryGuidance {
 
 /// Canonical evidence from a reloaded producer output.
 ///
-/// This value can only be constructed from a canonical [`ProjectSchema`] or
-/// through the fallible constructor that checks its schema/content invariant.
+/// This value can only be constructed from a canonical [`ProjectSchema`].
 /// It contains no schema model, host resource, URI, or execution handle.
 #[derive(Clone, Debug, Eq, PartialEq)]
 #[non_exhaustive]
@@ -38,35 +39,6 @@ pub struct ProducerActionOutputEvidence {
 }
 
 impl ProducerActionOutputEvidence {
-    /// Construct canonical output evidence after validating that the schema
-    /// fingerprint is the fingerprint of the supplied content fingerprint.
-    pub fn new(
-        producer: ProducerIdentity,
-        schema_fingerprint: SchemaFingerprint,
-        content_fingerprint: ContentFingerprint,
-        input_fingerprints: ProducerFingerprintScopes,
-        output_fingerprint: Option<ContentFingerprint>,
-    ) -> Result<Self, ProducerActionEvidenceError> {
-        match &schema_fingerprint {
-            SchemaFingerprint::NoSchema => {
-                return Err(ProducerActionEvidenceError::NoSchemaFingerprint);
-            }
-            SchemaFingerprint::Fingerprint(schema_content)
-                if schema_content != &content_fingerprint =>
-            {
-                return Err(ProducerActionEvidenceError::SchemaContentMismatch);
-            }
-            SchemaFingerprint::Fingerprint(_) => {}
-        }
-        Ok(Self {
-            producer,
-            schema_fingerprint,
-            content_fingerprint,
-            input_fingerprints,
-            output_fingerprint,
-        })
-    }
-
     /// Extract canonical output evidence from a reloaded project schema.
     pub fn from_schema(schema: &ProjectSchema) -> Result<Self, ProducerActionEvidenceError> {
         let metadata = schema
@@ -77,13 +49,15 @@ impl ProducerActionOutputEvidence {
             .producer
             .clone()
             .ok_or(ProducerActionEvidenceError::MissingProducerIdentity)?;
-        Self::new(
+        let input_fingerprints = ProducerFingerprintScopes::from_schema(schema)
+            .map_err(ProducerActionEvidenceError::InvalidInputFingerprints)?;
+        Ok(Self {
             producer,
-            schema.canonical_fingerprint(),
-            schema.canonical_content_fingerprint(),
-            ProducerFingerprintScopes::from_schema(schema),
-            metadata.content_fingerprint.clone(),
-        )
+            schema_fingerprint: schema.canonical_fingerprint(),
+            content_fingerprint: schema.canonical_content_fingerprint(),
+            input_fingerprints,
+            output_fingerprint: metadata.content_fingerprint.clone(),
+        })
     }
 
     #[must_use]
@@ -120,16 +94,14 @@ impl ProducerActionOutputEvidence {
 /// Compatibility-friendly name for the canonical producer output evidence.
 pub type ProducerActionEvidence = ProducerActionOutputEvidence;
 
-/// Why canonical producer action evidence could not be constructed.
-#[derive(Clone, Copy, Debug, Eq, PartialEq, thiserror::Error)]
+/// Why canonical producer action evidence could not be extracted.
+#[derive(Clone, Debug, Eq, PartialEq, thiserror::Error)]
 #[non_exhaustive]
 pub enum ProducerActionEvidenceError {
     #[error("schema has no producer metadata")]
     MissingProducerMetadata,
     #[error("producer metadata has no producer identity")]
     MissingProducerIdentity,
-    #[error("producer output must carry a schema fingerprint")]
-    NoSchemaFingerprint,
-    #[error("producer output schema and content fingerprints do not match")]
-    SchemaContentMismatch,
+    #[error("producer output input fingerprints are invalid: {0}")]
+    InvalidInputFingerprints(#[source] ProducerFingerprintScopesError),
 }
