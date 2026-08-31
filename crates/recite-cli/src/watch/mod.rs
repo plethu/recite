@@ -13,6 +13,7 @@ mod build;
 mod commit;
 mod engine;
 mod events;
+mod freshness;
 mod inputs;
 mod preparation;
 mod publisher;
@@ -112,6 +113,9 @@ fn report_build_result(
                 "{}",
                 messages.format(MsgId::WatchBuildSucceeded, [("count", asset_count)])
             )?;
+        }
+        Ok(BuildStatus::Stale { .. }) => {
+            writeln!(stderr, "{}", messages.text(MsgId::WatchBuildFailedWaiting))?;
         }
         Ok(BuildStatus::Diagnostics) => {
             writeln!(stderr, "{}", messages.text(MsgId::WatchBuildFailedWaiting))?;

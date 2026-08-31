@@ -116,14 +116,14 @@ impl TargetMap {
             physical_targets.push((physical, target.clone()));
             targets.insert(target, output);
         }
-        if targets.is_empty() {
+        let first_target = targets.keys().next().cloned().or_else(|| {
+            // This value is used only to classify impossible publisher failures;
+            // the coordinator handles an empty candidate set before publishing.
+            BuildTarget::new("empty-project").ok()
+        });
+        let Some(first_target) = first_target else {
             return Err(TargetMapError::NoTargets);
-        }
-        let first_target = targets
-            .keys()
-            .next()
-            .cloned()
-            .ok_or(TargetMapError::NoTargets)?;
+        };
         Ok(Self {
             root,
             first_target,

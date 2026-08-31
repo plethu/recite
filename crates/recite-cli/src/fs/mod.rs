@@ -15,6 +15,6 @@ pub(crate) use inputs::{
     read_compile_inputs_from_files, validate_inputs,
 };
 pub(crate) use paths::{display_path, reject_output_input_alias, resolve_project_path};
-pub(crate) use project::{check_fresh, validate_project};
+pub(crate) use project::{check_fresh, validate_project, validate_project_asset_freshness};
 pub(crate) use schema::{load_optional_schema, load_schema, load_schema_for_freshness};
 pub(crate) use write::write_staged;

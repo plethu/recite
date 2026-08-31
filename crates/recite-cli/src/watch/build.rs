@@ -12,10 +12,16 @@ use crate::diagnostics::report_diagnostics;
 use crate::error::CliError;
 use crate::i18n::Messages;
 
+#[cfg(test)]
+mod tests;
+
 /// The presentation boundary's compact view of one coordinated build.
 #[derive(Debug, Eq, PartialEq)]
 pub(super) enum BuildStatus {
     Fresh {
+        asset_count: usize,
+    },
+    Stale {
         asset_count: usize,
     },
     Diagnostics,
@@ -41,6 +47,19 @@ pub(super) fn build_once_with_control(
     messages: &Messages,
     control: &BuildControl,
 ) -> Result<BuildStatus, CliError> {
+    build_once_with_post_publish_hook(state, stderr, messages, control, || {})
+}
+
+pub(super) fn build_once_with_post_publish_hook<F>(
+    state: &mut WatchState,
+    stderr: &mut dyn Write,
+    messages: &Messages,
+    control: &BuildControl,
+    post_publish: F,
+) -> Result<BuildStatus, CliError>
+where
+    F: FnOnce(),
+{
     let generation = state.next_build_generation()?;
     let discovery = match discover_project(&state.project_root) {
         Ok(discovery) => discovery,
@@ -72,11 +91,6 @@ pub(super) fn build_once_with_control(
         }
     };
 
-    if request.targets().is_empty() {
-        report_diagnostics(stderr, messages, request.diagnostics().iter())?;
-        return Ok(BuildStatus::Fresh { asset_count: 0 });
-    }
-
     let mut engine = ProjectBuildEngine::new(&request);
     let mut publisher = ProjectBuildPublisher::new(&request).map_err(|error| CliError::Watch {
         message: error.to_string(),
@@ -95,6 +109,17 @@ pub(super) fn build_once_with_control(
 
     report_diagnostics(stderr, messages, result.diagnostics().iter())?;
     if result.status() == BuildTerminalStatus::Succeeded {
+        post_publish();
+        let freshness = super::freshness::assess_current_freshness(&request)?;
+        report_diagnostics(stderr, messages, freshness.diagnostics.iter())?;
+        if freshness.stale {
+            return Ok(BuildStatus::Stale {
+                asset_count: result.candidates().len(),
+            });
+        }
+        if !freshness.diagnostics.is_empty() {
+            return Ok(BuildStatus::Diagnostics);
+        }
         return Ok(BuildStatus::Fresh {
             asset_count: result.candidates().len(),
         });
