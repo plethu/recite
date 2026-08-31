@@ -23,6 +23,7 @@ pub(super) const fn key(id: super::MsgId) -> Option<&'static str> {
         super::MsgId::LspHoverSchemaProducer => Some("lsp-hover-schema-producer"),
         super::MsgId::LspHoverSchemaFreshness => Some("lsp-hover-schema-freshness"),
         super::MsgId::LspHoverSchemaFreshnessState => Some("lsp-hover-schema-freshness-state"),
+        super::MsgId::LspHoverSchemaFreshnessStatus => Some("lsp-hover-schema-freshness-status"),
         super::MsgId::LspHoverSchemaFreshnessUnavailable => {
             Some("lsp-hover-schema-freshness-unavailable")
         }

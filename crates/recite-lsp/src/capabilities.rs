@@ -31,6 +31,7 @@ pub(crate) fn initialize_result(params: &InitializeParams) -> InitializeResult {
                 code_action_kinds: Some(vec![
                     CodeActionKind::QUICKFIX,
                     CodeActionKind::SOURCE_FIX_ALL,
+                    CodeActionKind::REFACTOR,
                 ]),
                 resolve_provider: Some(false),
                 work_done_progress_options: WorkDoneProgressOptions::default(),

@@ -30,13 +30,13 @@ pub(super) fn initialize_advertises_missing_id_code_actions() {
         options.code_action_kinds,
         Some(vec![
             CodeActionKind::QUICKFIX,
-            CodeActionKind::SOURCE_FIX_ALL
+            CodeActionKind::SOURCE_FIX_ALL,
+            CodeActionKind::REFACTOR,
         ])
     );
 
     harness.finish();
 }
-
 pub(super) fn quick_fix_inserts_marker_only_line_and_choice_ids() {
     let mut harness = Harness::start();
     let source_uri = uri("file:///workspace/dialogue/code-action.recite");

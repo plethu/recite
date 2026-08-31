@@ -11,6 +11,7 @@ use super::support::{Harness, file_uri, full_change, test_workspace, uri, write_
 use crate::diagnostics::publish_diagnostics;
 use crate::workspace::WorkspaceConfig;
 
+mod fixtures;
 mod schema;
 
 pub(super) fn did_open_publishes_source_diagnostics_with_stable_shape() {
@@ -167,47 +168,11 @@ pub(super) fn did_open_publishes_schema_less_semantic_diagnostics() {
 }
 
 pub(super) fn shared_language_pressure_fixture_publishes_no_diagnostics() {
-    let harness = Harness::start();
-    let source_uri = uri("file:///workspace/fixtures/recite/valid/language_pressure.recite");
-    let source = include_str!("../../../../fixtures/recite/valid/language_pressure.recite");
-
-    harness.did_open(source_uri, 1, source);
-    let published = harness.recv_publish_diagnostics();
-
-    assert!(published.diagnostics.is_empty(), "{published:?}");
-    harness.finish();
+    fixtures::shared_language_pressure_fixture_publishes_no_diagnostics();
 }
 
 pub(super) fn shared_language_pressure_fixture_projects_marker_diagnostics() {
-    let harness = Harness::start();
-    let source_uri =
-        uri("file:///workspace/fixtures/recite/invalid/parser_marker_leading_prose.recite");
-    let source =
-        include_str!("../../../../fixtures/recite/invalid/parser_marker_leading_prose.recite");
-
-    harness.did_open(source_uri, 1, source);
-    let published = harness.recv_publish_diagnostics();
-
-    assert_eq!(
-        diagnostic_codes(&published.diagnostics),
-        ["RECITE_PARSE011", "RECITE_PARSE013"]
-    );
-    assert_eq!(
-        published.diagnostics[0].range,
-        Range {
-            start: Position::new(2, 11),
-            end: Position::new(2, 13),
-        }
-    );
-    assert_eq!(
-        published.diagnostics[1].range,
-        Range {
-            start: Position::new(3, 11),
-            end: Position::new(3, 13),
-        }
-    );
-
-    harness.finish();
+    fixtures::shared_language_pressure_fixture_projects_marker_diagnostics();
 }
 
 pub(super) fn did_open_publishes_schema_backed_semantic_diagnostics() {

@@ -23,6 +23,7 @@ macro_rules! lsp_message_ids {
         | MsgId::LspHoverSchemaProducer
         | MsgId::LspHoverSchemaFreshness
         | MsgId::LspHoverSchemaFreshnessState
+        | MsgId::LspHoverSchemaFreshnessStatus
         | MsgId::LspHoverSchemaFreshnessUnavailable
         | MsgId::LspHoverSchemaScopedFingerprints
         | MsgId::LspCompletionAvailabilityReason

@@ -86,11 +86,11 @@ fn freshness_state_detail(schema: &SchemaSummary, catalog: &UiCatalog) -> String
                     ),
                     (
                         "registries".to_owned(),
-                        UiArg::from(scope_status(&comparison.registries)),
+                        UiArg::from(scope_status(&comparison.registries, catalog)),
                     ),
                     (
                         "metadata_domains".to_owned(),
-                        UiArg::from(scope_status(&comparison.metadata_domains)),
+                        UiArg::from(scope_status(&comparison.metadata_domains, catalog)),
                     ),
                 ]),
             )
@@ -101,10 +101,7 @@ fn freshness_state_detail(schema: &SchemaSummary, catalog: &UiCatalog) -> String
         ),
         _ => catalog.format_args(
             MsgId::LspHoverSchemaFreshnessUnavailable,
-            &UiArgs::from([(
-                "reason".to_owned(),
-                UiArg::from("freshness state is not supported by this client"),
-            )]),
+            &UiArgs::from([("reason".to_owned(), UiArg::from("other"))]),
         ),
     }
 }
@@ -125,26 +122,41 @@ fn producer_status(freshness: &ProducerFreshness) -> &'static str {
     }
 }
 
-fn scope_status(scopes: &std::collections::BTreeMap<String, ProducerFreshness>) -> String {
+fn scope_status(
+    scopes: &std::collections::BTreeMap<String, ProducerFreshness>,
+    catalog: &UiCatalog,
+) -> String {
     if scopes.is_empty() {
-        return "none".to_owned();
+        return localized_status(catalog, "none");
     }
     scopes
         .iter()
-        .map(|(name, freshness)| format!("{name}:{}", producer_status(freshness)))
+        .map(|(name, freshness)| {
+            format!(
+                "{name}:{}",
+                localized_status(catalog, producer_status(freshness))
+            )
+        })
         .collect::<Vec<_>>()
         .join(", ")
+}
+
+fn localized_status(catalog: &UiCatalog, status: &str) -> String {
+    catalog.format_args(
+        MsgId::LspHoverSchemaFreshnessStatus,
+        &UiArgs::from([("status".to_owned(), UiArg::from(status))]),
+    )
 }
 
 fn freshness_reason(reason: recite_compiler::SchemaFreshnessUnavailableReason) -> &'static str {
     match reason {
         recite_compiler::SchemaFreshnessUnavailableReason::NoComparisonSnapshot => {
-            "no comparison snapshot"
+            "no-comparison-snapshot"
         }
         recite_compiler::SchemaFreshnessUnavailableReason::NoProducerMetadata => {
-            "no producer metadata"
+            "no-producer-metadata"
         }
-        _ => "freshness reason is not supported by this client",
+        _ => "other",
     }
 }
 

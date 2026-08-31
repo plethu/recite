@@ -323,11 +323,14 @@ registries = "string"
 metadata_domains = "string"
 [arguments."lsp-hover-schema-freshness-unavailable"]
 reason = "string"
+[arguments."lsp-hover-schema-freshness-status"]
+status = "string"
 [arguments."lsp-hover-schema-scoped-fingerprints"]
 fingerprints = "string"
 [arguments."lsp-code-action-schema-action"]
 action = "string"
 producer = "string"
+declaration = "string"
 [arguments."lsp-code-action-schema-disabled"]
 reason = "string"
 [arguments."lsp-completion-metadata-key-with-domain"]

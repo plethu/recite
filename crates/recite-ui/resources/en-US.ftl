@@ -303,8 +303,30 @@ lsp-hover-domain-value = Metadata domain value '{$word}' in '{$name}'{$context}.
 lsp-hover-produced-by =  Produced by {$kind} `{$id}`{$label}.
 lsp-hover-schema-producer =  Schema producer {$kind} '{$id}'.
 lsp-hover-schema-freshness =  Content fingerprint {$fingerprint}; {$inputs} producer input fingerprints{$scope}.
-lsp-hover-schema-freshness-state =  Freshness {$state}: content {$content}; manifest {$manifest}; registries {$registries}; metadata domains {$metadata_domains}.
-lsp-hover-schema-freshness-unavailable =  Freshness unavailable: {$reason}.
+lsp-hover-schema-freshness-state =  Freshness { $state ->
+    [fresh] fresh
+    [stale] stale
+   *[other] unavailable
+}: content { $content ->
+    [fresh] fresh
+    [stale] stale
+   *[other] unavailable
+}; manifest { $manifest ->
+    [fresh] fresh
+    [stale] stale
+   *[other] unavailable
+}; registries {$registries}; metadata domains {$metadata_domains}.
+lsp-hover-schema-freshness-unavailable =  Freshness unavailable: { $reason ->
+    [no-comparison-snapshot] no comparison snapshot
+    [no-producer-metadata] no producer metadata
+   *[other] unavailable for this client
+}.
+lsp-hover-schema-freshness-status = { $status ->
+    [fresh] fresh
+    [stale] stale
+    [none] none
+   *[other] unavailable
+}
 lsp-hover-schema-scoped-fingerprints =  (scoped: {$fingerprints})
 lsp-completion-availability-reason = parameterless availability reason
 lsp-completion-block = Recite block
@@ -329,6 +351,23 @@ lsp-code-action-insert-all-missing-ids = Insert all missing stable IDs in file
 lsp-code-action-create-block-stub = Create block stub `{$block}`
 lsp-code-action-add-condition = Add condition `{$name}` to schema
 lsp-code-action-add-effect = Add effect `{$name}` to schema
-lsp-code-action-schema-action = Schema capability: {$action} ({$producer})
-lsp-code-action-schema-disabled = Schema capability unavailable: {$reason}.
+lsp-code-action-schema-action = Schema capability ({$declaration}): { $action ->
+    [open-source] open source declaration
+    [edit-standalone] edit standalone source
+    [invoke] invoke producer
+    [retry] retry producer failure
+    [read-only] read-only generated schema
+    [unavailable] unavailable schema action
+   *[other] schema action
+} ({$producer})
+lsp-code-action-schema-disabled = Schema capability unavailable: { $reason ->
+    [source-location] source location is not available
+    [standalone-source-closed] standalone source is not open with a version
+    [standalone-edit] standalone source edit is not available
+    [producer-contract] producer execution contract is not available
+    [generated-read-only] generated schema is read-only
+    [unknown-source-owner] source owner is unknown
+    [producer-capability] producer capability is unavailable
+   *[other] schema action is not supported by this client
+}.
 lsp-warning-ui-config = UI configuration could not be loaded (code {$code}): {$detail}; using embedded en-US UI text.
