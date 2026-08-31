@@ -13,6 +13,8 @@ item = "string"
 path = "string"
 [arguments."watch-build-succeeded"]
 count = "integer"
+[arguments."watch-build-duration"]
+duration = "string"
 [arguments."watch-build-failed"]
 error = "string"
 [arguments."watch-build-failed-partial"]

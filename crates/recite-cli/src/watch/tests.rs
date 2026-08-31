@@ -4,6 +4,7 @@ use std::time::Duration;
 
 use notify::event::{AccessKind, AccessMode};
 use notify::{Event, EventKind};
+use recite_compiler::BuildTelemetry;
 use recite_core::decode_compiled_dialogue_messagepack;
 use tempfile::TempDir;
 
@@ -73,7 +74,13 @@ fn build_once_writes_manifest_assets_from_project_sources() {
     let mut state = WatchState::new(temp.path().to_owned());
     let status = build_once(&mut state, &mut stderr).expect("build");
 
-    assert_eq!(status, BuildStatus::Fresh { asset_count: 1 });
+    assert_eq!(
+        status,
+        BuildStatus::Fresh {
+            asset_count: 1,
+            telemetry: BuildTelemetry::none(),
+        }
+    );
     let asset = fs::read(temp.path().join("compiled/dialogue.recitec")).expect("asset");
     let asset = decode_compiled_dialogue_messagepack(&asset).expect("decode asset");
     assert_eq!(asset.header.asset_id.as_str(), "compiled/dialogue.recitec");
@@ -111,7 +118,13 @@ participants = ["hazel"]
     let mut state = WatchState::new(temp.path().to_owned());
     let status = build_once(&mut state, &mut stderr).expect("build");
 
-    assert_eq!(status, BuildStatus::Fresh { asset_count: 1 });
+    assert_eq!(
+        status,
+        BuildStatus::Fresh {
+            asset_count: 1,
+            telemetry: BuildTelemetry::none(),
+        }
+    );
     assert!(temp.path().join("compiled/shared.recitec").is_file());
 }
 
@@ -135,7 +148,13 @@ fn initial_build_resolves_project_relative_cross_file_targets() {
     let mut state = WatchState::new(aliased_root);
     let status = build_once(&mut state, &mut stderr).expect("build");
 
-    assert_eq!(status, BuildStatus::Fresh { asset_count: 1 });
+    assert_eq!(
+        status,
+        BuildStatus::Fresh {
+            asset_count: 1,
+            telemetry: BuildTelemetry::none(),
+        }
+    );
     assert!(temp.path().join("compiled/dialogue.recitec").is_file());
     assert_eq!(String::from_utf8(stderr).expect("stderr"), "");
 }
@@ -160,7 +179,12 @@ fn invalid_source_reports_diagnostics_without_overwriting_existing_asset() {
     let mut stderr = Vec::new();
     let status = build_once(&mut state, &mut stderr).expect("invalid build");
 
-    assert_eq!(status, BuildStatus::Diagnostics);
+    assert_eq!(
+        status,
+        BuildStatus::Diagnostics {
+            telemetry: BuildTelemetry::none(),
+        }
+    );
     assert_eq!(fs::read(asset).expect("asset unchanged"), original);
     let stderr = String::from_utf8(stderr).expect("stderr");
     assert!(stderr.contains("RECITE_"));
@@ -183,7 +207,12 @@ fn invalid_schema_reports_diagnostics_without_overwriting_existing_asset() {
     let mut stderr = Vec::new();
     let status = build_once(&mut state, &mut stderr).expect("invalid schema build");
 
-    assert_eq!(status, BuildStatus::Diagnostics);
+    assert_eq!(
+        status,
+        BuildStatus::Diagnostics {
+            telemetry: BuildTelemetry::none(),
+        }
+    );
     assert_eq!(fs::read(asset).expect("asset unchanged"), original);
     let stderr = String::from_utf8(stderr).expect("stderr");
     assert!(stderr.contains("RECITE_SCHEMA"));
@@ -217,14 +246,19 @@ fn fixing_invalid_source_allows_later_rebuild_to_recover() {
     let mut stderr = Vec::new();
     assert_eq!(
         build_once(&mut state, &mut stderr).expect("invalid build"),
-        BuildStatus::Diagnostics
+        BuildStatus::Diagnostics {
+            telemetry: BuildTelemetry::none(),
+        }
     );
 
     write_file(temp.path(), "dialogue/main.recite", valid_source());
     let mut stderr = Vec::new();
     assert_eq!(
         build_once(&mut state, &mut stderr).expect("fixed build"),
-        BuildStatus::Fresh { asset_count: 1 }
+        BuildStatus::Fresh {
+            asset_count: 1,
+            telemetry: BuildTelemetry::none(),
+        }
     );
     assert!(temp.path().join("compiled/dialogue.recitec").is_file());
 }

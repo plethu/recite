@@ -13,6 +13,17 @@ use crate::i18n::{Messages, MsgId};
 
 const DEBOUNCE: Duration = Duration::from_millis(250);
 
+// The watch host owns monotonic timing for build telemetry. Keeping the clock
+// at this boundary prevents wall-clock values from entering compiler state and
+// leaves build tests free to inject exact readings.
+#[allow(
+    clippy::disallowed_methods,
+    reason = "host watch timing stays outside the deterministic compiler contract"
+)]
+pub(super) fn monotonic_now() -> Instant {
+    Instant::now()
+}
+
 // Instant::now is intentional here: this is CLI file-watcher debounce logic,
 // not deterministic dialogue runtime code. The absolute deadline is tracked so
 // irrelevant events (generated output writes) consume the window without

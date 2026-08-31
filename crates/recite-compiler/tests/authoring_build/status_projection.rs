@@ -2,9 +2,10 @@ use super::support::*;
 use recite_compiler::{
     BuildAuthority, BuildCancellation, BuildCheck, BuildControl, BuildEngine, BuildFailure,
     BuildGeneration, BuildInput, BuildInputAuthority, BuildInputPolicy, BuildLifecycle,
-    BuildRequest, BuildStatusProjection, BuildTerminalStatus, BuildTransition,
+    BuildRequest, BuildStatusProjection, BuildTelemetry, BuildTerminalStatus, BuildTransition,
     PreparedPublishIdentity, PublishOutcome, RecoveryNeeded,
 };
+use std::time::Duration;
 
 #[test]
 fn projects_every_lifecycle_state_with_stable_fields() {
@@ -97,7 +98,8 @@ fn projects_every_lifecycle_state_with_stable_fields() {
         &recite_compiler::BuildControl::new(),
         &mut FakeEngine::new([candidate("dialogue/start.recitec", b"compiled")]),
         &mut FakePublisher::new(),
-    );
+    )
+    .with_telemetry(BuildTelemetry::from_duration(Duration::from_millis(23)));
     checking
         .transition(BuildTransition::PublishCompleted {
             result: result.clone(),
@@ -111,6 +113,10 @@ fn projects_every_lifecycle_state_with_stable_fields() {
     assert_eq!(
         succeeded_projection.terminal_status(),
         Some(BuildTerminalStatus::Succeeded)
+    );
+    assert_eq!(
+        succeeded_projection.telemetry().duration(),
+        Some(Duration::from_millis(23))
     );
     assert_eq!(
         succeeded_projection,
@@ -329,6 +335,75 @@ fn projection_retains_structured_diagnostics_and_freshness() {
     assert_eq!(projection.diagnostics(), result.diagnostics());
     assert_eq!(projection.failure(), result.failure());
     assert_eq!(projection.freshness(), Some(result.freshness()));
+}
+
+#[test]
+fn projection_preserves_host_telemetry_without_making_it_semantic() {
+    let request = make_request(8, [BuildInput::saved_source(key("timed.recite"), "x")]);
+    let result = run(
+        request,
+        &BuildControl::new(),
+        &mut FakeEngine::new([candidate("timed.recitec", b"compiled")]),
+        &mut FakePublisher::new(),
+    )
+    .with_telemetry(BuildTelemetry::from_duration(Duration::from_millis(37)));
+
+    let projection = BuildStatusProjection::from_result(&result);
+    assert_eq!(
+        projection.telemetry().duration(),
+        Some(Duration::from_millis(37))
+    );
+
+    let other_duration = result
+        .clone()
+        .with_telemetry(BuildTelemetry::from_duration(Duration::from_millis(91)));
+    assert_eq!(result, other_duration);
+    let other_projection = BuildStatusProjection::from_result(&other_duration);
+    assert_ne!(
+        BuildStatusProjection::from_result(&result)
+            .telemetry()
+            .duration(),
+        other_projection.telemetry().duration()
+    );
+    assert_eq!(projection, other_projection);
+    assert!(projection.semantic_eq(&other_projection));
+}
+
+#[test]
+fn projection_preserves_terminal_telemetry_for_failure_and_cancellation() {
+    let failed = run(
+        make_request(9, [BuildInput::saved_source(key("failed.recite"), "x")]),
+        &BuildControl::new(),
+        &mut FakeEngine::new([
+            candidate("failed.recitec", b"first"),
+            candidate("failed.recitec", b"second"),
+        ]),
+        &mut FakePublisher::new(),
+    )
+    .with_telemetry(BuildTelemetry::from_duration(Duration::from_millis(41)));
+    assert_eq!(failed.status(), BuildTerminalStatus::Failed);
+    assert_eq!(
+        BuildStatusProjection::from_result(&failed)
+            .telemetry()
+            .duration(),
+        Some(Duration::from_millis(41))
+    );
+
+    let control = cancelled_control();
+    let cancelled = run(
+        make_request(10, [BuildInput::saved_source(key("cancelled.recite"), "x")]),
+        &control,
+        &mut FakeEngine::new([]),
+        &mut FakePublisher::new(),
+    )
+    .with_telemetry(BuildTelemetry::from_duration(Duration::from_millis(59)));
+    assert_eq!(cancelled.status(), BuildTerminalStatus::Cancelled);
+    assert_eq!(
+        BuildStatusProjection::from_result(&cancelled)
+            .telemetry()
+            .duration(),
+        Some(Duration::from_millis(59))
+    );
 }
 
 fn cancelled_control() -> recite_compiler::BuildControl {

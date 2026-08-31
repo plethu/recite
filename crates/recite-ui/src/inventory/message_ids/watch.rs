@@ -4,6 +4,7 @@ pub(super) const fn key(id: super::MsgId) -> Option<&'static str> {
         super::MsgId::WatchWaitingForChanges => Some("watch-waiting-for-changes"),
         super::MsgId::WatchRebuilding => Some("watch-rebuilding"),
         super::MsgId::WatchBuildSucceeded => Some("watch-build-succeeded"),
+        super::MsgId::WatchBuildDuration => Some("watch-build-duration"),
         super::MsgId::WatchBuildFailedWaiting => Some("watch-build-failed-waiting"),
         super::MsgId::WatchBuildFailed => Some("watch-build-failed"),
         super::MsgId::WatchBuildFailedPartial => Some("watch-build-failed-partial"),

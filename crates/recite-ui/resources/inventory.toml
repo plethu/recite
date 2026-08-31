@@ -63,6 +63,7 @@ resource_ids = [
 "watch-waiting-for-changes",
 "watch-rebuilding",
 "watch-build-succeeded",
+"watch-build-duration",
 "watch-build-failed-waiting",
 "watch-build-failed",
 "watch-build-failed-partial",

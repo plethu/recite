@@ -1,5 +1,6 @@
 use std::io::Write;
 use std::sync::mpsc;
+use std::time::Duration;
 
 use notify::{RecursiveMode, Watcher, recommended_watcher};
 use recite_config::discover_project;
@@ -113,55 +114,72 @@ fn report_build_result(
     messages: &Messages,
 ) -> Result<(), CliError> {
     match result {
-        Ok(BuildStatus::Fresh { asset_count }) => {
-            writeln!(
-                stderr,
-                "{}",
-                messages.format(MsgId::WatchBuildSucceeded, [("count", asset_count)])
-            )?;
-        }
-        Ok(BuildStatus::Stale { recovery, .. }) => {
-            if !recovery.is_empty() {
-                writeln!(stderr, "{}", format_recovery_notice(messages, &recovery))?;
-            }
-            writeln!(stderr, "{}", messages.text(MsgId::WatchBuildFailedWaiting))?;
-        }
-        Ok(BuildStatus::Diagnostics) => {
-            writeln!(stderr, "{}", messages.text(MsgId::WatchBuildFailedWaiting))?;
-        }
-        Ok(BuildStatus::DiagnosticsWithRecovery { recovery }) => {
-            if !recovery.is_empty() {
-                writeln!(stderr, "{}", format_recovery_notice(messages, &recovery))?;
-            }
-            writeln!(stderr, "{}", messages.text(MsgId::WatchBuildFailedWaiting))?;
-        }
-        Ok(BuildStatus::RecoveryRequired {
-            asset_count,
-            recovery,
-        }) => {
-            writeln!(
-                stderr,
-                "{}",
-                format_recovery_required(messages, asset_count, &recovery)
-            )?;
-        }
-        Ok(BuildStatus::PublicationFailure {
-            status,
-            failure,
-            outcome,
-            recovery,
-        }) => {
-            writeln!(
-                stderr,
-                "{}",
-                format_failure_with_recovery(
-                    messages,
+        Ok(status) => {
+            let duration = status.telemetry().duration();
+            match status {
+                BuildStatus::Fresh { asset_count, .. } => {
+                    writeln!(
+                        stderr,
+                        "{}",
+                        messages.format(MsgId::WatchBuildSucceeded, [("count", asset_count)])
+                    )?;
+                }
+                BuildStatus::Stale { recovery, .. } => {
+                    if !recovery.is_empty() {
+                        writeln!(stderr, "{}", format_recovery_notice(messages, &recovery))?;
+                    }
+                    writeln!(stderr, "{}", messages.text(MsgId::WatchBuildFailedWaiting))?;
+                }
+                BuildStatus::Diagnostics { .. } => {
+                    writeln!(stderr, "{}", messages.text(MsgId::WatchBuildFailedWaiting))?;
+                }
+                BuildStatus::DiagnosticsWithRecovery { recovery, .. } => {
+                    if !recovery.is_empty() {
+                        writeln!(stderr, "{}", format_recovery_notice(messages, &recovery))?;
+                    }
+                    writeln!(stderr, "{}", messages.text(MsgId::WatchBuildFailedWaiting))?;
+                }
+                BuildStatus::RecoveryRequired {
+                    asset_count,
+                    recovery,
+                    ..
+                } => {
+                    writeln!(
+                        stderr,
+                        "{}",
+                        format_recovery_required(messages, asset_count, &recovery)
+                    )?;
+                }
+                BuildStatus::PublicationFailure {
                     status,
-                    failure.as_ref(),
-                    &outcome,
-                    &recovery,
-                )
-            )?;
+                    failure,
+                    outcome,
+                    recovery,
+                    ..
+                } => {
+                    writeln!(
+                        stderr,
+                        "{}",
+                        format_failure_with_recovery(
+                            messages,
+                            status,
+                            failure.as_ref(),
+                            &outcome,
+                            &recovery,
+                        )
+                    )?;
+                }
+            }
+            if let Some(duration) = duration {
+                writeln!(
+                    stderr,
+                    "{}",
+                    messages.format(
+                        MsgId::WatchBuildDuration,
+                        [("duration", format_duration(duration))],
+                    )
+                )?;
+            }
         }
         Err(CliError::WatchCoordinator { source, recovery }) => {
             report_recovery_error(stderr, messages, source.to_string(), &recovery)?;
@@ -183,6 +201,15 @@ fn report_build_result(
         }
     }
     Ok(())
+}
+
+fn format_duration(duration: Duration) -> String {
+    let micros = duration.as_micros();
+    if micros < 1_000 {
+        format!("{micros} µs")
+    } else {
+        format!("{}.{:03} ms", micros / 1_000, micros % 1_000)
+    }
 }
 
 fn report_recovery_error(

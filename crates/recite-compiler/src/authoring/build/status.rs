@@ -6,7 +6,7 @@ use super::identity::BuildGeneration;
 use super::lifecycle::{BuildPhase, BuildState};
 use super::publish::{BuildCandidate, PublishOutcome};
 use super::request_identity::BuildRequestIdentity;
-use super::result::{BuildResult, BuildTerminalStatus};
+use super::result::{BuildResult, BuildTelemetry, BuildTerminalStatus};
 use recite_core::Diagnostic;
 
 #[path = "status_conversion.rs"]
@@ -20,7 +20,7 @@ mod conversion;
 /// performs no discovery, I/O, rendering, or protocol translation. The
 /// projection owns its values so a host can retain or transport it without
 /// retaining the mutable lifecycle that produced it.
-#[derive(Clone, Debug, Eq, PartialEq)]
+#[derive(Clone, Debug, Eq)]
 #[non_exhaustive]
 pub struct BuildStatusProjection {
     phase: BuildPhase,
@@ -32,6 +32,7 @@ pub struct BuildStatusProjection {
     freshness: Option<FreshnessAssessment>,
     publish: Option<PublishOutcome>,
     restart_guidance: Option<RestartGuidance>,
+    telemetry: BuildTelemetry,
     failure: Option<BuildResultFailure>,
     cancellation: Option<BuildCancellation>,
 }
@@ -102,6 +103,7 @@ impl BuildStatusProjection {
             freshness: None,
             publish: None,
             restart_guidance: None,
+            telemetry: BuildTelemetry::none(),
             failure: None,
             cancellation: None,
         }
@@ -125,6 +127,7 @@ impl BuildStatusProjection {
             freshness: freshness.cloned(),
             publish: None,
             restart_guidance: Some(request.restart_guidance()),
+            telemetry: BuildTelemetry::none(),
             failure: None,
             cancellation: None,
         }
@@ -142,6 +145,7 @@ impl BuildStatusProjection {
             freshness: Some(result.freshness().clone()),
             publish: Some(result.publish().clone()),
             restart_guidance: Some(result.restart_guidance()),
+            telemetry: result.telemetry().clone(),
             failure: result.failure().cloned(),
             cancellation: result.cancellation(),
         }

@@ -53,6 +53,7 @@ watch-building = watch: building {$path}
 watch-waiting-for-changes = watch: waiting for changes
 watch-rebuilding = watch: rebuilding
 watch-build-succeeded = watch: build succeeded ({$count} assets)
+watch-build-duration = watch: build completed in {$duration}
 watch-build-failed-waiting = watch: build failed; waiting for changes
 watch-build-failed = watch: build failed: {$error}
 watch-build-failed-partial = watch: build {$status}: partial publication; failed target {$failed}; recovery targets: {$recovery}{$records}
