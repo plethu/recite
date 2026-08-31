@@ -21,7 +21,8 @@ fn is_extension_segment(segment: &str) -> bool {
 ///
 /// The source editor writes these lexemes into TOML and the source loader
 /// restores them from the concrete syntax tree. Restricting the input to the
-/// shared JSON number grammar avoids TOML-only spellings and variant changes.
+/// shared JSON number grammar and serde_json's canonical spelling avoids
+/// TOML-only spellings and loader-induced variant changes.
 pub(crate) fn is_json_number_lexeme(value: &str) -> bool {
     let bytes = value.as_bytes();
     let mut index = 0;
@@ -84,5 +85,9 @@ pub(crate) fn is_json_number_lexeme(value: &str) -> bool {
         }
     }
 
-    index == bytes.len() && (!negative || has_nonzero_digit)
+    if index != bytes.len() || (negative && !has_nonzero_digit) {
+        return false;
+    }
+    serde_json::Number::from_str(value).is_ok_and(|number| number.to_string() == value)
 }
+use std::str::FromStr;

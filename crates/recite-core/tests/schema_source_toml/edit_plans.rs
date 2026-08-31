@@ -226,6 +226,11 @@ fn origin_number_edits_reject_non_json_and_toml_only_lexemes_recursively() {
         ProducerMetadataValue::Number("1_000".to_owned()),
         ProducerMetadataValue::Number("0x10".to_owned()),
         ProducerMetadataValue::Number("-0".to_owned()),
+        ProducerMetadataValue::Number("0e0".to_owned()),
+        ProducerMetadataValue::Number("0E+00".to_owned()),
+        ProducerMetadataValue::Number("1E+2".to_owned()),
+        ProducerMetadataValue::Number("1E-002".to_owned()),
+        ProducerMetadataValue::Number("1e002".to_owned()),
         ProducerMetadataValue::Array(vec![ProducerMetadataValue::Number("1_000".to_owned())]),
         ProducerMetadataValue::Object(BTreeMap::from([(
             "nested".to_owned(),
