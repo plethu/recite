@@ -124,6 +124,7 @@ macro_rules! cli_message_ids {
         | MsgId::CliErrorDiagnostics
         | MsgId::CliErrorFixtureChoiceIndex
         | MsgId::CliErrorFixtureChoiceNotInPrompt
+        | MsgId::CliErrorAmbiguousFixtureChoice
         | MsgId::CliErrorFixtureToml
         | MsgId::CliErrorMissingPath
         | MsgId::CliErrorMissingFixtureChoice

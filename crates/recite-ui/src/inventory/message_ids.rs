@@ -38,7 +38,7 @@ message_ids! {
     CliErrorDialogueCatalogReasonInvalidStableId, CliErrorDialogueCatalogReasonDuplicateField, CliErrorDialogueCatalogReasonDuplicateEntry, CliErrorDialogueCatalogReasonInvalidFieldOrder, CliErrorDialogueCatalogReasonPlaceholderMismatch,
     CliErrorDialogueCatalogReasonPluralEntriesUnsupported, CliErrorDialogueCatalogReasonQuotedContinuationWithoutField, CliErrorDialogueCatalogReasonUnexpectedTextAfterQuotedString, CliErrorDialogueCatalogReasonUnterminatedQuotedString, CliErrorDialogueCatalogReasonUnsupportedEscape,
     CliErrorDecodeAsset, CliErrorAssetMetadata, CliErrorAssetNotFile, CliErrorMalformedCompiledAsset, CliErrorDiagnostics,
-    CliErrorFixtureChoiceIndex, CliErrorFixtureChoiceNotInPrompt, CliErrorFixtureToml, CliErrorMissingPath, CliErrorMissingFixtureChoice,
+    CliErrorFixtureChoiceIndex, CliErrorFixtureChoiceNotInPrompt, CliErrorAmbiguousFixtureChoice, CliErrorFixtureToml, CliErrorMissingPath, CliErrorMissingFixtureChoice,
     CliErrorNoInputs, CliErrorOutputOverwritesInput, CliErrorBlockingEffect, CliErrorBenchJson, CliErrorTraceJson,
     CliErrorUnknownPrompt, CliErrorRead, CliErrorReadDir, CliErrorWrite, CliErrorWatch,
     LspHoverRequires, LspHoverIf, LspHoverSpeaker, LspHoverSpeakerWithDisplayName, LspHoverMetadata,

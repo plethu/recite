@@ -215,6 +215,7 @@ cli-error-malformed-compiled-asset = malformed compiled asset: {$reason}
 cli-error-diagnostics = diagnostics reported
 cli-error-fixture-choice-index = fixture choice index {$index} is out of range for prompt {$prompt_keys} with {$choice_count} choices; indexes are 1-based
 cli-error-fixture-choice-not-in-prompt = fixture choice `{$choice}` is not in prompt {$prompt_keys}
+cli-error-ambiguous-fixture-choice = fixture block choice `{$block}` is ambiguous across {$prompt_count} prompts; use a line ID
 cli-error-fixture-toml = failed to parse fixture {$path}: {$source}
 cli-error-missing-path = input path does not exist: {$path}
 cli-error-missing-fixture-choice = fixture is missing a [choices] entry for prompt {$prompt_keys}; supported keys for this prompt are listed in trace prompt.identity.fixture_keys

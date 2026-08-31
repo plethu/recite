@@ -111,7 +111,7 @@ production suppressions must carry a narrow scope and rationale.
 | `crates/recite-core/src/compiled/messagepack/tags.rs` | 468 | production | core/wire | cohesive | #89: explicit wire tag table |
 | `crates/recite-core/src/compiled/messagepack/wire.rs` | 662 | production | core/wire | exception | #89: retain the explicit decoder boundary while the v0 wire contract is synchronized |
 | `crates/recite-runtime/src/session_snapshot.rs` | 294 | production | runtime/snapshot | follow-up | #135: typed snapshot-boundary errors |
-| `crates/recite-cli/src/error.rs` | 349 | production | cli | review | Keep user-facing error projection separate from typed domain errors |
+| `crates/recite-cli/src/error.rs` | 362 | production | cli | review | Keep user-facing error projection separate from typed domain errors |
 | `crates/recite-ui/tests/diagnostics.rs` | 371 | test/support | ui/tests | review | Structured diagnostic resource and compatibility-message coverage |
 | `crates/recite-lsp/src/features/hover/schema.rs` | 329 | production | lsp/features | review | #168: schema-backed hover presentation remains isolated from typed fact resolution |
 | `crates/recite-compiler/tests/authoring_edits.rs` | 387 | test/support | compiler/tests | review | Host-neutral authoring edit application and scoped/range planning coverage |

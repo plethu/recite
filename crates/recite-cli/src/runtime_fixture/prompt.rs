@@ -1,4 +1,6 @@
-use recite_core::{ChoiceId, CompiledDialogue, CompiledStatementKind, StatementRange};
+use std::collections::BTreeMap;
+
+use recite_core::{BlockId, ChoiceId, CompiledDialogue, CompiledStatementKind, StatementRange};
 use recite_runtime::PreviewPrompt;
 use recite_ui::UiArg;
 
@@ -11,11 +13,34 @@ use crate::i18n::{Messages, MsgId};
 #[derive(Clone, Debug)]
 pub(super) struct PromptIdentity {
     has_line: bool,
+    block: String,
     pub(super) fixture_keys: Vec<String>,
 }
 
+#[derive(Debug)]
+pub(super) struct PromptCardinality {
+    by_block: BTreeMap<String, usize>,
+}
+
+impl PromptCardinality {
+    pub(super) fn new(asset: &CompiledDialogue) -> Result<Self, CliError> {
+        let mut by_block = BTreeMap::new();
+        for block in &asset.blocks {
+            by_block.insert(
+                block.id.as_str().to_owned(),
+                count_prompts_in_range(asset, block.statements)?,
+            );
+        }
+        Ok(Self { by_block })
+    }
+
+    pub(super) fn for_block(&self, block: &BlockId) -> usize {
+        self.by_block.get(block.as_str()).copied().unwrap_or(0)
+    }
+}
+
 impl PromptIdentity {
-    pub(super) fn from_preview(prompt: &PreviewPrompt) -> Self {
+    pub(super) fn from_preview(prompt: &PreviewPrompt, block_prompt_count: usize) -> Self {
         let identity = prompt.identity();
         let mut fixture_keys = Vec::new();
         if let Some(line) = identity.line() {
@@ -23,9 +48,12 @@ impl PromptIdentity {
         }
         // A block key is retained as a compatibility fallback. The driver verifies that the
         // active block has exactly one prompt before accepting it.
-        fixture_keys.push(identity.block().as_str().to_owned());
+        if block_prompt_count == 1 {
+            fixture_keys.push(identity.block().as_str().to_owned());
+        }
         Self {
             has_line: identity.line().is_some(),
+            block: identity.block().as_str().to_owned(),
             fixture_keys,
         }
     }
@@ -45,32 +73,22 @@ pub(super) fn select_fixture_choice(
     let selection = match selection {
         Some(selection) => selection,
         None if block_prompt_count == 1 => {
-            let Some(block_key) = prompt.fixture_keys.last() else {
-                return Err(CliError::MalformedCompiledAsset {
-                    reason: "preview prompt has no block identity".to_owned(),
-                });
-            };
             fixture
                 .choices
-                .get(block_key)
+                .get(&prompt.block)
                 .ok_or_else(|| CliError::MissingFixtureChoice {
                     prompt_keys: prompt.fixture_keys.clone(),
                 })?
         }
-        None if prompt.has_line => {
-            return Err(CliError::MalformedCompiledAsset {
-                reason: format!(
-                    "fixture block choice key `{}` is ambiguous because the block contains multiple prompts; use a line ID",
-                    prompt.fixture_keys.last().cloned().unwrap_or_default()
-                ),
-            });
-        }
         None => {
-            return Err(CliError::MalformedCompiledAsset {
-                reason: format!(
-                    "fixture block choice key `{}` is ambiguous because the block contains multiple prompts; use a line ID",
-                    prompt.fixture_keys.first().cloned().unwrap_or_default()
-                ),
+            if fixture.choices.contains_key(&prompt.block) {
+                return Err(CliError::AmbiguousFixtureChoice {
+                    block: prompt.block.clone(),
+                    prompt_count: block_prompt_count,
+                });
+            }
+            return Err(CliError::MissingFixtureChoice {
+                prompt_keys: prompt.fixture_keys.clone(),
             });
         }
     };
@@ -126,22 +144,6 @@ pub(super) fn write_prompt_run_lines(
             ],
         ));
     }
-}
-
-pub(super) fn count_prompts_in_block(
-    asset: &CompiledDialogue,
-    block: &str,
-) -> Result<usize, CliError> {
-    let block = asset
-        .blocks
-        .iter()
-        .find(|candidate| candidate.id.as_str() == block)
-        .ok_or_else(|| {
-            CliError::Runtime(recite_runtime::DialogueError::UnknownBlock {
-                block: block.to_owned(),
-            })
-        })?;
-    count_prompts_in_range(asset, block.statements)
 }
 
 fn count_prompts_in_range(

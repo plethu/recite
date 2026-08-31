@@ -63,6 +63,10 @@ pub(crate) enum CliError {
         choice: String,
         prompt_keys: Vec<String>,
     },
+    AmbiguousFixtureChoice {
+        block: String,
+        prompt_count: usize,
+    },
     FixtureToml {
         path: PathBuf,
         source: toml::de::Error,
@@ -102,6 +106,7 @@ pub(crate) enum CliError {
         source: io::Error,
     },
     Runtime(recite_runtime::DialogueError),
+    Preview(recite_runtime::PreviewError),
     BlockingEffectNeedsAcknowledgement {
         effect: String,
     },
@@ -224,6 +229,13 @@ impl std::fmt::Display for CliError {
                 "fixture choice `{choice}` is not in prompt {}",
                 prompt_keys.join("|")
             ),
+            Self::AmbiguousFixtureChoice {
+                block,
+                prompt_count,
+            } => write!(
+                formatter,
+                "fixture block choice `{block}` is ambiguous: the block contains {prompt_count} prompts; use a line ID"
+            ),
             Self::FixtureToml { path, source } => {
                 write!(
                     formatter,
@@ -281,6 +293,7 @@ impl std::fmt::Display for CliError {
                 )
             }
             Self::Runtime(error) => write!(formatter, "{error}"),
+            Self::Preview(error) => write!(formatter, "{error}"),
             Self::BlockingEffectNeedsAcknowledgement { effect } => write!(
                 formatter,
                 "blocking effect `{effect}` requires [effects].auto_ack_blocking = true in the fixture"

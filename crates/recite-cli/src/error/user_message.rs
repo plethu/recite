@@ -110,6 +110,16 @@ impl CliError {
                     ("prompt_keys", prompt_keys.join("|")),
                 ],
             ),
+            Self::AmbiguousFixtureChoice {
+                block,
+                prompt_count,
+            } => {
+                let args = UiArgs::from([
+                    ("block".to_owned(), UiArg::from(block.clone())),
+                    ("prompt_count".to_owned(), UiArg::from(*prompt_count)),
+                ]);
+                messages.format_args(MsgId::CliErrorAmbiguousFixtureChoice, &args)
+            }
             Self::FixtureToml { path, source } => messages.format(
                 MsgId::CliErrorFixtureToml,
                 [("path", display_path(path)), ("source", source.to_string())],
@@ -171,6 +181,9 @@ impl CliError {
                 messages.format(MsgId::CliErrorGeneric, [("message", error.to_string())])
             }
             Self::Runtime(error) => {
+                messages.format(MsgId::CliErrorGeneric, [("message", error.to_string())])
+            }
+            Self::Preview(error) => {
                 messages.format(MsgId::CliErrorGeneric, [("message", error.to_string())])
             }
             Self::Io(error) => {

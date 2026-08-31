@@ -179,6 +179,7 @@ pub(super) const fn key(id: super::MsgId) -> Option<&'static str> {
         super::MsgId::CliErrorFixtureChoiceNotInPrompt => {
             Some("cli-error-fixture-choice-not-in-prompt")
         }
+        super::MsgId::CliErrorAmbiguousFixtureChoice => Some("cli-error-ambiguous-fixture-choice"),
         super::MsgId::CliErrorFixtureToml => Some("cli-error-fixture-toml"),
         super::MsgId::CliErrorMissingPath => Some("cli-error-missing-path"),
         super::MsgId::CliErrorMissingFixtureChoice => Some("cli-error-missing-fixture-choice"),

@@ -5,7 +5,7 @@ use recite_runtime::{
 use recite_ui::UiArg;
 
 use super::metrics::RuntimeMetricsCollector;
-use super::prompt::write_prompt_run_lines;
+use super::prompt::{PromptCardinality, write_prompt_run_lines};
 use super::trace::{
     TraceCondition, TraceConditionValue, TraceEvent, TracePrompt, TracePromptIdentity, TraceScalar,
     condition_query_text, trace_choice, trace_effect, trace_line,
@@ -21,6 +21,7 @@ pub(crate) struct RuntimeExecution {
 pub(super) fn project_event(
     event: &PreviewEvent,
     preview_trace: &PreviewTrace,
+    prompt_cardinality: &PromptCardinality,
     run_lines: &mut Vec<String>,
     trace_events: &mut Vec<TraceEvent>,
     metrics: Option<&mut RuntimeMetricsCollector>,
@@ -81,7 +82,7 @@ pub(super) fn project_event(
                 }
             }
             trace_events.push(TraceEvent::Prompt {
-                prompt: trace_prompt(prompt, preview_trace),
+                prompt: trace_prompt(prompt, preview_trace, prompt_cardinality),
             });
         }
         PreviewEvent::ChoiceSelected { prompt, choice_id } => {
@@ -93,7 +94,7 @@ pub(super) fn project_event(
                 prompt: TracePromptIdentity {
                     block: prompt.block().as_str().to_owned(),
                     line: prompt.line().map(|line| line.as_str().to_owned()),
-                    fixture_keys: fixture_keys(prompt),
+                    fixture_keys: fixture_keys(prompt, prompt_cardinality),
                 },
                 choice: choice_id.as_str().to_owned(),
             });
@@ -166,13 +167,17 @@ pub(super) fn project_event(
     Ok(())
 }
 
-fn trace_prompt(prompt: &PreviewPrompt, preview_trace: &PreviewTrace) -> TracePrompt {
+fn trace_prompt(
+    prompt: &PreviewPrompt,
+    preview_trace: &PreviewTrace,
+    prompt_cardinality: &PromptCardinality,
+) -> TracePrompt {
     let identity = prompt.identity();
     TracePrompt {
         identity: TracePromptIdentity {
             block: identity.block().as_str().to_owned(),
             line: identity.line().map(|line| line.as_str().to_owned()),
-            fixture_keys: fixture_keys(identity),
+            fixture_keys: fixture_keys(identity, prompt_cardinality),
         },
         line: prompt.line().map(|line| trace_line(line, preview_trace)),
         choices: prompt
@@ -183,12 +188,17 @@ fn trace_prompt(prompt: &PreviewPrompt, preview_trace: &PreviewTrace) -> TracePr
     }
 }
 
-fn fixture_keys(identity: &recite_runtime::PreviewPromptIdentity) -> Vec<String> {
+fn fixture_keys(
+    identity: &recite_runtime::PreviewPromptIdentity,
+    prompt_cardinality: &PromptCardinality,
+) -> Vec<String> {
     let mut keys = identity
         .line()
         .map(|line| vec![line.as_str().to_owned()])
         .unwrap_or_default();
-    keys.push(identity.block().as_str().to_owned());
+    if prompt_cardinality.for_block(identity.block()) == 1 {
+        keys.push(identity.block().as_str().to_owned());
+    }
     keys
 }
 

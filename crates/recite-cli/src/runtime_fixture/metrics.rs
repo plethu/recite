@@ -1,4 +1,4 @@
-use recite_runtime::{DialogueEffectMode, LocaleProvider, TextDomain, encode_session_messagepack};
+use recite_runtime::{DialogueEffectMode, encode_session_messagepack};
 
 use crate::error::CliError;
 
@@ -53,60 +53,5 @@ impl RuntimeMetricsCollector {
             elapsed_traversal_time_ns,
             max_serialized_session_size_bytes: self.max_serialized_session_size_bytes,
         }
-    }
-}
-
-pub(super) struct CountingLocaleProvider<'a> {
-    provider: &'a dyn LocaleProvider,
-    lookup_count: std::cell::Cell<usize>,
-}
-
-impl<'a> CountingLocaleProvider<'a> {
-    pub(super) fn new(provider: &'a dyn LocaleProvider) -> Self {
-        Self {
-            provider,
-            lookup_count: std::cell::Cell::new(0),
-        }
-    }
-
-    pub(super) fn lookup_count(&self) -> usize {
-        self.lookup_count.get()
-    }
-}
-
-impl LocaleProvider for CountingLocaleProvider<'_> {
-    fn lookup(
-        &self,
-        id: &str,
-        source_text: &str,
-        domain: TextDomain,
-        locale: &recite_core::LocaleId,
-        variant: Option<&str>,
-    ) -> Result<Option<String>, recite_runtime::LocaleError> {
-        self.lookup_count.set(self.lookup_count.get() + 1);
-        self.provider
-            .lookup(id, source_text, domain, locale, variant)
-    }
-
-    fn resolve_plural(
-        &self,
-        id: &str,
-        source_singular: &str,
-        source_plural: &str,
-        count: i64,
-        domain: TextDomain,
-        locale: &recite_core::LocaleId,
-        variant: Option<&str>,
-    ) -> Result<recite_runtime::PluralResolution, recite_runtime::LocaleError> {
-        self.lookup_count.set(self.lookup_count.get() + 1);
-        self.provider.resolve_plural(
-            id,
-            source_singular,
-            source_plural,
-            count,
-            domain,
-            locale,
-            variant,
-        )
     }
 }
