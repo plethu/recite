@@ -129,7 +129,6 @@ production suppressions must carry a narrow scope and rationale.
 | `crates/recite-core/src/schema/model/mod.rs` | 382 | production | core/schema | review | Schema module exports and model grouping |
 | `crates/recite-core/src/schema/source/export/basic.rs` | 284 | production | core/schema | cohesive | Deterministic JSON export for basic schema declarations |
 | `crates/recite-core/src/schema/source/lower/mod.rs` | 306 | production | core/schema | review | TOML source normalization and shared canonical lowering entrypoint |
-| `crates/recite-cli/src/play/driver.rs` | 360 | production | cli/play | cohesive | Shared preview driver seam |
 | `crates/recite-runtime/src/traversal/availability.rs` | 370 | production | runtime/traversal | cohesive | Deterministic availability traversal |
 | `crates/recite-runtime/src/traversal/interpolation.rs` | 400 | production | runtime/traversal | cohesive | #179/#180: typed interpolation and plural localisation after provider lookup |
 | `crates/recite-cli/src/play/tui/mod.rs` | 352 | production | cli/tui | review | TUI integration boundary |
@@ -141,7 +140,6 @@ production suppressions must carry a narrow scope and rationale.
 | `crates/recite-runtime/src/traversal/output.rs` | 270 | production | runtime/traversal | review | #180: structured plural output construction remains beside traversal until the output boundary settles |
 | `crates/recite-compiler/src/wire/inspection.rs` | 337 | production | compiler/wire | review | Structured wire inspection projection |
 | `crates/recite-benchmarks/src/project.rs` | 310 | production | benchmarks | cohesive | Synthetic project model |
-| `crates/recite-cli/src/play/plain.rs` | 310 | production | cli/play | cohesive | Plain preview adapter |
 | `crates/recite-cli/src/play/tui/state.rs` | 307 | production | cli/tui | cohesive | TUI reducer state |
 | `crates/recite-compiler/src/compile/builder.rs` | 306 | production | compiler | cohesive | Compiled asset builder |
 | `crates/recite-lsp/src/features/completion/projection.rs` | 317 | production | lsp/features | review | Completion projection |

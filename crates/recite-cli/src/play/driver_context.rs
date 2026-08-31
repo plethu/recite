@@ -40,7 +40,11 @@ impl<U: PlayUiAdapter> InteractiveContext<'_, U> {
         choices: &[DialogueChoice],
     ) -> Result<ChoiceId, CliError> {
         loop {
-            let selection = match self.ui.borrow_mut().choice(line, choices) {
+            let choice_result = {
+                let mut ui = self.ui.borrow_mut();
+                ui.choice(line, choices)
+            };
+            let selection = match choice_result {
                 Ok(selection) => selection,
                 Err(CliError::PlayInvalidInput(message)) => {
                     self.ui.borrow_mut().invalid_input(message)?;
@@ -58,9 +62,8 @@ impl<U: PlayUiAdapter> InteractiveContext<'_, U> {
                         if choice.availability.is_available {
                             return Ok(choice.id.clone());
                         }
-                        self.ui
-                            .borrow_mut()
-                            .invalid_input(unavailable_choice_message(&self.ui, choice))?;
+                        let message = unavailable_choice_message(&self.ui, choice);
+                        self.ui.borrow_mut().invalid_input(message)?;
                     } else if index == 0 || index > choices.len() {
                         let message = self.ui.borrow().message_typed(
                             MsgId::PlayErrorChoiceIndexOutOfRange,
@@ -75,9 +78,8 @@ impl<U: PlayUiAdapter> InteractiveContext<'_, U> {
                         if choice.availability.is_available {
                             return Ok(choice.id.clone());
                         }
-                        self.ui
-                            .borrow_mut()
-                            .invalid_input(unavailable_choice_message(&self.ui, choice))?;
+                        let message = unavailable_choice_message(&self.ui, choice);
+                        self.ui.borrow_mut().invalid_input(message)?;
                     }
                 }
                 ChoiceSelection::Id(id) => {
@@ -103,9 +105,8 @@ impl<U: PlayUiAdapter> InteractiveContext<'_, U> {
                     if choice.availability.is_available {
                         return Ok(choice_id);
                     }
-                    self.ui
-                        .borrow_mut()
-                        .invalid_input(unavailable_choice_message(&self.ui, choice))?;
+                    let message = unavailable_choice_message(&self.ui, choice);
+                    self.ui.borrow_mut().invalid_input(message)?;
                 }
             }
         }
