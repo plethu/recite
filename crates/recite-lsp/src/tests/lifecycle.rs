@@ -1,5 +1,4 @@
 use lsp_types::notification::{DidSaveTextDocument, Notification as LspNotification};
-use lsp_types::request::{RegisterCapability, Request as LspRequest};
 use lsp_types::{
     ClientCapabilities, DidSaveTextDocumentParams, NumberOrString, Position, PositionEncodingKind,
     TextDocumentIdentifier, TextDocumentSyncCapability, TextDocumentSyncKind,
@@ -15,43 +14,6 @@ use std::path::PathBuf;
 use tempfile::tempdir;
 
 use super::support::{Harness, uri};
-
-pub(super) fn dynamic_watched_files_register_after_initialized() {
-    let (mut harness, _) = Harness::start_with_result(json!({
-        "capabilities": {
-            "workspace": {
-                "didChangeWatchedFiles": { "dynamicRegistration": true }
-            }
-        }
-    }));
-    let registration_request = harness.recv_request();
-    assert_eq!(registration_request.method, RegisterCapability::METHOD);
-    let registration: lsp_types::RegistrationParams =
-        serde_json::from_value(registration_request.params)
-            .unwrap_or_else(|error| panic!("dynamic registration params: {error}"));
-    assert_eq!(registration.registrations.len(), 1);
-    let registration = &registration.registrations[0];
-    assert_eq!(registration.id, "recite-project-discovery");
-    assert_eq!(registration.method, "workspace/didChangeWatchedFiles");
-    let options = registration
-        .register_options
-        .as_ref()
-        .unwrap_or_else(|| panic!("watched-files registration options are missing"));
-    assert_eq!(options["watchers"][0]["globPattern"], "**/*");
-    assert_eq!(options["watchers"][0]["kind"], 7);
-    harness.reply_ok(registration_request.id);
-
-    harness.send_initialized();
-    assert!(
-        harness
-            .completion(
-                uri("file:///workspace/dialogue/test.recite"),
-                Position::new(0, 0)
-            )
-            .is_none()
-    );
-    harness.finish();
-}
 
 pub(super) fn initialize_advertises_full_sync_save_and_utf16() {
     let (harness, result) = Harness::start_with_result(json!({

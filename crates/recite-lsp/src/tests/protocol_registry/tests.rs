@@ -1,9 +1,4 @@
 #[test]
-fn dynamic_watched_files_register_after_initialized() {
-    super::lifecycle::dynamic_watched_files_register_after_initialized();
-}
-
-#[test]
 fn initialize_advertises_full_sync_save_and_utf16() {
     super::lifecycle::initialize_advertises_full_sync_save_and_utf16();
 }

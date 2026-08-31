@@ -3,7 +3,7 @@ use std::thread::{self, JoinHandle};
 use lsp_server::{Connection, Message, Notification, Request, RequestId, Response};
 use lsp_types::notification::{
     DidChangeTextDocument, DidCloseTextDocument, DidOpenTextDocument, DidSaveTextDocument, Exit,
-    Initialized, Notification as LspNotification, PublishDiagnostics,
+    Initialized, LogMessage, Notification as LspNotification, PublishDiagnostics,
 };
 use lsp_types::request::{
     CodeActionRequest, Completion, GotoDefinition, HoverRequest, PrepareRenameRequest, References,
@@ -13,11 +13,11 @@ use lsp_types::{CodeActionParams, CodeActionResponse, RenameParams};
 use lsp_types::{
     CompletionParams, CompletionResponse, DidChangeTextDocumentParams, DidCloseTextDocumentParams,
     DidOpenTextDocumentParams, DidSaveTextDocumentParams, GotoDefinitionParams,
-    GotoDefinitionResponse, Hover, HoverParams, InitializeResult, Location, PartialResultParams,
-    Position, PrepareRenameResponse, PublishDiagnosticsParams, ReferenceContext, ReferenceParams,
-    TextDocumentContentChangeEvent, TextDocumentIdentifier, TextDocumentItem,
-    TextDocumentPositionParams, Uri, VersionedTextDocumentIdentifier, WorkDoneProgressParams,
-    WorkspaceEdit,
+    GotoDefinitionResponse, Hover, HoverParams, InitializeResult, Location, LogMessageParams,
+    MessageType, PartialResultParams, Position, PrepareRenameResponse, PublishDiagnosticsParams,
+    ReferenceContext, ReferenceParams, TextDocumentContentChangeEvent, TextDocumentIdentifier,
+    TextDocumentItem, TextDocumentPositionParams, Uri, VersionedTextDocumentIdentifier,
+    WorkDoneProgressParams, WorkspaceEdit,
 };
 use recite_config::UiLocale;
 use recite_ui::{DEFAULT_RESOURCE, UiCatalog};
@@ -26,14 +26,14 @@ use serde_json::{Value, json};
 
 use crate::server::{ServerError, run_connection};
 
-pub(crate) struct Harness {
-    pub(crate) client: Connection,
-    pub(crate) server: JoinHandle<Result<(), ServerError>>,
-    pub(crate) next_id: i32,
+pub(in crate::tests) struct Harness {
+    client: Connection,
+    server: JoinHandle<Result<(), ServerError>>,
+    next_id: i32,
 }
 
 impl Harness {
-    pub(crate) fn start() -> Self {
+    pub(in crate::tests) fn start() -> Self {
         Self::start_with_result(json!({
             "capabilities": {
                 "general": {
@@ -44,13 +44,13 @@ impl Harness {
         .0
     }
 
-    pub(crate) fn start_with_result(params: Value) -> (Self, InitializeResult) {
+    pub(in crate::tests) fn start_with_result(params: Value) -> (Self, InitializeResult) {
         let (server_connection, client) = Connection::memory();
         let server = thread::spawn(move || run_connection(server_connection));
         Self::finish_start(params, client, server)
     }
 
-    pub(crate) fn start_with_result_and_resource(
+    pub(in crate::tests) fn start_with_result_and_resource(
         params: Value,
         locale: &str,
         resource: String,
@@ -82,7 +82,7 @@ impl Harness {
         Self::finish_start(params, client, server)
     }
 
-    pub(crate) fn finish_start(
+    pub(in crate::tests) fn finish_start(
         params: Value,
         client: Connection,
         server: JoinHandle<Result<(), ServerError>>,
@@ -96,18 +96,18 @@ impl Harness {
         (harness, result)
     }
 
-    pub(crate) fn send_initialized(&self) {
+    pub(in crate::tests) fn send_initialized(&self) {
         self.send_notification(Initialized::METHOD, ());
     }
 
-    pub(crate) fn send_notification(&self, method: &str, params: impl Serialize) {
+    pub(in crate::tests) fn send_notification(&self, method: &str, params: impl Serialize) {
         self.send(Message::Notification(Notification {
             method: method.to_owned(),
             params: to_value(params),
         }));
     }
 
-    pub(crate) fn recv_publish_diagnostics(&self) -> PublishDiagnosticsParams {
+    pub(in crate::tests) fn recv_publish_diagnostics(&self) -> PublishDiagnosticsParams {
         match self
             .client
             .receiver
@@ -122,7 +122,7 @@ impl Harness {
         }
     }
 
-    pub(crate) fn assert_no_message(&self) {
+    pub(in crate::tests) fn assert_no_message(&self) {
         for _ in 0..10 {
             if let Ok(message) = self.client.receiver.try_recv() {
                 panic!("expected no server message, got {message:?}");
@@ -131,19 +131,7 @@ impl Harness {
         }
     }
 
-    pub(crate) fn recv_request(&self) -> Request {
-        match self.client.receiver.recv() {
-            Ok(Message::Request(request)) => request,
-            Ok(other) => panic!("expected server request, got {other:?}"),
-            Err(error) => panic!("failed to receive server request: {error}"),
-        }
-    }
-
-    pub(crate) fn reply_ok(&self, id: RequestId) {
-        self.send(Message::Response(Response::new_ok(id, ())));
-    }
-
-    pub(crate) fn did_open(&self, uri: Uri, version: i32, text: &str) {
+    pub(in crate::tests) fn did_open(&self, uri: Uri, version: i32, text: &str) {
         self.send_notification(
             DidOpenTextDocument::METHOD,
             DidOpenTextDocumentParams {
@@ -157,7 +145,7 @@ impl Harness {
         );
     }
 
-    pub(crate) fn did_change(
+    pub(in crate::tests) fn did_change(
         &self,
         uri: Uri,
         version: i32,
@@ -172,7 +160,7 @@ impl Harness {
         );
     }
 
-    pub(crate) fn did_close(&self, uri: Uri) {
+    pub(in crate::tests) fn did_close(&self, uri: Uri) {
         self.send_notification(
             DidCloseTextDocument::METHOD,
             DidCloseTextDocumentParams {
@@ -181,7 +169,7 @@ impl Harness {
         );
     }
 
-    pub(crate) fn did_save(&self, uri: Uri) {
+    pub(in crate::tests) fn did_save(&self, uri: Uri) {
         self.send_notification(
             DidSaveTextDocument::METHOD,
             DidSaveTextDocumentParams {
@@ -191,7 +179,7 @@ impl Harness {
         );
     }
 
-    pub(crate) fn completion(
+    pub(in crate::tests) fn completion(
         &mut self,
         uri: Uri,
         position: Position,
@@ -213,7 +201,7 @@ impl Harness {
         self.recv_response_result()
     }
 
-    pub(crate) fn hover(&mut self, uri: Uri, position: Position) -> Option<Hover> {
+    pub(in crate::tests) fn hover(&mut self, uri: Uri, position: Position) -> Option<Hover> {
         let id = self.next_request_id();
         self.send(Message::Request(Request {
             id,
@@ -229,7 +217,7 @@ impl Harness {
         self.recv_response_result()
     }
 
-    pub(crate) fn definition(
+    pub(in crate::tests) fn definition(
         &mut self,
         uri: Uri,
         position: Position,
@@ -250,7 +238,7 @@ impl Harness {
         self.recv_response_result()
     }
 
-    pub(crate) fn references(
+    pub(in crate::tests) fn references(
         &mut self,
         uri: Uri,
         position: Position,
@@ -275,7 +263,7 @@ impl Harness {
         self.recv_response_result()
     }
 
-    pub(crate) fn prepare_rename(
+    pub(in crate::tests) fn prepare_rename(
         &mut self,
         uri: Uri,
         position: Position,
@@ -292,7 +280,7 @@ impl Harness {
         self.recv_response_result()
     }
 
-    pub(crate) fn rename(
+    pub(in crate::tests) fn rename(
         &mut self,
         uri: Uri,
         position: Position,
@@ -314,7 +302,10 @@ impl Harness {
         self.recv_response_result()
     }
 
-    pub(crate) fn code_action(&mut self, params: CodeActionParams) -> Option<CodeActionResponse> {
+    pub(in crate::tests) fn code_action(
+        &mut self,
+        params: CodeActionParams,
+    ) -> Option<CodeActionResponse> {
         let id = self.next_request_id();
         self.send(Message::Request(Request {
             id,
@@ -324,7 +315,11 @@ impl Harness {
         self.recv_response_result()
     }
 
-    pub(crate) fn raw_request_response(&mut self, method: &str, params: Value) -> Response {
+    pub(in crate::tests) fn raw_request_response(
+        &mut self,
+        method: &str,
+        params: Value,
+    ) -> Response {
         let id = self.next_request_id();
         self.send(Message::Request(Request {
             id,
@@ -334,7 +329,7 @@ impl Harness {
         self.recv_response()
     }
 
-    pub(crate) fn finish(self) {
+    pub(in crate::tests) fn finish(self) {
         let mut this = self;
         let id = this.next_request_id();
         this.send(Message::Request(Request {
@@ -353,7 +348,7 @@ impl Harness {
         }
     }
 
-    pub(crate) fn exit_without_shutdown(self) -> Result<(), ServerError> {
+    pub(in crate::tests) fn exit_without_shutdown(self) -> Result<(), ServerError> {
         self.send_notification(Exit::METHOD, ());
         match self.server.join() {
             Ok(result) => result,
@@ -405,9 +400,26 @@ impl Harness {
         }
         from_value(response.result.unwrap_or(Value::Null))
     }
+
+    pub(in crate::tests) fn recv_log_message(&self) -> LogMessageParams {
+        match self
+            .client
+            .receiver
+            .recv_timeout(std::time::Duration::from_secs(1))
+        {
+            Ok(Message::Notification(notification)) => {
+                assert_eq!(notification.method, LogMessage::METHOD);
+                let params: LogMessageParams = from_value(notification.params);
+                assert_eq!(params.typ, MessageType::WARNING);
+                params
+            }
+            Ok(other) => panic!("expected log message notification, got {other:?}"),
+            Err(error) => panic!("timed out or failed waiting for log message: {error}"),
+        }
+    }
 }
 
-pub(crate) fn from_value<T: serde::de::DeserializeOwned>(value: Value) -> T {
+fn from_value<T: serde::de::DeserializeOwned>(value: Value) -> T {
     match serde_json::from_value(value) {
         Ok(value) => value,
         Err(error) => panic!("failed to deserialize test value: {error}"),

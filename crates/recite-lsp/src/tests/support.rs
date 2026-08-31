@@ -4,7 +4,7 @@ use std::path::Path;
 mod config;
 mod harness;
 
-pub(super) use harness::{Harness, from_value};
+pub(super) use harness::Harness;
 
 use lsp_types::TextDocumentContentChangeEvent;
 use recite_config::UiLocale;

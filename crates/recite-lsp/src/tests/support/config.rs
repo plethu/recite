@@ -1,6 +1,5 @@
-use lsp_server::{Connection, Message};
-use lsp_types::notification::{LogMessage, Notification as LspNotification};
-use lsp_types::{InitializeResult, LogMessageParams, MessageType};
+use lsp_server::Connection;
+use lsp_types::InitializeResult;
 use recite_config::{ConfigError, LoadedUserConfig, UiLocale};
 use recite_ui::{DEFAULT_RESOURCE, UiCatalog};
 use serde_json::Value;
@@ -74,22 +73,5 @@ impl Harness {
             })
         });
         Self::finish_start(params, client, server)
-    }
-
-    pub(in crate::tests) fn recv_log_message(&self) -> LogMessageParams {
-        match self
-            .client
-            .receiver
-            .recv_timeout(std::time::Duration::from_secs(1))
-        {
-            Ok(Message::Notification(notification)) => {
-                assert_eq!(notification.method, LogMessage::METHOD);
-                let params: LogMessageParams = super::from_value(notification.params);
-                assert_eq!(params.typ, MessageType::WARNING);
-                params
-            }
-            Ok(other) => panic!("expected log message notification, got {other:?}"),
-            Err(error) => panic!("timed out or failed waiting for log message: {error}"),
-        }
     }
 }
