@@ -151,7 +151,8 @@ jobs:
     runs-on: ubuntu-24.04
     timeout-minutes: 10
     env:
-      # The scoped environment is the only CI lane that installs ast-grep.
+      # Lanes running structural policy checks use this scoped environment,
+      # which installs ast-grep.
       MISE_ENV: maintainability
       RECITE_BASE_REF: >-
         ${{ github.event_name == 'pull_request' &&
