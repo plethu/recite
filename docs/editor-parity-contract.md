@@ -55,6 +55,10 @@ under the current full-sync contract. A partial or incomplete buffer is still
 an editor input: the server may publish parser diagnostics and the client keeps
 editing; it must not turn a temporary parse failure into a different language.
 
+Reference results are declaration-first when the declaration is requested, then
+source-ordered by URI and range. Clients must preserve that order rather than
+sorting or deduplicating semantic locations locally.
+
 Every result that can be applied to source must retain the document URI,
 version, stable IDs, source ranges, and diagnostic codes supplied by the shared
 contract. Clients must not apply an edit against a document version they no
@@ -69,10 +73,11 @@ Issue #53 owns the command/watch lifecycle and the future cancellation contract.
 
 ## Structured commands and watch
 
-The shared command boundary is structured. Compile, validate, extract, run,
-trace, and watch consumers use typed/versioned records, not localised human
-CLI output. The current human-oriented watch stream is not a machine contract;
-its lifecycle, binary discovery, cancellation, and machine-readable status
+The intended command boundary is structured: compile, validate, extract, run,
+trace, and watch consumers should eventually use typed/versioned records rather
+than localised human CLI output. No current versioned command envelope is
+claimed here. The human-oriented watch stream is not a machine contract; its
+lifecycle, binary discovery, cancellation, and machine-readable status
 follow-up is tracked by #53. This parity slice records that limitation and
 does not claim command or watch integration merely because the CLI has a human
 command today.
@@ -100,21 +105,22 @@ fixture.
 - `lsp.completion`: project structured completion items from the shared snapshot.
 - `lsp.definition`: resolve same-project and cross-file definitions through the shared snapshot.
 - `lsp.hover`: project structured hover content and symbol ranges from the shared kernel.
-- `lsp.references`: project source-ordered references with explicit declaration inclusion.
-- `lsp.rename`: project versioned source-preserving workspace edits for stable symbols.
+- `lsp.references`: project declaration-first, source-ordered references with explicit declaration inclusion.
+- `lsp.rename`: project source-preserving workspace edits for resolved symbols; version preconditions remain incomplete.
 - `lsp.code-actions`: project source-preserving stable-ID repairs from the shared kernel.
 - `workspace.project.discovery`: discover canonical sibling sources under the configured project root.
 - `workspace.configuration`: keep root and project configuration ownership outside client semantics.
-- `authoring.stable-id.operations`: preserve stable IDs and edit preconditions across authoring operations.
-- `schema.localisation.resolution`: project schema provenance and localisation IDs as structured values.
-- `command.compile.validate.extract`: reserve typed compile, validate, and extract records for #53.
-- `command.run.trace`: reserve typed runtime and trace records for #53.
+- `authoring.stable-id.operations`: reserve the shared-kernel missing-ID repair; broader stable-ID edit preconditions remain incomplete.
+- `schema.localisation.resolution`: reserve schema provenance, producer fingerprints, catalogue ownership, and locale fallback evidence; no parity evidence is claimed yet.
+- `command.compile.validate.extract`: reserve versioned structured compile, validate, and extract records for #53; current CLI output is not machine protocol evidence.
+- `command.run.trace`: reserve versioned structured runtime and trace records for #53; current CLI tests are not command protocol evidence.
 - `command.watch.lifecycle`: reserve generation, freshness, process, and cancellation evidence for #53.
 
 Executable evidence covers the shared LSP operations, project-root discovery,
-stable-ID repair, and existing CLI/kernel records. Cancellation, structured
-watch lifecycle, client activation, and syntax grammars remain honest
-planned/unsupported boundaries; their status is not upgraded by server tests.
+and the bounded stable-ID repair. Schema/localisation resolution, structured
+compile/run/watch records, cancellation, client activation, and syntax grammars
+remain honest planned/unsupported boundaries; their status is not upgraded by
+server tests or human-oriented CLI tests.
 
 The rows currently draw from these scenarios. The source and schema files are
 the canonical fixtures; derived inputs are transformations or protocol events,

@@ -20,6 +20,7 @@ pub(crate) struct StdioHarness {
     next_id: u64,
 }
 
+#[allow(dead_code)]
 impl StdioHarness {
     pub(crate) fn start(params: Value) -> Self {
         let mut harness = Self::start_uninitialized(params);
@@ -172,7 +173,12 @@ impl StdioHarness {
     }
 
     fn expect_response(&mut self, id: u64) -> Value {
-        self.next_message_matching(|message| message.get("id") == Some(&json!(id)))
+        let message = self.next_message_matching(|message| message.get("id") == Some(&json!(id)));
+        assert!(
+            message.get("error").is_none(),
+            "unexpected response: {message}"
+        );
+        message
             .get("result")
             .cloned()
             .unwrap_or_else(|| panic!("response {id} omitted result"))
@@ -260,6 +266,7 @@ impl Drop for StdioHarness {
     }
 }
 
+#[allow(dead_code)]
 pub(crate) fn file_uri(path: &Path) -> String {
     Url::from_file_path(path)
         .unwrap_or_else(|()| {

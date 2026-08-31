@@ -122,9 +122,11 @@ fn diagnostic_recovery_keeps_incomplete_overlay_editable() {
     assert!(
         malformed["diagnostics"]
             .as_array()
-            .is_some_and(|diagnostics| diagnostics.iter().any(|diagnostic| diagnostic["code"]
-                .as_str()
-                .is_some_and(|code| { code.starts_with("RECITE_PARSE") })),
+            .is_some_and(
+                |diagnostics| diagnostics.iter().any(|diagnostic| diagnostic["code"]
+                    .as_str()
+                    .is_some_and(|code| { code.starts_with("RECITE_PARSE") }))
+            ),
         "malformed fixture did not publish a stable parse diagnostic: {malformed}"
     );
     assert_eq!(malformed["diagnostics"][0]["severity"], 1);
@@ -145,12 +147,20 @@ fn diagnostic_recovery_keeps_incomplete_overlay_editable() {
     harness.did_change(&uri, 2, ":: marker_probe default\n>");
     let incomplete = harness.diagnostics(&uri);
     assert_eq!(incomplete["version"], 2);
-    assert!(!incomplete["diagnostics"].as_array().is_some_and(Vec::is_empty));
+    assert!(
+        !incomplete["diagnostics"]
+            .as_array()
+            .is_some_and(Vec::is_empty)
+    );
 
     harness.did_change(&uri, 3, CORE_FIXTURE);
     let recovered = harness.diagnostics(&uri);
     assert_eq!(recovered["version"], 3);
-    assert!(recovered["diagnostics"].as_array().is_some_and(Vec::is_empty));
+    assert!(
+        recovered["diagnostics"]
+            .as_array()
+            .is_some_and(Vec::is_empty)
+    );
     harness.assert_no_stale_publication(&uri);
     harness.finish();
 }

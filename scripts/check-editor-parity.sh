@@ -169,6 +169,10 @@ for capability_id, capability in capability_map.items():
     require(isinstance(expected, dict) and expected.get("kind"), f"capability {capability_id} must name expected structured result")
     require(isinstance(expected.get("assertions"), list) and expected["assertions"], f"capability {capability_id} must name expected assertions")
     require(isinstance(capability.get("edge_cases"), list) and capability["edge_cases"], f"capability {capability_id} must name edge cases")
+    limitation = capability.get("known_limitation")
+    require(isinstance(limitation, str) and limitation.strip(), f"capability {capability_id} must name a known_limitation")
+    if isinstance(limitation, str) and limitation.strip() == "none":
+        require(capability.get("implementation_status") == "implemented", f"capability {capability_id} may use known_limitation=none only when fully implemented")
     status = capability.get("implementation_status")
     require(status in statuses, f"capability {capability_id} has invalid implementation status")
     client_status = capability.get("client_status") or {}
@@ -187,6 +191,10 @@ for capability_id, capability in capability_map.items():
     require(set(platform_status) == platforms, f"capability {capability_id} must name every platform exactly once")
     for platform, platform_status_value in platform_status.items():
         require(platform_status_value in statuses, f"capability {capability_id} has invalid {platform} status")
+        if status in {"planned", "unsupported"}:
+            require(platform_status_value in {"planned", "unsupported"}, f"{status} capability {capability_id} cannot claim {platform} platform status {platform_status_value}")
+        elif status == "partial":
+            require(platform_status_value in {"planned", "partial", "unsupported"}, f"partial capability {capability_id} cannot claim {platform} platform status {platform_status_value}")
     artifact_status = capability.get("artifact_status") or {}
     require(isinstance(artifact_status, dict), f"capability {capability_id} artifact_status must be an object")
     if not isinstance(artifact_status, dict):
@@ -212,6 +220,10 @@ for capability_id, capability in capability_map.items():
     if status in {"implemented", "partial"}:
         require(isinstance(evidence.get("command"), str) and evidence["command"], f"implemented/partial capability {capability_id} must name an evidence command")
         require(evidence.get("status") in {"implemented", "partial"}, f"implemented/partial capability {capability_id} needs implemented or partial evidence")
+    if status in {"planned", "unsupported"}:
+        require(evidence.get("status") in {"planned", "unsupported"}, f"{status} capability {capability_id} cannot claim evidence status {evidence.get('status')}")
+    elif status == "partial":
+        require(evidence.get("status") in {"planned", "partial"}, f"partial capability {capability_id} cannot claim implemented evidence")
     if status == "implemented":
         require(evidence.get("status") == "implemented", f"implemented capability {capability_id} needs implemented evidence")
     if status in {"planned", "unsupported"}:

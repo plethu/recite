@@ -52,6 +52,12 @@ elif mutation == "client":
 elif mutation == "distribution":
     distribution = next(distribution for distribution in contract["distributions"] if distribution["id"] == "vs-marketplace")
     distribution["status"] = "implemented"
+elif mutation == "capability-platform":
+    capability = next(capability for capability in contract["capabilities"] if capability["id"] == "lsp.completion")
+    capability["platform_status"]["linux"] = "implemented"
+elif mutation == "capability-evidence":
+    capability = next(capability for capability in contract["capabilities"] if capability["id"] == "lsp.completion")
+    capability["expected_evidence"]["status"] = "implemented"
 else:
     raise SystemExit(f"unknown mutation: {mutation}")
 
@@ -82,3 +88,5 @@ expect_failure() {
 expect_failure traversal "path escapes the repository"
 expect_failure client "implemented client vscode needs an implemented artifact"
 expect_failure distribution "implemented distribution vs-marketplace needs an implemented artifact"
+expect_failure capability-platform "partial capability lsp.completion cannot claim linux platform status implemented"
+expect_failure capability-evidence "partial capability lsp.completion cannot claim implemented evidence"
