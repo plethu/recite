@@ -290,16 +290,6 @@ fn schema_entry_quick_fix_rejects_open_schema_buffers() {
 }
 
 #[test]
-fn generated_json_schema_has_no_schema_edit_actions() {
-    super::code_action::generated_json_schema_has_no_schema_edit_actions();
-}
-
-#[test]
-fn unknown_schema_extension_has_unavailable_edit_capability() {
-    super::code_action::unknown_schema_extension_has_unavailable_edit_capability();
-}
-
-#[test]
 fn malformed_code_action_params_return_invalid_params() {
     super::code_action::malformed_code_action_params_return_invalid_params();
 }

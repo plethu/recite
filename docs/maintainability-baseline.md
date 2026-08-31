@@ -187,5 +187,4 @@ production suppressions must carry a narrow scope and rationale.
 | `crates/recite-cli/tests/watch_stress.rs` | 366 | test/support | cli/tests | cohesive | Watch stress harness |
 | `crates/recite-runtime/tests/traversal/conditions/choice_conditions.rs` | 365 | test/support | runtime/tests | cohesive | Choice condition coverage |
 | `crates/recite-lsp/src/tests/availability/speaker.rs` | 351 | test/support | lsp/tests | review | Typed and ordinary speaker completion coverage |
-| `crates/recite-lsp/src/tests/code_action/schema_entry.rs` | 359 | test/support | lsp/tests | review | Schema-backed JSON entry compatibility actions remain separate from compiler authoring edit plans |
 | `crates/recite-compiler/tests/validation/participation.rs` | 369 | test/support | compiler/tests | cohesive | #168: participation-aware validation completeness and all-complete compatibility coverage |

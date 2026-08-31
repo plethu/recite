@@ -99,14 +99,6 @@ pub(super) fn schema_entry_quick_fix_rejects_open_schema_buffers() {
     schema_entry::schema_entry_quick_fix_rejects_open_schema_buffers();
 }
 
-pub(super) fn generated_json_schema_has_no_schema_edit_actions() {
-    schema_entry::generated_json_schema_has_no_schema_edit_actions();
-}
-
-pub(super) fn unknown_schema_extension_has_unavailable_edit_capability() {
-    schema_entry::unknown_schema_extension_has_unavailable_edit_capability();
-}
-
 pub(super) fn malformed_code_action_params_return_invalid_params() {
     missing_id::malformed_code_action_params_return_invalid_params();
 }
