@@ -1,22 +1,21 @@
 use lsp_types::{Hover, Position};
-use recite_compiler::{AuthoringSnapshot, QueryResult};
-use recite_core::{DocumentKey, ProjectSchema};
+use recite_compiler::{AuthoringSnapshot, QueryResult, SchemaSummary};
+use recite_core::DocumentKey;
 use recite_ui::UiCatalog;
 
 use crate::position::lsp_position_to_source;
 
 mod position;
 mod schema;
+mod schema_values;
 mod typed;
-
-pub(crate) use position::byte_index_for_utf16_character;
 
 pub(super) fn hover(
     text: &str,
     position: Position,
     key: &DocumentKey,
     snapshot: &AuthoringSnapshot,
-    schema: Option<&ProjectSchema>,
+    schema: Option<&SchemaSummary>,
     catalog: &UiCatalog,
 ) -> Option<Hover> {
     let source_position = lsp_position_to_source(text, position)?;

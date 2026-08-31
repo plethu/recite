@@ -76,6 +76,32 @@ impl LspWorkspace {
     pub(crate) fn schema(&self) -> &SchemaIndex {
         &self.schema
     }
+
+    pub(in crate::workspace) fn rebuild_for_documents(
+        &mut self,
+        saved: SavedProjectIndex,
+        documents: OpenDocumentStore,
+    ) -> Result<(), recite_compiler::AuthoringError> {
+        if let Some(schema) = self.schema.overlay_for_documents(&documents) {
+            return self.rebuild_state_with_schema(saved, documents, schema);
+        }
+        if self.schema.has_open_match(&documents) {
+            let Some(uri) = documents
+                .documents()
+                .find(|document| self.schema.matches_uri(&document.identity().uri))
+                .map(|document| document.identity().uri.clone())
+            else {
+                return self.rebuild_for_documents(saved, documents);
+            };
+            return self.rebuild_state_with_schema(
+                saved,
+                documents,
+                self.schema.unavailable_overlay(uri),
+            );
+        }
+        let base = self.schema.base();
+        self.rebuild_state_with_schema(saved, documents, base)
+    }
 }
 
 #[derive(Clone, Debug)]

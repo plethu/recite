@@ -1,19 +1,21 @@
 use lsp_types::Hover;
 use recite_compiler::{
-    AuthoringSnapshot, ClauseKind, FunctionReferenceKind, HoverInfo, SemanticFact, SymbolIdentity,
+    AuthoringSnapshot, ClauseKind, FunctionReferenceKind, HoverInfo, SchemaSummary, SemanticFact,
+    SymbolIdentity,
 };
-use recite_core::{DocumentKey, ProjectSchema};
+use recite_core::DocumentKey;
 use recite_ui::{MsgId, UiArg, UiArgs, UiCatalog};
 
 use crate::position::span_to_range;
 
 use super::position::hover_response;
-use super::schema::{metadata_value_hover, schema_candidate_hover, schema_symbol_hover};
+use super::schema::schema_symbol_hover;
+use super::schema_values::{metadata_value_hover, schema_candidate_hover};
 
 pub(super) fn typed_hover(
     key: &DocumentKey,
     snapshot: &AuthoringSnapshot,
-    schema: Option<&ProjectSchema>,
+    schema: Option<&SchemaSummary>,
     info: &HoverInfo,
     catalog: &UiCatalog,
 ) -> Option<Hover> {
@@ -45,9 +47,12 @@ pub(super) fn typed_hover(
                 return None;
             }
             let schema = schema?;
-            let definition = schema.metadata.get(name)?;
+            let definition = schema
+                .metadata()
+                .iter()
+                .find(|metadata| metadata.name() == name)?;
             let detail = super::super::schema_hover::hover_detail(None, schema, &[], catalog);
-            let value = definition.domain.as_ref().map_or_else(
+            let value = definition.domain().map_or_else(
                 || {
                     catalog.format_args(
                         MsgId::LspHoverMetadata,
@@ -62,7 +67,7 @@ pub(super) fn typed_hover(
                         MsgId::LspHoverMetadataWithDomain,
                         &UiArgs::from([
                             ("name".to_owned(), UiArg::from(name.as_str())),
-                            ("domain".to_owned(), UiArg::from(domain.as_str())),
+                            ("domain".to_owned(), UiArg::from(domain)),
                             ("detail".to_owned(), UiArg::from(detail.clone())),
                         ]),
                     )
@@ -77,13 +82,16 @@ pub(super) fn typed_hover(
             let schema = schema?;
             match kind {
                 FunctionReferenceKind::BooleanCondition | FunctionReferenceKind::MatchCondition => {
-                    let definition = schema.conditions.get(name)?;
+                    let definition = schema
+                        .conditions()
+                        .iter()
+                        .find(|condition| condition.name() == name)?;
                     Some(hover_response(
                         &catalog.format_pairs(
                             MsgId::LspHoverCondition,
                             [(
                                 "returns",
-                                super::super::condition_detail(&definition.returns),
+                                super::super::condition_detail(definition.returns()),
                             )],
                         ),
                         range,
@@ -92,11 +100,14 @@ pub(super) fn typed_hover(
                 FunctionReferenceKind::DeferredEffect
                 | FunctionReferenceKind::ImmediateEffect
                 | FunctionReferenceKind::BlockingEffect => {
-                    let definition = schema.effects.get(name)?;
+                    let definition = schema
+                        .effects()
+                        .iter()
+                        .find(|effect| effect.name() == name)?;
                     Some(hover_response(
                         &catalog.format_pairs(
                             MsgId::LspHoverEffect,
-                            [("modes", super::super::effect_detail(&definition.modes))],
+                            [("modes", super::super::effect_detail(definition.modes()))],
                         ),
                         range,
                     ))

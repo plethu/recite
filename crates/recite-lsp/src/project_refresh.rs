@@ -16,7 +16,8 @@ impl LspWorkspace {
         let mut documents = self.documents.clone();
         let touched_saved = saved.refresh_uri(&uri);
         let open_identity_changed = self.refresh_open_identities(&saved, &mut documents);
-        if (touched_saved || open_identity_changed) && self.rebuild_state(saved, documents).is_err()
+        if (touched_saved || open_identity_changed)
+            && self.rebuild_for_documents(saved, documents).is_err()
         {
             return refreshes;
         }
@@ -50,7 +51,7 @@ impl LspWorkspace {
         saved.refresh_manifest();
         let mut documents = self.documents.clone();
         self.refresh_open_identities(&saved, &mut documents);
-        if self.rebuild_state(saved, documents).is_err() {
+        if self.rebuild_for_documents(saved, documents).is_err() {
             return Vec::new();
         }
         let mut refreshes = Vec::new();
@@ -91,7 +92,7 @@ impl LspWorkspace {
         let open_identity_changed = self.refresh_open_identities(&saved, &mut documents);
         if touched_saved || open_identity_changed {
             let watched_keys = self.watched_document_keys(uri, &saved, &documents);
-            if self.rebuild_state(saved, documents).is_err() {
+            if self.rebuild_for_documents(saved, documents).is_err() {
                 return Vec::new();
             }
             if let Some(document) = watched_keys
@@ -139,7 +140,10 @@ impl LspWorkspace {
         let mut saved = self.saved.clone();
         saved.refresh_uri(&uri);
         self.refresh_open_identities(&saved, &mut documents);
-        self.rebuild_state(saved, documents).ok()?;
+        self.rebuild_for_documents(saved, documents).ok()?;
+        if self.schema.matches_uri(&uri) {
+            return self.schema.refresh_or_clear(self.generation);
+        }
         let remaining_open = closed_key
             .as_ref()
             .and_then(|key| self.effective_open_document_for_key(key))

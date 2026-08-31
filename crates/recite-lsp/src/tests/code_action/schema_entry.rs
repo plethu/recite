@@ -12,6 +12,8 @@ const SOURCE: &str = "schema_version = 1\n[producer]\nid = \"dialogue\"\n";
 pub(super) fn condition_schema_quick_fix_inserts_zero_arg_bool_entry() {
     let (temp, source_uri, schema_uri) = fixture("schema.toml", SOURCE, ":if can_talk()\n");
     let mut harness = harness_for_root_with_schema_value(temp.path(), "./schema.toml");
+    harness.did_open(schema_uri.clone(), 1, SOURCE);
+    let _ = harness.recv_publish_diagnostics();
     let edit = single_quick_fix_with_title(
         &mut harness,
         source_uri,
@@ -20,7 +22,7 @@ pub(super) fn condition_schema_quick_fix_inserts_zero_arg_bool_entry() {
     );
 
     assert_eq!(edit.text_document.uri, schema_uri);
-    assert_eq!(edit.text_document.version, None);
+    assert_eq!(edit.text_document.version, Some(1));
     let text = single_text_edit(&edit).new_text;
     assert!(text.contains("[conditions.can_talk]"));
     assert!(text.contains("returns = \"bool\""));
@@ -53,8 +55,10 @@ pub(super) fn condition_schema_quick_fix_rejects_arguments_and_match_scrutinee()
 }
 
 pub(super) fn effect_schema_quick_fix_inserts_zero_arg_mode_entry() {
-    let (temp, source_uri, _) = fixture("schema.toml", SOURCE, "! blocking mark_seen()\n");
+    let (temp, source_uri, schema_uri) = fixture("schema.toml", SOURCE, "! blocking mark_seen()\n");
     let mut harness = harness_for_root_with_schema_value(temp.path(), "./schema.toml");
+    harness.did_open(schema_uri, 1, SOURCE);
+    let _ = harness.recv_publish_diagnostics();
     let edit = single_quick_fix_with_title(
         &mut harness,
         source_uri,
@@ -108,7 +112,10 @@ pub(super) fn schema_entry_quick_fix_uses_project_wide_same_name_function_contex
         ":: start\n! deferred pulse()\n",
     );
     let effect_uri = file_uri(&temp.path().join("effect.recite"));
+    let schema_uri = file_uri(&temp.path().join("schema.toml"));
     let mut harness = harness_for_root_with_schema_value(temp.path(), "./schema.toml");
+    harness.did_open(schema_uri, 1, SOURCE);
+    let _ = harness.recv_publish_diagnostics();
     let edit = single_quick_fix_with_title(
         &mut harness,
         effect_uri,
@@ -133,12 +140,18 @@ pub(super) fn schema_entry_quick_fix_rejects_incomplete_project_function_summari
 }
 
 pub(super) fn schema_entry_insertion_handles_crlf_and_eof_without_trailing_newline() {
-    let (temp, source_uri, _) = fixture(
+    let (temp, source_uri, schema_uri) = fixture(
         "schema.toml",
         "schema_version = 1\r\n[producer]\r\nid = \"dialogue\"",
         ":if ready()\r\n  -> END\r\n",
     );
     let mut harness = harness_for_root_with_schema_value(temp.path(), "./schema.toml");
+    harness.did_open(
+        schema_uri,
+        1,
+        "schema_version = 1\r\n[producer]\r\nid = \"dialogue\"",
+    );
+    let _ = harness.recv_publish_diagnostics();
     let edit = single_quick_fix_with_title(
         &mut harness,
         source_uri,
@@ -152,8 +165,10 @@ pub(super) fn schema_entry_insertion_handles_crlf_and_eof_without_trailing_newli
 }
 
 pub(super) fn schema_entry_quick_fix_rejects_missing_sections() {
-    let (temp, source_uri, _) = fixture("schema.toml", SOURCE, ":if ready()\n");
+    let (temp, source_uri, schema_uri) = fixture("schema.toml", SOURCE, ":if ready()\n");
     let mut harness = harness_for_root_with_schema_value(temp.path(), "./schema.toml");
+    harness.did_open(schema_uri, 1, SOURCE);
+    let _ = harness.recv_publish_diagnostics();
     let edit = single_quick_fix_with_title(
         &mut harness,
         source_uri,
@@ -201,6 +216,7 @@ pub(super) fn generated_json_schema_has_no_schema_edit_actions() {
 pub(super) fn unknown_schema_extension_has_unavailable_edit_capability() {
     let (temp, source_uri, _) = fixture("schema.data", SOURCE, ":if ready()\n");
     let mut harness = harness_for_root_with_schema_value(temp.path(), "./schema.data");
+    let _ = harness.recv_publish_diagnostics();
     let actions = code_actions(
         &mut harness,
         source_uri,

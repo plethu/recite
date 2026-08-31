@@ -2,7 +2,8 @@ use std::collections::BTreeSet;
 
 use lsp_types::{CodeActionParams, CodeActionResponse, CompletionResponse, Hover, Position};
 use recite_compiler::AuthoringSnapshot;
-use recite_core::{ConditionReturnType, DocumentKey, EffectMode, ProjectSchema, SchemaTypeRef};
+use recite_compiler::SchemaSummary;
+use recite_core::{ConditionReturnType, DocumentKey, EffectMode, SchemaTypeRef};
 use recite_ui::UiCatalog;
 
 mod code_action;
@@ -16,19 +17,10 @@ pub(crate) fn completion(
     position: Position,
     key: Option<&DocumentKey>,
     snapshot: &AuthoringSnapshot,
-    schema: Option<&ProjectSchema>,
-    schema_authoring: bool,
+    schema: Option<&SchemaSummary>,
     catalog: &UiCatalog,
 ) -> Option<CompletionResponse> {
-    completion::completion(
-        text,
-        position,
-        key,
-        snapshot,
-        schema,
-        schema_authoring,
-        catalog,
-    )
+    completion::completion(text, position, key, snapshot, schema, catalog)
 }
 
 pub(crate) use code_action::{CodeActionDocument, SchemaCodeActionDocument};
@@ -50,19 +42,11 @@ pub(crate) fn hover(
     position: Position,
     key: &DocumentKey,
     snapshot: &AuthoringSnapshot,
-    schema: Option<&ProjectSchema>,
+    schema: Option<&SchemaSummary>,
     catalog: &UiCatalog,
 ) -> Option<Hover> {
     hover::hover(text, position, key, snapshot, schema, catalog)
 }
-
-pub(super) fn line_prefix(text: &str, position: Position) -> Option<&str> {
-    let line = text.lines().nth(usize::try_from(position.line).ok()?)?;
-    let end = byte_index_for_utf16_character(line, position.character)?;
-    line.get(..end)
-}
-
-pub(super) use hover::byte_index_for_utf16_character;
 
 pub(super) fn condition_detail(return_type: &ConditionReturnType) -> String {
     match return_type {

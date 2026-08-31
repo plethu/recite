@@ -8,7 +8,7 @@ use lsp_types::{
     TextDocumentEdit, TextEdit, Uri, WorkspaceEdit,
 };
 use recite_compiler::AuthoringSnapshot;
-use recite_core::SchemaSource;
+use recite_core::{SchemaSource, SchemaSourceEditPlan};
 use recite_ui::{MsgId, UiCatalog};
 
 use crate::edit_projection::EditDocument;
@@ -24,7 +24,7 @@ pub(crate) struct SchemaCodeActionDocument {
     pub(crate) text: String,
     pub(crate) summary: recite_compiler::SchemaSummary,
     pub(crate) source: SchemaSource,
-    pub(crate) version: Option<i32>,
+    pub(crate) version: i32,
 }
 
 pub(crate) fn code_action(
@@ -100,15 +100,63 @@ fn includes_kind(params: &CodeActionParams, kind: &CodeActionKind) -> bool {
         .is_none_or(|kinds| kinds.iter().any(|candidate| candidate == kind))
 }
 
-fn workspace_edit(uri: Uri, version: Option<i32>, edits: Vec<TextEdit>) -> WorkspaceEdit {
-    WorkspaceEdit {
-        changes: None,
-        document_changes: Some(DocumentChanges::Edits(vec![TextDocumentEdit {
-            text_document: OptionalVersionedTextDocumentIdentifier { uri, version },
-            edits: edits.into_iter().map(OneOf::Left).collect(),
-        }])),
-        change_annotations: None,
+pub(crate) fn schema_workspace_edit(
+    schema: &SchemaCodeActionDocument,
+    plan: &SchemaSourceEditPlan,
+    documents: &[CodeActionDocument<'_>],
+) -> Option<WorkspaceEdit> {
+    let mut source = schema.source.clone();
+    plan.apply(&mut source).ok()?;
+    if source.source_text() != plan.replacement_text()
+        || schema.source.source_text() != schema.text
+        || schema.source.source_text_fingerprint() != *plan.expected_text_fingerprint()
+        || schema.source.source_fingerprint() != plan.expected_source_fingerprint()
+    {
+        return None;
     }
+
+    let mut changes = vec![TextDocumentEdit {
+        text_document: OptionalVersionedTextDocumentIdentifier {
+            uri: schema.uri.clone(),
+            version: Some(schema.version),
+        },
+        edits: vec![OneOf::Left(TextEdit {
+            range: full_document_range(&schema.text),
+            new_text: plan.replacement_text().to_owned(),
+        })],
+    }];
+    changes.extend(
+        documents
+            .iter()
+            .filter(|document| document.source.layer == recite_compiler::DocumentLayer::Open)
+            .map(|document| TextDocumentEdit {
+                text_document: OptionalVersionedTextDocumentIdentifier {
+                    uri: document.source.uri.clone(),
+                    version: document
+                        .source
+                        .version
+                        .and_then(|version| i32::try_from(version.as_i64()).ok()),
+                },
+                edits: Vec::new(),
+            }),
+    );
+    changes.sort_by(|left, right| {
+        left.text_document
+            .uri
+            .as_str()
+            .cmp(right.text_document.uri.as_str())
+    });
+    if changes
+        .windows(2)
+        .any(|pair| pair[0].text_document.uri == pair[1].text_document.uri)
+    {
+        return None;
+    }
+    Some(WorkspaceEdit {
+        changes: None,
+        document_changes: Some(DocumentChanges::Edits(changes)),
+        change_annotations: None,
+    })
 }
 
 fn full_document_range(text: &str) -> Range {

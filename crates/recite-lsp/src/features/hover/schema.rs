@@ -1,9 +1,6 @@
 use lsp_types::Hover;
-use recite_compiler::{
-    CompletionCandidateDetail, CompletionCandidateKind, HoverInfo, MetadataValueDetail,
-    SemanticFact, SemanticSymbolKind,
-};
-use recite_core::{MetadataDomainDefinition, ProjectSchema, ProjectionOutputTarget, SchemaTypeRef};
+use recite_compiler::{SchemaSummary, SemanticSymbolKind};
+use recite_core::{MetadataDomainDefinition, ProjectionOutputTarget};
 use recite_ui::{MsgId, UiArg, UiArgs, UiCatalog};
 
 use super::position::hover_response;
@@ -12,20 +9,26 @@ pub(super) fn schema_symbol_hover(
     name: &str,
     range: lsp_types::Range,
     kind: &SemanticSymbolKind,
-    schema: &ProjectSchema,
+    schema: &SchemaSummary,
     catalog: &UiCatalog,
 ) -> Option<Hover> {
     let value = match kind {
         SemanticSymbolKind::Speaker => {
-            let definition = schema.speakers.get(name)?;
-            super::super::schema_hover::speaker_hover_text(name, definition, catalog)
+            let definition = schema
+                .speakers()
+                .iter()
+                .find(|speaker| speaker.name() == name)?;
+            super::super::schema_hover::speaker_hover_text(name, definition.definition(), catalog)
         }
         SemanticSymbolKind::Registry => {
-            let definition = schema.registries.get(name)?;
+            let definition = schema
+                .registries()
+                .iter()
+                .find(|registry| registry.name() == name)?;
             let detail = super::super::schema_hover::hover_detail(
-                definition.origin.as_ref(),
+                definition.origin(),
                 schema,
-                &definition.producer_fingerprints,
+                &definition.definition().producer_fingerprints,
                 catalog,
             );
             catalog.format_args(
@@ -37,8 +40,11 @@ pub(super) fn schema_symbol_hover(
             )
         }
         SemanticSymbolKind::MetadataDomain => {
-            let definition = schema.metadata_domains.get(name)?;
-            let (origin, fingerprints) = match definition {
+            let definition = schema
+                .metadata_domains()
+                .iter()
+                .find(|domain| domain.name() == name)?;
+            let (origin, fingerprints) = match definition.definition() {
                 MetadataDomainDefinition::Flat(domain) => (
                     domain.provenance.origin.as_ref(),
                     &domain.provenance.producer_fingerprints,
@@ -59,9 +65,12 @@ pub(super) fn schema_symbol_hover(
             )
         }
         SemanticSymbolKind::Metadata => {
-            let definition = schema.metadata.get(name)?;
+            let definition = schema
+                .metadata()
+                .iter()
+                .find(|metadata| metadata.name() == name)?;
             let detail = super::super::schema_hover::hover_detail(None, schema, &[], catalog);
-            definition.domain.as_ref().map_or_else(
+            definition.domain().map_or_else(
                 || {
                     catalog.format_args(
                         MsgId::LspHoverMetadata,
@@ -76,7 +85,7 @@ pub(super) fn schema_symbol_hover(
                         MsgId::LspHoverMetadataWithDomain,
                         &UiArgs::from([
                             ("name".to_owned(), UiArg::from(name)),
-                            ("domain".to_owned(), UiArg::from(domain.as_str())),
+                            ("domain".to_owned(), UiArg::from(domain)),
                             ("detail".to_owned(), UiArg::from(detail.clone())),
                         ]),
                     )
@@ -84,13 +93,12 @@ pub(super) fn schema_symbol_hover(
             )
         }
         SemanticSymbolKind::AvailabilityReason => {
-            let definition = schema.availability_reasons.get(name)?;
-            let detail = super::super::schema_hover::hover_detail(
-                definition.origin.as_ref(),
-                schema,
-                &[],
-                catalog,
-            );
+            let definition = schema
+                .availability_reasons()
+                .iter()
+                .find(|reason| reason.id().as_str() == name)?;
+            let detail =
+                super::super::schema_hover::hover_detail(definition.origin(), schema, &[], catalog);
             catalog.format_args(
                 MsgId::LspHoverAvailabilityReason,
                 &UiArgs::from([
@@ -100,31 +108,40 @@ pub(super) fn schema_symbol_hover(
             )
         }
         SemanticSymbolKind::Condition => {
-            let definition = schema.conditions.get(name)?;
+            let definition = schema
+                .conditions()
+                .iter()
+                .find(|condition| condition.name() == name)?;
             catalog.format_pairs(
                 MsgId::LspHoverCondition,
                 [(
                     "returns",
-                    super::super::condition_detail(&definition.returns),
+                    super::super::condition_detail(definition.returns()),
                 )],
             )
         }
         SemanticSymbolKind::Effect => {
-            let definition = schema.effects.get(name)?;
+            let definition = schema
+                .effects()
+                .iter()
+                .find(|effect| effect.name() == name)?;
             catalog.format_pairs(
                 MsgId::LspHoverEffect,
-                [("modes", super::super::effect_detail(&definition.modes))],
+                [("modes", super::super::effect_detail(definition.modes()))],
             )
         }
         SemanticSymbolKind::ProjectionQuery => {
-            let definition = schema.projection_queries.get(name)?;
+            let definition = schema
+                .projection_queries()
+                .iter()
+                .find(|query| query.name() == name)?;
             catalog.format_args(
                 MsgId::LspHoverProjectionQuery,
                 &UiArgs::from([
                     ("name".to_owned(), UiArg::from(name)),
                     (
                         "returns".to_owned(),
-                        UiArg::from(super::super::schema_type_detail(&definition.returns)),
+                        UiArg::from(super::super::schema_type_detail(definition.returns())),
                     ),
                 ]),
             )
@@ -164,158 +181,6 @@ pub(super) fn schema_symbol_hover(
         ),
         _ => return None,
     };
-    Some(hover_response(&value, range))
-}
-
-pub(super) fn metadata_value_hover(
-    schema: Option<&ProjectSchema>,
-    info: &HoverInfo,
-    range: lsp_types::Range,
-    catalog: &UiCatalog,
-) -> Option<Hover> {
-    let schema = schema?;
-    let (value, detail) = info.metadata_value_detail().or_else(|| {
-        info.facts().iter().find_map(|fact| match fact {
-            SemanticFact::MetadataValueDetail { value, detail, .. } => {
-                Some((value.as_str(), detail))
-            }
-            _ => None,
-        })
-    })?;
-    let rendered = match detail {
-        MetadataValueDetail::Invalid => return None,
-        MetadataValueDetail::Speaker => {
-            let definition = schema.speakers.get(value)?;
-            super::super::schema_hover::speaker_hover_text(value, definition, catalog)
-        }
-        MetadataValueDetail::Registry(type_ref) => {
-            let SchemaTypeRef::Registry(name) = type_ref else {
-                return None;
-            };
-            let definition = schema.registries.get(name)?;
-            let detail = definition
-                .value_origins
-                .get(value)
-                .map_or_else(String::new, |origin| {
-                    super::super::schema_hover::origin_detail(catalog, origin)
-                });
-            catalog.format_args(
-                MsgId::LspHoverRegistryValue,
-                &UiArgs::from([
-                    ("word".to_owned(), UiArg::from(value)),
-                    ("name".to_owned(), UiArg::from(name)),
-                    ("detail".to_owned(), UiArg::from(detail)),
-                ]),
-            )
-        }
-        MetadataValueDetail::Enum(type_ref) => {
-            let SchemaTypeRef::Enum(name) = type_ref else {
-                return None;
-            };
-            schema
-                .types
-                .get(name)
-                .and_then(|definition| match definition {
-                    recite_core::SchemaTypeDefinition::Enum(definition)
-                        if definition.values.contains(value) =>
-                    {
-                        Some(())
-                    }
-                    _ => None,
-                })?;
-            catalog.format_pairs(MsgId::LspHoverEnumValue, [("word", value), ("name", name)])
-        }
-        MetadataValueDetail::Domain { name, context } => {
-            super::super::schema_hover::schema_domain_value_hover_with_context(
-                schema,
-                name,
-                value,
-                context.as_deref(),
-                catalog,
-            )?
-        }
-        _ => return None,
-    };
-    Some(hover_response(&rendered, range))
-}
-
-pub(super) fn schema_candidate_hover(
-    word: &str,
-    range: lsp_types::Range,
-    detail: &CompletionCandidateDetail,
-    kind: CompletionCandidateKind,
-    schema: &ProjectSchema,
-    catalog: &UiCatalog,
-) -> Option<Hover> {
-    let value = match kind {
-        CompletionCandidateKind::Speaker => {
-            let definition = schema.speakers.get(word)?;
-            super::super::schema_hover::speaker_hover_text(word, definition, catalog)
-        }
-        CompletionCandidateKind::MetadataValue => return None,
-        CompletionCandidateKind::Condition => {
-            let definition = schema.conditions.get(word)?;
-            catalog.format_pairs(
-                MsgId::LspHoverCondition,
-                [(
-                    "returns",
-                    super::super::condition_detail(&definition.returns),
-                )],
-            )
-        }
-        CompletionCandidateKind::Effect => {
-            let definition = schema.effects.get(word)?;
-            catalog.format_pairs(
-                MsgId::LspHoverEffect,
-                [("modes", super::super::effect_detail(&definition.modes))],
-            )
-        }
-        CompletionCandidateKind::AvailabilityReason => {
-            let definition = schema.availability_reasons.get(word)?;
-            let detail = super::super::schema_hover::hover_detail(
-                definition.origin.as_ref(),
-                schema,
-                &[],
-                catalog,
-            );
-            catalog.format_args(
-                MsgId::LspHoverAvailabilityReason,
-                &UiArgs::from([
-                    ("name".to_owned(), UiArg::from(word)),
-                    ("detail".to_owned(), UiArg::from(detail)),
-                ]),
-            )
-        }
-        CompletionCandidateKind::MetadataKey => return None,
-        CompletionCandidateKind::ProjectionQuery => {
-            let definition = schema.projection_queries.get(word)?;
-            catalog.format_args(
-                MsgId::LspHoverProjectionQuery,
-                &UiArgs::from([
-                    ("name".to_owned(), UiArg::from(word)),
-                    (
-                        "returns".to_owned(),
-                        UiArg::from(super::super::schema_type_detail(&definition.returns)),
-                    ),
-                ]),
-            )
-        }
-        CompletionCandidateKind::ProjectionProjector => catalog.format_args(
-            MsgId::LspHoverPresentationProjector,
-            &UiArgs::from([
-                ("name".to_owned(), UiArg::from(word)),
-                ("inputs".to_owned(), UiArg::from(0_usize)),
-                ("queries".to_owned(), UiArg::from(0_usize)),
-                ("outputs".to_owned(), UiArg::from(0_usize)),
-            ]),
-        ),
-        CompletionCandidateKind::ProjectionInput
-        | CompletionCandidateKind::ProjectionQueryResult
-        | CompletionCandidateKind::ProjectionOutput
-        | CompletionCandidateKind::ProjectionLabel => return None,
-        _ => return None,
-    };
-    let _ = detail;
     Some(hover_response(&value, range))
 }
 

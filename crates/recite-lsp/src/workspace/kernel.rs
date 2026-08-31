@@ -20,27 +20,6 @@ impl LspWorkspace {
         Ok(())
     }
 
-    pub(super) fn rebuild_state(
-        &mut self,
-        saved: SavedProjectIndex,
-        documents: OpenDocumentStore,
-    ) -> Result<(), recite_compiler::AuthoringError> {
-        let owners = self.rebuild_kernel_for(&saved, &documents, None)?;
-        let generation = self.next_generation();
-        let snapshot = super::LiveProjectSnapshot::rebuild(
-            generation,
-            &saved,
-            &documents,
-            self.kernel.snapshot(),
-        );
-        self.saved = saved;
-        self.documents = documents;
-        self.kernel_open_owners = owners;
-        self.generation = generation;
-        self.snapshot = snapshot;
-        Ok(())
-    }
-
     pub(super) fn rebuild_state_with_schema(
         &mut self,
         saved: SavedProjectIndex,
@@ -70,9 +49,10 @@ impl LspWorkspace {
         documents: &OpenDocumentStore,
         schema: Option<&SchemaIndex>,
     ) -> Result<BTreeMap<DocumentKey, lsp_types::Uri>, recite_compiler::AuthoringError> {
+        let schema_index = schema.unwrap_or(&self.schema);
         let open_documents = Self::effective_open_documents(documents)
             .into_iter()
-            .filter(|(_, document)| !self.schema.matches_uri(&document.identity().uri))
+            .filter(|(_, document)| !schema_index.matches_uri(&document.identity().uri))
             .collect::<BTreeMap<_, _>>();
         let owners = open_documents
             .iter()

@@ -121,7 +121,7 @@ pub(super) fn schema_load_failure_keeps_source_only_snapshot() {
     );
 
     assert!(workspace.schema().summary().is_none());
-    assert!(!workspace.schema().diagnostics().is_empty());
+    assert!(workspace.schema_diagnostics().is_some());
     assert_eq!(block_names(&workspace), ["source"]);
 }
 

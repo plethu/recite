@@ -1,18 +1,22 @@
-use recite_core::{MetadataDomainDefinition, MissingMetadataContextPolicy, ProjectSchema};
+use recite_compiler::SchemaSummary;
+use recite_core::{MetadataDomainDefinition, MissingMetadataContextPolicy};
 use recite_ui::{MsgId, UiArg, UiArgs, UiCatalog};
 
 /// Renders a compiler-resolved metadata domain value.  Context selection and
 /// validity belong to the compiler; this function only reads schema
 /// provenance and localises the protocol-facing hover text.
 pub(crate) fn schema_domain_value_hover_with_context(
-    schema: &ProjectSchema,
+    schema: &SchemaSummary,
     domain_name: &str,
     word: &str,
     context: Option<&str>,
     catalog: &UiCatalog,
 ) -> Option<String> {
-    let domain = schema.metadata_domains.get(domain_name)?;
-    match domain {
+    let domain = schema
+        .metadata_domains()
+        .iter()
+        .find(|domain| domain.name() == domain_name)?;
+    match domain.definition() {
         MetadataDomainDefinition::Flat(domain) => {
             if !domain.values.contains(word) {
                 return None;
@@ -43,7 +47,12 @@ pub(crate) fn schema_domain_value_hover_with_context(
                     else {
                         return None;
                     };
-                    match schema.metadata_domains.get(fallback) {
+                    match schema
+                        .metadata_domains()
+                        .iter()
+                        .find(|domain| domain.name() == fallback)
+                        .map(|domain| domain.definition())
+                    {
                         Some(MetadataDomainDefinition::Flat(fallback)) => {
                             fallback.provenance.value_origins.get(word)
                         }
@@ -63,8 +72,11 @@ pub(crate) fn schema_domain_value_hover_with_context(
             else {
                 return None;
             };
-            let Some(MetadataDomainDefinition::Flat(fallback)) =
-                schema.metadata_domains.get(fallback)
+            let Some(MetadataDomainDefinition::Flat(fallback)) = schema
+                .metadata_domains()
+                .iter()
+                .find(|domain| domain.name() == fallback)
+                .map(|domain| domain.definition())
             else {
                 return None;
             };

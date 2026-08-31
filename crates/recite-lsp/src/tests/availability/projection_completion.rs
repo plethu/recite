@@ -1,4 +1,3 @@
-use lsp_types::CompletionResponse;
 use serde_json::json;
 use tempfile::TempDir;
 
@@ -42,58 +41,11 @@ pub(super) fn completes_projection_schema_authoring_symbols() {
     );
     harness.did_open(schema_uri.clone(), 1, source);
     let _ = harness.recv_publish_diagnostics();
-
-    let functions = completion_labels(
+    assert!(
         harness
-            .completion(
-                schema_uri.clone(),
-                position_after(source, "\"function\": \"a"),
-            )
-            .expect("projection query function completion"),
+            .completion(schema_uri, position_after(source, "\"function\": \"a"))
+            .is_none()
     );
-    assert_eq!(functions, ["actor_skill"]);
-
-    let inputs = completion_labels(
-        harness
-            .completion(schema_uri.clone(), position_after(source, "\"input\": \"s"))
-            .expect("projection input completion"),
-    );
-    assert_eq!(inputs, ["skill", "threshold"]);
-
-    let query_results = completion_labels(
-        harness
-            .completion(
-                schema_uri.clone(),
-                position_after(source, "\"query_result\": \"c"),
-            )
-            .expect("projection query result completion"),
-    );
-    assert_eq!(query_results, ["current"]);
-
-    let projectors = completion_labels(
-        harness
-            .completion(schema_uri.clone(), position_after(source, "\"choice"))
-            .expect("presentation projector completion"),
-    );
-    assert_eq!(projectors, ["choice_skill_prefix"]);
-
-    let outputs = completion_labels(
-        harness
-            .completion(schema_uri.clone(), position_after(source, "        \"pre"))
-            .expect("presentation output completion"),
-    );
-    assert_eq!(outputs, ["prefix"]);
-
-    let labels = completion_labels(
-        harness
-            .completion(
-                schema_uri,
-                position_after(source, "\"template_id\": \"skill"),
-            )
-            .expect("presentation label completion"),
-    );
-    assert_eq!(labels, ["skill_check_prefix"]);
-
     harness.finish();
 }
 
@@ -134,41 +86,11 @@ pub(super) fn scopes_projection_schema_authoring_symbols_to_current_projector() 
     );
     harness.did_open(schema_uri.clone(), 1, source);
     let _ = harness.recv_publish_diagnostics();
-
-    let inputs = completion_labels(
+    assert!(
         harness
-            .completion(schema_uri.clone(), position_after(source, "\"input\": \"s"))
-            .expect("scoped projection input completion"),
+            .completion(schema_uri, position_after(source, "\"input\": \"s"))
+            .is_none()
     );
-    assert_eq!(inputs, ["skill", "threshold"]);
-
-    let query_results = completion_labels(
-        harness
-            .completion(
-                schema_uri.clone(),
-                position_after(source, "\"query_result\": \"c"),
-            )
-            .expect("scoped projection query result completion"),
-    );
-    assert_eq!(query_results, ["current"]);
-
-    let outputs = completion_labels(
-        harness
-            .completion(schema_uri.clone(), position_after(source, "        \"p"))
-            .expect("scoped projection output completion"),
-    );
-    assert_eq!(outputs, ["prefix"]);
-
-    let labels = completion_labels(
-        harness
-            .completion(
-                schema_uri,
-                position_after(source, "\"template_id\": \"skill"),
-            )
-            .expect("scoped projection label completion"),
-    );
-    assert_eq!(labels, ["skill_check_prefix"]);
-
     harness.finish();
 }
 
@@ -256,13 +178,6 @@ pub(super) fn does_not_complete_projection_projectors_in_sibling_objects() {
     );
 
     harness.finish();
-}
-
-fn completion_labels(response: CompletionResponse) -> Vec<String> {
-    match response {
-        CompletionResponse::Array(items) => items.into_iter().map(|item| item.label).collect(),
-        CompletionResponse::List(list) => list.items.into_iter().map(|item| item.label).collect(),
-    }
 }
 
 fn projection_scope_schema() -> &'static str {

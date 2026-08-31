@@ -22,7 +22,11 @@ impl LspWorkspace {
         let identity = self.open_identity(uri.clone());
         let mut documents = self.documents.clone();
         documents.open(identity, version, text);
-        self.rebuild_state(self.saved.clone(), documents).ok()?;
+        self.rebuild_for_documents(self.saved.clone(), documents)
+            .ok()?;
+        if self.schema.matches_uri(&uri) {
+            return self.schema.refresh_or_clear(self.generation);
+        }
         self.documents
             .document(&uri)
             .map(|document| self.publish_open_document(document))
@@ -38,8 +42,20 @@ impl LspWorkspace {
         let mut documents = self.documents.clone();
         match documents.change(identity, version, changes) {
             DocumentChangeResult::Accepted(_) => {
-                if self.rebuild_state(self.saved.clone(), documents).is_err() {
+                if self
+                    .rebuild_for_documents(self.saved.clone(), documents)
+                    .is_err()
+                {
                     return WorkspaceChangeResult::Rejected;
+                }
+                if self.schema.matches_uri(&uri) {
+                    if let Some(refresh) = self.schema.refresh_or_clear(self.generation) {
+                        return WorkspaceChangeResult::Accepted(refresh);
+                    }
+                    let Some(document) = self.documents.document(&uri) else {
+                        return WorkspaceChangeResult::Rejected;
+                    };
+                    return WorkspaceChangeResult::Accepted(self.publish_open_document(document));
                 }
                 let Some(document) = self.documents.document(&uri) else {
                     return WorkspaceChangeResult::Rejected;

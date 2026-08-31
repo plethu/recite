@@ -1,30 +1,21 @@
 use lsp_types::{CompletionItem, CompletionItemKind, CompletionResponse, Documentation, Position};
 use recite_compiler::{
     AuthoringSnapshot, CompletionCandidate, CompletionCandidateDetail, CompletionCandidateKind,
-    CompletionSiteKind, QueryResult, SymbolIdentity, SymbolQueryOptions, SymbolRole,
+    CompletionSiteKind, QueryResult, SchemaSummary, SymbolIdentity, SymbolQueryOptions, SymbolRole,
 };
-use recite_core::{DocumentKey, ProjectSchema};
+use recite_core::DocumentKey;
 use recite_ui::{MsgId, UiCatalog};
 
 use crate::position::lsp_position_to_source;
-
-mod projection;
 
 pub(super) fn completion(
     text: &str,
     position: Position,
     key: Option<&DocumentKey>,
     snapshot: &AuthoringSnapshot,
-    schema: Option<&ProjectSchema>,
-    schema_authoring: bool,
+    schema: Option<&SchemaSummary>,
     catalog: &UiCatalog,
 ) -> Option<CompletionResponse> {
-    if schema_authoring {
-        let schema = schema?;
-        let line = super::line_prefix(text, position)?;
-        return projection::schema_json_completion_items(text, position, line, schema, catalog);
-    }
-
     let key = key?;
     let source_position = lsp_position_to_source(text, position)?;
     let result = snapshot.complete(key, source_position);
@@ -80,7 +71,7 @@ fn extend_project_block_items(
 fn completion_item(
     candidate: &CompletionCandidate,
     _text: &str,
-    schema: Option<&ProjectSchema>,
+    schema: Option<&SchemaSummary>,
     catalog: &UiCatalog,
 ) -> Option<CompletionItem> {
     let mut item = CompletionItem {
@@ -108,20 +99,26 @@ fn completion_item(
             item.detail = Some(metadata_value_detail(candidate, catalog));
         }
         CompletionCandidateKind::Condition => {
-            let definition = schema?.conditions.get(candidate.name())?;
+            let definition = schema?
+                .conditions()
+                .iter()
+                .find(|condition| condition.name() == candidate.name())?;
             item.detail = Some(catalog.format_pairs(
                 MsgId::LspCompletionCondition,
-                [("returns", super::condition_detail(&definition.returns))],
+                [("returns", super::condition_detail(definition.returns()))],
             ));
             item.documentation = Some(Documentation::String(
                 catalog.text(MsgId::LspCompletionConditionDocumentation),
             ));
         }
         CompletionCandidateKind::Effect => {
-            let definition = schema?.effects.get(candidate.name())?;
+            let definition = schema?
+                .effects()
+                .iter()
+                .find(|effect| effect.name() == candidate.name())?;
             item.detail = Some(catalog.format_pairs(
                 MsgId::LspCompletionEffect,
-                [("modes", super::effect_detail(&definition.modes))],
+                [("modes", super::effect_detail(definition.modes()))],
             ));
             item.documentation = Some(Documentation::String(
                 catalog.text(MsgId::LspCompletionEffectDocumentation),

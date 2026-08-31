@@ -1,14 +1,11 @@
-use lsp_types::{
-    CodeAction, CodeActionKind, CodeActionOrCommand, CodeActionParams, Range, TextEdit,
-};
+use lsp_types::{CodeAction, CodeActionKind, CodeActionOrCommand, CodeActionParams, Range};
 use recite_core::{
     ConditionDefinition, ConditionReturnType, EffectDefinition, EffectMode, SchemaSourceEdit,
 };
 use recite_ui::{MsgId, UiCatalog};
 
 use super::{
-    CodeActionDocument, SchemaCodeActionDocument, full_document_range, ranges_intersect,
-    workspace_edit,
+    CodeActionDocument, SchemaCodeActionDocument, ranges_intersect, schema_workspace_edit,
 };
 use crate::summary::{FunctionReferenceKind, FunctionReferenceSummary};
 
@@ -84,18 +81,16 @@ fn condition_action(
             },
         })
         .ok()?;
-    Some(schema_code_action(
+    schema_code_action(
         params,
         schema,
+        documents,
+        &edit,
         catalog.format_pairs(
             MsgId::LspCodeActionAddCondition,
             [("name", function.name.as_str())],
         ),
-        TextEdit {
-            range: full_document_range(&schema.text),
-            new_text: edit.replacement_text(),
-        },
-    ))
+    )
 }
 
 fn effect_action(
@@ -136,18 +131,16 @@ fn effect_action(
             },
         })
         .ok()?;
-    Some(schema_code_action(
+    schema_code_action(
         params,
         schema,
+        documents,
+        &edit,
         catalog.format_pairs(
             MsgId::LspCodeActionAddEffect,
             [("name", function.name.as_str())],
         ),
-        TextEdit {
-            range: full_document_range(&schema.text),
-            new_text: edit.replacement_text(),
-        },
-    ))
+    )
 }
 
 fn same_name_conditions<'a>(
@@ -201,18 +194,15 @@ fn same_name_effect_modes(
 fn schema_code_action(
     params: &CodeActionParams,
     schema: &SchemaCodeActionDocument,
+    documents: &[CodeActionDocument<'_>],
+    plan: &recite_core::SchemaSourceEditPlan,
     title: String,
-    edit: TextEdit,
-) -> CodeActionOrCommand {
-    CodeActionOrCommand::CodeAction(CodeAction {
+) -> Option<CodeActionOrCommand> {
+    Some(CodeActionOrCommand::CodeAction(CodeAction {
         title,
         kind: Some(CodeActionKind::QUICKFIX),
         diagnostics: Some(params.context.diagnostics.clone()),
-        edit: Some(workspace_edit(
-            schema.uri.clone(),
-            schema.version,
-            vec![edit],
-        )),
+        edit: Some(schema_workspace_edit(schema, plan, documents)?),
         ..CodeAction::default()
-    })
+    }))
 }

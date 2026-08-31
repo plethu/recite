@@ -1,16 +1,16 @@
-use recite_core::ProjectSchema;
+use recite_compiler::SchemaSummary;
 use recite_ui::{MsgId, UiArg, UiArgs, UiCatalog};
 
 pub(crate) fn hover_detail(
     origin: Option<&recite_core::ProducerOrigin>,
-    schema: &ProjectSchema,
+    schema: &SchemaSummary,
     scoped_fingerprints: &[recite_core::ProducerFingerprint],
     catalog: &UiCatalog,
 ) -> String {
     let origin = origin.map_or_else(String::new, |origin| origin_detail(catalog, origin));
     let mut detail = origin;
-    let metadata = schema.producer_metadata.as_ref();
-    if let Some(producer) = metadata.and_then(|metadata| metadata.producer.as_ref()) {
+    let metadata = schema.producer_metadata();
+    if let Some(producer) = metadata.and_then(|metadata| metadata.producer()) {
         detail.push_str(&catalog.format_args(
             MsgId::LspHoverSchemaProducer,
             &UiArgs::from([
@@ -19,8 +19,9 @@ pub(crate) fn hover_detail(
             ]),
         ));
     }
-    let content_fingerprint = metadata.and_then(|metadata| metadata.content_fingerprint.as_ref());
-    let producer_fingerprints = metadata.map_or(0, |metadata| metadata.producer_fingerprints.len());
+    let content_fingerprint = metadata.and_then(|metadata| metadata.content_fingerprint());
+    let producer_fingerprints =
+        metadata.map_or(0, |metadata| metadata.producer_fingerprints().len());
     let scope = if scoped_fingerprints.is_empty() {
         String::new()
     } else {

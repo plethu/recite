@@ -23,8 +23,7 @@ impl LspWorkspace {
             position,
             key.as_ref(),
             self.kernel.snapshot(),
-            self.schema.schema(),
-            self.schema.is_generated() && self.schema.matches_uri(uri),
+            self.schema.summary(),
             &self.ui_catalog,
         )
     }
@@ -37,7 +36,7 @@ impl LspWorkspace {
             position,
             &key,
             self.kernel.snapshot(),
-            self.schema.schema(),
+            self.schema.summary(),
             &self.ui_catalog,
         )
     }
@@ -95,35 +94,12 @@ impl LspWorkspace {
 
     pub(crate) fn code_action(&self, params: &CodeActionParams) -> Option<CodeActionResponse> {
         let documents = self.code_action_documents();
-        let schema_is_open = self
+        // Schema edits are only safe against an unambiguous, versioned open
+        // TOML owner.  Closed/saved evidence has no protocol precondition.
+        let schema_document = self
             .schema
-            .uri()
-            .is_some_and(|uri| self.documents.document(uri).is_some())
-            || self.schema.path().is_some_and(|path| {
-                self.documents.documents().any(|document| {
-                    document
-                        .identity()
-                        .saved_path
-                        .as_ref()
-                        .is_some_and(|open| open == path)
-                })
-            });
-        let schema_document = if schema_is_open {
-            self.documents
-                .documents()
-                .find(|document| self.schema.matches_uri(&document.identity().uri))
-                .and_then(|document| {
-                    let version = document.version();
-                    self.schema
-                        .source_for_text(document.text())
-                        .map(|mut schema| {
-                            schema.version = Some(version);
-                            schema
-                        })
-                })
-        } else {
-            self.schema.code_action_document(None)
-        };
+            .overlay_for_documents(&self.documents)
+            .and_then(|schema| schema.code_action_document());
         features::code_action(
             params,
             self.kernel.snapshot(),
