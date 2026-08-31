@@ -28,6 +28,7 @@ impl SavedProjectIndex {
                     .iter()
                     .map(|root| root.path().to_owned())
                     .collect();
+                super::append_unique_paths(&mut self.roots, &self.fallback_roots);
                 self.manifest = Some(report.manifest().clone());
                 self.manifest_path = Some(report.manifest().manifest_path().to_owned());
                 self.manifest_text = report.manifest().source().source_text();
@@ -40,6 +41,8 @@ impl SavedProjectIndex {
                 for document in report.documents() {
                     self.insert_discovered(document);
                 }
+                let fallback_roots = self.fallback_roots[1..].to_vec();
+                self.insert_fallback_documents(&fallback_roots);
             }
             Err(recite_config::ProjectDiscoveryError::NotFound { .. }) => {
                 self.project_root = common_project_root(&self.fallback_roots);

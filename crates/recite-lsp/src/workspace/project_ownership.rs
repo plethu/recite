@@ -5,7 +5,7 @@ use std::path::Path;
 use lsp_types::Uri;
 
 use super::{SavedDocument, SavedProjectIndex, canonical_or_existing_parent_path};
-use crate::paths::{file_path_to_uri, project_relative_path, uri_to_file_path};
+use crate::paths::{file_path_to_uri, uri_to_file_path};
 use crate::summary::SavedFileIdentity;
 
 impl SavedProjectIndex {
@@ -52,12 +52,11 @@ impl SavedProjectIndex {
         if self.discovery_failed || !self.paths_share_source_root(source_path, path) {
             return false;
         }
-        let allowed = self.manifest.as_ref().map_or(
-            recite_config::allows_unscoped_source_path(&self.project_root, source_path)
-                && recite_config::allows_unscoped_source_path(&self.project_root, path),
-            |manifest| manifest.allows_path(source_path) && manifest.allows_path(path),
-        );
-        if !allowed {
+        let Some(project_relative_path) = self.project_key_for_path(path) else {
+            self.remove_unowned_document(path);
+            return true;
+        };
+        if self.project_key_for_path(source_path).is_none() {
             self.remove_unowned_document(path);
             return true;
         }
@@ -70,10 +69,6 @@ impl SavedProjectIndex {
             return true;
         };
         let Some(uri) = file_path_to_uri(path) else {
-            self.documents.remove(path);
-            return true;
-        };
-        let Some(project_relative_path) = project_relative_path(&self.project_root, path) else {
             self.documents.remove(path);
             return true;
         };

@@ -5,10 +5,12 @@ use std::path::{Path, PathBuf};
 use lsp_types::Uri;
 
 use super::WorkspaceConfig;
-use crate::paths::{file_path_to_uri, project_relative_path, uri_to_file_path};
+use crate::paths::{file_path_to_uri, uri_to_file_path};
 use crate::summary::SavedFileIdentity;
 use recite_config::DiscoveredDocument;
 
+#[path = "project_identity.rs"]
+mod project_identity;
 #[path = "project_manifest.rs"]
 mod project_manifest;
 #[path = "project_ownership.rs"]
@@ -17,6 +19,7 @@ mod project_ownership;
 #[derive(Clone)]
 pub(super) struct SavedProjectIndex {
     project_root: PathBuf,
+    workspace_root: PathBuf,
     fallback_roots: Vec<PathBuf>,
     roots: Vec<PathBuf>,
     pub(super) documents: BTreeMap<PathBuf, SavedDocument>,
@@ -36,8 +39,9 @@ impl SavedProjectIndex {
                 .as_ref()
                 .map(|report| report.manifest().project_root().to_owned())
                 .unwrap_or_else(|| common_project_root(&config.fallback_roots)),
+            workspace_root: common_project_root(&config.fallback_roots),
             fallback_roots: config.fallback_roots.clone(),
-            roots: config.roots.clone(),
+            roots: merged_roots(config),
             documents: BTreeMap::new(),
             manifest: config
                 .discovery
@@ -73,18 +77,9 @@ impl SavedProjectIndex {
             for document in report.documents() {
                 index.insert_discovered(document);
             }
+            index.insert_fallback_documents(&config.fallback_roots[1..]);
         } else if !index.discovery_failed {
-            for root in &config.fallback_roots {
-                let (documents, diagnostics) = recite_config::discover_unscoped_sources(root);
-                index.diagnostics.extend(
-                    diagnostics
-                        .iter()
-                        .map(recite_config::DiscoveryDiagnostic::as_core_diagnostic),
-                );
-                for document in documents {
-                    index.insert_discovered(&document);
-                }
-            }
+            index.insert_fallback_documents(&config.fallback_roots);
         }
         index
     }
@@ -113,19 +108,12 @@ impl SavedProjectIndex {
             .map(|document| &document.identity.uri)
     }
 
-    pub(super) fn project_key_for_path(&self, path: &Path) -> Option<String> {
-        project_relative_path(&self.project_root, path)
-    }
-
     fn insert_discovered(&mut self, document: &DiscoveredDocument) {
         let Some(uri) = file_path_to_uri(document.path()) else {
             return;
         };
-        let project_relative_path = if self.manifest.is_some() {
-            document.key().as_str().to_owned()
-        } else {
-            project_relative_path(&self.project_root, document.path())
-                .unwrap_or_else(|| document.key().as_str().to_owned())
+        let Some(project_relative_path) = self.project_key_for_path(document.path()) else {
+            return;
         };
         let identity = SavedFileIdentity {
             uri,
@@ -146,6 +134,20 @@ impl SavedProjectIndex {
                 source_paths,
             },
         );
+    }
+
+    fn insert_fallback_documents(&mut self, roots: &[PathBuf]) {
+        for root in roots {
+            let (documents, diagnostics) = recite_config::discover_unscoped_sources(root);
+            self.diagnostics.extend(
+                diagnostics
+                    .iter()
+                    .map(recite_config::DiscoveryDiagnostic::as_core_diagnostic),
+            );
+            for document in documents {
+                self.insert_discovered(&document);
+            }
+        }
     }
 }
 
@@ -169,6 +171,20 @@ fn common_project_root(roots: &[PathBuf]) -> PathBuf {
         }
     }
     common
+}
+
+pub(super) fn merged_roots(config: &WorkspaceConfig) -> Vec<PathBuf> {
+    let mut roots = config.roots.clone();
+    append_unique_paths(&mut roots, &config.fallback_roots);
+    roots
+}
+
+pub(super) fn append_unique_paths(roots: &mut Vec<PathBuf>, additional: &[PathBuf]) {
+    for root in additional {
+        if !roots.iter().any(|existing| existing == root) {
+            roots.push(root.clone());
+        }
+    }
 }
 
 fn canonical_or_existing_parent_path(path: &Path) -> Option<PathBuf> {

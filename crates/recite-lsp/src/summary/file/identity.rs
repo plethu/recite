@@ -40,6 +40,14 @@ pub(crate) struct OpenFileIdentity {
     pub(crate) uri: Uri,
     pub(crate) saved_path: Option<PathBuf>,
     pub(crate) project_relative_path: Option<String>,
+    pub(crate) scope: OpenFileScope,
+}
+
+#[derive(Clone, Copy, Debug, Eq, PartialEq)]
+pub(crate) enum OpenFileScope {
+    Project,
+    Standalone,
+    Excluded,
 }
 #[cfg(any(test, feature = "bench-support"))]
 use std::path::Path;

@@ -3,7 +3,9 @@ use tempfile::TempDir;
 
 use crate::workspace::{DiagnosticRefresh, WorkspaceConfig};
 
-use super::super::super::support::{block_names, file_uri, test_workspace, write_file};
+use super::super::super::support::{
+    block_names, file_uri, full_change, test_workspace, write_file,
+};
 
 pub(crate) fn all() {
     malformed_manifest_stays_fail_closed_across_file_lifecycle();
@@ -149,5 +151,14 @@ pub(crate) fn manifest_refresh_clears_removed_saved_diagnostics_only() {
         refresh,
         DiagnosticRefresh::Clear { uri, .. } if uri == &open_uri
     )));
-    assert_eq!(block_names(&workspace), ["overlay"]);
+    assert!(block_names(&workspace).is_empty());
+    let DiagnosticRefresh::Publish(diagnostics) =
+        (match workspace.change(open_uri, 2, vec![full_change("oops\n")]) {
+            crate::workspace::WorkspaceChangeResult::Accepted(refresh) => refresh,
+            other => panic!("excluded open file should remain diagnosable: {other:?}"),
+        })
+    else {
+        panic!("excluded open file should publish standalone diagnostics");
+    };
+    assert!(!diagnostics.diagnostics.is_empty());
 }

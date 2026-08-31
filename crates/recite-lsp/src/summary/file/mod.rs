@@ -10,7 +10,7 @@ use recite_compiler::{DocumentSnapshot, FunctionReferenceKind as AuthoringFuncti
 #[cfg(any(test, feature = "bench-support"))]
 use recite_core::Diagnostic;
 
-pub(crate) use identity::{FileIdentity, OpenFileIdentity, SavedFileIdentity};
+pub(crate) use identity::{FileIdentity, OpenFileIdentity, OpenFileScope, SavedFileIdentity};
 #[cfg(any(test, feature = "bench-support"))]
 pub(crate) use items::SpannedName;
 pub(crate) use items::{FileSummaryCompleteness, FunctionReferenceKind, FunctionReferenceSummary};

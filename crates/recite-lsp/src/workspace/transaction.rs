@@ -98,11 +98,19 @@ impl LspWorkspace {
         let project_relative_path = path_exists
             .then(|| saved.project_key_for_path(&canonical_path))
             .flatten();
+        let scope = if saved.is_excluded_path(&canonical_path) {
+            crate::summary::OpenFileScope::Excluded
+        } else if project_relative_path.is_some() {
+            crate::summary::OpenFileScope::Project
+        } else {
+            crate::summary::OpenFileScope::Standalone
+        };
 
         OpenFileIdentity {
             uri,
             saved_path: Some(canonical_path),
             project_relative_path,
+            scope,
         }
     }
 }
@@ -156,5 +164,6 @@ fn uri_keyed_open_identity(uri: Uri) -> OpenFileIdentity {
         uri,
         saved_path: None,
         project_relative_path: None,
+        scope: crate::summary::OpenFileScope::Standalone,
     }
 }

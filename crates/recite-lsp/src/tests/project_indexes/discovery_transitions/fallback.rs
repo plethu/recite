@@ -1,7 +1,8 @@
 use serde_json::json;
 use tempfile::TempDir;
 
-use crate::workspace::WorkspaceConfig;
+use crate::summary::{FileIdentity, OpenFileIdentity, OpenFileScope};
+use crate::workspace::{DiagnosticRefresh, WorkspaceConfig, document_key_for_identity};
 
 use super::super::super::support::{block_names, file_uri, test_workspace, write_file};
 
@@ -9,6 +10,9 @@ pub(crate) fn all() {
     manifestless_watcher_keeps_builtin_exclusions();
     manifestless_multi_root_documents_keep_project_relative_keys();
     multi_root_documents_keep_project_relative_keys();
+    workspace_folders_preserve_manifest_and_fallback_projects();
+    excluded_open_files_remain_diagnosable_without_project_membership();
+    synthetic_windows_paths_keep_drive_identity_in_fallback_keys();
 }
 
 pub(crate) fn manifestless_watcher_keeps_builtin_exclusions() {
@@ -107,4 +111,93 @@ pub(crate) fn multi_root_documents_keep_project_relative_keys() {
         .filter_map(|summary| summary.project_relative_path())
         .collect::<Vec<_>>();
     assert_eq!(keys, ["other/a.recite", "src/a.recite"]);
+}
+
+pub(crate) fn workspace_folders_preserve_manifest_and_fallback_projects() {
+    let temp = TempDir::new().unwrap_or_else(|error| panic!("tempdir: {error}"));
+    let manifest_root = temp.path().join("project");
+    let fallback_root = temp.path().join("standalone");
+    write_file(
+        &manifest_root,
+        "recite.project.toml",
+        "format_version = 1\n[discovery]\nsource_roots = [\"dialogue\"]\n",
+    );
+    write_file(&manifest_root, "dialogue/project.recite", ":: project\n");
+    write_file(&fallback_root, "standalone.recite", ":: standalone\n");
+    let params = serde_json::from_value(json!({
+        "workspaceFolders": [
+            {"uri": file_uri(&manifest_root).as_str(), "name": "project"},
+            {"uri": file_uri(&fallback_root).as_str(), "name": "standalone"}
+        ],
+        "capabilities": {},
+    }))
+    .unwrap_or_else(|error| panic!("initialize params: {error}"));
+
+    let workspace = test_workspace(WorkspaceConfig::from_initialize_params(&params));
+    let keys = workspace
+        .snapshot()
+        .summaries()
+        .iter()
+        .filter_map(|summary| summary.project_relative_path())
+        .collect::<Vec<_>>();
+    assert_eq!(
+        keys,
+        ["dialogue/project.recite", "standalone/standalone.recite"]
+    );
+}
+
+pub(crate) fn excluded_open_files_remain_diagnosable_without_project_membership() {
+    let temp = TempDir::new().unwrap_or_else(|error| panic!("tempdir: {error}"));
+    write_file(
+        temp.path(),
+        "recite.project.toml",
+        "format_version = 1\n[discovery]\nsource_roots = [\"dialogue\"]\n",
+    );
+    write_file(temp.path(), "dialogue/kept.recite", ":: kept\n");
+    let excluded = temp.path().join("generated.recite");
+    write_file(temp.path(), "generated.recite", ":: saved\n");
+    let params = serde_json::from_value(json!({
+        "rootUri": file_uri(temp.path()).as_str(),
+        "capabilities": {},
+    }))
+    .unwrap_or_else(|error| panic!("initialize params: {error}"));
+    let mut workspace = test_workspace(WorkspaceConfig::from_initialize_params(&params));
+
+    let refresh = workspace
+        .open(file_uri(&excluded), 1, "oops\n".to_owned())
+        .unwrap_or_else(|| panic!("opening an excluded file should publish diagnostics"));
+    let DiagnosticRefresh::Publish(diagnostics) = refresh else {
+        panic!("opening an excluded file should publish diagnostics");
+    };
+    assert!(!diagnostics.diagnostics.is_empty());
+    assert_eq!(
+        workspace
+            .snapshot()
+            .summaries()
+            .iter()
+            .map(|summary| summary.project_relative_path())
+            .collect::<Vec<_>>(),
+        [Some("dialogue/kept.recite")]
+    );
+}
+
+pub(crate) fn synthetic_windows_paths_keep_drive_identity_in_fallback_keys() {
+    let canonical = |drive: &str| OpenFileIdentity {
+        uri: format!("file:///{drive}:/project/dialogue.recite")
+            .parse()
+            .unwrap_or_else(|error| panic!("synthetic Windows URI: {error}")),
+        saved_path: Some(std::path::PathBuf::from(format!(
+            "{drive}:\\project\\dialogue.recite"
+        ))),
+        project_relative_path: None,
+        scope: OpenFileScope::Standalone,
+    };
+    let c = document_key_for_identity(&FileIdentity::Open(canonical("C")))
+        .unwrap_or_else(|| panic!("C: fallback key"));
+    let d = document_key_for_identity(&FileIdentity::Open(canonical("D")))
+        .unwrap_or_else(|| panic!("D: fallback key"));
+
+    assert_ne!(c, d);
+    assert!(c.as_str().starts_with("~lsp/"));
+    assert!(d.as_str().starts_with("~lsp/"));
 }
