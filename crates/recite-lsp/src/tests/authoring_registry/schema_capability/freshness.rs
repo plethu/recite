@@ -17,7 +17,7 @@ pub(super) fn assert_absent_content_fingerprint(catalog: &recite_ui::UiCatalog) 
     });
     let summary = recite_compiler::SchemaSummary::from_schema(&schema);
     let detail =
-        crate::features::schema_hover::hover_detail(None, &summary, &[fingerprint], &catalog);
+        crate::features::schema_hover::hover_detail(None, &summary, &[fingerprint], catalog);
 
     assert!(detail.contains("ABSENT-CONTENT"));
     assert!(detail.contains("items-v1"));
