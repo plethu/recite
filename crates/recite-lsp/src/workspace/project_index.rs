@@ -16,6 +16,8 @@ mod project_manifest;
 #[path = "project_ownership.rs"]
 mod project_ownership;
 
+pub(super) use project_identity::PathScope;
+
 #[derive(Clone)]
 pub(super) struct SavedProjectIndex {
     project_root: PathBuf,

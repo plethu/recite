@@ -3,7 +3,7 @@ use std::path::{Component, Path, PathBuf};
 
 use lsp_types::{TextDocumentContentChangeEvent, Uri};
 
-use super::project_index::SavedProjectIndex;
+use super::project_index::{PathScope, SavedProjectIndex};
 use super::{DiagnosticRefresh, LspWorkspace, WorkspaceChangeResult};
 use crate::documents::{DocumentChangeResult, OpenDocumentStore};
 use crate::paths::uri_to_file_path;
@@ -98,12 +98,10 @@ impl LspWorkspace {
         let project_relative_path = path_exists
             .then(|| saved.project_key_for_path(&canonical_path))
             .flatten();
-        let scope = if saved.is_excluded_path(&canonical_path) {
-            crate::summary::OpenFileScope::Excluded
-        } else if project_relative_path.is_some() {
-            crate::summary::OpenFileScope::Project
-        } else {
-            crate::summary::OpenFileScope::Standalone
+        let scope = match saved.path_scope(&canonical_path) {
+            PathScope::Project(_) => crate::summary::OpenFileScope::Project,
+            PathScope::Excluded => crate::summary::OpenFileScope::Excluded,
+            PathScope::Standalone => crate::summary::OpenFileScope::Standalone,
         };
 
         OpenFileIdentity {

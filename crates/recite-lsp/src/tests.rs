@@ -52,6 +52,32 @@ mod paths {
         );
     }
 
+    #[cfg(windows)]
+    #[test]
+    fn windows_fallback_document_keys_preserve_volume_identity() {
+        use crate::summary::{FileIdentity, OpenFileIdentity, OpenFileScope};
+        use crate::workspace::document_key_for_identity;
+
+        let identity = |drive: &str| {
+            FileIdentity::Open(OpenFileIdentity {
+                uri: format!("file:///{drive}:/project/dialogue.recite")
+                    .parse()
+                    .unwrap_or_else(|error| panic!("synthetic Windows URI: {error}")),
+                saved_path: Some(std::path::PathBuf::from(format!(
+                    r"{drive}:\project\dialogue.recite"
+                ))),
+                project_relative_path: None,
+                scope: OpenFileScope::Standalone,
+            })
+        };
+        let c =
+            document_key_for_identity(&identity("C")).unwrap_or_else(|| panic!("C: fallback key"));
+        let d =
+            document_key_for_identity(&identity("D")).unwrap_or_else(|| panic!("D: fallback key"));
+
+        assert_ne!(c, d);
+    }
+
     #[test]
     fn windows_drive_and_unc_uri_shapes_are_stable() {
         let drive = uri("file:///C:/Users/Recite%20User/schema.toml");

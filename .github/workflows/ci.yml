@@ -109,6 +109,13 @@ jobs:
           cargo test --locked -p recite-cli --all-features --lib
           --test watch_build_publisher --test watch_build_publisher_safety
 
+      - name: Run Windows LSP path and identity contracts
+        run: >-
+          cargo test --locked -p recite-lsp --lib
+          windows_fallback_document_keys_preserve_volume_identity
+          && cargo test --locked -p recite-lsp --lib
+          windows_drive_and_unc_uri_shapes_are_stable
+
   docs:
     name: Documentation
     runs-on: ubuntu-24.04

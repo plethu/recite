@@ -1,8 +1,11 @@
 use serde_json::json;
 use tempfile::TempDir;
 
+#[cfg(windows)]
 use crate::summary::{FileIdentity, OpenFileIdentity, OpenFileScope};
-use crate::workspace::{DiagnosticRefresh, WorkspaceConfig, document_key_for_identity};
+#[cfg(windows)]
+use crate::workspace::document_key_for_identity;
+use crate::workspace::{DiagnosticRefresh, WorkspaceConfig};
 
 use super::super::super::support::{block_names, file_uri, test_workspace, write_file};
 
@@ -11,7 +14,11 @@ pub(crate) fn all() {
     manifestless_multi_root_documents_keep_project_relative_keys();
     multi_root_documents_keep_project_relative_keys();
     workspace_folders_preserve_manifest_and_fallback_projects();
+    nested_fallback_root_overrides_manifest_exclusion_across_refresh();
     excluded_open_files_remain_diagnosable_without_project_membership();
+    manifestless_builtin_exclusions_stay_out_of_shared_state();
+    sibling_fallback_builtin_exclusions_stay_out_of_shared_state();
+    #[cfg(windows)]
     synthetic_windows_paths_keep_drive_identity_in_fallback_keys();
 }
 
@@ -181,6 +188,114 @@ pub(crate) fn excluded_open_files_remain_diagnosable_without_project_membership(
     );
 }
 
+pub(crate) fn nested_fallback_root_overrides_manifest_exclusion_across_refresh() {
+    let temp = TempDir::new().unwrap_or_else(|error| panic!("tempdir: {error}"));
+    let project = temp.path().join("project");
+    write_file(
+        &project,
+        "recite.project.toml",
+        "format_version = 1\n[discovery]\nsource_roots = [\"dialogue\"]\n",
+    );
+    write_file(&project, "dialogue/project.recite", ":: project\n");
+    write_file(&project, "drafts/draft.recite", ":: draft\n");
+    let params = serde_json::from_value(json!({
+        "workspaceFolders": [
+            {"uri": file_uri(&project).as_str(), "name": "project"},
+            {"uri": file_uri(&project.join("drafts")).as_str(), "name": "drafts"}
+        ],
+        "capabilities": {},
+    }))
+    .unwrap_or_else(|error| panic!("initialize params: {error}"));
+    let mut workspace = test_workspace(WorkspaceConfig::from_initialize_params(&params));
+
+    assert_eq!(
+        workspace
+            .snapshot()
+            .summaries()
+            .iter()
+            .filter_map(|summary| summary.project_relative_path())
+            .collect::<Vec<_>>(),
+        ["dialogue/project.recite", "drafts/draft.recite"]
+    );
+
+    write_file(
+        &project,
+        "recite.project.toml",
+        "format_version = 1\n[discovery]\nsource_roots = [\"dialogue\", \"other\"]\n",
+    );
+    std::fs::create_dir(project.join("other")).expect("other root");
+    workspace.save(file_uri(&project.join("recite.project.toml")));
+    assert_eq!(
+        workspace
+            .snapshot()
+            .summaries()
+            .iter()
+            .filter_map(|summary| summary.project_relative_path())
+            .collect::<Vec<_>>(),
+        ["dialogue/project.recite", "drafts/draft.recite"]
+    );
+}
+
+pub(crate) fn manifestless_builtin_exclusions_stay_out_of_shared_state() {
+    let temp = TempDir::new().unwrap_or_else(|error| panic!("tempdir: {error}"));
+    write_file(temp.path(), "visible.recite", ":: visible default\n");
+    let target = temp.path().join("target/ignored.recite");
+    let hidden = temp.path().join(".hidden/ignored.recite");
+    write_file(temp.path(), "target/ignored.recite", ":: target default\n");
+    write_file(temp.path(), ".hidden/ignored.recite", ":: hidden default\n");
+    let mut workspace = test_workspace(WorkspaceConfig::for_roots(vec![temp.path().to_owned()]));
+
+    for (path, text) in [
+        (&target, ":: target default\n"),
+        (&hidden, ":: hidden default\n"),
+    ] {
+        let refresh = workspace
+            .open(file_uri(path), 1, text.to_owned())
+            .unwrap_or_else(|| panic!("excluded open should publish diagnostics"));
+        let DiagnosticRefresh::Publish(diagnostics) = refresh else {
+            panic!("excluded open should publish diagnostics");
+        };
+        assert!(diagnostics.diagnostics.is_empty());
+    }
+    assert_eq!(block_names(&workspace), ["visible"]);
+}
+
+pub(crate) fn sibling_fallback_builtin_exclusions_stay_out_of_shared_state() {
+    let temp = TempDir::new().unwrap_or_else(|error| panic!("tempdir: {error}"));
+    let project = temp.path().join("project");
+    let sibling = temp.path().join("sibling");
+    write_file(
+        &project,
+        "recite.project.toml",
+        "format_version = 1\n[discovery]\nsource_roots = [\"dialogue\"]\n",
+    );
+    write_file(&project, "dialogue/project.recite", ":: project\n");
+    write_file(&sibling, "visible.recite", ":: visible\n");
+    write_file(&sibling, "target/ignored.recite", ":: ignored\n");
+    let params = serde_json::from_value(json!({
+        "workspaceFolders": [
+            {"uri": file_uri(&project).as_str(), "name": "project"},
+            {"uri": file_uri(&sibling).as_str(), "name": "sibling"}
+        ],
+        "capabilities": {},
+    }))
+    .unwrap_or_else(|error| panic!("initialize params: {error}"));
+    let mut workspace = test_workspace(WorkspaceConfig::from_initialize_params(&params));
+    let refresh = workspace
+        .open(
+            file_uri(&sibling.join("target/ignored.recite")),
+            1,
+            ":: ignored default\n".to_owned(),
+        )
+        .unwrap_or_else(|| panic!("excluded open should publish diagnostics"));
+    let DiagnosticRefresh::Publish(diagnostics) = refresh else {
+        panic!("excluded open should publish diagnostics");
+    };
+    assert!(diagnostics.diagnostics.is_empty());
+    assert_eq!(block_names(&workspace), ["project", "visible"]);
+}
+
+#[cfg(windows)]
 pub(crate) fn synthetic_windows_paths_keep_drive_identity_in_fallback_keys() {
     let canonical = |drive: &str| OpenFileIdentity {
         uri: format!("file:///{drive}:/project/dialogue.recite")
