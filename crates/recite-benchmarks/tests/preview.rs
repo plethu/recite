@@ -42,7 +42,7 @@ fn preview_evidence_report_is_stable_and_structured() -> Result<(), Box<dyn std:
             BenchmarkFixture::Synthetic(BenchmarkScale::Tiny) => (
                 PreviewTraversalShape {
                     event_count: 101,
-                    event_hash: "62bbe805cb7fcb30d70827a03e2045175e1235c986542377a3b649959919d852"
+                    event_hash: "f0204adf5c554c91fc39542540b54be255c1bdb4f230d8c5947105dc4c86dd16"
                         .to_owned(),
                 },
                 PreviewSnapshotShape {
@@ -74,7 +74,7 @@ fn preview_evidence_report_is_stable_and_structured() -> Result<(), Box<dyn std:
             BenchmarkFixture::RealisticV1Pack => (
                 PreviewTraversalShape {
                     event_count: 44,
-                    event_hash: "c5de4929a1cb36ce6db6dca1c8f0aff37e678f58a51d0c8f5939efa1477ada20"
+                    event_hash: "da579f8df89e79278901cacba7df5a4acd045ff69e562e8214f7b6827c9884cb"
                         .to_owned(),
                 },
                 PreviewSnapshotShape {

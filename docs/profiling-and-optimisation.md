@@ -215,6 +215,11 @@ RECITE_BENCH_SCALES=tiny cargo bench -p recite-benchmarks --bench preview -- pre
 RECITE_BENCH_SCALES=tiny cargo bench -p recite-benchmarks --bench preview -- preview/retained_trace_shape
 ```
 
+Traversal and step report throughput in events, while snapshot encoding and
+restore report bytes processed. Retained trace shape intentionally remains a
+per-report timing: its structured counters do not represent one meaningful
+throughput unit.
+
 LSP investigations usually start with indexing, edit refresh, diagnostics,
 completion, definition, and rename:
 

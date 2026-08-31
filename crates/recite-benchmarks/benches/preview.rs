@@ -1,7 +1,7 @@
 use std::hint::black_box;
 use std::time::Duration;
 
-use criterion::{BatchSize, BenchmarkId, Criterion, criterion_group, criterion_main};
+use criterion::{BatchSize, BenchmarkId, Criterion, Throughput, criterion_group, criterion_main};
 use recite_benchmarks::preview::PreviewProject;
 use recite_benchmarks::{BenchmarkFixture, BenchmarkResult};
 use recite_runtime::PreviewSnapshot;
@@ -19,7 +19,9 @@ fn preview_benchmarks(criterion: &mut Criterion) {
 }
 
 fn bench_step(criterion: &mut Criterion, fixture: &PreviewFixture) {
-    criterion.benchmark_group("preview/step").bench_function(
+    let mut group = criterion.benchmark_group("preview/step");
+    group.throughput(Throughput::Elements(fixture.step_event_count));
+    group.bench_function(
         BenchmarkId::from_parameter(fixture.fixture.as_str()),
         |bencher| {
             bencher.iter_batched(
@@ -32,36 +34,38 @@ fn bench_step(criterion: &mut Criterion, fixture: &PreviewFixture) {
 }
 
 fn bench_full_traversal(criterion: &mut Criterion, fixture: &PreviewFixture) {
-    criterion
-        .benchmark_group("preview/full_traversal")
-        .bench_function(
-            BenchmarkId::from_parameter(fixture.fixture.as_str()),
-            |bencher| {
-                bencher.iter(|| black_box(must(fixture.project.full_traversal())));
-            },
-        );
+    let mut group = criterion.benchmark_group("preview/full_traversal");
+    group.throughput(Throughput::Elements(fixture.event_count));
+    group.bench_function(
+        BenchmarkId::from_parameter(fixture.fixture.as_str()),
+        |bencher| {
+            bencher.iter(|| black_box(must(fixture.project.full_traversal())));
+        },
+    );
 }
 
 fn bench_snapshot_encode(criterion: &mut Criterion, fixture: &PreviewFixture) {
-    criterion
-        .benchmark_group("preview/snapshot_encode")
-        .bench_function(
-            BenchmarkId::from_parameter(fixture.fixture.as_str()),
-            |bencher| {
-                bencher.iter_batched(
-                    || must(fixture.project.at_first_prompt()),
-                    |preview| {
-                        let snapshot = must_preview(preview.snapshot());
-                        black_box(must_preview(snapshot.encode()))
-                    },
-                    BatchSize::SmallInput,
-                );
-            },
-        );
+    let mut group = criterion.benchmark_group("preview/snapshot_encode");
+    group.throughput(Throughput::Bytes(fixture.snapshot_bytes));
+    group.bench_function(
+        BenchmarkId::from_parameter(fixture.fixture.as_str()),
+        |bencher| {
+            bencher.iter_batched(
+                || must(fixture.project.at_first_prompt()),
+                |preview| {
+                    let snapshot = must_preview(preview.snapshot());
+                    black_box(must_preview(snapshot.encode()))
+                },
+                BatchSize::SmallInput,
+            );
+        },
+    );
 }
 
 fn bench_restore(criterion: &mut Criterion, fixture: &PreviewFixture) {
-    criterion.benchmark_group("preview/restore").bench_function(
+    let mut group = criterion.benchmark_group("preview/restore");
+    group.throughput(Throughput::Bytes(fixture.snapshot_bytes));
+    group.bench_function(
         BenchmarkId::from_parameter(fixture.fixture.as_str()),
         |bencher| {
             bencher.iter_batched(
@@ -123,6 +127,9 @@ fn bench_restore_parity(criterion: &mut Criterion, fixture: &PreviewFixture) {
 struct PreviewFixture {
     fixture: BenchmarkFixture,
     project: PreviewProject,
+    step_event_count: u64,
+    event_count: u64,
+    snapshot_bytes: u64,
 }
 
 fn load_preview_projects() -> Vec<PreviewFixture> {
@@ -133,9 +140,30 @@ fn load_preview_projects_result() -> BenchmarkResult<Vec<PreviewFixture>> {
     BenchmarkFixture::selected_preview_from_env()?
         .into_iter()
         .map(|fixture| {
+            let project = PreviewProject::load(fixture)?;
+            let step_event_count = project.start()?.step(project.inputs()).events().len() as u64;
+            let event_count = project.full_traversal()?.event_count as u64;
+            let snapshot_preview = project.at_first_prompt()?;
+            let snapshot_bytes = snapshot_preview
+                .snapshot()
+                .map_err(|error| {
+                    recite_benchmarks::BenchmarkError::Message(format!(
+                        "preview setup failed: {error}"
+                    ))
+                })?
+                .encode()
+                .map_err(|error| {
+                    recite_benchmarks::BenchmarkError::Message(format!(
+                        "preview setup failed: {error}"
+                    ))
+                })?
+                .len() as u64;
             Ok(PreviewFixture {
                 fixture,
-                project: PreviewProject::load(fixture)?,
+                project,
+                step_event_count,
+                event_count,
+                snapshot_bytes,
             })
         })
         .collect()
