@@ -232,7 +232,6 @@ fn empty_target_build_honours_cancellation_and_supersession() {
         }
     }
 }
-
 #[test]
 fn publication_failure_uses_alternate_ids_and_typed_arguments() {
     let messages = alternate_messages(&[
@@ -247,9 +246,12 @@ fn publication_failure_uses_alternate_ids_and_typed_arguments() {
             "alt-indeterminate status={$status} recovery={$recovery}",
         ),
         ("watch-build-status-cancelled", "alt-status-cancelled"),
+        ("watch-build-recovery-targets-empty", "alt-empty-recovery"),
+        ("watch-build-recovery-targets-list", "alt-list[{$targets}]"),
     ]);
     let target = BuildTarget::new("compiled/main.recitec".to_owned()).expect("target");
-    let recovery = RecoveryNeeded::for_targets(vec![target.clone()]);
+    let second = BuildTarget::new("compiled/second.recitec".to_owned()).expect("target");
+    let recovery = RecoveryNeeded::for_targets(vec![target.clone(), second.clone()]);
 
     assert_eq!(
         super::format_failure(
@@ -265,7 +267,7 @@ fn publication_failure_uses_alternate_ids_and_typed_arguments() {
                 recovery,
             },
         ),
-        "alt-partial status=alt-status-failed failed=compiled/main.recitec recovery=compiled/main.recitec failure=alt-engine-host"
+        "alt-partial status=alt-status-failed failed=compiled/main.recitec recovery=alt-list[compiled/main.recitec, compiled/second.recitec] failure=alt-engine-host"
     );
     assert_eq!(
         super::format_failure(
@@ -273,14 +275,29 @@ fn publication_failure_uses_alternate_ids_and_typed_arguments() {
             BuildTerminalStatus::Cancelled,
             None,
             &PublishOutcome::Indeterminate {
-                attempted: vec![target.clone()],
-                recovery: RecoveryNeeded::for_targets(vec![target]),
+                attempted: vec![target.clone(), second.clone()],
+                recovery: RecoveryNeeded::for_targets(vec![second, target.clone()]),
             },
         ),
-        "alt-indeterminate status=alt-status-cancelled recovery=compiled/main.recitec"
+        "alt-indeterminate status=alt-status-cancelled recovery=alt-list[compiled/main.recitec, compiled/second.recitec]"
+    );
+    assert_eq!(
+        super::format_failure(
+            &messages,
+            BuildTerminalStatus::Failed,
+            Some(&BuildResultFailure::Engine {
+                reason: BuildFailureReason::Host,
+            }),
+            &PublishOutcome::Partial {
+                committed: Vec::new(),
+                failed: target,
+                remaining: Vec::new(),
+                recovery: RecoveryNeeded::for_targets(Vec::new()),
+            },
+        ),
+        "alt-partial status=alt-status-failed failed=compiled/main.recitec recovery=alt-empty-recovery failure=alt-engine-host"
     );
 }
-
 #[test]
 fn publication_failure_localizes_reason_categories_without_debug_output() {
     let messages = alternate_messages(&[
