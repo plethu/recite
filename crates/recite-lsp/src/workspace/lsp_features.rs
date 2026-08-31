@@ -24,7 +24,7 @@ impl LspWorkspace {
             key.as_ref(),
             self.kernel.snapshot(),
             self.schema.schema(),
-            self.schema.matches_uri(uri),
+            self.schema.is_generated() && self.schema.matches_uri(uri),
             &self.ui_catalog,
         )
     }
@@ -109,9 +109,20 @@ impl LspWorkspace {
                 })
             });
         let schema_document = if schema_is_open {
-            None
+            self.documents
+                .documents()
+                .find(|document| self.schema.matches_uri(&document.identity().uri))
+                .and_then(|document| {
+                    let version = document.version();
+                    self.schema
+                        .source_for_text(document.text())
+                        .map(|mut schema| {
+                            schema.version = Some(version);
+                            schema
+                        })
+                })
         } else {
-            self.schema.code_action_document()
+            self.schema.code_action_document(None)
         };
         features::code_action(
             params,
@@ -182,6 +193,9 @@ impl LspWorkspace {
             .summaries()
             .iter()
             .filter_map(|summary| {
+                if self.schema.matches_uri(summary.uri()) {
+                    return None;
+                }
                 let key = document_key_for_identity(&summary.identity)?;
                 let source = compiler_snapshot.document(&key)?;
                 let text = self.text_for_summary(summary)?;

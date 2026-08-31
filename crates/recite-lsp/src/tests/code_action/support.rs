@@ -178,10 +178,6 @@ pub(super) fn range(
     }
 }
 
-pub(super) fn harness_for_root_with_schema(root: &std::path::Path) -> Harness {
-    harness_for_root_with_schema_value(root, root.join("schema.json").display().to_string())
-}
-
 pub(super) fn harness_for_root_with_schema_value(
     root: &std::path::Path,
     schema: impl Into<Value>,
@@ -199,10 +195,4 @@ pub(super) fn harness_for_root_with_schema_value(
         }
     }))
     .0
-}
-
-pub(super) fn schema_manifest(conditions: &str, effects: &str) -> String {
-    format!(
-        "{{\n  \"schema_version\": 1,\n  \"conditions\": {{{conditions}}},\n  \"effects\": {{{effects}}}\n}}\n"
-    )
 }

@@ -1,5 +1,4 @@
 mod block_stub;
-mod json_edit;
 mod missing_id;
 mod schema_entry;
 
@@ -9,20 +8,22 @@ use lsp_types::{
     TextDocumentEdit, TextEdit, Uri, WorkspaceEdit,
 };
 use recite_compiler::AuthoringSnapshot;
+use recite_core::SchemaSource;
 use recite_ui::{MsgId, UiCatalog};
 
 use crate::edit_projection::EditDocument;
-use crate::summary::{FileSummary, SchemaSummary};
+use crate::summary::FileSummary;
 
 pub(crate) struct CodeActionDocument<'a> {
     pub(crate) source: EditDocument<'a>,
     pub(crate) summary: &'a FileSummary,
 }
 
-pub(crate) struct SchemaCodeActionDocument<'a> {
-    pub(crate) uri: &'a Uri,
-    pub(crate) text: &'a str,
-    pub(crate) summary: &'a SchemaSummary,
+pub(crate) struct SchemaCodeActionDocument {
+    pub(crate) uri: Uri,
+    pub(crate) text: String,
+    pub(crate) summary: recite_compiler::SchemaSummary,
+    pub(crate) source: SchemaSource,
     pub(crate) version: Option<i32>,
 }
 
@@ -30,7 +31,7 @@ pub(crate) fn code_action(
     params: &CodeActionParams,
     snapshot: &AuthoringSnapshot,
     documents: &[CodeActionDocument<'_>],
-    schema: Option<SchemaCodeActionDocument<'_>>,
+    schema: Option<SchemaCodeActionDocument>,
     catalog: &UiCatalog,
 ) -> Option<CodeActionResponse> {
     let document = documents
@@ -69,7 +70,7 @@ pub(crate) fn code_action(
         ));
         if let Some(schema) = schema {
             actions.extend(schema_entry::actions(
-                params, document, documents, schema, catalog,
+                params, document, documents, &schema, catalog,
             ));
         }
     }
@@ -110,14 +111,28 @@ fn workspace_edit(uri: Uri, version: Option<i32>, edits: Vec<TextEdit>) -> Works
     }
 }
 
+fn full_document_range(text: &str) -> Range {
+    let lines = text.split('\n').collect::<Vec<_>>();
+    let (line, character) = if text.ends_with('\n') {
+        (lines.len().saturating_sub(1), 0)
+    } else {
+        let last = lines
+            .last()
+            .copied()
+            .unwrap_or_default()
+            .trim_end_matches('\r');
+        (lines.len().saturating_sub(1), last.encode_utf16().count())
+    };
+    Range {
+        start: Position::new(0, 0),
+        end: Position::new(line as u32, character as u32),
+    }
+}
+
 fn ranges_intersect(left: Range, right: Range) -> bool {
     position_le(left.start, right.end) && position_le(right.start, left.end)
 }
 
 fn position_le(left: Position, right: Position) -> bool {
     left.line < right.line || (left.line == right.line && left.character <= right.character)
-}
-
-fn newline_for(text: &str) -> &'static str {
-    if text.contains("\r\n") { "\r\n" } else { "\n" }
 }

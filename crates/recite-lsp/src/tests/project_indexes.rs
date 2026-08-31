@@ -212,6 +212,10 @@ pub(super) fn projection_schema_summary_exposes_queries_projectors_and_labels() 
     schema_summary::projection_schema_summary_exposes_queries_projectors_and_labels();
 }
 
+pub(super) fn schema_summary_preserves_source_ownership_and_generated_read_only_state() {
+    schema_summary::schema_summary_preserves_source_ownership_and_generated_read_only_state();
+}
+
 fn invalid_projection_schema() -> &'static str {
     r#"{
   "schema_version": 1,

@@ -4,7 +4,7 @@ use std::path::PathBuf;
 use lsp_types::Uri;
 use recite_core::{
     Diagnostic, DiagnosticArgumentValue, DiagnosticCode, DiagnosticPresentationId, ProjectSchema,
-    SourcePosition, SourceSpan, contract_for, load_schema_manifest_str,
+    SchemaSource, SourcePosition, SourceSpan, contract_for, load_schema_manifest_str,
 };
 
 use super::{DiagnosticRefresh, DocumentDiagnostics, SnapshotGeneration};
@@ -19,6 +19,7 @@ pub(crate) struct SchemaIndex {
     path: Option<PathBuf>,
     summary: Option<SchemaSummary>,
     schema: Option<ProjectSchema>,
+    source: Option<SchemaSource>,
     diagnostics: Vec<Diagnostic>,
     text: Option<String>,
 }
@@ -31,6 +32,7 @@ impl SchemaIndex {
                 path: None,
                 summary: None,
                 schema: None,
+                source: None,
                 diagnostics: Vec::new(),
                 text: None,
             };
@@ -38,7 +40,7 @@ impl SchemaIndex {
         let path = fs::canonicalize(&path).unwrap_or(path);
         let uri = file_path_to_uri(&path);
         let display_path = path.display().to_string();
-        let source = match fs::read_to_string(&path) {
+        let text = match fs::read_to_string(&path) {
             Ok(source) => source,
             Err(error) => {
                 return Self {
@@ -46,22 +48,54 @@ impl SchemaIndex {
                     path: Some(path),
                     summary: None,
                     schema: None,
+                    source: None,
                     diagnostics: schema_io_diagnostic(display_path, &error),
                     text: None,
                 };
             }
         };
 
-        let report = load_schema_manifest_str(display_path, &source);
-        let summary = report.schema.as_ref().map(SchemaSummary::from_schema);
+        let mut index = Self::from_text(path, &text);
+        index.uri = uri;
+        index
+    }
+
+    fn from_text(path: PathBuf, text: &str) -> Self {
+        let display_path = path.display().to_string();
+        let (schema, source, summary, diagnostics) =
+            match path.extension().and_then(|ext| ext.to_str()) {
+                Some("toml") => {
+                    let report = SchemaSource::load_str(display_path, text);
+                    let summary = report.source.as_ref().map(SchemaSummary::from_source);
+                    let schema = report.source.as_ref().map(|source| source.schema().clone());
+                    (schema, report.source, summary, report.diagnostics)
+                }
+                Some("json") => {
+                    let report = load_schema_manifest_str(display_path, text);
+                    let summary = report.schema.as_ref().map(SchemaSummary::from_schema);
+                    (report.schema, None, summary, report.diagnostics)
+                }
+                _ => (None, None, None, Vec::new()),
+            };
         Self {
-            uri,
+            uri: file_path_to_uri(&path),
             path: Some(path),
             summary,
-            schema: report.schema,
-            diagnostics: report.diagnostics,
-            text: Some(source),
+            schema,
+            source,
+            diagnostics,
+            text: Some(text.to_owned()),
         }
+    }
+
+    pub(crate) fn source_for_text(
+        &self,
+        text: &str,
+    ) -> Option<crate::features::SchemaCodeActionDocument> {
+        let path = self.path.clone()?;
+        let mut overlay = Self::from_text(path, text);
+        overlay.uri = self.uri.clone();
+        overlay.code_action_document(None)
     }
 
     pub(crate) fn summary(&self) -> Option<&SchemaSummary> {
@@ -70,6 +104,10 @@ impl SchemaIndex {
 
     pub(crate) fn schema(&self) -> Option<&ProjectSchema> {
         self.schema.as_ref()
+    }
+
+    pub(crate) fn is_generated(&self) -> bool {
+        self.schema.is_some() && self.source.is_none()
     }
 
     pub(crate) fn uri(&self) -> Option<&Uri> {
@@ -89,12 +127,14 @@ impl SchemaIndex {
 
     pub(crate) fn code_action_document(
         &self,
-    ) -> Option<crate::features::SchemaCodeActionDocument<'_>> {
+        version: Option<i32>,
+    ) -> Option<crate::features::SchemaCodeActionDocument> {
         Some(crate::features::SchemaCodeActionDocument {
-            uri: self.uri.as_ref()?,
-            text: self.text.as_deref()?,
-            summary: self.summary()?,
-            version: None,
+            uri: self.uri.clone()?,
+            text: self.text.clone()?,
+            summary: self.summary()?.clone(),
+            source: self.source.clone()?,
+            version,
         })
     }
 

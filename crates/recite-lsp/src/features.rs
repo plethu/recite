@@ -37,7 +37,7 @@ pub(crate) fn code_action(
     params: &CodeActionParams,
     snapshot: &AuthoringSnapshot,
     documents: &[CodeActionDocument<'_>],
-    schema: Option<SchemaCodeActionDocument<'_>>,
+    schema: Option<SchemaCodeActionDocument>,
     catalog: &UiCatalog,
 ) -> Option<CodeActionResponse> {
     code_action::code_action(params, snapshot, documents, schema, catalog)

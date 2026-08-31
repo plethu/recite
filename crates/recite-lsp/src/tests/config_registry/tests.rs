@@ -193,6 +193,12 @@ fn projection_schema_summary_exposes_queries_projectors_and_labels() {
 }
 
 #[test]
+fn schema_summary_preserves_source_ownership_and_generated_read_only_state() {
+    super::project_indexes::schema_summary_preserves_source_ownership_and_generated_read_only_state(
+    );
+}
+
+#[test]
 fn stale_change_does_not_bump_snapshot_generation() {
     super::project_indexes::stale_change_does_not_bump_snapshot_generation();
 }

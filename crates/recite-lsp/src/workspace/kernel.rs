@@ -70,7 +70,10 @@ impl LspWorkspace {
         documents: &OpenDocumentStore,
         schema: Option<&SchemaIndex>,
     ) -> Result<BTreeMap<DocumentKey, lsp_types::Uri>, recite_compiler::AuthoringError> {
-        let open_documents = Self::effective_open_documents(documents);
+        let open_documents = Self::effective_open_documents(documents)
+            .into_iter()
+            .filter(|(_, document)| !self.schema.matches_uri(&document.identity().uri))
+            .collect::<BTreeMap<_, _>>();
         let owners = open_documents
             .iter()
             .map(|(key, document)| (key.clone(), document.identity().uri.clone()))
