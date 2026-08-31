@@ -30,6 +30,7 @@ thiserror.workspace = true
 
 [dev-dependencies]
 tempfile.workspace = true
+url = "2.5.8"
 
 [lints]
 workspace = true

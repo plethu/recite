@@ -6,7 +6,8 @@ use std::thread;
 use std::time::Duration;
 
 use serde_json::{Value, json};
-use tempfile::TempDir;
+use tempfile::Builder;
+use url::Url;
 
 const READ_TIMEOUT: Duration = Duration::from_secs(2);
 
@@ -161,16 +162,22 @@ impl Drop for StdioHarness {
 
 #[test]
 fn stdio_schema_alias_close_clears_alias_and_refreshes_canonical() {
-    let temp = TempDir::new().unwrap_or_else(|error| panic!("temporary schema directory: {error}"));
+    let temp = Builder::new()
+        .prefix("recite % stdio ")
+        .tempdir()
+        .unwrap_or_else(|error| panic!("temporary schema directory: {error}"));
     let schema = temp.path().join("standalone.toml");
-    let alias = temp.path().join(".").join("standalone.toml");
     std::fs::write(
         &schema,
         "schema_version = 1\n[producer]\nid = \"dialogue\"\n",
     )
     .unwrap_or_else(|error| panic!("write standalone schema: {error}"));
     let canonical_uri = file_uri(&schema);
-    let alias_uri = file_uri(&alias);
+    let alias_base = Url::from_file_path(temp.path())
+        .unwrap_or_else(|()| panic!("temporary directory cannot become a file URI"));
+    let alias_uri = format!("{}/./standalone.toml", alias_base);
+    assert_ne!(alias_uri, canonical_uri);
+    assert!(alias_uri.contains("/./"));
     let mut harness = StdioHarness::start(temp.path(), &schema);
 
     harness.notify(
@@ -246,5 +253,12 @@ fn read_message(reader: &mut impl BufRead) -> io::Result<Value> {
 }
 
 fn file_uri(path: &Path) -> String {
-    format!("file://{}", path.display())
+    Url::from_file_path(path)
+        .unwrap_or_else(|()| {
+            panic!(
+                "path cannot be represented as a file URI: {}",
+                path.display()
+            )
+        })
+        .to_string()
 }
