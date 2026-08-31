@@ -2,7 +2,7 @@ use lsp_types::Position;
 use serde_json::json;
 use tempfile::TempDir;
 
-use super::super::support::{Harness, file_uri, write_file};
+use super::super::support::{Harness, file_uri, full_change, write_file};
 
 pub(super) fn did_open_publishes_schema_backed_semantic_diagnostics() {
     let temp = TempDir::new().unwrap_or_else(|error| panic!("tempdir: {error}"));
@@ -201,6 +201,28 @@ pub(super) fn watched_schema_refresh_keeps_unsaved_schema_overlay() {
     assert_eq!(after_watch.uri, schema_uri);
     assert_eq!(after_watch.version, Some(9));
     assert!(!after_watch.diagnostics.is_empty());
+
+    harness.finish();
+}
+
+pub(super) fn valid_schema_overlay_clears_diagnostics_with_new_version() {
+    let temp = TempDir::new().unwrap_or_else(|error| panic!("tempdir: {error}"));
+    let schema = "schema_version = 1\n[producer]\nid = \"dialogue\"\n";
+    write_file(temp.path(), "schema.toml", schema);
+    let schema_uri = file_uri(&temp.path().join("schema.toml"));
+    let harness = harness_for_toml_schema(&temp);
+
+    harness.did_open(schema_uri.clone(), 4, "not a schema\n");
+    let malformed = harness.recv_publish_diagnostics();
+    assert_eq!(malformed.uri, schema_uri);
+    assert_eq!(malformed.version, Some(4));
+    assert!(!malformed.diagnostics.is_empty());
+
+    harness.did_change(schema_uri.clone(), 5, vec![full_change(schema)]);
+    let cleared = harness.recv_publish_diagnostics();
+    assert_eq!(cleared.uri, schema_uri);
+    assert_eq!(cleared.version, Some(5));
+    assert!(cleared.diagnostics.is_empty());
 
     harness.finish();
 }

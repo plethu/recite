@@ -1,5 +1,6 @@
 mod block_stub;
 mod missing_id;
+pub(crate) mod schema_capability;
 mod schema_entry;
 
 use lsp_types::{
@@ -32,6 +33,7 @@ pub(crate) fn code_action(
     snapshot: &AuthoringSnapshot,
     documents: &[CodeActionDocument<'_>],
     schema: Option<SchemaCodeActionDocument>,
+    schema_summary: Option<&recite_compiler::SchemaSummary>,
     catalog: &UiCatalog,
 ) -> Option<CodeActionResponse> {
     let document = documents
@@ -45,6 +47,16 @@ pub(crate) fn code_action(
     let mut actions = Vec::new();
     let include_quick_fix = includes_kind(params, &CodeActionKind::QUICKFIX);
     let include_fix_all = includes_kind(params, &CodeActionKind::SOURCE_FIX_ALL);
+
+    if includes_kind(params, &CodeActionKind::REFACTOR)
+        && let Some(schema_summary) = schema_summary
+    {
+        actions.extend(schema_capability::actions(
+            schema_summary,
+            schema.is_some(),
+            catalog,
+        ));
+    }
 
     let quick_fix_edit = if include_quick_fix {
         missing_id::edit(document, snapshot, &edit_documents, params.range)

@@ -1,4 +1,5 @@
 use recite_compiler::SchemaSummary;
+use recite_core::{ContentFingerprintFreshness, ProducerFreshness};
 use recite_ui::{MsgId, UiArg, UiArgs, UiCatalog};
 
 pub(crate) fn hover_detail(
@@ -56,7 +57,95 @@ pub(crate) fn hover_detail(
             ]),
         ));
     }
+    detail.push_str(&freshness_state_detail(schema, catalog));
     detail
+}
+
+fn freshness_state_detail(schema: &SchemaSummary, catalog: &UiCatalog) -> String {
+    match schema.freshness() {
+        recite_compiler::SchemaFreshness::Compared(comparison) => {
+            let comparison = comparison.as_ref();
+            catalog.format_args(
+                MsgId::LspHoverSchemaFreshnessState,
+                &UiArgs::from([
+                    (
+                        "state".to_owned(),
+                        UiArg::from(if comparison.is_fresh() {
+                            "fresh"
+                        } else {
+                            "stale"
+                        }),
+                    ),
+                    (
+                        "content".to_owned(),
+                        UiArg::from(content_status(&comparison.content_fingerprint)),
+                    ),
+                    (
+                        "manifest".to_owned(),
+                        UiArg::from(producer_status(&comparison.manifest)),
+                    ),
+                    (
+                        "registries".to_owned(),
+                        UiArg::from(scope_status(&comparison.registries)),
+                    ),
+                    (
+                        "metadata_domains".to_owned(),
+                        UiArg::from(scope_status(&comparison.metadata_domains)),
+                    ),
+                ]),
+            )
+        }
+        recite_compiler::SchemaFreshness::Unavailable { reason } => catalog.format_args(
+            MsgId::LspHoverSchemaFreshnessUnavailable,
+            &UiArgs::from([("reason".to_owned(), UiArg::from(freshness_reason(*reason)))]),
+        ),
+        _ => catalog.format_args(
+            MsgId::LspHoverSchemaFreshnessUnavailable,
+            &UiArgs::from([(
+                "reason".to_owned(),
+                UiArg::from("freshness state is not supported by this client"),
+            )]),
+        ),
+    }
+}
+
+fn content_status(freshness: &ContentFingerprintFreshness) -> &'static str {
+    if matches!(freshness, ContentFingerprintFreshness::Fresh) {
+        "fresh"
+    } else {
+        "stale"
+    }
+}
+
+fn producer_status(freshness: &ProducerFreshness) -> &'static str {
+    if matches!(freshness, ProducerFreshness::Fresh) {
+        "fresh"
+    } else {
+        "stale"
+    }
+}
+
+fn scope_status(scopes: &std::collections::BTreeMap<String, ProducerFreshness>) -> String {
+    if scopes.is_empty() {
+        return "none".to_owned();
+    }
+    scopes
+        .iter()
+        .map(|(name, freshness)| format!("{name}:{}", producer_status(freshness)))
+        .collect::<Vec<_>>()
+        .join(", ")
+}
+
+fn freshness_reason(reason: recite_compiler::SchemaFreshnessUnavailableReason) -> &'static str {
+    match reason {
+        recite_compiler::SchemaFreshnessUnavailableReason::NoComparisonSnapshot => {
+            "no comparison snapshot"
+        }
+        recite_compiler::SchemaFreshnessUnavailableReason::NoProducerMetadata => {
+            "no producer metadata"
+        }
+        _ => "freshness reason is not supported by this client",
+    }
 }
 
 fn format_fingerprint(fingerprint: &recite_core::ContentFingerprint) -> String {

@@ -2,17 +2,14 @@
 fn initialize_advertises_completion_and_hover() {
     super::availability::initialize_advertises_completion_and_hover();
 }
-
 #[test]
 fn resolves_metadata_array_elements_by_declared_type() {
     super::availability::resolves_metadata_array_elements_by_declared_type();
 }
-
 #[test]
 fn completes_requires_conditions_and_parameterless_reasons() {
     super::availability::completes_requires_conditions_and_parameterless_reasons();
 }
-
 #[test]
 fn completes_project_and_schema_authoring_symbols() {
     super::availability::completes_project_and_schema_authoring_symbols();
@@ -348,3 +345,5 @@ fn typed_clause_and_schema_ranges_exclude_delimiters() {
 fn condition_marker_completion_and_hover_follow_parser_boundaries() {
     super::navigation_ranges::condition_marker_completion_and_hover_follow_parser_boundaries();
 }
+#[path = "schema_capability/tests.rs"]
+mod schema_capability;

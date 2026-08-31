@@ -23,7 +23,9 @@ impl LspWorkspace {
             position,
             key.as_ref(),
             self.kernel.snapshot(),
-            self.schema.summary(),
+            self.effective_schema()
+                .as_ref()
+                .and_then(|schema| schema.summary()),
             &self.ui_catalog,
         )
     }
@@ -36,7 +38,9 @@ impl LspWorkspace {
             position,
             &key,
             self.kernel.snapshot(),
-            self.schema.summary(),
+            self.effective_schema()
+                .as_ref()
+                .and_then(|schema| schema.summary()),
             &self.ui_catalog,
         )
     }
@@ -96,17 +100,29 @@ impl LspWorkspace {
         let documents = self.code_action_documents();
         // Schema edits are only safe against an unambiguous, versioned open
         // TOML owner.  Closed/saved evidence has no protocol precondition.
-        let schema_document = self
-            .schema
-            .overlay_for_documents(&self.documents)
+        let schema = self.effective_schema();
+        let schema_summary = schema.as_ref().and_then(|schema| schema.summary());
+        let schema_document = schema
+            .as_ref()
             .and_then(|schema| schema.code_action_document());
         features::code_action(
             params,
             self.kernel.snapshot(),
             &documents,
             schema_document,
+            schema_summary,
             &self.ui_catalog,
         )
+    }
+
+    fn effective_schema(&self) -> Option<super::schema_index::SchemaIndex> {
+        if let Some(schema) = self.schema.overlay_for_documents(&self.documents) {
+            return Some(schema);
+        }
+        if self.schema.has_open_match(&self.documents) {
+            return None;
+        }
+        Some(self.schema.clone())
     }
 
     pub(crate) fn open_document_diagnostics_except(

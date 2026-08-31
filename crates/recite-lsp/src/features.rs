@@ -6,7 +6,7 @@ use recite_compiler::SchemaSummary;
 use recite_core::{ConditionReturnType, DocumentKey, EffectMode, SchemaTypeRef};
 use recite_ui::UiCatalog;
 
-mod code_action;
+pub(crate) mod code_action;
 mod completion;
 mod hover;
 mod navigation;
@@ -30,9 +30,10 @@ pub(crate) fn code_action(
     snapshot: &AuthoringSnapshot,
     documents: &[CodeActionDocument<'_>],
     schema: Option<SchemaCodeActionDocument>,
+    schema_summary: Option<&recite_compiler::SchemaSummary>,
     catalog: &UiCatalog,
 ) -> Option<CodeActionResponse> {
-    code_action::code_action(params, snapshot, documents, schema, catalog)
+    code_action::code_action(params, snapshot, documents, schema, schema_summary, catalog)
 }
 
 pub(crate) use navigation::{NavigationDocument, definition, prepare_rename, references, rename};

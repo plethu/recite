@@ -74,6 +74,11 @@ fn watched_schema_refresh_keeps_unsaved_schema_overlay() {
 }
 
 #[test]
+fn valid_schema_overlay_clears_diagnostics_with_new_version() {
+    super::diagnostics::valid_schema_overlay_clears_diagnostics_with_new_version();
+}
+
+#[test]
 fn publishes_choice_availability_parser_diagnostics() {
     super::availability::publishes_choice_availability_parser_diagnostics();
 }

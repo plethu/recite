@@ -38,9 +38,21 @@ impl SchemaIndex {
         generation: SnapshotGeneration,
     ) -> Option<DiagnosticRefresh> {
         self.diagnostics_refresh(generation).or_else(|| {
-            self.uri
-                .clone()
-                .map(|uri| DiagnosticRefresh::Clear { uri, generation })
+            let uri = self.uri.clone()?;
+            if self.active_version.is_some() {
+                // A live overlay owns a protocol version even when it has
+                // become valid. Publish the empty set with that version so a
+                // client cannot mistake this clear for the saved disk state.
+                Some(DiagnosticRefresh::Publish(DocumentDiagnostics {
+                    uri,
+                    text: self.text.clone().unwrap_or_default(),
+                    version: self.active_version,
+                    diagnostics: Vec::new(),
+                    generation,
+                }))
+            } else {
+                Some(DiagnosticRefresh::Clear { uri, generation })
+            }
         })
     }
 }

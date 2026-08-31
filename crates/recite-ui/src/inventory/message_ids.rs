@@ -69,10 +69,10 @@ message_ids! {
     LspHoverMetadataWithDomain, LspHoverCondition, LspHoverEffect, LspHoverProjectionQuery, LspHoverPresentationProjector,
     LspHoverPresentationOutput, LspHoverPresentationLabel, LspHoverBlock, LspHoverRegistry, LspHoverMetadataDomain,
     LspHoverAvailabilityReason, LspHoverRegistryValue, LspHoverEnumValue, LspHoverDomainValue, LspHoverProducedBy,
-    LspHoverSchemaProducer, LspHoverSchemaFreshness, LspHoverSchemaScopedFingerprints, LspCompletionAvailabilityReason, LspCompletionBlock,
+    LspHoverSchemaProducer, LspHoverSchemaFreshness, LspHoverSchemaFreshnessState, LspHoverSchemaFreshnessUnavailable, LspHoverSchemaScopedFingerprints, LspCompletionAvailabilityReason, LspCompletionBlock,
     LspCompletionSpeaker, LspCompletionMetadataKey, LspCompletionMetadataKeyWithDomain, LspCompletionMetadataDomain, LspCompletionCondition,
     LspCompletionConditionDocumentation, LspCompletionEffect, LspCompletionEffectDocumentation, LspCompletionProjectionQuery, LspCompletionProjectionQueryDocumentation,
     LspCompletionProjectionQueryFunction, LspCompletionProjectionQueryCall, LspCompletionProjectionInput, LspCompletionProjector, LspCompletionOutput,
     LspCompletionLabel, LspCodeActionInsertMissingId, LspCodeActionInsertAllMissingIds, LspCodeActionCreateBlockStub, LspCodeActionAddCondition,
-    LspCodeActionAddEffect, LspWarningUiConfig,
+    LspCodeActionAddEffect, LspCodeActionSchemaAction, LspCodeActionSchemaDisabled, LspWarningUiConfig,
 }

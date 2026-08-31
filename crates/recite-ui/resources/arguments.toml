@@ -315,8 +315,21 @@ id = "string"
 fingerprint = "string"
 inputs = "integer"
 scope = "string"
+[arguments."lsp-hover-schema-freshness-state"]
+state = "string"
+content = "string"
+manifest = "string"
+registries = "string"
+metadata_domains = "string"
+[arguments."lsp-hover-schema-freshness-unavailable"]
+reason = "string"
 [arguments."lsp-hover-schema-scoped-fingerprints"]
 fingerprints = "string"
+[arguments."lsp-code-action-schema-action"]
+action = "string"
+producer = "string"
+[arguments."lsp-code-action-schema-disabled"]
+reason = "string"
 [arguments."lsp-completion-metadata-key-with-domain"]
 domain = "string"
 [arguments."lsp-completion-metadata-domain"]
