@@ -14,20 +14,20 @@ use super::super::preview::PreviewPlayUi;
 use super::TuiPlayUi;
 use super::choice::resolve_choice;
 use super::state::{
-    TuiChoiceRow, TuiDeferredEffectRow, TuiDeferredQueueState, TuiPrompt, TuiPromptLine,
-    TuiTranscriptEntry, TuiTranscriptKind, finished_interaction, initial_choice_selection,
-    initial_interaction,
+    TuiDeferredEffectRow, TuiDeferredQueueState, TuiPrompt, TuiTranscriptEntry, TuiTranscriptKind,
+    finished_interaction, initial_interaction,
 };
 
 pub(super) fn condition_prompt(
     expected_type: ConditionExpectedType,
     query: String,
+    selected_bool_answer: bool,
     keymap: Keymap,
 ) -> TuiPrompt {
     match expected_type {
         ConditionExpectedType::Bool => TuiPrompt::Condition {
             query,
-            selected: true,
+            selected: selected_bool_answer,
             interaction: initial_interaction(keymap),
         },
         ConditionExpectedType::Enum => TuiPrompt::EnumCondition {
@@ -35,6 +35,23 @@ pub(super) fn condition_prompt(
             interaction: initial_interaction(keymap),
             input: TextBuffer::default(),
         },
+    }
+}
+
+impl<B: ratatui::backend::Backend> TuiPlayUi<'_, B> {
+    pub(super) fn prepare_condition_prompt(
+        &mut self,
+        request: &PreviewConditionRequest,
+        query: String,
+    ) {
+        let selected = self.condition_answers.get(&query).copied().unwrap_or(true);
+        self.state.prompt = condition_prompt(
+            request.query().expected_type(),
+            query,
+            selected,
+            self.settings.keymap,
+        );
+        self.state.status.clear();
     }
 }
 
@@ -56,35 +73,7 @@ impl<B: ratatui::backend::Backend> PreviewPlayUi for TuiPlayUi<'_, B> {
     }
 
     fn choice(&mut self, prompt: &PreviewPrompt) -> Result<ChoiceId, CliError> {
-        let rows = prompt
-            .choices()
-            .iter()
-            .enumerate()
-            .map(|(index, choice)| TuiChoiceRow {
-                index: index + 1,
-                id: choice.id.as_str().to_owned(),
-                text: choice.text.clone(),
-                is_available: choice.availability.is_available,
-                unavailable_reason: choice
-                    .availability
-                    .primary_reason
-                    .as_ref()
-                    .map(|reason| reason.text.clone()),
-                is_visible: self.settings.show_unavailable_choices
-                    || choice.availability.is_available,
-            })
-            .collect::<Vec<_>>();
-        self.state.prompt = TuiPrompt::Choice {
-            line: prompt.line().map(|line| TuiPromptLine {
-                id: line.id.as_str().to_owned(),
-                text: line.text.clone(),
-            }),
-            selected: initial_choice_selection(&rows),
-            choices: rows,
-            interaction: initial_interaction(self.settings.keymap),
-            input: TextBuffer::default(),
-        };
-        self.state.status.clear();
+        self.prepare_choice_prompt(prompt);
         let selection = self.read_choice_selection()?;
         resolve_choice(&self.messages, selection, prompt)
     }
@@ -112,16 +101,16 @@ impl<B: ratatui::backend::Backend> PreviewPlayUi for TuiPlayUi<'_, B> {
         request: &PreviewConditionRequest,
     ) -> Result<ConditionAnswer, CliError> {
         let query = condition_query_text(request)?;
-        self.state.prompt =
-            condition_prompt(request.query().expected_type(), query, self.settings.keymap);
-        self.state.status.clear();
+        self.prepare_condition_prompt(request, query.clone());
         match request.query().expected_type() {
             ConditionExpectedType::Enum => Ok(ConditionAnswer::Value(ConditionValue::EnumVariant(
                 self.read_enum_condition_variant()?,
             ))),
-            ConditionExpectedType::Bool => Ok(ConditionAnswer::Value(ConditionValue::Bool(
-                self.read_condition_selection()?,
-            ))),
+            ConditionExpectedType::Bool => {
+                let answer = self.read_condition_selection()?;
+                self.condition_answers.insert(query, answer);
+                Ok(ConditionAnswer::Value(ConditionValue::Bool(answer)))
+            }
         }
     }
 

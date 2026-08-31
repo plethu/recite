@@ -5,6 +5,45 @@ use crate::error::CliError;
 use crate::i18n::{Messages, MsgId};
 use crate::play::choice_selection::ChoiceSelection;
 
+use super::TuiPlayUi;
+use super::state::{
+    TuiChoiceRow, TuiPrompt, TuiPromptLine, initial_choice_selection, initial_interaction,
+};
+
+impl<B: ratatui::backend::Backend> TuiPlayUi<'_, B> {
+    pub(super) fn prepare_choice_prompt(&mut self, prompt: &PreviewPrompt) {
+        let rows = prompt
+            .choices()
+            .iter()
+            .enumerate()
+            .map(|(index, choice)| TuiChoiceRow {
+                index: index + 1,
+                id: choice.id.as_str().to_owned(),
+                text: choice.text.clone(),
+                is_available: choice.availability.is_available,
+                unavailable_reason: choice
+                    .availability
+                    .primary_reason
+                    .as_ref()
+                    .map(|reason| reason.text.clone()),
+                is_visible: self.settings.show_unavailable_choices
+                    || choice.availability.is_available,
+            })
+            .collect::<Vec<_>>();
+        self.state.prompt = TuiPrompt::Choice {
+            line: prompt.line().map(|line| TuiPromptLine {
+                id: line.id.as_str().to_owned(),
+                text: line.text.clone(),
+            }),
+            selected: initial_choice_selection(&rows),
+            choices: rows,
+            interaction: initial_interaction(self.settings.keymap),
+            input: Default::default(),
+        };
+        self.state.status.clear();
+    }
+}
+
 pub(super) fn resolve_choice(
     messages: &Messages,
     selection: ChoiceSelection,

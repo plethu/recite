@@ -222,6 +222,32 @@ fn plain_play_reports_post_choice_condition_eof_as_cli_error() {
 }
 
 #[test]
+fn plain_preview_presents_choice_before_followup_condition() {
+    let asset = asset(concat!(
+        ":: start default\n",
+        "> intro@d4015ea1a2b18d0979f4\n",
+        "  Welcome.\n",
+        "  ? help@8d41a6f3bba2b4c2e660\n",
+        "    Help.\n",
+        "    -> help\n",
+        ":: help\n",
+        ":if trusts(player)\n",
+        "  > helped@33772e0e0fbf80051af0\n",
+        "    Helped.\n",
+        "-> END\n",
+    ));
+
+    let output = run_plain(&asset, "1\ny\n").expect("play succeeds");
+    let selected = output
+        .find("selected choice 8d41a6f3bba2b4c2e660")
+        .expect("selected choice");
+    let condition = output
+        .rfind("condition trusts(player) = true")
+        .expect("follow-up condition result");
+    assert!(selected < condition);
+}
+
+#[test]
 fn plain_preview_preserves_typed_event_order_for_condition_and_choice() {
     let asset = asset(concat!(
         ":: start default\n",

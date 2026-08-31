@@ -1,4 +1,4 @@
-use std::io;
+use std::{collections::BTreeMap, io};
 
 use crossterm::event::{self, Event, KeyEventKind};
 use ratatui::{
@@ -51,6 +51,9 @@ struct TuiPlayUi<'a, B: Backend> {
     state: TuiState,
     settings: TuiSettings,
     messages: Messages,
+    /// Remembers the last displayed boolean answer for prompt ergonomics only.
+    /// PreviewSession remains the sole condition/traversal authority.
+    condition_answers: BTreeMap<String, bool>,
 }
 
 impl<'a, B: Backend> TuiPlayUi<'a, B> {
@@ -66,6 +69,7 @@ impl<'a, B: Backend> TuiPlayUi<'a, B> {
             state,
             settings,
             messages,
+            condition_answers: BTreeMap::new(),
         }
     }
 

@@ -28,6 +28,7 @@ pub(super) fn run_preview<U: PreviewPlayUi>(
     let mut session =
         PreviewSession::new(asset, Some(block), options).map_err(CliError::Runtime)?;
     let mut pending = VecDeque::new();
+    let mut announced_choice = None;
 
     loop {
         if pending.is_empty() {
@@ -65,7 +66,7 @@ pub(super) fn run_preview<U: PreviewPlayUi>(
                     },
                     inputs,
                 );
-                enqueue_events(&mut pending, output.events());
+                enqueue_events(&mut pending, output.events(), &mut announced_choice);
             }
             PreviewEvent::ConditionResult { request, result } => {
                 ui.condition_result(&request, &result)?;
@@ -81,8 +82,33 @@ pub(super) fn run_preview<U: PreviewPlayUi>(
                         Err(error) => return Err(error),
                     }
                 };
-                let output = session.dispatch(PreviewCommand::Choose { choice_id }, inputs);
-                enqueue_events(&mut pending, output.events());
+                let output = session.dispatch(
+                    PreviewCommand::Choose {
+                        choice_id: choice_id.clone(),
+                    },
+                    inputs,
+                );
+                if output
+                    .events()
+                    .iter()
+                    .any(|event| matches!(event, PreviewEvent::ConditionRequested(_)))
+                    && !output
+                        .events()
+                        .iter()
+                        .any(|event| matches!(event, PreviewEvent::Error(_)))
+                    && !output
+                        .events()
+                        .iter()
+                        .any(|event| matches!(event, PreviewEvent::ChoiceSelected { .. }))
+                {
+                    // Choice validation succeeded at the preview boundary. Present this
+                    // accepted transition before asking for a follow-up branch condition;
+                    // the eventual runtime ChoiceSelected event is consumed below so the
+                    // presenter sees the transition exactly once.
+                    ui.selected_choice(&choice_id)?;
+                    announced_choice = Some(choice_id);
+                }
+                enqueue_events(&mut pending, output.events(), &mut announced_choice);
             }
             PreviewEvent::ChoiceSelected { choice_id, .. } => ui.selected_choice(&choice_id)?,
             PreviewEvent::EffectRequested(effect) => {
@@ -123,24 +149,41 @@ pub(super) fn run_preview<U: PreviewPlayUi>(
     }
 }
 
-/// Keeps the accepted choice visible before the branch traversal it unlocks.
-///
-/// The runtime deliberately records the condition replay prefix before the
-/// committed choice.  Interactive play has historically presented the choice
-/// first, however, so this is a presentation ordering rule over the typed
-/// events; it does not alter the runtime trace or traversal semantics.
-fn enqueue_events(pending: &mut VecDeque<PreviewEvent>, events: &[PreviewEvent]) {
+/// Presents accepted choices before replayed branch conditions without changing runtime trace.
+fn enqueue_events(
+    pending: &mut VecDeque<PreviewEvent>,
+    events: &[PreviewEvent],
+    announced_choice: &mut Option<ChoiceId>,
+) {
+    let mut events = events
+        .iter()
+        .filter(|event| {
+            let PreviewEvent::ChoiceSelected { choice_id, .. } = event else {
+                return true;
+            };
+            if announced_choice.as_ref() == Some(choice_id) {
+                *announced_choice = None;
+                false
+            } else {
+                true
+            }
+        })
+        .cloned()
+        .collect::<Vec<_>>();
+    if announced_choice.is_some() {
+        pending.extend(events);
+        return;
+    }
     let Some(choice_index) = events
         .iter()
         .position(|event| matches!(event, PreviewEvent::ChoiceSelected { .. }))
     else {
-        pending.extend(events.iter().cloned());
+        pending.extend(events);
         return;
     };
 
-    pending.push_back(events[choice_index].clone());
-    pending.extend(events[..choice_index].iter().cloned());
-    pending.extend(events[choice_index + 1..].iter().cloned());
+    pending.push_back(events.remove(choice_index));
+    pending.extend(events);
 }
 
 fn preview_inputs(preview: Option<DialogueTraversalPreview<'_>>) -> PreviewInputs<'_> {
