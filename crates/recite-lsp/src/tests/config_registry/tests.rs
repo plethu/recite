@@ -9,6 +9,11 @@ fn malformed_workspace_root_does_not_block_independent_root() {
 }
 
 #[test]
+fn manifest_refresh_reuses_unchanged_sibling_kernel() {
+    super::project_indexes::manifest_refresh_reuses_unchanged_sibling_kernel();
+}
+
+#[test]
 fn identical_relative_keys_are_partitioned() {
     super::project_indexes::identical_relative_keys_are_partitioned();
 }

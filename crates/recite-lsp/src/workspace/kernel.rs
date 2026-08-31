@@ -1,5 +1,4 @@
 use std::collections::{BTreeMap, BTreeSet};
-use std::fmt::Write as _;
 
 use recite_compiler::{AuthoringKernel, AuthoringRequest, OpenDocument as KernelOpenDocument};
 use recite_core::DocumentKey;
@@ -7,9 +6,11 @@ use recite_core::DocumentKey;
 use super::project_index::{SavedDocument, SavedProjectIndex};
 use super::schema_index::SchemaIndex;
 use super::{DiagnosticRefresh, LspWorkspace};
+use super::{document_key_for_open, document_key_for_saved};
 use crate::documents::{OpenDocument, OpenDocumentStore};
-use crate::paths::stable_path_identity;
-use crate::summary::{FileIdentity, OpenFileScope};
+
+#[cfg(test)]
+mod tests;
 
 pub(crate) struct KernelPartition {
     pub(super) kernel: AuthoringKernel,
@@ -28,18 +29,6 @@ impl LspWorkspace {
         self.partitions
             .iter()
             .map(|(id, partition)| (id.clone(), partition.schema.clone()))
-            .collect()
-    }
-
-    pub(crate) fn schema_partition_id(&self, uri: &lsp_types::Uri) -> Option<String> {
-        self.schema_partition_ids(uri).into_iter().next()
-    }
-
-    pub(crate) fn schema_partition_ids(&self, uri: &lsp_types::Uri) -> Vec<String> {
-        self.partitions
-            .iter()
-            .filter(|(_, partition)| partition.schema.matches_uri(uri))
-            .map(|(id, _)| id.clone())
             .collect()
     }
 
@@ -203,54 +192,4 @@ pub(super) fn authoring_request(
         })
         .collect::<Vec<_>>();
     AuthoringRequest::new(expected_generation, saved, open)
-}
-
-pub(crate) fn document_key_for_saved(document: &SavedDocument) -> Option<DocumentKey> {
-    document_key_for_identity(&FileIdentity::Saved(document.identity.clone()))
-}
-
-pub(crate) fn document_key_for_open(document: &OpenDocument) -> Option<DocumentKey> {
-    document_key_for_identity(&FileIdentity::Open(document.identity().clone()))
-}
-
-pub(crate) fn document_key_for_identity(identity: &FileIdentity) -> Option<DocumentKey> {
-    match identity {
-        FileIdentity::Saved(identity) => document_key(identity.project_relative_path.as_str())
-            .or_else(|| document_key(&stable_path_identity(&identity.canonical_path))),
-        FileIdentity::Open(identity) if identity.scope == OpenFileScope::Excluded => None,
-        FileIdentity::Open(identity) => identity
-            .project_relative_path
-            .as_deref()
-            .and_then(document_key)
-            .or_else(|| {
-                identity
-                    .saved_path
-                    .as_deref()
-                    .map(stable_path_identity)
-                    .and_then(|path| document_key(&path))
-            })
-            .or_else(|| fallback_document_key(identity.uri.as_str().as_bytes())),
-    }
-}
-
-fn document_key(value: &str) -> Option<DocumentKey> {
-    DocumentKey::new(value.to_owned()).ok()
-}
-
-fn fallback_document_key(value: &[u8]) -> Option<DocumentKey> {
-    let mut encoded = String::from("~lsp/");
-    for byte in value {
-        let _ = write!(&mut encoded, "{byte:02x}");
-    }
-    document_key(&encoded)
-}
-
-pub(super) fn standalone_document_key(document: &OpenDocument) -> Option<DocumentKey> {
-    document
-        .identity()
-        .saved_path
-        .as_deref()
-        .map(stable_path_identity)
-        .and_then(|path| document_key(&path))
-        .or_else(|| fallback_document_key(document.identity().uri.as_str().as_bytes()))
 }

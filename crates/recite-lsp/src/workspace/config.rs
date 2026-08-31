@@ -11,6 +11,7 @@ use crate::paths::uri_to_file_path;
 
 #[derive(Clone, Debug)]
 pub(crate) struct WorkspaceConfig {
+    pub(super) lexical_roots: Vec<PathBuf>,
     pub(super) fallback_roots: Vec<PathBuf>,
     pub(super) schema_override_path: Option<PathBuf>,
     pub(super) discoveries: Vec<WorkspaceDiscovery>,
@@ -35,9 +36,12 @@ pub(super) enum WorkspaceDiscoveryState {
 
 impl WorkspaceConfig {
     pub(crate) fn from_initialize_params(params: &InitializeParams) -> Self {
-        let fallback_roots = fallback_roots(params)
+        let lexical_roots = fallback_roots(params)
             .into_iter()
             .filter_map(|root| resolve_config_path(&root, None))
+            .collect::<Vec<_>>();
+        let fallback_roots = lexical_roots
+            .iter()
             .filter_map(|root| fs::canonicalize(root).ok())
             .collect::<Vec<_>>();
         let discoveries = discover_workspace_roots(&fallback_roots);
@@ -60,6 +64,7 @@ impl WorkspaceConfig {
             initialization_schema_path(params.initialization_options.as_ref())
                 .and_then(|schema| resolve_config_path(&schema, schema_base.as_deref()));
         Self {
+            lexical_roots,
             fallback_roots: fallback_roots.clone(),
             schema_override_path,
             discoveries,
@@ -68,11 +73,14 @@ impl WorkspaceConfig {
 
     #[allow(dead_code)]
     pub(crate) fn for_roots(roots: Vec<PathBuf>) -> Self {
-        let roots = roots
-            .into_iter()
+        let lexical_roots = roots;
+        let roots = lexical_roots
+            .iter()
+            .cloned()
             .filter_map(|root| fs::canonicalize(root).ok())
             .collect::<Vec<_>>();
         Self {
+            lexical_roots,
             fallback_roots: roots.clone(),
             schema_override_path: None,
             discoveries: roots

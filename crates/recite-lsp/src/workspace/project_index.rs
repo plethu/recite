@@ -25,6 +25,7 @@ pub(super) use project_identity::PathScope;
 #[derive(Clone)]
 pub(super) struct SavedProjectIndex {
     workspace_root: PathBuf,
+    lexical_roots: Vec<PathBuf>,
     fallback_roots: Vec<PathBuf>,
     roots: Vec<PathBuf>,
     pub(super) documents: BTreeMap<PathBuf, SavedDocument>,
@@ -34,15 +35,21 @@ pub(super) struct SavedProjectIndex {
 
 impl SavedProjectIndex {
     pub(super) fn discover(config: &WorkspaceConfig) -> Self {
-        Self::from_discoveries(config.fallback_roots.clone(), config.discoveries.clone())
+        Self::from_discoveries(
+            config.lexical_roots.clone(),
+            config.fallback_roots.clone(),
+            config.discoveries.clone(),
+        )
     }
 
     pub(super) fn from_discoveries(
+        lexical_roots: Vec<PathBuf>,
         fallback_roots: Vec<PathBuf>,
         discoveries: Vec<WorkspaceDiscovery>,
     ) -> Self {
         let mut index = Self {
             workspace_root: common_project_root(&fallback_roots),
+            lexical_roots,
             roots: roots_for_discoveries(&fallback_roots, &discoveries),
             fallback_roots,
             documents: BTreeMap::new(),

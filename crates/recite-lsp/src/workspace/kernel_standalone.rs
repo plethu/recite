@@ -1,7 +1,7 @@
 use recite_compiler::{AuthoringRequest, OpenDocument as KernelOpenDocument};
 
 use super::LspWorkspace;
-use super::kernel::standalone_document_key;
+use super::document_keys::standalone_document_key;
 use crate::documents::OpenDocument;
 
 impl LspWorkspace {

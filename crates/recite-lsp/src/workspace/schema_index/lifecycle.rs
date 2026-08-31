@@ -3,6 +3,7 @@ use std::fs;
 use lsp_types::Uri;
 
 use super::SchemaIndex;
+use crate::paths::stable_path_identity;
 use crate::paths::uri_to_file_path;
 use crate::workspace::{DiagnosticRefresh, DocumentDiagnostics, SnapshotGeneration};
 
@@ -13,6 +14,19 @@ impl SchemaIndex {
 
     pub(crate) fn configured_path(&self) -> Option<&std::path::Path> {
         self.configured_path.as_deref()
+    }
+
+    pub(crate) fn target_identity(&self) -> Option<String> {
+        self.path
+            .as_deref()
+            .or(self.configured_path.as_deref())
+            .map(stable_path_identity)
+    }
+
+    pub(crate) fn canonical_uri(&self) -> Option<Uri> {
+        self.path
+            .as_deref()
+            .and_then(crate::paths::file_path_to_uri)
     }
 
     pub(crate) fn clear_refresh(

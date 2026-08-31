@@ -180,7 +180,7 @@ fn partition_input_fingerprint(
     let open = documents
         .documents()
         .filter_map(|document| {
-            let key = super::kernel::document_key_for_open(document)?;
+            let key = super::document_key_for_open(document)?;
             if owners.get(&key) != Some(&document.identity().uri) {
                 return None;
             }

@@ -1,4 +1,5 @@
 mod config;
+mod document_keys;
 mod kernel;
 #[path = "workspace/kernel_rebuild.rs"]
 mod kernel_rebuild;
@@ -21,8 +22,10 @@ use recite_core::Diagnostic;
 use recite_ui::UiCatalog;
 
 pub(crate) use config::WorkspaceConfig;
+pub(crate) use document_keys::{
+    document_key_for_identity, document_key_for_open, document_key_for_saved,
+};
 pub(crate) use kernel::KernelPartition;
-pub(crate) use kernel::{document_key_for_identity, document_key_for_open, document_key_for_saved};
 use project_index::{SavedDocument, SavedProjectIndex};
 use schema_index::SchemaIndex;
 pub(crate) use snapshot::LiveProjectSnapshot;
@@ -46,7 +49,7 @@ pub(crate) struct LspWorkspace {
 
 impl LspWorkspace {
     pub(crate) fn schema_diagnostics_all(&self) -> Vec<DiagnosticRefresh> {
-        let mut refreshes = Vec::new();
+        let mut refreshes: Vec<(String, DocumentDiagnostics)> = Vec::new();
         for partition in self.partitions.values() {
             let Some(refresh) = partition.schema.diagnostics_refresh(self.generation) else {
                 continue;
@@ -54,22 +57,29 @@ impl LspWorkspace {
             let DiagnosticRefresh::Publish(published) = refresh else {
                 continue;
             };
-            if let Some(existing) = refreshes.iter_mut().find_map(|refresh| {
-                let DiagnosticRefresh::Publish(existing) = refresh else {
-                    return None;
-                };
-                (existing.uri == published.uri).then_some(existing)
-            }) {
+            let key = partition
+                .schema
+                .target_identity()
+                .unwrap_or_else(|| published.uri.as_str().to_owned());
+            if let Some((_, existing)) = refreshes.iter_mut().find(|(existing, _)| *existing == key)
+            {
                 for diagnostic in published.diagnostics {
                     if !existing.diagnostics.contains(&diagnostic) {
                         existing.diagnostics.push(diagnostic);
                     }
                 }
             } else {
-                refreshes.push(DiagnosticRefresh::Publish(published));
+                let mut published = published;
+                if let Some(uri) = partition.schema.canonical_uri() {
+                    published.uri = uri;
+                }
+                refreshes.push((key, published));
             }
         }
         refreshes
+            .into_iter()
+            .map(|(_, diagnostics)| DiagnosticRefresh::Publish(diagnostics))
+            .collect()
     }
 
     pub(crate) fn save_schema(&mut self, uri: &Uri) -> Option<DiagnosticRefresh> {

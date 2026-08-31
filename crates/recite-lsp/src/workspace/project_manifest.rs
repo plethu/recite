@@ -17,7 +17,11 @@ impl SavedProjectIndex {
             })
             .min_by_key(|report| report.manifest().manifest_path().to_owned())
             .and_then(|report| super::super::config::schema_path_for_discovery(report));
-        *self = Self::from_discoveries(self.fallback_roots.clone(), discoveries);
+        *self = Self::from_discoveries(
+            self.lexical_roots.clone(),
+            self.fallback_roots.clone(),
+            discoveries,
+        );
         schema_path
     }
 
@@ -28,11 +32,14 @@ impl SavedProjectIndex {
             return false;
         }
         let canonical = canonical_event_path(path).unwrap_or_else(|| path.to_owned());
-        self.fallback_roots.iter().any(|root| {
-            canonical.starts_with(root)
-                || canonical
-                    .parent()
-                    .is_some_and(|parent| root.starts_with(parent))
-        })
+        self.lexical_roots
+            .iter()
+            .chain(&self.fallback_roots)
+            .any(|root| {
+                canonical.starts_with(root)
+                    || canonical
+                        .parent()
+                        .is_some_and(|parent| root.starts_with(parent))
+            })
     }
 }

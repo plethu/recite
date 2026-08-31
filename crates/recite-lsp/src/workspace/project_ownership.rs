@@ -125,7 +125,7 @@ impl SavedProjectIndex {
     }
 
     fn is_lexically_excluded(&self, path: &Path) -> bool {
-        self.roots.iter().any(|root| {
+        self.lexical_roots.iter().chain(&self.roots).any(|root| {
             path.starts_with(root) && !recite_config::allows_unscoped_source_path(root, path)
         })
     }

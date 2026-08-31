@@ -19,7 +19,7 @@ pub(super) use lifecycle::{
     did_save_refreshes_saved_summary_for_closed_files,
     did_save_rekeys_new_open_file_without_duplicate_summary,
     manifest_refresh_is_atomic_and_preserves_open_overlay,
-    open_summary_overlays_saved_project_summary,
+    manifest_refresh_reuses_unchanged_sibling_kernel, open_summary_overlays_saved_project_summary,
     watched_files_refresh_saved_index_for_create_and_delete,
     watched_refresh_publishes_effective_open_payload,
 };

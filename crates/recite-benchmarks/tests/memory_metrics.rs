@@ -54,6 +54,36 @@ fn lsp_memory_report_counts_only_frozen_line_and_choice_ids()
     Ok(())
 }
 
+#[test]
+fn lsp_memory_and_probe_support_keep_identical_relative_keys_partitioned()
+-> Result<(), Box<dyn std::error::Error>> {
+    let directory = tempdir()?;
+    let first = directory.path().join("first");
+    let second = directory.path().join("second");
+    for root in [&first, &second] {
+        fs::create_dir_all(root.join("src"))?;
+        fs::write(
+            root.join("recite.project.toml"),
+            "format_version = 1\n[discovery]\nsource_roots = [\"src\"]\n",
+        )?;
+        fs::write(
+            root.join("src/main.recite"),
+            ":: main default\n> line@11111111111111111111\n  Hello.\n-> main\n",
+        )?;
+    }
+
+    let driver = LspBenchmarkDriver::new(&LspBenchmarkConfig::new(vec![first, second]));
+    let report = driver.memory_report();
+    assert_eq!(report.source_files, 2);
+    assert_eq!(report.block_definitions, 2);
+    let probes = driver.probes();
+    assert_eq!(
+        probes.document.project_relative_path,
+        "first/src/main.recite"
+    );
+    Ok(())
+}
+
 fn report_for_source(
     source: &str,
 ) -> Result<recite_lsp::bench_support::LspMemoryReport, Box<dyn std::error::Error>> {

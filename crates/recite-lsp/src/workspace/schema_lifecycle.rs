@@ -1,6 +1,18 @@
 use super::{DiagnosticRefresh, DocumentDiagnostics, LspWorkspace};
 
 impl LspWorkspace {
+    pub(crate) fn schema_partition_id(&self, uri: &lsp_types::Uri) -> Option<String> {
+        self.schema_partition_ids(uri).into_iter().next()
+    }
+
+    pub(crate) fn schema_partition_ids(&self, uri: &lsp_types::Uri) -> Vec<String> {
+        self.partitions
+            .iter()
+            .filter(|(_, partition)| partition.schema.matches_uri(uri))
+            .map(|(id, _)| id.clone())
+            .collect()
+    }
+
     pub(crate) fn schema_refresh_for_uri(&self, uri: &lsp_types::Uri) -> Option<DiagnosticRefresh> {
         let mut refreshes = self
             .partitions

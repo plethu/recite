@@ -2,6 +2,7 @@ use lsp_types::NumberOrString;
 use serde_json::json;
 use tempfile::TempDir;
 
+use crate::paths::stable_path_identity;
 use crate::workspace::{DiagnosticRefresh, WorkspaceChangeResult, WorkspaceConfig};
 
 use super::super::support::{
@@ -38,6 +39,42 @@ pub(crate) fn manifest_refresh_is_atomic_and_preserves_open_overlay() {
     assert!(workspace.project_diagnostics_all().is_empty());
     workspace.close(uri);
     assert_eq!(block_names(&workspace), ["saved"]);
+}
+
+pub(crate) fn manifest_refresh_reuses_unchanged_sibling_kernel() {
+    let temp = TempDir::new().unwrap_or_else(|error| panic!("tempdir: {error}"));
+    let first = temp.path().join("first");
+    let second = temp.path().join("second");
+    write_file(&first, "src/main.recite", ":: first\n");
+    write_file(&second, "src/main.recite", ":: second\n");
+    let params = serde_json::from_value(json!({
+        "workspaceFolders": [
+            {"uri": file_uri(&first).as_str(), "name": "first"},
+            {"uri": file_uri(&second).as_str(), "name": "second"}
+        ],
+        "capabilities": {}
+    }))
+    .unwrap_or_else(|error| panic!("initialize params: {error}"));
+    let mut workspace = test_workspace(WorkspaceConfig::from_initialize_params(&params));
+    let second_uri = file_uri(&second.join("src/main.recite"));
+    workspace.open(second_uri, 1, ":: second live\n".to_owned());
+    let second_id = stable_path_identity(&second);
+    let before = workspace
+        .partition_kernel_generation(&second_id)
+        .expect("second workspace partition");
+
+    write_file(
+        &first,
+        "recite.project.toml",
+        "format_version = 1\n[discovery]\nsource_roots = [\"src\"]\n",
+    );
+    workspace.refresh_watched_uri(&file_uri(&first.join("recite.project.toml")));
+
+    assert_eq!(
+        workspace.partition_kernel_generation(&second_id),
+        Some(before),
+        "manifest refresh must retain the untouched sibling kernel"
+    );
 }
 
 #[cfg(unix)]

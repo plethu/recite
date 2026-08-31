@@ -116,6 +116,45 @@ fn stdio_sibling_fallback_builtin_exclusion_does_not_join_manifest_kernel() {
     harness.finish();
 }
 
+#[cfg(unix)]
+#[test]
+fn stdio_symlinked_workspace_root_preserves_hidden_alias_exclusion() {
+    use std::os::unix::fs::symlink;
+
+    let temp = Builder::new()
+        .prefix("recite % stdio symlink root ")
+        .tempdir()
+        .unwrap_or_else(|error| panic!("temporary workspace: {error}"));
+    let real = temp.path().join("real");
+    let link = temp.path().join("link");
+    write_file(&real, ".hidden/ignored.recite", SHARED_SOURCE);
+    symlink(&real, &link).unwrap_or_else(|error| panic!("workspace root alias: {error}"));
+    let hidden_uri = file_uri(&link.join(".hidden/ignored.recite"));
+    let mut harness = StdioHarness::start(json!({
+        "capabilities": {},
+        "workspaceFolders": workspace_folders(&[&link])
+    }));
+
+    open(&mut harness, &hidden_uri, SHARED_SOURCE, 1);
+    assert!(diagnostics(&diagnostics_after(&mut harness, &hidden_uri)).is_empty());
+
+    std::fs::remove_file(real.join(".hidden/ignored.recite"))
+        .unwrap_or_else(|error| panic!("remove hidden source: {error}"));
+    harness.notify(
+        "workspace/didChangeWatchedFiles",
+        json!({ "changes": [{ "uri": hidden_uri.clone(), "type": 3 }] }),
+    );
+    assert!(diagnostics(&diagnostics_after(&mut harness, &hidden_uri)).is_empty());
+
+    write_file(&real, ".hidden/ignored.recite", SHARED_SOURCE);
+    harness.notify(
+        "workspace/didChangeWatchedFiles",
+        json!({ "changes": [{ "uri": hidden_uri.clone(), "type": 1 }] }),
+    );
+    assert!(diagnostics(&diagnostics_after(&mut harness, &hidden_uri)).is_empty());
+    harness.finish();
+}
+
 fn workspace_folders(paths: &[&Path]) -> Vec<Value> {
     paths
         .iter()
