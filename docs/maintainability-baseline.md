@@ -111,7 +111,7 @@ production suppressions must carry a narrow scope and rationale.
 | `crates/recite-core/src/compiled/messagepack/tags.rs` | 468 | production | core/wire | cohesive | #89: explicit wire tag table |
 | `crates/recite-core/src/compiled/messagepack/wire.rs` | 662 | production | core/wire | exception | #89: retain the explicit decoder boundary while the v0 wire contract is synchronized |
 | `crates/recite-runtime/src/session_snapshot.rs` | 294 | production | runtime/snapshot | follow-up | #135: typed snapshot-boundary errors |
-| `crates/recite-cli/src/error.rs` | 359 | production | cli | review | Keep user-facing error projection separate from typed domain errors |
+| `crates/recite-cli/src/error.rs` | 349 | production | cli | review | Keep user-facing error projection separate from typed domain errors |
 | `crates/recite-ui/tests/diagnostics.rs` | 371 | test/support | ui/tests | review | Structured diagnostic resource and compatibility-message coverage |
 | `crates/recite-lsp/src/features/hover/schema.rs` | 329 | production | lsp/features | review | #168: schema-backed hover presentation remains isolated from typed fact resolution |
 | `crates/recite-compiler/tests/authoring_edits.rs` | 387 | test/support | compiler/tests | review | Host-neutral authoring edit application and scoped/range planning coverage |
@@ -119,9 +119,7 @@ production suppressions must carry a narrow scope and rationale.
 | `crates/recite-lsp/src/tests/availability/completion.rs` | 373 | test/support | lsp/tests | review | #176: contextual selector completion coverage |
 | `crates/recite-benchmarks/src/report/mod.rs` | 389 | production | benchmarks | cohesive | Report aggregation boundary |
 | `crates/recite-benchmarks/src/report/fixture.rs` | 387 | production | benchmarks | cohesive | Fixture report model |
-| `crates/recite-cli/src/runtime_fixture/execute.rs` | 323 | production | cli/runtime-fixture | review | Keep headless execution separate from rendering |
 | `crates/recite-cli/src/dialogue_locale/catalog.rs` | 267 | production | cli/localisation | review | #180: catalogue loading and one-call plural resolution remain a cohesive provider boundary |
-| `crates/recite-cli/src/runtime_fixture/trace/convert.rs` | 271 | production | cli/runtime-fixture | review | #180: structured trace conversion preserves plural resolution provenance |
 | `crates/recite-cli/src/runtime_fixture/trace/model.rs` | 263 | production | cli/runtime-fixture | review | #180: trace output model keeps localized templates and structured metadata distinct |
 | `crates/recite-godot/src/adapter.rs` | 361 | production | godot | review | Host adapter lifecycle boundary |
 | `crates/recite-lsp/src/server.rs` | 390 | production | lsp/server | review | #164: request dispatch and protocol lifecycle remain the server boundary; error taxonomy and watcher registration are split into focused modules |
@@ -158,12 +156,11 @@ production suppressions must carry a narrow scope and rationale.
 | `crates/recite-cli/src/play/tui/render/prompt.rs` | 270 | production | cli/tui | cohesive | Prompt rendering |
 | `crates/recite-cli/src/cli_help.rs` | 309 | production | cli | cohesive | CLI help presentation |
 | `crates/recite-godot/src/bindings.rs` | 353 | production | godot | review | Host binding declarations |
-| `crates/recite-cli/src/runtime_fixture/prompt.rs` | 276 | production | cli/runtime-fixture | cohesive | Fixture prompt projection |
 | `crates/recite-benchmarks/src/runtime.rs` | 265 | production | benchmarks | cohesive | Runtime benchmark harness |
 
 | `crates/recite-runtime/tests/adapter_conformance/driver.rs` | 1179 | test/support | runtime/tests | exception | #171: shared conformance driver grows with typed callback scenarios; retain until adapter conformance split |
 | `crates/recite-cli/src/play/tui/render/tests.rs` | 811 | test/support | cli/tui/tests | cohesive | Private rendering contract tests |
-| `crates/recite-cli/tests/runtime.rs` | 659 | test/support | cli/tests | cohesive | Runtime command behavior suite |
+| `crates/recite-cli/tests/runtime.rs` | 661 | test/support | cli/tests | cohesive | Runtime command behavior suite |
 | `crates/recite-cli/tests/dialogue_locale.rs` | 480 | test/support | cli/tests | review | #180: end-to-end locale, plural, and trace scenarios remain grouped by the CLI contract |
 | `crates/recite-core/tests/support/mod.rs` | 554 | test/support | core/tests | cohesive | Shared model and wire constructors |
 | `crates/recite-core/tests/schema_manifest/fingerprint.rs` | 641 | test/support | core/tests | exception | #176: retain the canonical fingerprint fixture while typed provenance constructors migrate; producer-specific assertions are split into a dedicated test |

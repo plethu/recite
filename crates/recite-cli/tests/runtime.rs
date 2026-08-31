@@ -6,8 +6,6 @@ mod support;
 use support::*;
 #[path = "runtime/interpolation.rs"]
 mod interpolation;
-#[path = "runtime/preview_driver.rs"]
-mod preview_driver;
 
 use std::io::Write;
 use std::process::Stdio;

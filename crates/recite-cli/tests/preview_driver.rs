@@ -1,7 +1,8 @@
 use serde_json::Value;
 use tempfile::TempDir;
 
-use super::support::*;
+mod support;
+use support::*;
 
 #[test]
 fn run_and_trace_project_the_preview_event_sequence() {
