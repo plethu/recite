@@ -185,8 +185,7 @@ pub(super) fn schema_entry_quick_fix_rejects_open_schema_buffers() {
     harness.finish();
 }
 
-#[test]
-fn generated_json_schema_has_no_schema_edit_actions() {
+pub(super) fn generated_json_schema_has_no_schema_edit_actions() {
     let (temp, source_uri, _) = fixture("schema.json", "{\"schema_version\":1}\n", ":if ready()\n");
     let mut harness = harness_for_root_with_schema_value(temp.path(), "./schema.json");
     let actions = code_actions(
@@ -199,8 +198,7 @@ fn generated_json_schema_has_no_schema_edit_actions() {
     harness.finish();
 }
 
-#[test]
-fn unknown_schema_extension_has_unavailable_edit_capability() {
+pub(super) fn unknown_schema_extension_has_unavailable_edit_capability() {
     let (temp, source_uri, _) = fixture("schema.data", SOURCE, ":if ready()\n");
     let mut harness = harness_for_root_with_schema_value(temp.path(), "./schema.data");
     let actions = code_actions(

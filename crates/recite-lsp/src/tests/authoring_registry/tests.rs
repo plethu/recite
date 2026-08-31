@@ -282,11 +282,9 @@ fn schema_entry_insertion_handles_crlf_and_eof_without_trailing_newline() {
 #[test]
 fn schema_entry_quick_fix_rejects_missing_sections() {
     super::code_action::schema_entry_quick_fix_rejects_missing_sections();
-}
-
-#[test]
-fn schema_entry_quick_fix_rejects_open_schema_buffers() {
     super::code_action::schema_entry_quick_fix_rejects_open_schema_buffers();
+    super::code_action::generated_json_schema_has_no_schema_edit_actions();
+    super::code_action::unknown_schema_extension_has_unavailable_edit_capability();
 }
 
 #[test]
