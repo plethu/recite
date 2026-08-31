@@ -7,6 +7,10 @@ use recite_runtime::{
 
 use crate::error::CliError;
 
+/// Loaded dialogue-localisation inputs passed to the shared preview driver.
+///
+/// This type deliberately contains no runtime session or traversal state. The runtime preview
+/// owns those concerns; the CLI only supplies its explicit locale and provider.
 #[derive(Clone, Copy)]
 pub(crate) struct DialogueTraversalPreview<'a> {
     locale: &'a LocaleId,
@@ -27,6 +31,8 @@ impl<'a> DialogueTraversalPreview<'a> {
     }
 }
 
+/// Legacy play-only traversal adapter. The fixture `run`/`trace` commands use `PreviewSession`;
+/// plain and TUI play remain on this adapter until their presentation migration lands.
 pub(crate) struct DialogueTraversal<'a> {
     asset: &'a CompiledDialogue,
     preview: Option<DialogueTraversalPreview<'a>>,
@@ -45,16 +51,6 @@ impl<'a> DialogueTraversal<'a> {
             values: None,
             trace: None,
         }
-    }
-
-    pub(crate) fn with_values(mut self, values: &'a dyn InterpolationValueProvider) -> Self {
-        self.values = Some(values);
-        self
-    }
-
-    pub(crate) fn with_trace(mut self, trace: &'a DialogueTrace) -> Self {
-        self.trace = Some(trace);
-        self
     }
 
     pub(crate) fn start(&self, block: Option<&str>) -> Result<DialogueSession, CliError> {
