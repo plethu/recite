@@ -100,18 +100,6 @@ impl StdioHarness {
         }
     }
 
-    pub(crate) fn expect_diagnostics(&self, uri: &str) -> Value {
-        loop {
-            let message = self.receive();
-            if message.get("method") != Some(&json!("textDocument/publishDiagnostics")) {
-                continue;
-            }
-            if message["params"]["uri"] == uri {
-                return message["params"].clone();
-            }
-        }
-    }
-
     pub(crate) fn barrier(&mut self, uri: &str) -> Vec<Value> {
         let request_id = self.request(
             "textDocument/completion",

@@ -73,7 +73,7 @@ fn stdio_manifestless_builtin_exclusions_remain_diagnosable_and_unshared() {
 
     let target_uri = file_uri(&temp.path().join("target/ignored.recite"));
     open(&mut harness, &target_uri, SHARED_SOURCE, 1);
-    assert!(diagnostics(&harness.expect_diagnostics(&target_uri)).is_empty());
+    assert!(diagnostics(&diagnostics_after(&mut harness, &target_uri)).is_empty());
     harness.notify(
         "textDocument/didChange",
         json!({
@@ -81,11 +81,11 @@ fn stdio_manifestless_builtin_exclusions_remain_diagnosable_and_unshared() {
             "contentChanges": [{ "text": "oops\n" }]
         }),
     );
-    assert!(!diagnostics(&harness.expect_diagnostics(&target_uri)).is_empty());
+    assert!(!diagnostics(&diagnostics_after(&mut harness, &target_uri)).is_empty());
 
     let hidden_uri = file_uri(&temp.path().join(".hidden/ignored.recite"));
     open(&mut harness, &hidden_uri, SHARED_SOURCE, 1);
-    assert!(diagnostics(&harness.expect_diagnostics(&hidden_uri)).is_empty());
+    assert!(diagnostics(&diagnostics_after(&mut harness, &hidden_uri)).is_empty());
     harness.finish();
 }
 
@@ -112,7 +112,7 @@ fn stdio_sibling_fallback_builtin_exclusion_does_not_join_manifest_kernel() {
 
     let ignored_uri = file_uri(&sibling.join("target/ignored.recite"));
     open(&mut harness, &ignored_uri, SHARED_SOURCE, 1);
-    assert!(diagnostics(&harness.expect_diagnostics(&ignored_uri)).is_empty());
+    assert!(diagnostics(&diagnostics_after(&mut harness, &ignored_uri)).is_empty());
     harness.finish();
 }
 
@@ -142,6 +142,25 @@ fn diagnostics(params: &Value) -> &[Value] {
     params["diagnostics"]
         .as_array()
         .unwrap_or_else(|| panic!("diagnostics array is missing: {params}"))
+}
+
+fn diagnostics_after(harness: &mut StdioHarness, uri: &str) -> Value {
+    let messages = harness.barrier(uri);
+    let matches = messages
+        .iter()
+        .filter(|message| message["method"] == "textDocument/publishDiagnostics")
+        .filter(|message| message["params"]["uri"] == uri)
+        .map(|message| message["params"].clone())
+        .collect::<Vec<_>>();
+    assert_eq!(
+        matches.len(),
+        1,
+        "expected one diagnostics notification for {uri}, got {messages:?}"
+    );
+    matches
+        .into_iter()
+        .next()
+        .unwrap_or_else(|| panic!("diagnostics notification disappeared"))
 }
 
 fn write_file(root: &Path, relative: &str, text: &str) {

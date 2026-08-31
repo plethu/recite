@@ -48,7 +48,10 @@ fn manifest_schema_change_reloads_and_preserves_open_overlay() {
             }
         }),
     );
-    let overlay = harness.expect_diagnostics(&schema_a_alias_uri);
+    let overlay_messages = harness.barrier(&schema_a_alias_uri);
+    let overlay = diagnostics_for(&overlay_messages, &schema_a_alias_uri);
+    assert_eq!(overlay.len(), 1);
+    let overlay = overlay[0];
     assert_eq!(overlay["version"], 7);
     assert!(
         !overlay["diagnostics"]

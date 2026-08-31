@@ -43,7 +43,10 @@ fn stdio_schema_alias_close_clears_alias_and_refreshes_canonical() {
             }
         }),
     );
-    let invalid = harness.expect_diagnostics(&alias_uri);
+    let invalid_messages = harness.barrier(&alias_uri);
+    let invalid = diagnostics_for(&invalid_messages, &alias_uri);
+    assert_eq!(invalid.len(), 1);
+    let invalid = invalid[0];
     assert_eq!(invalid["version"], 7);
     assert!(
         !invalid["diagnostics"]
