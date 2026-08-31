@@ -196,6 +196,10 @@ pub enum BuildTransitionError {
     ResultCandidatesMismatch,
     #[error("build freshness does not match the active request")]
     FreshnessMismatch,
+    #[error("build result freshness does not match the retained check")]
+    ResultFreshnessMismatch,
+    #[error("build result diagnostics do not preserve the retained check diagnostics")]
+    ResultDiagnosticsMismatch,
     #[error("build check contains error diagnostics")]
     CheckContainsErrors,
     #[error("build candidates must be ordered by target")]

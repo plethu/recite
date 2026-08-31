@@ -1,7 +1,7 @@
 use super::super::phase::{BuildEventKind, BuildPhase};
 use super::super::state::{BuildState, BuildTransitionError};
 
-pub(super) fn invalid(state: &BuildState, event: BuildEventKind) -> BuildTransitionError {
+pub(crate) fn invalid(state: &BuildState, event: BuildEventKind) -> BuildTransitionError {
     BuildTransitionError::Invalid {
         state: phase(state),
         event,

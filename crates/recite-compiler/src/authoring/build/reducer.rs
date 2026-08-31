@@ -7,6 +7,8 @@ use super::state::{BuildState, BuildTransition, BuildTransitionError};
 #[path = "reducer_support.rs"]
 mod support;
 use support::invalid;
+#[path = "reducer_terminal.rs"]
+mod terminal;
 
 /// Pure reducer for legal build lifecycle transitions.
 #[non_exhaustive]
@@ -165,84 +167,5 @@ impl BuildLifecycle {
                 false,
             ),
         }
-    }
-    fn terminal(
-        &self,
-        event: BuildEventKind,
-        expected: BuildTerminalStatus,
-        result: &super::super::result::BuildResult,
-        strict_phase: bool,
-    ) -> Result<BuildState, BuildTransitionError> {
-        let (request, candidates) = match &self.state {
-            BuildState::Checking { request } => (request, Vec::new()),
-            BuildState::Building {
-                request,
-                candidates,
-                ..
-            }
-            | BuildState::Ready {
-                request,
-                candidates,
-                ..
-            } => (request, candidates.clone()),
-            BuildState::Publishing {
-                request, prepared, ..
-            } => (request, prepared.candidates().to_vec()),
-            _ => return Err(invalid(&self.state, event)),
-        };
-        if strict_phase
-            && event == BuildEventKind::CheckFailed
-            && !matches!(self.state, BuildState::Checking { .. })
-        {
-            return Err(invalid(&self.state, event));
-        }
-        if strict_phase
-            && event == BuildEventKind::NoCandidates
-            && !matches!(self.state, BuildState::Ready { .. })
-        {
-            return Err(invalid(&self.state, event));
-        }
-        if !result.matches_request(request) {
-            return Err(BuildTransitionError::ResultIdentityMismatch);
-        }
-        if result.candidates() != candidates {
-            return Err(BuildTransitionError::ResultCandidatesMismatch);
-        }
-        if event == BuildEventKind::PublishCompleted
-            && !matches!(self.state, BuildState::Publishing { .. })
-        {
-            return Err(invalid(&self.state, event));
-        }
-        if event == BuildEventKind::PublishCompleted
-            && !matches!(
-                result.publish(),
-                super::super::publish::PublishOutcome::Published { .. }
-            )
-        {
-            return Err(BuildTransitionError::ResultPublishMismatch);
-        }
-        if result.status() != expected {
-            return Err(BuildTransitionError::ResultStatusMismatch {
-                expected,
-                status: result.status(),
-            });
-        }
-        Ok(match expected {
-            BuildTerminalStatus::Succeeded => BuildState::Succeeded {
-                result: result.clone(),
-            },
-            BuildTerminalStatus::Failed => BuildState::Failed {
-                result: result.clone(),
-            },
-            BuildTerminalStatus::Stale => BuildState::Stale {
-                result: result.clone(),
-            },
-            BuildTerminalStatus::Cancelled => BuildState::Cancelled {
-                result: result.clone(),
-            },
-            BuildTerminalStatus::Superseded => BuildState::Superseded {
-                result: result.clone(),
-            },
-        })
     }
 }
