@@ -3,6 +3,8 @@ use recite_core::{
     SchemaProducerFreshness,
 };
 
+use super::producer::ProducerActionDescriptor;
+
 /// Identifies who owns the declarations represented by a schema summary.
 ///
 /// A missing producer is deliberately not treated as a standalone source. The
@@ -94,12 +96,23 @@ pub enum SchemaCapabilityUnavailableReason {
 #[non_exhaustive]
 pub struct SchemaCapability {
     pub(super) actions: Vec<SchemaAction>,
+    pub(super) producer_actions: Vec<ProducerActionDescriptor>,
 }
 
 impl SchemaCapability {
     #[must_use]
     pub fn actions(&self) -> &[SchemaAction] {
         &self.actions
+    }
+
+    /// Return execution-neutral producer requests for this capability.
+    ///
+    /// The descriptors contain only typed identities, operations, and
+    /// fingerprint evidence. A host still owns execution, progress, and
+    /// presentation.
+    #[must_use]
+    pub fn producer_actions(&self) -> &[ProducerActionDescriptor] {
+        &self.producer_actions
     }
 
     #[must_use]

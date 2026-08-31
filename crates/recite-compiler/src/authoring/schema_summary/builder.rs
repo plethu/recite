@@ -5,9 +5,11 @@ use super::evidence::SchemaSummaryEvidence;
 use super::freshness::{SchemaFreshnessEvidence, SchemaFreshnessSnapshotIdentity};
 use super::functions::{AvailabilityReasonSummary, ConditionSummary, EffectSummary, MarkupSummary};
 use super::helpers::{
-    capability, domain_origin, freshness, ownership, provenance, sorted_fingerprints,
+    capability as build_capability, domain_origin, freshness, ownership, provenance,
+    sorted_fingerprints,
 };
 use super::metadata::{MetadataDomainSummary, MetadataKeySummary};
+use super::producer::ProducerActionEvidence;
 use super::projections::{PresentationProjectorSummary, ProjectionQueryFunctionSummary};
 use super::{
     ProducerMetadataSummary, SchemaFingerprintSummary, SchemaSourceSummary, SchemaSummary,
@@ -61,6 +63,16 @@ impl SchemaSummary {
         let producer_inputs = producer.map_or_else(Vec::new, |metadata| {
             sorted_fingerprints(&metadata.producer_fingerprints)
         });
+        let producer_action_evidence = ProducerActionEvidence::from_schema(schema).ok();
+        let capability = |has_explicit_origin| {
+            build_capability(
+                &owner,
+                has_explicit_origin,
+                source_owned,
+                evidence,
+                producer_action_evidence.as_ref(),
+            )
+        };
         let fingerprints = SchemaFingerprintSummary {
             semantic: schema.canonical_fingerprint(),
             canonical_content,
@@ -82,7 +94,7 @@ impl SchemaSummary {
             source: SchemaSourceSummary {
                 ownership: owner.clone(),
             },
-            capability: capability(&owner, false, source_owned, evidence),
+            capability: capability(false),
             fingerprints,
             producer_metadata,
             freshness,
@@ -93,7 +105,7 @@ impl SchemaSummary {
                     name: name.clone(),
                     definition: definition.clone(),
                     provenance: provenance(&owner, None),
-                    capability: capability(&owner, false, source_owned, evidence),
+                    capability: capability(false),
                 })
                 .collect(),
             registries: schema
@@ -103,12 +115,7 @@ impl SchemaSummary {
                     name: name.clone(),
                     definition: definition.clone(),
                     provenance: provenance(&owner, definition.origin.as_ref()),
-                    capability: capability(
-                        &owner,
-                        definition.origin.is_some(),
-                        source_owned,
-                        evidence,
-                    ),
+                    capability: capability(definition.origin.is_some()),
                 })
                 .collect(),
             speakers: schema
@@ -118,7 +125,7 @@ impl SchemaSummary {
                     name: name.clone(),
                     definition: definition.clone(),
                     provenance: provenance(&owner, None),
-                    capability: capability(&owner, false, source_owned, evidence),
+                    capability: capability(false),
                 })
                 .collect(),
             conditions: schema
@@ -128,7 +135,7 @@ impl SchemaSummary {
                     name: name.clone(),
                     definition: definition.clone(),
                     provenance: provenance(&owner, None),
-                    capability: capability(&owner, false, source_owned, evidence),
+                    capability: capability(false),
                 })
                 .collect(),
             availability_reasons: schema
@@ -138,12 +145,7 @@ impl SchemaSummary {
                     id: id.clone(),
                     definition: definition.clone(),
                     provenance: provenance(&owner, definition.origin.as_ref()),
-                    capability: capability(
-                        &owner,
-                        definition.origin.is_some(),
-                        source_owned,
-                        evidence,
-                    ),
+                    capability: capability(definition.origin.is_some()),
                 })
                 .collect(),
             effects: schema
@@ -153,7 +155,7 @@ impl SchemaSummary {
                     name: name.clone(),
                     definition: definition.clone(),
                     provenance: provenance(&owner, None),
-                    capability: capability(&owner, false, source_owned, evidence),
+                    capability: capability(false),
                 })
                 .collect(),
             metadata_domains: schema
@@ -163,12 +165,7 @@ impl SchemaSummary {
                     name: name.clone(),
                     definition: definition.clone(),
                     provenance: provenance(&owner, domain_origin(definition)),
-                    capability: capability(
-                        &owner,
-                        domain_origin(definition).is_some(),
-                        source_owned,
-                        evidence,
-                    ),
+                    capability: capability(domain_origin(definition).is_some()),
                 })
                 .collect(),
             metadata: schema
@@ -178,7 +175,7 @@ impl SchemaSummary {
                     name: name.clone(),
                     definition: definition.clone(),
                     provenance: provenance(&owner, None),
-                    capability: capability(&owner, false, source_owned, evidence),
+                    capability: capability(false),
                 })
                 .collect(),
             projection_queries: schema
@@ -188,7 +185,7 @@ impl SchemaSummary {
                     name: name.clone(),
                     definition: definition.clone(),
                     provenance: provenance(&owner, None),
-                    capability: capability(&owner, false, source_owned, evidence),
+                    capability: capability(false),
                 })
                 .collect(),
             presentation_projectors: schema
@@ -198,7 +195,7 @@ impl SchemaSummary {
                     name: name.clone(),
                     definition: definition.clone(),
                     provenance: provenance(&owner, None),
-                    capability: capability(&owner, false, source_owned, evidence),
+                    capability: capability(false),
                 })
                 .collect(),
             markup: schema
@@ -208,7 +205,7 @@ impl SchemaSummary {
                     name: name.clone(),
                     definition: definition.clone(),
                     provenance: provenance(&owner, None),
-                    capability: capability(&owner, false, source_owned, evidence),
+                    capability: capability(false),
                 })
                 .collect(),
         }

@@ -2,6 +2,7 @@ use recite_core::{ProducerIdentity, ProjectSchema};
 
 use super::errors::SchemaSummaryEvidenceError;
 use super::freshness::SchemaFreshnessEvidence;
+use super::producer::ProducerRetryGuidance;
 
 /// Producer capability evidence supplied by a host or producer report.
 #[derive(Clone, Copy, Debug, Eq, PartialEq)]
@@ -20,6 +21,7 @@ pub struct ProducerFailureEvidence {
     producer: ProducerIdentity,
     code: String,
     detail: Option<String>,
+    retry_guidance: ProducerRetryGuidance,
 }
 
 impl ProducerFailureEvidence {
@@ -37,7 +39,15 @@ impl ProducerFailureEvidence {
             producer,
             code,
             detail,
+            retry_guidance: ProducerRetryGuidance::RetryNow,
         })
+    }
+
+    /// Attach typed guidance for callers deciding whether to offer a retry.
+    #[must_use]
+    pub const fn with_retry_guidance(mut self, guidance: ProducerRetryGuidance) -> Self {
+        self.retry_guidance = guidance;
+        self
     }
 
     #[must_use]
@@ -53,6 +63,11 @@ impl ProducerFailureEvidence {
     #[must_use]
     pub fn detail(&self) -> Option<&str> {
         self.detail.as_deref()
+    }
+
+    #[must_use]
+    pub const fn retry_guidance(&self) -> ProducerRetryGuidance {
+        self.retry_guidance
     }
 }
 
