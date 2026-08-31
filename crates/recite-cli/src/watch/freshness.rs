@@ -1,16 +1,8 @@
-use recite_config::discover_project;
-use recite_core::{Diagnostic, ProjectSchema, SchemaFingerprint};
+use recite_core::{Diagnostic, SchemaFingerprint};
 
-use super::preparation::classify_discovery_error;
 use super::{ProjectBuildPreparation, ProjectBuildPreparationError, ProjectBuildRequest};
 use crate::error::CliError;
-use crate::fs::{load_schema, resolve_project_path, validate_project_asset_freshness};
-
-type CurrentSchema = (
-    Option<ProjectSchema>,
-    Option<SchemaFingerprint>,
-    Vec<Diagnostic>,
-);
+use crate::fs::validate_project_asset_freshness;
 
 pub(super) struct FreshnessResult {
     pub(super) diagnostics: Vec<Diagnostic>,
@@ -20,79 +12,49 @@ pub(super) struct FreshnessResult {
 pub(super) fn assess_current_freshness(
     request: &ProjectBuildRequest,
 ) -> Result<FreshnessResult, CliError> {
-    let report = match discover_project(request.project_root()) {
-        Ok(report) => report,
-        Err(error) => {
-            return match classify_discovery_error(error) {
-                Ok(ProjectBuildPreparation::Rejected { diagnostics }) => Ok(FreshnessResult {
-                    diagnostics,
-                    stale: false,
-                }),
-                Ok(ProjectBuildPreparation::Ready(_)) => Err(CliError::Watch {
-                    message: "discovery error classification returned a ready request".to_owned(),
-                }),
-                Err(error) => Err(map_preparation_error(error)),
-            };
+    let current = ProjectBuildRequest::prepare_with_generations(
+        request.project_root(),
+        request.build_request().generation(),
+        request.build_request().snapshot_generation(),
+    )
+    .map_err(map_preparation_error)?;
+    let current = match current {
+        ProjectBuildPreparation::Ready(request) => *request,
+        ProjectBuildPreparation::Rejected { diagnostics } => {
+            return Ok(FreshnessResult {
+                diagnostics,
+                stale: false,
+            });
         }
     };
-    if !report.is_complete() {
+
+    if !same_published_request(request, &current) {
         return Ok(FreshnessResult {
-            diagnostics: report
-                .diagnostics()
-                .iter()
-                .map(recite_config::DiscoveryDiagnostic::as_core_diagnostic)
-                .collect(),
-            stale: false,
+            diagnostics: Vec::new(),
+            stale: true,
         });
     }
 
-    let manifest = report.manifest().source();
-    let (schema, schema_fingerprint, mut diagnostics) =
-        load_current_schema(report.manifest().project_root(), manifest)?;
-    diagnostics.extend(recite_core::project::validate_project_manifest_source(
-        manifest,
-        schema.as_ref(),
-    ));
-    if diagnostics
-        .iter()
-        .any(|diagnostic| diagnostic.severity == recite_core::DiagnosticSeverity::Error)
-    {
-        return Ok(FreshnessResult {
-            diagnostics,
-            stale: false,
+    let schema_fingerprint = current
+        .schema()
+        .map_or(SchemaFingerprint::NoSchema, |schema| {
+            schema.canonical_fingerprint()
         });
-    }
-    diagnostics.extend(validate_project_asset_freshness(
-        report.manifest().project_root(),
-        manifest,
-        schema_fingerprint,
-    )?);
+    let diagnostics = validate_project_asset_freshness(
+        current.project_root(),
+        current.manifest(),
+        Some(schema_fingerprint),
+    )?;
     let stale = diagnostics
         .iter()
         .any(|diagnostic| diagnostic.code.category() == recite_core::DiagnosticCategory::Freshness);
     Ok(FreshnessResult { diagnostics, stale })
 }
 
-fn load_current_schema(
-    project_root: &std::path::Path,
-    manifest: &recite_core::ProjectManifestSource,
-) -> Result<CurrentSchema, CliError> {
-    let Some(schema_path) = manifest.manifest().project.schema.as_deref() else {
-        return Ok((None, Some(SchemaFingerprint::NoSchema), Vec::new()));
-    };
-    let schema_path = resolve_project_path(project_root, schema_path);
-    let loaded = load_schema(&schema_path)?;
-    if !loaded.diagnostics.is_empty() {
-        return Ok((None, None, loaded.diagnostics));
-    }
-    let schema = loaded.schema.ok_or_else(|| CliError::Watch {
-        message: format!(
-            "schema input {} has no canonical model",
-            schema_path.display()
-        ),
-    })?;
-    let fingerprint = schema.canonical_fingerprint();
-    Ok((Some(schema), Some(fingerprint), Vec::new()))
+fn same_published_request(published: &ProjectBuildRequest, current: &ProjectBuildRequest) -> bool {
+    published.project_root() == current.project_root()
+        && published.build_request() == current.build_request()
+        && published.targets() == current.targets()
 }
 
 fn map_preparation_error(error: ProjectBuildPreparationError) -> CliError {
