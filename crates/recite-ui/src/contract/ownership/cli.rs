@@ -71,6 +71,14 @@ macro_rules! cli_message_ids {
         | MsgId::WatchBuildStatusUnknown
         | MsgId::WatchBuildRecoveryTargetsEmpty
         | MsgId::WatchBuildRecoveryTargetsList
+        | MsgId::WatchBuildRecoveryRequired
+        | MsgId::WatchBuildRecoveryNotice
+        | MsgId::WatchBuildRecoverySummary
+        | MsgId::WatchBuildRecoveryRecord
+        | MsgId::WatchBuildRecoveryReasonStageCleanup
+        | MsgId::WatchBuildRecoveryReasonPublicationIndeterminate
+        | MsgId::WatchBuildRecoveryReasonPublicationUncommitted
+        | MsgId::WatchBuildRecoveryReasonUnknown
         | MsgId::WatchBuildFailureCheckRequestMismatch
         | MsgId::WatchBuildFailureCheckFreshnessMismatch
         | MsgId::WatchBuildFailureCheckUnknown

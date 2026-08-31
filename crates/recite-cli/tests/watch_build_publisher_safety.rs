@@ -4,7 +4,7 @@ use std::path::Path;
 
 use recite_cli::watch::{
     ProjectBuildPreparation, ProjectBuildPublisher, ProjectBuildPublisherError,
-    ProjectBuildRequest, TargetMapError, TargetPathError,
+    ProjectBuildRecoveryReason, ProjectBuildRequest, TargetMapError, TargetPathError,
 };
 use recite_compiler::{BuildCandidate, BuildControl, BuildPublisher, PublishAbortReason};
 use tempfile::TempDir;
@@ -206,6 +206,10 @@ fn output_parent_symlink_swap_is_refused_at_commit() {
     ));
     assert!(!outside.path().join("dialogue.recitec").exists());
     assert_eq!(publisher.recovery().len(), 1);
+    assert_eq!(
+        publisher.recovery()[0].reason(),
+        ProjectBuildRecoveryReason::PublicationUncommitted
+    );
 }
 
 #[cfg(windows)]

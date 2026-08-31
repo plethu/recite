@@ -3,7 +3,7 @@ use std::path::Path;
 use recite_compiler::{BuildTarget, PublishOutcome, RecoveryNeeded};
 
 use super::publisher::{ProjectPreparedBuild, StagedTarget};
-use super::recovery::ProjectBuildRecovery;
+use super::recovery::{ProjectBuildRecovery, ProjectBuildRecoveryReason};
 use super::staging;
 use super::targets::reject_symlink_components;
 
@@ -43,12 +43,10 @@ where
                 record_uncommitted(&prepared.staged[index..], recovery_log);
                 return partial(&committed, staged, &all, index);
             }
-            staging::ReplaceOutcome::Indeterminate(error) => {
+            staging::ReplaceOutcome::Indeterminate(_error) => {
                 recovery_log.push(ProjectBuildRecovery::new(
                     staged.file.temp.clone(),
-                    format!(
-                        "atomic replacement outcome indeterminate; target may have changed: {error}"
-                    ),
+                    ProjectBuildRecoveryReason::PublicationIndeterminate,
                 ));
                 record_uncommitted(&prepared.staged[index + 1..], recovery_log);
                 return PublishOutcome::Indeterminate {
@@ -56,10 +54,10 @@ where
                     recovery: RecoveryNeeded::for_targets(all.clone()),
                 };
             }
-            staging::ReplaceOutcome::CommittedWithCleanup(error) => {
+            staging::ReplaceOutcome::CommittedWithCleanup(_error) => {
                 recovery_log.push(ProjectBuildRecovery::new(
                     staged.file.temp.clone(),
-                    format!("published but stage cleanup failed: {error}"),
+                    ProjectBuildRecoveryReason::StageCleanupFailed,
                 ));
                 committed.push(staged.target.clone());
             }
@@ -93,7 +91,7 @@ fn record_uncommitted(staged: &[StagedTarget], recovery_log: &mut Vec<ProjectBui
     for remaining in staged {
         recovery_log.push(ProjectBuildRecovery::new(
             remaining.file.temp.clone(),
-            "publication did not commit this target; inspect before cleanup".to_owned(),
+            ProjectBuildRecoveryReason::PublicationUncommitted,
         ));
     }
 }

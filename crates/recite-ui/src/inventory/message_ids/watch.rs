@@ -38,6 +38,22 @@ pub(super) const fn key(id: super::MsgId) -> Option<&'static str> {
         super::MsgId::WatchBuildStatusUnknown => Some("watch-build-status-unknown"),
         super::MsgId::WatchBuildRecoveryTargetsEmpty => Some("watch-build-recovery-targets-empty"),
         super::MsgId::WatchBuildRecoveryTargetsList => Some("watch-build-recovery-targets-list"),
+        super::MsgId::WatchBuildRecoveryRequired => Some("watch-build-recovery-required"),
+        super::MsgId::WatchBuildRecoveryNotice => Some("watch-build-recovery-notice"),
+        super::MsgId::WatchBuildRecoverySummary => Some("watch-build-recovery-summary"),
+        super::MsgId::WatchBuildRecoveryRecord => Some("watch-build-recovery-record"),
+        super::MsgId::WatchBuildRecoveryReasonStageCleanup => {
+            Some("watch-build-recovery-reason-stage-cleanup")
+        }
+        super::MsgId::WatchBuildRecoveryReasonPublicationIndeterminate => {
+            Some("watch-build-recovery-reason-publication-indeterminate")
+        }
+        super::MsgId::WatchBuildRecoveryReasonPublicationUncommitted => {
+            Some("watch-build-recovery-reason-publication-uncommitted")
+        }
+        super::MsgId::WatchBuildRecoveryReasonUnknown => {
+            Some("watch-build-recovery-reason-unknown")
+        }
         super::MsgId::WatchBuildFailureCheckRequestMismatch => {
             Some("watch-build-failure-check-request-mismatch")
         }

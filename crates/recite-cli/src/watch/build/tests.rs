@@ -86,7 +86,14 @@ fn alternate_messages(replacements: &[(&str, &str)]) -> Messages {
     )
     .expect("alternate messages")
 }
-
+fn format_failure(
+    messages: &Messages,
+    status: BuildTerminalStatus,
+    failure: Option<&BuildResultFailure>,
+    outcome: &PublishOutcome,
+) -> String {
+    super::format_failure_with_recovery(messages, status, failure, outcome, &[])
+}
 #[test]
 fn post_publish_source_change_is_stale_not_fresh() {
     let temp = TempDir::new().expect("tempdir");
@@ -96,11 +103,9 @@ fn post_publish_source_change_is_stale_not_fresh() {
     let (status, _stderr) = run_hook(&mut state, || {
         write(temp.path(), "dialogue/main.recite", &source("After."))
     });
-
-    assert!(matches!(status, BuildStatus::Stale { asset_count: 1 }));
+    assert!(matches!(status, BuildStatus::Stale { asset_count: 1, .. }));
     assert!(temp.path().join("compiled/dialogue.recitec").is_file());
 }
-
 #[test]
 fn post_publish_schema_change_is_stale_not_fresh() {
     let temp = TempDir::new().expect("tempdir");
@@ -121,11 +126,10 @@ fn post_publish_schema_change_is_stale_not_fresh() {
     });
 
     assert!(
-        matches!(status, BuildStatus::Stale { asset_count: 1 }),
+        matches!(status, BuildStatus::Stale { asset_count: 1, .. }),
         "{status:?}"
     );
 }
-
 #[test]
 fn post_publish_manifest_changes_are_stale_not_fresh() {
     for manifest in [
@@ -139,11 +143,10 @@ fn post_publish_manifest_changes_are_stale_not_fresh() {
         let (status, _) = run_hook(&mut state, || {
             write(temp.path(), "recite.project.toml", manifest)
         });
-        assert!(matches!(status, BuildStatus::Stale { asset_count: 1 }));
+        assert!(matches!(status, BuildStatus::Stale { asset_count: 1, .. }));
         assert!(temp.path().join("compiled/dialogue.recitec").is_file());
     }
 }
-
 #[test]
 fn post_publish_target_set_change_is_stale_not_fresh() {
     let temp = TempDir::new().expect("tempdir");
@@ -157,9 +160,8 @@ fn post_publish_target_set_change_is_stale_not_fresh() {
             "format_version = 1\n\n[[scenes]]\nid = \"scene.start\"\nasset = \"compiled/dialogue.recitec\"\nblock = \"start\"\nparticipants = [\"hazel\"]\n\n[[scenes]]\nid = \"scene.second\"\nasset = \"compiled/second.recitec\"\nblock = \"start\"\nparticipants = [\"hazel\"]\n",
         )
     });
-    assert!(matches!(status, BuildStatus::Stale { asset_count: 1 }));
+    assert!(matches!(status, BuildStatus::Stale { asset_count: 1, .. }));
 }
-
 #[test]
 fn newly_discovered_source_is_stale_not_fresh() {
     let temp = TempDir::new().expect("tempdir");
@@ -174,11 +176,10 @@ fn newly_discovered_source_is_stale_not_fresh() {
         )
     });
     assert!(
-        matches!(status, BuildStatus::Stale { asset_count: 1 }),
+        matches!(status, BuildStatus::Stale { asset_count: 1, .. }),
         "{status:?}"
     );
 }
-
 #[test]
 fn unchanged_request_is_fresh_after_post_publish_assessment() {
     let temp = TempDir::new().expect("tempdir");
@@ -187,11 +188,9 @@ fn unchanged_request_is_fresh_after_post_publish_assessment() {
     let mut state = WatchState::new(temp.path().to_owned());
 
     let (status, stderr) = run_hook(&mut state, || {});
-
     assert_eq!(status, BuildStatus::Fresh { asset_count: 1 });
     assert!(stderr.is_empty());
 }
-
 #[test]
 fn empty_target_build_honours_cancellation_and_supersession() {
     for cancellation in [None, Some(BuildGeneration::new(1))] {
@@ -237,13 +236,13 @@ fn publication_failure_uses_alternate_ids_and_typed_arguments() {
     let messages = alternate_messages(&[
         (
             "watch-build-failed-partial-with-failure",
-            "alt-partial status={$status} failed={$failed} recovery={$recovery} failure={$failure}",
+            "alt-partial status={$status} failed={$failed} recovery={$recovery} failure={$failure}{$records}",
         ),
         ("watch-build-status-failed", "alt-status-failed"),
         ("watch-build-failure-engine-host", "alt-engine-host"),
         (
             "watch-build-failed-indeterminate",
-            "alt-indeterminate status={$status} recovery={$recovery}",
+            "alt-indeterminate status={$status} recovery={$recovery}{$records}",
         ),
         ("watch-build-status-cancelled", "alt-status-cancelled"),
         ("watch-build-recovery-targets-empty", "alt-empty-recovery"),
@@ -254,7 +253,7 @@ fn publication_failure_uses_alternate_ids_and_typed_arguments() {
     let recovery = RecoveryNeeded::for_targets(vec![target.clone(), second.clone()]);
 
     assert_eq!(
-        super::format_failure(
+        format_failure(
             &messages,
             BuildTerminalStatus::Failed,
             Some(&BuildResultFailure::Engine {
@@ -270,7 +269,7 @@ fn publication_failure_uses_alternate_ids_and_typed_arguments() {
         "alt-partial status=alt-status-failed failed=compiled/main,part.recitec recovery=alt-item(compiled/main,part.recitec)\nalt-item(compiled/second\\npart\\t.recitec) failure=alt-engine-host"
     );
     assert_eq!(
-        super::format_failure(
+        format_failure(
             &messages,
             BuildTerminalStatus::Cancelled,
             None,
@@ -282,7 +281,7 @@ fn publication_failure_uses_alternate_ids_and_typed_arguments() {
         "alt-indeterminate status=alt-status-cancelled recovery=alt-item(compiled/main,part.recitec)\nalt-item(compiled/second\\npart\\t.recitec)"
     );
     assert_eq!(
-        super::format_failure(
+        format_failure(
             &messages,
             BuildTerminalStatus::Failed,
             Some(&BuildResultFailure::Engine {
@@ -303,7 +302,7 @@ fn publication_failure_localizes_reason_categories_without_debug_output() {
     let messages = alternate_messages(&[
         (
             "watch-build-failed-refused-with-failure",
-            "alt-refused {$status} {$reason} {$failure}",
+            "alt-refused {$status} {$reason} {$failure}{$records}",
         ),
         ("watch-build-status-stale", "alt-status-stale"),
         (
@@ -316,7 +315,7 @@ fn publication_failure_localizes_reason_categories_without_debug_output() {
         ),
         (
             "watch-build-failed-not-attempted",
-            "alt-not-attempted {$status} {$reason}",
+            "alt-not-attempted {$status} {$reason}{$records}",
         ),
         ("watch-build-status-superseded", "alt-status-superseded"),
         (
@@ -326,7 +325,7 @@ fn publication_failure_localizes_reason_categories_without_debug_output() {
     ]);
 
     assert_eq!(
-        super::format_failure(
+        format_failure(
             &messages,
             BuildTerminalStatus::Stale,
             Some(&BuildResultFailure::Check(BuildCheckError::RequestMismatch,)),
@@ -337,7 +336,7 @@ fn publication_failure_localizes_reason_categories_without_debug_output() {
         "alt-refused alt-status-stale alt-stale-fingerprints alt-request-mismatch"
     );
     assert_eq!(
-        super::format_failure(
+        format_failure(
             &messages,
             BuildTerminalStatus::Superseded,
             None,

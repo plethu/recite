@@ -6,7 +6,7 @@ use recite_config::discover_project;
 use super::events::WatchState;
 use super::{
     ProjectBuildEngine, ProjectBuildPreparation, ProjectBuildPreparationError,
-    ProjectBuildPublisher,
+    ProjectBuildPublisher, ProjectBuildRecovery,
 };
 use crate::diagnostics::report_diagnostics;
 use crate::error::CliError;
@@ -18,7 +18,9 @@ mod failure_reasons;
 #[cfg(test)]
 mod tests;
 
-pub(super) use failure::format_failure;
+pub(super) use failure::{
+    format_failure_with_recovery, format_recovery_notice, format_recovery_required,
+};
 
 /// The presentation boundary's compact view of one coordinated build.
 #[derive(Debug, Eq, PartialEq)]
@@ -28,12 +30,21 @@ pub(super) enum BuildStatus {
     },
     Stale {
         asset_count: usize,
+        recovery: Vec<ProjectBuildRecovery>,
     },
     Diagnostics,
+    DiagnosticsWithRecovery {
+        recovery: Vec<ProjectBuildRecovery>,
+    },
+    RecoveryRequired {
+        asset_count: usize,
+        recovery: Vec<ProjectBuildRecovery>,
+    },
     PublicationFailure {
         status: BuildTerminalStatus,
         failure: Option<BuildResultFailure>,
         outcome: PublishOutcome,
+        recovery: Vec<ProjectBuildRecovery>,
     },
 }
 
@@ -111,6 +122,7 @@ where
         .map_err(|error| CliError::Watch {
             message: error.to_string(),
         })?;
+    let recovery = publisher.recovery().to_vec();
 
     report_diagnostics(stderr, messages, result.diagnostics().iter())?;
     if result.status() == BuildTerminalStatus::Succeeded {
@@ -120,10 +132,21 @@ where
         if freshness.stale {
             return Ok(BuildStatus::Stale {
                 asset_count: result.candidates().len(),
+                recovery,
             });
         }
         if !freshness.diagnostics.is_empty() {
-            return Ok(BuildStatus::Diagnostics);
+            return if recovery.is_empty() {
+                Ok(BuildStatus::Diagnostics)
+            } else {
+                Ok(BuildStatus::DiagnosticsWithRecovery { recovery })
+            };
+        }
+        if !recovery.is_empty() {
+            return Ok(BuildStatus::RecoveryRequired {
+                asset_count: result.candidates().len(),
+                recovery,
+            });
         }
         return Ok(BuildStatus::Fresh {
             asset_count: result.candidates().len(),
@@ -142,13 +165,18 @@ where
         .iter()
         .any(|diagnostic| diagnostic.severity == recite_core::DiagnosticSeverity::Error)
     {
-        return Ok(BuildStatus::Diagnostics);
+        return if recovery.is_empty() {
+            Ok(BuildStatus::Diagnostics)
+        } else {
+            Ok(BuildStatus::DiagnosticsWithRecovery { recovery })
+        };
     }
 
     Ok(BuildStatus::PublicationFailure {
         status: result.status(),
         failure: result.failure().cloned(),
         outcome: result.publish().clone(),
+        recovery,
     })
 }
 

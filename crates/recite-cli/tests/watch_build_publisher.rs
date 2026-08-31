@@ -3,7 +3,8 @@ use std::fs;
 use std::path::Path;
 
 use recite_cli::watch::{
-    ProjectBuildPreparation, ProjectBuildPublisher, ProjectBuildRequest, ProjectBuildTarget,
+    ProjectBuildPreparation, ProjectBuildPublisher, ProjectBuildRecoveryReason,
+    ProjectBuildRequest, ProjectBuildTarget,
 };
 use recite_compiler::{
     BuildCandidate, BuildControl, BuildPreparedHandle, BuildPublisher, BuildTarget,
@@ -226,6 +227,10 @@ fn failed_replacement_reports_indeterminate_and_keeps_recovery_marker() {
     assert!(temp.path().join("compiled/z.recitec").is_dir());
     assert_eq!(markers(temp.path()).len(), 1);
     assert_eq!(publisher.recovery().len(), 1);
+    assert_eq!(
+        publisher.recovery()[0].reason(),
+        ProjectBuildRecoveryReason::PublicationIndeterminate
+    );
 }
 
 #[test]

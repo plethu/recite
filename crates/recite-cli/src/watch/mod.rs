@@ -25,13 +25,16 @@ mod targets;
 
 pub use engine::ProjectBuildEngine;
 pub use publisher::{ProjectBuildPublisher, ProjectPreparedBuild};
-pub use recovery::{ProjectBuildPublisherError, ProjectBuildRecovery};
+pub use recovery::{ProjectBuildPublisherError, ProjectBuildRecovery, ProjectBuildRecoveryReason};
 pub use request::{
     ProjectBuildPreparation, ProjectBuildPreparationError, ProjectBuildRequest, ProjectBuildTarget,
 };
 pub use targets::{TargetMapError, TargetPathError};
 
-use build::{BuildStatus, build_once, format_failure};
+use build::{
+    BuildStatus, build_once, format_failure_with_recovery, format_recovery_notice,
+    format_recovery_required,
+};
 use events::{WatchState, drain_debounce, watch_error};
 
 #[cfg(test)]
@@ -114,21 +117,47 @@ fn report_build_result(
                 messages.format(MsgId::WatchBuildSucceeded, [("count", asset_count)])
             )?;
         }
-        Ok(BuildStatus::Stale { .. }) => {
+        Ok(BuildStatus::Stale { recovery, .. }) => {
+            if !recovery.is_empty() {
+                writeln!(stderr, "{}", format_recovery_notice(messages, &recovery))?;
+            }
             writeln!(stderr, "{}", messages.text(MsgId::WatchBuildFailedWaiting))?;
         }
         Ok(BuildStatus::Diagnostics) => {
             writeln!(stderr, "{}", messages.text(MsgId::WatchBuildFailedWaiting))?;
         }
-        Ok(BuildStatus::PublicationFailure {
-            status,
-            failure,
-            outcome,
+        Ok(BuildStatus::DiagnosticsWithRecovery { recovery }) => {
+            if !recovery.is_empty() {
+                writeln!(stderr, "{}", format_recovery_notice(messages, &recovery))?;
+            }
+            writeln!(stderr, "{}", messages.text(MsgId::WatchBuildFailedWaiting))?;
+        }
+        Ok(BuildStatus::RecoveryRequired {
+            asset_count,
+            recovery,
         }) => {
             writeln!(
                 stderr,
                 "{}",
-                format_failure(messages, status, failure.as_ref(), &outcome)
+                format_recovery_required(messages, asset_count, &recovery)
+            )?;
+        }
+        Ok(BuildStatus::PublicationFailure {
+            status,
+            failure,
+            outcome,
+            recovery,
+        }) => {
+            writeln!(
+                stderr,
+                "{}",
+                format_failure_with_recovery(
+                    messages,
+                    status,
+                    failure.as_ref(),
+                    &outcome,
+                    &recovery,
+                )
             )?;
         }
         Err(error) => {

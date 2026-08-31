@@ -6,10 +6,15 @@ use recite_compiler::{
     PublishOutcome,
 };
 
-use super::recovery::{ProjectBuildPublisherError, ProjectBuildRecovery};
+use super::recovery::{
+    ProjectBuildPublisherError, ProjectBuildRecovery, ProjectBuildRecoveryReason,
+};
 use super::request::ProjectBuildRequest;
 use super::staging::{self, StagedOutput};
 use super::targets::{TargetMap, reject_symlink_components};
+
+#[cfg(test)]
+mod tests;
 
 /// Filesystem publisher for one exact prepared project request.
 ///
@@ -156,10 +161,10 @@ impl BuildPublisher for ProjectBuildPublisher {
                 }
             };
             if let Err(error) = ensure_output_boundary(&self.root, output) {
-                if let Err(cleanup_error) = staging::remove(&file) {
+                if let Err(_cleanup_error) = staging::remove(&file) {
                     self.recovery.push(ProjectBuildRecovery::new(
                         file.temp.clone(),
-                        format!("stage cleanup failed: {cleanup_error}"),
+                        ProjectBuildRecoveryReason::StageCleanupFailed,
                     ));
                 }
                 cleanup(&staged, &mut self.recovery);
@@ -193,10 +198,10 @@ impl BuildPublisher for ProjectBuildPublisher {
 
 fn cleanup(staged: &[StagedTarget], recovery: &mut Vec<ProjectBuildRecovery>) {
     for staged in staged {
-        if let Err(error) = staging::remove(&staged.file) {
+        if let Err(_error) = staging::remove(&staged.file) {
             recovery.push(ProjectBuildRecovery::new(
                 staged.file.temp.clone(),
-                format!("stage cleanup failed: {error}"),
+                ProjectBuildRecoveryReason::StageCleanupFailed,
             ));
         }
     }

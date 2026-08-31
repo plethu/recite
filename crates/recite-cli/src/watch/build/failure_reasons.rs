@@ -3,6 +3,8 @@ use recite_compiler::{
     PublishNotAttemptedReason, PublishOutcomeError, PublishRefusal,
 };
 
+use super::super::ProjectBuildRecoveryReason;
+
 pub(super) fn format_failure_reason(
     messages: &crate::i18n::Messages,
     failure: &BuildResultFailure,
@@ -121,6 +123,24 @@ pub(super) fn format_not_attempted(
             crate::i18n::MsgId::WatchBuildFailureNotAttemptedInvalidOutcome
         }
         _ => crate::i18n::MsgId::WatchBuildFailureNotAttemptedUnknown,
+    };
+    messages.text(id)
+}
+
+pub(super) fn format_recovery_reason(
+    messages: &crate::i18n::Messages,
+    reason: ProjectBuildRecoveryReason,
+) -> String {
+    let id = match reason {
+        ProjectBuildRecoveryReason::StageCleanupFailed => {
+            crate::i18n::MsgId::WatchBuildRecoveryReasonStageCleanup
+        }
+        ProjectBuildRecoveryReason::PublicationIndeterminate => {
+            crate::i18n::MsgId::WatchBuildRecoveryReasonPublicationIndeterminate
+        }
+        ProjectBuildRecoveryReason::PublicationUncommitted => {
+            crate::i18n::MsgId::WatchBuildRecoveryReasonPublicationUncommitted
+        }
     };
     messages.text(id)
 }
