@@ -1,17 +1,24 @@
 use recite_core::{
-    AvailabilityReasonId, ChoiceId, EffectId, LineId, MetadataEntry, ScalarValue, SourcePosition,
-    SourceSpan, Value,
+    AvailabilityReasonId, ChoiceId, CompiledAssetId, EffectId, LineId, MetadataEntry, ScalarValue,
+    SourcePosition, SourceSpan, Value,
 };
 use recite_runtime::{
     ChoiceAvailability, ChoiceAvailabilityReason, ChoiceAvailabilityReasonOrigin,
     ChoiceAvailabilityReasonTree, ChoiceAvailabilityReasonValue, ChoiceEchoMode, DialogueChoice,
-    DialogueEffectMode, DialogueEffectRequest, DialogueLine, DialoguePlural,
+    DialogueEffectMode, DialogueEffectRequest, DialogueError, DialogueLine, DialoguePlural,
     DialoguePluralResolution, EffectAck, PreviewConditionRequestId, PreviewError, PreviewEvent,
+    PreviewOutput,
 };
 
 fn digest(event: &PreviewEvent) -> String {
     let mut hasher = blake3::Hasher::new();
     crate::preview_hash::hash_event(event, &mut hasher);
+    hasher.finalize().to_hex().to_string()
+}
+
+fn state_digest(output: &PreviewOutput) -> String {
+    let mut hasher = blake3::Hasher::new();
+    crate::preview_hash::hash_output_state(output, &mut hasher);
     hasher.finalize().to_hex().to_string()
 }
 
@@ -117,8 +124,19 @@ fn acknowledgement_payloads_are_part_of_ack_evidence() {
 }
 
 #[test]
-fn choice_reason_tree_and_echo_are_part_of_choice_evidence() {
-    let mut choice = DialogueChoice {
+fn pending_effect_error_variants_have_distinct_evidence_tags() {
+    let effect_id = EffectId::new("set_flag").expect("test ID is valid");
+    let pending = PreviewEvent::Error(PreviewError::Runtime(DialogueError::EffectPending {
+        effect: effect_id.clone(),
+    }));
+    let absent = PreviewEvent::Error(PreviewError::Runtime(DialogueError::NoEffectPending {
+        effect: effect_id,
+    }));
+    assert_ne!(digest(&pending), digest(&absent));
+}
+
+fn choice_with_reason_tree_and_echo() -> DialogueChoice {
+    DialogueChoice {
         id: ChoiceId::new("choice").expect("test ID is valid"),
         source_text: "choose".to_owned(),
         text: "Choose".to_owned(),
@@ -140,15 +158,109 @@ fn choice_reason_tree_and_echo_are_part_of_choice_evidence() {
             )),
         },
         echo: ChoiceEchoMode::None,
-    };
+    }
+}
+
+fn choice_digest(choice: &DialogueChoice) -> blake3::Hash {
     let mut first_hasher = blake3::Hasher::new();
-    crate::preview_hash_dialogue::hash_choice(&mut first_hasher, &choice);
-    let first = first_hasher.finalize();
-    choice.echo = ChoiceEchoMode::SelectedText;
+    crate::preview_hash_dialogue::hash_choice(&mut first_hasher, choice);
+    first_hasher.finalize()
+}
+
+#[test]
+fn choice_reason_tree_changes_choice_evidence_independently() {
+    let mut choice = choice_with_reason_tree_and_echo();
+    let first = choice_digest(&choice);
     choice.availability.reason_tree = Some(ChoiceAvailabilityReasonTree::RequirementSourceText(
         "changed".to_owned(),
     ));
-    let mut second_hasher = blake3::Hasher::new();
-    crate::preview_hash_dialogue::hash_choice(&mut second_hasher, &choice);
-    assert_ne!(first, second_hasher.finalize());
+    assert_ne!(first, choice_digest(&choice));
+}
+
+#[test]
+fn choice_echo_changes_choice_evidence_independently() {
+    let mut choice = choice_with_reason_tree_and_echo();
+    let first = choice_digest(&choice);
+    choice.echo = ChoiceEchoMode::SelectedText;
+    assert_ne!(first, choice_digest(&choice));
+}
+
+#[test]
+fn preview_output_state_digest_changes_for_projected_fields()
+-> Result<(), Box<dyn std::error::Error>> {
+    let project = crate::preview::PreviewProject::load(crate::BenchmarkFixture::Synthetic(
+        crate::BenchmarkScale::Tiny,
+    ))?;
+
+    let mut default_preview = project.start()?;
+    let default_output = default_preview.step(project.inputs());
+    let default_digest = state_digest(&default_output);
+
+    let mut source_only_preview = recite_runtime::PreviewSession::new(
+        &project.asset,
+        None,
+        recite_runtime::PreviewOptions::new(),
+    )?;
+    let source_only_output = source_only_preview.step(recite_runtime::PreviewInputs::new());
+    assert_ne!(default_digest, state_digest(&source_only_output));
+
+    let mut explicit_block_preview = recite_runtime::PreviewSession::new(
+        &project.asset,
+        Some(project.runtime_fixture.first_prompt_block().as_str()),
+        recite_runtime::PreviewOptions::new().with_locale(project.runtime_fixture.locale()),
+    )?;
+    let explicit_block_output = explicit_block_preview.step(project.inputs());
+    assert_ne!(default_digest, state_digest(&explicit_block_output));
+
+    let mut candidate = project.asset.clone();
+    candidate.header.asset_id = CompiledAssetId::new("replacement-asset")?;
+    let restart_output = default_preview.assess_asset(&candidate)?;
+    assert_ne!(default_digest, state_digest(&restart_output));
+
+    let mut prompt_preview = project.at_first_prompt()?;
+    let prompt_state_output = prompt_preview.step(project.inputs());
+    assert_ne!(default_digest, state_digest(&prompt_state_output));
+
+    let mut selected_preview = project.at_first_prompt()?;
+    let choice = match selected_preview.state().status() {
+        recite_runtime::PreviewStatus::WaitingForChoice { prompt } => prompt
+            .choices()
+            .first()
+            .expect("tiny preview prompt has a choice")
+            .id
+            .clone(),
+        _ => return Err("tiny preview did not reach a choice".into()),
+    };
+    let selected_output = selected_preview.choose(choice, project.inputs());
+    assert_ne!(
+        state_digest(&prompt_state_output),
+        state_digest(&selected_output)
+    );
+
+    let mut deferred_preview = project.after_first_choice()?;
+    let deferred_output = deferred_preview.step(project.inputs());
+    assert!(!deferred_output.state().deferred_effects().is_empty());
+    assert_ne!(default_digest, state_digest(&deferred_output));
+
+    Ok(())
+}
+
+#[test]
+fn preview_output_state_digest_is_hashed_at_each_boundary() -> Result<(), Box<dyn std::error::Error>>
+{
+    let project = crate::preview::PreviewProject::load(crate::BenchmarkFixture::Synthetic(
+        crate::BenchmarkScale::Tiny,
+    ))?;
+    let mut preview = project.start()?;
+    let first = preview.step(project.inputs());
+    let second = preview.step(project.inputs());
+    let mut hasher = blake3::Hasher::new();
+    crate::preview_hash::hash_output_state(&first, &mut hasher);
+    crate::preview_hash::hash_output_state(&second, &mut hasher);
+    let two_boundaries = hasher.finalize();
+
+    let mut one_boundary_hasher = blake3::Hasher::new();
+    crate::preview_hash::hash_output_state(&first, &mut one_boundary_hasher);
+    assert_ne!(two_boundaries, one_boundary_hasher.finalize());
+    Ok(())
 }

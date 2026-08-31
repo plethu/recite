@@ -23,6 +23,11 @@ fn preview_traversal_is_deterministic_for_representative_fixtures()
             first_summary.event_count > 0,
             "{fixture} preview produced no events"
         );
+        assert_eq!(
+            first_summary.event_count,
+            project.full_traversal_count()?,
+            "{fixture} count-only traversal diverged"
+        );
         assert_eq!(first_summary, second_summary, "{fixture} preview diverged");
     }
     Ok(())
@@ -42,7 +47,10 @@ fn preview_evidence_report_is_stable_and_structured() -> Result<(), Box<dyn std:
             BenchmarkFixture::Synthetic(BenchmarkScale::Tiny) => (
                 PreviewTraversalShape {
                     event_count: 101,
+                    output_count: 76,
                     event_hash: "f0204adf5c554c91fc39542540b54be255c1bdb4f230d8c5947105dc4c86dd16"
+                        .to_owned(),
+                    state_hash: "68b8e95efc7b01e61d5528294c84fb1b4ace10d5d6d1111dc1313c658a579195"
                         .to_owned(),
                 },
                 PreviewSnapshotShape {
@@ -74,7 +82,10 @@ fn preview_evidence_report_is_stable_and_structured() -> Result<(), Box<dyn std:
             BenchmarkFixture::RealisticV1Pack => (
                 PreviewTraversalShape {
                     event_count: 44,
+                    output_count: 28,
                     event_hash: "da579f8df89e79278901cacba7df5a4acd045ff69e562e8214f7b6827c9884cb"
+                        .to_owned(),
+                    state_hash: "64e48264ca8733b4a66bcca8eeafa51ec013514c8a48e47c6c8d13edc3f84357"
                         .to_owned(),
                 },
                 PreviewSnapshotShape {

@@ -1,9 +1,62 @@
-use recite_runtime::PreviewEvent;
+use recite_runtime::{PreviewEvent, PreviewOutput, PreviewState, PreviewStatus};
 
 use crate::preview_hash_dialogue::{hash_identity, hash_line, hash_prompt};
 use crate::preview_hash_errors::hash_preview_error;
 use crate::preview_hash_primitives::{hash_len, hash_optional_text, hash_text, tag};
 use crate::preview_hash_runtime::{hash_effect, hash_request, hash_result, hash_revision};
+
+/// Hashes one command boundary's complete structured preview state. The
+/// boundary marker keeps adjacent outputs distinct from event evidence.
+pub(crate) fn hash_output_state(output: &PreviewOutput, hasher: &mut blake3::Hasher) {
+    tag(hasher, 0x20);
+    hash_state(output.state(), hasher);
+}
+
+/// Hashes every stable, structured field exposed by a preview state. This is a
+/// regression key, not a serialized compatibility format.
+pub(crate) fn hash_state(state: &PreviewState, hasher: &mut blake3::Hasher) {
+    hash_text(hasher, state.asset_id().as_str());
+    hash_optional_text(hasher, state.block().map(recite_core::BlockId::as_str));
+    hash_optional_text(hasher, state.locale().map(recite_core::LocaleId::as_str));
+    hash_status(hasher, state.status());
+    hash_len(hasher, state.selected_choice_history().len());
+    for choice_id in state.selected_choice_history() {
+        hash_text(hasher, choice_id.as_str());
+    }
+    hash_len(hasher, state.deferred_effects().len());
+    for effect in state.deferred_effects() {
+        hash_effect(hasher, effect);
+    }
+    if let Some(requirement) = state.restart_required() {
+        tag(hasher, 1);
+        hash_text(hasher, requirement.active_asset().as_str());
+        hash_text(hasher, requirement.replacement_asset().as_str());
+        hash_revision(hasher, requirement.active_revision());
+        hash_revision(hasher, requirement.replacement_revision());
+    } else {
+        tag(hasher, 0);
+    }
+}
+
+fn hash_status(hasher: &mut blake3::Hasher, status: &PreviewStatus) {
+    match status {
+        PreviewStatus::Ready => tag(hasher, 0),
+        PreviewStatus::WaitingForCondition { request } => {
+            tag(hasher, 1);
+            hash_request(hasher, request);
+        }
+        PreviewStatus::WaitingForChoice { prompt } => {
+            tag(hasher, 2);
+            hash_prompt(hasher, prompt);
+        }
+        PreviewStatus::WaitingForEffect { effect } => {
+            tag(hasher, 3);
+            hash_effect(hasher, effect);
+        }
+        PreviewStatus::Ended => tag(hasher, 4),
+        _ => tag(hasher, 255),
+    }
+}
 
 /// Hashes every stable, structured field exposed by a preview event. The
 /// digest is a regression key, not a serialized compatibility format.

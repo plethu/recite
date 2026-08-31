@@ -56,28 +56,32 @@ pub(super) fn hash_dialogue_error(
             tag(hasher, 5);
             hash_text(hasher, reason);
         }
-        DialogueError::EffectPending { effect } | DialogueError::NoEffectPending { effect } => {
+        DialogueError::EffectPending { effect } => {
             tag(hasher, 6);
             hash_text(hasher, effect.as_str());
         }
-        DialogueError::WrongEffectAcknowledgement { expected, actual } => {
+        DialogueError::NoEffectPending { effect } => {
             tag(hasher, 7);
+            hash_text(hasher, effect.as_str());
+        }
+        DialogueError::WrongEffectAcknowledgement { expected, actual } => {
+            tag(hasher, 8);
             hash_text(hasher, expected.as_str());
             hash_text(hasher, actual.as_str());
         }
         DialogueError::PromptPending { choices } => {
-            tag(hasher, 8);
+            tag(hasher, 9);
             hash_ids(hasher, choices);
         }
         DialogueError::NoPromptPending { choice } => {
-            tag(hasher, 9);
+            tag(hasher, 10);
             hash_text(hasher, choice.as_str());
         }
         DialogueError::InvalidChoice {
             choice,
             prompt_choices,
         } => {
-            tag(hasher, 10);
+            tag(hasher, 11);
             hash_text(hasher, choice.as_str());
             hash_ids(hasher, prompt_choices);
         }
@@ -85,12 +89,12 @@ pub(super) fn hash_dialogue_error(
             choice,
             availability,
         } => {
-            tag(hasher, 11);
+            tag(hasher, 12);
             hash_text(hasher, choice.as_str());
             hash_availability(hasher, availability);
         }
         DialogueError::ConditionEvaluationFailed { function, reason } => {
-            tag(hasher, 12);
+            tag(hasher, 13);
             hash_text(hasher, function);
             hash_text(hasher, reason);
         }
@@ -99,54 +103,54 @@ pub(super) fn hash_dialogue_error(
             expected,
             actual,
         } => {
-            tag(hasher, 13);
+            tag(hasher, 14);
             hash_text(hasher, function);
             hash_expected_type(hasher, *expected);
             hash_expected_type(hasher, *actual);
         }
         DialogueError::ConditionDepthLimitExceeded { limit } => {
-            tag(hasher, 14);
+            tag(hasher, 15);
             hash_len(hasher, *limit);
         }
         DialogueError::InterpolationValueFailed { name, reason } => {
-            tag(hasher, 15);
+            tag(hasher, 16);
             hash_text(hasher, name);
             hash_text(hasher, reason);
         }
         DialogueError::MissingInterpolationValue { name } => {
-            tag(hasher, 16);
+            tag(hasher, 17);
             hash_text(hasher, name);
         }
         DialogueError::InvalidInterpolationSyntax { reason } => {
-            tag(hasher, 17);
+            tag(hasher, 18);
             hash_text(hasher, reason);
         }
         DialogueError::LocaleLookupFailed { id, reason } => {
-            tag(hasher, 18);
+            tag(hasher, 19);
             hash_text(hasher, id);
             hash_text(hasher, reason);
         }
         DialogueError::InvalidPluralCount { name, reason } => {
-            tag(hasher, 19);
+            tag(hasher, 20);
             hash_text(hasher, name);
             hash_text(hasher, reason);
         }
         DialogueError::UnsupportedSessionSnapshotFormat {
             snapshot_format_version,
         } => {
-            tag(hasher, 20);
+            tag(hasher, 21);
             hash_u64(hasher, *snapshot_format_version as u64);
         }
         DialogueError::SessionSnapshotEncodeFailed { reason } => {
-            tag(hasher, 21);
-            hash_text(hasher, reason);
-        }
-        DialogueError::SessionSnapshotDecodeFailed { reason } => {
             tag(hasher, 22);
             hash_text(hasher, reason);
         }
-        DialogueError::InvalidSessionSnapshot { reason, source } => {
+        DialogueError::SessionSnapshotDecodeFailed { reason } => {
             tag(hasher, 23);
+            hash_text(hasher, reason);
+        }
+        DialogueError::InvalidSessionSnapshot { reason, source } => {
+            tag(hasher, 24);
             hash_text(hasher, reason);
             if let Some(source) = source {
                 tag(hasher, 1);
@@ -155,9 +159,9 @@ pub(super) fn hash_dialogue_error(
                 tag(hasher, 0);
             }
         }
-        DialogueError::SessionEnded => tag(hasher, 24),
+        DialogueError::SessionEnded => tag(hasher, 25),
         DialogueError::TraversalLimitExceeded { limit } => {
-            tag(hasher, 25);
+            tag(hasher, 26);
             hash_len(hasher, *limit);
         }
     }

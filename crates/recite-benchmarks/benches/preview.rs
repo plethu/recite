@@ -39,7 +39,7 @@ fn bench_full_traversal(criterion: &mut Criterion, fixture: &PreviewFixture) {
     group.bench_function(
         BenchmarkId::from_parameter(fixture.fixture.as_str()),
         |bencher| {
-            bencher.iter(|| black_box(must(fixture.project.full_traversal())));
+            bencher.iter(|| black_box(must(fixture.project.full_traversal_count())));
         },
     );
 }

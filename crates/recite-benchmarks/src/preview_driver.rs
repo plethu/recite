@@ -1,4 +1,8 @@
-use recite_runtime::{ConditionAnswer, PreviewEvent, PreviewPrompt, PreviewSession, PreviewStatus};
+use std::hint::black_box;
+
+use recite_runtime::{
+    ConditionAnswer, PreviewEvent, PreviewOutput, PreviewPrompt, PreviewSession, PreviewStatus,
+};
 
 use crate::preview::{PreviewProject, PreviewTraversalShape};
 use crate::{BenchmarkResult, error};
@@ -92,7 +96,9 @@ impl PreviewProject {
         preview: &mut PreviewSession<'_>,
     ) -> BenchmarkResult<Vec<PreviewEvent>> {
         let mut events = Vec::new();
-        self.drive_to_end(preview, |event| events.push(event.clone()))?;
+        self.drive_to_end(preview, |output| {
+            events.extend(output.events().iter().cloned());
+        })?;
         Ok(events)
     }
 
@@ -101,20 +107,43 @@ impl PreviewProject {
         preview: &mut PreviewSession<'_>,
     ) -> BenchmarkResult<PreviewTraversalShape> {
         let mut event_count = 0;
+        let mut output_count = 0;
         let mut event_hash = blake3::Hasher::new();
-        self.drive_to_end(preview, |event| {
-            event_count += 1;
-            crate::preview_hash::hash_event(event, &mut event_hash);
+        let mut state_hash = blake3::Hasher::new();
+        self.drive_to_end(preview, |output| {
+            output_count += 1;
+            crate::preview_hash::hash_output_state(output, &mut state_hash);
+            for event in output.events() {
+                event_count += 1;
+                crate::preview_hash::hash_event(event, &mut event_hash);
+            }
         })?;
         Ok(PreviewTraversalShape {
             event_count,
+            output_count,
             event_hash: event_hash.finalize().to_hex().to_string(),
+            state_hash: state_hash.finalize().to_hex().to_string(),
         })
     }
 
     pub fn full_traversal(&self) -> BenchmarkResult<PreviewTraversalShape> {
         let mut preview = self.start()?;
         self.traversal_summary(&mut preview)
+    }
+
+    /// Drives the complete preview while retaining only a black-box event sink
+    /// and count. Evidence hashing belongs to [`Self::full_traversal`], not
+    /// this traversal benchmark path.
+    pub fn full_traversal_count(&self) -> BenchmarkResult<usize> {
+        let mut preview = self.start()?;
+        let mut event_count = 0;
+        self.drive_to_end(&mut preview, |output| {
+            for event in output.events() {
+                black_box(event);
+                event_count += 1;
+            }
+        })?;
+        Ok(black_box(event_count))
     }
 
     fn choice_for_prompt(&self, prompt: &PreviewPrompt) -> BenchmarkResult<recite_core::ChoiceId> {
@@ -131,13 +160,13 @@ impl PreviewProject {
     fn drive_to_end(
         &self,
         preview: &mut PreviewSession<'_>,
-        mut visit: impl FnMut(&PreviewEvent),
+        mut visit: impl FnMut(&PreviewOutput),
     ) -> BenchmarkResult<()> {
         let mut output = initial_output(preview, self)?;
         loop {
+            visit(&output);
             let mut progressed = false;
             for event in output.events() {
-                visit(event);
                 match event {
                     PreviewEvent::ConditionRequested(request) => {
                         let answer = self

@@ -218,7 +218,9 @@ RECITE_BENCH_SCALES=tiny cargo bench -p recite-benchmarks --bench preview -- pre
 Traversal and step report throughput in events, while snapshot encoding and
 restore report bytes processed. Retained trace shape intentionally remains a
 per-report timing: its structured counters do not represent one meaningful
-throughput unit.
+throughput unit. `preview/full_traversal` uses a black-box event sink and count
+only; `preview/evidence_report` is the exhaustive event/state BLAKE3 evidence
+path and is intentionally measured separately.
 
 LSP investigations usually start with indexing, edit refresh, diagnostics,
 completion, definition, and rename:

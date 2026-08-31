@@ -12,7 +12,13 @@ pub use crate::preview_shape::PreviewTraceShape;
 #[derive(Clone, Debug, Eq, PartialEq)]
 pub struct PreviewTraversalShape {
     pub event_count: usize,
+    /// Number of command outputs at which structured preview state was
+    /// projected and hashed.
+    pub output_count: usize,
+    /// Digest of the complete event stream, retained for event-level parity.
     pub event_hash: String,
+    /// Digest of each [`recite_runtime::PreviewOutput`] state in command order.
+    pub state_hash: String,
 }
 
 #[derive(Clone, Debug, Eq, PartialEq)]
