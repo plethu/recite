@@ -79,11 +79,17 @@ watch-build-recovery-summary = { $count ->
     [0] {$items}
    *[other] ; recovery markers: {$items}
 }
-watch-build-recovery-record = {$marker}: {$reason}
+watch-build-recovery-record = {$marker}: {$reason}{$detail}
 watch-build-recovery-reason-stage-cleanup = stage cleanup failed
 watch-build-recovery-reason-publication-indeterminate = publication outcome is indeterminate
 watch-build-recovery-reason-publication-uncommitted = publication did not commit this target
 watch-build-recovery-reason-unknown = recovery reason unavailable
+watch-build-recovery-detail-io = ; I/O cause: {$kind} ({$raw_os_error}) {$message}
+watch-build-recovery-io-already-exists = already exists
+watch-build-recovery-io-invalid-input = invalid input
+watch-build-recovery-io-not-found = not found
+watch-build-recovery-io-permission-denied = permission denied
+watch-build-recovery-io-other = other I/O failure
 watch-build-failure-check-request-mismatch = build check request mismatch
 watch-build-failure-check-freshness-mismatch = build check freshness mismatch
 watch-build-failure-check-unknown = build check failed for an unknown reason

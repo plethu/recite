@@ -15,6 +15,126 @@ use super::{ProjectBuildRecovery, commit_prepared_with};
 use crate::i18n::Messages;
 
 #[test]
+fn coordinator_and_freshness_errors_retain_recovery_for_host() {
+    let messages = Messages::load(&crate::i18n::UiLocale::default()).expect("messages");
+    let record = ProjectBuildRecovery::new(
+        PathBuf::from("marker"),
+        super::super::recovery::ProjectBuildRecoveryReason::StageCleanupFailed,
+    );
+    let mut stderr = Vec::new();
+    crate::watch::report_build_result(
+        &mut stderr,
+        Err(crate::error::CliError::WatchCoordinator {
+            source: recite_compiler::BuildRunError::MissingAuthority,
+            recovery: vec![record.clone()],
+        }),
+        &messages,
+    )
+    .expect("coordinator report");
+    let output = String::from_utf8(stderr).expect("stderr");
+    assert!(output.contains("coordinator has no publication authority"));
+    assert!(output.contains("recovery markers"));
+
+    let mut stderr = Vec::new();
+    crate::watch::report_build_result(
+        &mut stderr,
+        Err(crate::error::CliError::WatchRecovery {
+            source: Box::new(crate::error::CliError::Read {
+                path: PathBuf::from("schema.json"),
+                source: io::Error::new(io::ErrorKind::NotFound, "schema missing"),
+            }),
+            recovery: vec![record],
+        }),
+        &messages,
+    )
+    .expect("freshness report");
+    let output = String::from_utf8(stderr).expect("stderr");
+    assert!(output.contains("failed to read"));
+    assert!(output.contains("recovery markers"));
+}
+
+#[test]
+fn freshness_recovery_localizes_nested_error_and_wrapper() {
+    let mut resource = recite_ui::DEFAULT_RESOURCE.to_owned();
+    for (id, replacement) in [
+        ("watch-build-failed", "alt-failed {$error}"),
+        ("cli-error-read", "alt-read {$path} {$source}"),
+        ("watch-build-recovery-notice", "alt-notice {$records}"),
+        (
+            "watch-build-recovery-record",
+            "alt-record {$marker} {$reason}{$detail}",
+        ),
+        ("watch-build-recovery-reason-stage-cleanup", "alt-stage"),
+    ] {
+        let mut found = false;
+        let mut lines = Vec::new();
+        for line in resource.lines() {
+            if line.starts_with(&format!("{id} = ")) {
+                found = true;
+                lines.push(format!("{id} = {replacement}"));
+            } else {
+                lines.push(line.to_owned());
+            }
+        }
+        resource = lines.join("\n");
+        resource.push('\n');
+        assert!(found, "missing resource {id}");
+    }
+    recite_ui::UiContract::default()
+        .validate(&resource)
+        .expect("alternate resource contract");
+    let messages = Messages::from_resources(
+        "en-GB".parse().expect("locale"),
+        [
+            (
+                "en-US".parse().expect("locale"),
+                recite_ui::DEFAULT_RESOURCE.to_owned(),
+            ),
+            ("en-GB".parse().expect("locale"), resource),
+        ],
+    )
+    .expect("alternate messages");
+    let mut stderr = Vec::new();
+    crate::watch::report_build_result(
+        &mut stderr,
+        Err(crate::error::CliError::WatchRecovery {
+            source: Box::new(crate::error::CliError::Read {
+                path: PathBuf::from("schema.json"),
+                source: io::Error::new(io::ErrorKind::NotFound, "schema missing"),
+            }),
+            recovery: vec![ProjectBuildRecovery::new(
+                PathBuf::from("marker"),
+                super::super::recovery::ProjectBuildRecoveryReason::StageCleanupFailed,
+            )],
+        }),
+        &messages,
+    )
+    .expect("localized freshness report");
+    assert_eq!(
+        String::from_utf8(stderr).expect("stderr"),
+        "alt-failed alt-read schema.json schema missing\nalt-notice ; recovery markers: alt-record u1~6d61726b6572 alt-stage\n"
+    );
+}
+
+#[test]
+fn recovery_deduplication_uses_marker_and_reason_not_io_detail() {
+    let messages = Messages::load(&crate::i18n::UiLocale::default()).expect("messages");
+    let marker = PathBuf::from("marker");
+    let first = ProjectBuildRecovery::new(
+        marker.clone(),
+        super::super::recovery::ProjectBuildRecoveryReason::StageCleanupFailed,
+    );
+    let second = ProjectBuildRecovery::with_io(
+        marker,
+        super::super::recovery::ProjectBuildRecoveryReason::StageCleanupFailed,
+        &io::Error::new(io::ErrorKind::PermissionDenied, "denied"),
+    );
+    let output = super::super::build::format_recovery_required(&messages, 1, &[first, second]);
+    assert!(output.contains("recovery markers: u1~"));
+    assert_eq!(output.matches("u1~").count(), 1);
+}
+
+#[test]
 fn post_rename_error_is_indeterminate_with_visible_new_bytes() {
     let temp = TempDir::new().unwrap_or_else(|error| panic!("temporary directory: {error}"));
     let output = temp.path().join("dialogue.recitec");
@@ -128,12 +248,20 @@ fn recovery_records_use_alternate_typed_fluent_contract() {
         ),
         (
             "watch-build-recovery-record",
-            "alt-record marker={$marker} reason={$reason}",
+            "alt-record marker={$marker} reason={$reason} detail={$detail}",
         ),
         ("watch-build-recovery-reason-stage-cleanup", "alt-stage"),
         (
             "watch-build-recovery-reason-publication-uncommitted",
             "alt-uncommitted",
+        ),
+        (
+            "watch-build-recovery-detail-io",
+            "alt-io {$kind} {$raw_os_error} {$message}",
+        ),
+        (
+            "watch-build-recovery-io-permission-denied",
+            "alt-permission",
         ),
     ] {
         let mut found = false;
@@ -168,9 +296,10 @@ fn recovery_records_use_alternate_typed_fluent_contract() {
         ],
     )
     .expect("alternate messages");
-    let first = ProjectBuildRecovery::new(
+    let first = ProjectBuildRecovery::with_io(
         PathBuf::from("stage/first\n.tmp"),
         super::super::recovery::ProjectBuildRecoveryReason::StageCleanupFailed,
+        &io::Error::new(io::ErrorKind::PermissionDenied, "denied"),
     );
     let second = ProjectBuildRecovery::new(
         PathBuf::from("stage/second.tmp"),
@@ -182,6 +311,6 @@ fn recovery_records_use_alternate_typed_fluent_contract() {
             2,
             &[second.clone(), first.clone(), first],
         ),
-        "alt-required count=2 records=; recovery markers: alt-record marker=stage/first\\n.tmp reason=alt-stage\nalt-record marker=stage/second.tmp reason=alt-uncommitted"
+        "alt-required count=2 records=; recovery markers: alt-record marker=u1~73746167652f66697273740a2e746d70 reason=alt-stage detail=alt-io alt-permission  denied\nalt-record marker=u1~73746167652f7365636f6e642e746d70 reason=alt-uncommitted detail="
     );
 }

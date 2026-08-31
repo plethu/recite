@@ -25,7 +25,10 @@ mod targets;
 
 pub use engine::ProjectBuildEngine;
 pub use publisher::{ProjectBuildPublisher, ProjectPreparedBuild};
-pub use recovery::{ProjectBuildPublisherError, ProjectBuildRecovery, ProjectBuildRecoveryReason};
+pub use recovery::{
+    ProjectBuildPublisherError, ProjectBuildRecovery, ProjectBuildRecoveryDetail,
+    ProjectBuildRecoveryIoKind, ProjectBuildRecoveryReason,
+};
 pub use request::{
     ProjectBuildPreparation, ProjectBuildPreparationError, ProjectBuildRequest, ProjectBuildTarget,
 };
@@ -160,6 +163,17 @@ fn report_build_result(
                 )
             )?;
         }
+        Err(CliError::WatchCoordinator { source, recovery }) => {
+            report_recovery_error(stderr, messages, source.to_string(), &recovery)?;
+        }
+        Err(CliError::WatchRecovery { source, recovery }) => {
+            report_recovery_error(
+                stderr,
+                messages,
+                source.to_user_message(messages),
+                &recovery,
+            )?;
+        }
         Err(error) => {
             writeln!(
                 stderr,
@@ -167,6 +181,23 @@ fn report_build_result(
                 messages.format(MsgId::WatchBuildFailed, [("error", error.to_string())])
             )?;
         }
+    }
+    Ok(())
+}
+
+fn report_recovery_error(
+    stderr: &mut dyn Write,
+    messages: &Messages,
+    error: String,
+    recovery: &[ProjectBuildRecovery],
+) -> Result<(), CliError> {
+    writeln!(
+        stderr,
+        "{}",
+        messages.format(MsgId::WatchBuildFailed, [("error", error)])
+    )?;
+    if !recovery.is_empty() {
+        writeln!(stderr, "{}", format_recovery_notice(messages, recovery))?;
     }
     Ok(())
 }

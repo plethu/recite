@@ -105,7 +105,7 @@ jobs:
 
       - name: Run Windows publisher contracts
         run: >-
-          cargo test --locked -p recite-cli --all-features
+          cargo test --locked -p recite-cli --all-features --lib
           --test watch_build_publisher --test watch_build_publisher_safety
 
   docs:

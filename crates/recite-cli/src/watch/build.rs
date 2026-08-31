@@ -1,6 +1,8 @@
 use std::io::Write;
 
-use recite_compiler::{BuildControl, BuildResultFailure, BuildTerminalStatus, PublishOutcome};
+use recite_compiler::{
+    BuildControl, BuildResult, BuildResultFailure, BuildTerminalStatus, PublishOutcome,
+};
 use recite_config::discover_project;
 
 use super::events::WatchState;
@@ -111,23 +113,32 @@ where
     let mut publisher = ProjectBuildPublisher::new(&request).map_err(|error| CliError::Watch {
         message: error.to_string(),
     })?;
-    let result = state
-        .coordinator
-        .run(
-            request.build_request().clone(),
-            control,
-            &mut engine,
-            &mut publisher,
-        )
-        .map_err(|error| CliError::Watch {
-            message: error.to_string(),
-        })?;
+    let result = match state.coordinator.run(
+        request.build_request().clone(),
+        control,
+        &mut engine,
+        &mut publisher,
+    ) {
+        Ok(result) => result,
+        Err(source) => {
+            let recovery = publisher.recovery().to_vec();
+            return Err(CliError::WatchCoordinator { source, recovery });
+        }
+    };
     let recovery = publisher.recovery().to_vec();
 
     report_diagnostics(stderr, messages, result.diagnostics().iter())?;
     if result.status() == BuildTerminalStatus::Succeeded {
         post_publish();
-        let freshness = super::freshness::assess_current_freshness(&request)?;
+        let freshness = match super::freshness::assess_current_freshness(&request) {
+            Ok(freshness) => freshness,
+            Err(source) => {
+                return Err(CliError::WatchRecovery {
+                    source: Box::new(source),
+                    recovery,
+                });
+            }
+        };
         report_diagnostics(stderr, messages, freshness.diagnostics.iter())?;
         if freshness.stale {
             return Ok(BuildStatus::Stale {
@@ -152,6 +163,13 @@ where
             asset_count: result.candidates().len(),
         });
     }
+    Ok(status_without_freshness(result, recovery))
+}
+
+pub(super) fn status_without_freshness(
+    result: BuildResult,
+    recovery: Vec<ProjectBuildRecovery>,
+) -> BuildStatus {
     if matches!(
         result.failure(),
         Some(BuildResultFailure::Diagnostics { .. })
@@ -166,18 +184,18 @@ where
         .any(|diagnostic| diagnostic.severity == recite_core::DiagnosticSeverity::Error)
     {
         return if recovery.is_empty() {
-            Ok(BuildStatus::Diagnostics)
+            BuildStatus::Diagnostics
         } else {
-            Ok(BuildStatus::DiagnosticsWithRecovery { recovery })
+            BuildStatus::DiagnosticsWithRecovery { recovery }
         };
     }
 
-    Ok(BuildStatus::PublicationFailure {
+    BuildStatus::PublicationFailure {
         status: result.status(),
         failure: result.failure().cloned(),
         outcome: result.publish().clone(),
         recovery,
-    })
+    }
 }
 
 fn map_preparation_error(error: ProjectBuildPreparationError) -> CliError {

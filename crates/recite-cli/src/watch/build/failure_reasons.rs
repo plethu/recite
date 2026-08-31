@@ -3,7 +3,9 @@ use recite_compiler::{
     PublishNotAttemptedReason, PublishOutcomeError, PublishRefusal,
 };
 
-use super::super::ProjectBuildRecoveryReason;
+use super::super::{
+    ProjectBuildRecoveryDetail, ProjectBuildRecoveryIoKind, ProjectBuildRecoveryReason,
+};
 
 pub(super) fn format_failure_reason(
     messages: &crate::i18n::Messages,
@@ -141,6 +143,50 @@ pub(super) fn format_recovery_reason(
         ProjectBuildRecoveryReason::PublicationUncommitted => {
             crate::i18n::MsgId::WatchBuildRecoveryReasonPublicationUncommitted
         }
+    };
+    messages.text(id)
+}
+
+pub(super) fn format_recovery_detail(
+    messages: &crate::i18n::Messages,
+    detail: ProjectBuildRecoveryDetail,
+) -> String {
+    match detail {
+        ProjectBuildRecoveryDetail::None => String::new(),
+        ProjectBuildRecoveryDetail::Io {
+            kind,
+            raw_os_error,
+            message,
+        } => messages.format(
+            crate::i18n::MsgId::WatchBuildRecoveryDetailIo,
+            [
+                ("kind", format_recovery_io_kind(messages, kind)),
+                (
+                    "raw_os_error",
+                    raw_os_error.map_or_else(String::new, |value| value.to_string()),
+                ),
+                ("message", message),
+            ],
+        ),
+    }
+}
+
+fn format_recovery_io_kind(
+    messages: &crate::i18n::Messages,
+    kind: ProjectBuildRecoveryIoKind,
+) -> String {
+    let id = match kind {
+        ProjectBuildRecoveryIoKind::AlreadyExists => {
+            crate::i18n::MsgId::WatchBuildRecoveryIoAlreadyExists
+        }
+        ProjectBuildRecoveryIoKind::InvalidInput => {
+            crate::i18n::MsgId::WatchBuildRecoveryIoInvalidInput
+        }
+        ProjectBuildRecoveryIoKind::NotFound => crate::i18n::MsgId::WatchBuildRecoveryIoNotFound,
+        ProjectBuildRecoveryIoKind::PermissionDenied => {
+            crate::i18n::MsgId::WatchBuildRecoveryIoPermissionDenied
+        }
+        ProjectBuildRecoveryIoKind::Other => crate::i18n::MsgId::WatchBuildRecoveryIoOther,
     };
     messages.text(id)
 }

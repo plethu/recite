@@ -3,7 +3,8 @@ use recite_ui::{UiArg, UiArgs};
 
 use super::super::ProjectBuildRecovery;
 use super::failure_reasons::{
-    format_failure_reason, format_not_attempted, format_recovery_reason, format_refusal,
+    format_failure_reason, format_not_attempted, format_recovery_detail, format_recovery_reason,
+    format_refusal,
 };
 
 pub(crate) fn format_failure_with_recovery(
@@ -165,8 +166,12 @@ fn format_recovery_summary(
             messages.format(
                 crate::i18n::MsgId::WatchBuildRecoveryRecord,
                 [
-                    ("marker", escape_target(&record.marker().to_string_lossy())),
+                    (
+                        "marker",
+                        super::super::recovery::encode_marker_path(record.marker()),
+                    ),
                     ("reason", format_recovery_reason(messages, record.reason())),
+                    ("detail", format_recovery_detail(messages, record.detail())),
                 ],
             )
         })

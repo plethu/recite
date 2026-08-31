@@ -161,10 +161,11 @@ impl BuildPublisher for ProjectBuildPublisher {
                 }
             };
             if let Err(error) = ensure_output_boundary(&self.root, output) {
-                if let Err(_cleanup_error) = staging::remove(&file) {
-                    self.recovery.push(ProjectBuildRecovery::new(
+                if let Err(cleanup_error) = staging::remove(&file) {
+                    self.recovery.push(ProjectBuildRecovery::with_io(
                         file.temp.clone(),
                         ProjectBuildRecoveryReason::StageCleanupFailed,
+                        &cleanup_error,
                     ));
                 }
                 cleanup(&staged, &mut self.recovery);
@@ -198,10 +199,11 @@ impl BuildPublisher for ProjectBuildPublisher {
 
 fn cleanup(staged: &[StagedTarget], recovery: &mut Vec<ProjectBuildRecovery>) {
     for staged in staged {
-        if let Err(_error) = staging::remove(&staged.file) {
-            recovery.push(ProjectBuildRecovery::new(
+        if let Err(error) = staging::remove(&staged.file) {
+            recovery.push(ProjectBuildRecovery::with_io(
                 staged.file.temp.clone(),
                 ProjectBuildRecoveryReason::StageCleanupFailed,
+                &error,
             ));
         }
     }

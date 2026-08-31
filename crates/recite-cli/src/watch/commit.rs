@@ -43,10 +43,11 @@ where
                 record_uncommitted(&prepared.staged[index..], recovery_log);
                 return partial(&committed, staged, &all, index);
             }
-            staging::ReplaceOutcome::Indeterminate(_error) => {
-                recovery_log.push(ProjectBuildRecovery::new(
+            staging::ReplaceOutcome::Indeterminate(error) => {
+                recovery_log.push(ProjectBuildRecovery::with_io(
                     staged.file.temp.clone(),
                     ProjectBuildRecoveryReason::PublicationIndeterminate,
+                    &error,
                 ));
                 record_uncommitted(&prepared.staged[index + 1..], recovery_log);
                 return PublishOutcome::Indeterminate {
@@ -54,10 +55,11 @@ where
                     recovery: RecoveryNeeded::for_targets(all.clone()),
                 };
             }
-            staging::ReplaceOutcome::CommittedWithCleanup(_error) => {
-                recovery_log.push(ProjectBuildRecovery::new(
+            staging::ReplaceOutcome::CommittedWithCleanup(error) => {
+                recovery_log.push(ProjectBuildRecovery::with_io(
                     staged.file.temp.clone(),
                     ProjectBuildRecoveryReason::StageCleanupFailed,
+                    &error,
                 ));
                 committed.push(staged.target.clone());
             }

@@ -78,6 +78,11 @@ items = "string"
 [arguments."watch-build-recovery-record"]
 marker = "string"
 reason = "string"
+detail = "string"
+[arguments."watch-build-recovery-detail-io"]
+kind = "string"
+raw_os_error = "string"
+message = "string"
 [arguments."watch-build-recovery-targets-list"]
 target = "string"
 [arguments."watch-build-failure-duplicate-target"]

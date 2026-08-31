@@ -54,6 +54,18 @@ pub(super) const fn key(id: super::MsgId) -> Option<&'static str> {
         super::MsgId::WatchBuildRecoveryReasonUnknown => {
             Some("watch-build-recovery-reason-unknown")
         }
+        super::MsgId::WatchBuildRecoveryDetailIo => Some("watch-build-recovery-detail-io"),
+        super::MsgId::WatchBuildRecoveryIoAlreadyExists => {
+            Some("watch-build-recovery-io-already-exists")
+        }
+        super::MsgId::WatchBuildRecoveryIoInvalidInput => {
+            Some("watch-build-recovery-io-invalid-input")
+        }
+        super::MsgId::WatchBuildRecoveryIoNotFound => Some("watch-build-recovery-io-not-found"),
+        super::MsgId::WatchBuildRecoveryIoPermissionDenied => {
+            Some("watch-build-recovery-io-permission-denied")
+        }
+        super::MsgId::WatchBuildRecoveryIoOther => Some("watch-build-recovery-io-other"),
         super::MsgId::WatchBuildFailureCheckRequestMismatch => {
             Some("watch-build-failure-check-request-mismatch")
         }

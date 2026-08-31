@@ -128,6 +128,14 @@ pub(crate) enum CliError {
     Watch {
         message: String,
     },
+    WatchCoordinator {
+        source: recite_compiler::BuildRunError,
+        recovery: Vec<crate::watch::ProjectBuildRecovery>,
+    },
+    WatchRecovery {
+        source: Box<Self>,
+        recovery: Vec<crate::watch::ProjectBuildRecovery>,
+    },
     Write {
         path: PathBuf,
         source: io::Error,
@@ -306,6 +314,8 @@ impl std::fmt::Display for CliError {
             Self::ProjectDiscovery { source } => write!(formatter, "{source}"),
             Self::UiCatalog { source } => write!(formatter, "failed to load UI text catalog: {source}"),
             Self::Watch { message } => formatter.write_str(message),
+            Self::WatchCoordinator { source, .. } => write!(formatter, "{source}"),
+            Self::WatchRecovery { source, .. } => write!(formatter, "{source}"),
             Self::Write { path, source } => {
                 write!(
                     formatter,

@@ -167,10 +167,6 @@ impl CliError {
                 MsgId::CliErrorWrite,
                 [("path", display_path(path)), ("source", source.to_string())],
             ),
-            // Domain diagnostic payloads and OS-provided detail strings are
-            // intentionally opaque here. #182 owns their structured
-            // diagnostic templates; keeping these arms explicit prevents a
-            // newly added CLI variant from silently bypassing this boundary.
             Self::Core(error) => {
                 messages.format(MsgId::CliErrorGeneric, [("message", error.to_string())])
             }
@@ -227,6 +223,10 @@ impl CliError {
             Self::Watch { message } => {
                 messages.format(MsgId::CliErrorWatch, [("message", message.clone())])
             }
+            Self::WatchCoordinator { source, .. } => {
+                messages.format(MsgId::CliErrorWatch, [("message", source.to_string())])
+            }
+            Self::WatchRecovery { source, .. } => source.to_user_message(messages),
         }
     }
 }
