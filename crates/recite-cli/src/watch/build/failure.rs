@@ -19,7 +19,7 @@ pub(crate) fn format_failure(
                 [
                     ("status", status.clone()),
                     ("failed", failed.to_string()),
-                    ("recovery", format_targets(recovery.targets())),
+                    ("recovery", format_targets(messages, recovery.targets())),
                     ("failure", failure),
                 ],
             ),
@@ -28,7 +28,7 @@ pub(crate) fn format_failure(
                 [
                     ("status", status.clone()),
                     ("failed", failed.to_string()),
-                    ("recovery", format_targets(recovery.targets())),
+                    ("recovery", format_targets(messages, recovery.targets())),
                 ],
             ),
         },
@@ -37,7 +37,7 @@ pub(crate) fn format_failure(
                 crate::i18n::MsgId::WatchBuildFailedIndeterminateWithFailure,
                 [
                     ("status", status.clone()),
-                    ("recovery", format_targets(recovery.targets())),
+                    ("recovery", format_targets(messages, recovery.targets())),
                     ("failure", failure),
                 ],
             ),
@@ -45,7 +45,7 @@ pub(crate) fn format_failure(
                 crate::i18n::MsgId::WatchBuildFailedIndeterminate,
                 [
                     ("status", status.clone()),
-                    ("recovery", format_targets(recovery.targets())),
+                    ("recovery", format_targets(messages, recovery.targets())),
                 ],
             ),
         },
@@ -118,13 +118,38 @@ fn format_status(messages: &crate::i18n::Messages, status: BuildTerminalStatus) 
     messages.text(id)
 }
 
-fn format_targets(targets: &[recite_compiler::BuildTarget]) -> String {
+fn format_targets(
+    messages: &crate::i18n::Messages,
+    targets: &[recite_compiler::BuildTarget],
+) -> String {
     if targets.is_empty() {
-        return "<none>".to_owned();
+        return messages.text(crate::i18n::MsgId::WatchBuildRecoveryTargetsEmpty);
     }
     targets
         .iter()
-        .map(ToString::to_string)
+        .map(|target| {
+            messages.format(
+                crate::i18n::MsgId::WatchBuildRecoveryTargetsList,
+                [("target", escape_target(target.as_str()))],
+            )
+        })
         .collect::<Vec<_>>()
-        .join(", ")
+        .join("\n")
+}
+
+fn escape_target(target: &str) -> String {
+    let mut escaped = String::with_capacity(target.len());
+    for character in target.chars() {
+        match character {
+            '\\' => escaped.push_str("\\\\"),
+            '\n' => escaped.push_str("\\n"),
+            '\r' => escaped.push_str("\\r"),
+            '\t' => escaped.push_str("\\t"),
+            character if character.is_control() || matches!(character, '\u{2028}' | '\u{2029}') => {
+                escaped.push_str(&format!("\\u{{{:04x}}}", character as u32));
+            }
+            character => escaped.push(character),
+        }
+    }
+    escaped
 }

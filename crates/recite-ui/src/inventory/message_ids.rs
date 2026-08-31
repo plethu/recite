@@ -17,6 +17,7 @@ message_ids! {
     WatchBuildFailedPublishedWithFailure, WatchBuildFailedUnsupportedWithFailure,
     WatchBuildStatusSucceeded, WatchBuildStatusFailed, WatchBuildStatusStale,
     WatchBuildStatusCancelled, WatchBuildStatusSuperseded, WatchBuildStatusUnknown,
+    WatchBuildRecoveryTargetsEmpty, WatchBuildRecoveryTargetsList,
     WatchBuildFailureCheckRequestMismatch, WatchBuildFailureCheckFreshnessMismatch,
     WatchBuildFailureCheckUnknown, WatchBuildFailureDiagnostics, WatchBuildFailureUnknown,
     WatchBuildFailureEngineInvalidOutput,

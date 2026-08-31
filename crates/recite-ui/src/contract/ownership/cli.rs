@@ -69,6 +69,8 @@ macro_rules! cli_message_ids {
         | MsgId::WatchBuildStatusCancelled
         | MsgId::WatchBuildStatusSuperseded
         | MsgId::WatchBuildStatusUnknown
+        | MsgId::WatchBuildRecoveryTargetsEmpty
+        | MsgId::WatchBuildRecoveryTargetsList
         | MsgId::WatchBuildFailureCheckRequestMismatch
         | MsgId::WatchBuildFailureCheckFreshnessMismatch
         | MsgId::WatchBuildFailureCheckUnknown

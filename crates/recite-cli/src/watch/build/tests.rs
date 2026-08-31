@@ -247,10 +247,10 @@ fn publication_failure_uses_alternate_ids_and_typed_arguments() {
         ),
         ("watch-build-status-cancelled", "alt-status-cancelled"),
         ("watch-build-recovery-targets-empty", "alt-empty-recovery"),
-        ("watch-build-recovery-targets-list", "alt-list[{$targets}]"),
+        ("watch-build-recovery-targets-list", "alt-item({$target})"),
     ]);
-    let target = BuildTarget::new("compiled/main.recitec".to_owned()).expect("target");
-    let second = BuildTarget::new("compiled/second.recitec".to_owned()).expect("target");
+    let target = BuildTarget::new("compiled/main,part.recitec".to_owned()).expect("target");
+    let second = BuildTarget::new("compiled/second\npart\t.recitec".to_owned()).expect("target");
     let recovery = RecoveryNeeded::for_targets(vec![target.clone(), second.clone()]);
 
     assert_eq!(
@@ -267,7 +267,7 @@ fn publication_failure_uses_alternate_ids_and_typed_arguments() {
                 recovery,
             },
         ),
-        "alt-partial status=alt-status-failed failed=compiled/main.recitec recovery=alt-list[compiled/main.recitec, compiled/second.recitec] failure=alt-engine-host"
+        "alt-partial status=alt-status-failed failed=compiled/main,part.recitec recovery=alt-item(compiled/main,part.recitec)\nalt-item(compiled/second\\npart\\t.recitec) failure=alt-engine-host"
     );
     assert_eq!(
         super::format_failure(
@@ -279,7 +279,7 @@ fn publication_failure_uses_alternate_ids_and_typed_arguments() {
                 recovery: RecoveryNeeded::for_targets(vec![second, target.clone()]),
             },
         ),
-        "alt-indeterminate status=alt-status-cancelled recovery=alt-list[compiled/main.recitec, compiled/second.recitec]"
+        "alt-indeterminate status=alt-status-cancelled recovery=alt-item(compiled/main,part.recitec)\nalt-item(compiled/second\\npart\\t.recitec)"
     );
     assert_eq!(
         super::format_failure(
@@ -295,7 +295,7 @@ fn publication_failure_uses_alternate_ids_and_typed_arguments() {
                 recovery: RecoveryNeeded::for_targets(Vec::new()),
             },
         ),
-        "alt-partial status=alt-status-failed failed=compiled/main.recitec recovery=alt-empty-recovery failure=alt-engine-host"
+        "alt-partial status=alt-status-failed failed=compiled/main,part.recitec recovery=alt-empty-recovery failure=alt-engine-host"
     );
 }
 #[test]

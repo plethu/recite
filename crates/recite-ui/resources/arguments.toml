@@ -55,6 +55,8 @@ failure = "string"
 [arguments."watch-build-failed-unsupported-with-failure"]
 status = "string"
 failure = "string"
+[arguments."watch-build-recovery-targets-list"]
+target = "string"
 [arguments."watch-build-failure-duplicate-target"]
 target = "string"
 [arguments."watch-build-failure-preparation"]

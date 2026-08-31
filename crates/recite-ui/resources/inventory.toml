@@ -81,6 +81,8 @@ resource_ids = [
 "watch-build-status-cancelled",
 "watch-build-status-superseded",
 "watch-build-status-unknown",
+"watch-build-recovery-targets-empty",
+"watch-build-recovery-targets-list",
 "watch-build-failure-check-request-mismatch",
 "watch-build-failure-check-freshness-mismatch",
 "watch-build-failure-check-unknown",

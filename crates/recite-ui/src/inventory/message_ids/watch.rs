@@ -36,6 +36,8 @@ pub(super) const fn key(id: super::MsgId) -> Option<&'static str> {
         super::MsgId::WatchBuildStatusCancelled => Some("watch-build-status-cancelled"),
         super::MsgId::WatchBuildStatusSuperseded => Some("watch-build-status-superseded"),
         super::MsgId::WatchBuildStatusUnknown => Some("watch-build-status-unknown"),
+        super::MsgId::WatchBuildRecoveryTargetsEmpty => Some("watch-build-recovery-targets-empty"),
+        super::MsgId::WatchBuildRecoveryTargetsList => Some("watch-build-recovery-targets-list"),
         super::MsgId::WatchBuildFailureCheckRequestMismatch => {
             Some("watch-build-failure-check-request-mismatch")
         }
