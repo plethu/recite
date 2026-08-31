@@ -241,11 +241,12 @@ pub(crate) fn open_alias_owner_switch_reseeds_kernel_version_state() {
     assert_eq!(block_names(&workspace), ["alias-updated"]);
     assert_eq!(workspace.snapshot().summaries()[0].version, Some(2));
 
-    let refresh = workspace.close(alias_uri).expect("alias close refresh");
+    let refreshes = workspace.close(alias_uri);
     assert_eq!(workspace.snapshot().summaries().len(), 1);
     assert_eq!(block_names(&workspace), ["canonical"]);
     assert_eq!(workspace.snapshot().summaries()[0].version, Some(10));
-    let DiagnosticRefresh::Publish(diagnostics) = refresh else {
+    assert_eq!(refreshes.len(), 1);
+    let DiagnosticRefresh::Publish(diagnostics) = &refreshes[0] else {
         panic!("closing alias should publish the remaining canonical overlay");
     };
     assert_eq!(diagnostics.uri, real_uri);

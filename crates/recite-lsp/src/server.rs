@@ -329,8 +329,12 @@ impl Server {
         else {
             return Ok(());
         };
-        if let Some(refresh) = self.workspace.close(params.text_document.uri) {
+        let refreshes = self.workspace.close(params.text_document.uri);
+        let has_refreshes = !refreshes.is_empty();
+        for refresh in refreshes {
             self.publish_refresh(refresh)?;
+        }
+        if has_refreshes {
             self.publish_open_document_refreshes(None)?;
         }
 

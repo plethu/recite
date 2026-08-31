@@ -4,6 +4,9 @@ use tempfile::TempDir;
 
 use super::super::support::{Harness, file_uri, full_change, write_file};
 
+#[path = "schema_close.rs"]
+mod schema_close;
+
 pub(super) fn did_open_publishes_schema_backed_semantic_diagnostics() {
     let temp = TempDir::new().unwrap_or_else(|error| panic!("tempdir: {error}"));
     write_file(temp.path(), "schema.json", semantic_schema());
@@ -225,6 +228,10 @@ pub(super) fn valid_schema_overlay_clears_diagnostics_with_new_version() {
     assert!(cleared.diagnostics.is_empty());
 
     harness.finish();
+}
+
+pub(super) fn did_close_schema_alias_clears_exact_uri() {
+    schema_close::did_close_schema_alias_clears_exact_uri();
 }
 
 fn diagnostic_codes(diagnostics: &[lsp_types::Diagnostic]) -> Vec<&str> {

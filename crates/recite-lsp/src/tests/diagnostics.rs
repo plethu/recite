@@ -303,6 +303,10 @@ pub(super) fn valid_schema_overlay_clears_diagnostics_with_new_version() {
     schema::valid_schema_overlay_clears_diagnostics_with_new_version();
 }
 
+pub(super) fn did_close_schema_alias_clears_exact_uri() {
+    schema::did_close_schema_alias_clears_exact_uri();
+}
+
 pub(super) fn did_close_removes_state_and_clears_diagnostics() {
     let harness = Harness::start();
     let uri = uri("file:///workspace/dialogue/close.recite");

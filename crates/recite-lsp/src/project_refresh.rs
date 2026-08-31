@@ -133,16 +133,35 @@ impl LspWorkspace {
             .collect()
     }
 
-    pub(crate) fn close(&mut self, uri: Uri) -> Option<DiagnosticRefresh> {
+    pub(crate) fn close(&mut self, uri: Uri) -> Vec<DiagnosticRefresh> {
         let mut documents = self.documents.clone();
-        let closed = documents.close(&uri)?;
+        let Some(closed) = documents.close(&uri) else {
+            return Vec::new();
+        };
         let closed_key = super::document_key_for_open(&closed);
         let mut saved = self.saved.clone();
         saved.refresh_uri(&uri);
         self.refresh_open_identities(&saved, &mut documents);
-        self.rebuild_for_documents(saved, documents).ok()?;
+        if self.rebuild_for_documents(saved, documents).is_err() {
+            return Vec::new();
+        }
         if self.schema.matches_uri(&uri) {
-            return self.schema.refresh_or_clear(self.generation);
+            let mut refreshes = vec![DiagnosticRefresh::Clear {
+                uri: uri.clone(),
+                generation: self.generation,
+            }];
+            if let Some(refresh) = self.schema.refresh_or_clear(self.generation) {
+                let targets_closed_uri = match &refresh {
+                    DiagnosticRefresh::Publish(diagnostics) => diagnostics.uri == uri,
+                    DiagnosticRefresh::Clear {
+                        uri: refresh_uri, ..
+                    } => *refresh_uri == uri,
+                };
+                if !targets_closed_uri {
+                    refreshes.push(refresh);
+                }
+            }
+            return refreshes;
         }
         let remaining_open = closed_key
             .as_ref()
@@ -153,9 +172,9 @@ impl LspWorkspace {
                     .find(|document| document.identity().saved_path == closed.identity().saved_path)
             });
         if let Some(document) = remaining_open {
-            return Some(self.publish_open_document(document));
+            return vec![self.publish_open_document(document)];
         }
-        Some(
+        vec![
             self.saved
                 .document_by_uri(&uri)
                 .map(|document| self.publish_saved_document(document))
@@ -163,6 +182,6 @@ impl LspWorkspace {
                     uri,
                     generation: self.generation,
                 }),
-        )
+        ]
     }
 }
