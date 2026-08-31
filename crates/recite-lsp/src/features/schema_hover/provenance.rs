@@ -19,6 +19,10 @@ pub(crate) fn hover_detail(
             ]),
         ));
     }
+    let compared = matches!(
+        schema.freshness(),
+        recite_compiler::SchemaFreshness::Compared(_)
+    );
     let content_fingerprint = metadata.and_then(|metadata| metadata.content_fingerprint());
     let producer_fingerprints =
         metadata.map_or(0, |metadata| metadata.producer_fingerprints().len());
@@ -36,6 +40,7 @@ pub(crate) fn hover_detail(
     if content_fingerprint.is_some()
         || producer_fingerprints != 0
         || !scoped_fingerprints.is_empty()
+        || compared
     {
         detail.push_str(&catalog.format_args(
             MsgId::LspHoverSchemaFreshness,

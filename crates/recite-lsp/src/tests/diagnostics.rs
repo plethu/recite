@@ -326,6 +326,14 @@ pub(super) fn did_save_schema_reloads_from_non_canonical_schema_uri() {
     schema::did_save_schema_reloads_from_non_canonical_schema_uri();
 }
 
+pub(super) fn did_save_keeps_unsaved_schema_overlay() {
+    schema::did_save_keeps_unsaved_schema_overlay();
+}
+
+pub(super) fn watched_schema_refresh_keeps_unsaved_schema_overlay() {
+    schema::watched_schema_refresh_keeps_unsaved_schema_overlay();
+}
+
 pub(super) fn did_close_removes_state_and_clears_diagnostics() {
     let harness = Harness::start();
     let uri = uri("file:///workspace/dialogue/close.recite");

@@ -16,6 +16,15 @@ pub(super) fn actions(
     schema: &SchemaCodeActionDocument,
     catalog: &UiCatalog,
 ) -> Vec<CodeActionOrCommand> {
+    if !schema
+        .summary
+        .capability()
+        .actions()
+        .iter()
+        .any(|action| matches!(action, recite_compiler::SchemaAction::EditStandaloneSource))
+    {
+        return Vec::new();
+    }
     if documents.iter().any(|document| {
         !document.summary.completeness.condition_functions
             || !document.summary.completeness.effect_functions

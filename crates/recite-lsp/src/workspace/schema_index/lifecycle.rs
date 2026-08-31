@@ -18,19 +18,10 @@ impl SchemaIndex {
         Some(DiagnosticRefresh::Publish(DocumentDiagnostics {
             uri,
             text: self.text.clone().unwrap_or_default(),
-            version: None,
+            version: self.active_version,
             diagnostics: self.diagnostics.clone(),
             generation,
         }))
-    }
-
-    pub(crate) fn refresh_uri(&mut self, uri: &Uri) -> bool {
-        if !self.matches_uri(uri) {
-            return false;
-        }
-        let path = self.configured_path.clone();
-        *self = Self::load(path);
-        true
     }
 
     pub(super) fn path_matches_uri(&self, uri: &Uri) -> bool {

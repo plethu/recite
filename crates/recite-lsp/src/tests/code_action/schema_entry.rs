@@ -1,11 +1,11 @@
-use lsp_types::CodeActionKind;
+use lsp_types::{CodeActionKind, CodeActionOrCommand, DocumentChanges};
 use tempfile::TempDir;
 
 use super::support::{
     assert_no_action_title, code_actions, harness_for_root_with_schema_value, range,
     single_quick_fix_with_title, single_text_edit,
 };
-use crate::tests::support::{file_uri, full_change, write_file};
+use crate::tests::support::{file_uri, write_file};
 
 const SOURCE: &str = "schema_version = 1\n[producer]\nid = \"dialogue\"\n";
 
@@ -186,17 +186,37 @@ pub(super) fn schema_entry_quick_fix_rejects_missing_sections() {
 pub(super) fn schema_entry_quick_fix_rejects_open_schema_buffers() {
     let (temp, source_uri, schema_uri) = fixture("schema.toml", SOURCE, ":if ready()\n");
     let mut harness = harness_for_root_with_schema_value(temp.path(), "./schema.toml");
+    harness.did_open(source_uri.clone(), 3, ":: start\n:if ready()\n");
+    let _ = harness.recv_publish_diagnostics();
     harness.did_open(schema_uri.clone(), 2, SOURCE);
     let _ = harness.recv_publish_diagnostics();
-    let edit = single_quick_fix_with_title(
+    let _ = harness.recv_publish_diagnostics();
+    let actions = code_actions(
         &mut harness,
-        source_uri,
+        source_uri.clone(),
         range(1, 4, 1, 11),
-        "Add condition `ready` to schema",
+        Some(vec![CodeActionKind::QUICKFIX]),
     );
-    assert_eq!(edit.text_document.uri, schema_uri);
-    assert_eq!(edit.text_document.version, Some(2));
-    harness.did_change(edit.text_document.uri, 1, vec![full_change(SOURCE)]);
+    let action = actions.into_iter().find_map(|action| match action {
+        CodeActionOrCommand::CodeAction(action)
+            if action.title == "Add condition `ready` to schema" =>
+        {
+            Some(action)
+        }
+        _ => None,
+    });
+    let Some(DocumentChanges::Edits(changes)) = action
+        .and_then(|action| action.edit)
+        .and_then(|edit| edit.document_changes)
+    else {
+        panic!("expected guarded schema edit");
+    };
+    let guard = changes
+        .iter()
+        .find(|change| change.text_document.uri == source_uri)
+        .expect("open dialogue precondition");
+    assert!(guard.edits.is_empty());
+    assert_eq!(guard.text_document.version, Some(3));
     harness.finish();
 }
 

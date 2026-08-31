@@ -115,6 +115,7 @@ impl LspWorkspace {
     ) -> Vec<super::DiagnosticRefresh> {
         self.documents
             .documents()
+            .filter(|document| !self.schema.matches_uri(&document.identity().uri))
             .filter(|document| match exclude {
                 Some(uri) => document.identity().uri != *uri,
                 None => true,

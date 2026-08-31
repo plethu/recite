@@ -9,7 +9,7 @@ use recite_compiler::SchemaSummary;
 
 use crate::workspace::WorkspaceConfig;
 
-use super::super::support::{test_workspace, write_file};
+use super::super::support::{file_uri, test_workspace, write_file};
 
 pub(super) fn metadata_domain_schema_summary_preserves_available_provenance() {
     let mut schema = ProjectSchema::empty_v1();
@@ -118,6 +118,45 @@ pub(super) fn schema_summary_preserves_source_ownership_and_generated_read_only_
     let json_summary = json_workspace.schema().summary().expect("JSON summary");
     assert!(json_summary.ownership().is_generated());
     assert!(json_summary.capability().is_read_only());
+}
+
+#[cfg(unix)]
+pub(super) fn schema_kind_survives_symlink_reload() {
+    use std::os::unix::fs::symlink;
+
+    let temp = TempDir::new().unwrap_or_else(|error| panic!("tempdir: {error}"));
+    let target = temp.path().join("schema.data");
+    let declared = temp.path().join("configured.TOML");
+    write_file(
+        temp.path(),
+        "schema.data",
+        "schema_version = 1\n[producer]\nid = \"standalone\"\n",
+    );
+    symlink(&target, &declared).expect("schema symlink");
+    let mut workspace =
+        test_workspace(WorkspaceConfig::for_roots(Vec::new()).with_schema_path(declared.clone()));
+    assert!(
+        workspace
+            .schema()
+            .summary()
+            .is_some_and(|summary| summary.ownership().is_standalone())
+    );
+
+    write_file(
+        temp.path(),
+        "schema.data",
+        "schema_version = 1\n[producer]\nid = \"reloaded\"\n",
+    );
+    workspace.refresh_watched_uri(&file_uri(&declared));
+    let summary = workspace.schema().summary().expect("reloaded summary");
+    assert!(summary.ownership().is_standalone());
+    assert_eq!(
+        summary
+            .producer_metadata()
+            .and_then(|metadata| metadata.producer())
+            .map(|producer| producer.id().to_owned()),
+        Some("reloaded".to_owned())
+    );
 }
 
 pub(super) fn valid_projection_schema() -> &'static str {

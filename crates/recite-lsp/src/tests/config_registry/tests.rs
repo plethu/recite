@@ -64,6 +64,16 @@ fn did_save_schema_reloads_from_non_canonical_schema_uri() {
 }
 
 #[test]
+fn did_save_keeps_unsaved_schema_overlay() {
+    super::diagnostics::did_save_keeps_unsaved_schema_overlay();
+}
+
+#[test]
+fn watched_schema_refresh_keeps_unsaved_schema_overlay() {
+    super::diagnostics::watched_schema_refresh_keeps_unsaved_schema_overlay();
+}
+
+#[test]
 fn publishes_choice_availability_parser_diagnostics() {
     super::availability::publishes_choice_availability_parser_diagnostics();
 }
@@ -196,6 +206,12 @@ fn projection_schema_summary_exposes_queries_projectors_and_labels() {
 fn schema_summary_preserves_source_ownership_and_generated_read_only_state() {
     super::project_indexes::schema_summary_preserves_source_ownership_and_generated_read_only_state(
     );
+}
+
+#[cfg(unix)]
+#[test]
+fn schema_kind_survives_symlink_reload() {
+    super::project_indexes::schema_kind_survives_symlink_reload();
 }
 
 #[test]

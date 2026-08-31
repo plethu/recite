@@ -44,11 +44,13 @@ impl LspWorkspace {
     }
 
     pub(crate) fn save_schema(&mut self, uri: &Uri) -> Option<DiagnosticRefresh> {
-        let mut schema = self.schema.clone();
-        if !schema.refresh_uri(uri) {
+        if !self.schema.matches_uri(uri) {
             return None;
         }
-        self.rebuild_state_with_schema(self.saved.clone(), self.documents.clone(), schema)
+        // Reload disk as the base, then let the live document store reapply
+        // the authoritative unsaved owner before rebuilding the kernel.
+        self.schema = self.schema.base();
+        self.rebuild_for_documents(self.saved.clone(), self.documents.clone())
             .ok()?;
         self.schema.refresh_or_clear(self.generation)
     }

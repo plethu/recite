@@ -216,6 +216,11 @@ pub(super) fn schema_summary_preserves_source_ownership_and_generated_read_only_
     schema_summary::schema_summary_preserves_source_ownership_and_generated_read_only_state();
 }
 
+#[cfg(unix)]
+pub(super) fn schema_kind_survives_symlink_reload() {
+    schema_summary::schema_kind_survives_symlink_reload();
+}
+
 fn invalid_projection_schema() -> &'static str {
     r#"{
   "schema_version": 1,

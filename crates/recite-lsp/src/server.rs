@@ -296,12 +296,13 @@ impl Server {
         } else {
             false
         };
+        if schema_refreshed {
+            return Ok(());
+        }
         for refresh in self.workspace.save(uri.clone()) {
             self.publish_refresh(refresh)?;
         }
-        if !schema_refreshed {
-            self.publish_open_document_refreshes(Some(&uri))?;
-        }
+        self.publish_open_document_refreshes(Some(&uri))?;
 
         Ok(())
     }

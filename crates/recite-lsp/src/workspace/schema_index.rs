@@ -51,9 +51,10 @@ impl SchemaIndex {
                 text: None,
             };
         };
-        let kind = schema_kind(&path);
-        let configured_uri = file_path_to_uri(&path);
-        let path = fs::canonicalize(&path).unwrap_or(path);
+        let declared_path = path.clone();
+        let kind = schema_kind(&declared_path);
+        let configured_uri = file_path_to_uri(&declared_path);
+        let path = fs::canonicalize(&declared_path).unwrap_or(path);
         let uri = configured_uri.clone().or_else(|| file_path_to_uri(&path));
         let display_path = path.display().to_string();
         let text = match fs::read_to_string(&path) {
@@ -62,7 +63,7 @@ impl SchemaIndex {
                 return Self {
                     uri,
                     configured_uri: configured_uri.or_else(|| file_path_to_uri(&path)),
-                    configured_path: Some(path.clone()),
+                    configured_path: Some(declared_path),
                     path: Some(path),
                     kind,
                     active_version: None,
@@ -78,7 +79,7 @@ impl SchemaIndex {
         let mut index = Self::from_text(path.clone(), kind, &text);
         index.uri = uri;
         index.configured_uri = configured_uri;
-        index.configured_path = Some(path);
+        index.configured_path = Some(declared_path);
         index
     }
 

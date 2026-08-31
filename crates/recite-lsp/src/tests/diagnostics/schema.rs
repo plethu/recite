@@ -152,6 +152,59 @@ pub(super) fn did_save_schema_reloads_from_non_canonical_schema_uri() {
     harness.finish();
 }
 
+pub(super) fn did_save_keeps_unsaved_schema_overlay() {
+    let temp = TempDir::new().unwrap_or_else(|error| panic!("tempdir: {error}"));
+    let schema = "schema_version = 1\n[producer]\nid = \"dialogue\"\n";
+    write_file(temp.path(), "schema.toml", schema);
+    let schema_uri = file_uri(&temp.path().join("schema.toml"));
+    let harness = harness_for_toml_schema(&temp);
+
+    harness.did_open(schema_uri.clone(), 7, "not a schema\n");
+    let overlay = harness.recv_publish_diagnostics();
+    assert_eq!(overlay.uri, schema_uri);
+    assert_eq!(overlay.version, Some(7));
+    assert!(!overlay.diagnostics.is_empty());
+
+    write_file(temp.path(), "schema.toml", schema);
+    harness.did_save(schema_uri.clone());
+    let after_save = harness.recv_publish_diagnostics();
+    assert_eq!(after_save.uri, schema_uri);
+    assert_eq!(after_save.version, Some(7));
+    assert!(!after_save.diagnostics.is_empty());
+
+    harness.finish();
+}
+
+pub(super) fn watched_schema_refresh_keeps_unsaved_schema_overlay() {
+    use lsp_types::notification::{DidChangeWatchedFiles, Notification};
+    use lsp_types::{DidChangeWatchedFilesParams, FileChangeType, FileEvent};
+
+    let temp = TempDir::new().unwrap_or_else(|error| panic!("tempdir: {error}"));
+    let schema = "schema_version = 1\n[producer]\nid = \"dialogue\"\n";
+    write_file(temp.path(), "schema.toml", schema);
+    let schema_uri = file_uri(&temp.path().join("schema.toml"));
+    let harness = harness_for_toml_schema(&temp);
+
+    harness.did_open(schema_uri.clone(), 9, "not a schema\n");
+    let _ = harness.recv_publish_diagnostics();
+    write_file(temp.path(), "schema.toml", schema);
+    harness.send_notification(
+        DidChangeWatchedFiles::METHOD,
+        DidChangeWatchedFilesParams {
+            changes: vec![FileEvent {
+                uri: schema_uri.clone(),
+                typ: FileChangeType::CHANGED,
+            }],
+        },
+    );
+    let after_watch = harness.recv_publish_diagnostics();
+    assert_eq!(after_watch.uri, schema_uri);
+    assert_eq!(after_watch.version, Some(9));
+    assert!(!after_watch.diagnostics.is_empty());
+
+    harness.finish();
+}
+
 fn diagnostic_codes(diagnostics: &[lsp_types::Diagnostic]) -> Vec<&str> {
     diagnostics
         .iter()
@@ -171,6 +224,19 @@ fn harness_for_schema(temp: &TempDir) -> Harness {
                 "positionEncodings": ["utf-16"]
             }
         },
+        "rootUri": root_uri.as_str(),
+        "initializationOptions": {
+            "schema": schema_path.display().to_string()
+        }
+    }))
+    .0
+}
+
+fn harness_for_toml_schema(temp: &TempDir) -> Harness {
+    let root_uri = file_uri(temp.path());
+    let schema_path = temp.path().join("schema.toml");
+    Harness::start_with_result(json!({
+        "capabilities": {},
         "rootUri": root_uri.as_str(),
         "initializationOptions": {
             "schema": schema_path.display().to_string()
