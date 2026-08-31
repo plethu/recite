@@ -42,6 +42,39 @@ pub enum BuildState {
     },
 }
 impl BuildState {
+    /// Borrow the request while the build is still active.
+    #[must_use]
+    pub const fn request(&self) -> Option<&BuildRequest> {
+        match self {
+            Self::Checking { request }
+            | Self::Building { request, .. }
+            | Self::Ready { request, .. }
+            | Self::Publishing { request, .. } => Some(request),
+            Self::Idle
+            | Self::Succeeded { .. }
+            | Self::Failed { .. }
+            | Self::Stale { .. }
+            | Self::Cancelled { .. }
+            | Self::Superseded { .. } => None,
+        }
+    }
+
+    /// Borrow candidates accumulated before publication or retained by a
+    /// terminal result. The lifecycle owns their deterministic ordering.
+    #[must_use]
+    pub fn candidates(&self) -> &[BuildCandidate] {
+        match self {
+            Self::Building { candidates, .. } | Self::Ready { candidates, .. } => candidates,
+            Self::Publishing { prepared, .. } => prepared.candidates(),
+            Self::Succeeded { result }
+            | Self::Failed { result }
+            | Self::Stale { result }
+            | Self::Cancelled { result }
+            | Self::Superseded { result } => result.candidates(),
+            Self::Idle | Self::Checking { .. } => &[],
+        }
+    }
+
     #[must_use]
     pub const fn generation(&self) -> Option<BuildGeneration> {
         match self {

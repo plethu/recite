@@ -13,6 +13,7 @@ mod publish;
 mod request;
 mod request_identity;
 mod result;
+mod status;
 
 pub use authority::{BuildAuthority, BuildAuthorityError, BuildAuthorityFence, BuildPublishPermit};
 pub use coordinator::{
@@ -42,3 +43,4 @@ pub use publish::{
 pub use request::{BuildCheck, BuildCheckError, BuildRequest, BuildRequestError};
 pub use request_identity::BuildRequestIdentity;
 pub use result::{BuildResult, BuildTelemetry, BuildTerminalStatus};
+pub use status::BuildStatusProjection;
