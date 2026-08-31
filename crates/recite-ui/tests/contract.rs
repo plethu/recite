@@ -14,7 +14,7 @@ fn launch_resource_matches_the_typed_inventory() {
     contract
         .validate(DEFAULT_RESOURCE)
         .expect("complete launch catalog");
-    assert_eq!(MsgId::ALL.len(), 336);
+    assert_eq!(MsgId::ALL.len(), 337);
 
     #[derive(Deserialize)]
     struct Inventory {

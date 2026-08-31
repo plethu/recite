@@ -51,7 +51,8 @@ macro_rules! cli_message_ids {
         | MsgId::WatchWaitingForChanges
         | MsgId::WatchRebuilding
         | MsgId::WatchBuildSucceeded
-        | MsgId::WatchBuildDuration
+        | MsgId::WatchBuildDurationMicroseconds
+        | MsgId::WatchBuildDurationMilliseconds
         | MsgId::WatchBuildFailedWaiting
         | MsgId::WatchBuildFailed
         | MsgId::WatchBuildFailedPartial

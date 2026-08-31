@@ -1,6 +1,5 @@
 use std::fs;
 use std::path::Path;
-use std::time::Duration;
 
 use recite_compiler::{
     BuildCheckError, BuildControl, BuildFailureReason, BuildGeneration, BuildResultFailure,
@@ -10,10 +9,11 @@ use recite_compiler::{
 use tempfile::TempDir;
 
 use super::super::events::WatchState;
-use super::{
-    BuildStatus, build_once_with_clock, build_once_with_control, build_once_with_post_publish_hook,
-};
+use super::{BuildStatus, build_once_with_control, build_once_with_post_publish_hook};
 use crate::i18n::{Messages, UiLocale};
+
+#[path = "tests/telemetry/tests.rs"]
+mod telemetry;
 
 fn write(root: &Path, name: &str, text: &str) {
     let path = root.join(name);
@@ -201,142 +201,6 @@ fn unchanged_request_is_fresh_after_post_publish_assessment() {
     assert!(stderr.is_empty());
 }
 
-#[test]
-fn coordinator_watch_path_attaches_exact_duration_to_success() {
-    let temp = TempDir::new().expect("tempdir");
-    write(temp.path(), "recite.project.toml", &project(true));
-    write(temp.path(), "dialogue/main.recite", &source("Timed."));
-    let mut state = WatchState::new(temp.path().to_owned());
-    let messages = Messages::load(&UiLocale::default()).expect("messages");
-    let mut stderr = Vec::new();
-    let started_at = Duration::ZERO;
-    let mut clock_calls = 0;
-    let mut clock = || {
-        clock_calls += 1;
-        if clock_calls == 1 {
-            started_at
-        } else {
-            started_at + Duration::from_millis(37)
-        }
-    };
-
-    let status = build_once_with_clock(
-        &mut state,
-        &mut stderr,
-        &messages,
-        &BuildControl::new(),
-        &mut clock,
-        || {},
-    )
-    .expect("build");
-
-    match status {
-        BuildStatus::Fresh {
-            asset_count,
-            telemetry,
-        } => {
-            assert_eq!(asset_count, 1);
-            assert_eq!(telemetry.duration(), Some(Duration::from_millis(37)));
-        }
-        other => panic!("unexpected status: {other:?}"),
-    }
-    assert_eq!(clock_calls, 2);
-
-    let mut report = Vec::new();
-    let mut report_clock_calls = 0;
-    let mut report_clock = || {
-        report_clock_calls += 1;
-        if report_clock_calls == 1 {
-            started_at
-        } else {
-            started_at + Duration::from_millis(37)
-        }
-    };
-    let status = build_once_with_clock(
-        &mut state,
-        &mut report,
-        &messages,
-        &BuildControl::new(),
-        &mut report_clock,
-        || {},
-    )
-    .expect("second build");
-    crate::watch::report_build_result(&mut report, Ok(status), &messages).expect("report build");
-    assert!(
-        String::from_utf8(report)
-            .expect("report utf8")
-            .contains("build completed in 37.000 ms")
-    );
-}
-
-#[test]
-fn coordinator_watch_path_attaches_exact_duration_to_cancellation() {
-    let temp = TempDir::new().expect("tempdir");
-    write(temp.path(), "recite.project.toml", &project(true));
-    write(temp.path(), "dialogue/main.recite", &source("Cancelled."));
-    let mut state = WatchState::new(temp.path().to_owned());
-    let messages = Messages::load(&UiLocale::default()).expect("messages");
-    let mut stderr = Vec::new();
-    let started_at = Duration::ZERO;
-    let mut clock_calls = 0;
-    let mut clock = || {
-        clock_calls += 1;
-        if clock_calls == 1 {
-            started_at
-        } else {
-            started_at + Duration::from_millis(11)
-        }
-    };
-    let control = BuildControl::new();
-    control.cancel();
-
-    let status = build_once_with_clock(
-        &mut state,
-        &mut stderr,
-        &messages,
-        &control,
-        &mut clock,
-        || {},
-    )
-    .expect("cancelled build");
-
-    match status {
-        BuildStatus::PublicationFailure {
-            status, telemetry, ..
-        } => {
-            assert_eq!(status, BuildTerminalStatus::Cancelled);
-            assert_eq!(telemetry.duration(), Some(Duration::from_millis(11)));
-        }
-        other => panic!("unexpected status: {other:?}"),
-    }
-    assert_eq!(clock_calls, 2);
-
-    let mut report = Vec::new();
-    let mut report_clock_calls = 0;
-    let mut report_clock = || {
-        report_clock_calls += 1;
-        if report_clock_calls == 1 {
-            started_at
-        } else {
-            started_at + Duration::from_millis(11)
-        }
-    };
-    let status = build_once_with_clock(
-        &mut state,
-        &mut report,
-        &messages,
-        &control,
-        &mut report_clock,
-        || {},
-    )
-    .expect("second cancelled build");
-    crate::watch::report_build_result(&mut report, Ok(status), &messages).expect("report build");
-    assert!(
-        String::from_utf8(report)
-            .expect("report utf8")
-            .contains("build completed in 11.000 ms")
-    );
-}
 #[test]
 fn empty_target_build_honours_cancellation_and_supersession() {
     for cancellation in [None, Some(BuildGeneration::new(1))] {

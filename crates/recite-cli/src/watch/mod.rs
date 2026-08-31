@@ -4,6 +4,7 @@ use std::time::Duration;
 
 use notify::{RecursiveMode, Watcher, recommended_watcher};
 use recite_config::discover_project;
+use recite_ui::UiArg;
 
 use crate::args::WatchArgs;
 use crate::error::CliError;
@@ -171,14 +172,7 @@ fn report_build_result(
                 }
             }
             if let Some(duration) = duration {
-                writeln!(
-                    stderr,
-                    "{}",
-                    messages.format(
-                        MsgId::WatchBuildDuration,
-                        [("duration", format_duration(duration))],
-                    )
-                )?;
+                report_build_duration(stderr, messages, duration)?;
             }
         }
         Err(CliError::WatchCoordinator { source, recovery }) => {
@@ -203,13 +197,28 @@ fn report_build_result(
     Ok(())
 }
 
-fn format_duration(duration: Duration) -> String {
-    let micros = duration.as_micros();
-    if micros < 1_000 {
-        format!("{micros} µs")
+fn report_build_duration(
+    stderr: &mut dyn Write,
+    messages: &Messages,
+    duration: Duration,
+) -> Result<(), CliError> {
+    let (message, value) = if duration < Duration::from_millis(1) {
+        (
+            MsgId::WatchBuildDurationMicroseconds,
+            UiArg::Integer(duration.as_micros() as i64),
+        )
     } else {
-        format!("{}.{:03} ms", micros / 1_000, micros % 1_000)
-    }
+        (
+            MsgId::WatchBuildDurationMilliseconds,
+            UiArg::Float(duration.as_secs_f64() * 1_000.0),
+        )
+    };
+    writeln!(
+        stderr,
+        "{}",
+        messages.format(message, [("duration", value)])
+    )?;
+    Ok(())
 }
 
 fn report_recovery_error(

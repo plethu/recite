@@ -8,7 +8,7 @@ message_ids! {
     CliHelpArgKeymap, CliHelpArgDialogueLocale, CliHelpArgDialogueCatalog, CliHelpArgBenchScale, CliHelpArgBenchGroup,
     CliHelpArgBenchFormat, CliHelpArgBenchOutput, CliHelpArgBenchBaseline, CliHelpArgBenchSamples, ExplainCode,
     ExplainCategory, ExplainMeaning, ExplainCommonCauses, ExplainHowToFix, ExplainListItem,
-    WatchBuilding, WatchWaitingForChanges, WatchRebuilding, WatchBuildSucceeded, WatchBuildDuration, WatchBuildFailedWaiting,
+    WatchBuilding, WatchWaitingForChanges, WatchRebuilding, WatchBuildSucceeded, WatchBuildDurationMicroseconds, WatchBuildDurationMilliseconds, WatchBuildFailedWaiting,
     WatchBuildFailed,
     WatchBuildFailedPartial, WatchBuildFailedIndeterminate, WatchBuildFailedRefused,
     WatchBuildFailedNotAttempted, WatchBuildFailedPublished, WatchBuildFailedUnsupported,
