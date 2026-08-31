@@ -24,13 +24,6 @@ impl SavedProjectIndex {
         if had_canonical_document {
             removed = self.remove_canonical_document(&lexical_path) || removed;
         }
-        if self
-            .discovery_failed_roots
-            .iter()
-            .any(|root| lexical_path.starts_with(root))
-        {
-            return removed;
-        }
         let Some(path) = canonical_or_existing_parent_path(&lexical_path) else {
             return removed;
         };
@@ -53,12 +46,7 @@ impl SavedProjectIndex {
     }
 
     fn refresh_path(&mut self, path: &Path, source_path: &Path) -> bool {
-        if self
-            .discovery_failed_roots
-            .iter()
-            .any(|root| source_path.starts_with(root) || path.starts_with(root))
-            || !self.paths_share_source_root(source_path, path)
-        {
+        if !self.paths_share_source_root(source_path, path) {
             return false;
         }
         let Some(project_relative_path) = self.project_key_for_path(path) else {

@@ -44,15 +44,11 @@ impl LspWorkspace {
 
     pub(crate) fn refresh_project_manifest(&mut self) -> Vec<DiagnosticRefresh> {
         let old_document_uris = self.saved.document_uris().cloned().collect::<Vec<_>>();
-        let old_uri = self
-            .saved
-            .manifest_path()
-            .and_then(crate::paths::file_path_to_uri);
-        let old_had_diagnostics = !self.saved.diagnostics().is_empty();
+        let old_manifest_diagnostics = self.saved.manifest_diagnostics().clone();
         let old_schema = self.schema.clone();
         let old_documents = self.documents.clone();
         let mut saved = self.saved.clone();
-        let manifest_schema_path = saved.refresh_manifest();
+        let manifest_schema_path = saved.refresh_manifests();
         let schema = self
             .schema_override_path
             .clone()
@@ -74,14 +70,30 @@ impl LspWorkspace {
             return Vec::new();
         }
         let mut refreshes = Vec::new();
-        if let Some(refresh) = self.project_diagnostics() {
-            refreshes.push(refresh);
-        } else if old_had_diagnostics && let Some(uri) = old_uri {
-            refreshes.push(DiagnosticRefresh::Clear {
-                uri,
-                version: None,
-                generation: self.generation,
-            });
+        for entry in self.saved.manifest_diagnostics().values() {
+            let changed = old_manifest_diagnostics
+                .get(&entry.path)
+                .is_none_or(|old| old.text != entry.text || old.diagnostics != entry.diagnostics);
+            if changed && let Some(uri) = crate::paths::file_path_to_uri(&entry.path) {
+                refreshes.push(DiagnosticRefresh::Publish(super::DocumentDiagnostics {
+                    uri,
+                    text: entry.text.clone(),
+                    version: None,
+                    diagnostics: entry.diagnostics.clone(),
+                    generation: self.generation,
+                }));
+            }
+        }
+        for old in old_manifest_diagnostics.values() {
+            if !self.saved.manifest_diagnostics().contains_key(&old.path)
+                && let Some(uri) = crate::paths::file_path_to_uri(&old.path)
+            {
+                refreshes.push(DiagnosticRefresh::Clear {
+                    uri,
+                    version: None,
+                    generation: self.generation,
+                });
+            }
         }
         if schema_target_changed {
             let open_schema_refreshes = old_documents

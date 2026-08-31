@@ -62,20 +62,19 @@ impl LspWorkspace {
             .collect()
     }
 
-    pub(crate) fn project_diagnostics(&self) -> Option<DiagnosticRefresh> {
-        let uri = self
-            .saved
-            .manifest_path()
-            .and_then(crate::paths::file_path_to_uri)?;
-        if self.saved.diagnostics().is_empty() {
-            return None;
-        }
-        Some(DiagnosticRefresh::Publish(super::DocumentDiagnostics {
-            uri,
-            text: self.saved.manifest_text().to_owned(),
-            version: None,
-            diagnostics: self.saved.diagnostics().to_vec(),
-            generation: self.generation,
-        }))
+    pub(crate) fn project_diagnostics_all(&self) -> Vec<DiagnosticRefresh> {
+        self.saved
+            .manifest_diagnostics()
+            .values()
+            .filter_map(|entry| {
+                Some(DiagnosticRefresh::Publish(super::DocumentDiagnostics {
+                    uri: crate::paths::file_path_to_uri(&entry.path)?,
+                    text: entry.text.clone(),
+                    version: None,
+                    diagnostics: entry.diagnostics.clone(),
+                    generation: self.generation,
+                }))
+            })
+            .collect()
     }
 }

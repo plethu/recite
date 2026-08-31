@@ -76,9 +76,25 @@ fn stdio_malformed_workspace_folder_does_not_block_later_folder() {
         .unwrap_or_else(|error| panic!("write malformed source: {error}"));
     std::fs::create_dir_all(&valid_root)
         .unwrap_or_else(|error| panic!("create valid root: {error}"));
-    let valid = valid_root.join("later.recite");
-    std::fs::write(&valid, ":: later\n")
+    std::fs::write(
+        valid_root.join("recite.project.toml"),
+        "format_version = 1\n[discovery]\nsource_roots = [\"src\"]\n",
+    )
+    .unwrap_or_else(|error| panic!("write valid manifest: {error}"));
+    std::fs::create_dir_all(valid_root.join("src"))
+        .unwrap_or_else(|error| panic!("create valid source root: {error}"));
+    let valid = valid_root.join("src/references.recite");
+    std::fs::write(
+        &valid,
+        ":: start default\n> intro@8a535b2e538dd4f39758\n  Hello.\n-> src/definitions.recite::target\n",
+    )
         .unwrap_or_else(|error| panic!("write valid source: {error}"));
+    let definition = valid_root.join("src/definitions.recite");
+    std::fs::write(
+        &definition,
+        ":: target\n> line@b7cf36a63a75edb16a8f\n  There.\n",
+    )
+    .unwrap_or_else(|error| panic!("write definition source: {error}"));
 
     let malformed_manifest_uri = file_uri(&malformed_root.join("recite.project.toml"));
     let mut harness = StdioHarness::start(json!({
@@ -95,6 +111,7 @@ fn stdio_malformed_workspace_folder_does_not_block_later_folder() {
     );
 
     let valid_uri = file_uri(&valid);
+    let definition_uri = file_uri(&definition);
     harness.notify(
         "textDocument/didOpen",
         json!({
@@ -102,13 +119,26 @@ fn stdio_malformed_workspace_folder_does_not_block_later_folder() {
                 "uri": valid_uri,
                 "languageId": "recite",
                 "version": 1,
-                "text": "oops\n"
+                "text": ":: start default\n> intro@8a535b2e538dd4f39758\n  Hello.\n-> src/definitions.recite::target\n"
             }
         }),
     );
     let messages = harness.barrier(&valid_uri);
     let diagnostics = published_diagnostics(&messages, &valid_uri, Some(1));
-    assert!(!diagnostics["diagnostics"].as_array().unwrap().is_empty());
+    assert!(diagnostics["diagnostics"].as_array().unwrap().is_empty());
+    let definition_id = harness.request(
+        "textDocument/definition",
+        json!({
+            "textDocument": { "uri": valid_uri },
+            "position": { "line": 3, "character": 29 }
+        }),
+    );
+    let definition_response = harness.receive_message();
+    assert_eq!(definition_response["id"], json!(definition_id));
+    assert_eq!(
+        definition_response["result"]["uri"], definition_uri,
+        "valid workspace must retain cross-file project identity"
+    );
     harness.finish();
 }
 

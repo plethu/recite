@@ -163,7 +163,9 @@ pub(super) fn malformed_manifest_does_not_fall_back_to_saved_walker() {
 
     assert!(workspace.snapshot().summaries().is_empty());
     let diagnostics = workspace
-        .project_diagnostics()
+        .project_diagnostics_all()
+        .into_iter()
+        .next()
         .expect("manifest diagnostics");
     let DiagnosticRefresh::Publish(diagnostics) = diagnostics else {
         panic!("expected manifest diagnostics")

@@ -1,4 +1,3 @@
-use std::collections::{BTreeMap, BTreeSet};
 use std::fs;
 use std::path::{Path, PathBuf};
 
@@ -12,14 +11,26 @@ use crate::paths::uri_to_file_path;
 #[derive(Clone, Debug)]
 pub(crate) struct WorkspaceConfig {
     pub(super) fallback_roots: Vec<PathBuf>,
-    pub(super) roots: Vec<PathBuf>,
     pub(super) schema_path: Option<PathBuf>,
     pub(super) schema_override_path: Option<PathBuf>,
-    pub(super) discovery: Option<ProjectDiscoveryReport>,
-    pub(super) discovery_diagnostics: Vec<recite_core::Diagnostic>,
-    pub(super) discovery_failed_roots: BTreeSet<PathBuf>,
-    pub(super) discovery_start: Option<PathBuf>,
-    pub(super) discovery_manifest_path: Option<PathBuf>,
+    pub(super) discoveries: Vec<WorkspaceDiscovery>,
+}
+
+#[derive(Clone, Debug)]
+pub(super) struct WorkspaceDiscovery {
+    pub(super) root: PathBuf,
+    pub(super) state: WorkspaceDiscoveryState,
+}
+
+#[derive(Clone, Debug)]
+pub(super) enum WorkspaceDiscoveryState {
+    Manifest(Box<ProjectDiscoveryReport>),
+    Manifestless,
+    Failed {
+        manifest_path: PathBuf,
+        text: String,
+        diagnostics: Vec<recite_core::Diagnostic>,
+    },
 }
 
 impl WorkspaceConfig {
@@ -29,74 +40,18 @@ impl WorkspaceConfig {
             .filter_map(|root| resolve_config_path(&root, None))
             .filter_map(|root| fs::canonicalize(root).ok())
             .collect::<Vec<_>>();
-        let mut reports = BTreeMap::new();
-        let mut discovery_diagnostics = Vec::new();
-        let mut discovery_failed_roots = BTreeSet::new();
-        let mut discovery_starts = BTreeMap::new();
-        let mut failed_manifest_paths = BTreeSet::new();
-        for root in &fallback_roots {
-            let start = discovery_start(root);
-            discovery_starts.insert(root.clone(), start.clone());
-            match discover_project(root) {
-                Ok(report) => {
-                    reports
-                        .entry(report.manifest().manifest_path().to_owned())
-                        .or_insert((start, report));
-                }
-                Err(recite_config::ProjectDiscoveryError::NotFound { .. }) => {}
-                Err(error) => {
-                    discovery_failed_roots.insert(root.clone());
-                    let diagnostics = error.diagnostics();
-                    discovery_diagnostics.extend(diagnostics.iter().cloned());
-                    if let Some(path) = error.manifest_path() {
-                        failed_manifest_paths.insert(path.to_owned());
-                    }
-                }
-            }
-        }
-        let (discovery_start, discovery) = reports.into_values().next().map_or_else(
-            || {
-                (
-                    fallback_roots
-                        .first()
-                        .and_then(|root| discovery_starts.get(root))
-                        .cloned(),
-                    None,
-                )
-            },
-            |(start, report)| (Some(start), Some(report)),
-        );
-        let discovery_manifest_path = failed_manifest_paths
+        let discoveries = discover_workspace_roots(&fallback_roots);
+        let reports = discoveries
             .iter()
-            .next()
-            .cloned()
-            .or_else(|| {
-                discovery
-                    .as_ref()
-                    .map(|report| report.manifest().manifest_path().to_owned())
-            })
-            .or_else(|| {
-                discovery_start
-                    .as_deref()
-                    .map(|start| start.join(recite_config::PROJECT_MANIFEST_FILE))
+            .filter_map(|discovery| match &discovery.state {
+                WorkspaceDiscoveryState::Manifest(report) => Some(report),
+                WorkspaceDiscoveryState::Manifestless | WorkspaceDiscoveryState::Failed { .. } => {
+                    None
+                }
             });
-        discovery_diagnostics.sort_by(|left, right| {
-            left.code
-                .as_str()
-                .cmp(right.code.as_str())
-                .then_with(|| left.message.cmp(&right.message))
-        });
-        let roots = discovery
-            .as_ref()
-            .map(|report| {
-                report
-                    .manifest()
-                    .roots()
-                    .iter()
-                    .map(|root| root.path().to_owned())
-                    .collect()
-            })
-            .unwrap_or_else(|| fallback_roots.clone());
+        let discovery = reports
+            .min_by_key(|report| report.manifest().manifest_path().to_owned())
+            .cloned();
         let schema_base = discovery
             .as_ref()
             .map(|report| report.manifest().project_root().to_owned())
@@ -104,20 +59,17 @@ impl WorkspaceConfig {
         let schema_override_path =
             initialization_schema_path(params.initialization_options.as_ref())
                 .and_then(|schema| resolve_config_path(&schema, schema_base.as_deref()));
-        let schema_path = schema_override_path
-            .clone()
-            .or_else(|| discovery.as_ref().and_then(schema_path_for_discovery));
+        let schema_path = schema_override_path.clone().or_else(|| {
+            discovery
+                .as_ref()
+                .and_then(|report| schema_path_for_discovery(report))
+        });
 
         Self {
             fallback_roots: fallback_roots.clone(),
-            roots,
             schema_path,
             schema_override_path,
-            discovery,
-            discovery_diagnostics,
-            discovery_failed_roots,
-            discovery_start,
-            discovery_manifest_path,
+            discoveries,
         }
     }
 
@@ -129,14 +81,17 @@ impl WorkspaceConfig {
             .collect::<Vec<_>>();
         Self {
             fallback_roots: roots.clone(),
-            discovery_start: roots.first().cloned(),
-            roots,
             schema_path: None,
             schema_override_path: None,
-            discovery: None,
-            discovery_diagnostics: Vec::new(),
-            discovery_failed_roots: BTreeSet::new(),
-            discovery_manifest_path: None,
+            discoveries: roots
+                .clone()
+                .iter()
+                .cloned()
+                .map(|root| WorkspaceDiscovery {
+                    root,
+                    state: WorkspaceDiscoveryState::Manifestless,
+                })
+                .collect(),
         }
     }
 
@@ -148,11 +103,44 @@ impl WorkspaceConfig {
     }
 }
 
-fn discovery_start(root: &Path) -> PathBuf {
-    if root.is_dir() {
-        root.to_owned()
-    } else {
-        root.parent().map_or_else(|| root.to_owned(), PathBuf::from)
+pub(super) fn discover_workspace_roots(roots: &[PathBuf]) -> Vec<WorkspaceDiscovery> {
+    roots
+        .iter()
+        .cloned()
+        .map(|root| WorkspaceDiscovery {
+            state: discover_workspace_root(&root, roots),
+            root,
+        })
+        .collect()
+}
+
+fn discover_workspace_root(root: &Path, roots: &[PathBuf]) -> WorkspaceDiscoveryState {
+    match discover_project(root) {
+        Ok(report) => WorkspaceDiscoveryState::Manifest(Box::new(report)),
+        Err(recite_config::ProjectDiscoveryError::NotFound { .. }) => {
+            WorkspaceDiscoveryState::Manifestless
+        }
+        Err(error) => {
+            let Some(manifest_path) = error.manifest_path().map(Path::to_owned) else {
+                return WorkspaceDiscoveryState::Manifestless;
+            };
+            // A malformed manifest found above this explicit root belongs to
+            // the deepest configured ancestor, not to this independent root.
+            if !manifest_path.starts_with(root)
+                && roots.iter().any(|candidate| {
+                    manifest_path.starts_with(candidate)
+                        && candidate.components().count() < root.components().count()
+                })
+            {
+                return WorkspaceDiscoveryState::Manifestless;
+            }
+            let text = fs::read_to_string(&manifest_path).unwrap_or_default();
+            WorkspaceDiscoveryState::Failed {
+                manifest_path,
+                text,
+                diagnostics: error.diagnostics(),
+            }
+        }
     }
 }
 

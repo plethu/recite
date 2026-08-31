@@ -10,7 +10,6 @@ use crate::workspace::{DiagnosticRefresh, WorkspaceConfig};
 use super::super::super::support::{block_names, file_uri, test_workspace, write_file};
 
 pub(crate) fn all() {
-    malformed_workspace_root_does_not_block_independent_root();
     manifestless_watcher_keeps_builtin_exclusions();
     manifestless_multi_root_documents_keep_project_relative_keys();
     multi_root_documents_keep_project_relative_keys();
@@ -21,64 +20,6 @@ pub(crate) fn all() {
     sibling_fallback_builtin_exclusions_stay_out_of_shared_state();
     #[cfg(windows)]
     synthetic_windows_paths_keep_drive_identity_in_fallback_keys();
-}
-
-pub(crate) fn malformed_workspace_root_does_not_block_independent_root() {
-    for malformed_first in [true, false] {
-        let temp = TempDir::new().unwrap_or_else(|error| panic!("tempdir: {error}"));
-        let malformed = temp.path().join("malformed");
-        let valid = temp.path().join("valid");
-        write_file(&malformed, "recite.project.toml", "format_version = [\n");
-        write_file(&malformed, "leaked.recite", ":: leaked\n");
-        write_file(&valid, "later.recite", ":: later\n");
-
-        let ordered_roots = if malformed_first {
-            [&malformed, &valid]
-        } else {
-            [&valid, &malformed]
-        };
-        let params = serde_json::from_value(json!({
-            "workspaceFolders": ordered_roots
-                .iter()
-                .map(|root| json!({ "uri": file_uri(root).as_str(), "name": "workspace" }))
-                .collect::<Vec<_>>(),
-            "capabilities": {},
-        }))
-        .unwrap_or_else(|error| panic!("initialize params: {error}"));
-        let mut workspace = test_workspace(WorkspaceConfig::from_initialize_params(&params));
-
-        assert_eq!(block_names(&workspace), ["later"]);
-        assert_eq!(
-            workspace.snapshot().summaries()[0].project_relative_path(),
-            Some("valid/later.recite")
-        );
-        let diagnostics = workspace
-            .project_diagnostics()
-            .expect("malformed workspace manifest diagnostics");
-        let DiagnosticRefresh::Publish(diagnostics) = diagnostics else {
-            panic!("expected malformed manifest diagnostics");
-        };
-        assert_eq!(
-            diagnostics.uri,
-            file_uri(&malformed.join("recite.project.toml"))
-        );
-        assert_eq!(
-            diagnostics.diagnostics[0].code.as_str(),
-            "RECITE_PROJECT001"
-        );
-
-        let refresh = workspace
-            .open(
-                file_uri(&valid.join("later.recite")),
-                1,
-                "oops\n".to_owned(),
-            )
-            .expect("independent valid workspace should remain authorable");
-        let DiagnosticRefresh::Publish(diagnostics) = refresh else {
-            panic!("valid workspace should publish authoring diagnostics");
-        };
-        assert!(!diagnostics.diagnostics.is_empty());
-    }
 }
 
 pub(crate) fn manifestless_watcher_keeps_builtin_exclusions() {

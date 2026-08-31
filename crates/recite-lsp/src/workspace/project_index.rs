@@ -5,10 +5,13 @@ use std::path::{Path, PathBuf};
 use lsp_types::Uri;
 
 use super::WorkspaceConfig;
+use super::config::{WorkspaceDiscovery, WorkspaceDiscoveryState};
 use crate::paths::{file_path_to_uri, uri_to_file_path};
 use crate::summary::SavedFileIdentity;
 use recite_config::DiscoveredDocument;
 
+#[path = "project_diagnostics.rs"]
+mod project_diagnostics;
 #[path = "project_identity.rs"]
 mod project_identity;
 #[path = "project_manifest.rs"]
@@ -16,74 +19,74 @@ mod project_manifest;
 #[path = "project_ownership.rs"]
 mod project_ownership;
 
+use project_diagnostics::ManifestDiagnostics;
 pub(super) use project_identity::PathScope;
 
 #[derive(Clone)]
 pub(super) struct SavedProjectIndex {
-    project_root: PathBuf,
     workspace_root: PathBuf,
     fallback_roots: Vec<PathBuf>,
     roots: Vec<PathBuf>,
     pub(super) documents: BTreeMap<PathBuf, SavedDocument>,
+    discoveries: Vec<WorkspaceDiscovery>,
     manifest: Option<recite_config::ProjectManifest>,
-    diagnostics: Vec<recite_core::Diagnostic>,
+    manifest_diagnostics: BTreeMap<PathBuf, ManifestDiagnostics>,
     manifest_path: Option<PathBuf>,
     manifest_text: String,
-    discovery_start: Option<PathBuf>,
-    discovery_failed_roots: BTreeSet<PathBuf>,
 }
 
 impl SavedProjectIndex {
     pub(super) fn discover(config: &WorkspaceConfig) -> Self {
+        Self::from_discoveries(config.fallback_roots.clone(), config.discoveries.clone())
+    }
+
+    pub(super) fn from_discoveries(
+        fallback_roots: Vec<PathBuf>,
+        discoveries: Vec<WorkspaceDiscovery>,
+    ) -> Self {
+        let report = discoveries
+            .iter()
+            .filter_map(|discovery| match &discovery.state {
+                WorkspaceDiscoveryState::Manifest(report) => Some(report),
+                WorkspaceDiscoveryState::Manifestless | WorkspaceDiscoveryState::Failed { .. } => {
+                    None
+                }
+            })
+            .min_by_key(|report| report.manifest().manifest_path().to_owned())
+            .cloned();
         let mut index = Self {
-            project_root: config
-                .discovery
-                .as_ref()
-                .map(|report| report.manifest().project_root().to_owned())
-                .unwrap_or_else(|| common_project_root(&config.fallback_roots)),
-            workspace_root: common_project_root(&config.fallback_roots),
-            fallback_roots: config.fallback_roots.clone(),
-            roots: merged_roots(config),
+            workspace_root: common_project_root(&fallback_roots),
+            roots: roots_for_discoveries(&fallback_roots, &discoveries),
+            fallback_roots,
             documents: BTreeMap::new(),
-            manifest: config
-                .discovery
-                .as_ref()
-                .map(|report| report.manifest().clone()),
-            diagnostics: config.discovery_diagnostics.clone(),
-            manifest_path: config.discovery_manifest_path.clone().or_else(|| {
-                config
-                    .discovery
-                    .as_ref()
-                    .map(|report| report.manifest().manifest_path().to_owned())
-            }),
-            manifest_text: config
-                .discovery_manifest_path
-                .as_deref()
-                .and_then(|path| fs::read_to_string(path).ok())
-                .or_else(|| {
-                    config
-                        .discovery
-                        .as_ref()
-                        .map(|report| report.manifest().source().source_text())
-                })
-                .unwrap_or_default(),
-            discovery_start: config.discovery_start.clone(),
-            discovery_failed_roots: config.discovery_failed_roots.clone(),
+            discoveries,
+            manifest: report.as_ref().map(|report| report.manifest().clone()),
+            manifest_diagnostics: BTreeMap::new(),
+            manifest_path: None,
+            manifest_text: String::new(),
         };
-        if let Some(report) = config.discovery.as_ref() {
-            index.diagnostics.extend(
-                report
-                    .diagnostics()
-                    .iter()
-                    .map(recite_config::DiscoveryDiagnostic::as_core_diagnostic),
-            );
-            for document in report.documents() {
-                index.insert_discovered(document);
+        for discovery in index.discoveries.clone() {
+            match discovery.state {
+                WorkspaceDiscoveryState::Manifest(report) => {
+                    index.add_manifest_diagnostics(&report);
+                    for document in report.documents() {
+                        index.insert_discovered(document);
+                    }
+                    if report.manifest().project_root() != discovery.root {
+                        index.insert_fallback_documents(std::slice::from_ref(&discovery.root));
+                    }
+                }
+                WorkspaceDiscoveryState::Manifestless => {
+                    index.insert_fallback_documents(std::slice::from_ref(&discovery.root));
+                }
+                WorkspaceDiscoveryState::Failed {
+                    manifest_path,
+                    text,
+                    diagnostics,
+                } => index.add_manifest_diagnostics_value(manifest_path, text, diagnostics),
             }
-            index.insert_fallback_documents(&config.fallback_roots);
-        } else {
-            index.insert_fallback_documents(&config.fallback_roots);
         }
+        index.set_primary_manifest();
         index
     }
 
@@ -93,16 +96,8 @@ impl SavedProjectIndex {
         self.documents.get(&path)
     }
 
-    pub(super) fn diagnostics(&self) -> &[recite_core::Diagnostic] {
-        &self.diagnostics
-    }
-
-    pub(super) fn manifest_path(&self) -> Option<&Path> {
-        self.manifest_path.as_deref()
-    }
-
-    pub(super) fn manifest_text(&self) -> &str {
-        &self.manifest_text
+    pub(super) fn discoveries(&self) -> &[WorkspaceDiscovery] {
+        &self.discoveries
     }
 
     pub(super) fn document_uris(&self) -> impl Iterator<Item = &Uri> {
@@ -141,7 +136,10 @@ impl SavedProjectIndex {
 
     fn insert_fallback_documents(&mut self, roots: &[PathBuf]) {
         for root in roots {
-            if self.discovery_failed_roots.contains(root) {
+            if self.discoveries.iter().any(|discovery| {
+                discovery.root == *root
+                    && matches!(discovery.state, WorkspaceDiscoveryState::Failed { .. })
+            }) {
                 continue;
             }
             if self
@@ -151,12 +149,7 @@ impl SavedProjectIndex {
             {
                 continue;
             }
-            let (documents, diagnostics) = recite_config::discover_unscoped_sources(root);
-            self.diagnostics.extend(
-                diagnostics
-                    .iter()
-                    .map(recite_config::DiscoveryDiagnostic::as_core_diagnostic),
-            );
+            let (documents, _diagnostics) = recite_config::discover_unscoped_sources(root);
             for document in documents {
                 self.insert_discovered(&document);
             }
@@ -186,18 +179,24 @@ fn common_project_root(roots: &[PathBuf]) -> PathBuf {
     common
 }
 
-pub(super) fn merged_roots(config: &WorkspaceConfig) -> Vec<PathBuf> {
-    let mut roots = config.roots.clone();
-    append_unique_paths(&mut roots, &config.fallback_roots);
-    roots
-}
-
-pub(super) fn append_unique_paths(roots: &mut Vec<PathBuf>, additional: &[PathBuf]) {
-    for root in additional {
-        if !roots.iter().any(|existing| existing == root) {
-            roots.push(root.clone());
+pub(super) fn roots_for_discoveries(
+    fallback_roots: &[PathBuf],
+    discoveries: &[WorkspaceDiscovery],
+) -> Vec<PathBuf> {
+    let mut roots = Vec::new();
+    for discovery in discoveries {
+        if let WorkspaceDiscoveryState::Manifest(report) = &discovery.state {
+            for root in report.manifest().roots() {
+                if !roots.iter().any(|existing| existing == root.path()) {
+                    roots.push(root.path().to_owned());
+                }
+            }
         }
     }
+    roots
+        .into_iter()
+        .chain(fallback_roots.iter().cloned())
+        .collect()
 }
 
 fn canonical_or_existing_parent_path(path: &Path) -> Option<PathBuf> {

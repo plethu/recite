@@ -35,7 +35,7 @@ pub(crate) fn manifest_refresh_is_atomic_and_preserves_open_overlay() {
     write_file(temp.path(), "recite.project.toml", "format_version = 1\n");
     workspace.save(manifest_uri);
     assert_eq!(block_names(&workspace), ["overlay"]);
-    assert!(workspace.project_diagnostics().is_none());
+    assert!(workspace.project_diagnostics_all().is_empty());
     workspace.close(uri);
     assert_eq!(block_names(&workspace), ["saved"]);
 }
