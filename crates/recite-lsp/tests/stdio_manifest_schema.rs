@@ -32,7 +32,10 @@ fn manifest_schema_change_reloads_and_preserves_open_overlay() {
     let schema_a_alias_uri = format!("{schema_a_alias_uri}/./schema-a.json");
     assert_ne!(schema_a_uri, schema_a_alias_uri);
     let manifest_uri = file_uri(&manifest);
-    let mut harness = StdioHarness::start_with_schema_option(temp.path(), None);
+    let mut harness = StdioHarness::start(json!({
+        "capabilities": {},
+        "rootUri": file_uri(temp.path())
+    }));
 
     harness.notify(
         "textDocument/didOpen",
@@ -45,10 +48,7 @@ fn manifest_schema_change_reloads_and_preserves_open_overlay() {
             }
         }),
     );
-    let open_messages = harness.barrier(&schema_a_uri);
-    let open_diagnostics = diagnostics_for(&open_messages, &schema_a_alias_uri);
-    assert_eq!(open_diagnostics.len(), 1);
-    let overlay = open_diagnostics[0];
+    let overlay = harness.expect_diagnostics(&schema_a_alias_uri);
     assert_eq!(overlay["version"], 7);
     assert!(
         !overlay["diagnostics"]

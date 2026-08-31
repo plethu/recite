@@ -63,16 +63,6 @@ impl StdioHarness {
         harness
     }
 
-    pub(crate) fn start_with_schema_option(root: &Path, schema: Option<&str>) -> Self {
-        let initialization_options =
-            schema.map_or_else(|| json!({}), |schema| json!({ "schema": schema }));
-        Self::start(json!({
-            "capabilities": {},
-            "rootUri": file_uri(root),
-            "initializationOptions": initialization_options
-        }))
-    }
-
     pub(crate) fn request(&mut self, method: &str, params: Value) -> u64 {
         let id = self.next_id;
         self.next_id += 1;
@@ -106,6 +96,18 @@ impl StdioHarness {
                     "unexpected response: {message}"
                 );
                 return;
+            }
+        }
+    }
+
+    pub(crate) fn expect_diagnostics(&self, uri: &str) -> Value {
+        loop {
+            let message = self.receive();
+            if message.get("method") != Some(&json!("textDocument/publishDiagnostics")) {
+                continue;
+            }
+            if message["params"]["uri"] == uri {
+                return message["params"].clone();
             }
         }
     }

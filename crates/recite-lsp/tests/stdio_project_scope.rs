@@ -48,7 +48,12 @@ fn stdio_nested_fallback_folder_survives_manifest_refresh() {
         "textDocument/didSave",
         json!({ "textDocument": { "uri": draft_uri.clone() } }),
     );
-    assert!(!diagnostics(&harness.expect_diagnostics(&draft_uri)).is_empty());
+    let messages = harness.barrier(&draft_uri);
+    let published = messages
+        .iter()
+        .find(|message| message["params"]["uri"] == draft_uri)
+        .unwrap_or_else(|| panic!("draft diagnostics notification is missing: {messages:?}"));
+    assert!(!diagnostics(&published["params"]).is_empty());
     harness.finish();
 }
 

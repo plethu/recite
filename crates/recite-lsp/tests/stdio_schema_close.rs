@@ -26,7 +26,11 @@ fn stdio_schema_alias_close_clears_alias_and_refreshes_canonical() {
     assert_ne!(alias_uri, canonical_uri);
     assert!(alias_uri.contains("/./"));
     let schema_path = schema.display().to_string();
-    let mut harness = StdioHarness::start_with_schema_option(temp.path(), Some(&schema_path));
+    let mut harness = StdioHarness::start(json!({
+        "capabilities": {},
+        "rootUri": file_uri(temp.path()),
+        "initializationOptions": { "schema": schema_path }
+    }));
 
     harness.notify(
         "textDocument/didOpen",
@@ -39,10 +43,7 @@ fn stdio_schema_alias_close_clears_alias_and_refreshes_canonical() {
             }
         }),
     );
-    let open_messages = harness.barrier(&alias_uri);
-    let invalid = diagnostics_for(&open_messages, &alias_uri);
-    assert_eq!(invalid.len(), 1);
-    let invalid = invalid[0];
+    let invalid = harness.expect_diagnostics(&alias_uri);
     assert_eq!(invalid["version"], 7);
     assert!(
         !invalid["diagnostics"]

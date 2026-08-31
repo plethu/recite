@@ -141,13 +141,17 @@ impl LspWorkspace {
     }
 
     pub(crate) fn publish_open_document(&self, document: &OpenDocument) -> DiagnosticRefresh {
-        let diagnostics = document_key_for_open(document)
-            .filter(|key| self.is_effective_open(document, key))
-            .and_then(|key| self.kernel.snapshot().document(&key))
-            .map_or_else(
-                || self.standalone_open_diagnostics(document),
-                |document| document.diagnostics().to_vec(),
-            );
+        let diagnostics = if self.is_schema_document_uri(&document.identity().uri) {
+            Vec::new()
+        } else {
+            document_key_for_open(document)
+                .filter(|key| self.is_effective_open(document, key))
+                .and_then(|key| self.kernel.snapshot().document(&key))
+                .map_or_else(
+                    || self.standalone_open_diagnostics(document),
+                    |document| document.diagnostics().to_vec(),
+                )
+        };
         DiagnosticRefresh::publish_open(document, diagnostics, self.generation)
     }
 
