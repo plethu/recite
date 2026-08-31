@@ -171,6 +171,10 @@ fn duration_report_uses_typed_unit_messages_and_alternate_catalogue_text() {
             Duration::from_micros(1_000_001),
             "alt-milli: 1000.001 milliseconds.",
         ),
+        (
+            Duration::from_micros(1_118),
+            "alt-milli: 1.118 milliseconds.",
+        ),
     ] {
         let status = BuildStatus::Fresh {
             asset_count: 1,

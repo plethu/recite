@@ -209,11 +209,9 @@ fn report_build_duration(
         )
     } else {
         let micros = duration.as_micros();
-        let whole_milliseconds = micros / 1_000;
-        let fractional_micros = micros % 1_000;
         (
             MsgId::WatchBuildDurationMilliseconds,
-            UiArg::Float(whole_milliseconds as f64 + fractional_micros as f64 / 1_000.0),
+            UiArg::Float(micros as f64 / 1_000.0),
         )
     };
     writeln!(
