@@ -67,6 +67,7 @@ jobs:
     runs-on: ubuntu-24.04
     timeout-minutes: 30
     env:
+      MISE_ENV: maintainability
       RECITE_BASE_REF: >-
         ${{ github.event_name == 'pull_request' &&
             format('origin/{0}', github.base_ref) || github.event.before }}
