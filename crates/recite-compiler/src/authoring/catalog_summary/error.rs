@@ -23,6 +23,27 @@ pub enum CatalogSummaryError {
     DuplicateCatalog { identity: CatalogIdentity },
     #[error("catalogue locale `{locale}` is supplied more than once")]
     DuplicateCatalogLocale { locale: LocaleId },
+    #[error(
+        "catalogues `{first:?}` and `{second:?}` provide conflicting translations for context `{context}` and source `{source_text}`"
+    )]
+    CatalogEntryConflict {
+        first: Box<CatalogIdentity>,
+        second: Box<CatalogIdentity>,
+        context: String,
+        source_text: String,
+    },
+    #[error(
+        "catalogues `{first:?}` and `{second:?}` declare conflicting Plural-Forms for locale `{locale}`"
+    )]
+    CatalogPluralFormsConflict {
+        first: Box<CatalogIdentity>,
+        second: Box<CatalogIdentity>,
+        locale: LocaleId,
+        first_forms: Box<str>,
+        second_forms: Box<str>,
+    },
+    /// Retained for compatibility with callers that matched the earlier
+    /// header-required policy; current summaries accept headerless sources.
     #[error("catalogue `{identity:?}` does not declare a Language header")]
     MissingCatalogLanguage { identity: CatalogIdentity },
     #[error(

@@ -113,6 +113,32 @@ fn locale_identity_is_canonical_and_po_language_must_match() {
 }
 
 #[test]
+fn same_locale_catalogues_reject_conflicting_plural_forms() {
+    let first = input(
+        "first",
+        "fr",
+        "msgid \"\"\nmsgstr \"\"\n\"Plural-Forms: nplurals=2; plural=(n != 1);\\n\"\n",
+    );
+    let second = input(
+        "second",
+        "fr",
+        "msgid \"\"\nmsgstr \"\"\n\"Plural-Forms: nplurals=3; plural=(n == 0 ? 0 : 1);\\n\"\n",
+    );
+    let result = CatalogCoverageSummary::build(
+        &expected(),
+        [first, second],
+        recite_compiler::CatalogResolutionPolicy::new(Some(locale("fr"))),
+    );
+    assert!(matches!(
+        result,
+        Err(recite_compiler::CatalogSummaryError::CatalogPluralFormsConflict {
+            locale,
+            ..
+        }) if locale.as_str() == "fr"
+    ));
+}
+
+#[test]
 fn stale_fuzzy_and_obsolete_plural_records_remain_in_lossless_inventory() {
     let source = concat!(
         "msgid \"\"\nmsgstr \"\"\n",

@@ -1,6 +1,6 @@
-use std::collections::BTreeSet;
+use std::collections::{BTreeMap, BTreeSet};
 
-use recite_core::PoDocumentFingerprint;
+use recite_core::{LocaleId, PoDocumentFingerprint, PoEntry};
 
 use super::CatalogSummaryError;
 use super::coverage::{CatalogEntryKey, CatalogEntryStatus};
@@ -8,14 +8,14 @@ use super::locale::declared_language;
 use super::record_status::CatalogRecordStatus;
 use super::resolution::{CatalogEntryResolution, CatalogResolution, CatalogResolutionPolicy};
 use super::summary::CatalogCoverageSummary;
-use super::types::{CatalogInput, CatalogSummary};
+use super::types::{CatalogIdentity, CatalogInput, CatalogSummary};
 use crate::PotDocument;
 
 impl CatalogCoverageSummary {
     /// Build a deterministic summary from an expected POT and lossless PO
     /// documents. Catalogues are sorted by explicit identity; duplicate
-    /// identities or locales are rejected because they would make a match
-    /// ambiguous.
+    /// identities and conflicting records are rejected, while multiple
+    /// source documents may contribute records to the same explicit locale.
     pub fn build(
         expected: &PotDocument,
         catalogs: impl IntoIterator<Item = CatalogInput>,
@@ -38,21 +38,7 @@ impl CatalogCoverageSummary {
 
         let mut catalogs = catalogs.into_iter().collect::<Vec<_>>();
         catalogs.sort_by(|left, right| left.identity.cmp(&right.identity));
-        let mut identities = BTreeSet::new();
-        let mut locales = BTreeSet::new();
-        for catalog in &catalogs {
-            declared_language(&catalog.document, &catalog.identity)?;
-            if !identities.insert(catalog.identity.clone()) {
-                return Err(CatalogSummaryError::DuplicateCatalog {
-                    identity: catalog.identity.clone(),
-                });
-            }
-            if !locales.insert(catalog.identity.locale().clone()) {
-                return Err(CatalogSummaryError::DuplicateCatalogLocale {
-                    locale: catalog.identity.locale().clone(),
-                });
-            }
-        }
+        validate_catalogs(&catalogs)?;
 
         let resolution = CatalogResolution::new(&policy)?;
         let summaries = catalogs
@@ -121,4 +107,100 @@ impl CatalogSummary {
 
 fn expected_fingerprint(expected: &PotDocument) -> PoDocumentFingerprint {
     PoDocumentFingerprint::from_source(&expected.to_pot_string())
+}
+
+fn validate_catalogs(catalogs: &[CatalogInput]) -> Result<(), CatalogSummaryError> {
+    let mut identities = BTreeSet::new();
+    let mut plural_forms: BTreeMap<LocaleId, (CatalogIdentity, String)> = BTreeMap::new();
+    let mut records = BTreeMap::new();
+    for catalog in catalogs {
+        declared_language(&catalog.document, &catalog.identity)?;
+        if !identities.insert(catalog.identity.clone()) {
+            return Err(CatalogSummaryError::DuplicateCatalog {
+                identity: catalog.identity.clone(),
+            });
+        }
+        if let Some(header) = catalog
+            .document
+            .headers()
+            .iter()
+            .find(|header| header.key().eq_ignore_ascii_case("Plural-Forms"))
+        {
+            let locale = catalog.identity.locale().clone();
+            let provided = header.value().to_owned();
+            if let Some((first_identity, first)) = plural_forms.get(&locale)
+                && first != &provided
+            {
+                return Err(CatalogSummaryError::CatalogPluralFormsConflict {
+                    first: Box::new(first_identity.clone()),
+                    second: Box::new(catalog.identity.clone()),
+                    locale,
+                    first_forms: first.clone().into_boxed_str(),
+                    second_forms: provided.into_boxed_str(),
+                });
+            }
+            plural_forms
+                .entry(locale)
+                .or_insert_with(|| (catalog.identity.clone(), provided));
+        }
+        for entry in catalog.document.entries().iter().filter(|entry| {
+            !entry.is_header()
+                && !entry.is_obsolete()
+                && !entry.flags().iter().any(|flag| flag == "fuzzy")
+        }) {
+            validate_record(&mut records, catalog, entry)?;
+        }
+    }
+    Ok(())
+}
+
+fn validate_record(
+    records: &mut BTreeMap<(LocaleId, CatalogRecordKey), (CatalogIdentity, Vec<String>)>,
+    catalog: &CatalogInput,
+    entry: &PoEntry,
+) -> Result<(), CatalogSummaryError> {
+    let Some(context) = entry.context() else {
+        return Ok(());
+    };
+    let key = (
+        catalog.identity.locale().clone(),
+        CatalogRecordKey {
+            context: context.to_owned(),
+            source_text: entry.source_text().to_owned(),
+            plural_source_text: entry.plural_source_text().map(str::to_owned),
+        },
+    );
+    let translations = entry_translations(entry);
+    if let Some((first_identity, first_translations)) = records.get(&key) {
+        if first_translations != &translations {
+            return Err(CatalogSummaryError::CatalogEntryConflict {
+                first: Box::new(first_identity.clone()),
+                second: Box::new(catalog.identity.clone()),
+                context: key.1.context.clone(),
+                source_text: key.1.source_text.clone(),
+            });
+        }
+    } else {
+        records.insert(key, (catalog.identity.clone(), translations));
+    }
+    Ok(())
+}
+
+fn entry_translations(entry: &PoEntry) -> Vec<String> {
+    if entry.is_plural() {
+        entry
+            .plural_translations()
+            .iter()
+            .map(|translation| translation.text().to_owned())
+            .collect()
+    } else {
+        vec![entry.translation().unwrap_or_default().to_owned()]
+    }
+}
+
+#[derive(Clone, Debug, Eq, Ord, PartialEq, PartialOrd)]
+struct CatalogRecordKey {
+    context: String,
+    source_text: String,
+    plural_source_text: Option<String>,
 }

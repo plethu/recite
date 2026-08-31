@@ -224,31 +224,75 @@ fn source_only_policy_has_no_candidates_and_uses_source_fallback() {
 }
 
 #[test]
-fn duplicate_catalogues_and_candidates_are_rejected() {
-    let duplicate_catalogues = CatalogCoverageSummary::build(
+fn split_headerless_catalogues_share_an_explicit_locale() {
+    let first = input(
+        "a-fr",
+        "fr",
+        "msgctxt \"11111111111111111111\"\nmsgid \"Hello\"\nmsgstr \"Bonjour\"\n",
+    );
+    let second = input(
+        "z-fr",
+        "fr",
+        "msgid \"\"\nmsgstr \"\"\n\"Language: fr\\n\"\n\nmsgctxt \"99999999999999999999\"\nmsgid \"Stale\"\nmsgstr \"Ancien\"\n",
+    );
+    let summary = CatalogCoverageSummary::build(
+        &expected(),
+        [first.clone(), second.clone()],
+        recite_compiler::CatalogResolutionPolicy::new(Some(locale("fr"))),
+    )
+    .expect("split headerless catalogues are valid");
+    assert_eq!(summary.catalogs().len(), 2);
+    assert_eq!(summary.catalogs()[0].id(), "a-fr");
+    assert_eq!(summary.catalogs()[1].id(), "z-fr");
+    assert_eq!(
+        summary.catalogs()[0].locale(),
+        summary.catalogs()[1].locale()
+    );
+    assert_eq!(summary.catalogs()[0].plural_forms(), None);
+    assert_eq!(
+        summary.entries()[0]
+            .matched()
+            .expect("split match")
+            .catalog()
+            .id(),
+        "a-fr"
+    );
+    assert!(summary.entries()[1].source_fallback());
+
+    let reordered = CatalogCoverageSummary::build(
+        &expected(),
+        [second, first],
+        recite_compiler::CatalogResolutionPolicy::new(Some(locale("fr"))),
+    )
+    .expect("reordered split catalogues are valid");
+    assert_eq!(summary, reordered);
+}
+
+#[test]
+fn conflicting_catalogue_records_and_candidates_are_rejected() {
+    let conflicting_catalogues = CatalogCoverageSummary::build(
         &expected(),
         [
             input(
                 "a-fr",
                 "fr",
-                "msgid \"\"\nmsgstr \"\"\n\"Language: fr\\n\"\n\nmsgctxt \"11111111111111111111\"\nmsgid \"Hello\"\nmsgstr \"A\"\n",
-            ),
-            input(
-                "m-de",
-                "de",
-                "msgid \"\"\nmsgstr \"\"\n\"Language: de\\n\"\n\nmsgctxt \"11111111111111111111\"\nmsgid \"Hello\"\nmsgstr \"B\"\n",
+                "msgctxt \"11111111111111111111\"\nmsgid \"Hello\"\nmsgstr \"A\"\n",
             ),
             input(
                 "z-fr",
                 "fr",
-                "msgid \"\"\nmsgstr \"\"\n\"Language: fr\\n\"\n\nmsgctxt \"11111111111111111111\"\nmsgid \"Hello\"\nmsgstr \"B\"\n",
+                "msgctxt \"11111111111111111111\"\nmsgid \"Hello\"\nmsgstr \"B\"\n",
             ),
         ],
         recite_compiler::CatalogResolutionPolicy::new(Some(locale("fr"))),
     );
     assert!(matches!(
-        duplicate_catalogues,
-        Err(recite_compiler::CatalogSummaryError::DuplicateCatalogLocale { .. })
+        conflicting_catalogues,
+        Err(recite_compiler::CatalogSummaryError::CatalogEntryConflict {
+            context,
+            source_text,
+            ..
+        }) if context == "11111111111111111111" && source_text == "Hello"
     ));
 
     let duplicate_variants = recite_compiler::CatalogResolutionPolicy::new(Some(locale("fr")));

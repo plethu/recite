@@ -44,6 +44,11 @@ impl CatalogIdentity {
 }
 
 /// A lossless PO document paired with its explicit authoring identity.
+///
+/// One explicit locale may be represented by multiple inputs, for example when
+/// a project loads several PO paths for the same locale. A `Language` header is
+/// optional for each source; when present, the summary validates it against
+/// this identity.
 #[derive(Clone, Debug, Eq, PartialEq)]
 #[non_exhaustive]
 pub struct CatalogInput {

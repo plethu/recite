@@ -22,15 +22,13 @@ pub(super) fn canonicalize_value(value: &str) -> Result<LocaleId, CatalogSummary
 pub(super) fn declared_language(
     document: &PoDocument,
     identity: &CatalogIdentity,
-) -> Result<LocaleId, CatalogSummaryError> {
+) -> Result<Option<LocaleId>, CatalogSummaryError> {
     let Some(header) = document
         .headers()
         .iter()
         .find(|header| header.key().eq_ignore_ascii_case("Language"))
     else {
-        return Err(CatalogSummaryError::MissingCatalogLanguage {
-            identity: identity.clone(),
-        });
+        return Ok(None);
     };
     let language = canonicalize_value(header.value())?;
     if language != *identity.locale() {
@@ -39,7 +37,7 @@ pub(super) fn declared_language(
             language,
         });
     }
-    Ok(language)
+    Ok(Some(language))
 }
 
 pub(super) fn fallback_chain(locale: &LocaleId) -> Result<Vec<LocaleId>, CatalogSummaryError> {
