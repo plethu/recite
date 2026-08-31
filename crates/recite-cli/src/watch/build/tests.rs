@@ -1,7 +1,11 @@
 use std::fs;
 use std::path::Path;
 
-use recite_compiler::{BuildControl, BuildGeneration, PublishNotAttemptedReason};
+use recite_compiler::{
+    BuildCheckError, BuildControl, BuildFailureReason, BuildGeneration, BuildResultFailure,
+    BuildTarget, BuildTerminalStatus, PublishNotAttemptedReason, PublishOutcome, PublishRefusal,
+    RecoveryNeeded,
+};
 use tempfile::TempDir;
 
 use super::super::events::WatchState;
@@ -47,6 +51,40 @@ fn run_hook<F: FnOnce()>(state: &mut WatchState, hook: F) -> (BuildStatus, Strin
     let status = build_once_with_post_publish_hook(state, &mut stderr, &messages, &control, hook)
         .expect("build");
     (status, String::from_utf8(stderr).expect("stderr"))
+}
+
+fn alternate_messages(replacements: &[(&str, &str)]) -> Messages {
+    let mut resource = recite_ui::DEFAULT_RESOURCE.to_owned();
+    for (id, replacement) in replacements {
+        let mut found = false;
+        let lines = resource
+            .lines()
+            .map(|line| {
+                if line.starts_with(&format!("{id} = ")) {
+                    found = true;
+                    format!("{id} = {replacement}")
+                } else {
+                    line.to_owned()
+                }
+            })
+            .collect::<Vec<_>>();
+        assert!(found, "missing resource {id}");
+        resource = format!("{}\n", lines.join("\n"));
+    }
+    recite_ui::UiContract::default()
+        .validate(&resource)
+        .expect("alternate resource contract");
+    Messages::from_resources(
+        "en-GB".parse().expect("locale"),
+        [
+            (
+                "en-US".parse().expect("locale"),
+                recite_ui::DEFAULT_RESOURCE.to_owned(),
+            ),
+            ("en-GB".parse().expect("locale"), resource),
+        ],
+    )
+    .expect("alternate messages")
 }
 
 #[test]
@@ -193,4 +231,103 @@ fn empty_target_build_honours_cancellation_and_supersession() {
             other => panic!("unexpected empty-target result: {other:?}"),
         }
     }
+}
+
+#[test]
+fn publication_failure_uses_alternate_ids_and_typed_arguments() {
+    let messages = alternate_messages(&[
+        (
+            "watch-build-failed-partial-with-failure",
+            "alt-partial status={$status} failed={$failed} recovery={$recovery} failure={$failure}",
+        ),
+        ("watch-build-status-failed", "alt-status-failed"),
+        ("watch-build-failure-engine-host", "alt-engine-host"),
+        (
+            "watch-build-failed-indeterminate",
+            "alt-indeterminate status={$status} recovery={$recovery}",
+        ),
+        ("watch-build-status-cancelled", "alt-status-cancelled"),
+    ]);
+    let target = BuildTarget::new("compiled/main.recitec".to_owned()).expect("target");
+    let recovery = RecoveryNeeded::for_targets(vec![target.clone()]);
+
+    assert_eq!(
+        super::format_failure(
+            &messages,
+            BuildTerminalStatus::Failed,
+            Some(&BuildResultFailure::Engine {
+                reason: BuildFailureReason::Host,
+            }),
+            &PublishOutcome::Partial {
+                committed: Vec::new(),
+                failed: target.clone(),
+                remaining: Vec::new(),
+                recovery,
+            },
+        ),
+        "alt-partial status=alt-status-failed failed=compiled/main.recitec recovery=compiled/main.recitec failure=alt-engine-host"
+    );
+    assert_eq!(
+        super::format_failure(
+            &messages,
+            BuildTerminalStatus::Cancelled,
+            None,
+            &PublishOutcome::Indeterminate {
+                attempted: vec![target.clone()],
+                recovery: RecoveryNeeded::for_targets(vec![target]),
+            },
+        ),
+        "alt-indeterminate status=alt-status-cancelled recovery=compiled/main.recitec"
+    );
+}
+
+#[test]
+fn publication_failure_localizes_reason_categories_without_debug_output() {
+    let messages = alternate_messages(&[
+        (
+            "watch-build-failed-refused-with-failure",
+            "alt-refused {$status} {$reason} {$failure}",
+        ),
+        ("watch-build-status-stale", "alt-status-stale"),
+        (
+            "watch-build-failure-refusal-stale-fingerprints",
+            "alt-stale-fingerprints",
+        ),
+        (
+            "watch-build-failure-check-request-mismatch",
+            "alt-request-mismatch",
+        ),
+        (
+            "watch-build-failed-not-attempted",
+            "alt-not-attempted {$status} {$reason}",
+        ),
+        ("watch-build-status-superseded", "alt-status-superseded"),
+        (
+            "watch-build-failure-not-attempted-superseded",
+            "alt-superseded",
+        ),
+    ]);
+
+    assert_eq!(
+        super::format_failure(
+            &messages,
+            BuildTerminalStatus::Stale,
+            Some(&BuildResultFailure::Check(BuildCheckError::RequestMismatch,)),
+            &PublishOutcome::Refused {
+                reason: PublishRefusal::StaleFingerprints,
+            },
+        ),
+        "alt-refused alt-status-stale alt-stale-fingerprints alt-request-mismatch"
+    );
+    assert_eq!(
+        super::format_failure(
+            &messages,
+            BuildTerminalStatus::Superseded,
+            None,
+            &PublishOutcome::NotAttempted {
+                reason: PublishNotAttemptedReason::Superseded,
+            },
+        ),
+        "alt-not-attempted alt-status-superseded alt-superseded"
+    );
 }

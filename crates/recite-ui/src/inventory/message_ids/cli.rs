@@ -1,4 +1,7 @@
 pub(super) const fn key(id: super::MsgId) -> Option<&'static str> {
+    if let Some(key) = super::watch_message_ids::key(id) {
+        return Some(key);
+    }
     match id {
         super::MsgId::CliHelpAbout => Some("cli-help-about"),
         super::MsgId::CliHelpUsageHeading => Some("cli-help-usage-heading"),
@@ -45,12 +48,6 @@ pub(super) const fn key(id: super::MsgId) -> Option<&'static str> {
         super::MsgId::ExplainCommonCauses => Some("explain-common-causes"),
         super::MsgId::ExplainHowToFix => Some("explain-how-to-fix"),
         super::MsgId::ExplainListItem => Some("explain-list-item"),
-        super::MsgId::WatchBuilding => Some("watch-building"),
-        super::MsgId::WatchWaitingForChanges => Some("watch-waiting-for-changes"),
-        super::MsgId::WatchRebuilding => Some("watch-rebuilding"),
-        super::MsgId::WatchBuildSucceeded => Some("watch-build-succeeded"),
-        super::MsgId::WatchBuildFailedWaiting => Some("watch-build-failed-waiting"),
-        super::MsgId::WatchBuildFailed => Some("watch-build-failed"),
         super::MsgId::WatchEventError => Some("watch-event-error"),
         super::MsgId::CliHelpArgHelp => Some("cli-help-arg-help"),
         super::MsgId::CliHelpArgVersion => Some("cli-help-arg-version"),

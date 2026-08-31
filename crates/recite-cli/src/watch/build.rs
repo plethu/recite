@@ -12,8 +12,13 @@ use crate::diagnostics::report_diagnostics;
 use crate::error::CliError;
 use crate::i18n::Messages;
 
+mod failure;
+mod failure_reasons;
+
 #[cfg(test)]
 mod tests;
+
+pub(super) use failure::format_failure;
 
 /// The presentation boundary's compact view of one coordinated build.
 #[derive(Debug, Eq, PartialEq)]
@@ -145,46 +150,6 @@ where
         failure: result.failure().cloned(),
         outcome: result.publish().clone(),
     })
-}
-
-pub(super) fn format_failure(
-    status: BuildTerminalStatus,
-    failure: Option<&BuildResultFailure>,
-    outcome: &PublishOutcome,
-) -> String {
-    let detail = match outcome {
-        PublishOutcome::Partial {
-            failed, recovery, ..
-        } => format!(
-            "partial publication; failed target {failed}; recovery targets: {}",
-            format_targets(recovery.targets())
-        ),
-        PublishOutcome::Indeterminate { recovery, .. } => format!(
-            "publication indeterminate; recovery targets: {}",
-            format_targets(recovery.targets())
-        ),
-        PublishOutcome::Refused { reason } => format!("publication refused: {reason:?}"),
-        PublishOutcome::NotAttempted { reason } => {
-            format!("publication not attempted: {reason:?}")
-        }
-        PublishOutcome::Published { .. } => "publication reported success".to_owned(),
-        _ => "publication returned an unsupported outcome".to_owned(),
-    };
-    failure.map_or_else(
-        || format!("build {status}: {detail}"),
-        |failure| format!("{failure}; {detail}"),
-    )
-}
-
-fn format_targets(targets: &[recite_compiler::BuildTarget]) -> String {
-    if targets.is_empty() {
-        return "<none>".to_owned();
-    }
-    targets
-        .iter()
-        .map(ToString::to_string)
-        .collect::<Vec<_>>()
-        .join(", ")
 }
 
 fn map_preparation_error(error: ProjectBuildPreparationError) -> CliError {

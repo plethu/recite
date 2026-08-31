@@ -125,11 +125,10 @@ fn report_build_result(
             failure,
             outcome,
         }) => {
-            let error = format_failure(status, failure.as_ref(), &outcome);
             writeln!(
                 stderr,
                 "{}",
-                messages.format(MsgId::WatchBuildFailed, [("error", error)])
+                format_failure(messages, status, failure.as_ref(), &outcome)
             )?;
         }
         Err(error) => {

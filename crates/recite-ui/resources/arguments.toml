@@ -15,6 +15,51 @@ path = "string"
 count = "integer"
 [arguments."watch-build-failed"]
 error = "string"
+[arguments."watch-build-failed-partial"]
+status = "string"
+failed = "string"
+recovery = "string"
+[arguments."watch-build-failed-indeterminate"]
+status = "string"
+recovery = "string"
+[arguments."watch-build-failed-refused"]
+status = "string"
+reason = "string"
+[arguments."watch-build-failed-not-attempted"]
+status = "string"
+reason = "string"
+[arguments."watch-build-failed-published"]
+status = "string"
+[arguments."watch-build-failed-unsupported"]
+status = "string"
+[arguments."watch-build-failed-partial-with-failure"]
+status = "string"
+failed = "string"
+recovery = "string"
+failure = "string"
+[arguments."watch-build-failed-indeterminate-with-failure"]
+status = "string"
+recovery = "string"
+failure = "string"
+[arguments."watch-build-failed-refused-with-failure"]
+status = "string"
+reason = "string"
+failure = "string"
+[arguments."watch-build-failed-not-attempted-with-failure"]
+status = "string"
+reason = "string"
+failure = "string"
+[arguments."watch-build-failed-published-with-failure"]
+status = "string"
+failure = "string"
+[arguments."watch-build-failed-unsupported-with-failure"]
+status = "string"
+failure = "string"
+[arguments."watch-build-failure-duplicate-target"]
+target = "string"
+[arguments."watch-build-failure-preparation"]
+target = "string"
+reason = "string"
 [arguments."watch-event-error"]
 error = "string"
 [arguments."play-start"]

@@ -51,6 +51,55 @@ macro_rules! cli_message_ids {
         | MsgId::WatchBuildSucceeded
         | MsgId::WatchBuildFailedWaiting
         | MsgId::WatchBuildFailed
+        | MsgId::WatchBuildFailedPartial
+        | MsgId::WatchBuildFailedIndeterminate
+        | MsgId::WatchBuildFailedRefused
+        | MsgId::WatchBuildFailedNotAttempted
+        | MsgId::WatchBuildFailedPublished
+        | MsgId::WatchBuildFailedUnsupported
+        | MsgId::WatchBuildFailedPartialWithFailure
+        | MsgId::WatchBuildFailedIndeterminateWithFailure
+        | MsgId::WatchBuildFailedRefusedWithFailure
+        | MsgId::WatchBuildFailedNotAttemptedWithFailure
+        | MsgId::WatchBuildFailedPublishedWithFailure
+        | MsgId::WatchBuildFailedUnsupportedWithFailure
+        | MsgId::WatchBuildStatusSucceeded
+        | MsgId::WatchBuildStatusFailed
+        | MsgId::WatchBuildStatusStale
+        | MsgId::WatchBuildStatusCancelled
+        | MsgId::WatchBuildStatusSuperseded
+        | MsgId::WatchBuildStatusUnknown
+        | MsgId::WatchBuildFailureCheckRequestMismatch
+        | MsgId::WatchBuildFailureCheckFreshnessMismatch
+        | MsgId::WatchBuildFailureCheckUnknown
+        | MsgId::WatchBuildFailureDiagnostics
+        | MsgId::WatchBuildFailureUnknown
+        | MsgId::WatchBuildFailureEngineInvalidOutput
+        | MsgId::WatchBuildFailureEngineHost
+        | MsgId::WatchBuildFailureEngineUnknown
+        | MsgId::WatchBuildFailureDuplicateTarget
+        | MsgId::WatchBuildFailurePreparation
+        | MsgId::WatchBuildFailureReasonRejected
+        | MsgId::WatchBuildFailureReasonStorage
+        | MsgId::WatchBuildFailureReasonUnknown
+        | MsgId::WatchBuildFailureInvalidPublishedPartition
+        | MsgId::WatchBuildFailureInvalidPartialPartition
+        | MsgId::WatchBuildFailureInvalidRecoveryTarget
+        | MsgId::WatchBuildFailureInvalidNotCommitted
+        | MsgId::WatchBuildFailureInvalidUnknown
+        | MsgId::WatchBuildFailureRefusalStaleBuildGeneration
+        | MsgId::WatchBuildFailureRefusalStaleSnapshotGeneration
+        | MsgId::WatchBuildFailureRefusalStaleFingerprints
+        | MsgId::WatchBuildFailureRefusalRequestIdentityMismatch
+        | MsgId::WatchBuildFailureRefusalUnknown
+        | MsgId::WatchBuildFailureNotAttemptedBuildFailed
+        | MsgId::WatchBuildFailureNotAttemptedCancelled
+        | MsgId::WatchBuildFailureNotAttemptedSuperseded
+        | MsgId::WatchBuildFailureNotAttemptedStale
+        | MsgId::WatchBuildFailureNotAttemptedNoCandidates
+        | MsgId::WatchBuildFailureNotAttemptedPreparationFailed
+        | MsgId::WatchBuildFailureNotAttemptedInvalidOutcome
+        | MsgId::WatchBuildFailureNotAttemptedUnknown
         | MsgId::WatchEventError
         | MsgId::CliHelpArgHelp
         | MsgId::CliHelpArgVersion
