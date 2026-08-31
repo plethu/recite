@@ -14,6 +14,7 @@ pub(crate) struct StdioHarness {
     child: Child,
     stdin: ChildStdin,
     messages: Receiver<io::Result<Value>>,
+    initialize: Value,
     next_id: u64,
 }
 
@@ -62,11 +63,16 @@ impl StdioHarness {
             child,
             stdin,
             messages,
+            initialize: Value::Null,
             next_id: 1,
         };
         let initialize_id = harness.request("initialize", params);
-        harness.expect_response(initialize_id);
+        harness.initialize = harness.expect_response(initialize_id);
         harness
+    }
+
+    pub(crate) fn initialize(&self) -> &Value {
+        &self.initialize
     }
 
     pub(crate) fn send_initialized(&mut self) {
@@ -86,13 +92,57 @@ impl StdioHarness {
 
     pub(crate) fn request(&mut self, method: &str, params: Value) -> u64 {
         let id = self.next_id;
-        self.next_id += 1;
+        self.next_id = self.next_id.saturating_add(1);
         self.send(json!({ "jsonrpc": "2.0", "id": id, "method": method, "params": params }));
         id
     }
 
     pub(crate) fn notify(&mut self, method: &str, params: Value) {
         self.send(json!({ "jsonrpc": "2.0", "method": method, "params": params }));
+    }
+
+    pub(crate) fn did_open(&mut self, uri: &str, version: i32, text: &str) {
+        self.notify(
+            "textDocument/didOpen",
+            json!({
+                "textDocument": {
+                    "uri": uri,
+                    "languageId": "recite",
+                    "version": version,
+                    "text": text
+                }
+            }),
+        );
+    }
+
+    pub(crate) fn did_change(&mut self, uri: &str, version: i32, text: &str) {
+        self.notify(
+            "textDocument/didChange",
+            json!({
+                "textDocument": { "uri": uri, "version": version },
+                "contentChanges": [{ "text": text }]
+            }),
+        );
+    }
+
+    pub(crate) fn diagnostics(&self, uri: &str) -> Value {
+        loop {
+            let message = self.receive_message();
+            if message.get("method") != Some(&json!("textDocument/publishDiagnostics")) {
+                continue;
+            }
+            if message["params"]["uri"] == uri {
+                return message["params"].clone();
+            }
+        }
+    }
+
+    pub(crate) fn assert_no_message(&self) {
+        match self.messages.recv_timeout(Duration::from_millis(150)) {
+            Err(mpsc::RecvTimeoutError::Timeout) => {}
+            Ok(message) => panic!("unexpected stale-result message: {message:?}"),
+            Err(error) => panic!("stdio reader failed while checking silence: {error}"),
+        }
     }
 
     fn send(&mut self, message: Value) {
@@ -108,7 +158,7 @@ impl StdioHarness {
             .unwrap_or_else(|error| panic!("flush JSON-RPC message: {error}"));
     }
 
-    fn expect_response(&self, id: u64) {
+    fn expect_response(&self, id: u64) -> Value {
         loop {
             let message = self.receive_message();
             if message.get("id") == Some(&json!(id)) {
@@ -116,7 +166,7 @@ impl StdioHarness {
                     message.get("error").is_none(),
                     "unexpected response: {message}"
                 );
-                return;
+                return message.get("result").cloned().unwrap_or(Value::Null);
             }
         }
     }

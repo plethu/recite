@@ -1,0 +1,222 @@
+{
+  "contract_version": 1,
+  "status_values": ["planned", "partial", "implemented", "unsupported"],
+  "clients": [
+    {
+      "id": "vscode",
+      "name": "VS Code",
+      "artifact": "vscode-vsix",
+      "status": "planned",
+      "platform_status": {"linux": "planned", "macos": "planned", "windows": "planned"},
+      "notes": "No extension artifact exists in this contract slice."
+    },
+    {
+      "id": "vscodium",
+      "name": "VSCodium",
+      "artifact": "vscode-vsix",
+      "status": "planned",
+      "platform_status": {"linux": "planned", "macos": "planned", "windows": "planned"},
+      "notes": "Uses the same future VSIX as VS Code; no publication is claimed."
+    },
+    {
+      "id": "neovim",
+      "name": "Neovim",
+      "artifact": "neovim-setup",
+      "status": "planned",
+      "platform_status": {"linux": "planned", "macos": "planned", "windows": "planned"},
+      "notes": "Plugin-manager-neutral setup and syntax evidence are follow-up work."
+    },
+    {
+      "id": "zed",
+      "name": "Zed",
+      "artifact": "zed-extension",
+      "status": "planned",
+      "platform_status": {"linux": "planned", "macos": "planned", "windows": "planned"},
+      "notes": "The Zed implementation is tracked separately by issue #192."
+    }
+  ],
+  "artifacts": [
+    {"id": "vscode-vsix", "kind": "editor-extension", "status": "planned", "path": null, "clients": ["vscode", "vscodium"]},
+    {"id": "neovim-setup", "kind": "editor-setup", "status": "planned", "path": null, "clients": ["neovim"]},
+    {"id": "zed-extension", "kind": "editor-extension", "status": "planned", "path": null, "clients": ["zed"]}
+  ],
+  "distributions": [
+    {"id": "vs-marketplace", "artifact": "vscode-vsix", "status": "planned", "notes": "Publication is not implied by a future VSIX build."},
+    {"id": "open-vsx", "artifact": "vscode-vsix", "status": "planned", "notes": "Open VSX availability is tracked separately from VS Marketplace."},
+    {"id": "neovim-distribution", "artifact": "neovim-setup", "status": "planned", "notes": "No plugin-manager-specific distribution is required by the contract."},
+    {"id": "zed-distribution", "artifact": "zed-extension", "status": "planned", "notes": "Zed packaging and install smoke are owned by #192."}
+  ],
+  "scenarios": [
+    {
+      "id": "lsp-stdio-baseline",
+      "canonical_fixtures": ["fixtures/recite/valid/core_language_spike.recite"],
+      "derived_inputs": ["initialize", "didOpen", "full didChange"],
+      "expected_evidence": ["versioned initialize capabilities", "structured completion and definition response"],
+      "status": "partial"
+    },
+    {
+      "id": "diagnostic-recovery",
+      "canonical_fixtures": [
+        "fixtures/recite/invalid/parser_marker_leading_prose.recite",
+        "fixtures/recite/valid/core_language_spike.recite"
+      ],
+      "derived_inputs": ["incomplete overlay", "newer complete overlay"],
+      "expected_evidence": ["diagnostic code and range", "newer overlay version"],
+      "status": "partial"
+    },
+    {
+      "id": "utf16-crlf-non-bmp",
+      "canonical_fixtures": ["fixtures/recite/invalid/parser_marker_leading_prose.recite"],
+      "derived_inputs": ["CRLF line endings", "non-BMP scalar before a diagnostic"],
+      "expected_evidence": ["UTF-16 diagnostic range", "logical line excludes CR"],
+      "status": "partial"
+    },
+    {
+      "id": "stale-overlay",
+      "canonical_fixtures": ["fixtures/recite/valid/core_language_spike.recite"],
+      "derived_inputs": ["version 3 accepted", "version 2 refused"],
+      "expected_evidence": ["no stale diagnostic publication", "current completion remains available"],
+      "status": "partial"
+    },
+    {
+      "id": "schema-localisation-reference",
+      "canonical_fixtures": [
+        "fixtures/schema/valid/generated_manifest.json",
+        "fixtures/schema/valid/full_manifest.json",
+        "fixtures/recite/valid/language_pressure.recite"
+      ],
+      "derived_inputs": ["schema and localisation resolution"],
+      "expected_evidence": ["shared schema/localisation authorities"],
+      "status": "planned"
+    },
+    {
+      "id": "command-watch-reference",
+      "canonical_fixtures": ["fixtures/recite/valid/core_language_spike.recite"],
+      "derived_inputs": ["structured command records", "watch lifecycle"],
+      "expected_evidence": ["versioned command result", "generation and freshness"],
+      "status": "planned"
+    }
+  ],
+  "capabilities": [
+    {
+      "id": "lsp.initialize.capabilities",
+      "scenario": "lsp-stdio-baseline",
+      "authority": ["recite-lsp", "shared authoring kernel"],
+      "protocol": "lsp",
+      "expected": {"kind": "initialize-result", "assertions": ["UTF-16 position encoding", "full open/change/save sync", "completion, hover, navigation, rename, and code actions"]},
+      "edge_cases": ["client omits positionEncodings", "client advertises UTF-8 only"],
+      "implementation_status": "partial",
+      "client_status": {"vscode": "planned", "vscodium": "planned", "neovim": "planned", "zed": "planned"},
+      "platform_status": {"linux": "partial", "macos": "planned", "windows": "planned"},
+      "artifact_status": {"vscode-vsix": "planned", "neovim-setup": "planned", "zed-extension": "planned"},
+      "distribution_status": {"vs-marketplace": "planned", "open-vsx": "planned", "neovim-distribution": "planned", "zed-distribution": "planned"},
+      "expected_evidence": {"status": "implemented", "command": "cargo test --locked -p recite-lsp --test editor_parity initialize_and_project_features", "assertions": ["stdio initialize response is versioned and structured"], "artifact": null},
+      "follow_up": "#51"
+    },
+    {
+      "id": "lsp.publish.diagnostics",
+      "scenario": "diagnostic-recovery",
+      "authority": ["recite-parser", "recite-compiler", "recite-lsp"],
+      "protocol": "lsp",
+      "expected": {"kind": "publishDiagnostics", "assertions": ["stable diagnostic code", "structured severity and UTF-16 range", "malformed source does not terminate the server"]},
+      "edge_cases": ["malformed marker-leading prose", "incomplete buffer"],
+      "implementation_status": "partial",
+      "client_status": {"vscode": "planned", "vscodium": "planned", "neovim": "planned", "zed": "planned"},
+      "platform_status": {"linux": "partial", "macos": "planned", "windows": "planned"},
+      "artifact_status": {"vscode-vsix": "planned", "neovim-setup": "planned", "zed-extension": "planned"},
+      "distribution_status": {"vs-marketplace": "planned", "open-vsx": "planned", "neovim-distribution": "planned", "zed-distribution": "planned"},
+      "expected_evidence": {"status": "implemented", "command": "cargo test --locked -p recite-lsp --test editor_parity diagnostic_recovery", "assertions": ["diagnostics carry URI, version, code, severity, and range"], "artifact": null},
+      "follow_up": "#51"
+    },
+    {
+      "id": "lsp.completion.navigation",
+      "scenario": "lsp-stdio-baseline",
+      "authority": ["recite-compiler", "recite-lsp"],
+      "protocol": "lsp",
+      "expected": {"kind": "completion-and-location", "assertions": ["completion labels come from the shared snapshot", "definition location preserves URI and source range"]},
+      "edge_cases": ["open overlay is newer than disk", "references remain source ordered"],
+      "implementation_status": "partial",
+      "client_status": {"vscode": "planned", "vscodium": "planned", "neovim": "planned", "zed": "planned"},
+      "platform_status": {"linux": "partial", "macos": "planned", "windows": "planned"},
+      "artifact_status": {"vscode-vsix": "planned", "neovim-setup": "planned", "zed-extension": "planned"},
+      "distribution_status": {"vs-marketplace": "planned", "open-vsx": "planned", "neovim-distribution": "planned", "zed-distribution": "planned"},
+      "expected_evidence": {"status": "implemented", "command": "cargo test --locked -p recite-lsp --test editor_parity initialize_and_project_features", "assertions": ["completion and definition are actual stdio responses"], "artifact": null},
+      "follow_up": "#51"
+    },
+    {
+      "id": "lsp.utf16.positions",
+      "scenario": "utf16-crlf-non-bmp",
+      "authority": ["recite-core", "recite-compiler", "recite-lsp"],
+      "protocol": "lsp",
+      "expected": {"kind": "diagnostic-range", "assertions": ["non-BMP scalar counts as two UTF-16 code units", "CRLF carriage return is excluded from logical line"]},
+      "edge_cases": ["surrogate-pair interior cursor", "CRLF"],
+      "implementation_status": "partial",
+      "client_status": {"vscode": "planned", "vscodium": "planned", "neovim": "planned", "zed": "planned"},
+      "platform_status": {"linux": "partial", "macos": "planned", "windows": "planned"},
+      "artifact_status": {"vscode-vsix": "planned", "neovim-setup": "planned", "zed-extension": "planned"},
+      "distribution_status": {"vs-marketplace": "planned", "open-vsx": "planned", "neovim-distribution": "planned", "zed-distribution": "planned"},
+      "expected_evidence": {"status": "implemented", "command": "cargo test --locked -p recite-lsp --test editor_parity utf16_crlf_and_non_bmp_ranges", "assertions": ["stdio diagnostics expose the expected UTF-16 range"], "artifact": null},
+      "follow_up": "#51"
+    },
+    {
+      "id": "lsp.overlay.recovery",
+      "scenario": "diagnostic-recovery",
+      "authority": ["recite-authoring-kernel", "recite-lsp"],
+      "protocol": "lsp",
+      "expected": {"kind": "versioned-diagnostic-refresh", "assertions": ["incomplete overlay remains editable", "newer full overlay replaces it", "diagnostics identify the current version"]},
+      "edge_cases": ["incomplete source", "full-sync only", "refresh after parse recovery"],
+      "implementation_status": "partial",
+      "client_status": {"vscode": "planned", "vscodium": "planned", "neovim": "planned", "zed": "planned"},
+      "platform_status": {"linux": "partial", "macos": "planned", "windows": "planned"},
+      "artifact_status": {"vscode-vsix": "planned", "neovim-setup": "planned", "zed-extension": "planned"},
+      "distribution_status": {"vs-marketplace": "planned", "open-vsx": "planned", "neovim-distribution": "planned", "zed-distribution": "planned"},
+      "expected_evidence": {"status": "implemented", "command": "cargo test --locked -p recite-lsp --test editor_parity diagnostic_recovery", "assertions": ["accepted newer overlay publishes only its current version"], "artifact": null},
+      "follow_up": "#51"
+    },
+    {
+      "id": "lsp.stale.version",
+      "scenario": "stale-overlay",
+      "authority": ["recite-authoring-kernel", "recite-lsp"],
+      "protocol": "lsp",
+      "expected": {"kind": "stale-change-refusal", "assertions": ["older version is ignored", "current overlay remains queryable", "no stale diagnostic publication"]},
+      "edge_cases": ["version 2 after version 3", "stale text differs materially"],
+      "implementation_status": "partial",
+      "client_status": {"vscode": "planned", "vscodium": "planned", "neovim": "planned", "zed": "planned"},
+      "platform_status": {"linux": "partial", "macos": "planned", "windows": "planned"},
+      "artifact_status": {"vscode-vsix": "planned", "neovim-setup": "planned", "zed-extension": "planned"},
+      "distribution_status": {"vs-marketplace": "planned", "open-vsx": "planned", "neovim-distribution": "planned", "zed-distribution": "planned"},
+      "expected_evidence": {"status": "implemented", "command": "cargo test --locked -p recite-lsp --test editor_parity stale_version_is_refused", "assertions": ["completion after stale change still observes version 3 text"], "artifact": null},
+      "follow_up": "#51"
+    },
+    {
+      "id": "lsp.cancellation",
+      "scenario": "stale-overlay",
+      "authority": ["recite-lsp"],
+      "protocol": "lsp",
+      "expected": {"kind": "documented-limitation", "assertions": ["$/cancelRequest is not implemented", "clients must not infer cancellation from timeout"]},
+      "edge_cases": ["request arrives while synchronous refresh is running", "client sends cancellation notification"],
+      "implementation_status": "unsupported",
+      "client_status": {"vscode": "planned", "vscodium": "planned", "neovim": "planned", "zed": "planned"},
+      "platform_status": {"linux": "unsupported", "macos": "planned", "windows": "planned"},
+      "artifact_status": {"vscode-vsix": "planned", "neovim-setup": "planned", "zed-extension": "planned"},
+      "distribution_status": {"vs-marketplace": "planned", "open-vsx": "planned", "neovim-distribution": "planned", "zed-distribution": "planned"},
+      "expected_evidence": {"status": "planned", "command": null, "assertions": ["limitation and owning follow-up are written down"], "artifact": null},
+      "follow_up": "#53"
+    },
+    {
+      "id": "command.structured.results",
+      "scenario": "command-watch-reference",
+      "authority": ["recite-cli", "recite-authoring-kernel"],
+      "protocol": "protocol-neutral",
+      "expected": {"kind": "versioned-command-record", "assertions": ["consumers use structured compile/validate/extract/run/trace/watch records", "human localisation is not a machine protocol"]},
+      "edge_cases": ["watch generation", "freshness and retry", "binary discovery", "cancellation"],
+      "implementation_status": "planned",
+      "client_status": {"vscode": "planned", "vscodium": "planned", "neovim": "planned", "zed": "planned"},
+      "platform_status": {"linux": "planned", "macos": "planned", "windows": "planned"},
+      "artifact_status": {"vscode-vsix": "planned", "neovim-setup": "planned", "zed-extension": "planned"},
+      "distribution_status": {"vs-marketplace": "planned", "open-vsx": "planned", "neovim-distribution": "planned", "zed-distribution": "planned"},
+      "expected_evidence": {"status": "planned", "command": null, "assertions": ["#53 owns executable command/watch integration evidence"], "artifact": null},
+      "follow_up": "#53"
+    }
+  ]
+}
