@@ -1,8 +1,13 @@
 use std::path::Path;
 
 use recite_compiler::{CompileInput, compile_inputs};
+use recite_core::{ChoiceId, CompiledDialogue};
+use recite_runtime::{
+    ConditionQuery, ConditionValue, DialogueChoice, DialogueEffectRequest, DialogueLine,
+};
 
 use crate::fs::compile_options;
+use crate::i18n::MsgId;
 
 use super::*;
 

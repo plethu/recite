@@ -20,7 +20,7 @@ fn run_plain(asset: &CompiledDialogue, input: &str) -> Result<String, CliError> 
     let mut output = Vec::new();
     let messages = Messages::load(&crate::i18n::UiLocale::default()).expect("messages");
     let mut ui = PlainPlayUi::new(&mut input, &mut output, &messages);
-    PlayDriver::new(asset, "start").run(&mut ui)?;
+    run_preview(asset, "start", None, &mut ui)?;
     Ok(String::from_utf8(output).expect("utf8"))
 }
 
@@ -219,4 +219,28 @@ fn plain_play_reports_post_choice_condition_eof_as_cli_error() {
             field: "condition answer"
         }
     ));
+}
+
+#[test]
+fn plain_preview_preserves_typed_event_order_for_condition_and_choice() {
+    let asset = asset(concat!(
+        ":: start default\n",
+        "> intro@11111111111111111111\n",
+        "  Welcome.\n",
+        "  ? continue@22222222222222222222 requires=(trusts(player))\n",
+        "    Continue.\n",
+        "    -> END\n",
+    ));
+    let output = run_plain(&asset, "y\n1\n").expect("play succeeds");
+    let condition = output
+        .find("condition trusts(player) = true")
+        .expect("condition");
+    let prompt = output
+        .find("prompt 11111111111111111111: Welcome.")
+        .expect("prompt");
+    let selected = output
+        .find("selected choice 22222222222222222222")
+        .expect("selection");
+    let end = output.find("end").expect("end");
+    assert!(condition < prompt && prompt < selected && selected < end);
 }

@@ -1,16 +1,13 @@
-use std::cell::RefCell;
-
-use recite_core::{ChoiceId, CompiledDialogue};
+use recite_core::CompiledDialogue;
 use recite_runtime::{
-    ConditionEvaluationError, ConditionQuery, ConditionValue, DialogueChoice, DialogueContext,
-    DialogueEffectMode, DialogueEffectRequest, DialogueEvent, DialogueLine, DialogueSession,
-    EffectAck, acknowledge_effect,
+    DialogueEffectMode, DialogueEvent, DialogueSession, EffectAck, acknowledge_effect,
 };
 
 use crate::dialogue_locale::{DialogueTraversal, DialogueTraversalPreview};
 use crate::error::CliError;
-use crate::i18n::{Messages, MsgId};
-use recite_ui::{UiArg, UiArgs};
+
+pub(super) use super::driver_api::{ChoiceSelection, PlayUiAdapter};
+use super::driver_context::InteractiveContext;
 
 pub(super) struct PlayDriver<'a> {
     asset: &'a CompiledDialogue,
@@ -61,14 +58,13 @@ impl<'a> PlayDriver<'a> {
                     Err(error) => return Err(context.resolve_runtime_error(error)),
                 },
             };
-
             match event {
                 DialogueEvent::Line(line) => context.line(&line)?,
                 DialogueEvent::Prompt { line, choices } => {
                     let choice_id = context.choice(line.as_ref(), &choices)?;
                     context.selected_choice(&choice_id)?;
                     let event = traversal
-                        .choose(&mut session, choice_id, &context)
+                        .choose(&mut session, choice_id.clone(), &context)
                         .map_err(|error| context.resolve_runtime_error(error))?;
                     notify_scheduled_deferred_queue(
                         &context,
@@ -91,7 +87,6 @@ impl<'a> PlayDriver<'a> {
                 }
             }
         }
-
         Ok(())
     }
 }
@@ -107,253 +102,6 @@ fn notify_scheduled_deferred_queue<U: PlayUiAdapter>(
         *deferred_effect_count = deferred_effects.len();
     }
     Ok(())
-}
-
-struct InteractiveContext<'a, U> {
-    // DialogueContext is an `&self` runtime trait, while the interactive CLI
-    // adapter is stateful. PlayDriver never holds a `ui` borrow across
-    // traversal calls (`next`/`choose`), and evaluate_condition borrows only
-    // for the callback frame before recording any error state.
-    ui: RefCell<&'a mut U>,
-    interrupted: RefCell<bool>,
-    ui_error: RefCell<Option<CliError>>,
-}
-
-impl<'a, U> InteractiveContext<'a, U> {
-    fn new(ui: &'a mut U) -> Self {
-        Self {
-            ui: RefCell::new(ui),
-            interrupted: RefCell::new(false),
-            ui_error: RefCell::new(None),
-        }
-    }
-}
-
-impl<U: PlayUiAdapter> InteractiveContext<'_, U> {
-    fn line(&self, line: &DialogueLine) -> Result<(), CliError> {
-        self.ui.borrow_mut().line(line)
-    }
-
-    fn choice(
-        &self,
-        line: Option<&DialogueLine>,
-        choices: &[DialogueChoice],
-    ) -> Result<ChoiceId, CliError> {
-        loop {
-            let choice_result = {
-                let mut ui = self.ui.borrow_mut();
-                ui.choice(line, choices)
-            };
-            let selection = match choice_result {
-                Ok(selection) => selection,
-                Err(CliError::PlayInvalidInput(message)) => {
-                    self.ui.borrow_mut().invalid_input(message)?;
-                    continue;
-                }
-                Err(error) => return Err(error),
-            };
-            match selection {
-                ChoiceSelection::Index(index) => {
-                    let numeric_id = index.to_string();
-                    if let Some(choice) = choices
-                        .iter()
-                        .find(|choice| choice.id.as_str() == numeric_id)
-                    {
-                        if choice.availability.is_available {
-                            return Ok(choice.id.clone());
-                        }
-                        let message = unavailable_choice_message(&self.ui, choice);
-                        self.ui.borrow_mut().invalid_input(message)?;
-                        continue;
-                    }
-                    if index == 0 || index > choices.len() {
-                        let message = self.ui.borrow().message_typed(
-                            MsgId::PlayErrorChoiceIndexOutOfRange,
-                            UiArgs::from([
-                                ("index".to_owned(), UiArg::from(index)),
-                                ("count".to_owned(), UiArg::from(choices.len())),
-                            ]),
-                        );
-                        self.ui.borrow_mut().invalid_input(message)?;
-                        continue;
-                    }
-                    let choice = &choices[index - 1];
-                    if choice.availability.is_available {
-                        return Ok(choice.id.clone());
-                    }
-                    let message = unavailable_choice_message(&self.ui, choice);
-                    self.ui.borrow_mut().invalid_input(message)?;
-                }
-                ChoiceSelection::Id(id) => {
-                    let choice_id = match ChoiceId::new(id.clone()) {
-                        Ok(choice_id) => choice_id,
-                        Err(error) => {
-                            let message = self.ui.borrow().message(
-                                MsgId::PlayErrorChoiceIdInvalid,
-                                [("id", id), ("error", error.to_string())],
-                            );
-                            self.ui.borrow_mut().invalid_input(message)?;
-                            continue;
-                        }
-                    };
-                    if let Some(choice) = choices.iter().find(|choice| choice.id == choice_id) {
-                        if choice.availability.is_available {
-                            return Ok(choice_id);
-                        }
-                        let message = unavailable_choice_message(&self.ui, choice);
-                        self.ui.borrow_mut().invalid_input(message)?;
-                    } else {
-                        let message = self
-                            .ui
-                            .borrow()
-                            .message(MsgId::PlayErrorChoiceIdUnavailable, [("id", id)]);
-                        self.ui.borrow_mut().invalid_input(message)?;
-                    }
-                }
-            }
-        }
-    }
-
-    fn selected_choice(&self, choice_id: &ChoiceId) -> Result<(), CliError> {
-        self.ui.borrow_mut().selected_choice(choice_id)
-    }
-
-    fn effect(&self, effect: &DialogueEffectRequest) -> Result<(), CliError> {
-        self.ui.borrow_mut().effect(effect)
-    }
-
-    fn acknowledge(&self, effect: &DialogueEffectRequest) -> Result<(), CliError> {
-        self.ui.borrow_mut().acknowledge(effect)
-    }
-
-    fn deferred_queue(
-        &self,
-        effects: &[DialogueEffectRequest],
-        status: DeferredQueueStatus,
-    ) -> Result<(), CliError> {
-        self.ui.borrow_mut().deferred_queue(effects, status)
-    }
-
-    fn end(&self, deferred_effects: &[DialogueEffectRequest]) -> Result<(), CliError> {
-        self.ui.borrow_mut().end(deferred_effects)
-    }
-
-    fn mark_interrupted(&self) {
-        *self.interrupted.borrow_mut() = true;
-    }
-
-    fn was_interrupted(&self) -> bool {
-        *self.interrupted.borrow()
-    }
-
-    fn set_ui_error(&self, error: CliError) {
-        *self.ui_error.borrow_mut() = Some(error);
-    }
-
-    fn take_ui_error(&self) -> Option<CliError> {
-        self.ui_error.borrow_mut().take()
-    }
-
-    fn resolve_runtime_error(&self, error: recite_runtime::DialogueError) -> CliError {
-        if self.was_interrupted() {
-            return CliError::PlayInterrupted;
-        }
-        self.take_ui_error().unwrap_or_else(|| error.into())
-    }
-}
-
-impl<U: PlayUiAdapter> DialogueContext for InteractiveContext<'_, U> {
-    fn evaluate_condition(
-        &self,
-        query: ConditionQuery<'_>,
-    ) -> Result<ConditionValue, ConditionEvaluationError> {
-        self.ui.borrow_mut().condition(query).map_err(|error| {
-            if matches!(error, CliError::PlayInterrupted) {
-                self.mark_interrupted();
-            }
-            let message = error.to_string();
-            self.set_ui_error(error);
-            ConditionEvaluationError::new(message)
-        })
-    }
-}
-
-pub(super) trait PlayUiAdapter {
-    fn message(&self, id: MsgId, args: impl IntoIterator<Item = (&'static str, String)>) -> String;
-    fn message_typed(&self, id: MsgId, args: UiArgs) -> String {
-        self.message(
-            id,
-            args.into_iter().map(|(name, value)| {
-                let name: &'static str = Box::leak(name.into_boxed_str());
-                (name, value.to_string())
-            }),
-        )
-    }
-    fn start(&mut self, asset: &CompiledDialogue, block: &str) -> Result<(), CliError>;
-    fn line(&mut self, line: &DialogueLine) -> Result<(), CliError>;
-    fn choice(
-        &mut self,
-        line: Option<&DialogueLine>,
-        choices: &[DialogueChoice],
-    ) -> Result<ChoiceSelection, CliError>;
-    fn selected_choice(&mut self, choice_id: &ChoiceId) -> Result<(), CliError>;
-    fn condition(&mut self, query: ConditionQuery<'_>) -> Result<ConditionValue, CliError>;
-    fn effect(&mut self, effect: &DialogueEffectRequest) -> Result<(), CliError>;
-    fn acknowledge(&mut self, effect: &DialogueEffectRequest) -> Result<(), CliError>;
-    fn deferred_queue(
-        &mut self,
-        _effects: &[DialogueEffectRequest],
-        _status: DeferredQueueStatus,
-    ) -> Result<(), CliError> {
-        Ok(())
-    }
-    fn end(&mut self, deferred_effects: &[DialogueEffectRequest]) -> Result<(), CliError>;
-    fn invalid_input(&mut self, message: String) -> Result<(), CliError>;
-}
-
-#[derive(Clone, Debug, Eq, PartialEq)]
-pub(super) enum ChoiceSelection {
-    Index(usize),
-    Id(String),
-}
-
-impl ChoiceSelection {
-    pub(super) fn parse(input: &str, messages: &Messages) -> Result<Self, CliError> {
-        if input.is_empty() {
-            return Err(CliError::PlayInvalidInput(
-                messages.text(MsgId::PlayErrorEmptyChoice),
-            ));
-        }
-        if let Ok(index) = input.parse::<usize>() {
-            return Ok(Self::Index(index));
-        }
-        Ok(Self::Id(input.to_owned()))
-    }
-}
-
-fn unavailable_choice_message<U: PlayUiAdapter>(
-    ui: &RefCell<&mut U>,
-    choice: &DialogueChoice,
-) -> String {
-    let ui = ui.borrow();
-    match choice
-        .availability
-        .primary_reason
-        .as_ref()
-        .map(|reason| reason.source_text.as_str())
-    {
-        Some(reason) if !reason.is_empty() => ui.message(
-            MsgId::PlayErrorChoiceUnavailableReason,
-            [
-                ("id", choice.id.as_str().to_owned()),
-                ("reason", reason.to_owned()),
-            ],
-        ),
-        _ => ui.message(
-            MsgId::PlayErrorChoiceUnavailable,
-            [("id", choice.id.as_str().to_owned())],
-        ),
-    }
 }
 
 #[cfg(test)]

@@ -8,8 +8,15 @@ use crate::runtime_fixture::load_compiled_asset;
 use crate::tui::TuiSettings;
 
 mod driver;
+mod driver_api;
+mod driver_context;
 mod format;
 mod plain;
+mod plain_choice;
+mod plain_input;
+mod plain_output;
+mod plain_ui;
+mod preview;
 mod tui;
 
 pub(crate) fn run_play_command(
