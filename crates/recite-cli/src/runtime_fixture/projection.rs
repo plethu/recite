@@ -153,6 +153,7 @@ pub(super) fn project_event(
             });
         }
         PreviewEvent::ConditionRequested(_)
+        | PreviewEvent::ChoiceAccepted { .. }
         | PreviewEvent::DeferredEffectScheduled(_)
         | PreviewEvent::Restarted { .. }
         | PreviewEvent::Restored

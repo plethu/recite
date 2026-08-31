@@ -1,4 +1,7 @@
-use std::{collections::BTreeMap, io};
+use std::{
+    collections::{BTreeMap, VecDeque},
+    io,
+};
 
 use crossterm::event::{self, Event, KeyEventKind};
 use ratatui::{
@@ -33,7 +36,7 @@ pub(super) fn run_tui_stdio(
     let stdout = io::stdout();
     let backend = CrosstermBackend::new(stdout);
     let mut terminal = Terminal::new(backend)?;
-    let mut ui = TuiPlayUi::new(&mut terminal, settings, messages);
+    let mut ui = TuiPlayUi::new(&mut terminal, settings, messages, std::iter::empty());
     let result = run_preview(asset, block, dialogue_preview, &mut ui);
     let restore_result = restore_terminal(&mut terminal);
     if restore_result.is_ok() {
@@ -54,10 +57,16 @@ struct TuiPlayUi<'a, B: Backend> {
     /// Remembers the last displayed boolean answer for prompt ergonomics only.
     /// PreviewSession remains the sole condition/traversal authority.
     condition_answers: BTreeMap<String, bool>,
+    input_intents: VecDeque<TuiIntent>,
 }
 
 impl<'a, B: Backend> TuiPlayUi<'a, B> {
-    fn new(terminal: &'a mut Terminal<B>, settings: TuiSettings, messages: Messages) -> Self {
+    fn new(
+        terminal: &'a mut Terminal<B>,
+        settings: TuiSettings,
+        messages: Messages,
+        intents: impl IntoIterator<Item = TuiIntent>,
+    ) -> Self {
         let state = TuiState {
             key_hints: settings.key_hints,
             keymap: settings.keymap,
@@ -70,6 +79,7 @@ impl<'a, B: Backend> TuiPlayUi<'a, B> {
             settings,
             messages,
             condition_answers: BTreeMap::new(),
+            input_intents: intents.into_iter().collect(),
         }
     }
 
@@ -96,6 +106,10 @@ impl<'a, B: Backend> TuiPlayUi<'a, B> {
     }
 
     fn read_intent(&mut self, mode: PromptMode) -> Result<TuiIntent, CliError> {
+        if let Some(intent) = self.input_intents.pop_front() {
+            self.render()?;
+            return Ok(intent);
+        }
         loop {
             self.render()?;
             if let Event::Key(key) = event::read()? {

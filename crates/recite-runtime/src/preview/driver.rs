@@ -5,18 +5,8 @@ use super::model::{
     PreviewEvent, PreviewInputs, PreviewOutput, PreviewStatus,
 };
 use super::projection::new_deferred_events;
+use super::trial::Trial;
 use crate::{DialogueError, LocaleResolution, choose_with, next_with};
-
-struct Trial<'a> {
-    operation: Operation,
-    base: crate::DialogueSession,
-    answers: Vec<ConditionAnswer>,
-    requests: Vec<PreviewConditionRequest>,
-    inputs: PreviewInputs<'a>,
-    prior_status: PreviewStatus,
-    prefix: Option<Vec<PreviewEvent>>,
-    runtime_trace: crate::DialogueTrace,
-}
 
 impl<'asset> PreviewSession<'asset> {
     pub(super) fn run_operation(
@@ -182,6 +172,17 @@ impl<'asset> PreviewSession<'asset> {
             };
             self.next_condition_id = next_id;
             requests.push(request.clone());
+            let accepted_choice = if requests.len() == 1 {
+                match &operation {
+                    Operation::Choose {
+                        prompt: Some(prompt),
+                        choice_id,
+                    } => Some((prompt.clone(), choice_id.clone())),
+                    _ => None,
+                }
+            } else {
+                None
+            };
             self.pending = Some(PendingOperation {
                 operation,
                 base,
@@ -194,6 +195,9 @@ impl<'asset> PreviewSession<'asset> {
                 request: request.clone(),
             };
             let mut events = prefix.unwrap_or_default();
+            if let Some((prompt, choice_id)) = accepted_choice {
+                events.push(PreviewEvent::ChoiceAccepted { prompt, choice_id });
+            }
             events.push(PreviewEvent::ConditionRequested(request));
             return self.append_events(events);
         }

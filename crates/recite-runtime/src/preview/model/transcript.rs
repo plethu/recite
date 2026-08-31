@@ -4,8 +4,9 @@ use crate::{DialogueEffectRequest, DialogueLine, EffectAck};
 
 use super::{ConditionAnswer, PreviewConditionResult, PreviewEvent, PreviewPrompt};
 
-/// User-facing transcript projection. Condition control traffic and runtime
-/// errors remain in [`crate::PreviewTrace`] rather than being duplicated here.
+/// User-facing transcript projection. Condition control traffic, tentative
+/// choice acceptance, and runtime errors remain in [`crate::PreviewTrace`]
+/// rather than being duplicated here.
 #[non_exhaustive]
 #[derive(Clone, Debug, Default, PartialEq)]
 pub struct PreviewTranscript {
@@ -43,7 +44,9 @@ pub enum PreviewTranscriptEvent {
 impl PreviewTranscript {
     pub(crate) fn push(&mut self, event: &PreviewEvent) {
         let event = match event {
-            PreviewEvent::ConditionRequested(_) | PreviewEvent::ConditionResult { .. } => return,
+            PreviewEvent::ConditionRequested(_)
+            | PreviewEvent::ConditionResult { .. }
+            | PreviewEvent::ChoiceAccepted { .. } => return,
             PreviewEvent::Line(line) => PreviewTranscriptEvent::Line(line.clone()),
             PreviewEvent::Prompt(prompt) => PreviewTranscriptEvent::Prompt(prompt.clone()),
             PreviewEvent::ChoiceSelected { choice_id, .. } => {

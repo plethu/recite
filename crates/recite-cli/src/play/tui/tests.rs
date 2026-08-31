@@ -1,16 +1,12 @@
 use std::path::Path;
 
 use crate::i18n::{Messages, UiLocale};
-use crate::play::preview::PreviewPlayUi;
+use crate::play::preview::run_preview;
 use crate::tui::{Keymap, PromptMode, TextBuffer, TuiInteractionState};
 use ratatui::{Terminal, backend::TestBackend};
 use recite_compiler::{CompileInput, compile_inputs};
 use recite_core::CompiledDialogue;
 use recite_runtime::ConditionExpectedType;
-use recite_runtime::{
-    ConditionAnswer, ConditionValue, DialogueEffectMode, PreviewCommand, PreviewEvent,
-    PreviewInputs, PreviewOptions, PreviewSession,
-};
 
 use super::TuiPlayUi;
 use super::interaction::enum_condition_variant;
@@ -83,122 +79,61 @@ fn asset(source: &str) -> CompiledDialogue {
 }
 
 #[test]
-fn tui_presenter_projects_real_preview_events_in_legacy_order() {
+fn tui_shared_preview_loop_projects_real_events_and_unavailable_focus() {
     let asset = asset(concat!(
         ":: start default\n",
         "> intro@18c570b9af4d973ba876\n",
         "  Choose.\n",
-        "  ? go@c491f4cbe1944ebc5bc5 requires=(trusts(player))\n",
+        "  ? locked@c491f4cbe1944ebc5bc6 requires=(trusts(player))\n",
+        "    Locked.\n",
+        "    -> locked\n",
+        "  ? go@c491f4cbe1944ebc5bc5\n",
         "    Go.\n",
         "    -> branch\n",
         ":: branch\n",
         ":if trusts(player)\n",
         "  ! deferred save(slot)\n",
-        "  ! immediate ping()\n",
-        "  ! blocking grant(map)\n",
         "  > done@d491f4cbe1944ebc5bc5\n",
         "    Done.\n",
+        ":else\n",
+        "  ! deferred denied(slot)\n",
+        "  > denied@d491f4cbe1944ebc5bc6\n",
+        "    Denied.\n",
+        "-> END\n",
+        ":: locked\n",
+        "> locked_line@d491f4cbe1944ebc5bc7\n",
+        "  Locked.\n",
         "-> END\n",
     ));
     let messages = Messages::load(&UiLocale::default()).expect("messages");
-    let mut session =
-        PreviewSession::new(&asset, Some("start"), PreviewOptions::new()).expect("preview session");
-    let request = match session.step(PreviewInputs::default()).events() {
-        [PreviewEvent::ConditionRequested(request)] => request.clone(),
-        events => panic!("expected initial condition request, got {events:?}"),
-    };
-    let prompt = session
-        .answer(
-            request.id(),
-            ConditionAnswer::Value(ConditionValue::Bool(true)),
-            PreviewInputs::default(),
-        )
-        .events()
-        .iter()
-        .find_map(|event| match event {
-            PreviewEvent::Prompt(prompt) => Some(prompt.clone()),
-            _ => None,
-        })
-        .expect("choice prompt");
-    let choice_id = prompt.choices()[0].id.clone();
-    let branch_request = match session
-        .dispatch(
-            PreviewCommand::Choose {
-                choice_id: choice_id.clone(),
-            },
-            PreviewInputs::default(),
-        )
-        .events()
-    {
-        [PreviewEvent::ConditionRequested(request)] => request.clone(),
-        events => panic!("expected branch condition request, got {events:?}"),
-    };
-    let final_events = session
-        .answer(
-            branch_request.id(),
-            ConditionAnswer::Value(ConditionValue::Bool(true)),
-            PreviewInputs::default(),
-        )
-        .events()
-        .to_vec();
-    assert_eq!(final_events.len(), 4);
-    assert!(matches!(
-        &final_events[0],
-        PreviewEvent::ConditionResult { .. }
-    ));
-    let PreviewEvent::ChoiceSelected {
-        choice_id: selected_id,
-        ..
-    } = &final_events[1]
-    else {
-        panic!("expected selected choice")
-    };
-    assert_eq!(selected_id.as_str(), "c491f4cbe1944ebc5bc5");
-    let PreviewEvent::DeferredEffectScheduled(effect) = &final_events[2] else {
-        panic!("expected deferred effect")
-    };
-    assert_eq!(effect.function, "save");
-    let PreviewEvent::EffectRequested(effect) = &final_events[3] else {
-        panic!("expected immediate effect")
-    };
-    assert_eq!(effect.mode, DialogueEffectMode::Immediate);
-    assert_eq!(effect.function, "ping");
-
     let backend = TestBackend::new(100, 30);
     let mut terminal = Terminal::new(backend).expect("test terminal");
-    let mut ui = TuiPlayUi::new(&mut terminal, crate::tui::TuiSettings::default(), messages);
-    ui.start(&asset, "start").expect("start presentation");
-    ui.prepare_choice_prompt(&prompt);
-    ui.selected_choice(&choice_id).expect("choice presentation");
-    ui.condition_answers
-        .insert("trusts(player)".to_owned(), false);
-    ui.prepare_condition_prompt(&branch_request, "trusts(player)".to_owned());
-    assert!(matches!(
-        ui.state.prompt,
-        TuiPrompt::Condition {
-            selected: false,
-            ..
-        }
-    ));
-    let PreviewEvent::ConditionResult { request, result } = &final_events[0] else {
-        panic!("expected condition result")
-    };
-    ui.condition_result(request, result)
-        .expect("condition presentation");
-    for event in &final_events[2..] {
-        match event {
-            PreviewEvent::DeferredEffectScheduled(effect) => {
-                ui.deferred_effect_scheduled(effect)
-                    .expect("deferred presentation");
-            }
-            PreviewEvent::EffectRequested(effect) => {
-                ui.effect(effect).expect("effect presentation")
-            }
-            PreviewEvent::Line(line) => ui.line(line).expect("line presentation"),
-            PreviewEvent::End { .. } => break,
-            event => panic!("unexpected branch event {event:?}"),
-        }
-    }
+    let intents = [
+        crate::tui::TuiIntent::MovePrevious,
+        crate::tui::TuiIntent::Submit,
+        crate::tui::TuiIntent::Submit,
+        crate::tui::TuiIntent::Submit,
+        crate::tui::TuiIntent::Submit,
+    ];
+    let mut ui = TuiPlayUi::new(
+        &mut terminal,
+        crate::tui::TuiSettings::default(),
+        messages,
+        intents,
+    );
+    run_preview(&asset, "start", None, &mut ui).expect("shared preview loop");
+
+    assert!(ui.state.transcript.iter().any(|entry| {
+        entry.kind == TuiTranscriptKind::Choice
+            && entry.id.as_deref() == Some("c491f4cbe1944ebc5bc5")
+    }));
+    assert_eq!(ui.condition_answers.get("trusts(player)"), Some(&false));
+    assert!(
+        ui.state
+            .transcript
+            .iter()
+            .any(|entry| entry.kind == TuiTranscriptKind::Line && entry.text == "Denied.")
+    );
     let kinds = ui
         .state
         .transcript
@@ -208,10 +143,14 @@ fn tui_presenter_projects_real_preview_events_in_legacy_order() {
     assert_eq!(
         kinds,
         [
+            TuiTranscriptKind::Condition,
             TuiTranscriptKind::Prompt,
             TuiTranscriptKind::Choice,
             TuiTranscriptKind::Condition,
-            TuiTranscriptKind::Effect,
+            TuiTranscriptKind::Line,
+            TuiTranscriptKind::End,
+            TuiTranscriptKind::Deferred,
+            TuiTranscriptKind::Deferred,
         ]
     );
     assert_eq!(ui.state.deferred_queue.len(), 1);

@@ -22,6 +22,7 @@ impl<'asset> PreviewSession<'asset> {
                     prompt: Box::new(prompt.clone()),
                 };
             }
+            PreviewEvent::ChoiceAccepted { .. } => {}
             PreviewEvent::ChoiceSelected { .. } => self.state.status = PreviewStatus::Ready,
             PreviewEvent::EffectRequested(effect) => {
                 self.state.status = if effect.mode == crate::DialogueEffectMode::Blocking {

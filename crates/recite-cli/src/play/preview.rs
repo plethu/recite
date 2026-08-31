@@ -88,27 +88,14 @@ pub(super) fn run_preview<U: PreviewPlayUi>(
                     },
                     inputs,
                 );
-                if output
-                    .events()
-                    .iter()
-                    .any(|event| matches!(event, PreviewEvent::ConditionRequested(_)))
-                    && !output
-                        .events()
-                        .iter()
-                        .any(|event| matches!(event, PreviewEvent::Error(_)))
-                    && !output
-                        .events()
-                        .iter()
-                        .any(|event| matches!(event, PreviewEvent::ChoiceSelected { .. }))
-                {
-                    // Choice validation succeeded at the preview boundary. Present this
-                    // accepted transition before asking for a follow-up branch condition;
-                    // the eventual runtime ChoiceSelected event is consumed below so the
-                    // presenter sees the transition exactly once.
-                    ui.selected_choice(&choice_id)?;
-                    announced_choice = Some(choice_id);
-                }
                 enqueue_events(&mut pending, output.events(), &mut announced_choice);
+            }
+            PreviewEvent::ChoiceAccepted { choice_id, .. } => {
+                // This event is emitted by PreviewSession only after Choose has been
+                // validated. It is intentionally distinct from committed ChoiceSelected;
+                // a later condition failure may roll the trial back.
+                ui.selected_choice(&choice_id)?;
+                announced_choice = Some(choice_id);
             }
             PreviewEvent::ChoiceSelected { choice_id, .. } => ui.selected_choice(&choice_id)?,
             PreviewEvent::EffectRequested(effect) => {

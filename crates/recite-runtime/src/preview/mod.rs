@@ -13,6 +13,7 @@ mod projection;
 mod snapshot;
 mod snapshot_codec;
 mod snapshot_validation;
+mod trial;
 
 use recite_core::CompiledDialogue;
 

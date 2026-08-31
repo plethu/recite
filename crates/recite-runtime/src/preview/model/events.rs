@@ -54,6 +54,14 @@ pub enum PreviewEvent {
     },
     Line(DialogueLine),
     Prompt(PreviewPrompt),
+    /// A choice was accepted before traversal suspended on a follow-up condition.
+    ///
+    /// This is a presentation boundary, not a committed traversal event. A later
+    /// condition failure leaves the session unchanged and emits no `ChoiceSelected`.
+    ChoiceAccepted {
+        prompt: PreviewPromptIdentity,
+        choice_id: ChoiceId,
+    },
     ChoiceSelected {
         prompt: PreviewPromptIdentity,
         choice_id: ChoiceId,

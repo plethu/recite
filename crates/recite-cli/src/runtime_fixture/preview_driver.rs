@@ -137,6 +137,7 @@ pub(crate) fn execute_runtime_fixture(
                         )?;
                     }
                 }
+                PreviewEvent::ChoiceAccepted { .. } => {}
                 PreviewEvent::ConditionResult { .. }
                 | PreviewEvent::Line(_)
                 | PreviewEvent::EffectRequested(_)
