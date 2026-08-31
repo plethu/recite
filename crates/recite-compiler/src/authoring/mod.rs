@@ -1,4 +1,5 @@
 mod build;
+mod catalog_summary;
 mod edit;
 mod engine;
 mod input;
@@ -22,6 +23,13 @@ pub use build::{
     PreparedPublishIdentity, PublishAbortReason, PublishFailure, PublishFailureReason,
     PublishNotAttemptedReason, PublishOutcome, PublishOutcomeError, PublishRefusal, RecoveryNeeded,
     RestartGuidance, StaleReason,
+};
+pub use catalog_summary::{
+    CatalogCoverage, CatalogCoverageSummary, CatalogEntryKey, CatalogEntryResolution,
+    CatalogEntryStatus, CatalogFallbackCandidate, CatalogIdentity, CatalogInput, CatalogMatch,
+    CatalogResolution, CatalogResolutionPolicy, CatalogSummary, CatalogSummaryError,
+    CatalogVariant, DialogueCatalog, DialogueCatalogInput, DialogueCatalogSummary,
+    TranslationStatus,
 };
 pub use edit::{
     AuthoringEditError, AuthoringEditOperation, AuthoringEditPlan, EditPrecondition, SourceEdit,
