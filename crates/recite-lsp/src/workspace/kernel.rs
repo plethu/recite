@@ -14,6 +14,7 @@ mod tests;
 
 pub(crate) struct KernelPartition {
     pub(super) kernel: AuthoringKernel,
+    pub(super) build_id: u64,
     pub(super) schema: SchemaIndex,
     pub(super) open_owners: BTreeMap<DocumentKey, lsp_types::Uri>,
     pub(super) retired_schema_uris: BTreeSet<String>,

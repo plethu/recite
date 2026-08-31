@@ -15,6 +15,9 @@ mod snapshot;
 mod transaction;
 mod ui;
 
+#[cfg(test)]
+mod tests;
+
 use std::collections::{BTreeMap, BTreeSet};
 
 use lsp_types::Uri;
@@ -44,6 +47,7 @@ pub(crate) struct LspWorkspace {
     schema_paths: BTreeMap<String, Option<std::path::PathBuf>>,
     retired_schema_uris: BTreeSet<String>,
     generation: SnapshotGeneration,
+    next_partition_build_id: u64,
     pub(crate) ui_catalog: UiCatalog,
 }
 
@@ -69,10 +73,6 @@ impl LspWorkspace {
                     }
                 }
             } else {
-                let mut published = published;
-                if let Some(uri) = partition.schema.canonical_uri() {
-                    published.uri = uri;
-                }
                 refreshes.push((key, published));
             }
         }

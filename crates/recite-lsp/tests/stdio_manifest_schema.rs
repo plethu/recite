@@ -49,7 +49,7 @@ fn manifest_schema_change_reloads_and_preserves_open_overlay() {
         }),
     );
     let overlay_messages = harness.barrier(&schema_a_alias_uri);
-    let overlay = diagnostics_for(&overlay_messages, &schema_a_alias_uri);
+    let overlay = diagnostics_for(&overlay_messages, &schema_a_uri);
     assert_eq!(overlay.len(), 1);
     let overlay = overlay[0];
     assert_eq!(overlay["version"], 7);
@@ -70,7 +70,7 @@ fn manifest_schema_change_reloads_and_preserves_open_overlay() {
         json!({ "changes": [{ "uri": manifest_uri.clone(), "type": 2 }] }),
     );
     let refresh_messages = harness.barrier(&schema_a_alias_uri);
-    let refreshed_diagnostics = diagnostics_for(&refresh_messages, &schema_a_alias_uri);
+    let refreshed_diagnostics = diagnostics_for(&refresh_messages, &schema_a_uri);
     assert_eq!(refreshed_diagnostics.len(), 1);
     let refreshed_overlay = refreshed_diagnostics[0];
     assert_eq!(refreshed_overlay["version"], 7);
@@ -92,7 +92,7 @@ fn manifest_schema_change_reloads_and_preserves_open_overlay() {
     );
     let switch_messages = harness.barrier(&schema_a_alias_uri);
     assert_eq!(switch_messages.len(), 2);
-    let old_clear = diagnostics_for(&switch_messages, &schema_a_alias_uri);
+    let old_clear = diagnostics_for(&switch_messages, &schema_a_uri);
     assert_eq!(old_clear.len(), 1);
     let old_clear = old_clear[0];
     assert_eq!(old_clear["version"], 7);
@@ -167,7 +167,7 @@ fn manifest_schema_change_reloads_and_preserves_open_overlay() {
     );
     let readd_messages = harness.barrier(&schema_a_alias_uri);
     assert_eq!(readd_messages.len(), 1);
-    let readded = diagnostics_for(&readd_messages, &schema_a_alias_uri);
+    let readded = diagnostics_for(&readd_messages, &schema_a_uri);
     assert_eq!(readded.len(), 1, "re-add messages: {readded:?}");
     assert_eq!(readded[0]["version"], 8);
     assert!(!readded[0]["diagnostics"].as_array().unwrap().is_empty());
@@ -211,7 +211,8 @@ fn removed_parent_manifest_retains_open_schema_alias_as_retired() {
         }),
     );
     let opened = harness.barrier(&schema_alias);
-    assert_eq!(diagnostics_for(&opened, &schema_alias).len(), 1);
+    let schema_uri = file_uri(&schema);
+    assert_eq!(diagnostics_for(&opened, &schema_uri).len(), 1);
 
     std::fs::remove_file(&manifest)
         .unwrap_or_else(|error| panic!("remove parent manifest: {error}"));
@@ -221,7 +222,7 @@ fn removed_parent_manifest_retains_open_schema_alias_as_retired() {
     );
     let removed = harness.barrier(&schema_alias);
     assert_eq!(removed.len(), 1);
-    let clear = diagnostics_for(&removed, &schema_alias);
+    let clear = diagnostics_for(&removed, &schema_uri);
     assert_eq!(clear.len(), 1);
     assert_eq!(clear[0]["version"], 7);
     assert!(
@@ -259,7 +260,7 @@ fn removed_parent_manifest_retains_open_schema_alias_as_retired() {
     );
     let readded = harness.barrier(&schema_alias);
     assert_eq!(readded.len(), 1, "re-add messages: {readded:?}");
-    let readded = diagnostics_for(&readded, &schema_alias);
+    let readded = diagnostics_for(&readded, &schema_uri);
     assert_eq!(readded.len(), 1);
     assert_eq!(readded[0]["version"], 8);
     assert!(
@@ -268,6 +269,85 @@ fn removed_parent_manifest_retains_open_schema_alias_as_retired() {
             .is_some_and(Vec::is_empty)
     );
     harness.finish();
+}
+
+#[cfg(unix)]
+#[test]
+fn symlink_schema_keeps_configured_uri_across_startup_overlay_and_close() {
+    use std::os::unix::fs::symlink;
+
+    let temp = Builder::new()
+        .prefix("recite symlink schema stdio ")
+        .tempdir()
+        .unwrap_or_else(|error| panic!("temporary schema directory: {error}"));
+    let manifest = temp.path().join("recite.project.toml");
+    let target = temp.path().join("target.json");
+    let configured = temp.path().join("schema.json");
+    std::fs::write(&target, "{\"schema_version\":\"bad\"}\n")
+        .unwrap_or_else(|error| panic!("write target schema: {error}"));
+    symlink(&target, &configured).unwrap_or_else(|error| panic!("symlink schema: {error}"));
+    std::fs::write(
+        &manifest,
+        "format_version = 1\n[project]\nschema = \"schema.json\"\n",
+    )
+    .unwrap_or_else(|error| panic!("write schema manifest: {error}"));
+
+    let configured_uri = file_uri(&configured);
+    let target_uri = file_uri(&target);
+    assert_ne!(configured_uri, target_uri);
+    let mut harness = StdioHarness::start(json!({
+        "capabilities": {},
+        "rootUri": file_uri(temp.path())
+    }));
+    let startup = harness.barrier(&configured_uri);
+    assert_eq!(startup.len(), 1, "startup schema messages: {startup:?}");
+    assert_schema_message(&startup[0], &configured_uri, None, false);
+
+    harness.notify(
+        "textDocument/didOpen",
+        json!({
+            "textDocument": {
+                "uri": target_uri.clone(),
+                "languageId": "json",
+                "version": 4,
+                "text": "{\"schema_version\":1}\n"
+            }
+        }),
+    );
+    let opened = harness.barrier(&target_uri);
+    assert_eq!(opened.len(), 1, "overlay schema messages: {opened:?}");
+    assert_schema_message(&opened[0], &configured_uri, Some(4), true);
+
+    harness.notify(
+        "textDocument/didClose",
+        json!({ "textDocument": { "uri": target_uri.clone() } }),
+    );
+    let closed = harness.barrier(&target_uri);
+    assert_eq!(closed.len(), 1, "closed schema messages: {closed:?}");
+    assert_schema_message(&closed[0], &configured_uri, None, false);
+    assert!(
+        closed[0]["params"]["uri"] != target_uri,
+        "canonical target URI must not receive a stale publication: {closed:?}"
+    );
+    harness.finish();
+}
+
+fn assert_schema_message(
+    message: &serde_json::Value,
+    uri: &str,
+    version: Option<i64>,
+    empty: bool,
+) {
+    assert_eq!(message["method"], "textDocument/publishDiagnostics");
+    assert_eq!(message["params"]["uri"], uri);
+    assert_eq!(message["params"]["version"].as_i64(), version);
+    assert_eq!(
+        message["params"]["diagnostics"]
+            .as_array()
+            .is_some_and(Vec::is_empty),
+        empty,
+        "schema diagnostics payload: {message}"
+    );
 }
 
 fn diagnostics_for<'a>(messages: &'a [serde_json::Value], uri: &str) -> Vec<&'a serde_json::Value> {

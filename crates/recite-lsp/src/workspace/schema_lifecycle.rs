@@ -58,7 +58,6 @@ impl LspWorkspace {
         }
         if has_publish {
             if let Some(document) = self.documents.document(uri) {
-                merged.uri = uri.clone();
                 merged.text = document.text().to_owned();
                 merged.version = Some(document.version());
             }

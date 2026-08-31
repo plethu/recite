@@ -140,7 +140,10 @@ impl SchemaIndex {
             return self.clone();
         };
         let mut overlay = Self::from_text(path, self.kind, text);
-        overlay.uri = Some(uri);
+        // The configured spelling is the stable protocol authority.  An
+        // editor may open the same target through a lexical or symlink alias,
+        // but diagnostics must not migrate to a second URI for that target.
+        overlay.uri = self.uri.clone().or(Some(uri));
         overlay.active_version = Some(version);
         overlay.configured_uri = self.configured_uri.clone();
         overlay.configured_path = self.configured_path.clone();

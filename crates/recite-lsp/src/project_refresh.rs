@@ -54,32 +54,51 @@ impl LspWorkspace {
             .iter()
             .map(|(id, partition)| (id.clone(), partition.retired_schema_uris.clone()))
             .collect();
-        let old_partitions = std::mem::take(&mut self.partitions);
-        let old_partition_ids = old_partitions.keys().cloned().collect::<BTreeSet<_>>();
+        let old_partition_ids = self.partitions.keys().cloned().collect::<BTreeSet<_>>();
+        let old_schemas = self
+            .partitions
+            .iter()
+            .map(|(id, partition)| (id.clone(), partition.schema.clone()))
+            .collect::<BTreeMap<_, _>>();
         let old_retired_workspace = self.retired_schema_uris.clone();
         let old_documents = self.documents.clone();
         let mut saved = self.saved.clone();
         saved.refresh_manifests();
         let schema_paths = schema_paths_for_saved(&saved, self.schema_override_path.as_ref());
-        let schemas = schema_paths
+        let mut schemas = schema_paths
             .iter()
             .map(|(id, path)| (id.clone(), SchemaIndex::load(path.clone())))
             .collect::<BTreeMap<_, _>>();
-        for (id, old) in old_partitions.iter() {
+        for schema in schemas.values_mut() {
+            let Some(target) = schema.target_identity() else {
+                continue;
+            };
+            let Some(protocol_uri) = old_schemas
+                .values()
+                .filter(|old| old.target_identity().as_deref() == Some(target.as_str()))
+                .filter_map(SchemaIndex::protocol_uri)
+                .min_by_key(|uri| uri.as_str().to_owned())
+            else {
+                continue;
+            };
+            *schema =
+                std::mem::replace(schema, SchemaIndex::empty()).with_protocol_uri(protocol_uri);
+        }
+        for (id, old) in &old_schemas {
             let changed = schemas
                 .get(id)
-                .is_some_and(|new| old.schema.configured_path() != new.configured_path());
+                .is_some_and(|new| old.configured_path() != new.configured_path());
             if changed {
                 old_retired.entry(id.clone()).or_default().extend(
                     old_documents
                         .documents()
-                        .filter(|document| old.schema.matches_uri(&document.identity().uri))
+                        .filter(|document| old.matches_uri(&document.identity().uri))
                         .map(|document| document.identity().uri.as_str().to_owned()),
                 );
             }
         }
         let (old_retired, retired_workspace) = update_retired_schema_state(
-            &old_partitions,
+            &self.partitions,
             &old_documents,
             &schemas,
             old_retired,
@@ -92,40 +111,47 @@ impl LspWorkspace {
             .rebuild_for_documents_with_schemas_and_retired(saved, documents, schemas, old_retired)
             .is_err()
         {
-            self.partitions = old_partitions;
             self.retired_schema_uris = old_retired_workspace;
             return Vec::new();
         }
         self.schema_paths = schema_paths;
 
         let mut refreshes = manifest_refreshes(self, &old_manifest_diagnostics);
-        for (id, old) in old_partitions {
+        for (id, old) in old_schemas {
             let Some(new) = self.partitions.get_mut(&id) else {
-                refreshes.extend(clear_old_schema(self, &old.schema, &old_documents));
+                refreshes.extend(clear_old_schema(self, &old, &old_documents));
                 continue;
             };
-            if old.schema.configured_path() != new.schema.configured_path() {
+            if old.configured_path() != new.schema.configured_path() {
                 let old_open = old_documents
                     .documents()
-                    .filter(|document| old.schema.matches_uri(&document.identity().uri))
+                    .filter(|document| old.matches_uri(&document.identity().uri))
                     .collect::<Vec<_>>();
                 new.retired_schema_uris.extend(
                     old_open
                         .iter()
                         .map(|document| document.identity().uri.as_str().to_owned()),
                 );
+                let protocol_uri = old.protocol_uri();
                 refreshes.extend(old_open.into_iter().map(|document| {
-                    DiagnosticRefresh::publish_open(document, Vec::new(), self.generation)
+                    let mut refresh =
+                        DiagnosticRefresh::publish_open(document, Vec::new(), self.generation);
+                    if let Some(protocol_uri) = &protocol_uri
+                        && let DiagnosticRefresh::Publish(published) = &mut refresh
+                    {
+                        published.uri = protocol_uri.clone();
+                    }
+                    refresh
                 }));
                 if old_documents
                     .documents()
-                    .all(|document| !old.schema.matches_uri(&document.identity().uri))
-                    && let Some(refresh) = old.schema.clear_refresh(self.generation)
+                    .all(|document| !old.matches_uri(&document.identity().uri))
+                    && let Some(refresh) = old.clear_refresh(self.generation)
                 {
                     refreshes.push(refresh);
                 }
             }
-            if (new.schema.needs_refresh() || old.schema.needs_refresh())
+            if (new.schema.needs_refresh() || old.needs_refresh())
                 && let Some(refresh) = new.schema.refresh_or_clear(self.generation)
             {
                 refreshes.push(refresh);

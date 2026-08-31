@@ -58,8 +58,12 @@ pub(crate) fn manifest_refresh_reuses_unchanged_sibling_kernel() {
     let mut workspace = test_workspace(WorkspaceConfig::from_initialize_params(&params));
     let second_uri = file_uri(&second.join("src/main.recite"));
     workspace.open(second_uri, 1, ":: second live\n".to_owned());
+    let first_id = stable_path_identity(&first);
     let second_id = stable_path_identity(&second);
-    let before = workspace
+    let first_before = workspace
+        .partition_kernel_generation(&first_id)
+        .expect("first workspace partition");
+    let second_before = workspace
         .partition_kernel_generation(&second_id)
         .expect("second workspace partition");
 
@@ -72,8 +76,29 @@ pub(crate) fn manifest_refresh_reuses_unchanged_sibling_kernel() {
 
     assert_eq!(
         workspace.partition_kernel_generation(&second_id),
-        Some(before),
+        Some(second_before),
         "manifest refresh must retain the untouched sibling kernel"
+    );
+    assert_ne!(
+        workspace.partition_kernel_generation(&first_id),
+        Some(first_before),
+        "manifest refresh must rebuild the affected kernel"
+    );
+    let first_after = workspace
+        .partition_kernel_generation(&first_id)
+        .expect("rebuilt first workspace partition");
+
+    workspace.exhaust_generation_for_test();
+    workspace.refresh_watched_uri(&file_uri(&first.join("src/main.recite")));
+    assert_eq!(
+        workspace.partition_kernel_generation(&first_id),
+        Some(first_after),
+        "failed refresh must retain the affected partition identity"
+    );
+    assert_eq!(
+        workspace.partition_kernel_generation(&second_id),
+        Some(second_before),
+        "failed refresh must retain the untouched sibling kernel"
     );
 }
 

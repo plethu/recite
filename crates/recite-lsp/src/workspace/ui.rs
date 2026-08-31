@@ -35,6 +35,7 @@ impl LspWorkspace {
             schema_paths,
             retired_schema_uris: BTreeSet::new(),
             generation,
+            next_partition_build_id: 0,
             ui_catalog,
         };
         workspace.rebuild_for_documents_with_schemas(saved, documents, schemas)?;

@@ -14,23 +14,9 @@ impl LspWorkspace {
             return Vec::new();
         }
         if self.is_schema_document_uri(&uri) {
-            let mut refreshes = vec![DiagnosticRefresh::Clear {
-                uri: uri.clone(),
-                version: None,
-                generation: self.generation,
-            }];
-            if let Some(refresh) = self.schema_refresh_for_uri(&uri) {
-                let targets_closed_uri = match &refresh {
-                    DiagnosticRefresh::Publish(diagnostics) => diagnostics.uri == uri,
-                    DiagnosticRefresh::Clear {
-                        uri: refresh_uri, ..
-                    } => *refresh_uri == uri,
-                };
-                if !targets_closed_uri {
-                    refreshes.push(refresh);
-                }
-            }
-            return refreshes;
+            return self
+                .schema_refresh_for_uri(&uri)
+                .map_or_else(Vec::new, |refresh| vec![refresh]);
         }
         let closed_partition = closed
             .identity()

@@ -25,7 +25,7 @@ fn shared_schema_owner_transitions_coalesce_and_reactivate() {
             "format_version = 1\n[project]\nschema = \"../shared.json\"\n",
         );
     }
-    let schema_uri = file_uri(&shared_schema);
+    let schema_uri = format!("{}/../shared.json", file_uri(&first));
     let first_manifest_path = first.join("recite.project.toml");
     let second_manifest_path = second.join("recite.project.toml");
     let first_manifest = file_uri(&first_manifest_path);

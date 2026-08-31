@@ -23,10 +23,20 @@ impl SchemaIndex {
             .map(stable_path_identity)
     }
 
-    pub(crate) fn canonical_uri(&self) -> Option<Uri> {
-        self.path
-            .as_deref()
-            .and_then(crate::paths::file_path_to_uri)
+    pub(crate) fn protocol_uri(&self) -> Option<Uri> {
+        self.uri
+            .clone()
+            .or_else(|| self.configured_uri.clone())
+            .or_else(|| {
+                self.path
+                    .as_deref()
+                    .and_then(crate::paths::file_path_to_uri)
+            })
+    }
+
+    pub(crate) fn with_protocol_uri(mut self, uri: Uri) -> Self {
+        self.uri = Some(uri);
+        self
     }
 
     pub(crate) fn clear_refresh(

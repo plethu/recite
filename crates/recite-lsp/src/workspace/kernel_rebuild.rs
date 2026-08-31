@@ -8,6 +8,15 @@ use super::schema_index::SchemaIndex;
 use super::{LspWorkspace, SnapshotGeneration};
 use crate::documents::OpenDocumentStore;
 
+fn take_old_partitions(
+    old_partitions: &mut Option<BTreeMap<String, KernelPartition>>,
+) -> BTreeMap<String, KernelPartition> {
+    let Some(partitions) = old_partitions.take() else {
+        unreachable!("candidate construction consumed old partitions")
+    };
+    partitions
+}
+
 #[derive(Clone, Debug, Eq, PartialEq)]
 pub(super) struct PartitionInputFingerprint {
     saved: Vec<(String, String)>,
@@ -28,7 +37,14 @@ impl LspWorkspace {
             .iter()
             .map(|(id, partition)| (id.clone(), partition.retired_schema_uris.clone()))
             .collect();
-        self.rebuild_partitions(saved, documents, schemas, retired)
+        let old_partitions = std::mem::take(&mut self.partitions);
+        match self.rebuild_partitions(saved, documents, schemas, retired, Some(old_partitions)) {
+            Ok(()) => Ok(()),
+            Err((error, old_partitions)) => {
+                self.partitions = old_partitions;
+                Err(error)
+            }
+        }
     }
 
     pub(super) fn rebuild_for_documents_with_schemas_and_retired(
@@ -38,7 +54,14 @@ impl LspWorkspace {
         schemas: BTreeMap<String, SchemaIndex>,
         retired: BTreeMap<String, BTreeSet<String>>,
     ) -> Result<(), recite_compiler::AuthoringError> {
-        self.rebuild_partitions(saved, documents, schemas, retired)
+        let old_partitions = std::mem::take(&mut self.partitions);
+        match self.rebuild_partitions(saved, documents, schemas, retired, Some(old_partitions)) {
+            Ok(()) => Ok(()),
+            Err((error, old_partitions)) => {
+                self.partitions = old_partitions;
+                Err(error)
+            }
+        }
     }
 
     fn rebuild_partitions(
@@ -47,13 +70,24 @@ impl LspWorkspace {
         documents: OpenDocumentStore,
         schemas: BTreeMap<String, SchemaIndex>,
         retired: BTreeMap<String, BTreeSet<String>>,
-    ) -> Result<(), recite_compiler::AuthoringError> {
-        let generation = SnapshotGeneration(self.generation.0.checked_add(1).ok_or(
-            recite_compiler::AuthoringError::GenerationExhausted {
-                current: recite_compiler::SnapshotGeneration::new(self.generation.0),
-            },
-        )?);
-        let old_partitions = &self.partitions;
+        mut old_partitions: Option<BTreeMap<String, KernelPartition>>,
+    ) -> Result<
+        (),
+        (
+            recite_compiler::AuthoringError,
+            BTreeMap<String, KernelPartition>,
+        ),
+    > {
+        let generation = SnapshotGeneration(
+            self.generation
+                .0
+                .checked_add(1)
+                .ok_or(recite_compiler::AuthoringError::GenerationExhausted {
+                    current: recite_compiler::SnapshotGeneration::new(self.generation.0),
+                })
+                .map_err(|error| (error, take_old_partitions(&mut old_partitions)))?,
+        );
+        let mut next_partition_build_id = self.next_partition_build_id;
         let mut ids = saved.partition_ids();
         ids.extend(schemas.keys().cloned());
         let mut retired_all = retired
@@ -106,8 +140,24 @@ impl LspWorkspace {
                 &retired_all,
             );
             let reusable = old_partitions
-                .get(&id)
+                .as_ref()
+                .and_then(|old| old.get(&id))
                 .is_some_and(|old| old.input_fingerprint == input_fingerprint);
+            let build_id = if reusable {
+                old_partitions
+                    .as_ref()
+                    .and_then(|old| old.get(&id))
+                    .map_or(next_partition_build_id, |old| old.build_id)
+            } else {
+                let build_id = next_partition_build_id
+                    .checked_add(1)
+                    .ok_or(recite_compiler::AuthoringError::GenerationExhausted {
+                        current: recite_compiler::SnapshotGeneration::new(next_partition_build_id),
+                    })
+                    .map_err(|error| (error, take_old_partitions(&mut old_partitions)))?;
+                next_partition_build_id = build_id;
+                build_id
+            };
             let mut kernel = schema
                 .schema()
                 .cloned()
@@ -116,13 +166,16 @@ impl LspWorkspace {
             if !reusable {
                 let expected = kernel.snapshot().generation();
                 let request = super::kernel::authoring_request(&saved, &open, &id, expected);
-                kernel.apply(request)?;
+                kernel
+                    .apply(request)
+                    .map_err(|error| (error, take_old_partitions(&mut old_partitions)))?;
             }
             let retired_schema_uris = retired.get(&id).cloned().unwrap_or_default();
             partitions.insert(
                 id,
                 KernelPartition {
                     kernel,
+                    build_id,
                     schema,
                     open_owners: owners,
                     retired_schema_uris,
@@ -130,7 +183,7 @@ impl LspWorkspace {
                 },
             );
         }
-        let mut old_partitions = std::mem::take(&mut self.partitions);
+        let mut old_partitions = take_old_partitions(&mut old_partitions);
         for (id, partition) in &mut partitions {
             if let Some(old) = old_partitions.remove(id)
                 && old.input_fingerprint == partition.input_fingerprint
@@ -148,6 +201,7 @@ impl LspWorkspace {
         self.documents = documents;
         self.partitions = partitions;
         self.generation = generation;
+        self.next_partition_build_id = next_partition_build_id;
         self.snapshot = snapshot;
         Ok(())
     }

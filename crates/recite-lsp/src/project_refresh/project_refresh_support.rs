@@ -88,9 +88,19 @@ pub(super) fn clear_old_schema(
     schema: &SchemaIndex,
     documents: &crate::documents::OpenDocumentStore,
 ) -> Vec<DiagnosticRefresh> {
+    let protocol_uri = schema.protocol_uri();
     documents
         .documents()
         .filter(|document| schema.matches_uri(&document.identity().uri))
-        .map(|document| DiagnosticRefresh::publish_open(document, Vec::new(), workspace.generation))
+        .map(|document| {
+            let mut refresh =
+                DiagnosticRefresh::publish_open(document, Vec::new(), workspace.generation);
+            if let Some(protocol_uri) = &protocol_uri
+                && let DiagnosticRefresh::Publish(published) = &mut refresh
+            {
+                published.uri = protocol_uri.clone();
+            }
+            refresh
+        })
         .collect()
 }
