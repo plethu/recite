@@ -6,6 +6,7 @@ mod kernel_rebuild;
 #[path = "workspace/kernel_standalone.rs"]
 mod kernel_standalone;
 mod lsp_features;
+mod partition_rollback;
 mod project_index;
 #[path = "project_refresh.rs"]
 mod project_refresh;

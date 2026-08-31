@@ -12,8 +12,11 @@ mod close;
 mod project_refresh_support;
 #[path = "project_refresh/retired_schema.rs"]
 mod retired_schema;
+#[path = "project_refresh/schema_authority.rs"]
+mod schema_authority;
 use project_refresh_support::{clear_old_schema, coalesce_refreshes, manifest_refreshes};
 use retired_schema::update_retired_schema_state;
+use schema_authority::carry_schema_authorities;
 
 impl LspWorkspace {
     pub(crate) fn save(&mut self, uri: Uri) -> Vec<DiagnosticRefresh> {
@@ -69,21 +72,7 @@ impl LspWorkspace {
             .iter()
             .map(|(id, path)| (id.clone(), SchemaIndex::load(path.clone())))
             .collect::<BTreeMap<_, _>>();
-        for schema in schemas.values_mut() {
-            let Some(target) = schema.target_identity() else {
-                continue;
-            };
-            let Some(protocol_uri) = old_schemas
-                .values()
-                .filter(|old| old.target_identity().as_deref() == Some(target.as_str()))
-                .filter_map(SchemaIndex::protocol_uri)
-                .min_by_key(|uri| uri.as_str().to_owned())
-            else {
-                continue;
-            };
-            *schema =
-                std::mem::replace(schema, SchemaIndex::empty()).with_protocol_uri(protocol_uri);
-        }
+        carry_schema_authorities(&old_schemas, &mut schemas);
         for (id, old) in &old_schemas {
             let changed = schemas
                 .get(id)

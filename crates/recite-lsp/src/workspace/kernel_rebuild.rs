@@ -3,19 +3,11 @@ use std::collections::{BTreeMap, BTreeSet};
 use recite_compiler::AuthoringKernel;
 
 use super::kernel::{KernelPartition, effective_open_documents};
+use super::partition_rollback::take_old_partitions;
 use super::project_index::SavedProjectIndex;
 use super::schema_index::SchemaIndex;
 use super::{LspWorkspace, SnapshotGeneration};
 use crate::documents::OpenDocumentStore;
-
-fn take_old_partitions(
-    old_partitions: &mut Option<BTreeMap<String, KernelPartition>>,
-) -> BTreeMap<String, KernelPartition> {
-    let Some(partitions) = old_partitions.take() else {
-        unreachable!("candidate construction consumed old partitions")
-    };
-    partitions
-}
 
 #[derive(Clone, Debug, Eq, PartialEq)]
 pub(super) struct PartitionInputFingerprint {
