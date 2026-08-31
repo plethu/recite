@@ -5,6 +5,7 @@ use std::path::{Path, PathBuf};
 use std::sync::atomic::{AtomicU64, Ordering};
 use std::{hash::Hash, hash::Hasher};
 
+use atomic_write_file::AtomicWriteFile;
 use recite_compiler::BuildRequest;
 
 static STAGE_SEQUENCE: AtomicU64 = AtomicU64::new(1);
@@ -65,6 +66,9 @@ pub(super) enum ReplaceOutcome {
     Failed,
     Committed,
     CommittedWithCleanup(io::Error),
+    /// The atomic writer returned an error after an operation that may have
+    /// replaced the destination. The old/new partition is not trustworthy.
+    Indeterminate(io::Error),
 }
 
 pub(super) fn replace(staged: &StagedOutput) -> ReplaceOutcome {
@@ -72,15 +76,22 @@ pub(super) fn replace(staged: &StagedOutput) -> ReplaceOutcome {
         Ok(bytes) => bytes,
         Err(_) => return ReplaceOutcome::Failed,
     };
-    let mut replacement = match atomic_write_file::AtomicWriteFile::options().open(&staged.output) {
+    let mut replacement = match AtomicWriteFile::options().open(&staged.output) {
         Ok(file) => file,
         Err(_) => return ReplaceOutcome::Failed,
     };
     if replacement.as_file_mut().write_all(&bytes).is_err() {
         return ReplaceOutcome::Failed;
     }
-    if replacement.commit().is_err() {
-        return ReplaceOutcome::Failed;
+    replace_with(staged, replacement, AtomicWriteFile::commit)
+}
+
+fn replace_with<F>(staged: &StagedOutput, replacement: AtomicWriteFile, commit: F) -> ReplaceOutcome
+where
+    F: FnOnce(AtomicWriteFile) -> io::Result<()>,
+{
+    if let Err(error) = commit(replacement) {
+        return ReplaceOutcome::Indeterminate(error);
     }
     match fs::remove_file(&staged.temp) {
         Ok(()) => ReplaceOutcome::Committed,

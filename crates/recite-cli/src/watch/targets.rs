@@ -4,6 +4,7 @@ use std::path::{Component, Path, PathBuf};
 use recite_compiler::{BuildInputKind, BuildTarget};
 
 use super::request::ProjectBuildRequest;
+use super::target_identity::{PhysicalIdentity, physical_identity, same_physical_path};
 
 #[derive(Clone, Debug, Eq, PartialEq, thiserror::Error)]
 #[non_exhaustive]
@@ -54,7 +55,7 @@ impl TargetMap {
             .map(|input| root.join(input.key().as_str()))
             .collect::<Vec<_>>();
         let mut targets = std::collections::BTreeMap::new();
-        let mut physical_targets: Vec<(PathBuf, BuildTarget)> = Vec::new();
+        let mut physical_targets: Vec<(PhysicalIdentity, BuildTarget)> = Vec::new();
         for project_target in request.targets() {
             let target = project_target.target().clone();
             let relative = validate_target(target.as_str()).map_err(|reason| {
@@ -98,11 +99,11 @@ impl TargetMap {
                 return Err(TargetMapError::DuplicateDestination {
                     target,
                     existing: existing.clone(),
-                    path: physical,
+                    path: physical.canonical.clone(),
                 });
             }
             for input in &input_paths {
-                if fs::canonicalize(input)
+                if physical_identity(input)
                     .ok()
                     .is_some_and(|input| same_physical_path(&input, &physical))
                 {
@@ -192,34 +193,6 @@ pub(super) fn reject_symlink_components(root: &Path, output: &Path) -> Result<()
         }
     }
     Ok(())
-}
-
-fn physical_identity(path: &Path) -> Result<PathBuf, String> {
-    if path.exists() {
-        return fs::canonicalize(path).map_err(|error| error.to_string());
-    }
-    let file_name = path
-        .file_name()
-        .ok_or_else(|| "target path has no file name".to_owned())?;
-    let parent = path
-        .parent()
-        .ok_or_else(|| "target path has no parent".to_owned())?;
-    if let Ok(parent) = fs::canonicalize(parent) {
-        return Ok(parent.join(file_name));
-    }
-    Ok(path.to_owned())
-}
-
-fn same_physical_path(left: &Path, right: &Path) -> bool {
-    #[cfg(windows)]
-    {
-        left.to_string_lossy()
-            .eq_ignore_ascii_case(&right.to_string_lossy())
-    }
-    #[cfg(not(windows))]
-    {
-        left == right
-    }
 }
 
 #[derive(Clone, Debug, Eq, PartialEq, thiserror::Error)]

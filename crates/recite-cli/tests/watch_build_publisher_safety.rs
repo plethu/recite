@@ -214,7 +214,18 @@ fn case_alias_destinations_are_rejected_before_staging() {
     let temp = require(TempDir::new(), "tempdir");
     let request = request(
         temp.path(),
-        "[[scenes]]\nid = \"scene.lower\"\nasset = \"compiled/dialogue.recitec\"\nblock = \"start\"\nparticipants = [\"hazel\"]\n\n[[scenes]]\nid = \"scene.upper\"\nasset = \"compiled/DIALOGUE.recitec\"\nblock = \"start\"\nparticipants = [\"hazel\"]\n",
+        "[[scenes]]\nid = \"scene.lower\"\nasset = \"compiled/café.recitec\"\nblock = \"start\"\nparticipants = [\"hazel\"]\n\n[[scenes]]\nid = \"scene.upper\"\nasset = \"compiled/CAFÉ.recitec\"\nblock = \"start\"\nparticipants = [\"hazel\"]\n",
+    );
+    assert!(ProjectBuildPublisher::new(&request).is_err());
+}
+
+#[cfg(target_os = "macos")]
+#[test]
+fn macos_case_alias_destinations_are_rejected_before_staging() {
+    let temp = require(TempDir::new(), "tempdir");
+    let request = request(
+        temp.path(),
+        "[[scenes]]\nid = \"scene.lower\"\nasset = \"compiled/café.recitec\"\nblock = \"start\"\nparticipants = [\"hazel\"]\n\n[[scenes]]\nid = \"scene.upper\"\nasset = \"compiled/CAFÉ.recitec\"\nblock = \"start\"\nparticipants = [\"hazel\"]\n",
     );
     assert!(ProjectBuildPublisher::new(&request).is_err());
 }

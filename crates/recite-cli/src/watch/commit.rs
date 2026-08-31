@@ -7,11 +7,26 @@ use super::recovery::ProjectBuildRecovery;
 use super::staging;
 use super::targets::reject_symlink_components;
 
+#[cfg(test)]
+mod tests;
+
 pub(super) fn commit_prepared(
     root: &Path,
     prepared: ProjectPreparedBuild,
     recovery_log: &mut Vec<ProjectBuildRecovery>,
 ) -> PublishOutcome {
+    commit_prepared_with(root, prepared, recovery_log, staging::replace)
+}
+
+fn commit_prepared_with<F>(
+    root: &Path,
+    prepared: ProjectPreparedBuild,
+    recovery_log: &mut Vec<ProjectBuildRecovery>,
+    replace: F,
+) -> PublishOutcome
+where
+    F: Fn(&staging::StagedOutput) -> staging::ReplaceOutcome,
+{
     let all = prepared
         .staged
         .iter()
@@ -23,10 +38,23 @@ pub(super) fn commit_prepared(
             record_uncommitted(&prepared.staged[index..], recovery_log);
             return partial(&committed, staged, &all, index);
         }
-        match staging::replace(&staged.file) {
+        match replace(&staged.file) {
             staging::ReplaceOutcome::Failed => {
                 record_uncommitted(&prepared.staged[index..], recovery_log);
                 return partial(&committed, staged, &all, index);
+            }
+            staging::ReplaceOutcome::Indeterminate(error) => {
+                recovery_log.push(ProjectBuildRecovery::new(
+                    staged.file.temp.clone(),
+                    format!(
+                        "atomic replacement outcome indeterminate; target may have changed: {error}"
+                    ),
+                ));
+                record_uncommitted(&prepared.staged[index + 1..], recovery_log);
+                return PublishOutcome::Indeterminate {
+                    attempted: all.clone(),
+                    recovery: RecoveryNeeded::for_targets(all.clone()),
+                };
             }
             staging::ReplaceOutcome::CommittedWithCleanup(error) => {
                 recovery_log.push(ProjectBuildRecovery::new(

@@ -187,6 +187,7 @@ jobs:
       - docs
       - benchmark-smoke
       - maintainability
+      - windows-publisher
     runs-on: ubuntu-24.04
     timeout-minutes: 5
     steps:
@@ -197,9 +198,11 @@ jobs:
           GIT_POLICY_RESULT: ${{ needs.git-policy.result }}
           MAINTAINABILITY_RESULT: ${{ needs.maintainability.result }}
           RUST_RESULT: ${{ needs.rust.result }}
+          WINDOWS_PUBLISHER_RESULT: ${{ needs.windows-publisher.result }}
         run: |
           test "$GIT_POLICY_RESULT" = success
           test "$RUST_RESULT" = success
           test "$DOCS_RESULT" = success
           test "$BENCHMARK_RESULT" = success
           test "$MAINTAINABILITY_RESULT" = success
+          test "$WINDOWS_PUBLISHER_RESULT" = success

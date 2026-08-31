@@ -19,6 +19,7 @@ mod publisher;
 mod recovery;
 mod request;
 mod staging;
+mod target_identity;
 mod targets;
 
 pub use engine::ProjectBuildEngine;

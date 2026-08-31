@@ -18,6 +18,9 @@ use super::targets::{TargetMap, reject_symlink_components};
 /// Preparation may create missing output directories. Rename replacement is
 /// process-visible per-file atomicity where the platform supports it; this
 /// publisher does not claim crash durability or global batch atomicity.
+/// Symlink components are refused and the boundary is rechecked at staging
+/// and commit, but ordinary path APIs cannot close a hostile concurrent
+/// filesystem retarget race between those checks and a syscall.
 #[derive(Debug)]
 pub struct ProjectBuildPublisher {
     root: PathBuf,

@@ -178,7 +178,7 @@ fn publisher_binds_the_exact_request_and_orders_candidates() {
 }
 
 #[test]
-fn failed_replacement_reports_partial_and_keeps_recovery_marker() {
+fn failed_replacement_reports_indeterminate_and_keeps_recovery_marker() {
     let temp = require(TempDir::new(), "tempdir");
     let request = request(
         temp.path(),
@@ -201,15 +201,17 @@ fn failed_replacement_reports_partial_and_keeps_recovery_marker() {
     );
     let outcome = publisher.commit(prepared);
     match outcome {
-        PublishOutcome::Partial {
-            committed,
-            failed,
-            remaining,
+        PublishOutcome::Indeterminate {
+            attempted,
             recovery,
         } => {
-            assert_eq!(committed, [BuildTarget::new("compiled/a.recitec").unwrap()]);
-            assert_eq!(failed, BuildTarget::new("compiled/z.recitec").unwrap());
-            assert!(remaining.is_empty());
+            assert_eq!(
+                attempted,
+                [
+                    BuildTarget::new("compiled/a.recitec").unwrap(),
+                    BuildTarget::new("compiled/z.recitec").unwrap(),
+                ]
+            );
             assert_eq!(
                 recovery.targets(),
                 &[
