@@ -2,12 +2,18 @@ use std::collections::{BTreeMap, BTreeSet};
 
 use lsp_types::Uri;
 
+use super::config::schema_paths_for_saved;
 use super::schema_index::SchemaIndex;
 use super::{DiagnosticRefresh, LspWorkspace};
 
+#[path = "project_refresh/close.rs"]
+mod close;
 #[path = "project_refresh/project_refresh_support.rs"]
 mod project_refresh_support;
-use project_refresh_support::{clear_old_schema, manifest_refreshes, schema_paths_for_saved};
+#[path = "project_refresh/retired_schema.rs"]
+mod retired_schema;
+use project_refresh_support::{clear_old_schema, coalesce_refreshes, manifest_refreshes};
+use retired_schema::update_retired_schema_state;
 
 impl LspWorkspace {
     pub(crate) fn save(&mut self, uri: Uri) -> Vec<DiagnosticRefresh> {
@@ -49,6 +55,8 @@ impl LspWorkspace {
             .map(|(id, partition)| (id.clone(), partition.retired_schema_uris.clone()))
             .collect();
         let old_partitions = std::mem::take(&mut self.partitions);
+        let old_partition_ids = old_partitions.keys().cloned().collect::<BTreeSet<_>>();
+        let old_retired_workspace = self.retired_schema_uris.clone();
         let old_documents = self.documents.clone();
         let mut saved = self.saved.clone();
         saved.refresh_manifests();
@@ -70,6 +78,14 @@ impl LspWorkspace {
                 );
             }
         }
+        let (old_retired, retired_workspace) = update_retired_schema_state(
+            &old_partitions,
+            &old_documents,
+            &schemas,
+            old_retired,
+            old_retired_workspace.clone(),
+        );
+        self.retired_schema_uris = retired_workspace;
         let mut documents = self.documents.clone();
         self.refresh_open_identities(&saved, &mut documents);
         if self
@@ -77,6 +93,7 @@ impl LspWorkspace {
             .is_err()
         {
             self.partitions = old_partitions;
+            self.retired_schema_uris = old_retired_workspace;
             return Vec::new();
         }
         self.schema_paths = schema_paths;
@@ -114,6 +131,14 @@ impl LspWorkspace {
                 refreshes.push(refresh);
             }
         }
+        for (id, partition) in &self.partitions {
+            if !old_partition_ids.contains(id)
+                && partition.schema.needs_refresh()
+                && let Some(refresh) = partition.schema.refresh_or_clear(self.generation)
+            {
+                refreshes.push(refresh);
+            }
+        }
         for uri in old_document_uris {
             if self.saved.document_by_uri(&uri).is_none() && self.documents.document(&uri).is_none()
             {
@@ -124,7 +149,7 @@ impl LspWorkspace {
                 });
             }
         }
-        refreshes
+        coalesce_refreshes(refreshes)
     }
 
     pub(crate) fn refresh_watched_uri(&mut self, uri: &Uri) -> Vec<DiagnosticRefresh> {
@@ -199,65 +224,5 @@ impl LspWorkspace {
                 })
             }))
             .collect()
-    }
-
-    pub(crate) fn close(&mut self, uri: Uri) -> Vec<DiagnosticRefresh> {
-        let mut documents = self.documents.clone();
-        let Some(closed) = documents.close(&uri) else {
-            return Vec::new();
-        };
-        let closed_key = super::document_key_for_open(&closed);
-        let mut saved = self.saved.clone();
-        saved.refresh_uri(&uri);
-        self.refresh_open_identities(&saved, &mut documents);
-        if self.rebuild_for_documents(saved, documents).is_err() {
-            return Vec::new();
-        }
-        if self.is_schema_document_uri(&uri) {
-            let mut refreshes = vec![DiagnosticRefresh::Clear {
-                uri: uri.clone(),
-                version: None,
-                generation: self.generation,
-            }];
-            if let Some(refresh) = self.schema_refresh_for_uri(&uri) {
-                let targets_closed_uri = match &refresh {
-                    DiagnosticRefresh::Publish(diagnostics) => diagnostics.uri == uri,
-                    DiagnosticRefresh::Clear {
-                        uri: refresh_uri, ..
-                    } => *refresh_uri == uri,
-                };
-                if !targets_closed_uri {
-                    refreshes.push(refresh);
-                }
-            }
-            return refreshes;
-        }
-        let closed_partition = closed
-            .identity()
-            .saved_path
-            .as_deref()
-            .and_then(|path| self.saved.partition_for_path(path))
-            .unwrap_or_else(|| "standalone".to_owned());
-        let remaining_open = closed_key
-            .as_ref()
-            .and_then(|key| self.effective_open_document_for_partition_key(&closed_partition, key))
-            .or_else(|| {
-                self.documents
-                    .documents()
-                    .find(|document| document.identity().saved_path == closed.identity().saved_path)
-            });
-        if let Some(document) = remaining_open {
-            return vec![self.publish_open_document(document)];
-        }
-        vec![
-            self.saved
-                .document_by_uri(&uri)
-                .map(|document| self.publish_saved_document(document))
-                .unwrap_or(DiagnosticRefresh::Clear {
-                    uri,
-                    version: None,
-                    generation: self.generation,
-                }),
-        ]
     }
 }

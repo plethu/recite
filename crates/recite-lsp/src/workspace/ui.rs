@@ -1,7 +1,8 @@
 use recite_ui::UiCatalog;
-use std::collections::BTreeMap;
+use std::collections::{BTreeMap, BTreeSet};
 
 use super::SnapshotGeneration;
+use super::config::schema_paths_for_saved;
 use super::project_index::SavedProjectIndex;
 use super::schema_index::SchemaIndex;
 use super::snapshot::LiveProjectSnapshot;
@@ -17,18 +18,11 @@ impl LspWorkspace {
         let saved = SavedProjectIndex::discover(&config);
         let schema_override_path = config.schema_override_path.clone();
         let documents = OpenDocumentStore::default();
-        let schema_paths = config.schema_paths.clone();
+        let schema_paths = schema_paths_for_saved(&saved, schema_override_path.as_ref());
         let mut schemas = BTreeMap::new();
         let partition_ids = saved.partition_ids();
-        let partition_count = partition_ids.len();
         for id in partition_ids {
-            let path = if id == "standalone" && partition_count > 1 {
-                schema_paths.get(&id).cloned()
-            } else {
-                schema_override_path
-                    .clone()
-                    .or_else(|| schema_paths.get(&id).cloned())
-            };
+            let path = schema_paths.get(&id).cloned().flatten();
             schemas.insert(id, SchemaIndex::load(path));
         }
         let generation = SnapshotGeneration(0);
@@ -38,10 +32,8 @@ impl LspWorkspace {
             partitions: BTreeMap::new(),
             snapshot: LiveProjectSnapshot::empty(generation),
             schema_override_path,
-            schema_paths: schema_paths
-                .into_iter()
-                .map(|(id, path)| (id, Some(path)))
-                .collect(),
+            schema_paths,
+            retired_schema_uris: BTreeSet::new(),
             generation,
             ui_catalog,
         };

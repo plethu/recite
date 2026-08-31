@@ -40,11 +40,13 @@ impl LspWorkspace {
         schemas: BTreeMap<String, SchemaIndex>,
         retired: BTreeMap<String, BTreeSet<String>>,
     ) -> Result<(), recite_compiler::AuthoringError> {
+        let mut old_partitions = std::mem::take(&mut self.partitions);
         let mut ids = saved.partition_ids();
         ids.extend(schemas.keys().cloned());
         let retired_all = retired
             .values()
             .flat_map(|uris| uris.iter().cloned())
+            .chain(self.retired_schema_uris.iter().cloned())
             .collect::<BTreeSet<_>>();
         let mut partitions = BTreeMap::new();
         for id in ids {
@@ -71,10 +73,13 @@ impl LspWorkspace {
                 .iter()
                 .map(|(key, document)| (key.clone(), document.identity().uri.clone()))
                 .collect();
-            let mut kernel = schema
-                .schema()
-                .cloned()
-                .map_or_else(AuthoringKernel::new, AuthoringKernel::with_schema);
+            let reusable = old_partitions.remove(&id).filter(|partition| {
+                partition.schema.same_state(&schema) && partition.open_owners == owners
+            });
+            let mut kernel = reusable
+                .map(|partition| partition.kernel)
+                .or_else(|| schema.schema().cloned().map(AuthoringKernel::with_schema))
+                .unwrap_or_default();
             let expected = kernel.snapshot().generation();
             let request = super::kernel::authoring_request(&saved, &open, &id, expected);
             kernel.apply(request)?;

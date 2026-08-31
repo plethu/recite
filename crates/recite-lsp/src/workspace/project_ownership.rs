@@ -4,7 +4,9 @@ use std::path::Path;
 
 use lsp_types::Uri;
 
-use super::{SavedDocument, SavedProjectIndex, canonical_or_existing_parent_path};
+use super::{
+    SavedDocument, SavedProjectIndex, canonical_event_path, canonical_or_existing_parent_path,
+};
 use crate::paths::{file_path_to_uri, uri_to_file_path};
 use crate::summary::SavedFileIdentity;
 
@@ -46,14 +48,16 @@ impl SavedProjectIndex {
     }
 
     fn refresh_path(&mut self, path: &Path, source_path: &Path) -> bool {
-        if !self.paths_share_source_root(source_path, path) {
+        let source_root_path =
+            canonical_event_path(source_path).unwrap_or_else(|| source_path.to_owned());
+        if !self.paths_share_source_root(&source_root_path, path) {
             return false;
         }
         let Some(project_relative_path) = self.project_key_for_path(path) else {
             self.remove_unowned_document(path);
             return true;
         };
-        if self.project_key_for_path(source_path).is_none() {
+        if self.project_key_for_path(&source_root_path).is_none() {
             self.remove_unowned_document(path);
             return true;
         }

@@ -14,7 +14,6 @@ pub(crate) struct WorkspaceConfig {
     pub(super) fallback_roots: Vec<PathBuf>,
     pub(super) schema_override_path: Option<PathBuf>,
     pub(super) discoveries: Vec<WorkspaceDiscovery>,
-    pub(super) schema_paths: BTreeMap<String, PathBuf>,
 }
 
 #[derive(Clone, Debug)]
@@ -60,28 +59,10 @@ impl WorkspaceConfig {
         let schema_override_path =
             initialization_schema_path(params.initialization_options.as_ref())
                 .and_then(|schema| resolve_config_path(&schema, schema_base.as_deref()));
-        let schema_paths = discoveries
-            .iter()
-            .filter_map(|discovery| match &discovery.state {
-                WorkspaceDiscoveryState::Manifest(report) => {
-                    schema_path_for_discovery(report).map(|path| {
-                        (
-                            crate::paths::stable_path_identity(report.manifest().project_root()),
-                            path,
-                        )
-                    })
-                }
-                WorkspaceDiscoveryState::Manifestless | WorkspaceDiscoveryState::Failed { .. } => {
-                    None
-                }
-            })
-            .collect();
-
         Self {
             fallback_roots: fallback_roots.clone(),
             schema_override_path,
             discoveries,
-            schema_paths,
         }
     }
 
@@ -103,7 +84,6 @@ impl WorkspaceConfig {
                     state: WorkspaceDiscoveryState::Manifestless,
                 })
                 .collect(),
-            schema_paths: BTreeMap::new(),
         }
     }
 
@@ -112,6 +92,39 @@ impl WorkspaceConfig {
         self.schema_override_path = Some(schema_path);
         self
     }
+}
+
+pub(super) fn schema_paths_for_saved(
+    saved: &super::project_index::SavedProjectIndex,
+    override_path: Option<&PathBuf>,
+) -> BTreeMap<String, Option<PathBuf>> {
+    let partition_ids = saved.partition_ids();
+    let partition_count = partition_ids.len();
+    partition_ids
+        .into_iter()
+        .map(|id| {
+            let path = if id == "standalone" && partition_count > 1 {
+                None
+            } else {
+                override_path.cloned().or_else(|| {
+                    saved
+                        .discoveries()
+                        .iter()
+                        .find_map(|discovery| match &discovery.state {
+                            WorkspaceDiscoveryState::Manifest(report)
+                                if crate::paths::stable_path_identity(
+                                    report.manifest().project_root(),
+                                ) == id =>
+                            {
+                                schema_path_for_discovery(report)
+                            }
+                            _ => None,
+                        })
+                })
+            };
+            (id, path)
+        })
+        .collect()
 }
 
 pub(super) fn discover_workspace_roots(roots: &[PathBuf]) -> Vec<WorkspaceDiscovery> {

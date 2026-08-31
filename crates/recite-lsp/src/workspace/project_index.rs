@@ -207,7 +207,7 @@ pub(super) fn roots_for_discoveries(
         .collect()
 }
 
-fn canonical_or_existing_parent_path(path: &Path) -> Option<PathBuf> {
+pub(super) fn canonical_or_existing_parent_path(path: &Path) -> Option<PathBuf> {
     if let Ok(path) = fs::canonicalize(path) {
         return Some(path);
     }
@@ -215,4 +215,10 @@ fn canonical_or_existing_parent_path(path: &Path) -> Option<PathBuf> {
     let parent = fs::canonicalize(parent).ok()?;
     let file_name = path.file_name()?;
     Some(parent.join(file_name))
+}
+
+pub(super) fn canonical_event_path(path: &Path) -> Option<PathBuf> {
+    let parent = path.parent()?;
+    let parent = fs::canonicalize(parent).ok()?;
+    Some(parent.join(path.file_name()?))
 }

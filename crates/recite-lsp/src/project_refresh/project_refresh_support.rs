@@ -3,32 +3,43 @@ use std::collections::BTreeMap;
 use super::super::schema_index::SchemaIndex;
 use super::super::{DiagnosticRefresh, LspWorkspace};
 
-pub(super) fn schema_paths_for_saved(
-    saved: &super::super::project_index::SavedProjectIndex,
-    override_path: Option<&std::path::PathBuf>,
-) -> BTreeMap<String, Option<std::path::PathBuf>> {
-    saved
-        .partition_ids()
-        .into_iter()
-        .map(|id| {
-            let path = override_path.cloned().or_else(|| {
-                saved
-                    .discoveries()
-                    .iter()
-                    .find_map(|discovery| match &discovery.state {
-                        super::super::config::WorkspaceDiscoveryState::Manifest(report)
-                            if crate::paths::stable_path_identity(
-                                report.manifest().project_root(),
-                            ) == id =>
-                        {
-                            super::super::config::schema_path_for_discovery(report)
-                        }
-                        _ => None,
-                    })
-            });
-            (id, path)
-        })
-        .collect()
+pub(super) fn coalesce_refreshes(refreshes: Vec<DiagnosticRefresh>) -> Vec<DiagnosticRefresh> {
+    let mut coalesced = Vec::new();
+    for refresh in refreshes {
+        let uri = match &refresh {
+            DiagnosticRefresh::Publish(published) => &published.uri,
+            DiagnosticRefresh::Clear { uri, .. } => uri,
+        };
+        let Some(existing) = coalesced.iter_mut().find(|existing| {
+            let existing_uri = match existing {
+                DiagnosticRefresh::Publish(published) => &published.uri,
+                DiagnosticRefresh::Clear { uri, .. } => uri,
+            };
+            existing_uri == uri
+        }) else {
+            coalesced.push(refresh);
+            continue;
+        };
+        match (existing, refresh) {
+            (DiagnosticRefresh::Publish(existing), DiagnosticRefresh::Publish(incoming)) => {
+                existing.version = existing.version.or(incoming.version);
+                if existing.text.is_empty() {
+                    existing.text = incoming.text;
+                }
+                for diagnostic in incoming.diagnostics {
+                    if !existing.diagnostics.contains(&diagnostic) {
+                        existing.diagnostics.push(diagnostic);
+                    }
+                }
+            }
+            (slot @ DiagnosticRefresh::Clear { .. }, DiagnosticRefresh::Publish(incoming)) => {
+                *slot = DiagnosticRefresh::Publish(incoming);
+            }
+            (DiagnosticRefresh::Publish(_), DiagnosticRefresh::Clear { .. })
+            | (DiagnosticRefresh::Clear { .. }, DiagnosticRefresh::Clear { .. }) => {}
+        }
+    }
+    coalesced
 }
 
 pub(super) fn manifest_refreshes(

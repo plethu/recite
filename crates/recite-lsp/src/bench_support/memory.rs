@@ -38,9 +38,7 @@ impl LspMemoryReport {
         for summary in workspace.snapshot().summaries() {
             report.diagnostics += summary.diagnostics.len();
             report.block_definitions += summary.blocks.len();
-            if let Some(key) = crate::workspace::document_key_for_identity(&summary.identity)
-                && let Some(document) = workspace.compiler_snapshot().document(&key)
-            {
+            if let Some(document) = workspace.compiler_document_for_summary(summary) {
                 debug_assert_eq!(
                     summary.version.is_some(),
                     matches!(document.layer(), DocumentLayer::Open)
@@ -48,7 +46,7 @@ impl LspMemoryReport {
             }
         }
 
-        for document in workspace.compiler_snapshot().documents() {
+        for document in workspace.compiler_documents() {
             let summary = document.summary();
             report.source_files += 1;
             report.block_references += summary.block_references().len();

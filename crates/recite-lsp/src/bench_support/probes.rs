@@ -125,8 +125,7 @@ fn compiler_document<'a>(
     workspace: &'a LspWorkspace,
     summary: &FileSummary,
 ) -> Option<&'a DocumentSnapshot> {
-    let key = crate::workspace::document_key_for_identity(&summary.identity)?;
-    workspace.compiler_snapshot().document(&key)
+    workspace.compiler_document_for_summary(summary)
 }
 
 fn position_probe(summary: &FileSummary, position: Position) -> Option<LspPositionProbe> {

@@ -1,6 +1,6 @@
 use std::path::Path;
 
-use super::SavedProjectIndex;
+use super::{SavedProjectIndex, canonical_event_path};
 
 impl SavedProjectIndex {
     /// Re-discover every explicitly configured root and replace the aggregate
@@ -27,8 +27,12 @@ impl SavedProjectIndex {
         {
             return false;
         }
+        let canonical = canonical_event_path(path).unwrap_or_else(|| path.to_owned());
         self.fallback_roots.iter().any(|root| {
-            path.starts_with(root) || path.parent().is_some_and(|parent| root.starts_with(parent))
+            canonical.starts_with(root)
+                || canonical
+                    .parent()
+                    .is_some_and(|parent| root.starts_with(parent))
         })
     }
 }
