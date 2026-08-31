@@ -16,6 +16,7 @@ pub(crate) struct KernelPartition {
     pub(super) schema: SchemaIndex,
     pub(super) open_owners: BTreeMap<DocumentKey, lsp_types::Uri>,
     pub(super) retired_schema_uris: BTreeSet<String>,
+    pub(super) input_fingerprint: super::kernel_rebuild::PartitionInputFingerprint,
 }
 
 impl LspWorkspace {
@@ -31,10 +32,15 @@ impl LspWorkspace {
     }
 
     pub(crate) fn schema_partition_id(&self, uri: &lsp_types::Uri) -> Option<String> {
+        self.schema_partition_ids(uri).into_iter().next()
+    }
+
+    pub(crate) fn schema_partition_ids(&self, uri: &lsp_types::Uri) -> Vec<String> {
         self.partitions
             .iter()
-            .find(|(_, partition)| partition.schema.matches_uri(uri))
+            .filter(|(_, partition)| partition.schema.matches_uri(uri))
             .map(|(id, _)| id.clone())
+            .collect()
     }
 
     pub(crate) fn partition_id_for_open(&self, document: &OpenDocument) -> Option<String> {

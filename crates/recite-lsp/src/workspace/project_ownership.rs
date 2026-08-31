@@ -26,6 +26,12 @@ impl SavedProjectIndex {
         if had_canonical_document {
             removed = self.remove_canonical_document(&lexical_path) || removed;
         }
+        // Preserve lexical exclusion semantics before resolving aliases to a
+        // canonical target.  Otherwise `.hidden/link.recite` could become a
+        // visible `link.recite` after canonicalization.
+        if self.is_lexically_excluded(&lexical_path) {
+            return removed;
+        }
         let Some(path) = canonical_or_existing_parent_path(&lexical_path) else {
             return removed;
         };
@@ -116,6 +122,12 @@ impl SavedProjectIndex {
         self.roots
             .iter()
             .any(|root| source_path.starts_with(root) && canonical_path.starts_with(root))
+    }
+
+    fn is_lexically_excluded(&self, path: &Path) -> bool {
+        self.roots.iter().any(|root| {
+            path.starts_with(root) && !recite_config::allows_unscoped_source_path(root, path)
+        })
     }
 }
 

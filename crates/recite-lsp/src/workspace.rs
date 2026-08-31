@@ -73,7 +73,9 @@ impl LspWorkspace {
     }
 
     pub(crate) fn save_schema(&mut self, uri: &Uri) -> Option<DiagnosticRefresh> {
-        self.schema_partition_id(uri)?;
+        if self.schema_partition_ids(uri).is_empty() {
+            return None;
+        }
         let mut schemas = self.partition_schemas();
         for schema in schemas.values_mut() {
             if schema.matches_uri(uri) {

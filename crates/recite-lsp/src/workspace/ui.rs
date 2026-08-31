@@ -41,11 +41,6 @@ impl LspWorkspace {
         Ok(workspace)
     }
 
-    #[cfg(any(test, feature = "bench-support"))]
-    pub(crate) fn diagnostic_sources(&self) -> Vec<DiagnosticSource<'_>> {
-        self.diagnostic_sources_for_partition(None)
-    }
-
     pub(crate) fn diagnostic_sources_for_uri(
         &self,
         uri: &lsp_types::Uri,

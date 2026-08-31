@@ -8,6 +8,14 @@ use super::schema_index::SchemaIndex;
 use super::{LspWorkspace, SnapshotGeneration};
 use crate::documents::OpenDocumentStore;
 
+#[derive(Clone, Debug, Eq, PartialEq)]
+pub(super) struct PartitionInputFingerprint {
+    saved: Vec<(String, String)>,
+    open: Vec<(String, String, i32, String)>,
+    schema: SchemaIndex,
+    retired: BTreeSet<String>,
+}
+
 impl LspWorkspace {
     pub(super) fn rebuild_for_documents_with_schemas(
         &mut self,
@@ -40,14 +48,30 @@ impl LspWorkspace {
         schemas: BTreeMap<String, SchemaIndex>,
         retired: BTreeMap<String, BTreeSet<String>>,
     ) -> Result<(), recite_compiler::AuthoringError> {
-        let mut old_partitions = std::mem::take(&mut self.partitions);
+        let generation = SnapshotGeneration(self.generation.0.checked_add(1).ok_or(
+            recite_compiler::AuthoringError::GenerationExhausted {
+                current: recite_compiler::SnapshotGeneration::new(self.generation.0),
+            },
+        )?);
+        let old_partitions = &self.partitions;
         let mut ids = saved.partition_ids();
         ids.extend(schemas.keys().cloned());
-        let retired_all = retired
+        let mut retired_all = retired
             .values()
             .flat_map(|uris| uris.iter().cloned())
             .chain(self.retired_schema_uris.iter().cloned())
             .collect::<BTreeSet<_>>();
+        // A schema target is a document-level exclusion for the whole
+        // workspace.  A shared target may be configured by one partition but
+        // must never be parsed as dialogue by a sibling partition.
+        for document in documents.documents() {
+            if schemas
+                .values()
+                .any(|schema| schema.matches_uri(&document.identity().uri))
+            {
+                retired_all.insert(document.identity().uri.as_str().to_owned());
+            }
+        }
         let mut partitions = BTreeMap::new();
         for id in ids {
             let base_schema = schemas.get(&id).cloned().unwrap_or_else(SchemaIndex::empty);
@@ -73,16 +97,27 @@ impl LspWorkspace {
                 .iter()
                 .map(|(key, document)| (key.clone(), document.identity().uri.clone()))
                 .collect();
-            let reusable = old_partitions.remove(&id).filter(|partition| {
-                partition.schema.same_state(&schema) && partition.open_owners == owners
-            });
-            let mut kernel = reusable
-                .map(|partition| partition.kernel)
-                .or_else(|| schema.schema().cloned().map(AuthoringKernel::with_schema))
+            let input_fingerprint = partition_input_fingerprint(
+                &saved,
+                &documents,
+                &id,
+                &schema,
+                &owners,
+                &retired_all,
+            );
+            let reusable = old_partitions
+                .get(&id)
+                .is_some_and(|old| old.input_fingerprint == input_fingerprint);
+            let mut kernel = schema
+                .schema()
+                .cloned()
+                .map(AuthoringKernel::with_schema)
                 .unwrap_or_default();
-            let expected = kernel.snapshot().generation();
-            let request = super::kernel::authoring_request(&saved, &open, &id, expected);
-            kernel.apply(request)?;
+            if !reusable {
+                let expected = kernel.snapshot().generation();
+                let request = super::kernel::authoring_request(&saved, &open, &id, expected);
+                kernel.apply(request)?;
+            }
             let retired_schema_uris = retired.get(&id).cloned().unwrap_or_default();
             partitions.insert(
                 id,
@@ -91,10 +126,18 @@ impl LspWorkspace {
                     schema,
                     open_owners: owners,
                     retired_schema_uris,
+                    input_fingerprint,
                 },
             );
         }
-        let generation = SnapshotGeneration(self.generation.0.saturating_add(1));
+        let mut old_partitions = std::mem::take(&mut self.partitions);
+        for (id, partition) in &mut partitions {
+            if let Some(old) = old_partitions.remove(id)
+                && old.input_fingerprint == partition.input_fingerprint
+            {
+                partition.kernel = old.kernel;
+            }
+        }
         let snapshot = super::snapshot::LiveProjectSnapshot::rebuild(
             generation,
             &saved,
@@ -107,5 +150,52 @@ impl LspWorkspace {
         self.generation = generation;
         self.snapshot = snapshot;
         Ok(())
+    }
+}
+
+fn partition_input_fingerprint(
+    saved: &SavedProjectIndex,
+    documents: &OpenDocumentStore,
+    partition: &str,
+    schema: &SchemaIndex,
+    owners: &BTreeMap<recite_core::DocumentKey, lsp_types::Uri>,
+    retired: &BTreeSet<String>,
+) -> PartitionInputFingerprint {
+    let saved = saved
+        .documents
+        .values()
+        .filter(|document| {
+            saved
+                .partition_for_path(&document.identity.canonical_path)
+                .as_deref()
+                == Some(partition)
+        })
+        .map(|document| {
+            (
+                document.identity.project_relative_path.clone(),
+                document.text.clone(),
+            )
+        })
+        .collect();
+    let open = documents
+        .documents()
+        .filter_map(|document| {
+            let key = super::kernel::document_key_for_open(document)?;
+            if owners.get(&key) != Some(&document.identity().uri) {
+                return None;
+            }
+            Some((
+                key.as_str().to_owned(),
+                document.identity().uri.as_str().to_owned(),
+                document.version(),
+                document.text().to_owned(),
+            ))
+        })
+        .collect();
+    PartitionInputFingerprint {
+        saved,
+        open,
+        schema: schema.clone(),
+        retired: retired.clone(),
     }
 }

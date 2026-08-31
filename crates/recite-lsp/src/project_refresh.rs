@@ -158,7 +158,7 @@ impl LspWorkspace {
         {
             return self.refresh_project_manifest();
         }
-        if self.schema_partition_id(uri).is_some()
+        if !self.schema_partition_ids(uri).is_empty()
             && let Some(refresh) = self.save_schema(uri)
         {
             return vec![refresh];

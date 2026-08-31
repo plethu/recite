@@ -260,12 +260,12 @@ pub(super) fn related_spans_resolve_project_files_and_target_text() {
         )),
     )]);
     let published = publish_diagnostics(
-        second_uri,
+        second_uri.clone(),
         ":: second\n> shared@83709c28414d0ce4659c\n  Second.\n",
         Some(1),
         &[diagnostic],
         &workspace.ui_catalog,
-        &workspace.diagnostic_sources(),
+        &workspace.diagnostic_sources_for_uri(&second_uri),
     )
     .expect("recordable diagnostic");
     let related = published.diagnostics[0]

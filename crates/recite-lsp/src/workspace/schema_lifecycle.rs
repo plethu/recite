@@ -7,7 +7,15 @@ impl LspWorkspace {
             .values()
             .filter(|partition| partition.schema.matches_uri(uri))
             .filter_map(|partition| partition.schema.refresh_or_clear(self.generation));
-        let first = refreshes.next()?;
+        let first = refreshes.next();
+        let Some(first) = first else {
+            let document = self.documents.document(uri)?;
+            return Some(DiagnosticRefresh::publish_open(
+                document,
+                Vec::new(),
+                self.generation,
+            ));
+        };
         let mut has_publish = matches!(&first, DiagnosticRefresh::Publish(_));
         let mut merged = match first {
             DiagnosticRefresh::Publish(published) => published,
@@ -37,6 +45,11 @@ impl LspWorkspace {
             }
         }
         if has_publish {
+            if let Some(document) = self.documents.document(uri) {
+                merged.uri = uri.clone();
+                merged.text = document.text().to_owned();
+                merged.version = Some(document.version());
+            }
             Some(DiagnosticRefresh::Publish(merged))
         } else {
             Some(DiagnosticRefresh::Clear {

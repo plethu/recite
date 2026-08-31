@@ -12,7 +12,7 @@ mod io;
 use io::{schema_io_diagnostic, schema_kind, schema_unavailable_diagnostic};
 mod lifecycle;
 
-#[derive(Clone)]
+#[derive(Clone, Debug, Eq, PartialEq)]
 pub(crate) struct SchemaIndex {
     uri: Option<Uri>,
     configured_uri: Option<Uri>,
@@ -197,18 +197,6 @@ impl SchemaIndex {
 
     pub(crate) fn base(&self) -> Self {
         Self::load(self.configured_path.clone())
-    }
-
-    pub(super) fn same_state(&self, other: &Self) -> bool {
-        self.uri == other.uri
-            && self.configured_uri == other.configured_uri
-            && self.configured_path == other.configured_path
-            && self.path == other.path
-            && self.kind == other.kind
-            && self.active_version == other.active_version
-            && self.summary == other.summary
-            && self.diagnostics == other.diagnostics
-            && self.text == other.text
     }
 
     pub(crate) fn summary(&self) -> Option<&SchemaSummary> {

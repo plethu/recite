@@ -113,12 +113,12 @@ impl LspBenchmarkDriver {
         };
         let text = read_probe_text_or_panic(probe);
         publish_diagnostics(
-            diagnostics.uri,
+            diagnostics.uri.clone(),
             &text,
             diagnostics.version,
             &diagnostics.diagnostics,
             &self.workspace.ui_catalog,
-            &self.workspace.diagnostic_sources(),
+            &self.workspace.diagnostic_sources_for_uri(&diagnostics.uri),
         )
         .unwrap_or_else(|error| panic!("LSP benchmark diagnostic publication failed: {error}"))
         .diagnostics

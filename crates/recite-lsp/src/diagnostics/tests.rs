@@ -152,7 +152,7 @@ fn related_spans_resolve_open_project_file_text() {
             "diagnostic-id-003-related",
         )),
     )]);
-    let sources = workspace.diagnostic_sources();
+    let sources = workspace.diagnostic_sources_for_uri(&second_uri);
     let published = publish_diagnostics(
         second_uri,
         ":: second\n",
