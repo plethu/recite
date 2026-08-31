@@ -155,6 +155,7 @@ impl CliError {
             Self::TraceJson(error) => {
                 messages.format(MsgId::CliErrorTraceJson, [("error", error.to_string())])
             }
+            Self::SchemaInspection(error) => error.to_user_message(messages),
             Self::Read { path, source } => messages.format(
                 MsgId::CliErrorRead,
                 [("path", display_path(path)), ("source", source.to_string())],
@@ -230,7 +231,6 @@ impl CliError {
         }
     }
 }
-
 fn user_config_message(error: &ConfigError, messages: &Messages) -> String {
     match error {
         ConfigError::Read { path, message } => messages.format(

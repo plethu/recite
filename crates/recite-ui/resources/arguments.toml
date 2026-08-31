@@ -247,6 +247,16 @@ effect = "string"
 error = "string"
 [arguments."cli-error-trace-json"]
 error = "string"
+[arguments."cli-error-schema-inspection-json"]
+error = "string"
+[arguments."cli-error-schema-inspection-unsupported-format"]
+path = "string"
+format = "string"
+[arguments."cli-error-schema-inspection-malformed"]
+path = "string"
+format = "string"
+[arguments."cli-error-schema-inspection-invalid-summary"]
+reason = "string"
 [arguments."cli-error-unknown-prompt"]
 line = "string"
 choices = "string"

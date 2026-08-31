@@ -123,7 +123,7 @@ production suppressions must carry a narrow scope and rationale.
 | `crates/recite-godot/src/adapter.rs` | 361 | production | godot | review | Host adapter lifecycle boundary |
 | `crates/recite-lsp/src/server.rs` | 395 | production | lsp/server | review | #164: request dispatch and protocol lifecycle remain the server boundary; error taxonomy and watcher registration are split into focused modules |
 | `crates/recite-benchmarks/src/memory_profiles/mod.rs` | 373 | production | benchmarks | cohesive | Maintainer-only profile orchestration |
-| `crates/recite-cli/src/commands.rs` | 395 | production | cli | review | Command orchestration boundary |
+| `crates/recite-cli/src/commands.rs` | 398 | production | cli | review | Command orchestration boundary |
 | `crates/recite-compiler/src/authoring/query/schema/metadata.rs` | 269 | production | compiler/authoring | review | #168: typed metadata completion and missing-context policy projection |
 | `crates/recite-core/src/schema/model/mod.rs` | 382 | production | core/schema | review | Schema module exports and model grouping |
 | `crates/recite-core/src/schema/source/export/basic.rs` | 284 | production | core/schema | cohesive | Deterministic JSON export for basic schema declarations |
@@ -149,7 +149,7 @@ production suppressions must carry a narrow scope and rationale.
 | `crates/recite-compiler/src/validation/conditions.rs` | 282 | production | compiler/validation | cohesive | Condition validation |
 | `crates/recite-core/src/diagnostic/explanation/validation.rs` | 352 | production | core/diagnostics | cohesive | Diagnostic explanation catalog |
 | `crates/recite-cli/src/play/tui/render/prompt.rs` | 270 | production | cli/tui | cohesive | Prompt rendering |
-| `crates/recite-cli/src/cli_help.rs` | 309 | production | cli | cohesive | CLI help presentation |
+| `crates/recite-cli/src/cli_help.rs` | 330 | production | cli | cohesive | CLI help presentation |
 | `crates/recite-godot/src/bindings.rs` | 353 | production | godot | review | Host binding declarations |
 | `crates/recite-benchmarks/src/runtime.rs` | 265 | production | benchmarks | cohesive | Runtime benchmark harness |
 

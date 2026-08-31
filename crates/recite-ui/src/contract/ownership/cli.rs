@@ -13,6 +13,7 @@ macro_rules! cli_message_ids {
         | MsgId::CliHelpCommandCheckMetadata
         | MsgId::CliHelpCommandValidateProject
         | MsgId::CliHelpCommandCheckFresh
+        | MsgId::CliHelpCommandInspectSchema
         | MsgId::CliHelpCommandExplain
         | MsgId::CliHelpCommandWatch
         | MsgId::CliHelpCommandRun
@@ -21,6 +22,7 @@ macro_rules! cli_message_ids {
         | MsgId::CliHelpCommandBench
         | MsgId::CliHelpArgPaths
         | MsgId::CliHelpArgSchema
+        | MsgId::CliHelpArgSchemaInspection
         | MsgId::CliHelpArgProjectRoot
         | MsgId::CliHelpArgDiagnosticCode
         | MsgId::CliHelpArgOutputCompile
@@ -198,6 +200,10 @@ macro_rules! cli_message_ids {
         | MsgId::CliErrorBlockingEffect
         | MsgId::CliErrorBenchJson
         | MsgId::CliErrorTraceJson
+        | MsgId::CliErrorSchemaInspectionJson
+        | MsgId::CliErrorSchemaInspectionUnsupportedFormat
+        | MsgId::CliErrorSchemaInspectionMalformed
+        | MsgId::CliErrorSchemaInspectionInvalidSummary
         | MsgId::CliErrorUnknownPrompt
         | MsgId::CliErrorRead
         | MsgId::CliErrorReadDir

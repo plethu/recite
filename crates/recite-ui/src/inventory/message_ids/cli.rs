@@ -16,6 +16,7 @@ pub(super) const fn key(id: super::MsgId) -> Option<&'static str> {
         super::MsgId::CliHelpCommandCheckMetadata => Some("cli-help-command-check-metadata"),
         super::MsgId::CliHelpCommandValidateProject => Some("cli-help-command-validate-project"),
         super::MsgId::CliHelpCommandCheckFresh => Some("cli-help-command-check-fresh"),
+        super::MsgId::CliHelpCommandInspectSchema => Some("cli-help-command-inspect-schema"),
         super::MsgId::CliHelpCommandExplain => Some("cli-help-command-explain"),
         super::MsgId::CliHelpCommandWatch => Some("cli-help-command-watch"),
         super::MsgId::CliHelpCommandRun => Some("cli-help-command-run"),
@@ -24,6 +25,7 @@ pub(super) const fn key(id: super::MsgId) -> Option<&'static str> {
         super::MsgId::CliHelpCommandBench => Some("cli-help-command-bench"),
         super::MsgId::CliHelpArgPaths => Some("cli-help-arg-paths"),
         super::MsgId::CliHelpArgSchema => Some("cli-help-arg-schema"),
+        super::MsgId::CliHelpArgSchemaInspection => Some("cli-help-arg-schema-inspection"),
         super::MsgId::CliHelpArgProjectRoot => Some("cli-help-arg-project-root"),
         super::MsgId::CliHelpArgDiagnosticCode => Some("cli-help-arg-diagnostic-code"),
         super::MsgId::CliHelpArgOutputCompile => Some("cli-help-arg-output-compile"),
@@ -185,6 +187,16 @@ pub(super) const fn key(id: super::MsgId) -> Option<&'static str> {
         super::MsgId::CliErrorBlockingEffect => Some("cli-error-blocking-effect"),
         super::MsgId::CliErrorBenchJson => Some("cli-error-bench-json"),
         super::MsgId::CliErrorTraceJson => Some("cli-error-trace-json"),
+        super::MsgId::CliErrorSchemaInspectionJson => Some("cli-error-schema-inspection-json"),
+        super::MsgId::CliErrorSchemaInspectionUnsupportedFormat => {
+            Some("cli-error-schema-inspection-unsupported-format")
+        }
+        super::MsgId::CliErrorSchemaInspectionMalformed => {
+            Some("cli-error-schema-inspection-malformed")
+        }
+        super::MsgId::CliErrorSchemaInspectionInvalidSummary => {
+            Some("cli-error-schema-inspection-invalid-summary")
+        }
         super::MsgId::CliErrorUnknownPrompt => Some("cli-error-unknown-prompt"),
         super::MsgId::CliErrorRead => Some("cli-error-read"),
         super::MsgId::CliErrorReadDir => Some("cli-error-read-dir"),

@@ -11,6 +11,7 @@ cli-help-command-check-markup = Validate inline markup, optionally against a sch
 cli-help-command-check-metadata = Validate metadata against a schema manifest
 cli-help-command-validate-project = Validate recite.project.toml and referenced compiled assets
 cli-help-command-check-fresh = Check whether project compiled assets are fresh
+cli-help-command-inspect-schema = Inspect standalone TOML or generated schema JSON as deterministic machine-readable JSON
 cli-help-command-explain = Explain a stable diagnostic code
 cli-help-command-watch = Watch project inputs and rebuild manifest assets
 cli-help-command-run = Run a compiled asset headlessly with fixture data
@@ -19,6 +20,7 @@ cli-help-command-play = Play a compiled asset interactively
 cli-help-command-bench = Generate benchmark scale reports for fixtures or a project root
 cli-help-arg-paths = One or more .recite files, or directories containing .recite files
 cli-help-arg-schema = Generated schema manifest JSON
+cli-help-arg-schema-inspection = Standalone Recite schema TOML or generated schema manifest JSON
 cli-help-arg-project-root = Project root containing recite.project.toml
 cli-help-arg-diagnostic-code = Stable diagnostic code, such as RECITE_PARSE001
 cli-help-arg-output-compile = Write MessagePack compiled asset bytes to this path
@@ -292,6 +294,10 @@ cli-error-output-overwrites-input = refusing to overwrite input {$input} with ou
 cli-error-blocking-effect = blocking effect `{$effect}` requires [effects].auto_ack_blocking = true in the fixture
 cli-error-bench-json = failed to read or write benchmark JSON: {$error}
 cli-error-trace-json = failed to encode trace JSON: {$error}
+cli-error-schema-inspection-json = failed to encode schema inspection JSON: {$error}
+cli-error-schema-inspection-unsupported-format = unsupported schema inspection format `{$format}` for {$path}
+cli-error-schema-inspection-malformed = malformed {$format} schema input {$path}
+cli-error-schema-inspection-invalid-summary = invalid schema inspection summary: {$reason}
 cli-error-unknown-prompt = runtime emitted an unknown prompt line={$line} choices=[{$choices}]
 cli-error-read = failed to read {$path}: {$source}
 cli-error-read-dir = failed to read directory {$path}: {$source}
