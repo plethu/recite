@@ -1,3 +1,4 @@
+use std::collections::VecDeque;
 use std::io::{self, BufRead, BufReader, Write};
 use std::path::Path;
 use std::process::{Child, ChildStdin, Command, Stdio};
@@ -14,6 +15,7 @@ pub(crate) struct StdioHarness {
     child: Child,
     stdin: ChildStdin,
     messages: Receiver<io::Result<Value>>,
+    pending: VecDeque<Value>,
     initialize: Value,
     next_id: u64,
 }
@@ -63,6 +65,7 @@ impl StdioHarness {
             child,
             stdin,
             messages,
+            pending: VecDeque::new(),
             initialize: Value::Null,
             next_id: 1,
         };
@@ -97,6 +100,11 @@ impl StdioHarness {
         id
     }
 
+    pub(crate) fn request_result(&mut self, method: &str, params: Value) -> Value {
+        let id = self.request(method, params);
+        self.expect_response(id)
+    }
+
     pub(crate) fn notify(&mut self, method: &str, params: Value) {
         self.send(json!({ "jsonrpc": "2.0", "method": method, "params": params }));
     }
@@ -125,16 +133,12 @@ impl StdioHarness {
         );
     }
 
-    pub(crate) fn diagnostics(&self, uri: &str) -> Value {
-        loop {
-            let message = self.receive_message();
-            if message.get("method") != Some(&json!("textDocument/publishDiagnostics")) {
-                continue;
-            }
-            if message["params"]["uri"] == uri {
-                return message["params"].clone();
-            }
-        }
+    pub(crate) fn diagnostics(&mut self, uri: &str) -> Value {
+        self.next_message_matching(|message| {
+            message.get("method") == Some(&json!("textDocument/publishDiagnostics"))
+                && message["params"]["uri"] == uri
+        })["params"]
+            .clone()
     }
 
     pub(crate) fn assert_no_message(&self) {
@@ -142,6 +146,15 @@ impl StdioHarness {
             Err(mpsc::RecvTimeoutError::Timeout) => {}
             Ok(message) => panic!("unexpected stale-result message: {message:?}"),
             Err(error) => panic!("stdio reader failed while checking silence: {error}"),
+        }
+    }
+
+    pub(crate) fn assert_no_stale_publication(&self, uri: &str) {
+        if let Some(message) = self.pending.iter().find(|message| {
+            message.get("method") == Some(&json!("textDocument/publishDiagnostics"))
+                && message["params"]["uri"] == uri
+        }) {
+            panic!("unexpected stale diagnostic publication: {message}");
         }
     }
 
@@ -158,21 +171,15 @@ impl StdioHarness {
             .unwrap_or_else(|error| panic!("flush JSON-RPC message: {error}"));
     }
 
-    fn expect_response(&self, id: u64) -> Value {
-        loop {
-            let message = self.receive_message();
-            if message.get("id") == Some(&json!(id)) {
-                assert!(
-                    message.get("error").is_none(),
-                    "unexpected response: {message}"
-                );
-                return message.get("result").cloned().unwrap_or(Value::Null);
-            }
-        }
+    fn expect_response(&mut self, id: u64) -> Value {
+        self.next_message_matching(|message| message.get("id") == Some(&json!(id)))
+            .get("result")
+            .cloned()
+            .unwrap_or_else(|| panic!("response {id} omitted result"))
     }
 
-    pub(crate) fn receive_message(&self) -> Value {
-        self.receive()
+    pub(crate) fn receive_message(&mut self) -> Value {
+        self.pending.pop_front().unwrap_or_else(|| self.receive())
     }
 
     pub(crate) fn barrier(&mut self, uri: &str) -> Vec<Value> {
@@ -183,7 +190,7 @@ impl StdioHarness {
                 "position": { "line": 0, "character": 0 }
             }),
         );
-        let mut messages = Vec::new();
+        let mut messages: Vec<Value> = self.pending.drain(..).collect();
         loop {
             let message = self.receive();
             if message.get("id") == Some(&json!(request_id)) {
@@ -204,9 +211,25 @@ impl StdioHarness {
             .unwrap_or_else(|error| panic!("stdio message is valid JSON-RPC: {error}"))
     }
 
+    fn next_message_matching(&mut self, predicate: impl Fn(&Value) -> bool) -> Value {
+        if let Some(index) = self.pending.iter().position(&predicate) {
+            return self
+                .pending
+                .remove(index)
+                .unwrap_or_else(|| panic!("matching pending stdio message disappeared"));
+        }
+        loop {
+            let message = self.receive();
+            if predicate(&message) {
+                return message;
+            }
+            self.pending.push_back(message);
+        }
+    }
+
     pub(crate) fn finish(mut self) {
         let shutdown_id = self.request("shutdown", Value::Null);
-        self.expect_response(shutdown_id);
+        let _ = self.expect_response(shutdown_id);
         self.notify("exit", Value::Null);
         let mut exited = false;
         for _ in 0..400 {

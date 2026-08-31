@@ -93,11 +93,28 @@ fixture.
 - `lsp.stale.version`: refuse an older document version without replacing the current overlay or publishing stale evidence.
 - `lsp.cancellation`: document the current unsupported cancellation surface and its owner rather than claiming a timeout is cancellation.
 - `command.structured.results`: reserve parity evidence for the structured command/watch contract owned by #53.
+- `editor.filetype.registration`: reserve `.recite` activation and file association evidence for the client owners.
+- `editor.vscode.syntax-projection`: reserve the syntax-only TextMate projection for #97.
+- `editor.neovim.syntax-projection`: reserve the plugin-manager-neutral Tree-sitter projection for #98.
+- `editor.zed.syntax-projection`: reserve Zed syntax and compatibility evidence for #192.
+- `lsp.completion`: project structured completion items from the shared snapshot.
+- `lsp.definition`: resolve same-project and cross-file definitions through the shared snapshot.
+- `lsp.hover`: project structured hover content and symbol ranges from the shared kernel.
+- `lsp.references`: project source-ordered references with explicit declaration inclusion.
+- `lsp.rename`: project versioned source-preserving workspace edits for stable symbols.
+- `lsp.code-actions`: project source-preserving stable-ID repairs from the shared kernel.
+- `workspace.project.discovery`: discover canonical sibling sources under the configured project root.
+- `workspace.configuration`: keep root and project configuration ownership outside client semantics.
+- `authoring.stable-id.operations`: preserve stable IDs and edit preconditions across authoring operations.
+- `schema.localisation.resolution`: project schema provenance and localisation IDs as structured values.
+- `command.compile.validate.extract`: reserve typed compile, validate, and extract records for #53.
+- `command.run.trace`: reserve typed runtime and trace records for #53.
+- `command.watch.lifecycle`: reserve generation, freshness, process, and cancellation evidence for #53.
 
-The initial executable evidence covers the first six rows. Cancellation and
-structured command/watch rows remain honest planned/unsupported boundaries.
-Client packages and syntax grammars are follow-up work; their status is not
-upgraded by these server tests.
+Executable evidence covers the shared LSP operations, project-root discovery,
+stable-ID repair, and existing CLI/kernel records. Cancellation, structured
+watch lifecycle, client activation, and syntax grammars remain honest
+planned/unsupported boundaries; their status is not upgraded by server tests.
 
 The rows currently draw from these scenarios. The source and schema files are
 the canonical fixtures; derived inputs are transformations or protocol events,
@@ -107,6 +124,9 @@ not copied Recite or schema sources.
 - `diagnostic-recovery`: derive an incomplete overlay from the canonical malformed source, then recover with the canonical valid language fixture.
 - `utf16-crlf-non-bmp`: apply CRLF and a non-BMP scalar to the canonical malformed-source case.
 - `stale-overlay`: send a newer accepted overlay followed by an older one, then query the current text.
+- `stable-id-repair`: derive a missing-ID overlay from the canonical language fixture and request a shared-kernel repair.
+- `multi-file-project`: materialize two canonical source fixtures under one root and resolve a qualified cross-file target.
+- `client-syntax-projections`: reserve filetype and syntax-only evidence over the canonical language fixtures.
 - `schema-localisation-reference`: reserve shared schema and localisation evidence for the existing canonical manifests and pressure fixture.
 - `command-watch-reference`: reserve structured command and watch lifecycle evidence for #53.
 

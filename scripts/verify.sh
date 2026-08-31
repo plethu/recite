@@ -16,10 +16,11 @@ Runs the complete local verification suite:
   7. tests/lint-suppressions/check.sh
   8. scripts/check-lint-suppressions.sh
   9. tests/trusted-policy/check.sh
- 10. tests/check-pr-review-gates/check-rollup-fixtures.sh
- 11. scripts/check-project-gates.sh
- 12. scripts/check-docs.sh
- 13. scripts/benchmark-smoke.sh
+ 10. tests/editor-parity/check.sh
+ 11. tests/check-pr-review-gates/check-rollup-fixtures.sh
+ 12. scripts/check-project-gates.sh
+ 13. scripts/check-docs.sh
+ 14. scripts/benchmark-smoke.sh
 
 Use `mise run verify` from the repository root when mise is available. That
 task loads the scoped `maintainability` mise environment for ast-grep;
@@ -73,6 +74,10 @@ if [[ ! -x "$repo_root/tests/trusted-policy/check.sh" ]]; then
   echo "missing trusted policy verification fixture gate: $repo_root/tests/trusted-policy/check.sh" >&2
   exit 2
 fi
+if [[ ! -x "$repo_root/tests/editor-parity/check.sh" ]]; then
+  echo "missing editor parity verification fixture gate: $repo_root/tests/editor-parity/check.sh" >&2
+  exit 2
+fi
 if [[ ! -f "$repo_root/tests/git-policy/check-integration.sh" ]]; then
   echo "missing Git policy integration fixture gate: $repo_root/tests/git-policy/check-integration.sh" >&2
   exit 2
@@ -100,6 +105,10 @@ echo "== maintainability fixtures and changed-surface check =="
 echo
 echo "== trusted pull-request policy fixtures =="
 bash "$repo_root/tests/trusted-policy/check.sh" "$repo_root"
+
+echo
+echo "== editor parity contract fixtures =="
+bash "$repo_root/tests/editor-parity/check.sh" "$repo_root"
 
 echo
 echo "== pull-request check rollup fixtures =="

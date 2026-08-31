@@ -103,18 +103,32 @@ for scenario_id, scenario in scenario_map.items():
     require(isinstance(scenario.get("derived_inputs"), list) and scenario["derived_inputs"], f"scenario {scenario_id} must describe derived inputs")
     require(isinstance(scenario.get("expected_evidence"), list) and scenario["expected_evidence"], f"scenario {scenario_id} must describe expected evidence")
 
+referenced_scenarios = {
+    capability.get("scenario")
+    for capability in capability_map.values()
+    if isinstance(capability.get("scenario"), str)
+}
+require(set(scenario_map) == referenced_scenarios, f"every scenario must be referenced by a capability: orphaned={sorted(set(scenario_map) - referenced_scenarios)}")
+
 for artifact_id, artifact in artifact_map.items():
     require(artifact.get("status") in statuses, f"artifact {artifact_id} has invalid status")
     require(isinstance(artifact.get("clients"), list) and artifact["clients"], f"artifact {artifact_id} must name clients")
     for client in artifact.get("clients", []):
         require(client in clients, f"artifact {artifact_id} names unknown client {client}")
+        if client in client_map:
+            require(client_map[client].get("artifact") == artifact_id, f"artifact {artifact_id} and client {client} disagree on their underlying artifact")
     path = artifact.get("path")
     if artifact.get("status") == "implemented":
         require(isinstance(path, str) and path, f"implemented artifact {artifact_id} must name a path")
     if path is not None:
-        require(isinstance(path, str) and bool(path) and not Path(path).is_absolute(), f"artifact {artifact_id} path must be a non-empty relative path")
-        if isinstance(path, str) and path:
-            require((repo_root / path).is_file(), f"artifact {artifact_id} claims missing path {path}")
+        artifact_path = Path(path) if isinstance(path, str) else None
+        require(artifact_path is not None and bool(path) and not artifact_path.is_absolute(), f"artifact {artifact_id} path must be a non-empty relative path")
+        if artifact_path is not None and path:
+            require(artifact_path.as_posix() == path and not {".", ".."}.intersection(artifact_path.parts), f"artifact {artifact_id} path must be normalized")
+            resolved_path = (repo_root / artifact_path).resolve()
+            resolved_root = repo_root.resolve()
+            require(resolved_root in resolved_path.parents, f"artifact {artifact_id} path escapes the repository: {path}")
+            require(resolved_path.is_file(), f"artifact {artifact_id} claims missing path {path}")
 
 for client_id, client in client_map.items():
     require(client_id in clients, f"unknown client ID {client_id}")
@@ -130,12 +144,18 @@ for client_id, client in client_map.items():
             require(status in {"planned", "unsupported"}, f"planned client {client_id} cannot claim partial/implemented {platform} support")
     artifact = client.get("artifact")
     require(artifact in artifact_map, f"client {client_id} references unknown artifact {artifact}")
+    if client.get("status") in {"partial", "implemented"} and artifact in artifact_map:
+        require(artifact_map[artifact].get("status") == "implemented", f"{client.get('status')} client {client_id} needs an implemented artifact")
     if client.get("status") == "implemented":
         require(artifact_map[artifact].get("status") == "implemented", f"implemented client {client_id} needs an implemented artifact")
+        require(any(status in {"partial", "implemented"} for status in platform_status.values()), f"implemented client {client_id} needs platform evidence")
 
 for distribution_id, distribution in distribution_map.items():
     require(distribution.get("status") in statuses, f"distribution {distribution_id} has invalid status")
-    require(distribution.get("artifact") in artifact_map, f"distribution {distribution_id} references unknown artifact")
+    artifact = distribution.get("artifact")
+    require(artifact in artifact_map, f"distribution {distribution_id} references unknown artifact")
+    if distribution.get("status") in {"partial", "implemented"} and artifact in artifact_map:
+        require(artifact_map[artifact].get("status") == "implemented", f"{distribution.get('status')} distribution {distribution_id} needs an implemented artifact")
 
 for capability_id, capability in capability_map.items():
     require(re.fullmatch(r"[a-z][a-z0-9]*(?:\.[a-z0-9-]+)+", capability_id or "") is not None, f"capability ID is not stable lowercase dotted form: {capability_id!r}")
@@ -158,6 +178,8 @@ for capability_id, capability in capability_map.items():
     require(set(client_status) == clients, f"capability {capability_id} must name every client exactly once")
     for client_id, client_status_value in client_status.items():
         require(client_status_value in statuses, f"capability {capability_id} has invalid {client_id} status")
+        if client_id in client_map and client_status_value == "implemented":
+            require(client_map[client_id].get("status") == "implemented", f"capability {capability_id} overstates implemented support for {client_id}")
     platform_status = capability.get("platform_status") or {}
     require(isinstance(platform_status, dict), f"capability {capability_id} platform_status must be an object")
     if not isinstance(platform_status, dict):
@@ -179,6 +201,8 @@ for capability_id, capability in capability_map.items():
     require(set(distribution_status) == set(distribution_map), f"capability {capability_id} must name every distribution status exactly once")
     for distribution_id, distribution_status_value in distribution_status.items():
         require(distribution_status_value in statuses, f"capability {capability_id} has invalid {distribution_id} distribution status")
+        if distribution_id in distribution_map:
+            require(distribution_status_value == distribution_map[distribution_id].get("status"), f"capability {capability_id} distribution status for {distribution_id} disagrees with its distribution record")
     evidence = capability.get("expected_evidence") or {}
     require(isinstance(evidence, dict), f"capability {capability_id} expected_evidence must be an object")
     if not isinstance(evidence, dict):
@@ -187,11 +211,20 @@ for capability_id, capability in capability_map.items():
     require(isinstance(evidence.get("assertions"), list) and evidence["assertions"], f"capability {capability_id} must name evidence assertions")
     if status in {"implemented", "partial"}:
         require(isinstance(evidence.get("command"), str) and evidence["command"], f"implemented/partial capability {capability_id} must name an evidence command")
+        require(evidence.get("status") in {"implemented", "partial"}, f"implemented/partial capability {capability_id} needs implemented or partial evidence")
+    if status == "implemented":
+        require(evidence.get("status") == "implemented", f"implemented capability {capability_id} needs implemented evidence")
     if status in {"planned", "unsupported"}:
         require(evidence.get("command") is None, f"unimplemented capability {capability_id} must not claim an executable evidence command")
     artifact = evidence.get("artifact")
     if artifact is not None:
         require(artifact in artifact_map, f"capability {capability_id} references unknown evidence artifact {artifact}")
+    for artifact_id, artifact_status_value in artifact_status.items():
+        if artifact_id in artifact_map:
+            require(artifact_status_value == artifact_map[artifact_id].get("status"), f"capability {capability_id} artifact status for {artifact_id} disagrees with its artifact record")
+    for client_id, client_status_value in client_status.items():
+        if client_id in client_map and client_status_value in {"partial", "implemented"}:
+            require(client_map[client_id].get("status") in {"partial", "implemented"}, f"capability {capability_id} overstates {client_id} while its client remains planned")
     require(re.fullmatch(r"#[1-9][0-9]*", capability.get("follow_up", "")) is not None, f"capability {capability_id} must name a follow-up issue")
 
 try:
