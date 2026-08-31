@@ -121,7 +121,7 @@ production suppressions must carry a narrow scope and rationale.
 | `crates/recite-cli/src/dialogue_locale/catalog.rs` | 267 | production | cli/localisation | review | #180: catalogue loading and one-call plural resolution remain a cohesive provider boundary |
 | `crates/recite-cli/src/runtime_fixture/trace/model.rs` | 263 | production | cli/runtime-fixture | review | #180: trace output model keeps localized templates and structured metadata distinct |
 | `crates/recite-godot/src/adapter.rs` | 361 | production | godot | review | Host adapter lifecycle boundary |
-| `crates/recite-lsp/src/server.rs` | 395 | production | lsp/server | review | #164: request dispatch and protocol lifecycle remain the server boundary; error taxonomy and watcher registration are split into focused modules |
+| `crates/recite-lsp/src/server.rs` | 397 | production | lsp/server | review | #164: request dispatch and protocol lifecycle remain the server boundary; error taxonomy and watcher registration are split into focused modules |
 | `crates/recite-benchmarks/src/memory_profiles/mod.rs` | 373 | production | benchmarks | cohesive | Maintainer-only profile orchestration |
 | `crates/recite-cli/src/commands.rs` | 398 | production | cli | review | Command orchestration boundary |
 | `crates/recite-compiler/src/authoring/query/schema/metadata.rs` | 269 | production | compiler/authoring | review | #168: typed metadata completion and missing-context policy projection |
@@ -170,7 +170,7 @@ production suppressions must carry a narrow scope and rationale.
 | `crates/recite-runtime/tests/interpolation.rs` | 496 | test/support | runtime/tests | review | #180: typed interpolation and plural provider scenarios remain grouped around runtime delivery |
 | `crates/recite-compiler/tests/asset.rs` | 640 | test/support | compiler/tests | exception | #89: retain the shared compiled-asset fixture entry point for the wire contract guard |
 | `crates/recite-ffi/tests/snapshots.rs` | 422 | test/support | ffi/tests | cohesive | #171: session snapshot and restore contract coverage |
-| `crates/recite-lsp/src/tests/support.rs` | 475 | test/support | lsp/tests | review | Test support ownership; retain private access where required |
+| `crates/recite-lsp/src/tests/support/harness.rs` | 422 | test/support | lsp/tests | follow-up | Protocol harness ownership remains grouped for shared request, response, and lifecycle helpers; split again if protocol coverage grows materially |
 | `crates/recite-core/tests/compiled_model.rs` | 427 | test/support | core/tests | cohesive | Compiled model behavior |
 | `crates/recite-compiler/tests/asset/tag_surface.rs` | 486 | test/support | compiler/tests | cohesive | Wire tag surface |
 | `crates/recite-runtime/tests/traversal/localisation.rs` | 441 | test/support | runtime/tests | cohesive | Locale traversal contract |

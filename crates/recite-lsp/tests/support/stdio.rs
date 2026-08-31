@@ -19,6 +19,13 @@ pub(crate) struct StdioHarness {
 
 impl StdioHarness {
     pub(crate) fn start(params: Value) -> Self {
+        let mut harness = Self::start_uninitialized(params);
+        harness.assert_no_messages();
+        harness.send_initialized();
+        harness
+    }
+
+    pub(crate) fn start_uninitialized(params: Value) -> Self {
         let mut child = Command::new(env!("CARGO_BIN_EXE_recite-lsp"))
             .env_clear()
             .stdin(Stdio::piped())
@@ -59,8 +66,22 @@ impl StdioHarness {
         };
         let initialize_id = harness.request("initialize", params);
         harness.expect_response(initialize_id);
-        harness.notify("initialized", json!({}));
         harness
+    }
+
+    pub(crate) fn send_initialized(&mut self) {
+        self.notify("initialized", json!({}));
+    }
+
+    pub(crate) fn assert_no_messages(&self) {
+        match self.messages.recv_timeout(Duration::from_millis(50)) {
+            Err(mpsc::RecvTimeoutError::Timeout) => {}
+            Ok(Ok(message)) => panic!("unexpected message before initialized: {message}"),
+            Ok(Err(error)) => panic!("stdio message is invalid JSON-RPC: {error}"),
+            Err(mpsc::RecvTimeoutError::Disconnected) => {
+                panic!("stdio message stream disconnected before initialized")
+            }
+        }
     }
 
     pub(crate) fn request(&mut self, method: &str, params: Value) -> u64 {
@@ -89,7 +110,7 @@ impl StdioHarness {
 
     fn expect_response(&self, id: u64) {
         loop {
-            let message = self.receive();
+            let message = self.receive_message();
             if message.get("id") == Some(&json!(id)) {
                 assert!(
                     message.get("error").is_none(),
@@ -98,6 +119,10 @@ impl StdioHarness {
                 return;
             }
         }
+    }
+
+    pub(crate) fn receive_message(&self) -> Value {
+        self.receive()
     }
 
     pub(crate) fn barrier(&mut self, uri: &str) -> Vec<Value> {

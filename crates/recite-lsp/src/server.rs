@@ -16,11 +16,11 @@ use lsp_types::{
 };
 
 use crate::diagnostics::{clear_diagnostics, publish_diagnostics};
-use crate::workspace::{DiagnosticRefresh, LspWorkspace, WorkspaceChangeResult};
+use crate::workspace::{DiagnosticRefresh, LspWorkspace, WorkspaceChangeResult, WorkspaceConfig};
+use recite_ui::UiCatalog;
 
 mod bootstrap;
 mod error;
-mod watched_files;
 #[allow(unused_imports, reason = "used by in-crate lifecycle harness")]
 pub(crate) use bootstrap::run_connection_with_user_config;
 #[allow(unused_imports, reason = "used by in-crate protocol harness")]
@@ -32,10 +32,22 @@ struct Server {
     connection: Connection,
     workspace: LspWorkspace,
     shutdown_requested: bool,
-    watched_files_registration: watched_files::RegistrationState,
 }
 
 impl Server {
+    fn new(
+        connection: Connection,
+        workspace_config: WorkspaceConfig,
+        catalog: UiCatalog,
+    ) -> Result<Self, ServerError> {
+        Ok(Self {
+            connection,
+            workspace: LspWorkspace::with_ui_catalog(workspace_config, catalog)
+                .map_err(|error| ServerError::Authoring(error.to_string()))?,
+            shutdown_requested: false,
+        })
+    }
+
     fn run(&mut self) -> Result<(), ServerError> {
         while let Ok(message) = self.connection.receiver.recv() {
             match message {
@@ -197,7 +209,7 @@ impl Server {
     }
     fn handle_notification(&mut self, notification: Notification) -> Result<bool, ServerError> {
         match notification.method.as_str() {
-            Initialized::METHOD => self.handle_initialized()?,
+            Initialized::METHOD => {}
             DidSaveTextDocument::METHOD => self.handle_did_save(notification)?,
             Exit::METHOD => {
                 if self.shutdown_requested {
