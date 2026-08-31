@@ -1,6 +1,11 @@
 use super::super::identity::BuildGeneration;
 use super::super::result::BuildTerminalStatus;
-use super::state::{BuildEventKind, BuildPhase, BuildState, BuildTransition, BuildTransitionError};
+use super::phase::BuildEventKind;
+use super::state::{BuildState, BuildTransition, BuildTransitionError};
+
+#[path = "reducer_support.rs"]
+mod support;
+use support::invalid;
 
 /// Pure reducer for legal build lifecycle transitions.
 #[non_exhaustive]
@@ -232,29 +237,8 @@ impl BuildLifecycle {
         })
     }
 }
-fn invalid(state: &BuildState, event: BuildEventKind) -> BuildTransitionError {
-    BuildTransitionError::Invalid {
-        state: phase(state),
-        event,
-    }
-}
-
 fn candidates_are_ordered(candidates: &[super::super::publish::BuildCandidate]) -> bool {
     candidates
         .windows(2)
         .all(|pair| pair[0].target() <= pair[1].target())
-}
-const fn phase(state: &BuildState) -> BuildPhase {
-    match state {
-        BuildState::Idle => BuildPhase::Idle,
-        BuildState::Checking { .. } => BuildPhase::Checking,
-        BuildState::Building { .. } => BuildPhase::Building,
-        BuildState::Publishing { .. } => BuildPhase::Publishing,
-        BuildState::Ready { .. } => BuildPhase::Ready,
-        BuildState::Succeeded { .. } => BuildPhase::Succeeded,
-        BuildState::Failed { .. } => BuildPhase::Failed,
-        BuildState::Stale { .. } => BuildPhase::Stale,
-        BuildState::Cancelled { .. } => BuildPhase::Cancelled,
-        BuildState::Superseded { .. } => BuildPhase::Superseded,
-    }
 }

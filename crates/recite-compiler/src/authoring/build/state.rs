@@ -3,6 +3,7 @@ use super::super::identity::BuildGeneration;
 use super::super::publish::{BuildCandidate, PreparedPublishIdentity};
 use super::super::request::BuildRequest;
 use super::super::result::{BuildResult, BuildTerminalStatus};
+use super::phase::{BuildEventKind, BuildPhase};
 use recite_core::Diagnostic;
 
 /// Current phase of the shared build lifecycle.
@@ -201,68 +202,4 @@ pub enum BuildTransitionError {
     PreparedIdentityMismatch,
     #[error("publish completion does not contain a published outcome")]
     ResultPublishMismatch,
-}
-
-#[derive(Clone, Copy, Debug, Eq, Hash, PartialEq)]
-#[non_exhaustive]
-pub enum BuildPhase {
-    Idle,
-    Checking,
-    Building,
-    Publishing,
-    Ready,
-    Succeeded,
-    Failed,
-    Stale,
-    Cancelled,
-    Superseded,
-}
-impl std::fmt::Display for BuildPhase {
-    fn fmt(&self, formatter: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
-        formatter.write_str(match self {
-            Self::Idle => "idle",
-            Self::Checking => "checking",
-            Self::Building => "building",
-            Self::Publishing => "publishing",
-            Self::Ready => "ready",
-            Self::Succeeded => "succeeded",
-            Self::Failed => "failed",
-            Self::Stale => "stale",
-            Self::Cancelled => "cancelled",
-            Self::Superseded => "superseded",
-        })
-    }
-}
-
-#[derive(Clone, Copy, Debug, Eq, Hash, PartialEq)]
-#[non_exhaustive]
-pub enum BuildEventKind {
-    Start,
-    CheckPassed,
-    CheckFailed,
-    BuildCompleted,
-    NoCandidates,
-    PublishStarted,
-    PublishCompleted,
-    Cancelled,
-    Superseded,
-    Stale,
-    Failed,
-}
-impl std::fmt::Display for BuildEventKind {
-    fn fmt(&self, formatter: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
-        formatter.write_str(match self {
-            Self::Start => "start",
-            Self::CheckPassed => "check-passed",
-            Self::CheckFailed => "check-failed",
-            Self::BuildCompleted => "build-completed",
-            Self::NoCandidates => "no-candidates",
-            Self::PublishStarted => "publish-started",
-            Self::PublishCompleted => "publish-completed",
-            Self::Cancelled => "cancelled",
-            Self::Superseded => "superseded",
-            Self::Stale => "stale",
-            Self::Failed => "failed",
-        })
-    }
 }

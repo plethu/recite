@@ -9,6 +9,9 @@ use super::request_identity::BuildRequestIdentity;
 use super::result::{BuildResult, BuildTerminalStatus};
 use recite_core::Diagnostic;
 
+#[path = "status_conversion.rs"]
+mod conversion;
+
 /// An owned, transport-neutral view of one build lifecycle state.
 ///
 /// This is a read projection of [`BuildState`] and [`BuildResult`]. It carries
@@ -85,13 +88,6 @@ impl BuildStatusProjection {
             BuildState::Cancelled { result } => Self::terminal(BuildPhase::Cancelled, result),
             BuildState::Superseded { result } => Self::terminal(BuildPhase::Superseded, result),
         }
-    }
-
-    /// Project a completed result, deriving its terminal lifecycle phase from
-    /// the result's typed status.
-    #[must_use]
-    pub fn from_result(result: &BuildResult) -> Self {
-        Self::terminal(phase_for(result.status()), result)
     }
 
     #[must_use]
@@ -234,27 +230,5 @@ impl BuildStatusProjection {
             Some(identity) => Some(identity.snapshot_generation()),
             None => None,
         }
-    }
-}
-
-impl From<&BuildState> for BuildStatusProjection {
-    fn from(state: &BuildState) -> Self {
-        Self::from_state(state)
-    }
-}
-
-impl From<&BuildResult> for BuildStatusProjection {
-    fn from(result: &BuildResult) -> Self {
-        Self::from_result(result)
-    }
-}
-
-const fn phase_for(status: BuildTerminalStatus) -> BuildPhase {
-    match status {
-        BuildTerminalStatus::Succeeded => BuildPhase::Succeeded,
-        BuildTerminalStatus::Failed => BuildPhase::Failed,
-        BuildTerminalStatus::Stale => BuildPhase::Stale,
-        BuildTerminalStatus::Cancelled => BuildPhase::Cancelled,
-        BuildTerminalStatus::Superseded => BuildPhase::Superseded,
     }
 }
