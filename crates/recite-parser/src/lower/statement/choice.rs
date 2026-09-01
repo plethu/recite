@@ -75,12 +75,6 @@ impl Lowerer<'_, '_> {
             availability_requirement,
             availability_reason_override,
         } = self.lower_choice_clauses(&choice_fields[field_start..]);
-        if matches!(
-            source_id,
-            SourceId::Malformed { .. } | SourceId::Draft { .. }
-        ) {
-            self.mark(SourceRecoveryClass::StableIds);
-        }
         let (metadata, echo, bindings) = self.lower_choice_metadata(&metadata_fields);
         let body = self.lower_prose_body(choice_index, true, false);
         let mut target = None;

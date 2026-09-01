@@ -106,6 +106,33 @@ fn asset_derived_mismatch_rejects_even_with_a_consistent_projection() {
     assert_eq!(*receiver.session(), before);
 }
 
+#[test]
+fn stale_ready_snapshot_rejects_revision_change_without_restart_requirement() {
+    let asset = asset(concat!(
+        ":: start default\n",
+        "> first@12345678901234567890\n",
+        "  First.\n",
+        "> future@12345678901234567891\n",
+        "  Original future.\n",
+        "-> END\n",
+    ));
+    let source = PreviewSession::new(&asset, None, PreviewOptions::new()).expect("source");
+    let snapshot = source.snapshot().expect("snapshot");
+    assert!(source.state().restart_required().is_none());
+
+    let mut changed = asset.clone();
+    changed.lines[1].source_text = "Changed future.".to_owned();
+    changed.lines[1].authored_source_text = "Changed future.".to_owned();
+    let mut receiver =
+        PreviewSession::new(&changed, None, PreviewOptions::new()).expect("receiver");
+    let before = receiver.session().clone();
+    assert!(matches!(
+        receiver.restore(snapshot),
+        Err(recite_runtime::PreviewError::SnapshotStateMismatch)
+    ));
+    assert_eq!(*receiver.session(), before);
+}
+
 fn replace_text(bytes: &[u8], original: &str, replacement: &str) -> Vec<u8> {
     assert_eq!(
         original.len(),

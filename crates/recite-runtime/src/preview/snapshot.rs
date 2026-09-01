@@ -2,7 +2,8 @@ use recite_core::LocaleId;
 
 use super::PreviewSession;
 use super::model::{
-    PREVIEW_SNAPSHOT_FORMAT_VERSION, PreviewError, PreviewEvent, PreviewSnapshot, PreviewStatus,
+    PREVIEW_SNAPSHOT_FORMAT_VERSION, PreviewAssetRevision, PreviewError, PreviewEvent,
+    PreviewSnapshot, PreviewStatus,
 };
 use super::snapshot_validation::state_matches_session;
 use crate::{restore_session, snapshot_session};
@@ -16,8 +17,14 @@ impl<'asset> PreviewSession<'asset> {
         if self.pending.is_some() {
             return Err(PreviewError::SnapshotPendingCondition);
         }
+        let asset_revision = PreviewAssetRevision::from_asset(self.asset).map_err(|error| {
+            PreviewError::AssetRevisionFailed {
+                reason: error.to_string(),
+            }
+        })?;
         Ok(PreviewSnapshot {
             snapshot_format_version: PREVIEW_SNAPSHOT_FORMAT_VERSION,
+            asset_revision,
             session: snapshot_session(&self.session),
             initial_block: self.block.clone(),
             options: self.options.clone(),
@@ -43,6 +50,14 @@ impl<'asset> PreviewSession<'asset> {
                 expected: self.asset.header.asset_id.clone(),
                 actual: snapshot.state().asset_id().clone(),
             });
+        }
+        let active_revision = PreviewAssetRevision::from_asset(self.asset).map_err(|error| {
+            PreviewError::AssetRevisionFailed {
+                reason: error.to_string(),
+            }
+        })?;
+        if snapshot.asset_revision() != &active_revision {
+            return Err(PreviewError::SnapshotStateMismatch);
         }
         if snapshot.initial_block().is_some_and(|block| {
             !self

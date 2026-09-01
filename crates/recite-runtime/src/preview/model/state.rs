@@ -8,9 +8,9 @@ use super::events::PreviewPrompt;
 
 /// The persisted preview snapshot format containing explicit asset revisions.
 /// Runtime event values are not wire types and are intentionally excluded from
-/// this versioned contract. Version 1 is rejected because its restart
-/// requirement did not persist those revisions.
-pub const PREVIEW_SNAPSHOT_FORMAT_VERSION: u16 = 2;
+/// this versioned contract. Versions 1 and 2 are rejected because they did not
+/// persist the active revision unconditionally.
+pub const PREVIEW_SNAPSHOT_FORMAT_VERSION: u16 = 3;
 
 #[non_exhaustive]
 #[derive(Clone, Debug, Eq, PartialEq)]
@@ -171,6 +171,7 @@ impl PreviewState {
 #[derive(Clone, Debug, PartialEq)]
 pub struct PreviewSnapshot {
     pub(crate) snapshot_format_version: u16,
+    pub(crate) asset_revision: PreviewAssetRevision,
     pub(crate) session: DialogueSessionSnapshot,
     pub(crate) initial_block: Option<String>,
     pub(crate) options: super::api::PreviewOptions,
@@ -191,6 +192,11 @@ impl PreviewSnapshot {
     #[must_use]
     pub fn session(&self) -> &DialogueSessionSnapshot {
         &self.session
+    }
+
+    #[must_use]
+    pub fn asset_revision(&self) -> &PreviewAssetRevision {
+        &self.asset_revision
     }
 
     #[must_use]

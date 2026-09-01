@@ -50,10 +50,47 @@ fn targeted_recovery_marks_only_the_affected_class() {
     let metadata = recovery_for(":: start\n> line@11111111111111111111 bind=(name:string=$)\n");
     assert!(!metadata.metadata().is_complete());
     assert!(metadata.block_references().is_complete());
+}
 
-    let stable = recovery_for(":: start\n> line@111111111111111111111\n");
-    assert!(!stable.stable_ids().is_complete());
-    assert!(stable.block_references().is_complete());
+#[test]
+fn syntax_recovery_marks_stable_ids_incomplete() {
+    let recovery = recovery_for(":: start\n> line@bad\n  Recoverable ID.\nsyntax error\n");
+    assert!(!recovery.stable_ids().is_complete());
+    assert!(!recovery.block_references().is_complete());
+}
+
+#[test]
+fn invalid_ids_do_not_suppress_independent_stable_id_diagnostics() {
+    let source = concat!(
+        ":: start default\n",
+        "> malformed@bad\n",
+        "  Malformed ID.\n",
+        "> duplicate@11111111111111111111\n",
+        "  First duplicate.\n",
+        "> duplicate@11111111111111111111\n",
+        "  Second duplicate.\n",
+        ">\n",
+        "  Missing ID.\n",
+    );
+    let mut kernel = AuthoringKernel::new();
+    kernel
+        .apply(AuthoringRequest::new(
+            SnapshotGeneration::initial(),
+            [SavedDocument::new(key(), source)],
+            [],
+        ))
+        .expect("recoverable source request accepted");
+
+    let document = &kernel.snapshot().documents()[0];
+    assert!(document.participation().stable_ids().is_complete());
+    let codes: Vec<_> = document
+        .diagnostics()
+        .iter()
+        .map(|diagnostic| diagnostic.code.as_str())
+        .collect();
+    assert!(codes.contains(&"RECITE_ID001"), "missing ID: {codes:?}");
+    assert!(codes.contains(&"RECITE_ID003"), "duplicate ID: {codes:?}");
+    assert!(codes.contains(&"RECITE_ID007"), "malformed ID: {codes:?}");
 }
 
 #[test]
@@ -154,7 +191,10 @@ fn symbol_readiness_reports_the_actual_incomplete_classes() {
     let cases = [
         ("::\n", QueryClass::BlockDefinitions),
         (":: start\n->\n", QueryClass::BlockReferences),
-        (":: start\n> line@bad\n", QueryClass::StableIds),
+        (
+            ":: start\n> line@bad\n  Recoverable ID.\nsyntax error\n",
+            QueryClass::StableIds,
+        ),
         (
             ":: start\n> line@11111111111111111111 bind=(name:string=$)\n",
             QueryClass::Metadata,

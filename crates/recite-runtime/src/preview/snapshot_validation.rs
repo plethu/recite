@@ -127,8 +127,7 @@ fn prompt_matches_line(
                     line.plural.as_ref(),
                 ) {
                     (Some(authored_plural), Some(plural)) => {
-                        plural.selected_arm <= 1
-                            && expected_source == Some(plural.selected_arm)
+                        plural_arm_matches_resolution(plural, expected_source)
                             && plural.singular_source_text == compiled.authored_source_text
                             && plural.plural_source_text == *authored_plural
                     }
@@ -138,6 +137,28 @@ fn prompt_matches_line(
         }
         _ => false,
     }
+}
+
+fn plural_arm_matches_resolution(
+    plural: &crate::DialoguePlural,
+    expected_source: Option<usize>,
+) -> bool {
+    // The compiled source has two authored forms, while a translated
+    // catalogue may expose any number of arms. The selected arm's source
+    // projection is therefore singular only for arm zero and plural for all
+    // other provider-selected arms. The resolution metadata is the concrete
+    // arm identity supplied by the provider (or the source fallback rule), so
+    // requiring exact agreement rejects a corrupted/out-of-range selection
+    // without imposing the source pair's two-arm limit on translations.
+    let expected_source = expected_source.map(|source| usize::from(source != 0));
+    let resolved_arm = match plural.resolution.outcome {
+        crate::DialoguePluralResolutionOutcome::Translated => plural.resolution.matched_arm,
+        crate::DialoguePluralResolutionOutcome::EnglishSourceFallback => {
+            plural.resolution.source_fallback_arm
+        }
+    };
+    expected_source == Some(usize::from(plural.selected_arm != 0))
+        && resolved_arm == Some(plural.selected_arm)
 }
 
 fn choice_projection_matches(

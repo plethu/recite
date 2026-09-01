@@ -18,7 +18,10 @@ use std::io::Cursor;
 use super::model::{
     PreviewConditionRequestId, PreviewError, PreviewSnapshot, PreviewState, PreviewStatus,
 };
-use wire::{SnapshotWire, StateWire, StatusWire, WaitingForChoiceWire, WaitingForEffectWire};
+use wire::{
+    AssetRevisionWire, SnapshotWire, StateWire, StatusWire, WaitingForChoiceWire,
+    WaitingForEffectWire,
+};
 
 impl PreviewSnapshot {
     /// Encodes only the versioned snapshot contract; preview events remain
@@ -60,6 +63,7 @@ impl SnapshotWire {
     fn from_snapshot(snapshot: &PreviewSnapshot) -> Result<Self, PreviewError> {
         Ok(Self {
             version: snapshot.snapshot_format_version(),
+            asset_revision: Some(AssetRevisionWire::from_revision(snapshot.asset_revision())),
             session: snapshot.session().clone(),
             initial_block: snapshot.initial_block.clone(),
             locale: snapshot
@@ -82,8 +86,16 @@ impl SnapshotWire {
             .with_optional_locale(locale)
             .with_optional_variant(self.variant);
         let state = self.state.into_state()?;
+        let asset_revision = self
+            .asset_revision
+            .ok_or_else(|| invalid("snapshot is missing active revision"))?
+            .into_revision()?;
+        if asset_revision.asset_id() != state.asset_id() {
+            return Err(invalid("snapshot revision asset ID mismatch"));
+        }
         Ok(PreviewSnapshot {
             snapshot_format_version: self.version,
+            asset_revision,
             session: self.session,
             initial_block: self.initial_block,
             options,

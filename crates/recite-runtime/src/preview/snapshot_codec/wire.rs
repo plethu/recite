@@ -12,6 +12,7 @@ pub(super) use status::{StatusWire, WaitingForChoiceWire, WaitingForEffectWire};
 #[serde(deny_unknown_fields)]
 pub(super) struct SnapshotWire {
     pub(super) version: u16,
+    pub(super) asset_revision: Option<AssetRevisionWire>,
     pub(super) session: DialogueSessionSnapshot,
     pub(super) initial_block: Option<String>,
     pub(super) locale: Option<String>,

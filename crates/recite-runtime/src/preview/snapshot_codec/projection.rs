@@ -213,14 +213,14 @@ impl RequirementWire {
 }
 
 impl AssetRevisionWire {
-    fn from_revision(revision: &PreviewAssetRevision) -> Self {
+    pub(super) fn from_revision(revision: &PreviewAssetRevision) -> Self {
         Self {
             asset_id: revision.asset_id().as_str().to_owned(),
             payload_fingerprint: revision.fingerprint_snapshot(),
         }
     }
 
-    fn into_revision(self) -> Result<PreviewAssetRevision, PreviewError> {
+    pub(super) fn into_revision(self) -> Result<PreviewAssetRevision, PreviewError> {
         PreviewAssetRevision::from_fingerprint_snapshot(
             recite_core::CompiledAssetId::new(self.asset_id).map_err(invalid)?,
             self.payload_fingerprint,
