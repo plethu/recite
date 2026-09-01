@@ -2,9 +2,9 @@
 
 This is the shared contract for Recite's first-class text authoring surfaces.
 It describes what an editor client can rely on and where the client stops being
-the authority. It is deliberately useful before a VS Code, Neovim, or Zed
-package exists: a planned client is not an implemented client, and a packaged
-artifact is not a published artifact.
+the authority. A planned client is not an implemented client, and a packaged
+artifact is not a published artifact; the Neovim source integration is checked
+in but remains Linux-only partial support.
 
 The machine-readable companion is
 [`fixtures/editor-parity/contract.json`](../fixtures/editor-parity/contract.json).
@@ -99,9 +99,9 @@ fixture.
 - `lsp.stale.version`: refuse an older document version without replacing the current overlay or publishing stale evidence.
 - `lsp.cancellation`: document the current unsupported cancellation surface and its owner rather than claiming a timeout is cancellation.
 - `command.structured.results`: project the shared `BuildStatusProjection` fields while reserving CLI wire, process, binary, and client integration for #53.
-- `editor.filetype.registration`: reserve `.recite` activation and file association evidence for the client owners.
+- `editor.filetype.registration`: exercise `.recite` activation and file association through the checked-in Neovim runtimepath package.
 - `editor.vscode.syntax-projection`: reserve the syntax-only TextMate projection for #97.
-- `editor.neovim.syntax-projection`: record the syntax-only Tree-sitter grammar evidence for #98; Neovim setup and package evidence remain planned.
+- `editor.neovim.syntax-projection`: record ABI14 Tree-sitter parser/query loading through the Neovim package; the shared grammar remains owned by #98.
 - `editor.zed.syntax-projection`: reserve Zed syntax and compatibility evidence for #192.
 - `lsp.completion`: project structured completion items from the shared snapshot.
 - `lsp.definition`: resolve same-project and cross-file definitions through the shared snapshot.
@@ -120,11 +120,12 @@ fixture.
 Executable evidence covers the shared LSP operations, project-root discovery,
 the bounded stable-ID repair, compiler catalogue fallback, the compiler's
 protocol-neutral build projection, CLI locale fallback through the checked-in
-`fixtures/recite/valid/locale_fallback_fr.po` catalogue, and the syntax-only
-Tree-sitter grammar check. The grammar check proves generated-parser
-reproducibility, canonical fixture coverage, recovery boundaries, and lexical
-captures; it does not provide Neovim setup, a plugin or package, platform or
-distribution evidence. This still does not claim a versioned CLI/watch
+`fixtures/recite/valid/locale_fallback_fr.po` catalogue, the syntax-only
+Tree-sitter grammar check, and the Neovim runtimepath check. The grammar check
+proves generated-parser reproducibility, canonical fixture coverage, recovery
+boundaries, and lexical captures; the Neovim check adds Linux/0.12.5 filetype,
+LSP, and ABI14 parser evidence without claiming macOS, Windows, packaging, or
+distribution. This still does not claim a versioned CLI/watch
 envelope, process or binary integration, combined LSP schema/catalogue
 transport, cancellation transport, client activation, or a TextMate or Zed
 grammar.
@@ -148,13 +149,15 @@ not copied Recite or schema sources.
 Linux, macOS, and Windows are intended first-class desktop platforms. This
 contract records support claims separately so a Linux test run cannot imply
 Windows or macOS packaging evidence. At this checkpoint the shared LSP has
-partial protocol evidence on Linux only; no client package artifact is implemented.
+partial protocol evidence on Linux only. The Neovim runtimepath source is
+checked in and exercised on Linux with Neovim 0.12.5 (minimum supported version
+0.10.4); no packaged distribution is claimed.
 
 | Client | Shared artifact | Linux | macOS | Windows | Status |
 | --- | --- | --- | --- | --- | --- |
 | VS Code | one future VSIX | planned | planned | planned | planned |
 | VSCodium | the same future VSIX | planned | planned | planned | planned |
-| Neovim | checked-in Tree-sitter grammar only; no setup/package | planned | planned | planned | planned |
+| Neovim | checked-in native runtimepath setup plus Tree-sitter grammar; no package distribution | partial | planned | planned | partial |
 | Zed | future extension package | planned | planned | planned | planned |
 
 VS Code Marketplace and Open VSX are separate distribution claims. Packaging,
@@ -173,5 +176,5 @@ update the JSON fixture, this document, and the corresponding tests together.
 
 The contract does not cover the GUI workbench, engine embedding, remote
 services, marketplace publication, or client implementation. The checked-in
-Tree-sitter grammar is a syntax artifact, not Neovim or Zed support. Those
-remain the separate milestone and issue surfaces named in the fixture.
+Tree-sitter grammar remains a syntax artifact; Neovim consumes it through its
+runtimepath package, while Zed support remains planned under #192.

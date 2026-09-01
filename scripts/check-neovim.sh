@@ -4,15 +4,20 @@ set -euo pipefail
 usage() {
   cat <<'EOF'
 Usage:
-  scripts/check-neovim.sh [repo-root]
+  scripts/check-neovim.sh [--static] [repo-root]
 
 Checks the plugin-manager-neutral Neovim integration. Static package and
-query checks always run. Headless filetype, Tree-sitter, LSP diagnostic, and
-shutdown checks run when Neovim and the required local tools are available;
-otherwise the unavailable platform/tool check is reported as skipped.
+query checks always run. The default lane is authoritative and requires
+Neovim, Cargo, and Tree-sitter. Use NVIM=/path/to/nvim to select an explicit
+Neovim binary. The static mode is for parity fixtures only.
 EOF
 }
 
+static_only=0
+if [[ "${1:-}" == "--static" ]]; then
+  static_only=1
+  shift
+fi
 if [[ "${1:-}" == "-h" || "${1:-}" == "--help" || "${1:-}" == "help" ]]; then
   usage
   exit 0
@@ -52,14 +57,48 @@ if ! cmp -s "$grammar_query" "$neovim_query"; then
 fi
 echo "Neovim package and query checks passed"
 
-if ! command -v nvim >/dev/null 2>&1; then
-  echo "Neovim headless checks skipped: nvim is not installed"
+if (( static_only )); then
   exit 0
 fi
-if ! command -v cargo >/dev/null 2>&1; then
-  echo "Neovim headless checks skipped: cargo is not installed"
-  exit 0
+
+resolve_tool() {
+  local requested="$1"
+  if [[ "$requested" == */* ]]; then
+    if [[ -x "$requested" ]]; then
+      printf '%s\n' "$requested"
+    fi
+  else
+    command -v "$requested" || true
+  fi
+  return 0
+}
+
+nvim_bin="$(resolve_tool "${NVIM:-nvim}")"
+cargo_bin="$(resolve_tool "${CARGO:-cargo}")"
+tree_sitter_bin="$(resolve_tool "${TREE_SITTER:-tree-sitter}")"
+if [[ -z "$nvim_bin" ]]; then
+  echo "Neovim headless checks require nvim; install the pinned tool or set NVIM=/path/to/nvim" >&2
+  exit 2
 fi
+if [[ -z "$cargo_bin" ]]; then
+  echo "Neovim headless checks require cargo; install the pinned Rust toolchain or set CARGO=/path/to/cargo" >&2
+  exit 2
+fi
+if [[ -z "$tree_sitter_bin" ]]; then
+  echo "Neovim headless checks require tree-sitter; install the pinned tool or set TREE_SITTER=/path/to/tree-sitter" >&2
+  exit 2
+fi
+
+nvim_version="$($nvim_bin --headless --version | sed -n '1s/^NVIM v//p')"
+if [[ -z "$nvim_version" ]]; then
+  echo "unable to determine Neovim version from $nvim_bin" >&2
+  exit 2
+fi
+if [[ "$(printf '%s\n' '0.10.4' "$nvim_version" | sort -V | head -n1)" != "0.10.4" ]]; then
+  echo "Neovim $nvim_version is below the supported minimum 0.10.4" >&2
+  exit 1
+fi
+echo "Neovim $nvim_version (minimum supported: 0.10.4; current pinned smoke: 0.12.5)"
 
 scratch="$(mktemp -d "${TMPDIR:-/tmp}/recite-neovim.XXXXXX")"
 cleanup() {
@@ -68,26 +107,22 @@ cleanup() {
 trap cleanup EXIT
 project="$scratch/project"
 mkdir -p "$project"
-cp "$repo_root/fixtures/recite/valid/language_pressure.recite" "$project/language_pressure.recite"
+cp "$repo_root/fixtures/recite/valid/core_language_spike.recite" "$project/core_language_spike.recite"
 cp "$repo_root/fixtures/recite/invalid/parser_marker_leading_prose.recite" "$project/invalid.recite"
 printf '%s\n' 'format_version = 1' > "$project/recite.project.toml"
 
 echo "== Neovim headless filetype/LSP checks =="
-cargo build --locked -q -p recite-lsp
+"$cargo_bin" build --locked -q -p recite-lsp
 
-parser_available=0
 parser_root="$scratch/parser-runtime"
-if command -v tree-sitter >/dev/null 2>&1; then
-  mkdir -p "$parser_root/parser"
-  if XDG_CACHE_HOME="$scratch/tree-sitter-cache" tree-sitter build \
-    "$repo_root/editor/recite-tree-sitter" \
-    --output "$parser_root/parser/recite.so"; then
-    parser_available=1
-  else
-    echo "Tree-sitter parser build skipped after a failed platform build"
-  fi
+mkdir -p "$parser_root/parser"
+if XDG_CACHE_HOME="$scratch/tree-sitter-cache" "$tree_sitter_bin" build \
+  "$repo_root/editor/recite-tree-sitter" \
+  --output "$parser_root/parser/recite.so"; then
+  parser_available=1
 else
-  echo "Tree-sitter parser smoke skipped: tree-sitter is not installed"
+  echo "Tree-sitter parser build failed" >&2
+  exit 1
 fi
 
 RECITE_PLUGIN="$plugin_root" \
@@ -96,10 +131,7 @@ RECITE_LSP="$repo_root/target/debug/recite-lsp" \
 RECITE_TEST_PROJECT="$project" \
 RECITE_PARSER_AVAILABLE="$parser_available" \
   env -u RECITE_CONFIG XDG_CONFIG_HOME="$scratch/config" XDG_STATE_HOME="$scratch/state" \
-    nvim --headless -u NONE -i NONE -n \
-    -c 'lua vim.opt.rtp:prepend(vim.env.RECITE_PLUGIN)' \
-    -c 'lua vim.opt.rtp:prepend(vim.env.RECITE_PARSER_ROOT)' \
-    -c 'lua require("recite").setup({ lsp = { cmd = { vim.env.RECITE_LSP } } })' \
+    "$nvim_bin" --headless -u "$repo_root/tests/neovim/preload.lua" -i NONE -n \
     -l "$repo_root/tests/neovim/check.lua"
 
 echo "Neovim headless checks passed"

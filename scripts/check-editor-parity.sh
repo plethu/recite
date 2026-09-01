@@ -337,11 +337,12 @@ for artifact_id, artifact in artifact_map.items():
     for client in artifact.get("clients", []):
         require(client in clients, f"artifact {artifact_id} names unknown client {client}")
         if client in client_map:
-            require(client_map[client].get("artifact") == artifact_id, f"artifact {artifact_id} and client {client} disagree on their underlying artifact")
+            client_artifacts = client_map[client].get("artifacts") or [client_map[client].get("artifact")]
+            require(artifact_id in client_artifacts, f"artifact {artifact_id} and client {client} disagree on their underlying artifact")
     reciprocal_clients = {
         client_id
         for client_id, client in client_map.items()
-        if client.get("artifact") == artifact_id
+        if artifact_id in (client.get("artifacts") or [client.get("artifact")])
     }
     require(
         set(listed_client_ids) == reciprocal_clients,
@@ -375,8 +376,16 @@ for client_id, client in client_map.items():
             require(status in {"planned", "unsupported"}, f"planned client {client_id} cannot claim partial/implemented {platform} support")
     artifact = client.get("artifact")
     require(artifact in artifact_map, f"client {client_id} references unknown artifact {artifact}")
-    if artifact in artifact_map:
-        require(client_id in artifact_map[artifact].get("clients", []), f"client {client_id} artifact reference is not reciprocated by artifact {artifact}")
+    supporting_artifacts = client.get("artifacts") or [artifact]
+    require(isinstance(supporting_artifacts, list) and artifact in supporting_artifacts, f"client {client_id} artifacts must include its primary artifact")
+    if isinstance(supporting_artifacts, list):
+        artifact_ids = [value for value in supporting_artifacts if isinstance(value, str)]
+        require(len(artifact_ids) == len(supporting_artifacts), f"client {client_id} artifacts must be strings")
+        require(len(artifact_ids) == len(set(artifact_ids)), f"client {client_id} artifacts must be unique")
+    for supporting_artifact in supporting_artifacts:
+        require(supporting_artifact in artifact_map, f"client {client_id} references unknown supporting artifact {supporting_artifact}")
+        if supporting_artifact in artifact_map:
+            require(client_id in artifact_map[supporting_artifact].get("clients", []), f"client {client_id} artifact reference is not reciprocated by artifact {supporting_artifact}")
     if client.get("status") in {"partial", "implemented"} and artifact in artifact_map:
         require(artifact_map[artifact].get("status") == "implemented", f"{client.get('status')} client {client_id} needs an implemented artifact")
     if client.get("status") == "implemented":
@@ -485,6 +494,13 @@ for capability_id, capability in capability_map.items():
             if not isinstance(command, str) or not command:
                 continue
             if command == "scripts/check-tree-sitter.sh":
+                evidence_script, _ = require_repo_file(command, f"capability {capability_id} evidence script")
+                require(
+                    evidence_script.stat().st_mode & 0o111,
+                    f"capability {capability_id} evidence script is not executable: {command}",
+                )
+                continue
+            if command == "scripts/check-neovim.sh":
                 evidence_script, _ = require_repo_file(command, f"capability {capability_id} evidence script")
                 require(
                     evidence_script.stat().st_mode & 0o111,

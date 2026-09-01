@@ -14,6 +14,8 @@ local defaults = {
 local state = {
   augroup = nil,
   config = vim.deepcopy(defaults),
+  clients = {},
+  restart_attempts = {},
 }
 
 local function join_path(parent, child)
@@ -84,11 +86,58 @@ local function attach(bufnr)
 end
 
 local function replace_config(options)
-  local config = vim.deepcopy(defaults)
+  local config = vim.deepcopy(state.config or defaults)
   if options then
     config = vim.tbl_deep_extend("force", config, options)
   end
   return config
+end
+
+local function stop_owned_clients()
+  for client_id, lifecycle in pairs(state.clients) do
+    lifecycle.intentional = true
+    state.restart_attempts[lifecycle.root] = 0
+    if lifecycle.timer then
+      vim.fn.timer_stop(lifecycle.timer)
+      lifecycle.timer = nil
+    end
+    local client = vim.lsp.get_client_by_id(client_id)
+    if client then
+      client:stop(true)
+    end
+    state.clients[client_id] = nil
+  end
+end
+
+local function has_open_buffer(root)
+  for _, bufnr in ipairs(vim.api.nvim_list_bufs()) do
+    if vim.api.nvim_buf_is_valid(bufnr)
+      and vim.bo[bufnr].buflisted
+      and vim.bo[bufnr].filetype == "recite"
+      and M.root_dir(bufnr) == root then
+      return bufnr
+    end
+  end
+end
+
+local function schedule_restart(lifecycle)
+  if lifecycle.attempts >= 3 then
+    return
+  end
+  local bufnr = has_open_buffer(lifecycle.root)
+  if not bufnr then
+    return
+  end
+  lifecycle.attempts = lifecycle.attempts + 1
+  state.restart_attempts[lifecycle.root] = lifecycle.attempts
+  local delay = math.min(2_000, 100 * (2 ^ (lifecycle.attempts - 1)))
+  lifecycle.timer = vim.defer_fn(function()
+    lifecycle.timer = nil
+    local current = has_open_buffer(lifecycle.root)
+    if current then
+      M.start(current)
+    end
+  end, delay)
 end
 
 --- Return the deterministic project root used for a buffer.
@@ -135,12 +184,55 @@ function M.start(bufnr, overrides)
     end
   end
 
-  return vim.lsp.start(client_config, { bufnr = bufnr })
+  local caller_on_exit = lsp.on_exit
+  client_config.on_exit = function(code, signal, exited_id)
+    if caller_on_exit then
+      caller_on_exit(code, signal, exited_id)
+    end
+    local lifecycle = state.clients[exited_id]
+    if lifecycle then
+      state.clients[exited_id] = nil
+      if not lifecycle.intentional then
+        schedule_restart(lifecycle)
+      end
+    end
+  end
+
+  local client_id = vim.lsp.start(client_config, { bufnr = bufnr })
+  if client_id then
+    state.clients[client_id] = {
+      root = root,
+      intentional = false,
+      attempts = state.restart_attempts[root] or 0,
+    }
+  end
+  return client_id
+end
+
+--- Stop a Recite client without scheduling crash recovery.
+function M.stop(client_id)
+  local lifecycle = state.clients[client_id]
+  if lifecycle then
+    lifecycle.intentional = true
+    if lifecycle.timer then
+      vim.fn.timer_stop(lifecycle.timer)
+      lifecycle.timer = nil
+    end
+  end
+  local client = vim.lsp.get_client_by_id(client_id)
+  if client then
+    client:stop(true)
+  end
 end
 
 --- Register filetype, Tree-sitter, and FileType integration.
 function M.setup(options)
-  state.config = replace_config(options)
+  local next_config = replace_config(options)
+  local config_changed = not vim.deep_equal(next_config, state.config)
+  if config_changed then
+    stop_owned_clients()
+  end
+  state.config = next_config
   vim.g.recite_setup = true
 
   vim.filetype.add({ extension = { recite = "recite" } })

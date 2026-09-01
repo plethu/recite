@@ -7,8 +7,8 @@ Recite. It registers the `.recite` filetype, starts the shared
 validate a project, or provide a second compiler in Lua.
 
 The integration uses Neovim's native Lua and LSP APIs. A plugin manager is
-optional; the directory can be placed on `runtimepath` directly. The examples
-below were tested with Neovim 0.12 and require Neovim 0.10 or newer.
+optional; the directory can be placed on `runtimepath` directly. The minimum
+supported Neovim is 0.10.4 (the checked-in smoke lane currently runs 0.12.5).
 
 ## Install from a checkout
 
@@ -19,8 +19,18 @@ vim.opt.rtp:prepend("/absolute/path/to/recite/editor/recite-neovim")
 ```
 
 The package's `plugin/recite.lua` calls `require("recite").setup()` with
-defaults. It is also safe to call `setup` yourself to choose an explicit
-language-server binary:
+defaults. For deterministic pre-load configuration, set
+`vim.g.recite_options` before the package enters `runtimepath`; this works with
+direct runtimepath use and lazy/packer-style managers:
+
+```lua
+vim.g.recite_options = {
+  lsp = { cmd = { "/absolute/path/to/recite-lsp" } },
+}
+vim.opt.rtp:prepend("/absolute/path/to/recite/editor/recite-neovim")
+```
+
+It is also safe to call `setup` yourself after a manager loads the package:
 
 ```lua
 require("recite").setup({
@@ -76,6 +86,14 @@ require("recite").setup({
 
 The server owns resolution of that path and all schema, localisation,
 diagnostic, completion, navigation, rename, and code-action semantics.
+Completion, hover, definition, references, and server-supported edits are
+requested from that server without Lua-side semantic fallbacks. Rename and
+code-action responses are inspected as structured workspace edits; a refused
+operation is left unapplied. Re-running `setup` with changed LSP-owned options
+stops and reattaches Recite clients while retaining caller-supplied
+`capabilities`, `init_options`, `settings`, and `on_exit`. Unexpected exits are
+retried for still-open Recite buffers with a bounded backoff; intentional
+`require("recite").stop(client_id)` calls are not restarted.
 
 ## Tree-sitter highlighting
 
@@ -93,8 +111,9 @@ tree-sitter build editor/recite-tree-sitter \
 Use `recite.dll` on Windows. On macOS, `recite.so` is the usual Neovim
 runtimepath name for this parser. The generated library is ignored by Git and
 must be rebuilt for the host where Neovim runs. `mise run check-tree-sitter`
-checks grammar generation, captures, recovery, and canonical fixture coverage;
-it does not install the Neovim parser library.
+checks grammar generation, captures, recovery, and canonical fixture coverage.
+`scripts/check-neovim.sh` builds and loads the ABI14 parser in Neovim and is the
+authoritative integration gate; it does not install the Neovim parser library.
 
 Highlighting starts automatically for `recite` buffers when the parser is
 available. Without it, the filetype and LSP still work. The grammar only
