@@ -53,6 +53,13 @@ impl LocaleProvider for FrenchProvider {
         })
     }
 
+    fn validated_plural_arm_count(
+        &self,
+        _resolution: &PluralResolution,
+    ) -> Result<Option<usize>, LocaleError> {
+        Ok(Some(2))
+    }
+
     fn lookup_with_provenance(
         &self,
         id: &str,

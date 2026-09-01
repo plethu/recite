@@ -4,8 +4,9 @@ mod preview_support;
 use preview_support::asset;
 use recite_core::{LocaleId, ScalarValue};
 use recite_runtime::{
-    ConditionAnswer, ConditionValue, InterpolationValues, LocaleError, LocaleProvider,
-    PluralResolution, PreviewEvent, PreviewInputs, PreviewOptions, PreviewSession, TextDomain,
+    ConditionAnswer, ConditionValue, DialogueError, InterpolationValues, LocaleError,
+    LocaleProvider, PluralResolution, PreviewError, PreviewEvent, PreviewInputs, PreviewOptions,
+    PreviewSession, PreviewStatus, TextDomain,
 };
 
 #[test]
@@ -184,6 +185,87 @@ fn rich_v3_golden_covers_prompt_effect_restart_and_plural_provenance() {
 }
 
 struct ThreeArmProvider;
+
+struct LegacyTranslatedProvider;
+
+impl LocaleProvider for LegacyTranslatedProvider {
+    fn lookup(
+        &self,
+        _id: &str,
+        _source_text: &str,
+        _domain: TextDomain,
+        _locale: &LocaleId,
+        _variant: Option<&str>,
+    ) -> Result<Option<String>, LocaleError> {
+        Ok(None)
+    }
+
+    fn resolve_plural(
+        &self,
+        _id: &str,
+        _source_singular: &str,
+        _source_plural: &str,
+        _count: i64,
+        _domain: TextDomain,
+        _locale: &LocaleId,
+        _variant: Option<&str>,
+    ) -> Result<PluralResolution, LocaleError> {
+        Ok(PluralResolution {
+            template: Some("Many {count} things.".to_owned()),
+            selected_arm: Some(1),
+            matched_locale: Some("legacy".to_owned()),
+            matched_context: None,
+            matched_key: Some("12345678901234567890".to_owned()),
+            attempts: Vec::new(),
+        })
+    }
+}
+
+fn translated_plural_asset() -> recite_core::CompiledDialogue {
+    asset(concat!(
+        ":: start default\n",
+        "> prompt@12345678901234567890 bind=(count:int=$count)\n",
+        "  One thing.\n",
+        "  | Many {count} things.\n",
+        "  ? keep@12345678901234567891\n",
+        "    Keep.\n",
+        "    -> END\n",
+    ))
+}
+
+#[test]
+fn translated_plural_without_arm_count_is_rejected_before_preview_mutation() {
+    let asset = translated_plural_asset();
+    let mut values = InterpolationValues::new();
+    values.insert("count".to_owned(), ScalarValue::from(2_i64));
+    let options = PreviewOptions::new().with_locale(LocaleId::new("legacy").expect("locale"));
+    let provider = LegacyTranslatedProvider;
+    let mut preview = PreviewSession::new(&asset, None, options).expect("preview");
+    let before = preview.session().clone();
+
+    let output = preview.step(
+        PreviewInputs::new()
+            .with_locale_provider(&provider)
+            .with_interpolation_values(&values),
+    );
+
+    assert!(matches!(
+        output.events(),
+        [PreviewEvent::Error(PreviewError::Runtime(
+            DialogueError::LocaleLookupFailed { reason, .. }
+        ))] if reason == "plural provider returned a translated template without validated arm count"
+    ));
+    assert_eq!(preview.session(), &before);
+    assert_eq!(preview.state().status(), &PreviewStatus::Ready);
+    assert_eq!(
+        preview
+            .snapshot()
+            .expect("unchanged snapshot")
+            .state()
+            .status(),
+        &PreviewStatus::Ready
+    );
+}
 
 impl LocaleProvider for ThreeArmProvider {
     fn lookup(

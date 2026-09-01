@@ -121,6 +121,19 @@ pub(super) fn localise_plural_text(
                             .to_owned(),
                     });
                 };
+                // Preview traces feed persisted prompt projections, so reject a
+                // translated result without a bound before that projection can
+                // enter a snapshot that restore cannot validate. Direct runtime
+                // traversal has no preview snapshot contract and keeps legacy
+                // providers usable.
+                if locale.trace.is_some() && translated_arm_count.is_none() {
+                    return Err(DialogueError::LocaleLookupFailed {
+                    id: id.to_owned(),
+                    reason:
+                        "plural provider returned a translated template without validated arm count"
+                            .to_owned(),
+                });
+                }
                 if translated_arm_count
                     .is_some_and(|arm_count| arm_count == 0 || provider_arm >= arm_count)
                 {
