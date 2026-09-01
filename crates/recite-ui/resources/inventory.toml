@@ -349,6 +349,11 @@ resource_ids = [
 "lsp-code-action-schema-action",
 "lsp-code-action-schema-disabled",
 "lsp-warning-ui-config",
+"lsp-client-start-failed",
+"lsp-client-error",
+"lsp-client-exited",
+"lsp-client-restart-scheduled",
+"lsp-client-restart-exhausted",
 ]
 
 # The complete future default-code presentation registry is explicit. Parser

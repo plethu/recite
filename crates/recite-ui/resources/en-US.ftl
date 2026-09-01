@@ -415,3 +415,8 @@ lsp-code-action-schema-disabled = Schema capability unavailable: { $reason ->
    *[other] schema action is not supported by this client
 }.
 lsp-warning-ui-config = UI configuration could not be loaded (code {$code}): {$detail}; using embedded en-US UI text.
+lsp-client-start-failed = Recite language server could not be started: {$detail}.
+lsp-client-error = Recite language server error: {$detail}.
+lsp-client-exited = Recite language server exited: {$detail}.
+lsp-client-restart-scheduled = Recite language server restart scheduled: {$detail}.
+lsp-client-restart-exhausted = Recite language server restart attempts exhausted: {$detail}.

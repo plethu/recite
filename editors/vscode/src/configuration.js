@@ -13,11 +13,19 @@ export function readConfiguration(api) {
   }
   if (typeof projectRoot !== "string") throw new Error("recite.lsp.projectRoot must be a string");
   const root = projectRootPath(api, projectRoot);
-  return { command: resolveCommand(command, root), args, cwd: root, projectRoot: root };
+  return {
+    command: resolveCommand(command, root),
+    args,
+    cwd: root,
+    projectRoot: root,
+    projectRootOverridden: Boolean(projectRoot.trim())
+  };
 }
 
-export function initializeParams(api, root) {
-  const workspaceFolders = (api.workspace.workspaceFolders ?? []).map((folder) => ({
+export function initializeParams(api, root, override = false) {
+  const workspaceFolders = override
+    ? [{ name: path.basename(root), uri: api.Uri.file(root).toString() }]
+    : (api.workspace.workspaceFolders ?? []).map((folder) => ({
     uri: folder.uri.toString(),
     name: folder.name
   }));
@@ -28,7 +36,10 @@ export function initializeParams(api, root) {
     workspaceFolders,
     capabilities: {
       general: { positionEncodings: ["utf-16"] },
-      workspace: { configuration: true },
+      workspace: {
+        configuration: true,
+        didChangeWatchedFiles: { dynamicRegistration: true }
+      },
       textDocument: {
         synchronization: { dynamicRegistration: true, willSave: false, willSaveWaitUntil: false, didSave: true },
         completion: { completionItem: { snippetSupport: false } },

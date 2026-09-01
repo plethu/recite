@@ -70,6 +70,11 @@ pub(super) const fn key(id: super::MsgId) -> Option<&'static str> {
         super::MsgId::LspCodeActionSchemaAction => Some("lsp-code-action-schema-action"),
         super::MsgId::LspCodeActionSchemaDisabled => Some("lsp-code-action-schema-disabled"),
         super::MsgId::LspWarningUiConfig => Some("lsp-warning-ui-config"),
+        super::MsgId::LspClientStartFailed => Some("lsp-client-start-failed"),
+        super::MsgId::LspClientError => Some("lsp-client-error"),
+        super::MsgId::LspClientExited => Some("lsp-client-exited"),
+        super::MsgId::LspClientRestartScheduled => Some("lsp-client-restart-scheduled"),
+        super::MsgId::LspClientRestartExhausted => Some("lsp-client-restart-exhausted"),
         _ => None,
     }
 }

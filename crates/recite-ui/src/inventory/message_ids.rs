@@ -84,4 +84,6 @@ message_ids! {
     LspCompletionProjectionQueryFunction, LspCompletionProjectionQueryCall, LspCompletionProjectionInput, LspCompletionProjector, LspCompletionOutput,
     LspCompletionLabel, LspCodeActionInsertMissingId, LspCodeActionInsertAllMissingIds, LspCodeActionCreateBlockStub, LspCodeActionAddCondition,
     LspCodeActionAddEffect, LspCodeActionSchemaAction, LspCodeActionSchemaDisabled, LspWarningUiConfig,
+    LspClientStartFailed, LspClientError, LspClientExited, LspClientRestartScheduled,
+    LspClientRestartExhausted,
 }

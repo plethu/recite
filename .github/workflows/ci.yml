@@ -148,6 +148,9 @@ jobs:
       - name: Install editor workspace metadata
         run: pnpm install --frozen-lockfile --filter recite-vscode
 
+      - name: Build language server for live editor checks
+        run: cargo build --locked -p recite-lsp
+
       - name: Check shared VS Code/VSCodium client
         run: pnpm editor:check
 

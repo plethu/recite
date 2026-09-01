@@ -38,11 +38,13 @@ when the binary is not on `PATH`. `recite.lsp.args` passes an explicit argument
 array without invoking a shell. `recite.lsp.projectRoot` optionally selects a
 project root; otherwise the first workspace folder is used.
 
-The server process is started when a `.recite` document activates the package,
-receives full-document open/change/save notifications, and is shut down when
-the extension deactivates or its configuration changes. The current server
-does not implement cancellation, command/watch envelopes, or remote projects;
-the extension does not claim those capabilities.
+The server process is started when a trusted `.recite` document activates the
+package, receives full-document open/change/save/close notifications, and is
+shut down when the extension deactivates or its configuration changes. The
+client also honours the LSP server's `client/registerCapability` request for
+project file watching and forwards deterministic create/change/delete events.
+This is distinct from the future structured command/watch envelopes owned by
+REC-53. The current server does not implement cancellation or remote projects.
 
 Relative paths and process spawning use Node's platform-neutral path and
 process APIs. Linux, macOS, and Windows are intended hosts, but this scaffold

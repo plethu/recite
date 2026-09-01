@@ -1,4 +1,5 @@
 {
+  "capabilities.untrustedWorkspaces.description": "Recite waits for workspace trust before starting a local language-server process.",
   "configuration.lsp.path.description": "Executable used to start the local recite-lsp language server. A bare name is resolved through PATH; a path is resolved relative to the project root.",
   "configuration.lsp.args.description": "Arguments passed to recite-lsp without a shell. The server currently speaks LSP over stdio.",
   "configuration.lsp.projectRoot.description": "Optional project root for language-server discovery. Relative paths are resolved from the first workspace folder. Leave empty to use the workspace folder."

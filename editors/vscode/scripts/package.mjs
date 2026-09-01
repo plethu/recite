@@ -1,9 +1,10 @@
 import { cp, mkdir, mkdtemp, readFile, rm, utimes, writeFile } from "node:fs/promises";
-import { existsSync, readdirSync, statSync } from "node:fs";
+import { readdirSync, statSync } from "node:fs";
 import os from "node:os";
 import path from "node:path";
 import { fileURLToPath } from "node:url";
 import { spawnSync } from "node:child_process";
+import { assertRegularFile, assertSafeTree } from "./safety.mjs";
 
 const packageRoot = path.resolve(path.dirname(fileURLToPath(import.meta.url)), "..");
 const manifest = JSON.parse(await readFile(path.join(packageRoot, "package.json"), "utf8"));
@@ -12,11 +13,11 @@ const stage = await mkdtemp(path.join(os.tmpdir(), "recite-vscode-package-"));
 const extension = path.join(stage, "extension");
 
 try {
-  if (!existsSync(path.join(packageRoot, "dist", "extension.js"))) {
-    runNode(path.join(packageRoot, "scripts", "build.mjs"));
-  }
+  runNode(path.join(packageRoot, "scripts", "build.mjs"));
+  assertSafeTree(path.join(packageRoot, "dist"), "extension package");
   await mkdir(extension, { recursive: true });
   for (const file of ["package.json", "package.nls.json", "language-configuration.json", "README.md"]) {
+    assertRegularFile(path.join(packageRoot, file));
     await cp(path.join(packageRoot, file), path.join(extension, file));
   }
   await cp(path.join(packageRoot, "dist"), path.join(extension, "dist"), { recursive: true });
@@ -38,9 +39,10 @@ function files(directory) {
     const relative = path.relative(directory, full);
     return statSync(full).isDirectory()
       ? files(full).map((child) => path.join(relative, child))
-      : [relative];
+      : [relative.split(path.sep).join("/")];
   }).sort();
 }
+
 
 async function writeText(file, text) {
   await writeFile(file, text, "utf8");
@@ -169,6 +171,7 @@ function crc32(data) {
 }
 
 async function checkArchive(archive, stageRoot) {
+  const { inflateRawSync } = await import("node:zlib");
   const archiveData = await readFile(archive);
   const end = archiveData.lastIndexOf(Buffer.from([0x50, 0x4b, 0x05, 0x06]));
   if (end < 0) throw new Error("VSIX has no ZIP end-of-directory record");
@@ -181,7 +184,22 @@ async function checkArchive(archive, stageRoot) {
     const filenameLength = archiveData.readUInt16LE(cursor + 28);
     const extraLength = archiveData.readUInt16LE(cursor + 30);
     const commentLength = archiveData.readUInt16LE(cursor + 32);
-    entries.add(archiveData.subarray(cursor + 46, cursor + 46 + filenameLength).toString("utf8"));
+    const name = archiveData.subarray(cursor + 46, cursor + 46 + filenameLength).toString("utf8");
+    if (name.startsWith("/") || name.split("/").includes("..")) {
+      throw new Error(`VSIX contains an unsafe path: ${name}`);
+    }
+    const compressedSize = archiveData.readUInt32LE(cursor + 20);
+    const uncompressedSize = archiveData.readUInt32LE(cursor + 24);
+    const localOffset = archiveData.readUInt32LE(cursor + 42);
+    const localNameLength = archiveData.readUInt16LE(localOffset + 26);
+    const localExtraLength = archiveData.readUInt16LE(localOffset + 28);
+    const bodyStart = localOffset + 30 + localNameLength + localExtraLength;
+    const compressed = archiveData.subarray(bodyStart, bodyStart + compressedSize);
+    const content = inflateRawSync(compressed);
+    if (content.length !== uncompressedSize || !content.equals(await readFile(path.join(stageRoot, name)))) {
+      throw new Error(`VSIX entry does not match its source bytes: ${name}`);
+    }
+    entries.add(name);
     cursor += 46 + filenameLength + extraLength + commentLength;
   }
   for (const expected of ["[Content_Types].xml", "extension.vsixmanifest", "extension/package.json", "extension/dist/extension.js"]) {

@@ -391,6 +391,16 @@ function = "string"
 [arguments."lsp-warning-ui-config"]
 code = "string"
 detail = "string"
+[arguments."lsp-client-start-failed"]
+detail = "string"
+[arguments."lsp-client-error"]
+detail = "string"
+[arguments."lsp-client-exited"]
+detail = "string"
+[arguments."lsp-client-restart-scheduled"]
+detail = "string"
+[arguments."lsp-client-restart-exhausted"]
+detail = "string"
 [arguments."lsp-completion-projection-query-function"]
 returns = "string"
 [arguments."lsp-completion-projection-query-call"]

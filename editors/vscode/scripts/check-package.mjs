@@ -9,6 +9,21 @@ const manifest = JSON.parse(await readFile(path.join(packageRoot, "package.json"
 const languageConfiguration = JSON.parse(
   await readFile(path.join(packageRoot, "language-configuration.json"), "utf8")
 );
+const projectedMessages = JSON.parse(
+  await readFile(path.join(packageRoot, "src", "messages.json"), "utf8")
+);
+const fluent = await readFile(
+  path.resolve(packageRoot, "../../crates/recite-ui/resources/en-US.ftl"), "utf8"
+);
+const expectedMessageIds = [
+  "lsp-client-start-failed",
+  "lsp-client-error",
+  "lsp-client-exited",
+  "lsp-client-restart-scheduled",
+  "lsp-client-restart-exhausted"
+];
+assert(JSON.stringify(Object.keys(projectedMessages).sort()) === JSON.stringify(expectedMessageIds.sort()),
+  "VS Code message projection must be complete and contain no unowned IDs");
 
 assert(manifest.name === "recite-vscode", "package name must remain recite-vscode");
 assert(manifest.publisher === "plethu", "publisher must remain plethu");
@@ -16,6 +31,11 @@ assert(manifest.license === "MIT OR Apache-2.0", "extension license must remain 
 assert(manifest.main === "./dist/extension.js", "package must point at the built extension entry point");
 assert(manifest.engines?.vscode, "the VS Code engine range is required");
 assert(manifest.activationEvents?.includes("onLanguage:recite"), "activation must be tied to Recite files");
+const trust = manifest.capabilities?.untrustedWorkspaces;
+assert(trust?.supported === true, "restricted workspaces must be supported without starting a server");
+assert(JSON.stringify(trust.restrictedConfigurations?.slice().sort()) === JSON.stringify([
+  "recite.lsp.args", "recite.lsp.path", "recite.lsp.projectRoot"
+]), "all process-affecting settings must be restricted in untrusted workspaces");
 
 const languages = manifest.contributes?.languages ?? [];
 const reciteLanguage = languages.find((language) => language.id === "recite");
@@ -36,6 +56,13 @@ assert(properties["recite.lsp.args"]?.type === "array" &&
 "server arguments must be an explicit string array");
 assert(properties["recite.lsp.projectRoot"]?.type === "string",
   "project root must be a string setting");
+
+for (const [id, message] of Object.entries(projectedMessages)) {
+  const fluentLine = fluent.split("\n").find((line) => line.startsWith(`${id} = `));
+  assert(fluentLine, `canonical Fluent message is missing ${id}`);
+  assert(fluentLine.slice(fluentLine.indexOf(" = ") + 3).replace("{$detail}", "{0}") === message,
+    `VS Code message projection diverges from canonical Fluent message ${id}`);
+}
 
 assert(languageConfiguration.comments?.lineComment === "#", "Recite comments must remain # comments");
 assert(Array.isArray(languageConfiguration.brackets), "language bracket behavior must be structured");

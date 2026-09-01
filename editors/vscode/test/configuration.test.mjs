@@ -17,19 +17,21 @@ test("configuration resolves project-relative binaries without a shell", () => {
     command: path.resolve("/workspace/demo/project", "tools/recite-lsp"),
     args: ["--local"],
     cwd: path.resolve("/workspace/demo/project"),
-    projectRoot: path.resolve("/workspace/demo/project")
+    projectRoot: path.resolve("/workspace/demo/project"),
+    projectRootOverridden: true
   });
 });
 
-test("initialization advertises UTF-16 and full sync without claiming watch support", () => {
+test("initialization advertises UTF-16, full sync, and dynamic watch registration", () => {
   const api = fakeApi({
     workspaceFolders: [{ name: "demo", uri: { fsPath: "/workspace/demo", toString: () => "file:///workspace/demo" } }]
   });
-  const params = initializeParams(api, "/workspace/demo");
+  const params = initializeParams(api, "/workspace/demo", true);
 
   assert.equal(params.rootUri, "file:///workspace/demo");
+  assert.deepEqual(params.workspaceFolders, [{ name: "demo", uri: "file:///workspace/demo" }]);
   assert.deepEqual(params.capabilities.general.positionEncodings, ["utf-16"]);
-  assert.equal(params.capabilities.workspace.didChangeWatchedFiles, undefined);
+  assert.deepEqual(params.capabilities.workspace.didChangeWatchedFiles, { dynamicRegistration: true });
   assert.equal(params.capabilities.textDocument.synchronization.didSave, true);
 });
 

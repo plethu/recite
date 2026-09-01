@@ -52,5 +52,10 @@ macro_rules! lsp_message_ids {
         | MsgId::LspCodeActionSchemaAction
         | MsgId::LspCodeActionSchemaDisabled
         | MsgId::LspWarningUiConfig
+        | MsgId::LspClientStartFailed
+        | MsgId::LspClientError
+        | MsgId::LspClientExited
+        | MsgId::LspClientRestartScheduled
+        | MsgId::LspClientRestartExhausted
     };
 }

@@ -18,6 +18,17 @@
   "engines": {
     "vscode": "^1.89.0"
   },
+  "capabilities": {
+    "untrustedWorkspaces": {
+      "supported": true,
+      "description": "%capabilities.untrustedWorkspaces.description%",
+      "restrictedConfigurations": [
+        "recite.lsp.path",
+        "recite.lsp.args",
+        "recite.lsp.projectRoot"
+      ]
+    }
+  },
   "categories": [
     "Programming Languages"
   ],

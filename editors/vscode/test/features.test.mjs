@@ -2,7 +2,9 @@ import test from "node:test";
 import assert from "node:assert/strict";
 import {
   lspDiagnosticToVscode,
-  lspWorkspaceEditToVscode
+  lspWorkspaceEditToVscode,
+  vscodeDiagnosticToLsp,
+  workspaceEditIsCurrent
 } from "../src/lsp-features.js";
 
 test("diagnostics retain stable code, source, severity, and UTF-16 range", () => {
@@ -57,6 +59,48 @@ test("versioned workspace edits are refused for a stale open document", () => {
   assert.equal(current.replacements[0].uri.toString(), uri.toString());
 });
 
+test("delayed workspace edits revalidate zero-edit sibling preconditions atomically", () => {
+  const primary = api.Uri.parse("file:///workspace/dialogue.recite");
+  const sibling = api.Uri.parse("file:///workspace/other.recite");
+  const documents = new Map([
+    [primary.toString(), { version: 4 }],
+    [sibling.toString(), { version: 9 }]
+  ]);
+  const edit = lspWorkspaceEditToVscode(api, {
+    documentChanges: [
+      {
+        textDocument: { uri: primary.toString(), version: 4 },
+        edits: [{
+          range: { start: { line: 1, character: 0 }, end: { line: 1, character: 4 } },
+          newText: "done"
+        }]
+      },
+      { textDocument: { uri: sibling.toString(), version: 9 }, edits: [] }
+    ]
+  }, (uri) => documents.get(uri.toString()));
+
+  assert.equal(workspaceEditIsCurrent(edit), true);
+  documents.get(sibling.toString()).version = 10;
+  assert.equal(workspaceEditIsCurrent(edit), false);
+  assert.equal(edit.replacements.length, 1);
+});
+
+test("diagnostic severity maps explicitly across the VS Code and LSP ranges", () => {
+  const severities = [
+    [1, 0], [2, 1], [3, 2], [4, 3]
+  ];
+  for (const [lsp, vscode] of severities) {
+    const api = numericSeverityApi();
+    const projected = lspDiagnosticToVscode(api, {
+      range: { start: { line: 0, character: 0 }, end: { line: 0, character: 1 } },
+      severity: lsp,
+      message: "message"
+    });
+    assert.equal(projected.severity, vscode);
+    assert.equal(vscodeDiagnosticToLsp(api, projected).severity, lsp);
+  }
+});
+
 const api = {
   Position: class Position {
     constructor(line, character) { this.line = line; this.character = character; }
@@ -78,3 +122,10 @@ const api = {
     replace(uri, range, newText) { this.replacements.push({ uri, range, newText }); }
   }
 };
+
+function numericSeverityApi() {
+  return {
+    ...api,
+    DiagnosticSeverity: { Error: 0, Warning: 1, Information: 2, Hint: 3 }
+  };
+}

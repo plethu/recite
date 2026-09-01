@@ -12,10 +12,13 @@ export class ReciteLanguageClient extends EventEmitter {
     this.cwd = options.cwd;
     this.environment = options.environment;
     this.spawnProcess = options.spawnProcess ?? spawn;
+    this.onRegisterCapability = options.onRegisterCapability;
+    this.onUnregisterCapability = options.onUnregisterCapability;
     this.child = undefined;
     this.state = "idle";
     this.nextRequestId = 1;
     this.pending = new Map();
+    this.queuedNotifications = [];
     this.parser = new LspFrameParser((message) => this.receive(message));
   }
 
@@ -55,8 +58,9 @@ export class ReciteLanguageClient extends EventEmitter {
 
     try {
       const result = await this.request("initialize", initializeParams);
-      this.notify("initialized", {});
       this.state = "running";
+      this.notify("initialized", {}, { queue: false });
+      this.flushNotifications();
       return result;
     } catch (error) {
       await this.stop();
@@ -91,12 +95,30 @@ export class ReciteLanguageClient extends EventEmitter {
     });
   }
 
-  notify(method, params) {
+  notify(method, params, { queue = true } = {}) {
+    if (this.state === "idle" || this.state === "starting") {
+      if (queue) this.queuedNotifications.push({ method, params });
+      return queue;
+    }
     if (!this.child?.stdin.writable || this.state === "stopped") return false;
+    return this.writeNotification(method, params);
+  }
+
+  writeNotification(method, params) {
     const message = { jsonrpc: "2.0", method };
     if (params !== undefined) message.params = params;
-    this.child.stdin.write(encodeMessage(message));
-    return true;
+    try {
+      this.child.stdin.write(encodeMessage(message));
+      return true;
+    } catch (error) {
+      this.fail(error);
+      return false;
+    }
+  }
+
+  flushNotifications() {
+    const notifications = this.queuedNotifications.splice(0);
+    for (const { method, params } of notifications) this.writeNotification(method, params);
   }
 
   receive(message) {
@@ -126,7 +148,19 @@ export class ReciteLanguageClient extends EventEmitter {
   handleServerRequest(message) {
     if (message.method === "client/registerCapability" ||
         message.method === "window/workDoneProgress/create") {
-      this.respond(message.id, {});
+      if (message.method === "client/registerCapability" && this.onRegisterCapability) {
+        Promise.resolve(this.onRegisterCapability(message.params))
+          .then(() => this.respond(message.id, {}))
+          .catch((error) => this.respond(message.id, undefined, { code: -32602, message: error.message }));
+      } else {
+        this.respond(message.id, {});
+      }
+      return;
+    }
+    if (message.method === "client/unregisterCapability") {
+      Promise.resolve(this.onUnregisterCapability?.(message.params))
+        .then(() => this.respond(message.id, {}))
+        .catch((error) => this.respond(message.id, undefined, { code: -32602, message: error.message }));
       return;
     }
     if (message.method === "workspace/configuration") {
@@ -145,7 +179,14 @@ export class ReciteLanguageClient extends EventEmitter {
   }
 
   async stop() {
-    if (!this.child || this.state === "stopped" || this.state === "stopping") return;
+    if (!this.child) return;
+    if (this.state === "stopped") {
+      this.cleanupChild(this.child);
+      this.child = undefined;
+      this.queuedNotifications = [];
+      return;
+    }
+    if (this.state === "stopping") return;
     this.state = "stopping";
     const child = this.child;
     const exited = new Promise((resolve) => child.once("exit", resolve));
@@ -159,13 +200,25 @@ export class ReciteLanguageClient extends EventEmitter {
         // A broken or already-exiting server still needs the exit notification
         // when its transport is writable; shutdown is best effort at teardown.
       }
-      this.notify("exit", undefined);
-      child.stdin.end();
+      this.notify("exit", undefined, { queue: false });
+      try { child.stdin.end(); } catch { /* already closed */ }
     }
     await Promise.race([exited, timeout(SHUTDOWN_TIMEOUT_MS)]);
-    if (!this.exited && !child.killed) child.kill();
+    if (!this.exited && !child.killed) {
+      try { child.kill(); } catch { /* already gone */ }
+      await Promise.race([exited, timeout(SHUTDOWN_TIMEOUT_MS)]);
+    }
+    this.cleanupChild(child);
     this.rejectPending(new Error("recite-lsp stopped"));
+    this.queuedNotifications = [];
+    this.child = undefined;
     this.state = "stopped";
+  }
+
+  cleanupChild(child) {
+    child.stdin.destroy?.();
+    child.stdout.destroy?.();
+    child.stderr.destroy?.();
   }
 
   fail(error) {
