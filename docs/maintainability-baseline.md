@@ -115,6 +115,7 @@ production suppressions must carry a narrow scope and rationale.
 | `crates/recite-ui/tests/diagnostics.rs` | 371 | test/support | ui/tests | review | Structured diagnostic resource and compatibility-message coverage |
 | `crates/recite-compiler/tests/authoring_edits.rs` | 387 | test/support | compiler/tests | review | Host-neutral authoring edit application and scoped/range planning coverage |
 | `crates/recite-lsp/src/tests/code_action/missing_id.rs` | 363 | test/support | lsp/tests | review | Stable-ID code-action protocol coverage, including guarded project preconditions |
+| `crates/recite-lsp/tests/stdio_retired_schema_aliases.rs` | 380 | test/support | lsp/tests | review | #187: exact stdio retirement and late-alias lifecycle coverage |
 | `crates/recite-lsp/src/tests/availability/completion.rs` | 373 | test/support | lsp/tests | review | #176: contextual selector completion coverage |
 | `crates/recite-benchmarks/src/report/mod.rs` | 389 | production | benchmarks | cohesive | Report aggregation boundary |
 | `crates/recite-benchmarks/src/report/fixture.rs` | 387 | production | benchmarks | cohesive | Fixture report model |
