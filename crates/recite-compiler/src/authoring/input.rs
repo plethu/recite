@@ -98,6 +98,7 @@ pub struct AuthoringRequest {
     expected_generation: super::SnapshotGeneration,
     saved_documents: Vec<SavedDocument>,
     open_documents: Vec<OpenDocument>,
+    project_complete: bool,
 }
 
 impl AuthoringRequest {
@@ -112,7 +113,21 @@ impl AuthoringRequest {
             expected_generation,
             saved_documents: saved_documents.into_iter().collect(),
             open_documents: open_documents.into_iter().collect(),
+            project_complete: true,
         }
+    }
+
+    /// Marks whether the supplied documents cover the complete project.
+    #[must_use]
+    pub const fn with_project_completeness(mut self, project_complete: bool) -> Self {
+        self.project_complete = project_complete;
+        self
+    }
+
+    /// Returns whether this request contains the complete project input set.
+    #[must_use]
+    pub const fn project_complete(&self) -> bool {
+        self.project_complete
     }
 
     /// Returns the generation against which this replacement is conditional.
@@ -139,11 +154,13 @@ impl AuthoringRequest {
         super::SnapshotGeneration,
         Vec<SavedDocument>,
         Vec<OpenDocument>,
+        bool,
     ) {
         (
             self.expected_generation,
             self.saved_documents,
             self.open_documents,
+            self.project_complete,
         )
     }
 }

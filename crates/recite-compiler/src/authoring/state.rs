@@ -82,6 +82,7 @@ pub struct AuthoringKernel {
     analyses: BTreeMap<DocumentKey, DocumentAnalysis>,
     snapshot: AuthoringSnapshot,
     schema: Option<Arc<ProjectSchema>>,
+    project_complete: bool,
 }
 
 impl Default for AuthoringKernel {
@@ -101,6 +102,7 @@ impl AuthoringKernel {
             analyses: BTreeMap::new(),
             snapshot: AuthoringSnapshot::new(generation, Vec::new(), None),
             schema: None,
+            project_complete: true,
         }
     }
 
@@ -120,9 +122,16 @@ impl AuthoringKernel {
         &self.snapshot
     }
 
+    /// Returns whether the current authoring state covers the complete
+    /// project input set.
+    #[must_use]
+    pub const fn project_complete(&self) -> bool {
+        self.project_complete
+    }
+
     /// Replaces the complete saved and open input set transactionally.
     pub fn apply(&mut self, request: AuthoringRequest) -> Result<AnalysisDelta, AuthoringError> {
-        self.apply_with_project_completeness(request, true)
+        self.apply_request(request)
     }
 
     /// Replaces the input set while retaining file-local analysis for an
@@ -132,15 +141,15 @@ impl AuthoringKernel {
         &mut self,
         request: AuthoringRequest,
     ) -> Result<AnalysisDelta, AuthoringError> {
-        self.apply_with_project_completeness(request, false)
+        self.apply_request(request.with_project_completeness(false))
     }
 
-    fn apply_with_project_completeness(
+    fn apply_request(
         &mut self,
         request: AuthoringRequest,
-        project_complete: bool,
     ) -> Result<AnalysisDelta, AuthoringError> {
-        let (expected_generation, saved_documents, open_documents) = request.into_parts();
+        let (expected_generation, saved_documents, open_documents, project_complete) =
+            request.into_parts();
         if expected_generation != self.snapshot.generation() {
             return Err(AuthoringError::GenerationMismatch {
                 expected: expected_generation,
@@ -151,7 +160,7 @@ impl AuthoringKernel {
         let saved = unique_saved(saved_documents)?;
         let open = unique_open(open_documents)?;
         validate_overlay_versions(&self.open, &open)?;
-        if saved == self.saved && open == self.open {
+        if saved == self.saved && open == self.open && project_complete == self.project_complete {
             return Ok(AnalysisDelta::empty(
                 self.snapshot.generation(),
                 self.snapshot.generation(),
@@ -165,7 +174,11 @@ impl AuthoringKernel {
 
         let old_effective = effective_documents(&self.saved, &self.open);
         let new_effective = effective_documents(&saved, &open);
-        let changed_inputs = changed_keys(&self.saved, &self.open, &saved, &open);
+        let mut changed_inputs = changed_keys(&self.saved, &self.open, &saved, &open);
+        if project_complete != self.project_complete {
+            changed_inputs.extend(old_effective.keys().map(|key| (*key).clone()));
+            changed_inputs.extend(new_effective.keys().map(|key| (*key).clone()));
+        }
         let analyses = rebuild_analyses(
             std::mem::take(&mut self.analyses),
             &old_effective,
@@ -179,6 +192,7 @@ impl AuthoringKernel {
         self.saved = saved;
         self.open = open;
         self.analyses = analyses;
+        self.project_complete = project_complete;
         self.snapshot = AuthoringSnapshot::new(generation, documents, self.schema.clone());
         Ok(delta)
     }

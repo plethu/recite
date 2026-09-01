@@ -1,7 +1,7 @@
 use recite_compiler::{
     ValidationCompleteness, ValidationInput, ValidationParticipation, validate_source_files,
-    validate_source_files_with_participation, validate_source_files_with_participation_with_schema,
-    validate_source_files_with_schema,
+    validate_source_files_with_incomplete_project, validate_source_files_with_participation,
+    validate_source_files_with_participation_with_schema, validate_source_files_with_schema,
 };
 use recite_core::{ProjectSchema, load_schema_manifest_str};
 use recite_parser::parse;
@@ -256,6 +256,61 @@ fn incomplete_stable_ids_do_not_contribute_duplicate_or_echo_evidence() {
     let complete = [participated(&files[0]), participated(&files[1])];
     let report = validate_source_files_with_participation(&complete);
     assert_eq!(codes(&report), ["RECITE_ID003"]);
+}
+
+#[test]
+fn incomplete_project_keeps_same_file_id_duplicates_but_not_cross_file_duplicates() {
+    let first = lower_clean(
+        "dialogue/first.recite",
+        concat!(
+            ":: first default\n",
+            "> same@11111111111111111111\n",
+            "  First.\n",
+            "? choose@22222222222222222222\n",
+            "  Choose.\n",
+            "  -> END\n",
+        ),
+    );
+    let second = lower_clean(
+        "dialogue/second.recite",
+        concat!(
+            ":: second\n",
+            "> same@11111111111111111111\n",
+            "  Second.\n",
+            "? choose@22222222222222222222\n",
+            "  Choose.\n",
+            "  -> END\n",
+        ),
+    );
+    let files = [first, second];
+    let incomplete = [participated(&files[0]), participated(&files[1])];
+    let incomplete_report = validate_source_files_with_incomplete_project(&incomplete);
+    assert!(
+        incomplete_report.diagnostics.is_empty(),
+        "cross-file IDs should be indeterminate: {incomplete_report:?}"
+    );
+
+    let local = lower_clean(
+        "dialogue/local.recite",
+        concat!(
+            ":: local default\n",
+            "> same@11111111111111111111\n",
+            "  First.\n",
+            "> same@11111111111111111111\n",
+            "  Second.\n",
+            "? choose@22222222222222222222\n",
+            "  Choose.\n",
+            "  -> END\n",
+            "? choose@22222222222222222222\n",
+            "  Again.\n",
+            "  -> END\n",
+        ),
+    );
+    let local_report = validate_source_files_with_incomplete_project(&[participated(&local)]);
+    assert_eq!(codes(&local_report), ["RECITE_ID003", "RECITE_ID004"]);
+
+    let complete_report = validate_source_files_with_participation(&incomplete);
+    assert_eq!(codes(&complete_report), ["RECITE_ID003", "RECITE_ID004"]);
 }
 
 #[test]

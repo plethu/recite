@@ -167,7 +167,7 @@ impl<'a> Validator<'a> {
         };
 
         if let Some(first_span) = self.localisable_ids.get(id.as_str())
-            && (self.project_complete || first_span.file == line.span.file)
+            && self.duplicate_id_is_in_scope(first_span, &line.span)
         {
             self.diagnostics
                 .push(diagnostics::duplicate_line_id(line, id, first_span.clone()));
@@ -245,7 +245,9 @@ impl<'a> Validator<'a> {
             let Some(id) = choice.id.as_ref() else {
                 return;
             };
-            if let Some(first_span) = self.localisable_ids.get(id.as_str()) {
+            if let Some(first_span) = self.localisable_ids.get(id.as_str())
+                && self.duplicate_id_is_in_scope(first_span, &choice.span)
+            {
                 self.diagnostics.push(diagnostics::duplicate_choice_id(
                     choice,
                     id,
@@ -265,6 +267,14 @@ impl<'a> Validator<'a> {
                 SourceId::Frozen { .. } => unreachable!("frozen ID matched earlier"),
             });
         }
+    }
+
+    fn duplicate_id_is_in_scope(
+        &self,
+        first_span: &recite_core::SourceSpan,
+        current_span: &recite_core::SourceSpan,
+    ) -> bool {
+        self.project_complete || first_span.file == current_span.file
     }
     pub(super) fn validate_divert(&mut self, source_file: &'a SourceFile, divert: &'a Divert) {
         if self.participation.ast_structure() == ValidationCompleteness::Complete {

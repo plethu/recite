@@ -181,3 +181,90 @@ fn generation_mismatch_is_transactional() {
     );
     assert!(kernel.snapshot().documents().is_empty());
 }
+
+#[test]
+fn project_completeness_changes_recompute_and_invalidate_every_document() {
+    let mut kernel = AuthoringKernel::new();
+    let complete_request = request(
+        SnapshotGeneration::initial(),
+        [
+            saved("a.recite", ":: start default\n-> b.recite::missing\n"),
+            saved("b.recite", ":: known\n"),
+        ],
+        [],
+    );
+    assert!(complete_request.project_complete());
+    kernel
+        .apply(complete_request)
+        .expect("complete request accepted");
+    assert!(kernel.project_complete());
+    assert!(
+        kernel
+            .snapshot()
+            .diagnostics()
+            .iter()
+            .any(|diagnostic| { diagnostic.code.as_str() == "RECITE_VALIDATE007" })
+    );
+
+    let incomplete_delta = kernel
+        .apply(
+            request(
+                kernel.snapshot().generation(),
+                [
+                    saved("a.recite", ":: start default\n-> b.recite::missing\n"),
+                    saved("b.recite", ":: known\n"),
+                ],
+                [],
+            )
+            .with_project_completeness(false),
+        )
+        .expect("incomplete request accepted");
+    assert!(!kernel.project_complete());
+    assert_eq!(incomplete_delta.generation(), SnapshotGeneration::new(2));
+    assert_eq!(
+        incomplete_delta
+            .changed()
+            .iter()
+            .map(|delta| delta.key().as_str())
+            .collect::<Vec<_>>(),
+        ["a.recite", "b.recite"]
+    );
+    assert!(incomplete_delta.removed().is_empty());
+    assert!(
+        incomplete_delta
+            .changed()
+            .iter()
+            .all(|delta| delta.previous().is_some() && delta.current().is_some())
+    );
+    assert!(
+        !kernel
+            .snapshot()
+            .diagnostics()
+            .iter()
+            .any(|diagnostic| { diagnostic.code.as_str() == "RECITE_VALIDATE007" })
+    );
+
+    let complete_delta = kernel
+        .apply(
+            request(
+                kernel.snapshot().generation(),
+                [
+                    saved("a.recite", ":: start default\n-> b.recite::missing\n"),
+                    saved("b.recite", ":: known\n"),
+                ],
+                [],
+            )
+            .with_project_completeness(true),
+        )
+        .expect("complete request accepted again");
+    assert!(kernel.project_complete());
+    assert_eq!(complete_delta.generation(), SnapshotGeneration::new(3));
+    assert_eq!(complete_delta.changed().len(), 2);
+    assert!(
+        kernel
+            .snapshot()
+            .diagnostics()
+            .iter()
+            .any(|diagnostic| { diagnostic.code.as_str() == "RECITE_VALIDATE007" })
+    );
+}
