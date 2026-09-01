@@ -147,7 +147,7 @@ production suppressions must carry a narrow scope and rationale.
 | `crates/recite-core/src/schema/manifest/spans.rs` | 328 | production | core/schema | cohesive | JSON span calculation and shared span state |
 | `crates/recite-cli/src/play/tui/interaction.rs` | 293 | production | cli/tui | cohesive | Input-to-intent translation |
 | `crates/recite-compiler/src/validation/metadata.rs` | 276 | production | compiler/validation | review | Metadata validation ownership |
-| `crates/recite-compiler/src/validation/statements.rs` | 329 | production | compiler/validation | cohesive | Statement traversal owns per-class validation gates; interpolation and plural validation remain separate seams |
+| `crates/recite-compiler/src/validation/statements.rs` | 331 | production | compiler/validation | cohesive | Statement traversal owns per-class validation gates; interpolation and plural validation remain separate seams |
 | `crates/recite-core/src/schema/manifest/lower/domains.rs` | 342 | production | core/schema | review | Strict domain shape and declaration lowering |
 | `crates/recite-core/src/schema/manifest/validate.rs` | 278 | production | core/schema | review | Shared schema reference and name validation boundary |
 | `crates/recite-compiler/src/validation/conditions.rs` | 282 | production | compiler/validation | cohesive | Condition validation |
@@ -186,9 +186,9 @@ production suppressions must carry a narrow scope and rationale.
 | `crates/recite-core/tests/schema_manifest/load_valid.rs` | 452 | test/support | core/tests | cohesive | Valid manifest coverage |
 | `crates/recite-runtime/tests/session_serialization/invalid_snapshots.rs` | 478 | test/support | runtime/tests | cohesive | Snapshot failure contract |
 | `crates/recite-cli/tests/watch_stress.rs` | 366 | test/support | cli/tests | cohesive | Watch stress harness |
-| `crates/recite-cli/src/watch/build/tests.rs` | 359 | test/support | cli/watch/build-tests | review | #189: status and telemetry coverage is split; keep each responsibility below the follow-up threshold |
+| `crates/recite-cli/src/watch/build/tests.rs` | 367 | test/support | cli/watch/build-tests | review | #189: status and telemetry coverage is split; keep each responsibility below the follow-up threshold |
 | `crates/recite-cli/src/watch/tests.rs` | 377 | test/support | cli/watch-tests | review | #189: event and initial-build integration coverage remains one watch contract; reassess before adding another responsibility |
-| `crates/recite-compiler/tests/authoring_build/status_projection.rs` | 419 | test/support | compiler/authoring-build-tests | review | #189: lifecycle projection and non-semantic telemetry assertions remain one focused contract suite |
+| `crates/recite-compiler/tests/authoring_build/status_projection.rs` | 492 | test/support | compiler/authoring-build-tests | review | #189: lifecycle projection and non-semantic telemetry assertions remain one focused contract suite |
 | `crates/recite-runtime/tests/traversal/conditions/choice_conditions.rs` | 365 | test/support | runtime/tests | cohesive | Choice condition coverage |
 | `crates/recite-lsp/src/tests/availability/speaker.rs` | 351 | test/support | lsp/tests | review | Typed and ordinary speaker completion coverage |
 | `crates/recite-compiler/tests/validation/participation.rs` | 369 | test/support | compiler/tests | cohesive | #168: participation-aware validation completeness and all-complete compatibility coverage |
