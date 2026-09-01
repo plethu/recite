@@ -9,6 +9,7 @@ import {
   SOURCE_MESSAGE_IDS,
   verifyMessageProjections
 } from "./message-projections.mjs";
+import { parseRepresentableMessages } from "../../message-projection-parser.mjs";
 import { listSourceModules } from "./source-files.mjs";
 import { assertSafeTree } from "./safety.mjs";
 import { assertUiBoundary } from "./ui-boundary.mjs";
@@ -21,8 +22,11 @@ const languageConfiguration = JSON.parse(
 const { fluent, projections } = await verifyMessageProjections(packageRoot);
 const projectedMessages = projections.runtime;
 const packageMessages = projections.package;
-const canonicalMessages = new Map([...fluent.matchAll(/^([a-z0-9-]+) = ([^\n]*)$/gm)]
-  .map((match) => [match[1], match[2]]));
+const canonicalMessages = parseRepresentableMessages(
+  fluent,
+  [...RUNTIME_MESSAGE_IDS, ...PACKAGE_MESSAGE_IDS],
+  "VS Code package contract"
+);
 assertSameKeys(Object.keys(projectedMessages), RUNTIME_MESSAGE_IDS,
   "VS Code runtime message projection");
 assertSameKeys(Object.keys(packageMessages), PACKAGE_MESSAGE_IDS,
@@ -61,12 +65,12 @@ assert(properties["recite.lsp.projectRoot"]?.type === "string",
   "project root must be a string setting");
 
 for (const [id, message] of Object.entries(projectedMessages)) {
-  assert(canonicalMessages.get(id), `canonical Fluent message is missing ${id}`);
+  assert(canonicalMessages.has(id), `canonical Fluent message is missing ${id}`);
   assert(projectRuntimeMessage(id, canonicalMessages.get(id)) === message,
     `VS Code message projection diverges from canonical Fluent message ${id}`);
 }
 for (const [id, message] of Object.entries(packageMessages)) {
-  assert(canonicalMessages.get(id), `canonical Fluent message is missing ${id}`);
+  assert(canonicalMessages.has(id), `canonical Fluent message is missing ${id}`);
   assert(canonicalMessages.get(id) === message,
     `VS Code package projection diverges from canonical Fluent message ${id}`);
 }

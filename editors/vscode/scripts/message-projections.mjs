@@ -35,17 +35,22 @@ export const SOURCE_MESSAGE_IDS = Object.freeze([...RUNTIME_MESSAGE_IDS]);
 export function projectRuntimeMessage(id, value) {
   const arguments_ = vscodeProjection.runtimeArguments[id];
   if (arguments_ === undefined) throw new Error(`runtime message arguments are missing ${id}`);
-  const seen = [];
+  return lowerRuntimeMessage(id, value, arguments_);
+}
+
+export function lowerRuntimeMessage(id, value, arguments_) {
+  const observed = new Set();
   const projected = value.replace(/\{\$([a-zA-Z][a-zA-Z0-9_-]*)\}/gu, (_, name) => {
     const index = arguments_.indexOf(name);
     if (index < 0) {
       throw new Error(`canonical Fluent message ${id} uses undeclared argument ${name}`);
     }
-    if (!seen.includes(name)) seen.push(name);
+    observed.add(name);
     return `{${index}}`;
   });
-  if (JSON.stringify(seen) !== JSON.stringify(arguments_)) {
-    throw new Error(`canonical Fluent message ${id} arguments do not match the typed projection inventory`);
+  const missing = arguments_.filter((name) => !observed.has(name));
+  if (missing.length > 0) {
+    throw new Error(`canonical Fluent message ${id} is missing required argument(s): ${missing.join(", ")}`);
   }
   return projected;
 }

@@ -16,6 +16,7 @@ import { fileURLToPath } from "node:url";
 import os from "node:os";
 import {
   generateMessageProjections,
+  lowerRuntimeMessage,
   projectRuntimeMessage,
   projectMessages,
   verifyMessageProjections
@@ -36,6 +37,29 @@ test("VS Code lowers typed canonical placeables to positional placeholders", asy
     projectRuntimeMessage("lsp-client-restart-scheduled", "restart in {$milliseconds} ms"),
     "restart in {0} ms"
   );
+  assert.equal(
+    lowerRuntimeMessage("fixture", "{$detail}: {$kind}", ["kind", "detail"]),
+    "{1}: {0}"
+  );
+  assert.equal(
+    projectRuntimeMessage("lsp-client-start-failed", "{$detail}: {$detail}"),
+    "{0}: {0}"
+  );
+  assert.throws(
+    () => projectRuntimeMessage("lsp-client-start-failed", "started"),
+    /missing required argument.*detail/
+  );
+  assert.throws(
+    () => projectRuntimeMessage("lsp-client-start-failed", "{$detail}: {$unknown}"),
+    /undeclared argument unknown/
+  );
+});
+
+test("message projections preserve representation across LF and CRLF Fluent resources", async () => {
+  const source = await readFile(
+    path.resolve(packageRoot, "../../crates/recite-ui/resources/en-US.ftl"), "utf8"
+  );
+  assert.deepEqual(projectMessages(source.replaceAll("\n", "\r\n")), projectMessages(source));
 });
 
 test("message projections reject multiline and selector Fluent before generation", async () => {
