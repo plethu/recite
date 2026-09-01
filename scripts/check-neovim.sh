@@ -95,7 +95,8 @@ RECITE_PARSER_ROOT="$parser_root" \
 RECITE_LSP="$repo_root/target/debug/recite-lsp" \
 RECITE_TEST_PROJECT="$project" \
 RECITE_PARSER_AVAILABLE="$parser_available" \
-  env -u RECITE_CONFIG XDG_STATE_HOME="$scratch/state" nvim --headless -u NONE -i NONE -n \
+  env -u RECITE_CONFIG XDG_CONFIG_HOME="$scratch/config" XDG_STATE_HOME="$scratch/state" \
+    nvim --headless -u NONE -i NONE -n \
     -c 'lua vim.opt.rtp:prepend(vim.env.RECITE_PLUGIN)' \
     -c 'lua vim.opt.rtp:prepend(vim.env.RECITE_PARSER_ROOT)' \
     -c 'lua require("recite").setup({ lsp = { cmd = { vim.env.RECITE_LSP } } })' \
