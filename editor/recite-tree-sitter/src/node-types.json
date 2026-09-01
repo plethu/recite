@@ -308,11 +308,11 @@
       "required": true,
       "types": [
         {
-          "type": "identifier",
+          "type": "id_suffix",
           "named": true
         },
         {
-          "type": "stable_id",
+          "type": "identifier",
           "named": true
         }
       ]
@@ -334,7 +334,7 @@
       },
       "name": {
         "multiple": false,
-        "required": true,
+        "required": false,
         "types": [
           {
             "type": "choice_name",
@@ -678,6 +678,25 @@
     "fields": {}
   },
   {
+    "type": "id_suffix",
+    "named": true,
+    "fields": {},
+    "children": {
+      "multiple": false,
+      "required": true,
+      "types": [
+        {
+          "type": "draft_id",
+          "named": true
+        },
+        {
+          "type": "stable_id",
+          "named": true
+        }
+      ]
+    }
+  },
+  {
     "type": "if_statement",
     "named": true,
     "fields": {
@@ -785,11 +804,11 @@
       "required": true,
       "types": [
         {
-          "type": "identifier",
+          "type": "id_suffix",
           "named": true
         },
         {
-          "type": "stable_id",
+          "type": "identifier",
           "named": true
         }
       ]
@@ -811,7 +830,7 @@
       },
       "name": {
         "multiple": false,
-        "required": true,
+        "required": false,
         "types": [
           {
             "type": "line_name",
@@ -1404,6 +1423,10 @@
   },
   {
     "type": "divert_marker",
+    "named": true
+  },
+  {
+    "type": "draft_id",
     "named": true
   },
   {

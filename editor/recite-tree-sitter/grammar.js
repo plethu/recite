@@ -51,8 +51,8 @@ module.exports = grammar({
     line_statement: ($) => seq(
       optional($.indent),
       field("marker", $.line_marker),
-      $.hspace,
-      field("name", $.line_name),
+      optional($.hspace),
+      field("name", optional($.line_name)),
       repeat($.header_attribute),
       optional($.inline_comment),
       $.newline,
@@ -61,8 +61,8 @@ module.exports = grammar({
     choice_statement: ($) => seq(
       optional($.indent),
       field("marker", $.choice_marker),
-      $.hspace,
-      field("name", $.choice_name),
+      optional($.hspace),
+      field("name", optional($.choice_name)),
       repeat($.choice_attribute),
       optional($.inline_comment),
       $.newline,
@@ -274,13 +274,25 @@ module.exports = grammar({
       "}",
     ),
 
-    line_name: ($) => seq($.identifier, "@", $.stable_id),
-    choice_name: ($) => seq($.identifier, "@", $.stable_id),
+    // Header IDs are deliberately syntax-only. Keep the label and any
+    // author-entered suffix available to editor tooling, including while a
+    // draft is incomplete or semantically malformed. The parser/compiler
+    // owns the stable-anchor policy.
+    line_name: ($) => prec(1, seq($.identifier, optional(seq("@", optional($.id_suffix))))),
+    choice_name: ($) => prec(1, seq($.identifier, optional(seq("@", optional($.id_suffix))))),
     target: ($) => choice($.end_target, /[^\s\r\n#]+/),
     end_target: ($) => token(prec(1, "END")),
 
     block_name: ($) => $.identifier,
-    stable_id: ($) => /[0-9a-f]{20}/,
+    id_suffix: ($) => choice($.stable_id, $.draft_id),
+    // `stable_id` is a useful lexical classification for captures, not a
+    // validity decision. A draft or malformed suffix remains an id fragment
+    // in the tree and is validated by the production parser/compiler.
+    stable_id: ($) => token(prec(2, /[0-9a-f]{20}/)),
+    // Keep the same lexical precedence as stable_id so a longer malformed
+    // suffix wins as one token instead of leaving a valid-looking prefix and
+    // an ERROR node behind.
+    draft_id: ($) => token(prec(2, /[^\s#]+/)),
     function_name: ($) => prec(1, $.identifier),
     metadata_key: ($) => $.identifier,
     type_name: ($) => $.identifier,

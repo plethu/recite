@@ -21,6 +21,7 @@
 ((line_name (identifier) @label))
 ((choice_name (identifier) @label))
 ((stable_id) @label)
+((draft_id) @label)
 ((target) @variable
   (#not-eq? @variable "END"))
 ((end_target) @constant.builtin)

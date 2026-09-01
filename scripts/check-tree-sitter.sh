@@ -10,8 +10,9 @@ Checks the syntax-only Recite Tree-sitter grammar. The check verifies that the
 checked-in generated parser is reproducible, the corpus passes, the canonical
 corpus source remains linked to the shared Recite fixture, required highlight
 captures are exact for representative syntax, all canonical Recite fixtures
-parse through the same grammar, and incomplete input produces a recoverable
-tree.
+parse through the same grammar, malformed and draft IDs remain recoverable and
+highlighted, the compiler still rejects those IDs, and incomplete input
+produces a recoverable tree.
 EOF
 }
 
@@ -49,6 +50,7 @@ canonical_fixture="$repo_root/fixtures/recite/valid/language_pressure.recite"
 canonical_corpus="$grammar_dir/test/corpus/canonical.txt"
 recovery_corpus="$grammar_dir/test/corpus/recovery.txt"
 capture_fixture="$grammar_dir/test/fixtures/capture-values.recite"
+id_recovery_fixture="$grammar_dir/test/fixtures/id-recovery.recite"
 incomplete_fixture="$grammar_dir/test/fixtures/incomplete.recite"
 
 for required_file in \
@@ -62,6 +64,7 @@ for required_file in \
   "$canonical_corpus" \
   "$recovery_corpus" \
   "$capture_fixture" \
+  "$id_recovery_fixture" \
   "$incomplete_fixture"; do
   if [[ ! -f "$required_file" ]]; then
     echo "missing required Tree-sitter grammar file: $required_file" >&2
@@ -85,6 +88,7 @@ tree-sitter --version
 
 scratch="$(mktemp -d "${TMPDIR:-/tmp}/recite-tree-sitter.XXXXXX")"
 query_output="$scratch/query-captures.txt"
+id_query_output="$scratch/id-recovery-captures.txt"
 recovery_output="$scratch/recovery-tree.txt"
 canonical_source="$scratch/canonical.recite"
 cleanup() {
@@ -200,6 +204,83 @@ for expectation in "${exact_captures[@]}"; do
     exit 1
   fi
 done
+
+echo "== syntax-only ID recovery =="
+id_recovery_output="$scratch/id-recovery.tree"
+id_recovery_rc=0
+if (
+  cd "$repo_root"
+  tree-sitter parse --grammar-path "$grammar_dir" "$id_recovery_fixture"
+) > "$id_recovery_output" 2>&1; then
+  id_recovery_rc=0
+else
+  id_recovery_rc=$?
+fi
+if (( id_recovery_rc > 1 )); then
+  echo "Tree-sitter ID recovery probe failed to run (exit $id_recovery_rc)" >&2
+  exit 1
+fi
+if grep -Eq '\((ERROR|MISSING)( |\))' "$id_recovery_output"; then
+  echo "malformed or draft ID collapsed the Tree-sitter recovery tree" >&2
+  sed -n '/ERROR\|MISSING/p' "$id_recovery_output" | sed -n '1,40p' >&2
+  exit 1
+fi
+for node in line_statement choice_statement; do
+  if [[ "$(grep -Fc "($node" "$id_recovery_output")" -lt 1 ]]; then
+    echo "ID recovery probe lost a $node node" >&2
+    exit 1
+  fi
+done
+for node in draft_id stable_id; do
+  if ! grep -Fq "($node" "$id_recovery_output"; then
+    echo "ID recovery probe did not retain $node classification" >&2
+    exit 1
+  fi
+done
+
+(
+  cd "$grammar_dir"
+  tree-sitter query --grammar-path . --captures queries/highlights.scm \
+    test/fixtures/id-recovery.recite
+) > "$id_query_output"
+for expectation in \
+  ' - label, start: (5, 12), end: (5, 15), text: `bad`' \
+  ' - label, start: (7, 9), end: (7, 22), text: `NOT_AN_ANCHOR`' \
+  ' - label, start: (12, 7), end: (12, 28), text: `0123456789abcdef01234`' \
+  ' - label, start: (14, 14), end: (14, 38), text: `0123456789abcdef0123junk`' \
+  ' - label, start: (16, 8), end: (16, 28), text: `0123456789abcdef0123`'; do
+  if ! grep -Fq "$expectation" "$id_query_output"; then
+    echo "ID recovery capture expectation is missing: $expectation" >&2
+    exit 1
+  fi
+done
+for unexpected in \
+  ' - label, start: (12, 7), end: (12, 27), text: `0123456789abcdef0123`' \
+  ' - label, start: (14, 14), end: (14, 34), text: `0123456789abcdef0123`'; do
+  if grep -Fq "$unexpected" "$id_query_output"; then
+    echo "malformed ID retained an accidental stable-ID prefix capture: $unexpected" >&2
+    exit 1
+  fi
+done
+
+semantic_output="$scratch/id-recovery-semantic.txt"
+semantic_rc=0
+if cargo run --quiet --locked --manifest-path "$repo_root/Cargo.toml" -p recite-cli -- \
+  check-ids "$id_recovery_fixture" > "$semantic_output" 2>&1; then
+  semantic_rc=0
+else
+  semantic_rc=$?
+fi
+if (( semantic_rc == 0 )); then
+  echo "compiler-facing ID validation unexpectedly accepted the recovery fixture" >&2
+  exit 1
+fi
+if ! grep -Eq 'RECITE_ID00[78]' "$semantic_output"; then
+  echo "compiler-facing ID validation did not report a stable-ID diagnostic" >&2
+  sed -n '1,80p' "$semantic_output" >&2
+  exit 1
+fi
+echo "syntax-only ID recovery passed; semantic validation remains compiler-owned"
 
 echo "== incomplete input recovery =="
 recovery_rc=0

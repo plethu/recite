@@ -63,7 +63,8 @@ Canonical Recite fixture
     (hspace)
     (line_name
       (identifier)
-      (stable_id))
+      (id_suffix
+        (stable_id)))
     (header_attribute
       (hspace)
       (metadata_field
@@ -123,7 +124,8 @@ Canonical Recite fixture
     (hspace)
     (choice_name
       (identifier)
-      (stable_id))
+      (id_suffix
+        (stable_id)))
     (choice_attribute
       (hspace)
       (metadata_field
@@ -182,7 +184,8 @@ Canonical Recite fixture
     (hspace)
     (line_name
       (identifier)
-      (stable_id))
+      (id_suffix
+        (stable_id)))
     (header_attribute
       (hspace)
       (metadata_field
@@ -227,7 +230,8 @@ Canonical Recite fixture
     (hspace)
     (line_name
       (identifier)
-      (stable_id))
+      (id_suffix
+        (stable_id)))
     (header_attribute
       (hspace)
       (metadata_field

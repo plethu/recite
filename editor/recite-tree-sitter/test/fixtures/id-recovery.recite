@@ -1,0 +1,19 @@
+:: recovery default
+>
+  A bare line header remains available while its label is being drafted.
+> missing@
+  A draft header without an anchor remains visible.
+> malformed@bad
+  A malformed anchor remains attached to its line.
+? choice@NOT_AN_ANCHOR
+  A malformed choice anchor remains attached to its choice.
+  -> END
+?
+  A bare choice header remains available while its label is being drafted.
+> long@0123456789abcdef01234
+  An overlong hexadecimal suffix remains one malformed fragment.
+> prefix_junk@0123456789abcdef0123junk
+  A valid-looking prefix followed by junk remains one malformed fragment.
+> valid@0123456789abcdef0123
+  A valid anchor remains separately classified.
+  -> END
