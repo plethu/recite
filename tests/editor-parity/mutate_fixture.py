@@ -93,6 +93,16 @@ def main() -> int:
         if original not in source:
             raise SystemExit("shared workspace input was not present")
         restore_mtime(root, source.replace(original, f"/* {original} */", 1))
+    elif mutation == "compiler-diagnostic":
+        set_module_shapes_command(contract)
+        root = fixture_repo / "crates/recite-lsp/tests/module_shapes.rs"
+        source = root.read_text(encoding="utf-8")
+        marker = 'include!("module_tests.inc");'
+        if marker not in source:
+            raise SystemExit("module-shapes include was not present")
+        detail = "editor parity compiler diagnostic fixture " + ("x" * 8000)
+        replacement = f'compile_error!("{detail}");\n\n{marker}'
+        restore_mtime(root, source.replace(marker, replacement, 1))
     elif mutation == "contained-file-link":
         create_digest_symlink_fixture(fixture_repo, "contained-file-link", False)
     elif mutation == "escaping-file-link":

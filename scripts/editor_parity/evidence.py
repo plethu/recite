@@ -10,8 +10,16 @@ from .model import Context, has_record
 from .paths import require_no_symlink_components, require_repo_file
 
 
+_CARGO_TIMEOUT_SECONDS = 120
+_MAX_CARGO_DIAGNOSTIC_LENGTH = 4096
+_CARGO_DIAGNOSTIC_TRUNCATION = "... [truncated]"
+
+
 def cargo_test_list(ctx: Context, package: str, target: str, test_filter: str | None = None) -> set[str]:
-    command = [str(cargo_test_executable(ctx, package, target)), "--list"]
+    executable = cargo_test_executable(ctx, package, target)
+    if executable is None:
+        return set()
+    command = [str(executable), "--list"]
     if test_filter is not None:
         command[1:1] = [test_filter, "--exact"]
     try:
@@ -23,11 +31,17 @@ def cargo_test_list(ctx: Context, package: str, target: str, test_filter: str | 
             encoding="utf-8",
             errors="replace",
             env={**os.environ, "CARGO_TERM_COLOR": "never"},
-            timeout=120,
+            timeout=_CARGO_TIMEOUT_SECONDS,
             check=False,
         )
-    except (OSError, subprocess.TimeoutExpired) as error:
-        ctx.require(False, f"test harness discovery failed for {package}/{target}: {error}")
+    except subprocess.TimeoutExpired:
+        ctx.require(
+            False,
+            f"test harness discovery timed out after {_CARGO_TIMEOUT_SECONDS}s for {package}/{target}",
+        )
+        return set()
+    except OSError as error:
+        ctx.require(False, f"test harness discovery could not start for {package}/{target}: {error}")
         return set()
     if result.returncode != 0:
         output = (result.stdout + result.stderr).strip().splitlines()
@@ -42,7 +56,7 @@ def cargo_test_list(ctx: Context, package: str, target: str, test_filter: str | 
     }
 
 
-def cargo_test_executable(ctx: Context, package: str, target: str) -> Path:
+def cargo_test_executable(ctx: Context, package: str, target: str) -> Path | None:
     key = (package, target)
     if key in ctx.cargo_test_executable_cache:
         return ctx.cargo_test_executable_cache[key]
@@ -55,7 +69,7 @@ def cargo_test_executable(ctx: Context, package: str, target: str) -> Path:
         package,
         "--test",
         target,
-        "--message-format=json-render-diagnostics",
+        "--message-format=json",
         "--",
         "--cfg",
         f'recite_editor_parity_source_digest="{digest}"',
@@ -69,12 +83,20 @@ def cargo_test_executable(ctx: Context, package: str, target: str) -> Path:
             encoding="utf-8",
             errors="replace",
             env={**os.environ, "CARGO_TERM_COLOR": "never", "CARGO_TARGET_DIR": str(ctx.cargo_target_dir)},
-            timeout=120,
+            timeout=_CARGO_TIMEOUT_SECONDS,
             check=False,
         )
-    except (OSError, subprocess.TimeoutExpired) as error:
-        ctx.require(False, f"cargo test-target compilation failed for {package}/{target}: {error}")
-        return ctx.repo_root / "target" / "missing-editor-parity-test"
+    except subprocess.TimeoutExpired:
+        ctx.require(
+            False,
+            f"cargo test-target compilation timed out after {_CARGO_TIMEOUT_SECONDS}s for {package}/{target}",
+        )
+        ctx.cargo_test_executable_cache[key] = None
+        return None
+    except OSError as error:
+        ctx.require(False, f"cargo test-target compilation could not start for {package}/{target}: {error}")
+        ctx.cargo_test_executable_cache[key] = None
+        return None
     executable = None
     for line in result.stdout.splitlines():
         try:
@@ -90,13 +112,56 @@ def cargo_test_executable(ctx: Context, package: str, target: str) -> Path:
         ):
             executable = message["executable"]
     if result.returncode != 0 or executable is None:
-        output = (result.stdout + result.stderr).strip().splitlines()
-        detail = output[-1] if output else "no cargo output"
+        detail = cargo_failure_detail(result.stdout, result.stderr)
         ctx.require(False, f"cargo test-target compilation failed for {package}/{target}: {detail}")
-        return ctx.repo_root / "target" / "missing-editor-parity-test"
+        ctx.cargo_test_executable_cache[key] = None
+        return None
     executable_path = Path(executable)
     ctx.cargo_test_executable_cache[key] = executable_path
     return executable_path
+
+
+def cargo_failure_detail(stdout: str, stderr: str) -> str:
+    """Return one bounded, actionable detail from a failed Cargo invocation."""
+
+    rendered = _first_rendered_cargo_diagnostic(stdout)
+    if rendered is not None:
+        return rendered
+    output = (stdout + stderr).strip().splitlines()
+    return _bound_cargo_diagnostic(output[-1] if output else "no cargo output")
+
+
+def _first_rendered_cargo_diagnostic(output: str) -> str | None:
+    fallback = None
+    for line in output.splitlines():
+        try:
+            message = json.loads(line)
+        except json.JSONDecodeError:
+            continue
+        if not isinstance(message, dict):
+            continue
+        if message.get("reason") != "compiler-message":
+            continue
+        diagnostic = message.get("message")
+        if not isinstance(diagnostic, dict):
+            continue
+        rendered = diagnostic.get("rendered")
+        if not isinstance(rendered, str) or not rendered.strip():
+            continue
+        rendered = _bound_cargo_diagnostic(rendered)
+        if diagnostic.get("level") == "error":
+            return rendered
+        if fallback is None:
+            fallback = rendered
+    return fallback
+
+
+def _bound_cargo_diagnostic(value: str) -> str:
+    normalized = value.replace("\r\n", "\n").replace("\r", "\n").strip()
+    if len(normalized) <= _MAX_CARGO_DIAGNOSTIC_LENGTH:
+        return normalized
+    limit = _MAX_CARGO_DIAGNOSTIC_LENGTH - len(_CARGO_DIAGNOSTIC_TRUNCATION)
+    return normalized[:limit].rstrip() + _CARGO_DIAGNOSTIC_TRUNCATION
 
 
 def discovered_test_paths(ctx: Context, package: str, target: str) -> set[str]:

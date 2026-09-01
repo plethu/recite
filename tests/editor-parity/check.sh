@@ -385,6 +385,41 @@ wait "$second_pid"
 assert_no_hashed_targets
 echo "editor parity concurrent fixture passed"
 
+python3 - "$fixture_repo" <<'PY'
+import subprocess
+import sys
+from pathlib import Path
+from unittest.mock import patch
+
+repo = Path(sys.argv[1])
+sys.path.insert(0, str(repo / "scripts"))
+from editor_parity import evidence
+from editor_parity.model import Context
+
+
+def timeout(*args, **kwargs):
+    raise subprocess.TimeoutExpired(args[0], kwargs.get("timeout"))
+
+
+context = Context(repo, [], repo / "target")
+with patch.object(evidence, "selected_target_digest", return_value="digest"), patch.object(evidence.subprocess, "run", side_effect=timeout):
+    if evidence.cargo_test_executable(context, "recite-lsp", "editor_parity") is not None:
+        raise SystemExit("timed-out Cargo compilation returned an executable")
+expected = "cargo test-target compilation timed out after 120s for recite-lsp/editor_parity"
+if context.errors != [expected]:
+    raise SystemExit(f"timeout diagnostic was not explicit: {context.errors!r}")
+
+context = Context(repo, [], repo / "target")
+context.cargo_test_executable_cache[("recite-lsp", "editor_parity")] = repo / "missing-test"
+with patch.object(evidence.subprocess, "run", side_effect=timeout):
+    evidence.cargo_test_list(context, "recite-lsp", "editor_parity")
+expected = "test harness discovery timed out after 120s for recite-lsp/editor_parity"
+if context.errors != [expected]:
+    raise SystemExit(f"timeout discovery diagnostic was not explicit: {context.errors!r}")
+
+print("editor parity timeout diagnostics fixture passed")
+PY
+
 expect_failure() {
   local mutation="$1"
   local expected="$2"
@@ -408,10 +443,30 @@ expect_failure() {
   git -C "$fixture_repo" checkout -q -- fixtures/editor-parity/contract.json \
     docs/editor-parity-contract.md crates/recite-compiler/tests/authoring_build.rs \
     crates/recite-compiler/tests/authoring_catalog_summary.rs \
-    crates/recite-lsp/tests/module_tests.inc crates/recite-lsp/build.rs \
+    crates/recite-lsp/tests/module_tests.inc crates/recite-lsp/tests/module_shapes.rs \
+    crates/recite-lsp/build.rs \
     shared-build.inc shared_workspace.rs
   rm -rf "$fixture_repo/digest-inputs" "$fixture_repo/../outside-input"
 }
+
+mutate_fixture compiler-diagnostic
+set +e
+compiler_diagnostic_a="$(run_checker 2>&1)"
+compiler_diagnostic_a_result=$?
+compiler_diagnostic_b="$(run_checker 2>&1)"
+compiler_diagnostic_b_result=$?
+set -e
+if (( compiler_diagnostic_a_result == 0 || compiler_diagnostic_b_result == 0 )) \
+  || [[ "$compiler_diagnostic_a" != "$compiler_diagnostic_b" ]] \
+  || [[ "$compiler_diagnostic_a" != *"editor parity compiler diagnostic fixture"* ]] \
+  || [[ "$compiler_diagnostic_a" != *"... [truncated]"* ]] \
+  || (( ${#compiler_diagnostic_a} > 40000 )); then
+  echo "editor parity compiler diagnostic fixture was not bounded and deterministic" >&2
+  printf '%s\n' "$compiler_diagnostic_a" >&2
+  exit 1
+fi
+echo "editor parity compiler diagnostic fixture surfaced and bounded the Cargo detail"
+git -C "$fixture_repo" checkout -q -- fixtures/editor-parity/contract.json crates/recite-lsp/tests/module_shapes.rs
 
 expect_failure traversal "path escapes the repository"
 expect_failure client "implemented client vscode needs an implemented artifact"
