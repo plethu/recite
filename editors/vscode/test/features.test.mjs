@@ -61,6 +61,33 @@ test("versioned workspace edits are refused for a stale open document", () => {
   assert.equal(current.replacements[0].uri.toString(), uri.toString());
 });
 
+test("workspace edits require integer versions and an open document", () => {
+  const uri = api.Uri.parse("file:///workspace/dialogue.recite");
+  const document = { version: 4 };
+  const edit = (version) => lspWorkspaceEditToVscode(api, {
+    documentChanges: [{
+      textDocument: version === "missing"
+        ? { uri: uri.toString() }
+        : { uri: uri.toString(), version },
+      edits: [{
+        range: { start: { line: 0, character: 0 }, end: { line: 0, character: 1 } },
+        newText: "#"
+      }]
+    }]
+  }, () => document);
+
+  for (const version of ["missing", null, 4.5, "4"]) {
+    assert.equal(edit(version), undefined, `version ${String(version)} must be refused`);
+  }
+
+  assert.equal(lspWorkspaceEditToVscode(api, {
+    documentChanges: [{
+      textDocument: { uri: uri.toString(), version: 4 },
+      edits: []
+    }]
+  }, () => undefined), undefined, "a zero-edit closed-document precondition must be refused");
+});
+
 test("delayed workspace edits revalidate zero-edit sibling preconditions atomically", () => {
   const primary = api.Uri.parse("file:///workspace/dialogue.recite");
   const sibling = api.Uri.parse("file:///workspace/other.recite");

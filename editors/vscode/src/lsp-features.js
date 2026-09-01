@@ -78,16 +78,12 @@ export function lspWorkspaceEditToVscode(api, result, getOpenDocument) {
   const workspaceEdit = new api.WorkspaceEdit();
   for (const change of result.documentChanges) {
     if (!change?.textDocument?.uri || !Array.isArray(change.edits)) return undefined;
+    const version = change.textDocument.version;
+    if (!Number.isInteger(version)) return undefined;
     const uri = api.Uri.parse(change.textDocument.uri);
     const document = getOpenDocument(uri);
-    if (change.textDocument.version !== undefined &&
-        change.textDocument.version !== null &&
-        (!document || document.version !== change.textDocument.version)) {
-      return undefined;
-    }
-    if (change.textDocument.version !== undefined && change.textDocument.version !== null) {
-      preconditions.push({ document, uri, version: change.textDocument.version });
-    }
+    if (!document || document.version !== version) return undefined;
+    preconditions.push({ document, uri, version });
     for (const edit of change.edits) {
       if (!edit?.range || typeof edit.newText !== "string") return undefined;
       workspaceEdit.replace(uri, lspRangeToVscode(api, edit.range), edit.newText);
