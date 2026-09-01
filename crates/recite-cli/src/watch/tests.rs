@@ -13,6 +13,9 @@ use super::events::WatchState;
 use crate::error::CliError;
 use crate::i18n::{Messages, UiLocale};
 
+#[path = "tests/discovery_truth/tests.rs"]
+mod discovery_truth;
+
 fn build_once(state: &mut WatchState, stderr: &mut Vec<u8>) -> Result<BuildStatus, CliError> {
     let messages = Messages::load(&UiLocale::default()).expect("messages");
     build_once_with_messages(state, stderr, &messages)
@@ -63,7 +66,6 @@ participants = ["hazel"]
 fn valid_source() -> &'static str {
     ":: start default speaker=hazel\n> intro@11111111111111111111\n  Hello.\n-> END\n"
 }
-
 #[test]
 fn build_once_writes_manifest_assets_from_project_sources() {
     let temp = TempDir::new().expect("tempdir");
@@ -90,7 +92,6 @@ fn build_once_writes_manifest_assets_from_project_sources() {
     );
     assert_eq!(String::from_utf8(stderr).expect("stderr"), "");
 }
-
 #[test]
 fn duplicate_manifest_asset_paths_are_built_once() {
     let temp = TempDir::new().expect("tempdir");
@@ -127,7 +128,6 @@ participants = ["hazel"]
     );
     assert!(temp.path().join("compiled/shared.recitec").is_file());
 }
-
 #[test]
 fn initial_build_resolves_project_relative_cross_file_targets() {
     let temp = TempDir::new().expect("tempdir");

@@ -23,7 +23,12 @@ pub(super) fn assess_current_freshness(
         ProjectBuildPreparation::Rejected { diagnostics } => {
             return Ok(FreshnessResult {
                 diagnostics,
-                stale: false,
+                // Publication completed from the previous valid request, but
+                // the recheck could not prepare the current project. The
+                // published asset is therefore known not to describe the
+                // current project, even though no fingerprint comparison was
+                // possible.
+                stale: true,
             });
         }
     };

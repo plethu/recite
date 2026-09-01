@@ -53,13 +53,16 @@ fn validate_project_with_mode(
         .map(recite_config::DiscoveryDiagnostic::as_core_diagnostic)
         .collect::<Vec<_>>();
 
-    let contains_invalid_utf8_source = report.diagnostics().iter().any(|diagnostic| {
-        matches!(
-            diagnostic,
-            recite_config::DiscoveryDiagnostic::NonUtf8Source { .. }
-        )
-    });
-    if !report.is_complete() && !contains_invalid_utf8_source {
+    // Discovery returns the readable subset so editor-facing consumers can
+    // retain per-file diagnostics. That subset is not a complete authoring
+    // project, however: project-wide checks would otherwise treat an
+    // unreadable source as absent and report false missing-reference/default
+    // errors. Keep the discovery evidence and stop before authoring checks
+    // whenever coverage is partial. Freshness-only checks still need to
+    // inspect the existing asset's embedded sources, so retain that mode's
+    // typed read/freshness result without feeding the incomplete set into the
+    // authoring kernel.
+    if !report.is_complete() && matches!(mode, ProjectValidationMode::Authoring) {
         return Ok(diagnostics);
     }
 

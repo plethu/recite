@@ -47,6 +47,42 @@ fn validate_project_reports_deterministic_cross_file_diagnostics() {
 }
 
 #[test]
+fn validate_project_stops_project_checks_after_non_utf8_source_discovery() {
+    let temp = TempDir::new().expect("tempdir");
+    write_project_manifest(temp.path(), "");
+    write_recite(
+        temp.path(),
+        "dialogue/start.recite",
+        concat!(
+            ":: start default\n",
+            "> line@11111111111111111111\n",
+            "  Start.\n",
+            "-> target.recite::missing\n",
+        ),
+    );
+    let unreadable = temp.path().join("dialogue/target.recite");
+    std::fs::write(&unreadable, [0xff, 0xfe]).expect("non-UTF-8 source");
+    let unreadable = std::fs::canonicalize(unreadable).expect("canonical source path");
+
+    let output = run(recite().arg("validate-project").arg(temp.path()));
+    assert_diagnostic_failure(&output);
+    let stderr = stderr(&output);
+    assert!(stderr.contains("error RECITE_CONFIG115"), "{stderr}");
+    assert!(
+        stderr.contains(&format!("{}:1:1", unreadable.display())),
+        "{stderr}"
+    );
+    assert!(
+        stderr.contains("project source is not valid UTF-8"),
+        "{stderr}"
+    );
+    assert!(
+        !stderr.contains("RECITE_VALIDATE007"),
+        "partial discovery must not run project-wide reference checks: {stderr}"
+    );
+}
+
+#[test]
 fn validate_project_ignores_malformed_excluded_source() {
     let temp = TempDir::new().expect("tempdir");
     write_project_manifest(temp.path(), "[discovery]\nexcludes = [\"excluded/**\"]\n");

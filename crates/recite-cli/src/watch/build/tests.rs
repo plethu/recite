@@ -12,6 +12,8 @@ use super::super::events::WatchState;
 use super::{BuildStatus, build_once_with_control, build_once_with_post_publish_hook};
 use crate::i18n::{Messages, UiLocale};
 
+#[path = "tests/post_publish/tests.rs"]
+mod post_publish;
 #[path = "tests/telemetry/tests.rs"]
 mod telemetry;
 
@@ -127,7 +129,6 @@ fn post_publish_schema_change_is_stale_not_fresh() {
             r#"{"schema_version":1,"speakers":{"hazel":{"display_name":"After"}}}"#,
         )
     });
-
     assert!(
         matches!(status, BuildStatus::Stale { asset_count: 1, .. }),
         "{status:?}"
@@ -200,7 +201,6 @@ fn unchanged_request_is_fresh_after_post_publish_assessment() {
     );
     assert!(stderr.is_empty());
 }
-
 #[test]
 fn empty_target_build_honours_cancellation_and_supersession() {
     for cancellation in [None, Some(BuildGeneration::new(1))] {
