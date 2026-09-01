@@ -58,7 +58,7 @@ traversal order is deterministic across tests, save/load, and replay.
 Most authoring should happen in your editor. Today, `recite-lsp` reports
 diagnostics and provides completion, hover, definition navigation, block
 rename, and code actions for missing stable IDs through compatible LSP clients.
-The [Neovim setup](editor/recite-neovim/README.md) is available directly from a
+The [Neovim setup](editors/recite-neovim/README.md) is available directly from a
 checkout; the packaged VS Code extension is still in progress.
 
 `recite watch` rebuilds when project inputs change. Engine adapters own how a

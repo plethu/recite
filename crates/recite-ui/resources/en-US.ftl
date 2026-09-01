@@ -450,6 +450,6 @@ neovim-health-query-found = Tree-sitter highlight query is on runtimepath
 neovim-health-query-missing = Tree-sitter highlight query is not on runtimepath
 neovim-health-parser-found = Tree-sitter parser is on runtimepath
 neovim-health-parser-missing = Tree-sitter parser is not built or is not on runtimepath
-neovim-health-parser-build = Build it from editor/recite-tree-sitter; see editor/recite-neovim/README.md
+neovim-health-parser-build = Build it from editors/recite-tree-sitter; see editors/recite-neovim/README.md
 neovim-health-current-root = current project root: {$root}
 neovim-health-open-buffer = Open a .recite buffer to inspect its project root

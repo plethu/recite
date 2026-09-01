@@ -90,7 +90,10 @@ The checked-in fixture gives each capability a stable ID, semantic authority,
 protocol, canonical scenario, expected structured evidence, edge cases, client
 and platform status, and owning follow-up. The rows below are the normative
 capability set; the checker rejects drift between this document and the JSON
-fixture.
+fixture. A record's `artifact` is its primary artifact; an optional `artifacts`
+array names the complete supporting set, must be unique, and must include the
+primary artifact. Partial or implemented clients and distributions must have
+an implemented primary artifact.
 
 - `lsp.initialize.capabilities`: advertise the supported sync, UTF-16, and LSP feature capabilities from the real server.
 - `lsp.publish.diagnostics`: publish structured diagnostics for malformed source through the real LSP transport.
@@ -196,4 +199,7 @@ update the JSON fixture, this document, and the corresponding tests together.
 The contract does not cover the GUI workbench, engine embedding, remote
 services, marketplace publication, or installed-host compatibility. The
 checked-in Tree-sitter grammar remains a syntax artifact; Neovim consumes it
-through its runtimepath package, while Zed support remains planned under #192.
+through its runtimepath package. The Neovim distribution record therefore
+names `neovim-runtimepath` as its primary artifact and keeps
+`tree-sitter-grammar` as supporting material. Zed does not consume either
+artifact and remains planned under #192.

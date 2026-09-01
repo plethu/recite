@@ -44,7 +44,7 @@ fi
 if [[ -z "${XDG_CACHE_HOME:-}" ]]; then
   export XDG_CACHE_HOME="$repo_root/target/tree-sitter-cache"
 fi
-grammar_dir="$repo_root/editor/recite-tree-sitter"
+grammar_dir="$repo_root/editors/recite-tree-sitter"
 parser_abi=14
 canonical_fixture="$repo_root/fixtures/recite/valid/language_pressure.recite"
 canonical_corpus="$grammar_dir/test/corpus/canonical.txt"

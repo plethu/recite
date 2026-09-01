@@ -38,14 +38,14 @@
   ],
   "artifacts": [
     {"id": "vscode-vsix", "kind": "editor-extension", "status": "partial", "path": null, "clients": ["vscode", "vscodium"], "notes": "The extension source and package manifest are checked in. A deterministic VSIX is generated and package-checked, but the archive is ignored build output rather than a checked-in artifact."},
-    {"id": "tree-sitter-grammar", "kind": "syntax-grammar", "status": "partial", "path": "editor/recite-tree-sitter/grammar.js", "clients": ["neovim"]},
-    {"id": "neovim-runtimepath", "kind": "editor-runtimepath", "status": "implemented", "path": "editor/recite-neovim/lua/recite.lua", "clients": ["neovim"]},
+    {"id": "tree-sitter-grammar", "kind": "syntax-grammar", "status": "partial", "path": "editors/recite-tree-sitter/grammar.js", "clients": ["neovim"]},
+    {"id": "neovim-runtimepath", "kind": "editor-runtimepath", "status": "implemented", "path": "editors/recite-neovim/lua/recite.lua", "clients": ["neovim"]},
     {"id": "zed-extension", "kind": "editor-extension", "status": "planned", "path": null, "clients": ["zed"]}
   ],
   "distributions": [
     {"id": "vs-marketplace", "artifact": "vscode-vsix", "status": "planned", "notes": "Publication is not implied by a future VSIX build."},
     {"id": "open-vsx", "artifact": "vscode-vsix", "status": "planned", "notes": "Open VSX availability is tracked separately from VS Marketplace."},
-    {"id": "neovim-distribution", "artifact": "tree-sitter-grammar", "status": "planned", "notes": "No plugin-manager-specific distribution is required by the contract."},
+    {"id": "neovim-distribution", "artifact": "neovim-runtimepath", "artifacts": ["neovim-runtimepath", "tree-sitter-grammar"], "status": "planned", "notes": "The source runtimepath package is the primary distribution artifact; its Tree-sitter grammar is a supporting artifact. No plugin-manager-specific distribution is required by the contract."},
     {"id": "zed-distribution", "artifact": "zed-extension", "status": "planned", "notes": "Zed packaging and install smoke are owned by #192."}
   ],
   "scenarios": [

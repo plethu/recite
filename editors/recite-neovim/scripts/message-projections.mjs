@@ -58,7 +58,7 @@ async function assertCallsites(ids) {
 export function renderMessages(messages) {
   const lines = [
     "-- Generated from crates/recite-ui/resources/en-US.ftl via the canonical inventory.",
-    "-- Do not edit. Run editor/recite-neovim/scripts/message-projections.mjs to regenerate.",
+    "-- Do not edit. Run editors/recite-neovim/scripts/message-projections.mjs to regenerate.",
     "local templates = {",
   ];
   for (const [id, value] of messages) {

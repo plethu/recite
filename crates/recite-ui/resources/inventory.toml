@@ -519,7 +519,7 @@ rule = "read-only; each host projection records its source resource ID"
 
 [projections.neovim]
 source_resource = "en-US.ftl"
-output = "editor/recite-neovim/lua/recite_messages.lua"
+output = "editors/recite-neovim/lua/recite_messages.lua"
 ids = [
 "lsp-client-display-name",
 "lsp-client-restart-exhausted",

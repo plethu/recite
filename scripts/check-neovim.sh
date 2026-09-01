@@ -34,8 +34,8 @@ else
   repo_root="$(git rev-parse --show-toplevel)"
 fi
 
-plugin_root="$repo_root/editor/recite-neovim"
-grammar_query="$repo_root/editor/recite-tree-sitter/queries/highlights.scm"
+plugin_root="$repo_root/editors/recite-neovim"
+grammar_query="$repo_root/editors/recite-tree-sitter/queries/highlights.scm"
 neovim_query="$plugin_root/queries/recite/highlights.scm"
 for required_file in \
   "$plugin_root/plugin/recite.lua" \
@@ -165,7 +165,7 @@ echo "== Neovim headless filetype/LSP checks =="
 parser_root="$scratch/parser-runtime"
 mkdir -p "$parser_root/parser"
 if XDG_CACHE_HOME="$scratch/tree-sitter-cache" "$tree_sitter_bin" build \
-  "$repo_root/editor/recite-tree-sitter" \
+  "$repo_root/editors/recite-tree-sitter" \
   --output "$parser_root/parser/recite.so"; then
   parser_available=1
 else

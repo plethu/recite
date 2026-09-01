@@ -10,7 +10,7 @@ pub(super) struct ProjectionDeclaration {
 
 const NEOVIM_PROJECTION: [ProjectionDeclaration; 1] = [ProjectionDeclaration {
     client: Client::Neovim,
-    field: "editor/recite-neovim/lua/recite_messages.lua",
+    field: "editors/recite-neovim/lua/recite_messages.lua",
 }];
 
 /// Return the typed projection declarations for one canonical message ID.

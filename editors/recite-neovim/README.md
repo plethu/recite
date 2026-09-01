@@ -16,7 +16,7 @@ compatibility target is Neovim 0.10.4 (the checked-in smoke lane currently runs
 Add the integration to `runtimepath` from `init.lua`:
 
 ```lua
-vim.opt.rtp:prepend("/absolute/path/to/recite/editor/recite-neovim")
+vim.opt.rtp:prepend("/absolute/path/to/recite/editors/recite-neovim")
 ```
 
 The package's `plugin/recite.lua` calls `require("recite").setup()` with
@@ -28,7 +28,7 @@ direct runtimepath use and lazy/packer-style managers:
 vim.g.recite_options = {
   lsp = { cmd = { "/absolute/path/to/recite-lsp" } },
 }
-vim.opt.rtp:prepend("/absolute/path/to/recite/editor/recite-neovim")
+vim.opt.rtp:prepend("/absolute/path/to/recite/editors/recite-neovim")
 ```
 
 It is also safe to call `setup` yourself after a manager loads the package:
@@ -110,9 +110,9 @@ the grammar after installing the pinned Tree-sitter CLI:
 
 ```sh
 cd /absolute/path/to/recite
-mkdir -p editor/recite-neovim/parser
-tree-sitter build editor/recite-tree-sitter \
-  --output editor/recite-neovim/parser/recite.so
+mkdir -p editors/recite-neovim/parser
+tree-sitter build editors/recite-tree-sitter \
+  --output editors/recite-neovim/parser/recite.so
 ```
 
 Use `recite.dll` on Windows. On macOS, `recite.so` is the usual Neovim
@@ -154,7 +154,7 @@ Run `:checkhealth recite` to inspect filetype registration, the configured
 `recite-lsp` executable, the Tree-sitter query, and the parser library.
 
 - If `:set filetype?` is not `recite` for a `.recite` file, make sure the
-  `editor/recite-neovim` directory is on `runtimepath` and run `:filetype on`.
+  `editors/recite-neovim` directory is on `runtimepath` and run `:filetype on`.
 - If the LSP is not attached, check `:checkhealth recite`, then set `lsp.cmd`
   to an absolute executable path. The server must be executable by Neovim and
   speak LSP over stdio.
