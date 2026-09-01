@@ -17,6 +17,10 @@ dotnet.isolated = true
 description = "Run the complete local verification suite"
 run = "mise -E maintainability exec -- scripts/verify.sh"
 
+[tasks.check-tree-sitter]
+description = "Check the Recite Tree-sitter grammar and editor captures"
+run = "scripts/check-tree-sitter.sh"
+
 [tasks.watch-stress]
 description = "Measure real watch rebuilds on generated fixture scales"
 run = "cargo test --locked -p recite-cli --test watch_stress -- --ignored --nocapture"

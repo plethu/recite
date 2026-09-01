@@ -1,0 +1,6 @@
+:: capture default speaker="Archivist" enabled=true count=3 tags=[dock, "night watch"]
+> capture_line@0123456789abcdef0123 speaker=archivist bind=(name:string=$name)
+  [quiet]Found {name}.[/quiet]
+:if not sealed() and stage("open")
+  ! immediate play_sfx("relay")
+  -> archive.recite::opening
