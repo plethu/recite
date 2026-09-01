@@ -129,7 +129,8 @@ def validate_clients(ctx: Context, clients: dict, artifacts: dict) -> None:
             ctx.require(isinstance(artifact_status, str) and artifact_status in {"partial", "implemented"}, f"partial client {client_id} needs a partial or implemented artifact")
         if client.get("status") == "implemented" and has_record(artifacts, primary):
             ctx.require(artifacts[primary].get("status") == "implemented", f"implemented client {client_id} needs an implemented artifact")
-            ctx.require(any(isinstance(value, str) and value in {"partial", "implemented"} for value in platform_status.values()), f"implemented client {client_id} needs platform evidence")
+            platform_values = platform_status.values() if isinstance(platform_status, dict) else ()
+            ctx.require(any(isinstance(value, str) and value in {"partial", "implemented"} for value in platform_values), f"implemented client {client_id} needs platform evidence")
     vscode_artifact = clients.get("vscode", {}).get("artifact")
     vscodium_artifact = clients.get("vscodium", {}).get("artifact")
     ctx.require(vscode_artifact == vscodium_artifact, "VS Code and VSCodium must share one VSIX artifact topology")

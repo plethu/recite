@@ -63,6 +63,12 @@ run_checker() {
   (cd "$fixture_repo" && scripts/check-editor-parity.sh)
 }
 
+mutate_fixture() {
+  local mutation="$1"
+  python3 "$repo_root/tests/editor-parity/mutate_fixture.py" \
+    "$fixture_repo/fixtures/editor-parity/contract.json" "$mutation"
+}
+
 assert_portable_lock_source() {
   python3 - "$repo_root/scripts/editor_parity/portable_lock.py" <<'PY'
 import ast
@@ -171,6 +177,19 @@ run_checker
 echo "editor parity baseline fixture passed"
 assert_no_hashed_targets
 
+mutate_fixture module-shapes
+set +e
+module_shapes_output="$(run_checker 2>&1)"
+module_shapes_result=$?
+set -e
+if (( module_shapes_result != 0 )); then
+  echo "editor parity valid Rust module-shapes fixture failed" >&2
+  printf '%s\n' "$module_shapes_output" >&2
+  exit 1
+fi
+git -C "$fixture_repo" checkout -q -- fixtures/editor-parity/contract.json
+echo "editor parity valid Rust module-shapes fixture passed"
+
 run_checker >"$test_root/concurrent-a.log" 2>&1 &
 first_pid=$!
 run_checker >"$test_root/concurrent-b.log" 2>&1 &
@@ -179,171 +198,6 @@ wait "$first_pid"
 wait "$second_pid"
 assert_no_hashed_targets
 echo "editor parity concurrent fixture passed"
-
-mutate_fixture() {
-  local mutation="$1"
-  python3 - "$fixture_repo/fixtures/editor-parity/contract.json" "$mutation" <<'PY'
-import json
-import os
-import sys
-from pathlib import Path
-
-path, mutation = sys.argv[1:]
-with open(path, encoding="utf-8") as handle:
-    contract = json.load(handle)
-
-if mutation == "traversal":
-    contract["artifacts"][0]["path"] = "../../outside/claimed.vsix"
-elif mutation == "client":
-    client = next(client for client in contract["clients"] if client["id"] == "vscode")
-    client["status"] = "implemented"
-    client["platform_status"] = {"linux": "implemented", "macos": "partial", "windows": "partial"}
-    artifact = next(artifact for artifact in contract["artifacts"] if artifact["id"] == "vscode-vsix")
-    artifact["status"] = "planned"
-elif mutation == "distribution":
-    distribution = next(distribution for distribution in contract["distributions"] if distribution["id"] == "vs-marketplace")
-    distribution["status"] = "implemented"
-elif mutation == "capability-platform":
-    capability = next(capability for capability in contract["capabilities"] if capability["id"] == "lsp.completion")
-    capability["platform_status"]["linux"] = "implemented"
-elif mutation == "capability-evidence":
-    capability = next(capability for capability in contract["capabilities"] if capability["id"] == "lsp.completion")
-    capability["expected_evidence"]["status"] = "implemented"
-elif mutation == "duplicate":
-    contract["capabilities"].append(dict(contract["capabilities"][0]))
-elif mutation == "malformed":
-    capability = next(capability for capability in contract["capabilities"] if capability["id"] == "lsp.completion")
-    capability["expected_evidence"].pop("commands", None)
-    capability["expected_evidence"]["command"] = "not a cargo test command"
-elif mutation == "stale-evidence":
-    capability = next(capability for capability in contract["capabilities"] if capability["id"] == "lsp.completion")
-    capability["expected_evidence"].pop("commands", None)
-    capability["expected_evidence"]["command"] = "cargo test --locked -p recite-lsp --test editor_parity no_such_test"
-elif mutation == "stale-module-evidence":
-    capability = next(capability for capability in contract["capabilities"] if capability["id"] == "command.structured.results")
-    capability["expected_evidence"]["command"] = "cargo test --locked -p recite-compiler --test authoring_build invented::projects_every_lifecycle_state_with_stable_fields"
-elif mutation == "preserved-mtime-disconnected-module":
-    fixture_repo = Path(path).parents[2]
-    root = fixture_repo / "crates/recite-compiler/tests/authoring_build.rs"
-    source = root.read_text(encoding="utf-8")
-    declaration = '#[path = "authoring_build/status_projection.rs"]\nmod status_projection;\n'
-    if declaration not in source:
-        raise SystemExit("status projection module declaration was not present")
-    original_stat = root.stat()
-    root.write_text(source.replace(declaration, "", 1), encoding="utf-8")
-    os.utime(root, ns=(original_stat.st_atime_ns, original_stat.st_mtime_ns))
-elif mutation == "evidence-traversal":
-    capability = next(capability for capability in contract["capabilities"] if capability["id"] == "lsp.completion")
-    capability["expected_evidence"].pop("commands", None)
-    capability["expected_evidence"]["command"] = "cargo test --locked -p ../../outside --test editor_parity project_root_discovers_canonical_multi_file_overlays_for_navigation"
-elif mutation == "orphan-utf16":
-    scenario = next(scenario for scenario in contract["scenarios"] if scenario["id"] == "utf16-crlf-non-bmp")
-    orphan = dict(scenario)
-    orphan["id"] = "orphan-utf16-crlf-non-bmp"
-    contract["scenarios"].append(orphan)
-elif mutation == "neovim-client-topology":
-    client = next(client for client in contract["clients"] if client["id"] == "neovim")
-    client["artifact"] = "tree-sitter-grammar"
-elif mutation == "zed-tree-sitter-claim":
-    zed = next(client for client in contract["clients"] if client["id"] == "zed")
-    zed["artifacts"] = ["zed-extension", "tree-sitter-grammar"]
-    grammar = next(artifact for artifact in contract["artifacts"] if artifact["id"] == "tree-sitter-grammar")
-    grammar["clients"].append("zed")
-elif mutation == "client-platform-shape":
-    client = next(client for client in contract["clients"] if client["id"] == "neovim")
-    client["platform_status"] = ["linux", "macos", "windows"]
-elif mutation == "neovim-evidence-shape":
-    capability = next(capability for capability in contract["capabilities"] if capability["id"] == "editor.neovim.syntax-projection")
-    capability["expected_evidence"] = ["broken evidence shape"]
-elif mutation == "implementation-status-shape":
-    capability = next(capability for capability in contract["capabilities"] if capability["id"] == "lsp.completion")
-    capability["implementation_status"] = ["partial"]
-elif mutation == "status-values-shape":
-    contract["status_values"] = [{"invalid": "shape"}]
-elif mutation == "client-artifacts-shape":
-    client = next(client for client in contract["clients"] if client["id"] == "neovim")
-    client["artifacts"] = {"invalid": "shape"}
-elif mutation == "distribution-artifacts-shape":
-    distribution = next(distribution for distribution in contract["distributions"] if distribution["id"] == "neovim-distribution")
-    distribution["artifacts"] = {"invalid": "shape"}
-elif mutation == "evidence-artifacts-shape":
-    capability = next(capability for capability in contract["capabilities"] if capability["id"] == "lsp.completion")
-    capability["expected_evidence"].pop("artifact", None)
-    capability["expected_evidence"]["artifacts"] = {"invalid": "shape"}
-elif mutation == "follow-up-shape":
-    capability = next(capability for capability in contract["capabilities"] if capability["id"] == "lsp.completion")
-    capability["follow_up"] = []
-elif mutation == "neovim-stale-filetype":
-    capability = next(capability for capability in contract["capabilities"] if capability["id"] == "editor.filetype.registration")
-    capability["known_limitation"] = "No client package or activation registration exists."
-    capability["platform_status"]["linux"] = "planned"
-elif mutation == "disconnected-module":
-    fixture_repo = Path(path).parents[2]
-    root = fixture_repo / "crates/recite-compiler/tests/authoring_build.rs"
-    source = root.read_text(encoding="utf-8")
-    declaration = '#[path = "authoring_build/status_projection.rs"]\nmod status_projection;\n'
-    if declaration not in source:
-        raise SystemExit("status projection module declaration was not present")
-    root.write_text(source.replace(declaration, "", 1), encoding="utf-8")
-elif mutation == "reciprocity":
-    artifact = next(artifact for artifact in contract["artifacts"] if artifact["id"] == "vscode-vsix")
-    artifact["clients"].remove("vscode")
-elif mutation == "topology":
-    client = next(client for client in contract["clients"] if client["id"] == "vscodium")
-    client["artifact"] = "tree-sitter-grammar"
-elif mutation == "wrong-primary":
-    distribution = next(distribution for distribution in contract["distributions"] if distribution["id"] == "neovim-distribution")
-    distribution["artifact"] = "tree-sitter-grammar"
-elif mutation == "missing-grammar-support":
-    distribution = next(distribution for distribution in contract["distributions"] if distribution["id"] == "neovim-distribution")
-    distribution["artifacts"].remove("tree-sitter-grammar")
-elif mutation == "unknown-supporting-artifact":
-    distribution = next(distribution for distribution in contract["distributions"] if distribution["id"] == "neovim-distribution")
-    distribution["artifacts"].append("unknown-editor-artifact")
-elif mutation == "symlink":
-    fixture_repo = Path(path).parents[2]
-    outside = fixture_repo.parent / "outside-editor-parity.recite"
-    outside.write_text("outside\n", encoding="utf-8")
-    canonical = fixture_repo / "fixtures/recite/valid/core_language_spike.recite"
-    canonical.unlink()
-    canonical.symlink_to(outside)
-elif mutation == "symlink-component":
-    import shutil
-
-    fixture_repo = Path(path).parents[2]
-    valid = fixture_repo / "fixtures/recite/valid"
-    internal = fixture_repo / "fixtures/recite/internal-valid"
-    shutil.copytree(valid, internal, symlinks=True)
-    shutil.rmtree(valid)
-    valid.symlink_to(internal, target_is_directory=True)
-elif mutation == "symlink-artifact-component":
-    fixture_repo = Path(path).parents[2]
-    alias = fixture_repo / "fixtures/editor-parity/artifact-alias"
-    alias.symlink_to(alias.parent, target_is_directory=True)
-    artifact = next(artifact for artifact in contract["artifacts"] if artifact["id"] == "vscode-vsix")
-    artifact["status"] = "implemented"
-    artifact["path"] = "fixtures/editor-parity/artifact-alias/contract.json"
-elif mutation == "symlink-contract-control":
-    fixture_repo = Path(path).parents[2]
-    outside = fixture_repo.parent / "outside-editor-parity-contract.json"
-    outside.write_text(Path(path).read_text(encoding="utf-8"), encoding="utf-8")
-    Path(path).unlink()
-    Path(path).symlink_to(outside)
-elif mutation == "symlink-document-control":
-    fixture_repo = Path(path).parents[2]
-    document = fixture_repo / "docs/editor-parity-contract.md"
-    outside = fixture_repo.parent / "outside-editor-parity-document.md"
-    outside.write_text(document.read_text(encoding="utf-8"), encoding="utf-8")
-    document.unlink()
-    document.symlink_to(outside)
-else:
-    raise SystemExit(f"unknown mutation: {mutation}")
-
-with open(path, "w", encoding="utf-8") as handle:
-    json.dump(contract, handle, indent=2)
-    handle.write("\n")
-PY
-}
 
 expect_failure() {
   local mutation="$1"
@@ -378,7 +232,8 @@ expect_failure duplicate "capabilities IDs must be unique"
 expect_failure malformed "evidence command must name a cargo integration test and filter"
 expect_failure stale-evidence "evidence command does not name an existing runnable test"
 expect_failure stale-module-evidence "evidence command does not name an existing runnable test"
-expect_failure preserved-mtime-disconnected-module "evidence command is disconnected from the current Rust source graph"
+expect_failure preserved-mtime-disconnected-module "evidence target has no Cargo-discovered runnable tests"
+expect_failure block-commented-stale-test "evidence target has no Cargo-discovered runnable tests"
 expect_failure evidence-traversal "evidence target escapes the repository"
 expect_failure orphan-utf16 "orphaned=['orphan-utf16-crlf-non-bmp']"
 expect_failure disconnected-module "evidence command does not name an existing runnable test discovered by Cargo"
@@ -392,6 +247,7 @@ expect_failure unknown-supporting-artifact "distribution neovim-distribution ref
 expect_failure neovim-client-topology "Neovim client primary artifact must be neovim-runtimepath"
 expect_failure zed-tree-sitter-claim "Zed must not claim the Neovim Tree-sitter grammar without compatibility evidence"
 expect_failure client-platform-shape "client neovim must name exactly Linux, macOS, and Windows status"
+expect_failure implemented-client-platform-shape "implemented client neovim needs platform evidence"
 expect_failure neovim-evidence-shape "capability editor.neovim.syntax-projection expected_evidence must be an object"
 expect_failure implementation-status-shape "capability lsp.completion has invalid implementation status"
 expect_failure status-values-shape "status_values must contain exactly the four contract statuses"

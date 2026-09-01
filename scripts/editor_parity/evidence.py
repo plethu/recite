@@ -1,17 +1,65 @@
+import json
 import os
 import re
 import shlex
 import subprocess
+from pathlib import Path
 
+from .content_digest import selected_target_digest
 from .model import Context, has_record
 from .paths import require_no_symlink_components, require_repo_file
-from .source_graph import reachable_test_names
 
 
 def cargo_test_list(ctx: Context, package: str, target: str, test_filter: str | None = None) -> set[str]:
-    command = [os.environ.get("CARGO", "cargo"), "test", "--locked", "-p", package, "--test", target, "--", "--list"]
+    command = [str(cargo_test_executable(ctx, package, target)), "--list"]
     if test_filter is not None:
-        command.extend([test_filter, "--exact"])
+        command[1:1] = [test_filter, "--exact"]
+    try:
+        result = subprocess.run(
+            command,
+            cwd=ctx.repo_root,
+            capture_output=True,
+            text=True,
+            encoding="utf-8",
+            errors="replace",
+            env={**os.environ, "CARGO_TERM_COLOR": "never"},
+            timeout=120,
+            check=False,
+        )
+    except (OSError, subprocess.TimeoutExpired) as error:
+        ctx.require(False, f"test harness discovery failed for {package}/{target}: {error}")
+        return set()
+    if result.returncode != 0:
+        output = (result.stdout + result.stderr).strip().splitlines()
+        detail = output[-1] if output else "no cargo output"
+        suffix = " exact selection" if test_filter is not None else " test list"
+        ctx.require(False, f"test harness discovery failed for {package}/{target}{suffix}: {detail}")
+        return set()
+    return {
+        line[: -len(": test")].strip()
+        for line in result.stdout.splitlines()
+        if line.rstrip().endswith(": test") and line[: -len(": test")].strip()
+    }
+
+
+def cargo_test_executable(ctx: Context, package: str, target: str) -> Path:
+    key = (package, target)
+    if key in ctx.cargo_test_executable_cache:
+        return ctx.cargo_test_executable_cache[key]
+    digest = selected_target_digest(ctx, package)
+    command = [
+        os.environ.get("CARGO", "cargo"),
+        "rustc",
+        "--locked",
+        "-p",
+        package,
+        "--test",
+        target,
+        "--message-format=json-render-diagnostics",
+        "--",
+        "--cfg",
+        f'recite_editor_parity_source_digest="{digest}"',
+    ]
     try:
         result = subprocess.run(
             command,
@@ -25,19 +73,30 @@ def cargo_test_list(ctx: Context, package: str, target: str, test_filter: str | 
             check=False,
         )
     except (OSError, subprocess.TimeoutExpired) as error:
-        ctx.require(False, f"cargo test discovery failed for {package}/{target}: {error}")
-        return set()
-    if result.returncode != 0:
+        ctx.require(False, f"cargo test-target compilation failed for {package}/{target}: {error}")
+        return ctx.repo_root / "target" / "missing-editor-parity-test"
+    executable = None
+    for line in result.stdout.splitlines():
+        try:
+            message = json.loads(line)
+        except json.JSONDecodeError:
+            continue
+        target_info = message.get("target", {})
+        if (
+            message.get("reason") == "compiler-artifact"
+            and target_info.get("name") == target
+            and "test" in target_info.get("kind", [])
+            and isinstance(message.get("executable"), str)
+        ):
+            executable = message["executable"]
+    if result.returncode != 0 or executable is None:
         output = (result.stdout + result.stderr).strip().splitlines()
         detail = output[-1] if output else "no cargo output"
-        suffix = " exact selection" if test_filter is not None else " test list"
-        ctx.require(False, f"cargo test discovery failed for {package}/{target}{suffix}: {detail}")
-        return set()
-    return {
-        line[: -len(": test")].strip()
-        for line in result.stdout.splitlines()
-        if line.rstrip().endswith(": test") and line[: -len(": test")].strip()
-    }
+        ctx.require(False, f"cargo test-target compilation failed for {package}/{target}: {detail}")
+        return ctx.repo_root / "target" / "missing-editor-parity-test"
+    executable_path = Path(executable)
+    ctx.cargo_test_executable_cache[key] = executable_path
+    return executable_path
 
 
 def discovered_test_paths(ctx: Context, package: str, target: str) -> set[str]:
@@ -77,8 +136,6 @@ def validate_command(ctx: Context, capability_id: str, command: str) -> None:
     ctx.require(ctx.repo_root in resolved_test_file.parents, f"capability {capability_id} evidence target escapes the repository: {test_file}")
     ctx.require(test_file.is_file() and not test_file.is_symlink(), f"capability {capability_id} evidence target does not exist: {test_file.relative_to(ctx.repo_root) if test_file.is_relative_to(ctx.repo_root) else test_file}")
     if test_file.is_file() and not test_file.is_symlink():
-        source_tests = reachable_test_names(ctx, test_file)
-        ctx.require(test_filter in source_tests, f"capability {capability_id} evidence command is disconnected from the current Rust source graph: {test_filter}")
         registered = discovered_test_paths(ctx, package, target)
         ctx.require(test_filter in registered, f"capability {capability_id} evidence command does not name an existing runnable test discovered by Cargo: {test_filter}")
         ctx.require(exact_test_selection(ctx, package, target, test_filter) == {test_filter}, f"capability {capability_id} evidence command does not select exactly one Cargo test: {test_filter}")

@@ -14,6 +14,7 @@ class Context:
         self.cargo_target_dir = cargo_target_dir
         self.cargo_test_list_cache: dict[tuple[str, str], set[str]] = {}
         self.cargo_exact_selection_cache: dict[tuple[str, str, str], set[str]] = {}
+        self.cargo_test_executable_cache: dict[tuple[str, str], Path] = {}
 
     def require(self, condition: bool, message: str) -> None:
         if not condition:
