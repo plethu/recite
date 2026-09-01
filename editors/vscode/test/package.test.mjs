@@ -1,12 +1,16 @@
 import test from "node:test";
 import assert from "node:assert/strict";
-import { readFile, writeFile, readdir, mkdtemp, mkdir, rm, symlink } from "node:fs/promises";
+import { cp, readFile, writeFile, mkdtemp, mkdir, rm, symlink } from "node:fs/promises";
 import path from "node:path";
 import { fileURLToPath } from "node:url";
 import os from "node:os";
 import { assertContainedRegularFile, assertSafeTree } from "../scripts/safety.mjs";
+import { listSourceModules } from "../scripts/source-files.mjs";
 import { assertUiBoundary } from "../scripts/ui-boundary.mjs";
-import { SOURCE_MESSAGE_IDS } from "../scripts/message-projections.mjs";
+import {
+  SOURCE_MESSAGE_IDS,
+  verifyMessageProjections
+} from "../scripts/message-projections.mjs";
 import projectedMessages from "../src/messages.generated.js";
 
 const packageRoot = path.resolve(path.dirname(fileURLToPath(import.meta.url)), "..");
@@ -28,6 +32,71 @@ test("the declared VS Code floor uses a plain JavaScript message projection", as
   assert.doesNotMatch(source, /\.json.*import attributes|with \{ type: ["']json["'] \}/);
   const generated = await readFile(path.join(packageRoot, "src", "messages.generated.js"), "utf8");
   assert.match(generated, /^\/\/ Generated from .*\.ftl/m);
+});
+
+test("message verification rejects a mutation without rewriting its projection", async () => {
+  const root = await mkdtemp(path.join(os.tmpdir(), "recite-vscode-projections-"));
+  const fixturePackage = path.join(root, "editors", "vscode");
+  const fixtureSource = path.join(fixturePackage, "src");
+  const fixtureFluent = path.join(root, "crates", "recite-ui", "resources");
+  try {
+    await mkdir(fixtureSource, { recursive: true });
+    await mkdir(fixtureFluent, { recursive: true });
+    await cp(
+      path.join(packageRoot, "src", "messages.generated.js"),
+      path.join(fixtureSource, "messages.generated.js")
+    );
+    await cp(path.join(packageRoot, "package.nls.json"), path.join(fixturePackage, "package.nls.json"));
+    await cp(
+      path.resolve(packageRoot, "../../crates/recite-ui/resources/en-US.ftl"),
+      path.join(fixtureFluent, "en-US.ftl")
+    );
+
+    const projection = path.join(fixtureSource, "messages.generated.js");
+    const mutated = `${await readFile(projection, "utf8")}\n// mutation fixture\n`;
+    await writeFile(projection, mutated, "utf8");
+    await assert.rejects(
+      verifyMessageProjections(fixturePackage),
+      /message projection is stale/
+    );
+    assert.equal(await readFile(projection, "utf8"), mutated);
+  } finally {
+    await rm(root, { recursive: true, force: true });
+  }
+});
+
+test("nested JavaScript modules are enumerated safely and reach the UI boundary", async () => {
+  const root = await mkdtemp(path.join(os.tmpdir(), "recite-vscode-source-"));
+  try {
+    await mkdir(path.join(root, "nested"));
+    await writeFile(path.join(root, "top.js"), "const top = true;\n");
+    await writeFile(path.join(root, "nested", "unrelated.js"),
+      "const host = { appendLine() {} }; host.appendLine(value);\n");
+    assert.deepEqual(listSourceModules(root).map(({ relativePath }) => relativePath), [
+      "nested/unrelated.js", "top.js"
+    ]);
+    const entries = await sourceEntries(root);
+    const packageEntries = await sourceEntries();
+    assert.doesNotThrow(() => assertUiBoundary(
+      [
+        ...packageEntries,
+        ...entries
+      ], SOURCE_MESSAGE_IDS, projectedMessages
+    ));
+
+    await writeFile(path.join(root, "nested", "hostile.js"),
+      "const output = {}; output.appendLine(\"English\");\n");
+    const hostileEntries = await sourceEntries(root);
+    assert.throws(() => assertUiBoundary(
+      [...packageEntries, ...hostileEntries],
+      SOURCE_MESSAGE_IDS, projectedMessages
+    ), /outside|acquisition|access|call|projection/);
+
+    await symlink(path.join(root, "top.js"), path.join(root, "nested", "escape.js"));
+    assert.throws(() => listSourceModules(root), /symlink/);
+  } finally {
+    await rm(root, { recursive: true, force: true });
+  }
 });
 
 test("the UI adapter owns source messages and syntax decoys remain inert", async () => {
@@ -158,10 +227,11 @@ test("the adapter rejects escaped IDs, aliases, reassignment, and composed text"
   rejected((source) => source.replace('serverError(detail) {', 'async serverError(detail) {'));
 });
 
-async function sourceEntries() {
-  return Promise.all((await readdir(path.join(packageRoot, "src")))
-    .filter((name) => name.endsWith(".js"))
-    .map(async (name) => [name, await readFile(path.join(packageRoot, "src", name), "utf8")]));
+async function sourceEntries(sourceRoot = path.join(packageRoot, "src")) {
+  return Promise.all(listSourceModules(sourceRoot).map(async ({ relativePath, absolutePath }) => [
+    relativePath,
+    await readFile(absolutePath, "utf8")
+  ]));
 }
 
 test("packaging safety rejects symlink escapes, including intermediate paths", async () => {

@@ -89,6 +89,7 @@
   },
   "scripts": {
     "build": "node scripts/build.mjs",
+    "messages:update": "node scripts/message-projections.mjs --update",
     "check": "node scripts/build.mjs && node scripts/check-package.mjs && node --test test/*.test.mjs",
     "package": "node scripts/package.mjs",
     "package:check": "node scripts/package.mjs --check"

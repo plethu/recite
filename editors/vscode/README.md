@@ -18,7 +18,12 @@ From the repository root:
 ```text
 pnpm --filter recite-vscode run check
 pnpm --filter recite-vscode run package:check
+pnpm --filter recite-vscode run messages:update  # after changing the canonical Fluent resources
 ```
+
+Build and verification never rewrite the checked-in message projections. Use
+the explicit update command when the canonical English Fluent resources
+change, then run the checks to review the resulting bytes.
 
 Build the extension and produce a deterministic VSIX with:
 

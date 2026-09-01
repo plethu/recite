@@ -43,6 +43,38 @@ if [[ ! -x "$lsp_bin" ]]; then
   echo "Build it with: cargo build --locked -q -p recite-lsp" >&2
   exit 2
 fi
+
+projection_paths=(
+  editors/vscode/src/messages.generated.js
+  editors/vscode/package.nls.json
+)
+declare -A projection_hashes=()
+for relative in "${projection_paths[@]}"; do
+  file="$repo_root/$relative"
+  if [[ ! -f "$file" ]]; then
+    echo "VS Code check requires tracked projection: $relative" >&2
+    exit 2
+  fi
+  projection_hashes["$relative"]="$(hash_file "$file")"
+done
+
+check_projection_unchanged() {
+  local status=$?
+  local failures=0
+  for relative in "${projection_paths[@]}"; do
+    file="$repo_root/$relative"
+    if [[ ! -f "$file" ]] || [[ "$(hash_file "$file")" != "${projection_hashes["$relative"]}" ]]; then
+      echo "VS Code check mutated a tracked message projection: $relative" >&2
+      failures=1
+    fi
+  done
+  if (( failures > 0 )); then
+    exit 1
+  fi
+  exit "$status"
+}
+trap check_projection_unchanged EXIT
+
 if ! command -v pnpm >/dev/null 2>&1; then
   echo "VS Code checks require pnpm from the repository toolchain" >&2
   exit 2
@@ -55,3 +87,11 @@ echo "== VS Code/VSCodium package and live checks =="
   pnpm editor:package
 )
 echo "VS Code/VSCodium checks passed"
+
+hash_file() {
+  if command -v sha256sum >/dev/null 2>&1; then
+    sha256sum "$1" | awk '{print $1}'
+  else
+    shasum -a 256 "$1" | awk '{print $1}'
+  fi
+}

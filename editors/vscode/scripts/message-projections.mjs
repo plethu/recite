@@ -1,5 +1,6 @@
 import { readFile, writeFile } from "node:fs/promises";
 import path from "node:path";
+import { fileURLToPath } from "node:url";
 
 export const RUNTIME_MESSAGE_IDS = [
   "lsp-client-start-failed",
@@ -50,19 +51,54 @@ export function projectMessages(fluent) {
   };
 }
 
-export async function generateMessageProjections(packageRoot) {
+export function renderMessageProjections(projections) {
+  return {
+    "src/messages.generated.js":
+      `// Generated from crates/recite-ui/resources/en-US.ftl. Do not edit.\nexport default Object.freeze(${JSON.stringify(projections.runtime, null, 2)});\n`,
+    "package.nls.json": `${JSON.stringify(projections.package, null, 2)}\n`
+  };
+}
+
+export async function verifyMessageProjections(packageRoot) {
   const fluent = await readFile(
     path.resolve(packageRoot, "../../crates/recite-ui/resources/en-US.ftl"), "utf8"
   );
   const projections = projectMessages(fluent);
-  await writeFile(
-    path.join(packageRoot, "src", "messages.generated.js"),
-    `// Generated from crates/recite-ui/resources/en-US.ftl. Do not edit.\nexport default Object.freeze(${JSON.stringify(projections.runtime, null, 2)});\n`,
-    "utf8"
+  const expectedFiles = renderMessageProjections(projections);
+  for (const [relative, expected] of Object.entries(expectedFiles)) {
+    const file = path.join(packageRoot, relative);
+    let actual;
+    try {
+      actual = await readFile(file, "utf8");
+    } catch (error) {
+      throw new Error(`VS Code message projection is missing: ${relative}; run the explicit message update command`, {
+        cause: error
+      });
+    }
+    if (actual !== expected) {
+      throw new Error(`VS Code message projection is stale: ${relative}; run the explicit message update command`);
+    }
+  }
+  return { fluent, projections };
+}
+
+export async function generateMessageProjections(packageRoot) {
+  const fluent = await readFile(
+    path.resolve(packageRoot, "../../crates/recite-ui/resources/en-US.ftl"), "utf8"
   );
-  await writeFile(
-    path.join(packageRoot, "package.nls.json"),
-    `${JSON.stringify(projections.package, null, 2)}\n`,
-    "utf8"
-  );
+  const files = renderMessageProjections(projectMessages(fluent));
+  await Promise.all(Object.entries(files).map(([relative, contents]) =>
+    writeFile(path.join(packageRoot, relative), contents, "utf8")
+  ));
+}
+
+if (path.resolve(process.argv[1] ?? "") === path.resolve(fileURLToPath(import.meta.url))) {
+  if (process.argv.length !== 3 || process.argv[2] !== "--update") {
+    console.error("Usage: node scripts/message-projections.mjs --update");
+    process.exitCode = 2;
+  } else {
+    const packageRoot = path.resolve(path.dirname(fileURLToPath(import.meta.url)), "..");
+    await generateMessageProjections(packageRoot);
+    console.log("updated VS Code message projections");
+  }
 }

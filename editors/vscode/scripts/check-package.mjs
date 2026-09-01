@@ -2,13 +2,14 @@ import { readFile } from "node:fs/promises";
 import path from "node:path";
 import { fileURLToPath } from "node:url";
 import { spawnSync } from "node:child_process";
-import { readdirSync } from "node:fs";
 import {
   PACKAGE_MESSAGE_IDS,
   RUNTIME_MESSAGE_IDS,
   SOURCE_MESSAGE_IDS,
-  projectMessages
+  verifyMessageProjections
 } from "./message-projections.mjs";
+import { listSourceModules } from "./source-files.mjs";
+import { assertSafeTree } from "./safety.mjs";
 import { assertUiBoundary } from "./ui-boundary.mjs";
 
 const packageRoot = path.resolve(path.dirname(fileURLToPath(import.meta.url)), "..");
@@ -16,25 +17,15 @@ const manifest = JSON.parse(await readFile(path.join(packageRoot, "package.json"
 const languageConfiguration = JSON.parse(
   await readFile(path.join(packageRoot, "language-configuration.json"), "utf8")
 );
-const projectedMessages = await import("../src/messages.generated.js")
-  .then(({ default: messages }) => messages);
-const packageMessages = JSON.parse(
-  await readFile(path.join(packageRoot, "package.nls.json"), "utf8")
-);
-const fluent = await readFile(
-  path.resolve(packageRoot, "../../crates/recite-ui/resources/en-US.ftl"), "utf8"
-);
+const { fluent, projections } = await verifyMessageProjections(packageRoot);
+const projectedMessages = projections.runtime;
+const packageMessages = projections.package;
 const canonicalMessages = new Map([...fluent.matchAll(/^([a-z0-9-]+) = ([^\n]*)$/gm)]
   .map((match) => [match[1], match[2]]));
-const generated = projectMessages(fluent);
 assertSameKeys(Object.keys(projectedMessages), RUNTIME_MESSAGE_IDS,
   "VS Code runtime message projection");
 assertSameKeys(Object.keys(packageMessages), PACKAGE_MESSAGE_IDS,
   "VS Code package message projection");
-assert(JSON.stringify(projectedMessages) === JSON.stringify(generated.runtime),
-  "VS Code runtime message projection is stale; run the message generator");
-assert(JSON.stringify(packageMessages) === JSON.stringify(generated.package),
-  "VS Code package message projection is stale; run the message generator");
 
 assert(manifest.name === "recite-vscode", "package name must remain recite-vscode");
 assert(manifest.publisher === "plethu", "publisher must remain plethu");
@@ -88,22 +79,23 @@ for (const value of localizableManifestValues(manifest)) {
 assert(languageConfiguration.comments?.lineComment === "#", "Recite comments must remain # comments");
 assert(Array.isArray(languageConfiguration.brackets), "language bracket behavior must be structured");
 
-const source = await readFile(path.join(packageRoot, "src/extension.js"), "utf8");
+const sourceRoot = path.join(packageRoot, "src");
+assertSafeTree(sourceRoot, "extension source");
+const source = await readFile(path.join(sourceRoot, "extension.js"), "utf8");
 assert(!source.includes("vscode-languageclient"), "the scaffold must keep its process boundary inspectable");
 assert(!source.match(/(?:parse|Parser|tokeniz|compile).*Recite/i),
   "the client must not grow a second Recite semantic implementation");
-const sourceFiles = readdirSync(path.join(packageRoot, "src"), { withFileTypes: true })
-  .filter((entry) => entry.isFile() && entry.name.endsWith(".js"));
-const sourceContents = await Promise.all(sourceFiles.map(async (entry) => [
-  entry.name,
-  await readFile(path.join(packageRoot, "src", entry.name), "utf8")
+const sourceFiles = listSourceModules(sourceRoot);
+const sourceContents = await Promise.all(sourceFiles.map(async ({ relativePath, absolutePath }) => [
+  relativePath,
+  await readFile(absolutePath, "utf8")
 ]));
 assertUiBoundary(sourceContents, SOURCE_MESSAGE_IDS, projectedMessages);
-for (const [name] of sourceContents) {
-  const syntax = spawnSync(process.execPath, ["--check", path.join(packageRoot, "src", name)], {
+for (const { relativePath, absolutePath } of sourceFiles) {
+  const syntax = spawnSync(process.execPath, ["--check", absolutePath], {
     encoding: "utf8"
   });
-  assert(syntax.status === 0, `invalid JavaScript in ${name}: ${syntax.stderr}`);
+  assert(syntax.status === 0, `invalid JavaScript in ${relativePath}: ${syntax.stderr}`);
 }
 
 console.log("recite-vscode package contract passed");
