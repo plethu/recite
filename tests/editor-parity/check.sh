@@ -218,6 +218,7 @@ expect_target_failure "$target_probe_root/real-parent/repo-parent/target" "CARGO
 
 python3 - "$fixture_repo" <<'PY'
 import os
+import shutil
 import subprocess
 import sys
 from pathlib import Path
@@ -251,12 +252,23 @@ if ignored_after_creation != selected_target_digest(context, "recite-lsp"):
 
 # A force-added path is tracked input even when its directory is ignored. This
 # is the explicit escape hatch for compiler-visible generated/source files.
-force_added = repo / "editors/vscode/dist/force-added.js"
-force_added.write_bytes(b"force-added compiler input")
-subprocess.run(["git", "-C", os.fsencode(repo), "add", "-f", "--", os.fsencode("editors/vscode/dist/force-added.js")], check=True)
-force_added_digest = selected_target_digest(context, "recite-lsp")
-if force_added_digest == ignored_after_creation:
-    raise SystemExit("force-added ignored output did not change the parity digest")
+force_added_digest = ignored_after_creation
+for relative in (
+    "editors/vscode/dist/force-added.js",
+    "target/force-added.rs",
+    "node_modules/force-added.js",
+    "__pycache__/force-added.pyc",
+    ".claude/force-added",
+    "force-added.pyo",
+):
+    force_added = repo / relative
+    force_added.parent.mkdir(parents=True, exist_ok=True)
+    force_added.write_bytes(b"force-added compiler input")
+    subprocess.run(["git", "-C", os.fsencode(repo), "add", "-f", "--", os.fsencode(relative)], check=True)
+    next_digest = selected_target_digest(context, "recite-lsp")
+    if next_digest == force_added_digest:
+        raise SystemExit(f"force-added path did not change the parity digest: {relative}")
+    force_added_digest = next_digest
 
 # A nonignored untracked input is included regardless of extension or spaces.
 untracked = repo / "digest-inputs/input with spaces.arbitrary"
@@ -278,6 +290,47 @@ if os.name != "nt":
     if non_utf8_before == selected_target_digest(context, "recite-lsp"):
         raise SystemExit("non-UTF-8 untracked input did not change the parity digest")
 
+# Git index mode is part of the identity, and a worktree executable-bit change
+# is also relevant because Cargo compiles the worktree rather than the index.
+if os.name != "nt":
+    mode_probe = repo / "digest-inputs/mode-input"
+    mode_probe.write_bytes(b"mode input")
+    subprocess.run(["git", "-C", os.fsencode(repo), "add", "--", os.fsencode("digest-inputs/mode-input")], check=True)
+    mode_before = selected_target_digest(context, "recite-lsp")
+    subprocess.run(["git", "-C", os.fsencode(repo), "update-index", "--chmod=+x", "--", os.fsencode("digest-inputs/mode-input")], check=True)
+    mode_after_index = selected_target_digest(context, "recite-lsp")
+    if mode_before == mode_after_index:
+        raise SystemExit("Git executable mode change did not change the parity digest")
+    mode_probe.chmod(0o755)
+    mode_after_worktree = selected_target_digest(context, "recite-lsp")
+    if mode_after_index == mode_after_worktree:
+        raise SystemExit("worktree executable mode change did not change the parity digest")
+
+# An untracked nested repository is enumerated by Git as a directory. A staged
+# gitlink is a separate unsupported index mode. Both must fail closed rather
+# than disappear and produce false-green evidence.
+nested_repo = repo / "nested-repo"
+nested_repo.mkdir(parents=True, exist_ok=True)
+subprocess.run(["git", "-C", os.fsencode(nested_repo), "init", "-q"], check=True)
+nested_context = Context(repo, [], repo / "target")
+selected_target_digest(nested_context, "recite-lsp")
+if not any("must not be a directory" in error for error in nested_context.errors):
+    raise SystemExit("untracked nested repository was not rejected as a directory input")
+subprocess.run(["git", "-C", os.fsencode(nested_repo), "config", "user.name", "Nested Fixture"], check=True)
+subprocess.run(["git", "-C", os.fsencode(nested_repo), "config", "user.email", "nested@example.invalid"], check=True)
+subprocess.run(["git", "-C", os.fsencode(nested_repo), "config", "commit.gpgsign", "false"], check=True)
+(nested_repo / "source").write_bytes(b"nested source")
+subprocess.run(["git", "-C", os.fsencode(nested_repo), "add", "source"], check=True)
+subprocess.run(["git", "-C", os.fsencode(nested_repo), "commit", "-q", "-m", "nested fixture"], check=True)
+nested_oid = subprocess.check_output(["git", "-C", os.fsencode(nested_repo), "rev-parse", "HEAD"]).strip()
+subprocess.run(["git", "-C", os.fsencode(repo), "update-index", "--add", "--cacheinfo", b"160000," + nested_oid + b",gitlink-fixture"], check=True)
+gitlink_context = Context(repo, [], repo / "target")
+selected_target_digest(gitlink_context, "recite-lsp")
+if not any("must not be a gitlink" in error for error in gitlink_context.errors):
+    raise SystemExit("staged gitlink was not rejected with a controlled error")
+subprocess.run(["git", "-C", os.fsencode(repo), "update-index", "--force-remove", "--", "gitlink-fixture"], check=True)
+shutil.rmtree(nested_repo)
+
 # Python bytecode is also ignored/excluded, including bytecode created by the
 # checker itself.
 before_bytecode = selected_target_digest(context, "recite-lsp")
@@ -291,8 +344,10 @@ if before_bytecode != after:
 paths = [path.relative_to(repo).as_posix() for path in workspace_files(context)]
 if paths != sorted(paths, key=os.fsencode):
     raise SystemExit("Git digest inputs were not sorted by stable path bytes")
-if any("__pycache__" in path or path.endswith((".pyc", ".pyo")) for path in paths):
-    raise SystemExit("Python bytecode entered parity digest inputs")
+if any(path.endswith(("checker.cpython-314.pyc", "checker-output.pyo")) for path in paths):
+    raise SystemExit("untracked Python bytecode entered parity digest inputs")
+if "__pycache__/force-added.pyc" not in paths or "force-added.pyo" not in paths:
+    raise SystemExit("force-added Python bytecode did not remain a digest input")
 print("editor parity Git-aware digest fixture passed")
 PY
 

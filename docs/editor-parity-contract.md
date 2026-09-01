@@ -81,12 +81,23 @@ when a file's mtime is restored. It deliberately excludes ignored build output,
 editor packages, documentation-site output, and Python bytecode; creating or
 rewriting those files must not trigger a Cargo evidence rebuild.
 
+Tracked and force-added files remain inputs even when their names resemble an
+ignored output path such as `target/`, `node_modules/`, `__pycache__/`, `.claude/`,
+or a `.pyc`/`.pyo` file. The Git index mode and current worktree permission mode
+are included too, so executable-bit changes cannot reuse stale evidence.
+
 An ignored untracked file is not an accepted compiler-input surface. If a
 `build.rs`, `include!`, generated source step, or other compiler action needs a
 file that is currently ignored, remove the ignore rule or force-add the file to
 Git. Force-added files are tracked inputs and therefore count. The checker does
 not pretend to discover an arbitrary ignored Cargo input from a pre-compilation
 filesystem walk.
+
+Nested repositories and Git submodules are not accepted digest inputs. Git may
+enumerate an untracked nested repository as a directory or a staged submodule
+as a mode-160000 gitlink; either form fails closed with a controlled checker
+error. Remove the nested repository/submodule from the compiler tree or make
+its source files ordinary repository inputs before collecting evidence.
 
 ## Structured commands and watch
 
