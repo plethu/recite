@@ -44,6 +44,14 @@ if [[ ! -x "$lsp_bin" ]]; then
   exit 2
 fi
 
+hash_file() {
+  if command -v sha256sum >/dev/null 2>&1; then
+    sha256sum "$1" | awk '{print $1}'
+  else
+    shasum -a 256 "$1" | awk '{print $1}'
+  fi
+}
+
 projection_paths=(
   editors/vscode/src/messages.generated.js
   editors/vscode/package.nls.json
@@ -87,11 +95,3 @@ echo "== VS Code/VSCodium package and live checks =="
   pnpm editor:package
 )
 echo "VS Code/VSCodium checks passed"
-
-hash_file() {
-  if command -v sha256sum >/dev/null 2>&1; then
-    sha256sum "$1" | awk '{print $1}'
-  else
-    shasum -a 256 "$1" | awk '{print $1}'
-  fi
-}
