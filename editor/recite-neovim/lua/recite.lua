@@ -109,6 +109,24 @@ local function stop_owned_clients()
   end
 end
 
+local function report_callback_error(kind, callback_error)
+  -- Callback failures belong to the caller, but they must remain visible when
+  -- the integration recovers its own lifecycle.  Keep reporting best effort:
+  -- a notification backend is also caller-provided code.
+  local message = string.format("Recite %s callback failed: %s", kind, callback_error)
+  pcall(vim.notify, message, vim.log.levels.ERROR)
+end
+
+local function invoke_callback(kind, callback, ...)
+  if not callback then
+    return
+  end
+  local ok, callback_error = xpcall(callback, debug.traceback, ...)
+  if not ok then
+    return callback_error
+  end
+end
+
 local function configured_root(bufnr, lsp)
   local root = lsp.root_dir
   if type(root) == "function" then
@@ -141,33 +159,15 @@ local function schedule_restart(lifecycle)
     end
     lifecycle.attempts = lifecycle.attempts + 1
     state.restart_attempts[lifecycle.root] = lifecycle.attempts
-    local delay = math.min(2_000, 100 * (2 ^ (lifecycle.attempts - 1)))
+    local delay = math.min(2000, 100 * (2 ^ (lifecycle.attempts - 1)))
     lifecycle.timer = vim.defer_fn(function()
       lifecycle.timer = nil
       vim.schedule(function()
         if lifecycle.intentional then
           return
         end
-        local restarted = {}
         for _, bufnr in ipairs(has_open_buffer(lifecycle.root, state.config.lsp)) do
-          local client_id = M.start(bufnr)
-          if client_id then
-            restarted[client_id] = true
-          end
-        end
-        for client_id in pairs(restarted) do
-          vim.defer_fn(function()
-            vim.schedule(function()
-              local client = vim.lsp.get_client_by_id(client_id)
-              if client and client.initialized and not client:is_stopped() then
-                state.restart_attempts[lifecycle.root] = 0
-                local current = state.clients[client_id]
-                if current then
-                  current.attempts = 0
-                end
-              end
-            end)
-          end, 1_000)
+          M.start(bufnr)
         end
       end)
     end, delay)
@@ -218,9 +218,7 @@ function M.start(bufnr, overrides)
   local caller_on_exit = lsp.on_exit
   client_config.on_exit = function(code, signal, exited_id)
     vim.schedule(function()
-      if caller_on_exit then
-        caller_on_exit(code, signal, exited_id)
-      end
+      local callback_error = invoke_callback("on_exit", caller_on_exit, code, signal, exited_id)
       local lifecycle = state.clients[exited_id]
       if lifecycle then
         state.clients[exited_id] = nil
@@ -228,7 +226,26 @@ function M.start(bufnr, overrides)
           schedule_restart(lifecycle)
         end
       end
+      if callback_error then
+        report_callback_error("on_exit", callback_error)
+      end
     end)
+  end
+
+  local caller_on_init = lsp.on_init
+  client_config.on_init = function(initialized_client, initialize_result)
+    -- `on_init` is the lifecycle's successful-initialisation event.  Reset
+    -- the stable-budget counter here instead of guessing when initialization
+    -- should have completed from a wall-clock timer.
+    state.restart_attempts[root] = 0
+    local lifecycle = state.clients[initialized_client.id]
+    if lifecycle then
+      lifecycle.attempts = 0
+    end
+    local callback_error = invoke_callback("on_init", caller_on_init, initialized_client, initialize_result)
+    if callback_error then
+      report_callback_error("on_init", callback_error)
+    end
   end
 
   local client_id = vim.lsp.start(client_config, {

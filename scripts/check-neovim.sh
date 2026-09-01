@@ -110,7 +110,14 @@ second_project="$scratch/second-project"
 invalid_project="$scratch/invalid-project"
 missing_project="$scratch/missing-project"
 unicode_project="$scratch/unicode-project"
-mkdir -p "$project" "$second_project" "$invalid_project" "$missing_project" "$unicode_project"
+config_home="$scratch/config"
+config_dirs="$scratch/config-dirs"
+data_home="$scratch/data"
+data_dirs="$scratch/data-dirs"
+state_home="$scratch/state"
+cache_home="$scratch/cache"
+mkdir -p "$project" "$second_project" "$invalid_project" "$missing_project" "$unicode_project" \
+  "$config_home" "$config_dirs" "$data_home" "$data_dirs" "$state_home" "$cache_home"
 cp "$repo_root/fixtures/recite/valid/core_language_spike.recite" "$project/core_language_spike.recite"
 cp "$repo_root/fixtures/recite/invalid/parser_marker_leading_prose.recite" "$invalid_project/invalid.recite"
 sed 's/> intro_001@637b1854a7f3ed42f045 speaker=hazel mood=calm mood=alert/>/' \
@@ -130,6 +137,16 @@ printf '%s\n' 'format_version = 1' > "$second_project/recite.project.toml"
 for isolated_project in "$invalid_project" "$missing_project" "$unicode_project"; do
   printf '%s\n' 'format_version = 1' > "$isolated_project/recite.project.toml"
 done
+
+delayed_lsp="$scratch/delayed-recite-lsp"
+# The wrapper must expand this variable when it runs, not while it is generated.
+# shellcheck disable=SC2016
+printf '%s\n' \
+  '#!/usr/bin/env bash' \
+  'set -euo pipefail' \
+  'sleep 2.1' \
+  'exec "${RECITE_LSP_TARGET:?}" "$@"' > "$delayed_lsp"
+chmod +x "$delayed_lsp"
 
 echo "== Neovim headless filetype/LSP checks =="
 "$cargo_bin" build --locked -q -p recite-lsp
@@ -153,8 +170,13 @@ RECITE_SECOND_PROJECT="$second_project" \
 RECITE_INVALID_PROJECT="$invalid_project" \
 RECITE_MISSING_PROJECT="$missing_project" \
 RECITE_UNICODE_PROJECT="$unicode_project" \
+RECITE_DELAYED_LSP="$delayed_lsp" \
+RECITE_LSP_TARGET="$repo_root/target/debug/recite-lsp" \
 RECITE_PARSER_AVAILABLE="$parser_available" \
-  env -u RECITE_CONFIG XDG_CONFIG_HOME="$scratch/config" XDG_STATE_HOME="$scratch/state" \
+  env -u RECITE_CONFIG -u NVIM_APPNAME -u VIMINIT -u EXINIT \
+    XDG_CONFIG_HOME="$config_home" XDG_CONFIG_DIRS="$config_dirs" \
+    XDG_DATA_HOME="$data_home" XDG_DATA_DIRS="$data_dirs" \
+    XDG_STATE_HOME="$state_home" XDG_CACHE_HOME="$cache_home" \
     "$nvim_bin" --headless -u "$repo_root/tests/neovim/preload.lua" -i NONE -n \
     -l "$repo_root/tests/neovim/check.lua"
 

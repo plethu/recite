@@ -9,7 +9,7 @@ local function assert_true(value, message)
 end
 
 local function wait_for(predicate, message)
-  assert_true(vim.wait(10_000, predicate, 50), message)
+  assert_true(vim.wait(10000, predicate, 50), message)
 end
 
 local function escaped(path)
@@ -20,6 +20,41 @@ local project = vim.env.RECITE_TEST_PROJECT
 local valid = project .. "/core_language_spike.recite"
 local invalid_project = vim.env.RECITE_INVALID_PROJECT
 local invalid = invalid_project .. "/invalid.recite"
+
+local function assert_isolated_neovim_paths()
+  local expected_paths = {
+    config = vim.env.XDG_CONFIG_HOME .. "/nvim",
+    data = vim.env.XDG_DATA_HOME .. "/nvim",
+    state = vim.env.XDG_STATE_HOME .. "/nvim",
+    cache = vim.env.XDG_CACHE_HOME .. "/nvim",
+  }
+  for _, kind in ipairs({ "config", "data", "state", "cache" }) do
+    local path = vim.fn.stdpath(kind)
+    assert_true(path == expected_paths[kind],
+      "Neovim " .. kind .. " path escaped the isolated XDG directory: " .. path)
+  end
+
+  local forbidden_user_roots = {
+    vim.fn.expand("~/.config/nvim"),
+    vim.fn.expand("~/.local/share/nvim"),
+    vim.fn.expand("~/.local/state/nvim"),
+    vim.fn.expand("~/.cache/nvim"),
+    vim.fn.expand("~/.vim"),
+  }
+  local runtime_paths = vim.opt.runtimepath:get()
+  assert_true(vim.tbl_contains(runtime_paths, vim.env.VIMRUNTIME),
+    "Neovim system runtime was removed from runtimepath")
+  for _, path in ipairs(runtime_paths) do
+    for _, forbidden_root in ipairs(forbidden_user_roots) do
+      local is_forbidden = path == forbidden_root
+        or path:sub(1, #forbidden_root + 1) == forbidden_root .. "/"
+      assert_true(not is_forbidden,
+        "Neovim runtimepath included a user directory or local plugin: " .. path)
+    end
+  end
+end
+
+assert_isolated_neovim_paths()
 
 vim.cmd("filetype on")
 vim.cmd("edit " .. escaped(valid))
@@ -220,6 +255,20 @@ clients = vim.lsp.get_clients({ bufnr = 0, name = "recite-lsp" })
 assert_true(#clients > 0 and clients[1].initialized, "unicode buffer lost its initialized client")
 local old_client_id = clients[1].id
 local callback_seen = false
+local callback_errors = { on_exit = false, on_init = false }
+-- Capture the integration's user-facing reports while keeping the headless
+-- smoke output focused on failures.
+vim.notify = function(message, level)
+  if type(message) == "string" then
+    if message:find("Recite on_exit callback failed", 1, true) then
+      callback_errors.on_exit = true
+      callback_errors.on_exit_level = level
+    elseif message:find("Recite on_init callback failed", 1, true) then
+      callback_errors.on_init = true
+      callback_errors.on_init_level = level
+    end
+  end
+end
 local capabilities = { workspace = { configuration = true } }
 local init_options = { smoke = true }
 recite.setup({
@@ -229,6 +278,7 @@ recite.setup({
     settings = { smoke = true },
     on_exit = function()
       callback_seen = true
+      error("hostile on_exit callback")
     end,
   },
 })
@@ -304,10 +354,15 @@ wait_for(function()
   return #restarted_a > 0 and restarted_a[1].initialized and restarted_a[1].id ~= crashed_a
     and #restarted_b > 0 and restarted_b[1].initialized and restarted_b[1].id ~= crashed_b
 end, "crash recovery did not reattach every open project buffer")
+wait_for(function()
+  return callback_seen and callback_errors.on_exit
+end, "throwing on_exit callback was not observed without blocking crash recovery")
+assert_true(callback_errors.on_exit_level == vim.log.levels.ERROR,
+  "throwing on_exit callback was not reported at error level")
 
 -- Wait past the stability window, then verify the next crash uses the first
 -- backoff interval rather than accumulating an old retry count.
-vim.wait(1_300, function() return false end, 50)
+vim.wait(1300, function() return false end, 50)
 local stable_client = restarted_b[1]
 local stable_id = stable_client.id
 local clock = vim.uv or vim.loop
@@ -321,12 +376,54 @@ wait_for(function()
 end, "stable client did not recover after a second crash")
 assert_true((clock.hrtime() - crash_time) / 1e6 < 500, "stable recovery retained an excessive backoff")
 
-for _, id in ipairs({
-  vim.lsp.get_clients({ bufnr = buffer_a, name = "recite-lsp" })[1].id,
-  vim.lsp.get_clients({ bufnr = buffer_b, name = "recite-lsp" })[1].id,
-}) do
-  assert_true(recite.stop(id), "owned client did not accept intentional stop")
+-- A real server wrapper delays every server start by more than two seconds.
+-- Each successful on_init must still reset the bounded restart
+-- budget; otherwise the fourth post-init crash would be abandoned.
+local delayed_init_calls = 0
+recite.setup({
+  lsp = {
+    autostart = false,
+    cmd = { vim.env.RECITE_DELAYED_LSP },
+    root_dir = vim.env.RECITE_SECOND_PROJECT,
+    on_init = function()
+      delayed_init_calls = delayed_init_calls + 1
+      error("hostile on_init callback")
+    end,
+  },
+})
+wait_for(function()
+  return #vim.lsp.get_clients({ bufnr = buffer_b, name = "recite-lsp" }) == 0
+end, "previous owned clients did not stop before delayed wrapper probe")
+local delayed_id = recite.start(buffer_b)
+assert_true(delayed_id ~= nil, "delayed real-server wrapper did not start")
+local delayed_client
+wait_for(function()
+  delayed_client = vim.lsp.get_client_by_id(delayed_id)
+  return delayed_client ~= nil and delayed_client.initialized
+end, "delayed real-server wrapper did not initialize")
+wait_for(function()
+  return delayed_init_calls == 1 and callback_errors.on_init
+end, "throwing on_init callback was not observed after internal reset")
+assert_true(callback_errors.on_init_level == vim.log.levels.ERROR,
+  "throwing on_init callback was not reported at error level")
+
+for attempt = 1, 4 do
+  local crashed_id = delayed_id
+  delayed_client = vim.lsp.get_client_by_id(crashed_id)
+  assert_true(delayed_client ~= nil and delayed_client.initialized,
+    "delayed client was not initialized before crash " .. attempt)
+  assert_true(delayed_client.rpc and delayed_client.rpc.terminate,
+    "Neovim RPC crash probe is unavailable for delayed client")
+  delayed_client.rpc:terminate()
+  wait_for(function()
+    local candidates = vim.lsp.get_clients({ bufnr = buffer_b, name = "recite-lsp" })
+    delayed_client = candidates[1]
+    return delayed_client ~= nil and delayed_client.initialized and delayed_client.id ~= crashed_id
+  end, "delayed post-init crash " .. attempt .. " did not recover within bounded policy")
+  delayed_id = delayed_client.id
 end
+assert_true(delayed_init_calls == 5, "delayed wrapper did not deliver every successful on_init event")
+assert_true(recite.stop(delayed_id), "delayed owned client did not accept intentional stop")
 wait_for(function()
   return #vim.lsp.get_clients({ bufnr = buffer_a, name = "recite-lsp" }) == 0
     and #vim.lsp.get_clients({ bufnr = buffer_b, name = "recite-lsp" }) == 0
