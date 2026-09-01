@@ -124,6 +124,11 @@ maintainability_validate_baseline() {
       validation_failures=$((validation_failures + 1))
       continue
     fi
+    if ! maintainability_is_regular_file_at "$repo_root" "$head_sha" "$path"; then
+      echo "baseline path is not a regular file at head: $path" >&2
+      validation_failures=$((validation_failures + 1))
+      continue
+    fi
     scrutiny="$(maintainability_scrutiny_threshold "$expected_kind")"
     actual_lines="$(maintainability_line_count_at "$repo_root" "$head_sha" "$path")"
     if [[ "$lines" =~ ^[1-9][0-9]*$ && "$lines" -ne "$actual_lines" ]]; then

@@ -8,6 +8,7 @@ maintainability_collect_paths() {
   local status base_path path
   local -n output_paths="$5"
   local -n output_base_paths="$6"
+  local -n output_renamed_paths="$7"
 
   if (( empty_base )); then
     diff_command=(git -C "$repo_root" diff --name-status -z -M --diff-filter=ACMR "$base_sha" "$head_sha" --)
@@ -25,6 +26,8 @@ maintainability_collect_paths() {
           echo "malformed changed-path record from git diff: $status" >&2
           return 2
         fi
+        # shellcheck disable=SC2034
+        output_renamed_paths["$path"]=1
         ;;
       *)
         if ! IFS= read -r -d '' path; then

@@ -46,7 +46,6 @@ maintainability_is_supported_extension() {
 maintainability_is_excluded_path() {
   case "$1" in
     target/*|include/recite.h|fixtures/generated/* \
-      |editors/vscode/dist/* \
       |editors/vscode/src/messages.generated.js \
       |editors/recite-neovim/lua/recite_messages.lua \
       |editors/recite-tree-sitter/src/parser.c \
@@ -58,6 +57,15 @@ maintainability_is_excluded_path() {
       return 1
       ;;
   esac
+}
+
+maintainability_is_regular_file_at() {
+  local repo_root="$1"
+  local revision="$2"
+  local path="$3"
+  local mode
+  mode="$(git -C "$repo_root" ls-tree "$revision" -- "$path" | awk 'NF { print $1 }')"
+  [[ "$mode" == 100644 || "$mode" == 100755 ]]
 }
 
 maintainability_is_valid_path() {

@@ -95,12 +95,13 @@ done < <(git -C "$repo_root" ls-tree -r --name-only -z "$head_sha")
 
 declare -a paths=()
 declare -A base_paths=()
+declare -A renamed_paths=()
 if (( full_scan )); then
   paths=("${all_paths[@]}")
   echo "== full maintainability inventory at $head_sha =="
 else
   diff_range=""
-  if ! maintainability_collect_paths "$repo_root" "$base_sha" "$head_sha" "$empty_base" paths base_paths; then
+  if ! maintainability_collect_paths "$repo_root" "$base_sha" "$head_sha" "$empty_base" paths base_paths renamed_paths; then
     exit 2
   fi
   echo "== changed maintainability inventory: $diff_range =="
@@ -115,6 +116,11 @@ triggered=0
 for path in "${all_paths[@]}"; do
   kind="$(maintainability_classify_path "$path" || true)"
   [[ -n "$kind" ]] || continue
+  if ! maintainability_is_regular_file_at "$repo_root" "$head_sha" "$path"; then
+    echo "eligible maintainability source is not a regular file: $path" >&2
+    failures=$((failures + 1))
+    continue
+  fi
   scrutiny="$(maintainability_scrutiny_threshold "$kind")"
   head_lines="$(maintainability_line_count_at "$repo_root" "$head_sha" "$path")"
   if (( head_lines > scrutiny )) && [[ -z "${baseline_seen["$path"]+present}" ]]; then
@@ -131,9 +137,25 @@ for path in "${paths[@]}"; do
   follow_up="$(maintainability_follow_up_threshold "$kind")"
   head_lines="$(maintainability_line_count_at "$repo_root" "$head_sha" "$path")"
   base_lines=0
+  policy_transition=0
   if (( ! full_scan )); then
     base_path="${base_paths["$path"]-$path}"
     base_lines="$(maintainability_line_count_at "$repo_root" "$base_sha" "$base_path")"
+    if [[ -n "${renamed_paths["$path"]+present}" ]]; then
+      base_kind="$(maintainability_classify_path "$base_path" || true)"
+      if [[ -z "$base_kind" ]]; then
+        policy_transition=1
+      else
+        base_scrutiny="$(maintainability_scrutiny_threshold "$base_kind")"
+        base_follow_up="$(maintainability_follow_up_threshold "$base_kind")"
+        if (( scrutiny < base_scrutiny || follow_up < base_follow_up )); then
+          policy_transition=1
+        fi
+      fi
+      if (( policy_transition )); then
+        base_lines=0
+      fi
+    fi
   fi
   if (( head_lines <= scrutiny )); then
     continue
@@ -145,7 +167,9 @@ for path in "${paths[@]}"; do
     continue
   fi
 
-  if (( base_lines == head_lines )); then
+  if (( policy_transition )); then
+    echo "policy transition trigger: $path ($kind, newly entering stricter maintainability policy; threshold $scrutiny)"
+  elif (( base_lines == head_lines )); then
     echo "unchanged trigger: $path ($kind, $head_lines lines; threshold $scrutiny)"
   elif (( head_lines < base_lines )); then
     echo "shrinking trigger: $path ($kind, $base_lines -> $head_lines lines)"

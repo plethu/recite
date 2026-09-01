@@ -26,10 +26,11 @@ scripts are tooling. The supported handwritten extensions are `.rs`, `.js`,
 
 Generated headers, build output, and generated fixture output are outside this
 inventory. The checker names generated paths explicitly: the FFI header,
-Tree-sitter parser/grammar/node-type outputs, the VS Code message projection
-and distribution tree, and the Neovim message projection. Any future generated
-path must be added as an explicit reviewed rule; a broad generated-directory
-exemption is not acceptable.
+Tree-sitter parser/grammar/node-type outputs, the VS Code message projection,
+and the Neovim message projection. VS Code's `dist/` directory is not an
+exemption: any force-tracked source there is governed as production code. Any
+future generated path must be added as an explicit reviewed rule; a broad
+generated-directory exemption is not acceptable.
 
 The `kind` column must agree with the path classification (`production`,
 `tooling`, or `test/support`), and the recorded line count must match the
@@ -216,4 +217,4 @@ production suppressions must carry a narrow scope and rationale.
 | `scripts/check-tree-sitter.sh` | 384 | tooling | tree-sitter/check | review | Parser generation, ABI, corpus, and reproducibility checks share one tool boundary |
 | `scripts/lint_suppression_ast.py` | 374 | tooling | lint-policy | review | AST suppression extraction keeps parser traversal and source categorisation together |
 | `tests/lint-suppressions/check.sh` | 398 | test/support | lint-policy/tests | review | Hostile suppression-policy fixture scenarios remain one executable contract suite |
-| `tests/maintainability/check.sh` | 453 | test/support | maintainability/tests | review | Cross-language threshold, baseline, rename, and generated-boundary fixtures remain one contract suite |
+| `tests/maintainability/check.sh` | 376 | test/support | maintainability/tests | review | Core Rust threshold, baseline, zero-SHA, and inherited-debt fixtures remain one contract suite |
