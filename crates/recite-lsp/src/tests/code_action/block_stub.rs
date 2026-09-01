@@ -146,9 +146,11 @@ pub(super) fn block_stub_quick_fix_rejects_unresolved_target_and_target_collisio
 }
 
 pub(super) fn block_stub_quick_fix_rejects_incomplete_block_reference_summary() {
-    let mut harness = Harness::start();
-    let source_uri = uri("file:///workspace/dialogue/incomplete-block-ref.recite");
     let source = concat!(":: start default\n", "-> missing_block\n", ":if\n");
+    let temp = TempDir::new().expect("tempdir");
+    write_file(temp.path(), "incomplete-block-ref.recite", source);
+    let source_uri = file_uri(&temp.path().join("incomplete-block-ref.recite"));
+    let mut harness = harness_for_root(temp.path());
     harness.did_open(source_uri.clone(), 7, source);
     let _ = harness.recv_publish_diagnostics();
 

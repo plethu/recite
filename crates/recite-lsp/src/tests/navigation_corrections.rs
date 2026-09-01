@@ -4,18 +4,17 @@ use tempfile::TempDir;
 use super::support::{Harness, file_uri, harness_for_root, uri, write_file};
 
 pub(super) fn rename_rejects_local_and_qualified_block_collisions() {
-    let mut local = Harness::start();
-    let local_uri = uri("file:///workspace/dialogue/local-collision.recite");
-    local.did_open(
-        local_uri.clone(),
-        1,
-        concat!(
-            ":: start default\n",
-            "-> target\n",
-            ":: target\n",
-            ":: renamed\n",
-        ),
+    let local_temp = TempDir::new().unwrap_or_else(|error| panic!("tempdir: {error}"));
+    let local_source = concat!(
+        ":: start default\n",
+        "-> target\n",
+        ":: target\n",
+        ":: renamed\n",
     );
+    write_file(local_temp.path(), "local-collision.recite", local_source);
+    let local_uri = file_uri(&local_temp.path().join("local-collision.recite"));
+    let mut local = harness_for_root(local_temp.path());
+    local.did_open(local_uri.clone(), 1, local_source);
     let _ = local.recv_publish_diagnostics();
     assert!(
         local
