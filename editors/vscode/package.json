@@ -92,5 +92,8 @@
     "check": "node scripts/build.mjs && node scripts/check-package.mjs && node --test test/*.test.mjs",
     "package": "node scripts/package.mjs",
     "package:check": "node scripts/package.mjs --check"
+  },
+  "devDependencies": {
+    "acorn": "8.15.0"
   }
 }

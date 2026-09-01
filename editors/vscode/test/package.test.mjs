@@ -69,6 +69,62 @@ test("every visible host output boundary rejects a newly added literal", async (
   }
 });
 
+test("source ownership is syntax-aware across hostile JavaScript forms", () => {
+  const valid = (source) => assert.doesNotThrow(() => assertSourceMessageOwnership(
+    [["hostile.js", source]], ["lsp-client-start-failed"], projectedMessages
+  ));
+  const rejected = (source, expected = /visible host output|canonical wrapper|message use/) =>
+    assert.throws(() => assertSourceMessageOwnership(
+      [["hostile.js", source]], ["lsp-client-start-failed"], projectedMessages
+    ), expected);
+
+  rejected(String.raw`const decoy = /clientMessage(api, "lsp-client-start-failed")/;`);
+  rejected(String.raw`const output = {}; output["appendLine"]("English literal");`);
+  rejected(String.raw`const output = {}; const method = "appendLine"; output[method]("English literal");`);
+  rejected(String.raw`const output = {}; const emit = output.appendLine; emit("English literal");`);
+  rejected(String.raw`const output = {}; const { appendLine: emit } = output; emit("English literal");`);
+  rejected(String.raw`const output = {}; const emit = output.appendLine.bind(output); emit("English literal");`);
+  rejected(String.raw`const output = {}; const text = "English literal"; output.appendLine(text);`);
+  rejected([
+    "const output = {};",
+    "output.appendLine(`prefix ${detail}`);"
+  ].join("\n"));
+  rejected([
+    "const output = {};",
+    "output.appendLine(`${\"English literal\"}`);"
+  ].join("\n"));
+  rejected(String.raw`const output = {}; output.appendLine("prefix " + detail);`);
+  for (const method of ["showWarningMessage", "showErrorMessage", "showInformationMessage"]) {
+    rejected(`const api = { window: { ${method}() {} } }; api.window.${method}("literal");`);
+  }
+  rejected(String.raw`const api = { window: { showInformationMessage() {} } };
+    const { showInformationMessage } = api.window;
+    showInformationMessage("Information");`);
+
+  valid([
+    'import { clientMessage as message } from "./messages.js";',
+    'const output = { appendLine() {} };',
+    'output.appendLine(`${message(api, "lsp-client-start-failed", detail)}`);'
+  ].join("\n"));
+  valid(String.raw`import { clientMessage } from "./messages.js";
+    const output = { appendLine() {} };
+    output.appendLine(clientMessage(api, "lsp-client-\x73tart-failed", detail));`);
+  valid(String.raw`import * as messages from "./messages.js";
+    const output = { appendLine() {} };
+    const { clientMessage: emit } = messages;
+    output.appendLine(emit(api, "lsp-client-start-failed"));`);
+  valid(String.raw`import * as messages from "./messages.js";
+    const output = { appendLine() {} };
+    const emit = messages["clientMessage"];
+    output.appendLine(emit(api, "lsp-client-start-failed"));`);
+  valid(String.raw`// clientMessage(api, "lsp-client-start-failed")
+    const text = "clientMessage(api, lsp-client-start-failed)";
+    const regular = /clientMessage\(api, "lsp-client-start-failed"\)/;
+    const panel = { render() {} };
+    panel.render("English literal");
+    clientMessage(api, "lsp-client-start-failed");`);
+});
+
 test("packaging safety rejects symlink escapes, including intermediate paths", async () => {
   const root = await mkdtemp(path.join(os.tmpdir(), "recite-vscode-safety-"));
   try {

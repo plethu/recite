@@ -1,42 +1,40 @@
-const VISIBLE_OUTPUT_METHODS = new Set(["append", "appendLine", "createOutputChannel"]);
+import {
+  isSourceOwnedMessage,
+  isStaticText,
+  parseSource,
+  resolveBindings,
+  expressionKind,
+  staticPropertyName,
+  staticStringValue,
+  visibleMethod,
+  walk
+} from "./source-messages-ast.mjs";
+
+const MESSAGE_WRAPPER = "clientMessage";
 
 /**
  * Check the extension's visible message boundary against the generated
- * projection. The small lexer keeps comments and string contents out of the
- * source inspection, while still retaining string tokens for call arguments.
+ * projection. Acorn owns JavaScript syntax here; this check must not infer
+ * source ownership from comments, strings, regexes, or delimiter counting.
+ *
+ * Dynamic values from the language server or the host remain valid output
+ * payloads. Source-owned text must come from the canonical clientMessage
+ * wrapper, and aliases of either boundary are resolved conservatively.
  */
 export function assertSourceMessageOwnership(sourceFiles, ownedIds, projectedMessages) {
   const expected = new Set(ownedIds);
   const used = new Map();
-  let callCount = 0;
 
   for (const [file, source] of sourceFiles) {
-    const tokens = lex(source);
-    for (let index = 0; index < tokens.length; index += 1) {
-      const token = tokens[index];
-      if (token.type === "identifier" && token.value === "clientMessage" &&
-          tokens[index + 1]?.value === "(") {
-        const call = parseCall(tokens, index);
-        assert(call, `clientMessage must be called with source-owned arguments (${file})`);
-        callCount += 1;
-        const id = call.args[1]?.type === "string" ? call.args[1].value : undefined;
-        assert(id, `clientMessage must use a literal canonical message ID (${file})`);
-        const sites = used.get(id) ?? [];
-        sites.push(file);
-        used.set(id, sites);
-      }
-      if (token.type === "identifier" && VISIBLE_OUTPUT_METHODS.has(token.value) &&
-          tokens[index - 1]?.value === ".") {
-        const call = parseCall(tokens, index);
-        if (call?.args[0]?.type === "string" || call?.args[0]?.type === "template") {
-          throw new Error(`visible host output ${token.value} must use clientMessage (${file})`);
-        }
-      }
-    }
+    const ast = parseSource(source, file);
+    const bindings = resolveBindings(ast);
+    walk(ast, (node) => {
+      if (node.type !== "CallExpression") return;
+      inspectMessageCall(node, file, bindings, expected, projectedMessages, used);
+      inspectVisibleCall(node, file, bindings);
+    });
   }
 
-  assert(callCount === [...used.values()].reduce((count, files) => count + files.length, 0),
-    "every clientMessage call must use a literal canonical message ID");
   assert(used.size === expected.size && [...expected].every((id) => used.has(id)),
     `extension source message use must cover exactly the owned IDs; missing ${missing(expected, used)}`);
   for (const [id, files] of used) {
@@ -45,94 +43,59 @@ export function assertSourceMessageOwnership(sourceFiles, ownedIds, projectedMes
   }
 }
 
-function lex(source) {
-  const tokens = [];
-  for (let index = 0; index < source.length;) {
-    const character = source[index];
-    if (/\s/.test(character)) {
-      index += 1;
-    } else if (character === "/" && source[index + 1] === "/") {
-      index = source.indexOf("\n", index + 2);
-      if (index < 0) break;
-    } else if (character === "/" && source[index + 1] === "*") {
-      const end = source.indexOf("*/", index + 2);
-      index = end < 0 ? source.length : end + 2;
-    } else if (character === "'" || character === '"') {
-      const result = readQuoted(source, index, character);
-      tokens.push({ type: "string", value: result.value });
-      index = result.end;
-    } else if (character === "`") {
-      const result = readTemplate(source, index);
-      tokens.push({ type: "template", value: result.value });
-      index = result.end;
-    } else if (/[A-Za-z_$]/.test(character)) {
-      const start = index;
-      index += 1;
-      while (index < source.length && /[A-Za-z0-9_$]/.test(source[index])) index += 1;
-      tokens.push({ type: "identifier", value: source.slice(start, index) });
-    } else {
-      tokens.push({ type: "punctuation", value: character });
-      index += 1;
-    }
+function inspectMessageCall(node, file, bindings, expected, projectedMessages, used) {
+  const kind = expressionKindForCall(node, bindings);
+  if (kind === "canonical") {
+    const id = node.arguments[1]?.type === "Literal" &&
+      typeof node.arguments[1].value === "string"
+      ? node.arguments[1].value
+      : undefined;
+    assert(id, `clientMessage must use a literal canonical message ID (${file})`);
+    const sites = used.get(id) ?? [];
+    sites.push(file);
+    used.set(id, sites);
+    return;
   }
-  return tokens;
+
+  // A local function named clientMessage must not masquerade as the wrapper.
+  // Also fail closed for an unresolved alias carrying an owned ID: accepting
+  // it would make a computed/destructured bypass possible.
+  if ((node.callee.type === "Identifier" && node.callee.name === MESSAGE_WRAPPER) ||
+      unresolvedOwnedMessageCall(node, bindings, expected, projectedMessages)) {
+    throw new Error(`clientMessage must use the canonical wrapper (${file})`);
+  }
 }
 
-function readQuoted(source, start, quote) {
-  let value = "";
-  for (let index = start + 1; index < source.length; index += 1) {
-    if (source[index] === "\\") {
-      value += source[index + 1] ?? "";
-      index += 1;
-    } else if (source[index] === quote) {
-      return { value, end: index + 1 };
-    } else {
-      value += source[index];
-    }
-  }
-  return { value, end: source.length };
+function expressionKindForCall(node, bindings) {
+  return expressionKind(node.callee, bindings);
 }
 
-function readTemplate(source, start) {
-  let value = "";
-  for (let index = start + 1; index < source.length; index += 1) {
-    if (source[index] === "\\") {
-      value += source[index] + (source[index + 1] ?? "");
-      index += 1;
-    } else if (source[index] === "`") {
-      return { value, end: index + 1 };
-    } else {
-      value += source[index];
-    }
-  }
-  return { value, end: source.length };
+function unresolvedOwnedMessageCall(node, bindings, expected, projectedMessages) {
+  if (node.arguments.length < 2) return false;
+  const id = staticStringValue(node.arguments[1], bindings);
+  if (id === undefined) return false;
+  return expected.has(id) || Object.hasOwn(projectedMessages, id);
 }
 
-function parseCall(tokens, index) {
-  if (tokens[index + 1]?.value !== "(") return undefined;
-  const args = [];
-  let current = [];
-  let depth = 0;
-  for (let cursor = index + 1; cursor < tokens.length; cursor += 1) {
-    const value = tokens[cursor].value;
-    if (value === "(") {
-      depth += 1;
-      if (depth > 1) current.push(tokens[cursor]);
-    } else if (value === ")") {
-      depth -= 1;
-      if (depth === 0) {
-        args.push(current[0]);
-        return { args };
-      }
-      current.push(tokens[cursor]);
-    } else if (value === "," && depth === 1) {
-      args.push(current[0]);
-      current = [];
-    } else {
-      current.push(tokens[cursor]);
+function inspectVisibleCall(node, file, bindings) {
+  const method = visibleMethod(node.callee, bindings);
+  if (!method) return;
+  const argument = visibleArgument(node, method, bindings);
+  if (!isSourceOwnedMessage(argument, bindings)) {
+    if (isStaticText(argument, bindings) || method === "ambiguous-visible") {
+      throw new Error(`visible host output ${method} must use clientMessage (${file})`);
     }
   }
-  return undefined;
+}
+
+function visibleArgument(node, method, bindings) {
+  const callee = node.callee;
+  const property = callee?.type === "MemberExpression"
+    ? staticPropertyName(callee, bindings)
+    : undefined;
+  if (method !== "ambiguous-visible" &&
+      (property === "call" || property === "apply")) return node.arguments[1];
+  return node.arguments[0];
 }
 
 function missing(expected, used) {
