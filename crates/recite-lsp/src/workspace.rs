@@ -152,7 +152,17 @@ impl LspWorkspace {
         saved: SavedProjectIndex,
         documents: OpenDocumentStore,
     ) -> Result<(), recite_compiler::AuthoringError> {
-        self.rebuild_for_documents_with_schemas(saved, documents, self.partition_schemas())
+        let retired = self
+            .partitions
+            .iter()
+            .map(|(id, partition)| (id.clone(), partition.retired_schema_uris.clone()))
+            .collect();
+        self.rebuild_for_documents_with_schemas_and_retired(
+            saved,
+            documents,
+            self.partition_schemas(),
+            retired,
+        )
     }
 
     pub(crate) fn is_schema_document_uri(&self, uri: &Uri) -> bool {

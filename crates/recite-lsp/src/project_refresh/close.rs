@@ -2,6 +2,7 @@ use super::super::{DiagnosticRefresh, LspWorkspace};
 
 impl LspWorkspace {
     pub(crate) fn close(&mut self, uri: lsp_types::Uri) -> Vec<DiagnosticRefresh> {
+        let old_schema_owner = self.schema_owner_for_uri(&uri);
         let mut documents = self.documents.clone();
         let Some(closed) = documents.close(&uri) else {
             return Vec::new();
@@ -38,9 +39,29 @@ impl LspWorkspace {
             return Vec::new();
         }
         if self.is_schema_document_uri(&uri) {
+            // Only the target's active owner had published schema diagnostics.
+            // Closing another open alias must not republish the owner under a
+            // closed URI (or clear an URI that was never published).
+            if old_schema_owner.as_ref() != Some(&uri) {
+                return Vec::new();
+            }
+            let remaining_schema_owner = self.schema_owner_for_uri(&uri);
             return self
                 .schema_refresh_for_uri(&uri)
-                .map_or_else(Vec::new, |refresh| vec![refresh]);
+                .map_or_else(Vec::new, |refresh| {
+                    if remaining_schema_owner.is_some() {
+                        vec![
+                            DiagnosticRefresh::Clear {
+                                uri: uri.clone(),
+                                version: None,
+                                generation: self.generation,
+                            },
+                            refresh,
+                        ]
+                    } else {
+                        vec![refresh]
+                    }
+                });
         }
         let closed_partition = closed
             .identity()

@@ -1,4 +1,5 @@
 use super::{DiagnosticRefresh, DocumentDiagnostics, LspWorkspace};
+use std::path::{Component, PathBuf};
 
 impl LspWorkspace {
     pub(crate) fn schema_partition_id(&self, uri: &lsp_types::Uri) -> Option<String> {
@@ -14,6 +15,16 @@ impl LspWorkspace {
     }
 
     pub(crate) fn schema_refresh_for_uri(&self, uri: &lsp_types::Uri) -> Option<DiagnosticRefresh> {
+        let owner = self.schema_owner_for_uri(uri);
+        // A second alias opening must not republish the first owner's
+        // diagnostics with the second document's version.  The deterministic
+        // owner is refreshed when it opens or changes; a non-owner open has no
+        // diagnostic transition to publish.
+        if self.documents.document(uri).is_some()
+            && owner.as_ref().is_some_and(|owner| owner != uri)
+        {
+            return None;
+        }
         let mut refreshes = self
             .partitions
             .values()
@@ -57,9 +68,13 @@ impl LspWorkspace {
             }
         }
         if has_publish {
-            if let Some(document) = self.documents.document(uri) {
-                merged.text = document.text().to_owned();
-                merged.version = Some(document.version());
+            // When the previous owner has just closed, the refresh is for the
+            // newly selected owner. Keep its URI, text, and version together;
+            // never borrow payload fields from the closed/requested alias.
+            if self.documents.document(uri).is_none()
+                && let Some(owner) = owner
+            {
+                merged.uri = owner;
             }
             Some(DiagnosticRefresh::Publish(merged))
         } else {
@@ -71,31 +86,67 @@ impl LspWorkspace {
         }
     }
 
+    pub(super) fn schema_owner_for_uri(&self, uri: &lsp_types::Uri) -> Option<lsp_types::Uri> {
+        let targets = self
+            .partitions
+            .values()
+            .filter(|partition| partition.schema.matches_uri(uri))
+            .filter_map(|partition| partition.schema.target_identity())
+            .collect::<std::collections::BTreeSet<_>>();
+        self.documents
+            .documents()
+            .filter(|document| {
+                let Some(path) = document.identity().saved_path.as_deref() else {
+                    return false;
+                };
+                targets.contains(&crate::paths::stable_path_identity(path))
+            })
+            .map(|document| document.identity().uri.clone())
+            .next()
+    }
+
     pub(super) fn is_retired_schema_alias(&self, uri: &lsp_types::Uri) -> bool {
         let Some(target) = self
             .documents
             .document(uri)
             .and_then(|document| document.identity().saved_path.as_deref())
-            .map(crate::paths::stable_path_identity)
+            .and_then(crate::paths::file_path_to_uri)
+            .and_then(normalized_file_uri)
         else {
             return false;
         };
-        self.documents.documents().any(|document| {
-            let retired = self
-                .retired_schema_uris
-                .contains(document.identity().uri.as_str())
-                || self.partitions.values().any(|partition| {
-                    partition
-                        .retired_schema_uris
-                        .contains(document.identity().uri.as_str())
-                });
-            retired
-                && document
-                    .identity()
-                    .saved_path
-                    .as_deref()
-                    .map(crate::paths::stable_path_identity)
-                    .is_some_and(|candidate| candidate == target)
-        })
+        let candidates = self
+            .retired_schema_uris
+            .iter()
+            .chain(
+                self.partitions
+                    .values()
+                    .flat_map(|partition| partition.retired_schema_uris.iter()),
+            )
+            .filter_map(|retired_uri| retired_uri.parse::<lsp_types::Uri>().ok())
+            .filter_map(normalized_file_uri)
+            .collect::<Vec<_>>();
+        candidates.into_iter().any(|candidate| candidate == target)
     }
+}
+
+fn normalized_file_uri(uri: lsp_types::Uri) -> Option<String> {
+    let mut parsed = url::Url::parse(uri.as_str()).ok()?;
+    if parsed.scheme() != "file" {
+        return None;
+    }
+    let mut path = PathBuf::new();
+    for component in PathBuf::from(parsed.path()).components() {
+        match component {
+            Component::RootDir => path.push(std::path::MAIN_SEPARATOR_STR),
+            Component::CurDir => {}
+            Component::ParentDir => {
+                path.pop();
+            }
+            Component::Normal(component) => path.push(component),
+            Component::Prefix(prefix) => path.push(prefix.as_os_str()),
+        }
+    }
+    parsed.set_path(&path.to_string_lossy());
+    Some(parsed.to_string())
 }

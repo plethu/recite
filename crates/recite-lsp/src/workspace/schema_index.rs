@@ -156,13 +156,13 @@ impl SchemaIndex {
         _saved: &super::project_index::SavedProjectIndex,
         _partition: &str,
     ) -> Option<Self> {
-        let mut matches = documents
+        // URI aliases identify one schema target.  The open-document store is
+        // URI ordered, so selecting its first matching document gives the
+        // target one deterministic live owner without manufacturing an
+        // "unavailable" schema merely because a second alias is open.
+        let document = documents
             .documents()
-            .filter(|document| self.matches_uri(&document.identity().uri));
-        let document = matches.next()?;
-        if matches.next().is_some() {
-            return None;
-        }
+            .find(|document| self.matches_uri(&document.identity().uri))?;
         Some(self.overlay_for_open(
             document.identity().uri.clone(),
             document.text(),

@@ -6,6 +6,59 @@ use tempfile::Builder;
 use support::stdio::{StdioHarness, file_uri};
 
 #[test]
+fn active_schema_alias_owner_is_deterministic_in_both_open_orders() {
+    let temp = Builder::new()
+        .prefix("recite active schema aliases ")
+        .tempdir()
+        .unwrap_or_else(|error| panic!("temporary schema directory: {error}"));
+    let manifest = temp.path().join("recite.project.toml");
+    let schema = temp.path().join("schema.json");
+    std::fs::write(
+        &manifest,
+        "format_version = 1\n[project]\nschema = \"schema.json\"\n",
+    )
+    .unwrap_or_else(|error| panic!("write manifest: {error}"));
+    std::fs::write(&schema, "{\"schema_version\":1}\n")
+        .unwrap_or_else(|error| panic!("write schema: {error}"));
+    std::fs::create_dir(temp.path().join("sub"))
+        .unwrap_or_else(|error| panic!("create schema alias parent: {error}"));
+    let canonical = file_uri(&schema);
+    let alias_a = format!("{}/./schema.json", file_uri(temp.path()));
+    let alias_b = format!("{}/sub/../schema.json", file_uri(temp.path()));
+    let mut harness = StdioHarness::start(json!({
+        "capabilities": {},
+        "rootUri": file_uri(temp.path())
+    }));
+
+    // B then A exercises the owner reselection path; the other order is
+    // covered by the retirement lifecycle test below.
+    harness.notify(
+        "textDocument/didOpen",
+        json!({"textDocument": {"uri": alias_b, "languageId": "json", "version": 8, "text": "{\"schema_version\":\"b\"}\n"}}),
+    );
+    let opened_b = harness.barrier(&alias_b);
+    assert_publish_batch(&opened_b, &[(&canonical, Some(8), false)]);
+
+    harness.notify(
+        "textDocument/didOpen",
+        json!({"textDocument": {"uri": alias_a, "languageId": "json", "version": 7, "text": "{\"schema_version\":\"a\"}\n"}}),
+    );
+    let opened_a = harness.barrier(&alias_a);
+    assert_publish_batch(&opened_a, &[(&canonical, Some(7), false)]);
+
+    harness.notify(
+        "textDocument/didClose",
+        json!({"textDocument": {"uri": alias_a}}),
+    );
+    let closed_a = harness.barrier(&alias_a);
+    assert_publish_batch(
+        &closed_a,
+        &[(&alias_a, None, true), (&alias_b, Some(8), false)],
+    );
+    harness.finish();
+}
+
+#[test]
 fn retired_schema_aliases_keep_target_retirement_until_final_close() {
     let temp = Builder::new()
         .prefix("recite retired schema aliases ")
@@ -23,6 +76,8 @@ fn retired_schema_aliases_keep_target_retirement_until_final_close() {
         .unwrap_or_else(|error| panic!("write old schema: {error}"));
     std::fs::write(&new_schema, "{\"schema_version\":\"new\"}\n")
         .unwrap_or_else(|error| panic!("write new schema: {error}"));
+    std::fs::create_dir(temp.path().join("sub"))
+        .unwrap_or_else(|error| panic!("create schema alias parent: {error}"));
 
     let schema_a = format!("{}/./schema-old.json", file_uri(temp.path()));
     let schema_b = format!("{}/sub/../schema-old.json", file_uri(temp.path()));
@@ -47,7 +102,7 @@ fn retired_schema_aliases_keep_target_retirement_until_final_close() {
         );
     }
     let opened_a = harness.barrier(&schema_a);
-    assert_schema_publish(&opened_a, &file_uri(&old_schema), Some(7));
+    assert_publish_batch(&opened_a, &[(&file_uri(&old_schema), Some(7), false)]);
     let opened_b = harness.barrier(&schema_b);
     assert!(
         opened_b.is_empty(),
@@ -65,12 +120,12 @@ fn retired_schema_aliases_keep_target_retirement_until_final_close() {
     );
     let switched = harness.barrier(&schema_a);
     assert_eq!(switched.len(), 2, "schema switch batch: {switched:?}");
-    assert_schema_clear(&switched, &schema_a, Some(7));
-    assert_schema_publish(&switched, &new_schema_uri, None);
-    let switched_b = harness.barrier(&schema_b);
-    assert!(
-        switched_b.is_empty(),
-        "second alias should not receive a stale switch batch: {switched_b:?}"
+    assert_publish_batch(
+        &switched,
+        &[
+            (&file_uri(&old_schema), Some(7), true),
+            (&new_schema_uri, None, false),
+        ],
     );
 
     harness.notify(
@@ -78,9 +133,10 @@ fn retired_schema_aliases_keep_target_retirement_until_final_close() {
         json!({ "textDocument": { "uri": schema_a.clone() } }),
     );
     let closed_a = harness.barrier(&schema_a);
-    assert_eq!(closed_a.len(), 2, "close A batch: {closed_a:?}");
-    assert_schema_clear(&closed_a, &schema_a, None);
-    assert_schema_publish(&closed_a, &schema_b, Some(8));
+    assert_publish_batch(
+        &closed_a,
+        &[(&schema_a, None, true), (&schema_b, Some(8), true)],
+    );
 
     harness.notify(
         "textDocument/didOpen",
@@ -94,55 +150,43 @@ fn retired_schema_aliases_keep_target_retirement_until_final_close() {
         }),
     );
     let reopened_a = harness.barrier(&schema_a);
-    assert_eq!(reopened_a.len(), 1, "reopen A batch: {reopened_a:?}");
-    assert_schema_publish(&reopened_a, &schema_a, Some(9));
-    assert_empty_diagnostics(&reopened_a, &schema_a);
+    assert_publish_batch(&reopened_a, &[(&schema_a, Some(9), true)]);
 
     harness.notify(
         "textDocument/didClose",
         json!({ "textDocument": { "uri": schema_b.clone() } }),
     );
     let closed_b = harness.barrier(&schema_b);
-    assert_eq!(closed_b.len(), 2, "close B final-owner batch: {closed_b:?}");
-    assert_schema_clear(&closed_b, &schema_b, None);
-    assert_schema_publish(&closed_b, &schema_a, Some(9));
+    assert_publish_batch(
+        &closed_b,
+        &[(&schema_b, None, true), (&schema_a, Some(9), false)],
+    );
 
     harness.notify(
         "textDocument/didClose",
         json!({ "textDocument": { "uri": schema_a.clone() } }),
     );
     let closed_final = harness.barrier(&schema_a);
-    assert_eq!(closed_final.len(), 1, "final close batch: {closed_final:?}");
-    assert_schema_clear(&closed_final, &schema_a, None);
+    assert_publish_batch(&closed_final, &[(&schema_a, None, true)]);
     harness.finish();
 }
 
-fn assert_schema_publish(messages: &[Value], uri: &str, version: Option<i64>) {
-    let published = diagnostics_for(messages, uri);
-    assert_eq!(published.len(), 1, "publish {uri}: {messages:?}");
-    assert_eq!(published[0]["params"]["version"].as_i64(), version);
-}
-
-fn assert_schema_clear(messages: &[Value], uri: &str, version: Option<i64>) {
-    let published = diagnostics_for(messages, uri);
-    assert_eq!(published.len(), 1, "clear {uri}: {messages:?}");
-    assert_eq!(published[0]["params"]["version"].as_i64(), version);
-    assert_empty_diagnostics(messages, uri);
-}
-
-fn assert_empty_diagnostics(messages: &[Value], uri: &str) {
-    let published = diagnostics_for(messages, uri);
-    assert!(
-        published[0]["params"]["diagnostics"]
-            .as_array()
-            .is_some_and(Vec::is_empty)
+fn assert_publish_batch(messages: &[Value], expected: &[(&str, Option<i64>, bool)]) {
+    assert_eq!(
+        messages.len(),
+        expected.len(),
+        "notification batch: {messages:?}"
     );
-}
-
-fn diagnostics_for<'a>(messages: &'a [Value], uri: &str) -> Vec<&'a Value> {
-    messages
-        .iter()
-        .filter(|message| message["method"] == "textDocument/publishDiagnostics")
-        .filter(|message| message["params"]["uri"] == uri)
-        .collect()
+    for (message, (uri, version, empty)) in messages.iter().zip(expected) {
+        assert_eq!(message["method"], "textDocument/publishDiagnostics");
+        assert_eq!(message["params"]["uri"], *uri);
+        assert_eq!(message["params"]["version"].as_i64(), *version);
+        assert_eq!(
+            message["params"]["diagnostics"]
+                .as_array()
+                .is_some_and(Vec::is_empty),
+            *empty,
+            "diagnostics for {uri}: {message}"
+        );
+    }
 }
