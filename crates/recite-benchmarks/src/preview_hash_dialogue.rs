@@ -6,8 +6,8 @@ use recite_runtime::{
 
 use crate::preview_hash_plural::hash_plural;
 use crate::preview_hash_primitives::{
-    hash_bool, hash_i64, hash_len, hash_optional_span, hash_optional_text, hash_text, hash_u64,
-    hash_value, tag,
+    hash_bool, hash_i64, hash_len, hash_optional_span, hash_optional_text, hash_optional_u64,
+    hash_text, hash_u64, hash_value, tag,
 };
 
 pub(super) fn hash_optional_prompt(
@@ -33,6 +33,10 @@ pub(super) fn hash_identity(hasher: &mut blake3::Hasher, identity: &PreviewPromp
 
 pub(super) fn hash_prompt(hasher: &mut blake3::Hasher, prompt: &PreviewPrompt) {
     hash_identity(hasher, prompt.identity());
+    hash_optional_u64(
+        hasher,
+        recite_runtime::bench_support::plural_arm_count(prompt).map(|count| count as u64),
+    );
     if let Some(line) = prompt.line() {
         tag(hasher, 1);
         hash_line(hasher, line);

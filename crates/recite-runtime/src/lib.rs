@@ -120,3 +120,7 @@ pub use traversal::{
     DialogueTrace, LocaleResolution, LocalizedLookupTrace, PluralLineTrace, acknowledge_effect,
     choose, choose_with, next, next_with, start_scene, start_scene_with_options,
 };
+
+#[cfg(feature = "bench-support")]
+#[doc(hidden)]
+pub mod bench_support;

@@ -48,9 +48,9 @@ fn preview_evidence_report_is_stable_and_structured() -> Result<(), Box<dyn std:
                 PreviewTraversalShape {
                     event_count: 101,
                     output_count: 76,
-                    event_hash: "f0204adf5c554c91fc39542540b54be255c1bdb4f230d8c5947105dc4c86dd16"
+                    event_hash: "9f9bb88c5aa6ef7eb5aa9986a79dca44a767802508f316d97fb23ac44e5e5e2c"
                         .to_owned(),
-                    state_hash: "68b8e95efc7b01e61d5528294c84fb1b4ace10d5d6d1111dc1313c658a579195"
+                    state_hash: "616c2a40f66d88e3df79f32bc5b1eb2246b6d7706245bd056449448ea5358393"
                         .to_owned(),
                 },
                 PreviewSnapshotShape {
@@ -83,9 +83,9 @@ fn preview_evidence_report_is_stable_and_structured() -> Result<(), Box<dyn std:
                 PreviewTraversalShape {
                     event_count: 44,
                     output_count: 28,
-                    event_hash: "da579f8df89e79278901cacba7df5a4acd045ff69e562e8214f7b6827c9884cb"
+                    event_hash: "91f8922fc862de9e22865c85ff82ab77798e4bdaa066db671f78319fd76d6c4c"
                         .to_owned(),
-                    state_hash: "64e48264ca8733b4a66bcca8eeafa51ec013514c8a48e47c6c8d13edc3f84357"
+                    state_hash: "f8f3b2e1c7f3b0da3c9da41d6a7b3fce0f14eb1bb7a7225a4211d393eabcd722"
                         .to_owned(),
                 },
                 PreviewSnapshotShape {

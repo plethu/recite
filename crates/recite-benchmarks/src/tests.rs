@@ -10,6 +10,9 @@ use recite_runtime::{
     PreviewOutput,
 };
 
+#[path = "tests/preview_prompt_evidence/tests.rs"]
+mod preview_prompt_evidence;
+
 fn digest(event: &PreviewEvent) -> String {
     let mut hasher = blake3::Hasher::new();
     crate::preview_hash::hash_event(event, &mut hasher);
