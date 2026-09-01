@@ -412,7 +412,7 @@ remain authoritative if the tracker is split again.
 | Product Foundation and Maintainability | Complete (0 open; 8 closed milestone items; delivered by PR #174) | 17 |
 | Language, schema, and localisation readiness | Complete (0 open; 12 closed milestone items; delivered by PR #183 and correction PR #184) | 18 |
 | Shared authoring kernel and preview | Complete (0 open; 8 closed milestone items; delivered by PR #191; #167, #168, and #185 complete) | 19 |
-| Editor integration parity | [#169 editor trio parity](https://github.com/plethu/recite/issues/169), [#192 Zed integration](https://github.com/plethu/recite/issues/192) (7 open) | 20 |
+| Editor integration parity | [#51 VS Code/VSCodium client](https://github.com/plethu/recite/issues/51), [#52 Neovim setup](https://github.com/plethu/recite/issues/52), [#53 command integration](https://github.com/plethu/recite/issues/53), [#97 TextMate grammar](https://github.com/plethu/recite/issues/97), [#98 Tree-sitter grammar](https://github.com/plethu/recite/issues/98), [#192 Zed integration](https://github.com/plethu/recite/issues/192) (6 open) | 20 |
 | Native GUI strategy and accessibility proof | [#54 GUI strategy](https://github.com/plethu/recite/issues/54), [#123 accessibility requirements](https://github.com/plethu/recite/issues/123) (2 open) | 21 |
 | GUI workbench | [#170 GUI workbench](https://github.com/plethu/recite/issues/170) (1 open) | 22 |
 | Engine companions | #49, #83–#86, #132–#134 (8 open) | 23 |
@@ -443,9 +443,10 @@ The language, schema, and localisation readiness outcome is complete as of
 kernel and preview outcome is complete as of 2026-09-01, delivered by PR #191
 at `636fa1b`; #167, #168, and #185 established the preceding configuration,
 discovery, and kernel seam. The next active outcome is Editor Integration
-Parity (milestone 20), currently represented by #169 and #192 within seven
-open milestone issues. The repository already contains substantial language,
-runtime, CLI, LSP, benchmark, FFI, Godot, and Unity work. That work should be
+Parity (milestone 20), currently represented by #51, #52, #53, #97, #98, and
+#192 within six open milestone issues. The repository already contains
+substantial language, runtime, CLI, LSP, benchmark, FFI, Godot, and Unity work.
+That work should be
 evaluated against the milestone exit gates rather than treated as automatically
 complete. The largest remaining structural gaps are first-class editor parity,
 the native GUI/accessibility decision, the GUI workbench, and the Godot, Unity,
