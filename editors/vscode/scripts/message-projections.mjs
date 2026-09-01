@@ -11,6 +11,7 @@ import {
 import { readFileSync } from "node:fs";
 import path from "node:path";
 import { fileURLToPath } from "node:url";
+import { parseRepresentableMessages } from "../../message-projection-parser.mjs";
 
 const packageRoot = path.resolve(path.dirname(fileURLToPath(import.meta.url)), "..");
 const inventoryPath = path.resolve(packageRoot, "../../crates/recite-ui/resources/inventory.toml");
@@ -30,59 +31,19 @@ export function projectMessages(fluent) {
   const canonical = parseRepresentableMessages(fluent, [
     ...RUNTIME_MESSAGE_IDS,
     ...PACKAGE_MESSAGE_IDS
-  ]);
+  ], "VS Code and Neovim");
   const projection = (ids, transform = (value) => value) => Object.fromEntries(ids.map((id) => {
     const value = canonical.get(id);
     if (value === undefined) throw new Error(`canonical Fluent message is missing ${id}`);
     return [id, transform(value)];
   }));
   return {
-    runtime: projection(RUNTIME_MESSAGE_IDS, (value) => value.replaceAll("{$detail}", "{0}")),
+    runtime: projection(RUNTIME_MESSAGE_IDS, (value) => {
+      let index = 0;
+      return value.replace(/\{\$[a-zA-Z][a-zA-Z0-9_-]*\}/gu, () => `{${index++}}`);
+    }),
     package: projection(PACKAGE_MESSAGE_IDS)
   };
-}
-
-/**
- * Parse the inventory-owned subset of Fluent. Host projections deliberately
- * support only single-line templates with simple variable placeables. A
- * continuation, selector, term, attribute, or other Fluent expression must
- * fail explicitly instead of being silently truncated by a line regex.
- */
-export function parseRepresentableMessages(source, ids) {
-  const wanted = new Set(ids);
-  const messages = new Map();
-  let currentId;
-  for (const [index, line] of source.split(/\r?\n/u).entries()) {
-    const message = /^(?<id>[a-z0-9-]+) = (?<value>[^\r\n]*)$/u.exec(line);
-    if (message) {
-      currentId = message.groups.id;
-      if (!wanted.has(currentId)) continue;
-      if (messages.has(currentId)) {
-        throw new Error(`duplicate canonical Fluent message ${currentId} at line ${index + 1}`);
-      }
-      const value = message.groups.value;
-      assertRepresentableValue(currentId, value, index + 1);
-      messages.set(currentId, value);
-      continue;
-    }
-    if (/^\s/u.test(line) && currentId && wanted.has(currentId)) {
-      throw new Error(
-        `canonical Fluent message ${currentId} uses a continuation at line ${index + 1}; ` +
-        "VS Code and Neovim projections support only single-line templates"
-      );
-    }
-    if (line.trim() !== "") currentId = undefined;
-  }
-  for (const id of wanted) {
-    if (!messages.has(id)) throw new Error(`canonical Fluent message is missing ${id}`);
-  }
-  return messages;
-}
-
-function assertRepresentableValue(id, value, line) {
-  if (!/^([^{}]|\{\$[a-zA-Z][a-zA-Z0-9_-]*\})*$/u.test(value)) {
-    throw new Error(`canonical Fluent message ${id} uses an unsupported expression at line ${line}`);
-  }
 }
 
 function parseProjectionInventory(source, name) {

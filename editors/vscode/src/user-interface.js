@@ -23,8 +23,8 @@ export function createUserInterface(api) {
       output.appendLine(clientMessage(api, "lsp-client-exited"));
       api.window.showErrorMessage(clientMessage(api, "lsp-client-exited"));
     },
-    restartScheduled(detail) {
-      output.appendLine(clientMessage(api, "lsp-client-restart-scheduled", detail));
+    restartScheduled(milliseconds) {
+      output.appendLine(clientMessage(api, "lsp-client-restart-scheduled", milliseconds));
     },
     restartExhausted() {
       output.appendLine(clientMessage(api, "lsp-client-restart-exhausted"));

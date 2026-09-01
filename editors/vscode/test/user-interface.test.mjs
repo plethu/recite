@@ -29,6 +29,7 @@ test("semantic UI operations localize source messages and keep the channel priva
   ui.serverProtocolFailure();
   ui.serverLifecycleFailure("ENOENT");
   ui.serverExited();
+  ui.restartScheduled(1_234);
   ui.restartExhausted();
   ui.serverStderr("stderr");
   ui.serverLogMessage("log");
@@ -40,6 +41,7 @@ test("semantic UI operations localize source messages and keep the channel priva
     "[Recite language server protocol failed.]",
     "[Recite language server lifecycle failed: {0}.] ENOENT",
     "[Recite language server exited.]",
+    "[Recite language server restart scheduled in {0} milliseconds.] 1234",
     "[Recite language server restart attempts exhausted.]",
     "log",
     "error from server",

@@ -3,7 +3,7 @@ export default Object.freeze({
   "lsp-client-start-failed": "Recite language server could not be started: {0}.",
   "lsp-client-error": "Recite language server error: {0}.",
   "lsp-client-exited": "Recite language server exited.",
-  "lsp-client-restart-scheduled": "Recite language server restart scheduled: {0}.",
+  "lsp-client-restart-scheduled": "Recite language server restart scheduled in {0} milliseconds.",
   "lsp-client-restart-exhausted": "Recite language server restart attempts exhausted.",
   "lsp-client-transport-failed": "Recite language server transport failed: {0}.",
   "lsp-client-protocol-failed": "Recite language server protocol failed.",

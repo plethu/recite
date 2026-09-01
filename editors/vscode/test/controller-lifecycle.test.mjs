@@ -157,7 +157,7 @@ test("rapid crash loops retain backoff until a stable run completes", async () =
   await waitFor(() => clients.length === 3, 750);
 
   assert.equal(messages.filter((message) => message.includes("restart scheduled")).length, 2);
-  assert.ok(messages.some((message) => message.includes("500 ms")));
+  assert.ok(messages.some((message) => message.includes("500 milliseconds")));
   await controller.dispose();
 });
 
@@ -182,16 +182,18 @@ test("restart budget resets only after a separated stable run", async () => {
   await waitFor(() => clients.length === 3, 250);
 
   assert.deepEqual(messages.filter((message) => message.includes("restart scheduled"))
-    .map((message) => message.match(/\d+ ms/)?.[0]), ["100 ms", "100 ms"]);
+    .map((message) => message.match(/\d+ milliseconds/)?.[0]),
+  ["100 milliseconds", "100 milliseconds"]);
   await controller.dispose();
 });
 
 test("restart exhaustion uses the canonical message without duplicated detail", async () => {
   const messages = [];
   const api = hostApi({ isTrusted: () => true, onDidGrantWorkspaceTrust: () => ({ dispose() {} }) });
-  const controller = new ExtensionController(api, output(messages), { delete() {} }, { createClient: () => new FakeClient() });
+  const controller = new ExtensionController(api, output(messages), { delete() {} }, {
+    createClient: () => new FakeClient(), restartDelaysMs: []
+  });
   await controller.start();
-  controller.restartAttempt = 5;
   controller.scheduleRestart();
   assert.equal(messages.at(-1), "Recite language server restart attempts exhausted.");
   await controller.dispose();
@@ -303,7 +305,69 @@ test("scheduled retry failures do not repeat visible lifecycle notifications", a
   controller.scheduleRestart();
   await waitFor(() => attempts === 1, 250);
 
-  assert.deepEqual(received.slice(0, 2), [["failure", "ENOENT"], ["scheduled", "100 ms"]]);
+  assert.deepEqual(received.slice(0, 2), [["failure", "ENOENT"], ["scheduled", 100]]);
   assert.equal(received.filter(([kind]) => kind === "failure").length, 1);
+  await controller.dispose();
+});
+
+test("missing executable retries through the complete budget before one exhaustion notice", async () => {
+  const received = [];
+  let attempts = 0;
+  const api = hostApi({ isTrusted: () => true, onDidGrantWorkspaceTrust: () => ({ dispose() {} }) });
+  const userInterface = {
+    serverLifecycleFailure: (detail) => received.push(["failure", detail]),
+    restartScheduled: (milliseconds) => received.push(["scheduled", milliseconds]),
+    restartExhausted: () => received.push(["exhausted"])
+  };
+  const controller = new ExtensionController(api, userInterface, { delete() {} }, {
+    restartDelaysMs: [0, 0, 0],
+    createClient: () => {
+      attempts += 1;
+      const client = new FakeClient();
+      client.start = async () => {
+        client.status = "stopped";
+        throw new Error("ENOENT");
+      };
+      return client;
+    }
+  });
+
+  controller.scheduleRestart();
+  await waitFor(() => received.some(([kind]) => kind === "exhausted"), 250);
+
+  assert.equal(attempts, 3);
+  assert.deepEqual(received, [["scheduled", 0], ["scheduled", 0], ["scheduled", 0], ["exhausted"]]);
+  await controller.dispose();
+});
+
+test("failure-emitting retries continue through the complete budget without failure spam", async () => {
+  const received = [];
+  let attempts = 0;
+  const api = hostApi({ isTrusted: () => true, onDidGrantWorkspaceTrust: () => ({ dispose() {} }) });
+  const userInterface = {
+    serverLifecycleFailure: (detail) => received.push(["failure", detail]),
+    restartScheduled: (milliseconds) => received.push(["scheduled", milliseconds]),
+    restartExhausted: () => received.push(["exhausted"])
+  };
+  const controller = new ExtensionController(api, userInterface, { delete() {} }, {
+    restartDelaysMs: [0, 0, 0],
+    createClient: () => {
+      attempts += 1;
+      const client = new FakeClient();
+      client.start = async () => {
+        client.status = "stopped";
+        const failure = new ClientFailure(ClientFailureKind.Lifecycle, "ENOENT");
+        client.emit("failure", failure);
+        throw failure;
+      };
+      return client;
+    }
+  });
+
+  controller.scheduleRestart();
+  await waitFor(() => received.some(([kind]) => kind === "exhausted"), 250);
+
+  assert.equal(attempts, 3);
+  assert.deepEqual(received, [["scheduled", 0], ["scheduled", 0], ["scheduled", 0], ["exhausted"]]);
   await controller.dispose();
 });

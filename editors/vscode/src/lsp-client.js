@@ -1,11 +1,12 @@
 import { EventEmitter } from "node:events";
 import { spawn } from "node:child_process";
-import { encodeMessage, LspFrameParser } from "./lsp-protocol.js";
+import { LspFrameParser } from "./lsp-protocol.js";
 import {
   asClientFailure,
   ClientFailure,
   ClientFailureKind
 } from "./client-failure.js";
+import { closeTransport, writeFramedMessage } from "./lsp-transport.js";
 
 const SHUTDOWN_TIMEOUT_MS = 1000;
 
@@ -190,17 +191,10 @@ export class ReciteLanguageClient extends EventEmitter {
   }
 
   writeMessage(message) {
-    const stdin = this.child?.stdin;
-    if (!stdin?.writable || this.transportClosed) return false;
-    try {
-      stdin.write(encodeMessage(message), (error) => {
-        if (error) this.handleFailure(ClientFailureKind.Transport, error);
-      });
-      return true;
-    } catch (error) {
-      this.handleFailure(ClientFailureKind.Transport, error);
-      return false;
-    }
+    if (this.transportClosed) return false;
+    return writeFramedMessage(
+      this.child?.stdin, message, (error) => this.handleFailure(ClientFailureKind.Transport, error)
+    );
   }
 
   async stop() {
@@ -261,11 +255,7 @@ export class ReciteLanguageClient extends EventEmitter {
   closeTransport() {
     if (this.transportClosed) return;
     this.transportClosed = true;
-    const child = this.child;
-    child?.stdin.destroy?.();
-    if (!this.exited && child && !child.killed) {
-      try { child.kill(); } catch { /* already gone */ }
-    }
+    closeTransport(this.child, this.child?.stdin, this.exited);
   }
 
   rejectPending(error) {

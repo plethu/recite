@@ -6,9 +6,9 @@ import { registerFeatureProviders } from "./providers.js";
 import { WatcherRegistry } from "./watchers.js";
 import { EditCommandRegistry } from "./edit-commands.js";
 import { asClientFailure, ClientFailureKind, isClientFailure } from "./client-failure.js";
+import { RestartPolicy } from "./restart-policy.js";
 
 const DIAGNOSTICS_METHOD = "textDocument/publishDiagnostics";
-const RESTART_DELAYS_MS = [100, 500, 1_000, 2_000, 5_000];
 const STABLE_RUN_MS = 10_000;
 
 export class ExtensionController {
@@ -19,11 +19,11 @@ export class ExtensionController {
     this.createClient = options.createClient ?? ((configuration, callbacks) =>
       new ReciteLanguageClient({ ...configuration, ...callbacks }));
     this.stableRunMs = options.stableRunMs ?? STABLE_RUN_MS;
+    this.restartPolicy = new RestartPolicy(options.restartDelaysMs);
     this.client = undefined;
     this.restartPromise = undefined;
     this.restartTimer = undefined;
     this.stableRunTimer = undefined;
-    this.restartAttempt = 0;
     this.stopping = false;
     this.disposed = false;
     this.subscriptions = [];
@@ -34,7 +34,7 @@ export class ExtensionController {
     this.watchers = new WatcherRegistry(this);
   }
 
-  async start() {
+  async start(phase = "initial") {
     this.ensureSubscriptions();
     if (this.disposed || this.api.workspace.isTrusted === false) return false;
     if (this.client && this.client.status !== "stopped") return true;
@@ -47,7 +47,9 @@ export class ExtensionController {
     this.client = client;
     client.on("notification", (method, params) => this.handleNotification(method, params));
     client.on("stderr", (message) => this.userInterface.serverStderr(message));
-    client.on("failure", (failure) => this.handleClientFailure(client, failure));
+    client.on("failure", (failure) => this.handleClientFailure(
+      client, failure, { notify: phase !== "retrying" }
+    ));
     client.on("exit", (event) => this.handleExit(client, event));
     try {
       await client.start(initializeParams(
@@ -116,19 +118,20 @@ export class ExtensionController {
 
   scheduleRestart() {
     if (this.restartTimer || this.disposed || this.stopping || this.api.workspace.isTrusted === false) return;
-    if (this.restartAttempt >= RESTART_DELAYS_MS.length) {
-      this.userInterface.restartExhausted();
+    const delay = this.restartPolicy.nextDelay();
+    if (delay === undefined) {
+      if (this.restartPolicy.reportExhausted()) this.userInterface.restartExhausted();
       return;
     }
-    const delay = RESTART_DELAYS_MS[this.restartAttempt++];
-    const delayDetail = `${delay} ms`;
-    this.userInterface.restartScheduled(delayDetail);
+    this.userInterface.restartScheduled(delay);
     this.restartTimer = setTimeout(() => {
       this.restartTimer = undefined;
       // A scheduled retry is already represented by the output-channel
       // schedule message. Keep transient failures quiet; the exhausted
       // budget below is the visible terminal notification.
-      void this.start().catch(() => this.scheduleRestart());
+      void this.start("retrying")
+        .then((started) => { if (!started) this.scheduleRestart(); })
+        .catch(() => this.scheduleRestart());
     }, delay);
     this.restartTimer.unref?.();
   }
@@ -137,7 +140,7 @@ export class ExtensionController {
     this.clearStableReset();
     const timer = setTimeout(() => {
       if (this.client === client && client.status === "running") {
-        this.restartAttempt = 0;
+        this.restartPolicy.reset();
         this.stableRunTimer = undefined;
       }
     }, this.stableRunMs);
@@ -200,9 +203,10 @@ export class ExtensionController {
     }
   }
 
-  handleClientFailure(client, failure) {
+  handleClientFailure(client, failure, { notify = true } = {}) {
     if (client && this.client !== client) return;
     if (client) client.failureReported = true;
+    if (!notify) return;
     switch (failure.kind) {
       case ClientFailureKind.Transport:
         this.userInterface.serverTransportFailure(failure.detail);

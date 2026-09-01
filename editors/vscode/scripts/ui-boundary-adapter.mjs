@@ -22,7 +22,7 @@ export const UI_METHOD_CONTRACTS = Object.freeze({
     host: "showErrorMessage"
   },
   serverExited: { kind: "visible-projection", id: "lsp-client-exited", host: "showErrorMessage" },
-  restartScheduled: { kind: "projection", id: "lsp-client-restart-scheduled", argument: "detail" },
+  restartScheduled: { kind: "projection", id: "lsp-client-restart-scheduled", argument: "milliseconds" },
   restartExhausted: {
     kind: "visible-projection", id: "lsp-client-restart-exhausted", host: "showErrorMessage"
   },

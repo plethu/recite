@@ -396,7 +396,7 @@ detail = "string"
 [arguments."lsp-client-error"]
 detail = "string"
 [arguments."lsp-client-restart-scheduled"]
-detail = "string"
+milliseconds = "integer"
 [arguments."lsp-client-transport-failed"]
 detail = "string"
 [arguments."lsp-client-lifecycle-failed"]

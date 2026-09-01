@@ -26,7 +26,9 @@ export function output(messages = []) {
     serverProtocolFailure() { this.appendLine("Recite language server protocol failed."); },
     serverLifecycleFailure(detail) { this.appendLine(`Recite language server lifecycle failed: ${detail}.`); },
     serverExited() { this.appendLine("Recite language server exited."); },
-    restartScheduled(detail) { this.appendLine(`Recite language server restart scheduled: ${detail}.`); },
+    restartScheduled(milliseconds) {
+      this.appendLine(`Recite language server restart scheduled in ${milliseconds} milliseconds.`);
+    },
     restartExhausted() { this.appendLine("Recite language server restart attempts exhausted."); },
     actionStale() { this.appendLine("Recite code action is no longer applicable because the document changed."); },
     actionClosed() { this.appendLine("Recite code action is no longer applicable because the document closed."); },

@@ -82,6 +82,7 @@ if [[ -z "$node_bin" ]]; then
 fi
 
 "$node_bin" "$plugin_root/scripts/message-projections.mjs" --check
+"$node_bin" --test "$plugin_root/test/message-projections.test.mjs"
 echo "Neovim UI message projection checks passed"
 
 if (( static_only )); then
