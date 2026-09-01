@@ -41,14 +41,24 @@ def workspace_files(ctx: Context) -> list[Path]:
     for root, directories, filenames in os.walk(ctx.repo_root, topdown=True, followlinks=False):
         root_path = Path(root)
         relative_root = root_path.relative_to(ctx.repo_root)
-        directories[:] = [
-            directory
-            for directory in directories
-            if not _ignored(ctx, relative_root / directory)
-        ]
+        kept_directories = []
+        for directory in directories:
+            path = root_path / directory
+            relative = relative_root / directory
+            if _ignored(ctx, relative):
+                continue
+            if path.is_symlink():
+                require_no_symlink_components(ctx, path, "workspace digest input")
+                continue
+            kept_directories.append(directory)
+        directories[:] = kept_directories
         for filename in filenames:
             path = root_path / filename
-            if _ignored(ctx, path.relative_to(ctx.repo_root)) or path.is_symlink():
+            relative = path.relative_to(ctx.repo_root)
+            if _ignored(ctx, relative):
+                continue
+            if path.is_symlink():
+                require_no_symlink_components(ctx, path, "workspace digest input")
                 continue
             if path.is_file() and _safe_input(ctx, path, "workspace digest input"):
                 inputs.append(path)
@@ -56,7 +66,12 @@ def workspace_files(ctx: Context) -> list[Path]:
 
 
 def _ignored(ctx: Context, relative_path: Path) -> bool:
-    if any(part in {".git", "node_modules"} for part in relative_path.parts):
+    # Agent instructions are repository metadata, not compiler-visible inputs.
+    if relative_path == Path("CLAUDE.md") or relative_path.parts[:1] == (".claude",):
+        return True
+    if any(part in {".git", "node_modules", "__pycache__"} for part in relative_path.parts):
+        return True
+    if relative_path.suffix in {".pyc", ".pyo"}:
         return True
     target_relative = _target_relative(ctx)
     return bool(target_relative and (relative_path == target_relative or target_relative in relative_path.parents))

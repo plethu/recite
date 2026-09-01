@@ -69,6 +69,26 @@ mutate_fixture() {
     "$fixture_repo/fixtures/editor-parity/contract.json" "$mutation"
 }
 
+expect_target_failure() {
+  local target_dir="$1"
+  local output result
+  set +e
+  output="$(CARGO_TARGET_DIR="$target_dir" run_checker 2>&1)"
+  result=$?
+  set -e
+  if (( result == 0 )) || [[ "$output" != *"CARGO_TARGET_DIR inside the repository must be exactly"* ]]; then
+    echo "editor parity target boundary fixture missed: $target_dir" >&2
+    printf '%s\n' "$output" >&2
+    exit 1
+  fi
+  if [[ "$output" == *"Traceback"* || "$output" == *"AttributeError"* || "$output" == *"TypeError"* ]]; then
+    echo "editor parity target boundary fixture raised an uncontrolled Python exception" >&2
+    printf '%s\n' "$output" >&2
+    exit 1
+  fi
+  echo "editor parity target boundary fixture rejected: $target_dir"
+}
+
 assert_portable_lock_source() {
   python3 - "$repo_root/scripts/editor_parity/portable_lock.py" <<'PY'
 import ast
@@ -177,6 +197,35 @@ run_checker
 echo "editor parity baseline fixture passed"
 assert_no_hashed_targets
 
+CARGO_TARGET_DIR="$test_root/external-target" run_checker
+echo "editor parity external target fixture passed"
+expect_target_failure "$fixture_repo"
+expect_target_failure "$fixture_repo/crates"
+expect_target_failure "$fixture_repo/target/custom"
+
+python3 - "$fixture_repo" <<'PY'
+import sys
+from pathlib import Path
+
+repo = Path(sys.argv[1])
+sys.path.insert(0, str(repo / "scripts"))
+from editor_parity.content_digest import selected_target_digest, workspace_files
+from editor_parity.model import Context
+
+before = selected_target_digest(Context(repo, [], repo / "target"), "recite-lsp")
+bytecode = repo / "scripts/editor_parity/__pycache__"
+bytecode.mkdir(parents=True, exist_ok=True)
+(bytecode / "checker.cpython-314.pyc").write_bytes(b"bytecode")
+(repo / "checker-output.pyo").write_bytes(b"bytecode")
+after = selected_target_digest(Context(repo, [], repo / "target"), "recite-lsp")
+paths = [path.relative_to(repo).as_posix() for path in workspace_files(Context(repo, [], repo / "target"))]
+if before != after:
+    raise SystemExit("Python bytecode changed the parity digest")
+if any("__pycache__" in path or path.endswith((".pyc", ".pyo")) for path in paths):
+    raise SystemExit("Python bytecode entered parity digest inputs")
+print("editor parity bytecode exclusion fixture passed")
+PY
+
 mutate_fixture module-shapes
 set +e
 module_shapes_output="$(run_checker 2>&1)"
@@ -224,6 +273,7 @@ expect_failure() {
     crates/recite-compiler/tests/authoring_catalog_summary.rs \
     crates/recite-lsp/tests/module_tests.inc crates/recite-lsp/build.rs \
     shared-build.inc shared_workspace.rs
+  rm -rf "$fixture_repo/digest-inputs" "$fixture_repo/../outside-input"
 }
 
 expect_failure traversal "path escapes the repository"
@@ -241,6 +291,10 @@ expect_failure block-commented-include-test "evidence command does not name an e
 expect_failure build-input "cargo test-target compilation failed"
 expect_failure shared-build-input "cargo test-target compilation failed"
 expect_failure shared-workspace-input "cargo test-target compilation failed"
+expect_failure contained-file-link "workspace digest input must not be a symlink"
+expect_failure escaping-file-link "workspace digest input must not be a symlink"
+expect_failure contained-directory-link "workspace digest input must not be a symlink"
+expect_failure symlink-cycle "workspace digest input must not be a symlink"
 expect_failure evidence-traversal "evidence target escapes the repository"
 expect_failure orphan-utf16 "orphaned=['orphan-utf16-crlf-non-bmp']"
 expect_failure disconnected-module "evidence command does not name an existing runnable test discovered by Cargo"

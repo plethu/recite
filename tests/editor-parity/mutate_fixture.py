@@ -93,6 +93,20 @@ def main() -> int:
         if original not in source:
             raise SystemExit("shared workspace input was not present")
         restore_mtime(root, source.replace(original, f"/* {original} */", 1))
+    elif mutation == "contained-file-link":
+        create_digest_symlink_fixture(fixture_repo, "contained-file-link", False)
+    elif mutation == "escaping-file-link":
+        create_digest_symlink_fixture(fixture_repo, "escaping-file-link", True)
+    elif mutation == "contained-directory-link":
+        create_digest_symlink_fixture(fixture_repo, "contained-directory-link", False, directory=True)
+    elif mutation == "symlink-cycle":
+        digest_root = fixture_repo / "digest-inputs"
+        first = digest_root / "cycle-a"
+        second = digest_root / "cycle-b"
+        first.mkdir(parents=True)
+        second.mkdir()
+        (first / "to-b").symlink_to(second)
+        (second / "to-a").symlink_to(first)
     elif mutation == "module-shapes":
         set_module_shapes_command(contract)
     elif mutation == "evidence-traversal":
@@ -207,6 +221,20 @@ def set_module_shapes_command(contract: dict) -> None:
     record(contract, "capabilities", "lsp.completion")["expected_evidence"]["commands"][0] = (
         "cargo test --locked -p recite-lsp --test module_shapes inline::nested::nested_test"
     )
+
+
+def create_digest_symlink_fixture(fixture_repo: Path, name: str, escaping: bool, directory: bool = False) -> None:
+    digest_root = fixture_repo / "digest-inputs"
+    digest_root.mkdir(exist_ok=True)
+    if directory:
+        target = digest_root / "contained-directory"
+        target.mkdir()
+        target.joinpath("input.txt").write_text("input\n", encoding="utf-8")
+    else:
+        target = digest_root / "contained-input.txt"
+        target.write_text("input\n", encoding="utf-8")
+    link = digest_root / name
+    link.symlink_to(fixture_repo.parent / "outside-input" if escaping else target)
 
 
 if __name__ == "__main__":

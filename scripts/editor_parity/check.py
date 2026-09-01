@@ -16,10 +16,26 @@ def main(argv: list[str]) -> int:
     if len(argv) != 4:
         print("usage: check.py REPO_ROOT FIXTURE DOCUMENT", file=sys.stderr)
         return 2
-    repo_root, fixture_path, document_path = map(Path, argv[1:])
+    repo_root = Path(argv[1]).resolve()
+    fixture_path = Path(argv[2])
+    document_path = Path(argv[3])
+    if not fixture_path.is_absolute():
+        fixture_path = repo_root / fixture_path
+    if not document_path.is_absolute():
+        document_path = repo_root / document_path
     cargo_target_dir = Path(os.environ.get("CARGO_TARGET_DIR", str(repo_root / "target")))
     if not cargo_target_dir.is_absolute():
         cargo_target_dir = repo_root / cargo_target_dir
+    cargo_target_dir = Path(os.path.abspath(cargo_target_dir))
+    canonical_target = repo_root / "target"
+    inside_repo = cargo_target_dir == repo_root or repo_root in cargo_target_dir.parents
+    if inside_repo and (cargo_target_dir != canonical_target or cargo_target_dir.is_symlink()):
+        print(
+            "editor parity contract: CARGO_TARGET_DIR inside the repository "
+            f"must be exactly {canonical_target}: {cargo_target_dir}",
+            file=sys.stderr,
+        )
+        return 1
     errors: list[str] = []
     ctx = Context(repo_root, errors, cargo_target_dir)
     lock_path = cargo_target_dir / "editor-parity.lock"
