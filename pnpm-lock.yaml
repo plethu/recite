@@ -28,6 +28,8 @@ importers:
         specifier: 5.9.3
         version: 5.9.3
 
+  editors/vscode: {}
+
 packages:
 
   '@astrojs/check@0.9.5':

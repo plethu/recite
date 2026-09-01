@@ -1,0 +1,85 @@
+{
+  "name": "recite-vscode",
+  "displayName": "Recite",
+  "description": "Language support for the Recite dialogue language.",
+  "version": "0.1.0",
+  "publisher": "plethu",
+  "type": "module",
+  "license": "MIT OR Apache-2.0",
+  "homepage": "https://github.com/plethu/recite",
+  "repository": {
+    "type": "git",
+    "url": "https://github.com/plethu/recite.git",
+    "directory": "editors/vscode"
+  },
+  "bugs": {
+    "url": "https://github.com/plethu/recite/issues"
+  },
+  "engines": {
+    "vscode": "^1.89.0"
+  },
+  "categories": [
+    "Programming Languages"
+  ],
+  "keywords": [
+    "recite",
+    "dialogue",
+    "language-server",
+    "lsp"
+  ],
+  "main": "./dist/extension.js",
+  "activationEvents": [
+    "onLanguage:recite"
+  ],
+  "files": [
+    "dist/**",
+    "language-configuration.json",
+    "package.json",
+    "package.nls.json",
+    "README.md"
+  ],
+  "contributes": {
+    "languages": [
+      {
+        "id": "recite",
+        "aliases": [
+          "Recite",
+          "recite"
+        ],
+        "extensions": [
+          ".recite"
+        ],
+        "configuration": "./language-configuration.json"
+      }
+    ],
+    "configuration": {
+      "title": "Recite",
+      "properties": {
+        "recite.lsp.path": {
+          "type": "string",
+          "default": "recite-lsp",
+          "description": "%configuration.lsp.path.description%"
+        },
+        "recite.lsp.args": {
+          "type": "array",
+          "items": {
+            "type": "string"
+          },
+          "default": [],
+          "description": "%configuration.lsp.args.description%"
+        },
+        "recite.lsp.projectRoot": {
+          "type": "string",
+          "default": "",
+          "description": "%configuration.lsp.projectRoot.description%"
+        }
+      }
+    }
+  },
+  "scripts": {
+    "build": "node scripts/build.mjs",
+    "check": "node scripts/build.mjs && node scripts/check-package.mjs && node --test test/*.test.mjs",
+    "package": "node scripts/package.mjs",
+    "package:check": "node scripts/package.mjs --check"
+  }
+}
