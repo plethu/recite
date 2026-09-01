@@ -94,8 +94,11 @@ operation is left unapplied. Re-running `setup` with changed LSP-owned options
 stops and reattaches Recite clients while retaining caller-supplied
 `capabilities`, `init_options`, `settings`, `on_init`, and `on_exit`.
 Unexpected exits are retried for still-open Recite buffers with a bounded
-backoff; intentional
-`require("recite").stop(client_id)` calls are not restarted.
+backoff. A client must remain alive for the stability window before its crash
+budget resets; changing the LSP configuration cancels queued recovery, and
+`autostart = false` cannot resurrect a client after reconfiguration. Exhausted
+recovery is reported through the shared Fluent UI resource.
+Intentional `require("recite").stop(client_id)` calls are not restarted.
 Caller callback failures are reported through `vim.notify` without blocking
 lifecycle cleanup or crash recovery.
 

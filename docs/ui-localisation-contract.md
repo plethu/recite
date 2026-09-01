@@ -2,14 +2,18 @@
 
 Recite-owned interface text has one Fluent boundary, implemented by the
 `recite-ui` crate. The human-authored `en-US` resource and the typed `MsgId`
-registry are the source of truth; the CLI/TUI and LSP are the shipped clients.
-VS Code, VSCodium, Neovim, Zed, and the native GUI are named conformance
+registry are the source of truth; the CLI/TUI, LSP, and Neovim are the shipped
+clients. Neovim's small host-facing health and lifecycle
+surface is a generated, read-only projection of the same English Fluent
+resources. VS Code, VSCodium, Zed, and the native GUI are named conformance
 clients, not claims that those clients ship in this milestone.
 
-CLI, TUI, and LSP adoption is covered by their catalog call sites and the
-external contract tests. The contract does not yet generate a whole-repository
-call-site inventory; the bounded evidence is the typed registry, explicit
-client ownership, and focused shipped-client tests.
+CLI, TUI, LSP, and Neovim adoption is covered by their catalog call sites and
+the external contract tests. The Neovim projection is declared in the
+canonical inventory, generated from `en-US.ftl`, and checked for stale output
+and undeclared call-site IDs. The contract does not yet generate a
+whole-repository call-site inventory; the bounded evidence is the typed
+registry, explicit client ownership, and focused shipped-client tests.
 
 `UiArgs` is a deterministic `BTreeMap<String, UiArg>`. `UiArg` is format
 neutral and supports string, integer, float, and boolean values. The
