@@ -253,9 +253,10 @@ module.exports = grammar({
       repeat(seq($.hspace, $.expression_part)),
     )),
 
-    // Statement markers at the beginning of an indented line are always
-    // structural. This mirrors the production parser's recovery boundary and
-    // leaves marker-leading prose for an explicit future syntax decision.
+    // Statement markers at the beginning of an indented line are structural;
+    // an ordinary hyphen is prose, while `->` remains a divert marker. This
+    // mirrors the production parser's recovery boundary without making
+    // semantic claims about the prose content.
     prose_text: ($) => seq(
       choice($.markup_tag, $.interpolation, $.prose_start),
       repeat(choice($.markup_tag, $.interpolation, $.prose_content)),
@@ -336,7 +337,7 @@ module.exports = grammar({
     ),
 
     comment_text: ($) => /[^\r\n]*/,
-    prose_start: ($) => /[^\r\n{}\[\]?#>!:|\-]+/,
+    prose_start: ($) => /[^\r\n{}\[\]?#>!:|]+/,
     prose_content: ($) => /[^\r\n{}\[\]]+/,
     indent: ($) => /[ \t]+/,
     hspace: ($) => /[ \t]+/,

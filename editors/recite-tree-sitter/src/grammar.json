@@ -1748,7 +1748,7 @@
     },
     "prose_start": {
       "type": "PATTERN",
-      "value": "[^\\r\\n{}\\[\\]?#>!:|\\-]+"
+      "value": "[^\\r\\n{}\\[\\]?#>!:|]+"
     },
     "prose_content": {
       "type": "PATTERN",

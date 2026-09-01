@@ -197,6 +197,7 @@ exact_captures=(
   ' - function.call, start: (7, 14), end: (7, 22), text: `play_sfx`'
   ' - number, start: (7, 32), end: (7, 37), text: `-4.25`'
   ' - constant.builtin, start: (9, 5), end: (9, 8), text: `END`'
+  ' - string.special, start: (10, 2), end: (10, 21), text: `- Hyphen-led prose.`'
 )
 for expectation in "${exact_captures[@]}"; do
   if ! grep -Fq "$expectation" "$query_output"; then

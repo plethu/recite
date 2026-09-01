@@ -117,8 +117,7 @@ Draft and malformed IDs remain recoverable
   (prose_line
     (indent)
     (prose_text
-      (prose_start)
-      (prose_content))
+      (prose_start))
     (newline))
   (line_statement
     (line_marker)
