@@ -155,8 +155,8 @@ public contracts and tests exercise catalog and fallback behavior.
 **Status:** Complete as of 2026-09-01. PR #191 merged as `636fa1b`, closing
 #187–#190 and delivering the shared authoring kernel and structured preview
 boundary. Together with #167, #168, and #185, the milestone-19 owner group is
-complete with eight closed issues; GitHub milestone 19 remains open with zero
-open issues because this follow-up does not mutate tracker state.
+complete with eight closed milestone items; GitHub milestone 19 remains open
+with zero open issues because this follow-up does not mutate tracker state.
 
 **Outcome:** CLI, LSP, text clients, GUI, and future tooling call the same
 host-neutral authoring operations.
@@ -409,9 +409,9 @@ remain authoritative if the tracker is split again.
 
 | Outcome | Current GitHub owner group (open count) | GitHub milestone |
 | --- | --- | --- |
-| Product Foundation and Maintainability | Complete (0 open; 8 closed; delivered by PR #174) | 17 |
-| Language, schema, and localisation readiness | Complete (0 open; 12 closed; delivered by PR #183 and correction PR #184) | 18 |
-| Shared authoring kernel and preview | Complete (0 open; 8 closed; delivered by PR #191; #167, #168, and #185 complete) | 19 |
+| Product Foundation and Maintainability | Complete (0 open; 8 closed milestone items; delivered by PR #174) | 17 |
+| Language, schema, and localisation readiness | Complete (0 open; 12 closed milestone items; delivered by PR #183 and correction PR #184) | 18 |
+| Shared authoring kernel and preview | Complete (0 open; 8 closed milestone items; delivered by PR #191; #167, #168, and #185 complete) | 19 |
 | Editor integration parity | [#169 editor trio parity](https://github.com/plethu/recite/issues/169), [#192 Zed integration](https://github.com/plethu/recite/issues/192) (7 open) | 20 |
 | Native GUI strategy and accessibility proof | [#54 GUI strategy](https://github.com/plethu/recite/issues/54), [#123 accessibility requirements](https://github.com/plethu/recite/issues/123) (2 open) | 21 |
 | GUI workbench | [#170 GUI workbench](https://github.com/plethu/recite/issues/170) (1 open) | 22 |
@@ -420,7 +420,7 @@ remain authoritative if the tracker is split again.
 | Serious v1 release | #77–#81, #109 (6 open) | 25 |
 | Post-v1 / no milestone (non-exhaustive tracker group) | #74, #119, #121, #126 (4 open); generated host-language bindings and other deferred directions still need future ownership | — |
 
-M17 is complete with 0 open and 8 closed issues. PR #174 delivered the
+M17 is complete with 0 open and 8 closed milestone items. PR #174 delivered the
 foundation outcome; trusted-policy activation remains a post-merge operational
 follow-up. Issues #59 and #61 are closed and superseded, so they are omitted.
 
