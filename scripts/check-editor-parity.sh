@@ -34,11 +34,14 @@ document="$repo_root/docs/editor-parity-contract.md"
 [[ -f "$document" ]] || { echo "missing editor parity contract: $document" >&2; exit 2; }
 
 python3 - "$repo_root" "$fixture" "$document" <<'PY'
-import json
+import atexit
+import fcntl
 import hashlib
+import json
 import os
 import re
 import shlex
+import shutil
 import subprocess
 import sys
 from pathlib import Path
@@ -132,7 +135,36 @@ def source_fingerprint():
 cargo_target_base = Path(os.environ.get("CARGO_TARGET_DIR", str(repo_root / "target")))
 if not cargo_target_base.is_absolute():
     cargo_target_base = repo_root / cargo_target_base
-cargo_target_dir = cargo_target_base / "editor-parity" / source_fingerprint()
+editor_parity_target_root = cargo_target_base / "editor-parity"
+editor_parity_target_root.mkdir(parents=True, exist_ok=True)
+editor_parity_lock = (editor_parity_target_root / ".lock").open("a+")
+fcntl.flock(editor_parity_lock.fileno(), fcntl.LOCK_EX)
+
+def release_editor_parity_lock():
+    fcntl.flock(editor_parity_lock.fileno(), fcntl.LOCK_UN)
+    editor_parity_lock.close()
+
+atexit.register(release_editor_parity_lock)
+
+source_hash = source_fingerprint()
+cargo_target_dir = editor_parity_target_root / source_hash
+# The lock remains held through every Cargo invocation below. That lets a
+# second checker prune this cache only after the first checker has finished,
+# while the hash-name restriction keeps unrelated target output untouched.
+for stale_target in editor_parity_target_root.iterdir():
+    if stale_target == cargo_target_dir or stale_target.name == ".lock":
+        continue
+    if not re.fullmatch(r"[0-9a-f]{64}", stale_target.name):
+        continue
+    if stale_target.is_symlink() or not stale_target.is_dir():
+        continue
+    try:
+        shutil.rmtree(stale_target)
+    except OSError as error:
+        require(
+            False,
+            f"unable to prune stale editor parity Cargo target {stale_target.name}: {error}",
+        )
 
 def symlink_component(path):
     try:

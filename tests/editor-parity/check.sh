@@ -34,6 +34,20 @@ git -C "$fixture_repo" commit -q -m initial
   cd "$fixture_repo"
   cargo generate-lockfile --quiet
 )
+parity_cache_root="$fixture_repo/target/editor-parity"
+stale_cache="$parity_cache_root/aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa"
+mkdir -p "$stale_cache/sentinel"
+
+assert_single_parity_cache() {
+  local cache_count
+  cache_count="$(find "$parity_cache_root" -mindepth 1 -maxdepth 1 -type d | wc -l | tr -d ' ')"
+  if [[ "$cache_count" != "1" || -e "$stale_cache/sentinel" ]]; then
+    echo "editor parity cache retention fixture failed: expected one live cache and no stale sentinel" >&2
+    find "$parity_cache_root" -mindepth 1 -maxdepth 2 -print >&2
+    exit 1
+  fi
+  echo "editor parity cache retention fixture passed"
+}
 
 run_checker() {
   (cd "$fixture_repo" && scripts/check-editor-parity.sh)
@@ -41,6 +55,7 @@ run_checker() {
 
 run_checker
 echo "editor parity baseline fixture passed"
+assert_single_parity_cache
 
 mutate_fixture() {
   local mutation="$1"
@@ -140,7 +155,8 @@ expect_failure() {
     exit 1
   fi
   echo "editor parity hostile fixture rejected: $mutation"
-  git -C "$fixture_repo" checkout -q -- fixtures/editor-parity/contract.json
+  git -C "$fixture_repo" checkout -q -- fixtures/editor-parity/contract.json \
+    crates/recite-compiler/tests/authoring_build.rs
 }
 
 expect_failure traversal "path escapes the repository"
@@ -153,6 +169,7 @@ expect_failure malformed "evidence command must name a cargo integration test an
 expect_failure stale-evidence "evidence command does not name an existing runnable test"
 expect_failure stale-module-evidence "evidence command does not name an existing runnable test"
 expect_failure disconnected-module "evidence command does not name an existing runnable test discovered by Cargo"
+assert_single_parity_cache
 expect_failure reciprocity "artifact vscode-vsix client list must exactly reciprocate"
 expect_failure topology "VS Code and VSCodium must share one VSIX artifact topology"
 expect_failure symlink-artifact-component "artifact vscode-vsix path must not traverse symlink component"
