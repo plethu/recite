@@ -152,7 +152,11 @@ public contracts and tests exercise catalog and fallback behavior.
 
 ### 3. Shared Authoring Kernel and Preview
 
-**Status:** Active next outcome.
+**Status:** Complete as of 2026-09-01. PR #191 merged as `636fa1b`, closing
+#187–#190 and delivering the shared authoring kernel and structured preview
+boundary. Together with #167, #168, and #185, the milestone-19 owner group is
+complete with eight closed milestone items; GitHub milestone 19 remains open
+with zero open issues because this follow-up does not mutate tracker state.
 
 **Outcome:** CLI, LSP, text clients, GUI, and future tooling call the same
 host-neutral authoring operations.
@@ -405,10 +409,10 @@ remain authoritative if the tracker is split again.
 
 | Outcome | Current GitHub owner group (open count) | GitHub milestone |
 | --- | --- | --- |
-| Product Foundation and Maintainability | Complete (0 open; 8 closed; delivered by PR #174) | 17 |
-| Language, schema, and localisation readiness | Complete (0 open; 11 closed; delivered by PR #183 and correction PR #184) | 18 |
-| Shared authoring kernel and preview | [#187 source edits](https://github.com/plethu/recite/issues/187), [#188 schema and producer actions](https://github.com/plethu/recite/issues/188), [#189 watch and freshness](https://github.com/plethu/recite/issues/189), [#190 preview driver](https://github.com/plethu/recite/issues/190) (4 open; #167, #168, and #185 complete) | 19 |
-| Editor integration parity | [#169 editor trio parity](https://github.com/plethu/recite/issues/169) (6 open) | 20 |
+| Product Foundation and Maintainability | Complete (0 open; 8 closed milestone items; delivered by PR #174) | 17 |
+| Language, schema, and localisation readiness | Complete (0 open; 12 closed milestone items; delivered by PR #183 and correction PR #184) | 18 |
+| Shared authoring kernel and preview | Complete (0 open; 8 closed milestone items; delivered by PR #191; #167, #168, and #185 complete) | 19 |
+| Editor integration parity | [#169 editor trio parity](https://github.com/plethu/recite/issues/169), [#192 Zed integration](https://github.com/plethu/recite/issues/192) (7 open) | 20 |
 | Native GUI strategy and accessibility proof | [#54 GUI strategy](https://github.com/plethu/recite/issues/54), [#123 accessibility requirements](https://github.com/plethu/recite/issues/123) (2 open) | 21 |
 | GUI workbench | [#170 GUI workbench](https://github.com/plethu/recite/issues/170) (1 open) | 22 |
 | Engine companions | #49, #83–#86, #132–#134 (8 open) | 23 |
@@ -416,9 +420,14 @@ remain authoritative if the tracker is split again.
 | Serious v1 release | #77–#81, #109 (6 open) | 25 |
 | Post-v1 / no milestone (non-exhaustive tracker group) | #74, #119, #121, #126 (4 open); generated host-language bindings and other deferred directions still need future ownership | — |
 
-M17 is complete with 0 open and 8 closed issues. PR #174 delivered the
+M17 is complete with 0 open and 8 closed milestone items. PR #174 delivered the
 foundation outcome; trusted-policy activation remains a post-merge operational
 follow-up. Issues #59 and #61 are closed and superseded, so they are omitted.
+
+M19 is complete as of 2026-09-01: PR #191 delivered the shared authoring kernel
+and structured preview outcome and closed #187–#190. GitHub milestone 19 remains
+open with 0 open issues; this roadmap records the outcome without changing the
+tracker.
 
 The post-v1 row is deliberately non-exhaustive: it records current open issues
 without a milestone, not every deferred capability. Generated host-language
@@ -430,14 +439,14 @@ the v1 compatibility guidance under #104, not by a Clyde importer or runtime.
 ## Current work classification
 
 The language, schema, and localisation readiness outcome is complete as of
-2026-08-29, delivered by PR #183 and correction PR #184. The shared
-configuration, discovery, and initial authoring-kernel seam are also complete
-under #167, #168, and #185. The active milestone-19 work is now the
-source-preserving edit contract (#187), schema and producer actions (#188),
-typed watch and freshness state (#189), and shared preview driver (#190). The
-repository already contains substantial language, runtime, CLI, LSP,
-benchmark, FFI, Godot, and Unity work. That work should be evaluated against
-the milestone exit gates rather than treated as automatically complete. The
-largest remaining structural gaps are the shared authoring operations around
-the kernel, first-class editor parity, the native GUI/accessibility decision,
-the GUI workbench, and a Bevy companion with a real distribution path.
+2026-08-29, delivered by PR #183 and correction PR #184. The shared authoring
+kernel and preview outcome is complete as of 2026-09-01, delivered by PR #191
+at `636fa1b`; #167, #168, and #185 established the preceding configuration,
+discovery, and kernel seam. The next active outcome is Editor Integration
+Parity (milestone 20), currently represented by #169 and #192 within seven
+open milestone issues. The repository already contains substantial language,
+runtime, CLI, LSP, benchmark, FFI, Godot, and Unity work. That work should be
+evaluated against the milestone exit gates rather than treated as automatically
+complete. The largest remaining structural gaps are first-class editor parity,
+the native GUI/accessibility decision, the GUI workbench, and the Godot, Unity,
+and Bevy companion and distribution paths.
