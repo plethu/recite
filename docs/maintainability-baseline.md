@@ -211,7 +211,7 @@ production suppressions must carry a narrow scope and rationale.
 | `.agents/skills/recite-github-pm/scripts/check-pr-review-gates.sh` | 470 | tooling | agent-workflow | exception | #197: split review-gate orchestration into focused policy helpers |
 | `editors/recite-tree-sitter/grammar.js` | 345 | production | tree-sitter/grammar | cohesive | Grammar source owns syntax and recovery rules alongside the named node declarations |
 | `editors/vscode/src/controller.js` | 257 | production | vscode/controller | review | #51: controller retains lifecycle coordination while restart policy and transport boundaries are extracted |
-| `editors/vscode/src/lsp-client.js` | 278 | production | vscode/lsp-client | review | #51: client retains protocol request lifecycle while framed transport owns writes and teardown |
+| `editors/vscode/src/lsp-client.js` | 279 | production | vscode/lsp-client | review | #51: client retains protocol request lifecycle while framed transport owns writes and teardown |
 | `editors/vscode/scripts/message-projections.mjs` | 260 | tooling | vscode/projections | review | #51: inventory parsing and projection installation remain one checked update boundary after Fluent parsing extraction |
 | `editors/vscode/scripts/ui-boundary-adapter.mjs` | 251 | tooling | vscode/checks | review | #51: semantic UI adapter contract remains one cohesive structural boundary |
 | `editors/vscode/scripts/ui-boundary-calls.mjs` | 347 | tooling | vscode/checks | review | UI boundary call inventory remains a single generated-boundary checker |
