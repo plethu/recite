@@ -132,7 +132,7 @@ production suppressions must carry a narrow scope and rationale.
 | `crates/recite-runtime/src/traversal/availability.rs` | 370 | production | runtime/traversal | cohesive | Deterministic availability traversal |
 | `crates/recite-runtime/src/traversal/interpolation.rs` | 433 | production | runtime/traversal | exception | #179/#180/#191: typed interpolation and plural localisation retain the provider arm-boundary handoff |
 | `crates/recite-runtime/src/preview/driver.rs` | 251 | production | runtime/preview | review | #191: preview event projection carries validated plural-arm evidence into snapshot state |
-| `crates/recite-runtime/src/preview/snapshot_validation.rs` | 261 | production | runtime/preview | review | #191: snapshot prompt validation keeps plural provenance and arm bounds mutually consistent |
+| `crates/recite-runtime/src/preview/snapshot_validation.rs` | 262 | production | runtime/preview | review | #191: snapshot prompt validation keeps plural provenance and arm bounds mutually consistent |
 | `crates/recite-runtime/tests/preview_snapshot.rs` | 399 | test/support | runtime/preview | review | #191: hostile preview snapshot and plural-arm wire coverage |
 | `crates/recite-core/src/schema/manifest/raw.rs` | 391 | production | core/schema | cohesive | Lossless raw manifest model |
 | `crates/recite-compiler/src/compile/builder/rows.rs` | 353 | production | compiler | cohesive | Compiled row construction |
