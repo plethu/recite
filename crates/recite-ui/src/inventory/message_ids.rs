@@ -86,6 +86,7 @@ message_ids! {
     LspCodeActionAddEffect, LspCodeActionSchemaAction, LspCodeActionSchemaDisabled, LspWarningUiConfig,
     LspClientStartFailed, LspClientError, LspClientExited, LspClientRestartScheduled,
     LspClientRestartExhausted,
+    LspClientTransportFailed, LspClientProtocolFailed, LspClientLifecycleFailed,
     LspClientDisplayName, LspClientDescription, LspClientUntrustedWorkspacesDescription,
     LspClientConfigurationTitle, LspClientConfigurationPathDescription,
     LspClientConfigurationArgsDescription, LspClientConfigurationProjectRootDescription,

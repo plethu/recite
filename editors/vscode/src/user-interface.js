@@ -7,20 +7,28 @@ export function createUserInterface(api) {
     clientMessage(api, "lsp-client-display-name")
   );
   return Object.freeze({
-    serverStartFailed(detail) {
-      output.appendLine(clientMessage(api, "lsp-client-start-failed", detail));
+    serverTransportFailure(detail) {
+      output.appendLine(clientMessage(api, "lsp-client-transport-failed", detail));
+      api.window.showErrorMessage(clientMessage(api, "lsp-client-transport-failed", detail));
     },
-    serverError(detail) {
-      output.appendLine(clientMessage(api, "lsp-client-error", detail));
+    serverProtocolFailure() {
+      output.appendLine(clientMessage(api, "lsp-client-protocol-failed"));
+      api.window.showErrorMessage(clientMessage(api, "lsp-client-protocol-failed"));
     },
-    serverExited(detail) {
-      output.appendLine(clientMessage(api, "lsp-client-exited", detail));
+    serverLifecycleFailure(detail) {
+      output.appendLine(clientMessage(api, "lsp-client-lifecycle-failed", detail));
+      api.window.showErrorMessage(clientMessage(api, "lsp-client-lifecycle-failed", detail));
+    },
+    serverExited() {
+      output.appendLine(clientMessage(api, "lsp-client-exited"));
+      api.window.showErrorMessage(clientMessage(api, "lsp-client-exited"));
     },
     restartScheduled(detail) {
       output.appendLine(clientMessage(api, "lsp-client-restart-scheduled", detail));
     },
     restartExhausted() {
       output.appendLine(clientMessage(api, "lsp-client-restart-exhausted"));
+      api.window.showErrorMessage(clientMessage(api, "lsp-client-restart-exhausted"));
     },
     actionStale() {
       output.appendLine(clientMessage(api, "lsp-client-action-stale"));
@@ -61,8 +69,20 @@ export function createUserInterface(api) {
     serverStderr(message) {
       output.append(message);
     },
-    serverNotification(message) {
+    serverLogMessage(message) {
       output.appendLine(message);
+    },
+    serverErrorMessage(message) {
+      output.appendLine(message);
+      api.window.showErrorMessage(message);
+    },
+    serverWarningMessage(message) {
+      output.appendLine(message);
+      api.window.showWarningMessage(message);
+    },
+    serverInfoMessage(message) {
+      output.appendLine(message);
+      api.window.showInformationMessage(message);
     },
     dispose() {
       output.dispose();

@@ -395,9 +395,11 @@ detail = "string"
 detail = "string"
 [arguments."lsp-client-error"]
 detail = "string"
-[arguments."lsp-client-exited"]
-detail = "string"
 [arguments."lsp-client-restart-scheduled"]
+detail = "string"
+[arguments."lsp-client-transport-failed"]
+detail = "string"
+[arguments."lsp-client-lifecycle-failed"]
 detail = "string"
 [arguments."lsp-completion-projection-query-function"]
 returns = "string"

@@ -1,6 +1,11 @@
 import { EventEmitter } from "node:events";
 import { spawn } from "node:child_process";
 import { encodeMessage, LspFrameParser } from "./lsp-protocol.js";
+import {
+  asClientFailure,
+  ClientFailure,
+  ClientFailureKind
+} from "./client-failure.js";
 
 const SHUTDOWN_TIMEOUT_MS = 1000;
 
@@ -19,6 +24,8 @@ export class ReciteLanguageClient extends EventEmitter {
     this.nextRequestId = 1;
     this.pending = new Map();
     this.queuedNotifications = [];
+    this.transportClosed = false;
+    this.failure = undefined;
     this.parser = new LspFrameParser((message) => this.receive(message));
   }
 
@@ -41,16 +48,29 @@ export class ReciteLanguageClient extends EventEmitter {
       });
     } catch (error) {
       this.state = "stopped";
-      throw error;
+      throw asClientFailure(ClientFailureKind.Lifecycle, error);
     }
     this.exited = false;
+    this.transportClosed = false;
+    this.failure = undefined;
     this.child.stdout.on("data", (chunk) => this.read(chunk));
     this.child.stderr.on("data", (chunk) => this.emit("stderr", chunk.toString("utf8")));
-    this.child.on("error", (error) => this.fail(error));
+    // A Writable emits EPIPE asynchronously. Attach this before the first
+    // initialize write so a child that exits immediately cannot surface an
+    // uncaught exception or leave a pending request hanging.
+    this.child.stdin.on("error", (error) => this.handleFailure(
+      ClientFailureKind.Transport, error
+    ));
+    this.child.on("error", (error) => this.handleFailure(
+      ClientFailureKind.Lifecycle, error
+    ));
     this.child.on("exit", (code, signal) => {
       this.exited = true;
       if (this.state !== "stopping" && this.state !== "stopped") {
-        this.fail(new Error(`recite-lsp exited (${code ?? "unknown"}, ${signal ?? "no signal"})`));
+        this.rejectPending(new ClientFailure(
+          ClientFailureKind.Lifecycle,
+          exitDetail(code, signal)
+        ));
       }
       this.state = "stopped";
       this.emit("exit", { code, signal });
@@ -72,25 +92,22 @@ export class ReciteLanguageClient extends EventEmitter {
     try {
       this.parser.push(chunk);
     } catch (error) {
-      this.fail(error);
-      this.child?.kill();
+      this.handleFailure(ClientFailureKind.Protocol, error);
     }
   }
 
   request(method, params) {
-    if (!this.child?.stdin.writable || this.state === "stopped") {
-      return Promise.reject(new Error("recite-lsp is not running"));
+    if (!this.child?.stdin.writable || this.state === "stopped" || this.transportClosed) {
+      return Promise.reject(new ClientFailure(ClientFailureKind.Lifecycle));
     }
     const id = this.nextRequestId++;
     const message = { jsonrpc: "2.0", id, method };
     if (params !== undefined) message.params = params;
     return new Promise((resolve, reject) => {
       this.pending.set(id, { resolve, reject });
-      try {
-        this.child.stdin.write(encodeMessage(message));
-      } catch (error) {
+      if (!this.writeMessage(message)) {
         this.pending.delete(id);
-        reject(error);
+        reject(this.failure ?? new ClientFailure(ClientFailureKind.Transport));
       }
     });
   }
@@ -100,20 +117,14 @@ export class ReciteLanguageClient extends EventEmitter {
       if (queue) this.queuedNotifications.push({ method, params });
       return queue;
     }
-    if (!this.child?.stdin.writable || this.state === "stopped") return false;
+    if (!this.child?.stdin.writable || this.state === "stopped" || this.transportClosed) return false;
     return this.writeNotification(method, params);
   }
 
   writeNotification(method, params) {
     const message = { jsonrpc: "2.0", method };
     if (params !== undefined) message.params = params;
-    try {
-      this.child.stdin.write(encodeMessage(message));
-      return true;
-    } catch (error) {
-      this.fail(error);
-      return false;
-    }
+    return this.writeMessage(message);
   }
 
   flushNotifications() {
@@ -171,11 +182,25 @@ export class ReciteLanguageClient extends EventEmitter {
   }
 
   respond(id, result, error) {
-    if (!this.child?.stdin.writable || this.state === "stopped") return;
+    if (!this.child?.stdin.writable || this.state === "stopped" || this.transportClosed) return;
     const message = { jsonrpc: "2.0", id };
     if (error) message.error = error;
     else message.result = result;
-    this.child.stdin.write(encodeMessage(message));
+    this.writeMessage(message);
+  }
+
+  writeMessage(message) {
+    const stdin = this.child?.stdin;
+    if (!stdin?.writable || this.transportClosed) return false;
+    try {
+      stdin.write(encodeMessage(message), (error) => {
+        if (error) this.handleFailure(ClientFailureKind.Transport, error);
+      });
+      return true;
+    } catch (error) {
+      this.handleFailure(ClientFailureKind.Transport, error);
+      return false;
+    }
   }
 
   async stop() {
@@ -209,7 +234,7 @@ export class ReciteLanguageClient extends EventEmitter {
       await Promise.race([exited, timeout(SHUTDOWN_TIMEOUT_MS)]);
     }
     this.cleanupChild(child);
-    this.rejectPending(new Error("recite-lsp stopped"));
+    this.rejectPending(new ClientFailure(ClientFailureKind.Lifecycle));
     this.queuedNotifications = [];
     this.child = undefined;
     this.state = "stopped";
@@ -221,15 +246,39 @@ export class ReciteLanguageClient extends EventEmitter {
     child.stderr.destroy?.();
   }
 
-  fail(error) {
-    this.rejectPending(error);
-    this.emit("serverError", error);
+  handleFailure(kind, error) {
+    const failure = error instanceof ClientFailure
+      ? error
+      : asClientFailure(kind, error);
+    if (this.failure) return false;
+    this.failure = failure;
+    this.rejectPending(failure);
+    this.closeTransport();
+    this.emit("failure", failure);
+    return true;
+  }
+
+  closeTransport() {
+    if (this.transportClosed) return;
+    this.transportClosed = true;
+    const child = this.child;
+    child?.stdin.destroy?.();
+    if (!this.exited && child && !child.killed) {
+      try { child.kill(); } catch { /* already gone */ }
+    }
   }
 
   rejectPending(error) {
     for (const pending of this.pending.values()) pending.reject(error);
     this.pending.clear();
   }
+}
+
+function exitDetail(code, signal) {
+  const parts = [];
+  if (code !== null && code !== undefined) parts.push(`code=${code}`);
+  if (signal !== null && signal !== undefined) parts.push(`signal=${signal}`);
+  return parts.length ? parts.join(", ") : undefined;
 }
 
 function timeout(milliseconds) {

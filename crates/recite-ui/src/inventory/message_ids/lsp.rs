@@ -75,6 +75,9 @@ pub(super) const fn key(id: super::MsgId) -> Option<&'static str> {
         super::MsgId::LspClientExited => Some("lsp-client-exited"),
         super::MsgId::LspClientRestartScheduled => Some("lsp-client-restart-scheduled"),
         super::MsgId::LspClientRestartExhausted => Some("lsp-client-restart-exhausted"),
+        super::MsgId::LspClientTransportFailed => Some("lsp-client-transport-failed"),
+        super::MsgId::LspClientProtocolFailed => Some("lsp-client-protocol-failed"),
+        super::MsgId::LspClientLifecycleFailed => Some("lsp-client-lifecycle-failed"),
         super::MsgId::LspClientDisplayName => Some("lsp-client-display-name"),
         super::MsgId::LspClientDescription => Some("lsp-client-description"),
         super::MsgId::LspClientUntrustedWorkspacesDescription => {

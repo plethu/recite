@@ -5,30 +5,58 @@ import { createUserInterface } from "../src/user-interface.js";
 test("semantic UI operations localize source messages and keep the channel private", () => {
   const lines = [];
   const raw = [];
+  const notices = [];
   let disposed = false;
   const api = {
-    l10n: { t: (template, detail) => `[${template}] ${detail}` },
+    l10n: { t: (template, detail) => detail === undefined ? `[${template}]` : `[${template}] ${detail}` },
     window: {
       createOutputChannel: (name) => {
-        assert.equal(name, "[Recite] undefined");
+        assert.equal(name, "[Recite]");
         return {
           append: (value) => raw.push(value),
           appendLine: (value) => lines.push(value),
           dispose: () => { disposed = true; }
         };
-      }
+      },
+      showErrorMessage: (value) => notices.push(["error", value]),
+      showWarningMessage: (value) => notices.push(["warning", value]),
+      showInformationMessage: (value) => notices.push(["information", value])
     }
   };
   const ui = createUserInterface(api);
 
-  ui.serverStartFailed("failed");
+  ui.serverTransportFailure("EPIPE");
+  ui.serverProtocolFailure();
+  ui.serverLifecycleFailure("ENOENT");
+  ui.serverExited();
+  ui.restartExhausted();
   ui.serverStderr("stderr");
-  ui.serverNotification("notification");
+  ui.serverLogMessage("log");
+  ui.serverErrorMessage("error from server");
+  ui.serverWarningMessage("warning from server");
+  ui.serverInfoMessage("info from server");
   assert.deepEqual(lines, [
-    "[Recite language server could not be started: {0}.] failed",
-    "notification"
+    "[Recite language server transport failed: {0}.] EPIPE",
+    "[Recite language server protocol failed.]",
+    "[Recite language server lifecycle failed: {0}.] ENOENT",
+    "[Recite language server exited.]",
+    "[Recite language server restart attempts exhausted.]",
+    "log",
+    "error from server",
+    "warning from server",
+    "info from server"
   ]);
   assert.deepEqual(raw, ["stderr"]);
+  assert.deepEqual(notices, [
+    ["error", "[Recite language server transport failed: {0}.] EPIPE"],
+    ["error", "[Recite language server protocol failed.]"],
+    ["error", "[Recite language server lifecycle failed: {0}.] ENOENT"],
+    ["error", "[Recite language server exited.]"],
+    ["error", "[Recite language server restart attempts exhausted.]"],
+    ["error", "error from server"],
+    ["warning", "warning from server"],
+    ["information", "info from server"]
+  ]);
   assert.equal(ui.output, undefined);
   assert.equal(ui.write, undefined);
   assert.equal(ui.show, undefined);

@@ -1,6 +1,7 @@
 import test from "node:test";
 import assert from "node:assert/strict";
 import { ExtensionController } from "../src/controller.js";
+import { ClientFailure, ClientFailureKind } from "../src/client-failure.js";
 import {
   FakeClient,
   hostApi,
@@ -193,5 +194,116 @@ test("restart exhaustion uses the canonical message without duplicated detail", 
   controller.restartAttempt = 5;
   controller.scheduleRestart();
   assert.equal(messages.at(-1), "Recite language server restart attempts exhausted.");
+  await controller.dispose();
+});
+
+test("server notifications preserve log visibility and project show-message severity", () => {
+  const received = [];
+  const api = hostApi({ isTrusted: () => true, onDidGrantWorkspaceTrust: () => ({ dispose() {} }) });
+  const userInterface = {
+    serverLogMessage: (message) => received.push(["log", message]),
+    serverErrorMessage: (message) => received.push(["error", message]),
+    serverWarningMessage: (message) => received.push(["warning", message]),
+    serverInfoMessage: (message) => received.push(["info", message])
+  };
+  const controller = new ExtensionController(api, userInterface, { delete() {} });
+
+  controller.handleNotification("window/logMessage", { type: 1, message: "diagnostic detail" });
+  controller.handleNotification("window/showMessage", { type: 1, message: "failure" });
+  controller.handleNotification("window/showMessage", { type: 2, message: "warning" });
+  controller.handleNotification("window/showMessage", { type: 3, message: "information" });
+
+  assert.deepEqual(received, [
+    ["log", "diagnostic detail"],
+    ["error", "failure"],
+    ["warning", "warning"],
+    ["info", "information"]
+  ]);
+});
+
+test("typed client failures select one localized UI category at the controller edge", () => {
+  const received = [];
+  const api = hostApi({ isTrusted: () => true, onDidGrantWorkspaceTrust: () => ({ dispose() {} }) });
+  const userInterface = {
+    serverTransportFailure: (detail) => received.push(["transport", detail]),
+    serverProtocolFailure: () => received.push(["protocol"]),
+    serverLifecycleFailure: (detail) => received.push(["lifecycle", detail])
+  };
+  const controller = new ExtensionController(api, userInterface, { delete() {} });
+  const transportClient = {};
+  controller.client = transportClient;
+  controller.handleClientFailure(
+    transportClient,
+    new ClientFailure(ClientFailureKind.Transport, "EPIPE")
+  );
+  const protocolClient = {};
+  controller.client = protocolClient;
+  controller.handleClientFailure(
+    protocolClient,
+    new ClientFailure(ClientFailureKind.Protocol)
+  );
+  const lifecycleClient = {};
+  controller.client = lifecycleClient;
+  controller.handleClientFailure(
+    lifecycleClient,
+    new ClientFailure(ClientFailureKind.Lifecycle, "code=1")
+  );
+
+  assert.deepEqual(received, [["transport", "EPIPE"], ["protocol"], ["lifecycle", "code=1"]]);
+  assert.equal(transportClient.failureReported, true);
+  assert.equal(protocolClient.failureReported, true);
+  assert.equal(lifecycleClient.failureReported, true);
+});
+
+test("startup failure events are not reported a second time by start rejection", async () => {
+  const received = [];
+  const api = hostApi({ isTrusted: () => true, onDidGrantWorkspaceTrust: () => ({ dispose() {} }) });
+  const userInterface = {
+    serverProtocolFailure: () => received.push("protocol")
+  };
+  const controller = new ExtensionController(api, userInterface, { delete() {} }, {
+    createClient: () => {
+      const client = new FakeClient();
+      client.start = async () => {
+        const failure = new ClientFailure(ClientFailureKind.Protocol);
+        client.emit("failure", failure);
+        throw failure;
+      };
+      return client;
+    }
+  });
+
+  assert.equal(await controller.start(), false);
+  assert.deepEqual(received, ["protocol"]);
+});
+
+test("scheduled retry failures do not repeat visible lifecycle notifications", async () => {
+  const received = [];
+  let attempts = 0;
+  const api = hostApi({ isTrusted: () => true, onDidGrantWorkspaceTrust: () => ({ dispose() {} }) });
+  const userInterface = {
+    serverLifecycleFailure: (detail) => received.push(["failure", detail]),
+    restartScheduled: (detail) => received.push(["scheduled", detail]),
+    restartExhausted: () => received.push(["exhausted"]),
+    serverLogMessage() {}
+  };
+  const controller = new ExtensionController(api, userInterface, { delete() {} }, {
+    createClient: () => {
+      attempts += 1;
+      const client = new FakeClient();
+      client.start = async () => {
+        client.status = "stopped";
+        throw new Error("ENOENT");
+      };
+      return client;
+    }
+  });
+
+  controller.handleStartFailure(new Error("ENOENT"));
+  controller.scheduleRestart();
+  await waitFor(() => attempts === 1, 250);
+
+  assert.deepEqual(received.slice(0, 2), [["failure", "ENOENT"], ["scheduled", "100 ms"]]);
+  assert.equal(received.filter(([kind]) => kind === "failure").length, 1);
   await controller.dispose();
 });

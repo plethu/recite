@@ -10,11 +10,22 @@ const MESSAGE_WRAPPER = "clientMessage";
 // This is the UI service contract. The adapter validator and the outside
 // policy share it instead of trying to infer arbitrary program dataflow.
 export const UI_METHOD_CONTRACTS = Object.freeze({
-  serverStartFailed: { kind: "projection", id: "lsp-client-start-failed", argument: "detail" },
-  serverError: { kind: "projection", id: "lsp-client-error", argument: "detail" },
-  serverExited: { kind: "projection", id: "lsp-client-exited", argument: "detail" },
+  serverTransportFailure: {
+    kind: "visible-projection", id: "lsp-client-transport-failed", argument: "detail",
+    host: "showErrorMessage"
+  },
+  serverProtocolFailure: {
+    kind: "visible-projection", id: "lsp-client-protocol-failed", host: "showErrorMessage"
+  },
+  serverLifecycleFailure: {
+    kind: "visible-projection", id: "lsp-client-lifecycle-failed", argument: "detail",
+    host: "showErrorMessage"
+  },
+  serverExited: { kind: "visible-projection", id: "lsp-client-exited", host: "showErrorMessage" },
   restartScheduled: { kind: "projection", id: "lsp-client-restart-scheduled", argument: "detail" },
-  restartExhausted: { kind: "projection", id: "lsp-client-restart-exhausted" },
+  restartExhausted: {
+    kind: "visible-projection", id: "lsp-client-restart-exhausted", host: "showErrorMessage"
+  },
   actionStale: { kind: "projection", id: "lsp-client-action-stale" },
   actionClosed: { kind: "projection", id: "lsp-client-action-closed" },
   actionReopened: { kind: "projection", id: "lsp-client-action-reopened" },
@@ -30,7 +41,10 @@ export const UI_METHOD_CONTRACTS = Object.freeze({
   },
   serverNotRunning: { kind: "error", id: "lsp-client-not-running" },
   serverStderr: { kind: "passthrough", sink: "append" },
-  serverNotification: { kind: "passthrough", sink: "appendLine" },
+  serverLogMessage: { kind: "passthrough", sink: "appendLine" },
+  serverErrorMessage: { kind: "host-passthrough", host: "showErrorMessage" },
+  serverWarningMessage: { kind: "host-passthrough", host: "showWarningMessage" },
+  serverInfoMessage: { kind: "host-passthrough", host: "showInformationMessage" },
   dispose: { kind: "dispose" }
 });
 
@@ -90,8 +104,8 @@ export function validateAdapter(ast, file, expected) {
 
   const ids = ["lsp-client-display-name", ...Object.values(UI_METHOD_CONTRACTS)
     .filter((contract) => contract.id).map((contract) => contract.id)];
-  assert(ids.length === expected.size && ids.every((id) => expected.has(id)),
-    `UI adapter contract IDs must match registered message IDs (${file})`);
+  assert(ids.every((id) => expected.has(id)),
+    `UI adapter contract IDs must be registered message IDs (${file})`);
   return UI_METHOD_CONTRACTS;
 }
 
@@ -110,6 +124,22 @@ function validateMethod(property, contract, file) {
     assert(isCanonicalCall(projection),
       `UI method ${propertyName(property)} must append a projection directly (${file})`);
     assertMessageCall(projection, file, contract.id, contract.argument);
+    return;
+  }
+  if (contract.kind === "visible-projection") {
+    assert(method.params.length === (contract.argument ? 1 : 0),
+      `UI method ${propertyName(property)} has the wrong argument count (${file})`);
+    assert(method.body.type === "BlockStatement" && method.body.body.length === 2,
+      `UI method ${propertyName(property)} must append and notify exactly (${file})`);
+    const append = method.body.body[0];
+    assert(append.type === "ExpressionStatement" && isOutputCall(append.expression, "appendLine"),
+      `UI method ${propertyName(property)} must append a projection directly (${file})`);
+    assertMessageCall(append.expression.arguments[0], file, contract.id, contract.argument);
+    const notify = method.body.body[1];
+    assert(notify.type === "ExpressionStatement" &&
+      isWindowMessageCall(notify.expression, contract.host),
+    `UI method ${propertyName(property)} must notify through the declared host API (${file})`);
+    assertMessageCall(notify.expression.arguments[0], file, contract.id, contract.argument);
     return;
   }
   if (contract.kind === "error") {
@@ -133,6 +163,22 @@ function validateMethod(property, contract, file) {
     const payload = statement.expression.arguments[0];
     assert(payload.type === "Identifier" && payload.name === method.params[0].name,
       `UI adapter method ${propertyName(property)} must pass its payload directly (${file})`);
+    return;
+  }
+  if (contract.kind === "host-passthrough") {
+    assert(method.params.length === 1,
+      `UI method ${propertyName(property)} has the wrong argument count (${file})`);
+    assert(method.body.type === "BlockStatement" && method.body.body.length === 2,
+      `UI method ${propertyName(property)} must append and notify exactly (${file})`);
+    const append = method.body.body[0];
+    assert(append.type === "ExpressionStatement" && isOutputCall(append.expression, "appendLine"),
+      `UI method ${propertyName(property)} must retain the server payload (${file})`);
+    assertDirectPayload(append.expression.arguments[0], method.params[0], file);
+    const notify = method.body.body[1];
+    assert(notify.type === "ExpressionStatement" &&
+      isWindowMessageCall(notify.expression, contract.host),
+    `UI method ${propertyName(property)} must notify through the declared host API (${file})`);
+    assertDirectPayload(notify.expression.arguments[0], method.params[0], file);
     return;
   }
   assert(method.params.length === 0,
@@ -165,6 +211,20 @@ function isOutputCall(node, method) {
     node.callee.type === "MemberExpression" && !node.callee.computed && !node.callee.optional &&
     node.callee.object.type === "Identifier" && node.callee.object.name === "output" &&
     memberMethod(node.callee) === method;
+}
+
+function isWindowMessageCall(node, method) {
+  return node?.type === "CallExpression" && node.arguments.length === 1 &&
+    node.callee.type === "MemberExpression" && !node.callee.computed && !node.callee.optional &&
+    node.callee.object.type === "MemberExpression" && !node.callee.object.computed &&
+    !node.callee.object.optional && node.callee.object.object.type === "Identifier" &&
+    node.callee.object.object.name === "api" && memberMethod(node.callee.object) === "window" &&
+    memberMethod(node.callee) === method;
+}
+
+function assertDirectPayload(node, parameter, file) {
+  assert(node.type === "Identifier" && node.name === parameter.name,
+    `UI method payload must be passed directly (${file})`);
 }
 
 function isCanonicalCall(node) {

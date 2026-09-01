@@ -25,6 +25,15 @@ Build and verification never rewrite the checked-in message projections. Use
 the explicit update command when the canonical English Fluent resources
 change, then run the checks to review the resulting bytes.
 
+The VS Code and VSCodium projections, including their argument lists and
+output paths, are declared in `crates/recite-ui/resources/inventory.toml`.
+The extension reports transport, protocol, and lifecycle failures through the
+same localised catalog. Server `showMessage` notifications use the matching
+editor severity, while server logs remain in the output channel and genuine
+process details are retained alongside their localised failure category.
+Transient restart attempts stay in the output channel; exhausted recovery is
+shown as an error notification.
+
 Build the extension and produce a deterministic VSIX with:
 
 ```text

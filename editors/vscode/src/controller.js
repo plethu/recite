@@ -5,6 +5,7 @@ import { registerDocumentLifecycle } from "./document-lifecycle.js";
 import { registerFeatureProviders } from "./providers.js";
 import { WatcherRegistry } from "./watchers.js";
 import { EditCommandRegistry } from "./edit-commands.js";
+import { asClientFailure, ClientFailureKind, isClientFailure } from "./client-failure.js";
 
 const DIAGNOSTICS_METHOD = "textDocument/publishDiagnostics";
 const RESTART_DELAYS_MS = [100, 500, 1_000, 2_000, 5_000];
@@ -46,7 +47,7 @@ export class ExtensionController {
     this.client = client;
     client.on("notification", (method, params) => this.handleNotification(method, params));
     client.on("stderr", (message) => this.userInterface.serverStderr(message));
-    client.on("serverError", (error) => this.handleServerError(error));
+    client.on("failure", (failure) => this.handleClientFailure(client, failure));
     client.on("exit", (event) => this.handleExit(client, event));
     try {
       await client.start(initializeParams(
@@ -60,6 +61,10 @@ export class ExtensionController {
       return true;
     } catch (error) {
       if (this.client === client) this.client = undefined;
+      // Transport/protocol failures have already been projected by the
+      // client's failure event. Exit handling likewise owns its notification;
+      // do not turn either one into a duplicate generic start failure.
+      if (client.failureReported || client.exitReported) return false;
       throw error;
     }
   }
@@ -94,15 +99,18 @@ export class ExtensionController {
   }
 
   handleStartFailure(error) {
-    this.userInterface.serverStartFailed(error.message);
+    const failure = isClientFailure(error)
+      ? error
+      : asClientFailure(ClientFailureKind.Lifecycle, error);
+    this.handleClientFailure(this.client, failure);
   }
 
   handleExit(client, event) {
     if (this.client !== client || this.stopping || this.disposed) return;
     this.clearStableReset();
     this.client = undefined;
-    const exitCode = event.code ?? "unknown";
-    this.userInterface.serverExited(exitCode);
+    client.exitReported = true;
+    if (!client.failureReported) this.userInterface.serverExited();
     this.scheduleRestart();
   }
 
@@ -117,10 +125,10 @@ export class ExtensionController {
     this.userInterface.restartScheduled(delayDetail);
     this.restartTimer = setTimeout(() => {
       this.restartTimer = undefined;
-      void this.start().catch((error) => {
-        this.handleStartFailure(error);
-        this.scheduleRestart();
-      });
+      // A scheduled retry is already represented by the output-channel
+      // schedule message. Keep transient failures quiet; the exhausted
+      // budget below is the visible terminal notification.
+      void this.start().catch(() => this.scheduleRestart());
     }, delay);
     this.restartTimer.unref?.();
   }
@@ -178,13 +186,35 @@ export class ExtensionController {
       );
       return;
     }
-    if (method === "window/logMessage" || method === "window/showMessage") {
-      if (params?.message) this.userInterface.serverNotification(params.message);
+    if (method === "window/logMessage") {
+      if (params?.message) this.userInterface.serverLogMessage(params.message);
+      return;
+    }
+    if (method === "window/showMessage") {
+      if (!params?.message) return;
+      switch (params.type) {
+        case 1: this.userInterface.serverErrorMessage(params.message); break;
+        case 2: this.userInterface.serverWarningMessage(params.message); break;
+        default: this.userInterface.serverInfoMessage(params.message); break;
+      }
     }
   }
 
-  handleServerError(error) {
-    this.userInterface.serverError(error.message);
+  handleClientFailure(client, failure) {
+    if (client && this.client !== client) return;
+    if (client) client.failureReported = true;
+    switch (failure.kind) {
+      case ClientFailureKind.Transport:
+        this.userInterface.serverTransportFailure(failure.detail);
+        break;
+      case ClientFailureKind.Protocol:
+        this.userInterface.serverProtocolFailure();
+        break;
+      case ClientFailureKind.Lifecycle:
+      default:
+        this.userInterface.serverLifecycleFailure(failure.detail);
+        break;
+    }
   }
 
   registerCapabilities(params) {

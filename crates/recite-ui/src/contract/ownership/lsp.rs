@@ -52,10 +52,18 @@ macro_rules! lsp_message_ids {
         | MsgId::LspCodeActionSchemaAction
         | MsgId::LspCodeActionSchemaDisabled
         | MsgId::LspWarningUiConfig
-        | MsgId::LspClientStartFailed
+    };
+}
+
+macro_rules! lsp_client_message_ids {
+    () => {
+        MsgId::LspClientStartFailed
         | MsgId::LspClientError
         | MsgId::LspClientExited
         | MsgId::LspClientRestartScheduled
+        | MsgId::LspClientTransportFailed
+        | MsgId::LspClientProtocolFailed
+        | MsgId::LspClientLifecycleFailed
         | MsgId::LspClientDescription
         | MsgId::LspClientUntrustedWorkspacesDescription
         | MsgId::LspClientConfigurationTitle

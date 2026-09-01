@@ -22,9 +22,10 @@ export function output(messages = []) {
   return {
     append() {},
     appendLine(value) { messages.push(value); },
-    serverStartFailed(detail) { this.appendLine(`Recite language server could not be started: ${detail}.`); },
-    serverError(detail) { this.appendLine(`Recite language server error: ${detail}.`); },
-    serverExited(detail) { this.appendLine(`Recite language server exited: ${detail}.`); },
+    serverTransportFailure(detail) { this.appendLine(`Recite language server transport failed: ${detail}.`); },
+    serverProtocolFailure() { this.appendLine("Recite language server protocol failed."); },
+    serverLifecycleFailure(detail) { this.appendLine(`Recite language server lifecycle failed: ${detail}.`); },
+    serverExited() { this.appendLine("Recite language server exited."); },
     restartScheduled(detail) { this.appendLine(`Recite language server restart scheduled: ${detail}.`); },
     restartExhausted() { this.appendLine("Recite language server restart attempts exhausted."); },
     actionStale() { this.appendLine("Recite code action is no longer applicable because the document changed."); },
@@ -43,7 +44,10 @@ export function output(messages = []) {
       new Error("recite.lsp.projectRoot needs a workspace for relative paths."),
     serverNotRunning: () => new Error("Recite language server is not running."),
     serverStderr() {},
-    serverNotification() {},
+    serverLogMessage() {},
+    serverErrorMessage() {},
+    serverWarningMessage() {},
+    serverInfoMessage() {},
     dispose() {}
   };
 }

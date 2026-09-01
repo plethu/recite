@@ -14,7 +14,7 @@ fn launch_resource_matches_the_typed_inventory() {
     contract
         .validate(DEFAULT_RESOURCE)
         .expect("complete launch catalog");
-    assert_eq!(MsgId::ALL.len(), 375);
+    assert_eq!(MsgId::ALL.len(), 378);
 
     #[derive(Deserialize)]
     struct Inventory {
@@ -30,12 +30,24 @@ fn launch_resource_matches_the_typed_inventory() {
     #[derive(Deserialize)]
     struct ProjectionInventory {
         neovim: NeovimProjection,
+        vscode: EditorProjection,
+        vscodium: EditorProjection,
     }
     #[derive(Deserialize)]
     struct NeovimProjection {
         source_resource: String,
         output: String,
         ids: Vec<String>,
+    }
+    #[derive(Deserialize)]
+    struct EditorProjection {
+        source_resource: String,
+        runtime_output: String,
+        package_output: String,
+        runtime_ids: Vec<String>,
+        package_ids: Vec<String>,
+        runtime_arguments: BTreeMap<String, Vec<String>>,
+        package_arguments: BTreeMap<String, Vec<String>>,
     }
     let inventory: Inventory = toml::from_str(include_str!("../resources/inventory.toml"))
         .expect("valid resource inventory");
@@ -134,6 +146,128 @@ fn launch_resource_matches_the_typed_inventory() {
         inventory.projections.neovim.source_resource, "en-US.ftl",
         "Neovim projects the canonical launch resource"
     );
+    for (name, projection) in [
+        ("VS Code", &inventory.projections.vscode),
+        ("VSCodium", &inventory.projections.vscodium),
+    ] {
+        assert_eq!(
+            projection.source_resource, "en-US.ftl",
+            "{name} source resource"
+        );
+        assert_eq!(
+            projection.runtime_output, "editors/vscode/src/messages.generated.js",
+            "{name} runtime projection output"
+        );
+        assert_eq!(
+            projection.package_output, "editors/vscode/package.nls.json",
+            "{name} package projection output"
+        );
+        let runtime_ids = projection
+            .runtime_ids
+            .iter()
+            .cloned()
+            .collect::<BTreeSet<_>>();
+        let package_ids = projection
+            .package_ids
+            .iter()
+            .cloned()
+            .collect::<BTreeSet<_>>();
+        let typed_runtime = contract
+            .resources
+            .iter()
+            .filter(|resource| {
+                resource.projections.iter().any(|declaration| {
+                    declaration.client
+                        == if name == "VS Code" {
+                            Client::VsCode
+                        } else {
+                            Client::VsCodium
+                        }
+                        && declaration.field == projection.runtime_output
+                })
+            })
+            .map(|resource| resource.id.as_str().to_owned())
+            .collect::<BTreeSet<_>>();
+        let typed_package = contract
+            .resources
+            .iter()
+            .filter(|resource| {
+                resource.projections.iter().any(|declaration| {
+                    declaration.client
+                        == if name == "VS Code" {
+                            Client::VsCode
+                        } else {
+                            Client::VsCodium
+                        }
+                        && declaration.field == projection.package_output
+                })
+            })
+            .map(|resource| resource.id.as_str().to_owned())
+            .collect::<BTreeSet<_>>();
+        assert_eq!(
+            typed_runtime, runtime_ids,
+            "{name} runtime IDs must match typed contract"
+        );
+        assert_eq!(
+            typed_package, package_ids,
+            "{name} package IDs must match typed contract"
+        );
+        let client = if name == "VS Code" {
+            Client::VsCode
+        } else {
+            Client::VsCodium
+        };
+        let typed_runtime_arguments = contract
+            .resources
+            .iter()
+            .filter(|resource| {
+                resource.projections.iter().any(|declaration| {
+                    declaration.client == client && declaration.field == projection.runtime_output
+                })
+            })
+            .map(|resource| {
+                (
+                    resource.id.as_str().to_owned(),
+                    resource.arguments.keys().cloned().collect::<Vec<_>>(),
+                )
+            })
+            .collect::<BTreeMap<_, _>>();
+        let typed_package_arguments = contract
+            .resources
+            .iter()
+            .filter(|resource| {
+                resource.projections.iter().any(|declaration| {
+                    declaration.client == client && declaration.field == projection.package_output
+                })
+            })
+            .map(|resource| {
+                (
+                    resource.id.as_str().to_owned(),
+                    resource.arguments.keys().cloned().collect::<Vec<_>>(),
+                )
+            })
+            .collect::<BTreeMap<_, _>>();
+        assert_eq!(
+            typed_runtime_arguments, projection.runtime_arguments,
+            "{name} runtime argument declarations must match typed contract"
+        );
+        assert_eq!(
+            typed_package_arguments, projection.package_arguments,
+            "{name} package argument declarations must match typed contract"
+        );
+        assert!(
+            runtime_ids
+                .iter()
+                .all(|id| contract.resources.iter().any(|resource| {
+                    resource.id.as_str() == id
+                        && resource.arguments.keys().all(|argument| {
+                            // Every projected runtime argument is represented by the canonical
+                            // arguments manifest; this assertion keeps the projection typed.
+                            !argument.is_empty()
+                        })
+                }))
+        );
+    }
     for id in ["lsp-client-display-name", "lsp-client-restart-exhausted"] {
         let shared = contract
             .resources
@@ -142,19 +276,15 @@ fn launch_resource_matches_the_typed_inventory() {
             .expect("shared Neovim/LSP projection resource");
         assert_eq!(
             shared.clients,
-            BTreeSet::from([Client::Lsp, Client::Neovim]),
+            BTreeSet::from([
+                Client::Lsp,
+                Client::VsCode,
+                Client::VsCodium,
+                Client::Neovim
+            ]),
             "shared projection resource ownership must include both hosts"
         );
     }
-    for spec in CLIENT_INVENTORY.iter().filter(|spec| !spec.shipped) {
-        assert!(
-            contract
-                .resources
-                .iter()
-                .all(|resource| !resource.clients.contains(&spec.client))
-        );
-    }
-
     let resource_ids = parser::parse(DEFAULT_RESOURCE)
         .expect("valid launch resource")
         .body

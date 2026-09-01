@@ -16,10 +16,25 @@ import { fileURLToPath } from "node:url";
 import os from "node:os";
 import {
   generateMessageProjections,
+  projectMessages,
   verifyMessageProjections
 } from "../scripts/message-projections.mjs";
 
 const packageRoot = path.resolve(path.dirname(fileURLToPath(import.meta.url)), "..");
+
+test("message projections reject multiline and selector Fluent before generation", async () => {
+  const sourcePath = path.resolve(packageRoot, "../../crates/recite-ui/resources/en-US.ftl");
+  const source = await readFile(sourcePath, "utf8");
+  const original = "lsp-client-start-failed = Recite language server could not be started: {$detail}.";
+  assert.throws(
+    () => projectMessages(source.replace(original, `${original}\n  continuation`)),
+    /continuation/
+  );
+  assert.throws(
+    () => projectMessages(source.replace(original, "lsp-client-start-failed = { $kind -> [one] one *[other] other }")),
+    /unsupported expression/
+  );
+});
 
 test("message verification rejects a mutation without rewriting its projection", async () => {
   const { root, fixturePackage, fixtureSource } = await createProjectionFixture();

@@ -8,47 +8,29 @@ import {
   rm,
   writeFile
 } from "node:fs/promises";
+import { readFileSync } from "node:fs";
 import path from "node:path";
 import { fileURLToPath } from "node:url";
 
-export const RUNTIME_MESSAGE_IDS = [
-  "lsp-client-start-failed",
-  "lsp-client-error",
-  "lsp-client-exited",
-  "lsp-client-restart-scheduled",
-  "lsp-client-restart-exhausted",
-  "lsp-client-display-name",
-  "lsp-client-action-stale",
-  "lsp-client-action-closed",
-  "lsp-client-action-reopened",
-  "lsp-client-action-expired",
-  "lsp-client-action-evicted",
-  "lsp-client-action-unknown",
-  "lsp-client-action-apply-failed",
-  "lsp-client-config-path-invalid",
-  "lsp-client-config-args-invalid",
-  "lsp-client-config-project-root-invalid",
-  "lsp-client-config-project-root-needs-workspace",
-  "lsp-client-not-running"
-];
+const packageRoot = path.resolve(path.dirname(fileURLToPath(import.meta.url)), "..");
+const inventoryPath = path.resolve(packageRoot, "../../crates/recite-ui/resources/inventory.toml");
+const inventorySource = readFileSync(inventoryPath, "utf8");
+const vscodeProjection = parseProjectionInventory(inventorySource, "vscode");
+const vscodiumProjection = parseProjectionInventory(inventorySource, "vscodium");
+assertProjectionParity(vscodeProjection, vscodiumProjection);
 
-export const PACKAGE_MESSAGE_IDS = [
-  "lsp-client-display-name",
-  "lsp-client-description",
-  "lsp-client-untrusted-workspaces-description",
-  "lsp-client-configuration-title",
-  "lsp-client-configuration-path-description",
-  "lsp-client-configuration-args-description",
-  "lsp-client-configuration-project-root-description"
-];
+export const RUNTIME_MESSAGE_IDS = Object.freeze(vscodeProjection.runtimeIds);
+export const PACKAGE_MESSAGE_IDS = Object.freeze(vscodeProjection.packageIds);
 
 // These are the extension-owned visible messages. Every source use must go
 // through clientMessage and resolve to one of these projected Fluent IDs.
 export const SOURCE_MESSAGE_IDS = Object.freeze([...RUNTIME_MESSAGE_IDS]);
 
 export function projectMessages(fluent) {
-  const canonical = new Map([...fluent.matchAll(/^([a-z0-9-]+) = ([^\n]*)$/gm)]
-    .map((match) => [match[1], match[2]]));
+  const canonical = parseRepresentableMessages(fluent, [
+    ...RUNTIME_MESSAGE_IDS,
+    ...PACKAGE_MESSAGE_IDS
+  ]);
   const projection = (ids, transform = (value) => value) => Object.fromEntries(ids.map((id) => {
     const value = canonical.get(id);
     if (value === undefined) throw new Error(`canonical Fluent message is missing ${id}`);
@@ -60,17 +42,101 @@ export function projectMessages(fluent) {
   };
 }
 
+/**
+ * Parse the inventory-owned subset of Fluent. Host projections deliberately
+ * support only single-line templates with simple variable placeables. A
+ * continuation, selector, term, attribute, or other Fluent expression must
+ * fail explicitly instead of being silently truncated by a line regex.
+ */
+export function parseRepresentableMessages(source, ids) {
+  const wanted = new Set(ids);
+  const messages = new Map();
+  let currentId;
+  for (const [index, line] of source.split(/\r?\n/u).entries()) {
+    const message = /^(?<id>[a-z0-9-]+) = (?<value>[^\r\n]*)$/u.exec(line);
+    if (message) {
+      currentId = message.groups.id;
+      if (!wanted.has(currentId)) continue;
+      if (messages.has(currentId)) {
+        throw new Error(`duplicate canonical Fluent message ${currentId} at line ${index + 1}`);
+      }
+      const value = message.groups.value;
+      assertRepresentableValue(currentId, value, index + 1);
+      messages.set(currentId, value);
+      continue;
+    }
+    if (/^\s/u.test(line) && currentId && wanted.has(currentId)) {
+      throw new Error(
+        `canonical Fluent message ${currentId} uses a continuation at line ${index + 1}; ` +
+        "VS Code and Neovim projections support only single-line templates"
+      );
+    }
+    if (line.trim() !== "") currentId = undefined;
+  }
+  for (const id of wanted) {
+    if (!messages.has(id)) throw new Error(`canonical Fluent message is missing ${id}`);
+  }
+  return messages;
+}
+
+function assertRepresentableValue(id, value, line) {
+  if (!/^([^{}]|\{\$[a-zA-Z][a-zA-Z0-9_-]*\})*$/u.test(value)) {
+    throw new Error(`canonical Fluent message ${id} uses an unsupported expression at line ${line}`);
+  }
+}
+
+function parseProjectionInventory(source, name) {
+  const marker = `[projections.${name}]`;
+  const start = source.indexOf(marker);
+  if (start < 0) throw new Error(`canonical inventory is missing ${marker}`);
+  const section = source.slice(start + marker.length).split(/\n\[/u, 1)[0];
+  const sourceResource = scalar(section, "source_resource");
+  const runtimeOutput = scalar(section, "runtime_output");
+  const packageOutput = scalar(section, "package_output");
+  const runtimeIds = array(section, "runtime_ids");
+  const packageIds = array(section, "package_ids");
+  if (!sourceResource || !runtimeOutput || !packageOutput || !runtimeIds.length || !packageIds.length) {
+    throw new Error(`${marker} must declare source, outputs, and IDs`);
+  }
+  return { sourceResource, runtimeOutput, packageOutput, runtimeIds, packageIds };
+}
+
+function scalar(section, key) {
+  return section.match(new RegExp(`(?:^|\\n)${key}\\s*=\\s*"([^"\\n]+)"`, "u"))?.[1];
+}
+
+function array(section, key) {
+  const match = section.match(new RegExp(`(?:^|\\n)${key}\\s*=\\s*\\[([\\s\\S]*?)\\]`, "u"));
+  if (!match) return [];
+  const values = [...match[1].matchAll(/"([a-z0-9-]+)"/gu)].map((entry) => entry[1]);
+  if (new Set(values).size !== values.length) throw new Error(`${key} contains duplicate IDs`);
+  return values;
+}
+
+function assertProjectionParity(left, right) {
+  for (const key of ["sourceResource", "runtimeOutput", "packageOutput"]) {
+    if (left[key] !== right[key]) throw new Error(`VS Code/VSCodium projection ${key} diverges`);
+  }
+  for (const key of ["runtimeIds", "packageIds"]) {
+    if (JSON.stringify(left[key]) !== JSON.stringify(right[key])) {
+      throw new Error(`VS Code/VSCodium projection ${key} diverges`);
+    }
+  }
+}
+
 export function renderMessageProjections(projections) {
+  const runtimeOutput = path.relative(packageRoot, path.resolve(packageRoot, "../../", vscodeProjection.runtimeOutput));
+  const packageOutput = path.relative(packageRoot, path.resolve(packageRoot, "../../", vscodeProjection.packageOutput));
   return {
-    "src/messages.generated.js":
+    [runtimeOutput]:
       `// Generated from crates/recite-ui/resources/en-US.ftl. Do not edit.\nexport default Object.freeze(${JSON.stringify(projections.runtime, null, 2)});\n`,
-    "package.nls.json": `${JSON.stringify(projections.package, null, 2)}\n`
+    [packageOutput]: `${JSON.stringify(projections.package, null, 2)}\n`
   };
 }
 
 export async function verifyMessageProjections(packageRoot) {
   const fluent = await readFile(
-    path.resolve(packageRoot, "../../crates/recite-ui/resources/en-US.ftl"), "utf8"
+    path.resolve(packageRoot, "../../crates/recite-ui/resources", vscodeProjection.sourceResource), "utf8"
   );
   const projections = projectMessages(fluent);
   const expectedFiles = renderMessageProjections(projections);
@@ -93,7 +159,7 @@ export async function verifyMessageProjections(packageRoot) {
 
 export async function generateMessageProjections(packageRoot, options = {}) {
   const fluent = await readFile(
-    path.resolve(packageRoot, "../../crates/recite-ui/resources/en-US.ftl"), "utf8"
+    path.resolve(packageRoot, "../../crates/recite-ui/resources", vscodeProjection.sourceResource), "utf8"
   );
   const files = renderMessageProjections(projectMessages(fluent));
   const fileSystem = {

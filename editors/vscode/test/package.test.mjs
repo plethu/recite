@@ -161,10 +161,10 @@ test("the outside policy rejects wrapper, sink, alias, and dynamic bypasses", as
 test("the UI service accepts only its structural caller contracts", async () => {
   const entries = await sourceEntries();
   const valid = [
-    "const ui1 = createUserInterface(api); ui1.serverError(detail);",
-    "const ui2 = createUserInterface(api); ui2.serverExited(event.code);",
+    "const ui1 = createUserInterface(api); ui1.serverLifecycleFailure(detail);",
+    "const ui2 = createUserInterface(api); ui2.serverExited();",
     "const ui3 = createUserInterface(api); ui3.serverStderr(message);",
-    "const ui4 = createUserInterface(api); ui4.serverNotification(event.message);",
+    "const ui4 = createUserInterface(api); ui4.serverLogMessage(event.message);",
     "const ui5 = createUserInterface(api); ui5.actionStale();",
     "const ui6 = createUserInterface(api); ui6.dispose();",
     "const host = { appendLine() {} }; host.appendLine(value);",
@@ -194,7 +194,7 @@ test("the adapter rejects escaped IDs, aliases, reassignment, and composed text"
   rejected((source) => `${source}\nconst extra = 1;`);
   rejected((source) => source.replace('export function createUserInterface',
     'export async function createUserInterface'));
-  rejected((source) => source.replace('serverError(detail) {', 'async serverError(detail) {'));
+  rejected((source) => source.replace('serverLifecycleFailure(detail) {', 'async serverLifecycleFailure(detail) {'));
 });
 
 async function sourceEntries(sourceRoot = path.join(packageRoot, "src")) {

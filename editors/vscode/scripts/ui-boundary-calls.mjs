@@ -123,7 +123,8 @@ function isValidUiCall(node, contracts, uiNames) {
   const method = memberMethod(callee);
   const contract = method && contracts[method];
   if (!contract) return false;
-  const expectsPayload = contract.kind === "projection" && contract.argument || contract.kind === "passthrough";
+  const expectsPayload = (contract.kind === "projection" || contract.kind === "visible-projection") &&
+    contract.argument || contract.kind === "passthrough" || contract.kind === "host-passthrough";
   assert(node.arguments.length === (expectsPayload ? 1 : 0) &&
     (!expectsPayload || isDirectPayload(node.arguments[0])),
   `UI method ${method} has an invalid direct contract payload outside ${ADAPTER_FILE}`);
