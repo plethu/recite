@@ -33,6 +33,21 @@ export function staticMemberMethod(node) {
   return node.property.value;
 }
 
+export function staticModuleSpecifier(node) {
+  if (![
+    "ImportDeclaration",
+    "ExportNamedDeclaration",
+    "ExportAllDeclaration",
+    "ImportExpression"
+  ].includes(node?.type)) return undefined;
+  const source = node.source;
+  if (source?.type === "Literal" && typeof source.value === "string") return source.value;
+  if (node.type !== "ImportExpression" || source?.type !== "TemplateLiteral" ||
+      source.expressions.length !== 0 || source.quasis.length !== 1) return undefined;
+  const value = source.quasis[0]?.value?.cooked;
+  return typeof value === "string" ? value : undefined;
+}
+
 export function isCallMethod(node, method) {
   return node?.type === "CallExpression" && node.callee.type === "MemberExpression" &&
     !node.callee.computed && node.callee.property.type === "Identifier" &&

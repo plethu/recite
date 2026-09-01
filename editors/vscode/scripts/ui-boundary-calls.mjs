@@ -3,6 +3,7 @@ import {
   memberMethod,
   propertyName,
   staticMemberMethod,
+  staticModuleSpecifier,
   walkWithParents
 } from "./ui-boundary-ast.mjs";
 import {
@@ -29,13 +30,16 @@ const CONTROLLER_NAMES = new Set(["controller"]);
 export function validateOutside(ast, file, contracts) {
   const uiNames = collectUiNames(ast);
   walkWithParents(ast, (node, parent) => {
-    if (node.type === "ImportDeclaration" && isProtectedModule(node.source.value, MESSAGE_MODULE)) {
+    const moduleSpecifier = staticModuleSpecifier(node);
+    if (node.type === "ImportDeclaration" && isProtectedModule(moduleSpecifier, MESSAGE_MODULE)) {
       fail(`only ${ADAPTER_FILE} may import ${MESSAGE_WRAPPER} (${file})`);
     }
-    if (node.type === "ExportNamedDeclaration" && isProtectedModule(node.source?.value, MESSAGE_MODULE)) {
+    if ((node.type === "ExportNamedDeclaration" || node.type === "ExportAllDeclaration") &&
+        isProtectedModule(moduleSpecifier, MESSAGE_MODULE)) {
       fail(`only ${ADAPTER_FILE} may re-export ${MESSAGE_WRAPPER} (${file})`);
     }
-    if (node.type === "ImportExpression" && isProtectedModule(node.source?.value, MESSAGE_MODULE, ADAPTER_MODULE)) {
+    if (node.type === "ImportExpression" &&
+        isProtectedModule(moduleSpecifier, MESSAGE_MODULE, ADAPTER_MODULE)) {
       fail(`dynamic import of the UI boundary is outside ${ADAPTER_FILE} (${file})`);
     }
 

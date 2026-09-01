@@ -48,7 +48,7 @@ test("the outside policy rejects wrapper, sink, alias, and dynamic bypasses", as
   const entries = await sourceEntries();
   const rejected = (source) => assert.throws(() => assertUiBoundary(
     [...entries, ["hostile.js", source]], SOURCE_MESSAGE_IDS, projectedMessages
-  ), /outside|acquisition|access|import|load|call|projection/);
+  ), /outside|acquisition|access|import|load|call|projection|re-export/);
   for (const source of [
     String.raw`function fake(clientMessage) { clientMessage(api, "lsp-client-start-failed"); }`,
     String.raw`function outer() { function fake(clientMessage) { return clientMessage(api, id); } }`,
@@ -93,6 +93,9 @@ test("the outside policy rejects wrapper, sink, alias, and dynamic bypasses", as
     String.raw`Reflect.apply(vscode.window.showErrorMessage, vscode.window, [detail]);`,
     String.raw`import("./messages.js");`,
     String.raw`import("./user-interface.js");`,
+    String.raw`export * from "./messages.js";`,
+    String.raw`export * as messages from "./messages.js";`,
+    String.raw`import(` + "`./messages.js`" + String.raw`);`,
     String.raw`require("./messages.js");`,
     String.raw`const { appendLine: emit, ...rest } = output;`,
     String.raw`const { window } = api; window.showErrorMessage("English");`,
@@ -107,7 +110,11 @@ test("the outside policy rejects wrapper, sink, alias, and dynamic bypasses", as
     ...entries, ["unrelated-properties.js", [
       "const host = { append() {} }; host.append(value);",
       "const { appendLine: emit, ...rest } = unrelated;",
-      "const copy = { appendLine };"
+      "const copy = { appendLine };",
+      "export * from \"./unrelated.js\";",
+      "export * as unrelated from \"./unrelated.js\";",
+      "import(`./unrelated.js`);",
+      "import(`./messages${suffix}.js`);"
     ].join("\n")]
   ], SOURCE_MESSAGE_IDS, projectedMessages));
 });
