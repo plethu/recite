@@ -1,7 +1,8 @@
 use recite_core::{BlockId, DocumentKey, SourcePosition, is_valid_source_label};
 
 use super::helpers::{
-    incomplete_from_query, make_plan, no_symbol, require_complete_block_references, source_range,
+    incomplete_from_query, make_plan, no_symbol, project_block_definitions,
+    require_complete_block_references, source_range,
 };
 use super::{AuthoringEditError, AuthoringEditOperation, AuthoringEditPlan, SourceEdit};
 use crate::authoring::{
@@ -75,6 +76,18 @@ pub fn plan_rename_block(
         location.role() == SymbolRole::Definition
             && matches!(location.identity(), SymbolIdentity::Block(block) if block == &new_name)
     }) {
+        return Err(AuthoringEditError::DestinationCollision {
+            document: target_document,
+            block: new_name,
+        });
+    }
+    if project_block_definitions(snapshot, key)?
+        .into_iter()
+        .any(|location| {
+            location.document() != &target_document
+                && matches!(location.identity(), SymbolIdentity::Block(block) if block == &new_name)
+        })
+    {
         return Err(AuthoringEditError::DestinationCollision {
             document: target_document,
             block: new_name,

@@ -6,7 +6,8 @@ use recite_core::DocumentKey;
 fn exhausted_generation_rejects_without_changing_owned_state() {
     let mut kernel = AuthoringKernel::new();
     let generation = SnapshotGeneration::new(u64::MAX);
-    kernel.snapshot = super::super::snapshot::AuthoringSnapshot::new(generation, Vec::new(), None);
+    kernel.snapshot =
+        super::super::snapshot::AuthoringSnapshot::new(generation, Vec::new(), None, true);
     let snapshot = kernel.snapshot.clone();
 
     let key = match DocumentKey::new("a.recite") {

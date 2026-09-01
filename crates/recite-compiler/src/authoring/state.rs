@@ -100,7 +100,7 @@ impl AuthoringKernel {
             saved: BTreeMap::new(),
             open: BTreeMap::new(),
             analyses: BTreeMap::new(),
-            snapshot: AuthoringSnapshot::new(generation, Vec::new(), None),
+            snapshot: AuthoringSnapshot::new(generation, Vec::new(), None, true),
             schema: None,
             project_complete: true,
         }
@@ -197,7 +197,8 @@ impl AuthoringKernel {
         self.open = open;
         self.analyses = analyses;
         self.project_complete = project_complete;
-        self.snapshot = AuthoringSnapshot::new(generation, documents, self.schema.clone());
+        self.snapshot =
+            AuthoringSnapshot::new(generation, documents, self.schema.clone(), project_complete);
         Ok(delta)
     }
 }

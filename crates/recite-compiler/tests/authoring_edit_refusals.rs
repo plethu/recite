@@ -26,6 +26,18 @@ fn kernel(source: &str) -> AuthoringKernel {
     kernel
 }
 
+fn project_kernel(documents: impl IntoIterator<Item = SavedDocument>) -> AuthoringKernel {
+    let mut kernel = AuthoringKernel::new();
+    kernel
+        .apply(AuthoringRequest::new(
+            SnapshotGeneration::initial(),
+            documents,
+            [],
+        ))
+        .expect("source accepted");
+    kernel
+}
+
 #[test]
 fn rename_refuses_ambiguous_definitions_from_navigation() {
     let kernel = kernel(":: target\n:: target\n");
@@ -59,6 +71,66 @@ fn stub_refuses_partial_symbol_query_before_materialising_an_edit() {
             .snapshot()
             .plan_create_block_stub(&key("main.recite"), position(2, 4)),
         Err(AuthoringEditError::Incomplete { .. })
+    ));
+}
+
+#[test]
+fn rename_refuses_destination_defined_in_another_document() {
+    let kernel = project_kernel([
+        SavedDocument::new(key("main.recite"), ":: source\n-> source\n"),
+        SavedDocument::new(key("other.recite"), ":: renamed\n"),
+    ]);
+    assert!(matches!(
+        kernel
+            .snapshot()
+            .plan_rename_block(&key("main.recite"), position(1, 4), "renamed"),
+        Err(AuthoringEditError::DestinationCollision { document, block })
+            if document == key("main.recite") && block.as_str() == "renamed"
+    ));
+}
+
+#[test]
+fn qualified_stub_refuses_name_defined_in_another_document() {
+    let kernel = project_kernel([
+        SavedDocument::new(
+            key("main.recite"),
+            ":: source\n-> target.recite::missing\n:: missing\n",
+        ),
+        SavedDocument::new(key("target.recite"), ":: target\n"),
+    ]);
+    assert!(matches!(
+        kernel
+            .snapshot()
+            .plan_create_block_stub(&key("main.recite"), position(2, 23)),
+        Err(AuthoringEditError::TargetAlreadyExists { document, block })
+            if document == key("target.recite") && block.as_str() == "missing"
+    ));
+}
+
+#[test]
+fn incomplete_project_refuses_global_block_collision_proof() {
+    let mut kernel = AuthoringKernel::new();
+    kernel
+        .apply(
+            AuthoringRequest::new(
+                SnapshotGeneration::initial(),
+                [
+                    SavedDocument::new(key("main.recite"), ":: source\n-> source\n"),
+                    SavedDocument::new(key("other.recite"), ":: renamed\n"),
+                ],
+                [],
+            )
+            .with_project_completeness(false),
+        )
+        .expect("incomplete project source accepted");
+    assert!(matches!(
+        kernel
+            .snapshot()
+            .plan_rename_block(&key("main.recite"), position(1, 4), "renamed"),
+        Err(AuthoringEditError::Incomplete {
+            document,
+            class: QueryClass::BlockDefinitions,
+        }) if document == key("main.recite")
     ));
 }
 

@@ -60,6 +60,44 @@ impl AuthoringSnapshot {
         }
     }
 
+    /// Returns the complete-project block-definition index used by source
+    /// edit planning.
+    pub(crate) fn project_block_definitions(&self) -> QueryResult<Vec<SymbolLocation>> {
+        let mut locations = Vec::new();
+        let mut unavailable = Vec::new();
+        if !self.project_complete {
+            unavailable.push(QueryUnavailableReason::Incomplete(
+                QueryClass::BlockDefinitions,
+            ));
+        }
+        for document in self.documents() {
+            if !document.participation().block_definitions().is_complete() {
+                unavailable.push(QueryUnavailableReason::Incomplete(
+                    QueryClass::BlockDefinitions,
+                ));
+                continue;
+            }
+            locations.extend(
+                symbol_locations(document.key(), document, SymbolQueryOptions::default())
+                    .into_iter()
+                    .filter(|location| {
+                        location.kind() == SymbolKind::Block
+                            && location.role() == SymbolRole::Definition
+                    }),
+            );
+        }
+        locations.sort_by(|left, right| {
+            left.document()
+                .cmp(right.document())
+                .then_with(|| left.span().start.cmp(&right.span().start))
+        });
+        if unavailable.is_empty() {
+            QueryResult::Ready(locations)
+        } else {
+            QueryResult::partial(locations, unavailable)
+        }
+    }
+
     /// Returns deterministic block references, optionally including declarations.
     #[must_use]
     pub fn references(

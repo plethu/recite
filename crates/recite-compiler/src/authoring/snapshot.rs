@@ -10,11 +10,23 @@ use super::DocumentVersion;
 use crate::ValidationParticipation;
 
 /// Deterministically ordered view of all effective saved and open documents.
-#[derive(Clone, Debug, Default, PartialEq)]
+#[derive(Clone, Debug, PartialEq)]
 pub struct AuthoringSnapshot {
     generation: super::SnapshotGeneration,
     documents: Vec<DocumentSnapshot>,
     pub(super) schema: Option<Arc<ProjectSchema>>,
+    pub(super) project_complete: bool,
+}
+
+impl Default for AuthoringSnapshot {
+    fn default() -> Self {
+        Self {
+            generation: super::SnapshotGeneration::initial(),
+            documents: Vec::new(),
+            schema: None,
+            project_complete: true,
+        }
+    }
 }
 
 impl AuthoringSnapshot {
@@ -23,11 +35,13 @@ impl AuthoringSnapshot {
         generation: super::SnapshotGeneration,
         documents: Vec<DocumentSnapshot>,
         schema: Option<Arc<ProjectSchema>>,
+        project_complete: bool,
     ) -> Self {
         Self {
             generation,
             documents,
             schema,
+            project_complete,
         }
     }
 

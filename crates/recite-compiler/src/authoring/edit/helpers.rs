@@ -33,6 +33,22 @@ pub(super) fn require_complete_block_references(
         })
 }
 
+pub(super) fn project_block_definitions(
+    snapshot: &AuthoringSnapshot,
+    document: &DocumentKey,
+) -> Result<Vec<SymbolLocation>, AuthoringEditError> {
+    match snapshot.project_block_definitions() {
+        QueryResult::Ready(locations) => Ok(locations),
+        QueryResult::Partial { unavailable, .. } | QueryResult::Unavailable(unavailable) => {
+            Err(incomplete_from_query(document, unavailable))
+        }
+        QueryResult::NoMatch => Err(AuthoringEditError::Incomplete {
+            document: document.clone(),
+            class: QueryClass::BlockDefinitions,
+        }),
+    }
+}
+
 pub(super) fn precondition(
     snapshot: &AuthoringSnapshot,
     key: &DocumentKey,

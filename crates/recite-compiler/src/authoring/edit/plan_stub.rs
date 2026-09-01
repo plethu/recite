@@ -1,7 +1,8 @@
 use recite_core::{DocumentKey, SourcePosition};
 
 use super::helpers::{
-    block_occurrence, document, incomplete_from_query, make_plan, no_symbol, source_range,
+    block_occurrence, document, incomplete_from_query, make_plan, no_symbol,
+    project_block_definitions, source_range,
 };
 use super::{AuthoringEditError, AuthoringEditOperation, AuthoringEditPlan, SourceEdit};
 use crate::authoring::{
@@ -75,6 +76,19 @@ pub fn plan_create_block_stub(
         QueryResult::Ready(NavigationResult::Unsupported) | QueryResult::NoMatch => {
             return Err(no_symbol(key, position));
         }
+    }
+
+    if project_block_definitions(snapshot, key)?
+        .into_iter()
+        .any(|location| {
+            location.document() != &target_key
+                && matches!(location.identity(), SymbolIdentity::Block(candidate) if candidate == block)
+        })
+    {
+        return Err(AuthoringEditError::TargetAlreadyExists {
+            document: target_key,
+            block: block.clone(),
+        });
     }
 
     let reference_range = source_range(key, reference.span())?;
