@@ -27,10 +27,13 @@ fn retired_symlink_alias_keeps_target_excluded_until_final_close() {
         .unwrap_or_else(|error| panic!("write target: {error}"));
     std::fs::write(&replacement, "{\"schema_version\":\"new\"}\n")
         .unwrap_or_else(|error| panic!("write replacement: {error}"));
+    std::fs::create_dir(temp.path().join("sub"))
+        .unwrap_or_else(|error| panic!("create lexical alias parent: {error}"));
     symlink(&target, &alias).unwrap_or_else(|error| panic!("schema symlink: {error}"));
 
     let target_uri = file_uri(&target);
     let alias_uri = file_uri(&alias);
+    let lexical_alias_uri = format!("{}/sub/../schema-old.json", file_uri(temp.path()));
     let replacement_uri = file_uri(&replacement);
     let manifest_uri = file_uri(&manifest);
     let mut harness = StdioHarness::start(json!({
@@ -77,14 +80,23 @@ fn retired_symlink_alias_keeps_target_excluded_until_final_close() {
         &closed_target,
         &[(&target_uri, None, true), (&alias_uri, Some(8), true)],
     );
+    harness.notify(
+        "textDocument/didOpen",
+        json!({"textDocument": {"uri": lexical_alias_uri, "languageId": "json", "version": 9, "text": "oops\n"}}),
+    );
+    let opened_lexical_alias = harness.barrier(&lexical_alias_uri);
+    assert_publish_batch(
+        &opened_lexical_alias,
+        &[(&lexical_alias_uri, Some(9), true)],
+    );
     std::fs::remove_file(&target)
         .unwrap_or_else(|error| panic!("remove retired schema target: {error}"));
     harness.notify(
         "textDocument/didOpen",
-        json!({"textDocument": {"uri": target_uri, "languageId": "json", "version": 9, "text": "oops\n"}}),
+        json!({"textDocument": {"uri": target_uri, "languageId": "json", "version": 10, "text": "oops\n"}}),
     );
     let reopened_target = harness.barrier(&target_uri);
-    assert_publish_batch(&reopened_target, &[(&target_uri, Some(9), true)]);
+    assert_publish_batch(&reopened_target, &[(&target_uri, Some(10), true)]);
 
     harness.notify(
         "textDocument/didClose",
@@ -93,13 +105,53 @@ fn retired_symlink_alias_keeps_target_excluded_until_final_close() {
     let closed_alias = harness.barrier(&alias_uri);
     assert_publish_batch(
         &closed_alias,
-        &[(&alias_uri, None, true), (&target_uri, Some(9), true)],
+        &[(&alias_uri, None, true), (&target_uri, Some(10), true)],
     );
+    harness.notify(
+        "textDocument/didChange",
+        json!({
+            "textDocument": {"uri": lexical_alias_uri, "version": 11},
+            "contentChanges": [{"text": "oops\n"}]
+        }),
+    );
+    let changed_alias = harness.barrier(&lexical_alias_uri);
+    assert_publish_batch(&changed_alias, &[(&lexical_alias_uri, Some(11), true)]);
     harness.notify(
         "textDocument/didClose",
         json!({"textDocument": {"uri": target_uri}}),
     );
-    assert_publish_batch(&harness.barrier(&target_uri), &[(&target_uri, None, true)]);
+    let closed_target = harness.barrier(&target_uri);
+    assert_publish_batch(
+        &closed_target,
+        &[
+            (&target_uri, None, true),
+            (&lexical_alias_uri, Some(11), true),
+        ],
+    );
+    harness.notify(
+        "textDocument/didClose",
+        json!({"textDocument": {"uri": lexical_alias_uri}}),
+    );
+    assert_publish_batch(
+        &harness.barrier(&lexical_alias_uri),
+        &[(&lexical_alias_uri, None, true)],
+    );
+    std::fs::write(&target, "{\"schema_version\":1}\n")
+        .unwrap_or_else(|error| panic!("recreate schema target: {error}"));
+    harness.notify(
+        "textDocument/didOpen",
+        json!({"textDocument": {"uri": lexical_alias_uri, "languageId": "json", "version": 12, "text": "oops\n"}}),
+    );
+    let recreated_alias = harness.barrier(&lexical_alias_uri);
+    assert_publish_batch(&recreated_alias, &[(&lexical_alias_uri, Some(12), false)]);
+    harness.notify(
+        "textDocument/didClose",
+        json!({"textDocument": {"uri": lexical_alias_uri}}),
+    );
+    assert_publish_batch(
+        &harness.barrier(&lexical_alias_uri),
+        &[(&lexical_alias_uri, None, true)],
+    );
     std::fs::write(&target, "{\"schema_version\":1}\n")
         .unwrap_or_else(|error| panic!("recreate schema target: {error}"));
     harness.notify(

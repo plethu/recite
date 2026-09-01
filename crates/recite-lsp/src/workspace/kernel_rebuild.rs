@@ -83,14 +83,46 @@ impl LspWorkspace {
         let mut next_partition_build_id = self.next_partition_build_id;
         let mut ids = saved.partition_ids();
         ids.extend(schemas.keys().cloned());
+        // A newly opened lexical alias may resolve to a target that was
+        // retired before this URI existed in the open-document store.  Carry
+        // that exact URI into the candidate state so close/owner accounting
+        // remains target-aware after this rebuild commits.
+        let mut retired_schema_targets = self.retired_schema_targets.clone();
+        let known_retired_targets = retired_schema_targets
+            .values()
+            .cloned()
+            .collect::<BTreeSet<_>>();
+        for document in documents.documents() {
+            if schemas
+                .values()
+                .any(|schema| schema.matches_uri(&document.identity().uri))
+            {
+                continue;
+            }
+            let Some(current_target) = document
+                .identity()
+                .saved_path
+                .as_deref()
+                .map(crate::paths::stable_path_identity)
+            else {
+                continue;
+            };
+            if let Some(target) = known_retired_targets
+                .iter()
+                .find(|target| **target == current_target)
+            {
+                retired_schema_targets
+                    .entry(document.identity().uri.as_str().to_owned())
+                    .or_insert_with(|| target.clone());
+            }
+        }
         let mut retired_all = retired
             .values()
             .flat_map(|uris| uris.iter().cloned())
             .chain(self.retired_schema_uris.iter().cloned())
-            .chain(self.retired_schema_targets.keys().cloned())
+            .chain(retired_schema_targets.keys().cloned())
             .collect::<BTreeSet<_>>();
-        let retired_targets = self
-            .retired_schema_targets
+        let retired_targets = retired_schema_targets
             .values()
             .cloned()
             .collect::<BTreeSet<_>>();
@@ -206,6 +238,7 @@ impl LspWorkspace {
         self.saved = saved;
         self.documents = documents;
         self.partitions = partitions;
+        self.retired_schema_targets = retired_schema_targets;
         self.generation = generation;
         self.next_partition_build_id = next_partition_build_id;
         self.snapshot = snapshot;

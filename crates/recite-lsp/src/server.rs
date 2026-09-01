@@ -1,26 +1,21 @@
 use lsp_server::{Connection, ErrorCode, Message, Notification, Request, Response};
-use lsp_types::notification::{
-    DidChangeTextDocument, DidChangeWatchedFiles, DidCloseTextDocument, DidOpenTextDocument,
-    DidSaveTextDocument, Exit, Initialized, LogMessage, Notification as LspNotification,
-    PublishDiagnostics,
-};
+use lsp_types::notification::{LogMessage, Notification as LspNotification, PublishDiagnostics};
 use lsp_types::request::{
     CodeActionRequest, Completion, GotoDefinition, HoverRequest, PrepareRenameRequest, References,
     Rename, Request as LspRequest, Shutdown,
 };
 use lsp_types::{
-    CodeActionParams, CompletionParams, DidChangeTextDocumentParams, DidChangeWatchedFilesParams,
-    DidCloseTextDocumentParams, DidOpenTextDocumentParams, DidSaveTextDocumentParams,
-    GotoDefinitionParams, HoverParams, LogMessageParams, MessageType, ReferenceParams,
-    RenameParams, TextDocumentPositionParams,
+    CodeActionParams, CompletionParams, GotoDefinitionParams, HoverParams, LogMessageParams,
+    MessageType, ReferenceParams, RenameParams, TextDocumentPositionParams,
 };
 
 use crate::diagnostics::{clear_diagnostics, publish_diagnostics};
-use crate::workspace::{DiagnosticRefresh, LspWorkspace, WorkspaceChangeResult, WorkspaceConfig};
+use crate::workspace::{DiagnosticRefresh, LspWorkspace, WorkspaceConfig};
 use recite_ui::UiCatalog;
 
 mod bootstrap;
 mod error;
+mod notifications;
 #[allow(unused_imports, reason = "used by in-crate lifecycle harness")]
 pub(crate) use bootstrap::run_connection_with_user_config;
 #[allow(unused_imports, reason = "used by in-crate protocol harness")]
@@ -206,26 +201,6 @@ impl Server {
         self.send(response.into())?;
         Ok(false)
     }
-    fn handle_notification(&mut self, notification: Notification) -> Result<bool, ServerError> {
-        match notification.method.as_str() {
-            Initialized::METHOD => {}
-            DidSaveTextDocument::METHOD => self.handle_did_save(notification)?,
-            Exit::METHOD => {
-                if self.shutdown_requested {
-                    return Ok(true);
-                }
-
-                return Err(ServerError::ExitWithoutShutdown);
-            }
-            DidOpenTextDocument::METHOD => self.handle_did_open(notification)?,
-            DidChangeTextDocument::METHOD => self.handle_did_change(notification)?,
-            DidChangeWatchedFiles::METHOD => self.handle_did_change_watched_files(notification)?,
-            DidCloseTextDocument::METHOD => self.handle_did_close(notification)?,
-            _ => {}
-        }
-        Ok(false)
-    }
-
     fn publish_schema_diagnostics(&mut self) -> Result<(), ServerError> {
         for refresh in self.workspace.project_diagnostics_all() {
             self.publish_refresh(refresh)?;
@@ -247,109 +222,6 @@ impl Server {
             )
             .into(),
         )
-    }
-    fn handle_did_open(&mut self, notification: Notification) -> Result<(), ServerError> {
-        let Ok(params) =
-            notification.extract::<DidOpenTextDocumentParams>(DidOpenTextDocument::METHOD)
-        else {
-            return Ok(());
-        };
-        let refreshes = self.workspace.open_refreshes(
-            params.text_document.uri.clone(),
-            params.text_document.version,
-            params.text_document.text,
-        );
-        for refresh in refreshes {
-            self.publish_refresh(refresh)?;
-        }
-        self.publish_open_document_refreshes(Some(&params.text_document.uri))
-    }
-    fn handle_did_change(&mut self, notification: Notification) -> Result<(), ServerError> {
-        let Ok(params) =
-            notification.extract::<DidChangeTextDocumentParams>(DidChangeTextDocument::METHOD)
-        else {
-            return Ok(());
-        };
-        let uri = params.text_document.uri;
-        let version = params.text_document.version;
-        match self
-            .workspace
-            .change(uri.clone(), version, params.content_changes)
-        {
-            WorkspaceChangeResult::Accepted(refresh) => {
-                self.publish_refresh(refresh)?;
-                self.publish_open_document_refreshes(Some(&uri))?;
-            }
-            WorkspaceChangeResult::AcceptedRefreshes(refreshes) => {
-                for refresh in refreshes {
-                    self.publish_refresh(refresh)?;
-                }
-                self.publish_open_document_refreshes(Some(&uri))?;
-            }
-            _ => {}
-        }
-
-        Ok(())
-    }
-    fn handle_did_save(&mut self, notification: Notification) -> Result<(), ServerError> {
-        let Ok(params) =
-            notification.extract::<DidSaveTextDocumentParams>(DidSaveTextDocument::METHOD)
-        else {
-            return Ok(());
-        };
-        let uri = params.text_document.uri;
-        let schema_refreshed = if let Some(refresh) = self.workspace.save_schema(&uri) {
-            self.publish_refresh(refresh)?;
-            self.publish_open_document_refreshes(None)?;
-            true
-        } else {
-            false
-        };
-        if schema_refreshed {
-            return Ok(());
-        }
-        for refresh in self.workspace.save(uri.clone()) {
-            self.publish_refresh(refresh)?;
-        }
-        self.publish_open_document_refreshes(Some(&uri))?;
-
-        Ok(())
-    }
-    fn handle_did_change_watched_files(
-        &mut self,
-        notification: Notification,
-    ) -> Result<(), ServerError> {
-        let Ok(params) =
-            notification.extract::<DidChangeWatchedFilesParams>(DidChangeWatchedFiles::METHOD)
-        else {
-            return Ok(());
-        };
-        for event in params.changes {
-            for refresh in self.workspace.refresh_watched_uri(&event.uri) {
-                self.publish_refresh(refresh)?;
-            }
-            self.publish_open_document_refreshes(None)?;
-        }
-        Ok(())
-    }
-    fn handle_did_close(&mut self, notification: Notification) -> Result<(), ServerError> {
-        let Ok(params) =
-            notification.extract::<DidCloseTextDocumentParams>(DidCloseTextDocument::METHOD)
-        else {
-            return Ok(());
-        };
-        let refreshes = self.workspace.close(params.text_document.uri);
-        let explicit_open_uri = refreshes.iter().find_map(|refresh| match refresh {
-            DiagnosticRefresh::Publish(diagnostics) => Some(diagnostics.uri.clone()),
-            DiagnosticRefresh::Clear { .. } => None,
-        });
-        for refresh in &refreshes {
-            self.publish_refresh(refresh.clone())?;
-        }
-        if !refreshes.is_empty() {
-            self.publish_open_document_refreshes(explicit_open_uri.as_ref())?;
-        }
-        Ok(())
     }
     fn publish_refresh(&self, refresh: DiagnosticRefresh) -> Result<(), ServerError> {
         if !self.workspace.is_current_generation(refresh.generation()) {
