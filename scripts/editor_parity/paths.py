@@ -37,3 +37,16 @@ def require_repo_file(ctx: Context, path: str, label: str) -> tuple[Path, Path]:
     ctx.require(ctx.repo_root in resolved.parents, f"{label} escapes the repository: {path}")
     ctx.require(resolved.is_file(), f"{label} does not exist: {path}")
     return candidate, resolved
+
+
+def require_control_file(ctx: Context, path: Path, label: str) -> Path:
+    """Validate a checker control input before opening or parsing it."""
+    candidate = path if path.is_absolute() else ctx.repo_root / path
+    require_no_symlink_components(ctx, candidate, label)
+    try:
+        resolved = candidate.resolve(strict=True)
+    except OSError:
+        resolved = candidate.resolve()
+    ctx.require(ctx.repo_root in resolved.parents, f"{label} escapes the repository: {path}")
+    ctx.require(resolved.is_file(), f"{label} does not exist: {path}")
+    return candidate

@@ -29,8 +29,6 @@ fi
 
 fixture="$repo_root/fixtures/editor-parity/contract.json"
 document="$repo_root/docs/editor-parity-contract.md"
-[[ -f "$fixture" ]] || { echo "missing editor parity fixture: $fixture" >&2; exit 2; }
-[[ -f "$document" ]] || { echo "missing editor parity contract: $document" >&2; exit 2; }
 
 script_dir="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
 exec python3 "$script_dir/editor_parity/check.py" "$repo_root" "$fixture" "$document"

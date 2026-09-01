@@ -18,3 +18,10 @@ class Context:
     def require(self, condition: bool, message: str) -> None:
         if not condition:
             self.errors.append(message)
+
+    def valid_status(self, value) -> bool:
+        return isinstance(value, str) and value in self.statuses
+
+
+def has_record(records: dict, value) -> bool:
+    return isinstance(value, str) and value in records

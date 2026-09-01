@@ -3,8 +3,9 @@ import re
 import shlex
 import subprocess
 
-from .model import Context
+from .model import Context, has_record
 from .paths import require_no_symlink_components, require_repo_file
+from .source_graph import reachable_test_names
 
 
 def cargo_test_list(ctx: Context, package: str, target: str, test_filter: str | None = None) -> set[str]:
@@ -76,6 +77,8 @@ def validate_command(ctx: Context, capability_id: str, command: str) -> None:
     ctx.require(ctx.repo_root in resolved_test_file.parents, f"capability {capability_id} evidence target escapes the repository: {test_file}")
     ctx.require(test_file.is_file() and not test_file.is_symlink(), f"capability {capability_id} evidence target does not exist: {test_file.relative_to(ctx.repo_root) if test_file.is_relative_to(ctx.repo_root) else test_file}")
     if test_file.is_file() and not test_file.is_symlink():
+        source_tests = reachable_test_names(ctx, test_file)
+        ctx.require(test_filter in source_tests, f"capability {capability_id} evidence command is disconnected from the current Rust source graph: {test_filter}")
         registered = discovered_test_paths(ctx, package, target)
         ctx.require(test_filter in registered, f"capability {capability_id} evidence command does not name an existing runnable test discovered by Cargo: {test_filter}")
         ctx.require(exact_test_selection(ctx, package, target, test_filter) == {test_filter}, f"capability {capability_id} evidence command does not select exactly one Cargo test: {test_filter}")
@@ -87,9 +90,9 @@ def validate_capabilities(ctx: Context, data: dict, scenario_map: dict, artifact
         if not isinstance(capability_id, str):
             continue
         ctx.require(re.fullmatch(r"[a-z][a-z0-9]*(?:\.[a-z0-9-]+)+", capability_id) is not None, f"capability ID is not stable lowercase dotted form: {capability_id!r}")
-        ctx.require(capability.get("scenario") in scenario_map, f"capability {capability_id} references unknown scenario")
+        ctx.require(has_record(scenario_map, capability.get("scenario")), f"capability {capability_id} references unknown scenario")
         ctx.require(isinstance(capability.get("authority"), list) and capability["authority"], f"capability {capability_id} must name semantic authority")
-        ctx.require(capability.get("protocol") in {"lsp", "protocol-neutral", "cli", "client"}, f"capability {capability_id} has invalid protocol")
+        ctx.require(isinstance(capability.get("protocol"), str) and capability.get("protocol") in {"lsp", "protocol-neutral", "cli", "client"}, f"capability {capability_id} has invalid protocol")
         expected = capability.get("expected") or {}
         ctx.require(isinstance(expected, dict) and expected.get("kind"), f"capability {capability_id} must name expected structured result")
         ctx.require(isinstance(expected, dict) and isinstance(expected.get("assertions"), list) and expected["assertions"], f"capability {capability_id} must name expected assertions")
@@ -97,36 +100,39 @@ def validate_capabilities(ctx: Context, data: dict, scenario_map: dict, artifact
         limitation = capability.get("known_limitation")
         ctx.require(isinstance(limitation, str) and limitation.strip(), f"capability {capability_id} must name a known_limitation")
         status = capability.get("implementation_status")
-        ctx.require(status in ctx.statuses, f"capability {capability_id} has invalid implementation status")
+        status_kind = status if isinstance(status, str) else None
+        ctx.require(ctx.valid_status(status), f"capability {capability_id} has invalid implementation status")
         if isinstance(limitation, str) and limitation.strip() == "none":
-            ctx.require(status == "implemented", f"capability {capability_id} may use known_limitation=none only when fully implemented")
-        _validate_capability_status(ctx, capability_id, capability, status, artifact_map, distribution_map, client_map)
-        _validate_capability_evidence(ctx, capability_id, capability, status, artifact_map)
-        ctx.require(re.fullmatch(r"#[1-9][0-9]*", capability.get("follow_up", "")) is not None, f"capability {capability_id} must name a follow-up issue")
+            ctx.require(status_kind == "implemented", f"capability {capability_id} may use known_limitation=none only when fully implemented")
+        _validate_capability_status(ctx, capability_id, capability, status_kind, artifact_map, distribution_map, client_map)
+        _validate_capability_evidence(ctx, capability_id, capability, status_kind, artifact_map)
+        follow_up = capability.get("follow_up", "")
+        ctx.require(isinstance(follow_up, str) and re.fullmatch(r"#[1-9][0-9]*", follow_up) is not None, f"capability {capability_id} must name a follow-up issue")
 
 
 def _validate_capability_status(ctx: Context, capability_id: str, capability: dict, status: str, artifact_map: dict, distribution_map: dict, client_map: dict) -> None:
     client_status = capability.get("client_status") or {}
     ctx.require(isinstance(client_status, dict) and set(client_status) == ctx.clients, f"capability {capability_id} must name every client exactly once")
     for client_id, value in client_status.items() if isinstance(client_status, dict) else []:
-        ctx.require(value in ctx.statuses, f"capability {capability_id} has invalid {client_id} status")
+        ctx.require(ctx.valid_status(value), f"capability {capability_id} has invalid {client_id} status")
         if value == "implemented" and client_id in client_map:
             ctx.require(client_map[client_id].get("status") == "implemented", f"capability {capability_id} overstates implemented support for {client_id}")
-        if value in {"partial", "implemented"} and client_id in client_map:
-            ctx.require(client_map[client_id].get("status") in {"partial", "implemented"}, f"capability {capability_id} overstates {client_id} while its client remains planned")
+        if isinstance(value, str) and value in {"partial", "implemented"} and client_id in client_map:
+            client_status_value = client_map[client_id].get("status")
+            ctx.require(isinstance(client_status_value, str) and client_status_value in {"partial", "implemented"}, f"capability {capability_id} overstates {client_id} while its client remains planned")
     platform_status = capability.get("platform_status") or {}
     ctx.require(isinstance(platform_status, dict) and set(platform_status) == ctx.platforms, f"capability {capability_id} must name every platform exactly once")
     for platform, value in platform_status.items() if isinstance(platform_status, dict) else []:
-        ctx.require(value in ctx.statuses, f"capability {capability_id} has invalid {platform} status")
-        if status in {"planned", "unsupported"}:
+        ctx.require(ctx.valid_status(value), f"capability {capability_id} has invalid {platform} status")
+        if isinstance(value, str) and status in {"planned", "unsupported"}:
             ctx.require(value in {"planned", "unsupported"}, f"{status} capability {capability_id} cannot claim {platform} platform status {value}")
-        elif status == "partial":
+        elif isinstance(value, str) and status == "partial":
             ctx.require(value in {"planned", "partial", "unsupported"}, f"partial capability {capability_id} cannot claim {platform} platform status {value}")
     for key, expected, label in [("artifact_status", set(artifact_map), "artifact"), ("distribution_status", set(distribution_map), "distribution")]:
         values = capability.get(key) or {}
         ctx.require(isinstance(values, dict) and set(values) == expected, f"capability {capability_id} must name every {label} status exactly once")
         for record_id, value in values.items() if isinstance(values, dict) else []:
-            ctx.require(value in ctx.statuses, f"capability {capability_id} has invalid {record_id} {label} status")
+            ctx.require(ctx.valid_status(value), f"capability {capability_id} has invalid {record_id} {label} status")
             records = artifact_map if label == "artifact" else distribution_map
             if record_id in records:
                 ctx.require(value == records[record_id].get("status"), f"capability {capability_id} {label} status for {record_id} disagrees with its {label} record")
@@ -138,7 +144,7 @@ def _validate_capability_evidence(ctx: Context, capability_id: str, capability: 
     if not isinstance(evidence, dict):
         return
     evidence_status = evidence.get("status")
-    ctx.require(evidence_status in ctx.statuses, f"capability {capability_id} has invalid evidence status")
+    ctx.require(ctx.valid_status(evidence_status), f"capability {capability_id} has invalid evidence status")
     ctx.require(isinstance(evidence.get("assertions"), list) and evidence["assertions"], f"capability {capability_id} must name evidence assertions")
     command, commands = evidence.get("command"), evidence.get("commands")
     ctx.require(not (command is not None and commands is not None), f"capability {capability_id} must use either command or commands, not both")
@@ -147,12 +153,12 @@ def _validate_capability_evidence(ctx: Context, capability_id: str, capability: 
         ctx.require(isinstance(commands, list) and bool(commands), f"capability {capability_id} commands must be a non-empty array")
     if status in {"implemented", "partial"}:
         ctx.require(evidence_commands and all(isinstance(value, str) and value for value in evidence_commands), f"implemented/partial capability {capability_id} must name evidence command(s)")
-        ctx.require(evidence_status in {"implemented", "partial"}, f"implemented/partial capability {capability_id} needs implemented or partial evidence")
+        ctx.require(isinstance(evidence_status, str) and evidence_status in {"implemented", "partial"}, f"implemented/partial capability {capability_id} needs implemented or partial evidence")
     if status in {"planned", "unsupported"}:
-        ctx.require(evidence_status in {"planned", "unsupported"}, f"{status} capability {capability_id} cannot claim evidence status {evidence_status}")
+        ctx.require(isinstance(evidence_status, str) and evidence_status in {"planned", "unsupported"}, f"{status} capability {capability_id} cannot claim evidence status {evidence_status}")
         ctx.require(command is None and commands is None, f"unimplemented capability {capability_id} must not claim an executable evidence command")
     if status == "partial":
-        ctx.require(evidence_status in {"planned", "partial"}, f"partial capability {capability_id} cannot claim implemented evidence")
+        ctx.require(isinstance(evidence_status, str) and evidence_status in {"planned", "partial"}, f"partial capability {capability_id} cannot claim implemented evidence")
     if status == "implemented":
         ctx.require(evidence_status == "implemented", f"implemented capability {capability_id} needs implemented evidence")
     for value in evidence_commands:
@@ -164,8 +170,9 @@ def _validate_capability_evidence(ctx: Context, capability_id: str, capability: 
         ctx.require(isinstance(artifacts, list) and bool(artifacts), f"capability {capability_id} artifacts must be a non-empty array")
         if isinstance(artifacts, list):
             ctx.require(all(isinstance(value, str) and value for value in artifacts), f"capability {capability_id} evidence artifacts must be non-empty strings")
-            ctx.require(len(artifacts) == len(set(artifacts)), f"capability {capability_id} evidence artifacts must be unique")
+            strings_only = all(isinstance(value, str) and value for value in artifacts)
+            ctx.require(strings_only and len(artifacts) == len(set(artifacts)), f"capability {capability_id} evidence artifacts must be unique")
             for value in artifacts:
-                ctx.require(value in artifact_map, f"capability {capability_id} references unknown evidence artifact {value}")
+                ctx.require(has_record(artifact_map, value), f"capability {capability_id} references unknown evidence artifact {value}")
     elif artifact is not None:
-        ctx.require(artifact in artifact_map, f"capability {capability_id} references unknown evidence artifact {artifact}")
+        ctx.require(has_record(artifact_map, artifact), f"capability {capability_id} references unknown evidence artifact {artifact}")
