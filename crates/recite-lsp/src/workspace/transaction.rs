@@ -16,20 +16,41 @@ impl LspWorkspace {
         version: i32,
         text: String,
     ) -> Option<DiagnosticRefresh> {
+        self.open_refreshes(uri, version, text).into_iter().next()
+    }
+
+    pub(crate) fn open_refreshes(
+        &mut self,
+        uri: Uri,
+        version: i32,
+        text: String,
+    ) -> Vec<DiagnosticRefresh> {
         if self.documents.document(&uri).is_some() {
-            return None;
+            return Vec::new();
         }
+        let previous_authority = self.schema_authority_for_uri(&uri);
         let identity = self.open_identity(uri.clone());
         let mut documents = self.documents.clone();
         documents.open(identity, version, text);
-        self.rebuild_for_documents(self.saved.clone(), documents)
-            .ok()?;
-        if self.is_schema_document_uri(&uri) {
-            return self.schema_refresh_for_uri(&uri);
+        if self
+            .rebuild_for_documents(self.saved.clone(), documents)
+            .is_err()
+        {
+            return Vec::new();
         }
-        self.documents
-            .document(&uri)
-            .map(|document| self.publish_open_document(document))
+        if let Some(document) = self.documents.document(&uri)
+            && !self.is_schema_document_uri(&uri)
+        {
+            return vec![self.publish_open_document(document)];
+        }
+        match self.schema_refresh_for_uri(&uri) {
+            super::SchemaRefreshOutcome::NotSchema => self
+                .documents
+                .document(&uri)
+                .map(|document| vec![self.publish_open_document(document)])
+                .unwrap_or_default(),
+            outcome => self.schema_transition(previous_authority, outcome),
+        }
     }
 
     pub(crate) fn change(
@@ -38,6 +59,7 @@ impl LspWorkspace {
         version: i32,
         changes: Vec<TextDocumentContentChangeEvent>,
     ) -> WorkspaceChangeResult {
+        let previous_authority = self.schema_authority_for_uri(&uri);
         let identity = self.open_identity(uri.clone());
         let mut documents = self.documents.clone();
         match documents.change(identity, version, changes) {
@@ -49,13 +71,23 @@ impl LspWorkspace {
                     return WorkspaceChangeResult::Rejected;
                 }
                 if self.is_schema_document_uri(&uri) {
-                    if let Some(refresh) = self.schema_refresh_for_uri(&uri) {
-                        return WorkspaceChangeResult::Accepted(refresh);
+                    match self.schema_refresh_for_uri(&uri) {
+                        super::SchemaRefreshOutcome::Silent => {
+                            return WorkspaceChangeResult::AcceptedRefreshes(Vec::new());
+                        }
+                        super::SchemaRefreshOutcome::NotSchema => {
+                            let Some(document) = self.documents.document(&uri) else {
+                                return WorkspaceChangeResult::Rejected;
+                            };
+                            return WorkspaceChangeResult::Accepted(
+                                self.publish_open_document(document),
+                            );
+                        }
+                        outcome => {
+                            let refreshes = self.schema_transition(previous_authority, outcome);
+                            return WorkspaceChangeResult::AcceptedRefreshes(refreshes);
+                        }
                     }
-                    let Some(document) = self.documents.document(&uri) else {
-                        return WorkspaceChangeResult::Rejected;
-                    };
-                    return WorkspaceChangeResult::Accepted(self.publish_open_document(document));
                 }
                 let Some(document) = self.documents.document(&uri) else {
                     return WorkspaceChangeResult::Rejected;

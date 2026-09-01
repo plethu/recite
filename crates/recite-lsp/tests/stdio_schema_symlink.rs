@@ -50,20 +50,18 @@ fn symlink_schema_keeps_configured_uri_across_startup_overlay_and_close() {
         }),
     );
     let opened = harness.barrier(&target_uri);
-    assert_eq!(opened.len(), 1, "overlay schema messages: {opened:?}");
-    assert_schema_message(&opened[0], &configured_uri, Some(4), true);
+    assert_eq!(opened.len(), 2, "overlay schema messages: {opened:?}");
+    assert_schema_message(&opened[0], &configured_uri, None, true);
+    assert_schema_message(&opened[1], &target_uri, Some(4), true);
 
     harness.notify(
         "textDocument/didClose",
         json!({ "textDocument": { "uri": target_uri.clone() } }),
     );
     let closed = harness.barrier(&target_uri);
-    assert_eq!(closed.len(), 1, "closed schema messages: {closed:?}");
-    assert_schema_message(&closed[0], &configured_uri, None, false);
-    assert!(
-        closed[0]["params"]["uri"] != target_uri,
-        "canonical target URI must not receive a stale publication: {closed:?}"
-    );
+    assert_eq!(closed.len(), 2, "closed schema messages: {closed:?}");
+    assert_schema_message(&closed[0], &target_uri, None, true);
+    assert_schema_message(&closed[1], &configured_uri, None, false);
     harness.finish();
 }
 

@@ -1,5 +1,4 @@
-use super::{DiagnosticRefresh, DocumentDiagnostics, LspWorkspace};
-use std::path::{Component, PathBuf};
+use super::{DiagnosticRefresh, DocumentDiagnostics, LspWorkspace, SchemaRefreshOutcome};
 
 impl LspWorkspace {
     pub(crate) fn schema_partition_id(&self, uri: &lsp_types::Uri) -> Option<String> {
@@ -14,7 +13,43 @@ impl LspWorkspace {
             .collect()
     }
 
-    pub(crate) fn schema_refresh_for_uri(&self, uri: &lsp_types::Uri) -> Option<DiagnosticRefresh> {
+    pub(super) fn schema_authority_for_uri(&self, uri: &lsp_types::Uri) -> Option<lsp_types::Uri> {
+        self.partitions
+            .values()
+            .filter(|partition| partition.schema.matches_uri(uri))
+            .filter_map(|partition| partition.schema.protocol_uri())
+            .min_by_key(|uri| uri.as_str().to_owned())
+    }
+
+    pub(super) fn schema_transition(
+        &self,
+        previous: Option<lsp_types::Uri>,
+        outcome: SchemaRefreshOutcome,
+    ) -> Vec<DiagnosticRefresh> {
+        let SchemaRefreshOutcome::Refreshes(mut refreshes) = outcome else {
+            return Vec::new();
+        };
+        let Some(previous) = previous else {
+            return refreshes;
+        };
+        let next = refreshes.first().map(|refresh| match refresh {
+            DiagnosticRefresh::Publish(published) => published.uri.clone(),
+            DiagnosticRefresh::Clear { uri, .. } => uri.clone(),
+        });
+        if next.as_ref() != Some(&previous) {
+            refreshes.insert(
+                0,
+                DiagnosticRefresh::Clear {
+                    uri: previous,
+                    version: None,
+                    generation: self.generation,
+                },
+            );
+        }
+        refreshes
+    }
+
+    pub(crate) fn schema_refresh_for_uri(&self, uri: &lsp_types::Uri) -> SchemaRefreshOutcome {
         let owner = self.schema_owner_for_uri(uri);
         // A second alias opening must not republish the first owner's
         // diagnostics with the second document's version.  The deterministic
@@ -23,7 +58,7 @@ impl LspWorkspace {
         if self.documents.document(uri).is_some()
             && owner.as_ref().is_some_and(|owner| owner != uri)
         {
-            return None;
+            return SchemaRefreshOutcome::Silent;
         }
         let mut refreshes = self
             .partitions
@@ -32,12 +67,17 @@ impl LspWorkspace {
             .filter_map(|partition| partition.schema.refresh_or_clear(self.generation));
         let first = refreshes.next();
         let Some(first) = first else {
-            let document = self.documents.document(uri)?;
-            return Some(DiagnosticRefresh::publish_open(
-                document,
-                Vec::new(),
-                self.generation,
-            ));
+            let Some(document) = self.documents.document(uri) else {
+                return SchemaRefreshOutcome::NotSchema;
+            };
+            if self.is_retired_schema_alias(uri) {
+                return SchemaRefreshOutcome::Refreshes(vec![DiagnosticRefresh::publish_open(
+                    document,
+                    Vec::new(),
+                    self.generation,
+                )]);
+            }
+            return SchemaRefreshOutcome::NotSchema;
         };
         let mut has_publish = matches!(&first, DiagnosticRefresh::Publish(_));
         let mut merged = match first {
@@ -76,13 +116,13 @@ impl LspWorkspace {
             {
                 merged.uri = owner;
             }
-            Some(DiagnosticRefresh::Publish(merged))
+            SchemaRefreshOutcome::Refreshes(vec![DiagnosticRefresh::Publish(merged)])
         } else {
-            Some(DiagnosticRefresh::Clear {
+            SchemaRefreshOutcome::Refreshes(vec![DiagnosticRefresh::Clear {
                 uri: merged.uri,
                 version: None,
                 generation: self.generation,
-            })
+            }])
         }
     }
 
@@ -110,8 +150,7 @@ impl LspWorkspace {
             .documents
             .document(uri)
             .and_then(|document| document.identity().saved_path.as_deref())
-            .and_then(crate::paths::file_path_to_uri)
-            .and_then(normalized_file_uri)
+            .map(crate::paths::stable_path_identity)
         else {
             return false;
         };
@@ -124,29 +163,14 @@ impl LspWorkspace {
                     .flat_map(|partition| partition.retired_schema_uris.iter()),
             )
             .filter_map(|retired_uri| retired_uri.parse::<lsp_types::Uri>().ok())
-            .filter_map(normalized_file_uri)
+            .filter_map(schema_target_id)
             .collect::<Vec<_>>();
         candidates.into_iter().any(|candidate| candidate == target)
     }
 }
 
-fn normalized_file_uri(uri: lsp_types::Uri) -> Option<String> {
-    let mut parsed = url::Url::parse(uri.as_str()).ok()?;
-    if parsed.scheme() != "file" {
-        return None;
-    }
-    let mut path = PathBuf::new();
-    for component in PathBuf::from(parsed.path()).components() {
-        match component {
-            Component::RootDir => path.push(std::path::MAIN_SEPARATOR_STR),
-            Component::CurDir => {}
-            Component::ParentDir => {
-                path.pop();
-            }
-            Component::Normal(component) => path.push(component),
-            Component::Prefix(prefix) => path.push(prefix.as_os_str()),
-        }
-    }
-    parsed.set_path(&path.to_string_lossy());
-    Some(parsed.to_string())
+fn schema_target_id(uri: lsp_types::Uri) -> Option<String> {
+    let path = crate::paths::uri_to_file_path(&uri)?;
+    let path = std::fs::canonicalize(&path).unwrap_or(path);
+    Some(crate::paths::stable_path_identity(&path))
 }

@@ -24,12 +24,20 @@ pub(super) fn did_close_schema_alias_clears_exact_uri() {
     let canonical_uri = file_uri(&schema_path);
 
     harness.did_open(alias_uri.clone(), 7, "not a schema\n");
+    let startup_clear = harness.recv_publish_diagnostics();
+    assert_eq!(startup_clear.uri, canonical_uri);
+    assert_eq!(startup_clear.version, None);
+    assert!(startup_clear.diagnostics.is_empty());
     let invalid = harness.recv_publish_diagnostics();
-    assert_eq!(invalid.uri, canonical_uri);
+    assert_eq!(invalid.uri, alias_uri);
     assert_eq!(invalid.version, Some(7));
     assert!(!invalid.diagnostics.is_empty());
 
     harness.did_close(alias_uri.clone());
+    let alias_refresh = harness.recv_publish_diagnostics();
+    assert_eq!(alias_refresh.uri, alias_uri);
+    assert_eq!(alias_refresh.version, None);
+    assert!(alias_refresh.diagnostics.is_empty());
     let canonical_refresh = harness.recv_publish_diagnostics();
     assert_eq!(canonical_refresh.uri, canonical_uri);
     assert_eq!(canonical_refresh.version, None);

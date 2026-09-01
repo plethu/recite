@@ -254,14 +254,14 @@ impl Server {
         else {
             return Ok(());
         };
-        let Some(refresh) = self.workspace.open(
+        let refreshes = self.workspace.open_refreshes(
             params.text_document.uri.clone(),
             params.text_document.version,
             params.text_document.text,
-        ) else {
-            return Ok(());
-        };
-        self.publish_refresh(refresh)?;
+        );
+        for refresh in refreshes {
+            self.publish_refresh(refresh)?;
+        }
         self.publish_open_document_refreshes(Some(&params.text_document.uri))
     }
     fn handle_did_change(&mut self, notification: Notification) -> Result<(), ServerError> {
@@ -272,12 +272,21 @@ impl Server {
         };
         let uri = params.text_document.uri;
         let version = params.text_document.version;
-        if let WorkspaceChangeResult::Accepted(refresh) =
-            self.workspace
-                .change(uri.clone(), version, params.content_changes)
+        match self
+            .workspace
+            .change(uri.clone(), version, params.content_changes)
         {
-            self.publish_refresh(refresh)?;
-            self.publish_open_document_refreshes(Some(&uri))?;
+            WorkspaceChangeResult::Accepted(refresh) => {
+                self.publish_refresh(refresh)?;
+                self.publish_open_document_refreshes(Some(&uri))?;
+            }
+            WorkspaceChangeResult::AcceptedRefreshes(refreshes) => {
+                for refresh in refreshes {
+                    self.publish_refresh(refresh)?;
+                }
+                self.publish_open_document_refreshes(Some(&uri))?;
+            }
+            _ => {}
         }
 
         Ok(())

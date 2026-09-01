@@ -121,16 +121,8 @@ impl LspWorkspace {
                         .iter()
                         .map(|document| document.identity().uri.as_str().to_owned()),
                 );
-                let protocol_uri = old.protocol_uri();
                 refreshes.extend(old_open.into_iter().map(|document| {
-                    let mut refresh =
-                        DiagnosticRefresh::publish_open(document, Vec::new(), self.generation);
-                    if let Some(protocol_uri) = &protocol_uri
-                        && let DiagnosticRefresh::Publish(published) = &mut refresh
-                    {
-                        published.uri = protocol_uri.clone();
-                    }
-                    refresh
+                    DiagnosticRefresh::publish_open(document, Vec::new(), self.generation)
                 }));
                 if old_documents
                     .documents()

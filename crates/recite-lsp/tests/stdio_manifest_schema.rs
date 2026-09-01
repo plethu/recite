@@ -49,7 +49,7 @@ fn manifest_schema_change_reloads_and_preserves_open_overlay() {
         }),
     );
     let overlay_messages = harness.barrier(&schema_a_alias_uri);
-    let overlay = diagnostics_for(&overlay_messages, &schema_a_uri);
+    let overlay = diagnostics_for(&overlay_messages, &schema_a_alias_uri);
     assert_eq!(overlay.len(), 1);
     let overlay = overlay[0];
     assert_eq!(overlay["version"], 7);
@@ -70,7 +70,7 @@ fn manifest_schema_change_reloads_and_preserves_open_overlay() {
         json!({ "changes": [{ "uri": manifest_uri.clone(), "type": 2 }] }),
     );
     let refresh_messages = harness.barrier(&schema_a_alias_uri);
-    let refreshed_diagnostics = diagnostics_for(&refresh_messages, &schema_a_uri);
+    let refreshed_diagnostics = diagnostics_for(&refresh_messages, &schema_a_alias_uri);
     assert_eq!(refreshed_diagnostics.len(), 1);
     let refreshed_overlay = refreshed_diagnostics[0];
     assert_eq!(refreshed_overlay["version"], 7);
@@ -92,7 +92,7 @@ fn manifest_schema_change_reloads_and_preserves_open_overlay() {
     );
     let switch_messages = harness.barrier(&schema_a_alias_uri);
     assert_eq!(switch_messages.len(), 2);
-    let old_clear = diagnostics_for(&switch_messages, &schema_a_uri);
+    let old_clear = diagnostics_for(&switch_messages, &schema_a_alias_uri);
     assert_eq!(old_clear.len(), 1);
     let old_clear = old_clear[0];
     assert_eq!(old_clear["version"], 7);
@@ -200,7 +200,7 @@ fn manifest_schema_change_reloads_and_preserves_open_overlay() {
     );
     let readd_messages = harness.barrier(&schema_a_alias_uri);
     assert_eq!(readd_messages.len(), 1);
-    let readded = diagnostics_for(&readd_messages, &schema_a_uri);
+    let readded = diagnostics_for(&readd_messages, &schema_a_alias_uri);
     assert_eq!(readded.len(), 1, "re-add messages: {readded:?}");
     assert_eq!(readded[0]["version"], 8);
     assert!(!readded[0]["diagnostics"].as_array().unwrap().is_empty());
@@ -244,8 +244,7 @@ fn removed_parent_manifest_retains_open_schema_alias_as_retired() {
         }),
     );
     let opened = harness.barrier(&schema_alias);
-    let schema_uri = file_uri(&schema);
-    assert_eq!(diagnostics_for(&opened, &schema_uri).len(), 1);
+    assert_eq!(diagnostics_for(&opened, &schema_alias).len(), 1);
 
     std::fs::remove_file(&manifest)
         .unwrap_or_else(|error| panic!("remove parent manifest: {error}"));
@@ -255,7 +254,7 @@ fn removed_parent_manifest_retains_open_schema_alias_as_retired() {
     );
     let removed = harness.barrier(&schema_alias);
     assert_eq!(removed.len(), 1);
-    let clear = diagnostics_for(&removed, &schema_uri);
+    let clear = diagnostics_for(&removed, &schema_alias);
     assert_eq!(clear.len(), 1);
     assert_eq!(clear[0]["version"], 7);
     assert!(
@@ -293,7 +292,7 @@ fn removed_parent_manifest_retains_open_schema_alias_as_retired() {
     );
     let readded = harness.barrier(&schema_alias);
     assert_eq!(readded.len(), 1, "re-add messages: {readded:?}");
-    let readded = diagnostics_for(&readded, &schema_uri);
+    let readded = diagnostics_for(&readded, &schema_alias);
     assert_eq!(readded.len(), 1);
     assert_eq!(readded[0]["version"], 8);
     assert!(

@@ -44,7 +44,7 @@ fn stdio_schema_alias_close_uses_configured_authority() {
         }),
     );
     let invalid_messages = harness.barrier(&alias_uri);
-    let invalid = diagnostics_for(&invalid_messages, &canonical_uri);
+    let invalid = diagnostics_for(&invalid_messages, &alias_uri);
     assert_eq!(invalid.len(), 1);
     let invalid = invalid[0];
     assert_eq!(invalid["version"], 7);
@@ -60,7 +60,10 @@ fn stdio_schema_alias_close_uses_configured_authority() {
         json!({ "textDocument": { "uri": alias_uri.clone() } }),
     );
     let close_messages = harness.barrier(&alias_uri);
-    assert_eq!(close_messages.len(), 1);
+    assert_eq!(close_messages.len(), 2);
+    let alias_refresh = diagnostics_for(&close_messages, &alias_uri);
+    assert_eq!(alias_refresh.len(), 1);
+    assert!(alias_refresh[0]["version"].is_null());
     let canonical_refresh = diagnostics_for(&close_messages, &canonical_uri);
     assert_eq!(canonical_refresh.len(), 1);
     let canonical_refresh = canonical_refresh[0];

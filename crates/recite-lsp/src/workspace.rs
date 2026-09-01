@@ -99,7 +99,11 @@ impl LspWorkspace {
             schemas,
         )
         .ok()?;
-        self.schema_refresh_for_uri(uri)
+        let SchemaRefreshOutcome::Refreshes(mut refreshes) = self.schema_refresh_for_uri(uri)
+        else {
+            return None;
+        };
+        refreshes.pop()
     }
 
     pub(crate) fn is_current_generation(&self, generation: SnapshotGeneration) -> bool {
@@ -177,10 +181,18 @@ impl LspWorkspace {
 #[derive(Clone, Debug)]
 pub(crate) enum WorkspaceChangeResult {
     Accepted(DiagnosticRefresh),
+    AcceptedRefreshes(Vec<DiagnosticRefresh>),
     Stale,
     Malformed,
     Unopened,
     Rejected,
+}
+
+#[derive(Clone, Debug)]
+pub(crate) enum SchemaRefreshOutcome {
+    NotSchema,
+    Silent,
+    Refreshes(Vec<DiagnosticRefresh>),
 }
 
 #[derive(Clone, Debug)]
