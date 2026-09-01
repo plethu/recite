@@ -209,7 +209,6 @@ production suppressions must carry a narrow scope and rationale.
 | `crates/recite-lsp/src/tests/availability/speaker.rs` | 351 | test/support | lsp/tests | review | Typed and ordinary speaker completion coverage |
 | `crates/recite-compiler/tests/validation/participation.rs` | 424 | test/support | compiler/tests | cohesive | #168: participation-aware validation completeness and all-complete compatibility coverage |
 | `.agents/skills/recite-github-pm/scripts/check-pr-review-gates.sh` | 470 | tooling | agent-workflow | exception | #197: split review-gate orchestration into focused policy helpers |
-| `editors/recite-neovim/lua/recite.lua` | 403 | production | neovim/runtime | exception | #197: split lifecycle recovery from editor command projections after the pending-restart correction |
 | `editors/recite-tree-sitter/grammar.js` | 345 | production | tree-sitter/grammar | cohesive | Grammar source owns syntax and recovery rules alongside the named node declarations |
 | `editors/vscode/scripts/ui-boundary-calls.mjs` | 346 | tooling | vscode/checks | review | UI boundary call inventory remains a single generated-boundary checker |
 | `scripts/check-git-policy.sh` | 414 | tooling | git-policy | exception | #197: split commit, diff, and workflow policy checks into focused helpers |

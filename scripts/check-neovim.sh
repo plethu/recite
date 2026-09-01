@@ -40,13 +40,16 @@ neovim_query="$plugin_root/queries/recite/highlights.scm"
 for required_file in \
   "$plugin_root/plugin/recite.lua" \
   "$plugin_root/lua/recite.lua" \
+  "$plugin_root/lua/recite/lifecycle.lua" \
+  "$plugin_root/lua/recite/material.lua" \
   "$plugin_root/ftdetect/recite.lua" \
   "$plugin_root/health/recite.lua" \
   "$plugin_root/scripts/message-projections.mjs" \
   "$plugin_root/lua/recite_messages.lua" \
   "$neovim_query" \
   "$repo_root/tests/neovim/check.lua" \
-  "$repo_root/tests/neovim/recovery.lua"; do
+  "$repo_root/tests/neovim/recovery.lua" \
+  "$repo_root/tests/neovim/material.lua"; do
   if [[ ! -f "$required_file" ]]; then
     echo "missing Neovim integration file: $required_file" >&2
     exit 2
@@ -195,5 +198,6 @@ run_headless() {
 
 run_headless "$repo_root/tests/neovim/check.lua"
 run_headless "$repo_root/tests/neovim/recovery.lua"
+run_headless "$repo_root/tests/neovim/material.lua"
 
 echo "Neovim headless checks passed"
