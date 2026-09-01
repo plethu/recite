@@ -447,8 +447,22 @@
               "type": "SEQ",
               "members": [
                 {
-                  "type": "SYMBOL",
-                  "name": "hspace"
+                  "type": "CHOICE",
+                  "members": [
+                    {
+                      "type": "SYMBOL",
+                      "name": "hspace"
+                    },
+                    {
+                      "type": "ALIAS",
+                      "content": {
+                        "type": "PATTERN",
+                        "value": "[\\u000B\\u000C\\u001C-\\u001F\\u0085\\u00A0\\u1680\\u2000-\\u200A\\u2028\\u2029\\u202F\\u205F\\u3000]+"
+                      },
+                      "named": true,
+                      "value": "hspace"
+                    }
+                  ]
                 },
                 {
                   "type": "CHOICE",
@@ -535,8 +549,22 @@
               "type": "SEQ",
               "members": [
                 {
-                  "type": "SYMBOL",
-                  "name": "hspace"
+                  "type": "CHOICE",
+                  "members": [
+                    {
+                      "type": "SYMBOL",
+                      "name": "hspace"
+                    },
+                    {
+                      "type": "ALIAS",
+                      "content": {
+                        "type": "PATTERN",
+                        "value": "[\\u000B\\u000C\\u001C-\\u001F\\u0085\\u00A0\\u1680\\u2000-\\u200A\\u2028\\u2029\\u202F\\u205F\\u3000]+"
+                      },
+                      "named": true,
+                      "value": "hspace"
+                    }
+                  ]
                 },
                 {
                   "type": "SYMBOL",
@@ -582,8 +610,22 @@
               "type": "SEQ",
               "members": [
                 {
-                  "type": "SYMBOL",
-                  "name": "hspace"
+                  "type": "CHOICE",
+                  "members": [
+                    {
+                      "type": "SYMBOL",
+                      "name": "hspace"
+                    },
+                    {
+                      "type": "ALIAS",
+                      "content": {
+                        "type": "PATTERN",
+                        "value": "[\\u000B\\u000C\\u001C-\\u001F\\u0085\\u00A0\\u1680\\u2000-\\u200A\\u2028\\u2029\\u202F\\u205F\\u3000]+"
+                      },
+                      "named": true,
+                      "value": "hspace"
+                    }
+                  ]
                 },
                 {
                   "type": "CHOICE",
@@ -657,8 +699,22 @@
               "type": "SEQ",
               "members": [
                 {
-                  "type": "SYMBOL",
-                  "name": "hspace"
+                  "type": "CHOICE",
+                  "members": [
+                    {
+                      "type": "SYMBOL",
+                      "name": "hspace"
+                    },
+                    {
+                      "type": "ALIAS",
+                      "content": {
+                        "type": "PATTERN",
+                        "value": "[\\u000B\\u000C\\u001C-\\u001F\\u0085\\u00A0\\u1680\\u2000-\\u200A\\u2028\\u2029\\u202F\\u205F\\u3000]+"
+                      },
+                      "named": true,
+                      "value": "hspace"
+                    }
+                  ]
                 },
                 {
                   "type": "CHOICE",
@@ -1389,6 +1445,10 @@
             },
             {
               "type": "SYMBOL",
+              "name": "prose_marker_text"
+            },
+            {
+              "type": "SYMBOL",
               "name": "prose_start"
             }
           ]
@@ -1825,22 +1885,31 @@
         {
           "type": "PATTERN",
           "value": ":"
+        }
+      ]
+    },
+    "prose_marker_text": {
+      "type": "CHOICE",
+      "members": [
+        {
+          "type": "PATTERN",
+          "value": ":[^iemc\\r\\n\\t \\u000B\\u000C\\u001C-\\u001F\\u0085\\u00A0\\u1680\\u2000-\\u200A\\u2028\\u2029\\u202F\\u205F\\u3000][^\\r\\n]*"
         },
         {
           "type": "PATTERN",
-          "value": ":i(?:[^f\\r\\n \\t]|f[^\\r\\n \\t])"
+          "value": ":i(?:[^f\\r\\n\\t \\u000B\\u000C\\u001C-\\u001F\\u0085\\u00A0\\u1680\\u2000-\\u200A\\u2028\\u2029\\u202F\\u205F\\u3000]|f[^\\r\\n\\t \\u000B\\u000C\\u001C-\\u001F\\u0085\\u00A0\\u1680\\u2000-\\u200A\\u2028\\u2029\\u202F\\u205F\\u3000])[^\\r\\n]*"
         },
         {
           "type": "PATTERN",
-          "value": ":e(?:[^l\\r\\n \\t]|l(?:[^s\\r\\n \\t]|s(?:[^e\\r\\n \\t]|e[^\\r\\n \\t])))"
+          "value": ":e(?:[^l\\r\\n\\t \\u000B\\u000C\\u001C-\\u001F\\u0085\\u00A0\\u1680\\u2000-\\u200A\\u2028\\u2029\\u202F\\u205F\\u3000]|l(?:[^s\\r\\n\\t \\u000B\\u000C\\u001C-\\u001F\\u0085\\u00A0\\u1680\\u2000-\\u200A\\u2028\\u2029\\u202F\\u205F\\u3000]|s(?:[^e\\r\\n\\t \\u000B\\u000C\\u001C-\\u001F\\u0085\\u00A0\\u1680\\u2000-\\u200A\\u2028\\u2029\\u202F\\u205F\\u3000]|e[^\\r\\n\\t \\u000B\\u000C\\u001C-\\u001F\\u0085\\u00A0\\u1680\\u2000-\\u200A\\u2028\\u2029\\u202F\\u205F\\u3000])))[^\\r\\n]*"
         },
         {
           "type": "PATTERN",
-          "value": ":m(?:[^a\\r\\n \\t]|a(?:[^t\\r\\n \\t]|t(?:[^c\\r\\n \\t]|c(?:[^h\\r\\n \\t]|h[^\\r\\n \\t]))))"
+          "value": ":m(?:[^a\\r\\n\\t \\u000B\\u000C\\u001C-\\u001F\\u0085\\u00A0\\u1680\\u2000-\\u200A\\u2028\\u2029\\u202F\\u205F\\u3000]|a(?:[^t\\r\\n\\t \\u000B\\u000C\\u001C-\\u001F\\u0085\\u00A0\\u1680\\u2000-\\u200A\\u2028\\u2029\\u202F\\u205F\\u3000]|t(?:[^c\\r\\n\\t \\u000B\\u000C\\u001C-\\u001F\\u0085\\u00A0\\u1680\\u2000-\\u200A\\u2028\\u2029\\u202F\\u205F\\u3000]|c(?:[^h\\r\\n\\t \\u000B\\u000C\\u001C-\\u001F\\u0085\\u00A0\\u1680\\u2000-\\u200A\\u2028\\u2029\\u202F\\u205F\\u3000]|h[^\\r\\n\\t \\u000B\\u000C\\u001C-\\u001F\\u0085\\u00A0\\u1680\\u2000-\\u200A\\u2028\\u2029\\u202F\\u205F\\u3000]))))[^\\r\\n]*"
         },
         {
           "type": "PATTERN",
-          "value": ":c(?:[^a\\r\\n \\t]|a(?:[^s\\r\\n \\t]|s(?:[^e\\r\\n \\t]|e[^\\r\\n \\t])))"
+          "value": ":c(?:[^a\\r\\n\\t \\u000B\\u000C\\u001C-\\u001F\\u0085\\u00A0\\u1680\\u2000-\\u200A\\u2028\\u2029\\u202F\\u205F\\u3000]|a(?:[^s\\r\\n\\t \\u000B\\u000C\\u001C-\\u001F\\u0085\\u00A0\\u1680\\u2000-\\u200A\\u2028\\u2029\\u202F\\u205F\\u3000]|s(?:[^e\\r\\n\\t \\u000B\\u000C\\u001C-\\u001F\\u0085\\u00A0\\u1680\\u2000-\\u200A\\u2028\\u2029\\u202F\\u205F\\u3000]|e[^\\r\\n\\t \\u000B\\u000C\\u001C-\\u001F\\u0085\\u00A0\\u1680\\u2000-\\u200A\\u2028\\u2029\\u202F\\u205F\\u3000])))[^\\r\\n]*"
         }
       ]
     },

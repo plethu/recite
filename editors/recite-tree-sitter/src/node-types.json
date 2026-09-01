@@ -1080,6 +1080,11 @@
     }
   },
   {
+    "type": "prose_marker_text",
+    "named": true,
+    "fields": {}
+  },
+  {
     "type": "prose_start",
     "named": true,
     "fields": {}
@@ -1102,6 +1107,10 @@
         },
         {
           "type": "prose_content",
+          "named": true
+        },
+        {
+          "type": "prose_marker_text",
           "named": true
         },
         {

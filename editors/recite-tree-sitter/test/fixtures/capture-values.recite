@@ -13,6 +13,10 @@
   :elsex this is prose.
   :matchx this is prose.
   :casex this is prose.
+  :if{value}
+  :else[tag]
+  :match(value)
+  :case[variant]
   :if exact directive
   :else
   :match exact directive

@@ -7,6 +7,10 @@ Directive markers are boundary aware in indented bodies
   :elsex this is prose
   :matchx this is prose
   :casex this is prose
+  :if{value}
+  :else[tag]
+  :match(value)
+  :case[variant]
   -> END
   :if exact directive
   :else # exact directive with horizontal whitespace
@@ -35,26 +39,42 @@ Directive markers are boundary aware in indented bodies
   (prose_line
     (indent)
     (prose_text
-      (prose_start)
-      (prose_content))
+      (prose_marker_text))
     (newline))
   (prose_line
     (indent)
     (prose_text
-      (prose_start)
-      (prose_content))
+      (prose_marker_text))
     (newline))
   (prose_line
     (indent)
     (prose_text
-      (prose_start)
-      (prose_content))
+      (prose_marker_text))
     (newline))
   (prose_line
     (indent)
     (prose_text
-      (prose_start)
-      (prose_content))
+      (prose_marker_text))
+    (newline))
+  (prose_line
+    (indent)
+    (prose_text
+      (prose_marker_text))
+    (newline))
+  (prose_line
+    (indent)
+    (prose_text
+      (prose_marker_text))
+    (newline))
+  (prose_line
+    (indent)
+    (prose_text
+      (prose_marker_text))
+    (newline))
+  (prose_line
+    (indent)
+    (prose_text
+      (prose_marker_text))
     (newline))
   (divert_statement
     (indent)
@@ -118,4 +138,53 @@ Directive markers are boundary aware in indented bodies
   (case_statement
     (indent)
     (case_marker)
+    (newline)))
+
+==================
+Unicode whitespace retains directive boundaries
+==================
+  :if condition
+  :else 
+  :match condition
+  :case variant
+  -> END
+
+---
+
+(source_file
+  (if_statement
+    (indent)
+    (if_marker)
+    (hspace)
+    (condition_expression
+      (expression_part
+        (symbol
+          (identifier))))
+    (newline))
+  (else_statement
+    (indent)
+    (else_marker)
+    (hspace)
+    (newline))
+  (match_statement
+    (indent)
+    (match_marker)
+    (hspace)
+    (condition_expression
+      (expression_part
+        (symbol
+          (identifier))))
+    (newline))
+  (case_statement
+    (indent)
+    (case_marker)
+    (hspace)
+    (identifier)
+    (newline))
+  (divert_statement
+    (indent)
+    (divert_marker)
+    (hspace)
+    (target
+      (end_target))
     (newline)))

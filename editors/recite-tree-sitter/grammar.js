@@ -5,6 +5,11 @@
 // source recovery, stable IDs, references, schema, conditions, effects,
 // markup, and match exhaustiveness.
 
+const directiveUnicodeWhitespace = "\\u000B\\u000C\\u001C-\\u001F\\u0085\\u00A0\\u1680\\u2000-\\u200A\\u2028\\u2029\\u202F\\u205F\\u3000";
+const directiveWhitespace = `\\t ${directiveUnicodeWhitespace}`;
+const directiveNonWhitespace = `\\r\\n${directiveWhitespace}`;
+const directiveUnicodeHspace = new RegExp(`[${directiveUnicodeWhitespace}]+`);
+
 module.exports = grammar({
   name: "recite",
 
@@ -93,7 +98,7 @@ module.exports = grammar({
       field("marker", $.if_marker),
       choice(
         seq(
-          $.hspace,
+          choice($.hspace, alias(directiveUnicodeHspace, $.hspace)),
           optional(field("condition", $.condition_expression)),
           optional($.inline_comment),
           $.newline,
@@ -111,7 +116,7 @@ module.exports = grammar({
           $.newline,
         ),
         seq(
-          $.hspace,
+          choice($.hspace, alias(directiveUnicodeHspace, $.hspace)),
           $.newline,
         ),
         $.newline,
@@ -123,7 +128,7 @@ module.exports = grammar({
       field("marker", $.match_marker),
       choice(
         seq(
-          $.hspace,
+          choice($.hspace, alias(directiveUnicodeHspace, $.hspace)),
           optional(field("condition", $.condition_expression)),
           optional($.inline_comment),
           $.newline,
@@ -137,7 +142,7 @@ module.exports = grammar({
       field("marker", $.case_marker),
       choice(
         seq(
-          $.hspace,
+          choice($.hspace, alias(directiveUnicodeHspace, $.hspace)),
           optional(field("variant", $.identifier)),
           optional($.inline_comment),
           $.newline,
@@ -283,7 +288,7 @@ module.exports = grammar({
     // about the prose content. An ordinary hyphen is prose, while `->`
     // remains a divert marker.
     prose_text: ($) => seq(
-      choice($.markup_tag, $.interpolation, $.prose_start),
+      choice($.markup_tag, $.interpolation, $.prose_marker_text, $.prose_start),
       repeat(choice($.markup_tag, $.interpolation, $.prose_content)),
     ),
 
@@ -362,6 +367,10 @@ module.exports = grammar({
     ),
 
     comment_text: ($) => /[^\r\n]*/,
+    // Rust's `char::is_whitespace` is the production marker-boundary
+    // contract. Physical CR/LF are handled by `newline`; the remaining
+    // Unicode White_Space/control scalars are enumerated here because the
+    // pinned Tree-sitter regex dialect has no Unicode property escapes.
     // A directive marker is only structural when its complete spelling is
     // followed by horizontal whitespace or the end of the physical line.
     // Keep near-misses in prose without relying on unsupported regex
@@ -371,10 +380,17 @@ module.exports = grammar({
     prose_start: ($) => choice(
       /[^\r\n{}\[\]?#>!:|]+/,
       /:/,
-      /:i(?:[^f\r\n \t]|f[^\r\n \t])/,
-      /:e(?:[^l\r\n \t]|l(?:[^s\r\n \t]|s(?:[^e\r\n \t]|e[^\r\n \t])))/,
-      /:m(?:[^a\r\n \t]|a(?:[^t\r\n \t]|t(?:[^c\r\n \t]|c(?:[^h\r\n \t]|h[^\r\n \t]))))/,
-      /:c(?:[^a\r\n \t]|a(?:[^s\r\n \t]|s(?:[^e\r\n \t]|e[^\r\n \t])))/,
+    ),
+    // Consume a marker-like near-miss through the end of its physical line so
+    // punctuation cannot become stranded as fake markup or interpolation.
+    // The production parser owns the whole line as prose; this rule makes no
+    // structured-content claim about it.
+    prose_marker_text: ($) => choice(
+      new RegExp(`:[^iemc${directiveNonWhitespace}][^\\r\\n]*`),
+      new RegExp(`:i(?:[^f${directiveNonWhitespace}]|f[^${directiveNonWhitespace}])[^\\r\\n]*`),
+      new RegExp(`:e(?:[^l${directiveNonWhitespace}]|l(?:[^s${directiveNonWhitespace}]|s(?:[^e${directiveNonWhitespace}]|e[^${directiveNonWhitespace}])))[^\\r\\n]*`),
+      new RegExp(`:m(?:[^a${directiveNonWhitespace}]|a(?:[^t${directiveNonWhitespace}]|t(?:[^c${directiveNonWhitespace}]|c(?:[^h${directiveNonWhitespace}]|h[^${directiveNonWhitespace}]))))[^\\r\\n]*`),
+      new RegExp(`:c(?:[^a${directiveNonWhitespace}]|a(?:[^s${directiveNonWhitespace}]|s(?:[^e${directiveNonWhitespace}]|e[^${directiveNonWhitespace}])))[^\\r\\n]*`),
     ),
     prose_content: ($) => /[^\r\n{}\[\]]+/,
     indent: ($) => /[ \t]+/,
