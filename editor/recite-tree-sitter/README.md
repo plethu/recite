@@ -11,8 +11,12 @@ decide ownership of a body or branch. It accepts partial editor buffers and
 allows Tree-sitter recovery to expose `ERROR` nodes while the authoritative
 tooling reports the real diagnostic.
 
-The checked-in `src/parser.c` is generated from `grammar.js`. `queries/` holds
-host-neutral captures. This package is syntax and highlighting evidence only;
+The checked-in `src/parser.c` is generated from `grammar.js` for Tree-sitter
+language ABI 14. That deliberately broad target keeps the generated parser
+loadable by the Tree-sitter runtime shipped with Neovim 0.10.4; it is a parser
+compatibility choice, not a claim that Neovim setup or package support exists.
+`queries/` holds host-neutral captures. This package is syntax and highlighting
+evidence only;
 it does not provide Neovim setup, a plugin/package, or Zed integration. The
 Rowan parser and compiler remain the authority for language meaning.
 

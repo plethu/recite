@@ -44,6 +44,7 @@ if [[ -z "${XDG_CACHE_HOME:-}" ]]; then
   export XDG_CACHE_HOME="$repo_root/target/tree-sitter-cache"
 fi
 grammar_dir="$repo_root/editor/recite-tree-sitter"
+parser_abi=14
 canonical_fixture="$repo_root/fixtures/recite/valid/language_pressure.recite"
 canonical_corpus="$grammar_dir/test/corpus/canonical.txt"
 recovery_corpus="$grammar_dir/test/corpus/recovery.txt"
@@ -67,6 +68,11 @@ for required_file in \
     exit 2
   fi
 done
+
+if ! grep -Eq "^#define LANGUAGE_VERSION $parser_abi$" "$grammar_dir/src/parser.c"; then
+  echo "generated Tree-sitter parser does not target ABI $parser_abi" >&2
+  exit 1
+fi
 
 if ! command -v tree-sitter >/dev/null 2>&1; then
   echo "missing required tool: tree-sitter" >&2
@@ -92,7 +98,7 @@ cp -R "$grammar_dir/." "$scratch/grammar/"
 rm -rf "$scratch/grammar/src"
 (
   cd "$scratch/grammar"
-  tree-sitter generate
+  tree-sitter generate --abi "$parser_abi"
 )
 for generated_file in \
   src/grammar.json \
@@ -107,6 +113,13 @@ for generated_file in \
     exit 1
   fi
 done
+
+echo "== native parser build (ABI $parser_abi) =="
+tree-sitter build --output "$scratch/recite-tree-sitter.so" "$grammar_dir"
+if [[ ! -s "$scratch/recite-tree-sitter.so" ]]; then
+  echo "Tree-sitter native parser build produced no library" >&2
+  exit 1
+fi
 
 echo "== canonical fixture linkage =="
 awk '
