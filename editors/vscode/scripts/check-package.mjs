@@ -87,6 +87,13 @@ assert(Array.isArray(languageConfiguration.brackets), "language bracket behavior
 const sourceRoot = path.join(packageRoot, "src");
 assertSafeTree(sourceRoot, "extension source");
 const source = await readFile(path.join(sourceRoot, "extension.js"), "utf8");
+const entrySource = await readFile(path.join(sourceRoot, "extension.cjs"), "utf8");
+assert(entrySource.includes('require("vscode")'),
+  "the CommonJS extension entry must acquire the VS Code host API");
+assert(!source.match(/(?:from|import\s*\()\s*["']vscode["']/),
+  "the ESM implementation must receive the VS Code host API explicitly");
+assert(source.includes("activateWithVscode"),
+  "the ESM implementation must expose the explicit VS Code activation boundary");
 assert(!source.includes("vscode-languageclient"), "the scaffold must keep its process boundary inspectable");
 assert(!source.match(/(?:parse|Parser|tokeniz|compile).*Recite/i),
   "the client must not grow a second Recite semantic implementation");

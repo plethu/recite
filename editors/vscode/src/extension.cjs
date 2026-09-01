@@ -1,3 +1,5 @@
+const vscode = require("vscode");
+
 let implementationPromise;
 
 function loadImplementation() {
@@ -6,12 +8,13 @@ function loadImplementation() {
 
 module.exports = {
   activate(...args) {
-    return loadImplementation().then(({ activate }) => activate(...args));
+    return loadImplementation().then(({ activateWithVscode }) =>
+      activateWithVscode(vscode, ...args));
   },
 
   async deactivate(...args) {
     if (!implementationPromise) return undefined;
-    const { deactivate } = await implementationPromise;
-    return deactivate?.(...args);
+    const { deactivateWithVscode } = await implementationPromise;
+    return deactivateWithVscode(...args);
   }
 };

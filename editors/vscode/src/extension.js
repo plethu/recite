@@ -1,10 +1,9 @@
-import * as vscode from "vscode";
 import { ExtensionController } from "./controller.js";
 import { createUserInterface } from "./user-interface.js";
 
 let activeController;
 
-export async function activate(context) {
+export async function activateWithVscode(vscode, context) {
   const userInterface = createUserInterface(vscode);
   const diagnostics = vscode.languages.createDiagnosticCollection("recite");
   const controller = new ExtensionController(vscode, userInterface, diagnostics);
@@ -14,7 +13,7 @@ export async function activate(context) {
   if (outcome) controller.handleStartOutcome(outcome);
 }
 
-export async function deactivate() {
+export async function deactivateWithVscode() {
   const controller = activeController;
   activeController = undefined;
   await controller?.dispose();
