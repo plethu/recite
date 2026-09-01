@@ -9,7 +9,9 @@ Usage:
 Checks the syntax-only Recite Tree-sitter grammar. The check verifies that the
 checked-in generated parser is reproducible, the corpus passes, the canonical
 corpus source remains linked to the shared Recite fixture, required highlight
-captures are present, and incomplete input produces a recoverable tree.
+captures are exact for representative syntax, all canonical Recite fixtures
+parse through the same grammar, and incomplete input produces a recoverable
+tree.
 EOF
 }
 
@@ -30,6 +32,7 @@ repo_root="$(git rev-parse --show-toplevel 2>/dev/null)" || {
 grammar_dir="$repo_root/editor/recite-tree-sitter"
 canonical_fixture="$repo_root/fixtures/recite/valid/language_pressure.recite"
 canonical_corpus="$grammar_dir/test/corpus/canonical.txt"
+recovery_corpus="$grammar_dir/test/corpus/recovery.txt"
 capture_fixture="$grammar_dir/test/fixtures/capture-values.recite"
 incomplete_fixture="$grammar_dir/test/fixtures/incomplete.recite"
 
@@ -42,6 +45,7 @@ for required_file in \
   "$grammar_dir/src/parser.c" \
   "$canonical_fixture" \
   "$canonical_corpus" \
+  "$recovery_corpus" \
   "$capture_fixture" \
   "$incomplete_fixture"; do
   if [[ ! -f "$required_file" ]]; then
@@ -147,6 +151,27 @@ for capture in "${required_captures[@]}"; do
   fi
 done
 
+exact_captures=(
+  ' - string, start: (0, 27), end: (0, 38), text: `"Archivist"`'
+  ' - number, start: (0, 67), end: (0, 72), text: `-12.5`'
+  ' - number, start: (0, 79), end: (0, 81), text: `+7`'
+  ' - punctuation.delimiter, start: (1, 58), end: (1, 59), text: `=`'
+  ' - string.special, start: (3, 2), end: (3, 14), text: `Plain prose.`'
+  ' - string.special, start: (4, 2), end: (4, 15), text: `Interpolated `'
+  ' - variable.parameter, start: (4, 16), end: (4, 20), text: `name`'
+  ' - string.special, start: (5, 3), end: (5, 11), text: ` Plural `'
+  ' - variable.parameter, start: (5, 12), end: (5, 17), text: `count`'
+  ' - function.call, start: (7, 14), end: (7, 22), text: `play_sfx`'
+  ' - number, start: (7, 32), end: (7, 37), text: `-4.25`'
+  ' - variable, start: (9, 5), end: (9, 8), text: `END`'
+)
+for expectation in "${exact_captures[@]}"; do
+  if ! grep -Fq "$expectation" "$query_output"; then
+    echo "exact highlight capture expectation is missing: $expectation" >&2
+    exit 1
+  fi
+done
+
 echo "== incomplete input recovery =="
 recovery_rc=0
 if (
@@ -165,5 +190,85 @@ if ! grep -Eq '\((ERROR|MISSING)( |\))' "$recovery_output"; then
   echo "incomplete fixture did not expose an explicit recovery node" >&2
   exit 1
 fi
+
+echo "== canonical fixture differential parse =="
+valid_count=0
+invalid_count=0
+while IFS= read -r -d '' fixture; do
+  fixture_output="$scratch/$(basename "$fixture").tree"
+  fixture_rc=0
+  if (
+    cd "$repo_root"
+    tree-sitter parse --grammar-path "$grammar_dir" "$fixture"
+  ) > "$fixture_output" 2>&1; then
+    fixture_rc=0
+  else
+    fixture_rc=$?
+  fi
+  if [[ "$fixture" == "$repo_root/fixtures/recite/valid/"* ]]; then
+    valid_count=$((valid_count + 1))
+    if (( fixture_rc != 0 )) || grep -Eq '\((ERROR|MISSING)( |\))' "$fixture_output"; then
+      echo "canonical valid fixture does not parse cleanly: ${fixture#$repo_root/}" >&2
+      sed -n '/ERROR\|MISSING/p' "$fixture_output" | sed -n '1,40p' >&2
+      exit 1
+    fi
+  elif [[ "$fixture" == "$repo_root/fixtures/recite/invalid/"* ]]; then
+    invalid_count=$((invalid_count + 1))
+    if (( fixture_rc > 1 )); then
+      echo "canonical invalid fixture failed to produce a parse tree: ${fixture#$repo_root/} (exit $fixture_rc)" >&2
+      exit 1
+    fi
+  fi
+done < <(find "$repo_root/fixtures/recite" -type f -name '*.recite' -print0 | sort -z)
+if (( valid_count == 0 || invalid_count == 0 )); then
+  echo "canonical fixture differential did not cover both valid and invalid .recite inputs" >&2
+  exit 1
+fi
+echo "canonical fixture differential passed: $valid_count valid, $invalid_count invalid"
+
+echo "== CRLF, non-BMP, and unexpected punctuation probes =="
+crlf_fixture="$scratch/canonical-crlf-non-bmp.recite"
+awk '{ sub(/tide/, "tide 🌊"); printf "%s\r\n", $0 }' "$canonical_fixture" > "$crlf_fixture"
+crlf_output="$scratch/crlf.tree"
+if ! (
+  cd "$repo_root"
+  tree-sitter parse --grammar-path "$grammar_dir" "$crlf_fixture"
+) > "$crlf_output" 2>&1; then
+  echo "canonical CRLF/non-BMP fixture failed to parse" >&2
+  exit 1
+fi
+if grep -Eq '\((ERROR|MISSING)( |\))' "$crlf_output"; then
+  echo "canonical CRLF/non-BMP fixture produced a recovery node" >&2
+  exit 1
+fi
+
+punctuation_fixture="$scratch/unexpected-punctuation.recite"
+printf '%s\n' \
+  ':: recovery' \
+  ':if stage("open") == 2' \
+  '> later@0123456789abcdef0123' \
+  '  Later prose.' \
+  '-> END' > "$punctuation_fixture"
+punctuation_output="$scratch/unexpected-punctuation.tree"
+punctuation_rc=0
+if (
+  cd "$repo_root"
+  tree-sitter parse --grammar-path "$grammar_dir" "$punctuation_fixture"
+) > "$punctuation_output" 2>&1; then
+  punctuation_rc=0
+else
+  punctuation_rc=$?
+fi
+if (( punctuation_rc > 1 )) || ! grep -Eq '\((ERROR|MISSING)( |\))' "$punctuation_output"; then
+  echo "unexpected punctuation probe did not expose a bounded recovery node" >&2
+  exit 1
+fi
+for node in line_statement prose_line divert_statement; do
+  if ! grep -Fq "($node" "$punctuation_output"; then
+    echo "unexpected punctuation probe lost later $node" >&2
+    exit 1
+  fi
+done
+echo "edge-case probes passed"
 
 echo "Tree-sitter grammar checks passed."

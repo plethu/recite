@@ -777,11 +777,6 @@
     }
   },
   {
-    "type": "line_marker",
-    "named": true,
-    "fields": {}
-  },
-  {
     "type": "line_name",
     "named": true,
     "fields": {},
@@ -1317,10 +1312,6 @@
     }
   },
   {
-    "type": "!=",
-    "named": false
-  },
-  {
     "type": "$",
     "named": false
   },
@@ -1345,27 +1336,7 @@
     "named": false
   },
   {
-    "type": "<",
-    "named": false
-  },
-  {
-    "type": "<=",
-    "named": false
-  },
-  {
     "type": "=",
-    "named": false
-  },
-  {
-    "type": "==",
-    "named": false
-  },
-  {
-    "type": ">",
-    "named": false
-  },
-  {
-    "type": ">=",
     "named": false
   },
   {
@@ -1443,6 +1414,10 @@
   {
     "type": "immediate",
     "named": false
+  },
+  {
+    "type": "line_marker",
+    "named": true
   },
   {
     "type": "markup_name",

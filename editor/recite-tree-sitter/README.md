@@ -12,8 +12,9 @@ allows Tree-sitter recovery to expose `ERROR` nodes while the authoritative
 tooling reports the real diagnostic.
 
 The checked-in `src/parser.c` is generated from `grammar.js`. `queries/` holds
-host-neutral captures; Neovim and Zed integrations choose how those captures
-map to their own presentation APIs.
+host-neutral captures. This package is syntax and highlighting evidence only;
+it does not provide Neovim setup, a plugin/package, or Zed integration. The
+Rowan parser and compiler remain the authority for language meaning.
 
 Run the local grammar checks from the repository root:
 
@@ -25,6 +26,7 @@ The check requires the Tree-sitter CLI used by the editor toolchain. It
 regenerates the parser in a temporary directory, compares the generated files
 with the checked-in parser, runs the corpus, verifies that the canonical corpus
 source matches `fixtures/recite/valid/language_pressure.recite`, exercises the
-required highlight captures, and checks recovery on incomplete input. The
-grammar CLI is an editor-development tool only and is not a Recite runtime
-dependency.
+required exact highlight captures, differentially parses the canonical valid
+and invalid `.recite` fixtures, and checks recovery on incomplete input plus
+CRLF, non-BMP, and unsupported punctuation probes. The grammar CLI is an
+editor-development tool only and is not a Recite runtime dependency.

@@ -202,18 +202,21 @@ module.exports = grammar({
       $.grouped_value,
     ),
 
-    call: ($) => seq(
+    call: ($) => prec.right(seq(
       field("function", $.function_name),
       "(",
       optional($.arguments),
       optional($.hspace),
-      ")",
-    ),
+      // A call may be left open while an author is typing. Because the call
+      // can end only at the current physical line, recovery cannot consume
+      // the next statement's marker.
+      optional(")"),
+    )),
 
-    arguments: ($) => seq(
+    arguments: ($) => prec.right(seq(
       $.argument,
       repeat(seq(",", optional($.hspace), $.argument)),
-    ),
+    )),
 
     argument: ($) => $.value,
 
@@ -286,16 +289,15 @@ module.exports = grammar({
 
     // Identifier spelling remains deliberately broad enough for the current
     // Unicode source fixtures. Compiler validation owns the exact XID policy.
-    identifier: ($) => /[^\s@$=()\[\]{}|,:0-9][^\s@$=()\[\]{}|,:]*/,
+    // Quote and numeric/sign prefixes are excluded so scalar tokens cannot be
+    // swallowed by the recovery-friendly symbol rule.
+    identifier: ($) => /[^\s@"$=()\[\]{}|,:0-9+-][^\s@"$=()\[\]{}|,:]*/,
 
     runtime_binding: ($) => seq("$", $.identifier),
-    // The closing quote is optional so an editor buffer remains highlightable
-    // while a literal is being typed; compiler syntax diagnostics own the
-    // malformed case.
-    string: ($) => /"(?:\\.|[^"\\\r\n])*"?/,
-    number: ($) => /[0-9]+(?:\.[0-9]+)?/,
+    string: ($) => token(prec(2, /"(?:\\.|[^"\\\r\n])*"/)),
+    number: ($) => token(prec(2, /[+-]?[0-9]+(?:\.[0-9]+)?/)),
     boolean: ($) => choice("true", "false"),
-    operator: ($) => choice("and", "or", "not", "==", "!=", ">=", "<=", ">", "<"),
+    operator: ($) => choice("and", "or", "not"),
 
     block_default: ($) => "default",
     requires_key: ($) => "requires",

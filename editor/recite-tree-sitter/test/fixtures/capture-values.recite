@@ -1,6 +1,10 @@
-:: capture default speaker="Archivist" enabled=true count=3 tags=[dock, "night watch"]
+:: capture default speaker="Archivist" enabled=true count=3 offset=-12.5 whole=+7 tags=[dock, "night watch"]
 > capture_line@0123456789abcdef0123 speaker=archivist bind=(name:string=$name)
   [quiet]Found {name}.[/quiet]
+  Plain prose.
+  Interpolated {name} prose.
+  | Plural {count} prose.
 :if not sealed() and stage("open")
-  ! immediate play_sfx("relay")
+  ! immediate play_sfx("relay", -4.25)
   -> archive.recite::opening
+  -> END

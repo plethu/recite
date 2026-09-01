@@ -1,0 +1,63 @@
+==================
+Line-bounded match recovery
+==================
+:match relationship(player
+:case open
+> later@0123456789abcdef0123
+  Plain recovery prose.
+? choose@fedcba98765432100123
+  Later choice prose.
+  -> END
+
+---
+
+(source_file
+  (match_statement
+    (match_marker)
+    (hspace)
+    (condition_expression
+      (expression_part
+        (call
+          (function_name
+            (identifier))
+          (arguments
+            (argument
+              (value
+                (symbol
+                  (identifier))))))))
+    (newline))
+  (case_statement
+    (case_marker)
+    (hspace)
+    (identifier)
+    (newline))
+  (line_statement
+    (line_marker)
+    (hspace)
+    (line_name
+      (identifier)
+      (stable_id))
+    (newline))
+  (prose_line
+    (indent)
+    (prose_text
+      (prose_start))
+    (newline))
+  (choice_statement
+    (choice_marker)
+    (hspace)
+    (choice_name
+      (identifier)
+      (stable_id))
+    (newline))
+  (prose_line
+    (indent)
+    (prose_text
+      (prose_start))
+    (newline))
+  (divert_statement
+    (indent)
+    (divert_marker)
+    (hspace)
+    (target)
+    (newline)))

@@ -9,15 +9,16 @@ Usage:
 Runs Recite's Rust and adapter project gates (the full local suite is
 scripts/verify.sh or `mise run verify`):
   1. scripts/check-test-organization.sh
-  2. scripts/check-editor-parity.sh
-  3. scripts/check-lint-suppressions.sh
-  4. scripts/generate-ffi-header.sh
-  5. scripts/check-ffi-header.sh
-  6. scripts/check-unity-adapter.sh
-  7. cargo fmt --check
-  8. cargo test --locked
-  9. cargo clippy --locked --all-targets --all-features -- -D warnings
- 10. RUSTDOCFLAGS=-Dwarnings cargo doc --locked --workspace --all-features --no-deps
+  2. scripts/check-tree-sitter.sh
+  3. scripts/check-editor-parity.sh
+  4. scripts/check-lint-suppressions.sh
+  5. scripts/generate-ffi-header.sh
+  6. scripts/check-ffi-header.sh
+  7. scripts/check-unity-adapter.sh
+  8. cargo fmt --check
+  9. cargo test --locked
+ 10. cargo clippy --locked --all-targets --all-features -- -D warnings
+ 11. RUSTDOCFLAGS=-Dwarnings cargo doc --locked --workspace --all-features --no-deps
 EOF
 }
 
@@ -54,6 +55,11 @@ if [[ ! -x "$repo_root/scripts/check-editor-parity.sh" ]]; then
   exit 2
 fi
 
+if [[ ! -x "$repo_root/scripts/check-tree-sitter.sh" ]]; then
+  echo "missing executable gate: $repo_root/scripts/check-tree-sitter.sh" >&2
+  exit 2
+fi
+
 if [[ ! -x "$repo_root/scripts/generate-ffi-header.sh" ]]; then
   echo "missing executable gate: $repo_root/scripts/generate-ffi-header.sh" >&2
   exit 2
@@ -75,6 +81,10 @@ echo "== test organization =="
 echo
 echo "== editor parity contract =="
 "$repo_root/scripts/check-editor-parity.sh" "$repo_root"
+
+echo
+echo "== Tree-sitter grammar =="
+"$repo_root/scripts/check-tree-sitter.sh"
 
 echo
 echo "== lint suppression policy =="

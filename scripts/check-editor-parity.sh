@@ -484,6 +484,13 @@ for capability_id, capability in capability_map.items():
         for command in evidence_commands:
             if not isinstance(command, str) or not command:
                 continue
+            if command == "scripts/check-tree-sitter.sh":
+                evidence_script, _ = require_repo_file(command, f"capability {capability_id} evidence script")
+                require(
+                    evidence_script.stat().st_mode & 0o111,
+                    f"capability {capability_id} evidence script is not executable: {command}",
+                )
+                continue
             try:
                 command_parts = shlex.split(command)
             except ValueError as error:

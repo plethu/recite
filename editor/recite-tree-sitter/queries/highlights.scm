@@ -43,6 +43,7 @@
 (["," ":" "="] @punctuation.delimiter)
 
 ; Localisable prose, markup, and placeholders.
+((prose_start) @string.special)
 ((prose_content) @string.special)
 ((markup_name) @tag)
 ((interpolation (placeholder) @variable.parameter))

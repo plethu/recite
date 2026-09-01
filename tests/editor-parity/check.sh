@@ -9,10 +9,13 @@ fixture_repo="$test_root/repo"
 mkdir -p "$fixture_repo/docs" "$fixture_repo/fixtures/editor-parity" \
   "$fixture_repo/fixtures/recite/valid" "$fixture_repo/fixtures/recite/invalid" \
   "$fixture_repo/fixtures/schema/valid" "$fixture_repo/scripts" \
+  "$fixture_repo/editor/recite-tree-sitter" \
   "$fixture_repo/crates/recite-lsp/tests" \
   "$fixture_repo/crates/recite-cli/tests" \
   "$fixture_repo/crates/recite-compiler/tests/authoring_build"
 cp "$repo_root/scripts/check-editor-parity.sh" "$fixture_repo/scripts/"
+cp "$repo_root/scripts/check-tree-sitter.sh" "$fixture_repo/scripts/"
+cp "$repo_root/editor/recite-tree-sitter/grammar.js" "$fixture_repo/editor/recite-tree-sitter/"
 cp "$repo_root/docs/editor-parity-contract.md" "$fixture_repo/docs/"
 cp "$repo_root/fixtures/editor-parity/contract.json" "$fixture_repo/fixtures/editor-parity/"
 cp "$repo_root/fixtures/recite/valid/language_pressure.recite" "$fixture_repo/fixtures/recite/valid/"
@@ -22,7 +25,7 @@ cp "$repo_root/fixtures/recite/invalid/parser_marker_leading_prose.recite" "$fix
 cp "$repo_root/fixtures/schema/valid/generated_manifest.json" "$fixture_repo/fixtures/schema/valid/"
 cp "$repo_root/fixtures/schema/valid/full_manifest.json" "$fixture_repo/fixtures/schema/valid/"
 cp -R "$repo_root/tests/editor-parity/cargo-fixture/." "$fixture_repo/"
-chmod +x "$fixture_repo/scripts/check-editor-parity.sh"
+chmod +x "$fixture_repo/scripts/check-editor-parity.sh" "$fixture_repo/scripts/check-tree-sitter.sh"
 
 git -C "$fixture_repo" init -q -b main
 git -C "$fixture_repo" config user.name Fixture
@@ -157,7 +160,7 @@ elif mutation == "reciprocity":
     artifact["clients"].remove("vscode")
 elif mutation == "topology":
     client = next(client for client in contract["clients"] if client["id"] == "vscodium")
-    client["artifact"] = "neovim-setup"
+    client["artifact"] = "tree-sitter-grammar"
 elif mutation == "symlink":
     fixture_repo = Path(path).parents[2]
     outside = fixture_repo.parent / "outside-editor-parity.recite"
