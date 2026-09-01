@@ -9,8 +9,8 @@ fixture_repo="$test_root/repo"
 mkdir -p "$fixture_repo/docs" "$fixture_repo/fixtures/editor-parity" \
   "$fixture_repo/fixtures/recite/valid" "$fixture_repo/fixtures/recite/invalid" \
   "$fixture_repo/fixtures/schema/valid" "$fixture_repo/scripts" \
-  "$fixture_repo/editor/recite-tree-sitter" \
-  "$fixture_repo/editor/recite-neovim" \
+  "$fixture_repo/editors/recite-tree-sitter" \
+  "$fixture_repo/editors/recite-neovim" \
   "$fixture_repo/crates/recite-lsp/tests" \
   "$fixture_repo/crates/recite-cli/tests" \
   "$fixture_repo/crates/recite-compiler/tests/authoring_build"
@@ -18,8 +18,9 @@ cp "$repo_root/scripts/check-editor-parity.sh" "$fixture_repo/scripts/"
 cp "$repo_root/scripts/check-tree-sitter.sh" "$fixture_repo/scripts/"
 cp "$repo_root/scripts/check-neovim.sh" "$fixture_repo/scripts/"
 cp "$repo_root/scripts/check-vscode.sh" "$fixture_repo/scripts/"
-cp "$repo_root/editor/recite-tree-sitter/grammar.js" "$fixture_repo/editor/recite-tree-sitter/"
-cp -R "$repo_root/editor/recite-neovim/." "$fixture_repo/editor/recite-neovim/"
+cp -R "$repo_root/scripts/editor_parity" "$fixture_repo/scripts/"
+cp "$repo_root/editors/recite-tree-sitter/grammar.js" "$fixture_repo/editors/recite-tree-sitter/"
+cp -R "$repo_root/editors/recite-neovim/." "$fixture_repo/editors/recite-neovim/"
 cp "$repo_root/docs/editor-parity-contract.md" "$fixture_repo/docs/"
 cp "$repo_root/fixtures/editor-parity/contract.json" "$fixture_repo/fixtures/editor-parity/"
 cp "$repo_root/fixtures/recite/valid/language_pressure.recite" "$fixture_repo/fixtures/recite/valid/"
@@ -41,19 +42,21 @@ git -C "$fixture_repo" commit -q -m initial
   cd "$fixture_repo"
   cargo generate-lockfile --quiet
 )
-parity_cache_root="$fixture_repo/target/editor-parity"
-stale_cache="$parity_cache_root/aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa"
-mkdir -p "$stale_cache/sentinel"
-
-assert_single_parity_cache() {
-  local cache_count
-  cache_count="$(find "$parity_cache_root" -mindepth 1 -maxdepth 1 -type d | wc -l | tr -d ' ')"
-  if [[ "$cache_count" != "1" || -e "$stale_cache/sentinel" ]]; then
-    echo "editor parity cache retention fixture failed: expected one live cache and no stale sentinel" >&2
-    find "$parity_cache_root" -mindepth 1 -maxdepth 2 -print >&2
+assert_no_hashed_targets() {
+  if [[ -d "$fixture_repo/target/editor-parity" ]]; then
+    echo "editor parity target isolation fixture failed: checker created a hash-cache directory" >&2
+    find "$fixture_repo/target/editor-parity" -mindepth 1 -maxdepth 2 -print >&2
     exit 1
   fi
-  echo "editor parity cache retention fixture passed"
+  if [[ ! -f "$fixture_repo/target/editor-parity.lock" ]]; then
+    echo "editor parity target isolation fixture failed: fixed lock was not created" >&2
+    exit 1
+  fi
+  if find "$fixture_repo/target" -mindepth 1 -type d -regextype posix-extended -regex '.*/[0-9a-f]{64}' -print -quit | grep -q .; then
+    echo "editor parity target isolation fixture failed: hashed Cargo target directory remains" >&2
+    exit 1
+  fi
+  echo "editor parity shared-target fixture passed"
 }
 
 run_checker() {
@@ -61,14 +64,12 @@ run_checker() {
 }
 
 assert_portable_lock_source() {
-  python3 - "$repo_root/scripts/check-editor-parity.sh" <<'PY'
+  python3 - "$repo_root/scripts/editor_parity/portable_lock.py" <<'PY'
 import ast
 import sys
 from pathlib import Path
 
-script = Path(sys.argv[1]).read_text(encoding="utf-8")
-python_source = script.split('python3 - "$repo_root" "$fixture" "$document" <<\'PY\'\n', 1)[1].split("\nPY\n", 1)[0]
-tree = ast.parse(python_source)
+tree = ast.parse(Path(sys.argv[1]).read_text(encoding="utf-8"))
 
 platform_import = next(
     node for node in tree.body
@@ -167,7 +168,16 @@ print("editor parity VS Code partial-foundation fixture passed")
 PY
 run_checker
 echo "editor parity baseline fixture passed"
-assert_single_parity_cache
+assert_no_hashed_targets
+
+run_checker >"$test_root/concurrent-a.log" 2>&1 &
+first_pid=$!
+run_checker >"$test_root/concurrent-b.log" 2>&1 &
+second_pid=$!
+wait "$first_pid"
+wait "$second_pid"
+assert_no_hashed_targets
+echo "editor parity concurrent fixture passed"
 
 mutate_fixture() {
   local mutation="$1"
@@ -210,6 +220,10 @@ elif mutation == "stale-evidence":
 elif mutation == "stale-module-evidence":
     capability = next(capability for capability in contract["capabilities"] if capability["id"] == "command.structured.results")
     capability["expected_evidence"]["command"] = "cargo test --locked -p recite-compiler --test authoring_build invented::projects_every_lifecycle_state_with_stable_fields"
+elif mutation == "evidence-traversal":
+    capability = next(capability for capability in contract["capabilities"] if capability["id"] == "lsp.completion")
+    capability["expected_evidence"].pop("commands", None)
+    capability["expected_evidence"]["command"] = "cargo test --locked -p ../../outside --test editor_parity project_root_discovers_canonical_multi_file_overlays_for_navigation"
 elif mutation == "neovim-stale-filetype":
     capability = next(capability for capability in contract["capabilities"] if capability["id"] == "editor.filetype.registration")
     capability["known_limitation"] = "No client package or activation registration exists."
@@ -228,6 +242,15 @@ elif mutation == "reciprocity":
 elif mutation == "topology":
     client = next(client for client in contract["clients"] if client["id"] == "vscodium")
     client["artifact"] = "tree-sitter-grammar"
+elif mutation == "wrong-primary":
+    distribution = next(distribution for distribution in contract["distributions"] if distribution["id"] == "neovim-distribution")
+    distribution["artifact"] = "tree-sitter-grammar"
+elif mutation == "missing-grammar-support":
+    distribution = next(distribution for distribution in contract["distributions"] if distribution["id"] == "neovim-distribution")
+    distribution["artifacts"].remove("tree-sitter-grammar")
+elif mutation == "unknown-supporting-artifact":
+    distribution = next(distribution for distribution in contract["distributions"] if distribution["id"] == "neovim-distribution")
+    distribution["artifacts"].append("unknown-editor-artifact")
 elif mutation == "symlink":
     fixture_repo = Path(path).parents[2]
     outside = fixture_repo.parent / "outside-editor-parity.recite"
@@ -288,11 +311,15 @@ expect_failure duplicate "capabilities IDs must be unique"
 expect_failure malformed "evidence command must name a cargo integration test and filter"
 expect_failure stale-evidence "evidence command does not name an existing runnable test"
 expect_failure stale-module-evidence "evidence command does not name an existing runnable test"
+expect_failure evidence-traversal "evidence target escapes the repository"
 expect_failure disconnected-module "evidence command does not name an existing runnable test discovered by Cargo"
 expect_failure neovim-stale-filetype "Neovim filetype evidence cannot retain stale no-activation wording"
-assert_single_parity_cache
+assert_no_hashed_targets
 expect_failure reciprocity "artifact vscode-vsix client list must exactly reciprocate"
 expect_failure topology "VS Code and VSCodium must share one VSIX artifact topology"
+expect_failure wrong-primary "Neovim distribution primary artifact must match its capability artifact"
+expect_failure missing-grammar-support "Neovim distribution supporting artifacts must include tree-sitter-grammar"
+expect_failure unknown-supporting-artifact "distribution neovim-distribution references unknown supporting artifact unknown-editor-artifact"
 expect_failure symlink-artifact-component "artifact vscode-vsix path must not traverse symlink component"
 expect_failure symlink "scenario lsp-stdio-baseline fixture must not be a symlink"
 expect_failure symlink-component "scenario lsp-stdio-baseline fixture must not traverse symlink component"
