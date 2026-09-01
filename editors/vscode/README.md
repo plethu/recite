@@ -4,6 +4,9 @@ This package is the shared VSIX entry point for Recite's VS Code and VSCodium
 clients. It registers `.recite` files and connects the editor to a local
 `recite-lsp` process over standard input and output.
 
+The package's CommonJS entry shim keeps the VS Code 1.89 extension host boundary
+loadable, then delegates activation to the ESM implementation.
+
 The language server and shared authoring kernel own parsing, validation,
 diagnostics, completion, navigation, edits, and stable IDs. The extension only
 adapts those LSP values to editor APIs. It does not parse Recite source, run a

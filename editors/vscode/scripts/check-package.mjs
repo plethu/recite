@@ -35,7 +35,7 @@ assertSameKeys(Object.keys(packageMessages), PACKAGE_MESSAGE_IDS,
 assert(manifest.name === "recite-vscode", "package name must remain recite-vscode");
 assert(manifest.publisher === "plethu", "publisher must remain plethu");
 assert(manifest.license === "MIT OR Apache-2.0", "extension license must remain permissive");
-assert(manifest.main === "./dist/extension.js", "package must point at the built extension entry point");
+assert(manifest.main === "./dist/extension.cjs", "package must point at the CommonJS extension entry point");
 assert(manifest.engines?.vscode, "the VS Code engine range is required");
 assert(manifest.activationEvents?.includes("onLanguage:recite"), "activation must be tied to Recite files");
 const trust = manifest.capabilities?.untrustedWorkspaces;
@@ -91,6 +91,8 @@ assert(!source.includes("vscode-languageclient"), "the scaffold must keep its pr
 assert(!source.match(/(?:parse|Parser|tokeniz|compile).*Recite/i),
   "the client must not grow a second Recite semantic implementation");
 const sourceFiles = listSourceModules(sourceRoot);
+assert(sourceFiles.some(({ relativePath }) => relativePath === "extension.cjs"),
+  "the CommonJS extension entry shim is required");
 const sourceContents = await Promise.all(sourceFiles.map(async ({ relativePath, absolutePath }) => [
   relativePath,
   await readFile(absolutePath, "utf8")

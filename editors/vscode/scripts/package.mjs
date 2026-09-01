@@ -66,6 +66,7 @@ function contentTypes() {
 <Types xmlns="http://schemas.openxmlformats.org/package/2006/content-types">
   <Default Extension="json" ContentType="application/json" />
   <Default Extension="js" ContentType="application/javascript" />
+  <Default Extension="cjs" ContentType="application/javascript" />
   <Default Extension="md" ContentType="text/markdown" />
   <Default Extension="xml" ContentType="text/xml" />
   <Default Extension="vsixmanifest" ContentType="text/xml" />
@@ -213,7 +214,13 @@ async function checkArchive(archive, stageRoot) {
     entries.add(name);
     cursor += 46 + filenameLength + extraLength + commentLength;
   }
-  for (const expected of ["[Content_Types].xml", "extension.vsixmanifest", "extension/package.json", "extension/dist/extension.js"]) {
+  for (const expected of [
+    "[Content_Types].xml",
+    "extension.vsixmanifest",
+    "extension/package.json",
+    "extension/dist/extension.cjs",
+    "extension/dist/extension.js"
+  ]) {
     if (!entries.has(expected)) throw new Error(`VSIX is missing ${expected}`);
   }
   if (entries.size !== files(stageRoot).length) throw new Error("VSIX file list is not deterministic");

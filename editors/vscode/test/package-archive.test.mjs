@@ -97,7 +97,13 @@ function assertZipArchive(data) {
   assert.equal(cursor, end, "central directory does not end at the ZIP footer");
   assert.deepEqual(Object.keys(entries).sort(), names.slice().sort(),
     "independent ZIP consumer returned a different file list");
-  for (const expected of ["[Content_Types].xml", "extension.vsixmanifest", "extension/package.json", "extension/dist/extension.js"]) {
+  for (const expected of [
+    "[Content_Types].xml",
+    "extension.vsixmanifest",
+    "extension/package.json",
+    "extension/dist/extension.cjs",
+    "extension/dist/extension.js"
+  ]) {
     assert.ok(entries[expected], `VSIX is missing ${expected}`);
   }
 }
