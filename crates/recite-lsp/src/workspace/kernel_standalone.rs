@@ -24,7 +24,8 @@ impl LspWorkspace {
                 recite_compiler::DocumentVersion::new(i64::from(document.version())),
                 document.text().to_owned(),
             )],
-        );
+        )
+        .with_project_completeness(self.saved.partition_is_complete("standalone"));
         kernel
             .apply(request)
             .ok()

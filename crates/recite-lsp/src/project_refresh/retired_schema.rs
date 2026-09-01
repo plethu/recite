@@ -3,7 +3,6 @@ use std::collections::{BTreeMap, BTreeSet};
 use super::super::kernel::KernelPartition;
 use super::super::schema_index::SchemaIndex;
 use crate::documents::OpenDocumentStore;
-use crate::paths::stable_path_identity;
 
 type RetiredSchemaState = (
     BTreeMap<String, BTreeSet<String>>,
@@ -20,11 +19,11 @@ pub(super) fn update_retired_schema_state(
     mut retired_targets: BTreeMap<String, String>,
 ) -> RetiredSchemaState {
     for old in old_partitions.values() {
-        let target = old
-            .schema
-            .configured_path()
-            .and_then(|path| std::fs::canonicalize(path).ok())
-            .map(|path| stable_path_identity(&path));
+        // SchemaIndex owns target identity, including the lexical identity of
+        // a configured path that is currently missing. Do not re-canonicalize
+        // here: a missing target must remain associated with its retirement
+        // aliases through the next refresh.
+        let target = old.schema.target_identity();
         for document in old_documents.documents() {
             if old.schema.matches_uri(&document.identity().uri) {
                 let uri = document.identity().uri.as_str().to_owned();

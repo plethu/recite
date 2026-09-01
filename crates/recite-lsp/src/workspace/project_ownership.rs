@@ -15,6 +15,11 @@ impl SavedProjectIndex {
         let Some(lexical_path) = uri_to_file_path(uri) else {
             return false;
         };
+        // Source coverage is part of partition identity. Re-evaluate the
+        // discovery report before reconciling this path so a file becoming
+        // readable (or unreadable) can transition the partition between
+        // conservative and project-wide validation.
+        let mut changed = self.refresh_discovery_metadata();
         // Reconcile the lexical source first. The path may have changed from
         // an alias to a regular file (or a directory), so classifying it from
         // the new filesystem state would otherwise strand the old canonical
@@ -30,15 +35,16 @@ impl SavedProjectIndex {
         // canonical target.  Otherwise `.hidden/link.recite` could become a
         // visible `link.recite` after canonicalization.
         if self.is_lexically_excluded(&lexical_path) {
-            return removed;
+            return changed || removed;
         }
         let Some(path) = canonical_or_existing_parent_path(&lexical_path) else {
-            return removed;
+            return changed || removed;
         };
         if !has_recite_extension(&path) {
-            return removed;
+            return changed || removed;
         }
-        self.refresh_path(&path, &lexical_path) || removed
+        changed |= self.refresh_path(&path, &lexical_path);
+        changed
     }
 
     fn remove_uri(&mut self, uri: &Uri, lexical_path: &Path) -> bool {

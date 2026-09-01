@@ -16,6 +16,7 @@ pub(super) struct PartitionInputFingerprint {
     schema: SchemaIndex,
     retired: BTreeSet<String>,
     retired_targets: BTreeSet<String>,
+    project_complete: bool,
 }
 
 impl LspWorkspace {
@@ -168,7 +169,7 @@ impl LspWorkspace {
                 .iter()
                 .map(|(key, document)| (key.clone(), document.identity().uri.clone()))
                 .collect();
-            let input_fingerprint = partition_input_fingerprint(
+            let mut input_fingerprint = partition_input_fingerprint(
                 &saved,
                 &documents,
                 &id,
@@ -177,6 +178,7 @@ impl LspWorkspace {
                 &retired_all,
                 &retired_targets,
             );
+            input_fingerprint.project_complete = saved.partition_is_complete(&id);
             let reusable = old_partitions
                 .as_ref()
                 .and_then(|old| old.get(&id))
@@ -203,7 +205,8 @@ impl LspWorkspace {
                 .unwrap_or_default();
             if !reusable {
                 let expected = kernel.snapshot().generation();
-                let request = super::kernel::authoring_request(&saved, &open, &id, expected);
+                let request = super::kernel::authoring_request(&saved, &open, &id, expected)
+                    .with_project_completeness(saved.partition_is_complete(&id));
                 kernel
                     .apply(request)
                     .map_err(|error| (error, take_old_partitions(&mut old_partitions)))?;
@@ -292,5 +295,6 @@ fn partition_input_fingerprint(
         schema: schema.clone(),
         retired: retired.clone(),
         retired_targets: retired_targets.clone(),
+        project_complete: false,
     }
 }

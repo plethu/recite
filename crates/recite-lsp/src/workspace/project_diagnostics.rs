@@ -3,7 +3,7 @@ use std::path::PathBuf;
 
 use super::SavedProjectIndex;
 
-#[derive(Clone, Debug)]
+#[derive(Clone, Debug, Eq, PartialEq)]
 pub(crate) struct ManifestDiagnostics {
     pub(crate) path: PathBuf,
     pub(crate) text: String,

@@ -31,6 +31,7 @@ pub(super) struct SavedProjectIndex {
     pub(super) documents: BTreeMap<PathBuf, SavedDocument>,
     discoveries: Vec<WorkspaceDiscovery>,
     manifest_diagnostics: BTreeMap<PathBuf, ManifestDiagnostics>,
+    partition_completeness: BTreeMap<String, bool>,
 }
 
 impl SavedProjectIndex {
@@ -55,6 +56,7 @@ impl SavedProjectIndex {
             documents: BTreeMap::new(),
             discoveries,
             manifest_diagnostics: BTreeMap::new(),
+            partition_completeness: BTreeMap::new(),
         };
         for discovery in index.discoveries.clone() {
             match discovery.state {
@@ -74,9 +76,12 @@ impl SavedProjectIndex {
                     manifest_path,
                     text,
                     diagnostics,
-                } => index.add_manifest_diagnostics_value(manifest_path, text, diagnostics),
+                } => {
+                    index.add_manifest_diagnostics_value(manifest_path, text, diagnostics);
+                }
             }
         }
+        index.recompute_partition_completeness();
         index
     }
 
@@ -115,6 +120,113 @@ impl SavedProjectIndex {
         }
         partitions.insert("standalone".to_owned());
         partitions
+    }
+
+    pub(super) fn partition_is_complete(&self, partition: &str) -> bool {
+        self.partition_completeness
+            .get(partition)
+            .copied()
+            .unwrap_or(false)
+    }
+
+    pub(super) fn refresh_discovery_metadata(&mut self) -> bool {
+        let discoveries = super::config::discover_workspace_roots(&self.fallback_roots);
+        let mut manifest_diagnostics = BTreeMap::new();
+        for discovery in &discoveries {
+            match &discovery.state {
+                WorkspaceDiscoveryState::Manifest(report) => {
+                    let diagnostics = report
+                        .diagnostics()
+                        .iter()
+                        .map(recite_config::DiscoveryDiagnostic::as_core_diagnostic)
+                        .collect::<Vec<_>>();
+                    if !diagnostics.is_empty() {
+                        manifest_diagnostics.insert(
+                            report.manifest().manifest_path().to_owned(),
+                            ManifestDiagnostics {
+                                path: report.manifest().manifest_path().to_owned(),
+                                text: report.manifest().source().source_text().to_owned(),
+                                diagnostics,
+                            },
+                        );
+                    }
+                }
+                WorkspaceDiscoveryState::Failed {
+                    manifest_path,
+                    text,
+                    diagnostics,
+                } => {
+                    if !diagnostics.is_empty() {
+                        manifest_diagnostics.insert(
+                            manifest_path.clone(),
+                            ManifestDiagnostics {
+                                path: manifest_path.clone(),
+                                text: text.clone(),
+                                diagnostics: diagnostics.clone(),
+                            },
+                        );
+                    }
+                }
+                WorkspaceDiscoveryState::Manifestless => {}
+            }
+        }
+        let previous_completeness = self.partition_completeness.clone();
+        let previous_diagnostics = self.manifest_diagnostics.clone();
+        self.discoveries = discoveries;
+        self.manifest_diagnostics = manifest_diagnostics;
+        self.recompute_partition_completeness();
+        previous_completeness != self.partition_completeness
+            || previous_diagnostics != self.manifest_diagnostics
+    }
+
+    fn recompute_partition_completeness(&mut self) {
+        self.partition_completeness.clear();
+        for discovery in &self.discoveries {
+            match &discovery.state {
+                WorkspaceDiscoveryState::Manifest(report) => {
+                    self.partition_completeness
+                        .entry(crate::paths::stable_path_identity(
+                            report.manifest().project_root(),
+                        ))
+                        .and_modify(|complete| *complete &= report.is_complete())
+                        .or_insert(report.is_complete());
+                    if report.manifest().project_root() != discovery.root {
+                        let (_, diagnostics) =
+                            recite_config::discover_unscoped_sources(&discovery.root);
+                        let complete = diagnostics
+                            .iter()
+                            .all(recite_config::DiscoveryDiagnostic::is_warning);
+                        self.partition_completeness
+                            .entry(crate::paths::stable_path_identity(&discovery.root))
+                            .and_modify(|current| *current &= complete)
+                            .or_insert(complete);
+                    }
+                }
+                WorkspaceDiscoveryState::Manifestless => {
+                    let (_, diagnostics) =
+                        recite_config::discover_unscoped_sources(&discovery.root);
+                    let complete = diagnostics
+                        .iter()
+                        .all(recite_config::DiscoveryDiagnostic::is_warning);
+                    self.partition_completeness
+                        .entry(crate::paths::stable_path_identity(&discovery.root))
+                        .and_modify(|current| *current &= complete)
+                        .or_insert(complete);
+                }
+                WorkspaceDiscoveryState::Failed { .. } => {
+                    self.partition_completeness
+                        .entry(crate::paths::stable_path_identity(&discovery.root))
+                        .and_modify(|complete| *complete = false)
+                        .or_insert(false);
+                }
+            }
+        }
+        // A standalone partition has no discovery report proving coverage of
+        // the surrounding filesystem. Keep it conservative even when one or
+        // more explicitly opened documents happen to be available.
+        self.partition_completeness
+            .entry("standalone".to_owned())
+            .or_insert(false);
     }
 
     pub(super) fn partition_for_path(&self, path: &Path) -> Option<String> {

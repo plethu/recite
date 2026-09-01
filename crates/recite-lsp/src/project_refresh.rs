@@ -174,6 +174,7 @@ impl LspWorkspace {
         {
             return vec![refresh];
         }
+        let old_manifest_diagnostics = self.saved.manifest_diagnostics().clone();
         let mut saved = self.saved.clone();
         let mut documents = self.documents.clone();
         let touched_saved = saved.refresh_uri(uri);
@@ -185,21 +186,23 @@ impl LspWorkspace {
         if self.rebuild_for_documents(saved, documents).is_err() {
             return Vec::new();
         }
+        let mut refreshes = manifest_refreshes(self, &old_manifest_diagnostics);
         if let Some(document) = watched_keys.iter().find_map(|(partition, key)| {
             self.effective_open_document_for_partition_key(partition, key)
         }) {
-            return vec![self.publish_open_document(document)];
+            refreshes.push(self.publish_open_document(document));
+            return coalesce_refreshes(refreshes);
         }
-        self.saved
-            .document_by_uri(uri)
-            .map(|document| vec![self.publish_saved_document(document)])
-            .unwrap_or_else(|| {
-                vec![DiagnosticRefresh::Clear {
-                    uri: uri.clone(),
-                    version: None,
-                    generation: self.generation,
-                }]
-            })
+        if let Some(document) = self.saved.document_by_uri(uri) {
+            refreshes.push(self.publish_saved_document(document));
+        } else {
+            refreshes.push(DiagnosticRefresh::Clear {
+                uri: uri.clone(),
+                version: None,
+                generation: self.generation,
+            });
+        }
+        coalesce_refreshes(refreshes)
     }
 
     fn watched_document_keys(

@@ -124,7 +124,8 @@ production suppressions must carry a narrow scope and rationale.
 | `crates/recite-godot/src/adapter.rs` | 361 | production | godot | review | Host adapter lifecycle boundary |
 | `crates/recite-lsp/src/server.rs` | 279 | production | lsp/server | review | #164: request dispatch and protocol lifecycle remain the server boundary; notification lifecycle handlers are split into a focused protocol module |
 | `crates/recite-lsp/src/workspace.rs` | 254 | production | lsp/workspace | review | #187: workspace lifecycle state and diagnostic refresh contracts remain the cohesive workspace boundary |
-| `crates/recite-lsp/src/workspace/kernel_rebuild.rs` | 296 | production | lsp/workspace | review | #187: partition rebuild and fingerprint ownership remain a cohesive transactional workspace boundary |
+| `crates/recite-lsp/src/workspace/kernel_rebuild.rs` | 300 | production | lsp/workspace | review | #187: partition rebuild and fingerprint ownership remain a cohesive transactional workspace boundary |
+| `crates/recite-lsp/src/workspace/project_index.rs` | 343 | production | lsp/workspace | review | #187: discovery documents, diagnostics, and per-partition completeness remain the cohesive saved-index boundary |
 | `crates/recite-lsp/src/workspace/lsp_features.rs` | 253 | production | lsp/workspace | review | #187: partition-routed authoring feature projections remain a cohesive LSP boundary; split by feature family if responsibilities grow materially |
 | `crates/recite-benchmarks/src/memory_profiles/mod.rs` | 373 | production | benchmarks | cohesive | Maintainer-only profile orchestration |
 | `crates/recite-cli/src/commands.rs` | 398 | production | cli | review | Command orchestration boundary |
