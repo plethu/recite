@@ -27,3 +27,11 @@ test("Neovim projection rejects selectors and does not truncate them", async () 
     /unsupported expression/
   );
 });
+
+test("Neovim retains canonical named placeables for its formatter", async () => {
+  const { messages } = await projectMessages();
+  assert.deepEqual(
+    messages.find(([id]) => id === "neovim-callback-failed"),
+    ["neovim-callback-failed", "Recite {$kind} callback failed: {$detail}"]
+  );
+});

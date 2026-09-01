@@ -27,6 +27,29 @@ export const PACKAGE_MESSAGE_IDS = Object.freeze(vscodeProjection.packageIds);
 // through clientMessage and resolve to one of these projected Fluent IDs.
 export const SOURCE_MESSAGE_IDS = Object.freeze([...RUNTIME_MESSAGE_IDS]);
 
+/**
+ * Lower canonical Fluent's named placeables to VS Code's positional l10n
+ * placeholders. The argument order is part of the typed projection
+ * inventory, rather than an incidental property of the source text.
+ */
+export function projectRuntimeMessage(id, value) {
+  const arguments_ = vscodeProjection.runtimeArguments[id];
+  if (arguments_ === undefined) throw new Error(`runtime message arguments are missing ${id}`);
+  const seen = [];
+  const projected = value.replace(/\{\$([a-zA-Z][a-zA-Z0-9_-]*)\}/gu, (_, name) => {
+    const index = arguments_.indexOf(name);
+    if (index < 0) {
+      throw new Error(`canonical Fluent message ${id} uses undeclared argument ${name}`);
+    }
+    if (!seen.includes(name)) seen.push(name);
+    return `{${index}}`;
+  });
+  if (JSON.stringify(seen) !== JSON.stringify(arguments_)) {
+    throw new Error(`canonical Fluent message ${id} arguments do not match the typed projection inventory`);
+  }
+  return projected;
+}
+
 export function projectMessages(fluent) {
   const canonical = parseRepresentableMessages(fluent, [
     ...RUNTIME_MESSAGE_IDS,
@@ -35,13 +58,10 @@ export function projectMessages(fluent) {
   const projection = (ids, transform = (value) => value) => Object.fromEntries(ids.map((id) => {
     const value = canonical.get(id);
     if (value === undefined) throw new Error(`canonical Fluent message is missing ${id}`);
-    return [id, transform(value)];
+    return [id, transform(value, id)];
   }));
   return {
-    runtime: projection(RUNTIME_MESSAGE_IDS, (value) => {
-      let index = 0;
-      return value.replace(/\{\$[a-zA-Z][a-zA-Z0-9_-]*\}/gu, () => `{${index++}}`);
-    }),
+    runtime: projection(RUNTIME_MESSAGE_IDS, (value, id) => projectRuntimeMessage(id, value)),
     package: projection(PACKAGE_MESSAGE_IDS)
   };
 }
@@ -56,10 +76,14 @@ function parseProjectionInventory(source, name) {
   const packageOutput = scalar(section, "package_output");
   const runtimeIds = array(section, "runtime_ids");
   const packageIds = array(section, "package_ids");
+  const runtimeArguments = argumentMap(section, "runtime_arguments");
   if (!sourceResource || !runtimeOutput || !packageOutput || !runtimeIds.length || !packageIds.length) {
     throw new Error(`${marker} must declare source, outputs, and IDs`);
   }
-  return { sourceResource, runtimeOutput, packageOutput, runtimeIds, packageIds };
+  if (JSON.stringify(Object.keys(runtimeArguments).sort()) !== JSON.stringify(runtimeIds.slice().sort())) {
+    throw new Error(`${marker} runtime arguments must cover runtime IDs exactly`);
+  }
+  return { sourceResource, runtimeOutput, packageOutput, runtimeIds, packageIds, runtimeArguments };
 }
 
 function scalar(section, key) {
@@ -74,11 +98,25 @@ function array(section, key) {
   return values;
 }
 
+function argumentMap(section, key) {
+  const match = section.match(new RegExp(`(?:^|\\n)${key}\\s*=\\s*\\{([\\s\\S]*?)\\n\\}`, "u"));
+  if (!match) throw new Error(`${key} is missing from the canonical inventory`);
+  const result = {};
+  for (const entry of match[1].matchAll(/"([a-z0-9-]+)"\s*=\s*\[([^\]]*)\]/gu)) {
+    const id = entry[1];
+    if (result[id]) throw new Error(`${key} contains duplicate IDs`);
+    const arguments_ = [...entry[2].matchAll(/"([a-zA-Z][a-zA-Z0-9_-]*)"/gu)].map((value) => value[1]);
+    if (new Set(arguments_).size !== arguments_.length) throw new Error(`${key} contains duplicate arguments for ${id}`);
+    result[id] = arguments_;
+  }
+  return result;
+}
+
 function assertProjectionParity(left, right) {
   for (const key of ["sourceResource", "runtimeOutput", "packageOutput"]) {
     if (left[key] !== right[key]) throw new Error(`VS Code/VSCodium projection ${key} diverges`);
   }
-  for (const key of ["runtimeIds", "packageIds"]) {
+  for (const key of ["runtimeIds", "packageIds", "runtimeArguments"]) {
     if (JSON.stringify(left[key]) !== JSON.stringify(right[key])) {
       throw new Error(`VS Code/VSCodium projection ${key} diverges`);
     }

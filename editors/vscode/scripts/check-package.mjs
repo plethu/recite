@@ -4,6 +4,7 @@ import { fileURLToPath } from "node:url";
 import { spawnSync } from "node:child_process";
 import {
   PACKAGE_MESSAGE_IDS,
+  projectRuntimeMessage,
   RUNTIME_MESSAGE_IDS,
   SOURCE_MESSAGE_IDS,
   verifyMessageProjections
@@ -61,7 +62,7 @@ assert(properties["recite.lsp.projectRoot"]?.type === "string",
 
 for (const [id, message] of Object.entries(projectedMessages)) {
   assert(canonicalMessages.get(id), `canonical Fluent message is missing ${id}`);
-  assert(canonicalMessages.get(id).replaceAll("{$detail}", "{0}") === message,
+  assert(projectRuntimeMessage(id, canonicalMessages.get(id)) === message,
     `VS Code message projection diverges from canonical Fluent message ${id}`);
 }
 for (const [id, message] of Object.entries(packageMessages)) {

@@ -213,7 +213,7 @@ production suppressions must carry a narrow scope and rationale.
 | `editors/recite-tree-sitter/grammar.js` | 345 | production | tree-sitter/grammar | cohesive | Grammar source owns syntax and recovery rules alongside the named node declarations |
 | `editors/vscode/src/controller.js` | 304 | production | vscode/controller | review | #51: controller retains lifecycle coordination while restart policy, startup outcomes, and transport boundaries are extracted |
 | `editors/vscode/src/lsp-client.js` | 279 | production | vscode/lsp-client | review | #51: client retains protocol request lifecycle while framed transport owns writes and teardown |
-| `editors/vscode/scripts/message-projections.mjs` | 260 | tooling | vscode/projections | review | #51: inventory parsing and projection installation remain one checked update boundary after Fluent parsing extraction |
+| `editors/vscode/scripts/message-projections.mjs` | 298 | tooling | vscode/projections | review | #51: inventory parsing, typed placeholder lowering, and projection installation remain one checked update boundary |
 | `editors/vscode/scripts/ui-boundary-adapter.mjs` | 251 | tooling | vscode/checks | review | #51: semantic UI adapter contract remains one cohesive structural boundary |
 | `editors/vscode/scripts/ui-boundary-calls.mjs` | 347 | tooling | vscode/checks | review | UI boundary call inventory remains a single generated-boundary checker |
 | `editors/vscode/test/controller-lifecycle.test.mjs` | 441 | test/support | vscode/tests | review | #51: lifecycle, startup outcomes, retry budget, and notification nonspam scenarios remain one controller contract suite |

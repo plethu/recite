@@ -16,11 +16,27 @@ import { fileURLToPath } from "node:url";
 import os from "node:os";
 import {
   generateMessageProjections,
+  projectRuntimeMessage,
   projectMessages,
   verifyMessageProjections
 } from "../scripts/message-projections.mjs";
 
 const packageRoot = path.resolve(path.dirname(fileURLToPath(import.meta.url)), "..");
+
+test("VS Code lowers typed canonical placeables to positional placeholders", async () => {
+  const source = await readFile(
+    path.resolve(packageRoot, "../../crates/recite-ui/resources/en-US.ftl"), "utf8"
+  );
+  const projected = projectMessages(source).runtime["lsp-client-restart-scheduled"];
+  assert.equal(
+    projected,
+    "Recite language server restart scheduled in {0} milliseconds."
+  );
+  assert.equal(
+    projectRuntimeMessage("lsp-client-restart-scheduled", "restart in {$milliseconds} ms"),
+    "restart in {0} ms"
+  );
+});
 
 test("message projections reject multiline and selector Fluent before generation", async () => {
   const sourcePath = path.resolve(packageRoot, "../../crates/recite-ui/resources/en-US.ftl");
