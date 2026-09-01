@@ -165,6 +165,26 @@ fn equal_overlay_input_is_a_no_op_and_close_resets_lifecycle() {
 }
 
 #[test]
+fn default_request_is_a_complete_no_op_for_new_kernel() {
+    let mut kernel = AuthoringKernel::new();
+    let before = kernel.snapshot().clone();
+
+    let delta = kernel
+        .apply(AuthoringRequest::default())
+        .expect("default request is accepted by a new kernel");
+
+    assert_eq!(kernel.snapshot(), &before);
+    assert_eq!(
+        kernel.snapshot().generation(),
+        SnapshotGeneration::initial()
+    );
+    assert!(kernel.project_complete());
+    assert!(delta.is_empty());
+    assert_eq!(delta.previous_generation(), before.generation());
+    assert_eq!(delta.generation(), before.generation());
+}
+
+#[test]
 fn generation_mismatch_is_transactional() {
     let mut kernel = AuthoringKernel::new();
     let error = kernel

@@ -92,8 +92,11 @@ impl std::fmt::Display for DocumentVersion {
     }
 }
 
-/// The complete saved/overlay input set for one authoring refresh.
-#[derive(Clone, Debug, Default, Eq, PartialEq)]
+/// The saved/overlay input set for one authoring refresh.
+///
+/// The request owns the project-completeness assertion used by authoring
+/// validation; it is retained as part of the accepted kernel state.
+#[derive(Clone, Debug, Eq, PartialEq)]
 pub struct AuthoringRequest {
     expected_generation: super::SnapshotGeneration,
     saved_documents: Vec<SavedDocument>,
@@ -101,8 +104,22 @@ pub struct AuthoringRequest {
     project_complete: bool,
 }
 
+impl Default for AuthoringRequest {
+    fn default() -> Self {
+        Self::new(
+            super::SnapshotGeneration::initial(),
+            std::iter::empty::<SavedDocument>(),
+            std::iter::empty::<OpenDocument>(),
+        )
+    }
+}
+
 impl AuthoringRequest {
     /// Creates a full replacement request for the expected snapshot generation.
+    ///
+    /// New requests are marked as complete; use
+    /// [`Self::with_project_completeness`] when the supplied documents are a
+    /// partial project view.
     #[must_use]
     pub fn new(
         expected_generation: super::SnapshotGeneration,
@@ -117,7 +134,11 @@ impl AuthoringRequest {
         }
     }
 
-    /// Marks whether the supplied documents cover the complete project.
+    /// Sets whether this request's documents cover the complete project.
+    ///
+    /// The setting is request-owned and participates in authoring state
+    /// identity, so changing it can trigger a fresh semantic analysis even
+    /// when the document bytes are unchanged.
     #[must_use]
     pub const fn with_project_completeness(mut self, project_complete: bool) -> Self {
         self.project_complete = project_complete;

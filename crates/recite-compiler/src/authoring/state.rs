@@ -129,13 +129,17 @@ impl AuthoringKernel {
         self.project_complete
     }
 
-    /// Replaces the complete saved and open input set transactionally.
+    /// Replaces the saved and open input set transactionally.
+    ///
+    /// The request-owned project-completeness setting is accepted alongside
+    /// the documents and controls whether project-wide validation is
+    /// authoritative or indeterminate.
     pub fn apply(&mut self, request: AuthoringRequest) -> Result<AnalysisDelta, AuthoringError> {
         self.apply_request(request)
     }
 
-    /// Replaces the input set while retaining file-local analysis for an
-    /// incomplete project. Project-wide checks are left indeterminate until
+    /// Replaces the input set as an incomplete project request while retaining
+    /// file-local analysis. Project-wide checks are left indeterminate until
     /// all sources participate.
     pub fn apply_with_incomplete_project(
         &mut self,
