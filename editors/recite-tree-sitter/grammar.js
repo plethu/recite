@@ -91,35 +91,59 @@ module.exports = grammar({
     if_statement: ($) => seq(
       optional($.indent),
       field("marker", $.if_marker),
-      optional($.hspace),
-      field("condition", $.condition_expression),
-      optional($.inline_comment),
-      $.newline,
+      choice(
+        seq(
+          $.hspace,
+          optional(field("condition", $.condition_expression)),
+          optional($.inline_comment),
+          $.newline,
+        ),
+        $.newline,
+      ),
     ),
 
     else_statement: ($) => seq(
       optional($.indent),
       field("marker", $.else_marker),
-      optional($.inline_comment),
-      $.newline,
+      choice(
+        seq(
+          $.inline_comment,
+          $.newline,
+        ),
+        seq(
+          $.hspace,
+          $.newline,
+        ),
+        $.newline,
+      ),
     ),
 
     match_statement: ($) => seq(
       optional($.indent),
       field("marker", $.match_marker),
-      optional($.hspace),
-      field("condition", $.condition_expression),
-      optional($.inline_comment),
-      $.newline,
+      choice(
+        seq(
+          $.hspace,
+          optional(field("condition", $.condition_expression)),
+          optional($.inline_comment),
+          $.newline,
+        ),
+        $.newline,
+      ),
     ),
 
     case_statement: ($) => seq(
       optional($.indent),
       field("marker", $.case_marker),
-      $.hspace,
-      field("variant", $.identifier),
-      optional($.inline_comment),
-      $.newline,
+      choice(
+        seq(
+          $.hspace,
+          optional(field("variant", $.identifier)),
+          optional($.inline_comment),
+          $.newline,
+        ),
+        $.newline,
+      ),
     ),
 
     // `|` is syntax-only here. Whether it is the second source form of a
@@ -253,10 +277,11 @@ module.exports = grammar({
       repeat(seq($.hspace, $.expression_part)),
     )),
 
-    // Statement markers at the beginning of an indented line are structural;
-    // an ordinary hyphen is prose, while `->` remains a divert marker. This
-    // mirrors the production parser's recovery boundary without making
-    // semantic claims about the prose content.
+    // Complete statement markers at the beginning of an indented line are
+    // structural; marker-like near-misses remain prose. This mirrors the
+    // production parser's recovery boundary without making semantic claims
+    // about the prose content. An ordinary hyphen is prose, while `->`
+    // remains a divert marker.
     prose_text: ($) => seq(
       choice($.markup_tag, $.interpolation, $.prose_start),
       repeat(choice($.markup_tag, $.interpolation, $.prose_content)),
@@ -337,7 +362,20 @@ module.exports = grammar({
     ),
 
     comment_text: ($) => /[^\r\n]*/,
-    prose_start: ($) => /[^\r\n{}\[\]?#>!:|]+/,
+    // A directive marker is only structural when its complete spelling is
+    // followed by horizontal whitespace or the end of the physical line.
+    // Keep near-misses in prose without relying on unsupported regex
+    // look-around: the alternatives consume the first character that makes a
+    // marker-like prefix non-structural, while the one-character fallback
+    // keeps ordinary colon-led prose available to the editor grammar.
+    prose_start: ($) => choice(
+      /[^\r\n{}\[\]?#>!:|]+/,
+      /:/,
+      /:i(?:[^f\r\n \t]|f[^\r\n \t])/,
+      /:e(?:[^l\r\n \t]|l(?:[^s\r\n \t]|s(?:[^e\r\n \t]|e[^\r\n \t])))/,
+      /:m(?:[^a\r\n \t]|a(?:[^t\r\n \t]|t(?:[^c\r\n \t]|c(?:[^h\r\n \t]|h[^\r\n \t]))))/,
+      /:c(?:[^a\r\n \t]|a(?:[^s\r\n \t]|s(?:[^e\r\n \t]|e[^\r\n \t])))/,
+    ),
     prose_content: ($) => /[^\r\n{}\[\]]+/,
     indent: ($) => /[ \t]+/,
     hspace: ($) => /[ \t]+/,

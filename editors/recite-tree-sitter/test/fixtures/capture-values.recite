@@ -9,3 +9,11 @@
   -> archive.recite::opening
   -> END
   - Hyphen-led prose.
+  :ifx this is prose.
+  :elsex this is prose.
+  :matchx this is prose.
+  :casex this is prose.
+  :if exact directive
+  :else
+  :match exact directive
+  :case exact

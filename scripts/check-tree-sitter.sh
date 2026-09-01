@@ -198,6 +198,14 @@ exact_captures=(
   ' - number, start: (7, 32), end: (7, 37), text: `-4.25`'
   ' - constant.builtin, start: (9, 5), end: (9, 8), text: `END`'
   ' - string.special, start: (10, 2), end: (10, 21), text: `- Hyphen-led prose.`'
+  ' - string.special, start: (11, 2), end: (11, 6), text: `:ifx`'
+  ' - string.special, start: (12, 2), end: (12, 8), text: `:elsex`'
+  ' - string.special, start: (13, 2), end: (13, 9), text: `:matchx`'
+  ' - string.special, start: (14, 2), end: (14, 8), text: `:casex`'
+  ' - keyword.conditional, start: (15, 2), end: (15, 5), text: `:if`'
+  ' - keyword.conditional, start: (16, 2), end: (16, 7), text: `:else`'
+  ' - keyword.conditional, start: (17, 2), end: (17, 8), text: `:match`'
+  ' - keyword.conditional, start: (18, 2), end: (18, 7), text: `:case`'
 )
 for expectation in "${exact_captures[@]}"; do
   if ! grep -Fq "$expectation" "$query_output"; then
