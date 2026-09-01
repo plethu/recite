@@ -105,6 +105,77 @@ test("activation-shaped startup replays documents already open before activation
   await controller.dispose();
 });
 
+test("configuration changes during initialization queue one restart with the latest settings", async () => {
+  let settings = { path: "initial", args: [], projectRoot: "" };
+  let configurationChanged;
+  let initializationEntered;
+  let releaseInitialization;
+  const initializationGate = new Promise((resolve) => { releaseInitialization = resolve; });
+  const clients = [];
+  const starts = [];
+  const stops = [];
+  const api = hostApi({ isTrusted: () => true, onDidGrantWorkspaceTrust: () => ({ dispose() {} }) });
+  api.workspace.getConfiguration = () => ({
+    get: (key, fallback) => ({
+      "lsp.path": settings.path,
+      "lsp.args": settings.args,
+      "lsp.projectRoot": settings.projectRoot
+    }[key] ?? fallback)
+  });
+  api.workspace.onDidChangeConfiguration = (callback) => {
+    configurationChanged = callback;
+    return { dispose() {} };
+  };
+  const controller = new ExtensionController(api, output(), { delete() {} }, {
+    createClient: (configuration) => {
+      const client = new FakeClient();
+      clients.push(client);
+      const start = client.start.bind(client);
+      client.start = async (params) => {
+        starts.push({ client, configuration, params });
+        if (starts.length === 2) {
+          initializationEntered();
+          await initializationGate;
+        }
+        await start();
+      };
+      const stop = client.stop.bind(client);
+      client.stop = async () => {
+        stops.push(client);
+        await stop();
+      };
+      return client;
+    }
+  });
+  const initialization = new Promise((resolve) => { initializationEntered = resolve; });
+
+  await controller.start();
+  settings = { path: "first-restart", args: ["--first"], projectRoot: "" };
+  const restart = controller.restart();
+  await initialization;
+
+  settings = { path: "latest", args: ["--latest"], projectRoot: "" };
+  configurationChanged({ affectsConfiguration: (section) => section === "recite.lsp" });
+  releaseInitialization();
+  await restart;
+
+  assert.equal(starts.length, 3, "the queued change should cause exactly one follow-up start");
+  assert.deepEqual(starts.map(({ configuration }) => ({
+    command: configuration.command,
+    args: configuration.args
+  })), [
+    { command: "initial", args: [] },
+    { command: "first-restart", args: ["--first"] },
+    { command: "latest", args: ["--latest"] }
+  ]);
+  assert.equal(stops.length, 2);
+  assert.equal(clients[0].status, "stopped");
+  assert.equal(clients[1].status, "stopped");
+  assert.equal(controller.client, clients[2]);
+  assert.equal(controller.client.status, "running");
+  await controller.dispose();
+});
+
 test("a crashed server restarts with bounded backoff and replays open documents", async () => {
   const clients = [];
   const api = hostApi({ isTrusted: () => true, onDidGrantWorkspaceTrust: () => ({ dispose() {} }) });

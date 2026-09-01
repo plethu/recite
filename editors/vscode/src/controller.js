@@ -23,6 +23,7 @@ export class ExtensionController {
     this.restartPolicy = new RestartPolicy(options.restartDelaysMs);
     this.client = undefined;
     this.restartPromise = undefined;
+    this.restartQueued = false;
     this.restartTimer = undefined;
     this.stableRunTimer = undefined;
     this.stopping = false;
@@ -276,16 +277,27 @@ export class ExtensionController {
   }
 
   async restart() {
+    this.restartQueued = true;
     if (this.restartPromise) return this.restartPromise;
     this.restartPromise = (async () => {
-      this.stopping = true;
-      this.clearStableReset();
-      await this.client?.stop();
-      this.client = undefined;
-      this.stopping = false;
-      const outcome = await this.start();
-      this.handleStartOutcome(outcome);
-    })().finally(() => { this.restartPromise = undefined; });
+      do {
+        this.restartQueued = false;
+        this.stopping = true;
+        this.clearStableReset();
+        await this.client?.stop();
+        this.client = undefined;
+        this.stopping = false;
+        const outcome = await this.start();
+        this.handleStartOutcome(outcome);
+        // A failed start already owns a bounded retry schedule. A queued
+        // configuration change will be read by that retry; do not start a
+        // second recovery path outside the restart budget.
+        if (outcome.kind !== StartupOutcomeKind.Started) break;
+      } while (this.restartQueued && !this.disposed);
+    })().finally(() => {
+      this.restartPromise = undefined;
+      this.restartQueued = false;
+    });
     return this.restartPromise;
   }
 
