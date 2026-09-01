@@ -1,0 +1,7 @@
+[workspace]
+members = [
+    "crates/recite-cli",
+    "crates/recite-compiler",
+    "crates/recite-lsp",
+]
+resolver = "3"

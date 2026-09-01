@@ -196,7 +196,7 @@ fn dialogue_locale_falls_back_to_language_catalog() {
     write_file(
         temp.path(),
         "locale/fr.po",
-        "msgctxt \"11111111111111111111\"\nmsgid \"Hello.\"\nmsgstr \"Salut.\"\n",
+        include_str!("../../../fixtures/recite/valid/locale_fallback_fr.po"),
     );
     let fixture = write_file(
         temp.path(),
