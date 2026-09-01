@@ -386,8 +386,10 @@ for client_id, client in client_map.items():
         require(supporting_artifact in artifact_map, f"client {client_id} references unknown supporting artifact {supporting_artifact}")
         if supporting_artifact in artifact_map:
             require(client_id in artifact_map[supporting_artifact].get("clients", []), f"client {client_id} artifact reference is not reciprocated by artifact {supporting_artifact}")
-    if client.get("status") in {"partial", "implemented"} and artifact in artifact_map:
-        require(artifact_map[artifact].get("status") == "implemented", f"{client.get('status')} client {client_id} needs an implemented artifact")
+    if client.get("status") == "partial" and artifact in artifact_map:
+        require(artifact_map[artifact].get("status") in {"partial", "implemented"}, f"partial client {client_id} needs a partial or implemented artifact")
+    if client.get("status") == "implemented" and artifact in artifact_map:
+        require(artifact_map[artifact].get("status") == "implemented", f"implemented client {client_id} needs an implemented artifact")
     if client.get("status") == "implemented":
         require(artifact_map[artifact].get("status") == "implemented", f"implemented client {client_id} needs an implemented artifact")
         require(any(status in {"partial", "implemented"} for status in platform_status.values()), f"implemented client {client_id} needs platform evidence")
@@ -500,7 +502,7 @@ for capability_id, capability in capability_map.items():
                     f"capability {capability_id} evidence script is not executable: {command}",
                 )
                 continue
-            if command == "scripts/check-neovim.sh":
+            if command in {"scripts/check-neovim.sh", "scripts/check-vscode.sh"}:
                 evidence_script, _ = require_repo_file(command, f"capability {capability_id} evidence script")
                 require(
                     evidence_script.stat().st_mode & 0o111,
@@ -542,7 +544,16 @@ for capability_id, capability in capability_map.items():
                         f"capability {capability_id} evidence command does not select exactly one Cargo test: {test_filter}",
                     )
     artifact = evidence.get("artifact")
-    if artifact is not None:
+    artifacts = evidence.get("artifacts")
+    require(not (artifact is not None and artifacts is not None), f"capability {capability_id} must use either artifact or artifacts, not both")
+    if artifacts is not None:
+        require(isinstance(artifacts, list) and artifacts, f"capability {capability_id} artifacts must be a non-empty array")
+        if isinstance(artifacts, list):
+            require(all(isinstance(value, str) and value for value in artifacts), f"capability {capability_id} evidence artifacts must be non-empty strings")
+            require(len(artifacts) == len(set(artifacts)), f"capability {capability_id} evidence artifacts must be unique")
+            for value in artifacts:
+                require(value in artifact_map, f"capability {capability_id} references unknown evidence artifact {value}")
+    elif artifact is not None:
         require(artifact in artifact_map, f"capability {capability_id} references unknown evidence artifact {artifact}")
     for artifact_id, artifact_status_value in artifact_status.items():
         if artifact_id in artifact_map:

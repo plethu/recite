@@ -2,9 +2,9 @@
 
 This is the shared contract for Recite's first-class text authoring surfaces.
 It describes what an editor client can rely on and where the client stops being
-the authority. A planned client is not an implemented client, and a packaged
-artifact is not a published artifact; the Neovim source integration is checked
-in but remains Linux-only partial support.
+the authority. A partial client is not an installed or published client, and a
+packaged artifact is not a published artifact; the Neovim source integration is
+checked in but remains Linux-only partial support.
 
 The machine-readable companion is
 [`fixtures/editor-parity/contract.json`](../fixtures/editor-parity/contract.json).
@@ -12,6 +12,7 @@ The checker and the stdio tests are part of the repository gate:
 
 ```text
 scripts/check-editor-parity.sh
+scripts/check-vscode.sh
 cargo test --locked -p recite-lsp --test editor_parity
 ```
 
@@ -121,14 +122,24 @@ Executable evidence covers the shared LSP operations, project-root discovery,
 the bounded stable-ID repair, compiler catalogue fallback, the compiler's
 protocol-neutral build projection, CLI locale fallback through the checked-in
 `fixtures/recite/valid/locale_fallback_fr.po` catalogue, the syntax-only
-Tree-sitter grammar check, and the Neovim runtimepath check. The grammar check
-proves generated-parser reproducibility, canonical fixture coverage, recovery
-boundaries, and lexical captures; the Neovim check adds Linux/0.12.5 filetype,
-LSP, and ABI14 parser evidence without claiming macOS, Windows, packaging, or
-distribution. This still does not claim a versioned CLI/watch
-envelope, process or binary integration, combined LSP schema/catalogue
-transport, cancellation transport, client activation, or a TextMate or Zed
+Tree-sitter grammar check, the Neovim runtimepath check, and the checked-in
+VS Code/VSCodium package scaffold. The grammar check proves generated-parser
+reproducibility, canonical fixture coverage, recovery boundaries, and lexical
+captures; the Neovim check adds Linux/0.12.5 filetype, LSP, and ABI14 parser
+evidence. The VS Code package check validates the generated VSIX contents and
+the Node tests exercise the real `recite-lsp` process over stdio on Linux.
+Those checks do not establish installed VS Code or VSCodium host activation,
+macOS or Windows support, marketplace publication, or a distributable archive
+in source control. This still does not claim a versioned CLI/watch envelope,
+process or binary integration, combined LSP schema/catalogue transport,
+cancellation transport, native version-safe rename, or a TextMate or Zed
 grammar.
+
+Capability rows with direct VS Code/VSCodium package, adapter, or live-server
+evidence use `partial` client status and include `scripts/check-vscode.sh` in
+their evidence commands. Rows for native rename, command/watch integration,
+and other untested client operations remain planned even though the shared
+extension artifact exists.
 
 The rows currently draw from these scenarios. The source and schema files are
 the canonical fixtures; derived inputs are transformations or protocol events,
@@ -140,7 +151,7 @@ not copied Recite or schema sources.
 - `stale-overlay`: send a newer accepted overlay followed by an older one, then query the current text.
 - `stable-id-repair`: derive a missing-ID overlay from the canonical language fixture and request a shared-kernel repair.
 - `multi-file-project`: materialize two canonical source fixtures under one root and resolve a qualified cross-file target.
-- `client-syntax-projections`: record partial syntax-only Tree-sitter evidence while reserving filetype, client setup, and package evidence over the canonical language fixtures.
+- `client-syntax-projections`: record partial syntax-only Tree-sitter evidence alongside the checked-in VS Code/VSCodium package projection; installed host setup remains untested over the canonical language fixtures.
 - `schema-localisation-reference`: combine the canonical manifests and pressure source with the checked-in PO catalogue to exercise the current shared/CLI locale-fallback evidence.
 - `command-watch-reference`: exercise the protocol-neutral `BuildStatusProjection`; CLI wire, process, binary, cancellation transport, and client lifecycle evidence remain planned for #53.
 
@@ -148,24 +159,31 @@ not copied Recite or schema sources.
 
 Linux, macOS, and Windows are intended first-class desktop platforms. This
 contract records support claims separately so a Linux test run cannot imply
-Windows or macOS packaging evidence. At this checkpoint the shared LSP has
-partial protocol evidence on Linux only. The Neovim runtimepath source is
-checked in and exercised on Linux with Neovim 0.12.5. Neovim 0.10.4 is an
-explicit compatibility target not yet executed in this checkout; no packaged
-distribution is claimed.
+Windows or macOS packaging evidence. At this checkpoint the shared LSP and
+the VS Code/VSCodium Node client have partial evidence on Linux only. The
+Neovim runtimepath source is checked in and exercised on Linux with Neovim
+0.12.5. Neovim 0.10.4 is an explicit compatibility target not yet executed in
+this checkout; no marketplace or Open VSX distribution is claimed.
 
 | Client | Shared artifact | Linux | macOS | Windows | Status |
 | --- | --- | --- | --- | --- | --- |
-| VS Code | one future VSIX | planned | planned | planned | planned |
-| VSCodium | the same future VSIX | planned | planned | planned | planned |
+| VS Code | checked-in extension scaffold; generated VSIX | partial | planned | planned | partial |
+| VSCodium | the same checked-in scaffold and generated VSIX | partial | planned | planned | partial |
 | Neovim | checked-in native runtimepath setup plus Tree-sitter grammar; no package distribution | partial | planned | planned | partial |
 | Zed | future extension package | planned | planned | planned | planned |
 
-VS Code Marketplace and Open VSX are separate distribution claims. Packaging,
-publication, signing, and installation smoke are all still planned. A shared
-VSIX means the VS Code and VSCodium clients do not acquire separate semantic
-implementations; it does not mean either marketplace already carries an
-artifact.
+The VS Code and VSCodium partial status is deliberately narrower than host
+support: the extension source is checked in, deterministic VSIX generation and
+package validation pass, and Linux Node tests exercise a real `recite-lsp`
+process. Installed VS Code/VSCodium activation smoke is still missing, as are
+macOS and Windows checks. Native rename remains unregistered until a
+version-safe adapter exists; structured command and watch integration remains
+owned by #53.
+
+VS Code Marketplace and Open VSX are separate distribution claims. Publication,
+signing, and installation smoke are still planned. A shared VSIX means the VS
+Code and VSCodium clients do not acquire separate semantic implementations; it
+does not mean either marketplace already carries an artifact.
 
 ## Reopening conditions
 
@@ -176,6 +194,6 @@ client/package has executable evidence on a named platform. Such a change must
 update the JSON fixture, this document, and the corresponding tests together.
 
 The contract does not cover the GUI workbench, engine embedding, remote
-services, marketplace publication, or client implementation. The checked-in
-Tree-sitter grammar remains a syntax artifact; Neovim consumes it through its
-runtimepath package, while Zed support remains planned under #192.
+services, marketplace publication, or installed-host compatibility. The
+checked-in Tree-sitter grammar remains a syntax artifact; Neovim consumes it
+through its runtimepath package, while Zed support remains planned under #192.

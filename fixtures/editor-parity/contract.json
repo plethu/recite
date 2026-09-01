@@ -6,17 +6,17 @@
       "id": "vscode",
       "name": "VS Code",
       "artifact": "vscode-vsix",
-      "status": "planned",
-      "platform_status": {"linux": "planned", "macos": "planned", "windows": "planned"},
-      "notes": "No extension artifact exists in this contract slice."
+      "status": "partial",
+      "platform_status": {"linux": "partial", "macos": "planned", "windows": "planned"},
+      "notes": "The checked-in extension scaffold is package-checked and has Linux Node/live-server evidence; installed VS Code host activation remains untested."
     },
     {
       "id": "vscodium",
       "name": "VSCodium",
       "artifact": "vscode-vsix",
-      "status": "planned",
-      "platform_status": {"linux": "planned", "macos": "planned", "windows": "planned"},
-      "notes": "Uses the same future VSIX as VS Code; no publication is claimed."
+      "status": "partial",
+      "platform_status": {"linux": "partial", "macos": "planned", "windows": "planned"},
+      "notes": "Uses the same checked-in extension scaffold and generated VSIX as VS Code; Linux Node/live-server evidence exists, but installed VSCodium activation remains untested and no publication is claimed."
     },
     {
       "id": "neovim",
@@ -37,7 +37,7 @@
     }
   ],
   "artifacts": [
-    {"id": "vscode-vsix", "kind": "editor-extension", "status": "planned", "path": null, "clients": ["vscode", "vscodium"]},
+    {"id": "vscode-vsix", "kind": "editor-extension", "status": "partial", "path": null, "clients": ["vscode", "vscodium"], "notes": "The extension source and package manifest are checked in. A deterministic VSIX is generated and package-checked, but the archive is ignored build output rather than a checked-in artifact."},
     {"id": "tree-sitter-grammar", "kind": "syntax-grammar", "status": "partial", "path": "editor/recite-tree-sitter/grammar.js", "clients": ["neovim"]},
     {"id": "neovim-runtimepath", "kind": "editor-runtimepath", "status": "implemented", "path": "editor/recite-neovim/lua/recite.lua", "clients": ["neovim"]},
     {"id": "zed-extension", "kind": "editor-extension", "status": "planned", "path": null, "clients": ["zed"]}
@@ -135,14 +135,14 @@
       "protocol": "lsp",
       "expected": {"kind": "initialize-result", "assertions": ["UTF-16 position encoding", "full open/change/save sync", "completion, hover, navigation, rename, and code actions"]},
       "edge_cases": ["client omits positionEncodings", "client advertises UTF-8 only"],
-      "known_limitation": "Only the current server's advertised LSP fields are covered; client activation and cross-platform support are untested.",
+      "known_limitation": "Only the current server's advertised LSP fields are covered; installed client activation and cross-platform support are untested.",
       "implementation_status": "partial",
-      "client_status": {"vscode": "planned", "vscodium": "planned", "neovim": "partial", "zed": "planned"},
+      "client_status": {"vscode": "partial", "vscodium": "partial", "neovim": "partial", "zed": "planned"},
       "platform_status": {"linux": "partial", "macos": "planned", "windows": "planned"},
-      "artifact_status": {"vscode-vsix": "planned", "tree-sitter-grammar": "partial", "neovim-runtimepath": "implemented", "zed-extension": "planned"},
+      "artifact_status": {"vscode-vsix": "partial", "tree-sitter-grammar": "partial", "neovim-runtimepath": "implemented", "zed-extension": "planned"},
       "distribution_status": {"vs-marketplace": "planned", "open-vsx": "planned", "neovim-distribution": "planned", "zed-distribution": "planned"},
-      "expected_evidence": {"status": "partial", "commands": ["cargo test --locked -p recite-lsp --test editor_parity initialize_and_project_features_use_shared_stdio_contract", "scripts/check-neovim.sh"], "assertions": ["stdio initialize response contains the advertised fields"], "artifact": "neovim-runtimepath"},
-      "follow_up": "#52"
+      "expected_evidence": {"status": "partial", "commands": ["cargo test --locked -p recite-lsp --test editor_parity initialize_and_project_features_use_shared_stdio_contract", "scripts/check-neovim.sh", "scripts/check-vscode.sh"], "assertions": ["stdio initialize response contains the advertised fields", "VS Code and VSCodium Node clients start a real recite-lsp process on Linux"], "artifacts": ["neovim-runtimepath", "vscode-vsix"]},
+      "follow_up": "#51"
     },
     {
       "id": "lsp.publish.diagnostics",
@@ -153,12 +153,12 @@
       "edge_cases": ["malformed marker-leading prose", "incomplete buffer"],
       "known_limitation": "The evidence covers parser diagnostics for the named fixtures, not all compiler or schema diagnostics.",
       "implementation_status": "partial",
-      "client_status": {"vscode": "planned", "vscodium": "planned", "neovim": "partial", "zed": "planned"},
+      "client_status": {"vscode": "partial", "vscodium": "partial", "neovim": "partial", "zed": "planned"},
       "platform_status": {"linux": "partial", "macos": "planned", "windows": "planned"},
-      "artifact_status": {"vscode-vsix": "planned", "tree-sitter-grammar": "partial", "neovim-runtimepath": "implemented", "zed-extension": "planned"},
+      "artifact_status": {"vscode-vsix": "partial", "tree-sitter-grammar": "partial", "neovim-runtimepath": "implemented", "zed-extension": "planned"},
       "distribution_status": {"vs-marketplace": "planned", "open-vsx": "planned", "neovim-distribution": "planned", "zed-distribution": "planned"},
-      "expected_evidence": {"status": "partial", "commands": ["cargo test --locked -p recite-lsp --test editor_parity diagnostic_recovery_keeps_incomplete_overlay_editable", "scripts/check-neovim.sh"], "assertions": ["diagnostics carry URI, version, code, severity, and range for the canonical malformed fixture"], "artifact": "neovim-runtimepath"},
-      "follow_up": "#52"
+      "expected_evidence": {"status": "partial", "commands": ["cargo test --locked -p recite-lsp --test editor_parity diagnostic_recovery_keeps_incomplete_overlay_editable", "scripts/check-neovim.sh", "scripts/check-vscode.sh"], "assertions": ["diagnostics carry URI, version, code, severity, and range for the canonical malformed fixture", "VS Code and VSCodium Node clients project live diagnostics on Linux"], "artifacts": ["neovim-runtimepath", "vscode-vsix"]},
+      "follow_up": "#51"
     },
     {
       "id": "lsp.completion.navigation",
@@ -167,14 +167,14 @@
       "protocol": "lsp",
       "expected": {"kind": "completion-and-location", "assertions": ["completion labels come from the shared snapshot", "definition location preserves URI and source range"]},
       "edge_cases": ["open overlay is newer than disk", "references remain source ordered"],
-      "known_limitation": "Same-file completion and definition evidence does not establish complete project indexing or client integration.",
+      "known_limitation": "Same-file completion and definition evidence does not establish complete project indexing or installed host integration.",
       "implementation_status": "partial",
-      "client_status": {"vscode": "planned", "vscodium": "planned", "neovim": "partial", "zed": "planned"},
+      "client_status": {"vscode": "partial", "vscodium": "partial", "neovim": "partial", "zed": "planned"},
       "platform_status": {"linux": "partial", "macos": "planned", "windows": "planned"},
-      "artifact_status": {"vscode-vsix": "planned", "tree-sitter-grammar": "partial", "neovim-runtimepath": "implemented", "zed-extension": "planned"},
+      "artifact_status": {"vscode-vsix": "partial", "tree-sitter-grammar": "partial", "neovim-runtimepath": "implemented", "zed-extension": "planned"},
       "distribution_status": {"vs-marketplace": "planned", "open-vsx": "planned", "neovim-distribution": "planned", "zed-distribution": "planned"},
-      "expected_evidence": {"status": "partial", "commands": ["cargo test --locked -p recite-lsp --test editor_parity initialize_and_project_features_use_shared_stdio_contract", "scripts/check-neovim.sh"], "assertions": ["completion and definition are actual stdio responses for the canonical fixture"], "artifact": "neovim-runtimepath"},
-      "follow_up": "#52"
+      "expected_evidence": {"status": "partial", "commands": ["cargo test --locked -p recite-lsp --test editor_parity initialize_and_project_features_use_shared_stdio_contract", "scripts/check-neovim.sh", "scripts/check-vscode.sh"], "assertions": ["completion and definition are actual stdio responses for the canonical fixture", "VS Code and VSCodium Node clients resolve a live cross-file definition on Linux"], "artifacts": ["neovim-runtimepath", "vscode-vsix"]},
+      "follow_up": "#51"
     },
     {
       "id": "lsp.utf16.positions",
@@ -183,14 +183,14 @@
       "protocol": "lsp",
       "expected": {"kind": "diagnostic-range", "assertions": ["non-BMP scalar counts as two UTF-16 code units", "CRLF carriage return is excluded from logical line"]},
       "edge_cases": ["surrogate-pair interior cursor", "CRLF"],
-      "known_limitation": "Only diagnostic ranges in full-sync overlays are covered; edit and client conversion paths remain untested.",
+      "known_limitation": "Only diagnostic ranges in full-sync overlays are covered; versioned edit and installed host conversion paths remain untested.",
       "implementation_status": "partial",
-      "client_status": {"vscode": "planned", "vscodium": "planned", "neovim": "partial", "zed": "planned"},
+      "client_status": {"vscode": "partial", "vscodium": "partial", "neovim": "partial", "zed": "planned"},
       "platform_status": {"linux": "partial", "macos": "planned", "windows": "planned"},
-      "artifact_status": {"vscode-vsix": "planned", "tree-sitter-grammar": "partial", "neovim-runtimepath": "implemented", "zed-extension": "planned"},
+      "artifact_status": {"vscode-vsix": "partial", "tree-sitter-grammar": "partial", "neovim-runtimepath": "implemented", "zed-extension": "planned"},
       "distribution_status": {"vs-marketplace": "planned", "open-vsx": "planned", "neovim-distribution": "planned", "zed-distribution": "planned"},
-      "expected_evidence": {"status": "partial", "commands": ["cargo test --locked -p recite-lsp --test editor_parity utf16_crlf_and_non_bmp_ranges_are_projected_over_stdio", "scripts/check-neovim.sh"], "assertions": ["stdio diagnostics expose the expected UTF-16 range for the derived CRLF fixture"], "artifact": "neovim-runtimepath"},
-      "follow_up": "#52"
+      "expected_evidence": {"status": "partial", "commands": ["cargo test --locked -p recite-lsp --test editor_parity utf16_crlf_and_non_bmp_ranges_are_projected_over_stdio", "scripts/check-neovim.sh", "scripts/check-vscode.sh"], "assertions": ["stdio diagnostics expose the expected UTF-16 range for the derived CRLF fixture", "VS Code and VSCodium Node clients preserve LSP range projections on Linux"], "artifacts": ["neovim-runtimepath", "vscode-vsix"]},
+      "follow_up": "#51"
     },
     {
       "id": "lsp.overlay.recovery",
@@ -201,11 +201,11 @@
       "edge_cases": ["incomplete source", "full-sync only", "refresh after parse recovery"],
       "known_limitation": "Recovery evidence covers full-text didChange and diagnostics; ranged edits and asynchronous scheduling are not implemented.",
       "implementation_status": "partial",
-      "client_status": {"vscode": "planned", "vscodium": "planned", "neovim": "planned", "zed": "planned"},
+      "client_status": {"vscode": "partial", "vscodium": "partial", "neovim": "planned", "zed": "planned"},
       "platform_status": {"linux": "partial", "macos": "planned", "windows": "planned"},
-      "artifact_status": {"vscode-vsix": "planned", "tree-sitter-grammar": "partial", "neovim-runtimepath": "implemented", "zed-extension": "planned"},
+      "artifact_status": {"vscode-vsix": "partial", "tree-sitter-grammar": "partial", "neovim-runtimepath": "implemented", "zed-extension": "planned"},
       "distribution_status": {"vs-marketplace": "planned", "open-vsx": "planned", "neovim-distribution": "planned", "zed-distribution": "planned"},
-      "expected_evidence": {"status": "partial", "command": "cargo test --locked -p recite-lsp --test editor_parity diagnostic_recovery_keeps_incomplete_overlay_editable", "assertions": ["accepted newer overlay publishes only its current version in the recovery scenario"], "artifact": null},
+      "expected_evidence": {"status": "partial", "commands": ["cargo test --locked -p recite-lsp --test editor_parity diagnostic_recovery_keeps_incomplete_overlay_editable", "scripts/check-vscode.sh"], "assertions": ["accepted newer overlay publishes only its current version in the recovery scenario", "VS Code and VSCodium client tests cover bounded restart and open-document replay on Linux"], "artifacts": ["vscode-vsix"]},
       "follow_up": "#51"
     },
     {
@@ -219,7 +219,7 @@
       "implementation_status": "partial",
       "client_status": {"vscode": "planned", "vscodium": "planned", "neovim": "planned", "zed": "planned"},
       "platform_status": {"linux": "partial", "macos": "planned", "windows": "planned"},
-      "artifact_status": {"vscode-vsix": "planned", "tree-sitter-grammar": "partial", "neovim-runtimepath": "implemented", "zed-extension": "planned"},
+      "artifact_status": {"vscode-vsix": "partial", "tree-sitter-grammar": "partial", "neovim-runtimepath": "implemented", "zed-extension": "planned"},
       "distribution_status": {"vs-marketplace": "planned", "open-vsx": "planned", "neovim-distribution": "planned", "zed-distribution": "planned"},
       "expected_evidence": {"status": "partial", "command": "cargo test --locked -p recite-lsp --test editor_parity_features stale_version_is_refused_after_a_deterministic_stdio_barrier", "assertions": ["completion after stale change still observes version 3 text"], "artifact": null},
       "follow_up": "#51"
@@ -235,7 +235,7 @@
       "implementation_status": "unsupported",
       "client_status": {"vscode": "planned", "vscodium": "planned", "neovim": "planned", "zed": "planned"},
       "platform_status": {"linux": "unsupported", "macos": "planned", "windows": "planned"},
-      "artifact_status": {"vscode-vsix": "planned", "tree-sitter-grammar": "partial", "neovim-runtimepath": "implemented", "zed-extension": "planned"},
+      "artifact_status": {"vscode-vsix": "partial", "tree-sitter-grammar": "partial", "neovim-runtimepath": "implemented", "zed-extension": "planned"},
       "distribution_status": {"vs-marketplace": "planned", "open-vsx": "planned", "neovim-distribution": "planned", "zed-distribution": "planned"},
       "expected_evidence": {"status": "unsupported", "command": null, "assertions": ["limitation and owning follow-up are written down"], "artifact": null},
       "follow_up": "#53"
@@ -251,7 +251,7 @@
       "implementation_status": "partial",
       "client_status": {"vscode": "planned", "vscodium": "planned", "neovim": "planned", "zed": "planned"},
       "platform_status": {"linux": "partial", "macos": "planned", "windows": "planned"},
-      "artifact_status": {"vscode-vsix": "planned", "tree-sitter-grammar": "partial", "neovim-runtimepath": "implemented", "zed-extension": "planned"},
+      "artifact_status": {"vscode-vsix": "partial", "tree-sitter-grammar": "partial", "neovim-runtimepath": "implemented", "zed-extension": "planned"},
       "distribution_status": {"vs-marketplace": "planned", "open-vsx": "planned", "neovim-distribution": "planned", "zed-distribution": "planned"},
       "expected_evidence": {"status": "partial", "command": "cargo test --locked -p recite-compiler --test authoring_build status_projection::projects_every_lifecycle_state_with_stable_fields", "assertions": ["BuildStatusProjection test covers lifecycle fields without claiming a CLI wire contract"], "artifact": null},
       "follow_up": "#53"
@@ -263,14 +263,14 @@
       "protocol": "client",
       "expected": {"kind": "filetype-registration", "assertions": [".recite files activate the client projection", "activation does not add semantic parsing"]},
       "edge_cases": ["unknown extension", "nested project root"],
-      "known_limitation": "Only the Neovim runtimepath activation is covered; VS Code, VSCodium, Zed, and packaged distributions remain unimplemented.",
+      "known_limitation": "Neovim runtimepath and VS Code/VSCodium package registration are covered; installed host activation, Zed, and marketplace distributions remain unimplemented.",
       "implementation_status": "partial",
-      "client_status": {"vscode": "planned", "vscodium": "planned", "neovim": "partial", "zed": "planned"},
+      "client_status": {"vscode": "partial", "vscodium": "partial", "neovim": "partial", "zed": "planned"},
       "platform_status": {"linux": "partial", "macos": "planned", "windows": "planned"},
-      "artifact_status": {"vscode-vsix": "planned", "tree-sitter-grammar": "partial", "neovim-runtimepath": "implemented", "zed-extension": "planned"},
+      "artifact_status": {"vscode-vsix": "partial", "tree-sitter-grammar": "partial", "neovim-runtimepath": "implemented", "zed-extension": "planned"},
       "distribution_status": {"vs-marketplace": "planned", "open-vsx": "planned", "neovim-distribution": "planned", "zed-distribution": "planned"},
-      "expected_evidence": {"status": "partial", "command": "scripts/check-neovim.sh", "assertions": [".recite activates the recite filetype through the automatic runtimepath entry"], "artifact": "neovim-runtimepath"},
-      "follow_up": "#52"
+      "expected_evidence": {"status": "partial", "commands": ["scripts/check-neovim.sh", "scripts/check-vscode.sh"], "assertions": [".recite activates the recite filetype through the automatic runtimepath entry", "VS Code and VSCodium package manifests associate .recite files on the shared client"], "artifacts": ["neovim-runtimepath", "vscode-vsix"]},
+      "follow_up": "#51"
     },
     {
       "id": "editor.vscode.syntax-projection",
@@ -283,7 +283,7 @@
       "implementation_status": "planned",
       "client_status": {"vscode": "planned", "vscodium": "planned", "neovim": "planned", "zed": "planned"},
       "platform_status": {"linux": "planned", "macos": "planned", "windows": "planned"},
-      "artifact_status": {"vscode-vsix": "planned", "tree-sitter-grammar": "partial", "neovim-runtimepath": "implemented", "zed-extension": "planned"},
+      "artifact_status": {"vscode-vsix": "partial", "tree-sitter-grammar": "partial", "neovim-runtimepath": "implemented", "zed-extension": "planned"},
       "distribution_status": {"vs-marketplace": "planned", "open-vsx": "planned", "neovim-distribution": "planned", "zed-distribution": "planned"},
       "expected_evidence": {"status": "planned", "command": null, "assertions": ["#97 owns TextMate grammar evidence"], "artifact": null},
       "follow_up": "#97"
@@ -299,7 +299,7 @@
       "implementation_status": "partial",
       "client_status": {"vscode": "planned", "vscodium": "planned", "neovim": "partial", "zed": "planned"},
       "platform_status": {"linux": "partial", "macos": "planned", "windows": "planned"},
-      "artifact_status": {"vscode-vsix": "planned", "tree-sitter-grammar": "partial", "neovim-runtimepath": "implemented", "zed-extension": "planned"},
+      "artifact_status": {"vscode-vsix": "partial", "tree-sitter-grammar": "partial", "neovim-runtimepath": "implemented", "zed-extension": "planned"},
       "distribution_status": {"vs-marketplace": "planned", "open-vsx": "planned", "neovim-distribution": "planned", "zed-distribution": "planned"},
       "expected_evidence": {"status": "partial", "command": "scripts/check-neovim.sh", "assertions": ["ABI14 parser loads and the checked-in highlights query emits captures in Neovim"], "artifact": "neovim-runtimepath"},
       "follow_up": "#52"
@@ -315,7 +315,7 @@
       "implementation_status": "planned",
       "client_status": {"vscode": "planned", "vscodium": "planned", "neovim": "planned", "zed": "planned"},
       "platform_status": {"linux": "planned", "macos": "planned", "windows": "planned"},
-      "artifact_status": {"vscode-vsix": "planned", "tree-sitter-grammar": "partial", "neovim-runtimepath": "implemented", "zed-extension": "planned"},
+      "artifact_status": {"vscode-vsix": "partial", "tree-sitter-grammar": "partial", "neovim-runtimepath": "implemented", "zed-extension": "planned"},
       "distribution_status": {"vs-marketplace": "planned", "open-vsx": "planned", "neovim-distribution": "planned", "zed-distribution": "planned"},
       "expected_evidence": {"status": "planned", "command": null, "assertions": ["#192 owns Zed language and install evidence"], "artifact": null},
       "follow_up": "#192"
@@ -331,7 +331,7 @@
       "implementation_status": "partial",
       "client_status": {"vscode": "planned", "vscodium": "planned", "neovim": "partial", "zed": "planned"},
       "platform_status": {"linux": "partial", "macos": "planned", "windows": "planned"},
-      "artifact_status": {"vscode-vsix": "planned", "tree-sitter-grammar": "partial", "neovim-runtimepath": "implemented", "zed-extension": "planned"},
+      "artifact_status": {"vscode-vsix": "partial", "tree-sitter-grammar": "partial", "neovim-runtimepath": "implemented", "zed-extension": "planned"},
       "distribution_status": {"vs-marketplace": "planned", "open-vsx": "planned", "neovim-distribution": "planned", "zed-distribution": "planned"},
       "expected_evidence": {"status": "partial", "commands": ["cargo test --locked -p recite-lsp --test editor_parity initialize_and_project_features_use_shared_stdio_contract", "scripts/check-neovim.sh"], "assertions": ["stdio completion contains the canonical work symbol"], "artifact": "neovim-runtimepath"},
       "follow_up": "#52"
@@ -345,12 +345,12 @@
       "edge_cases": ["qualified cross-file target", "open overlay newer than disk"],
       "known_limitation": "The cross-file check covers one qualified target; broader indexing and overlay combinations are untested.",
       "implementation_status": "partial",
-      "client_status": {"vscode": "planned", "vscodium": "planned", "neovim": "partial", "zed": "planned"},
+      "client_status": {"vscode": "partial", "vscodium": "partial", "neovim": "partial", "zed": "planned"},
       "platform_status": {"linux": "partial", "macos": "planned", "windows": "planned"},
-      "artifact_status": {"vscode-vsix": "planned", "tree-sitter-grammar": "partial", "neovim-runtimepath": "implemented", "zed-extension": "planned"},
+      "artifact_status": {"vscode-vsix": "partial", "tree-sitter-grammar": "partial", "neovim-runtimepath": "implemented", "zed-extension": "planned"},
       "distribution_status": {"vs-marketplace": "planned", "open-vsx": "planned", "neovim-distribution": "planned", "zed-distribution": "planned"},
-      "expected_evidence": {"status": "partial", "commands": ["cargo test --locked -p recite-lsp --test editor_parity_features project_root_discovers_canonical_multi_file_overlays_for_navigation", "scripts/check-neovim.sh"], "assertions": ["stdio definition resolves into the discovered sibling file"], "artifact": "neovim-runtimepath"},
-      "follow_up": "#52"
+      "expected_evidence": {"status": "partial", "commands": ["cargo test --locked -p recite-lsp --test editor_parity_features project_root_discovers_canonical_multi_file_overlays_for_navigation", "scripts/check-neovim.sh", "scripts/check-vscode.sh"], "assertions": ["stdio definition resolves into the discovered sibling file", "VS Code and VSCodium Node clients resolve a live cross-file definition on Linux"], "artifacts": ["neovim-runtimepath", "vscode-vsix"]},
+      "follow_up": "#51"
     },
     {
       "id": "lsp.hover",
@@ -363,7 +363,7 @@
       "implementation_status": "partial",
       "client_status": {"vscode": "planned", "vscodium": "planned", "neovim": "partial", "zed": "planned"},
       "platform_status": {"linux": "partial", "macos": "planned", "windows": "planned"},
-      "artifact_status": {"vscode-vsix": "planned", "tree-sitter-grammar": "partial", "neovim-runtimepath": "implemented", "zed-extension": "planned"},
+      "artifact_status": {"vscode-vsix": "partial", "tree-sitter-grammar": "partial", "neovim-runtimepath": "implemented", "zed-extension": "planned"},
       "distribution_status": {"vs-marketplace": "planned", "open-vsx": "planned", "neovim-distribution": "planned", "zed-distribution": "planned"},
       "expected_evidence": {"status": "partial", "commands": ["cargo test --locked -p recite-lsp --test editor_parity initialize_and_project_features_use_shared_stdio_contract", "scripts/check-neovim.sh"], "assertions": ["stdio hover response carries a symbol range and structured contents"], "artifact": "neovim-runtimepath"},
       "follow_up": "#52"
@@ -379,7 +379,7 @@
       "implementation_status": "partial",
       "client_status": {"vscode": "planned", "vscodium": "planned", "neovim": "partial", "zed": "planned"},
       "platform_status": {"linux": "partial", "macos": "planned", "windows": "planned"},
-      "artifact_status": {"vscode-vsix": "planned", "tree-sitter-grammar": "partial", "neovim-runtimepath": "implemented", "zed-extension": "planned"},
+      "artifact_status": {"vscode-vsix": "partial", "tree-sitter-grammar": "partial", "neovim-runtimepath": "implemented", "zed-extension": "planned"},
       "distribution_status": {"vs-marketplace": "planned", "open-vsx": "planned", "neovim-distribution": "planned", "zed-distribution": "planned"},
       "expected_evidence": {"status": "partial", "commands": ["cargo test --locked -p recite-lsp --test editor_parity initialize_and_project_features_use_shared_stdio_contract", "scripts/check-neovim.sh"], "assertions": ["stdio references include the declaration and use location"], "artifact": "neovim-runtimepath"},
       "follow_up": "#52"
@@ -395,7 +395,7 @@
       "implementation_status": "partial",
       "client_status": {"vscode": "planned", "vscodium": "planned", "neovim": "partial", "zed": "planned"},
       "platform_status": {"linux": "partial", "macos": "planned", "windows": "planned"},
-      "artifact_status": {"vscode-vsix": "planned", "tree-sitter-grammar": "partial", "neovim-runtimepath": "implemented", "zed-extension": "planned"},
+      "artifact_status": {"vscode-vsix": "partial", "tree-sitter-grammar": "partial", "neovim-runtimepath": "implemented", "zed-extension": "planned"},
       "distribution_status": {"vs-marketplace": "planned", "open-vsx": "planned", "neovim-distribution": "planned", "zed-distribution": "planned"},
       "expected_evidence": {"status": "partial", "commands": ["cargo test --locked -p recite-lsp --test editor_parity initialize_and_project_features_use_shared_stdio_contract", "scripts/check-neovim.sh"], "assertions": ["stdio rename response contains a source document edit"], "artifact": "neovim-runtimepath"},
       "follow_up": "#52"
@@ -407,14 +407,14 @@
       "protocol": "lsp",
       "expected": {"kind": "versioned-workspace-edit", "assertions": ["missing stable IDs produce source-preserving quick fixes", "client does not invent IDs"]},
       "edge_cases": ["missing line ID", "incomplete overlay"],
-      "known_limitation": "Only a missing line-ID quickfix is asserted; other diagnostics and client application are untested.",
+      "known_limitation": "Only a missing line-ID quickfix is asserted; other diagnostics and installed host application are untested.",
       "implementation_status": "partial",
-      "client_status": {"vscode": "planned", "vscodium": "planned", "neovim": "partial", "zed": "planned"},
+      "client_status": {"vscode": "partial", "vscodium": "partial", "neovim": "partial", "zed": "planned"},
       "platform_status": {"linux": "partial", "macos": "planned", "windows": "planned"},
-      "artifact_status": {"vscode-vsix": "planned", "tree-sitter-grammar": "partial", "neovim-runtimepath": "implemented", "zed-extension": "planned"},
+      "artifact_status": {"vscode-vsix": "partial", "tree-sitter-grammar": "partial", "neovim-runtimepath": "implemented", "zed-extension": "planned"},
       "distribution_status": {"vs-marketplace": "planned", "open-vsx": "planned", "neovim-distribution": "planned", "zed-distribution": "planned"},
-      "expected_evidence": {"status": "partial", "commands": ["cargo test --locked -p recite-lsp --test editor_parity_features code_actions_project_stable_id_repairs_from_the_shared_kernel", "scripts/check-neovim.sh"], "assertions": ["stdio code action response carries a source edit"], "artifact": "neovim-runtimepath"},
-      "follow_up": "#52"
+      "expected_evidence": {"status": "partial", "commands": ["cargo test --locked -p recite-lsp --test editor_parity_features code_actions_project_stable_id_repairs_from_the_shared_kernel", "scripts/check-neovim.sh", "scripts/check-vscode.sh"], "assertions": ["stdio code action response carries a source edit", "VS Code and VSCodium clients route guarded code actions through the controller boundary on Linux"], "artifacts": ["neovim-runtimepath", "vscode-vsix"]},
+      "follow_up": "#51"
     },
     {
       "id": "workspace.project.discovery",
@@ -425,12 +425,12 @@
       "edge_cases": ["nested source root", "qualified target"],
       "known_limitation": "Evidence covers sibling .recite files under one explicit root; manifests and nested roots are outside this slice.",
       "implementation_status": "partial",
-      "client_status": {"vscode": "planned", "vscodium": "planned", "neovim": "partial", "zed": "planned"},
+      "client_status": {"vscode": "partial", "vscodium": "partial", "neovim": "partial", "zed": "planned"},
       "platform_status": {"linux": "partial", "macos": "planned", "windows": "planned"},
-      "artifact_status": {"vscode-vsix": "planned", "tree-sitter-grammar": "partial", "neovim-runtimepath": "implemented", "zed-extension": "planned"},
+      "artifact_status": {"vscode-vsix": "partial", "tree-sitter-grammar": "partial", "neovim-runtimepath": "implemented", "zed-extension": "planned"},
       "distribution_status": {"vs-marketplace": "planned", "open-vsx": "planned", "neovim-distribution": "planned", "zed-distribution": "planned"},
-      "expected_evidence": {"status": "partial", "commands": ["cargo test --locked -p recite-lsp --test editor_parity_features project_root_discovers_canonical_multi_file_overlays_for_navigation", "scripts/check-neovim.sh"], "assertions": ["root URI discovers the canonical sibling source"], "artifact": "neovim-runtimepath"},
-      "follow_up": "#52"
+      "expected_evidence": {"status": "partial", "commands": ["cargo test --locked -p recite-lsp --test editor_parity_features project_root_discovers_canonical_multi_file_overlays_for_navigation", "scripts/check-neovim.sh", "scripts/check-vscode.sh"], "assertions": ["root URI discovers the canonical sibling source", "VS Code and VSCodium Node clients exercise project-root discovery on Linux"], "artifacts": ["neovim-runtimepath", "vscode-vsix"]},
+      "follow_up": "#51"
     },
     {
       "id": "workspace.configuration",
@@ -441,12 +441,12 @@
       "edge_cases": ["missing manifest", "fallback root"],
       "known_limitation": "Only root-URI selection is asserted; config-file loading and merging remain outside this slice.",
       "implementation_status": "partial",
-      "client_status": {"vscode": "planned", "vscodium": "planned", "neovim": "partial", "zed": "planned"},
+      "client_status": {"vscode": "partial", "vscodium": "partial", "neovim": "partial", "zed": "planned"},
       "platform_status": {"linux": "partial", "macos": "planned", "windows": "planned"},
-      "artifact_status": {"vscode-vsix": "planned", "tree-sitter-grammar": "partial", "neovim-runtimepath": "implemented", "zed-extension": "planned"},
+      "artifact_status": {"vscode-vsix": "partial", "tree-sitter-grammar": "partial", "neovim-runtimepath": "implemented", "zed-extension": "planned"},
       "distribution_status": {"vs-marketplace": "planned", "open-vsx": "planned", "neovim-distribution": "planned", "zed-distribution": "planned"},
-      "expected_evidence": {"status": "partial", "commands": ["cargo test --locked -p recite-lsp --test editor_parity_features project_root_discovers_canonical_multi_file_overlays_for_navigation", "scripts/check-neovim.sh"], "assertions": ["stdio startup uses the supplied project root"], "artifact": "neovim-runtimepath"},
-      "follow_up": "#52"
+      "expected_evidence": {"status": "partial", "commands": ["cargo test --locked -p recite-lsp --test editor_parity_features project_root_discovers_canonical_multi_file_overlays_for_navigation", "scripts/check-neovim.sh", "scripts/check-vscode.sh"], "assertions": ["stdio startup uses the supplied project root", "VS Code and VSCodium package tests exercise platform-neutral server configuration on Linux"], "artifacts": ["neovim-runtimepath", "vscode-vsix"]},
+      "follow_up": "#51"
     },
     {
       "id": "authoring.stable-id.operations",
@@ -459,7 +459,7 @@
       "implementation_status": "partial",
       "client_status": {"vscode": "planned", "vscodium": "planned", "neovim": "planned", "zed": "planned"},
       "platform_status": {"linux": "partial", "macos": "planned", "windows": "planned"},
-      "artifact_status": {"vscode-vsix": "planned", "tree-sitter-grammar": "partial", "neovim-runtimepath": "implemented", "zed-extension": "planned"},
+      "artifact_status": {"vscode-vsix": "partial", "tree-sitter-grammar": "partial", "neovim-runtimepath": "implemented", "zed-extension": "planned"},
       "distribution_status": {"vs-marketplace": "planned", "open-vsx": "planned", "neovim-distribution": "planned", "zed-distribution": "planned"},
       "expected_evidence": {"status": "partial", "command": "cargo test --locked -p recite-lsp --test editor_parity_features code_actions_project_stable_id_repairs_from_the_shared_kernel", "assertions": ["stdio operation delegates missing-ID repair to the shared kernel"], "artifact": null},
       "follow_up": "#51"
@@ -475,7 +475,7 @@
       "implementation_status": "partial",
       "client_status": {"vscode": "planned", "vscodium": "planned", "neovim": "planned", "zed": "planned"},
       "platform_status": {"linux": "partial", "macos": "planned", "windows": "planned"},
-      "artifact_status": {"vscode-vsix": "planned", "tree-sitter-grammar": "partial", "neovim-runtimepath": "implemented", "zed-extension": "planned"},
+      "artifact_status": {"vscode-vsix": "partial", "tree-sitter-grammar": "partial", "neovim-runtimepath": "implemented", "zed-extension": "planned"},
       "distribution_status": {"vs-marketplace": "planned", "open-vsx": "planned", "neovim-distribution": "planned", "zed-distribution": "planned"},
       "expected_evidence": {"status": "partial", "commands": ["cargo test --locked -p recite-compiler --test authoring_catalog_summary checked_in_locale_fallback_catalogue_resolves_deterministically", "cargo test --locked -p recite-cli --test dialogue_locale dialogue_locale_falls_back_to_language_catalog"], "assertions": ["CatalogCoverageSummary resolves the checked-in PO catalogue through the fr-FR to fr fallback and retains its fingerprint", "CLI locale fallback uses the same checked-in PO catalogue"], "artifact": null},
       "follow_up": "#51"
@@ -491,7 +491,7 @@
       "implementation_status": "planned",
       "client_status": {"vscode": "planned", "vscodium": "planned", "neovim": "planned", "zed": "planned"},
       "platform_status": {"linux": "planned", "macos": "planned", "windows": "planned"},
-      "artifact_status": {"vscode-vsix": "planned", "tree-sitter-grammar": "partial", "neovim-runtimepath": "implemented", "zed-extension": "planned"},
+      "artifact_status": {"vscode-vsix": "partial", "tree-sitter-grammar": "partial", "neovim-runtimepath": "implemented", "zed-extension": "planned"},
       "distribution_status": {"vs-marketplace": "planned", "open-vsx": "planned", "neovim-distribution": "planned", "zed-distribution": "planned"},
       "expected_evidence": {"status": "planned", "command": null, "assertions": ["#53 owns versioned structured compile, validate, and extract records"], "artifact": null},
       "follow_up": "#53"
@@ -507,7 +507,7 @@
       "implementation_status": "planned",
       "client_status": {"vscode": "planned", "vscodium": "planned", "neovim": "planned", "zed": "planned"},
       "platform_status": {"linux": "planned", "macos": "planned", "windows": "planned"},
-      "artifact_status": {"vscode-vsix": "planned", "tree-sitter-grammar": "partial", "neovim-runtimepath": "implemented", "zed-extension": "planned"},
+      "artifact_status": {"vscode-vsix": "partial", "tree-sitter-grammar": "partial", "neovim-runtimepath": "implemented", "zed-extension": "planned"},
       "distribution_status": {"vs-marketplace": "planned", "open-vsx": "planned", "neovim-distribution": "planned", "zed-distribution": "planned"},
       "expected_evidence": {"status": "planned", "command": null, "assertions": ["#53 owns versioned structured run and trace records"], "artifact": null},
       "follow_up": "#53"
@@ -523,7 +523,7 @@
       "implementation_status": "partial",
       "client_status": {"vscode": "planned", "vscodium": "planned", "neovim": "planned", "zed": "planned"},
       "platform_status": {"linux": "partial", "macos": "planned", "windows": "planned"},
-      "artifact_status": {"vscode-vsix": "planned", "tree-sitter-grammar": "partial", "neovim-runtimepath": "implemented", "zed-extension": "planned"},
+      "artifact_status": {"vscode-vsix": "partial", "tree-sitter-grammar": "partial", "neovim-runtimepath": "implemented", "zed-extension": "planned"},
       "distribution_status": {"vs-marketplace": "planned", "open-vsx": "planned", "neovim-distribution": "planned", "zed-distribution": "planned"},
       "expected_evidence": {"status": "partial", "command": "cargo test --locked -p recite-compiler --test authoring_build status_projection::projection_retains_structured_diagnostics_and_freshness", "assertions": ["projection test exercises diagnostics and freshness while the CLI lifecycle remains planned"], "artifact": null},
       "follow_up": "#53"

@@ -148,14 +148,8 @@ jobs:
       - name: Install editor workspace metadata
         run: pnpm install --frozen-lockfile --filter recite-vscode
 
-      - name: Build language server for live editor checks
-        run: cargo build --locked -p recite-lsp
-
-      - name: Check shared VS Code/VSCodium client
-        run: pnpm editor:check
-
-      - name: Check deterministic VSIX packaging
-        run: pnpm editor:package
+      - name: Check shared VS Code/VSCodium client and package
+        run: scripts/check-vscode.sh
 
   benchmark-smoke:
     # This checks that the tiny benchmark targets build and execute. It does

@@ -17,6 +17,7 @@ mkdir -p "$fixture_repo/docs" "$fixture_repo/fixtures/editor-parity" \
 cp "$repo_root/scripts/check-editor-parity.sh" "$fixture_repo/scripts/"
 cp "$repo_root/scripts/check-tree-sitter.sh" "$fixture_repo/scripts/"
 cp "$repo_root/scripts/check-neovim.sh" "$fixture_repo/scripts/"
+cp "$repo_root/scripts/check-vscode.sh" "$fixture_repo/scripts/"
 cp "$repo_root/editor/recite-tree-sitter/grammar.js" "$fixture_repo/editor/recite-tree-sitter/"
 cp -R "$repo_root/editor/recite-neovim/." "$fixture_repo/editor/recite-neovim/"
 cp "$repo_root/docs/editor-parity-contract.md" "$fixture_repo/docs/"
@@ -28,7 +29,7 @@ cp "$repo_root/fixtures/recite/invalid/parser_marker_leading_prose.recite" "$fix
 cp "$repo_root/fixtures/schema/valid/generated_manifest.json" "$fixture_repo/fixtures/schema/valid/"
 cp "$repo_root/fixtures/schema/valid/full_manifest.json" "$fixture_repo/fixtures/schema/valid/"
 cp -R "$repo_root/tests/editor-parity/cargo-fixture/." "$fixture_repo/"
-chmod +x "$fixture_repo/scripts/check-editor-parity.sh" "$fixture_repo/scripts/check-tree-sitter.sh" "$fixture_repo/scripts/check-neovim.sh"
+chmod +x "$fixture_repo/scripts/check-editor-parity.sh" "$fixture_repo/scripts/check-tree-sitter.sh" "$fixture_repo/scripts/check-neovim.sh" "$fixture_repo/scripts/check-vscode.sh"
 
 git -C "$fixture_repo" init -q -b main
 git -C "$fixture_repo" config user.name Fixture
@@ -109,6 +110,61 @@ PY
 }
 
 assert_portable_lock_source
+python3 - "$fixture_repo/fixtures/editor-parity/contract.json" "$fixture_repo/docs/editor-parity-contract.md" <<'PY'
+import json
+import sys
+from pathlib import Path
+
+contract_path, document_path = map(Path, sys.argv[1:])
+contract = json.loads(contract_path.read_text(encoding="utf-8"))
+clients = {client["id"]: client for client in contract["clients"]}
+artifacts = {artifact["id"]: artifact for artifact in contract["artifacts"]}
+
+for client_id in ("vscode", "vscodium"):
+    client = clients[client_id]
+    if client["status"] != "partial":
+        raise SystemExit(f"{client_id} foundation must remain partial")
+    if client["platform_status"] != {"linux": "partial", "macos": "planned", "windows": "planned"}:
+        raise SystemExit(f"{client_id} foundation must claim Linux-only partial evidence")
+
+artifact = artifacts["vscode-vsix"]
+if artifact["status"] != "partial" or artifact["path"] is not None:
+    raise SystemExit("VS Code artifact must remain a partial generated artifact, not checked-in archive")
+if "package-checked" not in artifact["notes"] or "ignored build output" not in artifact["notes"]:
+    raise SystemExit("VS Code artifact notes must distinguish package checks from checked-in output")
+capabilities = {capability["id"]: capability for capability in contract["capabilities"]}
+expected_client_evidence = {
+    "editor.filetype.registration",
+    "lsp.code-actions",
+    "lsp.completion.navigation",
+    "lsp.definition",
+    "lsp.initialize.capabilities",
+    "lsp.overlay.recovery",
+    "lsp.publish.diagnostics",
+    "lsp.utf16.positions",
+    "workspace.configuration",
+    "workspace.project.discovery",
+}
+actual_client_evidence = {
+    capability_id
+    for capability_id, capability in capabilities.items()
+    if capability["client_status"]["vscode"] == "partial"
+    and "scripts/check-vscode.sh" in capability["expected_evidence"].get("commands", [])
+}
+if actual_client_evidence != expected_client_evidence:
+    raise SystemExit("VS Code partial client evidence rows drifted from the checked package/live surface")
+for capability_id in expected_client_evidence:
+    capability = capabilities[capability_id]
+    if capability["follow_up"] != "#51":
+        raise SystemExit(f"{capability_id} must retain the open VS Code follow-up")
+    evidence_artifacts = set(capability["expected_evidence"].get("artifacts", []))
+    if "vscode-vsix" not in evidence_artifacts:
+        raise SystemExit(f"{capability_id} must attribute package/live evidence to vscode-vsix")
+if "installed vs code/vscodium activation smoke" not in document_path.read_text(encoding="utf-8").lower():
+    raise SystemExit("editor parity docs must retain the missing host activation boundary")
+
+print("editor parity VS Code partial-foundation fixture passed")
+PY
 run_checker
 echo "editor parity baseline fixture passed"
 assert_single_parity_cache
@@ -130,6 +186,8 @@ elif mutation == "client":
     client = next(client for client in contract["clients"] if client["id"] == "vscode")
     client["status"] = "implemented"
     client["platform_status"] = {"linux": "implemented", "macos": "partial", "windows": "partial"}
+    artifact = next(artifact for artifact in contract["artifacts"] if artifact["id"] == "vscode-vsix")
+    artifact["status"] = "planned"
 elif mutation == "distribution":
     distribution = next(distribution for distribution in contract["distributions"] if distribution["id"] == "vs-marketplace")
     distribution["status"] = "implemented"
