@@ -156,9 +156,7 @@ fn plural_arm_matches_resolution(
     // other provider-selected arms. The resolution metadata is the concrete
     // arm identity supplied by the provider (or the source fallback rule), so
     // requiring exact agreement rejects a corrupted/out-of-range selection
-    // without imposing the source pair's two-arm limit on translations. The
-    // persisted count is separate evidence; it must be present rather than
-    // inferred from either selected index.
+    // without imposing the source pair's two-arm limit on translations.
     let Some(arm_count) = arm_count else {
         return false;
     };
@@ -178,6 +176,9 @@ fn plural_arm_matches_resolution(
         crate::DialoguePluralResolutionOutcome::EnglishSourceFallback => {
             arm_count == 2
                 && plural.resolution.matched_arm.is_none()
+                && plural.resolution.matched_locale.is_none()
+                && plural.resolution.matched_context.is_none()
+                && plural.resolution.matched_key.is_none()
                 && plural
                     .resolution
                     .source_fallback_arm
