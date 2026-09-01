@@ -29,6 +29,7 @@ pub struct LocaleResolution<'a> {
     variant: Option<&'a str>,
     values: Option<&'a dyn InterpolationValueProvider>,
     trace: Option<&'a DialogueTrace>,
+    require_plural_arm_count: bool,
 }
 
 impl<'a> LocaleResolution<'a> {
@@ -66,6 +67,11 @@ impl<'a> LocaleResolution<'a> {
         self
     }
 
+    pub(crate) fn with_preview_plural_arm_validation(mut self) -> Self {
+        self.require_plural_arm_count = true;
+        self
+    }
+
     /// Returns the locale provider used for resolution, if any.
     #[must_use]
     pub fn provider(&self) -> Option<&'a dyn LocaleProvider> {
@@ -91,6 +97,7 @@ pub(super) struct LocaleLookup<'a> {
     pub(super) provider: Option<&'a dyn LocaleProvider>,
     pub(super) values: Option<&'a dyn InterpolationValueProvider>,
     pub(super) trace: Option<&'a super::trace::DialogueTrace>,
+    pub(super) require_plural_arm_count: bool,
 }
 
 impl<'a> LocaleLookup<'a> {
@@ -101,6 +108,7 @@ impl<'a> LocaleLookup<'a> {
             provider: None,
             values: None,
             trace: None,
+            require_plural_arm_count: false,
         }
     }
 
@@ -114,6 +122,7 @@ impl<'a> LocaleLookup<'a> {
             provider: resolution.provider,
             values: resolution.values,
             trace: resolution.trace,
+            require_plural_arm_count: resolution.require_plural_arm_count,
         }
     }
 }

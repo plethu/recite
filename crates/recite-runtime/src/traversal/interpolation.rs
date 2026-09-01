@@ -121,12 +121,9 @@ pub(super) fn localise_plural_text(
                             .to_owned(),
                     });
                 };
-                // Preview traces feed persisted prompt projections, so reject a
-                // translated result without a bound before that projection can
-                // enter a snapshot that restore cannot validate. Direct runtime
-                // traversal has no preview snapshot contract and keeps legacy
-                // providers usable.
-                if locale.trace.is_some() && translated_arm_count.is_none() {
+                // Preview prompt projections persist the arm bound, so reject a
+                // translated result without evidence before it can be snapshotted.
+                if locale.require_plural_arm_count && translated_arm_count.is_none() {
                     return Err(DialogueError::LocaleLookupFailed {
                     id: id.to_owned(),
                     reason:

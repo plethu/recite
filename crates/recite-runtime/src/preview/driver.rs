@@ -104,7 +104,9 @@ impl<'asset> PreviewSession<'asset> {
             prefix,
             runtime_trace,
         } = trial;
-        let mut resolution = LocaleResolution::new().with_trace(&runtime_trace);
+        let mut resolution = LocaleResolution::new()
+            .with_trace(&runtime_trace)
+            .with_preview_plural_arm_validation();
         if let Some(provider) = inputs.locale_provider {
             resolution = resolution.with_provider(provider);
         }

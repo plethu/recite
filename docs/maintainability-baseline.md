@@ -130,8 +130,8 @@ production suppressions must carry a narrow scope and rationale.
 | `crates/recite-core/src/schema/source/export/basic.rs` | 284 | production | core/schema | cohesive | Deterministic JSON export for basic schema declarations |
 | `crates/recite-core/src/schema/source/lower/mod.rs` | 306 | production | core/schema | review | TOML source normalization and shared canonical lowering entrypoint |
 | `crates/recite-runtime/src/traversal/availability.rs` | 370 | production | runtime/traversal | cohesive | Deterministic availability traversal |
-| `crates/recite-runtime/src/traversal/interpolation.rs` | 446 | production | runtime/traversal | exception | #179/#180/#191: typed interpolation and plural localisation retain the provider arm-boundary handoff |
-| `crates/recite-runtime/src/preview/driver.rs` | 251 | production | runtime/preview | review | #191: preview event projection carries validated plural-arm evidence into snapshot state |
+| `crates/recite-runtime/src/traversal/interpolation.rs` | 443 | production | runtime/traversal | exception | #179/#180/#191: typed interpolation and plural localisation retain the provider arm-boundary handoff |
+| `crates/recite-runtime/src/preview/driver.rs` | 253 | production | runtime/preview | review | #191: preview event projection carries validated plural-arm evidence into snapshot state |
 | `crates/recite-runtime/src/preview/snapshot_validation.rs` | 262 | production | runtime/preview | review | #191: snapshot prompt validation keeps plural provenance and arm bounds mutually consistent |
 | `crates/recite-runtime/tests/preview_snapshot.rs` | 481 | test/support | runtime/preview | review | #191: hostile preview snapshot and plural-arm wire coverage |
 | `crates/recite-core/src/schema/manifest/raw.rs` | 391 | production | core/schema | cohesive | Lossless raw manifest model |
@@ -139,7 +139,7 @@ production suppressions must carry a narrow scope and rationale.
 | `crates/recite-compiler/src/pot.rs` | 366 | production | compiler/localisation | follow-up | #164: consume shared authoring analysis |
 | `crates/recite-benchmarks/src/id_metrics.rs` | 332 | production | benchmarks | cohesive | Maintainer metric calculations |
 | `crates/recite-runtime/src/traversal/asset.rs` | 328 | production | runtime/traversal | cohesive | Asset validation and traversal boundary |
-| `crates/recite-runtime/src/traversal/output.rs` | 270 | production | runtime/traversal | review | #180: structured plural output construction remains beside traversal until the output boundary settles |
+| `crates/recite-runtime/src/traversal/output.rs` | 279 | production | runtime/traversal | review | #180: structured plural output construction remains beside traversal until the output boundary settles |
 | `crates/recite-compiler/src/wire/inspection.rs` | 337 | production | compiler/wire | review | Structured wire inspection projection |
 | `crates/recite-benchmarks/src/project.rs` | 310 | production | benchmarks | cohesive | Synthetic project model |
 | `crates/recite-cli/src/play/tui/state.rs` | 307 | production | cli/tui | cohesive | TUI reducer state |
@@ -171,7 +171,7 @@ production suppressions must carry a narrow scope and rationale.
 | `crates/recite-ffi/src/session/restore.rs` | 284 | production | ffi/session | review | #166: provider-backed restore ownership and rollback boundary |
 | `crates/recite-godot/src/catalog.rs` | 313 | production | godot | review | #166: owned locale catalogue and deterministic provider resolution |
 | `crates/recite-godot/src/catalog_resource.rs` | 389 | production | godot | review | #166: serializable Resource catalogue boundary and validated rebuild |
-| `crates/recite-runtime/tests/interpolation.rs` | 496 | test/support | runtime/tests | review | #180: typed interpolation and plural provider scenarios remain grouped around runtime delivery |
+| `crates/recite-runtime/tests/interpolation.rs` | 498 | test/support | runtime/tests | review | #180: typed interpolation and plural provider scenarios remain grouped around runtime delivery |
 | `crates/recite-compiler/tests/asset.rs` | 640 | test/support | compiler/tests | exception | #89: retain the shared compiled-asset fixture entry point for the wire contract guard |
 | `crates/recite-ffi/tests/snapshots.rs` | 422 | test/support | ffi/tests | cohesive | #171: session snapshot and restore contract coverage |
 | `crates/recite-lsp/src/tests/support/harness.rs` | 434 | test/support | lsp/tests | follow-up | Protocol harness ownership remains grouped for shared request, response, and lifecycle helpers; split again if protocol coverage grows materially |
