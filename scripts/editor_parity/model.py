@@ -12,8 +12,8 @@ class Context:
         self.repo_root = repo_root.resolve()
         self.errors = errors
         self.cargo_target_dir = cargo_target_dir
-        self.cargo_test_list_cache: dict[tuple[str, str], set[str]] = {}
-        self.cargo_exact_selection_cache: dict[tuple[str, str, str], set[str]] = {}
+        self.cargo_test_list_cache: dict[tuple[str, str], set[str] | None] = {}
+        self.cargo_exact_selection_cache: dict[tuple[str, str, str], set[str] | None] = {}
         self.cargo_test_executable_cache: dict[tuple[str, str], Path | None] = {}
 
     def require(self, condition: bool, message: str) -> None:

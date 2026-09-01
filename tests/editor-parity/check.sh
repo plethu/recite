@@ -385,40 +385,7 @@ wait "$second_pid"
 assert_no_hashed_targets
 echo "editor parity concurrent fixture passed"
 
-python3 - "$fixture_repo" <<'PY'
-import subprocess
-import sys
-from pathlib import Path
-from unittest.mock import patch
-
-repo = Path(sys.argv[1])
-sys.path.insert(0, str(repo / "scripts"))
-from editor_parity import evidence
-from editor_parity.model import Context
-
-
-def timeout(*args, **kwargs):
-    raise subprocess.TimeoutExpired(args[0], kwargs.get("timeout"))
-
-
-context = Context(repo, [], repo / "target")
-with patch.object(evidence, "selected_target_digest", return_value="digest"), patch.object(evidence.subprocess, "run", side_effect=timeout):
-    if evidence.cargo_test_executable(context, "recite-lsp", "editor_parity") is not None:
-        raise SystemExit("timed-out Cargo compilation returned an executable")
-expected = "cargo test-target compilation timed out after 120s for recite-lsp/editor_parity"
-if context.errors != [expected]:
-    raise SystemExit(f"timeout diagnostic was not explicit: {context.errors!r}")
-
-context = Context(repo, [], repo / "target")
-context.cargo_test_executable_cache[("recite-lsp", "editor_parity")] = repo / "missing-test"
-with patch.object(evidence.subprocess, "run", side_effect=timeout):
-    evidence.cargo_test_list(context, "recite-lsp", "editor_parity")
-expected = "test harness discovery timed out after 120s for recite-lsp/editor_parity"
-if context.errors != [expected]:
-    raise SystemExit(f"timeout discovery diagnostic was not explicit: {context.errors!r}")
-
-print("editor parity timeout diagnostics fixture passed")
-PY
+python3 "$repo_root/tests/editor-parity/diagnostic_probes.py" "$fixture_repo"
 
 expect_failure() {
   local mutation="$1"
