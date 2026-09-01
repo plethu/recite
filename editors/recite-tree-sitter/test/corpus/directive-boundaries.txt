@@ -188,3 +188,93 @@ Unicode whitespace retains directive boundaries
     (target
       (end_target))
     (newline)))
+
+==================
+Rust whitespace property controls directive boundaries
+==================
+  :ifcondition
+  :ifcondition
+  :ifcondition
+  :ifcondition
+  :ifcondition
+  :ifcondition
+  :ifcondition
+  :if condition
+  :if condition
+  -> END
+
+---
+
+(source_file
+  (prose_line
+    (indent)
+    (prose_text
+      (prose_marker_text))
+    (newline))
+  (prose_line
+    (indent)
+    (prose_text
+      (prose_marker_text))
+    (newline))
+  (prose_line
+    (indent)
+    (prose_text
+      (prose_marker_text))
+    (newline))
+  (prose_line
+    (indent)
+    (prose_text
+      (prose_marker_text))
+    (newline))
+  (if_statement
+    (indent)
+    (if_marker)
+    (hspace)
+    (condition_expression
+      (expression_part
+        (symbol
+          (identifier))))
+    (newline))
+  (if_statement
+    (indent)
+    (if_marker)
+    (hspace)
+    (condition_expression
+      (expression_part
+        (symbol
+          (identifier))))
+    (newline))
+  (if_statement
+    (indent)
+    (if_marker)
+    (hspace)
+    (condition_expression
+      (expression_part
+        (symbol
+          (identifier))))
+    (newline))
+  (if_statement
+    (indent)
+    (if_marker)
+    (hspace)
+    (condition_expression
+      (expression_part
+        (symbol
+          (identifier))))
+    (newline))
+  (if_statement
+    (indent)
+    (if_marker)
+    (hspace)
+    (condition_expression
+      (expression_part
+        (symbol
+          (identifier))))
+    (newline))
+  (divert_statement
+    (indent)
+    (divert_marker)
+    (hspace)
+    (target
+      (end_target))
+    (newline)))

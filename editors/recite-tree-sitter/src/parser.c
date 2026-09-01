@@ -1360,8 +1360,8 @@ static const TSStateId ts_primary_state_ids[STATE_COUNT] = {
 };
 
 static const TSCharacterRange aux_sym_if_statement_token1_character_set_1[] = {
-  {0x0b, '\f'}, {0x1c, 0x1f}, {0x85, 0x85}, {0xa0, 0xa0}, {0x1680, 0x1680}, {0x2000, 0x200a}, {0x2028, 0x2029}, {0x202f, 0x202f},
-  {0x205f, 0x205f}, {0x3000, 0x3000},
+  {0x0b, '\f'}, {0x85, 0x85}, {0xa0, 0xa0}, {0x1680, 0x1680}, {0x2000, 0x200a}, {0x2028, 0x2029}, {0x202f, 0x202f}, {0x205f, 0x205f},
+  {0x3000, 0x3000},
 };
 
 static const TSCharacterRange sym_identifier_character_set_1[] = {
@@ -1380,7 +1380,7 @@ static const TSCharacterRange aux_sym_prose_start_token1_character_set_1[] = {
 };
 
 static const TSCharacterRange aux_sym_prose_marker_text_token2_character_set_1[] = {
-  {0, 0x08}, {0x0e, 0x1b}, {'!', 0x84}, {0x86, 0x9f}, {0xa1, 0x167f}, {0x1681, 0x1fff}, {0x200b, 0x2027}, {0x202a, 0x202e},
+  {0, 0x08}, {0x0e, 0x1f}, {'!', 0x84}, {0x86, 0x9f}, {0xa1, 0x167f}, {0x1681, 0x1fff}, {0x200b, 0x2027}, {0x202a, 0x202e},
   {0x2030, 0x205e}, {0x2060, 0x2fff}, {0x3001, 0x10ffff},
 };
 
@@ -1430,7 +1430,7 @@ static bool ts_lex(TSLexer *lexer, TSStateId state) {
         '\f', 83,
       );
       if (('0' <= lookahead && lookahead <= '9')) ADVANCE(102);
-      if (set_contains(aux_sym_if_statement_token1_character_set_1, 10, lookahead)) ADVANCE(208);
+      if (set_contains(aux_sym_if_statement_token1_character_set_1, 9, lookahead)) ADVANCE(208);
       if (('A' <= lookahead && lookahead <= 'Z') ||
           ('g' <= lookahead && lookahead <= 'z')) ADVANCE(209);
       if (lookahead != 0) ADVANCE(210);
@@ -1846,14 +1846,14 @@ static bool ts_lex(TSLexer *lexer, TSStateId state) {
         '\t', 284,
         ' ', 284,
       );
-      if (set_contains(aux_sym_if_statement_token1_character_set_1, 10, lookahead)) ADVANCE(83);
+      if (set_contains(aux_sym_if_statement_token1_character_set_1, 9, lookahead)) ADVANCE(83);
       END_STATE();
     case 82:
       ACCEPT_TOKEN(ts_builtin_sym_end);
       END_STATE();
     case 83:
       ACCEPT_TOKEN(aux_sym_if_statement_token1);
-      if (set_contains(aux_sym_if_statement_token1_character_set_1, 10, lookahead)) ADVANCE(83);
+      if (set_contains(aux_sym_if_statement_token1_character_set_1, 9, lookahead)) ADVANCE(83);
       END_STATE();
     case 84:
       ACCEPT_TOKEN(anon_sym_EQ);
@@ -3182,12 +3182,12 @@ static bool ts_lex(TSLexer *lexer, TSStateId state) {
       END_STATE();
     case 208:
       ACCEPT_TOKEN(sym_draft_id);
-      if ((set_contains(aux_sym_if_statement_token1_character_set_1, 10, lookahead)) &&
+      if ((set_contains(aux_sym_if_statement_token1_character_set_1, 9, lookahead)) &&
           lookahead != 0x0b &&
           lookahead != '\f') ADVANCE(208);
       if (lookahead != 0 &&
           (lookahead < '\t' || '\r' < lookahead) &&
-          (lookahead < 0x1c || ' ' < lookahead) &&
+          lookahead != ' ' &&
           lookahead != '#') ADVANCE(210);
       END_STATE();
     case 209:

@@ -5,7 +5,7 @@
 // source recovery, stable IDs, references, schema, conditions, effects,
 // markup, and match exhaustiveness.
 
-const directiveUnicodeWhitespace = "\\u000B\\u000C\\u001C-\\u001F\\u0085\\u00A0\\u1680\\u2000-\\u200A\\u2028\\u2029\\u202F\\u205F\\u3000";
+const directiveUnicodeWhitespace = "\\u000B\\u000C\\u0085\\u00A0\\u1680\\u2000-\\u200A\\u2028\\u2029\\u202F\\u205F\\u3000";
 const directiveWhitespace = `\\t ${directiveUnicodeWhitespace}`;
 const directiveNonWhitespace = `\\r\\n${directiveWhitespace}`;
 const directiveUnicodeHspace = new RegExp(`[${directiveUnicodeWhitespace}]+`);
@@ -369,7 +369,7 @@ module.exports = grammar({
     comment_text: ($) => /[^\r\n]*/,
     // Rust's `char::is_whitespace` is the production marker-boundary
     // contract. Physical CR/LF are handled by `newline`; the remaining
-    // Unicode White_Space/control scalars are enumerated here because the
+    // Unicode White_Space scalars are enumerated here because the
     // pinned Tree-sitter regex dialect has no Unicode property escapes.
     // A directive marker is only structural when its complete spelling is
     // followed by horizontal whitespace or the end of the physical line.
