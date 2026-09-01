@@ -71,6 +71,13 @@ pub enum StaleReason {
 pub enum FreshnessFailureReason {
     RecheckFailed,
 }
+impl std::fmt::Display for FreshnessFailureReason {
+    fn fmt(&self, formatter: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
+        formatter.write_str(match self {
+            Self::RecheckFailed => "freshness recheck failed",
+        })
+    }
+}
 
 /// Host-provided final freshness outcome for a successfully published build.
 #[derive(Clone, Debug, Eq, PartialEq)]
