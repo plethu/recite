@@ -1,0 +1,49 @@
+==================
+Physical lines retain blank-line structure
+==================
+:: physical default
+> line@0123456789abcdef0123
+
+  [slow]Final {name} prose.[/slow]
+
+---
+(source_file
+  (block_statement
+    (block_marker)
+    (hspace)
+    (block_name
+      (identifier))
+    (block_attribute
+      (hspace)
+      (block_default))
+    (newline))
+  (line_statement
+    (line_marker)
+    (hspace)
+    (line_name
+      (identifier)
+      (id_suffix
+        (stable_id)))
+    (newline))
+  (blank_line
+    (newline))
+  (prose_line
+    (indent)
+    (prose_text
+      (markup_tag
+        (markup_name))
+      (prose_content)
+      (interpolation
+        (placeholder
+          (identifier)))
+      (prose_content)
+      (markup_tag
+        (markup_name)))
+    (newline)))
+
+==================
+Empty source remains an empty tree
+==================
+
+---
+(source_file)

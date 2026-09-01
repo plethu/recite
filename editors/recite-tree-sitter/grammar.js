@@ -10,6 +10,89 @@ const directiveWhitespace = `\\t ${directiveUnicodeWhitespace}`;
 const directiveNonWhitespace = `\\r\\n${directiveWhitespace}`;
 const directiveUnicodeHspace = new RegExp(`[${directiveUnicodeWhitespace}]+`);
 
+// Tree-sitter has no EOF token. Ordinary lines require a newline; the final
+// source arm below reuses these bodies with an empty terminator so internal
+// line separation remains mandatory without duplicating syntax.
+const lineEnd = ($, terminator) => terminator ?? seq();
+const terminated = ($, terminator, parts) => seq(...parts, lineEnd($, terminator));
+const commentLine = ($, terminator) => terminated($, terminator, [
+  optional($.indent), field("marker", $.comment_marker), $.comment_text,
+]);
+const blockStatement = ($, terminator) => terminated($, terminator, [
+  field("marker", $.block_marker), $.hspace, field("name", $.block_name),
+  repeat($.block_attribute), optional($.inline_comment),
+]);
+const lineStatement = ($, terminator) => terminated($, terminator, [
+  optional($.indent), field("marker", $.line_marker), optional($.hspace),
+  field("name", optional($.line_name)), repeat($.header_attribute),
+  optional($.inline_comment),
+]);
+const choiceStatement = ($, terminator) => terminated($, terminator, [
+  optional($.indent), field("marker", $.choice_marker), optional($.hspace),
+  field("name", optional($.choice_name)), repeat($.choice_attribute),
+  optional($.inline_comment),
+]);
+const effectStatement = ($, terminator) => terminated($, terminator, [
+  optional($.indent), field("marker", $.effect_marker), $.hspace,
+  field("mode", $.effect_mode), $.hspace, field("call", $.call),
+  optional($.inline_comment),
+]);
+const divertStatement = ($, terminator) => terminated($, terminator, [
+  optional($.indent), field("marker", $.divert_marker), $.hspace,
+  field("target", $.target), optional($.inline_comment),
+]);
+const conditionalLine = ($, marker, tail, terminator) => seq(
+  optional($.indent), field("marker", marker),
+  choice(seq(tail($), lineEnd($, terminator)), lineEnd($, terminator)),
+);
+const conditionTail = ($) => seq(
+  choice($.hspace, alias(directiveUnicodeHspace, $.hspace)),
+  optional(field("condition", $.condition_expression)), optional($.inline_comment),
+);
+const ifLine = ($, terminator) => conditionalLine($, $.if_marker, conditionTail, terminator);
+const matchLine = ($, terminator) => conditionalLine($, $.match_marker, conditionTail, terminator);
+const elseLine = ($, terminator) => seq(
+  optional($.indent), field("marker", $.else_marker),
+  choice(
+    seq($.inline_comment, lineEnd($, terminator)),
+    seq(choice($.hspace, alias(directiveUnicodeHspace, $.hspace)), lineEnd($, terminator)),
+    lineEnd($, terminator),
+  ),
+);
+const caseTail = ($) => seq(
+  choice($.hspace, alias(directiveUnicodeHspace, $.hspace)),
+  optional(field("variant", $.identifier)), optional($.inline_comment),
+);
+const caseLine = ($, terminator) => conditionalLine($, $.case_marker, caseTail, terminator);
+const pluralLine = ($, terminator) => terminated($, terminator, [
+  optional($.indent), field("marker", $.plural_marker), optional($.hspace),
+  field("text", $.prose_text),
+]);
+const proseLine = ($, terminator) => terminated($, terminator, [
+  $.indent, field("text", $.prose_text),
+]);
+
+const sourceLines = ($) => choice(
+  $.blank_line, $.comment_line, $.block_statement, $.line_statement,
+  $.choice_statement, $.effect_statement, $.divert_statement, $.if_statement,
+  $.else_statement, $.match_statement, $.case_statement, $.plural_line,
+  $.prose_line,
+);
+const finalLine = ($) => optional(choice(
+  alias($._final_comment_line, $.comment_line),
+  alias($._final_block_statement, $.block_statement),
+  alias($._final_line_statement, $.line_statement),
+  alias($._final_choice_statement, $.choice_statement),
+  alias($._final_effect_statement, $.effect_statement),
+  alias($._final_divert_statement, $.divert_statement),
+  alias($._final_if_statement, $.if_statement),
+  alias($._final_else_statement, $.else_statement),
+  alias($._final_match_statement, $.match_statement),
+  alias($._final_case_statement, $.case_statement),
+  alias($._final_plural_line, $.plural_line),
+  alias($._final_prose_line, $.prose_line),
+));
+
 module.exports = grammar({
   name: "recite",
 
@@ -19,153 +102,37 @@ module.exports = grammar({
   extras: ($) => [],
 
   rules: {
-    source_file: ($) => repeat(choice(
-      $.blank_line,
-      $.comment_line,
-      $.block_statement,
-      $.line_statement,
-      $.choice_statement,
-      $.effect_statement,
-      $.divert_statement,
-      $.if_statement,
-      $.else_statement,
-      $.match_statement,
-      $.case_statement,
-      $.plural_line,
-      $.prose_line,
-    )),
+    source_file: ($) => seq(repeat(sourceLines($)), finalLine($)),
 
-    blank_line: ($) => $.newline,
-
-    comment_line: ($) => seq(
-      optional($.indent),
-      field("marker", $.comment_marker),
-      $.comment_text,
-      $.newline,
-    ),
-
-    block_statement: ($) => seq(
-      field("marker", $.block_marker),
-      $.hspace,
-      field("name", $.block_name),
-      repeat($.block_attribute),
-      optional($.inline_comment),
-      $.newline,
-    ),
-
-    line_statement: ($) => seq(
-      optional($.indent),
-      field("marker", $.line_marker),
-      optional($.hspace),
-      field("name", optional($.line_name)),
-      repeat($.header_attribute),
-      optional($.inline_comment),
-      $.newline,
-    ),
-
-    choice_statement: ($) => seq(
-      optional($.indent),
-      field("marker", $.choice_marker),
-      optional($.hspace),
-      field("name", optional($.choice_name)),
-      repeat($.choice_attribute),
-      optional($.inline_comment),
-      $.newline,
-    ),
-
-    effect_statement: ($) => seq(
-      optional($.indent),
-      field("marker", $.effect_marker),
-      $.hspace,
-      field("mode", $.effect_mode),
-      $.hspace,
-      field("call", $.call),
-      optional($.inline_comment),
-      $.newline,
-    ),
-
-    divert_statement: ($) => seq(
-      optional($.indent),
-      field("marker", $.divert_marker),
-      $.hspace,
-      field("target", $.target),
-      optional($.inline_comment),
-      $.newline,
-    ),
-
-    if_statement: ($) => seq(
-      optional($.indent),
-      field("marker", $.if_marker),
-      choice(
-        seq(
-          choice($.hspace, alias(directiveUnicodeHspace, $.hspace)),
-          optional(field("condition", $.condition_expression)),
-          optional($.inline_comment),
-          $.newline,
-        ),
-        $.newline,
-      ),
-    ),
-
-    else_statement: ($) => seq(
-      optional($.indent),
-      field("marker", $.else_marker),
-      choice(
-        seq(
-          $.inline_comment,
-          $.newline,
-        ),
-        seq(
-          choice($.hspace, alias(directiveUnicodeHspace, $.hspace)),
-          $.newline,
-        ),
-        $.newline,
-      ),
-    ),
-
-    match_statement: ($) => seq(
-      optional($.indent),
-      field("marker", $.match_marker),
-      choice(
-        seq(
-          choice($.hspace, alias(directiveUnicodeHspace, $.hspace)),
-          optional(field("condition", $.condition_expression)),
-          optional($.inline_comment),
-          $.newline,
-        ),
-        $.newline,
-      ),
-    ),
-
-    case_statement: ($) => seq(
-      optional($.indent),
-      field("marker", $.case_marker),
-      choice(
-        seq(
-          choice($.hspace, alias(directiveUnicodeHspace, $.hspace)),
-          optional(field("variant", $.identifier)),
-          optional($.inline_comment),
-          $.newline,
-        ),
-        $.newline,
-      ),
-    ),
+    blank_line: ($) => seq(optional($.indent), $.newline),
+    comment_line: ($) => commentLine($, $.newline),
+    block_statement: ($) => blockStatement($, $.newline),
+    line_statement: ($) => lineStatement($, $.newline),
+    choice_statement: ($) => choiceStatement($, $.newline),
+    effect_statement: ($) => effectStatement($, $.newline),
+    divert_statement: ($) => divertStatement($, $.newline),
+    if_statement: ($) => ifLine($, $.newline),
+    else_statement: ($) => elseLine($, $.newline),
+    match_statement: ($) => matchLine($, $.newline),
+    case_statement: ($) => caseLine($, $.newline),
 
     // `|` is syntax-only here. Whether it is the second source form of a
     // plural line is a compiler/parser decision, not a Tree-sitter decision.
-    plural_line: ($) => seq(
-      optional($.indent),
-      field("marker", $.plural_marker),
-      optional($.hspace),
-      field("text", $.prose_text),
-      $.newline,
-    ),
+    plural_line: ($) => pluralLine($, $.newline),
+    prose_line: ($) => proseLine($, $.newline),
 
-    prose_line: ($) => seq(
-      $.indent,
-      field("text", $.prose_text),
-      $.newline,
-    ),
+    _final_comment_line: ($) => commentLine($),
+    _final_block_statement: ($) => blockStatement($),
+    _final_line_statement: ($) => lineStatement($),
+    _final_choice_statement: ($) => choiceStatement($),
+    _final_effect_statement: ($) => effectStatement($),
+    _final_divert_statement: ($) => divertStatement($),
+    _final_if_statement: ($) => ifLine($),
+    _final_else_statement: ($) => elseLine($),
+    _final_match_statement: ($) => matchLine($),
+    _final_case_statement: ($) => caseLine($),
+    _final_plural_line: ($) => pluralLine($),
+    _final_prose_line: ($) => proseLine($),
 
     block_attribute: ($) => seq(
       $.hspace,

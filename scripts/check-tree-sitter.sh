@@ -394,4 +394,6 @@ for node in line_statement prose_line divert_statement; do
 done
 echo "edge-case probes passed"
 
+"$repo_root/scripts/check-tree-sitter-physical-lines.sh" "$repo_root"
+
 echo "Tree-sitter grammar checks passed."
