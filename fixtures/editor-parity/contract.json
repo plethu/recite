@@ -139,7 +139,7 @@
       "platform_status": {"linux": "partial", "macos": "planned", "windows": "planned"},
       "artifact_status": {"vscode-vsix": "planned", "neovim-setup": "planned", "zed-extension": "planned"},
       "distribution_status": {"vs-marketplace": "planned", "open-vsx": "planned", "neovim-distribution": "planned", "zed-distribution": "planned"},
-      "expected_evidence": {"status": "partial", "command": "cargo test --locked -p recite-lsp --test editor_parity initialize_and_project_features", "assertions": ["stdio initialize response contains the advertised fields"], "artifact": null},
+      "expected_evidence": {"status": "partial", "command": "cargo test --locked -p recite-lsp --test editor_parity initialize_and_project_features_use_shared_stdio_contract", "assertions": ["stdio initialize response contains the advertised fields"], "artifact": null},
       "follow_up": "#51"
     },
     {
@@ -155,7 +155,7 @@
       "platform_status": {"linux": "partial", "macos": "planned", "windows": "planned"},
       "artifact_status": {"vscode-vsix": "planned", "neovim-setup": "planned", "zed-extension": "planned"},
       "distribution_status": {"vs-marketplace": "planned", "open-vsx": "planned", "neovim-distribution": "planned", "zed-distribution": "planned"},
-      "expected_evidence": {"status": "partial", "command": "cargo test --locked -p recite-lsp --test editor_parity diagnostic_recovery", "assertions": ["diagnostics carry URI, version, code, severity, and range for the canonical malformed fixture"], "artifact": null},
+      "expected_evidence": {"status": "partial", "command": "cargo test --locked -p recite-lsp --test editor_parity diagnostic_recovery_keeps_incomplete_overlay_editable", "assertions": ["diagnostics carry URI, version, code, severity, and range for the canonical malformed fixture"], "artifact": null},
       "follow_up": "#51"
     },
     {
@@ -171,7 +171,7 @@
       "platform_status": {"linux": "partial", "macos": "planned", "windows": "planned"},
       "artifact_status": {"vscode-vsix": "planned", "neovim-setup": "planned", "zed-extension": "planned"},
       "distribution_status": {"vs-marketplace": "planned", "open-vsx": "planned", "neovim-distribution": "planned", "zed-distribution": "planned"},
-      "expected_evidence": {"status": "partial", "command": "cargo test --locked -p recite-lsp --test editor_parity initialize_and_project_features", "assertions": ["completion and definition are actual stdio responses for the canonical fixture"], "artifact": null},
+      "expected_evidence": {"status": "partial", "command": "cargo test --locked -p recite-lsp --test editor_parity initialize_and_project_features_use_shared_stdio_contract", "assertions": ["completion and definition are actual stdio responses for the canonical fixture"], "artifact": null},
       "follow_up": "#51"
     },
     {
@@ -187,7 +187,7 @@
       "platform_status": {"linux": "partial", "macos": "planned", "windows": "planned"},
       "artifact_status": {"vscode-vsix": "planned", "neovim-setup": "planned", "zed-extension": "planned"},
       "distribution_status": {"vs-marketplace": "planned", "open-vsx": "planned", "neovim-distribution": "planned", "zed-distribution": "planned"},
-      "expected_evidence": {"status": "partial", "command": "cargo test --locked -p recite-lsp --test editor_parity utf16_crlf_and_non_bmp_ranges", "assertions": ["stdio diagnostics expose the expected UTF-16 range for the derived CRLF fixture"], "artifact": null},
+      "expected_evidence": {"status": "partial", "command": "cargo test --locked -p recite-lsp --test editor_parity utf16_crlf_and_non_bmp_ranges_are_projected_over_stdio", "assertions": ["stdio diagnostics expose the expected UTF-16 range for the derived CRLF fixture"], "artifact": null},
       "follow_up": "#51"
     },
     {
@@ -203,7 +203,7 @@
       "platform_status": {"linux": "partial", "macos": "planned", "windows": "planned"},
       "artifact_status": {"vscode-vsix": "planned", "neovim-setup": "planned", "zed-extension": "planned"},
       "distribution_status": {"vs-marketplace": "planned", "open-vsx": "planned", "neovim-distribution": "planned", "zed-distribution": "planned"},
-      "expected_evidence": {"status": "partial", "command": "cargo test --locked -p recite-lsp --test editor_parity diagnostic_recovery", "assertions": ["accepted newer overlay publishes only its current version in the recovery scenario"], "artifact": null},
+      "expected_evidence": {"status": "partial", "command": "cargo test --locked -p recite-lsp --test editor_parity diagnostic_recovery_keeps_incomplete_overlay_editable", "assertions": ["accepted newer overlay publishes only its current version in the recovery scenario"], "artifact": null},
       "follow_up": "#51"
     },
     {
@@ -475,7 +475,7 @@
       "platform_status": {"linux": "partial", "macos": "planned", "windows": "planned"},
       "artifact_status": {"vscode-vsix": "planned", "neovim-setup": "planned", "zed-extension": "planned"},
       "distribution_status": {"vs-marketplace": "planned", "open-vsx": "planned", "neovim-distribution": "planned", "zed-distribution": "planned"},
-      "expected_evidence": {"status": "partial", "command": "cargo test --locked -p recite-compiler --test authoring_catalog_summary checked_in_locale_fallback_catalogue_resolves_deterministically", "assertions": ["CatalogCoverageSummary resolves the checked-in PO catalogue through the fr-FR to fr fallback and retains its fingerprint"], "artifact": null},
+      "expected_evidence": {"status": "partial", "commands": ["cargo test --locked -p recite-compiler --test authoring_catalog_summary checked_in_locale_fallback_catalogue_resolves_deterministically", "cargo test --locked -p recite-cli --test dialogue_locale dialogue_locale_falls_back_to_language_catalog"], "assertions": ["CatalogCoverageSummary resolves the checked-in PO catalogue through the fr-FR to fr fallback and retains its fingerprint", "CLI locale fallback uses the same checked-in PO catalogue"], "artifact": null},
       "follow_up": "#51"
     },
     {

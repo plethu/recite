@@ -78,6 +78,9 @@ elif mutation == "malformed":
 elif mutation == "stale-evidence":
     capability = next(capability for capability in contract["capabilities"] if capability["id"] == "lsp.completion")
     capability["expected_evidence"]["command"] = "cargo test --locked -p recite-lsp --test editor_parity no_such_test"
+elif mutation == "stale-module-evidence":
+    capability = next(capability for capability in contract["capabilities"] if capability["id"] == "command.structured.results")
+    capability["expected_evidence"]["command"] = "cargo test --locked -p recite-compiler --test authoring_build invented::projects_every_lifecycle_state_with_stable_fields"
 elif mutation == "reciprocity":
     artifact = next(artifact for artifact in contract["artifacts"] if artifact["id"] == "vscode-vsix")
     artifact["clients"].remove("vscode")
@@ -91,6 +94,22 @@ elif mutation == "symlink":
     canonical = fixture_repo / "fixtures/recite/valid/core_language_spike.recite"
     canonical.unlink()
     canonical.symlink_to(outside)
+elif mutation == "symlink-component":
+    import shutil
+
+    fixture_repo = Path(path).parents[2]
+    valid = fixture_repo / "fixtures/recite/valid"
+    internal = fixture_repo / "fixtures/recite/internal-valid"
+    shutil.copytree(valid, internal, symlinks=True)
+    shutil.rmtree(valid)
+    valid.symlink_to(internal, target_is_directory=True)
+elif mutation == "symlink-artifact-component":
+    fixture_repo = Path(path).parents[2]
+    alias = fixture_repo / "fixtures/editor-parity/artifact-alias"
+    alias.symlink_to(alias.parent, target_is_directory=True)
+    artifact = next(artifact for artifact in contract["artifacts"] if artifact["id"] == "vscode-vsix")
+    artifact["status"] = "implemented"
+    artifact["path"] = "fixtures/editor-parity/artifact-alias/contract.json"
 else:
     raise SystemExit(f"unknown mutation: {mutation}")
 
@@ -126,6 +145,9 @@ expect_failure capability-evidence "partial capability lsp.completion cannot cla
 expect_failure duplicate "capabilities IDs must be unique"
 expect_failure malformed "evidence command must name a cargo integration test and filter"
 expect_failure stale-evidence "evidence command does not name an existing runnable test"
+expect_failure stale-module-evidence "evidence command does not name an existing runnable test"
 expect_failure reciprocity "artifact vscode-vsix client list must exactly reciprocate"
 expect_failure topology "VS Code and VSCodium must share one VSIX artifact topology"
 expect_failure symlink "scenario lsp-stdio-baseline fixture must not be a symlink"
+expect_failure symlink-component "scenario lsp-stdio-baseline fixture must not traverse symlink component"
+expect_failure symlink-artifact-component "artifact vscode-vsix path must not traverse symlink component"

@@ -96,9 +96,31 @@ canonical_allowlist = {
 
 resolved_root = repo_root.resolve()
 
+def symlink_component(path):
+    try:
+        relative = path.relative_to(repo_root)
+    except ValueError:
+        return None
+    current = repo_root
+    for component in relative.parts:
+        current /= component
+        if current.is_symlink():
+            return current
+    return None
+
+def require_no_symlink_components(path, label):
+    symlink = symlink_component(path)
+    if symlink is None:
+        return
+    relative = symlink.relative_to(repo_root)
+    if symlink == path:
+        require(False, f"{label} must not be a symlink: {relative}")
+    else:
+        require(False, f"{label} must not traverse symlink component: {relative}")
+
 def require_repo_file(path, label):
     candidate = repo_root / path
-    require(not candidate.is_symlink(), f"{label} must not be a symlink: {path}")
+    require_no_symlink_components(candidate, label)
     try:
         resolved = candidate.resolve(strict=True)
     except OSError:
@@ -106,6 +128,29 @@ def require_repo_file(path, label):
     require(resolved_root in resolved.parents, f"{label} escapes the repository: {path}")
     require(resolved.is_file(), f"{label} does not exist: {path}")
     return candidate, resolved
+
+def registered_test_paths(test_file):
+    source_files = [(test_file, ())]
+    module_dir = test_file.with_suffix("")
+    if module_dir.is_dir() and not module_dir.is_symlink():
+        for source_file in sorted(module_dir.rglob("*.rs")):
+            require_no_symlink_components(source_file, f"evidence source {source_file.relative_to(repo_root)}")
+            if source_file.is_file() and not source_file.is_symlink():
+                relative = source_file.relative_to(module_dir)
+                parts = list(relative.parts)
+                module_parts = parts[:-1] if parts[-1] == "mod.rs" else parts[:-1] + [Path(parts[-1]).stem]
+                source_files.append((source_file, tuple(module_parts)))
+    test_pattern = re.compile(
+        r"#\s*\[\s*(?:[A-Za-z_][A-Za-z0-9_]*::)*test\s*\]\s*(?:#\s*\[[^]]+\]\s*)*"
+        r"(?:pub\s+)?fn\s+([A-Za-z_][A-Za-z0-9_]*)\s*\("
+    )
+    registered = set()
+    for source_file, module_parts in source_files:
+        source = source_file.read_text(encoding="utf-8")
+        for match in test_pattern.finditer(source):
+            registered.add("::".join((*module_parts, match.group(1))))
+    require(bool(registered), f"evidence target has no registered runnable tests: {test_file.relative_to(repo_root)}")
+    return registered
 
 for scenario_id, scenario in scenario_map.items():
     paths = scenario.get("canonical_fixtures")
@@ -153,8 +198,9 @@ for artifact_id, artifact in artifact_map.items():
         require(artifact_path is not None and bool(path) and not artifact_path.is_absolute(), f"artifact {artifact_id} path must be a non-empty relative path")
         if artifact_path is not None and path:
             require(artifact_path.as_posix() == path and not {".", ".."}.intersection(artifact_path.parts), f"artifact {artifact_id} path must be normalized")
-            resolved_path = (repo_root / artifact_path).resolve()
-            require(not (repo_root / artifact_path).is_symlink(), f"artifact {artifact_id} path must not be a symlink: {path}")
+            artifact_candidate = repo_root / artifact_path
+            require_no_symlink_components(artifact_candidate, f"artifact {artifact_id} path")
+            resolved_path = artifact_candidate.resolve()
             require(resolved_root in resolved_path.parents, f"artifact {artifact_id} path escapes the repository: {path}")
             require(resolved_path.is_file(), f"artifact {artifact_id} claims missing path {path}")
 
@@ -256,8 +302,18 @@ for capability_id, capability in capability_map.items():
         evidence = {}
     require(evidence.get("status") in statuses, f"capability {capability_id} has invalid evidence status")
     require(isinstance(evidence.get("assertions"), list) and evidence["assertions"], f"capability {capability_id} must name evidence assertions")
+    command = evidence.get("command")
+    commands = evidence.get("commands")
+    if commands is not None:
+        require(command is None, f"capability {capability_id} must use either command or commands, not both")
+        require(isinstance(commands, list) and commands, f"capability {capability_id} commands must be a non-empty array")
+        evidence_commands = commands if isinstance(commands, list) else []
+    elif command is not None:
+        evidence_commands = [command]
+    else:
+        evidence_commands = []
     if status in {"implemented", "partial"}:
-        require(isinstance(evidence.get("command"), str) and evidence["command"], f"implemented/partial capability {capability_id} must name an evidence command")
+        require(evidence_commands and all(isinstance(value, str) and value for value in evidence_commands), f"implemented/partial capability {capability_id} must name evidence command(s)")
         require(evidence.get("status") in {"implemented", "partial"}, f"implemented/partial capability {capability_id} needs implemented or partial evidence")
     if status in {"planned", "unsupported"}:
         require(evidence.get("status") in {"planned", "unsupported"}, f"{status} capability {capability_id} cannot claim evidence status {evidence.get('status')}")
@@ -266,51 +322,37 @@ for capability_id, capability in capability_map.items():
     if status == "implemented":
         require(evidence.get("status") == "implemented", f"implemented capability {capability_id} needs implemented evidence")
     if status in {"planned", "unsupported"}:
-        require(evidence.get("command") is None, f"unimplemented capability {capability_id} must not claim an executable evidence command")
-    if status in {"partial", "implemented"} and isinstance(evidence.get("command"), str) and evidence["command"]:
-        command = evidence["command"]
-        try:
-            command_parts = shlex.split(command)
-        except ValueError as error:
-            command_parts = []
-            require(False, f"capability {capability_id} evidence command is malformed: {error}")
-        require(
-            len(command_parts) >= 8
-            and command_parts[:2] == ["cargo", "test"]
-            and command_parts[2] == "--locked"
-            and command_parts[3] == "-p"
-            and command_parts[5] == "--test"
-            and "--" not in command_parts,
-            f"capability {capability_id} evidence command must name a cargo integration test and filter",
-        )
-        if len(command_parts) >= 8 and command_parts[:2] == ["cargo", "test"] and "--" not in command_parts:
-            package = command_parts[4]
-            target = command_parts[6]
-            filters = command_parts[7:]
-            test_root = repo_root / "crates" / package / "tests"
-            test_file = test_root / f"{target}.rs"
-            require(test_file.is_file() and not test_file.is_symlink(), f"capability {capability_id} evidence target does not exist: {test_file.relative_to(repo_root) if test_file.is_relative_to(repo_root) else test_file}")
-            source_files = []
-            if test_file.is_file() and not test_file.is_symlink():
-                source_files.append(test_file)
-                module_dir = test_file.with_suffix("")
-                if module_dir.is_dir() and not module_dir.is_symlink():
-                    source_files.extend(sorted(module_dir.rglob("*.rs")))
-            source = "\n".join(
-                source_file.read_text(encoding="utf-8")
-                for source_file in source_files
-                if source_file.is_file() and not source_file.is_symlink()
+        require(command is None and commands is None, f"unimplemented capability {capability_id} must not claim an executable evidence command")
+    if status in {"partial", "implemented"} and evidence_commands:
+        for command in evidence_commands:
+            if not isinstance(command, str) or not command:
+                continue
+            try:
+                command_parts = shlex.split(command)
+            except ValueError as error:
+                command_parts = []
+                require(False, f"capability {capability_id} evidence command is malformed: {error}")
+            require(
+                len(command_parts) == 8
+                and command_parts[:2] == ["cargo", "test"]
+                and command_parts[2] == "--locked"
+                and command_parts[3] == "-p"
+                and command_parts[5] == "--test"
+                and "--" not in command_parts,
+                f"capability {capability_id} evidence command must name a cargo integration test and filter",
             )
-            for test_filter in filters:
-                function_name = test_filter.rsplit("::", 1)[-1]
-                require(
-                    re.search(
-                        rf"#\s*\[\s*(?:[A-Za-z_][A-Za-z0-9_]*::)?test\s*\]\s*(?:#\s*\[[^]]+\]\s*)*fn\s+{re.escape(function_name)}[A-Za-z0-9_]*\s*\(",
-                        source,
-                    )
-                    is not None,
-                    f"capability {capability_id} evidence command does not name an existing runnable test: {test_filter}",
-                )
+            if len(command_parts) == 8 and command_parts[:2] == ["cargo", "test"] and "--" not in command_parts:
+                package = command_parts[4]
+                target = command_parts[6]
+                test_filter = command_parts[7]
+                test_root = repo_root / "crates" / package / "tests"
+                test_file = test_root / f"{target}.rs"
+                evidence_target = test_file.relative_to(repo_root) if test_file.is_relative_to(repo_root) else test_file
+                require_no_symlink_components(test_file, f"capability {capability_id} evidence target")
+                require(test_file.is_file() and not test_file.is_symlink(), f"capability {capability_id} evidence target does not exist: {evidence_target}")
+                if test_file.is_file() and not test_file.is_symlink():
+                    registered = registered_test_paths(test_file)
+                    require(test_filter in registered, f"capability {capability_id} evidence command does not name an existing runnable test: {test_filter}")
     artifact = evidence.get("artifact")
     if artifact is not None:
         require(artifact in artifact_map, f"capability {capability_id} references unknown evidence artifact {artifact}")
