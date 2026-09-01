@@ -10,8 +10,11 @@ include!("ownership/neovim.rs");
 pub(super) const fn clients(id: MsgId) -> &'static [Client] {
     match id {
         tui_message_ids!() => &[Client::Tui],
-        lsp_message_ids!() => &[Client::Lsp],
+        MsgId::LspClientDisplayName | MsgId::LspClientRestartExhausted => {
+            &[Client::Lsp, Client::Neovim]
+        }
         neovim_message_ids!() => &[Client::Neovim],
+        lsp_message_ids!() => &[Client::Lsp],
         cli_message_ids!() => &[Client::Cli],
     }
 }

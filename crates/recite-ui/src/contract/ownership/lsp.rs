@@ -56,8 +56,6 @@ macro_rules! lsp_message_ids {
         | MsgId::LspClientError
         | MsgId::LspClientExited
         | MsgId::LspClientRestartScheduled
-        | MsgId::LspClientRestartExhausted
-        | MsgId::LspClientDisplayName
         | MsgId::LspClientDescription
         | MsgId::LspClientUntrustedWorkspacesDescription
         | MsgId::LspClientConfigurationTitle

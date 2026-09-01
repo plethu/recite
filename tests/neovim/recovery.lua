@@ -151,6 +151,25 @@ wait_for(function()
 end, "stable client did not recover after a second crash")
 assert_true((clock.hrtime() - crash_time) / 1e6 < 500, "stable recovery retained an excessive backoff")
 
+-- Reusing an active owned client must preserve the lifecycle's pending
+-- stability timer. Without that, the timer is orphaned after the first crash
+-- and this second crash incorrectly uses the slower backoff interval.
+local reused_before_stable_id = stable_restart.id
+assert_true(recite.start(buffer_b) == reused_before_stable_id,
+  "Recite did not reuse the active owned client for the lifecycle probe")
+vim.wait(1200, function() return false end, 50)
+local reuse_crash_time = clock.hrtime()
+stable_restart.rpc:terminate()
+local reuse_restart
+wait_for(function()
+  local candidates = vim.lsp.get_clients({ bufnr = buffer_b, name = "recite-lsp" })
+  reuse_restart = candidates[1]
+  return reuse_restart ~= nil and reuse_restart.initialized and reuse_restart.id ~= reused_before_stable_id
+end, "reused active client did not recover after a second crash")
+assert_true((clock.hrtime() - reuse_crash_time) / 1e6 < 180,
+  "reusing an active client orphaned its stability timer and retained the second backoff")
+stable_restart = reuse_restart
+
 -- Disabling automatic startup while a crash is waiting for its first
 -- backoff interval must invalidate the queued recovery.  The exit callback
 -- proves the lifecycle has been removed before setup runs, which is the

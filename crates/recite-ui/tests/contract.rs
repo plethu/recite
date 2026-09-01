@@ -20,11 +20,22 @@ fn launch_resource_matches_the_typed_inventory() {
     struct Inventory {
         resource_ids: Vec<String>,
         clients: BTreeMap<String, ClientEntry>,
+        projections: ProjectionInventory,
     }
     #[derive(Deserialize)]
     struct ClientEntry {
         name: String,
         shipped: bool,
+    }
+    #[derive(Deserialize)]
+    struct ProjectionInventory {
+        neovim: NeovimProjection,
+    }
+    #[derive(Deserialize)]
+    struct NeovimProjection {
+        source_resource: String,
+        output: String,
+        ids: Vec<String>,
     }
     let inventory: Inventory = toml::from_str(include_str!("../resources/inventory.toml"))
         .expect("valid resource inventory");
@@ -91,6 +102,50 @@ fn launch_resource_matches_the_typed_inventory() {
         actual_clients, expected_clients,
         "client inventory must be explicit"
     );
+    let typed_neovim_projections = contract
+        .resources
+        .iter()
+        .flat_map(|resource| {
+            resource
+                .projections
+                .iter()
+                .filter(|projection| projection.client == Client::Neovim)
+                .map(|projection| (resource.id.as_str().to_owned(), projection.field.clone()))
+        })
+        .collect::<Vec<_>>();
+    let inventory_neovim_ids = inventory.projections.neovim.ids.clone();
+    assert_eq!(
+        typed_neovim_projections
+            .iter()
+            .map(|(id, _)| id.clone())
+            .collect::<BTreeSet<_>>(),
+        inventory_neovim_ids.into_iter().collect::<BTreeSet<_>>(),
+        "Neovim projection IDs must match the typed contract"
+    );
+    assert_eq!(
+        typed_neovim_projections
+            .iter()
+            .map(|(_, output)| output)
+            .collect::<BTreeSet<_>>(),
+        BTreeSet::from([&inventory.projections.neovim.output]),
+        "Neovim projection output must match the typed contract"
+    );
+    assert_eq!(
+        inventory.projections.neovim.source_resource, "en-US.ftl",
+        "Neovim projects the canonical launch resource"
+    );
+    for id in ["lsp-client-display-name", "lsp-client-restart-exhausted"] {
+        let shared = contract
+            .resources
+            .iter()
+            .find(|resource| resource.id.as_str() == id)
+            .expect("shared Neovim/LSP projection resource");
+        assert_eq!(
+            shared.clients,
+            BTreeSet::from([Client::Lsp, Client::Neovim]),
+            "shared projection resource ownership must include both hosts"
+        );
+    }
     for spec in CLIENT_INVENTORY.iter().filter(|spec| !spec.shipped) {
         assert!(
             contract

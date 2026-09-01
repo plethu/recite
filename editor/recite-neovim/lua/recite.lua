@@ -320,13 +320,18 @@ function M.start(bufnr, overrides)
   if client_id then
     local client = vim.lsp.get_client_by_id(client_id)
     if client and client.config.recite_owned == true then
-      state.clients[client_id] = {
-        generation = state.restart_generation,
-        root = root,
-        intentional = false,
-        stability_timer = nil,
-        attempts = state.restart_attempts[root] or 0,
-      }
+      -- `vim.lsp.start` may reuse an active owned client. Preserve its
+      -- lifecycle record in that case: replacing it would orphan the
+      -- stability timer that eventually resets the bounded crash budget.
+      if not state.clients[client_id] then
+        state.clients[client_id] = {
+          generation = state.restart_generation,
+          root = root,
+          intentional = false,
+          stability_timer = nil,
+          attempts = state.restart_attempts[root] or 0,
+        }
+      end
     end
   end
   return client_id
