@@ -2,6 +2,7 @@ import test from "node:test";
 import assert from "node:assert/strict";
 import { ExtensionController } from "../src/controller.js";
 import { ClientFailure, ClientFailureKind } from "../src/client-failure.js";
+import { StartupOutcomeKind } from "../src/startup-outcome.js";
 import {
   FakeClient,
   hostApi,
@@ -66,7 +67,7 @@ test("untrusted workspaces never spawn and start once trust is granted", async (
     createClient: () => { clientCreated += 1; return new FakeClient(); }
   });
 
-  assert.equal(await controller.start(), false);
+  assert.equal((await controller.start()).kind, StartupOutcomeKind.Refused);
   assert.equal(clientCreated, 0);
   trusted = true;
   await grantTrust();
@@ -275,7 +276,7 @@ test("startup failure events are not reported a second time by start rejection",
     }
   });
 
-  assert.equal(await controller.start(), false);
+  assert.equal((await controller.start()).kind, StartupOutcomeKind.RetryableFailure);
   assert.deepEqual(received, ["protocol"]);
 });
 
@@ -337,6 +338,73 @@ test("missing executable retries through the complete budget before one exhausti
 
   assert.equal(attempts, 3);
   assert.deepEqual(received, [["scheduled", 0], ["scheduled", 0], ["scheduled", 0], ["exhausted"]]);
+  await controller.dispose();
+});
+
+test("activation turns an initial missing executable into a bounded retry sequence", async () => {
+  const received = [];
+  let attempts = 0;
+  const api = hostApi({ isTrusted: () => true, onDidGrantWorkspaceTrust: () => ({ dispose() {} }) });
+  const userInterface = {
+    serverLifecycleFailure: (detail) => received.push(["failure", detail]),
+    restartScheduled: (milliseconds) => received.push(["scheduled", milliseconds]),
+    restartExhausted: () => received.push(["exhausted"])
+  };
+  const controller = new ExtensionController(api, userInterface, { delete() {} }, {
+    restartDelaysMs: [0, 0, 0],
+    createClient: () => {
+      attempts += 1;
+      const client = new FakeClient();
+      client.start = async () => {
+        client.status = "stopped";
+        throw new Error("ENOENT");
+      };
+      return client;
+    }
+  });
+
+  const outcome = await controller.start();
+  assert.equal(outcome.kind, StartupOutcomeKind.RetryableFailure);
+  controller.handleStartOutcome(outcome);
+  await waitFor(() => received.some(([kind]) => kind === "exhausted"), 250);
+
+  assert.equal(attempts, 4, "initial startup plus every configured retry should be attempted");
+  assert.deepEqual(received, [
+    ["failure", "ENOENT"], ["scheduled", 0], ["scheduled", 0], ["scheduled", 0], ["exhausted"]
+  ]);
+  await controller.dispose();
+});
+
+test("retry-phase exit-only failures stay quiet through the budget", async () => {
+  const received = [];
+  const clients = [];
+  const api = hostApi({ isTrusted: () => true, onDidGrantWorkspaceTrust: () => ({ dispose() {} }) });
+  const userInterface = {
+    serverExited: () => received.push(["exited"]),
+    restartScheduled: (milliseconds) => received.push(["scheduled", milliseconds]),
+    restartExhausted: () => received.push(["exhausted"])
+  };
+  const controller = new ExtensionController(api, userInterface, { delete() {} }, {
+    restartDelaysMs: [0, 0, 0],
+    createClient: () => {
+      const client = new FakeClient();
+      clients.push(client);
+      client.start = async () => {
+        client.status = "running";
+        queueMicrotask(() => client.emit("exit", { code: 1, signal: null }));
+      };
+      return client;
+    }
+  });
+
+  const outcome = await controller.start();
+  assert.equal(outcome.kind, StartupOutcomeKind.Started);
+  await waitFor(() => received.some(([kind]) => kind === "exhausted"), 250);
+
+  assert.equal(clients.length, 4, "initial exit plus every configured retry should be attempted");
+  assert.deepEqual(received, [
+    ["exited"], ["scheduled", 0], ["scheduled", 0], ["scheduled", 0], ["exhausted"]
+  ]);
   await controller.dispose();
 });
 

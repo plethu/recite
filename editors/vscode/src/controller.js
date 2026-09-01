@@ -7,6 +7,7 @@ import { WatcherRegistry } from "./watchers.js";
 import { EditCommandRegistry } from "./edit-commands.js";
 import { asClientFailure, ClientFailureKind, isClientFailure } from "./client-failure.js";
 import { RestartPolicy } from "./restart-policy.js";
+import { StartupOutcomeKind, startupOutcome } from "./startup-outcome.js";
 
 const DIAGNOSTICS_METHOD = "textDocument/publishDiagnostics";
 const STABLE_RUN_MS = 10_000;
@@ -36,21 +37,38 @@ export class ExtensionController {
 
   async start(phase = "initial") {
     this.ensureSubscriptions();
-    if (this.disposed || this.api.workspace.isTrusted === false) return false;
-    if (this.client && this.client.status !== "stopped") return true;
+    if (this.disposed || this.api.workspace.isTrusted === false) {
+      return startupOutcome(StartupOutcomeKind.Refused);
+    }
+    if (this.client && this.client.status !== "stopped") {
+      return startupOutcome(StartupOutcomeKind.Started);
+    }
     this.client = undefined;
-    const configuration = readConfiguration(this.api, this.userInterface);
-    const client = this.createClient(configuration, {
-      onRegisterCapability: (params) => this.registerCapabilities(params),
-      onUnregisterCapability: (params) => this.unregisterCapabilities(params)
-    });
+    let configuration;
+    try {
+      configuration = readConfiguration(this.api, this.userInterface);
+    } catch (error) {
+      return startupOutcome(StartupOutcomeKind.Refused, error);
+    }
+    let client;
+    try {
+      client = this.createClient(configuration, {
+        onRegisterCapability: (params) => this.registerCapabilities(params),
+        onUnregisterCapability: (params) => this.unregisterCapabilities(params)
+      });
+    } catch (error) {
+      return startupOutcome(
+        StartupOutcomeKind.RetryableFailure,
+        asClientFailure(ClientFailureKind.Lifecycle, error)
+      );
+    }
     this.client = client;
     client.on("notification", (method, params) => this.handleNotification(method, params));
     client.on("stderr", (message) => this.userInterface.serverStderr(message));
     client.on("failure", (failure) => this.handleClientFailure(
       client, failure, { notify: phase !== "retrying" }
     ));
-    client.on("exit", (event) => this.handleExit(client, event));
+    client.on("exit", (event) => this.handleExit(client, event, phase));
     try {
       await client.start(initializeParams(
         this.api,
@@ -60,14 +78,17 @@ export class ExtensionController {
       this.replayOpenDocuments();
       this.watchers.flush();
       this.scheduleStableReset(client);
-      return true;
+      return startupOutcome(StartupOutcomeKind.Started);
     } catch (error) {
       if (this.client === client) this.client = undefined;
       // Transport/protocol failures have already been projected by the
       // client's failure event. Exit handling likewise owns its notification;
       // do not turn either one into a duplicate generic start failure.
-      if (client.failureReported || client.exitReported) return false;
-      throw error;
+      return startupOutcome(
+        StartupOutcomeKind.RetryableFailure,
+        error,
+        client.failureReported || client.exitReported
+      );
     }
   }
 
@@ -84,7 +105,9 @@ export class ExtensionController {
     if (this.trustListenerRegistered || !this.api.workspace.onDidGrantWorkspaceTrust) return;
     this.trustListenerRegistered = true;
     this.subscriptions.push(this.api.workspace.onDidGrantWorkspaceTrust(() => {
-      void this.start().catch((error) => this.handleStartFailure(error));
+      void this.start()
+        .then((outcome) => this.handleStartOutcome(outcome))
+        .catch((error) => this.handleUnexpectedStartFailure(error));
     }));
   }
 
@@ -107,12 +130,31 @@ export class ExtensionController {
     this.handleClientFailure(this.client, failure);
   }
 
-  handleExit(client, event) {
+  handleStartOutcome(outcome, phase = "initial") {
+    if (outcome.kind === StartupOutcomeKind.Refused) {
+      if (outcome.error) this.handleStartFailure(outcome.error);
+      return outcome;
+    }
+    if (outcome.kind === StartupOutcomeKind.RetryableFailure) {
+      if (phase !== "retrying" && !outcome.reported && outcome.error) {
+        this.handleStartFailure(outcome.error);
+      }
+      this.scheduleRestart();
+    }
+    return outcome;
+  }
+
+  handleUnexpectedStartFailure(error) {
+    this.handleStartFailure(error);
+    this.scheduleRestart();
+  }
+
+  handleExit(client, event, phase = "initial") {
     if (this.client !== client || this.stopping || this.disposed) return;
     this.clearStableReset();
     this.client = undefined;
     client.exitReported = true;
-    if (!client.failureReported) this.userInterface.serverExited();
+    if (phase !== "retrying" && !client.failureReported) this.userInterface.serverExited();
     this.scheduleRestart();
   }
 
@@ -130,10 +172,14 @@ export class ExtensionController {
       // schedule message. Keep transient failures quiet; the exhausted
       // budget below is the visible terminal notification.
       void this.start("retrying")
-        .then((started) => { if (!started) this.scheduleRestart(); })
-        .catch(() => this.scheduleRestart());
+        .then((outcome) => this.handleStartOutcome(outcome, "retrying"))
+        .catch((error) => this.handleUnexpectedRetryFailure(error));
     }, delay);
     this.restartTimer.unref?.();
+  }
+
+  handleUnexpectedRetryFailure(error) {
+    this.scheduleRestart();
   }
 
   scheduleStableReset(client) {
@@ -237,7 +283,8 @@ export class ExtensionController {
       await this.client?.stop();
       this.client = undefined;
       this.stopping = false;
-      await this.start();
+      const outcome = await this.start();
+      this.handleStartOutcome(outcome);
     })().finally(() => { this.restartPromise = undefined; });
     return this.restartPromise;
   }

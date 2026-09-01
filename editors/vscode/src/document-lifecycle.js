@@ -35,7 +35,7 @@ export function registerDocumentLifecycle(controller) {
     }),
     api.workspace.onDidChangeConfiguration((event) => {
       if (!event.affectsConfiguration("recite.lsp")) return;
-      void controller.restart().catch((error) => controller.handleStartFailure(error));
+      void controller.restart().catch((error) => controller.handleUnexpectedStartFailure(error));
     })
   );
 }

@@ -10,7 +10,8 @@ export async function activate(context) {
   const controller = new ExtensionController(vscode, userInterface, diagnostics);
   activeController = controller;
   context.subscriptions.push(userInterface, diagnostics, controller);
-  await controller.start().catch((error) => controller.handleStartFailure(error));
+  const outcome = await controller.start().catch((error) => controller.handleUnexpectedStartFailure(error));
+  if (outcome) controller.handleStartOutcome(outcome);
 }
 
 export async function deactivate() {
