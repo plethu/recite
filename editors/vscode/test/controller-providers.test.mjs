@@ -135,7 +135,21 @@ test("code-action provider projects commands without a VS Code Command construct
 
   controller.client.request = async () => [
     { title: "Run command", command: "recite.run" },
+    {
+      title: "Nested action wrapper",
+      kind: "quickfix",
+      command: {
+        title: "Run nested command",
+        command: "recite.runNested",
+        arguments: ["nested.recite", 3]
+      }
+    },
     { title: "Unavailable fix", kind: "quickfix", disabled: { reason: "not ready" } },
+    {
+      title: "Nested no-args wrapper",
+      kind: "quickfix",
+      command: { title: "Run nested no-args", command: "recite.runNestedNoArgs" }
+    },
     { title: "Run with arguments", command: "recite.run", arguments: ["other.recite"] }
   ];
   const mixed = await provider.provideCodeActions(
@@ -143,13 +157,25 @@ test("code-action provider projects commands without a VS Code Command construct
     new api.Range(new api.Position(0, 0), new api.Position(0, 2)),
     { diagnostics: [] }
   );
-  assert.equal(mixed.length, 3);
+  assert.equal(mixed.length, 5);
   assert.deepEqual(mixed[0], { title: "Run command", command: "recite.run" });
-  assert.equal(mixed[1] instanceof api.CodeAction, true);
-  assert.equal(mixed[1].title, "Unavailable fix");
-  assert.equal(mixed[1].kind, "quickfix");
-  assert.deepEqual(mixed[1].disabled, { reason: "not ready" });
-  assert.deepEqual(mixed[2], {
+  assert.deepEqual(mixed[1], {
+    title: "Run nested command",
+    command: "recite.runNested",
+    arguments: ["nested.recite", 3]
+  });
+  assert.equal(Object.getPrototypeOf(mixed[1]), Object.prototype);
+  assert.equal(mixed[2] instanceof api.CodeAction, true);
+  assert.equal(mixed[2].title, "Unavailable fix");
+  assert.equal(mixed[2].kind, "quickfix");
+  assert.deepEqual(mixed[2].disabled, { reason: "not ready" });
+  assert.deepEqual(mixed[3], {
+    title: "Run nested no-args",
+    command: "recite.runNestedNoArgs"
+  });
+  assert.equal(Object.getPrototypeOf(mixed[3]), Object.prototype);
+  assert.equal(Object.hasOwn(mixed[3], "arguments"), false);
+  assert.deepEqual(mixed[4], {
     title: "Run with arguments",
     command: "recite.run",
     arguments: ["other.recite"]
