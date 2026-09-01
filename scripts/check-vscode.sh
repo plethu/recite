@@ -56,22 +56,23 @@ projection_paths=(
   editors/vscode/src/messages.generated.js
   editors/vscode/package.nls.json
 )
-declare -A projection_hashes=()
+projection_hashes=()
 for relative in "${projection_paths[@]}"; do
   file="$repo_root/$relative"
   if [[ ! -f "$file" ]]; then
     echo "VS Code check requires tracked projection: $relative" >&2
     exit 2
   fi
-  projection_hashes["$relative"]="$(hash_file "$file")"
+  projection_hashes+=("$(hash_file "$file")")
 done
 
 check_projection_unchanged() {
   local status=$?
   local failures=0
-  for relative in "${projection_paths[@]}"; do
+  for index in "${!projection_paths[@]}"; do
+    relative="${projection_paths[$index]}"
     file="$repo_root/$relative"
-    if [[ ! -f "$file" ]] || [[ "$(hash_file "$file")" != "${projection_hashes["$relative"]}" ]]; then
+    if [[ ! -f "$file" ]] || [[ "$(hash_file "$file")" != "${projection_hashes[$index]}" ]]; then
       echo "VS Code check mutated a tracked message projection: $relative" >&2
       failures=1
     fi
