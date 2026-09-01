@@ -16,6 +16,7 @@ dotnet.isolated = true
 
 [tasks.verify]
 description = "Run the complete local verification suite"
+env = { XDG_CACHE_HOME = "{{config_root}}/target/tree-sitter-cache" }
 run = "mise -E maintainability exec -- scripts/verify.sh"
 
 [tasks.check-tree-sitter]

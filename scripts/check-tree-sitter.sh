@@ -4,7 +4,7 @@ set -euo pipefail
 usage() {
   cat <<'EOF'
 Usage:
-  scripts/check-tree-sitter.sh
+  scripts/check-tree-sitter.sh [repo-root]
 
 Checks the syntax-only Recite Tree-sitter grammar. The check verifies that the
 checked-in generated parser is reproducible, the corpus passes, the canonical
@@ -20,15 +20,29 @@ if [[ "${1:-}" == "-h" || "${1:-}" == "--help" || "${1:-}" == "help" ]]; then
   exit 0
 fi
 
-if (( $# > 0 )); then
+if (( $# > 1 )); then
   usage >&2
   exit 2
 fi
 
-repo_root="$(git rev-parse --show-toplevel 2>/dev/null)" || {
-  echo "unable to resolve Git repository root" >&2
-  exit 2
-}
+input_root="${1:-}"
+if [[ -n "$input_root" ]]; then
+  repo_root="$(git -C "$input_root" rev-parse --show-toplevel 2>/dev/null)" || {
+    echo "repo root is not a git checkout: $input_root" >&2
+    exit 2
+  }
+else
+  repo_root="$(git rev-parse --show-toplevel 2>/dev/null)" || {
+    echo "unable to resolve Git repository root" >&2
+    exit 2
+  }
+fi
+# Tree-sitter and its parser-generation dependencies use XDG cache locations.
+# Keep direct invocations writable and scoped to this checkout; mise tasks
+# provide the same value explicitly for nested verification commands.
+if [[ -z "${XDG_CACHE_HOME:-}" ]]; then
+  export XDG_CACHE_HOME="$repo_root/target/tree-sitter-cache"
+fi
 grammar_dir="$repo_root/editor/recite-tree-sitter"
 canonical_fixture="$repo_root/fixtures/recite/valid/language_pressure.recite"
 canonical_corpus="$grammar_dir/test/corpus/canonical.txt"
@@ -155,7 +169,9 @@ exact_captures=(
   ' - string, start: (0, 27), end: (0, 38), text: `"Archivist"`'
   ' - number, start: (0, 67), end: (0, 72), text: `-12.5`'
   ' - number, start: (0, 79), end: (0, 81), text: `+7`'
-  ' - punctuation.delimiter, start: (1, 58), end: (1, 59), text: `=`'
+  ' - operator, start: (1, 58), end: (1, 59), text: `=`'
+  ' - punctuation.delimiter, start: (0, 92), end: (0, 93), text: `,`'
+  ' - punctuation.delimiter, start: (1, 64), end: (1, 65), text: `:`'
   ' - string.special, start: (3, 2), end: (3, 14), text: `Plain prose.`'
   ' - string.special, start: (4, 2), end: (4, 15), text: `Interpolated `'
   ' - variable.parameter, start: (4, 16), end: (4, 20), text: `name`'
@@ -163,7 +179,7 @@ exact_captures=(
   ' - variable.parameter, start: (5, 12), end: (5, 17), text: `count`'
   ' - function.call, start: (7, 14), end: (7, 22), text: `play_sfx`'
   ' - number, start: (7, 32), end: (7, 37), text: `-4.25`'
-  ' - variable, start: (9, 5), end: (9, 8), text: `END`'
+  ' - constant.builtin, start: (9, 5), end: (9, 8), text: `END`'
 )
 for expectation in "${exact_captures[@]}"; do
   if ! grep -Fq "$expectation" "$query_output"; then

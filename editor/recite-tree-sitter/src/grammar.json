@@ -1403,8 +1403,28 @@
       ]
     },
     "target": {
-      "type": "PATTERN",
-      "value": "[^\\s\\r\\n#]+"
+      "type": "CHOICE",
+      "members": [
+        {
+          "type": "SYMBOL",
+          "name": "end_target"
+        },
+        {
+          "type": "PATTERN",
+          "value": "[^\\s\\r\\n#]+"
+        }
+      ]
+    },
+    "end_target": {
+      "type": "TOKEN",
+      "content": {
+        "type": "PREC",
+        "value": 1,
+        "content": {
+          "type": "STRING",
+          "value": "END"
+        }
+      }
     },
     "block_name": {
       "type": "SYMBOL",

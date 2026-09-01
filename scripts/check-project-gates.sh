@@ -84,7 +84,7 @@ echo "== editor parity contract =="
 
 echo
 echo "== Tree-sitter grammar =="
-"$repo_root/scripts/check-tree-sitter.sh"
+"$repo_root/scripts/check-tree-sitter.sh" "$repo_root"
 
 echo
 echo "== lint suppression policy =="

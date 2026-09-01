@@ -1250,6 +1250,21 @@
     }
   },
   {
+    "type": "target",
+    "named": true,
+    "fields": {},
+    "children": {
+      "multiple": false,
+      "required": false,
+      "types": [
+        {
+          "type": "end_target",
+          "named": true
+        }
+      ]
+    }
+  },
+  {
     "type": "type_name",
     "named": true,
     "fields": {},
@@ -1400,6 +1415,10 @@
     "named": true
   },
   {
+    "type": "end_target",
+    "named": true
+  },
+  {
     "type": "false",
     "named": false
   },
@@ -1469,10 +1488,6 @@
   },
   {
     "type": "string",
-    "named": true
-  },
-  {
-    "type": "target",
     "named": true
   },
   {

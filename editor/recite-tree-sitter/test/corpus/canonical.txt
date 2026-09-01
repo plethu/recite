@@ -166,7 +166,8 @@ Canonical Recite fixture
   (divert_statement
     (divert_marker)
     (hspace)
-    (target)
+    (target
+      (end_target))
     (newline))
   (blank_line
     (newline))
@@ -244,5 +245,6 @@ Canonical Recite fixture
   (divert_statement
     (divert_marker)
     (hspace)
-    (target)
+    (target
+      (end_target))
     (newline)))

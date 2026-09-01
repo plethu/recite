@@ -59,5 +59,6 @@ Line-bounded match recovery
     (indent)
     (divert_marker)
     (hspace)
-    (target)
+    (target
+      (end_target))
     (newline)))

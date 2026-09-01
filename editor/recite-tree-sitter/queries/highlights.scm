@@ -21,7 +21,9 @@
 ((line_name (identifier) @label))
 ((choice_name (identifier) @label))
 ((stable_id) @label)
-((target) @variable)
+((target) @variable
+  (#not-eq? @variable "END"))
+((end_target) @constant.builtin)
 
 ; Dedicated words and header fields.
 ((block_default) @constant.builtin)
@@ -40,7 +42,8 @@
 ((symbol) @constant)
 ((operator) @operator)
 (["(" ")" "[" "]" "{" "}"] @punctuation.bracket)
-(["," ":" "="] @punctuation.delimiter)
+(["," ":"] @punctuation.delimiter)
+(("=") @operator)
 
 ; Localisable prose, markup, and placeholders.
 ((prose_start) @string.special)

@@ -276,7 +276,8 @@ module.exports = grammar({
 
     line_name: ($) => seq($.identifier, "@", $.stable_id),
     choice_name: ($) => seq($.identifier, "@", $.stable_id),
-    target: ($) => /[^\s\r\n#]+/,
+    target: ($) => choice($.end_target, /[^\s\r\n#]+/),
+    end_target: ($) => token(prec(1, "END")),
 
     block_name: ($) => $.identifier,
     stable_id: ($) => /[0-9a-f]{20}/,
