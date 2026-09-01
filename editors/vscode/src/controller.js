@@ -82,12 +82,16 @@ export class ExtensionController {
     }));
   }
 
-  createEditCommand(title, edit) {
-    return this.editCommands.create(title, edit);
+  createEditCommand(title, edit, batch) {
+    return this.editCommands.create(title, edit, batch);
   }
 
-  discardEditCommandsForDocument(document) {
-    this.editCommands.discardForDocument(document);
+  createEditCommandBatch() {
+    return this.editCommands.beginBatch();
+  }
+
+  discardEditCommandsForDocument(document, reason = "document-stale") {
+    this.editCommands.discardForDocument(document, reason);
   }
 
   handleStartFailure(error) {
@@ -105,7 +109,7 @@ export class ExtensionController {
   scheduleRestart() {
     if (this.restartTimer || this.disposed || this.stopping || this.api.workspace.isTrusted === false) return;
     if (this.restartAttempt >= RESTART_DELAYS_MS.length) {
-      this.output.appendLine(clientMessage(this.api, "lsp-client-restart-exhausted", "restart attempts exhausted"));
+      this.output.appendLine(clientMessage(this.api, "lsp-client-restart-exhausted"));
       return;
     }
     const delay = RESTART_DELAYS_MS[this.restartAttempt++];

@@ -9,6 +9,12 @@ export const RUNTIME_MESSAGE_IDS = [
   "lsp-client-restart-exhausted",
   "lsp-client-display-name",
   "lsp-client-action-stale",
+  "lsp-client-action-closed",
+  "lsp-client-action-reopened",
+  "lsp-client-action-expired",
+  "lsp-client-action-evicted",
+  "lsp-client-action-unknown",
+  "lsp-client-action-apply-failed",
   "lsp-client-config-path-invalid",
   "lsp-client-config-args-invalid",
   "lsp-client-config-project-root-invalid",
@@ -25,6 +31,10 @@ export const PACKAGE_MESSAGE_IDS = [
   "lsp-client-configuration-args-description",
   "lsp-client-configuration-project-root-description"
 ];
+
+// These are the extension-owned visible messages. Every source use must go
+// through clientMessage and resolve to one of these projected Fluent IDs.
+export const SOURCE_MESSAGE_IDS = Object.freeze([...RUNTIME_MESSAGE_IDS]);
 
 export function projectMessages(fluent) {
   const canonical = new Map([...fluent.matchAll(/^([a-z0-9-]+) = ([^\n]*)$/gm)]

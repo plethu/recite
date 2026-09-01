@@ -66,9 +66,16 @@ export function registerFeatureProviders(controller) {
         context: { diagnostics: context.diagnostics.map((diagnostic) =>
           vscodeDiagnosticToLsp(api, diagnostic)
         ) }
-      }, token).then((result) => lspCodeActionsToVscode(api, result, getDocument, {
-        createEditCommand: (title, edit) => controller.createEditCommand(title, edit)
-      }))
+      }, token).then((result) => {
+        const batch = controller.createEditCommandBatch();
+        try {
+          return lspCodeActionsToVscode(api, result, getDocument, {
+            createEditCommand: (title, edit) => controller.createEditCommand(title, edit, batch)
+          });
+        } finally {
+          batch.finish();
+        }
+      })
     })
   );
 }

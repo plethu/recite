@@ -65,6 +65,12 @@ macro_rules! lsp_message_ids {
         | MsgId::LspClientConfigurationArgsDescription
         | MsgId::LspClientConfigurationProjectRootDescription
         | MsgId::LspClientActionStale
+        | MsgId::LspClientActionClosed
+        | MsgId::LspClientActionReopened
+        | MsgId::LspClientActionExpired
+        | MsgId::LspClientActionEvicted
+        | MsgId::LspClientActionUnknown
+        | MsgId::LspClientActionApplyFailed
         | MsgId::LspClientConfigPathInvalid
         | MsgId::LspClientConfigArgsInvalid
         | MsgId::LspClientConfigProjectRootInvalid

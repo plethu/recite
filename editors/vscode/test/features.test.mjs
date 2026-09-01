@@ -5,7 +5,8 @@ import {
   lspCodeActionsToVscode,
   lspWorkspaceEditToVscode,
   vscodeDiagnosticToLsp,
-  workspaceEditIsCurrent
+  workspaceEditIsCurrent,
+  workspaceEditStatus
 } from "../src/lsp-features.js";
 
 test("diagnostics retain stable code, source, severity, and UTF-16 range", () => {
@@ -105,6 +106,28 @@ test("versioned edits require the same open document generation after close and 
   assert.equal(workspaceEditIsCurrent(edit), false);
   openDocument = firstGeneration;
   assert.equal(workspaceEditIsCurrent(edit), true);
+});
+
+test("versioned workspace edits expose distinct document lifecycle outcomes", () => {
+  const uri = api.Uri.parse("file:///workspace/dialogue.recite");
+  const firstGeneration = { version: 4 };
+  const reopenedGeneration = { version: 4 };
+  let openDocument = firstGeneration;
+  const edit = lspWorkspaceEditToVscode(api, {
+    documentChanges: [{
+      textDocument: { uri: uri.toString(), version: 4 },
+      edits: []
+    }]
+  }, () => openDocument);
+
+  assert.equal(workspaceEditStatus(edit), "current");
+  firstGeneration.version = 5;
+  assert.equal(workspaceEditStatus(edit), "document-stale");
+  firstGeneration.version = 4;
+  openDocument = undefined;
+  assert.equal(workspaceEditStatus(edit), "document-closed");
+  openDocument = reopenedGeneration;
+  assert.equal(workspaceEditStatus(edit), "document-reopened");
 });
 
 test("editable code actions are projected as controller-owned commands", () => {

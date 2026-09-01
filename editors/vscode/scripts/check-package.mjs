@@ -6,8 +6,10 @@ import { readdirSync } from "node:fs";
 import {
   PACKAGE_MESSAGE_IDS,
   RUNTIME_MESSAGE_IDS,
+  SOURCE_MESSAGE_IDS,
   projectMessages
 } from "./message-projections.mjs";
+import { assertSourceMessageOwnership } from "./source-messages.mjs";
 
 const packageRoot = path.resolve(path.dirname(fileURLToPath(import.meta.url)), "..");
 const manifest = JSON.parse(await readFile(path.join(packageRoot, "package.json"), "utf8"));
@@ -90,12 +92,22 @@ const source = await readFile(path.join(packageRoot, "src/extension.js"), "utf8"
 assert(!source.includes("vscode-languageclient"), "the scaffold must keep its process boundary inspectable");
 assert(!source.match(/(?:parse|Parser|tokeniz|compile).*Recite/i),
   "the client must not grow a second Recite semantic implementation");
-for (const sourceFile of readdirSync(path.join(packageRoot, "src"), { withFileTypes: true })
-  .filter((entry) => entry.isFile() && entry.name.endsWith(".js"))) {
-  const syntax = spawnSync(process.execPath, ["--check", path.join(packageRoot, "src", sourceFile.name)], {
+const sourceFiles = readdirSync(path.join(packageRoot, "src"), { withFileTypes: true })
+  .filter((entry) => entry.isFile() && entry.name.endsWith(".js"));
+const sourceContents = await Promise.all(sourceFiles.map(async (entry) => [
+  entry.name,
+  await readFile(path.join(packageRoot, "src", entry.name), "utf8")
+]));
+assertSourceMessageOwnership(
+  sourceContents.filter(([name]) => name !== "messages.js"),
+  SOURCE_MESSAGE_IDS,
+  projectedMessages
+);
+for (const [name] of sourceContents) {
+  const syntax = spawnSync(process.execPath, ["--check", path.join(packageRoot, "src", name)], {
     encoding: "utf8"
   });
-  assert(syntax.status === 0, `invalid JavaScript in ${sourceFile.name}: ${syntax.stderr}`);
+  assert(syntax.status === 0, `invalid JavaScript in ${name}: ${syntax.stderr}`);
 }
 
 console.log("recite-vscode package contract passed");

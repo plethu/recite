@@ -95,20 +95,37 @@ export function lspWorkspaceEditToVscode(api, result, getOpenDocument) {
   }
   Object.defineProperty(workspaceEdit, "reciteVersionGuard", {
     enumerable: false,
-    value: () => preconditions.every(({ document: expectedDocument, uri, version }) => {
-      const document = getOpenDocument(uri);
-      return document && document === expectedDocument && document.version === version;
-    })
+    value: () => workspaceEditStatus(workspaceEdit) === "current"
   });
   Object.defineProperty(workspaceEdit, "reciteVersionPreconditions", {
     enumerable: false,
     value: preconditions
   });
+  Object.defineProperty(workspaceEdit, "reciteVersionStatus", {
+    enumerable: false,
+    value: () => {
+      for (const { document: expectedDocument, uri, version } of preconditions) {
+        const document = getOpenDocument(uri);
+        if (!document) return "document-closed";
+        if (document !== expectedDocument) return "document-reopened";
+        if (document.version !== version) return "document-stale";
+      }
+      return "current";
+    }
+  });
   return workspaceEdit;
 }
 
+export function workspaceEditStatus(workspaceEdit) {
+  if (workspaceEdit?.reciteVersionStatus) return workspaceEdit.reciteVersionStatus();
+  if (workspaceEdit?.reciteVersionGuard && !workspaceEdit.reciteVersionGuard()) {
+    return "document-stale";
+  }
+  return "current";
+}
+
 export function workspaceEditIsCurrent(workspaceEdit) {
-  return workspaceEdit?.reciteVersionGuard?.() ?? true;
+  return workspaceEditStatus(workspaceEdit) === "current";
 }
 
 export function lspCodeActionsToVscode(api, result, getOpenDocument, options = {}) {

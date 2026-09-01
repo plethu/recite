@@ -1,11 +1,14 @@
 import test from "node:test";
 import assert from "node:assert/strict";
-import { readFile, writeFile } from "node:fs/promises";
+import { readFile, writeFile, readdir } from "node:fs/promises";
 import path from "node:path";
 import { fileURLToPath } from "node:url";
 import { mkdtemp, mkdir, rm, symlink } from "node:fs/promises";
 import os from "node:os";
 import { assertContainedRegularFile, assertSafeTree } from "../scripts/safety.mjs";
+import { assertSourceMessageOwnership } from "../scripts/source-messages.mjs";
+import { SOURCE_MESSAGE_IDS } from "../scripts/message-projections.mjs";
+import projectedMessages from "../src/messages.generated.js";
 
 const packageRoot = path.resolve(path.dirname(fileURLToPath(import.meta.url)), "..");
 const manifest = JSON.parse(await readFile(path.join(packageRoot, "package.json"), "utf8"));
@@ -26,6 +29,21 @@ test("the declared VS Code floor uses a plain JavaScript message projection", as
   assert.doesNotMatch(source, /\.json.*import attributes|with \{ type: ["']json["'] \}/);
   const generated = await readFile(path.join(packageRoot, "src", "messages.generated.js"), "utf8");
   assert.match(generated, /^\/\/ Generated from .*\.ftl/m);
+});
+
+test("source message ownership rejects a hard-coded visible literal", async () => {
+  const entries = await Promise.all((await readdir(path.join(packageRoot, "src")))
+    .filter((name) => name.endsWith(".js") && name !== "messages.js")
+    .map(async (name) => [name, await readFile(path.join(packageRoot, "src", name), "utf8")]));
+  assert.doesNotThrow(() => assertSourceMessageOwnership(
+    entries, SOURCE_MESSAGE_IDS, projectedMessages
+  ));
+  const hostile = entries.map(([name, source]) => [name, name === "edit-commands.js"
+    ? source.replace('clientMessage(this.api, "lsp-client-action-stale")', '"Document changed"')
+    : source]);
+  assert.throws(() => assertSourceMessageOwnership(
+    hostile, SOURCE_MESSAGE_IDS, projectedMessages
+  ), /source message use must cover exactly the owned IDs|every clientMessage call/);
 });
 
 test("packaging safety rejects symlink escapes, including intermediate paths", async () => {

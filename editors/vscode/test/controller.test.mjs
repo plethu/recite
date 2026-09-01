@@ -2,6 +2,7 @@ import test from "node:test";
 import assert from "node:assert/strict";
 import { EventEmitter } from "node:events";
 import { ExtensionController } from "../src/controller.js";
+import { lspWorkspaceEditToVscode } from "../src/lsp-features.js";
 
 test("dynamic watched-file registration forwards deterministic events and disposes", async () => {
   const callbacks = {};
@@ -185,6 +186,20 @@ test("restart budget resets only after a separated stable run", async () => {
   await controller.dispose();
 });
 
+test("restart exhaustion uses the canonical message without duplicated detail", async () => {
+  const messages = [];
+  const api = hostApi({ isTrusted: () => true, onDidGrantWorkspaceTrust: () => ({ dispose() {} }) });
+  const controller = new ExtensionController(api, {
+    append() {},
+    appendLine(value) { messages.push(value); }
+  }, { delete() {} }, { createClient: () => new FakeClient() });
+  await controller.start();
+  controller.restartAttempt = 5;
+  controller.scheduleRestart();
+  assert.equal(messages.at(-1), "Recite language server restart attempts exhausted.");
+  await controller.dispose();
+});
+
 test("controller-owned edit commands revalidate immediately before apply", async () => {
   const applied = [];
   const messages = [];
@@ -212,13 +227,17 @@ test("controller-owned edit commands revalidate immediately before apply", async
   current = false;
   assert.equal(await api.commands.executeCommand(staleCommand.command, ...staleCommand.arguments), false);
   assert.deepEqual(applied, [edit]);
-  assert.equal(messages.at(-1), "Recite code action is no longer applicable because a document changed or closed.");
+  assert.equal(messages.at(-1), "Recite code action is no longer applicable because the document changed.");
   await controller.dispose();
 });
 
-test("code-action command cache is bounded and expires unselected actions", async () => {
+test("code-action command cache reports capacity eviction and TTL expiry", async () => {
+  const messages = [];
   const api = hostApi({ isTrusted: () => true, onDidGrantWorkspaceTrust: () => ({ dispose() {} }) });
-  const controller = new ExtensionController(api, output(), { delete() {} }, {
+  const controller = new ExtensionController(api, {
+    append() {},
+    appendLine(value) { messages.push(value); }
+  }, { delete() {} }, {
     editCommandTtlMs: 15,
     maxEditCommands: 1,
     createClient: () => new FakeClient()
@@ -228,8 +247,120 @@ test("code-action command cache is bounded and expires unselected actions", asyn
   const first = controller.createEditCommand("First", { reciteVersionGuard: () => true });
   const second = controller.createEditCommand("Second", { reciteVersionGuard: () => true });
   assert.equal(await api.commands.executeCommand(first.command, ...first.arguments), false);
+  assert.equal(messages.at(-1), "Recite code action was replaced by a newer action.");
   await new Promise((resolve) => setTimeout(resolve, 25));
   assert.equal(await api.commands.executeCommand(second.command, ...second.arguments), false);
+  assert.equal(messages.at(-1), "Recite code action expired before it was applied.");
+  await controller.dispose();
+});
+
+test("unknown code-action IDs and host apply failures have distinct outcomes", async () => {
+  const messages = [];
+  const api = hostApi({ isTrusted: () => true, onDidGrantWorkspaceTrust: () => ({ dispose() {} }) });
+  api.workspace.applyEdit = async () => false;
+  const controller = new ExtensionController(api, {
+    append() {},
+    appendLine(value) { messages.push(value); }
+  }, { delete() {} }, { createClient: () => new FakeClient() });
+  await controller.start();
+
+  assert.equal(await api.commands.executeCommand("recite.applyCodeAction", "missing"), false);
+  assert.equal(messages.at(-1), "Recite code action is no longer available.");
+  const command = controller.createEditCommand("Rejected", { reciteVersionGuard: () => true });
+  assert.equal(await api.commands.executeCommand(command.command, ...command.arguments), false);
+  assert.equal(messages.at(-1), "VS Code could not apply the Recite code action.");
+  await controller.dispose();
+});
+
+test("a capacity-one projected response never returns an evicted command", async () => {
+  const api = hostApi({ isTrusted: () => true, onDidGrantWorkspaceTrust: () => ({ dispose() {} }) });
+  api.workspace.applyEdit = async () => true;
+  const primary = {
+    languageId: "recite",
+    version: 4,
+    uri: uri("dialogue.recite"),
+    getText: () => ":: dialogue"
+  };
+  api.workspace.textDocuments.push(primary);
+  const controller = new ExtensionController(api, output(), { delete() {} }, {
+    maxEditCommands: 1,
+    createClient: () => {
+      const client = new FakeClient();
+      client.request = async () => [
+        action(primary, "First"),
+        action(primary, "Second")
+      ];
+      return client;
+    }
+  });
+  await controller.start();
+  const provider = api.registeredProviders.find(({ name }) => name === "code-actions").provider;
+  const actions = await provider.provideCodeActions(
+    primary,
+    new api.Range(new api.Position(0, 0), new api.Position(0, 2)),
+    { diagnostics: [] }
+  );
+  assert.equal(actions.length, 1);
+  assert.equal(await api.commands.executeCommand(
+    actions[0].command.command, ...actions[0].command.arguments
+  ), true);
+  await controller.dispose();
+});
+
+test("document close reports a closed command instead of an unknown ID", async () => {
+  const messages = [];
+  const document = {
+    languageId: "recite",
+    version: 4,
+    uri: uri("dialogue.recite"),
+    getText: () => ":: dialogue"
+  };
+  const api = hostApi({ isTrusted: () => true, onDidGrantWorkspaceTrust: () => ({ dispose() {} }) });
+  api.workspace.textDocuments.push(document);
+  const controller = new ExtensionController(api, {
+    append() {},
+    appendLine(value) { messages.push(value); }
+  }, { delete() {} }, { createClient: () => new FakeClient() });
+  await controller.start();
+  const edit = {
+    reciteVersionPreconditions: [{ document }],
+    reciteVersionGuard: () => false
+  };
+  const command = controller.createEditCommand("Close", edit);
+  controller.discardEditCommandsForDocument(document, "document-closed");
+  assert.equal(await api.commands.executeCommand(command.command, ...command.arguments), false);
+  assert.equal(messages.at(-1), "Recite code action is no longer applicable because the document closed.");
+  await controller.dispose();
+});
+
+test("document reopen reports a new generation instead of applying an old action", async () => {
+  const messages = [];
+  const document = {
+    languageId: "recite",
+    version: 4,
+    uri: uri("dialogue.recite"),
+    getText: () => ":: dialogue"
+  };
+  const reopened = { ...document };
+  const api = hostApi({ isTrusted: () => true, onDidGrantWorkspaceTrust: () => ({ dispose() {} }) });
+  api.workspace.textDocuments.push(document);
+  const controller = new ExtensionController(api, {
+    append() {},
+    appendLine(value) { messages.push(value); }
+  }, { delete() {} }, { createClient: () => new FakeClient() });
+  await controller.start();
+  const edit = lspWorkspaceEditToVscode(api, {
+    documentChanges: [{
+      textDocument: { uri: document.uri.toString(), version: document.version },
+      edits: []
+    }]
+  }, (documentUri) => api.workspace.textDocuments.find(
+    (candidate) => candidate.uri.toString() === documentUri.toString()
+  ));
+  const command = controller.createEditCommand("Reopen", edit);
+  api.workspace.textDocuments[0] = reopened;
+  assert.equal(await api.commands.executeCommand(command.command, ...command.arguments), false);
+  assert.equal(messages.at(-1), "Recite code action is no longer applicable because the document was closed and reopened.");
   await controller.dispose();
 });
 
@@ -294,6 +425,20 @@ test("activation-shaped host API routes versioned code actions through the comma
 
 function uri(value) {
   return { toString: () => `file:///${value}` };
+}
+
+function action(document, title) {
+  return {
+    title,
+    kind: "quickfix",
+    edit: { documentChanges: [{
+      textDocument: { uri: document.uri.toString(), version: document.version },
+      edits: [{
+        range: { start: { line: 0, character: 0 }, end: { line: 0, character: 2 } },
+        newText: "# "
+      }]
+    }] }
+  };
 }
 
 function output() {

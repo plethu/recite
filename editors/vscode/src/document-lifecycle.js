@@ -9,7 +9,7 @@ export function registerDocumentLifecycle(controller) {
     api.workspace.onDidChangeTextDocument((event) => {
       const { document } = event;
       if (!isReciteDocument(document)) return;
-      controller.discardEditCommandsForDocument(document);
+      controller.discardEditCommandsForDocument(document, "document-stale");
       controller.documents.set(document.uri.toString(), document);
       if (controller.client?.status !== "running") return;
       controller.client.notify("textDocument/didChange", {
@@ -25,7 +25,7 @@ export function registerDocumentLifecycle(controller) {
     }),
     api.workspace.onDidCloseTextDocument((document) => {
       if (!isReciteDocument(document)) return;
-      controller.discardEditCommandsForDocument(document);
+      controller.discardEditCommandsForDocument(document, "document-closed");
       const uri = document.uri.toString();
       controller.documents.delete(uri);
       if (controller.client?.status === "running") {

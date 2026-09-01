@@ -91,6 +91,12 @@ pub(super) const fn key(id: super::MsgId) -> Option<&'static str> {
             Some("lsp-client-configuration-project-root-description")
         }
         super::MsgId::LspClientActionStale => Some("lsp-client-action-stale"),
+        super::MsgId::LspClientActionClosed => Some("lsp-client-action-closed"),
+        super::MsgId::LspClientActionReopened => Some("lsp-client-action-reopened"),
+        super::MsgId::LspClientActionExpired => Some("lsp-client-action-expired"),
+        super::MsgId::LspClientActionEvicted => Some("lsp-client-action-evicted"),
+        super::MsgId::LspClientActionUnknown => Some("lsp-client-action-unknown"),
+        super::MsgId::LspClientActionApplyFailed => Some("lsp-client-action-apply-failed"),
         super::MsgId::LspClientConfigPathInvalid => Some("lsp-client-config-path-invalid"),
         super::MsgId::LspClientConfigArgsInvalid => Some("lsp-client-config-args-invalid"),
         super::MsgId::LspClientConfigProjectRootInvalid => {
