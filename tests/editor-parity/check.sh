@@ -31,6 +31,10 @@ cp "$repo_root/fixtures/schema/valid/generated_manifest.json" "$fixture_repo/fix
 cp "$repo_root/fixtures/schema/valid/full_manifest.json" "$fixture_repo/fixtures/schema/valid/"
 cp -R "$repo_root/tests/editor-parity/cargo-fixture/." "$fixture_repo/"
 cp "$repo_root/.gitignore" "$fixture_repo/"
+cp "$repo_root/AGENTS.md" "$fixture_repo/AGENTS.md"
+mkdir -p "$fixture_repo/.claude"
+ln -s ../.agents/skills "$fixture_repo/.claude/skills"
+ln -s AGENTS.md "$fixture_repo/CLAUDE.md"
 chmod +x "$fixture_repo/scripts/check-editor-parity.sh" "$fixture_repo/scripts/check-tree-sitter.sh" "$fixture_repo/scripts/check-neovim.sh" "$fixture_repo/scripts/check-vscode.sh"
 
 git -C "$fixture_repo" init -q -b main
@@ -258,7 +262,6 @@ for relative in (
     "target/force-added.rs",
     "node_modules/force-added.js",
     "__pycache__/force-added.pyc",
-    ".claude/force-added",
     "force-added.pyo",
 ):
     force_added = repo / relative
@@ -348,6 +351,15 @@ if any(path.endswith(("checker.cpython-314.pyc", "checker-output.pyo")) for path
     raise SystemExit("untracked Python bytecode entered parity digest inputs")
 if "__pycache__/force-added.pyc" not in paths or "force-added.pyo" not in paths:
     raise SystemExit("force-added Python bytecode did not remain a digest input")
+
+nested_metadata = repo / "nested/CLAUDE.md"
+nested_metadata.parent.mkdir(parents=True, exist_ok=True)
+nested_metadata.symlink_to(repo / "AGENTS.md")
+nested_metadata_context = Context(repo, [], repo / "target")
+selected_target_digest(nested_metadata_context, "recite-lsp")
+if not any("workspace digest input must not be a symlink" in error for error in nested_metadata_context.errors):
+    raise SystemExit("nested CLAUDE.md was incorrectly treated as repository metadata")
+shutil.rmtree(nested_metadata.parent)
 print("editor parity Git-aware digest fixture passed")
 PY
 
@@ -446,3 +458,8 @@ expect_failure symlink "scenario lsp-stdio-baseline fixture must not be a symlin
 expect_failure symlink-component "scenario lsp-stdio-baseline fixture must not traverse symlink component"
 expect_failure symlink-contract-control "editor parity fixture must not be a symlink"
 expect_failure symlink-document-control "editor parity documentation must not be a symlink"
+
+if [[ -L "$repo_root/.claude/skills" && -L "$repo_root/CLAUDE.md" ]]; then
+  CARGO_TARGET_DIR="$test_root/source-checkout-target" "$repo_root/scripts/check-editor-parity.sh" "$repo_root"
+  echo "editor parity source-checkout metadata symlink fixture passed"
+fi

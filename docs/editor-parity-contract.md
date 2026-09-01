@@ -82,9 +82,16 @@ editor packages, documentation-site output, and Python bytecode; creating or
 rewriting those files must not trigger a Cargo evidence rebuild.
 
 Tracked and force-added files remain inputs even when their names resemble an
-ignored output path such as `target/`, `node_modules/`, `__pycache__/`, `.claude/`,
-or a `.pyc`/`.pyo` file. The Git index mode and current worktree permission mode
-are included too, so executable-bit changes cannot reuse stale evidence.
+ignored output path such as `target/`, `node_modules/`, `__pycache__/`, or a
+`.pyc`/`.pyo` file. The Git index mode and current worktree permission mode are
+included too, so executable-bit changes cannot reuse stale evidence.
+
+The only repository-metadata exception is the exact root `CLAUDE.md` path and
+paths below the exact root `.claude/` directory. These are agent metadata in
+this checkout and are excluded before symlink checks because the tracked
+checkout intentionally represents them as metadata symlinks. A similarly named
+`nested/CLAUDE.md` or `nested/.claude/` path is not metadata and follows the
+ordinary digest and symlink rules.
 
 An ignored untracked file is not an accepted compiler-input surface. If a
 `build.rs`, `include!`, generated source step, or other compiler action needs a

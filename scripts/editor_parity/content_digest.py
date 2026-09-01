@@ -81,6 +81,8 @@ def _digest_inputs(ctx: Context) -> list[_DigestInput]:
             ctx.require(False, f"workspace digest input escapes the repository: {relative}")
             continue
         path = ctx.repo_root / relative
+        if _is_repository_metadata(relative):
+            continue
         if path.is_symlink():
             require_no_symlink_components(ctx, path, "workspace digest input")
             continue
@@ -157,15 +159,17 @@ def _run_git_files(ctx: Context, arguments: list[str]) -> bytes | None:
 
 
 def _ignored(ctx: Context, relative_path: Path) -> bool:
-    # Agent instructions are repository metadata, not compiler-visible inputs.
-    if relative_path == Path("CLAUDE.md") or relative_path.parts[:1] == (".claude",):
-        return True
     if any(part in {".git", "node_modules", "__pycache__"} for part in relative_path.parts):
         return True
     if relative_path.suffix in {".pyc", ".pyo"}:
         return True
     target_relative = _target_relative(ctx)
     return bool(target_relative and (relative_path == target_relative or target_relative in relative_path.parents))
+
+
+def _is_repository_metadata(relative_path: Path) -> bool:
+    """Exclude only the checkout's known agent metadata symlink paths."""
+    return relative_path == Path("CLAUDE.md") or relative_path.parts[:1] == (".claude",)
 
 
 def _target_relative(ctx: Context) -> Path | None:
