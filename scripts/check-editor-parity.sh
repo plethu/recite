@@ -552,6 +552,15 @@ for capability_id, capability in capability_map.items():
             require(client_map[client_id].get("status") in {"partial", "implemented"}, f"capability {capability_id} overstates {client_id} while its client remains planned")
     require(re.fullmatch(r"#[1-9][0-9]*", capability.get("follow_up", "")) is not None, f"capability {capability_id} must name a follow-up issue")
 
+
+filetype_capability = capability_map.get("editor.filetype.registration", {})
+filetype_evidence = filetype_capability.get("expected_evidence", {})
+filetype_commands = filetype_evidence.get("commands") or ([filetype_evidence.get("command")] if filetype_evidence.get("command") else [])
+if "scripts/check-neovim.sh" in filetype_commands:
+    limitation = str(filetype_capability.get("known_limitation", "")).lower()
+    require("no client package or activation" not in limitation, "Neovim filetype evidence cannot retain stale no-activation wording")
+    require(filetype_capability.get("platform_status", {}).get("linux") in {"partial", "implemented"}, "Neovim filetype evidence needs Linux support status")
+
 try:
     document = document_path.read_text(encoding="utf-8")
 except OSError as error:

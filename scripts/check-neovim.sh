@@ -95,10 +95,10 @@ if [[ -z "$nvim_version" ]]; then
   exit 2
 fi
 if [[ "$(printf '%s\n' '0.10.4' "$nvim_version" | sort -V | head -n1)" != "0.10.4" ]]; then
-  echo "Neovim $nvim_version is below the supported minimum 0.10.4" >&2
+  echo "Neovim $nvim_version is below the 0.10.4 compatibility target" >&2
   exit 1
 fi
-echo "Neovim $nvim_version (minimum supported: 0.10.4; current pinned smoke: 0.12.5)"
+echo "Neovim $nvim_version (compatibility target: 0.10.4; current pinned smoke: 0.12.5)"
 
 scratch="$(mktemp -d "${TMPDIR:-/tmp}/recite-neovim.XXXXXX")"
 cleanup() {
@@ -106,10 +106,30 @@ cleanup() {
 }
 trap cleanup EXIT
 project="$scratch/project"
-mkdir -p "$project"
+second_project="$scratch/second-project"
+invalid_project="$scratch/invalid-project"
+missing_project="$scratch/missing-project"
+unicode_project="$scratch/unicode-project"
+mkdir -p "$project" "$second_project" "$invalid_project" "$missing_project" "$unicode_project"
 cp "$repo_root/fixtures/recite/valid/core_language_spike.recite" "$project/core_language_spike.recite"
-cp "$repo_root/fixtures/recite/invalid/parser_marker_leading_prose.recite" "$project/invalid.recite"
+cp "$repo_root/fixtures/recite/invalid/parser_marker_leading_prose.recite" "$invalid_project/invalid.recite"
+sed 's/> intro_001@637b1854a7f3ed42f045 speaker=hazel mood=calm mood=alert/>/' \
+  "$repo_root/fixtures/recite/valid/core_language_spike.recite" > "$missing_project/missing.recite"
 printf '%s\n' 'format_version = 1' > "$project/recite.project.toml"
+printf '%s\r\n' \
+  ':: marker_probe default' \
+  '> sign@88990011223344556677' \
+  '  -> 😀East, if you can read it.' \
+  '  :if this is a sentence, not a branch.' \
+  '  # ash marks the lintel.' \
+  '  ? ask@99aabbccddeeff001122' \
+    '    Ask what the sign means.' \
+    '    -> END' > "$unicode_project/unicode.recite"
+cp "$repo_root/fixtures/recite/valid/core_language_spike.recite" "$second_project/core_language_spike.recite"
+printf '%s\n' 'format_version = 1' > "$second_project/recite.project.toml"
+for isolated_project in "$invalid_project" "$missing_project" "$unicode_project"; do
+  printf '%s\n' 'format_version = 1' > "$isolated_project/recite.project.toml"
+done
 
 echo "== Neovim headless filetype/LSP checks =="
 "$cargo_bin" build --locked -q -p recite-lsp
@@ -129,6 +149,10 @@ RECITE_PLUGIN="$plugin_root" \
 RECITE_PARSER_ROOT="$parser_root" \
 RECITE_LSP="$repo_root/target/debug/recite-lsp" \
 RECITE_TEST_PROJECT="$project" \
+RECITE_SECOND_PROJECT="$second_project" \
+RECITE_INVALID_PROJECT="$invalid_project" \
+RECITE_MISSING_PROJECT="$missing_project" \
+RECITE_UNICODE_PROJECT="$unicode_project" \
 RECITE_PARSER_AVAILABLE="$parser_available" \
   env -u RECITE_CONFIG XDG_CONFIG_HOME="$scratch/config" XDG_STATE_HOME="$scratch/state" \
     "$nvim_bin" --headless -u "$repo_root/tests/neovim/preload.lua" -i NONE -n \

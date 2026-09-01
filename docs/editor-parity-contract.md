@@ -150,8 +150,9 @@ Linux, macOS, and Windows are intended first-class desktop platforms. This
 contract records support claims separately so a Linux test run cannot imply
 Windows or macOS packaging evidence. At this checkpoint the shared LSP has
 partial protocol evidence on Linux only. The Neovim runtimepath source is
-checked in and exercised on Linux with Neovim 0.12.5 (minimum supported version
-0.10.4); no packaged distribution is claimed.
+checked in and exercised on Linux with Neovim 0.12.5. Neovim 0.10.4 is an
+explicit compatibility target not yet executed in this checkout; no packaged
+distribution is claimed.
 
 | Client | Shared artifact | Linux | macOS | Windows | Status |
 | --- | --- | --- | --- | --- | --- |

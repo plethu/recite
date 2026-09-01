@@ -152,6 +152,10 @@ elif mutation == "stale-evidence":
 elif mutation == "stale-module-evidence":
     capability = next(capability for capability in contract["capabilities"] if capability["id"] == "command.structured.results")
     capability["expected_evidence"]["command"] = "cargo test --locked -p recite-compiler --test authoring_build invented::projects_every_lifecycle_state_with_stable_fields"
+elif mutation == "neovim-stale-filetype":
+    capability = next(capability for capability in contract["capabilities"] if capability["id"] == "editor.filetype.registration")
+    capability["known_limitation"] = "No client package or activation registration exists."
+    capability["platform_status"]["linux"] = "planned"
 elif mutation == "disconnected-module":
     fixture_repo = Path(path).parents[2]
     root = fixture_repo / "crates/recite-compiler/tests/authoring_build.rs"
@@ -227,6 +231,7 @@ expect_failure malformed "evidence command must name a cargo integration test an
 expect_failure stale-evidence "evidence command does not name an existing runnable test"
 expect_failure stale-module-evidence "evidence command does not name an existing runnable test"
 expect_failure disconnected-module "evidence command does not name an existing runnable test discovered by Cargo"
+expect_failure neovim-stale-filetype "Neovim filetype evidence cannot retain stale no-activation wording"
 assert_single_parity_cache
 expect_failure reciprocity "artifact vscode-vsix client list must exactly reciprocate"
 expect_failure topology "VS Code and VSCodium must share one VSIX artifact topology"

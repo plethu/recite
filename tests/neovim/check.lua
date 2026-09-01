@@ -18,7 +18,8 @@ end
 
 local project = vim.env.RECITE_TEST_PROJECT
 local valid = project .. "/core_language_spike.recite"
-local invalid = project .. "/invalid.recite"
+local invalid_project = vim.env.RECITE_INVALID_PROJECT
+local invalid = invalid_project .. "/invalid.recite"
 
 vim.cmd("filetype on")
 vim.cmd("edit " .. escaped(valid))
@@ -72,7 +73,7 @@ assert_true(client.offset_encoding == "utf-16", "recite-lsp did not negotiate UT
 assert_true(client.config.cmd[1] == vim.env.RECITE_LSP, "pre-load options were not applied by the automatic plugin entry")
 
 local uri = vim.uri_from_fname(valid)
-local target = { line = 6, character = 8 }
+local target = { line = 6, character = 7 }
 local completion = request(client, "textDocument/completion", {
   textDocument = { uri = uri },
   position = { line = 6, character = 9 },
@@ -106,6 +107,12 @@ local references = request(client, "textDocument/references", {
   context = { includeDeclaration = true },
 })
 assert_true(type(references) == "table" and #references == 2, "references response was not source ordered")
+assert_true(references[1].uri == uri and references[1].range.start.line == 13
+  and references[1].range.start.character == 3 and references[1].range["end"].line == 13
+  and references[1].range["end"].character == 7, "references did not put the declaration first")
+assert_true(references[2].uri == uri and references[2].range.start.line == 6
+  and references[2].range.start.character == 7 and references[2].range["end"].line == 6
+  and references[2].range["end"].character == 11, "references did not preserve source order")
 
 local prepared = request(client, "textDocument/prepareRename", {
   textDocument = { uri = uri },
@@ -117,18 +124,50 @@ local rename = request(client, "textDocument/rename", {
   position = target,
   newName = "renamed",
 })
-if rename ~= nil then
-  assert_true(type(rename) == "table" and type(rename.documentChanges) == "table", "rename response was not a safe document change")
-  assert_true(rename.documentChanges[1].textDocument.version == 1, "rename omitted the source version")
-end
+assert_true(type(rename) == "table" and type(rename.documentChanges) == "table", "rename response was not a safe document change: " .. vim.inspect(rename))
+assert_true(#rename.documentChanges == 1, "rename returned an unexpected number of document changes")
+assert_true(rename.documentChanges[1].textDocument.uri == uri, "rename changed the source URI")
+assert_true(rename.documentChanges[1].textDocument.version ~= nil, "rename omitted the source version: " .. vim.inspect(rename))
+local rename_edits = rename.documentChanges[1].edits
+assert_true(#rename_edits == 2, "rename returned an unexpected number of edits")
+assert_true(rename_edits[1].range.start.line == 6 and rename_edits[1].range.start.character == 7
+  and rename_edits[1].range["end"].line == 6 and rename_edits[1].range["end"].character == 11
+  and rename_edits[1].newText == "renamed", "rename reference edit was not exact")
+assert_true(rename_edits[2].range.start.line == 13 and rename_edits[2].range.start.character == 3
+  and rename_edits[2].range["end"].line == 13 and rename_edits[2].range["end"].character == 7
+  and rename_edits[2].newText == "renamed", "rename declaration edit was not exact")
 assert_true(vim.api.nvim_buf_get_lines(0, 0, -1, false)[7]:find("work", 1, true) ~= nil, "rename request mutated the buffer")
 
+local missing = vim.env.RECITE_MISSING_PROJECT .. "/missing.recite"
+vim.cmd("edit " .. escaped(missing))
+wait_for(function()
+  clients = vim.lsp.get_clients({ bufnr = 0, name = "recite-lsp" })
+  return #clients > 0 and clients[1].initialized and #vim.diagnostic.get(0) > 0
+end, "missing-ID fixture did not publish diagnostics")
+client = clients[1]
+local missing_uri = vim.uri_from_fname(missing)
+local missing_diagnostics = vim.diagnostic.get(0)
+local missing_id_diagnostic
+for _, item in ipairs(missing_diagnostics) do
+  if item.code == "RECITE_ID001" or item.user_data.lsp.code == "RECITE_ID001" then
+    missing_id_diagnostic = item.user_data.lsp
+  end
+end
+assert_true(missing_id_diagnostic ~= nil, "missing-ID diagnostic omitted RECITE_ID001")
 local actions = request(client, "textDocument/codeAction", {
-  textDocument = { uri = uri },
-  range = { start = target, ["end"] = { line = 6, character = 12 } },
-  context = { diagnostics = {} },
+  textDocument = { uri = missing_uri },
+  range = { start = { line = 2, character = 0 }, ["end"] = { line = 2, character = 1 } },
+  context = { diagnostics = { missing_id_diagnostic }, only = { "quickfix" } },
 })
-assert_true(actions == nil or type(actions) == "table", "code action response was not safe")
+assert_true(type(actions) == "table" and #actions > 0, "code action response omitted the missing-ID quickfix")
+local action = actions[1]
+local change = action.edit.documentChanges[1]
+assert_true(action.kind == "quickfix", "missing-ID code action was not a quickfix")
+assert_true(change.textDocument.uri == missing_uri and change.textDocument.version ~= nil, "code action edit did not preserve the source version: " .. vim.inspect(actions))
+assert_true(#change.edits == 1, "missing-ID code action returned unexpected edits")
+assert_true(change.edits[1].range.start.line == 2 and change.edits[1].range.start.character == 1,
+  "missing-ID code action targeted the wrong insertion point")
+assert_true(change.edits[1].newText == " line@34e5ee56e949afa2bbf3", "missing-ID code action invented the wrong stable ID: " .. vim.inspect(actions))
 
 vim.cmd("edit " .. escaped(invalid))
 assert_true(vim.bo.filetype == "recite", "invalid .recite file lost its filetype")
@@ -136,7 +175,7 @@ wait_for(function()
   clients = vim.lsp.get_clients({ bufnr = 0, name = "recite-lsp" })
   return #clients > 0 and clients[1].initialized
 end, "recite-lsp did not attach to the Recite buffer")
-assert_true(clients[1].config.root_dir == project, "recite-lsp received the wrong project root")
+assert_true(clients[1].config.root_dir == invalid_project, "recite-lsp received the wrong project root")
 assert_true(clients[1].offset_encoding == "utf-16", "recite-lsp did not negotiate UTF-16 positions")
 
 wait_for(function()
@@ -152,6 +191,33 @@ assert_true(type(diagnostic.lnum) == "number", "diagnostic did not contain a lin
 assert_true(type(diagnostic.col) == "number", "diagnostic did not contain a column position")
 assert_true(type(diagnostic.message) == "string", "diagnostic did not contain a message")
 
+vim.api.nvim_buf_set_lines(0, 0, -1, false, {
+  ":: start default",
+  ">",
+  "  Hello.",
+  "?",
+  "  Stay.",
+})
+wait_for(function()
+  return #vim.diagnostic.get(0) > 0
+end, "missing-ID fixture did not publish diagnostics")
+vim.cmd("edit " .. escaped(vim.env.RECITE_UNICODE_PROJECT .. "/unicode.recite"))
+assert_true(vim.bo.fileformat == "dos", "CRLF fixture was not opened with DOS line endings")
+wait_for(function()
+  return #vim.diagnostic.get(0) > 0
+end, "CRLF/non-BMP fixture did not publish diagnostics")
+local unicode_diagnostic
+for _, item in ipairs(vim.diagnostic.get(0)) do
+  if item.lnum == 2 then
+    unicode_diagnostic = item
+  end
+end
+assert_true(unicode_diagnostic ~= nil, "unicode diagnostic was not positioned on the malformed line")
+assert_true(unicode_diagnostic.col == 15, "Neovim did not project UTF-16 diagnostics to the expected byte column: " .. vim.inspect(unicode_diagnostic))
+assert_true(unicode_diagnostic.user_data.lsp.range.start.character == 13, "the server did not retain the UTF-16 wire range")
+
+clients = vim.lsp.get_clients({ bufnr = 0, name = "recite-lsp" })
+assert_true(#clients > 0 and clients[1].initialized, "unicode buffer lost its initialized client")
 local old_client_id = clients[1].id
 local callback_seen = false
 local capabilities = { workspace = { configuration = true } }
@@ -178,15 +244,95 @@ assert_true(client.config.capabilities.workspace.configuration == true, "capabil
 
 local client_id = client.id
 assert_true(vim.lsp.get_client_by_id(client_id) ~= nil, "recite-lsp disappeared before shutdown")
-recite.stop(client_id)
+
+local buffer_a = vim.fn.bufnr(valid)
 wait_for(function()
-  return vim.lsp.get_client_by_id(client_id) == nil
-end, "recite-lsp did not shut down cleanly")
--- The callback is delivered asynchronously by Neovim; observe it without
--- allowing an intentional stop to trigger crash recovery.
+  local candidates = vim.lsp.get_clients({ bufnr = buffer_a, name = "recite-lsp" })
+  return #candidates > 0 and candidates[1].initialized
+end, "the first project buffer lost its client")
+local client_a = vim.lsp.get_clients({ bufnr = buffer_a, name = "recite-lsp" })[1]
+vim.cmd("edit " .. escaped(vim.env.RECITE_SECOND_PROJECT .. "/core_language_spike.recite"))
+local buffer_b = vim.api.nvim_get_current_buf()
+wait_for(function()
+  clients = vim.lsp.get_clients({ bufnr = buffer_b, name = "recite-lsp" })
+  return #clients > 0 and clients[1].initialized
+end, "second project did not receive a separate Recite client")
+local client_b = clients[1]
+assert_true(client_b.config.root_dir == vim.env.RECITE_SECOND_PROJECT, "second project root was not isolated")
+assert_true(client_b.id ~= client_a.id, "separate project roots shared a client")
+
+-- A same-name/root client started by a caller remains external ownership.
+local external_id = vim.lsp.start({
+  name = "recite-lsp",
+  cmd = { vim.env.RECITE_LSP },
+  root_dir = vim.env.RECITE_SECOND_PROJECT,
+}, { bufnr = buffer_b, reuse_client = function() return false end })
+wait_for(function()
+  local external = vim.lsp.get_client_by_id(external_id)
+  return external ~= nil and external.initialized
+end, "external same-root probe did not initialize")
+local reused_id = recite.start(buffer_b)
+assert_true(reused_id == client_b.id, "Recite did not reuse its owned same-root client")
+assert_true(vim.lsp.get_client_by_id(external_id) ~= nil, "external same-root client was adopted or stopped")
+assert_true(recite.stop(external_id) == false, "Recite claimed ownership of an external client")
+vim.lsp.get_client_by_id(external_id):stop(true)
+
+-- A configured root_dir must be used when recovering every open buffer.
+recite.setup({
+  lsp = {
+    root_dir = function(bufnr)
+      return vim.fn.fnamemodify(vim.api.nvim_buf_get_name(bufnr), ":p:h")
+    end,
+  },
+})
+wait_for(function()
+  local a = vim.lsp.get_clients({ bufnr = buffer_a, name = "recite-lsp" })
+  local b = vim.lsp.get_clients({ bufnr = buffer_b, name = "recite-lsp" })
+  return #a > 0 and a[1].initialized and #b > 0 and b[1].initialized
+end, "configured root_dir did not reattach both project buffers")
+client_a = vim.lsp.get_clients({ bufnr = buffer_a, name = "recite-lsp" })[1]
+client_b = vim.lsp.get_clients({ bufnr = buffer_b, name = "recite-lsp" })[1]
+local crashed_a, crashed_b = client_a.id, client_b.id
+assert_true(client_a.rpc and client_a.rpc.terminate, "Neovim RPC crash probe is unavailable")
+assert_true(client_b.rpc and client_b.rpc.terminate, "Neovim RPC crash probe is unavailable")
+client_a.rpc:terminate()
+client_b.rpc:terminate()
+local restarted_a, restarted_b
+wait_for(function()
+  restarted_a = vim.lsp.get_clients({ bufnr = buffer_a, name = "recite-lsp" })
+  restarted_b = vim.lsp.get_clients({ bufnr = buffer_b, name = "recite-lsp" })
+  return #restarted_a > 0 and restarted_a[1].initialized and restarted_a[1].id ~= crashed_a
+    and #restarted_b > 0 and restarted_b[1].initialized and restarted_b[1].id ~= crashed_b
+end, "crash recovery did not reattach every open project buffer")
+
+-- Wait past the stability window, then verify the next crash uses the first
+-- backoff interval rather than accumulating an old retry count.
+vim.wait(1_300, function() return false end, 50)
+local stable_client = restarted_b[1]
+local stable_id = stable_client.id
+local clock = vim.uv or vim.loop
+local crash_time = clock.hrtime()
+stable_client.rpc:terminate()
+local stable_restart
+wait_for(function()
+  local candidates = vim.lsp.get_clients({ bufnr = buffer_b, name = "recite-lsp" })
+  stable_restart = candidates[1]
+  return stable_restart ~= nil and stable_restart.initialized and stable_restart.id ~= stable_id
+end, "stable client did not recover after a second crash")
+assert_true((clock.hrtime() - crash_time) / 1e6 < 500, "stable recovery retained an excessive backoff")
+
+for _, id in ipairs({
+  vim.lsp.get_clients({ bufnr = buffer_a, name = "recite-lsp" })[1].id,
+  vim.lsp.get_clients({ bufnr = buffer_b, name = "recite-lsp" })[1].id,
+}) do
+  assert_true(recite.stop(id), "owned client did not accept intentional stop")
+end
+wait_for(function()
+  return #vim.lsp.get_clients({ bufnr = buffer_a, name = "recite-lsp" }) == 0
+    and #vim.lsp.get_clients({ bufnr = buffer_b, name = "recite-lsp" }) == 0
+end, "intentional shutdown did not stop all owned clients")
 wait_for(function()
   return callback_seen
 end, "caller on_exit was not preserved")
-assert_true(#vim.lsp.get_clients({ bufnr = 0, name = "recite-lsp" }) == 0, "intentional shutdown restarted the client")
 
 vim.cmd("qa!")
