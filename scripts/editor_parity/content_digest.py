@@ -1,6 +1,7 @@
 """Content inputs used to invalidate selected Cargo test targets."""
 
 import hashlib
+import os
 from pathlib import Path
 
 from .model import Context
@@ -8,33 +9,17 @@ from .paths import require_no_symlink_components
 
 
 def selected_target_digest(ctx: Context, package: str) -> str:
-    """Hash workspace manifests and all Rust sources in the selected package.
+    """Hash the repository files visible to the selected Cargo workspace.
 
     Cargo remains responsible for parsing Rust and discovering tests. The digest
     is only an explicit rustc argument, ensuring a restored source mtime cannot
-    make Cargo reuse a stale selected test executable.
+    make Cargo reuse a stale selected test executable. ``package`` remains part
+    of the interface because the digest is attached to one selected target;
+    inputs are deliberately conservative so include and build-script syntax is
+    not reimplemented here.
     """
-    inputs: list[Path] = []
-    manifests = [ctx.repo_root / "Cargo.toml"]
-    crates_root = ctx.repo_root / "crates"
-    if crates_root.is_dir():
-        manifests.extend(crates_root.rglob("Cargo.toml"))
-    for path in sorted(set(manifests)):
-        if path.is_file() and _safe_input(ctx, path, "Cargo manifest"):
-            inputs.append(path)
-    lockfile = ctx.repo_root / "Cargo.lock"
-    if lockfile.is_file() and _safe_input(ctx, lockfile, "Cargo lockfile"):
-        inputs.append(lockfile)
-
-    package_root = ctx.repo_root / "crates" / package
-    if not package_root.is_dir():
-        ctx.require(False, f"evidence package source directory does not exist: {package}")
-    else:
-        for path in sorted(package_root.rglob("*.rs")):
-            if _ignored(path):
-                continue
-            if path.is_file() and _safe_input(ctx, path, f"{package} Rust source"):
-                inputs.append(path)
+    del package
+    inputs = workspace_files(ctx)
 
     digest = hashlib.sha256()
     for path in inputs:
@@ -51,8 +36,37 @@ def selected_target_digest(ctx: Context, package: str) -> str:
     return digest.hexdigest()
 
 
-def _ignored(path: Path) -> bool:
-    return any(part in {".git", "target", "node_modules"} for part in path.parts)
+def workspace_files(ctx: Context) -> list[Path]:
+    inputs: list[Path] = []
+    for root, directories, filenames in os.walk(ctx.repo_root, topdown=True, followlinks=False):
+        root_path = Path(root)
+        relative_root = root_path.relative_to(ctx.repo_root)
+        directories[:] = [
+            directory
+            for directory in directories
+            if not _ignored(ctx, relative_root / directory)
+        ]
+        for filename in filenames:
+            path = root_path / filename
+            if _ignored(ctx, path.relative_to(ctx.repo_root)) or path.is_symlink():
+                continue
+            if path.is_file() and _safe_input(ctx, path, "workspace digest input"):
+                inputs.append(path)
+    return sorted(inputs, key=lambda path: path.relative_to(ctx.repo_root).as_posix())
+
+
+def _ignored(ctx: Context, relative_path: Path) -> bool:
+    if any(part in {".git", "node_modules"} for part in relative_path.parts):
+        return True
+    target_relative = _target_relative(ctx)
+    return bool(target_relative and (relative_path == target_relative or target_relative in relative_path.parents))
+
+
+def _target_relative(ctx: Context) -> Path | None:
+    try:
+        return ctx.cargo_target_dir.resolve().relative_to(ctx.repo_root)
+    except ValueError:
+        return None
 
 
 def _safe_input(ctx: Context, path: Path, label: str) -> bool:

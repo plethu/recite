@@ -5,7 +5,7 @@ repo_root="$(cd "$(dirname "${BASH_SOURCE[0]}")/../.." && pwd)"
 test_root="$(mktemp -d)"
 trap 'rm -rf "$test_root"' EXIT
 
-fixture_repo="$test_root/repo"
+fixture_repo="$test_root/target/repo"
 mkdir -p "$fixture_repo/docs" "$fixture_repo/fixtures/editor-parity" \
   "$fixture_repo/fixtures/recite/valid" "$fixture_repo/fixtures/recite/invalid" \
   "$fixture_repo/fixtures/schema/valid" "$fixture_repo/scripts" \
@@ -220,7 +220,10 @@ expect_failure() {
   fi
   echo "editor parity hostile fixture rejected: $mutation"
   git -C "$fixture_repo" checkout -q -- fixtures/editor-parity/contract.json \
-    docs/editor-parity-contract.md crates/recite-compiler/tests/authoring_build.rs
+    docs/editor-parity-contract.md crates/recite-compiler/tests/authoring_build.rs \
+    crates/recite-compiler/tests/authoring_catalog_summary.rs \
+    crates/recite-lsp/tests/module_tests.inc crates/recite-lsp/build.rs \
+    shared-build.inc shared_workspace.rs
 }
 
 expect_failure traversal "path escapes the repository"
@@ -234,6 +237,10 @@ expect_failure stale-evidence "evidence command does not name an existing runnab
 expect_failure stale-module-evidence "evidence command does not name an existing runnable test"
 expect_failure preserved-mtime-disconnected-module "evidence target has no Cargo-discovered runnable tests"
 expect_failure block-commented-stale-test "evidence target has no Cargo-discovered runnable tests"
+expect_failure block-commented-include-test "evidence command does not name an existing runnable test discovered by Cargo"
+expect_failure build-input "cargo test-target compilation failed"
+expect_failure shared-build-input "cargo test-target compilation failed"
+expect_failure shared-workspace-input "cargo test-target compilation failed"
 expect_failure evidence-traversal "evidence target escapes the repository"
 expect_failure orphan-utf16 "orphaned=['orphan-utf16-crlf-non-bmp']"
 expect_failure disconnected-module "evidence command does not name an existing runnable test discovered by Cargo"

@@ -60,10 +60,41 @@ def main() -> int:
         if original not in source:
             raise SystemExit("catalogue test was not present")
         restore_mtime(root, source.replace(original, replacement, 1))
+    elif mutation == "block-commented-include-test":
+        set_module_shapes_command(contract)
+        root = fixture_repo / "crates/recite-lsp/tests/module_tests.inc"
+        source = root.read_text(encoding="utf-8")
+        original = "        #[test]\n        fn nested_test() {}"
+        replacement = "        /* #[test]\n        fn nested_test() {} */"
+        if original not in source:
+            raise SystemExit("included nested test was not present")
+        restore_mtime(root, source.replace(original, replacement, 1))
+    elif mutation == "build-input":
+        set_module_shapes_command(contract)
+        root = fixture_repo / "crates/recite-lsp/build.rs"
+        source = root.read_text(encoding="utf-8")
+        original = 'include!("../../shared-build.inc");'
+        if original not in source:
+            raise SystemExit("build input include was not present")
+        restore_mtime(root, source.replace(original, f"/* {original} */", 1))
+    elif mutation == "shared-build-input":
+        set_module_shapes_command(contract)
+        root = fixture_repo / "shared-build.inc"
+        source = root.read_text(encoding="utf-8")
+        original = 'pub const BUILD_SHARED: &str = "build input";'
+        if original not in source:
+            raise SystemExit("shared build input was not present")
+        restore_mtime(root, source.replace(original, f"/* {original} */", 1))
+    elif mutation == "shared-workspace-input":
+        set_module_shapes_command(contract)
+        root = fixture_repo / "shared_workspace.rs"
+        source = root.read_text(encoding="utf-8")
+        original = 'pub const WORKSPACE_SHARED: &str = "workspace input";'
+        if original not in source:
+            raise SystemExit("shared workspace input was not present")
+        restore_mtime(root, source.replace(original, f"/* {original} */", 1))
     elif mutation == "module-shapes":
-        record(contract, "capabilities", "lsp.completion")["expected_evidence"]["commands"][0] = (
-            "cargo test --locked -p recite-lsp --test module_shapes inline::nested::nested_test"
-        )
+        set_module_shapes_command(contract)
     elif mutation == "evidence-traversal":
         evidence = record(contract, "capabilities", "lsp.completion")["expected_evidence"]
         evidence.pop("commands", None)
@@ -170,6 +201,12 @@ def restore_mtime(path: Path, content: str) -> None:
     original_stat = path.stat()
     path.write_text(content, encoding="utf-8")
     os.utime(path, ns=(original_stat.st_atime_ns, original_stat.st_mtime_ns))
+
+
+def set_module_shapes_command(contract: dict) -> None:
+    record(contract, "capabilities", "lsp.completion")["expected_evidence"]["commands"][0] = (
+        "cargo test --locked -p recite-lsp --test module_shapes inline::nested::nested_test"
+    )
 
 
 if __name__ == "__main__":
