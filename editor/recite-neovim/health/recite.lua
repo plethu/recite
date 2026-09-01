@@ -1,4 +1,5 @@
 local M = {}
+local messages = require("recite_messages")
 
 local function health_api()
   if vim.health then
@@ -16,44 +17,44 @@ end
 
 function M.check()
   local health = health_api()
-  health.start("Recite")
+  health.start(messages.format("lsp-client-display-name"))
 
   local ok, filetype = pcall(vim.filetype.match, { filename = "health.recite" })
   if ok and filetype == "recite" then
-    health.ok(".recite files use the recite filetype")
+    health.ok(messages.format("neovim-health-filetype-ok"))
   else
-    health.error(".recite filetype registration is unavailable")
+    health.error(messages.format("neovim-health-filetype-error"))
   end
 
   local config = require("recite")
   local command = command_name(config.command())
   if vim.fn.executable(command) == 1 then
-    health.ok(("language server executable found: %s"):format(command))
+    health.ok(messages.format("neovim-health-lsp-executable-found", { command = command }))
   else
-    health.warn(("language server executable not found: %s"):format(command))
-    health.info("Install recite-lsp or set lsp.cmd in require('recite').setup")
+    health.warn(messages.format("neovim-health-lsp-executable-missing", { command = command }))
+    health.info(messages.format("neovim-health-lsp-install"))
   end
 
   local query = vim.api.nvim_get_runtime_file("queries/recite/highlights.scm", true)
   if #query > 0 then
-    health.ok("Tree-sitter highlight query is on runtimepath")
+    health.ok(messages.format("neovim-health-query-found"))
   else
-    health.warn("Tree-sitter highlight query is not on runtimepath")
+    health.warn(messages.format("neovim-health-query-missing"))
   end
 
   local parser = vim.api.nvim_get_runtime_file("parser/recite.*", true)
   if #parser > 0 then
-    health.ok("Tree-sitter parser is on runtimepath")
+    health.ok(messages.format("neovim-health-parser-found"))
   else
-    health.warn("Tree-sitter parser is not built or is not on runtimepath")
-    health.info("Build it from editor/recite-tree-sitter; see editor/recite-neovim/README.md")
+    health.warn(messages.format("neovim-health-parser-missing"))
+    health.info(messages.format("neovim-health-parser-build"))
   end
 
   local bufnr = vim.api.nvim_get_current_buf()
   if vim.bo[bufnr].filetype == "recite" then
-    health.ok(("current project root: %s"):format(config.root_dir(bufnr)))
+    health.ok(messages.format("neovim-health-current-root", { root = config.root_dir(bufnr) }))
   else
-    health.info("Open a .recite buffer to inspect its project root")
+    health.info(messages.format("neovim-health-open-buffer"))
   end
 end
 

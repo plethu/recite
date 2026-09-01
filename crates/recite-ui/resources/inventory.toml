@@ -373,6 +373,20 @@ resource_ids = [
 "lsp-client-config-project-root-invalid",
 "lsp-client-config-project-root-needs-workspace",
 "lsp-client-not-running",
+"neovim-autocmd-description",
+"neovim-callback-failed",
+"neovim-health-filetype-ok",
+"neovim-health-filetype-error",
+"neovim-health-lsp-executable-found",
+"neovim-health-lsp-executable-missing",
+"neovim-health-lsp-install",
+"neovim-health-query-found",
+"neovim-health-query-missing",
+"neovim-health-parser-found",
+"neovim-health-parser-missing",
+"neovim-health-parser-build",
+"neovim-health-current-root",
+"neovim-health-open-buffer",
 ]
 
 # The complete future default-code presentation registry is explicit. Parser
@@ -490,7 +504,7 @@ shipped = false
 
 [clients.neovim]
 name = "Neovim"
-shipped = false
+shipped = true
 
 [clients.zed]
 name = "Zed"
@@ -502,3 +516,25 @@ shipped = false
 
 [projections]
 rule = "read-only; each host projection records its source resource ID"
+
+[projections.neovim]
+source_resource = "en-US.ftl"
+output = "editor/recite-neovim/lua/recite_messages.lua"
+ids = [
+"lsp-client-display-name",
+"lsp-client-restart-exhausted",
+"neovim-autocmd-description",
+"neovim-callback-failed",
+"neovim-health-filetype-ok",
+"neovim-health-filetype-error",
+"neovim-health-lsp-executable-found",
+"neovim-health-lsp-executable-missing",
+"neovim-health-lsp-install",
+"neovim-health-query-found",
+"neovim-health-query-missing",
+"neovim-health-parser-found",
+"neovim-health-parser-missing",
+"neovim-health-parser-build",
+"neovim-health-current-root",
+"neovim-health-open-buffer",
+]

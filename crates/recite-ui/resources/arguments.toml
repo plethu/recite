@@ -413,3 +413,12 @@ block = "string"
 name = "string"
 [arguments."lsp-code-action-add-effect"]
 name = "string"
+[arguments."neovim-callback-failed"]
+kind = "string"
+detail = "string"
+[arguments."neovim-health-lsp-executable-found"]
+command = "string"
+[arguments."neovim-health-lsp-executable-missing"]
+command = "string"
+[arguments."neovim-health-current-root"]
+root = "string"

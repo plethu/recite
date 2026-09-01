@@ -42,7 +42,7 @@ pub const CLIENT_INVENTORY: &[ClientSpec] = &[
     ClientSpec::new(Client::Lsp, "LSP", true),
     ClientSpec::new(Client::VsCode, "VS Code", false),
     ClientSpec::new(Client::VsCodium, "VSCodium", false),
-    ClientSpec::new(Client::Neovim, "Neovim", false),
+    ClientSpec::new(Client::Neovim, "Neovim", true),
     ClientSpec::new(Client::Zed, "Zed", false),
     ClientSpec::new(Client::NativeGui, "native GUI", false),
 ];

@@ -5,11 +5,13 @@ use super::{Client, MsgId};
 include!("ownership/cli.rs");
 include!("ownership/tui.rs");
 include!("ownership/lsp.rs");
+include!("ownership/neovim.rs");
 
 pub(super) const fn clients(id: MsgId) -> &'static [Client] {
     match id {
         tui_message_ids!() => &[Client::Tui],
         lsp_message_ids!() => &[Client::Lsp],
+        neovim_message_ids!() => &[Client::Neovim],
         cli_message_ids!() => &[Client::Cli],
     }
 }

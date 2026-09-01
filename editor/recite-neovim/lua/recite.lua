@@ -1,4 +1,8 @@
 local M = {}
+local messages = require("recite_messages")
+
+local RESTART_LIMIT = 3
+local RESTART_STABILITY_MS = 1000
 
 local defaults = {
   lsp = {
@@ -15,8 +19,18 @@ local state = {
   augroup = nil,
   config = vim.deepcopy(defaults),
   clients = {},
+  pending_restarts = {},
   restart_attempts = {},
+  restart_generation = 0,
 }
+
+local function stop_timer(timer)
+  if type(timer) == "number" then
+    vim.fn.timer_stop(timer)
+  elseif timer then
+    pcall(timer.stop, timer)
+  end
+end
 
 local function join_path(parent, child)
   if vim.fs and vim.fs.joinpath then
@@ -94,12 +108,29 @@ local function replace_config(options)
 end
 
 local function stop_owned_clients()
+  for lifecycle in pairs(state.pending_restarts) do
+    lifecycle.intentional = true
+    if lifecycle.timer then
+      stop_timer(lifecycle.timer)
+      lifecycle.timer = nil
+    end
+    if lifecycle.stability_timer then
+      stop_timer(lifecycle.stability_timer)
+      lifecycle.stability_timer = nil
+    end
+    state.pending_restarts[lifecycle] = nil
+  end
+
   for client_id, lifecycle in pairs(state.clients) do
     lifecycle.intentional = true
     state.restart_attempts[lifecycle.root] = 0
     if lifecycle.timer then
-      vim.fn.timer_stop(lifecycle.timer)
+      stop_timer(lifecycle.timer)
       lifecycle.timer = nil
+    end
+    if lifecycle.stability_timer then
+      stop_timer(lifecycle.stability_timer)
+      lifecycle.stability_timer = nil
     end
     local client = vim.lsp.get_client_by_id(client_id)
     if client then
@@ -113,8 +144,15 @@ local function report_callback_error(kind, callback_error)
   -- Callback failures belong to the caller, but they must remain visible when
   -- the integration recovers its own lifecycle.  Keep reporting best effort:
   -- a notification backend is also caller-provided code.
-  local message = string.format("Recite %s callback failed: %s", kind, callback_error)
+  local message = messages.format("neovim-callback-failed", {
+    kind = kind,
+    detail = callback_error,
+  })
   pcall(vim.notify, message, vim.log.levels.ERROR)
+end
+
+local function report_restart_exhausted()
+  pcall(vim.notify, messages.format("lsp-client-restart-exhausted"), vim.log.levels.ERROR)
 end
 
 local function invoke_callback(kind, callback, ...)
@@ -149,12 +187,17 @@ local function has_open_buffer(root, lsp)
 end
 
 local function schedule_restart(lifecycle)
+  local generation = lifecycle.generation
   vim.schedule(function()
-    if lifecycle.intentional or lifecycle.attempts >= 3 then
+    if lifecycle.intentional or generation ~= state.restart_generation then
       return
     end
     local buffers = has_open_buffer(lifecycle.root, state.config.lsp)
     if #buffers == 0 then
+      return
+    end
+    if lifecycle.attempts >= RESTART_LIMIT then
+      report_restart_exhausted()
       return
     end
     lifecycle.attempts = lifecycle.attempts + 1
@@ -162,8 +205,9 @@ local function schedule_restart(lifecycle)
     local delay = math.min(2000, 100 * (2 ^ (lifecycle.attempts - 1)))
     lifecycle.timer = vim.defer_fn(function()
       lifecycle.timer = nil
+      state.pending_restarts[lifecycle] = nil
       vim.schedule(function()
-        if lifecycle.intentional then
+        if lifecycle.intentional or generation ~= state.restart_generation then
           return
         end
         for _, bufnr in ipairs(has_open_buffer(lifecycle.root, state.config.lsp)) do
@@ -171,6 +215,7 @@ local function schedule_restart(lifecycle)
         end
       end)
     end, delay)
+    state.pending_restarts[lifecycle] = true
   end)
 end
 
@@ -221,6 +266,10 @@ function M.start(bufnr, overrides)
       local callback_error = invoke_callback("on_exit", caller_on_exit, code, signal, exited_id)
       local lifecycle = state.clients[exited_id]
       if lifecycle then
+        if lifecycle.stability_timer then
+          stop_timer(lifecycle.stability_timer)
+          lifecycle.stability_timer = nil
+        end
         state.clients[exited_id] = nil
         if not lifecycle.intentional then
           schedule_restart(lifecycle)
@@ -234,13 +283,26 @@ function M.start(bufnr, overrides)
 
   local caller_on_init = lsp.on_init
   client_config.on_init = function(initialized_client, initialize_result)
-    -- `on_init` is the lifecycle's successful-initialisation event.  Reset
-    -- the stable-budget counter here instead of guessing when initialization
-    -- should have completed from a wall-clock timer.
-    state.restart_attempts[root] = 0
     local lifecycle = state.clients[initialized_client.id]
     if lifecycle then
-      lifecycle.attempts = 0
+      -- A successful initialize is not proof that the process is stable. Keep
+      -- the bounded crash budget until the client has remained alive for the
+      -- stability window, so rapid initialize-then-crash loops eventually
+      -- surface an exhausted recovery state.
+      if lifecycle.stability_timer then
+        stop_timer(lifecycle.stability_timer)
+      end
+      lifecycle.stability_timer = vim.defer_fn(function()
+        lifecycle.stability_timer = nil
+        if lifecycle.intentional or lifecycle.generation ~= state.restart_generation then
+          return
+        end
+        local active = vim.lsp.get_client_by_id(initialized_client.id)
+        if active and active.config.recite_owned == true then
+          lifecycle.attempts = 0
+          state.restart_attempts[root] = 0
+        end
+      end, RESTART_STABILITY_MS)
     end
     local callback_error = invoke_callback("on_init", caller_on_init, initialized_client, initialize_result)
     if callback_error then
@@ -259,8 +321,10 @@ function M.start(bufnr, overrides)
     local client = vim.lsp.get_client_by_id(client_id)
     if client and client.config.recite_owned == true then
       state.clients[client_id] = {
+        generation = state.restart_generation,
         root = root,
         intentional = false,
+        stability_timer = nil,
         attempts = state.restart_attempts[root] or 0,
       }
     end
@@ -276,8 +340,12 @@ function M.stop(client_id)
   end
   lifecycle.intentional = true
   if lifecycle.timer then
-    vim.fn.timer_stop(lifecycle.timer)
+    stop_timer(lifecycle.timer)
     lifecycle.timer = nil
+  end
+  if lifecycle.stability_timer then
+    stop_timer(lifecycle.stability_timer)
+    lifecycle.stability_timer = nil
   end
   local client = vim.lsp.get_client_by_id(client_id)
   if client then
@@ -291,7 +359,9 @@ function M.setup(options)
   local next_config = replace_config(options)
   local config_changed = not vim.deep_equal(next_config, state.config)
   if config_changed then
+    state.restart_generation = state.restart_generation + 1
     stop_owned_clients()
+    state.restart_attempts = {}
   end
   state.config = next_config
   vim.g.recite_setup = true
@@ -311,7 +381,7 @@ function M.setup(options)
     callback = function(args)
       attach(args.buf)
     end,
-    desc = "Start Recite syntax and language tooling",
+    desc = messages.format("neovim-autocmd-description"),
   })
 
   -- `setup` is also safe to call from an init.lua after a buffer already

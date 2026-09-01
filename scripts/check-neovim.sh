@@ -42,8 +42,11 @@ for required_file in \
   "$plugin_root/lua/recite.lua" \
   "$plugin_root/ftdetect/recite.lua" \
   "$plugin_root/health/recite.lua" \
+  "$plugin_root/scripts/message-projections.mjs" \
+  "$plugin_root/lua/recite_messages.lua" \
   "$neovim_query" \
-  "$repo_root/tests/neovim/check.lua"; do
+  "$repo_root/tests/neovim/check.lua" \
+  "$repo_root/tests/neovim/recovery.lua"; do
   if [[ ! -f "$required_file" ]]; then
     echo "missing Neovim integration file: $required_file" >&2
     exit 2
@@ -57,10 +60,6 @@ if ! cmp -s "$grammar_query" "$neovim_query"; then
 fi
 echo "Neovim package and query checks passed"
 
-if (( static_only )); then
-  exit 0
-fi
-
 resolve_tool() {
   local requested="$1"
   if [[ "$requested" == */* ]]; then
@@ -72,6 +71,19 @@ resolve_tool() {
   fi
   return 0
 }
+
+node_bin="$(resolve_tool "${NODE:-node}")"
+if [[ -z "$node_bin" ]]; then
+  echo "Neovim UI projection checks require node; install the pinned tool or set NODE=/path/to/node" >&2
+  exit 2
+fi
+
+"$node_bin" "$plugin_root/scripts/message-projections.mjs" --check
+echo "Neovim UI message projection checks passed"
+
+if (( static_only )); then
+  exit 0
+fi
 
 nvim_bin="$(resolve_tool "${NVIM:-nvim}")"
 cargo_bin="$(resolve_tool "${CARGO:-cargo}")"
@@ -88,7 +100,6 @@ if [[ -z "$tree_sitter_bin" ]]; then
   echo "Neovim headless checks require tree-sitter; install the pinned tool or set TREE_SITTER=/path/to/tree-sitter" >&2
   exit 2
 fi
-
 nvim_version="$($nvim_bin --headless --version | sed -n '1s/^NVIM v//p')"
 if [[ -z "$nvim_version" ]]; then
   echo "unable to determine Neovim version from $nvim_bin" >&2
@@ -162,22 +173,27 @@ else
   exit 1
 fi
 
-RECITE_PLUGIN="$plugin_root" \
-RECITE_PARSER_ROOT="$parser_root" \
-RECITE_LSP="$repo_root/target/debug/recite-lsp" \
-RECITE_TEST_PROJECT="$project" \
-RECITE_SECOND_PROJECT="$second_project" \
-RECITE_INVALID_PROJECT="$invalid_project" \
-RECITE_MISSING_PROJECT="$missing_project" \
-RECITE_UNICODE_PROJECT="$unicode_project" \
-RECITE_DELAYED_LSP="$delayed_lsp" \
-RECITE_LSP_TARGET="$repo_root/target/debug/recite-lsp" \
-RECITE_PARSER_AVAILABLE="$parser_available" \
-  env -u RECITE_CONFIG -u NVIM_APPNAME -u VIMINIT -u EXINIT \
-    XDG_CONFIG_HOME="$config_home" XDG_CONFIG_DIRS="$config_dirs" \
-    XDG_DATA_HOME="$data_home" XDG_DATA_DIRS="$data_dirs" \
-    XDG_STATE_HOME="$state_home" XDG_CACHE_HOME="$cache_home" \
-    "$nvim_bin" --headless -u "$repo_root/tests/neovim/preload.lua" -i NONE -n \
-    -l "$repo_root/tests/neovim/check.lua"
+run_headless() {
+  RECITE_PLUGIN="$plugin_root" \
+  RECITE_PARSER_ROOT="$parser_root" \
+  RECITE_LSP="$repo_root/target/debug/recite-lsp" \
+  RECITE_TEST_PROJECT="$project" \
+  RECITE_SECOND_PROJECT="$second_project" \
+  RECITE_INVALID_PROJECT="$invalid_project" \
+  RECITE_MISSING_PROJECT="$missing_project" \
+  RECITE_UNICODE_PROJECT="$unicode_project" \
+  RECITE_DELAYED_LSP="$delayed_lsp" \
+  RECITE_LSP_TARGET="$repo_root/target/debug/recite-lsp" \
+  RECITE_PARSER_AVAILABLE="$parser_available" \
+    env -u RECITE_CONFIG -u NVIM_APPNAME -u VIMINIT -u EXINIT \
+      XDG_CONFIG_HOME="$config_home" XDG_CONFIG_DIRS="$config_dirs" \
+      XDG_DATA_HOME="$data_home" XDG_DATA_DIRS="$data_dirs" \
+      XDG_STATE_HOME="$state_home" XDG_CACHE_HOME="$cache_home" \
+      "$nvim_bin" --headless -u "$repo_root/tests/neovim/preload.lua" -i NONE -n \
+      -l "$1"
+}
+
+run_headless "$repo_root/tests/neovim/check.lua"
+run_headless "$repo_root/tests/neovim/recovery.lua"
 
 echo "Neovim headless checks passed"

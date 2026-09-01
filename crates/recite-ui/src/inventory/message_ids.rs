@@ -94,4 +94,9 @@ message_ids! {
     LspClientActionApplyFailed, LspClientConfigPathInvalid, LspClientConfigArgsInvalid,
     LspClientConfigProjectRootInvalid, LspClientConfigProjectRootNeedsWorkspace,
     LspClientNotRunning,
+    NeovimAutocmdDescription, NeovimCallbackFailed, NeovimHealthFiletypeOk, NeovimHealthFiletypeError,
+    NeovimHealthLspExecutableFound, NeovimHealthLspExecutableMissing, NeovimHealthLspInstall,
+    NeovimHealthQueryFound, NeovimHealthQueryMissing, NeovimHealthParserFound,
+    NeovimHealthParserMissing, NeovimHealthParserBuild, NeovimHealthCurrentRoot,
+    NeovimHealthOpenBuffer,
 }
