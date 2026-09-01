@@ -61,47 +61,71 @@ fn non_utf8_discovery_suppresses_cross_file_ids_and_republishes_transitions() {
     std::fs::write(&omitted, ":: target\n")
         .unwrap_or_else(|error| panic!("restore complete source: {error}"));
     harness.notify(
-        "workspace/didChangeWatchedFiles",
-        json!({"changes": [{"uri": omitted_uri.clone(), "type": 2}]}),
+        "textDocument/didSave",
+        json!({"textDocument": {"uri": omitted_uri.clone()}}),
     );
     let complete = harness.barrier(&source_uri);
-    let complete_source = diagnostics_for(&complete, &source_uri);
-    assert!(
-        complete_source
-            .iter()
-            .any(|diagnostic| diagnostic["code"] == "RECITE_ID001")
+    assert_publish_batch(
+        &complete,
+        &[
+            (&manifest_uri, None, &[]),
+            (&omitted_uri, None, &[]),
+            (
+                &source_uri,
+                Some(1),
+                &["RECITE_ID001", "RECITE_VALIDATE007"],
+            ),
+        ],
     );
-    assert!(
-        complete_source
-            .iter()
-            .any(|diagnostic| diagnostic["code"] == "RECITE_VALIDATE007")
-    );
-    assert!(diagnostics_for(&complete, &manifest_uri).is_empty());
 
     std::fs::write(&omitted, [b':', b':', b' ', b'\xfe'])
         .unwrap_or_else(|error| panic!("make source incomplete: {error}"));
     harness.notify(
-        "workspace/didChangeWatchedFiles",
-        json!({"changes": [{"uri": omitted_uri, "type": 2}]}),
+        "textDocument/didSave",
+        json!({"textDocument": {"uri": omitted_uri.clone()}}),
     );
     let incomplete = harness.barrier(&source_uri);
-    let incomplete_source = diagnostics_for(&incomplete, &source_uri);
-    assert!(
-        incomplete_source
-            .iter()
-            .any(|diagnostic| diagnostic["code"] == "RECITE_ID001")
-    );
-    assert!(
-        !incomplete_source
-            .iter()
-            .any(|diagnostic| diagnostic["code"] == "RECITE_VALIDATE007")
-    );
-    assert!(
-        diagnostics_for(&incomplete, &manifest_uri)
-            .iter()
-            .any(|diagnostic| diagnostic["code"] == "RECITE_CONFIG115")
+    assert_publish_batch(
+        &incomplete,
+        &[
+            (&manifest_uri, None, &["RECITE_CONFIG115"]),
+            (&omitted_uri, None, &[]),
+            (&source_uri, Some(1), &["RECITE_ID001"]),
+        ],
     );
     harness.finish();
+}
+
+fn assert_publish_batch(messages: &[Value], expected: &[(&str, Option<i64>, &[&str])]) {
+    assert_eq!(
+        messages.len(),
+        expected.len(),
+        "unexpected messages in diagnostic batch: {messages:?}"
+    );
+    let published = messages
+        .iter()
+        .filter(|message| message["method"] == "textDocument/publishDiagnostics")
+        .collect::<Vec<_>>();
+    assert_eq!(
+        published.len(),
+        expected.len(),
+        "unexpected diagnostic batch: {messages:?}"
+    );
+    for (message, (uri, version, codes)) in published.iter().zip(expected) {
+        assert_eq!(message["params"]["uri"], *uri);
+        assert_eq!(message["params"]["version"].as_i64(), *version);
+        let actual_codes = message["params"]["diagnostics"]
+            .as_array()
+            .unwrap_or_else(|| panic!("diagnostic array for {uri}: {message}"))
+            .iter()
+            .map(|diagnostic| {
+                diagnostic["code"]
+                    .as_str()
+                    .unwrap_or_else(|| panic!("diagnostic code for {uri}: {diagnostic}"))
+            })
+            .collect::<Vec<_>>();
+        assert_eq!(actual_codes, *codes, "diagnostics for {uri}: {message}");
+    }
 }
 
 fn diagnostics_for<'a>(messages: &'a [Value], uri: &str) -> Vec<&'a Value> {

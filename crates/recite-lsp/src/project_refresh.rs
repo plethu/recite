@@ -26,6 +26,12 @@ impl LspWorkspace {
         {
             refreshes.extend(self.refresh_project_manifest());
         }
+        // A saved source may change discovery coverage (for example when an
+        // invalid UTF-8 source is repaired). Compare the post-manifest state
+        // with the state just before refreshing this URI so that the save
+        // transaction publishes the manifest transition together with the
+        // source refreshes.
+        let old_manifest_diagnostics = self.saved.manifest_diagnostics().clone();
         let mut saved = self.saved.clone();
         let mut documents = self.documents.clone();
         let touched_saved = saved.refresh_uri(&uri);
@@ -35,6 +41,7 @@ impl LspWorkspace {
         {
             return refreshes;
         }
+        refreshes.extend(manifest_refreshes(self, &old_manifest_diagnostics));
         if let Some(document) = self.documents.document(&uri) {
             refreshes.push(self.publish_open_document(document));
         } else if let Some(document) = self.saved.document_by_uri(&uri) {
@@ -46,7 +53,7 @@ impl LspWorkspace {
                 generation: self.generation,
             });
         }
-        refreshes
+        coalesce_refreshes(refreshes)
     }
 
     pub(crate) fn refresh_project_manifest(&mut self) -> Vec<DiagnosticRefresh> {
