@@ -302,7 +302,7 @@
       "artifact_status": {"vscode-vsix": "partial", "tree-sitter-grammar": "partial", "neovim-runtimepath": "implemented", "zed-extension": "planned"},
       "distribution_status": {"vs-marketplace": "planned", "open-vsx": "planned", "neovim-distribution": "planned", "zed-distribution": "planned"},
       "expected_evidence": {"status": "partial", "command": "scripts/check-neovim.sh", "assertions": ["ABI14 parser loads and the checked-in highlights query emits captures in Neovim"], "artifact": "neovim-runtimepath"},
-      "follow_up": "#52"
+      "follow_up": "#98"
     },
     {
       "id": "editor.zed.syntax-projection",
@@ -334,7 +334,7 @@
       "artifact_status": {"vscode-vsix": "partial", "tree-sitter-grammar": "partial", "neovim-runtimepath": "implemented", "zed-extension": "planned"},
       "distribution_status": {"vs-marketplace": "planned", "open-vsx": "planned", "neovim-distribution": "planned", "zed-distribution": "planned"},
       "expected_evidence": {"status": "partial", "commands": ["cargo test --locked -p recite-lsp --test editor_parity initialize_and_project_features_use_shared_stdio_contract", "scripts/check-neovim.sh"], "assertions": ["stdio completion contains the canonical work symbol"], "artifact": "neovim-runtimepath"},
-      "follow_up": "#52"
+      "follow_up": "#51"
     },
     {
       "id": "lsp.definition",
@@ -366,7 +366,7 @@
       "artifact_status": {"vscode-vsix": "partial", "tree-sitter-grammar": "partial", "neovim-runtimepath": "implemented", "zed-extension": "planned"},
       "distribution_status": {"vs-marketplace": "planned", "open-vsx": "planned", "neovim-distribution": "planned", "zed-distribution": "planned"},
       "expected_evidence": {"status": "partial", "commands": ["cargo test --locked -p recite-lsp --test editor_parity initialize_and_project_features_use_shared_stdio_contract", "scripts/check-neovim.sh"], "assertions": ["stdio hover response carries a symbol range and structured contents"], "artifact": "neovim-runtimepath"},
-      "follow_up": "#52"
+      "follow_up": "#51"
     },
     {
       "id": "lsp.references",
@@ -382,7 +382,7 @@
       "artifact_status": {"vscode-vsix": "partial", "tree-sitter-grammar": "partial", "neovim-runtimepath": "implemented", "zed-extension": "planned"},
       "distribution_status": {"vs-marketplace": "planned", "open-vsx": "planned", "neovim-distribution": "planned", "zed-distribution": "planned"},
       "expected_evidence": {"status": "partial", "commands": ["cargo test --locked -p recite-lsp --test editor_parity initialize_and_project_features_use_shared_stdio_contract", "scripts/check-neovim.sh"], "assertions": ["stdio references include the declaration and use location"], "artifact": "neovim-runtimepath"},
-      "follow_up": "#52"
+      "follow_up": "#51"
     },
     {
       "id": "lsp.rename",
@@ -398,7 +398,7 @@
       "artifact_status": {"vscode-vsix": "partial", "tree-sitter-grammar": "partial", "neovim-runtimepath": "implemented", "zed-extension": "planned"},
       "distribution_status": {"vs-marketplace": "planned", "open-vsx": "planned", "neovim-distribution": "planned", "zed-distribution": "planned"},
       "expected_evidence": {"status": "partial", "commands": ["cargo test --locked -p recite-lsp --test editor_parity initialize_and_project_features_use_shared_stdio_contract", "scripts/check-neovim.sh"], "assertions": ["stdio rename response contains a source document edit"], "artifact": "neovim-runtimepath"},
-      "follow_up": "#52"
+      "follow_up": "#51"
     },
     {
       "id": "lsp.code-actions",
