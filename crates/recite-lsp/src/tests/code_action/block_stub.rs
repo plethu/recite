@@ -8,9 +8,11 @@ use super::support::{
 use crate::tests::support::{Harness, file_uri, harness_for_root, uri, write_file};
 
 pub(super) fn block_stub_quick_fix_inserts_local_eof_stub() {
-    let mut harness = Harness::start();
-    let source_uri = uri("file:///workspace/dialogue/block-stub.recite");
     let source = concat!(":: start default\n", "-> missing_block\n");
+    let temp = TempDir::new().expect("tempdir");
+    write_file(temp.path(), "block-stub.recite", source);
+    let source_uri = file_uri(&temp.path().join("block-stub.recite"));
+    let mut harness = harness_for_root(temp.path());
     harness.did_open(source_uri.clone(), 11, source);
     let _ = harness.recv_publish_diagnostics();
 
@@ -86,10 +88,12 @@ pub(super) fn block_stub_quick_fix_targets_unique_external_file() {
 }
 
 pub(super) fn block_stub_full_document_range_uses_bounded_candidates() {
-    let mut harness = Harness::start();
-    let source_uri = uri("file:///workspace/dialogue/block-stub-large-range.recite");
     let prose = "# ordinary prose\n".repeat(1_000);
     let source = format!(":: start default\n-> missing_block\n{prose}");
+    let temp = TempDir::new().expect("tempdir");
+    write_file(temp.path(), "block-stub-large-range.recite", &source);
+    let source_uri = file_uri(&temp.path().join("block-stub-large-range.recite"));
+    let mut harness = harness_for_root(temp.path());
     harness.did_open(source_uri.clone(), 5, &source);
     let _ = harness.recv_publish_diagnostics();
 
@@ -122,13 +126,13 @@ pub(super) fn block_stub_quick_fix_rejects_unresolved_target_and_target_collisio
     );
     assert_no_action_title(&unresolved, "Create block stub `later`");
 
-    let other_file_collision = single_quick_fix_with_title(
+    let other_file_collision = code_actions(
         &mut harness,
         source_uri.clone(),
         range(2, 3, 2, 14),
-        "Create block stub `local_later`",
+        Some(vec![CodeActionKind::QUICKFIX]),
     );
-    assert_eq!(other_file_collision.text_document.uri, source_uri.clone());
+    assert_no_action_title(&other_file_collision, "Create block stub `local_later`");
 
     let target_collision = code_actions(
         &mut harness,
@@ -146,6 +150,22 @@ pub(super) fn block_stub_quick_fix_rejects_incomplete_block_reference_summary() 
     let source_uri = uri("file:///workspace/dialogue/incomplete-block-ref.recite");
     let source = concat!(":: start default\n", "-> missing_block\n", ":if\n");
     harness.did_open(source_uri.clone(), 7, source);
+    let _ = harness.recv_publish_diagnostics();
+
+    let actions = code_actions(
+        &mut harness,
+        source_uri,
+        range(1, 3, 1, 16),
+        Some(vec![CodeActionKind::QUICKFIX]),
+    );
+    assert_no_action_title(&actions, "Create block stub `missing_block`");
+
+    harness.finish();
+
+    let mut harness = Harness::start();
+    let source_uri = uri("file:///workspace/dialogue/rootless-block-stub.recite");
+    let source = concat!(":: start default\n", "-> missing_block\n");
+    harness.did_open(source_uri.clone(), 1, source);
     let _ = harness.recv_publish_diagnostics();
 
     let actions = code_actions(

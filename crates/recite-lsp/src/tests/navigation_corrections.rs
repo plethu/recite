@@ -25,6 +25,22 @@ pub(super) fn rename_rejects_local_and_qualified_block_collisions() {
     );
     local.finish();
 
+    let mut rootless = Harness::start();
+    let rootless_uri = uri("file:///workspace/dialogue/rootless-rename.recite");
+    rootless.did_open(
+        rootless_uri.clone(),
+        1,
+        concat!(":: start default\n", "-> source\n", ":: source\n"),
+    );
+    let _ = rootless.recv_publish_diagnostics();
+    assert!(
+        rootless
+            .rename(rootless_uri, Position::new(1, 5), "renamed")
+            .is_none(),
+        "rootless project completeness must refuse project-wide rename",
+    );
+    rootless.finish();
+
     let temp = TempDir::new().expect("tempdir");
     write_file(
         temp.path(),

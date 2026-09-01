@@ -37,9 +37,11 @@ pub(super) fn definition_resolves_block_references() {
 }
 
 pub(super) fn typed_features_follow_open_overlay_generation() {
-    let mut harness = Harness::start();
-    let source_uri = uri("file:///workspace/dialogue/overlay-navigation.recite");
     let initial = ":: start default\r\n-> stale_target\r\n:: stale_target\r\n";
+    let temp = TempDir::new().expect("tempdir");
+    write_file(temp.path(), "overlay-navigation.recite", initial);
+    let source_uri = file_uri(&temp.path().join("overlay-navigation.recite"));
+    let mut harness = harness_for_root(temp.path());
     harness.did_open(source_uri.clone(), 1, initial);
     let _ = harness.recv_publish_diagnostics();
 
@@ -194,23 +196,22 @@ pub(super) fn references_include_declaration_and_project_references() {
 }
 
 pub(super) fn rename_updates_only_block_symbols() {
-    let mut harness = Harness::start();
-    let source_uri = uri("file:///workspace/dialogue/rename.recite");
-    harness.did_open(
-        source_uri.clone(),
-        1,
-        concat!(
-            ":: start default\n",
-            "> target@8392209a350039cc0dfd\n",
-            "  This stable line ID must stay target.\n",
-            "? choice_target@5a9d82b6cb8104fc9f19\n",
-            "  This choice ID must stay choice_target.\n",
-            "  -> target\n",
-            ":: target\n",
-            "> second@1a9463b9bc53e7500590\n",
-            "  Done.\n",
-        ),
+    let temp = TempDir::new().expect("tempdir");
+    let source = concat!(
+        ":: start default\n",
+        "> target@8392209a350039cc0dfd\n",
+        "  This stable line ID must stay target.\n",
+        "? choice_target@5a9d82b6cb8104fc9f19\n",
+        "  This choice ID must stay choice_target.\n",
+        "  -> target\n",
+        ":: target\n",
+        "> second@1a9463b9bc53e7500590\n",
+        "  Done.\n",
     );
+    write_file(temp.path(), "rename.recite", source);
+    let source_uri = file_uri(&temp.path().join("rename.recite"));
+    let mut harness = harness_for_root(temp.path());
+    harness.did_open(source_uri.clone(), 1, source);
     let _ = harness.recv_publish_diagnostics();
 
     let prepare = harness
