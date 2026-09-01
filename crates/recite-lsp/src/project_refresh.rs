@@ -64,6 +64,7 @@ impl LspWorkspace {
             .map(|(id, partition)| (id.clone(), partition.schema.clone()))
             .collect::<BTreeMap<_, _>>();
         let old_retired_workspace = self.retired_schema_uris.clone();
+        let old_retired_targets = self.retired_schema_targets.clone();
         let old_documents = self.documents.clone();
         let mut saved = self.saved.clone();
         saved.refresh_manifests();
@@ -86,14 +87,16 @@ impl LspWorkspace {
                 );
             }
         }
-        let (old_retired, retired_workspace) = update_retired_schema_state(
+        let (old_retired, retired_workspace, retired_targets) = update_retired_schema_state(
             &self.partitions,
             &old_documents,
             &schemas,
             old_retired,
             old_retired_workspace.clone(),
+            old_retired_targets.clone(),
         );
         self.retired_schema_uris = retired_workspace;
+        self.retired_schema_targets = retired_targets;
         let mut documents = self.documents.clone();
         self.refresh_open_identities(&saved, &mut documents);
         if self
@@ -101,6 +104,7 @@ impl LspWorkspace {
             .is_err()
         {
             self.retired_schema_uris = old_retired_workspace;
+            self.retired_schema_targets = old_retired_targets;
             return Vec::new();
         }
         self.schema_paths = schema_paths;

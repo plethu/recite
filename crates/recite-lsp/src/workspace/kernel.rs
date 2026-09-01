@@ -126,16 +126,21 @@ pub(super) fn effective_open_documents<'a>(
     schema: &SchemaIndex,
     partition: &str,
     retired: BTreeSet<String>,
+    retired_targets: BTreeSet<String>,
 ) -> BTreeMap<DocumentKey, &'a OpenDocument> {
     let mut result = BTreeMap::new();
     // Retirement belongs to a schema target, not only to the URI that first
     // opened it. Keep every alias of a still-retired target out of authoring,
     // including an alias reopened after its first close.
-    let retired_targets = documents
-        .documents()
-        .filter(|document| retired.contains(document.identity().uri.as_str()))
-        .filter_map(|document| document.identity().saved_path.as_deref())
-        .map(crate::paths::stable_path_identity)
+    let retired_targets = retired_targets
+        .into_iter()
+        .chain(
+            documents
+                .documents()
+                .filter(|document| retired.contains(document.identity().uri.as_str()))
+                .filter_map(|document| document.identity().saved_path.as_deref())
+                .map(crate::paths::stable_path_identity),
+        )
         .collect::<BTreeSet<_>>();
     for document in documents.documents() {
         let id = document

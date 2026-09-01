@@ -68,12 +68,12 @@ pub(crate) fn manifestless_multi_root_documents_keep_project_relative_keys() {
     let config = WorkspaceConfig::for_roots(vec![first.clone(), second.clone()]);
     let mut workspace = test_workspace(config);
 
-    workspace.open(
+    workspace.open_refreshes(
         file_uri(&first.join("a.recite")),
         1,
         ":: open first\n".to_owned(),
     );
-    workspace.open(
+    workspace.open_refreshes(
         file_uri(&second.join("a.recite")),
         1,
         ":: open second\n".to_owned(),
@@ -109,8 +109,8 @@ pub(crate) fn multi_root_documents_keep_project_relative_keys() {
     }))
     .unwrap_or_else(|error| panic!("initialize params: {error}"));
     let mut workspace = test_workspace(WorkspaceConfig::from_initialize_params(&params));
-    workspace.open(file_uri(&src), 1, ":: live src\n".to_owned());
-    workspace.open(file_uri(&other), 1, ":: live other\n".to_owned());
+    workspace.open_refreshes(file_uri(&src), 1, ":: live src\n".to_owned());
+    workspace.open_refreshes(file_uri(&other), 1, ":: live other\n".to_owned());
     let keys = workspace
         .snapshot()
         .summaries()
@@ -171,7 +171,9 @@ pub(crate) fn excluded_open_files_remain_diagnosable_without_project_membership(
     let mut workspace = test_workspace(WorkspaceConfig::from_initialize_params(&params));
 
     let refresh = workspace
-        .open(file_uri(&excluded), 1, "oops\n".to_owned())
+        .open_refreshes(file_uri(&excluded), 1, "oops\n".to_owned())
+        .into_iter()
+        .next()
         .unwrap_or_else(|| panic!("opening an excluded file should publish diagnostics"));
     let DiagnosticRefresh::Publish(diagnostics) = refresh else {
         panic!("opening an excluded file should publish diagnostics");
@@ -250,7 +252,9 @@ pub(crate) fn manifestless_builtin_exclusions_stay_out_of_shared_state() {
         (&hidden, ":: hidden default\n"),
     ] {
         let refresh = workspace
-            .open(file_uri(path), 1, text.to_owned())
+            .open_refreshes(file_uri(path), 1, text.to_owned())
+            .into_iter()
+            .next()
             .unwrap_or_else(|| panic!("excluded open should publish diagnostics"));
         let DiagnosticRefresh::Publish(diagnostics) = refresh else {
             panic!("excluded open should publish diagnostics");
@@ -282,11 +286,13 @@ pub(crate) fn sibling_fallback_builtin_exclusions_stay_out_of_shared_state() {
     .unwrap_or_else(|error| panic!("initialize params: {error}"));
     let mut workspace = test_workspace(WorkspaceConfig::from_initialize_params(&params));
     let refresh = workspace
-        .open(
+        .open_refreshes(
             file_uri(&sibling.join("target/ignored.recite")),
             1,
             ":: ignored default\n".to_owned(),
         )
+        .into_iter()
+        .next()
         .unwrap_or_else(|| panic!("excluded open should publish diagnostics"));
     let DiagnosticRefresh::Publish(diagnostics) = refresh else {
         panic!("excluded open should publish diagnostics");

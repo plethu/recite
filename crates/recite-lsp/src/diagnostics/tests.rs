@@ -129,7 +129,7 @@ fn related_spans_resolve_open_project_file_text() {
         .unwrap_or_else(|error| panic!("test authoring state is invalid: {error}")),
         Err(error) => panic!("test default UI catalog is invalid: {error}"),
     };
-    workspace.open(
+    workspace.open_refreshes(
         first_uri.clone(),
         1,
         ":: first\n> shared@83709c28414d0ce4659c\n  😀First.\n".to_owned(),

@@ -146,6 +146,15 @@ impl LspWorkspace {
     }
 
     pub(super) fn is_retired_schema_alias(&self, uri: &lsp_types::Uri) -> bool {
+        if self.retired_schema_targets.contains_key(uri.as_str())
+            || self.retired_schema_uris.contains(uri.as_str())
+            || self
+                .partitions
+                .values()
+                .any(|partition| partition.retired_schema_uris.contains(uri.as_str()))
+        {
+            return true;
+        }
         let Some(target) = self
             .documents
             .document(uri)
@@ -154,23 +163,8 @@ impl LspWorkspace {
         else {
             return false;
         };
-        let candidates = self
-            .retired_schema_uris
-            .iter()
-            .chain(
-                self.partitions
-                    .values()
-                    .flat_map(|partition| partition.retired_schema_uris.iter()),
-            )
-            .filter_map(|retired_uri| retired_uri.parse::<lsp_types::Uri>().ok())
-            .filter_map(schema_target_id)
-            .collect::<Vec<_>>();
-        candidates.into_iter().any(|candidate| candidate == target)
+        self.retired_schema_targets
+            .values()
+            .any(|candidate| candidate == &target)
     }
-}
-
-fn schema_target_id(uri: lsp_types::Uri) -> Option<String> {
-    let path = crate::paths::uri_to_file_path(&uri)?;
-    let path = std::fs::canonicalize(&path).unwrap_or(path);
-    Some(crate::paths::stable_path_identity(&path))
 }

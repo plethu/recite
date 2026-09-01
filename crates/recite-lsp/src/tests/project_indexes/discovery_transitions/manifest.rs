@@ -29,7 +29,7 @@ pub(crate) fn malformed_manifest_stays_fail_closed_across_file_lifecycle() {
         .expect("initialize params"),
     ));
 
-    workspace.open(source_uri.clone(), 1, ":: overlay\n".to_owned());
+    workspace.open_refreshes(source_uri.clone(), 1, ":: overlay\n".to_owned());
     write_file(temp.path(), "source.recite", ":: changed\n");
     workspace.save(source_uri.clone());
     workspace.refresh_watched_uri(&source_uri);
@@ -135,7 +135,7 @@ pub(crate) fn manifest_refresh_clears_removed_saved_diagnostics_only() {
     }))
     .unwrap_or_else(|error| panic!("initialize params: {error}"));
     let mut workspace = test_workspace(WorkspaceConfig::from_initialize_params(&params));
-    workspace.open(open_uri.clone(), 1, ":: overlay\n".to_owned());
+    workspace.open_refreshes(open_uri.clone(), 1, ":: overlay\n".to_owned());
     write_file(
         temp.path(),
         "recite.project.toml",

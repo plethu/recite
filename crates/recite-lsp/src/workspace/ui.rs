@@ -34,6 +34,7 @@ impl LspWorkspace {
             schema_override_path,
             schema_paths,
             retired_schema_uris: BTreeSet::new(),
+            retired_schema_targets: BTreeMap::new(),
             generation,
             next_partition_build_id: 0,
             ui_catalog,

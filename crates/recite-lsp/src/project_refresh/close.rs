@@ -10,13 +10,20 @@ impl LspWorkspace {
         let closed_key = super::super::document_key_for_open(&closed);
         let mut saved = self.saved.clone();
         saved.refresh_uri(&uri);
+        let was_retired = self.is_retired_schema_alias(&uri);
+        let retired_target = self
+            .retired_schema_targets
+            .get(uri.as_str())
+            .cloned()
+            .or_else(|| {
+                was_retired
+                    .then(|| closed.identity().saved_path.as_deref())
+                    .flatten()
+                    .map(crate::paths::stable_path_identity)
+            });
         self.refresh_open_identities(&saved, &mut documents);
-        let was_retired = self.retired_schema_uris.contains(uri.as_str())
-            || self
-                .partitions
-                .values()
-                .any(|partition| partition.retired_schema_uris.contains(uri.as_str()));
         let old_retired_workspace = self.retired_schema_uris.clone();
+        let old_retired_targets = self.retired_schema_targets.clone();
         self.retired_schema_uris.remove(uri.as_str());
         let mut retired = self
             .partitions
@@ -25,6 +32,39 @@ impl LspWorkspace {
             .collect::<std::collections::BTreeMap<_, _>>();
         for uris in retired.values_mut() {
             uris.remove(uri.as_str());
+        }
+        if let Some(target) = retired_target.as_deref() {
+            let target_remains_open = documents.documents().any(|document| {
+                self.retired_schema_targets
+                    .get(document.identity().uri.as_str())
+                    .is_some_and(|candidate| candidate == target)
+                    || document
+                        .identity()
+                        .saved_path
+                        .as_deref()
+                        .is_some_and(|path| {
+                            crate::paths::stable_path_identity(path) == target
+                                && (self
+                                    .retired_schema_uris
+                                    .contains(document.identity().uri.as_str())
+                                    || self.partitions.values().any(|partition| {
+                                        partition
+                                            .retired_schema_uris
+                                            .contains(document.identity().uri.as_str())
+                                    }))
+                        })
+            });
+            if !target_remains_open {
+                self.retired_schema_targets
+                    .retain(|_, candidate| candidate != target);
+                self.retired_schema_uris
+                    .retain(|retired_uri| self.retired_schema_targets.contains_key(retired_uri));
+                for uris in retired.values_mut() {
+                    uris.retain(|retired_uri| {
+                        self.retired_schema_targets.contains_key(retired_uri)
+                    });
+                }
+            }
         }
         if self
             .rebuild_for_documents_with_schemas_and_retired(
@@ -36,6 +76,7 @@ impl LspWorkspace {
             .is_err()
         {
             self.retired_schema_uris = old_retired_workspace;
+            self.retired_schema_targets = old_retired_targets;
             return Vec::new();
         }
         if old_schema_authority.is_some() {

@@ -77,9 +77,11 @@ fn retired_symlink_alias_keeps_target_excluded_until_final_close() {
         &closed_target,
         &[(&target_uri, None, true), (&alias_uri, Some(8), true)],
     );
+    std::fs::remove_file(&target)
+        .unwrap_or_else(|error| panic!("remove retired schema target: {error}"));
     harness.notify(
         "textDocument/didOpen",
-        json!({"textDocument": {"uri": target_uri, "languageId": "json", "version": 9, "text": "{\"schema_version\":1}\n"}}),
+        json!({"textDocument": {"uri": target_uri, "languageId": "json", "version": 9, "text": "oops\n"}}),
     );
     let reopened_target = harness.barrier(&target_uri);
     assert_publish_batch(&reopened_target, &[(&target_uri, Some(9), true)]);
@@ -91,8 +93,21 @@ fn retired_symlink_alias_keeps_target_excluded_until_final_close() {
     let closed_alias = harness.barrier(&alias_uri);
     assert_publish_batch(
         &closed_alias,
-        &[(&alias_uri, None, true), (&target_uri, Some(9), false)],
+        &[(&alias_uri, None, true), (&target_uri, Some(9), true)],
     );
+    harness.notify(
+        "textDocument/didClose",
+        json!({"textDocument": {"uri": target_uri}}),
+    );
+    assert_publish_batch(&harness.barrier(&target_uri), &[(&target_uri, None, true)]);
+    std::fs::write(&target, "{\"schema_version\":1}\n")
+        .unwrap_or_else(|error| panic!("recreate schema target: {error}"));
+    harness.notify(
+        "textDocument/didOpen",
+        json!({"textDocument": {"uri": target_uri, "languageId": "json", "version": 10, "text": "oops\n"}}),
+    );
+    let recreated_target = harness.barrier(&target_uri);
+    assert_publish_batch(&recreated_target, &[(&target_uri, Some(10), false)]);
     harness.notify(
         "textDocument/didClose",
         json!({"textDocument": {"uri": target_uri}}),
@@ -280,7 +295,7 @@ fn retired_schema_aliases_keep_target_retirement_until_final_close() {
     let closed_b = harness.barrier(&schema_b);
     assert_publish_batch(
         &closed_b,
-        &[(&schema_b, None, true), (&schema_a, Some(9), false)],
+        &[(&schema_b, None, true), (&schema_a, Some(9), true)],
     );
 
     harness.notify(

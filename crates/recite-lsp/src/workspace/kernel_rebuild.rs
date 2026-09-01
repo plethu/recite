@@ -15,6 +15,7 @@ pub(super) struct PartitionInputFingerprint {
     open: Vec<(String, String, i32, String)>,
     schema: SchemaIndex,
     retired: BTreeSet<String>,
+    retired_targets: BTreeSet<String>,
 }
 
 impl LspWorkspace {
@@ -86,6 +87,12 @@ impl LspWorkspace {
             .values()
             .flat_map(|uris| uris.iter().cloned())
             .chain(self.retired_schema_uris.iter().cloned())
+            .chain(self.retired_schema_targets.keys().cloned())
+            .collect::<BTreeSet<_>>();
+        let retired_targets = self
+            .retired_schema_targets
+            .values()
+            .cloned()
             .collect::<BTreeSet<_>>();
         // A schema target is a document-level exclusion for the whole
         // workspace.  A shared target may be configured by one partition but
@@ -117,8 +124,14 @@ impl LspWorkspace {
                         .flatten()
                 })
                 .unwrap_or_else(|| base_schema.base());
-            let open =
-                effective_open_documents(&saved, &documents, &schema, &id, retired_all.clone());
+            let open = effective_open_documents(
+                &saved,
+                &documents,
+                &schema,
+                &id,
+                retired_all.clone(),
+                retired_targets.clone(),
+            );
             let owners = open
                 .iter()
                 .map(|(key, document)| (key.clone(), document.identity().uri.clone()))
@@ -130,6 +143,7 @@ impl LspWorkspace {
                 &schema,
                 &owners,
                 &retired_all,
+                &retired_targets,
             );
             let reusable = old_partitions
                 .as_ref()
@@ -206,6 +220,7 @@ fn partition_input_fingerprint(
     schema: &SchemaIndex,
     owners: &BTreeMap<recite_core::DocumentKey, lsp_types::Uri>,
     retired: &BTreeSet<String>,
+    retired_targets: &BTreeSet<String>,
 ) -> PartitionInputFingerprint {
     let saved = saved
         .documents
@@ -243,5 +258,6 @@ fn partition_input_fingerprint(
         open,
         schema: schema.clone(),
         retired: retired.clone(),
+        retired_targets: retired_targets.clone(),
     }
 }

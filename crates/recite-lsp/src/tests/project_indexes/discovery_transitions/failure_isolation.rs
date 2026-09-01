@@ -34,10 +34,14 @@ fn failed_roots_isolate_open_source_only_partitions() {
     let source = "oops\n:: shared default\n";
 
     let first_refresh = workspace
-        .open(first_uri.clone(), 1, source.to_owned())
+        .open_refreshes(first_uri.clone(), 1, source.to_owned())
+        .into_iter()
+        .next()
         .expect("failed first root should retain source diagnostics");
     let second_refresh = workspace
-        .open(second_uri.clone(), 1, source.to_owned())
+        .open_refreshes(second_uri.clone(), 1, source.to_owned())
+        .into_iter()
+        .next()
         .expect("failed second root should retain source diagnostics");
     let refresh_diagnostics = [first_refresh, second_refresh]
         .into_iter()
@@ -147,11 +151,13 @@ pub(crate) fn malformed_workspace_root_does_not_block_independent_root() {
         );
 
         let refresh = workspace
-            .open(
+            .open_refreshes(
                 file_uri(&valid.join("later.recite")),
                 1,
                 "oops\n".to_owned(),
             )
+            .into_iter()
+            .next()
             .expect("independent valid workspace should remain authorable");
         let DiagnosticRefresh::Publish(diagnostics) = refresh else {
             panic!("valid workspace should publish authoring diagnostics");

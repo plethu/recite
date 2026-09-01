@@ -10,15 +10,6 @@ use crate::paths::uri_to_file_path;
 use crate::summary::OpenFileIdentity;
 
 impl LspWorkspace {
-    pub(crate) fn open(
-        &mut self,
-        uri: Uri,
-        version: i32,
-        text: String,
-    ) -> Option<DiagnosticRefresh> {
-        self.open_refreshes(uri, version, text).into_iter().next()
-    }
-
     pub(crate) fn open_refreshes(
         &mut self,
         uri: Uri,

@@ -71,9 +71,11 @@ impl LspBenchmarkDriver {
 
     #[must_use]
     pub fn open_file(&mut self, probe: &LspDocumentProbe) -> usize {
-        let Some(refresh) =
-            self.workspace
-                .open(probe.uri.clone(), 1, read_probe_text_or_panic(probe))
+        let Some(refresh) = self
+            .workspace
+            .open_refreshes(probe.uri.clone(), 1, read_probe_text_or_panic(probe))
+            .into_iter()
+            .next()
         else {
             return 0;
         };
@@ -83,7 +85,7 @@ impl LspBenchmarkDriver {
     #[must_use]
     pub fn change_file(&mut self, probe: &LspDocumentProbe) -> usize {
         self.workspace
-            .open(probe.uri.clone(), 1, read_probe_text_or_panic(probe));
+            .open_refreshes(probe.uri.clone(), 1, read_probe_text_or_panic(probe));
         match self.workspace.change(
             probe.uri.clone(),
             2,
@@ -102,9 +104,11 @@ impl LspBenchmarkDriver {
     pub fn diagnostics_refresh(&mut self, probe: &LspDocumentProbe) -> usize {
         // Keep the synthetic refresh at the latest probe version so repeated
         // benchmark operations satisfy the kernel's monotonic overlay guard.
-        let Some(refresh) =
-            self.workspace
-                .open(probe.uri.clone(), 2, read_probe_text_or_panic(probe))
+        let Some(refresh) = self
+            .workspace
+            .open_refreshes(probe.uri.clone(), 2, read_probe_text_or_panic(probe))
+            .into_iter()
+            .next()
         else {
             return 0;
         };
@@ -143,7 +147,7 @@ impl LspBenchmarkDriver {
     #[must_use]
     pub fn stale_change_is_suppressed(&mut self, probe: &LspDocumentProbe) -> bool {
         self.workspace
-            .open(probe.uri.clone(), 2, read_probe_text_or_panic(probe));
+            .open_refreshes(probe.uri.clone(), 2, read_probe_text_or_panic(probe));
         let generation = self.workspace.generation();
         let result = self.workspace.change(
             probe.uri.clone(),

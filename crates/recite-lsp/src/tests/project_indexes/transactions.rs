@@ -22,8 +22,8 @@ pub(crate) fn manifest_refresh_rekeys_open_overlay() {
     let mut workspace = test_workspace(WorkspaceConfig::from_initialize_params(&params));
     let uri = file_uri(&nested.join("scene.recite"));
 
-    let refresh = workspace.open(uri.clone(), 7, "oops\n:: overlay\n".to_owned());
-    assert!(refresh.is_some());
+    let refresh = workspace.open_refreshes(uri.clone(), 7, "oops\n:: overlay\n".to_owned());
+    assert!(!refresh.is_empty());
     assert_eq!(workspace.snapshot().summaries().len(), 1);
     assert_eq!(workspace.snapshot().summaries()[0].version, Some(7));
     assert_eq!(
@@ -64,8 +64,8 @@ pub(crate) fn watched_creation_rekeys_open_overlay() {
     let mut workspace = test_workspace(WorkspaceConfig::from_initialize_params(&params));
     let uri = file_uri(&source);
 
-    let refresh = workspace.open(uri.clone(), 9, "oops\n:: open\n".to_owned());
-    assert!(refresh.is_some());
+    let refresh = workspace.open_refreshes(uri.clone(), 9, "oops\n:: open\n".to_owned());
+    assert!(!refresh.is_empty());
     assert_eq!(workspace.snapshot().summaries().len(), 1);
     assert_eq!(
         workspace.snapshot().summaries()[0].project_relative_path(),
@@ -99,15 +99,15 @@ pub(crate) fn duplicate_open_is_ignored_transactionally() {
     let mut workspace = test_workspace(WorkspaceConfig::for_roots(vec![temp.path().to_owned()]));
     let uri = file_uri(&source);
 
-    let refresh = workspace.open(uri.clone(), 5, "oops\n:: original\n".to_owned());
-    assert!(refresh.is_some());
+    let refresh = workspace.open_refreshes(uri.clone(), 5, "oops\n:: original\n".to_owned());
+    assert!(!refresh.is_empty());
     let generation = workspace.generation();
     let summary = workspace.snapshot().summaries()[0].clone();
 
     assert!(
         workspace
-            .open(uri, 5, ":: replacement\n".to_owned())
-            .is_none()
+            .open_refreshes(uri, 5, ":: replacement\n".to_owned())
+            .is_empty()
     );
     assert_eq!(workspace.generation(), generation);
     assert_eq!(workspace.snapshot().generation(), generation);

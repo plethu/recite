@@ -44,7 +44,7 @@ fn valid_manifest_open_identity_survives_creation_and_alias_owner_switch() {
             .unwrap_or_else(|error| panic!("initialize params: {error}")),
         ));
 
-        workspace.open(main_uri.clone(), 1, source.to_owned());
+        workspace.open_refreshes(main_uri.clone(), 1, source.to_owned());
         assert_eq!(project_key(&workspace, &main_uri), Some("src/main.recite"));
         assert_navigation(
             &mut workspace,
@@ -67,7 +67,7 @@ fn valid_manifest_open_identity_survives_creation_and_alias_owner_switch() {
 
         symlink(&source_root, temp.path().join("src-alias")).expect("source alias");
         let alias_uri = file_uri(&temp.path().join("src-alias/main.recite"));
-        workspace.open(alias_uri.clone(), 9, source.to_owned());
+        workspace.open_refreshes(alias_uri.clone(), 9, source.to_owned());
         assert_eq!(project_key(&workspace, &alias_uri), Some("src/main.recite"));
         assert_navigation(
             &mut workspace,
@@ -116,8 +116,8 @@ fn manifestless_drafts_keep_cross_file_identity_per_root() {
         second.clone(),
     ]));
 
-    workspace.open(first_uri.clone(), 1, first_source.to_owned());
-    workspace.open(second_uri.clone(), 1, second_source.to_owned());
+    workspace.open_refreshes(first_uri.clone(), 1, first_source.to_owned());
+    workspace.open_refreshes(second_uri.clone(), 1, second_source.to_owned());
     assert_eq!(
         project_key(&workspace, &first_uri),
         Some("first/main.recite")

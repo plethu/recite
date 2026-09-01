@@ -78,7 +78,9 @@ pub(super) fn retired_schema_alias_close_clears_and_reopens() {
         .unwrap_or_else(|error| panic!("alias URI: {error}"));
 
     workspace
-        .open(alias_uri.clone(), 7, "not a schema\n".to_owned())
+        .open_refreshes(alias_uri.clone(), 7, "not a schema\n".to_owned())
+        .into_iter()
+        .next()
         .expect("active schema alias should publish diagnostics");
     write_file(
         temp.path(),
@@ -93,7 +95,9 @@ pub(super) fn retired_schema_alias_close_clears_and_reopens() {
         DiagnosticRefresh::Clear { uri, .. } if uri == &alias_uri
     )));
     let reopen = workspace
-        .open(alias_uri.clone(), 8, ":: source default\n".to_owned())
+        .open_refreshes(alias_uri.clone(), 8, ":: source default\n".to_owned())
+        .into_iter()
+        .next()
         .expect("closed retired alias should be reopenable");
     let DiagnosticRefresh::Publish(reopened) = reopen else {
         panic!("reopening a retired alias should publish its exact URI");

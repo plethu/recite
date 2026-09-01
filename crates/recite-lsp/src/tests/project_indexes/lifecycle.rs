@@ -25,7 +25,7 @@ pub(crate) fn manifest_refresh_is_atomic_and_preserves_open_overlay() {
         .expect("initialize params"),
     ));
 
-    workspace.open(uri.clone(), 1, ":: overlay\n".to_owned());
+    workspace.open_refreshes(uri.clone(), 1, ":: overlay\n".to_owned());
     write_file(temp.path(), "recite.project.toml", "format_version = [\n");
     let refreshes = workspace.save(manifest_uri.clone());
     assert_eq!(refreshes.len(), 1);
@@ -57,7 +57,7 @@ pub(crate) fn manifest_refresh_reuses_unchanged_sibling_kernel() {
     .unwrap_or_else(|error| panic!("initialize params: {error}"));
     let mut workspace = test_workspace(WorkspaceConfig::from_initialize_params(&params));
     let second_uri = file_uri(&second.join("src/main.recite"));
-    workspace.open(second_uri, 1, ":: second live\n".to_owned());
+    workspace.open_refreshes(second_uri, 1, ":: second live\n".to_owned());
     let first_id = stable_path_identity(&first);
     let second_id = stable_path_identity(&second);
     let first_before = workspace
@@ -156,7 +156,7 @@ pub(crate) fn open_summary_overlays_saved_project_summary() {
     let mut workspace = test_workspace(WorkspaceConfig::for_roots(vec![temp.path().to_owned()]));
     assert_eq!(block_names(&workspace), ["saved"]);
 
-    workspace.open(file_uri(&source), 1, ":: live\n".to_owned());
+    workspace.open_refreshes(file_uri(&source), 1, ":: live\n".to_owned());
 
     assert_eq!(block_names(&workspace), ["live"]);
     assert_eq!(workspace.snapshot().summaries()[0].version, Some(1));
@@ -168,7 +168,7 @@ pub(crate) fn did_save_rekeys_new_open_file_without_duplicate_summary() {
     let uri = file_uri(&source);
     let mut workspace = test_workspace(WorkspaceConfig::for_roots(vec![temp.path().to_owned()]));
 
-    workspace.open(uri.clone(), 1, ":: live\n".to_owned());
+    workspace.open_refreshes(uri.clone(), 1, ":: live\n".to_owned());
     assert_eq!(workspace.snapshot().summaries().len(), 1);
     assert_eq!(
         workspace.snapshot().summaries()[0].project_relative_path(),
@@ -199,8 +199,8 @@ pub(crate) fn open_nonexistent_aliases_share_one_fallback_key() {
     let alias_uri = file_uri(&alias.join("draft.recite"));
     let mut workspace = test_workspace(WorkspaceConfig::for_roots(vec![temp.path().to_owned()]));
 
-    workspace.open(real_uri, 1, ":: draft\n".to_owned());
-    workspace.open(alias_uri, 1, ":: draft\n".to_owned());
+    workspace.open_refreshes(real_uri, 1, ":: draft\n".to_owned());
+    workspace.open_refreshes(alias_uri, 1, ":: draft\n".to_owned());
 
     assert_eq!(workspace.snapshot().summaries().len(), 1);
     assert_eq!(
@@ -273,7 +273,7 @@ pub(crate) fn open_alias_owner_switch_reseeds_kernel_version_state() {
     let alias_uri = file_uri(&alias_directory.join("draft.recite"));
     let mut workspace = test_workspace(WorkspaceConfig::for_roots(vec![temp.path().to_owned()]));
 
-    workspace.open(real_uri.clone(), 10, ":: canonical\n".to_owned());
+    workspace.open_refreshes(real_uri.clone(), 10, ":: canonical\n".to_owned());
     assert_eq!(workspace.snapshot().summaries().len(), 1);
     assert_eq!(block_names(&workspace), ["canonical"]);
     assert_eq!(workspace.snapshot().summaries()[0].version, Some(10));
@@ -281,7 +281,7 @@ pub(crate) fn open_alias_owner_switch_reseeds_kernel_version_state() {
     // The alias sorts first and starts at an unrelated editor version. The
     // effective URI owner changes, so this must reseed kernel overlay state
     // instead of comparing version 1 with the canonical URI's version 10.
-    workspace.open(alias_uri.clone(), 1, ":: alias\n".to_owned());
+    workspace.open_refreshes(alias_uri.clone(), 1, ":: alias\n".to_owned());
     assert_eq!(workspace.snapshot().summaries().len(), 1);
     assert_eq!(block_names(&workspace), ["alias"]);
     assert_eq!(workspace.snapshot().summaries()[0].version, Some(1));
@@ -321,7 +321,7 @@ pub(crate) fn watched_refresh_publishes_effective_open_payload() {
     let uri = file_uri(&source);
     let mut workspace = test_workspace(WorkspaceConfig::for_roots(vec![temp.path().to_owned()]));
 
-    workspace.open(uri.clone(), 7, "oops\n".to_owned());
+    workspace.open_refreshes(uri.clone(), 7, "oops\n".to_owned());
     write_file(temp.path(), "scene.recite", ":: watched saved\n");
 
     let refreshes = workspace.refresh_watched_uri(&uri);

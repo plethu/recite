@@ -314,7 +314,7 @@ fn invalid_projection_schema() -> &'static str {
 pub(super) fn stale_change_does_not_bump_snapshot_generation() {
     let mut workspace = test_workspace(WorkspaceConfig::for_roots(Vec::new()));
     let uri = super::support::uri("file:///workspace/dialogue/stale-generation.recite");
-    workspace.open(uri.clone(), 3, ":: live\n".to_owned());
+    workspace.open_refreshes(uri.clone(), 3, ":: live\n".to_owned());
     let generation = workspace.generation();
 
     match workspace.change(uri, 2, vec![full_change("oops\n:: stale\n")]) {

@@ -47,6 +47,7 @@ pub(crate) struct LspWorkspace {
     schema_override_path: Option<std::path::PathBuf>,
     schema_paths: BTreeMap<String, Option<std::path::PathBuf>>,
     retired_schema_uris: BTreeSet<String>,
+    retired_schema_targets: BTreeMap<String, String>,
     generation: SnapshotGeneration,
     next_partition_build_id: u64,
     pub(crate) ui_catalog: UiCatalog,
@@ -174,6 +175,7 @@ impl LspWorkspace {
             partition.schema.matches_uri(uri)
                 || partition.retired_schema_uris.contains(uri.as_str())
         }) || self.retired_schema_uris.contains(uri.as_str())
+            || self.retired_schema_targets.contains_key(uri.as_str())
             || self.is_retired_schema_alias(uri)
     }
 }
