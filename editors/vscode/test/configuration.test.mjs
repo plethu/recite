@@ -33,6 +33,7 @@ test("initialization advertises UTF-16, full sync, and dynamic watch registratio
   assert.deepEqual(params.capabilities.general.positionEncodings, ["utf-16"]);
   assert.deepEqual(params.capabilities.workspace.didChangeWatchedFiles, { dynamicRegistration: true });
   assert.equal(params.capabilities.textDocument.synchronization.didSave, true);
+  assert.equal(params.capabilities.textDocument.rename, undefined);
 });
 
 test("relative project roots require a workspace folder", () => {

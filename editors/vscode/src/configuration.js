@@ -46,8 +46,7 @@ export function initializeParams(api, root, override = false) {
         codeAction: {},
         definition: {},
         hover: {},
-        references: {},
-        rename: {}
+        references: {}
       }
     },
     trace: "off"

@@ -46,8 +46,18 @@ project file watching and forwards deterministic create/change/delete events.
 This is distinct from the future structured command/watch envelopes owned by
 REC-53. The current server does not implement cancellation or remote projects.
 
+Code-action edits are returned as extension-owned commands. The command keeps
+the LSP document versions, including zero-edit sibling preconditions, and
+checks them again immediately before applying the edit. Native rename is not
+registered yet: VS Code's native `WorkspaceEdit` path cannot preserve those
+LSP versions at its eventual apply boundary. A version-safe rename adapter is
+remaining closure work for REC-51.
+
 Relative paths and process spawning use Node's platform-neutral path and
 process APIs. Linux, macOS, and Windows are intended hosts, but this scaffold
 contains Linux-only executable evidence; platform packaging and publication
-smoke remain release work. The same VSIX can be submitted to the VS Code
+smoke remain release work. A real installed VS Code and VSCodium activation
+smoke is also remaining REC-51 closure evidence; this foundation intentionally
+does not add the unpinned `@vscode/test-electron` dependency or its browser
+download. The same VSIX can be submitted to the VS Code
 Marketplace or Open VSX when those distribution decisions are made.

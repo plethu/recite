@@ -57,5 +57,12 @@ macro_rules! lsp_message_ids {
         | MsgId::LspClientExited
         | MsgId::LspClientRestartScheduled
         | MsgId::LspClientRestartExhausted
+        | MsgId::LspClientDisplayName
+        | MsgId::LspClientDescription
+        | MsgId::LspClientUntrustedWorkspacesDescription
+        | MsgId::LspClientConfigurationTitle
+        | MsgId::LspClientConfigurationPathDescription
+        | MsgId::LspClientConfigurationArgsDescription
+        | MsgId::LspClientConfigurationProjectRootDescription
     };
 }

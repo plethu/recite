@@ -66,6 +66,37 @@ test("untrusted workspaces never spawn and start once trust is granted", async (
   assert.equal(clientCreated, 1);
 });
 
+test("activation-shaped startup replays documents already open before activation", async () => {
+  const document = {
+    languageId: "recite",
+    version: 7,
+    uri: uri("already-open.recite"),
+    getText: () => ":: already-open"
+  };
+  const api = hostApi({ isTrusted: () => true, onDidGrantWorkspaceTrust: () => ({ dispose() {} }) });
+  api.workspace.textDocuments.push(document);
+  const clients = [];
+  const controller = new ExtensionController(api, output(), { delete() {} }, {
+    createClient: () => {
+      const client = new FakeClient();
+      clients.push(client);
+      return client;
+    }
+  });
+
+  await controller.start();
+
+  assert.deepEqual(clients[0].notifications, [{
+    method: "textDocument/didOpen",
+    params: { textDocument: {
+      uri: "file:///already-open.recite", languageId: "recite", version: 7,
+      text: ":: already-open"
+    } }
+  }]);
+  assert.equal(api.registeredProviders.some(({ name }) => name === "rename"), false);
+  await controller.dispose();
+});
+
 test("a crashed server restarts with bounded backoff and replays open documents", async () => {
   const clients = [];
   const api = hostApi({ isTrusted: () => true, onDidGrantWorkspaceTrust: () => ({ dispose() {} }) });
@@ -99,6 +130,146 @@ test("a crashed server restarts with bounded backoff and replays open documents"
   assert.equal(clients[1].status, "stopped");
 });
 
+test("rapid crash loops retain backoff until a stable run completes", async () => {
+  const clients = [];
+  const api = hostApi({ isTrusted: () => true, onDidGrantWorkspaceTrust: () => ({ dispose() {} }) });
+  const messages = [];
+  const controller = new ExtensionController(api, {
+    append() {},
+    appendLine(value) { messages.push(value); }
+  }, { delete() {} }, {
+    stableRunMs: 1_000,
+    createClient: () => {
+      const client = new FakeClient();
+      clients.push(client);
+      return client;
+    }
+  });
+
+  await controller.start();
+  clients[0].emit("exit", { code: 1, signal: null });
+  await waitFor(() => clients.length === 2, 250);
+  clients[1].emit("exit", { code: 1, signal: null });
+  await waitFor(() => clients.length === 3, 750);
+
+  assert.equal(messages.filter((message) => message.includes("restart scheduled")).length, 2);
+  assert.ok(messages.some((message) => message.includes("500 ms")));
+  await controller.dispose();
+});
+
+test("restart budget resets only after a separated stable run", async () => {
+  const clients = [];
+  const messages = [];
+  const api = hostApi({ isTrusted: () => true, onDidGrantWorkspaceTrust: () => ({ dispose() {} }) });
+  const controller = new ExtensionController(api, {
+    append() {},
+    appendLine(value) { messages.push(value); }
+  }, { delete() {} }, {
+    stableRunMs: 25,
+    createClient: () => {
+      const client = new FakeClient();
+      clients.push(client);
+      return client;
+    }
+  });
+
+  await controller.start();
+  clients[0].emit("exit", { code: 1, signal: null });
+  await waitFor(() => clients.length === 2, 250);
+  await new Promise((resolve) => setTimeout(resolve, 40));
+  clients[1].emit("exit", { code: 1, signal: null });
+  await waitFor(() => clients.length === 3, 250);
+
+  assert.deepEqual(messages.filter((message) => message.includes("restart scheduled"))
+    .map((message) => message.match(/\d+ ms/)?.[0]), ["100 ms", "100 ms"]);
+  await controller.dispose();
+});
+
+test("controller-owned edit commands revalidate immediately before apply", async () => {
+  const applied = [];
+  const api = hostApi({ isTrusted: () => true, onDidGrantWorkspaceTrust: () => ({ dispose() {} }) });
+  api.workspace.applyEdit = async (edit) => {
+    applied.push(edit);
+    return true;
+  };
+  const controller = new ExtensionController(api, output(), { delete() {} }, {
+    createClient: () => new FakeClient()
+  });
+  await controller.start();
+
+  let current = true;
+  const edit = { reciteVersionGuard: () => current };
+  const command = controller.createEditCommand("Apply fix", edit);
+  assert.equal(await api.commands.executeCommand(command.command, ...command.arguments), true);
+  assert.deepEqual(applied, [edit]);
+
+  const stale = { reciteVersionGuard: () => false };
+  const staleCommand = controller.createEditCommand("Stale fix", stale);
+  current = false;
+  assert.equal(await api.commands.executeCommand(staleCommand.command, ...staleCommand.arguments), false);
+  assert.deepEqual(applied, [edit]);
+  await controller.dispose();
+});
+
+test("activation-shaped host API routes versioned code actions through the command boundary", async () => {
+  const applied = [];
+  const primary = {
+    languageId: "recite",
+    version: 4,
+    uri: uri("dialogue.recite"),
+    getText: () => ":: dialogue"
+  };
+  const sibling = {
+    languageId: "recite",
+    version: 9,
+    uri: uri("sibling.recite"),
+    getText: () => ":: sibling"
+  };
+  const api = hostApi({ isTrusted: () => true, onDidGrantWorkspaceTrust: () => ({ dispose() {} }) });
+  api.workspace.textDocuments.push(primary, sibling);
+  api.workspace.applyEdit = async (edit) => {
+    applied.push(edit);
+    return true;
+  };
+  const controller = new ExtensionController(api, output(), { delete() {} }, {
+    createClient: () => {
+      const client = new FakeClient();
+      client.request = async () => [{
+        kind: "quickfix",
+        title: "Apply fix",
+        edit: { documentChanges: [
+          {
+            textDocument: { uri: primary.uri.toString(), version: 4 },
+            edits: [{
+              range: { start: { line: 0, character: 0 }, end: { line: 0, character: 2 } },
+              newText: "# "
+            }]
+          },
+          { textDocument: { uri: sibling.uri.toString(), version: 9 }, edits: [] }
+        ] }
+      }];
+      return client;
+    }
+  });
+  await controller.start();
+  const provider = api.registeredProviders.find(({ name }) => name === "code-actions").provider;
+  const actions = await provider.provideCodeActions(
+    primary,
+    new api.Range(new api.Position(0, 0), new api.Position(0, 2)),
+    { diagnostics: [] }
+  );
+  assert.equal(actions.length, 1);
+  assert.equal(actions[0].edit, undefined);
+  assert.equal(actions[0].command.command, "recite.applyCodeAction");
+
+  sibling.version = 10;
+  assert.equal(await api.commands.executeCommand(
+    actions[0].command.command, ...actions[0].command.arguments
+  ), false);
+  assert.deepEqual(applied, []);
+  await controller.dispose();
+});
+
 function uri(value) {
   return { toString: () => `file:///${value}` };
 }
@@ -116,30 +287,74 @@ class FakeClient extends EventEmitter {
 }
 
 function hostApi({ isTrusted, onDidGrantWorkspaceTrust }) {
+  const registeredProviders = [];
+  const registeredCommands = new Map();
   const workspace = {
     get isTrusted() { return isTrusted(); },
     onDidGrantWorkspaceTrust,
     workspaceFolders: [],
     textDocuments: [],
-    getConfiguration: () => ({ get: (_key, fallback) => fallback })
+    getConfiguration: () => ({ get: (_key, fallback) => fallback }),
+    applyEdit: async () => true
   };
   for (const event of [
     "onDidOpenTextDocument", "onDidChangeTextDocument", "onDidSaveTextDocument",
     "onDidCloseTextDocument", "onDidChangeConfiguration"
   ]) workspace[event] = () => ({ dispose() {} });
-  return {
+  const api = {
     workspace,
     languages: {
-      registerCompletionItemProvider: () => ({ dispose() {} }),
-      registerHoverProvider: () => ({ dispose() {} }),
-      registerDefinitionProvider: () => ({ dispose() {} }),
-      registerReferenceProvider: () => ({ dispose() {} }),
-      registerRenameProvider: () => ({ dispose() {} }),
-      registerCodeActionsProvider: () => ({ dispose() {} })
+      registerCompletionItemProvider: register("completion"),
+      registerHoverProvider: register("hover"),
+      registerDefinitionProvider: register("definition"),
+      registerReferenceProvider: register("reference"),
+      registerRenameProvider: register("rename"),
+      registerCodeActionsProvider: register("code-actions")
     },
+    commands: {
+      registerCommand: (name, callback) => {
+        registeredCommands.set(name, callback);
+        return { dispose: () => registeredCommands.delete(name) };
+      },
+      executeCommand: (name, ...args) => registeredCommands.get(name)?.(...args)
+    },
+    registeredProviders,
     Uri: {
       file: (value) => ({ toString: () => `file://${value}` }),
       parse: (value) => ({ toString: () => value })
-    }
+    },
+    Command: class Command {
+      constructor(title, command, ...args) { this.title = title; this.command = command; this.arguments = args; }
+    },
+    Position: class Position {
+      constructor(line, character) { this.line = line; this.character = character; }
+    },
+    Range: class Range {
+      constructor(start, end) { this.start = start; this.end = end; }
+    },
+    WorkspaceEdit: class WorkspaceEdit {
+      constructor() { this.replacements = []; }
+      replace(uri, range, newText) { this.replacements.push({ uri, range, newText }); }
+    },
+    CodeAction: class CodeAction {
+      constructor(title, kind) { this.title = title; this.kind = kind; }
+    },
+    CodeActionKind: { QuickFix: "quickfix", Refactor: "refactor", Source: "source", Empty: "" }
   };
+  return api;
+
+  function register(name) {
+    return (selector, provider, ...triggerCharacters) => {
+      registeredProviders.push({ name, selector, provider, triggerCharacters });
+      return { dispose() {} };
+    };
+  }
+}
+
+async function waitFor(predicate, timeoutMs = 5_000) {
+  const deadline = Date.now() + timeoutMs;
+  while (!predicate()) {
+    if (Date.now() >= deadline) throw new Error("timed out waiting for controller evidence");
+    await new Promise((resolve) => setTimeout(resolve, 10));
+  }
 }

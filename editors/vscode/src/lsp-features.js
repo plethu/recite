@@ -107,14 +107,19 @@ export function workspaceEditIsCurrent(workspaceEdit) {
   return workspaceEdit?.reciteVersionGuard?.() ?? true;
 }
 
-export function lspCodeActionsToVscode(api, result, getOpenDocument) {
+export function lspCodeActionsToVscode(api, result, getOpenDocument, options = {}) {
   const actions = Array.isArray(result) ? result : [];
   return actions.flatMap((action) => {
     if (action?.edit) {
       const edit = lspWorkspaceEditToVscode(api, action.edit, getOpenDocument);
       if (!edit || !workspaceEditIsCurrent(edit)) return [];
       const codeAction = new api.CodeAction(action.title ?? "", actionKind(api, action.kind));
-      codeAction.edit = edit;
+      const command = options.createEditCommand?.(action.title ?? "", edit);
+      if (!command) return [];
+      // VS Code does not preserve LSP document versions on a native
+      // WorkspaceEdit. Keep the edit behind the controller command so its
+      // preconditions can be checked again at invocation time.
+      codeAction.command = command;
       codeAction.isPreferred = action.isPreferred;
       if (Array.isArray(action.diagnostics)) {
         codeAction.diagnostics = action.diagnostics.map((diagnostic) =>

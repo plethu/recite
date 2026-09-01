@@ -3,6 +3,11 @@ import path from "node:path";
 import { fileURLToPath } from "node:url";
 import { spawnSync } from "node:child_process";
 import { readdirSync } from "node:fs";
+import {
+  PACKAGE_MESSAGE_IDS,
+  RUNTIME_MESSAGE_IDS,
+  projectMessages
+} from "./message-projections.mjs";
 
 const packageRoot = path.resolve(path.dirname(fileURLToPath(import.meta.url)), "..");
 const manifest = JSON.parse(await readFile(path.join(packageRoot, "package.json"), "utf8"));
@@ -12,18 +17,23 @@ const languageConfiguration = JSON.parse(
 const projectedMessages = JSON.parse(
   await readFile(path.join(packageRoot, "src", "messages.json"), "utf8")
 );
+const packageMessages = JSON.parse(
+  await readFile(path.join(packageRoot, "package.nls.json"), "utf8")
+);
 const fluent = await readFile(
   path.resolve(packageRoot, "../../crates/recite-ui/resources/en-US.ftl"), "utf8"
 );
-const expectedMessageIds = [
-  "lsp-client-start-failed",
-  "lsp-client-error",
-  "lsp-client-exited",
-  "lsp-client-restart-scheduled",
-  "lsp-client-restart-exhausted"
-];
-assert(JSON.stringify(Object.keys(projectedMessages).sort()) === JSON.stringify(expectedMessageIds.sort()),
-  "VS Code message projection must be complete and contain no unowned IDs");
+const canonicalMessages = new Map([...fluent.matchAll(/^([a-z0-9-]+) = ([^\n]*)$/gm)]
+  .map((match) => [match[1], match[2]]));
+const generated = projectMessages(fluent);
+assertSameKeys(Object.keys(projectedMessages), RUNTIME_MESSAGE_IDS,
+  "VS Code runtime message projection");
+assertSameKeys(Object.keys(packageMessages), PACKAGE_MESSAGE_IDS,
+  "VS Code package message projection");
+assert(JSON.stringify(projectedMessages) === JSON.stringify(generated.runtime),
+  "VS Code runtime message projection is stale; run the message generator");
+assert(JSON.stringify(packageMessages) === JSON.stringify(generated.package),
+  "VS Code package message projection is stale; run the message generator");
 
 assert(manifest.name === "recite-vscode", "package name must remain recite-vscode");
 assert(manifest.publisher === "plethu", "publisher must remain plethu");
@@ -58,10 +68,20 @@ assert(properties["recite.lsp.projectRoot"]?.type === "string",
   "project root must be a string setting");
 
 for (const [id, message] of Object.entries(projectedMessages)) {
-  const fluentLine = fluent.split("\n").find((line) => line.startsWith(`${id} = `));
-  assert(fluentLine, `canonical Fluent message is missing ${id}`);
-  assert(fluentLine.slice(fluentLine.indexOf(" = ") + 3).replace("{$detail}", "{0}") === message,
+  assert(canonicalMessages.get(id), `canonical Fluent message is missing ${id}`);
+  assert(canonicalMessages.get(id).replaceAll("{$detail}", "{0}") === message,
     `VS Code message projection diverges from canonical Fluent message ${id}`);
+}
+for (const [id, message] of Object.entries(packageMessages)) {
+  assert(canonicalMessages.get(id), `canonical Fluent message is missing ${id}`);
+  assert(canonicalMessages.get(id) === message,
+    `VS Code package projection diverges from canonical Fluent message ${id}`);
+}
+
+for (const value of localizableManifestValues(manifest)) {
+  assert(/^%[^%]+%$/.test(value), `visible package text must use a message projection: ${value}`);
+  const id = value.slice(1, -1);
+  assert(Object.hasOwn(packageMessages, id), `package message projection is missing ${id}`);
 }
 
 assert(languageConfiguration.comments?.lineComment === "#", "Recite comments must remain # comments");
@@ -83,4 +103,20 @@ console.log("recite-vscode package contract passed");
 
 function assert(condition, message) {
   if (!condition) throw new Error(message);
+}
+
+function assertSameKeys(actual, expected, label) {
+  assert(JSON.stringify(actual.slice().sort()) === JSON.stringify(expected.slice().sort()),
+    `${label} must be complete and contain no unowned IDs`);
+}
+
+function localizableManifestValues(packageManifest) {
+  return [
+    packageManifest.displayName,
+    packageManifest.description,
+    packageManifest.capabilities?.untrustedWorkspaces?.description,
+    packageManifest.contributes?.configuration?.title,
+    ...Object.values(packageManifest.contributes?.configuration?.properties ?? {})
+      .map((property) => property.description)
+  ].filter((value) => value !== undefined);
 }

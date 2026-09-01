@@ -75,6 +75,21 @@ pub(super) const fn key(id: super::MsgId) -> Option<&'static str> {
         super::MsgId::LspClientExited => Some("lsp-client-exited"),
         super::MsgId::LspClientRestartScheduled => Some("lsp-client-restart-scheduled"),
         super::MsgId::LspClientRestartExhausted => Some("lsp-client-restart-exhausted"),
+        super::MsgId::LspClientDisplayName => Some("lsp-client-display-name"),
+        super::MsgId::LspClientDescription => Some("lsp-client-description"),
+        super::MsgId::LspClientUntrustedWorkspacesDescription => {
+            Some("lsp-client-untrusted-workspaces-description")
+        }
+        super::MsgId::LspClientConfigurationTitle => Some("lsp-client-configuration-title"),
+        super::MsgId::LspClientConfigurationPathDescription => {
+            Some("lsp-client-configuration-path-description")
+        }
+        super::MsgId::LspClientConfigurationArgsDescription => {
+            Some("lsp-client-configuration-args-description")
+        }
+        super::MsgId::LspClientConfigurationProjectRootDescription => {
+            Some("lsp-client-configuration-project-root-description")
+        }
         _ => None,
     }
 }

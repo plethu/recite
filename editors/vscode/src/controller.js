@@ -1,25 +1,18 @@
 import { ReciteLanguageClient } from "./lsp-client.js";
 import { initializeParams, readConfiguration } from "./configuration.js";
 import {
-  lspCodeActionsToVscode,
-  lspCompletionItems,
   lspDiagnosticToVscode,
-  lspHoverToVscode,
-  lspLocationToVscode,
-  lspRangeToVscode,
-  lspWorkspaceEditToVscode,
   workspaceEditIsCurrent,
-  vscodeDiagnosticToLsp,
 } from "./lsp-features.js";
 import { clientMessage } from "./messages.js";
+import { registerDocumentLifecycle } from "./document-lifecycle.js";
+import { registerFeatureProviders } from "./providers.js";
+import { WatcherRegistry } from "./watchers.js";
 
-const SELECTOR = [
-  { scheme: "file", language: "recite" },
-  { scheme: "untitled", language: "recite" }
-];
 const DIAGNOSTICS_METHOD = "textDocument/publishDiagnostics";
-const WATCH_METHOD = "workspace/didChangeWatchedFiles";
+const APPLY_CODE_ACTION_COMMAND = "recite.applyCodeAction";
 const RESTART_DELAYS_MS = [100, 500, 1_000, 2_000, 5_000];
+const STABLE_RUN_MS = 10_000;
 
 export class ExtensionController {
   constructor(api, output, diagnostics, options = {}) {
@@ -28,9 +21,11 @@ export class ExtensionController {
     this.diagnostics = diagnostics;
     this.createClient = options.createClient ?? ((configuration, callbacks) =>
       new ReciteLanguageClient({ ...configuration, ...callbacks }));
+    this.stableRunMs = options.stableRunMs ?? STABLE_RUN_MS;
     this.client = undefined;
     this.restartPromise = undefined;
     this.restartTimer = undefined;
+    this.stableRunTimer = undefined;
     this.restartAttempt = 0;
     this.stopping = false;
     this.disposed = false;
@@ -38,9 +33,10 @@ export class ExtensionController {
     this.providersRegistered = false;
     this.trustListenerRegistered = false;
     this.documents = new Map();
-    this.watcherRegistrations = new Map();
-    this.pendingWatchEvents = new Map();
-    this.watchFlushTimer = undefined;
+    this.editCommands = new Map();
+    this.nextEditCommandId = 1;
+    this.editCommandRegistered = false;
+    this.watchers = new WatcherRegistry(this);
   }
 
   async start() {
@@ -65,7 +61,8 @@ export class ExtensionController {
         configuration.projectRootOverridden
       ));
       this.replayOpenDocuments();
-      this.flushWatchEvents();
+      this.watchers.flush();
+      this.scheduleStableReset(client);
       return true;
     } catch (error) {
       if (this.client === client) this.client = undefined;
@@ -76,8 +73,9 @@ export class ExtensionController {
   ensureSubscriptions() {
     this.ensureTrustListener();
     if (this.providersRegistered) return;
-    this.registerDocumentLifecycle();
-    this.registerFeatureProviders();
+    registerDocumentLifecycle(this);
+    registerFeatureProviders(this);
+    this.registerEditCommand();
     this.providersRegistered = true;
   }
 
@@ -89,12 +87,37 @@ export class ExtensionController {
     }));
   }
 
+  registerEditCommand() {
+    if (this.editCommandRegistered || !this.api.commands?.registerCommand) return;
+    this.editCommandRegistered = true;
+    this.subscriptions.push(this.api.commands.registerCommand(
+      APPLY_CODE_ACTION_COMMAND,
+      (id) => this.applyEditCommand(id)
+    ));
+  }
+
+  createEditCommand(title, edit) {
+    if (!this.editCommandRegistered) return undefined;
+    const id = String(this.nextEditCommandId++);
+    this.editCommands.set(id, edit);
+    if (this.api.Command) return new this.api.Command(title, APPLY_CODE_ACTION_COMMAND, id);
+    return { title, command: APPLY_CODE_ACTION_COMMAND, arguments: [id] };
+  }
+
+  applyEditCommand(id) {
+    const edit = this.editCommands.get(id);
+    this.editCommands.delete(id);
+    if (!edit || !workspaceEditIsCurrent(edit)) return false;
+    return this.api.workspace.applyEdit(edit);
+  }
+
   handleStartFailure(error) {
     this.output.appendLine(clientMessage(this.api, "lsp-client-start-failed", error.message));
   }
 
   handleExit(client, event) {
     if (this.client !== client || this.stopping || this.disposed) return;
+    this.clearStableReset();
     this.client = undefined;
     this.output.appendLine(clientMessage(this.api, "lsp-client-exited", event.code ?? "unknown"));
     this.scheduleRestart();
@@ -118,114 +141,27 @@ export class ExtensionController {
     this.restartTimer.unref?.();
   }
 
-  registerDocumentLifecycle() {
-    this.subscriptions.push(
-      this.api.workspace.onDidOpenTextDocument((document) => this.open(document)),
-      this.api.workspace.onDidChangeTextDocument((event) => {
-        if (!isReciteDocument(event.document)) return;
-        this.documents.set(event.document.uri.toString(), event.document);
-        if (this.client?.status !== "running") return;
-        this.client.notify("textDocument/didChange", {
-          textDocument: { uri: event.document.uri.toString(), version: event.document.version },
-          contentChanges: [{ text: event.document.getText() }]
-        });
-      }),
-      this.api.workspace.onDidSaveTextDocument((document) => {
-        if (!isReciteDocument(document)) return;
-        if (this.client?.status !== "running") return;
-        this.client.notify("textDocument/didSave", {
-          textDocument: { uri: document.uri.toString() }
-        });
-      }),
-      this.api.workspace.onDidCloseTextDocument((document) => {
-        if (!isReciteDocument(document)) return;
-        const uri = document.uri.toString();
-        this.documents.delete(uri);
-        if (this.client?.status === "running") {
-          this.client.notify("textDocument/didClose", { textDocument: { uri } });
-        }
-        this.diagnostics.delete(document.uri);
-      }),
-      this.api.workspace.onDidChangeConfiguration((event) => {
-        if (!event.affectsConfiguration("recite.lsp")) return;
-        void this.restart().catch((error) => this.handleStartFailure(error));
-      })
-    );
+  scheduleStableReset(client) {
+    this.clearStableReset();
+    const timer = setTimeout(() => {
+      if (this.client === client && client.status === "running") {
+        this.restartAttempt = 0;
+        this.stableRunTimer = undefined;
+      }
+    }, this.stableRunMs);
+    timer.unref?.();
+    this.stableRunTimer = timer;
   }
 
-  registerFeatureProviders() {
-    const send = (method, params, token) => {
-      const client = this.client;
-      if (!client || client.status !== "running") {
-        return Promise.reject(new Error("recite-lsp is not running"));
-      }
-      return client.request(method, params)
-        .then((result) => token?.isCancellationRequested ? undefined : result);
-    };
-    const request = (method, document, position, token, extra = {}) => send(method, {
-        textDocument: { uri: document.uri.toString() },
-        position: { line: position.line, character: position.character },
-        ...extra
-      }, token);
-    const getDocument = (uri) => this.api.workspace.textDocuments.find(
-      (document) => document.uri.toString() === uri.toString()
-    );
-    const provider = (callback, method, transform) => ({
-      [callback]: (document, position, token, extra) => request(method, document, position, token, extra)
-        .then((result) => transform(result))
-    });
-
-    this.subscriptions.push(
-      this.api.languages.registerCompletionItemProvider(
-        SELECTOR,
-        provider("provideCompletionItems", "textDocument/completion", (result) => lspCompletionItems(this.api, result)),
-        "(", "="
-      ),
-      this.api.languages.registerHoverProvider(
-        SELECTOR,
-        provider("provideHover", "textDocument/hover", (result) => lspHoverToVscode(this.api, result))
-      ),
-      this.api.languages.registerDefinitionProvider(
-        SELECTOR,
-        provider("provideDefinition", "textDocument/definition", (result) => locations(this.api, result))
-      ),
-      this.api.languages.registerReferenceProvider(SELECTOR, {
-        provideReferences: (document, position, context, token) => request(
-          "textDocument/references", document, position, token,
-          { context: { includeDeclaration: context.includeDeclaration } }
-        ).then((result) => locations(this.api, result))
-      }),
-      this.api.languages.registerRenameProvider(SELECTOR, {
-        prepareRename: (document, position, token) => request(
-          "textDocument/prepareRename", document, position, token
-        ).then((result) => result ? lspRangeToVscode(this.api, result.range ?? result) : undefined),
-        provideRenameEdits: (document, position, newName, token) => request(
-          "textDocument/rename", document, position, token, { newName }
-        ).then((result) => {
-          const edit = lspWorkspaceEditToVscode(this.api, result, getDocument);
-          return workspaceEditIsCurrent(edit) ? edit : undefined;
-        })
-      }),
-      this.api.languages.registerCodeActionsProvider(SELECTOR, {
-        provideCodeActions: (document, range, context, token) => send("textDocument/codeAction", {
-            textDocument: { uri: document.uri.toString() },
-            range: {
-              start: { line: range.start.line, character: range.start.character },
-              end: { line: range.end.line, character: range.end.character }
-            },
-            context: { diagnostics: context.diagnostics.map((diagnostic) =>
-              vscodeDiagnosticToLsp(this.api, diagnostic)
-            ) }
-          }, token).then((result) => lspCodeActionsToVscode(this.api, result, getDocument))
-      })
-    );
+  clearStableReset() {
+    if (this.stableRunTimer) clearTimeout(this.stableRunTimer);
+    this.stableRunTimer = undefined;
   }
 
   open(document) {
-    if (!isReciteDocument(document)) return;
+    if (document.languageId !== "recite") return;
     this.documents.set(document.uri.toString(), document);
-    if (this.client?.status !== "running") return;
-    this.sendOpen(document);
+    if (this.client?.status === "running") this.sendOpen(document);
   }
 
   sendOpen(document) {
@@ -267,76 +203,25 @@ export class ExtensionController {
     this.output.appendLine(clientMessage(this.api, "lsp-client-error", error.message));
   }
 
+  registerCapabilities(params) {
+    this.watchers.registerCapabilities(params);
+  }
+
+  unregisterCapabilities(params) {
+    this.watchers.unregisterCapabilities(params);
+  }
+
   async restart() {
     if (this.restartPromise) return this.restartPromise;
     this.restartPromise = (async () => {
       this.stopping = true;
+      this.clearStableReset();
       await this.client?.stop();
       this.client = undefined;
       this.stopping = false;
-      this.restartAttempt = 0;
       await this.start();
     })().finally(() => { this.restartPromise = undefined; });
     return this.restartPromise;
-  }
-
-  async registerCapabilities(params) {
-    for (const registration of params?.registrations ?? []) {
-      if (registration.method !== WATCH_METHOD) continue;
-      this.unregisterCapabilities({ unregistrations: [{ id: registration.id }] });
-      this.installWatchRegistration(registration);
-    }
-  }
-
-  unregisterCapabilities(params) {
-    for (const registration of params?.unregisterations ?? params?.unregistrations ?? []) {
-      const installed = this.watcherRegistrations.get(registration.id);
-      if (!installed) continue;
-      for (const disposable of installed) disposable.dispose();
-      this.watcherRegistrations.delete(registration.id);
-    }
-  }
-
-  installWatchRegistration(registration) {
-    const installed = [];
-    for (const watcher of registration.registerOptions?.watchers ?? []) {
-      const fileWatcher = this.api.workspace.createFileSystemWatcher(this.watchPattern(watcher.globPattern));
-      const kind = watcher.kind ?? 7;
-      if (kind & 1) installed.push(fileWatcher.onDidCreate((uri) => this.queueWatchEvent(1, uri)));
-      if (kind & 2) installed.push(fileWatcher.onDidChange((uri) => this.queueWatchEvent(2, uri)));
-      if (kind & 4) installed.push(fileWatcher.onDidDelete((uri) => this.queueWatchEvent(3, uri)));
-      installed.push(fileWatcher);
-    }
-    this.watcherRegistrations.set(registration.id, installed);
-  }
-
-  watchPattern(pattern) {
-    if (typeof pattern === "string") return pattern;
-    if (pattern?.baseUri && this.api.RelativePattern) {
-      return new this.api.RelativePattern(this.api.Uri.parse(pattern.baseUri), pattern.pattern);
-    }
-    return pattern?.pattern ?? "**/*";
-  }
-
-  queueWatchEvent(type, uri) {
-    const key = `${type}\0${uri.toString()}`;
-    this.pendingWatchEvents.set(key, { type, uri: uri.toString() });
-    if (this.watchFlushTimer) return;
-    this.watchFlushTimer = setTimeout(() => {
-      this.watchFlushTimer = undefined;
-      this.flushWatchEvents();
-    }, 0);
-    this.watchFlushTimer.unref?.();
-  }
-
-  flushWatchEvents() {
-    if (!this.pendingWatchEvents.size) return;
-    if (!this.client || this.client.status === "stopped") return;
-    const changes = [...this.pendingWatchEvents.values()]
-      .sort((left, right) => left.type - right.type || left.uri.localeCompare(right.uri))
-      .map(({ type, uri }) => ({ type, uri }));
-    this.pendingWatchEvents.clear();
-    this.client.notify(WATCH_METHOD, { changes });
   }
 
   async dispose() {
@@ -344,23 +229,11 @@ export class ExtensionController {
     this.stopping = true;
     if (this.restartTimer) clearTimeout(this.restartTimer);
     this.restartTimer = undefined;
-    if (this.watchFlushTimer) clearTimeout(this.watchFlushTimer);
-    this.watchFlushTimer = undefined;
-    for (const installed of this.watcherRegistrations.values()) {
-      for (const disposable of installed) disposable.dispose();
-    }
-    this.watcherRegistrations.clear();
+    this.clearStableReset();
+    this.watchers.dispose();
+    this.editCommands.clear();
     for (const subscription of this.subscriptions.splice(0)) subscription.dispose();
     await this.client?.stop();
     this.client = undefined;
   }
-}
-
-function isReciteDocument(document) {
-  return document.languageId === "recite";
-}
-
-function locations(api, result) {
-  const values = Array.isArray(result) ? result : result ? [result] : [];
-  return values.map((location) => lspLocationToVscode(api, location)).filter(Boolean);
 }

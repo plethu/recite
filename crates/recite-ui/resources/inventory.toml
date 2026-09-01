@@ -354,6 +354,13 @@ resource_ids = [
 "lsp-client-exited",
 "lsp-client-restart-scheduled",
 "lsp-client-restart-exhausted",
+"lsp-client-display-name",
+"lsp-client-description",
+"lsp-client-untrusted-workspaces-description",
+"lsp-client-configuration-title",
+"lsp-client-configuration-path-description",
+"lsp-client-configuration-args-description",
+"lsp-client-configuration-project-root-description",
 ]
 
 # The complete future default-code presentation registry is explicit. Parser

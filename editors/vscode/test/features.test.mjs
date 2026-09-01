@@ -2,6 +2,7 @@ import test from "node:test";
 import assert from "node:assert/strict";
 import {
   lspDiagnosticToVscode,
+  lspCodeActionsToVscode,
   lspWorkspaceEditToVscode,
   vscodeDiagnosticToLsp,
   workspaceEditIsCurrent
@@ -85,6 +86,30 @@ test("delayed workspace edits revalidate zero-edit sibling preconditions atomica
   assert.equal(edit.replacements.length, 1);
 });
 
+test("editable code actions are projected as controller-owned commands", () => {
+  const uri = api.Uri.parse("file:///workspace/dialogue.recite");
+  const command = { title: "Apply fix", command: "recite.applyCodeAction", arguments: ["1"] };
+  const actions = lspCodeActionsToVscode(api, [{
+    title: "Apply fix",
+    kind: "quickfix",
+    edit: {
+      documentChanges: [{
+        textDocument: { uri: uri.toString(), version: 4 },
+        edits: [{
+          range: { start: { line: 0, character: 0 }, end: { line: 0, character: 1 } },
+          newText: "#"
+        }]
+      }]
+    }
+  }], () => ({ version: 4 }), {
+    createEditCommand: () => command
+  });
+
+  assert.equal(actions.length, 1);
+  assert.equal(actions[0].edit, undefined);
+  assert.deepEqual(actions[0].command, command);
+});
+
 test("diagnostic severity maps explicitly across the VS Code and LSP ranges", () => {
   const severities = [
     [1, 0], [2, 1], [3, 2], [4, 3]
@@ -120,7 +145,11 @@ const api = {
   WorkspaceEdit: class WorkspaceEdit {
     constructor() { this.replacements = []; }
     replace(uri, range, newText) { this.replacements.push({ uri, range, newText }); }
-  }
+  },
+  CodeAction: class CodeAction {
+    constructor(title, kind) { this.title = title; this.kind = kind; }
+  },
+  CodeActionKind: { QuickFix: "quickfix", Refactor: "refactor", Source: "source", Empty: "" }
 };
 
 function numericSeverityApi() {

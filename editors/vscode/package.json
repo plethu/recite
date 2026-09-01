@@ -1,7 +1,7 @@
 {
   "name": "recite-vscode",
-  "displayName": "Recite",
-  "description": "Language support for the Recite dialogue language.",
+  "displayName": "%lsp-client-display-name%",
+  "description": "%lsp-client-description%",
   "version": "0.1.0",
   "publisher": "plethu",
   "type": "module",
@@ -21,7 +21,7 @@
   "capabilities": {
     "untrustedWorkspaces": {
       "supported": true,
-      "description": "%capabilities.untrustedWorkspaces.description%",
+      "description": "%lsp-client-untrusted-workspaces-description%",
       "restrictedConfigurations": [
         "recite.lsp.path",
         "recite.lsp.args",
@@ -64,12 +64,12 @@
       }
     ],
     "configuration": {
-      "title": "Recite",
+      "title": "%lsp-client-configuration-title%",
       "properties": {
         "recite.lsp.path": {
           "type": "string",
           "default": "recite-lsp",
-          "description": "%configuration.lsp.path.description%"
+          "description": "%lsp-client-configuration-path-description%"
         },
         "recite.lsp.args": {
           "type": "array",
@@ -77,12 +77,12 @@
             "type": "string"
           },
           "default": [],
-          "description": "%configuration.lsp.args.description%"
+          "description": "%lsp-client-configuration-args-description%"
         },
         "recite.lsp.projectRoot": {
           "type": "string",
           "default": "",
-          "description": "%configuration.lsp.projectRoot.description%"
+          "description": "%lsp-client-configuration-project-root-description%"
         }
       }
     }

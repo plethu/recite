@@ -4,11 +4,13 @@ import os from "node:os";
 import path from "node:path";
 import { fileURLToPath } from "node:url";
 import { spawnSync } from "node:child_process";
-import { assertRegularFile, assertSafeTree } from "./safety.mjs";
+import { assertContainedRegularFile, assertRegularFile, assertSafeTree } from "./safety.mjs";
 
 const packageRoot = path.resolve(path.dirname(fileURLToPath(import.meta.url)), "..");
 const manifest = JSON.parse(await readFile(path.join(packageRoot, "package.json"), "utf8"));
+const packageMessages = JSON.parse(await readFile(path.join(packageRoot, "package.nls.json"), "utf8"));
 const output = path.join(packageRoot, `${manifest.name}-${manifest.version}.vsix`);
+const repositoryRoot = path.resolve(packageRoot, "..", "..");
 const stage = await mkdtemp(path.join(os.tmpdir(), "recite-vscode-package-"));
 const extension = path.join(stage, "extension");
 
@@ -21,9 +23,11 @@ try {
     await cp(path.join(packageRoot, file), path.join(extension, file));
   }
   await cp(path.join(packageRoot, "dist"), path.join(extension, "dist"), { recursive: true });
-  await cp(path.resolve(packageRoot, "..", "..", "LICENSE"), path.join(extension, "LICENSE"));
+  const license = assertContainedRegularFile(repositoryRoot, "LICENSE", "repository license");
+  await cp(license, path.join(extension, "LICENSE"));
   await writeText(path.join(stage, "[Content_Types].xml"), contentTypes());
-  await writeText(path.join(stage, "extension.vsixmanifest"), vsixManifest(manifest));
+  await writeText(path.join(stage, "extension.vsixmanifest"), vsixManifest(manifest, packageMessages));
+  assertSafeTree(stage, "VSIX staging tree");
   await setStableMtimes(stage);
 
   await writeZip(output, stage);
@@ -67,9 +71,9 @@ function contentTypes() {
 `;
 }
 
-function vsixManifest(packageManifest) {
-  const displayName = xml(packageManifest.displayName);
-  const description = xml(packageManifest.description);
+function vsixManifest(packageManifest, messages) {
+  const displayName = xml(localize(packageManifest.displayName, messages));
+  const description = xml(localize(packageManifest.description, messages));
   return `<?xml version="1.0" encoding="utf-8"?>
 <PackageManifest Version="1.0.0" xmlns="http://schemas.microsoft.com/developer/vsx-schema/2011">
   <Metadata>
@@ -90,6 +94,11 @@ function vsixManifest(packageManifest) {
   </Assets>
 </PackageManifest>
 `;
+}
+
+function localize(value, messages) {
+  const match = /^%([^%]+)%$/.exec(value);
+  return match ? messages[match[1]] ?? value : value;
 }
 
 function xml(value) {
