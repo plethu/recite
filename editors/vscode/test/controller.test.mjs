@@ -135,10 +135,7 @@ test("rapid crash loops retain backoff until a stable run completes", async () =
   const clients = [];
   const api = hostApi({ isTrusted: () => true, onDidGrantWorkspaceTrust: () => ({ dispose() {} }) });
   const messages = [];
-  const controller = new ExtensionController(api, {
-    append() {},
-    appendLine(value) { messages.push(value); }
-  }, { delete() {} }, {
+  const controller = new ExtensionController(api, output(messages), { delete() {} }, {
     stableRunMs: 1_000,
     createClient: () => {
       const client = new FakeClient();
@@ -162,10 +159,7 @@ test("restart budget resets only after a separated stable run", async () => {
   const clients = [];
   const messages = [];
   const api = hostApi({ isTrusted: () => true, onDidGrantWorkspaceTrust: () => ({ dispose() {} }) });
-  const controller = new ExtensionController(api, {
-    append() {},
-    appendLine(value) { messages.push(value); }
-  }, { delete() {} }, {
+  const controller = new ExtensionController(api, output(messages), { delete() {} }, {
     stableRunMs: 25,
     createClient: () => {
       const client = new FakeClient();
@@ -189,10 +183,7 @@ test("restart budget resets only after a separated stable run", async () => {
 test("restart exhaustion uses the canonical message without duplicated detail", async () => {
   const messages = [];
   const api = hostApi({ isTrusted: () => true, onDidGrantWorkspaceTrust: () => ({ dispose() {} }) });
-  const controller = new ExtensionController(api, {
-    append() {},
-    appendLine(value) { messages.push(value); }
-  }, { delete() {} }, { createClient: () => new FakeClient() });
+  const controller = new ExtensionController(api, output(messages), { delete() {} }, { createClient: () => new FakeClient() });
   await controller.start();
   controller.restartAttempt = 5;
   controller.scheduleRestart();
@@ -208,10 +199,7 @@ test("controller-owned edit commands revalidate immediately before apply", async
     applied.push(edit);
     return true;
   };
-  const controller = new ExtensionController(api, {
-    append() {},
-    appendLine(value) { messages.push(value); }
-  }, { delete() {} }, {
+  const controller = new ExtensionController(api, output(messages), { delete() {} }, {
     createClient: () => new FakeClient()
   });
   await controller.start();
@@ -234,10 +222,7 @@ test("controller-owned edit commands revalidate immediately before apply", async
 test("code-action command cache reports capacity eviction and TTL expiry", async () => {
   const messages = [];
   const api = hostApi({ isTrusted: () => true, onDidGrantWorkspaceTrust: () => ({ dispose() {} }) });
-  const controller = new ExtensionController(api, {
-    append() {},
-    appendLine(value) { messages.push(value); }
-  }, { delete() {} }, {
+  const controller = new ExtensionController(api, output(messages), { delete() {} }, {
     editCommandTtlMs: 15,
     maxEditCommands: 1,
     createClient: () => new FakeClient()
@@ -258,10 +243,7 @@ test("unknown code-action IDs and host apply failures have distinct outcomes", a
   const messages = [];
   const api = hostApi({ isTrusted: () => true, onDidGrantWorkspaceTrust: () => ({ dispose() {} }) });
   api.workspace.applyEdit = async () => false;
-  const controller = new ExtensionController(api, {
-    append() {},
-    appendLine(value) { messages.push(value); }
-  }, { delete() {} }, { createClient: () => new FakeClient() });
+  const controller = new ExtensionController(api, output(messages), { delete() {} }, { createClient: () => new FakeClient() });
   await controller.start();
 
   assert.equal(await api.commands.executeCommand("recite.applyCodeAction", "missing"), false);
@@ -310,10 +292,7 @@ test("a capacity-one projected response never returns an evicted command", async
 test("retired command outcomes stay bounded and expire to unknown", async () => {
   const messages = [];
   const api = hostApi({ isTrusted: () => true, onDidGrantWorkspaceTrust: () => ({ dispose() {} }) });
-  const controller = new ExtensionController(api, {
-    append() {},
-    appendLine(value) { messages.push(value); }
-  }, { delete() {} }, {
+  const controller = new ExtensionController(api, output(messages), { delete() {} }, {
     maxEditCommands: 1,
     maxRetiredCommands: 1,
     editCommandTtlMs: 1_000,
@@ -349,10 +328,7 @@ test("document close reports a closed command instead of an unknown ID", async (
   };
   const api = hostApi({ isTrusted: () => true, onDidGrantWorkspaceTrust: () => ({ dispose() {} }) });
   api.workspace.textDocuments.push(document);
-  const controller = new ExtensionController(api, {
-    append() {},
-    appendLine(value) { messages.push(value); }
-  }, { delete() {} }, { createClient: () => new FakeClient() });
+  const controller = new ExtensionController(api, output(messages), { delete() {} }, { createClient: () => new FakeClient() });
   await controller.start();
   const edit = {
     reciteVersionPreconditions: [{ document }],
@@ -376,10 +352,7 @@ test("document reopen reports a new generation instead of applying an old action
   const reopened = { ...document };
   const api = hostApi({ isTrusted: () => true, onDidGrantWorkspaceTrust: () => ({ dispose() {} }) });
   api.workspace.textDocuments.push(document);
-  const controller = new ExtensionController(api, {
-    append() {},
-    appendLine(value) { messages.push(value); }
-  }, { delete() {} }, { createClient: () => new FakeClient() });
+  const controller = new ExtensionController(api, output(messages), { delete() {} }, { createClient: () => new FakeClient() });
   await controller.start();
   const edit = lspWorkspaceEditToVscode(api, {
     documentChanges: [{
@@ -473,8 +446,34 @@ function action(document, title) {
   };
 }
 
-function output() {
-  return { append() {}, appendLine() {} };
+function output(messages = []) {
+  return {
+    append() {},
+    appendLine(value) { messages.push(value); },
+    serverStartFailed(detail) { this.appendLine(`Recite language server could not be started: ${detail}.`); },
+    serverError(detail) { this.appendLine(`Recite language server error: ${detail}.`); },
+    serverExited(detail) { this.appendLine(`Recite language server exited: ${detail}.`); },
+    restartScheduled(detail) { this.appendLine(`Recite language server restart scheduled: ${detail}.`); },
+    restartExhausted() { this.appendLine("Recite language server restart attempts exhausted."); },
+    actionStale() { this.appendLine("Recite code action is no longer applicable because the document changed."); },
+    actionClosed() { this.appendLine("Recite code action is no longer applicable because the document closed."); },
+    actionReopened() {
+      this.appendLine("Recite code action is no longer applicable because the document was closed and reopened.");
+    },
+    actionExpired() { this.appendLine("Recite code action expired before it was applied."); },
+    actionEvicted() { this.appendLine("Recite code action was replaced by a newer action."); },
+    actionApplyFailed() { this.appendLine("VS Code could not apply the Recite code action."); },
+    actionUnknown() { this.appendLine("Recite code action is no longer available."); },
+    configurationPathInvalid: () => new Error("recite.lsp.path must be a non-empty string."),
+    configurationArgsInvalid: () => new Error("recite.lsp.args must be an array of strings."),
+    configurationProjectRootInvalid: () => new Error("recite.lsp.projectRoot must be a string."),
+    configurationProjectRootNeedsWorkspace: () =>
+      new Error("recite.lsp.projectRoot needs a workspace for relative paths."),
+    serverNotRunning: () => new Error("Recite language server is not running."),
+    serverStderr() {},
+    serverNotification() {},
+    dispose() {}
+  };
 }
 
 class FakeClient extends EventEmitter {

@@ -1,7 +1,6 @@
 import { ReciteLanguageClient } from "./lsp-client.js";
 import { initializeParams, readConfiguration } from "./configuration.js";
 import { lspDiagnosticToVscode } from "./lsp-features.js";
-import { clientMessage } from "./messages.js";
 import { registerDocumentLifecycle } from "./document-lifecycle.js";
 import { registerFeatureProviders } from "./providers.js";
 import { WatcherRegistry } from "./watchers.js";
@@ -12,9 +11,9 @@ const RESTART_DELAYS_MS = [100, 500, 1_000, 2_000, 5_000];
 const STABLE_RUN_MS = 10_000;
 
 export class ExtensionController {
-  constructor(api, output, diagnostics, options = {}) {
+  constructor(api, userInterface, diagnostics, options = {}) {
     this.api = api;
-    this.output = output;
+    this.userInterface = userInterface;
     this.diagnostics = diagnostics;
     this.createClient = options.createClient ?? ((configuration, callbacks) =>
       new ReciteLanguageClient({ ...configuration, ...callbacks }));
@@ -30,7 +29,7 @@ export class ExtensionController {
     this.providersRegistered = false;
     this.trustListenerRegistered = false;
     this.documents = new Map();
-    this.editCommands = new EditCommandRegistry(this.api, this.output, options);
+    this.editCommands = new EditCommandRegistry(this.api, this.userInterface, options);
     this.watchers = new WatcherRegistry(this);
   }
 
@@ -39,14 +38,14 @@ export class ExtensionController {
     if (this.disposed || this.api.workspace.isTrusted === false) return false;
     if (this.client && this.client.status !== "stopped") return true;
     this.client = undefined;
-    const configuration = readConfiguration(this.api);
+    const configuration = readConfiguration(this.api, this.userInterface);
     const client = this.createClient(configuration, {
       onRegisterCapability: (params) => this.registerCapabilities(params),
       onUnregisterCapability: (params) => this.unregisterCapabilities(params)
     });
     this.client = client;
     client.on("notification", (method, params) => this.handleNotification(method, params));
-    client.on("stderr", (message) => this.output.append(message));
+    client.on("stderr", (message) => this.userInterface.serverStderr(message));
     client.on("serverError", (error) => this.handleServerError(error));
     client.on("exit", (event) => this.handleExit(client, event));
     try {
@@ -95,25 +94,25 @@ export class ExtensionController {
   }
 
   handleStartFailure(error) {
-    this.output.appendLine(clientMessage(this.api, "lsp-client-start-failed", error.message));
+    this.userInterface.serverStartFailed(error.message);
   }
 
   handleExit(client, event) {
     if (this.client !== client || this.stopping || this.disposed) return;
     this.clearStableReset();
     this.client = undefined;
-    this.output.appendLine(clientMessage(this.api, "lsp-client-exited", event.code ?? "unknown"));
+    this.userInterface.serverExited(event.code ?? "unknown");
     this.scheduleRestart();
   }
 
   scheduleRestart() {
     if (this.restartTimer || this.disposed || this.stopping || this.api.workspace.isTrusted === false) return;
     if (this.restartAttempt >= RESTART_DELAYS_MS.length) {
-      this.output.appendLine(clientMessage(this.api, "lsp-client-restart-exhausted"));
+      this.userInterface.restartExhausted();
       return;
     }
     const delay = RESTART_DELAYS_MS[this.restartAttempt++];
-    this.output.appendLine(clientMessage(this.api, "lsp-client-restart-scheduled", `${delay} ms`));
+    this.userInterface.restartScheduled(`${delay} ms`);
     this.restartTimer = setTimeout(() => {
       this.restartTimer = undefined;
       void this.start().catch((error) => {
@@ -178,12 +177,12 @@ export class ExtensionController {
       return;
     }
     if (method === "window/logMessage" || method === "window/showMessage") {
-      if (params?.message) this.output.appendLine(params.message);
+      if (params?.message) this.userInterface.serverNotification(params.message);
     }
   }
 
   handleServerError(error) {
-    this.output.appendLine(clientMessage(this.api, "lsp-client-error", error.message));
+    this.userInterface.serverError(error.message);
   }
 
   registerCapabilities(params) {

@@ -13,7 +13,7 @@ test("configuration resolves project-relative binaries without a shell", () => {
     }
   });
 
-  assert.deepEqual(readConfiguration(api), {
+  assert.deepEqual(readConfiguration(api, userInterface()), {
     command: path.resolve("/workspace/demo/project", "tools/recite-lsp"),
     args: ["--local"],
     cwd: path.resolve("/workspace/demo/project"),
@@ -38,20 +38,20 @@ test("initialization advertises UTF-16, full sync, and dynamic watch registratio
 
 test("relative project roots require a workspace folder", () => {
   const api = fakeApi({ workspaceFolders: [], values: { "lsp.projectRoot": "project" } });
-  assert.throws(() => readConfiguration(api), /needs a workspace/);
+  assert.throws(() => readConfiguration(api, userInterface()), /needs a workspace/);
 });
 
 test("configuration validation reports canonical localized messages", () => {
   assert.throws(
-    () => readConfiguration(fakeApi({ workspaceFolders: [], values: { "lsp.path": "" } })),
+    () => readConfiguration(fakeApi({ workspaceFolders: [], values: { "lsp.path": "" } }), userInterface()),
     /recite\.lsp\.path must be a non-empty string/
   );
   assert.throws(
-    () => readConfiguration(fakeApi({ workspaceFolders: [], values: { "lsp.args": ["--ok", 1] } })),
+    () => readConfiguration(fakeApi({ workspaceFolders: [], values: { "lsp.args": ["--ok", 1] } }), userInterface()),
     /recite\.lsp\.args must be an array of strings/
   );
   assert.throws(
-    () => readConfiguration(fakeApi({ workspaceFolders: [], values: { "lsp.projectRoot": 1 } })),
+    () => readConfiguration(fakeApi({ workspaceFolders: [], values: { "lsp.projectRoot": 1 } }), userInterface()),
     /recite\.lsp\.projectRoot must be a string/
   );
 });
@@ -65,5 +65,15 @@ function fakeApi({ workspaceFolders, values = {} }) {
     Uri: {
       file: (value) => ({ toString: () => `file://${value}` })
     }
+  };
+}
+
+function userInterface() {
+  return {
+    configurationPathInvalid: () => new Error("recite.lsp.path must be a non-empty string."),
+    configurationArgsInvalid: () => new Error("recite.lsp.args must be an array of strings."),
+    configurationProjectRootInvalid: () => new Error("recite.lsp.projectRoot must be a string."),
+    configurationProjectRootNeedsWorkspace: () =>
+      new Error("recite.lsp.projectRoot needs a workspace for relative paths.")
   };
 }

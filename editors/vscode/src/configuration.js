@@ -1,21 +1,20 @@
 import * as path from "node:path";
-import { clientMessage } from "./messages.js";
 
-export function readConfiguration(api) {
+export function readConfiguration(api, userInterface) {
   const settings = api.workspace.getConfiguration("recite");
   const command = settings.get("lsp.path", "recite-lsp");
   const args = settings.get("lsp.args", []);
   const projectRoot = settings.get("lsp.projectRoot", "");
   if (typeof command !== "string" || command.trim() === "") {
-    throw new Error(clientMessage(api, "lsp-client-config-path-invalid"));
+    throw userInterface.configurationPathInvalid();
   }
   if (!Array.isArray(args) || args.some((arg) => typeof arg !== "string")) {
-    throw new Error(clientMessage(api, "lsp-client-config-args-invalid"));
+    throw userInterface.configurationArgsInvalid();
   }
   if (typeof projectRoot !== "string") {
-    throw new Error(clientMessage(api, "lsp-client-config-project-root-invalid"));
+    throw userInterface.configurationProjectRootInvalid();
   }
-  const root = projectRootPath(api, projectRoot);
+  const root = projectRootPath(api, projectRoot, userInterface);
   return {
     command: resolveCommand(command, root),
     args,
@@ -56,12 +55,12 @@ export function initializeParams(api, root, override = false) {
   };
 }
 
-function projectRootPath(api, configured) {
+function projectRootPath(api, configured, userInterface) {
   const workspace = api.workspace.workspaceFolders?.[0]?.uri.fsPath;
   if (!configured.trim()) return workspace;
   if (path.isAbsolute(configured)) return path.normalize(configured);
   if (!workspace) {
-    throw new Error(clientMessage(api, "lsp-client-config-project-root-needs-workspace"));
+    throw userInterface.configurationProjectRootNeedsWorkspace();
   }
   return path.resolve(workspace, configured);
 }

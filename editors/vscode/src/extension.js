@@ -1,15 +1,15 @@
 import * as vscode from "vscode";
 import { ExtensionController } from "./controller.js";
-import { clientMessage } from "./messages.js";
+import { createUserInterface } from "./user-interface.js";
 
 let activeController;
 
 export async function activate(context) {
-  const output = vscode.window.createOutputChannel(clientMessage(vscode, "lsp-client-display-name"));
+  const userInterface = createUserInterface(vscode);
   const diagnostics = vscode.languages.createDiagnosticCollection("recite");
-  const controller = new ExtensionController(vscode, output, diagnostics);
+  const controller = new ExtensionController(vscode, userInterface, diagnostics);
   activeController = controller;
-  context.subscriptions.push(output, diagnostics, controller);
+  context.subscriptions.push(userInterface, diagnostics, controller);
   await controller.start().catch((error) => controller.handleStartFailure(error));
 }
 

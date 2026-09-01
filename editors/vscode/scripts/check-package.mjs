@@ -9,7 +9,7 @@ import {
   SOURCE_MESSAGE_IDS,
   projectMessages
 } from "./message-projections.mjs";
-import { assertSourceMessageOwnership } from "./source-messages.mjs";
+import { assertUiBoundary } from "./ui-boundary.mjs";
 
 const packageRoot = path.resolve(path.dirname(fileURLToPath(import.meta.url)), "..");
 const manifest = JSON.parse(await readFile(path.join(packageRoot, "package.json"), "utf8"));
@@ -98,11 +98,7 @@ const sourceContents = await Promise.all(sourceFiles.map(async (entry) => [
   entry.name,
   await readFile(path.join(packageRoot, "src", entry.name), "utf8")
 ]));
-assertSourceMessageOwnership(
-  sourceContents.filter(([name]) => name !== "messages.js"),
-  SOURCE_MESSAGE_IDS,
-  projectedMessages
-);
+assertUiBoundary(sourceContents, SOURCE_MESSAGE_IDS, projectedMessages);
 for (const [name] of sourceContents) {
   const syntax = spawnSync(process.execPath, ["--check", path.join(packageRoot, "src", name)], {
     encoding: "utf8"

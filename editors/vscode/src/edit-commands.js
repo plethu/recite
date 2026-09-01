@@ -1,5 +1,4 @@
 import { workspaceEditStatus } from "./lsp-features.js";
-import { clientMessage } from "./messages.js";
 
 const APPLY_CODE_ACTION_COMMAND = "recite.applyCodeAction";
 const EDIT_COMMAND_TTL_MS = 30_000;
@@ -7,9 +6,9 @@ const MAX_EDIT_COMMANDS = 128;
 const MAX_RETIRED_COMMANDS = 128;
 
 export class EditCommandRegistry {
-  constructor(api, output, options = {}) {
+  constructor(api, userInterface, options = {}) {
     this.api = api;
-    this.output = output;
+    this.userInterface = userInterface;
     this.ttlMs = Math.max(1, options.editCommandTtlMs ?? EDIT_COMMAND_TTL_MS);
     this.maxCommands = Math.max(1, Math.floor(options.maxEditCommands ?? MAX_EDIT_COMMANDS));
     this.retiredTtlMs = Math.max(1, options.retiredCommandTtlMs ?? this.ttlMs);
@@ -124,25 +123,25 @@ export class EditCommandRegistry {
   reportFailure(reason) {
     switch (reason) {
       case "document-stale":
-        this.output.appendLine(clientMessage(this.api, "lsp-client-action-stale"));
+        this.userInterface.actionStale();
         break;
       case "document-closed":
-        this.output.appendLine(clientMessage(this.api, "lsp-client-action-closed"));
+        this.userInterface.actionClosed();
         break;
       case "document-reopened":
-        this.output.appendLine(clientMessage(this.api, "lsp-client-action-reopened"));
+        this.userInterface.actionReopened();
         break;
       case "expired":
-        this.output.appendLine(clientMessage(this.api, "lsp-client-action-expired"));
+        this.userInterface.actionExpired();
         break;
       case "evicted":
-        this.output.appendLine(clientMessage(this.api, "lsp-client-action-evicted"));
+        this.userInterface.actionEvicted();
         break;
       case "apply-failed":
-        this.output.appendLine(clientMessage(this.api, "lsp-client-action-apply-failed"));
+        this.userInterface.actionApplyFailed();
         break;
       default:
-        this.output.appendLine(clientMessage(this.api, "lsp-client-action-unknown"));
+        this.userInterface.actionUnknown();
     }
   }
 
