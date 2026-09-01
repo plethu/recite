@@ -27,6 +27,19 @@ def main(argv: list[str]) -> int:
     if not cargo_target_dir.is_absolute():
         cargo_target_dir = repo_root / cargo_target_dir
     cargo_target_dir = Path(os.path.abspath(cargo_target_dir))
+    symlink = _symlink_component(cargo_target_dir)
+    if symlink is not None:
+        print(
+            "editor parity contract: CARGO_TARGET_DIR must not traverse a "
+            f"symlink component: {symlink}",
+            file=sys.stderr,
+        )
+        return 1
+    try:
+        cargo_target_dir = cargo_target_dir.resolve(strict=False)
+    except OSError as error:
+        print(f"editor parity contract: unable to resolve CARGO_TARGET_DIR: {error}", file=sys.stderr)
+        return 1
     canonical_target = repo_root / "target"
     inside_repo = cargo_target_dir == repo_root or repo_root in cargo_target_dir.parents
     if inside_repo and (cargo_target_dir != canonical_target or cargo_target_dir.is_symlink()):
@@ -62,6 +75,17 @@ def main(argv: list[str]) -> int:
     counts = {key: len(data.get(key, [])) for key in ("capabilities", "scenarios", "clients", "artifacts")}
     print("Editor parity contract passed: " + ", ".join(f"{value} {key}" for key, value in counts.items()) + ".")
     return 0
+
+
+def _symlink_component(path: Path) -> Path | None:
+    current = Path(path.anchor)
+    for component in path.parts:
+        if component == path.anchor:
+            continue
+        current /= component
+        if current.is_symlink():
+            return current
+    return None
 
 
 if __name__ == "__main__":

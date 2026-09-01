@@ -71,12 +71,13 @@ mutate_fixture() {
 
 expect_target_failure() {
   local target_dir="$1"
+  local expected="${2:-CARGO_TARGET_DIR inside the repository must be exactly}"
   local output result
   set +e
   output="$(CARGO_TARGET_DIR="$target_dir" run_checker 2>&1)"
   result=$?
   set -e
-  if (( result == 0 )) || [[ "$output" != *"CARGO_TARGET_DIR inside the repository must be exactly"* ]]; then
+  if (( result == 0 )) || [[ "$output" != *"$expected"* ]]; then
     echo "editor parity target boundary fixture missed: $target_dir" >&2
     printf '%s\n' "$output" >&2
     exit 1
@@ -202,6 +203,17 @@ echo "editor parity external target fixture passed"
 expect_target_failure "$fixture_repo"
 expect_target_failure "$fixture_repo/crates"
 expect_target_failure "$fixture_repo/target/custom"
+
+target_probe_root="$test_root/external-target-probes"
+mkdir -p "$target_probe_root/real-parent"
+ln -s "$fixture_repo" "$target_probe_root/to-repo-root"
+ln -s "$fixture_repo/crates" "$target_probe_root/to-crates"
+ln -s "$fixture_repo/target" "$target_probe_root/to-target"
+ln -s "$fixture_repo" "$target_probe_root/real-parent/repo-parent"
+expect_target_failure "$target_probe_root/to-repo-root" "CARGO_TARGET_DIR must not traverse a symlink component"
+expect_target_failure "$target_probe_root/to-crates" "CARGO_TARGET_DIR must not traverse a symlink component"
+expect_target_failure "$target_probe_root/to-target" "CARGO_TARGET_DIR must not traverse a symlink component"
+expect_target_failure "$target_probe_root/real-parent/repo-parent/target" "CARGO_TARGET_DIR must not traverse a symlink component"
 
 python3 - "$fixture_repo" <<'PY'
 import sys
