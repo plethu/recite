@@ -53,6 +53,56 @@ run_checker() {
   (cd "$fixture_repo" && scripts/check-editor-parity.sh)
 }
 
+assert_portable_lock_source() {
+  python3 - "$repo_root/scripts/check-editor-parity.sh" <<'PY'
+import ast
+import sys
+from pathlib import Path
+
+script = Path(sys.argv[1]).read_text(encoding="utf-8")
+python_source = script.split('python3 - "$repo_root" "$fixture" "$document" <<\'PY\'\n', 1)[1].split("\nPY\n", 1)[0]
+tree = ast.parse(python_source)
+
+platform_import = next(
+    node for node in tree.body
+    if isinstance(node, ast.If)
+    and isinstance(node.test, ast.Compare)
+    and isinstance(node.test.left, ast.Attribute)
+    and isinstance(node.test.left.value, ast.Name)
+    and node.test.left.value.id == "os"
+    and node.test.left.attr == "name"
+    and len(node.test.ops) == 1
+    and isinstance(node.test.ops[0], ast.Eq)
+    and len(node.test.comparators) == 1
+    and isinstance(node.test.comparators[0], ast.Constant)
+    and node.test.comparators[0].value == "nt"
+)
+
+def imported_modules(nodes):
+    return {
+        alias.name
+        for node in nodes
+        if isinstance(node, ast.Import)
+        for alias in node.names
+    }
+
+if "msvcrt" not in imported_modules(platform_import.body):
+    raise SystemExit("Windows parity lock branch must import msvcrt")
+if "fcntl" not in imported_modules(platform_import.orelse):
+    raise SystemExit("POSIX parity lock branch must import fcntl")
+if any(
+    module == "fcntl"
+    for node in tree.body
+    if isinstance(node, ast.Import)
+    for module in imported_modules([node])
+):
+    raise SystemExit("fcntl must not be imported unconditionally")
+
+print("editor parity portable-lock source fixture passed")
+PY
+}
+
+assert_portable_lock_source
 run_checker
 echo "editor parity baseline fixture passed"
 assert_single_parity_cache

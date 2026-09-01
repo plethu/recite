@@ -35,7 +35,6 @@ document="$repo_root/docs/editor-parity-contract.md"
 
 python3 - "$repo_root" "$fixture" "$document" <<'PY'
 import atexit
-import fcntl
 import hashlib
 import json
 import os
@@ -44,6 +43,12 @@ import shlex
 import shutil
 import subprocess
 import sys
+if os.name == "nt":
+    import errno
+    import msvcrt
+    import time
+else:
+    import fcntl
 from pathlib import Path
 
 repo_root = Path(sys.argv[1])
@@ -138,10 +143,40 @@ if not cargo_target_base.is_absolute():
 editor_parity_target_root = cargo_target_base / "editor-parity"
 editor_parity_target_root.mkdir(parents=True, exist_ok=True)
 editor_parity_lock = (editor_parity_target_root / ".lock").open("a+")
-fcntl.flock(editor_parity_lock.fileno(), fcntl.LOCK_EX)
+editor_parity_lock.seek(0, os.SEEK_END)
+if editor_parity_lock.tell() == 0:
+    editor_parity_lock.write("0")
+    editor_parity_lock.flush()
+editor_parity_lock.seek(0)
+
+
+def acquire_editor_parity_lock(lock_file):
+    lock_file.seek(0)
+    if os.name == "nt":
+        while True:
+            try:
+                msvcrt.locking(lock_file.fileno(), msvcrt.LK_NBLCK, 1)
+                return
+            except OSError as error:
+                if error.errno not in {errno.EACCES, errno.EAGAIN}:
+                    raise
+                time.sleep(0.1)
+    else:
+        fcntl.flock(lock_file.fileno(), fcntl.LOCK_EX)
+
+
+def release_editor_parity_lock_file(lock_file):
+    lock_file.seek(0)
+    if os.name == "nt":
+        msvcrt.locking(lock_file.fileno(), msvcrt.LK_UNLCK, 1)
+    else:
+        fcntl.flock(lock_file.fileno(), fcntl.LOCK_UN)
+
+
+acquire_editor_parity_lock(editor_parity_lock)
 
 def release_editor_parity_lock():
-    fcntl.flock(editor_parity_lock.fileno(), fcntl.LOCK_UN)
+    release_editor_parity_lock_file(editor_parity_lock)
     editor_parity_lock.close()
 
 atexit.register(release_editor_parity_lock)
