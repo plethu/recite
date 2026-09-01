@@ -59,7 +59,17 @@ def reachable_test_names(ctx: Context, root: Path) -> set[str]:
             module_match = MODULE.match(line)
             if module_match:
                 module_name = module_match.group(1)
-                module_path = path.parent / (pending_path or f"{module_name}.rs")
+                if pending_path is not None:
+                    module_path = path.parent / pending_path
+                else:
+                    candidates = (
+                        path.parent / f"{module_name}.rs",
+                        path.parent / module_name / "mod.rs",
+                    )
+                    module_path = next(
+                        (candidate for candidate in candidates if candidate.is_file()),
+                        candidates[0],
+                    )
                 pending_path = None
                 if module_path.is_file():
                     visit(module_path, (*prefix, module_name))
