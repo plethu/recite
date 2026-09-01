@@ -188,7 +188,9 @@ production suppressions must carry a narrow scope and rationale.
 | `crates/recite-cli/tests/watch_stress.rs` | 366 | test/support | cli/tests | cohesive | Watch stress harness |
 | `crates/recite-cli/src/watch/build/tests.rs` | 367 | test/support | cli/watch/build-tests | review | #189: status and telemetry coverage is split; keep each responsibility below the follow-up threshold |
 | `crates/recite-cli/src/watch/tests.rs` | 377 | test/support | cli/watch-tests | review | #189: event and initial-build integration coverage remains one watch contract; reassess before adding another responsibility |
+| `crates/recite-cli/src/watch/build.rs` | 287 | production | cli/watch/build | review | #191: build orchestration retains the coordinator, publication, and post-publish freshness boundary; split if another lifecycle responsibility is added |
 | `crates/recite-compiler/tests/authoring_build/status_projection.rs` | 492 | test/support | compiler/authoring-build-tests | review | #189: lifecycle projection and non-semantic telemetry assertions remain one focused contract suite |
+| `crates/recite-compiler/src/authoring/build/result.rs` | 260 | production | compiler/authoring-build | review | #191: result finalization retains publication and freshness truth together; split if further lifecycle evidence is added |
 | `crates/recite-runtime/tests/traversal/conditions/choice_conditions.rs` | 365 | test/support | runtime/tests | cohesive | Choice condition coverage |
 | `crates/recite-lsp/src/tests/availability/speaker.rs` | 351 | test/support | lsp/tests | review | Typed and ordinary speaker completion coverage |
 | `crates/recite-compiler/tests/validation/participation.rs` | 369 | test/support | compiler/tests | cohesive | #168: participation-aware validation completeness and all-complete compatibility coverage |
