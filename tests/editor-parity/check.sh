@@ -8,15 +8,26 @@ trap 'rm -rf "$test_root"' EXIT
 fixture_repo="$test_root/repo"
 mkdir -p "$fixture_repo/docs" "$fixture_repo/fixtures/editor-parity" \
   "$fixture_repo/fixtures/recite/valid" "$fixture_repo/fixtures/recite/invalid" \
-  "$fixture_repo/fixtures/schema/valid" "$fixture_repo/scripts"
+  "$fixture_repo/fixtures/schema/valid" "$fixture_repo/scripts" \
+  "$fixture_repo/crates/recite-lsp/tests" \
+  "$fixture_repo/crates/recite-cli/tests" \
+  "$fixture_repo/crates/recite-compiler/tests/authoring_build"
 cp "$repo_root/scripts/check-editor-parity.sh" "$fixture_repo/scripts/"
 cp "$repo_root/docs/editor-parity-contract.md" "$fixture_repo/docs/"
 cp "$repo_root/fixtures/editor-parity/contract.json" "$fixture_repo/fixtures/editor-parity/"
 cp "$repo_root/fixtures/recite/valid/language_pressure.recite" "$fixture_repo/fixtures/recite/valid/"
+cp "$repo_root/fixtures/recite/valid/locale_fallback_fr.po" "$fixture_repo/fixtures/recite/valid/"
 cp "$repo_root/fixtures/recite/valid/core_language_spike.recite" "$fixture_repo/fixtures/recite/valid/"
 cp "$repo_root/fixtures/recite/invalid/parser_marker_leading_prose.recite" "$fixture_repo/fixtures/recite/invalid/"
 cp "$repo_root/fixtures/schema/valid/generated_manifest.json" "$fixture_repo/fixtures/schema/valid/"
 cp "$repo_root/fixtures/schema/valid/full_manifest.json" "$fixture_repo/fixtures/schema/valid/"
+cp "$repo_root/crates/recite-lsp/tests/editor_parity.rs" "$fixture_repo/crates/recite-lsp/tests/"
+cp "$repo_root/crates/recite-lsp/tests/editor_parity_features.rs" "$fixture_repo/crates/recite-lsp/tests/"
+cp "$repo_root/crates/recite-cli/tests/dialogue_locale.rs" "$fixture_repo/crates/recite-cli/tests/"
+cp "$repo_root/crates/recite-compiler/tests/authoring_build.rs" "$fixture_repo/crates/recite-compiler/tests/"
+cp "$repo_root/crates/recite-compiler/tests/authoring_catalog_summary.rs" "$fixture_repo/crates/recite-compiler/tests/"
+cp "$repo_root/crates/recite-compiler/tests/authoring_build/status_projection.rs" \
+  "$fixture_repo/crates/recite-compiler/tests/authoring_build/"
 chmod +x "$fixture_repo/scripts/check-editor-parity.sh"
 
 git -C "$fixture_repo" init -q -b main
@@ -38,6 +49,7 @@ mutate_fixture() {
   python3 - "$fixture_repo/fixtures/editor-parity/contract.json" "$mutation" <<'PY'
 import json
 import sys
+from pathlib import Path
 
 path, mutation = sys.argv[1:]
 with open(path, encoding="utf-8") as handle:
@@ -58,6 +70,27 @@ elif mutation == "capability-platform":
 elif mutation == "capability-evidence":
     capability = next(capability for capability in contract["capabilities"] if capability["id"] == "lsp.completion")
     capability["expected_evidence"]["status"] = "implemented"
+elif mutation == "duplicate":
+    contract["capabilities"].append(dict(contract["capabilities"][0]))
+elif mutation == "malformed":
+    capability = next(capability for capability in contract["capabilities"] if capability["id"] == "lsp.completion")
+    capability["expected_evidence"]["command"] = "not a cargo test command"
+elif mutation == "stale-evidence":
+    capability = next(capability for capability in contract["capabilities"] if capability["id"] == "lsp.completion")
+    capability["expected_evidence"]["command"] = "cargo test --locked -p recite-lsp --test editor_parity no_such_test"
+elif mutation == "reciprocity":
+    artifact = next(artifact for artifact in contract["artifacts"] if artifact["id"] == "vscode-vsix")
+    artifact["clients"].remove("vscode")
+elif mutation == "topology":
+    client = next(client for client in contract["clients"] if client["id"] == "vscodium")
+    client["artifact"] = "neovim-setup"
+elif mutation == "symlink":
+    fixture_repo = Path(path).parents[2]
+    outside = fixture_repo.parent / "outside-editor-parity.recite"
+    outside.write_text("outside\n", encoding="utf-8")
+    canonical = fixture_repo / "fixtures/recite/valid/core_language_spike.recite"
+    canonical.unlink()
+    canonical.symlink_to(outside)
 else:
     raise SystemExit(f"unknown mutation: {mutation}")
 
@@ -90,3 +123,9 @@ expect_failure client "implemented client vscode needs an implemented artifact"
 expect_failure distribution "implemented distribution vs-marketplace needs an implemented artifact"
 expect_failure capability-platform "partial capability lsp.completion cannot claim linux platform status implemented"
 expect_failure capability-evidence "partial capability lsp.completion cannot claim implemented evidence"
+expect_failure duplicate "capabilities IDs must be unique"
+expect_failure malformed "evidence command must name a cargo integration test and filter"
+expect_failure stale-evidence "evidence command does not name an existing runnable test"
+expect_failure reciprocity "artifact vscode-vsix client list must exactly reciprocate"
+expect_failure topology "VS Code and VSCodium must share one VSIX artifact topology"
+expect_failure symlink "scenario lsp-stdio-baseline fixture must not be a symlink"

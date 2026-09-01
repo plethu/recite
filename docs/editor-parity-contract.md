@@ -75,12 +75,13 @@ Issue #53 owns the command/watch lifecycle and the future cancellation contract.
 
 The intended command boundary is structured: compile, validate, extract, run,
 trace, and watch consumers should eventually use typed/versioned records rather
-than localised human CLI output. No current versioned command envelope is
-claimed here. The human-oriented watch stream is not a machine contract; its
-lifecycle, binary discovery, cancellation, and machine-readable status
-follow-up is tracked by #53. This parity slice records that limitation and
-does not claim command or watch integration merely because the CLI has a human
-command today.
+than localised human CLI output. The shared authoring kernel now exposes a
+protocol-neutral `BuildStatusProjection` with phase, generation, diagnostics,
+freshness, publication, recovery, and cancellation state. Its executable
+coverage is partial evidence for the shared lifecycle shape; it is not a CLI
+wire contract. Versioned command/watch envelopes, process and binary
+integration, cancellation transport, and client integration remain planned
+under #53.
 
 ## Conformance matrix
 
@@ -97,7 +98,7 @@ fixture.
 - `lsp.overlay.recovery`: accept an incomplete overlay, then refresh it when a newer complete overlay arrives.
 - `lsp.stale.version`: refuse an older document version without replacing the current overlay or publishing stale evidence.
 - `lsp.cancellation`: document the current unsupported cancellation surface and its owner rather than claiming a timeout is cancellation.
-- `command.structured.results`: reserve parity evidence for the structured command/watch contract owned by #53.
+- `command.structured.results`: project the shared `BuildStatusProjection` fields while reserving CLI wire, process, binary, and client integration for #53.
 - `editor.filetype.registration`: reserve `.recite` activation and file association evidence for the client owners.
 - `editor.vscode.syntax-projection`: reserve the syntax-only TextMate projection for #97.
 - `editor.neovim.syntax-projection`: reserve the plugin-manager-neutral Tree-sitter projection for #98.
@@ -111,16 +112,18 @@ fixture.
 - `workspace.project.discovery`: discover canonical sibling sources under the configured project root.
 - `workspace.configuration`: keep root and project configuration ownership outside client semantics.
 - `authoring.stable-id.operations`: reserve the shared-kernel missing-ID repair; broader stable-ID edit preconditions remain incomplete.
-- `schema.localisation.resolution`: reserve schema provenance, producer fingerprints, catalogue ownership, and locale fallback evidence; no parity evidence is claimed yet.
+- `schema.localisation.resolution`: project the current compiler catalogue identity/fingerprint and CLI locale-fallback evidence; combined LSP schema/catalogue provenance remains planned.
 - `command.compile.validate.extract`: reserve versioned structured compile, validate, and extract records for #53; current CLI output is not machine protocol evidence.
 - `command.run.trace`: reserve versioned structured runtime and trace records for #53; current CLI tests are not command protocol evidence.
-- `command.watch.lifecycle`: reserve generation, freshness, process, and cancellation evidence for #53.
+- `command.watch.lifecycle`: project the current protocol-neutral build lifecycle fields; versioned watch wire, process, binary, cancellation transport, and client evidence remain planned for #53.
 
 Executable evidence covers the shared LSP operations, project-root discovery,
-and the bounded stable-ID repair. Schema/localisation resolution, structured
-compile/run/watch records, cancellation, client activation, and syntax grammars
-remain honest planned/unsupported boundaries; their status is not upgraded by
-server tests or human-oriented CLI tests.
+the bounded stable-ID repair, compiler catalogue fallback, the compiler's
+protocol-neutral build projection, and CLI locale fallback through the checked-in
+`fixtures/recite/valid/locale_fallback_fr.po` catalogue. This does not claim a
+versioned CLI/watch envelope, process or binary integration, combined LSP
+schema/catalogue transport, cancellation transport, client activation, or
+syntax grammars; those remain planned/unsupported boundaries.
 
 The rows currently draw from these scenarios. The source and schema files are
 the canonical fixtures; derived inputs are transformations or protocol events,
@@ -133,8 +136,8 @@ not copied Recite or schema sources.
 - `stable-id-repair`: derive a missing-ID overlay from the canonical language fixture and request a shared-kernel repair.
 - `multi-file-project`: materialize two canonical source fixtures under one root and resolve a qualified cross-file target.
 - `client-syntax-projections`: reserve filetype and syntax-only evidence over the canonical language fixtures.
-- `schema-localisation-reference`: reserve shared schema and localisation evidence for the existing canonical manifests and pressure fixture.
-- `command-watch-reference`: reserve structured command and watch lifecycle evidence for #53.
+- `schema-localisation-reference`: combine the canonical manifests and pressure source with the checked-in PO catalogue to exercise the current shared/CLI locale-fallback evidence.
+- `command-watch-reference`: exercise the protocol-neutral `BuildStatusProjection`; CLI wire, process, binary, cancellation transport, and client lifecycle evidence remain planned for #53.
 
 ## Client, platform, and distribution status
 

@@ -84,6 +84,9 @@ impl StdioHarness {
     }
 
     pub(crate) fn assert_no_messages(&self) {
+        if let Some(message) = self.pending.front() {
+            panic!("unexpected pending message before initialized: {message}");
+        }
         match self.messages.recv_timeout(Duration::from_millis(50)) {
             Err(mpsc::RecvTimeoutError::Timeout) => {}
             Ok(Ok(message)) => panic!("unexpected message before initialized: {message}"),
@@ -143,6 +146,9 @@ impl StdioHarness {
     }
 
     pub(crate) fn assert_no_message(&self) {
+        if let Some(message) = self.pending.front() {
+            panic!("unexpected pending stale-result message: {message}");
+        }
         match self.messages.recv_timeout(Duration::from_millis(150)) {
             Err(mpsc::RecvTimeoutError::Timeout) => {}
             Ok(message) => panic!("unexpected stale-result message: {message:?}"),

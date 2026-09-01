@@ -110,18 +110,19 @@
       "canonical_fixtures": [
         "fixtures/schema/valid/generated_manifest.json",
         "fixtures/schema/valid/full_manifest.json",
-        "fixtures/recite/valid/language_pressure.recite"
+        "fixtures/recite/valid/language_pressure.recite",
+        "fixtures/recite/valid/locale_fallback_fr.po"
       ],
-      "derived_inputs": ["schema and localisation resolution"],
-      "expected_evidence": ["shared schema/localisation authorities"],
-      "status": "planned"
+      "derived_inputs": ["schema summary", "checked-in PO catalogue", "fr-FR to fr locale fallback"],
+      "expected_evidence": ["compiler catalogue identity and fingerprint remain structured", "CLI trace records the locale fallback from the checked-in PO catalogue"],
+      "status": "partial"
     },
     {
       "id": "command-watch-reference",
       "canonical_fixtures": ["fixtures/recite/valid/core_language_spike.recite"],
-      "derived_inputs": ["structured command records", "watch lifecycle"],
-      "expected_evidence": ["versioned command result", "generation and freshness"],
-      "status": "planned"
+      "derived_inputs": ["BuildStatusProjection lifecycle", "generation, diagnostics, freshness, publication, recovery, and cancellation fields"],
+      "expected_evidence": ["protocol-neutral status projection", "CLI wire/process/binary/client integration remains planned"],
+      "status": "partial"
     }
   ],
   "capabilities": [
@@ -240,17 +241,17 @@
     {
       "id": "command.structured.results",
       "scenario": "command-watch-reference",
-      "authority": ["recite-cli", "recite-authoring-kernel"],
+      "authority": ["recite-compiler", "recite-authoring-kernel"],
       "protocol": "protocol-neutral",
-      "expected": {"kind": "versioned-command-record", "assertions": ["consumers use structured compile/validate/extract/run/trace/watch records", "human localisation is not a machine protocol"]},
+      "expected": {"kind": "build-status-projection", "assertions": ["shared status exposes phase, generation, diagnostics, freshness, publication, recovery, and cancellation", "CLI wire/process/binary/client integration remains planned"]},
       "edge_cases": ["watch generation", "freshness and retry", "binary discovery", "cancellation"],
-      "known_limitation": "No versioned machine-readable CLI or watch envelope exists yet.",
-      "implementation_status": "planned",
+      "known_limitation": "BuildStatusProjection is protocol-neutral kernel evidence only; no versioned CLI/watch wire envelope, process or binary integration, or client integration is implemented.",
+      "implementation_status": "partial",
       "client_status": {"vscode": "planned", "vscodium": "planned", "neovim": "planned", "zed": "planned"},
-      "platform_status": {"linux": "planned", "macos": "planned", "windows": "planned"},
+      "platform_status": {"linux": "partial", "macos": "planned", "windows": "planned"},
       "artifact_status": {"vscode-vsix": "planned", "neovim-setup": "planned", "zed-extension": "planned"},
       "distribution_status": {"vs-marketplace": "planned", "open-vsx": "planned", "neovim-distribution": "planned", "zed-distribution": "planned"},
-      "expected_evidence": {"status": "planned", "command": null, "assertions": ["#53 owns executable command/watch integration evidence"], "artifact": null},
+      "expected_evidence": {"status": "partial", "command": "cargo test --locked -p recite-compiler --test authoring_build status_projection::projects_every_lifecycle_state_with_stable_fields", "assertions": ["BuildStatusProjection test covers lifecycle fields without claiming a CLI wire contract"], "artifact": null},
       "follow_up": "#53"
     },
     {
@@ -466,15 +467,15 @@
       "scenario": "schema-localisation-reference",
       "authority": ["recite-config", "recite-compiler", "recite-ui", "recite-lsp"],
       "protocol": "protocol-neutral",
-      "expected": {"kind": "schema-localisation-summary", "assertions": ["schema provenance and localisation IDs remain structured", "generated manifests are read-only evidence"]},
+      "expected": {"kind": "schema-localisation-summary", "assertions": ["compiler catalogue identity and fingerprint remain structured", "CLI locale fallback uses a checked-in PO catalogue", "generated manifests remain read-only evidence"]},
       "edge_cases": ["missing producer", "locale fallback", "schema fingerprint"],
-      "known_limitation": "No executable parity evidence currently loads schema and catalogue together or checks provenance, fingerprints, and locale fallback.",
-      "implementation_status": "planned",
+      "known_limitation": "Compiler catalogue summaries and CLI locale fallback are covered independently; LSP schema/catalogue projection, combined provenance transport, and client integration remain planned.",
+      "implementation_status": "partial",
       "client_status": {"vscode": "planned", "vscodium": "planned", "neovim": "planned", "zed": "planned"},
-      "platform_status": {"linux": "planned", "macos": "planned", "windows": "planned"},
+      "platform_status": {"linux": "partial", "macos": "planned", "windows": "planned"},
       "artifact_status": {"vscode-vsix": "planned", "neovim-setup": "planned", "zed-extension": "planned"},
       "distribution_status": {"vs-marketplace": "planned", "open-vsx": "planned", "neovim-distribution": "planned", "zed-distribution": "planned"},
-      "expected_evidence": {"status": "planned", "command": null, "assertions": ["#51 owns executable schema, catalogue, provenance, and locale evidence"], "artifact": null},
+      "expected_evidence": {"status": "partial", "command": "cargo test --locked -p recite-compiler --test authoring_catalog_summary checked_in_locale_fallback_catalogue_resolves_deterministically", "assertions": ["CatalogCoverageSummary resolves the checked-in PO catalogue through the fr-FR to fr fallback and retains its fingerprint"], "artifact": null},
       "follow_up": "#51"
     },
     {
@@ -512,17 +513,17 @@
     {
       "id": "command.watch.lifecycle",
       "scenario": "command-watch-reference",
-      "authority": ["recite-cli", "recite-authoring-kernel"],
+      "authority": ["recite-compiler", "recite-authoring-kernel"],
       "protocol": "protocol-neutral",
-      "expected": {"kind": "versioned-watch-record", "assertions": ["watch generations and freshness are machine-readable", "process lifecycle and cancellation are explicit"]},
+      "expected": {"kind": "build-status-projection", "assertions": ["BuildStatusProjection exposes generation, freshness, publication, recovery, and cancellation state", "CLI wire/process/binary/client integration remains planned"]},
       "edge_cases": ["binary discovery", "retry", "cancellation", "stale generation"],
-      "known_limitation": "No structured watch record or lifecycle protocol exists.",
-      "implementation_status": "planned",
+      "known_limitation": "The protocol-neutral projection is executable, but no versioned watch wire record, process or binary integration, cancellation transport, or client integration exists.",
+      "implementation_status": "partial",
       "client_status": {"vscode": "planned", "vscodium": "planned", "neovim": "planned", "zed": "planned"},
-      "platform_status": {"linux": "planned", "macos": "planned", "windows": "planned"},
+      "platform_status": {"linux": "partial", "macos": "planned", "windows": "planned"},
       "artifact_status": {"vscode-vsix": "planned", "neovim-setup": "planned", "zed-extension": "planned"},
       "distribution_status": {"vs-marketplace": "planned", "open-vsx": "planned", "neovim-distribution": "planned", "zed-distribution": "planned"},
-      "expected_evidence": {"status": "planned", "command": null, "assertions": ["#53 owns executable watch lifecycle evidence"], "artifact": null},
+      "expected_evidence": {"status": "partial", "command": "cargo test --locked -p recite-compiler --test authoring_build status_projection::projection_retains_structured_diagnostics_and_freshness", "assertions": ["projection test exercises diagnostics and freshness while the CLI lifecycle remains planned"], "artifact": null},
       "follow_up": "#53"
     }
   ]

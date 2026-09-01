@@ -38,6 +38,32 @@ fn input(id: &str, locale: &str, source: &str) -> CatalogInput {
     )
 }
 
+#[test]
+fn checked_in_locale_fallback_catalogue_resolves_deterministically() {
+    let catalog = input(
+        "fr",
+        "fr",
+        include_str!(concat!(
+            env!("CARGO_MANIFEST_DIR"),
+            "/../../fixtures/recite/valid/locale_fallback_fr.po"
+        )),
+    );
+    let fingerprint = catalog.document().fingerprint();
+    let mut expected = expected();
+    expected.entries[0].source_text = "Hello.".to_owned();
+    let summary = CatalogCoverageSummary::build(
+        &expected,
+        [catalog.clone()],
+        recite_compiler::CatalogResolutionPolicy::new(Some(locale("fr-FR"))),
+    )
+    .expect("checked-in fallback catalogue summary");
+
+    let matched = summary.entries()[0].matched().expect("fr fallback match");
+    assert_eq!(matched.catalog().id(), "fr");
+    assert_eq!(matched.candidate().locale().as_str(), "fr");
+    assert_eq!(summary.catalogs()[0].fingerprint(), &fingerprint);
+}
+
 fn translated_po(language: &str, hello: &str, plural_arms: &[&str]) -> String {
     let arms = plural_arms
         .iter()

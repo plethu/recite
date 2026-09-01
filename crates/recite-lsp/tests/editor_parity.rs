@@ -105,7 +105,40 @@ fn initialize_and_project_features_use_shared_stdio_contract() {
             "newName": "finished"
         }),
     );
-    assert_eq!(rename["documentChanges"].as_array().map(Vec::len), Some(1));
+    let changes = rename["documentChanges"]
+        .as_array()
+        .unwrap_or_else(|| panic!("rename omitted documentChanges: {rename}"));
+    assert_eq!(changes.len(), 1);
+    assert_eq!(
+        changes[0]["textDocument"],
+        json!({ "uri": uri, "version": 1 })
+    );
+    assert_eq!(
+        changes[0]["edits"],
+        json!([
+            {
+                "range": {
+                    "start": { "line": 6, "character": 7 },
+                    "end": { "line": 6, "character": 11 }
+                },
+                "newText": "finished"
+            },
+            {
+                "range": {
+                    "start": { "line": 13, "character": 3 },
+                    "end": { "line": 13, "character": 7 }
+                },
+                "newText": "finished"
+            }
+        ])
+    );
+    let applied = apply_text_edits(CORE_FIXTURE, &changes[0]["edits"]);
+    assert_eq!(
+        applied,
+        CORE_FIXTURE
+            .replace("-> work\n", "-> finished\n")
+            .replace(":: work\n", ":: finished\n")
+    );
     harness.finish();
 }
 
@@ -251,4 +284,48 @@ fn position_for_byte_index(source: &str, byte_index: usize) -> Value {
         }
     }
     json!({ "line": line, "character": character })
+}
+
+fn apply_text_edits(source: &str, edits: &Value) -> String {
+    let edits = edits
+        .as_array()
+        .unwrap_or_else(|| panic!("text edits are not an array: {edits}"));
+    let mut output = source.to_owned();
+    for edit in edits.iter().rev() {
+        let range = &edit["range"];
+        let start = byte_offset_for_position(&output, &range["start"]);
+        let end = byte_offset_for_position(&output, &range["end"]);
+        let replacement = edit["newText"]
+            .as_str()
+            .unwrap_or_else(|| panic!("text edit replacement is not a string: {edit}"));
+        output.replace_range(start..end, replacement);
+    }
+    output
+}
+
+fn byte_offset_for_position(source: &str, position: &Value) -> usize {
+    let line = position["line"]
+        .as_u64()
+        .unwrap_or_else(|| panic!("position line is not an integer: {position}"))
+        as usize;
+    let character = position["character"]
+        .as_u64()
+        .unwrap_or_else(|| panic!("position character is not an integer: {position}"))
+        as u32;
+    let mut offset = 0;
+    for (line_index, value) in source.split_inclusive('\n').enumerate() {
+        if line_index == line {
+            let without_newline = value.strip_suffix('\n').unwrap_or(value);
+            let mut utf16 = 0_u32;
+            for (byte_index, scalar) in without_newline.char_indices() {
+                if utf16 >= character {
+                    return offset + byte_index;
+                }
+                utf16 = utf16.saturating_add(scalar.len_utf16() as u32);
+            }
+            return offset + without_newline.len();
+        }
+        offset += value.len();
+    }
+    source.len()
 }

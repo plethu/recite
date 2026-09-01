@@ -36,6 +36,7 @@ document="$repo_root/docs/editor-parity-contract.md"
 python3 - "$repo_root" "$fixture" "$document" <<'PY'
 import json
 import re
+import shlex
 import sys
 from pathlib import Path
 
@@ -86,11 +87,26 @@ require(set(client_map) == clients, "clients must contain exactly vscode, vscodi
 
 canonical_allowlist = {
     "fixtures/recite/valid/language_pressure.recite",
+    "fixtures/recite/valid/locale_fallback_fr.po",
     "fixtures/recite/valid/core_language_spike.recite",
     "fixtures/recite/invalid/parser_marker_leading_prose.recite",
     "fixtures/schema/valid/generated_manifest.json",
     "fixtures/schema/valid/full_manifest.json",
 }
+
+resolved_root = repo_root.resolve()
+
+def require_repo_file(path, label):
+    candidate = repo_root / path
+    require(not candidate.is_symlink(), f"{label} must not be a symlink: {path}")
+    try:
+        resolved = candidate.resolve(strict=True)
+    except OSError:
+        resolved = candidate.resolve()
+    require(resolved_root in resolved.parents, f"{label} escapes the repository: {path}")
+    require(resolved.is_file(), f"{label} does not exist: {path}")
+    return candidate, resolved
+
 for scenario_id, scenario in scenario_map.items():
     paths = scenario.get("canonical_fixtures")
     require(isinstance(paths, list) and paths, f"scenario {scenario_id} must name canonical_fixtures")
@@ -98,7 +114,7 @@ for scenario_id, scenario in scenario_map.items():
         require(isinstance(path, str), f"scenario {scenario_id} fixture path must be a string: {path!r}")
         if isinstance(path, str):
             require(path in canonical_allowlist, f"scenario {scenario_id} references non-canonical fixture {path!r}")
-            require((repo_root / path).is_file(), f"scenario {scenario_id} fixture does not exist: {path}")
+            require_repo_file(path, f"scenario {scenario_id} fixture")
     require(scenario.get("status") in statuses, f"scenario {scenario_id} has invalid status")
     require(isinstance(scenario.get("derived_inputs"), list) and scenario["derived_inputs"], f"scenario {scenario_id} must describe derived inputs")
     require(isinstance(scenario.get("expected_evidence"), list) and scenario["expected_evidence"], f"scenario {scenario_id} must describe expected evidence")
@@ -113,10 +129,22 @@ require(set(scenario_map) == referenced_scenarios, f"every scenario must be refe
 for artifact_id, artifact in artifact_map.items():
     require(artifact.get("status") in statuses, f"artifact {artifact_id} has invalid status")
     require(isinstance(artifact.get("clients"), list) and artifact["clients"], f"artifact {artifact_id} must name clients")
+    listed_clients = artifact.get("clients", [])
+    listed_client_ids = [client for client in listed_clients if isinstance(client, str)] if isinstance(listed_clients, list) else []
+    require(len(listed_client_ids) == len(set(listed_client_ids)), f"artifact {artifact_id} client IDs must be unique")
     for client in artifact.get("clients", []):
         require(client in clients, f"artifact {artifact_id} names unknown client {client}")
         if client in client_map:
             require(client_map[client].get("artifact") == artifact_id, f"artifact {artifact_id} and client {client} disagree on their underlying artifact")
+    reciprocal_clients = {
+        client_id
+        for client_id, client in client_map.items()
+        if client.get("artifact") == artifact_id
+    }
+    require(
+        set(listed_client_ids) == reciprocal_clients,
+        f"artifact {artifact_id} client list must exactly reciprocate client artifact references",
+    )
     path = artifact.get("path")
     if artifact.get("status") == "implemented":
         require(isinstance(path, str) and path, f"implemented artifact {artifact_id} must name a path")
@@ -126,7 +154,7 @@ for artifact_id, artifact in artifact_map.items():
         if artifact_path is not None and path:
             require(artifact_path.as_posix() == path and not {".", ".."}.intersection(artifact_path.parts), f"artifact {artifact_id} path must be normalized")
             resolved_path = (repo_root / artifact_path).resolve()
-            resolved_root = repo_root.resolve()
+            require(not (repo_root / artifact_path).is_symlink(), f"artifact {artifact_id} path must not be a symlink: {path}")
             require(resolved_root in resolved_path.parents, f"artifact {artifact_id} path escapes the repository: {path}")
             require(resolved_path.is_file(), f"artifact {artifact_id} claims missing path {path}")
 
@@ -144,11 +172,22 @@ for client_id, client in client_map.items():
             require(status in {"planned", "unsupported"}, f"planned client {client_id} cannot claim partial/implemented {platform} support")
     artifact = client.get("artifact")
     require(artifact in artifact_map, f"client {client_id} references unknown artifact {artifact}")
+    if artifact in artifact_map:
+        require(client_id in artifact_map[artifact].get("clients", []), f"client {client_id} artifact reference is not reciprocated by artifact {artifact}")
     if client.get("status") in {"partial", "implemented"} and artifact in artifact_map:
         require(artifact_map[artifact].get("status") == "implemented", f"{client.get('status')} client {client_id} needs an implemented artifact")
     if client.get("status") == "implemented":
         require(artifact_map[artifact].get("status") == "implemented", f"implemented client {client_id} needs an implemented artifact")
         require(any(status in {"partial", "implemented"} for status in platform_status.values()), f"implemented client {client_id} needs platform evidence")
+
+vscode_artifact = client_map.get("vscode", {}).get("artifact")
+vscodium_artifact = client_map.get("vscodium", {}).get("artifact")
+require(vscode_artifact == vscodium_artifact, "VS Code and VSCodium must share one VSIX artifact topology")
+if vscode_artifact in artifact_map:
+    require(
+        set(artifact_map[vscode_artifact].get("clients", [])) == {"vscode", "vscodium"},
+        "shared VS Code/VSCodium VSIX artifact must list exactly both clients",
+    )
 
 for distribution_id, distribution in distribution_map.items():
     require(distribution.get("status") in statuses, f"distribution {distribution_id} has invalid status")
@@ -228,6 +267,50 @@ for capability_id, capability in capability_map.items():
         require(evidence.get("status") == "implemented", f"implemented capability {capability_id} needs implemented evidence")
     if status in {"planned", "unsupported"}:
         require(evidence.get("command") is None, f"unimplemented capability {capability_id} must not claim an executable evidence command")
+    if status in {"partial", "implemented"} and isinstance(evidence.get("command"), str) and evidence["command"]:
+        command = evidence["command"]
+        try:
+            command_parts = shlex.split(command)
+        except ValueError as error:
+            command_parts = []
+            require(False, f"capability {capability_id} evidence command is malformed: {error}")
+        require(
+            len(command_parts) >= 8
+            and command_parts[:2] == ["cargo", "test"]
+            and command_parts[2] == "--locked"
+            and command_parts[3] == "-p"
+            and command_parts[5] == "--test"
+            and "--" not in command_parts,
+            f"capability {capability_id} evidence command must name a cargo integration test and filter",
+        )
+        if len(command_parts) >= 8 and command_parts[:2] == ["cargo", "test"] and "--" not in command_parts:
+            package = command_parts[4]
+            target = command_parts[6]
+            filters = command_parts[7:]
+            test_root = repo_root / "crates" / package / "tests"
+            test_file = test_root / f"{target}.rs"
+            require(test_file.is_file() and not test_file.is_symlink(), f"capability {capability_id} evidence target does not exist: {test_file.relative_to(repo_root) if test_file.is_relative_to(repo_root) else test_file}")
+            source_files = []
+            if test_file.is_file() and not test_file.is_symlink():
+                source_files.append(test_file)
+                module_dir = test_file.with_suffix("")
+                if module_dir.is_dir() and not module_dir.is_symlink():
+                    source_files.extend(sorted(module_dir.rglob("*.rs")))
+            source = "\n".join(
+                source_file.read_text(encoding="utf-8")
+                for source_file in source_files
+                if source_file.is_file() and not source_file.is_symlink()
+            )
+            for test_filter in filters:
+                function_name = test_filter.rsplit("::", 1)[-1]
+                require(
+                    re.search(
+                        rf"#\s*\[\s*(?:[A-Za-z_][A-Za-z0-9_]*::)?test\s*\]\s*(?:#\s*\[[^]]+\]\s*)*fn\s+{re.escape(function_name)}[A-Za-z0-9_]*\s*\(",
+                        source,
+                    )
+                    is not None,
+                    f"capability {capability_id} evidence command does not name an existing runnable test: {test_filter}",
+                )
     artifact = evidence.get("artifact")
     if artifact is not None:
         require(artifact in artifact_map, f"capability {capability_id} references unknown evidence artifact {artifact}")
