@@ -15,7 +15,7 @@ new_fixture() {
   cleanup
   test_root="$(mktemp -d)"
   mkdir -p "$test_root/repo/crates/demo/src" "$test_root/repo/crates/demo/tests" "$test_root/repo/crates/demo/benches" "$test_root/repo/tests" "$test_root/repo/docs" "$test_root/repo/scripts"
-  cp "$repo_root/scripts/check-maintainability.sh" "$test_root/repo/scripts/check-maintainability.sh"
+  copy_gate
   chmod +x "$test_root/repo/scripts/check-maintainability.sh"
   # These literals intentionally contain Markdown code ticks.
   # shellcheck disable=SC2016
@@ -60,9 +60,8 @@ write_lines() {
 initial_push_fixture() {
   cleanup
   test_root="$(mktemp -d)"
-  mkdir -p "$test_root/repo/crates/demo/src" "$test_root/repo/docs" "$test_root/repo/scripts"
-  cp "$repo_root/scripts/check-maintainability.sh" "$test_root/repo/scripts/check-maintainability.sh"
-  chmod +x "$test_root/repo/scripts/check-maintainability.sh"
+  mkdir -p "$test_root/repo/crates/demo/src" "$test_root/repo/editors/vscode/src" "$test_root/repo/docs" "$test_root/repo/scripts"
+  copy_gate
   # This literal intentionally contains Markdown code ticks.
   # shellcheck disable=SC2016
   printf '%s\n' \
@@ -73,12 +72,61 @@ initial_push_fixture() {
     '| Path | Lines | Kind | Owner | Disposition | Issue/reason |' \
     '| --- | ---: | --- | --- | --- | --- |' \
     '| `crates/demo/src/new.rs` | 300 | production | demo | cohesive | initial push fixture |' \
+    '| `editors/vscode/src/new.js` | 300 | production | editor-runtime | cohesive | initial push fixture |' \
     > "$test_root/repo/docs/maintainability-baseline.md"
   git -C "$test_root/repo" init -q -b main
   git -C "$test_root/repo" config user.name Fixture
   git -C "$test_root/repo" config user.email fixture@example.invalid
   git -C "$test_root/repo" config commit.gpgsign false
   write_lines crates/demo/src/new.rs 300
+  write_lines editors/vscode/src/new.js 300
+}
+
+copy_gate() {
+  cp "$repo_root/scripts/check-maintainability.sh" "$test_root/repo/scripts/check-maintainability.sh"
+  mkdir -p "$test_root/repo/scripts/maintainability"
+  cp "$repo_root/scripts/maintainability"/*.sh "$test_root/repo/scripts/maintainability/"
+  chmod +x "$test_root/repo/scripts/check-maintainability.sh" "$test_root/repo/scripts/maintainability"/*.sh
+}
+
+new_multilang_fixture() {
+  cleanup
+  test_root="$(mktemp -d)"
+  mkdir -p "$test_root/repo/docs" "$test_root/repo/editors/vscode/src" \
+    "$test_root/repo/editors/vscode/test" "$test_root/repo/scripts" \
+    "$test_root/repo/tests" "$test_root/repo/.agents/skills/demo/scripts"
+  copy_gate
+  # These literals intentionally contain Markdown code ticks.
+  # shellcheck disable=SC2016
+  printf '%s\n' \
+    '# Maintainability fixture baseline' '' '## Inventory' '' \
+    '| Path | Lines | Kind | Owner | Disposition | Issue/reason |' \
+    '| --- | ---: | --- | --- | --- | --- |' \
+    > "$test_root/repo/docs/maintainability-baseline.md"
+  local extension
+  for extension in js mjs cjs lua py sh; do
+    # Each extension is exercised in all three policy categories.
+    printf '%s\n' \
+      "| \`editors/vscode/src/large.$extension\` | 401 | production | editor-runtime | cohesive | fixture $extension production |" \
+      "| \`scripts/large.$extension\` | 401 | tooling | scripts | cohesive | fixture $extension tooling |" \
+      "| \`tests/large.$extension\` | 501 | test/support | tests | cohesive | fixture $extension test support |" \
+      >> "$test_root/repo/docs/maintainability-baseline.md"
+    write_lines "editors/vscode/src/large.$extension" 401
+    write_lines "scripts/large.$extension" 401
+    write_lines "tests/large.$extension" 501
+  done
+  # Generated boundaries are explicit, and therefore remain outside the
+  # handwritten inventory even when they use a supported extension.
+  write_lines editors/vscode/src/messages.generated.js 501
+  write_lines editors/vscode/dist/generated.js 501
+  write_lines editors/recite-neovim/lua/recite_messages.lua 501
+  write_lines editors/recite-tree-sitter/src/parser.c 501
+  write_lines editors/recite-tree-sitter/src/grammar.json 501
+  write_lines editors/recite-tree-sitter/src/node-types.json 501
+  git -C "$test_root/repo" init -q -b main
+  git -C "$test_root/repo" config user.name Fixture
+  git -C "$test_root/repo" config user.email fixture@example.invalid
+  git -C "$test_root/repo" config commit.gpgsign false
 }
 
 commit_fixture() {
@@ -242,6 +290,45 @@ expect_full_fail malformed issue/reason reference
 initial_push_fixture
 commit_fixture initial
 expect_initial_push_pass initial push empty-tree fallback
+
+new_multilang_fixture
+commit_fixture baseline
+expect_full_pass all supported extensions and explicit generated exclusions
+
+new_multilang_fixture
+commit_fixture baseline
+sed -i 's/| 401 | tooling | scripts |/| 401 | production | scripts |/' \
+  "$test_root/repo/docs/maintainability-baseline.md"
+expect_full_fail incorrect tooling classification
+
+new_multilang_fixture
+commit_fixture base
+write_lines editors/vscode/src/large.js 402
+update_baseline_lines editors/vscode/src/large.js 401 402
+commit_fixture grow
+expect_fail growing production JavaScript file
+
+new_multilang_fixture
+commit_fixture base
+write_lines scripts/large.py 402
+update_baseline_lines scripts/large.py 401 402
+commit_fixture grow
+expect_fail growing tooling Python file
+
+new_multilang_fixture
+commit_fixture base
+write_lines tests/large.lua 502
+update_baseline_lines tests/large.lua 501 502
+commit_fixture grow
+expect_fail growing test/support Lua file
+
+new_multilang_fixture
+commit_fixture base
+mv "$test_root/repo/scripts/large.py" "$test_root/repo/scripts/renamed.py"
+sed -i 's#scripts/large.py#scripts/renamed.py#' \
+  "$test_root/repo/docs/maintainability-baseline.md"
+commit_fixture rename-tooling
+expect_pass unchanged oversized tooling rename
 
 new_fixture
 write_lines crates/demo/src/large.rs 401

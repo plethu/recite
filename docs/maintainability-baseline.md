@@ -1,7 +1,7 @@
 # Maintainability baseline
 
-This is the checked-in inventory for Recite's handwritten Rust surfaces. It is
-an ownership and review aid, not a demand that every large file be split.
+This is the checked-in inventory for Recite's handwritten source surfaces. It
+is an ownership and review aid, not a demand that every large file be split.
 
 The maintainability check compares the source file at the pull request head
 with the merge base. Existing debt is reported but does not fail a change when
@@ -14,17 +14,26 @@ issue and reason. An exception never authorises growth of an unrelated file.
 
 | Surface | Scrutinise above | Follow up above |
 | --- | ---: | ---: |
-| Production Rust under `crates/*/src/` | 250 lines | 400 lines |
-| Test/support Rust under crate tests, `crates/*/benches/`, `src/**/tests.rs`, or `tests/` | 350 lines | 500 lines |
+| Production source, including editor runtime/client/grammar code | 250 lines | 400 lines |
+| Tooling and gate source under `scripts/`, editor `scripts/`, or agent `scripts/` | 250 lines | 400 lines |
+| Test/support source under crate tests, `crates/*/benches/`, `src/**/tests.rs`, `tests/`, or editor test dirs | 350 lines | 500 lines |
 
-`tests.rs` sidecars, `src/tests/`, crate integration tests, and crate benches
-are test/support code even though some are below a crate's `src/` directory.
+`tests.rs` sidecars, `src/tests/`, crate integration tests, crate benches, and
+editor test directories are test/support code even though some are below a
+source directory. `scripts/`, editor build/check scripts, and agent-local
+scripts are tooling. The supported handwritten extensions are `.rs`, `.js`,
+`.mjs`, `.cjs`, `.lua`, `.py`, and `.sh`.
+
 Generated headers, build output, and generated fixture output are outside this
-inventory. Any future generated Rust path must be excluded by an explicit,
-reviewed path rule; a broad generated directory exemption is not acceptable.
+inventory. The checker names generated paths explicitly: the FFI header,
+Tree-sitter parser/grammar/node-type outputs, the VS Code message projection
+and distribution tree, and the Neovim message projection. Any future generated
+path must be added as an explicit reviewed rule; a broad generated-directory
+exemption is not acceptable.
 
-The `kind` column must agree with the path classification (`production` or
-`test/support`), and the recorded line count must match the checked-out head.
+The `kind` column must agree with the path classification (`production`,
+`tooling`, or `test/support`), and the recorded line count must match the
+checked-out head.
 The `disposition` column is deliberately descriptive. `cohesive` means the
 current boundary is understood and should not be split for a number alone;
 `follow-up` names work that should reduce change pressure; `review` means a
@@ -198,3 +207,13 @@ production suppressions must carry a narrow scope and rationale.
 | `crates/recite-runtime/tests/traversal/conditions/choice_conditions.rs` | 365 | test/support | runtime/tests | cohesive | Choice condition coverage |
 | `crates/recite-lsp/src/tests/availability/speaker.rs` | 351 | test/support | lsp/tests | review | Typed and ordinary speaker completion coverage |
 | `crates/recite-compiler/tests/validation/participation.rs` | 424 | test/support | compiler/tests | cohesive | #168: participation-aware validation completeness and all-complete compatibility coverage |
+| `.agents/skills/recite-github-pm/scripts/check-pr-review-gates.sh` | 470 | tooling | agent-workflow | exception | #197: split review-gate orchestration into focused policy helpers |
+| `editors/recite-neovim/lua/recite.lua` | 403 | production | neovim/runtime | exception | #197: split lifecycle recovery from editor command projections after the pending-restart correction |
+| `editors/recite-tree-sitter/grammar.js` | 345 | production | tree-sitter/grammar | cohesive | Grammar source owns syntax and recovery rules alongside the named node declarations |
+| `editors/vscode/scripts/ui-boundary-calls.mjs` | 346 | tooling | vscode/checks | review | UI boundary call inventory remains a single generated-boundary checker |
+| `scripts/check-git-policy.sh` | 414 | tooling | git-policy | exception | #197: split commit, diff, and workflow policy checks into focused helpers |
+| `scripts/check-lint-suppressions.py` | 256 | tooling | lint-policy | review | Suppression policy parsing and diff-aware enforcement remain one checker boundary |
+| `scripts/check-tree-sitter.sh` | 384 | tooling | tree-sitter/check | review | Parser generation, ABI, corpus, and reproducibility checks share one tool boundary |
+| `scripts/lint_suppression_ast.py` | 374 | tooling | lint-policy | review | AST suppression extraction keeps parser traversal and source categorisation together |
+| `tests/lint-suppressions/check.sh` | 398 | test/support | lint-policy/tests | review | Hostile suppression-policy fixture scenarios remain one executable contract suite |
+| `tests/maintainability/check.sh` | 453 | test/support | maintainability/tests | review | Cross-language threshold, baseline, rename, and generated-boundary fixtures remain one contract suite |
