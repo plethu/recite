@@ -147,7 +147,7 @@ production suppressions must carry a narrow scope and rationale.
 | `crates/recite-core/src/schema/manifest/spans.rs` | 328 | production | core/schema | cohesive | JSON span calculation and shared span state |
 | `crates/recite-cli/src/play/tui/interaction.rs` | 293 | production | cli/tui | cohesive | Input-to-intent translation |
 | `crates/recite-compiler/src/validation/metadata.rs` | 276 | production | compiler/validation | review | Metadata validation ownership |
-| `crates/recite-compiler/src/validation/statements.rs` | 331 | production | compiler/validation | cohesive | Statement traversal owns per-class validation gates; interpolation and plural validation remain separate seams |
+| `crates/recite-compiler/src/validation/statements.rs` | 341 | production | compiler/validation | cohesive | Statement traversal owns per-class validation gates; interpolation and plural validation remain separate seams |
 | `crates/recite-core/src/schema/manifest/lower/domains.rs` | 342 | production | core/schema | review | Strict domain shape and declaration lowering |
 | `crates/recite-core/src/schema/manifest/validate.rs` | 278 | production | core/schema | review | Shared schema reference and name validation boundary |
 | `crates/recite-compiler/src/validation/conditions.rs` | 282 | production | compiler/validation | cohesive | Condition validation |
@@ -193,4 +193,4 @@ production suppressions must carry a narrow scope and rationale.
 | `crates/recite-compiler/src/authoring/build/result.rs` | 260 | production | compiler/authoring-build | review | #191: result finalization retains publication and freshness truth together; split if further lifecycle evidence is added |
 | `crates/recite-runtime/tests/traversal/conditions/choice_conditions.rs` | 365 | test/support | runtime/tests | cohesive | Choice condition coverage |
 | `crates/recite-lsp/src/tests/availability/speaker.rs` | 351 | test/support | lsp/tests | review | Typed and ordinary speaker completion coverage |
-| `crates/recite-compiler/tests/validation/participation.rs` | 369 | test/support | compiler/tests | cohesive | #168: participation-aware validation completeness and all-complete compatibility coverage |
+| `crates/recite-compiler/tests/validation/participation.rs` | 424 | test/support | compiler/tests | cohesive | #168: participation-aware validation completeness and all-complete compatibility coverage |
