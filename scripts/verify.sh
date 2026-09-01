@@ -18,7 +18,7 @@ Runs the complete local verification suite:
   9. tests/trusted-policy/check.sh
  10. tests/editor-parity/check.sh
  11. tests/check-pr-review-gates/check-rollup-fixtures.sh
- 12. scripts/check-project-gates.sh (including the Tree-sitter grammar gate)
+ 12. scripts/check-project-gates.sh (including editor grammar and Neovim gates)
  13. scripts/check-docs.sh
  14. scripts/benchmark-smoke.sh
 

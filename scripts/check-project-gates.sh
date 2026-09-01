@@ -10,15 +10,16 @@ Runs Recite's Rust and adapter project gates (the full local suite is
 scripts/verify.sh or `mise run verify`):
   1. scripts/check-test-organization.sh
   2. scripts/check-tree-sitter.sh
-  3. scripts/check-editor-parity.sh
-  4. scripts/check-lint-suppressions.sh
-  5. scripts/generate-ffi-header.sh
-  6. scripts/check-ffi-header.sh
-  7. scripts/check-unity-adapter.sh
-  8. cargo fmt --check
-  9. cargo test --locked
- 10. cargo clippy --locked --all-targets --all-features -- -D warnings
- 11. RUSTDOCFLAGS=-Dwarnings cargo doc --locked --workspace --all-features --no-deps
+  3. scripts/check-neovim.sh
+  4. scripts/check-editor-parity.sh
+  5. scripts/check-lint-suppressions.sh
+  6. scripts/generate-ffi-header.sh
+  7. scripts/check-ffi-header.sh
+  8. scripts/check-unity-adapter.sh
+  9. cargo fmt --check
+ 10. cargo test --locked
+ 11. cargo clippy --locked --all-targets --all-features -- -D warnings
+ 12. RUSTDOCFLAGS=-Dwarnings cargo doc --locked --workspace --all-features --no-deps
 EOF
 }
 
@@ -60,6 +61,11 @@ if [[ ! -x "$repo_root/scripts/check-tree-sitter.sh" ]]; then
   exit 2
 fi
 
+if [[ ! -x "$repo_root/scripts/check-neovim.sh" ]]; then
+  echo "missing executable gate: $repo_root/scripts/check-neovim.sh" >&2
+  exit 2
+fi
+
 if [[ ! -x "$repo_root/scripts/generate-ffi-header.sh" ]]; then
   echo "missing executable gate: $repo_root/scripts/generate-ffi-header.sh" >&2
   exit 2
@@ -85,6 +91,10 @@ echo "== editor parity contract =="
 echo
 echo "== Tree-sitter grammar =="
 "$repo_root/scripts/check-tree-sitter.sh" "$repo_root"
+
+echo
+echo "== Neovim integration =="
+"$repo_root/scripts/check-neovim.sh" "$repo_root"
 
 echo
 echo "== lint suppression policy =="
