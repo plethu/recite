@@ -122,6 +122,8 @@ production suppressions must carry a narrow scope and rationale.
 | `crates/recite-cli/src/runtime_fixture/trace/model.rs` | 263 | production | cli/runtime-fixture | review | #180: trace output model keeps localized templates and structured metadata distinct |
 | `crates/recite-godot/src/adapter.rs` | 361 | production | godot | review | Host adapter lifecycle boundary |
 | `crates/recite-lsp/src/server.rs` | 407 | production | lsp/server | review | #164: request dispatch and protocol lifecycle remain the server boundary; error taxonomy and watcher registration are split into focused modules |
+| `crates/recite-lsp/src/workspace.rs` | 254 | production | lsp/workspace | review | #187: workspace lifecycle state and diagnostic refresh contracts remain the cohesive workspace boundary |
+| `crates/recite-lsp/src/workspace/kernel_rebuild.rs` | 263 | production | lsp/workspace | review | #187: partition rebuild and fingerprint ownership remain a cohesive transactional workspace boundary |
 | `crates/recite-lsp/src/workspace/lsp_features.rs` | 253 | production | lsp/workspace | review | #187: partition-routed authoring feature projections remain a cohesive LSP boundary; split by feature family if responsibilities grow materially |
 | `crates/recite-benchmarks/src/memory_profiles/mod.rs` | 373 | production | benchmarks | cohesive | Maintainer-only profile orchestration |
 | `crates/recite-cli/src/commands.rs` | 398 | production | cli | review | Command orchestration boundary |
