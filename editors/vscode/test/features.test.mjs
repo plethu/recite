@@ -86,8 +86,30 @@ test("delayed workspace edits revalidate zero-edit sibling preconditions atomica
   assert.equal(edit.replacements.length, 1);
 });
 
+test("versioned edits require the same open document generation after close and reopen", () => {
+  const uri = api.Uri.parse("file:///workspace/dialogue.recite");
+  const firstGeneration = { version: 4 };
+  const reopenedGeneration = { version: 4 };
+  let openDocument = firstGeneration;
+  const edit = lspWorkspaceEditToVscode(api, {
+    documentChanges: [{
+      textDocument: { uri: uri.toString(), version: 4 },
+      edits: []
+    }]
+  }, () => openDocument);
+
+  assert.equal(workspaceEditIsCurrent(edit), true);
+  openDocument = undefined;
+  assert.equal(workspaceEditIsCurrent(edit), false);
+  openDocument = reopenedGeneration;
+  assert.equal(workspaceEditIsCurrent(edit), false);
+  openDocument = firstGeneration;
+  assert.equal(workspaceEditIsCurrent(edit), true);
+});
+
 test("editable code actions are projected as controller-owned commands", () => {
   const uri = api.Uri.parse("file:///workspace/dialogue.recite");
+  const document = { version: 4 };
   const command = { title: "Apply fix", command: "recite.applyCodeAction", arguments: ["1"] };
   const actions = lspCodeActionsToVscode(api, [{
     title: "Apply fix",
@@ -101,13 +123,34 @@ test("editable code actions are projected as controller-owned commands", () => {
         }]
       }]
     }
-  }], () => ({ version: 4 }), {
+  }], () => document, {
     createEditCommand: () => command
   });
 
   assert.equal(actions.length, 1);
   assert.equal(actions[0].edit, undefined);
   assert.deepEqual(actions[0].command, command);
+});
+
+test("disabled and nested source-fix-all actions preserve their LSP shape", () => {
+  const actions = lspCodeActionsToVscode(api, [
+    {
+      title: "Unavailable fix",
+      kind: "quickfix",
+      disabled: { reason: "requires a project schema" }
+    },
+    {
+      title: "Fix all Recite files",
+      kind: "source.fixAll.recite",
+      edit: { documentChanges: [] }
+    }
+  ], () => undefined, {
+    createEditCommand: () => ({ title: "Fix all Recite files", command: "recite.applyCodeAction", arguments: ["1"] })
+  });
+
+  assert.equal(actions.length, 2);
+  assert.deepEqual(actions[0].disabled, { reason: "requires a project schema" });
+  assert.equal(actions[1].kind, "source.fixAll.recite");
 });
 
 test("diagnostic severity maps explicitly across the VS Code and LSP ranges", () => {
@@ -149,7 +192,14 @@ const api = {
   CodeAction: class CodeAction {
     constructor(title, kind) { this.title = title; this.kind = kind; }
   },
-  CodeActionKind: { QuickFix: "quickfix", Refactor: "refactor", Source: "source", Empty: "" }
+  CodeActionKind: {
+    QuickFix: "quickfix",
+    Refactor: "refactor",
+    Source: "source",
+    SourceFixAll: { append: (value) => `source.fixAll.${value}` },
+    SourceOrganizeImports: "source.organizeImports",
+    Empty: ""
+  }
 };
 
 function numericSeverityApi() {

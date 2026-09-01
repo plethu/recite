@@ -64,5 +64,11 @@ macro_rules! lsp_message_ids {
         | MsgId::LspClientConfigurationPathDescription
         | MsgId::LspClientConfigurationArgsDescription
         | MsgId::LspClientConfigurationProjectRootDescription
+        | MsgId::LspClientActionStale
+        | MsgId::LspClientConfigPathInvalid
+        | MsgId::LspClientConfigArgsInvalid
+        | MsgId::LspClientConfigProjectRootInvalid
+        | MsgId::LspClientConfigProjectRootNeedsWorkspace
+        | MsgId::LspClientNotRunning
     };
 }

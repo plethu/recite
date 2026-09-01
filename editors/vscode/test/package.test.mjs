@@ -19,6 +19,15 @@ test("the shared artifact serves both VS Code and VSCodium without semantic fork
   assert.match(manifest.repository.url, /github\.com\/plethu\/recite\.git$/);
 });
 
+test("the declared VS Code floor uses a plain JavaScript message projection", async () => {
+  assert.equal(manifest.engines.vscode, "^1.89.0");
+  const source = await readFile(path.join(packageRoot, "src", "messages.js"), "utf8");
+  assert.match(source, /messages\.generated\.js/);
+  assert.doesNotMatch(source, /\.json.*import attributes|with \{ type: ["']json["'] \}/);
+  const generated = await readFile(path.join(packageRoot, "src", "messages.generated.js"), "utf8");
+  assert.match(generated, /^\/\/ Generated from .*\.ftl/m);
+});
+
 test("packaging safety rejects symlink escapes, including intermediate paths", async () => {
   const root = await mkdtemp(path.join(os.tmpdir(), "recite-vscode-safety-"));
   try {

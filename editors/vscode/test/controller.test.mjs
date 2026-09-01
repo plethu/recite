@@ -187,12 +187,16 @@ test("restart budget resets only after a separated stable run", async () => {
 
 test("controller-owned edit commands revalidate immediately before apply", async () => {
   const applied = [];
+  const messages = [];
   const api = hostApi({ isTrusted: () => true, onDidGrantWorkspaceTrust: () => ({ dispose() {} }) });
   api.workspace.applyEdit = async (edit) => {
     applied.push(edit);
     return true;
   };
-  const controller = new ExtensionController(api, output(), { delete() {} }, {
+  const controller = new ExtensionController(api, {
+    append() {},
+    appendLine(value) { messages.push(value); }
+  }, { delete() {} }, {
     createClient: () => new FakeClient()
   });
   await controller.start();
@@ -208,6 +212,24 @@ test("controller-owned edit commands revalidate immediately before apply", async
   current = false;
   assert.equal(await api.commands.executeCommand(staleCommand.command, ...staleCommand.arguments), false);
   assert.deepEqual(applied, [edit]);
+  assert.equal(messages.at(-1), "Recite code action is no longer applicable because a document changed or closed.");
+  await controller.dispose();
+});
+
+test("code-action command cache is bounded and expires unselected actions", async () => {
+  const api = hostApi({ isTrusted: () => true, onDidGrantWorkspaceTrust: () => ({ dispose() {} }) });
+  const controller = new ExtensionController(api, output(), { delete() {} }, {
+    editCommandTtlMs: 15,
+    maxEditCommands: 1,
+    createClient: () => new FakeClient()
+  });
+  await controller.start();
+
+  const first = controller.createEditCommand("First", { reciteVersionGuard: () => true });
+  const second = controller.createEditCommand("Second", { reciteVersionGuard: () => true });
+  assert.equal(await api.commands.executeCommand(first.command, ...first.arguments), false);
+  await new Promise((resolve) => setTimeout(resolve, 25));
+  assert.equal(await api.commands.executeCommand(second.command, ...second.arguments), false);
   await controller.dispose();
 });
 

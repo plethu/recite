@@ -361,6 +361,12 @@ resource_ids = [
 "lsp-client-configuration-path-description",
 "lsp-client-configuration-args-description",
 "lsp-client-configuration-project-root-description",
+"lsp-client-action-stale",
+"lsp-client-config-path-invalid",
+"lsp-client-config-args-invalid",
+"lsp-client-config-project-root-invalid",
+"lsp-client-config-project-root-needs-workspace",
+"lsp-client-not-running",
 ]
 
 # The complete future default-code presentation registry is explicit. Parser

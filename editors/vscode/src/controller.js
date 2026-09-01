@@ -1,16 +1,13 @@
 import { ReciteLanguageClient } from "./lsp-client.js";
 import { initializeParams, readConfiguration } from "./configuration.js";
-import {
-  lspDiagnosticToVscode,
-  workspaceEditIsCurrent,
-} from "./lsp-features.js";
+import { lspDiagnosticToVscode } from "./lsp-features.js";
 import { clientMessage } from "./messages.js";
 import { registerDocumentLifecycle } from "./document-lifecycle.js";
 import { registerFeatureProviders } from "./providers.js";
 import { WatcherRegistry } from "./watchers.js";
+import { EditCommandRegistry } from "./edit-commands.js";
 
 const DIAGNOSTICS_METHOD = "textDocument/publishDiagnostics";
-const APPLY_CODE_ACTION_COMMAND = "recite.applyCodeAction";
 const RESTART_DELAYS_MS = [100, 500, 1_000, 2_000, 5_000];
 const STABLE_RUN_MS = 10_000;
 
@@ -33,9 +30,7 @@ export class ExtensionController {
     this.providersRegistered = false;
     this.trustListenerRegistered = false;
     this.documents = new Map();
-    this.editCommands = new Map();
-    this.nextEditCommandId = 1;
-    this.editCommandRegistered = false;
+    this.editCommands = new EditCommandRegistry(this.api, this.output, options);
     this.watchers = new WatcherRegistry(this);
   }
 
@@ -75,7 +70,7 @@ export class ExtensionController {
     if (this.providersRegistered) return;
     registerDocumentLifecycle(this);
     registerFeatureProviders(this);
-    this.registerEditCommand();
+    this.editCommands.register(this.subscriptions);
     this.providersRegistered = true;
   }
 
@@ -87,28 +82,12 @@ export class ExtensionController {
     }));
   }
 
-  registerEditCommand() {
-    if (this.editCommandRegistered || !this.api.commands?.registerCommand) return;
-    this.editCommandRegistered = true;
-    this.subscriptions.push(this.api.commands.registerCommand(
-      APPLY_CODE_ACTION_COMMAND,
-      (id) => this.applyEditCommand(id)
-    ));
-  }
-
   createEditCommand(title, edit) {
-    if (!this.editCommandRegistered) return undefined;
-    const id = String(this.nextEditCommandId++);
-    this.editCommands.set(id, edit);
-    if (this.api.Command) return new this.api.Command(title, APPLY_CODE_ACTION_COMMAND, id);
-    return { title, command: APPLY_CODE_ACTION_COMMAND, arguments: [id] };
+    return this.editCommands.create(title, edit);
   }
 
-  applyEditCommand(id) {
-    const edit = this.editCommands.get(id);
-    this.editCommands.delete(id);
-    if (!edit || !workspaceEditIsCurrent(edit)) return false;
-    return this.api.workspace.applyEdit(edit);
+  discardEditCommandsForDocument(document) {
+    this.editCommands.discardForDocument(document);
   }
 
   handleStartFailure(error) {
@@ -231,7 +210,7 @@ export class ExtensionController {
     this.restartTimer = undefined;
     this.clearStableReset();
     this.watchers.dispose();
-    this.editCommands.clear();
+    this.editCommands.dispose();
     for (const subscription of this.subscriptions.splice(0)) subscription.dispose();
     await this.client?.stop();
     this.client = undefined;

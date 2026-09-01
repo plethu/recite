@@ -90,6 +90,16 @@ pub(super) const fn key(id: super::MsgId) -> Option<&'static str> {
         super::MsgId::LspClientConfigurationProjectRootDescription => {
             Some("lsp-client-configuration-project-root-description")
         }
+        super::MsgId::LspClientActionStale => Some("lsp-client-action-stale"),
+        super::MsgId::LspClientConfigPathInvalid => Some("lsp-client-config-path-invalid"),
+        super::MsgId::LspClientConfigArgsInvalid => Some("lsp-client-config-args-invalid"),
+        super::MsgId::LspClientConfigProjectRootInvalid => {
+            Some("lsp-client-config-project-root-invalid")
+        }
+        super::MsgId::LspClientConfigProjectRootNeedsWorkspace => {
+            Some("lsp-client-config-project-root-needs-workspace")
+        }
+        super::MsgId::LspClientNotRunning => Some("lsp-client-not-running"),
         _ => None,
     }
 }

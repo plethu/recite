@@ -14,9 +14,8 @@ const manifest = JSON.parse(await readFile(path.join(packageRoot, "package.json"
 const languageConfiguration = JSON.parse(
   await readFile(path.join(packageRoot, "language-configuration.json"), "utf8")
 );
-const projectedMessages = JSON.parse(
-  await readFile(path.join(packageRoot, "src", "messages.json"), "utf8")
-);
+const projectedMessages = await import("../src/messages.generated.js")
+  .then(({ default: messages }) => messages);
 const packageMessages = JSON.parse(
   await readFile(path.join(packageRoot, "package.nls.json"), "utf8")
 );

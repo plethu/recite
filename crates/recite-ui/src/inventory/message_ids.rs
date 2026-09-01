@@ -89,4 +89,7 @@ message_ids! {
     LspClientDisplayName, LspClientDescription, LspClientUntrustedWorkspacesDescription,
     LspClientConfigurationTitle, LspClientConfigurationPathDescription,
     LspClientConfigurationArgsDescription, LspClientConfigurationProjectRootDescription,
+    LspClientActionStale, LspClientConfigPathInvalid, LspClientConfigArgsInvalid,
+    LspClientConfigProjectRootInvalid, LspClientConfigProjectRootNeedsWorkspace,
+    LspClientNotRunning,
 }

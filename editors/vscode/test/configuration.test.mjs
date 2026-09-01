@@ -41,6 +41,21 @@ test("relative project roots require a workspace folder", () => {
   assert.throws(() => readConfiguration(api), /needs a workspace/);
 });
 
+test("configuration validation reports canonical localized messages", () => {
+  assert.throws(
+    () => readConfiguration(fakeApi({ workspaceFolders: [], values: { "lsp.path": "" } })),
+    /recite\.lsp\.path must be a non-empty string/
+  );
+  assert.throws(
+    () => readConfiguration(fakeApi({ workspaceFolders: [], values: { "lsp.args": ["--ok", 1] } })),
+    /recite\.lsp\.args must be an array of strings/
+  );
+  assert.throws(
+    () => readConfiguration(fakeApi({ workspaceFolders: [], values: { "lsp.projectRoot": 1 } })),
+    /recite\.lsp\.projectRoot must be a string/
+  );
+});
+
 function fakeApi({ workspaceFolders, values = {} }) {
   return {
     workspace: {

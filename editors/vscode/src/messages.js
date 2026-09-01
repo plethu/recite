@@ -1,4 +1,4 @@
-import messages from "./messages.json" with { type: "json" };
+import messages from "./messages.generated.js";
 
 export function clientMessage(api, id, detail) {
   const template = messages[id];

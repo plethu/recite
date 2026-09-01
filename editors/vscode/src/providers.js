@@ -5,6 +5,7 @@ import {
   lspLocationToVscode,
   vscodeDiagnosticToLsp,
 } from "./lsp-features.js";
+import { clientMessage } from "./messages.js";
 
 const SELECTOR = [
   { scheme: "file", language: "recite" },
@@ -16,7 +17,7 @@ export function registerFeatureProviders(controller) {
   const send = (method, params, token) => {
     const client = controller.client;
     if (!client || client.status !== "running") {
-      return Promise.reject(new Error("recite-lsp is not running"));
+      return Promise.reject(new Error(clientMessage(controller.api, "lsp-client-not-running")));
     }
     return client.request(method, params)
       .then((result) => token?.isCancellationRequested ? undefined : result);

@@ -6,7 +6,14 @@ export const RUNTIME_MESSAGE_IDS = [
   "lsp-client-error",
   "lsp-client-exited",
   "lsp-client-restart-scheduled",
-  "lsp-client-restart-exhausted"
+  "lsp-client-restart-exhausted",
+  "lsp-client-display-name",
+  "lsp-client-action-stale",
+  "lsp-client-config-path-invalid",
+  "lsp-client-config-args-invalid",
+  "lsp-client-config-project-root-invalid",
+  "lsp-client-config-project-root-needs-workspace",
+  "lsp-client-not-running"
 ];
 
 export const PACKAGE_MESSAGE_IDS = [
@@ -39,8 +46,8 @@ export async function generateMessageProjections(packageRoot) {
   );
   const projections = projectMessages(fluent);
   await writeFile(
-    path.join(packageRoot, "src", "messages.json"),
-    `${JSON.stringify(projections.runtime, null, 2)}\n`,
+    path.join(packageRoot, "src", "messages.generated.js"),
+    `// Generated from crates/recite-ui/resources/en-US.ftl. Do not edit.\nexport default Object.freeze(${JSON.stringify(projections.runtime, null, 2)});\n`,
     "utf8"
   );
   await writeFile(

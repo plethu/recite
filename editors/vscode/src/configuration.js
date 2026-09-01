@@ -1,4 +1,5 @@
 import * as path from "node:path";
+import { clientMessage } from "./messages.js";
 
 export function readConfiguration(api) {
   const settings = api.workspace.getConfiguration("recite");
@@ -6,12 +7,14 @@ export function readConfiguration(api) {
   const args = settings.get("lsp.args", []);
   const projectRoot = settings.get("lsp.projectRoot", "");
   if (typeof command !== "string" || command.trim() === "") {
-    throw new Error("recite.lsp.path must be a non-empty string");
+    throw new Error(clientMessage(api, "lsp-client-config-path-invalid"));
   }
   if (!Array.isArray(args) || args.some((arg) => typeof arg !== "string")) {
-    throw new Error("recite.lsp.args must be an array of strings");
+    throw new Error(clientMessage(api, "lsp-client-config-args-invalid"));
   }
-  if (typeof projectRoot !== "string") throw new Error("recite.lsp.projectRoot must be a string");
+  if (typeof projectRoot !== "string") {
+    throw new Error(clientMessage(api, "lsp-client-config-project-root-invalid"));
+  }
   const root = projectRootPath(api, projectRoot);
   return {
     command: resolveCommand(command, root),
@@ -57,7 +60,9 @@ function projectRootPath(api, configured) {
   const workspace = api.workspace.workspaceFolders?.[0]?.uri.fsPath;
   if (!configured.trim()) return workspace;
   if (path.isAbsolute(configured)) return path.normalize(configured);
-  if (!workspace) throw new Error("recite.lsp.projectRoot needs a workspace for relative paths");
+  if (!workspace) {
+    throw new Error(clientMessage(api, "lsp-client-config-project-root-needs-workspace"));
+  }
   return path.resolve(workspace, configured);
 }
 

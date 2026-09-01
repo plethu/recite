@@ -82,11 +82,11 @@ export function lspWorkspaceEditToVscode(api, result, getOpenDocument) {
     const document = getOpenDocument(uri);
     if (change.textDocument.version !== undefined &&
         change.textDocument.version !== null &&
-        document && document.version !== change.textDocument.version) {
+        (!document || document.version !== change.textDocument.version)) {
       return undefined;
     }
     if (change.textDocument.version !== undefined && change.textDocument.version !== null) {
-      preconditions.push({ uri, version: change.textDocument.version });
+      preconditions.push({ document, uri, version: change.textDocument.version });
     }
     for (const edit of change.edits) {
       if (!edit?.range || typeof edit.newText !== "string") return undefined;
@@ -95,10 +95,14 @@ export function lspWorkspaceEditToVscode(api, result, getOpenDocument) {
   }
   Object.defineProperty(workspaceEdit, "reciteVersionGuard", {
     enumerable: false,
-    value: () => preconditions.every(({ uri, version }) => {
+    value: () => preconditions.every(({ document: expectedDocument, uri, version }) => {
       const document = getOpenDocument(uri);
-      return !document || document.version === version;
+      return document && document === expectedDocument && document.version === version;
     })
+  });
+  Object.defineProperty(workspaceEdit, "reciteVersionPreconditions", {
+    enumerable: false,
+    value: preconditions
   });
   return workspaceEdit;
 }
@@ -110,22 +114,23 @@ export function workspaceEditIsCurrent(workspaceEdit) {
 export function lspCodeActionsToVscode(api, result, getOpenDocument, options = {}) {
   const actions = Array.isArray(result) ? result : [];
   return actions.flatMap((action) => {
+    if (!action) return [];
+    const codeAction = new api.CodeAction(action.title ?? "", actionKind(api, action.kind));
+    if (action.disabled) {
+      codeAction.disabled = { reason: action.disabled.reason ?? "" };
+      setCodeActionDiagnostics(api, codeAction, action);
+      return [codeAction];
+    }
     if (action?.edit) {
       const edit = lspWorkspaceEditToVscode(api, action.edit, getOpenDocument);
       if (!edit || !workspaceEditIsCurrent(edit)) return [];
-      const codeAction = new api.CodeAction(action.title ?? "", actionKind(api, action.kind));
       const command = options.createEditCommand?.(action.title ?? "", edit);
       if (!command) return [];
       // VS Code does not preserve LSP document versions on a native
       // WorkspaceEdit. Keep the edit behind the controller command so its
       // preconditions can be checked again at invocation time.
       codeAction.command = command;
-      codeAction.isPreferred = action.isPreferred;
-      if (Array.isArray(action.diagnostics)) {
-        codeAction.diagnostics = action.diagnostics.map((diagnostic) =>
-          lspDiagnosticToVscode(api, diagnostic)
-        );
-      }
+      setCodeActionDiagnostics(api, codeAction, action);
       return [codeAction];
     }
     if (action?.command?.command && action.command.title) {
@@ -133,6 +138,15 @@ export function lspCodeActionsToVscode(api, result, getOpenDocument, options = {
     }
     return [];
   });
+}
+
+function setCodeActionDiagnostics(api, codeAction, action) {
+  codeAction.isPreferred = action.isPreferred;
+  if (Array.isArray(action.diagnostics)) {
+    codeAction.diagnostics = action.diagnostics.map((diagnostic) =>
+      lspDiagnosticToVscode(api, diagnostic)
+    );
+  }
 }
 
 function diagnosticSeverity(api, severity) {
@@ -170,6 +184,14 @@ function actionKind(api, kind) {
   if (kind === "quickfix") return api.CodeActionKind.QuickFix;
   if (kind === "refactor") return api.CodeActionKind.Refactor;
   if (kind === "source") return api.CodeActionKind.Source;
+  if (kind === "source.fixAll") return api.CodeActionKind.SourceFixAll ?? "source.fixAll";
+  if (kind === "source.organizeImports") {
+    return api.CodeActionKind.SourceOrganizeImports ?? "source.organizeImports";
+  }
+  if (kind?.startsWith("source.fixAll.")) {
+    const base = api.CodeActionKind.SourceFixAll ?? "source.fixAll";
+    return typeof base.append === "function" ? base.append(kind.slice("source.fixAll".length + 1)) : kind;
+  }
   return api.CodeActionKind.Empty;
 }
 

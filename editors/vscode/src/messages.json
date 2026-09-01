@@ -1,7 +1,0 @@
-{
-  "lsp-client-start-failed": "Recite language server could not be started: {0}.",
-  "lsp-client-error": "Recite language server error: {0}.",
-  "lsp-client-exited": "Recite language server exited: {0}.",
-  "lsp-client-restart-scheduled": "Recite language server restart scheduled: {0}.",
-  "lsp-client-restart-exhausted": "Recite language server restart attempts exhausted: {0}."
-}
