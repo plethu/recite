@@ -98,6 +98,9 @@ configuration: command, settings, initialization options, capabilities, and
 callbacks must match before a client is reused. This keeps compatible repeated
 starts cheap without silently applying an incompatible override to an existing
 client.
+If an overridden client exits unexpectedly, recovery retains that exact
+material configuration and its independent retry budget; same-root variants do
+not inherit one another's command or restart state.
 Unexpected exits are retried for still-open Recite buffers with a bounded
 backoff. A client must remain alive for the stability window before its crash
 budget resets; changing the LSP configuration cancels queued recovery, and

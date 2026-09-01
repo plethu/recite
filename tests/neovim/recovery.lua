@@ -166,6 +166,115 @@ assert_true(recite.start(buffer_b, {
 }) == init_options_override_id, "an identical init_options override did not reuse its client")
 stop_probe(init_options_override_id, "init_options override client")
 
+-- Recovery must restart the exact direct-start variant that crashed. This
+-- exercises every caller-owned material input that can affect its process or
+-- protocol handshake, including a root override and callback identity.
+local material_root = vim.fn.fnamemodify(vim.env.RECITE_SECOND_PROJECT, ":h")
+local material_init_calls = 0
+local material_exit_calls = 0
+local material_attach_calls = 0
+local material_overrides = {
+  cmd = { vim.env.RECITE_LSP, "--material-recovery-probe" },
+  root_dir = material_root,
+  settings = { material_recovery = { enabled = true } },
+  init_options = { material_recovery = { enabled = true } },
+  capabilities = { workspace = { configuration = true } },
+  on_attach = function()
+    material_attach_calls = material_attach_calls + 1
+  end,
+  on_init = function()
+    material_init_calls = material_init_calls + 1
+  end,
+  on_exit = function()
+    material_exit_calls = material_exit_calls + 1
+  end,
+}
+local material_id = recite.start(buffer_b, material_overrides)
+assert_true(material_id ~= default_override_id,
+  "material recovery variant unexpectedly reused the default client")
+local material_client = wait_initialized(material_id, "material recovery client")
+assert_true(material_client.config.root_dir == material_root,
+  "material recovery variant lost its root override")
+assert_true(material_client.config.cmd[2] == "--material-recovery-probe",
+  "material recovery variant lost its command override")
+assert_true(material_client.config.capabilities.workspace.configuration == true,
+  "material recovery variant lost its capabilities")
+assert_true(recite.start(buffer_b, material_overrides) == material_id,
+  "an identical material recovery variant did not reuse its client")
+material_client.rpc:terminate()
+local recovered_material
+wait_for(function()
+  for _, candidate in ipairs(vim.lsp.get_clients({ bufnr = buffer_b, name = "recite-lsp" })) do
+    if candidate.config.cmd[2] == "--material-recovery-probe"
+      and candidate.id ~= material_id and candidate.initialized then
+      recovered_material = candidate
+      break
+    end
+  end
+  return recovered_material ~= nil
+end, "material recovery variant did not restart")
+assert_true(recovered_material.config.root_dir == material_root,
+  "recovered material variant lost its root override")
+assert_true(recovered_material.config.settings.material_recovery.enabled == true,
+  "recovered material variant lost its settings")
+assert_true(recovered_material.config.init_options.material_recovery.enabled == true,
+  "recovered material variant lost its init_options")
+assert_true(recovered_material.config.capabilities.workspace.configuration == true,
+  "recovered material variant lost its capabilities")
+assert_true(material_init_calls >= 2 and material_exit_calls >= 1 and material_attach_calls >= 2,
+  "material recovery did not preserve caller callbacks")
+assert_true(recite.start(buffer_b, material_overrides) == recovered_material.id,
+  "an identical material override did not reuse the recovered client")
+stop_probe(recovered_material.id, "recovered material client")
+
+-- A same-root variant must have an independent crash budget. Exhaust one
+-- variant first, then start a second variant and prove it still gets a first
+-- backoff recovery rather than inheriting the exhausted root's budget.
+local budget_a = recite.start(buffer_b, { cmd = { vim.env.RECITE_LSP, "--budget-a" } })
+wait_initialized(budget_a, "budget A client")
+for attempt = 1, 4 do
+  local crashed = vim.lsp.get_client_by_id(budget_a)
+  assert_true(crashed ~= nil and crashed.rpc and crashed.rpc.terminate,
+    "budget A crash probe is unavailable")
+  crashed.rpc:terminate()
+  if attempt < 4 then
+    local replacement
+    wait_for(function()
+      for _, candidate in ipairs(vim.lsp.get_clients({ bufnr = buffer_b, name = "recite-lsp" })) do
+        if candidate.config.cmd[2] == "--budget-a" and candidate.id ~= budget_a and candidate.initialized then
+          replacement = candidate
+          break
+        end
+      end
+      return replacement ~= nil
+    end, "budget A crash " .. attempt .. " did not recover")
+    budget_a = replacement.id
+  else
+    wait_for(function()
+      return vim.lsp.get_client_by_id(budget_a) == nil and callback_errors.restart_exhausted
+    end, "budget A did not exhaust independently")
+  end
+end
+local budget_b = recite.start(buffer_b, { cmd = { vim.env.RECITE_LSP, "--budget-b" } })
+assert_true(budget_b ~= default_override_id,
+  "same-root budget B variant reused an incompatible client")
+local budget_b_client = wait_initialized(budget_b, "budget B client")
+local budget_b_crash_time = (vim.uv or vim.loop).hrtime()
+budget_b_client.rpc:terminate()
+local budget_b_replacement
+wait_for(function()
+  for _, candidate in ipairs(vim.lsp.get_clients({ bufnr = buffer_b, name = "recite-lsp" })) do
+    if candidate.config.cmd[2] == "--budget-b" and candidate.id ~= budget_b and candidate.initialized then
+      budget_b_replacement = candidate
+      break
+    end
+  end
+  return budget_b_replacement ~= nil
+end, "budget B inherited budget A's exhausted recovery")
+assert_true(((vim.uv or vim.loop).hrtime() - budget_b_crash_time) / 1e6 < 500,
+  "budget B did not recover using its independent first backoff")
+stop_probe(budget_b_replacement.id, "budget B client")
+
 -- A configured root_dir must be used when recovering every open buffer.
 recite.setup({
   lsp = {
@@ -230,7 +339,8 @@ wait_for(function()
   reuse_restart = candidates[1]
   return reuse_restart ~= nil and reuse_restart.initialized and reuse_restart.id ~= reused_before_stable_id
 end, "reused active client did not recover after a second crash")
-assert_true((clock.hrtime() - reuse_crash_time) / 1e6 < 180,
+local reuse_elapsed = (clock.hrtime() - reuse_crash_time) / 1e6
+assert_true(reuse_elapsed < 180,
   "reusing an active client orphaned its stability timer and retained the second backoff")
 stable_restart = reuse_restart
 

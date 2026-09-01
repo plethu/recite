@@ -20,7 +20,6 @@ local state = {
   config = vim.deepcopy(defaults),
   clients = {},
   pending_restarts = {},
-  restart_attempts = {},
   restart_generation = 0,
 }
 
@@ -123,7 +122,6 @@ local function stop_owned_clients()
 
   for client_id, lifecycle in pairs(state.clients) do
     lifecycle.intentional = true
-    state.restart_attempts[lifecycle.root] = 0
     if lifecycle.timer then
       stop_timer(lifecycle.timer)
       lifecycle.timer = nil
@@ -176,6 +174,8 @@ end
 local MATERIAL_CONFIG_KEYS = {
   "name",
   "root_dir",
+  "root_dir_spec",
+  "root_markers",
   "cmd",
   "settings",
   "init_options",
@@ -206,6 +206,34 @@ local function same_material_configuration(client, config)
   return true
 end
 
+local function lifecycle_root_config(lifecycle)
+  if not lifecycle.material then
+    return state.config.lsp
+  end
+  return {
+    root_dir = lifecycle.material.root_dir_spec,
+    root_markers = lifecycle.material.root_markers,
+  }
+end
+
+local function restart_overrides(material)
+  local overrides = {
+    name = material.name,
+    cmd = vim.deepcopy(material.cmd),
+    root_markers = vim.deepcopy(material.root_markers),
+    settings = vim.deepcopy(material.settings),
+    init_options = vim.deepcopy(material.init_options),
+    capabilities = vim.deepcopy(material.capabilities),
+    on_attach = material.on_attach,
+    on_init = material.on_init,
+    on_exit = material.on_exit,
+  }
+  if material.root_dir_spec ~= nil then
+    overrides.root_dir = material.root_dir_spec
+  end
+  return overrides
+end
+
 local function has_open_buffer(root, lsp)
   local buffers = {}
   for _, bufnr in ipairs(vim.api.nvim_list_bufs()) do
@@ -219,13 +247,15 @@ local function has_open_buffer(root, lsp)
   return buffers
 end
 
+local start_client
+
 local function schedule_restart(lifecycle)
   local generation = lifecycle.generation
   vim.schedule(function()
     if lifecycle.intentional or generation ~= state.restart_generation then
       return
     end
-    local buffers = has_open_buffer(lifecycle.root, state.config.lsp)
+    local buffers = has_open_buffer(lifecycle.root, lifecycle_root_config(lifecycle))
     if #buffers == 0 then
       return
     end
@@ -234,7 +264,6 @@ local function schedule_restart(lifecycle)
       return
     end
     lifecycle.attempts = lifecycle.attempts + 1
-    state.restart_attempts[lifecycle.root] = lifecycle.attempts
     local delay = math.min(2000, 100 * (2 ^ (lifecycle.attempts - 1)))
     lifecycle.timer = vim.defer_fn(function()
       lifecycle.timer = nil
@@ -243,8 +272,8 @@ local function schedule_restart(lifecycle)
         if lifecycle.intentional or generation ~= state.restart_generation then
           return
         end
-        for _, bufnr in ipairs(has_open_buffer(lifecycle.root, state.config.lsp)) do
-          M.start(bufnr)
+        for _, bufnr in ipairs(has_open_buffer(lifecycle.root, lifecycle_root_config(lifecycle))) do
+          start_client(bufnr, restart_overrides(lifecycle.material), lifecycle.attempts)
         end
       end)
     end, delay)
@@ -270,7 +299,7 @@ function M.command()
 end
 
 --- Start or reuse Recite's language server for a buffer.
-function M.start(bufnr, overrides)
+start_client = function(bufnr, overrides, retry_attempts)
   bufnr = bufnr or 0
   local lsp = vim.deepcopy(state.config.lsp)
   if overrides then
@@ -333,7 +362,6 @@ function M.start(bufnr, overrides)
         local active = vim.lsp.get_client_by_id(initialized_client.id)
         if active and active.config.recite_owned == true then
           lifecycle.attempts = 0
-          state.restart_attempts[root] = 0
         end
       end, RESTART_STABILITY_MS)
     end
@@ -350,6 +378,8 @@ function M.start(bufnr, overrides)
   client_config.recite_material = {
     name = client_config.name,
     root_dir = root,
+    root_dir_spec = lsp.root_dir,
+    root_markers = vim.deepcopy(lsp.root_markers),
     cmd = vim.deepcopy(client_config.cmd),
     settings = vim.deepcopy(client_config.settings),
     init_options = vim.deepcopy(client_config.init_options),
@@ -379,12 +409,17 @@ function M.start(bufnr, overrides)
           root = root,
           intentional = false,
           stability_timer = nil,
-          attempts = state.restart_attempts[root] or 0,
+          attempts = retry_attempts or 0,
+          material = vim.deepcopy(client.config.recite_material),
         }
       end
     end
   end
   return client_id
+end
+
+function M.start(bufnr, overrides)
+  return start_client(bufnr, overrides, 0)
 end
 
 --- Stop a Recite client without scheduling crash recovery.
@@ -416,7 +451,6 @@ function M.setup(options)
   if config_changed then
     state.restart_generation = state.restart_generation + 1
     stop_owned_clients()
-    state.restart_attempts = {}
   end
   state.config = next_config
   vim.g.recite_setup = true
