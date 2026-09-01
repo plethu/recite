@@ -198,7 +198,6 @@ impl Server {
             self.send(Response::new_ok(id, result).into())?;
             return Ok(false);
         }
-
         let response = Response::new_err(
             request.id,
             ErrorCode::MethodNotFound as i32,
@@ -224,7 +223,6 @@ impl Server {
             DidCloseTextDocument::METHOD => self.handle_did_close(notification)?,
             _ => {}
         }
-
         Ok(false)
     }
 
@@ -332,14 +330,16 @@ impl Server {
             return Ok(());
         };
         let refreshes = self.workspace.close(params.text_document.uri);
-        let has_refreshes = !refreshes.is_empty();
-        for refresh in refreshes {
-            self.publish_refresh(refresh)?;
+        let explicit_open_uri = refreshes.iter().find_map(|refresh| match refresh {
+            DiagnosticRefresh::Publish(diagnostics) => Some(diagnostics.uri.clone()),
+            DiagnosticRefresh::Clear { .. } => None,
+        });
+        for refresh in &refreshes {
+            self.publish_refresh(refresh.clone())?;
         }
-        if has_refreshes {
-            self.publish_open_document_refreshes(None)?;
+        if !refreshes.is_empty() {
+            self.publish_open_document_refreshes(explicit_open_uri.as_ref())?;
         }
-
         Ok(())
     }
     fn publish_refresh(&self, refresh: DiagnosticRefresh) -> Result<(), ServerError> {

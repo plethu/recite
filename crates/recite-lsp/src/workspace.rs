@@ -160,6 +160,7 @@ impl LspWorkspace {
             partition.schema.matches_uri(uri)
                 || partition.retired_schema_uris.contains(uri.as_str())
         }) || self.retired_schema_uris.contains(uri.as_str())
+            || self.is_retired_schema_alias(uri)
     }
 }
 

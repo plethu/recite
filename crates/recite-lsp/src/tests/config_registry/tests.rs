@@ -180,6 +180,11 @@ fn did_save_rekeys_new_open_file_without_duplicate_summary() {
     super::project_indexes::did_save_rekeys_new_open_file_without_duplicate_summary();
 }
 
+#[test]
+fn open_project_identity_stays_stable_through_creation_and_aliases() {
+    super::project_indexes::open_identity_tests();
+}
+
 #[cfg(unix)]
 #[test]
 fn open_nonexistent_aliases_share_one_fallback_key() {

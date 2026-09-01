@@ -35,7 +35,13 @@ impl SavedProjectIndex {
         let discovery = self.deepest_discovery(path)?;
         match &discovery.state {
             WorkspaceDiscoveryState::Failed { .. } => self.fallback_identity(&discovery.root, path),
-            WorkspaceDiscoveryState::Manifestless | WorkspaceDiscoveryState::Manifest(_) => None,
+            WorkspaceDiscoveryState::Manifestless => self.fallback_identity(&discovery.root, path),
+            WorkspaceDiscoveryState::Manifest(report)
+                if discovery.root != report.manifest().project_root() =>
+            {
+                self.fallback_identity(&discovery.root, path)
+            }
+            WorkspaceDiscoveryState::Manifest(_) => None,
         }
     }
 

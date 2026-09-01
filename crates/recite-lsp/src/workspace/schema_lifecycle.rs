@@ -70,4 +70,32 @@ impl LspWorkspace {
             })
         }
     }
+
+    pub(super) fn is_retired_schema_alias(&self, uri: &lsp_types::Uri) -> bool {
+        let Some(target) = self
+            .documents
+            .document(uri)
+            .and_then(|document| document.identity().saved_path.as_deref())
+            .map(crate::paths::stable_path_identity)
+        else {
+            return false;
+        };
+        self.documents.documents().any(|document| {
+            let retired = self
+                .retired_schema_uris
+                .contains(document.identity().uri.as_str())
+                || self.partitions.values().any(|partition| {
+                    partition
+                        .retired_schema_uris
+                        .contains(document.identity().uri.as_str())
+                });
+            retired
+                && document
+                    .identity()
+                    .saved_path
+                    .as_deref()
+                    .map(crate::paths::stable_path_identity)
+                    .is_some_and(|candidate| candidate == target)
+        })
+    }
 }

@@ -10,6 +10,11 @@ impl LspWorkspace {
         let mut saved = self.saved.clone();
         saved.refresh_uri(&uri);
         self.refresh_open_identities(&saved, &mut documents);
+        let was_retired = self.retired_schema_uris.contains(uri.as_str())
+            || self
+                .partitions
+                .values()
+                .any(|partition| partition.retired_schema_uris.contains(uri.as_str()));
         let old_retired_workspace = self.retired_schema_uris.clone();
         self.retired_schema_uris.remove(uri.as_str());
         let mut retired = self
@@ -51,8 +56,19 @@ impl LspWorkspace {
                     .documents()
                     .find(|document| document.identity().saved_path == closed.identity().saved_path)
             });
+        let closed_refresh = was_retired.then_some(DiagnosticRefresh::Clear {
+            uri: uri.clone(),
+            version: None,
+            generation: self.generation,
+        });
         if let Some(document) = remaining_open {
-            return vec![self.publish_open_document(document)];
+            return closed_refresh
+                .into_iter()
+                .chain(std::iter::once(self.publish_open_document(document)))
+                .collect();
+        }
+        if let Some(closed_refresh) = closed_refresh {
+            return vec![closed_refresh];
         }
         vec![
             self.saved

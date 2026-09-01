@@ -9,6 +9,7 @@ use super::support::{Harness, block_names, file_uri, full_change, test_workspace
 
 pub(super) mod discovery_transitions;
 mod lifecycle;
+mod open_identity;
 mod project_partition;
 mod schema_summary;
 mod transactions;
@@ -29,6 +30,7 @@ pub(super) use lifecycle::{
     open_nonexistent_aliases_share_one_fallback_key,
     saved_uri_replacement_removes_old_canonical_entry,
 };
+pub(super) use open_identity::all as open_identity_tests;
 pub(super) use project_partition::{
     identical_relative_keys_are_partitioned, identical_relative_keys_use_their_project_schema,
 };

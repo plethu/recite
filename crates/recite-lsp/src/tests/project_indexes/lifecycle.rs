@@ -170,10 +170,9 @@ pub(crate) fn did_save_rekeys_new_open_file_without_duplicate_summary() {
 
     workspace.open(uri.clone(), 1, ":: live\n".to_owned());
     assert_eq!(workspace.snapshot().summaries().len(), 1);
-    assert!(
-        workspace.snapshot().summaries()[0]
-            .project_relative_path()
-            .is_none()
+    assert_eq!(
+        workspace.snapshot().summaries()[0].project_relative_path(),
+        Some("draft.recite")
     );
 
     write_file(temp.path(), "draft.recite", ":: saved\n");
@@ -204,10 +203,9 @@ pub(crate) fn open_nonexistent_aliases_share_one_fallback_key() {
     workspace.open(alias_uri, 1, ":: draft\n".to_owned());
 
     assert_eq!(workspace.snapshot().summaries().len(), 1);
-    assert!(
-        workspace.snapshot().summaries()[0]
-            .project_relative_path()
-            .is_none()
+    assert_eq!(
+        workspace.snapshot().summaries()[0].project_relative_path(),
+        Some("real/draft.recite")
     );
 }
 
