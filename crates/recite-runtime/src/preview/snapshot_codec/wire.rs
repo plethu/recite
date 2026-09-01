@@ -55,6 +55,7 @@ pub(super) struct PromptWire {
     pub(super) block: String,
     pub(super) line: Option<String>,
     pub(super) choices: Vec<String>,
+    pub(super) plural_arm_count: Option<usize>,
     pub(super) line_projection: Option<LineWire>,
     pub(super) choice_projection: Vec<ChoiceWire>,
 }

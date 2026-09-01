@@ -241,7 +241,11 @@ impl<'asset> PreviewSession<'asset> {
             });
         }
         events.extend(new_deferred_events(&base, &self.session));
-        events.push(PreviewEvent::from_dialogue_event(event, block));
+        events.push(PreviewEvent::from_dialogue_event(
+            event,
+            block,
+            runtime_trace.plural_arm_count(),
+        ));
         self.append_events(events)
     }
 }

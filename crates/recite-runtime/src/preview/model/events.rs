@@ -13,6 +13,7 @@ pub struct PreviewPrompt {
     pub(crate) identity: PreviewPromptIdentity,
     pub(crate) line: Option<DialogueLine>,
     pub(crate) choices: Vec<DialogueChoice>,
+    pub(crate) plural_arm_count: Option<usize>,
 }
 
 impl PreviewPrompt {
@@ -20,11 +21,13 @@ impl PreviewPrompt {
         identity: PreviewPromptIdentity,
         line: Option<DialogueLine>,
         choices: Vec<DialogueChoice>,
+        plural_arm_count: Option<usize>,
     ) -> Self {
         Self {
             identity,
             line,
             choices,
+            plural_arm_count,
         }
     }
 
@@ -41,6 +44,10 @@ impl PreviewPrompt {
     #[must_use]
     pub fn choices(&self) -> &[DialogueChoice] {
         &self.choices
+    }
+
+    pub(crate) fn plural_arm_count(&self) -> Option<usize> {
+        self.plural_arm_count
     }
 }
 
@@ -90,7 +97,11 @@ pub enum PreviewEvent {
 }
 
 impl PreviewEvent {
-    pub(crate) fn from_dialogue_event(event: DialogueEvent, block: BlockId) -> Self {
+    pub(crate) fn from_dialogue_event(
+        event: DialogueEvent,
+        block: BlockId,
+        plural_arm_count: Option<usize>,
+    ) -> Self {
         match event {
             DialogueEvent::Line(line) => Self::Line(line),
             DialogueEvent::Prompt { line, choices } => {
@@ -103,6 +114,7 @@ impl PreviewEvent {
                     identity,
                     line,
                     choices,
+                    plural_arm_count,
                 })
             }
             DialogueEvent::Effect(effect) => Self::EffectRequested(effect),

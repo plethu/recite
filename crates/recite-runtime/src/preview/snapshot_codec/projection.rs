@@ -25,6 +25,7 @@ impl PromptWire {
                 .iter()
                 .map(ToString::to_string)
                 .collect(),
+            plural_arm_count: prompt.plural_arm_count(),
             line_projection: prompt.line().map(LineWire::from_line),
             choice_projection: prompt
                 .choices()
@@ -50,7 +51,12 @@ impl PromptWire {
             .into_iter()
             .map(ChoiceWire::into_choice)
             .collect::<Result<Vec<_>, _>>()?;
-        Ok(PreviewPrompt::from_parts(identity, line, choices))
+        Ok(PreviewPrompt::from_parts(
+            identity,
+            line,
+            choices,
+            self.plural_arm_count,
+        ))
     }
 }
 

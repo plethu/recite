@@ -54,7 +54,7 @@ fn preview_evidence_report_is_stable_and_structured() -> Result<(), Box<dyn std:
                         .to_owned(),
                 },
                 PreviewSnapshotShape {
-                    encoded_bytes: 3857,
+                    encoded_bytes: 3875,
                     selected_choice_count: 1,
                     deferred_effect_count: 1,
                 },
@@ -89,7 +89,7 @@ fn preview_evidence_report_is_stable_and_structured() -> Result<(), Box<dyn std:
                         .to_owned(),
                 },
                 PreviewSnapshotShape {
-                    encoded_bytes: 3604,
+                    encoded_bytes: 3622,
                     selected_choice_count: 1,
                     deferred_effect_count: 0,
                 },

@@ -223,4 +223,17 @@ pub trait LocaleProvider {
         locale: &LocaleId,
         variant: Option<&str>,
     ) -> Result<PluralResolution, LocaleError>;
+
+    /// Returns the validated number of arms for a translated plural result.
+    ///
+    /// Providers that validate their catalogue's `Plural-Forms` header should
+    /// return that header's `nplurals` value for the supplied match. The
+    /// default deliberately returns no evidence: a selected arm is not itself
+    /// an arm bound, and preview snapshots must not infer one from it.
+    fn validated_plural_arm_count(
+        &self,
+        _resolution: &PluralResolution,
+    ) -> Result<Option<usize>, LocaleError> {
+        Ok(None)
+    }
 }

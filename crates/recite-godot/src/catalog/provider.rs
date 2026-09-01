@@ -109,6 +109,23 @@ impl LocaleProvider for ReciteDialogueCatalog {
             attempts,
         })
     }
+
+    fn validated_plural_arm_count(
+        &self,
+        resolution: &PluralResolution,
+    ) -> Result<Option<usize>, LocaleError> {
+        let Some(locale) = resolution.matched_locale.as_deref() else {
+            return Ok(None);
+        };
+        self.plural_forms
+            .get(locale)
+            .map(|header| {
+                recite_core::validate_plural_rule(header)
+                    .map(Some)
+                    .map_err(|error| LocaleError::new(error.to_string()))
+            })
+            .unwrap_or(Ok(None))
+    }
 }
 
 impl ReciteDialogueCatalog {

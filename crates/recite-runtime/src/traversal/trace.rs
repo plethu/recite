@@ -16,6 +16,7 @@ use crate::locale::{
 pub struct DialogueTrace {
     localized_availability_templates: RefCell<Vec<(String, String)>>,
     plural_lines: RefCell<Vec<(String, PluralLineTrace)>>,
+    plural_arm_counts: RefCell<Vec<(String, usize)>>,
     localized_lookups: RefCell<Vec<LocalizedLookupTrace>>,
 }
 
@@ -92,6 +93,19 @@ impl DialogueTrace {
 
     pub(crate) fn record_plural_line(&self, id: &str, trace: PluralLineTrace) {
         self.plural_lines.borrow_mut().push((id.to_owned(), trace));
+    }
+
+    pub(crate) fn plural_arm_count(&self) -> Option<usize> {
+        self.plural_arm_counts
+            .borrow()
+            .last()
+            .map(|(_, count)| *count)
+    }
+
+    pub(crate) fn record_plural_arm_count(&self, id: &str, count: usize) {
+        self.plural_arm_counts
+            .borrow_mut()
+            .push((id.to_owned(), count));
     }
 
     pub(crate) fn record_localized_lookup(
