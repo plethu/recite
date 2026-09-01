@@ -128,6 +128,9 @@ export function lspCodeActionsToVscode(api, result, getOpenDocument, options = {
   const actions = Array.isArray(result) ? result : [];
   return actions.flatMap((action) => {
     if (!action) return [];
+    if (action.title && typeof action.command === "string") {
+      return [lspCommandToVscode(action)];
+    }
     const codeAction = new api.CodeAction(action.title ?? "", actionKind(api, action.kind));
     if (action.disabled) {
       codeAction.disabled = { reason: action.disabled.reason ?? "" };
@@ -147,10 +150,19 @@ export function lspCodeActionsToVscode(api, result, getOpenDocument, options = {
       return [codeAction];
     }
     if (action?.command?.command && action.command.title) {
-      return [new api.Command(action.command.title, action.command.command, ...(action.command.arguments ?? []))];
+      return [lspCommandToVscode(action.command)];
     }
     return [];
   });
+}
+
+function lspCommandToVscode(command) {
+  const result = {
+    title: command.title,
+    command: command.command
+  };
+  if (command.arguments !== undefined) result.arguments = command.arguments;
+  return result;
 }
 
 function setCodeActionDiagnostics(api, codeAction, action) {
