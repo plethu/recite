@@ -95,6 +95,7 @@
     "package:check": "node scripts/package.mjs --check"
   },
   "devDependencies": {
-    "acorn": "8.15.0"
+    "acorn": "8.15.0",
+    "fflate": "0.8.2"
   }
 }
