@@ -1,3 +1,4 @@
+use recite_compiler::{FreshnessAssessment, FreshnessStatus, StaleReason};
 use recite_core::{Diagnostic, SchemaFingerprint};
 
 use super::{ProjectBuildPreparation, ProjectBuildPreparationError, ProjectBuildRequest};
@@ -6,7 +7,7 @@ use crate::fs::validate_project_asset_freshness;
 
 pub(super) struct FreshnessResult {
     pub(super) diagnostics: Vec<Diagnostic>,
-    pub(super) stale: bool,
+    pub(super) assessment: FreshnessAssessment,
 }
 
 pub(super) fn assess_current_freshness(
@@ -28,7 +29,10 @@ pub(super) fn assess_current_freshness(
                 // published asset is therefore known not to describe the
                 // current project, even though no fingerprint comparison was
                 // possible.
-                stale: true,
+                assessment: FreshnessAssessment::stale(
+                    request.build_request().fingerprints().clone(),
+                    vec![StaleReason::Fingerprints],
+                ),
             });
         }
     };
@@ -36,7 +40,10 @@ pub(super) fn assess_current_freshness(
     if !same_published_request(request, &current) {
         return Ok(FreshnessResult {
             diagnostics: Vec::new(),
-            stale: true,
+            assessment: FreshnessAssessment::stale(
+                request.build_request().fingerprints().clone(),
+                vec![StaleReason::Fingerprints],
+            ),
         });
     }
 
@@ -53,7 +60,22 @@ pub(super) fn assess_current_freshness(
     let stale = diagnostics
         .iter()
         .any(|diagnostic| diagnostic.code.category() == recite_core::DiagnosticCategory::Freshness);
-    Ok(FreshnessResult { diagnostics, stale })
+    let assessment = if stale {
+        FreshnessAssessment::stale(
+            request.build_request().fingerprints().clone(),
+            vec![StaleReason::Fingerprints],
+        )
+    } else {
+        FreshnessAssessment::fresh(request.build_request().fingerprints().clone())
+    };
+    debug_assert!(matches!(
+        assessment.status(),
+        FreshnessStatus::Fresh | FreshnessStatus::Stale
+    ));
+    Ok(FreshnessResult {
+        diagnostics,
+        assessment,
+    })
 }
 
 fn same_published_request(published: &ProjectBuildRequest, current: &ProjectBuildRequest) -> bool {

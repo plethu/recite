@@ -31,6 +31,7 @@ pub struct BuildStatusProjection {
     candidates: Vec<BuildCandidate>,
     freshness: Option<FreshnessAssessment>,
     publish: Option<PublishOutcome>,
+    recovery: Option<super::publish::RecoveryNeeded>,
     restart_guidance: Option<RestartGuidance>,
     telemetry: BuildTelemetry,
     failure: Option<BuildResultFailure>,
@@ -102,6 +103,7 @@ impl BuildStatusProjection {
             candidates: Vec::new(),
             freshness: None,
             publish: None,
+            recovery: None,
             restart_guidance: None,
             telemetry: BuildTelemetry::none(),
             failure: None,
@@ -126,6 +128,7 @@ impl BuildStatusProjection {
             candidates: candidates.to_vec(),
             freshness: freshness.cloned(),
             publish: None,
+            recovery: None,
             restart_guidance: Some(request.restart_guidance()),
             telemetry: BuildTelemetry::none(),
             failure: None,
@@ -144,6 +147,7 @@ impl BuildStatusProjection {
             candidates: result.candidates().to_vec(),
             freshness: Some(result.freshness().clone()),
             publish: Some(result.publish().clone()),
+            recovery: result.recovery().cloned(),
             restart_guidance: Some(result.restart_guidance()),
             telemetry: result.telemetry().clone(),
             failure: result.failure().cloned(),
@@ -197,6 +201,12 @@ impl BuildStatusProjection {
     #[must_use]
     pub const fn publish(&self) -> Option<&PublishOutcome> {
         self.publish.as_ref()
+    }
+
+    /// Structured recovery retained after post-publication finalization.
+    #[must_use]
+    pub const fn recovery(&self) -> Option<&super::publish::RecoveryNeeded> {
+        self.recovery.as_ref()
     }
 
     /// Host restart guidance, when a request exists.

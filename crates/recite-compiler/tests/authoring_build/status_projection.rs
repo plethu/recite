@@ -3,7 +3,7 @@ use recite_compiler::{
     BuildAuthority, BuildCancellation, BuildCheck, BuildControl, BuildEngine, BuildFailure,
     BuildGeneration, BuildInput, BuildInputAuthority, BuildInputPolicy, BuildLifecycle,
     BuildRequest, BuildStatusProjection, BuildTelemetry, BuildTerminalStatus, BuildTransition,
-    PreparedPublishIdentity, PublishOutcome, RecoveryNeeded,
+    FreshnessFinalization, PreparedPublishIdentity, PublishOutcome, RecoveryNeeded,
 };
 use std::time::Duration;
 
@@ -287,6 +287,79 @@ fn projection_repeats_deterministically_and_retains_recovery_truth() {
             if recovery.targets() == [target("a.recitec")]
     ));
     assert!(first.failure().is_none());
+}
+
+#[test]
+fn finalizing_post_publish_freshness_updates_shared_state_truthfully() {
+    let request = make_request(20, [BuildInput::saved_source(key("a.recite"), "a")]);
+    let mut coordinator = recite_compiler::BuildCoordinator::new();
+    let mut engine = FakeEngine::new([candidate("a.recitec", b"a")]);
+    let mut publisher = FakePublisher::new();
+    coordinator
+        .run(
+            request.clone(),
+            &BuildControl::new(),
+            &mut engine,
+            &mut publisher,
+        )
+        .unwrap_or_else(|error| panic!("successful run: {error}"));
+    let stale = coordinator
+        .finalize_freshness(FreshnessFinalization::Stale {
+            assessment: recite_compiler::FreshnessAssessment::stale(
+                request.fingerprints().clone(),
+                vec![recite_compiler::StaleReason::Fingerprints],
+            ),
+            diagnostics: vec![warning("a.recite")],
+            recovery: Some(RecoveryNeeded::for_targets(vec![target("a.recitec")])),
+        })
+        .unwrap_or_else(|error| panic!("stale finalization: {error}"));
+    assert_eq!(stale.status(), BuildTerminalStatus::Stale);
+    assert!(matches!(stale.publish(), PublishOutcome::Published { .. }));
+    let projection = BuildStatusProjection::from_state(coordinator.state());
+    assert_eq!(projection.phase(), recite_compiler::BuildPhase::Stale);
+    assert_eq!(
+        projection.freshness().map(|value| value.status()),
+        Some(recite_compiler::FreshnessStatus::Stale)
+    );
+    assert_eq!(
+        projection.recovery().map(|value| value.targets()),
+        Some([target("a.recitec")].as_slice())
+    );
+    assert_eq!(projection.diagnostics(), &[warning("a.recite")]);
+
+    let request = make_request(21, [BuildInput::saved_source(key("b.recite"), "b")]);
+    let mut engine = FakeEngine::new([candidate("b.recitec", b"b")]);
+    let mut publisher = FakePublisher::new();
+    coordinator
+        .run(
+            request.clone(),
+            &BuildControl::new(),
+            &mut engine,
+            &mut publisher,
+        )
+        .unwrap_or_else(|error| panic!("second successful run: {error}"));
+    let failed = coordinator
+        .finalize_freshness(FreshnessFinalization::Indeterminate {
+            assessment: recite_compiler::FreshnessAssessment::not_assessed(
+                request.fingerprints().clone(),
+            ),
+            diagnostics: Vec::new(),
+            recovery: None,
+            reason: recite_compiler::FreshnessFailureReason::RecheckFailed,
+        })
+        .unwrap_or_else(|error| panic!("indeterminate finalization: {error}"));
+    assert_eq!(failed.status(), BuildTerminalStatus::Failed);
+    assert!(matches!(failed.publish(), PublishOutcome::Published { .. }));
+    let projection = BuildStatusProjection::from_state(coordinator.state());
+    assert_eq!(projection.phase(), recite_compiler::BuildPhase::Failed);
+    assert_eq!(
+        projection.freshness().map(|value| value.status()),
+        Some(recite_compiler::FreshnessStatus::Unknown)
+    );
+    assert!(matches!(
+        projection.failure(),
+        Some(recite_compiler::BuildResultFailure::Freshness { .. })
+    ));
 }
 
 #[test]

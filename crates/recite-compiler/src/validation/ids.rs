@@ -21,7 +21,9 @@ impl<'a> Validator<'a> {
             self.block_ids.insert(key, block.span.clone());
         }
 
-        if let Some((first_file, first_span)) = self.compiled_block_ids.get(block.id.as_str()) {
+        if self.project_complete
+            && let Some((first_file, first_span)) = self.compiled_block_ids.get(block.id.as_str())
+        {
             if *first_file != source_file.path {
                 self.diagnostics
                     .push(diagnostics::ambiguous_compiled_block_id(
@@ -43,7 +45,9 @@ impl<'a> Validator<'a> {
         }
 
         self.default_count += 1;
-        if let Some(first) = self.first_default {
+        if let Some(first) = self.first_default
+            && (self.project_complete || first.span.file == block.span.file)
+        {
             self.diagnostics
                 .push(diagnostics::ambiguous_default_block(block, first));
         } else {
@@ -55,7 +59,7 @@ impl<'a> Validator<'a> {
             return;
         };
 
-        if self.stable_ids_incomplete() {
+        if self.stable_ids_incomplete() || !self.project_complete {
             return;
         }
         if !self.line_ids.contains(line_id.as_str()) {
@@ -92,6 +96,9 @@ impl<'a> Validator<'a> {
             .file
             .as_deref()
             .unwrap_or(source_file.path.as_str());
+        if !self.project_complete && file != source_file.path.as_str() {
+            return BlockLookup::Indeterminate;
+        }
         let Some(participation) = self.effective_participation.get(file) else {
             return BlockLookup::Missing;
         };

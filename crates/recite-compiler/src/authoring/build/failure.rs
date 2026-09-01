@@ -24,4 +24,8 @@ pub enum BuildResultFailure {
     },
     #[error("publisher returned an invalid outcome: {0}")]
     InvalidPublication(#[from] PublishOutcomeError),
+    #[error("post-publication freshness recheck failed: {reason:?}")]
+    Freshness {
+        reason: super::freshness::FreshnessFailureReason,
+    },
 }

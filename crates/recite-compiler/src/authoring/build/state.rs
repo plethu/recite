@@ -1,4 +1,4 @@
-use super::super::freshness::FreshnessAssessment;
+use super::super::freshness::{FreshnessAssessment, FreshnessFinalization};
 use super::super::identity::BuildGeneration;
 use super::super::publish::{BuildCandidate, PreparedPublishIdentity};
 use super::super::request::BuildRequest;
@@ -164,6 +164,9 @@ pub enum BuildTransition {
     Failed {
         result: BuildResult,
     },
+    FreshnessFinalized {
+        finalization: FreshnessFinalization,
+    },
 }
 
 /// Illegal reducer event or result.
@@ -208,4 +211,8 @@ pub enum BuildTransitionError {
     PreparedIdentityMismatch,
     #[error("publish completion does not contain a published outcome")]
     ResultPublishMismatch,
+    #[error("post-publication freshness finalization requires a published result")]
+    FreshnessFinalizationPublishMismatch,
+    #[error("post-publication freshness finalization has an incompatible assessment")]
+    FreshnessFinalizationAssessmentMismatch,
 }

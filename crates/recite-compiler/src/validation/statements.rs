@@ -166,7 +166,9 @@ impl<'a> Validator<'a> {
             return;
         };
 
-        if let Some(first_span) = self.localisable_ids.get(id.as_str()) {
+        if let Some(first_span) = self.localisable_ids.get(id.as_str())
+            && (self.project_complete || first_span.file == line.span.file)
+        {
             self.diagnostics
                 .push(diagnostics::duplicate_line_id(line, id, first_span.clone()));
         } else {

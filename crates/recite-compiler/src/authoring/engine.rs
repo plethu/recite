@@ -87,14 +87,27 @@ fn completeness(is_complete: bool) -> crate::ValidationCompleteness {
 pub(super) fn validate_analyses(
     analyses: &BTreeMap<recite_core::DocumentKey, DocumentAnalysis>,
     schema: Option<&ProjectSchema>,
+    project_complete: bool,
 ) -> BTreeMap<recite_core::DocumentKey, Vec<Diagnostic>> {
     let inputs = analyses
         .values()
         .map(|analysis| ValidationInput::new(&analysis.source_file, analysis.participation))
         .collect::<Vec<_>>();
     let report = schema.map_or_else(
-        || validate_source_files_with_participation(&inputs),
-        |schema| validate_source_files_with_participation_with_schema(&inputs, schema),
+        || {
+            if project_complete {
+                validate_source_files_with_participation(&inputs)
+            } else {
+                crate::validate_source_files_with_incomplete_project(&inputs)
+            }
+        },
+        |schema| {
+            if project_complete {
+                validate_source_files_with_participation_with_schema(&inputs, schema)
+            } else {
+                crate::validate_source_files_with_incomplete_project_with_schema(&inputs, schema)
+            }
+        },
     );
     let mut diagnostics = BTreeMap::<recite_core::DocumentKey, Vec<Diagnostic>>::new();
     for diagnostic in report.diagnostics {

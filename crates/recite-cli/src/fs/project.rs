@@ -53,19 +53,6 @@ fn validate_project_with_mode(
         .map(recite_config::DiscoveryDiagnostic::as_core_diagnostic)
         .collect::<Vec<_>>();
 
-    // Discovery returns the readable subset so editor-facing consumers can
-    // retain per-file diagnostics. That subset is not a complete authoring
-    // project, however: project-wide checks would otherwise treat an
-    // unreadable source as absent and report false missing-reference/default
-    // errors. Keep the discovery evidence and stop before authoring checks
-    // whenever coverage is partial. Freshness-only checks still need to
-    // inspect the existing asset's embedded sources, so retain that mode's
-    // typed read/freshness result without feeding the incomplete set into the
-    // authoring kernel.
-    if !report.is_complete() && matches!(mode, ProjectValidationMode::Authoring) {
-        return Ok(diagnostics);
-    }
-
     let loaded_schema = load_project_schema(&project_root, manifest_source.manifest())?;
     diagnostics.extend(loaded_schema.diagnostics.iter().cloned());
     diagnostics.extend(validate_project_manifest_source(
@@ -78,6 +65,7 @@ fn validate_project_with_mode(
             report.documents(),
             loaded_schema.schema.as_ref(),
             loaded_schema.diagnostics.is_empty(),
+            report.is_complete(),
         )?);
     }
 
@@ -101,6 +89,7 @@ fn validate_project_sources(
     documents: &[recite_config::DiscoveredDocument],
     schema: Option<&ProjectSchema>,
     schema_is_valid: bool,
+    project_complete: bool,
 ) -> Result<Vec<Diagnostic>, CliError> {
     let saved_documents = documents
         .iter()
@@ -109,17 +98,21 @@ fn validate_project_sources(
         (Some(schema), true) => AuthoringKernel::with_schema(schema.clone()),
         _ => AuthoringKernel::new(),
     };
-    kernel
-        .apply(AuthoringRequest::new(
-            SnapshotGeneration::initial(),
-            saved_documents,
-            std::iter::empty(),
+    let request = AuthoringRequest::new(
+        SnapshotGeneration::initial(),
+        saved_documents,
+        std::iter::empty(),
+    );
+    if project_complete {
+        kernel.apply(request)
+    } else {
+        kernel.apply_with_incomplete_project(request)
+    }
+    .map_err(|error| {
+        CliError::Compile(recite_compiler::CompileError::InvalidValidatedInput(
+            format!("authoring kernel rejected initial project request: {error}"),
         ))
-        .map_err(|error| {
-            CliError::Compile(recite_compiler::CompileError::InvalidValidatedInput(
-                format!("authoring kernel rejected initial project request: {error}"),
-            ))
-        })?;
+    })?;
 
     Ok(kernel.snapshot().diagnostics().iter().cloned().collect())
 }

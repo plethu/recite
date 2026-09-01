@@ -83,6 +83,39 @@ fn validate_project_stops_project_checks_after_non_utf8_source_discovery() {
 }
 
 #[test]
+fn validate_project_keeps_readable_parse_diagnostics_with_non_utf8_discovery() {
+    let temp = TempDir::new().expect("tempdir");
+    write_project_manifest(temp.path(), "");
+    write_recite(
+        temp.path(),
+        "dialogue/malformed.recite",
+        ":: start\n:if broken(\n  prose without a statement header\n",
+    );
+    let unreadable = temp.path().join("dialogue/unreadable.recite");
+    std::fs::write(&unreadable, [0xff, 0xfe]).expect("non-UTF-8 source");
+    let unreadable = std::fs::canonicalize(unreadable).expect("canonical source path");
+
+    let output = run(recite().arg("validate-project").arg(temp.path()));
+    assert_diagnostic_failure(&output);
+    let stderr = stderr(&output);
+    assert!(
+        stderr.contains("error RECITE_PARSE013 dialogue/malformed.recite:2:12"),
+        "{stderr}"
+    );
+    assert!(
+        stderr.contains("error RECITE_PARSE001 dialogue/malformed.recite:3:3"),
+        "{stderr}"
+    );
+    assert!(
+        stderr.contains(&format!(
+            "error RECITE_CONFIG115 {}:1:1",
+            unreadable.display()
+        )),
+        "{stderr}"
+    );
+}
+
+#[test]
 fn validate_project_ignores_malformed_excluded_source() {
     let temp = TempDir::new().expect("tempdir");
     write_project_manifest(temp.path(), "[discovery]\nexcludes = [\"excluded/**\"]\n");

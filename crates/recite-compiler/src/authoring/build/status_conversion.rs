@@ -43,6 +43,7 @@ impl BuildStatusProjection {
             && self.candidates == other.candidates
             && self.freshness == other.freshness
             && self.publish == other.publish
+            && self.recovery == other.recovery
             && self.restart_guidance == other.restart_guidance
             && self.failure == other.failure
             && self.cancellation == other.cancellation

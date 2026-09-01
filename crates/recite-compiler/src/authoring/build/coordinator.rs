@@ -3,6 +3,7 @@ use std::sync::atomic::{AtomicBool, AtomicU64, Ordering};
 
 use super::authority::{BuildAuthority, BuildAuthorityError, BuildAuthorityFence};
 use super::build_run;
+use super::freshness::FreshnessFinalization;
 use super::identity::BuildGeneration;
 use super::lifecycle::{BuildLifecycle, BuildTransitionError};
 use super::publish::{
@@ -208,5 +209,20 @@ impl BuildCoordinator {
             engine,
             publisher,
         )
+    }
+
+    /// Finalize the freshness of a result after host-owned post-publication
+    /// checks, updating the shared lifecycle and its projections.
+    pub fn finalize_freshness(
+        &mut self,
+        finalization: FreshnessFinalization,
+    ) -> Result<BuildResult, BuildRunError> {
+        self.lifecycle
+            .transition(super::lifecycle::BuildTransition::FreshnessFinalized { finalization })?;
+        self.lifecycle
+            .state()
+            .result()
+            .cloned()
+            .ok_or(BuildRunError::MissingAuthority)
     }
 }

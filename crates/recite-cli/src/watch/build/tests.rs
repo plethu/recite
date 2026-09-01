@@ -51,9 +51,17 @@ fn schema_project() -> &'static str {
 
 fn run_hook<F: FnOnce()>(state: &mut WatchState, hook: F) -> (BuildStatus, String) {
     let messages = Messages::load(&UiLocale::default()).expect("messages");
+    run_hook_with_messages(state, &messages, hook)
+}
+
+fn run_hook_with_messages<F: FnOnce()>(
+    state: &mut WatchState,
+    messages: &Messages,
+    hook: F,
+) -> (BuildStatus, String) {
     let control = BuildControl::new();
     let mut stderr = Vec::new();
-    let status = build_once_with_post_publish_hook(state, &mut stderr, &messages, &control, hook)
+    let status = build_once_with_post_publish_hook(state, &mut stderr, messages, &control, hook)
         .expect("build");
     (status, String::from_utf8(stderr).expect("stderr"))
 }

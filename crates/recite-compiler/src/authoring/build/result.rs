@@ -2,9 +2,11 @@ use super::super::SnapshotGeneration;
 use super::coordinator::BuildCancellation;
 use super::failure::BuildResultFailure;
 use super::fingerprints::BuildFingerprintSet;
-use super::freshness::{AffectedInput, FreshnessAssessment, RestartGuidance};
+use super::freshness::{
+    AffectedInput, FreshnessAssessment, FreshnessFinalization, RestartGuidance,
+};
 use super::identity::BuildGeneration;
-use super::publish::{BuildCandidate, PublishOutcome};
+use super::publish::{BuildCandidate, PublishOutcome, RecoveryNeeded};
 use super::request::BuildRequest;
 use super::request_identity::BuildRequestIdentity;
 use recite_core::Diagnostic;
@@ -68,6 +70,7 @@ pub struct BuildResult {
     candidates: Vec<BuildCandidate>,
     freshness: FreshnessAssessment,
     publish: PublishOutcome,
+    recovery: Option<RecoveryNeeded>,
     restart: RestartGuidance,
     telemetry: BuildTelemetry,
     failure: Option<BuildResultFailure>,
@@ -99,6 +102,7 @@ impl BuildResult {
             candidates,
             freshness,
             publish,
+            recovery: None,
             restart: request.restart_guidance(),
             telemetry: BuildTelemetry::none(),
             failure,
@@ -123,6 +127,7 @@ impl BuildResult {
             && self.candidates == other.candidates
             && self.freshness == other.freshness
             && self.publish == other.publish
+            && self.recovery == other.recovery
             && self.restart == other.restart
             && self.failure == other.failure
             && self.cancellation == other.cancellation
@@ -168,6 +173,10 @@ impl BuildResult {
         &self.publish
     }
     #[must_use]
+    pub const fn recovery(&self) -> Option<&RecoveryNeeded> {
+        self.recovery.as_ref()
+    }
+    #[must_use]
     pub const fn restart_guidance(&self) -> RestartGuidance {
         self.restart
     }
@@ -189,6 +198,60 @@ impl BuildResult {
     pub(crate) fn with_cancellation(mut self, cancellation: BuildCancellation) -> Self {
         self.cancellation = Some(cancellation);
         self
+    }
+
+    pub(crate) fn finalize_freshness(&mut self, finalization: FreshnessFinalization) {
+        match finalization {
+            FreshnessFinalization::Fresh {
+                assessment,
+                diagnostics,
+                recovery,
+            } => self.apply_freshness(
+                BuildTerminalStatus::Succeeded,
+                assessment,
+                diagnostics,
+                recovery,
+                None,
+            ),
+            FreshnessFinalization::Stale {
+                assessment,
+                diagnostics,
+                recovery,
+            } => self.apply_freshness(
+                BuildTerminalStatus::Stale,
+                assessment,
+                diagnostics,
+                recovery,
+                None,
+            ),
+            FreshnessFinalization::Indeterminate {
+                assessment,
+                diagnostics,
+                recovery,
+                reason,
+            } => self.apply_freshness(
+                BuildTerminalStatus::Failed,
+                assessment,
+                diagnostics,
+                recovery,
+                Some(BuildResultFailure::Freshness { reason }),
+            ),
+        }
+    }
+
+    fn apply_freshness(
+        &mut self,
+        status: BuildTerminalStatus,
+        assessment: FreshnessAssessment,
+        diagnostics: Vec<Diagnostic>,
+        recovery: Option<RecoveryNeeded>,
+        failure: Option<BuildResultFailure>,
+    ) {
+        self.status = status;
+        self.freshness = assessment;
+        self.diagnostics.extend(diagnostics);
+        self.recovery = recovery;
+        self.failure = failure;
     }
 
     pub(crate) fn matches_request(&self, request: &BuildRequest) -> bool {

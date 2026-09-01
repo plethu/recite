@@ -16,6 +16,7 @@ pub(crate) struct Validator<'a> {
     pub(crate) source_files: Vec<ValidationInput<'a>>,
     pub(crate) diagnostics: Vec<Diagnostic>,
     pub(super) schema: Option<&'a ProjectSchema>,
+    pub(super) project_complete: bool,
     pub(super) participation: super::participation::ValidationParticipation,
     pub(super) blocks: BTreeMap<&'a str, BTreeSet<&'a str>>,
     pub(super) effective_participation: BTreeMap<&'a str, ValidationParticipation>,
@@ -32,6 +33,7 @@ impl<'a> Validator<'a> {
     pub(crate) fn new(
         source_files: impl IntoIterator<Item = ValidationInput<'a>>,
         schema: Option<&'a ProjectSchema>,
+        project_complete: bool,
     ) -> Self {
         let mut source_files = source_files.into_iter().collect::<Vec<_>>();
         sort_validation_source_files_in_project_order(&mut source_files);
@@ -43,6 +45,7 @@ impl<'a> Validator<'a> {
             source_files,
             diagnostics: Vec::new(),
             schema,
+            project_complete,
             participation: ValidationParticipation::all_complete(),
             blocks,
             effective_participation,
@@ -104,6 +107,7 @@ impl<'a> Validator<'a> {
             source_files: Vec::new(),
             diagnostics: Vec::new(),
             schema,
+            project_complete: true,
             participation: ValidationParticipation::all_complete(),
             blocks: BTreeMap::new(),
             effective_participation: BTreeMap::new(),
@@ -128,7 +132,8 @@ impl<'a> Validator<'a> {
                     participation.block_definitions() == ValidationCompleteness::Complete
                 })
         });
-        if self.default_count == 0
+        if self.project_complete
+            && self.default_count == 0
             && !self.source_files.is_empty()
             && all_block_definitions_complete
         {
@@ -161,6 +166,9 @@ impl<'a> Validator<'a> {
         }
     }
     pub(super) fn validate_source_path(&mut self, source_file: &'a SourceFile) {
+        if !self.project_complete {
+            return;
+        }
         let span = first_source_span(std::iter::once(source_file));
         if let Some(first_span) = self.source_paths.get(source_file.path.as_str()) {
             self.diagnostics.push(diagnostics::duplicate_source_path(

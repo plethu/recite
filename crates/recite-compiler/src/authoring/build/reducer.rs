@@ -166,6 +166,58 @@ impl BuildLifecycle {
                 result,
                 false,
             ),
+            BuildTransition::FreshnessFinalized { finalization } => {
+                self.finalize_freshness(finalization)
+            }
         }
+    }
+
+    fn finalize_freshness(
+        &self,
+        finalization: &super::super::freshness::FreshnessFinalization,
+    ) -> Result<BuildState, BuildTransitionError> {
+        let BuildState::Succeeded { result } = &self.state else {
+            return Err(invalid(&self.state, BuildEventKind::FreshnessFinalized));
+        };
+        if !matches!(
+            result.publish(),
+            super::super::publish::PublishOutcome::Published { .. }
+        ) {
+            return Err(BuildTransitionError::FreshnessFinalizationPublishMismatch);
+        }
+        let assessment = match finalization {
+            super::super::freshness::FreshnessFinalization::Fresh { assessment, .. }
+                if assessment.status() == super::super::freshness::FreshnessStatus::Fresh =>
+            {
+                assessment
+            }
+            super::super::freshness::FreshnessFinalization::Stale { assessment, .. }
+                if assessment.status() == super::super::freshness::FreshnessStatus::Stale =>
+            {
+                assessment
+            }
+            super::super::freshness::FreshnessFinalization::Indeterminate {
+                assessment, ..
+            } if assessment.status() == super::super::freshness::FreshnessStatus::Unknown => {
+                assessment
+            }
+            _ => return Err(BuildTransitionError::FreshnessFinalizationAssessmentMismatch),
+        };
+        if assessment.expected() != result.fingerprints() {
+            return Err(BuildTransitionError::FreshnessMismatch);
+        }
+        let mut result = result.clone();
+        result.finalize_freshness(finalization.clone());
+        Ok(match result.status() {
+            BuildTerminalStatus::Succeeded => BuildState::Succeeded { result },
+            BuildTerminalStatus::Stale => BuildState::Stale { result },
+            BuildTerminalStatus::Failed => BuildState::Failed { result },
+            status => {
+                return Err(BuildTransitionError::ResultStatusMismatch {
+                    expected: BuildTerminalStatus::Failed,
+                    status,
+                });
+            }
+        })
     }
 }

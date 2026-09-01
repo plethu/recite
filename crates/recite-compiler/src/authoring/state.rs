@@ -122,6 +122,24 @@ impl AuthoringKernel {
 
     /// Replaces the complete saved and open input set transactionally.
     pub fn apply(&mut self, request: AuthoringRequest) -> Result<AnalysisDelta, AuthoringError> {
+        self.apply_with_project_completeness(request, true)
+    }
+
+    /// Replaces the input set while retaining file-local analysis for an
+    /// incomplete project. Project-wide checks are left indeterminate until
+    /// all sources participate.
+    pub fn apply_with_incomplete_project(
+        &mut self,
+        request: AuthoringRequest,
+    ) -> Result<AnalysisDelta, AuthoringError> {
+        self.apply_with_project_completeness(request, false)
+    }
+
+    fn apply_with_project_completeness(
+        &mut self,
+        request: AuthoringRequest,
+        project_complete: bool,
+    ) -> Result<AnalysisDelta, AuthoringError> {
         let (expected_generation, saved_documents, open_documents) = request.into_parts();
         if expected_generation != self.snapshot.generation() {
             return Err(AuthoringError::GenerationMismatch {
@@ -153,7 +171,7 @@ impl AuthoringKernel {
             &old_effective,
             &new_effective,
         );
-        let semantic = validate_analyses(&analyses, self.schema.as_deref());
+        let semantic = validate_analyses(&analyses, self.schema.as_deref(), project_complete);
         let documents = build_documents(&new_effective, &analyses, &semantic, &self.snapshot);
         let (changed, removed) = build_delta(changed_inputs, &self.snapshot, &documents);
         let delta = AnalysisDelta::new(self.snapshot.generation(), generation, changed, removed);

@@ -1,4 +1,5 @@
 use super::fingerprints::{BuildFingerprintSet, BuildInputFingerprint};
+use super::publish::RecoveryNeeded;
 
 /// Why a canonical input is affected by a build.
 #[derive(Clone, Copy, Debug, Eq, Hash, Ord, PartialEq, PartialOrd)]
@@ -62,6 +63,35 @@ pub enum StaleReason {
     BuildGeneration,
     SnapshotGeneration,
     Fingerprints,
+}
+
+/// Typed reason that a post-publication freshness recheck could not finish.
+#[derive(Clone, Copy, Debug, Eq, Hash, PartialEq)]
+#[non_exhaustive]
+pub enum FreshnessFailureReason {
+    RecheckFailed,
+}
+
+/// Host-provided final freshness outcome for a successfully published build.
+#[derive(Clone, Debug, Eq, PartialEq)]
+#[non_exhaustive]
+pub enum FreshnessFinalization {
+    Fresh {
+        assessment: FreshnessAssessment,
+        diagnostics: Vec<recite_core::Diagnostic>,
+        recovery: Option<RecoveryNeeded>,
+    },
+    Stale {
+        assessment: FreshnessAssessment,
+        diagnostics: Vec<recite_core::Diagnostic>,
+        recovery: Option<RecoveryNeeded>,
+    },
+    Indeterminate {
+        assessment: FreshnessAssessment,
+        diagnostics: Vec<recite_core::Diagnostic>,
+        recovery: Option<RecoveryNeeded>,
+        reason: FreshnessFailureReason,
+    },
 }
 
 /// Freshness remains a field separate from terminal stale state.

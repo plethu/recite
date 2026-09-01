@@ -42,6 +42,10 @@ pub(super) fn prepare_discovered(
         .collect::<Vec<_>>();
 
     if !discovery.is_complete() {
+        diagnostics.extend(
+            validate_sources(discovery.documents(), None, false)
+                .map_err(|message| ProjectBuildPreparationError::Authoring { message })?,
+        );
         sort_diagnostics(&mut diagnostics);
         return Ok(ProjectBuildPreparation::Rejected { diagnostics });
     }
@@ -91,7 +95,7 @@ pub(super) fn prepare_discovered(
         schema.as_ref(),
     ));
     diagnostics.extend(
-        validate_sources(discovery.documents(), schema.as_ref())
+        validate_sources(discovery.documents(), schema.as_ref(), true)
             .map_err(|message| ProjectBuildPreparationError::Authoring { message })?,
     );
     sort_diagnostics(&mut diagnostics);
@@ -155,6 +159,7 @@ pub(super) fn prepare_discovered(
 fn validate_sources(
     documents: &[recite_config::DiscoveredDocument],
     schema: Option<&ProjectSchema>,
+    project_complete: bool,
 ) -> Result<Vec<Diagnostic>, String> {
     let mut kernel = schema.map_or_else(AuthoringKernel::new, |schema| {
         AuthoringKernel::with_schema(schema.clone())
@@ -162,13 +167,13 @@ fn validate_sources(
     let saved = documents.iter().map(|document| {
         recite_compiler::SavedDocument::new(document.key().clone(), document.text())
     });
-    kernel
-        .apply(AuthoringRequest::new(
-            SnapshotGeneration::initial(),
-            saved,
-            std::iter::empty(),
-        ))
-        .map_err(|error| error.to_string())?;
+    let request = AuthoringRequest::new(SnapshotGeneration::initial(), saved, std::iter::empty());
+    if project_complete {
+        kernel.apply(request)
+    } else {
+        kernel.apply_with_incomplete_project(request)
+    }
+    .map_err(|error| error.to_string())?;
     Ok(kernel.snapshot().diagnostics().iter().cloned().collect())
 }
 

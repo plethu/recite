@@ -2,7 +2,8 @@ use std::io::Write;
 
 use recite_compiler::{
     BuildControl, BuildResult, BuildResultFailure, BuildTelemetry, BuildTerminalStatus,
-    PublishOutcome,
+    FreshnessAssessment, FreshnessFailureReason, FreshnessFinalization, FreshnessStatus,
+    PublishOutcome, RecoveryNeeded,
 };
 use recite_config::discover_project;
 
@@ -134,27 +135,66 @@ where
     let result = result.with_telemetry(telemetry);
     let recovery = publisher.recovery().to_vec();
 
-    report_diagnostics(stderr, messages, result.diagnostics().iter())?;
-    if result.status() == BuildTerminalStatus::Succeeded {
+    if result.status() == BuildTerminalStatus::Succeeded
+        && matches!(result.publish(), PublishOutcome::Published { .. })
+    {
         post_publish();
         let freshness = match super::freshness::assess_current_freshness(&request) {
             Ok(freshness) => freshness,
             Err(source) => {
+                report_diagnostics(stderr, messages, result.diagnostics().iter())?;
+                let finalization = FreshnessFinalization::Indeterminate {
+                    assessment: FreshnessAssessment::not_assessed(
+                        request.build_request().fingerprints().clone(),
+                    ),
+                    diagnostics: Vec::new(),
+                    recovery: shared_recovery(&result, &recovery),
+                    reason: FreshnessFailureReason::RecheckFailed,
+                };
+                if let Err(source) = state.coordinator.finalize_freshness(finalization) {
+                    return Err(CliError::WatchCoordinator { source, recovery });
+                }
                 return Err(CliError::WatchRecovery {
                     source: Box::new(source),
                     recovery,
                 });
             }
         };
-        report_diagnostics(stderr, messages, freshness.diagnostics.iter())?;
-        if freshness.stale {
+        let finalization = match freshness.assessment.status() {
+            FreshnessStatus::Fresh => FreshnessFinalization::Fresh {
+                assessment: freshness.assessment,
+                diagnostics: freshness.diagnostics,
+                recovery: shared_recovery(&result, &recovery),
+            },
+            FreshnessStatus::Stale => FreshnessFinalization::Stale {
+                assessment: freshness.assessment,
+                diagnostics: freshness.diagnostics,
+                recovery: shared_recovery(&result, &recovery),
+            },
+            _ => FreshnessFinalization::Indeterminate {
+                assessment: freshness.assessment,
+                diagnostics: freshness.diagnostics,
+                recovery: shared_recovery(&result, &recovery),
+                reason: FreshnessFailureReason::RecheckFailed,
+            },
+        };
+        let result = state
+            .coordinator
+            .finalize_freshness(finalization)
+            .map_err(|source| CliError::WatchCoordinator {
+                source,
+                recovery: recovery.clone(),
+            })?
+            .with_telemetry(result.telemetry().clone());
+        report_diagnostics(stderr, messages, result.diagnostics().iter())?;
+        if result.status() == BuildTerminalStatus::Stale {
             return Ok(BuildStatus::Stale {
                 asset_count: result.candidates().len(),
                 recovery,
                 telemetry: result.telemetry().clone(),
             });
         }
-        if !freshness.diagnostics.is_empty() {
+        if !result.diagnostics().is_empty() {
             return if recovery.is_empty() {
                 Ok(BuildStatus::Diagnostics {
                     telemetry: result.telemetry().clone(),
@@ -178,7 +218,25 @@ where
             telemetry: result.telemetry().clone(),
         });
     }
+    report_diagnostics(stderr, messages, result.diagnostics().iter())?;
     Ok(status_without_freshness(result, recovery))
+}
+
+fn shared_recovery(
+    result: &BuildResult,
+    recovery: &[ProjectBuildRecovery],
+) -> Option<RecoveryNeeded> {
+    if recovery.is_empty() {
+        None
+    } else {
+        Some(RecoveryNeeded::for_targets(
+            result
+                .candidates()
+                .iter()
+                .map(|candidate| candidate.target().clone())
+                .collect(),
+        ))
+    }
 }
 
 pub(super) fn status_without_freshness(

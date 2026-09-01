@@ -19,10 +19,10 @@ pub use build::{
     BuildPreparedHandle, BuildPublishPermit, BuildPublisher, BuildRequest, BuildRequestError,
     BuildRequestIdentity, BuildResult, BuildResultFailure, BuildRunError, BuildState,
     BuildStatusProjection, BuildTarget, BuildTargetError, BuildTelemetry, BuildTerminalStatus,
-    BuildTransition, BuildTransitionError, FreshnessAssessment, FreshnessStatus,
-    PreparedPublishIdentity, PublishAbortReason, PublishFailure, PublishFailureReason,
-    PublishNotAttemptedReason, PublishOutcome, PublishOutcomeError, PublishRefusal, RecoveryNeeded,
-    RestartGuidance, StaleReason,
+    BuildTransition, BuildTransitionError, FreshnessAssessment, FreshnessFailureReason,
+    FreshnessFinalization, FreshnessStatus, PreparedPublishIdentity, PublishAbortReason,
+    PublishFailure, PublishFailureReason, PublishNotAttemptedReason, PublishOutcome,
+    PublishOutcomeError, PublishRefusal, RecoveryNeeded, RestartGuidance, StaleReason,
 };
 pub use catalog_summary::{
     CatalogCoverage, CatalogCoverageSummary, CatalogEntryKey, CatalogEntryResolution,

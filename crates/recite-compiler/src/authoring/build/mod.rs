@@ -26,8 +26,8 @@ pub(crate) use execution::build_run;
 pub use failure::BuildResultFailure;
 pub use fingerprints::{BuildFingerprintSet, BuildInputFingerprint};
 pub use freshness::{
-    AffectedInput, AffectedInputReason, FreshnessAssessment, FreshnessStatus, RestartGuidance,
-    StaleReason,
+    AffectedInput, AffectedInputReason, FreshnessAssessment, FreshnessFailureReason,
+    FreshnessFinalization, FreshnessStatus, RestartGuidance, StaleReason,
 };
 pub use identity::{
     BuildGeneration, BuildGenerationError, BuildInput, BuildInputAuthority, BuildInputKind,

@@ -45,6 +45,7 @@ pub enum BuildEventKind {
     Superseded,
     Stale,
     Failed,
+    FreshnessFinalized,
 }
 impl std::fmt::Display for BuildEventKind {
     fn fmt(&self, formatter: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
@@ -60,6 +61,7 @@ impl std::fmt::Display for BuildEventKind {
             Self::Superseded => "superseded",
             Self::Stale => "stale",
             Self::Failed => "failed",
+            Self::FreshnessFinalized => "freshness-finalized",
         })
     }
 }
