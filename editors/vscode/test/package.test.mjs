@@ -48,13 +48,14 @@ test("the outside policy rejects wrapper, sink, alias, and dynamic bypasses", as
   const entries = await sourceEntries();
   const rejected = (source) => assert.throws(() => assertUiBoundary(
     [...entries, ["hostile.js", source]], SOURCE_MESSAGE_IDS, projectedMessages
-  ), /outside|acquisition|access|import|call|projection/);
+  ), /outside|acquisition|access|import|load|call|projection/);
   for (const source of [
     String.raw`function fake(clientMessage) { clientMessage(api, "lsp-client-start-failed"); }`,
+    String.raw`function outer() { function fake(clientMessage) { return clientMessage(api, id); } }`,
     String.raw`const clientMessage = () => {}; clientMessage(api, "lsp-client-start-failed");`,
     String.raw`let emit; emit = clientMessage;`,
+    String.raw`let emit; emit = output.appendLine; emit(value);`,
     String.raw`const output = {}; output.appendLine("English");`,
-    String.raw`const host = {}; host.append("English");`,
     String.raw`const output = {}; output["appendLine"]("English");`,
     String.raw`const output = {}; const method = "appendLine"; output[method]("English");`,
     String.raw`const output = {}; const emit = output.appendLine; emit("English");`,
@@ -65,18 +66,69 @@ test("the outside policy rejects wrapper, sink, alias, and dynamic bypasses", as
     String.raw`const output = {}; output.appendLine(...["English"]);`,
     String.raw`const output = {}; output.appendLine(condition ? "a" : "b");`,
     String.raw`const output = {}; output.appendLine("prefix " + detail);`,
+    String.raw`const ui = createUserInterface(api); ui.serverError("English");`,
+    String.raw`const ui = createUserInterface(api); ui.serverError(` + "`English ${detail}`" + String.raw`);`,
+    String.raw`const ui = createUserInterface(api); ui.serverError(prefix + detail);`,
+    String.raw`const ui = createUserInterface(api); ui.serverError(condition ? detail : other);`,
+    String.raw`const ui = createUserInterface(api); ui.serverError(format(detail));`,
+    String.raw`const ui = createUserInterface(api); ui.serverError(...[detail]);`,
+    String.raw`const ui = createUserInterface(api); ui.actionStale(detail);`,
+    String.raw`const ui = createUserInterface(api); ui.serverStderr("English");`,
+    String.raw`const ui = createUserInterface(api); ui.serverNotification(prefix + message);`,
+    String.raw`const ui = createUserInterface(api); ui.serverStderr.call(ui, message);`,
+    String.raw`const ui = createUserInterface(api); ui.serverNotification.apply(ui, [message]);`,
     String.raw`const api = { window: {} }; api.window.showWarningMessage("Warning");`,
     String.raw`const api = { window: {} }; api.window.showErrorMessage("Error");`,
     String.raw`const api = { window: {} }; api.window.showInformationMessage("Information");`,
     String.raw`const api = { window: {} }; api.window[method]("Warning");`,
     String.raw`const ui = {}; ui[method]("Warning");`,
     String.raw`const controller = { userInterface: {} }; controller.userInterface[method]("Warning");`,
+    String.raw`const ui = createUserInterface(api); ui[method](detail);`,
+    String.raw`const ui = createUserInterface(api); Reflect.get(ui, method);`,
+    String.raw`const ui = createUserInterface(api); Reflect.apply(ui.serverError, ui, [detail]);`,
+    String.raw`Reflect.get(api.window, method);`,
+    String.raw`Reflect.get(api, "window");`,
+    String.raw`Reflect["get"](api.window, method);`,
+    String.raw`Reflect[reflectMethod](api.window, method);`,
+    String.raw`Reflect.apply(vscode.window.showErrorMessage, vscode.window, [detail]);`,
+    String.raw`import("./messages.js");`,
+    String.raw`import("./user-interface.js");`,
+    String.raw`require("./messages.js");`,
+    String.raw`const { appendLine: emit, ...rest } = output;`,
+    String.raw`const { window } = api; window.showErrorMessage("English");`,
+    String.raw`const currentWindow = window; currentWindow[method]("English");`,
     String.raw`import { clientMessage } from "./messages.js";`,
     String.raw`const api = {}; api.window.createOutputChannel("name");`
   ]) rejected(source);
   assert.doesNotThrow(() => assertUiBoundary([
     ...entries, ["builder.js", "const builder = { append() {} }; builder.append(value);"]
   ], SOURCE_MESSAGE_IDS, projectedMessages));
+  assert.doesNotThrow(() => assertUiBoundary([
+    ...entries, ["unrelated-properties.js", [
+      "const host = { append() {} }; host.append(value);",
+      "const { appendLine: emit, ...rest } = unrelated;",
+      "const copy = { appendLine };"
+    ].join("\n")]
+  ], SOURCE_MESSAGE_IDS, projectedMessages));
+});
+
+test("the UI service accepts only its structural caller contracts", async () => {
+  const entries = await sourceEntries();
+  const valid = [
+    "const ui1 = createUserInterface(api); ui1.serverError(detail);",
+    "const ui2 = createUserInterface(api); ui2.serverExited(event.code);",
+    "const ui3 = createUserInterface(api); ui3.serverStderr(message);",
+    "const ui4 = createUserInterface(api); ui4.serverNotification(event.message);",
+    "const ui5 = createUserInterface(api); ui5.actionStale();",
+    "const ui6 = createUserInterface(api); ui6.dispose();",
+    "const host = { appendLine() {} }; host.appendLine(value);",
+    "const { appendLine, ...rest } = unrelated; const copy = { appendLine };",
+    "const unrelated = { output: { appendLine() {} } }; unrelated.output.appendLine(value);"
+  ];
+  assert.doesNotThrow(() => assertUiBoundary(
+    [...entries, ["valid-contracts.js", valid.join("\n")]],
+    SOURCE_MESSAGE_IDS, projectedMessages
+  ));
 });
 
 test("the adapter rejects escaped IDs, aliases, reassignment, and composed text", async () => {
@@ -93,6 +145,10 @@ test("the adapter rejects escaped IDs, aliases, reassignment, and composed text"
   rejected((source) => source.replace('serverStderr(message)', 'serverStderr(clientMessage)'));
   rejected((source) => source.replace('output.appendLine(clientMessage(api, "lsp-client-action-stale"))',
     'output.appendLine(clientMessage(api, condition ? "lsp-client-action-stale" : "lsp-client-action-stale"))'));
+  rejected((source) => `${source}\nconst extra = 1;`);
+  rejected((source) => source.replace('export function createUserInterface',
+    'export async function createUserInterface'));
+  rejected((source) => source.replace('serverError(detail) {', 'async serverError(detail) {'));
 });
 
 async function sourceEntries() {

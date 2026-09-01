@@ -101,7 +101,8 @@ export class ExtensionController {
     if (this.client !== client || this.stopping || this.disposed) return;
     this.clearStableReset();
     this.client = undefined;
-    this.userInterface.serverExited(event.code ?? "unknown");
+    const exitCode = event.code ?? "unknown";
+    this.userInterface.serverExited(exitCode);
     this.scheduleRestart();
   }
 
@@ -112,7 +113,8 @@ export class ExtensionController {
       return;
     }
     const delay = RESTART_DELAYS_MS[this.restartAttempt++];
-    this.userInterface.restartScheduled(`${delay} ms`);
+    const delayDetail = `${delay} ms`;
+    this.userInterface.restartScheduled(delayDetail);
     this.restartTimer = setTimeout(() => {
       this.restartTimer = undefined;
       void this.start().catch((error) => {

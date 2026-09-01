@@ -1,210 +1,189 @@
 import {
-  isCallMethod,
   isMemberCall,
   memberMethod,
-  propertyName,
-  staticMemberMethod,
-  walkWithParents
+  propertyName
 } from "./ui-boundary-ast.mjs";
 
 const MESSAGE_MODULE = "./messages.js";
 const MESSAGE_WRAPPER = "clientMessage";
-const OUTPUT_METHODS = new Set(["append", "appendLine", "createOutputChannel"]);
-const MESSAGE_METHODS = new Set([
-  "showWarningMessage",
-  "showErrorMessage",
-  "showInformationMessage"
-]);
-const VISIBLE_METHODS = new Set([...OUTPUT_METHODS, ...MESSAGE_METHODS]);
-const GENERIC_INTERFACE_METHODS = new Set(["show", "showMessage", "write", "display"]);
-const PASSTHROUGH_METHODS = new Map([
-  ["serverStderr", "append"],
-  ["serverNotification", "appendLine"]
-]);
+
+// This is the UI service contract. The adapter validator and the outside
+// policy share it instead of trying to infer arbitrary program dataflow.
+export const UI_METHOD_CONTRACTS = Object.freeze({
+  serverStartFailed: { kind: "projection", id: "lsp-client-start-failed", argument: "detail" },
+  serverError: { kind: "projection", id: "lsp-client-error", argument: "detail" },
+  serverExited: { kind: "projection", id: "lsp-client-exited", argument: "detail" },
+  restartScheduled: { kind: "projection", id: "lsp-client-restart-scheduled", argument: "detail" },
+  restartExhausted: { kind: "projection", id: "lsp-client-restart-exhausted" },
+  actionStale: { kind: "projection", id: "lsp-client-action-stale" },
+  actionClosed: { kind: "projection", id: "lsp-client-action-closed" },
+  actionReopened: { kind: "projection", id: "lsp-client-action-reopened" },
+  actionExpired: { kind: "projection", id: "lsp-client-action-expired" },
+  actionEvicted: { kind: "projection", id: "lsp-client-action-evicted" },
+  actionApplyFailed: { kind: "projection", id: "lsp-client-action-apply-failed" },
+  actionUnknown: { kind: "projection", id: "lsp-client-action-unknown" },
+  configurationPathInvalid: { kind: "error", id: "lsp-client-config-path-invalid" },
+  configurationArgsInvalid: { kind: "error", id: "lsp-client-config-args-invalid" },
+  configurationProjectRootInvalid: { kind: "error", id: "lsp-client-config-project-root-invalid" },
+  configurationProjectRootNeedsWorkspace: {
+    kind: "error", id: "lsp-client-config-project-root-needs-workspace"
+  },
+  serverNotRunning: { kind: "error", id: "lsp-client-not-running" },
+  serverStderr: { kind: "passthrough", sink: "append" },
+  serverNotification: { kind: "passthrough", sink: "appendLine" },
+  dispose: { kind: "dispose" }
+});
 
 export function validateAdapter(ast, file, expected) {
+  assert(ast.body.length === 2 && ast.body[0].type === "ImportDeclaration" &&
+    ast.body[1].type === "ExportNamedDeclaration",
+  `UI adapter must contain only its canonical import and factory (${file})`);
   const imports = ast.body.filter((node) => node.type === "ImportDeclaration");
-  const messageImports = imports.filter((node) => node.source.value === MESSAGE_MODULE);
-  assert(messageImports.length === 1, `UI adapter must import ${MESSAGE_WRAPPER} exactly once (${file})`);
-  const specifiers = messageImports[0].specifiers;
-  assert(specifiers.length === 1 && specifiers[0].type === "ImportSpecifier" &&
-    specifiers[0].imported.name === MESSAGE_WRAPPER &&
-    specifiers[0].local.name === MESSAGE_WRAPPER,
+  const exports = ast.body.filter((node) => node.type === "ExportNamedDeclaration");
+  assert(imports.length === 1 && exports.length === 1,
+    `UI adapter must contain one import and one export (${file})`);
+  const messageImport = imports[0];
+  assert(messageImport.source.value === MESSAGE_MODULE && messageImport.specifiers.length === 1 &&
+    (messageImport.attributes?.length ?? 0) === 0 &&
+    messageImport.specifiers[0].type === "ImportSpecifier" &&
+    messageImport.specifiers[0].imported.name === MESSAGE_WRAPPER &&
+    messageImport.specifiers[0].local.name === MESSAGE_WRAPPER,
   `UI adapter must use the canonical ${MESSAGE_WRAPPER} import (${file})`);
-  assert(imports.every((node) => node.source.value === MESSAGE_MODULE),
-    `UI adapter imports must remain limited to ${MESSAGE_MODULE} (${file})`);
+  const declaration = exports[0].declaration;
+  assert(exports[0].specifiers.length === 0 && exports[0].source === null &&
+    declaration?.type === "FunctionDeclaration" && declaration.id?.name === "createUserInterface" &&
+    !declaration.async && !declaration.generator,
+  `UI adapter must export only createUserInterface (${file})`);
+  const factory = declaration;
+  assert(factory.params.length === 1 && factory.params[0].type === "Identifier" &&
+    factory.params[0].name === "api" && factory.body.body.length === 2,
+  `UI adapter factory must accept only api and have an exact body (${file})`);
 
-  const createFunctions = ast.body.flatMap((node) => {
-    const declaration = node.type === "ExportNamedDeclaration" ? node.declaration : node;
-    return declaration?.type === "FunctionDeclaration" && declaration.id?.name === "createUserInterface"
-      ? [declaration] : [];
-  });
-  assert(createFunctions.length === 1, `UI adapter must export createUserInterface (${file})`);
-  const root = createFunctions[0];
-  assert(root.params.length === 1 && root.params[0].type === "Identifier" &&
-    root.params[0].name === "api", `UI adapter must accept only api (${file})`);
+  const outputStatement = factory.body.body[0];
+  assert(outputStatement.type === "VariableDeclaration" && outputStatement.kind === "const" &&
+    outputStatement.declarations.length === 1 && outputStatement.declarations[0].id.type === "Identifier" &&
+    outputStatement.declarations[0].id.name === "output",
+  `UI factory must declare one private output channel (${file})`);
+  const output = outputStatement.declarations[0];
+  assert(isMemberCall(output.init, "api", "window", "createOutputChannel") &&
+    output.init.arguments.length === 1 && isCanonicalCall(output.init.arguments[0]),
+  `UI output must be created directly from the canonical display projection (${file})`);
+  assertMessageCall(output.init.arguments[0], file, "lsp-client-display-name");
 
-  const state = { outputDeclarations: [], messageCalls: [] };
-  walkWithParents(root, (node, parent, ancestors) => {
-    if (node.type === "Identifier" && node.name === MESSAGE_WRAPPER) {
-      const imported = parent?.type === "ImportSpecifier";
-      const directCallee = parent?.type === "CallExpression" && parent.callee === node;
-      assert(imported || directCallee, `UI adapter must not alias or expose ${MESSAGE_WRAPPER} (${file})`);
-    }
-    if (node.type === "Identifier" && node.name === "output") {
-      const declaration = parent?.type === "VariableDeclarator" && parent.id === node;
-      const receiver = parent?.type === "MemberExpression" && parent.object === node;
-      assert(declaration || receiver, `UI adapter must not expose its output channel (${file})`);
-    }
-    if (node.type === "VariableDeclarator") validateDeclaration(node, file, state);
-    if (node.type === "AssignmentExpression" || node.type === "UpdateExpression") {
-      throw new Error(`UI adapter forbids reassignment (${file})`);
-    }
-    if (["ConditionalExpression", "TemplateLiteral", "BinaryExpression", "SequenceExpression",
-      "SpreadElement", "RestElement"].includes(node.type)) {
-      throw new Error(`UI adapter uses an unsupported expression shape: ${node.type} (${file})`);
-    }
-    if (node.type === "FunctionDeclaration" && node !== root ||
-        node.type === "FunctionExpression" || node.type === "ArrowFunctionExpression") {
-      for (const parameter of node.params) {
-        assert(parameter.type === "Identifier", `UI adapter parameters must be simple identifiers (${file})`);
-        assert(!["api", MESSAGE_WRAPPER, "output"].includes(parameter.name),
-          `UI adapter shadows a reserved binding: ${parameter.name} (${file})`);
-      }
-    }
-    if (node.type === "CatchClause" && node.param?.type === "Identifier") {
-      assert(!["api", MESSAGE_WRAPPER, "output"].includes(node.param.name),
-        `UI adapter shadows a reserved binding: ${node.param.name} (${file})`);
-    }
-    if (node.type === "MemberExpression" && node.computed &&
-        (isWindowReceiver(node.object) || isVisibleMember(node.object) ||
-          node.object.type === "Identifier" && node.object.name === "output")) {
-      throw new Error(`UI adapter forbids computed visible sink access (${file})`);
-    }
-    if (node.type === "Property") {
-      const name = propertyName(node);
-      assert(!name || !GENERIC_INTERFACE_METHODS.has(name),
-        `UI adapter method must be semantic, not generic: ${name} (${file})`);
-    }
-    if (node.type === "CallExpression") validateCall(node, parent, ancestors, file, state);
-    if (node.type === "NewExpression") {
-      assert(node.callee.type === "Identifier" && node.callee.name === "Error" &&
-        node.arguments.length === 1 && node.arguments[0].type === "CallExpression" &&
-        node.arguments[0].callee.type === "Identifier" &&
-        node.arguments[0].callee.name === MESSAGE_WRAPPER,
-      `UI adapter errors must use a direct canonical projection (${file})`);
-    }
-  });
+  const returnStatement = factory.body.body[1];
+  assert(returnStatement.type === "ReturnStatement" && isObjectFreeze(returnStatement.argument),
+    `UI factory must return Object.freeze of its semantic service (${file})`);
+  const service = returnStatement.argument.arguments[0];
+  assert(service.properties.length === Object.keys(UI_METHOD_CONTRACTS).length,
+    `UI service methods must match the declared contract (${file})`);
+  const seen = new Set();
+  for (const property of service.properties) {
+    const name = propertyName(property);
+    assert(property.type === "Property" && property.method === true && name &&
+      Object.hasOwn(UI_METHOD_CONTRACTS, name) && !seen.has(name),
+    `UI service contains an unsupported or duplicate method: ${name ?? "computed"} (${file})`);
+    seen.add(name);
+    validateMethod(property, UI_METHOD_CONTRACTS[name], file);
+  }
+  assert(seen.size === Object.keys(UI_METHOD_CONTRACTS).length,
+    `UI service methods must match the declared contract (${file})`);
 
-  assert(state.outputDeclarations.length === 1,
-    `UI adapter must create one private output channel (${file})`);
-  assert(state.messageCalls.length === expected.size,
-    `UI adapter message projections must cover exactly the registered IDs (${file})`);
-  const used = new Set(state.messageCalls.map((call) => call.arguments[1].value));
-  assert(used.size === expected.size && [...expected].every((id) => used.has(id)),
-    `UI adapter message projections must cover exactly the registered IDs (${file})`);
+  const ids = ["lsp-client-display-name", ...Object.values(UI_METHOD_CONTRACTS)
+    .filter((contract) => contract.id).map((contract) => contract.id)];
+  assert(ids.length === expected.size && ids.every((id) => expected.has(id)),
+    `UI adapter contract IDs must match registered message IDs (${file})`);
+  return UI_METHOD_CONTRACTS;
 }
 
-function validateDeclaration(node, file, state) {
-  assert(node.id.type === "Identifier", `UI adapter declarations must not destructure values (${file})`);
-  assert(node.id.name !== MESSAGE_WRAPPER, `UI adapter must not redeclare ${MESSAGE_WRAPPER} (${file})`);
-  if (node.id.name === "api") throw new Error(`UI adapter shadows api (${file})`);
-  if (node.id.name === "output") {
-    assert(node.init?.type === "CallExpression" && isMemberCall(node.init, "api", "window",
-      "createOutputChannel"), `UI adapter output must be created directly (${file})`);
-    state.outputDeclarations.push(node);
+function validateMethod(property, contract, file) {
+  const method = property.value;
+  assert(method.type === "FunctionExpression" && !method.async && !method.generator &&
+    method.params.every((param) => param.type === "Identifier"),
+    `UI adapter method parameters must be simple identifiers (${file})`);
+  if (contract.kind === "projection") {
+    assert(method.params.length === (contract.argument ? 1 : 0),
+      `UI method ${propertyName(property)} has the wrong argument count (${file})`);
+    const statement = oneStatement(method, file, propertyName(property));
+    assert(statement.type === "ExpressionStatement" && isOutputCall(statement.expression, "appendLine"),
+      `UI method ${propertyName(property)} must append a projection directly (${file})`);
+    const projection = statement.expression.arguments[0];
+    assert(isCanonicalCall(projection),
+      `UI method ${propertyName(property)} must append a projection directly (${file})`);
+    assertMessageCall(projection, file, contract.id, contract.argument);
+    return;
   }
-  if (node.init?.type === "Identifier" && [MESSAGE_WRAPPER, "output"].includes(node.init.name)) {
-    throw new Error(`UI adapter forbids aliases of ${node.init.name} (${file})`);
+  if (contract.kind === "error") {
+    assert(method.params.length === 0,
+      `UI adapter method ${propertyName(property)} has the wrong argument count (${file})`);
+    const statement = oneStatement(method, file, propertyName(property));
+    const error = statement.type === "ReturnStatement" ? statement.argument : undefined;
+    assert(error?.type === "NewExpression" && error.callee.type === "Identifier" &&
+      error.callee.name === "Error" && error.arguments.length === 1 &&
+      isCanonicalCall(error.arguments[0]),
+    `UI method ${propertyName(property)} must return a canonical Error (${file})`);
+    assertMessageCall(error.arguments[0], file, contract.id);
+    return;
   }
-  if (isVisibleMember(node.init)) {
-    throw new Error(`UI adapter forbids aliases of visible host sinks (${file})`);
+  if (contract.kind === "passthrough") {
+    assert(method.params.length === 1,
+      `UI adapter method ${propertyName(property)} has the wrong argument count (${file})`);
+    const statement = oneStatement(method, file, propertyName(property));
+    assert(statement.type === "ExpressionStatement" && isOutputCall(statement.expression, contract.sink),
+      `UI adapter method ${propertyName(property)} must pass one payload directly (${file})`);
+    const payload = statement.expression.arguments[0];
+    assert(payload.type === "Identifier" && payload.name === method.params[0].name,
+      `UI adapter method ${propertyName(property)} must pass its payload directly (${file})`);
+    return;
   }
+  assert(method.params.length === 0,
+    `UI adapter method ${propertyName(property)} has the wrong argument count (${file})`);
+  const statement = oneStatement(method, file, propertyName(property));
+  assert(statement.type === "ExpressionStatement" && isOutputCall(statement.expression, "dispose"),
+    `UI method ${propertyName(property)} must dispose the private output directly (${file})`);
+  assert(statement.expression.arguments.length === 0,
+    `UI method ${propertyName(property)} must not pass disposal arguments (${file})`);
 }
 
-function validateCall(node, parent, ancestors, file, state) {
-  if (node.callee.type === "MemberExpression" && node.callee.optional) {
-    throw new Error(`UI adapter forbids optional visible sink access (${file})`);
-  }
-  if (isCallMethod(node, "call") || isCallMethod(node, "apply") || isCallMethod(node, "bind")) {
-    throw new Error(`UI adapter forbids call/apply/bind sink aliases (${file})`);
-  }
-  if (node.callee.type === "Identifier" && node.callee.name === MESSAGE_WRAPPER) {
-    assert(!node.optional, `UI adapter projections must call the canonical wrapper directly (${file})`);
-    assertMessageCall(node, file, state);
-    const directParent = parent?.type === "CallExpression" &&
-      parent.arguments.some((argument) => argument === node);
-    const errorParent = parent?.type === "NewExpression" && parent.callee.type === "Identifier" &&
-      parent.callee.name === "Error" && parent.arguments[0] === node;
-    assert(directParent || errorParent, `UI adapter projections must be used directly (${file})`);
-    return;
-  }
-  const method = memberMethod(node.callee);
-  if (!method || !VISIBLE_METHODS.has(method)) return;
-  if (method === "createOutputChannel") {
-    assert(isMemberCall(node, "api", "window", method) && node.arguments.length === 1 &&
-      isCanonicalCall(node.arguments[0]), `UI output creation must use a direct projection (${file})`);
-    return;
-  }
-  if (isOutputMember(node.callee)) {
-    assert(node.arguments.length === 1, `UI output calls must have one argument (${file})`);
-    if (isCanonicalCall(node.arguments[0])) return;
-    const functionNode = ancestors.findLast((ancestor) =>
-      ancestor.type === "FunctionExpression" || ancestor.type === "ArrowFunctionExpression" ||
-      ancestor.type === "FunctionDeclaration");
-    const methodNode = functionNode && ancestors
-      .slice(0, ancestors.indexOf(functionNode)).findLast((ancestor) => ancestor.type === "Property");
-    const property = methodNode && propertyName(methodNode);
-    const parameter = functionNode?.params.find((candidate) =>
-      candidate.type === "Identifier" && candidate.name === node.arguments[0]?.name);
-    assert(parameter && PASSTHROUGH_METHODS.get(property) === method,
-      `UI output calls must use a direct projection or approved server payload (${file})`);
-    return;
-  }
-  if (MESSAGE_METHODS.has(method)) {
-    assert(isMemberCall(node, "api", "window", method) && node.arguments.length === 1 &&
-      isCanonicalCall(node.arguments[0]), `UI message calls must use a direct projection (${file})`);
-    return;
-  }
-  throw new Error(`UI adapter uses an unsupported visible sink (${file})`);
-}
-
-function assertMessageCall(node, file, state) {
-  assert(node.arguments.length >= 2 && node.arguments.length <= 3 &&
+function assertMessageCall(node, file, id, argument) {
+  assert(node.arguments.length === (argument ? 3 : 2) &&
     node.arguments[0].type === "Identifier" && node.arguments[0].name === "api",
-  `canonical projections must receive api directly (${file})`);
-  const id = node.arguments[1];
-  assert(id.type === "Literal" && typeof id.value === "string" && /^[a-z0-9-]+$/.test(id.value) &&
-    (id.raw === JSON.stringify(id.value) || id.raw === `'${id.value}'`),
-  `canonical projections must use an unescaped literal ID (${file})`);
-  if (node.arguments[2]) assert(isSimpleValue(node.arguments[2]),
-    `canonical projection details must be direct values (${file})`);
-  state.messageCalls.push(node);
+  `canonical projection ${id} must receive api directly (${file})`);
+  const literal = node.arguments[1];
+  assert(literal.type === "Literal" && typeof literal.value === "string" &&
+    /^[a-z0-9-]+$/.test(literal.value) &&
+    (literal.raw === JSON.stringify(literal.value) || literal.raw === `'${literal.value}'`) &&
+    literal.value === id,
+  `canonical projection must use the registered unescaped ID ${id} (${file})`);
+  if (argument) {
+    assert(node.arguments[2].type === "Identifier" && node.arguments[2].name === argument,
+      `canonical projection ${id} must receive its direct detail (${file})`);
+  }
 }
 
-function isOutputMember(node) {
-  return node?.type === "MemberExpression" && !node.computed &&
-    node.object.type === "Identifier" && node.object.name === "output" &&
-    (node.property.name === "append" || node.property.name === "appendLine");
+function isOutputCall(node, method) {
+  return node?.type === "CallExpression" && node.arguments.length === 1 - (method === "dispose") &&
+    node.callee.type === "MemberExpression" && !node.callee.computed && !node.callee.optional &&
+    node.callee.object.type === "Identifier" && node.callee.object.name === "output" &&
+    memberMethod(node.callee) === method;
 }
 
 function isCanonicalCall(node) {
   return node?.type === "CallExpression" && node.callee.type === "Identifier" &&
-    node.callee.name === MESSAGE_WRAPPER;
+    node.callee.name === MESSAGE_WRAPPER && !node.optional;
 }
 
-function isVisibleMember(node) {
-  if (node?.type !== "MemberExpression") return false;
-  return VISIBLE_METHODS.has(memberMethod(node) ?? staticMemberMethod(node));
+function isObjectFreeze(node) {
+  return node?.type === "CallExpression" && node.arguments.length === 1 &&
+    node.callee.type === "MemberExpression" && !node.callee.computed && !node.callee.optional &&
+    node.callee.object.type === "Identifier" && node.callee.object.name === "Object" &&
+    memberMethod(node.callee) === "freeze" && node.arguments[0].type === "ObjectExpression" &&
+    node.arguments[0].properties.every((property) => property.type === "Property" && !property.computed);
 }
 
-function isWindowReceiver(node) {
-  return node?.type === "MemberExpression" && !node.computed && node.property.type === "Identifier" &&
-    node.property.name === "window";
-}
-
-function isSimpleValue(node) {
-  return node?.type === "Identifier" || node?.type === "MemberExpression" && !node.computed;
+function oneStatement(method, file, name) {
+  assert(method.body.type === "BlockStatement" && method.body.body.length === 1,
+    `UI adapter method ${name} must have one exact statement (${file})`);
+  return method.body.body[0];
 }
 
 function assert(condition, message) {
