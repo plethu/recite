@@ -173,6 +173,39 @@ local function configured_root(bufnr, lsp)
   return root or M.root_dir(bufnr, lsp.root_markers)
 end
 
+local MATERIAL_CONFIG_KEYS = {
+  "name",
+  "root_dir",
+  "cmd",
+  "settings",
+  "init_options",
+  "capabilities",
+  "on_attach",
+  "on_init",
+  "on_exit",
+}
+
+local function same_material_value(left, right)
+  if type(left) == "function" or type(right) == "function" then
+    return left == right
+  end
+  return vim.deep_equal(left, right)
+end
+
+local function same_material_configuration(client, config)
+  local actual = client.config.recite_material
+  local expected = config.recite_material
+  if not actual or not expected then
+    return false
+  end
+  for _, key in ipairs(MATERIAL_CONFIG_KEYS) do
+    if not same_material_value(actual[key], expected[key]) then
+      return false
+    end
+  end
+  return true
+end
+
 local function has_open_buffer(root, lsp)
   local buffers = {}
   for _, bufnr in ipairs(vim.api.nvim_list_bufs()) do
@@ -310,11 +343,28 @@ function M.start(bufnr, overrides)
     end
   end
 
+  -- Neovim's reuse callback receives an effective client config, not the
+  -- caller's original M.start overrides. Keep the material inputs alongside
+  -- that config so direct starts cannot silently inherit an incompatible
+  -- command, settings, initialization options, capabilities, or callback.
+  client_config.recite_material = {
+    name = client_config.name,
+    root_dir = root,
+    cmd = vim.deepcopy(client_config.cmd),
+    settings = vim.deepcopy(client_config.settings),
+    init_options = vim.deepcopy(client_config.init_options),
+    capabilities = vim.deepcopy(client_config.capabilities),
+    on_attach = client_config.on_attach,
+    on_init = caller_on_init,
+    on_exit = caller_on_exit,
+  }
+
   local client_id = vim.lsp.start(client_config, {
     bufnr = bufnr,
     reuse_client = function(client, config)
       return client.config.recite_owned == true
         and client.config.root_dir == config.root_dir
+        and same_material_configuration(client, config)
     end,
   })
   if client_id then

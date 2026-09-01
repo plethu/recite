@@ -93,6 +93,11 @@ code-action responses are inspected as structured workspace edits; a refused
 operation is left unapplied. Re-running `setup` with changed LSP-owned options
 stops and reattaches Recite clients while retaining caller-supplied
 `capabilities`, `init_options`, `settings`, `on_init`, and `on_exit`.
+Direct `start` overrides are compared against the effective owned-client
+configuration: command, settings, initialization options, capabilities, and
+callbacks must match before a client is reused. This keeps compatible repeated
+starts cheap without silently applying an incompatible override to an existing
+client.
 Unexpected exits are retried for still-open Recite buffers with a bounded
 backoff. A client must remain alive for the stability window before its crash
 budget resets; changing the LSP configuration cancels queued recovery, and

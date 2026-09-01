@@ -102,6 +102,70 @@ assert_true(vim.lsp.get_client_by_id(external_id) ~= nil, "external same-root cl
 assert_true(recite.stop(external_id) == false, "Recite claimed ownership of an external client")
 vim.lsp.get_client_by_id(external_id):stop(true)
 
+-- Direct starts may override client material without changing global setup.
+-- Repeated compatible starts reuse the existing owned client, while each
+-- incompatible command/settings/init_options value receives its own client.
+local function wait_initialized(client_id, label)
+  local started
+  wait_for(function()
+    started = vim.lsp.get_client_by_id(client_id)
+    return started ~= nil and started.initialized
+  end, label .. " did not initialize")
+  return started
+end
+
+local function stop_probe(client_id, label)
+  assert_true(recite.stop(client_id), label .. " did not accept intentional stop")
+  wait_for(function()
+    return vim.lsp.get_client_by_id(client_id) == nil
+  end, label .. " did not stop")
+end
+
+local default_override_id = recite.start(buffer_b)
+assert_true(default_override_id == client_b.id,
+  "a repeated default start did not reuse the owned client")
+assert_true(recite.start(buffer_b) == default_override_id,
+  "identical repeated starts did not reuse the owned client")
+
+local settings_override_id = recite.start(buffer_b, {
+  settings = { material_probe = { enabled = true } },
+})
+assert_true(settings_override_id ~= default_override_id,
+  "a changed settings override silently reused the owned client")
+local settings_override_client = wait_initialized(settings_override_id, "settings override client")
+assert_true(settings_override_client.config.settings.material_probe.enabled == true,
+  "the settings override was not applied to its distinct client")
+assert_true(recite.start(buffer_b, {
+  settings = { material_probe = { enabled = true } },
+}) == settings_override_id, "an identical settings override did not reuse its client")
+stop_probe(settings_override_id, "settings override client")
+
+local command_override_id = recite.start(buffer_b, {
+  cmd = { vim.env.RECITE_LSP, "--material-command-probe" },
+})
+assert_true(command_override_id ~= default_override_id,
+  "a changed command override silently reused the owned client")
+local command_override_client = wait_initialized(command_override_id, "command override client")
+assert_true(command_override_client.config.cmd[2] == "--material-command-probe",
+  "the command override was not applied to its distinct client")
+assert_true(recite.start(buffer_b, {
+  cmd = { vim.env.RECITE_LSP, "--material-command-probe" },
+}) == command_override_id, "an identical command override did not reuse its client")
+stop_probe(command_override_id, "command override client")
+
+local init_options_override_id = recite.start(buffer_b, {
+  init_options = { material_probe = { enabled = true } },
+})
+assert_true(init_options_override_id ~= default_override_id,
+  "changed init_options silently reused the owned client")
+local init_options_override_client = wait_initialized(init_options_override_id, "init_options override client")
+assert_true(init_options_override_client.config.init_options.material_probe.enabled == true,
+  "the init_options override was not applied to its distinct client")
+assert_true(recite.start(buffer_b, {
+  init_options = { material_probe = { enabled = true } },
+}) == init_options_override_id, "an identical init_options override did not reuse its client")
+stop_probe(init_options_override_id, "init_options override client")
+
 -- A configured root_dir must be used when recovering every open buffer.
 recite.setup({
   lsp = {
