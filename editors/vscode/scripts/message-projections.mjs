@@ -1,4 +1,13 @@
-import { readFile, writeFile } from "node:fs/promises";
+import {
+  copyFile,
+  lstat,
+  mkdir,
+  mkdtemp,
+  readFile,
+  rename,
+  rm,
+  writeFile
+} from "node:fs/promises";
 import path from "node:path";
 import { fileURLToPath } from "node:url";
 
@@ -82,14 +91,123 @@ export async function verifyMessageProjections(packageRoot) {
   return { fluent, projections };
 }
 
-export async function generateMessageProjections(packageRoot) {
+export async function generateMessageProjections(packageRoot, options = {}) {
   const fluent = await readFile(
     path.resolve(packageRoot, "../../crates/recite-ui/resources/en-US.ftl"), "utf8"
   );
   const files = renderMessageProjections(projectMessages(fluent));
-  await Promise.all(Object.entries(files).map(([relative, contents]) =>
-    writeFile(path.join(packageRoot, relative), contents, "utf8")
-  ));
+  const fileSystem = {
+    copyFile,
+    lstat,
+    mkdir,
+    mkdtemp,
+    rename,
+    rm,
+    writeFile,
+    ...(options.fileSystem ?? {})
+  };
+  const destinations = Object.entries(files).map(([relative, contents]) => ({
+    relative,
+    contents,
+    target: path.resolve(packageRoot, relative)
+  }));
+  for (const destination of destinations) {
+    await assertSafeDestination(packageRoot, destination.relative, fileSystem);
+  }
+
+  let stageRoot;
+  const backedUp = [];
+  try {
+    stageRoot = await fileSystem.mkdtemp(path.join(path.resolve(packageRoot), ".recite-message-projections-"));
+    const stageDirectory = path.join(stageRoot, "staged");
+    const backupDirectory = path.join(stageRoot, "backups");
+    await fileSystem.mkdir(stageDirectory, { recursive: true });
+    await fileSystem.mkdir(backupDirectory, { recursive: true });
+    for (const destination of destinations) {
+      const stagePath = path.join(stageDirectory, destination.relative);
+      await fileSystem.mkdir(path.dirname(stagePath), { recursive: true });
+      await fileSystem.writeFile(stagePath, destination.contents, "utf8");
+      destination.stagePath = stagePath;
+      destination.backupPath = path.join(backupDirectory, destination.relative);
+      await fileSystem.mkdir(path.dirname(destination.backupPath), { recursive: true });
+      await assertSafeAbsent(destination.backupPath, fileSystem);
+      await fileSystem.copyFile(destination.target, destination.backupPath);
+    }
+
+    for (const destination of destinations) {
+      await assertSafeDestination(packageRoot, destination.relative, fileSystem);
+    }
+
+    try {
+      for (const destination of destinations) {
+        await fileSystem.rename(destination.stagePath, destination.target);
+        backedUp.push(destination);
+      }
+    } catch (error) {
+      await rollbackProjectionUpdate(backedUp, fileSystem, error);
+      throw error;
+    }
+
+    for (const destination of destinations) {
+      await fileSystem.rm(destination.backupPath, { force: true });
+    }
+  } finally {
+    if (stageRoot) await fileSystem.rm(stageRoot, { recursive: true, force: true });
+  }
+}
+
+async function assertSafeDestination(packageRoot, relative, fileSystem) {
+  const root = path.resolve(packageRoot);
+  const target = path.resolve(root, relative);
+  const remainder = path.relative(root, target);
+  if (!remainder || remainder === ".." || remainder.startsWith(`..${path.sep}`) || path.isAbsolute(remainder)) {
+    throw new Error(`refusing projection path outside package root: ${relative}`);
+  }
+
+  const rootStat = await fileSystem.lstat(root);
+  if (rootStat.isSymbolicLink()) throw new Error(`refusing symlink in projection package root: ${root}`);
+  if (!rootStat.isDirectory()) throw new Error(`projection package root is not a directory: ${root}`);
+
+  const components = remainder.split(path.sep);
+  let current = root;
+  for (const [index, component] of components.entries()) {
+    current = path.join(current, component);
+    let stat;
+    try {
+      stat = await fileSystem.lstat(current);
+    } catch (error) {
+      throw new Error(`projection path is missing: ${path.relative(root, current)}`, { cause: error });
+    }
+    if (stat.isSymbolicLink()) throw new Error(`refusing symlink in projection path: ${current}`);
+    if (index < components.length - 1 && !stat.isDirectory()) {
+      throw new Error(`projection parent is not a directory: ${current}`);
+    }
+    if (index === components.length - 1 && !stat.isFile()) {
+      throw new Error(`projection target is not a regular file: ${current}`);
+    }
+  }
+}
+
+async function assertSafeAbsent(file, fileSystem) {
+  try {
+    const stat = await fileSystem.lstat(file);
+    throw new Error(`refusing pre-existing projection backup: ${file} (${stat.isSymbolicLink() ? "symlink" : "path"})`);
+  } catch (error) {
+    if (error?.code !== "ENOENT") throw error;
+  }
+}
+
+async function rollbackProjectionUpdate(backedUp, fileSystem, originalError) {
+  try {
+    for (const destination of backedUp.toReversed()) {
+      await fileSystem.rm(destination.target, { force: true });
+      await fileSystem.rename(destination.backupPath, destination.target);
+    }
+  } catch (rollbackError) {
+    throw new Error("failed to roll back VS Code message projections", {
+      cause: new AggregateError([originalError, rollbackError])
+    });
+  }
 }
 
 if (path.resolve(process.argv[1] ?? "") === path.resolve(fileURLToPath(import.meta.url))) {

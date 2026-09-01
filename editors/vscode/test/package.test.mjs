@@ -1,6 +1,16 @@
 import test from "node:test";
 import assert from "node:assert/strict";
-import { cp, readFile, writeFile, mkdtemp, mkdir, rm, symlink } from "node:fs/promises";
+import {
+  cp,
+  mkdtemp,
+  mkdir,
+  readFile,
+  readdir,
+  rename,
+  rm,
+  symlink,
+  writeFile
+} from "node:fs/promises";
 import path from "node:path";
 import { fileURLToPath } from "node:url";
 import os from "node:os";
@@ -8,6 +18,7 @@ import { assertContainedRegularFile, assertSafeTree } from "../scripts/safety.mj
 import { listSourceModules } from "../scripts/source-files.mjs";
 import { assertUiBoundary } from "../scripts/ui-boundary.mjs";
 import {
+  generateMessageProjections,
   SOURCE_MESSAGE_IDS,
   verifyMessageProjections
 } from "../scripts/message-projections.mjs";
@@ -35,23 +46,8 @@ test("the declared VS Code floor uses a plain JavaScript message projection", as
 });
 
 test("message verification rejects a mutation without rewriting its projection", async () => {
-  const root = await mkdtemp(path.join(os.tmpdir(), "recite-vscode-projections-"));
-  const fixturePackage = path.join(root, "editors", "vscode");
-  const fixtureSource = path.join(fixturePackage, "src");
-  const fixtureFluent = path.join(root, "crates", "recite-ui", "resources");
+  const { root, fixturePackage, fixtureSource } = await createProjectionFixture();
   try {
-    await mkdir(fixtureSource, { recursive: true });
-    await mkdir(fixtureFluent, { recursive: true });
-    await cp(
-      path.join(packageRoot, "src", "messages.generated.js"),
-      path.join(fixtureSource, "messages.generated.js")
-    );
-    await cp(path.join(packageRoot, "package.nls.json"), path.join(fixturePackage, "package.nls.json"));
-    await cp(
-      path.resolve(packageRoot, "../../crates/recite-ui/resources/en-US.ftl"),
-      path.join(fixtureFluent, "en-US.ftl")
-    );
-
     const projection = path.join(fixtureSource, "messages.generated.js");
     const mutated = `${await readFile(projection, "utf8")}\n// mutation fixture\n`;
     await writeFile(projection, mutated, "utf8");
@@ -65,15 +61,117 @@ test("message verification rejects a mutation without rewriting its projection",
   }
 });
 
+test("message projection updates refuse symlinked destinations before writing", async () => {
+  const { root, fixturePackage, fixtureSource } = await createProjectionFixture();
+  const packageProjection = path.join(fixturePackage, "package.nls.json");
+  const runtimeProjection = path.join(fixtureSource, "messages.generated.js");
+  const outside = path.join(root, "outside.json");
+  const originalRuntime = await readFile(runtimeProjection, "utf8");
+  try {
+    await writeFile(outside, "outside\n", "utf8");
+    await rm(packageProjection);
+    await symlink(outside, packageProjection);
+
+    await assert.rejects(
+      generateMessageProjections(fixturePackage),
+      /refusing symlink/
+    );
+    assert.equal(await readFile(outside, "utf8"), "outside\n");
+    assert.equal(await readFile(runtimeProjection, "utf8"), originalRuntime);
+  } finally {
+    await rm(root, { recursive: true, force: true });
+  }
+});
+
+test("message projection updates refuse symlinked projection parents before writing", async () => {
+  const { root, fixturePackage, fixtureSource } = await createProjectionFixture();
+  const outsideSource = path.join(root, "outside-src");
+  const outsideProjection = path.join(outsideSource, "messages.generated.js");
+  const packageProjection = path.join(fixturePackage, "package.nls.json");
+  const originalPackage = await readFile(packageProjection, "utf8");
+  try {
+    await mkdir(outsideSource);
+    await cp(path.join(fixtureSource, "messages.generated.js"), outsideProjection);
+    const outsideOriginal = await readFile(outsideProjection, "utf8");
+    await rm(fixtureSource, { recursive: true });
+    await symlink(outsideSource, fixtureSource);
+
+    await assert.rejects(
+      generateMessageProjections(fixturePackage),
+      /refusing symlink/
+    );
+    assert.equal(await readFile(outsideProjection, "utf8"), outsideOriginal);
+    assert.equal(await readFile(packageProjection, "utf8"), originalPackage);
+  } finally {
+    await rm(root, { recursive: true, force: true });
+  }
+});
+
+test("message projection updates install verified projections as a pair", async () => {
+  const { root, fixturePackage } = await createProjectionFixture();
+  try {
+    await generateMessageProjections(fixturePackage);
+    await assert.doesNotReject(verifyMessageProjections(fixturePackage));
+    assert.deepEqual(
+      (await readdir(fixturePackage)).filter((entry) => entry.startsWith(".recite-message-projections-")),
+      []
+    );
+  } finally {
+    await rm(root, { recursive: true, force: true });
+  }
+});
+
+test("message projection updates roll back a partial commit and clean staging", async () => {
+  const { root, fixturePackage, fixtureSource } = await createProjectionFixture();
+  const packageProjection = path.join(fixturePackage, "package.nls.json");
+  const runtimeProjection = path.join(fixtureSource, "messages.generated.js");
+  const originals = await Promise.all([
+    readFile(runtimeProjection, "utf8"),
+    readFile(packageProjection, "utf8")
+  ]);
+  let renameCount = 0;
+  try {
+    await assert.rejects(
+      generateMessageProjections(fixturePackage, {
+        fileSystem: {
+          rename: async (from, to) => {
+            renameCount += 1;
+            if (renameCount === 2) throw new Error("induced projection install failure");
+            return rename(from, to);
+          }
+        }
+      }),
+      /induced projection install failure/
+    );
+    assert.equal(renameCount, 3, "rollback should restore the first projection after the failed install");
+    assert.deepEqual(await Promise.all([
+      readFile(runtimeProjection, "utf8"),
+      readFile(packageProjection, "utf8")
+    ]), originals);
+    assert.deepEqual(
+      (await readdir(fixturePackage)).filter((entry) => entry.startsWith(".recite-message-projections-")),
+      []
+    );
+    assert.deepEqual(
+      (await readdir(path.join(fixturePackage, "src"))).filter((entry) => entry.includes(".backup-")),
+      []
+    );
+  } finally {
+    await rm(root, { recursive: true, force: true });
+  }
+});
+
 test("nested JavaScript modules are enumerated safely and reach the UI boundary", async () => {
   const root = await mkdtemp(path.join(os.tmpdir(), "recite-vscode-source-"));
   try {
     await mkdir(path.join(root, "nested"));
     await writeFile(path.join(root, "top.js"), "const top = true;\n");
-    await writeFile(path.join(root, "nested", "unrelated.js"),
-      "const host = { appendLine() {} }; host.appendLine(value);\n");
+    for (const extension of [".js", ".mjs", ".cjs"]) {
+      await writeFile(path.join(root, "nested", `unrelated${extension}`),
+        "const host = { appendLine() {} }; host.appendLine(value);\n");
+    }
     assert.deepEqual(listSourceModules(root).map(({ relativePath }) => relativePath), [
-      "nested/unrelated.js", "top.js"
+      "nested/unrelated.cjs", "nested/unrelated.js", "nested/unrelated.mjs", "top.js"
     ]);
     const entries = await sourceEntries(root);
     const packageEntries = await sourceEntries();
@@ -84,13 +182,15 @@ test("nested JavaScript modules are enumerated safely and reach the UI boundary"
       ], SOURCE_MESSAGE_IDS, projectedMessages
     ));
 
-    await writeFile(path.join(root, "nested", "hostile.js"),
-      "const output = {}; output.appendLine(\"English\");\n");
-    const hostileEntries = await sourceEntries(root);
-    assert.throws(() => assertUiBoundary(
-      [...packageEntries, ...hostileEntries],
-      SOURCE_MESSAGE_IDS, projectedMessages
-    ), /outside|acquisition|access|call|projection/);
+    for (const extension of [".mjs", ".cjs"]) {
+      await writeFile(path.join(root, "nested", `hostile${extension}`),
+        "const output = {}; output.appendLine(\"English\");\n");
+      const hostileEntries = await sourceEntries(root);
+      assert.throws(() => assertUiBoundary(
+        [...packageEntries, ...hostileEntries],
+        SOURCE_MESSAGE_IDS, projectedMessages
+      ), /outside|acquisition|access|call|projection/);
+    }
 
     await symlink(path.join(root, "top.js"), path.join(root, "nested", "escape.js"));
     assert.throws(() => listSourceModules(root), /symlink/);
@@ -232,6 +332,25 @@ async function sourceEntries(sourceRoot = path.join(packageRoot, "src")) {
     relativePath,
     await readFile(absolutePath, "utf8")
   ]));
+}
+
+async function createProjectionFixture() {
+  const root = await mkdtemp(path.join(os.tmpdir(), "recite-vscode-projections-"));
+  const fixturePackage = path.join(root, "editors", "vscode");
+  const fixtureSource = path.join(fixturePackage, "src");
+  const fixtureFluent = path.join(root, "crates", "recite-ui", "resources");
+  await mkdir(fixtureSource, { recursive: true });
+  await mkdir(fixtureFluent, { recursive: true });
+  await cp(
+    path.join(packageRoot, "src", "messages.generated.js"),
+    path.join(fixtureSource, "messages.generated.js")
+  );
+  await cp(path.join(packageRoot, "package.nls.json"), path.join(fixturePackage, "package.nls.json"));
+  await cp(
+    path.resolve(packageRoot, "../../crates/recite-ui/resources/en-US.ftl"),
+    path.join(fixtureFluent, "en-US.ftl")
+  );
+  return { root, fixturePackage, fixtureSource };
 }
 
 test("packaging safety rejects symlink escapes, including intermediate paths", async () => {

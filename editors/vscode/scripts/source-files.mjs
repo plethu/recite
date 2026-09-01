@@ -1,6 +1,8 @@
 import { lstatSync, readdirSync } from "node:fs";
 import path from "node:path";
 
+export const SOURCE_MODULE_EXTENSIONS = Object.freeze([".js", ".mjs", ".cjs"]);
+
 export function listSourceModules(sourceRoot) {
   const root = path.resolve(sourceRoot);
   assertDirectory(root, "extension source root");
@@ -13,7 +15,9 @@ function walk(root, directory) {
     const stat = lstatSync(absolutePath);
     if (stat.isSymbolicLink()) throw new Error(`refusing symlink in extension source: ${absolutePath}`);
     if (stat.isDirectory()) return walk(root, absolutePath);
-    if (!stat.isFile() || !entry.name.endsWith(".js")) return [];
+    if (!stat.isFile() || !SOURCE_MODULE_EXTENSIONS.some((extension) => entry.name.endsWith(extension))) {
+      return [];
+    }
 
     const relativePath = path.relative(root, absolutePath).split(path.sep).join("/");
     if (!relativePath || relativePath.startsWith("../") || path.isAbsolute(relativePath) ||
