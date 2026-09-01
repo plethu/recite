@@ -7,6 +7,8 @@ import { spawnSync } from "node:child_process";
 import { assertContainedRegularFile, assertRegularFile, assertSafeTree } from "./safety.mjs";
 
 const packageRoot = path.resolve(path.dirname(fileURLToPath(import.meta.url)), "..");
+const DOS_EPOCH_TIME = 0;
+const DOS_EPOCH_DATE = 0x21; // 1980-01-01, the earliest legal ZIP date.
 const manifest = JSON.parse(await readFile(path.join(packageRoot, "package.json"), "utf8"));
 const packageMessages = JSON.parse(await readFile(path.join(packageRoot, "package.nls.json"), "utf8"));
 const output = path.join(packageRoot, `${manifest.name}-${manifest.version}.vsix`);
@@ -126,8 +128,8 @@ async function writeZip(archive, stageRoot) {
     local.writeUInt16LE(20, 4);
     local.writeUInt16LE(0, 6);
     local.writeUInt16LE(8, 8);
-    local.writeUInt16LE(0, 10);
-    local.writeUInt16LE(0, 12);
+    local.writeUInt16LE(DOS_EPOCH_TIME, 10);
+    local.writeUInt16LE(DOS_EPOCH_DATE, 12);
     local.writeUInt32LE(crc, 14);
     local.writeUInt32LE(compressed.length, 18);
     local.writeUInt32LE(data.length, 22);
@@ -141,8 +143,8 @@ async function writeZip(archive, stageRoot) {
     directory.writeUInt16LE(20, 6);
     directory.writeUInt16LE(0, 8);
     directory.writeUInt16LE(8, 10);
-    directory.writeUInt16LE(0, 12);
-    directory.writeUInt16LE(0, 14);
+    directory.writeUInt16LE(DOS_EPOCH_TIME, 12);
+    directory.writeUInt16LE(DOS_EPOCH_DATE, 14);
     directory.writeUInt32LE(crc, 16);
     directory.writeUInt32LE(compressed.length, 20);
     directory.writeUInt32LE(data.length, 24);
