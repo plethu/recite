@@ -38,6 +38,19 @@ fn project_kernel(documents: impl IntoIterator<Item = SavedDocument>) -> Authori
     kernel
 }
 
+fn incomplete_project_kernel(
+    documents: impl IntoIterator<Item = SavedDocument>,
+) -> AuthoringKernel {
+    let mut kernel = AuthoringKernel::new();
+    kernel
+        .apply(
+            AuthoringRequest::new(SnapshotGeneration::initial(), documents, [])
+                .with_project_completeness(false),
+        )
+        .expect("incomplete project source accepted");
+    kernel
+}
+
 #[test]
 fn rename_refuses_ambiguous_definitions_from_navigation() {
     let kernel = kernel(":: target\n:: target\n");
@@ -108,21 +121,11 @@ fn qualified_stub_refuses_name_defined_in_another_document() {
 }
 
 #[test]
-fn incomplete_project_refuses_global_block_collision_proof() {
-    let mut kernel = AuthoringKernel::new();
-    kernel
-        .apply(
-            AuthoringRequest::new(
-                SnapshotGeneration::initial(),
-                [
-                    SavedDocument::new(key("main.recite"), ":: source\n-> source\n"),
-                    SavedDocument::new(key("other.recite"), ":: renamed\n"),
-                ],
-                [],
-            )
-            .with_project_completeness(false),
-        )
-        .expect("incomplete project source accepted");
+fn incomplete_project_refuses_rename_without_known_collision() {
+    let kernel = incomplete_project_kernel([
+        SavedDocument::new(key("main.recite"), ":: source\n-> source\n"),
+        SavedDocument::new(key("other.recite"), ":: other\n"),
+    ]);
     assert!(matches!(
         kernel
             .snapshot()
@@ -131,6 +134,59 @@ fn incomplete_project_refuses_global_block_collision_proof() {
             document,
             class: QueryClass::BlockDefinitions,
         }) if document == key("main.recite")
+    ));
+}
+
+#[test]
+fn incomplete_project_refuses_qualified_stub_without_known_collision() {
+    let kernel = incomplete_project_kernel([
+        SavedDocument::new(key("main.recite"), ":: source\n-> target.recite::missing\n"),
+        SavedDocument::new(key("target.recite"), ":: target\n"),
+    ]);
+    assert!(matches!(
+        kernel
+            .snapshot()
+            .plan_create_block_stub(&key("main.recite"), position(2, 23)),
+        Err(AuthoringEditError::Incomplete {
+            class: QueryClass::BlockDefinitions,
+            ..
+        })
+    ));
+}
+
+#[test]
+fn unrelated_incomplete_block_definitions_refuse_rename() {
+    let kernel = project_kernel([
+        SavedDocument::new(key("main.recite"), ":: source\n-> source\n"),
+        SavedDocument::new(key("other.recite"), ":: other\n"),
+        SavedDocument::new(key("broken.recite"), "::\n"),
+    ]);
+    assert!(matches!(
+        kernel
+            .snapshot()
+            .plan_rename_block(&key("main.recite"), position(1, 4), "renamed"),
+        Err(AuthoringEditError::Incomplete {
+            class: QueryClass::BlockDefinitions,
+            ..
+        })
+    ));
+}
+
+#[test]
+fn unrelated_incomplete_block_definitions_refuse_qualified_stub() {
+    let kernel = project_kernel([
+        SavedDocument::new(key("main.recite"), ":: source\n-> target.recite::missing\n"),
+        SavedDocument::new(key("target.recite"), ":: target\n"),
+        SavedDocument::new(key("broken.recite"), "::\n"),
+    ]);
+    assert!(matches!(
+        kernel
+            .snapshot()
+            .plan_create_block_stub(&key("main.recite"), position(2, 23)),
+        Err(AuthoringEditError::Incomplete {
+            class: QueryClass::BlockDefinitions,
+            ..
+        })
     ));
 }
 
