@@ -23,7 +23,7 @@ export class ExtensionController {
     this.restartPolicy = new RestartPolicy(options.restartDelaysMs);
     this.client = undefined;
     this.restartPromise = undefined;
-    this.restartQueued = false;
+    this.restartRevision = 0;
     this.restartTimer = undefined;
     this.stableRunTimer = undefined;
     this.stopping = false;
@@ -277,26 +277,29 @@ export class ExtensionController {
   }
 
   async restart() {
-    this.restartQueued = true;
+    this.restartRevision += 1;
     if (this.restartPromise) return this.restartPromise;
     this.restartPromise = (async () => {
+      let restartRevision;
       do {
-        this.restartQueued = false;
         this.stopping = true;
         this.clearStableReset();
         await this.client?.stop();
         this.client = undefined;
         this.stopping = false;
+        restartRevision = this.restartRevision;
         const outcome = await this.start();
         this.handleStartOutcome(outcome);
         // A failed start already owns a bounded retry schedule. A queued
         // configuration change will be read by that retry; do not start a
         // second recovery path outside the restart budget.
         if (outcome.kind !== StartupOutcomeKind.Started) break;
-      } while (this.restartQueued && !this.disposed);
+        // Capture the revision after stopping the old client. Changes made
+        // while it was stopping are included by this start; only changes
+        // after that snapshot need a follow-up restart.
+      } while (this.restartRevision !== restartRevision && !this.disposed);
     })().finally(() => {
       this.restartPromise = undefined;
-      this.restartQueued = false;
     });
     return this.restartPromise;
   }
