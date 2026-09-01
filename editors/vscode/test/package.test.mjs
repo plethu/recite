@@ -31,7 +31,7 @@ test("the declared VS Code floor uses a plain JavaScript message projection", as
   assert.match(generated, /^\/\/ Generated from .*\.ftl/m);
 });
 
-test("source message ownership rejects a hard-coded visible literal", async () => {
+test("source message ownership rejects literals and comment/string decoys", async () => {
   const entries = await Promise.all((await readdir(path.join(packageRoot, "src")))
     .filter((name) => name.endsWith(".js") && name !== "messages.js")
     .map(async (name) => [name, await readFile(path.join(packageRoot, "src", name), "utf8")]));
@@ -39,11 +39,34 @@ test("source message ownership rejects a hard-coded visible literal", async () =
     entries, SOURCE_MESSAGE_IDS, projectedMessages
   ));
   const hostile = entries.map(([name, source]) => [name, name === "edit-commands.js"
-    ? source.replace('clientMessage(this.api, "lsp-client-action-stale")', '"Document changed"')
+    ? source.replace('clientMessage(this.api, "lsp-client-action-stale")',
+      '// clientMessage(this.api, "lsp-client-action-stale")\n'
+      + '/* clientMessage(this.api, "lsp-client-action-stale") */\n'
+      + '"clientMessage(this.api, \\\"lsp-client-action-stale\\\")"')
     : source]);
   assert.throws(() => assertSourceMessageOwnership(
     hostile, SOURCE_MESSAGE_IDS, projectedMessages
-  ), /source message use must cover exactly the owned IDs|every clientMessage call/);
+  ), /source message use must cover exactly the owned IDs|every clientMessage call|visible host output/);
+});
+
+test("every visible host output boundary rejects a newly added literal", async () => {
+  const entries = await Promise.all((await readdir(path.join(packageRoot, "src")))
+    .filter((name) => name.endsWith(".js") && name !== "messages.js")
+    .map(async (name) => [name, await readFile(path.join(packageRoot, "src", name), "utf8")]));
+  const injections = [
+    ["controller.js", "this.output.append(message)", "this.output.append(\"English literal\")"],
+    ["controller.js", "clientMessage(this.api, \"lsp-client-start-failed\", error.message)", "\"English literal\""],
+    ["extension.js", "clientMessage(vscode, \"lsp-client-display-name\")", "\"English literal\""],
+    ["edit-commands.js", "clientMessage(this.api, \"lsp-client-action-stale\")", "\"English literal\""]
+  ];
+  for (const [file, original, replacement] of injections) {
+    const hostile = entries.map(([name, source]) => [name, name === file
+      ? source.replace(original, replacement)
+      : source]);
+    assert.throws(() => assertSourceMessageOwnership(
+      hostile, SOURCE_MESSAGE_IDS, projectedMessages
+    ), /visible host output/);
+  }
 });
 
 test("packaging safety rejects symlink escapes, including intermediate paths", async () => {

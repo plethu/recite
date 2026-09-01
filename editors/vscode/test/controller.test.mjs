@@ -307,6 +307,38 @@ test("a capacity-one projected response never returns an evicted command", async
   await controller.dispose();
 });
 
+test("retired command outcomes stay bounded and expire to unknown", async () => {
+  const messages = [];
+  const api = hostApi({ isTrusted: () => true, onDidGrantWorkspaceTrust: () => ({ dispose() {} }) });
+  const controller = new ExtensionController(api, {
+    append() {},
+    appendLine(value) { messages.push(value); }
+  }, { delete() {} }, {
+    maxEditCommands: 1,
+    maxRetiredCommands: 1,
+    editCommandTtlMs: 1_000,
+    retiredCommandTtlMs: 15,
+    createClient: () => new FakeClient()
+  });
+  await controller.start();
+
+  for (let index = 0; index < 10_000; index += 1) {
+    controller.createEditCommand(`Action ${index}`, { reciteVersionGuard: () => true });
+  }
+  assert.ok(controller.editCommands.commands.size <= 1);
+  assert.ok(controller.editCommands.retired.size <= 1);
+  const beforeExpiry = controller.createEditCommand("Before expiry", {
+    reciteVersionGuard: () => true
+  });
+  controller.createEditCommand("Current", { reciteVersionGuard: () => true });
+  await new Promise((resolve) => setTimeout(resolve, 30));
+  assert.equal(await api.commands.executeCommand(
+    beforeExpiry.command, ...beforeExpiry.arguments
+  ), false);
+  assert.equal(messages.at(-1), "Recite code action is no longer available.");
+  await controller.dispose();
+});
+
 test("document close reports a closed command instead of an unknown ID", async () => {
   const messages = [];
   const document = {

@@ -4,6 +4,7 @@ import { clientMessage } from "./messages.js";
 const APPLY_CODE_ACTION_COMMAND = "recite.applyCodeAction";
 const EDIT_COMMAND_TTL_MS = 30_000;
 const MAX_EDIT_COMMANDS = 128;
+const MAX_RETIRED_COMMANDS = 128;
 
 export class EditCommandRegistry {
   constructor(api, output, options = {}) {
@@ -11,6 +12,10 @@ export class EditCommandRegistry {
     this.output = output;
     this.ttlMs = Math.max(1, options.editCommandTtlMs ?? EDIT_COMMAND_TTL_MS);
     this.maxCommands = Math.max(1, Math.floor(options.maxEditCommands ?? MAX_EDIT_COMMANDS));
+    this.retiredTtlMs = Math.max(1, options.retiredCommandTtlMs ?? this.ttlMs);
+    this.maxRetiredCommands = Math.max(1, Math.min(MAX_RETIRED_COMMANDS, Math.floor(
+      options.maxRetiredCommands ?? this.maxCommands
+    )));
     this.commands = new Map();
     this.retired = new Map();
     this.nextId = 1;
@@ -54,7 +59,7 @@ export class EditCommandRegistry {
     const key = String(id);
     const entry = this.commands.get(key);
     if (!entry) {
-      this.reportFailure(this.retired.get(key) ?? "unknown");
+      this.reportFailure(this.retired.get(key)?.reason ?? "unknown");
       return false;
     }
     this.commands.delete(key);
@@ -88,6 +93,9 @@ export class EditCommandRegistry {
     for (const [id, entry] of this.commands) {
       if (entry.expiresAt <= now) this.retire(id, "expired");
     }
+    for (const [id, entry] of this.retired) {
+      if (entry.expiresAt <= now) this.retired.delete(id);
+    }
     this.schedulePrune();
   }
 
@@ -95,6 +103,7 @@ export class EditCommandRegistry {
     if (this.expiryTimer) clearTimeout(this.expiryTimer);
     this.expiryTimer = undefined;
     const nextExpiry = [...this.commands.values()]
+      .concat([...this.retired.values()])
       .reduce((next, entry) => Math.min(next, entry.expiresAt), Infinity);
     if (!Number.isFinite(nextExpiry)) return;
     this.expiryTimer = setTimeout(() => {
@@ -106,7 +115,10 @@ export class EditCommandRegistry {
 
   retire(id, reason) {
     this.commands.delete(id);
-    this.retired.set(id, reason);
+    this.retired.set(id, { reason, expiresAt: Date.now() + this.retiredTtlMs });
+    while (this.retired.size > this.maxRetiredCommands) {
+      this.retired.delete(this.retired.keys().next().value);
+    }
   }
 
   reportFailure(reason) {
