@@ -112,7 +112,9 @@ export async function generateMessageProjections(packageRoot, options = {}) {
     target: path.resolve(packageRoot, relative)
   }));
   for (const destination of destinations) {
-    await assertSafeDestination(packageRoot, destination.relative, fileSystem);
+    destination.originallyExisted = await assertSafeDestination(
+      packageRoot, destination.relative, fileSystem
+    );
   }
 
   let stageRoot;
@@ -130,12 +132,17 @@ export async function generateMessageProjections(packageRoot, options = {}) {
       destination.stagePath = stagePath;
       destination.backupPath = path.join(backupDirectory, destination.relative);
       await fileSystem.mkdir(path.dirname(destination.backupPath), { recursive: true });
-      await assertSafeAbsent(destination.backupPath, fileSystem);
-      await fileSystem.copyFile(destination.target, destination.backupPath);
+      if (destination.originallyExisted) {
+        await assertSafeAbsent(destination.backupPath, fileSystem);
+        await fileSystem.copyFile(destination.target, destination.backupPath);
+      }
     }
 
     for (const destination of destinations) {
-      await assertSafeDestination(packageRoot, destination.relative, fileSystem);
+      const stillExists = await assertSafeDestination(packageRoot, destination.relative, fileSystem);
+      if (stillExists !== destination.originallyExisted) {
+        throw new Error(`projection changed during update: ${destination.relative}`);
+      }
     }
 
     try {
@@ -176,6 +183,7 @@ async function assertSafeDestination(packageRoot, relative, fileSystem) {
     try {
       stat = await fileSystem.lstat(current);
     } catch (error) {
+      if (index === components.length - 1 && error?.code === "ENOENT") return false;
       throw new Error(`projection path is missing: ${path.relative(root, current)}`, { cause: error });
     }
     if (stat.isSymbolicLink()) throw new Error(`refusing symlink in projection path: ${current}`);
@@ -186,6 +194,7 @@ async function assertSafeDestination(packageRoot, relative, fileSystem) {
       throw new Error(`projection target is not a regular file: ${current}`);
     }
   }
+  return true;
 }
 
 async function assertSafeAbsent(file, fileSystem) {
@@ -201,7 +210,9 @@ async function rollbackProjectionUpdate(backedUp, fileSystem, originalError) {
   try {
     for (const destination of backedUp.toReversed()) {
       await fileSystem.rm(destination.target, { force: true });
-      await fileSystem.rename(destination.backupPath, destination.target);
+      if (destination.originallyExisted) {
+        await fileSystem.rename(destination.backupPath, destination.target);
+      }
     }
   } catch (rollbackError) {
     throw new Error("failed to roll back VS Code message projections", {
