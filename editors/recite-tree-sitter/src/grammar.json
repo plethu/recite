@@ -75,6 +75,15 @@
                   "type": "ALIAS",
                   "content": {
                     "type": "SYMBOL",
+                    "name": "_final_blank_line"
+                  },
+                  "named": true,
+                  "value": "blank_line"
+                },
+                {
+                  "type": "ALIAS",
+                  "content": {
+                    "type": "SYMBOL",
                     "name": "_final_comment_line"
                   },
                   "named": true,
@@ -985,6 +994,10 @@
           "name": "newline"
         }
       ]
+    },
+    "_final_blank_line": {
+      "type": "SYMBOL",
+      "name": "indent"
     },
     "_final_comment_line": {
       "type": "SEQ",

@@ -79,6 +79,7 @@ const sourceLines = ($) => choice(
   $.prose_line,
 );
 const finalLine = ($) => optional(choice(
+  alias($._final_blank_line, $.blank_line),
   alias($._final_comment_line, $.comment_line),
   alias($._final_block_statement, $.block_statement),
   alias($._final_line_statement, $.line_statement),
@@ -121,6 +122,7 @@ module.exports = grammar({
     plural_line: ($) => pluralLine($, $.newline),
     prose_line: ($) => proseLine($, $.newline),
 
+    _final_blank_line: ($) => $.indent,
     _final_comment_line: ($) => commentLine($),
     _final_block_statement: ($) => blockStatement($),
     _final_line_statement: ($) => lineStatement($),

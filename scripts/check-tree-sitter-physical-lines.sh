@@ -78,6 +78,20 @@ if [[ "$(grep -Fc '(blank_line' <<<"$boundary_output")" -ne 2 ]]; then
   sed -n '1,100p' <<<"$boundary_output" >&2
   exit 1
 fi
+parse_clean final-blank-space blank_line '   '
+parse_clean final-blank-tab blank_line $'\t'
+parse_clean final-blank-mixed blank_line $' \t '
+parse_clean final-blank-after-statement blank_line $':: source default\n  '
+parse_clean final-blank-lf blank_line $'  \n'
+parse_clean final-blank-crlf blank_line $'  \r\n'
+spaced_adjacent_file="$scratch/spaced-adjacent.recite"
+printf '%s' ':: first :: second' > "$spaced_adjacent_file"
+spaced_adjacent_output="$(tree-sitter parse --grammar-path "$grammar_dir" "$spaced_adjacent_file" 2>&1)" || true
+if ! grep -Eq '\((ERROR|MISSING)( |\))' <<<"$spaced_adjacent_output"; then
+  echo "same-line statements with horizontal spacing were accepted without a physical separator" >&2
+  sed -n '1,100p' <<<"$spaced_adjacent_output" >&2
+  exit 1
+fi
 boundary_captures="$scratch/boundary-captures.txt"
 tree-sitter query --grammar-path "$grammar_dir" --captures \
   "$grammar_dir/queries/highlights.scm" "$boundary_file" > "$boundary_captures"

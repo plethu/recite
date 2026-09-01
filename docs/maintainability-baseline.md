@@ -210,7 +210,7 @@ production suppressions must carry a narrow scope and rationale.
 | `crates/recite-compiler/tests/validation/participation.rs` | 424 | test/support | compiler/tests | cohesive | #168: participation-aware validation completeness and all-complete compatibility coverage |
 | `crates/recite-ui/tests/contract.rs` | 475 | test/support | ui/tests | review | #51: typed client projection and argument parity coverage remains one inventory contract suite |
 | `.agents/skills/recite-github-pm/scripts/check-pr-review-gates.sh` | 470 | tooling | agent-workflow | exception | #197: split review-gate orchestration into focused policy helpers |
-| `editors/recite-tree-sitter/grammar.js` | 367 | production | tree-sitter/grammar | cohesive | Grammar source owns syntax and recovery rules alongside the named node declarations |
+| `editors/recite-tree-sitter/grammar.js` | 369 | production | tree-sitter/grammar | cohesive | Grammar source owns syntax and recovery rules alongside the named node declarations |
 | `editors/vscode/src/controller.js` | 319 | production | vscode/controller | review | #51: controller retains lifecycle coordination while restart policy, startup outcomes, and transport boundaries are extracted |
 | `editors/vscode/src/lsp-client.js` | 279 | production | vscode/lsp-client | review | #51: client retains protocol request lifecycle while framed transport owns writes and teardown |
 | `editors/vscode/scripts/message-projections.mjs` | 303 | tooling | vscode/projections | review | #51: inventory parsing, typed placeholder lowering, and projection installation remain one checked update boundary |
