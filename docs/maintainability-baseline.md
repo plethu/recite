@@ -118,7 +118,7 @@ production suppressions must carry a narrow scope and rationale.
 | `crates/recite-lsp/src/tests/availability/completion.rs` | 373 | test/support | lsp/tests | review | #176: contextual selector completion coverage |
 | `crates/recite-benchmarks/src/report/mod.rs` | 389 | production | benchmarks | cohesive | Report aggregation boundary |
 | `crates/recite-benchmarks/src/report/fixture.rs` | 387 | production | benchmarks | cohesive | Fixture report model |
-| `crates/recite-cli/src/dialogue_locale/catalog.rs` | 267 | production | cli/localisation | review | #180: catalogue loading and one-call plural resolution remain a cohesive provider boundary |
+| `crates/recite-cli/src/dialogue_locale/catalog.rs` | 284 | production | cli/localisation | review | #180/#191: catalogue loading and validated plural-arm evidence remain a cohesive provider boundary |
 | `crates/recite-cli/src/runtime_fixture/trace/model.rs` | 263 | production | cli/runtime-fixture | review | #180: trace output model keeps localized templates and structured metadata distinct |
 | `crates/recite-godot/src/adapter.rs` | 361 | production | godot | review | Host adapter lifecycle boundary |
 | `crates/recite-lsp/src/server.rs` | 398 | production | lsp/server | review | #164: request dispatch and protocol lifecycle remain the server boundary; error taxonomy and watcher registration are split into focused modules |
@@ -130,7 +130,10 @@ production suppressions must carry a narrow scope and rationale.
 | `crates/recite-core/src/schema/source/export/basic.rs` | 284 | production | core/schema | cohesive | Deterministic JSON export for basic schema declarations |
 | `crates/recite-core/src/schema/source/lower/mod.rs` | 306 | production | core/schema | review | TOML source normalization and shared canonical lowering entrypoint |
 | `crates/recite-runtime/src/traversal/availability.rs` | 370 | production | runtime/traversal | cohesive | Deterministic availability traversal |
-| `crates/recite-runtime/src/traversal/interpolation.rs` | 400 | production | runtime/traversal | cohesive | #179/#180: typed interpolation and plural localisation after provider lookup |
+| `crates/recite-runtime/src/traversal/interpolation.rs` | 433 | production | runtime/traversal | exception | #179/#180/#191: typed interpolation and plural localisation retain the provider arm-boundary handoff |
+| `crates/recite-runtime/src/preview/driver.rs` | 251 | production | runtime/preview | review | #191: preview event projection carries validated plural-arm evidence into snapshot state |
+| `crates/recite-runtime/src/preview/snapshot_validation.rs` | 261 | production | runtime/preview | review | #191: snapshot prompt validation keeps plural provenance and arm bounds mutually consistent |
+| `crates/recite-runtime/tests/preview_snapshot.rs` | 399 | test/support | runtime/preview | review | #191: hostile preview snapshot and plural-arm wire coverage |
 | `crates/recite-core/src/schema/manifest/raw.rs` | 391 | production | core/schema | cohesive | Lossless raw manifest model |
 | `crates/recite-compiler/src/compile/builder/rows.rs` | 353 | production | compiler | cohesive | Compiled row construction |
 | `crates/recite-compiler/src/pot.rs` | 366 | production | compiler/localisation | follow-up | #164: consume shared authoring analysis |
