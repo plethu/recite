@@ -21,13 +21,7 @@ cp "$repo_root/fixtures/recite/valid/core_language_spike.recite" "$fixture_repo/
 cp "$repo_root/fixtures/recite/invalid/parser_marker_leading_prose.recite" "$fixture_repo/fixtures/recite/invalid/"
 cp "$repo_root/fixtures/schema/valid/generated_manifest.json" "$fixture_repo/fixtures/schema/valid/"
 cp "$repo_root/fixtures/schema/valid/full_manifest.json" "$fixture_repo/fixtures/schema/valid/"
-cp "$repo_root/crates/recite-lsp/tests/editor_parity.rs" "$fixture_repo/crates/recite-lsp/tests/"
-cp "$repo_root/crates/recite-lsp/tests/editor_parity_features.rs" "$fixture_repo/crates/recite-lsp/tests/"
-cp "$repo_root/crates/recite-cli/tests/dialogue_locale.rs" "$fixture_repo/crates/recite-cli/tests/"
-cp "$repo_root/crates/recite-compiler/tests/authoring_build.rs" "$fixture_repo/crates/recite-compiler/tests/"
-cp "$repo_root/crates/recite-compiler/tests/authoring_catalog_summary.rs" "$fixture_repo/crates/recite-compiler/tests/"
-cp "$repo_root/crates/recite-compiler/tests/authoring_build/status_projection.rs" \
-  "$fixture_repo/crates/recite-compiler/tests/authoring_build/"
+cp -R "$repo_root/tests/editor-parity/cargo-fixture/." "$fixture_repo/"
 chmod +x "$fixture_repo/scripts/check-editor-parity.sh"
 
 git -C "$fixture_repo" init -q -b main
@@ -36,6 +30,10 @@ git -C "$fixture_repo" config user.email fixture@example.invalid
 git -C "$fixture_repo" config commit.gpgsign false
 git -C "$fixture_repo" add .
 git -C "$fixture_repo" commit -q -m initial
+(
+  cd "$fixture_repo"
+  cargo generate-lockfile --quiet
+)
 
 run_checker() {
   (cd "$fixture_repo" && scripts/check-editor-parity.sh)
@@ -81,6 +79,14 @@ elif mutation == "stale-evidence":
 elif mutation == "stale-module-evidence":
     capability = next(capability for capability in contract["capabilities"] if capability["id"] == "command.structured.results")
     capability["expected_evidence"]["command"] = "cargo test --locked -p recite-compiler --test authoring_build invented::projects_every_lifecycle_state_with_stable_fields"
+elif mutation == "disconnected-module":
+    fixture_repo = Path(path).parents[2]
+    root = fixture_repo / "crates/recite-compiler/tests/authoring_build.rs"
+    source = root.read_text(encoding="utf-8")
+    declaration = '#[path = "authoring_build/status_projection.rs"]\nmod status_projection;\n'
+    if declaration not in source:
+        raise SystemExit("status projection module declaration was not present")
+    root.write_text(source.replace(declaration, "", 1), encoding="utf-8")
 elif mutation == "reciprocity":
     artifact = next(artifact for artifact in contract["artifacts"] if artifact["id"] == "vscode-vsix")
     artifact["clients"].remove("vscode")
@@ -146,8 +152,9 @@ expect_failure duplicate "capabilities IDs must be unique"
 expect_failure malformed "evidence command must name a cargo integration test and filter"
 expect_failure stale-evidence "evidence command does not name an existing runnable test"
 expect_failure stale-module-evidence "evidence command does not name an existing runnable test"
+expect_failure disconnected-module "evidence command does not name an existing runnable test discovered by Cargo"
 expect_failure reciprocity "artifact vscode-vsix client list must exactly reciprocate"
 expect_failure topology "VS Code and VSCodium must share one VSIX artifact topology"
+expect_failure symlink-artifact-component "artifact vscode-vsix path must not traverse symlink component"
 expect_failure symlink "scenario lsp-stdio-baseline fixture must not be a symlink"
 expect_failure symlink-component "scenario lsp-stdio-baseline fixture must not traverse symlink component"
-expect_failure symlink-artifact-component "artifact vscode-vsix path must not traverse symlink component"

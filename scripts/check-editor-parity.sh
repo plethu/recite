@@ -35,8 +35,11 @@ document="$repo_root/docs/editor-parity-contract.md"
 
 python3 - "$repo_root" "$fixture" "$document" <<'PY'
 import json
+import hashlib
+import os
 import re
 import shlex
+import subprocess
 import sys
 from pathlib import Path
 
@@ -96,6 +99,41 @@ canonical_allowlist = {
 
 resolved_root = repo_root.resolve()
 
+def source_fingerprint():
+    # Cargo can retain a test binary when a source mutation shares its
+    # timestamp with the previous build. Include source contents in the target
+    # path so each source graph is listed from a fresh Cargo target while an
+    # unchanged checkout still reuses its compiled test targets.
+    digest = hashlib.sha256()
+    ignored_directories = {".git", "target", "node_modules"}
+    included_suffixes = {".lock", ".rs", ".toml"}
+    for directory, directory_names, file_names in os.walk(repo_root):
+        directory_path = Path(directory)
+        directory_names[:] = [
+            name
+            for name in directory_names
+            if name not in ignored_directories
+            and not (directory_path / name).is_symlink()
+        ]
+        for name in sorted(file_names):
+            candidate = directory_path / name
+            if candidate.is_symlink():
+                continue
+            if candidate.suffix not in included_suffixes and candidate.name not in {"build.rs"}:
+                continue
+            relative = candidate.relative_to(repo_root)
+            digest.update(relative.as_posix().encode("utf-8"))
+            digest.update(b"\0")
+            digest.update(candidate.read_bytes())
+            digest.update(b"\0")
+    return digest.hexdigest()
+
+
+cargo_target_base = Path(os.environ.get("CARGO_TARGET_DIR", str(repo_root / "target")))
+if not cargo_target_base.is_absolute():
+    cargo_target_base = repo_root / cargo_target_base
+cargo_target_dir = cargo_target_base / "editor-parity" / source_fingerprint()
+
 def symlink_component(path):
     try:
         relative = path.relative_to(repo_root)
@@ -129,28 +167,80 @@ def require_repo_file(path, label):
     require(resolved.is_file(), f"{label} does not exist: {path}")
     return candidate, resolved
 
-def registered_test_paths(test_file):
-    source_files = [(test_file, ())]
-    module_dir = test_file.with_suffix("")
-    if module_dir.is_dir() and not module_dir.is_symlink():
-        for source_file in sorted(module_dir.rglob("*.rs")):
-            require_no_symlink_components(source_file, f"evidence source {source_file.relative_to(repo_root)}")
-            if source_file.is_file() and not source_file.is_symlink():
-                relative = source_file.relative_to(module_dir)
-                parts = list(relative.parts)
-                module_parts = parts[:-1] if parts[-1] == "mod.rs" else parts[:-1] + [Path(parts[-1]).stem]
-                source_files.append((source_file, tuple(module_parts)))
-    test_pattern = re.compile(
-        r"#\s*\[\s*(?:[A-Za-z_][A-Za-z0-9_]*::)*test\s*\]\s*(?:#\s*\[[^]]+\]\s*)*"
-        r"(?:pub\s+)?fn\s+([A-Za-z_][A-Za-z0-9_]*)\s*\("
-    )
-    registered = set()
-    for source_file, module_parts in source_files:
-        source = source_file.read_text(encoding="utf-8")
-        for match in test_pattern.finditer(source):
-            registered.add("::".join((*module_parts, match.group(1))))
-    require(bool(registered), f"evidence target has no registered runnable tests: {test_file.relative_to(repo_root)}")
-    return registered
+def cargo_test_list(package, target, test_filter=None):
+    command = [
+        os.environ.get("CARGO", "cargo"),
+        "test",
+        "--locked",
+        "-p",
+        package,
+        "--test",
+        target,
+        "--",
+        "--list",
+    ]
+    if test_filter is not None:
+        command.extend([test_filter, "--exact"])
+    try:
+        result = subprocess.run(
+            command,
+            cwd=repo_root,
+            capture_output=True,
+            text=True,
+            encoding="utf-8",
+            errors="replace",
+            env={
+                **os.environ,
+                "CARGO_TERM_COLOR": "never",
+                "CARGO_TARGET_DIR": str(cargo_target_dir),
+            },
+            timeout=120,
+            check=False,
+        )
+    except (OSError, subprocess.TimeoutExpired) as error:
+        require(
+            False,
+            f"cargo test discovery failed for {package}/{target}: {error}",
+        )
+        return set()
+    if result.returncode != 0:
+        output = (result.stdout + result.stderr).strip().splitlines()
+        detail = output[-1] if output else "no cargo output"
+        suffix = " exact selection" if test_filter is not None else " test list"
+        require(
+            False,
+            f"cargo test discovery failed for {package}/{target}{suffix}: {detail}",
+        )
+        return set()
+    return {
+        line[: -len(": test")].strip()
+        for line in result.stdout.splitlines()
+        if line.rstrip().endswith(": test") and line[: -len(": test")].strip()
+    }
+
+
+cargo_test_list_cache = {}
+cargo_exact_selection_cache = {}
+
+
+def discovered_test_paths(package, target):
+    key = (package, target)
+    if key not in cargo_test_list_cache:
+        discovered = cargo_test_list(package, target)
+        require(
+            bool(discovered),
+            f"evidence target has no Cargo-discovered runnable tests: {package}/{target}",
+        )
+        cargo_test_list_cache[key] = discovered
+    return cargo_test_list_cache[key]
+
+
+def exact_test_selection(package, target, test_filter):
+    key = (package, target, test_filter)
+    if key not in cargo_exact_selection_cache:
+        selected = cargo_test_list(package, target, test_filter)
+        cargo_exact_selection_cache[key] = selected
+    return cargo_exact_selection_cache[key]
 
 for scenario_id, scenario in scenario_map.items():
     paths = scenario.get("canonical_fixtures")
@@ -351,8 +441,16 @@ for capability_id, capability in capability_map.items():
                 require_no_symlink_components(test_file, f"capability {capability_id} evidence target")
                 require(test_file.is_file() and not test_file.is_symlink(), f"capability {capability_id} evidence target does not exist: {evidence_target}")
                 if test_file.is_file() and not test_file.is_symlink():
-                    registered = registered_test_paths(test_file)
-                    require(test_filter in registered, f"capability {capability_id} evidence command does not name an existing runnable test: {test_filter}")
+                    registered = discovered_test_paths(package, target)
+                    require(
+                        test_filter in registered,
+                        f"capability {capability_id} evidence command does not name an existing runnable test discovered by Cargo: {test_filter}",
+                    )
+                    selected = exact_test_selection(package, target, test_filter)
+                    require(
+                        selected == {test_filter},
+                        f"capability {capability_id} evidence command does not select exactly one Cargo test: {test_filter}",
+                    )
     artifact = evidence.get("artifact")
     if artifact is not None:
         require(artifact in artifact_map, f"capability {capability_id} references unknown evidence artifact {artifact}")
