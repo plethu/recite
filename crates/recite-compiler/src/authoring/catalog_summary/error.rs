@@ -1,0 +1,64 @@
+use recite_core::LocaleId;
+
+use super::CatalogIdentity;
+
+/// Invalid input to a dialogue catalogue coverage or fallback projection.
+#[derive(Clone, Debug, Eq, PartialEq, thiserror::Error)]
+#[non_exhaustive]
+pub enum CatalogSummaryError {
+    #[error("catalog identity must not be empty")]
+    EmptyCatalogIdentity,
+    #[error("expected catalogue context must not be empty")]
+    EmptyExpectedContext,
+    #[error("expected catalogue source text must not be empty")]
+    EmptyExpectedSourceText,
+    #[error("expected catalogue plural source text must not be empty")]
+    EmptyExpectedPluralSourceText,
+    #[error("expected catalogue repeats context `{context}` and source `{source_text}`")]
+    DuplicateExpectedEntry {
+        context: String,
+        source_text: String,
+    },
+    #[error("catalogue identity `{identity:?}` is repeated")]
+    DuplicateCatalog { identity: CatalogIdentity },
+    #[error(
+        "catalogues `{first:?}` and `{second:?}` provide conflicting translations for context `{context}` and source `{source_text}`"
+    )]
+    CatalogEntryConflict {
+        first: Box<CatalogIdentity>,
+        second: Box<CatalogIdentity>,
+        context: String,
+        source_text: String,
+    },
+    #[error(
+        "catalogues `{first:?}` and `{second:?}` declare conflicting Plural-Forms for locale `{locale}`"
+    )]
+    CatalogPluralFormsConflict {
+        first: Box<CatalogIdentity>,
+        second: Box<CatalogIdentity>,
+        locale: LocaleId,
+        first_forms: Box<str>,
+        second_forms: Box<str>,
+    },
+    #[error(
+        "catalogue `{identity:?}` declares Language `{language}`, which does not match its identity"
+    )]
+    CatalogLocaleMismatch {
+        identity: CatalogIdentity,
+        language: LocaleId,
+    },
+    #[error("locale `{locale}` is not a valid BCP-47 language tag")]
+    InvalidLocale { locale: String },
+    #[error("catalogue fallback locale `{locale}` repeats and forms a fallback cycle")]
+    FallbackCycle { locale: LocaleId },
+    #[error("catalogue fallback candidate `{candidate:?}` is repeated")]
+    DuplicateCandidate { candidate: String },
+    #[error("catalogue variant candidate policy must not be empty")]
+    EmptyVariantCandidates,
+    #[error("catalogue variant must not be empty")]
+    EmptyVariant,
+    #[error("catalogue variant `{variant}` must not contain `&`")]
+    InvalidVariant { variant: String },
+    #[error("source-only catalogue resolution cannot carry locale candidates")]
+    SourceOnlyHasLocaleCandidates,
+}

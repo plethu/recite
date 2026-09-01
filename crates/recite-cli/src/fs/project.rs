@@ -2,6 +2,8 @@ use std::collections::BTreeMap;
 use std::fs;
 use std::path::{Path, PathBuf};
 
+use recite_compiler::{AuthoringKernel, AuthoringRequest, SavedDocument, SnapshotGeneration};
+use recite_config::discover_project;
 use recite_core::{
     Diagnostic, DiagnosticArgumentValue, ProjectFreshnessInput, ProjectManifest,
     ProjectManifestSource, ProjectSchema, SchemaFingerprint,
@@ -10,38 +12,66 @@ use recite_core::{
     },
 };
 
-use super::paths::{display_path, resolve_project_path};
+use super::paths::resolve_project_path;
 use super::project_asset::decode_project_asset;
 use super::project_diagnostics::project_diagnostic;
 use super::project_sources::read_project_sources;
 use super::schema::{LoadedSchema, load_schema};
 use crate::error::CliError;
 
-const PROJECT_MANIFEST_FILE: &str = "recite.project.toml";
-
 pub(crate) fn validate_project(project_root: PathBuf) -> Result<Vec<Diagnostic>, CliError> {
-    let manifest_path = project_root.join(PROJECT_MANIFEST_FILE);
-    let manifest_source = fs::read_to_string(&manifest_path).map_err(|source| CliError::Read {
-        path: manifest_path.clone(),
-        source,
-    })?;
-    let manifest_file = display_path(&manifest_path);
-    let report = ProjectManifest::load_str_with_spans(manifest_file, &manifest_source);
-    let mut diagnostics = report.diagnostics;
-    let Some(manifest_source) = report.source else {
-        return Ok(diagnostics);
+    validate_project_with_mode(project_root, ProjectValidationMode::Authoring)
+}
+
+pub(crate) fn check_fresh(project_root: PathBuf) -> Result<Vec<Diagnostic>, CliError> {
+    validate_project_with_mode(project_root, ProjectValidationMode::FreshnessOnly)
+}
+
+#[derive(Clone, Copy)]
+enum ProjectValidationMode {
+    Authoring,
+    FreshnessOnly,
+}
+
+fn validate_project_with_mode(
+    project_root: PathBuf,
+    mode: ProjectValidationMode,
+) -> Result<Vec<Diagnostic>, CliError> {
+    let report = match discover_project(&project_root) {
+        Ok(report) => report,
+        Err(recite_config::ProjectDiscoveryError::Malformed { diagnostics, .. }) => {
+            return Ok(diagnostics);
+        }
+        Err(source) => return Ok(vec![source.as_core_diagnostic()]),
     };
+    let discovered = report.manifest();
+    let project_root = discovered.project_root().to_owned();
+    let manifest_source = discovered.source();
+    let mut diagnostics = report
+        .diagnostics()
+        .iter()
+        .map(recite_config::DiscoveryDiagnostic::as_core_diagnostic)
+        .collect::<Vec<_>>();
 
     let loaded_schema = load_project_schema(&project_root, manifest_source.manifest())?;
     diagnostics.extend(loaded_schema.diagnostics.iter().cloned());
     diagnostics.extend(validate_project_manifest_source(
-        &manifest_source,
+        manifest_source,
         loaded_schema.schema.as_ref(),
     ));
 
+    if matches!(mode, ProjectValidationMode::Authoring) {
+        diagnostics.extend(validate_project_sources(
+            report.documents(),
+            loaded_schema.schema.as_ref(),
+            loaded_schema.diagnostics.is_empty(),
+            report.is_complete(),
+        )?);
+    }
+
     diagnostics.extend(validate_project_asset_freshness(
         &project_root,
-        &manifest_source,
+        manifest_source,
         match (
             loaded_schema.schema.as_ref(),
             loaded_schema.diagnostics.is_empty(),
@@ -53,6 +83,38 @@ pub(crate) fn validate_project(project_root: PathBuf) -> Result<Vec<Diagnostic>,
     )?);
 
     Ok(diagnostics)
+}
+
+fn validate_project_sources(
+    documents: &[recite_config::DiscoveredDocument],
+    schema: Option<&ProjectSchema>,
+    schema_is_valid: bool,
+    project_complete: bool,
+) -> Result<Vec<Diagnostic>, CliError> {
+    let saved_documents = documents
+        .iter()
+        .map(|document| SavedDocument::new(document.key().clone(), document.text().to_owned()));
+    let mut kernel = match (schema, schema_is_valid) {
+        (Some(schema), true) => AuthoringKernel::with_schema(schema.clone()),
+        _ => AuthoringKernel::new(),
+    };
+    let request = AuthoringRequest::new(
+        SnapshotGeneration::initial(),
+        saved_documents,
+        std::iter::empty(),
+    );
+    if project_complete {
+        kernel.apply(request)
+    } else {
+        kernel.apply_with_incomplete_project(request)
+    }
+    .map_err(|error| {
+        CliError::Compile(recite_compiler::CompileError::InvalidValidatedInput(
+            format!("authoring kernel rejected initial project request: {error}"),
+        ))
+    })?;
+
+    Ok(kernel.snapshot().diagnostics().iter().cloned().collect())
 }
 
 /// Validate decoded project assets against a parsed project manifest.

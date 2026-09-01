@@ -1,8 +1,9 @@
 use super::super::super::diagnostics::{INVALID_TYPE_REFERENCE, MALFORMED_SHAPE};
 use super::super::super::raw::RawMetadataOccurrence;
 use super::selector::{selector_metadata_target, validate_metadata_key_target};
+use super::{AvailabilityReasonContext, CandidateMetadataContext};
 use crate::schema::schema_diagnostic;
-use crate::schema::{MetadataOccurrence, ProjectSchema, SchemaProjectionSelector, SchemaTypeRef};
+use crate::schema::{MetadataOccurrence, SchemaProjectionSelector, SchemaTypeRef};
 use crate::{Diagnostic, DiagnosticArgumentValue};
 
 macro_rules! text_args {
@@ -64,54 +65,49 @@ pub(super) fn validate_candidate_source(
     }
 }
 
-#[expect(
-    clippy::too_many_arguments,
-    reason = "projection metadata validation carries selector, schema, type, and span context"
-)]
 pub(super) fn validate_candidate_metadata_source(
     diagnostics: &mut Vec<Diagnostic>,
-    schema: &ProjectSchema,
-    projector: &str,
-    input: &str,
-    selector: &SchemaProjectionSelector,
-    key: &str,
-    occurrence: &MetadataOccurrence,
-    type_ref: &SchemaTypeRef,
+    context: CandidateMetadataContext<'_>,
     span: crate::SourceSpan,
 ) {
-    let Some(target) = selector_metadata_target(selector) else {
+    let Some(target) = selector_metadata_target(context.selector) else {
         diagnostics.push(schema_diagnostic(
             MALFORMED_SHAPE,
             "diagnostic-schema-001-projection-candidate-no-target",
-            format!("projector '{projector}' input '{input}' reads candidate metadata but its selector has no metadata target"),
+            format!("projector '{}' input '{}' reads candidate metadata but its selector has no metadata target", context.projector, context.input),
             span,
-            text_args!("projector" => projector, "input" => input),
+            text_args!("projector" => context.projector, "input" => context.input),
         ));
         return;
     };
-    let Some(metadata) =
-        validate_metadata_key_target(diagnostics, schema, projector, key, target, span.clone())
-    else {
+    let Some(metadata) = validate_metadata_key_target(
+        diagnostics,
+        context.schema,
+        context.projector,
+        context.key,
+        target,
+        span.clone(),
+    ) else {
         return;
     };
-    if !metadata.repeatable && !matches!(occurrence, MetadataOccurrence::Only) {
+    if !metadata.repeatable && !matches!(context.occurrence, MetadataOccurrence::Only) {
         diagnostics.push(schema_diagnostic(
             MALFORMED_SHAPE,
             "diagnostic-schema-001-projection-occurrence-repeat",
-            format!("projector '{projector}' input '{input}' uses repeated occurrence '{}' for non-repeatable metadata key '{key}'", occurrence_name(occurrence)),
+            format!("projector '{}' input '{}' uses repeated occurrence '{}' for non-repeatable metadata key '{}'", context.projector, context.input, occurrence_name(context.occurrence), context.key),
             span.clone(),
-            text_args!("projector" => projector, "input" => input, "occurrence" => occurrence_name(occurrence), "key" => key),
+            text_args!("projector" => context.projector, "input" => context.input, "occurrence" => occurrence_name(context.occurrence), "key" => context.key),
         ));
     }
-    match occurrence {
+    match context.occurrence {
         MetadataOccurrence::All => {
-            let SchemaTypeRef::Array(inner) = type_ref else {
+            let SchemaTypeRef::Array(inner) = context.type_ref else {
                 diagnostics.push(schema_diagnostic(
                     MALFORMED_SHAPE,
                     "diagnostic-schema-001-projection-occurrence-all-type",
-                    format!("projector '{projector}' input '{input}' uses occurrence 'all' but has non-array type {}", super::reference::type_ref_name(type_ref)),
+                    format!("projector '{}' input '{}' uses occurrence 'all' but has non-array type {}", context.projector, context.input, super::reference::type_ref_name(context.type_ref)),
                     span,
-                    text_args!("projector" => projector, "input" => input, "type_ref" => super::reference::type_ref_name(type_ref)),
+                    text_args!("projector" => context.projector, "input" => context.input, "type_ref" => super::reference::type_ref_name(context.type_ref)),
                 ));
                 return;
             };
@@ -119,80 +115,77 @@ pub(super) fn validate_candidate_metadata_source(
                 diagnostics.push(schema_diagnostic(
                     MALFORMED_SHAPE,
                     "diagnostic-schema-001-projection-candidate-type-mismatch",
-                    format!("projector '{projector}' input '{input}' expects {}, but metadata key '{key}' has {}", super::reference::type_ref_name(type_ref), super::reference::type_ref_name(&metadata.type_ref)),
+                    format!("projector '{}' input '{}' expects {}, but metadata key '{}' has {}", context.projector, context.input, super::reference::type_ref_name(context.type_ref), context.key, super::reference::type_ref_name(&metadata.type_ref)),
                     span,
-                    text_args!("projector" => projector, "input" => input, "expected" => super::reference::type_ref_name(type_ref), "key" => key, "actual" => super::reference::type_ref_name(&metadata.type_ref)),
+                    text_args!("projector" => context.projector, "input" => context.input, "expected" => super::reference::type_ref_name(context.type_ref), "key" => context.key, "actual" => super::reference::type_ref_name(&metadata.type_ref)),
                 ));
             }
         }
-        _ if matches!(type_ref, SchemaTypeRef::Array(_)) => diagnostics.push(schema_diagnostic(
+        _ if matches!(context.type_ref, SchemaTypeRef::Array(_)) => diagnostics.push(schema_diagnostic(
             MALFORMED_SHAPE,
             "diagnostic-schema-001-projection-occurrence-array",
-            format!("projector '{projector}' input '{input}' uses array type {} without occurrence 'all'", super::reference::type_ref_name(type_ref)),
+            format!("projector '{}' input '{}' uses array type {} without occurrence 'all'", context.projector, context.input, super::reference::type_ref_name(context.type_ref)),
             span,
-            text_args!("projector" => projector, "input" => input, "type_ref" => super::reference::type_ref_name(type_ref)),
+            text_args!("projector" => context.projector, "input" => context.input, "type_ref" => super::reference::type_ref_name(context.type_ref)),
         )),
-        _ if *type_ref != metadata.type_ref => diagnostics.push(schema_diagnostic(
+        _ if *context.type_ref != metadata.type_ref => diagnostics.push(schema_diagnostic(
             MALFORMED_SHAPE,
             "diagnostic-schema-001-projection-candidate-type-mismatch",
-            format!("projector '{projector}' input '{input}' expects {}, but metadata key '{key}' has {}", super::reference::type_ref_name(type_ref), super::reference::type_ref_name(&metadata.type_ref)),
+            format!("projector '{}' input '{}' expects {}, but metadata key '{}' has {}", context.projector, context.input, super::reference::type_ref_name(context.type_ref), context.key, super::reference::type_ref_name(&metadata.type_ref)),
             span,
-            text_args!("projector" => projector, "input" => input, "expected" => super::reference::type_ref_name(type_ref), "key" => key, "actual" => super::reference::type_ref_name(&metadata.type_ref)),
+            text_args!("projector" => context.projector, "input" => context.input, "expected" => super::reference::type_ref_name(context.type_ref), "key" => context.key, "actual" => super::reference::type_ref_name(&metadata.type_ref)),
         )),
         _ => {}
     }
 }
 
-#[expect(
-    clippy::too_many_arguments,
-    reason = "availability projection validation carries selector, schema, type, and span context"
-)]
 pub(super) fn validate_availability_reason_arg_source(
     diagnostics: &mut Vec<Diagnostic>,
-    schema: &ProjectSchema,
-    projector: &str,
-    input: &str,
-    selector: &SchemaProjectionSelector,
-    name: &str,
-    type_ref: &SchemaTypeRef,
+    context: AvailabilityReasonContext<'_>,
     span: crate::SourceSpan,
 ) {
-    let SchemaProjectionSelector::AvailabilityReason { reason_id } = selector else {
+    let SchemaProjectionSelector::AvailabilityReason { reason_id } = context.selector else {
         diagnostics.push(schema_diagnostic(
             MALFORMED_SHAPE,
             "diagnostic-schema-001-projection-reason-no-selector",
-            format!("projector '{projector}' input '{input}' reads an availability reason argument but its selector is not availability_reason"),
+            format!("projector '{}' input '{}' reads an availability reason argument but its selector is not availability_reason", context.projector, context.input),
             span,
-            text_args!("projector" => projector, "input" => input),
+            text_args!("projector" => context.projector, "input" => context.input),
         ));
         return;
     };
-    let Some(reason) = schema.availability_reasons.get(reason_id) else {
+    let Some(reason) = context.schema.availability_reasons.get(reason_id) else {
         return;
     };
-    let Some(param) = reason.params.iter().find(|param| param.name == name) else {
+    let Some(param) = reason
+        .params
+        .iter()
+        .find(|param| param.name == context.name)
+    else {
         diagnostics.push(schema_diagnostic(
             INVALID_TYPE_REFERENCE,
             "diagnostic-schema-004-projection-reason-arg",
             format!(
-                "projector '{projector}' input '{input}' references unknown availability reason argument '{name}'"
+                "projector '{}' input '{}' references unknown availability reason argument '{}'",
+                context.projector, context.input, context.name
             ),
             span,
-            text_args!("projector" => projector, "input" => input, "name" => name),
+            text_args!("projector" => context.projector, "input" => context.input, "name" => context.name),
         ));
         return;
     };
-    if &param.type_ref != type_ref {
+    if &param.type_ref != context.type_ref {
         diagnostics.push(schema_diagnostic(
             MALFORMED_SHAPE,
             "diagnostic-schema-001-projection-reason-type",
             format!(
-                "projector '{projector}' input '{input}' expects {}, but availability reason argument '{name}' has {}",
-                super::reference::type_ref_name(type_ref),
+                "projector '{}' input '{}' expects {}, but availability reason argument '{}' has {}",
+                context.projector, context.input, super::reference::type_ref_name(context.type_ref),
+                context.name,
                 super::reference::type_ref_name(&param.type_ref)
             ),
             span,
-            text_args!("projector" => projector, "input" => input, "name" => name, "expected" => super::reference::type_ref_name(type_ref), "actual" => super::reference::type_ref_name(&param.type_ref)),
+            text_args!("projector" => context.projector, "input" => context.input, "name" => context.name, "expected" => super::reference::type_ref_name(context.type_ref), "actual" => super::reference::type_ref_name(&param.type_ref)),
         ));
     }
 }

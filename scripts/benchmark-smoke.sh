@@ -9,9 +9,11 @@ Usage:
 Runs Recite's fast, non-comparative benchmark smoke:
   1. RECITE_BENCH_SCALES=tiny cargo bench --locked -p recite-benchmarks --bench compiler -- 'compiler/.*/tiny' --test
   2. RECITE_BENCH_SCALES=tiny cargo bench --locked -p recite-benchmarks --bench runtime -- 'runtime/.*/tiny' --test
+  3. RECITE_BENCH_SCALES=tiny cargo bench --locked -p recite-benchmarks --bench preview -- 'preview/.*/tiny' --test
 
-The smoke only proves that the tiny compiler and runtime Criterion benchmarks
-build and execute. It does not compare timings or enforce regression thresholds.
+The smoke only proves that the tiny compiler, runtime, and preview Criterion
+benchmarks build and execute. It does not compare timings or enforce regression
+thresholds.
 EOF
 }
 
@@ -59,6 +61,7 @@ run_smoke_target() {
 
 run_smoke_target compiler 'compiler/.*/tiny'
 run_smoke_target runtime 'runtime/.*/tiny'
+run_smoke_target preview 'preview/.*/tiny'
 
 echo
 echo "Recite benchmark smoke passed."

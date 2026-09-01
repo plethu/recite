@@ -1,97 +1,48 @@
-use lsp_types::{
-    CodeAction, CodeActionKind, CodeActionOrCommand, CodeActionParams, Range, TextEdit,
-};
+use lsp_types::{CodeAction, CodeActionKind, CodeActionOrCommand, CodeActionParams};
+use recite_compiler::{AuthoringEditOperation, AuthoringEditPlan, AuthoringSnapshot, SourceRange};
 use recite_ui::{MsgId, UiCatalog};
 
-use super::{CodeActionDocument, end_position, newline_for, ranges_intersect, workspace_edit};
-use crate::summary::BlockReferenceSummary;
+use super::CodeActionDocument;
+use crate::edit_projection::{EditDocument, project_plan};
+use crate::position::lsp_position_to_source;
 
 pub(super) fn actions(
     params: &CodeActionParams,
     document: &CodeActionDocument<'_>,
-    documents: &[CodeActionDocument<'_>],
+    snapshot: &AuthoringSnapshot,
+    documents: &[EditDocument<'_>],
     catalog: &UiCatalog,
 ) -> Vec<CodeActionOrCommand> {
-    if !document.summary.completeness.block_references {
+    let Some(plan) = plan_for_range(snapshot, document, params.range) else {
         return Vec::new();
-    }
-
-    document
-        .summary
-        .block_references
-        .iter()
-        .filter(|reference| {
-            let reference_range = crate::position::span_to_range(document.text, &reference.span);
-            ranges_intersect(params.range, reference_range)
-        })
-        .filter_map(|reference| action(params, reference, document, documents, catalog))
-        .collect()
-}
-
-fn action(
-    params: &CodeActionParams,
-    reference: &BlockReferenceSummary,
-    document: &CodeActionDocument<'_>,
-    documents: &[CodeActionDocument<'_>],
-    catalog: &UiCatalog,
-) -> Option<CodeActionOrCommand> {
-    let target = target_document(reference, document, documents)?;
-    if !target.summary.completeness.block_definitions {
-        return None;
-    }
-    if target
-        .summary
-        .blocks
-        .iter()
-        .any(|block| block.name == reference.block_id)
-    {
-        return None;
-    }
-
-    let position = end_position(target.text);
-    Some(CodeActionOrCommand::CodeAction(CodeAction {
+    };
+    let AuthoringEditOperation::CreateBlockStub { block, .. } = plan.operation() else {
+        return Vec::new();
+    };
+    let Some(edit) = project_plan(&plan, snapshot, documents) else {
+        return Vec::new();
+    };
+    vec![CodeActionOrCommand::CodeAction(CodeAction {
         title: catalog.format_pairs(
             MsgId::LspCodeActionCreateBlockStub,
-            [("block", reference.block_id.as_str())],
+            [("block", block.as_str())],
         ),
         kind: Some(CodeActionKind::QUICKFIX),
         diagnostics: Some(params.context.diagnostics.clone()),
-        edit: Some(workspace_edit(
-            target.uri.clone(),
-            target.summary.version,
-            vec![TextEdit {
-                range: Range {
-                    start: position,
-                    end: position,
-                },
-                new_text: stub_text(target.text, &reference.block_id),
-            }],
-        )),
+        edit: Some(edit),
         ..CodeAction::default()
-    }))
+    })]
 }
 
-fn target_document<'a>(
-    reference: &BlockReferenceSummary,
-    document: &'a CodeActionDocument<'_>,
-    documents: &'a [CodeActionDocument<'_>],
-) -> Option<&'a CodeActionDocument<'a>> {
-    let Some(file) = &reference.file else {
-        return Some(document);
-    };
-    let mut matches = documents
-        .iter()
-        .filter(|document| document.summary.project_relative_path() == Some(file.as_str()));
-    let target = matches.next()?;
-    matches.next().is_none().then_some(target)
-}
-
-fn stub_text(text: &str, block_id: &str) -> String {
-    let newline = newline_for(text);
-    let prefix = if text.is_empty() || text.ends_with('\n') {
-        ""
-    } else {
-        newline
-    };
-    format!("{prefix}:: {block_id}{newline}")
+fn plan_for_range(
+    snapshot: &AuthoringSnapshot,
+    document: &CodeActionDocument<'_>,
+    range: lsp_types::Range,
+) -> Option<AuthoringEditPlan> {
+    let start = lsp_position_to_source(document.source.text, range.start)?;
+    let end = lsp_position_to_source(document.source.text, range.end)?;
+    let source_range = SourceRange::new(start, end);
+    snapshot
+        .plan_create_block_stub_in_range(document.source.key, source_range)
+        .ok()
 }

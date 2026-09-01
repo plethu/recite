@@ -9,7 +9,7 @@ mod wire;
 pub(crate) use fingerprint::canonical_blake3_fingerprint;
 pub use fingerprint::{
     BLAKE3_DIGEST_LEN, ContentFingerprint, FingerprintAlgorithm, FingerprintDigest,
-    SchemaFingerprint, canonical_source_fingerprint,
+    SchemaFingerprint, canonical_compiled_dialogue_fingerprint, canonical_source_fingerprint,
 };
 pub use header::{
     COMPILED_ASSET_FORMAT_VERSION_V0, COMPILER_COMPATIBILITY_VERSION_V0, CompiledAssetEncoding,
@@ -19,7 +19,10 @@ pub use lookup::{
     BlockLookupEntry, BlockLookupTable, ChoiceLookupEntry, ChoiceLookupTable, LineLookupEntry,
     LineLookupTable,
 };
-pub use messagepack::{CompiledAssetDecodeError, decode_compiled_dialogue_messagepack};
+pub use messagepack::{
+    CompiledAssetDecodeError, CompiledAssetEncodeError, decode_compiled_dialogue_messagepack,
+    encode_compiled_dialogue_messagepack,
+};
 pub use rows::{
     CompiledArgument, CompiledAvailabilityReason, CompiledAvailabilityReasonArgBinding,
     CompiledAvailabilityReasonArgValue, CompiledBlock, CompiledChoice, CompiledChoiceEcho,

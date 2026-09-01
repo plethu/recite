@@ -3,6 +3,7 @@ members = [
     "crates/recite-benchmarks",
     "crates/recite-cli",
     "crates/recite-compiler",
+    "crates/recite-config",
     "crates/recite-core",
     "crates/recite-ffi",
     "crates/recite-fixturegen",
@@ -37,12 +38,14 @@ recite-core = { version = "0.1.0", path = "crates/recite-core" }
 recite-ffi = { version = "0.5.0", path = "crates/recite-ffi" }
 recite-parser = { version = "0.1.0", path = "crates/recite-parser" }
 recite-compiler = { version = "0.1.0", path = "crates/recite-compiler" }
+recite-config = { version = "0.1.0", path = "crates/recite-config" }
 recite-fixturegen = { version = "0.1.0", path = "crates/recite-fixturegen" }
 recite-godot = { version = "0.1.0", path = "crates/recite-godot" }
 recite-lsp = { version = "0.1.0", path = "crates/recite-lsp" }
 recite-runtime = { version = "0.1.0", path = "crates/recite-runtime" }
 recite-ui = { version = "0.1.0", path = "crates/recite-ui" }
 blake3 = "1.8.5"
+dirs = "6.0.0"
 # Maintained BSD-3-Clause atomic replacement primitive for Unix and Windows.
 atomic-write-file = "0.3.1"
 clap = { version = "4.5.51", features = ["derive", "string"] }
@@ -66,3 +69,7 @@ toml = "0.9.8"
 toml_edit = { version = "0.25.12", features = ["serde"] }
 unic-langid = { version = "0.9.6", features = ["macros"] }
 unicode-ident = "1.0.22"
+# Unicode normalization for conservative case-insensitive output identities.
+unicode-normalization = "0.1.25"
+# Full Unicode case folding for conservative case-insensitive output identities.
+unicase = "=2.7.0"

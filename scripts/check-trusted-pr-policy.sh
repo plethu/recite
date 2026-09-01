@@ -168,9 +168,17 @@ RECITE_BRANCH_NAME="$head_ref" \
 RECITE_INTEGRATION_LABEL="$labels_integration" \
 RECITE_INTEGRATION_PR="$labels_integration" \
 GITHUB_EVENT_NAME=pull_request \
-GITHUB_HEAD_REF="$head_ref" \
-GITHUB_BASE_REF="$base_ref" \
+  GITHUB_HEAD_REF="$head_ref" \
+  GITHUB_BASE_REF="$base_ref" \
   "$repo_root/scripts/check-git-policy.sh" "$repo_root"
+
+# This checker is also loaded from the trusted base checkout. It reads the
+# fetched PR tree by object reference, so a PR cannot replace or remove the
+# suppression policy that evaluates its own Rust changes.
+RECITE_BASE_REF="$base_sha" \
+RECITE_HEAD_REF=refs/recite/trusted-pr-head \
+  "$repo_root/scripts/check-lint-suppressions.sh" "$base_sha" refs/recite/trusted-pr-head \
+  --policy-revision "$base_sha"
 
 final_pr="$(read_live_pr)" || {
   echo "unable to reread live pull-request metadata" >&2

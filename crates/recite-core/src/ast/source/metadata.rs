@@ -25,12 +25,14 @@ impl From<SourceMetadataScalar> for SourceMetadataValue {
 
 /// One source metadata annotation, preserving spans when available.
 #[derive(Clone, Debug, PartialEq)]
+#[non_exhaustive]
 pub struct SourceMetadataEntry {
     pub key: String,
     pub value: SourceMetadataValue,
     pub source_span: Option<SourceSpan>,
     pub key_span: Option<SourceSpan>,
     pub value_span: Option<SourceSpan>,
+    value_element_spans: Vec<SourceSpan>,
 }
 
 impl SourceMetadataEntry {
@@ -42,6 +44,7 @@ impl SourceMetadataEntry {
             source_span: None,
             key_span: None,
             value_span: None,
+            value_element_spans: Vec::new(),
         }
     }
 
@@ -60,6 +63,17 @@ impl SourceMetadataEntry {
         self.key_span = Some(key_span);
         self.value_span = value_span;
         self
+    }
+
+    #[must_use]
+    pub fn with_value_element_spans(mut self, spans: Vec<SourceSpan>) -> Self {
+        self.value_element_spans = spans;
+        self
+    }
+
+    #[must_use]
+    pub fn value_element_spans(&self) -> &[SourceSpan] {
+        &self.value_element_spans
     }
 }
 

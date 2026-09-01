@@ -3,11 +3,11 @@
 //! This file is the shared code registry for v0 fixed-array field counts and
 //! `[tag, payload]` tag values. The production spec remains the wire
 //! authority; three code/projection surfaces must stay in sync with this
-//! registry:
-//! the compiler encoder (`crates/recite-compiler/src/wire/messagepack*`), the
+//! registry: the core encoder (`crate::compiled::messagepack::encode`), the
 //! core decoder (`crate::compiled::messagepack`), and the documented field
-//! tables in `docs/recite-production-spec.md` §12.2. Any new compiled row,
-//! field, tag, or enum variant updates all of them together.
+//! tables in `docs/recite-production-spec.md` §12.2. The compiler delegates to
+//! that core encoder. Any new compiled row, field, tag, or enum variant updates
+//! all of them together.
 //!
 //! Drift fails close to the change: the tag-surface round-trip test
 //! (`recite-compiler/tests/asset/tag_surface.rs`) catches one-sided

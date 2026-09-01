@@ -13,6 +13,7 @@ name = "recite"
 path = "src/main.rs"
 
 [dependencies]
+atomic-write-file.workspace = true
 clap.workspace = true
 crossterm.workspace = true
 notify.workspace = true
@@ -21,12 +22,16 @@ recite-core.workspace = true
 recite-parser.workspace = true
 recite-compiler.workspace = true
 recite-benchmarks = { version = "0.1.0", path = "../recite-benchmarks" }
+recite-config.workspace = true
 recite-runtime.workspace = true
 recite-ui.workspace = true
 serde.workspace = true
 serde_json.workspace = true
+thiserror.workspace = true
 toml.workspace = true
 unic-langid.workspace = true
+unicode-normalization.workspace = true
+unicase.workspace = true
 
 [dev-dependencies]
 tempfile.workspace = true

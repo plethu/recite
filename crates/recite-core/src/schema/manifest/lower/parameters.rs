@@ -1,22 +1,15 @@
 use std::collections::BTreeSet;
 
 use super::super::raw::RawParameterDefinition;
-use super::super::spans::ManifestSpans;
 use super::super::validate::{
     PendingTypeReference, validate_manifest_name, validate_non_empty_string,
 };
+use super::LoweringContext;
 use crate::schema::{ParameterDefinition, SchemaTypeRef, schema_diagnostic};
 use crate::{Diagnostic, DiagnosticArgumentValue};
 
-#[expect(
-    clippy::too_many_arguments,
-    reason = "parameter lowering carries shared span, validation, and semantic path context"
-)]
 pub(super) fn lower_params_at(
-    file: &str,
-    source: &str,
-    spans: &mut ManifestSpans,
-    diagnostics: &mut Vec<Diagnostic>,
+    context: &mut LoweringContext<'_>,
     owner: &str,
     params: &[RawParameterDefinition],
     pending_type_refs: &mut Vec<PendingTypeReference>,
@@ -32,22 +25,22 @@ pub(super) fn lower_params_at(
             param_path.push(format!("[{index}]"));
             let mut name_path = param_path.clone();
             name_path.push("name".to_owned());
-            let name_span = spans.value_span_at(file, source, &name_path, &param.name);
+            let name_span = context.value_span_at(&name_path, &param.name);
             if validate_non_empty_string(
-                diagnostics,
+                context.diagnostics,
                 "parameter name",
                 &param.name,
                 name_span.clone(),
             ) {
                 validate_manifest_name(
-                    diagnostics,
+                    context.diagnostics,
                     "parameter name",
                     &param.name,
                     name_span.clone(),
                 );
             }
             if !seen.insert(param.name.clone()) {
-                diagnostics.push(schema_diagnostic(
+                context.diagnostics.push(schema_diagnostic(
                     super::super::diagnostics::DUPLICATE_DEFINITION,
                     "diagnostic-schema-003-parameter",
                     format!("{owner} repeats parameter '{}'", param.name),
@@ -66,10 +59,7 @@ pub(super) fn lower_params_at(
             type_path.push("type".to_owned());
             let (mut type_ref, type_ref_span, type_ref_is_valid) =
                 super::types::lower_type_reference_at_with_context(
-                    file,
-                    source,
-                    spans,
-                    diagnostics,
+                    context,
                     &param.type_ref,
                     &type_path,
                     format!(
@@ -82,7 +72,7 @@ pub(super) fn lower_params_at(
                 );
             let type_ref_is_valid = type_ref_is_valid
                 && validate_parameter_type_ref(
-                    diagnostics,
+                    context.diagnostics,
                     owner,
                     param,
                     &mut type_ref,

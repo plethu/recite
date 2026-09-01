@@ -12,6 +12,7 @@ impl FileIdentity {
         }
     }
 
+    #[cfg(any(test, feature = "bench-support"))]
     pub(crate) fn saved_path(&self) -> Option<&Path> {
         match self {
             Self::Saved(identity) => Some(&identity.canonical_path),
@@ -39,7 +40,17 @@ pub(crate) struct OpenFileIdentity {
     pub(crate) uri: Uri,
     pub(crate) saved_path: Option<PathBuf>,
     pub(crate) project_relative_path: Option<String>,
+    pub(crate) scope: OpenFileScope,
 }
-use std::path::{Path, PathBuf};
+
+#[derive(Clone, Copy, Debug, Eq, PartialEq)]
+pub(crate) enum OpenFileScope {
+    Project,
+    Standalone,
+    Excluded,
+}
+#[cfg(any(test, feature = "bench-support"))]
+use std::path::Path;
+use std::path::PathBuf;
 
 use lsp_types::Uri;

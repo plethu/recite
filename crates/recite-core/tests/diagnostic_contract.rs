@@ -4,7 +4,7 @@ use recite_core::{
     DiagnosticArgumentType, DiagnosticArgumentValue, DiagnosticCode,
     DiagnosticPresentationContract, DiagnosticPresentationContractRegistryError,
     DiagnosticPresentationError, DiagnosticPresentationId, DiagnosticSeverity, SourcePosition,
-    SourceSpan, auxiliary_contract_for, contract_for, contracts_for_code,
+    SourceSpan, auxiliary_contract_for, config_contract_for, contract_for, contracts_for_code,
     migrated_diagnostic_presentation_contracts, presentation_for,
     validate_diagnostic_presentation_contracts,
     validate_migrated_diagnostic_presentation_contracts,
@@ -105,6 +105,39 @@ fn migrated_parser_contracts_keep_code_and_presentation_pairs_explicit() {
             .len(),
         contracts.len()
     );
+}
+
+#[test]
+fn invalid_document_key_config_contract_is_typed_and_recordable() {
+    let code = DiagnosticCode::new_static("RECITE_CONFIG117");
+    let contract = config_contract_for(&code).expect("invalid document key contract");
+    assert_eq!(contract.presentation_id().as_str(), "diagnostic-config-117");
+    assert_eq!(
+        contract
+            .arguments()
+            .iter()
+            .map(|argument| (argument.name(), argument.argument_type()))
+            .collect::<Vec<_>>(),
+        [("detail", DiagnosticArgumentType::String)]
+    );
+
+    let diagnostic = recite_core::Diagnostic::error_from_contract(
+        contract,
+        "project source has an invalid document key: document key must use slash separators",
+        SourceSpan::point(
+            "dir\\start.recite",
+            SourcePosition::new(1, 1).expect("valid source position"),
+        ),
+        [(
+            "detail",
+            DiagnosticArgumentValue::String(
+                "project source has an invalid document key: document key must use slash separators"
+                    .to_owned(),
+            ),
+        )],
+    )
+    .expect("config contract arguments are valid");
+    assert!(diagnostic.record().is_ok());
 }
 
 #[test]

@@ -1,56 +1,69 @@
 use super::super::producer::{RawContentFingerprint, RawProducerFingerprint, RawProducerIdentity};
-use super::super::spans::ManifestSpans;
 use super::super::validate::validate_non_empty_string;
+use super::LoweringContext;
+use crate::DiagnosticArgumentValue;
 use crate::schema::{
     ProducerContentFingerprintError, ProducerIdentity, ProducerMetadata,
     producer_content_fingerprint_detailed, schema_diagnostic,
 };
-use crate::{Diagnostic, DiagnosticArgumentValue};
 
 pub(super) use super::producer_provenance::{
     ProvenanceLocation, lower_origin, lower_origin_map, lower_origin_value_map,
     lower_producer_fingerprints, origin_entries, validate_origin_keys,
 };
 
-#[allow(clippy::too_many_arguments)]
+pub(super) struct ProducerMetadataInput {
+    pub(super) producer: Option<RawProducerIdentity>,
+    pub(super) content_fingerprint: Option<RawContentFingerprint>,
+    pub(super) schema_export_version: Option<u32>,
+    pub(super) inclusion_policy: Option<String>,
+    pub(super) producer_fingerprints: Vec<RawProducerFingerprint>,
+    pub(super) allow_duplicate_fingerprints: bool,
+}
+
 pub(super) fn lower_producer_metadata(
-    spans: &mut ManifestSpans,
-    file: &str,
-    source: &str,
-    producer: Option<RawProducerIdentity>,
-    content_fingerprint: Option<RawContentFingerprint>,
-    schema_export_version: Option<u32>,
-    inclusion_policy: Option<String>,
-    producer_fingerprints: Vec<RawProducerFingerprint>,
-    allow_duplicate_fingerprints: bool,
-    diagnostics: &mut Vec<Diagnostic>,
+    context: &mut LoweringContext<'_>,
+    input: ProducerMetadataInput,
 ) -> Option<ProducerMetadata> {
+    let ProducerMetadataInput {
+        producer,
+        content_fingerprint,
+        schema_export_version,
+        inclusion_policy,
+        producer_fingerprints,
+        allow_duplicate_fingerprints,
+    } = input;
     if schema_export_version == Some(0) {
-        diagnostics.push(schema_diagnostic(
+        context.diagnostics.push(schema_diagnostic(
             super::super::diagnostics::MALFORMED_SHAPE,
             "diagnostic-schema-001-producer-export-version",
             "schema_export_version must be greater than zero",
-            spans.root_key_span(file, source, "schema_export_version"),
+            context.root_key_span("schema_export_version"),
             std::iter::empty::<(String, DiagnosticArgumentValue)>(),
         ));
     }
     let producer = producer.and_then(|raw| {
         let kind_valid = validate_non_empty_string(
-            diagnostics,
+            context.diagnostics,
             "manifest producer kind",
             &raw.kind,
-            spans.root_object_value_span(file, source, "producer", "kind"),
+            context.root_object_value_span("producer", "kind"),
         );
         let id_valid = validate_non_empty_string(
-            diagnostics,
+            context.diagnostics,
             "manifest producer id",
             &raw.id,
-            spans.root_object_value_span(file, source, "producer", "id"),
+            context.root_object_value_span("producer", "id"),
         );
-        (kind_valid && id_valid).then_some(ProducerIdentity {
-            kind: raw.kind,
-            id: raw.id,
-        })
+        if !(kind_valid && id_valid) {
+            return None;
+        }
+        match ProducerIdentity::new(raw.kind, raw.id) {
+            Ok(identity) => Some(identity),
+            Err(_) => {
+                unreachable!("producer identity validation must match manifest field validation")
+            }
+        }
     });
     let content_fingerprint = content_fingerprint.and_then(|raw| {
         match producer_content_fingerprint_detailed(raw.algorithm, &raw.value) {
@@ -78,11 +91,11 @@ pub(super) fn lower_producer_metadata(
                         vec![("actual", DiagnosticArgumentValue::Integer(*actual as i64))],
                     ),
                 };
-                diagnostics.push(schema_diagnostic(
+                context.diagnostics.push(schema_diagnostic(
                     super::super::diagnostics::MALFORMED_SHAPE,
                     presentation_id,
                     format!("manifest content_fingerprint is invalid: {error}"),
-                    spans.root_key_span(file, source, "content_fingerprint"),
+                    context.root_key_span("content_fingerprint"),
                     arguments,
                 ));
                 None
@@ -91,22 +104,18 @@ pub(super) fn lower_producer_metadata(
     });
     if let Some(policy) = &inclusion_policy {
         validate_non_empty_string(
-            diagnostics,
+            context.diagnostics,
             "inclusion_policy",
             policy,
-            spans.root_key_span(file, source, "inclusion_policy"),
+            context.root_key_span("inclusion_policy"),
         );
     }
 
     let fingerprints = lower_producer_fingerprints(
-        spans,
-        file,
-        source,
-        diagnostics,
+        context,
         producer_fingerprints,
         &[],
         "manifest",
-        spans.root_key_span(file, source, "producer_fingerprints"),
         allow_duplicate_fingerprints,
     );
     if producer.is_none()

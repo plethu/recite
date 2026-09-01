@@ -333,6 +333,25 @@ diagnostic-project-007-malformed = scene '{$scene_id}' references malformed comp
 diagnostic-project-008 = scene '{$scene_id}' references unknown participant '{$participant}'
 diagnostic-project-008-compiled-asset = scene '{$scene_id}' participant '{$participant}' is not present in compiled asset '{$asset}'
 
+# RECITE_CONFIG101-117
+diagnostic-config-101 = project manifest not found: {$detail}
+diagnostic-config-102 = could not read project manifest: {$detail}
+diagnostic-config-103 = malformed project manifest: {$detail}
+diagnostic-config-104 = unsupported project manifest version: {$detail}
+diagnostic-config-105 = invalid project source root: {$detail}
+diagnostic-config-106 = invalid project exclusion: {$detail}
+diagnostic-config-107 = project source root is missing: {$detail}
+diagnostic-config-108 = could not read project source root: {$detail}
+diagnostic-config-109 = project source root escapes the project: {$detail}
+diagnostic-config-110 = duplicate project source root: {$detail}
+diagnostic-config-111 = overlapping project source root: {$detail}
+diagnostic-config-112 = could not read project source directory: {$detail}
+diagnostic-config-113 = project discovery encountered a non-UTF-8 path: {$detail}
+diagnostic-config-114 = project source symlink escapes the project: {$detail}
+diagnostic-config-115 = project source is not valid UTF-8: {$detail}
+diagnostic-config-116 = project source root is not a directory: {$detail}
+diagnostic-config-117 = project source has an invalid document key: {$detail}
+
 # RECITE_FRESH001
 diagnostic-fresh-001-meaning = A compiled asset was built from an older version of one or more source files.
 diagnostic-fresh-001-cause-001 = The source dialogue changed after the asset was compiled.

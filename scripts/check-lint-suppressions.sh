@@ -1,0 +1,38 @@
+#!/usr/bin/env bash
+set -euo pipefail
+
+usage() {
+  cat <<'EOF'
+Usage:
+  check-lint-suppressions.sh [base-ref [head-ref]] [--full] [--policy-revision ref]
+
+Parses every scanned handwritten Rust file with pinned workspace rustfmt (with
+stdout discarded), then inventories #[allow]/#[expect] attributes with the
+pinned ast-grep Rust parser. It rejects only new or expanded production
+suppressions that do not follow the local policy. Use --full for a
+reporting-only inventory of all tracked Rust source. Run it in the
+maintainability mise environment.
+EOF
+}
+
+if [[ "${1:-}" == "-h" || "${1:-}" == "--help" || "${1:-}" == "help" ]]; then
+  usage
+  exit 0
+fi
+
+repo_root="$(git rev-parse --show-toplevel 2>/dev/null)" || {
+  echo "unable to resolve Git repository root" >&2
+  exit 2
+}
+parser="$repo_root/scripts/check-lint-suppressions.py"
+if [[ ! -f "$parser" ]]; then
+  echo "missing lint suppression parser: $parser" >&2
+  exit 2
+fi
+ast_parser="$repo_root/scripts/lint_suppression_ast.py"
+if [[ ! -f "$ast_parser" ]]; then
+  echo "missing structural lint suppression parser: $ast_parser" >&2
+  exit 2
+fi
+cd "$repo_root"
+exec python3 "$parser" "$@"

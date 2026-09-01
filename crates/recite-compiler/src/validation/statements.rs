@@ -4,6 +4,7 @@ use recite_core::{
 };
 
 use super::metadata::MetadataValidationContext;
+use super::participation::ValidationCompleteness;
 use super::state::Validator;
 use crate::diagnostics::{self, ArgumentOwner as A, SourceSpanOwner as O};
 
@@ -11,18 +12,26 @@ mod interpolation;
 
 impl<'a> Validator<'a> {
     pub(super) fn validate_block(&mut self, source_file: &'a SourceFile, block: &'a Block) {
-        self.validate_span(source_file, &block.span, O::Block);
-        self.validate_metadata(
-            source_file,
-            MetadataValidationContext {
-                target: MetadataTarget::Block,
-                line_speaker: None,
-                block_default_speaker: None,
-                metadata: &block.metadata,
-            },
-        );
-        self.validate_block_id(source_file, block);
-        self.validate_default_block(block);
+        if self.participation.ast_structure() == ValidationCompleteness::Complete {
+            self.validate_span(source_file, &block.span, O::Block);
+        }
+        if self.participation.ast_structure() == ValidationCompleteness::Complete
+            && self.participation.metadata() == ValidationCompleteness::Complete
+        {
+            self.validate_metadata(
+                source_file,
+                MetadataValidationContext {
+                    target: MetadataTarget::Block,
+                    line_speaker: None,
+                    block_default_speaker: None,
+                    metadata: &block.metadata,
+                },
+            );
+        }
+        if self.participation.block_definitions() == ValidationCompleteness::Complete {
+            self.validate_block_id(source_file, block);
+            self.validate_default_block(block);
+        }
     }
     pub(super) fn validate_statement_with_block(
         &mut self,
@@ -34,7 +43,9 @@ impl<'a> Validator<'a> {
             Statement::Line(line) => {
                 self.validate_line(source_file, line, block_default_speaker);
                 for statement in &line.statements {
-                    if !matches!(statement, Statement::Choice(_)) {
+                    if self.participation.ast_structure() == ValidationCompleteness::Complete
+                        && !matches!(statement, Statement::Choice(_))
+                    {
                         self.diagnostics
                             .push(diagnostics::unsupported_line_child_statement(
                                 line, statement,
@@ -50,10 +61,12 @@ impl<'a> Validator<'a> {
             Statement::Choice(choice) => {
                 self.validate_choice(source_file, choice);
                 for statement in &choice.statements {
-                    self.diagnostics
-                        .push(diagnostics::unsupported_choice_child_statement(
-                            choice, statement,
-                        ));
+                    if self.participation.ast_structure() == ValidationCompleteness::Complete {
+                        self.diagnostics
+                            .push(diagnostics::unsupported_choice_child_statement(
+                                choice, statement,
+                            ));
+                    }
                     self.validate_statement_with_block(
                         source_file,
                         statement,
@@ -94,7 +107,9 @@ impl<'a> Validator<'a> {
             }
             Statement::Effect(effect) => self.validate_effect(source_file, effect),
             Statement::Comment(comment) => {
-                self.validate_span(source_file, &comment.span, O::Comment);
+                if self.participation.ast_structure() == ValidationCompleteness::Complete {
+                    self.validate_span(source_file, &comment.span, O::Comment);
+                }
             }
         }
     }
@@ -104,24 +119,37 @@ impl<'a> Validator<'a> {
         line: &'a Line,
         block_default_speaker: Option<&'a str>,
     ) {
-        self.validate_span(source_file, &line.span, O::Line);
-        self.validate_source_text(source_file, &line.source_text, O::LineSourceText);
-        if let Some(plural_source_text) = &line.plural_source_text {
-            self.validate_plural_line(source_file, line, plural_source_text);
-        } else {
-            self.validate_interpolation(&line.source_text, &line.interpolation_bindings);
+        if self.participation.ast_structure() == ValidationCompleteness::Complete {
+            self.validate_span(source_file, &line.span, O::Line);
+            self.validate_source_text(
+                source_file,
+                &line.source_text,
+                O::LineSourceText,
+                self.participation,
+            );
+            if let Some(plural_source_text) = &line.plural_source_text {
+                self.validate_plural_line(source_file, line, plural_source_text);
+            } else {
+                self.validate_interpolation(&line.source_text, &line.interpolation_bindings);
+            }
         }
-        self.validate_metadata(
-            source_file,
-            MetadataValidationContext {
-                target: MetadataTarget::Line,
-                line_speaker: line.speaker.as_ref().map(|speaker| speaker.as_str()),
-                block_default_speaker,
-                metadata: &line.metadata,
-            },
-        );
+        if self.participation.ast_structure() == ValidationCompleteness::Complete
+            && self.participation.metadata() == ValidationCompleteness::Complete
+        {
+            self.validate_metadata(
+                source_file,
+                MetadataValidationContext {
+                    target: MetadataTarget::Line,
+                    line_speaker: line.speaker.as_ref().map(|speaker| speaker.as_str()),
+                    block_default_speaker,
+                    metadata: &line.metadata,
+                },
+            );
+        }
 
-        self.validate_line_localisable_id(line);
+        if self.participation.stable_ids() == ValidationCompleteness::Complete {
+            self.validate_line_localisable_id(line);
+        }
     }
 
     pub(crate) fn validate_line_localisable_id(&mut self, line: &'a Line) {
@@ -138,7 +166,9 @@ impl<'a> Validator<'a> {
             return;
         };
 
-        if let Some(first_span) = self.localisable_ids.get(id.as_str()) {
+        if let Some(first_span) = self.localisable_ids.get(id.as_str())
+            && self.duplicate_id_is_in_scope(first_span, &line.span)
+        {
             self.diagnostics
                 .push(diagnostics::duplicate_line_id(line, id, first_span.clone()));
         } else {
@@ -146,43 +176,66 @@ impl<'a> Validator<'a> {
         }
     }
     pub(super) fn validate_choice(&mut self, source_file: &'a SourceFile, choice: &'a Choice) {
-        self.validate_span(source_file, &choice.span, O::Choice);
-        self.validate_source_text(source_file, &choice.source_text, O::ChoiceSourceText);
-        self.validate_interpolation(&choice.source_text, &choice.interpolation_bindings);
-        self.validate_metadata(
-            source_file,
-            MetadataValidationContext {
-                target: MetadataTarget::Choice,
-                line_speaker: None,
-                block_default_speaker: None,
-                metadata: &choice.metadata,
-            },
-        );
-        self.validate_choice_echo(choice);
-        if let Some(requirement) = &choice.availability_requirement {
-            self.validate_span(
+        if self.participation.ast_structure() == ValidationCompleteness::Complete {
+            self.validate_span(source_file, &choice.span, O::Choice);
+            self.validate_source_text(
                 source_file,
-                &requirement.span,
-                O::ChoiceAvailabilityRequirement,
+                &choice.source_text,
+                O::ChoiceSourceText,
+                self.participation,
             );
-            self.validate_condition_expression(source_file, &requirement.condition);
-            self.validate_boolean_condition_schema(&requirement.condition);
+            self.validate_interpolation(&choice.source_text, &choice.interpolation_bindings);
         }
-        if let Some(reason) = &choice.availability_reason_override {
-            self.validate_span(source_file, &reason.span, O::ChoiceAvailabilityReason);
-            self.validate_span(source_file, &reason.id_span, O::ChoiceAvailabilityReasonId);
-            if let Some(span) = &reason.argument_span {
-                self.validate_span(source_file, span, O::ChoiceAvailabilityReasonArguments);
+        if self.participation.ast_structure() == ValidationCompleteness::Complete
+            && self.participation.metadata() == ValidationCompleteness::Complete
+        {
+            self.validate_metadata(
+                source_file,
+                MetadataValidationContext {
+                    target: MetadataTarget::Choice,
+                    line_speaker: None,
+                    block_default_speaker: None,
+                    metadata: &choice.metadata,
+                },
+            );
+        }
+        if self.participation.stable_ids() == ValidationCompleteness::Complete {
+            self.validate_choice_echo(choice);
+        }
+        if self.participation.ast_structure() == ValidationCompleteness::Complete
+            && self.participation.condition_functions() == ValidationCompleteness::Complete
+        {
+            if let Some(requirement) = &choice.availability_requirement {
+                self.validate_span(
+                    source_file,
+                    &requirement.span,
+                    O::ChoiceAvailabilityRequirement,
+                );
+                self.validate_condition_expression(source_file, &requirement.condition);
+                self.validate_boolean_condition_schema(&requirement.condition);
             }
+            if let Some(reason) = &choice.availability_reason_override {
+                self.validate_span(source_file, &reason.span, O::ChoiceAvailabilityReason);
+                self.validate_span(source_file, &reason.id_span, O::ChoiceAvailabilityReasonId);
+                if let Some(span) = &reason.argument_span {
+                    self.validate_span(source_file, span, O::ChoiceAvailabilityReasonArguments);
+                }
+            }
+            self.validate_choice_availability_reason(choice);
         }
-        self.validate_choice_availability_reason(choice);
 
-        self.validate_choice_localisable_id(choice);
+        if self.participation.stable_ids() == ValidationCompleteness::Complete {
+            self.validate_choice_localisable_id(choice);
+        }
 
         if let Some(target) = &choice.target {
-            self.validate_span(source_file, &target.span, O::ChoiceTarget);
-            self.validate_reference(source_file, &target.target, &target.span);
-        } else {
+            if self.participation.ast_structure() == ValidationCompleteness::Complete {
+                self.validate_span(source_file, &target.span, O::ChoiceTarget);
+            }
+            if self.participation.block_references() == ValidationCompleteness::Complete {
+                self.validate_reference(source_file, &target.target, &target.span);
+            }
+        } else if self.participation.ast_structure() == ValidationCompleteness::Complete {
             self.diagnostics
                 .push(diagnostics::missing_choice_target(choice));
         }
@@ -192,7 +245,9 @@ impl<'a> Validator<'a> {
             let Some(id) = choice.id.as_ref() else {
                 return;
             };
-            if let Some(first_span) = self.localisable_ids.get(id.as_str()) {
+            if let Some(first_span) = self.localisable_ids.get(id.as_str())
+                && self.duplicate_id_is_in_scope(first_span, &choice.span)
+            {
                 self.diagnostics.push(diagnostics::duplicate_choice_id(
                     choice,
                     id,
@@ -213,42 +268,74 @@ impl<'a> Validator<'a> {
             });
         }
     }
+
+    fn duplicate_id_is_in_scope(
+        &self,
+        first_span: &recite_core::SourceSpan,
+        current_span: &recite_core::SourceSpan,
+    ) -> bool {
+        self.project_complete || first_span.file == current_span.file
+    }
     pub(super) fn validate_divert(&mut self, source_file: &'a SourceFile, divert: &'a Divert) {
-        self.validate_span(source_file, &divert.span, O::Divert);
-        self.validate_reference(source_file, &divert.target, &divert.span);
+        if self.participation.ast_structure() == ValidationCompleteness::Complete {
+            self.validate_span(source_file, &divert.span, O::Divert);
+        }
+        if self.participation.block_references() == ValidationCompleteness::Complete {
+            self.validate_reference(source_file, &divert.target, &divert.span);
+        }
     }
     pub(super) fn validate_if_branch(&mut self, source_file: &'a SourceFile, branch: &'a IfBranch) {
-        self.validate_span(source_file, &branch.span, O::IfBranch);
-        self.validate_condition_expression(source_file, &branch.condition);
-        self.validate_boolean_condition_schema(&branch.condition);
+        if self.participation.ast_structure() == ValidationCompleteness::Complete {
+            self.validate_span(source_file, &branch.span, O::IfBranch);
+        }
+        if self.participation.ast_structure() == ValidationCompleteness::Complete
+            && self.participation.condition_functions() == ValidationCompleteness::Complete
+        {
+            self.validate_condition_expression(source_file, &branch.condition);
+            self.validate_boolean_condition_schema(&branch.condition);
+        }
     }
     pub(super) fn validate_match_branch(
         &mut self,
         source_file: &'a SourceFile,
         branch: &'a MatchBranch,
     ) {
-        self.validate_span(source_file, &branch.span, O::MatchBranch);
-        self.validate_condition_call(source_file, &branch.scrutinee);
-        self.validate_match_scrutinee_schema(&branch.scrutinee);
+        if self.participation.ast_structure() == ValidationCompleteness::Complete {
+            self.validate_span(source_file, &branch.span, O::MatchBranch);
+        }
+        if self.participation.ast_structure() == ValidationCompleteness::Complete
+            && self.participation.condition_functions() == ValidationCompleteness::Complete
+        {
+            self.validate_condition_call(source_file, &branch.scrutinee);
+            self.validate_match_scrutinee_schema(&branch.scrutinee);
+        }
     }
     pub(super) fn validate_match_arm(&mut self, source_file: &'a SourceFile, arm: &'a MatchArm) {
-        self.validate_span(source_file, &arm.span, O::MatchArm);
+        if self.participation.ast_structure() == ValidationCompleteness::Complete {
+            self.validate_span(source_file, &arm.span, O::MatchArm);
+        }
     }
     pub(super) fn validate_effect(&mut self, source_file: &'a SourceFile, effect: &'a Effect) {
-        self.validate_span(source_file, &effect.span, O::Effect);
-        if let Some(span) = &effect.mode_span {
-            self.validate_span(source_file, span, O::EffectMode);
+        if self.participation.ast_structure() == ValidationCompleteness::Complete {
+            self.validate_span(source_file, &effect.span, O::Effect);
+            if let Some(span) = &effect.mode_span {
+                self.validate_span(source_file, span, O::EffectMode);
+            }
+            if let Some(span) = &effect.function_span {
+                self.validate_span(source_file, span, O::EffectFunction);
+            }
+            if let Some(span) = &effect.call_span {
+                self.validate_span(source_file, span, O::EffectCall);
+            }
+            for span in &effect.arg_spans {
+                self.validate_span(source_file, span, O::EffectArgument);
+            }
         }
-        if let Some(span) = &effect.function_span {
-            self.validate_span(source_file, span, O::EffectFunction);
+        if self.participation.ast_structure() == ValidationCompleteness::Complete
+            && self.participation.effect_functions() == ValidationCompleteness::Complete
+        {
+            self.validate_arguments(&effect.args, effect.span.clone(), A::Effect);
+            self.validate_effect_schema(source_file, effect);
         }
-        if let Some(span) = &effect.call_span {
-            self.validate_span(source_file, span, O::EffectCall);
-        }
-        for span in &effect.arg_spans {
-            self.validate_span(source_file, span, O::EffectArgument);
-        }
-        self.validate_arguments(&effect.args, effect.span.clone(), A::Effect);
-        self.validate_effect_schema(source_file, effect);
     }
 }

@@ -1,22 +1,18 @@
 use recite_core::{MetadataEntry, ScalarValue, SourceSpan, Value};
 use recite_runtime::{
-    ChoiceAvailability, ChoiceAvailabilityReason, ChoiceAvailabilityReasonArg,
-    ChoiceAvailabilityReasonOrigin, ChoiceAvailabilityReasonTree, ChoiceAvailabilityReasonValue,
-    ConditionArgument, DialogueChoice, DialogueEffectArgument, DialogueEffectRequest, DialogueLine,
-    DialogueTrace,
+    DialogueChoice, DialogueEffectArgument, DialogueEffectRequest, DialogueLine, PreviewTrace,
 };
 
+use super::availability::trace_availability;
 use super::format::effect_mode_name;
 use super::model::{
-    TraceChoice, TraceChoiceAvailability, TraceChoiceAvailabilityReason,
-    TraceChoiceAvailabilityReasonArg, TraceChoiceAvailabilityReasonOrigin,
-    TraceChoiceAvailabilityReasonTree, TraceChoiceAvailabilityReasonValue, TraceEffect, TraceLine,
-    TraceMetadata, TracePlural, TracePluralAttempt, TraceScalar, TraceSourceSpan, TraceValue,
+    TraceChoice, TraceEffect, TraceLine, TraceMetadata, TracePlural, TracePluralAttempt,
+    TraceScalar, TraceSourceSpan, TraceValue,
 };
 
 pub(in crate::runtime_fixture) fn trace_line(
     line: &DialogueLine,
-    dialogue_trace: &DialogueTrace,
+    dialogue_trace: &PreviewTrace,
 ) -> TraceLine {
     TraceLine {
         id: line.id.as_str().to_owned(),
@@ -29,7 +25,7 @@ pub(in crate::runtime_fixture) fn trace_line(
         metadata: line.metadata.iter().map(trace_metadata).collect(),
         plural: dialogue_trace
             .plural_line(line.id.as_str())
-            .map(trace_plural),
+            .map(|trace| trace_plural(trace.clone())),
     }
 }
 
@@ -74,7 +70,7 @@ fn trace_plural(trace: recite_runtime::PluralLineTrace) -> TracePlural {
 
 pub(in crate::runtime_fixture) fn trace_choice(
     choice: &DialogueChoice,
-    dialogue_trace: &DialogueTrace,
+    dialogue_trace: &PreviewTrace,
 ) -> TraceChoice {
     TraceChoice {
         id: choice.id.as_str().to_owned(),
@@ -88,118 +84,6 @@ pub(in crate::runtime_fixture) fn trace_choice(
             .primary_reason
             .as_ref()
             .map(|reason| reason.text.clone()),
-    }
-}
-
-fn trace_availability(
-    availability: &ChoiceAvailability,
-    dialogue_trace: &DialogueTrace,
-) -> TraceChoiceAvailability {
-    TraceChoiceAvailability {
-        is_available: availability.is_available,
-        primary_reason: availability
-            .primary_reason
-            .as_ref()
-            .map(|reason| trace_availability_reason(reason, dialogue_trace)),
-        reason_tree: availability
-            .reason_tree
-            .as_ref()
-            .map(|tree| trace_availability_reason_tree(tree, dialogue_trace)),
-    }
-}
-
-fn trace_availability_reason(
-    reason: &ChoiceAvailabilityReason,
-    dialogue_trace: &DialogueTrace,
-) -> TraceChoiceAvailabilityReason {
-    TraceChoiceAvailabilityReason {
-        id: reason.id.as_str().to_owned(),
-        source_text: reason.source_text.clone(),
-        localized_template: dialogue_trace
-            .localized_availability_template(reason.id.as_str())
-            .unwrap_or_else(|| reason.source_text.clone()),
-        text: reason.text.clone(),
-        origin: reason.origin.as_ref().map(trace_availability_reason_origin),
-        args: reason
-            .args
-            .iter()
-            .map(trace_availability_reason_arg)
-            .collect(),
-    }
-}
-
-fn trace_availability_reason_origin(
-    origin: &ChoiceAvailabilityReasonOrigin,
-) -> TraceChoiceAvailabilityReasonOrigin {
-    match origin {
-        ChoiceAvailabilityReasonOrigin::ConditionCall { function, args } => {
-            TraceChoiceAvailabilityReasonOrigin::ConditionCall {
-                function: function.clone(),
-                args: args.iter().map(trace_availability_reason_value).collect(),
-            }
-        }
-        ChoiceAvailabilityReasonOrigin::RequirementExpression { source_text } => {
-            TraceChoiceAvailabilityReasonOrigin::RequirementExpression {
-                source_text: source_text.clone(),
-            }
-        }
-    }
-}
-
-fn trace_availability_reason_arg(
-    arg: &ChoiceAvailabilityReasonArg,
-) -> TraceChoiceAvailabilityReasonArg {
-    TraceChoiceAvailabilityReasonArg {
-        name: arg.name.clone(),
-        value: trace_availability_reason_value(&arg.value),
-    }
-}
-
-fn trace_availability_reason_value(
-    value: &ChoiceAvailabilityReasonValue,
-) -> TraceChoiceAvailabilityReasonValue {
-    match value {
-        ChoiceAvailabilityReasonValue::Identifier(value) => {
-            TraceChoiceAvailabilityReasonValue::Identifier(value.clone())
-        }
-        ChoiceAvailabilityReasonValue::String(value) => {
-            TraceChoiceAvailabilityReasonValue::String(value.clone())
-        }
-        ChoiceAvailabilityReasonValue::Integer(value) => {
-            TraceChoiceAvailabilityReasonValue::Integer(*value)
-        }
-        ChoiceAvailabilityReasonValue::Float(value) => {
-            TraceChoiceAvailabilityReasonValue::Float(*value)
-        }
-        ChoiceAvailabilityReasonValue::Boolean(value) => {
-            TraceChoiceAvailabilityReasonValue::Boolean(*value)
-        }
-    }
-}
-
-fn trace_availability_reason_tree(
-    tree: &ChoiceAvailabilityReasonTree,
-    dialogue_trace: &DialogueTrace,
-) -> TraceChoiceAvailabilityReasonTree {
-    match tree {
-        ChoiceAvailabilityReasonTree::All(children) => TraceChoiceAvailabilityReasonTree::All(
-            children
-                .iter()
-                .map(|tree| trace_availability_reason_tree(tree, dialogue_trace))
-                .collect(),
-        ),
-        ChoiceAvailabilityReasonTree::Any(children) => TraceChoiceAvailabilityReasonTree::Any(
-            children
-                .iter()
-                .map(|tree| trace_availability_reason_tree(tree, dialogue_trace))
-                .collect(),
-        ),
-        ChoiceAvailabilityReasonTree::Reason(reason) => TraceChoiceAvailabilityReasonTree::Reason(
-            trace_availability_reason(reason, dialogue_trace),
-        ),
-        ChoiceAvailabilityReasonTree::RequirementSourceText(source_text) => {
-            TraceChoiceAvailabilityReasonTree::RequirementSourceText(source_text.clone())
-        }
     }
 }
 
@@ -243,18 +127,6 @@ fn trace_source_span(span: &SourceSpan) -> TraceSourceSpan {
         start_column: span.start.column(),
         end_line: span.end.map(|end| end.line()),
         end_column: span.end.map(|end| end.column()),
-    }
-}
-
-pub(in crate::runtime_fixture) fn trace_condition_argument(
-    argument: ConditionArgument<'_>,
-) -> TraceScalar {
-    match argument {
-        ConditionArgument::Identifier(value) => TraceScalar::Identifier(value.to_owned()),
-        ConditionArgument::String(value) => TraceScalar::String(value.to_owned()),
-        ConditionArgument::Integer(value) => TraceScalar::Integer(value),
-        ConditionArgument::Float(value) => TraceScalar::Float(value),
-        ConditionArgument::Boolean(value) => TraceScalar::Boolean(value),
     }
 }
 

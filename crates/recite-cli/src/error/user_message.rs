@@ -1,6 +1,7 @@
 use crate::error::CliError;
 use crate::fs::display_path;
 use crate::i18n::{Messages, MsgId};
+use recite_config::ConfigError;
 use recite_ui::{UiArg, UiArgs};
 
 #[cfg(test)]
@@ -18,18 +19,10 @@ impl CliError {
             ),
             Self::PlayInterrupted => messages.text(MsgId::CliErrorPlayInterrupted),
             Self::PlayTuiRequiresTerminal => messages.text(MsgId::CliErrorPlayTuiRequiresTerminal),
-            Self::TuiConfigRead { path, source } => messages.format(
-                MsgId::CliErrorUiConfigRead,
-                [("path", display_path(path)), ("source", source.to_string())],
-            ),
-            Self::TuiConfigToml { path, source } => messages.format(
-                MsgId::CliErrorUiConfigToml,
-                [("path", display_path(path)), ("source", source.to_string())],
-            ),
-            Self::UiLocaleInvalid { path, locale } => messages.format(
-                MsgId::CliErrorUiLocaleInvalid,
-                [("path", display_path(path)), ("locale", locale.clone())],
-            ),
+            Self::UserConfig { source } => user_config_message(source, messages),
+            Self::ProjectDiscovery { source } => {
+                messages.format(MsgId::CliErrorGeneric, [("message", source.to_string())])
+            }
             Self::DialogueCatalogConflict {
                 path,
                 locale,
@@ -117,6 +110,16 @@ impl CliError {
                     ("prompt_keys", prompt_keys.join("|")),
                 ],
             ),
+            Self::AmbiguousFixtureChoice {
+                block,
+                prompt_count,
+            } => {
+                let args = UiArgs::from([
+                    ("block".to_owned(), UiArg::from(block.clone())),
+                    ("prompt_count".to_owned(), UiArg::from(*prompt_count)),
+                ]);
+                messages.format_args(MsgId::CliErrorAmbiguousFixtureChoice, &args)
+            }
             Self::FixtureToml { path, source } => messages.format(
                 MsgId::CliErrorFixtureToml,
                 [("path", display_path(path)), ("source", source.to_string())],
@@ -152,13 +155,7 @@ impl CliError {
             Self::TraceJson(error) => {
                 messages.format(MsgId::CliErrorTraceJson, [("error", error.to_string())])
             }
-            Self::UnknownPrompt { line, choices } => messages.format(
-                MsgId::CliErrorUnknownPrompt,
-                [
-                    ("line", line.clone().unwrap_or_else(|| "<none>".to_owned())),
-                    ("choices", choices.join(", ")),
-                ],
-            ),
+            Self::SchemaInspection(error) => error.to_user_message(messages),
             Self::Read { path, source } => messages.format(
                 MsgId::CliErrorRead,
                 [("path", display_path(path)), ("source", source.to_string())],
@@ -171,10 +168,6 @@ impl CliError {
                 MsgId::CliErrorWrite,
                 [("path", display_path(path)), ("source", source.to_string())],
             ),
-            // Domain diagnostic payloads and OS-provided detail strings are
-            // intentionally opaque here. #182 owns their structured
-            // diagnostic templates; keeping these arms explicit prevents a
-            // newly added CLI variant from silently bypassing this boundary.
             Self::Core(error) => {
                 messages.format(MsgId::CliErrorGeneric, [("message", error.to_string())])
             }
@@ -185,6 +178,9 @@ impl CliError {
                 messages.format(MsgId::CliErrorGeneric, [("message", error.to_string())])
             }
             Self::Runtime(error) => {
+                messages.format(MsgId::CliErrorGeneric, [("message", error.to_string())])
+            }
+            Self::Preview(error) => {
                 messages.format(MsgId::CliErrorGeneric, [("message", error.to_string())])
             }
             Self::Io(error) => {
@@ -228,6 +224,27 @@ impl CliError {
             Self::Watch { message } => {
                 messages.format(MsgId::CliErrorWatch, [("message", message.clone())])
             }
+            Self::WatchCoordinator { source, .. } => {
+                messages.format(MsgId::CliErrorWatch, [("message", source.to_string())])
+            }
+            Self::WatchRecovery { source, .. } => source.to_user_message(messages),
         }
+    }
+}
+fn user_config_message(error: &ConfigError, messages: &Messages) -> String {
+    match error {
+        ConfigError::Read { path, message } => messages.format(
+            MsgId::CliErrorUiConfigRead,
+            [("path", display_path(path)), ("source", message.clone())],
+        ),
+        ConfigError::Malformed { path, message } => messages.format(
+            MsgId::CliErrorUiConfigToml,
+            [("path", display_path(path)), ("source", message.clone())],
+        ),
+        ConfigError::InvalidLocale { path, locale } => messages.format(
+            MsgId::CliErrorUiLocaleInvalid,
+            [("path", display_path(path)), ("locale", locale.clone())],
+        ),
+        _ => messages.format(MsgId::CliErrorGeneric, [("message", error.to_string())]),
     }
 }

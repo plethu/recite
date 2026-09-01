@@ -1,10 +1,11 @@
-use lsp_types::{
-    CodeAction, CodeActionKind, CodeActionOrCommand, CodeActionParams, Range, TextEdit,
+use lsp_types::{CodeAction, CodeActionKind, CodeActionOrCommand, CodeActionParams, Range};
+use recite_core::{
+    ConditionDefinition, ConditionReturnType, EffectDefinition, EffectMode, SchemaSourceEdit,
 };
 use recite_ui::{MsgId, UiCatalog};
 
 use super::{
-    CodeActionDocument, SchemaCodeActionDocument, json_edit, ranges_intersect, workspace_edit,
+    CodeActionDocument, SchemaCodeActionDocument, ranges_intersect, schema_workspace_edit,
 };
 use crate::summary::{FunctionReferenceKind, FunctionReferenceSummary};
 
@@ -12,9 +13,18 @@ pub(super) fn actions(
     params: &CodeActionParams,
     document: &CodeActionDocument<'_>,
     documents: &[CodeActionDocument<'_>],
-    schema: SchemaCodeActionDocument<'_>,
+    schema: &SchemaCodeActionDocument,
     catalog: &UiCatalog,
 ) -> Vec<CodeActionOrCommand> {
+    if !schema
+        .summary
+        .capability()
+        .actions()
+        .iter()
+        .any(|action| matches!(action, recite_compiler::SchemaAction::EditStandaloneSource))
+    {
+        return Vec::new();
+    }
     if documents.iter().any(|document| {
         !document.summary.completeness.condition_functions
             || !document.summary.completeness.effect_functions
@@ -28,16 +38,16 @@ pub(super) fn actions(
             .summary
             .condition_functions
             .iter()
-            .filter(|function| function_intersects(document.text, function, params.range))
-            .filter_map(|function| condition_action(params, function, documents, &schema, catalog)),
+            .filter(|function| function_intersects(document.source.text, function, params.range))
+            .filter_map(|function| condition_action(params, function, documents, schema, catalog)),
     );
     actions.extend(
         document
             .summary
             .effect_functions
             .iter()
-            .filter(|function| function_intersects(document.text, function, params.range))
-            .filter_map(|function| effect_action(params, function, documents, &schema, catalog)),
+            .filter(|function| function_intersects(document.source.text, function, params.range))
+            .filter_map(|function| effect_action(params, function, documents, schema, catalog)),
     );
     actions
 }
@@ -50,7 +60,7 @@ fn condition_action(
     params: &CodeActionParams,
     function: &FunctionReferenceSummary,
     documents: &[CodeActionDocument<'_>],
-    schema: &SchemaCodeActionDocument<'_>,
+    schema: &SchemaCodeActionDocument,
     catalog: &UiCatalog,
 ) -> Option<CodeActionOrCommand> {
     if function.argument_count != 0 || function.kind != FunctionReferenceKind::BoolCondition {
@@ -63,34 +73,40 @@ fn condition_action(
     }
     if schema
         .summary
-        .conditions
+        .conditions()
         .iter()
-        .any(|condition| condition.name == function.name)
+        .any(|condition| condition.name() == function.name)
     {
         return None;
     }
-    let edit = json_edit::object_section_entry(
-        schema.text,
-        "conditions",
-        &function.name,
-        "{ \"params\": [] }",
-    )?;
-    Some(schema_code_action(
+    let edit = schema
+        .source
+        .plan_edit(SchemaSourceEdit::AddCondition {
+            name: function.name.clone(),
+            definition: ConditionDefinition {
+                params: Vec::new(),
+                returns: ConditionReturnType::Bool,
+                availability_reason: None,
+            },
+        })
+        .ok()?;
+    schema_code_action(
         params,
         schema,
+        documents,
+        &edit,
         catalog.format_pairs(
             MsgId::LspCodeActionAddCondition,
             [("name", function.name.as_str())],
         ),
-        edit,
-    ))
+    )
 }
 
 fn effect_action(
     params: &CodeActionParams,
     function: &FunctionReferenceSummary,
     documents: &[CodeActionDocument<'_>],
-    schema: &SchemaCodeActionDocument<'_>,
+    schema: &SchemaCodeActionDocument,
     catalog: &UiCatalog,
 ) -> Option<CodeActionOrCommand> {
     if function.argument_count != 0 {
@@ -99,28 +115,41 @@ fn effect_action(
     let modes = same_name_effect_modes(documents, &function.name)?;
     if schema
         .summary
-        .effects
+        .effects()
         .iter()
-        .any(|effect| effect.name == function.name)
+        .any(|effect| effect.name() == function.name)
     {
         return None;
     }
     let modes = modes
         .iter()
-        .map(|mode| json_edit::json_string(mode))
-        .collect::<Vec<_>>()
-        .join(", ");
-    let body = format!("{{ \"modes\": [{}], \"params\": [] }}", modes);
-    let edit = json_edit::object_section_entry(schema.text, "effects", &function.name, &body)?;
-    Some(schema_code_action(
+        .filter_map(|mode| match *mode {
+            "deferred" => Some(EffectMode::Deferred),
+            "immediate" => Some(EffectMode::Immediate),
+            "blocking" => Some(EffectMode::Blocking),
+            _ => None,
+        })
+        .collect();
+    let edit = schema
+        .source
+        .plan_edit(SchemaSourceEdit::AddEffect {
+            name: function.name.clone(),
+            definition: EffectDefinition {
+                modes,
+                params: Vec::new(),
+            },
+        })
+        .ok()?;
+    schema_code_action(
         params,
         schema,
+        documents,
+        &edit,
         catalog.format_pairs(
             MsgId::LspCodeActionAddEffect,
             [("name", function.name.as_str())],
         ),
-        edit,
-    ))
+    )
 }
 
 fn same_name_conditions<'a>(
@@ -173,19 +202,16 @@ fn same_name_effect_modes(
 
 fn schema_code_action(
     params: &CodeActionParams,
-    schema: &SchemaCodeActionDocument<'_>,
+    schema: &SchemaCodeActionDocument,
+    documents: &[CodeActionDocument<'_>],
+    plan: &recite_core::SchemaSourceEditPlan,
     title: String,
-    edit: TextEdit,
-) -> CodeActionOrCommand {
-    CodeActionOrCommand::CodeAction(CodeAction {
+) -> Option<CodeActionOrCommand> {
+    Some(CodeActionOrCommand::CodeAction(CodeAction {
         title,
         kind: Some(CodeActionKind::QUICKFIX),
         diagnostics: Some(params.context.diagnostics.clone()),
-        edit: Some(workspace_edit(
-            schema.uri.clone(),
-            schema.version,
-            vec![edit],
-        )),
+        edit: Some(schema_workspace_edit(schema, plan, documents)?),
         ..CodeAction::default()
-    })
+    }))
 }

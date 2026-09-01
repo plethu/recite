@@ -22,7 +22,12 @@ pub(crate) fn write_recite(root: &Path, name: &str, source: &str) -> PathBuf {
 }
 
 pub(crate) fn write_project_manifest(root: &Path, source: &str) -> PathBuf {
-    write_file(root, "recite.project.toml", source)
+    let source = if source.contains("format_version") {
+        source.to_owned()
+    } else {
+        format!("format_version = 1\n\n{source}")
+    };
+    write_file(root, "recite.project.toml", &source)
 }
 
 pub(crate) fn write_file(root: &Path, name: &str, source: &str) -> PathBuf {

@@ -214,6 +214,23 @@ impl LocaleProvider for DialogueCatalogProvider {
             attempts,
         })
     }
+
+    fn validated_plural_arm_count(
+        &self,
+        resolution: &PluralResolution,
+    ) -> Result<Option<usize>, recite_runtime::LocaleError> {
+        let Some(locale) = resolution.matched_locale.as_deref() else {
+            return Ok(None);
+        };
+        self.plural_forms
+            .get(locale)
+            .map(|header| {
+                recite_core::validate_plural_rule(header)
+                    .map(Some)
+                    .map_err(|error| recite_runtime::LocaleError::new(error.to_string()))
+            })
+            .unwrap_or(Ok(None))
+    }
 }
 
 fn gettext_contexts(context: &str, variant: Option<&str>) -> Vec<String> {

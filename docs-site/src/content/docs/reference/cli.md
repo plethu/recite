@@ -35,6 +35,20 @@ markup policy.
 
 Validates metadata keys and values against a schema manifest.
 
+### `recite inspect-schema <SCHEMA>`
+
+Projects a standalone schema TOML or generated schema manifest JSON to a
+versioned, deterministic JSON summary on stdout. The input extension selects
+the authoritative loader: `.toml` uses standalone source loading and `.json`
+uses the generated-manifest loader. Generated manifests are read-only; this
+command does not invoke producers or write files. The projection includes
+schema ownership, producer identity, scoped fingerprints, available freshness
+channels, declaration origins, capabilities, and producer action evidence.
+The top-level `capability` field uses the same typed action and producer-action
+projection as each declaration. `source.path` is an exact tagged machine path:
+UTF-8 text where representable, raw Unix bytes as lowercase hex otherwise, and
+WTF-16 units on Windows when UTF-16 text is not representable.
+
 ## Building
 
 ### `recite compile --output <OUTPUT> [--schema <SCHEMA>] <PATHS>...`

@@ -1,8 +1,10 @@
-use std::fs;
 use std::io::Write;
 use std::sync::mpsc;
+use std::time::Duration;
 
 use notify::{RecursiveMode, Watcher, recommended_watcher};
+use recite_config::discover_project;
+use recite_ui::UiArg;
 
 use crate::args::WatchArgs;
 use crate::error::CliError;
@@ -10,10 +12,34 @@ use crate::fs::display_path;
 use crate::i18n::{Messages, MsgId};
 
 mod build;
+mod commit;
+mod engine;
 mod events;
+mod freshness;
 mod inputs;
+mod preparation;
+mod publisher;
+mod recovery;
+mod request;
+mod staging;
+mod target_identity;
+mod targets;
 
-use build::{BuildStatus, build_once};
+pub use engine::ProjectBuildEngine;
+pub use publisher::{ProjectBuildPublisher, ProjectPreparedBuild};
+pub use recovery::{
+    ProjectBuildPublisherError, ProjectBuildRecovery, ProjectBuildRecoveryDetail,
+    ProjectBuildRecoveryIoKind, ProjectBuildRecoveryReason,
+};
+pub use request::{
+    ProjectBuildPreparation, ProjectBuildPreparationError, ProjectBuildRequest, ProjectBuildTarget,
+};
+pub use targets::{TargetMapError, TargetPathError};
+
+use build::{
+    BuildStatus, build_once, format_failure_with_recovery, format_recovery_notice,
+    format_recovery_required,
+};
 use events::{WatchState, drain_debounce, watch_error};
 
 #[cfg(test)]
@@ -29,11 +55,9 @@ pub(crate) fn run_watch_command(
     if !args.project_root.is_dir() {
         return Err(CliError::MissingPath(args.project_root));
     }
-    let project_root =
-        fs::canonicalize(&args.project_root).map_err(|source| CliError::ReadDir {
-            path: args.project_root,
-            source,
-        })?;
+    let discovery = discover_project(&args.project_root)
+        .map_err(|source| CliError::ProjectDiscovery { source })?;
+    let project_root = discovery.manifest().project_root().to_owned();
 
     let (sender, receiver) = mpsc::channel();
     let mut watcher = recommended_watcher(move |event| {
@@ -45,6 +69,7 @@ pub(crate) fn run_watch_command(
         .map_err(watch_error)?;
 
     let mut state = WatchState::new(project_root);
+    state.manifest = Some(discovery.manifest().clone());
     writeln!(
         stderr,
         "{}",
@@ -90,15 +115,76 @@ fn report_build_result(
     messages: &Messages,
 ) -> Result<(), CliError> {
     match result {
-        Ok(BuildStatus::Fresh { asset_count }) => {
-            writeln!(
-                stderr,
-                "{}",
-                messages.format(MsgId::WatchBuildSucceeded, [("count", asset_count)])
-            )?;
+        Ok(status) => {
+            let duration = status.telemetry().duration();
+            match status {
+                BuildStatus::Fresh { asset_count, .. } => {
+                    writeln!(
+                        stderr,
+                        "{}",
+                        messages.format(MsgId::WatchBuildSucceeded, [("count", asset_count)])
+                    )?;
+                }
+                BuildStatus::Stale { recovery, .. } => {
+                    if !recovery.is_empty() {
+                        writeln!(stderr, "{}", format_recovery_notice(messages, &recovery))?;
+                    }
+                    writeln!(stderr, "{}", messages.text(MsgId::WatchBuildFailedWaiting))?;
+                }
+                BuildStatus::Diagnostics { .. } => {
+                    writeln!(stderr, "{}", messages.text(MsgId::WatchBuildFailedWaiting))?;
+                }
+                BuildStatus::DiagnosticsWithRecovery { recovery, .. } => {
+                    if !recovery.is_empty() {
+                        writeln!(stderr, "{}", format_recovery_notice(messages, &recovery))?;
+                    }
+                    writeln!(stderr, "{}", messages.text(MsgId::WatchBuildFailedWaiting))?;
+                }
+                BuildStatus::RecoveryRequired {
+                    asset_count,
+                    recovery,
+                    ..
+                } => {
+                    writeln!(
+                        stderr,
+                        "{}",
+                        format_recovery_required(messages, asset_count, &recovery)
+                    )?;
+                }
+                BuildStatus::PublicationFailure {
+                    status,
+                    failure,
+                    outcome,
+                    recovery,
+                    ..
+                } => {
+                    writeln!(
+                        stderr,
+                        "{}",
+                        format_failure_with_recovery(
+                            messages,
+                            status,
+                            failure.as_ref(),
+                            &outcome,
+                            &recovery,
+                        )
+                    )?;
+                }
+            }
+            if let Some(duration) = duration {
+                report_build_duration(stderr, messages, duration)?;
+            }
         }
-        Ok(BuildStatus::Diagnostics) => {
-            writeln!(stderr, "{}", messages.text(MsgId::WatchBuildFailedWaiting))?;
+        Err(CliError::WatchCoordinator { source, recovery }) => {
+            report_recovery_error(stderr, messages, source.to_string(), &recovery)?;
+        }
+        Err(CliError::WatchRecovery { source, recovery }) => {
+            report_recovery_error(
+                stderr,
+                messages,
+                source.to_user_message(messages),
+                &recovery,
+            )?;
         }
         Err(error) => {
             writeln!(
@@ -107,6 +193,48 @@ fn report_build_result(
                 messages.format(MsgId::WatchBuildFailed, [("error", error.to_string())])
             )?;
         }
+    }
+    Ok(())
+}
+
+fn report_build_duration(
+    stderr: &mut dyn Write,
+    messages: &Messages,
+    duration: Duration,
+) -> Result<(), CliError> {
+    let (message, value) = if duration < Duration::from_millis(1) {
+        (
+            MsgId::WatchBuildDurationMicroseconds,
+            UiArg::Integer(duration.as_micros() as i64),
+        )
+    } else {
+        let micros = duration.as_micros();
+        (
+            MsgId::WatchBuildDurationMilliseconds,
+            UiArg::Float(micros as f64 / 1_000.0),
+        )
+    };
+    writeln!(
+        stderr,
+        "{}",
+        messages.format(message, [("duration", value)])
+    )?;
+    Ok(())
+}
+
+fn report_recovery_error(
+    stderr: &mut dyn Write,
+    messages: &Messages,
+    error: String,
+    recovery: &[ProjectBuildRecovery],
+) -> Result<(), CliError> {
+    writeln!(
+        stderr,
+        "{}",
+        messages.format(MsgId::WatchBuildFailed, [("error", error)])
+    )?;
+    if !recovery.is_empty() {
+        writeln!(stderr, "{}", format_recovery_notice(messages, recovery))?;
     }
     Ok(())
 }

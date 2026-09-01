@@ -138,6 +138,20 @@ fn project_and_freshness_presentations_preserve_cli_messages() {
     assert_eq!(
         render(
             &catalog,
+            "RECITE_CONFIG117",
+            "diagnostic-config-117",
+            [(
+                "detail",
+                DiagnosticArgumentValue::String(
+                    "dir\\start.recite: document key must use slash separators".to_owned(),
+                ),
+            )],
+        ),
+        "project source has an invalid document key: dir\\start.recite: document key must use slash separators"
+    );
+    assert_eq!(
+        render(
+            &catalog,
             "RECITE_PROJECT003",
             "diagnostic-project-003",
             [

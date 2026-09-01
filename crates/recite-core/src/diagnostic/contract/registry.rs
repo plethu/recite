@@ -1,6 +1,6 @@
 use super::{
-    DiagnosticAuxiliaryPresentationContract, DiagnosticPresentationContract, compiler, freshness,
-    parser, po, project, schema,
+    DiagnosticAuxiliaryPresentationContract, DiagnosticCode, DiagnosticPresentationContract,
+    compiler, config, freshness, parser, po, project, schema,
 };
 use std::sync::OnceLock;
 
@@ -28,9 +28,17 @@ pub fn migrated_diagnostic_presentation_contracts()
     parser::contracts()
         .chain(po::contracts())
         .chain(compiler::contracts())
+        .chain(config::contracts())
         .chain(project::contracts())
         .chain(freshness::contracts())
         .chain(schema::contracts())
+}
+
+/// Return the central contract for a config/discovery diagnostic.
+pub fn config_contract_for(
+    code: &DiagnosticCode,
+) -> Option<&'static DiagnosticPresentationContract> {
+    config::contracts().find(|contract| contract.code() == code)
 }
 
 /// Structured contracts for related-span and help presentations emitted by

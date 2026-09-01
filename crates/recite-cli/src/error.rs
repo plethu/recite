@@ -1,10 +1,8 @@
-use std::io;
-use std::path::PathBuf;
-
-use recite_core::CompiledAssetDecodeError;
-
 use crate::dialogue_locale::DialogueCatalogMalformedReason;
 use crate::fs::display_path;
+use recite_core::CompiledAssetDecodeError;
+use std::io;
+use std::path::PathBuf;
 
 mod user_message;
 
@@ -63,6 +61,10 @@ pub(crate) enum CliError {
         choice: String,
         prompt_keys: Vec<String>,
     },
+    AmbiguousFixtureChoice {
+        block: String,
+        prompt_count: usize,
+    },
     FixtureToml {
         path: PathBuf,
         source: toml::de::Error,
@@ -102,6 +104,7 @@ pub(crate) enum CliError {
         source: io::Error,
     },
     Runtime(recite_runtime::DialogueError),
+    Preview(recite_runtime::PreviewError),
     BlockingEffectNeedsAcknowledgement {
         effect: String,
     },
@@ -111,27 +114,26 @@ pub(crate) enum CliError {
     Benchmark(recite_benchmarks::BenchmarkError),
     BenchJson(serde_json::Error),
     TraceJson(serde_json::Error),
-    TuiConfigRead {
-        path: PathBuf,
-        source: io::Error,
+    SchemaInspection(crate::schema_inspection::error::SchemaInspectionError),
+    UserConfig {
+        source: recite_config::ConfigError,
     },
-    TuiConfigToml {
-        path: PathBuf,
-        source: toml::de::Error,
+    ProjectDiscovery {
+        source: recite_config::ProjectDiscoveryError,
     },
     UiCatalog {
         source: String,
     },
-    UiLocaleInvalid {
-        path: PathBuf,
-        locale: String,
-    },
-    UnknownPrompt {
-        line: Option<String>,
-        choices: Vec<String>,
-    },
     Watch {
         message: String,
+    },
+    WatchCoordinator {
+        source: recite_compiler::BuildRunError,
+        recovery: Vec<crate::watch::ProjectBuildRecovery>,
+    },
+    WatchRecovery {
+        source: Box<Self>,
+        recovery: Vec<crate::watch::ProjectBuildRecovery>,
     },
     Write {
         path: PathBuf,
@@ -234,6 +236,13 @@ impl std::fmt::Display for CliError {
                 "fixture choice `{choice}` is not in prompt {}",
                 prompt_keys.join("|")
             ),
+            Self::AmbiguousFixtureChoice {
+                block,
+                prompt_count,
+            } => write!(
+                formatter,
+                "fixture block choice `{block}` is ambiguous: the block contains {prompt_count} prompts; use a line ID"
+            ),
             Self::FixtureToml { path, source } => {
                 write!(
                     formatter,
@@ -291,6 +300,7 @@ impl std::fmt::Display for CliError {
                 )
             }
             Self::Runtime(error) => write!(formatter, "{error}"),
+            Self::Preview(error) => write!(formatter, "{error}"),
             Self::BlockingEffectNeedsAcknowledgement { effect } => write!(
                 formatter,
                 "blocking effect `{effect}` requires [effects].auto_ack_blocking = true in the fixture"
@@ -299,29 +309,13 @@ impl std::fmt::Display for CliError {
             Self::Benchmark(error) => write!(formatter, "{error}"),
             Self::BenchJson(error) => write!(formatter, "failed to read or write benchmark JSON: {error}"),
             Self::TraceJson(error) => write!(formatter, "failed to encode trace JSON: {error}"),
-            Self::TuiConfigRead { path, source } => write!(
-                formatter,
-                "failed to read UI config {}: {source}",
-                display_path(path)
-            ),
-            Self::TuiConfigToml { path, source } => write!(
-                formatter,
-                "failed to parse UI config {}: {source}",
-                display_path(path)
-            ),
+            Self::SchemaInspection(error) => write!(formatter, "{error}"),
+            Self::UserConfig { source } => write!(formatter, "{source}"),
+            Self::ProjectDiscovery { source } => write!(formatter, "{source}"),
             Self::UiCatalog { source } => write!(formatter, "failed to load UI text catalog: {source}"),
-            Self::UiLocaleInvalid { path, locale } => write!(
-                formatter,
-                "failed to parse UI config {}: invalid [ui].locale `{locale}`; expected a BCP-47 locale such as \"en-US\" or \"system\"",
-                display_path(path)
-            ),
-            Self::UnknownPrompt { line, choices } => write!(
-                formatter,
-                "runtime emitted an unknown prompt line={} choices=[{}]",
-                line.as_deref().unwrap_or("<none>"),
-                choices.join(", ")
-            ),
             Self::Watch { message } => formatter.write_str(message),
+            Self::WatchCoordinator { source, .. } => write!(formatter, "{source}"),
+            Self::WatchRecovery { source, .. } => write!(formatter, "{source}"),
             Self::Write { path, source } => {
                 write!(
                     formatter,
@@ -368,5 +362,11 @@ impl From<recite_runtime::DialogueError> for CliError {
 impl From<recite_benchmarks::BenchmarkError> for CliError {
     fn from(error: recite_benchmarks::BenchmarkError) -> Self {
         Self::Benchmark(error)
+    }
+}
+
+impl From<recite_config::ConfigError> for CliError {
+    fn from(source: recite_config::ConfigError) -> Self {
+        Self::UserConfig { source }
     }
 }

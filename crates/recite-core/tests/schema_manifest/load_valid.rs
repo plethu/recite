@@ -94,10 +94,10 @@ fn full_generated_manifest_loads_producer_metadata_and_projection_features() {
     assert_eq!(
         schema.producer_metadata,
         Some(recite_core::ProducerMetadata {
-            producer: Some(recite_core::ProducerIdentity {
-                kind: "adapter".to_owned(),
-                id: "example".to_owned(),
-            }),
+            producer: Some(
+                recite_core::ProducerIdentity::new("adapter", "example")
+                    .expect("valid producer identity"),
+            ),
             content_fingerprint: Some(
                 recite_core::producer_content_fingerprint(
                     "blake3",

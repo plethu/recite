@@ -22,6 +22,9 @@ macro_rules! lsp_message_ids {
         | MsgId::LspHoverProducedBy
         | MsgId::LspHoverSchemaProducer
         | MsgId::LspHoverSchemaFreshness
+        | MsgId::LspHoverSchemaFreshnessState
+        | MsgId::LspHoverSchemaFreshnessStatus
+        | MsgId::LspHoverSchemaFreshnessUnavailable
         | MsgId::LspHoverSchemaScopedFingerprints
         | MsgId::LspCompletionAvailabilityReason
         | MsgId::LspCompletionBlock
@@ -46,5 +49,8 @@ macro_rules! lsp_message_ids {
         | MsgId::LspCodeActionCreateBlockStub
         | MsgId::LspCodeActionAddCondition
         | MsgId::LspCodeActionAddEffect
+        | MsgId::LspCodeActionSchemaAction
+        | MsgId::LspCodeActionSchemaDisabled
+        | MsgId::LspWarningUiConfig
     };
 }

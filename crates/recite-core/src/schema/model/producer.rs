@@ -4,10 +4,12 @@ use crate::ContentFingerprint;
 use serde_json::Value;
 
 mod fingerprint;
+mod identity;
 
 pub(crate) use fingerprint::{
     ProducerContentFingerprintError, producer_content_fingerprint_detailed,
 };
+pub use identity::{ProducerIdentity, ProducerIdentityError, ProducerIdentityPart};
 
 /// Format-neutral recursive value for producer diagnostic extensions.
 #[derive(Clone, Debug, Eq, PartialEq)]
@@ -36,13 +38,6 @@ impl ProducerMetadataValue {
             ),
         }
     }
-}
-
-/// Stable identity of the host producer that owns a generated manifest.
-#[derive(Clone, Debug, Eq, PartialEq)]
-pub struct ProducerIdentity {
-    pub kind: String,
-    pub id: String,
 }
 
 /// Parse a producer-owned content digest through the historical string error surface.

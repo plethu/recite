@@ -63,6 +63,8 @@ mod cli_message_ids;
 mod lsp_message_ids;
 #[path = "inventory/message_ids/tui.rs"]
 mod tui_message_ids;
+#[path = "inventory/message_ids/watch.rs"]
+mod watch_message_ids;
 
 include!("inventory/message_ids.rs");
 

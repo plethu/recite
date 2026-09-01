@@ -49,6 +49,7 @@ before opening lower-level profilers:
 cargo bench -p recite-benchmarks --no-run
 RECITE_BENCH_SCALES=tiny cargo bench -p recite-benchmarks --bench compiler
 RECITE_BENCH_SCALES=tiny cargo bench -p recite-benchmarks --bench runtime
+RECITE_BENCH_SCALES=tiny cargo bench -p recite-benchmarks --bench preview
 RECITE_BENCH_SCALES=tiny cargo bench -p recite-benchmarks --bench lsp
 ```
 
@@ -68,8 +69,8 @@ For quick build/execution smoke, use:
 scripts/benchmark-smoke.sh
 ```
 
-The smoke proves the tiny compiler and runtime Criterion targets build and run.
-It does not compare timing.
+The smoke proves the tiny compiler, runtime, and preview Criterion targets build
+and run. It does not compare timing.
 
 ## Interpreting Criterion Output
 
@@ -203,6 +204,23 @@ RECITE_BENCH_SCALES=tiny cargo bench -p recite-benchmarks --bench runtime -- run
 RECITE_BENCH_SCALES=tiny cargo bench -p recite-benchmarks --bench runtime -- runtime/localised_next
 RECITE_BENCH_SCALES=tiny cargo bench -p recite-benchmarks --bench runtime -- runtime/session_encode
 ```
+
+Preview investigations usually start with full traversal, snapshot encoding,
+restore, and retained trace shape:
+
+```bash
+RECITE_BENCH_SCALES=tiny cargo bench -p recite-benchmarks --bench preview -- preview/full_traversal
+RECITE_BENCH_SCALES=tiny cargo bench -p recite-benchmarks --bench preview -- preview/snapshot_encode
+RECITE_BENCH_SCALES=tiny cargo bench -p recite-benchmarks --bench preview -- preview/restore
+RECITE_BENCH_SCALES=tiny cargo bench -p recite-benchmarks --bench preview -- preview/retained_trace_shape
+```
+
+Traversal and step report throughput in events, while snapshot encoding and
+restore report bytes processed. Retained trace shape intentionally remains a
+per-report timing: its structured counters do not represent one meaningful
+throughput unit. `preview/full_traversal` uses a black-box event sink and count
+only; `preview/evidence_report` is the exhaustive event/state BLAKE3 evidence
+path and is intentionally measured separately.
 
 LSP investigations usually start with indexing, edit refresh, diagnostics,
 completion, definition, and rename:

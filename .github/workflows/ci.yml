@@ -66,10 +66,19 @@ jobs:
     name: Rust gates
     runs-on: ubuntu-24.04
     timeout-minutes: 30
+    env:
+      MISE_ENV: maintainability
+      RECITE_BASE_REF: >-
+        ${{ github.event_name == 'pull_request' &&
+            format('origin/{0}', github.base_ref) || github.event.before }}
+      RECITE_HEAD_REF: >-
+        ${{ github.event_name == 'pull_request' &&
+            github.event.pull_request.head.sha || github.sha }}
     steps:
       - name: Check out source
         uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
         with:
+          fetch-depth: 0
           persist-credentials: false
 
       - name: Install repository toolchain
@@ -80,6 +89,32 @@ jobs:
 
       - name: Run Rust and adapter gates
         run: scripts/check-project-gates.sh
+
+  windows-publisher:
+    name: Windows publisher contract
+    runs-on: windows-latest
+    timeout-minutes: 15
+    steps:
+      - name: Check out source
+        uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          fetch-depth: 1
+          persist-credentials: false
+
+      - name: Install repository toolchain
+        uses: jdx/mise-action@3c2e0cf82a5b2e5249f0d3635a4d83d0ae861518 # v4.2.5
+
+      - name: Run Windows publisher contracts
+        run: >-
+          cargo test --locked -p recite-cli --all-features --lib
+          --test watch_build_publisher --test watch_build_publisher_safety
+
+      - name: Run Windows LSP path and identity contracts
+        run: >-
+          cargo test --locked -p recite-lsp --lib
+          windows_fallback_document_keys_preserve_volume_identity
+          && cargo test --locked -p recite-lsp --lib
+          windows_drive_and_unc_uri_shapes_are_stable
 
   docs:
     name: Documentation
@@ -123,7 +158,8 @@ jobs:
     runs-on: ubuntu-24.04
     timeout-minutes: 10
     env:
-      # The scoped environment is the only CI lane that installs ast-grep.
+      # Lanes running structural policy checks use this scoped environment,
+      # which installs ast-grep.
       MISE_ENV: maintainability
       RECITE_BASE_REF: >-
         ${{ github.event_name == 'pull_request' &&
@@ -146,8 +182,10 @@ jobs:
         run: |
           tests/maintainability/check.sh
           tests/ast-grep/check.sh
+          tests/lint-suppressions/check.sh
           scripts/check-maintainability.sh
           scripts/check-ast-grep.sh
+          scripts/check-lint-suppressions.sh
 
   required-check:
     name: required-check
@@ -158,6 +196,7 @@ jobs:
       - docs
       - benchmark-smoke
       - maintainability
+      - windows-publisher
     runs-on: ubuntu-24.04
     timeout-minutes: 5
     steps:
@@ -168,9 +207,11 @@ jobs:
           GIT_POLICY_RESULT: ${{ needs.git-policy.result }}
           MAINTAINABILITY_RESULT: ${{ needs.maintainability.result }}
           RUST_RESULT: ${{ needs.rust.result }}
+          WINDOWS_PUBLISHER_RESULT: ${{ needs.windows-publisher.result }}
         run: |
           test "$GIT_POLICY_RESULT" = success
           test "$RUST_RESULT" = success
           test "$DOCS_RESULT" = success
           test "$BENCHMARK_RESULT" = success
           test "$MAINTAINABILITY_RESULT" = success
+          test "$WINDOWS_PUBLISHER_RESULT" = success

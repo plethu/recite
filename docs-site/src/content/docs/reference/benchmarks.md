@@ -5,7 +5,8 @@ description: Commands and policy for Recite benchmark smoke checks and regressio
 
 Recite benchmarks live in `crates/recite-benchmarks` and use Criterion against
 the shared synthetic fixture profiles and checked-in realistic fixture packs.
-The suite is split into explicit compiler, runtime, and LSP bench targets.
+The suite is split into explicit compiler, runtime, preview, and LSP bench
+targets.
 
 ## Fast smoke
 
@@ -22,6 +23,7 @@ generator for larger profiles:
 ```bash
 RECITE_BENCH_SCALES=tiny cargo bench -p recite-benchmarks --bench compiler -- 'compiler/.*/tiny' --test
 RECITE_BENCH_SCALES=tiny cargo bench -p recite-benchmarks --bench runtime -- 'runtime/.*/tiny' --test
+RECITE_BENCH_SCALES=tiny cargo bench -p recite-benchmarks --bench preview -- 'preview/.*/tiny' --test
 ```
 
 Criterion `--test` mode executes each matching benchmark once. This is a
@@ -45,6 +47,10 @@ RECITE_BENCH_SCALES=medium cargo bench -p recite-benchmarks
 RECITE_BENCH_SCALES=large,epic cargo bench -p recite-benchmarks -- --sample-size 10
 ```
 
+The preview target is the exception: its no-environment default is the checked-in
+`tiny` fixture plus `realistic:v1-pack`, so traversal evidence covers both a
+generated shape and an authored project.
+
 The same selector also accepts checked-in realistic packs:
 
 ```bash
@@ -57,6 +63,7 @@ Target one side of the suite when isolating a change:
 ```bash
 RECITE_BENCH_SCALES=tiny cargo bench -p recite-benchmarks --bench compiler
 RECITE_BENCH_SCALES=tiny cargo bench -p recite-benchmarks --bench runtime
+RECITE_BENCH_SCALES=tiny cargo bench -p recite-benchmarks --bench preview
 RECITE_BENCH_SCALES=tiny cargo bench -p recite-benchmarks --bench lsp
 ```
 

@@ -4,8 +4,8 @@ use serde::Deserialize;
 use toml_edit::Document;
 
 use super::{
-    MALFORMED_MANIFEST, ProjectManifest, ProjectManifestLoadReport, ProjectManifestMetadata,
-    ProjectManifestSource, ProjectManifestSourceLoadReport, ProjectScene,
+    MALFORMED_MANIFEST, ProjectDiscovery, ProjectManifest, ProjectManifestLoadReport,
+    ProjectManifestMetadata, ProjectManifestSource, ProjectManifestSourceLoadReport, ProjectScene,
 };
 use crate::{
     DiagnosticArgumentValue,
@@ -150,19 +150,39 @@ impl ProjectManifestSource {
 #[derive(Deserialize)]
 #[serde(deny_unknown_fields)]
 struct RawProjectManifest {
+    format_version: Option<u32>,
     #[serde(default)]
     project: RawProjectMetadata,
     #[serde(default)]
+    discovery: RawProjectDiscovery,
+    #[serde(default)]
     scenes: Vec<RawProjectScene>,
+}
+
+#[derive(Default, Deserialize)]
+#[serde(deny_unknown_fields)]
+struct RawProjectDiscovery {
+    #[serde(default)]
+    source_roots: Option<Vec<String>>,
+    #[serde(default)]
+    excludes: Vec<String>,
 }
 
 impl RawProjectManifest {
     fn into_manifest(self) -> ProjectManifest {
         ProjectManifest {
+            format_version: self.format_version,
             project: ProjectManifestMetadata {
                 content_set: self.project.content_set,
                 version: self.project.version,
                 schema: self.project.schema,
+            },
+            discovery: ProjectDiscovery {
+                source_roots: self
+                    .discovery
+                    .source_roots
+                    .unwrap_or_else(|| ProjectDiscovery::default().source_roots),
+                excludes: self.discovery.excludes,
             },
             scenes: self
                 .scenes

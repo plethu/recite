@@ -1,4 +1,4 @@
-use super::CompiledValueError;
+use super::{CompiledAssetEncodeError, CompiledDialogue, CompiledValueError};
 
 pub const BLAKE3_DIGEST_LEN: usize = 32;
 
@@ -14,6 +14,19 @@ pub(crate) fn canonical_blake3_fingerprint(bytes: &[u8]) -> ContentFingerprint {
         algorithm: FingerprintAlgorithm::blake3(),
         digest: FingerprintDigest(digest.as_bytes().to_vec()),
     }
+}
+
+/// Return the canonical full-payload identity of a compiled dialogue.
+///
+/// The digest covers the exact bytes emitted by the v0 compiled-asset encoder,
+/// including every header and semantic table. It is a content identity, not
+/// an authenticity proof; untrusted persisted identities still require the
+/// host's trust boundary.
+pub fn canonical_compiled_dialogue_fingerprint(
+    dialogue: &CompiledDialogue,
+) -> Result<ContentFingerprint, CompiledAssetEncodeError> {
+    let bytes = super::messagepack::encode_compiled_dialogue_messagepack(dialogue)?;
+    Ok(canonical_blake3_fingerprint(&bytes))
 }
 
 macro_rules! define_non_empty_string {

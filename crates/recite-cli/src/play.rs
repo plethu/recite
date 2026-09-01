@@ -7,9 +7,13 @@ use crate::i18n::{Messages, MsgId};
 use crate::runtime_fixture::load_compiled_asset;
 use crate::tui::TuiSettings;
 
-mod driver;
-mod format;
+mod choice_selection;
 mod plain;
+mod plain_choice;
+mod plain_input;
+mod plain_output;
+mod plain_ui;
+mod preview;
 mod tui;
 
 pub(crate) fn run_play_command(

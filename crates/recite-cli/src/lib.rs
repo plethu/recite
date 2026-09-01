@@ -35,8 +35,9 @@ mod play;
 mod runtime_fixture;
 mod runtime_format;
 mod schema_freshness;
+mod schema_inspection;
 mod tui;
-mod watch;
+pub mod watch;
 
 use args::Command;
 use error::CliError;

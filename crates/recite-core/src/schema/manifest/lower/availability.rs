@@ -11,6 +11,7 @@ use super::super::spans::ManifestSpans;
 use super::super::validate::{
     PendingTypeReference, duplicate_definition, validate_manifest_name, validate_non_empty_string,
 };
+use super::LoweringContext;
 use super::ManifestSourceFormat;
 use super::functions::{PendingConditionAvailabilityReasonMapping, lower_params_at};
 use super::producer::{ProvenanceLocation, lower_origin};
@@ -57,10 +58,7 @@ pub(super) fn lower_availability_reasons(
             template_span.clone(),
         );
         let params = lower_params_at(
-            file,
-            source,
-            spans,
-            diagnostics,
+            &mut LoweringContext::new(file, source, spans, diagnostics),
             &format!("availability reason '{}'", entry.name),
             &entry.value.params,
             pending_type_refs,
@@ -80,10 +78,7 @@ pub(super) fn lower_availability_reasons(
             path
         };
         let origin = lower_origin(
-            spans,
-            file,
-            source,
-            diagnostics,
+            &mut LoweringContext::new(file, source, spans, diagnostics),
             entry.value.origin,
             ProvenanceLocation {
                 owner: &format!("availability reason '{}'", entry.name),

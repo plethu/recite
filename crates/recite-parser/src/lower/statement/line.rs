@@ -14,21 +14,44 @@ impl Lowerer<'_, '_> {
         let line_span = span_for_line(self.path, header.number, base_column);
         let fields = header_fields(trimmed, StatementMarker::Line, header, base_column);
         let mut field_start = 0;
-        let source_id = if let Some(first) = fields.first().copied() {
+        let (source_id, source_id_span, source_id_insertion_span) = if let Some(first) =
+            fields.first().copied()
+        {
             if first.key_value(self.path).is_none() {
                 field_start = 1;
-                SourceId::parse(Some(first.text))
+                (
+                    SourceId::parse(Some(first.text)),
+                    Some(first.span(self.path)),
+                    span_for_line(
+                        self.path,
+                        header.number,
+                        first.column + first.text.chars().count(),
+                    ),
+                )
             } else {
-                SourceId::Missing
+                (
+                    SourceId::Missing,
+                    None,
+                    super::super::insertion_span_after_marker(
+                        self.path,
+                        header,
+                        StatementMarker::Line,
+                    ),
+                )
             }
         } else {
-            SourceId::Missing
+            (
+                SourceId::Missing,
+                None,
+                super::super::insertion_span_after_marker(self.path, header, StatementMarker::Line),
+            )
         };
 
         let (speaker, metadata, bindings) = self.lower_speaker_metadata(&fields[field_start..]);
         let body = self.lower_prose_body(line_index, false, true);
         let mut line = Line::new(None, SourceText::new(body.text, body.text_span), line_span)
             .with_source_id(source_id)
+            .with_source_id_spans(source_id_span, source_id_insertion_span)
             .with_metadata(metadata)
             .with_interpolation_bindings(bindings)
             .with_statements(body.statements);

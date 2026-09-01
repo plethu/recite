@@ -1,4 +1,7 @@
 pub(super) const fn key(id: super::MsgId) -> Option<&'static str> {
+    if let Some(key) = super::watch_message_ids::key(id) {
+        return Some(key);
+    }
     match id {
         super::MsgId::CliHelpAbout => Some("cli-help-about"),
         super::MsgId::CliHelpUsageHeading => Some("cli-help-usage-heading"),
@@ -13,6 +16,7 @@ pub(super) const fn key(id: super::MsgId) -> Option<&'static str> {
         super::MsgId::CliHelpCommandCheckMetadata => Some("cli-help-command-check-metadata"),
         super::MsgId::CliHelpCommandValidateProject => Some("cli-help-command-validate-project"),
         super::MsgId::CliHelpCommandCheckFresh => Some("cli-help-command-check-fresh"),
+        super::MsgId::CliHelpCommandInspectSchema => Some("cli-help-command-inspect-schema"),
         super::MsgId::CliHelpCommandExplain => Some("cli-help-command-explain"),
         super::MsgId::CliHelpCommandWatch => Some("cli-help-command-watch"),
         super::MsgId::CliHelpCommandRun => Some("cli-help-command-run"),
@@ -21,6 +25,7 @@ pub(super) const fn key(id: super::MsgId) -> Option<&'static str> {
         super::MsgId::CliHelpCommandBench => Some("cli-help-command-bench"),
         super::MsgId::CliHelpArgPaths => Some("cli-help-arg-paths"),
         super::MsgId::CliHelpArgSchema => Some("cli-help-arg-schema"),
+        super::MsgId::CliHelpArgSchemaInspection => Some("cli-help-arg-schema-inspection"),
         super::MsgId::CliHelpArgProjectRoot => Some("cli-help-arg-project-root"),
         super::MsgId::CliHelpArgDiagnosticCode => Some("cli-help-arg-diagnostic-code"),
         super::MsgId::CliHelpArgOutputCompile => Some("cli-help-arg-output-compile"),
@@ -45,12 +50,6 @@ pub(super) const fn key(id: super::MsgId) -> Option<&'static str> {
         super::MsgId::ExplainCommonCauses => Some("explain-common-causes"),
         super::MsgId::ExplainHowToFix => Some("explain-how-to-fix"),
         super::MsgId::ExplainListItem => Some("explain-list-item"),
-        super::MsgId::WatchBuilding => Some("watch-building"),
-        super::MsgId::WatchWaitingForChanges => Some("watch-waiting-for-changes"),
-        super::MsgId::WatchRebuilding => Some("watch-rebuilding"),
-        super::MsgId::WatchBuildSucceeded => Some("watch-build-succeeded"),
-        super::MsgId::WatchBuildFailedWaiting => Some("watch-build-failed-waiting"),
-        super::MsgId::WatchBuildFailed => Some("watch-build-failed"),
         super::MsgId::WatchEventError => Some("watch-event-error"),
         super::MsgId::CliHelpArgHelp => Some("cli-help-arg-help"),
         super::MsgId::CliHelpArgVersion => Some("cli-help-arg-version"),
@@ -179,6 +178,7 @@ pub(super) const fn key(id: super::MsgId) -> Option<&'static str> {
         super::MsgId::CliErrorFixtureChoiceNotInPrompt => {
             Some("cli-error-fixture-choice-not-in-prompt")
         }
+        super::MsgId::CliErrorAmbiguousFixtureChoice => Some("cli-error-ambiguous-fixture-choice"),
         super::MsgId::CliErrorFixtureToml => Some("cli-error-fixture-toml"),
         super::MsgId::CliErrorMissingPath => Some("cli-error-missing-path"),
         super::MsgId::CliErrorMissingFixtureChoice => Some("cli-error-missing-fixture-choice"),
@@ -187,6 +187,16 @@ pub(super) const fn key(id: super::MsgId) -> Option<&'static str> {
         super::MsgId::CliErrorBlockingEffect => Some("cli-error-blocking-effect"),
         super::MsgId::CliErrorBenchJson => Some("cli-error-bench-json"),
         super::MsgId::CliErrorTraceJson => Some("cli-error-trace-json"),
+        super::MsgId::CliErrorSchemaInspectionJson => Some("cli-error-schema-inspection-json"),
+        super::MsgId::CliErrorSchemaInspectionUnsupportedFormat => {
+            Some("cli-error-schema-inspection-unsupported-format")
+        }
+        super::MsgId::CliErrorSchemaInspectionMalformed => {
+            Some("cli-error-schema-inspection-malformed")
+        }
+        super::MsgId::CliErrorSchemaInspectionInvalidSummary => {
+            Some("cli-error-schema-inspection-invalid-summary")
+        }
         super::MsgId::CliErrorUnknownPrompt => Some("cli-error-unknown-prompt"),
         super::MsgId::CliErrorRead => Some("cli-error-read"),
         super::MsgId::CliErrorReadDir => Some("cli-error-read-dir"),

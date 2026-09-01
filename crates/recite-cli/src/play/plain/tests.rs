@@ -1,4 +1,5 @@
 use super::*;
+use std::io::{self, Cursor, Read};
 use std::path::Path;
 
 use recite_compiler::{CompileInput, compile_inputs};
@@ -15,12 +16,28 @@ fn asset(source: &str) -> CompiledDialogue {
     report.asset.expect("asset").dialogue
 }
 
+fn choice_branch_asset() -> CompiledDialogue {
+    asset(concat!(
+        ":: start default\n",
+        "> intro@d4015ea1a2b18d0979f4\n",
+        "  Welcome.\n",
+        "  ? help@8d41a6f3bba2b4c2e660\n",
+        "    Help.\n",
+        "    -> help\n",
+        ":: help\n",
+        ":if trusts(player)\n",
+        "  > helped@33772e0e0fbf80051af0\n",
+        "    Helped.\n",
+        "-> END\n",
+    ))
+}
+
 fn run_plain(asset: &CompiledDialogue, input: &str) -> Result<String, CliError> {
     let mut input = input.as_bytes();
     let mut output = Vec::new();
     let messages = Messages::load(&crate::i18n::UiLocale::default()).expect("messages");
     let mut ui = PlainPlayUi::new(&mut input, &mut output, &messages);
-    PlayDriver::new(asset, "start").run(&mut ui)?;
+    run_preview(asset, "start", None, &mut ui)?;
     Ok(String::from_utf8(output).expect("utf8"))
 }
 
@@ -196,22 +213,69 @@ fn plain_play_reports_condition_prompt_eof_as_cli_error() {
 }
 
 #[test]
-fn plain_play_reports_post_choice_condition_eof_as_cli_error() {
+fn plain_preview_preserves_typed_event_order_for_condition_and_choice() {
     let asset = asset(concat!(
         ":: start default\n",
-        "> intro@d4015ea1a2b18d0979f4\n",
+        "> intro@11111111111111111111\n",
         "  Welcome.\n",
-        "  ? help@8d41a6f3bba2b4c2e660\n",
-        "    Help.\n",
-        "    -> help\n",
-        ":: help\n",
-        ":if trusts(player)\n",
-        "  > helped@33772e0e0fbf80051af0\n",
-        "    Helped.\n",
-        "-> END\n",
+        "  ? continue@22222222222222222222 requires=(trusts(player))\n",
+        "    Continue.\n",
+        "    -> END\n",
     ));
+    let output = run_plain(&asset, "y\n1\n").expect("play succeeds");
+    let condition = output
+        .find("condition trusts(player) = true")
+        .expect("condition");
+    let prompt = output
+        .find("prompt 11111111111111111111: Welcome.")
+        .expect("prompt");
+    let selected = output
+        .find("selected choice 22222222222222222222")
+        .expect("selection");
+    let end = output.find("end").expect("end");
+    assert!(condition < prompt && prompt < selected && selected < end);
+}
 
-    let error = run_plain(&asset, "8d41a6f3bba2b4c2e660\n").expect_err("eof fails");
+fn run_plain_capture(asset: &CompiledDialogue, input: &str) -> (Result<(), CliError>, String) {
+    let mut input = input.as_bytes();
+    let mut output = Vec::new();
+    let messages = Messages::load(&crate::i18n::UiLocale::default()).expect("messages");
+    let mut ui = PlainPlayUi::new(&mut input, &mut output, &messages);
+    let result = run_preview(asset, "start", None, &mut ui);
+    (result, String::from_utf8(output).expect("utf8"))
+}
+
+struct ErrorAfterInput {
+    input: Cursor<Vec<u8>>,
+    failed: bool,
+}
+
+impl ErrorAfterInput {
+    fn new(input: &str) -> Self {
+        Self {
+            input: Cursor::new(input.as_bytes().to_vec()),
+            failed: false,
+        }
+    }
+}
+
+impl Read for ErrorAfterInput {
+    fn read(&mut self, buffer: &mut [u8]) -> io::Result<usize> {
+        let read = self.input.read(buffer)?;
+        if read == 0 && !self.failed {
+            self.failed = true;
+            return Err(io::Error::other("input failed"));
+        }
+        Ok(read)
+    }
+}
+
+#[test]
+fn plain_play_reports_post_choice_condition_eof_as_cli_error() {
+    let asset = choice_branch_asset();
+
+    let (result, output) = run_plain_capture(&asset, "8d41a6f3bba2b4c2e660\n");
+    let error = result.expect_err("eof fails");
 
     assert!(matches!(
         error,
@@ -219,4 +283,66 @@ fn plain_play_reports_post_choice_condition_eof_as_cli_error() {
             field: "condition answer"
         }
     ));
+    assert_eq!(
+        output
+            .matches("selected choice 8d41a6f3bba2b4c2e660")
+            .count(),
+        1
+    );
+    assert!(
+        output
+            .find("selected choice 8d41a6f3bba2b4c2e660")
+            .expect("accepted choice")
+            < output
+                .find("condition trusts(player)")
+                .expect("condition prompt")
+    );
+}
+
+#[test]
+fn plain_play_reports_post_choice_condition_io_without_duplicate_selection() {
+    let asset = choice_branch_asset();
+    let mut input = ErrorAfterInput::new("8d41a6f3bba2b4c2e660\n");
+    let mut output = Vec::new();
+    let messages = Messages::load(&crate::i18n::UiLocale::default()).expect("messages");
+    let mut ui = PlainPlayUi::new(&mut input, &mut output, &messages);
+    let result = run_preview(&asset, "start", None, &mut ui);
+    let output = String::from_utf8(output).expect("utf8");
+
+    assert!(matches!(result, Err(CliError::Io(_))));
+    assert_eq!(
+        output
+            .matches("selected choice 8d41a6f3bba2b4c2e660")
+            .count(),
+        1
+    );
+    assert!(
+        output
+            .find("selected choice 8d41a6f3bba2b4c2e660")
+            .expect("accepted choice")
+            < output
+                .find("condition trusts(player)")
+                .expect("condition prompt")
+    );
+}
+
+#[test]
+fn plain_preview_presents_choice_before_followup_condition() {
+    let asset = choice_branch_asset();
+
+    let (result, output) = run_plain_capture(&asset, "1\ny\n");
+    result.expect("play succeeds");
+    let selected = output
+        .find("selected choice 8d41a6f3bba2b4c2e660")
+        .expect("selected choice");
+    let condition = output
+        .rfind("condition trusts(player) = true")
+        .expect("follow-up condition result");
+    assert_eq!(
+        output
+            .matches("selected choice 8d41a6f3bba2b4c2e660")
+            .count(),
+        1
+    );
+    assert!(selected < condition);
 }

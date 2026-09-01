@@ -51,6 +51,7 @@
 //! # }
 //! ```
 
+mod authoring;
 mod compile;
 mod diagnostics;
 mod pot;
@@ -61,6 +62,52 @@ mod wire;
 #[doc(hidden)]
 pub mod bench_support;
 
+pub use authoring::{
+    AffectedInput, AffectedInputReason, AnalysisDelta, AuthoringEditError, AuthoringEditOperation,
+    AuthoringEditPlan, AuthoringError, AuthoringKernel, AuthoringRequest, AuthoringSchemaSummary,
+    AuthoringSnapshot, AuthoringSummary, AvailabilityReasonSummary, BlockDefinitionSummary,
+    BlockReferenceSummary, BlockTarget, BuildAuthority, BuildAuthorityError, BuildAuthorityFence,
+    BuildCancellation, BuildCandidate, BuildCheck, BuildCheckError, BuildControl, BuildCoordinator,
+    BuildEngine, BuildEventKind, BuildFailure, BuildFailureReason, BuildFingerprintSet,
+    BuildGeneration, BuildGenerationError, BuildInput, BuildInputAuthority, BuildInputFingerprint,
+    BuildInputKind, BuildInputPayload, BuildInputPolicy, BuildLifecycle, BuildPhase,
+    BuildPreparedHandle, BuildPublishPermit, BuildPublisher, BuildRequest, BuildRequestError,
+    BuildRequestIdentity, BuildResult, BuildResultFailure, BuildRunError, BuildState,
+    BuildStatusProjection, BuildTarget, BuildTargetError, BuildTelemetry, BuildTerminalStatus,
+    BuildTransition, BuildTransitionError, CatalogCoverage, CatalogCoverageSummary,
+    CatalogEntryKey, CatalogEntryResolution, CatalogEntryStatus, CatalogFallbackCandidate,
+    CatalogIdentity, CatalogInput, CatalogMatch, CatalogRecordStatus, CatalogResolution,
+    CatalogResolutionPolicy, CatalogSummary, CatalogSummaryError, CatalogVariant, ClauseKind,
+    CompletionCandidate, CompletionCandidateDetail, CompletionCandidateKind, CompletionItem,
+    CompletionSite, CompletionSiteKind, ConditionSummary, DiagnosticCollection, DiagnosticIter,
+    DialogueCatalog, DialogueCatalogInput, DialogueCatalogSummary, DocumentDelta, DocumentLayer,
+    DocumentMetadata, DocumentSnapshot, DocumentVersion, EditPrecondition, EffectSummary,
+    FreshnessAssessment, FreshnessFailureReason, FreshnessFinalization, FreshnessSnapshotSide,
+    FreshnessStatus, FunctionReferenceKind, FunctionReferenceSummary, HoverInfo, MarkupSummary,
+    MetadataDomainSummary, MetadataKeySummary, MetadataScalar, MetadataSummary, MetadataValue,
+    MetadataValueDetail, MetadataValueKind, NavigationResult, OpenDocument,
+    PreparedPublishIdentity, PresentationProjectorSummary, ProducerActionDescriptor,
+    ProducerActionEvidence, ProducerActionEvidenceError, ProducerActionOperation,
+    ProducerActionOutputEvidence, ProducerActionRequest, ProducerActionRequestError,
+    ProducerActionRequestIdentity, ProducerActionResult, ProducerActionResultError,
+    ProducerActionResultOutcome, ProducerActionStatus, ProducerCapabilityStatus,
+    ProducerFailureEvidence, ProducerFingerprintScopes, ProducerFingerprintScopesError,
+    ProducerLaunchSnapshot, ProducerLaunchSnapshotError, ProducerMetadataSummary,
+    ProducerRetryGuidance, ProjectionQueryFunctionSummary, PublishAbortReason, PublishFailure,
+    PublishFailureReason, PublishNotAttemptedReason, PublishOutcome, PublishOutcomeError,
+    PublishRefusal, QueryClass, QueryResult, QueryUnavailableReason, RecoveryNeeded,
+    RegistrySummary, RestartGuidance, SavedDocument, SchemaAction, SchemaCapability,
+    SchemaCapabilityUnavailableReason, SchemaDeclarationProvenance, SchemaDeclarationSummary,
+    SchemaFingerprintSummary, SchemaFreshness, SchemaFreshnessEvidence,
+    SchemaFreshnessSnapshotIdentity, SchemaFreshnessUnavailableReason, SchemaOwnership,
+    SchemaSourceSummary, SchemaSummary, SchemaSummaryBuildError, SchemaSummaryEvidence,
+    SchemaSummaryEvidenceBuilder, SchemaSummaryEvidenceError, SchemaTypeSummary, SemanticFact,
+    SemanticSymbolKind, SnapshotGeneration, SourceEdit, SourceFingerprint, SourceRange,
+    SpeakerSummary, StableIdKind, StableIdSummary, StaleReason, SymbolIdentity, SymbolKind,
+    SymbolLocation, SymbolQueryOptions, SymbolRole, TranslationStatus, plan_create_block_stub,
+    plan_create_block_stub_in_range, plan_insert_missing_id, plan_insert_missing_ids,
+    plan_insert_missing_ids_for_document, plan_insert_missing_ids_in_range, plan_rename_block,
+};
 pub use compile::{
     CompileError, CompileInput, CompileOptions, CompileReport, CompiledAssetOutput, compile_inputs,
     compile_inputs_with_schema,
@@ -69,6 +116,9 @@ pub use pot::{
     PotDocument, PotEntry, PotExtractionReport, PotReference, extract_pot, extract_pot_with_schema,
 };
 pub use validation::{
-    ValidationReport, validate_source_file, validate_source_files,
+    ValidationCompleteness, ValidationInput, ValidationParticipation, ValidationReport,
+    validate_source_file, validate_source_files, validate_source_files_with_incomplete_project,
+    validate_source_files_with_incomplete_project_with_schema,
+    validate_source_files_with_participation, validate_source_files_with_participation_with_schema,
     validate_source_files_with_schema,
 };

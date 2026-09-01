@@ -11,6 +11,7 @@ cli-help-command-check-markup = Validate inline markup, optionally against a sch
 cli-help-command-check-metadata = Validate metadata against a schema manifest
 cli-help-command-validate-project = Validate recite.project.toml and referenced compiled assets
 cli-help-command-check-fresh = Check whether project compiled assets are fresh
+cli-help-command-inspect-schema = Inspect standalone TOML or generated schema JSON as deterministic machine-readable JSON
 cli-help-command-explain = Explain a stable diagnostic code
 cli-help-command-watch = Watch project inputs and rebuild manifest assets
 cli-help-command-run = Run a compiled asset headlessly with fixture data
@@ -19,6 +20,7 @@ cli-help-command-play = Play a compiled asset interactively
 cli-help-command-bench = Generate benchmark scale reports for fixtures or a project root
 cli-help-arg-paths = One or more .recite files, or directories containing .recite files
 cli-help-arg-schema = Generated schema manifest JSON
+cli-help-arg-schema-inspection = Standalone Recite schema TOML or generated schema manifest JSON
 cli-help-arg-project-root = Project root containing recite.project.toml
 cli-help-arg-diagnostic-code = Stable diagnostic code, such as RECITE_PARSE001
 cli-help-arg-output-compile = Write MessagePack compiled asset bytes to this path
@@ -51,8 +53,78 @@ watch-building = watch: building {$path}
 watch-waiting-for-changes = watch: waiting for changes
 watch-rebuilding = watch: rebuilding
 watch-build-succeeded = watch: build succeeded ({$count} assets)
+watch-build-duration-microseconds = watch: build completed in {$duration} µs
+watch-build-duration-milliseconds = watch: build completed in {$duration} ms
 watch-build-failed-waiting = watch: build failed; waiting for changes
 watch-build-failed = watch: build failed: {$error}
+watch-build-failed-partial = watch: build {$status}: partial publication; failed target {$failed}; recovery targets: {$recovery}{$records}
+watch-build-failed-indeterminate = watch: build {$status}: publication state is indeterminate; recovery targets: {$recovery}{$records}
+watch-build-failed-refused = watch: build {$status}: publication refused: {$reason}{$records}
+watch-build-failed-not-attempted = watch: build {$status}: publication not attempted: {$reason}{$records}
+watch-build-failed-published = watch: build {$status}: publication unexpectedly reported success{$records}
+watch-build-failed-unsupported = watch: build {$status}: publication returned an unsupported outcome{$records}
+watch-build-failed-partial-with-failure = watch: build {$status}: partial publication; failed target {$failed}; recovery targets: {$recovery}; {$failure}{$records}
+watch-build-failed-indeterminate-with-failure = watch: build {$status}: publication state is indeterminate; recovery targets: {$recovery}; {$failure}{$records}
+watch-build-failed-refused-with-failure = watch: build {$status}: publication refused: {$reason}; {$failure}{$records}
+watch-build-failed-not-attempted-with-failure = watch: build {$status}: publication not attempted: {$reason}; {$failure}{$records}
+watch-build-failed-published-with-failure = watch: build {$status}: publication unexpectedly reported success; {$failure}{$records}
+watch-build-failed-unsupported-with-failure = watch: build {$status}: publication returned an unsupported outcome; {$failure}{$records}
+watch-build-status-succeeded = succeeded
+watch-build-status-failed = failed
+watch-build-status-stale = stale
+watch-build-status-cancelled = cancelled
+watch-build-status-superseded = superseded
+watch-build-status-unknown = unknown
+watch-build-recovery-targets-empty = <none>
+watch-build-recovery-targets-list = {$target}
+watch-build-recovery-required = watch: build published {$count} assets; recovery required{$records}
+watch-build-recovery-notice = watch: recovery required{$records}
+watch-build-recovery-summary = { $count ->
+    [0] {$items}
+   *[other] ; recovery markers: {$items}
+}
+watch-build-recovery-record = {$marker}: {$reason}{$detail}
+watch-build-recovery-reason-stage-cleanup = stage cleanup failed
+watch-build-recovery-reason-publication-indeterminate = publication outcome is indeterminate
+watch-build-recovery-reason-publication-uncommitted = publication did not commit this target
+watch-build-recovery-reason-unknown = recovery reason unavailable
+watch-build-recovery-detail-io = ; I/O cause: {$kind} ({$raw_os_error}) {$message}
+watch-build-recovery-io-already-exists = already exists
+watch-build-recovery-io-invalid-input = invalid input
+watch-build-recovery-io-not-found = not found
+watch-build-recovery-io-permission-denied = permission denied
+watch-build-recovery-io-other = other I/O failure
+watch-build-failure-check-request-mismatch = build check request mismatch
+watch-build-failure-check-freshness-mismatch = build check freshness mismatch
+watch-build-failure-check-unknown = build check failed for an unknown reason
+watch-build-failure-diagnostics = engine returned diagnostics
+watch-build-failure-unknown = build failed for an unknown reason
+watch-build-failure-engine-invalid-output = engine failure: invalid output
+watch-build-failure-engine-host = engine failure: host failure
+watch-build-failure-engine-unknown = engine failure: unknown failure
+watch-build-failure-duplicate-target = duplicate build target {$target}
+watch-build-failure-preparation = could not prepare {$target}: {$reason}
+watch-build-failure-reason-rejected = target was rejected
+watch-build-failure-reason-storage = storage failure
+watch-build-failure-reason-unknown = unknown preparation failure
+watch-build-failure-invalid-published-partition = invalid published target partition
+watch-build-failure-invalid-partial-partition = invalid partial target partition
+watch-build-failure-invalid-recovery-target = invalid recovery target
+watch-build-failure-invalid-not-committed = publication did not commit the prepared batch
+watch-build-failure-invalid-unknown = publication returned an unknown invalid outcome
+watch-build-failure-refusal-stale-build-generation = stale build generation
+watch-build-failure-refusal-stale-snapshot-generation = stale snapshot generation
+watch-build-failure-refusal-stale-fingerprints = stale build fingerprints
+watch-build-failure-refusal-request-identity-mismatch = request identity mismatch
+watch-build-failure-refusal-unknown = publication was refused for an unknown reason
+watch-build-failure-not-attempted-build-failed = build failed
+watch-build-failure-not-attempted-cancelled = build was cancelled
+watch-build-failure-not-attempted-superseded = build was superseded
+watch-build-failure-not-attempted-stale = build was stale
+watch-build-failure-not-attempted-no-candidates = build produced no candidates
+watch-build-failure-not-attempted-preparation-failed = build preparation failed
+watch-build-failure-not-attempted-invalid-outcome = publication outcome was invalid
+watch-build-failure-not-attempted-unknown = publication was not attempted for an unknown reason
 watch-event-error = watch: watcher event error: {$error}
 
 play-tui-starting = starting recite play TUI; use --ui plain for line-oriented output
@@ -215,6 +287,7 @@ cli-error-malformed-compiled-asset = malformed compiled asset: {$reason}
 cli-error-diagnostics = diagnostics reported
 cli-error-fixture-choice-index = fixture choice index {$index} is out of range for prompt {$prompt_keys} with {$choice_count} choices; indexes are 1-based
 cli-error-fixture-choice-not-in-prompt = fixture choice `{$choice}` is not in prompt {$prompt_keys}
+cli-error-ambiguous-fixture-choice = fixture block choice `{$block}` is ambiguous across {$prompt_count} prompts; use a line ID
 cli-error-fixture-toml = failed to parse fixture {$path}: {$source}
 cli-error-missing-path = input path does not exist: {$path}
 cli-error-missing-fixture-choice = fixture is missing a [choices] entry for prompt {$prompt_keys}; supported keys for this prompt are listed in trace prompt.identity.fixture_keys
@@ -223,6 +296,10 @@ cli-error-output-overwrites-input = refusing to overwrite input {$input} with ou
 cli-error-blocking-effect = blocking effect `{$effect}` requires [effects].auto_ack_blocking = true in the fixture
 cli-error-bench-json = failed to read or write benchmark JSON: {$error}
 cli-error-trace-json = failed to encode trace JSON: {$error}
+cli-error-schema-inspection-json = failed to encode schema inspection JSON: {$error}
+cli-error-schema-inspection-unsupported-format = unsupported schema inspection format `{$format}` for {$path}
+cli-error-schema-inspection-malformed = malformed {$format} schema input {$path}
+cli-error-schema-inspection-invalid-summary = invalid schema inspection summary: {$reason}
 cli-error-unknown-prompt = runtime emitted an unknown prompt line={$line} choices=[{$choices}]
 cli-error-read = failed to read {$path}: {$source}
 cli-error-read-dir = failed to read directory {$path}: {$source}
@@ -250,7 +327,34 @@ lsp-hover-enum-value = Enum value '{$word}' in '{$name}'.
 lsp-hover-domain-value = Metadata domain value '{$word}' in '{$name}'{$context}.{$detail}
 lsp-hover-produced-by =  Produced by {$kind} `{$id}`{$label}.
 lsp-hover-schema-producer =  Schema producer {$kind} '{$id}'.
-lsp-hover-schema-freshness =  Content fingerprint {$fingerprint}; {$inputs} producer input fingerprints{$scope}.
+lsp-hover-schema-freshness =  Content fingerprint { $fingerprint_state ->
+    [present] {$fingerprint}
+   *[absent] none {$fingerprint}
+}; {$inputs} producer input fingerprints{$scope}.
+lsp-hover-schema-freshness-state =  Freshness { $state ->
+    [fresh] fresh
+    [stale] stale
+   *[other] unavailable
+}: content { $content ->
+    [fresh] fresh
+    [stale] stale
+   *[other] unavailable
+}; manifest { $manifest ->
+    [fresh] fresh
+    [stale] stale
+   *[other] unavailable
+}; registries {$registries}; metadata domains {$metadata_domains}.
+lsp-hover-schema-freshness-unavailable =  Freshness unavailable: { $reason ->
+    [no-comparison-snapshot] no comparison snapshot
+    [no-producer-metadata] no producer metadata
+   *[other] unavailable for this client
+}.
+lsp-hover-schema-freshness-status = { $status ->
+    [fresh] fresh
+    [stale] stale
+    [absent] none
+   *[other] unavailable
+}
 lsp-hover-schema-scoped-fingerprints =  (scoped: {$fingerprints})
 lsp-completion-availability-reason = parameterless availability reason
 lsp-completion-block = Recite block
@@ -275,3 +379,39 @@ lsp-code-action-insert-all-missing-ids = Insert all missing stable IDs in file
 lsp-code-action-create-block-stub = Create block stub `{$block}`
 lsp-code-action-add-condition = Add condition `{$name}` to schema
 lsp-code-action-add-effect = Add effect `{$name}` to schema
+lsp-code-action-schema-action = Schema capability ({ $declaration_kind ->
+    [type] type
+    [registry] registry
+    [speaker] speaker
+    [condition] condition
+    [reason] reason
+    [effect] effect
+    [metadata-domain] metadata domain
+    [metadata] metadata
+    [projection-query] projection query
+    [projector] projector
+    [markup] markup
+   *[schema] schema
+} {$declaration_name}): { $action ->
+    [open-source] open source declaration
+    [edit-standalone] edit standalone source
+    [invoke] invoke producer
+    [retry] retry producer failure
+    [read-only] read-only generated schema
+    [unavailable] unavailable schema action
+   *[other] schema action
+} ({ $producer_state ->
+    [present] {$producer}
+   *[absent] no producer {$producer}
+})
+lsp-code-action-schema-disabled = Schema capability unavailable: { $reason ->
+    [source-location] source location is not available
+    [standalone-source-closed] standalone source is not open with a version
+    [standalone-edit] standalone source edit is not available
+    [producer-contract] producer execution contract is not available
+    [generated-read-only] generated schema is read-only
+    [unknown-source-owner] source owner is unknown
+    [producer-capability] producer capability is unavailable
+   *[other] schema action is not supported by this client
+}.
+lsp-warning-ui-config = UI configuration could not be loaded (code {$code}): {$detail}; using embedded en-US UI text.

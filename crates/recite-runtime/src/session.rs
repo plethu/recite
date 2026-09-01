@@ -94,6 +94,14 @@ impl DialogueSession {
     pub fn locale(&self) -> Option<&LocaleId> {
         self.locale.as_ref()
     }
+
+    pub(crate) fn active_block_index(&self) -> BlockIndex {
+        self.current_block
+    }
+
+    pub(crate) fn next_statement_index(&self) -> StatementIndex {
+        self.next_statement
+    }
 }
 
 #[derive(Clone, Debug, Default, Eq, PartialEq)]

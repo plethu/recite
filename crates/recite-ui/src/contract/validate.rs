@@ -146,7 +146,6 @@ impl UiContract {
         }
     }
 
-    #[allow(clippy::expect_used)]
     fn validate_resolution(
         &self,
         source: &str,
@@ -156,9 +155,17 @@ impl UiContract {
         let Ok(resource) = FluentResource::try_new(source.to_owned()) else {
             return;
         };
-        let locale = "en-US"
-            .parse()
-            .expect("embedded validation locale is valid");
+        let locale = {
+            #[expect(
+                clippy::expect_used,
+                reason = "the fixed en-US validation locale is a valid BCP-47 identifier"
+            )]
+            {
+                "en-US"
+                    .parse()
+                    .expect("embedded validation locale is valid")
+            }
+        };
         let mut bundle = FluentBundle::new(vec![locale]);
         if let Err(errors) = bundle.add_resource(resource) {
             issues.insert(ContractIssue::Resolution(format!(

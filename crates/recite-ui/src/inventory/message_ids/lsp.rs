@@ -22,6 +22,11 @@ pub(super) const fn key(id: super::MsgId) -> Option<&'static str> {
         super::MsgId::LspHoverProducedBy => Some("lsp-hover-produced-by"),
         super::MsgId::LspHoverSchemaProducer => Some("lsp-hover-schema-producer"),
         super::MsgId::LspHoverSchemaFreshness => Some("lsp-hover-schema-freshness"),
+        super::MsgId::LspHoverSchemaFreshnessState => Some("lsp-hover-schema-freshness-state"),
+        super::MsgId::LspHoverSchemaFreshnessStatus => Some("lsp-hover-schema-freshness-status"),
+        super::MsgId::LspHoverSchemaFreshnessUnavailable => {
+            Some("lsp-hover-schema-freshness-unavailable")
+        }
         super::MsgId::LspHoverSchemaScopedFingerprints => {
             Some("lsp-hover-schema-scoped-fingerprints")
         }
@@ -62,6 +67,9 @@ pub(super) const fn key(id: super::MsgId) -> Option<&'static str> {
         super::MsgId::LspCodeActionCreateBlockStub => Some("lsp-code-action-create-block-stub"),
         super::MsgId::LspCodeActionAddCondition => Some("lsp-code-action-add-condition"),
         super::MsgId::LspCodeActionAddEffect => Some("lsp-code-action-add-effect"),
+        super::MsgId::LspCodeActionSchemaAction => Some("lsp-code-action-schema-action"),
+        super::MsgId::LspCodeActionSchemaDisabled => Some("lsp-code-action-schema-disabled"),
+        super::MsgId::LspWarningUiConfig => Some("lsp-warning-ui-config"),
         _ => None,
     }
 }

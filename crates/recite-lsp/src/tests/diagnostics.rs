@@ -7,10 +7,11 @@ use recite_core::{
 use serde_json::json;
 use tempfile::TempDir;
 
-use super::support::{Harness, file_uri, full_change, uri, write_file};
+use super::support::{Harness, file_uri, full_change, test_workspace, uri, write_file};
 use crate::diagnostics::publish_diagnostics;
-use crate::workspace::{LspWorkspace, WorkspaceConfig};
+use crate::workspace::WorkspaceConfig;
 
+mod fixtures;
 mod schema;
 
 pub(super) fn did_open_publishes_source_diagnostics_with_stable_shape() {
@@ -167,47 +168,11 @@ pub(super) fn did_open_publishes_schema_less_semantic_diagnostics() {
 }
 
 pub(super) fn shared_language_pressure_fixture_publishes_no_diagnostics() {
-    let harness = Harness::start();
-    let source_uri = uri("file:///workspace/fixtures/recite/valid/language_pressure.recite");
-    let source = include_str!("../../../../fixtures/recite/valid/language_pressure.recite");
-
-    harness.did_open(source_uri, 1, source);
-    let published = harness.recv_publish_diagnostics();
-
-    assert!(published.diagnostics.is_empty(), "{published:?}");
-    harness.finish();
+    fixtures::shared_language_pressure_fixture_publishes_no_diagnostics();
 }
 
 pub(super) fn shared_language_pressure_fixture_projects_marker_diagnostics() {
-    let harness = Harness::start();
-    let source_uri =
-        uri("file:///workspace/fixtures/recite/invalid/parser_marker_leading_prose.recite");
-    let source =
-        include_str!("../../../../fixtures/recite/invalid/parser_marker_leading_prose.recite");
-
-    harness.did_open(source_uri, 1, source);
-    let published = harness.recv_publish_diagnostics();
-
-    assert_eq!(
-        diagnostic_codes(&published.diagnostics),
-        ["RECITE_PARSE011", "RECITE_PARSE013"]
-    );
-    assert_eq!(
-        published.diagnostics[0].range,
-        Range {
-            start: Position::new(2, 11),
-            end: Position::new(2, 13),
-        }
-    );
-    assert_eq!(
-        published.diagnostics[1].range,
-        Range {
-            start: Position::new(3, 11),
-            end: Position::new(3, 13),
-        }
-    );
-
-    harness.finish();
+    fixtures::shared_language_pressure_fixture_projects_marker_diagnostics();
 }
 
 pub(super) fn did_open_publishes_schema_backed_semantic_diagnostics() {
@@ -265,7 +230,7 @@ pub(super) fn related_spans_resolve_project_files_and_target_text() {
     assert_eq!(related[0].location.range.start, Position::new(1, 0));
     assert_eq!(related[0].location.range.end, Position::new(1, 0));
 
-    let workspace = LspWorkspace::new(WorkspaceConfig::for_roots(vec![temp.path().to_owned()]));
+    let workspace = test_workspace(WorkspaceConfig::for_roots(vec![temp.path().to_owned()]));
     let primary_span = SourceSpan::point(
         "dialogue/second.recite",
         SourcePosition::new(1, 1).expect("valid test position"),
@@ -295,12 +260,12 @@ pub(super) fn related_spans_resolve_project_files_and_target_text() {
         )),
     )]);
     let published = publish_diagnostics(
-        second_uri,
+        second_uri.clone(),
         ":: second\n> shared@83709c28414d0ce4659c\n  Second.\n",
         Some(1),
         &[diagnostic],
         &workspace.ui_catalog,
-        &workspace.diagnostic_sources(),
+        &workspace.diagnostic_sources_for_uri(&second_uri),
     )
     .expect("recordable diagnostic");
     let related = published.diagnostics[0]
@@ -324,6 +289,26 @@ pub(super) fn did_save_schema_reloads_and_republishes_source_diagnostics() {
 
 pub(super) fn did_save_schema_reloads_from_non_canonical_schema_uri() {
     schema::did_save_schema_reloads_from_non_canonical_schema_uri();
+}
+
+pub(super) fn did_save_keeps_unsaved_schema_overlay() {
+    schema::did_save_keeps_unsaved_schema_overlay();
+}
+
+pub(super) fn watched_schema_refresh_keeps_unsaved_schema_overlay() {
+    schema::watched_schema_refresh_keeps_unsaved_schema_overlay();
+}
+
+pub(super) fn valid_schema_overlay_clears_diagnostics_with_new_version() {
+    schema::valid_schema_overlay_clears_diagnostics_with_new_version();
+}
+
+pub(super) fn did_close_schema_alias_clears_exact_uri() {
+    schema::did_close_schema_alias_clears_exact_uri();
+}
+
+pub(super) fn retired_schema_alias_close_clears_and_reopens() {
+    schema::retired_schema_alias_close_clears_and_reopens();
 }
 
 pub(super) fn did_close_removes_state_and_clears_diagnostics() {

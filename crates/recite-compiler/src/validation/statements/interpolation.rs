@@ -79,6 +79,7 @@ impl<'a> Validator<'a> {
             source_file,
             plural_source_text,
             diagnostics::SourceSpanOwner::PluralSourceText,
+            self.participation,
         );
         if line.source_text.text.contains('\n') || plural_source_text.text.contains('\n') {
             self.diagnostics.push(diagnostics::invalid_plural_line(

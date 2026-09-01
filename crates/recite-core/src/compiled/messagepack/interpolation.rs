@@ -43,8 +43,9 @@ pub(crate) fn validate_interpolation_row(
 
 pub(crate) fn validate_line_interpolation_rows(
     line: &CompiledLine,
+    canonical_wire: bool,
 ) -> Result<(), CompiledAssetDecodeError> {
-    if line.interpolation_mode == crate::CompiledInterpolationMode::Legacy {
+    if line.interpolation_mode == crate::CompiledInterpolationMode::Legacy && !canonical_wire {
         return Ok(());
     }
     let ignored = if let (Some(_source_text), Some(authored_plural_source_text)) = (

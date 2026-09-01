@@ -2,6 +2,7 @@ use std::fs;
 use std::path::PathBuf;
 
 use lsp_types::{Position, Uri};
+use recite_compiler::DocumentSnapshot;
 
 use crate::position::span_to_range;
 use crate::summary::FileSummary;
@@ -26,14 +27,19 @@ impl LspBenchmarkProbes {
             });
         let completion = summaries
             .iter()
-            .find_map(block_reference_probe)
+            .find_map(|summary| block_reference_probe(workspace, summary))
             .unwrap_or_else(|| {
                 panic!("LSP benchmark fixture contains at least one block reference")
             });
-        let definition = completion.clone();
+        let definition = summaries
+            .iter()
+            .find_map(|summary| block_reference_definition_probe(workspace, summary))
+            .unwrap_or_else(|| {
+                panic!("LSP benchmark fixture contains at least one block reference")
+            });
         let rename = summaries
             .iter()
-            .find_map(block_definition_probe)
+            .find_map(|summary| block_definition_probe(workspace, summary))
             .unwrap_or_else(|| {
                 panic!("LSP benchmark fixture contains at least one block definition")
             });
@@ -82,27 +88,44 @@ pub(crate) fn read_probe_text_or_panic(probe: &LspDocumentProbe) -> String {
     }
 }
 
-fn block_reference_probe(summary: &FileSummary) -> Option<LspPositionProbe> {
-    let reference = summary.block_references.first()?;
+fn block_reference_probe(
+    workspace: &LspWorkspace,
+    summary: &FileSummary,
+) -> Option<LspPositionProbe> {
+    let document = compiler_document(workspace, summary)?;
+    let reference = document.summary().block_references().first()?;
     let text = read_summary_text(summary)?;
-    let range = span_to_range(&text, &reference.span);
+    let range = span_to_range(&text, reference.block_id_span().unwrap_or(reference.span()));
     position_probe(summary, range.end)
 }
 
-fn block_definition_probe(summary: &FileSummary) -> Option<LspPositionProbe> {
-    let block = summary.blocks.first()?;
+fn block_reference_definition_probe(
+    workspace: &LspWorkspace,
+    summary: &FileSummary,
+) -> Option<LspPositionProbe> {
+    let document = compiler_document(workspace, summary)?;
+    let reference = document.summary().block_references().first()?;
     let text = read_summary_text(summary)?;
-    let full_range = span_to_range(&text, &block.span);
-    let line = text
-        .lines()
-        .nth(usize::try_from(full_range.start.line).ok()?)
-        .unwrap_or_default();
-    let start_byte = line.find(block.name.as_str())?;
-    let position = Position {
-        line: full_range.start.line,
-        character: utf16_units_for_byte_index(line, start_byte),
-    };
+    let range = span_to_range(&text, reference.block_id_span().unwrap_or(reference.span()));
+    position_probe(summary, range.start)
+}
+
+fn block_definition_probe(
+    workspace: &LspWorkspace,
+    summary: &FileSummary,
+) -> Option<LspPositionProbe> {
+    let document = compiler_document(workspace, summary)?;
+    let block = document.summary().blocks().first()?;
+    let text = read_summary_text(summary)?;
+    let position = span_to_range(&text, block.id_span().unwrap_or(block.span())).start;
     position_probe(summary, position)
+}
+
+fn compiler_document<'a>(
+    workspace: &'a LspWorkspace,
+    summary: &FileSummary,
+) -> Option<&'a DocumentSnapshot> {
+    workspace.compiler_document_for_summary(summary)
 }
 
 fn position_probe(summary: &FileSummary, position: Position) -> Option<LspPositionProbe> {
@@ -116,13 +139,4 @@ fn position_probe(summary: &FileSummary, position: Position) -> Option<LspPositi
 
 fn read_summary_text(summary: &FileSummary) -> Option<String> {
     fs::read_to_string(summary.saved_path()?).ok()
-}
-
-fn utf16_units_for_byte_index(line: &str, byte_index: usize) -> u32 {
-    line[..byte_index]
-        .chars()
-        .map(char::len_utf16)
-        .fold(0u32, |total, width| {
-            total.saturating_add(u32::try_from(width).unwrap_or(u32::MAX))
-        })
 }

@@ -1,3 +1,5 @@
+format_version = 1
+
 [project]
 name = "realistic-v1-pack"
 schema = "schema/realistic.schema.json"

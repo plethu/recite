@@ -38,6 +38,19 @@ jobs:
           fetch-depth: 0
           persist-credentials: false
 
+      # The base-owned maintainability environment supplies the exact parser
+      # used by the trusted suppression policy. Never install tools from the
+      # contributor's ref.
+      - name: Install base policy toolchain
+        uses: jdx/mise-action@3c2e0cf82a5b2e5249f0d3635a4d83d0ae861518 # v4.2.5
+        env:
+          MISE_ENV: maintainability
+
+      - name: Check pinned Rust parse toolchain
+        run: |
+          test "$(mise current rust)" = "1.96.0"
+          command -v rustfmt
+
       - name: Check trusted Git workflow policy
         env:
           GH_TOKEN: ${{ github.token }}

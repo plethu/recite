@@ -18,6 +18,7 @@ fn help_covers_issue_25_commands_and_options() {
         "check-metadata",
         "validate-project",
         "check-fresh",
+        "inspect-schema",
         "explain",
         "watch",
         "run",
@@ -49,6 +50,11 @@ fn help_covers_issue_25_commands_and_options() {
     let fresh = run(recite().arg("check-fresh").arg("--help"));
     fresh.assert_success().assert_stderr("");
     fresh.assert_stdout_contains("compiled assets are fresh");
+
+    let inspect = run(recite().arg("inspect-schema").arg("--help"));
+    inspect.assert_success().assert_stderr("");
+    inspect.assert_stdout_contains("Usage: recite inspect-schema <SCHEMA>");
+    inspect.assert_stdout_contains("deterministic machine-readable JSON");
 
     let explain = run(recite().arg("explain").arg("--help"));
     explain.assert_success().assert_stderr("");

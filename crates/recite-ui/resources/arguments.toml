@@ -13,8 +13,87 @@ item = "string"
 path = "string"
 [arguments."watch-build-succeeded"]
 count = "integer"
+[arguments."watch-build-duration-microseconds"]
+duration = "integer"
+[arguments."watch-build-duration-milliseconds"]
+duration = "float"
 [arguments."watch-build-failed"]
 error = "string"
+[arguments."watch-build-failed-partial"]
+status = "string"
+failed = "string"
+recovery = "string"
+records = "string"
+[arguments."watch-build-failed-indeterminate"]
+status = "string"
+recovery = "string"
+records = "string"
+[arguments."watch-build-failed-refused"]
+status = "string"
+reason = "string"
+records = "string"
+[arguments."watch-build-failed-not-attempted"]
+status = "string"
+reason = "string"
+records = "string"
+[arguments."watch-build-failed-published"]
+status = "string"
+records = "string"
+[arguments."watch-build-failed-unsupported"]
+status = "string"
+records = "string"
+[arguments."watch-build-failed-partial-with-failure"]
+status = "string"
+failed = "string"
+recovery = "string"
+failure = "string"
+records = "string"
+[arguments."watch-build-failed-indeterminate-with-failure"]
+status = "string"
+recovery = "string"
+failure = "string"
+records = "string"
+[arguments."watch-build-failed-refused-with-failure"]
+status = "string"
+reason = "string"
+failure = "string"
+records = "string"
+[arguments."watch-build-failed-not-attempted-with-failure"]
+status = "string"
+reason = "string"
+failure = "string"
+records = "string"
+[arguments."watch-build-failed-published-with-failure"]
+status = "string"
+failure = "string"
+records = "string"
+[arguments."watch-build-failed-unsupported-with-failure"]
+status = "string"
+failure = "string"
+records = "string"
+[arguments."watch-build-recovery-required"]
+count = "integer"
+records = "string"
+[arguments."watch-build-recovery-notice"]
+records = "string"
+[arguments."watch-build-recovery-summary"]
+count = "integer"
+items = "string"
+[arguments."watch-build-recovery-record"]
+marker = "string"
+reason = "string"
+detail = "string"
+[arguments."watch-build-recovery-detail-io"]
+kind = "string"
+raw_os_error = "string"
+message = "string"
+[arguments."watch-build-recovery-targets-list"]
+target = "string"
+[arguments."watch-build-failure-duplicate-target"]
+target = "string"
+[arguments."watch-build-failure-preparation"]
+target = "string"
+reason = "string"
 [arguments."watch-event-error"]
 error = "string"
 [arguments."play-start"]
@@ -153,6 +232,9 @@ choice_count = "integer"
 [arguments."cli-error-fixture-choice-not-in-prompt"]
 choice = "string"
 prompt_keys = "string"
+[arguments."cli-error-ambiguous-fixture-choice"]
+block = "string"
+prompt_count = "integer"
 [arguments."cli-error-fixture-toml"]
 path = "string"
 source = "string"
@@ -169,6 +251,16 @@ effect = "string"
 error = "string"
 [arguments."cli-error-trace-json"]
 error = "string"
+[arguments."cli-error-schema-inspection-json"]
+error = "string"
+[arguments."cli-error-schema-inspection-unsupported-format"]
+path = "string"
+format = "string"
+[arguments."cli-error-schema-inspection-malformed"]
+path = "string"
+format = "string"
+[arguments."cli-error-schema-inspection-invalid-summary"]
+reason = "string"
 [arguments."cli-error-unknown-prompt"]
 line = "string"
 choices = "string"
@@ -263,10 +355,29 @@ kind = "string"
 id = "string"
 [arguments."lsp-hover-schema-freshness"]
 fingerprint = "string"
+fingerprint_state = "string"
 inputs = "integer"
 scope = "string"
+[arguments."lsp-hover-schema-freshness-state"]
+state = "string"
+content = "string"
+manifest = "string"
+registries = "string"
+metadata_domains = "string"
+[arguments."lsp-hover-schema-freshness-unavailable"]
+reason = "string"
+[arguments."lsp-hover-schema-freshness-status"]
+status = "string"
 [arguments."lsp-hover-schema-scoped-fingerprints"]
 fingerprints = "string"
+[arguments."lsp-code-action-schema-action"]
+action = "string"
+producer = "string"
+producer_state = "string"
+declaration_kind = "string"
+declaration_name = "string"
+[arguments."lsp-code-action-schema-disabled"]
+reason = "string"
 [arguments."lsp-completion-metadata-key-with-domain"]
 domain = "string"
 [arguments."lsp-completion-metadata-domain"]
@@ -277,6 +388,9 @@ returns = "string"
 modes = "string"
 [arguments."lsp-completion-projection-query"]
 function = "string"
+[arguments."lsp-warning-ui-config"]
+code = "string"
+detail = "string"
 [arguments."lsp-completion-projection-query-function"]
 returns = "string"
 [arguments."lsp-completion-projection-query-call"]

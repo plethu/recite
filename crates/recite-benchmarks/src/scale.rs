@@ -101,6 +101,11 @@ impl BenchmarkFixture {
         Self::Synthetic(BenchmarkScale::Small),
     ];
 
+    /// Preview evidence spans the checked-in tiny fixture and the realistic
+    /// v1 pack so both synthetic scale and authored project shape stay visible.
+    pub const PREVIEW_DEFAULT: [Self; 2] =
+        [Self::Synthetic(BenchmarkScale::Tiny), Self::RealisticV1Pack];
+
     #[must_use]
     pub fn as_str(self) -> &'static str {
         match self {
@@ -121,6 +126,16 @@ impl BenchmarkFixture {
         match std::env::var(ENV_SCALES) {
             Ok(value) => parse_fixture_list(&value),
             Err(std::env::VarError::NotPresent) => Ok(Self::DEFAULT.to_vec()),
+            Err(var_error) => Err(error(format!(
+                "{ENV_SCALES} is not valid UTF-8: {var_error}"
+            ))),
+        }
+    }
+
+    pub fn selected_preview_from_env() -> BenchmarkResult<Vec<Self>> {
+        match std::env::var(ENV_SCALES) {
+            Ok(value) => parse_fixture_list(&value),
+            Err(std::env::VarError::NotPresent) => Ok(Self::PREVIEW_DEFAULT.to_vec()),
             Err(var_error) => Err(error(format!(
                 "{ENV_SCALES} is not valid UTF-8: {var_error}"
             ))),

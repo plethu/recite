@@ -115,6 +115,15 @@ fn localise_subcommand(command: &mut clap::Command, messages: &Messages) {
                 messages,
             );
         }
+        "inspect-schema" => {
+            set_about(command, messages.text(MsgId::CliHelpCommandInspectSchema));
+            set_positional_arg_help(
+                command,
+                "schema",
+                messages.text(MsgId::CliHelpArgSchemaInspection),
+                messages,
+            );
+        }
         "explain" => {
             set_about(command, messages.text(MsgId::CliHelpCommandExplain));
             set_arg_help(
@@ -259,6 +268,18 @@ fn set_arg_help(command: &mut clap::Command, id: &'static str, help: String, mes
         messages.text(MsgId::CliHelpOptionsHeading)
     };
     *command = std::mem::take(command).mut_arg(id, |arg| arg.help(help).help_heading(heading));
+}
+
+fn set_positional_arg_help(
+    command: &mut clap::Command,
+    id: &'static str,
+    help: String,
+    messages: &Messages,
+) {
+    *command = std::mem::take(command).mut_arg(id, |arg| {
+        arg.help(help)
+            .help_heading(messages.text(MsgId::CliHelpArgumentsHeading))
+    });
 }
 
 fn set_about(command: &mut clap::Command, about: String) {

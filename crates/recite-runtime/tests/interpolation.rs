@@ -6,10 +6,10 @@ use recite_core::{
     decode_compiled_dialogue_messagepack,
 };
 use recite_runtime::{
-    DialogueEvent, DialogueSessionOptions, EmptyDialogueContext, InterpolationValueProvider,
-    InterpolationValues, LocaleError, LocaleProvider, LocaleResolution, PluralResolution,
-    PluralResolutionAttempt, PluralResolutionOutcome, TextDomain, choose, next_with, start_scene,
-    start_scene_with_options,
+    DialogueEvent, DialogueSessionOptions, DialogueTrace, EmptyDialogueContext,
+    InterpolationValueProvider, InterpolationValues, LocaleError, LocaleProvider, LocaleResolution,
+    PluralResolution, PluralResolutionAttempt, PluralResolutionOutcome, TextDomain, choose,
+    next_with, start_scene, start_scene_with_options,
 };
 
 fn asset() -> recite_core::CompiledDialogue {
@@ -340,13 +340,15 @@ fn plural_provider_receives_count_and_translates_selected_form() {
     .unwrap();
     let mut values = InterpolationValues::new();
     values.insert("remaining".to_owned(), ScalarValue::from(1_i64));
+    let trace = DialogueTrace::new();
     let DialogueEvent::Line(line) = next_with(
         &asset,
         &mut session,
         &recite_runtime::EmptyDialogueContext,
         LocaleResolution::new()
             .with_provider(&PluralProvider)
-            .with_values(&values),
+            .with_values(&values)
+            .with_trace(&trace),
     )
     .unwrap() else {
         panic!("expected plural line");

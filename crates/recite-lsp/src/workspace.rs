@@ -1,29 +1,40 @@
 mod config;
+mod document_keys;
+mod kernel;
+#[path = "workspace/kernel_rebuild.rs"]
+mod kernel_rebuild;
+#[path = "workspace/kernel_standalone.rs"]
+mod kernel_standalone;
+mod lsp_features;
+mod partition_rollback;
 mod project_index;
+#[path = "project_refresh.rs"]
+mod project_refresh;
 mod schema_index;
+mod schema_lifecycle;
+mod snapshot;
+mod transaction;
 mod ui;
 
-use std::collections::BTreeSet;
-use std::fs;
-use std::path::{Path, PathBuf};
+#[cfg(test)]
+mod tests;
 
-use lsp_types::{
-    CodeActionParams, CodeActionResponse, CompletionResponse, GotoDefinitionResponse, Hover,
-    Location, Position, PrepareRenameResponse, TextDocumentContentChangeEvent, Uri, WorkspaceEdit,
-};
-use recite_core::{Diagnostic, SourceFile};
-use recite_parser::parse;
+use std::collections::{BTreeMap, BTreeSet};
+
+use lsp_types::Uri;
+use recite_core::Diagnostic;
 use recite_ui::UiCatalog;
 
 pub(crate) use config::WorkspaceConfig;
-pub(crate) use project_index::LiveProjectSnapshot;
+pub(crate) use document_keys::{
+    document_key_for_identity, document_key_for_open, document_key_for_saved,
+};
+pub(crate) use kernel::KernelPartition;
 use project_index::{SavedDocument, SavedProjectIndex};
 use schema_index::SchemaIndex;
+pub(crate) use snapshot::LiveProjectSnapshot;
 
-use crate::documents::{DocumentChangeResult, OpenDocument, OpenDocumentStore};
-use crate::features;
-use crate::paths::{project_relative_path, uri_to_file_path};
-use crate::summary::{FileSummary, OpenFileIdentity};
+use crate::documents::{OpenDocument, OpenDocumentStore};
 
 #[derive(Clone, Copy, Debug, Eq, PartialEq)]
 pub(crate) struct SnapshotGeneration(u64);
@@ -31,398 +42,159 @@ pub(crate) struct SnapshotGeneration(u64);
 pub(crate) struct LspWorkspace {
     saved: SavedProjectIndex,
     documents: OpenDocumentStore,
+    partitions: BTreeMap<String, KernelPartition>,
     snapshot: LiveProjectSnapshot,
-    schema: SchemaIndex,
+    schema_override_path: Option<std::path::PathBuf>,
+    schema_paths: BTreeMap<String, Option<std::path::PathBuf>>,
+    retired_schema_uris: BTreeSet<String>,
+    retired_schema_targets: BTreeMap<String, String>,
     generation: SnapshotGeneration,
+    next_partition_build_id: u64,
     pub(crate) ui_catalog: UiCatalog,
 }
 
 impl LspWorkspace {
-    pub(crate) fn open(&mut self, uri: Uri, version: i32, text: String) -> DiagnosticRefresh {
-        let identity = self.open_identity(uri);
-        let document = self.documents.open(identity, version, text);
-        self.rebuild_next_generation();
-        DiagnosticRefresh::publish_open(&document, self.generation)
-    }
-
-    pub(crate) fn change(
-        &mut self,
-        uri: Uri,
-        version: i32,
-        changes: Vec<TextDocumentContentChangeEvent>,
-    ) -> WorkspaceChangeResult {
-        let identity = self.open_identity(uri);
-        match self.documents.change(identity, version, changes) {
-            DocumentChangeResult::Accepted(document) => {
-                self.rebuild_next_generation();
-                WorkspaceChangeResult::Accepted(DiagnosticRefresh::publish_open(
-                    &document,
-                    self.generation,
-                ))
+    pub(crate) fn schema_diagnostics_all(&self) -> Vec<DiagnosticRefresh> {
+        let mut refreshes: Vec<(String, DocumentDiagnostics)> = Vec::new();
+        for partition in self.partitions.values() {
+            let Some(refresh) = partition.schema.diagnostics_refresh(self.generation) else {
+                continue;
+            };
+            let DiagnosticRefresh::Publish(published) = refresh else {
+                continue;
+            };
+            let key = partition
+                .schema
+                .target_identity()
+                .unwrap_or_else(|| published.uri.as_str().to_owned());
+            if let Some((_, existing)) = refreshes.iter_mut().find(|(existing, _)| *existing == key)
+            {
+                for diagnostic in published.diagnostics {
+                    if !existing.diagnostics.contains(&diagnostic) {
+                        existing.diagnostics.push(diagnostic);
+                    }
+                }
+            } else {
+                refreshes.push((key, published));
             }
-            DocumentChangeResult::Stale => WorkspaceChangeResult::Stale,
-            DocumentChangeResult::Malformed => WorkspaceChangeResult::Malformed,
-            DocumentChangeResult::Unopened => WorkspaceChangeResult::Unopened,
         }
-    }
-
-    pub(crate) fn save(&mut self, uri: Uri) -> Option<DiagnosticRefresh> {
-        let touched_saved = self.saved.refresh_uri(&uri);
-        let open_identity = self.open_identity(uri.clone());
-        let open_refresh = self.documents.refresh_identity(open_identity);
-
-        if touched_saved
-            || open_refresh
-                .as_ref()
-                .is_some_and(|refresh| refresh.identity_changed)
-        {
-            self.rebuild_next_generation();
-        }
-
-        if let Some(open_refresh) = open_refresh {
-            return Some(DiagnosticRefresh::publish_open(
-                &open_refresh.document,
-                self.generation,
-            ));
-        }
-
-        self.saved
-            .document_by_uri(&uri)
-            .map(|document| DiagnosticRefresh::publish_saved(document, self.generation))
-            .or_else(|| {
-                touched_saved.then_some(DiagnosticRefresh::Clear {
-                    uri,
-                    generation: self.generation,
-                })
-            })
-    }
-
-    pub(crate) fn close(&mut self, uri: Uri) -> Option<DiagnosticRefresh> {
-        self.documents.close(&uri)?;
-        self.saved.refresh_uri(&uri);
-        self.rebuild_next_generation();
-
-        Some(
-            self.saved
-                .document_by_uri(&uri)
-                .map(|document| DiagnosticRefresh::publish_saved(document, self.generation))
-                .unwrap_or(DiagnosticRefresh::Clear {
-                    uri,
-                    generation: self.generation,
-                }),
-        )
-    }
-
-    pub(crate) fn schema_diagnostics(&self) -> Option<DiagnosticRefresh> {
-        self.schema.diagnostics_refresh(self.generation)
-    }
-
-    pub(crate) fn save_schema(&mut self, uri: &Uri) -> Option<DiagnosticRefresh> {
-        if !self.schema.refresh_uri(uri) {
-            return None;
-        }
-        self.rebuild_next_generation();
-        self.schema.refresh_or_clear(self.generation)
-    }
-
-    pub(crate) fn with_semantic_diagnostics(
-        &self,
-        mut diagnostics: DocumentDiagnostics,
-    ) -> DocumentDiagnostics {
-        if !diagnostics.diagnostics.is_empty() {
-            return diagnostics;
-        }
-        let Some(source_files) = self.live_source_files() else {
-            return diagnostics;
-        };
-        let validation_path = self.validation_path_for_uri(&diagnostics.uri);
-
-        diagnostics.diagnostics = match self.schema.schema() {
-            Some(schema) => {
-                recite_compiler::validate_source_files_with_schema(&source_files, schema)
-                    .diagnostics
-            }
-            None => recite_compiler::validate_source_files(&source_files).diagnostics,
-        };
-        diagnostics
-            .diagnostics
-            .retain(|diagnostic| diagnostic.span.file == validation_path);
-        diagnostics
-    }
-
-    pub(crate) fn completion(&self, uri: &Uri, position: Position) -> Option<CompletionResponse> {
-        let text = self.documents.document(uri)?.text();
-        let schema = self.schema.schema()?;
-        features::completion(
-            text,
-            position,
-            schema,
-            self.schema.matches_uri(uri),
-            &self.snapshot,
-            &self.ui_catalog,
-        )
-    }
-
-    pub(crate) fn hover(&self, uri: &Uri, position: Position) -> Option<Hover> {
-        let text = self.documents.document(uri)?.text();
-        features::hover(
-            text,
-            position,
-            self.schema.schema(),
-            &self.snapshot,
-            &self.ui_catalog,
-        )
-    }
-
-    pub(crate) fn definition(
-        &self,
-        uri: &Uri,
-        position: Position,
-    ) -> Option<GotoDefinitionResponse> {
-        let documents = self.navigation_documents();
-        features::definition(uri, position, &documents)
-    }
-
-    pub(crate) fn references(
-        &self,
-        uri: &Uri,
-        position: Position,
-        include_declaration: bool,
-    ) -> Option<Vec<Location>> {
-        let documents = self.navigation_documents();
-        features::references(uri, position, include_declaration, &documents)
-    }
-
-    pub(crate) fn prepare_rename(
-        &self,
-        uri: &Uri,
-        position: Position,
-    ) -> Option<PrepareRenameResponse> {
-        let documents = self.navigation_documents();
-        features::prepare_rename(uri, position, &documents)
-    }
-
-    pub(crate) fn rename(
-        &self,
-        uri: &Uri,
-        position: Position,
-        new_name: &str,
-    ) -> Option<WorkspaceEdit> {
-        let documents = self.navigation_documents();
-        features::rename(uri, position, new_name, &documents)
-    }
-
-    pub(crate) fn code_action(&self, params: &CodeActionParams) -> Option<CodeActionResponse> {
-        let documents = self.code_action_documents();
-        let schema_is_open = self
-            .schema
-            .uri()
-            .is_some_and(|uri| self.documents.document(uri).is_some())
-            || self.schema.path().is_some_and(|path| {
-                self.documents.documents().any(|document| {
-                    document
-                        .summary()
-                        .saved_path()
-                        .is_some_and(|open| open == path)
-                })
-            });
-        let schema_document = if schema_is_open {
-            None
-        } else {
-            self.schema.code_action_document()
-        };
-        features::code_action(params, &documents, schema_document, &self.ui_catalog)
-    }
-
-    pub(crate) fn open_document_diagnostics_except(
-        &self,
-        exclude: Option<&Uri>,
-    ) -> Vec<DiagnosticRefresh> {
-        self.documents
-            .documents()
-            .filter(|document| match exclude {
-                Some(uri) => document.identity().uri != *uri,
-                None => true,
-            })
-            .map(|document| DiagnosticRefresh::publish_open(document, self.generation))
+        refreshes
+            .into_iter()
+            .map(|(_, diagnostics)| DiagnosticRefresh::Publish(diagnostics))
             .collect()
     }
 
-    pub(crate) fn is_current_generation(&self, generation: SnapshotGeneration) -> bool {
-        self.generation == generation
+    pub(crate) fn save_schema(&mut self, uri: &Uri) -> Option<DiagnosticRefresh> {
+        if self.schema_partition_ids(uri).is_empty() {
+            return None;
+        }
+        let mut schemas = self.partition_schemas();
+        for schema in schemas.values_mut() {
+            if schema.matches_uri(uri) {
+                *schema = schema.base();
+            }
+        }
+        self.rebuild_for_documents_with_schemas(
+            self.saved.clone(),
+            self.documents.clone(),
+            schemas,
+        )
+        .ok()?;
+        let SchemaRefreshOutcome::Refreshes(mut refreshes) = self.schema_refresh_for_uri(uri)
+        else {
+            return None;
+        };
+        refreshes.pop()
     }
 
-    #[allow(dead_code)]
+    pub(crate) fn is_current_generation(&self, generation: SnapshotGeneration) -> bool {
+        self.generation == generation && self.snapshot.generation() == generation
+    }
+
+    #[cfg(any(test, feature = "bench-support"))]
     pub(crate) fn generation(&self) -> SnapshotGeneration {
         self.generation
     }
 
-    #[allow(dead_code)]
+    #[cfg(any(test, feature = "bench-support"))]
     pub(crate) fn snapshot(&self) -> &LiveProjectSnapshot {
         &self.snapshot
     }
 
+    #[cfg(feature = "bench-support")]
+    pub(crate) fn compiler_documents(&self) -> Vec<&recite_compiler::DocumentSnapshot> {
+        self.partitions
+            .values()
+            .flat_map(|partition| partition.kernel.snapshot().documents())
+            .collect()
+    }
+
+    #[cfg(feature = "bench-support")]
+    pub(crate) fn compiler_document_for_summary(
+        &self,
+        summary: &crate::summary::FileSummary,
+    ) -> Option<&recite_compiler::DocumentSnapshot> {
+        let partition = self.partition_id_for_uri(summary.uri())?;
+        let key = document_key_for_identity(&summary.identity)?;
+        self.partition(&partition)?.kernel.snapshot().document(&key)
+    }
+
     #[allow(dead_code)]
     pub(crate) fn schema(&self) -> &SchemaIndex {
-        &self.schema
+        let Some(partition) = self
+            .partitions
+            .values()
+            .find(|partition| partition.schema.summary().is_some())
+            .or_else(|| self.partitions.values().next())
+        else {
+            unreachable!("workspace always has a partition")
+        };
+        &partition.schema
     }
 
-    fn rebuild_next_generation(&mut self) {
-        self.generation = SnapshotGeneration(self.generation.0.saturating_add(1));
-        self.snapshot = LiveProjectSnapshot::rebuild(self.generation, &self.saved, &self.documents);
-    }
-
-    fn navigation_documents(&self) -> Vec<features::NavigationDocument<'_>> {
-        self.snapshot
-            .summaries()
+    pub(in crate::workspace) fn rebuild_for_documents(
+        &mut self,
+        saved: SavedProjectIndex,
+        documents: OpenDocumentStore,
+    ) -> Result<(), recite_compiler::AuthoringError> {
+        let retired = self
+            .partitions
             .iter()
-            .filter_map(|summary| {
-                let text = self.text_for_summary(summary)?;
-                Some(features::NavigationDocument {
-                    uri: summary.uri(),
-                    project_relative_path: summary.project_relative_path(),
-                    text,
-                    summary,
-                })
-            })
-            .collect()
+            .map(|(id, partition)| (id.clone(), partition.retired_schema_uris.clone()))
+            .collect();
+        self.rebuild_for_documents_with_schemas_and_retired(
+            saved,
+            documents,
+            self.partition_schemas(),
+            retired,
+        )
     }
 
-    fn code_action_documents(&self) -> Vec<features::CodeActionDocument<'_>> {
-        self.snapshot
-            .summaries()
-            .iter()
-            .filter_map(|summary| {
-                let text = self.text_for_summary(summary)?;
-                Some(features::CodeActionDocument {
-                    uri: summary.uri(),
-                    text,
-                    summary,
-                })
-            })
-            .collect()
-    }
-
-    fn text_for_summary(&self, summary: &FileSummary) -> Option<&str> {
-        self.documents
-            .document(summary.uri())
-            .map(OpenDocument::text)
-            .or_else(|| {
-                self.saved
-                    .document_by_uri(summary.uri())
-                    .map(|document| document.text.as_str())
-            })
-    }
-
-    fn live_source_files(&self) -> Option<Vec<SourceFile>> {
-        let open_saved_paths = self
-            .documents
-            .documents()
-            .filter_map(|document| document.summary().saved_path().map(Path::to_owned))
-            .collect::<BTreeSet<PathBuf>>();
-        let open_uris = self
-            .documents
-            .documents()
-            .map(|document| document.summary().uri().as_str().to_owned())
-            .collect::<BTreeSet<_>>();
-
-        let mut inputs = self
-            .saved
-            .documents()
-            .filter(|document| {
-                !document
-                    .summary
-                    .saved_path()
-                    .is_some_and(|path| open_saved_paths.contains(path))
-                    && !open_uris.contains(document.summary.uri().as_str())
-            })
-            .map(|document| {
-                (
-                    document
-                        .summary
-                        .project_relative_path()
-                        .unwrap_or(document.summary.uri().as_str())
-                        .to_owned(),
-                    document.text.as_str(),
-                )
-            })
-            .collect::<Vec<_>>();
-        inputs.extend(self.documents.documents().map(|document| {
-            (
-                document
-                    .summary()
-                    .project_relative_path()
-                    .unwrap_or(document.identity().uri.as_str())
-                    .to_owned(),
-                document.text(),
-            )
-        }));
-        inputs.sort_by(|left, right| left.0.cmp(&right.0));
-
-        let mut source_files = Vec::with_capacity(inputs.len());
-        for (uri, text) in inputs {
-            let lowered = parse(uri.as_str(), text).lower_source_file();
-            if !lowered.diagnostics.is_empty() {
-                return None;
-            }
-            source_files.push(lowered.source_file);
-        }
-
-        Some(source_files)
-    }
-
-    fn validation_path_for_uri(&self, uri: &Uri) -> String {
-        if let Some(document) = self.documents.document(uri) {
-            return document
-                .summary()
-                .project_relative_path()
-                .unwrap_or(uri.as_str())
-                .to_owned();
-        }
-        if let Some(document) = self.saved.document_by_uri(uri) {
-            return document
-                .summary
-                .project_relative_path()
-                .unwrap_or(uri.as_str())
-                .to_owned();
-        }
-
-        uri.as_str().to_owned()
-    }
-
-    fn open_identity(&self, uri: Uri) -> OpenFileIdentity {
-        let Some(path) = uri_to_file_path(&uri) else {
-            return uri_keyed_open_identity(uri);
-        };
-        let Some(canonical_path) = fs::canonicalize(path).ok() else {
-            return uri_keyed_open_identity(uri);
-        };
-        let Some(root) = self.saved.root_for_path(&canonical_path) else {
-            return uri_keyed_open_identity(uri);
-        };
-
-        OpenFileIdentity {
-            uri,
-            saved_path: Some(canonical_path.clone()),
-            project_relative_path: project_relative_path(root, &canonical_path),
-        }
-    }
-}
-
-fn uri_keyed_open_identity(uri: Uri) -> OpenFileIdentity {
-    OpenFileIdentity {
-        uri,
-        saved_path: None,
-        project_relative_path: None,
+    pub(crate) fn is_schema_document_uri(&self, uri: &Uri) -> bool {
+        self.partitions.values().any(|partition| {
+            partition.schema.matches_uri(uri)
+                || partition.retired_schema_uris.contains(uri.as_str())
+        }) || self.retired_schema_uris.contains(uri.as_str())
+            || self.retired_schema_targets.contains_key(uri.as_str())
+            || self.is_retired_schema_alias(uri)
     }
 }
 
 #[derive(Clone, Debug)]
 pub(crate) enum WorkspaceChangeResult {
     Accepted(DiagnosticRefresh),
+    AcceptedRefreshes(Vec<DiagnosticRefresh>),
     Stale,
     Malformed,
     Unopened,
+    Rejected,
+}
+
+#[derive(Clone, Debug)]
+pub(crate) enum SchemaRefreshOutcome {
+    NotSchema,
+    Silent,
+    Refreshes(Vec<DiagnosticRefresh>),
 }
 
 #[derive(Clone, Debug)]
@@ -430,27 +202,36 @@ pub(crate) enum DiagnosticRefresh {
     Publish(DocumentDiagnostics),
     Clear {
         uri: Uri,
+        version: Option<i32>,
         generation: SnapshotGeneration,
     },
 }
 
 impl DiagnosticRefresh {
-    fn publish_open(document: &OpenDocument, generation: SnapshotGeneration) -> Self {
+    fn publish_open(
+        document: &OpenDocument,
+        diagnostics: Vec<Diagnostic>,
+        generation: SnapshotGeneration,
+    ) -> Self {
         Self::Publish(DocumentDiagnostics {
             uri: document.identity().uri.clone(),
             text: document.text().to_owned(),
             version: Some(document.version()),
-            diagnostics: document.diagnostics().to_vec(),
+            diagnostics,
             generation,
         })
     }
 
-    fn publish_saved(document: &SavedDocument, generation: SnapshotGeneration) -> Self {
+    fn publish_saved(
+        document: &SavedDocument,
+        diagnostics: Vec<Diagnostic>,
+        generation: SnapshotGeneration,
+    ) -> Self {
         Self::Publish(DocumentDiagnostics {
-            uri: document.summary.uri().clone(),
+            uri: document.identity.uri.clone(),
             text: document.text.clone(),
             version: None,
-            diagnostics: document.summary.diagnostics.clone(),
+            diagnostics,
             generation,
         })
     }

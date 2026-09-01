@@ -4,12 +4,11 @@ use recite_core::{
     CompiledInterpolationBinding, CompiledInterpolationMode, InterpolationType, ScalarValue,
 };
 
+use super::output::LocaleLookup;
+use super::trace::PluralLineTrace;
 use crate::DialogueError;
 use crate::event::{DialoguePlural, DialoguePluralResolution, DialoguePluralResolutionOutcome};
 use crate::locale::{InterpolationValueProvider, TextDomain};
-
-use super::output::LocaleLookup;
-use super::trace::PluralLineTrace;
 
 pub(super) fn localise_text(
     id: &str,
@@ -20,13 +19,16 @@ pub(super) fn localise_text(
     locale: LocaleLookup<'_>,
 ) -> Result<String, DialogueError> {
     let template = if let Some((locale_id, provider)) = locale.locale.zip(locale.provider) {
-        let translated = provider
-            .lookup(id, authored_source_text, domain, locale_id, locale.variant)
+        let resolved = provider
+            .lookup_with_provenance(id, authored_source_text, domain, locale_id, locale.variant)
             .map_err(|error| DialogueError::LocaleLookupFailed {
                 id: id.to_owned(),
                 reason: error.reason().to_owned(),
             })?;
-        if let Some(template) = translated {
+        if let Some(trace) = locale.trace {
+            trace.record_localized_lookup(id, authored_source_text, domain, &resolved);
+        }
+        if let Some(template) = resolved.template {
             if mode == CompiledInterpolationMode::Current {
                 recite_core::validate_translation_placeholders(authored_source_text, &template)
                     .map_err(|error| DialogueError::InvalidInterpolationSyntax {
@@ -79,24 +81,36 @@ pub(super) fn localise_plural_text(
     // plural rule is meaningful only when its exact catalogue entry supplies
     // a translation and therefore a selected provider arm.
     let english_arm = usize::from(count != 1);
-    let resolution = if let Some((locale_id, provider)) = locale.locale.zip(locale.provider) {
-        provider
-            .resolve_plural(
-                id,
-                source.authored_singular,
-                source.authored_plural,
-                count,
-                TextDomain::Line,
-                locale_id,
-                locale.variant,
-            )
-            .map_err(|error| DialogueError::LocaleLookupFailed {
-                id: id.to_owned(),
-                reason: error.reason().to_owned(),
-            })?
-    } else {
-        recite_runtime_resolution_without_provider()
-    };
+    let (resolution, translated_arm_count) =
+        if let Some((locale_id, provider)) = locale.locale.zip(locale.provider) {
+            let resolution = provider
+                .resolve_plural(
+                    id,
+                    source.authored_singular,
+                    source.authored_plural,
+                    count,
+                    TextDomain::Line,
+                    locale_id,
+                    locale.variant,
+                )
+                .map_err(|error| DialogueError::LocaleLookupFailed {
+                    id: id.to_owned(),
+                    reason: error.reason().to_owned(),
+                })?;
+            let arm_count = if resolution.template.is_some() {
+                provider
+                    .validated_plural_arm_count(&resolution)
+                    .map_err(|error| DialogueError::LocaleLookupFailed {
+                        id: id.to_owned(),
+                        reason: error.reason().to_owned(),
+                    })?
+            } else {
+                None
+            };
+            (resolution, arm_count)
+        } else {
+            (recite_runtime_resolution_without_provider(), None)
+        };
     let (selected_arm, source_fallback_arm, matched_arm, outcome) =
         match resolution.template.as_ref() {
             Some(_) => {
@@ -107,6 +121,25 @@ pub(super) fn localise_plural_text(
                             .to_owned(),
                     });
                 };
+                // Preview prompt projections persist the arm bound, so reject a
+                // translated result without evidence before it can be snapshotted.
+                if locale.require_plural_arm_count && translated_arm_count.is_none() {
+                    return Err(DialogueError::LocaleLookupFailed {
+                    id: id.to_owned(),
+                    reason:
+                        "plural provider returned a translated template without validated arm count"
+                            .to_owned(),
+                });
+                }
+                if translated_arm_count
+                    .is_some_and(|arm_count| arm_count == 0 || provider_arm >= arm_count)
+                {
+                    return Err(DialogueError::LocaleLookupFailed {
+                        id: id.to_owned(),
+                        reason: "plural provider returned an arm outside its validated arm count"
+                            .to_owned(),
+                    });
+                }
                 (
                     provider_arm,
                     None,
@@ -121,6 +154,18 @@ pub(super) fn localise_plural_text(
                 DialoguePluralResolutionOutcome::EnglishSourceFallback,
             ),
         };
+    if let Some(trace) = locale.trace {
+        match &outcome {
+            DialoguePluralResolutionOutcome::Translated => {
+                if let Some(arm_count) = translated_arm_count {
+                    trace.record_plural_arm_count(id, arm_count);
+                }
+            }
+            DialoguePluralResolutionOutcome::EnglishSourceFallback => {
+                trace.record_plural_arm_count(id, 2);
+            }
+        }
+    }
     let source_text = if selected_arm == 0 {
         source.authored_singular
     } else {

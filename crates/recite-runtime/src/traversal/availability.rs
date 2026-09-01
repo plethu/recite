@@ -324,8 +324,8 @@ fn localise_reason_template(
     locale: LocaleLookup<'_>,
 ) -> Result<String, DialogueError> {
     let text = if let Some((locale_id, provider)) = locale.locale.zip(locale.provider) {
-        provider
-            .lookup(
+        let resolved = provider
+            .lookup_with_provenance(
                 id,
                 source_text,
                 TextDomain::AvailabilityReason,
@@ -335,8 +335,16 @@ fn localise_reason_template(
             .map_err(|error| DialogueError::LocaleLookupFailed {
                 id: id.to_owned(),
                 reason: error.reason().to_owned(),
-            })?
-            .unwrap_or_else(|| source_text.to_owned())
+            })?;
+        if let Some(trace) = locale.trace {
+            trace.record_localized_lookup(
+                id,
+                source_text,
+                TextDomain::AvailabilityReason,
+                &resolved,
+            );
+        }
+        resolved.template.unwrap_or_else(|| source_text.to_owned())
     } else {
         source_text.to_owned()
     };

@@ -1,4 +1,4 @@
-use recite_core::{Divert, Effect};
+use recite_core::{Divert, Effect, SourceRecoveryClass};
 
 use crate::condition::parse_condition_call;
 use crate::diagnostics::{
@@ -21,11 +21,15 @@ impl Lowerer<'_, '_> {
         let fields = header_fields(trimmed, StatementMarker::Divert, line, base_column);
         let span = span_for_line(self.path, line.number, base_column);
         let Some(target) = fields.first().copied() else {
+            self.mark(SourceRecoveryClass::BlockReferences);
+            self.mark(SourceRecoveryClass::AstStructure);
             self.diagnostics.push(missing_divert_target(span));
             return None;
         };
 
         if fields.len() > 1 {
+            self.mark(SourceRecoveryClass::BlockReferences);
+            self.mark(SourceRecoveryClass::AstStructure);
             self.diagnostics
                 .push(malformed_divert_target(fields[1].span(self.path)));
             return None;
@@ -44,10 +48,14 @@ impl Lowerer<'_, '_> {
         let span = span_for_line(self.path, line.number, base_column);
         let fields = header_fields(trimmed, StatementMarker::Effect, line, base_column);
         let Some(mode_field) = fields.first().copied() else {
+            self.mark(SourceRecoveryClass::EffectFunctions);
+            self.mark(SourceRecoveryClass::AstStructure);
             self.diagnostics.push(malformed_effect_missing_mode(span));
             return None;
         };
         let Some(mode) = effect_mode(mode_field.text) else {
+            self.mark(SourceRecoveryClass::EffectFunctions);
+            self.mark(SourceRecoveryClass::AstStructure);
             self.diagnostics
                 .push(malformed_effect_invalid_mode(mode_field.span(self.path)));
             return None;
@@ -72,6 +80,8 @@ impl Lowerer<'_, '_> {
                 )
             }
             Err(error) => {
+                self.mark(SourceRecoveryClass::EffectFunctions);
+                self.mark(SourceRecoveryClass::AstStructure);
                 self.diagnostics.push(malformed_effect(error));
                 None
             }

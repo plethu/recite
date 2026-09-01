@@ -1,15 +1,16 @@
 use recite_core::{
     AvailabilityReasonId, Choice, ChoiceAvailabilityReasonOverride, ChoiceAvailabilityRequirement,
-    ChoiceTarget, SourceId, SourceSpan, SourceText, Statement,
+    ChoiceTarget, SourceId, SourceRecoveryClass, SourceText, Statement,
 };
 
 use crate::condition::parse_condition_expression;
 use crate::diagnostics::{malformed_condition, malformed_header, trailing_choice_if};
 use crate::header::{HeaderField, HeaderKeyValue};
 use crate::markers::StatementMarker;
-use crate::source::{span_for_line, span_for_text};
+use crate::source::span_for_line;
 
 use super::super::{Lowerer, header_fields};
+use super::choice_reason::{parse_reason_override_value, source_column};
 
 impl Lowerer<'_, '_> {
     pub(super) fn lower_choice(&mut self, choice_index: usize) -> (Choice, usize) {
@@ -21,6 +22,8 @@ impl Lowerer<'_, '_> {
         let fields = header_fields(trimmed, StatementMarker::Choice, header, base_column);
         let if_index = fields.iter().position(|field| field.text == "if");
         if let Some(if_index) = if_index {
+            self.mark(SourceRecoveryClass::ConditionFunctions);
+            super::super::mark_all(self.recovery);
             self.diagnostics
                 .push(trailing_choice_if(fields[if_index].span(self.path)));
         }
@@ -31,16 +34,41 @@ impl Lowerer<'_, '_> {
         };
 
         let mut field_start = 0;
-        let source_id = if let Some(first) = choice_fields.first().copied() {
-            if first.key_value(self.path).is_none() {
-                field_start = 1;
-                SourceId::parse(Some(first.text))
+        let (source_id, source_id_span, source_id_insertion_span) =
+            if let Some(first) = choice_fields.first().copied() {
+                if first.key_value(self.path).is_none() {
+                    field_start = 1;
+                    (
+                        SourceId::parse(Some(first.text)),
+                        Some(first.span(self.path)),
+                        crate::source::span_for_line(
+                            self.path,
+                            header.number,
+                            first.column + first.text.chars().count(),
+                        ),
+                    )
+                } else {
+                    (
+                        SourceId::Missing,
+                        None,
+                        super::super::insertion_span_after_marker(
+                            self.path,
+                            header,
+                            StatementMarker::Choice,
+                        ),
+                    )
+                }
             } else {
-                SourceId::Missing
-            }
-        } else {
-            SourceId::Missing
-        };
+                (
+                    SourceId::Missing,
+                    None,
+                    super::super::insertion_span_after_marker(
+                        self.path,
+                        header,
+                        StatementMarker::Choice,
+                    ),
+                )
+            };
 
         let ChoiceClauses {
             metadata_fields,
@@ -66,6 +94,7 @@ impl Lowerer<'_, '_> {
             choice_span,
         )
         .with_source_id(source_id)
+        .with_source_id_spans(source_id_span, source_id_insertion_span)
         .with_metadata(metadata)
         .with_interpolation_bindings(bindings)
         .with_echo(echo)
@@ -97,6 +126,7 @@ impl Lowerer<'_, '_> {
             match kv.key {
                 "requires" => {
                     if availability_requirement.is_some() {
+                        self.mark(SourceRecoveryClass::Metadata);
                         self.diagnostics.push(malformed_header(kv.key_span));
                         continue;
                     }
@@ -104,6 +134,7 @@ impl Lowerer<'_, '_> {
                 }
                 "reason" => {
                     if availability_reason_override.is_some() {
+                        self.mark(SourceRecoveryClass::Metadata);
                         self.diagnostics.push(malformed_header(kv.key_span));
                         continue;
                     }
@@ -135,6 +166,8 @@ impl Lowerer<'_, '_> {
                 kv.field_span.clone(),
             )),
             Err(error) => {
+                self.mark(SourceRecoveryClass::ConditionFunctions);
+                super::super::mark_all(self.recovery);
                 self.diagnostics.push(malformed_condition(error));
                 None
             }
@@ -146,11 +179,13 @@ impl Lowerer<'_, '_> {
         kv: &HeaderKeyValue<'_>,
     ) -> Option<ChoiceAvailabilityReasonOverride> {
         let Some(parsed) = parse_reason_override_value(self.path, kv) else {
+            self.mark(SourceRecoveryClass::Metadata);
             self.diagnostics
                 .push(malformed_header(kv.value_span.clone()));
             return None;
         };
         let Ok(reason_id) = AvailabilityReasonId::new(parsed.id) else {
+            self.mark(SourceRecoveryClass::Metadata);
             self.diagnostics.push(malformed_header(parsed.id_span));
             return None;
         };
@@ -168,51 +203,4 @@ struct ChoiceClauses<'a> {
     metadata_fields: Vec<HeaderField<'a>>,
     availability_requirement: Option<ChoiceAvailabilityRequirement>,
     availability_reason_override: Option<ChoiceAvailabilityReasonOverride>,
-}
-
-struct ParsedReasonOverride<'a> {
-    id: &'a str,
-    id_span: SourceSpan,
-    argument_span: Option<SourceSpan>,
-}
-
-fn parse_reason_override_value<'a>(
-    path: &str,
-    kv: &HeaderKeyValue<'a>,
-) -> Option<ParsedReasonOverride<'a>> {
-    if let Some(open) = kv.value.find('(') {
-        let close = kv.value.rfind(')')?;
-        if close != kv.value.len() - 1 || open == 0 {
-            return None;
-        }
-        let id = &kv.value[..open];
-        let argument_text = &kv.value[open..=close];
-        let value_column = source_column(kv.value_span.start.column());
-        let id_span = span_for_text(path, kv.value_span.start.line(), value_column, id);
-        let argument_span = span_for_text(
-            path,
-            kv.value_span.start.line(),
-            value_column + id.chars().count(),
-            argument_text,
-        );
-        return Some(ParsedReasonOverride {
-            id,
-            id_span,
-            argument_span: Some(argument_span),
-        });
-    }
-
-    if kv.value.contains(')') {
-        return None;
-    }
-
-    Some(ParsedReasonOverride {
-        id: kv.value,
-        id_span: kv.value_span.clone(),
-        argument_span: None,
-    })
-}
-
-fn source_column(column: u32) -> usize {
-    column as usize
 }

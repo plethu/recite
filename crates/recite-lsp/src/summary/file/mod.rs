@@ -1,70 +1,79 @@
-mod collector;
 mod identity;
 mod items;
 
+#[cfg(any(test, feature = "bench-support"))]
 use std::path::Path;
 
 use lsp_types::Uri;
-use recite_core::{Diagnostic, SourcePosition, SourceSpan};
-use recite_parser::parse;
+use recite_compiler::{DocumentSnapshot, FunctionReferenceKind as AuthoringFunctionReferenceKind};
 
-use collector::FileSummaryCollector;
-pub(crate) use identity::{FileIdentity, OpenFileIdentity, SavedFileIdentity};
-pub(crate) use items::{
-    BlockReferenceSummary, FileSummaryCompleteness, FunctionReferenceKind,
-    FunctionReferenceSummary, MetadataKeySummary, MissingIdInsertion, MissingIdKind,
-    MissingIdSummary, SpannedName,
-};
+#[cfg(any(test, feature = "bench-support"))]
+use recite_core::Diagnostic;
+
+pub(crate) use identity::{FileIdentity, OpenFileIdentity, OpenFileScope, SavedFileIdentity};
+#[cfg(any(test, feature = "bench-support"))]
+pub(crate) use items::SpannedName;
+pub(crate) use items::{FileSummaryCompleteness, FunctionReferenceKind, FunctionReferenceSummary};
 
 #[derive(Clone, Debug)]
-#[allow(dead_code)]
 pub(crate) struct FileSummary {
     pub(crate) identity: FileIdentity,
+    #[cfg(any(test, feature = "bench-support"))]
     pub(crate) version: Option<i32>,
+    #[cfg(any(test, feature = "bench-support"))]
     pub(crate) diagnostics: Vec<Diagnostic>,
     pub(crate) completeness: FileSummaryCompleteness,
+    #[cfg(any(test, feature = "bench-support"))]
     pub(crate) blocks: Vec<SpannedName>,
-    pub(crate) block_references: Vec<BlockReferenceSummary>,
-    pub(crate) line_ids: Vec<SpannedName>,
-    pub(crate) choice_ids: Vec<SpannedName>,
-    pub(crate) missing_ids: Vec<MissingIdSummary>,
-    pub(crate) metadata_keys: Vec<MetadataKeySummary>,
     pub(crate) condition_functions: Vec<FunctionReferenceSummary>,
     pub(crate) effect_functions: Vec<FunctionReferenceSummary>,
 }
 
 impl FileSummary {
-    pub(crate) fn from_text(identity: FileIdentity, version: Option<i32>, text: &str) -> Self {
-        let parse = parse(identity.uri().as_str(), text);
-        let lowered = parse.lower_source_file();
-        let diagnostics = unique_diagnostics(lowered.diagnostics.clone());
-        let mut collector = FileSummaryCollector::new();
-        collector.collect_source_file(&lowered.source_file);
-        narrow_block_reference_spans(&mut collector.block_references, text);
-        let complete_source_model = lowered.diagnostics.is_empty();
-
+    pub(crate) fn from_authoring(
+        identity: FileIdentity,
+        _version: Option<i32>,
+        document: &DocumentSnapshot,
+    ) -> Self {
+        let summary = document.summary();
+        let participation = document.participation();
+        #[cfg(any(test, feature = "bench-support"))]
+        let blocks = summary
+            .blocks()
+            .iter()
+            .map(|block| SpannedName {
+                name: block.id().as_str().to_owned(),
+                span: block.span().clone(),
+            })
+            .collect();
+        let condition_functions = summary
+            .condition_functions()
+            .iter()
+            .filter_map(function_reference)
+            .collect();
+        let effect_functions = summary
+            .effect_functions()
+            .iter()
+            .filter_map(function_reference)
+            .collect();
         Self {
             identity,
-            version,
-            diagnostics,
+            #[cfg(any(test, feature = "bench-support"))]
+            version: _version,
+            #[cfg(any(test, feature = "bench-support"))]
+            diagnostics: document.diagnostics().to_vec(),
             completeness: FileSummaryCompleteness {
-                block_definitions: complete_source_model,
-                block_references: complete_source_model,
-                stable_ids: complete_source_model,
-                metadata: complete_source_model,
-                condition_functions: complete_source_model,
-                effect_functions: complete_source_model,
-                inline_markup: false,
-                recoverable_regions: false,
+                block_definitions: participation.block_definitions().is_complete(),
+                metadata: participation.metadata().is_complete(),
+                condition_functions: participation.condition_functions().is_complete(),
+                effect_functions: participation.effect_functions().is_complete(),
+                inline_markup: participation.inline_markup().is_complete(),
+                recoverable_regions: !participation.ast_structure().is_complete(),
             },
-            blocks: collector.blocks,
-            block_references: collector.block_references,
-            line_ids: collector.line_ids,
-            choice_ids: collector.choice_ids,
-            missing_ids: collector.missing_ids,
-            metadata_keys: collector.metadata_keys,
-            condition_functions: collector.condition_functions,
-            effect_functions: collector.effect_functions,
+            #[cfg(any(test, feature = "bench-support"))]
+            blocks,
+            condition_functions,
+            effect_functions,
         }
     }
 
@@ -72,6 +81,7 @@ impl FileSummary {
         self.identity.uri()
     }
 
+    #[cfg(any(test, feature = "bench-support"))]
     pub(crate) fn saved_path(&self) -> Option<&Path> {
         self.identity.saved_path()
     }
@@ -81,44 +91,24 @@ impl FileSummary {
     }
 }
 
-fn narrow_block_reference_spans(block_references: &mut [BlockReferenceSummary], text: &str) {
-    let lines = text.lines().collect::<Vec<_>>();
-    for reference in block_references {
-        let line_index = reference
-            .span
-            .start
-            .line()
-            .saturating_sub(1)
-            .try_into()
-            .unwrap_or(usize::MAX);
-        let Some(line) = lines.get(line_index).copied() else {
-            continue;
-        };
-        let Some(block_start) = line.rfind(reference.block_id.as_str()) else {
-            continue;
-        };
-        let block_end = block_start + reference.block_id.len();
-        let start_column = u32::try_from(line[..block_start].chars().count())
-            .unwrap_or(u32::MAX)
-            .saturating_add(1);
-        let end_column = u32::try_from(line[..block_end].chars().count()).unwrap_or(u32::MAX);
-        let Ok(start) = SourcePosition::new(reference.span.start.line(), start_column) else {
-            continue;
-        };
-        let Ok(end) = SourcePosition::new(reference.span.start.line(), end_column) else {
-            continue;
-        };
-        reference.span = SourceSpan::new(reference.span.file.clone(), start, Some(end));
-    }
-}
-
-fn unique_diagnostics(diagnostics: Vec<Diagnostic>) -> Vec<Diagnostic> {
-    let mut unique = Vec::new();
-    for diagnostic in diagnostics {
-        if !unique.contains(&diagnostic) {
-            unique.push(diagnostic);
-        }
-    }
-
-    unique
+fn function_reference(
+    function: &recite_compiler::FunctionReferenceSummary,
+) -> Option<FunctionReferenceSummary> {
+    Some(FunctionReferenceSummary {
+        name: function.name().to_owned(),
+        span: function.span().clone(),
+        argument_count: function.argument_count(),
+        kind: match function.kind() {
+            AuthoringFunctionReferenceKind::BooleanCondition => {
+                FunctionReferenceKind::BoolCondition
+            }
+            AuthoringFunctionReferenceKind::MatchCondition => FunctionReferenceKind::MatchCondition,
+            AuthoringFunctionReferenceKind::DeferredEffect => FunctionReferenceKind::DeferredEffect,
+            AuthoringFunctionReferenceKind::ImmediateEffect => {
+                FunctionReferenceKind::ImmediateEffect
+            }
+            AuthoringFunctionReferenceKind::BlockingEffect => FunctionReferenceKind::BlockingEffect,
+            _ => return None,
+        },
+    })
 }

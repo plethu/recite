@@ -3,6 +3,7 @@ use std::path::PathBuf;
 use lsp_types::{
     CompletionResponse, GotoDefinitionResponse, TextDocumentContentChangeEvent, WorkspaceEdit,
 };
+use recite_ui::{UiCatalog, UiLocale};
 
 use super::memory::LspMemoryReport;
 use super::probes::{
@@ -48,8 +49,13 @@ pub struct LspBenchmarkDriver {
 impl LspBenchmarkDriver {
     #[must_use]
     pub fn new(config: &LspBenchmarkConfig) -> Self {
+        let catalog = match UiCatalog::load(&UiLocale::default()) {
+            Ok(catalog) => catalog,
+            Err(error) => panic!("benchmark default UI catalog is invalid: {error}"),
+        };
         Self {
-            workspace: LspWorkspace::new(config.workspace_config()),
+            workspace: LspWorkspace::with_ui_catalog(config.workspace_config(), catalog)
+                .unwrap_or_else(|error| panic!("benchmark authoring state is invalid: {error}")),
         }
     }
 
@@ -65,16 +71,21 @@ impl LspBenchmarkDriver {
 
     #[must_use]
     pub fn open_file(&mut self, probe: &LspDocumentProbe) -> usize {
-        let refresh = self
+        let Some(refresh) = self
             .workspace
-            .open(probe.uri.clone(), 1, read_probe_text_or_panic(probe));
+            .open_refreshes(probe.uri.clone(), 1, read_probe_text_or_panic(probe))
+            .into_iter()
+            .next()
+        else {
+            return 0;
+        };
         diagnostic_count(refresh)
     }
 
     #[must_use]
     pub fn change_file(&mut self, probe: &LspDocumentProbe) -> usize {
         self.workspace
-            .open(probe.uri.clone(), 1, read_probe_text_or_panic(probe));
+            .open_refreshes(probe.uri.clone(), 1, read_probe_text_or_panic(probe));
         match self.workspace.change(
             probe.uri.clone(),
             2,
@@ -91,21 +102,27 @@ impl LspBenchmarkDriver {
 
     #[must_use]
     pub fn diagnostics_refresh(&mut self, probe: &LspDocumentProbe) -> usize {
-        let refresh = self
+        // Keep the synthetic refresh at the latest probe version so repeated
+        // benchmark operations satisfy the kernel's monotonic overlay guard.
+        let Some(refresh) = self
             .workspace
-            .open(probe.uri.clone(), 1, read_probe_text_or_panic(probe));
+            .open_refreshes(probe.uri.clone(), 2, read_probe_text_or_panic(probe))
+            .into_iter()
+            .next()
+        else {
+            return 0;
+        };
         let DiagnosticRefresh::Publish(diagnostics) = refresh else {
             return 0;
         };
-        let diagnostics = self.workspace.with_semantic_diagnostics(diagnostics);
         let text = read_probe_text_or_panic(probe);
         publish_diagnostics(
-            diagnostics.uri,
+            diagnostics.uri.clone(),
             &text,
             diagnostics.version,
             &diagnostics.diagnostics,
             &self.workspace.ui_catalog,
-            &self.workspace.diagnostic_sources(),
+            &self.workspace.diagnostic_sources_for_uri(&diagnostics.uri),
         )
         .unwrap_or_else(|error| panic!("LSP benchmark diagnostic publication failed: {error}"))
         .diagnostics
@@ -130,7 +147,7 @@ impl LspBenchmarkDriver {
     #[must_use]
     pub fn stale_change_is_suppressed(&mut self, probe: &LspDocumentProbe) -> bool {
         self.workspace
-            .open(probe.uri.clone(), 2, read_probe_text_or_panic(probe));
+            .open_refreshes(probe.uri.clone(), 2, read_probe_text_or_panic(probe));
         let generation = self.workspace.generation();
         let result = self.workspace.change(
             probe.uri.clone(),

@@ -1,10 +1,10 @@
-use recite_core::Diagnostic;
+use recite_core::{Diagnostic, SourceRecovery};
 use rowan::{GreenNode, GreenNodeBuilder};
 
 use crate::body::{BodyBoundary, BodyCursor, BodyStep};
 use crate::diagnostics::expected_statement_or_prose;
 use crate::layout::{ClassifiedLine, classify_line};
-use crate::lower::{LoweredSourceFile, lower_source_file};
+use crate::lower::{LoweredSourceFile, lower_source_file, mark_all};
 use crate::markers::StatementMarker;
 use crate::source::{LogicalLine, LogicalLines, span_for_line};
 use crate::syntax::{ReciteSyntaxKind, ReciteSyntaxNode};
@@ -16,6 +16,7 @@ pub struct Parse {
     source: String,
     green: GreenNode,
     diagnostics: Vec<Diagnostic>,
+    recovery: SourceRecovery,
 }
 
 impl Parse {
@@ -35,7 +36,7 @@ impl Parse {
     /// reported as parser-boundary diagnostics until their lowering slices land.
     #[must_use]
     pub fn lower_source_file(&self) -> LoweredSourceFile {
-        lower_source_file(&self.path, &self.source, &self.diagnostics)
+        lower_source_file(&self.path, &self.source, &self.diagnostics, self.recovery)
     }
 }
 
@@ -45,20 +46,28 @@ pub fn parse(path: impl Into<String>, source: impl Into<String>) -> Parse {
     let source = source.into();
     let mut builder = GreenNodeBuilder::new();
     let mut diagnostics = Vec::new();
+    let mut recovery = SourceRecovery::complete();
     let lines = LogicalLines::new(&source).collect::<Vec<_>>();
 
     builder.start_node(ReciteSyntaxKind::Root.into());
     for logical_line in lines.iter().copied() {
-        parse_line(&path, logical_line, &mut builder, &mut diagnostics);
+        parse_line(
+            &path,
+            logical_line,
+            &mut builder,
+            &mut diagnostics,
+            &mut recovery,
+        );
     }
     builder.finish_node();
-    validate_body_indentation(&path, &lines, &mut diagnostics);
+    validate_body_indentation(&path, &lines, &mut diagnostics, &mut recovery);
 
     Parse {
         path,
         source,
         green: builder.finish(),
         diagnostics,
+        recovery,
     }
 }
 
@@ -67,6 +76,7 @@ fn parse_line(
     line: LogicalLine<'_>,
     builder: &mut GreenNodeBuilder<'_>,
     diagnostics: &mut Vec<Diagnostic>,
+    recovery: &mut SourceRecovery,
 ) {
     let indent_len = line.indent_len();
     let indent = line.indentation();
@@ -104,6 +114,7 @@ fn parse_line(
             push_token(builder, ReciteSyntaxKind::Text, trimmed);
         }
         ClassifiedLine::Error => {
+            mark_all(recovery);
             push_token(builder, ReciteSyntaxKind::Text, trimmed);
             if !trimmed.is_empty() {
                 diagnostics.push(expected_statement_or_prose(span_for_line(
@@ -123,13 +134,14 @@ fn validate_body_indentation(
     path: &str,
     lines: &[LogicalLine<'_>],
     diagnostics: &mut Vec<Diagnostic>,
+    recovery: &mut SourceRecovery,
 ) {
     for (index, line) in lines.iter().copied().enumerate() {
         if classify_line(line) != ClassifiedLine::Statement(StatementMarker::Line) {
             continue;
         }
 
-        validate_line_body_indentation(path, lines, index, diagnostics);
+        validate_line_body_indentation(path, lines, index, diagnostics, recovery);
     }
 }
 
@@ -138,6 +150,7 @@ fn validate_line_body_indentation(
     lines: &[LogicalLine<'_>],
     header_index: usize,
     diagnostics: &mut Vec<Diagnostic>,
+    recovery: &mut SourceRecovery,
 ) {
     let mut cursor = BodyCursor::new(lines, header_index, BodyBoundary::HeaderIndent);
 
@@ -151,7 +164,8 @@ fn validate_line_body_indentation(
                 cursor.advance();
             }
             BodyStep::Boundary => break,
-            BodyStep::Blank | BodyStep::MixedIndent => {}
+            BodyStep::Blank => {}
+            BodyStep::MixedIndent => mark_all(recovery),
         }
     }
 }

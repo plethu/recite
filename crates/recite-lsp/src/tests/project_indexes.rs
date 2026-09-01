@@ -3,11 +3,41 @@ use recite_ui::DEFAULT_RESOURCE;
 use serde_json::json;
 use tempfile::TempDir;
 
-use crate::workspace::{LspWorkspace, WorkspaceChangeResult, WorkspaceConfig};
+use crate::workspace::{DiagnosticRefresh, WorkspaceChangeResult, WorkspaceConfig};
 
-use super::support::{Harness, block_names, file_uri, full_change, harness_for_root, write_file};
+use super::support::{Harness, block_names, file_uri, full_change, test_workspace, write_file};
 
+pub(super) mod discovery_transitions;
+mod lifecycle;
+mod open_identity;
+mod project_partition;
 mod schema_summary;
+mod transactions;
+
+pub(super) use discovery_transitions::malformed_workspace_root_does_not_block_independent_root;
+pub(super) use lifecycle::{
+    did_close_refreshes_saved_summary_before_falling_back,
+    did_save_refreshes_saved_summary_for_closed_files,
+    did_save_rekeys_new_open_file_without_duplicate_summary,
+    manifest_refresh_is_atomic_and_preserves_open_overlay,
+    manifest_refresh_reuses_unchanged_sibling_kernel, open_summary_overlays_saved_project_summary,
+    watched_files_refresh_saved_index_for_create_and_delete,
+    watched_refresh_publishes_effective_open_payload,
+};
+#[cfg(unix)]
+pub(super) use lifecycle::{
+    open_alias_owner_switch_reseeds_kernel_version_state,
+    open_nonexistent_aliases_share_one_fallback_key,
+    saved_uri_replacement_removes_old_canonical_entry,
+};
+pub(super) use open_identity::all as open_identity_tests;
+pub(super) use project_partition::{
+    identical_relative_keys_are_partitioned, identical_relative_keys_use_their_project_schema,
+};
+pub(super) use transactions::{
+    duplicate_open_is_ignored_transactionally, manifest_refresh_rekeys_open_overlay,
+    watched_creation_rekeys_open_overlay,
+};
 
 pub(super) fn saved_project_discovery_is_deterministically_sorted() {
     let temp = TempDir::new().unwrap_or_else(|error| panic!("tempdir: {error}"));
@@ -17,7 +47,7 @@ pub(super) fn saved_project_discovery_is_deterministically_sorted() {
     write_file(temp.path(), "target/ignored.recite", ":: ignored\n");
     write_file(temp.path(), ".hidden/ignored.recite", ":: ignored\n");
 
-    let workspace = LspWorkspace::new(WorkspaceConfig::for_roots(vec![temp.path().to_owned()]));
+    let workspace = test_workspace(WorkspaceConfig::for_roots(vec![temp.path().to_owned()]));
     let paths = workspace
         .snapshot()
         .summaries()
@@ -33,93 +63,124 @@ pub(super) fn saved_project_discovery_is_deterministically_sorted() {
     assert_eq!(paths, ["a.recite", "nested/m.recite", "z.recite"]);
 }
 
-pub(super) fn open_summary_overlays_saved_project_summary() {
+pub(super) fn manifest_discovery_uses_shared_source_roots() {
     let temp = TempDir::new().unwrap_or_else(|error| panic!("tempdir: {error}"));
-    let source = temp.path().join("scene.recite");
-    write_file(temp.path(), "scene.recite", ":: saved\n");
+    write_file(
+        temp.path(),
+        "recite.project.toml",
+        "format_version = 1\n\n[discovery]\nsource_roots = [\"src\"]\n",
+    );
+    write_file(temp.path(), "src/kept.recite", ":: kept\n");
+    write_file(temp.path(), "ignored.recite", ":: ignored\n");
 
-    let mut workspace = LspWorkspace::new(WorkspaceConfig::for_roots(vec![temp.path().to_owned()]));
-    assert_eq!(block_names(&workspace), ["saved"]);
+    let params = serde_json::from_value(json!({
+        "rootUri": file_uri(temp.path()).as_str(),
+        "capabilities": {},
+    }))
+    .unwrap_or_else(|error| panic!("initialize params: {error}"));
+    let workspace = test_workspace(WorkspaceConfig::from_initialize_params(&params));
+    let paths = workspace
+        .snapshot()
+        .summaries()
+        .iter()
+        .map(|summary| {
+            summary
+                .project_relative_path()
+                .unwrap_or("<none>")
+                .to_owned()
+        })
+        .collect::<Vec<_>>();
 
-    workspace.open(file_uri(&source), 1, ":: live\n".to_owned());
-
-    assert_eq!(block_names(&workspace), ["live"]);
-    assert_eq!(workspace.snapshot().summaries()[0].version, Some(1));
+    assert_eq!(paths, ["src/kept.recite"]);
 }
 
-pub(super) fn did_save_rekeys_new_open_file_without_duplicate_summary() {
+pub(super) fn explicit_relative_schema_uses_project_root_with_multiple_source_roots() {
     let temp = TempDir::new().unwrap_or_else(|error| panic!("tempdir: {error}"));
-    let source = temp.path().join("draft.recite");
-    let uri = file_uri(&source);
-    let mut workspace = LspWorkspace::new(WorkspaceConfig::for_roots(vec![temp.path().to_owned()]));
-
-    workspace.open(uri.clone(), 1, ":: live\n".to_owned());
-    assert_eq!(workspace.snapshot().summaries().len(), 1);
-    assert!(
-        workspace.snapshot().summaries()[0]
-            .project_relative_path()
-            .is_none()
+    write_file(
+        temp.path(),
+        "recite.project.toml",
+        "format_version = 1\n\n[discovery]\nsource_roots = [\"dialogue\", \"lore\"]\n",
     );
+    write_file(temp.path(), "dialogue/scene.recite", ":: scene\n");
+    write_file(temp.path(), "lore/notes.recite", ":: notes\n");
+    write_file(temp.path(), "schema.json", "{\"schema_version\":1}\n");
 
-    write_file(temp.path(), "draft.recite", ":: saved\n");
-    workspace.save(uri);
+    let params = serde_json::from_value(json!({
+        "rootUri": file_uri(temp.path()).as_str(),
+        "capabilities": {},
+        "initializationOptions": { "schema": "schema.json" }
+    }))
+    .unwrap_or_else(|error| panic!("initialize params: {error}"));
+    let workspace = test_workspace(WorkspaceConfig::from_initialize_params(&params));
 
-    assert_eq!(block_names(&workspace), ["live"]);
-    let summaries = workspace.snapshot().summaries();
-    assert_eq!(summaries.len(), 1);
-    assert_eq!(summaries[0].version, Some(1));
-    assert_eq!(summaries[0].project_relative_path(), Some("draft.recite"));
-    assert!(summaries[0].saved_path().is_some());
+    let paths = workspace
+        .snapshot()
+        .summaries()
+        .iter()
+        .filter_map(|summary| summary.project_relative_path())
+        .collect::<Vec<_>>();
+    assert_eq!(paths, ["dialogue/scene.recite", "lore/notes.recite"]);
+    assert!(workspace.schema().summary().is_some());
 }
 
-pub(super) fn did_save_refreshes_saved_summary_for_closed_files() {
+pub(super) fn explicit_schema_override_survives_manifest_schema_change() {
     let temp = TempDir::new().unwrap_or_else(|error| panic!("tempdir: {error}"));
-    let source = temp.path().join("scene.recite");
-    write_file(temp.path(), "scene.recite", ":: saved\n");
-    let harness = harness_for_root(temp.path());
-
-    write_file(temp.path(), "scene.recite", "oops\n:: saved\n");
-    harness.did_save(file_uri(&source));
-    let published = harness.recv_publish_diagnostics();
-
-    assert!(
-        published
-            .diagnostics
-            .iter()
-            .any(|diagnostic| diagnostic.code.as_ref()
-                == Some(&NumberOrString::String("RECITE_PARSE001".to_owned())))
+    write_file(
+        temp.path(),
+        "recite.project.toml",
+        "format_version = 1\n[project]\nschema = \"manifest.json\"\n",
     );
+    write_file(temp.path(), "manifest.json", "{\"schema_version\":1}\n");
+    write_file(temp.path(), "override.json", "{\"schema_version\":1}\n");
 
-    harness.finish();
+    let params = serde_json::from_value(json!({
+        "rootUri": file_uri(temp.path()).as_str(),
+        "capabilities": {},
+        "initializationOptions": { "schema": "override.json" }
+    }))
+    .unwrap_or_else(|error| panic!("initialize params: {error}"));
+    let mut workspace = test_workspace(WorkspaceConfig::from_initialize_params(&params));
+    let manifest_uri = file_uri(&temp.path().join("recite.project.toml"));
+
+    write_file(
+        temp.path(),
+        "recite.project.toml",
+        "format_version = 1\n[project]\nschema = \"replacement.json\"\n",
+    );
+    write_file(temp.path(), "replacement.json", "{\"schema_version\":2}\n");
+    workspace.refresh_watched_uri(&manifest_uri);
+
+    assert!(workspace.schema().summary().is_some());
+    assert!(workspace.schema_diagnostics_all().is_empty());
 }
 
-pub(super) fn did_close_refreshes_saved_summary_before_falling_back() {
+pub(super) fn malformed_manifest_does_not_fall_back_to_saved_walker() {
     let temp = TempDir::new().unwrap_or_else(|error| panic!("tempdir: {error}"));
-    let source = temp.path().join("scene.recite");
-    write_file(temp.path(), "scene.recite", "oops\n:: saved\n");
-    let harness = harness_for_root(temp.path());
-    let uri = file_uri(&source);
+    let manifest = temp.path().join("recite.project.toml");
+    write_file(temp.path(), "recite.project.toml", "format_version = [\n");
+    write_file(temp.path(), "source.recite", ":: saved\n");
 
-    harness.did_open(
-        uri.clone(),
-        1,
-        ":: live default\n> intro@b769cd02ad888d04dc53\n  Hello.\n",
+    let params = serde_json::from_value(json!({
+        "rootUri": file_uri(temp.path()).as_str(),
+        "capabilities": {},
+    }))
+    .unwrap_or_else(|error| panic!("initialize params: {error}"));
+    let workspace = test_workspace(WorkspaceConfig::from_initialize_params(&params));
+
+    assert!(workspace.snapshot().summaries().is_empty());
+    let diagnostics = workspace
+        .project_diagnostics_all()
+        .into_iter()
+        .next()
+        .expect("manifest diagnostics");
+    let DiagnosticRefresh::Publish(diagnostics) = diagnostics else {
+        panic!("expected manifest diagnostics")
+    };
+    assert_eq!(diagnostics.uri, file_uri(&manifest));
+    assert_eq!(
+        diagnostics.diagnostics[0].code.as_str(),
+        "RECITE_PROJECT001"
     );
-    assert!(harness.recv_publish_diagnostics().diagnostics.is_empty());
-
-    harness.did_close(uri);
-    let published = harness.recv_publish_diagnostics();
-
-    assert_eq!(published.version, None);
-    assert!(
-        published
-            .diagnostics
-            .iter()
-            .any(|diagnostic| diagnostic.code.as_ref()
-                == Some(&NumberOrString::String("RECITE_PARSE001".to_owned())))
-    );
-
-    harness.finish();
 }
 
 pub(super) fn schema_load_failure_keeps_source_only_snapshot() {
@@ -127,13 +188,13 @@ pub(super) fn schema_load_failure_keeps_source_only_snapshot() {
     write_file(temp.path(), "scene.recite", ":: source\n");
     write_file(temp.path(), "schema.json", r#"{"schema_version":"one"}"#);
 
-    let workspace = LspWorkspace::new(
+    let workspace = test_workspace(
         WorkspaceConfig::for_roots(vec![temp.path().to_owned()])
             .with_schema_path(temp.path().join("schema.json")),
     );
 
     assert!(workspace.schema().summary().is_none());
-    assert!(!workspace.schema().diagnostics().is_empty());
+    assert!(!workspace.schema_diagnostics_all().is_empty());
     assert_eq!(block_names(&workspace), ["source"]);
 }
 
@@ -224,6 +285,15 @@ pub(super) fn projection_schema_summary_exposes_queries_projectors_and_labels() 
     schema_summary::projection_schema_summary_exposes_queries_projectors_and_labels();
 }
 
+pub(super) fn schema_summary_preserves_source_ownership_and_generated_read_only_state() {
+    schema_summary::schema_summary_preserves_source_ownership_and_generated_read_only_state();
+}
+
+#[cfg(unix)]
+pub(super) fn schema_kind_survives_symlink_reload() {
+    schema_summary::schema_kind_survives_symlink_reload();
+}
+
 fn invalid_projection_schema() -> &'static str {
     r#"{
   "schema_version": 1,
@@ -242,9 +312,9 @@ fn invalid_projection_schema() -> &'static str {
 }
 
 pub(super) fn stale_change_does_not_bump_snapshot_generation() {
-    let mut workspace = LspWorkspace::new(WorkspaceConfig::for_roots(Vec::new()));
+    let mut workspace = test_workspace(WorkspaceConfig::for_roots(Vec::new()));
     let uri = super::support::uri("file:///workspace/dialogue/stale-generation.recite");
-    workspace.open(uri.clone(), 3, ":: live\n".to_owned());
+    workspace.open_refreshes(uri.clone(), 3, ":: live\n".to_owned());
     let generation = workspace.generation();
 
     match workspace.change(uri, 2, vec![full_change("oops\n:: stale\n")]) {

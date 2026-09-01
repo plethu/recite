@@ -1,7 +1,9 @@
 use std::cell::RefCell;
-use std::collections::BTreeMap;
 
-use crate::locale::PluralResolutionAttempt;
+use crate::locale::{
+    LocaleLookupAttempt, LocaleLookupOutcome, LocaleLookupProvenance, PluralResolutionAttempt,
+    TextDomain,
+};
 
 /// Trace-only data captured while resolving runtime output.
 ///
@@ -12,8 +14,24 @@ use crate::locale::PluralResolutionAttempt;
 /// not need to perform a second, potentially lossy lookup.
 #[derive(Default)]
 pub struct DialogueTrace {
-    localized_availability_templates: RefCell<BTreeMap<String, String>>,
-    plural_lines: RefCell<BTreeMap<String, PluralLineTrace>>,
+    localized_availability_templates: RefCell<Vec<(String, String)>>,
+    plural_lines: RefCell<Vec<(String, PluralLineTrace)>>,
+    plural_arm_counts: RefCell<Vec<(String, usize)>>,
+    localized_lookups: RefCell<Vec<LocalizedLookupTrace>>,
+}
+
+#[non_exhaustive]
+#[derive(Clone, Debug, Eq, PartialEq)]
+pub struct LocalizedLookupTrace {
+    pub id: String,
+    pub source_text: String,
+    pub resolved_text: Option<String>,
+    pub domain: TextDomain,
+    pub attempts: Vec<LocaleLookupAttempt>,
+    pub matched_locale: Option<String>,
+    pub matched_context: Option<String>,
+    pub matched_key: Option<String>,
+    pub outcome: LocaleLookupOutcome,
 }
 
 /// Trace-only plural resolution provenance for one line delivery.
@@ -43,22 +61,75 @@ impl DialogueTrace {
     pub fn localized_availability_template(&self, id: &str) -> Option<String> {
         self.localized_availability_templates
             .borrow()
-            .get(id)
-            .cloned()
+            .iter()
+            .rev()
+            .find(|(candidate, _)| candidate == id)
+            .map(|(_, template)| template.clone())
     }
 
     #[must_use]
     pub fn plural_line(&self, id: &str) -> Option<PluralLineTrace> {
-        self.plural_lines.borrow().get(id).cloned()
+        self.plural_lines
+            .borrow()
+            .iter()
+            .rev()
+            .find(|(candidate, _)| candidate == id)
+            .map(|(_, trace)| trace.clone())
+    }
+
+    pub(crate) fn plural_lines(&self) -> Vec<(String, PluralLineTrace)> {
+        self.plural_lines.borrow().iter().cloned().collect()
+    }
+
+    pub(crate) fn localized_lookups(&self) -> Vec<LocalizedLookupTrace> {
+        self.localized_lookups.borrow().clone()
     }
 
     pub(crate) fn record_localized_availability_template(&self, id: &str, template: &str) {
         self.localized_availability_templates
             .borrow_mut()
-            .insert(id.to_owned(), template.to_owned());
+            .push((id.to_owned(), template.to_owned()));
     }
 
     pub(crate) fn record_plural_line(&self, id: &str, trace: PluralLineTrace) {
-        self.plural_lines.borrow_mut().insert(id.to_owned(), trace);
+        self.plural_lines.borrow_mut().push((id.to_owned(), trace));
+    }
+
+    pub(crate) fn plural_arm_count(&self) -> Option<usize> {
+        self.plural_arm_counts
+            .borrow()
+            .last()
+            .map(|(_, count)| *count)
+    }
+
+    pub(crate) fn record_plural_arm_count(&self, id: &str, count: usize) {
+        self.plural_arm_counts
+            .borrow_mut()
+            .push((id.to_owned(), count));
+    }
+
+    pub(crate) fn record_localized_lookup(
+        &self,
+        id: &str,
+        source_text: &str,
+        domain: TextDomain,
+        resolved: &LocaleLookupProvenance,
+    ) {
+        let trace = LocalizedLookupTrace {
+            id: id.to_owned(),
+            source_text: source_text.to_owned(),
+            resolved_text: resolved.template.clone(),
+            domain,
+            attempts: resolved.attempts.clone(),
+            matched_locale: resolved.matched_locale.clone(),
+            matched_context: resolved.matched_context.clone(),
+            matched_key: resolved.matched_key.clone(),
+            outcome: if resolved.template.is_some() {
+                LocaleLookupOutcome::Matched
+            } else {
+                LocaleLookupOutcome::MissingEntry
+            },
+        };
+        self.localized_lookups.borrow_mut().push(trace);
     }
 }

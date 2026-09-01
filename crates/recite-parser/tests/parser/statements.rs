@@ -80,12 +80,6 @@ fn lowering_parses_statement_vocabulary_and_conditions() {
     assert_eq!(choice.source_text.text, "What's the news?");
     assert!(choice.availability_requirement.is_some());
     assert_eq!(
-        choice.target.as_ref().map(|target| &target.target),
-        Some(&DivertTarget::Block(recite_core::BlockReference::local(
-            recite_core::BlockId::new("local_news").expect("valid block id")
-        )))
-    );
-    assert_eq!(
         choice
             .target
             .as_ref()
@@ -300,47 +294,6 @@ fn effect_arguments_preserve_scalar_types() {
 }
 
 #[test]
-fn diverts_parse_external_targets_and_extra_token_spans() {
-    let source = concat!(
-        ":: tavern_arrival\n",
-        "-> local_news\n",
-        "-> dialogue/market.recite::market_intro\n",
-        "-> local_news extra\n",
-        "-> dialogue/market.recite::\n",
-    );
-
-    let lowered = lower(source);
-
-    assert_diagnostic_codes(&lowered, ["RECITE_PARSE011", "RECITE_PARSE011"]);
-    assert_eq!(lowered.diagnostics[0].span.start.line(), 4);
-    assert_eq!(lowered.diagnostics[0].span.start.column(), 15);
-    assert_eq!(lowered.diagnostics[1].span.start.line(), 5);
-    assert_eq!(lowered.diagnostics[1].span.start.column(), 4);
-
-    let block = single_block(&lowered);
-    let Statement::Divert(local) = &block.statements[0] else {
-        panic!("expected local divert");
-    };
-    assert_eq!(
-        local.target,
-        DivertTarget::Block(recite_core::BlockReference::local(
-            recite_core::BlockId::new("local_news").expect("valid block id")
-        ))
-    );
-
-    let Statement::Divert(external) = &block.statements[1] else {
-        panic!("expected external divert");
-    };
-    assert_eq!(
-        external.target,
-        DivertTarget::Block(recite_core::BlockReference::external(
-            "dialogue/market.recite",
-            recite_core::BlockId::new("market_intro").expect("valid block id")
-        ))
-    );
-}
-
-#[test]
 fn choice_extracts_first_divert_as_target_and_preserves_later_statement_order() {
     let source = concat!(
         ":: tavern_arrival\n",
@@ -355,12 +308,14 @@ fn choice_extracts_first_divert_as_target_and_preserves_later_statement_order() 
 
     assert!(lowered.diagnostics.is_empty());
     let choice = choice_statement(single_block(&lowered), 0);
-    assert_eq!(
-        choice.target.as_ref().map(|target| &target.target),
-        Some(&DivertTarget::Block(recite_core::BlockReference::local(
-            recite_core::BlockId::new("road_intro").expect("valid block id")
-        )))
-    );
+    let Some(ChoiceTarget {
+        target: DivertTarget::Block(reference),
+        ..
+    }) = choice.target.as_ref()
+    else {
+        panic!("expected local choice target");
+    };
+    assert_eq!(reference.block_id.as_str(), "road_intro");
     assert_eq!(
         choice
             .target

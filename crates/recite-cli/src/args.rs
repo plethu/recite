@@ -26,6 +26,8 @@ pub(crate) enum Command {
     CheckFresh(ProjectRootArgs),
     #[command(name = "check-schema-producer-freshness")]
     CheckSchemaProducerFreshness(ProducerFreshnessArgs),
+    #[command(name = "inspect-schema")]
+    InspectSchema(InspectSchemaArgs),
     Explain(ExplainArgs),
     Watch(WatchArgs),
     Run(RuntimeArgs),
@@ -69,6 +71,12 @@ pub(crate) struct ProducerFreshnessArgs {
     /// Current producer export to compare with the expected manifest.
     #[arg(long)]
     pub(crate) actual: PathBuf,
+}
+
+#[derive(Debug, Args)]
+pub(crate) struct InspectSchemaArgs {
+    /// Standalone Recite TOML or generated schema manifest JSON.
+    pub(crate) schema: PathBuf,
 }
 
 #[derive(Debug, Args)]

@@ -1,22 +1,15 @@
 use super::super::diagnostics::MALFORMED_SHAPE;
 use super::super::raw::RawMissingMetadataContext;
-use super::super::spans::ManifestSpans;
 use super::super::validate::PendingDomainReference;
+use super::LoweringContext;
+use crate::DiagnosticArgumentValue;
 use crate::schema::{MissingMetadataContextPolicy, schema_diagnostic};
-use crate::{Diagnostic, DiagnosticArgumentValue};
 
-#[expect(
-    clippy::too_many_arguments,
-    reason = "missing-context lowering carries shared span, validation, and semantic path context"
-)]
 pub(super) fn lower_missing_context(
-    file: &str,
-    source: &str,
-    spans: &mut ManifestSpans,
+    context: &mut LoweringContext<'_>,
     owner: &str,
     domain_path: &[String],
     raw: Option<RawMissingMetadataContext>,
-    diagnostics: &mut Vec<Diagnostic>,
     pending_domain_refs: &mut Vec<PendingDomainReference>,
 ) -> MissingMetadataContextPolicy {
     let Some(raw) = raw else {
@@ -28,15 +21,14 @@ pub(super) fn lower_missing_context(
     match raw.policy.as_str() {
         "diagnostic" => {
             if let Some(domain) = raw.domain {
-                diagnostics.push(schema_diagnostic(
+                let mut path = domain_path.to_vec();
+                path.extend(["missing_context".to_owned(), "domain".to_owned()]);
+                let domain_span = context.value_span_at(&path, &domain);
+                context.diagnostics.push(schema_diagnostic(
                     MALFORMED_SHAPE,
                     "diagnostic-schema-001-domain-policy-domain",
                     format!("metadata domain '{owner}' diagnostic policy must not declare domain"),
-                    {
-                        let mut path = domain_path.to_vec();
-                        path.extend(["missing_context".to_owned(), "domain".to_owned()]);
-                        spans.value_span_at(file, source, &path, &domain)
-                    },
+                    domain_span,
                     [
                         ("domain", DiagnosticArgumentValue::String(owner.to_owned())),
                         (
@@ -50,15 +42,14 @@ pub(super) fn lower_missing_context(
         }
         "empty" => {
             if let Some(domain) = raw.domain {
-                diagnostics.push(schema_diagnostic(
+                let mut path = domain_path.to_vec();
+                path.extend(["missing_context".to_owned(), "domain".to_owned()]);
+                let domain_span = context.value_span_at(&path, &domain);
+                context.diagnostics.push(schema_diagnostic(
                     MALFORMED_SHAPE,
                     "diagnostic-schema-001-domain-policy-domain",
                     format!("metadata domain '{owner}' empty policy must not declare domain"),
-                    {
-                        let mut path = domain_path.to_vec();
-                        path.extend(["missing_context".to_owned(), "domain".to_owned()]);
-                        spans.value_span_at(file, source, &path, &domain)
-                    },
+                    domain_span,
                     [
                         ("domain", DiagnosticArgumentValue::String(owner.to_owned())),
                         (
@@ -72,8 +63,8 @@ pub(super) fn lower_missing_context(
         }
         "fallback" => {
             let Some(domain) = raw.domain else {
-                let span = spans.value_span_at(file, source, &policy_path, "fallback");
-                diagnostics.push(schema_diagnostic(
+                let span = context.value_span_at(&policy_path, "fallback");
+                context.diagnostics.push(schema_diagnostic(
                     MALFORMED_SHAPE,
                     "diagnostic-schema-001-domain-fallback-domain",
                     format!("metadata domain '{owner}' fallback policy requires domain"),
@@ -84,7 +75,7 @@ pub(super) fn lower_missing_context(
             };
             let mut path = domain_path.to_vec();
             path.extend(["missing_context".to_owned(), "domain".to_owned()]);
-            let span = spans.value_span_at(file, source, &path, &domain);
+            let span = context.value_span_at(&path, &domain);
             pending_domain_refs.push(PendingDomainReference {
                 owner: format!("metadata domain '{owner}' fallback"),
                 domain: domain.clone(),
@@ -94,8 +85,8 @@ pub(super) fn lower_missing_context(
             MissingMetadataContextPolicy::Fallback { domain }
         }
         other => {
-            let span = spans.value_span_at(file, source, &policy_path, other);
-            diagnostics.push(schema_diagnostic(
+            let span = context.value_span_at(&policy_path, other);
+            context.diagnostics.push(schema_diagnostic(
                 MALFORMED_SHAPE,
                 "diagnostic-schema-001-domain-policy",
                 format!(

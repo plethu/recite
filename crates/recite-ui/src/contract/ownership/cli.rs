@@ -13,6 +13,7 @@ macro_rules! cli_message_ids {
         | MsgId::CliHelpCommandCheckMetadata
         | MsgId::CliHelpCommandValidateProject
         | MsgId::CliHelpCommandCheckFresh
+        | MsgId::CliHelpCommandInspectSchema
         | MsgId::CliHelpCommandExplain
         | MsgId::CliHelpCommandWatch
         | MsgId::CliHelpCommandRun
@@ -21,6 +22,7 @@ macro_rules! cli_message_ids {
         | MsgId::CliHelpCommandBench
         | MsgId::CliHelpArgPaths
         | MsgId::CliHelpArgSchema
+        | MsgId::CliHelpArgSchemaInspection
         | MsgId::CliHelpArgProjectRoot
         | MsgId::CliHelpArgDiagnosticCode
         | MsgId::CliHelpArgOutputCompile
@@ -49,8 +51,75 @@ macro_rules! cli_message_ids {
         | MsgId::WatchWaitingForChanges
         | MsgId::WatchRebuilding
         | MsgId::WatchBuildSucceeded
+        | MsgId::WatchBuildDurationMicroseconds
+        | MsgId::WatchBuildDurationMilliseconds
         | MsgId::WatchBuildFailedWaiting
         | MsgId::WatchBuildFailed
+        | MsgId::WatchBuildFailedPartial
+        | MsgId::WatchBuildFailedIndeterminate
+        | MsgId::WatchBuildFailedRefused
+        | MsgId::WatchBuildFailedNotAttempted
+        | MsgId::WatchBuildFailedPublished
+        | MsgId::WatchBuildFailedUnsupported
+        | MsgId::WatchBuildFailedPartialWithFailure
+        | MsgId::WatchBuildFailedIndeterminateWithFailure
+        | MsgId::WatchBuildFailedRefusedWithFailure
+        | MsgId::WatchBuildFailedNotAttemptedWithFailure
+        | MsgId::WatchBuildFailedPublishedWithFailure
+        | MsgId::WatchBuildFailedUnsupportedWithFailure
+        | MsgId::WatchBuildStatusSucceeded
+        | MsgId::WatchBuildStatusFailed
+        | MsgId::WatchBuildStatusStale
+        | MsgId::WatchBuildStatusCancelled
+        | MsgId::WatchBuildStatusSuperseded
+        | MsgId::WatchBuildStatusUnknown
+        | MsgId::WatchBuildRecoveryTargetsEmpty
+        | MsgId::WatchBuildRecoveryTargetsList
+        | MsgId::WatchBuildRecoveryRequired
+        | MsgId::WatchBuildRecoveryNotice
+        | MsgId::WatchBuildRecoverySummary
+        | MsgId::WatchBuildRecoveryRecord
+        | MsgId::WatchBuildRecoveryReasonStageCleanup
+        | MsgId::WatchBuildRecoveryReasonPublicationIndeterminate
+        | MsgId::WatchBuildRecoveryReasonPublicationUncommitted
+        | MsgId::WatchBuildRecoveryReasonUnknown
+        | MsgId::WatchBuildRecoveryDetailIo
+        | MsgId::WatchBuildRecoveryIoAlreadyExists
+        | MsgId::WatchBuildRecoveryIoInvalidInput
+        | MsgId::WatchBuildRecoveryIoNotFound
+        | MsgId::WatchBuildRecoveryIoPermissionDenied
+        | MsgId::WatchBuildRecoveryIoOther
+        | MsgId::WatchBuildFailureCheckRequestMismatch
+        | MsgId::WatchBuildFailureCheckFreshnessMismatch
+        | MsgId::WatchBuildFailureCheckUnknown
+        | MsgId::WatchBuildFailureDiagnostics
+        | MsgId::WatchBuildFailureUnknown
+        | MsgId::WatchBuildFailureEngineInvalidOutput
+        | MsgId::WatchBuildFailureEngineHost
+        | MsgId::WatchBuildFailureEngineUnknown
+        | MsgId::WatchBuildFailureDuplicateTarget
+        | MsgId::WatchBuildFailurePreparation
+        | MsgId::WatchBuildFailureReasonRejected
+        | MsgId::WatchBuildFailureReasonStorage
+        | MsgId::WatchBuildFailureReasonUnknown
+        | MsgId::WatchBuildFailureInvalidPublishedPartition
+        | MsgId::WatchBuildFailureInvalidPartialPartition
+        | MsgId::WatchBuildFailureInvalidRecoveryTarget
+        | MsgId::WatchBuildFailureInvalidNotCommitted
+        | MsgId::WatchBuildFailureInvalidUnknown
+        | MsgId::WatchBuildFailureRefusalStaleBuildGeneration
+        | MsgId::WatchBuildFailureRefusalStaleSnapshotGeneration
+        | MsgId::WatchBuildFailureRefusalStaleFingerprints
+        | MsgId::WatchBuildFailureRefusalRequestIdentityMismatch
+        | MsgId::WatchBuildFailureRefusalUnknown
+        | MsgId::WatchBuildFailureNotAttemptedBuildFailed
+        | MsgId::WatchBuildFailureNotAttemptedCancelled
+        | MsgId::WatchBuildFailureNotAttemptedSuperseded
+        | MsgId::WatchBuildFailureNotAttemptedStale
+        | MsgId::WatchBuildFailureNotAttemptedNoCandidates
+        | MsgId::WatchBuildFailureNotAttemptedPreparationFailed
+        | MsgId::WatchBuildFailureNotAttemptedInvalidOutcome
+        | MsgId::WatchBuildFailureNotAttemptedUnknown
         | MsgId::WatchEventError
         | MsgId::CliHelpArgHelp
         | MsgId::CliHelpArgVersion
@@ -124,6 +193,7 @@ macro_rules! cli_message_ids {
         | MsgId::CliErrorDiagnostics
         | MsgId::CliErrorFixtureChoiceIndex
         | MsgId::CliErrorFixtureChoiceNotInPrompt
+        | MsgId::CliErrorAmbiguousFixtureChoice
         | MsgId::CliErrorFixtureToml
         | MsgId::CliErrorMissingPath
         | MsgId::CliErrorMissingFixtureChoice
@@ -132,6 +202,10 @@ macro_rules! cli_message_ids {
         | MsgId::CliErrorBlockingEffect
         | MsgId::CliErrorBenchJson
         | MsgId::CliErrorTraceJson
+        | MsgId::CliErrorSchemaInspectionJson
+        | MsgId::CliErrorSchemaInspectionUnsupportedFormat
+        | MsgId::CliErrorSchemaInspectionMalformed
+        | MsgId::CliErrorSchemaInspectionInvalidSummary
         | MsgId::CliErrorUnknownPrompt
         | MsgId::CliErrorRead
         | MsgId::CliErrorReadDir

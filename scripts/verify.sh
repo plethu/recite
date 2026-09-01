@@ -13,11 +13,13 @@ Runs the complete local verification suite:
   4. tests/ast-grep/check.sh
   5. scripts/check-maintainability.sh
   6. scripts/check-ast-grep.sh
-  7. tests/trusted-policy/check.sh
-  8. tests/check-pr-review-gates/check-rollup-fixtures.sh
-  9. scripts/check-project-gates.sh
- 10. scripts/check-docs.sh
- 11. scripts/benchmark-smoke.sh
+  7. tests/lint-suppressions/check.sh
+  8. scripts/check-lint-suppressions.sh
+  9. tests/trusted-policy/check.sh
+ 10. tests/check-pr-review-gates/check-rollup-fixtures.sh
+ 11. scripts/check-project-gates.sh
+ 12. scripts/check-docs.sh
+ 13. scripts/benchmark-smoke.sh
 
 Use `mise run verify` from the repository root when mise is available. That
 task loads the scoped `maintainability` mise environment for ast-grep;
@@ -49,7 +51,7 @@ else
   fi
 fi
 
-for gate in check-git-policy.sh check-maintainability.sh check-ast-grep.sh check-project-gates.sh check-docs.sh benchmark-smoke.sh; do
+for gate in check-git-policy.sh check-maintainability.sh check-ast-grep.sh check-lint-suppressions.sh check-project-gates.sh check-docs.sh benchmark-smoke.sh; do
   if [[ ! -x "$repo_root/scripts/$gate" ]]; then
     echo "missing executable verification gate: $repo_root/scripts/$gate" >&2
     exit 2
@@ -61,6 +63,10 @@ if [[ ! -x "$repo_root/tests/check-pr-review-gates/check-rollup-fixtures.sh" ]];
 fi
 if [[ ! -x "$repo_root/tests/ast-grep/check.sh" ]]; then
   echo "missing ast-grep verification fixture gate: $repo_root/tests/ast-grep/check.sh" >&2
+  exit 2
+fi
+if [[ ! -x "$repo_root/tests/lint-suppressions/check.sh" ]]; then
+  echo "missing lint suppression verification fixture gate: $repo_root/tests/lint-suppressions/check.sh" >&2
   exit 2
 fi
 if [[ ! -x "$repo_root/tests/trusted-policy/check.sh" ]]; then
@@ -87,6 +93,8 @@ echo "== maintainability fixtures and changed-surface check =="
   tests/ast-grep/check.sh
   scripts/check-maintainability.sh
   scripts/check-ast-grep.sh
+  tests/lint-suppressions/check.sh
+  scripts/check-lint-suppressions.sh
 )
 
 echo

@@ -1,4 +1,4 @@
-use recite_core::{MatchArm, MatchBranch, MatchPattern};
+use recite_core::{MatchArm, MatchBranch, MatchPattern, SourceRecoveryClass};
 
 use crate::body::{BodyBoundary, BodyCursor, BodyStep};
 use crate::diagnostics::malformed_case;
@@ -6,7 +6,7 @@ use crate::layout::{ClassifiedLine, classify_line};
 use crate::markers::StatementMarker;
 use crate::source::span_for_line;
 
-use super::super::{Lowerer, header_fields};
+use super::super::{Lowerer, header_fields, mark_all};
 use super::helpers::{directive_header, parse_condition_call_header};
 
 impl Lowerer<'_, '_> {
@@ -14,6 +14,10 @@ impl Lowerer<'_, '_> {
         let line = self.lines[index];
         let header = directive_header(self.path, line, StatementMarker::Match);
         let scrutinee = parse_condition_call_header(self.path, self.diagnostics, &header);
+        if scrutinee.is_none() {
+            self.mark(SourceRecoveryClass::ConditionFunctions);
+            mark_all(self.recovery);
+        }
         let (arms, next_index) = self.lower_match_arms(index);
 
         let Some(scrutinee) = scrutinee else {
@@ -35,10 +39,16 @@ impl Lowerer<'_, '_> {
             let index = match cursor.step(self.path, line, true, self.diagnostics) {
                 BodyStep::Content { index } => index,
                 BodyStep::Boundary => break,
-                BodyStep::Blank | BodyStep::MixedIndent => continue,
+                BodyStep::Blank => continue,
+                BodyStep::MixedIndent => {
+                    mark_all(self.recovery);
+                    continue;
+                }
             };
 
             if classify_line(line) != ClassifiedLine::Statement(StatementMarker::Case) {
+                self.mark(SourceRecoveryClass::ConditionFunctions);
+                mark_all(self.recovery);
                 self.diagnostics.push(malformed_case(span_for_line(
                     self.path,
                     line.number,
@@ -72,6 +82,8 @@ impl Lowerer<'_, '_> {
         let (statements, next_index) = self.lower_statement_body(index);
 
         let Some(pattern_field) = fields.first().copied() else {
+            self.mark(SourceRecoveryClass::ConditionFunctions);
+            mark_all(self.recovery);
             self.diagnostics.push(malformed_case(span_for_line(
                 self.path,
                 line.number,
@@ -81,6 +93,8 @@ impl Lowerer<'_, '_> {
         };
 
         if fields.len() > 1 {
+            self.mark(SourceRecoveryClass::ConditionFunctions);
+            mark_all(self.recovery);
             self.diagnostics
                 .push(malformed_case(fields[1].span(self.path)));
             return (None, next_index);

@@ -68,6 +68,7 @@ mod context;
 mod error;
 mod event;
 mod locale;
+mod preview;
 mod session;
 mod session_serialization;
 mod session_snapshot;
@@ -86,8 +87,18 @@ pub use event::{
     DialoguePluralResolutionOutcome, EffectAck,
 };
 pub use locale::{
-    InterpolationValueProvider, InterpolationValues, LocaleError, LocaleProvider, PluralResolution,
+    InterpolationValueProvider, InterpolationValues, LocaleError, LocaleLookupAttempt,
+    LocaleLookupOutcome, LocaleLookupProvenance, LocaleProvider, PluralResolution,
     PluralResolutionAttempt, PluralResolutionOutcome, TextDomain,
+};
+pub use preview::{
+    ConditionAnswer, PREVIEW_SNAPSHOT_FORMAT_VERSION, PreviewAssetRevision, PreviewCommand,
+    PreviewConditionArgument, PreviewConditionQuery, PreviewConditionRequest,
+    PreviewConditionRequestId, PreviewConditionResult, PreviewError, PreviewEvent,
+    PreviewInputRevision, PreviewInputs, PreviewOptions, PreviewOutput, PreviewPrompt,
+    PreviewPromptIdentity, PreviewRestartRequirement, PreviewSession, PreviewSessionState,
+    PreviewSnapshot, PreviewState, PreviewStatus, PreviewTrace, PreviewTranscript,
+    PreviewTranscriptEvent,
 };
 pub use session::{DialogueSession, DialogueSessionOptions};
 pub use session_serialization::{
@@ -106,6 +117,10 @@ pub use session_snapshot::{
     SESSION_SNAPSHOT_FORMAT_VERSION_V1, snapshot_session,
 };
 pub use traversal::{
-    DialogueTrace, LocaleResolution, PluralLineTrace, acknowledge_effect, choose, choose_with,
-    next, next_with, start_scene, start_scene_with_options,
+    DialogueTrace, LocaleResolution, LocalizedLookupTrace, PluralLineTrace, acknowledge_effect,
+    choose, choose_with, next, next_with, start_scene, start_scene_with_options,
 };
+
+#[cfg(feature = "bench-support")]
+#[doc(hidden)]
+pub mod bench_support;

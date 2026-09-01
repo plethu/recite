@@ -1,0 +1,24 @@
+[package]
+name = "recite-config"
+version.workspace = true
+edition.workspace = true
+rust-version.workspace = true
+description = "Shared local configuration and capability contracts for Recite tooling."
+license.workspace = true
+repository.workspace = true
+readme.workspace = true
+
+[dependencies]
+dirs.workspace = true
+recite-core.workspace = true
+recite-ui.workspace = true
+serde.workspace = true
+thiserror.workspace = true
+toml.workspace = true
+
+[dev-dependencies]
+serde_json.workspace = true
+tempfile.workspace = true
+
+[lints]
+workspace = true

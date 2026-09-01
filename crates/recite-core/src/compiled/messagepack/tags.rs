@@ -1,8 +1,8 @@
 //! MessagePack v0 tagged-value decoders.
 //!
 //! This module is the runtime/core decode half of the same wire format encoded
-//! by `crates/recite-compiler/src/wire/messagepack/tags.rs`. Both halves are
-//! keyed by the shared `V0_*` tag constants defined in
+//! by `crate::compiled::messagepack::encode::tags`. Both halves are keyed by
+//! the shared `V0_*` tag constants defined in
 //! `crate::compiled::wire`; add, remove, or renumber tags in all three places
 //! together. From the first tagged release onward, tag changes also require
 //! the versioning policy in `docs/recite-production-spec.md` §12.2.
@@ -13,7 +13,7 @@ use serde_bytes::ByteBuf;
 
 use crate::{LineId, ScalarValue, SourcePosition, SourceSpan, Value};
 
-use super::{CompiledAssetDecodeError, malformed};
+use super::CompiledAssetDecodeError;
 use crate::compiled::messagepack::wire::MsgRange;
 use crate::compiled::{
     BlockIndex, CompiledArgument, CompiledAssetEncoding, CompiledChoiceEcho, CompiledConditionCall,
@@ -154,7 +154,7 @@ impl<'de> Deserialize<'de> for MsgStatementKind {
                 let (scrutinee, arms): (MsgConditionCall, MsgRange) =
                     from_value("match statement", payload)?;
                 CompiledStatementKind::Match {
-                    scrutinee: scrutinee.into_inner().map_err(de::Error::custom)?,
+                    scrutinee: scrutinee.into_inner(),
                     arms: arms.match_arm(),
                 }
             }
@@ -176,12 +176,11 @@ impl<'de> Deserialize<'de> for MsgStatementKind {
 struct MsgConditionCall(String, Vec<MsgArgument>);
 
 impl MsgConditionCall {
-    fn into_inner(self) -> Result<CompiledConditionCall, CompiledAssetDecodeError> {
-        ensure_identifier_like("condition function", &self.0)?;
-        Ok(CompiledConditionCall {
+    fn into_inner(self) -> CompiledConditionCall {
+        CompiledConditionCall {
             function: self.0,
             args: collect_wrapped(self.1),
-        })
+        }
     }
 }
 
@@ -275,9 +274,7 @@ impl<'de> Deserialize<'de> for MsgConditionExpression {
         let (tag, payload): (u8, serde_value::Value) = Deserialize::deserialize(deserializer)?;
         match tag {
             V0_CONDITION_TAG_CALL => Ok(Self(CompiledConditionExpression::Call(
-                from_value::<MsgConditionCall, D::Error>("condition call", payload)?
-                    .into_inner()
-                    .map_err(de::Error::custom)?,
+                from_value::<MsgConditionCall, D::Error>("condition call", payload)?.into_inner(),
             ))),
             V0_CONDITION_TAG_AND => Ok(Self(CompiledConditionExpression::And(collect_wrapped(
                 from_value::<Vec<MsgConditionExpression>, D::Error>("condition and", payload)?,
@@ -302,7 +299,6 @@ impl<'de> Deserialize<'de> for MsgArgument {
         match tag {
             V0_ARGUMENT_TAG_IDENTIFIER => {
                 let value: String = from_value("argument identifier", payload)?;
-                ensure_identifier_like("argument identifier", &value).map_err(de::Error::custom)?;
                 Ok(Self(CompiledArgument::Identifier(value)))
             }
             V0_ARGUMENT_TAG_VALUE => Ok(Self(CompiledArgument::Value(
@@ -352,11 +348,6 @@ impl<'de> Deserialize<'de> for MsgScalarValue {
             )?))),
             V0_SCALAR_TAG_FLOAT => {
                 let value = from_value("float scalar", payload)?;
-                if !f64::is_finite(value) {
-                    return Err(de::Error::custom(CompiledAssetDecodeError::MalformedAsset(
-                        "float scalar must be finite".to_owned(),
-                    )));
-                }
                 Ok(Self(ScalarValue::Float(value)))
             }
             V0_SCALAR_TAG_BOOLEAN => Ok(Self(ScalarValue::Boolean(from_value(
@@ -393,11 +384,6 @@ impl<'de> Deserialize<'de> for MsgSourceSpan {
                 )));
             }
         };
-        if end.is_some_and(|end| end < start) {
-            return Err(de::Error::custom(CompiledAssetDecodeError::MalformedAsset(
-                "source span end precedes span start".to_owned(),
-            )));
-        }
         Ok(Self(SourceSpan::new(file, start, end)))
     }
 }
@@ -406,30 +392,6 @@ where
     T: IntoWrapped<U>,
 {
     values.into_iter().map(IntoWrapped::into_wrapped).collect()
-}
-
-pub(super) fn ensure_identifier_like(
-    field: &'static str,
-    value: &str,
-) -> Result<(), CompiledAssetDecodeError> {
-    let mut chars = value.chars();
-    let Some(first) = chars.next() else {
-        return Err(malformed(format!("{field} must not be empty")));
-    };
-    if (first.is_ascii_alphabetic() || first == '_')
-        && chars.all(|character| {
-            character.is_ascii_alphanumeric()
-                || character == '_'
-                || character == '.'
-                || character == '-'
-        })
-    {
-        Ok(())
-    } else {
-        Err(malformed(format!(
-            "{field} must be an identifier-like name"
-        )))
-    }
 }
 
 pub(super) trait IntoWrapped<T> {

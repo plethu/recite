@@ -1,3 +1,5 @@
+format_version = 1
+
 [project]
 content_set = "synthetic-tiny"
 version = "72"

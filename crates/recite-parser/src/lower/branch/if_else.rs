@@ -1,4 +1,4 @@
-use recite_core::{IfBranch, Statement};
+use recite_core::{IfBranch, SourceRecoveryClass, Statement};
 
 use crate::diagnostics::malformed_header;
 use crate::layout::{ClassifiedLine, classify_line};
@@ -14,6 +14,10 @@ impl Lowerer<'_, '_> {
         let indent = line.indent_len();
         let header = directive_header(self.path, line, StatementMarker::If);
         let condition = parse_condition_expression_header(self.path, self.diagnostics, &header);
+        if condition.is_none() {
+            self.mark(SourceRecoveryClass::ConditionFunctions);
+            super::super::mark_all(self.recovery);
+        }
         let (then_statements, mut next_index) = self.lower_statement_body(index);
         let else_statements = if self.is_else_at(next_index, indent) {
             let (else_body, after_else) = self.lower_else(next_index);
@@ -37,6 +41,7 @@ impl Lowerer<'_, '_> {
         let line = self.lines[index];
         let header = directive_header(self.path, line, StatementMarker::Else);
         if !header.text.is_empty() {
+            self.mark(SourceRecoveryClass::ConditionFunctions);
             self.diagnostics.push(malformed_header(span_for_text(
                 self.path,
                 header.line,

@@ -81,7 +81,6 @@ fn unresolved_related_sources_are_omitted_without_rebinding_to_primary() {
     .expect("recordable diagnostic");
     assert!(published.diagnostics[0].related_information.is_none());
 }
-
 #[test]
 fn unrecordable_diagnostics_are_reported_instead_of_dropped() {
     let legacy = recite_core::Diagnostic::error(
@@ -103,7 +102,6 @@ fn unrecordable_diagnostics_are_reported_instead_of_dropped() {
     let primary_uri = "file:///workspace/dialogue/primary.recite"
         .parse::<Uri>()
         .expect("valid test URI");
-
     let error = publish_diagnostics(primary_uri, "primary\n", Some(1), &[legacy], &catalog, &[])
         .expect_err("legacy-only diagnostics must not be silently dropped");
     assert!(error.to_string().contains("RECITE_ID003"));
@@ -123,13 +121,19 @@ fn related_spans_resolve_open_project_file_text() {
     let first_uri = file_path_to_uri(&first_path).expect("valid first URI");
     let second_uri =
         file_path_to_uri(&temp.path().join("dialogue/second.recite")).expect("valid second URI");
-    let mut workspace = LspWorkspace::new(WorkspaceConfig::for_roots(vec![temp.path().to_owned()]));
-    workspace.open(
+    let mut workspace = match UiCatalog::load(&UiLocale::default()) {
+        Ok(catalog) => LspWorkspace::with_ui_catalog(
+            WorkspaceConfig::for_roots(vec![temp.path().to_owned()]),
+            catalog,
+        )
+        .unwrap_or_else(|error| panic!("test authoring state is invalid: {error}")),
+        Err(error) => panic!("test default UI catalog is invalid: {error}"),
+    };
+    workspace.open_refreshes(
         first_uri.clone(),
         1,
         ":: first\n> shared@83709c28414d0ce4659c\n  😀First.\n".to_owned(),
     );
-
     let diagnostic = diagnostic_with_id(
         "compatibility message",
         SourceSpan::point(
@@ -148,7 +152,7 @@ fn related_spans_resolve_open_project_file_text() {
             "diagnostic-id-003-related",
         )),
     )]);
-    let sources = workspace.diagnostic_sources();
+    let sources = workspace.diagnostic_sources_for_uri(&second_uri);
     let published = publish_diagnostics(
         second_uri,
         ":: second\n",
@@ -166,14 +170,13 @@ fn related_spans_resolve_open_project_file_text() {
     assert_eq!(related[0].location.range.start, Position::new(2, 2));
     assert_eq!(related[0].location.range.end, Position::new(2, 9));
 }
-
 #[test]
 fn localized_primary_related_and_help_use_shared_renderer_at_lsp_boundary() {
     let related_uri = "file:///workspace/dialogue/related.recite"
         .parse::<Uri>()
         .expect("valid related URI");
     let sources = [DiagnosticSource {
-        path: "dialogue/related.recite",
+        path: "dialogue/related.recite".to_owned(),
         uri: &related_uri,
         text: "😀first\nsecond\n",
     }];
@@ -254,7 +257,6 @@ fn localized_primary_related_and_help_use_shared_renderer_at_lsp_boundary() {
     assert_eq!(related[0].location.range.end, Position::new(0, 7));
     assert_eq!(related[1].location.range.start, Position::new(1, 0));
 }
-
 #[test]
 fn primary_renderer_fallback_preserves_compatibility_message() {
     let diagnostic = Diagnostic::error(
@@ -280,7 +282,6 @@ fn primary_renderer_fallback_preserves_compatibility_message() {
         &[],
     )
     .expect("compatibility fallback is recordable");
-
     assert_eq!(published.diagnostics[0].message, "compatibility fallback");
 }
 
@@ -308,7 +309,6 @@ fn ordering_uses_record_data_when_localized_text_reverses_lexical_order() {
         &[],
     )
     .expect("recordable diagnostics");
-
     assert_eq!(
         published
             .diagnostics

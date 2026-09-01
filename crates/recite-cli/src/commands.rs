@@ -10,7 +10,7 @@ use crate::diagnostics::{report_diagnostics, report_targeted_diagnostics};
 use crate::dialogue_locale::LoadedDialoguePreview;
 use crate::error::CliError;
 use crate::fs::{
-    collect_input_files, compile_options, load_optional_schema, load_schema,
+    check_fresh, collect_input_files, compile_options, load_optional_schema, load_schema,
     read_compile_inputs_for_output, read_compile_inputs_from_files, reject_output_input_alias,
     validate_inputs, validate_project, write_staged,
 };
@@ -31,6 +31,9 @@ use recite_compiler::{
 use recite_core::{
     DiagnosticCategory, DiagnosticCode, explain_diagnostic_code, suggest_diagnostic_code,
 };
+
+mod project;
+use project::project_check;
 
 pub(crate) fn run_command(
     command: Command,
@@ -74,16 +77,17 @@ pub(crate) fn run_command(
                 diagnostic.code.category() == DiagnosticCategory::Metadata
             })
         }
-        Command::ValidateProject(args) | Command::CheckFresh(args) => {
-            let diagnostics = validate_project(args.project_root)?;
-            report_diagnostics(stderr, messages, diagnostics.iter())?;
-            diagnostics
-                .is_empty()
-                .then_some(())
-                .ok_or(CliError::Diagnostics)
+        Command::ValidateProject(args) => {
+            project_check(args.project_root, validate_project, stderr, messages)
+        }
+        Command::CheckFresh(args) => {
+            project_check(args.project_root, check_fresh, stderr, messages)
         }
         Command::CheckSchemaProducerFreshness(args) => {
             crate::schema_freshness::check(args, stdout, stderr, messages)
+        }
+        Command::InspectSchema(args) => {
+            crate::schema_inspection::run(args, stdout, stderr, messages)
         }
         Command::Explain(args) => explain_command(args, stdout, messages),
         Command::Watch(args) => run_watch_command(args, stderr, messages),

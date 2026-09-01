@@ -1,9 +1,17 @@
 use lsp_types::notification::{DidSaveTextDocument, Notification as LspNotification};
 use lsp_types::{
-    ClientCapabilities, DidSaveTextDocumentParams, PositionEncodingKind, TextDocumentIdentifier,
-    TextDocumentSyncCapability, TextDocumentSyncKind, TextDocumentSyncSaveOptions,
+    ClientCapabilities, DidSaveTextDocumentParams, NumberOrString, Position, PositionEncodingKind,
+    TextDocumentIdentifier, TextDocumentSyncCapability, TextDocumentSyncKind,
+    TextDocumentSyncSaveOptions,
 };
+use recite_config::{
+    ConfigError, Platform, PlatformRoots, PlayConfig, UiConfig, UiLocale, UserConfig,
+    load_user_config_from,
+};
+use recite_ui::DEFAULT_RESOURCE;
 use serde_json::json;
+use std::path::PathBuf;
+use tempfile::tempdir;
 
 use super::support::{Harness, uri};
 
@@ -74,4 +82,130 @@ pub(super) fn exit_before_shutdown_terminates_with_error() {
         Err(crate::server::ServerError::ExitWithoutShutdown) => {}
         other => panic!("unexpected server result after early exit: {other:?}"),
     }
+}
+
+pub(super) fn valid_ui_config_changes_presentation_only() {
+    let loaded = UserConfig {
+        ui: UiConfig {
+            locale: UiLocale::parse("fr-FR").expect("locale"),
+            ..UiConfig::default()
+        },
+        play: PlayConfig::default(),
+        config_version: recite_config::CONFIG_VERSION,
+    };
+    let localized = DEFAULT_RESOURCE.replace(
+        "diagnostic-parse-001 = expected a Recite statement header or indented prose",
+        "diagnostic-parse-001 = diagnostic localisé",
+    );
+    let (harness, result) = super::support::Harness::start_with_user_config(
+        json!({"capabilities": ClientCapabilities::default()}),
+        Ok(recite_config::LoadedUserConfig::from_explicit(loaded)),
+        "fr-FR",
+        localized,
+    );
+
+    assert!(result.capabilities.completion_provider.is_some());
+    harness.assert_no_message();
+
+    let uri = super::support::uri("file:///workspace/dialogue/configured.recite");
+    harness.did_open(uri, 1, "oops\n");
+    let published = harness.recv_publish_diagnostics();
+    let diagnostic = published
+        .diagnostics
+        .iter()
+        .find(|diagnostic| {
+            diagnostic.code == Some(NumberOrString::String("RECITE_PARSE001".to_owned()))
+        })
+        .expect("parse diagnostic");
+    assert_eq!(diagnostic.message, "diagnostic localisé");
+    assert_eq!(diagnostic.range.start, Position::new(0, 0));
+    assert_eq!(diagnostic.range.end, Position::new(0, 0));
+
+    harness.finish();
+}
+
+pub(super) fn absent_platform_default_uses_defaults_without_warning() {
+    let loaded = load_user_config_from(Platform::Linux, &PlatformRoots::new(), None)
+        .expect("missing platform root uses defaults");
+    let (harness, result) = super::support::Harness::start_with_user_config(
+        json!({"capabilities": ClientCapabilities::default()}),
+        Ok(loaded),
+        "en-US",
+        DEFAULT_RESOURCE.to_owned(),
+    );
+
+    assert!(result.capabilities.completion_provider.is_some());
+    harness.assert_no_message();
+    harness.finish();
+}
+
+pub(super) fn malformed_user_config_warns_without_blocking_initialize() {
+    let temp = tempdir().expect("temporary directory");
+    let schema_path = temp.path().join("missing-schema.json");
+    let error = ConfigError::Malformed {
+        path: PathBuf::from("/synthetic/recite-config.toml"),
+        message: "invalid TOML".to_owned(),
+    };
+    let (harness, result) = super::support::Harness::start_with_user_config(
+        json!({
+            "capabilities": ClientCapabilities::default(),
+            "initializationOptions": {"schema": schema_path.display().to_string()}
+        }),
+        Err(error),
+        "fr-FR",
+        DEFAULT_RESOURCE.to_owned(),
+    );
+
+    assert!(result.capabilities.hover_provider.is_some());
+    let warning = harness.recv_log_message();
+    assert!(warning.message.contains("RECITE_CONFIG005"));
+    assert!(warning.message.contains("invalid TOML"));
+    let schema_diagnostics = harness.recv_publish_diagnostics();
+    assert_eq!(schema_diagnostics.diagnostics.len(), 1);
+
+    harness.finish();
+}
+
+pub(super) fn explicit_missing_user_config_warns_with_stable_code() {
+    let error = ConfigError::MissingExplicit {
+        path: PathBuf::from("/synthetic/missing-recite-config.toml"),
+    };
+    let (harness, _) = super::support::Harness::start_with_user_config(
+        json!({"capabilities": ClientCapabilities::default()}),
+        Err(error),
+        "fr-FR",
+        DEFAULT_RESOURCE.to_owned(),
+    );
+
+    let warning = harness.recv_log_message();
+    assert_eq!(warning.typ, lsp_types::MessageType::WARNING);
+    assert!(warning.message.contains("RECITE_CONFIG003"));
+    assert!(warning.message.contains("missing-recite-config.toml"));
+    harness.assert_no_message();
+    harness.finish();
+}
+
+pub(super) fn translated_config_warning_uses_exact_code_and_detail_once() {
+    let localized = DEFAULT_RESOURCE.replace(
+        "lsp-warning-ui-config = UI configuration could not be loaded (code {$code}): {$detail}; using embedded en-US UI text.",
+        "lsp-warning-ui-config = localized config warning [{$code}] {$detail}",
+    );
+    let error = ConfigError::Malformed {
+        path: PathBuf::from("/synthetic/recite-config.toml"),
+        message: "invalid TOML".to_owned(),
+    };
+    let (harness, _) = super::support::Harness::start_with_user_config_and_resource(
+        json!({"capabilities": ClientCapabilities::default()}),
+        Err(error),
+        "fr-FR",
+        localized,
+    );
+
+    let warning = harness.recv_log_message();
+    assert_eq!(
+        warning.message,
+        "localized config warning [RECITE_CONFIG005] could not parse user config /synthetic/recite-config.toml: invalid TOML"
+    );
+    harness.assert_no_message();
+    harness.finish();
 }

@@ -1,6 +1,9 @@
-use std::fs;
-
 use crossterm::event::{KeyCode, KeyEvent, KeyModifiers};
+use recite_config::{
+    CONFIG_VERSION, KeyHints as SharedKeyHints, Keymap as SharedKeymap,
+    PlayConfig as SharedPlayConfig, TuiColorMode as SharedTuiColorMode,
+    TuiContrast as SharedTuiContrast, UiConfig as SharedUiConfig, UserConfig,
+};
 
 use super::config::TuiColorMode;
 use super::*;
@@ -171,101 +174,30 @@ fn settings_default_to_standard_contextual_hints_and_visible_unavailable_choices
 }
 
 #[test]
-fn settings_parse_toml_config() {
-    let temp = tempfile::tempdir().expect("tempdir");
-    let path = temp.path().join("config.toml");
-    fs::write(
-        &path,
-        r#"[ui]
-locale = "en-GB"
-keymap = "vim"
-key_hints = "compact"
-color = "always"
-contrast = "accessible"
+fn settings_adapter_resolves_shared_values_and_invocation_keymap() {
+    let loaded = recite_config::LoadedUserConfig::from_explicit(UserConfig {
+        config_version: CONFIG_VERSION,
+        ui: SharedUiConfig {
+            locale: recite_config::UiLocale::parse("en-US").expect("locale"),
+            keymap: SharedKeymap::Vim,
+            key_hints: SharedKeyHints::Compact,
+            color: SharedTuiColorMode::Never,
+            contrast: SharedTuiContrast::Accessible,
+        },
+        play: SharedPlayConfig {
+            show_unavailable_choices: false,
+        },
+    });
 
-[play]
-show_unavailable_choices = false
-"#,
-    )
-    .expect("write config");
-
-    let settings = TuiSettings::load_path(&path).expect("config loads");
-
-    assert_eq!(settings.locale.to_string(), "en-GB");
+    let settings = TuiSettings::from_loaded(&loaded, None);
     assert_eq!(settings.keymap, Keymap::Vim);
     assert_eq!(settings.key_hints, KeyHints::Compact);
-    assert_eq!(settings.color, TuiColorMode::Always);
+    assert_eq!(settings.color, TuiColorMode::Never);
     assert_eq!(settings.contrast, TuiContrast::Accessible);
     assert!(!settings.show_unavailable_choices);
-}
 
-#[test]
-fn settings_parse_color_and_contrast_values() {
-    let temp = tempfile::tempdir().expect("tempdir");
-    for (color, contrast, expected_color, expected_contrast) in [
-        (
-            "auto",
-            "standard",
-            TuiColorMode::Auto,
-            TuiContrast::Standard,
-        ),
-        (
-            "never",
-            "accessible",
-            TuiColorMode::Never,
-            TuiContrast::Accessible,
-        ),
-    ] {
-        let path = temp.path().join(format!("{color}-{contrast}.toml"));
-        fs::write(
-            &path,
-            format!(
-                r#"[ui]
-color = "{color}"
-contrast = "{contrast}"
-"#
-            ),
-        )
-        .expect("write config");
-
-        let settings = TuiSettings::load_path(&path).expect("config loads");
-
-        assert_eq!(settings.color, expected_color);
-        assert_eq!(settings.contrast, expected_contrast);
-    }
-}
-
-#[test]
-fn settings_reject_unknown_values() {
-    let temp = tempfile::tempdir().expect("tempdir");
-    let path = temp.path().join("config.toml");
-    fs::write(
-        &path,
-        r#"[ui]
-keymap = "emacs"
-"#,
-    )
-    .expect("write config");
-
-    let error = TuiSettings::load_path(&path).expect_err("config fails");
-
-    assert!(error.to_string().contains("failed to parse UI config"));
-}
-
-#[test]
-fn settings_reject_unknown_color_and_contrast_values() {
-    let temp = tempfile::tempdir().expect("tempdir");
-    for (name, config) in [
-        ("color", "color = \"sometimes\""),
-        ("contrast", "contrast = \"maximum\""),
-    ] {
-        let path = temp.path().join(format!("{name}.toml"));
-        fs::write(&path, format!("[ui]\n{config}\n")).expect("write config");
-
-        let error = TuiSettings::load_path(&path).expect_err("config fails");
-
-        assert!(error.to_string().contains("failed to parse UI config"));
-    }
+    let overridden = TuiSettings::from_loaded(&loaded, Some(crate::args::PlayKeymap::Standard));
+    assert_eq!(overridden.keymap, Keymap::Standard);
 }
 
 #[test]
@@ -303,21 +235,4 @@ fn color_always_and_never_override_terminal_color_environment() {
         }
         .color_enabled_with_env(|_| None)
     );
-}
-
-#[test]
-fn settings_reject_malformed_locale() {
-    let temp = tempfile::tempdir().expect("tempdir");
-    let path = temp.path().join("config.toml");
-    fs::write(
-        &path,
-        r#"[ui]
-locale = "not a locale"
-"#,
-    )
-    .expect("write config");
-
-    let error = TuiSettings::load_path(&path).expect_err("config fails");
-
-    assert!(error.to_string().contains("invalid [ui].locale"));
 }

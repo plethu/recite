@@ -1,26 +1,32 @@
-use recite_core::ProjectSchema;
+use recite_compiler::SchemaSummary;
+use recite_core::{ContentFingerprintFreshness, ProducerFreshness};
 use recite_ui::{MsgId, UiArg, UiArgs, UiCatalog};
 
 pub(crate) fn hover_detail(
     origin: Option<&recite_core::ProducerOrigin>,
-    schema: &ProjectSchema,
+    schema: &SchemaSummary,
     scoped_fingerprints: &[recite_core::ProducerFingerprint],
     catalog: &UiCatalog,
 ) -> String {
     let origin = origin.map_or_else(String::new, |origin| origin_detail(catalog, origin));
     let mut detail = origin;
-    let metadata = schema.producer_metadata.as_ref();
-    if let Some(producer) = metadata.and_then(|metadata| metadata.producer.as_ref()) {
+    let metadata = schema.producer_metadata();
+    if let Some(producer) = metadata.and_then(|metadata| metadata.producer()) {
         detail.push_str(&catalog.format_args(
             MsgId::LspHoverSchemaProducer,
             &UiArgs::from([
-                ("kind".to_owned(), UiArg::from(producer.kind.to_string())),
-                ("id".to_owned(), UiArg::from(producer.id.to_string())),
+                ("kind".to_owned(), UiArg::from(producer.kind().to_string())),
+                ("id".to_owned(), UiArg::from(producer.id().to_string())),
             ]),
         ));
     }
-    let content_fingerprint = metadata.and_then(|metadata| metadata.content_fingerprint.as_ref());
-    let producer_fingerprints = metadata.map_or(0, |metadata| metadata.producer_fingerprints.len());
+    let compared = matches!(
+        schema.freshness(),
+        recite_compiler::SchemaFreshness::Compared(_)
+    );
+    let content_fingerprint = metadata.and_then(|metadata| metadata.content_fingerprint());
+    let producer_fingerprints =
+        metadata.map_or(0, |metadata| metadata.producer_fingerprints().len());
     let scope = if scoped_fingerprints.is_empty() {
         String::new()
     } else {
@@ -35,22 +41,129 @@ pub(crate) fn hover_detail(
     if content_fingerprint.is_some()
         || producer_fingerprints != 0
         || !scoped_fingerprints.is_empty()
+        || compared
     {
         detail.push_str(&catalog.format_args(
             MsgId::LspHoverSchemaFreshness,
             &UiArgs::from([
                 (
                     "fingerprint".to_owned(),
-                    UiArg::from(
-                        content_fingerprint.map_or_else(|| "none".to_owned(), format_fingerprint),
-                    ),
+                    UiArg::from(content_fingerprint.map_or_else(String::new, format_fingerprint)),
+                ),
+                (
+                    "fingerprint_state".to_owned(),
+                    UiArg::from(if content_fingerprint.is_some() {
+                        "present"
+                    } else {
+                        "absent"
+                    }),
                 ),
                 ("inputs".to_owned(), UiArg::from(producer_fingerprints)),
                 ("scope".to_owned(), UiArg::from(scope)),
             ]),
         ));
     }
+    detail.push_str(&freshness_state_detail(schema, catalog));
     detail
+}
+
+fn freshness_state_detail(schema: &SchemaSummary, catalog: &UiCatalog) -> String {
+    match schema.freshness() {
+        recite_compiler::SchemaFreshness::Compared(comparison) => {
+            let comparison = comparison.as_ref();
+            catalog.format_args(
+                MsgId::LspHoverSchemaFreshnessState,
+                &UiArgs::from([
+                    (
+                        "state".to_owned(),
+                        UiArg::from(if comparison.is_fresh() {
+                            "fresh"
+                        } else {
+                            "stale"
+                        }),
+                    ),
+                    (
+                        "content".to_owned(),
+                        UiArg::from(content_status(&comparison.content_fingerprint)),
+                    ),
+                    (
+                        "manifest".to_owned(),
+                        UiArg::from(producer_status(&comparison.manifest)),
+                    ),
+                    (
+                        "registries".to_owned(),
+                        UiArg::from(scope_status(&comparison.registries, catalog)),
+                    ),
+                    (
+                        "metadata_domains".to_owned(),
+                        UiArg::from(scope_status(&comparison.metadata_domains, catalog)),
+                    ),
+                ]),
+            )
+        }
+        recite_compiler::SchemaFreshness::Unavailable { reason } => catalog.format_args(
+            MsgId::LspHoverSchemaFreshnessUnavailable,
+            &UiArgs::from([("reason".to_owned(), UiArg::from(freshness_reason(*reason)))]),
+        ),
+        _ => catalog.format_args(
+            MsgId::LspHoverSchemaFreshnessUnavailable,
+            &UiArgs::from([("reason".to_owned(), UiArg::from("other"))]),
+        ),
+    }
+}
+
+fn content_status(freshness: &ContentFingerprintFreshness) -> &'static str {
+    if matches!(freshness, ContentFingerprintFreshness::Fresh) {
+        "fresh"
+    } else {
+        "stale"
+    }
+}
+
+fn producer_status(freshness: &ProducerFreshness) -> &'static str {
+    if matches!(freshness, ProducerFreshness::Fresh) {
+        "fresh"
+    } else {
+        "stale"
+    }
+}
+
+fn scope_status(
+    scopes: &std::collections::BTreeMap<String, ProducerFreshness>,
+    catalog: &UiCatalog,
+) -> String {
+    if scopes.is_empty() {
+        return localized_status(catalog, "absent");
+    }
+    scopes
+        .iter()
+        .map(|(name, freshness)| {
+            format!(
+                "{name}:{}",
+                localized_status(catalog, producer_status(freshness))
+            )
+        })
+        .collect::<Vec<_>>()
+        .join(", ")
+}
+
+fn localized_status(catalog: &UiCatalog, status: &str) -> String {
+    catalog.format_args(
+        MsgId::LspHoverSchemaFreshnessStatus,
+        &UiArgs::from([("status".to_owned(), UiArg::from(status))]),
+    )
+}
+
+fn freshness_reason(reason: recite_compiler::SchemaFreshnessUnavailableReason) -> &'static str {
+    match reason {
+        recite_compiler::SchemaFreshnessUnavailableReason::NoComparisonSnapshot => {
+            "no-comparison-snapshot"
+        }
+        recite_compiler::SchemaFreshnessUnavailableReason::NoProducerMetadata => {
+            "no-producer-metadata"
+        }
+        _ => "other",
+    }
 }
 
 fn format_fingerprint(fingerprint: &recite_core::ContentFingerprint) -> String {
@@ -80,7 +193,7 @@ fn format_scoped_fingerprints(fingerprints: &[recite_core::ProducerFingerprint])
     values.join(", ")
 }
 
-pub(super) fn origin_detail(catalog: &UiCatalog, origin: &recite_core::ProducerOrigin) -> String {
+pub(crate) fn origin_detail(catalog: &UiCatalog, origin: &recite_core::ProducerOrigin) -> String {
     catalog.format_args(
         MsgId::LspHoverProducedBy,
         &UiArgs::from([

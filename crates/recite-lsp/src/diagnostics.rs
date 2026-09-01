@@ -18,7 +18,7 @@ mod tests;
 /// target URI and that target document's text for correct UTF-16 conversion.
 #[derive(Debug)]
 pub(crate) struct DiagnosticSource<'a> {
-    pub(crate) path: &'a str,
+    pub(crate) path: String,
     pub(crate) uri: &'a Uri,
     pub(crate) text: &'a str,
 }
@@ -79,8 +79,8 @@ struct IndexedDiagnostic {
     record: DiagnosticRecord,
 }
 
-pub(crate) fn clear_diagnostics(uri: Uri) -> PublishDiagnosticsParams {
-    PublishDiagnosticsParams::new(uri, Vec::new(), None)
+pub(crate) fn clear_diagnostics(uri: Uri, version: Option<i32>) -> PublishDiagnosticsParams {
+    PublishDiagnosticsParams::new(uri, Vec::new(), version)
 }
 
 fn to_lsp_diagnostic(

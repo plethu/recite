@@ -2288,13 +2288,44 @@ remain valid even when producer origins are unavailable.
 
 ### 11.1 Purpose
 
-The project should include an optional scene manifest to connect dialogue assets to game concepts without embedding game-specific data in the dialogue DSL.
+Every project uses exactly one `recite.project.toml` manifest to connect
+project-owned dialogue sources and compiled assets to game concepts without
+embedding game-specific data in the dialogue DSL. Project commands and shared
+authoring clients discover the nearest manifest from the opened path; a nearer
+manifest wins even when it is malformed.
+
+The manifest must declare `format_version = 1`. Its optional `[discovery]`
+table controls source enumeration:
+
+- `source_roots` is an ordered, project-relative list, defaulting to `["."]`;
+- `excludes` is a project-root-relative slash glob list that augments the
+  non-disableable built-ins for hidden components, `target`, `build`, `dist`,
+  `out`, `generated`, `vendor`, and `node_modules`;
+- absolute, parent, backslash, and negation patterns are invalid;
+- canonical roots and source files must remain within the project, symlink
+  directories are not traversed, and non-UTF-8 paths or source text are
+  reported as incomplete coverage;
+- duplicate canonical roots are errors; overlapping roots are allowed with a
+  warning, and the first declared root owns a shared document;
+- eligible files have the exact lowercase `.recite` suffix and receive
+  project-relative slash `DocumentKey`s sorted deterministically.
+
+The shared discovery report retains valid documents alongside typed
+diagnostics and marks coverage complete or partial. CLI project commands fail
+on partial coverage; LSP clients may retain usable documents while publishing
+the diagnostics. The LSP owns URIs, versions, overlays, and protocol state;
+filesystem and path semantics belong to the shared authoring configuration.
+
+The scene entries remain the project-level connection between dialogue assets
+and game concepts.
 
 This mirrors the current need for scene IDs, presentation modes, participants, and cinematic paths.
 
 ### 11.2 Example
 
 ```toml
+format_version = 1
+
 [project]
 content_set = "base"
 version = "0.1.0"
@@ -3539,10 +3570,10 @@ The runtime should prefer shared immutable compiled data plus compact session st
 CI should run a fast, non-comparative benchmark smoke suite on every pull
 request and a fuller benchmark suite on release branches or scheduled jobs. The
 pull-request smoke suite must use the existing `crates/recite-benchmarks`
-Criterion targets with `RECITE_BENCH_SCALES=tiny` and explicit compiler/runtime
-bench target commands. It proves that the tiny compiler and runtime benchmarks
-build and execute quickly; it does not compare timings or enforce regression
-thresholds.
+Criterion targets with `RECITE_BENCH_SCALES=tiny` and explicit
+compiler/runtime/preview bench target commands. It proves that the tiny
+compiler, runtime, and preview benchmarks build and execute quickly; it does
+not compare timings or enforce regression thresholds.
 
 The current pull-request and main-branch workflow owns only that fast smoke
 check. Issue #109 owns the named release/scheduled benchmark baseline and fuller

@@ -1,8 +1,5 @@
-// Fixturegen is a deterministic generator/tooling crate; string-write panics indicate logic bugs.
-#![allow(clippy::expect_used)]
-
 use std::collections::BTreeMap;
-use std::fmt::Write as _;
+use std::fmt::{self, Write as _};
 use std::fs;
 use std::path::Path;
 
@@ -11,6 +8,13 @@ use crate::summary::{FileSummary, FixtureCounts, FixtureSummary, hash_hex, summa
 use recite_core::SourceIdKind;
 
 mod source;
+
+fn append_line(output: &mut String, line: fmt::Arguments<'_>) {
+    match output.write_fmt(line) {
+        Ok(()) => output.push('\n'),
+        Err(_) => unreachable!("writing formatted text to a String cannot fail"),
+    }
+}
 
 pub fn write_project(
     config: &FixtureProfile,
@@ -105,11 +109,13 @@ impl FixtureGenerator {
     fn emit_schema(&mut self) {
         let mut speakers = String::new();
         for index in 0..8 {
-            writeln!(
+            append_line(
                 &mut speakers,
-                r#"    "speaker_{index:02}": {{"display_name": "Synthetic Speaker {index:02}"}},"#
-            )
-            .expect("write string");
+                format_args!(
+                    r#"    "speaker_{index:02}": {{"display_name": "Synthetic Speaker {index:02}"}},"#,
+                    index = index,
+                ),
+            );
         }
         speakers.push_str(r#"    "narrator": {"display_name": "Synthetic Narrator"}"#);
 
@@ -144,75 +150,97 @@ impl FixtureGenerator {
 
     fn emit_project_manifest(&mut self) {
         let mut manifest = String::new();
-        writeln!(&mut manifest, "[project]").expect("write string");
-        writeln!(
+        append_line(&mut manifest, format_args!("format_version = 1"));
+        append_line(&mut manifest, format_args!(""));
+        append_line(&mut manifest, format_args!("[project]"));
+        append_line(
             &mut manifest,
-            "content_set = \"synthetic-{}\"",
-            self.profile.name
-        )
-        .expect("write string");
-        writeln!(&mut manifest, "version = \"{}\"", self.profile.seed).expect("write string");
-        writeln!(&mut manifest, "schema = \"schema/synthetic.schema.json\"\n")
-            .expect("write string");
-        writeln!(&mut manifest, "[[scenes]]").expect("write string");
-        writeln!(&mut manifest, "id = \"synthetic_{}\"", self.profile.name).expect("write string");
-        writeln!(&mut manifest, "asset = \"build/synthetic.recitec\"").expect("write string");
-        writeln!(&mut manifest, "block = \"block_00000\"").expect("write string");
-        writeln!(&mut manifest, "participants = [\"speaker_00\"]").expect("write string");
+            format_args!("content_set = \"synthetic-{}\"", self.profile.name),
+        );
+        append_line(
+            &mut manifest,
+            format_args!("version = \"{}\"", self.profile.seed),
+        );
+        append_line(
+            &mut manifest,
+            format_args!("schema = \"schema/synthetic.schema.json\"\n"),
+        );
+        append_line(&mut manifest, format_args!("[[scenes]]"));
+        append_line(
+            &mut manifest,
+            format_args!("id = \"synthetic_{}\"", self.profile.name),
+        );
+        append_line(
+            &mut manifest,
+            format_args!("asset = \"build/synthetic.recitec\""),
+        );
+        append_line(&mut manifest, format_args!("block = \"block_00000\""));
+        append_line(
+            &mut manifest,
+            format_args!("participants = [\"speaker_00\"]"),
+        );
         self.insert_text("recite.project.toml", manifest);
     }
 
     fn emit_runtime_fixture(&mut self) {
         let mut fixture = String::new();
-        writeln!(
+        append_line(
             &mut fixture,
-            "[dialogue]\nlocale = \"en-US\"\n[dialogue.catalogs]\nen-US = [\"locales/en-US.po\"]\n"
-        )
-        .expect("write string");
-        writeln!(&mut fixture, "[conditions]").expect("write string");
+            format_args!(
+                "[dialogue]\nlocale = \"en-US\"\n[dialogue.catalogs]\nen-US = [\"locales/en-US.po\"]\n"
+            ),
+        );
+        append_line(&mut fixture, format_args!("[conditions]"));
         for index in 0..64 {
-            writeln!(&mut fixture, "\"flag(\\\"flag_{index:02}\\\")\" = true")
-                .expect("write string");
+            append_line(
+                &mut fixture,
+                format_args!("\"flag(\\\"flag_{index:02}\\\")\" = true"),
+            );
         }
-        writeln!(
+        append_line(
             &mut fixture,
-            "\"counter_gte(\\\"counter_00\\\", 2)\" = true"
-        )
-        .expect("write string");
-        writeln!(
+            format_args!("\"counter_gte(\\\"counter_00\\\", 2)\" = true"),
+        );
+        append_line(
             &mut fixture,
-            "\"relationship(speaker_00, speaker_01)\" = {{ enum = \"active\" }}\n"
-        )
-        .expect("write string");
-        writeln!(
+            format_args!("\"relationship(speaker_00, speaker_01)\" = {{ enum = \"active\" }}\n"),
+        );
+        append_line(
             &mut fixture,
-            "[anchors]\nchoice_anchor_line = \"{}\"\n",
-            self.entry_id(SourceIdKind::Line, 0, 0)
-        )
-        .expect("write string");
-        writeln!(&mut fixture, "[choices]").expect("write string");
+            format_args!(
+                "[anchors]\nchoice_anchor_line = \"{}\"\n",
+                self.entry_id(SourceIdKind::Line, 0, 0)
+            ),
+        );
+        append_line(&mut fixture, format_args!("[choices]"));
         for block in 0..self.profile.blocks {
             if self.block_has_choices(block) {
-                writeln!(
+                append_line(
                     &mut fixture,
-                    "\"{}\" = \"{}\"",
-                    self.entry_id(SourceIdKind::Line, block, 0),
-                    self.entry_id(SourceIdKind::Choice, block, 0)
-                )
-                .expect("write string");
+                    format_args!(
+                        "\"{}\" = \"{}\"",
+                        self.entry_id(SourceIdKind::Line, block, 0),
+                        self.entry_id(SourceIdKind::Choice, block, 0)
+                    ),
+                );
             }
         }
-        writeln!(&mut fixture, "\n[effects]\nauto_ack_blocking = true").expect("write string");
+        append_line(
+            &mut fixture,
+            format_args!("\n[effects]\nauto_ack_blocking = true"),
+        );
         self.insert_text("runtime-fixture.toml", fixture);
     }
 
     fn emit_locale_catalog(&mut self) {
         let mut catalog = String::new();
         self.for_each_entry(|kind, id, text| {
-            writeln!(&mut catalog, "msgctxt \"{id}\"").expect("write string");
-            writeln!(&mut catalog, "msgid \"{text}\"").expect("write string");
-            writeln!(&mut catalog, "msgstr \"{kind} translation for {id}\"\n")
-                .expect("write string");
+            append_line(&mut catalog, format_args!("msgctxt \"{id}\""));
+            append_line(&mut catalog, format_args!("msgid \"{text}\""));
+            append_line(
+                &mut catalog,
+                format_args!("msgstr \"{kind} translation for {id}\"\n"),
+            );
         });
         self.insert_text("locales/en-US.po", catalog);
     }

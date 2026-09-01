@@ -1,180 +1,287 @@
-use std::collections::BTreeMap;
-use std::fs;
 use std::io::Write;
-use std::path::{Path, PathBuf};
 
-use recite_compiler::{CompileOptions, compile_inputs, compile_inputs_with_schema};
-use recite_core::{
-    CompiledAssetId, CompilerVersion, Diagnostic, ProjectManifest, ProjectSchema,
-    SchemaFingerprint, SourceMapId, project::validate_project_manifest_source,
+use recite_compiler::{
+    BuildControl, BuildResult, BuildResultFailure, BuildTelemetry, BuildTerminalStatus,
+    FreshnessAssessment, FreshnessFailureReason, FreshnessFinalization, FreshnessStatus,
+    PublishOutcome, RecoveryNeeded,
 };
+use recite_config::discover_project;
 
 use super::events::WatchState;
-use super::inputs::collect_project_sources;
+use super::{
+    ProjectBuildEngine, ProjectBuildPreparation, ProjectBuildPreparationError,
+    ProjectBuildPublisher, ProjectBuildRecovery,
+};
 use crate::diagnostics::report_diagnostics;
 use crate::error::CliError;
-use crate::fs::{
-    display_path, load_schema, read_compile_inputs_relative_to, reject_output_input_alias,
-    resolve_project_path, validate_project_asset_freshness, write_staged,
-};
 use crate::i18n::Messages;
+
+mod failure;
+mod failure_reasons;
+mod status;
+
+#[cfg(test)]
+mod tests;
+
+pub(super) use failure::{
+    format_failure_with_recovery, format_recovery_notice, format_recovery_required,
+};
+pub(super) use status::BuildStatus;
 
 pub(super) fn build_once(
     state: &mut WatchState,
     stderr: &mut dyn Write,
     messages: &Messages,
 ) -> Result<BuildStatus, CliError> {
-    let manifest_path = state.manifest_path();
-    let manifest_text = fs::read_to_string(&manifest_path).map_err(|source| CliError::Read {
-        path: manifest_path.clone(),
-        source,
-    })?;
-    let manifest_file = display_path(&manifest_path);
-    let report = ProjectManifest::load_str_with_spans(manifest_file.clone(), &manifest_text);
-    if !report.diagnostics.is_empty() {
-        report_diagnostics(stderr, messages, report.diagnostics.iter())?;
-        state.schema_path = None;
-        return Ok(BuildStatus::Diagnostics);
-    }
-    let Some(manifest_source) = report.source else {
-        return Ok(BuildStatus::Diagnostics);
-    };
-    let manifest = manifest_source.manifest();
+    let control = BuildControl::new();
+    build_once_with_control(state, stderr, messages, &control)
+}
 
-    state.schema_path = project_schema_path(&state.project_root, manifest);
-    let loaded_schema = load_project_schema(state.schema_path.as_deref())?;
-    if !loaded_schema.diagnostics.is_empty() {
-        report_diagnostics(stderr, messages, loaded_schema.diagnostics.iter())?;
-        return Ok(BuildStatus::Diagnostics);
-    }
+pub(super) fn build_once_with_control(
+    state: &mut WatchState,
+    stderr: &mut dyn Write,
+    messages: &Messages,
+    control: &BuildControl,
+) -> Result<BuildStatus, CliError> {
+    build_once_with_post_publish_hook(state, stderr, messages, control, || {})
+}
 
-    let manifest_diagnostics =
-        validate_project_manifest_source(&manifest_source, loaded_schema.schema.as_ref());
-    if !manifest_diagnostics.is_empty() {
-        report_diagnostics(stderr, messages, manifest_diagnostics.iter())?;
-        return Ok(BuildStatus::Diagnostics);
-    }
+pub(super) fn build_once_with_post_publish_hook<F>(
+    state: &mut WatchState,
+    stderr: &mut dyn Write,
+    messages: &Messages,
+    control: &BuildControl,
+    post_publish: F,
+) -> Result<BuildStatus, CliError>
+where
+    F: FnOnce(),
+{
+    let started_at = super::events::monotonic_now();
+    let mut clock = || super::events::monotonic_now().saturating_duration_since(started_at);
+    build_once_with_clock(state, stderr, messages, control, &mut clock, post_publish)
+}
 
-    let input_files = collect_project_sources(&state.project_root)?;
-    if input_files.is_empty() {
-        return Err(CliError::NoInputs);
-    }
-
-    let mut compiled_assets = Vec::new();
-    for target in unique_asset_targets(&state.project_root, manifest) {
-        reject_output_input_alias(&target.write_path, &input_files)?;
-        let inputs = read_compile_inputs_relative_to(&state.project_root, input_files.clone())?;
-        let options =
-            compile_options_for_asset_id(&target.asset_id, loaded_schema.schema.as_ref())?;
-        let report = if let Some(schema) = &loaded_schema.schema {
-            compile_inputs_with_schema(inputs, options, schema)?
-        } else {
-            compile_inputs(inputs, options)?
-        };
-
-        report_diagnostics(stderr, messages, report.diagnostics.iter())?;
-        let Some(asset) = report.asset else {
-            return Ok(BuildStatus::Diagnostics);
-        };
-        compiled_assets.push((target.write_path, asset.messagepack));
-    }
-
-    for (output, bytes) in &compiled_assets {
-        if let Some(parent) = output.parent() {
-            fs::create_dir_all(parent).map_err(|source| CliError::Write {
-                path: parent.to_owned(),
-                source,
-            })?;
+fn build_once_with_clock<C, F>(
+    state: &mut WatchState,
+    stderr: &mut dyn Write,
+    messages: &Messages,
+    control: &BuildControl,
+    clock: &mut C,
+    post_publish: F,
+) -> Result<BuildStatus, CliError>
+where
+    C: FnMut() -> std::time::Duration,
+    F: FnOnce(),
+{
+    // Timing belongs to the host watch invocation, not the deterministic
+    // compiler lifecycle. This measures discovery, preparation, and the
+    // coordinator through its terminal result; debounce and post-publish
+    // freshness inspection remain outside the build duration.
+    let started_at = clock();
+    let generation = state.next_build_generation()?;
+    let discovery = match discover_project(&state.project_root) {
+        Ok(discovery) => discovery,
+        Err(error) => {
+            return match super::preparation::classify_discovery_error(error) {
+                Ok(ProjectBuildPreparation::Rejected { diagnostics }) => {
+                    report_diagnostics(stderr, messages, diagnostics.iter())?;
+                    Ok(BuildStatus::Diagnostics {
+                        telemetry: BuildTelemetry::from_duration(
+                            clock().saturating_sub(started_at),
+                        ),
+                    })
+                }
+                Ok(ProjectBuildPreparation::Ready(_)) => Err(CliError::Watch {
+                    message: "discovery error classification returned a ready request".to_owned(),
+                }),
+                Err(error) => Err(map_preparation_error(error)),
+            };
         }
-        write_staged(output, bytes)?;
-    }
-
-    let diagnostics = validate_project_asset_freshness(
-        &state.project_root,
-        &manifest_source,
-        Some(loaded_schema.schema.as_ref().map_or(
-            SchemaFingerprint::NoSchema,
-            ProjectSchema::canonical_fingerprint,
-        )),
-    )?;
-    report_diagnostics(stderr, messages, diagnostics.iter())?;
-    if diagnostics.is_empty() {
-        Ok(BuildStatus::Fresh {
-            asset_count: compiled_assets.len(),
-        })
-    } else {
-        Ok(BuildStatus::Diagnostics)
-    }
-}
-
-fn load_project_schema(schema_path: Option<&Path>) -> Result<LoadedProjectSchema, CliError> {
-    let Some(schema_path) = schema_path else {
-        return Ok(LoadedProjectSchema {
-            schema: None,
-            diagnostics: Vec::new(),
-        });
+    };
+    state.update_from_discovery(&discovery);
+    let preparation = super::preparation::prepare_discovered(
+        discovery,
+        generation,
+        recite_compiler::SnapshotGeneration::initial(),
+    )
+    .map_err(map_preparation_error)?;
+    let request = match preparation {
+        ProjectBuildPreparation::Ready(request) => *request,
+        ProjectBuildPreparation::Rejected { diagnostics } => {
+            report_diagnostics(stderr, messages, diagnostics.iter())?;
+            return Ok(BuildStatus::Diagnostics {
+                telemetry: BuildTelemetry::from_duration(clock().saturating_sub(started_at)),
+            });
+        }
     };
 
-    let loaded = load_schema(schema_path)?;
-    Ok(LoadedProjectSchema {
-        schema: loaded.schema,
-        diagnostics: loaded.diagnostics,
-    })
+    let mut engine = ProjectBuildEngine::new(&request);
+    let mut publisher = ProjectBuildPublisher::new(&request).map_err(|error| CliError::Watch {
+        message: error.to_string(),
+    })?;
+    let result = match state.coordinator.run(
+        request.build_request().clone(),
+        control,
+        &mut engine,
+        &mut publisher,
+    ) {
+        Ok(result) => result,
+        Err(source) => {
+            let recovery = publisher.recovery().to_vec();
+            return Err(CliError::WatchCoordinator { source, recovery });
+        }
+    };
+    let telemetry = BuildTelemetry::from_duration(clock().saturating_sub(started_at));
+    let result = result.with_telemetry(telemetry);
+    let recovery = publisher.recovery().to_vec();
+
+    if result.status() == BuildTerminalStatus::Succeeded
+        && matches!(result.publish(), PublishOutcome::Published { .. })
+    {
+        post_publish();
+        let freshness = match super::freshness::assess_current_freshness(&request) {
+            Ok(freshness) => freshness,
+            Err(source) => {
+                report_diagnostics(stderr, messages, result.diagnostics().iter())?;
+                let finalization = FreshnessFinalization::Indeterminate {
+                    assessment: FreshnessAssessment::not_assessed(
+                        request.build_request().fingerprints().clone(),
+                    ),
+                    diagnostics: Vec::new(),
+                    recovery: shared_recovery(&result, &recovery),
+                    reason: FreshnessFailureReason::RecheckFailed,
+                };
+                if let Err(source) = state.coordinator.finalize_freshness(finalization) {
+                    return Err(CliError::WatchCoordinator { source, recovery });
+                }
+                return Err(CliError::WatchRecovery {
+                    source: Box::new(source),
+                    recovery,
+                });
+            }
+        };
+        let finalization = match freshness.assessment.status() {
+            FreshnessStatus::Fresh => FreshnessFinalization::Fresh {
+                assessment: freshness.assessment,
+                diagnostics: freshness.diagnostics,
+                recovery: shared_recovery(&result, &recovery),
+            },
+            FreshnessStatus::Stale => FreshnessFinalization::Stale {
+                assessment: freshness.assessment,
+                diagnostics: freshness.diagnostics,
+                recovery: shared_recovery(&result, &recovery),
+            },
+            _ => FreshnessFinalization::Indeterminate {
+                assessment: freshness.assessment,
+                diagnostics: freshness.diagnostics,
+                recovery: shared_recovery(&result, &recovery),
+                reason: FreshnessFailureReason::RecheckFailed,
+            },
+        };
+        let result = state
+            .coordinator
+            .finalize_freshness(finalization)
+            .map_err(|source| CliError::WatchCoordinator {
+                source,
+                recovery: recovery.clone(),
+            })?
+            .with_telemetry(result.telemetry().clone());
+        report_diagnostics(stderr, messages, result.diagnostics().iter())?;
+        if result.status() == BuildTerminalStatus::Stale {
+            return Ok(BuildStatus::Stale {
+                asset_count: result.candidates().len(),
+                recovery,
+                telemetry: result.telemetry().clone(),
+            });
+        }
+        if !result.diagnostics().is_empty() {
+            return if recovery.is_empty() {
+                Ok(BuildStatus::Diagnostics {
+                    telemetry: result.telemetry().clone(),
+                })
+            } else {
+                Ok(BuildStatus::DiagnosticsWithRecovery {
+                    recovery,
+                    telemetry: result.telemetry().clone(),
+                })
+            };
+        }
+        if !recovery.is_empty() {
+            return Ok(BuildStatus::RecoveryRequired {
+                asset_count: result.candidates().len(),
+                recovery,
+                telemetry: result.telemetry().clone(),
+            });
+        }
+        return Ok(BuildStatus::Fresh {
+            asset_count: result.candidates().len(),
+            telemetry: result.telemetry().clone(),
+        });
+    }
+    report_diagnostics(stderr, messages, result.diagnostics().iter())?;
+    Ok(status_without_freshness(result, recovery))
 }
 
-fn project_schema_path(project_root: &Path, manifest: &ProjectManifest) -> Option<PathBuf> {
-    manifest
-        .project
-        .schema
-        .as_deref()
-        .map(|schema| resolve_project_path(project_root, schema))
+fn shared_recovery(
+    result: &BuildResult,
+    recovery: &[ProjectBuildRecovery],
+) -> Option<RecoveryNeeded> {
+    if recovery.is_empty() {
+        None
+    } else {
+        Some(RecoveryNeeded::for_targets(
+            result
+                .candidates()
+                .iter()
+                .map(|candidate| candidate.target().clone())
+                .collect(),
+        ))
+    }
 }
 
-fn compile_options_for_asset_id(
-    asset_id: &str,
-    schema: Option<&ProjectSchema>,
-) -> Result<CompileOptions, CliError> {
-    Ok(CompileOptions::new(
-        CompilerVersion::new(env!("CARGO_PKG_VERSION"))?,
-        CompiledAssetId::new(asset_id.to_owned())?,
-        SourceMapId::new(format!("{asset_id}.map"))?,
-        schema.map_or(
-            SchemaFingerprint::NoSchema,
-            ProjectSchema::canonical_fingerprint,
-        ),
-    ))
-}
-
-fn unique_asset_targets(project_root: &Path, manifest: &ProjectManifest) -> Vec<AssetTarget> {
-    let mut targets = BTreeMap::new();
-    for scene in &manifest.scenes {
-        targets
-            .entry(resolve_project_path(project_root, &scene.asset))
-            .or_insert_with(|| display_path(Path::new(&scene.asset)));
+pub(super) fn status_without_freshness(
+    result: BuildResult,
+    recovery: Vec<ProjectBuildRecovery>,
+) -> BuildStatus {
+    let telemetry = result.telemetry().clone();
+    if matches!(
+        result.failure(),
+        Some(BuildResultFailure::Diagnostics { .. })
+    ) || matches!(
+        result.publish(),
+        PublishOutcome::NotAttempted {
+            reason: recite_compiler::PublishNotAttemptedReason::BuildFailed
+        }
+    ) && result
+        .diagnostics()
+        .iter()
+        .any(|diagnostic| diagnostic.severity == recite_core::DiagnosticSeverity::Error)
+    {
+        return if recovery.is_empty() {
+            BuildStatus::Diagnostics { telemetry }
+        } else {
+            BuildStatus::DiagnosticsWithRecovery {
+                recovery,
+                telemetry,
+            }
+        };
     }
 
-    targets
-        .into_iter()
-        .map(|(write_path, asset_id)| AssetTarget {
-            write_path,
-            asset_id,
-        })
-        .collect()
+    BuildStatus::PublicationFailure {
+        status: result.status(),
+        failure: result.failure().cloned(),
+        outcome: result.publish().clone(),
+        recovery,
+        telemetry,
+    }
 }
 
-#[derive(Clone, Debug, Eq, PartialEq)]
-struct AssetTarget {
-    write_path: PathBuf,
-    asset_id: String,
-}
-
-#[derive(Debug, Eq, PartialEq)]
-pub(super) enum BuildStatus {
-    Fresh { asset_count: usize },
-    Diagnostics,
-}
-
-struct LoadedProjectSchema {
-    schema: Option<ProjectSchema>,
-    diagnostics: Vec<Diagnostic>,
+fn map_preparation_error(error: ProjectBuildPreparationError) -> CliError {
+    match error {
+        ProjectBuildPreparationError::Discovery(source) => CliError::ProjectDiscovery { source },
+        ProjectBuildPreparationError::NoInputs => CliError::NoInputs,
+        error => CliError::Watch {
+            message: error.to_string(),
+        },
+    }
 }

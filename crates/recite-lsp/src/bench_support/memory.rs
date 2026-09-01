@@ -1,5 +1,5 @@
-use std::fs;
-
+use recite_compiler::DocumentLayer;
+use recite_core::SourceId;
 use serde::Serialize;
 
 use crate::workspace::LspWorkspace;
@@ -36,22 +36,42 @@ impl LspMemoryReport {
         };
 
         for summary in workspace.snapshot().summaries() {
-            report.source_files += 1;
             report.diagnostics += summary.diagnostics.len();
             report.block_definitions += summary.blocks.len();
-            report.block_references += summary.block_references.len();
-            report.line_ids += summary.line_ids.len();
-            report.choice_ids += summary.choice_ids.len();
-            report.metadata_keys += summary.metadata_keys.len();
-            report.condition_functions += summary.condition_functions.len();
-            report.effect_functions += summary.effect_functions.len();
-            if let Some(path) = summary.saved_path()
-                && let Ok(metadata) = fs::metadata(path)
-            {
-                report.indexed_source_bytes = report
-                    .indexed_source_bytes
-                    .saturating_add(usize::try_from(metadata.len()).unwrap_or(usize::MAX));
+            if let Some(document) = workspace.compiler_document_for_summary(summary) {
+                debug_assert_eq!(
+                    summary.version.is_some(),
+                    matches!(document.layer(), DocumentLayer::Open)
+                );
             }
+        }
+
+        for document in workspace.compiler_documents() {
+            let summary = document.summary();
+            report.source_files += 1;
+            report.block_references += summary.block_references().len();
+            report.line_ids += summary
+                .stable_ids()
+                .iter()
+                .filter(|stable| {
+                    stable.kind() == recite_compiler::StableIdKind::Line
+                        && matches!(stable.source_id(), SourceId::Frozen { .. })
+                })
+                .count();
+            report.choice_ids += summary
+                .stable_ids()
+                .iter()
+                .filter(|stable| {
+                    stable.kind() == recite_compiler::StableIdKind::Choice
+                        && matches!(stable.source_id(), SourceId::Frozen { .. })
+                })
+                .count();
+            report.metadata_keys += summary.metadata().len();
+            report.condition_functions += summary.condition_functions().len();
+            report.effect_functions += summary.effect_functions().len();
+            report.indexed_source_bytes = report
+                .indexed_source_bytes
+                .saturating_add(document.source_text().len());
         }
 
         report.estimated_summary_bytes = report.estimate_summary_bytes();

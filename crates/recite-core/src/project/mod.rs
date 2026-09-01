@@ -32,8 +32,30 @@ pub const STALE_COMPILER_COMPATIBILITY: DiagnosticCode =
 /// Loaded `recite.project.toml` manifest.
 #[derive(Clone, Debug, Eq, PartialEq)]
 pub struct ProjectManifest {
+    /// The version of the project manifest syntax, when declared.
+    pub format_version: Option<u32>,
     pub project: ProjectManifestMetadata,
+    /// Filesystem discovery configuration for project-owned source files.
+    pub discovery: ProjectDiscovery,
     pub scenes: Vec<ProjectScene>,
+}
+
+/// Project-owned source discovery settings.
+#[derive(Clone, Debug, Eq, PartialEq)]
+pub struct ProjectDiscovery {
+    /// Project-relative source roots in declaration order.
+    pub source_roots: Vec<String>,
+    /// Project-relative slash-separated exclusion globs.
+    pub excludes: Vec<String>,
+}
+
+impl Default for ProjectDiscovery {
+    fn default() -> Self {
+        Self {
+            source_roots: vec![".".to_owned()],
+            excludes: Vec::new(),
+        }
+    }
 }
 
 /// Result of loading a project manifest.

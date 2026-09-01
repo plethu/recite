@@ -1,4 +1,4 @@
-use recite_core::{Block, BlockId, SourceMetadata, Statement};
+use recite_core::{Block, BlockId, SourceMetadata, SourceRecoveryClass, Statement};
 
 use crate::body::{BodyBoundary, BodyCursor, BodyStep};
 use crate::diagnostics::{empty_block_id, missing_block_id, statement_before_block};
@@ -40,6 +40,7 @@ impl Lowerer<'_, '_> {
 
         let (statements, next_index) = self.lower_block_statements(header_index);
         let mut block = Block::new(header.id, statements, header.span)
+            .with_id_span(header.id_span)
             .with_default(header.is_default)
             .with_metadata(header.metadata);
         if let Some(default_speaker) = header.default_speaker {
@@ -57,17 +58,23 @@ impl Lowerer<'_, '_> {
         let span = span_for_line(self.path, line.number, base_column);
         let fields = header_fields(trimmed, StatementMarker::Block, line, base_column);
         let Some(id_field) = fields.first().copied() else {
+            self.mark(SourceRecoveryClass::BlockDefinitions);
+            self.mark(SourceRecoveryClass::AstStructure);
             self.diagnostics.push(missing_block_id(span));
             return None;
         };
 
         if id_field.key_value(self.path).is_some() {
+            self.mark(SourceRecoveryClass::BlockDefinitions);
+            self.mark(SourceRecoveryClass::AstStructure);
             self.diagnostics
                 .push(missing_block_id(id_field.span(self.path)));
             return None;
         }
 
         let Ok(id) = BlockId::new(id_field.text) else {
+            self.mark(SourceRecoveryClass::BlockDefinitions);
+            self.mark(SourceRecoveryClass::AstStructure);
             self.diagnostics
                 .push(empty_block_id(id_field.span(self.path)));
             return None;
@@ -99,6 +106,7 @@ impl Lowerer<'_, '_> {
 
         Some(BlockHeader {
             id,
+            id_span: id_field.span(self.path),
             is_default,
             default_speaker,
             metadata,
@@ -115,7 +123,11 @@ impl Lowerer<'_, '_> {
             let index = match cursor.step(self.path, line, true, self.diagnostics) {
                 BodyStep::Content { index } => index,
                 BodyStep::Boundary => break,
-                BodyStep::Blank | BodyStep::MixedIndent => continue,
+                BodyStep::Blank => continue,
+                BodyStep::MixedIndent => {
+                    super::mark_all(self.recovery);
+                    continue;
+                }
             };
 
             let (statement, next_index) = self.lower_statement(index);
@@ -140,5 +152,6 @@ impl Lowerer<'_, '_> {
             line.number,
             1,
         )));
+        super::mark_all(self.recovery);
     }
 }

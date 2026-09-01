@@ -4,6 +4,7 @@ use crate::diagnostic_presentation::DiagnosticPresentationId;
 use crate::diagnostic_presentation_record::DiagnosticPresentation;
 
 mod compiler;
+mod config;
 mod freshness;
 mod parser;
 mod po;
@@ -12,8 +13,8 @@ mod registry;
 mod schema;
 
 pub use registry::{
-    DiagnosticPresentationContractRegistryError, auxiliary_contract_for, contract_for,
-    contracts_for_code, migrated_diagnostic_auxiliary_presentation_contracts,
+    DiagnosticPresentationContractRegistryError, auxiliary_contract_for, config_contract_for,
+    contract_for, contracts_for_code, migrated_diagnostic_auxiliary_presentation_contracts,
     migrated_diagnostic_presentation_contracts, presentation_for,
     validate_auxiliary_diagnostic_presentation_contracts,
     validate_diagnostic_presentation_contracts,

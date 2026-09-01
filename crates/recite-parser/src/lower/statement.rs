@@ -1,8 +1,9 @@
 mod action;
 mod choice;
+mod choice_reason;
 mod line;
 
-use recite_core::{Comment, Statement};
+use recite_core::{Comment, SourceRecoveryClass, Statement};
 
 use crate::diagnostics::{misplaced_case, misplaced_else};
 use crate::layout::{ClassifiedLine, classify_line};
@@ -42,6 +43,8 @@ impl Lowerer<'_, '_> {
             ),
             ClassifiedLine::Statement(StatementMarker::Else) => {
                 let line = self.lines[index];
+                self.mark(SourceRecoveryClass::ConditionFunctions);
+                super::mark_all(self.recovery);
                 self.diagnostics.push(misplaced_else(span_for_line(
                     self.path,
                     line.number,
@@ -51,6 +54,8 @@ impl Lowerer<'_, '_> {
             }
             ClassifiedLine::Statement(StatementMarker::Case) => {
                 let line = self.lines[index];
+                self.mark(SourceRecoveryClass::ConditionFunctions);
+                super::mark_all(self.recovery);
                 self.diagnostics.push(misplaced_case(span_for_line(
                     self.path,
                     line.number,
@@ -60,8 +65,11 @@ impl Lowerer<'_, '_> {
             }
             ClassifiedLine::Statement(StatementMarker::Block)
             | ClassifiedLine::Blank
-            | ClassifiedLine::Prose
             | ClassifiedLine::Error => (None, index + 1),
+            ClassifiedLine::Prose => {
+                super::mark_all(self.recovery);
+                (None, index + 1)
+            }
         }
     }
 

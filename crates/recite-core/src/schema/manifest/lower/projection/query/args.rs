@@ -1,43 +1,45 @@
-use std::collections::BTreeMap;
-
 use super::super::super::super::diagnostics::MALFORMED_SHAPE;
 use super::super::super::super::raw::RawProjectionInputRef;
+use super::super::QueryArgumentContext;
 use super::super::reference::{lower_input_ref, validate_ref_type};
+use crate::schema::ProjectionInputRef;
 use crate::schema::schema_diagnostic;
-use crate::schema::{ParameterDefinition, ProjectionInputRef, SchemaTypeRef};
 use crate::{Diagnostic, DiagnosticArgumentValue, SourceSpan};
 
-#[expect(
-    clippy::too_many_arguments,
-    reason = "projection query argument validation carries query, type, and span context"
-)]
 pub(super) fn lower_and_validate_query_args(
     diagnostics: &mut Vec<Diagnostic>,
-    projector: &str,
-    query: &str,
-    function: &str,
-    params: &[ParameterDefinition],
+    context: QueryArgumentContext<'_>,
     raw_args: Vec<RawProjectionInputRef>,
-    input_types: &BTreeMap<&str, &SchemaTypeRef>,
-    query_types: &BTreeMap<String, SchemaTypeRef>,
     span: SourceSpan,
 ) -> Vec<ProjectionInputRef> {
-    if raw_args.len() != params.len() {
+    if raw_args.len() != context.params.len() {
         diagnostics.push(schema_diagnostic(
             MALFORMED_SHAPE,
             "diagnostic-schema-001-query-arg-count",
             format!(
-                "projector '{projector}' query '{query}' passes {} args to projection query function '{function}', expected {}",
+                "projector '{}' query '{}' passes {} args to projection query function '{}', expected {}",
+                context.projector,
+                context.query,
                 raw_args.len(),
-                params.len()
+                context.function,
+                context.params.len()
             ),
             span.clone(),
             [
-                ("projector", DiagnosticArgumentValue::String(projector.to_owned())),
-                ("query", DiagnosticArgumentValue::String(query.to_owned())),
+                (
+                    "projector",
+                    DiagnosticArgumentValue::String(context.projector.to_owned()),
+                ),
+                ("query", DiagnosticArgumentValue::String(context.query.to_owned())),
                 ("actual", DiagnosticArgumentValue::Integer(raw_args.len() as i64)),
-                ("function", DiagnosticArgumentValue::String(function.to_owned())),
-                ("expected", DiagnosticArgumentValue::Integer(params.len() as i64)),
+                (
+                    "function",
+                    DiagnosticArgumentValue::String(context.function.to_owned()),
+                ),
+                (
+                    "expected",
+                    DiagnosticArgumentValue::Integer(context.params.len() as i64),
+                ),
             ],
         ));
     }
@@ -46,15 +48,17 @@ pub(super) fn lower_and_validate_query_args(
         .enumerate()
         .map(|(index, raw)| {
             let input_ref = lower_input_ref(raw);
-            if let Some(param) = params.get(index) {
+            if let Some(param) = context.params.get(index) {
                 validate_ref_type(
                     diagnostics,
-                    projector,
-                    &format!("query '{query}' argument '{}'", param.name),
+                    super::super::ReferenceTypeContext {
+                        projector: context.projector,
+                        owner: &format!("query '{}' argument '{}'", context.query, param.name),
+                        expected: &param.type_ref,
+                        input_types: context.input_types,
+                        query_types: context.query_types,
+                    },
                     &input_ref,
-                    &param.type_ref,
-                    input_types,
-                    query_types,
                     span.clone(),
                 );
             }

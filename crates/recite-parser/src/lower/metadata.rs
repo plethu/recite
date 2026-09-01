@@ -1,12 +1,14 @@
 use recite_core::{
     BlockId, BlockReference, ChoiceEcho, DivertTarget, EffectMode, InterpolationBinding,
-    InterpolationType, LineId, SourceMetadata, SourceMetadataEntry, SourceSpan, SpeakerId,
+    InterpolationType, SourceMetadata, SourceMetadataEntry, SourceRecoveryClass, SpeakerId,
 };
 
 use crate::diagnostics::{malformed_divert_target, malformed_header};
 use crate::header::{HeaderField, HeaderKeyValue};
+use crate::source::span_for_text;
 
 use super::Lowerer;
+use super::metadata_values::{choice_echo, is_placeholder_name, metadata_entry};
 
 impl Lowerer<'_, '_> {
     pub(super) fn lower_speaker_metadata(
@@ -59,6 +61,7 @@ impl Lowerer<'_, '_> {
                 if let Some(parsed) = choice_echo(kv.value) {
                     echo = parsed;
                 } else {
+                    self.mark(SourceRecoveryClass::Metadata);
                     self.diagnostics.push(malformed_header(kv.value_span));
                 }
                 continue;
@@ -85,16 +88,19 @@ impl Lowerer<'_, '_> {
             .strip_prefix("(")
             .and_then(|value| value.strip_suffix(')'))
         else {
+            self.mark(SourceRecoveryClass::Metadata);
             self.diagnostics
                 .push(malformed_header(kv.value_span.clone()));
             return None;
         };
         let Some((name, value)) = value.split_once(':') else {
+            self.mark(SourceRecoveryClass::Metadata);
             self.diagnostics
                 .push(malformed_header(kv.value_span.clone()));
             return None;
         };
         let Some((value_type, value)) = value.split_once("=$") else {
+            self.mark(SourceRecoveryClass::Metadata);
             self.diagnostics
                 .push(malformed_header(kv.value_span.clone()));
             return None;
@@ -105,6 +111,7 @@ impl Lowerer<'_, '_> {
             "float" => InterpolationType::Float,
             "bool" => InterpolationType::Boolean,
             _ => {
+                self.mark(SourceRecoveryClass::Metadata);
                 let type_column =
                     kv.value_span.start.column() as usize + 1 + name.chars().count() + 1;
                 self.diagnostics
@@ -118,6 +125,7 @@ impl Lowerer<'_, '_> {
             }
         };
         if !is_placeholder_name(name) || !is_placeholder_name(value) {
+            self.mark(SourceRecoveryClass::Metadata);
             self.diagnostics
                 .push(malformed_header(kv.value_span.clone()));
             return None;
@@ -130,12 +138,14 @@ impl Lowerer<'_, '_> {
         field: HeaderField<'a>,
     ) -> Option<HeaderKeyValue<'a>> {
         let Some(kv) = field.key_value(self.path) else {
+            self.mark(SourceRecoveryClass::Metadata);
             self.diagnostics
                 .push(malformed_header(field.span(self.path)));
             return None;
         };
 
         if kv.key.is_empty() || kv.value.is_empty() {
+            self.mark(SourceRecoveryClass::Metadata);
             self.diagnostics
                 .push(malformed_header(kv.field_span.clone()));
             return None;
@@ -148,6 +158,7 @@ impl Lowerer<'_, '_> {
         match SpeakerId::new(kv.value) {
             Ok(speaker) => Some(speaker),
             Err(_) => {
+                self.mark(SourceRecoveryClass::Metadata);
                 self.diagnostics
                     .push(malformed_header(kv.value_span.clone()));
                 None
@@ -159,6 +170,7 @@ impl Lowerer<'_, '_> {
         match metadata_entry(kv) {
             Ok(entry) => Some(entry),
             Err(span) => {
+                self.mark(SourceRecoveryClass::Metadata);
                 self.diagnostics.push(malformed_header(span));
                 None
             }
@@ -172,26 +184,41 @@ impl Lowerer<'_, '_> {
 
         let reference = if let Some((file, block_id)) = field.text.split_once("::") {
             if file.is_empty() || block_id.is_empty() || block_id.contains("::") {
+                self.mark(SourceRecoveryClass::BlockReferences);
                 self.diagnostics
                     .push(malformed_divert_target(field.span(self.path)));
                 return None;
             }
 
             let Ok(block_id) = BlockId::new(block_id) else {
+                self.mark(SourceRecoveryClass::BlockReferences);
                 self.diagnostics
                     .push(malformed_divert_target(field.span(self.path)));
                 return None;
             };
 
-            BlockReference::external(file, block_id)
+            let block_id_span = span_for_text(
+                self.path,
+                field.line,
+                field.column + file.chars().count() + 2,
+                block_id.as_str(),
+            );
+            BlockReference::external(file, block_id).with_spans(
+                Some(span_for_text(self.path, field.line, field.column, file)),
+                block_id_span,
+            )
         } else {
             let Ok(block_id) = BlockId::new(field.text) else {
+                self.mark(SourceRecoveryClass::BlockReferences);
                 self.diagnostics
                     .push(malformed_divert_target(field.span(self.path)));
                 return None;
             };
 
-            BlockReference::local(block_id)
+            BlockReference::local(block_id).with_spans(
+                None,
+                span_for_text(self.path, field.line, field.column, field.text),
+            )
         };
 
         Some(DivertTarget::Block(reference))
@@ -205,34 +232,4 @@ pub(super) fn effect_mode(value: &str) -> Option<EffectMode> {
         "blocking" => Some(EffectMode::Blocking),
         _ => None,
     }
-}
-
-fn metadata_entry(kv: HeaderKeyValue<'_>) -> Result<SourceMetadataEntry, SourceSpan> {
-    let value = kv.parse_value()?;
-
-    Ok(SourceMetadataEntry::new(kv.key, value)
-        .with_source_span(kv.field_span)
-        .with_key_value_spans(kv.key_span, Some(kv.value_span)))
-}
-
-fn choice_echo(value: &str) -> Option<ChoiceEcho> {
-    match value {
-        "none" => Some(ChoiceEcho::None),
-        "selected_text" => Some(ChoiceEcho::SelectedText),
-        _ => {
-            let line_id = value.strip_prefix("line(")?.strip_suffix(')')?;
-            Some(ChoiceEcho::Line(LineId::new(line_id).ok()?))
-        }
-    }
-}
-
-fn is_placeholder_name(value: &str) -> bool {
-    let mut chars = value.chars();
-    let Some(first) = chars.next() else {
-        return false;
-    };
-    first.is_ascii_lowercase()
-        && chars.all(|character| {
-            character.is_ascii_lowercase() || character.is_ascii_digit() || character == '_'
-        })
 }

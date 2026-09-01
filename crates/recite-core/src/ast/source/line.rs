@@ -22,8 +22,11 @@ impl SourceText {
 /// A localisable dialogue line. Missing IDs are represented for later
 /// compiler/LSP validation.
 #[derive(Clone, Debug, PartialEq)]
+#[non_exhaustive]
 pub struct Line {
     pub source_id: SourceId,
+    pub source_id_span: Option<SourceSpan>,
+    pub source_id_insertion_span: Option<SourceSpan>,
     pub id: Option<LineId>,
     pub speaker: Option<SpeakerId>,
     pub source_text: SourceText,
@@ -44,6 +47,8 @@ impl Line {
                 .and_then(|id| SourceAnchor::new(id.as_str()).ok())
                 .and_then(|anchor| SourceId::frozen("line", anchor))
                 .unwrap_or(SourceId::Missing),
+            source_id_span: None,
+            source_id_insertion_span: None,
             id,
             speaker: None,
             source_text,
@@ -59,6 +64,17 @@ impl Line {
     pub fn with_source_id(mut self, source_id: SourceId) -> Self {
         self.id = source_id.canonical_line_id();
         self.source_id = source_id;
+        self
+    }
+
+    #[must_use]
+    pub fn with_source_id_spans(
+        mut self,
+        source_id_span: Option<SourceSpan>,
+        source_id_insertion_span: SourceSpan,
+    ) -> Self {
+        self.source_id_span = source_id_span;
+        self.source_id_insertion_span = Some(source_id_insertion_span);
         self
     }
 

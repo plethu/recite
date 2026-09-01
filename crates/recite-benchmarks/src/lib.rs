@@ -29,11 +29,26 @@ pub mod fixture_context;
 pub mod id_metrics;
 pub mod lsp;
 pub mod memory_profiles;
+pub mod preview;
+mod preview_driver;
+mod preview_evidence;
+mod preview_hash;
+mod preview_hash_dialogue;
+mod preview_hash_dialogue_errors;
+mod preview_hash_errors;
+mod preview_hash_plural;
+mod preview_hash_primitives;
+mod preview_hash_runtime;
+mod preview_retention;
+mod preview_shape;
 pub mod project;
 pub mod report;
 pub mod runtime;
 pub mod runtime_allocations;
 pub mod scale;
+
+#[cfg(test)]
+mod tests;
 
 pub use scale::{BenchmarkFixture, BenchmarkScale};
 

@@ -4,7 +4,7 @@ use tempfile::TempDir;
 
 use crate::tests::support::{Harness, file_uri, write_file};
 
-use super::support::{authoring_schema, position_after};
+use super::support::{authoring_schema, position_after, position_inside};
 
 pub(super) fn hover_prioritizes_contextual_metadata_values() {
     let temp = TempDir::new().unwrap_or_else(|error| panic!("tempdir: {error}"));
@@ -217,6 +217,21 @@ pub(super) fn hover_preserves_choice_reason_clause_resolution() {
         )
         .expect("choice reason hover");
     assert!(hover_text(reason_hover).contains("Availability reason 'innkeeper_trust_hint'"));
+
+    let interior_reason_hover = harness
+        .hover(
+            source_uri.clone(),
+            position_inside(source, "innkeeper_trust_hint"),
+        )
+        .expect("interior choice reason hover");
+    assert_eq!(
+        interior_reason_hover.range,
+        Some(Range::new(
+            position_after(source, "reason="),
+            position_after(source, "reason=innkeeper_trust_hint"),
+        )),
+        "reason hover must use the parsed value span",
+    );
 
     assert!(
         harness
