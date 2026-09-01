@@ -3,20 +3,26 @@
 import hashlib
 import os
 from pathlib import Path
+import subprocess
 
 from .model import Context
 from .paths import require_no_symlink_components
 
 
 def selected_target_digest(ctx: Context, package: str) -> str:
-    """Hash the repository files visible to the selected Cargo workspace.
+    """Hash accepted source inputs visible to the selected Cargo workspace.
 
     Cargo remains responsible for parsing Rust and discovering tests. The digest
     is only an explicit rustc argument, ensuring a restored source mtime cannot
     make Cargo reuse a stale selected test executable. ``package`` remains part
-    of the interface because the digest is attached to one selected target;
-    inputs are deliberately conservative so include and build-script syntax is
-    not reimplemented here.
+    of the interface because the digest is attached to one selected target.
+
+    Input enumeration is intentionally Git-aware: tracked files and nonignored
+    untracked files are accepted, while ignored untracked files are not an
+    accepted compiler-input surface. Projects that need Cargo to consume an
+    ignored file must force-add it (or remove the ignore rule); otherwise there
+    is no reliable way to discover it before compilation and the digest does
+    not claim to cover it.
     """
     del package
     inputs = workspace_files(ctx)
@@ -24,7 +30,9 @@ def selected_target_digest(ctx: Context, package: str) -> str:
     digest = hashlib.sha256()
     for path in inputs:
         try:
-            relative = path.relative_to(ctx.repo_root).as_posix().encode()
+            # Use the host filesystem encoding rather than UTF-8 text encoding
+            # so valid non-UTF-8 Git paths retain a stable digest identity.
+            relative = os.fsencode(path.relative_to(ctx.repo_root).as_posix())
             content = path.read_bytes()
         except OSError as error:
             ctx.require(False, f"unable to read evidence digest input {path}: {error}")
@@ -37,32 +45,61 @@ def selected_target_digest(ctx: Context, package: str) -> str:
 
 
 def workspace_files(ctx: Context) -> list[Path]:
+    """Return Git-tracked and nonignored untracked files in stable byte order.
+
+    A filesystem walk sees ignored build products and editor caches that cannot
+    affect Cargo's source graph. Git already has the authoritative answer for
+    tracked and nonignored untracked paths, and ``-z`` preserves spaces and
+    arbitrary filename bytes without quoting. The path checks below remain
+    necessary because Git can record symlinks and because this function is also
+    responsible for the repository-boundary safety contract.
+    """
     inputs: list[Path] = []
-    for root, directories, filenames in os.walk(ctx.repo_root, topdown=True, followlinks=False):
-        root_path = Path(root)
-        relative_root = root_path.relative_to(ctx.repo_root)
-        kept_directories = []
-        for directory in directories:
-            path = root_path / directory
-            relative = relative_root / directory
-            if _ignored(ctx, relative):
-                continue
-            if path.is_symlink():
-                require_no_symlink_components(ctx, path, "workspace digest input")
-                continue
-            kept_directories.append(directory)
-        directories[:] = kept_directories
-        for filename in filenames:
-            path = root_path / filename
-            relative = path.relative_to(ctx.repo_root)
-            if _ignored(ctx, relative):
-                continue
-            if path.is_symlink():
-                require_no_symlink_components(ctx, path, "workspace digest input")
-                continue
-            if path.is_file() and _safe_input(ctx, path, "workspace digest input"):
-                inputs.append(path)
-    return sorted(inputs, key=lambda path: path.relative_to(ctx.repo_root).as_posix())
+    for raw_path in _git_files(ctx):
+        try:
+            relative = Path(os.fsdecode(raw_path))
+        except (TypeError, ValueError) as error:
+            ctx.require(False, f"unable to decode Git digest input: {error}")
+            continue
+        if relative.is_absolute() or any(component == ".." for component in relative.parts):
+            ctx.require(False, f"workspace digest input escapes the repository: {relative}")
+            continue
+        path = ctx.repo_root / relative
+        if _ignored(ctx, relative):
+            continue
+        if path.is_symlink():
+            require_no_symlink_components(ctx, path, "workspace digest input")
+            continue
+        if path.is_file() and _safe_input(ctx, path, "workspace digest input"):
+            inputs.append(path)
+    return sorted(inputs, key=lambda path: os.fsencode(path.relative_to(ctx.repo_root).as_posix()))
+
+
+def _git_files(ctx: Context) -> list[bytes]:
+    """List accepted Git paths without text decoding or shell interpretation."""
+    try:
+        result = subprocess.run(
+            [
+                "git",
+                "-C",
+                os.fsencode(ctx.repo_root),
+                "ls-files",
+                "--cached",
+                "--others",
+                "--exclude-standard",
+                "-z",
+            ],
+            capture_output=True,
+            check=False,
+        )
+    except OSError as error:
+        ctx.require(False, f"unable to enumerate Git digest inputs: {error}")
+        return []
+    if result.returncode != 0:
+        detail = os.fsdecode(result.stderr).strip() or "git ls-files failed"
+        ctx.require(False, f"unable to enumerate Git digest inputs: {detail}")
+        return []
+    return [path for path in result.stdout.split(b"\0") if path]
 
 
 def _ignored(ctx: Context, relative_path: Path) -> bool:

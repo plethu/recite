@@ -72,6 +72,22 @@ is therefore an explicit unsupported/planned capability in this contract;
 clients must not claim cancellation support or infer it from a request timeout.
 Issue #53 owns the command/watch lifecycle and the future cancellation contract.
 
+## Evidence input boundary
+
+The parity evidence compiler digest uses Git's path set rather than walking the
+filesystem. It includes tracked files and nonignored untracked files, in stable
+repository-relative byte order, so source changes still invalidate evidence even
+when a file's mtime is restored. It deliberately excludes ignored build output,
+editor packages, documentation-site output, and Python bytecode; creating or
+rewriting those files must not trigger a Cargo evidence rebuild.
+
+An ignored untracked file is not an accepted compiler-input surface. If a
+`build.rs`, `include!`, generated source step, or other compiler action needs a
+file that is currently ignored, remove the ignore rule or force-add the file to
+Git. Force-added files are tracked inputs and therefore count. The checker does
+not pretend to discover an arbitrary ignored Cargo input from a pre-compilation
+filesystem walk.
+
 ## Structured commands and watch
 
 The intended command boundary is structured: compile, validate, extract, run,

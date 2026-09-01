@@ -30,6 +30,7 @@ cp "$repo_root/fixtures/recite/invalid/parser_marker_leading_prose.recite" "$fix
 cp "$repo_root/fixtures/schema/valid/generated_manifest.json" "$fixture_repo/fixtures/schema/valid/"
 cp "$repo_root/fixtures/schema/valid/full_manifest.json" "$fixture_repo/fixtures/schema/valid/"
 cp -R "$repo_root/tests/editor-parity/cargo-fixture/." "$fixture_repo/"
+cp "$repo_root/.gitignore" "$fixture_repo/"
 chmod +x "$fixture_repo/scripts/check-editor-parity.sh" "$fixture_repo/scripts/check-tree-sitter.sh" "$fixture_repo/scripts/check-neovim.sh" "$fixture_repo/scripts/check-vscode.sh"
 
 git -C "$fixture_repo" init -q -b main
@@ -216,6 +217,8 @@ expect_target_failure "$target_probe_root/to-target" "CARGO_TARGET_DIR must not 
 expect_target_failure "$target_probe_root/real-parent/repo-parent/target" "CARGO_TARGET_DIR must not traverse a symlink component"
 
 python3 - "$fixture_repo" <<'PY'
+import os
+import subprocess
 import sys
 from pathlib import Path
 
@@ -224,18 +227,73 @@ sys.path.insert(0, str(repo / "scripts"))
 from editor_parity.content_digest import selected_target_digest, workspace_files
 from editor_parity.model import Context
 
-before = selected_target_digest(Context(repo, [], repo / "target"), "recite-lsp")
+context = Context(repo, [], repo / "target")
+before = selected_target_digest(context, "recite-lsp")
+
+# Generated documentation/editor output is ignored and must not invalidate the
+# evidence executable merely because a packaging or docs command touched it.
+ignored_outputs = [
+    repo / "docs-site/.astro/cache.json",
+    repo / "docs-site/dist/index.html",
+    repo / "editors/vscode/dist/extension.js",
+    repo / "editors/vscode/recite.vsix",
+]
+for output in ignored_outputs:
+    output.parent.mkdir(parents=True, exist_ok=True)
+    output.write_bytes(b"generated output")
+ignored_after_creation = selected_target_digest(context, "recite-lsp")
+if before != ignored_after_creation:
+    raise SystemExit("ignored generated output changed the parity digest")
+for output in ignored_outputs:
+    output.write_bytes(b"rewritten generated output")
+if ignored_after_creation != selected_target_digest(context, "recite-lsp"):
+    raise SystemExit("modifying ignored generated output changed the parity digest")
+
+# A force-added path is tracked input even when its directory is ignored. This
+# is the explicit escape hatch for compiler-visible generated/source files.
+force_added = repo / "editors/vscode/dist/force-added.js"
+force_added.write_bytes(b"force-added compiler input")
+subprocess.run(["git", "-C", os.fsencode(repo), "add", "-f", "--", os.fsencode("editors/vscode/dist/force-added.js")], check=True)
+force_added_digest = selected_target_digest(context, "recite-lsp")
+if force_added_digest == ignored_after_creation:
+    raise SystemExit("force-added ignored output did not change the parity digest")
+
+# A nonignored untracked input is included regardless of extension or spaces.
+untracked = repo / "digest-inputs/input with spaces.arbitrary"
+untracked.parent.mkdir(parents=True, exist_ok=True)
+untracked.write_bytes(b"first source input")
+untracked_digest = selected_target_digest(context, "recite-lsp")
+original_stat = untracked.stat()
+untracked.write_bytes(b"second source input")
+os.utime(untracked, ns=(original_stat.st_atime_ns, original_stat.st_mtime_ns))
+if untracked_digest == selected_target_digest(context, "recite-lsp"):
+    raise SystemExit("restored-mtime untracked input did not change the parity digest")
+
+# Git's NUL-delimited output preserves arbitrary filesystem bytes on platforms
+# whose filesystem supports them. Skip this optional stress case on Windows.
+if os.name != "nt":
+    non_utf8 = repo / os.fsdecode(b"digest-inputs/non-utf8-\xff.input")
+    non_utf8_before = selected_target_digest(context, "recite-lsp")
+    non_utf8.write_bytes(b"non-UTF-8 filename input")
+    if non_utf8_before == selected_target_digest(context, "recite-lsp"):
+        raise SystemExit("non-UTF-8 untracked input did not change the parity digest")
+
+# Python bytecode is also ignored/excluded, including bytecode created by the
+# checker itself.
+before_bytecode = selected_target_digest(context, "recite-lsp")
 bytecode = repo / "scripts/editor_parity/__pycache__"
 bytecode.mkdir(parents=True, exist_ok=True)
 (bytecode / "checker.cpython-314.pyc").write_bytes(b"bytecode")
 (repo / "checker-output.pyo").write_bytes(b"bytecode")
-after = selected_target_digest(Context(repo, [], repo / "target"), "recite-lsp")
-paths = [path.relative_to(repo).as_posix() for path in workspace_files(Context(repo, [], repo / "target"))]
-if before != after:
+after = selected_target_digest(context, "recite-lsp")
+if before_bytecode != after:
     raise SystemExit("Python bytecode changed the parity digest")
+paths = [path.relative_to(repo).as_posix() for path in workspace_files(context)]
+if paths != sorted(paths, key=os.fsencode):
+    raise SystemExit("Git digest inputs were not sorted by stable path bytes")
 if any("__pycache__" in path or path.endswith((".pyc", ".pyo")) for path in paths):
     raise SystemExit("Python bytecode entered parity digest inputs")
-print("editor parity bytecode exclusion fixture passed")
+print("editor parity Git-aware digest fixture passed")
 PY
 
 mutate_fixture module-shapes
