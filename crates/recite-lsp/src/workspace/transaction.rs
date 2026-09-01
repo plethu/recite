@@ -95,9 +95,15 @@ impl LspWorkspace {
             return uri_keyed_open_identity(uri);
         };
         let (canonical_path, path_exists) = canonical_or_normalized_path(&path);
-        let project_relative_path = path_exists
-            .then(|| saved.project_key_for_path(&canonical_path))
-            .flatten();
+        // The existing-parent canonical path is a stable identity for a
+        // missing buffer too. Resolve its project key regardless of whether
+        // the final path exists so opening a draft and saving it later cannot
+        // reseed the document as a standalone `~lsp` key.
+        let project_relative_path = if path_exists {
+            saved.project_key_for_path(&canonical_path)
+        } else {
+            saved.project_key_for_open_path(&canonical_path)
+        };
         let scope = match saved.path_scope(&canonical_path) {
             PathScope::Project(_) => crate::summary::OpenFileScope::Project,
             PathScope::Excluded => crate::summary::OpenFileScope::Excluded,

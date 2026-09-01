@@ -69,7 +69,7 @@ pub(crate) fn watched_creation_rekeys_open_overlay() {
     assert_eq!(workspace.snapshot().summaries().len(), 1);
     assert_eq!(
         workspace.snapshot().summaries()[0].project_relative_path(),
-        None
+        Some("src/new.recite")
     );
 
     write_file(temp.path(), "src/new.recite", ":: saved\n");

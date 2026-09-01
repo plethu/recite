@@ -48,7 +48,7 @@ impl LiveProjectSnapshot {
                 continue;
             };
             let partition = saved
-                .partition_for_path(path)
+                .partition_for_open_path(path)
                 .unwrap_or_else(|| "standalone".to_owned());
             // URI iteration is deterministic. Keep the first alias for one
             // canonical key so the kernel and every projection have one

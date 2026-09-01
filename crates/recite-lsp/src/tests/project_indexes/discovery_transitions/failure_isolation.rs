@@ -1,6 +1,7 @@
 use serde_json::json;
 use tempfile::TempDir;
 
+use crate::paths::stable_path_identity;
 use crate::workspace::{DiagnosticRefresh, WorkspaceConfig};
 
 use super::super::super::support::{block_names, file_uri, test_workspace, write_file};
@@ -10,6 +11,94 @@ pub(crate) fn all() {
     two_malformed_roots_publish_independent_diagnostics();
     nested_valid_manifest_overrides_malformed_outer_root();
     sibling_manifest_transitions_preserve_unaffected_root();
+    failed_roots_isolate_open_source_only_partitions();
+}
+
+fn failed_roots_isolate_open_source_only_partitions() {
+    let temp = TempDir::new().unwrap_or_else(|error| panic!("tempdir: {error}"));
+    let first = temp.path().join("first");
+    let second = temp.path().join("second");
+    write_file(&first, "recite.project.toml", "format_version = [\n");
+    write_file(&second, "recite.project.toml", "format_version = [\n");
+    let params = serde_json::from_value(json!({
+        "workspaceFolders": [
+            {"uri": file_uri(&first), "name": "first"},
+            {"uri": file_uri(&second), "name": "second"}
+        ],
+        "capabilities": {},
+    }))
+    .unwrap_or_else(|error| panic!("initialize params: {error}"));
+    let mut workspace = test_workspace(WorkspaceConfig::from_initialize_params(&params));
+    let first_uri = file_uri(&first.join("src/live.recite"));
+    let second_uri = file_uri(&second.join("src/live.recite"));
+    let source = "oops\n:: shared default\n";
+
+    let first_refresh = workspace
+        .open(first_uri.clone(), 1, source.to_owned())
+        .expect("failed first root should retain source diagnostics");
+    let second_refresh = workspace
+        .open(second_uri.clone(), 1, source.to_owned())
+        .expect("failed second root should retain source diagnostics");
+    let refresh_diagnostics = [first_refresh, second_refresh]
+        .into_iter()
+        .map(|refresh| match refresh {
+            DiagnosticRefresh::Publish(diagnostics) => diagnostics,
+            DiagnosticRefresh::Clear { .. } => panic!("open source should publish diagnostics"),
+        })
+        .collect::<Vec<_>>();
+    assert!(
+        refresh_diagnostics
+            .iter()
+            .all(|diagnostics| !diagnostics.diagnostics.is_empty())
+    );
+    assert!(refresh_diagnostics.iter().all(|diagnostics| {
+        diagnostics
+            .diagnostics
+            .iter()
+            .all(|diagnostic| diagnostic.code.as_str() != "RECITE_VALIDATE009")
+    }));
+    assert_eq!(
+        block_names(&workspace),
+        ["shared", "shared"],
+        "duplicate block names in failed roots must not share a kernel"
+    );
+    assert!(
+        workspace
+            .partition_kernel_generation(&stable_path_identity(&first))
+            .is_some()
+    );
+    assert!(
+        workspace
+            .partition_kernel_generation(&stable_path_identity(&second))
+            .is_some()
+    );
+
+    write_file(
+        &first,
+        "recite.project.toml",
+        "format_version = 1\n[discovery]\nsource_roots = [\"src\"]\n",
+    );
+    write_file(&first, "src/live.recite", ":: saved\n");
+    workspace.refresh_watched_uri(&file_uri(&first.join("recite.project.toml")));
+
+    let first_summary = workspace
+        .snapshot()
+        .summaries()
+        .iter()
+        .find(|summary| summary.uri() == &first_uri)
+        .expect("first open buffer should survive manifest recovery");
+    assert_eq!(
+        first_summary.project_relative_path(),
+        Some("src/live.recite")
+    );
+    assert_eq!(first_summary.version, Some(1));
+    assert!(
+        workspace
+            .snapshot()
+            .summaries()
+            .iter()
+            .any(|summary| summary.uri() == &second_uri)
+    );
 }
 
 pub(crate) fn malformed_workspace_root_does_not_block_independent_root() {

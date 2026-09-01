@@ -221,7 +221,7 @@ impl LspWorkspace {
                             .identity()
                             .saved_path
                             .as_deref()
-                            .and_then(|path| saved.partition_for_path(path))
+                            .and_then(|path| saved.partition_for_open_path(path))
                             .unwrap_or_else(|| "standalone".to_owned()),
                         key,
                     )

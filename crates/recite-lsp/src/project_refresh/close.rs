@@ -10,7 +10,26 @@ impl LspWorkspace {
         let mut saved = self.saved.clone();
         saved.refresh_uri(&uri);
         self.refresh_open_identities(&saved, &mut documents);
-        if self.rebuild_for_documents(saved, documents).is_err() {
+        let old_retired_workspace = self.retired_schema_uris.clone();
+        self.retired_schema_uris.remove(uri.as_str());
+        let mut retired = self
+            .partitions
+            .iter()
+            .map(|(id, partition)| (id.clone(), partition.retired_schema_uris.clone()))
+            .collect::<std::collections::BTreeMap<_, _>>();
+        for uris in retired.values_mut() {
+            uris.remove(uri.as_str());
+        }
+        if self
+            .rebuild_for_documents_with_schemas_and_retired(
+                saved,
+                documents,
+                self.partition_schemas(),
+                retired,
+            )
+            .is_err()
+        {
+            self.retired_schema_uris = old_retired_workspace;
             return Vec::new();
         }
         if self.is_schema_document_uri(&uri) {
@@ -22,7 +41,7 @@ impl LspWorkspace {
             .identity()
             .saved_path
             .as_deref()
-            .and_then(|path| self.saved.partition_for_path(path))
+            .and_then(|path| self.saved.partition_for_open_path(path))
             .unwrap_or_else(|| "standalone".to_owned());
         let remaining_open = closed_key
             .as_ref()

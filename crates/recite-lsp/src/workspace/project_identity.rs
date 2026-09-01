@@ -24,6 +24,35 @@ impl SavedProjectIndex {
         }
     }
 
+    /// Resolve an open buffer's project identity, including a source-only
+    /// identity for a root whose manifest could not be loaded. Failed
+    /// manifests deliberately do not contribute saved documents, but an
+    /// editor can still open and author a buffer below that explicit root.
+    pub(crate) fn project_identity_for_open_path(&self, path: &Path) -> Option<ProjectIdentity> {
+        if let Some(identity) = self.valid_manifest_identity(path) {
+            return Some(identity);
+        }
+        let discovery = self.deepest_discovery(path)?;
+        match &discovery.state {
+            WorkspaceDiscoveryState::Failed { .. } => self.fallback_identity(&discovery.root, path),
+            WorkspaceDiscoveryState::Manifestless | WorkspaceDiscoveryState::Manifest(_) => None,
+        }
+    }
+
+    pub(crate) fn project_key_for_open_path(&self, path: &Path) -> Option<String> {
+        self.project_identity_for_open_path(path)
+            .map(|identity| identity.key)
+    }
+
+    pub(crate) fn partition_for_open_path(&self, path: &Path) -> Option<String> {
+        self.project_identity_for_open_path(path)
+            .map(|identity| identity.partition)
+            .or_else(|| {
+                self.project_identity_for_path(path)
+                    .map(|identity| identity.partition)
+            })
+    }
+
     pub(crate) fn project_identity_for_path(&self, path: &Path) -> Option<ProjectIdentity> {
         if let Some(identity) = self.valid_manifest_identity(path) {
             return Some(identity);
@@ -48,7 +77,7 @@ impl SavedProjectIndex {
             return PathScope::Standalone;
         };
         match &discovery.state {
-            WorkspaceDiscoveryState::Failed { .. } => PathScope::Standalone,
+            WorkspaceDiscoveryState::Failed { .. } => self.fallback_scope(&discovery.root, path),
             WorkspaceDiscoveryState::Manifestless => self.fallback_scope(&discovery.root, path),
             WorkspaceDiscoveryState::Manifest(report) => {
                 if discovery.root != report.manifest().project_root() {

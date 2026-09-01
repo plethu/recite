@@ -104,6 +104,11 @@ fn did_close_schema_alias_clears_exact_uri() {
 }
 
 #[test]
+fn retired_schema_alias_close_clears_and_reopens() {
+    super::diagnostics::retired_schema_alias_close_clears_and_reopens();
+}
+
+#[test]
 fn publishes_choice_availability_parser_diagnostics() {
     super::availability::publishes_choice_availability_parser_diagnostics();
 }

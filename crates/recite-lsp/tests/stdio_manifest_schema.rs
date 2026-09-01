@@ -156,6 +156,39 @@ fn manifest_schema_change_reloads_and_preserves_open_overlay() {
     );
     assert!(diagnostics_for(&removal_messages, &schema_a_alias_uri).is_empty());
 
+    harness.notify(
+        "textDocument/didClose",
+        json!({ "textDocument": { "uri": schema_a_alias_uri.clone() } }),
+    );
+    let close_messages = harness.barrier(&schema_a_alias_uri);
+    assert_eq!(close_messages.len(), 1);
+    let closed_alias = diagnostics_for(&close_messages, &schema_a_alias_uri);
+    assert_eq!(closed_alias.len(), 1);
+    assert!(closed_alias[0]["version"].is_null());
+    assert!(
+        closed_alias[0]["diagnostics"]
+            .as_array()
+            .unwrap_or_else(|| panic!("closed alias diagnostics array is missing"))
+            .is_empty()
+    );
+
+    harness.notify(
+        "textDocument/didOpen",
+        json!({
+            "textDocument": {
+                "uri": schema_a_alias_uri.clone(),
+                "languageId": "json",
+                "version": 8,
+                "text": "dialogue text\n"
+            }
+        }),
+    );
+    let reopened_messages = harness.barrier(&schema_a_alias_uri);
+    assert_eq!(reopened_messages.len(), 1);
+    let reopened_alias = diagnostics_for(&reopened_messages, &schema_a_alias_uri);
+    assert_eq!(reopened_alias.len(), 1);
+    assert_eq!(reopened_alias[0]["version"], 8);
+
     std::fs::write(
         &manifest,
         "format_version = 1\n[project]\nschema = \"schema-a.json\"\n",

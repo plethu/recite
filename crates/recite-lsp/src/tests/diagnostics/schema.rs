@@ -234,6 +234,10 @@ pub(super) fn did_close_schema_alias_clears_exact_uri() {
     schema_close::did_close_schema_alias_clears_exact_uri();
 }
 
+pub(super) fn retired_schema_alias_close_clears_and_reopens() {
+    schema_close::retired_schema_alias_close_clears_and_reopens();
+}
+
 fn diagnostic_codes(diagnostics: &[lsp_types::Diagnostic]) -> Vec<&str> {
     diagnostics
         .iter()

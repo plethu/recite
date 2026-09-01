@@ -307,6 +307,10 @@ pub(super) fn did_close_schema_alias_clears_exact_uri() {
     schema::did_close_schema_alias_clears_exact_uri();
 }
 
+pub(super) fn retired_schema_alias_close_clears_and_reopens() {
+    schema::retired_schema_alias_close_clears_and_reopens();
+}
+
 pub(super) fn did_close_removes_state_and_clears_diagnostics() {
     let harness = Harness::start();
     let uri = uri("file:///workspace/dialogue/close.recite");

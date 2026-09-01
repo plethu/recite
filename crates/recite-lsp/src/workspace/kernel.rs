@@ -38,7 +38,7 @@ impl LspWorkspace {
             .identity()
             .saved_path
             .as_deref()
-            .and_then(|path| self.saved.partition_for_path(path))
+            .and_then(|path| self.saved.partition_for_open_path(path))
             .or_else(|| Some("standalone".to_owned()))
     }
 
@@ -133,7 +133,7 @@ pub(super) fn effective_open_documents<'a>(
             .identity()
             .saved_path
             .as_deref()
-            .and_then(|path| saved.partition_for_path(path))
+            .and_then(|path| saved.partition_for_open_path(path))
             .unwrap_or_else(|| "standalone".to_owned());
         if schema.matches_uri(&document.identity().uri)
             || retired.contains(document.identity().uri.as_str())
@@ -180,7 +180,7 @@ pub(super) fn authoring_request(
                 .identity()
                 .saved_path
                 .as_deref()
-                .and_then(|path| saved_index.partition_for_path(path))
+                .and_then(|path| saved_index.partition_for_open_path(path))
                 .unwrap_or_else(|| "standalone".to_owned())
                 == partition
         })
