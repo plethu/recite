@@ -1,3 +1,13 @@
+:: opening
+-> next_block
+| one | two
+  Hello {traveller_name}
+:if trusts(player)
+:else
+> line@anchor
+? choice@anchor
+>speaker=rhea
+?requires=(trusts(player))
 > speaker=foo requires=(trusts(player)) reason="why"
 ? requires=(trusts(player)) reason="why"
 ! immediateFoo play_sfx()

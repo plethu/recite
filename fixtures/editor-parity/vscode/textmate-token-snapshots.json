@@ -9,6 +9,107 @@
       ]
     },
     {
+      "id": "block",
+      "source": ":: opening",
+      "tokens": [
+        ["::", ["source.recite", "keyword.control.recite"]],
+        [" ", ["source.recite"]],
+        ["opening", ["source.recite", "entity.name.section.recite"]]
+      ]
+    },
+    {
+      "id": "divert",
+      "source": "-> next_block",
+      "tokens": [
+        ["->", ["source.recite", "punctuation.definition.divert.recite"]],
+        [" ", ["source.recite"]],
+        ["next_block", ["source.recite", "variable.other.reference.recite"]]
+      ]
+    },
+    {
+      "id": "plural",
+      "source": "| one | two",
+      "tokens": [
+        ["|", ["source.recite", "punctuation.definition.plural.recite"]],
+        [" one | two", ["source.recite", "string.unquoted.prose.recite"]]
+      ]
+    },
+    {
+      "id": "interpolation",
+      "source": "  Hello {traveller_name}",
+      "tokens": [
+        ["  ", ["source.recite"]],
+        ["Hello ", ["source.recite", "string.unquoted.prose.recite"]],
+        ["{", ["source.recite", "punctuation.definition.interpolation.recite"]],
+        ["traveller_name", ["source.recite", "variable.other.placeholder.recite"]],
+        ["}", ["source.recite", "punctuation.definition.interpolation.recite"]]
+      ]
+    },
+    {
+      "id": "if-directive",
+      "source": ":if trusts(player)",
+      "tokens": [
+        [":if", ["source.recite", "keyword.control.conditional.recite"]],
+        [" ", ["source.recite"]],
+        ["trusts", ["source.recite", "support.function.recite"]],
+        ["(", ["source.recite", "punctuation.section.arguments.recite"]],
+        ["player", ["source.recite", "constant.other.symbol.recite"]],
+        [")", ["source.recite", "punctuation.section.arguments.recite"]]
+      ]
+    },
+    {
+      "id": "else-directive",
+      "source": ":else",
+      "tokens": [[":else", ["source.recite", "keyword.control.conditional.recite"]]]
+    },
+    {
+      "id": "anchor",
+      "source": "> line@anchor",
+      "tokens": [
+        [">", ["source.recite", "punctuation.definition.line.recite"]],
+        [" ", ["source.recite"]],
+        ["line", ["source.recite", "entity.name.label.recite"]],
+        ["@", ["source.recite", "punctuation.definition.anchor.recite"]],
+        ["anchor", ["source.recite", "constant.other.anchor.recite"]]
+      ]
+    },
+    {
+      "id": "choice-anchor",
+      "source": "? choice@anchor",
+      "tokens": [
+        ["?", ["source.recite", "punctuation.definition.choice.recite"]],
+        [" ", ["source.recite"]],
+        ["choice", ["source.recite", "entity.name.label.recite"]],
+        ["@", ["source.recite", "punctuation.definition.anchor.recite"]],
+        ["anchor", ["source.recite", "constant.other.anchor.recite"]]
+      ]
+    },
+    {
+      "id": "tight-missing-line-id",
+      "source": ">speaker=rhea",
+      "tokens": [
+        [">", ["source.recite", "punctuation.definition.line.recite"]],
+        ["speaker", ["source.recite", "variable.parameter.recite"]],
+        ["=", ["source.recite", "keyword.operator.assignment.recite"]],
+        ["rhea", ["source.recite", "constant.other.symbol.recite"]]
+      ]
+    },
+    {
+      "id": "tight-missing-choice-id",
+      "source": "?requires=(trusts(player))",
+      "tokens": [
+        ["?", ["source.recite", "punctuation.definition.choice.recite"]],
+        ["requires", ["source.recite", "keyword.control.conditional.recite"]],
+        ["=", ["source.recite", "keyword.operator.assignment.recite"]],
+        ["(", ["source.recite", "punctuation.section.arguments.recite"]],
+        ["trusts", ["source.recite", "support.function.recite"]],
+        ["(", ["source.recite", "punctuation.section.arguments.recite"]],
+        ["player", ["source.recite", "constant.other.symbol.recite"]],
+        [")", ["source.recite", "punctuation.section.arguments.recite"]],
+        [")", ["source.recite", "punctuation.section.arguments.recite"]]
+      ]
+    },
+    {
       "id": "missing-line-id",
       "source": "> speaker=foo requires=(trusts(player)) reason=\"why\"",
       "tokens": [

@@ -11,6 +11,14 @@ markup, and placeholders. It never validates IDs, references, schemas,
 conditions, effects, markup balance, or match exhaustiveness; those remain
 parser/compiler/LSP responsibilities.
 
+The grammar supplies scopes only; the active VS Code or VSCodium theme controls
+their colour, font, and contrast. The line and choice anchor scopes are separate
+so a theme may de-emphasise them, but the grammar cannot require that visual
+treatment. Scope appearance is never the sole semantic signal: marker, label,
+and anchor text remains present, and non-colour/high-contrast themes remain
+valid. The pinned Node tokenizer snapshots provide evidence for scope identity,
+not installed-host rendering or accessibility behaviour.
+
 The package's CommonJS entry shim obtains the VS Code host API through
 `require`, keeping the VS Code 1.89 extension host boundary loadable, then
 delegates activation to the ESM implementation.

@@ -166,7 +166,14 @@ generated-parser reproducibility, canonical fixture coverage, recovery
 boundaries, and lexical captures; the Neovim check adds Linux/0.12.5 filetype,
 LSP, and ABI14 parser evidence. The VS Code package check validates the
 generated VSIX contents, including the grammar, and the Node tests exercise the
-real `recite-lsp` process over stdio on Linux.
+real `recite-lsp` process over stdio on Linux. The pinned TextMate tokenizer
+snapshots assert exact scopes for blocks, diverts, plural pipes, interpolation,
+condition directives, anchors, and hostile recovery cases. TextMate appearance
+is theme-controlled; anchor scopes are merely de-emphasizable, never hidden by
+the grammar. Non-colour and high-contrast themes retain the authored text and
+syntax markers, so colour is not treated as the sole semantic signal. These
+Node scope snapshots are not evidence of installed-host rendering or
+accessibility integration.
 Those checks do not establish installed VS Code or VSCodium host activation,
 macOS or Windows support, marketplace publication, or a distributable archive
 in source control. This still does not claim a versioned CLI/watch envelope,
