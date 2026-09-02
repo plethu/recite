@@ -1,0 +1,2 @@
+# The Tree-sitter parser is a platform-specific build artifact, not source.
+/parser/

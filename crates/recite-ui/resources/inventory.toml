@@ -349,6 +349,47 @@ resource_ids = [
 "lsp-code-action-schema-action",
 "lsp-code-action-schema-disabled",
 "lsp-warning-ui-config",
+"lsp-client-start-failed",
+"lsp-client-error",
+"lsp-client-exited",
+"lsp-client-restart-scheduled",
+"lsp-client-restart-exhausted",
+"lsp-client-transport-failed",
+"lsp-client-protocol-failed",
+"lsp-client-lifecycle-failed",
+"lsp-client-display-name",
+"lsp-client-description",
+"lsp-client-untrusted-workspaces-description",
+"lsp-client-configuration-title",
+"lsp-client-configuration-path-description",
+"lsp-client-configuration-args-description",
+"lsp-client-configuration-project-root-description",
+"lsp-client-action-stale",
+"lsp-client-action-closed",
+"lsp-client-action-reopened",
+"lsp-client-action-expired",
+"lsp-client-action-evicted",
+"lsp-client-action-unknown",
+"lsp-client-action-apply-failed",
+"lsp-client-config-path-invalid",
+"lsp-client-config-args-invalid",
+"lsp-client-config-project-root-invalid",
+"lsp-client-config-project-root-needs-workspace",
+"lsp-client-not-running",
+"neovim-autocmd-description",
+"neovim-callback-failed",
+"neovim-health-filetype-ok",
+"neovim-health-filetype-error",
+"neovim-health-lsp-executable-found",
+"neovim-health-lsp-executable-missing",
+"neovim-health-lsp-install",
+"neovim-health-query-found",
+"neovim-health-query-missing",
+"neovim-health-parser-found",
+"neovim-health-parser-missing",
+"neovim-health-parser-build",
+"neovim-health-current-root",
+"neovim-health-open-buffer",
 ]
 
 # The complete future default-code presentation registry is explicit. Parser
@@ -466,7 +507,7 @@ shipped = false
 
 [clients.neovim]
 name = "Neovim"
-shipped = false
+shipped = true
 
 [clients.zed]
 name = "Zed"
@@ -478,3 +519,163 @@ shipped = false
 
 [projections]
 rule = "read-only; each host projection records its source resource ID"
+
+[projections.neovim]
+source_resource = "en-US.ftl"
+output = "editors/recite-neovim/lua/recite_messages.lua"
+ids = [
+"lsp-client-display-name",
+"lsp-client-restart-exhausted",
+"neovim-autocmd-description",
+"neovim-callback-failed",
+"neovim-health-filetype-ok",
+"neovim-health-filetype-error",
+"neovim-health-lsp-executable-found",
+"neovim-health-lsp-executable-missing",
+"neovim-health-lsp-install",
+"neovim-health-query-found",
+"neovim-health-query-missing",
+"neovim-health-parser-found",
+"neovim-health-parser-missing",
+"neovim-health-parser-build",
+"neovim-health-current-root",
+"neovim-health-open-buffer",
+]
+
+[projections.vscode]
+source_resource = "en-US.ftl"
+runtime_output = "editors/vscode/src/messages.generated.js"
+package_output = "editors/vscode/package.nls.json"
+runtime_ids = [
+"lsp-client-start-failed",
+"lsp-client-error",
+"lsp-client-exited",
+"lsp-client-restart-scheduled",
+"lsp-client-restart-exhausted",
+"lsp-client-transport-failed",
+"lsp-client-protocol-failed",
+"lsp-client-lifecycle-failed",
+"lsp-client-display-name",
+"lsp-client-action-stale",
+"lsp-client-action-closed",
+"lsp-client-action-reopened",
+"lsp-client-action-expired",
+"lsp-client-action-evicted",
+"lsp-client-action-unknown",
+"lsp-client-action-apply-failed",
+"lsp-client-config-path-invalid",
+"lsp-client-config-args-invalid",
+"lsp-client-config-project-root-invalid",
+"lsp-client-config-project-root-needs-workspace",
+"lsp-client-not-running",
+]
+package_ids = [
+"lsp-client-display-name",
+"lsp-client-description",
+"lsp-client-untrusted-workspaces-description",
+"lsp-client-configuration-title",
+"lsp-client-configuration-path-description",
+"lsp-client-configuration-args-description",
+"lsp-client-configuration-project-root-description",
+]
+runtime_arguments = {
+"lsp-client-start-failed" = ["detail"],
+"lsp-client-error" = ["detail"],
+"lsp-client-exited" = [],
+"lsp-client-restart-scheduled" = ["milliseconds"],
+"lsp-client-restart-exhausted" = [],
+"lsp-client-transport-failed" = ["detail"],
+"lsp-client-protocol-failed" = [],
+"lsp-client-lifecycle-failed" = ["detail"],
+"lsp-client-display-name" = [],
+"lsp-client-action-stale" = [],
+"lsp-client-action-closed" = [],
+"lsp-client-action-reopened" = [],
+"lsp-client-action-expired" = [],
+"lsp-client-action-evicted" = [],
+"lsp-client-action-unknown" = [],
+"lsp-client-action-apply-failed" = [],
+"lsp-client-config-path-invalid" = [],
+"lsp-client-config-args-invalid" = [],
+"lsp-client-config-project-root-invalid" = [],
+"lsp-client-config-project-root-needs-workspace" = [],
+"lsp-client-not-running" = [],
+}
+package_arguments = {
+"lsp-client-display-name" = [],
+"lsp-client-description" = [],
+"lsp-client-untrusted-workspaces-description" = [],
+"lsp-client-configuration-title" = [],
+"lsp-client-configuration-path-description" = [],
+"lsp-client-configuration-args-description" = [],
+"lsp-client-configuration-project-root-description" = [],
+}
+
+[projections.vscodium]
+source_resource = "en-US.ftl"
+runtime_output = "editors/vscode/src/messages.generated.js"
+package_output = "editors/vscode/package.nls.json"
+runtime_ids = [
+"lsp-client-start-failed",
+"lsp-client-error",
+"lsp-client-exited",
+"lsp-client-restart-scheduled",
+"lsp-client-restart-exhausted",
+"lsp-client-transport-failed",
+"lsp-client-protocol-failed",
+"lsp-client-lifecycle-failed",
+"lsp-client-display-name",
+"lsp-client-action-stale",
+"lsp-client-action-closed",
+"lsp-client-action-reopened",
+"lsp-client-action-expired",
+"lsp-client-action-evicted",
+"lsp-client-action-unknown",
+"lsp-client-action-apply-failed",
+"lsp-client-config-path-invalid",
+"lsp-client-config-args-invalid",
+"lsp-client-config-project-root-invalid",
+"lsp-client-config-project-root-needs-workspace",
+"lsp-client-not-running",
+]
+package_ids = [
+"lsp-client-display-name",
+"lsp-client-description",
+"lsp-client-untrusted-workspaces-description",
+"lsp-client-configuration-title",
+"lsp-client-configuration-path-description",
+"lsp-client-configuration-args-description",
+"lsp-client-configuration-project-root-description",
+]
+runtime_arguments = {
+"lsp-client-start-failed" = ["detail"],
+"lsp-client-error" = ["detail"],
+"lsp-client-exited" = [],
+"lsp-client-restart-scheduled" = ["milliseconds"],
+"lsp-client-restart-exhausted" = [],
+"lsp-client-transport-failed" = ["detail"],
+"lsp-client-protocol-failed" = [],
+"lsp-client-lifecycle-failed" = ["detail"],
+"lsp-client-display-name" = [],
+"lsp-client-action-stale" = [],
+"lsp-client-action-closed" = [],
+"lsp-client-action-reopened" = [],
+"lsp-client-action-expired" = [],
+"lsp-client-action-evicted" = [],
+"lsp-client-action-unknown" = [],
+"lsp-client-action-apply-failed" = [],
+"lsp-client-config-path-invalid" = [],
+"lsp-client-config-args-invalid" = [],
+"lsp-client-config-project-root-invalid" = [],
+"lsp-client-config-project-root-needs-workspace" = [],
+"lsp-client-not-running" = [],
+}
+package_arguments = {
+"lsp-client-display-name" = [],
+"lsp-client-description" = [],
+"lsp-client-untrusted-workspaces-description" = [],
+"lsp-client-configuration-title" = [],
+"lsp-client-configuration-path-description" = [],
+"lsp-client-configuration-args-description" = [],
+"lsp-client-configuration-project-root-description" = [],
+}

@@ -1,0 +1,280 @@
+==================
+Directive markers are boundary aware in indented bodies
+==================
+:: boundaries
+> line
+  :ifx this is prose
+  :elsex this is prose
+  :matchx this is prose
+  :casex this is prose
+  :if{value}
+  :else[tag]
+  :match(value)
+  :case[variant]
+  -> END
+  :if exact directive
+  :else # exact directive with horizontal whitespace
+  :match exact directive
+  :case exact
+  :if
+  :else
+  :match
+  :case
+
+---
+
+(source_file
+  (block_statement
+    (block_marker)
+    (hspace)
+    (block_name
+      (identifier))
+    (newline))
+  (line_statement
+    (line_marker)
+    (hspace)
+    (line_name
+      (identifier))
+    (newline))
+  (prose_line
+    (indent)
+    (prose_text
+      (prose_marker_text))
+    (newline))
+  (prose_line
+    (indent)
+    (prose_text
+      (prose_marker_text))
+    (newline))
+  (prose_line
+    (indent)
+    (prose_text
+      (prose_marker_text))
+    (newline))
+  (prose_line
+    (indent)
+    (prose_text
+      (prose_marker_text))
+    (newline))
+  (prose_line
+    (indent)
+    (prose_text
+      (prose_marker_text))
+    (newline))
+  (prose_line
+    (indent)
+    (prose_text
+      (prose_marker_text))
+    (newline))
+  (prose_line
+    (indent)
+    (prose_text
+      (prose_marker_text))
+    (newline))
+  (prose_line
+    (indent)
+    (prose_text
+      (prose_marker_text))
+    (newline))
+  (divert_statement
+    (indent)
+    (divert_marker)
+    (hspace)
+    (target
+      (end_target))
+    (newline))
+  (if_statement
+    (indent)
+    (if_marker)
+    (hspace)
+    (condition_expression
+      (expression_part
+        (symbol
+          (identifier)))
+      (hspace)
+      (expression_part
+        (symbol
+          (identifier))))
+    (newline))
+  (else_statement
+    (indent)
+    (else_marker)
+    (inline_comment
+      (hspace)
+      (comment_marker)
+      (comment_text))
+    (newline))
+  (match_statement
+    (indent)
+    (match_marker)
+    (hspace)
+    (condition_expression
+      (expression_part
+        (symbol
+          (identifier)))
+      (hspace)
+      (expression_part
+        (symbol
+          (identifier))))
+    (newline))
+  (case_statement
+    (indent)
+    (case_marker)
+    (hspace)
+    (identifier)
+    (newline))
+  (if_statement
+    (indent)
+    (if_marker)
+    (newline))
+  (else_statement
+    (indent)
+    (else_marker)
+    (newline))
+  (match_statement
+    (indent)
+    (match_marker)
+    (newline))
+  (case_statement
+    (indent)
+    (case_marker)
+    (newline)))
+
+==================
+Unicode whitespace retains directive boundaries
+==================
+  :if condition
+  :else 
+  :match condition
+  :case variant
+  -> END
+
+---
+
+(source_file
+  (if_statement
+    (indent)
+    (if_marker)
+    (hspace)
+    (condition_expression
+      (expression_part
+        (symbol
+          (identifier))))
+    (newline))
+  (else_statement
+    (indent)
+    (else_marker)
+    (hspace)
+    (newline))
+  (match_statement
+    (indent)
+    (match_marker)
+    (hspace)
+    (condition_expression
+      (expression_part
+        (symbol
+          (identifier))))
+    (newline))
+  (case_statement
+    (indent)
+    (case_marker)
+    (hspace)
+    (identifier)
+    (newline))
+  (divert_statement
+    (indent)
+    (divert_marker)
+    (hspace)
+    (target
+      (end_target))
+    (newline)))
+
+==================
+Rust whitespace property controls directive boundaries
+==================
+  :ifcondition
+  :ifcondition
+  :ifcondition
+  :ifcondition
+  :ifcondition
+  :ifcondition
+  :ifcondition
+  :if condition
+  :if condition
+  -> END
+
+---
+
+(source_file
+  (prose_line
+    (indent)
+    (prose_text
+      (prose_marker_text))
+    (newline))
+  (prose_line
+    (indent)
+    (prose_text
+      (prose_marker_text))
+    (newline))
+  (prose_line
+    (indent)
+    (prose_text
+      (prose_marker_text))
+    (newline))
+  (prose_line
+    (indent)
+    (prose_text
+      (prose_marker_text))
+    (newline))
+  (if_statement
+    (indent)
+    (if_marker)
+    (hspace)
+    (condition_expression
+      (expression_part
+        (symbol
+          (identifier))))
+    (newline))
+  (if_statement
+    (indent)
+    (if_marker)
+    (hspace)
+    (condition_expression
+      (expression_part
+        (symbol
+          (identifier))))
+    (newline))
+  (if_statement
+    (indent)
+    (if_marker)
+    (hspace)
+    (condition_expression
+      (expression_part
+        (symbol
+          (identifier))))
+    (newline))
+  (if_statement
+    (indent)
+    (if_marker)
+    (hspace)
+    (condition_expression
+      (expression_part
+        (symbol
+          (identifier))))
+    (newline))
+  (if_statement
+    (indent)
+    (if_marker)
+    (hspace)
+    (condition_expression
+      (expression_part
+        (symbol
+          (identifier))))
+    (newline))
+  (divert_statement
+    (indent)
+    (divert_marker)
+    (hspace)
+    (target
+      (end_target))
+    (newline)))

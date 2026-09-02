@@ -1,5 +1,6 @@
 packages:
   - docs-site
+  - editors/vscode
 
 onlyBuiltDependencies:
   - esbuild

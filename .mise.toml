@@ -6,6 +6,9 @@ dotnet = "8.0.421"
 rust = { version = "1.96.0", components = ["rustfmt", "clippy"] }
 node = "22.12.0"
 pnpm = "11.3.0"
+"aqua:tree-sitter/tree-sitter" = "0.26.9"
+# The Neovim compatibility target is 0.10.4; the CI smoke lane is pinned to 0.12.5.
+"aqua:neovim/neovim" = "0.12.5"
 
 [env]
 RUST_BACKTRACE = "1"
@@ -15,7 +18,13 @@ dotnet.isolated = true
 
 [tasks.verify]
 description = "Run the complete local verification suite"
+env = { XDG_CACHE_HOME = "{{config_root}}/target/tree-sitter-cache" }
 run = "mise -E maintainability exec -- scripts/verify.sh"
+
+[tasks.check-tree-sitter]
+description = "Check the Recite Tree-sitter grammar and editor captures"
+env = { XDG_CACHE_HOME = "{{config_root}}/target/tree-sitter-cache" }
+run = "scripts/check-tree-sitter.sh"
 
 [tasks.watch-stress]
 description = "Measure real watch rebuilds on generated fixture scales"

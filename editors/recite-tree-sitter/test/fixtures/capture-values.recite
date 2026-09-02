@@ -1,0 +1,23 @@
+:: capture default speaker="Archivist" enabled=true count=3 offset=-12.5 whole=+7 tags=[dock, "night watch"]
+> capture_line@0123456789abcdef0123 speaker=archivist bind=(name:string=$name)
+  [quiet]Found {name}.[/quiet]
+  Plain prose.
+  Interpolated {name} prose.
+  | Plural {count} prose.
+:if not sealed() and stage("open")
+  ! immediate play_sfx("relay", -4.25)
+  -> archive.recite::opening
+  -> END
+  - Hyphen-led prose.
+  :ifx this is prose.
+  :elsex this is prose.
+  :matchx this is prose.
+  :casex this is prose.
+  :if{value}
+  :else[tag]
+  :match(value)
+  :case[variant]
+  :if exact directive
+  :else
+  :match exact directive
+  :case exact

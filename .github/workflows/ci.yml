@@ -132,6 +132,25 @@ jobs:
       - name: Verify documentation
         run: scripts/check-docs.sh
 
+  editor:
+    name: VS Code client
+    runs-on: ubuntu-24.04
+    timeout-minutes: 10
+    steps:
+      - name: Check out source
+        uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          persist-credentials: false
+
+      - name: Install repository toolchain
+        uses: jdx/mise-action@3c2e0cf82a5b2e5249f0d3635a4d83d0ae861518 # v4.2.5
+
+      - name: Install editor workspace metadata
+        run: pnpm install --frozen-lockfile --filter recite-vscode
+
+      - name: Check shared VS Code/VSCodium client and package
+        run: scripts/check-vscode.sh
+
   benchmark-smoke:
     # This checks that the tiny benchmark targets build and execute. It does
     # not compare timings or enforce the performance thresholds in §19.8.
@@ -197,6 +216,7 @@ jobs:
       - benchmark-smoke
       - maintainability
       - windows-publisher
+      - editor
     runs-on: ubuntu-24.04
     timeout-minutes: 5
     steps:
@@ -208,6 +228,7 @@ jobs:
           MAINTAINABILITY_RESULT: ${{ needs.maintainability.result }}
           RUST_RESULT: ${{ needs.rust.result }}
           WINDOWS_PUBLISHER_RESULT: ${{ needs.windows-publisher.result }}
+          EDITOR_RESULT: ${{ needs.editor.result }}
         run: |
           test "$GIT_POLICY_RESULT" = success
           test "$RUST_RESULT" = success
@@ -215,3 +236,4 @@ jobs:
           test "$BENCHMARK_RESULT" = success
           test "$MAINTAINABILITY_RESULT" = success
           test "$WINDOWS_PUBLISHER_RESULT" = success
+          test "$EDITOR_RESULT" = success

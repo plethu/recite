@@ -50,6 +50,7 @@ macro_rules! message_ids {
                 if let Some(key) = cli_message_ids::key(self) { return key; }
                 if let Some(key) = tui_message_ids::key(self) { return key; }
                 if let Some(key) = lsp_message_ids::key(self) { return key; }
+                if let Some(key) = neovim_message_ids::key(self) { return key; }
                 panic!("every message ID has one domain key")
             }
             pub fn resource_id(self) -> ResourceId { ResourceId(self.key().to_owned()) }
@@ -61,6 +62,8 @@ macro_rules! message_ids {
 mod cli_message_ids;
 #[path = "inventory/message_ids/lsp.rs"]
 mod lsp_message_ids;
+#[path = "inventory/message_ids/neovim.rs"]
+mod neovim_message_ids;
 #[path = "inventory/message_ids/tui.rs"]
 mod tui_message_ids;
 #[path = "inventory/message_ids/watch.rs"]

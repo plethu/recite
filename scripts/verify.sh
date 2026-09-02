@@ -18,9 +18,10 @@ Runs the complete local verification suite:
   9. tests/trusted-policy/check.sh
  10. tests/editor-parity/check.sh
  11. tests/check-pr-review-gates/check-rollup-fixtures.sh
- 12. scripts/check-project-gates.sh
- 13. scripts/check-docs.sh
- 14. scripts/benchmark-smoke.sh
+ 12. scripts/check-vscode.sh
+ 13. scripts/check-project-gates.sh (including editor grammar and Neovim gates)
+ 14. scripts/check-docs.sh
+ 15. scripts/benchmark-smoke.sh
 
 Use `mise run verify` from the repository root when mise is available. That
 task loads the scoped `maintainability` mise environment for ast-grep;
@@ -52,7 +53,7 @@ else
   fi
 fi
 
-for gate in check-git-policy.sh check-maintainability.sh check-ast-grep.sh check-lint-suppressions.sh check-project-gates.sh check-docs.sh benchmark-smoke.sh; do
+for gate in check-git-policy.sh check-maintainability.sh check-ast-grep.sh check-lint-suppressions.sh check-vscode.sh check-project-gates.sh check-docs.sh benchmark-smoke.sh; do
   if [[ ! -x "$repo_root/scripts/$gate" ]]; then
     echo "missing executable verification gate: $repo_root/scripts/$gate" >&2
     exit 2
@@ -109,6 +110,10 @@ bash "$repo_root/tests/trusted-policy/check.sh" "$repo_root"
 echo
 echo "== editor parity contract fixtures =="
 bash "$repo_root/tests/editor-parity/check.sh" "$repo_root"
+
+echo
+echo "== VS Code/VSCodium client =="
+"$repo_root/scripts/check-vscode.sh" "$repo_root"
 
 echo
 echo "== pull-request check rollup fixtures =="

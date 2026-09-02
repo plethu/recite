@@ -1,0 +1,101 @@
+{
+  "name": "recite-vscode",
+  "displayName": "%lsp-client-display-name%",
+  "description": "%lsp-client-description%",
+  "version": "0.1.0",
+  "publisher": "plethu",
+  "type": "module",
+  "license": "MIT OR Apache-2.0",
+  "homepage": "https://github.com/plethu/recite",
+  "repository": {
+    "type": "git",
+    "url": "https://github.com/plethu/recite.git",
+    "directory": "editors/vscode"
+  },
+  "bugs": {
+    "url": "https://github.com/plethu/recite/issues"
+  },
+  "engines": {
+    "vscode": "^1.89.0"
+  },
+  "capabilities": {
+    "untrustedWorkspaces": {
+      "supported": true,
+      "description": "%lsp-client-untrusted-workspaces-description%",
+      "restrictedConfigurations": [
+        "recite.lsp.path",
+        "recite.lsp.args",
+        "recite.lsp.projectRoot"
+      ]
+    }
+  },
+  "categories": [
+    "Programming Languages"
+  ],
+  "keywords": [
+    "recite",
+    "dialogue",
+    "language-server",
+    "lsp"
+  ],
+  "main": "./dist/extension.cjs",
+  "activationEvents": [
+    "onLanguage:recite"
+  ],
+  "files": [
+    "dist/**",
+    "language-configuration.json",
+    "package.json",
+    "package.nls.json",
+    "README.md"
+  ],
+  "contributes": {
+    "languages": [
+      {
+        "id": "recite",
+        "aliases": [
+          "Recite",
+          "recite"
+        ],
+        "extensions": [
+          ".recite"
+        ],
+        "configuration": "./language-configuration.json"
+      }
+    ],
+    "configuration": {
+      "title": "%lsp-client-configuration-title%",
+      "properties": {
+        "recite.lsp.path": {
+          "type": "string",
+          "default": "recite-lsp",
+          "description": "%lsp-client-configuration-path-description%"
+        },
+        "recite.lsp.args": {
+          "type": "array",
+          "items": {
+            "type": "string"
+          },
+          "default": [],
+          "description": "%lsp-client-configuration-args-description%"
+        },
+        "recite.lsp.projectRoot": {
+          "type": "string",
+          "default": "",
+          "description": "%lsp-client-configuration-project-root-description%"
+        }
+      }
+    }
+  },
+  "scripts": {
+    "build": "node scripts/build.mjs",
+    "messages:update": "node scripts/message-projections.mjs --update",
+    "check": "node scripts/build.mjs && node scripts/check-package.mjs && node --test test/*.test.mjs",
+    "package": "node scripts/package.mjs",
+    "package:check": "node scripts/package.mjs --check"
+  },
+  "devDependencies": {
+    "acorn": "8.15.0",
+    "fflate": "0.8.2"
+  }
+}

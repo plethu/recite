@@ -1,0 +1,127 @@
+==================
+Line-bounded match recovery
+==================
+:match relationship(player
+:case open
+> later@0123456789abcdef0123
+  Plain recovery prose.
+? choose@fedcba98765432100123
+  Later choice prose.
+  -> END
+
+---
+
+(source_file
+  (match_statement
+    (match_marker)
+    (hspace)
+    (condition_expression
+      (expression_part
+        (call
+          (function_name
+            (identifier))
+          (arguments
+            (argument
+              (value
+                (symbol
+                  (identifier))))))))
+    (newline))
+  (case_statement
+    (case_marker)
+    (hspace)
+    (identifier)
+    (newline))
+  (line_statement
+    (line_marker)
+    (hspace)
+    (line_name
+      (identifier)
+      (id_suffix
+        (stable_id)))
+    (newline))
+  (prose_line
+    (indent)
+    (prose_text
+      (prose_start))
+    (newline))
+  (choice_statement
+    (choice_marker)
+    (hspace)
+    (choice_name
+      (identifier)
+      (id_suffix
+        (stable_id)))
+    (newline))
+  (prose_line
+    (indent)
+    (prose_text
+      (prose_start))
+    (newline))
+  (divert_statement
+    (indent)
+    (divert_marker)
+    (hspace)
+    (target
+      (end_target))
+    (newline)))
+
+==================
+Hyphen prose preserves adjacent statements
+==================
+:: hyphen_recovery default
+> first@0123456789abcdef0123
+  - Not yet.
+  -> target
+> after@fedcba98765432100123
+  Statement recovery remains visible.
+-> END
+
+---
+(source_file
+  (block_statement
+    (block_marker)
+    (hspace)
+    (block_name
+      (identifier))
+    (block_attribute
+      (hspace)
+      (block_default))
+    (newline))
+  (line_statement
+    (line_marker)
+    (hspace)
+    (line_name
+      (identifier)
+      (id_suffix
+        (stable_id)))
+    (newline))
+  (prose_line
+    (indent)
+    (prose_text
+      (prose_start))
+    (newline))
+  (divert_statement
+    (indent)
+    (divert_marker)
+    (hspace)
+    (target)
+    (newline))
+  (line_statement
+    (line_marker)
+    (hspace)
+    (line_name
+      (identifier)
+      (id_suffix
+        (stable_id)))
+    (newline))
+  (prose_line
+    (indent)
+    (prose_text
+      (prose_start))
+    (newline))
+  (divert_statement
+    (divert_marker)
+    (hspace)
+    (target
+      (end_target))
+    (newline)))

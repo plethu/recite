@@ -54,3 +54,33 @@ macro_rules! lsp_message_ids {
         | MsgId::LspWarningUiConfig
     };
 }
+
+macro_rules! lsp_client_message_ids {
+    () => {
+        MsgId::LspClientStartFailed
+        | MsgId::LspClientError
+        | MsgId::LspClientExited
+        | MsgId::LspClientRestartScheduled
+        | MsgId::LspClientTransportFailed
+        | MsgId::LspClientProtocolFailed
+        | MsgId::LspClientLifecycleFailed
+        | MsgId::LspClientDescription
+        | MsgId::LspClientUntrustedWorkspacesDescription
+        | MsgId::LspClientConfigurationTitle
+        | MsgId::LspClientConfigurationPathDescription
+        | MsgId::LspClientConfigurationArgsDescription
+        | MsgId::LspClientConfigurationProjectRootDescription
+        | MsgId::LspClientActionStale
+        | MsgId::LspClientActionClosed
+        | MsgId::LspClientActionReopened
+        | MsgId::LspClientActionExpired
+        | MsgId::LspClientActionEvicted
+        | MsgId::LspClientActionUnknown
+        | MsgId::LspClientActionApplyFailed
+        | MsgId::LspClientConfigPathInvalid
+        | MsgId::LspClientConfigArgsInvalid
+        | MsgId::LspClientConfigProjectRootInvalid
+        | MsgId::LspClientConfigProjectRootNeedsWorkspace
+        | MsgId::LspClientNotRunning
+    };
+}

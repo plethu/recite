@@ -1,0 +1,141 @@
+==================
+Draft and malformed IDs remain recoverable
+==================
+:: recovery default
+>
+  A bare line header remains available while its label is being drafted.
+> missing@
+  A draft header without an anchor remains visible.
+> malformed@bad
+  A malformed anchor remains attached to its line.
+? choice@NOT_AN_ANCHOR
+  A malformed choice anchor remains attached to its choice.
+  -> END
+?
+  A bare choice header remains available while its label is being drafted.
+> long@0123456789abcdef01234
+  An overlong hexadecimal suffix remains one malformed fragment.
+> prefix_junk@0123456789abcdef0123junk
+  A valid-looking prefix followed by junk remains one malformed fragment.
+> valid@0123456789abcdef0123
+  A valid anchor remains separately classified.
+  -> END
+
+---
+
+(source_file
+  (block_statement
+    (block_marker)
+    (hspace)
+    (block_name
+      (identifier))
+    (block_attribute
+      (hspace)
+      (block_default))
+    (newline))
+  (line_statement
+    (line_marker)
+    (newline))
+  (prose_line
+    (indent)
+    (prose_text
+      (prose_start))
+    (newline))
+  (line_statement
+    (line_marker)
+    (hspace)
+    (line_name
+      (identifier))
+    (newline))
+  (prose_line
+    (indent)
+    (prose_text
+      (prose_start))
+    (newline))
+  (line_statement
+    (line_marker)
+    (hspace)
+    (line_name
+      (identifier)
+      (id_suffix
+        (draft_id)))
+    (newline))
+  (prose_line
+    (indent)
+    (prose_text
+      (prose_start))
+    (newline))
+  (choice_statement
+    (choice_marker)
+    (hspace)
+    (choice_name
+      (identifier)
+      (id_suffix
+        (draft_id)))
+    (newline))
+  (prose_line
+    (indent)
+    (prose_text
+      (prose_start))
+    (newline))
+  (divert_statement
+    (indent)
+    (divert_marker)
+    (hspace)
+    (target
+      (end_target))
+    (newline))
+  (choice_statement
+    (choice_marker)
+    (newline))
+  (prose_line
+    (indent)
+    (prose_text
+      (prose_start))
+    (newline))
+  (line_statement
+    (line_marker)
+    (hspace)
+    (line_name
+      (identifier)
+      (id_suffix
+        (draft_id)))
+    (newline))
+  (prose_line
+    (indent)
+    (prose_text
+      (prose_start))
+    (newline))
+  (line_statement
+    (line_marker)
+    (hspace)
+    (line_name
+      (identifier)
+      (id_suffix
+        (draft_id)))
+    (newline))
+  (prose_line
+    (indent)
+    (prose_text
+      (prose_start))
+    (newline))
+  (line_statement
+    (line_marker)
+    (hspace)
+    (line_name
+      (identifier)
+      (id_suffix
+        (stable_id)))
+    (newline))
+  (prose_line
+    (indent)
+    (prose_text
+      (prose_start))
+    (newline))
+  (divert_statement
+    (indent)
+    (divert_marker)
+    (hspace)
+    (target
+      (end_target))
+    (newline)))

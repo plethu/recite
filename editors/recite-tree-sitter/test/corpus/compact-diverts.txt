@@ -1,0 +1,103 @@
+==================
+Compact and spaced diverts preserve targets
+==================
+->END
+-> target
+
+---
+
+(source_file
+  (divert_statement
+    (divert_marker)
+    (target
+      (end_target))
+    (newline))
+  (divert_statement
+    (divert_marker)
+    (hspace)
+    (target)
+    (newline)))
+
+==================
+Indented compact diverts and following statements
+==================
+? choose@0123456789abcdef0123
+  Choice prose.
+  ->END
+  ->target
+> following@fedcba98765432100123
+  Following prose.
+
+---
+
+(source_file
+  (choice_statement
+    (choice_marker)
+    (hspace)
+    (choice_name
+      (identifier)
+      (id_suffix
+        (stable_id)))
+    (newline))
+  (prose_line
+    (indent)
+    (prose_text
+      (prose_start))
+    (newline))
+  (divert_statement
+    (indent)
+    (divert_marker)
+    (target
+      (end_target))
+    (newline))
+  (divert_statement
+    (indent)
+    (divert_marker)
+    (target)
+    (newline))
+  (line_statement
+    (line_marker)
+    (hspace)
+    (line_name
+      (identifier)
+      (id_suffix
+        (stable_id)))
+    (newline))
+  (prose_line
+    (indent)
+    (prose_text
+      (prose_start))
+    (newline)))
+
+==================
+Malformed target retains following statement recovery
+==================
+->target,
+> following@0123456789abcdef0123
+  Recovery prose.
+->
+
+---
+
+(source_file
+  (divert_statement
+    (divert_marker)
+    (target)
+    (newline))
+  (line_statement
+    (line_marker)
+    (hspace)
+    (line_name
+      (identifier)
+      (id_suffix
+        (stable_id)))
+    (newline))
+  (prose_line
+    (indent)
+    (prose_text
+      (prose_start))
+    (newline))
+  (ERROR
+    (divert_marker))
+  (blank_line
+    (newline)))

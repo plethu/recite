@@ -70,6 +70,45 @@ pub(super) const fn key(id: super::MsgId) -> Option<&'static str> {
         super::MsgId::LspCodeActionSchemaAction => Some("lsp-code-action-schema-action"),
         super::MsgId::LspCodeActionSchemaDisabled => Some("lsp-code-action-schema-disabled"),
         super::MsgId::LspWarningUiConfig => Some("lsp-warning-ui-config"),
+        super::MsgId::LspClientStartFailed => Some("lsp-client-start-failed"),
+        super::MsgId::LspClientError => Some("lsp-client-error"),
+        super::MsgId::LspClientExited => Some("lsp-client-exited"),
+        super::MsgId::LspClientRestartScheduled => Some("lsp-client-restart-scheduled"),
+        super::MsgId::LspClientRestartExhausted => Some("lsp-client-restart-exhausted"),
+        super::MsgId::LspClientTransportFailed => Some("lsp-client-transport-failed"),
+        super::MsgId::LspClientProtocolFailed => Some("lsp-client-protocol-failed"),
+        super::MsgId::LspClientLifecycleFailed => Some("lsp-client-lifecycle-failed"),
+        super::MsgId::LspClientDisplayName => Some("lsp-client-display-name"),
+        super::MsgId::LspClientDescription => Some("lsp-client-description"),
+        super::MsgId::LspClientUntrustedWorkspacesDescription => {
+            Some("lsp-client-untrusted-workspaces-description")
+        }
+        super::MsgId::LspClientConfigurationTitle => Some("lsp-client-configuration-title"),
+        super::MsgId::LspClientConfigurationPathDescription => {
+            Some("lsp-client-configuration-path-description")
+        }
+        super::MsgId::LspClientConfigurationArgsDescription => {
+            Some("lsp-client-configuration-args-description")
+        }
+        super::MsgId::LspClientConfigurationProjectRootDescription => {
+            Some("lsp-client-configuration-project-root-description")
+        }
+        super::MsgId::LspClientActionStale => Some("lsp-client-action-stale"),
+        super::MsgId::LspClientActionClosed => Some("lsp-client-action-closed"),
+        super::MsgId::LspClientActionReopened => Some("lsp-client-action-reopened"),
+        super::MsgId::LspClientActionExpired => Some("lsp-client-action-expired"),
+        super::MsgId::LspClientActionEvicted => Some("lsp-client-action-evicted"),
+        super::MsgId::LspClientActionUnknown => Some("lsp-client-action-unknown"),
+        super::MsgId::LspClientActionApplyFailed => Some("lsp-client-action-apply-failed"),
+        super::MsgId::LspClientConfigPathInvalid => Some("lsp-client-config-path-invalid"),
+        super::MsgId::LspClientConfigArgsInvalid => Some("lsp-client-config-args-invalid"),
+        super::MsgId::LspClientConfigProjectRootInvalid => {
+            Some("lsp-client-config-project-root-invalid")
+        }
+        super::MsgId::LspClientConfigProjectRootNeedsWorkspace => {
+            Some("lsp-client-config-project-root-needs-workspace")
+        }
+        super::MsgId::LspClientNotRunning => Some("lsp-client-not-running"),
         _ => None,
     }
 }

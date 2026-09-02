@@ -2,6 +2,7 @@ mod ast;
 mod diagnostics;
 mod issue;
 mod ownership;
+mod projections;
 mod validate;
 
 use std::collections::{BTreeMap, BTreeSet};
@@ -154,6 +155,13 @@ impl Default for UiContract {
                 // naming prefixes. Future clients remain conformance entries.
                 for client in ownership::clients(*id) {
                     spec = spec.client(*client);
+                }
+                for projection in projections::for_message(*id) {
+                    spec = spec.projection(ProjectionSpec::new(
+                        id.resource_id(),
+                        projection.client,
+                        projection.field,
+                    ));
                 }
                 spec
             })

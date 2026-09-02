@@ -6,10 +6,10 @@ usage() {
 Usage:
   check-maintainability.sh [base-ref [head-ref]] [--full]
 
-Checks changed handwritten Rust for maintainability regressions. Line counts
-are review triggers, not automatic split rules:
-  production Rust: scrutiny >250, follow-up >400
-  test/support Rust: scrutiny >350, follow-up >500
+Checks changed handwritten Rust, JavaScript, Lua, Python, and shell source.
+Line counts are review triggers, not automatic split rules:
+  production and tooling: scrutiny >250, follow-up >400
+  test/support: scrutiny >350, follow-up >500
 
 Unchanged oversized files are reported as legacy debt and pass. New or newly
 triggered files must be recorded in docs/maintainability-baseline.md. A file
@@ -29,6 +29,17 @@ repo_root="$(git rev-parse --show-toplevel 2>/dev/null)" || {
   echo "unable to resolve Git repository root" >&2
   exit 2
 }
+
+script_dir="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
+# Keep policy functions separate from this orchestration entrypoint.  This
+# prevents the gate from becoming an oversized tooling file as languages are
+# added while keeping the policy executable and fixture-testable.
+# shellcheck source=scripts/maintainability/paths.sh
+source "$script_dir/maintainability/paths.sh"
+# shellcheck source=scripts/maintainability/baseline.sh
+source "$script_dir/maintainability/baseline.sh"
+# shellcheck source=scripts/maintainability/diff.sh
+source "$script_dir/maintainability/diff.sh"
 
 full_scan=0
 refs=()
@@ -70,270 +81,48 @@ if [[ ! -f "$baseline_file" ]]; then
   exit 2
 fi
 
-is_test_path() {
-  local path="$1"
-  [[ "$path" == crates/*/tests/* \
-    || "$path" == crates/*/benches/* \
-    || "$path" == crates/*/src/tests.rs \
-    || "$path" == crates/*/src/tests/* \
-    || "$path" == */src/*/tests.rs \
-    || "$path" == tests/* ]]
-}
-
-is_rust_source_path() {
-  local path="$1"
-  [[ "$path" == crates/*/src/* || "$path" == crates/*/tests/* \
-    || "$path" == crates/*/benches/* \
-    || "$path" == tests/* ]]
-}
-
-is_excluded_path() {
-  case "$1" in
-    target/*|include/recite.h|fixtures/generated/*)
-      return 0
-      ;;
-    *)
-      return 1
-      ;;
-  esac
-}
-
-is_valid_handwritten_path() {
-  local path="$1"
-  [[ "$path" =~ ^(crates|tests)/[A-Za-z0-9._/-]+\.rs$ ]] || return 1
-  case "$path" in
-    */../*|*/..|../*|./*|*/./*)
-      return 1
-      ;;
-  esac
-  is_rust_source_path "$path" && ! is_excluded_path "$path"
-}
-
-classify_path() {
-  if ! is_valid_handwritten_path "$1"; then
-    return 1
-  fi
-  if is_test_path "$1"; then
-    printf 'test/support\n'
-  else
-    printf 'production\n'
-  fi
-}
-
-line_count_at() {
-  local revision="$1"
-  local path="$2"
-  if ! git -C "$repo_root" cat-file -e "${revision}:${path}" 2>/dev/null; then
-    printf '0\n'
-    return
-  fi
-  git -C "$repo_root" show "${revision}:${path}" | awk 'END { print NR + 0 }'
-}
-
-parse_baseline_rows() {
-  awk -F'|' '
-    function trim(value) {
-      gsub(/^[[:space:]]+|[[:space:]]+$/, "", value)
-      return value
-    }
-    /^## Inventory$/ {
-      in_baseline = 1
-      next
-    }
-    in_baseline && /^[[:space:]]*\|/ {
-      path_cell = trim($2)
-      if (path_cell == "Path" && trim($3) == "Lines") {
-        next
-      }
-      if (path_cell ~ /^-+$/) {
-        next
-      }
-      if (NF != 8) {
-        print "ERROR\t" NR "\tbaseline data row must have six columns"
-        next
-      }
-      if (path_cell !~ /^`[^`]+`$/) {
-        print "ERROR\t" NR "\tbaseline path must be enclosed in backticks"
-        next
-      }
-      sub(/^`/, "", path_cell)
-      sub(/`$/, "", path_cell)
-      lines = trim($3)
-      kind = trim($4)
-      owner = trim($5)
-      disposition = trim($6)
-      reason = trim($7)
-      if (path_cell ~ /[\t\r]/ || lines ~ /[\t\r]/ || kind ~ /[\t\r]/ || owner ~ /[\t\r]/ || disposition ~ /[\t\r]/ || reason ~ /[\t\r]/) {
-        print "ERROR\t" NR "\tbaseline data row must not contain tabs or carriage returns"
-        next
-      }
-      print "ROW\t" NR "\t" path_cell "\t" lines "\t" kind "\t" owner "\t" disposition "\t" reason
-    }
-  ' "$baseline_file"
-}
-
-valid_issue_reason() {
-  local disposition="$1"
-  local reason="$2"
-  [[ -n "$reason" ]] || return 1
-
-  local remaining="$reason"
-  if [[ "$reason" == *'#'* ]]; then
-    # Issue references are deliberately offline and syntax-only: #1, #2, ...
-    # followed by punctuation, whitespace, or the end of the reason.
-    remaining="$(printf '%s\n' "$reason" | sed -E 's/#[1-9][0-9]*([^[:alnum:]_]|$)/\1/g')"
-    [[ "$remaining" != *'#'* ]] || return 1
-    [[ "$remaining" =~ [[:alpha:]] ]] || return 1
-  elif [[ "$disposition" == exception ]]; then
-    return 1
-  fi
-
-  return 0
-}
-
 declare -A baseline_seen=()
 declare -A baseline_dispositions=()
-
-validate_baseline() {
-  local record line_number path lines kind owner disposition reason
-  local expected_kind scrutiny actual_lines
-  local validation_failures=0
-
-  while IFS=$'\t' read -r record line_number path lines kind owner disposition reason; do
-    [[ -n "$record" ]] || continue
-    if [[ "$record" == ERROR ]]; then
-      echo "invalid maintainability baseline at line $line_number: $path" >&2
-      validation_failures=$((validation_failures + 1))
-      continue
-    fi
-
-    if [[ "$record" != ROW ]]; then
-      echo "invalid maintainability baseline record: $record" >&2
-      validation_failures=$((validation_failures + 1))
-      continue
-    fi
-    if [[ -n "${baseline_seen["$path"]+present}" ]]; then
-      echo "duplicate maintainability baseline row at line $line_number: $path" >&2
-      validation_failures=$((validation_failures + 1))
-      continue
-    fi
-    baseline_seen["$path"]=1
-
-    if [[ ! "$lines" =~ ^[1-9][0-9]*$ ]]; then
-      echo "invalid line count at baseline line $line_number: $path ($lines)" >&2
-      validation_failures=$((validation_failures + 1))
-    fi
-    if [[ -z "$owner" ]]; then
-      echo "missing baseline owner at line $line_number: $path" >&2
-      validation_failures=$((validation_failures + 1))
-    fi
-    case "$disposition" in
-      cohesive|follow-up|review|exception)
-        ;;
-      *)
-        echo "unknown baseline disposition at line $line_number: $path ($disposition)" >&2
-        validation_failures=$((validation_failures + 1))
-        ;;
-    esac
-    if ! valid_issue_reason "$disposition" "$reason"; then
-      echo "malformed baseline issue/reason at line $line_number: $path" >&2
-      validation_failures=$((validation_failures + 1))
-    fi
-
-    expected_kind="$(classify_path "$path" || true)"
-    if [[ -z "$expected_kind" ]]; then
-      echo "invalid maintainability baseline path at line $line_number: $path" >&2
-      validation_failures=$((validation_failures + 1))
-      continue
-    fi
-    if [[ "$kind" != "$expected_kind" ]]; then
-      echo "incorrect baseline classification at line $line_number: $path (recorded $kind, expected $expected_kind)" >&2
-      validation_failures=$((validation_failures + 1))
-    fi
-    if ! git -C "$repo_root" cat-file -e "${head_sha}:${path}" 2>/dev/null; then
-      echo "baseline path is missing at head: $path" >&2
-      validation_failures=$((validation_failures + 1))
-      continue
-    fi
-    if [[ "$expected_kind" == production ]]; then
-      scrutiny=250
-    else
-      scrutiny=350
-    fi
-    actual_lines="$(line_count_at "$head_sha" "$path")"
-    if [[ "$lines" =~ ^[1-9][0-9]*$ && "$lines" -ne "$actual_lines" ]]; then
-      echo "baseline line count mismatch at line $line_number: $path (recorded $lines, actual $actual_lines)" >&2
-      validation_failures=$((validation_failures + 1))
-    fi
-    if (( actual_lines <= scrutiny )); then
-      echo "stale maintainability baseline row at line $line_number: $path is now $actual_lines lines" >&2
-      validation_failures=$((validation_failures + 1))
-    fi
-
-    baseline_dispositions["$path"]="$disposition"
-  done < <(parse_baseline_rows)
-
-  return "$validation_failures"
-}
-
-if ! validate_baseline; then
+if ! maintainability_validate_baseline; then
   echo "maintainability baseline validation failed" >&2
   exit 1
 fi
 
-declare -a paths=()
 declare -a all_paths=()
-declare -A base_paths=()
 while IFS= read -r -d '' path; do
   all_paths+=("$path")
 done < <(git -C "$repo_root" ls-tree -r --name-only -z "$head_sha")
 
+declare -a paths=()
+declare -A base_paths=()
+declare -A renamed_paths=()
 if (( full_scan )); then
   paths=("${all_paths[@]}")
   echo "== full maintainability inventory at $head_sha =="
 else
-  if (( empty_base )); then
-    diff_range="$base_sha $head_sha"
-    diff_command=(git -C "$repo_root" diff --name-status -z -M --diff-filter=ACMR "$base_sha" "$head_sha" -- '*.rs')
-  else
-    diff_range="$base_sha...$head_sha"
-    diff_command=(git -C "$repo_root" diff --name-status -z -M --diff-filter=ACMR "${base_sha}...${head_sha}" -- '*.rs')
+  diff_range=""
+  if ! maintainability_collect_paths "$repo_root" "$base_sha" "$head_sha" "$empty_base" paths base_paths renamed_paths; then
+    exit 2
   fi
-  while IFS= read -r -d '' status; do
-    case "$status" in
-      R*|C*)
-        if ! IFS= read -r -d '' base_path || ! IFS= read -r -d '' path; then
-          echo "malformed changed-path record from git diff: $status" >&2
-          exit 2
-        fi
-        ;;
-      *)
-        if ! IFS= read -r -d '' path; then
-          echo "malformed changed-path record from git diff: $status" >&2
-          exit 2
-        fi
-        base_path="$path"
-        ;;
-    esac
-    paths+=("$path")
-    base_paths["$path"]="$base_path"
-  done < <("${diff_command[@]}")
   echo "== changed maintainability inventory: $diff_range =="
 fi
 
 failures=0
 triggered=0
 
+# Every oversized source file must have a truthful current inventory row,
+# including unchanged debt.  This makes the baseline an ownership map rather
+# than a list that only happens to mention files touched by the current diff.
 for path in "${all_paths[@]}"; do
-  [[ "$path" == *.rs ]] || continue
-  kind="$(classify_path "$path" || true)"
+  kind="$(maintainability_classify_path "$path" || true)"
   [[ -n "$kind" ]] || continue
-  if [[ "$kind" == production ]]; then
-    scrutiny=250
-  else
-    scrutiny=350
+  if ! maintainability_is_regular_file_at "$repo_root" "$head_sha" "$path"; then
+    echo "eligible maintainability source is not a regular file: $path" >&2
+    failures=$((failures + 1))
+    continue
   fi
-  head_lines="$(line_count_at "$head_sha" "$path")"
+  scrutiny="$(maintainability_scrutiny_threshold "$kind")"
+  head_lines="$(maintainability_line_count_at "$repo_root" "$head_sha" "$path")"
   if (( head_lines > scrutiny )) && [[ -z "${baseline_seen["$path"]+present}" ]]; then
     echo "missing baseline row for $path ($kind, $head_lines lines; scrutiny threshold $scrutiny)" >&2
     failures=$((failures + 1))
@@ -341,22 +130,32 @@ for path in "${all_paths[@]}"; do
 done
 
 for path in "${paths[@]}"; do
-  [[ "$path" == *.rs ]] || continue
-  kind="$(classify_path "$path" || true)"
+  kind="$(maintainability_classify_path "$path" || true)"
   [[ -n "$kind" ]] || continue
 
-  if [[ "$kind" == production ]]; then
-    scrutiny=250
-    follow_up=400
-  else
-    scrutiny=350
-    follow_up=500
-  fi
-
-  head_lines="$(line_count_at "$head_sha" "$path")"
+  scrutiny="$(maintainability_scrutiny_threshold "$kind")"
+  follow_up="$(maintainability_follow_up_threshold "$kind")"
+  head_lines="$(maintainability_line_count_at "$repo_root" "$head_sha" "$path")"
   base_lines=0
+  policy_transition=0
   if (( ! full_scan )); then
-    base_lines="$(line_count_at "$base_sha" "${base_paths["$path"]-$path}")"
+    base_path="${base_paths["$path"]-$path}"
+    base_lines="$(maintainability_line_count_at "$repo_root" "$base_sha" "$base_path")"
+    if [[ -n "${renamed_paths["$path"]+present}" ]]; then
+      base_kind="$(maintainability_classify_path "$base_path" || true)"
+      if [[ -z "$base_kind" ]]; then
+        policy_transition=1
+      else
+        base_scrutiny="$(maintainability_scrutiny_threshold "$base_kind")"
+        base_follow_up="$(maintainability_follow_up_threshold "$base_kind")"
+        if (( scrutiny < base_scrutiny || follow_up < base_follow_up )); then
+          policy_transition=1
+        fi
+      fi
+      if (( policy_transition )); then
+        base_lines=0
+      fi
+    fi
   fi
   if (( head_lines <= scrutiny )); then
     continue
@@ -368,7 +167,9 @@ for path in "${paths[@]}"; do
     continue
   fi
 
-  if (( base_lines == head_lines )); then
+  if (( policy_transition )); then
+    echo "policy transition trigger: $path ($kind, newly entering stricter maintainability policy; threshold $scrutiny)"
+  elif (( base_lines == head_lines )); then
     echo "unchanged trigger: $path ($kind, $head_lines lines; threshold $scrutiny)"
   elif (( head_lines < base_lines )); then
     echo "shrinking trigger: $path ($kind, $base_lines -> $head_lines lines)"
@@ -388,7 +189,7 @@ for path in "${paths[@]}"; do
 done
 
 if (( ${#paths[@]} == 0 )); then
-  echo "no changed Rust source files"
+  echo "no changed maintainability source files"
 fi
 echo "maintainability triggers: $triggered"
 if (( failures > 0 )); then

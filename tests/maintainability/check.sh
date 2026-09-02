@@ -15,7 +15,7 @@ new_fixture() {
   cleanup
   test_root="$(mktemp -d)"
   mkdir -p "$test_root/repo/crates/demo/src" "$test_root/repo/crates/demo/tests" "$test_root/repo/crates/demo/benches" "$test_root/repo/tests" "$test_root/repo/docs" "$test_root/repo/scripts"
-  cp "$repo_root/scripts/check-maintainability.sh" "$test_root/repo/scripts/check-maintainability.sh"
+  copy_gate
   chmod +x "$test_root/repo/scripts/check-maintainability.sh"
   # These literals intentionally contain Markdown code ticks.
   # shellcheck disable=SC2016
@@ -60,9 +60,8 @@ write_lines() {
 initial_push_fixture() {
   cleanup
   test_root="$(mktemp -d)"
-  mkdir -p "$test_root/repo/crates/demo/src" "$test_root/repo/docs" "$test_root/repo/scripts"
-  cp "$repo_root/scripts/check-maintainability.sh" "$test_root/repo/scripts/check-maintainability.sh"
-  chmod +x "$test_root/repo/scripts/check-maintainability.sh"
+  mkdir -p "$test_root/repo/crates/demo/src" "$test_root/repo/editors/vscode/src" "$test_root/repo/docs" "$test_root/repo/scripts"
+  copy_gate
   # This literal intentionally contains Markdown code ticks.
   # shellcheck disable=SC2016
   printf '%s\n' \
@@ -73,12 +72,21 @@ initial_push_fixture() {
     '| Path | Lines | Kind | Owner | Disposition | Issue/reason |' \
     '| --- | ---: | --- | --- | --- | --- |' \
     '| `crates/demo/src/new.rs` | 300 | production | demo | cohesive | initial push fixture |' \
+    '| `editors/vscode/src/new.js` | 300 | production | editor-runtime | cohesive | initial push fixture |' \
     > "$test_root/repo/docs/maintainability-baseline.md"
   git -C "$test_root/repo" init -q -b main
   git -C "$test_root/repo" config user.name Fixture
   git -C "$test_root/repo" config user.email fixture@example.invalid
   git -C "$test_root/repo" config commit.gpgsign false
   write_lines crates/demo/src/new.rs 300
+  write_lines editors/vscode/src/new.js 300
+}
+
+copy_gate() {
+  cp "$repo_root/scripts/check-maintainability.sh" "$test_root/repo/scripts/check-maintainability.sh"
+  mkdir -p "$test_root/repo/scripts/maintainability"
+  cp "$repo_root/scripts/maintainability"/*.sh "$test_root/repo/scripts/maintainability/"
+  chmod +x "$test_root/repo/scripts/check-maintainability.sh" "$test_root/repo/scripts/maintainability"/*.sh
 }
 
 commit_fixture() {
@@ -242,6 +250,8 @@ expect_full_fail malformed issue/reason reference
 initial_push_fixture
 commit_fixture initial
 expect_initial_push_pass initial push empty-tree fallback
+
+"$repo_root/tests/maintainability/check-cross-language.sh"
 
 new_fixture
 write_lines crates/demo/src/large.rs 401

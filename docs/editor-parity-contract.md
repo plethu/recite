@@ -2,9 +2,9 @@
 
 This is the shared contract for Recite's first-class text authoring surfaces.
 It describes what an editor client can rely on and where the client stops being
-the authority. It is deliberately useful before a VS Code, Neovim, or Zed
-package exists: a planned client is not an implemented client, and a packaged
-artifact is not a published artifact.
+the authority. A partial client is not an installed or published client, and a
+packaged artifact is not a published artifact; the Neovim source integration is
+checked in but remains Linux-only partial support.
 
 The machine-readable companion is
 [`fixtures/editor-parity/contract.json`](../fixtures/editor-parity/contract.json).
@@ -12,6 +12,7 @@ The checker and the stdio tests are part of the repository gate:
 
 ```text
 scripts/check-editor-parity.sh
+scripts/check-vscode.sh
 cargo test --locked -p recite-lsp --test editor_parity
 ```
 
@@ -71,6 +72,40 @@ is therefore an explicit unsupported/planned capability in this contract;
 clients must not claim cancellation support or infer it from a request timeout.
 Issue #53 owns the command/watch lifecycle and the future cancellation contract.
 
+## Evidence input boundary
+
+The parity evidence compiler digest uses Git's path set rather than walking the
+filesystem. It includes tracked files and nonignored untracked files, in stable
+repository-relative byte order, so source changes still invalidate evidence even
+when a file's mtime is restored. It deliberately excludes ignored build output,
+editor packages, documentation-site output, and Python bytecode; creating or
+rewriting those files must not trigger a Cargo evidence rebuild.
+
+Tracked and force-added files remain inputs even when their names resemble an
+ignored output path such as `target/`, `node_modules/`, `__pycache__/`, or a
+`.pyc`/`.pyo` file. The Git index mode and current worktree permission mode are
+included too, so executable-bit changes cannot reuse stale evidence.
+
+The only repository-metadata exception is the exact root `CLAUDE.md` path and
+paths below the exact root `.claude/` directory. These are agent metadata in
+this checkout and are excluded before symlink checks because the tracked
+checkout intentionally represents them as metadata symlinks. A similarly named
+`nested/CLAUDE.md` or `nested/.claude/` path is not metadata and follows the
+ordinary digest and symlink rules.
+
+An ignored untracked file is not an accepted compiler-input surface. If a
+`build.rs`, `include!`, generated source step, or other compiler action needs a
+file that is currently ignored, remove the ignore rule or force-add the file to
+Git. Force-added files are tracked inputs and therefore count. The checker does
+not pretend to discover an arbitrary ignored Cargo input from a pre-compilation
+filesystem walk.
+
+Nested repositories and Git submodules are not accepted digest inputs. Git may
+enumerate an untracked nested repository as a directory or a staged submodule
+as a mode-160000 gitlink; either form fails closed with a controlled checker
+error. Remove the nested repository/submodule from the compiler tree or make
+its source files ordinary repository inputs before collecting evidence.
+
 ## Structured commands and watch
 
 The intended command boundary is structured: compile, validate, extract, run,
@@ -89,7 +124,11 @@ The checked-in fixture gives each capability a stable ID, semantic authority,
 protocol, canonical scenario, expected structured evidence, edge cases, client
 and platform status, and owning follow-up. The rows below are the normative
 capability set; the checker rejects drift between this document and the JSON
-fixture.
+fixture. A record's `artifact` is its primary artifact; an optional `artifacts`
+array names the complete supporting set, must be unique, and must include the
+primary artifact. A partial client may have a partial or implemented primary;
+an implemented client and any partial or implemented distribution require an
+implemented primary artifact.
 
 - `lsp.initialize.capabilities`: advertise the supported sync, UTF-16, and LSP feature capabilities from the real server.
 - `lsp.publish.diagnostics`: publish structured diagnostics for malformed source through the real LSP transport.
@@ -99,9 +138,9 @@ fixture.
 - `lsp.stale.version`: refuse an older document version without replacing the current overlay or publishing stale evidence.
 - `lsp.cancellation`: document the current unsupported cancellation surface and its owner rather than claiming a timeout is cancellation.
 - `command.structured.results`: project the shared `BuildStatusProjection` fields while reserving CLI wire, process, binary, and client integration for #53.
-- `editor.filetype.registration`: reserve `.recite` activation and file association evidence for the client owners.
+- `editor.filetype.registration`: exercise `.recite` activation and file association through the checked-in Neovim runtimepath package.
 - `editor.vscode.syntax-projection`: reserve the syntax-only TextMate projection for #97.
-- `editor.neovim.syntax-projection`: reserve the plugin-manager-neutral Tree-sitter projection for #98.
+- `editor.neovim.syntax-projection`: record ABI14 Tree-sitter parser/query loading through the Neovim package; the shared grammar remains owned by #98.
 - `editor.zed.syntax-projection`: reserve Zed syntax and compatibility evidence for #192.
 - `lsp.completion`: project structured completion items from the shared snapshot.
 - `lsp.definition`: resolve same-project and cross-file definitions through the shared snapshot.
@@ -119,11 +158,26 @@ fixture.
 
 Executable evidence covers the shared LSP operations, project-root discovery,
 the bounded stable-ID repair, compiler catalogue fallback, the compiler's
-protocol-neutral build projection, and CLI locale fallback through the checked-in
-`fixtures/recite/valid/locale_fallback_fr.po` catalogue. This does not claim a
-versioned CLI/watch envelope, process or binary integration, combined LSP
-schema/catalogue transport, cancellation transport, client activation, or
-syntax grammars; those remain planned/unsupported boundaries.
+protocol-neutral build projection, CLI locale fallback through the checked-in
+`fixtures/recite/valid/locale_fallback_fr.po` catalogue, the syntax-only
+Tree-sitter grammar check, the Neovim runtimepath check, and the checked-in
+VS Code/VSCodium package scaffold. The grammar check proves generated-parser
+reproducibility, canonical fixture coverage, recovery boundaries, and lexical
+captures; the Neovim check adds Linux/0.12.5 filetype, LSP, and ABI14 parser
+evidence. The VS Code package check validates the generated VSIX contents and
+the Node tests exercise the real `recite-lsp` process over stdio on Linux.
+Those checks do not establish installed VS Code or VSCodium host activation,
+macOS or Windows support, marketplace publication, or a distributable archive
+in source control. This still does not claim a versioned CLI/watch envelope,
+process or binary integration, combined LSP schema/catalogue transport,
+cancellation transport, native version-safe rename, or a TextMate or Zed
+grammar.
+
+Capability rows with direct VS Code/VSCodium package, adapter, or live-server
+evidence use `partial` client status and include `scripts/check-vscode.sh` in
+their evidence commands. Rows for native rename, command/watch integration,
+and other untested client operations remain planned even though the shared
+extension artifact exists.
 
 The rows currently draw from these scenarios. The source and schema files are
 the canonical fixtures; derived inputs are transformations or protocol events,
@@ -135,7 +189,7 @@ not copied Recite or schema sources.
 - `stale-overlay`: send a newer accepted overlay followed by an older one, then query the current text.
 - `stable-id-repair`: derive a missing-ID overlay from the canonical language fixture and request a shared-kernel repair.
 - `multi-file-project`: materialize two canonical source fixtures under one root and resolve a qualified cross-file target.
-- `client-syntax-projections`: reserve filetype and syntax-only evidence over the canonical language fixtures.
+- `client-syntax-projections`: record partial syntax-only Tree-sitter evidence alongside the checked-in VS Code/VSCodium package projection; installed host setup remains untested over the canonical language fixtures.
 - `schema-localisation-reference`: combine the canonical manifests and pressure source with the checked-in PO catalogue to exercise the current shared/CLI locale-fallback evidence.
 - `command-watch-reference`: exercise the protocol-neutral `BuildStatusProjection`; CLI wire, process, binary, cancellation transport, and client lifecycle evidence remain planned for #53.
 
@@ -143,21 +197,31 @@ not copied Recite or schema sources.
 
 Linux, macOS, and Windows are intended first-class desktop platforms. This
 contract records support claims separately so a Linux test run cannot imply
-Windows or macOS packaging evidence. At this checkpoint the shared LSP has
-partial protocol evidence on Linux only; no client artifact is implemented.
+Windows or macOS packaging evidence. At this checkpoint the shared LSP and
+the VS Code/VSCodium Node client have partial evidence on Linux only. The
+Neovim runtimepath source is checked in and exercised on Linux with Neovim
+0.12.5. Neovim 0.10.4 is an explicit compatibility target not yet executed in
+this checkout; no marketplace or Open VSX distribution is claimed.
 
 | Client | Shared artifact | Linux | macOS | Windows | Status |
 | --- | --- | --- | --- | --- | --- |
-| VS Code | one future VSIX | planned | planned | planned | planned |
-| VSCodium | the same future VSIX | planned | planned | planned | planned |
-| Neovim | future setup/grammar package | planned | planned | planned | planned |
+| VS Code | checked-in extension scaffold; generated VSIX | partial | planned | planned | partial |
+| VSCodium | the same checked-in scaffold and generated VSIX | partial | planned | planned | partial |
+| Neovim | checked-in native runtimepath setup plus Tree-sitter grammar; no package distribution | partial | planned | planned | partial |
 | Zed | future extension package | planned | planned | planned | planned |
 
-VS Code Marketplace and Open VSX are separate distribution claims. Packaging,
-publication, signing, and installation smoke are all still planned. A shared
-VSIX means the VS Code and VSCodium clients do not acquire separate semantic
-implementations; it does not mean either marketplace already carries an
-artifact.
+The VS Code and VSCodium partial status is deliberately narrower than host
+support: the extension source is checked in, deterministic VSIX generation and
+package validation pass, and Linux Node tests exercise a real `recite-lsp`
+process. Installed VS Code/VSCodium activation smoke is still missing, as are
+macOS and Windows checks. Native rename remains unregistered until a
+version-safe adapter exists; structured command and watch integration remains
+owned by #53.
+
+VS Code Marketplace and Open VSX are separate distribution claims. Publication,
+signing, and installation smoke are still planned. A shared VSIX means the VS
+Code and VSCodium clients do not acquire separate semantic implementations; it
+does not mean either marketplace already carries an artifact.
 
 ## Reopening conditions
 
@@ -168,5 +232,9 @@ client/package has executable evidence on a named platform. Such a change must
 update the JSON fixture, this document, and the corresponding tests together.
 
 The contract does not cover the GUI workbench, engine embedding, remote
-services, marketplace publication, or client implementation. Those remain the
-separate milestone and issue surfaces named in the fixture.
+services, marketplace publication, or installed-host compatibility. The
+checked-in Tree-sitter grammar remains a syntax artifact; Neovim consumes it
+through its runtimepath package. The Neovim client and distribution records
+therefore name `neovim-runtimepath` as their primary artifact and keep
+`tree-sitter-grammar` as supporting material. Zed does not consume either
+artifact without compatibility evidence and remains planned under #192.

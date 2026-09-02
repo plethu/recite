@@ -1,0 +1,16 @@
+{
+  "version": 1,
+  "grammars": [
+    {
+      "name": "recite",
+      "scope": "source.recite",
+      "file-types": ["recite"],
+      "highlights": "queries/highlights.scm"
+    }
+  ],
+  "metadata": {
+    "version": "0.1.0",
+    "description": "Syntax-only Tree-sitter grammar for Recite source",
+    "license": "MIT OR Apache-2.0"
+  }
+}

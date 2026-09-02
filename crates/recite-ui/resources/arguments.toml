@@ -391,6 +391,16 @@ function = "string"
 [arguments."lsp-warning-ui-config"]
 code = "string"
 detail = "string"
+[arguments."lsp-client-start-failed"]
+detail = "string"
+[arguments."lsp-client-error"]
+detail = "string"
+[arguments."lsp-client-restart-scheduled"]
+milliseconds = "integer"
+[arguments."lsp-client-transport-failed"]
+detail = "string"
+[arguments."lsp-client-lifecycle-failed"]
+detail = "string"
 [arguments."lsp-completion-projection-query-function"]
 returns = "string"
 [arguments."lsp-completion-projection-query-call"]
@@ -405,3 +415,12 @@ block = "string"
 name = "string"
 [arguments."lsp-code-action-add-effect"]
 name = "string"
+[arguments."neovim-callback-failed"]
+kind = "string"
+detail = "string"
+[arguments."neovim-health-lsp-executable-found"]
+command = "string"
+[arguments."neovim-health-lsp-executable-missing"]
+command = "string"
+[arguments."neovim-health-current-root"]
+root = "string"

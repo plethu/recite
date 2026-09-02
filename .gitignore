@@ -5,6 +5,8 @@
 node_modules/
 docs-site/.astro/
 docs-site/dist/
+editors/vscode/dist/
+editors/vscode/*.vsix
 
 .DS_Store
 .direnv/

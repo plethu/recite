@@ -1,0 +1,138 @@
+==================
+Physical lines retain blank-line structure
+==================
+:: physical default
+> line@0123456789abcdef0123
+
+  [slow]Final {name} prose.[/slow]
+
+---
+(source_file
+  (block_statement
+    (block_marker)
+    (hspace)
+    (block_name
+      (identifier))
+    (block_attribute
+      (hspace)
+      (block_default))
+    (newline))
+  (line_statement
+    (line_marker)
+    (hspace)
+    (line_name
+      (identifier)
+      (id_suffix
+        (stable_id)))
+    (newline))
+  (blank_line
+    (newline))
+  (prose_line
+    (indent)
+    (prose_text
+      (markup_tag
+        (markup_name))
+      (prose_content)
+      (interpolation
+        (placeholder
+          (identifier)))
+      (prose_content)
+      (markup_tag
+        (markup_name)))
+    (newline)))
+
+==================
+Empty source remains an empty tree
+==================
+
+---
+(source_file)
+
+==================
+Indented block headers terminate the preceding body
+==================
+:: outer default
+  > first@0123456789abcdef0123
+    First body.
+  :: nested speaker=guide
+  > nested@fedcba9876543210fedc
+    Nested body.
+	:: tabbed
+	> tabbed@00112233445566778899
+	  Tabbed body.
+
+---
+(source_file
+  (block_statement
+    (block_marker)
+    (hspace)
+    (block_name
+      (identifier))
+    (block_attribute
+      (hspace)
+      (block_default))
+    (newline))
+  (line_statement
+    (indent)
+    (line_marker)
+    (hspace)
+    (line_name
+      (identifier)
+      (id_suffix
+        (stable_id)))
+    (newline))
+  (prose_line
+    (indent)
+    (prose_text
+      (prose_start))
+    (newline))
+  (block_statement
+    (indent)
+    (block_marker)
+    (hspace)
+    (block_name
+      (identifier))
+    (block_attribute
+      (hspace)
+      (metadata_field
+        (metadata_key
+          (identifier))
+        (value
+          (symbol
+            (identifier)))))
+    (newline))
+  (line_statement
+    (indent)
+    (line_marker)
+    (hspace)
+    (line_name
+      (identifier)
+      (id_suffix
+        (stable_id)))
+    (newline))
+  (prose_line
+    (indent)
+    (prose_text
+      (prose_start))
+    (newline))
+  (block_statement
+    (indent)
+    (block_marker)
+    (hspace)
+    (block_name
+      (identifier))
+    (newline))
+  (line_statement
+    (indent)
+    (line_marker)
+    (hspace)
+    (line_name
+      (identifier)
+      (id_suffix
+        (stable_id)))
+    (newline))
+  (prose_line
+    (indent)
+    (prose_text
+      (prose_start))
+    (newline)))

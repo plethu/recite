@@ -1,0 +1,243 @@
+==================
+Escaped braces stay prose beside real interpolation
+==================
+:: escaped default
+> line@0123456789abcdef0123 bind=(value:string=$value)
+  Isolated opening \{
+  Isolated closing \}
+  Balanced \{name\}
+  Opening \{ remains prose; closing \} remains prose; balanced \{name\} remains prose.
+  Adjacent \{name\} and real {value} interpolation.
+? choice@fedcba98765432100123 bind=(value:string=$value)
+  Choice \{literal\} and real {value} interpolation.
+  -> END
+-> END
+
+---
+
+(source_file
+  (block_statement
+    (block_marker)
+    (hspace)
+    (block_name
+      (identifier))
+    (block_attribute
+      (hspace)
+      (block_default))
+    (newline))
+  (line_statement
+    (line_marker)
+    (hspace)
+    (line_name
+      (identifier)
+      (id_suffix
+        (stable_id)))
+    (header_attribute
+      (hspace)
+      (metadata_field
+        (metadata_key
+          (identifier))
+        (value
+          (grouped_value
+            (expression_part
+              (binding
+                (identifier)
+                (type_name
+                  (identifier))
+                (value
+                  (runtime_binding
+                    (identifier)))))))))
+    (newline))
+  (prose_line
+    (indent)
+    (prose_text
+      (prose_start)
+      (escaped_brace))
+    (newline))
+  (prose_line
+    (indent)
+    (prose_text
+      (prose_start)
+      (escaped_brace))
+    (newline))
+  (prose_line
+    (indent)
+    (prose_text
+      (prose_start)
+      (escaped_brace)
+      (prose_content)
+      (escaped_brace))
+    (newline))
+  (prose_line
+    (indent)
+    (prose_text
+      (prose_start)
+      (escaped_brace)
+      (prose_content)
+      (escaped_brace)
+      (prose_content)
+      (escaped_brace)
+      (prose_content)
+      (escaped_brace)
+      (prose_content))
+    (newline))
+  (prose_line
+    (indent)
+    (prose_text
+      (prose_start)
+      (escaped_brace)
+      (prose_content)
+      (escaped_brace)
+      (prose_content)
+      (interpolation
+        (placeholder
+          (identifier)))
+      (prose_content))
+    (newline))
+  (choice_statement
+    (choice_marker)
+    (hspace)
+    (choice_name
+      (identifier)
+      (id_suffix
+        (stable_id)))
+    (choice_attribute
+      (hspace)
+      (metadata_field
+        (metadata_key
+          (identifier))
+        (value
+          (grouped_value
+            (expression_part
+              (binding
+                (identifier)
+                (type_name
+                  (identifier))
+                (value
+                  (runtime_binding
+                    (identifier)))))))))
+    (newline))
+  (prose_line
+    (indent)
+    (prose_text
+      (prose_start)
+      (escaped_brace)
+      (prose_content)
+      (escaped_brace)
+      (prose_content)
+      (interpolation
+        (placeholder
+          (identifier)))
+      (prose_content))
+    (newline))
+  (divert_statement
+    (indent)
+    (divert_marker)
+    (hspace)
+    (target
+      (end_target))
+    (newline))
+  (divert_statement
+    (divert_marker)
+    (hspace)
+    (target
+      (end_target))
+    (newline)))
+
+==================
+Double backslash follows production escape scanning
+==================
+:: escaped_edge default
+> line@0123456789abcdef0123
+  Two slashes \\{name\} remain prose without a placeholder.
+
+---
+
+(source_file
+  (block_statement
+    (block_marker)
+    (hspace)
+    (block_name
+      (identifier))
+    (block_attribute
+      (hspace)
+      (block_default))
+    (newline))
+  (line_statement
+    (line_marker)
+    (hspace)
+    (line_name
+      (identifier)
+      (id_suffix
+        (stable_id)))
+    (newline))
+  (prose_line
+    (indent)
+    (prose_text
+      (prose_start)
+      (prose_content)
+      (escaped_brace)
+      (prose_content)
+      (escaped_brace)
+      (prose_content))
+    (newline)))
+
+==================
+Double backslash leaves an unescaped close for recovery
+==================
+:: escaped_recovery default
+> first@0123456789abcdef0123
+  Two slashes \\{name}
+> next@fedcba98765432100123
+  Recovery keeps the following statement.
+-> END
+
+---
+
+(source_file
+  (block_statement
+    (block_marker)
+    (hspace)
+    (block_name
+      (identifier))
+    (block_attribute
+      (hspace)
+      (block_default))
+    (newline))
+  (line_statement
+    (line_marker)
+    (hspace)
+    (line_name
+      (identifier)
+      (id_suffix
+        (stable_id)))
+    (newline))
+  (prose_line
+    (indent)
+    (prose_text
+      (prose_start)
+      (prose_content)
+      (escaped_brace)
+      (prose_content))
+    (ERROR
+      (draft_id))
+    (newline))
+  (line_statement
+    (line_marker)
+    (hspace)
+    (line_name
+      (identifier)
+      (id_suffix
+        (stable_id)))
+    (newline))
+  (prose_line
+    (indent)
+    (prose_text
+      (prose_start))
+    (newline))
+  (divert_statement
+    (divert_marker)
+    (hspace)
+    (target
+      (end_target))
+    (newline)))
