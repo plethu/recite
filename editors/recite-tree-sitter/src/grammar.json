@@ -2417,6 +2417,10 @@
             },
             {
               "type": "SYMBOL",
+              "name": "escaped_brace"
+            },
+            {
+              "type": "SYMBOL",
               "name": "prose_marker_text"
             },
             {
@@ -2437,6 +2441,10 @@
               {
                 "type": "SYMBOL",
                 "name": "interpolation"
+              },
+              {
+                "type": "SYMBOL",
+                "name": "escaped_brace"
               },
               {
                 "type": "SYMBOL",
@@ -2500,6 +2508,17 @@
           "value": "}"
         }
       ]
+    },
+    "escaped_brace": {
+      "type": "TOKEN",
+      "content": {
+        "type": "PREC",
+        "value": 1,
+        "content": {
+          "type": "PATTERN",
+          "value": "\\\\[{}]"
+        }
+      }
     },
     "line_name": {
       "type": "PREC",
@@ -2859,7 +2878,11 @@
       "members": [
         {
           "type": "PATTERN",
-          "value": "[^\\r\\n{}\\[\\]?#>!:|]+"
+          "value": "[^\\r\\n{}\\[\\]?#>!:|\\\\]+"
+        },
+        {
+          "type": "PATTERN",
+          "value": "\\\\"
         },
         {
           "type": "PATTERN",
@@ -2893,8 +2916,17 @@
       ]
     },
     "prose_content": {
-      "type": "PATTERN",
-      "value": "[^\\r\\n{}\\[\\]]+"
+      "type": "CHOICE",
+      "members": [
+        {
+          "type": "PATTERN",
+          "value": "[^\\r\\n{}\\[\\]\\\\]+"
+        },
+        {
+          "type": "PATTERN",
+          "value": "\\\\"
+        }
+      ]
     },
     "indent": {
       "type": "PATTERN",

@@ -191,6 +191,8 @@ if ! cargo run --quiet --locked --manifest-path "$repo_root/Cargo.toml" -p recit
   exit 1
 fi
 
+"$repo_root/scripts/check-tree-sitter-escaped-braces.sh" "$repo_root"
+
 echo "== empty and malformed EOF recovery =="
 parse_clean empty source_file ''
 malformed_file="$scratch/malformed.recite"

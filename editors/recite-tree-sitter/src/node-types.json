@@ -1058,6 +1058,11 @@
     }
   },
   {
+    "type": "prose_content",
+    "named": true,
+    "fields": {}
+  },
+  {
     "type": "prose_line",
     "named": true,
     "fields": {
@@ -1105,6 +1110,10 @@
       "multiple": true,
       "required": true,
       "types": [
+        {
+          "type": "escaped_brace",
+          "named": true
+        },
         {
           "type": "interpolation",
           "named": true
@@ -1468,6 +1477,10 @@
     "named": true
   },
   {
+    "type": "escaped_brace",
+    "named": true
+  },
+  {
     "type": "false",
     "named": false
   },
@@ -1513,10 +1526,6 @@
   },
   {
     "type": "plural_marker",
-    "named": true
-  },
-  {
-    "type": "prose_content",
     "named": true
   },
   {

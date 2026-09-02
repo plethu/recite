@@ -258,8 +258,14 @@ module.exports = grammar({
     // about the prose content. An ordinary hyphen is prose, while `->`
     // remains a divert marker.
     prose_text: ($) => seq(
-      choice($.markup_tag, $.interpolation, $.prose_marker_text, $.prose_start),
-      repeat(choice($.markup_tag, $.interpolation, $.prose_content)),
+      choice(
+        $.markup_tag,
+        $.interpolation,
+        $.escaped_brace,
+        $.prose_marker_text,
+        $.prose_start,
+      ),
+      repeat(choice($.markup_tag, $.interpolation, $.escaped_brace, $.prose_content)),
     ),
 
     markup_tag: ($) => seq(
@@ -274,6 +280,14 @@ module.exports = grammar({
       field("name", $.placeholder),
       "}",
     ),
+
+    // The production text scanner consumes a backslash with an immediately
+    // following brace as one escaped literal. Keeping this token ahead of
+    // `interpolation` prevents `\{name\}` from becoming a placeholder;
+    // leaving ordinary backslashes in their own prose token also preserves
+    // the production's left-to-right `\\{name}` edge (the second slash
+    // escapes the opening brace, while the closing brace remains unescaped).
+    escaped_brace: ($) => token(prec(1, /\\[{}]/)),
 
     // Header IDs are deliberately syntax-only. Keep the label and any
     // author-entered suffix available to editor tooling, including while a
@@ -350,7 +364,8 @@ module.exports = grammar({
     // marker-like prefix non-structural, while the one-character fallback
     // keeps ordinary colon-led prose available to the editor grammar.
     prose_start: ($) => choice(
-      /[^\r\n{}\[\]?#>!:|]+/,
+      /[^\r\n{}\[\]?#>!:|\\]+/,
+      /\\/,
       /:/,
     ),
     // Consume a marker-like near-miss through the end of its physical line so
@@ -364,7 +379,10 @@ module.exports = grammar({
       new RegExp(`:m(?:[^a${directiveNonWhitespace}]|a(?:[^t${directiveNonWhitespace}]|t(?:[^c${directiveNonWhitespace}]|c(?:[^h${directiveNonWhitespace}]|h[^${directiveNonWhitespace}]))))[^\\r\\n]*`),
       new RegExp(`:c(?:[^a${directiveNonWhitespace}]|a(?:[^s${directiveNonWhitespace}]|s(?:[^e${directiveNonWhitespace}]|e[^${directiveNonWhitespace}])))[^\\r\\n]*`),
     ),
-    prose_content: ($) => /[^\r\n{}\[\]]+/,
+    prose_content: ($) => choice(
+      /[^\r\n{}\[\]\\]+/,
+      /\\/,
+    ),
     indent: ($) => /[ \t]+/,
     hspace: ($) => /[ \t]+/,
     newline: ($) => /\r?\n/,

@@ -50,6 +50,7 @@
 ((prose_start) @string.special)
 ((prose_marker_text) @string.special)
 ((prose_content) @string.special)
+((escaped_brace) @string.special)
 ((markup_name) @tag)
 ((interpolation (placeholder) @variable.parameter))
 

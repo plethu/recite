@@ -1,0 +1,11 @@
+:: escaped default
+> line@0123456789abcdef0123 bind=(value:string=$value)
+  Isolated opening \{
+  Isolated closing \}
+  Balanced \{name\}
+  Opening \{ remains prose; closing \} remains prose; balanced \{name\} remains prose.
+  Adjacent \{name\} and real {value} interpolation.
+? choice@fedcba98765432100123 bind=(value:string=$value)
+  Choice \{literal\} and real {value} interpolation.
+  -> END
+-> END
