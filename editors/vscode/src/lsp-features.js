@@ -217,7 +217,7 @@ function completionKind(api, kind) {
 
 function completionKindName(kind) {
   return {
-    2: "Method", 3: "Function", 6: "Variable", 7: "Class", 10: "Property",
+    2: "Method", 3: "Function", 5: "Field", 6: "Variable", 7: "Class", 10: "Property",
     12: "Value", 13: "Enum", 14: "Keyword", 17: "Reference", 18: "File",
     19: "Folder", 21: "Constant", 22: "Struct", 23: "Event", 25: "TypeParameter"
   }[kind] ?? "Text";

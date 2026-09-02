@@ -3,6 +3,7 @@ import assert from "node:assert/strict";
 import {
   lspDiagnosticToVscode,
   lspCodeActionsToVscode,
+  lspCompletionItems,
   lspWorkspaceEditToVscode,
   vscodeCodeActionContextToLsp,
   vscodeDiagnosticToLsp,
@@ -230,6 +231,30 @@ test("code-action context projects kind values and preserves only semantics", ()
   const absent = vscodeCodeActionContextToLsp(api, { diagnostics: [] });
   assert.equal(Object.hasOwn(absent, "only"), false);
   assert.deepEqual(vscodeCodeActionContextToLsp(api, { diagnostics: [], only: [] }).only, []);
+});
+
+test("completion projection preserves field identity and filter text", () => {
+  const field = Symbol("Field");
+  const text = Symbol("Text");
+  const completionApi = {
+    ...api,
+    CompletionItem: class CompletionItem {
+      constructor(label, kind) {
+        this.label = label;
+        this.kind = kind;
+      }
+    },
+    CompletionItemKind: { Field: field, Text: text }
+  };
+  const [completion] = lspCompletionItems(completionApi, [{
+    label: "portrait",
+    kind: 5,
+    filterText: "por"
+  }]);
+
+  assert.equal(completion.kind, field);
+  assert.equal(completion.label, "portrait");
+  assert.equal(completion.filterText, "por");
 });
 
 const api = {
