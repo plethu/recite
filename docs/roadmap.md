@@ -201,6 +201,14 @@ executes game-side effects.
 
 ### 4. Editor Integration Parity
 
+**Status:** In progress as of 2026-09-02. PR #198 merged and completed #52,
+delivering the Neovim setup plus partial VS Code/VSCodium and
+Tree-sitter/parity/maintainability foundations. The milestone exit gate is not
+met: #51 and #98 remain partial and open, and the remaining editor issue group
+is #51, #53, #97, #98, and #192 (five open issues). Issue #197 is a separate
+cross-cutting milestone-20 maintainability follow-up; it is included in the
+milestone's six total open issues, but not in the editor issue count.
+
 **Outcome:** text authoring is safe and discoverable in the editors users
 already choose.
 
@@ -412,7 +420,7 @@ remain authoritative if the tracker is split again.
 | Product Foundation and Maintainability | Complete (0 open; 8 closed milestone items; delivered by PR #174) | 17 |
 | Language, schema, and localisation readiness | Complete (0 open; 12 closed milestone items; delivered by PR #183 and correction PR #184) | 18 |
 | Shared authoring kernel and preview | Complete (0 open; 8 closed milestone items; delivered by PR #191; #167, #168, and #185 complete) | 19 |
-| Editor integration parity | [#51 VS Code/VSCodium client](https://github.com/plethu/recite/issues/51), [#52 Neovim setup](https://github.com/plethu/recite/issues/52), [#53 command integration](https://github.com/plethu/recite/issues/53), [#97 TextMate grammar](https://github.com/plethu/recite/issues/97), [#98 Tree-sitter grammar](https://github.com/plethu/recite/issues/98), [#192 Zed integration](https://github.com/plethu/recite/issues/192) (6 open) | 20 |
+| Editor integration parity | [#51 VS Code/VSCodium client (partial; open)](https://github.com/plethu/recite/issues/51), [#53 command integration](https://github.com/plethu/recite/issues/53), [#97 TextMate grammar](https://github.com/plethu/recite/issues/97), [#98 Tree-sitter grammar (partial; open)](https://github.com/plethu/recite/issues/98), [#192 Zed integration](https://github.com/plethu/recite/issues/192) (5 open) | 20 |
 | Native GUI strategy and accessibility proof | [#54 GUI strategy](https://github.com/plethu/recite/issues/54), [#123 accessibility requirements](https://github.com/plethu/recite/issues/123) (2 open) | 21 |
 | GUI workbench | [#170 GUI workbench](https://github.com/plethu/recite/issues/170) (1 open) | 22 |
 | Engine companions | #49, #83–#86, #132–#134 (8 open) | 23 |
@@ -429,6 +437,14 @@ and structured preview outcome and closed #187–#190. GitHub milestone 19 remai
 open with 0 open issues; this roadmap records the outcome without changing the
 tracker.
 
+M20 is in progress as of 2026-09-02. PR #198 merged and closed #52, delivering
+the Neovim setup plus partial VS Code/VSCodium and Tree-sitter/parity/
+maintainability foundations. Five editor issues remain open: #51, #53, #97,
+#98, and #192; #51 and #98 are still partial. Issue #197 is tracked separately
+as the cross-cutting maintainability and lint-suppression follow-up. GitHub
+milestone 20 therefore has six open issues in total, one more than the editor
+issue group shown above.
+
 The post-v1 row is deliberately non-exhaustive: it records current open issues
 without a milestone, not every deferred capability. Generated host-language
 bindings (specification §13.9) have no current tracker owner and need one if
@@ -443,8 +459,10 @@ The language, schema, and localisation readiness outcome is complete as of
 kernel and preview outcome is complete as of 2026-09-01, delivered by PR #191
 at `636fa1b`; #167, #168, and #185 established the preceding configuration,
 discovery, and kernel seam. The next active outcome is Editor Integration
-Parity (milestone 20), currently represented by #51, #52, #53, #97, #98, and
-#192 within six open milestone issues. The repository already contains
+Parity (milestone 20), with #52 complete and five editor issues remaining:
+#51, #53, #97, #98, and #192. Issues #51 and #98 remain partial and open;
+#197 is a separate cross-cutting milestone-20 maintainability follow-up,
+bringing the milestone total to six open issues. The repository already contains
 substantial language, runtime, CLI, LSP, benchmark, FFI, Godot, and Unity work.
 That work should be
 evaluated against the milestone exit gates rather than treated as automatically
