@@ -45,6 +45,7 @@
   "files": [
     "dist/**",
     "language-configuration.json",
+    "syntaxes/**",
     "package.json",
     "package.nls.json",
     "README.md"
@@ -61,6 +62,13 @@
           ".recite"
         ],
         "configuration": "./language-configuration.json"
+      }
+    ],
+    "grammars": [
+      {
+        "language": "recite",
+        "scopeName": "source.recite",
+        "path": "./syntaxes/recite.tmLanguage.json"
       }
     ],
     "configuration": {
@@ -90,7 +98,7 @@
   "scripts": {
     "build": "node scripts/build.mjs",
     "messages:update": "node scripts/message-projections.mjs --update",
-    "check": "node scripts/build.mjs && node scripts/check-package.mjs && node --test test/*.test.mjs",
+    "check": "node scripts/build.mjs && node scripts/check-package.mjs && node scripts/check-grammar.mjs && node --test test/*.test.mjs",
     "package": "node scripts/package.mjs",
     "package:check": "node scripts/package.mjs --check"
   },

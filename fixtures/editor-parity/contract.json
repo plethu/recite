@@ -8,7 +8,7 @@
       "artifact": "vscode-vsix",
       "status": "partial",
       "platform_status": {"linux": "partial", "macos": "planned", "windows": "planned"},
-      "notes": "The checked-in extension scaffold is package-checked and has Linux Node/live-server evidence; installed VS Code host activation remains untested."
+      "notes": "The checked-in extension scaffold and syntax-only TextMate grammar are package-checked and have Linux Node/live-server evidence; installed VS Code host activation remains untested."
     },
     {
       "id": "vscodium",
@@ -16,7 +16,7 @@
       "artifact": "vscode-vsix",
       "status": "partial",
       "platform_status": {"linux": "partial", "macos": "planned", "windows": "planned"},
-      "notes": "Uses the same checked-in extension scaffold and generated VSIX as VS Code; Linux Node/live-server evidence exists, but installed VSCodium activation remains untested and no publication is claimed."
+      "notes": "Uses the same checked-in extension scaffold, TextMate grammar, and generated VSIX as VS Code; Linux Node/live-server evidence exists, but installed VSCodium activation remains untested and no publication is claimed."
     },
     {
       "id": "neovim",
@@ -37,7 +37,7 @@
     }
   ],
   "artifacts": [
-    {"id": "vscode-vsix", "kind": "editor-extension", "status": "partial", "path": null, "clients": ["vscode", "vscodium"], "notes": "The extension source and package manifest are checked in. A deterministic VSIX is generated and package-checked, but the archive is ignored build output rather than a checked-in artifact."},
+    {"id": "vscode-vsix", "kind": "editor-extension", "status": "partial", "path": null, "clients": ["vscode", "vscodium"], "notes": "The extension source, TextMate grammar, and package manifest are checked in. A deterministic VSIX containing the grammar is generated and package-checked, but the archive is ignored build output rather than a checked-in artifact."},
     {"id": "tree-sitter-grammar", "kind": "syntax-grammar", "status": "partial", "path": "editors/recite-tree-sitter/grammar.js", "clients": ["neovim"]},
     {"id": "neovim-runtimepath", "kind": "editor-runtimepath", "status": "implemented", "path": "editors/recite-neovim/lua/recite.lua", "clients": ["neovim"]},
     {"id": "zed-extension", "kind": "editor-extension", "status": "planned", "path": null, "clients": ["zed"]}
@@ -279,14 +279,14 @@
       "protocol": "client",
       "expected": {"kind": "syntax-projection", "assertions": ["TextMate highlighting is lexical only", "canonical constructs remain visible without semantic validation"]},
       "edge_cases": ["incomplete marker", "markup and interpolation"],
-      "known_limitation": "No VS Code or VSCodium grammar artifact exists for lexical projection.",
-      "implementation_status": "planned",
-      "client_status": {"vscode": "planned", "vscodium": "planned", "neovim": "planned", "zed": "planned"},
-      "platform_status": {"linux": "planned", "macos": "planned", "windows": "planned"},
+      "known_limitation": "The checked-in grammar and deterministic VSIX are syntax evidence only; installed VS Code/VSCodium activation, macOS/Windows hosts, and marketplace distributions remain untested.",
+      "implementation_status": "partial",
+      "client_status": {"vscode": "partial", "vscodium": "partial", "neovim": "planned", "zed": "planned"},
+      "platform_status": {"linux": "partial", "macos": "planned", "windows": "planned"},
       "artifact_status": {"vscode-vsix": "partial", "tree-sitter-grammar": "partial", "neovim-runtimepath": "implemented", "zed-extension": "planned"},
       "distribution_status": {"vs-marketplace": "planned", "open-vsx": "planned", "neovim-distribution": "planned", "zed-distribution": "planned"},
-      "expected_evidence": {"status": "planned", "command": null, "assertions": ["#97 owns TextMate grammar evidence"], "artifact": null},
-      "follow_up": "#97"
+      "expected_evidence": {"status": "partial", "commands": ["scripts/check-vscode.sh"], "assertions": ["the checked-in TextMate grammar covers canonical, malformed, and incomplete lexical fixtures", "grammar scopes distinguish statement markers, names, anchors, references, values, calls, prose, markup, and placeholders", "the grammar does not perform semantic validation", "the generated VSIX includes the grammar with deterministic bytes"], "artifact": "vscode-vsix"},
+      "follow_up": "#51"
     },
     {
       "id": "editor.neovim.syntax-projection",

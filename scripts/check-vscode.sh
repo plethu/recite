@@ -6,9 +6,10 @@ usage() {
 Usage:
   scripts/check-vscode.sh [repo-root]
 
-Checks the shared VS Code/VSCodium client with its package contract and the
-real language server. The live test is required here rather than skipped when
-the language-server binary is unavailable.
+Checks the shared VS Code/VSCodium client with its package contract, the
+syntax-only TextMate grammar, and the real language server. The live test is
+required here rather than skipped when the language-server binary is
+unavailable.
 EOF
 }
 

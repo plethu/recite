@@ -4,6 +4,13 @@ This package is the shared VSIX entry point for Recite's VS Code and VSCodium
 clients. It registers `.recite` files and connects the editor to a local
 `recite-lsp` process over standard input and output.
 
+The package also contributes `syntaxes/recite.tmLanguage.json`, a tolerant
+TextMate grammar shared by VS Code and VSCodium. It provides lexical scopes for
+Recite markers, names, anchors, references, metadata, values, calls, prose,
+markup, and placeholders. It never validates IDs, references, schemas,
+conditions, effects, markup balance, or match exhaustiveness; those remain
+parser/compiler/LSP responsibilities.
+
 The package's CommonJS entry shim obtains the VS Code host API through
 `require`, keeping the VS Code 1.89 extension host boundary loadable, then
 delegates activation to the ESM implementation.

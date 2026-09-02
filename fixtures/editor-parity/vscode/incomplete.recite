@@ -1,0 +1,7 @@
+:: editor_draft default
+! immediate play_sfx("Archivist", -12.5, true, [night])
+> unfinished@
+  The anchor is still being written, {traveller_name
+? ask_more@
+  Continue editing this choice.
+  ->

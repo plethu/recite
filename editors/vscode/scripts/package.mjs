@@ -24,6 +24,8 @@ try {
     assertRegularFile(path.join(packageRoot, file));
     await cp(path.join(packageRoot, file), path.join(extension, file));
   }
+  assertSafeTree(path.join(packageRoot, "syntaxes"), "extension syntax grammars");
+  await cp(path.join(packageRoot, "syntaxes"), path.join(extension, "syntaxes"), { recursive: true });
   await cp(path.join(packageRoot, "dist"), path.join(extension, "dist"), { recursive: true });
   const license = assertContainedRegularFile(repositoryRoot, "LICENSE", "repository license");
   await cp(license, path.join(extension, "LICENSE"));
@@ -218,6 +220,7 @@ async function checkArchive(archive, stageRoot) {
     "[Content_Types].xml",
     "extension.vsixmanifest",
     "extension/package.json",
+    "extension/syntaxes/recite.tmLanguage.json",
     "extension/dist/extension.cjs",
     "extension/dist/extension.js"
   ]) {

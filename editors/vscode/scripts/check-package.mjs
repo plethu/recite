@@ -19,6 +19,9 @@ const manifest = JSON.parse(await readFile(path.join(packageRoot, "package.json"
 const languageConfiguration = JSON.parse(
   await readFile(path.join(packageRoot, "language-configuration.json"), "utf8")
 );
+assertSafeTree(path.join(packageRoot, "syntaxes"), "extension syntax grammars");
+const grammarPath = path.join(packageRoot, "syntaxes", "recite.tmLanguage.json");
+const grammar = JSON.parse(await readFile(grammarPath, "utf8"));
 const { fluent, projections } = await verifyMessageProjections(packageRoot);
 const projectedMessages = projections.runtime;
 const packageMessages = projections.package;
@@ -51,7 +54,25 @@ assert(reciteLanguage.extensions?.length === 1 && reciteLanguage.extensions[0] =
   "only .recite source files may activate the language contribution");
 assert(reciteLanguage.configuration === "./language-configuration.json",
   "language editing behavior must be explicit and local");
-assert(!manifest.contributes.grammars, "TextMate grammar belongs to REC-97");
+const grammars = manifest.contributes?.grammars ?? [];
+assert(grammars.length === 1, "the Recite TextMate grammar contribution is required");
+assert(grammars[0].language === "recite" && grammars[0].scopeName === "source.recite" &&
+  grammars[0].path === "./syntaxes/recite.tmLanguage.json",
+"the Recite TextMate grammar contribution must use the checked-in source grammar");
+assert(Array.isArray(manifest.files) && manifest.files.includes("syntaxes/**"),
+  "the TextMate grammar must be included in the extension package");
+assert(grammar.name === "Recite" && grammar.scopeName === "source.recite" &&
+  Array.isArray(grammar.fileTypes) && grammar.fileTypes.length === 1 && grammar.fileTypes[0] === "recite",
+"the TextMate grammar must declare the Recite source scope and .recite file type");
+assert(grammar.repository && typeof grammar.repository === "object",
+  "the TextMate grammar repository is required");
+for (const rule of [
+  "comment-line", "block-statement", "line-statement", "choice-statement",
+  "effect-statement", "divert-statement", "conditional-statement", "plural-statement",
+  "prose-line", "markup-tag", "interpolation", "invalid-lexical"
+]) {
+  assert(grammar.repository[rule], `TextMate grammar is missing lexical rule ${rule}`);
+}
 assert(!manifest.contributes.commands, "commands belong to REC-53");
 assert(!manifest.contributes.menus, "menus belong to REC-53");
 assert(!manifest.contributes.tasks, "tasks belong to REC-53");
