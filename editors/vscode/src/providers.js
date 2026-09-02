@@ -3,7 +3,7 @@ import {
   lspCompletionItems,
   lspHoverToVscode,
   lspLocationToVscode,
-  vscodeDiagnosticToLsp,
+  vscodeCodeActionContextToLsp,
 } from "./lsp-features.js";
 
 const SELECTOR = [
@@ -62,9 +62,7 @@ export function registerFeatureProviders(controller) {
           start: { line: range.start.line, character: range.start.character },
           end: { line: range.end.line, character: range.end.character }
         },
-        context: { diagnostics: context.diagnostics.map((diagnostic) =>
-          vscodeDiagnosticToLsp(api, diagnostic)
-        ) }
+        context: vscodeCodeActionContextToLsp(api, context)
       }, token).then((result) => {
         const batch = controller.createEditCommandBatch();
         try {

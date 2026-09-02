@@ -183,3 +183,52 @@ test("code-action provider projects commands without a VS Code Command construct
   assert.equal(Object.hasOwn(mixed[0], "arguments"), false);
   await controller.dispose();
 });
+
+test("code-action requests preserve requested kind families and command shapes", async () => {
+  const document = {
+    languageId: "recite",
+    version: 2,
+    uri: uri("save.recite"),
+    getText: () => ":: save"
+  };
+  const api = hostApi({ isTrusted: () => true, onDidGrantWorkspaceTrust: () => ({ dispose() {} }) });
+  api.workspace.textDocuments.push(document);
+  const requests = [];
+  const controller = new ExtensionController(api, output(), { delete() {} }, {
+    createClient: () => {
+      const client = new FakeClient();
+      client.request = async (_method, params) => {
+        requests.push(params);
+        return [
+          {
+            title: "Fix all Recite files",
+            kind: "source.fixAll",
+            disabled: { reason: "nothing to fix" }
+          },
+          {
+            title: "Run fix-all command",
+            kind: "source.fixAll.recite",
+            command: { title: "Run fix-all command", command: "recite.fixAll" }
+          }
+        ];
+      };
+      return client;
+    }
+  });
+  await controller.start();
+  const provider = api.registeredProviders.find(({ name }) => name === "code-actions").provider;
+  const actions = await provider.provideCodeActions(
+    document,
+    new api.Range(new api.Position(0, 0), new api.Position(0, 2)),
+    { diagnostics: [], only: [{ value: "source.fixAll" }, "custom.recite"] }
+  );
+
+  assert.deepEqual(requests[0].context.only, ["source.fixAll", "custom.recite"]);
+  assert.equal(actions.length, 2, "disabled and nested command actions remain projected");
+  assert.deepEqual(actions[0].disabled, { reason: "nothing to fix" });
+  assert.deepEqual(actions[1], {
+    title: "Run fix-all command",
+    command: "recite.fixAll"
+  });
+  await controller.dispose();
+});

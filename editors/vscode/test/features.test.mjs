@@ -4,6 +4,7 @@ import {
   lspDiagnosticToVscode,
   lspCodeActionsToVscode,
   lspWorkspaceEditToVscode,
+  vscodeCodeActionContextToLsp,
   vscodeDiagnosticToLsp,
   workspaceEditIsCurrent,
   workspaceEditStatus
@@ -217,6 +218,18 @@ test("diagnostic severity maps explicitly across the VS Code and LSP ranges", ()
     assert.equal(projected.severity, vscode);
     assert.equal(vscodeDiagnosticToLsp(api, projected).severity, lsp);
   }
+});
+
+test("code-action context projects kind values and preserves only semantics", () => {
+  const requested = vscodeCodeActionContextToLsp(api, {
+    diagnostics: [],
+    only: [api.CodeActionKind.QuickFix, { value: "source.fixAll" }, "custom.recite"]
+  });
+  assert.deepEqual(requested.only, ["quickfix", "source.fixAll", "custom.recite"]);
+
+  const absent = vscodeCodeActionContextToLsp(api, { diagnostics: [] });
+  assert.equal(Object.hasOwn(absent, "only"), false);
+  assert.deepEqual(vscodeCodeActionContextToLsp(api, { diagnostics: [], only: [] }).only, []);
 });
 
 const api = {

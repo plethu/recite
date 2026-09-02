@@ -35,9 +35,16 @@ export function registerDocumentLifecycle(controller) {
     }),
     api.workspace.onDidChangeConfiguration((event) => {
       if (!event.affectsConfiguration("recite.lsp")) return;
-      void controller.restart().catch((error) => controller.handleUnexpectedStartFailure(error));
+      queueRestart(controller);
     })
   );
+  if (api.workspace.onDidChangeWorkspaceFolders) {
+    subscriptions.push(api.workspace.onDidChangeWorkspaceFolders(() => queueRestart(controller)));
+  }
+}
+
+function queueRestart(controller) {
+  void controller.restart().catch((error) => controller.handleUnexpectedStartFailure(error));
 }
 
 export function isReciteDocument(document) {

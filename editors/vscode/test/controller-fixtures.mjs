@@ -75,7 +75,7 @@ export function hostApi({ isTrusted, onDidGrantWorkspaceTrust }) {
   };
   for (const event of [
     "onDidOpenTextDocument", "onDidChangeTextDocument", "onDidSaveTextDocument",
-    "onDidCloseTextDocument", "onDidChangeConfiguration"
+    "onDidCloseTextDocument", "onDidChangeConfiguration", "onDidChangeWorkspaceFolders"
   ]) workspace[event] = () => ({ dispose() {} });
   const api = {
     workspace,
@@ -108,6 +108,14 @@ export function hostApi({ isTrusted, onDidGrantWorkspaceTrust }) {
     Range: class Range {
       constructor(start, end) { this.start = start; this.end = end; }
     },
+    Diagnostic: class Diagnostic {
+      constructor(range, message, severity) {
+        this.range = range;
+        this.message = message;
+        this.severity = severity;
+      }
+    },
+    DiagnosticSeverity: { Error: "error", Warning: "warning", Information: "info", Hint: "hint" },
     WorkspaceEdit: class WorkspaceEdit {
       constructor() { this.replacements = []; }
       replace(uri, range, newText) { this.replacements.push({ uri, range, newText }); }

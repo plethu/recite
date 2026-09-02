@@ -48,9 +48,10 @@ export class ExtensionController {
       // A child error may be terminal without ever producing an exit event.
       // Finish that client's local transport cleanup before dropping the
       // controller reference during the bounded retry.
-      try { await this.client.stop?.(); } catch { /* already torn down */ }
+      const stoppedClient = this.client;
+      this.retireClient(stoppedClient);
+      try { await stoppedClient.stop?.(); } catch { /* already torn down */ }
     }
-    this.client = undefined;
     let configuration;
     try {
       configuration = readConfiguration(this.api, this.userInterface);
@@ -70,7 +71,7 @@ export class ExtensionController {
       );
     }
     this.client = client;
-    client.on("notification", (method, params) => this.handleNotification(method, params));
+    client.on("notification", (method, params) => this.handleNotification(method, params, client));
     client.on("stderr", (message) => this.userInterface.serverStderr(message));
     client.on("failure", (failure) => this.handleClientFailure(
       client, failure, { notify: phase !== "retrying" }
@@ -82,12 +83,20 @@ export class ExtensionController {
         configuration.projectRoot,
         configuration.projectRootOverridden
       ));
+      const exitedDuringStart = client.exitReported;
+      if (this.disposed || (!exitedDuringStart && (
+        this.client !== client || client.retired || client.status !== "running"
+      ))) {
+        try { await client.stop?.(); } catch { /* already torn down */ }
+        return startupOutcome(StartupOutcomeKind.Refused);
+      }
+      if (exitedDuringStart) return startupOutcome(StartupOutcomeKind.Started);
       this.replayOpenDocuments();
       this.watchers.flush();
       this.scheduleStableReset(client);
       return startupOutcome(StartupOutcomeKind.Started);
     } catch (error) {
-      if (this.client === client) this.client = undefined;
+      this.retireClient(client);
       // Transport/protocol failures have already been projected by the
       // client's failure event. Exit handling likewise owns its notification;
       // do not turn either one into a duplicate generic start failure.
@@ -157,9 +166,9 @@ export class ExtensionController {
   }
 
   handleExit(client, event, phase = "initial") {
-    if (this.client !== client || this.stopping || this.disposed) return;
+    if (this.client !== client || client.retired || this.stopping || this.disposed) return;
     this.clearStableReset();
-    this.client = undefined;
+    this.retireClient(client);
     client.exitReported = true;
     if (phase !== "retrying" && !client.failureReported) this.userInterface.serverExited();
     this.scheduleRestart();
@@ -206,6 +215,15 @@ export class ExtensionController {
     this.stableRunTimer = undefined;
   }
 
+  retireClient(client, { clearReference = true } = {}) {
+    if (!client) return;
+    if (!client.retired) {
+      client.retired = true;
+      if (this.client === client) this.diagnostics?.clear?.();
+    }
+    if (clearReference && this.client === client) this.client = undefined;
+  }
+
   open(document) {
     if (document.languageId !== "recite") return;
     this.documents.set(document.uri.toString(), document);
@@ -229,7 +247,8 @@ export class ExtensionController {
     )) this.sendOpen(document);
   }
 
-  handleNotification(method, params) {
+  handleNotification(method, params, client) {
+    if (client && (client.retired || this.client !== client)) return;
     if (method === DIAGNOSTICS_METHOD) {
       const uri = this.api.Uri.parse(params.uri);
       const document = this.api.workspace.textDocuments.find(
@@ -257,7 +276,7 @@ export class ExtensionController {
   }
 
   handleClientFailure(client, failure, { notify = true } = {}) {
-    if (client && this.client !== client) return;
+    if (client && (this.client !== client || client.retired)) return;
     if (client) client.failureReported = true;
     if (notify) {
       switch (failure.kind) {
@@ -279,6 +298,7 @@ export class ExtensionController {
     // idempotent through the restart timer guard and failureReported marker.
     if (client && this.client === client && client.status === "stopped") {
       this.clearStableReset();
+      this.retireClient(client, { clearReference: false });
       this.scheduleRestart();
     }
   }
@@ -293,15 +313,21 @@ export class ExtensionController {
 
   async restart() {
     this.restartRevision += 1;
+    if (this.restartTimer) clearTimeout(this.restartTimer);
+    this.restartTimer = undefined;
     if (this.restartPromise) return this.restartPromise;
     this.restartPromise = (async () => {
       let restartRevision;
       do {
         this.stopping = true;
         this.clearStableReset();
-        await this.client?.stop();
-        this.client = undefined;
-        this.stopping = false;
+        const retiredClient = this.client;
+        this.retireClient(retiredClient);
+        try {
+          await retiredClient?.stop();
+        } finally {
+          this.stopping = false;
+        }
         restartRevision = this.restartRevision;
         const outcome = await this.start();
         this.handleStartOutcome(outcome);
@@ -328,7 +354,12 @@ export class ExtensionController {
     this.watchers.dispose();
     this.editCommands.dispose();
     for (const subscription of this.subscriptions.splice(0)) subscription.dispose();
-    await this.client?.stop();
-    this.client = undefined;
+    const retiredClient = this.client;
+    this.retireClient(retiredClient);
+    try {
+      await retiredClient?.stop();
+    } finally {
+      this.client = undefined;
+    }
   }
 }

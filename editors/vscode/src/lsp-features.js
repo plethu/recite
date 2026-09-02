@@ -41,6 +41,24 @@ export function vscodeDiagnosticToLsp(api, diagnostic) {
   };
 }
 
+export function vscodeCodeActionContextToLsp(api, context) {
+  const result = {
+    diagnostics: (context?.diagnostics ?? []).map((diagnostic) =>
+      vscodeDiagnosticToLsp(api, diagnostic)
+    )
+  };
+  if (context?.only !== undefined) {
+    result.only = context.only.map(codeActionKindToLsp);
+  }
+  return result;
+}
+
+function codeActionKindToLsp(kind) {
+  if (typeof kind === "string") return kind;
+  if (typeof kind?.value === "string") return kind.value;
+  return kind;
+}
+
 export function lspCompletionItems(api, result) {
   const items = Array.isArray(result) ? result : result?.items ?? [];
   return items.map((item) => {
