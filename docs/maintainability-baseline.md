@@ -209,7 +209,6 @@ production suppressions must carry a narrow scope and rationale.
 | `crates/recite-lsp/src/tests/availability/speaker.rs` | 351 | test/support | lsp/tests | review | Typed and ordinary speaker completion coverage |
 | `crates/recite-compiler/tests/validation/participation.rs` | 424 | test/support | compiler/tests | cohesive | #168: participation-aware validation completeness and all-complete compatibility coverage |
 | `crates/recite-ui/tests/contract.rs` | 475 | test/support | ui/tests | review | #51: typed client projection and argument parity coverage remains one inventory contract suite |
-| `.agents/skills/recite-github-pm/scripts/check-pr-review-gates.sh` | 470 | tooling | agent-workflow | exception | #197: split review-gate orchestration into focused policy helpers |
 | `editors/recite-tree-sitter/grammar.js` | 390 | production | tree-sitter/grammar | cohesive | Grammar source owns syntax and recovery rules alongside the named node declarations |
 | `editors/vscode/src/controller.js` | 366 | production | vscode/controller | review | #51: controller retains restart coordination, startup projection, and terminal child-failure recovery |
 | `editors/vscode/src/lsp-client.js` | 375 | production | vscode/lsp-client | review | #51: client keeps request settlement, child event ordering, transport closure, and bounded teardown as one shared lifecycle |
@@ -217,7 +216,6 @@ production suppressions must carry a narrow scope and rationale.
 | `editors/vscode/scripts/message-projections.mjs` | 303 | tooling | vscode/projections | review | #51: inventory parsing, typed placeholder lowering, and projection installation remain one checked update boundary |
 | `editors/vscode/scripts/ui-boundary-adapter.mjs` | 251 | tooling | vscode/checks | review | #51: semantic UI adapter contract remains one cohesive structural boundary |
 | `editors/vscode/scripts/ui-boundary-calls.mjs` | 347 | tooling | vscode/checks | review | UI boundary call inventory remains a single generated-boundary checker |
-| `scripts/check-git-policy.sh` | 414 | tooling | git-policy | exception | #197: split commit, diff, and workflow policy checks into focused helpers |
 | `scripts/check-lint-suppressions.py` | 256 | tooling | lint-policy | review | Suppression policy parsing and diff-aware enforcement remain one checker boundary |
 | `scripts/check-tree-sitter.sh` | 399 | tooling | tree-sitter/check | review | Parser generation, ABI, corpus, and reproducibility checks share one tool boundary |
 | `scripts/lint_suppression_ast.py` | 374 | tooling | lint-policy | review | AST suppression extraction keeps parser traversal and source categorisation together |

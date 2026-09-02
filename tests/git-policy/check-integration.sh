@@ -27,9 +27,14 @@ if [[ -n "$(git -C "$clone_root" branch --show-current)" ]]; then
   exit 1
 fi
 base_sha="$(git -C "$clone_root" rev-parse HEAD)"
-# The source checkout may contain the policy script under test as an
-# uncommitted change, so copy that script into the disposable clone.
+# The source checkout may contain the policy checker and its helper modules as
+# uncommitted changes, so copy the complete policy boundary into the disposable
+# clone. This keeps the detached checkout fixture equivalent to Actions.
 cp -- "$repo_root/scripts/check-git-policy.sh" "$clone_root/scripts/check-git-policy.sh"
+mkdir -p "$clone_root/scripts/git-policy"
+for helper in "$repo_root"/scripts/git-policy/*.sh; do
+  cp -- "$helper" "$clone_root/scripts/git-policy/"
+done
 git -C "$clone_root" config user.name "Git policy fixture"
 git -C "$clone_root" config user.email "git-policy-fixture@example.invalid"
 git -C "$clone_root" config commit.gpgsign false
@@ -74,6 +79,19 @@ run_policy_without_label() {
     GITHUB_BASE_REF=main \
     "$clone_root/scripts/check-git-policy.sh" "$clone_root"
 }
+
+set +e
+invalid_mode_output="$(env -u RECITE_PR_TITLE -u RECITE_PR_BODY \
+  -u RECITE_BRANCH_NAME -u RECITE_HEAD_BRANCH -u GITHUB_EVENT_NAME \
+  -u GITHUB_HEAD_REF -u GITHUB_REF_NAME -u GITHUB_BASE_REF \
+  RECITE_INTEGRATION_PR=2 "$clone_root/scripts/check-git-policy.sh" "$clone_root" 2>&1)"
+invalid_mode_status=$?
+set -e
+if [[ "$invalid_mode_status" != 2 || "$invalid_mode_output" != *"RECITE_INTEGRATION_PR must be 0 or 1"* ]]; then
+  echo "invalid integration-mode input did not preserve its status/diagnostic" >&2
+  echo "$invalid_mode_output" >&2
+  exit 1
+fi
 
 if run_policy "[REC-163] chore: integrate milestone" 0 0 feat/milestone-integration >/dev/null 2>&1; then
   echo "ordinary policy unexpectedly accepted a mixed-code commit range" >&2
@@ -213,6 +231,23 @@ if ! env -u RECITE_INTEGRATION_LABEL -u RECITE_PR_TITLE -u RECITE_PR_BODY \
   RECITE_HEAD_REF=HEAD \
   "$clone_root/scripts/check-git-policy.sh" "$clone_root" >/dev/null; then
   echo "detached local check with RECITE_BRANCH_NAME was rejected" >&2
+  exit 1
+fi
+
+set +e
+missing_ref_output="$(env -u RECITE_INTEGRATION_LABEL -u RECITE_PR_TITLE -u RECITE_PR_BODY \
+  -u RECITE_HEAD_BRANCH -u GITHUB_EVENT_NAME -u GITHUB_HEAD_REF \
+  -u GITHUB_REF_NAME -u GITHUB_BASE_REF -u RECITE_PR_BASE_REF \
+  RECITE_INTEGRATION_PR=0 \
+  RECITE_BRANCH_NAME=chore/local-detached-check \
+  RECITE_BASE_REF="$base_sha" \
+  RECITE_HEAD_REF=refs/recite/missing-head \
+  "$clone_root/scripts/check-git-policy.sh" "$clone_root" 2>&1)"
+missing_ref_status=$?
+set -e
+if [[ "$missing_ref_status" != 2 || "$missing_ref_output" != *"unable to resolve Git policy head ref"* ]]; then
+  echo "missing Git policy head ref did not preserve its status/diagnostic" >&2
+  echo "$missing_ref_output" >&2
   exit 1
 fi
 

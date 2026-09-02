@@ -1,7 +1,9 @@
 # Git workflow policy fixtures
 
 `scripts/check-git-policy.sh` reads these deterministic fixtures on every
-invocation before checking the current repository. `branches.tsv` records
+invocation before checking the current repository. Its checker-local modules
+under `scripts/git-policy/` own branch/integration metadata, commit messages,
+and ref-range handling; they are sourced from the base checkout. `branches.tsv` records
 expected branch-name results. Files under `commit-messages/` use the filename
 prefix `valid-` or `invalid-` to record expected commit-message results,
 including the issue prefix, body-sentence, and attribution-trailer rules. An
