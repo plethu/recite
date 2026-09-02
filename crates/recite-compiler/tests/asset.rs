@@ -14,7 +14,7 @@ use recite_core::{
     decode_compiled_dialogue_messagepack, load_schema_manifest_str,
 };
 #[path = "../../../tests/support/fixtures.rs"]
-#[allow(dead_code)]
+#[allow(dead_code, reason = "shared snapshot fixtures are selectively reused")]
 mod fixture_support;
 
 #[path = "asset/tag_surface.rs"]

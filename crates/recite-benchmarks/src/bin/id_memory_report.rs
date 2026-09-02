@@ -160,16 +160,16 @@ fn build_scale_report(scale: BenchmarkScale, repeat: usize) -> BenchmarkResult<S
     })
 }
 
+#[allow(
+    clippy::disallowed_methods,
+    reason = "benchmark timing is intentionally outside deterministic runtime measurements"
+)]
 fn time_operation(
     repeat: usize,
     mut operation: impl FnMut() -> BenchmarkResult<()>,
 ) -> BenchmarkResult<TimingSummary> {
     let mut samples = Vec::with_capacity(repeat);
     for _ in 0..repeat {
-        #[allow(
-            clippy::disallowed_methods,
-            reason = "benchmark report tool intentionally measures elapsed operation time"
-        )]
         let started = Instant::now();
         operation()?;
         samples.push(duration_ms(started.elapsed()));

@@ -24,20 +24,18 @@ pub(super) fn monotonic_now() -> Instant {
     Instant::now()
 }
 
-// Instant::now is intentional here: this is CLI file-watcher debounce logic,
-// not deterministic dialogue runtime code. The absolute deadline is tracked so
-// irrelevant events (generated output writes) consume the window without
-// resetting it; do not simplify to a per-loop recv_timeout(DEBOUNCE).
-#[allow(clippy::disallowed_methods)]
+// The absolute deadline is tracked so irrelevant events (generated output
+// writes) consume the window without resetting it; do not simplify to a
+// per-loop recv_timeout(DEBOUNCE).
 pub(super) fn drain_debounce(
     receiver: &mpsc::Receiver<notify::Result<Event>>,
     state: &WatchState,
     stderr: &mut dyn Write,
     messages: &Messages,
 ) -> Result<(), CliError> {
-    let mut deadline = Instant::now() + DEBOUNCE;
+    let mut deadline = monotonic_now() + DEBOUNCE;
     loop {
-        let now = Instant::now();
+        let now = monotonic_now();
         if now >= deadline {
             return Ok(());
         }
@@ -47,7 +45,7 @@ pub(super) fn drain_debounce(
                 // Events are wakeups only. Relevant wakeups extend the fixed
                 // debounce; generated asset writes are intentionally ignored.
                 if state.is_relevant_event(&event) {
-                    deadline = Instant::now() + DEBOUNCE;
+                    deadline = monotonic_now() + DEBOUNCE;
                 }
             }
             Ok(Err(error)) => {

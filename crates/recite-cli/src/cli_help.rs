@@ -25,12 +25,9 @@ pub(crate) fn parse(args: impl IntoIterator<Item = OsString>) -> Result<Cli, Err
 // this narrow host-owned residual rather than treating `Error::to_string()`
 // as a Recite UI resource.
 
-// Invariant: the embedded default UI catalog is bundled with the CLI binary.
-#[allow(clippy::expect_used)]
 fn help_messages() -> Messages {
-    Messages::load(&TuiSettings::help_locale())
-        .or_else(|_| Messages::load(&UiLocale::default()))
-        .expect("embedded default UI catalog must load")
+    // Recover through the required embedded default catalog when needed.
+    Messages::load(&TuiSettings::help_locale()).unwrap_or_else(|_| default_messages())
 }
 
 fn localise_command(command: &mut clap::Command, messages: &Messages) {
@@ -312,7 +309,10 @@ fn version_arg(messages: &Messages) -> Arg {
 }
 
 // Invariant: the embedded default UI catalog is bundled with the CLI binary.
-#[allow(clippy::expect_used)]
+#[allow(
+    clippy::expect_used,
+    reason = "the embedded default UI catalog is a required CLI resource"
+)]
 fn default_messages() -> Messages {
     Messages::load(&UiLocale::default()).expect("embedded default UI catalog must load")
 }

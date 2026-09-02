@@ -1,8 +1,6 @@
 mod convert;
 mod encode;
 mod model;
-#[allow(unused_imports)]
-pub(crate) use encode::encode_batch_to_writer;
 #[cfg(test)]
 mod tests;
 

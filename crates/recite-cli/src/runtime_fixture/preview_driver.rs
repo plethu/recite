@@ -21,6 +21,16 @@ pub(crate) struct RuntimeFixtureOptions {
     pub(crate) metrics: bool,
 }
 
+// Wall-clock duration is intentionally opt-in trace instrumentation; the default trace is
+// deterministic and contains no timing data.
+#[allow(
+    clippy::disallowed_methods,
+    reason = "metrics timing stays outside the trace contract"
+)]
+fn metrics_now() -> Instant {
+    Instant::now()
+}
+
 pub(crate) fn execute_runtime_fixture(
     asset: &CompiledDialogue,
     block: &str,
@@ -38,15 +48,7 @@ pub(crate) fn execute_runtime_fixture(
     let prompt_cardinality = PromptCardinality::new(asset)?;
     let mut metrics = options.metrics.then(RuntimeMetricsCollector::default);
     record_session_size(metrics.as_mut(), session.session())?;
-    // Wall-clock duration is intentionally opt-in trace instrumentation; the default trace is
-    // deterministic and contains no timing data.
-    // Reason: Instant is isolated to opt-in metrics and never enters the deterministic trace
-    // contract; replacing it would make the metrics instrumentation less faithful.
-    #[allow(
-        clippy::disallowed_methods,
-        reason = "opt-in wall-clock metrics stay outside the deterministic trace contract"
-    )]
-    let metrics_started_at = options.metrics.then(Instant::now);
+    let metrics_started_at = options.metrics.then(metrics_now);
     let mut run_lines = Vec::new();
     let mut trace_events = Vec::new();
     let mut final_deferred_effects = Vec::new();

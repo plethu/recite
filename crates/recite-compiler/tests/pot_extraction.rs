@@ -14,7 +14,7 @@ use recite_core::{
 };
 
 #[path = "../../../tests/support/fixtures.rs"]
-#[allow(dead_code)]
+#[allow(dead_code, reason = "shared snapshot fixtures are selectively reused")]
 mod fixture_support;
 
 #[path = "pot_extraction/shared_pressure.rs"]

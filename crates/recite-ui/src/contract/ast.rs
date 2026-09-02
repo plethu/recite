@@ -6,6 +6,10 @@ use crate::{Client, ClientSpec, ResourceSpec, UiArgType};
 
 use super::ContractIssue;
 
+#[expect(
+    clippy::expect_used,
+    reason = "this helper owns the embedded UI argument-contract parse invariant"
+)]
 pub(super) fn argument_contract() -> BTreeMap<String, BTreeMap<String, UiArgType>> {
     #[derive(serde::Deserialize)]
     struct Manifest {
@@ -19,16 +23,8 @@ pub(super) fn argument_contract() -> BTreeMap<String, BTreeMap<String, UiArgType
         Float,
         Boolean,
     }
-    let manifest: Manifest = {
-        #[expect(
-            clippy::expect_used,
-            reason = "the embedded argument manifest is checked by the UI contract gate"
-        )]
-        {
-            toml::from_str(include_str!("../../resources/arguments.toml"))
-                .expect("embedded UI argument contract is valid")
-        }
-    };
+    let manifest: Manifest = toml::from_str(include_str!("../../resources/arguments.toml"))
+        .expect("embedded UI argument contract is valid");
     manifest
         .arguments
         .into_iter()

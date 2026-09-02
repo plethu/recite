@@ -1,4 +1,7 @@
-#![allow(dead_code)]
+#![allow(
+    dead_code,
+    reason = "shared Godot adapter helpers are reused selectively across integration binaries"
+)]
 
 use std::path::PathBuf;
 

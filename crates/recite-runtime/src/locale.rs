@@ -211,7 +211,7 @@ pub trait LocaleProvider {
     // to host providers. This public shape is the §9.7 compatibility contract.
     #[expect(
         clippy::too_many_arguments,
-        reason = "the public plural provider contract keeps gettext tuple fields explicit"
+        reason = "compatibility: preserve the public gettext plural-provider lookup tuple"
     )]
     fn resolve_plural(
         &self,

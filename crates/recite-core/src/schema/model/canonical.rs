@@ -585,7 +585,7 @@ impl CanonicalSchemaBytes {
     }
 
     // Invariant: supported Recite targets have usize widths no larger than u64.
-    #[allow(clippy::expect_used)]
+    #[allow(clippy::expect_used, reason = "usize fits into u64")]
     fn usize(&mut self, value: usize) {
         let value = u64::try_from(value).expect("schema collection length fits into u64");
         self.bytes.extend_from_slice(&value.to_le_bytes());

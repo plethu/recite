@@ -247,6 +247,10 @@ pub fn build_bench_report(options: &BenchReportOptions) -> BenchmarkResult<Bench
     })
 }
 
+#[allow(
+    clippy::disallowed_methods,
+    reason = "benchmark timing is intentionally outside deterministic runtime measurements"
+)]
 pub(crate) fn timed_operation(
     group: BenchGroup,
     operation: &'static str,
@@ -255,10 +259,6 @@ pub(crate) fn timed_operation(
 ) -> BenchmarkResult<BenchOperationReport> {
     let mut timings = Vec::with_capacity(samples);
     for _ in 0..samples {
-        #[allow(
-            clippy::disallowed_methods,
-            reason = "benchmark report command intentionally measures elapsed operation time"
-        )]
         let started = Instant::now();
         measure()?;
         timings.push(started.elapsed());

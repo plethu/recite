@@ -20,7 +20,10 @@ pub(crate) struct StdioHarness {
     next_id: u64,
 }
 
-#[allow(dead_code)]
+#[allow(
+    dead_code,
+    reason = "the stdio harness owns helpers used by different protocol integration binaries"
+)]
 impl StdioHarness {
     pub(crate) fn start(params: Value) -> Self {
         let mut harness = Self::start_uninitialized(params);
@@ -272,7 +275,10 @@ impl Drop for StdioHarness {
     }
 }
 
-#[allow(dead_code)]
+#[allow(
+    dead_code,
+    reason = "the stdio harness owns URI conversion used by different protocol integration binaries"
+)]
 pub(crate) fn file_uri(path: &Path) -> String {
     Url::from_file_path(path)
         .unwrap_or_else(|()| {

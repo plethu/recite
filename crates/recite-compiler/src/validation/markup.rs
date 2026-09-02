@@ -68,7 +68,10 @@ fn span_for_offset(source_text: &SourceText, offset: usize, len: usize) -> Sourc
 }
 
 // Invariant: offsets are within source text whose span starts at a valid source position.
-#[allow(clippy::expect_used)]
+#[allow(
+    clippy::expect_used,
+    reason = "validated markup offsets produce non-zero source positions"
+)]
 fn position_for_offset(source_text: &SourceText, offset: usize) -> SourcePosition {
     let mut line = source_text.span.start.line();
     let mut column = source_text.span.start.column();

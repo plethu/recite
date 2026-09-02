@@ -49,7 +49,10 @@ pub(super) fn collect_blocks<'a>(
 }
 
 // Invariant: 1:1 is a valid fallback source position for empty source-file sets.
-#[allow(clippy::expect_used)]
+#[allow(
+    clippy::expect_used,
+    reason = "empty validation inputs use the canonical 1:1 source position"
+)]
 pub(super) fn first_source_span<'a>(
     source_files: impl IntoIterator<Item = &'a SourceFile>,
 ) -> SourceSpan {

@@ -139,7 +139,7 @@ impl LspWorkspace {
         self.partition(&partition)?.kernel.snapshot().document(&key)
     }
 
-    #[allow(dead_code)]
+    #[allow(dead_code, reason = "workspace tests inspect schema")]
     pub(crate) fn schema(&self) -> &SchemaIndex {
         let Some(partition) = self
             .partitions

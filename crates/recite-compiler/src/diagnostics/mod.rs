@@ -47,7 +47,7 @@ pub(crate) fn integer_argument(value: usize) -> DiagnosticArgumentValue {
 
 #[allow(
     clippy::expect_used,
-    reason = "the central compiler registry is validated before producers run"
+    reason = "this helper owns the compiler presentation-contract lookup invariant"
 )]
 pub(crate) fn diagnostic_contract(
     code: &DiagnosticCode,
@@ -59,7 +59,7 @@ pub(crate) fn diagnostic_contract(
 
 #[allow(
     clippy::expect_used,
-    reason = "compiler factories are paired with checked central contracts"
+    reason = "this helper owns argument validation for compiler presentation contracts"
 )]
 pub(crate) fn compiler_diagnostic(
     contract: &'static DiagnosticPresentationContract,
@@ -77,7 +77,7 @@ pub(crate) fn compiler_diagnostic(
 
 #[allow(
     clippy::expect_used,
-    reason = "compiler factories are paired with checked auxiliary contracts"
+    reason = "this helper owns argument validation for compiler auxiliary contracts"
 )]
 pub(crate) fn auxiliary_presentation(
     presentation_id: &'static str,

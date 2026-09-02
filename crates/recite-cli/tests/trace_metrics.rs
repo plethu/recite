@@ -86,7 +86,7 @@ auto_ack_blocking = true
     assert_eq!(metrics["effect_count"]["immediate"], 0);
     assert_eq!(metrics["effect_count"]["blocking"], 1);
     assert_eq!(metrics["localization_lookup_count"], 0);
-    assert!(metrics["elapsed_traversal_time_ns"].is_number());
+    assert!(metrics["elapsed_traversal_time_ns"].as_u64().is_some());
     assert!(
         metrics["max_serialized_session_size_bytes"]
             .as_u64()

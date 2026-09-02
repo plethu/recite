@@ -43,7 +43,10 @@ impl DiagnosticExplanation {
     /// used by the current CLI. New clients should resolve these stable IDs
     /// through the shared UI catalogue instead of treating prose as identity.
     #[must_use]
-    #[allow(clippy::expect_used, reason = "the ID grammar is defined below")]
+    #[allow(
+        clippy::expect_used,
+        reason = "presentation IDs are derived through the validated diagnostic ID grammar"
+    )]
     pub fn presentation(&self) -> DiagnosticExplanationPresentation {
         let meaning =
             DiagnosticPresentation::new(detail_presentation_id(&self.code, "meaning", None));
@@ -126,7 +129,7 @@ pub fn default_presentation_id_for_code(code: &DiagnosticCode) -> DiagnosticPres
 
 #[allow(
     clippy::expect_used,
-    reason = "diagnostic codes and detail slots are validated at construction"
+    reason = "detail presentation IDs are assembled from validated code and ordinal parts"
 )]
 fn detail_presentation_id(
     code: &DiagnosticCode,
