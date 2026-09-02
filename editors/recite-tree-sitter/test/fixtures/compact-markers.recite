@@ -1,0 +1,7 @@
+::compact_markers default
+!immediate play_sfx(snap)
+! immediate play_sfx(snap)
+  ::indented_compact
+    !immediate play_sfx(snap)
+:: spaced_block
+! immediate play_sfx(snap)

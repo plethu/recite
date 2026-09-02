@@ -172,7 +172,7 @@
     },
     "children": {
       "multiple": true,
-      "required": true,
+      "required": false,
       "types": [
         {
           "type": "block_attribute",

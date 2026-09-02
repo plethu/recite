@@ -193,6 +193,7 @@ fi
 
 "$repo_root/scripts/check-tree-sitter-escaped-braces.sh" "$repo_root"
 "$repo_root/scripts/check-tree-sitter-compact-diverts.sh" "$repo_root"
+"$repo_root/scripts/check-tree-sitter-compact-markers.sh" "$repo_root"
 
 echo "== empty and malformed EOF recovery =="
 parse_clean empty source_file ''

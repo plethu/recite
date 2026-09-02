@@ -19,7 +19,7 @@ const commentLine = ($, terminator) => terminated($, terminator, [
   optional($.indent), field("marker", $.comment_marker), $.comment_text,
 ]);
 const blockStatement = ($, terminator) => terminated($, terminator, [
-  optional($.indent), field("marker", $.block_marker), $.hspace,
+  optional($.indent), field("marker", $.block_marker), optional($.hspace),
   field("name", $.block_name),
   repeat($.block_attribute), optional($.inline_comment),
 ]);
@@ -34,7 +34,7 @@ const choiceStatement = ($, terminator) => terminated($, terminator, [
   optional($.inline_comment),
 ]);
 const effectStatement = ($, terminator) => terminated($, terminator, [
-  optional($.indent), field("marker", $.effect_marker), $.hspace,
+  optional($.indent), field("marker", $.effect_marker), optional($.hspace),
   field("mode", $.effect_mode), $.hspace, field("call", $.call),
   optional($.inline_comment),
 ]);

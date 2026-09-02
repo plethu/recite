@@ -65,7 +65,7 @@ for required_file in \
   "$recovery_corpus" \
   "$capture_fixture" \
   "$id_recovery_fixture" \
-  "$incomplete_fixture"; do
+  "$incomplete_fixture" "$grammar_dir/test/fixtures/compact-markers.recite"; do
   if [[ ! -f "$required_file" ]]; then
     echo "missing required Tree-sitter grammar file: $required_file" >&2
     exit 2

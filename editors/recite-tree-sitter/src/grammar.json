@@ -275,8 +275,16 @@
           }
         },
         {
-          "type": "SYMBOL",
-          "name": "hspace"
+          "type": "CHOICE",
+          "members": [
+            {
+              "type": "SYMBOL",
+              "name": "hspace"
+            },
+            {
+              "type": "BLANK"
+            }
+          ]
         },
         {
           "type": "FIELD",
@@ -487,8 +495,16 @@
           }
         },
         {
-          "type": "SYMBOL",
-          "name": "hspace"
+          "type": "CHOICE",
+          "members": [
+            {
+              "type": "SYMBOL",
+              "name": "hspace"
+            },
+            {
+              "type": "BLANK"
+            }
+          ]
         },
         {
           "type": "FIELD",
@@ -1076,8 +1092,16 @@
           }
         },
         {
-          "type": "SYMBOL",
-          "name": "hspace"
+          "type": "CHOICE",
+          "members": [
+            {
+              "type": "SYMBOL",
+              "name": "hspace"
+            },
+            {
+              "type": "BLANK"
+            }
+          ]
         },
         {
           "type": "FIELD",
@@ -1288,8 +1312,16 @@
           }
         },
         {
-          "type": "SYMBOL",
-          "name": "hspace"
+          "type": "CHOICE",
+          "members": [
+            {
+              "type": "SYMBOL",
+              "name": "hspace"
+            },
+            {
+              "type": "BLANK"
+            }
+          ]
         },
         {
           "type": "FIELD",

@@ -1,0 +1,198 @@
+==================
+Compact, spaced, and indented block/effect markers
+==================
+::compact_markers default
+!immediate play_sfx(snap)
+! immediate play_sfx(snap)
+  ::indented_compact
+    !immediate play_sfx(snap)
+:: spaced_block
+! immediate play_sfx(snap)
+
+---
+
+(source_file
+  (block_statement
+    (block_marker)
+    (block_name
+      (identifier))
+    (block_attribute
+      (hspace)
+      (block_default))
+    (newline))
+  (effect_statement
+    (effect_marker)
+    (effect_mode)
+    (hspace)
+    (call
+      (function_name
+        (identifier))
+      (arguments
+        (argument
+          (value
+            (symbol
+              (identifier))))))
+    (newline))
+  (effect_statement
+    (effect_marker)
+    (hspace)
+    (effect_mode)
+    (hspace)
+    (call
+      (function_name
+        (identifier))
+      (arguments
+        (argument
+          (value
+            (symbol
+              (identifier))))))
+    (newline))
+  (block_statement
+    (indent)
+    (block_marker)
+    (block_name
+      (identifier))
+    (newline))
+  (effect_statement
+    (indent)
+    (effect_marker)
+    (effect_mode)
+    (hspace)
+    (call
+      (function_name
+        (identifier))
+      (arguments
+        (argument
+          (value
+            (symbol
+              (identifier))))))
+    (newline))
+  (block_statement
+    (block_marker)
+    (hspace)
+    (block_name
+      (identifier))
+    (newline))
+  (effect_statement
+    (effect_marker)
+    (hspace)
+    (effect_mode)
+    (hspace)
+    (call
+      (function_name
+        (identifier))
+      (arguments
+        (argument
+          (value
+            (symbol
+              (identifier))))))
+    (newline)))
+
+==================
+Malformed markers retain following statement recovery
+==================
+::recovery
+::
+!
+!bogus play_sfx()
+! immediate
+! immediate ,
+>following@0123456789abcdef0123
+  Recovery prose.
+
+---
+
+(source_file
+  (block_statement
+    (block_marker)
+    (block_name
+      (identifier))
+    (newline))
+  (ERROR
+    (block_marker))
+  (blank_line
+    (newline))
+  (ERROR
+    (effect_marker)
+    (ERROR
+      (newline)
+      (draft_id)
+      (hspace)
+      (draft_id)
+      (newline)
+      (draft_id))
+    (hspace)
+    (effect_mode))
+  (blank_line
+    (newline))
+  (ERROR
+    (effect_marker)
+    (hspace)
+    (effect_mode)
+    (hspace))
+  (blank_line
+    (newline))
+  (line_statement
+    (line_marker)
+    (line_name
+      (identifier)
+      (id_suffix
+        (stable_id)))
+    (newline))
+  (prose_line
+    (indent)
+    (prose_text
+      (prose_start))
+    (newline)))
+
+==================
+Punctuation and Unicode do not separate compact markers
+==================
+::,punctuation
+!;immediate play_sfx()
+:: unicode
+! immediate play_sfx()
+>following@0123456789abcdef0123
+  Recovery prose.
+
+---
+(source_file
+  (ERROR
+    (block_marker)
+    (draft_id))
+  (blank_line
+    (newline))
+  (ERROR
+    (effect_marker)
+    (ERROR
+      (draft_id))
+    (hspace)
+    (draft_id))
+  (blank_line
+    (newline))
+  (block_statement
+    (block_marker)
+    (block_name
+      (identifier))
+    (newline))
+  (ERROR
+    (effect_marker)
+    (ERROR
+      (hspace)
+      (draft_id))
+    (hspace)
+    (draft_id))
+  (blank_line
+    (newline))
+  (line_statement
+    (line_marker)
+    (line_name
+      (identifier)
+      (id_suffix
+        (stable_id)))
+    (newline))
+  (prose_line
+    (indent)
+    (prose_text
+      (prose_start))
+    (newline)))
