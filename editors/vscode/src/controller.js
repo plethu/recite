@@ -312,6 +312,7 @@ export class ExtensionController {
   }
 
   async restart() {
+    if (!this.restartPromise) this.restartPolicy.reset();
     this.restartRevision += 1;
     if (this.restartTimer) clearTimeout(this.restartTimer);
     this.restartTimer = undefined;
