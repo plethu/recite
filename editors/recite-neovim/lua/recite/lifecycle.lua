@@ -24,16 +24,18 @@ local function new(options)
     return root or resolve_root(bufnr, lsp.root_markers)
   end
 
-  local function open_buffers(root, lsp)
+  local function owned_buffers(lifecycle)
     local buffers = {}
-    for _, bufnr in ipairs(vim.api.nvim_list_bufs()) do
+    for bufnr in pairs(lifecycle.buffers) do
       if vim.api.nvim_buf_is_valid(bufnr)
         and vim.bo[bufnr].buflisted
-        and vim.bo[bufnr].filetype == "recite"
-        and configured_root(bufnr, lsp or state.config.lsp) == root then
+        and vim.bo[bufnr].filetype == "recite" then
         buffers[#buffers + 1] = bufnr
+      else
+        lifecycle.buffers[bufnr] = nil
       end
     end
+    table.sort(buffers)
     return buffers
   end
 
@@ -65,7 +67,7 @@ local function new(options)
       if lifecycle.intentional or generation ~= state.restart_generation then
         return
       end
-      if #open_buffers(lifecycle.root, material.root_config(lifecycle, state.config.lsp)) == 0 then
+      if #owned_buffers(lifecycle) == 0 then
         return
       end
       if lifecycle.attempts >= RESTART_LIMIT then
@@ -81,7 +83,7 @@ local function new(options)
           if lifecycle.intentional or generation ~= state.restart_generation then
             return
           end
-          for _, bufnr in ipairs(open_buffers(lifecycle.root, material.root_config(lifecycle, state.config.lsp))) do
+          for _, bufnr in ipairs(owned_buffers(lifecycle)) do
             start_client(bufnr, material.restart_overrides(lifecycle.material), lifecycle.attempts)
           end
         end)
@@ -115,6 +117,9 @@ local function new(options)
 
   start_client = function(bufnr, overrides, retry_attempts)
     bufnr = bufnr or 0
+    if bufnr == 0 then
+      bufnr = vim.api.nvim_get_current_buf()
+    end
     local lsp = vim.deepcopy(state.config.lsp)
     if overrides then
       lsp = vim.tbl_deep_extend("force", lsp, overrides)
@@ -205,7 +210,12 @@ local function new(options)
           stability_timer = nil,
           attempts = retry_attempts or 0,
           material = vim.deepcopy(client.config.recite_material),
+          buffers = {},
         }
+      end
+      local lifecycle = state.clients[client_id]
+      if client and lifecycle and client.config.recite_owned == true then
+        lifecycle.buffers[bufnr] = true
       end
     end
     return client_id
