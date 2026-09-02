@@ -183,6 +183,10 @@
           "named": true
         },
         {
+          "type": "indent",
+          "named": true
+        },
+        {
           "type": "inline_comment",
           "named": true
         },

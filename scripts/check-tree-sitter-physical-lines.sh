@@ -92,6 +92,74 @@ if ! grep -Eq '\((ERROR|MISSING)( |\))' <<<"$spaced_adjacent_output"; then
   sed -n '1,100p' <<<"$spaced_adjacent_output" >&2
   exit 1
 fi
+
+echo "== indented block headers and body boundaries =="
+indented_block_source=$':: outer default\n  > first@0123456789abcdef0123\n    First body.\n  :: nested speaker=guide\n  > nested@fedcba9876543210fedc\n    Nested body.\n\t:: tabbed\n\t> tabbed@00112233445566778899\n\t  Tabbed body.\n'
+parse_clean indented-block block_statement "$indented_block_source"
+indented_block_file="$scratch/indented-block.recite"
+printf '%s' "$indented_block_source" > "$indented_block_file"
+indented_block_output="$(tree-sitter parse --grammar-path "$grammar_dir" "$indented_block_file" 2>&1)"
+if [[ "$(grep -Fc '(block_statement' <<<"$indented_block_output")" -ne 3 ]]; then
+  echo "indented block boundary probe did not retain all three block statements" >&2
+  sed -n '1,160p' <<<"$indented_block_output" >&2
+  exit 1
+fi
+indented_block_captures="$scratch/indented-block-captures.txt"
+tree-sitter query --grammar-path "$grammar_dir" --captures \
+  "$grammar_dir/queries/highlights.scm" "$indented_block_file" > "$indented_block_captures"
+for expectation in \
+  ' - keyword, start: (3, 2), end: (3, 4), text: `::`' \
+  ' - label, start: (3, 5), end: (3, 11), text: `nested`' \
+  ' - property, start: (3, 12), end: (3, 19), text: `speaker`' \
+  ' - keyword, start: (6, 1), end: (6, 3), text: `::`' \
+  ' - label, start: (6, 4), end: (6, 10), text: `tabbed`'; do
+  if ! grep -Fq "$expectation" "$indented_block_captures"; then
+    echo "indented block capture expectation is missing: $expectation" >&2
+    sed -n '1,160p' "$indented_block_captures" >&2
+    exit 1
+  fi
+done
+
+indented_block_eof_source="${indented_block_source%$'\n'}"
+parse_clean indented-block-eof block_statement "$indented_block_eof_source"
+indented_block_eof_file="$scratch/indented-block-eof.recite"
+printf '%s' "$indented_block_eof_source" > "$indented_block_eof_file"
+parse_clean final-indented-block-eof block_statement $'  :: final_eof'
+indented_block_crlf_source="${indented_block_source//$'\n'/$'\r\n'}"
+parse_clean indented-block-crlf block_statement "$indented_block_crlf_source"
+indented_block_crlf_file="$scratch/indented-block-crlf.recite"
+printf '%s' "$indented_block_crlf_source" > "$indented_block_crlf_file"
+
+production_output="$scratch/production.txt"
+for production_fixture in "$indented_block_file" "$indented_block_eof_file" "$indented_block_crlf_file"; do
+  if ! cargo run --quiet --locked --manifest-path "$repo_root/Cargo.toml" -p recite-cli -- \
+    validate "$production_fixture" > "$production_output" 2>&1; then
+    echo "production parser rejected an indented-block boundary fixture: $production_fixture" >&2
+    sed -n '1,100p' "$production_output" >&2
+    exit 1
+  fi
+done
+
+malformed_block_file="$scratch/malformed-indented-block.recite"
+printf '%s' $':: outer default\n> outer@0123456789abcdef0123\n  Outer body.\n  ::: malformed\n  :: recovered\n> recovered@fedcba9876543210fedc\n  Recovered body.\n' > "$malformed_block_file"
+malformed_block_output="$(tree-sitter parse --grammar-path "$grammar_dir" "$malformed_block_file" 2>&1)" || true
+if ! grep -Eq '\((ERROR|MISSING)( |\))' <<<"$malformed_block_output" \
+  || [[ "$(grep -Fc '(block_statement' <<<"$malformed_block_output")" -lt 3 ]]; then
+  echo "malformed indented block near-miss did not expose recovery and retain the later header" >&2
+  sed -n '1,160p' <<<"$malformed_block_output" >&2
+  exit 1
+fi
+
+non_space_indent_file="$scratch/non-space-indented-block.recite"
+printf '%s' $' :: nbsp\n\v:: vertical\n:: valid\n' > "$non_space_indent_file"
+non_space_indent_output="$(tree-sitter parse --grammar-path "$grammar_dir" "$non_space_indent_file" 2>&1)" || true
+if [[ "$(grep -Ec '\((ERROR|MISSING)( |\))' <<<"$non_space_indent_output")" -lt 2 ]] \
+  || [[ "$(grep -Fc '(block_statement' <<<"$non_space_indent_output")" -ne 1 ]]; then
+  echo "non-space indentation was accepted as a block header or hid recovery" >&2
+  sed -n '1,160p' <<<"$non_space_indent_output" >&2
+  exit 1
+fi
+
 boundary_captures="$scratch/boundary-captures.txt"
 tree-sitter query --grammar-path "$grammar_dir" --captures \
   "$grammar_dir/queries/highlights.scm" "$boundary_file" > "$boundary_captures"

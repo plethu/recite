@@ -19,7 +19,8 @@ const commentLine = ($, terminator) => terminated($, terminator, [
   optional($.indent), field("marker", $.comment_marker), $.comment_text,
 ]);
 const blockStatement = ($, terminator) => terminated($, terminator, [
-  field("marker", $.block_marker), $.hspace, field("name", $.block_name),
+  optional($.indent), field("marker", $.block_marker), $.hspace,
+  field("name", $.block_name),
   repeat($.block_attribute), optional($.inline_comment),
 ]);
 const lineStatement = ($, terminator) => terminated($, terminator, [
@@ -317,7 +318,9 @@ module.exports = grammar({
     reason_key: ($) => "reason",
     effect_mode: ($) => choice("immediate", "deferred", "blocking"),
 
-    block_marker: ($) => "::",
+    // Prefer the exact marker over permissive prose recovery so an indented
+    // block header retains its structural node and named fields.
+    block_marker: ($) => token(prec(1, "::")),
     line_marker: ($) => ">",
     choice_marker: ($) => "?",
     effect_marker: ($) => "!",
