@@ -42,8 +42,8 @@ for required_file in \
   "$plugin_root/lua/recite.lua" \
   "$plugin_root/lua/recite/lifecycle.lua" \
   "$plugin_root/lua/recite/material.lua" \
+  "$plugin_root/lua/recite/health.lua" \
   "$plugin_root/ftdetect/recite.lua" \
-  "$plugin_root/health/recite.lua" \
   "$plugin_root/scripts/message-projections.mjs" \
   "$plugin_root/lua/recite_messages.lua" \
   "$neovim_query" \
@@ -55,6 +55,11 @@ for required_file in \
     exit 2
   fi
 done
+
+if [[ -e "$plugin_root/health/recite.lua" ]]; then
+  echo "legacy Neovim health path is not part of the runtimepath package: $plugin_root/health/recite.lua" >&2
+  exit 1
+fi
 
 if ! cmp -s "$grammar_query" "$neovim_query"; then
   echo "Neovim highlight query diverges from the host-neutral Tree-sitter query" >&2

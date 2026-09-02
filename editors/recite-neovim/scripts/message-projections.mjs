@@ -37,7 +37,7 @@ export async function projectMessages({ sourceOverride } = {}) {
 async function assertCallsites(ids) {
   const files = [
     path.join(packageRoot, "lua", "recite.lua"),
-    path.join(packageRoot, "health", "recite.lua"),
+    path.join(packageRoot, "lua", "recite", "health.lua"),
   ];
   const known = new Set(ids);
   for (const file of files) {

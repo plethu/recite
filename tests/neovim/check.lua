@@ -254,4 +254,37 @@ assert_true(unicode_diagnostic.user_data.lsp.range.start.character == 13, "the s
 clients = vim.lsp.get_clients({ bufnr = 0, name = "recite-lsp" })
 assert_true(#clients > 0 and clients[1].initialized, "unicode buffer lost its initialized client")
 
+local messages = require("recite_messages")
+local health_module_path = vim.api.nvim_get_runtime_file("lua/recite/health.lua", true)
+assert_true(#health_module_path == 1
+  and health_module_path[1] == vim.env.RECITE_PLUGIN .. "/lua/recite/health.lua",
+  "Neovim runtimepath did not expose the standard Recite health module")
+assert_true(#vim.api.nvim_get_runtime_file("health/recite.lua", true) == 0,
+  "Neovim runtimepath retained the non-discoverable Recite health module")
+vim.cmd("checkhealth recite")
+local health_lines = vim.api.nvim_buf_get_lines(0, 0, -1, false)
+local function health_report_contains(message)
+  for _, line in ipairs(health_lines) do
+    if line:find(message, 1, true) then
+      return true
+    end
+  end
+  return false
+end
+
+assert_true(package.loaded["recite.health"] ~= nil,
+  ":checkhealth recite did not load the discoverable recite.health module")
+assert_true(not health_report_contains('No healthcheck found for "recite" plugin.'),
+  ":checkhealth recite reported that no healthcheck was found")
+for _, message in ipairs({
+  messages.format("neovim-health-filetype-ok"),
+  messages.format("neovim-health-lsp-executable-found", { command = vim.env.RECITE_LSP }),
+  messages.format("neovim-health-query-found"),
+  messages.format("neovim-health-parser-found"),
+  messages.format("neovim-health-open-buffer"),
+}) do
+  assert_true(health_report_contains(message),
+    ":checkhealth recite omitted check result: " .. message)
+end
+
 vim.cmd("qa!")

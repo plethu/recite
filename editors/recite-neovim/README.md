@@ -160,6 +160,8 @@ readers and pipes.
 
 Run `:checkhealth recite` to inspect filetype registration, the configured
 `recite-lsp` executable, the Tree-sitter query, and the parser library.
+The health module is installed at `lua/recite/health.lua`, Neovim's standard
+runtimepath discovery location.
 
 - If `:set filetype?` is not `recite` for a `.recite` file, make sure the
   `editors/recite-neovim` directory is on `runtimepath` and run `:filetype on`.
