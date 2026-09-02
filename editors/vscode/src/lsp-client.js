@@ -18,6 +18,13 @@ export class ReciteLanguageClient extends EventEmitter {
     this.cwd = options.cwd;
     this.environment = options.environment;
     this.spawnProcess = options.spawnProcess ?? spawn;
+    const clock = options.clock ?? {};
+    this.clock = {
+      now: clock.now ?? options.now ?? (() => Date.now()),
+      setTimeout: clock.setTimeout ?? options.setTimeout ?? ((callback, milliseconds) =>
+        setTimeout(callback, milliseconds)),
+      clearTimeout: clock.clearTimeout ?? options.clearTimeout ?? ((timer) => clearTimeout(timer))
+    };
     this.onRegisterCapability = options.onRegisterCapability;
     this.onUnregisterCapability = options.onUnregisterCapability;
     this.child = undefined;
@@ -27,6 +34,9 @@ export class ReciteLanguageClient extends EventEmitter {
     this.queuedNotifications = [];
     this.transportClosed = false;
     this.failure = undefined;
+    this.exited = false;
+    this.childListeners = undefined;
+    this.stopPromise = undefined;
     this.parser = new LspFrameParser((message) => this.receive(message));
   }
 
@@ -51,34 +61,16 @@ export class ReciteLanguageClient extends EventEmitter {
       this.state = "stopped";
       throw asClientFailure(ClientFailureKind.Lifecycle, error);
     }
-    this.exited = false;
     this.transportClosed = false;
     this.failure = undefined;
-    this.child.stdout.on("data", (chunk) => this.read(chunk));
-    this.child.stderr.on("data", (chunk) => this.emit("stderr", chunk.toString("utf8")));
-    // A Writable emits EPIPE asynchronously. Attach this before the first
-    // initialize write so a child that exits immediately cannot surface an
-    // uncaught exception or leave a pending request hanging.
-    this.child.stdin.on("error", (error) => this.handleFailure(
-      ClientFailureKind.Transport, error
-    ));
-    this.child.on("error", (error) => this.handleFailure(
-      ClientFailureKind.Lifecycle, error
-    ));
-    this.child.on("exit", (code, signal) => {
-      this.exited = true;
-      if (this.state !== "stopping" && this.state !== "stopped") {
-        this.rejectPending(new ClientFailure(
-          ClientFailureKind.Lifecycle,
-          exitDetail(code, signal)
-        ));
-      }
-      this.state = "stopped";
-      this.emit("exit", { code, signal });
-    });
+    this.exited = false;
+    this.attachChild(this.child);
 
     try {
       const result = await this.request("initialize", initializeParams);
+      if (this.state !== "starting" || this.failure || this.exited || this.transportClosed) {
+        throw this.failure ?? new ClientFailure(ClientFailureKind.Lifecycle);
+      }
       this.state = "running";
       this.notify("initialized", {}, { queue: false });
       this.flushNotifications();
@@ -197,44 +189,127 @@ export class ReciteLanguageClient extends EventEmitter {
     );
   }
 
-  async stop() {
-    if (!this.child) return;
+  stop() {
+    if (this.stopPromise) return this.stopPromise;
+    if (!this.child) return Promise.resolve();
     if (this.state === "stopped") {
-      this.cleanupChild(this.child);
+      const child = this.child;
+      this.cleanupChild(child);
       this.child = undefined;
       this.queuedNotifications = [];
-      return;
+      return Promise.resolve();
     }
-    if (this.state === "stopping") return;
     this.state = "stopping";
     const child = this.child;
-    const exited = new Promise((resolve) => child.once("exit", resolve));
-    if (child.stdin.writable) {
-      try {
-        await Promise.race([
-          this.request("shutdown", undefined),
-          timeout(SHUTDOWN_TIMEOUT_MS)
-        ]);
-      } catch {
-        // A broken or already-exiting server still needs the exit notification
-        // when its transport is writable; shutdown is best effort at teardown.
+    this.stopPromise = this.teardown(child).finally(() => {
+      this.stopPromise = undefined;
+    });
+    return this.stopPromise;
+  }
+
+  async teardown(child) {
+    const exitWait = this.waitForExit(child);
+    const exited = exitWait.promise;
+    const deadline = createDeadline(this.clock, SHUTDOWN_TIMEOUT_MS);
+    const deadlineReached = deadline.promise.then(() => "deadline");
+    const exitReached = exited.then(() => "exit");
+
+    try {
+      if (!this.exited && child.stdin.writable && !this.transportClosed) {
+        let shutdown;
+        try {
+          shutdown = this.request("shutdown", undefined);
+        } catch {
+          shutdown = Promise.resolve();
+        }
+        const shutdownReached = Promise.resolve(shutdown)
+          .then(() => "shutdown", () => "shutdown");
+        const result = await Promise.race([shutdownReached, exitReached, deadlineReached]);
+        if (result !== "deadline" && result !== "exit" && !this.exited) {
+          this.notify("exit", undefined, { queue: false });
+          try { child.stdin.end(); } catch { /* already closed */ }
+        }
       }
-      this.notify("exit", undefined, { queue: false });
-      try { child.stdin.end(); } catch { /* already closed */ }
+
+      await Promise.race([exitReached, deadlineReached]);
+      if (!this.exited && !child.killed) {
+        try { child.kill(); } catch { /* already gone */ }
+      }
+      await Promise.race([exitReached, deadlineReached]);
+    } finally {
+      exitWait.cancel();
+      deadline.cancel();
+      this.cleanupChild(child);
+      this.rejectPending(new ClientFailure(ClientFailureKind.Lifecycle));
+      this.queuedNotifications = [];
+      if (this.child === child) this.child = undefined;
+      this.state = "stopped";
     }
-    await Promise.race([exited, timeout(SHUTDOWN_TIMEOUT_MS)]);
-    if (!this.exited && !child.killed) {
-      try { child.kill(); } catch { /* already gone */ }
-      await Promise.race([exited, timeout(SHUTDOWN_TIMEOUT_MS)]);
-    }
-    this.cleanupChild(child);
-    this.rejectPending(new ClientFailure(ClientFailureKind.Lifecycle));
-    this.queuedNotifications = [];
-    this.child = undefined;
+  }
+
+  waitForExit(child) {
+    if (this.exited) return { promise: Promise.resolve(), cancel() {} };
+    let settled = false;
+    let onExit;
+    const promise = new Promise((resolve) => {
+      onExit = () => {
+        settled = true;
+        child.removeListener("exit", onExit);
+        resolve();
+      };
+      child.once("exit", onExit);
+    });
+    return {
+      promise,
+      cancel: () => {
+        if (!settled) child.removeListener("exit", onExit);
+      }
+    };
+  }
+
+  attachChild(child) {
+    const listeners = {
+      stdout: (chunk) => this.read(chunk),
+      stderr: (chunk) => this.emit("stderr", chunk.toString("utf8")),
+      stdinError: (error) => this.handleFailure(ClientFailureKind.Transport, error),
+      error: (error) => this.handleFailure(ClientFailureKind.Lifecycle, error),
+      exit: (code, signal) => this.handleExit(child, code, signal)
+    };
+    child.stdout.on("data", listeners.stdout);
+    child.stderr.on("data", listeners.stderr);
+    // A Writable emits EPIPE asynchronously. Attach this before the first
+    // initialize write so a child that exits immediately cannot surface an
+    // uncaught exception or leave a pending request hanging.
+    child.stdin.on("error", listeners.stdinError);
+    child.on("error", listeners.error);
+    child.on("exit", listeners.exit);
+    this.childListeners = { child, listeners };
+  }
+
+  handleExit(child, code, signal) {
+    if (this.child !== child || this.exited) return;
+    this.exited = true;
+    const unexpected = this.state !== "stopping" && this.state !== "stopped";
     this.state = "stopped";
+    this.closeTransport();
+    if (unexpected && !this.failure) {
+      this.failure = new ClientFailure(ClientFailureKind.Lifecycle, exitDetail(code, signal));
+      this.rejectPending(this.failure);
+      this.emit("failure", this.failure);
+    }
+    this.emit("exit", { code, signal });
   }
 
   cleanupChild(child) {
+    if (this.childListeners?.child === child) {
+      const { listeners } = this.childListeners;
+      child.stdout.removeListener("data", listeners.stdout);
+      child.stderr.removeListener("data", listeners.stderr);
+      child.stdin.removeListener("error", listeners.stdinError);
+      child.removeListener("error", listeners.error);
+      child.removeListener("exit", listeners.exit);
+      this.childListeners = undefined;
+    }
     child.stdin.destroy?.();
     child.stdout.destroy?.();
     child.stderr.destroy?.();
@@ -244,18 +319,25 @@ export class ReciteLanguageClient extends EventEmitter {
     const failure = error instanceof ClientFailure
       ? error
       : asClientFailure(kind, error);
-    if (this.failure) return false;
+    if (this.failure || this.exited || this.state === "stopping" || this.state === "stopped") {
+      return false;
+    }
     this.failure = failure;
     this.rejectPending(failure);
-    this.closeTransport();
+    this.state = "stopped";
+    const child = this.child;
     this.emit("failure", failure);
+    // Failure observers may synchronously stop the client and clear
+    // `this.child`; close the captured process rather than rereading mutable
+    // client state after the event.
+    this.closeTransport(child);
     return true;
   }
 
-  closeTransport() {
+  closeTransport(child = this.child) {
     if (this.transportClosed) return;
     this.transportClosed = true;
-    closeTransport(this.child, this.child?.stdin, this.exited);
+    closeTransport(child, child?.stdin, this.exited);
   }
 
   rejectPending(error) {
@@ -271,9 +353,23 @@ function exitDetail(code, signal) {
   return parts.length ? parts.join(", ") : undefined;
 }
 
-function timeout(milliseconds) {
-  return new Promise((resolve) => {
-    const timer = setTimeout(resolve, milliseconds);
-    timer.unref?.();
+function createDeadline(clock, milliseconds) {
+  let timer;
+  let settled = false;
+  const promise = new Promise((resolve) => {
+    const remaining = Math.max(0, milliseconds);
+    timer = clock.setTimeout(() => {
+      settled = true;
+      resolve();
+    }, remaining);
+    timer?.unref?.();
   });
+  return {
+    promise,
+    cancel: () => {
+      if (settled) return;
+      settled = true;
+      if (timer !== undefined) clock.clearTimeout(timer);
+    }
+  };
 }

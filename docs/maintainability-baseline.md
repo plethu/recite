@@ -211,8 +211,9 @@ production suppressions must carry a narrow scope and rationale.
 | `crates/recite-ui/tests/contract.rs` | 475 | test/support | ui/tests | review | #51: typed client projection and argument parity coverage remains one inventory contract suite |
 | `.agents/skills/recite-github-pm/scripts/check-pr-review-gates.sh` | 470 | tooling | agent-workflow | exception | #197: split review-gate orchestration into focused policy helpers |
 | `editors/recite-tree-sitter/grammar.js` | 372 | production | tree-sitter/grammar | cohesive | Grammar source owns syntax and recovery rules alongside the named node declarations |
-| `editors/vscode/src/controller.js` | 319 | production | vscode/controller | review | #51: controller retains lifecycle coordination while restart policy, startup outcomes, and transport boundaries are extracted |
-| `editors/vscode/src/lsp-client.js` | 279 | production | vscode/lsp-client | review | #51: client retains protocol request lifecycle while framed transport owns writes and teardown |
+| `editors/vscode/src/controller.js` | 334 | production | vscode/controller | review | #51: controller retains restart coordination, startup projection, and terminal child-failure recovery |
+| `editors/vscode/src/lsp-client.js` | 375 | production | vscode/lsp-client | review | #51: client keeps request settlement, child event ordering, transport closure, and bounded teardown as one shared lifecycle |
+| `editors/vscode/test/lsp.test.mjs` | 460 | test/support | vscode/tests | review | #51: fake child, clock, framing, and lifecycle contract scenarios remain one protocol-boundary suite |
 | `editors/vscode/scripts/message-projections.mjs` | 303 | tooling | vscode/projections | review | #51: inventory parsing, typed placeholder lowering, and projection installation remain one checked update boundary |
 | `editors/vscode/scripts/ui-boundary-adapter.mjs` | 251 | tooling | vscode/checks | review | #51: semantic UI adapter contract remains one cohesive structural boundary |
 | `editors/vscode/scripts/ui-boundary-calls.mjs` | 347 | tooling | vscode/checks | review | UI boundary call inventory remains a single generated-boundary checker |

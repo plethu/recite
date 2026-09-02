@@ -1,4 +1,6 @@
 import { EventEmitter } from "node:events";
+import os from "node:os";
+import path from "node:path";
 import test from "node:test";
 import assert from "node:assert/strict";
 import { ReciteLanguageClient } from "../src/lsp-client.js";
@@ -175,6 +177,170 @@ test("an immediately exiting child rejects initialize with a typed lifecycle fai
   assert.equal(client.status, "stopped");
 });
 
+test("a spawn error without an exit event settles initialize immediately", async () => {
+  const child = new FakeProcess({ noExitOnKill: true });
+  const client = new ReciteLanguageClient({
+    command: "missing-recite-lsp", args: [], spawnProcess: () => child
+  });
+  const starting = client.start({ capabilities: {} });
+  child.emit("error", Object.assign(new Error("ENOENT"), { code: "ENOENT" }));
+
+  await assert.rejects(starting, (error) => {
+    assert.equal(error.kind, "lifecycle");
+    assert.equal(error.code, "ENOENT");
+    return true;
+  });
+  assert.equal(client.status, "stopped");
+  assert.equal(child.killCount, 1);
+  assert.equal(child.listenerCount("error"), 0);
+  assert.equal(child.listenerCount("exit"), 0);
+});
+
+test("a real missing executable spawn error settles without waiting for exit", async () => {
+  const command = path.join(os.tmpdir(), `recite-missing-server-${process.pid}`);
+  const client = new ReciteLanguageClient({ command, args: [] });
+  const startedAt = Date.now();
+
+  await assert.rejects(client.start({ capabilities: {} }), (error) => {
+    assert.equal(error.kind, "lifecycle");
+    assert.equal(error.code, "ENOENT");
+    return true;
+  });
+
+  assert.ok(Date.now() - startedAt < 500, "spawn failure should not enter teardown timeouts");
+  assert.equal(client.status, "stopped");
+});
+
+test("a child error after initialize is terminal and reports one failure without exit", async () => {
+  const child = new FakeProcess({ noExitOnKill: true });
+  const failures = [];
+  const exits = [];
+  const client = new ReciteLanguageClient({
+    command: "recite-lsp", args: [], spawnProcess: () => child
+  });
+  client.on("failure", (failure) => failures.push(failure));
+  client.on("exit", (event) => exits.push(event));
+  const starting = client.start({ capabilities: {} });
+  child.stdout.emit("data", encodeMessage({ jsonrpc: "2.0", id: 1, result: {} }));
+  await starting;
+
+  child.emit("error", new Error("child failed"));
+
+  assert.equal(client.status, "stopped");
+  assert.equal(client.transportClosed, true);
+  assert.equal(failures.length, 1);
+  assert.equal(failures[0].kind, "lifecycle");
+  assert.deepEqual(exits, []);
+  await client.stop();
+  assert.equal(child.listenerCount("error"), 0);
+  assert.equal(child.listenerCount("exit"), 0);
+});
+
+for (const [label, emitEvents] of [
+  ["error then exit", (child) => {
+    child.emit("error", new Error("child failed"));
+    child.emit("exit", 1, null);
+  }],
+  ["exit then error", (child) => {
+    child.emit("exit", 1, null);
+    child.emit("error", new Error("late child failure"));
+  }]
+]) {
+  test(`child ${label} produces one failure and one exit notification`, async () => {
+    const child = new FakeProcess({ noExitOnKill: true });
+    const failures = [];
+    const exits = [];
+    const client = new ReciteLanguageClient({
+      command: "recite-lsp", args: [], spawnProcess: () => child
+    });
+    client.on("failure", (failure) => failures.push(failure));
+    client.on("exit", (event) => exits.push(event));
+    const starting = client.start({ capabilities: {} });
+    child.stdout.emit("data", encodeMessage({ jsonrpc: "2.0", id: 1, result: {} }));
+    await starting;
+
+    emitEvents(child);
+
+    assert.equal(client.status, "stopped");
+    assert.equal(failures.length, 1);
+    assert.deepEqual(exits, [{ code: 1, signal: null }]);
+    await client.stop();
+  });
+}
+
+test("graceful stop forces at one total deadline and concurrent callers join it", async () => {
+  const clock = new FakeClock();
+  const child = new FakeProcess({ noExitOnKill: true });
+  const client = new ReciteLanguageClient({
+    command: "recite-lsp", args: [], spawnProcess: () => child, clock
+  });
+  const starting = client.start({ capabilities: {} });
+  child.stdout.emit("data", encodeMessage({ jsonrpc: "2.0", id: 1, result: {} }));
+  await starting;
+
+  const first = client.stop();
+  const second = client.stop();
+  assert.strictEqual(first, second);
+  await flushMicrotasks();
+  assert.equal(client.status, "stopping");
+  assert.equal(decode(child.stdin.writes.at(-1)).method, "shutdown");
+  assert.equal(clock.timers.length, 1);
+  assert.equal(child.killCount, 0);
+  clock.advance(999);
+  await flushMicrotasks();
+  assert.equal(child.killCount, 0);
+  clock.advance(1);
+  await first;
+
+  assert.equal(child.killCount, 1);
+  assert.equal(client.status, "stopped");
+  assert.equal(child.listenerCount("error"), 0);
+  assert.equal(child.listenerCount("exit"), 0);
+  assert.equal(child.stdin.listenerCount("error"), 0);
+});
+
+test("a synchronous failure observer cannot orphan the captured child", async () => {
+  const child = new FakeProcess({ noExitOnKill: true });
+  const client = new ReciteLanguageClient({
+    command: "recite-lsp", args: [], spawnProcess: () => child
+  });
+  let observerStop;
+  client.on("failure", () => { observerStop = client.stop(); });
+  const starting = client.start({ capabilities: {} });
+  child.stdout.emit("data", encodeMessage({ jsonrpc: "2.0", id: 1, result: {} }));
+  await starting;
+
+  child.emit("error", new Error("child failed"));
+  await observerStop;
+
+  assert.equal(child.killCount, 1);
+  assert.equal(client.status, "stopped");
+  assert.equal(child.stdin.destroyed, true);
+});
+
+test("child errors during teardown are ignored and remain within the deadline", async () => {
+  const clock = new FakeClock();
+  const child = new FakeProcess({ noExitOnKill: true });
+  const failures = [];
+  const client = new ReciteLanguageClient({
+    command: "recite-lsp", args: [], spawnProcess: () => child, clock
+  });
+  client.on("failure", (failure) => failures.push(failure));
+  const starting = client.start({ capabilities: {} });
+  child.stdout.emit("data", encodeMessage({ jsonrpc: "2.0", id: 1, result: {} }));
+  await starting;
+
+  const stopping = client.stop();
+  await flushMicrotasks();
+  child.emit("error", new Error("late child failure during stop"));
+  clock.advance(1000);
+  await stopping;
+
+  assert.deepEqual(failures, []);
+  assert.equal(child.killCount, 1);
+  assert.equal(client.status, "stopped");
+});
+
 test("a transport error wins a response race and rejects every pending request once", async () => {
   const child = new FakeProcess();
   const failures = [];
@@ -204,6 +370,7 @@ class FakeStream extends EventEmitter {
     this.destroyed = false;
     this.writes = [];
     this.writeError = options.writeError;
+    this.onWrite = options.onWrite;
   }
 
   write(value, callback) {
@@ -214,6 +381,7 @@ class FakeStream extends EventEmitter {
       return true;
     }
     this.writes.push(Buffer.from(value));
+    this.onWrite?.(Buffer.from(value));
     callback?.();
     return true;
   }
@@ -232,8 +400,11 @@ class FakeStream extends EventEmitter {
 class FakeProcess extends EventEmitter {
   constructor(options = {}) {
     super();
+    this.noExitOnKill = options.noExitOnKill ?? false;
     this.stdin = new FakeStream(
-      () => queueMicrotask(() => this.emit("exit", 0, null)), options
+      () => {
+        if (!options.noExitOnEnd) queueMicrotask(() => this.emit("exit", 0, null));
+      }, options
     );
     this.stdout = new FakeStream();
     this.stderr = new FakeStream();
@@ -245,8 +416,42 @@ class FakeProcess extends EventEmitter {
   kill() {
     this.killCount += 1;
     this.killed = true;
-    queueMicrotask(() => this.emit("exit", 0, null));
+    if (!this.noExitOnKill) queueMicrotask(() => this.emit("exit", 0, null));
   }
+}
+
+class FakeClock {
+  constructor() {
+    this.time = 0;
+    this.timers = [];
+  }
+
+  now = () => this.time;
+
+  setTimeout = (callback, milliseconds) => {
+    const timer = { callback, due: this.time + milliseconds, cancelled: false };
+    this.timers.push(timer);
+    return timer;
+  };
+
+  clearTimeout = (timer) => { timer.cancelled = true; };
+
+  advance(milliseconds) {
+    this.time += milliseconds;
+    const due = [];
+    const remaining = [];
+    for (const timer of this.timers) {
+      if (timer.cancelled) continue;
+      if (timer.due <= this.time) due.push(timer);
+      else remaining.push(timer);
+    }
+    this.timers = remaining;
+    for (const timer of due) timer.callback();
+  }
+}
+
+async function flushMicrotasks() {
+  await new Promise((resolve) => setImmediate(resolve));
 }
 
 function decode(frame) {

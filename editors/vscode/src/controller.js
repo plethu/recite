@@ -44,6 +44,12 @@ export class ExtensionController {
     if (this.client && this.client.status !== "stopped") {
       return startupOutcome(StartupOutcomeKind.Started);
     }
+    if (this.client?.status === "stopped") {
+      // A child error may be terminal without ever producing an exit event.
+      // Finish that client's local transport cleanup before dropping the
+      // controller reference during the bounded retry.
+      try { await this.client.stop?.(); } catch { /* already torn down */ }
+    }
     this.client = undefined;
     let configuration;
     try {
@@ -253,18 +259,27 @@ export class ExtensionController {
   handleClientFailure(client, failure, { notify = true } = {}) {
     if (client && this.client !== client) return;
     if (client) client.failureReported = true;
-    if (!notify) return;
-    switch (failure.kind) {
-      case ClientFailureKind.Transport:
-        this.userInterface.serverTransportFailure(failure.detail);
-        break;
-      case ClientFailureKind.Protocol:
-        this.userInterface.serverProtocolFailure();
-        break;
-      case ClientFailureKind.Lifecycle:
-      default:
-        this.userInterface.serverLifecycleFailure(failure.detail);
-        break;
+    if (notify) {
+      switch (failure.kind) {
+        case ClientFailureKind.Transport:
+          this.userInterface.serverTransportFailure(failure.detail);
+          break;
+        case ClientFailureKind.Protocol:
+          this.userInterface.serverProtocolFailure();
+          break;
+        case ClientFailureKind.Lifecycle:
+        default:
+          this.userInterface.serverLifecycleFailure(failure.detail);
+          break;
+      }
+    }
+    // A child error is terminal even when the process never emits `exit`.
+    // The client moves to stopped before emitting failure, so this path owns
+    // recovery for that otherwise silent lifecycle ending. Exit events remain
+    // idempotent through the restart timer guard and failureReported marker.
+    if (client && this.client === client && client.status === "stopped") {
+      this.clearStableReset();
+      this.scheduleRestart();
     }
   }
 

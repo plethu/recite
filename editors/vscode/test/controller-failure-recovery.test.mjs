@@ -68,6 +68,30 @@ test("typed client failures select one localized UI category at the controller e
   assert.equal(lifecycleClient.failureReported, true);
 });
 
+test("a terminal child failure schedules recovery without waiting for exit", async () => {
+  const messages = [];
+  const api = hostApi({ isTrusted: () => true, onDidGrantWorkspaceTrust: () => ({ dispose() {} }) });
+  const clients = [];
+  const controller = new ExtensionController(api, output(messages), { delete() {} }, {
+    createClient: () => {
+      const client = new FakeClient();
+      clients.push(client);
+      return client;
+    }
+  });
+
+  await controller.start();
+  clients[0].status = "stopped";
+  clients[0].emit("failure", new ClientFailure(ClientFailureKind.Lifecycle, "child failed"));
+
+  assert.deepEqual(messages, [
+    "Recite language server lifecycle failed: child failed.",
+    "Recite language server restart scheduled in 100 milliseconds."
+  ]);
+  assert.equal(controller.restartTimer !== undefined, true);
+  await controller.dispose();
+});
+
 test("startup failure events are not reported a second time by start rejection", async () => {
   const received = [];
   const api = hostApi({ isTrusted: () => true, onDidGrantWorkspaceTrust: () => ({ dispose() {} }) });
