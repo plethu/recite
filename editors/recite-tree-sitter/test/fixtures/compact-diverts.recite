@@ -1,0 +1,12 @@
+:: compact default
+> first@0123456789abcdef0123
+  First.
+->END
+->compact_target
+? choose@fedcba98765432100123
+  Choose.
+  ->END
+:: compact_target
+> final@00112233445566778899
+  Final.
+->END

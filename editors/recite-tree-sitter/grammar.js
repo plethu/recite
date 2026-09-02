@@ -39,7 +39,7 @@ const effectStatement = ($, terminator) => terminated($, terminator, [
   optional($.inline_comment),
 ]);
 const divertStatement = ($, terminator) => terminated($, terminator, [
-  optional($.indent), field("marker", $.divert_marker), $.hspace,
+  optional($.indent), field("marker", $.divert_marker), optional($.hspace),
   field("target", $.target), optional($.inline_comment),
 ]);
 const conditionalLine = ($, marker, tail, terminator) => seq(
