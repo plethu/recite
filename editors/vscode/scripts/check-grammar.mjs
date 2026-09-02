@@ -20,11 +20,17 @@ assert(grammar.repository && typeof grammar.repository === "object",
   "TextMate grammar must have a repository");
 assert(fixtureManifest.grammar === grammarRelative,
   "TextMate fixture manifest must point at the checked-in grammar");
+assert(!grammar.repository["inline-comment"],
+  "TextMate grammar must not invent trailing hash comments");
+assert(fixtureManifest.hostile_fixture === "fixtures/editor-parity/vscode/textmate-hostile.recite",
+  "TextMate fixture manifest must name the hostile fixture");
+assert(fixtureManifest.token_snapshots === "fixtures/editor-parity/vscode/textmate-token-snapshots.json",
+  "TextMate fixture manifest must name the tokenizer snapshots");
 
 const requiredRules = [
   "comment-line", "block-statement", "line-statement", "choice-statement",
   "effect-statement", "divert-statement", "conditional-statement",
-  "plural-statement", "prose-line", "markup-tag", "interpolation",
+  "plural-statement", "prose-line", "markup-tag", "markup-attribute", "interpolation",
   "invalid-lexical"
 ];
 for (const rule of requiredRules) {

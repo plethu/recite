@@ -53,17 +53,6 @@
         }
       }
     },
-    "inline-comment": {
-      "match": "(#)([^\\r\\n]*)$",
-      "captures": {
-        "1": {
-          "name": "punctuation.definition.comment.recite"
-        },
-        "2": {
-          "name": "comment.line.number-sign.recite"
-        }
-      }
-    },
     "block-statement": {
       "begin": "^([ \\t]*)(::)[ \\t]*([^\\s@#=(),\\[\\]{}|:]+)?",
       "beginCaptures": {
@@ -82,7 +71,7 @@
       ]
     },
     "line-statement": {
-      "begin": "^([ \\t]*)(>)[ \\t]*([^\\s@#=(),\\[\\]{}|:]+)?(?:[ \\t]*(@)([^\\s#]*)?)?",
+      "begin": "^([ \\t]*)(>)[ \\t]*(?!(?:[^\\s@#=(),\\[\\]{}|:]+)[ \\t]*=)([^\\s@#=(),\\[\\]{}|:]+)?(?:[ \\t]*(@)([^\\s#]*)?)?",
       "beginCaptures": {
         "2": {
           "name": "punctuation.definition.line.recite"
@@ -105,7 +94,7 @@
       ]
     },
     "choice-statement": {
-      "begin": "^([ \\t]*)(\\?)[ \\t]*([^\\s@#=(),\\[\\]{}|:]+)?(?:[ \\t]*(@)([^\\s#]*)?)?",
+      "begin": "^([ \\t]*)(\\?)[ \\t]*(?!(?:[^\\s@#=(),\\[\\]{}|:]+)[ \\t]*=)([^\\s@#=(),\\[\\]{}|:]+)?(?:[ \\t]*(@)([^\\s#]*)?)?",
       "beginCaptures": {
         "2": {
           "name": "punctuation.definition.choice.recite"
@@ -128,7 +117,7 @@
       ]
     },
     "effect-statement": {
-      "begin": "^([ \\t]*)(!)[ \\t]*(immediate|deferred|blocking)?",
+      "begin": "^([ \\t]*)(!)[ \\t]*(?:(immediate|deferred|blocking)(?=[ \\t]|$))?",
       "beginCaptures": {
         "2": {
           "name": "punctuation.definition.effect.recite"
@@ -145,7 +134,7 @@
       ]
     },
     "divert-end-statement": {
-      "begin": "^([ \\t]*)(->)[ \\t]*(END)(?=[ \\t]*(?:#.*)?$)",
+      "begin": "^([ \\t]*)(->)[ \\t]*(END)(?=[ \\t]*$)",
       "beginCaptures": {
         "2": {
           "name": "punctuation.definition.divert.recite"
@@ -155,11 +144,7 @@
         }
       },
       "end": "$",
-      "patterns": [
-        {
-          "include": "#inline-comment"
-        }
-      ]
+      "patterns": []
     },
     "divert-statement": {
       "begin": "^([ \\t]*)(->)[ \\t]*([^\\s#]+)?",
@@ -172,14 +157,10 @@
         }
       },
       "end": "$",
-      "patterns": [
-        {
-          "include": "#inline-comment"
-        }
-      ]
+      "patterns": []
     },
     "conditional-statement": {
-      "begin": "^([ \\t]*)(:(?:if|else|match|case))(?=[ \\t(]|$)",
+      "begin": "^([ \\t]*)(:(?:if|else|match|case))(?=[ \\t]|$)",
       "beginCaptures": {
         "2": {
           "name": "keyword.control.conditional.recite"
@@ -248,7 +229,7 @@
     "header-content": {
       "patterns": [
         {
-          "include": "#inline-comment"
+          "include": "#invalid-lexical"
         },
         {
           "include": "#requires-key"
@@ -373,13 +354,16 @@
       "match": "[^\\s=(),\\[\\]{}#:]+"
     },
     "markup-tag": {
-      "begin": "(\\[)(/?)(?=[A-Za-z][A-Za-z0-9_-]*\\])",
+      "begin": "(\\[)[ \\t]*(/?)[ \\t]*([A-Za-z][A-Za-z0-9_-]*)(?=[^\\]\\r\\n]*\\])",
       "beginCaptures": {
         "1": {
           "name": "punctuation.definition.tag.recite"
         },
         "2": {
           "name": "punctuation.definition.tag.recite"
+        },
+        "3": {
+          "name": "entity.name.tag.recite"
         }
       },
       "end": "(\\])",
@@ -390,10 +374,30 @@
       },
       "patterns": [
         {
-          "name": "entity.name.tag.recite",
+          "include": "#markup-attribute"
+        },
+        {
+          "include": "#string"
+        },
+        {
+          "include": "#number"
+        },
+        {
+          "include": "#assignment"
+        },
+        {
+          "name": "constant.other.symbol.recite",
           "match": "[A-Za-z][A-Za-z0-9_-]*"
         }
       ]
+    },
+    "markup-attribute": {
+      "match": "([A-Za-z][A-Za-z0-9_-]*)(?=[ \\t]*=)",
+      "captures": {
+        "1": {
+          "name": "variable.parameter.recite"
+        }
+      }
     },
     "interpolation": {
       "begin": "(\\{)(?=[^{}\\r\\n]*\\})",

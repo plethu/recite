@@ -26,47 +26,6 @@ test("the shared artifact serves both VS Code and VSCodium without semantic fork
   assert.match(manifest.repository.url, /github\.com\/plethu\/recite\.git$/);
 });
 
-test("the TextMate projection is lexical, recoverable, and keeps anchors distinct", async () => {
-  const grammarPath = path.join(packageRoot, "syntaxes", "recite.tmLanguage.json");
-  const grammar = JSON.parse(await readFile(grammarPath, "utf8"));
-  assert.equal(grammar.scopeName, "source.recite");
-  assert.deepEqual(grammar.fileTypes, ["recite"]);
-  const repository = JSON.stringify(grammar.repository);
-  for (const scope of [
-    "comment.line.number-sign.recite",
-    "keyword.control.recite",
-    "keyword.control.conditional.recite",
-    "punctuation.definition.line.recite",
-    "punctuation.definition.choice.recite",
-    "punctuation.definition.effect.recite",
-    "punctuation.definition.divert.recite",
-    "entity.name.section.recite",
-    "entity.name.label.recite",
-    "constant.other.anchor.recite",
-    "variable.other.reference.recite",
-    "constant.language.recite",
-    "variable.parameter.recite",
-    "keyword.operator.assignment.recite",
-    "constant.other.symbol.recite",
-    "string.quoted.double.recite",
-    "constant.numeric.recite",
-    "constant.language.boolean.recite",
-    "variable.other.runtime.recite",
-    "support.function.recite",
-    "string.unquoted.prose.recite",
-    "entity.name.tag.recite",
-    "variable.other.placeholder.recite",
-    "invalid.illegal.recite"
-  ]) {
-    assert.match(repository, new RegExp(scope.replaceAll(".", "\\.")),
-      `grammar is missing the ${scope} lexical category`);
-  }
-  assert.match(grammar.repository["line-statement"].begin, /@/,
-    "line anchors must have a separate capture");
-  assert.match(grammar.repository["choice-statement"].begin, /@/,
-    "choice anchors must have a separate capture");
-});
-
 test("TextMate fixtures reuse canonical source and include incomplete recovery input", async () => {
   const manifestPath = path.join(packageRoot, "..", "..", "fixtures", "editor-parity", "textmate.json");
   const fixtureManifest = JSON.parse(await readFile(manifestPath, "utf8"));

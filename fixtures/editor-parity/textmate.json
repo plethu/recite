@@ -6,5 +6,7 @@
     "fixtures/recite/invalid/parser_marker_leading_prose.recite"
   ],
   "incomplete_fixture": "fixtures/editor-parity/vscode/incomplete.recite",
+  "hostile_fixture": "fixtures/editor-parity/vscode/textmate-hostile.recite",
+  "token_snapshots": "fixtures/editor-parity/vscode/textmate-token-snapshots.json",
   "notes": "Canonical and malformed inputs remain shared Recite fixtures; the incomplete input is a derived editor-only buffer."
 }

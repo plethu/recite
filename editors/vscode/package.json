@@ -104,6 +104,8 @@
   },
   "devDependencies": {
     "acorn": "8.15.0",
-    "fflate": "0.8.2"
+    "fflate": "0.8.2",
+    "vscode-oniguruma": "1.7.0",
+    "vscode-textmate": "9.2.0"
   }
 }

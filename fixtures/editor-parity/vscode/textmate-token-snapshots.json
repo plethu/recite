@@ -1,0 +1,176 @@
+{
+  "cases": [
+    {
+      "id": "full-comment",
+      "source": "# a full line comment",
+      "tokens": [
+        ["#", ["source.recite", "comment.line.number-sign.recite", "punctuation.definition.comment.recite"]],
+        [" a full line comment", ["source.recite", "comment.line.number-sign.recite", "comment.line.number-sign.recite"]]
+      ]
+    },
+    {
+      "id": "missing-line-id",
+      "source": "> speaker=foo requires=(trusts(player)) reason=\"why\"",
+      "tokens": [
+        [">", ["source.recite", "punctuation.definition.line.recite"]],
+        [" ", ["source.recite"]],
+        ["speaker", ["source.recite", "variable.parameter.recite"]],
+        ["=", ["source.recite", "keyword.operator.assignment.recite"]],
+        ["foo", ["source.recite", "constant.other.symbol.recite"]],
+        [" ", ["source.recite"]],
+        ["requires", ["source.recite", "keyword.control.conditional.recite"]],
+        ["=", ["source.recite", "keyword.operator.assignment.recite"]],
+        ["(", ["source.recite", "punctuation.section.arguments.recite"]],
+        ["trusts", ["source.recite", "support.function.recite"]],
+        ["(", ["source.recite", "punctuation.section.arguments.recite"]],
+        ["player", ["source.recite", "constant.other.symbol.recite"]],
+        [")", ["source.recite", "punctuation.section.arguments.recite"]],
+        [")", ["source.recite", "punctuation.section.arguments.recite"]],
+        [" ", ["source.recite"]],
+        ["reason", ["source.recite", "variable.parameter.recite"]],
+        ["=", ["source.recite", "keyword.operator.assignment.recite"]],
+        ["\"why\"", ["source.recite", "string.quoted.double.recite"]]
+      ]
+    },
+    {
+      "id": "missing-choice-id",
+      "source": "? requires=(trusts(player)) reason=\"why\"",
+      "tokens": [
+        ["?", ["source.recite", "punctuation.definition.choice.recite"]],
+        [" ", ["source.recite"]],
+        ["requires", ["source.recite", "keyword.control.conditional.recite"]],
+        ["=", ["source.recite", "keyword.operator.assignment.recite"]],
+        ["(", ["source.recite", "punctuation.section.arguments.recite"]],
+        ["trusts", ["source.recite", "support.function.recite"]],
+        ["(", ["source.recite", "punctuation.section.arguments.recite"]],
+        ["player", ["source.recite", "constant.other.symbol.recite"]],
+        [")", ["source.recite", "punctuation.section.arguments.recite"]],
+        [")", ["source.recite", "punctuation.section.arguments.recite"]],
+        [" ", ["source.recite"]],
+        ["reason", ["source.recite", "variable.parameter.recite"]],
+        ["=", ["source.recite", "keyword.operator.assignment.recite"]],
+        ["\"why\"", ["source.recite", "string.quoted.double.recite"]]
+      ]
+    },
+    {
+      "id": "effect-immediate-prefix",
+      "source": "! immediateFoo play_sfx()",
+      "tokens": [
+        ["!", ["source.recite", "punctuation.definition.effect.recite"]],
+        [" ", ["source.recite"]],
+        ["immediateFoo", ["source.recite", "constant.other.symbol.recite"]],
+        [" ", ["source.recite"]],
+        ["play_sfx", ["source.recite", "support.function.recite"]],
+        ["(", ["source.recite", "punctuation.section.arguments.recite"]],
+        [")", ["source.recite", "punctuation.section.arguments.recite"]]
+      ]
+    },
+    {
+      "id": "effect-deferred-prefix",
+      "source": "! deferredness play_sfx()",
+      "tokens": [
+        ["!", ["source.recite", "punctuation.definition.effect.recite"]],
+        [" ", ["source.recite"]],
+        ["deferredness", ["source.recite", "constant.other.symbol.recite"]],
+        [" ", ["source.recite"]],
+        ["play_sfx", ["source.recite", "support.function.recite"]],
+        ["(", ["source.recite", "punctuation.section.arguments.recite"]],
+        [")", ["source.recite", "punctuation.section.arguments.recite"]]
+      ]
+    },
+    {
+      "id": "directive-without-boundary",
+      "source": ":if(trusts(player)) :else( :match(",
+      "tokens": [[":if(trusts(player)) :else( :match(", ["source.recite"]]]
+    },
+    {
+      "id": "markup-attributes",
+      "source": "  [slow tone=\"soft\" speed=2]Hello[/slow]",
+      "tokens": [
+        ["  ", ["source.recite"]],
+        ["[", ["source.recite", "punctuation.definition.tag.recite"]],
+        ["slow", ["source.recite", "entity.name.tag.recite"]],
+        [" ", ["source.recite"]],
+        ["tone", ["source.recite", "variable.parameter.recite"]],
+        ["=", ["source.recite", "keyword.operator.assignment.recite"]],
+        ["\"soft\"", ["source.recite", "string.quoted.double.recite"]],
+        [" ", ["source.recite"]],
+        ["speed", ["source.recite", "variable.parameter.recite"]],
+        ["=", ["source.recite", "keyword.operator.assignment.recite"]],
+        ["2", ["source.recite", "constant.numeric.recite"]],
+        ["]", ["source.recite", "punctuation.definition.tag.recite"]],
+        ["Hello", ["source.recite", "string.unquoted.prose.recite"]],
+        ["[", ["source.recite", "punctuation.definition.tag.recite"]],
+        ["/", ["source.recite", "punctuation.definition.tag.recite"]],
+        ["slow", ["source.recite", "entity.name.tag.recite"]],
+        ["]", ["source.recite", "punctuation.definition.tag.recite"]]
+      ]
+    },
+    {
+      "id": "markup-spaces-and-quoted-attributes",
+      "source": "  [ slow tone = \"soft\" ]Hi[/ slow ]",
+      "tokens": [
+        ["  ", ["source.recite"]],
+        ["[", ["source.recite", "punctuation.definition.tag.recite"]],
+        [" ", ["source.recite"]],
+        ["slow", ["source.recite", "entity.name.tag.recite"]],
+        [" ", ["source.recite"]],
+        ["tone", ["source.recite", "variable.parameter.recite"]],
+        [" ", ["source.recite"]],
+        ["=", ["source.recite", "keyword.operator.assignment.recite"]],
+        [" ", ["source.recite"]],
+        ["\"soft\"", ["source.recite", "string.quoted.double.recite"]],
+        [" ", ["source.recite"]],
+        ["]", ["source.recite", "punctuation.definition.tag.recite"]],
+        ["Hi", ["source.recite", "string.unquoted.prose.recite"]],
+        ["[", ["source.recite", "punctuation.definition.tag.recite"]],
+        ["/", ["source.recite", "punctuation.definition.tag.recite"]],
+        [" ", ["source.recite"]],
+        ["slow", ["source.recite", "entity.name.tag.recite"]],
+        [" ", ["source.recite"]],
+        ["]", ["source.recite", "punctuation.definition.tag.recite"]]
+      ]
+    },
+    {
+      "id": "invalid-quote",
+      "source": "> line speaker=\"unterminated",
+      "tokens": [
+        [">", ["source.recite", "punctuation.definition.line.recite"]],
+        [" ", ["source.recite"]],
+        ["line", ["source.recite", "entity.name.label.recite"]],
+        [" ", ["source.recite"]],
+        ["speaker", ["source.recite", "variable.parameter.recite"]],
+        ["=", ["source.recite", "keyword.operator.assignment.recite"]],
+        ["\"unterminated", ["source.recite", "invalid.illegal.recite"]]
+      ]
+    },
+    {
+      "id": "invalid-array",
+      "source": "> line choices=[one, two",
+      "tokens": [
+        [">", ["source.recite", "punctuation.definition.line.recite"]],
+        [" ", ["source.recite"]],
+        ["line", ["source.recite", "entity.name.label.recite"]],
+        [" ", ["source.recite"]],
+        ["choices", ["source.recite", "variable.parameter.recite"]],
+        ["=", ["source.recite", "keyword.operator.assignment.recite"]],
+        ["[one, two", ["source.recite", "invalid.illegal.recite"]]
+      ]
+    },
+    {
+      "id": "trailing-hash",
+      "source": "> line trailing # not comment",
+      "tokens": [
+        [">", ["source.recite", "punctuation.definition.line.recite"]],
+        [" ", ["source.recite"]],
+        ["line", ["source.recite", "entity.name.label.recite"]],
+        [" ", ["source.recite"]],
+        ["trailing", ["source.recite", "constant.other.symbol.recite"]],
+        [" # ", ["source.recite"]],
+        ["not", ["source.recite", "keyword.operator.logical.recite"]],
+        [" ", ["source.recite"]],
+        ["comment", ["source.recite", "constant.other.symbol.recite"]]
+      ]
+    }
+  ]
+}
