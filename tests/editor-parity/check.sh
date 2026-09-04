@@ -169,6 +169,7 @@ if "package-checked" not in artifact["notes"] or "ignored build output" not in a
 capabilities = {capability["id"]: capability for capability in contract["capabilities"]}
 expected_client_evidence = {
     "editor.filetype.registration",
+    "editor.vscode.syntax-projection",
     "lsp.code-actions",
     "lsp.completion.navigation",
     "lsp.definition",
@@ -191,7 +192,14 @@ for capability_id in expected_client_evidence:
     capability = capabilities[capability_id]
     if capability["follow_up"] != "#51":
         raise SystemExit(f"{capability_id} must retain the open VS Code follow-up")
-    evidence_artifacts = set(capability["expected_evidence"].get("artifacts", []))
+    evidence = capability["expected_evidence"]
+    evidence_artifacts = (
+        set(evidence["artifacts"])
+        if "artifacts" in evidence
+        else {evidence["artifact"]}
+        if "artifact" in evidence
+        else set()
+    )
     if "vscode-vsix" not in evidence_artifacts:
         raise SystemExit(f"{capability_id} must attribute package/live evidence to vscode-vsix")
 if "installed vs code/vscodium activation smoke" not in document_path.read_text(encoding="utf-8").lower():
