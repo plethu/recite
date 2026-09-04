@@ -121,8 +121,9 @@ production suppressions must carry a narrow scope and rationale.
 | `crates/recite-core/src/compiled/messagepack/tags.rs` | 468 | production | core/wire | cohesive | #89: explicit wire tag table |
 | `crates/recite-core/src/compiled/messagepack/wire.rs` | 662 | production | core/wire | exception | #89: retain the explicit decoder boundary while the v0 wire contract is synchronized |
 | `crates/recite-runtime/src/session_snapshot.rs` | 294 | production | runtime/snapshot | follow-up | #135: typed snapshot-boundary errors |
-| `crates/recite-cli/src/error.rs` | 372 | production | cli | review | Keep user-facing error projection separate from typed domain errors |
-| `crates/recite-cli/src/structured/error_mapping.rs` | 371 | production | cli/structured | cohesive | Exhaustive CliError-to-wire classification remains one stable protocol boundary |
+| `crates/recite-cli/src/error.rs` | 386 | production | cli | review | Keep user-facing error projection separate from typed domain errors |
+| `crates/recite-cli/src/error/user_message.rs` | 266 | production | cli | review | Localized CLI error presentation remains a dedicated user-message boundary |
+| `crates/recite-cli/src/structured/error_mapping.rs` | 382 | production | cli/structured | cohesive | Exhaustive CliError-to-wire classification remains one stable protocol boundary |
 | `crates/recite-ui/tests/diagnostics.rs` | 371 | test/support | ui/tests | review | Structured diagnostic resource and compatibility-message coverage |
 | `crates/recite-compiler/tests/authoring_edits.rs` | 387 | test/support | compiler/tests | review | Host-neutral authoring edit application and scoped/range planning coverage |
 | `crates/recite-lsp/src/tests/code_action/missing_id.rs` | 363 | test/support | lsp/tests | review | Stable-ID code-action protocol coverage, including guarded project preconditions |
@@ -203,8 +204,13 @@ production suppressions must carry a narrow scope and rationale.
 | `crates/recite-runtime/tests/session_serialization/invalid_snapshots.rs` | 478 | test/support | runtime/tests | cohesive | Snapshot failure contract |
 | `crates/recite-cli/tests/watch_stress.rs` | 366 | test/support | cli/tests | cohesive | Watch stress harness |
 | `crates/recite-cli/src/watch/build/tests.rs` | 367 | test/support | cli/watch/build-tests | review | #189: status and telemetry coverage is split; keep each responsibility below the follow-up threshold |
-| `crates/recite-cli/src/watch/tests.rs` | 377 | test/support | cli/watch-tests | review | #189: event and initial-build integration coverage remains one watch contract; reassess before adding another responsibility |
-| `crates/recite-cli/src/watch/build.rs` | 287 | production | cli/watch/build | review | #191: build orchestration retains the coordinator, publication, and post-publish freshness boundary; split if another lifecycle responsibility is added |
+| `crates/recite-cli/src/watch/protocol.rs` | 302 | production | cli/watch/protocol | cohesive | Versioned watch stream orchestration owns lifecycle ordering and host cancellation coordination |
+| `crates/recite-cli/src/watch/protocol/tests.rs` | 410 | test/support | cli/watch/protocol-tests | review | Active cancellation and stream-failure ordering use deterministic injected seams |
+| `crates/recite-cli/src/watch/tests.rs` | 415 | test/support | cli/watch-tests | review | #189: event and initial-build integration coverage remains one watch contract; reassess before adding another responsibility |
+| `crates/recite-cli/src/watch/build.rs` | 309 | production | cli/watch/build | review | #191: build orchestration retains the coordinator, publication, and post-publish freshness boundary; split if another lifecycle responsibility is added |
+| `crates/recite-cli/src/watch/mod.rs` | 252 | production | cli/watch | review | Watch command routing keeps human and structured host entrypoints together; split if dispatch grows materially |
+| `crates/recite-cli/src/watch/wire_mapping.rs` | 331 | production | cli/watch/wire | cohesive | Explicit compiler-state to version-1 DTO mapping owns publication, recovery, and failure projections |
+| `crates/recite-cli/tests/structured_watch.rs` | 429 | test/support | cli/tests | review | #53: real-process structured watch lifecycle and cancellation transport coverage |
 | `crates/recite-compiler/tests/authoring_build/status_projection.rs` | 492 | test/support | compiler/authoring-build-tests | review | #189: lifecycle projection and non-semantic telemetry assertions remain one focused contract suite |
 | `crates/recite-compiler/src/authoring/build/result.rs` | 260 | production | compiler/authoring-build | review | #191: result finalization retains publication and freshness truth together; split if further lifecycle evidence is added |
 | `crates/recite-runtime/tests/traversal/conditions/choice_conditions.rs` | 365 | test/support | runtime/tests | cohesive | Choice condition coverage |
