@@ -123,7 +123,7 @@
       "id": "command-watch-reference",
       "canonical_fixtures": ["fixtures/recite/valid/core_language_spike.recite"],
       "derived_inputs": ["BuildStatusProjection lifecycle", "generation, diagnostics, freshness, publication, recovery, and cancellation fields"],
-      "expected_evidence": ["protocol-neutral status projection", "CLI wire/process/binary/client integration remains planned"],
+      "expected_evidence": ["finite structured CLI records", "protocol-neutral status projection", "watch wire/process/binary/client integration remains planned or partial"],
       "status": "partial"
     }
   ],
@@ -487,13 +487,13 @@
       "protocol": "cli",
       "expected": {"kind": "structured-command-record", "assertions": ["compile, validate, and extract expose typed outcomes", "machine consumers do not parse human text"]},
       "edge_cases": ["invalid source", "schema mismatch", "localisation failure"],
-      "known_limitation": "No versioned structured records are exposed by these CLI commands; human output and crate tests are not parity evidence.",
-      "implementation_status": "planned",
+      "known_limitation": "The finite command protocol is implemented and externally tested; watch and editor client adapters remain planned or partial.",
+      "implementation_status": "partial",
       "client_status": {"vscode": "planned", "vscodium": "planned", "neovim": "planned", "zed": "planned"},
-      "platform_status": {"linux": "planned", "macos": "planned", "windows": "planned"},
+      "platform_status": {"linux": "partial", "macos": "planned", "windows": "planned"},
       "artifact_status": {"vscode-vsix": "partial", "tree-sitter-grammar": "partial", "neovim-runtimepath": "implemented", "zed-extension": "planned"},
       "distribution_status": {"vs-marketplace": "planned", "open-vsx": "planned", "neovim-distribution": "planned", "zed-distribution": "planned"},
-      "expected_evidence": {"status": "planned", "command": null, "assertions": ["#53 owns versioned structured compile, validate, and extract records"], "artifact": null},
+      "expected_evidence": {"status": "partial", "commands": ["cargo test --locked -p recite-cli --test structured_command structured_compile_and_extract_project_machine_artifacts_or_typed_entries"], "assertions": ["version-1 compile, validate, and extract records are externally tested", "watch and editor client adapters remain planned or partial"], "artifact": null},
       "follow_up": "#53"
     },
     {
@@ -503,13 +503,13 @@
       "protocol": "cli",
       "expected": {"kind": "structured-runtime-record", "assertions": ["run and trace preserve deterministic runtime records", "effects remain typed requests"]},
       "edge_cases": ["runtime error", "effect request", "trace retention"],
-      "known_limitation": "No versioned structured runtime or trace command record is exposed; crate tests are not command protocol evidence.",
-      "implementation_status": "planned",
+      "known_limitation": "The finite runtime and trace protocol is implemented and externally tested; watch and editor client adapters remain planned or partial.",
+      "implementation_status": "partial",
       "client_status": {"vscode": "planned", "vscodium": "planned", "neovim": "planned", "zed": "planned"},
-      "platform_status": {"linux": "planned", "macos": "planned", "windows": "planned"},
+      "platform_status": {"linux": "partial", "macos": "planned", "windows": "planned"},
       "artifact_status": {"vscode-vsix": "partial", "tree-sitter-grammar": "partial", "neovim-runtimepath": "implemented", "zed-extension": "planned"},
       "distribution_status": {"vs-marketplace": "planned", "open-vsx": "planned", "neovim-distribution": "planned", "zed-distribution": "planned"},
-      "expected_evidence": {"status": "planned", "command": null, "assertions": ["#53 owns versioned structured run and trace records"], "artifact": null},
+      "expected_evidence": {"status": "partial", "commands": ["cargo test --locked -p recite-cli --test structured_command structured_run_and_trace_share_deterministic_trace_data_without_run_text", "cargo test --locked -p recite-cli --test dialogue_locale run_trace_and_play_plain_preview_dialogue_locale_catalogs"], "assertions": ["version-1 run and trace records preserve deterministic runtime data", "the focused locale fixture exercises structured trace data", "watch and editor client adapters remain planned or partial"], "artifact": null},
       "follow_up": "#53"
     },
     {
@@ -517,7 +517,7 @@
       "scenario": "command-watch-reference",
       "authority": ["recite-compiler", "recite-authoring-kernel"],
       "protocol": "protocol-neutral",
-      "expected": {"kind": "build-status-projection", "assertions": ["BuildStatusProjection exposes generation, freshness, publication, recovery, and cancellation state", "CLI wire/process/binary/client integration remains planned"]},
+      "expected": {"kind": "build-status-projection", "assertions": ["BuildStatusProjection exposes generation, freshness, publication, recovery, and cancellation state", "finite CLI records are implemented", "watch wire/process/binary/client integration remains planned or partial"]},
       "edge_cases": ["binary discovery", "retry", "cancellation", "stale generation"],
       "known_limitation": "The protocol-neutral projection is executable, but no versioned watch wire record, process or binary integration, cancellation transport, or client integration exists.",
       "implementation_status": "partial",

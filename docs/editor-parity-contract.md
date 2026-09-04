@@ -108,15 +108,17 @@ its source files ordinary repository inputs before collecting evidence.
 
 ## Structured commands and watch
 
-The intended command boundary is structured: compile, validate, extract, run,
-trace, and watch consumers should eventually use typed/versioned records rather
-than localised human CLI output. The shared authoring kernel now exposes a
-protocol-neutral `BuildStatusProjection` with phase, generation, diagnostics,
-freshness, publication, recovery, and cancellation state. Its executable
-coverage is partial evidence for the shared lifecycle shape; it is not a CLI
-wire contract. Versioned command/watch envelopes, process and binary
-integration, cancellation transport, and client integration remain planned
-under #53.
+The command boundary is structured for the finite `compile`, `validate`,
+`extract`, `run`, and `trace` commands. Their opt-in version-1 NDJSON contract
+is documented in [`docs/cli-structured-protocol.md`](cli-structured-protocol.md)
+and exercised by the external `recite-cli` tests. Invalid source remains a
+typed result with content diagnostics; operational failures are typed errors.
+The shared authoring kernel also exposes a protocol-neutral
+`BuildStatusProjection` with phase, generation, diagnostics, freshness,
+publication, recovery, and cancellation state. Watch wire/process/binary
+integration, cancellation transport, and editor client adapters remain
+planned or partial under #53; `watch` is explicitly outside the finite
+structured command protocol.
 
 ## Conformance matrix
 
@@ -137,7 +139,7 @@ implemented primary artifact.
 - `lsp.overlay.recovery`: accept an incomplete overlay, then refresh it when a newer complete overlay arrives.
 - `lsp.stale.version`: refuse an older document version without replacing the current overlay or publishing stale evidence.
 - `lsp.cancellation`: document the current unsupported cancellation surface and its owner rather than claiming a timeout is cancellation.
-- `command.structured.results`: project the shared `BuildStatusProjection` fields while reserving CLI wire, process, binary, and client integration for #53.
+- `command.structured.results`: project typed/versioned finite CLI command records while reserving watch wire, process, binary, cancellation, and client integration for #53.
 - `editor.filetype.registration`: exercise `.recite` activation and file association through the checked-in Neovim runtimepath package.
 - `editor.vscode.syntax-projection`: project the checked-in syntax-only TextMate grammar and deterministic VSIX for VS Code/VSCodium; installed host activation and non-Linux platforms remain untested.
 - `editor.neovim.syntax-projection`: record ABI14 Tree-sitter parser/query loading through the Neovim package; the shared grammar remains owned by #98.
@@ -152,14 +154,15 @@ implemented primary artifact.
 - `workspace.configuration`: keep root and project configuration ownership outside client semantics.
 - `authoring.stable-id.operations`: reserve the shared-kernel missing-ID repair; broader stable-ID edit preconditions remain incomplete.
 - `schema.localisation.resolution`: project the current compiler catalogue identity/fingerprint and CLI locale-fallback evidence; combined LSP schema/catalogue provenance remains planned.
-- `command.compile.validate.extract`: reserve versioned structured compile, validate, and extract records for #53; current CLI output is not machine protocol evidence.
-- `command.run.trace`: reserve versioned structured runtime and trace records for #53; current CLI tests are not command protocol evidence.
+- `command.compile.validate.extract`: exercise version-1 structured compile, validate, and extract records; watch and editor client adapters remain outside this slice.
+- `command.run.trace`: exercise version-1 structured runtime and trace records; watch and editor client adapters remain outside this slice.
 - `command.watch.lifecycle`: project the current protocol-neutral build lifecycle fields; versioned watch wire, process, binary, cancellation transport, and client evidence remain planned for #53.
 
 Executable evidence covers the shared LSP operations, project-root discovery,
 the bounded stable-ID repair, compiler catalogue fallback, the compiler's
 protocol-neutral build projection, CLI locale fallback through the checked-in
-`fixtures/recite/valid/locale_fallback_fr.po` catalogue, the syntax-only
+`fixtures/recite/valid/locale_fallback_fr.po` catalogue, the finite version-1
+structured CLI records through the external `recite-cli` command tests, the syntax-only
 Tree-sitter grammar check, the Neovim runtimepath check, and the checked-in
 VS Code/VSCodium TextMate grammar and package. The Tree-sitter check proves
 generated-parser reproducibility, canonical fixture coverage, recovery
@@ -176,7 +179,7 @@ Node scope snapshots are not evidence of installed-host rendering or
 accessibility integration.
 Those checks do not establish installed VS Code or VSCodium host activation,
 macOS or Windows support, marketplace publication, or a distributable archive
-in source control. This still does not claim a versioned CLI/watch envelope,
+in source control. This still does not claim a versioned watch envelope, watch
 process or binary integration, combined LSP schema/catalogue transport,
 cancellation transport, native version-safe rename, or a Zed grammar.
 
@@ -198,7 +201,7 @@ not copied Recite or schema sources.
 - `multi-file-project`: materialize two canonical source fixtures under one root and resolve a qualified cross-file target.
 - `client-syntax-projections`: record partial syntax-only Tree-sitter evidence alongside the checked-in VS Code/VSCodium TextMate package projection; canonical and malformed inputs remain shared fixtures, while an incomplete buffer is derived under `fixtures/editor-parity/vscode/`; installed host setup remains untested.
 - `schema-localisation-reference`: combine the canonical manifests and pressure source with the checked-in PO catalogue to exercise the current shared/CLI locale-fallback evidence.
-- `command-watch-reference`: exercise the protocol-neutral `BuildStatusProjection`; CLI wire, process, binary, cancellation transport, and client lifecycle evidence remain planned for #53.
+- `command-watch-reference`: exercise the finite CLI protocol and protocol-neutral `BuildStatusProjection`; watch wire/process/binary, cancellation transport, and client lifecycle evidence remain planned or partial for #53.
 
 ## Client, platform, and distribution status
 

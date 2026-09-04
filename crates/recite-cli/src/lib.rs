@@ -36,6 +36,7 @@ mod runtime_fixture;
 mod runtime_format;
 mod schema_freshness;
 mod schema_inspection;
+mod structured;
 mod tui;
 pub mod watch;
 
@@ -58,7 +59,20 @@ pub fn run(args: impl IntoIterator<Item = OsString>) -> ExitCode {
     let mut stderr = io::stderr().lock();
     let error_messages = error_messages_for_command(&cli.command);
 
-    match commands::run_command(cli.command, &mut stdout, &mut stderr, &error_messages) {
+    if cli.command.structured_invocation().is_some() {
+        return match structured::run(cli.command, &mut stdout) {
+            Ok(exit_code) => exit_code,
+            Err(error) => {
+                let message = error.to_user_message(&error_messages);
+                let _ = writeln!(stderr, "error: {message}");
+                ExitCode::from(1)
+            }
+        };
+    }
+
+    let result = commands::run_command(cli.command, &mut stdout, &mut stderr, &error_messages);
+
+    match result {
         Ok(()) => SUCCESS,
         Err(CliError::Diagnostics) => ExitCode::from(1),
         Err(error) => {

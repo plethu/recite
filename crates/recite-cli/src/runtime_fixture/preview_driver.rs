@@ -21,6 +21,10 @@ pub(crate) struct RuntimeFixtureOptions {
     pub(crate) metrics: bool,
 }
 
+pub(crate) fn trace_document(execution: RuntimeExecution) -> super::TraceDocument {
+    execution.trace
+}
+
 // Wall-clock duration is intentionally opt-in trace instrumentation; the default trace is
 // deterministic and contains no timing data.
 #[allow(
