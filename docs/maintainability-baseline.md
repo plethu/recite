@@ -122,6 +122,7 @@ production suppressions must carry a narrow scope and rationale.
 | `crates/recite-core/src/compiled/messagepack/wire.rs` | 662 | production | core/wire | exception | #89: retain the explicit decoder boundary while the v0 wire contract is synchronized |
 | `crates/recite-runtime/src/session_snapshot.rs` | 294 | production | runtime/snapshot | follow-up | #135: typed snapshot-boundary errors |
 | `crates/recite-cli/src/error.rs` | 372 | production | cli | review | Keep user-facing error projection separate from typed domain errors |
+| `crates/recite-cli/src/structured/error_mapping.rs` | 371 | production | cli/structured | cohesive | Exhaustive CliError-to-wire classification remains one stable protocol boundary |
 | `crates/recite-ui/tests/diagnostics.rs` | 371 | test/support | ui/tests | review | Structured diagnostic resource and compatibility-message coverage |
 | `crates/recite-compiler/tests/authoring_edits.rs` | 387 | test/support | compiler/tests | review | Host-neutral authoring edit application and scoped/range planning coverage |
 | `crates/recite-lsp/src/tests/code_action/missing_id.rs` | 363 | test/support | lsp/tests | review | Stable-ID code-action protocol coverage, including guarded project preconditions |
@@ -174,7 +175,8 @@ production suppressions must carry a narrow scope and rationale.
 | `crates/recite-runtime/tests/adapter_conformance/driver.rs` | 1179 | test/support | runtime/tests | exception | #171: shared conformance driver grows with typed callback scenarios; retain until adapter conformance split |
 | `crates/recite-cli/src/play/tui/render/tests.rs` | 811 | test/support | cli/tui/tests | cohesive | Private rendering contract tests |
 | `crates/recite-cli/tests/runtime.rs` | 659 | test/support | cli/tests | cohesive | Runtime command behavior suite |
-| `crates/recite-cli/tests/dialogue_locale.rs` | 480 | test/support | cli/tests | review | #180: end-to-end locale, plural, and trace scenarios remain grouped by the CLI contract |
+| `crates/recite-cli/tests/dialogue_locale.rs` | 500 | test/support | cli/tests | review | #180: end-to-end locale, plural, trace, and structured trace locale projection scenarios remain grouped by the CLI contract |
+| `crates/recite-cli/tests/structured_command.rs` | 490 | test/support | cli/tests | review | #53: finite structured command protocol conformance remains one external CLI suite; split before adding watch coverage |
 | `crates/recite-core/tests/support/mod.rs` | 554 | test/support | core/tests | cohesive | Shared model and wire constructors |
 | `crates/recite-core/tests/schema_manifest/fingerprint.rs` | 641 | test/support | core/tests | exception | #176: retain the canonical fingerprint fixture while typed provenance constructors migrate; producer-specific assertions are split into a dedicated test |
 | `crates/recite-ffi/tests/conditions.rs` | 437 | test/support | ffi/tests | cohesive | #171: condition callback protocol coverage |
@@ -219,6 +221,6 @@ production suppressions must carry a narrow scope and rationale.
 | `scripts/check-lint-suppressions.py` | 256 | tooling | lint-policy | review | Suppression policy parsing and diff-aware enforcement remain one checker boundary |
 | `scripts/check-tree-sitter.sh` | 399 | tooling | tree-sitter/check | review | Parser generation, ABI, corpus, and reproducibility checks share one tool boundary |
 | `scripts/lint_suppression_ast.py` | 374 | tooling | lint-policy | review | AST suppression extraction keeps parser traversal and source categorisation together |
-| `tests/editor-parity/check.sh` | 487 | test/support | editor-parity/tests | review | Editor parity fixture scenarios remain one executable contract suite |
+| `tests/editor-parity/check.sh` | 495 | test/support | editor-parity/tests | review | Editor parity fixture scenarios remain one executable contract suite |
 | `tests/lint-suppressions/check.sh` | 398 | test/support | lint-policy/tests | review | Hostile suppression-policy fixture scenarios remain one executable contract suite |
 | `tests/maintainability/check.sh` | 376 | test/support | maintainability/tests | review | Core Rust threshold, baseline, zero-SHA, and inherited-debt fixtures remain one contract suite |
