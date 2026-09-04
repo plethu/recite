@@ -99,6 +99,12 @@ pub(crate) struct InspectSchemaArgs {
 
 #[derive(Debug, Args)]
 pub(crate) struct WatchArgs {
+    /// Select human-readable or version-1 newline-delimited structured output.
+    #[arg(long, value_enum, default_value_t = OutputFormat::Human)]
+    pub(crate) output_format: OutputFormat,
+    /// Caller-owned identifier copied into each structured protocol record.
+    #[arg(long)]
+    pub(crate) invocation_id: Option<String>,
     pub(crate) project_root: PathBuf,
 }
 
@@ -225,6 +231,7 @@ impl Command {
             Self::Validate(args) => ("validate", args.output_format, &args.invocation_id),
             Self::Compile(args) => ("compile", args.output_format, &args.invocation_id),
             Self::Extract(args) => ("extract", args.output_format, &args.invocation_id),
+            Self::Watch(args) => ("watch", args.output_format, &args.invocation_id),
             Self::Run(args) => ("run", args.output_format, &args.invocation_id),
             Self::Trace(args) => (
                 "trace",

@@ -5,10 +5,12 @@ use std::time::{Duration, Instant};
 
 use notify::{Event, EventKind};
 use recite_compiler::{BuildCoordinator, BuildGeneration, BuildGenerationError};
+use recite_core::Diagnostic;
 
 use super::PROJECT_MANIFEST_FILE;
 use super::inputs::{is_generated_output_path, is_project_recite_source};
 use crate::error::CliError;
+use crate::fs::resolve_project_path;
 use crate::i18n::{Messages, MsgId};
 
 const DEBOUNCE: Duration = Duration::from_millis(250);
@@ -78,6 +80,9 @@ pub(super) struct WatchState {
     pub(super) manifest: Option<recite_config::ProjectManifest>,
     pub(super) coordinator: BuildCoordinator,
     build_generation: BuildGeneration,
+    last_build_generation: Option<BuildGeneration>,
+    preparation_inputs: Vec<String>,
+    preparation_diagnostics: Vec<Diagnostic>,
 }
 
 impl WatchState {
@@ -88,11 +93,20 @@ impl WatchState {
             manifest: None,
             coordinator: BuildCoordinator::new(),
             build_generation: BuildGeneration::initial(),
+            last_build_generation: None,
+            preparation_inputs: vec![PROJECT_MANIFEST_FILE.to_owned()],
+            preparation_diagnostics: Vec::new(),
         }
     }
 
     pub(super) fn next_build_generation(&mut self) -> Result<BuildGeneration, CliError> {
         let generation = self.build_generation;
+        self.last_build_generation = Some(generation);
+        // The manifest remains a known input even when discovery or
+        // preparation fails before it can enumerate the rest of the project.
+        // This keeps a recoverable attempt attributable to its trigger.
+        self.preparation_inputs = vec![PROJECT_MANIFEST_FILE.to_owned()];
+        self.preparation_diagnostics.clear();
         self.build_generation = generation.next().map_err(|error| match error {
             BuildGenerationError::Exhausted { current } => CliError::Watch {
                 message: format!("build generation {current} cannot advance"),
@@ -102,6 +116,32 @@ impl WatchState {
             },
         })?;
         Ok(generation)
+    }
+
+    pub(super) const fn next_build_generation_number(&self) -> u64 {
+        self.build_generation.as_u64()
+    }
+
+    pub(super) const fn last_build_generation(&self) -> Option<BuildGeneration> {
+        self.last_build_generation
+    }
+
+    pub(super) fn set_preparation_diagnostics(&mut self, diagnostics: Vec<Diagnostic>) {
+        self.preparation_diagnostics = diagnostics;
+    }
+
+    pub(super) fn set_preparation_inputs(&mut self, mut inputs: Vec<String>) {
+        inputs.sort();
+        inputs.dedup();
+        self.preparation_inputs = inputs;
+    }
+
+    pub(super) fn preparation_inputs(&self) -> &[String] {
+        &self.preparation_inputs
+    }
+
+    pub(super) fn preparation_diagnostics(&self) -> &[Diagnostic] {
+        &self.preparation_diagnostics
     }
 
     pub(super) fn update_from_discovery(
@@ -125,9 +165,28 @@ impl WatchState {
     }
 
     pub(super) fn is_relevant_event(&self, event: &Event) -> bool {
-        !matches!(event.kind, EventKind::Access(_))
-            && (event.paths.is_empty()
-                || event.paths.iter().any(|path| self.is_relevant_path(path)))
+        if matches!(event.kind, EventKind::Access(_)) {
+            return false;
+        }
+
+        // Publishing creates output parent directories. Ignore that narrow
+        // create wakeup, while still allowing remove/rename events for a
+        // configured source directory that happens to contain an output.
+        if matches!(event.kind, EventKind::Create(_))
+            && !event.paths.is_empty()
+            && event.paths.iter().all(|path| {
+                let path = if path.is_absolute() {
+                    path.to_owned()
+                } else {
+                    self.project_root.join(path)
+                };
+                is_generated_output_path(&path) || self.is_generated_output_container(&path)
+            })
+        {
+            return false;
+        }
+
+        event.paths.is_empty() || event.paths.iter().any(|path| self.is_relevant_path(path))
     }
 
     pub(super) fn is_relevant_path(&self, path: &Path) -> bool {
@@ -154,5 +213,21 @@ impl WatchState {
             || is_project_recite_source(&self.project_root, &path),
             |manifest| manifest.allows_event_path(&path),
         )
+    }
+
+    fn is_generated_output_container(&self, path: &Path) -> bool {
+        let Some(manifest) = self.manifest.as_ref() else {
+            return false;
+        };
+        if path == self.project_root {
+            return false;
+        }
+        manifest
+            .source()
+            .manifest()
+            .scenes
+            .iter()
+            .map(|scene| resolve_project_path(&self.project_root, &scene.asset))
+            .any(|output| output.starts_with(path))
     }
 }

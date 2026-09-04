@@ -14,7 +14,10 @@ type ErrorParts<'a> = (
     Option<ErrorDetails>,
 );
 
-pub(super) fn structured_error(
+#[path = "error_mapping/watch.rs"]
+mod watch;
+
+pub(crate) fn structured_error(
     error: &CliError,
     fallback_operation: &'static str,
     fallback_path: Option<&Path>,
@@ -143,6 +146,12 @@ pub(super) fn structured_error(
             "resolve_path",
             Some(path),
         ),
+        CliError::InvalidProjectRoot(path) => generic(
+            ErrorCategory::Input,
+            ErrorCode::InvalidProjectRoot,
+            "resolve_path",
+            Some(path),
+        ),
         CliError::MissingFixtureChoice { prompt_keys } => fixture_details(
             ErrorCode::MissingFixtureChoice,
             fallback_path,
@@ -242,11 +251,11 @@ pub(super) fn structured_error(
             fallback_operation,
             fallback_path,
         ),
-        CliError::ProjectDiscovery { .. } => generic(
+        CliError::ProjectDiscovery { source } => generic(
             ErrorCategory::Project,
             ErrorCode::ProjectDiscovery,
             fallback_operation,
-            fallback_path,
+            source.manifest_path().or(fallback_path),
         ),
         CliError::UiCatalog { .. } => generic(
             ErrorCategory::Configuration,
@@ -260,6 +269,8 @@ pub(super) fn structured_error(
             fallback_operation,
             fallback_path,
         ),
+        CliError::WatchPreparation { source } => watch::preparation(source, fallback_path),
+        CliError::WatchPublisher { source } => watch::publisher(source, fallback_path),
         CliError::WatchCoordinator { .. } => generic(
             ErrorCategory::Watch,
             ErrorCode::WatchCoordinator,

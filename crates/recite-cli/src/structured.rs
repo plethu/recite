@@ -11,12 +11,12 @@ use crate::args::Command;
 use crate::error::CliError;
 
 #[path = "structured/data.rs"]
-mod data;
+pub(crate) mod data;
 mod emitter;
 #[path = "structured/error_mapping.rs"]
-mod error_mapping;
+pub(crate) mod error_mapping;
 #[path = "structured/errors.rs"]
-mod errors;
+pub(crate) mod errors;
 mod operations;
 
 use emitter::ProtocolWriter;
@@ -25,11 +25,17 @@ use error_mapping::structured_error;
 const PROTOCOL_VERSION: u16 = 1;
 
 pub(crate) fn run(command: Command, stdout: &mut dyn Write) -> Result<ExitCode, CliError> {
+    let command = match command {
+        Command::Watch(args) => return crate::watch::run_structured_watch_command(args, stdout),
+        command => command,
+    };
+
     let Some(invocation) = command.structured_invocation() else {
         return Err(CliError::MalformedCompiledAsset {
             reason: "structured protocol was requested for an unsupported command".to_owned(),
         });
     };
+
     let mut protocol = ProtocolWriter::new(stdout);
     protocol.started(&invocation)?;
 

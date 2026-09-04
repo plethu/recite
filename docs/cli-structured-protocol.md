@@ -1,6 +1,6 @@
 # Structured CLI protocol
 
-Recite's five non-interactive commands support an opt-in machine-output
+Recite's non-interactive commands support an opt-in machine-output
 boundary:
 
 ```text
@@ -9,10 +9,11 @@ recite compile --output OUTPUT --output-format structured [--invocation-id ID] P
 recite extract --output-format structured [--output OUTPUT] [--invocation-id ID] PATHS...
 recite run --output-format structured [--invocation-id ID] ASSET --block BLOCK --fixture FIXTURE
 recite trace --output-format structured [--invocation-id ID] ASSET --block BLOCK --fixture FIXTURE
+recite watch --output-format structured [--invocation-id ID] PROJECT-ROOT
 ```
 
-`watch` is not part of this protocol. The default output format remains the
-existing human CLI surface.
+The default output format remains the existing human CLI surface. `watch` is a
+streaming lifecycle and does not use the finite two-record result contract.
 
 ## Version 1 envelope
 
@@ -72,3 +73,52 @@ Structured mode writes protocol records only to stdout and does not leak human
 diagnostics or localized run output to stderr. A broken output pipe is handled
 as the normal CLI write failure; callers should treat an incomplete stream as
 non-conforming rather than attempting recovery from a partial record.
+
+## Structured `watch`
+
+`watch` emits version-1 NDJSON records, flushing each record before continuing:
+
+1. `watch.started`;
+2. for each build attempt, `watch.build.started` (with `trigger: "initial"` or
+   `trigger: "input_changed"`) followed by exactly one
+   `watch.build.completed`;
+3. `watch.waiting` after every non-terminal attempt;
+4. `watch.cancel.requested` when a valid cancellation control is received; and
+5. `watch.stopped` when the process exits.
+
+Build completion data is an explicit CLI projection. It contains the build
+`generation` and optional `snapshot_generation` (null for preparation-only
+diagnostics), sorted, deduplicated project-relative `inputs`, locale-neutral
+`diagnostics`, exact machine path plus `size_bytes` for published `artifacts`, typed
+`publication`, `recovery`, `freshness`, and `cancellation` values, and
+`restart_guidance: {"type":"host_policy_required","decision":"unspecified"}`.
+Compiler fingerprints, candidate bytes, process IDs, wall-clock values, and
+telemetry are not wire data. Human watch output and debounce/generated-output
+filtering are unchanged.
+
+Preparation-only diagnostics use `snapshot_generation: null`,
+`publication: {"type":"not_attempted","reason":"preparation_failed"}`, and
+the sorted inputs known before preparation. Recoverable preparation or host
+build failures use the tagged `operational_failure` outcome and retain their
+typed error; they do not claim that publication occurred. A post-publication
+freshness failure is tagged `freshness_failure` while retaining the published
+outcome and any recovery records. Unknown future lifecycle or publication
+variants remain explicitly tagged `unknown` rather than being treated as a
+successful or failed publication.
+
+The process-scoped stdin control transport is also versioned NDJSON. A caller
+may request cancellation with:
+
+```json
+{"version":1,"command":"watch","action":"cancel"}
+```
+
+When the command was started with `--invocation-id`, the control may include a
+matching `invocation_id`; a mismatched control is reported as a typed,
+recoverable `watch.control.error`. Malformed, unsupported-version, unsupported
+command/action, and mismatched controls are recoverable and do not stop the
+watch. EOF is not cancellation. A valid cancellation wakes an idle watcher
+and cooperatively cancels an active build through the shared build control.
+Notify failures are similarly reported as typed recoverable records. Startup,
+stream, and fatal watch failures are typed in the terminal `watch.stopped`
+record. No OS signal transport is implied.

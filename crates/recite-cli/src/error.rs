@@ -81,6 +81,7 @@ pub(crate) enum CliError {
         reason: String,
     },
     MissingPath(PathBuf),
+    InvalidProjectRoot(PathBuf),
     MissingFixtureChoice {
         prompt_keys: Vec<String>,
     },
@@ -126,6 +127,12 @@ pub(crate) enum CliError {
     },
     Watch {
         message: String,
+    },
+    WatchPreparation {
+        source: crate::watch::ProjectBuildPreparationError,
+    },
+    WatchPublisher {
+        source: crate::watch::ProjectBuildPublisherError,
     },
     WatchCoordinator {
         source: recite_compiler::BuildRunError,
@@ -269,6 +276,11 @@ impl std::fmt::Display for CliError {
                 "input path does not exist: {}",
                 display_path(path)
             ),
+            Self::InvalidProjectRoot(path) => write!(
+                formatter,
+                "input project root is not a directory: {}",
+                display_path(path)
+            ),
             Self::MissingFixtureChoice { prompt_keys } => write!(
                 formatter,
                 "fixture is missing a [choices] entry for prompt {}; supported keys for this prompt are listed in trace prompt.identity.fixture_keys",
@@ -314,6 +326,8 @@ impl std::fmt::Display for CliError {
             Self::ProjectDiscovery { source } => write!(formatter, "{source}"),
             Self::UiCatalog { source } => write!(formatter, "failed to load UI text catalog: {source}"),
             Self::Watch { message } => formatter.write_str(message),
+            Self::WatchPreparation { source } => write!(formatter, "{source}"),
+            Self::WatchPublisher { source } => write!(formatter, "{source}"),
             Self::WatchCoordinator { source, .. } => write!(formatter, "{source}"),
             Self::WatchRecovery { source, .. } => write!(formatter, "{source}"),
             Self::Write { path, source } => {

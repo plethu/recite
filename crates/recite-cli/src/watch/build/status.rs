@@ -120,4 +120,14 @@ impl BuildStatus {
             | Self::PublicationFailure { telemetry, .. } => telemetry,
         }
     }
+
+    pub(crate) fn recovery(&self) -> &[ProjectBuildRecovery] {
+        match self {
+            Self::Stale { recovery, .. }
+            | Self::DiagnosticsWithRecovery { recovery, .. }
+            | Self::RecoveryRequired { recovery, .. }
+            | Self::PublicationFailure { recovery, .. } => recovery,
+            Self::Fresh { .. } | Self::Diagnostics { .. } => &[],
+        }
+    }
 }

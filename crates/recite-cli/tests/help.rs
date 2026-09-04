@@ -64,7 +64,9 @@ fn help_covers_issue_25_commands_and_options() {
 
     let watch = run(recite().arg("watch").arg("--help"));
     watch.assert_success().assert_stderr("");
-    watch.assert_stdout_contains("Usage: recite watch <PROJECT_ROOT>");
+    watch.assert_stdout_contains("Usage: recite watch [OPTIONS] <PROJECT_ROOT>");
+    watch.assert_stdout_contains("--output-format <OUTPUT_FORMAT>");
+    watch.assert_stdout_contains("--invocation-id <INVOCATION_ID>");
     watch.assert_stdout_contains("recite.project.toml");
 
     let run_help = run(recite().arg("run").arg("--help"));

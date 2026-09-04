@@ -13,17 +13,22 @@ use crate::i18n::{Messages, MsgId};
 
 mod build;
 mod commit;
+mod control;
+mod emitter;
 mod engine;
 mod events;
 mod freshness;
 mod inputs;
 mod preparation;
+mod protocol;
 mod publisher;
 mod recovery;
 mod request;
 mod staging;
 mod target_identity;
 mod targets;
+mod wire;
+mod wire_types;
 
 pub use engine::ProjectBuildEngine;
 pub use publisher::{ProjectBuildPublisher, ProjectPreparedBuild};
@@ -107,6 +112,13 @@ pub(crate) fn run_watch_command(
         let result = build_once(&mut state, stderr, messages);
         report_build_result(stderr, result, messages)?;
     }
+}
+
+pub(crate) fn run_structured_watch_command(
+    args: WatchArgs,
+    stdout: &mut dyn Write,
+) -> Result<std::process::ExitCode, CliError> {
+    protocol::run(args, stdout)
 }
 
 fn report_build_result(

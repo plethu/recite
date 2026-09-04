@@ -144,12 +144,12 @@ impl StructuredOutcome {
 }
 
 #[derive(Serialize)]
-pub(super) struct ArtifactMetadata {
-    pub(super) path: MachinePathProjection,
-    pub(super) size_bytes: u64,
+pub(crate) struct ArtifactMetadata {
+    pub(crate) path: MachinePathProjection,
+    pub(crate) size_bytes: u64,
 }
 
-pub(super) fn artifact_metadata(path: &Path) -> Result<ArtifactMetadata, CliError> {
+pub(crate) fn artifact_metadata(path: &Path) -> Result<ArtifactMetadata, CliError> {
     let size_bytes = fs::metadata(path)
         .map_err(|source| CliError::AssetMetadata {
             path: path.to_owned(),
@@ -200,7 +200,7 @@ impl From<&recite_compiler::PotReference> for CatalogReference {
     }
 }
 
-pub(super) fn diagnostic_records(
+pub(crate) fn diagnostic_records(
     diagnostics: &[Diagnostic],
 ) -> Result<Vec<DiagnosticRecord>, CliError> {
     diagnostics

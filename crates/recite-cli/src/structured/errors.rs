@@ -2,7 +2,7 @@ use serde::Serialize;
 
 #[derive(Serialize)]
 #[serde(rename_all = "snake_case")]
-pub(super) enum ErrorCategory {
+pub(crate) enum ErrorCategory {
     Input,
     Io,
     Schema,
@@ -22,7 +22,7 @@ pub(super) enum ErrorCategory {
 
 #[derive(Serialize)]
 #[serde(rename_all = "snake_case")]
-pub(super) enum ErrorCode {
+pub(crate) enum ErrorCode {
     CoreValue,
     Compile,
     CompiledValue,
@@ -46,6 +46,7 @@ pub(super) enum ErrorCode {
     Io,
     MalformedCompiledAsset,
     MissingPath,
+    InvalidProjectRoot,
     MissingFixtureChoice,
     NoInputs,
     OutputOverwritesInput,
@@ -70,11 +71,13 @@ pub(super) enum ErrorCode {
     WatchCoordinator,
     WatchRecovery,
     Write,
+    WatchPreparation,
+    WatchPublisher,
 }
 
 #[derive(Serialize)]
 #[serde(tag = "type", rename_all = "snake_case")]
-pub(super) enum ErrorDetails {
+pub(crate) enum ErrorDetails {
     FixtureChoice {
         choice: String,
         prompt_keys: Vec<String>,
@@ -101,17 +104,24 @@ pub(super) enum ErrorDetails {
     CatalogSpec {
         spec: String,
     },
+    Watch {
+        kind: &'static str,
+    },
+    WatchTarget {
+        kind: &'static str,
+        target: String,
+    },
 }
 
 #[derive(Serialize)]
-pub(super) struct StructuredError {
-    pub(super) category: ErrorCategory,
-    pub(super) code: ErrorCode,
-    pub(super) operation: &'static str,
+pub(crate) struct StructuredError {
+    pub(crate) category: ErrorCategory,
+    pub(crate) code: ErrorCode,
+    pub(crate) operation: &'static str,
     #[serde(skip_serializing_if = "Option::is_none")]
-    pub(super) path: Option<crate::schema_inspection::MachinePathProjection>,
+    pub(crate) path: Option<crate::schema_inspection::MachinePathProjection>,
     #[serde(skip_serializing_if = "Option::is_none")]
-    pub(super) related_path: Option<crate::schema_inspection::MachinePathProjection>,
+    pub(crate) related_path: Option<crate::schema_inspection::MachinePathProjection>,
     #[serde(skip_serializing_if = "Option::is_none")]
-    pub(super) details: Option<ErrorDetails>,
+    pub(crate) details: Option<ErrorDetails>,
 }
