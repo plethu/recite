@@ -15,6 +15,9 @@ CANONICAL_FIXTURES = {
     "fixtures/schema/valid/full_manifest.json",
 }
 
+KEYBOARD_CAPABILITY_ID = "editor.keyboard.workflow"
+KEYBOARD_FOLLOW_UP = "#202"
+
 
 def unique_records(ctx: Context, key: str, records):
     if not isinstance(records, list):
@@ -48,6 +51,7 @@ def validate(ctx: Context, data: dict, document_path: Path) -> tuple[dict, dict,
     validate_clients(ctx, client_map, artifact_map)
     validate_distributions(ctx, distribution_map, artifact_map)
     validate_capabilities(ctx, data, scenario_map, artifact_map, distribution_map, client_map)
+    validate_keyboard_capability(ctx, capability_map, scenario_map)
     validate_neovim_topology(ctx, client_map, artifact_map, distribution_map, capability_map)
     validate_document(ctx, document_path, capability_map, scenario_map)
     return scenario_map, capability_map, artifact_map, distribution_map, client_map
@@ -194,6 +198,13 @@ def validate_document(ctx: Context, document_path: Path, capabilities: dict, sce
         ctx.require(f"`{scenario_id}`" in document, f"documentation does not mention scenario {scenario_id}")
     for capability_id in capabilities:
         ctx.require(f"`{capability_id}`" in document, f"documentation does not mention capability {capability_id}")
+    keyboard_document = document.lower()
+    for required in (
+        "issue #202",
+        "package, source, and headless protocol checks are not installed-host keyboard evidence",
+        "broader milestone 5 accessibility proof",
+    ):
+        ctx.require(required in keyboard_document, f"keyboard workflow documentation must retain {required!r}")
     filetype = capabilities.get("editor.filetype.registration", {})
     evidence = filetype.get("expected_evidence") or {}
     commands = evidence.get("commands") if isinstance(evidence, dict) else []
@@ -204,3 +215,32 @@ def validate_document(ctx: Context, document_path: Path, capabilities: dict, sce
         platform_status = filetype.get("platform_status", {})
         linux_status = platform_status.get("linux") if isinstance(platform_status, dict) else None
         ctx.require(isinstance(linux_status, str) and linux_status in {"partial", "implemented"}, "Neovim filetype evidence needs Linux support status")
+
+
+def validate_keyboard_capability(ctx: Context, capabilities: dict, scenarios: dict) -> None:
+    capability = capabilities.get(KEYBOARD_CAPABILITY_ID)
+    ctx.require(isinstance(capability, dict), f"contract must contain {KEYBOARD_CAPABILITY_ID}")
+    if not isinstance(capability, dict):
+        return
+    scenario_id = capability.get("scenario")
+    ctx.require(scenario_id == "keyboard-workflow", f"{KEYBOARD_CAPABILITY_ID} must use the keyboard-workflow scenario")
+    scenario = scenarios.get(scenario_id)
+    if isinstance(scenario, dict):
+        ctx.require(scenario.get("status") == "planned", f"keyboard-workflow scenario must remain planned until installed-host evidence exists")
+    ctx.require(capability.get("follow_up") == KEYBOARD_FOLLOW_UP, f"{KEYBOARD_CAPABILITY_ID} must remain owned by open follow-up {KEYBOARD_FOLLOW_UP}")
+    ctx.require(capability.get("implementation_status") == "planned", f"{KEYBOARD_CAPABILITY_ID} must remain planned until installed-host evidence exists")
+    client_status = capability.get("client_status")
+    if isinstance(client_status, dict):
+        for client_id, status in client_status.items():
+            ctx.require(status in {"planned", "unsupported"}, f"{KEYBOARD_CAPABILITY_ID} cannot claim {client_id} host evidence before {KEYBOARD_FOLLOW_UP}")
+    platform_status = capability.get("platform_status")
+    if isinstance(platform_status, dict):
+        for platform, status in platform_status.items():
+            ctx.require(status in {"planned", "unsupported"}, f"{KEYBOARD_CAPABILITY_ID} cannot claim {platform} host evidence before {KEYBOARD_FOLLOW_UP}")
+    evidence = capability.get("expected_evidence")
+    if isinstance(evidence, dict):
+        ctx.require(evidence.get("status") == "planned", f"{KEYBOARD_CAPABILITY_ID} must not claim executable evidence before {KEYBOARD_FOLLOW_UP}")
+        ctx.require("command" not in evidence and "commands" not in evidence, f"{KEYBOARD_CAPABILITY_ID} must not reuse package/source/headless commands as keyboard evidence")
+    limitation = str(capability.get("known_limitation", "")).lower()
+    for boundary in ("installed-host", "package", "source", "headless"):
+        ctx.require(boundary in limitation, f"{KEYBOARD_CAPABILITY_ID} known_limitation must name the {boundary} evidence boundary")

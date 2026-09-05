@@ -160,6 +160,25 @@ def main() -> int:
         evidence["artifacts"] = {"invalid": "shape"}
     elif mutation == "follow-up-shape":
         record(contract, "capabilities", "lsp.completion")["follow_up"] = []
+    elif mutation == "keyboard-follow-up":
+        record(contract, "capabilities", "editor.keyboard.workflow")["follow_up"] = "#192"
+    elif mutation == "keyboard-follow-up-missing":
+        record(contract, "capabilities", "editor.keyboard.workflow").pop("follow_up")
+    elif mutation == "keyboard-scenario-status":
+        record(contract, "scenarios", "keyboard-workflow")["status"] = "implemented"
+    elif mutation == "keyboard-executable-evidence":
+        evidence = record(contract, "capabilities", "editor.keyboard.workflow")["expected_evidence"]
+        evidence["commands"] = ["scripts/check-vscode.sh"]
+    elif mutation == "keyboard-evidence-boundary":
+        capability = record(contract, "capabilities", "editor.keyboard.workflow")
+        capability["known_limitation"] = capability["known_limitation"].replace("headless", "protocol")
+    elif mutation == "keyboard-document-wording":
+        document = fixture_repo / "docs/editor-parity-contract.md"
+        marker = "broader Milestone 5 accessibility proof"
+        source = document.read_text(encoding="utf-8")
+        if marker not in source:
+            raise SystemExit("keyboard documentation wording was not present")
+        document.write_text(source.replace(marker, "accessibility proof"), encoding="utf-8")
     elif mutation == "neovim-stale-filetype":
         capability = record(contract, "capabilities", "editor.filetype.registration")
         capability["known_limitation"] = "No client package or activation registration exists."
