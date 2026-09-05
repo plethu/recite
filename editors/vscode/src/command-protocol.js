@@ -196,7 +196,20 @@ export function validateEnvelope(record, command, invocationId, sequence) {
       record.sequence !== sequence || typeof record.event !== "string") {
     throw protocol("invalid_envelope");
   }
-  if (invocationId !== undefined && record.invocation_id !== invocationId) {
+  const hasInvocationId = Object.hasOwn(record, "invocation_id");
+  if (invocationId === undefined) {
+    if (hasInvocationId) throw protocol("unexpected_invocation_id");
+  } else if (!hasInvocationId || record.invocation_id !== invocationId) {
     throw protocol("invocation_mismatch");
   }
+}
+
+/** Check the exact envelope shape, omitting optional invocation metadata when
+ * the caller did not provide an invocation ID. */
+export function exactEnvelopeKeys(value, expected, invocationId) {
+  const keys = invocationId === undefined
+    ? expected.filter((key) => key !== "invocation_id")
+    : expected;
+  return value && typeof value === "object" && JSON.stringify(Object.keys(value).sort()) ===
+    JSON.stringify(keys.slice().sort());
 }

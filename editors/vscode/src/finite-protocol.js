@@ -1,4 +1,10 @@
-import { NdjsonRecordParser, integerInRange, protocol, validateEnvelope } from "./command-protocol.js";
+import {
+  NdjsonRecordParser,
+  exactEnvelopeKeys,
+  integerInRange,
+  protocol,
+  validateEnvelope
+} from "./command-protocol.js";
 import { validDiagnosticRecord } from "./command-diagnostics.js";
 import { validStructuredError } from "./watch-record-validation.js";
 import { validTrace } from "./trace-record-validation.js";
@@ -15,16 +21,16 @@ export function parseFiniteRecords(stdout, command, invocationId, exitCode) {
   if (records.length !== 2) throw protocol("finite_record_count");
   validateEnvelope(records[0], command, invocationId, 0);
   validateEnvelope(records[1], command, invocationId, 1);
-  if (!exactKeys(records[0], ["version", "sequence", "event", "command", "invocation_id"]) ||
+  if (!exactEnvelopeKeys(records[0], ["version", "sequence", "event", "command", "invocation_id"], invocationId) ||
       records[0].event !== "command.started") throw protocol("missing_started");
   const terminal = records[1];
   if (terminal.event === "command.result") {
-    if (!exactKeys(terminal, ["version", "sequence", "event", "command", "invocation_id", "status", "exit_code", "data"])) {
+    if (!exactEnvelopeKeys(terminal, ["version", "sequence", "event", "command", "invocation_id", "status", "exit_code", "data"], invocationId)) {
       throw protocol("invalid_result");
     }
     validateResult(command, terminal, exitCode);
   } else if (terminal.event === "command.error") {
-    if (!exactKeys(terminal, ["version", "sequence", "event", "command", "invocation_id", "status", "exit_code", "error"])) {
+    if (!exactEnvelopeKeys(terminal, ["version", "sequence", "event", "command", "invocation_id", "status", "exit_code", "error"], invocationId)) {
       throw protocol("invalid_error");
     }
     validateError(terminal, exitCode);

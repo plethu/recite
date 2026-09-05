@@ -23,6 +23,21 @@ test("finite protocol validates exact records, terminal exit, and UTF-8 boundari
   assert.throws(() => new NdjsonRecordParser().push(Buffer.from([0xff, 0x0a])), /invalid_utf8/);
 });
 
+test("finite protocol omits invocation metadata only when no ID is expected", () => {
+  const started = { version: 1, sequence: 0, event: "command.started", command: "validate" };
+  const result = {
+    version: 1, sequence: 1, event: "command.result", command: "validate",
+    status: "success", exit_code: 0, data: { diagnostics: [] }
+  };
+  const wire = `${JSON.stringify(started)}\n${JSON.stringify(result)}\n`;
+  assert.equal(parseFiniteRecords(wire, "validate", undefined, 0).terminal.status, "success");
+  assert.throws(() => parseFiniteRecords(wire, "validate", "expected-id", 0), /invocation_mismatch/);
+
+  const mismatched = `${JSON.stringify({ ...started, invocation_id: "other-id" })}\n${JSON.stringify({ ...result, invocation_id: "other-id" })}\n`;
+  assert.throws(() => parseFiniteRecords(mismatched, "validate", "expected-id", 0), /invocation_mismatch/);
+  assert.throws(() => parseFiniteRecords(mismatched, "validate", undefined, 0), /unexpected_invocation_id/);
+});
+
 test("lossless JSON numbers preserve wide integers and cannot collide with source strings", () => {
   const value = parseLosslessJson(
     '{"min":-9223372036854775808,"max":9223372036854775807,"text":"\\u0000recite-lossless-integer:7"}'
@@ -129,6 +144,22 @@ test("watch lifecycle requires an initial build and waiting between attempts", (
   complete.consume(record(4, "watch.cancel.requested", { cancellation: { type: "user" } }));
   complete.consume(record(5, "watch.stopped", { reason: { type: "cancelled" } }));
   complete.finish(0);
+});
+
+test("watch protocol omits invocation metadata only when no ID is expected", () => {
+  const noId = new WatchProtocolValidator("watch");
+  noId.consume(recordFor(undefined, 0, "watch.started", { project_root: root() }));
+  noId.consume(recordFor(undefined, 1, "watch.stopped", {
+    reason: { type: "fatal" }, error: { category: "input", code: "missing_path", operation: "watch" }
+  }));
+  noId.finish(1);
+
+  const missing = new WatchProtocolValidator("watch", "expected-id");
+  assert.throws(() => missing.consume(recordFor(undefined, 0, "watch.started", { project_root: root() })), /invocation_mismatch/);
+  const mismatched = new WatchProtocolValidator("watch", "expected-id");
+  assert.throws(() => mismatched.consume(recordFor("other-id", 0, "watch.started", { project_root: root() })), /invocation_mismatch/);
+  const unexpected = new WatchProtocolValidator("watch");
+  assert.throws(() => unexpected.consume(recordFor("other-id", 0, "watch.started", { project_root: root() })), /unexpected_invocation_id/);
 });
 
 test("watch accepts startup fatal and rejects hostile typed values", () => {
@@ -246,5 +277,7 @@ function record(sequence, event, data = {}) {
 }
 
 function recordFor(invocationId, sequence, event, data) {
-  return { version: 1, sequence, event, command: "watch", invocation_id: invocationId, data };
+  const record = { version: 1, sequence, event, command: "watch", data };
+  if (invocationId !== undefined) record.invocation_id = invocationId;
+  return record;
 }

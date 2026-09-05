@@ -1,6 +1,6 @@
 import * as path from "node:path";
 import { realpathSync } from "node:fs";
-import { compareIntegers, protocol, validateEnvelope } from "./command-protocol.js";
+import { compareIntegers, exactEnvelopeKeys, protocol, validateEnvelope } from "./command-protocol.js";
 import {
   validBuildCompleted,
   validBuildStart,
@@ -26,10 +26,10 @@ export class WatchProtocolValidator {
 
   consume(record) {
     if (this.stopped) throw protocol("records_after_stopped");
-    if (!exactKeys(record, ["version", "sequence", "event", "command", "invocation_id", "data"])) {
+    validateEnvelope(record, this.command, this.invocationId, this.sequence++);
+    if (!exactEnvelopeKeys(record, ["version", "sequence", "event", "command", "invocation_id", "data"], this.invocationId)) {
       throw protocol("invalid_envelope");
     }
-    validateEnvelope(record, this.command, this.invocationId, this.sequence++);
     switch (record.event) {
       case "watch.started": this.startedRecord(record); break;
       case "watch.build.started": this.buildStarted(record); break;
