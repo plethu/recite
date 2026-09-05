@@ -2920,7 +2920,11 @@ The VS Code/VSCodium extension must provide:
 - TextMate syntax highlighting;
 - LSP client wiring;
 - commands for compile/validate/extract/watch;
-- problem matcher integration;
+- structured problem integration: project typed CLI diagnostics into the
+  command-owned VS Code DiagnosticCollection. A line-oriented
+  `problemMatcher` must not parse localized or nested versioned NDJSON text;
+  task/workbench contributions may be added only with an equivalent structured
+  contract;
 - block outline;
 - quick run/trace command;
 - optional graph preview.

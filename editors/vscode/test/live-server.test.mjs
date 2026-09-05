@@ -12,7 +12,7 @@ const coreFixturePath = path.resolve(packageRoot, "../../fixtures/recite/valid/c
 const schemaFixturePath = path.resolve(packageRoot, "../../fixtures/schema/valid/generated_manifest.json");
 
 test("built recite-lsp handles effective root, UTF-16 diagnostics, watcher refresh, and shutdown", {
-  skip: !(await exists(serverBinary)),
+  skip: process.env.RECITE_LSP_BIN === undefined,
   timeout: 15_000
 }, async () => {
   const root = await mkdtemp(path.join(os.tmpdir(), "recite-vscode-live-"));

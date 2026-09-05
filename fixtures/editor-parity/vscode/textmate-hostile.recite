@@ -1,0 +1,20 @@
+:: opening
+-> next_block
+| one | two
+  Hello {traveller_name}
+:if trusts(player)
+:else
+> line@anchor
+? choice@anchor
+>speaker=rhea
+?requires=(trusts(player))
+> speaker=foo requires=(trusts(player)) reason="why"
+? requires=(trusts(player)) reason="why"
+! immediateFoo play_sfx()
+! deferredness play_sfx()
+:if(trusts(player)) :else( :match(
+  [slow tone="soft" speed=2]Hello[/slow]
+  [ slow tone = "soft" ]Hi[/ slow ]
+> line speaker="unterminated
+> line choices=[one, two
+> line trailing # not comment

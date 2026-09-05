@@ -3,6 +3,10 @@ use crate::{ContentFingerprint, ProducerFingerprint, ProjectSchema};
 /// Compute the source-owned fingerprint: canonical semantic content plus the
 /// stable producer identity. Formatting, comments, and map insertion order do
 /// not affect it; semantic arrays are retained by the canonical model.
+#[expect(
+    clippy::expect_used,
+    reason = "this helper owns the BLAKE3 digest-to-fingerprint invariant"
+)]
 pub(super) fn source_fingerprint(schema: &ProjectSchema) -> ContentFingerprint {
     let mut bytes = Vec::from(b"recite-schema-source-fingerprint-v1\0".as_slice());
     if let Some(metadata) = &schema.producer_metadata
@@ -14,14 +18,8 @@ pub(super) fn source_fingerprint(schema: &ProjectSchema) -> ContentFingerprint {
     }
     bytes.push(0);
     bytes.extend_from_slice(schema.canonical_content_fingerprint().digest().as_bytes());
-    #[expect(
-        clippy::expect_used,
-        reason = "BLAKE3 produces the exact non-empty digest required by ContentFingerprint"
-    )]
-    {
-        ContentFingerprint::blake3(blake3::hash(&bytes).as_bytes().to_vec())
-            .expect("BLAKE3 always produces a valid content fingerprint")
-    }
+    ContentFingerprint::blake3(blake3::hash(&bytes).as_bytes().to_vec())
+        .expect("BLAKE3 always produces a valid content fingerprint")
 }
 
 pub(super) fn source_producer_fingerprint(

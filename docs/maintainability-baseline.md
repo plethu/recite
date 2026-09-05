@@ -121,7 +121,9 @@ production suppressions must carry a narrow scope and rationale.
 | `crates/recite-core/src/compiled/messagepack/tags.rs` | 468 | production | core/wire | cohesive | #89: explicit wire tag table |
 | `crates/recite-core/src/compiled/messagepack/wire.rs` | 662 | production | core/wire | exception | #89: retain the explicit decoder boundary while the v0 wire contract is synchronized |
 | `crates/recite-runtime/src/session_snapshot.rs` | 294 | production | runtime/snapshot | follow-up | #135: typed snapshot-boundary errors |
-| `crates/recite-cli/src/error.rs` | 372 | production | cli | review | Keep user-facing error projection separate from typed domain errors |
+| `crates/recite-cli/src/error.rs` | 386 | production | cli | review | Keep user-facing error projection separate from typed domain errors |
+| `crates/recite-cli/src/error/user_message.rs` | 266 | production | cli | review | Localized CLI error presentation remains a dedicated user-message boundary |
+| `crates/recite-cli/src/structured/error_mapping.rs` | 382 | production | cli/structured | cohesive | Exhaustive CliError-to-wire classification remains one stable protocol boundary |
 | `crates/recite-ui/tests/diagnostics.rs` | 371 | test/support | ui/tests | review | Structured diagnostic resource and compatibility-message coverage |
 | `crates/recite-compiler/tests/authoring_edits.rs` | 387 | test/support | compiler/tests | review | Host-neutral authoring edit application and scoped/range planning coverage |
 | `crates/recite-lsp/src/tests/code_action/missing_id.rs` | 363 | test/support | lsp/tests | review | Stable-ID code-action protocol coverage, including guarded project preconditions |
@@ -174,7 +176,8 @@ production suppressions must carry a narrow scope and rationale.
 | `crates/recite-runtime/tests/adapter_conformance/driver.rs` | 1179 | test/support | runtime/tests | exception | #171: shared conformance driver grows with typed callback scenarios; retain until adapter conformance split |
 | `crates/recite-cli/src/play/tui/render/tests.rs` | 811 | test/support | cli/tui/tests | cohesive | Private rendering contract tests |
 | `crates/recite-cli/tests/runtime.rs` | 659 | test/support | cli/tests | cohesive | Runtime command behavior suite |
-| `crates/recite-cli/tests/dialogue_locale.rs` | 480 | test/support | cli/tests | review | #180: end-to-end locale, plural, and trace scenarios remain grouped by the CLI contract |
+| `crates/recite-cli/tests/dialogue_locale.rs` | 500 | test/support | cli/tests | review | #180: end-to-end locale, plural, trace, and structured trace locale projection scenarios remain grouped by the CLI contract |
+| `crates/recite-cli/tests/structured_command.rs` | 490 | test/support | cli/tests | review | #53: finite structured command protocol conformance remains one external CLI suite; split before adding watch coverage |
 | `crates/recite-core/tests/support/mod.rs` | 554 | test/support | core/tests | cohesive | Shared model and wire constructors |
 | `crates/recite-core/tests/schema_manifest/fingerprint.rs` | 641 | test/support | core/tests | exception | #176: retain the canonical fingerprint fixture while typed provenance constructors migrate; producer-specific assertions are split into a dedicated test |
 | `crates/recite-ffi/tests/conditions.rs` | 437 | test/support | ffi/tests | cohesive | #171: condition callback protocol coverage |
@@ -201,26 +204,36 @@ production suppressions must carry a narrow scope and rationale.
 | `crates/recite-runtime/tests/session_serialization/invalid_snapshots.rs` | 478 | test/support | runtime/tests | cohesive | Snapshot failure contract |
 | `crates/recite-cli/tests/watch_stress.rs` | 366 | test/support | cli/tests | cohesive | Watch stress harness |
 | `crates/recite-cli/src/watch/build/tests.rs` | 367 | test/support | cli/watch/build-tests | review | #189: status and telemetry coverage is split; keep each responsibility below the follow-up threshold |
-| `crates/recite-cli/src/watch/tests.rs` | 377 | test/support | cli/watch-tests | review | #189: event and initial-build integration coverage remains one watch contract; reassess before adding another responsibility |
-| `crates/recite-cli/src/watch/build.rs` | 287 | production | cli/watch/build | review | #191: build orchestration retains the coordinator, publication, and post-publish freshness boundary; split if another lifecycle responsibility is added |
+| `crates/recite-cli/src/watch/protocol.rs` | 302 | production | cli/watch/protocol | cohesive | Versioned watch stream orchestration owns lifecycle ordering and host cancellation coordination |
+| `crates/recite-cli/src/watch/protocol/tests.rs` | 417 | test/support | cli/watch/protocol-tests | review | Active cancellation and stream-failure ordering use deterministic injected seams |
+| `crates/recite-cli/src/watch/tests.rs` | 415 | test/support | cli/watch-tests | review | #189: event and initial-build integration coverage remains one watch contract; reassess before adding another responsibility |
+| `tests/neovim/commands_lifecycle.lua` | 356 | test/support | neovim/commands | review | #53: structured CLI lifecycle and real command adapter coverage remains one focused Neovim contract suite |
+| `crates/recite-cli/src/watch/build.rs` | 309 | production | cli/watch/build | review | #191: build orchestration retains the coordinator, publication, and post-publish freshness boundary; split if another lifecycle responsibility is added |
+| `crates/recite-cli/src/watch/mod.rs` | 252 | production | cli/watch | review | Watch command routing keeps human and structured host entrypoints together; split if dispatch grows materially |
+| `crates/recite-cli/src/watch/wire_mapping.rs` | 331 | production | cli/watch/wire | cohesive | Explicit compiler-state to version-1 DTO mapping owns publication, recovery, and failure projections |
+| `crates/recite-cli/tests/structured_watch.rs` | 429 | test/support | cli/tests | review | #53: real-process structured watch lifecycle and cancellation transport coverage |
 | `crates/recite-compiler/tests/authoring_build/status_projection.rs` | 492 | test/support | compiler/authoring-build-tests | review | #189: lifecycle projection and non-semantic telemetry assertions remain one focused contract suite |
 | `crates/recite-compiler/src/authoring/build/result.rs` | 260 | production | compiler/authoring-build | review | #191: result finalization retains publication and freshness truth together; split if further lifecycle evidence is added |
 | `crates/recite-runtime/tests/traversal/conditions/choice_conditions.rs` | 365 | test/support | runtime/tests | cohesive | Choice condition coverage |
 | `crates/recite-lsp/src/tests/availability/speaker.rs` | 351 | test/support | lsp/tests | review | Typed and ordinary speaker completion coverage |
 | `crates/recite-compiler/tests/validation/participation.rs` | 424 | test/support | compiler/tests | cohesive | #168: participation-aware validation completeness and all-complete compatibility coverage |
-| `crates/recite-ui/tests/contract.rs` | 475 | test/support | ui/tests | review | #51: typed client projection and argument parity coverage remains one inventory contract suite |
-| `.agents/skills/recite-github-pm/scripts/check-pr-review-gates.sh` | 470 | tooling | agent-workflow | exception | #197: split review-gate orchestration into focused policy helpers |
+| `crates/recite-ui/tests/contract.rs` | 486 | test/support | ui/tests | review | #51: typed client projection and argument parity coverage remains one inventory contract suite |
 | `editors/recite-tree-sitter/grammar.js` | 390 | production | tree-sitter/grammar | cohesive | Grammar source owns syntax and recovery rules alongside the named node declarations |
-| `editors/vscode/src/controller.js` | 366 | production | vscode/controller | review | #51: controller retains restart coordination, startup projection, and terminal child-failure recovery |
+| `editors/vscode/src/controller.js` | 377 | production | vscode/controller | review | #51: controller retains restart coordination, startup projection, and terminal child-failure recovery |
+| `editors/vscode/src/lsp-features.js` | 262 | production | vscode/lsp-features | review | #51: LSP range/workspace-edit conversion and version precondition projection remain one checked editor boundary |
 | `editors/vscode/src/lsp-client.js` | 375 | production | vscode/lsp-client | review | #51: client keeps request settlement, child event ordering, transport closure, and bounded teardown as one shared lifecycle |
 | `editors/vscode/test/lsp.test.mjs` | 460 | test/support | vscode/tests | review | #51: fake child, clock, framing, and lifecycle contract scenarios remain one protocol-boundary suite |
+| `editors/vscode/test/controller-lifecycle.test.mjs` | 383 | test/support | vscode/tests | review | #51: controller startup, restart, capability, and explicit rename lifecycle coverage remain one host lifecycle suite; reassess before adding another lifecycle responsibility |
 | `editors/vscode/scripts/message-projections.mjs` | 303 | tooling | vscode/projections | review | #51: inventory parsing, typed placeholder lowering, and projection installation remain one checked update boundary |
 | `editors/vscode/scripts/ui-boundary-adapter.mjs` | 251 | tooling | vscode/checks | review | #51: semantic UI adapter contract remains one cohesive structural boundary |
-| `editors/vscode/scripts/ui-boundary-calls.mjs` | 347 | tooling | vscode/checks | review | UI boundary call inventory remains a single generated-boundary checker |
-| `scripts/check-git-policy.sh` | 414 | tooling | git-policy | exception | #197: split commit, diff, and workflow policy checks into focused helpers |
+| `editors/vscode/scripts/ui-boundary-command-contracts.mjs` | 257 | tooling | vscode/checks | review | #51: typed command and rename UI capabilities remain one explicit structural boundary; reassess before adding another host capability |
+| `editors/vscode/scripts/ui-boundary-calls.mjs` | 350 | tooling | vscode/checks | review | UI boundary call inventory remains a single generated-boundary checker |
+| `editors/recite-neovim/lua/recite/command_process.lua` | 281 | production | neovim/commands | review | Structured finite/stream process ownership, bounded TERM/KILL teardown, and callback settlement remain one transport boundary |
+| `editors/recite-neovim/lua/recite/watch.lua` | 292 | production | neovim/watch | review | Structured watch validation, recovery escalation, tombstone ownership, and synchronous editor-exit drain remain one lifecycle boundary |
 | `scripts/check-lint-suppressions.py` | 256 | tooling | lint-policy | review | Suppression policy parsing and diff-aware enforcement remain one checker boundary |
 | `scripts/check-tree-sitter.sh` | 399 | tooling | tree-sitter/check | review | Parser generation, ABI, corpus, and reproducibility checks share one tool boundary |
+| `scripts/check-zed.sh` | 304 | tooling | zed/check | review | #192: Zed manifest, grammar pin, task argv, launcher API, and parity evidence remain one checked boundary; split before adding another host surface |
 | `scripts/lint_suppression_ast.py` | 374 | tooling | lint-policy | review | AST suppression extraction keeps parser traversal and source categorisation together |
-| `tests/editor-parity/check.sh` | 487 | test/support | editor-parity/tests | review | Editor parity fixture scenarios remain one executable contract suite |
+| `tests/editor-parity/check.sh` | 435 | test/support | editor-parity/tests | review | Editor parity fixture scenarios remain one executable contract suite |
 | `tests/lint-suppressions/check.sh` | 398 | test/support | lint-policy/tests | review | Hostile suppression-policy fixture scenarios remain one executable contract suite |
 | `tests/maintainability/check.sh` | 376 | test/support | maintainability/tests | review | Core Rust threshold, baseline, zero-SHA, and inherited-debt fixtures remain one contract suite |

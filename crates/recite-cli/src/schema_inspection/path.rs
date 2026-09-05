@@ -17,7 +17,7 @@ mod tests;
 /// apply lossy Unicode conversion, so distinct inputs remain distinct.
 #[derive(Clone, Debug, Eq, PartialEq, Serialize)]
 #[serde(tag = "encoding", content = "value", rename_all = "snake_case")]
-pub(super) enum MachinePathProjection {
+pub(crate) enum MachinePathProjection {
     Utf8(String),
     #[cfg(unix)]
     UnixBytes(String),
@@ -25,7 +25,7 @@ pub(super) enum MachinePathProjection {
     WindowsWtf16(Vec<u16>),
 }
 
-pub(super) fn machine_path(path: &Path) -> MachinePathProjection {
+pub(crate) fn machine_path(path: &Path) -> MachinePathProjection {
     #[cfg(unix)]
     {
         let bytes = path.as_os_str().as_bytes();

@@ -42,7 +42,10 @@ fn run_stdio_with_startup(startup: Startup) -> Result<(), ServerError> {
     Ok(())
 }
 
-#[allow(dead_code)]
+#[allow(
+    dead_code,
+    reason = "the in-crate protocol harness owns the memory-connection server seam"
+)]
 pub(crate) fn run_connection(connection: Connection) -> Result<(), ServerError> {
     run_connection_with_catalog(connection, default_ui_catalog())
 }
@@ -54,7 +57,10 @@ pub(crate) fn run_connection_with_catalog(
     run_connection_with_startup(connection, Startup::without_warning(catalog))
 }
 
-#[allow(dead_code, reason = "used by in-crate lifecycle tests")]
+#[allow(
+    dead_code,
+    reason = "the in-crate lifecycle harness owns user-config startup coverage"
+)]
 pub(crate) fn run_connection_with_user_config(
     connection: Connection,
     loaded: Result<LoadedUserConfig, ConfigError>,
@@ -170,12 +176,10 @@ fn config_warning(catalog: &UiCatalog, error: &ConfigError) -> String {
     )
 }
 
+#[expect(
+    clippy::expect_used,
+    reason = "this helper owns the embedded default UI catalog invariant"
+)]
 fn default_ui_catalog() -> UiCatalog {
-    #[expect(
-        clippy::expect_used,
-        reason = "the embedded default UI catalog is validated by the UI contract gate"
-    )]
-    {
-        UiCatalog::load(&UiLocale::default()).expect("embedded default UI catalog must load")
-    }
+    UiCatalog::load(&UiLocale::default()).expect("embedded default UI catalog must load")
 }

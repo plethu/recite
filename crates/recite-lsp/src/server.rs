@@ -16,9 +16,9 @@ use recite_ui::UiCatalog;
 mod bootstrap;
 mod error;
 mod notifications;
-#[allow(unused_imports, reason = "used by in-crate lifecycle harness")]
+#[allow(unused_imports, reason = "test harness reexports protocol seams")]
 pub(crate) use bootstrap::run_connection_with_user_config;
-#[allow(unused_imports, reason = "used by in-crate protocol harness")]
+#[allow(unused_imports, reason = "test harness reexports protocol seams")]
 pub(crate) use bootstrap::{run_connection, run_connection_with_catalog};
 pub use bootstrap::{run_stdio, run_stdio_with_catalog, run_stdio_with_locale};
 pub use error::ServerError;

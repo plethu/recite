@@ -1,0 +1,3 @@
+# Zed lexical recovery fixture: an unfinished marker remains editable.
+@block zed_preview {
+  ~line [[draft line

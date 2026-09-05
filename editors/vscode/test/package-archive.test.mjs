@@ -101,6 +101,7 @@ function assertZipArchive(data) {
     "[Content_Types].xml",
     "extension.vsixmanifest",
     "extension/package.json",
+    "extension/syntaxes/recite.tmLanguage.json",
     "extension/dist/extension.cjs",
     "extension/dist/extension.js"
   ]) {

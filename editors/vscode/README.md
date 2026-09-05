@@ -4,6 +4,21 @@ This package is the shared VSIX entry point for Recite's VS Code and VSCodium
 clients. It registers `.recite` files and connects the editor to a local
 `recite-lsp` process over standard input and output.
 
+The package also contributes `syntaxes/recite.tmLanguage.json`, a tolerant
+TextMate grammar shared by VS Code and VSCodium. It provides lexical scopes for
+Recite markers, names, anchors, references, metadata, values, calls, prose,
+markup, and placeholders. It never validates IDs, references, schemas,
+conditions, effects, markup balance, or match exhaustiveness; those remain
+parser/compiler/LSP responsibilities.
+
+The grammar supplies scopes only; the active VS Code or VSCodium theme controls
+their colour, font, and contrast. The line and choice anchor scopes are separate
+so a theme may de-emphasise them, but the grammar cannot require that visual
+treatment. Scope appearance is never the sole semantic signal: marker, label,
+and anchor text remains present, and non-colour/high-contrast themes remain
+valid. The pinned Node tokenizer snapshots provide evidence for scope identity,
+not installed-host rendering or accessibility behaviour.
+
 The package's CommonJS entry shim obtains the VS Code host API through
 `require`, keeping the VS Code 1.89 extension host boundary loadable, then
 delegates activation to the ESM implementation.
@@ -61,15 +76,26 @@ package, receives full-document open/change/save/close notifications, and is
 shut down when the extension deactivates or its configuration changes. The
 client also honours the LSP server's `client/registerCapability` request for
 project file watching and forwards deterministic create/change/delete events.
-This is distinct from the future structured command/watch envelopes owned by
-REC-53. The current server does not implement cancellation or remote projects.
+The command palette also adapts the local structured CLI protocol for
+validation, compilation, extraction, fixture runs, traces, and a one-process
+watch loop. Commands use the saved active `.recite` document where applicable;
+they never save or execute an untitled/dirty document. Output is consumed as
+version-1 NDJSON, while diagnostics are kept in a command-owned collection.
+The watch stop command sends the versioned stdin cancellation record and waits
+for the matching stopped record before using bounded process recovery.
 
-Code-action edits are returned as extension-owned commands. The command keeps
-the LSP document versions, including zero-edit sibling preconditions, and
-checks them again immediately before applying the edit. Native rename is not
-registered yet: VS Code's native `WorkspaceEdit` path cannot preserve those
-LSP versions at its eventual apply boundary. A version-safe rename adapter is
-remaining closure work for REC-51.
+Set `recite.cli.path` to an absolute or project-root-relative `recite` binary;
+a bare executable name is resolved through `PATH`. It is restricted in
+untrusted workspaces, and commands never invoke a shell or a hosted service.
+
+Code-action and rename edits are returned through extension-owned commands. The
+commands keep the LSP document versions, including zero-edit sibling
+preconditions, and check them again immediately before applying the edit. Use
+`Recite: Rename block` (the `recite.renameBlock` command) for version-safe block
+rename. Native F2 rename is deliberately not registered: VS Code's native
+`WorkspaceEdit` path cannot preserve those LSP versions at its eventual apply
+boundary. The explicit command remains a partial adapter until installed-host
+activation evidence exists.
 
 Relative paths and process spawning use Node's platform-neutral path and
 process APIs. Linux, macOS, and Windows are intended hosts, but this scaffold

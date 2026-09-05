@@ -43,13 +43,31 @@ for required_file in \
   "$plugin_root/lua/recite/lifecycle.lua" \
   "$plugin_root/lua/recite/material.lua" \
   "$plugin_root/lua/recite/health.lua" \
+  "$plugin_root/lua/recite/command_json.lua" \
+  "$plugin_root/lua/recite/command_protocol.lua" \
+  "$plugin_root/lua/recite/diagnostic_protocol.lua" \
+  "$plugin_root/lua/recite/finite_protocol.lua" \
+  "$plugin_root/lua/recite/command_process.lua" \
+  "$plugin_root/lua/recite/timer.lua" \
+  "$plugin_root/lua/recite/command_diagnostics.lua" \
+  "$plugin_root/lua/recite/command_inputs.lua" \
+  "$plugin_root/lua/recite/finite_controller.lua" \
+  "$plugin_root/lua/recite/trace_protocol.lua" \
+  "$plugin_root/lua/recite/watch_protocol.lua" \
+  "$plugin_root/lua/recite/watch.lua" \
+  "$plugin_root/lua/recite/commands.lua" \
   "$plugin_root/ftdetect/recite.lua" \
   "$plugin_root/scripts/message-projections.mjs" \
+  "$plugin_root/scripts/diagnostic-projections.mjs" \
   "$plugin_root/lua/recite_messages.lua" \
+  "$plugin_root/lua/recite_diagnostics.lua" \
   "$neovim_query" \
   "$repo_root/tests/neovim/check.lua" \
   "$repo_root/tests/neovim/recovery.lua" \
-  "$repo_root/tests/neovim/material.lua"; do
+  "$repo_root/tests/neovim/material.lua" \
+  "$repo_root/tests/neovim/commands_protocol.lua" \
+  "$repo_root/tests/neovim/commands_lifecycle.lua" \
+  "$repo_root/tests/neovim/commands.lua"; do
   if [[ ! -f "$required_file" ]]; then
     echo "missing Neovim integration file: $required_file" >&2
     exit 2
@@ -88,6 +106,7 @@ fi
 
 "$node_bin" "$plugin_root/scripts/message-projections.mjs" --check
 "$node_bin" --test "$plugin_root/test/message-projections.test.mjs"
+"$node_bin" "$plugin_root/scripts/diagnostic-projections.mjs"
 echo "Neovim UI message projection checks passed"
 
 if (( static_only )); then
@@ -168,8 +187,8 @@ printf '%s\n' \
   'exec "${RECITE_LSP_TARGET:?}" "$@"' > "$delayed_lsp"
 chmod +x "$delayed_lsp"
 
-echo "== Neovim headless filetype/LSP checks =="
-"$cargo_bin" build --locked -q -p recite-lsp
+echo "== Neovim headless filetype/LSP/structured-command checks =="
+"$cargo_bin" build --locked -q -p recite-lsp -p recite-cli
 
 parser_root="$scratch/parser-runtime"
 mkdir -p "$parser_root/parser"
@@ -183,7 +202,8 @@ else
 fi
 
 run_headless() {
-  RECITE_PLUGIN="$plugin_root" \
+  local output
+  if ! output=$(RECITE_PLUGIN="$plugin_root" \
   RECITE_PARSER_ROOT="$parser_root" \
   RECITE_LSP="$repo_root/target/debug/recite-lsp" \
   RECITE_TEST_PROJECT="$project" \
@@ -193,17 +213,28 @@ run_headless() {
   RECITE_UNICODE_PROJECT="$unicode_project" \
   RECITE_DELAYED_LSP="$delayed_lsp" \
   RECITE_LSP_TARGET="$repo_root/target/debug/recite-lsp" \
+  RECITE_CLI="$repo_root/target/debug/recite" \
+  RECITE_REPO_ROOT="$repo_root" \
   RECITE_PARSER_AVAILABLE="$parser_available" \
-    env -u RECITE_CONFIG -u NVIM_APPNAME -u VIMINIT -u EXINIT \
+    env -u RECITE_CONFIG -u NVIM_APPNAME -u VIMINIT -u EXINIT -u VIMRUNTIME \
       XDG_CONFIG_HOME="$config_home" XDG_CONFIG_DIRS="$config_dirs" \
       XDG_DATA_HOME="$data_home" XDG_DATA_DIRS="$data_dirs" \
       XDG_STATE_HOME="$state_home" XDG_CACHE_HOME="$cache_home" \
       "$nvim_bin" --headless -u "$repo_root/tests/neovim/preload.lua" -i NONE -n \
-      -l "$1"
+      -l "$1" 2>&1); then
+    printf '%s\n' "$output"
+    return 1
+  fi
+  printf '%s\n' "$output"
+  if printf '%s\n' "$output" | rg -n 'E[0-9]{4}:|Error detected while processing|stack traceback|^lua:' >/dev/null; then
+    echo "Neovim headless lane emitted a Lua/API error" >&2
+    return 1
+  fi
 }
 
 run_headless "$repo_root/tests/neovim/check.lua"
 run_headless "$repo_root/tests/neovim/recovery.lua"
 run_headless "$repo_root/tests/neovim/material.lua"
+run_headless "$repo_root/tests/neovim/commands.lua"
 
 echo "Neovim headless checks passed"

@@ -198,7 +198,7 @@ pub(super) fn classify_discovery_error(
     }
 }
 
-fn schema_document_key(project_root: &Path, path: &Path) -> Result<DocumentKey, String> {
+pub(super) fn schema_document_key(project_root: &Path, path: &Path) -> Result<DocumentKey, String> {
     let relative = if path.is_absolute() {
         path.strip_prefix(project_root)
             .map_err(|_| "path resolves outside the project".to_owned())?

@@ -134,7 +134,10 @@ fn display_reference(reference: &BlockReference) -> String {
 }
 
 // Invariant: 1:1 is a valid fallback source position for source files without blocks.
-#[allow(clippy::expect_used)]
+#[allow(
+    clippy::expect_used,
+    reason = "source files without blocks use the canonical 1:1 diagnostic span"
+)]
 fn first_span_for(source_file: &SourceFile) -> SourceSpan {
     source_file.blocks.first().map_or_else(
         || {

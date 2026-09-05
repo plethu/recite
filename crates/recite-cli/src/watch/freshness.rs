@@ -88,8 +88,6 @@ fn map_preparation_error(error: ProjectBuildPreparationError) -> CliError {
     match error {
         ProjectBuildPreparationError::Discovery(source) => CliError::ProjectDiscovery { source },
         ProjectBuildPreparationError::NoInputs => CliError::NoInputs,
-        error => CliError::Watch {
-            message: error.to_string(),
-        },
+        source => CliError::WatchPreparation { source },
     }
 }

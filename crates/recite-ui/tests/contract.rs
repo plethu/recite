@@ -14,7 +14,7 @@ fn launch_resource_matches_the_typed_inventory() {
     contract
         .validate(DEFAULT_RESOURCE)
         .expect("complete launch catalog");
-    assert_eq!(MsgId::ALL.len(), 378);
+    assert_eq!(MsgId::ALL.len(), 438);
 
     #[derive(Deserialize)]
     struct Inventory {
@@ -146,6 +146,17 @@ fn launch_resource_matches_the_typed_inventory() {
         inventory.projections.neovim.source_resource, "en-US.ftl",
         "Neovim projects the canonical launch resource"
     );
+    for resource in contract
+        .resources
+        .iter()
+        .filter(|resource| resource.id.as_str().starts_with("diagnostic-"))
+    {
+        assert!(
+            resource.clients.contains(&Client::Neovim),
+            "Neovim must own the typed diagnostic resource {}",
+            resource.id
+        );
+    }
     for (name, projection) in [
         ("VS Code", &inventory.projections.vscode),
         ("VSCodium", &inventory.projections.vscodium),

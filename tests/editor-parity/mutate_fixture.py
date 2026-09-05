@@ -41,7 +41,9 @@ def main() -> int:
         evidence.pop("commands", None)
         evidence["command"] = "cargo test --locked -p recite-lsp --test editor_parity no_such_test"
     elif mutation == "stale-module-evidence":
-        record(contract, "capabilities", "command.structured.results")["expected_evidence"]["command"] = (
+        evidence = record(contract, "capabilities", "command.structured.results")["expected_evidence"]
+        evidence.pop("commands", None)
+        evidence["command"] = (
             "cargo test --locked -p recite-compiler --test authoring_build "
             "invented::projects_every_lifecycle_state_with_stable_fields"
         )

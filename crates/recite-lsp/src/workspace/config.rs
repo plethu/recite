@@ -71,7 +71,7 @@ impl WorkspaceConfig {
         }
     }
 
-    #[allow(dead_code)]
+    #[cfg(any(test, feature = "bench-support"))]
     pub(crate) fn for_roots(roots: Vec<PathBuf>) -> Self {
         let lexical_roots = roots;
         let roots = lexical_roots
@@ -176,7 +176,10 @@ fn discover_workspace_root(root: &Path, roots: &[PathBuf]) -> WorkspaceDiscovery
     }
 }
 
-#[allow(deprecated)]
+#[allow(
+    deprecated,
+    reason = "compatibility: retain deprecated LSP root_uri and root_path fallbacks"
+)]
 fn fallback_roots(params: &InitializeParams) -> Vec<String> {
     if let Some(workspace_folders) = &params.workspace_folders {
         let roots = workspace_folders

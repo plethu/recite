@@ -1,4 +1,4 @@
-#![allow(dead_code)]
+#![allow(dead_code, reason = "shared wire fixtures are selectively reused")]
 #![cfg(test)]
 
 mod wire_rows;

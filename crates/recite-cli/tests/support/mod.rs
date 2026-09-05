@@ -1,4 +1,7 @@
-#![allow(dead_code)]
+#![allow(
+    dead_code,
+    reason = "shared CLI test helpers are reused selectively across integration binaries"
+)]
 
 use std::fs;
 use std::path::{Path, PathBuf};

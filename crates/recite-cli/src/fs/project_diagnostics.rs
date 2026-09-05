@@ -2,7 +2,7 @@ use recite_core::{Diagnostic, DiagnosticArgumentValue, DiagnosticPresentationId,
 
 #[allow(
     clippy::expect_used,
-    reason = "CLI project producers use static first-party contract pairs"
+    reason = "this helper owns the CLI project diagnostic contract invariant"
 )]
 pub(super) fn project_diagnostic<I, K>(
     code: &recite_core::DiagnosticCode,

@@ -7,6 +7,8 @@ use recite_compiler::{
 };
 use recite_config::discover_project;
 
+use crate::fs::resolve_project_path;
+
 use super::events::WatchState;
 use super::{
     ProjectBuildEngine, ProjectBuildPreparation, ProjectBuildPreparationError,
@@ -84,6 +86,7 @@ where
         Err(error) => {
             return match super::preparation::classify_discovery_error(error) {
                 Ok(ProjectBuildPreparation::Rejected { diagnostics }) => {
+                    state.set_preparation_diagnostics(diagnostics.clone());
                     report_diagnostics(stderr, messages, diagnostics.iter())?;
                     Ok(BuildStatus::Diagnostics {
                         telemetry: BuildTelemetry::from_duration(
@@ -99,6 +102,7 @@ where
         }
     };
     state.update_from_discovery(&discovery);
+    state.set_preparation_inputs(discovery_input_keys(&discovery));
     let preparation = super::preparation::prepare_discovered(
         discovery,
         generation,
@@ -108,6 +112,7 @@ where
     let request = match preparation {
         ProjectBuildPreparation::Ready(request) => *request,
         ProjectBuildPreparation::Rejected { diagnostics } => {
+            state.set_preparation_diagnostics(diagnostics.clone());
             report_diagnostics(stderr, messages, diagnostics.iter())?;
             return Ok(BuildStatus::Diagnostics {
                 telemetry: BuildTelemetry::from_duration(clock().saturating_sub(started_at)),
@@ -116,9 +121,8 @@ where
     };
 
     let mut engine = ProjectBuildEngine::new(&request);
-    let mut publisher = ProjectBuildPublisher::new(&request).map_err(|error| CliError::Watch {
-        message: error.to_string(),
-    })?;
+    let mut publisher = ProjectBuildPublisher::new(&request)
+        .map_err(|source| CliError::WatchPublisher { source })?;
     let result = match state.coordinator.run(
         request.build_request().clone(),
         control,
@@ -222,6 +226,26 @@ where
     Ok(status_without_freshness(result, recovery))
 }
 
+fn discovery_input_keys(discovery: &recite_config::ProjectDiscoveryReport) -> Vec<String> {
+    let project_root = discovery.manifest().project_root();
+    let manifest = discovery.manifest().source().manifest();
+    let mut inputs = discovery
+        .documents()
+        .iter()
+        .map(|document| document.key().as_str().to_owned())
+        .chain(std::iter::once(super::PROJECT_MANIFEST_FILE.to_owned()))
+        .collect::<Vec<_>>();
+    if let Some(schema) = manifest.project.schema.as_deref()
+        && let Ok(key) = super::preparation::schema_document_key(
+            project_root,
+            &resolve_project_path(project_root, schema),
+        )
+    {
+        inputs.push(key.as_str().to_owned());
+    }
+    inputs
+}
+
 fn shared_recovery(
     result: &BuildResult,
     recovery: &[ProjectBuildRecovery],
@@ -280,8 +304,6 @@ fn map_preparation_error(error: ProjectBuildPreparationError) -> CliError {
     match error {
         ProjectBuildPreparationError::Discovery(source) => CliError::ProjectDiscovery { source },
         ProjectBuildPreparationError::NoInputs => CliError::NoInputs,
-        error => CliError::Watch {
-            message: error.to_string(),
-        },
+        source => CliError::WatchPreparation { source },
     }
 }

@@ -1,5 +1,6 @@
 import test from "node:test";
 import assert from "node:assert/strict";
+import { EventEmitter } from "node:events";
 import { ExtensionController } from "../src/controller.js";
 import { StartupOutcomeKind } from "../src/startup-outcome.js";
 import { FakeClient, hostApi, output, uri, waitFor } from "./controller-fixtures.mjs";
@@ -172,7 +173,7 @@ test("workspace folder changes queue one latest-authority restart", async () => 
   folderChanged({ added: [third], removed: [] });
   api.workspace.workspaceFolders = [first, third];
   folderChanged({ added: [], removed: [second] });
-  configurationChanged({ affectsConfiguration: (section) => section === "recite.lsp" });
+  configurationChanged({ affectsConfiguration: (section) => section === "recite.cli" });
   releaseStop();
   await waitFor(() => starts.length === 2 && controller.restartPromise === undefined);
 
@@ -211,6 +212,56 @@ test("an explicit authority restart cancels a pending crash retry", async () => 
   await new Promise((resolve) => setTimeout(resolve, 125));
 
   assert.equal(clients.length, 2);
+  await controller.dispose();
+});
+
+test("authority restart stops an active structured watch before the new LSP", async () => {
+  const api = hostApi({ isTrusted: () => true, onDidGrantWorkspaceTrust: () => ({ dispose() {} }) });
+  api.workspace.workspaceFolders = [{ name: "project", uri: { fsPath: "/project" } }];
+  api.workspace.getConfiguration = () => ({ get: (key, fallback) => ({
+    "lsp.path": "lsp", "lsp.args": [], "lsp.projectRoot": "", "cli.path": "cli"
+  }[key] ?? fallback) });
+  const child = new EventEmitter();
+  child.stdout = new EventEmitter();
+  child.stderr = new EventEmitter();
+  child.stdin = { writable: true, writes: [], write(value) { this.writes.push(JSON.parse(value)); return true; }, end() {}, destroy() {} };
+  child.kill = () => {};
+  const clients = [];
+  const stops = [];
+  const ui = output();
+  Object.assign(ui, {
+    commandNotTrusted() {}, commandWatchRunning() {}, commandWatchNotRunning() {}, commandWatchStopTimeout() {},
+    commandWatchStatus() {}, commandFailure() {}, commandProtocolFailure() {}, commandResult() {},
+    commandContentDiagnostics() {}, commandDocumentRequired: () => new Error("document"),
+    commandDocumentUnsaved: () => new Error("unsaved"), commandUntitledDocument: () => new Error("untitled"),
+    commandDocumentChanged: () => new Error("changed"), commandDocumentOutsideRoot: () => new Error("outside"),
+    commandWorkspaceRequired: () => new Error("workspace"), cliPathInvalid: () => new Error("path"),
+    commandInputInvalid: () => new Error("input"), activeDocument: () => undefined,
+    documentIsOpen: () => true, chooseCompileOutputPath: async () => undefined,
+    chooseExtractOutputPath: async () => undefined, chooseAssetPath: async () => undefined,
+    chooseBlock: async () => undefined, chooseFixturePath: async () => undefined
+  });
+  const controller = new ExtensionController(api, ui, { delete() {} }, {
+    spawnProcess: () => child,
+    createClient: () => {
+      const client = new FakeClient();
+      const stop = client.stop.bind(client);
+      client.stop = async () => { stops.push(child.stdin.writes.length); await stop(); };
+      clients.push(client);
+      return client;
+    }
+  });
+  await controller.start();
+  await api.commands.executeCommand("recite.watch.start");
+  const restart = controller.restart();
+  await waitFor(() => child.stdin.writes.length === 1);
+  assert.equal(stops.length, 0, "the LSP must wait for watch ownership teardown");
+  child.emit("close", 0, null);
+  await restart;
+  assert.deepEqual(child.stdin.writes[0], {
+    version: 1, command: "watch", action: "cancel", invocation_id: child.stdin.writes[0].invocation_id
+  });
+  assert.equal(stops.length, 1);
   await controller.dispose();
 });
 

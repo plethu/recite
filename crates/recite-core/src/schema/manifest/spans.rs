@@ -12,7 +12,7 @@ pub(crate) use paths::top_level_toml_number_token;
 
 // Shared schema span state keeps JSON and TOML format handling cohesive.
 // Invariant: JSON error positions are clamped to non-zero before construction.
-#[allow(clippy::expect_used)]
+#[allow(clippy::expect_used, reason = "JSON positions are clamped")]
 pub(crate) fn json_error_span(file: &str, error: &serde_json::Error) -> SourceSpan {
     let line = u32::try_from(error.line()).unwrap_or(u32::MAX).max(1);
     let column = u32::try_from(error.column()).unwrap_or(u32::MAX).max(1);

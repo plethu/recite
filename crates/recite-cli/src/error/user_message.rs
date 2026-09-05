@@ -134,6 +134,16 @@ impl CliError {
             Self::MissingPath(path) => {
                 messages.format(MsgId::CliErrorMissingPath, [("path", display_path(path))])
             }
+            Self::InvalidProjectRoot(path) => messages.format(
+                MsgId::CliErrorGeneric,
+                [(
+                    "message",
+                    format!(
+                        "input project root is not a directory: {}",
+                        display_path(path)
+                    ),
+                )],
+            ),
             Self::MissingFixtureChoice { prompt_keys } => messages.format(
                 MsgId::CliErrorMissingFixtureChoice,
                 [("prompt_keys", prompt_keys.join("|"))],
@@ -223,6 +233,12 @@ impl CliError {
             }
             Self::Watch { message } => {
                 messages.format(MsgId::CliErrorWatch, [("message", message.clone())])
+            }
+            Self::WatchPreparation { source } => {
+                messages.format(MsgId::CliErrorWatch, [("message", source.to_string())])
+            }
+            Self::WatchPublisher { source } => {
+                messages.format(MsgId::CliErrorWatch, [("message", source.to_string())])
             }
             Self::WatchCoordinator { source, .. } => {
                 messages.format(MsgId::CliErrorWatch, [("message", source.to_string())])

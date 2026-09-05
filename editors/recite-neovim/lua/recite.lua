@@ -10,6 +10,11 @@ local defaults = {
   treesitter = {
     enabled = true,
   },
+  commands = {
+    binary = "recite",
+    max_finite_bytes = 32 * 1024 * 1024,
+    max_watch_bytes = 4 * 1024 * 1024,
+  },
 }
 
 local state = {
@@ -20,6 +25,7 @@ local state = {
   restart_generation = 0,
 }
 local lsp_lifecycle
+local command_adapter
 
 local function join_path(parent, child)
   if vim.fs and vim.fs.joinpath then
@@ -97,10 +103,6 @@ local function replace_config(options)
 end
 
 --- Return the deterministic project root used for a buffer.
----
---- The nearest exact `recite.project.toml` wins.  A source-only workspace with
---- no manifest uses the buffer's containing directory; callers with a larger
---- source-only project can provide `lsp.root_dir` explicitly.
 function M.root_dir(bufnr, markers)
   bufnr = bufnr or 0
   markers = markers or state.config.lsp.root_markers
@@ -112,6 +114,12 @@ lsp_lifecycle = require("recite.lifecycle").new({
   state = state,
   root_dir = function(bufnr, markers)
     return M.root_dir(bufnr, markers)
+  end,
+})
+command_adapter = require("recite.commands").new({
+  config = state.config.commands,
+  root_dir = function(bufnr)
+    return M.root_dir(bufnr)
   end,
 })
 
@@ -130,6 +138,19 @@ function M.command()
   return vim.deepcopy(state.config.lsp.cmd)
 end
 
+-- Structured CLI adapters have a lifecycle separate from LSP.
+if vim.env.RECITE_DISABLE_COMMANDS ~= "1" then
+  M.commands = command_adapter
+  M.validate = function(options) return command_adapter.validate(options) end
+  M.compile = function(options) return command_adapter.compile(options) end
+  M.extract = function(options) return command_adapter.extract(options) end
+  M.run = function(options) return command_adapter.run(options) end
+  M.trace = function(options) return command_adapter.trace(options) end
+  M.watch_start = function(options) return command_adapter.watch_start(options) end
+  M.watch_stop = function() return command_adapter.watch_stop() end
+  M.watch_active = function() return command_adapter.watch_active() end
+end
+
 --- Register filetype, Tree-sitter, and FileType integration.
 function M.setup(options)
   local next_config = replace_config(options)
@@ -139,6 +160,7 @@ function M.setup(options)
     lsp_lifecycle.stop_owned_clients()
   end
   state.config = next_config
+  command_adapter.configure(state.config.commands)
   vim.g.recite_setup = true
 
   vim.filetype.add({ extension = { recite = "recite" } })
@@ -149,6 +171,54 @@ function M.setup(options)
   if state.augroup then
     vim.api.nvim_del_augroup_by_id(state.augroup)
   end
+
+  local function command(name, callback, command_options)
+    if vim.fn.exists(":" .. name) == 2 then vim.api.nvim_del_user_command(name) end
+    local definition = vim.tbl_extend("force", {
+      nargs = "*",
+      complete = "file",
+      desc = messages.format("neovim-command-description", { command = name }),
+    }, command_options or {})
+    if definition.complete == false then definition.complete = nil end
+    vim.api.nvim_create_user_command(name, callback, definition)
+  end
+  command("ReciteValidate", function(args)
+    local values = args.fargs
+    M.validate(#values > 0 and { paths = values } or {})
+  end)
+  command("ReciteCompile", function(args)
+    local values = args.fargs
+    M.compile(#values > 1 and { output = values[1], paths = vim.list_slice(values, 2) }
+      or #values == 1 and { output = values[1] } or {})
+  end)
+  command("ReciteExtract", function(args)
+    local values = args.fargs
+    M.extract(#values > 1 and { output = values[1], paths = vim.list_slice(values, 2) }
+      or #values == 1 and { output = values[1] } or {})
+  end)
+  command("ReciteRun", function(args)
+    local values = args.fargs
+    if #values ~= 3 then
+      vim.notify(messages.format("neovim-command-input-invalid"), vim.log.levels.ERROR)
+      return
+    end
+    M.run({ asset = values[1], block = values[2], fixture = values[3] })
+  end)
+  command("ReciteTrace", function(args)
+    local values = args.fargs
+    if #values ~= 3 then
+      vim.notify(messages.format("neovim-command-input-invalid"), vim.log.levels.ERROR)
+      return
+    end
+    M.trace({ asset = values[1], block = values[2], fixture = values[3] })
+  end)
+  command("ReciteWatchStart", function(args)
+    local values = args.fargs
+    M.watch_start(#values > 0 and { project_root = values[1] } or {})
+  end, { nargs = "?" })
+  command("ReciteWatchStop", function()
+    M.watch_stop()
+  end, { nargs = 0, complete = false })
   state.augroup = vim.api.nvim_create_augroup("recite_editor", { clear = true })
   vim.api.nvim_create_autocmd("FileType", {
     group = state.augroup,
@@ -157,6 +227,13 @@ function M.setup(options)
       attach(args.buf)
     end,
     desc = messages.format("neovim-autocmd-description"),
+  })
+  vim.api.nvim_create_autocmd("VimLeavePre", {
+    group = state.augroup,
+    callback = function()
+      command_adapter.dispose_sync()
+      lsp_lifecycle.stop_owned_clients()
+    end,
   })
 
   -- `setup` is also safe to call from an init.lua after a buffer already

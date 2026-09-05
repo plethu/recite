@@ -1,0 +1,435 @@
+{
+  "$schema": "https://raw.githubusercontent.com/martinring/tmlanguage/master/tmlanguage.json",
+  "name": "Recite",
+  "scopeName": "source.recite",
+  "fileTypes": [
+    "recite"
+  ],
+  "patterns": [
+    {
+      "include": "#comment-line"
+    },
+    {
+      "include": "#block-statement"
+    },
+    {
+      "include": "#line-statement"
+    },
+    {
+      "include": "#choice-statement"
+    },
+    {
+      "include": "#effect-statement"
+    },
+    {
+      "include": "#divert-end-statement"
+    },
+    {
+      "include": "#divert-statement"
+    },
+    {
+      "include": "#conditional-statement"
+    },
+    {
+      "include": "#plural-statement"
+    },
+    {
+      "include": "#prose-line"
+    },
+    {
+      "include": "#invalid-lexical"
+    }
+  ],
+  "repository": {
+    "comment-line": {
+      "name": "comment.line.number-sign.recite",
+      "match": "^[ \\t]*(#)(.*)$",
+      "captures": {
+        "1": {
+          "name": "punctuation.definition.comment.recite"
+        },
+        "2": {
+          "name": "comment.line.number-sign.recite"
+        }
+      }
+    },
+    "block-statement": {
+      "begin": "^([ \\t]*)(::)[ \\t]*([^\\s@#=(),\\[\\]{}|:]+)?",
+      "beginCaptures": {
+        "2": {
+          "name": "keyword.control.recite"
+        },
+        "3": {
+          "name": "entity.name.section.recite"
+        }
+      },
+      "end": "$",
+      "patterns": [
+        {
+          "include": "#header-content"
+        }
+      ]
+    },
+    "line-statement": {
+      "begin": "^([ \\t]*)(>)[ \\t]*(?:(?!(?:[^\\s@#=(),\\[\\]{}|:]+)[ \\t]*=)([^\\s@#=(),\\[\\]{}|:]+)(?:[ \\t]*(@)([^\\s#]*)?)?)?",
+      "beginCaptures": {
+        "2": {
+          "name": "punctuation.definition.line.recite"
+        },
+        "3": {
+          "name": "entity.name.label.recite"
+        },
+        "4": {
+          "name": "punctuation.definition.anchor.recite"
+        },
+        "5": {
+          "name": "constant.other.anchor.recite"
+        }
+      },
+      "end": "$",
+      "patterns": [
+        {
+          "include": "#header-content"
+        }
+      ]
+    },
+    "choice-statement": {
+      "begin": "^([ \\t]*)(\\?)[ \\t]*(?:(?!(?:[^\\s@#=(),\\[\\]{}|:]+)[ \\t]*=)([^\\s@#=(),\\[\\]{}|:]+)(?:[ \\t]*(@)([^\\s#]*)?)?)?",
+      "beginCaptures": {
+        "2": {
+          "name": "punctuation.definition.choice.recite"
+        },
+        "3": {
+          "name": "entity.name.label.recite"
+        },
+        "4": {
+          "name": "punctuation.definition.anchor.recite"
+        },
+        "5": {
+          "name": "constant.other.anchor.recite"
+        }
+      },
+      "end": "$",
+      "patterns": [
+        {
+          "include": "#header-content"
+        }
+      ]
+    },
+    "effect-statement": {
+      "begin": "^([ \\t]*)(!)[ \\t]*(?:(immediate|deferred|blocking)(?=[ \\t]|$))?",
+      "beginCaptures": {
+        "2": {
+          "name": "punctuation.definition.effect.recite"
+        },
+        "3": {
+          "name": "keyword.control.recite"
+        }
+      },
+      "end": "$",
+      "patterns": [
+        {
+          "include": "#header-content"
+        }
+      ]
+    },
+    "divert-end-statement": {
+      "begin": "^([ \\t]*)(->)[ \\t]*(END)(?=[ \\t]*$)",
+      "beginCaptures": {
+        "2": {
+          "name": "punctuation.definition.divert.recite"
+        },
+        "3": {
+          "name": "constant.language.recite"
+        }
+      },
+      "end": "$",
+      "patterns": []
+    },
+    "divert-statement": {
+      "begin": "^([ \\t]*)(->)[ \\t]*([^\\s#]+)?",
+      "beginCaptures": {
+        "2": {
+          "name": "punctuation.definition.divert.recite"
+        },
+        "3": {
+          "name": "variable.other.reference.recite"
+        }
+      },
+      "end": "$",
+      "patterns": []
+    },
+    "conditional-statement": {
+      "begin": "^([ \\t]*)(:(?:if|else|match|case))(?=[ \\t]|$)",
+      "beginCaptures": {
+        "2": {
+          "name": "keyword.control.conditional.recite"
+        }
+      },
+      "end": "$",
+      "patterns": [
+        {
+          "include": "#header-content"
+        }
+      ]
+    },
+    "plural-statement": {
+      "begin": "^([ \\t]*)(\\|)",
+      "beginCaptures": {
+        "2": {
+          "name": "punctuation.definition.plural.recite"
+        }
+      },
+      "end": "$",
+      "patterns": [
+        {
+          "include": "#markup-tag"
+        },
+        {
+          "include": "#interpolation"
+        },
+        {
+          "include": "#runtime-binding"
+        },
+        {
+          "include": "#escaped-brace"
+        },
+        {
+          "include": "#invalid-lexical"
+        },
+        {
+          "include": "#prose-content"
+        }
+      ]
+    },
+    "prose-line": {
+      "begin": "^[ \\t]+(?=\\S)",
+      "end": "$",
+      "patterns": [
+        {
+          "include": "#markup-tag"
+        },
+        {
+          "include": "#interpolation"
+        },
+        {
+          "include": "#runtime-binding"
+        },
+        {
+          "include": "#escaped-brace"
+        },
+        {
+          "include": "#invalid-lexical"
+        },
+        {
+          "include": "#prose-content"
+        }
+      ]
+    },
+    "header-content": {
+      "patterns": [
+        {
+          "include": "#invalid-lexical"
+        },
+        {
+          "include": "#requires-key"
+        },
+        {
+          "include": "#reason-key"
+        },
+        {
+          "include": "#type-name"
+        },
+        {
+          "include": "#metadata-key"
+        },
+        {
+          "include": "#call"
+        },
+        {
+          "include": "#string"
+        },
+        {
+          "include": "#number"
+        },
+        {
+          "include": "#boolean"
+        },
+        {
+          "include": "#runtime-binding"
+        },
+        {
+          "include": "#reserved-word"
+        },
+        {
+          "include": "#operator"
+        },
+        {
+          "include": "#assignment"
+        },
+        {
+          "include": "#brackets-and-delimiters"
+        },
+        {
+          "include": "#symbol"
+        },
+        {
+          "include": "#invalid-lexical"
+        }
+      ]
+    },
+    "requires-key": {
+      "name": "keyword.control.conditional.recite",
+      "match": "\\brequires(?=[ \\t]*=)"
+    },
+    "reason-key": {
+      "name": "variable.parameter.recite",
+      "match": "\\breason(?=[ \\t]*=)"
+    },
+    "metadata-key": {
+      "name": "variable.parameter.recite",
+      "match": "[^\\s=(),\\[\\]{}#:]+(?=[ \\t]*=)"
+    },
+    "call": {
+      "patterns": [
+        {
+          "name": "support.function.recite",
+          "match": "[^\\s=(),\\[\\]{}#]+(?=[ \\t]*\\()"
+        },
+        {
+          "include": "#brackets-and-delimiters"
+        }
+      ]
+    },
+    "string": {
+      "name": "string.quoted.double.recite",
+      "match": "\"(?:\\\\.|[^\"\\\\\\r\\n])*\""
+    },
+    "number": {
+      "name": "constant.numeric.recite",
+      "match": "[+-]?[0-9]+(?:\\.[0-9]+)?"
+    },
+    "boolean": {
+      "name": "constant.language.boolean.recite",
+      "match": "\\b(?:true|false)\\b"
+    },
+    "runtime-binding": {
+      "name": "variable.other.runtime.recite",
+      "match": "\\$[^\\s=(),\\[\\]{}#]+"
+    },
+    "reserved-word": {
+      "name": "constant.language.recite",
+      "match": "\\b(?:default|END)\\b"
+    },
+    "operator": {
+      "name": "keyword.operator.logical.recite",
+      "match": "\\b(?:and|or|not)\\b"
+    },
+    "type-name": {
+      "name": "entity.name.type.recite",
+      "match": "(?<=:)[^\\s=(),\\[\\]{}#]+"
+    },
+    "assignment": {
+      "name": "keyword.operator.assignment.recite",
+      "match": "="
+    },
+    "brackets-and-delimiters": {
+      "patterns": [
+        {
+          "name": "punctuation.section.arguments.recite",
+          "match": "[()]"
+        },
+        {
+          "name": "punctuation.definition.array.recite",
+          "match": "[\\[\\]]"
+        },
+        {
+          "name": "punctuation.delimiter.recite",
+          "match": ",|:"
+        }
+      ]
+    },
+    "symbol": {
+      "name": "constant.other.symbol.recite",
+      "match": "[^\\s=(),\\[\\]{}#:]+"
+    },
+    "markup-tag": {
+      "begin": "(\\[)[ \\t]*(/?)[ \\t]*([A-Za-z][A-Za-z0-9_-]*)(?=[^\\]\\r\\n]*\\])",
+      "beginCaptures": {
+        "1": {
+          "name": "punctuation.definition.tag.recite"
+        },
+        "2": {
+          "name": "punctuation.definition.tag.recite"
+        },
+        "3": {
+          "name": "entity.name.tag.recite"
+        }
+      },
+      "end": "(\\])",
+      "endCaptures": {
+        "1": {
+          "name": "punctuation.definition.tag.recite"
+        }
+      },
+      "patterns": [
+        {
+          "include": "#markup-attribute"
+        },
+        {
+          "include": "#string"
+        },
+        {
+          "include": "#number"
+        },
+        {
+          "include": "#assignment"
+        },
+        {
+          "name": "constant.other.symbol.recite",
+          "match": "[A-Za-z][A-Za-z0-9_-]*"
+        }
+      ]
+    },
+    "markup-attribute": {
+      "match": "([A-Za-z][A-Za-z0-9_-]*)(?=[ \\t]*=)",
+      "captures": {
+        "1": {
+          "name": "variable.parameter.recite"
+        }
+      }
+    },
+    "interpolation": {
+      "begin": "(\\{)(?=[^{}\\r\\n]*\\})",
+      "beginCaptures": {
+        "1": {
+          "name": "punctuation.definition.interpolation.recite"
+        }
+      },
+      "end": "(\\})",
+      "endCaptures": {
+        "1": {
+          "name": "punctuation.definition.interpolation.recite"
+        }
+      },
+      "patterns": [
+        {
+          "name": "variable.other.placeholder.recite",
+          "match": "[^{}\\s]+"
+        }
+      ]
+    },
+    "escaped-brace": {
+      "name": "string.unquoted.prose.recite",
+      "match": "\\\\[{}]"
+    },
+    "prose-content": {
+      "name": "string.unquoted.prose.recite",
+      "match": "[^\\[\\]{}\\\\\\r\\n]+|\\\\"
+    },
+    "invalid-lexical": {
+      "name": "invalid.illegal.recite",
+      "match": "(?:\"[^\"\\r\\n]*$|\\[[^\\]\\r\\n]*$|\\{[^}\\r\\n]*$)"
+    }
+  }
+}

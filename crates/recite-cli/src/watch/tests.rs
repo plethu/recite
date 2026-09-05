@@ -333,6 +333,44 @@ fn relevant_events_include_manifest_sources_and_schema_but_ignore_outputs() {
 }
 
 #[test]
+fn source_directory_events_are_relevant_when_output_parent_overlaps() {
+    let temp = TempDir::new().expect("tempdir");
+    write_file(
+        temp.path(),
+        "recite.project.toml",
+        r#"format_version = 1
+
+[[scenes]]
+id = "scene.start"
+asset = "dialogue/out.recitec"
+block = "start"
+participants = ["hazel"]
+"#,
+    );
+    write_file(temp.path(), "dialogue/main.recite", valid_source());
+
+    let mut state = WatchState::new(temp.path().to_owned());
+    let mut stderr = Vec::new();
+    build_once(&mut state, &mut stderr).expect("initial build");
+    let source_directory = state.project_root.join("dialogue");
+
+    let removed = Event {
+        kind: EventKind::Remove(notify::event::RemoveKind::Any),
+        paths: vec![source_directory.clone()],
+        attrs: Default::default(),
+    };
+    let renamed = Event {
+        kind: EventKind::Modify(notify::event::ModifyKind::Name(
+            notify::event::RenameMode::Both,
+        )),
+        paths: vec![source_directory.clone()],
+        attrs: Default::default(),
+    };
+    assert!(state.is_relevant_event(&removed));
+    assert!(state.is_relevant_event(&renamed));
+}
+
+#[test]
 fn synthetic_relevant_events_are_debounced_into_one_rebuild() {
     let temp = TempDir::new().expect("tempdir");
     let state = WatchState::new(temp.path().to_owned());

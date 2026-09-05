@@ -1,5 +1,6 @@
 local messages = require("recite_messages")
 local material = require("recite.material")
+local timer = require("recite.timer")
 
 local RESTART_LIMIT = 3
 local RESTART_STABILITY_MS = 1000
@@ -8,12 +9,8 @@ local function new(options)
   local resolve_root = options.root_dir
   local api = {}
 
-  local function stop_timer(timer)
-    if type(timer) == "number" then
-      vim.fn.timer_stop(timer)
-    elseif timer then
-      pcall(timer.stop, timer)
-    end
+  local function stop_timer(handle)
+    timer.stop(handle)
   end
 
   local function configured_root(bufnr, lsp)
@@ -76,7 +73,7 @@ local function new(options)
       end
       lifecycle.attempts = lifecycle.attempts + 1
       local delay = math.min(2000, 100 * (2 ^ (lifecycle.attempts - 1)))
-      lifecycle.timer = vim.defer_fn(function()
+      lifecycle.timer = timer.after(delay, function()
         lifecycle.timer = nil
         state.pending_restarts[lifecycle] = nil
         vim.schedule(function()
@@ -161,7 +158,7 @@ local function new(options)
       local lifecycle = state.clients[initialized_client.id]
       if lifecycle then
         stop_timer(lifecycle.stability_timer)
-        lifecycle.stability_timer = vim.defer_fn(function()
+        lifecycle.stability_timer = timer.after(RESTART_STABILITY_MS, function()
           lifecycle.stability_timer = nil
           if lifecycle.intentional or lifecycle.generation ~= state.restart_generation then
             return

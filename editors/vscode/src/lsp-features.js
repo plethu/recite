@@ -5,6 +5,19 @@ export function lspRangeToVscode(api, range) {
   );
 }
 
+export function isValidLspRange(range) {
+  const start = range?.start;
+  const end = range?.end;
+  if (!Number.isInteger(start?.line) || start.line < 0 ||
+      !Number.isInteger(start?.character) || start.character < 0 ||
+      !Number.isInteger(end?.line) || end.line < 0 ||
+      !Number.isInteger(end?.character) || end.character < 0) {
+    return false;
+  }
+  return start.line < end.line ||
+    start.line === end.line && start.character <= end.character;
+}
+
 export function lspLocationToVscode(api, location) {
   if (location?.targetUri && location.targetRange) {
     return new api.Location(api.Uri.parse(location.targetUri), lspRangeToVscode(api, location.targetRange));
@@ -103,7 +116,7 @@ export function lspWorkspaceEditToVscode(api, result, getOpenDocument) {
     if (!document || document.version !== version) return undefined;
     preconditions.push({ document, uri, version });
     for (const edit of change.edits) {
-      if (!edit?.range || typeof edit.newText !== "string") return undefined;
+      if (!isValidLspRange(edit?.range) || typeof edit.newText !== "string") return undefined;
       workspaceEdit.replace(uri, lspRangeToVscode(api, edit.range), edit.newText);
     }
   }

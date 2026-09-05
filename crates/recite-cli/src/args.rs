@@ -11,7 +11,7 @@ pub(crate) struct Cli {
 
 #[derive(Debug, Subcommand)]
 pub(crate) enum Command {
-    Validate(InputArgs),
+    Validate(ValidateArgs),
     Compile(CompileArgs),
     Extract(ExtractArgs),
     #[command(name = "check-ids")]
@@ -38,6 +38,24 @@ pub(crate) enum Command {
 
 #[derive(Debug, Args)]
 pub(crate) struct InputArgs {
+    #[arg(required = true)]
+    pub(crate) paths: Vec<PathBuf>,
+}
+
+#[derive(Clone, Copy, Debug, Eq, PartialEq, clap::ValueEnum)]
+pub(crate) enum OutputFormat {
+    Human,
+    Structured,
+}
+
+#[derive(Debug, Args)]
+pub(crate) struct ValidateArgs {
+    /// Select human-readable or version-1 newline-delimited structured output.
+    #[arg(long, value_enum, default_value_t = OutputFormat::Human)]
+    pub(crate) output_format: OutputFormat,
+    /// Caller-owned identifier copied into each structured protocol record.
+    #[arg(long)]
+    pub(crate) invocation_id: Option<String>,
     #[arg(required = true)]
     pub(crate) paths: Vec<PathBuf>,
 }
@@ -81,6 +99,12 @@ pub(crate) struct InspectSchemaArgs {
 
 #[derive(Debug, Args)]
 pub(crate) struct WatchArgs {
+    /// Select human-readable or version-1 newline-delimited structured output.
+    #[arg(long, value_enum, default_value_t = OutputFormat::Human)]
+    pub(crate) output_format: OutputFormat,
+    /// Caller-owned identifier copied into each structured protocol record.
+    #[arg(long)]
+    pub(crate) invocation_id: Option<String>,
     pub(crate) project_root: PathBuf,
 }
 
@@ -95,6 +119,12 @@ pub(crate) struct CompileArgs {
     pub(crate) output: PathBuf,
     #[arg(long)]
     pub(crate) schema: Option<PathBuf>,
+    /// Select human-readable or version-1 newline-delimited structured output.
+    #[arg(long, value_enum, default_value_t = OutputFormat::Human)]
+    pub(crate) output_format: OutputFormat,
+    /// Caller-owned identifier copied into each structured protocol record.
+    #[arg(long)]
+    pub(crate) invocation_id: Option<String>,
     #[arg(required = true)]
     pub(crate) paths: Vec<PathBuf>,
 }
@@ -105,6 +135,12 @@ pub(crate) struct ExtractArgs {
     pub(crate) output: Option<PathBuf>,
     #[arg(long)]
     pub(crate) schema: Option<PathBuf>,
+    /// Select human-readable or version-1 newline-delimited structured output.
+    #[arg(long, value_enum, default_value_t = OutputFormat::Human)]
+    pub(crate) output_format: OutputFormat,
+    /// Caller-owned identifier copied into each structured protocol record.
+    #[arg(long)]
+    pub(crate) invocation_id: Option<String>,
     #[arg(required = true)]
     pub(crate) paths: Vec<PathBuf>,
 }
@@ -116,6 +152,12 @@ pub(crate) struct RuntimeArgs {
     pub(crate) block: String,
     #[arg(long)]
     pub(crate) fixture: PathBuf,
+    /// Select human-readable or version-1 newline-delimited structured output.
+    #[arg(long, value_enum, default_value_t = OutputFormat::Human)]
+    pub(crate) output_format: OutputFormat,
+    /// Caller-owned identifier copied into each structured protocol record.
+    #[arg(long)]
+    pub(crate) invocation_id: Option<String>,
 }
 
 #[derive(Debug, Args)]
@@ -175,4 +217,33 @@ pub(crate) struct BenchArgs {
     pub(crate) baseline: Option<PathBuf>,
     #[arg(long, default_value_t = 3)]
     pub(crate) samples: usize,
+}
+
+#[derive(Clone, Debug, Eq, PartialEq)]
+pub(crate) struct StructuredInvocation {
+    pub(crate) command: &'static str,
+    pub(crate) invocation_id: Option<String>,
+}
+
+impl Command {
+    pub(crate) fn structured_invocation(&self) -> Option<StructuredInvocation> {
+        let (command, output_format, invocation_id) = match self {
+            Self::Validate(args) => ("validate", args.output_format, &args.invocation_id),
+            Self::Compile(args) => ("compile", args.output_format, &args.invocation_id),
+            Self::Extract(args) => ("extract", args.output_format, &args.invocation_id),
+            Self::Watch(args) => ("watch", args.output_format, &args.invocation_id),
+            Self::Run(args) => ("run", args.output_format, &args.invocation_id),
+            Self::Trace(args) => (
+                "trace",
+                args.runtime.output_format,
+                &args.runtime.invocation_id,
+            ),
+            _ => return None,
+        };
+
+        (output_format == OutputFormat::Structured).then(|| StructuredInvocation {
+            command,
+            invocation_id: invocation_id.clone(),
+        })
+    }
 }

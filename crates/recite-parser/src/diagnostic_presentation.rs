@@ -71,7 +71,7 @@ fn reason_argument(reason: &str) -> Vec<(String, DiagnosticArgumentValue)> {
 
 #[allow(
     clippy::expect_used,
-    reason = "the central parser contract is paired with every parser constructor"
+    reason = "this helper owns parser diagnostic contract lookup and argument validation"
 )]
 fn diagnostic_with_presentation(
     code: DiagnosticCode,

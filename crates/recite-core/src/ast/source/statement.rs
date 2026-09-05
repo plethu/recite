@@ -4,7 +4,10 @@ use super::{Choice, Divert, Effect, IfBranch, Line, MatchBranch};
 
 /// One source-level statement in the order it appears in a block or body.
 #[derive(Clone, Debug, PartialEq)]
-#[allow(clippy::large_enum_variant)]
+#[allow(
+    clippy::large_enum_variant,
+    reason = "the public AST keeps source payloads owned for stable direct traversal"
+)]
 pub enum Statement {
     Line(Line),
     Choice(Choice),

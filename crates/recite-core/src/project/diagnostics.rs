@@ -5,7 +5,7 @@ use crate::{
 
 #[allow(
     clippy::expect_used,
-    reason = "project producers use static first-party contract pairs"
+    reason = "this helper owns project diagnostic contract lookup and argument validation"
 )]
 pub(super) fn project_diagnostic<I, K>(
     code: &DiagnosticCode,
@@ -26,7 +26,7 @@ where
 
 #[allow(
     clippy::expect_used,
-    reason = "project producers use static first-party auxiliary contracts"
+    reason = "this helper owns project related-presentation lookup and argument validation"
 )]
 pub(super) fn related_presentation(
     span: SourceSpan,

@@ -24,7 +24,10 @@ impl Messages {
             })
     }
 
-    #[allow(dead_code, reason = "used only by compatibility tests")]
+    #[allow(
+        dead_code,
+        reason = "shared CLI test helpers construct alternate UI catalogs"
+    )]
     pub(crate) fn from_resources(
         requested: LanguageIdentifier,
         resources: impl IntoIterator<Item = (LanguageIdentifier, String)>,

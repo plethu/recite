@@ -3,6 +3,7 @@ import path from "node:path";
 import { fileURLToPath } from "node:url";
 import { assertSafeTree } from "./safety.mjs";
 import { verifyMessageProjections } from "./message-projections.mjs";
+import { verifyDiagnosticProjection } from "./diagnostic-projections.mjs";
 
 const root = path.dirname(fileURLToPath(import.meta.url));
 const packageRoot = path.resolve(root, "..");
@@ -10,6 +11,7 @@ const sourceRoot = path.join(packageRoot, "src");
 const outputRoot = path.join(packageRoot, "dist");
 
 await verifyMessageProjections(packageRoot);
+await verifyDiagnosticProjection();
 assertSafeTree(sourceRoot, "extension source");
 await rm(outputRoot, { recursive: true, force: true });
 await mkdir(outputRoot, { recursive: true });

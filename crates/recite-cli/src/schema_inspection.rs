@@ -26,10 +26,12 @@ mod path;
 mod provenance;
 mod summary;
 
+pub(crate) use path::MachinePathProjection;
+pub(crate) use path::machine_path;
+
 use self::error::SchemaInspectionError;
 use input::InputFormat;
 use model::SchemaInspectionProjection;
-use path::machine_path;
 
 /// Version of the CLI inspection projection, independent of schema and
 /// generated-manifest versions.

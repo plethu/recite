@@ -125,6 +125,26 @@ locale = "fr-FR"
     assert_eq!(prompt["prompt"]["choices"][0]["source_text"], "Help me.");
     assert_eq!(prompt["prompt"]["choices"][0]["text"], "Aidez-moi.");
     assert!(prompt["prompt"]["identity"]["fixture_keys"].is_array());
+    let structured = run(recite()
+        .args([
+            "trace",
+            "--output-format",
+            "structured",
+            "--invocation-id",
+            "locale-trace",
+        ])
+        .arg(&asset)
+        .args(["--block", "start", "--fixture"])
+        .arg(&fixture));
+    structured.assert_success().assert_stderr("");
+    let records: Vec<serde_json::Value> = String::from_utf8_lossy(&structured.stdout)
+        .lines()
+        .map(|line| serde_json::from_str(line).expect("structured trace record is JSON"))
+        .collect();
+    assert_eq!(records.len(), 2);
+    assert_eq!(records[1]["event"], "command.result");
+    assert_eq!(records[1]["invocation_id"], "locale-trace");
+    assert_eq!(records[1]["data"]["trace"]["dialogue_locale"], "fr-FR");
 
     let default_trace = run(recite()
         .arg("trace")

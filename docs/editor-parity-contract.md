@@ -108,15 +108,29 @@ its source files ordinary repository inputs before collecting evidence.
 
 ## Structured commands and watch
 
-The intended command boundary is structured: compile, validate, extract, run,
-trace, and watch consumers should eventually use typed/versioned records rather
-than localised human CLI output. The shared authoring kernel now exposes a
-protocol-neutral `BuildStatusProjection` with phase, generation, diagnostics,
-freshness, publication, recovery, and cancellation state. Its executable
-coverage is partial evidence for the shared lifecycle shape; it is not a CLI
-wire contract. Versioned command/watch envelopes, process and binary
-integration, cancellation transport, and client integration remain planned
-under #53.
+The command boundary is structured for the finite `compile`, `validate`,
+`extract`, `run`, and `trace` commands and the streaming `watch` command. Their
+opt-in version-1 NDJSON contracts are documented in
+[`docs/cli-structured-protocol.md`](cli-structured-protocol.md) and exercised
+by the external `recite-cli` tests, the VS Code/VSCodium adapter tests, and the
+Neovim headless command lane. The shared CLI remains semantic authority:
+clients resolve a local binary, pass argv and the project root, validate every
+record, and project typed diagnostics and runtime/watch data without parsing
+human output. Neovim owns a separate `vim.system` process lifecycle and one
+watch child, including cooperative cancel, bounded teardown, and stale-result
+fencing. A late or malformed record is a protocol failure. Zed's compile,
+validate, extract, and watch entries are static terminal tasks only: they pass
+structured output to the host terminal but do not parse records, replace
+diagnostics, or provide a fake stdin cancellation controller. Zed intentionally
+has no built-in run/trace task because asset, block, and fixture inputs cannot
+be guessed; a project may add an explicit task. Installed host activation and
+non-Linux platform evidence remain outside this contract.
+
+The VS Code/VSCodium adapter deliberately contributes no line-oriented
+`problemMatcher` or task definition. Such a matcher would parse localized or
+nested NDJSON text and would duplicate the structured boundary. The command
+adapter's typed `DiagnosticCollection` is the problem integration for this
+slice; native task/workbench affordances remain a separate host surface.
 
 ## Conformance matrix
 
@@ -137,47 +151,72 @@ implemented primary artifact.
 - `lsp.overlay.recovery`: accept an incomplete overlay, then refresh it when a newer complete overlay arrives.
 - `lsp.stale.version`: refuse an older document version without replacing the current overlay or publishing stale evidence.
 - `lsp.cancellation`: document the current unsupported cancellation surface and its owner rather than claiming a timeout is cancellation.
-- `command.structured.results`: project the shared `BuildStatusProjection` fields while reserving CLI wire, process, binary, and client integration for #53.
-- `editor.filetype.registration`: exercise `.recite` activation and file association through the checked-in Neovim runtimepath package.
-- `editor.vscode.syntax-projection`: reserve the syntax-only TextMate projection for #97.
+- `command.structured.results`: project typed/versioned finite CLI command records through the shared VS Code/VSCodium and Neovim adapters; no human stderr/output parsing is permitted.
+- `editor.filetype.registration`: exercise `.recite` activation and file association through the checked-in Neovim runtimepath, VS Code/VSCodium package, and Zed language package projections.
+- `editor.vscode.syntax-projection`: project the checked-in syntax-only TextMate grammar and deterministic VSIX for VS Code/VSCodium; installed host activation and non-Linux platforms remain untested.
 - `editor.neovim.syntax-projection`: record ABI14 Tree-sitter parser/query loading through the Neovim package; the shared grammar remains owned by #98.
-- `editor.zed.syntax-projection`: reserve Zed syntax and compatibility evidence for #192.
+- `editor.zed.syntax-projection`: check the Zed language package, exact highlights-query projection, pinned grammar revision, and lexical capture evidence through `scripts/check-zed.sh`; this does not claim installed-host rendering.
 - `lsp.completion`: project structured completion items from the shared snapshot.
 - `lsp.definition`: resolve same-project and cross-file definitions through the shared snapshot.
 - `lsp.hover`: project structured hover content and symbol ranges from the shared kernel.
 - `lsp.references`: project declaration-first, source-ordered references with explicit declaration inclusion.
-- `lsp.rename`: project source-preserving workspace edits for resolved symbols; version preconditions remain incomplete.
+- `lsp.rename`: project source-preserving workspace edits for resolved symbols through the explicit VS Code/VSCodium `recite.renameBlock` command; the command retains version preconditions while native F2 rename remains unregistered.
 - `lsp.code-actions`: project source-preserving stable-ID repairs from the shared kernel.
 - `workspace.project.discovery`: discover canonical sibling sources under the configured project root.
 - `workspace.configuration`: keep root and project configuration ownership outside client semantics.
 - `authoring.stable-id.operations`: reserve the shared-kernel missing-ID repair; broader stable-ID edit preconditions remain incomplete.
 - `schema.localisation.resolution`: project the current compiler catalogue identity/fingerprint and CLI locale-fallback evidence; combined LSP schema/catalogue provenance remains planned.
-- `command.compile.validate.extract`: reserve versioned structured compile, validate, and extract records for #53; current CLI output is not machine protocol evidence.
-- `command.run.trace`: reserve versioned structured runtime and trace records for #53; current CLI tests are not command protocol evidence.
-- `command.watch.lifecycle`: project the current protocol-neutral build lifecycle fields; versioned watch wire, process, binary, cancellation transport, and client evidence remain planned for #53.
+- `command.compile.validate.extract`: exercise version-1 structured compile, validate, and extract records through the local-first VS Code/VSCodium and Neovim command adapters; Zed exposes static structured terminal tasks but does not parse their records into diagnostics.
+- `command.run.trace`: exercise version-1 structured runtime and trace records through the local-first VS Code/VSCodium and Neovim command adapters; Zed built-in run/trace remains unsupported because the required asset, block, and fixture are explicit inputs.
+- `command.watch.lifecycle`: exercise the version-1 watch wire, argv/cwd process boundary, cooperative cancel, bounded recovery, and typed diagnostic replacement through the VS Code/VSCodium and Neovim adapters; Zed's static watch task remains a host-terminal process with no parsed diagnostic controller or fake stdin cancellation.
 
 Executable evidence covers the shared LSP operations, project-root discovery,
 the bounded stable-ID repair, compiler catalogue fallback, the compiler's
 protocol-neutral build projection, CLI locale fallback through the checked-in
-`fixtures/recite/valid/locale_fallback_fr.po` catalogue, the syntax-only
+`fixtures/recite/valid/locale_fallback_fr.po` catalogue, the finite version-1
+structured CLI records through the external `recite-cli` command tests and the VS Code/VSCodium
+finite and streaming adapter tests, the syntax-only
 Tree-sitter grammar check, the Neovim runtimepath check, and the checked-in
-VS Code/VSCodium package scaffold. The grammar check proves generated-parser
-reproducibility, canonical fixture coverage, recovery boundaries, and lexical
-captures; the Neovim check adds Linux/0.12.5 filetype, LSP, and ABI14 parser
-evidence. The VS Code package check validates the generated VSIX contents and
-the Node tests exercise the real `recite-lsp` process over stdio on Linux.
-Those checks do not establish installed VS Code or VSCodium host activation,
+VS Code/VSCodium TextMate grammar and package. The Tree-sitter check proves
+generated-parser reproducibility, canonical fixture coverage, recovery
+boundaries, and lexical captures; the Neovim check adds Linux/0.12.5 filetype,
+LSP, ABI14 parser, five finite command operations, and watch cancel/exit
+evidence. The VS Code package check validates the
+generated VSIX contents, including the grammar, and the Node tests exercise the
+real `recite-lsp` process over stdio on Linux. The Zed package check validates
+the manifest, language config, static task argv, API-0.7.0 launcher, exact
+highlights query, and pinned grammar revision. The pinned TextMate tokenizer
+snapshots assert exact scopes for blocks, diverts, plural pipes, interpolation,
+condition directives, anchors, and hostile recovery cases. TextMate appearance
+is theme-controlled; anchor scopes are merely de-emphasizable, never hidden by
+the grammar. Non-colour and high-contrast themes retain the authored text and
+syntax markers, so colour is not treated as the sole semantic signal. These
+Node scope snapshots are not evidence of installed-host rendering or
+accessibility integration.
+Those checks do not establish installed VS Code, VSCodium, or Zed host activation,
 macOS or Windows support, marketplace publication, or a distributable archive
-in source control. This still does not claim a versioned CLI/watch envelope,
-process or binary integration, combined LSP schema/catalogue transport,
-cancellation transport, native version-safe rename, or a TextMate or Zed
-grammar.
+in source control. They also do not claim a native text problem matcher or
+task contribution: typed command diagnostics are intentionally owned by the
+structured `DiagnosticCollection` projection. Combined LSP schema/catalogue
+transport, native F2 rename, or installed Zed host activation remain outside
+this evidence. Zed task terminals do not parse structured records into
+diagnostics, and no watch diagnostic controller or fake stdin cancellation is
+claimed.
 
 Capability rows with direct VS Code/VSCodium package, adapter, or live-server
-evidence use `partial` client status and include `scripts/check-vscode.sh` in
-their evidence commands. Rows for native rename, command/watch integration,
-and other untested client operations remain planned even though the shared
-extension artifact exists.
+evidence, or direct Neovim command evidence, use `partial` client status and include the
+corresponding gate in
+their evidence commands. The Zed syntax/filetype package is `partial` on Linux
+because source/package checks exist; no installed Zed host is available in this
+verification environment, so native Zed LSP activation remains planned. Rows
+for native rename and other untested host operations remain planned. Zed's
+static compile/validate/extract/watch task definitions do not make it a
+structured command/watch adapter: task terminals do not parse human or NDJSON
+output, and Zed does not receive a fake cancellation controller. Built-in Zed
+run/trace are unsupported; explicit project tasks remain possible when their
+inputs are known. Keyboard,
+task-panel, diagnostic-panel, colour, and accessibility behavior remain host
+surfaces and are not smoke-tested.
 
 The rows currently draw from these scenarios. The source and schema files are
 the canonical fixtures; derived inputs are transformations or protocol events,
@@ -189,9 +228,9 @@ not copied Recite or schema sources.
 - `stale-overlay`: send a newer accepted overlay followed by an older one, then query the current text.
 - `stable-id-repair`: derive a missing-ID overlay from the canonical language fixture and request a shared-kernel repair.
 - `multi-file-project`: materialize two canonical source fixtures under one root and resolve a qualified cross-file target.
-- `client-syntax-projections`: record partial syntax-only Tree-sitter evidence alongside the checked-in VS Code/VSCodium package projection; installed host setup remains untested over the canonical language fixtures.
+- `client-syntax-projections`: record partial syntax-only Tree-sitter evidence alongside the checked-in VS Code/VSCodium TextMate and Zed query/package projections; canonical and malformed inputs remain shared fixtures, while incomplete buffers are derived under `fixtures/editor-parity/vscode/` and `fixtures/editor-parity/zed/`; installed host setup remains untested.
 - `schema-localisation-reference`: combine the canonical manifests and pressure source with the checked-in PO catalogue to exercise the current shared/CLI locale-fallback evidence.
-- `command-watch-reference`: exercise the protocol-neutral `BuildStatusProjection`; CLI wire, process, binary, cancellation transport, and client lifecycle evidence remain planned for #53.
+- `command-watch-reference`: exercise finite and streaming CLI protocol records, local argv/cwd resolution, typed diagnostics, and watch cancellation/recovery through `scripts/check-vscode.sh`; `scripts/check-zed.sh` checks only Zed's static structured-task argv and documents the host-terminal limitation; installed host activation remains untested.
 
 ## Client, platform, and distribution status
 
@@ -205,18 +244,20 @@ this checkout; no marketplace or Open VSX distribution is claimed.
 
 | Client | Shared artifact | Linux | macOS | Windows | Status |
 | --- | --- | --- | --- | --- | --- |
-| VS Code | checked-in extension scaffold; generated VSIX | partial | planned | planned | partial |
-| VSCodium | the same checked-in scaffold and generated VSIX | partial | planned | planned | partial |
+| VS Code | checked-in extension scaffold and TextMate grammar; generated VSIX | partial | planned | planned | partial |
+| VSCodium | the same checked-in scaffold and TextMate grammar; generated VSIX | partial | planned | planned | partial |
 | Neovim | checked-in native runtimepath setup plus Tree-sitter grammar; no package distribution | partial | planned | planned | partial |
-| Zed | future extension package | planned | planned | planned | planned |
+| Zed | checked-in extension source, pinned grammar reference, language config/query, static tasks, and API-0.7.0 launcher | partial package evidence only | planned | planned | partial |
 
 The VS Code and VSCodium partial status is deliberately narrower than host
-support: the extension source is checked in, deterministic VSIX generation and
-package validation pass, and Linux Node tests exercise a real `recite-lsp`
-process. Installed VS Code/VSCodium activation smoke is still missing, as are
-macOS and Windows checks. Native rename remains unregistered until a
-version-safe adapter exists; structured command and watch integration remains
-owned by #53.
+support: the extension source and syntax grammar are checked in, deterministic
+VSIX generation and package validation pass, and Linux Node tests exercise real
+`recite-lsp` and `recite` processes. Installed VS Code/VSCodium activation smoke
+is still missing, as are macOS and Windows checks. Native F2 rename remains
+unregistered; the explicit `recite.renameBlock` command is a partial Linux
+adapter that retains LSP document versions and refuses stale or closed
+workspace edits. Task/workbench integration and a native text problem matcher
+remain outside this structured command slice.
 
 VS Code Marketplace and Open VSX are separate distribution claims. Publication,
 signing, and installation smoke are still planned. A shared VSIX means the VS
@@ -236,5 +277,11 @@ services, marketplace publication, or installed-host compatibility. The
 checked-in Tree-sitter grammar remains a syntax artifact; Neovim consumes it
 through its runtimepath package. The Neovim client and distribution records
 therefore name `neovim-runtimepath` as their primary artifact and keep
-`tree-sitter-grammar` as supporting material. Zed does not consume either
-artifact without compatibility evidence and remains planned under #192.
+`tree-sitter-grammar` as supporting material. Zed references the upstream
+grammar at the pinned revision and projects its query, with exact drift and
+capture checks in `scripts/check-zed.sh`; this source/package compatibility
+evidence does not establish installed Zed host activation, macOS/Windows
+support, rendering/accessibility integration, keyboard/task/diagnostic host
+behavior, gallery publication, dynamic tasks, parsed structured command/watch
+diagnostics, task termination/clean shutdown, or a task cancellation
+controller.

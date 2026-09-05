@@ -1,4 +1,10 @@
-#![allow(clippy::unwrap_used, clippy::expect_used, dead_code, unused_imports)]
+#![allow(
+    clippy::unwrap_used,
+    clippy::expect_used,
+    dead_code,
+    unused_imports,
+    reason = "shared FFI test support intentionally centralises fail-fast setup and ABI imports"
+)]
 
 use std::ffi::CString;
 

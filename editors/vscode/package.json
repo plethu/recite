@@ -25,7 +25,8 @@
       "restrictedConfigurations": [
         "recite.lsp.path",
         "recite.lsp.args",
-        "recite.lsp.projectRoot"
+        "recite.lsp.projectRoot",
+        "recite.cli.path"
       ]
     }
   },
@@ -40,11 +41,20 @@
   ],
   "main": "./dist/extension.cjs",
   "activationEvents": [
-    "onLanguage:recite"
+    "onLanguage:recite",
+    "onCommand:recite.validate",
+    "onCommand:recite.compile",
+    "onCommand:recite.extract",
+    "onCommand:recite.watch.start",
+    "onCommand:recite.watch.stop",
+    "onCommand:recite.run",
+    "onCommand:recite.trace",
+    "onCommand:recite.renameBlock"
   ],
   "files": [
     "dist/**",
     "language-configuration.json",
+    "syntaxes/**",
     "package.json",
     "package.nls.json",
     "README.md"
@@ -61,6 +71,13 @@
           ".recite"
         ],
         "configuration": "./language-configuration.json"
+      }
+    ],
+    "grammars": [
+      {
+        "language": "recite",
+        "scopeName": "source.recite",
+        "path": "./syntaxes/recite.tmLanguage.json"
       }
     ],
     "configuration": {
@@ -83,19 +100,36 @@
           "type": "string",
           "default": "",
           "description": "%lsp-client-configuration-project-root-description%"
+        },
+        "recite.cli.path": {
+          "type": "string",
+          "default": "recite",
+          "description": "%vscode-command-cli-path-description%"
         }
       }
-    }
+    },
+    "commands": [
+      { "command": "recite.validate", "title": "%vscode-command-validate-title%" },
+      { "command": "recite.compile", "title": "%vscode-command-compile-title%" },
+      { "command": "recite.extract", "title": "%vscode-command-extract-title%" },
+      { "command": "recite.watch.start", "title": "%vscode-command-watch-start-title%" },
+      { "command": "recite.watch.stop", "title": "%vscode-command-watch-stop-title%" },
+      { "command": "recite.run", "title": "%vscode-command-run-title%" },
+      { "command": "recite.trace", "title": "%vscode-command-trace-title%" },
+      { "command": "recite.renameBlock", "title": "%vscode-command-rename-command-title%" }
+    ]
   },
   "scripts": {
     "build": "node scripts/build.mjs",
     "messages:update": "node scripts/message-projections.mjs --update",
-    "check": "node scripts/build.mjs && node scripts/check-package.mjs && node --test test/*.test.mjs",
+    "check": "node scripts/build.mjs && node scripts/check-package.mjs && node scripts/check-grammar.mjs && node --test test/*.test.mjs",
     "package": "node scripts/package.mjs",
     "package:check": "node scripts/package.mjs --check"
   },
   "devDependencies": {
     "acorn": "8.15.0",
-    "fflate": "0.8.2"
+    "fflate": "0.8.2",
+    "vscode-oniguruma": "1.7.0",
+    "vscode-textmate": "9.2.0"
   }
 }

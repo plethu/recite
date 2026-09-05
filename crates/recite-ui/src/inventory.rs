@@ -47,6 +47,7 @@ macro_rules! message_ids {
         impl MsgId {
             pub const ALL: &'static [Self] = &[$(Self::$variant,)+];
             pub const fn key(self) -> &'static str {
+                if let Some(key) = vscode_message_ids::key(self) { return key; }
                 if let Some(key) = cli_message_ids::key(self) { return key; }
                 if let Some(key) = tui_message_ids::key(self) { return key; }
                 if let Some(key) = lsp_message_ids::key(self) { return key; }
@@ -66,6 +67,8 @@ mod lsp_message_ids;
 mod neovim_message_ids;
 #[path = "inventory/message_ids/tui.rs"]
 mod tui_message_ids;
+#[path = "inventory/message_ids/vscode.rs"]
+mod vscode_message_ids;
 #[path = "inventory/message_ids/watch.rs"]
 mod watch_message_ids;
 

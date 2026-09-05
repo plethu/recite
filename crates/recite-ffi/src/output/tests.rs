@@ -11,7 +11,8 @@ use recite_runtime::{
     PluralResolutionAttempt, PluralResolutionOutcome, next_with, start_scene,
 };
 
-use super::{FfiOutputEncodeError, encode_batch, encode_batch_output, encode_batch_to_writer};
+use super::encode::encode_batch_to_writer;
+use super::{FfiOutputEncodeError, encode_batch, encode_batch_output};
 use crate::ReciteStatus;
 
 struct FailingWriter;

@@ -8,6 +8,8 @@ import { EditCommandRegistry } from "./edit-commands.js";
 import { asClientFailure, ClientFailureKind, isClientFailure } from "./client-failure.js";
 import { RestartPolicy } from "./restart-policy.js";
 import { StartupOutcomeKind, startupOutcome } from "./startup-outcome.js";
+import { CommandRegistry } from "./commands.js";
+import { RenameCommand } from "./rename-command.js";
 
 const DIAGNOSTICS_METHOD = "textDocument/publishDiagnostics";
 const STABLE_RUN_MS = 10_000;
@@ -34,6 +36,8 @@ export class ExtensionController {
     this.documents = new Map();
     this.editCommands = new EditCommandRegistry(this.api, this.userInterface, options);
     this.watchers = new WatcherRegistry(this);
+    this.commands = new CommandRegistry(this.api, this.userInterface, options);
+    this.renameCommand = new RenameCommand(this.api, this.userInterface, () => this.client, options);
   }
 
   async start(phase = "initial") {
@@ -114,6 +118,8 @@ export class ExtensionController {
     registerDocumentLifecycle(this);
     registerFeatureProviders(this);
     this.editCommands.register(this.subscriptions);
+    this.commands.register(this.subscriptions);
+    this.renameCommand.register(this.subscriptions);
     this.providersRegistered = true;
   }
 
@@ -134,7 +140,6 @@ export class ExtensionController {
   createEditCommandBatch() {
     return this.editCommands.beginBatch();
   }
-
   discardEditCommandsForDocument(document, reason = "document-stale") {
     this.editCommands.discardForDocument(document, reason);
   }
@@ -322,9 +327,13 @@ export class ExtensionController {
       do {
         this.stopping = true;
         this.clearStableReset();
-        const retiredClient = this.client;
-        this.retireClient(retiredClient);
         try {
+          // Structured commands have their own process authority. Retire an
+          // active watch before reading the next LSP/CLI configuration so a
+          // stale root or binary cannot continue under a new generation.
+          await this.commands.stopForAuthorityChange();
+          const retiredClient = this.client;
+          this.retireClient(retiredClient);
           await retiredClient?.stop();
         } finally {
           this.stopping = false;
@@ -354,6 +363,8 @@ export class ExtensionController {
     this.clearStableReset();
     this.watchers.dispose();
     this.editCommands.dispose();
+    await this.renameCommand.dispose();
+    await this.commands.dispose();
     for (const subscription of this.subscriptions.splice(0)) subscription.dispose();
     const retiredClient = this.client;
     this.retireClient(retiredClient);

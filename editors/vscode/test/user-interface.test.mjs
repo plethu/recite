@@ -68,3 +68,47 @@ test("semantic UI operations localize source messages and keep the channel priva
   ui.dispose();
   assert.equal(disposed, true);
 });
+
+test("runtime input pickers localize prompts and constrain file types", async () => {
+  const calls = [];
+  const api = {
+    l10n: { t: (template) => template },
+    window: {
+      createOutputChannel: () => ({ appendLine() {}, dispose() {} }),
+      showOpenDialog: async (options) => { calls.push(["open", options]); return undefined; },
+      showInputBox: async (options) => { calls.push(["input", options]); return undefined; }
+    }
+  };
+  const ui = createUserInterface(api);
+  await ui.chooseAssetPath();
+  await ui.chooseBlock();
+  await ui.chooseRenameName("work");
+  await ui.chooseFixturePath();
+  assert.deepEqual(calls, [
+    ["open", {
+      title: "Choose the compiled Recite asset",
+      filters: { "Recite compiled assets": ["recitec"] },
+      canSelectFiles: true,
+      canSelectFolders: false,
+      canSelectMany: false
+    }],
+    ["input", {
+      title: "Enter the Recite block name",
+      prompt: "Block name used by the fixture",
+      placeHolder: "For example, start"
+    }],
+    ["input", {
+      title: "Recite: Rename block",
+      prompt: "New block name",
+      placeHolder: "work"
+    }],
+    ["open", {
+      title: "Choose the runtime fixture",
+      filters: { "Recite runtime fixtures": ["toml"] },
+      canSelectFiles: true,
+      canSelectFolders: false,
+      canSelectMany: false
+    }]
+  ]);
+  ui.dispose();
+});

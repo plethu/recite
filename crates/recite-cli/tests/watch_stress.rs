@@ -220,7 +220,7 @@ fn test_error(message: impl Into<String>) -> Box<dyn Error> {
     Box::new(io::Error::other(message.into()))
 }
 
-#[allow(clippy::disallowed_methods)]
+#[allow(clippy::disallowed_methods, reason = "stress tests use monotonic time")]
 fn measured_now() -> Instant {
     Instant::now()
 }

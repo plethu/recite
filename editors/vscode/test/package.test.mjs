@@ -17,9 +17,38 @@ test("the shared artifact serves both VS Code and VSCodium without semantic fork
   assert.equal(manifest.name, "recite-vscode");
   assert.equal(manifest.main, "./dist/extension.cjs");
   assert.deepEqual(manifest.contributes.languages[0].extensions, [".recite"]);
-  assert.equal(manifest.contributes.grammars, undefined);
-  assert.equal(manifest.contributes.commands, undefined);
+  assert.deepEqual(manifest.contributes.grammars, [{
+    language: "recite",
+    scopeName: "source.recite",
+    path: "./syntaxes/recite.tmLanguage.json"
+  }]);
+  assert.deepEqual(
+    manifest.contributes.commands.map(({ command }) => command),
+    [
+      "recite.validate", "recite.compile", "recite.extract", "recite.watch.start",
+      "recite.watch.stop", "recite.run", "recite.trace", "recite.renameBlock"
+    ]
+  );
   assert.match(manifest.repository.url, /github\.com\/plethu\/recite\.git$/);
+  const titles = manifest.contributes.commands.map(({ title }) => title);
+  assert.equal(new Set(titles).size, titles.length, "command palette titles must be distinct");
+  assert.equal(manifest.contributes.configuration.properties["recite.cli.path"].default, "recite");
+});
+
+test("TextMate fixtures reuse canonical source and include incomplete recovery input", async () => {
+  const manifestPath = path.join(packageRoot, "..", "..", "fixtures", "editor-parity", "textmate.json");
+  const fixtureManifest = JSON.parse(await readFile(manifestPath, "utf8"));
+  assert.equal(fixtureManifest.grammar, "editors/vscode/syntaxes/recite.tmLanguage.json");
+  for (const relative of fixtureManifest.canonical_fixtures) {
+    const source = await readFile(path.join(packageRoot, "..", "..", relative), "utf8");
+    assert.match(source, /(?:^|\n)(?:[ \t]*)(?:::|>|\?|!|->|:if|:else|:match|:case|\|)/,
+      `canonical fixture has no Recite statement marker: ${relative}`);
+  }
+  const incomplete = await readFile(path.join(packageRoot, "..", "..", fixtureManifest.incomplete_fixture), "utf8");
+  assert.match(incomplete, /> unfinished@/);
+  assert.match(incomplete, /\{traveller_name$/m);
+  assert.match(incomplete, /\? ask_more@/);
+  assert.match(incomplete, /->$/m);
 });
 
 test("the declared VS Code floor uses a plain JavaScript message projection", async () => {
@@ -182,13 +211,17 @@ test("the adapter rejects escaped IDs, aliases, reassignment, and composed text"
   const rejected = (replacement) => assert.throws(() => assertUiBoundary(
     entries.map(([name, source]) => [name, name === "user-interface.js" ? replacement(source) : source]),
     SOURCE_MESSAGE_IDS, projectedMessages
-  ), /adapter|projection|reassignment|unsupported|shadow/);
+  ), /adapter|projection|reassignment|unsupported|shadow|active/);
   rejected((source) => source.replace('"lsp-client-display-name"', '"lsp-client-\\x64isplay-name"'));
   rejected((source) => source.replace('output.appendLine(clientMessage(api, "lsp-client-action-stale"))',
     'const emit = clientMessage; output.appendLine(emit(api, "lsp-client-action-stale"))'));
   rejected((source) => source.replace('const output = api.window.createOutputChannel(',
     'let output; output = api.window.createOutputChannel('));
   rejected((source) => source.replace('serverStderr(message)', 'serverStderr(clientMessage)'));
+  rejected((source) => source.replace(
+    'activeEditor() {\n      return api.window?.activeTextEditor;',
+    'activeEditor() {\n      return api[window]?.activeTextEditor;'
+  ));
   rejected((source) => source.replace('output.appendLine(clientMessage(api, "lsp-client-action-stale"))',
     'output.appendLine(clientMessage(api, condition ? "lsp-client-action-stale" : "lsp-client-action-stale"))'));
   rejected((source) => `${source}\nconst extra = 1;`);

@@ -55,7 +55,10 @@ pub(crate) fn format_effect_arguments(arguments: &[DialogueEffectArgument]) -> S
 }
 
 // Invariant: serde_json string serialization has no data-dependent failure path.
-#[allow(clippy::expect_used)]
+#[allow(
+    clippy::expect_used,
+    reason = "serde_json serialization of a borrowed string has no data-dependent failure"
+)]
 pub(crate) fn format_runtime_argument(argument: RuntimeDisplayArgument<'_>) -> String {
     match argument {
         RuntimeDisplayArgument::Identifier(value) => value.to_owned(),

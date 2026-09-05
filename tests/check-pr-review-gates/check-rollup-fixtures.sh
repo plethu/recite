@@ -58,6 +58,24 @@ run_fixture() {
   fi
 }
 
+run_dispatch_fixture() {
+  local expected_status="$1"
+  local expected_message="$2"
+  shift 2
+  local output status
+
+  set +e
+  output="$($gate "$@" 2>&1)"
+  status=$?
+  set -e
+
+  if [[ "$status" != "$expected_status" || "$output" != *"$expected_message"* ]]; then
+    echo "fixture dispatch expectation failed (expected status $expected_status and message $expected_message, got $status)" >&2
+    echo "$output" >&2
+    return 1
+  fi
+}
+
 run_fixture 0 "$fixture_root/superseded-success.json"
 run_fixture 0 "$fixture_root/mixed-status-context.json"
 run_fixture 1 "$fixture_root/newest-failure.json"
@@ -67,6 +85,12 @@ run_fixture 1 "$fixture_root/ambiguous-pending-neutral-tie.json"
 run_fixture 1 "$fixture_root/unorderable-pending.json"
 run_fixture 1 "$fixture_root/missing-required.json"
 run_fixture 1 "$fixture_root/distinct-check-names.json"
+
+run_dispatch_fixture 2 "unable to reduce status-check rollup fixture" \
+  --check-rollup "$fixture_root/rollup-invalid-shape.json"
+run_dispatch_fixture 2 "pull-request metadata fixture is not a JSON object" \
+  --check-metadata "$fixture_root/metadata-invalid-shape.json"
+run_dispatch_fixture 2 "status-check rollup fixture is missing" --check-rollup
 
 run_metadata_fixture 0 "$fixture_root/metadata-valid-integration.json" integration/milestone-integration
 run_metadata_fixture 0 "$fixture_root/metadata-valid-ordinary.json" docs/policy-metadata

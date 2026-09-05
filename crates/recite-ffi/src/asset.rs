@@ -20,7 +20,10 @@ pub(crate) fn assets() -> &'static AssetMap {
 }
 
 // Mutex poison is unrecoverable in a cdylib boundary; unwrap is intentional.
-#[allow(clippy::unwrap_used)]
+#[allow(
+    clippy::unwrap_used,
+    reason = "ffi: the process-global asset registry cannot recover a poisoned mutex"
+)]
 pub(crate) fn lock_assets()
 -> std::sync::MutexGuard<'static, BTreeMap<u64, std::sync::Arc<CompiledDialogue>>> {
     assets().lock().unwrap()

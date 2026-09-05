@@ -14,5 +14,20 @@ macro_rules! neovim_message_ids {
         | MsgId::NeovimHealthParserBuild
         | MsgId::NeovimHealthCurrentRoot
         | MsgId::NeovimHealthOpenBuffer
+        | MsgId::NeovimCommandDescription
+        | MsgId::NeovimCommandDocumentRequired
+        | MsgId::NeovimCommandDocumentUnsaved
+        | MsgId::NeovimCommandDocumentChanged
+        | MsgId::NeovimCommandInputInvalid
+        | MsgId::NeovimCommandCliMissing
+        | MsgId::NeovimCommandOutputDerived
+        | MsgId::NeovimCommandResult
+        | MsgId::NeovimCommandContentDiagnostics
+        | MsgId::NeovimCommandFailure
+        | MsgId::NeovimCommandProtocolFailure
+        | MsgId::NeovimCommandWatchRunning
+        | MsgId::NeovimCommandWatchNotRunning
+        | MsgId::NeovimCommandWatchStopTimeout
+        | MsgId::NeovimCommandWatchStatus
     };
 }

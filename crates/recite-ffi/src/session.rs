@@ -50,7 +50,10 @@ fn sessions() -> &'static SessionMap {
     SESSIONS.get_or_init(|| Mutex::new(BTreeMap::new()))
 }
 
-#[allow(clippy::unwrap_used)]
+#[allow(
+    clippy::unwrap_used,
+    reason = "ffi: the process-global session registry cannot recover a poisoned mutex"
+)]
 pub(crate) fn lock_sessions() -> std::sync::MutexGuard<'static, BTreeMap<u64, FfiSession>> {
     sessions().lock().unwrap()
 }

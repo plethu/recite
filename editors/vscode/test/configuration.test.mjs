@@ -1,7 +1,22 @@
 import test from "node:test";
 import assert from "node:assert/strict";
 import path from "node:path";
-import { initializeParams, readConfiguration } from "../src/configuration.js";
+import { initializeParams, readCliConfiguration, readConfiguration } from "../src/configuration.js";
+
+test("CLI configuration resolves bare names through PATH and paths from the effective root", () => {
+  const api = fakeApi({
+    workspaceFolders: [{ name: "demo", uri: { fsPath: "/workspace/demo", toString: () => "file:///workspace/demo" } }],
+    values: { "cli.path": "tools/recite", "lsp.projectRoot": "project" }
+  });
+  assert.deepEqual(readCliConfiguration(api, userInterface()), {
+    command: path.resolve("/workspace/demo/project", "tools/recite"),
+    cwd: path.resolve("/workspace/demo/project"),
+    projectRoot: path.resolve("/workspace/demo/project"),
+    projectRootOverridden: true
+  });
+  const bare = fakeApi({ workspaceFolders: [{ name: "demo", uri: { fsPath: "/workspace/demo", toString: () => "file:///workspace/demo" } }] });
+  assert.equal(readCliConfiguration(bare, userInterface()).command, "recite");
+});
 
 test("configuration resolves project-relative binaries without a shell", () => {
   const api = fakeApi({
@@ -41,6 +56,11 @@ test("relative project roots require a workspace folder", () => {
   assert.throws(() => readConfiguration(api, userInterface()), /needs a workspace/);
 });
 
+test("CLI configuration reports its command-specific workspace error", () => {
+  const api = fakeApi({ workspaceFolders: [], values: { "lsp.projectRoot": "project" } });
+  assert.throws(() => readCliConfiguration(api, userInterface()), /a workspace is required/);
+});
+
 test("configuration validation reports canonical localized messages", () => {
   assert.throws(
     () => readConfiguration(fakeApi({ workspaceFolders: [], values: { "lsp.path": "" } }), userInterface()),
@@ -74,6 +94,8 @@ function userInterface() {
     configurationArgsInvalid: () => new Error("recite.lsp.args must be an array of strings."),
     configurationProjectRootInvalid: () => new Error("recite.lsp.projectRoot must be a string."),
     configurationProjectRootNeedsWorkspace: () =>
-      new Error("recite.lsp.projectRoot needs a workspace for relative paths.")
+      new Error("recite.lsp.projectRoot needs a workspace for relative paths."),
+    cliPathInvalid: () => new Error("recite.cli.path must be a non-empty string."),
+    commandWorkspaceRequired: () => new Error("a workspace is required")
   };
 }

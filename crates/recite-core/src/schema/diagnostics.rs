@@ -11,7 +11,7 @@ use crate::{
 /// than malformed project content.
 #[allow(
     clippy::expect_used,
-    reason = "schema producers use static first-party contract pairs"
+    reason = "this helper owns schema diagnostic contract lookup and argument validation"
 )]
 pub(crate) fn schema_diagnostic<I, K>(
     code: DiagnosticCode,

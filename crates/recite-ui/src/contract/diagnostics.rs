@@ -38,7 +38,10 @@ fn resource_spec_for_contract(
         resource
             .client(Client::Cli)
             .client(Client::Tui)
-            .client(Client::Lsp),
+            .client(Client::Lsp)
+            .client(Client::VsCode)
+            .client(Client::VsCodium)
+            .client(Client::Neovim),
     ]
 }
 
@@ -59,7 +62,10 @@ fn resource_spec_for_auxiliary_contract(
         resource
             .client(Client::Cli)
             .client(Client::Tui)
-            .client(Client::Lsp),
+            .client(Client::Lsp)
+            .client(Client::VsCode)
+            .client(Client::VsCodium)
+            .client(Client::Neovim),
     ]
 }
 
@@ -99,6 +105,9 @@ pub(super) fn legacy_resource_spec() -> ResourceSpec {
     .client(Client::Cli)
     .client(Client::Tui)
     .client(Client::Lsp)
+    .client(Client::VsCode)
+    .client(Client::VsCodium)
+    .client(Client::Neovim)
 }
 
 #[allow(
@@ -110,4 +119,7 @@ fn resource_spec(presentation: &DiagnosticPresentation) -> ResourceSpec {
         .client(Client::Cli)
         .client(Client::Tui)
         .client(Client::Lsp)
+        .client(Client::VsCode)
+        .client(Client::VsCodium)
+        .client(Client::Neovim)
 }
