@@ -234,6 +234,6 @@ production suppressions must carry a narrow scope and rationale.
 | `scripts/check-tree-sitter.sh` | 399 | tooling | tree-sitter/check | review | Parser generation, ABI, corpus, and reproducibility checks share one tool boundary |
 | `scripts/check-zed.sh` | 304 | tooling | zed/check | review | #192: Zed manifest, grammar pin, task argv, launcher API, and parity evidence remain one checked boundary; split before adding another host surface |
 | `scripts/lint_suppression_ast.py` | 374 | tooling | lint-policy | review | AST suppression extraction keeps parser traversal and source categorisation together |
-| `tests/editor-parity/check.sh` | 435 | test/support | editor-parity/tests | review | Editor parity fixture scenarios remain one executable contract suite |
+| `tests/editor-parity/check.sh` | 440 | test/support | editor-parity/tests | review | Editor parity fixture scenarios remain one executable contract suite |
 | `tests/lint-suppressions/check.sh` | 398 | test/support | lint-policy/tests | review | Hostile suppression-policy fixture scenarios remain one executable contract suite |
 | `tests/maintainability/check.sh` | 376 | test/support | maintainability/tests | review | Core Rust threshold, baseline, zero-SHA, and inherited-debt fixtures remain one contract suite |
