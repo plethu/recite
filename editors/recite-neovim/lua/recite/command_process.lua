@@ -33,7 +33,7 @@ local function cancel_timers(session)
 end
 
 local function terminate_bounded(session, term_timeout_ms, kill_timeout_ms, on_hung)
-  if session.closed or session.termination_started then return end
+  if session.closed or session.exiting or session.termination_started then return end
   session.termination_started = true
   terminate(session, false)
   session.term_timer = timer.after(term_timeout_ms or 250, function()
@@ -80,6 +80,7 @@ function M.start_finite(options)
     failed = false,
     finished = false,
     closed = false,
+    exiting = false,
     process = nil,
     term_timer = nil,
     kill_timer = nil,
@@ -182,6 +183,7 @@ function M.start_stream(options)
     failed = false,
     finished = false,
     closed = false,
+    exiting = false,
     process = nil,
     term_timer = nil,
     kill_timer = nil,
@@ -204,7 +206,7 @@ function M.start_stream(options)
     end
   end
   local function stdout(_, data)
-    if session.failed or session.closed or not data then return end
+    if session.failed or session.closed or session.exiting or not data then return end
     local ok, records = pcall(session.parser.push, session.parser, data)
     if not ok then fail(records); return end
     for _, record in ipairs(records) do
@@ -222,19 +224,25 @@ function M.start_stream(options)
       and "stderr_too_large" or "stderr_output"))
   end
   local function on_exit(result)
-    if session.closed then return end
-    session.closed = true
+    if session.closed or session.exiting then return end
+    -- stdout schedules record callbacks.  Keep the transport open from the
+    -- callbacks' perspective until those callbacks have drained; otherwise
+    -- a same-tick on_exit discards already-parsed terminal records.
+    session.exiting = true
     cancel_timers(session)
     local ok, error = pcall(session.parser.finish, session.parser)
     if not ok and not session.failed then
       session.failed = true
       report_error(error)
     end
-    schedule(options, close_once, session, options.on_close, {
-      failed = session.failed,
-      code = result and result.code,
-      signal = result and result.signal,
-    }, options)
+    schedule(options, function()
+      session.closed = true
+      close_once(session, options.on_close, {
+        failed = session.failed,
+        code = result and result.code,
+        signal = result and result.signal,
+      }, options)
+    end)
   end
   local ok, process = pcall(make_system, {
     argv = options.argv,

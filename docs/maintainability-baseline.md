@@ -227,7 +227,7 @@ production suppressions must carry a narrow scope and rationale.
 | `editors/vscode/scripts/ui-boundary-adapter.mjs` | 251 | tooling | vscode/checks | review | #51: semantic UI adapter contract remains one cohesive structural boundary |
 | `editors/vscode/scripts/ui-boundary-command-contracts.mjs` | 257 | tooling | vscode/checks | review | #51: typed command and rename UI capabilities remain one explicit structural boundary; reassess before adding another host capability |
 | `editors/vscode/scripts/ui-boundary-calls.mjs` | 350 | tooling | vscode/checks | review | UI boundary call inventory remains a single generated-boundary checker |
-| `editors/recite-neovim/lua/recite/command_process.lua` | 273 | production | neovim/commands | review | Structured finite/stream process ownership, bounded TERM/KILL teardown, and callback settlement remain one transport boundary |
+| `editors/recite-neovim/lua/recite/command_process.lua` | 281 | production | neovim/commands | review | Structured finite/stream process ownership, bounded TERM/KILL teardown, and callback settlement remain one transport boundary |
 | `editors/recite-neovim/lua/recite/watch.lua` | 271 | production | neovim/watch | review | Structured watch validation, recovery escalation, tombstone ownership, and synchronous editor-exit drain remain one lifecycle boundary |
 | `scripts/check-lint-suppressions.py` | 256 | tooling | lint-policy | review | Suppression policy parsing and diff-aware enforcement remain one checker boundary |
 | `scripts/check-tree-sitter.sh` | 399 | tooling | tree-sitter/check | review | Parser generation, ABI, corpus, and reproducibility checks share one tool boundary |
