@@ -214,7 +214,7 @@ already choose.
 **Scope:**
 
 - VS Code and VSCodium extension/client wiring, highlighting, commands,
-  problem matcher, outline, and quick preview/trace;
+  structured diagnostic integration, outline, and quick preview/trace;
 - Neovim filetype, documented LSP setup, highlighting, and command examples;
 - Zed language integration and task/diagnostic wiring through its supported
   language-server surface;
