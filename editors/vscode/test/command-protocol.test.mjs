@@ -191,6 +191,44 @@ test("watch accepts a producer-valid preparation failure in a fatal stop", () =>
   validator.finish(1);
 });
 
+test("watch accepts a fatal stop after a completed build without waiting", () => {
+  const fatal = new WatchProtocolValidator("watch", "completed-fatal-id");
+  fatal.consume(recordFor("completed-fatal-id", 0, "watch.started", { project_root: root() }));
+  fatal.consume(recordFor("completed-fatal-id", 1, "watch.build.started", {
+    generation: 0, trigger: "initial"
+  }));
+  fatal.consume(recordFor("completed-fatal-id", 2, "watch.build.completed", completedData(0)));
+  fatal.consume(recordFor("completed-fatal-id", 3, "watch.stopped", {
+    reason: { type: "fatal" },
+    error: { category: "io", code: "io", operation: "watch" }
+  }));
+  fatal.finish(1);
+
+  const cancelled = new WatchProtocolValidator("watch", "completed-cancel-id");
+  cancelled.consume(recordFor("completed-cancel-id", 0, "watch.started", { project_root: root() }));
+  cancelled.consume(recordFor("completed-cancel-id", 1, "watch.build.started", {
+    generation: 0, trigger: "initial"
+  }));
+  cancelled.consume(recordFor("completed-cancel-id", 2, "watch.build.completed", completedData(0)));
+  assert.throws(() => cancelled.consume(recordFor("completed-cancel-id", 3, "watch.stopped", {
+    reason: { type: "cancelled" }
+  })), /invalid_watch_stopped/);
+
+  assert.throws(() => {
+    const mismatch = new WatchProtocolValidator("watch", "completed-mismatch-id");
+    mismatch.consume(recordFor("completed-mismatch-id", 0, "watch.started", { project_root: root() }));
+    mismatch.consume(recordFor("completed-mismatch-id", 1, "watch.build.started", {
+      generation: 0, trigger: "initial"
+    }));
+    mismatch.consume(recordFor("completed-mismatch-id", 2, "watch.build.completed", completedData(0)));
+    mismatch.consume(recordFor("completed-mismatch-id", 3, "watch.stopped", {
+      reason: { type: "fatal" },
+      error: { category: "io", code: "io", operation: "watch" }
+    }));
+    mismatch.finish(0);
+  }, /watch_exit_mismatch/);
+});
+
 test("watch accepts a fatal control-stream error emitted by the CLI", () => {
   const validator = new WatchProtocolValidator("watch", "control-fatal-id");
   validator.consume(recordFor("control-fatal-id", 0, "watch.started", { project_root: root() }));

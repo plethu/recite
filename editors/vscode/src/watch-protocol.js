@@ -112,8 +112,10 @@ export class WatchProtocolValidator {
   }
 
   stoppedRecord(record) {
+    const phaseAllowsStop = ["awaiting_build", "stopped_ready"].includes(this.phase) ||
+      this.phase === "awaiting_wait" && record.data?.reason?.type === "fatal";
     if (!this.started || this.stopReason || !dataKeys(record.data, ["reason"], ["error"]) || !validStop(record.data) ||
-        !["awaiting_build", "stopped_ready"].includes(this.phase)) throw protocol("invalid_watch_stopped");
+        !phaseAllowsStop) throw protocol("invalid_watch_stopped");
     if (record.data.reason.type === "cancelled" && !this.cancelRequested) throw protocol("invalid_watch_stopped");
     this.stopReason = record.data.reason.type;
     this.stopped = true;
