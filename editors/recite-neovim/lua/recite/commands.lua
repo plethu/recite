@@ -72,6 +72,24 @@ function M.new(options)
     return root, paths, snapshot
   end
 
+  local function ensure_derived_output_parent(output, config)
+    if state.finite_blocked then
+      report("neovim-command-protocol-failure", { detail = "finite_process_hung" }, vim.log.levels.ERROR)
+      return false
+    end
+    local binary, requested = inputs.command_binary(config)
+    if not binary then
+      report("neovim-command-cli-missing", { command = tostring(requested) }, vim.log.levels.ERROR)
+      return false
+    end
+    local parent = vim.fn.fnamemodify(output, ":h")
+    if vim.fn.isdirectory(parent) == 1 then return true end
+    local ok, created = pcall(vim.fn.mkdir, parent, "p")
+    if ok and created == 1 and vim.fn.isdirectory(parent) == 1 then return true end
+    report("neovim-command-failure", { detail = "unable to create derived compile output directory: " .. parent }, vim.log.levels.ERROR)
+    return false
+  end
+
   function adapter.validate(options_override)
     local root, paths, snapshot = prepare_source(options_override or {})
     if not root then return nil end
@@ -86,6 +104,10 @@ function M.new(options)
     output = inputs.absolute(output)
     for _, path in ipairs(paths) do
       if inputs.absolute(path) == output then report("neovim-command-input-invalid", {}, vim.log.levels.ERROR); return nil end
+    end
+    if not options_override.output then
+      local config = vim.tbl_deep_extend("force", vim.deepcopy(state.config), options_override.config or {})
+      if not ensure_derived_output_parent(output, config) then return nil end
     end
     if not options_override.output then report("neovim-command-output-derived", { path = output }, vim.log.levels.INFO) end
     local args = { "--output", output }

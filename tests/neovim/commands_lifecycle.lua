@@ -318,7 +318,24 @@ local output, extract, fixture = root .. "/neovim-command-test.recitec", root ..
 local fixture_handle = assert(io.open(fixture, "wb")); fixture_handle:write('[conditions]\n"trusts(player)" = true\n\n[choices]\n637b1854a7f3ed42f045 = "b84cc9fa241a33bcdf05"\n\n[effects]\nauto_ack_blocking = true\n'); fixture_handle:close()
 local results = {}
 local function invoke(name, options) options.on_result = function(result) results[name] = result end; options.on_error = function(error) fail(name .. " failed: " .. protocol.error_message(error)) end; recite.commands[name](options); wait_for(function() return results[name] ~= nil end, "real " .. name .. " did not complete"); assert_true(results[name].terminal.event == "command.result", name .. " did not return a result") end
+local derived_output = root .. "/build/dialogue.recitec"
+local derived_result
+assert_true(vim.fn.isdirectory(root .. "/build") == 0, "derived-output fixture unexpectedly had a build directory")
+recite.commands.compile({ project_root = root, paths = { source }, on_result = function(result) derived_result = result end, on_error = function(error) fail("derived compile failed: " .. protocol.error_message(error)) end })
+wait_for(function() return derived_result ~= nil end, "derived compile did not complete")
+assert_true(vim.fn.filereadable(derived_output) == 1, "derived compile did not write build/dialogue.recitec")
+assert_true(vim.fn.isdirectory(root .. "/build") == 1, "derived compile did not create its output parent")
 invoke("validate", { project_root = root, paths = { source } }); invoke("compile", { project_root = root, paths = { source }, output = output }); invoke("extract", { project_root = root, paths = { source }, output = extract }); invoke("run", { asset = output, block = "start", fixture = fixture }); invoke("trace", { asset = output, block = "start", fixture = fixture })
+local blocked_parent = vim.env.RECITE_SECOND_PROJECT .. "/build"
+local blocked_handle = assert(io.open(blocked_parent, "wb")); blocked_handle:write("not a directory"); blocked_handle:close()
+local blocked_result, blocked_message
+local original_notify = vim.notify
+vim.notify = function(message, level) if level == vim.log.levels.ERROR then blocked_message = message end end
+local blocked_invocation = recite.commands.compile({ project_root = vim.env.RECITE_SECOND_PROJECT, paths = { vim.env.RECITE_SECOND_PROJECT .. "/core_language_spike.recite" }, on_result = function() blocked_result = true end, on_error = function() blocked_result = true end })
+vim.notify = original_notify
+assert_true(blocked_invocation == nil and blocked_result == nil, "derived compile accepted an unusable output parent")
+assert_true(blocked_message ~= nil and vim.fn.filereadable(blocked_parent) == 1 and vim.fn.isdirectory(blocked_parent) == 0, "derived compile did not report or preserve a blocked output parent")
+os.remove(blocked_parent)
 local watch_session = recite.watch_start({ project_root = root }); assert_true(watch_session ~= nil, "real watch did not start"); wait_for(function() return recite.watch_active() ~= nil end, "real watch ownership was not retained"); assert_true(recite.watch_stop(), "real watch did not accept cancellation"); wait_for(function() return recite.watch_active() == nil end, "real watch did not stop"); os.remove(output); os.remove(extract); os.remove(fixture)
 
 local exit_watch_child, exit_watch_signal, exit_watch_signals = nil, nil, {}

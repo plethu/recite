@@ -207,6 +207,7 @@ production suppressions must carry a narrow scope and rationale.
 | `crates/recite-cli/src/watch/protocol.rs` | 302 | production | cli/watch/protocol | cohesive | Versioned watch stream orchestration owns lifecycle ordering and host cancellation coordination |
 | `crates/recite-cli/src/watch/protocol/tests.rs` | 417 | test/support | cli/watch/protocol-tests | review | Active cancellation and stream-failure ordering use deterministic injected seams |
 | `crates/recite-cli/src/watch/tests.rs` | 415 | test/support | cli/watch-tests | review | #189: event and initial-build integration coverage remains one watch contract; reassess before adding another responsibility |
+| `tests/neovim/commands_lifecycle.lua` | 356 | test/support | neovim/commands | review | #53: structured CLI lifecycle and real command adapter coverage remains one focused Neovim contract suite |
 | `crates/recite-cli/src/watch/build.rs` | 309 | production | cli/watch/build | review | #191: build orchestration retains the coordinator, publication, and post-publish freshness boundary; split if another lifecycle responsibility is added |
 | `crates/recite-cli/src/watch/mod.rs` | 252 | production | cli/watch | review | Watch command routing keeps human and structured host entrypoints together; split if dispatch grows materially |
 | `crates/recite-cli/src/watch/wire_mapping.rs` | 331 | production | cli/watch/wire | cohesive | Explicit compiler-state to version-1 DTO mapping owns publication, recovery, and failure projections |

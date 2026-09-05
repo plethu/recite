@@ -156,7 +156,9 @@ The corresponding commands are `:ReciteValidate`, `:ReciteCompile`,
 `:ReciteWatchStop`. Run and trace deliberately require explicit asset, block,
 and fixture paths; Neovim does not guess runtime inputs. Compile derives
 `build/dialogue.recitec` under the selected project when `output` is omitted,
-and reports that path because an existing generated file may be replaced.
+creates its missing parent after input and CLI preflight, and reports that path because an
+existing generated file may be replaced. Explicit output paths retain the CLI's directory
+semantics.
 Set `commands.binary` to an absolute checkout-local executable when PATH
 discovery is not suitable.
 
