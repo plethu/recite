@@ -46,5 +46,15 @@ export default Object.freeze({
   "vscode-command-block-prompt": "Block name used by the fixture",
   "vscode-command-block-placeholder": "For example, start",
   "vscode-command-fixture-title": "Choose the runtime fixture",
-  "vscode-command-fixture-filter": "Recite runtime fixtures"
+  "vscode-command-fixture-filter": "Recite runtime fixtures",
+  "vscode-command-rename-title": "Recite: Rename block",
+  "vscode-command-rename-prompt": "New block name",
+  "vscode-command-rename-placeholder": "For example, start",
+  "vscode-command-rename-busy": "Recite block rename is already waiting for a response.",
+  "vscode-command-rename-document-required": "Place the cursor in an open Recite document before renaming a block.",
+  "vscode-command-rename-unavailable": "Recite could not prepare a block rename at the cursor.",
+  "vscode-command-rename-invalid": "Recite returned an invalid block rename response.",
+  "vscode-command-rename-stale": "Recite rename was cancelled because the document or language server changed.",
+  "vscode-command-rename-apply-failed": "VS Code could not apply the Recite block rename.",
+  "vscode-command-rename-request-failed": "Recite block rename failed: {0}."
 });

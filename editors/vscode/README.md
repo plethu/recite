@@ -88,12 +88,14 @@ Set `recite.cli.path` to an absolute or project-root-relative `recite` binary;
 a bare executable name is resolved through `PATH`. It is restricted in
 untrusted workspaces, and commands never invoke a shell or a hosted service.
 
-Code-action edits are returned as extension-owned commands. The command keeps
-the LSP document versions, including zero-edit sibling preconditions, and
-checks them again immediately before applying the edit. Native rename is not
-registered yet: VS Code's native `WorkspaceEdit` path cannot preserve those
-LSP versions at its eventual apply boundary. A version-safe rename adapter is
-remaining closure work for REC-51.
+Code-action and rename edits are returned through extension-owned commands. The
+commands keep the LSP document versions, including zero-edit sibling
+preconditions, and check them again immediately before applying the edit. Use
+`Recite: Rename block` (the `recite.renameBlock` command) for version-safe block
+rename. Native F2 rename is deliberately not registered: VS Code's native
+`WorkspaceEdit` path cannot preserve those LSP versions at its eventual apply
+boundary. The explicit command remains a partial adapter until installed-host
+activation evidence exists.
 
 Relative paths and process spawning use Node's platform-neutral path and
 process APIs. Linux, macOS, and Windows are intended hosts, but this scaffold

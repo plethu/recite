@@ -42,6 +42,23 @@ pub(super) const fn key(id: super::MsgId) -> Option<&'static str> {
         super::MsgId::VscodeCommandBlockPlaceholder => Some("vscode-command-block-placeholder"),
         super::MsgId::VscodeCommandFixtureTitle => Some("vscode-command-fixture-title"),
         super::MsgId::VscodeCommandFixtureFilter => Some("vscode-command-fixture-filter"),
+        super::MsgId::VscodeCommandRenameTitle => Some("vscode-command-rename-title"),
+        super::MsgId::VscodeCommandRenameCommandTitle => {
+            Some("vscode-command-rename-command-title")
+        }
+        super::MsgId::VscodeCommandRenamePrompt => Some("vscode-command-rename-prompt"),
+        super::MsgId::VscodeCommandRenamePlaceholder => Some("vscode-command-rename-placeholder"),
+        super::MsgId::VscodeCommandRenameBusy => Some("vscode-command-rename-busy"),
+        super::MsgId::VscodeCommandRenameDocumentRequired => {
+            Some("vscode-command-rename-document-required")
+        }
+        super::MsgId::VscodeCommandRenameUnavailable => Some("vscode-command-rename-unavailable"),
+        super::MsgId::VscodeCommandRenameInvalid => Some("vscode-command-rename-invalid"),
+        super::MsgId::VscodeCommandRenameStale => Some("vscode-command-rename-stale"),
+        super::MsgId::VscodeCommandRenameApplyFailed => Some("vscode-command-rename-apply-failed"),
+        super::MsgId::VscodeCommandRenameRequestFailed => {
+            Some("vscode-command-rename-request-failed")
+        }
         _ => None,
     }
 }

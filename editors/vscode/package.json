@@ -48,7 +48,8 @@
     "onCommand:recite.watch.start",
     "onCommand:recite.watch.stop",
     "onCommand:recite.run",
-    "onCommand:recite.trace"
+    "onCommand:recite.trace",
+    "onCommand:recite.renameBlock"
   ],
   "files": [
     "dist/**",
@@ -114,7 +115,8 @@
       { "command": "recite.watch.start", "title": "%vscode-command-watch-start-title%" },
       { "command": "recite.watch.stop", "title": "%vscode-command-watch-stop-title%" },
       { "command": "recite.run", "title": "%vscode-command-run-title%" },
-      { "command": "recite.trace", "title": "%vscode-command-trace-title%" }
+      { "command": "recite.trace", "title": "%vscode-command-trace-title%" },
+      { "command": "recite.renameBlock", "title": "%vscode-command-rename-command-title%" }
     ]
   },
   "scripts": {

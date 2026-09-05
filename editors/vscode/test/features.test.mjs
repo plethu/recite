@@ -90,6 +90,19 @@ test("workspace edits require integer versions and an open document", () => {
   }, () => undefined), undefined, "a zero-edit closed-document precondition must be refused");
 });
 
+test("workspace edits reject reversed text ranges before host conversion", () => {
+  const uri = api.Uri.parse("file:///workspace/dialogue.recite");
+  assert.equal(lspWorkspaceEditToVscode(api, {
+    documentChanges: [{
+      textDocument: { uri: uri.toString(), version: 4 },
+      edits: [{
+        range: { start: { line: 2, character: 0 }, end: { line: 1, character: 9 } },
+        newText: "done"
+      }]
+    }]
+  }, () => ({ version: 4 })), undefined);
+});
+
 test("delayed workspace edits revalidate zero-edit sibling preconditions atomically", () => {
   const primary = api.Uri.parse("file:///workspace/dialogue.recite");
   const sibling = api.Uri.parse("file:///workspace/other.recite");

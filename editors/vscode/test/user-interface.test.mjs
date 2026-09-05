@@ -82,6 +82,7 @@ test("runtime input pickers localize prompts and constrain file types", async ()
   const ui = createUserInterface(api);
   await ui.chooseAssetPath();
   await ui.chooseBlock();
+  await ui.chooseRenameName("work");
   await ui.chooseFixturePath();
   assert.deepEqual(calls, [
     ["open", {
@@ -95,6 +96,11 @@ test("runtime input pickers localize prompts and constrain file types", async ()
       title: "Enter the Recite block name",
       prompt: "Block name used by the fixture",
       placeHolder: "For example, start"
+    }],
+    ["input", {
+      title: "Recite: Rename block",
+      prompt: "New block name",
+      placeHolder: "work"
     }],
     ["open", {
       title: "Choose the runtime fixture",

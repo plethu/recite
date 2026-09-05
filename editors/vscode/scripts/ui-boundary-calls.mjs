@@ -126,6 +126,7 @@ function isValidUiCall(node, contracts, uiNames) {
   const expectsPayload = (contract.kind === "projection" || contract.kind === "visible-projection") &&
     contract.argument || contract.kind === "passthrough" || contract.kind === "host-passthrough" ||
     contract.kind === "host-capability-projection" && contract.argument ||
+    contract.kind === "host-input-projection" && contract.argument ||
     contract.kind === "host-membership";
   assert(node.arguments.length === (expectsPayload ? 1 : 0) &&
     (!expectsPayload || isDirectPayload(node.arguments[0])),

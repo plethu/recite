@@ -18,7 +18,7 @@ export function action(document, title) {
   };
 }
 
-export function output(messages = []) {
+export function output(messages = [], hostApi) {
   return {
     append() {},
     appendLine(value) { messages.push(value); },
@@ -39,17 +39,32 @@ export function output(messages = []) {
     actionEvicted() { this.appendLine("Recite code action was replaced by a newer action."); },
     actionApplyFailed() { this.appendLine("VS Code could not apply the Recite code action."); },
     actionUnknown() { this.appendLine("Recite code action is no longer available."); },
+    renameBusy() { this.appendLine("Recite block rename is already waiting for a response."); },
+    renameDocumentRequired() {
+      this.appendLine("Place the cursor in an open Recite document before renaming a block.");
+    },
+    renameUnavailable() { this.appendLine("Recite could not prepare a block rename at the cursor."); },
+    renameInvalid() { this.appendLine("Recite returned an invalid block rename response."); },
+    renameStale() {
+      this.appendLine("Recite rename was cancelled because the document or language server changed.");
+    },
+    renameApplyFailed() { this.appendLine("VS Code could not apply the Recite block rename."); },
+    renameRequestFailed(detail) { this.appendLine(`Recite block rename failed: ${detail}.`); },
     configurationPathInvalid: () => new Error("recite.lsp.path must be a non-empty string."),
     configurationArgsInvalid: () => new Error("recite.lsp.args must be an array of strings."),
     configurationProjectRootInvalid: () => new Error("recite.lsp.projectRoot must be a string."),
     configurationProjectRootNeedsWorkspace: () =>
       new Error("recite.lsp.projectRoot needs a workspace for relative paths."),
     serverNotRunning: () => new Error("Recite language server is not running."),
+    commandFailure(detail) { this.appendLine(`Recite command failed: ${detail}`); },
     serverStderr() {},
     serverLogMessage() {},
     serverErrorMessage() {},
     serverWarningMessage() {},
     serverInfoMessage() {},
+    activeEditor: () => hostApi?.window?.activeTextEditor,
+    documentIsOpen: (document) => hostApi?.workspace?.textDocuments?.includes(document) ?? true,
+    chooseRenameName: async () => undefined,
     dispose() {}
   };
 }
@@ -79,6 +94,7 @@ export function hostApi({ isTrusted, onDidGrantWorkspaceTrust }) {
   ]) workspace[event] = () => ({ dispose() {} });
   const api = {
     workspace,
+    window: { activeTextEditor: undefined },
     languages: {
       registerCompletionItemProvider: register("completion"),
       registerHoverProvider: register("hover"),

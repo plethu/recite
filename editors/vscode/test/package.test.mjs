@@ -26,7 +26,7 @@ test("the shared artifact serves both VS Code and VSCodium without semantic fork
     manifest.contributes.commands.map(({ command }) => command),
     [
       "recite.validate", "recite.compile", "recite.extract", "recite.watch.start",
-      "recite.watch.stop", "recite.run", "recite.trace"
+      "recite.watch.stop", "recite.run", "recite.trace", "recite.renameBlock"
     ]
   );
   assert.match(manifest.repository.url, /github\.com\/plethu\/recite\.git$/);
@@ -211,13 +211,17 @@ test("the adapter rejects escaped IDs, aliases, reassignment, and composed text"
   const rejected = (replacement) => assert.throws(() => assertUiBoundary(
     entries.map(([name, source]) => [name, name === "user-interface.js" ? replacement(source) : source]),
     SOURCE_MESSAGE_IDS, projectedMessages
-  ), /adapter|projection|reassignment|unsupported|shadow/);
+  ), /adapter|projection|reassignment|unsupported|shadow|active/);
   rejected((source) => source.replace('"lsp-client-display-name"', '"lsp-client-\\x64isplay-name"'));
   rejected((source) => source.replace('output.appendLine(clientMessage(api, "lsp-client-action-stale"))',
     'const emit = clientMessage; output.appendLine(emit(api, "lsp-client-action-stale"))'));
   rejected((source) => source.replace('const output = api.window.createOutputChannel(',
     'let output; output = api.window.createOutputChannel('));
   rejected((source) => source.replace('serverStderr(message)', 'serverStderr(clientMessage)'));
+  rejected((source) => source.replace(
+    'activeEditor() {\n      return api.window?.activeTextEditor;',
+    'activeEditor() {\n      return api[window]?.activeTextEditor;'
+  ));
   rejected((source) => source.replace('output.appendLine(clientMessage(api, "lsp-client-action-stale"))',
     'output.appendLine(clientMessage(api, condition ? "lsp-client-action-stale" : "lsp-client-action-stale"))'));
   rejected((source) => `${source}\nconst extra = 1;`);

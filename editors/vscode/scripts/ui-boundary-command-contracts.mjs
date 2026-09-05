@@ -13,6 +13,7 @@ export const COMMAND_UI_METHOD_CONTRACTS = Object.freeze({
   cliPathInvalid: { kind: "error", id: "vscode-command-cli-path-invalid" },
   commandInputInvalid: { kind: "error", id: "vscode-command-input-invalid" },
   activeDocument: { kind: "host-value" },
+  activeEditor: { kind: "host-editor" },
   documentIsOpen: { kind: "host-membership", argument: "document" },
   chooseCompileOutputPath: {
     kind: "host-capability-projection", host: "showSaveDialog", argument: "defaultUri",
@@ -29,6 +30,11 @@ export const COMMAND_UI_METHOD_CONTRACTS = Object.freeze({
   chooseBlock: {
     kind: "host-capability-projection", host: "showInputBox", id: "vscode-command-block-title",
     promptId: "vscode-command-block-prompt", placeholderId: "vscode-command-block-placeholder"
+  },
+  chooseRenameName: {
+    kind: "host-input-projection", host: "showInputBox", id: "vscode-command-rename-title",
+    promptId: "vscode-command-rename-prompt", placeholderId: "vscode-command-rename-placeholder",
+    argument: "placeholder"
   },
   chooseFixturePath: {
     kind: "host-capability-projection", host: "showOpenDialog", id: "vscode-command-fixture-title",
@@ -53,7 +59,27 @@ export const COMMAND_UI_METHOD_CONTRACTS = Object.freeze({
   commandProtocolFailure: {
     kind: "visible-projection", id: "vscode-command-protocol-failure", argument: "detail", host: "showErrorMessage"
   },
-  commandWatchStatus: { kind: "projection", id: "vscode-command-watch-status", argument: "detail" }
+  commandWatchStatus: { kind: "projection", id: "vscode-command-watch-status", argument: "detail" },
+  renameBusy: { kind: "projection", id: "vscode-command-rename-busy" },
+  renameDocumentRequired: {
+    kind: "visible-projection", id: "vscode-command-rename-document-required", host: "showErrorMessage"
+  },
+  renameUnavailable: {
+    kind: "visible-projection", id: "vscode-command-rename-unavailable", host: "showWarningMessage"
+  },
+  renameInvalid: {
+    kind: "visible-projection", id: "vscode-command-rename-invalid", host: "showErrorMessage"
+  },
+  renameStale: {
+    kind: "visible-projection", id: "vscode-command-rename-stale", host: "showWarningMessage"
+  },
+  renameApplyFailed: {
+    kind: "visible-projection", id: "vscode-command-rename-apply-failed", host: "showErrorMessage"
+  },
+  renameRequestFailed: {
+    kind: "visible-projection", id: "vscode-command-rename-request-failed",
+    argument: "detail", host: "showErrorMessage"
+  }
 });
 
 export function validateCommandMethod(property, contract, file) {
@@ -90,6 +116,15 @@ export function validateCommandMethod(property, contract, file) {
       `UI method ${propertyName(property)} must return the active document (${file})`);
     return true;
   }
+  if (contract.kind === "host-editor") {
+    assert(property.value.params.length === 0,
+      `UI method ${propertyName(property)} has the wrong argument count (${file})`);
+    const statement = oneStatement(property.value, file, propertyName(property));
+    const value = statement.type === "ReturnStatement" ? statement.argument : undefined;
+    assert(isActiveEditorValue(value),
+      `UI method ${propertyName(property)} must return the active editor (${file})`);
+    return true;
+  }
   if (contract.kind === "host-membership") {
     assert(property.value.params.length === 1 && property.value.params[0].type === "Identifier" &&
       property.value.params[0].name === contract.argument,
@@ -98,6 +133,22 @@ export function validateCommandMethod(property, contract, file) {
     const value = statement.type === "ReturnStatement" ? statement.argument : undefined;
     assert(isDocumentOpenValue(value, contract.argument),
       `UI method ${propertyName(property)} must return canonical document membership (${file})`);
+    return true;
+  }
+  if (contract.kind === "host-input-projection") {
+    assert(property.value.params.length === 1 && property.value.params[0].type === "Identifier" &&
+      property.value.params[0].name === contract.argument,
+    `UI method ${propertyName(property)} has the wrong argument (${file})`);
+    const statement = oneStatement(property.value, file, propertyName(property));
+    const call = statement.type === "ReturnStatement" ? statement.argument : undefined;
+    assert(isWindowHostCall(call, contract.host),
+      `UI method ${propertyName(property)} must return the localized input host capability (${file})`);
+    const options = call.arguments[0];
+    assert(options?.type === "ObjectExpression" &&
+      isOptionMessage(options, "title", contract.id) &&
+      isOptionMessage(options, "prompt", contract.promptId) &&
+      isPlaceholderOption(options, contract.placeholderId, contract.argument),
+    `UI method ${propertyName(property)} must localize its input options (${file})`);
     return true;
   }
   return false;
@@ -157,6 +208,25 @@ function isActiveDocumentValue(node) {
     node.expression.object.object.object.type === "Identifier" &&
     node.expression.object.object.object.name === "api" &&
     memberMethod(node.expression.object.object) === "window";
+}
+
+function isActiveEditorValue(node) {
+  return node?.type === "ChainExpression" && node.expression.type === "MemberExpression" &&
+    node.expression.optional && !node.expression.computed &&
+    node.expression.property.type === "Identifier" && node.expression.property.name === "activeTextEditor" &&
+    node.expression.object.type === "MemberExpression" && !node.expression.object.computed &&
+    node.expression.object.property.type === "Identifier" &&
+    node.expression.object.property.name === "window" &&
+    node.expression.object.object.type === "Identifier" &&
+    node.expression.object.object.name === "api";
+}
+
+function isPlaceholderOption(options, id, argument) {
+  const property = options.properties.find((candidate) => propertyName(candidate) === "placeHolder");
+  const value = property?.value;
+  return value?.type === "LogicalExpression" && value.operator === "||" &&
+    value.left.type === "Identifier" && value.left.name === argument &&
+    isCanonicalMessage(value.right, id);
 }
 
 function isDocumentOpenValue(node, parameter) {

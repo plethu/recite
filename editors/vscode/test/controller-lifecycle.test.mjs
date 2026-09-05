@@ -104,6 +104,50 @@ test("activation-shaped startup replays documents already open before activation
   await controller.dispose();
 });
 
+test("controller registers explicit version-safe rename without a native provider", async () => {
+  const messages = [];
+  const document = {
+    languageId: "recite",
+    version: 4,
+    uri: uri("rename.recite"),
+    getText: () => ":: work"
+  };
+  const api = hostApi({ isTrusted: () => true, onDidGrantWorkspaceTrust: () => ({ dispose() {} }) });
+  api.workspace.textDocuments.push(document);
+  api.window.activeTextEditor = {
+    document,
+    selection: { active: new api.Position(0, 3) }
+  };
+  api.workspace.applyEdit = async () => true;
+  const ui = output(messages, api);
+  ui.chooseRenameName = async () => "renamed";
+  const requests = [];
+  const controller = new ExtensionController(api, ui, { delete() {} }, {
+    createClient: () => {
+      const client = new FakeClient();
+      client.request = async (method) => {
+        requests.push(method);
+        return method === "textDocument/prepareRename"
+          ? { defaultBehavior: true }
+          : { documentChanges: [{
+            textDocument: { uri: document.uri.toString(), version: document.version },
+            edits: [{
+              range: { start: { line: 0, character: 3 }, end: { line: 0, character: 7 } },
+              newText: "renamed"
+            }]
+          }] };
+      };
+      return client;
+    }
+  });
+
+  await controller.start();
+  assert.equal(await api.commands.executeCommand("recite.renameBlock"), true);
+  assert.deepEqual(requests, ["textDocument/prepareRename", "textDocument/rename"]);
+  assert.equal(api.registeredProviders.some(({ name }) => name === "rename"), false);
+  await controller.dispose();
+});
+
 test("configuration changes while stopping use the latest settings without a redundant restart", async () => {
   let settings = { path: "initial", args: [], projectRoot: "" };
   let configurationChanged;

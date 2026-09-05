@@ -43,6 +43,17 @@ macro_rules! vscode_command_message_ids {
             | MsgId::VscodeCommandBlockPlaceholder
             | MsgId::VscodeCommandFixtureTitle
             | MsgId::VscodeCommandFixtureFilter
+            | MsgId::VscodeCommandRenameTitle
+            | MsgId::VscodeCommandRenameCommandTitle
+            | MsgId::VscodeCommandRenamePrompt
+            | MsgId::VscodeCommandRenamePlaceholder
+            | MsgId::VscodeCommandRenameBusy
+            | MsgId::VscodeCommandRenameDocumentRequired
+            | MsgId::VscodeCommandRenameUnavailable
+            | MsgId::VscodeCommandRenameInvalid
+            | MsgId::VscodeCommandRenameStale
+            | MsgId::VscodeCommandRenameApplyFailed
+            | MsgId::VscodeCommandRenameRequestFailed
     };
 }
 

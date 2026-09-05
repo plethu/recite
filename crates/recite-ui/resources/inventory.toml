@@ -410,6 +410,17 @@ resource_ids = [
 "vscode-command-block-placeholder",
 "vscode-command-fixture-title",
 "vscode-command-fixture-filter",
+"vscode-command-rename-title",
+"vscode-command-rename-command-title",
+"vscode-command-rename-prompt",
+"vscode-command-rename-placeholder",
+"vscode-command-rename-busy",
+"vscode-command-rename-document-required",
+"vscode-command-rename-unavailable",
+"vscode-command-rename-invalid",
+"vscode-command-rename-stale",
+"vscode-command-rename-apply-failed",
+"vscode-command-rename-request-failed",
 "neovim-autocmd-description",
 "neovim-callback-failed",
 "neovim-health-filetype-ok",
@@ -628,6 +639,16 @@ runtime_ids = [
 "vscode-command-block-placeholder",
 "vscode-command-fixture-title",
 "vscode-command-fixture-filter",
+"vscode-command-rename-title",
+"vscode-command-rename-prompt",
+"vscode-command-rename-placeholder",
+"vscode-command-rename-busy",
+"vscode-command-rename-document-required",
+"vscode-command-rename-unavailable",
+"vscode-command-rename-invalid",
+"vscode-command-rename-stale",
+"vscode-command-rename-apply-failed",
+"vscode-command-rename-request-failed",
 ]
 package_ids = [
 "lsp-client-display-name",
@@ -644,6 +665,7 @@ package_ids = [
 "vscode-command-watch-stop-title",
 "vscode-command-run-title",
 "vscode-command-trace-title",
+"vscode-command-rename-command-title",
 "vscode-command-cli-path-description",
 ]
 runtime_arguments = {
@@ -694,6 +716,16 @@ runtime_arguments = {
 "vscode-command-block-placeholder" = [],
 "vscode-command-fixture-title" = [],
 "vscode-command-fixture-filter" = [],
+"vscode-command-rename-title" = [],
+"vscode-command-rename-prompt" = [],
+"vscode-command-rename-placeholder" = [],
+"vscode-command-rename-busy" = [],
+"vscode-command-rename-document-required" = [],
+"vscode-command-rename-unavailable" = [],
+"vscode-command-rename-invalid" = [],
+"vscode-command-rename-stale" = [],
+"vscode-command-rename-apply-failed" = [],
+"vscode-command-rename-request-failed" = ["detail"],
 }
 package_arguments = {
 "lsp-client-display-name" = [],
@@ -710,6 +742,7 @@ package_arguments = {
 "vscode-command-watch-stop-title" = [],
 "vscode-command-run-title" = [],
 "vscode-command-trace-title" = [],
+"vscode-command-rename-command-title" = [],
 "vscode-command-cli-path-description" = [],
 }
 
@@ -765,6 +798,16 @@ runtime_ids = [
 "vscode-command-block-placeholder",
 "vscode-command-fixture-title",
 "vscode-command-fixture-filter",
+"vscode-command-rename-title",
+"vscode-command-rename-prompt",
+"vscode-command-rename-placeholder",
+"vscode-command-rename-busy",
+"vscode-command-rename-document-required",
+"vscode-command-rename-unavailable",
+"vscode-command-rename-invalid",
+"vscode-command-rename-stale",
+"vscode-command-rename-apply-failed",
+"vscode-command-rename-request-failed",
 ]
 package_ids = [
 "lsp-client-display-name",
@@ -781,6 +824,7 @@ package_ids = [
 "vscode-command-watch-stop-title",
 "vscode-command-run-title",
 "vscode-command-trace-title",
+"vscode-command-rename-command-title",
 "vscode-command-cli-path-description",
 ]
 runtime_arguments = {
@@ -831,6 +875,16 @@ runtime_arguments = {
 "vscode-command-block-placeholder" = [],
 "vscode-command-fixture-title" = [],
 "vscode-command-fixture-filter" = [],
+"vscode-command-rename-title" = [],
+"vscode-command-rename-prompt" = [],
+"vscode-command-rename-placeholder" = [],
+"vscode-command-rename-busy" = [],
+"vscode-command-rename-document-required" = [],
+"vscode-command-rename-unavailable" = [],
+"vscode-command-rename-invalid" = [],
+"vscode-command-rename-stale" = [],
+"vscode-command-rename-apply-failed" = [],
+"vscode-command-rename-request-failed" = ["detail"],
 }
 package_arguments = {
 "lsp-client-display-name" = [],
@@ -847,5 +901,6 @@ package_arguments = {
 "vscode-command-watch-stop-title" = [],
 "vscode-command-run-title" = [],
 "vscode-command-trace-title" = [],
+"vscode-command-rename-command-title" = [],
 "vscode-command-cli-path-description" = [],
 }

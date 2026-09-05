@@ -43,7 +43,7 @@ assert(manifest.engines?.vscode, "the VS Code engine range is required");
 assert(manifest.activationEvents?.includes("onLanguage:recite"), "activation must be tied to Recite files");
 for (const command of [
   "recite.validate", "recite.compile", "recite.extract", "recite.watch.start",
-  "recite.watch.stop", "recite.run", "recite.trace"
+  "recite.watch.stop", "recite.run", "recite.trace", "recite.renameBlock"
 ]) {
   assert(manifest.activationEvents?.includes(`onCommand:${command}`),
     `activation must include ${command}`);
@@ -83,8 +83,8 @@ for (const rule of [
 const commands = manifest.contributes?.commands ?? [];
 assert(JSON.stringify(commands.map(({ command }) => command)) === JSON.stringify([
   "recite.validate", "recite.compile", "recite.extract", "recite.watch.start",
-  "recite.watch.stop", "recite.run", "recite.trace"
-]), "structured CLI command contributions must remain stable and complete");
+  "recite.watch.stop", "recite.run", "recite.trace", "recite.renameBlock"
+]), "command contributions must remain stable and complete");
 assert(!manifest.contributes.menus, "this slice uses stable command-palette IDs without menu contributions");
 assert(!manifest.contributes.tasks,
   "structured command diagnostics use DiagnosticCollection; no text problem matcher or task contribution is claimed");

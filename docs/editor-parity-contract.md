@@ -154,7 +154,7 @@ implemented primary artifact.
 - `lsp.definition`: resolve same-project and cross-file definitions through the shared snapshot.
 - `lsp.hover`: project structured hover content and symbol ranges from the shared kernel.
 - `lsp.references`: project declaration-first, source-ordered references with explicit declaration inclusion.
-- `lsp.rename`: project source-preserving workspace edits for resolved symbols; version preconditions remain incomplete.
+- `lsp.rename`: project source-preserving workspace edits for resolved symbols through the explicit VS Code/VSCodium `recite.renameBlock` command; the command retains version preconditions while native F2 rename remains unregistered.
 - `lsp.code-actions`: project source-preserving stable-ID repairs from the shared kernel.
 - `workspace.project.discovery`: discover canonical sibling sources under the configured project root.
 - `workspace.configuration`: keep root and project configuration ownership outside client semantics.
@@ -189,8 +189,7 @@ macOS or Windows support, marketplace publication, or a distributable archive
 in source control. They also do not claim a native text problem matcher or
 task contribution: typed command diagnostics are intentionally owned by the
 structured `DiagnosticCollection` projection. Combined LSP schema/catalogue
-transport, native version-safe rename, or a Zed grammar remain outside this
-evidence.
+transport, native F2 rename, or a Zed grammar remain outside this evidence.
 
 Capability rows with direct VS Code/VSCodium package, adapter, or live-server
 evidence use `partial` client status and include `scripts/check-vscode.sh` in
@@ -234,9 +233,11 @@ The VS Code and VSCodium partial status is deliberately narrower than host
 support: the extension source and syntax grammar are checked in, deterministic
 VSIX generation and package validation pass, and Linux Node tests exercise real
 `recite-lsp` and `recite` processes. Installed VS Code/VSCodium activation smoke
-is still missing, as are macOS and Windows checks. Native rename remains
-unregistered until a version-safe adapter exists; task/workbench integration and
-a native text problem matcher remain outside this structured command slice.
+is still missing, as are macOS and Windows checks. Native F2 rename remains
+unregistered; the explicit `recite.renameBlock` command is a partial Linux
+adapter that retains LSP document versions and refuses stale or closed
+workspace edits. Task/workbench integration and a native text problem matcher
+remain outside this structured command slice.
 
 VS Code Marketplace and Open VSX are separate distribution claims. Publication,
 signing, and installation smoke are still planned. A shared VSIX means the VS

@@ -129,6 +129,7 @@ pub(super) const fn for_message(id: MsgId) -> &'static [ProjectionDeclaration] {
         | MsgId::VscodeCommandWatchStopTitle
         | MsgId::VscodeCommandRunTitle
         | MsgId::VscodeCommandTraceTitle
+        | MsgId::VscodeCommandRenameCommandTitle
         | MsgId::VscodeCommandCliPathDescription => &VSCODE_PACKAGE_PROJECTIONS,
         MsgId::VscodeCommandUntrusted
         | MsgId::VscodeCommandDocumentRequired
@@ -155,7 +156,17 @@ pub(super) const fn for_message(id: MsgId) -> &'static [ProjectionDeclaration] {
         | MsgId::VscodeCommandBlockPrompt
         | MsgId::VscodeCommandBlockPlaceholder
         | MsgId::VscodeCommandFixtureTitle
-        | MsgId::VscodeCommandFixtureFilter => &VSCODE_RUNTIME_PROJECTIONS,
+        | MsgId::VscodeCommandFixtureFilter
+        | MsgId::VscodeCommandRenameTitle
+        | MsgId::VscodeCommandRenamePrompt
+        | MsgId::VscodeCommandRenamePlaceholder
+        | MsgId::VscodeCommandRenameBusy
+        | MsgId::VscodeCommandRenameDocumentRequired
+        | MsgId::VscodeCommandRenameUnavailable
+        | MsgId::VscodeCommandRenameInvalid
+        | MsgId::VscodeCommandRenameStale
+        | MsgId::VscodeCommandRenameApplyFailed
+        | MsgId::VscodeCommandRenameRequestFailed => &VSCODE_RUNTIME_PROJECTIONS,
         _ => &[],
     }
 }

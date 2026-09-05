@@ -9,6 +9,7 @@ import { asClientFailure, ClientFailureKind, isClientFailure } from "./client-fa
 import { RestartPolicy } from "./restart-policy.js";
 import { StartupOutcomeKind, startupOutcome } from "./startup-outcome.js";
 import { CommandRegistry } from "./commands.js";
+import { RenameCommand } from "./rename-command.js";
 
 const DIAGNOSTICS_METHOD = "textDocument/publishDiagnostics";
 const STABLE_RUN_MS = 10_000;
@@ -36,6 +37,7 @@ export class ExtensionController {
     this.editCommands = new EditCommandRegistry(this.api, this.userInterface, options);
     this.watchers = new WatcherRegistry(this);
     this.commands = new CommandRegistry(this.api, this.userInterface, options);
+    this.renameCommand = new RenameCommand(this.api, this.userInterface, () => this.client, options);
   }
 
   async start(phase = "initial") {
@@ -117,6 +119,7 @@ export class ExtensionController {
     registerFeatureProviders(this);
     this.editCommands.register(this.subscriptions);
     this.commands.register(this.subscriptions);
+    this.renameCommand.register(this.subscriptions);
     this.providersRegistered = true;
   }
 
@@ -360,6 +363,7 @@ export class ExtensionController {
     this.clearStableReset();
     this.watchers.dispose();
     this.editCommands.dispose();
+    await this.renameCommand.dispose();
     await this.commands.dispose();
     for (const subscription of this.subscriptions.splice(0)) subscription.dispose();
     const retiredClient = this.client;

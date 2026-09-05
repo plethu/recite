@@ -434,3 +434,5 @@ detail = "string"
 detail = "string"
 [arguments."vscode-command-watch-status"]
 detail = "string"
+[arguments."vscode-command-rename-request-failed"]
+detail = "string"

@@ -66,6 +66,33 @@ export function createUserInterface(api) {
     serverNotRunning() {
       return new Error(clientMessage(api, "lsp-client-not-running"));
     },
+    renameBusy() {
+      output.appendLine(clientMessage(api, "vscode-command-rename-busy"));
+    },
+    renameDocumentRequired() {
+      output.appendLine(clientMessage(api, "vscode-command-rename-document-required"));
+      api.window.showErrorMessage(clientMessage(api, "vscode-command-rename-document-required"));
+    },
+    renameUnavailable() {
+      output.appendLine(clientMessage(api, "vscode-command-rename-unavailable"));
+      api.window.showWarningMessage(clientMessage(api, "vscode-command-rename-unavailable"));
+    },
+    renameInvalid() {
+      output.appendLine(clientMessage(api, "vscode-command-rename-invalid"));
+      api.window.showErrorMessage(clientMessage(api, "vscode-command-rename-invalid"));
+    },
+    renameStale() {
+      output.appendLine(clientMessage(api, "vscode-command-rename-stale"));
+      api.window.showWarningMessage(clientMessage(api, "vscode-command-rename-stale"));
+    },
+    renameApplyFailed() {
+      output.appendLine(clientMessage(api, "vscode-command-rename-apply-failed"));
+      api.window.showErrorMessage(clientMessage(api, "vscode-command-rename-apply-failed"));
+    },
+    renameRequestFailed(detail) {
+      output.appendLine(clientMessage(api, "vscode-command-rename-request-failed", detail));
+      api.window.showErrorMessage(clientMessage(api, "vscode-command-rename-request-failed", detail));
+    },
     serverStderr(message) {
       output.append(message);
     },
@@ -113,7 +140,10 @@ export function createUserInterface(api) {
       return new Error(clientMessage(api, "vscode-command-input-invalid"));
     },
     activeDocument() {
-      return api.window.activeTextEditor?.document;
+      return api.window?.activeTextEditor?.document;
+    },
+    activeEditor() {
+      return api.window?.activeTextEditor;
     },
     documentIsOpen(document) {
       return api.workspace.textDocuments?.includes(document) ?? true;
@@ -144,6 +174,13 @@ export function createUserInterface(api) {
         title: clientMessage(api, "vscode-command-block-title"),
         prompt: clientMessage(api, "vscode-command-block-prompt"),
         placeHolder: clientMessage(api, "vscode-command-block-placeholder")
+      });
+    },
+    chooseRenameName(placeholder) {
+      return api.window.showInputBox({
+        title: clientMessage(api, "vscode-command-rename-title"),
+        prompt: clientMessage(api, "vscode-command-rename-prompt"),
+        placeHolder: placeholder || clientMessage(api, "vscode-command-rename-placeholder")
       });
     },
     chooseFixturePath() {

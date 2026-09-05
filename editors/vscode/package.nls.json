@@ -13,5 +13,6 @@
   "vscode-command-watch-stop-title": "Recite: Stop watch",
   "vscode-command-run-title": "Recite: Run fixture",
   "vscode-command-trace-title": "Recite: Trace fixture",
+  "vscode-command-rename-command-title": "Recite: Rename block",
   "vscode-command-cli-path-description": "Executable used for local Recite commands. A bare name is resolved through PATH; a path is resolved relative to the project root."
 }
