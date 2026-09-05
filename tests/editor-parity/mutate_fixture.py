@@ -164,6 +164,8 @@ def main() -> int:
         record(contract, "capabilities", "editor.keyboard.workflow")["follow_up"] = "#192"
     elif mutation == "keyboard-follow-up-missing":
         record(contract, "capabilities", "editor.keyboard.workflow").pop("follow_up")
+    elif mutation == "keyboard-scenario-status":
+        record(contract, "scenarios", "keyboard-workflow")["status"] = "implemented"
     elif mutation == "keyboard-executable-evidence":
         evidence = record(contract, "capabilities", "editor.keyboard.workflow")["expected_evidence"]
         evidence["commands"] = ["scripts/check-vscode.sh"]

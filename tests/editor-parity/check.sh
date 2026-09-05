@@ -425,6 +425,7 @@ expect_failure evidence-artifacts-shape "capability lsp.completion artifacts mus
 expect_failure follow-up-shape "capability lsp.completion must name a follow-up issue"
 expect_failure keyboard-follow-up "editor.keyboard.workflow must remain owned by open follow-up #202"
 expect_failure keyboard-follow-up-missing "capability editor.keyboard.workflow must name a follow-up issue"
+expect_failure keyboard-scenario-status "keyboard-workflow scenario must remain planned until installed-host evidence exists"
 expect_failure keyboard-executable-evidence "unimplemented capability editor.keyboard.workflow must not claim an executable evidence command"
 expect_failure keyboard-evidence-boundary "editor.keyboard.workflow known_limitation must name the headless evidence boundary"
 expect_failure keyboard-document-wording "keyboard workflow documentation must retain 'broader milestone 5 accessibility proof'"

@@ -51,7 +51,7 @@ def validate(ctx: Context, data: dict, document_path: Path) -> tuple[dict, dict,
     validate_clients(ctx, client_map, artifact_map)
     validate_distributions(ctx, distribution_map, artifact_map)
     validate_capabilities(ctx, data, scenario_map, artifact_map, distribution_map, client_map)
-    validate_keyboard_capability(ctx, capability_map)
+    validate_keyboard_capability(ctx, capability_map, scenario_map)
     validate_neovim_topology(ctx, client_map, artifact_map, distribution_map, capability_map)
     validate_document(ctx, document_path, capability_map, scenario_map)
     return scenario_map, capability_map, artifact_map, distribution_map, client_map
@@ -217,11 +217,16 @@ def validate_document(ctx: Context, document_path: Path, capabilities: dict, sce
         ctx.require(isinstance(linux_status, str) and linux_status in {"partial", "implemented"}, "Neovim filetype evidence needs Linux support status")
 
 
-def validate_keyboard_capability(ctx: Context, capabilities: dict) -> None:
+def validate_keyboard_capability(ctx: Context, capabilities: dict, scenarios: dict) -> None:
     capability = capabilities.get(KEYBOARD_CAPABILITY_ID)
     ctx.require(isinstance(capability, dict), f"contract must contain {KEYBOARD_CAPABILITY_ID}")
     if not isinstance(capability, dict):
         return
+    scenario_id = capability.get("scenario")
+    ctx.require(scenario_id == "keyboard-workflow", f"{KEYBOARD_CAPABILITY_ID} must use the keyboard-workflow scenario")
+    scenario = scenarios.get(scenario_id)
+    if isinstance(scenario, dict):
+        ctx.require(scenario.get("status") == "planned", f"keyboard-workflow scenario must remain planned until installed-host evidence exists")
     ctx.require(capability.get("follow_up") == KEYBOARD_FOLLOW_UP, f"{KEYBOARD_CAPABILITY_ID} must remain owned by open follow-up {KEYBOARD_FOLLOW_UP}")
     ctx.require(capability.get("implementation_status") == "planned", f"{KEYBOARD_CAPABILITY_ID} must remain planned until installed-host evidence exists")
     client_status = capability.get("client_status")
