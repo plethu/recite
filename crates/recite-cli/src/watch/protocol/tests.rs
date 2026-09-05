@@ -268,13 +268,12 @@ impl Read for ErrorReader {
 
 struct SignalledErrorReader {
     started: Receiver<()>,
-    failed: Sender<()>,
+    dropped: Sender<()>,
 }
 
 impl Read for SignalledErrorReader {
     fn read(&mut self, _buffer: &mut [u8]) -> io::Result<usize> {
         self.started.recv().expect("build start signal");
-        self.failed.send(()).expect("build waits for read error");
         Err(io::Error::new(
             io::ErrorKind::BrokenPipe,
             "control read failed",
@@ -282,9 +281,15 @@ impl Read for SignalledErrorReader {
     }
 }
 
+impl Drop for SignalledErrorReader {
+    fn drop(&mut self) {
+        self.dropped.send(()).expect("build waits for reader drop");
+    }
+}
+
 struct QuickEngine {
     started: Sender<()>,
-    reader_failed: Receiver<()>,
+    reader_dropped: Receiver<()>,
 }
 
 impl BuildEngine for QuickEngine {
@@ -302,7 +307,9 @@ impl BuildEngine for QuickEngine {
         _control: &BuildControl,
     ) -> Result<Vec<BuildCandidate>, BuildFailure> {
         self.started.send(()).expect("build starts");
-        self.reader_failed.recv().expect("reader reports failure");
+        self.reader_dropped
+            .recv()
+            .expect("reader reports drop after stream error");
         Ok(vec![BuildCandidate::new(
             BuildTarget::new("compiled/dialogue.recitec").expect("target"),
             b"candidate".to_vec(),
@@ -343,10 +350,10 @@ fn control_stream_read_error_stops_with_typed_record() {
 #[test]
 fn active_control_stream_error_emits_completion_before_fatal_stop() {
     let (build_started, reader_started) = mpsc::channel();
-    let (reader_failed, build_wait) = mpsc::channel();
+    let (reader_dropped, build_wait) = mpsc::channel();
     let reader = SignalledErrorReader {
         started: reader_started,
-        failed: reader_failed,
+        dropped: reader_dropped,
     };
     let (transport, controls) = ControlTransport::spawn(reader, None);
     let request = BuildRequest::new(
@@ -370,7 +377,7 @@ fn active_control_stream_error_emits_completion_before_fatal_stop() {
             state.next_build_generation().expect("build generation");
             let mut engine = QuickEngine {
                 started: build_started,
-                reader_failed: build_wait,
+                reader_dropped: build_wait,
             };
             let mut publisher = CountingPublisher { commits: 0 };
             let result = state
