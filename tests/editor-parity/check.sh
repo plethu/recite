@@ -18,6 +18,7 @@ cp "$repo_root/scripts/check-editor-parity.sh" "$fixture_repo/scripts/"
 cp "$repo_root/scripts/check-tree-sitter.sh" "$fixture_repo/scripts/"
 cp "$repo_root/scripts/check-neovim.sh" "$fixture_repo/scripts/"
 cp "$repo_root/scripts/check-vscode.sh" "$fixture_repo/scripts/"
+cp "$repo_root/scripts/check-zed.sh" "$fixture_repo/scripts/"
 cp -R "$repo_root/scripts/editor_parity" "$fixture_repo/scripts/"
 cp "$repo_root/editors/recite-tree-sitter/grammar.js" "$fixture_repo/editors/recite-tree-sitter/"
 cp -R "$repo_root/editors/recite-neovim/." "$fixture_repo/editors/recite-neovim/"
@@ -35,7 +36,7 @@ cp "$repo_root/AGENTS.md" "$fixture_repo/AGENTS.md"
 mkdir -p "$fixture_repo/.claude"
 ln -s ../.agents/skills "$fixture_repo/.claude/skills"
 ln -s AGENTS.md "$fixture_repo/CLAUDE.md"
-chmod +x "$fixture_repo/scripts/check-editor-parity.sh" "$fixture_repo/scripts/check-tree-sitter.sh" "$fixture_repo/scripts/check-neovim.sh" "$fixture_repo/scripts/check-vscode.sh"
+chmod +x "$fixture_repo/scripts/check-editor-parity.sh" "$fixture_repo/scripts/check-tree-sitter.sh" "$fixture_repo/scripts/check-neovim.sh" "$fixture_repo/scripts/check-vscode.sh" "$fixture_repo/scripts/check-zed.sh"
 
 git -C "$fixture_repo" init -q -b main
 git -C "$fixture_repo" config user.name Fixture
@@ -168,6 +169,10 @@ if "package-checked" not in artifact["notes"] or "ignored build output" not in a
     raise SystemExit("VS Code artifact notes must distinguish package checks from checked-in output")
 capabilities = {capability["id"]: capability for capability in contract["capabilities"]}
 expected_client_evidence = {
+    "command.compile.validate.extract",
+    "command.run.trace",
+    "command.structured.results",
+    "command.watch.lifecycle",
     "editor.filetype.registration",
     "editor.vscode.syntax-projection",
     "lsp.code-actions",
@@ -176,6 +181,7 @@ expected_client_evidence = {
     "lsp.initialize.capabilities",
     "lsp.overlay.recovery",
     "lsp.publish.diagnostics",
+    "lsp.rename",
     "lsp.utf16.positions",
     "workspace.configuration",
     "workspace.project.discovery",
@@ -190,7 +196,8 @@ if actual_client_evidence != expected_client_evidence:
     raise SystemExit("VS Code partial client evidence rows drifted from the checked package/live surface")
 for capability_id in expected_client_evidence:
     capability = capabilities[capability_id]
-    if capability["follow_up"] != "#51":
+    expected_follow_up = "#53" if capability_id.startswith("command.") else "#51"
+    if capability["follow_up"] != expected_follow_up:
         raise SystemExit(f"{capability_id} must retain the open VS Code follow-up")
     evidence = capability["expected_evidence"]
     evidence_artifacts = (
@@ -200,8 +207,45 @@ for capability_id in expected_client_evidence:
         if "artifact" in evidence
         else set()
     )
-    if "vscode-vsix" not in evidence_artifacts:
+    if not capability_id.startswith("command.") and "vscode-vsix" not in evidence_artifacts:
         raise SystemExit(f"{capability_id} must attribute package/live evidence to vscode-vsix")
+
+expected_zed_evidence = {
+    "editor.filetype.registration",
+    "editor.zed.syntax-projection",
+}
+actual_zed_evidence = {
+    capability_id
+    for capability_id, capability in capabilities.items()
+    if capability["client_status"].get("zed") == "partial"
+    and "scripts/check-zed.sh" in capability["expected_evidence"].get("commands", [])
+}
+if actual_zed_evidence != expected_zed_evidence:
+    raise SystemExit("Zed partial client evidence rows drifted from the checked package/static surface")
+for capability_id in expected_zed_evidence:
+    capability = capabilities[capability_id]
+    evidence = capability["expected_evidence"]
+    evidence_artifacts = (
+        set(evidence["artifacts"])
+        if "artifacts" in evidence
+        else {evidence["artifact"]}
+        if "artifact" in evidence
+        else set()
+    )
+    if "zed-extension" not in evidence_artifacts:
+        raise SystemExit(f"{capability_id} must attribute package/static evidence to zed-extension")
+zed_syntax = capabilities["editor.zed.syntax-projection"]
+if zed_syntax["follow_up"] != "#192":
+    raise SystemExit("editor.zed.syntax-projection must retain the open Zed follow-up")
+if zed_syntax["client_status"].get("vscode") != "planned":
+    raise SystemExit("editor.zed.syntax-projection must not project Zed evidence to VS Code")
+for capability_id in (
+    "command.compile.validate.extract",
+    "command.run.trace",
+    "command.watch.lifecycle",
+):
+    if capabilities[capability_id]["client_status"].get("zed") != "planned":
+        raise SystemExit(f"{capability_id} must retain Zed's static-task limitation")
 if "installed vs code/vscodium activation smoke" not in document_path.read_text(encoding="utf-8").lower():
     raise SystemExit("editor parity docs must retain the missing host activation boundary")
 
