@@ -352,7 +352,7 @@ participants = ["hazel"]
     let mut state = WatchState::new(temp.path().to_owned());
     let mut stderr = Vec::new();
     build_once(&mut state, &mut stderr).expect("initial build");
-    let source_directory = temp.path().join("dialogue");
+    let source_directory = state.project_root.join("dialogue");
 
     let removed = Event {
         kind: EventKind::Remove(notify::event::RemoveKind::Any),
