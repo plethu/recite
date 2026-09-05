@@ -229,6 +229,7 @@ production suppressions must carry a narrow scope and rationale.
 | `editors/vscode/scripts/ui-boundary-calls.mjs` | 350 | tooling | vscode/checks | review | UI boundary call inventory remains a single generated-boundary checker |
 | `scripts/check-lint-suppressions.py` | 256 | tooling | lint-policy | review | Suppression policy parsing and diff-aware enforcement remain one checker boundary |
 | `scripts/check-tree-sitter.sh` | 399 | tooling | tree-sitter/check | review | Parser generation, ABI, corpus, and reproducibility checks share one tool boundary |
+| `scripts/check-zed.sh` | 304 | tooling | zed/check | review | #192: Zed manifest, grammar pin, task argv, launcher API, and parity evidence remain one checked boundary; split before adding another host surface |
 | `scripts/lint_suppression_ast.py` | 374 | tooling | lint-policy | review | AST suppression extraction keeps parser traversal and source categorisation together |
 | `tests/editor-parity/check.sh` | 495 | test/support | editor-parity/tests | review | Editor parity fixture scenarios remain one executable contract suite |
 | `tests/lint-suppressions/check.sh` | 398 | test/support | lint-policy/tests | review | Hostile suppression-policy fixture scenarios remain one executable contract suite |
