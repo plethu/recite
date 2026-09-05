@@ -204,9 +204,9 @@ executes game-side effects.
 **Status:** Implementation landed on 2026-09-05, but the exit gate remains
 open. PR #200 delivered the remaining VS Code/VSCodium, Neovim, Zed, grammar,
 structured-command, parity, and maintainability work after PR #198 established
-the Neovim setup and shared editor foundations. Issue #192 remains the owner for
-the missing installed-Zed, semantic-parity, task-lifecycle, and keyboard
-evidence recorded in the editor parity contract.
+the Neovim setup and shared editor foundations. Issues #51, #53, #192, and #202
+remain the owners for the missing installed-host, semantic-parity, command/task
+lifecycle, and keyboard evidence recorded in the editor parity contract.
 
 **Outcome:** text authoring is safe and discoverable in the editors users
 already choose.
@@ -419,7 +419,7 @@ remain authoritative if the tracker is split again.
 | Product Foundation and Maintainability | Complete (0 open; 8 closed milestone items; delivered by PR #174) | 17 |
 | Language, schema, and localisation readiness | Complete (0 open; 12 closed milestone items; delivered by PR #183 and correction PR #184) | 18 |
 | Shared authoring kernel and preview | Complete (0 open; 8 closed milestone items; delivered by PR #191; #167, #168, and #185 complete) | 19 |
-| Editor integration parity | In progress (1 open: #192; implementation delivered by PR #200 after PR #198 foundations) | 20 |
+| Editor integration parity | In progress (4 open: #51, #53, #192, #202; implementation delivered by PR #200 after PR #198 foundations) | 20 |
 | Native GUI strategy and accessibility proof | [#54 GUI strategy](https://github.com/plethu/recite/issues/54), [#123 accessibility requirements](https://github.com/plethu/recite/issues/123) (2 open) | 21 |
 | GUI workbench | [#170 GUI workbench](https://github.com/plethu/recite/issues/170) (1 open) | 22 |
 | Engine companions | #49, #83–#86, #132–#134 (8 open) | 23 |
@@ -437,10 +437,10 @@ open with 0 open issues; this roadmap records the outcome without changing the
 tracker.
 
 M20 implementation landed on 2026-09-05. PR #200 delivered the remaining editor
-integration work after PR #198 established the first foundations; #51, #53,
-#97, #98, and the cross-cutting #197 follow-up are closed. Issue #192 is open
-until the installed-Zed, semantic-parity, task-lifecycle, and keyboard evidence
-required by its acceptance criteria and this outcome's exit gate exists.
+integration work after PR #198 established the first foundations; #97, #98, and
+the cross-cutting #197 follow-up are closed. Issues #51, #53, #192, and #202
+remain open for the installed-host, semantic-parity, command/task lifecycle, and
+keyboard evidence required by their matrix rows and this outcome's exit gate.
 
 The post-v1 row is deliberately non-exhaustive: it records current open issues
 without a milestone, not every deferred capability. Generated host-language
@@ -457,11 +457,11 @@ kernel and preview outcome is complete as of 2026-09-01, delivered by PR #191
 at `636fa1b`; #167, #168, and #185 established the preceding configuration,
 discovery, and kernel seam. Editor Integration Parity implementation landed on
 2026-09-05 through PR #200 after PR #198 established the first editor
-foundations, but #192 still owns the evidence needed to pass its exit gate.
-Native GUI Strategy and Accessibility Proof (milestone 21), tracked by #54 and
-#123, may proceed independently because completed editor clients are not its
-entry gate. Substantial language, runtime, CLI, LSP, benchmark, FFI, Godot, and
-Unity work already exists, but each area remains subject to its milestone exit
-gate. The largest remaining structural gaps are editor host evidence, the native
-GUI/accessibility decision, the GUI workbench, and the Godot, Unity, and Bevy
-companion and distribution paths.
+foundations, but #51, #53, #192, and #202 still own the evidence needed to pass
+its exit gate. Native GUI Strategy and Accessibility Proof (milestone 21),
+tracked by #54 and #123, may proceed independently because completed editor
+clients are not its entry gate. Substantial language, runtime, CLI, LSP,
+benchmark, FFI, Godot, and Unity work already exists, but each area remains
+subject to its milestone exit gate. The largest remaining structural gaps are
+editor host evidence, the native GUI/accessibility decision, the GUI workbench,
+and the Godot, Unity, and Bevy companion and distribution paths.
