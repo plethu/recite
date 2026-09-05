@@ -131,8 +131,14 @@ function M.new(options)
   function adapter.watch_active() return watcher.active() end
   function adapter.clear_diagnostics() clear_diagnostics() end
   function adapter.configure(config)
-    state.config = vim.tbl_deep_extend("force", state.config, config or {})
+    local next_config = vim.tbl_deep_extend("force", vim.deepcopy(state.config), config or {})
+    if vim.deep_equal(next_config, state.config) then return false end
+    finite.cancel("configuration changed")
+    watcher.reconfigure()
+    clear_diagnostics()
+    state.config = next_config
     watcher.configure(state.config)
+    return true
   end
   function adapter.dispose()
     watcher.dispose()

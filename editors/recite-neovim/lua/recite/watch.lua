@@ -14,6 +14,15 @@ local function absolute(path)
   return vim.fs and vim.fs.normalize and vim.fs.normalize(value) or value
 end
 
+local function timing(configuration)
+  return {
+    cancel_grace_ms = configuration.watch_cancel_grace_ms or 100,
+    stop_timeout_ms = configuration.watch_stop_timeout_ms or 1500,
+    force_kill_delay_ms = configuration.watch_force_kill_delay_ms or 100,
+    teardown_timeout_ms = configuration.watch_teardown_timeout_ms or 500,
+  }
+end
+
 function M.new(options)
   local state = {
     config = options.config,
@@ -54,7 +63,7 @@ function M.new(options)
     if session.retired or session.closed then return end
     process.terminate(session.transport, true)
     if session.hung_timer then return end
-    session.hung_timer = timer.after(state.config.watch_teardown_timeout_ms or 500, function()
+    session.hung_timer = timer.after(session.timing.teardown_timeout_ms, function()
       session.hung_timer = nil
       if session.retired or session.closed then return end
       session.hung = true
@@ -67,11 +76,11 @@ function M.new(options)
   local function recover(session)
     if session.retired or session.recovery then return end
     session.recovery = true
-    session.recovery_timer = timer.after(state.config.watch_cancel_grace_ms or 100, function()
+    session.recovery_timer = timer.after(session.timing.cancel_grace_ms, function()
       session.recovery_timer = nil
       if session.retired or session.closed then return end
       process.terminate(session.transport, false)
-      session.force_timer = timer.after(state.config.watch_force_kill_delay_ms or 100, function()
+      session.force_timer = timer.after(session.timing.force_kill_delay_ms, function()
         session.force_timer = nil
         if session.retired or session.closed then return end
         process.terminate(session.transport, true)
@@ -83,7 +92,9 @@ function M.new(options)
   local function failure(session, error)
     if state.active ~= session or session.retired or session.failed then return end
     session.failed = true
-    report("neovim-command-protocol-failure", { detail = protocol.error_message(error) }, vim.log.levels.ERROR)
+    if not session.fenced then
+      report("neovim-command-protocol-failure", { detail = protocol.error_message(error) }, vim.log.levels.ERROR)
+    end
     recover(session)
   end
 
@@ -99,7 +110,7 @@ function M.new(options)
   end
 
   local function record(session, record_value)
-    if state.active ~= session or session.retired or session.recovery then return end
+    if state.active ~= session or session.retired or session.fenced or session.recovery then return end
     local ok, error = pcall(session.validator.consume, session.validator, record_value)
     if not ok then failure(session, error); return end
     if record_value.event == "watch.started" then
@@ -119,7 +130,7 @@ function M.new(options)
       if record_value.data.reason.type == "fatal" then
         report("neovim-command-failure", { detail = json(record_value.data.error) }, vim.log.levels.ERROR)
         session.fatal = true
-        session.fatal_timer = timer.after(state.config.watch_stop_timeout_ms or 1500, function()
+        session.fatal_timer = timer.after(session.timing.stop_timeout_ms, function()
           session.fatal_timer = nil
           if state.active == session and not session.closed then recover(session) end
         end)
@@ -135,7 +146,7 @@ function M.new(options)
     if state.active ~= session or session.retired then return end
     session.closed = true
     local ok, error = pcall(session.validator.finish, session.validator, event.code)
-    if not ok and not session.failed then
+    if not ok and not session.failed and not session.fenced then
       report("neovim-command-protocol-failure", { detail = protocol.error_message(error) }, vim.log.levels.ERROR)
     end
     retire(session)
@@ -179,7 +190,9 @@ function M.new(options)
       stopped = false,
       closed = false,
       failed = false,
+      fenced = false,
       transport = nil,
+      timing = timing(configuration),
       stop_timer = nil,
       force_timer = nil,
       recovery_timer = nil,
@@ -214,7 +227,7 @@ function M.new(options)
     end
     if session.stop_requested then return true end
     if not request_cancel(session) then return false end
-    session.stop_timer = timer.after(state.config.watch_stop_timeout_ms or 1500, function()
+    session.stop_timer = timer.after(session.timing.stop_timeout_ms, function()
       if state.active ~= session or session.retired or session.closed then return end
       report("neovim-command-watch-stop-timeout", {}, vim.log.levels.ERROR)
       recover(session)
@@ -224,6 +237,14 @@ function M.new(options)
 
   function adapter.active()
     return state.active and not state.active.retired and state.active or nil
+  end
+
+  function adapter.reconfigure()
+    local session = state.active
+    if not session or session.retired then return true end
+    session.fenced = true
+    state.clear_diagnostics()
+    return adapter.stop()
   end
 
   function adapter.dispose()
@@ -241,17 +262,17 @@ function M.new(options)
     local session = state.active
     if not session then return true end
     request_cancel(session)
-    vim.wait(state.config.watch_cancel_grace_ms or 100, function()
+    vim.wait(session.timing.cancel_grace_ms, function()
       return session.closed or session.retired
     end, 10)
     if session.closed or session.retired then return true end
     process.terminate(session.transport, false)
-    vim.wait(state.config.watch_stop_timeout_ms or 1500, function()
+    vim.wait(session.timing.stop_timeout_ms, function()
       return session.closed or session.retired
     end, 10)
     if session.closed or session.retired then return true end
     process.terminate(session.transport, true)
-    vim.wait(state.config.watch_teardown_timeout_ms or 500, function()
+    vim.wait(session.timing.teardown_timeout_ms, function()
       return session.closed or session.retired
     end, 10)
     if not session.closed and not session.retired then

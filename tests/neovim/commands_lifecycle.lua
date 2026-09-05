@@ -159,6 +159,62 @@ local second_invocation = commands_adapter.validate({ project_root = root, paths
 assert_true(first_invocation and second_invocation and first_invocation.invocation_id ~= second_invocation.invocation_id, "generation test did not create two invocations"); assert_true(stale_cwd == root, "finite source command did not use project root cwd"); wait_for(function() return stale_first_failure ~= nil end, "superseded finite invocation did not settle"); assert_true(stale_first_failure.code == "superseded" and stale_spawn_count == 1 and stale_live == 1, "replacement overlapped the predecessor or used the wrong settlement"); assert_true(stale_second == nil, "replacement spawned before predecessor close")
 stale_callbacks[first_invocation.invocation_id](); wait_for(function() return stale_spawn_count == 2 end, "replacement did not wait for predecessor close"); assert_true(stale_live == 1, "replacement exceeded one live child"); stale_callbacks[second_invocation.invocation_id](); wait_for(function() return stale_second or stale_second_failure end, "replacement invocation did not complete"); assert_true(stale_second ~= nil and stale_second_failure == nil, "replacement invocation failed"); assert_true(not stale_first, "late finite result escaped generation fencing")
 
+local reconfigure_old_emit, reconfigure_old_exit, reconfigure_old_kill
+local reconfigure_old_result, reconfigure_old_error, reconfigure_old_error_count = nil, nil, 0
+local reconfigure_new_spawned, reconfigure_new_result = false, nil
+local reconfigure_old_system = function(argv, opts, on_exit)
+  local invocation = argv[#argv]
+  local child = {}
+  function child:write() end
+  function child:kill(signal) reconfigure_old_kill = signal end
+  reconfigure_old_emit = function()
+    opts.stdout(nil, string.format('{"version":1,"sequence":0,"event":"command.started","command":"validate","invocation_id":"%s"}\n', invocation))
+    opts.stdout(nil, string.format('{"version":1,"sequence":1,"event":"command.result","command":"validate","invocation_id":"%s","status":"success","exit_code":0,"data":{"diagnostics":[]}}\n', invocation))
+  end
+  reconfigure_old_exit = on_exit
+  return child
+end
+local reconfigure_new_system = function(argv, opts, on_exit)
+  reconfigure_new_spawned = true
+  local invocation = argv[#argv]
+  local child = {}
+  function child:write() end
+  function child:kill() end
+  vim.schedule(function()
+    opts.stdout(nil, string.format('{"version":1,"sequence":0,"event":"command.started","command":"validate","invocation_id":"%s"}\n', invocation))
+    opts.stdout(nil, string.format('{"version":1,"sequence":1,"event":"command.result","command":"validate","invocation_id":"%s","status":"success","exit_code":0,"data":{"diagnostics":[]}}\n', invocation))
+    on_exit({ code = 0, signal = 0 })
+  end)
+  return child
+end
+commands_adapter.configure({ system = reconfigure_old_system, finite_stop_timeout_ms = 20, finite_kill_timeout_ms = 20 })
+commands_adapter.validate({ project_root = root, paths = { stale_source }, invocation_id = "reconfigure-old", on_result = function() reconfigure_old_result = true end, on_error = function(error) reconfigure_old_error = error; reconfigure_old_error_count = reconfigure_old_error_count + 1 end })
+commands_adapter.configure({ system = reconfigure_new_system, finite_stop_timeout_ms = 200, finite_kill_timeout_ms = 200 })
+assert_true(reconfigure_old_kill == "sigterm", "finite reconfiguration did not cancel the old process")
+assert_true(reconfigure_old_error and reconfigure_old_error.code == "cancelled" and reconfigure_old_error_count == 1, "finite reconfiguration did not settle the old callback exactly once")
+commands_adapter.validate({ project_root = root, paths = { stale_source }, invocation_id = "reconfigure-new", on_result = function(result) reconfigure_new_result = result end, on_error = function(error) fail("reconfigured finite invocation failed: " .. protocol.error_message(error)) end })
+assert_true(not reconfigure_new_spawned, "finite replacement launched before the old process closed")
+reconfigure_old_emit()
+reconfigure_old_exit({ code = 0, signal = 15 })
+wait_for(function() return reconfigure_new_spawned end, "finite replacement did not launch after the old process closed")
+wait_for(function() return reconfigure_new_result ~= nil end, "reconfigured finite invocation did not complete")
+assert_true(reconfigure_old_result == nil, "cancelled finite result escaped reconfiguration fencing")
+
+local no_op_child, no_op_exit, no_op_killed, no_op_error
+local no_op_system = function(_, _, on_exit)
+  no_op_child = {}
+  function no_op_child:write() end
+  function no_op_child:kill(signal) no_op_killed = signal end
+  no_op_exit = on_exit
+  return no_op_child
+end
+commands_adapter.configure({ system = no_op_system })
+commands_adapter.validate({ project_root = root, paths = { stale_source }, invocation_id = "reconfigure-no-op", on_result = function() end, on_error = function(error) no_op_error = error end })
+assert_true(commands_adapter.configure({ system = no_op_system }) == false, "unchanged command configuration churned the adapter")
+assert_true(no_op_killed == nil, "unchanged command configuration cancelled a finite process")
+no_op_exit({ code = 0, signal = 0 })
+wait_for(function() return no_op_error ~= nil end, "no-op configuration test process did not close")
+
 local fake_watch_ready, fake_watch_child, fake_watch_failure = false, nil, nil
 local fake_watch_cancel_requested, fake_watch_stopped = false, false
 local fake_watch_system = function(_, opts, on_exit)
@@ -178,6 +234,71 @@ local late_finite_system = function(argv, opts, on_exit)
 end
 commands_adapter.validate({ project_root = root, paths = { stale_source }, config = { system = late_finite_system }, on_result = function(result) late_finite_result = result end, on_error = function(error) fail("late finite failed: " .. protocol.error_message(error)) end })
 assert_true(commands_adapter.watch_start({ project_root = root, invocation_id = "fake-watch", system = fake_watch_system }) ~= nil, "finite-to-watch ownership test did not start watch"); wait_for(function() return command_replace_calls > 0 end, "watch did not publish initial diagnostics"); local replace_before_late = command_replace_calls; late_finite_callback(); wait_for(function() return late_finite_result ~= nil end, "finite result did not settle while watch was active"); assert_true(command_replace_calls == replace_before_late, "finite diagnostics overwrote watch-owned diagnostics"); commands_adapter.watch_stop(); wait_for(function() return commands_adapter.watch_active() == nil end, "watch did not stop"); command_diagnostics.replace = original_command_replace
+
+local function reconfigure_watch_completed(invocation, sequence)
+  return string.format('{"version":1,"sequence":%d,"event":"watch.build.completed","command":"watch","invocation_id":"%s","data":{"generation":0,"snapshot_generation":null,"status":"succeeded","outcome":{"type":"fresh"},"inputs":[],"diagnostics":[],"artifacts":[],"freshness":{"type":"fresh"},"publication":{"type":"not_attempted","reason":"no_candidates"},"recovery":[],"restart_guidance":{"type":"host_policy_required","decision":"unspecified"}}}\n', sequence, invocation)
+end
+local reconfigure_watch_old_emit, reconfigure_watch_old_exit, reconfigure_watch_old_child
+local reconfigure_watch_ready, reconfigure_watch_signals = false, {}
+local reconfigure_watch_old_system = function(argv, opts, on_exit)
+  local invocation = argv[#argv - 1]
+  reconfigure_watch_old_child = {}
+  function reconfigure_watch_old_child:write() end
+  function reconfigure_watch_old_child:kill(signal) reconfigure_watch_signals[#reconfigure_watch_signals + 1] = signal end
+  reconfigure_watch_old_emit = function()
+    opts.stdout(nil, reconfigure_watch_completed(invocation, 4))
+  end
+  reconfigure_watch_old_exit = on_exit
+  vim.schedule(function()
+    opts.stdout(nil, vim.json.encode({ version = 1, sequence = 0, event = "watch.started", command = "watch", invocation_id = invocation, data = { project_root = { encoding = "utf8", value = root } } }) .. "\n")
+    opts.stdout(nil, vim.json.encode({ version = 1, sequence = 1, event = "watch.build.started", command = "watch", invocation_id = invocation, data = { generation = 0, trigger = "initial" } }) .. "\n")
+    opts.stdout(nil, reconfigure_watch_completed(invocation, 2))
+    opts.stdout(nil, vim.json.encode({ version = 1, sequence = 3, event = "watch.waiting", command = "watch", invocation_id = invocation, data = vim.empty_dict() }) .. "\n")
+    reconfigure_watch_ready = true
+  end)
+  return reconfigure_watch_old_child
+end
+local reconfigure_watch_new_spawned = false
+local reconfigure_watch_new_system = function(argv, opts, on_exit)
+  local invocation = argv[#argv - 1]
+  reconfigure_watch_new_spawned = true
+  local child = {}
+  function child:write(data)
+    if not data then return end
+    opts.stdout(nil, vim.json.encode({ version = 1, sequence = 1, event = "watch.cancel.requested", command = "watch", invocation_id = invocation, data = { cancellation = { type = "user" } } }) .. "\n")
+    opts.stdout(nil, vim.json.encode({ version = 1, sequence = 2, event = "watch.stopped", command = "watch", invocation_id = invocation, data = { reason = { type = "cancelled" } } }) .. "\n")
+    on_exit({ code = 0, signal = 0 })
+  end
+  function child:kill() end
+  vim.schedule(function()
+    opts.stdout(nil, vim.json.encode({ version = 1, sequence = 0, event = "watch.started", command = "watch", invocation_id = invocation, data = { project_root = { encoding = "utf8", value = root } } }) .. "\n")
+  end)
+  return child
+end
+local reconfigure_watch_replace_calls = 0
+local original_reconfigure_watch_replace = command_diagnostics.replace
+command_diagnostics.replace = function(...)
+  reconfigure_watch_replace_calls = reconfigure_watch_replace_calls + 1
+  return original_reconfigure_watch_replace(...)
+end
+commands_adapter.configure({ system = reconfigure_watch_old_system, watch_cancel_grace_ms = 10, watch_stop_timeout_ms = 20, watch_force_kill_delay_ms = 10, watch_teardown_timeout_ms = 20 })
+assert_true(commands_adapter.watch_start({ project_root = root, invocation_id = "reconfigure-watch-old" }) ~= nil, "reconfiguration watch did not start")
+wait_for(function() return reconfigure_watch_ready end, "reconfiguration watch did not reach its first build")
+assert_true(reconfigure_watch_replace_calls == 1, "reconfiguration watch did not publish its initial diagnostics")
+commands_adapter.configure({ system = reconfigure_watch_new_system, watch_cancel_grace_ms = 200, watch_stop_timeout_ms = 200, watch_force_kill_delay_ms = 200, watch_teardown_timeout_ms = 200 })
+assert_true(commands_adapter.watch_active() ~= nil, "watch reconfiguration discarded ownership before close")
+reconfigure_watch_old_emit()
+vim.wait(100)
+assert_true(reconfigure_watch_replace_calls == 1, "fenced watch published stale diagnostics")
+wait_for(function() return reconfigure_watch_signals[1] == "sigterm" and reconfigure_watch_signals[2] == "sigkill" end, "watch reconfiguration did not use the old bounded shutdown timing")
+assert_true(commands_adapter.watch_active() ~= nil, "watch reconfiguration released its tombstone before close")
+reconfigure_watch_old_exit({ code = 0, signal = 9 })
+wait_for(function() return commands_adapter.watch_active() == nil end, "watch reconfiguration did not release ownership after close")
+assert_true(commands_adapter.watch_start({ project_root = root, invocation_id = "reconfigure-watch-new" }) ~= nil, "watch did not become reusable after reconfiguration close")
+wait_for(function() return reconfigure_watch_new_spawned end, "watch did not use the replacement configuration")
+commands_adapter.watch_stop()
+wait_for(function() return commands_adapter.watch_active() == nil end, "replacement watch did not close")
+command_diagnostics.replace = original_reconfigure_watch_replace
 
 local hung_child, hung_on_exit, hung_failure, hung_signals = nil, nil, nil, {}
 local hung_watch = watch.new({ config = { binary = vim.env.RECITE_CLI, watch_stop_timeout_ms = 20, watch_force_kill_delay_ms = 20, watch_teardown_timeout_ms = 20 }, notify = function(id) if id == "neovim-command-protocol-failure" then hung_failure = true end end, clear_diagnostics = function() end, replace_diagnostics = function() end })

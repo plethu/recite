@@ -25,7 +25,7 @@ function M.new(options)
 
   local function stop_process(session)
     if session and session.process then
-      process.terminate_bounded(session.process, state.config.finite_stop_timeout_ms, state.config.finite_kill_timeout_ms, function()
+      process.terminate_bounded(session.process, session.config.finite_stop_timeout_ms, session.config.finite_kill_timeout_ms, function()
         if session.closed or session.hung then return end
         session.hung = true
         state.finite_blocked = true
@@ -210,22 +210,32 @@ function M.new(options)
     cancel(reason or "adapter disposed")
   end
 
+  function controller.cancel(reason)
+    cancel(reason or "configuration changed")
+  end
+
   function controller.dispose_sync(reason)
     cancel(reason or "editor exit")
     local sessions = {}
     for _, session in pairs(state.finite_sessions) do sessions[#sessions + 1] = session end
+    local stop_timeout = state.config.finite_stop_timeout_ms or 250
+    local kill_timeout = state.config.finite_kill_timeout_ms or 250
+    for _, session in ipairs(sessions) do
+      stop_timeout = math.max(stop_timeout, session.config.finite_stop_timeout_ms or 250)
+      kill_timeout = math.max(kill_timeout, session.config.finite_kill_timeout_ms or 250)
+    end
     local function closed()
       for _, session in ipairs(sessions) do
         if not session.owner_closed then return false end
       end
       return true
     end
-    vim.wait(state.config.finite_stop_timeout_ms or 250, closed, 10)
+    vim.wait(stop_timeout, closed, 10)
     if not closed() then
       for _, session in ipairs(sessions) do
         if not session.owner_closed then process.terminate(session.process, true) end
       end
-      vim.wait(state.config.finite_kill_timeout_ms or 250, closed, 10)
+      vim.wait(kill_timeout, closed, 10)
     end
     if not closed() then
       report("neovim-command-protocol-failure", { detail = "finite_process_hung" }, vim.log.levels.ERROR)
