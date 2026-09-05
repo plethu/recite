@@ -146,10 +146,10 @@ implemented primary artifact.
 - `lsp.stale.version`: refuse an older document version without replacing the current overlay or publishing stale evidence.
 - `lsp.cancellation`: document the current unsupported cancellation surface and its owner rather than claiming a timeout is cancellation.
 - `command.structured.results`: project typed/versioned finite CLI command records through the shared VS Code/VSCodium adapter; no human stderr/output parsing is permitted.
-- `editor.filetype.registration`: exercise `.recite` activation and file association through the checked-in Neovim runtimepath package.
+- `editor.filetype.registration`: exercise `.recite` activation and file association through the checked-in Neovim runtimepath, VS Code/VSCodium package, and Zed language package projections.
 - `editor.vscode.syntax-projection`: project the checked-in syntax-only TextMate grammar and deterministic VSIX for VS Code/VSCodium; installed host activation and non-Linux platforms remain untested.
 - `editor.neovim.syntax-projection`: record ABI14 Tree-sitter parser/query loading through the Neovim package; the shared grammar remains owned by #98.
-- `editor.zed.syntax-projection`: reserve Zed syntax and compatibility evidence for #192.
+- `editor.zed.syntax-projection`: check the Zed language package, exact highlights-query projection, pinned grammar revision, and lexical capture evidence through `scripts/check-zed.sh`; this does not claim installed-host rendering.
 - `lsp.completion`: project structured completion items from the shared snapshot.
 - `lsp.definition`: resolve same-project and cross-file definitions through the shared snapshot.
 - `lsp.hover`: project structured hover content and symbol ranges from the shared kernel.
@@ -160,9 +160,9 @@ implemented primary artifact.
 - `workspace.configuration`: keep root and project configuration ownership outside client semantics.
 - `authoring.stable-id.operations`: reserve the shared-kernel missing-ID repair; broader stable-ID edit preconditions remain incomplete.
 - `schema.localisation.resolution`: project the current compiler catalogue identity/fingerprint and CLI locale-fallback evidence; combined LSP schema/catalogue provenance remains planned.
-- `command.compile.validate.extract`: exercise version-1 structured compile, validate, and extract records through the local-first VS Code/VSCodium command adapter.
+- `command.compile.validate.extract`: exercise version-1 structured compile, validate, and extract records through the local-first VS Code/VSCodium command adapter; Zed exposes static structured tasks but does not parse their records into diagnostics.
 - `command.run.trace`: exercise version-1 structured runtime and trace records through the local-first VS Code/VSCodium command adapter.
-- `command.watch.lifecycle`: exercise the version-1 watch wire, argv/cwd process boundary, cooperative cancel, bounded recovery, and typed diagnostic replacement through the VS Code/VSCodium adapter.
+- `command.watch.lifecycle`: exercise the version-1 watch wire, argv/cwd process boundary, cooperative cancel, bounded recovery, and typed diagnostic replacement through the VS Code/VSCodium adapter; Zed's static watch task remains a host-terminal process with no parsed diagnostic controller or fake stdin cancellation.
 
 Executable evidence covers the shared LSP operations, project-root discovery,
 the bounded stable-ID repair, compiler catalogue fallback, the compiler's
@@ -176,7 +176,9 @@ generated-parser reproducibility, canonical fixture coverage, recovery
 boundaries, and lexical captures; the Neovim check adds Linux/0.12.5 filetype,
 LSP, and ABI14 parser evidence. The VS Code package check validates the
 generated VSIX contents, including the grammar, and the Node tests exercise the
-real `recite-lsp` process over stdio on Linux. The pinned TextMate tokenizer
+real `recite-lsp` process over stdio on Linux. The Zed package check validates
+the manifest, language config, static task argv, API-0.7.0 launcher, exact
+highlights query, and pinned grammar revision. The pinned TextMate tokenizer
 snapshots assert exact scopes for blocks, diverts, plural pipes, interpolation,
 condition directives, anchors, and hostile recovery cases. TextMate appearance
 is theme-controlled; anchor scopes are merely de-emphasizable, never hidden by
@@ -189,14 +191,22 @@ macOS or Windows support, marketplace publication, or a distributable archive
 in source control. They also do not claim a native text problem matcher or
 task contribution: typed command diagnostics are intentionally owned by the
 structured `DiagnosticCollection` projection. Combined LSP schema/catalogue
-transport, native F2 rename, or a Zed grammar remain outside this evidence.
+transport, native F2 rename, or installed Zed host activation remain outside
+this evidence. Zed task terminals do not parse structured records into
+diagnostics, and no watch diagnostic controller or fake stdin cancellation is
+claimed.
 
 Capability rows with direct VS Code/VSCodium package, adapter, or live-server
 evidence use `partial` client status and include `scripts/check-vscode.sh` in
-their evidence commands. Rows for native rename and other untested host
-operations remain planned. Neovim and Zed command/watch adapters also remain
-planned; the VS Code/VSCodium command/watch rows above are partial because
-their Linux Node and real-CLI evidence is present.
+their evidence commands. The Zed syntax/filetype package is `partial` on Linux
+because source/package checks exist; no installed Zed host is available in this
+verification environment, so native Zed LSP activation remains planned. Rows
+for native rename and other untested host operations remain planned. Zed's
+static compile/validate/extract/watch task definitions do not make it a
+structured command/watch adapter: task terminals do not parse human or NDJSON
+output, and Zed does not receive a fake cancellation controller. Keyboard,
+task-panel, diagnostic-panel, colour, and accessibility behavior remain host
+surfaces and are not smoke-tested.
 
 The rows currently draw from these scenarios. The source and schema files are
 the canonical fixtures; derived inputs are transformations or protocol events,
@@ -208,9 +218,9 @@ not copied Recite or schema sources.
 - `stale-overlay`: send a newer accepted overlay followed by an older one, then query the current text.
 - `stable-id-repair`: derive a missing-ID overlay from the canonical language fixture and request a shared-kernel repair.
 - `multi-file-project`: materialize two canonical source fixtures under one root and resolve a qualified cross-file target.
-- `client-syntax-projections`: record partial syntax-only Tree-sitter evidence alongside the checked-in VS Code/VSCodium TextMate package projection; canonical and malformed inputs remain shared fixtures, while an incomplete buffer is derived under `fixtures/editor-parity/vscode/`; installed host setup remains untested.
+- `client-syntax-projections`: record partial syntax-only Tree-sitter evidence alongside the checked-in VS Code/VSCodium TextMate and Zed query/package projections; canonical and malformed inputs remain shared fixtures, while incomplete buffers are derived under `fixtures/editor-parity/vscode/` and `fixtures/editor-parity/zed/`; installed host setup remains untested.
 - `schema-localisation-reference`: combine the canonical manifests and pressure source with the checked-in PO catalogue to exercise the current shared/CLI locale-fallback evidence.
-- `command-watch-reference`: exercise finite and streaming CLI protocol records, local argv/cwd resolution, typed diagnostics, and watch cancellation/recovery through `scripts/check-vscode.sh`; installed host activation remains untested.
+- `command-watch-reference`: exercise finite and streaming CLI protocol records, local argv/cwd resolution, typed diagnostics, and watch cancellation/recovery through `scripts/check-vscode.sh`; `scripts/check-zed.sh` checks only Zed's static structured-task argv and documents the host-terminal limitation; installed host activation remains untested.
 
 ## Client, platform, and distribution status
 
@@ -227,7 +237,7 @@ this checkout; no marketplace or Open VSX distribution is claimed.
 | VS Code | checked-in extension scaffold and TextMate grammar; generated VSIX | partial | planned | planned | partial |
 | VSCodium | the same checked-in scaffold and TextMate grammar; generated VSIX | partial | planned | planned | partial |
 | Neovim | checked-in native runtimepath setup plus Tree-sitter grammar; no package distribution | partial | planned | planned | partial |
-| Zed | future extension package | planned | planned | planned | planned |
+| Zed | checked-in extension source, pinned grammar reference, language config/query, static tasks, and API-0.7.0 launcher | partial package evidence only | planned | planned | partial |
 
 The VS Code and VSCodium partial status is deliberately narrower than host
 support: the extension source and syntax grammar are checked in, deterministic
@@ -257,5 +267,11 @@ services, marketplace publication, or installed-host compatibility. The
 checked-in Tree-sitter grammar remains a syntax artifact; Neovim consumes it
 through its runtimepath package. The Neovim client and distribution records
 therefore name `neovim-runtimepath` as their primary artifact and keep
-`tree-sitter-grammar` as supporting material. Zed does not consume either
-artifact without compatibility evidence and remains planned under #192.
+`tree-sitter-grammar` as supporting material. Zed references the upstream
+grammar at the pinned revision and projects its query, with exact drift and
+capture checks in `scripts/check-zed.sh`; this source/package compatibility
+evidence does not establish installed Zed host activation, macOS/Windows
+support, rendering/accessibility integration, keyboard/task/diagnostic host
+behavior, gallery publication, dynamic tasks, parsed structured command/watch
+diagnostics, task termination/clean shutdown, or a task cancellation
+controller.

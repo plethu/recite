@@ -8,7 +8,7 @@ from .paths import require_no_symlink_components, require_repo_file
 
 
 def validate_command(ctx: Context, capability_id: str, command: str) -> None:
-    if command in {"scripts/check-tree-sitter.sh", "scripts/check-neovim.sh", "scripts/check-vscode.sh"}:
+    if command in {"scripts/check-tree-sitter.sh", "scripts/check-neovim.sh", "scripts/check-vscode.sh", "scripts/check-zed.sh"}:
         script, _ = require_repo_file(ctx, command, f"capability {capability_id} evidence script")
         ctx.require(script.stat().st_mode & 0o111, f"capability {capability_id} evidence script is not executable: {command}")
         return

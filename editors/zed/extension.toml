@@ -1,0 +1,16 @@
+id = "recite"
+name = "Recite"
+description = "Recite dialogue language support for Zed."
+version = "0.1.0"
+schema_version = 1
+authors = ["Recite contributors"]
+repository = "https://github.com/plethu/recite"
+
+[grammars.recite]
+repository = "https://github.com/plethu/recite"
+rev = "209ea23195f674a18be0b8f87e037273fb3296bd"
+path = "editors/recite-tree-sitter"
+
+[language_servers.recite-lsp]
+name = "Recite Language Server"
+languages = ["Recite"]

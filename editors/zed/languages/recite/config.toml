@@ -1,0 +1,6 @@
+name = "Recite"
+grammar = "recite"
+path_suffixes = ["recite"]
+line_comments = ["#"]
+tab_size = 2
+hard_tabs = false

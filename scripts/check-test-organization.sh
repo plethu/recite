@@ -9,6 +9,7 @@ Usage:
 Checks Recite Rust test layout conventions:
   - production source may declare `#[cfg(test)] mod tests;` only;
   - private source-side tests must live in module-local `tests.rs` sidecars;
+  - Zed extension source follows the same sidecar rule under `editors/zed/src/`;
   - source-side `*_test.rs` and `*_tests.rs` files are not allowed;
   - crate behavior tests should live under `crates/<crate>/tests/`.
 
@@ -75,7 +76,9 @@ while IFS= read -r file; do
 done < <(
   git -C "$repo_root" ls-files --cached --others --exclude-standard -- \
     'crates/*/src/*.rs' \
-    'crates/*/src/**/*.rs'
+    'crates/*/src/**/*.rs' \
+    'editors/zed/src/*.rs' \
+    'editors/zed/src/**/*.rs'
 )
 
 if (( failures > 0 )); then
