@@ -71,6 +71,8 @@ def main() -> int:
             raise SystemExit(f"{capability_id} must attribute package/live evidence to vscode-vsix")
 
     expected_zed_evidence = {
+        "command.compile.validate.extract",
+        "command.watch.lifecycle",
         "editor.filetype.registration",
         "editor.zed.syntax-projection",
     }
@@ -90,13 +92,35 @@ def main() -> int:
         raise SystemExit("editor.zed.syntax-projection must retain the open Zed follow-up")
     if zed_syntax["client_status"].get("vscode") != "planned":
         raise SystemExit("editor.zed.syntax-projection must not project Zed evidence to VS Code")
-    for capability_id in (
-        "command.compile.validate.extract",
-        "command.run.trace",
-        "command.watch.lifecycle",
-    ):
-        if capabilities[capability_id]["client_status"].get("zed") != "planned":
-            raise SystemExit(f"{capability_id} must retain Zed's static-task limitation")
+
+    expected_zed_command_status = {
+        "command.compile.validate.extract": "partial",
+        "command.run.trace": "unsupported",
+        "command.structured.results": "planned",
+        "command.watch.lifecycle": "partial",
+    }
+    for capability_id, expected_status in expected_zed_command_status.items():
+        actual_status = capabilities[capability_id]["client_status"].get("zed")
+        if actual_status != expected_status:
+            raise SystemExit(
+                f"{capability_id} must retain Zed status {expected_status!r}, "
+                f"not {actual_status!r}"
+            )
+
+    static_task_assertions = {
+        "command.compile.validate.extract": (
+            "zed only exposes explicit static terminal tasks and does not parse their output"
+        ),
+        "command.watch.lifecycle": (
+            "zed checks only explicit static watch task argv; no parsed task controller is claimed"
+        ),
+    }
+    for capability_id, assertion in static_task_assertions.items():
+        assertions = capabilities[capability_id]["expected_evidence"].get("assertions", [])
+        if assertion not in (value.lower() for value in assertions):
+            raise SystemExit(
+                f"{capability_id} must describe Zed as static task evidence without a parsed adapter"
+            )
 
     if "installed vs code/vscodium activation smoke" not in document_path.read_text(encoding="utf-8").lower():
         raise SystemExit("editor parity docs must retain the missing host activation boundary")
