@@ -424,6 +424,24 @@ command = "string"
 command = "string"
 [arguments."neovim-health-current-root"]
 root = "string"
+[arguments."neovim-command-description"]
+command = "string"
+[arguments."neovim-command-cli-missing"]
+command = "string"
+[arguments."neovim-command-output-derived"]
+path = "string"
+[arguments."neovim-command-result"]
+command = "string"
+detail = "string"
+[arguments."neovim-command-content-diagnostics"]
+command = "string"
+detail = "string"
+[arguments."neovim-command-failure"]
+detail = "string"
+[arguments."neovim-command-protocol-failure"]
+detail = "string"
+[arguments."neovim-command-watch-status"]
+detail = "string"
 [arguments."vscode-command-result"]
 detail = "string"
 [arguments."vscode-command-content-diagnostics"]

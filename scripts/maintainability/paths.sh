@@ -48,6 +48,7 @@ maintainability_is_excluded_path() {
     target/*|include/recite.h|fixtures/generated/* \
       |editors/vscode/src/messages.generated.js \
       |editors/recite-neovim/lua/recite_messages.lua \
+      |editors/recite-neovim/lua/recite_diagnostics.lua \
       |editors/recite-tree-sitter/src/parser.c \
       |editors/recite-tree-sitter/src/grammar.json \
       |editors/recite-tree-sitter/src/node-types.json)

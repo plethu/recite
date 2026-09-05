@@ -138,8 +138,38 @@ markup, and match exhaustiveness.
 
 ## Authoring commands
 
-These commands operate on the project or source paths and are intentionally
-ordinary CLI commands. They do not depend on Neovim or a plugin manager:
+The integration exposes scriptable `require("recite")` functions and matching
+user commands for the versioned structured CLI boundary:
+
+```lua
+local recite = require("recite")
+recite.validate({ project_root = "/path/to/project", paths = { "/path/to/project/dialogue.recite" } })
+recite.compile({ project_root = "/path/to/project", paths = { "/path/to/project/dialogue.recite" },
+  output = "/path/to/project/build/dialogue.recitec" })
+recite.extract({ project_root = "/path/to/project", paths = { "/path/to/project/dialogue.recite" } })
+recite.run({ asset = "/path/to/project/build/dialogue.recitec", block = "which_way", fixture = "/path/to/project/runtime-fixture.toml" })
+recite.trace({ asset = "/path/to/project/build/dialogue.recitec", block = "which_way", fixture = "/path/to/project/runtime-fixture.toml" })
+```
+
+The corresponding commands are `:ReciteValidate`, `:ReciteCompile`,
+`:ReciteExtract`, `:ReciteRun`, `:ReciteTrace`, `:ReciteWatchStart`, and
+`:ReciteWatchStop`. Run and trace deliberately require explicit asset, block,
+and fixture paths; Neovim does not guess runtime inputs. Compile derives
+`build/dialogue.recitec` under the selected project when `output` is omitted,
+and reports that path because an existing generated file may be replaced.
+Set `commands.binary` to an absolute checkout-local executable when PATH
+discovery is not suitable.
+
+The adapter passes argv directly to `vim.system`, uses the explicit project
+root as its working directory, validates the version-1 finite and watch NDJSON
+records, and owns a separate child lifecycle from the LSP client. CLI
+diagnostics use a `recite-cli` namespace and are only projected for clean
+disk-backed buffers; unsaved or changed buffers retain LSP ownership. Watch
+owns one child, uses the version-1 stdin cancel record, and bounds TERM/KILL
+recovery. Late records from retired generations are ignored.
+
+The same commands remain ordinary CLI operations and do not depend on a plugin
+manager:
 
 ```sh
 recite validate /path/to/project
@@ -149,12 +179,11 @@ recite play /path/to/project/build/dialogue.recitec \
   --block which_way --ui plain
 ```
 
-`recite watch` is the current human-oriented rebuild stream. Versioned
-structured command and watch integration, process lifecycle, cancellation, and
-editor task presentation belong to #53; this setup does not scrape CLI prose
-or pretend that a watch process is an LSP feature. The `play --ui plain` form
-is the predictable terminal preview path and is also suitable for screen
-readers and pipes.
+The Lua adapter does not scrape CLI prose or pretend that a watch process is an
+LSP feature. The `play --ui plain` form remains the predictable terminal
+preview path and is also suitable for screen readers and pipes. Zed's static
+tasks are a separate terminal projection; they do not parse these records or
+provide the Neovim adapter's diagnostic replacement and cancellation control.
 
 ## Health and troubleshooting
 

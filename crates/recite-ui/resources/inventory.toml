@@ -435,6 +435,21 @@ resource_ids = [
 "neovim-health-parser-build",
 "neovim-health-current-root",
 "neovim-health-open-buffer",
+"neovim-command-description",
+"neovim-command-document-required",
+"neovim-command-document-unsaved",
+"neovim-command-document-changed",
+"neovim-command-input-invalid",
+"neovim-command-cli-missing",
+"neovim-command-output-derived",
+"neovim-command-result",
+"neovim-command-content-diagnostics",
+"neovim-command-failure",
+"neovim-command-protocol-failure",
+"neovim-command-watch-running",
+"neovim-command-watch-not-running",
+"neovim-command-watch-stop-timeout",
+"neovim-command-watch-status",
 ]
 
 # The complete future default-code presentation registry is explicit. Parser
@@ -585,6 +600,21 @@ ids = [
 "neovim-health-parser-build",
 "neovim-health-current-root",
 "neovim-health-open-buffer",
+"neovim-command-description",
+"neovim-command-document-required",
+"neovim-command-document-unsaved",
+"neovim-command-document-changed",
+"neovim-command-input-invalid",
+"neovim-command-cli-missing",
+"neovim-command-output-derived",
+"neovim-command-result",
+"neovim-command-content-diagnostics",
+"neovim-command-failure",
+"neovim-command-protocol-failure",
+"neovim-command-watch-running",
+"neovim-command-watch-not-running",
+"neovim-command-watch-stop-timeout",
+"neovim-command-watch-status",
 ]
 
 [projections.vscode]

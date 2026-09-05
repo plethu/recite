@@ -115,5 +115,10 @@ message_ids! {
     NeovimHealthLspExecutableFound, NeovimHealthLspExecutableMissing, NeovimHealthLspInstall,
     NeovimHealthQueryFound, NeovimHealthQueryMissing, NeovimHealthParserFound,
     NeovimHealthParserMissing, NeovimHealthParserBuild, NeovimHealthCurrentRoot,
-    NeovimHealthOpenBuffer,
+    NeovimHealthOpenBuffer, NeovimCommandDescription, NeovimCommandDocumentRequired,
+    NeovimCommandDocumentUnsaved, NeovimCommandDocumentChanged, NeovimCommandInputInvalid,
+    NeovimCommandCliMissing, NeovimCommandOutputDerived, NeovimCommandResult,
+    NeovimCommandContentDiagnostics, NeovimCommandFailure, NeovimCommandProtocolFailure,
+    NeovimCommandWatchRunning, NeovimCommandWatchNotRunning, NeovimCommandWatchStopTimeout,
+    NeovimCommandWatchStatus,
 }

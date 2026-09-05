@@ -216,7 +216,7 @@ production suppressions must carry a narrow scope and rationale.
 | `crates/recite-runtime/tests/traversal/conditions/choice_conditions.rs` | 365 | test/support | runtime/tests | cohesive | Choice condition coverage |
 | `crates/recite-lsp/src/tests/availability/speaker.rs` | 351 | test/support | lsp/tests | review | Typed and ordinary speaker completion coverage |
 | `crates/recite-compiler/tests/validation/participation.rs` | 424 | test/support | compiler/tests | cohesive | #168: participation-aware validation completeness and all-complete compatibility coverage |
-| `crates/recite-ui/tests/contract.rs` | 475 | test/support | ui/tests | review | #51: typed client projection and argument parity coverage remains one inventory contract suite |
+| `crates/recite-ui/tests/contract.rs` | 486 | test/support | ui/tests | review | #51: typed client projection and argument parity coverage remains one inventory contract suite |
 | `editors/recite-tree-sitter/grammar.js` | 390 | production | tree-sitter/grammar | cohesive | Grammar source owns syntax and recovery rules alongside the named node declarations |
 | `editors/vscode/src/controller.js` | 377 | production | vscode/controller | review | #51: controller retains restart coordination, startup projection, and terminal child-failure recovery |
 | `editors/vscode/src/lsp-features.js` | 262 | production | vscode/lsp-features | review | #51: LSP range/workspace-edit conversion and version precondition projection remain one checked editor boundary |
@@ -227,6 +227,8 @@ production suppressions must carry a narrow scope and rationale.
 | `editors/vscode/scripts/ui-boundary-adapter.mjs` | 251 | tooling | vscode/checks | review | #51: semantic UI adapter contract remains one cohesive structural boundary |
 | `editors/vscode/scripts/ui-boundary-command-contracts.mjs` | 257 | tooling | vscode/checks | review | #51: typed command and rename UI capabilities remain one explicit structural boundary; reassess before adding another host capability |
 | `editors/vscode/scripts/ui-boundary-calls.mjs` | 350 | tooling | vscode/checks | review | UI boundary call inventory remains a single generated-boundary checker |
+| `editors/recite-neovim/lua/recite/command_process.lua` | 273 | production | neovim/commands | review | Structured finite/stream process ownership, bounded TERM/KILL teardown, and callback settlement remain one transport boundary |
+| `editors/recite-neovim/lua/recite/watch.lua` | 271 | production | neovim/watch | review | Structured watch validation, recovery escalation, tombstone ownership, and synchronous editor-exit drain remain one lifecycle boundary |
 | `scripts/check-lint-suppressions.py` | 256 | tooling | lint-policy | review | Suppression policy parsing and diff-aware enforcement remain one checker boundary |
 | `scripts/check-tree-sitter.sh` | 399 | tooling | tree-sitter/check | review | Parser generation, ABI, corpus, and reproducibility checks share one tool boundary |
 | `scripts/check-zed.sh` | 304 | tooling | zed/check | review | #192: Zed manifest, grammar pin, task argv, launcher API, and parity evidence remain one checked boundary; split before adding another host surface |

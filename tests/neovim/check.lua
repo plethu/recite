@@ -261,7 +261,19 @@ assert_true(#health_module_path == 1
   "Neovim runtimepath did not expose the standard Recite health module")
 assert_true(#vim.api.nvim_get_runtime_file("health/recite.lua", true) == 0,
   "Neovim runtimepath retained the non-discoverable Recite health module")
-vim.cmd("checkhealth recite")
+-- `:checkhealth` runs runtime discovery and must execute on the main event
+-- loop, not nested inside the Lua chunk that drove the preceding LSP checks.
+-- This also keeps Neovim 0.10 and 0.12 from reporting a spurious E5009
+-- against their internally selected runtime path.
+local health_finished = false
+local health_error
+vim.schedule(function()
+  local ok, error = pcall(vim.cmd, "checkhealth recite")
+  if ok then health_error = nil else health_error = error end
+  health_finished = true
+end)
+wait_for(function() return health_finished end, "checkhealth did not complete")
+assert_true(health_error == nil, "checkhealth raised a Lua/Vim error: " .. tostring(health_error))
 local health_lines = vim.api.nvim_buf_get_lines(0, 0, -1, false)
 local function health_report_contains(message)
   for _, line in ipairs(health_lines) do

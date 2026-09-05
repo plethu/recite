@@ -112,7 +112,8 @@ fn diagnostic_contract_matches_registry_and_resources() {
             Client::Tui,
             Client::Lsp,
             Client::VsCode,
-            Client::VsCodium
+            Client::VsCodium,
+            Client::Neovim
         ]
         .into_iter()
         .collect()

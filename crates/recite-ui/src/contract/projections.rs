@@ -94,7 +94,22 @@ pub(super) const fn for_message(id: MsgId) -> &'static [ProjectionDeclaration] {
         | MsgId::NeovimHealthParserMissing
         | MsgId::NeovimHealthParserBuild
         | MsgId::NeovimHealthCurrentRoot
-        | MsgId::NeovimHealthOpenBuffer => &NEOVIM_PROJECTION,
+        | MsgId::NeovimHealthOpenBuffer
+        | MsgId::NeovimCommandDescription
+        | MsgId::NeovimCommandDocumentRequired
+        | MsgId::NeovimCommandDocumentUnsaved
+        | MsgId::NeovimCommandDocumentChanged
+        | MsgId::NeovimCommandInputInvalid
+        | MsgId::NeovimCommandCliMissing
+        | MsgId::NeovimCommandOutputDerived
+        | MsgId::NeovimCommandResult
+        | MsgId::NeovimCommandContentDiagnostics
+        | MsgId::NeovimCommandFailure
+        | MsgId::NeovimCommandProtocolFailure
+        | MsgId::NeovimCommandWatchRunning
+        | MsgId::NeovimCommandWatchNotRunning
+        | MsgId::NeovimCommandWatchStopTimeout
+        | MsgId::NeovimCommandWatchStatus => &NEOVIM_PROJECTION,
         MsgId::LspClientDisplayName => &DISPLAY_NAME_PROJECTIONS,
         MsgId::LspClientRestartExhausted => &RESTART_EXHAUSTED_PROJECTIONS,
         MsgId::LspClientStartFailed

@@ -203,7 +203,7 @@ if zed["status"] != "partial" or zed["platform_status"]["linux"] != "partial":
     fail("parity contract must record Zed as partial on Linux")
 if artifact["status"] != "partial" or zed_syntax["implementation_status"] != "partial":
     fail("parity contract must record checked Zed source/package evidence as partial")
-expected_partial = {"editor.filetype.registration", "editor.zed.syntax-projection"}
+expected_partial = {"editor.filetype.registration", "editor.zed.syntax-projection", "command.compile.validate.extract", "command.watch.lifecycle"}
 actual_partial = set()
 for capability in parity.get("capabilities", []):
     if capability.get("client_status", {}).get("zed") != "partial":
