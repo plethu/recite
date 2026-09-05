@@ -125,6 +125,13 @@
       "derived_inputs": ["BuildStatusProjection lifecycle", "generation, diagnostics, freshness, publication, recovery, and cancellation fields"],
       "expected_evidence": ["finite structured CLI records", "protocol-neutral status projection", "watch wire/process/binary/client integration remains planned or partial"],
       "status": "partial"
+    },
+    {
+      "id": "keyboard-workflow",
+      "canonical_fixtures": ["fixtures/recite/valid/core_language_spike.recite", "fixtures/recite/invalid/parser_marker_leading_prose.recite"],
+      "derived_inputs": ["installed host opens and activates a .recite file", "keyboard-only diagnostic navigation and command invocation", "keyboard-only status/failure observation", "keyboard-only watch stop where the host exposes it"],
+      "expected_evidence": ["exact host product, version, platform, profile, and key sequence", "diagnostic navigation and command status are keyboard reachable without colour alone", "unsupported host operations are recorded explicitly"],
+      "status": "planned"
     }
   ],
   "capabilities": [
@@ -527,6 +534,22 @@
       "distribution_status": {"vs-marketplace": "planned", "open-vsx": "planned", "neovim-distribution": "planned", "zed-distribution": "planned"},
       "expected_evidence": {"status": "partial", "commands": ["scripts/check-vscode.sh", "scripts/check-neovim.sh", "scripts/check-zed.sh", "cargo test --locked -p recite-compiler --test authoring_build status_projection::projection_retains_structured_diagnostics_and_freshness"], "assertions": ["the real CLI watch adapter covers start, initial build/waiting, stop, and process exit", "Neovim fake and real lanes cover one-child ownership, cooperative cancel, bounded recovery, diagnostic replacement, and late-record fencing", "Zed checks only explicit static watch task argv; no parsed task controller is claimed"], "artifacts": ["neovim-runtimepath", "zed-extension"]},
       "follow_up": "#53"
+    },
+    {
+      "id": "editor.keyboard.workflow",
+      "scenario": "keyboard-workflow",
+      "authority": ["client", "recite-lsp", "recite-cli"],
+      "protocol": "client",
+      "expected": {"kind": "installed-host-keyboard-workflow", "assertions": ["a .recite file opens and activates through the host", "diagnostics can be reached and navigated without pointer input", "supported authoring commands are keyboard reachable", "status and failure presentation is keyboard observable without relying on colour alone", "a running watch can be stopped from the host where that workflow is exposed"]},
+      "edge_cases": ["host activation is unavailable", "diagnostic panel is not keyboard reachable", "authoring command reports failure", "watch stop is unsupported by the host"],
+      "known_limitation": "No installed-host keyboard evidence is recorded yet. Package, source, and headless protocol checks do not prove keyboard reachability, diagnostic navigation, command invocation, status/failure presentation, or watch stopping; exact host versions and platforms remain untested.",
+      "implementation_status": "planned",
+      "client_status": {"vscode": "planned", "vscodium": "planned", "neovim": "planned", "zed": "planned"},
+      "platform_status": {"linux": "planned", "macos": "planned", "windows": "planned"},
+      "artifact_status": {"vscode-vsix": "partial", "tree-sitter-grammar": "partial", "neovim-runtimepath": "implemented", "zed-extension": "partial"},
+      "distribution_status": {"vs-marketplace": "planned", "open-vsx": "planned", "neovim-distribution": "planned", "zed-distribution": "planned"},
+      "expected_evidence": {"status": "planned", "assertions": ["each claimed client/platform names the exact installed host and version", "the recorded key sequence opens the source, reaches diagnostics, invokes supported commands, and observes status/failure", "watch stopping is recorded as supported or explicitly unsupported per host; no package, source, or headless check is counted as keyboard evidence"]},
+      "follow_up": "#202"
     }
   ]
 }

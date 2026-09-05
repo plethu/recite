@@ -169,6 +169,7 @@ implemented primary artifact.
 - `command.compile.validate.extract`: exercise version-1 structured compile, validate, and extract records through the local-first VS Code/VSCodium and Neovim command adapters; Zed exposes static structured terminal tasks but does not parse their records into diagnostics.
 - `command.run.trace`: exercise version-1 structured runtime and trace records through the local-first VS Code/VSCodium and Neovim command adapters; Zed built-in run/trace remains unsupported because the required asset, block, and fixture are explicit inputs.
 - `command.watch.lifecycle`: exercise the version-1 watch wire, argv/cwd process boundary, cooperative cancel, bounded recovery, and typed diagnostic replacement through the VS Code/VSCodium and Neovim adapters; Zed's static watch task remains a host-terminal process with no parsed diagnostic controller or fake stdin cancellation.
+- `editor.keyboard.workflow`: prove the required keyboard-only workflow in named installed VS Code/VSCodium, Neovim, and Zed hosts: open and activate a `.recite` file, reach and navigate diagnostics, invoke supported authoring commands, observe status/failure, and stop a running watch where the host exposes that workflow. This row is planned and owned by open issue #202; package, source, and headless protocol checks are not installed-host keyboard evidence.
 
 Executable evidence covers the shared LSP operations, project-root discovery,
 the bounded stable-ID repair, compiler catalogue fallback, the compiler's
@@ -214,9 +215,14 @@ static compile/validate/extract/watch task definitions do not make it a
 structured command/watch adapter: task terminals do not parse human or NDJSON
 output, and Zed does not receive a fake cancellation controller. Built-in Zed
 run/trace are unsupported; explicit project tasks remain possible when their
-inputs are known. Keyboard,
-task-panel, diagnostic-panel, colour, and accessibility behavior remain host
-surfaces and are not smoke-tested.
+inputs are known. Keyboard, task-panel, diagnostic-panel, colour, and
+accessibility behavior remain host surfaces and are not smoke-tested by the
+package/source/headless checks. The `editor.keyboard.workflow` row is the
+narrower Milestone 4 host-evidence contract: it remains planned until issue
+#202 records exact host versions, platforms, key sequences, diagnostic
+navigation, command/status and failure presentation, and watch stopping or an
+explicit unsupported result. It does not claim the standalone GUI workbench or
+the broader Milestone 5 accessibility proof.
 
 The rows currently draw from these scenarios. The source and schema files are
 the canonical fixtures; derived inputs are transformations or protocol events,
@@ -231,6 +237,7 @@ not copied Recite or schema sources.
 - `client-syntax-projections`: record partial syntax-only Tree-sitter evidence alongside the checked-in VS Code/VSCodium TextMate and Zed query/package projections; canonical and malformed inputs remain shared fixtures, while incomplete buffers are derived under `fixtures/editor-parity/vscode/` and `fixtures/editor-parity/zed/`; installed host setup remains untested.
 - `schema-localisation-reference`: combine the canonical manifests and pressure source with the checked-in PO catalogue to exercise the current shared/CLI locale-fallback evidence.
 - `command-watch-reference`: exercise finite and streaming CLI protocol records, local argv/cwd resolution, typed diagnostics, and watch cancellation/recovery through `scripts/check-vscode.sh`; `scripts/check-zed.sh` checks only Zed's static structured-task argv and documents the host-terminal limitation; installed host activation remains untested.
+- `keyboard-workflow`: use the shared language and malformed-source fixtures in named installed hosts to record keyboard-only activation, diagnostic navigation, supported command invocation, status/failure observation, and watch stopping where exposed; source/package/headless checks remain supporting evidence only.
 
 ## Client, platform, and distribution status
 
@@ -269,19 +276,23 @@ does not mean either marketplace already carries an artifact.
 This contract should be revised when a shared-kernel operation changes its
 wire shape, when the server negotiates another position encoding, when
 asynchronous work and cancellation become real protocol behavior, or when a
-client/package has executable evidence on a named platform. Such a change must
-update the JSON fixture, this document, and the corresponding tests together.
+client/package or installed host has executable evidence on a named platform.
+Such a change must update the JSON fixture, this document, and the corresponding
+tests together.
 
 The contract does not cover the GUI workbench, engine embedding, remote
-services, marketplace publication, or installed-host compatibility. The
-checked-in Tree-sitter grammar remains a syntax artifact; Neovim consumes it
-through its runtimepath package. The Neovim client and distribution records
-therefore name `neovim-runtimepath` as their primary artifact and keep
-`tree-sitter-grammar` as supporting material. Zed references the upstream
-grammar at the pinned revision and projects its query, with exact drift and
-capture checks in `scripts/check-zed.sh`; this source/package compatibility
-evidence does not establish installed Zed host activation, macOS/Windows
-support, rendering/accessibility integration, keyboard/task/diagnostic host
-behavior, gallery publication, dynamic tasks, parsed structured command/watch
+services, or marketplace publication. The `editor.keyboard.workflow` row is the
+only installed-host keyboard claim in this contract; it does not turn source,
+package, or headless checks into host evidence, and it does not replace the
+broader Milestone 5 accessibility proof. The checked-in Tree-sitter grammar
+remains a syntax artifact; Neovim consumes it through its runtimepath package.
+The Neovim client and distribution records therefore name
+`neovim-runtimepath` as their primary artifact and keep `tree-sitter-grammar`
+as supporting material. Zed references the upstream grammar at the pinned
+revision and projects its query, with exact drift and capture checks in
+`scripts/check-zed.sh`; this source/package compatibility evidence does not
+establish installed Zed host activation, macOS/Windows support,
+rendering/accessibility integration, keyboard/task/diagnostic host behavior,
+gallery publication, dynamic tasks, parsed structured command/watch
 diagnostics, task termination/clean shutdown, or a task cancellation
 controller.
