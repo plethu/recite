@@ -178,12 +178,25 @@ test("watch accepts startup fatal and rejects hostile typed values", () => {
   assert.throws(() => hostile.consume(recordFor("hostile-id", 2, "watch.build.completed", data)), /invalid_build_completed/);
 });
 
+test("watch accepts a producer-valid preparation failure in a fatal stop", () => {
+  const validator = new WatchProtocolValidator("watch", "preparation-id");
+  validator.consume(recordFor("preparation-id", 0, "watch.started", { project_root: root() }));
+  validator.consume(recordFor("preparation-id", 1, "watch.stopped", {
+    reason: { type: "fatal" },
+    error: {
+      category: "schema", code: "watch_preparation", operation: "load_schema",
+      details: { type: "watch", kind: "schema_without_model" }
+    }
+  }));
+  validator.finish(1);
+});
+
 test("watch accepts a fatal control-stream error emitted by the CLI", () => {
   const validator = new WatchProtocolValidator("watch", "control-fatal-id");
   validator.consume(recordFor("control-fatal-id", 0, "watch.started", { project_root: root() }));
   validator.consume(recordFor("control-fatal-id", 1, "watch.stopped", {
     reason: { type: "fatal" },
-    error: { category: "io", code: "io", operation: "control" }
+    error: { category: "io", code: "io", operation: "watch" }
   }));
   validator.finish(1);
 });
