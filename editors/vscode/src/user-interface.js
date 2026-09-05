@@ -84,6 +84,106 @@ export function createUserInterface(api) {
       output.appendLine(message);
       api.window.showInformationMessage(message);
     },
+    commandNotTrusted() {
+      output.appendLine(clientMessage(api, "vscode-command-untrusted"));
+      api.window.showErrorMessage(clientMessage(api, "vscode-command-untrusted"));
+    },
+    commandDocumentRequired() {
+      return new Error(clientMessage(api, "vscode-command-document-required"));
+    },
+    commandDocumentUnsaved() {
+      return new Error(clientMessage(api, "vscode-command-document-unsaved"));
+    },
+    commandUntitledDocument() {
+      return new Error(clientMessage(api, "vscode-command-document-untitled"));
+    },
+    commandDocumentChanged() {
+      return new Error(clientMessage(api, "vscode-command-document-changed"));
+    },
+    commandDocumentOutsideRoot() {
+      return new Error(clientMessage(api, "vscode-command-document-outside-root"));
+    },
+    commandWorkspaceRequired() {
+      return new Error(clientMessage(api, "vscode-command-workspace-required"));
+    },
+    cliPathInvalid() {
+      return new Error(clientMessage(api, "vscode-command-cli-path-invalid"));
+    },
+    commandInputInvalid() {
+      return new Error(clientMessage(api, "vscode-command-input-invalid"));
+    },
+    activeDocument() {
+      return api.window.activeTextEditor?.document;
+    },
+    documentIsOpen(document) {
+      return api.workspace.textDocuments?.includes(document) ?? true;
+    },
+    chooseCompileOutputPath(defaultUri) {
+      return api.window.showSaveDialog({
+        defaultUri,
+        title: clientMessage(api, "vscode-command-compile-output-title")
+      });
+    },
+    chooseExtractOutputPath(defaultUri) {
+      return api.window.showSaveDialog({
+        defaultUri,
+        title: clientMessage(api, "vscode-command-extract-output-title")
+      });
+    },
+    chooseAssetPath() {
+      return api.window.showOpenDialog({
+        title: clientMessage(api, "vscode-command-asset-title"),
+        filters: { [clientMessage(api, "vscode-command-asset-filter")]: ["recitec"] },
+        canSelectFiles: true,
+        canSelectFolders: false,
+        canSelectMany: false
+      });
+    },
+    chooseBlock() {
+      return api.window.showInputBox({
+        title: clientMessage(api, "vscode-command-block-title"),
+        prompt: clientMessage(api, "vscode-command-block-prompt"),
+        placeHolder: clientMessage(api, "vscode-command-block-placeholder")
+      });
+    },
+    chooseFixturePath() {
+      return api.window.showOpenDialog({
+        title: clientMessage(api, "vscode-command-fixture-title"),
+        filters: { [clientMessage(api, "vscode-command-fixture-filter")]: ["toml"] },
+        canSelectFiles: true,
+        canSelectFolders: false,
+        canSelectMany: false
+      });
+    },
+    commandWatchRunning() {
+      output.appendLine(clientMessage(api, "vscode-command-watch-running"));
+      api.window.showErrorMessage(clientMessage(api, "vscode-command-watch-running"));
+    },
+    commandWatchNotRunning() {
+      output.appendLine(clientMessage(api, "vscode-command-watch-not-running"));
+      api.window.showErrorMessage(clientMessage(api, "vscode-command-watch-not-running"));
+    },
+    commandWatchStopTimeout() {
+      output.appendLine(clientMessage(api, "vscode-command-watch-stop-timeout"));
+      api.window.showErrorMessage(clientMessage(api, "vscode-command-watch-stop-timeout"));
+    },
+    commandResult(detail) {
+      output.appendLine(clientMessage(api, "vscode-command-result", detail));
+    },
+    commandContentDiagnostics(detail) {
+      output.appendLine(clientMessage(api, "vscode-command-content-diagnostics", detail));
+    },
+    commandFailure(detail) {
+      output.appendLine(clientMessage(api, "vscode-command-failure", detail));
+      api.window.showErrorMessage(clientMessage(api, "vscode-command-failure", detail));
+    },
+    commandProtocolFailure(detail) {
+      output.appendLine(clientMessage(api, "vscode-command-protocol-failure", detail));
+      api.window.showErrorMessage(clientMessage(api, "vscode-command-protocol-failure", detail));
+    },
+    commandWatchStatus(detail) {
+      output.appendLine(clientMessage(api, "vscode-command-watch-status", detail));
+    },
     dispose() {
       output.dispose();
     }

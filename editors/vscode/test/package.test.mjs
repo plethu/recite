@@ -22,8 +22,17 @@ test("the shared artifact serves both VS Code and VSCodium without semantic fork
     scopeName: "source.recite",
     path: "./syntaxes/recite.tmLanguage.json"
   }]);
-  assert.equal(manifest.contributes.commands, undefined);
+  assert.deepEqual(
+    manifest.contributes.commands.map(({ command }) => command),
+    [
+      "recite.validate", "recite.compile", "recite.extract", "recite.watch.start",
+      "recite.watch.stop", "recite.run", "recite.trace"
+    ]
+  );
   assert.match(manifest.repository.url, /github\.com\/plethu\/recite\.git$/);
+  const titles = manifest.contributes.commands.map(({ title }) => title);
+  assert.equal(new Set(titles).size, titles.length, "command palette titles must be distinct");
+  assert.equal(manifest.contributes.configuration.properties["recite.cli.path"].default, "recite");
 });
 
 test("TextMate fixtures reuse canonical source and include incomplete recovery input", async () => {

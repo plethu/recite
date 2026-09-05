@@ -34,7 +34,7 @@ export function registerDocumentLifecycle(controller) {
       controller.diagnostics.delete(document.uri);
     }),
     api.workspace.onDidChangeConfiguration((event) => {
-      if (!event.affectsConfiguration("recite.lsp")) return;
+      if (!event.affectsConfiguration("recite.lsp") && !event.affectsConfiguration("recite.cli")) return;
       queueRestart(controller);
     })
   );

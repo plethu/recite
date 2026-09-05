@@ -7,9 +7,49 @@ include!("ownership/tui.rs");
 include!("ownership/lsp.rs");
 include!("ownership/neovim.rs");
 
+macro_rules! vscode_command_message_ids {
+    () => {
+        MsgId::VscodeCommandValidateTitle
+            | MsgId::VscodeCommandCompileTitle
+            | MsgId::VscodeCommandExtractTitle
+            | MsgId::VscodeCommandWatchStartTitle
+            | MsgId::VscodeCommandWatchStopTitle
+            | MsgId::VscodeCommandRunTitle
+            | MsgId::VscodeCommandTraceTitle
+            | MsgId::VscodeCommandCliPathDescription
+            | MsgId::VscodeCommandUntrusted
+            | MsgId::VscodeCommandDocumentRequired
+            | MsgId::VscodeCommandDocumentUnsaved
+            | MsgId::VscodeCommandDocumentUntitled
+            | MsgId::VscodeCommandDocumentChanged
+            | MsgId::VscodeCommandDocumentOutsideRoot
+            | MsgId::VscodeCommandWorkspaceRequired
+            | MsgId::VscodeCommandCliPathInvalid
+            | MsgId::VscodeCommandInputInvalid
+            | MsgId::VscodeCommandWatchRunning
+            | MsgId::VscodeCommandWatchNotRunning
+            | MsgId::VscodeCommandWatchStopTimeout
+            | MsgId::VscodeCommandResult
+            | MsgId::VscodeCommandContentDiagnostics
+            | MsgId::VscodeCommandFailure
+            | MsgId::VscodeCommandProtocolFailure
+            | MsgId::VscodeCommandWatchStatus
+            | MsgId::VscodeCommandCompileOutputTitle
+            | MsgId::VscodeCommandExtractOutputTitle
+            | MsgId::VscodeCommandAssetTitle
+            | MsgId::VscodeCommandAssetFilter
+            | MsgId::VscodeCommandBlockTitle
+            | MsgId::VscodeCommandBlockPrompt
+            | MsgId::VscodeCommandBlockPlaceholder
+            | MsgId::VscodeCommandFixtureTitle
+            | MsgId::VscodeCommandFixtureFilter
+    };
+}
+
 pub(super) const fn clients(id: MsgId) -> &'static [Client] {
     match id {
         tui_message_ids!() => &[Client::Tui],
+        vscode_command_message_ids!() => &[Client::VsCode, Client::VsCodium],
         MsgId::LspClientDisplayName | MsgId::LspClientRestartExhausted => &[
             Client::Lsp,
             Client::VsCode,

@@ -7,8 +7,8 @@ Usage:
   scripts/check-vscode.sh [repo-root]
 
 Checks the shared VS Code/VSCodium client with its package contract, the
-syntax-only TextMate grammar, and the real language server. The live test is
-required here rather than skipped when the language-server binary is
+syntax-only TextMate grammar, and the real language server and structured CLI.
+The live test is required here rather than skipped when either binary is
 unavailable.
 EOF
 }
@@ -45,6 +45,22 @@ if [[ ! -x "$lsp_bin" ]]; then
   exit 2
 fi
 
+if [[ -n "${RECITE_CLI_BIN:-}" ]]; then
+  cli_bin="$RECITE_CLI_BIN"
+else
+  echo "== build recite CLI for VS Code live checks =="
+  (
+    cd "$repo_root"
+    cargo build --locked -q -p recite-cli
+  )
+  cli_bin="$repo_root/target/debug/recite"
+fi
+if [[ ! -x "$cli_bin" ]]; then
+  echo "VS Code live checks require an executable recite CLI: $cli_bin" >&2
+  echo "Build it with: cargo build --locked -q -p recite-cli" >&2
+  exit 2
+fi
+
 hash_file() {
   if command -v sha256sum >/dev/null 2>&1; then
     sha256sum "$1" | awk '{print $1}'
@@ -56,6 +72,8 @@ hash_file() {
 projection_paths=(
   editors/vscode/src/messages.generated.js
   editors/vscode/package.nls.json
+  editors/vscode/src/diagnostics.generated.js
+  editors/vscode/src/diagnostic-contract.generated.js
 )
 projection_hashes=()
 for relative in "${projection_paths[@]}"; do
@@ -93,7 +111,10 @@ fi
 echo "== VS Code/VSCodium package and live checks =="
 (
   cd "$repo_root"
-  RECITE_LSP_BIN="$lsp_bin" pnpm editor:check
+  echo "== verify typed VS Code diagnostic contract export =="
+  diff -u crates/recite-ui/resources/vscode-diagnostic-contract.tsv \
+    <(cargo run --locked -q -p recite-ui --example export-vscode-diagnostic-contract)
+  RECITE_LSP_BIN="$lsp_bin" RECITE_CLI_BIN="$cli_bin" pnpm editor:check
   pnpm editor:package
 )
 echo "VS Code/VSCodium checks passed"

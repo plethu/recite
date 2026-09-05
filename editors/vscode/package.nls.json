@@ -5,5 +5,13 @@
   "lsp-client-configuration-title": "Recite",
   "lsp-client-configuration-path-description": "Executable used to start the local recite-lsp language server. A bare name is resolved through PATH; a path is resolved relative to the project root.",
   "lsp-client-configuration-args-description": "Arguments passed to recite-lsp without a shell. The server currently speaks LSP over stdio.",
-  "lsp-client-configuration-project-root-description": "Optional project root for language-server discovery. Relative paths are resolved from the first workspace folder. Leave empty to use the workspace folder."
+  "lsp-client-configuration-project-root-description": "Optional project root for language-server discovery. Relative paths are resolved from the first workspace folder. Leave empty to use the workspace folder.",
+  "vscode-command-validate-title": "Recite: Validate",
+  "vscode-command-compile-title": "Recite: Compile",
+  "vscode-command-extract-title": "Recite: Extract messages",
+  "vscode-command-watch-start-title": "Recite: Start watch",
+  "vscode-command-watch-stop-title": "Recite: Stop watch",
+  "vscode-command-run-title": "Recite: Run fixture",
+  "vscode-command-trace-title": "Recite: Trace fixture",
+  "vscode-command-cli-path-description": "Executable used for local Recite commands. A bare name is resolved through PATH; a path is resolved relative to the project root."
 }

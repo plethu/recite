@@ -25,7 +25,8 @@
       "restrictedConfigurations": [
         "recite.lsp.path",
         "recite.lsp.args",
-        "recite.lsp.projectRoot"
+        "recite.lsp.projectRoot",
+        "recite.cli.path"
       ]
     }
   },
@@ -40,7 +41,14 @@
   ],
   "main": "./dist/extension.cjs",
   "activationEvents": [
-    "onLanguage:recite"
+    "onLanguage:recite",
+    "onCommand:recite.validate",
+    "onCommand:recite.compile",
+    "onCommand:recite.extract",
+    "onCommand:recite.watch.start",
+    "onCommand:recite.watch.stop",
+    "onCommand:recite.run",
+    "onCommand:recite.trace"
   ],
   "files": [
     "dist/**",
@@ -91,9 +99,23 @@
           "type": "string",
           "default": "",
           "description": "%lsp-client-configuration-project-root-description%"
+        },
+        "recite.cli.path": {
+          "type": "string",
+          "default": "recite",
+          "description": "%vscode-command-cli-path-description%"
         }
       }
-    }
+    },
+    "commands": [
+      { "command": "recite.validate", "title": "%vscode-command-validate-title%" },
+      { "command": "recite.compile", "title": "%vscode-command-compile-title%" },
+      { "command": "recite.extract", "title": "%vscode-command-extract-title%" },
+      { "command": "recite.watch.start", "title": "%vscode-command-watch-start-title%" },
+      { "command": "recite.watch.stop", "title": "%vscode-command-watch-stop-title%" },
+      { "command": "recite.run", "title": "%vscode-command-run-title%" },
+      { "command": "recite.trace", "title": "%vscode-command-trace-title%" }
+    ]
   },
   "scripts": {
     "build": "node scripts/build.mjs",

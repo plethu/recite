@@ -41,10 +41,17 @@ assert(manifest.license === "MIT OR Apache-2.0", "extension license must remain 
 assert(manifest.main === "./dist/extension.cjs", "package must point at the CommonJS extension entry point");
 assert(manifest.engines?.vscode, "the VS Code engine range is required");
 assert(manifest.activationEvents?.includes("onLanguage:recite"), "activation must be tied to Recite files");
+for (const command of [
+  "recite.validate", "recite.compile", "recite.extract", "recite.watch.start",
+  "recite.watch.stop", "recite.run", "recite.trace"
+]) {
+  assert(manifest.activationEvents?.includes(`onCommand:${command}`),
+    `activation must include ${command}`);
+}
 const trust = manifest.capabilities?.untrustedWorkspaces;
 assert(trust?.supported === true, "restricted workspaces must be supported without starting a server");
 assert(JSON.stringify(trust.restrictedConfigurations?.slice().sort()) === JSON.stringify([
-  "recite.lsp.args", "recite.lsp.path", "recite.lsp.projectRoot"
+  "recite.cli.path", "recite.lsp.args", "recite.lsp.path", "recite.lsp.projectRoot"
 ]), "all process-affecting settings must be restricted in untrusted workspaces");
 
 const languages = manifest.contributes?.languages ?? [];
@@ -73,9 +80,14 @@ for (const rule of [
 ]) {
   assert(grammar.repository[rule], `TextMate grammar is missing lexical rule ${rule}`);
 }
-assert(!manifest.contributes.commands, "commands belong to REC-53");
-assert(!manifest.contributes.menus, "menus belong to REC-53");
-assert(!manifest.contributes.tasks, "tasks belong to REC-53");
+const commands = manifest.contributes?.commands ?? [];
+assert(JSON.stringify(commands.map(({ command }) => command)) === JSON.stringify([
+  "recite.validate", "recite.compile", "recite.extract", "recite.watch.start",
+  "recite.watch.stop", "recite.run", "recite.trace"
+]), "structured CLI command contributions must remain stable and complete");
+assert(!manifest.contributes.menus, "this slice uses stable command-palette IDs without menu contributions");
+assert(!manifest.contributes.tasks,
+  "structured command diagnostics use DiagnosticCollection; no text problem matcher or task contribution is claimed");
 
 const properties = manifest.contributes.configuration?.properties ?? {};
 assert(properties["recite.lsp.path"]?.type === "string", "server path must be a string setting");
@@ -84,6 +96,9 @@ assert(properties["recite.lsp.args"]?.type === "array" &&
 "server arguments must be an explicit string array");
 assert(properties["recite.lsp.projectRoot"]?.type === "string",
   "project root must be a string setting");
+assert(properties["recite.cli.path"]?.type === "string" &&
+  properties["recite.cli.path"].default === "recite",
+"CLI path must be a string setting defaulting to recite");
 
 for (const [id, message] of Object.entries(projectedMessages)) {
   assert(canonicalMessages.has(id), `canonical Fluent message is missing ${id}`);
@@ -151,6 +166,7 @@ function localizableManifestValues(packageManifest) {
     packageManifest.capabilities?.untrustedWorkspaces?.description,
     packageManifest.contributes?.configuration?.title,
     ...Object.values(packageManifest.contributes?.configuration?.properties ?? {})
-      .map((property) => property.description)
+      .map((property) => property.description),
+    ...(packageManifest.contributes?.commands ?? []).map((command) => command.title)
   ].filter((value) => value !== undefined);
 }

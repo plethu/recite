@@ -3,7 +3,10 @@ import {
   memberMethod,
   propertyName
 } from "./ui-boundary-ast.mjs";
-
+import {
+  COMMAND_UI_METHOD_CONTRACTS,
+  validateCommandMethod
+} from "./ui-boundary-command-contracts.mjs";
 const MESSAGE_MODULE = "./messages.js";
 const MESSAGE_WRAPPER = "clientMessage";
 
@@ -45,9 +48,9 @@ export const UI_METHOD_CONTRACTS = Object.freeze({
   serverErrorMessage: { kind: "host-passthrough", host: "showErrorMessage" },
   serverWarningMessage: { kind: "host-passthrough", host: "showWarningMessage" },
   serverInfoMessage: { kind: "host-passthrough", host: "showInformationMessage" },
+  ...COMMAND_UI_METHOD_CONTRACTS,
   dispose: { kind: "dispose" }
 });
-
 export function validateAdapter(ast, file, expected) {
   assert(ast.body.length === 2 && ast.body[0].type === "ImportDeclaration" &&
     ast.body[1].type === "ExportNamedDeclaration",
@@ -83,7 +86,6 @@ export function validateAdapter(ast, file, expected) {
     output.init.arguments.length === 1 && isCanonicalCall(output.init.arguments[0]),
   `UI output must be created directly from the canonical display projection (${file})`);
   assertMessageCall(output.init.arguments[0], file, "lsp-client-display-name");
-
   const returnStatement = factory.body.body[1];
   assert(returnStatement.type === "ReturnStatement" && isObjectFreeze(returnStatement.argument),
     `UI factory must return Object.freeze of its semantic service (${file})`);
@@ -97,7 +99,10 @@ export function validateAdapter(ast, file, expected) {
       Object.hasOwn(UI_METHOD_CONTRACTS, name) && !seen.has(name),
     `UI service contains an unsupported or duplicate method: ${name ?? "computed"} (${file})`);
     seen.add(name);
-    validateMethod(property, UI_METHOD_CONTRACTS[name], file);
+    const contract = UI_METHOD_CONTRACTS[name];
+    if (!validateCommandMethod(property, contract, file)) {
+      validateMethod(property, contract, file);
+    }
   }
   assert(seen.size === Object.keys(UI_METHOD_CONTRACTS).length,
     `UI service methods must match the declared contract (${file})`);
@@ -108,7 +113,6 @@ export function validateAdapter(ast, file, expected) {
     `UI adapter contract IDs must be registered message IDs (${file})`);
   return UI_METHOD_CONTRACTS;
 }
-
 function validateMethod(property, contract, file) {
   const method = property.value;
   assert(method.type === "FunctionExpression" && !method.async && !method.generator &&
@@ -189,7 +193,6 @@ function validateMethod(property, contract, file) {
   assert(statement.expression.arguments.length === 0,
     `UI method ${propertyName(property)} must not pass disposal arguments (${file})`);
 }
-
 function assertMessageCall(node, file, id, argument) {
   assert(node.arguments.length === (argument ? 3 : 2) &&
     node.arguments[0].type === "Identifier" && node.arguments[0].name === "api",
@@ -205,14 +208,12 @@ function assertMessageCall(node, file, id, argument) {
       `canonical projection ${id} must receive its direct detail (${file})`);
   }
 }
-
 function isOutputCall(node, method) {
   return node?.type === "CallExpression" && node.arguments.length === 1 - (method === "dispose") &&
     node.callee.type === "MemberExpression" && !node.callee.computed && !node.callee.optional &&
     node.callee.object.type === "Identifier" && node.callee.object.name === "output" &&
     memberMethod(node.callee) === method;
 }
-
 function isWindowMessageCall(node, method) {
   return node?.type === "CallExpression" && node.arguments.length === 1 &&
     node.callee.type === "MemberExpression" && !node.callee.computed && !node.callee.optional &&
@@ -221,7 +222,6 @@ function isWindowMessageCall(node, method) {
     node.callee.object.object.name === "api" && memberMethod(node.callee.object) === "window" &&
     memberMethod(node.callee) === method;
 }
-
 function assertDirectPayload(node, parameter, file) {
   assert(node.type === "Identifier" && node.name === parameter.name,
     `UI method payload must be passed directly (${file})`);

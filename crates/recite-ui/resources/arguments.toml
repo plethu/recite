@@ -424,3 +424,13 @@ command = "string"
 command = "string"
 [arguments."neovim-health-current-root"]
 root = "string"
+[arguments."vscode-command-result"]
+detail = "string"
+[arguments."vscode-command-content-diagnostics"]
+detail = "string"
+[arguments."vscode-command-failure"]
+detail = "string"
+[arguments."vscode-command-protocol-failure"]
+detail = "string"
+[arguments."vscode-command-watch-status"]
+detail = "string"

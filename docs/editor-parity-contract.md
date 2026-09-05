@@ -109,16 +109,22 @@ its source files ordinary repository inputs before collecting evidence.
 ## Structured commands and watch
 
 The command boundary is structured for the finite `compile`, `validate`,
-`extract`, `run`, and `trace` commands. Their opt-in version-1 NDJSON contract
-is documented in [`docs/cli-structured-protocol.md`](cli-structured-protocol.md)
-and exercised by the external `recite-cli` tests. Invalid source remains a
-typed result with content diagnostics; operational failures are typed errors.
-The shared authoring kernel also exposes a protocol-neutral
-`BuildStatusProjection` with phase, generation, diagnostics, freshness,
-publication, recovery, and cancellation state. Watch wire/process/binary
-integration, cancellation transport, and editor client adapters remain
-planned or partial under #53; `watch` is explicitly outside the finite
-structured command protocol.
+`extract`, `run`, and `trace` commands and the streaming `watch` command. Their
+opt-in version-1 NDJSON contracts are documented in
+[`docs/cli-structured-protocol.md`](cli-structured-protocol.md) and exercised
+by the external `recite-cli` tests and the VS Code/VSCodium adapter tests. The
+shared CLI remains semantic authority: the extension resolves a local binary,
+passes argv and the project root, validates every record, and projects typed
+diagnostics and runtime/watch data without parsing human output. Watch owns one
+child and its cancellation/teardown identity; a late or malformed record is a
+protocol failure. Installed host activation and non-Linux platform evidence
+remain outside this contract.
+
+The VS Code/VSCodium adapter deliberately contributes no line-oriented
+`problemMatcher` or task definition. Such a matcher would parse localized or
+nested NDJSON text and would duplicate the structured boundary. The command
+adapter's typed `DiagnosticCollection` is the problem integration for this
+slice; native task/workbench affordances remain a separate host surface.
 
 ## Conformance matrix
 
@@ -139,7 +145,7 @@ implemented primary artifact.
 - `lsp.overlay.recovery`: accept an incomplete overlay, then refresh it when a newer complete overlay arrives.
 - `lsp.stale.version`: refuse an older document version without replacing the current overlay or publishing stale evidence.
 - `lsp.cancellation`: document the current unsupported cancellation surface and its owner rather than claiming a timeout is cancellation.
-- `command.structured.results`: project typed/versioned finite CLI command records while reserving watch wire, process, binary, cancellation, and client integration for #53.
+- `command.structured.results`: project typed/versioned finite CLI command records through the shared VS Code/VSCodium adapter; no human stderr/output parsing is permitted.
 - `editor.filetype.registration`: exercise `.recite` activation and file association through the checked-in Neovim runtimepath package.
 - `editor.vscode.syntax-projection`: project the checked-in syntax-only TextMate grammar and deterministic VSIX for VS Code/VSCodium; installed host activation and non-Linux platforms remain untested.
 - `editor.neovim.syntax-projection`: record ABI14 Tree-sitter parser/query loading through the Neovim package; the shared grammar remains owned by #98.
@@ -154,15 +160,16 @@ implemented primary artifact.
 - `workspace.configuration`: keep root and project configuration ownership outside client semantics.
 - `authoring.stable-id.operations`: reserve the shared-kernel missing-ID repair; broader stable-ID edit preconditions remain incomplete.
 - `schema.localisation.resolution`: project the current compiler catalogue identity/fingerprint and CLI locale-fallback evidence; combined LSP schema/catalogue provenance remains planned.
-- `command.compile.validate.extract`: exercise version-1 structured compile, validate, and extract records; watch and editor client adapters remain outside this slice.
-- `command.run.trace`: exercise version-1 structured runtime and trace records; watch and editor client adapters remain outside this slice.
-- `command.watch.lifecycle`: project the current protocol-neutral build lifecycle fields; versioned watch wire, process, binary, cancellation transport, and client evidence remain planned for #53.
+- `command.compile.validate.extract`: exercise version-1 structured compile, validate, and extract records through the local-first VS Code/VSCodium command adapter.
+- `command.run.trace`: exercise version-1 structured runtime and trace records through the local-first VS Code/VSCodium command adapter.
+- `command.watch.lifecycle`: exercise the version-1 watch wire, argv/cwd process boundary, cooperative cancel, bounded recovery, and typed diagnostic replacement through the VS Code/VSCodium adapter.
 
 Executable evidence covers the shared LSP operations, project-root discovery,
 the bounded stable-ID repair, compiler catalogue fallback, the compiler's
 protocol-neutral build projection, CLI locale fallback through the checked-in
 `fixtures/recite/valid/locale_fallback_fr.po` catalogue, the finite version-1
-structured CLI records through the external `recite-cli` command tests, the syntax-only
+structured CLI records through the external `recite-cli` command tests and the VS Code/VSCodium
+finite and streaming adapter tests, the syntax-only
 Tree-sitter grammar check, the Neovim runtimepath check, and the checked-in
 VS Code/VSCodium TextMate grammar and package. The Tree-sitter check proves
 generated-parser reproducibility, canonical fixture coverage, recovery
@@ -179,15 +186,18 @@ Node scope snapshots are not evidence of installed-host rendering or
 accessibility integration.
 Those checks do not establish installed VS Code or VSCodium host activation,
 macOS or Windows support, marketplace publication, or a distributable archive
-in source control. This still does not claim a versioned watch envelope, watch
-process or binary integration, combined LSP schema/catalogue transport,
-cancellation transport, native version-safe rename, or a Zed grammar.
+in source control. They also do not claim a native text problem matcher or
+task contribution: typed command diagnostics are intentionally owned by the
+structured `DiagnosticCollection` projection. Combined LSP schema/catalogue
+transport, native version-safe rename, or a Zed grammar remain outside this
+evidence.
 
 Capability rows with direct VS Code/VSCodium package, adapter, or live-server
 evidence use `partial` client status and include `scripts/check-vscode.sh` in
-their evidence commands. Rows for native rename, command/watch integration,
-and other untested client operations remain planned even though the shared
-extension artifact exists.
+their evidence commands. Rows for native rename and other untested host
+operations remain planned. Neovim and Zed command/watch adapters also remain
+planned; the VS Code/VSCodium command/watch rows above are partial because
+their Linux Node and real-CLI evidence is present.
 
 The rows currently draw from these scenarios. The source and schema files are
 the canonical fixtures; derived inputs are transformations or protocol events,
@@ -201,7 +211,7 @@ not copied Recite or schema sources.
 - `multi-file-project`: materialize two canonical source fixtures under one root and resolve a qualified cross-file target.
 - `client-syntax-projections`: record partial syntax-only Tree-sitter evidence alongside the checked-in VS Code/VSCodium TextMate package projection; canonical and malformed inputs remain shared fixtures, while an incomplete buffer is derived under `fixtures/editor-parity/vscode/`; installed host setup remains untested.
 - `schema-localisation-reference`: combine the canonical manifests and pressure source with the checked-in PO catalogue to exercise the current shared/CLI locale-fallback evidence.
-- `command-watch-reference`: exercise the finite CLI protocol and protocol-neutral `BuildStatusProjection`; watch wire/process/binary, cancellation transport, and client lifecycle evidence remain planned or partial for #53.
+- `command-watch-reference`: exercise finite and streaming CLI protocol records, local argv/cwd resolution, typed diagnostics, and watch cancellation/recovery through `scripts/check-vscode.sh`; installed host activation remains untested.
 
 ## Client, platform, and distribution status
 
@@ -222,11 +232,11 @@ this checkout; no marketplace or Open VSX distribution is claimed.
 
 The VS Code and VSCodium partial status is deliberately narrower than host
 support: the extension source and syntax grammar are checked in, deterministic
-VSIX generation and package validation pass, and Linux Node tests exercise a
-real `recite-lsp` process. Installed VS Code/VSCodium activation smoke is still
-missing, as are macOS and Windows checks. Native rename remains unregistered until a
-version-safe adapter exists; structured command and watch integration remains
-owned by #53.
+VSIX generation and package validation pass, and Linux Node tests exercise real
+`recite-lsp` and `recite` processes. Installed VS Code/VSCodium activation smoke
+is still missing, as are macOS and Windows checks. Native rename remains
+unregistered until a version-safe adapter exists; task/workbench integration and
+a native text problem matcher remain outside this structured command slice.
 
 VS Code Marketplace and Open VSX are separate distribution claims. Publication,
 signing, and installation smoke are still planned. A shared VSIX means the VS

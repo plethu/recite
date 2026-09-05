@@ -122,6 +122,40 @@ pub(super) const fn for_message(id: MsgId) -> &'static [ProjectionDeclaration] {
         | MsgId::LspClientConfigurationPathDescription
         | MsgId::LspClientConfigurationArgsDescription
         | MsgId::LspClientConfigurationProjectRootDescription => &VSCODE_PACKAGE_PROJECTIONS,
+        MsgId::VscodeCommandValidateTitle
+        | MsgId::VscodeCommandCompileTitle
+        | MsgId::VscodeCommandExtractTitle
+        | MsgId::VscodeCommandWatchStartTitle
+        | MsgId::VscodeCommandWatchStopTitle
+        | MsgId::VscodeCommandRunTitle
+        | MsgId::VscodeCommandTraceTitle
+        | MsgId::VscodeCommandCliPathDescription => &VSCODE_PACKAGE_PROJECTIONS,
+        MsgId::VscodeCommandUntrusted
+        | MsgId::VscodeCommandDocumentRequired
+        | MsgId::VscodeCommandDocumentUnsaved
+        | MsgId::VscodeCommandDocumentUntitled
+        | MsgId::VscodeCommandDocumentChanged
+        | MsgId::VscodeCommandDocumentOutsideRoot
+        | MsgId::VscodeCommandWorkspaceRequired
+        | MsgId::VscodeCommandCliPathInvalid
+        | MsgId::VscodeCommandInputInvalid
+        | MsgId::VscodeCommandWatchRunning
+        | MsgId::VscodeCommandWatchNotRunning
+        | MsgId::VscodeCommandWatchStopTimeout
+        | MsgId::VscodeCommandResult
+        | MsgId::VscodeCommandContentDiagnostics
+        | MsgId::VscodeCommandFailure
+        | MsgId::VscodeCommandProtocolFailure
+        | MsgId::VscodeCommandWatchStatus
+        | MsgId::VscodeCommandCompileOutputTitle
+        | MsgId::VscodeCommandExtractOutputTitle
+        | MsgId::VscodeCommandAssetTitle
+        | MsgId::VscodeCommandAssetFilter
+        | MsgId::VscodeCommandBlockTitle
+        | MsgId::VscodeCommandBlockPrompt
+        | MsgId::VscodeCommandBlockPlaceholder
+        | MsgId::VscodeCommandFixtureTitle
+        | MsgId::VscodeCommandFixtureFilter => &VSCODE_RUNTIME_PROJECTIONS,
         _ => &[],
     }
 }

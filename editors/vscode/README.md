@@ -76,8 +76,17 @@ package, receives full-document open/change/save/close notifications, and is
 shut down when the extension deactivates or its configuration changes. The
 client also honours the LSP server's `client/registerCapability` request for
 project file watching and forwards deterministic create/change/delete events.
-This is distinct from the future structured command/watch envelopes owned by
-REC-53. The current server does not implement cancellation or remote projects.
+The command palette also adapts the local structured CLI protocol for
+validation, compilation, extraction, fixture runs, traces, and a one-process
+watch loop. Commands use the saved active `.recite` document where applicable;
+they never save or execute an untitled/dirty document. Output is consumed as
+version-1 NDJSON, while diagnostics are kept in a command-owned collection.
+The watch stop command sends the versioned stdin cancellation record and waits
+for the matching stopped record before using bounded process recovery.
+
+Set `recite.cli.path` to an absolute or project-root-relative `recite` binary;
+a bare executable name is resolved through `PATH`. It is restricted in
+untrusted workspaces, and commands never invoke a shell or a hosted service.
 
 Code-action edits are returned as extension-owned commands. The command keeps
 the LSP document versions, including zero-edit sibling preconditions, and
