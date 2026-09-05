@@ -11,7 +11,7 @@ fn main() {
         resource.id.as_str().starts_with("diagnostic-")
             && resource.clients.contains(&Client::VsCode)
             && resource.clients.contains(&Client::VsCodium)
-        }) {
+    }) {
         if resource.arguments.is_empty() {
             println!("{}", resource.id.as_str());
         } else {
