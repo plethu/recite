@@ -60,16 +60,24 @@ For each host, the check asserts:
   sequence). Any descendant observed on a phase exit fails that lane, even if
   bounded cleanup recovers it.
 - a second isolated host run drives actual Wayland keyboard events through
-  private Cage: `Ctrl+Shift+M`, `Home`, and `Down` reach and navigate the
-  Problems view, then a disposable probe keybinding records the live
-  `RECITE_PARSE011` code, error severity, and source location without relying
-  on colour. Real key events invoke the supported explicit rename command and
-  `recite.watch.start`; a disposable `Ctrl+Alt+Shift+Q` binding invokes the
-  supported `recite.watch.stop` command because the product intentionally has
-  no default shortcut. The
+  private Cage: `Ctrl+Shift+M` opens Problems, `Escape` returns focus, `Ctrl+1`
+  focuses the primary editor, and `F8` activates the next diagnostic. The probe
+  then asserts that the real host's active editor URI is the invalid `.recite`
+  document and that its selection is within the `RECITE_PARSE011` range; a disposable probe
+  keybinding records the live code, error severity, and source location without
+  relying on colour. Real key events invoke the supported explicit rename command and `recite.watch.start`;
+  a disposable `Ctrl+Alt+Shift+Q` binding invokes the supported
+  `recite.watch.stop` command because the product intentionally has no default
+  shortcut. The
   resulting document edit and exact captured-group CLI shutdown are observed
   through marker files and process inspection. The disposable bindings belong
   only to this probe profile and are not product compatibility claims.
+- the keyboard runs use distinct one-character `v` and `c` profile roots to
+  stay within Linux's Unix-socket path limit. Each install phase must start
+  without its marker, and the host writes a host-product and lane-specific
+  activation marker before the keyboard phase continues; this prevents
+  sequential profile/session state from being mistaken for independent host
+  evidence.
 
 The assertions live in
 [`tests/editor-hosts/vscode/host-probe.cjs`](../../../tests/editor-hosts/vscode/host-probe.cjs).

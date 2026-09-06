@@ -324,6 +324,7 @@ cat > "$probe/package.json" <<'EOF'
 }
 EOF
 cat > "$probe/extension.cjs" <<'EOF'
+const assert = require("node:assert/strict");
 const fs = require("node:fs");
 const vscode = require("vscode");
 
@@ -336,10 +337,26 @@ exports.activate = () => {
       start: { line: diagnostic.range.start.line, character: diagnostic.range.start.character },
       end: { line: diagnostic.range.end.line, character: diagnostic.range.end.character }
     }));
+    const activeEditor = vscode.window.activeTextEditor;
+    const selection = activeEditor?.selection.active;
+    const navigation = {
+      activeDocument: activeEditor?.document.uri.fsPath,
+      selection: selection ? { line: selection.line, character: selection.character } : null
+    };
     fs.writeFileSync(process.env.RECITE_HOST_PROBE_KEYBOARD_KEY_RESULT, JSON.stringify({
       event: "keyboard-probe",
-      diagnostics
+      diagnostics,
+      navigation
     }) + "\n");
+    assert.equal(navigation.activeDocument, invalid.fsPath,
+      "Problems Enter navigation activates the invalid Recite document");
+    const target = diagnostics.find((diagnostic) => diagnostic.code === "RECITE_PARSE011");
+    assert(target, "Problems Enter navigation retains the expected diagnostic");
+    assert.equal(navigation.selection?.line, target.start.line,
+      "Problems Enter navigation lands on the diagnostic line");
+    assert(navigation.selection.character >= target.start.character &&
+      navigation.selection.character <= target.end.character,
+    "Problems Enter navigation lands inside the diagnostic range");
   });
   return { dispose: () => disposable.dispose() };
 };
@@ -415,8 +432,11 @@ drive_keyboard() {
 
   wait_for_file "$profile/keyboard.ready" "keyboard probe readiness" || return 1
   wtype_key -M ctrl -M shift -k m
-  sleep 0.75
-  wtype_key -k Home -k Down
+  sleep 2
+  wtype_key -k Escape
+  wtype_key -M ctrl -k 1
+  wtype_key -k F8
+  sleep 1
   wtype_key -M ctrl -M alt -M shift -k k
   wait_for_file "$profile/keyboard.key-result" "diagnostic keyboard marker" || return 1
   wtype_key -k Escape
@@ -457,6 +477,7 @@ run_host_process() {
   local host_bin="$4"
   local install_only="$5"
   local keyboard_mode="${6:-0}"
+  local host_label="${7:-unknown}"
   local candidate_pgid=""
 
   runner_pgid=""
@@ -486,6 +507,8 @@ run_host_process() {
     RECITE_HOST_PROBE_KEYBOARD_RENAME_READY="$profile/keyboard.rename-ready" \
     RECITE_HOST_PROBE_KEYBOARD_RENAME_RESULT="$profile/keyboard.rename-result" \
     RECITE_HOST_PROBE_KEYBOARD_WATCH_RESULT="$profile/keyboard.watch-result" \
+    RECITE_HOST_PROBE_HOST_LABEL="$host_label" \
+    RECITE_HOST_PROBE_PROFILE_MARKER="$profile/profile.marker" \
     cage -- \
     "$host_bin" --no-sandbox --disable-gpu --disable-updates --skip-welcome \
       --skip-release-notes --disable-telemetry --disable-crash-reporter \
@@ -563,7 +586,7 @@ run_host_phase() {
   rm -f "$result"
 
   echo "== run $label host $host_version_value ($(host_commit "$product")) =="
-  if run_host_process "$profile" "$result" "$log" "$host_bin" 1 0; then
+  if run_host_process "$profile" "$result" "$log" "$host_bin" 1 0 "$label"; then
     :
   else
     status=$?
@@ -582,7 +605,7 @@ run_host_phase() {
   ' "$result"
 
   rm -f "$result"
-  if run_host_process "$profile" "$result" "$log" "$host_bin" 0 0; then
+  if run_host_process "$profile" "$result" "$log" "$host_bin" 0 0 "$label"; then
     :
   else
     status=$?
@@ -637,20 +660,26 @@ EOF
 run_keyboard_phase() {
   local label="$1"
   local host_bin="$2"
-  # Keep the private profile short enough for Electron's Unix IPC socket
-  # (sun_path is limited to 107 bytes on Linux).
-  local profile="$run_root/kbd"
+  # Keep each private profile distinct and short enough for Electron's Unix
+  # IPC socket (sun_path is limited to 107 bytes on Linux).
+  local profile
+  if [[ "$label" == "vscode" ]]; then
+    profile="$run_root/v"
+  else
+    profile="$run_root/c"
+  fi
   local result="$profile/result.json"
   local log="$profile/host.log"
+  local profile_marker="$profile/profile.marker"
   local status
 
   mkdir -p "$profile/home" "$profile/config" "$profile/data" "$profile/cache" \
     "$profile/runtime" "$profile/portable" "$profile/user-data" "$profile/extensions" "$profile/shared"
   chmod 700 "$profile/runtime"
-  rm -f "$result" "$profile"/keyboard.*
+  rm -f "$result" "$profile"/keyboard.* "$profile_marker"
 
   echo "== run $label keyboard host workflow =="
-  if run_host_process "$profile" "$result" "$log" "$host_bin" 1 0; then
+  if run_host_process "$profile" "$result" "$log" "$host_bin" 1 0 "$label"; then
     :
   else
     status=$?
@@ -663,13 +692,21 @@ run_keyboard_phase() {
     tail -120 "$log" >&2 || true
     return 1
   fi
-  node -e '
-    const result = require(process.argv[1]);
-    if (result.installed !== true) throw new Error("VSIX keyboard installation did not complete");
-  ' "$result"
+  node - "$result" "$profile_marker" "$label" <<'EOF'
+const fs = require("node:fs");
+const assert = require("node:assert/strict");
+const result = JSON.parse(fs.readFileSync(process.argv[2], "utf8"));
+const marker = JSON.parse(fs.readFileSync(process.argv[3], "utf8"));
+assert.equal(result.installed, true, "VSIX keyboard installation did not complete");
+assert.equal(result.profileMarker?.event, "clean-profile", "install host wrote a profile marker");
+assert.equal(result.profileMarker?.phase, "install", "install host wrote the install profile marker");
+assert.equal(marker.event, "clean-profile", "install host marker is structured");
+assert.equal(marker.phase, "install", "install host marker records its phase");
+assert.equal(marker.profileLabel, process.argv[4], "install host marker identifies this host lane");
+EOF
 
   rm -f "$result" "$profile"/keyboard.*
-  if run_host_process "$profile" "$result" "$log" "$host_bin" 0 1; then
+  if run_host_process "$profile" "$result" "$log" "$host_bin" 0 1 "$label"; then
     :
   else
     status=$?
@@ -682,17 +719,25 @@ run_keyboard_phase() {
     tail -160 "$log" >&2 || true
     return 1
   fi
-  node - "$result" <<'EOF'
+  node - "$result" "$profile_marker" "$label" <<'EOF'
 const fs = require("node:fs");
 const assert = require("node:assert/strict");
 const result = JSON.parse(fs.readFileSync(process.argv[2], "utf8"));
+const marker = JSON.parse(fs.readFileSync(process.argv[3], "utf8"));
 assert.equal(result.keyboard, "passed", "keyboard workflow completed through the host");
 assert.equal(result.keyboardDiagnostics, "navigated", "diagnostic panel navigation was exercised");
+assert.equal(result.keyboardNavigation?.activeDocumentMatches, true, "Problems navigation activated the invalid document");
+assert.equal(result.keyboardNavigation?.selectionMatches, true, "Problems navigation selected the diagnostic range");
 assert.equal(result.keyboardDiagnosticCode, "RECITE_PARSE011", "keyboard marker retains diagnostic code");
 assert.equal(result.keyboardDiagnosticSeverity, "error", "keyboard marker retains diagnostic severity");
 assert.equal(result.keyboardDiagnosticLine, 2, "keyboard marker retains diagnostic location");
 assert.equal(result.keyboardRename, "applied", "keyboard rename applied its edit");
 assert.equal(result.keyboardWatch, "stopped", "keyboard watch stopped cleanly");
+assert.equal(result.profileMarker?.event, "clean-profile", "keyboard host retained its profile marker");
+assert.equal(result.profileMarker?.phase, "keyboard", "keyboard host wrote its activation marker");
+assert.equal(result.profileMarker?.profileLabel, process.argv[4], "keyboard result identifies this host lane");
+assert.equal(marker.phase, "keyboard", "keyboard host activation marker is current");
+assert.equal(marker.profileLabel, process.argv[4], "keyboard marker identifies this host lane");
 EOF
   node -e '
     const result = require(process.argv[1]);

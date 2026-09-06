@@ -20,15 +20,22 @@ Set `RECITE_HOST_TMPDIR` to an ignored build directory when `/tmp` does not
 have enough space for a full host profile; `/tmp` remains the default.
 
 The keyboard phase starts a second isolated host under private Cage/WLR and
-sends real Wayland events with `wtype`: it reaches the Problems view, moves to
-the diagnostic, invokes a disposable binding for the supported rename command,
-and starts watch. It sends `Ctrl+Alt+Shift+Q` through a disposable binding for
-the supported Stop watch command (the product has no default shortcut), then
-observes the edit, diagnostic
+sends real Wayland events with `wtype`: it opens Problems, returns focus,
+focuses the primary editor with `Ctrl+1`, and presses F8 to activate the next
+diagnostic. The probe asserts that the host's active editor URI is the invalid
+`.recite` document and that its selection is within the `RECITE_PARSE011`
+range. It then invokes a disposable
+binding for the supported rename command and starts watch. It sends `Ctrl+Alt+Shift+Q` through a
+disposable binding for the supported Stop watch command (the product has no
+default shortcut), then observes the edit, diagnostic
 code/severity/location, and captured-group CLI exit through marker files and
 process inspection. The temporary bindings are test-harness wiring only; they
 do not claim product keybindings. This proves the scripted host path, not
 arbitrary focus traversal, visual rendering, screen-reader/high-contrast
 output, or all desktop accessibility behavior, which remain manual platform
-follow-up. The probe does not access the user's display, desktop, profiles,
+follow-up. VS Code and VSCodium use distinct one-character `v` and `c`
+profiles to stay within Linux's Unix-socket path limit; each host must write a
+fresh host-product activation marker before its keyboard phase is accepted.
+The probe does not access the
+user's display, desktop, profiles,
 extensions, Marketplace, or Open VSX.

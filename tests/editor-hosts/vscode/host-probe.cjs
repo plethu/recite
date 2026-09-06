@@ -32,7 +32,11 @@ async function installVsix() {
     "plethu.recite-vscode-0.1.0"
   );
   await waitFor(() => fs.existsSync(path.join(extensionDirectory, "package.json")), "VSIX installation");
-  writeResult({ installed: true, extensionDirectory: "isolated-profile" });
+  writeResult({
+    installed: true,
+    extensionDirectory: "isolated-profile",
+    profileMarker: writeProfileMarker("install")
+  });
 }
 
 function writeKeyboardMarker(destination, value) {
@@ -46,6 +50,40 @@ function readKeyboardMarker(destination) {
   } catch {
     return undefined;
   }
+}
+
+function writeProfileMarker(phase) {
+  const destination = process.env.RECITE_HOST_PROBE_PROFILE_MARKER;
+  const profileLabel = process.env.RECITE_HOST_PROBE_HOST_LABEL;
+  assert(destination, "host profile marker path is configured");
+  assert(profileLabel, "host profile marker label is configured");
+  const expectedHostProduct = {
+    vscode: "Visual Studio Code",
+    vscodium: "VSCodium"
+  }[profileLabel];
+  assert(expectedHostProduct, `unknown host profile marker label: ${profileLabel}`);
+  assert.equal(vscode.env.appName, expectedHostProduct,
+    "keyboard host profile marker identifies the expected installed host");
+  const existing = fs.existsSync(destination)
+    ? JSON.parse(fs.readFileSync(destination, "utf8"))
+    : undefined;
+  if (phase === "install") {
+    assert.equal(existing, undefined, "keyboard host profile starts without a marker");
+  } else {
+    assert(existing, "keyboard host profile retains its install marker");
+    assert.equal(existing.event, "clean-profile", "keyboard host profile marker is structured");
+    assert.equal(existing.phase, "install", "keyboard host profile marker records installation");
+    assert.equal(existing.profileLabel, profileLabel, "keyboard host profile marker is host-specific");
+  }
+  const marker = {
+    event: "clean-profile",
+    phase,
+    profileLabel,
+    hostProduct: vscode.env.appName,
+    hostVersion: vscode.version
+  };
+  fs.writeFileSync(destination, `${JSON.stringify(marker)}\n`, "utf8");
+  return marker;
 }
 
 async function runKeyboardProbe() {
@@ -95,6 +133,18 @@ async function runKeyboardProbe() {
   assert.equal(keyDiagnostic.severity, "error", "keyboard marker preserves diagnostic severity");
   assert.equal(keyDiagnostic.start.line, 2, "keyboard marker preserves diagnostic location");
   assert.equal(keyDiagnostic.start.character, 11, "keyboard marker preserves diagnostic start");
+  const navigation = {
+    activeDocumentMatches: keyResult.navigation?.activeDocument === invalidUri.fsPath,
+    selectionMatches: keyResult.navigation?.selection?.line === keyDiagnostic.start.line &&
+      keyResult.navigation.selection.character >= keyDiagnostic.start.character &&
+      keyResult.navigation.selection.character <= keyDiagnostic.end.character,
+    activeDocument: keyResult.navigation?.activeDocument,
+    selection: keyResult.navigation?.selection
+  };
+  assert.equal(navigation.activeDocumentMatches, true,
+    "Problems navigation activated the invalid document");
+  assert.equal(navigation.selectionMatches, true,
+    "Problems navigation selected the diagnostic range");
 
   const editor = await vscode.window.showTextDocument(valid);
   const targetPosition = positionFor(valid.getText(), "-> work", 4);
@@ -125,8 +175,10 @@ async function runKeyboardProbe() {
     keyboardDiagnosticCode: keyDiagnostic.code,
     keyboardDiagnosticSeverity: keyDiagnostic.severity,
     keyboardDiagnosticLine: keyDiagnostic.start.line,
+    keyboardNavigation: navigation,
     keyboardRename: "applied",
-    keyboardWatch: "stopped"
+    keyboardWatch: "stopped",
+    profileMarker: writeProfileMarker("keyboard")
   });
 }
 
