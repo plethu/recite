@@ -166,7 +166,7 @@ implemented primary artifact.
 - `lsp.hover`: project structured hover content and symbol ranges from the shared kernel; installed VS Code/VSCodium and Zed Linux responses are recorded.
 - `lsp.references`: project declaration-first, source-ordered references with explicit declaration inclusion; installed VS Code/VSCodium and Zed Linux responses are recorded.
 - `lsp.rename`: project source-preserving workspace edits for resolved symbols through the explicit VS Code/VSCodium `recite.renameBlock` command; the command retains version preconditions while native F2 rename remains unregistered.
-- `lsp.code-actions`: project source-preserving stable-ID repairs from the shared kernel; installed VS Code/VSCodium application and a partial Zed Linux response check are recorded, while Zed edit application is not claimed.
+- `lsp.code-actions`: project source-preserving stable-ID repairs from the shared kernel; installed VS Code/VSCodium application is recorded. Zed sent the missing-ID request with `RECITE_ID001` and the selected range, but Recite returned the exact empty result and applied no edit, so Zed code actions are unsupported.
 - `workspace.project.discovery`: discover canonical sibling sources under the configured project root.
 - `workspace.configuration`: keep root and project configuration ownership outside client semantics.
 - `authoring.stable-id.operations`: reserve the shared-kernel missing-ID repair; installed VS Code/VSCodium application is recorded, while broader stable-ID edit preconditions remain incomplete.
@@ -174,7 +174,7 @@ implemented primary artifact.
 - `command.compile.validate.extract`: exercise version-1 structured compile, validate, and extract records through the local-first VS Code/VSCodium and Neovim command adapters; installed VS Code/VSCodium and Zed static task invocation is recorded, while Zed does not parse task records into diagnostics.
 - `command.run.trace`: exercise version-1 structured runtime and trace records through the local-first VS Code/VSCodium and Neovim command adapters; installed VS Code/VSCodium projection is recorded, while Zed built-in run/trace remains unsupported because the required asset, block, and fixture are explicit inputs.
 - `command.watch.lifecycle`: exercise the version-1 watch wire, argv/cwd process boundary, cooperative cancel, bounded recovery, and typed diagnostic replacement through the VS Code/VSCodium and Neovim adapters; installed Linux start/stop evidence is recorded for VS Code/VSCodium, Neovim, and Zed, while Zed remains a host-terminal process with no parsed diagnostic controller or native cancellation controller.
-- `editor.keyboard.workflow`: prove installed-host activation plus the required keyboard-only workflow in named installed VS Code/VSCodium, Neovim, and Zed hosts: reach and navigate diagnostics, invoke supported authoring commands, observe status/failure, and stop a running watch where the host exposes that workflow. Where a host prepares the file before keyboard input, that setup is not claimed as keyboard-open. This row is partial and remains owned by open issue #202; package, source, and headless protocol checks are not installed-host keyboard evidence.
+- `editor.keyboard.workflow`: prove installed-host activation plus the required keyboard-only workflow in named installed VS Code/VSCodium, Neovim, and Zed hosts: reach and navigate diagnostics, invoke supported authoring commands, observe status/failure, and stop a running watch where the host exposes that workflow. The VS Code/VSCodium lane sends `Ctrl+1`, `Ctrl+P`, types `scratch/invalid.recite`, and presses `Return`, then asserts the active URI, `recite` language, and extension activation before using Problems/`F8` and the supported commands. This row is partial and remains owned by open issue #202; package, source, and headless protocol checks are not installed-host keyboard evidence.
 
 Executable evidence covers the shared LSP operations, project-root discovery,
 the bounded stable-ID repair, compiler catalogue fallback, the compiler's
@@ -191,13 +191,15 @@ check validates the generated VSIX contents, including the grammar, and the
 Node tests exercise the real `recite-lsp` process over stdio on Linux. The Zed
 package check validates the manifest, language config, static task argv,
 API-0.7.0 launcher, exact highlights query, and pinned grammar revision. The
+source gate also runs the hostile empty/null code-action-result regression. The
 installed-host runners add separately recorded Linux x86_64 evidence: VS Code
 and VSCodium cover activation, LSP projections, commands, watch stop, and the
-bounded keyboard path (the host probe prepares the documents before that
-keyboard phase); Neovim 0.10.4 and 0.12.5 cover activation, diagnostics,
+bounded keyboard path; Neovim 0.10.4 and 0.12.5 cover activation, diagnostics,
 commands, watch stop, and the bounded keyboard path; Zed 1.18.1 covers local
 development-extension activation, rendered syntax, LSP requests, static task
-status, terminal Ctrl-C, and keyboard navigation/shutdown. Host records are
+status, terminal Ctrl-C, and keyboard navigation/shutdown. Zed code actions are
+not included in that positive host matrix: its real missing-ID request returned
+an exact empty result with no edit. Host records are
 incremental and never upgrade an untested client or platform implicitly.
 The pinned TextMate tokenizer snapshots assert exact scopes for blocks, diverts,
 plural pipes, interpolation, condition directives, anchors, and hostile
@@ -224,7 +226,9 @@ Capability rows with direct VS Code/VSCodium package, adapter, live-server, or
 installed-host evidence, or direct Neovim/Zed command evidence, use `partial`
 client status and include the corresponding gate in their evidence commands.
 The Zed syntax/filetype and selected LSP rows are `partial` on Linux because
-source/package and installed-host checks exist; rows for stale-version,
+source/package and installed-host checks exist; Zed code actions are explicitly
+unsupported because the real missing-ID request returned an exact empty result
+with no edit; rows for stale-version,
 non-BMP, native rename-edit application, and other untested host operations
 remain planned or explicitly unsupported. Zed's static
 compile/validate/extract/watch task definitions do not make it a structured
@@ -252,7 +256,7 @@ not copied Recite or schema sources.
 - `client-syntax-projections`: record partial syntax-only Tree-sitter evidence alongside the checked-in VS Code/VSCodium TextMate and Zed query/package projections; canonical and malformed inputs remain shared fixtures, while incomplete buffers are derived under `fixtures/editor-parity/vscode/` and `fixtures/editor-parity/zed/`; installed Linux host setup is recorded separately and rendered syntax remains bounded evidence.
 - `schema-localisation-reference`: combine the canonical manifests and pressure source with the checked-in PO catalogue to exercise the current shared/CLI locale-fallback evidence.
 - `command-watch-reference`: exercise finite and streaming CLI protocol records, local argv/cwd resolution, typed diagnostics, and watch cancellation/recovery through `scripts/check-vscode.sh`; `scripts/check-zed.sh` checks only Zed's static structured-task argv and documents the host-terminal limitation; installed Linux start/stop records are kept separate from parsed adapter evidence.
-- `keyboard-workflow`: use the shared language and malformed-source fixtures in named installed hosts to record installed activation plus keyboard-only diagnostic navigation, supported command invocation, status/failure observation, and watch stopping where exposed; a host's prepared-file setup is not keyboard-open evidence, and source/package/headless checks remain supporting evidence only.
+- `keyboard-workflow`: use the shared language and malformed-source fixtures in named installed hosts to record installed activation plus keyboard-only diagnostic navigation, supported command invocation, status/failure observation, and watch stopping where exposed; the VS Code/VSCodium key sequence opens `scratch/invalid.recite` through `Ctrl+1`, `Ctrl+P`, text entry, and `Return` before asserting activation, and source/package/headless checks remain supporting evidence only.
 
 ## Client, platform, and distribution status
 

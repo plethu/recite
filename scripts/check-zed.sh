@@ -43,6 +43,12 @@ extension_dir="$repo_root/editors/zed"
 query="$extension_dir/languages/recite/highlights.scm"
 fixture="$repo_root/fixtures/editor-parity/zed/incomplete.recite"
 grammar_revision="209ea23195f674a18be0b8f87e037273fb3296bd"
+assert_lsp_log_test="$repo_root/tests/editor-hosts/zed/test_assert_lsp_log.py"
+
+if [[ ! -f "$assert_lsp_log_test" || -L "$assert_lsp_log_test" ]]; then
+  echo "missing or symlinked Zed LSP assertion regression: ${assert_lsp_log_test#$repo_root/}" >&2
+  exit 2
+fi
 
 required_files=(
   Cargo.toml
@@ -203,7 +209,20 @@ if zed["status"] != "partial" or zed["platform_status"]["linux"] != "partial":
     fail("parity contract must record Zed as partial on Linux")
 if artifact["status"] != "partial" or zed_syntax["implementation_status"] != "partial":
     fail("parity contract must record checked Zed source/package evidence as partial")
-expected_partial = {"editor.filetype.registration", "editor.zed.syntax-projection", "command.compile.validate.extract", "command.watch.lifecycle"}
+expected_partial = {
+    "lsp.initialize.capabilities",
+    "lsp.publish.diagnostics",
+    "lsp.completion.navigation",
+    "editor.filetype.registration",
+    "editor.zed.syntax-projection",
+    "lsp.completion",
+    "lsp.definition",
+    "lsp.hover",
+    "lsp.references",
+    "command.compile.validate.extract",
+    "command.watch.lifecycle",
+    "editor.keyboard.workflow",
+}
 actual_partial = set()
 for capability in parity.get("capabilities", []):
     if capability.get("client_status", {}).get("zed") != "partial":
@@ -300,5 +319,8 @@ echo "== real recite-lsp stdio parity =="
   cargo test --locked -p recite-lsp --test editor_parity initialize_and_project_features_use_shared_stdio_contract
 )
 
-echo "RESIDUAL: installed Zed host activation/rendering smoke is unavailable or unexecuted; macOS/Windows smoke, gallery publication, dynamic tasks, parsed structured task diagnostics, and a task watch-cancellation controller are not claimed."
+echo "== hostile Zed code-action result regression =="
+python3 "$assert_lsp_log_test"
+
+echo "RESIDUAL: this source/package gate does not rerun the separately recorded installed Zed Linux host lane; Zed code-action and rename-edit application remain unsupported, task terminals do not parse structured diagnostics, native task cancellation is unavailable, and macOS/Windows, accessibility, and gallery publication are not claimed."
 echo "Zed source/package and shared-protocol evidence passed."

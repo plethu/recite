@@ -208,8 +208,9 @@ maintainability work after PR #198 established the Neovim setup and shared
 editor foundations. The recorded host lanes cover Linux x86_64 VS Code,
 VSCodium, Neovim, and Zed paths incrementally; they do not establish the
 unclaimed platform, accessibility, publication, or Zed task/semantic behavior
-listed in the contract. Issues #51, #53, #192, and #202 remain open in the
-tracker while their owners assess those residual acceptance boundaries.
+listed in the contract. #51 and #202 meet their current issue acceptance and
+are recommended for closure through this milestone PR; #53 and #192 remain
+open for their residual acceptance boundaries.
 
 **Outcome:** text authoring is safe and discoverable in the editors users
 already choose.
@@ -443,12 +444,15 @@ M20 implementation landed on 2026-09-05. PR #200 delivered the remaining editor
 integration work after PR #198 established the first foundations; #97, #98, and
 the cross-cutting #197 follow-up are closed. Follow-up host records now cover
 bounded Linux x86_64 activation, LSP, command/watch, and keyboard paths for
-VS Code, VSCodium, Neovim, and Zed. Issue #51 can be recommended for closure
-once its owner accepts that matrix evidence; #53 remains open for complete
-per-client command/task lifecycle parity, #192 remains open for Zed's
-unproven/non-native semantic and task boundaries, and #202 is conditionally
-closable only after its owner accepts the partial Linux keyboard record and
-prepared-file/UI limitations. The M20 exit gate therefore remains open.
+VS Code, VSCodium, Neovim, and Zed. Issue #51 meets its acceptance and is
+recommended for closure through this milestone PR. Issue #202 also meets its
+acceptance: all four Linux clients now record keyboard open/activation,
+diagnostic navigation, command/status/failure and watch-stop evidence, with
+unsupported operations explicit; its row remains partial because non-Linux and
+broader accessibility evidence are outside this lane. #53 remains open for
+complete per-client command/task lifecycle parity, and #192 remains open for
+Zed's unproven/non-native semantic and task boundaries. The M20 exit gate
+therefore remains open.
 
 The post-v1 row is deliberately non-exhaustive: it records current open issues
 without a milestone, not every deferred capability. Generated host-language
@@ -465,10 +469,10 @@ kernel and preview outcome is complete as of 2026-09-01, delivered by PR #191
 at `636fa1b`; #167, #168, and #185 established the preceding configuration,
 discovery, and kernel seam. Editor Integration Parity implementation landed on
 2026-09-05 through PR #200 after PR #198 established the first editor
-foundations. The bounded Linux host records support a closure recommendation
-for #51 and a conditional recommendation for #202, while #53 and #192 remain
-open for their residual acceptance gaps; these recommendations do not pass the
-M20 exit gate. Native GUI Strategy and Accessibility Proof (milestone 21),
+foundations. The bounded Linux host records support closure recommendations for
+#51 and #202, while #53 and #192 remain open for their residual acceptance
+gaps; these recommendations do not pass the M20 exit gate. Native GUI Strategy
+and Accessibility Proof (milestone 21),
 tracked by #54 and #123, may proceed independently because completed editor
 clients are not its entry gate. Substantial language, runtime, CLI, LSP,
 benchmark, FFI, Godot, and Unity work already exists, but each area remains
