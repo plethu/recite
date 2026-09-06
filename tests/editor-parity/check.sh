@@ -14,15 +14,20 @@ mkdir -p "$fixture_repo/docs" "$fixture_repo/fixtures/editor-parity" \
   "$fixture_repo/crates/recite-lsp/tests" \
   "$fixture_repo/crates/recite-cli/tests" \
   "$fixture_repo/crates/recite-compiler/tests/authoring_build"
+mkdir -p "$fixture_repo/docs/evidence/editor-hosts" "$fixture_repo/tests/editor-hosts/neovim"
 cp "$repo_root/scripts/check-editor-parity.sh" "$fixture_repo/scripts/"
 cp "$repo_root/scripts/check-tree-sitter.sh" "$fixture_repo/scripts/"
 cp "$repo_root/scripts/check-neovim.sh" "$fixture_repo/scripts/"
 cp "$repo_root/scripts/check-vscode.sh" "$fixture_repo/scripts/"
 cp "$repo_root/scripts/check-zed.sh" "$fixture_repo/scripts/"
+cp "$repo_root/scripts/check-neovim-host.sh" "$fixture_repo/scripts/"
+cp "$repo_root/scripts/check-vscode-host.sh" "$fixture_repo/scripts/"
 cp -R "$repo_root/scripts/editor_parity" "$fixture_repo/scripts/"
 cp "$repo_root/editors/recite-tree-sitter/grammar.js" "$fixture_repo/editors/recite-tree-sitter/"
 cp -R "$repo_root/editors/recite-neovim/." "$fixture_repo/editors/recite-neovim/"
 cp "$repo_root/docs/editor-parity-contract.md" "$fixture_repo/docs/"
+cp "$repo_root/docs/evidence/editor-hosts/neovim-linux.md" "$fixture_repo/docs/evidence/editor-hosts/"
+cp "$repo_root/docs/evidence/editor-hosts/vscode-linux.md" "$fixture_repo/docs/evidence/editor-hosts/"
 cp "$repo_root/fixtures/editor-parity/contract.json" "$fixture_repo/fixtures/editor-parity/"
 cp "$repo_root/fixtures/recite/valid/language_pressure.recite" "$fixture_repo/fixtures/recite/valid/"
 cp "$repo_root/fixtures/recite/valid/locale_fallback_fr.po" "$fixture_repo/fixtures/recite/valid/"
@@ -36,7 +41,7 @@ cp "$repo_root/AGENTS.md" "$fixture_repo/AGENTS.md"
 mkdir -p "$fixture_repo/.claude"
 ln -s ../.agents/skills "$fixture_repo/.claude/skills"
 ln -s AGENTS.md "$fixture_repo/CLAUDE.md"
-chmod +x "$fixture_repo/scripts/check-editor-parity.sh" "$fixture_repo/scripts/check-tree-sitter.sh" "$fixture_repo/scripts/check-neovim.sh" "$fixture_repo/scripts/check-vscode.sh" "$fixture_repo/scripts/check-zed.sh"
+chmod +x "$fixture_repo/scripts/check-editor-parity.sh" "$fixture_repo/scripts/check-tree-sitter.sh" "$fixture_repo/scripts/check-neovim.sh" "$fixture_repo/scripts/check-vscode.sh" "$fixture_repo/scripts/check-zed.sh" "$fixture_repo/scripts/check-neovim-host.sh" "$fixture_repo/scripts/check-vscode-host.sh"
 
 git -C "$fixture_repo" init -q -b main
 git -C "$fixture_repo" config user.name Fixture
@@ -360,7 +365,8 @@ expect_failure() {
     crates/recite-compiler/tests/authoring_catalog_summary.rs \
     crates/recite-lsp/tests/module_tests.inc crates/recite-lsp/tests/module_shapes.rs \
     crates/recite-lsp/build.rs \
-    shared-build.inc shared_workspace.rs
+    shared-build.inc shared_workspace.rs \
+    scripts/check-neovim-host.sh scripts/check-vscode-host.sh
   rm -rf "$fixture_repo/digest-inputs" "$fixture_repo/../outside-input"
 }
 
@@ -429,6 +435,28 @@ expect_failure keyboard-scenario-status "keyboard-workflow scenario must remain 
 expect_failure keyboard-executable-evidence "unimplemented capability editor.keyboard.workflow must not claim an executable evidence command"
 expect_failure keyboard-evidence-boundary "editor.keyboard.workflow known_limitation must name the headless evidence boundary"
 expect_failure keyboard-document-wording "keyboard workflow documentation must retain 'broader milestone 5 accessibility proof'"
+mutate_fixture keyboard-valid-host-evidence
+set +e
+keyboard_host_output="$(run_checker 2>&1)"
+keyboard_host_result=$?
+set -e
+if (( keyboard_host_result != 0 )); then
+  echo "editor parity valid installed-host keyboard evidence fixture failed" >&2
+  printf '%s\n' "$keyboard_host_output" >&2
+  exit 1
+fi
+echo "editor parity valid installed-host keyboard evidence fixture passed"
+git -C "$fixture_repo" checkout -q -- fixtures/editor-parity/contract.json
+expect_failure keyboard-host-record-missing "must name a non-empty architecture"
+expect_failure keyboard-host-runner-missing "host_records require an installed-host evidence runner command"
+expect_failure keyboard-host-runner-file-missing "installed-host evidence runner does not exist"
+expect_failure keyboard-host-runner-non-executable "installed-host evidence runner is not executable"
+expect_failure keyboard-host-runner-mismatch "runner scripts/check-vscode-host.sh does not match client neovim"
+expect_failure keyboard-host-platform-overclaim "host records do not cover claimed macos platform evidence"
+expect_failure keyboard-host-scenario-mismatch "partial/implemented status requires a partial/implemented keyboard-workflow scenario"
+expect_failure keyboard-host-doc-missing "evidence document does not exist"
+expect_failure keyboard-host-key-sequence "key_sequence must be a non-empty string or array"
+expect_failure keyboard-host-no-leak "keyboard assertion process_leak_check must be true"
 expect_failure symlink-artifact-component "artifact vscode-vsix path must not traverse symlink component"
 expect_failure symlink "scenario lsp-stdio-baseline fixture must not be a symlink"
 expect_failure symlink-component "scenario lsp-stdio-baseline fixture must not traverse symlink component"

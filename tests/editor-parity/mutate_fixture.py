@@ -179,6 +179,41 @@ def main() -> int:
         if marker not in source:
             raise SystemExit("keyboard documentation wording was not present")
         document.write_text(source.replace(marker, "accessibility proof"), encoding="utf-8")
+    elif mutation == "keyboard-valid-host-evidence":
+        set_keyboard_host_evidence(contract)
+    elif mutation == "keyboard-host-record-missing":
+        set_keyboard_host_evidence(contract)
+        record(contract, "capabilities", "editor.keyboard.workflow")["expected_evidence"]["host_records"][0].pop("architecture")
+    elif mutation == "keyboard-host-runner-missing":
+        set_keyboard_host_evidence(contract)
+        record(contract, "capabilities", "editor.keyboard.workflow")["expected_evidence"]["commands"] = [
+            "scripts/check-neovim.sh"
+        ]
+    elif mutation == "keyboard-host-runner-file-missing":
+        set_keyboard_host_evidence(contract)
+        (fixture_repo / "scripts/check-neovim-host.sh").unlink()
+    elif mutation == "keyboard-host-runner-non-executable":
+        set_keyboard_host_evidence(contract)
+        (fixture_repo / "scripts/check-neovim-host.sh").chmod(0o644)
+    elif mutation == "keyboard-host-runner-mismatch":
+        set_keyboard_host_evidence(contract)
+        evidence = record(contract, "capabilities", "editor.keyboard.workflow")["expected_evidence"]
+        evidence["host_records"][0]["runner"] = "scripts/check-vscode-host.sh"
+    elif mutation == "keyboard-host-platform-overclaim":
+        set_keyboard_host_evidence(contract)
+        record(contract, "capabilities", "editor.keyboard.workflow")["platform_status"]["macos"] = "partial"
+    elif mutation == "keyboard-host-scenario-mismatch":
+        set_keyboard_host_evidence(contract)
+        record(contract, "scenarios", "keyboard-workflow")["status"] = "planned"
+    elif mutation == "keyboard-host-doc-missing":
+        set_keyboard_host_evidence(contract)
+        record(contract, "capabilities", "editor.keyboard.workflow")["expected_evidence"]["host_records"][0]["record"] = "docs/evidence/editor-hosts/neovim-linux-missing.md"
+    elif mutation == "keyboard-host-key-sequence":
+        set_keyboard_host_evidence(contract)
+        record(contract, "capabilities", "editor.keyboard.workflow")["expected_evidence"]["host_records"][0]["keyboard"].pop("key_sequence")
+    elif mutation == "keyboard-host-no-leak":
+        set_keyboard_host_evidence(contract)
+        record(contract, "capabilities", "editor.keyboard.workflow")["expected_evidence"]["host_records"][0]["keyboard"]["process_leak_check"] = False
     elif mutation == "neovim-stale-filetype":
         capability = record(contract, "capabilities", "editor.filetype.registration")
         capability["known_limitation"] = "No client package or activation registration exists."
@@ -252,6 +287,52 @@ def set_module_shapes_command(contract: dict) -> None:
     record(contract, "capabilities", "lsp.completion")["expected_evidence"]["commands"][0] = (
         "cargo test --locked -p recite-lsp --test module_shapes inline::nested::nested_test"
     )
+
+
+def set_keyboard_host_evidence(contract: dict) -> None:
+    capability = record(contract, "capabilities", "editor.keyboard.workflow")
+    capability["implementation_status"] = "partial"
+    capability["client_status"]["neovim"] = "partial"
+    capability["platform_status"]["linux"] = "partial"
+    record(contract, "scenarios", "keyboard-workflow")["status"] = "partial"
+    evidence = capability["expected_evidence"]
+    evidence["status"] = "partial"
+    evidence["commands"] = ["scripts/check-neovim-host.sh"]
+    evidence["host_records"] = [
+        host_record("0.10.4"),
+        host_record("0.12.5"),
+    ]
+
+
+def host_record(version: str) -> dict:
+    return {
+        "client": "neovim",
+        "platform": "linux",
+        "runner": "scripts/check-neovim-host.sh",
+        "record": "docs/evidence/editor-hosts/neovim-linux.md",
+        "product": "Neovim",
+        "version": version,
+        "architecture": "x86_64",
+        "keyboard": {
+            "key_sequence": [
+                ":edit <malformed .recite path><Enter>",
+                "]d",
+                ":edit <valid .recite path><Enter>",
+                ":ReciteValidate <valid .recite path><Enter>",
+                ":ReciteCompile<Enter>",
+                ":ReciteRun<Enter>",
+                ":ReciteWatchStart <project root><Enter>",
+                ":ReciteWatchStop<Enter>",
+            ],
+            "diagnostic_navigation": True,
+            "textual_severity": True,
+            "textual_status": True,
+            "textual_failure": True,
+            "watch_stop": "supported",
+            "clean_exit": True,
+            "process_leak_check": True,
+        },
+    }
 
 
 def create_digest_symlink_fixture(fixture_repo: Path, name: str, escaping: bool, directory: bool = False) -> None:
