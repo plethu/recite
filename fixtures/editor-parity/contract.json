@@ -8,7 +8,7 @@
       "artifact": "vscode-vsix",
       "status": "partial",
       "platform_status": {"linux": "partial", "macos": "planned", "windows": "planned"},
-      "notes": "The checked-in extension scaffold and syntax-only TextMate grammar are package-checked and have Linux Node/live-server evidence; installed VS Code host activation remains untested."
+      "notes": "The checked-in extension scaffold and syntax-only TextMate grammar are package-checked, and the installed VS Code Linux x86_64 lane exercises activation, shared-LSP projections, commands, and the bounded keyboard workflow; macOS/Windows, publication, and broader accessibility remain unclaimed."
     },
     {
       "id": "vscodium",
@@ -16,7 +16,7 @@
       "artifact": "vscode-vsix",
       "status": "partial",
       "platform_status": {"linux": "partial", "macos": "planned", "windows": "planned"},
-      "notes": "Uses the same checked-in extension scaffold, TextMate grammar, and generated VSIX as VS Code; Linux Node/live-server evidence exists, but installed VSCodium activation remains untested and no publication is claimed."
+      "notes": "Uses the same checked-in extension scaffold, TextMate grammar, and generated VSIX as VS Code; the installed VSCodium Linux x86_64 lane exercises activation, shared-LSP projections, commands, and the bounded keyboard workflow; macOS/Windows and publication remain unclaimed."
     },
     {
       "id": "neovim",
@@ -25,7 +25,7 @@
       "artifacts": ["neovim-runtimepath", "tree-sitter-grammar"],
       "status": "partial",
       "platform_status": {"linux": "partial", "macos": "planned", "windows": "planned"},
-      "notes": "Checked-in native runtimepath setup is exercised on Linux with Neovim 0.12.5 and targets the 0.10.4 ABI14 minimum; no package or macOS/Windows claim."
+      "notes": "Checked-in native runtimepath setup is exercised in installed Linux x86_64 Neovim 0.10.4 and 0.12.5 hosts, including the bounded keyboard workflow; no distribution package or macOS/Windows claim."
     },
     {
       "id": "zed",
@@ -33,20 +33,20 @@
       "artifact": "zed-extension",
       "status": "partial",
       "platform_status": {"linux": "partial", "macos": "planned", "windows": "planned"},
-      "notes": "The checked-in extension manifest, pinned grammar/query projection, static task argv, and API-0.7.0 LSP launcher are checked on Linux. No installed Zed host, macOS/Windows smoke, or gallery publication is claimed."
+      "notes": "The checked-in extension manifest, pinned grammar/query projection, static task argv, and API-0.7.0 LSP launcher have partial installed Zed 1.18.1 Linux x86_64 evidence, including LSP requests, syntax rendering, task status/termination, and keyboard navigation; non-BMP, stale-version, rename-edit, macOS/Windows, and gallery claims remain unmade."
     }
   ],
   "artifacts": [
     {"id": "vscode-vsix", "kind": "editor-extension", "status": "partial", "path": null, "clients": ["vscode", "vscodium"], "notes": "The extension source, TextMate grammar, and package manifest are checked in. A deterministic VSIX containing the grammar is generated and package-checked, but the archive is ignored build output rather than a checked-in artifact."},
     {"id": "tree-sitter-grammar", "kind": "syntax-grammar", "status": "partial", "path": "editors/recite-tree-sitter/grammar.js", "clients": ["neovim"]},
     {"id": "neovim-runtimepath", "kind": "editor-runtimepath", "status": "implemented", "path": "editors/recite-neovim/lua/recite.lua", "clients": ["neovim"]},
-    {"id": "zed-extension", "kind": "editor-extension", "status": "partial", "path": null, "clients": ["zed"], "notes": "The source package is checked by scripts/check-zed.sh; no installed-host or gallery artifact is claimed."}
+    {"id": "zed-extension", "kind": "editor-extension", "status": "partial", "path": null, "clients": ["zed"], "notes": "The source package is checked by scripts/check-zed.sh and installed as a local development extension by scripts/check-zed-host.sh; no gallery artifact or publication is claimed."}
   ],
   "distributions": [
     {"id": "vs-marketplace", "artifact": "vscode-vsix", "status": "planned", "notes": "Publication is not implied by a future VSIX build."},
     {"id": "open-vsx", "artifact": "vscode-vsix", "status": "planned", "notes": "Open VSX availability is tracked separately from VS Marketplace."},
     {"id": "neovim-distribution", "artifact": "neovim-runtimepath", "artifacts": ["neovim-runtimepath", "tree-sitter-grammar"], "status": "planned", "notes": "The source runtimepath package is the primary distribution artifact; its Tree-sitter grammar is a supporting artifact. No plugin-manager-specific distribution is required by the contract."},
-    {"id": "zed-distribution", "artifact": "zed-extension", "status": "planned", "notes": "Zed packaging and install smoke are owned by #192."}
+    {"id": "zed-distribution", "artifact": "zed-extension", "status": "planned", "notes": "Local development-extension install is exercised on Linux; gallery packaging, signing, and publication remain owned by #192."}
   ],
   "scenarios": [
     {
@@ -129,9 +129,9 @@
     {
       "id": "keyboard-workflow",
       "canonical_fixtures": ["fixtures/recite/valid/core_language_spike.recite", "fixtures/recite/invalid/parser_marker_leading_prose.recite"],
-      "derived_inputs": ["installed host opens and activates a .recite file", "keyboard-only diagnostic navigation and command invocation", "keyboard-only status/failure observation", "keyboard-only watch stop where the host exposes it"],
+      "derived_inputs": ["installed host prepares and activates a .recite file", "keyboard-only diagnostic navigation and command invocation", "keyboard-only status/failure observation", "keyboard-only watch stop where the host exposes it"],
       "expected_evidence": ["exact host product, version, platform, profile, and key sequence", "diagnostic navigation and command status are keyboard reachable without colour alone", "unsupported host operations are recorded explicitly"],
-      "status": "planned"
+      "status": "partial"
     }
   ],
   "capabilities": [
@@ -142,13 +142,13 @@
       "protocol": "lsp",
       "expected": {"kind": "initialize-result", "assertions": ["UTF-16 position encoding", "full open/change/save sync", "completion, hover, navigation, rename, and code actions"]},
       "edge_cases": ["client omits positionEncodings", "client advertises UTF-8 only"],
-      "known_limitation": "Only the current server's advertised LSP fields are covered; installed client activation and cross-platform support are untested.",
+      "known_limitation": "The shared stdio fields and installed VS Code/VSCodium/Zed Linux host activation are covered; Neovim host capability enumeration, cross-platform support, and accessibility remain untested.",
       "implementation_status": "partial",
-      "client_status": {"vscode": "partial", "vscodium": "partial", "neovim": "partial", "zed": "planned"},
+      "client_status": {"vscode": "partial", "vscodium": "partial", "neovim": "partial", "zed": "partial"},
       "platform_status": {"linux": "partial", "macos": "planned", "windows": "planned"},
       "artifact_status": {"vscode-vsix": "partial", "tree-sitter-grammar": "partial", "neovim-runtimepath": "implemented", "zed-extension": "partial"},
       "distribution_status": {"vs-marketplace": "planned", "open-vsx": "planned", "neovim-distribution": "planned", "zed-distribution": "planned"},
-      "expected_evidence": {"status": "partial", "commands": ["cargo test --locked -p recite-lsp --test editor_parity initialize_and_project_features_use_shared_stdio_contract", "scripts/check-neovim.sh", "scripts/check-vscode.sh"], "assertions": ["stdio initialize response contains the advertised fields", "VS Code and VSCodium Node clients start a real recite-lsp process on Linux"], "artifacts": ["neovim-runtimepath", "vscode-vsix"]},
+      "expected_evidence": {"status": "partial", "commands": ["cargo test --locked -p recite-lsp --test editor_parity initialize_and_project_features_use_shared_stdio_contract", "scripts/check-neovim.sh", "scripts/check-vscode.sh", "scripts/check-vscode-host.sh", "scripts/check-zed-host.sh"], "assertions": ["stdio initialize response contains the advertised fields", "VS Code and VSCodium Node clients start a real recite-lsp process on Linux", "Zed's installed Linux host crosses the initialize boundary and receives the advertised capabilities"], "artifacts": ["neovim-runtimepath", "vscode-vsix", "zed-extension"], "host_records": [{"client": "vscode", "platform": "linux", "runner": "scripts/check-vscode-host.sh", "record": "docs/evidence/editor-hosts/vscode-linux.md", "product": "VS Code", "version": "1.136.1", "architecture": "x86_64"}, {"client": "vscodium", "platform": "linux", "runner": "scripts/check-vscode-host.sh", "record": "docs/evidence/editor-hosts/vscode-linux.md", "product": "VSCodium", "version": "1.126.04524", "architecture": "x86_64"}, {"client": "zed", "platform": "linux", "runner": "scripts/check-zed-host.sh", "record": "docs/evidence/editor-hosts/zed-linux.md", "product": "Zed", "version": "1.18.1", "architecture": "x86_64"}]},
       "follow_up": "#51"
     },
     {
@@ -158,13 +158,13 @@
       "protocol": "lsp",
       "expected": {"kind": "publishDiagnostics", "assertions": ["stable diagnostic code", "structured severity and UTF-16 range", "malformed source does not terminate the server"]},
       "edge_cases": ["malformed marker-leading prose", "incomplete buffer"],
-      "known_limitation": "The evidence covers parser diagnostics for the named fixtures, not all compiler or schema diagnostics.",
+      "known_limitation": "Installed Linux host diagnostics are covered for VS Code/VSCodium, Neovim, and Zed on the named parser fixtures; compiler/schema breadth, non-Linux platforms, and broader accessibility remain untested.",
       "implementation_status": "partial",
-      "client_status": {"vscode": "partial", "vscodium": "partial", "neovim": "partial", "zed": "planned"},
+      "client_status": {"vscode": "partial", "vscodium": "partial", "neovim": "partial", "zed": "partial"},
       "platform_status": {"linux": "partial", "macos": "planned", "windows": "planned"},
       "artifact_status": {"vscode-vsix": "partial", "tree-sitter-grammar": "partial", "neovim-runtimepath": "implemented", "zed-extension": "partial"},
       "distribution_status": {"vs-marketplace": "planned", "open-vsx": "planned", "neovim-distribution": "planned", "zed-distribution": "planned"},
-      "expected_evidence": {"status": "partial", "commands": ["cargo test --locked -p recite-lsp --test editor_parity diagnostic_recovery_keeps_incomplete_overlay_editable", "scripts/check-neovim.sh", "scripts/check-vscode.sh"], "assertions": ["diagnostics carry URI, version, code, severity, and range for the canonical malformed fixture", "VS Code and VSCodium Node clients project live diagnostics on Linux"], "artifacts": ["neovim-runtimepath", "vscode-vsix"]},
+      "expected_evidence": {"status": "partial", "commands": ["cargo test --locked -p recite-lsp --test editor_parity diagnostic_recovery_keeps_incomplete_overlay_editable", "scripts/check-neovim.sh", "scripts/check-vscode.sh", "scripts/check-neovim-host.sh", "scripts/check-vscode-host.sh", "scripts/check-zed-host.sh"], "assertions": ["diagnostics carry URI, version, code, severity, and range for the canonical malformed fixture", "VS Code and VSCodium Node clients project live diagnostics on Linux", "installed Neovim and Zed Linux hosts project textual diagnostics with severity and location"], "artifacts": ["neovim-runtimepath", "vscode-vsix", "zed-extension"], "host_records": [{"client": "vscode", "platform": "linux", "runner": "scripts/check-vscode-host.sh", "record": "docs/evidence/editor-hosts/vscode-linux.md", "product": "VS Code", "version": "1.136.1", "architecture": "x86_64"}, {"client": "vscodium", "platform": "linux", "runner": "scripts/check-vscode-host.sh", "record": "docs/evidence/editor-hosts/vscode-linux.md", "product": "VSCodium", "version": "1.126.04524", "architecture": "x86_64"}, {"client": "neovim", "platform": "linux", "runner": "scripts/check-neovim-host.sh", "record": "docs/evidence/editor-hosts/neovim-linux.md", "product": "Neovim", "version": "0.10.4", "architecture": "x86_64"}, {"client": "neovim", "platform": "linux", "runner": "scripts/check-neovim-host.sh", "record": "docs/evidence/editor-hosts/neovim-linux.md", "product": "Neovim", "version": "0.12.5", "architecture": "x86_64"}, {"client": "zed", "platform": "linux", "runner": "scripts/check-zed-host.sh", "record": "docs/evidence/editor-hosts/zed-linux.md", "product": "Zed", "version": "1.18.1", "architecture": "x86_64"}]},
       "follow_up": "#51"
     },
     {
@@ -174,13 +174,13 @@
       "protocol": "lsp",
       "expected": {"kind": "completion-and-location", "assertions": ["completion labels come from the shared snapshot", "definition location preserves URI and source range"]},
       "edge_cases": ["open overlay is newer than disk", "references remain source ordered"],
-      "known_limitation": "Same-file completion and definition evidence does not establish complete project indexing or installed host integration.",
+      "known_limitation": "Installed VS Code/VSCodium and Zed Linux hosts project the named completion/definition responses; Neovim host projection, complete project indexing, non-Linux platforms, and accessibility remain untested.",
       "implementation_status": "partial",
-      "client_status": {"vscode": "partial", "vscodium": "partial", "neovim": "partial", "zed": "planned"},
+      "client_status": {"vscode": "partial", "vscodium": "partial", "neovim": "partial", "zed": "partial"},
       "platform_status": {"linux": "partial", "macos": "planned", "windows": "planned"},
       "artifact_status": {"vscode-vsix": "partial", "tree-sitter-grammar": "partial", "neovim-runtimepath": "implemented", "zed-extension": "partial"},
       "distribution_status": {"vs-marketplace": "planned", "open-vsx": "planned", "neovim-distribution": "planned", "zed-distribution": "planned"},
-      "expected_evidence": {"status": "partial", "commands": ["cargo test --locked -p recite-lsp --test editor_parity initialize_and_project_features_use_shared_stdio_contract", "scripts/check-neovim.sh", "scripts/check-vscode.sh"], "assertions": ["completion and definition are actual stdio responses for the canonical fixture", "VS Code and VSCodium Node clients resolve a live cross-file definition on Linux"], "artifacts": ["neovim-runtimepath", "vscode-vsix"]},
+      "expected_evidence": {"status": "partial", "commands": ["cargo test --locked -p recite-lsp --test editor_parity initialize_and_project_features_use_shared_stdio_contract", "scripts/check-neovim.sh", "scripts/check-vscode.sh", "scripts/check-vscode-host.sh", "scripts/check-zed-host.sh"], "assertions": ["completion and definition are actual stdio responses for the canonical fixture", "VS Code and VSCodium Node clients resolve a live cross-file definition on Linux", "Zed's installed Linux host receives canonical completion and definition responses"], "artifacts": ["neovim-runtimepath", "vscode-vsix", "zed-extension"], "host_records": [{"client": "vscode", "platform": "linux", "runner": "scripts/check-vscode-host.sh", "record": "docs/evidence/editor-hosts/vscode-linux.md", "product": "VS Code", "version": "1.136.1", "architecture": "x86_64"}, {"client": "vscodium", "platform": "linux", "runner": "scripts/check-vscode-host.sh", "record": "docs/evidence/editor-hosts/vscode-linux.md", "product": "VSCodium", "version": "1.126.04524", "architecture": "x86_64"}, {"client": "zed", "platform": "linux", "runner": "scripts/check-zed-host.sh", "record": "docs/evidence/editor-hosts/zed-linux.md", "product": "Zed", "version": "1.18.1", "architecture": "x86_64"}]},
       "follow_up": "#51"
     },
     {
@@ -190,7 +190,7 @@
       "protocol": "lsp",
       "expected": {"kind": "diagnostic-range", "assertions": ["non-BMP scalar counts as two UTF-16 code units", "CRLF carriage return is excluded from logical line"]},
       "edge_cases": ["surrogate-pair interior cursor", "CRLF"],
-      "known_limitation": "Only diagnostic ranges in full-sync overlays are covered; versioned edit and installed host conversion paths remain untested.",
+      "known_limitation": "Only diagnostic ranges in full-sync overlays are covered; installed VS Code/VSCodium Linux conversion is recorded, while Neovim/Zed host conversion, versioned edit application, non-Linux platforms, and accessibility remain untested.",
       "implementation_status": "partial",
       "client_status": {"vscode": "partial", "vscodium": "partial", "neovim": "partial", "zed": "planned"},
       "platform_status": {"linux": "partial", "macos": "planned", "windows": "planned"},
@@ -254,7 +254,7 @@
       "protocol": "client",
       "expected": {"kind": "structured-command-adapter", "assertions": ["typed versioned finite records remain semantic authority", "VS Code/VSCodium and Neovim adapters resolve a local binary and project typed diagnostics/runtime data", "human stderr/output is never parsed"]},
       "edge_cases": ["watch generation", "freshness and retry", "binary discovery", "cancellation"],
-      "known_limitation": "Installed VS Code/VSCodium and Neovim host activation, Neovim 0.10.4 execution, and macOS/Windows hosts remain untested; watch lifecycle is covered by the dedicated command.watch.lifecycle row, and no native text problem matcher or task contribution is claimed.",
+      "known_limitation": "Installed VS Code/VSCodium Linux command results are covered; Neovim's installed lane covers only validate/compile in the bounded workflow, and macOS/Windows remain untested. Zed's corresponding tasks are static terminal projections with no parsed diagnostic controller; typed diagnostics use a command-owned collection rather than a line-oriented problem matcher or task contribution.",
       "implementation_status": "partial",
       "client_status": {"vscode": "partial", "vscodium": "partial", "neovim": "partial", "zed": "planned"},
       "platform_status": {"linux": "partial", "macos": "planned", "windows": "planned"},
@@ -270,13 +270,13 @@
       "protocol": "client",
       "expected": {"kind": "filetype-registration", "assertions": [".recite files activate the client projection", "activation does not add semantic parsing"]},
       "edge_cases": ["unknown extension", "nested project root"],
-      "known_limitation": "Neovim runtimepath, VS Code/VSCodium package registration, and the checked-in Zed language package are covered by source/package checks; installed host activation, macOS/Windows hosts, and marketplace/gallery distributions remain untested.",
+      "known_limitation": "Installed Linux x86_64 activation is covered for VS Code/VSCodium, Neovim 0.10.4/0.12.5, and Zed 1.18.1; macOS/Windows hosts and marketplace/gallery distributions remain untested.",
       "implementation_status": "partial",
       "client_status": {"vscode": "partial", "vscodium": "partial", "neovim": "partial", "zed": "partial"},
       "platform_status": {"linux": "partial", "macos": "planned", "windows": "planned"},
       "artifact_status": {"vscode-vsix": "partial", "tree-sitter-grammar": "partial", "neovim-runtimepath": "implemented", "zed-extension": "partial"},
       "distribution_status": {"vs-marketplace": "planned", "open-vsx": "planned", "neovim-distribution": "planned", "zed-distribution": "planned"},
-      "expected_evidence": {"status": "partial", "commands": ["scripts/check-neovim.sh", "scripts/check-vscode.sh", "scripts/check-zed.sh"], "assertions": [".recite activates the recite filetype through the automatic runtimepath entry", "VS Code and VSCodium package manifests associate .recite files on the shared client", "Zed's checked-in language package associates .recite files"], "artifacts": ["neovim-runtimepath", "vscode-vsix", "zed-extension"]},
+      "expected_evidence": {"status": "partial", "commands": ["scripts/check-neovim.sh", "scripts/check-vscode.sh", "scripts/check-zed.sh", "scripts/check-neovim-host.sh", "scripts/check-vscode-host.sh", "scripts/check-zed-host.sh"], "assertions": [".recite activates the recite filetype through the automatic runtimepath entry", "VS Code and VSCodium package manifests associate .recite files on the shared client", "Zed's checked-in language package associates .recite files", "installed Linux hosts activate .recite through their native editor path"], "artifacts": ["neovim-runtimepath", "vscode-vsix", "zed-extension"], "host_records": [{"client": "vscode", "platform": "linux", "runner": "scripts/check-vscode-host.sh", "record": "docs/evidence/editor-hosts/vscode-linux.md", "product": "VS Code", "version": "1.136.1", "architecture": "x86_64"}, {"client": "vscodium", "platform": "linux", "runner": "scripts/check-vscode-host.sh", "record": "docs/evidence/editor-hosts/vscode-linux.md", "product": "VSCodium", "version": "1.126.04524", "architecture": "x86_64"}, {"client": "neovim", "platform": "linux", "runner": "scripts/check-neovim-host.sh", "record": "docs/evidence/editor-hosts/neovim-linux.md", "product": "Neovim", "version": "0.10.4", "architecture": "x86_64"}, {"client": "neovim", "platform": "linux", "runner": "scripts/check-neovim-host.sh", "record": "docs/evidence/editor-hosts/neovim-linux.md", "product": "Neovim", "version": "0.12.5", "architecture": "x86_64"}, {"client": "zed", "platform": "linux", "runner": "scripts/check-zed-host.sh", "record": "docs/evidence/editor-hosts/zed-linux.md", "product": "Zed", "version": "1.18.1", "architecture": "x86_64"}]},
       "follow_up": "#51"
     },
     {
@@ -286,7 +286,7 @@
       "protocol": "client",
       "expected": {"kind": "syntax-projection", "assertions": ["TextMate highlighting is lexical only", "canonical constructs remain visible without semantic validation"]},
       "edge_cases": ["incomplete marker", "markup and interpolation"],
-      "known_limitation": "The checked-in grammar and deterministic VSIX are syntax evidence only; installed VS Code/VSCodium activation, macOS/Windows hosts, and marketplace distributions remain untested.",
+      "known_limitation": "The checked-in grammar and deterministic VSIX are syntax evidence; installed VS Code/VSCodium Linux activation is covered, while rendered syntax, macOS/Windows hosts, and marketplace distributions remain untested.",
       "implementation_status": "partial",
       "client_status": {"vscode": "partial", "vscodium": "partial", "neovim": "planned", "zed": "planned"},
       "platform_status": {"linux": "partial", "macos": "planned", "windows": "planned"},
@@ -318,13 +318,13 @@
       "protocol": "client",
       "expected": {"kind": "syntax-projection", "assertions": ["Zed syntax is lexical only", "grammar reuse is not claimed before compatibility evidence"]},
       "edge_cases": ["incomplete marker", "markup and interpolation"],
-      "known_limitation": "The checked-in Zed package and pinned grammar/query compatibility are source-checked, but no installed Zed host is available; macOS/Windows smoke, rendering/accessibility integration, and gallery publication remain untested.",
+      "known_limitation": "The checked-in Zed package and pinned grammar/query compatibility plus installed Linux rendering are covered; non-BMP/stale-version behavior, macOS/Windows smoke, accessibility integration, and gallery publication remain untested.",
       "implementation_status": "partial",
       "client_status": {"vscode": "planned", "vscodium": "planned", "neovim": "planned", "zed": "partial"},
       "platform_status": {"linux": "partial", "macos": "planned", "windows": "planned"},
       "artifact_status": {"vscode-vsix": "partial", "tree-sitter-grammar": "partial", "neovim-runtimepath": "implemented", "zed-extension": "partial"},
       "distribution_status": {"vs-marketplace": "planned", "open-vsx": "planned", "neovim-distribution": "planned", "zed-distribution": "planned"},
-      "expected_evidence": {"status": "partial", "commands": ["scripts/check-zed.sh"], "assertions": ["the Zed package check proves manifest/config/task/query drift and the exact pinned grammar reference", "the check exercises lexical captures against the pinned grammar", "installed Zed host activation and rendering are an explicit residual"], "artifact": "zed-extension"},
+      "expected_evidence": {"status": "partial", "commands": ["scripts/check-zed.sh", "scripts/check-zed-host.sh"], "assertions": ["the Zed package check proves manifest/config/task/query drift and the exact pinned grammar reference", "the check exercises lexical captures against the pinned grammar", "the installed Zed Linux host exercises local extension activation and rendered syntax"], "artifact": "zed-extension", "host_records": [{"client": "zed", "platform": "linux", "runner": "scripts/check-zed-host.sh", "record": "docs/evidence/editor-hosts/zed-linux.md", "product": "Zed", "version": "1.18.1", "architecture": "x86_64"}]},
       "follow_up": "#192"
     },
     {
@@ -334,13 +334,13 @@
       "protocol": "lsp",
       "expected": {"kind": "completion-items", "assertions": ["completion labels come from the shared snapshot", "items are structured LSP values"]},
       "edge_cases": ["open overlay newer than disk", "incomplete prefix"],
-      "known_limitation": "Only the canonical work completion in stdio is asserted; ranking, edits, and client rendering are untested.",
+      "known_limitation": "Installed VS Code/VSCodium and Zed Linux hosts project the canonical work completion; ranking, edits, Neovim host projection, non-Linux platforms, and accessibility remain untested.",
       "implementation_status": "partial",
-      "client_status": {"vscode": "planned", "vscodium": "planned", "neovim": "partial", "zed": "planned"},
+      "client_status": {"vscode": "partial", "vscodium": "partial", "neovim": "partial", "zed": "partial"},
       "platform_status": {"linux": "partial", "macos": "planned", "windows": "planned"},
       "artifact_status": {"vscode-vsix": "partial", "tree-sitter-grammar": "partial", "neovim-runtimepath": "implemented", "zed-extension": "partial"},
       "distribution_status": {"vs-marketplace": "planned", "open-vsx": "planned", "neovim-distribution": "planned", "zed-distribution": "planned"},
-      "expected_evidence": {"status": "partial", "commands": ["cargo test --locked -p recite-lsp --test editor_parity initialize_and_project_features_use_shared_stdio_contract", "scripts/check-neovim.sh"], "assertions": ["stdio completion contains the canonical work symbol"], "artifact": "neovim-runtimepath"},
+      "expected_evidence": {"status": "partial", "commands": ["cargo test --locked -p recite-lsp --test editor_parity initialize_and_project_features_use_shared_stdio_contract", "scripts/check-neovim.sh", "scripts/check-vscode-host.sh", "scripts/check-zed-host.sh"], "assertions": ["stdio completion contains the canonical work symbol", "installed VS Code/VSCodium and Zed Linux hosts return the canonical work completion"], "artifacts": ["neovim-runtimepath", "vscode-vsix", "zed-extension"], "host_records": [{"client": "vscode", "platform": "linux", "runner": "scripts/check-vscode-host.sh", "record": "docs/evidence/editor-hosts/vscode-linux.md", "product": "VS Code", "version": "1.136.1", "architecture": "x86_64"}, {"client": "vscodium", "platform": "linux", "runner": "scripts/check-vscode-host.sh", "record": "docs/evidence/editor-hosts/vscode-linux.md", "product": "VSCodium", "version": "1.126.04524", "architecture": "x86_64"}, {"client": "zed", "platform": "linux", "runner": "scripts/check-zed-host.sh", "record": "docs/evidence/editor-hosts/zed-linux.md", "product": "Zed", "version": "1.18.1", "architecture": "x86_64"}]},
       "follow_up": "#51"
     },
     {
@@ -350,13 +350,13 @@
       "protocol": "lsp",
       "expected": {"kind": "location", "assertions": ["definition URI and range resolve through the shared snapshot", "cross-file location preserves source ownership"]},
       "edge_cases": ["qualified cross-file target", "open overlay newer than disk"],
-      "known_limitation": "The cross-file check covers one qualified target; broader indexing and overlay combinations are untested.",
+      "known_limitation": "Installed VS Code/VSCodium and Zed Linux hosts project the named cross-file definition; broader indexing, overlay combinations, Neovim host projection, non-Linux platforms, and accessibility remain untested.",
       "implementation_status": "partial",
-      "client_status": {"vscode": "partial", "vscodium": "partial", "neovim": "partial", "zed": "planned"},
+      "client_status": {"vscode": "partial", "vscodium": "partial", "neovim": "partial", "zed": "partial"},
       "platform_status": {"linux": "partial", "macos": "planned", "windows": "planned"},
       "artifact_status": {"vscode-vsix": "partial", "tree-sitter-grammar": "partial", "neovim-runtimepath": "implemented", "zed-extension": "partial"},
       "distribution_status": {"vs-marketplace": "planned", "open-vsx": "planned", "neovim-distribution": "planned", "zed-distribution": "planned"},
-      "expected_evidence": {"status": "partial", "commands": ["cargo test --locked -p recite-lsp --test editor_parity_features project_root_discovers_canonical_multi_file_overlays_for_navigation", "scripts/check-neovim.sh", "scripts/check-vscode.sh"], "assertions": ["stdio definition resolves into the discovered sibling file", "VS Code and VSCodium Node clients resolve a live cross-file definition on Linux"], "artifacts": ["neovim-runtimepath", "vscode-vsix"]},
+      "expected_evidence": {"status": "partial", "commands": ["cargo test --locked -p recite-lsp --test editor_parity_features project_root_discovers_canonical_multi_file_overlays_for_navigation", "scripts/check-neovim.sh", "scripts/check-vscode.sh", "scripts/check-vscode-host.sh", "scripts/check-zed-host.sh"], "assertions": ["stdio definition resolves into the discovered sibling file", "VS Code and VSCodium Node clients resolve a live cross-file definition on Linux", "Zed's installed Linux host resolves the canonical definition location"], "artifacts": ["neovim-runtimepath", "vscode-vsix", "zed-extension"], "host_records": [{"client": "vscode", "platform": "linux", "runner": "scripts/check-vscode-host.sh", "record": "docs/evidence/editor-hosts/vscode-linux.md", "product": "VS Code", "version": "1.136.1", "architecture": "x86_64"}, {"client": "vscodium", "platform": "linux", "runner": "scripts/check-vscode-host.sh", "record": "docs/evidence/editor-hosts/vscode-linux.md", "product": "VSCodium", "version": "1.126.04524", "architecture": "x86_64"}, {"client": "zed", "platform": "linux", "runner": "scripts/check-zed-host.sh", "record": "docs/evidence/editor-hosts/zed-linux.md", "product": "Zed", "version": "1.18.1", "architecture": "x86_64"}]},
       "follow_up": "#51"
     },
     {
@@ -366,13 +366,13 @@
       "protocol": "lsp",
       "expected": {"kind": "hover", "assertions": ["hover content is structured", "range belongs to the queried symbol"]},
       "edge_cases": ["reference position", "non-ASCII source"],
-      "known_limitation": "Only one symbol's structured response is asserted; markdown rendering and invalid positions are untested.",
+      "known_limitation": "Installed VS Code/VSCodium and Zed Linux hosts project one structured hover response; markdown rendering, invalid positions, Neovim host projection, non-Linux platforms, and accessibility remain untested.",
       "implementation_status": "partial",
-      "client_status": {"vscode": "planned", "vscodium": "planned", "neovim": "partial", "zed": "planned"},
+      "client_status": {"vscode": "partial", "vscodium": "partial", "neovim": "partial", "zed": "partial"},
       "platform_status": {"linux": "partial", "macos": "planned", "windows": "planned"},
       "artifact_status": {"vscode-vsix": "partial", "tree-sitter-grammar": "partial", "neovim-runtimepath": "implemented", "zed-extension": "partial"},
       "distribution_status": {"vs-marketplace": "planned", "open-vsx": "planned", "neovim-distribution": "planned", "zed-distribution": "planned"},
-      "expected_evidence": {"status": "partial", "commands": ["cargo test --locked -p recite-lsp --test editor_parity initialize_and_project_features_use_shared_stdio_contract", "scripts/check-neovim.sh"], "assertions": ["stdio hover response carries a symbol range and structured contents"], "artifact": "neovim-runtimepath"},
+      "expected_evidence": {"status": "partial", "commands": ["cargo test --locked -p recite-lsp --test editor_parity initialize_and_project_features_use_shared_stdio_contract", "scripts/check-neovim.sh", "scripts/check-vscode-host.sh", "scripts/check-zed-host.sh"], "assertions": ["stdio hover response carries a symbol range and structured contents", "installed VS Code/VSCodium and Zed Linux hosts return structured hover contents"], "artifacts": ["neovim-runtimepath", "vscode-vsix", "zed-extension"], "host_records": [{"client": "vscode", "platform": "linux", "runner": "scripts/check-vscode-host.sh", "record": "docs/evidence/editor-hosts/vscode-linux.md", "product": "VS Code", "version": "1.136.1", "architecture": "x86_64"}, {"client": "vscodium", "platform": "linux", "runner": "scripts/check-vscode-host.sh", "record": "docs/evidence/editor-hosts/vscode-linux.md", "product": "VSCodium", "version": "1.126.04524", "architecture": "x86_64"}, {"client": "zed", "platform": "linux", "runner": "scripts/check-zed-host.sh", "record": "docs/evidence/editor-hosts/zed-linux.md", "product": "Zed", "version": "1.18.1", "architecture": "x86_64"}]},
       "follow_up": "#51"
     },
     {
@@ -382,13 +382,13 @@
       "protocol": "lsp",
       "expected": {"kind": "locations", "assertions": ["declaration is first when included", "remaining references are source ordered by the shared kernel"]},
       "edge_cases": ["include declaration", "cross-file references"],
-      "known_limitation": "Only one declaration-inclusive same-file result is asserted; workspace-scale ordering is untested.",
+      "known_limitation": "Installed VS Code/VSCodium and Zed Linux hosts project the canonical reference set, with VS Code host ordering observable; workspace-scale ordering, Neovim host projection, non-Linux platforms, and accessibility remain untested.",
       "implementation_status": "partial",
-      "client_status": {"vscode": "planned", "vscodium": "planned", "neovim": "partial", "zed": "planned"},
+      "client_status": {"vscode": "partial", "vscodium": "partial", "neovim": "partial", "zed": "partial"},
       "platform_status": {"linux": "partial", "macos": "planned", "windows": "planned"},
       "artifact_status": {"vscode-vsix": "partial", "tree-sitter-grammar": "partial", "neovim-runtimepath": "implemented", "zed-extension": "partial"},
       "distribution_status": {"vs-marketplace": "planned", "open-vsx": "planned", "neovim-distribution": "planned", "zed-distribution": "planned"},
-      "expected_evidence": {"status": "partial", "commands": ["cargo test --locked -p recite-lsp --test editor_parity initialize_and_project_features_use_shared_stdio_contract", "scripts/check-neovim.sh"], "assertions": ["stdio references include the declaration and use location"], "artifact": "neovim-runtimepath"},
+      "expected_evidence": {"status": "partial", "commands": ["cargo test --locked -p recite-lsp --test editor_parity initialize_and_project_features_use_shared_stdio_contract", "scripts/check-neovim.sh", "scripts/check-vscode-host.sh", "scripts/check-zed-host.sh"], "assertions": ["stdio references include the declaration and use location", "installed VS Code/VSCodium and Zed Linux hosts return the canonical references"], "artifacts": ["neovim-runtimepath", "vscode-vsix", "zed-extension"], "host_records": [{"client": "vscode", "platform": "linux", "runner": "scripts/check-vscode-host.sh", "record": "docs/evidence/editor-hosts/vscode-linux.md", "product": "VS Code", "version": "1.136.1", "architecture": "x86_64"}, {"client": "vscodium", "platform": "linux", "runner": "scripts/check-vscode-host.sh", "record": "docs/evidence/editor-hosts/vscode-linux.md", "product": "VSCodium", "version": "1.126.04524", "architecture": "x86_64"}, {"client": "zed", "platform": "linux", "runner": "scripts/check-zed-host.sh", "record": "docs/evidence/editor-hosts/zed-linux.md", "product": "Zed", "version": "1.18.1", "architecture": "x86_64"}]},
       "follow_up": "#51"
     },
     {
@@ -398,7 +398,7 @@
       "protocol": "lsp",
       "expected": {"kind": "workspace-edit", "assertions": ["rename returns a source-preserving edit for a resolved symbol", "the explicit recite.renameBlock command receives a structured workspace edit", "all affected documents remain open at their LSP versions before apply"]},
       "edge_cases": ["prepare rename", "stale overlay"],
-      "known_limitation": "The explicit command is partial Linux evidence; native F2 rename remains unregistered, and installed-host activation plus cross-platform checks are untested.",
+      "known_limitation": "The explicit command is partial Linux evidence; installed VS Code/VSCodium activation is covered, native F2 rename remains unregistered, and host edit application plus cross-platform checks are incomplete.",
       "implementation_status": "partial",
       "client_status": {"vscode": "partial", "vscodium": "partial", "neovim": "partial", "zed": "planned"},
       "platform_status": {"linux": "partial", "macos": "planned", "windows": "planned"},
@@ -414,13 +414,13 @@
       "protocol": "lsp",
       "expected": {"kind": "versioned-workspace-edit", "assertions": ["missing stable IDs produce source-preserving quick fixes", "client does not invent IDs"]},
       "edge_cases": ["missing line ID", "incomplete overlay"],
-      "known_limitation": "Only a missing line-ID quickfix is asserted; other diagnostics and installed host application are untested.",
+      "known_limitation": "Installed VS Code/VSCodium apply the guarded code-action response; Zed has only partial installed Linux response evidence and does not claim edit application. Application breadth, Neovim host application, non-Linux platforms, and accessibility remain untested.",
       "implementation_status": "partial",
-      "client_status": {"vscode": "partial", "vscodium": "partial", "neovim": "partial", "zed": "planned"},
+      "client_status": {"vscode": "partial", "vscodium": "partial", "neovim": "partial", "zed": "partial"},
       "platform_status": {"linux": "partial", "macos": "planned", "windows": "planned"},
       "artifact_status": {"vscode-vsix": "partial", "tree-sitter-grammar": "partial", "neovim-runtimepath": "implemented", "zed-extension": "partial"},
       "distribution_status": {"vs-marketplace": "planned", "open-vsx": "planned", "neovim-distribution": "planned", "zed-distribution": "planned"},
-      "expected_evidence": {"status": "partial", "commands": ["cargo test --locked -p recite-lsp --test editor_parity_features code_actions_project_stable_id_repairs_from_the_shared_kernel", "scripts/check-neovim.sh", "scripts/check-vscode.sh"], "assertions": ["stdio code action response carries a source edit", "VS Code and VSCodium clients route guarded code actions through the controller boundary on Linux"], "artifacts": ["neovim-runtimepath", "vscode-vsix"]},
+      "expected_evidence": {"status": "partial", "commands": ["cargo test --locked -p recite-lsp --test editor_parity_features code_actions_project_stable_id_repairs_from_the_shared_kernel", "scripts/check-neovim.sh", "scripts/check-vscode.sh", "scripts/check-vscode-host.sh", "scripts/check-zed-host.sh"], "assertions": ["stdio code action response carries a source edit", "VS Code and VSCodium clients route guarded code actions through the controller boundary on Linux", "Zed's installed Linux host has a partial code-action response check; edit application is not claimed"], "artifacts": ["neovim-runtimepath", "vscode-vsix", "zed-extension"], "host_records": [{"client": "vscode", "platform": "linux", "runner": "scripts/check-vscode-host.sh", "record": "docs/evidence/editor-hosts/vscode-linux.md", "product": "VS Code", "version": "1.136.1", "architecture": "x86_64"}, {"client": "vscodium", "platform": "linux", "runner": "scripts/check-vscode-host.sh", "record": "docs/evidence/editor-hosts/vscode-linux.md", "product": "VSCodium", "version": "1.126.04524", "architecture": "x86_64"}, {"client": "zed", "platform": "linux", "runner": "scripts/check-zed-host.sh", "record": "docs/evidence/editor-hosts/zed-linux.md", "product": "Zed", "version": "1.18.1", "architecture": "x86_64"}]},
       "follow_up": "#51"
     },
     {
@@ -462,13 +462,13 @@
       "protocol": "protocol-neutral",
       "expected": {"kind": "stable-id-edit-plan", "assertions": ["missing line IDs can be repaired by the shared kernel", "the source edit remains source preserving"]},
       "edge_cases": ["rename", "missing ID repair", "stale generation"],
-      "known_limitation": "Only missing-ID repair is exercised; rename preconditions and generation checks are not yet complete.",
+      "known_limitation": "The installed VS Code/VSCodium Linux hosts apply the canonical missing-ID repair; rename preconditions, generation checks, Neovim/Zed host application, non-Linux platforms, and accessibility remain incomplete.",
       "implementation_status": "partial",
-      "client_status": {"vscode": "planned", "vscodium": "planned", "neovim": "planned", "zed": "planned"},
+      "client_status": {"vscode": "partial", "vscodium": "partial", "neovim": "planned", "zed": "planned"},
       "platform_status": {"linux": "partial", "macos": "planned", "windows": "planned"},
       "artifact_status": {"vscode-vsix": "partial", "tree-sitter-grammar": "partial", "neovim-runtimepath": "implemented", "zed-extension": "partial"},
       "distribution_status": {"vs-marketplace": "planned", "open-vsx": "planned", "neovim-distribution": "planned", "zed-distribution": "planned"},
-      "expected_evidence": {"status": "partial", "command": "cargo test --locked -p recite-lsp --test editor_parity_features code_actions_project_stable_id_repairs_from_the_shared_kernel", "assertions": ["stdio operation delegates missing-ID repair to the shared kernel"], "artifact": null},
+      "expected_evidence": {"status": "partial", "commands": ["cargo test --locked -p recite-lsp --test editor_parity_features code_actions_project_stable_id_repairs_from_the_shared_kernel", "scripts/check-vscode-host.sh"], "assertions": ["stdio operation delegates missing-ID repair to the shared kernel", "installed VS Code/VSCodium Linux hosts apply the source-preserving missing-ID repair"], "artifact": "vscode-vsix", "host_records": [{"client": "vscode", "platform": "linux", "runner": "scripts/check-vscode-host.sh", "record": "docs/evidence/editor-hosts/vscode-linux.md", "product": "VS Code", "version": "1.136.1", "architecture": "x86_64"}, {"client": "vscodium", "platform": "linux", "runner": "scripts/check-vscode-host.sh", "record": "docs/evidence/editor-hosts/vscode-linux.md", "product": "VSCodium", "version": "1.126.04524", "architecture": "x86_64"}]},
       "follow_up": "#51"
     },
     {
@@ -494,13 +494,13 @@
       "protocol": "cli",
       "expected": {"kind": "structured-command-record", "assertions": ["compile, validate, and extract expose typed outcomes through the local-first VS Code/VSCodium and Neovim adapters", "machine consumers do not parse human text"]},
       "edge_cases": ["invalid source", "schema mismatch", "localisation failure"],
-      "known_limitation": "Installed VS Code/VSCodium and Neovim activation, Neovim 0.10.4 execution, and macOS/Windows hosts remain untested; Zed's corresponding tasks are static terminal projections with no parsed diagnostic controller; typed diagnostics use a command-owned collection rather than a line-oriented problem matcher or task contribution.",
+      "known_limitation": "Installed VS Code/VSCodium and Zed Linux task projections are covered, while the Neovim host lane covers validate/compile but not the full extract surface; macOS/Windows remain untested. Zed's tasks are static terminal projections with no parsed diagnostic controller; typed diagnostics use a command-owned collection rather than a line-oriented problem matcher or task contribution.",
       "implementation_status": "partial",
       "client_status": {"vscode": "partial", "vscodium": "partial", "neovim": "partial", "zed": "partial"},
       "platform_status": {"linux": "partial", "macos": "planned", "windows": "planned"},
       "artifact_status": {"vscode-vsix": "partial", "tree-sitter-grammar": "partial", "neovim-runtimepath": "implemented", "zed-extension": "partial"},
       "distribution_status": {"vs-marketplace": "planned", "open-vsx": "planned", "neovim-distribution": "planned", "zed-distribution": "planned"},
-      "expected_evidence": {"status": "partial", "commands": ["cargo test --locked -p recite-cli --test structured_command structured_compile_and_extract_project_machine_artifacts_or_typed_entries", "scripts/check-vscode.sh", "scripts/check-neovim.sh", "scripts/check-zed.sh"], "assertions": ["version-1 compile, validate, and extract records are externally tested", "VS Code/VSCodium tests cover argv/cwd, typed diagnostics, and local binary refusal", "Neovim runs real validate/compile/extract records and projects clean-buffer diagnostics", "Zed only exposes explicit static terminal tasks and does not parse their output"], "artifacts": ["neovim-runtimepath", "zed-extension"]},
+      "expected_evidence": {"status": "partial", "commands": ["cargo test --locked -p recite-cli --test structured_command structured_compile_and_extract_project_machine_artifacts_or_typed_entries", "scripts/check-vscode.sh", "scripts/check-neovim.sh", "scripts/check-zed.sh", "scripts/check-vscode-host.sh", "scripts/check-zed-host.sh"], "assertions": ["version-1 compile, validate, and extract records are externally tested", "VS Code/VSCodium tests cover argv/cwd, typed diagnostics, and local binary refusal", "Neovim runs real validate/compile/extract records and projects clean-buffer diagnostics", "Zed only exposes explicit static terminal tasks and does not parse their output", "installed VS Code/VSCodium and Zed Linux hosts invoke their documented task projections"], "artifacts": ["vscode-vsix", "neovim-runtimepath", "zed-extension"], "host_records": [{"client": "vscode", "platform": "linux", "runner": "scripts/check-vscode-host.sh", "record": "docs/evidence/editor-hosts/vscode-linux.md", "product": "VS Code", "version": "1.136.1", "architecture": "x86_64"}, {"client": "vscodium", "platform": "linux", "runner": "scripts/check-vscode-host.sh", "record": "docs/evidence/editor-hosts/vscode-linux.md", "product": "VSCodium", "version": "1.126.04524", "architecture": "x86_64"}, {"client": "zed", "platform": "linux", "runner": "scripts/check-zed-host.sh", "record": "docs/evidence/editor-hosts/zed-linux.md", "product": "Zed", "version": "1.18.1", "architecture": "x86_64"}]},
       "follow_up": "#53"
     },
     {
@@ -510,13 +510,13 @@
       "protocol": "cli",
       "expected": {"kind": "structured-runtime-record", "assertions": ["run and trace preserve deterministic runtime records", "effects remain typed requests"]},
       "edge_cases": ["runtime error", "effect request", "trace retention"],
-      "known_limitation": "Installed VS Code/VSCodium and Neovim activation, Neovim 0.10.4 execution, and macOS/Windows hosts remain untested; Zed built-in run/trace are unsupported because asset, block, and fixture inputs cannot be guessed, though explicit project tasks remain possible; trace values stay structured and no human output is parsed.",
+      "known_limitation": "Installed VS Code/VSCodium Linux hosts project valid run/trace records; the Neovim host lane only exercises invalid run, and Neovim 0.10.4 run/trace plus macOS/Windows hosts remain untested. Zed built-in run/trace are unsupported because asset, block, and fixture inputs cannot be guessed, though explicit project tasks remain possible; trace values stay structured and no human output is parsed.",
       "implementation_status": "partial",
       "client_status": {"vscode": "partial", "vscodium": "partial", "neovim": "partial", "zed": "unsupported"},
       "platform_status": {"linux": "partial", "macos": "planned", "windows": "planned"},
       "artifact_status": {"vscode-vsix": "partial", "tree-sitter-grammar": "partial", "neovim-runtimepath": "implemented", "zed-extension": "partial"},
       "distribution_status": {"vs-marketplace": "planned", "open-vsx": "planned", "neovim-distribution": "planned", "zed-distribution": "planned"},
-      "expected_evidence": {"status": "partial", "commands": ["cargo test --locked -p recite-cli --test structured_command structured_run_and_trace_share_deterministic_trace_data_without_run_text", "cargo test --locked -p recite-cli --test dialogue_locale run_trace_and_play_plain_preview_dialogue_locale_catalogs", "scripts/check-vscode.sh", "scripts/check-neovim.sh"], "assertions": ["version-1 run and trace records preserve deterministic runtime data", "the focused locale fixture exercises structured trace data", "VS Code/VSCodium tests cover structured runtime projection without human output parsing", "Neovim requires explicit asset, block, and fixture and projects exact structured runtime data"], "artifact": "neovim-runtimepath"},
+      "expected_evidence": {"status": "partial", "commands": ["cargo test --locked -p recite-cli --test structured_command structured_run_and_trace_share_deterministic_trace_data_without_run_text", "cargo test --locked -p recite-cli --test dialogue_locale run_trace_and_play_plain_preview_dialogue_locale_catalogs", "scripts/check-vscode.sh", "scripts/check-neovim.sh", "scripts/check-vscode-host.sh"], "assertions": ["version-1 run and trace records preserve deterministic runtime data", "the focused locale fixture exercises structured trace data", "VS Code/VSCodium tests cover structured runtime projection without human output parsing", "Neovim requires explicit asset, block, and fixture and projects exact structured runtime data", "installed VS Code/VSCodium Linux hosts return matching structured run and trace records"], "artifacts": ["neovim-runtimepath", "vscode-vsix"], "host_records": [{"client": "vscode", "platform": "linux", "runner": "scripts/check-vscode-host.sh", "record": "docs/evidence/editor-hosts/vscode-linux.md", "product": "VS Code", "version": "1.136.1", "architecture": "x86_64"}, {"client": "vscodium", "platform": "linux", "runner": "scripts/check-vscode-host.sh", "record": "docs/evidence/editor-hosts/vscode-linux.md", "product": "VSCodium", "version": "1.126.04524", "architecture": "x86_64"}]},
       "follow_up": "#53"
     },
     {
@@ -526,13 +526,13 @@
       "protocol": "client",
       "expected": {"kind": "structured-watch-record", "assertions": ["version-1 watch records expose generation, freshness, publication, recovery, cancellation, and typed diagnostics", "the adapter owns one argv/cwd child and rejects late records", "watch stop uses cooperative cancel followed by bounded recovery"]},
       "edge_cases": ["binary discovery", "retry", "cancellation", "stale generation"],
-      "known_limitation": "Installed VS Code/VSCodium and Neovim activation, Neovim 0.10.4 execution, and macOS/Windows hosts remain untested; Zed's watch task is a static terminal projection with no parsed diagnostics or fake stdin cancellation, and no native text problem matcher or task contribution is claimed.",
+      "known_limitation": "Installed VS Code/VSCodium, Neovim 0.10.4/0.12.5, and Zed Linux watch boundaries are covered, but Zed remains a static terminal projection with no parsed diagnostics or native task cancellation controller; macOS/Windows and broader accessibility remain untested, and no native text problem matcher or task contribution is claimed.",
       "implementation_status": "partial",
       "client_status": {"vscode": "partial", "vscodium": "partial", "neovim": "partial", "zed": "partial"},
       "platform_status": {"linux": "partial", "macos": "planned", "windows": "planned"},
       "artifact_status": {"vscode-vsix": "partial", "tree-sitter-grammar": "partial", "neovim-runtimepath": "implemented", "zed-extension": "partial"},
       "distribution_status": {"vs-marketplace": "planned", "open-vsx": "planned", "neovim-distribution": "planned", "zed-distribution": "planned"},
-      "expected_evidence": {"status": "partial", "commands": ["scripts/check-vscode.sh", "scripts/check-neovim.sh", "scripts/check-zed.sh", "cargo test --locked -p recite-compiler --test authoring_build status_projection::projection_retains_structured_diagnostics_and_freshness"], "assertions": ["the real CLI watch adapter covers start, initial build/waiting, stop, and process exit", "Neovim fake and real lanes cover one-child ownership, cooperative cancel, bounded recovery, diagnostic replacement, and late-record fencing", "Zed checks only explicit static watch task argv; no parsed task controller is claimed"], "artifacts": ["neovim-runtimepath", "zed-extension"]},
+      "expected_evidence": {"status": "partial", "commands": ["scripts/check-vscode.sh", "scripts/check-neovim.sh", "scripts/check-zed.sh", "cargo test --locked -p recite-compiler --test authoring_build status_projection::projection_retains_structured_diagnostics_and_freshness", "scripts/check-vscode-host.sh", "scripts/check-neovim-host.sh", "scripts/check-zed-host.sh"], "assertions": ["the real CLI watch adapter covers start, initial build/waiting, stop, and process exit", "Neovim fake and real lanes cover one-child ownership, cooperative cancel, bounded recovery, diagnostic replacement, and late-record fencing", "Zed checks only explicit static watch task argv; no parsed task controller is claimed", "installed VS Code/VSCodium, Neovim, and Zed Linux hosts start and stop their documented watch process boundaries"], "artifacts": ["vscode-vsix", "neovim-runtimepath", "zed-extension"], "host_records": [{"client": "vscode", "platform": "linux", "runner": "scripts/check-vscode-host.sh", "record": "docs/evidence/editor-hosts/vscode-linux.md", "product": "VS Code", "version": "1.136.1", "architecture": "x86_64"}, {"client": "vscodium", "platform": "linux", "runner": "scripts/check-vscode-host.sh", "record": "docs/evidence/editor-hosts/vscode-linux.md", "product": "VSCodium", "version": "1.126.04524", "architecture": "x86_64"}, {"client": "neovim", "platform": "linux", "runner": "scripts/check-neovim-host.sh", "record": "docs/evidence/editor-hosts/neovim-linux.md", "product": "Neovim", "version": "0.10.4", "architecture": "x86_64"}, {"client": "neovim", "platform": "linux", "runner": "scripts/check-neovim-host.sh", "record": "docs/evidence/editor-hosts/neovim-linux.md", "product": "Neovim", "version": "0.12.5", "architecture": "x86_64"}, {"client": "zed", "platform": "linux", "runner": "scripts/check-zed-host.sh", "record": "docs/evidence/editor-hosts/zed-linux.md", "product": "Zed", "version": "1.18.1", "architecture": "x86_64"}]},
       "follow_up": "#53"
     },
     {
@@ -540,15 +540,15 @@
       "scenario": "keyboard-workflow",
       "authority": ["client", "recite-lsp", "recite-cli"],
       "protocol": "client",
-      "expected": {"kind": "installed-host-keyboard-workflow", "assertions": ["a .recite file opens and activates through the host", "diagnostics can be reached and navigated without pointer input", "supported authoring commands are keyboard reachable", "status and failure presentation is keyboard observable without relying on colour alone", "a running watch can be stopped from the host where that workflow is exposed"]},
+      "expected": {"kind": "installed-host-keyboard-workflow", "assertions": ["a prepared .recite file activates through the host", "diagnostics can be reached and navigated without pointer input", "supported authoring commands are keyboard reachable", "status and failure presentation is keyboard observable without relying on colour alone", "a running watch can be stopped from the host where that workflow is exposed"]},
       "edge_cases": ["host activation is unavailable", "diagnostic panel is not keyboard reachable", "authoring command reports failure", "watch stop is unsupported by the host"],
-      "known_limitation": "No installed-host keyboard evidence is recorded yet. Package, source, and headless protocol checks do not prove keyboard reachability, diagnostic navigation, command invocation, status/failure presentation, or watch stopping; exact host versions and platforms remain untested.",
-      "implementation_status": "planned",
-      "client_status": {"vscode": "planned", "vscodium": "planned", "neovim": "planned", "zed": "planned"},
-      "platform_status": {"linux": "planned", "macos": "planned", "windows": "planned"},
+      "known_limitation": "Installed-host Linux x86_64 evidence covers the bounded keyboard workflow in VS Code 1.136.1, VSCodium 1.126.04524, Neovim 0.10.4/0.12.5, and Zed 1.18.1. The scripted probes do not establish arbitrary focus traversal, screen-reader or high-contrast behavior, macOS/Windows support, gallery publication, or a native Zed task cancellation controller; package, source, and headless protocol checks remain distinct from host evidence.",
+      "implementation_status": "partial",
+      "client_status": {"vscode": "partial", "vscodium": "partial", "neovim": "partial", "zed": "partial"},
+      "platform_status": {"linux": "partial", "macos": "planned", "windows": "planned"},
       "artifact_status": {"vscode-vsix": "partial", "tree-sitter-grammar": "partial", "neovim-runtimepath": "implemented", "zed-extension": "partial"},
       "distribution_status": {"vs-marketplace": "planned", "open-vsx": "planned", "neovim-distribution": "planned", "zed-distribution": "planned"},
-      "expected_evidence": {"status": "planned", "assertions": ["each claimed client/platform names the exact installed host and version", "the recorded key sequence opens the source, reaches diagnostics, invokes supported commands, and observes status/failure", "watch stopping is recorded as supported or explicitly unsupported per host; no package, source, or headless check is counted as keyboard evidence"]},
+      "expected_evidence": {"status": "partial", "commands": ["scripts/check-vscode-host.sh", "scripts/check-neovim-host.sh", "scripts/check-zed-host.sh"], "assertions": ["each claimed client/platform names the exact installed host and version", "the recorded key sequence reaches the prepared source, reaches diagnostics, invokes supported commands, and observes status/failure", "watch stopping is recorded as supported or explicitly unsupported per host; no package, source, or headless check is counted as keyboard evidence", "unsupported Zed rename-edit and native task-controller operations remain explicit rather than inferred"], "artifacts": ["vscode-vsix", "neovim-runtimepath", "zed-extension"], "host_records": [{"client": "vscode", "platform": "linux", "runner": "scripts/check-vscode-host.sh", "record": "docs/evidence/editor-hosts/vscode-linux.md", "product": "VS Code", "version": "1.136.1", "architecture": "x86_64", "keyboard": {"key_sequence": ["Ctrl+Shift+M", "Escape", "Ctrl+1", "F8", "Ctrl+Alt+Shift+K", "Escape", "Ctrl+Alt+Shift+R", "keyboard_done", "Enter", "Ctrl+Alt+Shift+S", "Ctrl+Alt+Shift+Q"], "diagnostic_navigation": true, "textual_severity": true, "textual_status": true, "textual_failure": true, "watch_stop": "supported", "clean_exit": true, "process_leak_check": true}}, {"client": "vscodium", "platform": "linux", "runner": "scripts/check-vscode-host.sh", "record": "docs/evidence/editor-hosts/vscode-linux.md", "product": "VSCodium", "version": "1.126.04524", "architecture": "x86_64", "keyboard": {"key_sequence": ["Ctrl+Shift+M", "Escape", "Ctrl+1", "F8", "Ctrl+Alt+Shift+K", "Escape", "Ctrl+Alt+Shift+R", "keyboard_done", "Enter", "Ctrl+Alt+Shift+S", "Ctrl+Alt+Shift+Q"], "diagnostic_navigation": true, "textual_severity": true, "textual_status": true, "textual_failure": true, "watch_stop": "supported", "clean_exit": true, "process_leak_check": true}}, {"client": "neovim", "platform": "linux", "runner": "scripts/check-neovim-host.sh", "record": "docs/evidence/editor-hosts/neovim-linux.md", "product": "Neovim", "version": "0.10.4", "architecture": "x86_64", "keyboard": {"key_sequence": [":edit <malformed .recite path><Enter>", "]d", ":edit <valid .recite path><Enter>", ":ReciteValidate <valid .recite path><Enter>", ":ReciteCompile<Enter>", ":ReciteRun<Enter>", ":ReciteWatchStart <project root><Enter>", ":ReciteWatchStop<Enter>"], "diagnostic_navigation": true, "textual_severity": true, "textual_status": true, "textual_failure": true, "watch_stop": "supported", "clean_exit": true, "process_leak_check": true}}, {"client": "neovim", "platform": "linux", "runner": "scripts/check-neovim-host.sh", "record": "docs/evidence/editor-hosts/neovim-linux.md", "product": "Neovim", "version": "0.12.5", "architecture": "x86_64", "keyboard": {"key_sequence": [":edit <malformed .recite path><Enter>", "]d", ":edit <valid .recite path><Enter>", ":ReciteValidate <valid .recite path><Enter>", ":ReciteCompile<Enter>", ":ReciteRun<Enter>", ":ReciteWatchStart <project root><Enter>", ":ReciteWatchStop<Enter>"], "diagnostic_navigation": true, "textual_severity": true, "textual_status": true, "textual_failure": true, "watch_stop": "supported", "clean_exit": true, "process_leak_check": true}}, {"client": "zed", "platform": "linux", "runner": "scripts/check-zed-host.sh", "record": "docs/evidence/editor-hosts/zed-linux.md", "product": "Zed", "version": "1.18.1", "architecture": "x86_64", "keyboard": {"key_sequence": ["Ctrl+Shift+P: zed: install dev extension", "Ctrl+P: malformed .recite", "F8", "Shift+F8", "Ctrl+Shift+P: task picker", "Ctrl+C", "Ctrl+Q", "zed: quit", "Alt+F4"], "diagnostic_navigation": true, "textual_severity": true, "textual_status": true, "textual_failure": true, "watch_stop": "supported", "clean_exit": true, "process_leak_check": true}}]},
       "follow_up": "#202"
     }
   ]

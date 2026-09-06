@@ -165,7 +165,7 @@ def main() -> int:
     elif mutation == "keyboard-follow-up-missing":
         record(contract, "capabilities", "editor.keyboard.workflow").pop("follow_up")
     elif mutation == "keyboard-scenario-status":
-        record(contract, "scenarios", "keyboard-workflow")["status"] = "implemented"
+        record(contract, "scenarios", "keyboard-workflow")["status"] = "planned"
     elif mutation == "keyboard-executable-evidence":
         evidence = record(contract, "capabilities", "editor.keyboard.workflow")["expected_evidence"]
         evidence["commands"] = ["scripts/check-vscode.sh"]
@@ -305,7 +305,12 @@ def set_module_shapes_command(contract: dict) -> None:
 def set_keyboard_host_evidence(contract: dict) -> None:
     capability = record(contract, "capabilities", "editor.keyboard.workflow")
     capability["implementation_status"] = "partial"
-    capability["client_status"]["neovim"] = "partial"
+    capability["client_status"] = {
+        "vscode": "planned",
+        "vscodium": "planned",
+        "neovim": "partial",
+        "zed": "planned",
+    }
     capability["platform_status"]["linux"] = "partial"
     record(contract, "scenarios", "keyboard-workflow")["status"] = "partial"
     evidence = capability["expected_evidence"]

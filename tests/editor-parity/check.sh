@@ -14,7 +14,8 @@ mkdir -p "$fixture_repo/docs" "$fixture_repo/fixtures/editor-parity" \
   "$fixture_repo/crates/recite-lsp/tests" \
   "$fixture_repo/crates/recite-cli/tests" \
   "$fixture_repo/crates/recite-compiler/tests/authoring_build"
-mkdir -p "$fixture_repo/docs/evidence/editor-hosts" "$fixture_repo/tests/editor-hosts/neovim"
+mkdir -p "$fixture_repo/docs/evidence/editor-hosts" "$fixture_repo/tests/editor-hosts/neovim" \
+  "$fixture_repo/tests/editor-hosts/zed"
 cp "$repo_root/scripts/check-editor-parity.sh" "$fixture_repo/scripts/"
 cp "$repo_root/scripts/check-tree-sitter.sh" "$fixture_repo/scripts/"
 cp "$repo_root/scripts/check-neovim.sh" "$fixture_repo/scripts/"
@@ -22,12 +23,14 @@ cp "$repo_root/scripts/check-vscode.sh" "$fixture_repo/scripts/"
 cp "$repo_root/scripts/check-zed.sh" "$fixture_repo/scripts/"
 cp "$repo_root/scripts/check-neovim-host.sh" "$fixture_repo/scripts/"
 cp "$repo_root/scripts/check-vscode-host.sh" "$fixture_repo/scripts/"
+cp "$repo_root/scripts/check-zed-host.sh" "$fixture_repo/scripts/"
 cp -R "$repo_root/scripts/editor_parity" "$fixture_repo/scripts/"
 cp "$repo_root/editors/recite-tree-sitter/grammar.js" "$fixture_repo/editors/recite-tree-sitter/"
 cp -R "$repo_root/editors/recite-neovim/." "$fixture_repo/editors/recite-neovim/"
 cp "$repo_root/docs/editor-parity-contract.md" "$fixture_repo/docs/"
 cp "$repo_root/docs/evidence/editor-hosts/neovim-linux.md" "$fixture_repo/docs/evidence/editor-hosts/"
 cp "$repo_root/docs/evidence/editor-hosts/vscode-linux.md" "$fixture_repo/docs/evidence/editor-hosts/"
+cp "$repo_root/docs/evidence/editor-hosts/zed-linux.md" "$fixture_repo/docs/evidence/editor-hosts/"
 cp "$repo_root/fixtures/editor-parity/contract.json" "$fixture_repo/fixtures/editor-parity/"
 cp "$repo_root/fixtures/recite/valid/language_pressure.recite" "$fixture_repo/fixtures/recite/valid/"
 cp "$repo_root/fixtures/recite/valid/locale_fallback_fr.po" "$fixture_repo/fixtures/recite/valid/"
@@ -41,7 +44,7 @@ cp "$repo_root/AGENTS.md" "$fixture_repo/AGENTS.md"
 mkdir -p "$fixture_repo/.claude"
 ln -s ../.agents/skills "$fixture_repo/.claude/skills"
 ln -s AGENTS.md "$fixture_repo/CLAUDE.md"
-chmod +x "$fixture_repo/scripts/check-editor-parity.sh" "$fixture_repo/scripts/check-tree-sitter.sh" "$fixture_repo/scripts/check-neovim.sh" "$fixture_repo/scripts/check-vscode.sh" "$fixture_repo/scripts/check-zed.sh" "$fixture_repo/scripts/check-neovim-host.sh" "$fixture_repo/scripts/check-vscode-host.sh"
+chmod +x "$fixture_repo/scripts/check-editor-parity.sh" "$fixture_repo/scripts/check-tree-sitter.sh" "$fixture_repo/scripts/check-neovim.sh" "$fixture_repo/scripts/check-vscode.sh" "$fixture_repo/scripts/check-zed.sh" "$fixture_repo/scripts/check-neovim-host.sh" "$fixture_repo/scripts/check-vscode-host.sh" "$fixture_repo/scripts/check-zed-host.sh"
 
 git -C "$fixture_repo" init -q -b main
 git -C "$fixture_repo" config user.name Fixture
@@ -431,8 +434,8 @@ expect_failure evidence-artifacts-shape "capability lsp.completion artifacts mus
 expect_failure follow-up-shape "capability lsp.completion must name a follow-up issue"
 expect_failure keyboard-follow-up "editor.keyboard.workflow must remain owned by open follow-up #202"
 expect_failure keyboard-follow-up-missing "capability editor.keyboard.workflow must name a follow-up issue"
-expect_failure keyboard-scenario-status "keyboard-workflow scenario must remain planned until installed-host evidence exists"
-expect_failure keyboard-executable-evidence "unimplemented capability editor.keyboard.workflow must not claim an executable evidence command"
+expect_failure keyboard-scenario-status "editor.keyboard.workflow partial/implemented status requires a partial/implemented keyboard-workflow scenario"
+expect_failure keyboard-executable-evidence "capability editor.keyboard.workflow host_records require an installed-host evidence runner command"
 expect_failure keyboard-evidence-boundary "editor.keyboard.workflow known_limitation must name the headless evidence boundary"
 expect_failure keyboard-document-wording "keyboard workflow documentation must retain 'broader milestone 5 accessibility proof'"
 mutate_fixture keyboard-valid-host-evidence
