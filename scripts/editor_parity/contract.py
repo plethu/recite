@@ -1,7 +1,7 @@
 import re
 from pathlib import Path
 
-from .evidence import validate_capabilities
+from .evidence import is_host_runner, validate_capabilities
 from .model import Context, has_record
 from .paths import require_no_symlink_components, require_repo_file
 
@@ -225,20 +225,35 @@ def validate_keyboard_capability(ctx: Context, capabilities: dict, scenarios: di
     scenario_id = capability.get("scenario")
     ctx.require(scenario_id == "keyboard-workflow", f"{KEYBOARD_CAPABILITY_ID} must use the keyboard-workflow scenario")
     scenario = scenarios.get(scenario_id)
-    if isinstance(scenario, dict):
-        ctx.require(scenario.get("status") == "planned", f"keyboard-workflow scenario must remain planned until installed-host evidence exists")
+    capability_status = capability.get("implementation_status")
+    if capability_status == "planned":
+        if isinstance(scenario, dict):
+            ctx.require(scenario.get("status") == "planned", f"keyboard-workflow scenario must remain planned until installed-host evidence exists")
+    elif capability_status in {"partial", "implemented"}:
+        if isinstance(scenario, dict):
+            ctx.require(scenario.get("status") in {"partial", "implemented"}, f"{KEYBOARD_CAPABILITY_ID} partial/implemented status requires a partial/implemented keyboard-workflow scenario")
+        evidence = capability.get("expected_evidence")
+        evidence_commands = []
+        if isinstance(evidence, dict):
+            commands = evidence.get("commands")
+            command = evidence.get("command")
+            evidence_commands = commands if isinstance(commands, list) else ([command] if isinstance(command, str) else [])
+            host_records = evidence.get("host_records")
+            ctx.require(isinstance(host_records, list) and bool(host_records), f"{KEYBOARD_CAPABILITY_ID} partial/implemented status requires host_records")
+        ctx.require(any(is_host_runner(command) for command in evidence_commands), f"{KEYBOARD_CAPABILITY_ID} partial/implemented status requires an installed-host evidence runner")
     ctx.require(capability.get("follow_up") == KEYBOARD_FOLLOW_UP, f"{KEYBOARD_CAPABILITY_ID} must remain owned by open follow-up {KEYBOARD_FOLLOW_UP}")
-    ctx.require(capability.get("implementation_status") == "planned", f"{KEYBOARD_CAPABILITY_ID} must remain planned until installed-host evidence exists")
+    if capability_status == "planned":
+        ctx.require(capability.get("implementation_status") == "planned", f"{KEYBOARD_CAPABILITY_ID} must remain planned until installed-host evidence exists")
     client_status = capability.get("client_status")
-    if isinstance(client_status, dict):
-        for client_id, status in client_status.items():
-            ctx.require(status in {"planned", "unsupported"}, f"{KEYBOARD_CAPABILITY_ID} cannot claim {client_id} host evidence before {KEYBOARD_FOLLOW_UP}")
+    if capability_status == "planned" and isinstance(client_status, dict):
+        for client_id, client_status_value in client_status.items():
+            ctx.require(client_status_value in {"planned", "unsupported"}, f"{KEYBOARD_CAPABILITY_ID} cannot claim {client_id} host evidence before {KEYBOARD_FOLLOW_UP}")
     platform_status = capability.get("platform_status")
-    if isinstance(platform_status, dict):
-        for platform, status in platform_status.items():
-            ctx.require(status in {"planned", "unsupported"}, f"{KEYBOARD_CAPABILITY_ID} cannot claim {platform} host evidence before {KEYBOARD_FOLLOW_UP}")
+    if capability_status == "planned" and isinstance(platform_status, dict):
+        for platform, platform_status_value in platform_status.items():
+            ctx.require(platform_status_value in {"planned", "unsupported"}, f"{KEYBOARD_CAPABILITY_ID} cannot claim {platform} host evidence before {KEYBOARD_FOLLOW_UP}")
     evidence = capability.get("expected_evidence")
-    if isinstance(evidence, dict):
+    if capability_status == "planned" and isinstance(evidence, dict):
         ctx.require(evidence.get("status") == "planned", f"{KEYBOARD_CAPABILITY_ID} must not claim executable evidence before {KEYBOARD_FOLLOW_UP}")
         ctx.require("command" not in evidence and "commands" not in evidence, f"{KEYBOARD_CAPABILITY_ID} must not reuse package/source/headless commands as keyboard evidence")
     limitation = str(capability.get("known_limitation", "")).lower()

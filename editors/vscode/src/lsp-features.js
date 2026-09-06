@@ -61,7 +61,11 @@ export function vscodeCodeActionContextToLsp(api, context) {
     )
   };
   if (context?.only !== undefined) {
-    result.only = context.only.map(codeActionKindToLsp);
+    // Some installed VS Code-compatible hosts expose the optional command
+    // filter as one CodeActionKind/string instead of the API's array shape.
+    // Normalize that boundary before sending the LSP request.
+    const only = Array.isArray(context.only) ? context.only : [context.only];
+    result.only = only.map(codeActionKindToLsp);
   }
   return result;
 }

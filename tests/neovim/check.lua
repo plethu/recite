@@ -68,11 +68,22 @@ local function request(client, method, params, bufnr)
   local finished = false
   local result
   local request_error
-  local accepted = client:request(method, params, function(err, response)
+  -- Neovim 0.10.4 exposes `request` as a self-bound wrapper around the
+  -- private `_request` implementation; newer hosts expose `request` as a
+  -- normal colon method.  Keep this host-call convention in the evidence
+  -- harness rather than making the integration depend on a private API.
+  assert_true(type(client.request) == "function", "Neovim client request API is unavailable")
+  local callback = function(err, response)
     request_error = err
     result = response
     finished = true
-  end, bufnr or 0)
+  end
+  local accepted
+  if type(client._request) == "function" then
+    accepted = client.request(method, params, callback, bufnr or 0)
+  else
+    accepted = client:request(method, params, callback, bufnr or 0)
+  end
   assert_true(accepted, method .. " request was not accepted")
   wait_for(function()
     return finished

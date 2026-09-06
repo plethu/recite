@@ -71,9 +71,17 @@ def main() -> int:
             raise SystemExit(f"{capability_id} must attribute package/live evidence to vscode-vsix")
 
     expected_zed_evidence = {
+        "lsp.completion",
+        "lsp.completion.navigation",
+        "lsp.definition",
+        "lsp.hover",
+        "lsp.initialize.capabilities",
+        "lsp.publish.diagnostics",
+        "lsp.references",
         "command.compile.validate.extract",
         "command.watch.lifecycle",
         "editor.filetype.registration",
+        "editor.keyboard.workflow",
         "editor.zed.syntax-projection",
     }
     actual_zed_evidence = {
