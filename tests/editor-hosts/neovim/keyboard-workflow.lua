@@ -48,6 +48,8 @@ local project = vim.env.RECITE_TEST_PROJECT
 local valid = project .. "/core_language_spike.recite"
 local invalid_project = vim.env.RECITE_INVALID_PROJECT
 local invalid = invalid_project .. "/invalid.recite"
+local runtime_asset = project .. "/build/dialogue.recitec"
+local runtime_fixture = project .. "/runtime-fixture.toml"
 
 assert_true(type(project) == "string" and type(invalid_project) == "string",
   "host workflow fixture paths were not supplied")
@@ -107,6 +109,90 @@ wait_for(function()
 end, "keyboard-reachable ReciteCompile did not complete")
 assert_true(has_notification(notifications, "Recite compile") ~= nil,
   "compile completion was not textually observable")
+
+-- User commands intentionally expose only host-facing notifications.  Attach
+-- callbacks at the public adapter boundary for this evidence lane so the
+-- finite command assertions inspect the already-validated structured result,
+-- rather than scraping notification text or duplicating CLI semantics.
+local recite = require("recite")
+local fixture_handle = assert(io.open(runtime_fixture, "wb"))
+fixture_handle:write("# The work block has no choices or conditions.\n")
+fixture_handle:close()
+
+local function structured_user_command(user_command, adapter_name, arguments)
+  local original = recite[adapter_name]
+  local result, command_error
+  recite[adapter_name] = function(options)
+    options = options or {}
+    options.on_result = function(value) result = value end
+    options.on_error = function(value) command_error = value end
+    return original(options)
+  end
+  feed_command(user_command .. " " .. arguments)
+  wait_for(function()
+    return result ~= nil or command_error ~= nil
+  end, user_command .. " did not return a structured result")
+  recite[adapter_name] = original
+  assert_true(command_error == nil,
+    user_command .. " returned an error: " .. tostring(command_error and command_error.detail or command_error))
+  assert_true(result ~= nil and result.terminal ~= nil,
+    user_command .. " did not expose a terminal record")
+  assert_true(result.terminal.event == "command.result",
+    user_command .. " did not expose command.result")
+  assert_true(result.terminal.command == adapter_name,
+    user_command .. " returned the wrong command")
+  assert_true(result.terminal.status == "success" and result.terminal.exit_code == 0,
+    user_command .. " did not report structured success")
+  assert_true(type(result.terminal.data) == "table",
+    user_command .. " did not expose structured data")
+  return result
+end
+
+local extract_output = project .. "/host-extract.pot"
+local extract_result = structured_user_command(
+  "ReciteExtract",
+  "extract",
+  escaped(extract_output) .. " " .. escaped(valid))
+local extract_artifact = extract_result.terminal.data.artifact
+assert_true(type(extract_artifact) == "table"
+  and extract_artifact.path.encoding == "utf8"
+  and extract_artifact.path.value == extract_output
+  and vim.fn.filereadable(extract_output) == 1,
+  "ReciteExtract did not return its structured artifact")
+
+local run_result = structured_user_command(
+  "ReciteRun",
+  "run",
+  escaped(runtime_asset) .. " work " .. escaped(runtime_fixture))
+local run_trace = run_result.terminal.data.trace
+assert_true(type(run_trace) == "table"
+  and run_trace.asset_id == runtime_asset
+  and run_trace.block == "work"
+  and type(run_trace.events) == "table"
+  and #run_trace.events >= 2,
+  "ReciteRun did not return the explicit structured runtime trace")
+local work_line = run_trace.events[1]
+local work_end = run_trace.events[#run_trace.events]
+-- Source IDs retain the author label, while runtime trace line IDs use the
+-- canonical anchor.  Keep the authored ID here and assert that the host's
+-- structured projection preserves its exact anchor identity.
+local expected_work_id = "work_001@2119548317bb586e3865"
+local expected_work_anchor = expected_work_id:match("@(.+)$")
+assert_true(work_line.type == "line"
+  and expected_work_anchor ~= nil
+  and work_line.line.id == expected_work_anchor
+  and work_line.line.text == "Work waits.",
+  "ReciteRun did not return the known work-block line")
+assert_true(work_end.type == "end",
+  "ReciteRun did not terminate with the structured end event")
+
+local trace_result = structured_user_command(
+  "ReciteTrace",
+  "trace",
+  escaped(runtime_asset) .. " work " .. escaped(runtime_fixture))
+local trace = trace_result.terminal.data.trace
+assert_true(vim.deep_equal(run_trace, trace),
+  "ReciteRun and ReciteTrace did not preserve deterministic trace data")
 
 local failure_before = #notifications
 feed_command("ReciteRun")

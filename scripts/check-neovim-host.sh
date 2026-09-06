@@ -59,7 +59,7 @@ version_of() {
 assert_host_binary() {
   local binary="$1"
   local expected_version="$2"
-  local version
+  local version digest
   if [[ ! -x "$binary" ]]; then
     echo "Neovim host binary is not executable: $binary" >&2
     return 1
@@ -74,7 +74,9 @@ assert_host_binary() {
     file "$binary" >&2 || true
     return 1
   fi
-  echo "Neovim host: $version / Linux x86_64 / $binary"
+  digest="$(sha256sum "$binary")"
+  digest="${digest%% *}"
+  echo "Neovim host: $version / Linux x86_64 / $binary / SHA-256 $digest"
 }
 
 scratch="$(mktemp -d "${TMPDIR:-/tmp}/recite-neovim-host.XXXXXX")"

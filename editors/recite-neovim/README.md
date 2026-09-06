@@ -8,8 +8,8 @@ validate a project, or provide a second compiler in Lua.
 
 The integration uses Neovim's native Lua and LSP APIs. A plugin manager is
 optional; the directory can be placed on `runtimepath` directly. The minimum
-compatibility target is Neovim 0.10.4 (the checked-in smoke lane currently runs
-0.12.5; 0.10.4 has not yet been executed here).
+compatibility target is Neovim 0.10.4. The installed-host evidence lane runs
+both 0.10.4 and the pinned current host, 0.12.5, on Linux x86_64.
 
 ## Install from a checkout
 

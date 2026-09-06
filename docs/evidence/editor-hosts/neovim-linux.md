@@ -9,10 +9,10 @@ GUI terminal session.
 
 ## Hosts
 
-| Host | Version | Binary/source | Result |
-| --- | --- | --- | --- |
-| Neovim | 0.10.4 | Official `nvim-linux-x86_64.tar.gz`, downloaded ephemerally under `/tmp` from [`neovim/neovim` v0.10.4](https://github.com/neovim/neovim/releases/download/v0.10.4/nvim-linux-x86_64.tar.gz); SHA-256 `95aaa8e89473f5421114f2787c13ae0ec6e11ebbd1a13a1bd6fcf63420f8073f` | pass |
-| Neovim | 0.12.5 | Current pinned Linux x86_64 host selected through `NVIM` (the repository toolchain pins 0.12.5) | pass |
+| Host | Version | Binary/source | SHA-256 | Result |
+| --- | --- | --- | --- | --- |
+| Neovim | 0.10.4 | Official `nvim-linux-x86_64.tar.gz`, downloaded ephemerally under `/tmp` from [`neovim/neovim` v0.10.4](https://github.com/neovim/neovim/releases/download/v0.10.4/nvim-linux-x86_64.tar.gz) | binary: `5f2ae42555d31ceb992ec9ce1b9bdc4ec4016801f57ddb9274a806f529c857f7` (archive: `95aaa8e89473f5421114f2787c13ae0ec6e11ebbd1a13a1bd6fcf63420f8073f`) | pass |
+| Neovim | 0.12.5 | Current pinned Linux x86_64 host selected through `NVIM` (the repository toolchain pins 0.12.5) | `23489b431f020180b1cd82268a0ffefec8165aa4e61224188f8a6e1d68a8681c` | pass |
 
 The temporary 0.10.4 archive and extracted directory are removed by the
 harness trap. The harness checks the reported Neovim version and the ELF
@@ -54,6 +54,9 @@ The sequence exercised in both hosts is:
 :edit <valid .recite path><Enter>
 :ReciteValidate <valid .recite path><Enter>
 :ReciteCompile<Enter>
+:ReciteExtract <POT output path> <valid .recite path><Enter>
+:ReciteRun <compiled asset path> work <runtime fixture path><Enter>
+:ReciteTrace <compiled asset path> work <runtime fixture path><Enter>
 :ReciteRun<Enter>                         # expected input failure
 :ReciteWatchStart <project root><Enter>
 :ReciteWatchStop<Enter>
@@ -66,9 +69,13 @@ The assertions prove that:
 - malformed-source diagnostics are present, navigable through Neovim's
   diagnostic command, positioned on the reported line, and have textual
   messages;
-- `ReciteValidate` and `ReciteCompile` are reachable through the host command
-  line and produce a structured command result (compile also creates the
-  derived output in the isolated project);
+- `ReciteValidate`, `ReciteCompile`, and `ReciteExtract` are reachable through
+  the host command line and produce structured command results (compile also
+  creates the derived output in the isolated project, while extract reports
+  its explicit POT artifact);
+- valid `ReciteRun` and `ReciteTrace` calls use the explicitly supplied
+  compiled asset, `work` block, and deterministic empty runtime fixture;
+  both return structured success and identical trace data;
 - the invalid `ReciteRun` invocation presents a non-empty textual failure with
   Neovim error severity; and
 - a real CLI watch child starts, publishes textual status, accepts the
