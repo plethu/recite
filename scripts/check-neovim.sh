@@ -4,30 +4,42 @@ set -euo pipefail
 usage() {
   cat <<'EOF'
 Usage:
-  scripts/check-neovim.sh [--static] [repo-root]
+  scripts/check-neovim.sh [--static] [--host-evidence] [repo-root]
 
 Checks the plugin-manager-neutral Neovim integration. Static package and
 query checks always run. The default lane is authoritative and requires
 Neovim, Cargo, and Tree-sitter. Use NVIM=/path/to/nvim to select an explicit
-Neovim binary. The static mode is for parity fixtures only.
+Neovim binary. The static mode is for parity fixtures only. The host-evidence
+mode additionally runs the installed-host keyboard workflow and checks that
+the Neovim process group is empty after clean shutdown.
 EOF
 }
 
 static_only=0
-if [[ "${1:-}" == "--static" ]]; then
-  static_only=1
+host_evidence=0
+input_root=""
+while (( $# > 0 )); do
+  case "$1" in
+    --static) static_only=1 ;;
+    --host-evidence) host_evidence=1 ;;
+    -h|--help|help)
+      usage
+      exit 0
+      ;;
+    -*)
+      usage >&2
+      exit 2
+      ;;
+    *)
+      if [[ -n "$input_root" ]]; then
+        usage >&2
+        exit 2
+      fi
+      input_root="$1"
+      ;;
+  esac
   shift
-fi
-if [[ "${1:-}" == "-h" || "${1:-}" == "--help" || "${1:-}" == "help" ]]; then
-  usage
-  exit 0
-fi
-if (( $# > 1 )); then
-  usage >&2
-  exit 2
-fi
-
-input_root="${1:-}"
+done
 if [[ -n "$input_root" ]]; then
   repo_root="$(git -C "$input_root" rev-parse --show-toplevel)"
 else
@@ -73,6 +85,10 @@ for required_file in \
     exit 2
   fi
 done
+if (( host_evidence )) && [[ ! -f "$repo_root/tests/editor-hosts/neovim/keyboard-workflow.lua" ]]; then
+  echo "missing Neovim installed-host evidence file: $repo_root/tests/editor-hosts/neovim/keyboard-workflow.lua" >&2
+  exit 2
+fi
 
 if [[ -e "$plugin_root/health/recite.lua" ]]; then
   echo "legacy Neovim health path is not part of the runtimepath package: $plugin_root/health/recite.lua" >&2
@@ -201,9 +217,8 @@ else
   exit 1
 fi
 
-run_headless() {
-  local output
-  if ! output=$(RECITE_PLUGIN="$plugin_root" \
+run_nvim() {
+  RECITE_PLUGIN="$plugin_root" \
   RECITE_PARSER_ROOT="$parser_root" \
   RECITE_LSP="$repo_root/target/debug/recite-lsp" \
   RECITE_TEST_PROJECT="$project" \
@@ -219,9 +234,44 @@ run_headless() {
     env -u RECITE_CONFIG -u NVIM_APPNAME -u VIMINIT -u EXINIT -u VIMRUNTIME \
       XDG_CONFIG_HOME="$config_home" XDG_CONFIG_DIRS="$config_dirs" \
       XDG_DATA_HOME="$data_home" XDG_DATA_DIRS="$data_dirs" \
-      XDG_STATE_HOME="$state_home" XDG_CACHE_HOME="$cache_home" \
-      "$nvim_bin" --headless -u "$repo_root/tests/neovim/preload.lua" -i NONE -n \
+      XDG_STATE_HOME="$state_home" XDG_CACHE_HOME="$cache_home" "$@"
+}
+
+run_headless() {
+  local output
+  local status=0
+  if (( host_evidence )); then
+    local output_file="$scratch/nvim-output.$$.${RANDOM}"
+    if ! command -v setsid >/dev/null 2>&1 || ! command -v ps >/dev/null 2>&1; then
+      echo "Neovim host evidence requires setsid and ps for process-group cleanup checks" >&2
+      return 1
+    fi
+    run_nvim setsid "$nvim_bin" --headless -u "$repo_root/tests/neovim/preload.lua" -i NONE -n \
+      -l "$1" >"$output_file" 2>&1 &
+    local nvim_pid=$!
+    if wait "$nvim_pid"; then
+      status=0
+    else
+      status=$?
+    fi
+    output="$(<"$output_file")"
+    rm -f "$output_file"
+    if (( status == 0 )); then
+      local leaked_processes
+      leaked_processes="$(ps -eo pid=,pgid=,args= | awk -v group="$nvim_pid" '$2 == group && $1 != group { print }')"
+      if [[ -n "$leaked_processes" ]]; then
+        echo "Neovim host lane leaked processes from process group $nvim_pid:" >&2
+        printf '%s\n' "$leaked_processes" >&2
+        status=1
+      fi
+    fi
+  else
+    if ! output=$(run_nvim "$nvim_bin" --headless -u "$repo_root/tests/neovim/preload.lua" -i NONE -n \
       -l "$1" 2>&1); then
+      status=1
+    fi
+  fi
+  if (( status != 0 )); then
     printf '%s\n' "$output"
     return 1
   fi
@@ -236,5 +286,8 @@ run_headless "$repo_root/tests/neovim/check.lua"
 run_headless "$repo_root/tests/neovim/recovery.lua"
 run_headless "$repo_root/tests/neovim/material.lua"
 run_headless "$repo_root/tests/neovim/commands.lua"
+if (( host_evidence )); then
+  run_headless "$repo_root/tests/editor-hosts/neovim/keyboard-workflow.lua"
+fi
 
 echo "Neovim headless checks passed"

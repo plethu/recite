@@ -6,4 +6,7 @@ vim.g.recite_options = {
   lsp = {
     cmd = { vim.env.RECITE_LSP },
   },
+  commands = {
+    binary = vim.env.RECITE_CLI,
+  },
 }
