@@ -295,7 +295,11 @@ run_headless() {
         echo "Neovim host lane leaked processes from process group $nvim_pid:" >&2
         printf '%s\n' "$leaked_processes" >&2
       fi
-      cleanup_process_group "$nvim_pid" || status=1
+      # A recovered leak is still a host-lifecycle failure: clean shutdown
+      # means no child survived the editor, not merely that the harness could
+      # eventually terminate it.
+      status=1
+      cleanup_process_group "$nvim_pid" || true
     fi
   else
     if ! output=$(run_nvim "$nvim_bin" --headless -u "$repo_root/tests/neovim/preload.lua" -i NONE -n \
