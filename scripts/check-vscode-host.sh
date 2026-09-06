@@ -35,7 +35,7 @@ if [[ "$(uname -s)" != "Linux" || "$(uname -m)" != "x86_64" ]]; then
   exit 2
 fi
 
-for command in awk cargo cage chmod cp git node pnpm ps rm setsid sleep tar timeout tr; do
+for command in awk cargo cage chmod cp git node pnpm ps rm setsid sleep tar tr; do
   if ! command -v "$command" >/dev/null 2>&1; then
     echo "VS Code host evidence requires $command" >&2
     exit 2
@@ -71,25 +71,80 @@ VSCODIUM_COMMIT="4c0b0c6cc561d2d3636d1ec250935431876ce4dc"
 VSCODIUM_URL="https://github.com/VSCodium/vscodium/releases/download/${VSCODIUM_VERSION}/VSCodium-linux-x64-${VSCODIUM_VERSION}.tar.gz"
 VSCODIUM_SHA256="adf3548df055d18e476cdee887488ba7486b879ad99a31a546c6b5c5ff296c24"
 
-run_root="$(mktemp -d /tmp/recite-vscode-host.XXXXXX)"
+host_temp_root="${RECITE_HOST_TMPDIR:-/tmp}"
+if [[ ! -d "$host_temp_root" || ! -w "$host_temp_root" ]]; then
+  echo "host evidence temporary root is not writable: $host_temp_root" >&2
+  exit 2
+fi
+run_root="$(mktemp -d "$host_temp_root/recite-vscode-host.XXXXXX")"
 runner_pid=""
 runner_pgid=""
+script_pgid="$(ps -o pgid= -p "$$" | tr -d ' ')"
 
-kill_runner() {
-  if [[ -n "$runner_pgid" && "$runner_pgid" =~ ^[0-9]+$ && "$runner_pgid" -gt 1 ]]; then
-    kill -- "-$runner_pgid" 2>/dev/null || true
-  elif [[ -n "$runner_pid" && "$runner_pid" =~ ^[0-9]+$ && "$runner_pid" -ne $$ ]]; then
-    kill "$runner_pid" 2>/dev/null || true
+group_processes() {
+  local process_group="$1"
+  if [[ ! "$process_group" =~ ^[0-9]+$ || "$process_group" -le 1 ]]; then
+    return 0
   fi
+  ps -eo pid=,ppid=,pgid=,comm=,args= | awk \
+    -v process_group="$process_group" -v self="$$" \
+    '$3 == process_group && $1 != self { print }'
+}
+
+cleanup_process_group() {
+  local process_group="$1"
+  if [[ ! "$process_group" =~ ^[0-9]+$ || "$process_group" -le 1 ]]; then
+    return 0
+  fi
+  if [[ "$process_group" == "$script_pgid" ]]; then
+    echo "refusing to signal the harness process group $process_group" >&2
+    return 1
+  fi
+
+  local remaining
+  remaining="$(group_processes "$process_group")"
+  if [[ -z "$remaining" ]]; then
+    return 0
+  fi
+
+  echo "host phase left process-group descendants; sending TERM (pgid $process_group):" >&2
+  echo "$remaining" >&2
+  kill -TERM -- "-$process_group" 2>/dev/null || true
+  for _ in {1..30}; do
+    remaining="$(group_processes "$process_group")"
+    [[ -z "$remaining" ]] && break
+    sleep 0.1
+  done
+  if [[ -n "$remaining" ]]; then
+    echo "host phase still has process-group descendants; sending KILL (pgid $process_group):" >&2
+    echo "$remaining" >&2
+    kill -KILL -- "-$process_group" 2>/dev/null || true
+    for _ in {1..20}; do
+      remaining="$(group_processes "$process_group")"
+      [[ -z "$remaining" ]] && break
+      sleep 0.1
+    done
+  fi
+  if [[ -n "$remaining" ]]; then
+    echo "unable to clear host process group $process_group:" >&2
+    echo "$remaining" >&2
+  else
+    echo "recovered host process group $process_group; the phase remains failed" >&2
+  fi
+  return 1
 }
 
 cleanup() {
-  kill_runner
-  runner_pid=""
-  runner_pgid=""
+  local status=$?
+  if [[ -n "$runner_pgid" ]]; then
+    cleanup_process_group "$runner_pgid" || true
+  fi
   rm -rf "$run_root"
+  exit "$status"
 }
-trap cleanup EXIT INT TERM
+trap cleanup EXIT
+trap 'exit 130' INT
+trap 'exit 143' TERM
 
 download_host() {
   local name="$1"
@@ -184,17 +239,67 @@ fi
 vsix_hash="$(hash_file "$vsix")"
 
 workspace="$run_root/workspace"
-mkdir -p "$workspace/dialogue" "$workspace/compiled"
+mkdir -p "$workspace/dialogue" "$workspace/scratch" "$workspace/compiled"
 cp "$repo_root/fixtures/recite/valid/core_language_spike.recite" "$workspace/dialogue/main.recite"
-cp "$repo_root/fixtures/recite/invalid/parser_marker_leading_prose.recite" "$workspace/dialogue/invalid.recite"
+cp "$repo_root/fixtures/recite/valid/language_pressure.recite" "$workspace/dialogue/pressure.recite"
+node - "$workspace/dialogue/main.recite" "$workspace/dialogue/cross-file.recite" <<'EOF'
+const fs = require("node:fs");
+const [source, destination] = process.argv.slice(2);
+fs.writeFileSync(destination, fs.readFileSync(source, "utf8").replace(
+  "-> work", "-> dialogue/pressure.recite::letters"
+));
+EOF
+cp "$repo_root/fixtures/recite/invalid/parser_marker_leading_prose.recite" "$workspace/scratch/invalid.recite"
+cp "$repo_root/fixtures/recite/invalid/parser_marker_leading_prose.recite" "$workspace/scratch/overlay.recite"
+cp "$repo_root/fixtures/recite/invalid/parser_marker_leading_prose.recite" "$workspace/scratch/unicode.recite"
+node - "$workspace/scratch/unicode.recite" <<'EOF'
+const fs = require("node:fs");
+const file = process.argv[2];
+const source = fs.readFileSync(file, "utf8").replace("-> East", "-> 😀East");
+fs.writeFileSync(file, source.replaceAll("\n", "\r\n"));
+EOF
+node - "$workspace/dialogue/main.recite" "$workspace/dialogue/repair.recite" <<'EOF'
+const fs = require("node:fs");
+const [source, destination] = process.argv.slice(2);
+fs.writeFileSync(destination, fs.readFileSync(source, "utf8").replace(
+  "> intro_001@637b1854a7f3ed42f045 speaker=hazel mood=calm mood=alert", ">"
+));
+EOF
+cat > "$workspace/scratch/runtime-fixture.toml" <<'EOF'
+[choices]
+start = 1
+
+[effects]
+auto_ack_blocking = true
+EOF
+cat > "$workspace/scratch/runtime-invalid.toml" <<'EOF'
+[choices]
+start = 0
+EOF
 cat > "$workspace/recite.project.toml" <<'EOF'
 format_version = 1
+
+[discovery]
+source_roots = ["dialogue"]
 
 [[scenes]]
 id = "scene.start"
 asset = "compiled/dialogue.recitec"
 block = "start"
 participants = ["hazel"]
+EOF
+
+asset="$workspace/compiled/dialogue.recitec"
+fixture="$workspace/scratch/runtime-fixture.toml"
+"$cli_bin" compile --output-format structured --invocation-id host-fixture \
+  --output "$asset" "$workspace/dialogue/main.recite" >"$run_root/fixture-compile.jsonl"
+node - "$run_root/fixture-compile.jsonl" <<'EOF'
+const fs = require("node:fs");
+const records = fs.readFileSync(process.argv[2], "utf8").trim().split("\n").map(JSON.parse);
+const result = records.at(-1);
+if (result?.event !== "command.result" || result.status !== "success") {
+  throw new Error("the valid host fixture did not compile");
+}
 EOF
 
 probe="$run_root/probe"
@@ -214,28 +319,15 @@ exports.activate = () => {};
 exports.deactivate = () => {};
 EOF
 
-check_processes() {
-  local host_bin="$1"
-  local host_name="${host_bin##*/}"
-  local lsp_name="${lsp_bin##*/}"
-  local cli_name="${cli_bin##*/}"
-  local leaked
-  leaked="$(ps -eo pid=,comm=,args= | awk -v host="$host_name" -v lsp="$lsp_name" -v cli="$cli_name" -v self="$$" \
-    '($2 == host || $2 == lsp || $2 == cli) && $1 != self && $2 != "awk" { print }')"
-  if [[ -n "$leaked" ]]; then
-    echo "Recite host probe left a Recite process running:" >&2
-    echo "$leaked" >&2
-    return 1
-  fi
-}
-
 run_host_process() {
   local profile="$1"
   local result="$2"
   local log="$3"
   local host_bin="$4"
   local install_only="$5"
+  local candidate_pgid=""
 
+  runner_pgid=""
   set +e
   setsid env -u DISPLAY -u WAYLAND_DISPLAY \
     HOME="$profile/home" \
@@ -252,11 +344,11 @@ run_host_process() {
     RECITE_HOST_PROBE_EXTENSIONS="$profile/extensions" \
     RECITE_HOST_PROBE_WORKSPACE="$workspace" \
     RECITE_HOST_PROBE_VALID="$workspace/dialogue/main.recite" \
-    RECITE_HOST_PROBE_INVALID="$workspace/dialogue/invalid.recite" \
+    RECITE_HOST_PROBE_INVALID="$workspace/scratch/invalid.recite" \
     RECITE_HOST_PROBE_LSP="$lsp_bin" \
     RECITE_HOST_PROBE_CLI="$cli_bin" \
     RECITE_HOST_PROBE_INSTALL_ONLY="$install_only" \
-    timeout --kill-after=10 180 cage -- \
+    cage -- \
     "$host_bin" --no-sandbox --disable-gpu --disable-updates --skip-welcome \
       --skip-release-notes --disable-telemetry --disable-crash-reporter \
       --password-store=basic --user-data-dir="$profile/user-data" \
@@ -265,16 +357,46 @@ run_host_process() {
       --disable-workspace-trust "$workspace" >"$log" 2>&1 &
   runner_pid=$!
   for _ in {1..20}; do
-    runner_pgid="$(ps -o pgid= -p "$runner_pid" 2>/dev/null | tr -d ' ')"
-    [[ "$runner_pgid" =~ ^[0-9]+$ ]] && break
+    candidate_pgid="$(ps -o pgid= -p "$runner_pid" 2>/dev/null | tr -d ' ')"
+    if [[ "$candidate_pgid" =~ ^[0-9]+$ && "$candidate_pgid" -gt 1 &&
+      "$candidate_pgid" != "$script_pgid" ]]; then
+      runner_pgid="$candidate_pgid"
+      break
+    fi
     sleep 0.05
   done
-  wait "$runner_pid"
-  local status=$?
+  local status=124
+  local finished=0
+  for _ in {1..3600}; do
+    if ! kill -0 "$runner_pid" 2>/dev/null; then
+      wait "$runner_pid"
+      status=$?
+      finished=1
+      break
+    fi
+    sleep 0.05
+  done
+  if (( finished == 0 )); then
+    echo "host phase exceeded the 180-second bound" >&2
+  fi
+  local process_group="$runner_pgid"
+  local group_status=1
+  if [[ -n "$process_group" ]]; then
+    cleanup_process_group "$process_group"
+    group_status=$?
+  else
+    echo "unable to capture an isolated host process group" >&2
+  fi
   set -e
   runner_pid=""
   runner_pgid=""
-  return "$status"
+  if (( finished == 0 )); then
+    return 124
+  fi
+  if (( status != 0 )); then
+    return "$status"
+  fi
+  return "$group_status"
 }
 
 run_host_phase() {
@@ -285,6 +407,7 @@ run_host_phase() {
   local profile="$run_root/$label"
   local result="$profile/result.json"
   local log="$profile/host.log"
+  local status
 
   mkdir -p "$profile/home" "$profile/config" "$profile/data" "$profile/cache" \
     "$profile/runtime" "$profile/portable" "$profile/user-data" "$profile/extensions" "$profile/shared"
@@ -332,6 +455,10 @@ assert.equal(typeof result.host, "string", "host version is reported by the real
 assert(result.host.length > 0, "host version is not empty");
 assert.equal(result.extensionActive, true, "extension activated");
 assert.equal(result.language, "recite", "Recite language is active");
+assert.equal(result.hover, true, "hover is host-projected");
+assert.equal(result.definition, true, "definition is host-projected");
+assert.equal(result.references, "host-sorted", "references return a deterministic host projection");
+assert.equal(result.crossFileDefinition, true, "cross-file definition is host-projected");
 assert(result.lspDiagnostics.includes("RECITE_PARSE011"), "LSP diagnostics include stable parse code");
 assert(result.lspDiagnostics.includes("RECITE_PARSE013"), "LSP diagnostics include all expected stable parse codes");
 assert(result.diagnosticEvents > 0, "host observed diagnostic changes");
@@ -340,10 +467,19 @@ assert.equal(result.validateSuccess, "success", "valid validation succeeded");
 assert.equal(result.validateFailure, "content_diagnostics", "invalid validation reported content diagnostics");
 assert.equal(result.compile, "content_diagnostics", "compile reported content diagnostics");
 assert.equal(result.extract, "content_diagnostics", "extract reported content diagnostics");
+assert.equal(result.run, "success", "run reported structured success");
+assert.equal(result.trace, "success", "trace reported structured success");
+assert.equal(result.runFailure, "failure", "run reported structured failure");
+assert.equal(result.traceFailure, "failure", "trace reported structured failure");
 assert.equal(result.watchStopped, true, "watch stopped");
 assert.equal(result.watchExitCode, 0, "watch exited cleanly");
+assert.equal(result.overlayRecovery, true, "malformed and incomplete overlays recovered");
+assert.equal(result.utf16, "passed", "UTF-16/non-BMP ranges were projected");
+assert.equal(result.codeAction, "stable-id-applied", "stable-ID code action applied");
+assert.equal(result.nativeRename, "unsupported", "native rename limitation is explicit");
+assert(["undefined", "empty-workspace-edit"].includes(result.nativeRenameShape), "native rename shape is recorded");
+assert(["applied", "precondition-only"].includes(result.rename), "explicit rename result is recorded");
 EOF
-  check_processes "$host_bin"
   node -e '
     const result = require(process.argv[1]);
     process.stdout.write(JSON.stringify(result) + "\n");

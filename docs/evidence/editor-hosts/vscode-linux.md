@@ -23,7 +23,7 @@ desktop/session. Existing extracted official hosts can be supplied with
 | VSCodium | `1.126.04524` | `1.126.0` | `4c0b0c6cc561d2d3636d1ec250935431876ce4dc` | VSCodium GitHub release Linux x64 | `adf3548df055d18e476cdee887488ba7486b879ad99a31a546c6b5c5ff296c24` |
 
 The deterministic VSIX produced by the check currently hashes to
-`ecfc491f311e975c2080f4fe0d0fef7abf36ac4c4444970fdf1b710a490e6bdd`.
+`5a5f411406cf3e706d420499a6036923941616c356b7a6d212f2abc8e54db20b`.
 The VSIX is a local test artifact; this evidence makes no Marketplace or Open
 VSX publication claim.
 
@@ -36,15 +36,29 @@ For each host, the check asserts:
 - opening `.recite` selects the `recite` language and activates the extension;
 - the actual `recite-lsp` emits stable diagnostics (`RECITE_PARSE011` and
   `RECITE_PARSE013`) and the host receives a diagnostic-change event;
-- the host's completion API returns structured completion items;
+- the host's completion and hover APIs return structured results, and
+  definition/navigation resolves both same-file and canonical sibling targets;
+- references return the two canonical locations in the pinned host's
+  deterministic order (the VS Code host sorts them, so the server's source
+  order is not observable through this native API); the explicit Recite rename
+  command exercises its guarded missing-active-document precondition. The
+  installed extension-test API cannot answer its input prompt without opening
+  a real UI, so the versioned edit/apply path remains covered by controller
+  tests; native F2 rename is explicitly unsupported by this client;
+- the UTF-16/non-BMP/CRLF diagnostic range survives host projection, malformed
+  and incomplete overlays recover to a valid document, and the stable-ID
+  quick-fix is applied through the controller-owned command;
 - `recite.validate` reports structured `success` for valid content and
   `content_diagnostics` plus `RECITE_PARSE011` for invalid content;
 - `recite.compile` and `recite.extract` preserve the structured failure
-  status, and `recite.watch.start` returns an invocation identifier;
+  status; `recite.run` and `recite.trace` return matching structured runtime
+  traces; and `recite.watch.start` returns an invocation identifier;
 - `recite.watch.stop` completes the supported cancellation path with exit code
   zero; the host test completes normally; and no `recite`, `recite-lsp`, or
-  host-owned child process remains after the host exits (the host then owns its
-  normal extension deactivation sequence).
+  host-owned Cage/host descendant remains in the captured process group after
+  the host exits (the host then owns its normal extension deactivation
+  sequence). Any descendant observed on a phase exit fails that lane, even if
+  bounded cleanup recovers it.
 
 The assertions live in
 [`tests/editor-hosts/vscode/host-probe.cjs`](../../../tests/editor-hosts/vscode/host-probe.cjs).

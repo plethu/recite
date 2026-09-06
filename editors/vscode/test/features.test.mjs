@@ -244,6 +244,9 @@ test("code-action context projects kind values and preserves only semantics", ()
   const absent = vscodeCodeActionContextToLsp(api, { diagnostics: [] });
   assert.equal(Object.hasOwn(absent, "only"), false);
   assert.deepEqual(vscodeCodeActionContextToLsp(api, { diagnostics: [], only: [] }).only, []);
+  assert.deepEqual(vscodeCodeActionContextToLsp(api, {
+    diagnostics: [], only: "quickfix"
+  }).only, ["quickfix"]);
 });
 
 test("completion projection preserves field identity and filter text", () => {

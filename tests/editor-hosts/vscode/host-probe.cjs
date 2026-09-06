@@ -39,6 +39,15 @@ async function runHostProbe() {
   const workspace = vscode.Uri.file(process.env.RECITE_HOST_PROBE_WORKSPACE);
   const validUri = vscode.Uri.file(process.env.RECITE_HOST_PROBE_VALID);
   const invalidUri = vscode.Uri.file(process.env.RECITE_HOST_PROBE_INVALID);
+  const mainUri = validUri;
+  const crossUri = vscode.Uri.file(path.join(workspace.fsPath, "dialogue", "cross-file.recite"));
+  const pressureUri = vscode.Uri.file(path.join(workspace.fsPath, "dialogue", "pressure.recite"));
+  const overlayUri = vscode.Uri.file(path.join(workspace.fsPath, "scratch", "overlay.recite"));
+  const repairUri = vscode.Uri.file(path.join(workspace.fsPath, "dialogue", "repair.recite"));
+  const unicodeUri = vscode.Uri.file(path.join(workspace.fsPath, "scratch", "unicode.recite"));
+  const assetPath = path.join(workspace.fsPath, "compiled", "dialogue.recitec");
+  const fixturePath = path.join(workspace.fsPath, "scratch", "runtime-fixture.toml");
+  const invalidFixturePath = path.join(workspace.fsPath, "scratch", "runtime-invalid.toml");
   const extension = vscode.extensions.getExtension("plethu.recite-vscode");
 
   assert(extension, "the installed Recite VSIX is discoverable");
@@ -57,15 +66,86 @@ async function runHostProbe() {
     diagnosticEvents.push(true);
   });
 
-  const valid = await vscode.workspace.openTextDocument(validUri);
+  const valid = await vscode.workspace.openTextDocument(mainUri);
   assert.equal(valid.languageId, "recite", ".recite files activate the Recite language");
   await vscode.window.showTextDocument(valid);
   await waitFor(() => extension.isActive, "Recite extension activation");
+  await sleep(500);
+
+  const mainText = valid.getText();
+  const targetPosition = positionFor(mainText, "-> work", 4);
+  const hoverResults = await vscode.commands.executeCommand(
+    "vscode.executeHoverProvider", mainUri, targetPosition
+  );
+  assert(Array.isArray(hoverResults) && hoverResults.length > 0, "hover returns host-projected results");
+  assert.equal(hoverResults[0].range.start.line, 6, "hover preserves the canonical source range");
+  assert(hoverResults[0].contents.length > 0, "hover preserves structured contents");
+
+  const definitionResults = await vscode.commands.executeCommand(
+    "vscode.executeDefinitionProvider", mainUri, targetPosition
+  );
+  assert(Array.isArray(definitionResults) && definitionResults.length > 0,
+    "definition returns host-projected locations");
+  assert.equal(definitionResults[0].uri.fsPath, mainUri.fsPath, "same-file definition retains its URI");
+  assert.equal(definitionResults[0].range.start.line, 13, "definition preserves the canonical source range");
+
+  const referenceResults = await vscode.commands.executeCommand(
+    "vscode.executeReferenceProvider", mainUri, targetPosition
+  );
+  assert(Array.isArray(referenceResults) && referenceResults.length === 2,
+    "references return the canonical location set");
+  assert.deepEqual(referenceResults.map((location) => location.range.start.line), [6, 13],
+    "references preserve the pinned host's deterministic ordering");
+
+  const pressure = await vscode.workspace.openTextDocument(pressureUri);
+  const cross = await vscode.workspace.openTextDocument(crossUri);
+  assert.equal(pressure.languageId, "recite", "sibling fixture uses the Recite language");
+  assert.equal(cross.languageId, "recite", "cross-file fixture uses the Recite language");
+  await vscode.window.showTextDocument(pressure);
+  await vscode.window.showTextDocument(cross);
+  await sleep(500);
+  const crossDefinitionResults = await vscode.commands.executeCommand(
+    "vscode.executeDefinitionProvider",
+    crossUri,
+    positionFor(cross.getText(), "-> dialogue/pressure.recite::le")
+  );
+  assert(Array.isArray(crossDefinitionResults) && crossDefinitionResults.length > 0,
+    "definition resolves the canonical sibling project");
+  assert.equal(crossDefinitionResults[0].uri.fsPath, pressureUri.fsPath,
+    "cross-file definition preserves the sibling URI");
+  assert.equal(crossDefinitionResults[0].range.start.line, 9,
+    "cross-file definition preserves the canonical sibling range");
+
+  await vscode.window.showTextDocument(valid);
+  const runResult = await vscode.commands.executeCommand("recite.run", {
+    asset: assetPath, block: "start", fixture: fixturePath
+  });
+  const traceResult = await vscode.commands.executeCommand("recite.trace", {
+    asset: assetPath, block: "start", fixture: fixturePath
+  });
+  assert.equal(runResult?.terminal?.status, "success", "run returns a structured success");
+  assert.equal(traceResult?.terminal?.status, "success", "trace returns a structured success");
+  assert.deepEqual(runResult.terminal.data.trace, traceResult.terminal.data.trace,
+    "run and trace preserve shared deterministic trace data");
+  assert.equal(runResult.terminal.data.trace.events[0].type, "prompt",
+    "run retains the structured prompt event");
+  assert(runResult.terminal.data.trace.events.some((event) => event.type === "line"),
+    "run retains structured line events");
+  const runFailure = await vscode.commands.executeCommand("recite.run", {
+    asset: assetPath, block: "start", fixture: invalidFixturePath
+  });
+  const traceFailure = await vscode.commands.executeCommand("recite.trace", {
+    asset: assetPath, block: "start", fixture: invalidFixturePath
+  });
+  assert.equal(runFailure?.terminal?.event, "command.error", "run exposes a structured failure");
+  assert.equal(runFailure?.terminal?.status, "failure", "run failure retains its status");
+  assert.equal(traceFailure?.terminal?.event, "command.error", "trace exposes a structured failure");
+  assert.equal(traceFailure?.terminal?.status, "failure", "trace failure retains its status");
 
   const successfulValidation = await vscode.commands.executeCommand("recite.validate");
   assert.equal(successfulValidation?.terminal?.status, "success", "validate reports structured success");
   const completion = await vscode.commands.executeCommand(
-    "vscode.executeCompletionItemProvider", validUri, new vscode.Position(0, 0)
+    "vscode.executeCompletionItemProvider", mainUri, new vscode.Position(0, 0)
   );
   assert(completion && Array.isArray(completion.items), "completion remains a structured LSP result");
 
@@ -103,11 +183,85 @@ async function runHostProbe() {
   assert.equal(watchStopped?.stopped, true, "watch stop completes cooperatively");
   assert.equal(watchStopped?.exitCode, 0, "watch exits cleanly");
 
+  const overlay = await vscode.workspace.openTextDocument(overlayUri);
+  const overlayEditor = await vscode.window.showTextDocument(overlay);
+  await waitFor(
+    () => vscode.languages.getDiagnostics(overlayUri).some((diagnostic) => diagnostic.code === "RECITE_PARSE011"),
+    "malformed overlay diagnostics"
+  );
+  await replaceDocument(overlay, overlayEditor, ":: marker_probe default\n>");
+  await waitFor(
+    () => vscode.languages.getDiagnostics(overlayUri).length > 0,
+    "incomplete overlay recovery diagnostics"
+  );
+  await replaceDocument(overlay, overlayEditor, mainText);
+  await waitFor(
+    () => vscode.languages.getDiagnostics(overlayUri).length === 0,
+    "recovered overlay diagnostics"
+  );
+
+  const unicode = await vscode.workspace.openTextDocument(unicodeUri);
+  await vscode.window.showTextDocument(unicode);
+  const unicodeDiagnostic = await waitFor(() => vscode.languages.getDiagnostics(unicodeUri).find(
+    (diagnostic) => diagnostic.range.start.line === 2
+  ), "UTF-16/non-BMP diagnostics");
+  assert.equal(unicodeDiagnostic.range.start.character, 13,
+    "non-BMP source uses two UTF-16 code units");
+  assert.equal(unicodeDiagnostic.range.end.character, 15,
+    "CRLF/non-BMP diagnostic end remains UTF-16 stable");
+
+  const repair = await vscode.workspace.openTextDocument(repairUri);
+  await vscode.window.showTextDocument(repair);
+  const repairDiagnostics = await waitFor(
+    () => vscode.languages.getDiagnostics(repairUri).filter((diagnostic) => diagnostic.code === "RECITE_ID001"),
+    "stable-ID repair diagnostics"
+  );
+  const actions = await vscode.commands.executeCommand(
+    "vscode.executeCodeActionProvider",
+    repairUri,
+    new vscode.Range(new vscode.Position(2, 0), new vscode.Position(2, 1)),
+    "quickfix"
+  );
+  assert(Array.isArray(actions), "code actions return host-projected actions");
+  const repairAction = actions.find((action) => action.command?.command === "recite.applyCodeAction");
+  assert(repairAction?.command?.command === "recite.applyCodeAction",
+    "stable-ID repair remains behind the controller command boundary");
+  const repairApplied = await vscode.commands.executeCommand(
+    repairAction.command.command, ...(repairAction.command.arguments ?? [])
+  );
+  assert.equal(repairApplied, true, "host applies the guarded stable-ID repair command");
+  await waitFor(
+    () => /line@[0-9a-f]{20}/u.test(repair.getText()),
+    "stable-ID repair edit"
+  );
+
+  const renameEditor = await vscode.window.showTextDocument(valid);
+  renameEditor.selection = new vscode.Selection(targetPosition, targetPosition);
+  const nativeRename = await vscode.commands.executeCommand(
+    "vscode.executeDocumentRenameProvider", mainUri, targetPosition, "finished"
+  );
+  const nativeRenameEntries = typeof nativeRename?.entries === "function"
+    ? nativeRename.entries()
+    : [];
+  assert(nativeRename === undefined || nativeRenameEntries.length === 0,
+    "native rename stays unsupported without projected edits");
+  // The installed-host API has no supported way to answer the explicit
+  // rename prompt without opening a real UI. Exercise the guarded command's
+  // missing-document precondition; the pure controller tests cover the
+  // versioned edit/apply path without manufacturing keyboard input here.
+  await vscode.commands.executeCommand("workbench.action.closeAllEditors");
+  const precondition = await vscode.commands.executeCommand("recite.renameBlock");
+  assert.equal(precondition, false, "explicit Recite rename rejects a missing active document");
+
   diagnosticSubscription.dispose();
   writeResult({
     host: vscode.version,
     extensionActive: true,
     language: invalid.languageId,
+    hover: true,
+    definition: true,
+    references: "host-sorted",
+    crossFileDefinition: true,
     lspDiagnostics: diagnostics.map((diagnostic) => String(diagnostic.code)),
     diagnosticEvents: diagnosticEvents.length,
     completionCount: completion.items.length,
@@ -115,9 +269,35 @@ async function runHostProbe() {
     validateFailure: failedValidation.terminal.status,
     compile: compile.terminal.status,
     extract: extract.terminal.status,
+    run: runResult.terminal.status,
+    trace: traceResult.terminal.status,
+    runFailure: runFailure.terminal.status,
+    traceFailure: traceFailure.terminal.status,
     watchStopped: watchStopped.stopped,
-    watchExitCode: watchStopped.exitCode
+    watchExitCode: watchStopped.exitCode,
+    overlayRecovery: true,
+    utf16: "passed",
+    codeAction: "stable-id-applied",
+    nativeRename: "unsupported",
+    nativeRenameShape: nativeRename === undefined ? "undefined" : "empty-workspace-edit",
+    rename: "precondition-only"
   });
+}
+
+function positionFor(source, needle, offset = needle.length) {
+  const byteIndex = source.indexOf(needle);
+  assert(byteIndex >= 0, `source is missing ${needle}`);
+  const prefix = source.slice(0, byteIndex + offset);
+  const lines = prefix.split("\n");
+  return new vscode.Position(lines.length - 1, [...lines.at(-1)].reduce(
+    (units, scalar) => units + scalar.length,
+    0
+  ));
+}
+
+async function replaceDocument(document, editor, text) {
+  const range = new vscode.Range(document.positionAt(0), document.positionAt(document.getText().length));
+  assert(await editor.edit((builder) => builder.replace(range, text)), "host applied overlay edit");
 }
 
 exports.run = async function run(_testDirectory, callback) {
