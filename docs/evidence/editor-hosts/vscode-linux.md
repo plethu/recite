@@ -64,8 +64,9 @@ For each host, the check asserts:
   Problems view, then a disposable probe keybinding records the live
   `RECITE_PARSE011` code, error severity, and source location without relying
   on colour. Real key events invoke the supported explicit rename command and
-  `recite.watch.start`; Stop watch is selected and invoked from the command
-  palette because the product intentionally has no default shortcut. The
+  `recite.watch.start`; a disposable `Ctrl+Alt+Shift+Q` binding invokes the
+  supported `recite.watch.stop` command because the product intentionally has
+  no default shortcut. The
   resulting document edit and exact captured-group CLI shutdown are observed
   through marker files and process inspection. The disposable bindings belong
   only to this probe profile and are not product compatibility claims.

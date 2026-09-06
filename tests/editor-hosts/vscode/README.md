@@ -22,8 +22,9 @@ have enough space for a full host profile; `/tmp` remains the default.
 The keyboard phase starts a second isolated host under private Cage/WLR and
 sends real Wayland events with `wtype`: it reaches the Problems view, moves to
 the diagnostic, invokes a disposable binding for the supported rename command,
-and starts watch. It selects Stop watch through the command palette (the
-product has no default shortcut), then observes the edit, diagnostic
+and starts watch. It sends `Ctrl+Alt+Shift+Q` through a disposable binding for
+the supported Stop watch command (the product has no default shortcut), then
+observes the edit, diagnostic
 code/severity/location, and captured-group CLI exit through marker files and
 process inspection. The temporary bindings are test-harness wiring only; they
 do not claim product keybindings. This proves the scripted host path, not
