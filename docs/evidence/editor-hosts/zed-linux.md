@@ -42,8 +42,8 @@ Observed 2026-09-06 on Linux x86_64:
 | Direct host SHA-256 | `6329d6a67e3114d834c3d50b08babf8328de68001250c37cf43a890daeecd8fe` |
 | Version query | `zeditor --version` → `Zed 1.18.1 – /usr/lib/zed/zed-editor` |
 | Architecture/kernel | `x86_64`, Linux `7.2.3-1-cachyos` |
-| Recite LSP SHA-256 | `bf3bd27a5bdbf867fb2ddf6135a46514052d6f07fd4409f54bbcf7c28bc0dfd3` |
-| Recite CLI SHA-256 | `8bd51e96244ec97968d7c3af265cb458be88751c41a46a9ffcc3088c1fb98442` |
+| Recite LSP SHA-256 | `87874eb92054a854d36d3ca0e32fe2c30f57dc593537e8e03d71d05d18949cdf` |
+| Recite CLI SHA-256 | `6d8b6e1cbff9c198966d9b759d9e81a6abf79dba6fd2f7f1b0e8b2ce24a308b1` |
 | Host compositor | Cage `0.3.1-b7b774a`, WLR `headless`, one private `wayland-0` socket |
 | Automation tools | `wtype` 0.4-2.4, `grim` 1.5.0-2.1, `dbus-run-session` 1.16.2 |
 | Render path | Zed log recorded `Rendered first frame` and an AMD Radeon 860M Vulkan adapter |
@@ -70,22 +70,29 @@ scripts/check-zed-host.sh /path/to/recite
 
 The installed host rendered and activated the development extension, started
 the real `recite-lsp`, exercised the keyboard LSP/task workflow, and left no
-private probe process after shutdown. The transport assertion recorded:
+private probe process after shutdown. The transport and task assertions
+recorded:
 
 ```text
 extension_wasm_sha256=eff6f486881a0e53b77d29c98fa3a5098113af1d55fd58389850457ebb4b2f9f
 installed_extension_index=recite(dev=true),grammar_rev=209ea23195f674a18be0b8f87e037273fb3296bd
 recite_lsp_process=observed
 lsp_transport=actual_zed_requests_and_recite_responses_asserted
-lsp_diagnostics=RECITE_PARSE011/013 severity=1 UTF-16 ranges asserted
+lsp_diagnostics=RECITE_PARSE011/013 severity=1 non-BMP UTF-16 ranges asserted
+lsp_utf16=non_BMP_fixture_didOpen_and_post_marker_request_asserted
 lsp_features=completion/hover/definition/references/prepareRename asserted
-lsp_code_action=unsupported_empty_result(request_crossed_zed; no_edit_applied)
-lsp_rename_edit=unsupported_in_this_key_sequence(rename requires host text-entry confirmation)
+lsp_code_action=non_empty_canonical_quick_fix_response_and_edit_asserted
+lsp_rename_edit=work_renamed_two_occurrence_workspace_edit_asserted
+lsp_rename_edit=non_empty_workspace_edit_applied_and_saved
+lsp_code_action=non_empty_quick_fix_applied_and_saved
+lsp_ui_actions=diagnostics,completion,hover,definition,references,rename,code-actions dispatched
+task_extract=pid=2757833, exact argv/cwd/status asserted
+task_compile=pid=2758074, exact argv/cwd/status asserted
 diagnostic_navigation=next_and_previous_keyboard_actions_observed
-task_validate=structured argv observed, status=1 observed
+task_validate=pid=2758674, exact argv/cwd/status asserted
 task_watch=structured argv observed, Ctrl-C termination observed
 shutdown=Ctrl-Q+zed:quit+Alt-F4 requested; no private probe process remained
-PASS: installed Zed Linux source extension, activation/rendering, LSP process, diagnostic fixture, LSP UI actions, static task failure, watch keyboard termination, and private shutdown exercised; code-action edit remains unsupported
+PASS: installed Zed Linux source extension, activation/rendering, LSP process, diagnostic fixture, LSP UI actions, applied code action, applied rename, static task invocation/status, watch keyboard termination, and private shutdown exercised
 ```
 
 The checked-in `tests/editor-hosts/zed/lsp_proxy.py` is copied into the private
@@ -96,13 +103,29 @@ checks messages from this Zed process: initialize advertised UTF-16,
 synchronization, completion, hover, definition, references, prepare-rename,
 and code-action capabilities; the canonical malformed fixture produced
 `RECITE_PARSE011` and `RECITE_PARSE013` at their exact severity-1 UTF-16
-ranges; and Zed-triggered completion, hover, definition, references,
-and prepare-rename responses contained the canonical Recite results. Zed also
-sent a real missing-ID code-action request for `code-action.recite`, with the
-`RECITE_ID001` diagnostic and selected marker range; Recite returned
-`result: []`, so no edit was applied. The assertion records that empty result
-as an unsupported host boundary and rejects non-empty or malformed shapes
-until fresh evidence is reviewed.
+ranges, including a non-BMP marker carried in the real `didOpen` text. Zed
+also sent a real completion request at line 2, UTF-16 character 14, after the
+marker and separator; this proves the installed client emitted the expected
+post-marker wire position. It does not claim any additional rendering or
+client-side range conversion beyond that request. The other Zed-triggered
+completion, hover, definition, references, and prepare-rename
+responses contained the canonical Recite results. Zed also sent a real
+missing-ID code-action request for `code-action.recite`, with the `RECITE_ID001`
+diagnostic and selected marker range; Recite returned the canonical
+`Insert missing stable ID` quick-fix with the deterministic text
+` line@56d52d8cd8619971011f` in a versioned document edit. Zed applied that
+workspace edit and the probe compared the resulting line to that exact
+returned `newText`. The exact request and response remain in the retained
+proxy log.
+
+The replacement-name keyboard flow entered `work_renamed` and sent a real
+`textDocument/rename` request. Recite returned the exact two-occurrence
+workspace edit for `core.recite`; Zed applied it and the probe compared the
+complete before/after file, rejecting any change beyond those exact two
+returned replacements. Extract and compile were then spawned independently
+against the valid fixture; their task wrapper correlated each exact argv/cwd
+start record with its own PID-matched exit status, including the compile
+output path `project/core.recitec`.
 
 The non-empty Wayland screenshots record extension installation, authoring,
 each action stage, diagnostic navigation in both directions, and task stages.
@@ -122,23 +145,27 @@ process.
   not claimed.
 - The LSP transport assertions prove requests and responses crossed this
   installed Zed process, but they are not a replacement for the shared Recite
-  LSP stdio/editor-parity fixtures. This host run does not add a non-BMP
-  fixture or independently prove stale-document/version rejection; those
-  remain covered by the canonical lower-level tests.
-- Zed sent `textDocument/codeAction` for the missing-ID fixture with the
-  `RECITE_ID001` diagnostic and selected marker range, but Recite returned
-  `result: []`; no edit was applied. The host checker records this as an
-  unsupported code-action boundary and fails closed if a future result is
-  non-empty or malformed until the evidence and this document are reviewed.
-- The rename action reached `textDocument/prepareRename` and its canonical
-  response. This keyboard sequence did not enter a replacement name and did
-  not capture a `textDocument/rename` edit, so rename edit application remains
-  unsupported in this host probe.
-- Zed's task terminal displays the CLI's structured records but does not
-  expose them through an editor-diagnostic API. The probe therefore asserts
-  exact task argv/status and process termination, not parsing of rendered task
-  records. Zed exposes no stable host API for a native watch-cancellation
-  controller; Ctrl-C is the genuine terminal keyboard boundary.
+  LSP stdio/editor-parity fixtures. The host copy of the malformed fixture
+  includes a non-BMP marker; its retained `didOpen` text plus a real
+  completion request at line 2, UTF-16 character 14 after that marker prove
+  the installed Zed client emitted the expected UTF-16 request position. This
+  does not claim rendering or client-side response-range conversion. A
+  conforming Zed client increments full-sync document versions for each
+  change; this keyboard probe does not fabricate a stale `didChange`, so
+  stale-version rejection remains a lower-level ownership/test concern rather
+  than a claimed host result.
+- The malformed diagnostic fixture is intentionally outside project
+  discovery. Opening it as a project sibling previously caused the
+  project-wide stable-ID planner to return `Incomplete`, which correctly
+  produced `result: []`; the probe now excludes `host-fixtures/**` while
+  retaining the fixture for diagnostics. This is a harness isolation fix, not
+  a semantic or host limitation.
+- The task terminal does not expose structured records through an
+  editor-diagnostic API. The probe therefore asserts exact task argv/cwd/status
+  for validate, extract, and compile, plus process termination for watch; it
+  does not parse rendered task records. Zed exposes no stable host API for a
+  native watch-cancellation controller; Ctrl-C is the genuine terminal
+  keyboard boundary.
 - Any process still carrying this probe's private path or descended from its
   private Cage root causes the lane to fail. Cleanup uses bounded TERM/KILL
   recovery only to avoid leaking processes and reports recovery as evidence

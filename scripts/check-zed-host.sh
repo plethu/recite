@@ -115,10 +115,12 @@ data_home="$probe_dir/data"
 cache_home="$probe_dir/cache"
 home_dir="$probe_dir/home"
 project_dir="$probe_dir/project"
+fixture_dir="$project_dir/host-fixtures"
 extension_copy="$probe_dir/extension"
 bin_dir="$probe_dir/bin"
 mkdir -p "$runtime_dir" "$user_data/config" "$config_home/zed" "$data_home/config" \
   "$data_home/dbus-1/services" "$cache_home" "$home_dir" "$project_dir/.zed" \
+  "$fixture_dir" \
   "$bin_dir"
 chmod 700 "$runtime_dir"
 
@@ -283,10 +285,25 @@ cmp -s -- "$proxy_script" "$proxy_probe_script" || {
   exit 1
 }
 
-printf 'format_version = 1\n' > "$project_dir/recite.project.toml"
+printf 'format_version = 1\n\n[discovery]\nexcludes = ["host-fixtures/**"]\n' > "$project_dir/recite.project.toml"
 printf '{"lsp":{"recite-lsp":{"binary":{"path":"%s","arguments":[]}}}}\n' "$bin_dir/recite-lsp" > "$project_dir/.zed/settings.json"
-cp -- "$fixture" "$project_dir/fixture.recite"
+cp -- "$fixture" "$fixture_dir/fixture.recite"
+# Keep the checked-in parser fixture authoritative while adding a real
+# non-BMP source marker to the installed-host copy.  The malformed marker
+# remains the diagnostic target and occupies two UTF-16 code units.
+python3 - "$fixture_dir/fixture.recite" <<'PY'
+from pathlib import Path
+import sys
+
+path = Path(sys.argv[1])
+path.write_text(
+    path.read_text(encoding="utf-8").replace("East, if", "East, 😀 if"),
+    encoding="utf-8",
+)
+PY
 cp -- "$capability_fixture" "$project_dir/core.recite"
+core_before="$probe_dir/core-before.recite"
+cp -- "$project_dir/core.recite" "$core_before"
 python3 - "$project_dir/code-action.recite" <<'PY'
 from pathlib import Path
 import sys
@@ -375,9 +392,10 @@ open_file() {
   # than accidentally inserting it into the current buffer.
   press -M ctrl -k p -m ctrl
   sleep 1
-  # A basename gives the file finder a stable unique result in this temporary
-  # project and avoids host-version differences in absolute-path matching.
-  type_text "${path##*/}"
+  # A project-relative path keeps excluded host fixtures addressable without
+  # allowing the file finder to create a new root-level buffer when a nested
+  # basename is not indexed as a unique result.
+  type_text "${path#"$project_dir/"}"
   press -k Return
   sleep 5
 }
@@ -412,10 +430,33 @@ place_cursor_in_missing_id() {
   press -M shift -k Right -m shift
   sleep 1
 }
+place_cursor_after_non_bmp() {
+  # Start from the document beginning so the first `if` match is the one on
+  # the marker line, not the later malformed condition fixture.
+  press -M ctrl -k Home -m ctrl
+  press -M ctrl -k f -m ctrl
+  # The ASCII token starts immediately after the marker and separator at
+  # UTF-16 character 14; collapsing its search selection lands there without
+  # depending on editor-specific Unicode cursor movement.
+  type_text 'if'
+  press -k Return
+  press -k Escape
+  press -k Left
+}
 wait_for_file() {
   local path="$1"
   local waited=0
   while [[ ! -e "$path" ]]; do
+    (( waited += 1 ))
+    (( waited >= timeout_seconds )) && return 1
+    sleep 1
+  done
+}
+wait_for_file_match() {
+  local path="$1"
+  local pattern="$2"
+  local waited=0
+  while ! [[ -f "$path" ]] || ! rg -q -- "$pattern" "$path"; do
     (( waited += 1 ))
     (( waited >= timeout_seconds )) && return 1
     sleep 1
@@ -467,7 +508,9 @@ start_host() {
     echo "Zed did not render a first frame; see $stage_log and $zed_log" >&2
     return 1
   }
-  open_file "$project_dir/fixture.recite"
+  if [[ "$stage" == install ]]; then
+    open_file "$fixture_dir/fixture.recite"
+  fi
   capture "$stage-start"
 }
 stop_host() {
@@ -551,10 +594,8 @@ stop_host
 
 echo "== reload installed extension, LSP diagnostics, and keyboard workflow =="
 start_host authoring
-# The initial path was passed to Zed, but explicitly reopening it through the
-# documented file picker makes the keyboard boundary observable as part of the
-# run.
-open_file "$project_dir/fixture.recite"
+# Zed restores the fixture opened during the install stage in this same
+# isolated profile; avoid reopening it and racing the restored editor focus.
 sleep 3
 capture authoring-file
 wait_for_probe_process "$bin_dir/recite-lsp" || {
@@ -583,6 +624,8 @@ host_action() {
   press -k Escape
   sleep 1
 }
+place_cursor_after_non_bmp
+host_action 'editor: show completions' lsp-completion-after-emoji
 hover_action() {
   # The official Linux keymap binds Ctrl-K Ctrl-I to editor::Hover. Using the
   # direct binding avoids making the hover assertion depend on the command
@@ -607,16 +650,143 @@ host_action 'editor: go to definition' lsp-definition
 place_cursor_in_definition
 host_action 'editor: find all references' lsp-references
 place_cursor_in_definition
-host_action 'editor: rename' lsp-rename
+rename_action() {
+  press -M ctrl -M shift -k p -m shift -m ctrl
+  sleep 1
+  type_text 'editor: rename'
+  press -k Return
+  sleep 2
+  capture lsp-rename-before
+  type_text 'work_renamed'
+  press -k Return
+  sleep 3
+  press -M ctrl -k s -m ctrl
+  sleep 3
+  capture lsp-rename-after
+}
+rename_action
 open_file "$project_dir/code-action.recite"
 place_cursor_in_missing_id
-host_action 'editor: toggle code actions' lsp-code-actions
+code_action_apply() {
+  press -M ctrl -M shift -k p -m shift -m ctrl
+  sleep 1
+  type_text 'editor: toggle code actions'
+  press -k Return
+  sleep 2
+  capture lsp-code-actions
+  press -k Return
+  sleep 3
+  press -M ctrl -k s -m ctrl
+  sleep 3
+  capture lsp-code-action-applied
+}
+code_action_apply
+wait_for_file_match "$project_dir/core.recite" '^:: work_renamed([[:space:]]*)$' || {
+  echo "Zed did not apply the canonical rename workspace edit" >&2
+  rg -n '^:: work|-> work' "$project_dir/core.recite" >&2 || true
+  exit 1
+}
+wait_for_file_match "$project_dir/core.recite" '^[[:space:]]*->[[:space:]]*work_renamed([[:space:]]*)$' || {
+  echo "Zed did not apply the canonical rename divert edit" >&2
+  rg -n '^:: work|-> work' "$project_dir/core.recite" >&2 || true
+  exit 1
+}
+python3 - "$core_before" "$project_dir/core.recite" <<'PY'
+from pathlib import Path
+import sys
+
+before = Path(sys.argv[1]).read_text(encoding="utf-8")
+after = Path(sys.argv[2]).read_text(encoding="utf-8")
+assert before.count(":: work\n") == 1
+assert before.count("    -> work\n") == 1
+expected = before.replace(":: work\n", ":: work_renamed\n").replace(
+    "    -> work\n", "    -> work_renamed\n"
+)
+assert after == expected, "rename application changed content beyond the two returned edits"
+assert after.count("work_renamed") == 2
+assert ":: work\n" not in after
+assert "    -> work\n" not in after
+PY
+echo "lsp_rename_edit=non_empty_workspace_edit_applied_and_saved"
+wait_for_file_match "$project_dir/code-action.recite" '^> line@56d52d8cd8619971011f([[:space:]]*)$' || {
+  echo "Zed did not apply the canonical missing-ID workspace edit" >&2
+  sed -n '1,12p' "$project_dir/code-action.recite" >&2
+  exit 1
+}
+echo "lsp_code_action=non_empty_quick_fix_applied_and_saved"
 echo "lsp_ui_actions=diagnostics,completion,hover,definition,references,rename,code-actions dispatched"
 host_action 'diagnostics: deploy' diagnostics-panel
 
+# Exercise the two non-diagnostic static tasks independently on the valid
+# canonical project fixture.  The wrapper records their exact argv and status;
+# Zed's task terminal is the real process boundary for this probe.
+spawn_task() {
+  local label="$1"
+  local screenshot="$2"
+  press -M ctrl -M shift -k p -m shift -m ctrl
+  sleep 1
+  type_text 'task: spawn'
+  press -k Return
+  sleep 1
+  type_text "$label"
+  press -k Return
+  sleep 6
+  capture "$screenshot"
+}
+assert_task_record() {
+  local expected_status="$1"
+  shift
+  python3 - "$task_log" "$project_dir" "$expected_status" "$@" <<'PY'
+from pathlib import Path
+import re
+import shlex
+import sys
+
+log_path = Path(sys.argv[1])
+expected_cwd = sys.argv[2]
+expected_status = int(sys.argv[3])
+expected_argv = sys.argv[4:]
+starts = {}
+exits = {}
+for line in log_path.read_text(encoding="utf-8").splitlines():
+    start = re.fullmatch(r"start pid=(\d+) cwd=(\S+) argv=(.*)", line)
+    if start:
+        pid, cwd, raw_argv = start.groups()
+        starts[pid] = (cwd, shlex.split(raw_argv))
+        continue
+    exit_record = re.fullmatch(r"exit pid=(\d+) status=(\d+)", line)
+    if exit_record:
+        pid, status = exit_record.groups()
+        exits[pid] = int(status)
+
+matches = [
+    (pid, cwd, argv)
+    for pid, (cwd, argv) in starts.items()
+    if cwd == expected_cwd and argv == expected_argv
+]
+assert len(matches) == 1, f"expected one exact {expected_argv!r} task start, got {matches!r}"
+pid, _, _ = matches[0]
+assert pid in exits, f"task pid {pid} has no matching exit record"
+assert exits[pid] == expected_status, (
+    f"task pid {pid} status {exits[pid]} != expected {expected_status}"
+)
+print(f"task_{expected_argv[0]}=pid={pid}, exact argv/cwd/status asserted")
+PY
+}
+open_file "$project_dir/core.recite"
+spawn_task 'Recite: extract current file' task-extract
+wait_for_file "$task_log"
+assert_task_record 0 extract --output-format structured "$project_dir/core.recite"
+spawn_task 'Recite: compile current file' task-compile
+assert_task_record 0 compile --output "$project_dir/core.recitec" --output-format structured "$project_dir/core.recite"
+wait_for_file "$project_dir/core.recitec" || {
+  echo "valid fixture compilation did not create its explicit output path" >&2
+  exit 1
+}
+
 # Return to the malformed canonical fixture for the task-failure and watch
 # lifecycle checks below.
-open_file "$project_dir/fixture.recite"
+open_file "$fixture_dir/fixture.recite"
 
 # Navigate both directions through the two canonical parser diagnostics. The
 # screenshot hashes are a rendered keyboard-boundary assertion only; payload
@@ -651,15 +821,7 @@ press -k Return
 sleep 6
 capture task-validate
 wait_for_file "$task_log"
-rg -F -- 'validate --output-format structured' "$task_log" >/dev/null || {
-  echo "Zed did not invoke the structured Recite validation task" >&2
-  exit 1
-}
-rg -F -- 'status=1' "$task_log" >/dev/null || {
-  echo "invalid fixture validation did not report the expected failure status" >&2
-  exit 1
-}
-echo "task_validate=structured argv observed, status=1 observed"
+assert_task_record 1 validate --output-format structured "$fixture_dir/fixture.recite"
 
 # Spawn watch and stop it with Ctrl-C in the task terminal. Zed's documented
 # task surface has no machine-readable cancellation API, so process absence
@@ -695,5 +857,5 @@ if [[ -n "$(probe_processes)" ]]; then
   exit 1
 fi
 echo "shutdown=Ctrl-Q+zed:quit+Alt-F4 requested; no private probe process remained"
-echo "PASS: installed Zed Linux source extension, activation/rendering, LSP process, diagnostic fixture, LSP UI actions, static task failure, watch keyboard termination, and private shutdown exercised; code-action edit remains unsupported"
-echo "RESIDUAL: Zed task terminals do not expose structured records as editor diagnostics; no gallery publication, macOS/Windows host, screen-reader/high-contrast, or native task cancellation API is claimed"
+echo "PASS: installed Zed Linux source extension, activation/rendering, LSP process, diagnostic fixture, LSP UI actions, applied code action, applied rename, extract/compile/validate task invocation, watch keyboard termination, and private shutdown exercised"
+echo "RESIDUAL: stale didChange rejection is covered at the lower-level LSP boundary because conforming Zed versions are monotonic; task terminals do not expose structured records as editor diagnostics; no gallery publication, macOS/Windows host, screen-reader/high-contrast, or native task cancellation API is claimed"

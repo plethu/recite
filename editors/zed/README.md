@@ -30,12 +30,16 @@ references, prepare-rename, task, and shutdown actions. It never used the
 caller's display or desktop.
 
 That host run received a real `textDocument/codeAction` request for a missing
-ID, but Recite returned an empty result and no edit was applied. Code actions
-therefore remain an explicit host limitation; the probe fails closed if a
-future result is non-empty until its evidence and documentation are reviewed.
-The run reached `textDocument/prepareRename`, but did not apply a replacement
-name or capture a `textDocument/rename` edit. The shared LSP tests still prove
-the canonical code-action edit and rename semantics outside this host lane.
+ID, and Recite returned the canonical `Insert missing stable ID` quick-fix.
+Zed applied its versioned workspace edit, and the probe verified the generated
+stable ID on disk. The replacement-name keyboard flow sent
+`textDocument/rename` with `work_renamed`; Zed applied Recite's exact
+two-occurrence workspace edit and the probe verified both replacements. The
+host copy of the diagnostic fixture also carries a non-BMP marker, with the
+real `didOpen` text and a Zed-generated completion at line 2, UTF-16 character
+14 after the marker retained in the transport log. This proves the installed
+client emitted that post-marker UTF-16 request position, not additional
+rendering or response-range conversion behavior.
 
 macOS and Windows host smoke, gallery publication, and gallery installation
 remain residuals.
@@ -120,10 +124,11 @@ claimed here. The package adds no color protocol or terminal-color parser.
 query drift, task argv contract, launcher unit tests, and a real `recite-lsp`
 stdio parity test. `scripts/check-zed-host.sh` exercises the installed Linux
 development-extension path in isolated Cage/WLR state. Its transport log
-asserts the real Zed requests and canonical diagnostics/navigation results; the
-current host's code-action response is explicitly recorded as empty and
-unsupported, and prepare-rename is the furthest rename boundary proved.
-Task-terminal structured-record parsing, a native watch-cancellation API,
+asserts the exact Zed requests and canonical diagnostics/navigation results,
+including a non-empty quick-fix response and applied rename workspace edit.
+It independently records validate, extract, and compile argv/cwd/status by
+PID-matched start/exit records, plus watch lifecycle. Task-terminal
+structured-record parsing, a native watch-cancellation API,
 screen-reader/high-contrast behavior, macOS/Windows host smoke, gallery
 publication, and gallery installation remain residuals.
 
