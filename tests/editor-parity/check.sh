@@ -457,6 +457,32 @@ expect_failure keyboard-host-scenario-mismatch "partial/implemented status requi
 expect_failure keyboard-host-doc-missing "evidence document does not exist"
 expect_failure keyboard-host-key-sequence "key_sequence must be a non-empty string or array"
 expect_failure keyboard-host-no-leak "keyboard assertion process_leak_check must be true"
+mutate_fixture non-keyboard-dual-client-host-evidence
+set +e
+non_keyboard_dual_output="$(run_checker 2>&1)"
+non_keyboard_dual_result=$?
+set -e
+if (( non_keyboard_dual_result != 0 )); then
+  echo "editor parity valid dual-client installed-host evidence fixture failed" >&2
+  printf '%s\n' "$non_keyboard_dual_output" >&2
+  exit 1
+fi
+echo "editor parity valid dual-client installed-host evidence fixture passed"
+git -C "$fixture_repo" checkout -q -- fixtures/editor-parity/contract.json
+mutate_fixture non-keyboard-incremental-host-evidence
+set +e
+non_keyboard_incremental_output="$(run_checker 2>&1)"
+non_keyboard_incremental_result=$?
+set -e
+if (( non_keyboard_incremental_result != 0 )); then
+  echo "editor parity valid incremental installed-host evidence fixture failed" >&2
+  printf '%s\n' "$non_keyboard_incremental_output" >&2
+  exit 1
+fi
+echo "editor parity valid incremental installed-host evidence fixture passed"
+git -C "$fixture_repo" checkout -q -- fixtures/editor-parity/contract.json
+expect_failure host-dual-client-mismatch "runner scripts/check-vscode-host.sh does not match client zed"
+expect_failure keyboard-host-missing-client-platform "host records do not cover claimed vscode client evidence"
 expect_failure symlink-artifact-component "artifact vscode-vsix path must not traverse symlink component"
 expect_failure symlink "scenario lsp-stdio-baseline fixture must not be a symlink"
 expect_failure symlink-component "scenario lsp-stdio-baseline fixture must not traverse symlink component"

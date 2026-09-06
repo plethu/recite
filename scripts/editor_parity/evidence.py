@@ -9,6 +9,9 @@ from .paths import require_no_symlink_components, require_repo_file
 
 HOST_RUNNER_PATTERN = re.compile(r"scripts/check-[a-z0-9][a-z0-9-]*-host\.sh")
 HOST_RECORD_DIRECTORY = Path("docs/evidence/editor-hosts")
+SHARED_HOST_CLIENTS = {
+    "vscode": frozenset({"vscode", "vscodium"}),
+}
 
 
 def is_host_runner(command: object) -> bool:
@@ -19,6 +22,22 @@ def host_runner_client(command: str) -> str | None:
     if not is_host_runner(command):
         return None
     return command[len("scripts/check-") : -len("-host.sh")]
+
+
+def host_runner_clients(command: str) -> frozenset[str]:
+    slug = host_runner_client(command)
+    if slug is None:
+        return frozenset()
+    return SHARED_HOST_CLIENTS.get(slug, frozenset({slug}))
+
+
+def host_document_clients(document: str, platform: str) -> frozenset[str]:
+    stem = Path(document).stem.lower()
+    suffix = f"-{platform.lower()}"
+    if not stem.endswith(suffix):
+        return frozenset()
+    slug = stem[: -len(suffix)]
+    return SHARED_HOST_CLIENTS.get(slug, frozenset({slug}))
 
 
 def validate_command(ctx: Context, capability_id: str, command: str) -> None:
@@ -218,8 +237,8 @@ def validate_host_records(
         if isinstance(runner, str) and is_host_runner(runner):
             record_runners.append(runner)
             validate_command(ctx, capability_id, runner)
-            runner_client = host_runner_client(runner)
-            ctx.require(runner_client == client, f"{label} runner {runner} does not match client {client}")
+            runner_clients = host_runner_clients(runner)
+            ctx.require(client in runner_clients, f"{label} runner {runner} does not match client {client}")
         ctx.require(isinstance(document, str) and bool(document), f"{label} must name an evidence document")
         if isinstance(document, str) and document:
             document_path = Path(document)
@@ -230,8 +249,8 @@ def validate_host_records(
                 f"{label} evidence document must be a direct path under {HOST_RECORD_DIRECTORY}",
             )
             if document_path.parent == HOST_RECORD_DIRECTORY and isinstance(client, str) and isinstance(platform, str):
-                stem = document_path.stem.lower()
-                ctx.require(client.lower() in stem and platform.lower() in stem, f"{label} evidence document must name {client} and {platform}")
+                document_clients = host_document_clients(document, platform)
+                ctx.require(client in document_clients, f"{label} evidence document does not match client {client} and platform {platform}")
             require_repo_file(ctx, document, f"{label} evidence document")
         for field, value in (("product", product), ("version", version), ("architecture", architecture)):
             ctx.require(isinstance(value, str) and value.strip(), f"{label} must name a non-empty {field}")
@@ -251,14 +270,15 @@ def validate_host_records(
         ctx.require(command in record_runners, f"capability {capability_id} installed-host runner {command} has no matching host record")
     for runner in record_runners:
         ctx.require(runner in host_commands, f"capability {capability_id} host record runner {runner} is not listed in evidence commands")
-    if isinstance(capability_clients, dict):
-        for client, client_status in capability_clients.items():
-            if client_status in {"partial", "implemented"}:
-                ctx.require(any(record.get("client") == client for record in valid_records), f"capability {capability_id} host records do not cover claimed {client} client evidence")
-    if isinstance(capability_platforms, dict):
-        for platform, platform_status in capability_platforms.items():
-            if platform_status in {"partial", "implemented"}:
-                ctx.require(any(record.get("platform") == platform for record in valid_records), f"capability {capability_id} host records do not cover claimed {platform} platform evidence")
+    if keyboard:
+        if isinstance(capability_clients, dict):
+            for client, client_status in capability_clients.items():
+                if client_status in {"partial", "implemented"}:
+                    ctx.require(any(record.get("client") == client for record in valid_records), f"capability {capability_id} host records do not cover claimed {client} client evidence")
+        if isinstance(capability_platforms, dict):
+            for platform, platform_status in capability_platforms.items():
+                if platform_status in {"partial", "implemented"}:
+                    ctx.require(any(record.get("platform") == platform for record in valid_records), f"capability {capability_id} host records do not cover claimed {platform} platform evidence")
 
 
 def validate_keyboard_host_record(ctx: Context, label: str, record: dict) -> None:

@@ -214,6 +214,19 @@ def main() -> int:
     elif mutation == "keyboard-host-no-leak":
         set_keyboard_host_evidence(contract)
         record(contract, "capabilities", "editor.keyboard.workflow")["expected_evidence"]["host_records"][0]["keyboard"]["process_leak_check"] = False
+    elif mutation == "keyboard-host-missing-client-platform":
+        set_keyboard_host_evidence(contract)
+        capability = record(contract, "capabilities", "editor.keyboard.workflow")
+        capability["client_status"]["vscode"] = "partial"
+        capability["platform_status"]["macos"] = "partial"
+    elif mutation == "non-keyboard-dual-client-host-evidence":
+        set_dual_client_host_evidence(contract)
+    elif mutation == "non-keyboard-incremental-host-evidence":
+        set_incremental_host_evidence(contract)
+    elif mutation == "host-dual-client-mismatch":
+        set_dual_client_host_evidence(contract)
+        evidence = record(contract, "capabilities", "editor.filetype.registration")["expected_evidence"]
+        evidence["host_records"][1]["client"] = "zed"
     elif mutation == "neovim-stale-filetype":
         capability = record(contract, "capabilities", "editor.filetype.registration")
         capability["known_limitation"] = "No client package or activation registration exists."
@@ -304,34 +317,81 @@ def set_keyboard_host_evidence(contract: dict) -> None:
     ]
 
 
+def set_dual_client_host_evidence(contract: dict) -> None:
+    capability = record(contract, "capabilities", "editor.filetype.registration")
+    evidence = capability["expected_evidence"]
+    evidence["commands"] = [
+        "scripts/check-neovim.sh",
+        "scripts/check-vscode.sh",
+        "scripts/check-zed.sh",
+        "scripts/check-vscode-host.sh",
+    ]
+    evidence["host_records"] = [
+        generic_host_record(
+            client="vscode",
+            runner="scripts/check-vscode-host.sh",
+            document="docs/evidence/editor-hosts/vscode-linux.md",
+            product="VS Code",
+            version="1.136.1",
+        ),
+        generic_host_record(
+            client="vscodium",
+            runner="scripts/check-vscode-host.sh",
+            document="docs/evidence/editor-hosts/vscode-linux.md",
+            product="VSCodium",
+            version="1.126.04524",
+        ),
+    ]
+
+
+def set_incremental_host_evidence(contract: dict) -> None:
+    capability = record(contract, "capabilities", "editor.neovim.syntax-projection")
+    evidence = capability["expected_evidence"]
+    original = evidence.pop("command")
+    evidence["commands"] = [original, "scripts/check-neovim-host.sh"]
+    evidence["host_records"] = [generic_host_record()]
+
+
 def host_record(version: str) -> dict:
+    record = generic_host_record(version=version)
+    record["keyboard"] = {
+        "key_sequence": [
+            ":edit <malformed .recite path><Enter>",
+            "]d",
+            ":edit <valid .recite path><Enter>",
+            ":ReciteValidate <valid .recite path><Enter>",
+            ":ReciteCompile<Enter>",
+            ":ReciteRun<Enter>",
+            ":ReciteWatchStart <project root><Enter>",
+            ":ReciteWatchStop<Enter>",
+        ],
+        "diagnostic_navigation": True,
+        "textual_severity": True,
+        "textual_status": True,
+        "textual_failure": True,
+        "watch_stop": "supported",
+        "clean_exit": True,
+        "process_leak_check": True,
+    }
+    return record
+
+
+def generic_host_record(
+    *,
+    client: str = "neovim",
+    runner: str = "scripts/check-neovim-host.sh",
+    document: str = "docs/evidence/editor-hosts/neovim-linux.md",
+    product: str = "Neovim",
+    version: str = "0.12.5",
+) -> dict:
     return {
-        "client": "neovim",
+        "client": client,
         "platform": "linux",
-        "runner": "scripts/check-neovim-host.sh",
-        "record": "docs/evidence/editor-hosts/neovim-linux.md",
-        "product": "Neovim",
+        "runner": runner,
+        "record": document,
+        "product": product,
         "version": version,
         "architecture": "x86_64",
-        "keyboard": {
-            "key_sequence": [
-                ":edit <malformed .recite path><Enter>",
-                "]d",
-                ":edit <valid .recite path><Enter>",
-                ":ReciteValidate <valid .recite path><Enter>",
-                ":ReciteCompile<Enter>",
-                ":ReciteRun<Enter>",
-                ":ReciteWatchStart <project root><Enter>",
-                ":ReciteWatchStop<Enter>",
-            ],
-            "diagnostic_navigation": True,
-            "textual_severity": True,
-            "textual_status": True,
-            "textual_failure": True,
-            "watch_stop": "supported",
-            "clean_exit": True,
-            "process_leak_check": True,
-        },
     }
 
 
