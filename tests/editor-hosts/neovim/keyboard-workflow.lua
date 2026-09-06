@@ -68,7 +68,10 @@ wait_for(function()
 end, "installed host did not attach recite-lsp and publish diagnostics")
 
 local initial_cursor = vim.api.nvim_win_get_cursor(0)
-feed_command("lua vim.diagnostic.goto_next()")
+-- Neovim's built-in ]d mapping is present in both supported hosts.  Driving
+-- it through feedkeys exercises the same normal-mode route an author uses and
+-- avoids depending on a deprecated Lua helper in newer Neovim releases.
+feed("]d")
 wait_for(function()
   local cursor = vim.api.nvim_win_get_cursor(0)
   return cursor[1] ~= initial_cursor[1] or cursor[2] ~= initial_cursor[2]

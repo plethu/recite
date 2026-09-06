@@ -237,6 +237,38 @@ run_nvim() {
       XDG_STATE_HOME="$state_home" XDG_CACHE_HOME="$cache_home" "$@"
 }
 
+group_processes() {
+  local group="$1"
+  ps -eo pid=,pgid=,args= | awk -v group="$group" '$2 == group && $1 != group { print }'
+}
+
+cleanup_process_group() {
+  local group="$1"
+  local leaked_processes
+  local attempt
+  leaked_processes="$(group_processes "$group")"
+  if [[ -z "$leaked_processes" ]]; then
+    return 0
+  fi
+  echo "Neovim host lane terminating processes left in process group $group" >&2
+  kill -TERM -- "-$group" 2>/dev/null || true
+  for (( attempt = 0; attempt < 20; attempt++ )); do
+    leaked_processes="$(group_processes "$group")"
+    [[ -z "$leaked_processes" ]] && return 0
+    sleep 0.05
+  done
+  echo "Neovim host lane escalating process-group cleanup to KILL: $group" >&2
+  kill -KILL -- "-$group" 2>/dev/null || true
+  for (( attempt = 0; attempt < 20; attempt++ )); do
+    leaked_processes="$(group_processes "$group")"
+    [[ -z "$leaked_processes" ]] && return 0
+    sleep 0.05
+  done
+  echo "Neovim host lane could not clean process group $group:" >&2
+  printf '%s\n' "$leaked_processes" >&2
+  return 1
+}
+
 run_headless() {
   local output
   local status=0
@@ -256,14 +288,14 @@ run_headless() {
     fi
     output="$(<"$output_file")"
     rm -f "$output_file"
-    if (( status == 0 )); then
-      local leaked_processes
-      leaked_processes="$(ps -eo pid=,pgid=,args= | awk -v group="$nvim_pid" '$2 == group && $1 != group { print }')"
-      if [[ -n "$leaked_processes" ]]; then
+    local leaked_processes
+    leaked_processes="$(group_processes "$nvim_pid")"
+    if [[ -n "$leaked_processes" ]]; then
+      if (( status == 0 )); then
         echo "Neovim host lane leaked processes from process group $nvim_pid:" >&2
         printf '%s\n' "$leaked_processes" >&2
-        status=1
       fi
+      cleanup_process_group "$nvim_pid" || status=1
     fi
   else
     if ! output=$(run_nvim "$nvim_bin" --headless -u "$repo_root/tests/neovim/preload.lua" -i NONE -n \

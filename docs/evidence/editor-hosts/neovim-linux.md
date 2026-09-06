@@ -50,7 +50,7 @@ The sequence exercised in both hosts is:
 
 ```text
 :edit <malformed .recite path><Enter>
-:lua vim.diagnostic.goto_next()<Enter>
+]d                                       # built-in next-diagnostic mapping
 :edit <valid .recite path><Enter>
 :ReciteValidate <valid .recite path><Enter>
 :ReciteCompile<Enter>
