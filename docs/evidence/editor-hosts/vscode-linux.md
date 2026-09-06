@@ -60,10 +60,13 @@ For each host, the check asserts:
   sequence). Any descendant observed on a phase exit fails that lane, even if
   bounded cleanup recovers it.
 - a second isolated host run drives actual Wayland keyboard events through
-  private Cage: `Ctrl+Shift+M` opens Problems, `Escape` returns focus, `Ctrl+1`
-  focuses the primary editor, and `F8` activates the next diagnostic. The probe
-  then asserts that the real host's active editor URI is the invalid `.recite`
-  document and that its selection is within the `RECITE_PARSE011` range; a disposable probe
+  private Cage: `Ctrl+P`, `scratch/invalid.recite`, and `Return` open the
+  workspace-relative source. Before diagnostics navigation continues, the
+  probe asserts the real host's active editor URI, `recite` language, and
+  Recite extension activation. Then `Ctrl+Shift+M` opens Problems, `Escape`
+  returns focus, `Ctrl+1` focuses the primary editor, and `F8` activates the
+  next diagnostic. The probe asserts that the selection is within the
+  `RECITE_PARSE011` range; a disposable probe
   keybinding records the live code, error severity, and source location without
   relying on colour. Real key events invoke the supported explicit rename command and `recite.watch.start`;
   a disposable `Ctrl+Alt+Shift+Q` binding invokes the supported

@@ -430,6 +430,15 @@ drive_keyboard() {
     env XDG_RUNTIME_DIR="$profile/runtime" WAYLAND_DISPLAY="$display" wtype "$@"
   }
 
+  wait_for_file "$profile/keyboard.open-ready" "keyboard source-open readiness" || return 1
+  wtype_key -M ctrl -k 1
+  wtype_key -M ctrl -k p
+  sleep 1
+  wtype_key -M ctrl -k a
+  wtype_key -d 30 scratch/invalid.recite
+  sleep 1
+  wtype_key -k Return
+  wait_for_file "$profile/keyboard.open-result" "keyboard source-open result" || return 1
   wait_for_file "$profile/keyboard.ready" "keyboard probe readiness" || return 1
   wtype_key -M ctrl -M shift -k m
   sleep 2
@@ -502,6 +511,8 @@ run_host_process() {
     RECITE_HOST_PROBE_CLI="$cli_bin" \
     RECITE_HOST_PROBE_INSTALL_ONLY="$install_only" \
     RECITE_HOST_PROBE_KEYBOARD="$keyboard_mode" \
+    RECITE_HOST_PROBE_KEYBOARD_OPEN_READY="$profile/keyboard.open-ready" \
+    RECITE_HOST_PROBE_KEYBOARD_OPEN_RESULT="$profile/keyboard.open-result" \
     RECITE_HOST_PROBE_KEYBOARD_READY="$profile/keyboard.ready" \
     RECITE_HOST_PROBE_KEYBOARD_KEY_RESULT="$profile/keyboard.key-result" \
     RECITE_HOST_PROBE_KEYBOARD_RENAME_READY="$profile/keyboard.rename-ready" \
@@ -723,9 +734,13 @@ EOF
 const fs = require("node:fs");
 const assert = require("node:assert/strict");
 const result = JSON.parse(fs.readFileSync(process.argv[2], "utf8"));
-const marker = JSON.parse(fs.readFileSync(process.argv[3], "utf8"));
-assert.equal(result.keyboard, "passed", "keyboard workflow completed through the host");
-assert.equal(result.keyboardDiagnostics, "navigated", "diagnostic panel navigation was exercised");
+  const marker = JSON.parse(fs.readFileSync(process.argv[3], "utf8"));
+  assert.equal(result.keyboard, "passed", "keyboard workflow completed through the host");
+  assert.equal(result.keyboardOpen, "activated", "keyboard source open completed through the host");
+  assert.equal(result.keyboardOpenUriMatches, true, "keyboard source open activated the expected URI");
+  assert.equal(result.keyboardOpenLanguage, "recite", "keyboard source open activated Recite language");
+  assert.equal(result.keyboardOpenExtensionActive, true, "keyboard source open activated Recite extension");
+  assert.equal(result.keyboardDiagnostics, "navigated", "diagnostic panel navigation was exercised");
 assert.equal(result.keyboardNavigation?.activeDocumentMatches, true, "Problems navigation activated the invalid document");
 assert.equal(result.keyboardNavigation?.selectionMatches, true, "Problems navigation selected the diagnostic range");
 assert.equal(result.keyboardDiagnosticCode, "RECITE_PARSE011", "keyboard marker retains diagnostic code");

@@ -20,11 +20,12 @@ Set `RECITE_HOST_TMPDIR` to an ignored build directory when `/tmp` does not
 have enough space for a full host profile; `/tmp` remains the default.
 
 The keyboard phase starts a second isolated host under private Cage/WLR and
-sends real Wayland events with `wtype`: it opens Problems, returns focus,
-focuses the primary editor with `Ctrl+1`, and presses F8 to activate the next
-diagnostic. The probe asserts that the host's active editor URI is the invalid
-`.recite` document and that its selection is within the `RECITE_PARSE011`
-range. It then invokes a disposable
+sends real Wayland events with `wtype`: it opens `scratch/invalid.recite`
+through Quick Open (`Ctrl+P`, path, Return), and
+asserts the active URI, `recite` language, and extension activation. It then
+opens Problems, returns focus, focuses the primary editor with `Ctrl+1`, and
+presses F8 to activate the next diagnostic. The probe asserts that the
+selection is within the `RECITE_PARSE011` range. It then invokes a disposable
 binding for the supported rename command and starts watch. It sends `Ctrl+Alt+Shift+Q` through a
 disposable binding for the supported Stop watch command (the product has no
 default shortcut), then observes the edit, diagnostic

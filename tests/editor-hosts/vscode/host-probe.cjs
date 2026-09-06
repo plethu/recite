@@ -102,17 +102,32 @@ async function runKeyboardProbe() {
   await vscode.workspace.getConfiguration("recite").update(
     "lsp.projectRoot", workspace.fsPath, vscode.ConfigurationTarget.Workspace
   );
+  await waitFor(
+    () => vscode.workspace.workspaceFolders?.some((folder) => folder.uri.fsPath === workspace.fsPath),
+    "keyboard workspace activation"
+  );
 
-  // Bring up a healthy Recite document first so the client is fully running
-  // before the keyboard lane focuses the Problems view for the invalid one.
-  // This keeps the observed keyboard workflow independent of document-open
-  // ordering while retaining a real diagnostic navigation target.
-  const valid = await vscode.workspace.openTextDocument(validUri);
-  await vscode.window.showTextDocument(valid);
+  writeKeyboardMarker(process.env.RECITE_HOST_PROBE_KEYBOARD_OPEN_READY, {
+    event: "open-ready",
+    host: vscode.version
+  });
+  const openedEditor = await waitFor(
+    () => vscode.window.activeTextEditor?.document.uri.fsPath === invalidUri.fsPath
+      ? vscode.window.activeTextEditor
+      : undefined,
+    "keyboard source-open active editor"
+  );
+  assert.equal(openedEditor.document.languageId, "recite",
+    "keyboard source-open activates the Recite language");
   await waitFor(() => extension.isActive, "Recite extension activation");
-  await sleep(500);
-  const invalid = await vscode.workspace.openTextDocument(invalidUri);
-  await vscode.window.showTextDocument(invalid);
+  const openObservation = {
+    event: "open",
+    activeDocument: openedEditor.document.uri.fsPath,
+    language: openedEditor.document.languageId,
+    extensionActive: extension.isActive
+  };
+  writeKeyboardMarker(process.env.RECITE_HOST_PROBE_KEYBOARD_OPEN_RESULT, openObservation);
+  const invalid = openedEditor.document;
   const diagnostics = await waitFor(() => vscode.languages.getDiagnostics(invalidUri).filter(
     (diagnostic) => diagnostic.code === "RECITE_PARSE011"
   ), "keyboard diagnostics");
@@ -146,6 +161,7 @@ async function runKeyboardProbe() {
   assert.equal(navigation.selectionMatches, true,
     "Problems navigation selected the diagnostic range");
 
+  const valid = await vscode.workspace.openTextDocument(validUri);
   const editor = await vscode.window.showTextDocument(valid);
   const targetPosition = positionFor(valid.getText(), "-> work", 4);
   editor.selection = new vscode.Selection(targetPosition, targetPosition);
@@ -171,6 +187,10 @@ async function runKeyboardProbe() {
   writeResult({
     host: vscode.version,
     keyboard: "passed",
+    keyboardOpen: "activated",
+    keyboardOpenUriMatches: openObservation.activeDocument === invalidUri.fsPath,
+    keyboardOpenLanguage: openObservation.language,
+    keyboardOpenExtensionActive: openObservation.extensionActive,
     keyboardDiagnostics: "navigated",
     keyboardDiagnosticCode: keyDiagnostic.code,
     keyboardDiagnosticSeverity: keyDiagnostic.severity,
