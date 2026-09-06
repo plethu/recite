@@ -208,9 +208,8 @@ maintainability work after PR #198 established the Neovim setup and shared
 editor foundations. The recorded host lanes cover Linux x86_64 VS Code,
 VSCodium, Neovim, and Zed paths incrementally; they do not establish the
 unclaimed platform, accessibility, publication, or Zed task/semantic behavior
-listed in the contract. #51 and #202 meet their current issue acceptance and
-are recommended for closure through this milestone PR; #53 and #192 remain
-open for their residual acceptance boundaries.
+listed in the contract. PR #204 closed #51 and #202 after recording that host
+evidence; #53 and #192 remain open for their residual acceptance boundaries.
 
 **Outcome:** text authoring is safe and discoverable in the editors users
 already choose.
@@ -423,7 +422,7 @@ remain authoritative if the tracker is split again.
 | Product Foundation and Maintainability | Complete (0 open; 8 closed milestone items; delivered by PR #174) | 17 |
 | Language, schema, and localisation readiness | Complete (0 open; 12 closed milestone items; delivered by PR #183 and correction PR #184) | 18 |
 | Shared authoring kernel and preview | Complete (0 open; 8 closed milestone items; delivered by PR #191; #167, #168, and #185 complete) | 19 |
-| Editor integration parity | In progress (4 open: #51, #53, #192, #202; implementation and bounded Linux host evidence delivered by PR #200 and follow-up host records) | 20 |
+| Editor integration parity | In progress (2 open: #53 and #192; implementation delivered by PR #200 and bounded Linux host evidence by PR #204) | 20 |
 | Native GUI strategy and accessibility proof | [#54 GUI strategy](https://github.com/plethu/recite/issues/54), [#123 accessibility requirements](https://github.com/plethu/recite/issues/123) (2 open) | 21 |
 | GUI workbench | [#170 GUI workbench](https://github.com/plethu/recite/issues/170) (1 open) | 22 |
 | Engine companions | #49, #83–#86, #132–#134 (8 open) | 23 |
@@ -442,17 +441,13 @@ tracker.
 
 M20 implementation landed on 2026-09-05. PR #200 delivered the remaining editor
 integration work after PR #198 established the first foundations; #97, #98, and
-the cross-cutting #197 follow-up are closed. Follow-up host records now cover
-bounded Linux x86_64 activation, LSP, command/watch, and keyboard paths for
-VS Code, VSCodium, Neovim, and Zed. Issue #51 meets its acceptance and is
-recommended for closure through this milestone PR. Issue #202 also meets its
-acceptance: all four Linux clients now record keyboard open/activation,
-diagnostic navigation, command/status/failure and watch-stop evidence, with
-unsupported operations explicit; its row remains partial because non-Linux and
-broader accessibility evidence are outside this lane. #53 remains open for
-complete per-client command/task lifecycle parity, and #192 remains open for
-Zed's unproven/non-native semantic and task boundaries. The M20 exit gate
-therefore remains open.
+the cross-cutting #197 follow-up are closed. PR #204 added bounded Linux x86_64
+activation, LSP, command/watch, and keyboard host records for VS Code,
+VSCodium, Neovim, and Zed, closing #51 and #202. The records keep unsupported
+operations explicit and do not claim non-Linux or broader accessibility
+evidence. #53 remains open for complete per-client command/task lifecycle
+parity, and #192 remains open for Zed's unproven/non-native semantic and task
+boundaries. The M20 exit gate therefore remains open.
 
 The post-v1 row is deliberately non-exhaustive: it records current open issues
 without a milestone, not every deferred capability. Generated host-language
@@ -469,10 +464,10 @@ kernel and preview outcome is complete as of 2026-09-01, delivered by PR #191
 at `636fa1b`; #167, #168, and #185 established the preceding configuration,
 discovery, and kernel seam. Editor Integration Parity implementation landed on
 2026-09-05 through PR #200 after PR #198 established the first editor
-foundations. The bounded Linux host records support closure recommendations for
-#51 and #202, while #53 and #192 remain open for their residual acceptance
-gaps; these recommendations do not pass the M20 exit gate. Native GUI Strategy
-and Accessibility Proof (milestone 21),
+foundations. PR #204 delivered bounded Linux host records and closed #51 and
+#202, while #53 and #192 remain open for their residual acceptance gaps; those
+closures do not pass the M20 exit gate. Native GUI Strategy and Accessibility
+Proof (milestone 21),
 tracked by #54 and #123, may proceed independently because completed editor
 clients are not its entry gate. Substantial language, runtime, CLI, LSP,
 benchmark, FFI, Godot, and Unity work already exists, but each area remains
