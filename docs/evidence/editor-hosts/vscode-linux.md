@@ -59,6 +59,16 @@ For each host, the check asserts:
   the host exits (the host then owns its normal extension deactivation
   sequence). Any descendant observed on a phase exit fails that lane, even if
   bounded cleanup recovers it.
+- a second isolated host run drives actual Wayland keyboard events through
+  private Cage: `Ctrl+Shift+M`, `Home`, and `Down` reach and navigate the
+  Problems view, then a disposable probe keybinding records the live
+  `RECITE_PARSE011` code, error severity, and source location without relying
+  on colour. Real key events invoke the supported explicit rename command and
+  `recite.watch.start`; Stop watch is selected and invoked from the command
+  palette because the product intentionally has no default shortcut. The
+  resulting document edit and exact captured-group CLI shutdown are observed
+  through marker files and process inspection. The disposable bindings belong
+  only to this probe profile and are not product compatibility claims.
 
 The assertions live in
 [`tests/editor-hosts/vscode/host-probe.cjs`](../../../tests/editor-hosts/vscode/host-probe.cjs).
@@ -69,12 +79,13 @@ rather than a package-only claim.
 
 ## Residual manual/platform evidence
 
-The nested headless boundary proves extension and language-server behaviour
-through host APIs. It does not prove keyboard-only reachability of the command
-palette, Problems panel, status UI, focus order, screen-reader output,
-high-contrast rendering, colour-independent diagnostics, or platform-specific
-desktop integration. Those remain manual follow-up on supported desktop
-platforms. In particular, no keyboard workflow is claimed by this check.
+The nested headless boundary proves the scripted keyboard path above, including
+host command dispatch and inspectable semantic results. It does not prove
+arbitrary keyboard-only focus traversal, every command-palette or Problems
+panel layout, screen-reader output, high-contrast rendering, or platform-
+specific desktop integration. Those remain manual follow-up on supported
+desktop platforms. The marker is a test boundary, not a visual or accessibility
+oracle.
 
 The test also does not cover non-Linux host builds, remote workspaces,
 Marketplace/Open VSX distribution, or an installed user configuration. Those

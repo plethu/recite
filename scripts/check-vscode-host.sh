@@ -35,7 +35,7 @@ if [[ "$(uname -s)" != "Linux" || "$(uname -m)" != "x86_64" ]]; then
   exit 2
 fi
 
-for command in awk cargo cage chmod cp git node pnpm ps rm setsid sleep tar tr; do
+for command in awk cargo cage chmod cp git node pnpm ps rm setsid sleep tar tr wtype; do
   if ! command -v "$command" >/dev/null 2>&1; then
     echo "VS Code host evidence requires $command" >&2
     exit 2
@@ -311,13 +311,144 @@ cat > "$probe/package.json" <<'EOF'
   "version": "0.0.0",
   "main": "./extension.cjs",
   "engines": { "vscode": "^1.89.0" },
-  "activationEvents": []
+  "activationEvents": ["onCommand:recite.keyboardProbe"],
+  "contributes": {
+    "commands": [{ "command": "recite.keyboardProbe", "title": "Recite: Keyboard probe" }],
+    "keybindings": [
+      { "command": "recite.keyboardProbe", "key": "ctrl+alt+shift+k" },
+      { "command": "recite.renameBlock", "key": "ctrl+alt+shift+r" },
+      { "command": "recite.watch.start", "key": "ctrl+alt+shift+s" },
+      { "command": "recite.watch.stop", "key": "ctrl+alt+shift+q" }
+    ]
+  }
 }
 EOF
 cat > "$probe/extension.cjs" <<'EOF'
-exports.activate = () => {};
+const fs = require("node:fs");
+const vscode = require("vscode");
+
+exports.activate = () => {
+  const disposable = vscode.commands.registerCommand("recite.keyboardProbe", () => {
+    const invalid = vscode.Uri.file(process.env.RECITE_HOST_PROBE_INVALID);
+    const diagnostics = vscode.languages.getDiagnostics(invalid).map((diagnostic) => ({
+      code: String(diagnostic.code),
+      severity: ["error", "warning", "information", "hint"][diagnostic.severity] ?? "unknown",
+      start: { line: diagnostic.range.start.line, character: diagnostic.range.start.character },
+      end: { line: diagnostic.range.end.line, character: diagnostic.range.end.character }
+    }));
+    fs.writeFileSync(process.env.RECITE_HOST_PROBE_KEYBOARD_KEY_RESULT, JSON.stringify({
+      event: "keyboard-probe",
+      diagnostics
+    }) + "\n");
+  });
+  return { dispose: () => disposable.dispose() };
+};
 exports.deactivate = () => {};
 EOF
+
+wait_for_file() {
+  local file="$1"
+  local label="$2"
+  for _ in {1..600}; do
+    if [[ -s "$file" ]]; then
+      return 0
+    fi
+    sleep 0.05
+  done
+  echo "timed out waiting for $label: $file" >&2
+  return 1
+}
+
+group_has_cli() {
+  local process_group="$1"
+  ps -eo pid=,pgid=,args= | awk -v process_group="$process_group" -v executable="$cli_bin" \
+    '$2 == process_group && $3 == executable { print }'
+}
+
+wait_for_cli_in_group() {
+  local process_group="$1"
+  for _ in {1..200}; do
+    if [[ -n "$(group_has_cli "$process_group")" ]]; then
+      return 0
+    fi
+    sleep 0.05
+  done
+  echo "watch did not start a CLI descendant in process group $process_group" >&2
+  return 1
+}
+
+wait_for_cli_stopped() {
+  local process_group="$1"
+  for _ in {1..200}; do
+    if [[ -z "$(group_has_cli "$process_group")" ]]; then
+      return 0
+    fi
+    sleep 0.05
+  done
+  echo "watch CLI descendant remained in process group $process_group" >&2
+  return 1
+}
+
+keyboard_display() {
+  local runtime="$1"
+  for _ in {1..200}; do
+    for socket in "$runtime"/wayland-*; do
+      if [[ -S "$socket" ]]; then
+        printf '%s\n' "${socket##*/}"
+        return 0
+      fi
+    done
+    sleep 0.05
+  done
+  echo "headless Cage did not create a Wayland socket under $runtime" >&2
+  return 1
+}
+
+drive_keyboard() {
+  local profile="$1"
+  local process_group="$2"
+  local display
+  display="$(keyboard_display "$profile/runtime")" || return 1
+  wtype_key() {
+    env XDG_RUNTIME_DIR="$profile/runtime" WAYLAND_DISPLAY="$display" wtype "$@"
+  }
+
+  wait_for_file "$profile/keyboard.ready" "keyboard probe readiness" || return 1
+  wtype_key -M ctrl -M shift -k m
+  sleep 0.75
+  wtype_key -k Home -k Down
+  wtype_key -M ctrl -M alt -M shift -k k
+  wait_for_file "$profile/keyboard.key-result" "diagnostic keyboard marker" || return 1
+  wtype_key -k Escape
+  wait_for_file "$profile/keyboard.rename-ready" "rename keyboard readiness" || return 1
+  # The probe binds these existing Recite command IDs only inside this
+  # disposable profile. The commands are therefore reached by real Wayland
+  # input without making a product keybinding/public compatibility claim.
+  wtype_key -M ctrl -M alt -M shift -k r
+  # The explicit rename command waits for prepareRename before opening its
+  # input box. Give the real host enough time to cross that async boundary
+  # before typing the replacement name.
+  sleep 3
+  wtype_key -d 30 keyboard_done
+  wtype_key -k Return
+  wait_for_file "$profile/keyboard.rename-result" "keyboard rename edit" || return 1
+
+  wtype_key -M ctrl -M alt -M shift -k s
+  sleep 1
+  wait_for_cli_in_group "$process_group" || return 1
+  sleep 1
+  # Stop watch through a disposable binding to the supported command ID.
+  # The product intentionally has no default shortcut; this keeps the
+  # invocation a real Wayland key event without making a public keybinding
+  # compatibility claim.
+  wtype_key -M ctrl -M alt -M shift -k q
+  if ! wait_for_cli_stopped "$process_group"; then
+    # Retry the same supported command through the real keyboard boundary.
+    wtype_key -M ctrl -M alt -M shift -k q
+    wait_for_cli_stopped "$process_group" || return 1
+  fi
+  printf '%s\n' '{"event":"watch","started":true,"stopped":true}' >"$profile/keyboard.watch-result"
+}
 
 run_host_process() {
   local profile="$1"
@@ -325,6 +456,7 @@ run_host_process() {
   local log="$3"
   local host_bin="$4"
   local install_only="$5"
+  local keyboard_mode="${6:-0}"
   local candidate_pgid=""
 
   runner_pgid=""
@@ -348,6 +480,12 @@ run_host_process() {
     RECITE_HOST_PROBE_LSP="$lsp_bin" \
     RECITE_HOST_PROBE_CLI="$cli_bin" \
     RECITE_HOST_PROBE_INSTALL_ONLY="$install_only" \
+    RECITE_HOST_PROBE_KEYBOARD="$keyboard_mode" \
+    RECITE_HOST_PROBE_KEYBOARD_READY="$profile/keyboard.ready" \
+    RECITE_HOST_PROBE_KEYBOARD_KEY_RESULT="$profile/keyboard.key-result" \
+    RECITE_HOST_PROBE_KEYBOARD_RENAME_READY="$profile/keyboard.rename-ready" \
+    RECITE_HOST_PROBE_KEYBOARD_RENAME_RESULT="$profile/keyboard.rename-result" \
+    RECITE_HOST_PROBE_KEYBOARD_WATCH_RESULT="$profile/keyboard.watch-result" \
     cage -- \
     "$host_bin" --no-sandbox --disable-gpu --disable-updates --skip-welcome \
       --skip-release-notes --disable-telemetry --disable-crash-reporter \
@@ -365,6 +503,16 @@ run_host_process() {
     fi
     sleep 0.05
   done
+  if [[ "$keyboard_mode" == "1" ]]; then
+    if ! drive_keyboard "$profile" "$runner_pgid"; then
+      cleanup_process_group "$runner_pgid" || true
+      wait "$runner_pid" 2>/dev/null || true
+      runner_pid=""
+      runner_pgid=""
+      set -e
+      return 1
+    fi
+  fi
   local status=124
   local finished=0
   for _ in {1..3600}; do
@@ -415,7 +563,7 @@ run_host_phase() {
   rm -f "$result"
 
   echo "== run $label host $host_version_value ($(host_commit "$product")) =="
-  if run_host_process "$profile" "$result" "$log" "$host_bin" 1; then
+  if run_host_process "$profile" "$result" "$log" "$host_bin" 1 0; then
     :
   else
     status=$?
@@ -434,7 +582,7 @@ run_host_phase() {
   ' "$result"
 
   rm -f "$result"
-  if run_host_process "$profile" "$result" "$log" "$host_bin" 0; then
+  if run_host_process "$profile" "$result" "$log" "$host_bin" 0 0; then
     :
   else
     status=$?
@@ -486,6 +634,72 @@ EOF
   ' "$result"
 }
 
+run_keyboard_phase() {
+  local label="$1"
+  local host_bin="$2"
+  # Keep the private profile short enough for Electron's Unix IPC socket
+  # (sun_path is limited to 107 bytes on Linux).
+  local profile="$run_root/kbd"
+  local result="$profile/result.json"
+  local log="$profile/host.log"
+  local status
+
+  mkdir -p "$profile/home" "$profile/config" "$profile/data" "$profile/cache" \
+    "$profile/runtime" "$profile/portable" "$profile/user-data" "$profile/extensions" "$profile/shared"
+  chmod 700 "$profile/runtime"
+  rm -f "$result" "$profile"/keyboard.*
+
+  echo "== run $label keyboard host workflow =="
+  if run_host_process "$profile" "$result" "$log" "$host_bin" 1 0; then
+    :
+  else
+    status=$?
+    echo "$label keyboard install host test failed with exit status $status" >&2
+    tail -120 "$log" >&2 || true
+    return 1
+  fi
+  if [[ ! -s "$result" ]]; then
+    echo "$label keyboard install host exited without a result" >&2
+    tail -120 "$log" >&2 || true
+    return 1
+  fi
+  node -e '
+    const result = require(process.argv[1]);
+    if (result.installed !== true) throw new Error("VSIX keyboard installation did not complete");
+  ' "$result"
+
+  rm -f "$result" "$profile"/keyboard.*
+  if run_host_process "$profile" "$result" "$log" "$host_bin" 0 1; then
+    :
+  else
+    status=$?
+    echo "$label keyboard host test failed with exit status $status" >&2
+    tail -160 "$log" >&2 || true
+    return 1
+  fi
+  if [[ ! -s "$result" ]]; then
+    echo "$label keyboard host exited without a result" >&2
+    tail -160 "$log" >&2 || true
+    return 1
+  fi
+  node - "$result" <<'EOF'
+const fs = require("node:fs");
+const assert = require("node:assert/strict");
+const result = JSON.parse(fs.readFileSync(process.argv[2], "utf8"));
+assert.equal(result.keyboard, "passed", "keyboard workflow completed through the host");
+assert.equal(result.keyboardDiagnostics, "navigated", "diagnostic panel navigation was exercised");
+assert.equal(result.keyboardDiagnosticCode, "RECITE_PARSE011", "keyboard marker retains diagnostic code");
+assert.equal(result.keyboardDiagnosticSeverity, "error", "keyboard marker retains diagnostic severity");
+assert.equal(result.keyboardDiagnosticLine, 2, "keyboard marker retains diagnostic location");
+assert.equal(result.keyboardRename, "applied", "keyboard rename applied its edit");
+assert.equal(result.keyboardWatch, "stopped", "keyboard watch stopped cleanly");
+EOF
+  node -e '
+    const result = require(process.argv[1]);
+    process.stdout.write(JSON.stringify(result) + "\n");
+  ' "$result"
+}
+
 run_host() {
   local label="$1"
   local host_bin="$2"
@@ -499,9 +713,14 @@ run_host() {
     echo "$label version mismatch: expected $pinned_version, got $actual_version" >&2
     return 1
   fi
-  run_host_phase "$label" "$host_bin" "$product" "$actual_version"
+  if ! run_host_phase "$label" "$host_bin" "$product" "$actual_version"; then
+    return 1
+  fi
+  if ! run_keyboard_phase "$label" "$host_bin"; then
+    return 1
+  fi
   runtime_version="$(node -e 'const result = require(process.argv[1]); process.stdout.write(result.host)' "$run_root/$label/result.json")"
-  printf 'host=%s runtime_version=%s product_version=%s arch=x86_64 archive_sha256=%s vsix_sha256=%s install=passed activation=passed diagnostics=passed commands=passed watch_stop=passed shutdown=passed process_leak_check=passed\n' \
+  printf 'host=%s runtime_version=%s product_version=%s arch=x86_64 archive_sha256=%s vsix_sha256=%s install=passed activation=passed diagnostics=passed commands=passed keyboard=passed watch_stop=passed shutdown=passed process_leak_check=passed\n' \
     "$label" "$runtime_version" "$actual_version" "$archive_hash" "$vsix_hash"
 }
 

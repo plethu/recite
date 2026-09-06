@@ -19,8 +19,15 @@ activation, diagnostic, command, or shutdown observation is absent.
 Set `RECITE_HOST_TMPDIR` to an ignored build directory when `/tmp` does not
 have enough space for a full host profile; `/tmp` remains the default.
 
-This is host API automation, not keyboard or visual accessibility evidence.
-The probe does not access the user's display, desktop, profiles, extensions,
-Marketplace, or Open VSX. Keyboard-only navigation and visual/a11y checks
-remain manual platform follow-up until a portable isolated GUI automation
-boundary can make those observations repeatably.
+The keyboard phase starts a second isolated host under private Cage/WLR and
+sends real Wayland events with `wtype`: it reaches the Problems view, moves to
+the diagnostic, invokes a disposable binding for the supported rename command,
+and starts watch. It selects Stop watch through the command palette (the
+product has no default shortcut), then observes the edit, diagnostic
+code/severity/location, and captured-group CLI exit through marker files and
+process inspection. The temporary bindings are test-harness wiring only; they
+do not claim product keybindings. This proves the scripted host path, not
+arbitrary focus traversal, visual rendering, screen-reader/high-contrast
+output, or all desktop accessibility behavior, which remain manual platform
+follow-up. The probe does not access the user's display, desktop, profiles,
+extensions, Marketplace, or Open VSX.
