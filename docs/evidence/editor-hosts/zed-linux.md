@@ -52,80 +52,80 @@ running build as `1.18.1+stable, sha unknown`.
 
 ## Results
 
-The final run used:
+The final private run used the installed host and the prebuilt binaries from
+the checked-out worktree:
 
 ```sh
 ZED_EDITOR=/usr/lib/zed/zed-editor \
-RECITE_LSP_BIN=/tmp/recite-zed-host-target.zPfWt2/debug/recite-lsp \
-RECITE_CLI_BIN=/tmp/recite-zed-host-target.zPfWt2/debug/recite \
+RECITE_LSP_BIN=/tmp/recite-zed-final-target/debug/recite-lsp \
+RECITE_CLI_BIN=/tmp/recite-zed-final-target/debug/recite \
 RECITE_ZED_TIMEOUT=45 \
 scripts/check-zed-host.sh /tmp/recite-m4-zed
 ```
 
-It reported:
+It passed the following assertions:
 
 ```text
 extension_wasm_sha256=eff6f486881a0e53b77d29c98fa3a5098113af1d55fd58389850457ebb4b2f9f
 installed_extension_index=recite(dev=true),grammar_rev=209ea23195f674a18be0b8f87e037273fb3296bd
 recite_lsp_process=observed
+lsp_transport=actual_zed_requests_and_recite_responses_asserted
+lsp_diagnostics=RECITE_PARSE011/013 severity=1 UTF-16 ranges asserted
+lsp_features=completion/hover/definition/references/prepareRename/codeAction asserted
+lsp_rename_edit=unsupported_in_this_key_sequence(rename requires host text-entry confirmation)
+diagnostic_navigation=next_and_previous_keyboard_actions_observed
 task_validate=structured argv observed, status=1 observed
 task_watch=structured argv observed, Ctrl-C termination observed
-lsp_ui_actions=diagnostics,completion,hover,definition,references,rename,code-actions dispatched
-shutdown=Ctrl-Q requested; no private probe process remained
+shutdown=Ctrl-Q+zed:quit+Alt-F4 requested; no private probe process remained
 PASS: installed Zed Linux source extension, activation/rendering, LSP process, diagnostic fixture, LSP UI actions, static task failure, watch keyboard termination, and private shutdown exercised
 ```
 
-The install path and each authoring/task stage also produced a non-empty
-Wayland screenshot. The keyboard events were sent through `wtype` to the
-private compositor: command palette, development-extension path selection,
-file open, task picker, task selection, task-terminal Ctrl-C, and the final
-Ctrl-Q request. The temporary `recite` PATH wrapper recorded the exact
-structured task argv and the malformed canonical fixture returned status 1.
-The watch task was stopped through the task terminal; the exact CLI watch
-process was absent afterward. Ctrl-Q did not close this Linux host within the
-bounded wait, so the harness terminated only processes whose command lines
-contained its unique temporary probe path. No Zed, Cage, LSP, or CLI process
-with that path remained.
+The checked-in `tests/editor-hosts/zed/lsp_proxy.py` is copied into the private
+run directory. Zed launches that unique probe-local path, which launches the
+copied `recite-lsp` binary; the proxy records and forwards each original
+`Content-Length` frame without synthesizing messages. `assert_lsp_log.py` then
+checks messages from this Zed process: initialize advertised UTF-16,
+synchronization, completion, hover, definition, references, prepare-rename,
+and code-action capabilities; the canonical malformed fixture produced
+`RECITE_PARSE011` and `RECITE_PARSE013` at their exact severity-1 UTF-16
+ranges; and Zed-triggered completion, hover, definition, references,
+prepare-rename, and code-action responses contained the canonical Recite
+results.
 
-The host action sequence dispatched `diagnostics: deploy`, `editor: show
-completions`, `editor: hover`, `editor: go to definition`, `editor: find all
-references`, `editor: rename`, and `editor: toggle code actions`. The
-non-empty screenshots for the latter six were identical in this headless run,
-so that sequence demonstrates keyboard reachability only; it does not claim
-that Zed rendered a successful completion, hover, navigation, rename, or code
-action result.
-
-For the final run, the screenshot digests were
-`diagnostics-panel=9a23166d380a5b276d1e763c5e89d1de87e91b0d4197f3d6406c3bcce17b505e`,
-`lsp-completion=lsp-hover=lsp-definition=lsp-references=lsp-rename=lsp-code-actions=b1b7348c0a7cc46966f4d021a502afa53719a0dbb86e469ef59b7ae29fc54ea9`,
-and the install/authoring/task screenshots were non-empty as reported by the
-probe. These are ephemeral screenshots; the probe does not check them in.
-
-The LSP server was made available through the same temporary task PATH and
-Zed logged the extension's normal fallback launcher. The malformed canonical
-fixture was opened in the installed extension and the LSP process remained
-alive. This proves host launch/attachment reachability and the diagnostic
-fixture path; Zed 1.18.1 provides no stable machine-readable API for reading
-the rendered diagnostic panel or task terminal, so screenshot evidence is not
-promoted to a structured diagnostic assertion.
+The non-empty Wayland screenshots record extension installation, authoring,
+each action stage, diagnostic navigation in both directions, and task stages.
+Keyboard events crossed the private compositor through `wtype`: command
+palette, development-extension path selection, file picker, task picker,
+task-terminal Ctrl-C, F8/Shift-F8 diagnostic navigation, and shutdown. The
+temporary `recite` wrapper recorded exact task argv and status: the malformed
+canonical fixture returned status 1, and the watch task was stopped by
+Ctrl-C. The final process check tracks the private Cage/DBus process tree and
+probe path, and found no remaining private Zed, Cage, LSP, CLI, proxy, or task
+process.
 
 ## Boundaries and residuals
 
 - The extension was installed as a local development extension, not from the
   Zed gallery. Gallery publication, signing, and gallery-install behavior are
   not claimed.
-- The host's LSP UI actions were dispatched through a real `recite-lsp`
-  process, but the headless run did not produce distinct result captures for
-  completion, hover, definition, references, rename, or code actions. This
-  probe therefore does not claim those result payloads. The shared Recite LSP
-  stdio/editor-parity tests remain the authority for structured responses; Zed
-  exposes them only through rendered UI in this lane.
+- The LSP transport assertions prove requests and responses crossed this
+  installed Zed process, but they are not a replacement for the shared Recite
+  LSP stdio/editor-parity fixtures. This host run does not add a non-BMP
+  fixture or independently prove stale-document/version rejection; those
+  remain covered by the canonical lower-level tests.
+- The rename action reached `textDocument/prepareRename` and its canonical
+  response. This keyboard sequence did not enter a replacement name and did
+  not capture a `textDocument/rename` edit, so rename edit application remains
+  unsupported in this host probe.
 - Zed's task terminal displays the CLI's structured records but does not
   expose them through an editor-diagnostic API. The probe therefore asserts
-  exact task argv/status and process termination, not task-record parsing.
-- The task surface has no native machine-readable watch-cancellation
-  controller in this host. Ctrl-C is the genuine terminal keyboard boundary;
-  exact private-process cleanup is the bounded fallback.
+  exact task argv/status and process termination, not parsing of rendered task
+  records. Zed exposes no stable host API for a native watch-cancellation
+  controller; Ctrl-C is the genuine terminal keyboard boundary.
+- Any process still carrying this probe's private path or descended from its
+  private Cage root causes the lane to fail. Cleanup uses bounded TERM/KILL
+  recovery only to avoid leaking processes and reports recovery as evidence
+  failure.
 - No macOS/Windows host, screen-reader, high-contrast, gallery, live desktop,
   or network service behavior is claimed.
 
@@ -145,6 +145,11 @@ promoted to a structured diagnostic assertion.
   editor commands used by the probe.
 - [Diagnostics](https://zed.dev/docs/diagnostics) documents language-server
   diagnostics and the diagnostic deployment command.
+- [Finding and navigating](https://zed.dev/docs/finding-navigating) documents
+  the Ctrl-P file picker used to move between canonical fixtures.
+- [All actions](https://zed.dev/docs/all-actions) documents the diagnostic
+  actions; the [Linux default keymap](https://github.com/zed-industries/zed/blob/main/assets/keymaps/default-linux.json)
+  binds F8 and Shift-F8 to next/previous diagnostic navigation.
 - [Worktree trust](https://zed.dev/docs/worktree-trust) documents restricted
   worktrees and the `session.trust_all_worktrees` setting used only in this
   ephemeral probe profile.

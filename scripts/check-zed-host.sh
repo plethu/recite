@@ -68,6 +68,16 @@ for required in "$extension_dir/extension.toml" \
     exit 2
   }
 done
+proxy_script="$repo_root/tests/editor-hosts/zed/lsp_proxy.py"
+[[ -f "$proxy_script" && ! -L "$proxy_script" ]] || {
+  echo "missing or symlinked Zed LSP probe transport: ${proxy_script#"$repo_root"/}" >&2
+  exit 2
+}
+assert_lsp_log="$repo_root/tests/editor-hosts/zed/assert_lsp_log.py"
+[[ -f "$assert_lsp_log" && ! -L "$assert_lsp_log" ]] || {
+  echo "missing or symlinked Zed LSP evidence assertion: ${assert_lsp_log#"$repo_root"/}" >&2
+  exit 2
+}
 
 command_path() {
   command -v "$1" 2>/dev/null || true
@@ -112,39 +122,97 @@ mkdir -p "$runtime_dir" "$user_data/config" "$config_home/zed" "$data_home/confi
 chmod 700 "$runtime_dir"
 
 cleanup_status=0
+evidence_failure=0
 cage_pid=""
 probe_processes() {
-  ps -eo pid=,args= | awk -v probe="$probe_dir" -v self="$$" \
-    'index($0, probe) && $1 != self && $0 !~ /awk/ && $0 !~ /rg -F/ {print}'
+  local process_root="${cage_pid:-0}"
+  # Match the unique probe path and every descendant of this run's private
+  # dbus-run-session/Cage root. The ancestry check also catches a private
+  # dbus-daemon or interpreter whose argv does not repeat the temporary path.
+  ps -eo pid=,ppid=,args= | awk -v probe="$probe_dir" -v root="$process_root" -v self="$$" '
+    {
+      pid = $1
+      parent[pid] = $2
+      command[pid] = $0
+      marked[pid] = (index($0, probe) > 0)
+    }
+    END {
+      if (root != "0" && (root in command)) {
+        marked[root] = 1
+      }
+      changed = 1
+      while (changed) {
+        changed = 0
+        for (pid in command) {
+          if (!marked[pid] && marked[parent[pid]]) {
+            marked[pid] = 1
+            changed = 1
+          }
+        }
+      }
+      for (pid in command) {
+        if (marked[pid] && pid != self && command[pid] !~ /(^|[ \/])awk([ \/]|$)/ && command[pid] !~ /rg -F/) {
+          print command[pid]
+        }
+      }
+    }'
+}
+probe_pids() {
+  probe_processes | awk '!seen[$1]++ {print $1}'
 }
 terminate_probe_processes() {
-  local -a pids
-  mapfile -t pids < <(probe_processes | awk '{print $1}')
-  if (("${#pids[@]}")); then
-    kill "${pids[@]}" 2>/dev/null || true
-    sleep 1
-    mapfile -t pids < <(probe_processes | awk '{print $1}')
-    (("${#pids[@]}")) || return 0
-    kill -KILL "${pids[@]}" 2>/dev/null || true
+  local -a pids remaining
+  mapfile -t pids < <(probe_pids)
+  if (( ! ${#pids[@]} )); then
+    return 0
   fi
+
+  # A normal host stop must leave no process carrying this probe's private
+  # path. Recovery is bounded and safe, but it is evidence failure even when
+  # the recovery succeeds: a host that ignores its keyboard shutdown boundary
+  # has not passed the installed-host lane.
+  evidence_failure=1
+  echo "ERROR: private probe processes required cleanup recovery: ${pids[*]}" >&2
+  kill "${pids[@]}" 2>/dev/null || true
+  for _ in {1..50}; do
+    mapfile -t remaining < <(probe_pids)
+    (( ! ${#remaining[@]} )) && {
+      echo "INFO: private probe processes exited after bounded TERM" >&2
+      return 1
+    }
+    sleep 0.1
+  done
+  if (( ${#remaining[@]} )); then
+    echo "ERROR: private probe processes survived bounded TERM; sending KILL: ${remaining[*]}" >&2
+    kill -KILL "${remaining[@]}" 2>/dev/null || true
+  fi
+  for _ in {1..50}; do
+    mapfile -t remaining < <(probe_pids)
+    (( ! ${#remaining[@]} )) && {
+      echo "INFO: private probe processes exited after bounded KILL" >&2
+      return 1
+    }
+    sleep 0.1
+  done
+  echo "ERROR: private probe process remained after bounded KILL: ${remaining[*]}" >&2
+  return 1
 }
 cleanup() {
   cleanup_status=$?
-  if [[ -n "$cage_pid" ]] && kill -0 "$cage_pid" 2>/dev/null; then
-    kill "$cage_pid" 2>/dev/null || true
-    for _ in {1..20}; do
-      kill -0 "$cage_pid" 2>/dev/null || break
-      sleep 0.1
-    done
-    kill -KILL "$cage_pid" 2>/dev/null || true
+  terminate_probe_processes || true
+  if [[ -n "$cage_pid" ]]; then
+    wait "$cage_pid" 2>/dev/null || true
+    cage_pid=""
   fi
-  terminate_probe_processes
   if [[ -d "$probe_dir" && -z "$keep_probe" ]]; then
     # The probe owns this exact mktemp directory. Keep no screenshots,
     # extension artifacts, Cargo output, DBus services, or logs by default.
     rm -rf -- "$probe_dir"
   elif [[ -d "$probe_dir" ]]; then
     echo "INFO: keeping probe artifacts at $probe_dir" >&2
+  fi
+  if (( evidence_failure )) && (( cleanup_status == 0 )); then
+    cleanup_status=1
   fi
   exit "$cleanup_status"
 }
@@ -185,20 +253,47 @@ for binary in "$lsp_bin" "$cli_bin"; do
   }
 done
 printf 'recite_lsp=%s\n' "$lsp_bin"
-printf 'recite_lsp_sha256=%s\n' "$(sha256sum "$lsp_bin" | awk '{print $1}')"
+lsp_sha256="$(sha256sum "$lsp_bin" | awk '{print $1}')"
+printf 'recite_lsp_sha256=%s\n' "$lsp_sha256"
 printf 'recite_cli=%s\n' "$cli_bin"
-printf 'recite_cli_sha256=%s\n' "$(sha256sum "$cli_bin" | awk '{print $1}')"
+cli_sha256="$(sha256sum "$cli_bin" | awk '{print $1}')"
+printf 'recite_cli_sha256=%s\n' "$cli_sha256"
+
+# Keep every language-server/task descendant under the private probe path.
+# This makes process ancestry and cleanup assertions specific to this run,
+# while preserving the exact hashes of the externally supplied binaries.
+lsp_probe_bin="$bin_dir/recite-lsp.real"
+cli_probe_bin="$bin_dir/recite.real"
+proxy_probe_script="$bin_dir/lsp_proxy.py"
+cp -- "$lsp_bin" "$lsp_probe_bin"
+cp -- "$cli_bin" "$cli_probe_bin"
+cp -- "$proxy_script" "$proxy_probe_script"
+chmod 755 "$lsp_probe_bin" "$cli_probe_bin"
+[[ "$(sha256sum "$lsp_probe_bin" | awk '{print $1}')" == "$lsp_sha256" ]] || {
+  echo "private recite-lsp probe copy changed its source hash" >&2
+  exit 1
+}
+[[ "$(sha256sum "$cli_probe_bin" | awk '{print $1}')" == "$cli_sha256" ]] || {
+  echo "private recite CLI probe copy changed its source hash" >&2
+  exit 1
+}
+cmp -s -- "$proxy_script" "$proxy_probe_script" || {
+  echo "private LSP probe transport copy changed its checked-in source" >&2
+  exit 1
+}
 
 printf 'format_version = 1\n' > "$project_dir/recite.project.toml"
-printf '{"lsp":{"recite-lsp":{"binary":{"path":"%s","arguments":[]}}}}\n' "$lsp_bin" > "$project_dir/.zed/settings.json"
+printf '{"lsp":{"recite-lsp":{"binary":{"path":"%s","arguments":[]}}}}\n' "$bin_dir/recite-lsp" > "$project_dir/.zed/settings.json"
 cp -- "$fixture" "$project_dir/fixture.recite"
 cp -- "$capability_fixture" "$project_dir/core.recite"
 cp -R -- "$extension_dir" "$extension_copy"
 rm -rf -- "$extension_copy/target"
 
-# A PATH wrapper makes the exact argv and exit status of every Zed task
-# observable without changing the checked-in task command (which remains
-# recite). It execs the actual binary after recording the invocation.
+# PATH wrappers make the exact argv and exit status of every Zed task and
+# language-server launch observable without changing the checked-in commands.
+# The task wrapper retains the real child process. The LSP wrapper additionally
+# interposes the checked-in transport logger, forwarding all original frames
+# while retaining both the logger and real server under this private path.
 task_log="$probe_dir/task.log"
 cat > "$bin_dir/recite" <<EOF
 #!/usr/bin/env bash
@@ -206,13 +301,20 @@ set -uo pipefail
 printf 'start pid=%s cwd=%s argv=' "\$\$" "\$(pwd)" >> "$task_log"
 printf '%q ' "\$@" >> "$task_log"
 printf '\n' >> "$task_log"
-"$cli_bin" "\$@"
+"$cli_probe_bin" "\$@"
 rc=\$?
 printf 'exit pid=%s status=%s\n' "\$\$" "\$rc" >> "$task_log"
 exit "\$rc"
 EOF
 chmod 755 "$bin_dir/recite"
-ln -s -- "$lsp_bin" "$bin_dir/recite-lsp"
+lsp_log="$probe_dir/lsp.log"
+cat > "$bin_dir/recite-lsp" <<EOF
+#!/usr/bin/env bash
+set -uo pipefail
+env RECITE_PROBE_LSP_REAL="$lsp_probe_bin" RECITE_PROBE_LSP_LOG="$lsp_log" \
+  python3 "$proxy_probe_script" "\$@"
+EOF
+chmod 755 "$bin_dir/recite-lsp"
 
 # Zed 1.18.1 reads user settings from --user-data-dir/config/settings.json.
 # Keep the XDG copy as well so this remains clear if the host changes its
@@ -246,6 +348,8 @@ host_env=(
   "XDG_DATA_DIRS=$data_home:/usr/local/share:/usr/share"
   "HOME=$home_dir"
   "PATH=$bin_dir:${PATH:-/usr/bin:/bin}"
+  "RECITE_PROBE_LSP_REAL=$lsp_probe_bin"
+  "RECITE_PROBE_LSP_LOG=$lsp_log"
 )
 
 press() {
@@ -253,6 +357,39 @@ press() {
 }
 type_text() {
   "${host_env[@]}" wtype -d 4 -- "$1"
+}
+open_file() {
+  local path="$1"
+  # Zed's documented file picker action is Ctrl-P on Linux. Unlike a
+  # command-palette search, this leaves the selected path in the picker rather
+  # than accidentally inserting it into the current buffer.
+  press -M ctrl -k p -m ctrl
+  sleep 1
+  # A basename gives the file finder a stable unique result in this temporary
+  # project and avoids host-version differences in absolute-path matching.
+  type_text "${path##*/}"
+  press -k Return
+  sleep 5
+}
+place_cursor_in_divert() {
+  press -M ctrl -k f -m ctrl
+  type_text '-> work'
+  press -k Return
+  press -k Escape
+  press -k Left
+  for _ in {1..5}; do
+    press -k Right
+  done
+}
+place_cursor_in_definition() {
+  press -M ctrl -k f -m ctrl
+  type_text ':: work'
+  press -k Return
+  press -k Escape
+  press -k Left
+  for _ in {1..5}; do
+    press -k Right
+  done
 }
 wait_for_file() {
   local path="$1"
@@ -272,10 +409,10 @@ wait_for_log() {
     sleep 1
   done
 }
-wait_for_process() {
+wait_for_probe_process() {
   local needle="$1"
   local waited=0
-  while ! ps -eo args= | rg -F -- "$needle" >/dev/null; do
+  while ! probe_processes | rg -F -- "$needle" >/dev/null; do
     (( waited += 1 ))
     (( waited >= timeout_seconds )) && return 1
     sleep 1
@@ -288,7 +425,8 @@ capture() {
     echo "grim produced an empty screenshot: $name" >&2
     return 1
   }
-  printf '%s_sha256=%s\n' "$name" "$(sha256sum "$probe_dir/$name.png" | awk '{print $1}')"
+  capture_hash="$(sha256sum "$probe_dir/$name.png" | awk '{print $1}')"
+  printf '%s_sha256=%s\n' "$name" "$capture_hash"
 }
 start_host() {
   local stage="$1"
@@ -297,7 +435,7 @@ start_host() {
   # dbus-run-session owns the private bus and Cage owns the private Wayland
   # socket. The direct editor binary avoids zeditor's single-instance client.
   "${host_env[@]}" dbus-run-session -- cage -d -- "$zed_bin" \
-    --user-data-dir "$user_data" "$project_dir/fixture.recite" \
+    --user-data-dir "$user_data" "$project_dir" \
     > "$stage_log" 2>&1 &
   cage_pid=$!
   wait_for_file "$runtime_dir/$wayland_display" || {
@@ -308,24 +446,36 @@ start_host() {
     echo "Zed did not render a first frame; see $stage_log and $zed_log" >&2
     return 1
   }
+  open_file "$project_dir/fixture.recite"
   capture "$stage-start"
 }
 stop_host() {
-  # Ctrl-Q is a real Zed keyboard action delivered through Wayland. If this
-  # host has no such binding, cleanup still bounds the exact private Cage PID.
+  # Ctrl-Q, the command palette's `zed: quit`, and Alt-F4 are real Zed/window
+  # keyboard actions delivered through Wayland. Alt-F4 is the normal
+  # window-close fallback on hosts where the application action is not bound.
+  # Any process recovery is evidence failure, even if bounded cleanup
+  # succeeds.
   press -M ctrl -k q -m ctrl || true
+  press -M ctrl -M shift -k p -m shift -m ctrl || true
+  sleep 1
+  type_text 'zed: quit' || true
+  press -k Return || true
+  press -M alt -k F4 -m alt || true
   local waited=0
-  while kill -0 "$cage_pid" 2>/dev/null; do
+  while [[ -n "$(probe_processes)" ]]; do
     (( waited += 1 ))
     (( waited >= 10 )) && break
     sleep 1
   done
-  if kill -0 "$cage_pid" 2>/dev/null; then
-    echo "INFO: Zed did not stop after Ctrl-Q; terminating only private probe processes" >&2
-    kill "$cage_pid" 2>/dev/null || true
-    sleep 1
+  if [[ -n "$(probe_processes)" ]]; then
+    echo "ERROR: Zed did not stop after keyboard shutdown; recovering only private probe processes" >&2
+    terminate_probe_processes || true
+    if [[ -n "$cage_pid" ]]; then
+      wait "$cage_pid" 2>/dev/null || true
+    fi
+    cage_pid=""
+    return 1
   fi
-  terminate_probe_processes
   wait "$cage_pid" 2>/dev/null || true
   cage_pid=""
 }
@@ -381,23 +531,17 @@ stop_host
 echo "== reload installed extension, LSP diagnostics, and keyboard workflow =="
 start_host authoring
 # The initial path was passed to Zed, but explicitly reopening it through the
-# command palette makes the keyboard boundary observable as part of the run.
-press -M ctrl -M shift -k p -m shift -m ctrl
-sleep 1
-type_text 'file: open'
-press -k Return
-sleep 1
-press -M ctrl -k a -m ctrl
-type_text "$project_dir/fixture.recite"
-press -k Return
-sleep 8
+# documented file picker makes the keyboard boundary observable as part of the
+# run.
+open_file "$project_dir/fixture.recite"
+sleep 3
 capture authoring-file
-wait_for_process "$(basename "$lsp_bin")" || {
+wait_for_probe_process "$bin_dir/recite-lsp" || {
   echo "Zed did not leave recite-lsp running after opening the Recite fixture" >&2
   exit 1
 }
 ps -eo pid=,args= > "$probe_dir/processes-after-lsp.txt"
-rg -e '/recite-lsp($| )' "$probe_dir/processes-after-lsp.txt" >/dev/null || {
+rg -F -- "$bin_dir/recite-lsp" "$probe_dir/processes-after-lsp.txt" >/dev/null || {
   echo "recite-lsp process disappeared before process capture" >&2
   exit 1
 }
@@ -418,41 +562,58 @@ host_action() {
   press -k Escape
   sleep 1
 }
-host_action 'diagnostics: deploy' diagnostics-panel
-
-press -M ctrl -M shift -k p -m shift -m ctrl
-sleep 1
-type_text 'file: open'
-press -k Return
-sleep 1
-press -M ctrl -k a -m ctrl
-type_text "$project_dir/core.recite"
-press -k Return
-sleep 5
-press -M ctrl -k f -m ctrl
-type_text 'work'
-press -k Return
-press -k Escape
+hover_action() {
+  # The official Linux keymap binds Ctrl-K Ctrl-I to editor::Hover. Using the
+  # direct binding avoids making the hover assertion depend on the command
+  # palette retaining editor focus after completion UI closes.
+  press -M ctrl -k k -m ctrl
+  press -M ctrl -k i -m ctrl
+  sleep 2
+  capture lsp-hover
+  press -k Escape
+  sleep 1
+}
+open_file "$project_dir/core.recite"
+place_cursor_in_divert
+# Collapse the search selection and place the cursor inside `work`, where the
+# Recite server's source-span boundary accepts navigation/rename requests.
 sleep 2
 host_action 'editor: show completions' lsp-completion
-host_action 'editor: hover' lsp-hover
+place_cursor_in_divert
+hover_action
+place_cursor_in_divert
 host_action 'editor: go to definition' lsp-definition
+place_cursor_in_definition
 host_action 'editor: find all references' lsp-references
+place_cursor_in_definition
 host_action 'editor: rename' lsp-rename
 host_action 'editor: toggle code actions' lsp-code-actions
 echo "lsp_ui_actions=diagnostics,completion,hover,definition,references,rename,code-actions dispatched"
+host_action 'diagnostics: deploy' diagnostics-panel
 
 # Return to the malformed canonical fixture for the task-failure and watch
 # lifecycle checks below.
-press -M ctrl -M shift -k p -m shift -m ctrl
-sleep 1
-type_text 'file: open'
-press -k Return
-sleep 1
-press -M ctrl -k a -m ctrl
-type_text "$project_dir/fixture.recite"
-press -k Return
-sleep 5
+open_file "$project_dir/fixture.recite"
+
+# Navigate both directions through the two canonical parser diagnostics. The
+# screenshot hashes are a rendered keyboard-boundary assertion only; payload
+# correctness is asserted from the transport log below.
+capture diagnostic-navigation-start
+diagnostic_start_hash="$capture_hash"
+press -k F8
+sleep 2
+capture diagnostic-next
+diagnostic_next_hash="$capture_hash"
+press -M shift -k F8 -m shift
+sleep 2
+capture diagnostic-previous
+diagnostic_previous_hash="$capture_hash"
+if [[ "$diagnostic_start_hash" == "$diagnostic_next_hash" || \
+  "$diagnostic_next_hash" == "$diagnostic_previous_hash" ]]; then
+  echo "diagnostic navigation did not change the rendered host boundary" >&2
+  exit 1
+fi
+echo "diagnostic_navigation=next_and_previous_keyboard_actions_observed"
 
 # Spawn the language-provided validation task through Zed's command palette.
 # Its PATH wrapper records the actual task argv and status while the child is
@@ -496,19 +657,20 @@ rg -F -- 'watch --output-format structured' "$task_log" >/dev/null || {
 press -M ctrl -k c -m ctrl
 sleep 3
 ps -eo pid=,args= > "$probe_dir/processes-after-watch-stop.txt"
-if rg -F -- "$cli_bin" "$probe_dir/processes-after-watch-stop.txt" | rg -e ' watch( |$)' >/dev/null; then
+if probe_processes | rg -F -- "$cli_probe_bin" | rg -e ' watch( |$)' >/dev/null; then
   echo "recite watch process remained after the host keyboard stop boundary" >&2
   exit 1
 fi
 echo "task_watch=structured argv observed, Ctrl-C termination observed"
+python3 "$assert_lsp_log" "$lsp_log" "$project_dir"
 stop_host
 
 echo "== exact private-host process cleanup =="
-if probe_processes | rg -e 'zed-editor|cage|recite($| )|recite-lsp|dbus' >/dev/null; then
+if [[ -n "$(probe_processes)" ]]; then
   echo "private Zed probe process leaked its temporary path" >&2
   probe_processes >&2 || true
   exit 1
 fi
-echo "shutdown=Ctrl-Q requested; no private probe process remained"
+echo "shutdown=Ctrl-Q+zed:quit+Alt-F4 requested; no private probe process remained"
 echo "PASS: installed Zed Linux source extension, activation/rendering, LSP process, diagnostic fixture, LSP UI actions, static task failure, watch keyboard termination, and private shutdown exercised"
 echo "RESIDUAL: Zed task terminals do not expose structured records as editor diagnostics; no gallery publication, macOS/Windows host, screen-reader/high-contrast, or native task cancellation API is claimed"
