@@ -22,11 +22,23 @@ its pinned grammar from that directory. Rust with the `wasm32-wasip2` target
 and the grammar build prerequisites must be available to the host; the
 repository gate uses host checks when that target is unavailable.
 
-These host installation steps are documented but unexecuted here because no
-installed Zed host is available. Linux source/package evidence is limited to
-`scripts/check-zed.sh`, the pinned grammar/query capture checks, and the
-shared `recite-lsp` stdio test. macOS and Windows host smoke, gallery
-publication, and installation smoke remain residuals.
+The installed Linux host path was exercised on 2026-09-06 with Arch Zed
+1.18.1 under a private headless Cage/WLR compositor. The probe installed and
+rendered this development extension, started the configured `recite-lsp`, and
+sent real keyboard-driven diagnostic, completion, hover, definition,
+references, prepare-rename, task, and shutdown actions. It never used the
+caller's display or desktop.
+
+That host run received a real `textDocument/codeAction` request for a missing
+ID, but Recite returned an empty result and no edit was applied. Code actions
+therefore remain an explicit host limitation; the probe fails closed if a
+future result is non-empty until its evidence and documentation are reviewed.
+The run reached `textDocument/prepareRename`, but did not apply a replacement
+name or capture a `textDocument/rename` edit. The shared LSP tests still prove
+the canonical code-action edit and rename semantics outside this host lane.
+
+macOS and Windows host smoke, gallery publication, and gallery installation
+remain residuals.
 
 See Zed's [extension development guide](https://zed.dev/docs/extensions/developing-extensions)
 for the host-side development-extension workflow.
@@ -93,24 +105,27 @@ known.
 Zed owns task process lifecycle. These static tasks do not implement a fake
 stdin cancellation transport or claim parsed watch recovery; stopping a task
 uses the host's normal terminal/process controls. `recite` remains the owner of
-structured watch records. Host task termination and clean extension shutdown
-have not been smoke-tested.
+structured watch records. The isolated Linux probe observed validation failure,
+watch termination through the task terminal's Ctrl-C action, and clean private
+process shutdown.
 
-No Zed keyboard, task-panel, diagnostic-panel, screen-reader, focus, or
-high-contrast accessibility behavior is claimed. The package adds no color
-protocol or terminal-color parser; non-colour themes and diagnostics remain
-host/LSP surfaces rather than extension-owned semantics.
+The isolated probe demonstrates keyboard reachability for the tested actions,
+not complete Zed accessibility conformance. Screen-reader, focus,
+high-contrast, and non-colour behavior remain host/LSP surfaces and are not
+claimed here. The package adds no color protocol or terminal-color parser.
 
 ## Evidence and limits
 
 `scripts/check-zed.sh` checks the manifest, package inventory, grammar pin and
 query drift, task argv contract, launcher unit tests, and a real `recite-lsp`
-stdio parity test. It does not claim that Zed rendered the package or launched
-the extension in a host. The current verification environment has no installed
-Zed host, so local host installation, activation/rendering, keyboard/task
-accessibility, clean task termination, and clean shutdown are unexecuted.
-macOS and Windows smoke, gallery publication, and package installation remain
-residuals.
+stdio parity test. `scripts/check-zed-host.sh` exercises the installed Linux
+development-extension path in isolated Cage/WLR state. Its transport log
+asserts the real Zed requests and canonical diagnostics/navigation results; the
+current host's code-action response is explicitly recorded as empty and
+unsupported, and prepare-rename is the furthest rename boundary proved.
+Task-terminal structured-record parsing, a native watch-cancellation API,
+screen-reader/high-contrast behavior, macOS/Windows host smoke, gallery
+publication, and gallery installation remain residuals.
 
 The extension is dual-licensed under MIT OR Apache-2.0. See
 `LICENSE-MIT` and `LICENSE-APACHE`.

@@ -37,6 +37,11 @@ def has_label(value: Any, label: str) -> bool:
     return False
 
 
+def is_unsupported_empty_code_action_result(result: Any) -> bool:
+    """Return whether the host produced exactly the documented empty result."""
+    return type(result) is list and not result
+
+
 def main() -> int:
     if len(sys.argv) != 3:
         raise SystemExit("usage: assert_lsp_log.py LOG PROJECT_DIR")
@@ -127,10 +132,35 @@ def main() -> int:
         isinstance(result, dict) and result.get("placeholder") == "work"
         for result in response_results("textDocument/prepareRename")
     ), "no canonical prepare-rename response was captured from Zed"
-    assert response_results("textDocument/codeAction"), "Zed did not receive a code-action response"
+    code_action_uri = f"{project}/code-action.recite"
+    code_action_transactions = [
+        (request, responses[request_id].get("result"))
+        for request_id, request in requests.items()
+        if request.get("method") == "textDocument/codeAction"
+        and request.get("params", {}).get("textDocument", {}).get("uri") == code_action_uri
+        and request_id in responses
+    ]
+    assert code_action_transactions, "Zed did not receive a code-action response for the canonical fixture"
+    assert any(
+        request.get("params", {}).get("range") == {
+            "start": {"line": 1, "character": 0},
+            "end": {"line": 1, "character": 1},
+        }
+        and any(
+            diagnostic.get("code") == "RECITE_ID001"
+            for diagnostic in request.get("params", {}).get("context", {}).get("diagnostics", [])
+            if isinstance(diagnostic, dict)
+        )
+        for request, _ in code_action_transactions
+    ), "Zed did not send the canonical missing-ID code-action range and diagnostic"
+    assert all(
+        is_unsupported_empty_code_action_result(result)
+        for _, result in code_action_transactions
+    ), "Zed code-action result changed; update the documented host boundary before claiming success"
     print("lsp_transport=actual_zed_requests_and_recite_responses_asserted")
     print("lsp_diagnostics=RECITE_PARSE011/013 severity=1 UTF-16 ranges asserted")
-    print("lsp_features=completion/hover/definition/references/prepareRename/codeAction asserted")
+    print("lsp_features=completion/hover/definition/references/prepareRename asserted")
+    print("lsp_code_action=unsupported_empty_result(request_crossed_zed; no_edit_applied)")
     print("lsp_rename_edit=unsupported_in_this_key_sequence(rename requires host text-entry confirmation)")
     return 0
 

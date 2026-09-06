@@ -20,8 +20,9 @@ WAYLAND_DISPLAY is used.
 
 Environment:
   ZED_EDITOR          direct zed-editor binary (not the zeditor client)
-  RECITE_LSP_BIN      prebuilt recite-lsp; otherwise Cargo builds it in /tmp
-  RECITE_CLI_BIN      prebuilt recite CLI; otherwise Cargo builds it in /tmp
+  RECITE_LSP_BIN      prebuilt recite-lsp; otherwise Cargo builds it under TMPDIR
+  RECITE_CLI_BIN      prebuilt recite CLI; otherwise Cargo builds it under TMPDIR
+  TMPDIR              private writable parent for the bounded host probe (default /tmp)
   RECITE_ZED_TIMEOUT  per-stage timeout in seconds (default: 90)
 EOF
 }
@@ -286,6 +287,15 @@ printf 'format_version = 1\n' > "$project_dir/recite.project.toml"
 printf '{"lsp":{"recite-lsp":{"binary":{"path":"%s","arguments":[]}}}}\n' "$bin_dir/recite-lsp" > "$project_dir/.zed/settings.json"
 cp -- "$fixture" "$project_dir/fixture.recite"
 cp -- "$capability_fixture" "$project_dir/core.recite"
+python3 - "$project_dir/code-action.recite" <<'PY'
+from pathlib import Path
+import sys
+
+Path(sys.argv[1]).write_text(
+    ":: start default\n>\n  Hello.\n?\n  Stay.\n",
+    encoding="utf-8",
+)
+PY
 cp -R -- "$extension_dir" "$extension_copy"
 rm -rf -- "$extension_copy/target"
 
@@ -390,6 +400,17 @@ place_cursor_in_definition() {
   for _ in {1..5}; do
     press -k Right
   done
+}
+place_cursor_in_missing_id() {
+  press -M ctrl -k f -m ctrl
+  type_text '>'
+  press -k Return
+  sleep 1
+  press -k Escape
+  sleep 1
+  press -k Left
+  press -M shift -k Right -m shift
+  sleep 1
 }
 wait_for_file() {
   local path="$1"
@@ -587,6 +608,8 @@ place_cursor_in_definition
 host_action 'editor: find all references' lsp-references
 place_cursor_in_definition
 host_action 'editor: rename' lsp-rename
+open_file "$project_dir/code-action.recite"
+place_cursor_in_missing_id
 host_action 'editor: toggle code actions' lsp-code-actions
 echo "lsp_ui_actions=diagnostics,completion,hover,definition,references,rename,code-actions dispatched"
 host_action 'diagnostics: deploy' diagnostics-panel
@@ -672,5 +695,5 @@ if [[ -n "$(probe_processes)" ]]; then
   exit 1
 fi
 echo "shutdown=Ctrl-Q+zed:quit+Alt-F4 requested; no private probe process remained"
-echo "PASS: installed Zed Linux source extension, activation/rendering, LSP process, diagnostic fixture, LSP UI actions, static task failure, watch keyboard termination, and private shutdown exercised"
+echo "PASS: installed Zed Linux source extension, activation/rendering, LSP process, diagnostic fixture, LSP UI actions, static task failure, watch keyboard termination, and private shutdown exercised; code-action edit remains unsupported"
 echo "RESIDUAL: Zed task terminals do not expose structured records as editor diagnostics; no gallery publication, macOS/Windows host, screen-reader/high-contrast, or native task cancellation API is claimed"

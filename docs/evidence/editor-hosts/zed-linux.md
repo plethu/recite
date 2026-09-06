@@ -10,15 +10,18 @@ Run this from a Linux session with an installed Zed binary, a working GPU
 driver, and the private compositor tools:
 
 ```sh
-RECITE_ZED_TIMEOUT=90 tests/editor-hosts/zed/check.sh
+TMPDIR=/path/to/private-temp RECITE_ZED_TIMEOUT=90 \
+  tests/editor-hosts/zed/check.sh
 ```
 
 The probe builds `recite-lsp` and `recite` into a temporary Cargo target unless
-`RECITE_LSP_BIN` and `RECITE_CLI_BIN` are supplied. It runs the direct
-`zed-editor` binary under Cage's headless WLR backend with a private
+`RECITE_LSP_BIN` and `RECITE_CLI_BIN` are supplied. Keep `TMPDIR` on a
+writable, private filesystem with enough space for the Cargo target and probe
+artifacts. It runs the direct `zed-editor` binary under Cage's headless WLR
+backend with a private
 `XDG_RUNTIME_DIR`, user-data directory, DBus session, and Wayland socket. It
 unsets the caller's `DISPLAY` and `WAYLAND_DISPLAY`; it never uses the live
-desktop. The selected extension directory is copied under `/tmp`, since the
+desktop. The selected extension directory is copied under `TMPDIR`, since the
 Zed development installer writes `extension.wasm` and generated grammar files
 beside the selected source directory. Every probe artifact is removed on
 success or failure unless `RECITE_ZED_KEEP=1` is set for diagnosis.
@@ -39,8 +42,8 @@ Observed 2026-09-06 on Linux x86_64:
 | Direct host SHA-256 | `6329d6a67e3114d834c3d50b08babf8328de68001250c37cf43a890daeecd8fe` |
 | Version query | `zeditor --version` → `Zed 1.18.1 – /usr/lib/zed/zed-editor` |
 | Architecture/kernel | `x86_64`, Linux `7.2.3-1-cachyos` |
-| Recite LSP SHA-256 | `de5b70e31b2dce4489a9637d489a0be8448c789a8af311e2280696385f037954` |
-| Recite CLI SHA-256 | `4720ca9cc17e67eb05f3ef5843872afb96dbb831ee09e6c56bc9096583e44819` |
+| Recite LSP SHA-256 | `bf3bd27a5bdbf867fb2ddf6135a46514052d6f07fd4409f54bbcf7c28bc0dfd3` |
+| Recite CLI SHA-256 | `8bd51e96244ec97968d7c3af265cb458be88751c41a46a9ffcc3088c1fb98442` |
 | Host compositor | Cage `0.3.1-b7b774a`, WLR `headless`, one private `wayland-0` socket |
 | Automation tools | `wtype` 0.4-2.4, `grim` 1.5.0-2.1, `dbus-run-session` 1.16.2 |
 | Render path | Zed log recorded `Rendered first frame` and an AMD Radeon 860M Vulkan adapter |
@@ -52,18 +55,22 @@ running build as `1.18.1+stable, sha unknown`.
 
 ## Results
 
-The final private run used the installed host and the prebuilt binaries from
-the checked-out worktree:
+The 2026-09-06 private run used the installed host and prebuilt binaries from
+the checked-out worktree. Its private probe state was kept outside `/tmp`;
+substitute the paths to the prebuilt binaries and private temporary directory
+for a reproduction:
 
 ```sh
 ZED_EDITOR=/usr/lib/zed/zed-editor \
-RECITE_LSP_BIN=/tmp/recite-zed-final-target/debug/recite-lsp \
-RECITE_CLI_BIN=/tmp/recite-zed-final-target/debug/recite \
-RECITE_ZED_TIMEOUT=45 \
-scripts/check-zed-host.sh /tmp/recite-m4-zed
+RECITE_LSP_BIN=/path/to/recite-lsp \
+RECITE_CLI_BIN=/path/to/recite \
+TMPDIR=/path/to/private-temp RECITE_ZED_TIMEOUT=90 \
+scripts/check-zed-host.sh /path/to/recite
 ```
 
-It passed the following assertions:
+The installed host rendered and activated the development extension, started
+the real `recite-lsp`, exercised the keyboard LSP/task workflow, and left no
+private probe process after shutdown. The transport assertion recorded:
 
 ```text
 extension_wasm_sha256=eff6f486881a0e53b77d29c98fa3a5098113af1d55fd58389850457ebb4b2f9f
@@ -71,13 +78,14 @@ installed_extension_index=recite(dev=true),grammar_rev=209ea23195f674a18be0b8f87
 recite_lsp_process=observed
 lsp_transport=actual_zed_requests_and_recite_responses_asserted
 lsp_diagnostics=RECITE_PARSE011/013 severity=1 UTF-16 ranges asserted
-lsp_features=completion/hover/definition/references/prepareRename/codeAction asserted
+lsp_features=completion/hover/definition/references/prepareRename asserted
+lsp_code_action=unsupported_empty_result(request_crossed_zed; no_edit_applied)
 lsp_rename_edit=unsupported_in_this_key_sequence(rename requires host text-entry confirmation)
 diagnostic_navigation=next_and_previous_keyboard_actions_observed
 task_validate=structured argv observed, status=1 observed
 task_watch=structured argv observed, Ctrl-C termination observed
 shutdown=Ctrl-Q+zed:quit+Alt-F4 requested; no private probe process remained
-PASS: installed Zed Linux source extension, activation/rendering, LSP process, diagnostic fixture, LSP UI actions, static task failure, watch keyboard termination, and private shutdown exercised
+PASS: installed Zed Linux source extension, activation/rendering, LSP process, diagnostic fixture, LSP UI actions, static task failure, watch keyboard termination, and private shutdown exercised; code-action edit remains unsupported
 ```
 
 The checked-in `tests/editor-hosts/zed/lsp_proxy.py` is copied into the private
@@ -89,8 +97,12 @@ synchronization, completion, hover, definition, references, prepare-rename,
 and code-action capabilities; the canonical malformed fixture produced
 `RECITE_PARSE011` and `RECITE_PARSE013` at their exact severity-1 UTF-16
 ranges; and Zed-triggered completion, hover, definition, references,
-prepare-rename, and code-action responses contained the canonical Recite
-results.
+and prepare-rename responses contained the canonical Recite results. Zed also
+sent a real missing-ID code-action request for `code-action.recite`, with the
+`RECITE_ID001` diagnostic and selected marker range; Recite returned
+`result: []`, so no edit was applied. The assertion records that empty result
+as an unsupported host boundary and rejects non-empty or malformed shapes
+until fresh evidence is reviewed.
 
 The non-empty Wayland screenshots record extension installation, authoring,
 each action stage, diagnostic navigation in both directions, and task stages.
@@ -113,6 +125,11 @@ process.
   LSP stdio/editor-parity fixtures. This host run does not add a non-BMP
   fixture or independently prove stale-document/version rejection; those
   remain covered by the canonical lower-level tests.
+- Zed sent `textDocument/codeAction` for the missing-ID fixture with the
+  `RECITE_ID001` diagnostic and selected marker range, but Recite returned
+  `result: []`; no edit was applied. The host checker records this as an
+  unsupported code-action boundary and fails closed if a future result is
+  non-empty or malformed until the evidence and this document are reviewed.
 - The rename action reached `textDocument/prepareRename` and its canonical
   response. This keyboard sequence did not enter a replacement name and did
   not capture a `textDocument/rename` edit, so rename edit application remains
