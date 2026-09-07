@@ -120,8 +120,8 @@ production suppressions must carry a narrow scope and rationale.
 | `crates/recite-core/src/schema/manifest/lower/domains_provenance.rs` | 285 | production | core/schema | review | Domain provenance lowering owns flat and contextual provenance shapes |
 | `crates/recite-core/src/schema/manifest/lower/producer_provenance.rs` | 303 | production | core/schema | review | Producer origin and fingerprint lowering owns source-aware provenance paths |
 | `crates/recite-core/src/compiled/messagepack/tags.rs` | 468 | production | core/wire | cohesive | #89: explicit wire tag table |
-| `crates/recite-core/src/compiled/messagepack/wire.rs` | 662 | production | core/wire | exception | #89: retain the explicit decoder boundary while the v0 wire contract is synchronized |
-| `crates/recite-runtime/src/session_snapshot.rs` | 299 | production | runtime/snapshot | follow-up | #135: typed snapshot-boundary errors |
+| `crates/recite-core/src/compiled/messagepack/wire.rs` | 663 | production | core/wire | exception | #89: retain the explicit decoder boundary while the v0 wire contract is synchronized |
+| `crates/recite-runtime/src/session_snapshot.rs` | 296 | production | runtime/snapshot | follow-up | #135: typed snapshot-boundary errors |
 | `crates/recite-cli/src/error.rs` | 386 | production | cli | review | Keep user-facing error projection separate from typed domain errors |
 | `crates/recite-cli/src/error/user_message.rs` | 266 | production | cli | review | Localized CLI error presentation remains a dedicated user-message boundary |
 | `crates/recite-cli/src/structured/error_mapping.rs` | 382 | production | cli/structured | cohesive | Exhaustive CliError-to-wire classification remains one stable protocol boundary |
@@ -160,7 +160,7 @@ production suppressions must carry a narrow scope and rationale.
 | `crates/recite-compiler/src/wire/inspection.rs` | 337 | production | compiler/wire | review | Structured wire inspection projection |
 | `crates/recite-benchmarks/src/project.rs` | 310 | production | benchmarks | cohesive | Synthetic project model |
 | `crates/recite-cli/src/play/tui/state.rs` | 307 | production | cli/tui | cohesive | TUI reducer state |
-| `crates/recite-compiler/src/compile/builder.rs` | 357 | production | compiler | cohesive | Compiled asset builder |
+| `crates/recite-compiler/src/compile/builder.rs` | 358 | production | compiler | cohesive | Compiled asset builder |
 | `crates/recite-core/src/schema/manifest/spans.rs` | 328 | production | core/schema | cohesive | JSON span calculation and shared span state |
 | `crates/recite-cli/src/play/tui/interaction.rs` | 293 | production | cli/tui | cohesive | Input-to-intent translation |
 | `crates/recite-compiler/src/validation/metadata.rs` | 276 | production | compiler/validation | review | Metadata validation ownership |

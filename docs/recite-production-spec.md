@@ -1529,11 +1529,18 @@ data. A v1 API must not expose only a flat `Option<String>` reason.
 
 The session must not serialise game state.
 
-Runtime session snapshots use an explicit format version. Version 2 stores the
+Runtime session snapshots use an explicit format version. The initial v1 stores the
 canonical compiled payload fingerprint so restoring against an asset with the
 same header and source metadata but different semantic tables is rejected.
-Identity-less snapshot formats are rejected rather than restored through a
-compatibility fallback.
+Preview snapshot envelopes also use their initial v1 format. Before publication,
+development snapshots may be regenerated as these contracts are completed;
+they do not require compatibility aliases or migration readers. Unknown versions
+and snapshots missing the required payload identity are rejected.
+
+Compilation and asset decoding prepare the canonical payload fingerprint once.
+Starting another session from that asset reuses the prepared identity; it must
+not serialize and hash the whole asset again. Exclusive payload edits invalidate
+the cached identity before allowing further mutation.
 
 #### Save/load while waiting on a blocking effect
 
