@@ -3,6 +3,7 @@
 
 import json
 import os
+import re
 import shutil
 import sys
 from pathlib import Path
@@ -160,10 +161,39 @@ def main() -> int:
         evidence["artifacts"] = {"invalid": "shape"}
     elif mutation == "follow-up-shape":
         record(contract, "capabilities", "lsp.completion")["follow_up"] = []
+    elif mutation == "follow-up-historical":
+        record(contract, "capabilities", "lsp.completion")["follow_up"] = "#51"
+    elif mutation == "evidence-issues-shape":
+        record(contract, "capabilities", "lsp.completion")["evidence_issues"] = {"invalid": "shape"}
+    elif mutation == "evidence-issues-open":
+        record(contract, "capabilities", "lsp.completion")["evidence_issues"] = ["#206"]
+    elif mutation == "follow-up-owner-drift":
+        record(contract, "capabilities", "lsp.completion")["follow_up"] = "#206"
+    elif mutation == "cancellation-follow-up":
+        record(contract, "capabilities", "lsp.cancellation")["follow_up"] = "#53"
+    elif mutation == "cancellation-status-inflation":
+        record(contract, "capabilities", "lsp.cancellation")["client_status"]["neovim"] = "partial"
+    elif mutation == "cancellation-status-bypass":
+        capability = record(contract, "capabilities", "lsp.cancellation")
+        capability["implementation_status"] = "planned"
+        capability["client_status"]["neovim"] = "partial"
+    elif mutation == "cancellation-evidence-status":
+        record(contract, "capabilities", "lsp.cancellation")["expected_evidence"]["status"] = "planned"
+    elif mutation == "zed-code-action-support":
+        record(contract, "capabilities", "lsp.code-actions")["client_status"]["zed"] = "unsupported"
+    elif mutation == "zed-rename-support":
+        record(contract, "capabilities", "lsp.rename")["client_status"]["zed"] = "planned"
+    elif mutation == "zed-utf16-post-emoji":
+        evidence = record(contract, "capabilities", "lsp.utf16.positions")["expected_evidence"]
+        evidence["assertions"] = [
+            assertion
+            for assertion in evidence["assertions"]
+            if "post-emoji" not in assertion.lower()
+        ]
     elif mutation == "keyboard-follow-up":
-        record(contract, "capabilities", "editor.keyboard.workflow")["follow_up"] = "#192"
+        record(contract, "capabilities", "editor.keyboard.workflow")["evidence_issues"] = ["#192"]
     elif mutation == "keyboard-follow-up-missing":
-        record(contract, "capabilities", "editor.keyboard.workflow").pop("follow_up")
+        record(contract, "capabilities", "editor.keyboard.workflow").pop("evidence_issues")
     elif mutation == "keyboard-scenario-status":
         record(contract, "scenarios", "keyboard-workflow")["status"] = "planned"
     elif mutation == "keyboard-executable-evidence":
@@ -172,6 +202,16 @@ def main() -> int:
     elif mutation == "keyboard-evidence-boundary":
         capability = record(contract, "capabilities", "editor.keyboard.workflow")
         capability["known_limitation"] = capability["known_limitation"].replace("headless", "protocol")
+    elif mutation == "keyboard-zed-sequence-provenance":
+        record(contract, "capabilities", "editor.keyboard.workflow").pop("keyboard_sequence_scope")
+    elif mutation == "m4-zed-task-diagnostics":
+        replace_reconciliation_text(fixture_repo, "Zed does not parse task records", "Zed parses task records")
+    elif mutation == "m4-zed-native-cancellation":
+        replace_reconciliation_text(fixture_repo, "native task cancellation controller", "native task controller")
+    elif mutation == "m4-zed-built-in-run-trace":
+        replace_reconciliation_text(fixture_repo, "built-in run/trace remain unclaimed", "built-in run/trace are supported")
+    elif mutation == "m4-zed-stale-didchange":
+        replace_reconciliation_text(fixture_repo, "Stale-version rejection remains a lower-level test boundary", "Installed-host stale-version rejection is covered")
     elif mutation == "keyboard-document-wording":
         document = fixture_repo / "docs/editor-parity-contract.md"
         marker = "broader Milestone 5 accessibility proof"
@@ -214,6 +254,12 @@ def main() -> int:
     elif mutation == "keyboard-host-no-leak":
         set_keyboard_host_evidence(contract)
         record(contract, "capabilities", "editor.keyboard.workflow")["expected_evidence"]["host_records"][0]["keyboard"]["process_leak_check"] = False
+    elif mutation == "stable-id-zed-support":
+        record(contract, "capabilities", "authoring.stable-id.operations")["client_status"]["zed"] = "planned"
+    elif mutation == "zed-lsp-provenance":
+        record(contract, "capabilities", "lsp.code-actions")["evidence_issues"] = ["#51"]
+    elif mutation == "zed-non-lsp-provenance":
+        record(contract, "capabilities", "command.watch.lifecycle")["evidence_issues"] = ["#53"]
     elif mutation == "keyboard-host-missing-client-platform":
         set_keyboard_host_evidence(contract)
         capability = record(contract, "capabilities", "editor.keyboard.workflow")
@@ -294,6 +340,20 @@ def restore_mtime(path: Path, content: str) -> None:
     original_stat = path.stat()
     path.write_text(content, encoding="utf-8")
     os.utime(path, ns=(original_stat.st_atime_ns, original_stat.st_mtime_ns))
+
+
+def replace_reconciliation_text(fixture_repo: Path, original: str, replacement: str) -> None:
+    document = fixture_repo / "docs/editor-parity-contract.md"
+    source = document.read_text(encoding="utf-8")
+    start = source.find("## Milestone 4 reconciliation")
+    end = source.find("## Reopening conditions", start)
+    if start < 0 or end < 0:
+        raise SystemExit(f"Milestone 4 reconciliation text was not present: {original}")
+    pattern = re.compile(r"\s+".join(re.escape(part) for part in original.split()))
+    scoped, count = pattern.subn(replacement, source[start:end], count=1)
+    if count != 1:
+        raise SystemExit(f"Milestone 4 reconciliation text was not present: {original}")
+    restore_mtime(document, source[:start] + scoped + source[end:])
 
 
 def set_module_shapes_command(contract: dict) -> None:

@@ -215,10 +215,14 @@ expected_partial = {
     "lsp.completion.navigation",
     "editor.filetype.registration",
     "editor.zed.syntax-projection",
+    "lsp.utf16.positions",
     "lsp.completion",
     "lsp.definition",
     "lsp.hover",
     "lsp.references",
+    "lsp.code-actions",
+    "lsp.rename",
+    "authoring.stable-id.operations",
     "command.compile.validate.extract",
     "command.watch.lifecycle",
     "editor.keyboard.workflow",
@@ -234,7 +238,8 @@ for capability in parity.get("capabilities", []):
     if evidence_commands is None:
         evidence_commands = [evidence.get("command")]
     if "scripts/check-zed.sh" not in evidence_commands:
-        fail(f"partial Zed capability lacks scripts/check-zed.sh evidence: {capability_id}")
+        if capability_id != "lsp.utf16.positions" or "scripts/check-zed-host.sh" not in evidence_commands:
+            fail(f"partial Zed capability lacks scripts/check-zed.sh evidence: {capability_id}")
     evidence_artifacts = evidence.get("artifacts")
     if evidence_artifacts is None:
         evidence_artifacts = [evidence.get("artifact")]
@@ -319,8 +324,8 @@ echo "== real recite-lsp stdio parity =="
   cargo test --locked -p recite-lsp --test editor_parity initialize_and_project_features_use_shared_stdio_contract
 )
 
-echo "== hostile Zed code-action result regression =="
+echo "== Zed code-action evidence assertion regression =="
 python3 "$assert_lsp_log_test"
 
-echo "RESIDUAL: this source/package gate does not rerun the separately recorded installed Zed Linux host lane; Zed code-action and rename-edit application remain unsupported, task terminals do not parse structured diagnostics, native task cancellation is unavailable, and macOS/Windows, accessibility, and gallery publication are not claimed."
+echo "RESIDUAL: this source/package gate does not rerun the separately recorded installed Zed Linux host lane; installed-host UTF-16 evidence and stale-version rejection remain host/lower-level boundaries, task terminals do not parse structured diagnostics, native task cancellation is unavailable, and macOS/Windows, accessibility, and gallery publication are not claimed."
 echo "Zed source/package and shared-protocol evidence passed."

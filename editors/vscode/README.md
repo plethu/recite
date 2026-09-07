@@ -94,14 +94,14 @@ preconditions, and check them again immediately before applying the edit. Use
 `Recite: Rename block` (the `recite.renameBlock` command) for version-safe block
 rename. Native F2 rename is deliberately not registered: VS Code's native
 `WorkspaceEdit` path cannot preserve those LSP versions at its eventual apply
-boundary. The explicit command remains a partial adapter until installed-host
-activation evidence exists.
+boundary. The explicit command is covered by the installed-host activation
+evidence; native F2 remains intentionally unsupported by this client.
 
 Relative paths and process spawning use Node's platform-neutral path and
 process APIs. Linux, macOS, and Windows are intended hosts, but this scaffold
 contains Linux-only executable evidence; platform packaging and publication
-smoke remain release work. A real installed VS Code and VSCodium activation
-smoke is also remaining REC-51 closure evidence; this foundation intentionally
-does not add the unpinned `@vscode/test-electron` dependency or its browser
-download. The same VSIX can be submitted to the VS Code
+smoke remain release work. Installed VS Code and VSCodium activation evidence
+is recorded in `docs/evidence/editor-hosts/vscode-linux.md`; this foundation
+intentionally does not add the unpinned `@vscode/test-electron` dependency or
+its browser download. The same VSIX can be submitted to the VS Code
 Marketplace or Open VSX when those distribution decisions are made.
