@@ -4,9 +4,9 @@
 
 **Issue:** [#138](https://github.com/plethu/recite/issues/138)
 
-This records the product decision for Recite's current binary boundaries. It
-settles retention and migration policy; it does not authorise a replacement
-codec, a benchmark spike, or a new wire version.
+This records the product decision for Recite's current binary boundaries,
+including the explicitly versioned snapshot identity correction in #212.
+Further codec or wire-version changes require their own decision.
 
 ## Decision
 

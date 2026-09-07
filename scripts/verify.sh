@@ -6,7 +6,8 @@ usage() {
 Usage:
   verify.sh [repo-root]
 
-Runs the complete local verification suite:
+Installs frozen JavaScript dependencies, then checks formatting, spelling,
+unused dependencies, and dependency policy before the existing verification lanes:
   1. scripts/check-git-policy.sh
   2. tests/git-policy/check-integration.sh
   3. tests/maintainability/check.sh
@@ -21,7 +22,7 @@ Runs the complete local verification suite:
  12. scripts/check-vscode.sh
  13. scripts/check-helix.sh
  14. tests/editor-hosts/helix/check.sh
- 15. scripts/check-project-gates.sh (including editor grammar and Neovim gates)
+ 15. scripts/check-project-gates.sh (including editors and the Godot host)
  16. scripts/check-docs.sh
  17. scripts/benchmark-smoke.sh
 
@@ -92,7 +93,7 @@ if [[ ! -f "$repo_root/tests/git-policy/check-integration.sh" ]]; then
 fi
 
 echo "== workspace dependencies =="
-"$repo_root/scripts/install-js-dependencies.sh"
+"$repo_root/scripts/install-js-dependencies.sh" "$repo_root"
 
 echo "== developer tool checks =="
 (

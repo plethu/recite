@@ -2,6 +2,9 @@
 # No advisory exceptions are accepted by default.
 [advisories]
 version = 2
+yanked = "deny"
+unmaintained = "all"
+unused-ignored-advisory = "deny"
 
 [bans]
 multiple-versions = "warn"

@@ -34,7 +34,7 @@ else
   fi
 fi
 
-"$repo_root/scripts/install-js-dependencies.sh"
+"$repo_root/scripts/install-js-dependencies.sh" "$repo_root"
 
 echo
 echo "== generated schema fixtures =="
