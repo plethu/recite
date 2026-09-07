@@ -114,7 +114,7 @@ pub use session_snapshot::{
     DialogueSessionPendingEffectSnapshot, DialogueSessionPendingPromptSnapshot,
     DialogueSessionRangeSnapshot, DialogueSessionSnapshot, DialogueSessionSnapshotConversionError,
     DialogueSessionSourceSnapshot, SESSION_SNAPSHOT_FORMAT_VERSION_V0,
-    SESSION_SNAPSHOT_FORMAT_VERSION_V1, snapshot_session,
+    SESSION_SNAPSHOT_FORMAT_VERSION_V1, SESSION_SNAPSHOT_FORMAT_VERSION_V2, snapshot_session,
 };
 pub use traversal::{
     DialogueTrace, LocaleResolution, LocalizedLookupTrace, PluralLineTrace, acknowledge_effect,

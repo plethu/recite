@@ -1,14 +1,15 @@
-use recite_core::CompiledDialogue;
+use recite_core::{CompiledDialogue, ContentFingerprint, canonical_compiled_dialogue_fingerprint};
 
 use crate::DialogueError;
 use crate::session_snapshot::{
-    DialogueSessionSnapshot, schema_fingerprint_snapshot, source_snapshot,
+    DialogueSessionSnapshot, content_fingerprint_snapshot, schema_fingerprint_snapshot,
+    source_snapshot,
 };
 
 pub(super) fn ensure_snapshot_matches_asset(
     asset: &CompiledDialogue,
     snapshot: &DialogueSessionSnapshot,
-) -> Result<(), DialogueError> {
+) -> Result<ContentFingerprint, DialogueError> {
     let actual_schema_fingerprint = schema_fingerprint_snapshot(&asset.header.schema_fingerprint);
     if snapshot.schema_fingerprint != actual_schema_fingerprint {
         return Err(DialogueError::SchemaMismatch {
@@ -54,8 +55,20 @@ pub(super) fn ensure_snapshot_matches_asset(
             "source fingerprints differ from the provided compiled asset",
         );
     }
+    let actual_compiled_payload_fingerprint = canonical_compiled_dialogue_fingerprint(asset)
+        .map_err(|error| DialogueError::MalformedCompiledAsset {
+            reason: error.to_string(),
+        })?;
+    if snapshot.compiled_payload_fingerprint
+        != content_fingerprint_snapshot(&actual_compiled_payload_fingerprint)
+    {
+        return asset_content_mismatch(
+            snapshot,
+            "compiled payload fingerprint differs from the provided compiled asset",
+        );
+    }
 
-    Ok(())
+    Ok(actual_compiled_payload_fingerprint)
 }
 
 fn asset_content_mismatch<T>(

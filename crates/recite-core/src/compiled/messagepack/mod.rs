@@ -135,6 +135,8 @@ mod tags;
 mod validate;
 mod wire;
 
+pub use probe::{messagepack_array_len, messagepack_u16};
+
 fn malformed(reason: String) -> CompiledAssetDecodeError {
     CompiledAssetDecodeError::MalformedAsset(reason)
 }

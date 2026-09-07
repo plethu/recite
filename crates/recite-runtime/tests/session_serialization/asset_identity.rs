@@ -1,9 +1,10 @@
 use super::*;
-use recite_core::{SchemaFingerprint, canonical_source_fingerprint};
+use recite_core::{CompiledArgument, SchemaFingerprint, canonical_source_fingerprint};
 use recite_runtime::{
     DialogueSchemaFingerprintSnapshot, DialogueSessionFrameSnapshot,
     DialogueSessionPendingPromptSnapshot, DialogueSessionRangeSnapshot, DialogueSessionSnapshot,
     DialogueSessionSourceSnapshot, SESSION_SNAPSHOT_FORMAT_VERSION_V0,
+    SESSION_SNAPSHOT_FORMAT_VERSION_V1,
 };
 use serde::Serialize;
 
@@ -34,6 +35,34 @@ fn same_id_different_asset_content_is_rejected() {
     assert!(matches!(
         restore_session(&second, snapshot_session(&session)),
         Err(DialogueError::AssetContentMismatch { .. })
+    ));
+}
+
+#[test]
+fn same_header_different_compiled_payload_is_rejected() {
+    let asset = compile_asset(
+        "dialogue/start.recite",
+        concat!(
+            ":: start default\n",
+            "! deferred grant_item(original_item)\n",
+            "> start_line@3a011ecfcf4c5ed87289\n",
+            "  Start.\n",
+            "-> END\n",
+        ),
+    );
+    let mut session = start_scene(&asset, None).expect("starts");
+    next(&asset, &mut session).expect("collects deferred effect and emits line");
+    let snapshot = snapshot_session(&session);
+
+    let mut modified = asset.clone();
+    modified.effects[0].args[0] = CompiledArgument::Identifier("changed_item".to_owned());
+
+    assert_eq!(asset.header, modified.header);
+    assert_eq!(asset.sources, modified.sources);
+    assert!(matches!(
+        restore_session(&modified, snapshot),
+        Err(DialogueError::AssetContentMismatch { reason, .. })
+            if reason.contains("compiled payload fingerprint")
     ));
 }
 
@@ -150,6 +179,29 @@ fn previous_session_snapshot_format_is_rejected() {
         restore_session(&asset, snapshot),
         Err(DialogueError::UnsupportedSessionSnapshotFormat {
             snapshot_format_version: 0,
+        })
+    );
+}
+
+#[test]
+fn identityless_v1_session_snapshot_format_is_rejected() {
+    let asset = compile_asset(
+        "dialogue/start.recite",
+        concat!(
+            ":: start default\n",
+            "> start_line@4ecb6bdcfbdc7a839198\n",
+            "  Start.\n",
+            "-> END\n",
+        ),
+    );
+    let session = start_scene(&asset, None).expect("starts");
+    let mut snapshot = snapshot_session(&session);
+    snapshot.snapshot_format_version = SESSION_SNAPSHOT_FORMAT_VERSION_V1;
+
+    assert_eq!(
+        restore_session(&asset, snapshot),
+        Err(DialogueError::UnsupportedSessionSnapshotFormat {
+            snapshot_format_version: SESSION_SNAPSHOT_FORMAT_VERSION_V1,
         })
     );
 }

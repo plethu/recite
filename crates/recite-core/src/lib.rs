@@ -140,6 +140,7 @@ pub use compiled::{
     V0_TAGGED_VALUE_FIELDS, V0_VALUE_TAG_ARRAY, V0_VALUE_TAG_SCALAR,
     canonical_compiled_dialogue_fingerprint, canonical_source_fingerprint,
     decode_compiled_dialogue_messagepack, encode_compiled_dialogue_messagepack,
+    messagepack_array_len, messagepack_u16,
 };
 pub use diagnostic::{
     Diagnostic, DiagnosticArgumentSpec, DiagnosticArgumentType,

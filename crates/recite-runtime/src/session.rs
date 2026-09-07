@@ -1,7 +1,7 @@
 use recite_core::{
     BlockIndex, ChoiceId, CompiledAssetHeader, CompiledAssetId, CompiledDivertTarget,
-    CompiledSourceFile, CompilerVersion, LocaleId, SchemaFingerprint, SourceMapId, StatementIndex,
-    StatementRange,
+    CompiledSourceFile, CompilerVersion, ContentFingerprint, LocaleId, SchemaFingerprint,
+    SourceMapId, StatementIndex, StatementRange,
 };
 
 use crate::{ChoiceAvailability, DialogueEffectRequest, DialogueError, DialogueEvent};
@@ -15,6 +15,7 @@ pub struct DialogueSession {
     pub(crate) compiler_version: CompilerVersion,
     pub(crate) source_map_id: SourceMapId,
     pub(crate) schema_fingerprint: SchemaFingerprint,
+    pub(crate) compiled_payload_fingerprint: ContentFingerprint,
     pub(crate) sources: Vec<CompiledSourceFile>,
     pub(crate) current_block: BlockIndex,
     pub(crate) current_range: StatementRange,
@@ -36,6 +37,7 @@ impl DialogueSession {
         sources: Vec<CompiledSourceFile>,
         current_block: BlockIndex,
         current_range: StatementRange,
+        compiled_payload_fingerprint: ContentFingerprint,
         options: DialogueSessionOptions,
     ) -> Self {
         Self {
@@ -45,6 +47,7 @@ impl DialogueSession {
             compiler_version: header.compiler_version.clone(),
             source_map_id: header.source_map_id.clone(),
             schema_fingerprint: header.schema_fingerprint.clone(),
+            compiled_payload_fingerprint,
             sources,
             current_block,
             current_range,

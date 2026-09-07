@@ -1,7 +1,7 @@
 use recite_core::{
     BlockIndex, BlockLookupTable, ChoiceId, ChoiceLookupTable, CompiledAssetHeader,
-    CompiledAssetId, CompiledDialogue, CompiledDivertTarget, CompilerVersion, LineLookupTable,
-    SchemaFingerprint, SourceMapId, StatementIndex, StatementRange,
+    CompiledAssetId, CompiledDialogue, CompiledDivertTarget, CompilerVersion, ContentFingerprint,
+    LineLookupTable, SchemaFingerprint, SourceMapId, StatementIndex, StatementRange,
 };
 
 use crate::session::{PendingPrompt, PendingPromptChoice};
@@ -21,6 +21,7 @@ fn unavailable_pending_choice_is_structured_error_without_mutating_session() {
         asset.sources.clone(),
         BlockIndex::new(0),
         StatementRange::new(StatementIndex::new(0), 0),
+        ContentFingerprint::blake3([0; 32]).expect("valid test fingerprint"),
         DialogueSessionOptions::default(),
     );
     session.pending_prompt = Some(PendingPrompt {

@@ -23,7 +23,7 @@ pub fn restore_session(
     }
 
     let asset_view = AssetView::new(asset)?;
-    ensure_snapshot_matches_asset(asset, &snapshot)?;
+    let compiled_payload_fingerprint = ensure_snapshot_matches_asset(asset, &snapshot)?;
 
     let current_block = BlockIndex::new(snapshot.current_block);
     let block = snapshot_reference("current block", asset_view.block_at(current_block))?;
@@ -78,6 +78,7 @@ pub fn restore_session(
         compiler_version: asset.header.compiler_version.clone(),
         source_map_id: asset.header.source_map_id.clone(),
         schema_fingerprint: asset.header.schema_fingerprint.clone(),
+        compiled_payload_fingerprint,
         sources: asset.sources.clone(),
         current_block,
         current_range,

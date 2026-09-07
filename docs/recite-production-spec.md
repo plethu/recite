@@ -1516,6 +1516,7 @@ data. A v1 API must not expose only a flat `Option<String>` reason.
 `DialogueSession` must serialise enough information to resume exactly:
 
 - compiled asset identity/version;
+- canonical fingerprint of the complete compiled asset payload;
 - current block;
 - statement pointer;
 - call/divert stack if applicable;
@@ -1527,6 +1528,12 @@ data. A v1 API must not expose only a flat `Option<String>` reason.
 - selected choice history.
 
 The session must not serialise game state.
+
+Runtime session snapshots use an explicit format version. Version 2 stores the
+canonical compiled payload fingerprint so restoring against an asset with the
+same header and source metadata but different semantic tables is rejected.
+Identity-less snapshot formats are rejected rather than restored through a
+compatibility fallback.
 
 #### Save/load while waiting on a blocking effect
 
