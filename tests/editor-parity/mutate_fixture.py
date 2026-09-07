@@ -258,6 +258,8 @@ def main() -> int:
         record(contract, "capabilities", "authoring.stable-id.operations")["client_status"]["zed"] = "planned"
     elif mutation == "zed-lsp-provenance":
         record(contract, "capabilities", "lsp.code-actions")["evidence_issues"] = ["#51"]
+    elif mutation == "zed-non-lsp-provenance":
+        record(contract, "capabilities", "command.watch.lifecycle")["evidence_issues"] = ["#53"]
     elif mutation == "keyboard-host-missing-client-platform":
         set_keyboard_host_evidence(contract)
         capability = record(contract, "capabilities", "editor.keyboard.workflow")

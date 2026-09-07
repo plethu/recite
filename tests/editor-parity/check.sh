@@ -445,6 +445,7 @@ expect_failure zed-rename-support "lsp.rename must retain partial Zed host evide
 expect_failure zed-utf16-post-emoji "lsp.utf16.positions must retain Zed assertion 'post-emoji utf-16 completion request'"
 expect_failure stable-id-zed-support "authoring.stable-id.operations must retain partial Zed host evidence"
 expect_failure zed-lsp-provenance "lsp.code-actions must retain historical evidence issue #192 for Zed host evidence"
+expect_failure zed-non-lsp-provenance "command.watch.lifecycle must retain historical evidence issue #192 for Zed host evidence"
 expect_failure keyboard-follow-up "editor.keyboard.workflow must retain historical evidence issue #202"
 expect_failure keyboard-follow-up-missing "capability editor.keyboard.workflow must name non-empty historical evidence_issues"
 expect_failure keyboard-scenario-status "editor.keyboard.workflow partial/implemented status requires a partial/implemented keyboard-workflow scenario"

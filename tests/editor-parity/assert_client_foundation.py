@@ -99,26 +99,20 @@ def main() -> int:
         if "zed-extension" not in evidence_artifacts(capabilities[capability_id]["expected_evidence"]):
             raise SystemExit(f"{capability_id} must attribute package/static evidence to zed-extension")
     zed_syntax = capabilities["editor.zed.syntax-projection"]
-    if "#192" not in zed_syntax.get("evidence_issues", []):
-        raise SystemExit("editor.zed.syntax-projection must retain historical evidence issue #192")
     if zed_syntax["client_status"].get("vscode") != "planned":
         raise SystemExit("editor.zed.syntax-projection must not project Zed evidence to VS Code")
 
-    expected_zed_lsp_provenance = {
-        "lsp.initialize.capabilities",
-        "lsp.publish.diagnostics",
-        "lsp.completion.navigation",
-        "lsp.utf16.positions",
-        "lsp.completion",
-        "lsp.definition",
-        "lsp.hover",
-        "lsp.references",
-        "lsp.rename",
-        "lsp.code-actions",
-        "authoring.stable-id.operations",
+    zed_host_capabilities = {
+        capability_id: capability
+        for capability_id, capability in capabilities.items()
+        if any(
+            record.get("client") == "zed"
+            for record in capability.get("expected_evidence", {}).get("host_records", [])
+            if isinstance(record, dict)
+        )
     }
-    for capability_id in expected_zed_lsp_provenance:
-        if "#192" not in capabilities[capability_id].get("evidence_issues", []):
+    for capability_id, capability in zed_host_capabilities.items():
+        if "#192" not in capability.get("evidence_issues", []):
             raise SystemExit(f"{capability_id} must retain historical evidence issue #192 for Zed host evidence")
 
     expected_zed_command_status = {
@@ -159,8 +153,6 @@ def main() -> int:
     for capability_id, assertion in expected_zed_host_evidence.items():
         capability = capabilities[capability_id]
         evidence = capability["expected_evidence"]
-        if "#192" not in capability.get("evidence_issues", []):
-            raise SystemExit(f"{capability_id} must retain historical evidence issue #192 for Zed host evidence")
         if "scripts/check-zed-host.sh" not in evidence.get("commands", []):
             raise SystemExit(f"{capability_id} must retain installed Zed host evidence")
         records = evidence.get("host_records", [])

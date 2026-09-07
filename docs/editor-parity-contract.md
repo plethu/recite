@@ -158,10 +158,11 @@ distribution require an implemented primary artifact.
 The accepted issue references `#51`, `#53`, `#98`, `#192`, and `#202` are
 historical evidence trackers, not outstanding owners. The current fixture's
 only `follow_up` is `#206`, which tracks future cooperative LSP cancellation;
-an issue cannot appear in both fields. Shared LSP and stable-ID rows with an
-installed Zed host record carry both `#51` and `#192`, because historical #192
-covers the recorded Zed LSP acceptance while #51 remains the shared-kernel
-evidence tracker.
+an issue cannot appear in both fields. Every capability with an installed Zed
+host record carries historical `#192`, alongside any shared or workflow
+evidence tracker such as `#51`, `#53`, or `#202`. Historical #192 owns the
+positive installed-Zed evidence: package, activation, and host smoke; syntax,
+LSP, task/lifecycle, keyboard, and clean-shutdown acceptance.
 
 - `lsp.initialize.capabilities`: advertise the supported sync, UTF-16, and LSP feature capabilities from the real server; installed VS Code/VSCodium and Zed Linux host crossings are recorded.
 - `lsp.publish.diagnostics`: publish structured diagnostics for malformed source through the real LSP transport; installed Linux projection is recorded for all four clients.
@@ -305,7 +306,8 @@ and signing remain planned even though installed-host smoke now passes from a
 local deterministic VSIX. A shared VSIX means the VS Code and VSCodium clients
 do not acquire separate semantic implementations; it does not mean either
 marketplace already carries an artifact. Zed's local development-extension
-install is likewise not gallery publication. Zed syntax/LSP/task evidence is
+install is likewise not gallery publication. Zed package, activation, and host
+smoke, syntax, LSP, task/lifecycle, keyboard, and clean-shutdown evidence is
 recorded under #192; future gallery/distribution work needs a separate owner.
 
 ## Milestone 4 reconciliation
