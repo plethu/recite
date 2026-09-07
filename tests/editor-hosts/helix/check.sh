@@ -26,9 +26,12 @@ cp -- "$repo_root/editors/recite-tree-sitter/queries/highlights.scm" \
   "$fixture/editors/recite-tree-sitter/queries/highlights.scm"
 git -C "$fixture" init -q
 
+fake_binary="$test_root/fake-helix"
+printf '%s\n' '#!/bin/sh' 'printf "%s\\n" "not-a-helix"' >"$fake_binary"
+chmod +x "$fake_binary"
 fake_output="$test_root/fake-output"
-if HELIX_BIN=/usr/bin/echo "$checker" "$fixture" >"$fake_output" 2>&1; then
-  echo "Helix hostile fixture accepted /usr/bin/echo as HELIX_BIN" >&2
+if HELIX_BIN="$fake_binary" "$checker" "$fixture" >"$fake_output" 2>&1; then
+  echo "Helix hostile fixture accepted a portable fake executable as HELIX_BIN" >&2
   exit 1
 fi
 if ! grep -Fq "not a Helix executable" "$fake_output"; then
