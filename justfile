@@ -57,6 +57,7 @@ test-watch-stress *args:
     cargo test --locked -p recite-cli --test watch_stress -- --ignored "$@"
 
 test-godot:
+    mise -E godot install
     mise -E godot exec -- scripts/check-godot-host.sh
 
 test-editor-host client *args:
