@@ -32,7 +32,9 @@ second runtime asset, snapshot, or FFI format.
 ### Snapshot version 2
 
 [#212](https://github.com/plethu/recite/issues/212) adds the canonical compiled
-payload fingerprint to runtime snapshots. Header and source fingerprints alone
+payload fingerprint to runtime snapshots. Session creation validates the compiled
+asset before recording its identity, so malformed payloads fail at that boundary.
+Header and source fingerprints alone
 cannot detect a changed compiled effect argument or semantic table. A session
 records its payload identity when created; restore compares it with the supplied
 asset before reconstructing saved requests.
