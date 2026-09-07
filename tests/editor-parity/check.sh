@@ -432,12 +432,16 @@ expect_failure client-artifacts-shape "client neovim artifacts must include its 
 expect_failure distribution-artifacts-shape "distribution neovim-distribution artifacts must include its primary artifact"
 expect_failure evidence-artifacts-shape "capability lsp.completion artifacts must be a non-empty array"
 expect_failure follow-up-shape "capability lsp.completion must name a follow-up issue"
-expect_failure keyboard-follow-up "editor.keyboard.workflow must remain owned by open follow-up #202"
+expect_failure cancellation-follow-up "lsp.cancellation must remain owned by serious-v1 follow-up #206"
+expect_failure zed-code-action-support "lsp.code-actions must retain partial Zed host evidence"
+expect_failure zed-rename-support "lsp.rename must retain partial Zed host evidence"
+expect_failure zed-utf16-post-emoji "lsp.utf16.positions must retain Zed assertion 'post-emoji utf-16 completion request'"
+expect_failure keyboard-follow-up "editor.keyboard.workflow must retain evidence owner #202"
 expect_failure keyboard-follow-up-missing "capability editor.keyboard.workflow must name a follow-up issue"
 expect_failure keyboard-scenario-status "editor.keyboard.workflow partial/implemented status requires a partial/implemented keyboard-workflow scenario"
 expect_failure keyboard-executable-evidence "capability editor.keyboard.workflow host_records require an installed-host evidence runner command"
 expect_failure keyboard-evidence-boundary "editor.keyboard.workflow known_limitation must name the headless evidence boundary"
-expect_failure keyboard-document-wording "keyboard workflow documentation must retain 'broader milestone 5 accessibility proof'"
+expect_failure keyboard-document-wording "editor parity documentation must retain 'broader milestone 5 accessibility proof'"
 mutate_fixture keyboard-valid-host-evidence
 set +e
 keyboard_host_output="$(run_checker 2>&1)"

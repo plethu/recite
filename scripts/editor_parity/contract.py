@@ -17,6 +17,13 @@ CANONICAL_FIXTURES = {
 
 KEYBOARD_CAPABILITY_ID = "editor.keyboard.workflow"
 KEYBOARD_FOLLOW_UP = "#202"
+CANCELLATION_CAPABILITY_ID = "lsp.cancellation"
+CANCELLATION_FOLLOW_UP = "#206"
+ZED_HOST_CAPABILITY_ASSERTIONS = {
+    "lsp.utf16.positions": "post-emoji utf-16 completion request",
+    "lsp.code-actions": "non-empty missing-id quick fix",
+    "lsp.rename": "exact two-edit workspace rename",
+}
 
 
 def unique_records(ctx: Context, key: str, records):
@@ -51,6 +58,8 @@ def validate(ctx: Context, data: dict, document_path: Path) -> tuple[dict, dict,
     validate_clients(ctx, client_map, artifact_map)
     validate_distributions(ctx, distribution_map, artifact_map)
     validate_capabilities(ctx, data, scenario_map, artifact_map, distribution_map, client_map)
+    validate_cancellation_contract(ctx, capability_map)
+    validate_zed_host_contract(ctx, capability_map)
     validate_keyboard_capability(ctx, capability_map, scenario_map)
     validate_neovim_topology(ctx, client_map, artifact_map, distribution_map, capability_map)
     validate_document(ctx, document_path, capability_map, scenario_map)
@@ -200,11 +209,15 @@ def validate_document(ctx: Context, document_path: Path, capabilities: dict, sce
         ctx.require(f"`{capability_id}`" in document, f"documentation does not mention capability {capability_id}")
     keyboard_document = document.lower()
     for required in (
-        "issue #202",
+        "closed issue #202",
         "package, source, and headless protocol checks are not installed-host keyboard evidence",
         "broader milestone 5 accessibility proof",
+        "issue #206",
+        "serious-v1 scheduler/performance",
+        "not m4",
+        "command/watch work",
     ):
-        ctx.require(required in keyboard_document, f"keyboard workflow documentation must retain {required!r}")
+        ctx.require(required in keyboard_document, f"editor parity documentation must retain {required!r}")
     filetype = capabilities.get("editor.filetype.registration", {})
     evidence = filetype.get("expected_evidence") or {}
     commands = evidence.get("commands") if isinstance(evidence, dict) else []
@@ -241,7 +254,7 @@ def validate_keyboard_capability(ctx: Context, capabilities: dict, scenarios: di
             host_records = evidence.get("host_records")
             ctx.require(isinstance(host_records, list) and bool(host_records), f"{KEYBOARD_CAPABILITY_ID} partial/implemented status requires host_records")
         ctx.require(any(is_host_runner(command) for command in evidence_commands), f"{KEYBOARD_CAPABILITY_ID} partial/implemented status requires an installed-host evidence runner")
-    ctx.require(capability.get("follow_up") == KEYBOARD_FOLLOW_UP, f"{KEYBOARD_CAPABILITY_ID} must remain owned by open follow-up {KEYBOARD_FOLLOW_UP}")
+    ctx.require(capability.get("follow_up") == KEYBOARD_FOLLOW_UP, f"{KEYBOARD_CAPABILITY_ID} must retain evidence owner {KEYBOARD_FOLLOW_UP}")
     if capability_status == "planned":
         ctx.require(capability.get("implementation_status") == "planned", f"{KEYBOARD_CAPABILITY_ID} must remain planned until installed-host evidence exists")
     client_status = capability.get("client_status")
@@ -259,3 +272,67 @@ def validate_keyboard_capability(ctx: Context, capabilities: dict, scenarios: di
     limitation = str(capability.get("known_limitation", "")).lower()
     for boundary in ("installed-host", "package", "source", "headless"):
         ctx.require(boundary in limitation, f"{KEYBOARD_CAPABILITY_ID} known_limitation must name the {boundary} evidence boundary")
+
+
+def validate_zed_host_contract(ctx: Context, capabilities: dict) -> None:
+    """Keep the accepted Zed host proofs attached to their contract rows.
+
+    The source/package gate and its hostile fixture checker run independently
+    of the installed-host runner.  These assertions make a later status,
+    runner, or evidence-row edit fail closed instead of silently reducing the
+    Milestone 4 proof back to the old unsupported claims.
+    """
+    for capability_id, assertion_fragment in ZED_HOST_CAPABILITY_ASSERTIONS.items():
+        capability = capabilities.get(capability_id)
+        ctx.require(isinstance(capability, dict), f"contract must contain {capability_id} for accepted Zed host evidence")
+        if not isinstance(capability, dict):
+            continue
+        client_status = capability.get("client_status")
+        ctx.require(
+            isinstance(client_status, dict) and client_status.get("zed") == "partial",
+            f"{capability_id} must retain partial Zed host evidence",
+        )
+        evidence = capability.get("expected_evidence")
+        ctx.require(isinstance(evidence, dict), f"{capability_id} must retain Zed host evidence details")
+        if not isinstance(evidence, dict):
+            continue
+        commands = evidence.get("commands")
+        ctx.require(
+            isinstance(commands, list) and "scripts/check-zed-host.sh" in commands,
+            f"{capability_id} must retain scripts/check-zed-host.sh evidence",
+        )
+        records = evidence.get("host_records")
+        ctx.require(
+            isinstance(records, list)
+            and any(
+                isinstance(record, dict)
+                and record.get("client") == "zed"
+                and record.get("platform") == "linux"
+                for record in records
+            ),
+            f"{capability_id} must retain an installed Zed Linux host record",
+        )
+        assertions = evidence.get("assertions")
+        assertion_text = " ".join(value.lower() for value in assertions if isinstance(value, str)) if isinstance(assertions, list) else ""
+        ctx.require(
+            assertion_fragment in assertion_text,
+            f"{capability_id} must retain Zed assertion {assertion_fragment!r}",
+        )
+
+
+def validate_cancellation_contract(ctx: Context, capabilities: dict) -> None:
+    capability = capabilities.get(CANCELLATION_CAPABILITY_ID)
+    ctx.require(isinstance(capability, dict), f"contract must contain {CANCELLATION_CAPABILITY_ID}")
+    if not isinstance(capability, dict):
+        return
+    follow_up = capability.get("follow_up")
+    ctx.require(
+        follow_up == CANCELLATION_FOLLOW_UP,
+        f"{CANCELLATION_CAPABILITY_ID} must remain owned by serious-v1 follow-up {CANCELLATION_FOLLOW_UP}",
+    )
+    limitation = str(capability.get("known_limitation", "")).lower()
+    for phrase in ("serious-v1", "scheduler", "performance", "not m4 command/watch work"):
+        ctx.require(
+            phrase in limitation,
+            f"{CANCELLATION_CAPABILITY_ID} limitation must retain {phrase!r}",
+        )

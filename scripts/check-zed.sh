@@ -215,10 +215,13 @@ expected_partial = {
     "lsp.completion.navigation",
     "editor.filetype.registration",
     "editor.zed.syntax-projection",
+    "lsp.utf16.positions",
     "lsp.completion",
     "lsp.definition",
     "lsp.hover",
     "lsp.references",
+    "lsp.code-actions",
+    "lsp.rename",
     "command.compile.validate.extract",
     "command.watch.lifecycle",
     "editor.keyboard.workflow",
@@ -234,7 +237,8 @@ for capability in parity.get("capabilities", []):
     if evidence_commands is None:
         evidence_commands = [evidence.get("command")]
     if "scripts/check-zed.sh" not in evidence_commands:
-        fail(f"partial Zed capability lacks scripts/check-zed.sh evidence: {capability_id}")
+        if capability_id != "lsp.utf16.positions" or "scripts/check-zed-host.sh" not in evidence_commands:
+            fail(f"partial Zed capability lacks scripts/check-zed.sh evidence: {capability_id}")
     evidence_artifacts = evidence.get("artifacts")
     if evidence_artifacts is None:
         evidence_artifacts = [evidence.get("artifact")]

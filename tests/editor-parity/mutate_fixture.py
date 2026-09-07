@@ -160,6 +160,19 @@ def main() -> int:
         evidence["artifacts"] = {"invalid": "shape"}
     elif mutation == "follow-up-shape":
         record(contract, "capabilities", "lsp.completion")["follow_up"] = []
+    elif mutation == "cancellation-follow-up":
+        record(contract, "capabilities", "lsp.cancellation")["follow_up"] = "#53"
+    elif mutation == "zed-code-action-support":
+        record(contract, "capabilities", "lsp.code-actions")["client_status"]["zed"] = "unsupported"
+    elif mutation == "zed-rename-support":
+        record(contract, "capabilities", "lsp.rename")["client_status"]["zed"] = "planned"
+    elif mutation == "zed-utf16-post-emoji":
+        evidence = record(contract, "capabilities", "lsp.utf16.positions")["expected_evidence"]
+        evidence["assertions"] = [
+            assertion
+            for assertion in evidence["assertions"]
+            if "post-emoji" not in assertion.lower()
+        ]
     elif mutation == "keyboard-follow-up":
         record(contract, "capabilities", "editor.keyboard.workflow")["follow_up"] = "#192"
     elif mutation == "keyboard-follow-up-missing":

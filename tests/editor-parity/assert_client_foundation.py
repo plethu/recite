@@ -66,7 +66,7 @@ def main() -> int:
         capability = capabilities[capability_id]
         expected_follow_up = "#53" if capability_id.startswith("command.") else "#51"
         if capability["follow_up"] != expected_follow_up:
-            raise SystemExit(f"{capability_id} must retain the open VS Code follow-up")
+            raise SystemExit(f"{capability_id} must retain the VS Code evidence follow-up")
         if not capability_id.startswith("command.") and "vscode-vsix" not in evidence_artifacts(capability["expected_evidence"]):
             raise SystemExit(f"{capability_id} must attribute package/live evidence to vscode-vsix")
 
@@ -75,6 +75,8 @@ def main() -> int:
         "lsp.completion.navigation",
         "lsp.definition",
         "lsp.hover",
+        "lsp.code-actions",
+        "lsp.rename",
         "lsp.initialize.capabilities",
         "lsp.publish.diagnostics",
         "lsp.references",
@@ -97,7 +99,7 @@ def main() -> int:
             raise SystemExit(f"{capability_id} must attribute package/static evidence to zed-extension")
     zed_syntax = capabilities["editor.zed.syntax-projection"]
     if zed_syntax["follow_up"] != "#192":
-        raise SystemExit("editor.zed.syntax-projection must retain the open Zed follow-up")
+        raise SystemExit("editor.zed.syntax-projection must retain the Zed evidence follow-up")
     if zed_syntax["client_status"].get("vscode") != "planned":
         raise SystemExit("editor.zed.syntax-projection must not project Zed evidence to VS Code")
 
@@ -120,7 +122,7 @@ def main() -> int:
             "zed only exposes explicit static terminal tasks and does not parse their output"
         ),
         "command.watch.lifecycle": (
-            "zed checks only explicit static watch task argv; no parsed task controller is claimed"
+            "zed checks only explicit static watch task argv; its installed terminal records ctrl-c termination without a parsed task controller"
         ),
     }
     for capability_id, assertion in static_task_assertions.items():
@@ -129,6 +131,26 @@ def main() -> int:
             raise SystemExit(
                 f"{capability_id} must describe Zed as static task evidence without a parsed adapter"
             )
+
+    expected_zed_host_evidence = {
+        "lsp.utf16.positions": "post-emoji UTF-16 completion request",
+        "lsp.code-actions": "non-empty missing-ID quick fix",
+        "lsp.rename": "exact two-edit workspace rename",
+    }
+    for capability_id, assertion in expected_zed_host_evidence.items():
+        capability = capabilities[capability_id]
+        evidence = capability["expected_evidence"]
+        if "scripts/check-zed-host.sh" not in evidence.get("commands", []):
+            raise SystemExit(f"{capability_id} must retain installed Zed host evidence")
+        records = evidence.get("host_records", [])
+        if not any(
+            record.get("client") == "zed" and record.get("platform") == "linux"
+            for record in records
+            if isinstance(record, dict)
+        ):
+            raise SystemExit(f"{capability_id} must retain an installed Zed Linux host record")
+        if assertion.lower() not in " ".join(evidence.get("assertions", [])).lower():
+            raise SystemExit(f"{capability_id} must retain its positive Zed host assertion")
 
     if "installed vs code/vscodium activation smoke" not in document_path.read_text(encoding="utf-8").lower():
         raise SystemExit("editor parity docs must retain the missing host activation boundary")

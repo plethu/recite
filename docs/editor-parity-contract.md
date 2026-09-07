@@ -72,7 +72,9 @@ The current server handles stale versions synchronously and does not yet
 implement `$/cancelRequest` or an asynchronous request scheduler. Cancellation
 is therefore an explicit unsupported/planned capability in this contract;
 clients must not claim cancellation support or infer it from a request timeout.
-Issue #53 owns the command/watch lifecycle and the future cancellation contract.
+Issue #53 owns the command/watch lifecycle. Issue #206 owns future LSP request
+cancellation as a serious-v1 scheduler/performance capability, not M4
+command/watch work.
 
 ## Evidence input boundary
 
@@ -122,7 +124,9 @@ record, and project typed diagnostics and runtime/watch data without parsing
 human output. Neovim owns a separate `vim.system` process lifecycle and one
 watch child, including cooperative cancel, bounded teardown, and stale-result
 fencing. A late or malformed record is a protocol failure. Zed's compile,
-validate, extract, and watch entries are static terminal tasks only: they pass
+validate, extract, and watch entries are static terminal tasks only: the
+installed Linux host proves exact argv, cwd, and exit status for the finite
+tasks and genuine terminal Ctrl-C termination for watch, while the tasks pass
 structured output to the host terminal but do not parse records, replace
 diagnostics, or provide a fake stdin cancellation controller. Zed intentionally
 has no built-in run/trace task because asset, block, and fixture inputs cannot
@@ -152,7 +156,7 @@ implemented primary artifact.
 - `lsp.initialize.capabilities`: advertise the supported sync, UTF-16, and LSP feature capabilities from the real server; installed VS Code/VSCodium and Zed Linux host crossings are recorded.
 - `lsp.publish.diagnostics`: publish structured diagnostics for malformed source through the real LSP transport; installed Linux projection is recorded for all four clients.
 - `lsp.completion.navigation`: project shared-kernel completion and definition results without client-side semantics; installed VS Code/VSCodium and Zed Linux responses are recorded.
-- `lsp.utf16.positions`: preserve ranges across CRLF and non-BMP source text; the installed-host record is limited to VS Code/VSCodium because Zed non-BMP behavior is not claimed.
+- `lsp.utf16.positions`: preserve ranges across CRLF and non-BMP source text; the installed-host record includes the Zed client-generated post-emoji UTF-16 request, while response-range conversion remains unclaimed.
 - `lsp.overlay.recovery`: accept an incomplete overlay, then refresh it when a newer complete overlay arrives; installed VS Code/VSCodium recovery is recorded.
 - `lsp.stale.version`: refuse an older document version without replacing the current overlay or publishing stale evidence.
 - `lsp.cancellation`: document the current unsupported cancellation surface and its owner rather than claiming a timeout is cancellation.
@@ -165,16 +169,16 @@ implemented primary artifact.
 - `lsp.definition`: resolve same-project and cross-file definitions through the shared snapshot; installed VS Code/VSCodium and Zed Linux responses are recorded.
 - `lsp.hover`: project structured hover content and symbol ranges from the shared kernel; installed VS Code/VSCodium and Zed Linux responses are recorded.
 - `lsp.references`: project declaration-first, source-ordered references with explicit declaration inclusion; installed VS Code/VSCodium and Zed Linux responses are recorded.
-- `lsp.rename`: project source-preserving workspace edits for resolved symbols through the explicit VS Code/VSCodium `recite.renameBlock` command; the command retains version preconditions while native F2 rename remains unregistered.
-- `lsp.code-actions`: project source-preserving stable-ID repairs from the shared kernel; installed VS Code/VSCodium application is recorded. Zed sent the missing-ID request with `RECITE_ID001` and the selected range, but Recite returned the exact empty result and applied no edit, so Zed code actions are unsupported.
+- `lsp.rename`: project source-preserving workspace edits for resolved symbols through the explicit VS Code/VSCodium `recite.renameBlock` command and the installed Zed rename workflow; the command retains version preconditions while native F2 rename remains unregistered.
+- `lsp.code-actions`: project source-preserving stable-ID repairs from the shared kernel; installed VS Code/VSCodium and Zed application is recorded, including the exact Zed missing-ID edit.
 - `workspace.project.discovery`: discover canonical sibling sources under the configured project root.
 - `workspace.configuration`: keep root and project configuration ownership outside client semantics.
 - `authoring.stable-id.operations`: reserve the shared-kernel missing-ID repair; installed VS Code/VSCodium application is recorded, while broader stable-ID edit preconditions remain incomplete.
 - `schema.localisation.resolution`: project the current compiler catalogue identity/fingerprint and CLI locale-fallback evidence; combined LSP schema/catalogue provenance remains planned.
-- `command.compile.validate.extract`: exercise version-1 structured compile, validate, and extract records through the local-first VS Code/VSCodium and Neovim command adapters; installed VS Code/VSCodium and Zed static task invocation is recorded, while Zed does not parse task records into diagnostics.
-- `command.run.trace`: exercise version-1 structured runtime and trace records through the local-first VS Code/VSCodium and Neovim command adapters; installed VS Code/VSCodium projection is recorded, while Zed built-in run/trace remains unsupported because the required asset, block, and fixture are explicit inputs.
-- `command.watch.lifecycle`: exercise the version-1 watch wire, argv/cwd process boundary, cooperative cancel, bounded recovery, and typed diagnostic replacement through the VS Code/VSCodium and Neovim adapters; installed Linux start/stop evidence is recorded for VS Code/VSCodium, Neovim, and Zed, while Zed remains a host-terminal process with no parsed diagnostic controller or native cancellation controller.
-- `editor.keyboard.workflow`: prove installed-host activation plus the required keyboard-only workflow in named installed VS Code/VSCodium, Neovim, and Zed hosts: reach and navigate diagnostics, invoke supported authoring commands, observe status/failure, and stop a running watch where the host exposes that workflow. The VS Code/VSCodium lane sends `Ctrl+1`, `Ctrl+P`, types `scratch/invalid.recite`, and presses `Return`, then asserts the active URI, `recite` language, and extension activation before using Problems/`F8` and the supported commands. This row is partial and remains owned by open issue #202; package, source, and headless protocol checks are not installed-host keyboard evidence.
+- `command.compile.validate.extract`: exercise version-1 structured compile, validate, and extract records through the local-first VS Code/VSCodium and Neovim command adapters; installed VS Code/VSCodium and Neovim finite command evidence and Zed exact static task argv/cwd/status are recorded, while Zed does not parse task records into diagnostics.
+- `command.run.trace`: exercise version-1 structured runtime and trace records through the local-first VS Code/VSCodium and Neovim command adapters; installed VS Code/VSCodium and Neovim hosts project valid run/trace records, while Zed built-in run/trace remains unsupported because the required asset, block, and fixture are explicit inputs.
+- `command.watch.lifecycle`: exercise the version-1 watch wire, argv/cwd process boundary, cooperative cancel, bounded recovery, and typed diagnostic replacement through the VS Code/VSCodium and Neovim adapters; installed Linux start/stop evidence is recorded for VS Code/VSCodium, Neovim, and Zed, with Zed's genuine terminal Ctrl-C boundary explicit and no parsed diagnostic controller or native cancellation controller.
+- `editor.keyboard.workflow`: prove installed-host activation plus the required keyboard-only workflow in named installed VS Code/VSCodium, Neovim, and Zed hosts: reach and navigate diagnostics, invoke supported authoring commands, observe status/failure, and stop a running watch where the host exposes that workflow. The VS Code/VSCodium lane sends `Ctrl+1`, `Ctrl+P`, types `scratch/invalid.recite`, and presses `Return`, then asserts the active URI, `recite` language, and extension activation before using Problems/`F8` and the supported commands. The Linux evidence is recorded under closed issue #202; package, source, and headless protocol checks are not installed-host keyboard evidence.
 
 Executable evidence covers the shared LSP operations, project-root discovery,
 the bounded stable-ID repair, compiler catalogue fallback, the compiler's
@@ -191,15 +195,14 @@ check validates the generated VSIX contents, including the grammar, and the
 Node tests exercise the real `recite-lsp` process over stdio on Linux. The Zed
 package check validates the manifest, language config, static task argv,
 API-0.7.0 launcher, exact highlights query, and pinned grammar revision. The
-source gate also runs the hostile empty/null code-action-result regression. The
+source gate also runs the hostile Zed code-action evidence assertion regression. The
 installed-host runners add separately recorded Linux x86_64 evidence: VS Code
 and VSCodium cover activation, LSP projections, commands, watch stop, and the
 bounded keyboard path; Neovim 0.10.4 and 0.12.5 cover activation, diagnostics,
 commands, watch stop, and the bounded keyboard path; Zed 1.18.1 covers local
-development-extension activation, rendered syntax, LSP requests, static task
-status, terminal Ctrl-C, and keyboard navigation/shutdown. Zed code actions are
-not included in that positive host matrix: its real missing-ID request returned
-an exact empty result with no edit. Host records are
+development-extension activation, rendered syntax, LSP requests including the
+post-emoji UTF-16 request, applied code action and rename edits, exact finite
+task argv/cwd/status, terminal Ctrl-C, and keyboard navigation/shutdown. Host records are
 incremental and never upgrade an untested client or platform implicitly.
 The pinned TextMate tokenizer snapshots assert exact scopes for blocks, diverts,
 plural pipes, interpolation, condition directives, anchors, and hostile
@@ -216,21 +219,19 @@ or Zed gallery publication, or a distributable archive in source control. They
 also do not claim a native text problem matcher or task contribution: typed
 command diagnostics are intentionally owned by the structured
 `DiagnosticCollection` projection. Combined LSP schema/catalogue transport,
-stale-version host behavior, Zed non-BMP behavior, and Zed rename edit
-application remain outside this evidence. Zed task terminals do not parse
-structured records into diagnostics and expose no native task cancellation
-controller; the probe records terminal status and genuine Ctrl-C termination
-only.
+stale-version host behavior, and Zed response-range conversion remain outside
+this evidence. Zed task terminals do not parse structured records into
+diagnostics and expose no native task cancellation controller; the probe records
+exact finite-task status and genuine Ctrl-C termination only.
 
 Capability rows with direct VS Code/VSCodium package, adapter, live-server, or
 installed-host evidence, or direct Neovim/Zed command evidence, use `partial`
 client status and include the corresponding gate in their evidence commands.
 The Zed syntax/filetype and selected LSP rows are `partial` on Linux because
-source/package and installed-host checks exist; Zed code actions are explicitly
-unsupported because the real missing-ID request returned an exact empty result
-with no edit; rows for stale-version,
-non-BMP, native rename-edit application, and other untested host operations
-remain planned or explicitly unsupported. Zed's static
+source/package and installed-host checks exist; the installed host now applies
+the canonical code action and the exact two-edit rename. Rows for stale-version,
+response-range conversion, and other untested host operations remain planned or
+explicitly unsupported. Zed's static
 compile/validate/extract/watch task definitions do not make it a structured
 command/watch adapter: task terminals do not parse human or NDJSON output, and
 Zed does not expose a native cancellation controller. Built-in Zed run/trace are
@@ -238,7 +239,7 @@ unsupported; explicit project tasks remain possible when their inputs are
 known. Keyboard, task-panel, diagnostic-panel, colour, and accessibility
 behavior remain host surfaces with only the bounded scripted workflow covered.
 The `editor.keyboard.workflow` row is the narrower Milestone 4 host-evidence
-contract: it is partial and remains owned by issue #202, with exact host
+contract: it is partial on the named Linux hosts and recorded under closed issue #202, with exact host
 versions, platforms, key sequences, diagnostic navigation, command/status and
 failure presentation, and watch stopping recorded where supported. It does not
 claim the standalone GUI workbench or the broader Milestone 5 accessibility proof.
@@ -294,7 +295,34 @@ and signing remain planned even though installed-host smoke now passes from a
 local deterministic VSIX. A shared VSIX means the VS Code and VSCodium clients
 do not acquire separate semantic implementations; it does not mean either
 marketplace already carries an artifact. Zed's local development-extension
-install is likewise not gallery publication.
+install is likewise not gallery publication. Zed syntax/LSP/task evidence is
+recorded under #192; future gallery/distribution work needs a separate owner.
+
+## Milestone 4 reconciliation
+
+The evidence now closes the remaining #53 and #192 acceptance questions for the
+named Linux hosts without changing the Milestone 4 exit gate or broadening any
+platform claim.
+
+- #53 command availability and lifecycle are covered by the VS Code/VSCodium
+  and Neovim structured adapters, including Neovim extract and valid run/trace;
+  Zed's supported workflow is the explicit static terminal projection, with
+  exact validate/extract/compile argv, cwd, and status plus genuine watch
+  Ctrl-C termination. Zed does not parse task records, expose a native task
+  cancellation controller, or ship built-in run/trace tasks because their
+  asset, block, and fixture inputs are explicit. Those are documented client
+  limits, not missing M4 evidence.
+- #192 package, activation, grammar, installed LSP, keyboard, and task
+  acceptance is covered on Zed 1.18.1 Linux x86_64. The host sent the
+  client-generated post-emoji UTF-16 request, applied the canonical missing-ID
+  code action, applied exactly the two returned rename edits, and proved the
+  finite task argv/cwd/status boundaries. Stale-version rejection remains a
+  lower-level test boundary; response-range conversion, non-Linux hosts,
+  accessibility, gallery/distribution, parsed task diagnostics, native task
+  cancellation, and built-in run/trace remain unclaimed.
+- The keyboard workflow evidence is recorded under closed #202. Package,
+  source, and headless checks remain supporting evidence only, and broader
+  Milestone 5 accessibility proof is not implied.
 
 ## Reopening conditions
 
@@ -318,7 +346,7 @@ revision and projects its query, with exact drift and capture checks in
 `scripts/check-zed.sh`; this source/package compatibility evidence does not
 establish Zed macOS/Windows support, screen-reader/high-contrast integration,
 gallery publication, dynamic tasks, parsed structured command/watch diagnostics,
-Zed non-BMP or stale-version behavior, Zed rename edit application, or a native
-task cancellation controller. The installed Linux probe does establish its
+Zed response-range conversion or stale-version behavior, or a native task
+cancellation controller. The installed Linux probe does establish its
 bounded keyboard navigation and task-terminal shutdown boundary, including
 clean private-process exit, but does not widen the semantic contract.
