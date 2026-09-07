@@ -8,10 +8,7 @@ use crate::DialogueSession;
 use crate::event::DialogueEffectRequest;
 use crate::session::{PendingEffect, PendingPrompt, StatementFrame};
 
-pub const SESSION_SNAPSHOT_FORMAT_VERSION_V0: u16 = 0;
-pub const SESSION_SNAPSHOT_FORMAT_VERSION_V1: u16 = 1;
-pub const SESSION_SNAPSHOT_FORMAT_VERSION_V2: u16 = 2;
-pub const CURRENT_SESSION_SNAPSHOT_FORMAT_VERSION: u16 = SESSION_SNAPSHOT_FORMAT_VERSION_V2;
+pub const CURRENT_SESSION_SNAPSHOT_FORMAT_VERSION: u16 = 1;
 
 mod conversion;
 
