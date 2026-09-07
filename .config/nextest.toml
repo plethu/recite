@@ -1,0 +1,8 @@
+# These tests both recreate target/recite-benchmarks/generated/small.
+# Their in-process mutex covers cargo test; nextest runs each test in a process.
+[test-groups.generated-small-fixture]
+max-threads = 1
+
+[[profile.default.overrides]]
+filter = 'package(recite-benchmarks) & binary(benchmark_support) & test(/^generated_/)'
+test-group = "generated-small-fixture"

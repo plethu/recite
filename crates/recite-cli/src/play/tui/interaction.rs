@@ -13,7 +13,7 @@ use super::state::{
     start_prompt_command, toggle_deferred_queue, toggle_help,
 };
 
-impl<B: Backend> TuiPlayUi<'_, B> {
+impl<B: Backend<Error: Send + Sync + 'static>> TuiPlayUi<'_, B> {
     pub(super) fn wait_for_exit(&mut self) -> Result<(), CliError> {
         loop {
             let mode = prompt_mode(&self.state.prompt);

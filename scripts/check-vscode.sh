@@ -108,6 +108,8 @@ if ! command -v pnpm >/dev/null 2>&1; then
   exit 2
 fi
 
+"$repo_root/scripts/install-js-dependencies.sh" "$repo_root"
+
 echo "== VS Code/VSCodium package and live checks =="
 (
   cd "$repo_root"

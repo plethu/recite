@@ -296,6 +296,8 @@ done
 echo "pinned grammar and lexical captures passed"
 
 echo "== isolated extension host/API checks =="
+just --justfile "$repo_root/justfile" fmt-zed-check
+just --justfile "$repo_root/justfile" clippy-zed
 cargo check --locked --manifest-path "$extension_dir/Cargo.toml"
 test_list="$(mktemp "${TMPDIR:-/tmp}/recite-zed-tests.XXXXXX")"
 cargo test --locked --manifest-path "$extension_dir/Cargo.toml" -- --list | tee "$test_list"

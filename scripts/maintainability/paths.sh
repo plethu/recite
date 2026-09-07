@@ -10,6 +10,7 @@ maintainability_is_test_path() {
     || "$path" == crates/*/benches/* \
     || "$path" == crates/*/src/tests.rs \
     || "$path" == crates/*/src/tests/* \
+    || "$path" == editors/zed/src/tests.rs \
     || "$path" == */src/*/tests.rs \
     || "$path" == tests/* \
     || "$path" == editors/*/test/* \
@@ -29,6 +30,7 @@ maintainability_is_rust_source_path() {
   local path="$1"
   [[ "$path" == crates/*/src/* || "$path" == crates/*/tests/* \
     || "$path" == crates/*/benches/* \
+    || "$path" == editors/zed/src/* \
     || "$path" == tests/* ]]
 }
 

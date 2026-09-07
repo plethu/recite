@@ -10,7 +10,7 @@ use super::state::{
     TuiChoiceRow, TuiPrompt, TuiPromptLine, initial_choice_selection, initial_interaction,
 };
 
-impl<B: ratatui::backend::Backend> TuiPlayUi<'_, B> {
+impl<B: ratatui::backend::Backend<Error: Send + Sync + 'static>> TuiPlayUi<'_, B> {
     pub(super) fn prepare_choice_prompt(&mut self, prompt: &PreviewPrompt) {
         let rows = prompt
             .choices()

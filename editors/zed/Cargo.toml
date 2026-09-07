@@ -14,3 +14,13 @@ crate-type = ["cdylib"]
 
 [dependencies]
 zed_extension_api = "0.7.0"
+
+[lints.rust]
+unsafe_code = "forbid"
+unreachable_pub = "warn"
+
+[lints.clippy]
+unwrap_used = "warn"
+expect_used = "warn"
+todo = "warn"
+unimplemented = "warn"

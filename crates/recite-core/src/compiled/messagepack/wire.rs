@@ -24,11 +24,12 @@ use crate::compiled::{
     BlockIndex, BlockLookupEntry, BlockLookupTable, COMPILED_ASSET_FORMAT_VERSION_V0,
     COMPILER_COMPATIBILITY_VERSION_V0, ChoiceIndex, ChoiceLookupEntry, ChoiceLookupTable,
     ChoiceRange, CompiledAssetHeader, CompiledAssetId, CompiledBlock, CompiledChoice,
-    CompiledDialogue, CompiledEffect, CompiledInterpolationMode, CompiledLine, CompiledMatchArm,
-    CompiledMetadataEntry, CompiledSourceFile, CompiledSourceMapEntry, CompiledSpeaker,
-    CompiledStatement, CompilerVersion, LineIndex, LineLookupEntry, LineLookupTable, MatchArmIndex,
-    MatchArmRange, MetadataIndex, MetadataRange, SourceFileIndex, SourceMapId, SourceMapIndex,
-    SpeakerIndex, StatementIndex, StatementRange, TableRange, V0_TAGGED_VALUE_FIELDS,
+    CompiledDialogue, CompiledDialoguePayload, CompiledEffect, CompiledInterpolationMode,
+    CompiledLine, CompiledMatchArm, CompiledMetadataEntry, CompiledSourceFile,
+    CompiledSourceMapEntry, CompiledSpeaker, CompiledStatement, CompilerVersion, LineIndex,
+    LineLookupEntry, LineLookupTable, MatchArmIndex, MatchArmRange, MetadataIndex, MetadataRange,
+    SourceFileIndex, SourceMapId, SourceMapIndex, SpeakerIndex, StatementIndex, StatementRange,
+    TableRange, V0_TAGGED_VALUE_FIELDS,
 };
 
 #[derive(Deserialize)]
@@ -56,7 +57,7 @@ impl TryFrom<MsgDialogue> for CompiledDialogue {
     type Error = CompiledAssetDecodeError;
 
     fn try_from(value: MsgDialogue) -> Result<Self, Self::Error> {
-        Ok(Self {
+        Ok(CompiledDialogue::new(CompiledDialoguePayload {
             header: value.0.try_into()?,
             default_block: BlockIndex::new(value.1),
             sources: collect(value.2)?,
@@ -92,7 +93,7 @@ impl TryFrom<MsgDialogue> for CompiledDialogue {
                     .map(|entry| entry.choice())
                     .collect::<Result<Vec<_>, _>>()?,
             )?,
-        })
+        }))
     }
 }
 

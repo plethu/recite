@@ -1,7 +1,8 @@
 use recite_core::{
     BlockIndex, BlockLookupTable, ChoiceId, ChoiceLookupTable, CompiledAssetHeader,
-    CompiledAssetId, CompiledDialogue, CompiledDivertTarget, CompilerVersion, LineLookupTable,
-    SchemaFingerprint, SourceMapId, StatementIndex, StatementRange,
+    CompiledAssetId, CompiledDialogue, CompiledDialoguePayload, CompiledDivertTarget,
+    CompilerVersion, ContentFingerprint, LineLookupTable, SchemaFingerprint, SourceMapId,
+    StatementIndex, StatementRange,
 };
 
 use crate::session::{PendingPrompt, PendingPromptChoice};
@@ -21,6 +22,7 @@ fn unavailable_pending_choice_is_structured_error_without_mutating_session() {
         asset.sources.clone(),
         BlockIndex::new(0),
         StatementRange::new(StatementIndex::new(0), 0),
+        ContentFingerprint::blake3([0; 32]).expect("valid test fingerprint"),
         DialogueSessionOptions::default(),
     );
     session.pending_prompt = Some(PendingPrompt {
@@ -91,7 +93,7 @@ fn missing_trust_availability() -> ChoiceAvailability {
 }
 
 fn empty_asset() -> CompiledDialogue {
-    CompiledDialogue {
+    CompiledDialogue::new(CompiledDialoguePayload {
         header: CompiledAssetHeader::messagepack_v0(
             CompilerVersion::new("0.0.1").expect("valid compiler version"),
             CompiledAssetId::new("dialogue/main.recitec").expect("valid asset id"),
@@ -114,5 +116,5 @@ fn empty_asset() -> CompiledDialogue {
         block_lookup: BlockLookupTable::default(),
         line_lookup: LineLookupTable::default(),
         choice_lookup: ChoiceLookupTable::default(),
-    }
+    })
 }

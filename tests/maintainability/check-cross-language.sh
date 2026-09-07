@@ -30,6 +30,7 @@ new_multilang_fixture() {
   cleanup
   test_root="$(mktemp -d)"
   mkdir -p "$test_root/repo/docs" "$test_root/repo/editors/vscode/src" \
+    "$test_root/repo/editors/zed/src" \
     "$test_root/repo/editors/vscode/test" "$test_root/repo/scripts" \
     "$test_root/repo/tests" "$test_root/repo/.agents/skills/demo/scripts"
   copy_gate
@@ -39,7 +40,11 @@ new_multilang_fixture() {
     '# Maintainability fixture baseline' '' '## Inventory' '' \
     '| Path | Lines | Kind | Owner | Disposition | Issue/reason |' \
     '| --- | ---: | --- | --- | --- | --- |' \
+    '| `editors/zed/src/large.rs` | 401 | production | editor-runtime | cohesive | fixture Rust production |' \
+    '| `editors/zed/src/tests.rs` | 351 | test/support | editor-runtime | cohesive | fixture Rust test support |' \
     > "$test_root/repo/docs/maintainability-baseline.md"
+  write_lines editors/zed/src/large.rs 401
+  write_lines editors/zed/src/tests.rs 351
   local extension
   for extension in js mjs cjs lua py sh; do
     # Each extension is exercised in all three policy categories.

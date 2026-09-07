@@ -6,7 +6,8 @@ usage() {
 Usage:
   verify.sh [repo-root]
 
-Runs the complete local verification suite:
+Installs frozen JavaScript dependencies, then checks formatting, spelling,
+unused dependencies, and dependency policy before the existing verification lanes:
   1. scripts/check-git-policy.sh
   2. tests/git-policy/check-integration.sh
   3. tests/maintainability/check.sh
@@ -21,14 +22,15 @@ Runs the complete local verification suite:
  12. scripts/check-vscode.sh
  13. scripts/check-helix.sh
  14. tests/editor-hosts/helix/check.sh
- 15. scripts/check-project-gates.sh (including editor grammar and Neovim gates)
+ 15. scripts/check-project-gates.sh (including editors and the Godot host)
  16. scripts/check-docs.sh
  17. scripts/benchmark-smoke.sh
 
-Use `mise run verify` from the repository root when mise is available. That
-task loads the scoped `maintainability` mise environment for ast-grep;
+Use `mise exec -- just check` (or `mise run verify`) from the repository root.
+The check loads the scoped `maintainability` mise environment for ast-grep;
 ordinary project commands do not install it.
-`mise install` provisions the pinned Rust, Node, pnpm, .NET, and cbindgen tools.
+`mise install` provisions the pinned toolchain. JavaScript dependencies are
+installed from the frozen lockfile before any package checks.
 EOF
 }
 
@@ -89,6 +91,18 @@ if [[ ! -f "$repo_root/tests/git-policy/check-integration.sh" ]]; then
   echo "missing Git policy integration fixture gate: $repo_root/tests/git-policy/check-integration.sh" >&2
   exit 2
 fi
+
+echo "== workspace dependencies =="
+"$repo_root/scripts/install-js-dependencies.sh" "$repo_root"
+
+echo "== developer tool checks =="
+(
+  cd "$repo_root"
+  just fmt-check
+  just spelling
+  just unused-deps
+  just supply-chain
+)
 
 echo "== Git workflow policy =="
 "$repo_root/scripts/check-git-policy.sh" "$repo_root"

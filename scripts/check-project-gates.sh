@@ -17,10 +17,11 @@ scripts/verify.sh or `mise run verify`):
   7. scripts/generate-ffi-header.sh
   8. scripts/check-ffi-header.sh
   9. scripts/check-unity-adapter.sh
- 10. cargo fmt --check
- 11. cargo test --locked
- 12. cargo clippy --locked --all-targets --all-features -- -D warnings
- 13. RUSTDOCFLAGS=-Dwarnings cargo doc --locked --workspace --all-features --no-deps
+ 10. just test-godot
+ 11. cargo fmt --check
+ 12. just test and just test-doc
+ 13. just clippy
+ 14. RUSTDOCFLAGS=-Dwarnings cargo doc --locked --workspace --all-features --no-deps
 EOF
 }
 
@@ -128,6 +129,13 @@ if [[ -x "$repo_root/scripts/check-unity-adapter.sh" ]]; then
 fi
 
 echo
+echo "== Godot persistence and signal conformance =="
+(
+  cd "$repo_root"
+  just test-godot
+)
+
+echo
 echo "== cargo fmt --check =="
 (
   cd "$repo_root"
@@ -138,14 +146,15 @@ echo
 echo "== cargo test =="
 (
   cd "$repo_root"
-  cargo test --locked
+  just test
+  just test-doc
 )
 
 echo
 echo "== cargo clippy =="
 (
   cd "$repo_root"
-  cargo clippy --locked --all-targets --all-features -- -D warnings
+  just clippy
 )
 
 echo

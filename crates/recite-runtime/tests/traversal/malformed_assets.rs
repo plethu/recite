@@ -70,7 +70,7 @@ fn malformed_default_block_index_is_structured_error() {
 }
 
 #[test]
-fn malformed_line_index_is_structured_error() {
+fn malformed_line_index_is_rejected_at_start_as_structured_error() {
     let mut asset = compile_asset(
         "dialogue/start.recite",
         concat!(
@@ -81,16 +81,14 @@ fn malformed_line_index_is_structured_error() {
         ),
     );
     asset.statements[0].kind = CompiledStatementKind::Line(LineIndex::new(99));
-    let mut session = start_scene(&asset, None).expect("starts");
-
     assert!(matches!(
-        next(&asset, &mut session),
+        start_scene(&asset, None),
         Err(DialogueError::MalformedCompiledAsset { .. })
     ));
 }
 
 #[test]
-fn malformed_effect_index_is_structured_error() {
+fn malformed_effect_index_is_rejected_at_start_as_structured_error() {
     let mut asset = compile_asset(
         "dialogue/start.recite",
         concat!(
@@ -101,10 +99,8 @@ fn malformed_effect_index_is_structured_error() {
         ),
     );
     asset.statements[0].kind = CompiledStatementKind::Effect(EffectIndex::new(99));
-    let mut session = start_scene(&asset, None).expect("starts");
-
     assert!(matches!(
-        next(&asset, &mut session),
+        start_scene(&asset, None),
         Err(DialogueError::MalformedCompiledAsset { .. })
     ));
 }
@@ -143,7 +139,7 @@ fn mismatched_explicit_block_lookup_entry_is_structured_error() {
 }
 
 #[test]
-fn prompt_with_empty_choice_range_is_structured_error() {
+fn prompt_with_empty_choice_range_is_rejected_at_start_as_structured_error() {
     let mut asset = compile_asset(
         "dialogue/start.recite",
         concat!(
@@ -159,16 +155,14 @@ fn prompt_with_empty_choice_range_is_structured_error() {
         panic!("expected prompt statement");
     };
     *choices = ChoiceRange::new(choices.start, 0);
-    let mut session = start_scene(&asset, None).expect("starts");
-
     assert!(matches!(
-        next(&asset, &mut session),
+        start_scene(&asset, None),
         Err(DialogueError::MalformedCompiledAsset { .. })
     ));
 }
 
 #[test]
-fn missing_availability_reason_reference_is_structured_error() {
+fn missing_availability_reason_reference_is_rejected_at_start_as_structured_error() {
     let schema = recite_core::load_schema_manifest_str(
         "fixtures/schema/valid/generated_manifest.json",
         include_str!("../../../../fixtures/schema/valid/generated_manifest.json"),
@@ -188,17 +182,14 @@ fn missing_availability_reason_reference_is_structured_error() {
         &schema,
     );
     asset.availability_reasons.clear();
-    let context = RecordingContext::default().with("trust_gte", false);
-    let mut session = start_scene(&asset, None).expect("starts");
-
     assert!(matches!(
-        next_with_context(&asset, &mut session, &context),
+        start_scene(&asset, None),
         Err(DialogueError::MalformedCompiledAsset { .. })
     ));
 }
 
 #[test]
-fn malformed_match_arm_range_is_structured_error() {
+fn malformed_match_arm_range_is_rejected_at_start_as_structured_error() {
     let mut asset = compile_asset(
         "dialogue/start.recite",
         concat!(
@@ -215,11 +206,8 @@ fn malformed_match_arm_range_is_structured_error() {
         },
         arms: MatchArmRange::new(MatchArmIndex::new(99), 1),
     };
-    let context = RecordingContext::default().with_enum("mood", "tired");
-    let mut session = start_scene(&asset, None).expect("starts");
-
     assert!(matches!(
-        next_with_context(&asset, &mut session, &context),
+        start_scene(&asset, None),
         Err(DialogueError::MalformedCompiledAsset { .. })
     ));
 }

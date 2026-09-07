@@ -8,9 +8,8 @@ use super::events::PreviewPrompt;
 
 /// The persisted preview snapshot format containing explicit asset revisions.
 /// Runtime event values are not wire types and are intentionally excluded from
-/// this versioned contract. Versions 1 and 2 are rejected because they did not
-/// persist the active revision unconditionally.
-pub const PREVIEW_SNAPSHOT_FORMAT_VERSION: u16 = 3;
+/// this versioned contract.
+pub const PREVIEW_SNAPSHOT_FORMAT_VERSION: u16 = 1;
 
 #[non_exhaustive]
 #[derive(Clone, Debug, Eq, PartialEq)]

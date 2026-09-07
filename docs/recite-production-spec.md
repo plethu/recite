@@ -1516,6 +1516,7 @@ data. A v1 API must not expose only a flat `Option<String>` reason.
 `DialogueSession` must serialise enough information to resume exactly:
 
 - compiled asset identity/version;
+- canonical fingerprint of the complete compiled asset payload;
 - current block;
 - statement pointer;
 - call/divert stack if applicable;
@@ -1527,6 +1528,19 @@ data. A v1 API must not expose only a flat `Option<String>` reason.
 - selected choice history.
 
 The session must not serialise game state.
+
+Runtime session snapshots use an explicit format version. The initial v1 stores the
+canonical compiled payload fingerprint so restoring against an asset with the
+same header and source metadata but different semantic tables is rejected.
+Preview snapshot envelopes also use their initial v1 format. Before publication,
+development snapshots may be regenerated as these contracts are completed;
+they do not require compatibility aliases or migration readers. Unknown versions
+and snapshots missing the required payload identity are rejected.
+
+Compilation and asset decoding prepare the canonical payload fingerprint once.
+Starting another session from that asset reuses the prepared identity; it must
+not serialize and hash the whole asset again. Exclusive payload edits invalidate
+the cached identity before allowing further mutation.
 
 #### Save/load while waiting on a blocking effect
 
@@ -2452,6 +2466,16 @@ Top-level and row arrays use this field order:
 - `CompiledChoice`: `[id, source_text, metadata, requirement,
   requirement_source_text, availability_reason_override, target, echo,
   source_map, authored_source_text, interpolation_bindings]`.
+
+Decoded v0 assets may also contain legacy interpolation rows from the original
+5-field `CompiledLine` shape (`id, source_text, speaker, metadata, source_map`)
+and 9-field `CompiledChoice` shape (the current choice fields through `echo`
+and `source_map`). The canonical encoder preserves those shapes when their
+compiled rows are marked `Legacy`; legacy rows retain literal placeholder text,
+have no interpolation bindings or plural fields, and require authored and
+decoded source text to match. Current rows keep their existing 9-field and
+11-field bytes. This is compatibility with already-supported v0 rows and does
+not require a format-version bump.
 - `CompiledAvailabilityReason`: `[id, template_source_text]`.
 - `CompiledConditionAvailabilityReason`: `[function, reason, args]`.
 - `CompiledAvailabilityReasonArgBinding`: `[name, value]`.

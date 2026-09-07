@@ -3,7 +3,7 @@
 use recite_core::{
     BlockIndex, COMPILED_ASSET_FORMAT_VERSION_V0, COMPILER_COMPATIBILITY_VERSION_V0,
     CompiledAssetDecodeError, CompiledAssetEncodeError, canonical_compiled_dialogue_fingerprint,
-    decode_compiled_dialogue_messagepack, encode_compiled_dialogue_messagepack,
+    decode_compiled_dialogue_messagepack, encode_compiled_dialogue_messagepack, messagepack_u16,
 };
 
 mod support;
@@ -24,6 +24,49 @@ fn decode_rejects_unexpected_top_level_array_length() {
     let error = decode_compiled_dialogue_messagepack(&bytes).expect_err("arity is rejected");
 
     assert!(matches!(error, CompiledAssetDecodeError::MalformedAsset(_)));
+}
+
+#[test]
+fn version_probe_accepts_wider_integer_markers_and_rejects_truncation() {
+    let mut offset = 0;
+    assert_eq!(messagepack_u16(&[0xce, 0, 0, 0, 1], &mut offset), Some(1));
+    assert_eq!(offset, 5);
+
+    let mut offset = 0;
+    assert_eq!(
+        messagepack_u16(&[0xcf, 0, 0, 0, 0, 0, 0, 0, 1], &mut offset),
+        Some(1)
+    );
+    assert_eq!(offset, 9);
+
+    let mut offset = 0;
+    assert_eq!(messagepack_u16(&[0xce, 0, 1, 0, 0], &mut offset), None);
+
+    let mut offset = 0;
+    assert_eq!(
+        messagepack_u16(&[0xcf, 0, 0, 0, 0, 0, 1, 0, 0], &mut offset),
+        None
+    );
+
+    let mut offset = 0;
+    assert_eq!(messagepack_u16(&[0xce, 0, 0], &mut offset), None);
+}
+
+#[test]
+fn version_probe_reports_unsupported_wider_encoded_versions_before_body_decode() {
+    for marker in [vec![0xce, 0, 0, 0, 1], vec![0xcf, 0, 0, 0, 0, 0, 0, 0, 1]] {
+        let mut bytes = vec![0x92, 0x98];
+        bytes.extend(marker);
+        bytes.extend([0xcd, 0, 0]);
+
+        assert_eq!(
+            decode_compiled_dialogue_messagepack(&bytes),
+            Err(CompiledAssetDecodeError::UnsupportedFormat {
+                format_version: 1,
+                compiler_compatibility_version: 0,
+            })
+        );
+    }
 }
 
 #[test]

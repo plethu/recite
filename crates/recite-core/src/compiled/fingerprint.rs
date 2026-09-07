@@ -25,7 +25,16 @@ pub(crate) fn canonical_blake3_fingerprint(bytes: &[u8]) -> ContentFingerprint {
 pub fn canonical_compiled_dialogue_fingerprint(
     dialogue: &CompiledDialogue,
 ) -> Result<ContentFingerprint, CompiledAssetEncodeError> {
-    let bytes = super::messagepack::encode_compiled_dialogue_messagepack(dialogue)?;
+    dialogue
+        .cached_content_fingerprint()
+        .cloned()
+        .map_err(Clone::clone)
+}
+
+pub(crate) fn compute_canonical_compiled_dialogue_fingerprint(
+    dialogue: &CompiledDialogue,
+) -> Result<ContentFingerprint, CompiledAssetEncodeError> {
+    let bytes = super::messagepack::encode_compiled_dialogue_messagepack_uncached(dialogue)?;
     Ok(canonical_blake3_fingerprint(&bytes))
 }
 

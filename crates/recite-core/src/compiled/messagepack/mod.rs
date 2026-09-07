@@ -104,6 +104,9 @@ pub fn decode_compiled_dialogue_messagepack(
 
     let dialogue = wire.try_into()?;
     validate_dialogue(&dialogue, ValidationMode::Decoded)?;
+    dialogue
+        .prime_content_fingerprint()
+        .map_err(|error| malformed(error.to_string()))?;
     Ok(dialogue)
 }
 
@@ -113,6 +116,22 @@ pub fn decode_compiled_dialogue_messagepack(
 /// compiler delegates here, and callers may use the exact bytes for durable
 /// content identity without introducing a second semantic serialization.
 pub fn encode_compiled_dialogue_messagepack(
+    dialogue: &CompiledDialogue,
+) -> Result<Vec<u8>, CompiledAssetEncodeError> {
+    let result = encode_compiled_dialogue_messagepack_uncached(dialogue);
+    match result {
+        Ok(bytes) => {
+            dialogue.cache_canonical_bytes(&bytes);
+            Ok(bytes)
+        }
+        Err(error) => {
+            dialogue.cache_content_fingerprint(Err(error.clone()));
+            Err(error)
+        }
+    }
+}
+
+pub(crate) fn encode_compiled_dialogue_messagepack_uncached(
     dialogue: &CompiledDialogue,
 ) -> Result<Vec<u8>, CompiledAssetEncodeError> {
     if dialogue.header.format_version != COMPILED_ASSET_FORMAT_VERSION_V0
@@ -134,6 +153,8 @@ mod probe;
 mod tags;
 mod validate;
 mod wire;
+
+pub use probe::{messagepack_array_len, messagepack_u16};
 
 fn malformed(reason: String) -> CompiledAssetDecodeError {
     CompiledAssetDecodeError::MalformedAsset(reason)

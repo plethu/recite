@@ -438,7 +438,7 @@ place_cursor_after_non_bmp() {
   # The ASCII token starts immediately after the marker and separator at
   # UTF-16 character 14; collapsing its search selection lands there without
   # depending on editor-specific Unicode cursor movement.
-  type_text 'if'
+  type_text 'if you'
   press -k Return
   press -k Escape
   press -k Left

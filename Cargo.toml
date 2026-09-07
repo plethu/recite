@@ -51,12 +51,12 @@ atomic-write-file = "0.3.1"
 clap = { version = "4.5.51", features = ["derive", "string"] }
 compact_str = "0.8.1"
 criterion = { version = "0.8.2", default-features = false, features = ["plotters"] }
-crossterm = "0.28.1"
+crossterm = "0.29.0"
 fluent-bundle = "0.15.3"
 fluent-syntax = "0.11.1"
 insta = { version = "1.47.2", default-features = false }
 notify = "8.2.0"
-ratatui = "0.29.0"
+ratatui = "0.30.2"
 rand_chacha = { version = "0.10.0", default-features = false }
 rmp-serde = "1.3.1"
 serde = { version = "1.0.228", features = ["derive"] }

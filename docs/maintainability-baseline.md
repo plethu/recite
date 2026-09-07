@@ -20,7 +20,8 @@ issue and reason. An exception never authorises growth of an unrelated file.
 
 `tests.rs` sidecars, `src/tests/`, crate integration tests, crate benches, and
 editor test directories are test/support code even though some are below a
-source directory. `scripts/`, editor build/check scripts, and agent-local
+source directory. The isolated Zed workspace under `editors/zed/src/` follows
+the same production and test rules. `scripts/`, editor build/check scripts, and agent-local
 scripts are tooling. The supported handwritten extensions are `.rs`, `.js`,
 `.mjs`, `.cjs`, `.lua`, `.py`, and `.sh`.
 
@@ -119,8 +120,8 @@ production suppressions must carry a narrow scope and rationale.
 | `crates/recite-core/src/schema/manifest/lower/domains_provenance.rs` | 285 | production | core/schema | review | Domain provenance lowering owns flat and contextual provenance shapes |
 | `crates/recite-core/src/schema/manifest/lower/producer_provenance.rs` | 303 | production | core/schema | review | Producer origin and fingerprint lowering owns source-aware provenance paths |
 | `crates/recite-core/src/compiled/messagepack/tags.rs` | 468 | production | core/wire | cohesive | #89: explicit wire tag table |
-| `crates/recite-core/src/compiled/messagepack/wire.rs` | 662 | production | core/wire | exception | #89: retain the explicit decoder boundary while the v0 wire contract is synchronized |
-| `crates/recite-runtime/src/session_snapshot.rs` | 294 | production | runtime/snapshot | follow-up | #135: typed snapshot-boundary errors |
+| `crates/recite-core/src/compiled/messagepack/wire.rs` | 663 | production | core/wire | exception | #89: retain the explicit decoder boundary while the v0 wire contract is synchronized |
+| `crates/recite-runtime/src/session_snapshot.rs` | 296 | production | runtime/snapshot | follow-up | #135: typed snapshot-boundary errors |
 | `crates/recite-cli/src/error.rs` | 386 | production | cli | review | Keep user-facing error projection separate from typed domain errors |
 | `crates/recite-cli/src/error/user_message.rs` | 266 | production | cli | review | Localized CLI error presentation remains a dedicated user-message boundary |
 | `crates/recite-cli/src/structured/error_mapping.rs` | 382 | production | cli/structured | cohesive | Exhaustive CliError-to-wire classification remains one stable protocol boundary |
@@ -151,7 +152,7 @@ production suppressions must carry a narrow scope and rationale.
 | `crates/recite-runtime/src/preview/snapshot_validation.rs` | 262 | production | runtime/preview | review | #191: snapshot prompt validation keeps plural provenance and arm bounds mutually consistent |
 | `crates/recite-runtime/tests/preview_snapshot.rs` | 481 | test/support | runtime/preview | review | #191: hostile preview snapshot and plural-arm wire coverage |
 | `crates/recite-core/src/schema/manifest/raw.rs` | 391 | production | core/schema | cohesive | Lossless raw manifest model |
-| `crates/recite-compiler/src/compile/builder/rows.rs` | 353 | production | compiler | cohesive | Compiled row construction |
+| `crates/recite-compiler/src/compile/builder/rows.rs` | 341 | production | compiler | cohesive | Compiled row construction |
 | `crates/recite-compiler/src/pot.rs` | 366 | production | compiler/localisation | follow-up | #164: consume shared authoring analysis |
 | `crates/recite-benchmarks/src/id_metrics.rs` | 332 | production | benchmarks | cohesive | Maintainer metric calculations |
 | `crates/recite-runtime/src/traversal/asset.rs` | 328 | production | runtime/traversal | cohesive | Asset validation and traversal boundary |
@@ -159,7 +160,7 @@ production suppressions must carry a narrow scope and rationale.
 | `crates/recite-compiler/src/wire/inspection.rs` | 337 | production | compiler/wire | review | Structured wire inspection projection |
 | `crates/recite-benchmarks/src/project.rs` | 310 | production | benchmarks | cohesive | Synthetic project model |
 | `crates/recite-cli/src/play/tui/state.rs` | 307 | production | cli/tui | cohesive | TUI reducer state |
-| `crates/recite-compiler/src/compile/builder.rs` | 306 | production | compiler | cohesive | Compiled asset builder |
+| `crates/recite-compiler/src/compile/builder.rs` | 358 | production | compiler | cohesive | Compiled asset builder |
 | `crates/recite-core/src/schema/manifest/spans.rs` | 328 | production | core/schema | cohesive | JSON span calculation and shared span state |
 | `crates/recite-cli/src/play/tui/interaction.rs` | 293 | production | cli/tui | cohesive | Input-to-intent translation |
 | `crates/recite-compiler/src/validation/metadata.rs` | 276 | production | compiler/validation | review | Metadata validation ownership |
@@ -185,10 +186,10 @@ production suppressions must carry a narrow scope and rationale.
 | `crates/recite-ffi/tests/localisation.rs` | 368 | test/support | ffi/tests | cohesive | #166: shared locale callback fixtures and translated/fallback traversal coverage |
 | `crates/recite-ffi/src/session/start.rs` | 343 | production | ffi/session | cohesive | #166: provider-backed start ownership and rollback remain one cohesive session boundary |
 | `crates/recite-ffi/src/locale/provider.rs` | 273 | production | ffi/locale | cohesive | #166: owned callback provider request and result parsing remain one cohesive FFI boundary |
-| `crates/recite-ffi/src/session/restore.rs` | 284 | production | ffi/session | review | #166: provider-backed restore ownership and rollback boundary |
+| `crates/recite-ffi/src/session/restore.rs` | 311 | production | ffi/session | review | #166: provider-backed restore ownership and rollback boundary |
 | `crates/recite-godot/src/catalog.rs` | 313 | production | godot | review | #166: owned locale catalogue and deterministic provider resolution |
-| `crates/recite-godot/src/catalog_resource.rs` | 389 | production | godot | review | #166: serializable Resource catalogue boundary and validated rebuild |
-| `crates/recite-runtime/tests/interpolation.rs` | 498 | test/support | runtime/tests | review | #180: typed interpolation and plural provider scenarios remain grouped around runtime delivery |
+| `crates/recite-godot/src/catalog_resource.rs` | 386 | production | godot | review | #166: serializable Resource catalogue boundary and validated rebuild |
+| `crates/recite-runtime/tests/interpolation.rs` | 365 | test/support | runtime/tests | review | #180: typed interpolation and plural provider scenarios remain grouped around runtime delivery |
 | `crates/recite-compiler/tests/asset.rs` | 640 | test/support | compiler/tests | exception | #89: retain the shared compiled-asset fixture entry point for the wire contract guard |
 | `crates/recite-ffi/tests/snapshots.rs` | 422 | test/support | ffi/tests | cohesive | #171: session snapshot and restore contract coverage |
 | `crates/recite-lsp/src/tests/support/harness.rs` | 434 | test/support | lsp/tests | follow-up | Protocol harness ownership remains grouped for shared request, response, and lifecycle helpers; split again if protocol coverage grows materially |
@@ -231,10 +232,10 @@ production suppressions must carry a narrow scope and rationale.
 | `editors/recite-neovim/lua/recite/command_process.lua` | 281 | production | neovim/commands | review | Structured finite/stream process ownership, bounded TERM/KILL teardown, and callback settlement remain one transport boundary |
 | `editors/recite-neovim/lua/recite/watch.lua` | 292 | production | neovim/watch | review | Structured watch validation, recovery escalation, tombstone ownership, and synchronous editor-exit drain remain one lifecycle boundary |
 | `scripts/check-lint-suppressions.py` | 256 | tooling | lint-policy | review | Suppression policy parsing and diff-aware enforcement remain one checker boundary |
-| `scripts/check-neovim.sh` | 329 | tooling | neovim/check | review | #53: Neovim headless runtime, command lifecycle, and process-cleanup parity checks remain one checked host boundary |
+| `scripts/check-neovim.sh` | 331 | tooling | neovim/check | review | #53: Neovim headless runtime, command lifecycle, and process-cleanup parity checks remain one checked host boundary |
 | `scripts/check-tree-sitter.sh` | 399 | tooling | tree-sitter/check | review | Parser generation, ABI, corpus, and reproducibility checks share one tool boundary |
 | `scripts/check-vscode-host.sh` | 789 | tooling | vscode/host | exception | #51/#202: pinned VS Code/VSCodium acquisition, VSIX setup, API/keyboard probes, and process cleanup share one Linux host acceptance runner; split acquisition and provisioning from host phases before adding another capability/acquisition family |
-| `scripts/check-zed.sh` | 331 | tooling | zed/check | review | #192: Zed manifest, grammar pin, task argv, launcher API, parity evidence, and hostile code-action regression remain one checked boundary; split before adding another capability/acquisition family |
+| `scripts/check-zed.sh` | 333 | tooling | zed/check | review | #192: Zed manifest, grammar pin, task argv, launcher API, parity evidence, and hostile code-action regression remain one checked boundary; split before adding another capability/acquisition family |
 | `scripts/check-zed-host.sh` | 861 | tooling | zed/host | exception | #192: pinned Zed package setup, extension inspection, LSP/input probes, and process cleanup share one Linux host acceptance runner; split package setup from host phases before adding another capability/acquisition family |
 | `scripts/editor_parity/evidence.py` | 347 | tooling | editor-parity/evidence | review | #202: editor-parity evidence commands, host records, and capability validation remain one checked contract boundary |
 | `scripts/lint_suppression_ast.py` | 374 | tooling | lint-policy | review | AST suppression extraction keeps parser traversal and source categorisation together |

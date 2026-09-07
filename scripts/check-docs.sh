@@ -34,28 +34,7 @@ else
   fi
 fi
 
-for required_file in package.json pnpm-lock.yaml; do
-  if [[ ! -f "$repo_root/$required_file" ]]; then
-    echo "missing required documentation package file: $repo_root/$required_file" >&2
-    exit 2
-  fi
-done
-
-if ! command -v pnpm >/dev/null 2>&1; then
-  cat >&2 <<'EOF'
-missing required tool: pnpm
-
-Install the repository toolchain with:
-  mise install
-EOF
-  exit 2
-fi
-
-echo "== install documentation packages (frozen lockfile) =="
-(
-  cd "$repo_root"
-  pnpm install --frozen-lockfile
-)
+"$repo_root/scripts/install-js-dependencies.sh" "$repo_root"
 
 echo
 echo "== generated schema fixtures =="

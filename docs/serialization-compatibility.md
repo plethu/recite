@@ -4,9 +4,10 @@
 
 **Issue:** [#138](https://github.com/plethu/recite/issues/138)
 
-This records the product decision for Recite's current binary boundaries. It
-settles retention and migration policy; it does not authorise a replacement
-codec, a benchmark spike, or a new wire version.
+This records the product decision for Recite's current binary boundaries.
+Recite is an unpublished work in progress. Its snapshot contract is being
+completed as v1; development iterations do not create released compatibility
+obligations or require new format numbers.
 
 ## Decision
 
@@ -15,19 +16,40 @@ Keep the current MessagePack contracts, with each surface governed separately:
 | Surface | Current contract | Boundary |
 | --- | --- | --- |
 | Compiled assets | Deterministic MessagePack v0 (`format_version = 0`, `compiler_compatibility_version = 0`) with fixed arrays and an explicit encoding tag | The compiler, core decoder, adapters, and the [wire synchronization matrix](compiled-wire-synchronization.md) share this contract. |
-| Runtime snapshots | MessagePack encoding of `DialogueSessionSnapshot` with its own `snapshot_format_version = 1` | Hosts store snapshot bytes as opaque save data. Restore validates the snapshot against the compiled asset, including pending-effect identity. |
+| Runtime snapshots | MessagePack encoding of `DialogueSessionSnapshot` with `snapshot_format_version = 1` | Hosts store snapshot bytes as opaque save data. Restore validates the canonical compiled payload fingerprint as well as header, source, schema, and pending-effect identity. |
+| Preview snapshots | MessagePack preview envelope with `version = 1` | The envelope preserves preview state and embeds the validated session snapshot. |
 | FFI output batches | Named-map MessagePack with `batch_format_version = 0` | The [C ABI boundary](c-abi-boundary-design.md#output-payload-encoding) owns buffer, status, ordering, and host-copy rules; the batch is not the compiled-asset wire. |
 | FFI condition payloads | MessagePack argument arrays and tagged result maps; no independent format version | The current ABI contract fixes this payload. Recite owns the query, name, and argument bytes and lends them to the callback; the host owns result and error bytes, which Recite borrows only until the callback returns. |
 
-These are four compatibility surfaces, even where they currently use the same
+These are five compatibility surfaces, even where they currently use the same
 codec. They are not one shared version: compiled assets expose their format and
 compiler-compatibility versions, snapshots expose their snapshot format and
 carry asset identity, and batches expose their batch format. Condition
 payloads have no independent version and are fixed by the current ABI
-contract. Existing fields and values remain as shipped; a compiler, crate, or
-host version does not silently select a different reader. Compact JSON remains
+contract. A compiler, crate, or host version does not silently select a
+different reader. Compact JSON remains
 an inspection encoding for fixtures, debugging, and CLI tooling. It is not a
 second runtime asset, snapshot, or FFI format.
+
+### The initial v1 snapshot contract
+
+[#212](https://github.com/plethu/recite/issues/212) adds the canonical compiled
+payload fingerprint to runtime snapshots. Compilation and decoding validate the
+asset and prepare its identity once; session creation copies that cached value.
+Exclusive edits to a compiled payload invalidate its cached identity, so a
+modified payload must be validated again before its identity can be reused.
+Header and source fingerprints alone
+cannot detect a changed compiled effect argument or semantic table. A session
+records its payload identity when created; restore compares it with the supplied
+asset before reconstructing saved requests.
+
+Both session snapshots and preview envelopes use their initial v1 format.
+Development snapshots may be discarded and regenerated; there are no released
+snapshot formats to migrate. Unknown versions and malformed snapshots,
+including those missing the required payload identity, are rejected. A reader
+must never invent missing identity from the asset supplied during restore.
+The older size measurements below are historical evidence and do not describe
+the completed v1 snapshot shape.
 
 ## Why MessagePack remains
 
@@ -56,7 +78,7 @@ codec:
 See the [memory profile report](benchmark-reports/memory-profiles-known-limits.md)
 for fixture counts, session checkpoints, and measurement limits. No candidate
 format has comparable Recite measurements. Generic claims such as “zero-copy”
-or “fast” are not a reason to change a shipped boundary.
+or “fast” are not a reason to replace the implemented boundary.
 
 The alternatives were considered with these weights: compatibility and
 migration 25%; host and platform portability 20%; deterministic
@@ -83,19 +105,23 @@ There is no current Bevy serialization consumer, and no candidate has shown a
 Recite-level size, allocation, load, or cross-host advantage that repays a
 second codec and its migration surface.
 
-## The compiled-asset v0 correction window
+## Unpublished format corrections
 
 For compiled assets only, [§12.2 of the production spec](recite-production-spec.md#122-compiled-format)
 permits an intentional v0 wire-shape correction before the first tagged
 release. It must update the model, writer, reader, validator, inspection
 projection, wire matrix, and focused fixtures together, with the byte change
 reviewed as evidence. That is a coordinated decision, never a silent encoder
-change. Runtime snapshots, FFI batches, and condition payloads keep their own
-contracts; this window does not authorise changes to them. After the first
+change. Snapshot v1 corrections likewise update the model, codec, validation,
+documentation, and fixtures together. Earlier development snapshots do not
+need compatibility aliases or migration readers. FFI batches and condition
+payloads keep their own contracts. After the first
 tagged release, compiled-asset field or tag changes require the format or
 compatibility-version rule below.
 
 ## Future format gate
+
+The migration requirements below apply when replacing a published format.
 
 A future encoding may be considered only for one named artifact at a time, and
 only after a measured Recite requirement or a concrete shipped-host need. An

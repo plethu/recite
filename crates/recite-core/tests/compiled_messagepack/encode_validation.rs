@@ -4,11 +4,12 @@ use recite_core::{
     CompiledArgument, CompiledAssetEncodeError, CompiledAvailabilityReason,
     CompiledAvailabilityReasonArgBinding, CompiledAvailabilityReasonArgValue, CompiledChoice,
     CompiledChoiceEcho, CompiledConditionCall, CompiledConditionExpression, CompiledDivertTarget,
-    CompiledEffect, CompiledEffectMode, CompiledInterpolationMode, CompiledLine,
-    CompiledMetadataEntry, CompiledStatement, CompiledStatementKind, LineId, LineIndex,
-    LineLookupEntry, LineLookupTable, MetadataIndex, ScalarValue, SourceMapIndex, SourcePosition,
-    TableRange, Value, canonical_compiled_dialogue_fingerprint,
-    decode_compiled_dialogue_messagepack, encode_compiled_dialogue_messagepack,
+    CompiledEffect, CompiledEffectMode, CompiledInterpolationBinding, CompiledInterpolationMode,
+    CompiledLine, CompiledMetadataEntry, CompiledStatement, CompiledStatementKind,
+    InterpolationType, LineId, LineIndex, LineLookupEntry, LineLookupTable, MetadataIndex,
+    ScalarValue, SourceMapIndex, SourcePosition, TableRange, Value,
+    canonical_compiled_dialogue_fingerprint, decode_compiled_dialogue_messagepack,
+    encode_compiled_dialogue_messagepack,
 };
 
 #[test]
@@ -168,7 +169,73 @@ fn canonical_encoding_checks_choice_and_legacy_interpolation_rows() {
         index: LineIndex::new(0),
     }])
     .expect("sorted lookup");
-    assert_rejected(legacy, "placeholder `missing` has no interpolation binding");
+    let encoded = encode_compiled_dialogue_messagepack(&legacy).expect("legacy row encodes");
+    let decoded = decode_compiled_dialogue_messagepack(&encoded).expect("legacy row decodes");
+    assert_eq!(decoded.lines[0].source_text, "{missing}");
+    assert_eq!(
+        decoded.lines[0].interpolation_mode,
+        CompiledInterpolationMode::Legacy
+    );
+
+    let mut mismatched_source = legacy.clone();
+    mismatched_source.lines[0].authored_source_text = "Different".to_owned();
+    assert_rejected(
+        mismatched_source,
+        "legacy interpolation rows require authored and decoded source text to match",
+    );
+
+    let mut bound_legacy = legacy.clone();
+    bound_legacy.lines[0]
+        .interpolation_bindings
+        .push(CompiledInterpolationBinding {
+            name: "missing".to_owned(),
+            value: "value".to_owned(),
+            value_type: InterpolationType::String,
+        });
+    assert_rejected(
+        bound_legacy,
+        "legacy interpolation rows cannot contain interpolation bindings",
+    );
+
+    let mut plural_legacy = legacy.clone();
+    plural_legacy.lines[0].plural_source_text = Some("Many".to_owned());
+    plural_legacy.lines[0].authored_plural_source_text = Some("Many".to_owned());
+    assert_rejected(
+        plural_legacy,
+        "legacy interpolation rows cannot contain plural source text",
+    );
+}
+
+#[test]
+fn canonical_fingerprint_includes_interpolation_mode() {
+    let mut current = decode_valid();
+    current.lines.push(CompiledLine {
+        id: LineId::new("line").expect("valid line id"),
+        source_text: "Literal text".to_owned(),
+        plural_source_text: None,
+        authored_source_text: "Literal text".to_owned(),
+        authored_plural_source_text: None,
+        interpolation_bindings: Vec::new(),
+        interpolation_mode: CompiledInterpolationMode::Current,
+        speaker: None,
+        metadata: TableRange::new(MetadataIndex::new(0), 0),
+        source_map: SourceMapIndex::new(0),
+    });
+    current.line_lookup = LineLookupTable::new(vec![LineLookupEntry {
+        id: LineId::new("line").expect("valid line id"),
+        index: LineIndex::new(0),
+    }])
+    .expect("sorted lookup");
+    let mut legacy = current.clone();
+    legacy.lines[0].interpolation_mode = CompiledInterpolationMode::Legacy;
+
+    let current_bytes = encode_compiled_dialogue_messagepack(&current).expect("current encodes");
+    let legacy_bytes = encode_compiled_dialogue_messagepack(&legacy).expect("legacy encodes");
+    assert_ne!(current_bytes, legacy_bytes);
+    assert_ne!(
+        canonical_compiled_dialogue_fingerprint(&current),
+        canonical_compiled_dialogue_fingerprint(&legacy)
+    );
 }
 
 fn decode_valid() -> recite_core::CompiledDialogue {

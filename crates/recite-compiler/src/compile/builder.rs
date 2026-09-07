@@ -4,10 +4,11 @@ use recite_core::{
     AvailabilityReasonArgBinding, BlockIndex, Choice, CompiledAssetHeader,
     CompiledAvailabilityReason, CompiledAvailabilityReasonArgBinding,
     CompiledAvailabilityReasonArgValue, CompiledBlock, CompiledChoice,
-    CompiledConditionAvailabilityReason, CompiledDialogue, CompiledEffect, CompiledLine,
-    CompiledMatchArm, CompiledMetadataEntry, CompiledSourceFile, CompiledSourceMapEntry,
-    CompiledSpeaker, CompiledStatement, DivertTarget, Effect, IfBranch, Line, ProjectSchema,
-    ScalarValue, SchemaLiteralValue, SourceFileIndex, SpeakerIndex, canonical_source_fingerprint,
+    CompiledConditionAvailabilityReason, CompiledDialogue, CompiledDialoguePayload, CompiledEffect,
+    CompiledLine, CompiledMatchArm, CompiledMetadataEntry, CompiledSourceFile,
+    CompiledSourceMapEntry, CompiledSpeaker, CompiledStatement, DivertTarget, Effect, IfBranch,
+    Line, ProjectSchema, ScalarValue, SchemaLiteralValue, SourceFileIndex, SpeakerIndex,
+    canonical_source_fingerprint,
 };
 
 use super::CompileError;
@@ -43,11 +44,54 @@ enum StatementPlan<'a> {
     Effect(&'a Effect),
 }
 
+struct SourceDocumentIndex<'a> {
+    source: &'a str,
+    positions: SourcePositionIndex,
+}
+
+struct SourcePositionIndex {
+    line_starts: Vec<usize>,
+}
+
+impl SourcePositionIndex {
+    fn new(source: &str) -> Self {
+        let mut line_starts = vec![0];
+        for (offset, character) in source.char_indices() {
+            if character == '\n' {
+                line_starts.push(offset + character.len_utf8());
+            }
+        }
+
+        Self { line_starts }
+    }
+
+    fn byte_offset(&self, source: &str, line: u32, column: u32) -> Option<usize> {
+        let line_index = usize::try_from(line.checked_sub(1)?).ok()?;
+        let line_start = *self.line_starts.get(line_index)?;
+        let line_end = self
+            .line_starts
+            .get(line_index + 1)
+            .copied()
+            .unwrap_or(source.len());
+        let scalar = usize::try_from(column.checked_sub(1)?).ok()?;
+        let line_source = source.get(line_start..line_end)?;
+        let is_final_line = line_index + 1 == self.line_starts.len();
+        if is_final_line && scalar == line_source.chars().count() {
+            return Some(line_end);
+        }
+        line_source
+            .char_indices()
+            .nth(scalar)
+            .map(|(offset, _)| line_start + offset)
+    }
+}
+
 struct AssetBuilder<'a> {
     inputs: &'a [LoweredInput],
     options: CompileOptions,
     schema: Option<&'a ProjectSchema>,
     source_file_indices: BTreeMap<&'a str, SourceFileIndex>,
+    source_documents: BTreeMap<&'a str, SourceDocumentIndex<'a>>,
     block_indices: BTreeMap<&'a str, BlockIndex>,
     speakers_by_id: BTreeMap<String, SpeakerIndex>,
     blocks: Vec<CompiledBlock>,
@@ -72,6 +116,7 @@ impl<'a> AssetBuilder<'a> {
             options,
             schema,
             source_file_indices: BTreeMap::new(),
+            source_documents: BTreeMap::new(),
             block_indices: BTreeMap::new(),
             speakers_by_id: BTreeMap::new(),
             blocks: Vec::new(),
@@ -106,7 +151,7 @@ impl<'a> AssetBuilder<'a> {
         let availability_reasons = self.compile_availability_reasons();
         let condition_availability_reasons = self.compile_condition_availability_reasons()?;
 
-        Ok(CompiledDialogue {
+        Ok(CompiledDialogue::new(CompiledDialoguePayload {
             header: CompiledAssetHeader::messagepack_v0(
                 self.options.compiler_version,
                 self.options.asset_id,
@@ -129,7 +174,7 @@ impl<'a> AssetBuilder<'a> {
             block_lookup,
             line_lookup,
             choice_lookup,
-        })
+        }))
     }
 
     fn compile_availability_reasons(&self) -> Vec<CompiledAvailabilityReason> {
@@ -184,6 +229,13 @@ impl<'a> AssetBuilder<'a> {
             )?);
             self.source_file_indices
                 .insert(input.source_file.path.as_str(), index);
+            self.source_documents.insert(
+                input.source_file.path.as_str(),
+                SourceDocumentIndex {
+                    source: input.source.as_str(),
+                    positions: SourcePositionIndex::new(&input.source),
+                },
+            );
         }
 
         Ok(())

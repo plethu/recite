@@ -23,6 +23,8 @@ pub const V0_SOURCE_FILE_FIELDS: u8 = 2;
 pub const V0_BLOCK_FIELDS: u8 = 6;
 pub const V0_STATEMENT_FIELDS: u8 = 2;
 pub const V0_MATCH_ARM_FIELDS: u8 = 3;
+// Current-row arities. The decoder and canonical encoder also preserve the
+// already-supported legacy 5-field line and 9-field choice rows.
 pub const V0_LINE_FIELDS: u8 = 9;
 pub const V0_CHOICE_FIELDS: u8 = 11;
 pub const V0_AVAILABILITY_REASON_FIELDS: u8 = 2;

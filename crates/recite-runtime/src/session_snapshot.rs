@@ -8,9 +8,7 @@ use crate::DialogueSession;
 use crate::event::DialogueEffectRequest;
 use crate::session::{PendingEffect, PendingPrompt, StatementFrame};
 
-pub const SESSION_SNAPSHOT_FORMAT_VERSION_V0: u16 = 0;
-pub const SESSION_SNAPSHOT_FORMAT_VERSION_V1: u16 = 1;
-pub const CURRENT_SESSION_SNAPSHOT_FORMAT_VERSION: u16 = SESSION_SNAPSHOT_FORMAT_VERSION_V1;
+pub const CURRENT_SESSION_SNAPSHOT_FORMAT_VERSION: u16 = 1;
 
 mod conversion;
 
@@ -19,7 +17,7 @@ pub(crate) use conversion::{availability_from_snapshot, availability_snapshot};
 
 /// Versioned structural save data for a dialogue session.
 ///
-/// Snapshots contain only compact runtime state and asset identity references.
+/// Snapshots contain only compact runtime state and compiled asset identity references.
 /// They are not a tamper-proof proof that the state was produced by a previous
 /// honest traversal. Hosts that treat save data as untrusted should
 /// authenticate or encrypt encoded snapshots before restoring them.
@@ -32,6 +30,7 @@ pub struct DialogueSessionSnapshot {
     pub asset_compiler_compatibility_version: u16,
     pub compiler_version: String,
     pub source_map_id: String,
+    pub compiled_payload_fingerprint: DialogueContentFingerprintSnapshot,
     pub schema_fingerprint: DialogueSchemaFingerprintSnapshot,
     pub sources: Vec<DialogueSessionSourceSnapshot>,
     pub current_block: u32,
@@ -180,6 +179,9 @@ pub fn snapshot_session(session: &DialogueSession) -> DialogueSessionSnapshot {
         asset_compiler_compatibility_version: session.compiler_compatibility_version,
         compiler_version: session.compiler_version.as_str().to_owned(),
         source_map_id: session.source_map_id.as_str().to_owned(),
+        compiled_payload_fingerprint: content_fingerprint_snapshot(
+            &session.compiled_payload_fingerprint,
+        ),
         schema_fingerprint: schema_fingerprint_snapshot(&session.schema_fingerprint),
         sources: session.sources.iter().map(source_snapshot).collect(),
         current_block: session.current_block.as_u32(),
@@ -281,7 +283,7 @@ fn range_snapshot(range: StatementRange) -> DialogueSessionRangeSnapshot {
     }
 }
 
-fn content_fingerprint_snapshot(
+pub(crate) fn content_fingerprint_snapshot(
     fingerprint: &ContentFingerprint,
 ) -> DialogueContentFingerprintSnapshot {
     DialogueContentFingerprintSnapshot {

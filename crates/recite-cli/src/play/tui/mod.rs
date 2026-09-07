@@ -60,7 +60,7 @@ struct TuiPlayUi<'a, B: Backend> {
     input_intents: VecDeque<TuiIntent>,
 }
 
-impl<'a, B: Backend> TuiPlayUi<'a, B> {
+impl<'a, B: Backend<Error: Send + Sync + 'static>> TuiPlayUi<'a, B> {
     fn new(
         terminal: &'a mut Terminal<B>,
         settings: TuiSettings,
@@ -101,7 +101,8 @@ impl<'a, B: Backend> TuiPlayUi<'a, B> {
         let state = &self.state;
         let messages = &self.messages;
         self.terminal
-            .draw(|frame| render_tui(frame, state, messages))?;
+            .draw(|frame| render_tui(frame, state, messages))
+            .map_err(io::Error::other)?;
         Ok(())
     }
 

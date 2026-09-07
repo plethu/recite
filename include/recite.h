@@ -428,8 +428,10 @@ void recite_asset_free(uint64_t asset_handle);
  * The asset handle is valid until `recite_asset_free` is called.
  *
  * # Safety
- * `bytes` must be valid for `len` bytes. `asset_handle_out` must be a valid
- * non-null pointer.
+ * `bytes` must be non-null. When `len` does not exceed the maximum value
+ * representable by Rust `isize`, it must be valid for `len` bytes. Larger
+ * lengths are rejected with `RECITE_STATUS_VALIDATION` before `bytes` is
+ * read. `asset_handle_out` must be a valid non-null pointer.
  */
 ReciteStatus recite_asset_load(const uint8_t *bytes, size_t len, uint64_t *asset_handle_out);
 
@@ -617,6 +619,10 @@ ReciteStatus recite_session_register_condition(uint64_t session_handle,
  *
  * # Safety
  * All non-null pointer arguments must be valid for the duration of the call.
+ * `snapshot_bytes` must be non-null. When `snapshot_len` does not exceed the
+ * maximum value representable by Rust `isize`, it must be valid for that many
+ * bytes. Larger lengths are rejected with `RECITE_STATUS_VALIDATION` before
+ * the snapshot is read.
  */
 ReciteStatus recite_session_restore(uint64_t asset_handle,
                                     const uint8_t *snapshot_bytes,
@@ -634,7 +640,10 @@ ReciteStatus recite_session_restore(uint64_t asset_handle,
  *
  * # Safety
  * All non-null pointer arguments, including each record's string pointers,
- * must be valid for the duration of the call.
+ * must be valid for the duration of the call. `snapshot_bytes` must be
+ * non-null. When `snapshot_len` does not exceed the maximum value representable
+ * by Rust `isize`, it must be valid for that many bytes. Larger lengths are
+ * rejected with `RECITE_STATUS_VALIDATION` before the snapshot is read.
  */
 ReciteStatus recite_session_restore_with_values(uint64_t asset_handle,
                                                 const uint8_t *snapshot_bytes,
@@ -653,7 +662,11 @@ ReciteStatus recite_session_restore_with_values(uint64_t asset_handle,
  * Recite copies it before returning the resumption batch.
  *
  * # Safety
- * All non-null pointers must be valid for the duration of the call. The
+ * All non-null pointers must be valid for the duration of the call.
+ * `snapshot_bytes` must be non-null. When `snapshot_len` does not exceed the
+ * maximum value representable by Rust `isize`, it must be valid for that many
+ * bytes. Larger lengths are rejected with `RECITE_STATUS_VALIDATION` before
+ * the snapshot is read. The
  * callback must be a valid non-null function pointer, and `userdata` must
  * remain valid for the restored session lifetime. Passing NULL as `callback`
  * returns `RECITE_STATUS_VALIDATION` before a session is created.
@@ -678,7 +691,11 @@ ReciteStatus recite_session_restore_with_values_and_locale_provider(uint64_t ass
  * snapshot that needs a variant-specific catalog entry.
  *
  * # Safety
- * All non-null pointers must be valid for the duration of the call. The
+ * All non-null pointers must be valid for the duration of the call.
+ * `snapshot_bytes` must be non-null. When `snapshot_len` does not exceed the
+ * maximum value representable by Rust `isize`, it must be valid for that many
+ * bytes. Larger lengths are rejected with `RECITE_STATUS_VALIDATION` before
+ * the snapshot is read. The
  * callback must be a valid non-null function pointer, and `userdata` must
  * remain valid for the restored session lifetime. Passing NULL as `callback`
  * returns `RECITE_STATUS_VALIDATION` before a session is created.

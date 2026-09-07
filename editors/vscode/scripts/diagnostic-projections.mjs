@@ -1,7 +1,12 @@
 import { readFile, writeFile } from "node:fs/promises";
 import { readFileSync } from "node:fs";
 import path from "node:path";
-import { parseRepresentableMessages } from "../../message-projection-parser.mjs";
+import {
+  assertDiagnosticTemplate,
+  diagnosticIds,
+  parseDiagnosticContracts,
+  parseRepresentableMessages
+} from "../../message-projection-parser.mjs";
 
 const SOURCE = path.resolve(import.meta.dirname, "../../../crates/recite-ui/resources/diagnostics.ftl");
 const INVENTORY = path.resolve(import.meta.dirname, "../../../crates/recite-ui/resources/inventory.toml");
@@ -29,13 +34,8 @@ export function projectDiagnostics(source, inventory) {
     }
   }
   return Object.fromEntries([...messages.entries()].map(([id, template]) => {
-    const argumentsForId = contracts.get(id) ?? legacyArguments(id, template);
-    const placeholders = [...template.matchAll(/\{\s*\$([a-zA-Z][a-zA-Z0-9_-]*)\s*\}/gu)]
-      .map((match) => match[1]).filter((name, index, values) => values.indexOf(name) === index).sort();
-    const contractNames = argumentsForId.map(({ name }) => name).sort();
-    if (JSON.stringify(placeholders) !== JSON.stringify(contractNames)) {
-      throw new Error(`diagnostic contract/template mismatch for ${id}`);
-    }
+    const argumentsForId = contracts.get(id) ?? legacyArguments(id);
+    assertDiagnosticTemplate(id, template, argumentsForId);
     return [id, { template, arguments: argumentsForId.map(({ name, type }) => ({ name, type })) }];
   }));
 }
@@ -78,26 +78,12 @@ if (process.argv.includes("--update")) {
   await verifyDiagnosticProjection();
 }
 
-function diagnosticIds(source) {
-  return [...source.matchAll(/(?:^|\n)(diagnostic-[a-z0-9-]+)\s*=\s*[^\n]*/gu)]
-    .map((entry) => entry[1])
-    .filter((id) => !/(?:-help|-related|-meaning|-cause-\d+|-remediation-\d+)$/u.test(id));
-}
-
-function legacyArguments(id, template) {
+function legacyArguments(id) {
   if (id === "diagnostic-legacy-message") return [{ name: "message", type: "string" }];
   throw new Error(`missing typed diagnostic contract for ${id}`);
 }
 
 /** Read the executable UiContract export rather than inferring types from Fluent. */
 function diagnosticContracts() {
-  const contracts = new Map();
-  for (const line of readFileSync(DIAGNOSTIC_CONTRACT, "utf8").split("\n")) {
-    if (!line || line.startsWith("#")) continue;
-    const [id, name = "", type = ""] = line.split("\t");
-    const argumentsForId = contracts.get(id) ?? [];
-    if (name) argumentsForId.push({ name, type });
-    contracts.set(id, argumentsForId);
-  }
-  return contracts;
+  return parseDiagnosticContracts(readFileSync(DIAGNOSTIC_CONTRACT, "utf8"));
 }
