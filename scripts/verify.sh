@@ -19,9 +19,11 @@ Runs the complete local verification suite:
  10. tests/editor-parity/check.sh
  11. tests/check-pr-review-gates/check-rollup-fixtures.sh
  12. scripts/check-vscode.sh
- 13. scripts/check-project-gates.sh (including editor grammar and Neovim gates)
- 14. scripts/check-docs.sh
- 15. scripts/benchmark-smoke.sh
+ 13. scripts/check-helix.sh
+ 14. tests/editor-hosts/helix/check.sh
+ 15. scripts/check-project-gates.sh (including editor grammar and Neovim gates)
+ 16. scripts/check-docs.sh
+ 17. scripts/benchmark-smoke.sh
 
 Use `mise run verify` from the repository root when mise is available. That
 task loads the scoped `maintainability` mise environment for ast-grep;
@@ -53,7 +55,7 @@ else
   fi
 fi
 
-for gate in check-git-policy.sh check-maintainability.sh check-ast-grep.sh check-lint-suppressions.sh check-vscode.sh check-project-gates.sh check-docs.sh benchmark-smoke.sh; do
+for gate in check-git-policy.sh check-maintainability.sh check-ast-grep.sh check-lint-suppressions.sh check-vscode.sh check-helix.sh check-project-gates.sh check-docs.sh benchmark-smoke.sh; do
   if [[ ! -x "$repo_root/scripts/$gate" ]]; then
     echo "missing executable verification gate: $repo_root/scripts/$gate" >&2
     exit 2
@@ -77,6 +79,10 @@ if [[ ! -x "$repo_root/tests/trusted-policy/check.sh" ]]; then
 fi
 if [[ ! -x "$repo_root/tests/editor-parity/check.sh" ]]; then
   echo "missing editor parity verification fixture gate: $repo_root/tests/editor-parity/check.sh" >&2
+  exit 2
+fi
+if [[ ! -x "$repo_root/tests/editor-hosts/helix/check.sh" ]]; then
+  echo "missing Helix verification fixture gate: $repo_root/tests/editor-hosts/helix/check.sh" >&2
   exit 2
 fi
 if [[ ! -f "$repo_root/tests/git-policy/check-integration.sh" ]]; then
@@ -114,6 +120,14 @@ bash "$repo_root/tests/editor-parity/check.sh" "$repo_root"
 echo
 echo "== VS Code/VSCodium client =="
 "$repo_root/scripts/check-vscode.sh" "$repo_root"
+
+echo
+echo "== Helix language configuration =="
+"$repo_root/scripts/check-helix.sh" "$repo_root"
+
+echo
+echo "== Helix checker hostile fixtures =="
+"$repo_root/tests/editor-hosts/helix/check.sh" "$repo_root"
 
 echo
 echo "== pull-request check rollup fixtures =="

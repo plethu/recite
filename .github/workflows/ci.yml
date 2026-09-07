@@ -133,7 +133,7 @@ jobs:
         run: scripts/check-docs.sh
 
   editor:
-    name: VS Code client
+    name: VS Code and Helix clients
     runs-on: ubuntu-24.04
     timeout-minutes: 10
     steps:
@@ -150,6 +150,12 @@ jobs:
 
       - name: Check shared VS Code/VSCodium client and package
         run: scripts/check-vscode.sh
+
+      - name: Check Helix language configuration
+        run: scripts/check-helix.sh
+
+      - name: Check Helix checker hostile fixtures
+        run: tests/editor-hosts/helix/check.sh
 
   benchmark-smoke:
     # This checks that the tiny benchmark targets build and execute. It does
