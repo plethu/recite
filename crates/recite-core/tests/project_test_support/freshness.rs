@@ -1,8 +1,8 @@
 use recite_core::{
     BlockId, BlockIndex, BlockLookupEntry, BlockLookupTable, ChoiceLookupTable,
-    CompiledAssetHeader, CompiledAssetId, CompiledDialogue, CompiledSourceFile, CompiledSpeaker,
-    CompilerVersion, LineLookupTable, ProjectManifest, SchemaFingerprint, SourceMapId, SpeakerId,
-    canonical_source_fingerprint,
+    CompiledAssetHeader, CompiledAssetId, CompiledDialogue, CompiledDialoguePayload,
+    CompiledSourceFile, CompiledSpeaker, CompilerVersion, LineLookupTable, ProjectManifest,
+    SchemaFingerprint, SourceMapId, SpeakerId, canonical_source_fingerprint,
 };
 
 pub(crate) fn manifest_source() -> recite_core::ProjectManifestSource {
@@ -40,7 +40,7 @@ pub(crate) fn asset_with(
             .unwrap_or_else(|error| panic!("valid source map id: {error}")),
         schema_fingerprint,
     );
-    CompiledDialogue {
+    CompiledDialogue::new(CompiledDialoguePayload {
         header: CompiledAssetHeader {
             format_version,
             compiler_compatibility_version,
@@ -68,7 +68,7 @@ pub(crate) fn asset_with(
             .unwrap_or_else(|error| panic!("sorted block lookup: {error}")),
         line_lookup: LineLookupTable::default(),
         choice_lookup: ChoiceLookupTable::default(),
-    }
+    })
 }
 
 pub(crate) fn source_fingerprint(value: &str) -> recite_core::ContentFingerprint {

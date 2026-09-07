@@ -151,7 +151,7 @@ impl<'a> AssetBuilder<'a> {
         let availability_reasons = self.compile_availability_reasons();
         let condition_availability_reasons = self.compile_condition_availability_reasons()?;
 
-        CompiledDialogue::prepare(CompiledDialoguePayload {
+        Ok(CompiledDialogue::new(CompiledDialoguePayload {
             header: CompiledAssetHeader::messagepack_v0(
                 self.options.compiler_version,
                 self.options.asset_id,
@@ -174,8 +174,7 @@ impl<'a> AssetBuilder<'a> {
             block_lookup,
             line_lookup,
             choice_lookup,
-        })
-        .map_err(|error| CompileError::Serialization(error.to_string()))
+        }))
     }
 
     fn compile_availability_reasons(&self) -> Vec<CompiledAvailabilityReason> {

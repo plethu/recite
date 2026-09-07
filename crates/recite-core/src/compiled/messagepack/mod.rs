@@ -118,6 +118,22 @@ pub fn decode_compiled_dialogue_messagepack(
 pub fn encode_compiled_dialogue_messagepack(
     dialogue: &CompiledDialogue,
 ) -> Result<Vec<u8>, CompiledAssetEncodeError> {
+    let result = encode_compiled_dialogue_messagepack_uncached(dialogue);
+    match result {
+        Ok(bytes) => {
+            dialogue.cache_canonical_bytes(&bytes);
+            Ok(bytes)
+        }
+        Err(error) => {
+            dialogue.cache_content_fingerprint(Err(error.clone()));
+            Err(error)
+        }
+    }
+}
+
+pub(crate) fn encode_compiled_dialogue_messagepack_uncached(
+    dialogue: &CompiledDialogue,
+) -> Result<Vec<u8>, CompiledAssetEncodeError> {
     if dialogue.header.format_version != COMPILED_ASSET_FORMAT_VERSION_V0
         || dialogue.header.compiler_compatibility_version != COMPILER_COMPATIBILITY_VERSION_V0
     {

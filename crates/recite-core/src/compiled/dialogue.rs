@@ -45,6 +45,17 @@ impl CompiledDialogue {
             .map(|_| ())
             .map_err(Clone::clone)
     }
+
+    pub(crate) fn cache_content_fingerprint(
+        &self,
+        result: Result<ContentFingerprint, CompiledAssetEncodeError>,
+    ) {
+        let _ = self.content_fingerprint.set(result);
+    }
+
+    pub(crate) fn cache_canonical_bytes(&self, bytes: &[u8]) {
+        self.cache_content_fingerprint(Ok(super::fingerprint::canonical_blake3_fingerprint(bytes)));
+    }
 }
 
 impl Clone for CompiledDialogue {

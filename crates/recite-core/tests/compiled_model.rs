@@ -4,26 +4,26 @@ use recite_core::{
     BLAKE3_DIGEST_LEN, BlockId, BlockIndex, BlockLookupEntry, BlockLookupTable,
     COMPILED_ASSET_FORMAT_VERSION_V0, COMPILER_COMPATIBILITY_VERSION_V0, ChoiceId, ChoiceIndex,
     ChoiceLookupEntry, ChoiceLookupTable, ChoiceRange, CompiledAssetEncoding, CompiledAssetHeader,
-    CompiledAssetId, CompiledChoice, CompiledChoiceEcho, CompiledDialogue, CompiledDivertTarget,
-    CompiledInspectionEncoding, CompiledInterpolationMode, CompiledLine, CompiledMatchArm,
-    CompiledMatchPattern, CompiledMetadataEntry, CompiledSourceMapEntry, CompiledStatement,
-    CompiledStatementKind, CompiledValueError, CompilerVersion, ContentFingerprint, LineId,
-    LineIndex, LineLookupEntry, LineLookupTable, MatchArmIndex, MatchArmRange, MetadataIndex,
-    MetadataRange, ScalarValue, SchemaFingerprint, SourceFileIndex, SourceMapId, SourceMapIndex,
-    SourcePosition, SourceSpan, SpeakerIndex, StatementIndex, StatementRange,
-    V0_ARGUMENT_TAG_IDENTIFIER, V0_ARGUMENT_TAG_VALUE, V0_ASSET_ENCODING_MESSAGEPACK,
-    V0_ASSET_HEADER_FIELDS, V0_CHOICE_ECHO_TAG_EXPLICIT_LINE, V0_CHOICE_ECHO_TAG_NONE,
-    V0_CHOICE_ECHO_TAG_SELECTED_TEXT, V0_CHOICE_FIELDS, V0_COMPILED_DIALOGUE_FIELDS,
-    V0_CONDITION_TAG_AND, V0_CONDITION_TAG_CALL, V0_CONDITION_TAG_NOT, V0_CONDITION_TAG_OR,
-    V0_DIVERT_TARGET_TAG_BLOCK, V0_DIVERT_TARGET_TAG_END, V0_EFFECT_MODE_TAG_BLOCKING,
-    V0_EFFECT_MODE_TAG_DEFERRED, V0_EFFECT_MODE_TAG_IMMEDIATE, V0_INSPECTION_ENCODING_COMPACT_JSON,
-    V0_LOOKUP_ENTRY_FIELDS, V0_MATCH_ARM_FIELDS, V0_MATCH_PATTERN_TAG_VARIANT,
-    V0_MATCH_PATTERN_TAG_WILDCARD, V0_RANGE_FIELDS, V0_SCALAR_TAG_BOOLEAN, V0_SCALAR_TAG_FLOAT,
-    V0_SCALAR_TAG_INTEGER, V0_SCALAR_TAG_STRING, V0_SCHEMA_FINGERPRINT_TAG_FINGERPRINT,
-    V0_SCHEMA_FINGERPRINT_TAG_NO_SCHEMA, V0_SOURCE_SPAN_FIELDS, V0_STATEMENT_TAG_DIVERT,
-    V0_STATEMENT_TAG_EFFECT, V0_STATEMENT_TAG_END, V0_STATEMENT_TAG_IF, V0_STATEMENT_TAG_LINE,
-    V0_STATEMENT_TAG_MATCH, V0_STATEMENT_TAG_PROMPT, V0_VALUE_TAG_ARRAY, V0_VALUE_TAG_SCALAR,
-    Value, canonical_source_fingerprint,
+    CompiledAssetId, CompiledChoice, CompiledChoiceEcho, CompiledDialogue, CompiledDialoguePayload,
+    CompiledDivertTarget, CompiledInspectionEncoding, CompiledInterpolationMode, CompiledLine,
+    CompiledMatchArm, CompiledMatchPattern, CompiledMetadataEntry, CompiledSourceMapEntry,
+    CompiledStatement, CompiledStatementKind, CompiledValueError, CompilerVersion,
+    ContentFingerprint, LineId, LineIndex, LineLookupEntry, LineLookupTable, MatchArmIndex,
+    MatchArmRange, MetadataIndex, MetadataRange, ScalarValue, SchemaFingerprint, SourceFileIndex,
+    SourceMapId, SourceMapIndex, SourcePosition, SourceSpan, SpeakerIndex, StatementIndex,
+    StatementRange, V0_ARGUMENT_TAG_IDENTIFIER, V0_ARGUMENT_TAG_VALUE,
+    V0_ASSET_ENCODING_MESSAGEPACK, V0_ASSET_HEADER_FIELDS, V0_CHOICE_ECHO_TAG_EXPLICIT_LINE,
+    V0_CHOICE_ECHO_TAG_NONE, V0_CHOICE_ECHO_TAG_SELECTED_TEXT, V0_CHOICE_FIELDS,
+    V0_COMPILED_DIALOGUE_FIELDS, V0_CONDITION_TAG_AND, V0_CONDITION_TAG_CALL, V0_CONDITION_TAG_NOT,
+    V0_CONDITION_TAG_OR, V0_DIVERT_TARGET_TAG_BLOCK, V0_DIVERT_TARGET_TAG_END,
+    V0_EFFECT_MODE_TAG_BLOCKING, V0_EFFECT_MODE_TAG_DEFERRED, V0_EFFECT_MODE_TAG_IMMEDIATE,
+    V0_INSPECTION_ENCODING_COMPACT_JSON, V0_LOOKUP_ENTRY_FIELDS, V0_MATCH_ARM_FIELDS,
+    V0_MATCH_PATTERN_TAG_VARIANT, V0_MATCH_PATTERN_TAG_WILDCARD, V0_RANGE_FIELDS,
+    V0_SCALAR_TAG_BOOLEAN, V0_SCALAR_TAG_FLOAT, V0_SCALAR_TAG_INTEGER, V0_SCALAR_TAG_STRING,
+    V0_SCHEMA_FINGERPRINT_TAG_FINGERPRINT, V0_SCHEMA_FINGERPRINT_TAG_NO_SCHEMA,
+    V0_SOURCE_SPAN_FIELDS, V0_STATEMENT_TAG_DIVERT, V0_STATEMENT_TAG_EFFECT, V0_STATEMENT_TAG_END,
+    V0_STATEMENT_TAG_IF, V0_STATEMENT_TAG_LINE, V0_STATEMENT_TAG_MATCH, V0_STATEMENT_TAG_PROMPT,
+    V0_VALUE_TAG_ARRAY, V0_VALUE_TAG_SCALAR, Value, canonical_source_fingerprint,
 };
 
 #[test]
@@ -379,7 +379,7 @@ fn lookup_table_wrappers_reject_duplicate_and_unsorted_rows() {
 
 #[test]
 fn compiled_dialogue_uses_typed_lookup_tables() {
-    let dialogue = CompiledDialogue {
+    let dialogue = CompiledDialogue::new(CompiledDialoguePayload {
         header: CompiledAssetHeader::messagepack_v0(
             CompilerVersion::new("0.0.1").expect("valid compiler version"),
             CompiledAssetId::new("dialogue/main.recitec").expect("valid asset id"),
@@ -402,7 +402,7 @@ fn compiled_dialogue_uses_typed_lookup_tables() {
         block_lookup: BlockLookupTable::default(),
         line_lookup: LineLookupTable::default(),
         choice_lookup: ChoiceLookupTable::default(),
-    };
+    });
 
     assert!(dialogue.block_lookup.is_empty());
     assert!(dialogue.line_lookup.is_empty());

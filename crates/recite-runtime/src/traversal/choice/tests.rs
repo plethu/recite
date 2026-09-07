@@ -1,7 +1,8 @@
 use recite_core::{
     BlockIndex, BlockLookupTable, ChoiceId, ChoiceLookupTable, CompiledAssetHeader,
-    CompiledAssetId, CompiledDialogue, CompiledDivertTarget, CompilerVersion, ContentFingerprint,
-    LineLookupTable, SchemaFingerprint, SourceMapId, StatementIndex, StatementRange,
+    CompiledAssetId, CompiledDialogue, CompiledDialoguePayload, CompiledDivertTarget,
+    CompilerVersion, ContentFingerprint, LineLookupTable, SchemaFingerprint, SourceMapId,
+    StatementIndex, StatementRange,
 };
 
 use crate::session::{PendingPrompt, PendingPromptChoice};
@@ -92,7 +93,7 @@ fn missing_trust_availability() -> ChoiceAvailability {
 }
 
 fn empty_asset() -> CompiledDialogue {
-    CompiledDialogue {
+    CompiledDialogue::new(CompiledDialoguePayload {
         header: CompiledAssetHeader::messagepack_v0(
             CompilerVersion::new("0.0.1").expect("valid compiler version"),
             CompiledAssetId::new("dialogue/main.recitec").expect("valid asset id"),
@@ -115,5 +116,5 @@ fn empty_asset() -> CompiledDialogue {
         block_lookup: BlockLookupTable::default(),
         line_lookup: LineLookupTable::default(),
         choice_lookup: ChoiceLookupTable::default(),
-    }
+    })
 }
