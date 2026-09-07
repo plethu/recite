@@ -76,7 +76,7 @@ fn run_watch_stress(scale: BenchmarkScale) -> Result<WatchStressReport, Box<dyn 
     let schema_successes = watch.success_count()?;
     let schema_started = measured_now();
     edit_schema(&schema_path)?;
-    let source_schema_fingerprint = source_asset.header.schema_fingerprint;
+    let source_schema_fingerprint = source_asset.header.schema_fingerprint.clone();
     let schema_elapsed = watch.wait_for_fresh_output(schema_started, schema_successes, || {
         decode_asset(&original_asset_path)
             .is_ok_and(|asset| asset.header.schema_fingerprint != source_schema_fingerprint)
