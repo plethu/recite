@@ -18,7 +18,7 @@ scripts/verify.sh or `mise run verify`):
   8. scripts/check-ffi-header.sh
   9. scripts/check-unity-adapter.sh
  10. cargo fmt --check
- 11. cargo test --locked
+ 11. just test and just test-doc
  12. cargo clippy --locked --all-targets --all-features -- -D warnings
  13. RUSTDOCFLAGS=-Dwarnings cargo doc --locked --workspace --all-features --no-deps
 EOF
@@ -138,14 +138,15 @@ echo
 echo "== cargo test =="
 (
   cd "$repo_root"
-  cargo test --locked
+  just test
+  just test-doc
 )
 
 echo
 echo "== cargo clippy =="
 (
   cd "$repo_root"
-  cargo clippy --locked --all-targets --all-features -- -D warnings
+  just clippy
 )
 
 echo

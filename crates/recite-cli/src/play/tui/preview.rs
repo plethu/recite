@@ -38,7 +38,7 @@ pub(super) fn condition_prompt(
     }
 }
 
-impl<B: ratatui::backend::Backend> TuiPlayUi<'_, B> {
+impl<B: ratatui::backend::Backend<Error: Send + Sync + 'static>> TuiPlayUi<'_, B> {
     pub(super) fn prepare_condition_prompt(
         &mut self,
         request: &PreviewConditionRequest,
@@ -55,7 +55,9 @@ impl<B: ratatui::backend::Backend> TuiPlayUi<'_, B> {
     }
 }
 
-impl<B: ratatui::backend::Backend> PreviewPlayUi for TuiPlayUi<'_, B> {
+impl<B: ratatui::backend::Backend<Error: Send + Sync + 'static>> PreviewPlayUi
+    for TuiPlayUi<'_, B>
+{
     fn start(&mut self, asset: &CompiledDialogue, block: &str) -> Result<(), CliError> {
         self.state.asset = asset.header.asset_id.as_str().to_owned();
         self.state.block = block.to_owned();

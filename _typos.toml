@@ -1,0 +1,9 @@
+[default]
+# Stable dialogue IDs are hexadecimal data, including in JSON and PO strings.
+extend-ignore-re = ["[0-9a-f]{20}"]
+
+[default.extend-words]
+ratatui = "ratatui"
+# French catalogue example and intentionally incomplete LSP completion input.
+registre = "registre"
+sav = "sav"

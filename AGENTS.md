@@ -27,8 +27,9 @@ Recite is a Rust-first deterministic dialogue compiler, runtime, and tooling pro
 - For non-trivial Rust changes, use the relevant Recite overlay, especially
   `.agents/skills/recite-rust-quality/SKILL.md`, and load the global
   `rust-quality` skill when it is available.
-- The complete local gate is `mise run verify`; use a narrower documented check
-  only when the changed surface makes that sufficient.
+- The complete local gate is `mise exec -- just check` (`mise run verify` is
+  an alias); use a narrower documented check only when the changed surface
+  makes that sufficient.
 - Follow the Rust test organization policy in `.agents/skills/recite-testing-diagnostics/SKILL.md`; PR gates fail if tests are added in the wrong location.
 - Repo-local skills must be Recite-specific overlays or Recite domain guidance. Put reusable personal workflow skills in the global agent config instead.
 

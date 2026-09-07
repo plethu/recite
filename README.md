@@ -85,6 +85,6 @@ installing directly from Git.
 The [production spec](docs/recite-production-spec.md) is the detailed contract,
 and the [v1 roadmap](docs/roadmap.md) records what is still missing.
 [`CONTRIBUTING.md`](CONTRIBUTING.md) has the current contribution status and
-project notes.
+maintainer setup (`mise install`, then `mise exec -- just check`).
 
 Licensed under `MIT OR Apache-2.0`.

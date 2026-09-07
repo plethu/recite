@@ -15,7 +15,7 @@ Keep the current MessagePack contracts, with each surface governed separately:
 | Surface | Current contract | Boundary |
 | --- | --- | --- |
 | Compiled assets | Deterministic MessagePack v0 (`format_version = 0`, `compiler_compatibility_version = 0`) with fixed arrays and an explicit encoding tag | The compiler, core decoder, adapters, and the [wire synchronization matrix](compiled-wire-synchronization.md) share this contract. |
-| Runtime snapshots | MessagePack encoding of `DialogueSessionSnapshot` with its own `snapshot_format_version = 1` | Hosts store snapshot bytes as opaque save data. Restore validates the snapshot against the compiled asset, including pending-effect identity. |
+| Runtime snapshots | MessagePack encoding of `DialogueSessionSnapshot` with its own `snapshot_format_version = 2` | Hosts store snapshot bytes as opaque save data. Restore validates the canonical compiled payload fingerprint as well as header, source, schema, and pending-effect identity. |
 | FFI output batches | Named-map MessagePack with `batch_format_version = 0` | The [C ABI boundary](c-abi-boundary-design.md#output-payload-encoding) owns buffer, status, ordering, and host-copy rules; the batch is not the compiled-asset wire. |
 | FFI condition payloads | MessagePack argument arrays and tagged result maps; no independent format version | The current ABI contract fixes this payload. Recite owns the query, name, and argument bytes and lends them to the callback; the host owns result and error bytes, which Recite borrows only until the callback returns. |
 
@@ -28,6 +28,22 @@ contract. Existing fields and values remain as shipped; a compiler, crate, or
 host version does not silently select a different reader. Compact JSON remains
 an inspection encoding for fixtures, debugging, and CLI tooling. It is not a
 second runtime asset, snapshot, or FFI format.
+
+### Snapshot version 2
+
+[#212](https://github.com/plethu/recite/issues/212) adds the canonical compiled
+payload fingerprint to runtime snapshots. Header and source fingerprints alone
+cannot detect a changed compiled effect argument or semantic table. A session
+records its payload identity when created; restore compares it with the supplied
+asset before reconstructing saved requests.
+
+Version 0 and version 1 snapshots are rejected explicitly. They do not contain
+the evidence needed to attach a trustworthy payload identity, so there is no
+automatic upgrade by stamping them with the current asset's fingerprint. Hosts
+must retain the old runtime and original asset to finish old sessions, or begin
+a new session and save it with version 2. Compiled-asset and FFI batch versions
+are unchanged. The older size measurements below are historical evidence and
+do not describe the version 2 snapshot size.
 
 ## Why MessagePack remains
 

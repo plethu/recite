@@ -1,12 +1,12 @@
 allow-unwrap-in-tests = true
 allow-expect-in-tests = true
 disallowed-types = [
-  { path = "std::collections::HashMap", reason = "iteration order is nondeterministic; use BTreeMap" },
-  { path = "std::collections::HashSet", reason = "iteration order is nondeterministic; use BTreeSet" },
+    { path = "std::collections::HashMap", reason = "iteration order is nondeterministic; use BTreeMap" },
+    { path = "std::collections::HashSet", reason = "iteration order is nondeterministic; use BTreeSet" },
 ]
 disallowed-methods = [
-  { path = "std::time::SystemTime::now", reason = "no wall-clock in deterministic crates" },
-  { path = "std::time::Instant::now", reason = "no wall-clock in deterministic crates" },
+    { path = "std::time::SystemTime::now", reason = "no wall-clock in deterministic crates" },
+    { path = "std::time::Instant::now", reason = "no wall-clock in deterministic crates" },
 ]
 # There is no unseeded or non-deterministic production RNG call site today.
 # The fixture generator intentionally uses a seeded ChaCha8Rng. Add a concrete

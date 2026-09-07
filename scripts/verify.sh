@@ -25,10 +25,11 @@ Runs the complete local verification suite:
  16. scripts/check-docs.sh
  17. scripts/benchmark-smoke.sh
 
-Use `mise run verify` from the repository root when mise is available. That
-task loads the scoped `maintainability` mise environment for ast-grep;
+Use `mise exec -- just check` (or `mise run verify`) from the repository root.
+The check loads the scoped `maintainability` mise environment for ast-grep;
 ordinary project commands do not install it.
-`mise install` provisions the pinned Rust, Node, pnpm, .NET, and cbindgen tools.
+`mise install` provisions the pinned toolchain. JavaScript dependencies are
+installed from the frozen lockfile before any package checks.
 EOF
 }
 
@@ -89,6 +90,18 @@ if [[ ! -f "$repo_root/tests/git-policy/check-integration.sh" ]]; then
   echo "missing Git policy integration fixture gate: $repo_root/tests/git-policy/check-integration.sh" >&2
   exit 2
 fi
+
+echo "== workspace dependencies =="
+"$repo_root/scripts/install-js-dependencies.sh"
+
+echo "== developer tool checks =="
+(
+  cd "$repo_root"
+  just fmt-check
+  just spelling
+  just unused-deps
+  just supply-chain
+)
 
 echo "== Git workflow policy =="
 "$repo_root/scripts/check-git-policy.sh" "$repo_root"

@@ -1,0 +1,6 @@
+# Malformed authored inputs are tested by Recite, not by the toolchain formatter.
+include = ["*.toml", "crates/*/Cargo.toml", "editors/zed/Cargo.toml", ".config/**/*.toml"]
+
+[formatting]
+column_width = 100
+indent_string = "    "

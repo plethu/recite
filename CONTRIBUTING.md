@@ -6,6 +6,63 @@ Issues, questions, and design feedback are still welcome on GitHub, especially w
 
 After the v1 shape is stable, I'll review and publish fuller contribution guidelines covering pull request scope, tests, review expectations, compatibility policy, and release process.
 
+## Maintainer setup
+
+From a checkout, install the pinned tools and run the complete check:
+
+```sh
+mise install
+mise exec -- just check
+```
+
+`just check` installs the JavaScript workspace dependencies from the frozen
+lockfile before using them. It checks Rust, editor packages, adapters, docs,
+dependency policy, spelling, and benchmark smoke. `just verify` and
+`mise run verify` run that same gate. With mise activated in your shell, the
+`mise exec --` prefix is unnecessary. Run `just` to list the commands.
+
+For a focused change:
+
+```sh
+just fmt
+just clippy
+just test -p recite-runtime -E 'test(restore)'
+just test-doc -p recite-runtime
+just test-zed
+just supply-chain
+```
+
+`fmt` deliberately rewrites Rust and maintained toolchain TOML files;
+`fmt-check` only checks them. The normal test recipe uses nextest; doctests have
+their own recipe and remain part of the complete gate. The Zed extension is a
+separate Cargo workspace, covered by the format, lint, and editor gates.
+`supply-chain` checks both dependency graphs for advisories, licenses, bans,
+and sources. `unused-deps` checks both workspaces with cargo-machete.
+The existing Godot bindings and `option-ext` retain their MPL-2.0 licenses;
+the dependency policy names those packages explicitly. Recite's own source
+remains MIT OR Apache-2.0. Distributions must retain dependency notices and
+the MPL source availability obligations described in the
+[Mozilla FAQ](https://www.mozilla.org/en-US/MPL/2.0/FAQ/).
+
+The complete check needs network access for dependency installation and the
+advisory database. Rust and Unity headless tests require no database or running
+game. Platform-host and expensive stress evidence have explicit commands:
+
+```sh
+just test-stress --nocapture
+just test-watch-stress --nocapture
+just test-godot
+just test-editor-host neovim
+just test-editor-host vscode
+just test-editor-host zed
+```
+
+Host commands fail when their prerequisites are absent. The VS Code/VSCodium
+and Zed runners currently require Linux x86_64, Cage, wtype, and official host
+downloads; see their `--help` output and `docs/editor-parity-contract.md` for
+the evidence boundaries. These runs do not establish other-platform support
+or replace the release benchmark baseline.
+
 ## Project Notes
 
 - Recite is hosted on GitHub. Use `gh` with `--repo plethu/recite` for issue and pull-request operations.
@@ -35,7 +92,7 @@ After the v1 shape is stable, I'll review and publish fuller contribution guidel
   title. Commit subjects always begin with `[REC-N]` and a concise
   conventional-commit-style subject, with at most one explanatory body
   sentence and no agent-attribution trailers.
-- The canonical local quality gate is `mise run verify`
+- The canonical local quality gate is `mise exec -- just check`
   (`scripts/verify.sh`). It loads the scoped `maintainability` mise
   environment for the pinned ast-grep check. GitHub Actions runs separate Git
   policy, Rust, documentation, benchmark, and maintainability lanes, followed
