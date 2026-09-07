@@ -201,15 +201,13 @@ executes game-side effects.
 
 ### 4. Editor Integration Parity
 
-**Status:** Implementation and bounded installed-host evidence landed on
-2026-09-05/06, but the exit gate remains open. PR #200 delivered the remaining
-VS Code/VSCodium, Neovim, Zed, grammar, structured-command, parity, and
-maintainability work after PR #198 established the Neovim setup and shared
-editor foundations. The recorded host lanes cover Linux x86_64 VS Code,
-VSCodium, Neovim, and Zed paths incrementally; they do not establish the
-unclaimed platform, accessibility, publication, or Zed task/semantic behavior
-listed in the contract. PR #204 closed #51 and #202 after recording that host
-evidence; #53 and #192 remain open for their residual acceptance boundaries.
+**Status:** Complete as of 2026-09-07. PR #207 merged as `cc1d768`, closing #53
+and #192 and completing the exit gate after PRs #198, #200, and #204 established
+the shared editor foundations, parity implementation, and installed-host
+evidence. The editor parity contract records the remaining unclaimed platform,
+accessibility, publication, and host-specific boundaries. Cooperative LSP
+request cancellation remains a serious-v1 follow-up in #206 rather than an
+editor-parity blocker.
 
 **Outcome:** text authoring is safe and discoverable in the editors users
 already choose.
