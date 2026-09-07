@@ -93,7 +93,7 @@ jobs:
   windows-publisher:
     name: Windows publisher contract
     runs-on: windows-latest
-    timeout-minutes: 15
+    timeout-minutes: 30
     steps:
       - name: Check out source
         uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
@@ -106,6 +106,9 @@ jobs:
         with:
           # This lane runs Cargo contracts only; Linux owns the quality tools.
           install_args: rust
+
+      - name: Cache Rust dependencies and build output
+        uses: Swatinem/rust-cache@6323deb102c322ba6fcbdcafc7e3dddab59af2b6 # v2.9.2
 
       - name: Run Windows publisher contracts
         run: >-
