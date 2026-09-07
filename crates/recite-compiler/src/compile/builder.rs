@@ -43,11 +43,66 @@ enum StatementPlan<'a> {
     Effect(&'a Effect),
 }
 
+struct SourceDocumentIndex<'a> {
+    source: &'a str,
+    positions: SourcePositionIndex,
+}
+
+struct SourcePositionIndex {
+    lines: Vec<SourceLineIndex>,
+}
+
+struct SourceLineIndex {
+    character_starts: Vec<usize>,
+    end: usize,
+    terminated_by_newline: bool,
+}
+
+impl SourcePositionIndex {
+    fn new(source: &str) -> Self {
+        let mut lines = vec![SourceLineIndex {
+            character_starts: Vec::new(),
+            end: 0,
+            terminated_by_newline: false,
+        }];
+
+        for (offset, character) in source.char_indices() {
+            let current_line = lines.len() - 1;
+            let line = &mut lines[current_line];
+            line.character_starts.push(offset);
+            line.end = offset + character.len_utf8();
+            if character == '\n' {
+                line.terminated_by_newline = true;
+                let next_line_start = line.end;
+                lines.push(SourceLineIndex {
+                    character_starts: Vec::new(),
+                    end: next_line_start,
+                    terminated_by_newline: false,
+                });
+            }
+        }
+
+        Self { lines }
+    }
+
+    fn byte_offset(&self, line: u32, column: u32) -> Option<usize> {
+        let line = self
+            .lines
+            .get(usize::try_from(line.checked_sub(1)?).ok()?)?;
+        let scalar = usize::try_from(column.checked_sub(1)?).ok()?;
+        line.character_starts.get(scalar).copied().or_else(|| {
+            (!line.terminated_by_newline && scalar == line.character_starts.len())
+                .then_some(line.end)
+        })
+    }
+}
+
 struct AssetBuilder<'a> {
     inputs: &'a [LoweredInput],
     options: CompileOptions,
     schema: Option<&'a ProjectSchema>,
     source_file_indices: BTreeMap<&'a str, SourceFileIndex>,
+    source_documents: BTreeMap<&'a str, SourceDocumentIndex<'a>>,
     block_indices: BTreeMap<&'a str, BlockIndex>,
     speakers_by_id: BTreeMap<String, SpeakerIndex>,
     blocks: Vec<CompiledBlock>,
@@ -72,6 +127,7 @@ impl<'a> AssetBuilder<'a> {
             options,
             schema,
             source_file_indices: BTreeMap::new(),
+            source_documents: BTreeMap::new(),
             block_indices: BTreeMap::new(),
             speakers_by_id: BTreeMap::new(),
             blocks: Vec::new(),
@@ -184,6 +240,13 @@ impl<'a> AssetBuilder<'a> {
             )?);
             self.source_file_indices
                 .insert(input.source_file.path.as_str(), index);
+            self.source_documents.insert(
+                input.source_file.path.as_str(),
+                SourceDocumentIndex {
+                    source: input.source.as_str(),
+                    positions: SourcePositionIndex::new(&input.source),
+                },
+            );
         }
 
         Ok(())

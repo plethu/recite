@@ -121,7 +121,9 @@ if [[ -z "$node_bin" ]]; then
 fi
 
 "$node_bin" "$plugin_root/scripts/message-projections.mjs" --check
-"$node_bin" --test "$plugin_root/test/message-projections.test.mjs"
+"$node_bin" --test \
+  "$plugin_root/test/message-projections.test.mjs" \
+  "$plugin_root/test/diagnostic-projections.test.mjs"
 "$node_bin" "$plugin_root/scripts/diagnostic-projections.mjs"
 echo "Neovim UI message projection checks passed"
 

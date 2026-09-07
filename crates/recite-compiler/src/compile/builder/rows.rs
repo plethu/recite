@@ -111,13 +111,8 @@ impl AssetBuilder<'_> {
     }
 
     fn source_text_for_span(&self, span: &SourceSpan) -> Option<String> {
-        let source = self
-            .inputs
-            .iter()
-            .find(|input| input.source_file.path == span.file)?
-            .source
-            .as_str();
-        slice_source_span(source, span)
+        let document = self.source_documents.get(span.file.as_str())?;
+        slice_source_span(document.source, &document.positions, span)
     }
 
     pub(super) fn compile_match_arms(
@@ -290,11 +285,15 @@ impl AssetBuilder<'_> {
     }
 }
 
-fn slice_source_span(source: &str, span: &SourceSpan) -> Option<String> {
-    let start = byte_offset_for_position(source, span.start.line(), span.start.column())?;
+fn slice_source_span(
+    source: &str,
+    positions: &super::SourcePositionIndex,
+    span: &SourceSpan,
+) -> Option<String> {
+    let start = positions.byte_offset(span.start.line(), span.start.column())?;
     let end = span
         .end
-        .and_then(|end| byte_offset_after_position(source, end.line(), end.column()))
+        .and_then(|end| byte_offset_after_position(source, positions, end.line(), end.column()))
         .unwrap_or(start);
 
     if end < start {
@@ -304,29 +303,15 @@ fn slice_source_span(source: &str, span: &SourceSpan) -> Option<String> {
     source.get(start..end).map(str::to_owned)
 }
 
-fn byte_offset_after_position(source: &str, line: u32, column: u32) -> Option<usize> {
-    let start = byte_offset_for_position(source, line, column)?;
+fn byte_offset_after_position(
+    source: &str,
+    positions: &super::SourcePositionIndex,
+    line: u32,
+    column: u32,
+) -> Option<usize> {
+    let start = positions.byte_offset(line, column)?;
     let character = source.get(start..)?.chars().next()?;
     Some(start + character.len_utf8())
-}
-
-fn byte_offset_for_position(source: &str, line: u32, column: u32) -> Option<usize> {
-    let mut current_line = 1_u32;
-    let mut current_column = 1_u32;
-
-    for (index, character) in source.char_indices() {
-        if current_line == line && current_column == column {
-            return Some(index);
-        }
-        if character == '\n' {
-            current_line += 1;
-            current_column = 1;
-        } else {
-            current_column += 1;
-        }
-    }
-
-    (current_line == line && current_column == column).then_some(source.len())
 }
 
 fn lower_source_metadata_value(value: &SourceMetadataValue) -> Value {
@@ -351,3 +336,6 @@ fn lower_source_metadata_scalar(value: &SourceMetadataScalar) -> ScalarValue {
         SourceMetadataScalar::Bool(value) => ScalarValue::Boolean(*value),
     }
 }
+
+#[cfg(test)]
+mod tests;
