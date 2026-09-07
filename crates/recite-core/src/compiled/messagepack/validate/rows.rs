@@ -46,9 +46,11 @@ pub(super) fn validate_choices(
     mode: ValidationMode,
 ) -> Result<(), super::CompiledAssetDecodeError> {
     for choice in &dialogue.choices {
-        if choice.interpolation_mode == crate::CompiledInterpolationMode::Current
-            || mode == ValidationMode::Canonical
-        {
+        if choice.interpolation_mode == crate::CompiledInterpolationMode::Legacy {
+            if mode == ValidationMode::Canonical {
+                interpolation::validate_legacy_choice(choice)?;
+            }
+        } else {
             interpolation::validate_interpolation_row(
                 &choice.source_text,
                 &choice.authored_source_text,

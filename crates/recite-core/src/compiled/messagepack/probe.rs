@@ -42,6 +42,16 @@ pub fn messagepack_u16(bytes: &[u8], offset: &mut usize) -> Option<u16> {
             *offset += 2;
             Some(value)
         }
+        0xce => {
+            let value = u32::from_be_bytes(read_bytes(bytes, *offset)?);
+            *offset += 4;
+            u16::try_from(value).ok()
+        }
+        0xcf => {
+            let value = u64::from_be_bytes(read_bytes(bytes, *offset)?);
+            *offset += 8;
+            u16::try_from(value).ok()
+        }
         _ => None,
     }
 }

@@ -5,7 +5,7 @@ use serde::Deserialize;
 use super::CompiledAssetDecodeError;
 use crate::InterpolationType;
 use crate::compiled::CompiledInterpolationBinding;
-use crate::compiled::CompiledLine;
+use crate::compiled::{CompiledChoice, CompiledLine};
 
 #[derive(Deserialize)]
 pub(crate) struct MsgInterpolationBinding(pub(crate) String, pub(crate) String, pub(crate) String);
@@ -45,7 +45,10 @@ pub(crate) fn validate_line_interpolation_rows(
     line: &CompiledLine,
     canonical_wire: bool,
 ) -> Result<(), CompiledAssetDecodeError> {
-    if line.interpolation_mode == crate::CompiledInterpolationMode::Legacy && !canonical_wire {
+    if line.interpolation_mode == crate::CompiledInterpolationMode::Legacy {
+        if canonical_wire {
+            validate_legacy_line(line)?;
+        }
         return Ok(());
     }
     let ignored = if let (Some(_source_text), Some(authored_plural_source_text)) = (
@@ -94,6 +97,49 @@ pub(crate) fn validate_line_interpolation_rows(
             "compiled plural source text must include both decoded and authored forms".to_owned(),
         )),
     }
+}
+
+pub(crate) fn validate_legacy_choice(
+    choice: &CompiledChoice,
+) -> Result<(), CompiledAssetDecodeError> {
+    validate_legacy_row(
+        &choice.source_text,
+        &choice.authored_source_text,
+        &choice.interpolation_bindings,
+    )
+}
+
+fn validate_legacy_line(line: &CompiledLine) -> Result<(), CompiledAssetDecodeError> {
+    validate_legacy_row(
+        &line.source_text,
+        &line.authored_source_text,
+        &line.interpolation_bindings,
+    )?;
+    if line.plural_source_text.is_some() || line.authored_plural_source_text.is_some() {
+        return Err(CompiledAssetDecodeError::MalformedAsset(
+            "legacy interpolation rows cannot contain plural source text".to_owned(),
+        ));
+    }
+    Ok(())
+}
+
+fn validate_legacy_row(
+    source_text: &str,
+    authored_source_text: &str,
+    bindings: &[CompiledInterpolationBinding],
+) -> Result<(), CompiledAssetDecodeError> {
+    if source_text != authored_source_text {
+        return Err(CompiledAssetDecodeError::MalformedAsset(
+            "legacy interpolation rows require authored and decoded source text to match"
+                .to_owned(),
+        ));
+    }
+    if !bindings.is_empty() {
+        return Err(CompiledAssetDecodeError::MalformedAsset(
+            "legacy interpolation rows cannot contain interpolation bindings".to_owned(),
+        ));
+    }
+    Ok(())
 }
 
 fn plural_unused_bindings<'a>(

@@ -9,7 +9,7 @@ use recite_runtime::{
     DialogueEvent, DialogueSessionOptions, DialogueTrace, EmptyDialogueContext,
     InterpolationValueProvider, InterpolationValues, LocaleError, LocaleProvider, LocaleResolution,
     PluralResolution, PluralResolutionAttempt, PluralResolutionOutcome, TextDomain, choose,
-    next_with, start_scene, start_scene_with_options,
+    next_with, restore_session, snapshot_session, start_scene, start_scene_with_options,
 };
 
 fn asset() -> recite_core::CompiledDialogue {
@@ -488,9 +488,12 @@ fn legacy_wire_rows_preserve_braced_line_and_choice_text() {
     assert_eq!(choices[0].source_text, "Choose {unbound}.");
     assert_eq!(line.text, "Bonjour.");
     assert_eq!(choices[0].text, "Choisir.");
+    let snapshot = snapshot_session(&session);
+    let mut restored = restore_session(&asset, snapshot)
+        .unwrap_or_else(|error| panic!("legacy snapshot restores: {error}"));
     choose(
         &asset,
-        &mut session,
+        &mut restored,
         choices[0].id.clone(),
         &EmptyDialogueContext,
     )

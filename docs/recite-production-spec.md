@@ -2459,6 +2459,16 @@ Top-level and row arrays use this field order:
 - `CompiledChoice`: `[id, source_text, metadata, requirement,
   requirement_source_text, availability_reason_override, target, echo,
   source_map, authored_source_text, interpolation_bindings]`.
+
+Decoded v0 assets may also contain legacy interpolation rows from the original
+5-field `CompiledLine` shape (`id, source_text, speaker, metadata, source_map`)
+and 9-field `CompiledChoice` shape (the current choice fields through `echo`
+and `source_map`). The canonical encoder preserves those shapes when their
+compiled rows are marked `Legacy`; legacy rows retain literal placeholder text,
+have no interpolation bindings or plural fields, and require authored and
+decoded source text to match. Current rows keep their existing 9-field and
+11-field bytes. This is compatibility with already-supported v0 rows and does
+not require a format-version bump.
 - `CompiledAvailabilityReason`: `[id, template_source_text]`.
 - `CompiledConditionAvailabilityReason`: `[function, reason, args]`.
 - `CompiledAvailabilityReasonArgBinding`: `[name, value]`.
