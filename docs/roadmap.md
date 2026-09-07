@@ -420,7 +420,7 @@ remain authoritative if the tracker is split again.
 | Product Foundation and Maintainability | Complete (0 open; 8 closed milestone items; delivered by PR #174) | 17 |
 | Language, schema, and localisation readiness | Complete (0 open; 12 closed milestone items; delivered by PR #183 and correction PR #184) | 18 |
 | Shared authoring kernel and preview | Complete (0 open; 8 closed milestone items; delivered by PR #191; #167, #168, and #185 complete) | 19 |
-| Editor integration parity | In progress (2 open: #53 and #192; implementation delivered by PR #200 and bounded Linux host evidence by PR #204) | 20 |
+| Editor integration parity | Complete (0 open; 18 closed milestone items; delivered by PR #207 after PRs #198, #200, and #204) | 20 |
 | Native GUI strategy and accessibility proof | [#54 GUI strategy](https://github.com/plethu/recite/issues/54), [#123 accessibility requirements](https://github.com/plethu/recite/issues/123) (2 open) | 21 |
 | GUI workbench | [#170 GUI workbench](https://github.com/plethu/recite/issues/170) (1 open) | 22 |
 | Engine companions | #49, #83–#86, #132–#134 (8 open) | 23 |
@@ -437,15 +437,17 @@ and structured preview outcome and closed #187–#190. GitHub milestone 19 remai
 open with 0 open issues; this roadmap records the outcome without changing the
 tracker.
 
-M20 implementation landed on 2026-09-05. PR #200 delivered the remaining editor
-integration work after PR #198 established the first foundations; #97, #98, and
-the cross-cutting #197 follow-up are closed. PR #204 added bounded Linux x86_64
-activation, LSP, command/watch, and keyboard host records for VS Code,
-VSCodium, Neovim, and Zed, closing #51 and #202. The records keep unsupported
-operations explicit and do not claim non-Linux or broader accessibility
-evidence. #53 remains open for complete per-client command/task lifecycle
-parity, and #192 remains open for Zed's unproven/non-native semantic and task
-boundaries. The M20 exit gate therefore remains open.
+M20 is complete as of 2026-09-07 with 0 open and 18 closed milestone items. PR
+#200 delivered the remaining editor integration work after PR #198 established
+the first foundations, and PR #204 added bounded Linux x86_64 activation, LSP,
+command/watch, and keyboard host records for VS Code, VSCodium, Neovim, and Zed.
+PR #207 closed the remaining #53 and #192 acceptance gaps and completed the exit
+gate. The records keep unsupported operations explicit and do not claim
+non-Linux or broader accessibility evidence. Cooperative LSP request
+cancellation remains tracked by #206 in the serious-v1 milestone rather than as
+an editor-parity blocker. PR #210 later added bounded Helix configuration and
+host evidence plus a Ki evaluation without expanding the v1 parity contract or
+claiming Ki support.
 
 The post-v1 row is deliberately non-exhaustive: it records current open issues
 without a milestone, not every deferred capability. Generated host-language
@@ -463,12 +465,12 @@ at `636fa1b`; #167, #168, and #185 established the preceding configuration,
 discovery, and kernel seam. Editor Integration Parity implementation landed on
 2026-09-05 through PR #200 after PR #198 established the first editor
 foundations. PR #204 delivered bounded Linux host records and closed #51 and
-#202, while #53 and #192 remain open for their residual acceptance gaps; those
-closures do not pass the M20 exit gate. Native GUI Strategy and Accessibility
-Proof (milestone 21),
-tracked by #54 and #123, may proceed independently because completed editor
-clients are not its entry gate. Substantial language, runtime, CLI, LSP,
+#202; PR #207 closed #53 and #192 and completed the M20 exit gate on 2026-09-07.
+PR #210 subsequently added bounded Helix support and a Ki evaluation outside
+the v1 parity contract. Native GUI Strategy and Accessibility Proof (milestone
+21), tracked by #54 and #123, may proceed independently because completed
+editor clients are not its entry gate. Substantial language, runtime, CLI, LSP,
 benchmark, FFI, Godot, and Unity work already exists, but each area remains
 subject to its milestone exit gate. The largest remaining structural gaps are
-editor host evidence, the native GUI/accessibility decision, the GUI workbench,
-and the Godot, Unity, and Bevy companion and distribution paths.
+the native GUI/accessibility decision, the GUI workbench, and the Godot, Unity,
+and Bevy companion and distribution paths.
