@@ -6,9 +6,6 @@ use crate::adapter::{AdapterError, AdapterErrorKind};
 use crate::binding_types::ReciteOperationResult;
 use crate::catalog::ReciteDialogueCatalog;
 
-#[cfg(test)]
-mod tests;
-
 /// Godot-owned dialogue catalogue. Entries are copied into the resource and
 /// can be shared by any number of dialogue nodes.
 #[derive(GodotClass)]
@@ -18,9 +15,9 @@ pub struct ReciteDialogueCatalogResource {
     catalog: ReciteDialogueCatalog,
     /// Serializable Godot properties. The validated Rust catalogue is rebuilt
     /// from these fields after a Resource is deserialized.
-    #[var]
+    #[var(usage_flags = [STORAGE])]
     serialized_entries: VarArray,
-    #[var]
+    #[var(usage_flags = [STORAGE])]
     serialized_plural_forms: VarDictionary,
 }
 

@@ -182,6 +182,7 @@ int main(int argc, char **argv) {
     ReciteBuffer prompt_snapshot = {0};
     unsigned char *asset_bytes = NULL;
     size_t asset_len = 0;
+    const char *source_name;
 
     if (argc != 3 || !read_asset(argv[1], &asset_bytes, &asset_len)
         || !check_status(recite_asset_load(asset_bytes, asset_len,
@@ -190,7 +191,9 @@ int main(int argc, char **argv) {
         return 1;
     }
     free(asset_bytes);
-    if (snprintf(effect_id, sizeof(effect_id), "effect:%s:11:1#3", argv[2])
+    source_name = strrchr(argv[2], '/');
+    source_name = source_name == NULL ? argv[2] : source_name + 1;
+    if (snprintf(effect_id, sizeof(effect_id), "effect:%s:11:1#3", source_name)
         < 0 || strlen(effect_id) >= sizeof(effect_id) - 1) {
         recite_asset_free(asset);
         return 2;

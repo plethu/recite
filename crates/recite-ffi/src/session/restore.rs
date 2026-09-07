@@ -2,7 +2,7 @@ use std::collections::BTreeMap;
 use std::thread;
 
 use crate::asset::{alloc_handle, lock_assets};
-use crate::buffer::ReciteBuffer;
+use crate::buffer::{ReciteBuffer, checked_bytes};
 use crate::condition::FfiContext;
 use crate::error::{ReciteStatus, clear_condition_status, restore_status, set_last_error};
 use crate::interpolation::{ReciteInterpolationValue, parse_interpolation_values};
@@ -40,6 +40,10 @@ struct RestoreOutputs {
 ///
 /// # Safety
 /// All non-null pointer arguments must be valid for the duration of the call.
+/// `snapshot_bytes` must be non-null. When `snapshot_len` does not exceed the
+/// maximum value representable by Rust `isize`, it must be valid for that many
+/// bytes. Larger lengths are rejected with `RECITE_STATUS_VALIDATION` before
+/// the snapshot is read.
 #[unsafe(no_mangle)]
 pub unsafe extern "C" fn recite_session_restore(
     asset_handle: u64,
@@ -70,7 +74,10 @@ pub unsafe extern "C" fn recite_session_restore(
 ///
 /// # Safety
 /// All non-null pointer arguments, including each record's string pointers,
-/// must be valid for the duration of the call.
+/// must be valid for the duration of the call. `snapshot_bytes` must be
+/// non-null. When `snapshot_len` does not exceed the maximum value representable
+/// by Rust `isize`, it must be valid for that many bytes. Larger lengths are
+/// rejected with `RECITE_STATUS_VALIDATION` before the snapshot is read.
 #[unsafe(no_mangle)]
 pub unsafe extern "C" fn recite_session_restore_with_values(
     asset_handle: u64,
@@ -108,7 +115,11 @@ pub unsafe extern "C" fn recite_session_restore_with_values(
 /// Recite copies it before returning the resumption batch.
 ///
 /// # Safety
-/// All non-null pointers must be valid for the duration of the call. The
+/// All non-null pointers must be valid for the duration of the call.
+/// `snapshot_bytes` must be non-null. When `snapshot_len` does not exceed the
+/// maximum value representable by Rust `isize`, it must be valid for that many
+/// bytes. Larger lengths are rejected with `RECITE_STATUS_VALIDATION` before
+/// the snapshot is read. The
 /// callback must be a valid non-null function pointer, and `userdata` must
 /// remain valid for the restored session lifetime. Passing NULL as `callback`
 /// returns `RECITE_STATUS_VALIDATION` before a session is created.
@@ -160,7 +171,11 @@ pub unsafe extern "C" fn recite_session_restore_with_values_and_locale_provider(
 /// snapshot that needs a variant-specific catalog entry.
 ///
 /// # Safety
-/// All non-null pointers must be valid for the duration of the call. The
+/// All non-null pointers must be valid for the duration of the call.
+/// `snapshot_bytes` must be non-null. When `snapshot_len` does not exceed the
+/// maximum value representable by Rust `isize`, it must be valid for that many
+/// bytes. Larger lengths are rejected with `RECITE_STATUS_VALIDATION` before
+/// the snapshot is read. The
 /// callback must be a valid non-null function pointer, and `userdata` must
 /// remain valid for the restored session lifetime. Passing NULL as `callback`
 /// returns `RECITE_STATUS_VALIDATION` before a session is created.
@@ -228,7 +243,19 @@ unsafe fn restore_impl(request: RestoreRequest, outputs: RestoreOutputs) -> Reci
             }
         }
     };
-    let bytes = unsafe { std::slice::from_raw_parts(request.snapshot_bytes, request.snapshot_len) };
+    let bytes = match unsafe {
+        checked_bytes(
+            request.snapshot_bytes,
+            request.snapshot_len,
+            "snapshot bytes",
+        )
+    } {
+        Ok(bytes) => bytes,
+        Err(error) => {
+            set_last_error(&error);
+            return ReciteStatus::Validation;
+        }
+    };
     let mut session = match recite_runtime::decode_session_messagepack(&dialogue, bytes) {
         Ok(session) => session,
         Err(error) => {

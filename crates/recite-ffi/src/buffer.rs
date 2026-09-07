@@ -1,3 +1,29 @@
+/// Builds a borrowed byte slice from a C pointer after checking the length
+/// precondition required by `slice::from_raw_parts`.
+///
+/// The C ABI uses `size_t`, while Rust slices cannot represent an allocation
+/// larger than `isize::MAX`. Keeping this check in one helper prevents the
+/// asset and snapshot entrypoints from diverging on malformed host input.
+///
+/// # Safety
+/// When `length` does not exceed `isize::MAX`, `pointer` must be valid for
+/// `length` bytes. Larger lengths return an error before `pointer` is read.
+pub(crate) unsafe fn checked_bytes<'a>(
+    pointer: *const u8,
+    length: usize,
+    label: &str,
+) -> Result<&'a [u8], String> {
+    if pointer.is_null() {
+        return Err(format!("{label} pointer is null"));
+    }
+    if length > isize::MAX as usize {
+        return Err(format!("{label} length is too large"));
+    }
+    // SAFETY: the caller's C ABI contract requires `pointer` to be valid for
+    // `length` bytes; this helper has checked the remaining Rust slice bound.
+    Ok(unsafe { std::slice::from_raw_parts(pointer, length) })
+}
+
 /// Heap-allocated byte buffer returned by `recite-ffi`.
 ///
 /// The host must call `recite_buffer_free` exactly once after consuming the

@@ -84,6 +84,48 @@ fn invalid_handle_returns_error() {
     };
     assert_eq!(status, ReciteStatus::InvalidHandle);
 }
+
+#[test]
+fn asset_load_rejects_a_slice_larger_than_isize() {
+    let byte = 0_u8;
+    let mut handle = 0_u64;
+    let status =
+        unsafe { recite_asset_load(&raw const byte, isize::MAX as usize + 1, &raw mut handle) };
+
+    assert_eq!(status, ReciteStatus::Validation);
+    assert_eq!(handle, 0);
+}
+
+#[test]
+fn restore_rejects_a_snapshot_slice_larger_than_isize() {
+    let bytes = compile_to_bytes(concat!(
+        ":: start default\n",
+        "> hello@99990000000000000001\n",
+        "  Hello.\n",
+        "-> END\n",
+    ));
+    let mut asset = 0_u64;
+    let load_status = unsafe { recite_asset_load(bytes.as_ptr(), bytes.len(), &raw mut asset) };
+    assert_eq!(load_status, ReciteStatus::Ok);
+
+    let byte = 0_u8;
+    let mut session = 0_u64;
+    let mut batch = ReciteBuffer::null();
+    let status = unsafe {
+        recite_session_restore(
+            asset,
+            &raw const byte,
+            isize::MAX as usize + 1,
+            &raw mut session,
+            &raw mut batch,
+        )
+    };
+
+    assert_eq!(status, ReciteStatus::Validation);
+    assert_eq!(session, 0);
+    recite_asset_free(asset);
+}
+
 #[test]
 fn session_free_unknown_handle_is_noop() {
     recite_session_free(0xDEADBEEF_DEADBEEF);

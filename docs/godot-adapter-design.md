@@ -16,7 +16,7 @@ $ReciteDialogueNode.set_locale_catalog(catalog)
 $ReciteDialogueNode.start_with_variant(dialogue, "start", "fr-CA", "formal")
 ```
 
-The Resource stores entries and plural headers in exported serializable Godot
+The Resource stores entries and plural headers in serializable Godot
 properties. When a Resource is loaded, the Rust adapter rebuilds a validated,
 owned catalogue from those properties. Placeholder names must be preserved;
 plural entries must have exactly the rule's `nplurals` arms. Empty translated
@@ -31,9 +31,13 @@ No catalogue lookup or traversal operation performs game-side effects.
 
 Rust unit tests cover the catalogue's line, choice, availability-reason,
 presentation-label, plural, variant, fallback, placeholder, and restore
-semantics. The Resource source tests also cover malformed persisted array,
-dictionary, and plural shapes plus reload-before-mutation, but are marked
-host-required because Godot's `VarArray`/`VarDictionary` property
-serialisation requires an initialized Godot 4 host. The repository's headless
-Rust gate therefore cannot claim that engine-hosted save/load round-trip. Run a
-Godot-hosted conformance scene before shipping a Resource format change.
+semantics. The executable host conformance lane is
+`scripts/check-godot-host.sh`. It builds the GDExtension, compiles the basic
+dialogue fixture, initializes a clean Godot project, and exercises malformed
+persisted array/dictionary/plural shapes, reload-before-mutation, a `.tres`
+round trip, class registration, and output signal delivery. It uses the
+official Godot 4.6.3 stable Linux x86_64 standard build
+(`4.6.3.stable.official.7d41c59c4`), matching the crate's `api-4-6` feature;
+set `GODOT` to that binary when it is not on `PATH`. The ordinary Cargo lane
+remains host-independent, while this script is the required engine-hosted
+evidence before changing the Resource format.
