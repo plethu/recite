@@ -1,0 +1,28 @@
+# Recite language support for Helix.
+#
+# Copy this file to ~/.config/helix/languages.toml, or to
+# .helix/languages.toml for a project-local setup. The language server remains
+# the semantic authority; this file only registers the file type, syntax
+# grammar, and LSP process.
+
+use-grammars = { only = ["recite"] }
+
+[language-server.recite-lsp]
+command = "recite-lsp"
+args = []
+timeout = 20
+
+[[language]]
+name = "recite"
+language-id = "recite"
+scope = "source.recite"
+injection-regex = "recite"
+file-types = ["recite"]
+roots = ["recite.project.toml"]
+language-servers = ["recite-lsp"]
+grammar = "recite"
+indent = { tab-width = 2, unit = "  " }
+
+[[grammar]]
+name = "recite"
+source = { git = "https://github.com/plethu/recite", rev = "cb0e34a94709df290ebadcf371bcfd4e3ad587b1", subpath = "editors/recite-tree-sitter" }
