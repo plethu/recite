@@ -263,7 +263,7 @@ fn choice_selection_continuation_is_deterministic() {
 }
 
 #[test]
-fn malformed_choice_target_is_structured_error_and_keeps_prompt_pending() {
+fn malformed_choice_target_is_rejected_at_start_as_structured_error() {
     let mut asset = compile_asset(
         "dialogue/start.recite",
         concat!(
@@ -276,8 +276,32 @@ fn malformed_choice_target_is_structured_error_and_keeps_prompt_pending() {
         ),
     );
     asset.choices[0].target = CompiledDivertTarget::Block(BlockIndex::new(99));
-    let mut session = start_scene(&asset, None).expect("starts");
+    assert!(matches!(
+        start_scene(&asset, None),
+        Err(DialogueError::MalformedCompiledAsset { .. })
+    ));
+}
+
+#[test]
+fn malformed_choice_target_after_start_is_structured_error_and_keeps_prompt_pending() {
+    let mut asset = compile_asset(
+        "dialogue/start.recite",
+        concat!(
+            ":: start default\n",
+            "> prompt_line@b310fd8aa3baf5cdecce\n",
+            "  What next?\n",
+            "  ? ask_work@f0d4d54acca265cffc88\n",
+            "    Ask about work.\n",
+            "    -> work\n",
+            ":: work\n",
+            "> work_line@c6fec4a314d3e1c36a53\n",
+            "  Work waits.\n",
+            "-> END\n",
+        ),
+    );
+    let mut session = start_scene(&asset, None).expect("valid asset starts");
     next(&asset, &mut session).expect("emits prompt");
+    asset.blocks.truncate(1);
     let ask_work = ChoiceId::new("f0d4d54acca265cffc88").expect("valid choice ID");
 
     assert!(matches!(

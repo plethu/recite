@@ -140,7 +140,7 @@ fn mutable_candidate_interpolation_and_reason_invariants_are_transactional() {
     legacy_line.lines[0].source_text = "{missing}".to_owned();
     legacy_line.lines[0].authored_source_text = "{missing}".to_owned();
     legacy_line.lines[0].interpolation_mode = recite_core::CompiledInterpolationMode::Legacy;
-    assert_invalid_candidate(&active, &legacy_line);
+    assert_restart_required_candidate(&active, &legacy_line);
 
     let mut malformed_reason = active.clone();
     malformed_reason
@@ -178,4 +178,33 @@ fn assert_invalid_candidate(
         Err(recite_runtime::PreviewError::AssetRevisionFailed { .. })
     ));
     assert_eq!(preview.state(), &before);
+}
+
+fn assert_restart_required_candidate(
+    active: &recite_core::CompiledDialogue,
+    candidate: &recite_core::CompiledDialogue,
+) {
+    let Some(mut preview) = PreviewSession::new(active, None, PreviewOptions::new()).ok() else {
+        panic!("valid test fixture must create a preview session");
+    };
+    let before = preview.state().clone();
+    let output = match preview.assess_asset(candidate) {
+        Ok(output) => output,
+        Err(error) => panic!("canonical candidate must be assessed: {error}"),
+    };
+
+    assert!(matches!(
+        output.events(),
+        [PreviewEvent::RestartRequired { .. }]
+    ));
+    assert_eq!(preview.state().status(), before.status());
+    assert_eq!(
+        preview.state().selected_choice_history(),
+        before.selected_choice_history()
+    );
+    assert_eq!(
+        preview.state().deferred_effects(),
+        before.deferred_effects()
+    );
+    assert!(preview.state().restart_required().is_some());
 }
