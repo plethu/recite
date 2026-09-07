@@ -1,9 +1,11 @@
 # Recite language support for Helix.
 #
 # Copy this file to ~/.config/helix/languages.toml, or to
-# .helix/languages.toml for a project-local setup. The language server remains
-# the semantic authority; this file only registers the file type, syntax
-# grammar, and LSP process.
+# .helix/languages.toml for a project-local setup, only when that destination
+# is absent. If it exists, merge the Recite language-server, language, and
+# grammar tables and reconcile use-grammars as described in README.md. The
+# language server remains the semantic authority; this file only registers the
+# file type, syntax grammar, and LSP process.
 
 use-grammars = { only = ["recite"] }
 

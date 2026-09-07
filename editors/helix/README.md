@@ -7,18 +7,40 @@ validate, or compile Recite in Helix.
 
 ## Install from a checkout
 
-Copy the language configuration and query into the Helix user configuration
-directory:
+The shipped `languages.toml` is a standalone configuration: its
+`use-grammars = { only = ["recite"] }` setting scopes grammar fetch/build to
+the Recite entry for this isolated file. Do not copy it over an existing
+Helix configuration, because that would discard unrelated language servers,
+grammars, and user policy.
+
+For an absent user configuration, this guarded command installs the language
+file and Recite-specific query:
 
 ```sh
-mkdir -p ~/.config/helix/runtime/queries/recite
-cp /absolute/path/to/recite/editors/helix/languages.toml ~/.config/helix/languages.toml
-cp /absolute/path/to/recite/editors/helix/runtime/queries/recite/highlights.scm \
-  ~/.config/helix/runtime/queries/recite/highlights.scm
+config_dir="$HOME/.config/helix"
+config_file="$config_dir/languages.toml"
+query_file="$config_dir/runtime/queries/recite/highlights.scm"
+if [ -e "$config_file" ] || [ -L "$config_file" ]; then
+  echo "Refusing to overwrite $config_file; merge the Recite entries manually." >&2
+  exit 1
+fi
+if [ -e "$query_file" ] || [ -L "$query_file" ]; then
+  echo "Refusing to overwrite $query_file; inspect the existing Recite query first." >&2
+  exit 1
+fi
+mkdir -p "$(dirname "$query_file")"
+cp /absolute/path/to/recite/editors/helix/languages.toml "$config_file"
+cp /absolute/path/to/recite/editors/helix/runtime/queries/recite/highlights.scm "$query_file"
 ```
 
-For a project-local setup, copy `languages.toml` to `.helix/languages.toml`
-instead and set `HELIX_RUNTIME` to a runtime directory containing the query.
+If `languages.toml` already exists, stop and merge these three tables into it:
+`[language-server.recite-lsp]`, the `[[language]]` entry, and the `[[grammar]]`
+entry. Preserve the existing `use-grammars` policy; if it uses an `only` list,
+add `recite` to that list rather than replacing the list with only `recite`.
+The query is Recite-specific, but inspect an existing destination before
+replacing it. For a project-local setup, make the same guarded merge in
+`.helix/languages.toml` and set `HELIX_RUNTIME` to a runtime directory
+containing the query.
 
 The configured command is `recite-lsp`, resolved through `PATH`. For a
 checkout-local development binary, change `command` to an absolute path such
