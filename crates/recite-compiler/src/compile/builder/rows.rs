@@ -290,7 +290,7 @@ fn slice_source_span(
     positions: &super::SourcePositionIndex,
     span: &SourceSpan,
 ) -> Option<String> {
-    let start = positions.byte_offset(span.start.line(), span.start.column())?;
+    let start = positions.byte_offset(source, span.start.line(), span.start.column())?;
     let end = span
         .end
         .and_then(|end| byte_offset_after_position(source, positions, end.line(), end.column()))
@@ -309,7 +309,7 @@ fn byte_offset_after_position(
     line: u32,
     column: u32,
 ) -> Option<usize> {
-    let start = positions.byte_offset(line, column)?;
+    let start = positions.byte_offset(source, line, column)?;
     let character = source.get(start..)?.chars().next()?;
     Some(start + character.len_utf8())
 }

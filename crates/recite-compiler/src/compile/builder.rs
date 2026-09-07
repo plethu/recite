@@ -49,51 +49,39 @@ struct SourceDocumentIndex<'a> {
 }
 
 struct SourcePositionIndex {
-    lines: Vec<SourceLineIndex>,
-}
-
-struct SourceLineIndex {
-    character_starts: Vec<usize>,
-    end: usize,
-    terminated_by_newline: bool,
+    line_starts: Vec<usize>,
 }
 
 impl SourcePositionIndex {
     fn new(source: &str) -> Self {
-        let mut lines = vec![SourceLineIndex {
-            character_starts: Vec::new(),
-            end: 0,
-            terminated_by_newline: false,
-        }];
-
+        let mut line_starts = vec![0];
         for (offset, character) in source.char_indices() {
-            let current_line = lines.len() - 1;
-            let line = &mut lines[current_line];
-            line.character_starts.push(offset);
-            line.end = offset + character.len_utf8();
             if character == '\n' {
-                line.terminated_by_newline = true;
-                let next_line_start = line.end;
-                lines.push(SourceLineIndex {
-                    character_starts: Vec::new(),
-                    end: next_line_start,
-                    terminated_by_newline: false,
-                });
+                line_starts.push(offset + character.len_utf8());
             }
         }
 
-        Self { lines }
+        Self { line_starts }
     }
 
-    fn byte_offset(&self, line: u32, column: u32) -> Option<usize> {
-        let line = self
-            .lines
-            .get(usize::try_from(line.checked_sub(1)?).ok()?)?;
+    fn byte_offset(&self, source: &str, line: u32, column: u32) -> Option<usize> {
+        let line_index = usize::try_from(line.checked_sub(1)?).ok()?;
+        let line_start = *self.line_starts.get(line_index)?;
+        let line_end = self
+            .line_starts
+            .get(line_index + 1)
+            .copied()
+            .unwrap_or(source.len());
         let scalar = usize::try_from(column.checked_sub(1)?).ok()?;
-        line.character_starts.get(scalar).copied().or_else(|| {
-            (!line.terminated_by_newline && scalar == line.character_starts.len())
-                .then_some(line.end)
-        })
+        let line_source = source.get(line_start..line_end)?;
+        let is_final_line = line_index + 1 == self.line_starts.len();
+        if is_final_line && scalar == line_source.chars().count() {
+            return Some(line_end);
+        }
+        line_source
+            .char_indices()
+            .nth(scalar)
+            .map(|(offset, _)| line_start + offset)
     }
 }
 
