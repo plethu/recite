@@ -1,0 +1,58 @@
+[
+  {
+    "view": "script-light",
+    "logical_size": [
+      1200,
+      800
+    ],
+    "pixel_size": [
+      1600,
+      1067
+    ],
+    "floating": true,
+    "workspace": "isolated",
+    "capture": "foreign toplevel only"
+  },
+  {
+    "view": "script-dark",
+    "logical_size": [
+      1200,
+      800
+    ],
+    "pixel_size": [
+      1600,
+      1067
+    ],
+    "floating": true,
+    "workspace": "isolated",
+    "capture": "foreign toplevel only"
+  },
+  {
+    "view": "source-light",
+    "logical_size": [
+      1200,
+      800
+    ],
+    "pixel_size": [
+      1600,
+      1067
+    ],
+    "floating": true,
+    "workspace": "isolated",
+    "capture": "foreign toplevel only"
+  },
+  {
+    "view": "source-dark",
+    "logical_size": [
+      1200,
+      800
+    ],
+    "pixel_size": [
+      1600,
+      1067
+    ],
+    "floating": true,
+    "workspace": "isolated",
+    "capture": "foreign toplevel only"
+  }
+]

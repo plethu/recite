@@ -1,0 +1,30 @@
+[
+  {
+    "candidate": "floem",
+    "mapped": true,
+    "floating": true,
+    "size": [
+      1200,
+      800
+    ],
+    "workspace": "isolated",
+    "input_tested": false
+  },
+  {
+    "candidate": "gpui",
+    "mapped": true,
+    "floating": true,
+    "size": [
+      1200,
+      800
+    ],
+    "workspace": "isolated",
+    "input_tested": false
+  },
+  {
+    "candidate": "xilem",
+    "mapped": false,
+    "error": "xilem: no mapped window; see /home/mari/code/personal/recite/prototypes/gui-bakeoff/candidates/xilem/startup.log",
+    "input_tested": false
+  }
+]

@@ -1,0 +1,18 @@
+.recite-candidate { background: #f5f2ed; color: #322f2b; }
+.recite-candidate button { background: #ece8e2; color: #322f2b; border: 1px solid #827d75; box-shadow: none; }
+.recite-candidate button:focus-visible { outline: 3px solid #48634d; outline-offset: 2px; }
+.recite-candidate textview, .recite-candidate textview text { background: #fffdfa; color: #322f2b; font: 20px serif; }
+.recite-candidate textview.source, .recite-candidate textview.source text { font: 15px monospace; }
+.recite-candidate textview text selection { background: #e0e8dc; color: #322f2b; }
+.recite-candidate .brand { font: bold 28px serif; }
+.recite-candidate .heading { font: 28px serif; }
+.recite-candidate .passage { background: #fffdfa; padding: 20px; border-radius: 6px; }
+.recite-candidate .passage.choice { background: #f1d4bf; }
+.recite-candidate .prose { font: 20px serif; }
+.recite-candidate.dark .passage { background: #292a2d; }
+.recite-candidate.dark .passage.choice { background: #41332b; }
+.recite-candidate.dark { background: #202124; color: #eae7e1; }
+.recite-candidate.dark button { background: #303237; color: #eae7e1; border-color: #a29f99; }
+.recite-candidate.dark button:focus-visible { outline-color: #b4cba4; }
+.recite-candidate.dark textview, .recite-candidate.dark textview text { background: #292a2d; color: #eae7e1; }
+.recite-candidate.dark textview text selection { background: #3e4d40; color: #eae7e1; }

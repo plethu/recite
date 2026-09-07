@@ -239,7 +239,15 @@ without a GUI workbench; editor docs contain tested setup instructions.
 **Outcome:** Recite chooses its GUI strategy from evidence rather than
 framework enthusiasm.
 
-**Candidate lanes:**
+The accepted [visual language](gui-visual-language.md) and its browser-viewable
+reference define the common light/dark appearance and writer-facing authoring
+hierarchy. The [first executable slice](../prototypes/gui-bakeoff/README.md)
+records the Linux comparison. **Freya was selected on 2026-09-08** by the
+maintainer; see the [decision record](decisions/gui-framework.md). Further
+candidate implementation is parked. GPUI remains the fallback, and platform
+and accessibility acceptance remain open.
+
+**Historical candidate lanes (further comparison parked):**
 
 - unified Rust frontends, including Freya 0.5 RC, Floem, GPUI, and
   Xilem/Masonry candidates;
@@ -247,12 +255,13 @@ framework enthusiasm.
   separate `windows-reactor` Rust evaluation and experimental C#
   `Microsoft.UI.Reactor` fallback on Windows, and a
   Linux-native GTK/GtkSourceView path where that is the chosen host;
-- Avalonia using code-first C# as the primary non-Rust cross-platform control;
-- Qt, Flutter, Compose, Slint, and wxWidgets remain comparison baselines, not
+- Avalonia and Flutter remain comparison baselines following maintainer review
+  of authoring style and renderer tradeoffs;
+- Qt, Compose, Slint, and wxWidgets remain comparison baselines, not
   commitments. A candidate must earn its place through authoring and
   accessibility evidence, not only renderer reach or feature lists.
 
-The bake-off uses the same project, source, schema, catalog, and preview
+The original comparison plan uses the same project, source, schema, catalog, and preview
 fixtures. It measures source editing, undo/redo, external changes, diagnostics,
 schema completion, localisation preview, graph navigation, startup, memory,
 packaging, and maintenance boundaries. Non-Rust/native candidates must also

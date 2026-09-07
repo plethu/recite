@@ -1,0 +1,27 @@
+# Adapted from the public-domain Alice exchange in the Recite README.
+# Keep this comment and every existing ID when editing the dialogue.
+:: which_way default
+
+> alice_way_001@7701ceab59d2adfa057a speaker=alice
+  Would you tell me, please, which way I ought to go from here?
+
+> cat_way_001@e26ae3e6834c21c1b716 speaker=cheshire_cat portrait=grin
+  That depends a good deal on where you want to get to.
+
+? answer_anywhere@a6f46c2edbe8466b9bfd
+  I don't much care where.
+  -> anywhere
+
+? answer_garden@11111111111111111111
+  I would like to see the garden.
+  -> garden
+
+:: anywhere
+> cat_anywhere_001@a11b4b64dceda892c08e speaker=cheshire_cat
+  Then it doesn't matter which way you go.
+-> END
+
+:: garden
+> garden_001@22222222222222222222 speaker=alice
+  Then I shall try that way.
+-> END

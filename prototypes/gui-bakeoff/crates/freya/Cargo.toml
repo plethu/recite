@@ -1,0 +1,22 @@
+[package]
+name = "recite-bakeoff-freya"
+version.workspace = true
+edition.workspace = true
+rust-version.workspace = true
+license.workspace = true
+publish.workspace = true
+
+[dependencies]
+recite-bakeoff-grammar = { path = "../grammar" }
+freya = { version = "=0.5.0-rc.4", features = ["code-editor"] }
+recite-bakeoff-authoring.workspace = true
+
+recite-config = { path = "../../../../crates/recite-config" }
+tempfile = "3"
+thiserror = "2"
+
+[lints]
+workspace = true
+
+[dev-dependencies]
+freya-testing = "=0.5.0-rc.4"

@@ -1,0 +1,28 @@
+[package]
+name = "recite-bakeoff-gpui"
+version = "0.0.0"
+edition = "2024"
+license = "MIT OR Apache-2.0"
+publish = false
+
+[workspace]
+
+[dependencies]
+recite-bakeoff-authoring = { path = "../../crates/authoring" }
+gpui = { package = "gpui-pre", version = "=0.3.1" }
+gpui-platform = { package = "gpui-pre-platform", version = "=0.3.1", features = ["wayland"] }
+gpui-component = { version = "=0.6.0", features = ["tree-sitter"] }
+recite-bakeoff-grammar = { path = "../../crates/grammar" }
+
+[dev-dependencies]
+gpui = { package = "gpui-pre", version = "=0.3.1", features = ["test-support"] }
+
+[lints.rust]
+unsafe_code = "forbid"
+
+[lints.clippy]
+unwrap_used = "deny"
+expect_used = "deny"
+
+[profile.dev]
+debug = 0

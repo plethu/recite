@@ -3863,6 +3863,13 @@ localisation, and UTF-16 fixtures produce equivalent semantic answers.
 
 ### Milestone 5: Native GUI Strategy and Accessibility Proof
 
+**Maintainer decision, 2026-09-08:** Freya is selected. Further candidate
+implementation, including the unrun platform-native lanes, is parked under the
+[decision record](decisions/gui-framework.md). The exhaustive comparison portion
+of the exit gate below is superseded; accessibility and declared-platform
+acceptance remain outstanding. Early workbench implementation is authorized
+alongside those checks, without claiming milestone completion.
+
 **Outcome:** the standalone workbench strategy is selected from comparable
 authoring and accessibility evidence.
 
