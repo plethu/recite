@@ -45,7 +45,11 @@ the MPL source availability obligations described in the
 [Mozilla FAQ](https://www.mozilla.org/en-US/MPL/2.0/FAQ/).
 
 The complete check needs network access for dependency installation and the
-advisory database. Rust and Unity headless tests require no database or running
+advisory database. Its isolated fixture builds also need temporary disk space.
+If `/tmp` is a small RAM-backed filesystem, use `TMPDIR=/var/tmp just check`;
+the temporary directory must be outside the checkout so isolation checks and
+editor project discovery retain their intended boundaries.
+Rust and Unity headless tests require no database or running
 game. The complete adapter gate also runs a temporary headless Godot project;
 its pinned 4.6.3 host is provisioned by the scoped `mise.godot.toml` environment.
 That host lane currently requires Linux x86_64. Other platform-host and expensive
