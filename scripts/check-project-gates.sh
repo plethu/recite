@@ -128,6 +128,13 @@ if [[ -x "$repo_root/scripts/check-unity-adapter.sh" ]]; then
 fi
 
 echo
+echo "== Godot persistence and signal conformance =="
+(
+  cd "$repo_root"
+  just test-godot
+)
+
+echo
 echo "== cargo fmt --check =="
 (
   cd "$repo_root"

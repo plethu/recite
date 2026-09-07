@@ -57,7 +57,7 @@ test-watch-stress *args:
     cargo test --locked -p recite-cli --test watch_stress -- --ignored "$@"
 
 test-godot:
-    scripts/check-godot-host.sh
+    mise -E godot exec -- scripts/check-godot-host.sh
 
 test-editor-host client *args:
     case "$1" in neovim|vscode|zed) scripts/check-"$1"-host.sh "${@:2}" ;; *) echo 'Expected neovim, vscode, or zed' >&2; exit 2 ;; esac
