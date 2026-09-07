@@ -1,3 +1,4 @@
+mod dialogue;
 mod fingerprint;
 mod header;
 mod lookup;
@@ -6,6 +7,7 @@ mod rows;
 mod table;
 mod wire;
 
+pub use dialogue::CompiledDialogue;
 pub(crate) use fingerprint::canonical_blake3_fingerprint;
 pub use fingerprint::{
     BLAKE3_DIGEST_LEN, ContentFingerprint, FingerprintAlgorithm, FingerprintDigest,
@@ -27,7 +29,7 @@ pub use rows::{
     CompiledArgument, CompiledAvailabilityReason, CompiledAvailabilityReasonArgBinding,
     CompiledAvailabilityReasonArgValue, CompiledBlock, CompiledChoice, CompiledChoiceEcho,
     CompiledConditionAvailabilityReason, CompiledConditionCall, CompiledConditionExpression,
-    CompiledDialogue, CompiledDivertTarget, CompiledEffect, CompiledEffectMode,
+    CompiledDialoguePayload, CompiledDivertTarget, CompiledEffect, CompiledEffectMode,
     CompiledInterpolationBinding, CompiledInterpolationMode, CompiledLine, CompiledMatchArm,
     CompiledMatchPattern, CompiledMetadataEntry, CompiledSourceFile, CompiledSourceMapEntry,
     CompiledSpeaker, CompiledStatement, CompiledStatementKind,

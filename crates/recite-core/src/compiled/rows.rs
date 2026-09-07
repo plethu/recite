@@ -5,13 +5,13 @@ use crate::{
 
 use super::{
     BlockIndex, BlockLookupTable, ChoiceLookupTable, ChoiceRange, CompiledAssetHeader,
-    ContentFingerprint, EffectIndex, LineIndex, LineLookupTable, MatchArmRange, MetadataRange,
-    SourceFileIndex, SourceMapIndex, SpeakerIndex, StatementRange,
+    CompiledDialogue, ContentFingerprint, EffectIndex, LineIndex, LineLookupTable, MatchArmRange,
+    MetadataRange, SourceFileIndex, SourceMapIndex, SpeakerIndex, StatementRange,
 };
 
-/// Runtime-facing compiled dialogue asset.
+/// Runtime-facing compiled dialogue payload.
 #[derive(Clone, Debug, PartialEq)]
-pub struct CompiledDialogue {
+pub struct CompiledDialoguePayload {
     pub header: CompiledAssetHeader,
     pub default_block: BlockIndex,
     pub sources: Vec<CompiledSourceFile>,

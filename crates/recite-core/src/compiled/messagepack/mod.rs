@@ -104,6 +104,9 @@ pub fn decode_compiled_dialogue_messagepack(
 
     let dialogue = wire.try_into()?;
     validate_dialogue(&dialogue, ValidationMode::Decoded)?;
+    dialogue
+        .prime_content_fingerprint()
+        .map_err(|error| malformed(error.to_string()))?;
     Ok(dialogue)
 }
 

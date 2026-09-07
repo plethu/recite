@@ -4,10 +4,11 @@ use recite_core::{
     AvailabilityReasonArgBinding, BlockIndex, Choice, CompiledAssetHeader,
     CompiledAvailabilityReason, CompiledAvailabilityReasonArgBinding,
     CompiledAvailabilityReasonArgValue, CompiledBlock, CompiledChoice,
-    CompiledConditionAvailabilityReason, CompiledDialogue, CompiledEffect, CompiledLine,
-    CompiledMatchArm, CompiledMetadataEntry, CompiledSourceFile, CompiledSourceMapEntry,
-    CompiledSpeaker, CompiledStatement, DivertTarget, Effect, IfBranch, Line, ProjectSchema,
-    ScalarValue, SchemaLiteralValue, SourceFileIndex, SpeakerIndex, canonical_source_fingerprint,
+    CompiledConditionAvailabilityReason, CompiledDialogue, CompiledDialoguePayload, CompiledEffect,
+    CompiledLine, CompiledMatchArm, CompiledMetadataEntry, CompiledSourceFile,
+    CompiledSourceMapEntry, CompiledSpeaker, CompiledStatement, DivertTarget, Effect, IfBranch,
+    Line, ProjectSchema, ScalarValue, SchemaLiteralValue, SourceFileIndex, SpeakerIndex,
+    canonical_source_fingerprint,
 };
 
 use super::CompileError;
@@ -150,7 +151,7 @@ impl<'a> AssetBuilder<'a> {
         let availability_reasons = self.compile_availability_reasons();
         let condition_availability_reasons = self.compile_condition_availability_reasons()?;
 
-        Ok(CompiledDialogue {
+        CompiledDialogue::prepare(CompiledDialoguePayload {
             header: CompiledAssetHeader::messagepack_v0(
                 self.options.compiler_version,
                 self.options.asset_id,
@@ -174,6 +175,7 @@ impl<'a> AssetBuilder<'a> {
             line_lookup,
             choice_lookup,
         })
+        .map_err(|error| CompileError::Serialization(error.to_string()))
     }
 
     fn compile_availability_reasons(&self) -> Vec<CompiledAvailabilityReason> {
