@@ -64,9 +64,9 @@ def main() -> int:
         raise SystemExit("VS Code partial client evidence rows drifted from the checked package/live surface")
     for capability_id in expected_client_evidence:
         capability = capabilities[capability_id]
-        expected_follow_up = "#53" if capability_id.startswith("command.") else "#51"
-        if capability["follow_up"] != expected_follow_up:
-            raise SystemExit(f"{capability_id} must retain the VS Code evidence follow-up")
+        expected_evidence_issue = "#53" if capability_id.startswith("command.") else "#51"
+        if expected_evidence_issue not in capability.get("evidence_issues", []):
+            raise SystemExit(f"{capability_id} must retain historical evidence issue {expected_evidence_issue}")
         if not capability_id.startswith("command.") and "vscode-vsix" not in evidence_artifacts(capability["expected_evidence"]):
             raise SystemExit(f"{capability_id} must attribute package/live evidence to vscode-vsix")
 
@@ -85,6 +85,7 @@ def main() -> int:
         "editor.filetype.registration",
         "editor.keyboard.workflow",
         "editor.zed.syntax-projection",
+        "authoring.stable-id.operations",
     }
     actual_zed_evidence = {
         capability_id
@@ -98,8 +99,8 @@ def main() -> int:
         if "zed-extension" not in evidence_artifacts(capabilities[capability_id]["expected_evidence"]):
             raise SystemExit(f"{capability_id} must attribute package/static evidence to zed-extension")
     zed_syntax = capabilities["editor.zed.syntax-projection"]
-    if zed_syntax["follow_up"] != "#192":
-        raise SystemExit("editor.zed.syntax-projection must retain the Zed evidence follow-up")
+    if "#192" not in zed_syntax.get("evidence_issues", []):
+        raise SystemExit("editor.zed.syntax-projection must retain historical evidence issue #192")
     if zed_syntax["client_status"].get("vscode") != "planned":
         raise SystemExit("editor.zed.syntax-projection must not project Zed evidence to VS Code")
 
@@ -136,6 +137,7 @@ def main() -> int:
         "lsp.utf16.positions": "post-emoji UTF-16 completion request",
         "lsp.code-actions": "non-empty missing-ID quick fix",
         "lsp.rename": "exact two-edit workspace rename",
+        "authoring.stable-id.operations": "exact canonical missing-ID repair",
     }
     for capability_id, assertion in expected_zed_host_evidence.items():
         capability = capabilities[capability_id]
@@ -151,6 +153,12 @@ def main() -> int:
             raise SystemExit(f"{capability_id} must retain an installed Zed Linux host record")
         if assertion.lower() not in " ".join(evidence.get("assertions", [])).lower():
             raise SystemExit(f"{capability_id} must retain its positive Zed host assertion")
+
+    cancellation = capabilities["lsp.cancellation"]
+    if cancellation.get("follow_up") != "#206":
+        raise SystemExit("lsp.cancellation must retain current follow-up #206")
+    if set(cancellation.get("client_status", {}).values()) - {"planned", "unsupported"}:
+        raise SystemExit("lsp.cancellation must not claim client support before #206")
 
     if "installed vs code/vscodium activation smoke" not in document_path.read_text(encoding="utf-8").lower():
         raise SystemExit("editor parity docs must retain the missing host activation boundary")

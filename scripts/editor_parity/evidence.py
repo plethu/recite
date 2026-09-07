@@ -9,6 +9,9 @@ from .paths import require_no_symlink_components, require_repo_file
 
 HOST_RUNNER_PATTERN = re.compile(r"scripts/check-[a-z0-9][a-z0-9-]*-host\.sh")
 HOST_RECORD_DIRECTORY = Path("docs/evidence/editor-hosts")
+ISSUE_REFERENCE_PATTERN = re.compile(r"#[1-9][0-9]*")
+HISTORICAL_EVIDENCE_ISSUES = frozenset({"#51", "#53", "#98", "#192", "#202"})
+CURRENT_FOLLOW_UP_OWNERS = {"#206": "lsp.cancellation"}
 SHARED_HOST_CLIENTS = {
     "vscode": frozenset({"vscode", "vscodium"}),
 }
@@ -101,8 +104,50 @@ def validate_capabilities(ctx: Context, data: dict, scenario_map: dict, artifact
             ctx.require(status_kind == "implemented", f"capability {capability_id} may use known_limitation=none only when fully implemented")
         _validate_capability_status(ctx, capability_id, capability, status_kind, artifact_map, distribution_map, client_map)
         _validate_capability_evidence(ctx, capability_id, capability, status_kind, artifact_map, client_map)
-        follow_up = capability.get("follow_up", "")
-        ctx.require(isinstance(follow_up, str) and re.fullmatch(r"#[1-9][0-9]*", follow_up) is not None, f"capability {capability_id} must name a follow-up issue")
+        validate_issue_provenance(ctx, capability_id, capability)
+
+
+def validate_issue_provenance(ctx: Context, capability_id: str, capability: dict) -> None:
+    evidence_issues = capability.get("evidence_issues")
+    valid_evidence_issues = (
+        isinstance(evidence_issues, list)
+        and bool(evidence_issues)
+        and all(isinstance(issue, str) and ISSUE_REFERENCE_PATTERN.fullmatch(issue) for issue in evidence_issues)
+    )
+    ctx.require(valid_evidence_issues, f"capability {capability_id} must name non-empty historical evidence_issues")
+    if isinstance(evidence_issues, list):
+        string_issues = [issue for issue in evidence_issues if isinstance(issue, str)]
+        if len(string_issues) == len(evidence_issues):
+            ctx.require(
+                len(evidence_issues) == len(set(evidence_issues)),
+                f"capability {capability_id} evidence_issues must be unique",
+            )
+            for issue in string_issues:
+                ctx.require(
+                    issue in HISTORICAL_EVIDENCE_ISSUES,
+                    f"capability {capability_id} evidence_issues must name closed historical issues, not {issue}",
+                )
+    follow_up = capability.get("follow_up")
+    if follow_up is None:
+        return
+    valid_follow_up = isinstance(follow_up, str) and ISSUE_REFERENCE_PATTERN.fullmatch(follow_up) is not None
+    ctx.require(valid_follow_up, f"capability {capability_id} follow_up must be a valid issue reference when present")
+    if not valid_follow_up:
+        return
+    ctx.require(
+        follow_up not in HISTORICAL_EVIDENCE_ISSUES,
+        f"capability {capability_id} follow_up {follow_up} is historical; use evidence_issues",
+    )
+    owner = CURRENT_FOLLOW_UP_OWNERS.get(follow_up)
+    ctx.require(
+        owner == capability_id,
+        f"capability {capability_id} follow_up {follow_up} belongs to {owner or 'no current capability owner'}",
+    )
+    if isinstance(evidence_issues, list):
+        ctx.require(
+            follow_up not in evidence_issues,
+            f"capability {capability_id} follow_up must not duplicate evidence_issues",
+        )
 
 
 def _validate_capability_status(ctx: Context, capability_id: str, capability: dict, status: str, artifact_map: dict, distribution_map: dict, client_map: dict) -> None:
@@ -115,6 +160,12 @@ def _validate_capability_status(ctx: Context, capability_id: str, capability: di
         if isinstance(value, str) and value in {"partial", "implemented"} and client_id in client_map:
             client_status_value = client_map[client_id].get("status")
             ctx.require(isinstance(client_status_value, str) and client_status_value in {"partial", "implemented"}, f"capability {capability_id} overstates {client_id} while its client remains planned")
+    if status == "unsupported" and isinstance(client_status, dict):
+        for client_id, value in client_status.items():
+            ctx.require(
+                isinstance(value, str) and value in {"planned", "unsupported"},
+                f"unsupported capability {capability_id} cannot claim {client_id} status {value}",
+            )
     platform_status = capability.get("platform_status") or {}
     ctx.require(isinstance(platform_status, dict) and set(platform_status) == ctx.platforms, f"capability {capability_id} must name every platform exactly once")
     for platform, value in platform_status.items() if isinstance(platform_status, dict) else []:

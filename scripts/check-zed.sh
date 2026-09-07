@@ -222,6 +222,7 @@ expected_partial = {
     "lsp.references",
     "lsp.code-actions",
     "lsp.rename",
+    "authoring.stable-id.operations",
     "command.compile.validate.extract",
     "command.watch.lifecycle",
     "editor.keyboard.workflow",

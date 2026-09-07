@@ -72,9 +72,9 @@ The current server handles stale versions synchronously and does not yet
 implement `$/cancelRequest` or an asynchronous request scheduler. Cancellation
 is therefore an explicit unsupported/planned capability in this contract;
 clients must not claim cancellation support or infer it from a request timeout.
-Issue #53 owns the command/watch lifecycle. Issue #206 owns future LSP request
-cancellation as a serious-v1 scheduler/performance capability, not M4
-command/watch work.
+The historical #53 command/watch evidence covers that lifecycle. Issue #206
+owns future LSP request cancellation as a serious-v1 scheduler/performance
+capability, not M4 command/watch work.
 
 ## Evidence input boundary
 
@@ -145,13 +145,20 @@ slice; native task/workbench affordances remain a separate host surface.
 
 The checked-in fixture gives each capability a stable ID, semantic authority,
 protocol, canonical scenario, expected structured evidence, edge cases, client
-and platform status, and owning follow-up. The rows below are the normative
-capability set; the checker rejects drift between this document and the JSON
-fixture. A record's `artifact` is its primary artifact; an optional `artifacts`
-array names the complete supporting set, must be unique, and must include the
-primary artifact. A partial client may have a partial or implemented primary;
-an implemented client and any partial or implemented distribution require an
-implemented primary artifact.
+and platform status, and issue provenance. `evidence_issues` records historical
+issues that owned or tracked the evidence; optional `follow_up` is reserved for
+a genuinely outstanding issue and must not repeat an evidence issue. The rows
+below are the normative capability set; the checker rejects drift between this
+document and the JSON fixture. A record's `artifact` is its primary artifact;
+an optional `artifacts` array names the complete supporting set, must be unique,
+and must include the primary artifact. A partial client may have a partial or
+implemented primary; an implemented client and any partial or implemented
+distribution require an implemented primary artifact.
+
+The accepted issue references `#51`, `#53`, `#98`, `#192`, and `#202` are
+historical evidence trackers, not outstanding owners. The current fixture's
+only `follow_up` is `#206`, which tracks future cooperative LSP cancellation;
+an issue cannot appear in both fields.
 
 - `lsp.initialize.capabilities`: advertise the supported sync, UTF-16, and LSP feature capabilities from the real server; installed VS Code/VSCodium and Zed Linux host crossings are recorded.
 - `lsp.publish.diagnostics`: publish structured diagnostics for malformed source through the real LSP transport; installed Linux projection is recorded for all four clients.
@@ -159,7 +166,7 @@ implemented primary artifact.
 - `lsp.utf16.positions`: preserve ranges across CRLF and non-BMP source text; the installed-host record includes the Zed client-generated post-emoji UTF-16 request, while response-range conversion remains unclaimed.
 - `lsp.overlay.recovery`: accept an incomplete overlay, then refresh it when a newer complete overlay arrives; installed VS Code/VSCodium recovery is recorded.
 - `lsp.stale.version`: refuse an older document version without replacing the current overlay or publishing stale evidence.
-- `lsp.cancellation`: document the current unsupported cancellation surface and its owner rather than claiming a timeout is cancellation.
+- `lsp.cancellation`: document the current unsupported cancellation surface, its historical evidence issue, and its outstanding `#206` follow-up rather than claiming a timeout is cancellation.
 - `command.structured.results`: project typed/versioned finite CLI command records through the shared VS Code/VSCodium and Neovim adapters; no human stderr/output parsing is permitted.
 - `editor.filetype.registration`: exercise `.recite` activation and file association through the checked-in Neovim runtimepath, VS Code/VSCodium package, and Zed language package projections; installed Linux activation is recorded for each client.
 - `editor.vscode.syntax-projection`: project the checked-in syntax-only TextMate grammar and deterministic VSIX for VS Code/VSCodium; installed activation is covered but rendered syntax and non-Linux platforms remain untested.
@@ -173,12 +180,12 @@ implemented primary artifact.
 - `lsp.code-actions`: project source-preserving stable-ID repairs from the shared kernel; installed VS Code/VSCodium and Zed application is recorded, including the exact Zed missing-ID edit.
 - `workspace.project.discovery`: discover canonical sibling sources under the configured project root.
 - `workspace.configuration`: keep root and project configuration ownership outside client semantics.
-- `authoring.stable-id.operations`: reserve the shared-kernel missing-ID repair; installed VS Code/VSCodium application is recorded, while broader stable-ID edit preconditions remain incomplete.
+- `authoring.stable-id.operations`: reserve the shared-kernel missing-ID repair; installed VS Code/VSCodium and Zed application is recorded, while Neovim application and broader stable-ID edit preconditions remain untested.
 - `schema.localisation.resolution`: project the current compiler catalogue identity/fingerprint and CLI locale-fallback evidence; combined LSP schema/catalogue provenance remains planned.
 - `command.compile.validate.extract`: exercise version-1 structured compile, validate, and extract records through the local-first VS Code/VSCodium and Neovim command adapters; installed VS Code/VSCodium and Neovim finite command evidence and Zed exact static task argv/cwd/status are recorded, while Zed does not parse task records into diagnostics.
 - `command.run.trace`: exercise version-1 structured runtime and trace records through the local-first VS Code/VSCodium and Neovim command adapters; installed VS Code/VSCodium and Neovim hosts project valid run/trace records, while Zed built-in run/trace remains unsupported because the required asset, block, and fixture are explicit inputs.
 - `command.watch.lifecycle`: exercise the version-1 watch wire, argv/cwd process boundary, cooperative cancel, bounded recovery, and typed diagnostic replacement through the VS Code/VSCodium and Neovim adapters; installed Linux start/stop evidence is recorded for VS Code/VSCodium, Neovim, and Zed, with Zed's genuine terminal Ctrl-C boundary explicit and no parsed diagnostic controller or native cancellation controller.
-- `editor.keyboard.workflow`: prove installed-host activation plus the required keyboard-only workflow in named installed VS Code/VSCodium, Neovim, and Zed hosts: reach and navigate diagnostics, invoke supported authoring commands, observe status/failure, and stop a running watch where the host exposes that workflow. The VS Code/VSCodium lane sends `Ctrl+1`, `Ctrl+P`, types `scratch/invalid.recite`, and presses `Return`, then asserts the active URI, `recite` language, and extension activation before using Problems/`F8` and the supported commands. The Linux evidence is recorded under closed issue #202; package, source, and headless protocol checks are not installed-host keyboard evidence.
+- `editor.keyboard.workflow`: prove installed-host activation plus the required keyboard-only workflow in named installed VS Code/VSCodium, Neovim, and Zed hosts: reach and navigate diagnostics, invoke supported authoring commands, observe status/failure, and stop a running watch where the host exposes that workflow. The VS Code/VSCodium lane sends `Ctrl+1`, `Ctrl+P`, types `scratch/invalid.recite`, and presses `Return`, then asserts the active URI, `recite` language, and extension activation before using Problems/`F8` and the supported commands. The Linux evidence is recorded under closed issue #202; package, source, and headless protocol checks are not installed-host keyboard evidence. The bounded Zed key sequence intentionally keeps operation-specific LSP UI actions in the dedicated palette sequence recorded by the `lsp.code-actions` and `lsp.rename` rows.
 
 Executable evidence covers the shared LSP operations, project-root discovery,
 the bounded stable-ID repair, compiler catalogue fallback, the compiler's
@@ -312,6 +319,8 @@ platform claim.
   cancellation controller, or ship built-in run/trace tasks because their
   asset, block, and fixture inputs are explicit. Those are documented client
   limits, not missing M4 evidence.
+- LSP request cancellation remains unsupported and belongs to #206 as a
+  serious-v1 scheduler/performance capability, not M4 command/watch work.
 - #192 package, activation, grammar, installed LSP, keyboard, and task
   acceptance is covered on Zed 1.18.1 Linux x86_64. The host sent the
   client-generated post-emoji UTF-16 request, applied the canonical missing-ID
