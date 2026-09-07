@@ -186,9 +186,9 @@ production suppressions must carry a narrow scope and rationale.
 | `crates/recite-ffi/tests/localisation.rs` | 368 | test/support | ffi/tests | cohesive | #166: shared locale callback fixtures and translated/fallback traversal coverage |
 | `crates/recite-ffi/src/session/start.rs` | 343 | production | ffi/session | cohesive | #166: provider-backed start ownership and rollback remain one cohesive session boundary |
 | `crates/recite-ffi/src/locale/provider.rs` | 273 | production | ffi/locale | cohesive | #166: owned callback provider request and result parsing remain one cohesive FFI boundary |
-| `crates/recite-ffi/src/session/restore.rs` | 284 | production | ffi/session | review | #166: provider-backed restore ownership and rollback boundary |
+| `crates/recite-ffi/src/session/restore.rs` | 311 | production | ffi/session | review | #166: provider-backed restore ownership and rollback boundary |
 | `crates/recite-godot/src/catalog.rs` | 313 | production | godot | review | #166: owned locale catalogue and deterministic provider resolution |
-| `crates/recite-godot/src/catalog_resource.rs` | 389 | production | godot | review | #166: serializable Resource catalogue boundary and validated rebuild |
+| `crates/recite-godot/src/catalog_resource.rs` | 386 | production | godot | review | #166: serializable Resource catalogue boundary and validated rebuild |
 | `crates/recite-runtime/tests/interpolation.rs` | 365 | test/support | runtime/tests | review | #180: typed interpolation and plural provider scenarios remain grouped around runtime delivery |
 | `crates/recite-compiler/tests/asset.rs` | 640 | test/support | compiler/tests | exception | #89: retain the shared compiled-asset fixture entry point for the wire contract guard |
 | `crates/recite-ffi/tests/snapshots.rs` | 422 | test/support | ffi/tests | cohesive | #171: session snapshot and restore contract coverage |
