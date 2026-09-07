@@ -104,6 +104,23 @@ def main() -> int:
     if zed_syntax["client_status"].get("vscode") != "planned":
         raise SystemExit("editor.zed.syntax-projection must not project Zed evidence to VS Code")
 
+    expected_zed_lsp_provenance = {
+        "lsp.initialize.capabilities",
+        "lsp.publish.diagnostics",
+        "lsp.completion.navigation",
+        "lsp.utf16.positions",
+        "lsp.completion",
+        "lsp.definition",
+        "lsp.hover",
+        "lsp.references",
+        "lsp.rename",
+        "lsp.code-actions",
+        "authoring.stable-id.operations",
+    }
+    for capability_id in expected_zed_lsp_provenance:
+        if "#192" not in capabilities[capability_id].get("evidence_issues", []):
+            raise SystemExit(f"{capability_id} must retain historical evidence issue #192 for Zed host evidence")
+
     expected_zed_command_status = {
         "command.compile.validate.extract": "partial",
         "command.run.trace": "unsupported",
@@ -142,6 +159,8 @@ def main() -> int:
     for capability_id, assertion in expected_zed_host_evidence.items():
         capability = capabilities[capability_id]
         evidence = capability["expected_evidence"]
+        if "#192" not in capability.get("evidence_issues", []):
+            raise SystemExit(f"{capability_id} must retain historical evidence issue #192 for Zed host evidence")
         if "scripts/check-zed-host.sh" not in evidence.get("commands", []):
             raise SystemExit(f"{capability_id} must retain installed Zed host evidence")
         records = evidence.get("host_records", [])
@@ -155,6 +174,10 @@ def main() -> int:
             raise SystemExit(f"{capability_id} must retain its positive Zed host assertion")
 
     cancellation = capabilities["lsp.cancellation"]
+    if cancellation.get("implementation_status") != "unsupported":
+        raise SystemExit("lsp.cancellation implementation status must remain unsupported until #206")
+    if cancellation.get("expected_evidence", {}).get("status") != "unsupported":
+        raise SystemExit("lsp.cancellation evidence status must remain unsupported until #206")
     if cancellation.get("follow_up") != "#206":
         raise SystemExit("lsp.cancellation must retain current follow-up #206")
     if set(cancellation.get("client_status", {}).values()) - {"planned", "unsupported"}:

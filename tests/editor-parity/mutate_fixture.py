@@ -173,6 +173,12 @@ def main() -> int:
         record(contract, "capabilities", "lsp.cancellation")["follow_up"] = "#53"
     elif mutation == "cancellation-status-inflation":
         record(contract, "capabilities", "lsp.cancellation")["client_status"]["neovim"] = "partial"
+    elif mutation == "cancellation-status-bypass":
+        capability = record(contract, "capabilities", "lsp.cancellation")
+        capability["implementation_status"] = "planned"
+        capability["client_status"]["neovim"] = "partial"
+    elif mutation == "cancellation-evidence-status":
+        record(contract, "capabilities", "lsp.cancellation")["expected_evidence"]["status"] = "planned"
     elif mutation == "zed-code-action-support":
         record(contract, "capabilities", "lsp.code-actions")["client_status"]["zed"] = "unsupported"
     elif mutation == "zed-rename-support":
@@ -250,6 +256,8 @@ def main() -> int:
         record(contract, "capabilities", "editor.keyboard.workflow")["expected_evidence"]["host_records"][0]["keyboard"]["process_leak_check"] = False
     elif mutation == "stable-id-zed-support":
         record(contract, "capabilities", "authoring.stable-id.operations")["client_status"]["zed"] = "planned"
+    elif mutation == "zed-lsp-provenance":
+        record(contract, "capabilities", "lsp.code-actions")["evidence_issues"] = ["#51"]
     elif mutation == "keyboard-host-missing-client-platform":
         set_keyboard_host_evidence(contract)
         capability = record(contract, "capabilities", "editor.keyboard.workflow")

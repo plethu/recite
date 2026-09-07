@@ -19,6 +19,11 @@ KEYBOARD_CAPABILITY_ID = "editor.keyboard.workflow"
 KEYBOARD_EVIDENCE_ISSUE = "#202"
 CANCELLATION_CAPABILITY_ID = "lsp.cancellation"
 CANCELLATION_FOLLOW_UP = "#206"
+ZED_LSP_EVIDENCE_ISSUE = "#192"
+ZED_NON_LSP_EVIDENCE_CAPABILITY_IDS = {
+    "editor.zed.syntax-projection",
+    "authoring.stable-id.operations",
+}
 ZED_HOST_CAPABILITY_ASSERTIONS = {
     "lsp.utf16.positions": "post-emoji utf-16 completion request",
     "lsp.code-actions": "non-empty missing-id quick fix",
@@ -374,6 +379,26 @@ def validate_zed_host_contract(ctx: Context, capabilities: dict) -> None:
             assertion_fragment in assertion_text,
             f"{capability_id} must retain Zed assertion {assertion_fragment!r}",
         )
+    for capability_id, capability in capabilities.items():
+        if not isinstance(capability, dict):
+            continue
+        if not (capability_id.startswith("lsp.") or capability_id in ZED_NON_LSP_EVIDENCE_CAPABILITY_IDS):
+            continue
+        evidence = capability.get("expected_evidence")
+        records = evidence.get("host_records") if isinstance(evidence, dict) else None
+        has_zed_host_record = isinstance(records, list) and any(
+            isinstance(record, dict)
+            and record.get("client") == "zed"
+            and record.get("platform") == "linux"
+            for record in records
+        )
+        if not has_zed_host_record:
+            continue
+        evidence_issues = capability.get("evidence_issues")
+        ctx.require(
+            isinstance(evidence_issues, list) and ZED_LSP_EVIDENCE_ISSUE in evidence_issues,
+            f"{capability_id} must retain historical evidence issue {ZED_LSP_EVIDENCE_ISSUE} for Zed host evidence",
+        )
 
 
 def validate_cancellation_contract(ctx: Context, capabilities: dict) -> None:
@@ -381,6 +406,15 @@ def validate_cancellation_contract(ctx: Context, capabilities: dict) -> None:
     ctx.require(isinstance(capability, dict), f"contract must contain {CANCELLATION_CAPABILITY_ID}")
     if not isinstance(capability, dict):
         return
+    ctx.require(
+        capability.get("implementation_status") == "unsupported",
+        f"{CANCELLATION_CAPABILITY_ID} implementation_status must remain unsupported until {CANCELLATION_FOLLOW_UP}",
+    )
+    evidence = capability.get("expected_evidence")
+    ctx.require(
+        isinstance(evidence, dict) and evidence.get("status") == "unsupported",
+        f"{CANCELLATION_CAPABILITY_ID} expected_evidence.status must remain unsupported until {CANCELLATION_FOLLOW_UP}",
+    )
     follow_up = capability.get("follow_up")
     ctx.require(
         follow_up == CANCELLATION_FOLLOW_UP,

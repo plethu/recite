@@ -160,11 +160,11 @@ def _validate_capability_status(ctx: Context, capability_id: str, capability: di
         if isinstance(value, str) and value in {"partial", "implemented"} and client_id in client_map:
             client_status_value = client_map[client_id].get("status")
             ctx.require(isinstance(client_status_value, str) and client_status_value in {"partial", "implemented"}, f"capability {capability_id} overstates {client_id} while its client remains planned")
-    if status == "unsupported" and isinstance(client_status, dict):
+    if status in {"planned", "unsupported"} and isinstance(client_status, dict):
         for client_id, value in client_status.items():
             ctx.require(
                 isinstance(value, str) and value in {"planned", "unsupported"},
-                f"unsupported capability {capability_id} cannot claim {client_id} status {value}",
+                f"{status} capability {capability_id} cannot claim {client_id} status {value}",
             )
     platform_status = capability.get("platform_status") or {}
     ctx.require(isinstance(platform_status, dict) and set(platform_status) == ctx.platforms, f"capability {capability_id} must name every platform exactly once")
