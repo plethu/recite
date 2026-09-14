@@ -20,7 +20,7 @@ def main():
     parser = argparse.ArgumentParser(description=__doc__)
     parser.add_argument("candidate", choices=("freya", "gpui"))
     parser.add_argument("--smoke", action="store_true", help="Verify placement and close without interaction.")
-    parser.add_argument("--project", type=Path, help="Open Freya's file-backed mode with this path pre-filled.")
+    parser.add_argument("--project", type=Path, help="Open Freya's file-backed mode at this path.")
     args = parser.parse_args()
     if args.project and args.candidate != "freya":
         parser.error("--project is only available for the selected Freya entry")
@@ -56,7 +56,7 @@ def main():
             if process.poll() is not None:
                 raise RuntimeError("Writer exited during startup check")
         else:
-            print(f"Switch when ready: hyprctl dispatch workspace name:{identity}", flush=True)
+            print(f"Switch when ready: hyprctl eval 'hl.dispatch(hl.dsp.focus({{workspace=\"name:{identity}\"}}))'", flush=True)
             print("Close the window or press Ctrl+C here to end the session.", flush=True)
             if process.wait() != 0:
                 raise RuntimeError("Writer exited unsuccessfully")

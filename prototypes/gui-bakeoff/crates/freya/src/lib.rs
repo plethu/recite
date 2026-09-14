@@ -1,12 +1,19 @@
+mod closing;
 mod editing;
 mod files;
 mod palette;
+mod passage_menu;
 mod project;
+mod project_context;
+mod recovery;
+pub use closing::request_close;
+mod field;
+mod preview_panel;
 mod scene;
 
-use editing::{editor_data, perform};
-use freya::{code_editor::*, prelude::*};
-use recite_bakeoff_authoring::{FIXTURE, PassageKind, View, Workbench};
+use editing::editor_data;
+use freya::prelude::*;
+use recite_bakeoff_authoring::{FIXTURE, View, Workbench};
 
 pub fn app() -> Element {
     workbench(false)
@@ -21,8 +28,8 @@ fn workbench(file_backed: bool) -> Element {
     let mut model = use_state(|| Workbench::new(FIXTURE));
     let mut dark = use_state(|| false);
     let mut theme = use_init_theme(|| palette::theme(false));
-    let message = use_state(|| "Choose a passage and start writing.".to_owned());
-    let mut details = use_state(|| false);
+    let message = use_state(String::new);
+    let details = use_state(|| false);
     let mut editor = use_state(move || {
         let state = model.peek();
         editor_data(state.as_ref().map_or("", Workbench::draft), false, false)
@@ -52,102 +59,147 @@ fn workbench(file_backed: bool) -> Element {
             session.set_draft(draft);
         }
     });
-    let file_controls = if file_backed {
-        files::controls(
-            files::Buffers {
-                model,
-                editor,
-                prose,
-            },
-            message,
-            *dark.read(),
-        )
-    } else {
-        rect().into_element()
-    };
     let editor_id = use_a11y();
+    let buffers = files::Buffers {
+        model,
+        editor,
+        prose,
+    };
+    let night = *dark.read();
+    let writer = editing::Writer {
+        buffers,
+        message,
+        dark: night,
+    };
+    let mut preview_visible = use_state(|| false);
+    let mut navigation_visible = use_state(|| true);
+    let file_chrome = file_backed.then(|| files::controls(buffers, message, night));
     let state = model.read();
     let session = match state.as_ref() {
         Ok(session) => session,
         Err(error) => return label().text(error.to_string()).into_element(),
     };
-    let source = matches!(session.view(), View::Source);
-    let night = *dark.read();
+    let source = session.view() == &View::Source;
     let colors = theme.read().colors.clone();
-    let selected = session.selected().ok().flatten();
-    let heading = selected
-        .as_ref()
-        .map_or("Source".to_owned(), |p| match p.kind {
-            PassageKind::Dialogue { .. } => "Dialogue".to_owned(),
-            PassageKind::Choice { .. } => "Player choice".to_owned(),
-        });
+    let scene_name = palette::display_name(session.document().key().as_str());
     let mut navigation = rect()
-        .width(Size::px(240.))
-        .spacing(8.)
+        .width(Size::px(208.))
+        .height(Size::fill())
         .padding(16.)
-        .child(label().text("Crossroads").font_size(22.));
-    match session.document().passages() {
-        Ok(passages) => {
-            for passage in passages {
-                let id = passage.id.clone();
-                let text = match passage.kind {
-                    PassageKind::Dialogue { speaker } => {
-                        speaker.unwrap_or_else(|| "Narration".to_owned())
-                    }
-                    PassageKind::Choice { .. } => format!(
-                        "Choice: {}",
-                        passage.text.chars().take(28).collect::<String>()
-                    ),
-                };
-                navigation = navigation.child(
-                    Button::new()
-                        .on_press(move |_| {
-                            perform(model, editor, message, prose, night, |m| {
-                                m.select(View::Passage(id.clone()))
-                            })
-                        })
-                        .child(label().text(format!(
-                            "{} · {}",
-                            passage.section.replace('_', " "),
-                            text.replace('_', " ")
-                        ))),
-                );
-            }
-        }
-        Err(error) => navigation = navigation.child(label().text(error.to_string())),
+        .spacing(16.)
+        .child(
+            label()
+                .text("Scenes")
+                .color(colors.text_secondary)
+                .font_size(14.),
+        );
+    if let Some(chrome) = &file_chrome {
+        navigation = navigation.child(chrome.scenes.clone());
+    } else {
+        navigation = navigation
+            .child(palette::navigation_button(true, night).child(label().text(scene_name.clone())));
     }
-    let toolbar = rect()
+    navigation = navigation.child(
+        label()
+            .text("In this scene")
+            .font_size(14.)
+            .color(colors.text_secondary),
+    );
+    let mut previous = String::new();
+    if let Ok(passages) = session.document().passages() {
+        let selected_section = session.selected().ok().flatten().map(|p| p.section);
+        for passage in passages {
+            if passage.section == previous {
+                continue;
+            }
+            previous = passage.section.clone();
+            let selected = selected_section.as_deref() == Some(passage.section.as_str());
+            let caption = palette::display_name(&passage.section);
+            let id = passage.id;
+            navigation = navigation.child(
+                palette::navigation_button(selected, night)
+                    .on_press(move |_| writer.perform(|m| m.select(View::Passage(id.clone()))))
+                    .child(label().text(caption)),
+            );
+        }
+    }
+    let mut toolbar = rect()
+        .width(Size::fill())
+        .height(Size::px(68.))
+        .content(Content::Flex)
         .horizontal()
-        .spacing(8.)
-        .child(label().text("recite.").font_size(28.))
+        .cross_align(Alignment::Center)
+        .padding(16.)
+        .spacing(16.)
+        .child(label().text("recite.").font_size(24.))
         .child(
             Button::new()
+                .cursor_icon(CursorIcon::Pointer)
+                .flat()
                 .on_press(move |_| {
-                    perform(model, editor, message, prose, night, Workbench::show_script)
+                    let next = !*navigation_visible.peek();
+                    navigation_visible.set(next);
                 })
-                .child("Script"),
+                .child(if *navigation_visible.read() {
+                    "Hide scenes"
+                } else {
+                    "Show scenes"
+                }),
         )
         .child(
-            Button::new()
-                .on_press(move |_| {
-                    perform(model, editor, message, prose, night, |m| {
-                        m.select(View::Source)
-                    })
-                })
-                .child("Source"),
+            rect()
+                .horizontal()
+                .spacing(4.)
+                .child(
+                    Button::new()
+                        .cursor_icon(CursorIcon::Pointer)
+                        .flat()
+                        .theme_colors(ButtonColorsThemePartial {
+                            background: Some(Preference::Specific(if source {
+                                Color::TRANSPARENT
+                            } else {
+                                palette::selection(night)
+                            })),
+                            ..Default::default()
+                        })
+                        .on_press(move |_| writer.perform(Workbench::show_script))
+                        .child("Script"),
+                )
+                .child(
+                    Button::new()
+                        .cursor_icon(CursorIcon::Pointer)
+                        .flat()
+                        .theme_colors(ButtonColorsThemePartial {
+                            background: Some(Preference::Specific(if source {
+                                palette::selection(night)
+                            } else {
+                                Color::TRANSPARENT
+                            })),
+                            ..Default::default()
+                        })
+                        .on_press(move |_| writer.perform(|m| m.select(View::Source)))
+                        .child("Source"),
+                ),
         )
+        .child(rect().width(Size::flex(1.)))
         .child(
             Button::new()
-                .on_press(move |_| perform(model, editor, message, prose, night, Workbench::undo))
+                .cursor_icon(CursorIcon::Pointer)
+                .flat()
+                .on_press(move |_| writer.perform(Workbench::undo))
                 .child("Undo"),
         )
         .child(
             Button::new()
-                .on_press(move |_| perform(model, editor, message, prose, night, Workbench::redo))
+                .cursor_icon(CursorIcon::Pointer)
+                .flat()
+                .on_press(move |_| writer.perform(Workbench::redo))
                 .child("Redo"),
         )
         .child(
             Button::new()
+                .cursor_icon(CursorIcon::Pointer)
+                .flat()
                 .on_press(move |_| {
                     let next = !*dark.peek();
                     dark.set(next);
@@ -158,205 +210,151 @@ fn workbench(file_backed: bool) -> Element {
                 })
                 .child(if night { "Light" } else { "Dark" }),
         );
-    let pending = session.has_draft();
-    let mut field = rect()
-        .width(Size::fill())
-        .spacing(12.)
-        .padding(24.)
-        .maybe(source, |field| {
-            field.child(label().text(heading).font_size(28.))
-        });
-    if let Some(passage) = selected {
-        let attributes = match passage.kind {
-            PassageKind::Dialogue { speaker } => {
-                field = field.child(label().text(format!(
-                        "Speaker: {}",
-                        speaker
-                            .unwrap_or_else(|| "Narration".to_owned())
-                            .replace('_', " ")
-                    )));
-                vec!["alice".to_owned(), "cheshire_cat".to_owned()]
-            }
-            PassageKind::Choice { destination } => {
-                field = field.child(label().text(format!(
-                    "Continue to: {}",
-                    destination.unwrap_or_default().replace('_', " ")
-                )));
-                let mut sections = session.document().sections();
-                sections.push("END".to_owned());
-                sections
-            }
-        };
-        field = field.child(
-            rect()
-                .horizontal()
-                .spacing(8.)
-                .children(attributes.into_iter().map(|value| {
-                    let caption = value.replace('_', " ");
-                    Button::new()
-                        .on_press(move |_| {
-                            perform(model, editor, message, prose, night, |m| {
-                                m.attribute(&value)
-                            })
-                        })
-                        .child(label().text(caption))
-                })),
-        );
-        field = field.child(
-            Button::new()
-                .on_press(move |_| {
-                    details.set(!*details.peek());
-                })
-                .child("Line / choice details"),
-        );
-        if *details.read() {
-            field = field.child(label().text(format!("{}@{}", passage.label, passage.id)));
-        }
+    if let Some(chrome) = &file_chrome {
+        toolbar = toolbar.child(chrome.actions.clone());
     }
-    field = field
+    let active = field::render(writer, details, editor_id);
+    let mut reading = rect()
+        .width(Size::fill())
+        .max_width(Size::px(1040.))
+        .padding(Gaps::new(24., 40., 32., 40.))
+        .spacing(8.)
         .child(
             rect()
-                .height(Size::px(if source { 400. } else { 110. }))
                 .width(Size::fill())
-                .font_family("serif")
-                .font_size(20.)
-                .child(if !source {
-                    Input::new(prose)
-                        .multiline(true)
-                        .width(Size::fill())
-                        .height(Size::fill())
-                        .into_element()
-                } else {
-                    CodeEditor::new(editor, editor_id)
-                        .font_family(if source { "monospace" } else { "serif" })
-                        .font_size(if source { 15. } else { 20. })
-                        .gutter(source)
-                        .show_whitespace(false)
-                        .on_pre_key_down(move |event: Event<KeyboardEventData>| match &event.key {
-                            Key::Named(NamedKey::Tab) => false,
-                            Key::Named(NamedKey::Escape) => {
-                                editor_id.request_unfocus();
-                                event.stop_propagation();
-                                false
-                            }
-                            _ => {
-                                event.stop_propagation();
-                                true
-                            }
-                        })
-                        .into_element()
-                }),
-        )
-        .child(
-            rect()
+                .height(Size::px(40.))
+                .content(Content::Flex)
                 .horizontal()
-                .spacing(8.)
+                .cross_align(Alignment::Center)
                 .child(
-                    Button::new()
-                        .on_press(move |_| {
-                            perform(model, editor, message, prose, night, Workbench::apply)
-                        })
-                        .child("Apply draft"),
+                    label()
+                        .text(format!("Scene / {scene_name}"))
+                        .font_size(14.)
+                        .color(colors.text_secondary),
                 )
+                .child(rect().width(Size::flex(1.)))
                 .child(
                     Button::new()
+                        .cursor_icon(CursorIcon::Pointer)
+                        .flat()
                         .on_press(move |_| {
-                            perform(model, editor, message, prose, night, |m| {
-                                m.discard();
-                                Ok(())
-                            })
-                        })
-                        .child("Discard draft"),
-                )
-                .child(
-                    Button::new()
-                        .enabled(!source)
-                        .on_press(move |_| {
-                            perform(model, editor, message, prose, night, Workbench::add_choice)
-                        })
-                        .child("Add choice"),
-                )
-                .child(
-                    Button::new()
-                        .on_press(move |_| {
-                            perform(
-                                model,
-                                editor,
-                                message,
-                                prose,
-                                night,
-                                Workbench::start_preview,
-                            )
+                            writer.perform(Workbench::start_preview);
+                            if writer
+                                .buffers
+                                .model
+                                .peek()
+                                .as_ref()
+                                .is_ok_and(|m| m.preview_page().is_some())
+                            {
+                                preview_visible.set(true);
+                            }
                         })
                         .child("Try scene"),
                 ),
+        )
+        .child(scene::reading_surface(writer, active));
+    let diagnostics = session.document().diagnostics();
+    for diagnostic in &diagnostics {
+        let text = if source {
+            format!(
+                "{}:{} · {} · {}",
+                diagnostic.span.file,
+                diagnostic.span.start.line(),
+                diagnostic.code,
+                diagnostic.message
+            )
+        } else {
+            diagnostic.message.clone()
+        };
+        reading = reading.child(label().text(text).font_size(14.));
+    }
+    let mut body = rect()
+        .content(Content::Flex)
+        .horizontal()
+        .width(Size::fill())
+        .height(Size::flex(1.))
+        .maybe_child((*navigation_visible.read()).then(|| {
+            ScrollView::new()
+                .width(Size::px(208.))
+                .height(Size::fill())
+                .child(navigation)
+        }))
+        .child(
+            rect()
+                .width(Size::flex(1.))
+                .height(Size::fill())
+                .background(palette::reading(night))
+                .border(
+                    Border::new()
+                        .width(BorderWidth {
+                            left: 1.,
+                            ..Default::default()
+                        })
+                        .fill(palette::rule(night)),
+                )
+                .child(
+                    ScrollView::new()
+                        .height(Size::fill())
+                        .width(Size::fill())
+                        .child(reading),
+                ),
         );
-    if let Some(page) = session.preview_page() {
-        field = field
-            .child(label().text(if session.preview_stale() {
-                "Preview is out of date"
-            } else {
-                "Preview"
-            }))
-            .child(label().text(page.text.clone()).font_size(20.));
-        for (index, choice) in page.choices.iter().enumerate() {
-            field = field.child(
-                Button::new()
-                    .on_press(move |_| {
-                        perform(model, editor, message, prose, night, |m| {
-                            m.advance_preview(Some(index))
-                        })
-                    })
-                    .child(label().text(choice.text.clone())),
-            );
-        }
-        if page.choices.is_empty() && !page.ended {
-            field = field.child(
-                Button::new()
-                    .on_press(move |_| {
-                        perform(model, editor, message, prose, night, |m| {
-                            m.advance_preview(None)
-                        })
-                    })
-                    .child("Continue"),
-            );
-        }
+    if *preview_visible.read() {
+        body = body.child(preview_panel::render(writer, preview_visible));
     }
-    for diagnostic in session.document().diagnostics() {
-        field = field.child(label().text(diagnostic.message));
-    }
-    let field = scene::reading_surface(model, editor, message, prose, night, field.into_element());
-    rect()
+    let saved = file_chrome
+        .as_ref()
+        .map_or("Temporary example", |chrome| chrome.status.as_str());
+    let diagnostic_status = if diagnostics.is_empty() {
+        "No diagnostics".into()
+    } else {
+        format!("{} diagnostics", diagnostics.len())
+    };
+    let preview_status = if session.preview_page().is_some() && session.preview_stale() {
+        " · Preview is out of date"
+    } else {
+        ""
+    };
+    let mut root = rect()
         .expanded()
+        .content(Content::Flex)
+        .font_size(14.)
         .background(colors.background)
         .color(colors.text_primary)
-        .padding(16.)
-        .spacing(12.)
         .child(toolbar)
-        .child(file_controls)
         .child(
-            label()
-                .text(if file_backed {
-                    "Recite writer · Early file-backed slice"
-                } else {
-                    "Crossroads · Session changes are temporary."
-                })
-                .color(colors.text_secondary),
-        )
-        .child(label().text(if pending {
-            "Draft not applied · existing preview may be out of date."
-        } else {
-            ""
-        }))
-        .child(label().text(message.read().clone()))
-        .child(
-            ScrollView::new().height(Size::flex(1.)).child(
-                rect()
-                    .horizontal()
-                    .width(Size::fill())
-                    .child(navigation)
-                    .child(field),
-            ),
-        )
-        .into_element()
+            rect()
+                .width(Size::fill())
+                .height(Size::px(1.))
+                .background(palette::rule(night)),
+        );
+    if let Some(chrome) = &file_chrome {
+        root = root.child(chrome.project_panel.clone());
+    }
+    root = root.child(body).child(
+        rect()
+            .width(Size::fill())
+            .padding(Gaps::new(8., 16., 8., 16.))
+            .spacing(4.)
+            .border(
+                Border::new()
+                    .width(BorderWidth {
+                        top: 1.,
+                        ..Default::default()
+                    })
+                    .fill(palette::rule(night)),
+            )
+            .child(
+                label()
+                    .text(format!("{saved} · {diagnostic_status}{preview_status}"))
+                    .color(colors.text_secondary),
+            )
+            .maybe(!message.read().is_empty(), |status| {
+                status.child(label().text(message.read().clone()))
+            }),
+    );
+    if let Some(chrome) = file_chrome {
+        root = root.child(chrome.close_prompt);
+    }
+    root.into_element()
 }

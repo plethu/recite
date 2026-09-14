@@ -66,8 +66,10 @@ Script view. The current implementation remains in the isolated experimental
 workspace while its file lifecycle is established; do not treat the whole
 bake-off adapter as production-ready.
 
-Before broader use, finish close protection and unsaved-draft recovery,
-project-context/schema preview, per-project diagnostics, conflict recovery,
-full keyboard routes, assistive technology and platform validation. Fluent UI
+The [retained writer](../../prototypes/gui-bakeoff/freya-workbench.md) now has
+close protection, draft recovery, project-context/schema compilation, project
+diagnostics, and a recovery-copy path for conflicts. Before broader use, finish
+condition/effect fixture inputs, scene-manifest preview selection, full keyboard
+routes, assistive technology and platform validation. Fluent UI
 localisation and the complete milestone 6 contract remain required. Do not
 replace these gates with the statement that Freya was selected.

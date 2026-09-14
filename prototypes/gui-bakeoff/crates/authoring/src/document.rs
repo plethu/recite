@@ -1,7 +1,7 @@
 use recite_compiler::{
-    AuthoringError, AuthoringKernel, AuthoringRequest, DocumentVersion, OpenDocument,
+    AuthoringError, AuthoringKernel, AuthoringRequest, DocumentVersion, OpenDocument, SavedDocument,
 };
-use recite_core::{CoreValueError, Diagnostic, DocumentKey};
+use recite_core::{CoreValueError, Diagnostic, DocumentKey, ProjectSchema};
 
 use crate::{DOCUMENT_NAME, Passage, projection};
 
@@ -35,12 +35,20 @@ pub enum EditError {
     Destination,
 }
 
+/// Immutable saved inputs used beneath the current document's unsaved overlay.
+#[derive(Clone, Default)]
+pub struct ProjectContext {
+    pub documents: Vec<SavedDocument>,
+    pub schema: Option<ProjectSchema>,
+}
+
 /// One in-memory document; candidates share edits and validation, not widget state.
 pub struct Document {
     source: String,
     key: DocumentKey,
     version: i64,
     kernel: AuthoringKernel,
+    context: ProjectContext,
     undo: Vec<String>,
     redo: Vec<String>,
 }
@@ -51,16 +59,53 @@ impl Document {
     }
 
     pub fn open(key: DocumentKey, source: impl Into<String>) -> Result<Self, EditError> {
+        Self::in_project(key, source, ProjectContext::default())
+    }
+
+    pub fn in_project(
+        key: DocumentKey,
+        source: impl Into<String>,
+        context: ProjectContext,
+    ) -> Result<Self, EditError> {
+        let kernel = context
+            .schema
+            .clone()
+            .map_or_else(AuthoringKernel::new, AuthoringKernel::with_schema);
         let mut document = Self {
             source: String::new(),
             key,
             version: 0,
-            kernel: AuthoringKernel::new(),
+            kernel,
+            context,
             undo: Vec::new(),
             redo: Vec::new(),
         };
         document.accept(source.into())?;
         Ok(document)
+    }
+
+    pub fn refresh_project(&mut self, context: ProjectContext) -> Result<(), EditError> {
+        let version = self
+            .version
+            .checked_add(1)
+            .ok_or(EditError::RevisionExhausted)?;
+        let mut kernel = context
+            .schema
+            .clone()
+            .map_or_else(AuthoringKernel::new, AuthoringKernel::with_schema);
+        kernel.apply(AuthoringRequest::new(
+            kernel.snapshot().generation(),
+            context.documents.clone(),
+            [OpenDocument::new(
+                self.key.clone(),
+                DocumentVersion::new(version),
+                self.source.clone(),
+            )],
+        ))?;
+        self.kernel = kernel;
+        self.context = context;
+        self.version = version;
+        Ok(())
     }
 
     pub fn source(&self) -> &str {
@@ -85,6 +130,7 @@ impl Document {
             .snapshot()
             .documents()
             .iter()
+            .filter(|document| document.key() == &self.key)
             .flat_map(|document| document.summary().blocks())
             .map(|block| block.id().as_str().to_owned())
             .collect()
@@ -135,7 +181,10 @@ impl Document {
     pub(crate) fn kernel(&self) -> &AuthoringKernel {
         &self.kernel
     }
-    pub(crate) fn key(&self) -> &DocumentKey {
+    pub(crate) fn schema(&self) -> Option<&ProjectSchema> {
+        self.context.schema.as_ref()
+    }
+    pub fn key(&self) -> &DocumentKey {
         &self.key
     }
 
@@ -146,7 +195,7 @@ impl Document {
             .ok_or(EditError::RevisionExhausted)?;
         self.kernel.apply(AuthoringRequest::new(
             self.kernel.snapshot().generation(),
-            [],
+            self.context.documents.clone(),
             [OpenDocument::new(
                 self.key.clone(),
                 DocumentVersion::new(version),

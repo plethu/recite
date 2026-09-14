@@ -20,6 +20,13 @@ fn main() {
                     recite_bakeoff_freya::app()
                 }
             })
+            .with_on_close(move |_, _| {
+                if file_backed {
+                    recite_bakeoff_freya::request_close()
+                } else {
+                    CloseDecision::Close
+                }
+            })
             .with_title(title)
             .with_size(1200., 800.),
         ),

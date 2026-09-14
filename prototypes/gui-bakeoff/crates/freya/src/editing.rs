@@ -46,7 +46,7 @@ pub fn perform(
                     ));
                 }
                 prose.set_if_modified(session.draft().to_owned());
-                "Done.".to_owned()
+                String::new()
             })
         }
         Err(error) => {
@@ -58,4 +58,24 @@ pub fn perform(
         Ok(text) => text,
         Err(error) => error.to_string(),
     });
+}
+
+#[derive(Clone, Copy)]
+pub(crate) struct Writer {
+    pub buffers: crate::files::Buffers,
+    pub message: State<String>,
+    pub dark: bool,
+}
+
+impl Writer {
+    pub fn perform(self, action: impl FnOnce(&mut Workbench) -> Result<(), WorkbenchError>) {
+        perform(
+            self.buffers.model,
+            self.buffers.editor,
+            self.message,
+            self.buffers.prose,
+            self.dark,
+            action,
+        );
+    }
 }

@@ -1,6 +1,7 @@
-use recite_compiler::{CompileInput, CompileOptions, compile_inputs};
+use recite_compiler::{CompileInput, CompileOptions, compile_inputs, compile_inputs_with_schema};
 use recite_core::{
-    ChoiceId, CompiledAssetId, CompiledDialogue, CompilerVersion, SchemaFingerprint, SourceMapId,
+    ChoiceId, CompiledAssetId, CompiledDialogue, CompilerVersion, ProjectSchema, SchemaFingerprint,
+    SourceMapId,
 };
 use recite_runtime::{
     DialogueChoice, PreviewEvent, PreviewInputs, PreviewOptions, PreviewSession, PreviewSnapshot,
@@ -38,27 +39,39 @@ pub struct Preview {
     asset: CompiledDialogue,
     state: Option<PreviewSnapshot>,
     revision: i64,
+    entry: Option<String>,
 }
 
 impl Preview {
     pub fn new(document: &Document) -> Result<Self, PreviewError> {
-        let report = compile_inputs(
-            [CompileInput::new(
-                document.key().as_str(),
-                document.source(),
-            )],
-            CompileOptions::new(
-                CompilerVersion::new("0.1.0")?,
-                CompiledAssetId::new("bakeoff/scene.recitec")?,
-                SourceMapId::new("bakeoff/scene.map")?,
+        Self::at_block(document, None)
+    }
+
+    pub fn at_block(document: &Document, block: Option<&str>) -> Result<Self, PreviewError> {
+        let snapshot = document.kernel().snapshot();
+        let inputs = snapshot
+            .documents()
+            .iter()
+            .map(|input| CompileInput::new(input.key().as_str(), input.source_text()));
+        let options = CompileOptions::new(
+            CompilerVersion::new("0.1.0")?,
+            CompiledAssetId::new("workbench/preview.recitec")?,
+            SourceMapId::new("workbench/preview.map")?,
+            document.schema().map_or(
                 SchemaFingerprint::NoSchema,
+                ProjectSchema::canonical_fingerprint,
             ),
-        )?;
+        );
+        let report = match document.schema() {
+            Some(schema) => compile_inputs_with_schema(inputs, options, schema)?,
+            None => compile_inputs(inputs, options)?,
+        };
         let asset = report.asset.ok_or(PreviewError::InvalidSource)?.dialogue;
         Ok(Self {
             asset,
             state: None,
             revision: document.revision(),
+            entry: block.map(str::to_owned),
         })
     }
 
@@ -67,7 +80,8 @@ impl Preview {
     }
 
     pub fn advance(&mut self, choice: Option<ChoiceId>) -> Result<PreviewPage, PreviewError> {
-        let mut session = PreviewSession::new(&self.asset, None, PreviewOptions::new())?;
+        let mut session =
+            PreviewSession::new(&self.asset, self.entry.as_deref(), PreviewOptions::new())?;
         if let Some(snapshot) = &self.state {
             session.restore(snapshot.clone())?;
         }

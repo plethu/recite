@@ -62,3 +62,56 @@ fn color(dark: bool, light: (u8, u8, u8), night: (u8, u8, u8)) -> Color {
     let (r, g, b) = if dark { night } else { light };
     Color::from_rgb(r, g, b)
 }
+
+pub fn reading(dark: bool) -> Color {
+    color(dark, (255, 253, 250), (41, 42, 45))
+}
+pub fn muted(dark: bool) -> Color {
+    color(dark, (101, 97, 91), (188, 184, 177))
+}
+pub fn rule(dark: bool) -> Color {
+    color(dark, (215, 210, 202), (73, 74, 77))
+}
+pub fn accent(dark: bool) -> Color {
+    color(dark, (72, 99, 77), (180, 203, 164))
+}
+pub fn selection(dark: bool) -> Color {
+    color(dark, (224, 232, 220), (62, 77, 64))
+}
+pub fn peach(dark: bool) -> Color {
+    color(dark, (241, 212, 191), (229, 189, 161))
+}
+
+pub fn display_name(identifier: &str) -> String {
+    let name = identifier
+        .strip_suffix(".recite")
+        .unwrap_or(identifier)
+        .replace('_', " ");
+    name.split(' ')
+        .map(|word| {
+            let mut chars = word.chars();
+            chars.next().map_or_else(String::new, |first| {
+                first.to_uppercase().collect::<String>() + chars.as_str()
+            })
+        })
+        .collect::<Vec<_>>()
+        .join(" ")
+}
+
+pub fn navigation_button(selected: bool, dark: bool) -> Button {
+    Button::new()
+        .cursor_icon(CursorIcon::Pointer)
+        .flat()
+        .theme_colors(ButtonColorsThemePartial {
+            background: Some(Preference::Specific(if selected {
+                selection(dark)
+            } else {
+                Color::TRANSPARENT
+            })),
+            ..Default::default()
+        })
+        .theme_layout(ButtonLayoutThemePartial {
+            width: Some(Preference::Specific(Size::fill())),
+            ..Default::default()
+        })
+}

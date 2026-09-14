@@ -160,3 +160,63 @@ was added to the renderer.
 This starts the retained slice, not production readiness: preview/diagnostics
 are still file-local without project schema, close protection and unsaved-draft
 recovery remain missing, and platform/accessibility gates remain unaccepted.
+
+## Recoverable project writer · 2026-09-14
+
+The retained Freya writer now checkpoints applied source and field drafts,
+restores them on reopen, protects window closing, and retains a recovery copy
+before loading an external edit. A per-file OS lock prevents two writers from
+replacing the same recovery snapshot. The shared kernel receives all discovered
+sources and the configured schema; refresh preserves local drafts and undo.
+Preview compilation uses those effective inputs and supports cross-file jumps.
+
+The focused authoring/Freya suite passes 28 tests. New coverage exercises corrupt
+and future snapshots, recovery ownership, external edits made while closed,
+failed file switches, schema refresh, cross-file preview, keyboard save, and
+close-dialog focus cycling/restoration. Clippy with warnings denied, formatting,
+test organization, and Git policy pass. These changes are confined to the
+isolated GUI workspace and its documentation; the root workspace gate is not
+claimed by these checks.
+
+Save mechanics were split into `project/save.rs`; recovery storage and the
+native close dialog have separate owners. The root composes the header,
+navigation, script field, and optional preview; field and preview rendering have
+their own modules, with file lifecycle and persistence kept outside them. The [writing trial](freya-workbench.md#writing-trial) records the
+remaining native and human acceptance work. Conditions/effects still require
+runtime fixture input integration; the workbench milestone remains open.
+
+## Crash and visual correction · 2026-09-14
+
+The line-details toggle held a state read borrow while writing the same state.
+A scene test reproduced the native panic; reading the next value before writing
+fixes it. The regression opens and closes details. GUI interaction checks now
+also reject clipped or vertically squeezed action labels and exercise opening,
+advancing, and closing preview.
+
+The writer follows `docs/gui-visual-language.md`: compact chrome, neutral light
+and dark surfaces, serif dialogue, a continuous script with leading sage and
+peach rules, and details disclosed on demand. Project controls are behind
+Project and preview opens beside the script only when requested. Rendered
+captures were inspected in both themes and with the preview open. This is local
+visual verification, not human acceptance of the writing experience.
+
+## Compact writer interactions · 2026-09-14
+
+Enabled buttons, navigation, menu actions, and close-dialog actions now use a
+pointer cursor. The scene sidebar can be hidden, and script sections can be
+folded independently without discarding a field draft. Fold state is scoped to
+the document and section. The reading surface can use more of the available
+width; passage actions share the speaker row instead of adding a separate row.
+
+Secondary active-passage actions use an anchored Freya menu. Opening focuses its
+first action; arrows/Home/End move focus, Escape/Tab dismiss and restore the
+trigger, and outside clicks dismiss. Primary draft and save actions remain
+visible. Tests check pointer feedback, reclaimed width, retained drafts, menu
+position stability, keyboard navigation and dismissal. All 29 focused tests,
+Clippy, formatting, test organization and Git policy pass. Light/dark and folded/
+menu captures were inspected. Native screen-reader acceptance remains open.
+
+The 360-line root remains the composition/hook owner; menu interaction is isolated
+in `passage_menu.rs`. The 367-line scene integration test retains the related
+writer interaction scenarios and shared click/capture setup; neither file owns
+persistence or language semantics.

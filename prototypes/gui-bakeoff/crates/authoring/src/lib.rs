@@ -5,11 +5,13 @@ mod document;
 mod edits;
 mod preview;
 mod projection;
+mod recovery;
 mod workbench;
 
-pub use document::{Document, EditError};
+pub use document::{Document, EditError, ProjectContext};
 pub use preview::{Preview, PreviewError, PreviewPage};
 pub use projection::{Passage, PassageKind};
+pub use recovery::RecoveredDraft;
 pub use workbench::{View, Workbench, WorkbenchError};
 
 pub const FIXTURE: &str =

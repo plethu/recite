@@ -1,6 +1,6 @@
 use crate::{Document, EditError, Passage, PassageKind, Preview, PreviewError, PreviewPage};
 
-#[derive(Clone, Debug, PartialEq)]
+#[derive(Clone, Debug, PartialEq, serde::Serialize, serde::Deserialize)]
 pub enum View {
     Source,
     Passage(String),
@@ -43,6 +43,11 @@ impl Workbench {
     pub fn open(name: &str, source: &str) -> Result<Self, WorkbenchError> {
         let key = recite_core::DocumentKey::new(name).map_err(EditError::from)?;
         let document = Document::open(key, source)?;
+        Self::from_document(document)
+    }
+
+    pub fn from_document(document: Document) -> Result<Self, WorkbenchError> {
+        let source = document.source();
         let first = document
             .passages()
             .ok()
@@ -62,6 +67,15 @@ impl Workbench {
             page: None,
         })
     }
+    pub fn refresh_project(
+        &mut self,
+        context: crate::ProjectContext,
+    ) -> Result<(), WorkbenchError> {
+        self.document.refresh_project(context)?;
+        self.draft_revision = self.document.revision();
+        Ok(())
+    }
+
     pub const fn document(&self) -> &Document {
         &self.document
     }
@@ -162,7 +176,11 @@ impl Workbench {
     }
     pub fn start_preview(&mut self) -> Result<(), WorkbenchError> {
         self.require_applied()?;
-        let mut preview = Preview::new(&self.document)?;
+        let selected = self.selected()?;
+        let mut preview = Preview::at_block(
+            &self.document,
+            selected.as_ref().map(|passage| passage.section.as_str()),
+        )?;
         let page = preview.advance(None)?;
         self.preview = Some(preview);
         self.page = Some(page);

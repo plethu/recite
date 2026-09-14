@@ -3705,6 +3705,7 @@ dependencies = [
  "recite-core",
  "recite-parser",
  "recite-runtime",
+ "serde",
  "thiserror 2.0.20",
 ]
 
@@ -3716,7 +3717,11 @@ dependencies = [
  "freya-testing",
  "recite-bakeoff-authoring",
  "recite-bakeoff-grammar",
+ "recite-compiler",
  "recite-config",
+ "recite-core",
+ "serde",
+ "serde_json",
  "tempfile",
  "thiserror 2.0.20",
 ]

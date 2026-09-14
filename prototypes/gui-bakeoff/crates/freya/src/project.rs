@@ -1,7 +1,10 @@
-//! File ownership for the first retained editor slice.
+//! File ownership for the retained editor.
+mod save;
+use crate::recovery::{Recovery, RecoveryStore};
+use recite_bakeoff_authoring::{Document, ProjectContext, Workbench};
+
 use std::{
-    fs::{self, OpenOptions},
-    io::{self, Write},
+    fs, io,
     path::{Path, PathBuf},
 };
 
@@ -13,12 +16,24 @@ pub enum FileError {
         "Project discovery is incomplete. Repair the project's discovery diagnostics before opening it here."
     )]
     Incomplete,
+    #[error("Project validation failed: {}", crate::project_context::diagnostic_messages(.0))]
+    Validation(Vec<recite_core::Diagnostic>),
+    #[error(
+        "This document is already open in another writer. Close it there before opening it here."
+    )]
+    RecoveryInUse,
+    #[error("The recovery snapshot uses an unsupported version; it has been left untouched.")]
+    RecoveryVersion,
+    #[error("Recovery snapshot could not be read or written: {0}")]
+    Recovery(#[from] serde_json::Error),
+    #[error(transparent)]
+    Workbench(#[from] recite_bakeoff_authoring::WorkbenchError),
     #[error("The project has no Recite source files.")]
     Empty,
     #[error("The selected file is no longer in this project.")]
     Selection,
     #[error(
-        "This file changed on disk. Your edits remain open; save them elsewhere before reopening the project."
+        "This file changed on disk. Your edits remain open. Use Keep recovery copy and reload disk to retain both versions."
     )]
     Conflict,
     #[error("Refusing to replace a symbolic link or a non-regular file.")]
@@ -35,11 +50,18 @@ pub struct ProjectFiles {
     pub paths: Vec<PathBuf>,
     pub current: PathBuf,
     saved: String,
+    root: PathBuf,
+    context: ProjectContext,
+    recovery: RecoveryStore,
     names: std::collections::BTreeMap<PathBuf, String>,
 }
 
 impl ProjectFiles {
     pub fn open(path: &Path) -> Result<Self, FileError> {
+        Self::open_at(path, None)
+    }
+
+    fn open_at(path: &Path, selection: Option<&Path>) -> Result<Self, FileError> {
         let report = recite_config::discover_project(path)?;
         if !report.is_complete() {
             return Err(FileError::Incomplete);
@@ -49,8 +71,15 @@ impl ProjectFiles {
             .iter()
             .map(|d| d.path().to_owned())
             .collect();
-        let current = paths.first().ok_or(FileError::Empty)?.clone();
+        let current = match selection {
+            Some(path) if paths.iter().any(|p| p == path) => path.to_owned(),
+            Some(_) => return Err(FileError::Selection),
+            None => paths.first().ok_or(FileError::Empty)?.clone(),
+        };
         let saved = read_regular(&current)?;
+        let recovery = RecoveryStore::open(&current)?;
+        let context = crate::project_context::load(&report)?;
+        let root = report.manifest().project_root().to_owned();
         let names = report
             .documents()
             .iter()
@@ -61,6 +90,9 @@ impl ProjectFiles {
             current,
             saved,
             names,
+            recovery,
+            context,
+            root,
         })
     }
 
@@ -71,98 +103,115 @@ impl ProjectFiles {
             .ok_or(FileError::Selection)
     }
 
-    pub fn source(&self) -> &str {
-        &self.saved
-    }
-
     pub fn dirty(&self, source: &str) -> bool {
         self.saved != source
     }
 
-    pub fn select(&mut self, path: &Path) -> Result<(), FileError> {
-        if !self.paths.iter().any(|p| p == path) {
+    pub fn workbench(&mut self) -> Result<Workbench, FileError> {
+        let recovered = self.recovery.snapshot();
+        let source = recovered.map_or(self.saved.as_str(), |r| r.draft.source());
+        let key = recite_core::DocumentKey::new(self.document_name()?)
+            .map_err(recite_bakeoff_authoring::EditError::from)
+            .map_err(recite_bakeoff_authoring::WorkbenchError::from)?;
+        let document = Document::in_project(key, source, self.context.clone())
+            .map_err(recite_bakeoff_authoring::WorkbenchError::from)?;
+        let mut workbench = Workbench::from_document(document)?;
+        if let Some(recovery) = recovered {
+            recovery.draft.restore(&mut workbench)?;
+            self.saved = recovery.baseline.clone();
+        }
+        Ok(workbench)
+    }
+
+    pub fn has_recovery(&self) -> bool {
+        self.recovery.snapshot().is_some()
+    }
+
+    pub fn checkpoint(&mut self, workbench: &Workbench) -> Result<(), FileError> {
+        let recovery = (workbench.has_draft() || self.dirty(workbench.document().source()))
+            .then(|| Recovery::new(self.saved.clone(), workbench.recovery()));
+        self.recovery.persist(recovery)
+    }
+
+    pub fn select(&mut self, path: &Path) -> Result<Workbench, FileError> {
+        if path == self.current {
+            return self.workbench();
+        }
+        let mut next = Self::open_at(&self.root, Some(path))?;
+        let workbench = next.workbench()?;
+        *self = next;
+        Ok(workbench)
+    }
+
+    /// Preserve the complete local session before accepting the disk version.
+    pub fn reload(&mut self, workbench: &Workbench) -> Result<(PathBuf, Workbench), FileError> {
+        let report = recite_config::discover_project(&self.root)?;
+        if !report.is_complete() {
+            return Err(FileError::Incomplete);
+        }
+        let context = crate::project_context::load(&report)?;
+        let disk = read_regular(&self.current)?;
+        let key = recite_core::DocumentKey::new(self.document_name()?)
+            .map_err(recite_bakeoff_authoring::EditError::from)
+            .map_err(recite_bakeoff_authoring::WorkbenchError::from)?;
+        let document = Document::in_project(key, disk.clone(), context.clone())
+            .map_err(recite_bakeoff_authoring::WorkbenchError::from)?;
+        let next = Workbench::from_document(document)?;
+        let path = self.export(workbench)?;
+        self.recovery.persist(None)?;
+        self.saved = disk;
+        self.context = context;
+        Ok((path, next))
+    }
+
+    pub fn refresh(&mut self, workbench: &mut Workbench) -> Result<(), FileError> {
+        let report = recite_config::discover_project(&self.root)?;
+        if !report.is_complete() {
+            return Err(FileError::Incomplete);
+        }
+        if !report.documents().iter().any(|d| d.path() == self.current) {
             return Err(FileError::Selection);
         }
-        let source = read_regular(path)?;
-        self.current = path.to_owned();
-        self.saved = source;
+        let context = crate::project_context::load(&report)?;
+        workbench.refresh_project(context.clone())?;
+        self.paths = report
+            .documents()
+            .iter()
+            .map(|d| d.path().to_owned())
+            .collect();
+        self.names = report
+            .documents()
+            .iter()
+            .map(|d| (d.path().to_owned(), d.key().as_str().to_owned()))
+            .collect();
+        self.context = context;
         Ok(())
     }
 
-    /// Cooperative lock + checked replacement. Each replacement retains a backup
-    /// of the previous bytes. Non-cooperating writers can still race the final check.
-    pub fn save(&mut self, source: &str) -> Result<(), FileError> {
+    pub fn export(&self, workbench: &Workbench) -> Result<PathBuf, FileError> {
         let parent = self.current.parent().ok_or(FileError::Selection)?;
-        let mut lock_name = self.current.as_os_str().to_owned();
-        lock_name.push(".recite-editor.lock");
-        let lock_path = PathBuf::from(lock_name);
-        let lock_file = OpenOptions::new()
-            .write(true)
-            .create_new(true)
-            .open(&lock_path)
-            .map_err(FileError::Locked)?;
-        let _lock = SaveLock {
-            path: lock_path,
-            _file: lock_file,
-        };
-        let old = read_regular(&self.current)?;
-        if old != self.saved {
-            return Err(FileError::Conflict);
-        }
-        if source == self.saved {
-            #[cfg(unix)]
-            fs::File::open(parent)?.sync_all()?;
-            return Ok(());
-        }
-        let permissions = fs::metadata(&self.current)?.permissions();
-        if permissions.readonly() {
-            return Err(io::Error::new(
-                io::ErrorKind::PermissionDenied,
-                "Source file is read-only",
-            )
-            .into());
-        }
-        let mut replacement = tempfile::NamedTempFile::new_in(parent)?;
-        replacement.as_file().set_permissions(permissions.clone())?;
-        replacement.write_all(source.as_bytes())?;
-        replacement.as_file().sync_all()?;
-        // Keep the last observed source even after successful replacement.
-        let mut backup = tempfile::Builder::new()
-            .prefix(".recite-editor-backup-")
+        let mut copy = tempfile::Builder::new()
+            .prefix(".recite-recovered-")
+            .suffix(".json")
             .tempfile_in(parent)?;
-        backup.as_file().set_permissions(permissions)?;
-        backup.write_all(old.as_bytes())?;
-        backup.as_file().sync_all()?;
-        if read_regular(&self.current)? != self.saved {
-            return Err(FileError::Conflict);
-        }
-        backup.keep().map_err(|error| error.error)?;
-        replacement
-            .persist(&self.current)
-            .map_err(|error| error.error)?;
-        self.saved = source.to_owned();
+        serde_json::to_writer_pretty(
+            &mut copy,
+            &Recovery::new(self.saved.clone(), workbench.recovery()),
+        )?;
+        copy.as_file().sync_all()?;
+        let (_, path) = copy.keep().map_err(|error| error.error)?;
         #[cfg(unix)]
         fs::File::open(parent)?.sync_all()?;
-        Ok(())
+        Ok(path)
     }
 }
 
-fn read_regular(path: &Path) -> Result<String, FileError> {
+pub(super) fn read_regular(path: &Path) -> Result<String, FileError> {
     let metadata = fs::symlink_metadata(path)?;
     if !metadata.file_type().is_file() {
         return Err(FileError::FileKind);
     }
     Ok(fs::read_to_string(path)?)
-}
-
-struct SaveLock {
-    path: PathBuf,
-    _file: fs::File,
-}
-impl Drop for SaveLock {
-    fn drop(&mut self) {
-        let _ = fs::remove_file(&self.path);
-    }
 }
 
 #[cfg(test)]
