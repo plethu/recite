@@ -15,12 +15,12 @@ pub use load::{load_user_config, load_user_config_from, load_user_config_path};
 pub use model::{
     CONFIG_VERSION, ConfigAuthority, ConfigFormat, ConfigProvenance, KeyHints, Keymap,
     LoadedUserConfig, PlayConfig, TuiColorMode, TuiContrast, UiConfig, UserConfig, UserConfigField,
-    WriterConfig, WriterTheme, WriterView,
+    WriterConfig, WriterPaneSide, WriterTheme, WriterView,
 };
 pub use resolution::{
     AuthorityValue, ColorPolicy, ContrastPolicy, FieldPolicy, FieldProvenance,
     FieldResolutionError, InvocationOverrides, KeyHintsPolicy, KeymapPolicy, ResolvedField,
     ResolvedUiConfig, ResolvedUserConfig, ShowUnavailableChoicesPolicy, UiLocalePolicy,
-    WriterConfirmExitPolicy, WriterReducedMotionPolicy, WriterThemePolicy, WriterViewPolicy,
-    WriterZoomToPointerPolicy, resolve_field, resolve_user_config,
+    WriterConfirmExitPolicy, WriterPaneSidePolicy, WriterReducedMotionPolicy, WriterThemePolicy,
+    WriterViewPolicy, WriterZoomToPointerPolicy, resolve_field, resolve_user_config,
 };

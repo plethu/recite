@@ -60,8 +60,8 @@ pub(super) fn viewport(
     mut drag: State<Option<(f64, f64)>>,
     canvas: Element,
     writer: crate::editing::Writer,
-    blocks: Vec<recite_writer_model::ScriptBlock>,
-    nodes: Vec<super::layout::Node>,
+    blocks: std::sync::Arc<[recite_writer_model::ScriptBlock]>,
+    nodes: std::sync::Arc<[super::layout::Node]>,
 ) -> Element {
     let id = writer.map_focus;
     let selected = writer.selection.read().clone().unwrap_or_default();

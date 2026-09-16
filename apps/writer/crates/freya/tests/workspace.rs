@@ -28,7 +28,7 @@ fn keyboard_and_vim_share_selection_editing_and_focus_return()
         1.,
     );
     support::click(&mut test, "Settings")?;
-    support::click(&mut test, "Keymap: Standard")?;
+    support::click(&mut test, "Keymap: Vim")?;
     support::click(&mut test, "Close settings")?;
     // F6 enters the graph; j selects below the entry and Enter opens its editor.
     key(
@@ -124,7 +124,7 @@ fn personal_preferences_survive_a_new_window_and_settings_keep_focus()
     support::click(&mut test, "Source")?;
     assert_eq!(store.load()?.config.writer.view, WriterView::Source);
     support::click(&mut test, "Settings")?;
-    support::click(&mut test, "Theme: Light")?;
+    support::click(&mut test, "Theme: Dark")?;
     let focused = *platform.focused_accessibility_id.peek();
     key(
         &mut test,

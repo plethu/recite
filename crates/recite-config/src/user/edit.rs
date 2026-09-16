@@ -1,5 +1,5 @@
 //! Typed, source-preserving edits to user-owned settings.
-use super::{KeyHints, Keymap, TuiColorMode, TuiContrast, WriterTheme, WriterView};
+use super::{KeyHints, Keymap, TuiColorMode, TuiContrast, WriterPaneSide, WriterTheme, WriterView};
 use recite_ui::UiLocale;
 use toml_edit::{DocumentMut, Value};
 
@@ -15,6 +15,7 @@ pub enum UserConfigEdit {
     ShowUnavailableChoices(bool),
     WriterConfirmExit(bool),
     WriterView(WriterView),
+    WriterPaneSide(WriterPaneSide),
     WriterTheme(WriterTheme),
     WriterReducedMotion(bool),
     WriterZoomToPointer(bool),
@@ -33,6 +34,7 @@ impl UserConfigEdit {
             Self::ShowUnavailableChoices(v) => config.play.show_unavailable_choices = *v,
             Self::WriterConfirmExit(v) => config.writer.confirm_exit = *v,
             Self::WriterView(v) => config.writer.view = *v,
+            Self::WriterPaneSide(v) => config.writer.pane_side = *v,
             Self::WriterTheme(v) => config.writer.theme = *v,
             Self::WriterReducedMotion(v) => config.writer.reduced_motion = *v,
             Self::WriterZoomToPointer(v) => config.writer.zoom_to_pointer = *v,
@@ -89,6 +91,15 @@ impl UserConfigEdit {
                 match view {
                     WriterView::Map => "map",
                     WriterView::Source => "source",
+                }
+                .into(),
+            ),
+            Self::WriterPaneSide(pane_side) => (
+                "writer",
+                "pane_side",
+                match pane_side {
+                    WriterPaneSide::Left => "left",
+                    WriterPaneSide::Right => "right",
                 }
                 .into(),
             ),

@@ -134,7 +134,7 @@ fn whole_scene_source_and_dark_theme_render() -> Result<(), Box<dyn std::error::
     test.poll_n(std::time::Duration::from_millis(16), 15);
     capture(&mut test, "source-dark.png")?;
     support::click(&mut test, "Settings")?;
-    support::click(&mut test, "Theme: Dark")?;
+    support::click(&mut test, "Theme: Light")?;
     support::click(&mut test, "Close settings")?;
     capture(&mut test, "source-light.png")?;
     Ok(())

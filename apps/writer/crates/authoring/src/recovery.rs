@@ -3,7 +3,7 @@ use crate::{View, Workbench, WorkbenchError};
 /// Applied source and the field draft are separate: rejected prose must survive too.
 #[derive(Clone, Debug, PartialEq, serde::Serialize, serde::Deserialize)]
 pub struct RecoveredDraft {
-    source: String,
+    source: std::sync::Arc<str>,
     view: View,
     draft: String,
 }
@@ -14,7 +14,7 @@ impl RecoveredDraft {
     }
 
     pub fn restore(&self, workbench: &mut Workbench) -> Result<(), WorkbenchError> {
-        if workbench.document().source() != self.source {
+        if workbench.document().source() != self.source.as_ref() {
             return Err(crate::EditError::Stale.into());
         }
         workbench.discard();
@@ -27,7 +27,7 @@ impl RecoveredDraft {
 impl Workbench {
     pub fn recovery(&self) -> RecoveredDraft {
         RecoveredDraft {
-            source: self.document().source().to_owned(),
+            source: self.document().source_snapshot(),
             view: self.view().clone(),
             draft: self.draft().to_owned(),
         }

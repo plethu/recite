@@ -18,7 +18,7 @@ fn project() -> Result<(tempfile::TempDir, ProjectFiles), Box<dyn std::error::Er
 #[test]
 fn save_preserves_source_and_keeps_previous_bytes() -> Result<(), Box<dyn std::error::Error>> {
     let (_dir, mut files) = project()?;
-    let old = files.saved.clone();
+    let old = files.saved.to_string();
     let changed = old.replace("Would you tell me", "Could you tell me");
     files.save(&changed)?;
     assert_eq!(fs::read_to_string(&files.current)?, changed);
@@ -54,7 +54,7 @@ fn external_changes_are_not_overwritten() -> Result<(), Box<dyn std::error::Erro
 fn held_save_lock_preserves_the_file_and_retry_succeeds() -> Result<(), Box<dyn std::error::Error>>
 {
     let (_dir, mut files) = project()?;
-    let old = files.saved.clone();
+    let old = files.saved.to_string();
     let lock = files.current.with_file_name(format!(
         "{}.recite-editor.lock",
         files.current.file_name().ok_or("name")?.to_string_lossy()
@@ -144,5 +144,28 @@ fn failed_file_switch_keeps_the_current_session_and_its_recovery()
         files.workbench()?.document().source(),
         recite_writer_model::FIXTURE
     );
+    Ok(())
+}
+
+#[test]
+fn saved_search_updates_without_rediscovering_scenes() -> Result<(), Box<dyn std::error::Error>> {
+    let (dir, mut files) = project()?;
+    let before = files.search_index();
+    let changed = files
+        .saved
+        .replace("Would you tell me", "A unique zeppelin");
+    files.save(&changed)?;
+    assert_eq!(before.search("zeppelin", 10).0, 0);
+    assert_eq!(files.search_index().search("zeppelin", 10).0, 1);
+    let other = dir.path().join("second.recite");
+    fs::write(&other, ":: second\n-> END\n")?;
+    assert!(
+        files.select(&other).is_err(),
+        "discovery is an explicit refresh"
+    );
+    let mut workbench = files.workbench()?;
+    files.refresh(&mut workbench)?;
+    files.select(&other)?;
+    assert_eq!(files.search_index().search("zeppelin", 10).0, 1);
     Ok(())
 }

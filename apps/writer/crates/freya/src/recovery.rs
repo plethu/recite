@@ -1,4 +1,6 @@
-//! A locked, atomic recovery snapshot beside each edited document.
+mod worker;
+pub(super) use worker::RecoveryStore;
+// A locked, atomic recovery snapshot beside each edited document.
 use std::{
     fs::{self, File, OpenOptions},
     io::{self, Write},
@@ -13,12 +15,12 @@ use crate::project::{FileError, read_regular};
 #[derive(Clone, Debug, PartialEq, Serialize, Deserialize)]
 pub(super) struct Recovery {
     version: u32,
-    pub baseline: String,
+    pub baseline: std::sync::Arc<str>,
     pub draft: RecoveredDraft,
 }
 
 impl Recovery {
-    pub fn new(baseline: String, draft: RecoveredDraft) -> Self {
+    pub fn new(baseline: std::sync::Arc<str>, draft: RecoveredDraft) -> Self {
         Self {
             version: 1,
             baseline,
@@ -27,14 +29,14 @@ impl Recovery {
     }
 }
 
-pub(super) struct RecoveryStore {
+struct RecoveryDisk {
     path: PathBuf,
     // OS lock is released even after a process crash; the empty lock file remains.
     _lock: File,
     persisted: Option<Recovery>,
 }
 
-impl RecoveryStore {
+impl RecoveryDisk {
     pub fn open(source: &Path) -> Result<Self, FileError> {
         let path = sidecar(source, ".recite-editor-recovery.json");
         let lock_path = sidecar(source, ".recite-editor-recovery.lock");
@@ -109,3 +111,5 @@ fn sidecar(source: &Path, suffix: &str) -> PathBuf {
 
 #[cfg(test)]
 mod tests;
+
+pub(crate) mod status;

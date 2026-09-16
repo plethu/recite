@@ -1,4 +1,6 @@
 //! Preview is opened deliberately and never duplicates the writing surface by default.
+use crate::design::Button;
+use crate::design::tokens as t;
 use crate::{editing::Writer, palette};
 use freya::prelude::*;
 
@@ -15,7 +17,7 @@ pub(super) fn render(writer: Writer) -> Element {
     let mut panel = rect()
         .width(Size::px(280.))
         .padding(20.)
-        .spacing(16.)
+        .spacing(t::SPACE_LG)
         .border(
             Border::new()
                 .width(BorderWidth {
@@ -24,10 +26,9 @@ pub(super) fn render(writer: Writer) -> Element {
                 })
                 .fill(palette::rule(writer.dark)),
         )
-        .child(label().text("Try this scene").font_size(18.))
+        .child(label().text("Try this scene").font_size(t::TEXT_HEADING))
         .child(
             Button::new()
-                .cursor_icon(CursorIcon::Pointer)
                 .flat()
                 .on_press(move |_| pane.set(crate::editing::Pane::Map))
                 .child("Close preview"),
@@ -36,7 +37,7 @@ pub(super) fn render(writer: Writer) -> Element {
             label()
                 .text(page.text.clone())
                 .font_family("serif")
-                .font_size(20.),
+                .font_size(t::TEXT_PROSE),
         );
     for effect in &page.effects {
         panel = panel.child(
@@ -45,13 +46,12 @@ pub(super) fn render(writer: Writer) -> Element {
                     "{}({:?}) · request only",
                     effect.function, effect.args
                 ))
-                .font_size(13.),
+                .font_size(t::TEXT_SMALL),
         );
     }
     for (index, choice) in page.choices.iter().enumerate() {
         panel = panel.child(
             Button::new()
-                .cursor_icon(CursorIcon::Pointer)
                 .on_press(move |_| writer.perform(|m| m.advance_preview(Some(index))))
                 .child(label().text(choice.text.clone())),
         );
@@ -59,7 +59,6 @@ pub(super) fn render(writer: Writer) -> Element {
     if page.choices.is_empty() && !page.ended {
         panel = panel.child(
             Button::new()
-                .cursor_icon(CursorIcon::Pointer)
                 .filled()
                 .on_press(move |_| writer.perform(|m| m.advance_preview(None)))
                 .child("Continue"),

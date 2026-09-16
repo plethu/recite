@@ -49,6 +49,14 @@ fn collect(origin: &str, entries: &[ScriptEntry], conditional: bool, links: &mut
 
 // Iterative traversal avoids recursive stack growth for large scenes.
 fn classify_returns(blocks: &[ScriptBlock], links: &mut [SceneLink]) {
+    let ids: std::collections::BTreeSet<_> = blocks.iter().map(|b| b.id.as_str()).collect();
+    let mut adjacency = std::collections::BTreeMap::<String, Vec<usize>>::new();
+    for (index, link) in links.iter().enumerate() {
+        adjacency
+            .entry(link.origin.clone())
+            .or_default()
+            .push(index);
+    }
     let mut visited = std::collections::BTreeSet::new();
     let mut active = std::collections::BTreeSet::new();
     for root in blocks
@@ -63,19 +71,20 @@ fn classify_returns(blocks: &[ScriptBlock], links: &mut [SceneLink]) {
         visited.insert(root.id.clone());
         active.insert(root.id.clone());
         while let Some((origin, next)) = stack.last_mut() {
-            let edge = (*next..links.len()).find(|i| links[*i].origin == *origin);
+            let edge = adjacency
+                .get(origin)
+                .and_then(|edges| edges.get(*next))
+                .copied();
             let Some(index) = edge else {
                 active.remove(origin);
                 stack.pop();
                 continue;
             };
-            *next = index + 1;
+            *next += 1;
             let target = links[index].destination.clone();
             if active.contains(&target) {
                 links[index].returning = true;
-            } else if blocks.iter().any(|block| block.id == target)
-                && visited.insert(target.clone())
-            {
+            } else if ids.contains(target.as_str()) && visited.insert(target.clone()) {
                 active.insert(target.clone());
                 stack.push((target, 0));
             }

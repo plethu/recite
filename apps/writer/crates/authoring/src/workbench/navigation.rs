@@ -26,7 +26,7 @@ impl Workbench {
     pub fn selected(&self) -> Result<Option<Passage>, WorkbenchError> {
         match &self.view {
             View::Source | View::Block(_) => Ok(None),
-            View::Passage(id) => Ok(self.document.passages()?.into_iter().find(|p| &p.id == id)),
+            View::Passage(id) => Ok(self.document.find_passage(id)?),
         }
     }
     pub fn select(&mut self, view: View) -> Result<(), WorkbenchError> {
@@ -41,21 +41,14 @@ impl Workbench {
             }
             View::Passage(id) => {
                 self.document
-                    .passages()?
-                    .into_iter()
-                    .find(|p| &p.id == id)
+                    .find_passage(id)?
                     .ok_or(EditError::MissingPassage)?
                     .text
             }
         };
         let block = match &view {
             View::Block(block) => Some(block.clone()),
-            View::Passage(id) => self
-                .document
-                .passages()?
-                .into_iter()
-                .find(|p| &p.id == id)
-                .map(|p| p.section),
+            View::Passage(id) => self.document.find_passage(id)?.map(|p| p.section),
             View::Source => None,
         };
         if let Some(block) = block {

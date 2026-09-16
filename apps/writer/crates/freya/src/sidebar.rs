@@ -1,107 +1,60 @@
 //! A stable navigation rail with an animated scene outline and fixed settings footer.
-use crate::{controls, editing::Writer, palette};
-use freya::{
-    animation::{AnimNum, Ease, OnChange, use_animation_with_dependencies},
-    prelude::*,
-};
-use std::{cell::Cell, rc::Rc};
+use crate::design::tokens as t;
+use crate::{controls, editing::Writer};
+use freya::prelude::*;
 
-pub(super) fn render(
+#[derive(Clone)]
+pub(super) struct Sidebar {
+    pub writer: Writer,
+    pub visible: State<bool>,
+    pub width: f32,
+    pub scenes: Element,
+}
+impl PartialEq for Sidebar {
+    fn eq(&self, other: &Self) -> bool {
+        self.writer.dark == other.writer.dark
+            && self.width == other.width
+            && self.scenes == other.scenes
+    }
+}
+impl Component for Sidebar {
+    fn render(&self) -> impl IntoElement {
+        render(self.writer, self.visible, self.width, self.scenes.clone())
+    }
+}
+fn render(
     mut writer: Writer,
     mut navigation_visible: State<bool>,
-    _dark: State<bool>,
-    theme: State<Theme>,
+    width: f32,
     scenes: Element,
 ) -> Element {
-    let mut outline = use_state(|| false);
     let visible = *navigation_visible.read();
-    let reduced = writer.preferences.read().config.writer.reduced_motion;
-    let current = use_hook(|| Rc::new(Cell::new(if visible { 224. } else { 40. })));
-    let previous = current.clone();
-    let animation =
-        use_animation_with_dependencies(&(visible, reduced), move |c, (visible, reduced)| {
-            c.on_change(OnChange::Rerun);
-            AnimNum::new(previous.get(), if *visible { 224. } else { 40. })
-                .time(if *reduced { 0 } else { 180 })
-                .ease(Ease::InOut)
-        });
-    let width = if reduced {
-        if visible { 224. } else { 40. }
-    } else {
-        animation.get().value()
-    };
-    current.set(width);
-    let colors = theme.read().colors.clone();
-    let mut body = rect()
+    let colors = use_theme().read().colors.clone();
+    let body = rect()
+        .height(Size::fill())
+        .content(Content::Flex)
         .width(Size::fill())
         .padding((4., 12.))
-        .spacing(4.)
+        .spacing(t::SPACE_XS)
         .a11y_role(AccessibilityRole::Group)
         .a11y_alt("Scenes and beats")
         .child(
             label()
                 .text("Scenes")
-                .font_size(12.)
+                .font_size(t::TEXT_SMALL)
                 .color(colors.text_secondary),
         )
         .child(scenes);
-    body = body.child(
-        Button::new()
-            .flat()
-            .compact()
-            .on_press(move |_| {
-                let next = !*outline.peek();
-                outline.set(next);
-            })
-            .child(if *outline.read() {
-                "▾ Beats in this scene"
-            } else {
-                "▸ Beats in this scene"
-            }),
-    );
-    if *outline.read()
-        && let Ok(session) = writer.buffers.model.read().as_ref()
-        && let Ok(blocks) = session.document().script()
-    {
-        let links = recite_writer_model::scene_links(&blocks);
-        let mut beats = rect()
-            .width(Size::fill())
-            .padding((0., 0., 0., 12.))
-            .a11y_role(AccessibilityRole::Group)
-            .a11y_alt(format!(
-                "{} · {} beats",
-                palette::display_name(session.document().key().as_str()),
-                blocks.len()
-            ));
-        for block in blocks {
-            let selected = writer.selection.read().as_ref() == Some(&block.id);
-            let end = links
-                .iter()
-                .any(|l| l.origin == block.id && l.destination == "END");
-            let caption = format!(
-                "{}{}{}",
-                if block.is_default { "Start · " } else { "" },
-                palette::display_name(&block.id),
-                if end { " · end" } else { "" }
-            );
-            beats = beats.child(controls::navigation_row(
-                caption,
-                selected,
-                writer.dark,
-                move |_| {
-                    writer.selection.set(Some(block.id.clone()));
-                    writer.map_focus.request_focus();
-                },
-            ));
-        }
-        body = body.child(beats);
-    }
     rect()
         .a11y_id(writer.sidebar_focus)
         .a11y_focusable(true)
         .a11y_role(AccessibilityRole::Navigation)
         .a11y_alt("Scene navigation")
-        .width(Size::px(width))
+        .width(Size::px(if visible {
+            width
+        } else {
+            t::COLLAPSED_DRAWER_WIDTH
+        }))
         .height(Size::fill())
         .content(Content::Flex)
         .overflow(Overflow::Clip)
@@ -112,7 +65,7 @@ pub(super) fn render(
                 .maybe_child(visible.then(|| {
                     rect()
                         .padding((8., 12.))
-                        .child(label().text("recite.").font_size(22.))
+                        .child(label().text("recite.").font_size(t::TEXT_TITLE))
                 }))
                 .child(
                     rect()
@@ -135,11 +88,9 @@ pub(super) fn render(
             rect()
                 .height(Size::flex(1.))
                 .width(Size::fill())
-                .maybe_child(visible.then(|| {
-                    ScrollView::new()
-                        .width(Size::fill())
-                        .height(Size::fill())
-                        .child(body)
+                .maybe_child(visible.then(|| crate::design::Reveal {
+                    reduced_motion: writer.preferences.read().config.writer.reduced_motion,
+                    content: body.into_element(),
                 })),
         )
         .child(

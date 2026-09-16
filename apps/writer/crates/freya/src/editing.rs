@@ -69,7 +69,9 @@ pub(crate) enum Pane {
 
 #[derive(Clone, Copy)]
 pub(crate) struct Writer {
-    pub buffers: crate::files::Buffers,
+    pub trail: State<crate::reading_context::Trail>,
+    pub reference: State<Option<crate::reading_context::Reference>>,
+    pub buffers: crate::buffers::Buffers,
     pub message: State<String>,
     pub dark: bool,
     pub scroll: ScrollController,
@@ -87,6 +89,13 @@ pub(crate) struct Writer {
 
 impl Writer {
     pub fn inspect(mut self, block: &str) {
+        if let Ok(session) = self.buffers.model.peek().as_ref()
+            && let Ok(Some(current)) = session.selected_block()
+        {
+            self.trail
+                .write()
+                .visit(session.document().key().as_str(), &current);
+        }
         self.selection.set(Some(block.to_owned()));
         self.navigate(|m| m.inspect_block(block));
         if self
@@ -96,6 +105,11 @@ impl Writer {
             .as_ref()
             .is_ok_and(|m| m.selected_block().ok().flatten().as_deref() == Some(block))
         {
+            if let Ok(session) = self.buffers.model.peek().as_ref() {
+                self.trail
+                    .write()
+                    .visit(session.document().key().as_str(), block);
+            }
             self.pane.set(Pane::Script);
             self.inspector_focus.request_focus();
             self.scroll
@@ -103,6 +117,44 @@ impl Writer {
         }
     }
 
+    pub fn history_step(mut self, forward: bool) {
+        let document = self
+            .buffers
+            .model
+            .peek()
+            .as_ref()
+            .ok()
+            .map(|m| m.document().key().to_string())
+            .unwrap_or_default();
+        let target = self.trail.peek().destination(&document, forward);
+        if let Some(target) = target {
+            self.navigate(|m| m.inspect_block(&target));
+            if self.message.peek().is_empty() {
+                self.trail.write().step(forward);
+                self.selection.set(Some(target));
+                self.pane.set(Pane::Script);
+                self.inspector_focus.request_focus();
+                self.scroll
+                    .scroll_to(ScrollPosition::Start, Direction::Vertical);
+            }
+        }
+    }
+    pub fn pin(mut self) {
+        self.navigate(|_| Ok(()));
+        if !self.message.peek().is_empty() {
+            return;
+        }
+        if let Ok(session) = self.buffers.model.peek().as_ref()
+            && let Ok(Some(id)) = session.selected_block()
+            && let Ok(blocks) = session.document().script_snapshot()
+            && let Some(block) = blocks.iter().find(|b| b.id == id)
+        {
+            self.reference.set(Some(crate::reading_context::Reference {
+                document: session.document().key().to_string(),
+                block: block.clone(),
+            }));
+        }
+    }
     pub fn close_editor(mut self) {
         self.navigate(|_| Ok(()));
         if self.message.peek().is_empty() {

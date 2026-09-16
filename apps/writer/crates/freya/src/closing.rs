@@ -1,5 +1,6 @@
 //! One close policy for native window requests and application keyboard shortcuts.
-use crate::{files::Buffers, project::ProjectFiles};
+use crate::design::tokens as t;
+use crate::{buffers::Buffers, project::ProjectFiles};
 use freya::prelude::*;
 use std::cell::RefCell;
 
@@ -103,12 +104,19 @@ pub(super) fn controls(
                 if pending.peek().is_some() {
                     return CloseDecision::KeepOpen;
                 }
-                let dirty = files.peek().is_some() && !buffers.can_leave(files.peek().as_ref());
+                let mut dirty = files.peek().is_some() && !buffers.can_leave(files.peek().as_ref());
+                let mut close_error = None;
                 if !dirty && !preferences.peek().config.writer.confirm_exit {
-                    return CloseDecision::Close;
+                    match flush_recovery(buffers, files) {
+                        Ok(()) => return CloseDecision::Close,
+                        Err(error) => {
+                            dirty = true;
+                            close_error = Some(error);
+                        }
+                    }
                 }
                 previous_focus.set(Some(*platform.focused_accessibility_id.peek()));
-                failure.set(preferences.peek().error.clone());
+                failure.set(close_error.or_else(|| preferences.peek().error.clone()));
                 pending.set(Some(if dirty { Prompt::Unsaved } else { Prompt::Exit }));
                 CloseDecision::KeepOpen
             }));
@@ -122,42 +130,22 @@ pub(super) fn controls(
     let Some(prompt) = *pending.read() else {
         return rect().into_element();
     };
-    let mut content = rect()
-        .spacing(12.)
-        .on_global_key_down(move |event: Event<KeyboardEventData>| {
-            if event.key == Key::Named(NamedKey::Tab) {
-                event.stop_propagation();
-                event.prevent_default();
-                let current = *Platform::get().focused_accessibility_id.peek();
-                let index = actions.iter().position(|id| *id == current).unwrap_or(0);
-                let step = if event.modifiers.contains(Modifiers::SHIFT) {
-                    2
+    let mut content =
+        rect()
+            .spacing(t::SPACE_MD)
+            .child(label().text(failure.read().clone().unwrap_or_else(|| {
+                if prompt == Prompt::Unsaved {
+                    "Save your changes or keep a recovery copy for the next session.".into()
+                } else if files.peek().is_none() {
+                    "Temporary example edits will be discarded when this window closes.".into()
                 } else {
-                    1
-                };
-                actions[(index + step) % 3].request_focus();
-            }
-        })
-        .child(PopupTitle::new(
-            if prompt == Prompt::Unsaved {
-                "There are unsaved changes."
-            } else {
-                "Close Recite?"
-            }
-            .to_owned(),
-        ))
-        .child(label().text(failure.read().clone().unwrap_or_else(|| {
-            if prompt == Prompt::Unsaved {
-                "Save your changes or keep a recovery copy for the next session.".into()
-            } else if files.peek().is_none() {
-                "Temporary example edits will be discarded when this window closes.".into()
-            } else {
-                "Your project is saved.".into()
-            }
-        })))
-        .child(action_button(actions[0], "Keep editing", cancel));
+                    "Your project is saved.".into()
+                }
+            })));
+    let mut footer =
+        crate::design::actions().child(action_button(actions[0], "Keep editing", cancel));
     if prompt == Prompt::Unsaved {
-        content = content
+        footer = footer
             .child(action_button(
                 actions[1],
                 "Keep recovery and close",
@@ -173,77 +161,77 @@ pub(super) fn controls(
                     }
                 },
             ))
-            .child(action_button(
-                actions[2],
-                "Save and close",
-                move || match buffers.save(files) {
-                    Ok(()) => close_window(),
-                    Err(error) => failure.set(Some(error)),
-                },
-            ));
-    } else {
-        content = content
             .child(
-                rect()
-                    .a11y_id(actions[1])
-                    .a11y_focusable(true)
-                    .a11y_role(AccessibilityRole::CheckBox)
-                    .a11y_alt("Don't ask again when closing Recite")
-                    .a11y_builder(|node| {
-                        node.set_toggled(if *dont_ask.read() {
-                            accesskit::Toggled::True
-                        } else {
-                            accesskit::Toggled::False
-                        })
-                    })
-                    .cursor(CursorIcon::Pointer)
-                    .padding(8.)
-                    .border(
-                        Border::new()
-                            .width(if actions[1].is_focused() { 2. } else { 0. })
-                            .fill((120, 140, 110)),
-                    )
-                    .on_all_press(move |_: Event<PressEventData>| {
-                        let next = !*dont_ask.peek();
-                        dont_ask.set(next);
-                        actions[1].request_focus();
-                    })
-                    .child(label().text(if *dont_ask.read() {
-                        "☑ Don't ask again when closing Recite"
-                    } else {
-                        "☐ Don't ask again when closing Recite"
-                    })),
-            )
-            .child(action_button(actions[2], "Close Recite", move || {
-                if *dont_ask.peek()
-                    && let Err(error) = preferences
-                        .write()
-                        .update(recite_config::UserConfigEdit::WriterConfirmExit(false))
-                {
-                    failure.set(Some(error));
-                    return;
-                }
-                close_window();
-            }));
+                action_button(actions[2], "Save and close", move || {
+                    match buffers.save(files) {
+                        Ok(()) => close_window(),
+                        Err(error) => failure.set(Some(error)),
+                    }
+                })
+                .filled(),
+            );
+    } else {
+        content = content.child(crate::design::checkbox(
+            actions[1],
+            "Don't ask again when closing Recite",
+            *dont_ask.read(),
+            move |_| {
+                let next = !*dont_ask.peek();
+                dont_ask.set(next);
+            },
+        ));
+        footer = footer.child(action_button(actions[2], "Close Recite", move || {
+            if *dont_ask.peek()
+                && let Err(error) = preferences
+                    .write()
+                    .update(recite_config::UserConfigEdit::WriterConfirmExit(false))
+            {
+                failure.set(Some(error));
+                return;
+            }
+            match flush_recovery(buffers, files) {
+                Ok(()) => close_window(),
+                Err(error) => failure.set(Some(error)),
+            }
+        }));
     }
-    Popup::new()
-        .on_close_request(move |_| cancel())
-        .child(content)
-        .into_element()
+    crate::design::Dialog {
+        title: if prompt == Prompt::Unsaved {
+            "Unsaved changes".into()
+        } else {
+            "Close Recite?".into()
+        },
+        reduced_motion: preferences.read().config.writer.reduced_motion,
+        close: EventHandler::new(move |()| cancel()),
+        content: content.into_element(),
+        focus_order: actions.to_vec(),
+        actions: footer.into_element(),
+    }
+    .into_element()
 }
 
 fn action_button(
     id: AccessibilityId,
     caption: &'static str,
     action: impl FnMut() + 'static,
-) -> Element {
+) -> crate::design::Button {
     let mut action = action;
-    let action = EventHandler::new(move |()| action());
-    rect().a11y_id(id).a11y_focusable(true).a11y_role(AccessibilityRole::Button).a11y_alt(caption)
-        .cursor(CursorIcon::Pointer)
-        .border(Border::new().width(if id.is_focused() { 2. } else { 1. }).fill((128, 128, 128))).padding(10.)
-        .on_all_press(move |event: Event<PressEventData>| {
-            if matches!(event.data(), PressEventData::Mouse(data) if data.button != Some(MouseButton::Left)) { return; }
-            id.request_focus(); action.call(());
-        }).child(label().text(caption)).into_element()
+    crate::design::Button::new()
+        .a11y_id(id)
+        .named(caption)
+        .on_press(move |_| action())
+        .child(label().text(caption))
+}
+
+// A clean source can still have a queued recovery deletion after undo or save.
+// Closing must observe its durability result instead of relying on Drop.
+fn flush_recovery(buffers: Buffers, mut files: State<Option<ProjectFiles>>) -> Result<(), String> {
+    buffers.harvest();
+    let model = buffers.model.peek();
+    if let (Ok(workbench), Some(project)) = (model.as_ref(), files.write().as_mut()) {
+        project
+            .checkpoint(workbench)
+            .map_err(|error| error.to_string())?;
+    }
+    Ok(())
 }

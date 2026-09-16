@@ -4,56 +4,20 @@ use crate::recovery::{Recovery, RecoveryStore};
 use recite_writer_model::{Document, ProjectContext, Workbench};
 
 use std::{
-    fs, io,
+    fs,
     path::{Path, PathBuf},
 };
 
-#[derive(Debug, thiserror::Error)]
-pub enum FileError {
-    #[error(transparent)]
-    Discovery(#[from] recite_config::ProjectDiscoveryError),
-    #[error(
-        "Project discovery is incomplete. Repair the project's discovery diagnostics before opening it here."
-    )]
-    Incomplete,
-    #[error("Project validation failed: {}", crate::project_context::diagnostic_messages(.0))]
-    Validation(Vec<recite_core::Diagnostic>),
-    #[error(
-        "This document is already open in another writer. Close it there before opening it here."
-    )]
-    RecoveryInUse,
-    #[error("The recovery snapshot uses an unsupported version; it has been left untouched.")]
-    RecoveryVersion,
-    #[error("Recovery snapshot could not be read or written: {0}")]
-    Recovery(#[from] serde_json::Error),
-    #[error(transparent)]
-    Workbench(#[from] recite_writer_model::WorkbenchError),
-    #[error("The project has no Recite source files.")]
-    Empty,
-    #[error("The selected file is no longer in this project.")]
-    Selection,
-    #[error(
-        "This file changed on disk. Your edits remain open. Use Keep recovery copy and reload disk to retain both versions."
-    )]
-    Conflict,
-    #[error("Refusing to replace a symbolic link or a non-regular file.")]
-    FileKind,
-    #[error("Another editor is saving this file, or its save lock could not be opened: {0}")]
-    Locked(io::Error),
-    #[error(
-        "Replacement could not be confirmed: {0}. Keep your draft and reload the disk version through the recovery-copy action before retrying."
-    )]
-    Commit(io::Error),
-    #[error("File operation failed: {0}")]
-    Io(#[from] io::Error),
-}
+mod error;
+pub use error::FileError;
 
 pub struct ProjectFiles {
     pub paths: Vec<PathBuf>,
     pub current: PathBuf,
-    saved: String,
+    saved: std::sync::Arc<str>,
     root: PathBuf,
     context: ProjectContext,
+    search: std::sync::Arc<recite_writer_model::SearchIndex>,
     recovery: RecoveryStore,
     names: std::collections::BTreeMap<PathBuf, String>,
 }
@@ -81,9 +45,11 @@ impl ProjectFiles {
             Some(_) => return Err(FileError::Selection),
             None => paths.first().ok_or(FileError::Empty)?.clone(),
         };
-        let saved = read_regular(&current)?;
+        let saved = read_regular(&current)?.into();
         let recovery = RecoveryStore::open(&current)?;
         let context = crate::project_context::load(&report)?;
+        let search =
+            std::sync::Arc::new(recite_writer_model::SearchIndex::build(&context.documents));
         let root = report.manifest().project_root().to_owned();
         let names = report
             .documents()
@@ -97,8 +63,19 @@ impl ProjectFiles {
             names,
             recovery,
             context,
+            search,
             root,
         })
+    }
+
+    pub fn search_index(&self) -> std::sync::Arc<recite_writer_model::SearchIndex> {
+        self.search.clone()
+    }
+    pub fn path_for_document(&self, name: &str) -> Option<PathBuf> {
+        self.names
+            .iter()
+            .find(|(_, key)| key.as_str() == name)
+            .map(|(path, _)| path.clone())
     }
 
     pub fn document_name(&self) -> Result<&str, FileError> {
@@ -109,12 +86,12 @@ impl ProjectFiles {
     }
 
     pub fn dirty(&self, source: &str) -> bool {
-        self.saved != source
+        self.saved.as_ref() != source
     }
 
     pub fn workbench(&mut self) -> Result<Workbench, FileError> {
         let recovered = self.recovery.snapshot();
-        let source = recovered.map_or(self.saved.as_str(), |r| r.draft.source());
+        let source = recovered.map_or(self.saved.as_ref(), |r| r.draft.source());
         let key = recite_core::DocumentKey::new(self.document_name()?)
             .map_err(recite_writer_model::EditError::from)
             .map_err(recite_writer_model::WorkbenchError::from)?;
@@ -138,11 +115,34 @@ impl ProjectFiles {
         self.recovery.persist(recovery)
     }
 
+    pub fn recovery_error(&self) -> Option<String> {
+        self.recovery.error()
+    }
+    pub fn queue_checkpoint(&mut self, workbench: &Workbench) -> Result<(), FileError> {
+        let recovery = (workbench.has_draft() || self.dirty(workbench.document().source()))
+            .then(|| Recovery::new(self.saved.clone(), workbench.recovery()));
+        self.recovery.queue(recovery)
+    }
     pub fn select(&mut self, path: &Path) -> Result<Workbench, FileError> {
         if path == self.current {
             return self.workbench();
         }
-        let mut next = Self::open_at(&self.root, Some(path))?;
+        if !self.paths.iter().any(|candidate| candidate == path) {
+            return Err(FileError::Selection);
+        }
+        let saved = read_regular(path)?.into();
+        let recovery = RecoveryStore::open(path)?;
+        let mut next = Self {
+            paths: self.paths.clone(),
+            current: path.to_owned(),
+            saved,
+            root: self.root.clone(),
+            context: self.context.clone(),
+            recovery,
+            names: self.names.clone(),
+            search: self.search.clone(),
+        };
+        next.update_saved_context()?;
         let workbench = next.workbench()?;
         *self = next;
         Ok(workbench)
@@ -164,7 +164,9 @@ impl ProjectFiles {
         let next = Workbench::from_document(document)?;
         let path = self.export(workbench)?;
         self.recovery.persist(None)?;
-        self.saved = disk;
+        self.saved = disk.into();
+        self.search =
+            std::sync::Arc::new(recite_writer_model::SearchIndex::build(&context.documents));
         self.context = context;
         Ok((path, next))
     }
@@ -189,6 +191,8 @@ impl ProjectFiles {
             .iter()
             .map(|d| (d.path().to_owned(), d.key().as_str().to_owned()))
             .collect();
+        self.search =
+            std::sync::Arc::new(recite_writer_model::SearchIndex::build(&context.documents));
         self.context = context;
         Ok(())
     }

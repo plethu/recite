@@ -172,10 +172,7 @@ impl Document {
     }
 
     fn passage(&self, id: &str) -> Result<Passage, EditError> {
-        self.passages()?
-            .into_iter()
-            .find(|passage| passage.id == id)
-            .ok_or(EditError::MissingPassage)
+        self.find_passage(id)?.ok_or(EditError::MissingPassage)
     }
 }
 

@@ -1,68 +1,7 @@
-use crate::{
-    editing::{Session, editor_data},
-    project::ProjectFiles,
-};
-use freya::{code_editor::CodeEditorData, prelude::*};
-use recite_writer_model::View;
-
-#[derive(Clone, Copy)]
-pub(crate) struct Buffers {
-    pub model: Session,
-    pub editor: State<CodeEditorData>,
-    pub prose: State<String>,
-}
-
-impl Buffers {
-    pub(super) fn load(self, project: &mut ProjectFiles, dark: bool) -> Result<(), String> {
-        let next = project.workbench().map_err(|e| e.to_string())?;
-        self.install(next, dark);
-        Ok(())
-    }
-
-    fn install(mut self, next: recite_writer_model::Workbench, dark: bool) {
-        self.editor.set(editor_data(
-            next.draft(),
-            next.view() == &View::Source,
-            dark,
-        ));
-        self.prose.set(next.draft().to_owned());
-        self.model.set(Ok(next));
-    }
-
-    pub(super) fn harvest(mut self) {
-        if let Ok(model) = self.model.write().as_mut() {
-            model.set_draft(if model.view() == &View::Source {
-                self.editor.peek().rope.to_string()
-            } else {
-                self.prose.peek().clone()
-            });
-        }
-    }
-
-    pub(super) fn save(self, mut files: State<Option<ProjectFiles>>) -> Result<(), String> {
-        self.harvest();
-        let mut model = self.model;
-        let mut state = model.write();
-        let workbench = state.as_mut().map_err(|error| error.to_string())?;
-        let mut opened = files.write();
-        let project = opened.as_mut().ok_or("Open a project before saving.")?;
-        workbench.apply().map_err(|error| error.to_string())?;
-        project
-            .save(workbench.document().source())
-            .map_err(|error| error.to_string())?;
-        project
-            .checkpoint(workbench)
-            .map_err(|error| error.to_string())
-    }
-
-    pub(super) fn can_leave(self, files: Option<&ProjectFiles>) -> bool {
-        self.harvest();
-        self.model
-            .peek()
-            .as_ref()
-            .is_ok_and(|m| !m.has_draft() && files.is_none_or(|f| !f.dirty(m.document().source())))
-    }
-}
+use crate::design::Button;
+use crate::design::tokens as t;
+use crate::project::ProjectFiles;
+use freya::prelude::*;
 
 pub(crate) struct FileChrome {
     pub actions: Element,
@@ -72,7 +11,12 @@ pub(crate) struct FileChrome {
     pub files: State<Option<ProjectFiles>>,
 }
 
-pub(crate) fn controls(buffers: Buffers, mut message: State<String>, dark: bool) -> FileChrome {
+pub(crate) fn controls(
+    writer: crate::editing::Writer,
+    mut message: State<String>,
+    dark: bool,
+) -> FileChrome {
+    let buffers = writer.buffers;
     let path = use_state(|| {
         if std::env::args().nth(1).as_deref() == Some("--project") {
             std::env::args().nth(2).unwrap_or_default()
@@ -82,24 +26,15 @@ pub(crate) fn controls(buffers: Buffers, mut message: State<String>, dark: bool)
     });
     let mut files = use_state(|| None::<ProjectFiles>);
     let mut project_panel_open = use_state(|| path.peek().is_empty());
+    let job = use_state(|| None::<crate::project_loading::LoadJob>);
     use_hook(move || {
         if !path.peek().is_empty() {
-            let result = ProjectFiles::open(std::path::Path::new(path.peek().as_str()));
-            match result {
-                Ok(mut project) => match buffers.load(&mut project, dark) {
-                    Ok(()) => {
-                        files.set(Some(project));
-                    }
-                    Err(error) => {
-                        message.set(error);
-                        project_panel_open.set(true);
-                    }
-                },
-                Err(error) => {
-                    message.set(error.to_string());
-                    project_panel_open.set(true);
-                }
-            }
+            crate::project_loading::start(
+                job,
+                path.peek().as_str().into(),
+                message,
+                writer.buffers,
+            );
         }
     });
     use_side_effect(move || {
@@ -108,7 +43,7 @@ pub(crate) fn controls(buffers: Buffers, mut message: State<String>, dark: bool)
             return;
         };
         if let Some(project) = files.write().as_mut()
-            && let Err(error) = project.checkpoint(workbench)
+            && let Err(error) = project.queue_checkpoint(workbench)
         {
             message.set(format!(
                 "Draft recovery failed: {error}. Keep this window open and retry Save."
@@ -118,7 +53,7 @@ pub(crate) fn controls(buffers: Buffers, mut message: State<String>, dark: bool)
     let current = files.read();
     let actions = rect()
         .horizontal()
-        .spacing(8.)
+        .spacing(t::SPACE_SM)
         .on_global_key_down(move |event: Event<KeyboardEventData>| {
             if crate::editing::is_save_key(&event) {
                 message.set(match buffers.save(files) {
@@ -129,7 +64,6 @@ pub(crate) fn controls(buffers: Buffers, mut message: State<String>, dark: bool)
         })
         .child(
             Button::new()
-                .cursor_icon(CursorIcon::Pointer)
                 .flat()
                 .on_press(move |_| {
                     let next = !*project_panel_open.peek();
@@ -139,7 +73,6 @@ pub(crate) fn controls(buffers: Buffers, mut message: State<String>, dark: bool)
         )
         .child(
             Button::new()
-                .cursor_icon(CursorIcon::Pointer)
                 .filled()
                 .enabled(current.is_some())
                 .on_press(move |_| {
@@ -150,33 +83,32 @@ pub(crate) fn controls(buffers: Buffers, mut message: State<String>, dark: bool)
                 })
                 .child("Save"),
         )
+        .child(crate::recovery::status::RecoveryStatus { files })
+        .child(crate::project_loading::Loading {
+            writer,
+            files,
+            job,
+            panel: project_panel_open,
+        })
         .into_element();
-    let mut panel = rect().width(Size::fill()).spacing(12.).padding(16.);
+    let mut panel = rect()
+        .width(Size::fill())
+        .spacing(t::SPACE_MD)
+        .padding(t::SPACE_LG);
     if *project_panel_open.read() {
-        panel = panel.child(rect().horizontal().spacing(8.)
+        panel = panel.child(rect().horizontal().spacing(t::SPACE_SM)
             .child(Input::new(path).on_pre_key_down(crate::closing::text_input_key).width(Size::px(440.)).placeholder("Project folder or recite.project.toml"))
-            .child(Button::new().cursor_icon(CursorIcon::Pointer).on_press(move |_| {
+            .child(Button::new().on_press(move |_| {
                 if !buffers.can_leave(files.peek().as_ref()) {
                     message.set("Save changes and apply or discard the draft before opening another project.".into());
                     return;
                 }
-                match ProjectFiles::open(std::path::Path::new(path.peek().as_str())) {
-                    Ok(mut project) => match buffers.load(&mut project, dark) {
-                        Ok(()) => {
-                            let recovered = project.has_recovery();
-                            files.set(Some(project));
-                            project_panel_open.set(false);
-                            message.set(if recovered { "Recovered your previous session." } else { "Project opened." }.into());
-                        },
-                        Err(error) => message.set(error),
-                    },
-                    Err(error) => message.set(error.to_string()),
-                }
+                crate::project_loading::start(job, path.peek().as_str().into(), message, writer.buffers);
             }).child("Open project")));
         if let Some(project) = current.as_ref() {
             panel = panel.child(label().text(project.current.display().to_string()).color(crate::palette::muted(dark)))
-                .child(rect().horizontal().spacing(8.)
-                    .child(Button::new().cursor_icon(CursorIcon::Pointer).flat().on_press(move |_| {
+                .child(rect().horizontal().spacing(t::SPACE_SM)
+                    .child(Button::new().flat().on_press(move |_| {
                         buffers.harvest();
                         let mut model = buffers.model;
                         let mut state = model.write();
@@ -187,7 +119,7 @@ pub(crate) fn controls(buffers: Buffers, mut message: State<String>, dark: bool)
                             });
                         }
                     }).child("Refresh project context"))
-                    .child(Button::new().cursor_icon(CursorIcon::Pointer).flat().on_press(move |_| {
+                    .child(Button::new().flat().on_press(move |_| {
                         buffers.harvest();
                         let state = buffers.model.peek();
                         let Ok(workbench) = state.as_ref() else { return; };
@@ -210,18 +142,17 @@ pub(crate) fn controls(buffers: Buffers, mut message: State<String>, dark: bool)
     } else {
         rect().into_element()
     };
-    let mut scenes = rect().width(Size::fill()).spacing(4.);
+    let mut scenes = Vec::new();
     let status = if let Some(project) = current.as_ref() {
         for target in &project.paths {
             let target = target.clone();
             let caption = crate::palette::display_name(
                 &target.file_name().unwrap_or_default().to_string_lossy(),
             );
-            scenes = scenes.child(crate::controls::navigation_row(
+            scenes.push(crate::scene_navigation::SceneBranch {
                 caption,
-                target == project.current,
-                dark,
-                move |_| {
+                active: target == project.current,
+                open: EventHandler::new(move |()| {
                     if !buffers.can_leave(files.peek().as_ref()) {
                         message.set(
                             "Save changes and apply or discard the draft before changing files."
@@ -238,8 +169,8 @@ pub(crate) fn controls(buffers: Buffers, mut message: State<String>, dark: bool)
                             Err(error) => message.set(error.to_string()),
                         }
                     }
-                },
-            ));
+                }),
+            });
         }
         let dirty = buffers
             .model
@@ -258,7 +189,13 @@ pub(crate) fn controls(buffers: Buffers, mut message: State<String>, dark: bool)
     FileChrome {
         actions,
         project_panel,
-        scenes: scenes.into_element(),
+        scenes: rect()
+            .width(Size::fill())
+            .height(Size::flex(1.))
+            .content(Content::Flex)
+            .child(crate::project_search::ProjectSearch { writer, files })
+            .child(crate::scene_navigation::SceneNavigation { writer, scenes })
+            .into_element(),
         status,
         files,
     }

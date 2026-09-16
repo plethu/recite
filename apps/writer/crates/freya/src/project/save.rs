@@ -25,10 +25,10 @@ impl ProjectFiles {
             .try_lock()
             .map_err(|error| FileError::Locked(io::Error::other(error)))?;
         let old = read_regular(&self.current)?;
-        if old != self.saved {
+        if old != self.saved.as_ref() {
             return Err(FileError::Conflict);
         }
-        if source == self.saved {
+        if source == self.saved.as_ref() {
             #[cfg(unix)]
             fs::File::open(parent)?.sync_all()?;
             return Ok(());
@@ -51,14 +51,37 @@ impl ProjectFiles {
         backup.as_file().set_permissions(permissions)?;
         backup.write_all(old.as_bytes())?;
         backup.as_file().sync_all()?;
-        if read_regular(&self.current)? != self.saved {
+        if read_regular(&self.current)? != self.saved.as_ref() {
             return Err(FileError::Conflict);
         }
         backup.keep().map_err(|error| error.error)?;
         replacement.commit().map_err(FileError::Commit)?;
-        self.saved = source.to_owned();
+        self.saved = source.into();
         #[cfg(unix)]
         fs::File::open(parent)?.sync_all()?;
+        self.update_saved_context()?;
+        Ok(())
+    }
+}
+
+impl ProjectFiles {
+    pub(super) fn update_saved_context(&mut self) -> Result<(), FileError> {
+        let key = recite_core::DocumentKey::new(self.document_name()?)
+            .map_err(recite_writer_model::EditError::from)
+            .map_err(recite_writer_model::WorkbenchError::from)?;
+        let document = recite_compiler::SavedDocument::new(key, self.saved.to_string());
+        if let Some(old) = self
+            .context
+            .documents
+            .iter_mut()
+            .find(|old| old.key() == document.key())
+        {
+            if old.text() == document.text() {
+                return Ok(());
+            }
+            *old = document.clone();
+        }
+        std::sync::Arc::make_mut(&mut self.search).replace_document(document);
         Ok(())
     }
 }

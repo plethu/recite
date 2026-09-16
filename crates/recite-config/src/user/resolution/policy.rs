@@ -1,7 +1,4 @@
-use super::super::model::{
-    ConfigAuthority, KeyHints, Keymap, TuiColorMode, TuiContrast, UserConfigField,
-};
-use recite_ui::UiLocale;
+use super::super::model::{ConfigAuthority, UserConfigField};
 use thiserror::Error;
 
 /// The source selected for a resolved field, including in-memory defaults.
@@ -99,72 +96,6 @@ pub trait FieldPolicy: sealed::Sealed + Copy {
     fn allows(self, authority: ConfigAuthority) -> bool;
 }
 
-macro_rules! user_policy {
-    ($name:ident, $field:expr, $value:ty, [$($allowed:pat),+]) => {
-        #[doc = concat!("Sealed policy for the `", stringify!($field), "` user field.")]
-        #[derive(Clone, Copy, Debug, Default)]
-        pub struct $name;
-
-        impl sealed::Sealed for $name {}
-
-        impl FieldPolicy for $name {
-            type Value = $value;
-
-            fn field(self) -> UserConfigField {
-                $field
-            }
-
-            fn allows(self, authority: ConfigAuthority) -> bool {
-                matches!(authority, $($allowed)|+)
-            }
-        }
-    };
-}
-
-user_policy!(
-    UiLocalePolicy,
-    UserConfigField::UiLocale,
-    UiLocale,
-    [ConfigAuthority::User]
-);
-user_policy!(
-    KeymapPolicy,
-    UserConfigField::Keymap,
-    Keymap,
-    [ConfigAuthority::Invocation, ConfigAuthority::User]
-);
-user_policy!(
-    KeyHintsPolicy,
-    UserConfigField::KeyHints,
-    KeyHints,
-    [ConfigAuthority::User]
-);
-user_policy!(
-    ColorPolicy,
-    UserConfigField::Color,
-    TuiColorMode,
-    [ConfigAuthority::User]
-);
-user_policy!(
-    ContrastPolicy,
-    UserConfigField::Contrast,
-    TuiContrast,
-    [ConfigAuthority::User]
-);
-user_policy!(
-    ShowUnavailableChoicesPolicy,
-    UserConfigField::ShowUnavailableChoices,
-    bool,
-    [ConfigAuthority::User]
-);
-
-user_policy!(
-    WriterConfirmExitPolicy,
-    UserConfigField::WriterConfirmExit,
-    bool,
-    [ConfigAuthority::User]
-);
-
 /// Resolve candidates with a named policy. Invocation wins only for the one
 /// policy that explicitly permits invocation; user and generated values never
 /// become project-semantic fallbacks because no project policy is exposed here.
@@ -226,27 +157,9 @@ where
     })
 }
 
-user_policy!(
-    WriterViewPolicy,
-    UserConfigField::WriterView,
-    super::super::WriterView,
-    [ConfigAuthority::User]
-);
-user_policy!(
-    WriterThemePolicy,
-    UserConfigField::WriterTheme,
-    super::super::WriterTheme,
-    [ConfigAuthority::User]
-);
-user_policy!(
-    WriterReducedMotionPolicy,
-    UserConfigField::WriterReducedMotion,
-    bool,
-    [ConfigAuthority::User]
-);
-user_policy!(
-    WriterZoomToPointerPolicy,
-    UserConfigField::WriterZoomToPointer,
-    bool,
-    [ConfigAuthority::User]
-);
+mod fields;
+pub use fields::{
+    ColorPolicy, ContrastPolicy, KeyHintsPolicy, KeymapPolicy, ShowUnavailableChoicesPolicy,
+    UiLocalePolicy, WriterConfirmExitPolicy, WriterPaneSidePolicy, WriterReducedMotionPolicy,
+    WriterThemePolicy, WriterViewPolicy, WriterZoomToPointerPolicy,
+};

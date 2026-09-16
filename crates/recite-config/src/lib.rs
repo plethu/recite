@@ -32,9 +32,10 @@ pub use user::{
     LoadedUserConfig, PlayConfig, ResolvedField, ResolvedUiConfig, ResolvedUserConfig,
     ShowUnavailableChoicesPolicy, StateUpdateError, TextFileStore, TuiColorMode, TuiContrast,
     UiConfig, UiLocalePolicy, UserConfig, UserConfigEdit, UserConfigField, UserConfigStore,
-    UserStateFile, WriterConfig, WriterConfirmExitPolicy, WriterReducedMotionPolicy, WriterTheme,
-    WriterThemePolicy, WriterView, WriterViewPolicy, WriterZoomToPointerPolicy, load_user_config,
-    load_user_config_from, load_user_config_path, resolve_field, resolve_user_config,
+    UserStateFile, WriterConfig, WriterConfirmExitPolicy, WriterPaneSide, WriterPaneSidePolicy,
+    WriterReducedMotionPolicy, WriterTheme, WriterThemePolicy, WriterView, WriterViewPolicy,
+    WriterZoomToPointerPolicy, load_user_config, load_user_config_from, load_user_config_path,
+    resolve_field, resolve_user_config,
 };
 
 /// The user-facing locale type used by the existing UI resource contract.

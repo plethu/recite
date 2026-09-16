@@ -3,7 +3,7 @@ use recite_compiler::{
 };
 use recite_core::{CoreValueError, Diagnostic, DocumentKey, ProjectSchema};
 
-use crate::{DOCUMENT_NAME, Passage, projection};
+use crate::{DOCUMENT_NAME, Passage};
 
 #[derive(Debug, thiserror::Error)]
 pub enum EditError {
@@ -44,13 +44,13 @@ pub struct ProjectContext {
 
 /// One source document with revision-checked edits and compiler diagnostics.
 pub struct Document {
-    source: String,
+    source: std::sync::Arc<str>,
     key: DocumentKey,
     version: i64,
     kernel: AuthoringKernel,
     context: ProjectContext,
-    undo: Vec<String>,
-    redo: Vec<String>,
+    history: crate::history::History,
+    pub(crate) projections: crate::projection_cache::ProjectionCache,
 }
 
 impl Document {
@@ -72,13 +72,13 @@ impl Document {
             .clone()
             .map_or_else(AuthoringKernel::new, AuthoringKernel::with_schema);
         let mut document = Self {
-            source: String::new(),
+            source: String::new().into(),
             key,
             version: 0,
             kernel,
             context,
-            undo: Vec::new(),
-            redo: Vec::new(),
+            history: crate::history::History::default(),
+            projections: crate::projection_cache::ProjectionCache::default(),
         };
         document.accept(source.into())?;
         Ok(document)
@@ -99,7 +99,7 @@ impl Document {
             [OpenDocument::new(
                 self.key.clone(),
                 DocumentVersion::new(version),
-                self.source.clone(),
+                self.source.to_string(),
             )],
         ))?;
         self.kernel = kernel;
@@ -111,11 +111,14 @@ impl Document {
     pub fn source(&self) -> &str {
         &self.source
     }
+    pub fn source_snapshot(&self) -> std::sync::Arc<str> {
+        self.source.clone()
+    }
     pub const fn revision(&self) -> i64 {
         self.version
     }
     pub fn passages(&self) -> Result<Vec<Passage>, EditError> {
-        projection::passages(&self.source)
+        Ok(self.passage_snapshot()?.to_vec())
     }
     pub fn diagnostics(&self) -> Vec<Diagnostic> {
         self.kernel
@@ -139,36 +142,34 @@ impl Document {
     /// Source editing preserves invalid buffers so the writer can repair them.
     pub fn replace_source(&mut self, expected: i64, source: String) -> Result<(), EditError> {
         self.check_revision(expected)?;
-        if source == self.source {
+        if source == self.source.as_ref() {
             return Ok(());
         }
-        let previous = self.source.clone();
+        let change = crate::history::Change::between(&self.source, &source);
         self.accept(source)?;
-        self.undo.push(previous);
-        self.redo.clear();
+        self.history.record(change);
         Ok(())
     }
 
     pub fn undo(&mut self) -> Result<bool, EditError> {
-        let Some(previous) = self.undo.last().cloned() else {
+        let Some(source) = self.history.undo_source(&self.source) else {
             return Ok(false);
         };
-        let current = self.source.clone();
-        self.accept(previous)?;
-        self.undo.pop();
-        self.redo.push(current);
+        self.accept(source)?;
+        self.history.did_undo();
         Ok(true)
     }
-
     pub fn redo(&mut self) -> Result<bool, EditError> {
-        let Some(next) = self.redo.last().cloned() else {
+        let Some(source) = self.history.redo_source(&self.source) else {
             return Ok(false);
         };
-        let current = self.source.clone();
-        self.accept(next)?;
-        self.redo.pop();
-        self.undo.push(current);
+        self.accept(source)?;
+        self.history.did_redo();
         Ok(true)
+    }
+    /// Estimated retained undo/redo allocation, excluding the current document.
+    pub fn history_bytes(&self) -> usize {
+        self.history.bytes()
     }
 
     pub(crate) fn check_revision(&self, expected: i64) -> Result<(), EditError> {
@@ -202,7 +203,8 @@ impl Document {
                 source.clone(),
             )],
         ))?;
-        self.source = source;
+        self.projections = crate::projection_cache::ProjectionCache::default();
+        self.source = source.into();
         self.version = version;
         Ok(())
     }

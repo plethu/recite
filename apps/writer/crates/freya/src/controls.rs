@@ -1,9 +1,13 @@
 //! Compact, named controls shared by the writer's contextual toolbars.
-use crate::palette;
 use freya::prelude::*;
 
 #[derive(Clone, Copy, PartialEq)]
 pub(super) enum Icon {
+    Back,
+    Forward,
+    Pin,
+    Close,
+    Confirm,
     Sidebar,
     Settings,
     Undo,
@@ -15,6 +19,11 @@ pub(super) enum Icon {
 impl Icon {
     fn render(self) -> Element {
         let shape = match self {
+            Self::Back => "<path d='M15 5l-7 7 7 7'/>",
+            Self::Forward => "<path d='M9 5l7 7-7 7'/>",
+            Self::Pin => "<path d='M8 3h8l-1 7 4 4H5l4-4-1-7M12 14v8'/>",
+            Self::Close => "<path d='M6 6l12 12M18 6L6 18'/>",
+            Self::Confirm => "<path d='M5 12l4 4L19 6'/>",
             Self::Settings => {
                 "<circle cx='12' cy='12' r='3'/><path d='M9 3h6l1 3 3 1 2 5-2 5-3 1-1 3H9l-1-3-3-1-2-5 2-5 3-1Z'/>"
             }
@@ -40,33 +49,35 @@ pub(super) struct IconButton {
     name: String,
     icon: Icon,
     action: EventHandler<()>,
+    enabled: bool,
 }
 
 impl IconButton {
+    pub fn enabled(mut self, enabled: bool) -> Self {
+        self.enabled = enabled;
+        self
+    }
     pub fn new(name: impl Into<String>, icon: Icon, action: impl FnMut() + 'static) -> Self {
         let mut action = action;
         Self {
             name: name.into(),
             icon,
             action: EventHandler::new(move |()| action()),
+            enabled: true,
         }
     }
 }
 
 impl Component for IconButton {
     fn render(&self) -> impl IntoElement {
-        let id = use_a11y();
         let action = self.action.clone();
         TooltipContainer::new(Tooltip::new_text(self.name.clone())).child(
-            rect().a11y_id(id).a11y_role(AccessibilityRole::Button).a11y_alt(self.name.clone())
-                .a11y_focusable(true).cursor(CursorIcon::Pointer)
-                .width(Size::px(32.)).height(Size::px(32.))
-                .main_align(Alignment::Center).cross_align(Alignment::Center)
-                .border(Border::new().width(if id.is_focused() { 2. } else { 0. }).fill((120, 140, 110)))
-                .on_all_press(move |event: Event<PressEventData>| {
-                    if matches!(event.data(), PressEventData::Mouse(data) if data.button != Some(MouseButton::Left)) { return; }
-                    id.request_focus(); action.call(());
-                })
+            crate::design::Button::new()
+                .flat()
+                .enabled(self.enabled)
+                .named(self.name.clone())
+                .width(Size::px(crate::design::tokens::CONTROL_HEIGHT))
+                .on_press(move |_| action.call(()))
                 .child(self.icon.render()),
         )
     }
@@ -96,41 +107,18 @@ struct NavigationRow {
 }
 impl Component for NavigationRow {
     fn render(&self) -> impl IntoElement {
-        let id = use_a11y();
-        let text = self.text.clone();
-        let selected = self.selected;
-        let dark = self.dark;
-        let action = self.action.clone();
-        rect()
+        crate::design::Button::new()
+            .flat()
+            .named(self.text.clone())
+            .selected(self.selected)
             .width(Size::fill())
-            .padding((5., 6.))
-            .a11y_id(id)
-            .a11y_focusable(true)
-            .a11y_role(AccessibilityRole::Button)
-            .a11y_alt(text.clone())
-            .a11y_builder(move |node| {
-                node.set_toggled(if selected {
-                    accesskit::Toggled::True
-                } else {
-                    accesskit::Toggled::False
-                })
-            })
-            .background(if selected {
-                palette::selection(dark)
-            } else {
-                Color::TRANSPARENT
-            })
-            .border(
-                Border::new()
-                    .width(if id.is_focused() { 1. } else { 0. })
-                    .fill(palette::accent(dark)),
+            .on_press(self.action.clone())
+            .child(
+                label()
+                    .text(self.text.clone())
+                    .width(Size::fill())
+                    .text_align(TextAlign::Left),
             )
-            .cursor(CursorIcon::Pointer)
-            .on_all_press(move |event: Event<PressEventData>| {
-                id.request_focus();
-                action.call(event);
-            })
-            .child(label().text(text).text_align(TextAlign::Left))
             .into_element()
     }
 }

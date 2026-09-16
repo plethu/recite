@@ -1,4 +1,5 @@
 //! Settings visibly separate personal presentation from project-owned content.
+use crate::design::tokens as t;
 use crate::{
     editing::{Writer, editor_data},
     project::ProjectFiles,
@@ -25,6 +26,12 @@ pub(super) fn render(writer: Writer, files: State<Option<ProjectFiles>>) -> Elem
         use_a11y(),
         use_a11y(),
         use_a11y(),
+    ];
+    let option_ids = [
+        [ids[2], use_a11y()],
+        [ids[3], use_a11y()],
+        [ids[4], use_a11y()],
+        [use_a11y(), use_a11y()],
     ];
     let preferences = writer.preferences;
     let mut visible = writer.settings_open;
@@ -63,55 +70,67 @@ pub(super) fn render(writer: Writer, files: State<Option<ProjectFiles>>) -> Elem
     } else if on_project {
         vec![ids[0], ids[1], editor_id, ids[8], ids[9]]
     } else {
-        ids.into_iter().filter(|id| *id != ids[8]).collect()
+        let config = &preferences.read().config;
+        let selected = [
+            usize::from(config.writer.theme == recite_config::WriterTheme::Dark),
+            usize::from(config.ui.keymap == recite_config::Keymap::Vim),
+            usize::from(config.writer.view == recite_config::WriterView::Source),
+            usize::from(config.writer.pane_side == recite_config::WriterPaneSide::Right),
+        ];
+        vec![
+            ids[0],
+            ids[1],
+            option_ids[0][selected[0]],
+            option_ids[1][selected[1]],
+            option_ids[2][selected[2]],
+            option_ids[3][selected[3]],
+            ids[5],
+            ids[6],
+            ids[7],
+            ids[9],
+        ]
     };
-    let mut content = rect()
-        .width(Size::fill())
-        .spacing(12.)
-        .on_global_key_down(move |event: Event<KeyboardEventData>| {
-            if event.key == Key::Named(NamedKey::Tab) {
-                let current = *Platform::get().focused_accessibility_id.peek();
-                let index = tab_order.iter().position(|id| *id == current).unwrap_or(0);
-                let step = if event.modifiers.contains(Modifiers::SHIFT) {
-                    tab_order.len() - 1
-                } else {
-                    1
-                };
-                tab_order[(index + step) % tab_order.len()].request_focus();
-                event.stop_propagation();
-                event.prevent_default();
-            }
-        })
-        .child(PopupTitle::new("Settings".to_owned()))
-        .child(
-            rect()
-                .horizontal()
-                .spacing(8.)
-                .child(action(ids[0], "User preferences", move || {
-                    project_tab.set(false)
-                }))
-                .child(action(ids[1], "Project settings", move || {
-                    project_tab.set(true)
-                })),
-        );
+    let mut content = rect().width(Size::fill()).spacing(t::SPACE_MD).child(
+        rect()
+            .horizontal()
+            .spacing(t::SPACE_SM)
+            .child(
+                crate::design::Button::new()
+                    .flat()
+                    .selected(!on_project)
+                    .a11y_id(ids[0])
+                    .named("User preferences")
+                    .on_press(move |_| project_tab.set(false))
+                    .child("User preferences"),
+            )
+            .child(
+                crate::design::Button::new()
+                    .flat()
+                    .selected(on_project)
+                    .a11y_id(ids[1])
+                    .named("Project settings")
+                    .on_press(move |_| project_tab.set(true))
+                    .child("Project settings"),
+            ),
+    );
     if on_project {
         if let Some(settings) = project.read().as_ref() {
             content = content
                 .child(
                     label()
                         .text(settings.path().display().to_string())
-                        .font_size(12.),
+                        .font_size(t::TEXT_SMALL),
                 )
                 .child(
                     label()
                         .text("Project manifest · changes affect everyone using this project.")
-                        .font_size(12.),
+                        .font_size(t::TEXT_SMALL),
                 )
                 .child(
                     rect().height(Size::px(340.)).child(
                         CodeEditor::new(draft, editor_id)
                             .font_family("monospace")
-                            .font_size(14.)
+                            .font_size(t::TEXT_BODY)
                             .gutter(true)
                             .on_pre_key_down(|e: Event<KeyboardEventData>| {
                                 if matches!(e.key, Key::Named(NamedKey::Tab | NamedKey::Escape)) {
@@ -149,7 +168,7 @@ pub(super) fn render(writer: Writer, files: State<Option<ProjectFiles>>) -> Elem
             content = content.child(label().text("Open a project to edit its settings."));
         }
     } else {
-        content = content.child(personal::render(writer, &ids[2..8], error));
+        content = content.child(personal::render(writer, &ids[2..8], option_ids, error));
     }
     if !error.read().is_empty() {
         content = content.child(label().text(error.read().clone()));
@@ -157,10 +176,17 @@ pub(super) fn render(writer: Writer, files: State<Option<ProjectFiles>>) -> Elem
     if let Some(e) = preferences.read().error.clone() {
         content = content.child(label().text(e));
     }
-    Popup::new()
-        .on_close_request(move |_| close())
-        .child(content.child(action(ids[9], "Close settings", close)))
-        .into_element()
+    crate::design::Dialog {
+        title: "Settings".into(),
+        reduced_motion: preferences.read().config.writer.reduced_motion,
+        close: EventHandler::new(move |()| close()),
+        content: content.into_element(),
+        focus_order: tab_order,
+        actions: crate::design::actions()
+            .child(action(ids[9], "Close settings", close))
+            .into_element(),
+    }
+    .into_element()
 }
 
 pub(super) fn action(
@@ -169,23 +195,10 @@ pub(super) fn action(
     mut action: impl FnMut() + 'static,
 ) -> Element {
     let name = name.into();
-    rect()
+    crate::design::Button::new()
         .a11y_id(id)
-        .a11y_focusable(true)
-        .a11y_role(AccessibilityRole::Button)
-        .a11y_alt(name.clone())
-        .padding(8.)
-        .cursor(CursorIcon::Pointer)
-        .border(
-            Border::new()
-                .width(if id.is_focused() { 2. } else { 1. })
-                .fill((120, 130, 115)),
-        )
-        .on_all_press(move |e: Event<PressEventData>| {
-            e.stop_propagation();
-            id.request_focus();
-            action();
-        })
+        .named(name.clone())
+        .on_press(move |_| action())
         .child(label().text(name))
         .into_element()
 }

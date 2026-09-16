@@ -3,6 +3,9 @@ use std::{fmt, path::PathBuf};
 use recite_ui::UiLocale;
 use serde::Deserialize;
 
+mod writer;
+pub use writer::{WriterConfig, WriterPaneSide, WriterTheme, WriterView};
+
 mod presence;
 pub(super) use presence::UserConfigFieldPresence;
 
@@ -40,6 +43,7 @@ pub enum UserConfigField {
     /// Whether the native writer asks before ordinary exit.
     WriterConfirmExit,
     WriterView,
+    WriterPaneSide,
     WriterTheme,
     WriterReducedMotion,
     WriterZoomToPointer,
@@ -68,48 +72,6 @@ impl Default for UserConfig {
             writer: WriterConfig::default(),
         }
     }
-}
-
-/// Native writer preferences stored in the user's Recite configuration.
-#[derive(Clone, Debug, Eq, PartialEq, Deserialize)]
-#[serde(default, deny_unknown_fields)]
-pub struct WriterConfig {
-    /// Ask before an ordinary exit. Unsaved-work protection remains mandatory.
-    pub confirm_exit: bool,
-    pub view: WriterView,
-    pub theme: WriterTheme,
-    pub reduced_motion: bool,
-    pub zoom_to_pointer: bool,
-}
-
-impl Default for WriterConfig {
-    fn default() -> Self {
-        Self {
-            confirm_exit: true,
-            view: WriterView::Map,
-            theme: WriterTheme::Light,
-            reduced_motion: false,
-            zoom_to_pointer: true,
-        }
-    }
-}
-
-/// Preferred writer workspace, independent of a scene's editing selection.
-#[derive(Clone, Copy, Debug, Default, Eq, PartialEq, Deserialize)]
-#[serde(rename_all = "lowercase")]
-pub enum WriterView {
-    #[default]
-    Map,
-    Source,
-}
-
-/// Writer colour scheme; independent of terminal colour policy.
-#[derive(Clone, Copy, Debug, Default, Eq, PartialEq, Deserialize)]
-#[serde(rename_all = "lowercase")]
-pub enum WriterTheme {
-    #[default]
-    Light,
-    Dark,
 }
 
 /// UI preferences owned by the user rather than a project or dialogue asset.

@@ -4,7 +4,7 @@ use recite_core::DocumentKey;
 #[derive(Clone, Debug, Eq, PartialEq)]
 pub struct SavedDocument {
     key: DocumentKey,
-    text: String,
+    text: std::sync::Arc<str>,
 }
 
 impl SavedDocument {
@@ -13,7 +13,7 @@ impl SavedDocument {
     pub fn new(key: DocumentKey, text: impl Into<String>) -> Self {
         Self {
             key,
-            text: text.into(),
+            text: text.into().into(),
         }
     }
 

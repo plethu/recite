@@ -1,4 +1,6 @@
 //! Destination editing beside the reply or continuation it changes.
+use crate::design::Button;
+use crate::design::tokens as t;
 use crate::{editing::Writer, palette};
 use freya::prelude::*;
 use recite_writer_model::View;
@@ -13,10 +15,13 @@ pub(super) enum RouteOwner {
 pub(super) struct RouteEditor {
     pub writer: Writer,
     pub owner: RouteOwner,
+    pub heading: Element,
 }
 impl PartialEq for RouteEditor {
     fn eq(&self, other: &Self) -> bool {
-        self.owner == other.owner && self.writer.dark == other.writer.dark
+        self.owner == other.owner
+            && self.heading == other.heading
+            && self.writer.dark == other.writer.dark
     }
 }
 impl Component for RouteEditor {
@@ -24,21 +29,28 @@ impl Component for RouteEditor {
         let writer = self.writer;
         let mut open = use_state(|| false);
         let mut result = rect().width(Size::fill()).child(
-            Button::new()
-                .flat()
-                .compact()
-                .on_press(move |_| {
-                    let next = !*open.peek();
-                    open.set(next);
-                })
+            rect()
+                .horizontal()
+                .content(Content::Flex)
+                .width(Size::fill())
+                .cross_align(Alignment::Center)
+                .child(rect().width(Size::flex(1.)).child(self.heading.clone()))
                 .child(
-                    label()
-                        .text(if *open.read() {
-                            "Cancel connection"
-                        } else {
-                            "Change destination…"
+                    Button::new()
+                        .flat()
+                        .on_press(move |_| {
+                            let next = !*open.peek();
+                            open.set(next);
                         })
-                        .font_size(12.),
+                        .child(
+                            label()
+                                .text(if *open.read() {
+                                    "Cancel connection"
+                                } else {
+                                    "Change destination…"
+                                })
+                                .font_size(t::TEXT_SMALL),
+                        ),
                 ),
         );
         if *open.read() {
@@ -57,7 +69,6 @@ impl Component for RouteEditor {
                 result = result.child(
                     Button::new()
                         .flat()
-                        .compact()
                         .child(palette::display_name(&target))
                         .on_press(move |_| {
                             writer.navigate(|m| match &owner {

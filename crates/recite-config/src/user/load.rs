@@ -98,6 +98,7 @@ struct RawUserConfig {
 struct RawWriterConfig {
     confirm_exit: Option<bool>,
     view: Option<super::WriterView>,
+    pane_side: Option<super::WriterPaneSide>,
     theme: Option<super::WriterTheme>,
     reduced_motion: Option<bool>,
     zoom_to_pointer: Option<bool>,
@@ -144,6 +145,7 @@ pub(super) fn parse_user_config(
     let field_presence = UserConfigFieldPresence {
         writer_confirm_exit: raw.writer.confirm_exit.is_some(),
         writer_view: raw.writer.view.is_some(),
+        writer_pane_side: raw.writer.pane_side.is_some(),
         writer_theme: raw.writer.theme.is_some(),
         writer_reduced_motion: raw.writer.reduced_motion.is_some(),
         writer_zoom_to_pointer: raw.writer.zoom_to_pointer.is_some(),
@@ -165,6 +167,7 @@ pub(super) fn parse_user_config(
     };
     let config = UserConfig {
         writer: super::WriterConfig {
+            pane_side: raw.writer.pane_side.unwrap_or(defaults.writer.pane_side),
             view: raw.writer.view.unwrap_or(defaults.writer.view),
             theme: raw.writer.theme.unwrap_or(defaults.writer.theme),
             reduced_motion: raw

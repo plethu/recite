@@ -16,26 +16,34 @@ pub(super) fn routes(
     links: &[SceneLink],
 ) -> Vec<Option<Route>> {
     let right = nodes.iter().map(|n| n.x + n.width).fold(0., f32::max) + 24.;
+    let ids: std::collections::BTreeMap<_, _> = blocks
+        .iter()
+        .enumerate()
+        .map(|(i, b)| (b.id.as_str(), i))
+        .collect();
+    let mut outgoing = std::collections::BTreeMap::new();
+    let mut incoming = std::collections::BTreeMap::new();
+    let slots: Vec<_> = links
+        .iter()
+        .map(|link| {
+            let out = outgoing.entry(link.origin.as_str()).or_insert(0usize);
+            let out_slot = *out;
+            *out += 1;
+            let into = incoming.entry(link.destination.as_str()).or_insert(0usize);
+            let in_slot = *into;
+            *into += 1;
+            (out_slot, in_slot)
+        })
+        .collect();
     let mut lane = 0;
     links
         .iter()
-        .enumerate()
-        .map(|(index, link)| {
-            let from = &nodes[blocks.iter().position(|b| b.id == link.origin)?];
-            let to = &nodes[blocks.iter().position(|b| b.id == link.destination)?];
-            let outgoing = links.iter().filter(|l| l.origin == link.origin).count();
-            let out_slot = links[..index]
-                .iter()
-                .filter(|l| l.origin == link.origin)
-                .count();
-            let incoming = links
-                .iter()
-                .filter(|l| l.destination == link.destination)
-                .count();
-            let in_slot = links[..index]
-                .iter()
-                .filter(|l| l.destination == link.destination)
-                .count();
+        .zip(slots)
+        .map(|(link, (out_slot, in_slot))| {
+            let from = &nodes[*ids.get(link.origin.as_str())?];
+            let to = &nodes[*ids.get(link.destination.as_str())?];
+            let outgoing = outgoing[link.origin.as_str()];
+            let incoming = incoming[link.destination.as_str()];
             let x1 = from.x + from.width * (out_slot + 1) as f32 / (outgoing + 1) as f32;
             let y1 = from.y + HEIGHT;
             let x2 = to.x + to.width * (in_slot + 1) as f32 / (incoming + 1) as f32;

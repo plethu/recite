@@ -72,3 +72,15 @@ check-writer:
     cargo fmt --manifest-path apps/writer/Cargo.toml --all -- --check
     cargo test --locked --manifest-path apps/writer/Cargo.toml --workspace
     cargo clippy --locked --manifest-path apps/writer/Cargo.toml --workspace --all-targets -- -D warnings
+
+# Generated saved-project workload; accepts --passages, --per-document and --output.
+bench-writer *args:
+    cargo bench --locked --manifest-path apps/writer/Cargo.toml -p recite-writer-model --features benchmarks --bench large_project -- "$@"
+
+# Headless large-conversation mounting and navigation timings (not native FPS).
+bench-writer-ui beats="1000":
+    RECITE_BENCH_BEATS="$1" cargo test --locked --manifest-path apps/writer/Cargo.toml -p recite-writer --test scale -- --ignored --nocapture
+
+# Background draft queue, durable flush and reopen timings.
+bench-writer-recovery:
+    cargo test --locked --manifest-path apps/writer/Cargo.toml -p recite-writer --lib recovery::tests::background_recovery_timing -- --ignored --nocapture

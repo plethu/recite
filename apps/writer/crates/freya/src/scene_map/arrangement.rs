@@ -1,5 +1,6 @@
 //! A quiet, keyboard-accessible grip. Commit placement on release, not each frame.
 use super::{camera::Camera, placement::Arrangement};
+use crate::design::tokens as t;
 use freya::prelude::*;
 
 #[derive(Clone, PartialEq)]
@@ -93,7 +94,7 @@ impl Component for Handle {
                                 0.
                             },
                         )
-                        .child(label().text("⠿").font_size(18.)),
+                        .child(label().text("⠿").font_size(t::TEXT_HEADING)),
                 ),
         )
     }

@@ -31,7 +31,8 @@ fn main() {
             })
             .with_on_close(|_, _| recite_writer::request_close())
             .with_title(title)
-            .with_size(1200., 800.),
+            .with_size(1200., 800.)
+            .with_min_size(900., 650.),
         ),
     );
 }

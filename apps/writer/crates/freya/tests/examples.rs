@@ -40,7 +40,7 @@ fn default_examples_switch_without_losing_field_drafts_or_applied_edits()
         test.render_to_file(std::path::Path::new(&directory).join("hub-script-dark.png"));
     }
     support::click(&mut test, "Settings")?;
-    support::click(&mut test, "Theme: Dark")?;
+    support::click(&mut test, "Theme: Light")?;
     support::click(&mut test, "Close settings")?;
     click(&mut test, "Floodgate Waterfall")?;
     assert!(

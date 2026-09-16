@@ -18,6 +18,7 @@ pub(super) struct Card {
     pub block: ScriptBlock,
     pub node: Node,
     pub selected: bool,
+    pub related: bool,
     pub ending: bool,
     pub scene: String,
     pub hovered: State<Option<String>>,
@@ -32,6 +33,7 @@ impl PartialEq for Card {
             && self.block == other.block
             && self.node == other.node
             && self.selected == other.selected
+            && self.related == other.related
             && self.ending == other.ending
             && self.scene == other.scene
             && self.writer.dark == other.writer.dark
@@ -57,7 +59,7 @@ impl Component for Card {
             }
             had_focus.set_if_modified(focused);
         });
-        let active = hovered.read().as_ref() == Some(&id) || focus.is_focused();
+        let active = self.related || hovered.read().as_ref() == Some(&id) || focus.is_focused();
         let synopsis = synopsis(&self.block.entries);
         let description = format!(
             "{}. {}. {}",

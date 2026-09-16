@@ -13,7 +13,22 @@ pub(super) struct Node {
 
 pub(super) fn layout(blocks: &[ScriptBlock], links: &[SceneLink], width: f32) -> Vec<Node> {
     let columns = ((width - 32.) / 240.).floor().clamp(2., 4.) as usize;
-    let mut depths: Vec<Option<usize>> = vec![None; blocks.len()];
+    let ids: std::collections::BTreeMap<_, _> = blocks
+        .iter()
+        .enumerate()
+        .map(|(i, b)| (b.id.as_str(), i))
+        .collect();
+    let mut adjacency = vec![Vec::new(); blocks.len()];
+    for link in links {
+        if let (Some(&from), Some(&to)) = (
+            ids.get(link.origin.as_str()),
+            ids.get(link.destination.as_str()),
+        ) {
+            adjacency[from].push(to);
+        }
+    }
+    let mut depths = vec![None; blocks.len()];
+    let mut next_depth = 0;
     for root in (0..blocks.len())
         .filter(|i| blocks[*i].is_default)
         .chain((0..blocks.len()).filter(|i| !blocks[*i].is_default))
@@ -21,42 +36,38 @@ pub(super) fn layout(blocks: &[ScriptBlock], links: &[SceneLink], width: f32) ->
         if depths[root].is_some() {
             continue;
         }
-        let first_depth = depths.iter().flatten().max().map_or(0, |depth| depth + 1);
-        depths[root] = Some(first_depth);
+        depths[root] = Some(next_depth);
         let mut pending = VecDeque::from([root]);
         while let Some(index) = pending.pop_front() {
-            for link in links.iter().filter(|link| link.origin == blocks[index].id) {
-                if let Some(next) = blocks.iter().position(|block| block.id == link.destination)
-                    && depths[next].is_none()
-                {
-                    depths[next] = depths[index].map(|depth| depth + 1);
+            let depth = depths[index].unwrap_or(0);
+            next_depth = next_depth.max(depth + 1);
+            for &next in &adjacency[index] {
+                if depths[next].is_none() {
+                    depths[next] = Some(depth + 1);
                     pending.push_back(next);
                 }
             }
         }
     }
+    let mut counts = vec![0usize; next_depth];
+    for depth in depths.iter().flatten() {
+        counts[*depth] += 1;
+    }
+    let mut rows = vec![0; next_depth];
+    for depth in 1..next_depth {
+        rows[depth] = rows[depth - 1] + counts[depth - 1].div_ceil(columns);
+    }
+    let mut used = vec![0usize; next_depth];
     depths
         .iter()
-        .enumerate()
-        .map(|(index, depth)| {
-            let count = depths.iter().filter(|other| *other == depth).count();
-            let column = depths[..index]
-                .iter()
-                .filter(|other| *other == depth)
-                .count();
-            let slot = (width - 32.) / count.clamp(1, columns) as f32;
-            let preceding_rows: usize = (0..depth.unwrap_or(0))
-                .map(|level| {
-                    depths
-                        .iter()
-                        .filter(|d| **d == Some(level))
-                        .count()
-                        .div_ceil(columns)
-                })
-                .sum();
+        .map(|depth| {
+            let depth = depth.unwrap_or(0);
+            let column = used[depth];
+            used[depth] += 1;
+            let slot = (width - 32.) / counts[depth].clamp(1, columns) as f32;
             Node {
                 x: 8. + (column % columns) as f32 * slot + (slot - (slot - 8.).min(320.)) / 2.,
-                y: 12. + (preceding_rows + column / columns) as f32 * (HEIGHT + 100.),
+                y: 12. + (rows[depth] + column / columns) as f32 * (HEIGHT + 100.),
                 width: (slot - 8.).min(320.),
             }
         })

@@ -1,16 +1,16 @@
 use recite_core::{DivertTarget, SourceId, SourcePosition, SourceText, Statement};
-use recite_parser::{ReciteSyntaxKind, parse};
+use recite_parser::{ReciteSyntaxKind, ReciteSyntaxNode, parse};
 use std::ops::Range;
 
 use crate::{DOCUMENT_NAME, EditError};
 
-#[derive(Clone, Debug, PartialEq)]
+#[derive(Clone, Debug, PartialEq, Eq)]
 pub enum PassageKind {
     Dialogue { speaker: Option<String> },
     Choice { destination: Option<String> },
 }
 
-#[derive(Clone, Debug, PartialEq)]
+#[derive(Clone, Debug, PartialEq, Eq)]
 pub struct Passage {
     pub id: String,
     pub label: String,
@@ -29,6 +29,10 @@ pub(crate) fn passages(source: &str) -> Result<Vec<Passage>, EditError> {
     if !lowered.diagnostics.is_empty() {
         return Err(EditError::SourceRequired("repair the syntax diagnostics"));
     }
+    let nodes: Vec<_> = parsed.syntax().children().collect();
+    let mut offsets = vec![0];
+    offsets.extend(source.match_indices('\n').map(|(index, _)| index + 1));
+    let mut seen = std::collections::BTreeSet::new();
     let mut result = Vec::new();
     for block in &lowered.source_file.blocks {
         let mut statements = Vec::new();
@@ -73,13 +77,10 @@ pub(crate) fn passages(source: &str) -> Result<Vec<Passage>, EditError> {
             let SourceId::Frozen { label, anchor } = id else {
                 return Err(EditError::MissingPassage);
             };
-            if result
-                .iter()
-                .any(|passage: &Passage| passage.id == anchor.as_str())
-            {
+            if !seen.insert(anchor.as_str()) {
                 return Err(EditError::MissingPassage);
             }
-            let (text_range, indentation) = prose_range(source, text)?;
+            let (text_range, indentation) = prose_range(source, text, &nodes, &offsets)?;
             result.push(Passage {
                 id: anchor.to_string(),
                 label: label.clone(),
@@ -96,19 +97,18 @@ pub(crate) fn passages(source: &str) -> Result<Vec<Passage>, EditError> {
     Ok(result)
 }
 
-fn prose_range(source: &str, text: &SourceText) -> Result<(Range<usize>, String), EditError> {
+fn prose_range(
+    source: &str,
+    text: &SourceText,
+    nodes: &[ReciteSyntaxNode],
+    offsets: &[usize],
+) -> Result<(Range<usize>, String), EditError> {
     if text.text.is_empty() {
         return Err(EditError::SourceRequired("empty prose needs Source view"));
     }
     let first = usize::try_from(text.span.start.line() - 1).map_err(|_| EditError::Position)?;
     let count = text.text.split('\n').count();
-    let parsed = parse(DOCUMENT_NAME, source);
-    let nodes = parsed
-        .syntax()
-        .children()
-        .skip(first)
-        .take(count)
-        .collect::<Vec<_>>();
+    let nodes = nodes.get(first..first + count).ok_or(EditError::Position)?;
     if nodes.len() != count
         || nodes
             .iter()
@@ -116,7 +116,17 @@ fn prose_range(source: &str, text: &SourceText) -> Result<(Range<usize>, String)
     {
         return Err(EditError::SourceRequired("the prose extent is ambiguous"));
     }
-    let start = offset(source, text.span.start)?;
+    let line_start = *offsets.get(first).ok_or(EditError::Position)?;
+    let header = source
+        .get(line_start..*offsets.get(first + 1).unwrap_or(&source.len()))
+        .ok_or(EditError::Position)?;
+    let column = usize::try_from(text.span.start.column() - 1).map_err(|_| EditError::Position)?;
+    let start = line_start
+        + header
+            .char_indices()
+            .nth(column)
+            .map(|(byte, _)| byte)
+            .ok_or(EditError::Position)?;
     let last = nodes.last().ok_or(EditError::Position)?;
     let last_token = last
         .children_with_tokens()
@@ -124,10 +134,6 @@ fn prose_range(source: &str, text: &SourceText) -> Result<(Range<usize>, String)
         .find(|token| token.kind() == ReciteSyntaxKind::Text)
         .ok_or(EditError::Position)?;
     let end = usize::from(last_token.text_range().end());
-    let header = source
-        .split_inclusive('\n')
-        .nth(first)
-        .ok_or(EditError::Position)?;
     let indentation = header
         .chars()
         .take_while(|c| *c == ' ' || *c == '\t')

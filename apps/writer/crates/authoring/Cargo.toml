@@ -12,7 +12,19 @@ recite-core.workspace = true
 recite-parser.workspace = true
 recite-runtime.workspace = true
 thiserror.workspace = true
-serde = { version = "1", features = ["derive"] }
+serde = { version = "1", features = ["derive", "rc"] }
 
 [lints]
 workspace = true
+
+[features]
+benchmarks = []
+
+[dev-dependencies]
+criterion = { version = "0.8.2", default-features = false }
+serde_json = "1"
+
+[[bench]]
+name = "large_project"
+harness = false
+required-features = ["benchmarks"]

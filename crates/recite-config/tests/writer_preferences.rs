@@ -213,7 +213,7 @@ fn shared_edits_handle_existing_preferences_and_inline_tables()
 #[test]
 fn writer_workspace_preferences_round_trip_with_provenance()
 -> Result<(), Box<dyn std::error::Error>> {
-    use recite_config::{UserConfigField, WriterTheme, WriterView};
+    use recite_config::{UserConfigField, WriterPaneSide, WriterTheme, WriterView};
     let dir = tempfile::tempdir()?;
     let path = dir.path().join("config.toml");
     std::fs::write(&path, "config_version = 1\n")?;
@@ -223,12 +223,15 @@ fn writer_workspace_preferences_round_trip_with_provenance()
         Some(&path),
     )?);
     store.update(UserConfigEdit::WriterView(WriterView::Source))?;
+    store.update(UserConfigEdit::WriterPaneSide(WriterPaneSide::Left))?;
     store.update(UserConfigEdit::WriterTheme(WriterTheme::Dark))?;
     store.update(UserConfigEdit::WriterReducedMotion(true))?;
     store.update(UserConfigEdit::WriterZoomToPointer(false))?;
     store.update(UserConfigEdit::Keymap(recite_config::Keymap::Vim))?;
     let reopened = store.load()?;
     assert_eq!(reopened.config.writer.view, WriterView::Source);
+    assert_eq!(reopened.config.writer.pane_side, WriterPaneSide::Left);
+    assert!(reopened.field_is_explicit(UserConfigField::WriterPaneSide));
     assert_eq!(reopened.config.writer.theme, WriterTheme::Dark);
     assert!(reopened.config.writer.reduced_motion);
     assert!(!reopened.config.writer.zoom_to_pointer);
@@ -236,6 +239,49 @@ fn writer_workspace_preferences_round_trip_with_provenance()
     let resolved =
         recite_config::resolve_user_config(&reopened, &recite_config::InvocationOverrides::new());
     assert_eq!(*resolved.writer_view().value(), WriterView::Source);
+    assert_eq!(*resolved.writer_pane_side().value(), WriterPaneSide::Left);
     assert_eq!(*resolved.ui().keymap().value(), recite_config::Keymap::Vim);
+    Ok(())
+}
+
+#[test]
+fn pane_side_defaults_to_right_and_rejects_invalid_or_project_owned_values()
+-> Result<(), Box<dyn std::error::Error>> {
+    use recite_config::{
+        AuthorityValue, ConfigAuthority, WriterPaneSide, WriterPaneSidePolicy, resolve_field,
+    };
+    assert_eq!(
+        recite_config::WriterConfig::default().pane_side,
+        WriterPaneSide::Right
+    );
+    for authority in [
+        ConfigAuthority::Project,
+        ConfigAuthority::Generated,
+        ConfigAuthority::Invocation,
+    ] {
+        assert!(
+            resolve_field(
+                WriterPaneSidePolicy,
+                WriterPaneSide::Right,
+                [AuthorityValue::new(authority, WriterPaneSide::Left)]
+            )
+            .is_err()
+        );
+    }
+    let dir = tempfile::tempdir()?;
+    let path = dir.path().join("config.toml");
+    let source = "config_version = 1\n[writer]\npane_side = 'above'\n";
+    std::fs::write(&path, source)?;
+    let store = UserConfigStore::new(resolve_config_path(
+        Platform::Linux,
+        &PlatformRoots::new(),
+        Some(&path),
+    )?);
+    assert!(
+        store
+            .update(UserConfigEdit::WriterPaneSide(WriterPaneSide::Left))
+            .is_err()
+    );
+    assert_eq!(std::fs::read_to_string(path)?, source);
     Ok(())
 }

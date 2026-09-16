@@ -3,9 +3,9 @@ use super::{
     camera::{Camera, Framing},
     layout::{HEIGHT, Node},
 };
-use crate::{editing::Writer, palette};
+use crate::editing::Writer;
 use freya::prelude::*;
-use recite_writer_model::{SceneLink, ScriptBlock};
+use recite_writer_model::ScriptBlock;
 
 pub(super) fn nearest(nodes: &[Node], current: usize, direction: (f32, f32)) -> Option<usize> {
     let from = &nodes[current];
@@ -92,67 +92,6 @@ pub(super) fn key(
     }
     event.stop_propagation();
     event.prevent_default();
-}
-
-pub(super) fn connections(mut writer: Writer, selected: &str, links: &[SceneLink]) -> Element {
-    let mut list = rect()
-        .width(Size::fill())
-        .spacing(3.)
-        .a11y_role(AccessibilityRole::List)
-        .a11y_alt(format!(
-            "Connections for {}",
-            palette::display_name(selected)
-        ))
-        .child(
-            label()
-                .text(format!("Connections · {}", palette::display_name(selected)))
-                .font_size(12.),
-        );
-    for link in links {
-        let outgoing = link.origin == selected;
-        if !outgoing && link.destination != selected {
-            continue;
-        }
-        let target = if outgoing {
-            &link.destination
-        } else {
-            &link.origin
-        };
-        if target == "END" {
-            list = list.child(label().text("End of conversation").font_size(12.));
-            continue;
-        }
-        let target = target.clone();
-        let text = if outgoing {
-            format!(
-                "{} → {}{}",
-                link.label,
-                palette::display_name(&target),
-                if link.conditional {
-                    " · conditional"
-                } else {
-                    ""
-                }
-            )
-        } else {
-            format!("From {} · {}", palette::display_name(&target), link.label)
-        };
-        list = list.child(
-            Button::new()
-                .flat()
-                .compact()
-                .on_press(move |_| {
-                    writer.selection.set(Some(target.clone()));
-                    writer.map_focus.request_focus();
-                })
-                .child(text),
-        );
-    }
-    ScrollView::new()
-        .width(Size::fill())
-        .height(Size::px(112.))
-        .child(list)
-        .into_element()
 }
 
 #[cfg(test)]

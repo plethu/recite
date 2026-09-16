@@ -7,6 +7,7 @@ fn settle(test: &mut TestingRunner) {
 }
 
 fn click(test: &mut TestingRunner, caption: &str) -> Result<(), Box<dyn std::error::Error>> {
+    settle(test);
     let area = test
         .find(|node, element| {
             Label::try_downcast(element)
@@ -249,11 +250,27 @@ fn map_pan_zoom_and_persistent_nudge_use_the_same_visible_coordinates()
     assert!(moved.min_x() > before.min_x());
     assert!(std::fs::read_to_string(&state_path)?.contains("passage:31000000000000000001"));
     // Pan an empty patch; releasing over the graph must not activate a beat.
-    test.press_cursor((250., 200.));
+    let viewport = test
+        .find(|node, e| {
+            Rect::try_downcast(e)
+                .filter(|r| {
+                    r.accessibility
+                        .builder
+                        .label()
+                        .is_some_and(|label| label.starts_with("Scene map."))
+                })
+                .map(|_| node.layout().area)
+        })
+        .ok_or("viewport")?;
+    let start = (
+        f64::from(viewport.min_x() + 10.),
+        f64::from(viewport.min_y() + 10.),
+    );
+    test.press_cursor(start);
     test.sync_and_update();
-    test.move_cursor((282., 216.));
+    test.move_cursor((start.0 + 32., start.1 + 16.));
     settle(&mut test);
-    test.release_cursor((282., 216.));
+    test.release_cursor((start.0 + 32., start.1 + 16.));
     settle(&mut test);
     let panned = grip(&test).ok_or("panned grip")?;
     assert!((panned.min_x() - moved.min_x() - 32.).abs() < 1.);

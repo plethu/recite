@@ -19,8 +19,13 @@ is saved to disk. Closing the window discards these temporary sessions.
 
 Map and Source are workspace views. Your choice is a user preference, shared
 across scenes and restored next time. Map includes single-beat conversations.
-Select a card to open its writing pane; **Close** or Escape returns to the map.
-The sidebar's optional beat outline selects a beat without opening its editor.
+Select a card to open its writing pane; the **Close beat editor** icon or Escape returns to the map.
+Select the title to rename the beat in place; Enter applies and Escape cancels.
+Renaming uses the shared undo history and updates its references.
+The sidebar opens each scene as an accordion, with its beats indented underneath
+in source order. Selecting a beat highlights it without opening its editor.
+Start/end labels identify entry and exit points; the graph shows branching and
+convergence rather than imposing a false parent-child hierarchy on beats.
 
 Expand reply destinations independently to compare branches inside the writing
 pane. These previews stay one level deep; **Edit [beat]** enters that beat.
@@ -30,7 +35,14 @@ Hover a card or select it with the keyboard to reveal its move grip. Drag the
 grip, or Tab to it and use arrow keys. Drag empty map space or scroll to pan.
 Ctrl+scroll zooms around the pointer (or the viewport centre when disabled in
 Settings). Zoom controls include **100%** and **Fit**; fitting
-does not rearrange cards. **Arrange automatically** resets the current scene.
+does not rearrange cards. **Arrange automatically** resets card placement while
+preserving the camera's zoom and position.
+
+Drag the divider beside the scene drawer or script pane to resize it. The
+drawer allows 180–360 logical pixels and the script pane 320–800, constrained
+by the space needed for the graph. Focus a divider and use Left/Right to resize,
+or Home/End to reach its bounds. Settings includes **Script pane: Left/Right**;
+this preference is restored next launch. Widths remain local to the window.
 
 Card positions survive reopening in `writer-layouts.json`, beside the resolved
 user configuration. Project scenes are identified by their full discovered file
@@ -47,7 +59,7 @@ use separate lanes and attachment points. Hovering a beat isolates its incident
 connections while dimming unrelated ones; keyboard focus reveals the same
 connections. Selection keeps a persistent outline. Reply labels appear beside
 the outgoing connections of the inspected beat. Cards separate speaker and
-dialogue from condition/effect annotations. Path emphasis eases over 180 ms,
+dialogue from condition/effect annotations. Path emphasis eases over 160 ms,
 including when the pointer changes targets mid-transition.
 
 **Add beat** creates a separate beat and opens it for writing. **Rename** uses the
@@ -60,7 +72,7 @@ share the document's undo history.
 
 Prose remains a text field throughout: clicking places the caret without changing
 the text's layout. Hover outlines indicate editability; focus colour settles over
-100 ms, with no animated movement of text or panels. Leaving a prose field or
+160 ms, without changing text geometry. Leaving a prose field or
 changing context applies a source-preserving edit to the working document, with
 undo available. Rejected text stays in its field with an explanation and a
 Discard draft action. Source changes still use explicit Apply / Discard actions.
@@ -90,8 +102,11 @@ F6 cycles navigation, map and the open writing pane; Shift+F6 reverses direction
 In the map, arrow keys select the nearest beat in that direction and bring it
 into view. Enter opens its editor. Slash focuses beat search; type a name and
 press Enter to select it. Escape returns from search or writing to the map.
-The connection list names incoming and outgoing links and offers explicit
-navigation without following drawn lines. Tab reaches controls and connections.
+Connections keeps incoming and outgoing links in separate columns, with each
+reply beside its source and destination. Return and condition markers remain
+visible. Hover or keyboard focus highlights the matching route and its beats;
+selecting a row reveals the linked beat. Conversation endings
+are labelled without a navigation action. Tab reaches controls and connections.
 
 Settings lives at the bottom of the navigation rail; Ctrl+, (Cmd+, on macOS)
 opens it too. User preferences include theme, Map/Source, reduced motion,
@@ -109,6 +124,9 @@ Native trackpad pinch remains unsupported by this pinned backend: Freya does
 not forward pinch events, and its winit version does not emit them on Linux.
 Ctrl+scroll is available, but is not a substitute for native gesture support.
 Keyboard component tests do not establish screen-reader or hardware acceptance.
+
+Shared controls, dialog layout and motion are described in the
+[writer design system](design-system.md).
 
 ## Save boundary
 
@@ -208,3 +226,17 @@ mise exec -- cargo fmt --manifest-path apps/writer/Cargo.toml --all -- --check
 scripts/check-test-organization.sh
 scripts/check-git-policy.sh
 ```
+
+Pane dividers preview a new width with a guide while dragging, then reflow on
+release. Escape cancels the drag. Keyboard resizing remains immediate.
+
+Large beats page their entries without flattening condition groups. Pin reference
+keeps a labelled snapshot alongside the script; Previous/Next beat retraces visits
+within the current scene. Project search matches complete words in saved passages
+and their document, beat and speaker context. Save updates the affected search
+index; Refresh discovers new files and refreshes the full saved context.
+
+Initial project open runs in the background. Cancel opening discards its result;
+it does not abort the compiler. Recovery writes are coalesced on a separate worker;
+Save and Keep recovery and close still wait for durability. The
+[scalability report](scalability.md) documents workloads and current limits.

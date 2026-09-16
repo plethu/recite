@@ -78,9 +78,6 @@ pub fn accent(dark: bool) -> Color {
 pub fn selection(dark: bool) -> Color {
     color(dark, (224, 232, 220), (62, 77, 64))
 }
-pub fn peach(dark: bool) -> Color {
-    color(dark, (241, 212, 191), (229, 189, 161))
-}
 
 pub fn display_name(identifier: &str) -> String {
     let name = identifier

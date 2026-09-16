@@ -1,4 +1,6 @@
 //! Explicit source editing; prose fields manage their own focus and edit sessions.
+use crate::design::Button;
+use crate::design::tokens as t;
 use crate::editing::Writer;
 use freya::{code_editor::*, prelude::*};
 use recite_writer_model::{View, Workbench};
@@ -10,12 +12,12 @@ pub(super) fn render(writer: Writer, editor_id: AccessibilityId) -> Element {
         .width(Size::fill())
         .height(Size::fill())
         .content(Content::Flex)
-        .spacing(6.)
+        .spacing(t::SPACE_SM)
         .child(
             rect().width(Size::fill()).height(Size::flex(1.)).child(
                 CodeEditor::new(writer.buffers.editor, editor_id)
                     .font_family("monospace")
-                    .font_size(15.)
+                    .font_size(t::TEXT_CODE)
                     .gutter(true)
                     .show_whitespace(false)
                     .on_pre_key_down(move |event: Event<KeyboardEventData>| {
@@ -54,7 +56,7 @@ pub(super) fn render(writer: Writer, editor_id: AccessibilityId) -> Element {
         field = field.child(
             rect()
                 .horizontal()
-                .spacing(8.)
+                .spacing(t::SPACE_SM)
                 .child(
                     Button::new()
                         .on_press(move |_| writer.perform(Workbench::apply))

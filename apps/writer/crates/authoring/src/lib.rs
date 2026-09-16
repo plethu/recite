@@ -24,3 +24,12 @@ pub use workbench::{View, Workbench, WorkbenchError};
 pub const FIXTURE: &str =
     include_str!("../../../../../fixtures/recite/valid/gui_bakeoff/crossroads.recite");
 pub const DOCUMENT_NAME: &str = "crossroads.recite";
+
+mod history;
+mod projection_cache;
+
+mod search;
+pub use search::{SearchHit, SearchIndex};
+
+#[cfg(feature = "benchmarks")]
+pub mod workload;

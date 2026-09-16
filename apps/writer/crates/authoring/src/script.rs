@@ -3,14 +3,14 @@ use crate::{Document, EditError, Passage};
 use recite_core::{DivertTarget, SourceId, Statement};
 use recite_parser::parse;
 
-#[derive(Clone, Debug, PartialEq)]
+#[derive(Clone, Debug, PartialEq, Eq)]
 pub struct ScriptBlock {
     pub id: String,
     pub is_default: bool,
     pub entries: Vec<ScriptEntry>,
 }
 
-#[derive(Clone, Debug, PartialEq)]
+#[derive(Clone, Debug, PartialEq, Eq)]
 pub enum ScriptEntry {
     Passage(Passage),
     Jump(String),
@@ -24,11 +24,16 @@ pub enum ScriptEntry {
 
 impl Document {
     pub fn script(&self) -> Result<Vec<ScriptBlock>, EditError> {
+        Ok(self.script_snapshot()?.to_vec())
+    }
+    pub(crate) fn project_script(&self) -> Result<Vec<ScriptBlock>, EditError> {
         let parsed = parse(self.key().as_str(), self.source()).lower_source_file();
         if !parsed.diagnostics.is_empty() {
             return Err(EditError::SourceRequired("repair the syntax diagnostics"));
         }
-        let passages = self.passages()?;
+        let passages = self.passage_snapshot()?;
+        let passages: std::collections::BTreeMap<_, _> =
+            passages.iter().map(|p| (p.id.as_str(), p)).collect();
         Ok(parsed
             .source_file
             .blocks
@@ -42,7 +47,11 @@ impl Document {
     }
 }
 
-fn entries(statements: &[Statement], source: &str, passages: &[Passage]) -> Vec<ScriptEntry> {
+fn entries(
+    statements: &[Statement],
+    source: &str,
+    passages: &std::collections::BTreeMap<&str, &Passage>,
+) -> Vec<ScriptEntry> {
     let mut result = Vec::new();
     let heading = |line: u32| {
         source
@@ -121,14 +130,13 @@ fn entries(statements: &[Statement], source: &str, passages: &[Passage]) -> Vec<
     result
 }
 
-fn find(id: &SourceId, passages: &[Passage]) -> Option<Passage> {
+fn find(id: &SourceId, passages: &std::collections::BTreeMap<&str, &Passage>) -> Option<Passage> {
     let SourceId::Frozen { anchor, .. } = id else {
         return None;
     };
     passages
-        .iter()
-        .find(|passage| passage.id == anchor.as_str())
-        .cloned()
+        .get(anchor.as_str())
+        .map(|passage| (*passage).clone())
 }
 
 fn destination(target: &DivertTarget) -> String {

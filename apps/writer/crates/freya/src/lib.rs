@@ -1,15 +1,21 @@
+use crate::design::tokens as t;
 mod beat_heading;
 mod branch_preview;
+mod buffers;
 mod chrome;
 mod closing;
 mod controls;
+mod design;
 mod editing;
 mod examples;
 mod files;
-mod palette;
+use design::palette;
 mod passage_menu;
 mod project;
 mod project_context;
+mod project_loading;
+mod project_search;
+mod reading_context;
 mod recovery;
 mod route_editor;
 pub use closing::request_close;
@@ -19,8 +25,11 @@ mod preview_panel;
 mod prose;
 mod scene;
 mod scene_map;
+mod scene_navigation;
+mod script_entries;
 mod settings;
 mod sidebar;
+mod workspace;
 
 use editing::editor_data;
 use freya::prelude::*;
@@ -37,6 +46,10 @@ pub fn app() -> Element {
     workbench(AppMode::Examples)
 }
 
+/// Optional source for embedding and repeatable headless workloads.
+#[derive(Clone)]
+pub struct InitialSource(pub String);
+
 /// The original Alice scene retained for interaction regressions.
 pub fn regression_app() -> Element {
     workbench(AppMode::Regression)
@@ -48,7 +61,13 @@ pub fn editor_app() -> Element {
 }
 
 fn workbench(mode: AppMode) -> Element {
+    let initial = use_try_consume::<InitialSource>();
     let mut model = use_state(move || {
+        if mode == AppMode::Regression
+            && let Some(initial) = initial
+        {
+            return Workbench::new(&initial.0);
+        }
         if mode == AppMode::Examples {
             WRITER_EXAMPLES[0].open()
         } else {
@@ -102,7 +121,7 @@ fn workbench(mode: AppMode) -> Element {
         }
     });
     let editor_id = use_a11y();
-    let buffers = files::Buffers {
+    let buffers = buffers::Buffers {
         model,
         editor,
         prose,
@@ -133,7 +152,11 @@ fn workbench(mode: AppMode) -> Element {
         }
     });
     let expanded = use_state(std::collections::BTreeSet::new);
+    let trail = use_state(reading_context::Trail::default);
+    let reference = use_state(|| None::<reading_context::Reference>);
     let writer = editing::Writer {
+        trail,
+        reference,
         scroll,
         pane,
         expanded,
@@ -150,9 +173,9 @@ fn workbench(mode: AppMode) -> Element {
         search,
     };
     let navigation_visible = use_state(|| true);
-    let file_chrome = (mode == AppMode::Project).then(|| files::controls(buffers, message, night));
+    let file_chrome = (mode == AppMode::Project).then(|| files::controls(writer, message, night));
     let example_scenes =
-        (mode == AppMode::Examples).then(|| examples::navigation(buffers, message, night));
+        (mode == AppMode::Examples).then(|| examples::navigation(writer, message, night));
     let empty_files = use_state(|| None);
     let mut displayed_document = use_state(String::new);
     let document = model
@@ -189,9 +212,16 @@ fn workbench(mode: AppMode) -> Element {
     } else if let Some(scenes) = example_scenes {
         scenes
     } else {
-        label().text(scene_name.clone()).into_element()
+        scene_navigation::SceneNavigation {
+            writer,
+            scenes: vec![scene_navigation::SceneBranch {
+                caption: scene_name.clone(),
+                active: true,
+                open: EventHandler::new(|()| {}),
+            }],
+        }
+        .into_element()
     };
-    let navigation = sidebar::render(writer, navigation_visible, dark, theme, scenes);
     let toolbar = chrome::toolbar(
         writer,
         file_chrome.as_ref().map(|chrome| chrome.actions.clone()),
@@ -214,8 +244,8 @@ fn workbench(mode: AppMode) -> Element {
     let active = field::render(writer, editor_id);
     let mut reading = rect()
         .width(Size::fill())
-        .padding((8., 20.))
-        .spacing(8.)
+        .padding((design::tokens::SPACE_XS, design::tokens::SPACE_SM))
+        .spacing(t::SPACE_SM)
         .child(scene::reading_surface(writer, active.clone()));
     let diagnostics = session.document().diagnostics();
     for diagnostic in &diagnostics {
@@ -230,66 +260,23 @@ fn workbench(mode: AppMode) -> Element {
         } else {
             diagnostic.message.clone()
         };
-        reading = reading.child(label().text(text).font_size(14.));
+        reading = reading.child(label().text(text).font_size(t::TEXT_BODY));
     }
     let mut body = rect()
         .content(Content::Flex)
         .horizontal()
         .width(Size::fill())
         .height(Size::flex(1.))
-        .child(navigation)
-        .child(
-            rect()
-                .key("scene-editor")
-                .content(Content::Flex)
-                .width(Size::flex(1.))
-                .height(Size::fill())
-                .background(palette::reading(night))
-                .border(
-                    Border::new()
-                        .width(BorderWidth {
-                            left: 1.,
-                            ..Default::default()
-                        })
-                        .fill(palette::rule(night)),
-                )
-                .child(toolbar)
-                .child(
-                    rect()
-                        .horizontal()
-                        .content(Content::Flex)
-                        .width(Size::fill())
-                        .height(Size::flex(1.))
-                        .maybe_child((!source).then_some(map))
-                        .maybe_child((source || *pane.read() == editing::Pane::Script).then(
-                            || {
-                                rect()
-                                    .key("writing-pane")
-                                    .a11y_id(inspector_focus)
-                                    .a11y_focusable(true)
-                                    .a11y_role(AccessibilityRole::Group)
-                                    .a11y_alt("Beat editor")
-                                    .width(if source { Size::fill() } else { Size::px(520.) })
-                                    .height(Size::fill())
-                                    .on_key_down(move |event: Event<KeyboardEventData>| {
-                                        if event.key == Key::Named(NamedKey::Escape) && !source {
-                                            event.stop_propagation();
-                                            writer.close_editor();
-                                        }
-                                    })
-                                    .child(if source {
-                                        active
-                                    } else {
-                                        ScrollView::new_controlled(scroll)
-                                            .height(Size::fill())
-                                            .width(Size::fill())
-                                            .child(reading)
-                                            .into_element()
-                                    })
-                            },
-                        )),
-                ),
-        );
+        .child(workspace::Workspace {
+            writer,
+            source,
+            navigation_visible,
+            scenes,
+            toolbar,
+            map,
+            reading: reading.into_element(),
+            active,
+        });
     if *pane.read() == editing::Pane::Preview {
         body = body.child(preview_panel::render(writer));
     }
@@ -342,7 +329,7 @@ fn workbench(mode: AppMode) -> Element {
             }
         })
         .content(Content::Flex)
-        .font_size(14.)
+        .font_size(t::TEXT_BODY)
         .background(colors.background)
         .color(colors.text_primary)
         .child(
@@ -358,7 +345,7 @@ fn workbench(mode: AppMode) -> Element {
         rect()
             .width(Size::fill())
             .padding(Gaps::new(8., 16., 8., 16.))
-            .spacing(4.)
+            .spacing(t::SPACE_XS)
             .border(
                 Border::new()
                     .width(BorderWidth {

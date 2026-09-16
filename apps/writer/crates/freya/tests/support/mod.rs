@@ -38,6 +38,6 @@ pub fn open_beat(test: &mut TestingRunner) -> Result<(), Box<dyn std::error::Err
 }
 pub fn dark_theme(test: &mut TestingRunner) -> Result<(), Box<dyn std::error::Error>> {
     click(test, "Settings")?;
-    click(test, "Theme: Light")?;
+    click(test, "Theme: Dark")?;
     click(test, "Close settings")
 }

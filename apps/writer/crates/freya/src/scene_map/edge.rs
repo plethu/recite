@@ -1,6 +1,6 @@
 //! Retarget colour fades from the current frame, even during rapid pointer movement.
 use freya::{
-    animation::{AnimNum, Ease, OnChange, use_animation_with_dependencies},
+    animation::{OnChange, use_animation_with_dependencies},
     prelude::*,
 };
 use skia_safe::{Color, Paint, PaintStyle, Path, PathEffect};
@@ -20,23 +20,29 @@ pub(super) struct Edge {
 }
 impl Component for Edge {
     fn render(&self) -> impl IntoElement {
-        let duration = if self.reduced_motion { 0 } else { 180 };
+        let reduced = self.reduced_motion;
         let initial = if self.highlighted { 1. } else { 0. };
         let current = use_hook(|| Rc::new(Cell::new(initial)));
         let previous = current.clone();
         let animation =
             use_animation_with_dependencies(&self.highlighted, move |config, active| {
                 config.on_change(OnChange::Rerun);
-                AnimNum::new(previous.get(), if *active { 1. } else { 0. })
-                    .time(duration)
-                    .ease(Ease::InOut)
+                crate::design::tokens::transition(
+                    previous.get(),
+                    if *active { 1. } else { 0. },
+                    reduced,
+                )
             });
         let initial_opacity = if self.dimmed { 0.65 } else { 1. };
         let current_opacity = use_hook(|| Rc::new(Cell::new(initial_opacity)));
         let previous_opacity = current_opacity.clone();
         let opacity = use_animation_with_dependencies(&self.dimmed, move |config, dimmed| {
             config.on_change(OnChange::Rerun);
-            AnimNum::new(previous_opacity.get(), if *dimmed { 0.65 } else { 1. }).time(duration)
+            crate::design::tokens::transition(
+                previous_opacity.get(),
+                if *dimmed { 0.65 } else { 1. },
+                reduced,
+            )
         });
         current_opacity.set(opacity.get().value());
         let amount = animation.get().value();
