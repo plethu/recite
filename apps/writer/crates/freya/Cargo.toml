@@ -1,0 +1,30 @@
+[package]
+name = "recite-writer"
+version.workspace = true
+edition.workspace = true
+rust-version.workspace = true
+license.workspace = true
+publish.workspace = true
+
+[dependencies]
+atomic-write-file = "0.3.1"
+accesskit = "0.24.1"
+recite-writer-grammar = { path = "../grammar" }
+freya = { version = "=0.5.0-rc.4", features = ["code-editor"] }
+recite-writer-model.workspace = true
+# The same Skia package used by Freya; draw graph paths without raster SVG assets.
+skia-safe = { package = "freya-skia-safe", version = "=0.99.1", default-features = false }
+
+recite-config = { path = "../../../../crates/recite-config" }
+tempfile = "3"
+thiserror = "2"
+recite-core = { path = "../../../../crates/recite-core" }
+recite-compiler = { path = "../../../../crates/recite-compiler" }
+serde = { version = "1", features = ["derive"] }
+serde_json = "1"
+
+[lints]
+workspace = true
+
+[dev-dependencies]
+freya-testing = "=0.5.0-rc.4"

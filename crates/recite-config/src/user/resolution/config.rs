@@ -4,7 +4,7 @@ use super::super::model::{
 };
 use super::policy::{
     AuthorityValue, ColorPolicy, ContrastPolicy, KeyHintsPolicy, KeymapPolicy, ResolvedField,
-    ShowUnavailableChoicesPolicy, UiLocalePolicy, resolve_field,
+    ShowUnavailableChoicesPolicy, UiLocalePolicy, WriterConfirmExitPolicy, resolve_field,
 };
 use recite_ui::UiLocale;
 
@@ -45,9 +45,33 @@ pub struct ResolvedUserConfig {
     color: ResolvedField<TuiColorMode>,
     contrast: ResolvedField<TuiContrast>,
     show_unavailable_choices: ResolvedField<bool>,
+    writer_confirm_exit: ResolvedField<bool>,
+    writer_view: ResolvedField<super::super::WriterView>,
+    writer_theme: ResolvedField<super::super::WriterTheme>,
+    writer_reduced_motion: ResolvedField<bool>,
+    writer_zoom_to_pointer: ResolvedField<bool>,
 }
 
 impl ResolvedUserConfig {
+    pub const fn writer_view(&self) -> &ResolvedField<super::super::WriterView> {
+        &self.writer_view
+    }
+    pub const fn writer_theme(&self) -> &ResolvedField<super::super::WriterTheme> {
+        &self.writer_theme
+    }
+    pub const fn writer_reduced_motion(&self) -> &ResolvedField<bool> {
+        &self.writer_reduced_motion
+    }
+    pub const fn writer_zoom_to_pointer(&self) -> &ResolvedField<bool> {
+        &self.writer_zoom_to_pointer
+    }
+
+    /// Whether to confirm ordinary native writer exits, with user/default provenance.
+    #[must_use]
+    pub const fn writer_confirm_exit(&self) -> &ResolvedField<bool> {
+        &self.writer_confirm_exit
+    }
+
     /// Returns the resolved UI settings.
     #[must_use]
     pub const fn ui(&self) -> ResolvedUiConfig<'_> {
@@ -108,6 +132,53 @@ pub fn resolve_user_config(
     let ui = &loaded.config.ui;
     let play = &loaded.config.play;
     ResolvedUserConfig {
+        writer_view: resolve_field(
+            super::policy::WriterViewPolicy,
+            super::super::WriterConfig::default().view,
+            loaded
+                .field_is_explicit(UserConfigField::WriterView)
+                .then(|| AuthorityValue::new(ConfigAuthority::User, loaded.config.writer.view)),
+        )
+        .unwrap_or_else(|_| unreachable!("writer preferences are user owned")),
+        writer_theme: resolve_field(
+            super::policy::WriterThemePolicy,
+            super::super::WriterConfig::default().theme,
+            loaded
+                .field_is_explicit(UserConfigField::WriterTheme)
+                .then(|| AuthorityValue::new(ConfigAuthority::User, loaded.config.writer.theme)),
+        )
+        .unwrap_or_else(|_| unreachable!("writer preferences are user owned")),
+        writer_reduced_motion: resolve_field(
+            super::policy::WriterReducedMotionPolicy,
+            super::super::WriterConfig::default().reduced_motion,
+            loaded
+                .field_is_explicit(UserConfigField::WriterReducedMotion)
+                .then(|| {
+                    AuthorityValue::new(ConfigAuthority::User, loaded.config.writer.reduced_motion)
+                }),
+        )
+        .unwrap_or_else(|_| unreachable!("writer preferences are user owned")),
+        writer_zoom_to_pointer: resolve_field(
+            super::policy::WriterZoomToPointerPolicy,
+            super::super::WriterConfig::default().zoom_to_pointer,
+            loaded
+                .field_is_explicit(UserConfigField::WriterZoomToPointer)
+                .then(|| {
+                    AuthorityValue::new(ConfigAuthority::User, loaded.config.writer.zoom_to_pointer)
+                }),
+        )
+        .unwrap_or_else(|_| unreachable!("writer preferences are user owned")),
+
+        writer_confirm_exit: resolve_field(
+            WriterConfirmExitPolicy,
+            super::super::WriterConfig::default().confirm_exit,
+            loaded
+                .field_is_explicit(UserConfigField::WriterConfirmExit)
+                .then(|| {
+                    AuthorityValue::new(ConfigAuthority::User, loaded.config.writer.confirm_exit)
+                }),
+        )
+        .unwrap_or_else(|_| unreachable!("writer exit confirmation is a user preference")),
         ui_locale: resolve_field(
             UiLocalePolicy,
             UiLocale::default(),

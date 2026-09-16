@@ -1,0 +1,78 @@
+# Original writer fixture: a recurring conversation hub with nested topics.
+# Effects are requests to the host; this file never changes game state itself.
+:: relay_desk default
+> desk_greeting@31000000000000000001 speaker=mara
+  If you're here about the transmitter, take a number. If you're here about the smoke, take a bucket.
+? ask_work@31000000000000000002
+  Anything I can do to help?
+  -> missing_courier
+? ask_station@31000000000000000003
+  What happened to this place?
+  -> station_history
+? insult_station@31000000000000000004
+  Quite an operation. Does anything here actually work?
+  -> insult
+? leave_desk@31000000000000000005
+  I'll leave you to it.
+  -> goodbye
+
+:: missing_courier
+> courier_problem@31000000000000000006 speaker=mara
+  Our courier is two days late. Everyone keeps asking about the battery she was carrying. I'd rather know where she is.
+? ask_route@31000000000000000007
+  Where was she headed?
+  -> courier_route
+? offer_search@31000000000000000008
+  I'll look for her.
+  -> accept_search
+? back_from_work@31000000000000000009
+  Let me ask about something else.
+  -> relay_desk
+
+:: courier_route
+> route_warning@3100000000000000000a speaker=mara
+  The old flood road. She knows it goes under at dusk, so don't tell me she simply got lost.
+? ask_shelter@3100000000000000000b
+  Is there somewhere she could shelter?
+  -> pump_house
+? back_to_courier@3100000000000000000c
+  About the search...
+  -> missing_courier
+
+:: pump_house
+> shelter_hint@3100000000000000000d speaker=mara
+  A pump house, halfway out. Knock before you go in. She carries a flare pistol and she startles easily.
+-> courier_route
+
+:: accept_search
+! immediate set_flag(courier_search, true)
+! immediate change_disposition(mara, 1)
+> search_accepted@3100000000000000000e speaker=mara
+  Bring her home. The battery can walk back on its own, for all I care.
+-> relay_desk
+
+:: station_history
+> station_history_line@3100000000000000000f speaker=mara
+  We used to send weather reports. Now we send names. People listening for someone who hasn't come home.
+? ask_names@31000000000000000010
+  Do you ever get an answer?
+  -> station_answer
+? return_from_history@31000000000000000011
+  Something else I wanted to ask.
+  -> relay_desk
+
+:: station_answer
+> answer_story@31000000000000000012 speaker=mara
+  Last week. A woman up north recognised her brother's cough before he said a word.
+-> station_history
+
+:: insult
+! immediate change_disposition(mara, -1)
+> insult_response@31000000000000000013 speaker=mara
+  The door. Try it.
+-> relay_desk
+
+:: goodbye
+> farewell@31000000000000000014 speaker=mara
+  Keep off the flood road after dark.
+-> END

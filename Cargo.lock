@@ -2070,6 +2070,7 @@ dependencies = [
 name = "recite-config"
 version = "0.1.0"
 dependencies = [
+ "atomic-write-file",
  "dirs",
  "recite-core",
  "recite-ui",
@@ -2078,6 +2079,7 @@ dependencies = [
  "tempfile",
  "thiserror 2.0.18",
  "toml",
+ "toml_edit",
 ]
 
 [[package]]

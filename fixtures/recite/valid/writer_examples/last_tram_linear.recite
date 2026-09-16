@@ -1,0 +1,9 @@
+# Original writer fixture: exactly three spoken sentences, no choices.
+:: last_tram default
+> tram_question@33000000000000000001 speaker=lea
+  Is this the last tram?
+> tram_answer@33000000000000000002 speaker=ivo
+  Only if we get on it.
+> tram_reply@33000000000000000003 speaker=lea
+  Hold the door, then.
+-> END

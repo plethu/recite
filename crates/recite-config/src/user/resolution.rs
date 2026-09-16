@@ -7,5 +7,7 @@ pub use config::{InvocationOverrides, ResolvedUiConfig, ResolvedUserConfig, reso
 pub use policy::{
     AuthorityValue, ColorPolicy, ContrastPolicy, FieldPolicy, FieldProvenance,
     FieldResolutionError, KeyHintsPolicy, KeymapPolicy, ResolvedField,
-    ShowUnavailableChoicesPolicy, UiLocalePolicy, resolve_field,
+    ShowUnavailableChoicesPolicy, UiLocalePolicy, WriterConfirmExitPolicy,
+    WriterReducedMotionPolicy, WriterThemePolicy, WriterViewPolicy, WriterZoomToPointerPolicy,
+    resolve_field,
 };

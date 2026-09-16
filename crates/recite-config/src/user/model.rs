@@ -37,6 +37,12 @@ pub enum UserConfigField {
     Contrast,
     /// Whether the play surface displays unavailable choices.
     ShowUnavailableChoices,
+    /// Whether the native writer asks before ordinary exit.
+    WriterConfirmExit,
+    WriterView,
+    WriterTheme,
+    WriterReducedMotion,
+    WriterZoomToPointer,
 }
 
 /// A typed, read-only user presentation configuration.
@@ -49,6 +55,8 @@ pub struct UserConfig {
     pub ui: UiConfig,
     /// Play-surface preferences.
     pub play: PlayConfig,
+    /// Native writer preferences; never supplied by a project manifest.
+    pub writer: WriterConfig,
 }
 
 impl Default for UserConfig {
@@ -57,8 +65,51 @@ impl Default for UserConfig {
             config_version: CONFIG_VERSION,
             ui: UiConfig::default(),
             play: PlayConfig::default(),
+            writer: WriterConfig::default(),
         }
     }
+}
+
+/// Native writer preferences stored in the user's Recite configuration.
+#[derive(Clone, Debug, Eq, PartialEq, Deserialize)]
+#[serde(default, deny_unknown_fields)]
+pub struct WriterConfig {
+    /// Ask before an ordinary exit. Unsaved-work protection remains mandatory.
+    pub confirm_exit: bool,
+    pub view: WriterView,
+    pub theme: WriterTheme,
+    pub reduced_motion: bool,
+    pub zoom_to_pointer: bool,
+}
+
+impl Default for WriterConfig {
+    fn default() -> Self {
+        Self {
+            confirm_exit: true,
+            view: WriterView::Map,
+            theme: WriterTheme::Light,
+            reduced_motion: false,
+            zoom_to_pointer: true,
+        }
+    }
+}
+
+/// Preferred writer workspace, independent of a scene's editing selection.
+#[derive(Clone, Copy, Debug, Default, Eq, PartialEq, Deserialize)]
+#[serde(rename_all = "lowercase")]
+pub enum WriterView {
+    #[default]
+    Map,
+    Source,
+}
+
+/// Writer colour scheme; independent of terminal colour policy.
+#[derive(Clone, Copy, Debug, Default, Eq, PartialEq, Deserialize)]
+#[serde(rename_all = "lowercase")]
+pub enum WriterTheme {
+    #[default]
+    Light,
+    Dark,
 }
 
 /// UI preferences owned by the user rather than a project or dialogue asset.

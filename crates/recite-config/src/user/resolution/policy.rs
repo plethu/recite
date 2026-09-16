@@ -158,6 +158,13 @@ user_policy!(
     [ConfigAuthority::User]
 );
 
+user_policy!(
+    WriterConfirmExitPolicy,
+    UserConfigField::WriterConfirmExit,
+    bool,
+    [ConfigAuthority::User]
+);
+
 /// Resolve candidates with a named policy. Invocation wins only for the one
 /// policy that explicitly permits invocation; user and generated values never
 /// become project-semantic fallbacks because no project policy is exposed here.
@@ -218,3 +225,28 @@ where
         provenance: FieldProvenance::Default,
     })
 }
+
+user_policy!(
+    WriterViewPolicy,
+    UserConfigField::WriterView,
+    super::super::WriterView,
+    [ConfigAuthority::User]
+);
+user_policy!(
+    WriterThemePolicy,
+    UserConfigField::WriterTheme,
+    super::super::WriterTheme,
+    [ConfigAuthority::User]
+);
+user_policy!(
+    WriterReducedMotionPolicy,
+    UserConfigField::WriterReducedMotion,
+    bool,
+    [ConfigAuthority::User]
+);
+user_policy!(
+    WriterZoomToPointerPolicy,
+    UserConfigField::WriterZoomToPointer,
+    bool,
+    [ConfigAuthority::User]
+);

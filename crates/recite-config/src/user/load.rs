@@ -12,8 +12,7 @@ use super::{
     LoadedUserConfig, PlayConfig, TuiColorMode, TuiContrast, UiConfig, UserConfig,
 };
 use crate::path::{
-    ConfigPathSource, Platform, PlatformRoots, ResolvedConfigPath, production_config_path,
-    resolve_config_path,
+    ConfigPathSource, Platform, PlatformRoots, ResolvedConfigPath, resolve_config_path,
 };
 
 /// Loads user configuration through the production environment/platform adapter.
@@ -21,8 +20,7 @@ use crate::path::{
 /// An absent platform default returns typed defaults. Any explicit override
 /// failure is returned, including missing, unreadable, or malformed files.
 pub fn load_user_config() -> Result<LoadedUserConfig, ConfigError> {
-    let path = production_config_path()?;
-    load_user_config_path(path.as_ref())
+    super::UserConfigStore::discover()?.load()
 }
 
 /// Loads user configuration using synthetic platform inputs and a real local
@@ -41,8 +39,17 @@ pub fn load_user_config_from(
 pub fn load_user_config_path(
     path: Option<&ResolvedConfigPath>,
 ) -> Result<LoadedUserConfig, ConfigError> {
+    load_source(path).map(|(loaded, _)| loaded)
+}
+
+pub(super) fn load_source(
+    path: Option<&ResolvedConfigPath>,
+) -> Result<(LoadedUserConfig, Option<String>), ConfigError> {
     let Some(path) = path else {
-        return Ok(LoadedUserConfig::defaults(ConfigProvenance::Defaults, None));
+        return Ok((
+            LoadedUserConfig::defaults(ConfigProvenance::Defaults, None),
+            None,
+        ));
     };
 
     let provenance = match path.source() {
@@ -57,9 +64,9 @@ pub fn load_user_config_path(
                     path: path.path().to_path_buf(),
                 });
             }
-            return Ok(LoadedUserConfig::defaults(
-                provenance,
-                Some(path.path().to_path_buf()),
+            return Ok((
+                LoadedUserConfig::defaults(provenance, Some(path.path().to_path_buf())),
+                None,
             ));
         }
         Err(error) => {
@@ -70,7 +77,8 @@ pub fn load_user_config_path(
         }
     };
 
-    parse_user_config(&source, path.path(), provenance)
+    let loaded = parse_user_config(&source, path.path(), provenance)?;
+    Ok((loaded, Some(source)))
 }
 
 #[derive(Debug, Default, Deserialize)]
@@ -81,6 +89,18 @@ struct RawUserConfig {
     ui: RawUiConfig,
     #[serde(default)]
     play: RawPlayConfig,
+    #[serde(default)]
+    writer: RawWriterConfig,
+}
+
+#[derive(Debug, Default, Deserialize)]
+#[serde(deny_unknown_fields)]
+struct RawWriterConfig {
+    confirm_exit: Option<bool>,
+    view: Option<super::WriterView>,
+    theme: Option<super::WriterTheme>,
+    reduced_motion: Option<bool>,
+    zoom_to_pointer: Option<bool>,
 }
 
 #[derive(Debug, Default, Deserialize)]
@@ -99,7 +119,7 @@ struct RawPlayConfig {
     show_unavailable_choices: Option<bool>,
 }
 
-fn parse_user_config(
+pub(super) fn parse_user_config(
     source: &str,
     path: &Path,
     provenance: ConfigProvenance,
@@ -122,6 +142,12 @@ fn parse_user_config(
     };
 
     let field_presence = UserConfigFieldPresence {
+        writer_confirm_exit: raw.writer.confirm_exit.is_some(),
+        writer_view: raw.writer.view.is_some(),
+        writer_theme: raw.writer.theme.is_some(),
+        writer_reduced_motion: raw.writer.reduced_motion.is_some(),
+        writer_zoom_to_pointer: raw.writer.zoom_to_pointer.is_some(),
+
         ui_locale: raw.ui.locale.is_some(),
         keymap: raw.ui.keymap.is_some(),
         key_hints: raw.ui.key_hints.is_some(),
@@ -138,6 +164,23 @@ fn parse_user_config(
         None => defaults.ui.locale,
     };
     let config = UserConfig {
+        writer: super::WriterConfig {
+            view: raw.writer.view.unwrap_or(defaults.writer.view),
+            theme: raw.writer.theme.unwrap_or(defaults.writer.theme),
+            reduced_motion: raw
+                .writer
+                .reduced_motion
+                .unwrap_or(defaults.writer.reduced_motion),
+            zoom_to_pointer: raw
+                .writer
+                .zoom_to_pointer
+                .unwrap_or(defaults.writer.zoom_to_pointer),
+
+            confirm_exit: raw
+                .writer
+                .confirm_exit
+                .unwrap_or(defaults.writer.confirm_exit),
+        },
         config_version: CONFIG_VERSION,
         ui: UiConfig {
             locale,

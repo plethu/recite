@@ -1,0 +1,68 @@
+# Original writer fixture: split, converge, split again, and finish.
+:: alarm default
+> alarm_line@32000000000000000001 speaker=ivo
+  The lower gate is stuck open, and the market is still full of people.
+? take_rooftops@32000000000000000002
+  I'll ring the roof bell. You clear the stairs.
+  -> rooftops
+? take_market@32000000000000000003
+  Come with me. We'll clear the stalls together.
+  -> market
+
+:: rooftops
+> rooftops_line@32000000000000000004 speaker=lea
+  From up here I can see the water crossing the square.
+> bell_line@32000000000000000005 speaker=ivo
+  They heard you. The stairs are moving.
+-> gatehouse
+
+:: market
+> market_line@32000000000000000006 speaker=lea
+  Leave the carts! The upper street is still dry.
+> market_reply@32000000000000000007 speaker=ivo
+  That's the last stallholder. She wouldn't leave without her cat.
+-> gatehouse
+
+:: gatehouse
+> gatehouse_line@32000000000000000008 speaker=ivo
+  Everyone's out. Now we either cut the gate loose or turn the water through the workshops.
+? cut_chain@32000000000000000009
+  Cut the chain. We'll rebuild the gate.
+  -> broken_gate
+? open_sluice@3200000000000000000a
+  Open the side sluice. Save the foundations.
+  -> flooded_workshops
+
+:: broken_gate
+> chain_line@3200000000000000000b speaker=lea
+  Stand back. When it falls, nothing holds it.
+> gate_falls@3200000000000000000c speaker=ivo
+  There it goes. A year's repairs in one splash.
+-> high_ground
+
+:: flooded_workshops
+> sluice_line@3200000000000000000d speaker=lea
+  Help me with the wheel. Don't look at the windows.
+> workshop_loss@3200000000000000000e speaker=ivo
+  My sister works down there. I'll tell her myself.
+-> high_ground
+
+:: high_ground
+> high_ground_line@3200000000000000000f speaker=ivo
+  Everyone's accounted for. They're waiting to hear what happened.
+? tell_truth@32000000000000000010
+  Then we tell them together.
+  -> together
+? take_blame@32000000000000000011
+  I'll speak. It was my decision.
+  -> alone
+
+:: together
+> together_line@32000000000000000012 speaker=lea
+  Give us a moment, everyone. We owe you the whole story.
+-> END
+
+:: alone
+> alone_line@32000000000000000013 speaker=lea
+  I made a choice down there. You deserve to know why.
+-> END

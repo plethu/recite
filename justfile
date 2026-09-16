@@ -62,3 +62,13 @@ test-godot:
 
 test-editor-host client *args:
     case "$1" in neovim|vscode|zed) scripts/check-"$1"-host.sh "${@:2}" ;; *) echo 'Expected neovim, vscode, or zed' >&2; exit 2 ;; esac
+
+# Launch the native writer, optionally with --project PATH.
+writer *args:
+    cargo run --locked --manifest-path apps/writer/Cargo.toml -p recite-writer -- "$@"
+
+# Verify the maintained native application and its source-editing model.
+check-writer:
+    cargo fmt --manifest-path apps/writer/Cargo.toml --all -- --check
+    cargo test --locked --manifest-path apps/writer/Cargo.toml --workspace
+    cargo clippy --locked --manifest-path apps/writer/Cargo.toml --workspace --all-targets -- -D warnings

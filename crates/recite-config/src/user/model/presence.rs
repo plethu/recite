@@ -9,6 +9,11 @@ pub(crate) struct UserConfigFieldPresence {
     pub(crate) color: bool,
     pub(crate) contrast: bool,
     pub(crate) show_unavailable_choices: bool,
+    pub(crate) writer_confirm_exit: bool,
+    pub(crate) writer_view: bool,
+    pub(crate) writer_theme: bool,
+    pub(crate) writer_reduced_motion: bool,
+    pub(crate) writer_zoom_to_pointer: bool,
 }
 
 impl UserConfigFieldPresence {
@@ -20,6 +25,11 @@ impl UserConfigFieldPresence {
             color: true,
             contrast: true,
             show_unavailable_choices: true,
+            writer_confirm_exit: true,
+            writer_view: true,
+            writer_theme: true,
+            writer_reduced_motion: true,
+            writer_zoom_to_pointer: true,
         }
     }
 
@@ -31,6 +41,11 @@ impl UserConfigFieldPresence {
             UserConfigField::Color => self.color,
             UserConfigField::Contrast => self.contrast,
             UserConfigField::ShowUnavailableChoices => self.show_unavailable_choices,
+            UserConfigField::WriterConfirmExit => self.writer_confirm_exit,
+            UserConfigField::WriterView => self.writer_view,
+            UserConfigField::WriterTheme => self.writer_theme,
+            UserConfigField::WriterReducedMotion => self.writer_reduced_motion,
+            UserConfigField::WriterZoomToPointer => self.writer_zoom_to_pointer,
         }
     }
 }

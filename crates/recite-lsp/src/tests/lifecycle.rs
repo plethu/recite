@@ -92,6 +92,7 @@ pub(super) fn valid_ui_config_changes_presentation_only() {
         },
         play: PlayConfig::default(),
         config_version: recite_config::CONFIG_VERSION,
+        ..UserConfig::default()
     };
     let localized = DEFAULT_RESOURCE.replace(
         "diagnostic-parse-001 = expected a Recite statement header or indented prose",
