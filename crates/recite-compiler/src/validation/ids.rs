@@ -127,9 +127,7 @@ impl<'a> Validator<'a> {
     }
 
     fn stable_ids_incomplete(&self) -> bool {
-        self.effective_participation
-            .values()
-            .any(|participation| participation.stable_ids() == ValidationCompleteness::Incomplete)
+        !self.stable_ids_complete
     }
 }
 

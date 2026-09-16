@@ -140,3 +140,85 @@ fn local_markup_errors_change_without_rebuilding_project_indexes() {
     );
     assert_eq!(super::PROJECT_VALIDATION_COUNT.with(Cell::get), 1);
 }
+
+#[test]
+fn shared_destination_does_not_revalidate_unrelated_callers() {
+    use crate::validation::incremental::VALIDATED_DOCUMENTS;
+    let mut kernel = AuthoringKernel::new();
+    let mut saved: Vec<_> = (0..100)
+        .map(|n| {
+            SavedDocument::new(
+                key(&format!("scene{n:03}.recite")),
+                format!(
+                    ":: beat{n}{}\n> line@{n:020x}\n  Hello.\n-> scene000.recite::beat0\n",
+                    if n == 0 { " default" } else { "" }
+                ),
+            )
+        })
+        .collect();
+    kernel
+        .apply(AuthoringRequest::new(
+            kernel.snapshot().generation(),
+            saved.clone(),
+            [],
+        ))
+        .unwrap();
+    for text in [
+        ":: beat50\n> line@ffffffffffffffffffff\n  Hello.\n-> scene000.recite::beat0\n",
+        ":: beat50\n> line@ffffffffffffffffffff\n  Hello.\n  More words.\n-> scene000.recite::beat0\n",
+    ] {
+        VALIDATED_DOCUMENTS.with(|count| count.set(0));
+        saved[50] = SavedDocument::new(key("scene050.recite"), text);
+        kernel
+            .apply(AuthoringRequest::new(
+                kernel.snapshot().generation(),
+                saved.clone(),
+                [],
+            ))
+            .unwrap();
+        assert!(
+            VALIDATED_DOCUMENTS.with(Cell::get) <= 3,
+            "unrelated scenes must not be validated"
+        );
+        assert!(
+            kernel
+                .snapshot()
+                .documents()
+                .iter()
+                .all(|doc| doc.diagnostics().is_empty())
+        );
+    }
+    VALIDATED_DOCUMENTS.with(|count| count.set(0));
+    saved[0] = SavedDocument::new(key("scene000.recite"), format!("\n{}", saved[0].text()));
+    kernel
+        .apply(AuthoringRequest::new(
+            kernel.snapshot().generation(),
+            saved.clone(),
+            [],
+        ))
+        .unwrap();
+    assert_eq!(
+        VALIDATED_DOCUMENTS.with(Cell::get),
+        1,
+        "moving the destination must not invalidate callers"
+    );
+    saved[0] = SavedDocument::new(
+        key("scene000.recite"),
+        saved[0].text().replace(":: beat0", ":: renamed"),
+    );
+    kernel
+        .apply(AuthoringRequest::new(
+            kernel.snapshot().generation(),
+            saved,
+            [],
+        ))
+        .unwrap();
+    assert!(
+        kernel
+            .snapshot()
+            .documents()
+            .iter()
+            .all(|doc| !doc.diagnostics().is_empty()),
+        "removing the referenced block must invalidate every caller"
+    );
+}

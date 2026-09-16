@@ -30,8 +30,9 @@ Preview uses Recite's runtime; game-side effects remain caller-owned requests.
 
 The [scalability report](scalability.md) records the implemented cache, rendering,
 navigation and recovery boundaries, repeatable benchmark commands, and measured
-10k/100k/1m-passage results. Million-passage semantic validation and process memory
-remain too expensive for a production-readiness claim. New regressions cover
+10k/100k/1m-passage results. Incremental validation and profiled heap reductions
+now have allocation/work-count regression checks; native performance and sustained
+large-project memory still need acceptance evidence. New regressions cover
 projection identity/invalidation, compact Unicode undo, indexed saved search,
 large graph scope/culling, paged prose with undo, pinned reading history, and
 background recovery flush/failure/retry.

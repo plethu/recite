@@ -5,13 +5,42 @@ use serde_json::{Value, json};
 use std::hint::black_box;
 
 fn measure<T>(name: &str, rows: &mut Vec<Value>, operation: impl FnOnce() -> T) -> T {
+    #[cfg(feature = "heap-profile")]
+    let before = dhat::HeapStats::get();
     let start = WallTime.start();
     let value = operation();
-    rows.push(json!({"operation":name, "milliseconds":WallTime.end(start).as_secs_f64()*1000.}));
+    let elapsed = WallTime.end(start).as_secs_f64() * 1000.;
+    #[cfg(feature = "heap-profile")]
+    let after = dhat::HeapStats::get();
+    let row = json!({"operation":name, "milliseconds":elapsed});
+    #[cfg(feature = "heap-profile")]
+    let row = {
+        let mut row = row;
+        row["allocated_bytes"] = json!(after.total_bytes - before.total_bytes);
+        row["allocations"] = json!(after.total_blocks - before.total_blocks);
+        row["live_bytes"] = json!(after.curr_bytes);
+        row["peak_live_bytes"] = json!(after.max_bytes);
+        row
+    };
+    rows.push(row);
     value
 }
+#[cfg(feature = "heap-profile")]
+#[global_allocator]
+static ALLOC: dhat::Alloc = dhat::Alloc;
+
 fn main() -> Result<(), Box<dyn std::error::Error>> {
     let args: Vec<_> = std::env::args().collect();
+    let check_heap = args.iter().any(|arg| arg == "--check-heap");
+    if check_heap && !cfg!(feature = "heap-profile") {
+        return Err("--check-heap requires the heap-profile feature".into());
+    }
+    #[cfg(feature = "heap-profile")]
+    let _profiler = if check_heap {
+        dhat::Profiler::builder().testing().build()
+    } else {
+        dhat::Profiler::new_heap()
+    };
     let argument = |name: &str| {
         args.iter()
             .position(|value| value == name)
@@ -28,9 +57,28 @@ fn main() -> Result<(), Box<dyn std::error::Error>> {
     if passages == 0 || per_document == 0 {
         return Err("positive workload sizes required".into());
     }
+    if check_heap && (passages != 10_000 || per_document != 500) {
+        return Err("heap regression check uses 10,000 passages and 500 per document".into());
+    }
+    let linked = args.iter().any(|arg| arg == "--linked");
     let mut rows = Vec::new();
     let inputs = measure("generate", &mut rows, || {
-        workload::project(passages, per_document)
+        workload::project(passages, per_document).map(|documents| {
+            if linked {
+                documents
+                    .into_iter()
+                    .map(|doc| {
+                        recite_compiler::SavedDocument::new(
+                            doc.key().clone(),
+                            doc.text()
+                                .replace("-> END", "-> scene_00000.recite::beat_0"),
+                        )
+                    })
+                    .collect()
+            } else {
+                documents
+            }
+        })
     })?;
     let bytes: usize = inputs.iter().map(|doc| doc.text().len()).sum();
     let index = measure("index", &mut rows, || SearchIndex::build(&inputs));
@@ -80,22 +128,24 @@ fn main() -> Result<(), Box<dyn std::error::Error>> {
     for _ in 0..10 {
         assert!(measure("redo", &mut rows, || document.redo())?);
     }
-    let multiline =
-        document
-            .source()
-            .replacen("The courier waits", "The courier waits\n  and wonders", 1);
-    measure("multiline_edit", &mut rows, || {
-        document.replace_source(document.revision(), multiline)
-    })?;
-    assert!(measure("multiline_undo", &mut rows, || document.undo())?);
-    let changed_id =
-        document
-            .source()
-            .replacen("@00000000000000000000", "@ffffffffffffffffffff", 1);
-    measure("id_edit", &mut rows, || {
-        document.replace_source(document.revision(), changed_id)
-    })?;
-    assert!(measure("id_undo", &mut rows, || document.undo())?);
+    for _ in 0..10 {
+        let multiline =
+            document
+                .source()
+                .replacen("The courier waits", "The courier waits\n  and wonders", 1);
+        measure("multiline_edit", &mut rows, || {
+            document.replace_source(document.revision(), multiline)
+        })?;
+        assert!(measure("multiline_undo", &mut rows, || document.undo())?);
+        let changed_id =
+            document
+                .source()
+                .replacen("@00000000000000000000", "@ffffffffffffffffffff", 1);
+        measure("id_edit", &mut rows, || {
+            document.replace_source(document.revision(), changed_id)
+        })?;
+        assert!(measure("id_undo", &mut rows, || document.undo())?);
+    }
     let peak = std::fs::read_to_string("/proc/self/status")
         .ok()
         .and_then(|text| {
@@ -103,8 +153,27 @@ fn main() -> Result<(), Box<dyn std::error::Error>> {
                 .find(|line| line.starts_with("VmHWM:"))
                 .map(str::to_owned)
         });
+    #[cfg(feature = "heap-profile")]
+    if check_heap {
+        // Fixed corpus allocation bounds, independent of wall-clock/host speed.
+        // Heap evidence and rationale live in scalability.md.
+        let peak_bytes = dhat::HeapStats::get().max_bytes;
+        dhat::assert!(peak_bytes < 20_000_000);
+        for row in &rows {
+            if matches!(
+                row["operation"].as_str(),
+                Some("edit" | "undo" | "redo" | "multiline_edit" | "id_edit")
+            ) {
+                dhat::assert!(
+                    row["allocated_bytes"]
+                        .as_u64()
+                        .is_some_and(|bytes| bytes < 4_000_000)
+                );
+            }
+        }
+    }
     let report = json!({"os":std::env::consts::OS, "arch":std::env::consts::ARCH,
-        "profile":"bench", "passages":passages, "documents":inputs.len(), "source_bytes":bytes,
+        "profile":"bench", "heap_instrumented":cfg!(feature = "heap-profile"), "shared_destination":linked, "passages":passages, "documents":inputs.len(), "source_bytes":bytes,
         "diagnostic_count":diagnostic_count, "history_bytes":document.history_bytes(), "process_peak_rss":peak, "samples":rows});
     let text = serde_json::to_string_pretty(&report)?;
     if let Some(path) = argument("--output") {

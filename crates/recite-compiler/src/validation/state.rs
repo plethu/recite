@@ -15,6 +15,7 @@ use crate::diagnostics;
 
 pub(crate) struct Validator<'a> {
     pub(super) phase: ValidationPhase,
+    pub(super) stable_ids_complete: bool,
     pub(crate) source_files: Vec<ValidationInput<'a>>,
     pub(crate) diagnostics: Vec<Diagnostic>,
     pub(super) schema: Option<&'a ProjectSchema>,
@@ -63,6 +64,9 @@ impl<'a> Validator<'a> {
         };
 
         Self {
+            stable_ids_complete: effective_participation
+                .values()
+                .all(|p| p.stable_ids().is_complete()),
             phase,
             source_files,
             diagnostics: Vec::new(),
@@ -127,6 +131,7 @@ impl<'a> Validator<'a> {
     fn empty_probe_state(schema: Option<&'a ProjectSchema>) -> Self {
         Self {
             phase: ValidationPhase::Complete,
+            stable_ids_complete: true,
             source_files: Vec::new(),
             diagnostics: Vec::new(),
             schema,

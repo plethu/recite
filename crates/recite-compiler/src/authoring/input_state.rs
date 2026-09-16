@@ -9,7 +9,7 @@ use super::state::AuthoringError;
 #[derive(Clone, Copy, Debug, Eq, PartialEq)]
 pub(super) struct EffectiveDocument<'a> {
     pub(super) key: &'a DocumentKey,
-    pub(super) text: &'a str,
+    pub(super) text: &'a std::sync::Arc<str>,
     pub(super) layer: DocumentLayer,
     pub(super) version: Option<super::DocumentVersion>,
 }
@@ -77,7 +77,7 @@ pub(super) fn effective_documents<'a>(
                 key,
                 EffectiveDocument {
                     key,
-                    text: document.text(),
+                    text: document.shared_text(),
                     layer: DocumentLayer::Saved,
                     version: None,
                 },
@@ -89,7 +89,7 @@ pub(super) fn effective_documents<'a>(
             key,
             EffectiveDocument {
                 key,
-                text: document.text(),
+                text: document.shared_text(),
                 layer: DocumentLayer::Open,
                 version: Some(document.version()),
             },

@@ -243,3 +243,74 @@ fn echo_targets_and_related_diagnostic_locations_are_invalidated() {
             .diagnostics()
     );
 }
+
+#[test]
+fn joining_splitting_and_removing_components_matches_batch() {
+    let variants = [
+        ":: first default\n> line@11111111111111111111\n  Hello.\n-> END\n",
+        ":: first\n> line@22222222222222222222\n  Hello.\n-> END\n",
+        ":: second default\n> line@11111111111111111111\n  Hello.\n-> END\n",
+        ":: first\n-> b.recite::second\n",
+        ":: first\n* reply@33333333333333333333 echo=line(22222222222222222222)\n  Reply.\n  -> END\n",
+        ":: first default\n> line@broken\n  Broken.\n",
+        "",
+    ];
+    let b = ":: second\n> line@22222222222222222222\n  Other.\n-> END\n";
+    let c = ":: third\n> line@33333333333333333333\n  Independent.\n-> END\n";
+    let mut kernel = AuthoringKernel::new();
+    // Reuse one kernel across every transition, including removal of a target,
+    // missing-default owner changes and global recovery/completeness changes.
+    for a in variants {
+        for next in variants {
+            for complete in [true, false] {
+                compare(
+                    &mut kernel,
+                    &[("a.recite", a), ("b.recite", b), ("c.recite", c)],
+                    None,
+                    complete,
+                );
+                compare(
+                    &mut kernel,
+                    &[("a.recite", next), ("b.recite", b), ("c.recite", c)],
+                    None,
+                    complete,
+                );
+                compare(
+                    &mut kernel,
+                    &[("b.recite", b), ("c.recite", c)],
+                    None,
+                    complete,
+                );
+            }
+        }
+    }
+}
+
+#[test]
+fn context_only_diagnostics_are_never_published() {
+    let a = ":: first default\n-> b.recite::second\n";
+    let b = ":: second\n-> c.recite::third\n";
+    let c = ":: third\n-> END\n";
+    let mut kernel = AuthoringKernel::new();
+    for next in [
+        a.to_owned(),
+        format!("\n{a}"),
+        a.replace("second", "missing"),
+        a.to_owned(),
+    ] {
+        compare(
+            &mut kernel,
+            &[("a.recite", &next), ("b.recite", b), ("c.recite", c)],
+            None,
+            true,
+        );
+        assert!(
+            kernel
+                .snapshot()
+                .document(&DocumentKey::new("b.recite").unwrap())
+                .unwrap()
+                .diagnostics()
+                .is_empty()
+        );
+    }
+}

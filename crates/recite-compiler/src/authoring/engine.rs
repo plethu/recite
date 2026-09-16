@@ -9,7 +9,7 @@ use super::input_state::EffectiveDocument;
 use super::snapshot::{AuthoringSnapshot, DocumentDelta, DocumentSnapshot, delta, metadata};
 use super::state::DocumentAnalysis;
 use crate::validation::{
-    incremental::{same_project_inputs, validate_local, validate_project},
+    incremental::{ProjectFacts, validate_local},
     project::sort_diagnostics_by_source,
 };
 use crate::{ValidationInput, ValidationParticipation};
@@ -26,32 +26,36 @@ pub(super) fn rebuild_analyses(
     old_effective: &BTreeMap<&recite_core::DocumentKey, EffectiveDocument<'_>>,
     new_effective: &BTreeMap<&recite_core::DocumentKey, EffectiveDocument<'_>>,
     schema: Option<&ProjectSchema>,
-) -> (BTreeMap<recite_core::DocumentKey, DocumentAnalysis>, bool) {
-    let mut project_changed = old.len() != new_effective.len();
+) -> (
+    BTreeMap<recite_core::DocumentKey, DocumentAnalysis>,
+    BTreeSet<recite_core::DocumentKey>,
+) {
+    let mut project_changed = BTreeSet::new();
     let mut analyses = BTreeMap::new();
     for (key, document) in new_effective {
         let previous = old.remove(*key);
         let analysis = match previous {
             Some(previous)
                 if old_effective.get(key).is_some_and(|old| {
-                    std::ptr::eq(old.text, document.text) || old.text == document.text
+                    Arc::ptr_eq(old.text, document.text) || old.text == document.text
                 }) =>
             {
                 previous
             }
             previous => {
                 let next = analyze(document, schema);
-                project_changed |= previous.as_ref().is_none_or(|old| {
-                    !same_project_inputs(
-                        ValidationInput::new(&old.source_file, old.participation),
-                        ValidationInput::new(&next.source_file, next.participation),
-                    )
-                });
+                if previous
+                    .as_ref()
+                    .is_none_or(|old| old.project_facts != next.project_facts)
+                {
+                    project_changed.insert((*key).clone());
+                }
                 next
             }
         };
         analyses.insert((*key).clone(), analysis);
     }
+    project_changed.extend(old.into_keys());
     (analyses, project_changed)
 }
 
@@ -59,7 +63,7 @@ fn analyze(document: &EffectiveDocument<'_>, schema: Option<&ProjectSchema>) -> 
     if cfg!(test) {
         ANALYZE_COUNT.with(|count| count.set(count.get() + 1));
     }
-    let parsed = parse(document.key.as_str(), document.text);
+    let parsed = parse(document.key.as_str(), document.text.as_ref());
     let lowered = parsed.lower_source_file();
     let participation = participation_for(lowered.recovery);
     let summary = AuthoringSummary::from_source_file(&lowered.source_file);
@@ -71,8 +75,11 @@ fn analyze(document: &EffectiveDocument<'_>, schema: Option<&ProjectSchema>) -> 
     .into();
     DocumentAnalysis {
         local_diagnostics,
-        source_file: lowered.source_file,
-        source_text: Arc::from(document.text),
+        project_facts: Arc::new(ProjectFacts::collect(ValidationInput::new(
+            &lowered.source_file,
+            participation,
+        ))),
+        source_text: Arc::clone(document.text),
         parse_diagnostics: lowered.diagnostics.into(),
         summary: Arc::new(summary),
         participation,
@@ -102,35 +109,12 @@ fn completeness(is_complete: bool) -> crate::ValidationCompleteness {
     }
 }
 
-pub(super) fn validate_analyses(
-    analyses: &BTreeMap<recite_core::DocumentKey, DocumentAnalysis>,
-    schema: Option<&ProjectSchema>,
-    project_complete: bool,
-) -> BTreeMap<recite_core::DocumentKey, Vec<Diagnostic>> {
-    if cfg!(test) {
-        PROJECT_VALIDATION_COUNT.with(|count| count.set(count.get() + 1));
-    }
-    let inputs = analyses
-        .values()
-        .map(|analysis| ValidationInput::new(&analysis.source_file, analysis.participation));
-    let report = validate_project(inputs, schema, project_complete);
-    let mut diagnostics = BTreeMap::<recite_core::DocumentKey, Vec<Diagnostic>>::new();
-    for diagnostic in report.diagnostics {
-        if let Ok(key) = recite_core::DocumentKey::new(diagnostic.span.file.clone())
-            && analyses.contains_key(&key)
-        {
-            diagnostics.entry(key).or_default().push(diagnostic);
-        }
-    }
-    diagnostics
-}
-
 pub(super) fn build_documents(
     effective: &BTreeMap<&recite_core::DocumentKey, EffectiveDocument<'_>>,
     analyses: &BTreeMap<recite_core::DocumentKey, DocumentAnalysis>,
     semantic: &BTreeMap<recite_core::DocumentKey, Vec<Diagnostic>>,
     old_snapshot: &AuthoringSnapshot,
-    project_changed: bool,
+    project_changed: &BTreeSet<recite_core::DocumentKey>,
 ) -> Vec<DocumentSnapshot> {
     effective
         .iter()
@@ -138,7 +122,7 @@ pub(super) fn build_documents(
             let analysis = analyses.get(*key)?;
             let diagnostics = match old_snapshot.document(key) {
                 Some(old)
-                    if !project_changed
+                    if !project_changed.contains(*key)
                         && std::ptr::eq(old.source_text(), analysis.source_text.as_ref()) =>
                 {
                     Arc::clone(old.shared_diagnostics())

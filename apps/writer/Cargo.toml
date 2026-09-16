@@ -28,3 +28,6 @@ unimplemented = "deny"
 
 [profile.dev]
 debug = 0
+
+[profile.bench]
+debug = "line-tables-only"

@@ -71,7 +71,17 @@ writer *args:
 check-writer:
     cargo fmt --manifest-path apps/writer/Cargo.toml --all -- --check
     cargo test --locked --manifest-path apps/writer/Cargo.toml --workspace
-    cargo clippy --locked --manifest-path apps/writer/Cargo.toml --workspace --all-targets -- -D warnings
+    cargo clippy --locked --manifest-path apps/writer/Cargo.toml --workspace --all-targets --all-features -- -D warnings
+    just check-writer-heap
+
+# Fixed-corpus allocation regression checks; no wall-clock budget.
+check-writer-heap:
+    cargo bench --locked --manifest-path apps/writer/Cargo.toml -p recite-writer-model --features heap-profile --bench large_project -- --passages 10000 --check-heap
+    cargo bench --locked --manifest-path apps/writer/Cargo.toml -p recite-writer-model --features heap-profile --bench large_project -- --passages 10000 --check-heap --linked
+
+# perf (Linux CPU) or DHAT (heap), using the optimized benchmark with debug lines.
+profile-writer mode="cpu" passages="10000" output="/tmp/recite-writer-profile":
+    scripts/profile-writer.sh "$1" "$2" "$3"
 
 # Generated saved-project workload; accepts --passages, --per-document and --output.
 bench-writer *args:

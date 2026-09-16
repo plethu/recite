@@ -23,6 +23,10 @@ impl SavedDocument {
         &self.key
     }
 
+    pub(super) fn shared_text(&self) -> &std::sync::Arc<str> {
+        &self.text
+    }
+
     /// Returns the complete saved source text.
     #[must_use]
     pub fn text(&self) -> &str {
@@ -35,7 +39,7 @@ impl SavedDocument {
 pub struct OpenDocument {
     key: DocumentKey,
     version: DocumentVersion,
-    text: String,
+    text: std::sync::Arc<str>,
 }
 
 impl OpenDocument {
@@ -45,7 +49,7 @@ impl OpenDocument {
         Self {
             key,
             version,
-            text: text.into(),
+            text: text.into().into(),
         }
     }
 
@@ -59,6 +63,10 @@ impl OpenDocument {
     #[must_use]
     pub const fn version(&self) -> DocumentVersion {
         self.version
+    }
+
+    pub(super) fn shared_text(&self) -> &std::sync::Arc<str> {
+        &self.text
     }
 
     /// Returns the complete overlay source text.

@@ -1,12 +1,12 @@
 # Writer scalability
 
 The writer bounds much of its visible work, shares saved source text, and indexes
-project search. The authoring kernel now caches file-local validation separately
-from project diagnostics. On the corrected million-passage benchmark, ordinary
-single-line prose edits take about 14 ms, compared with 1.01 seconds before this
-kernel change. **This is not full million-passage readiness**: multiline edits
-and changes to project facts still take about a second, and peak process memory
-remains near 3 GiB. Freya remains the selected UI.
+project search. The authoring kernel retains compact validation facts and updates
+only changed documents and affected dependents. Single-line, multiline and ID edits
+now avoid project-wide validation in the generated million-passage workload.
+[The profiling pass](benchmarks/2026-09-16-dependencies/README.md) records latency,
+heap ownership, RSS, regression checks and the remaining limits. Freya remains the
+selected UI; these model measurements do not establish native GUI readiness.
 
 ## Implemented boundaries
 
@@ -61,7 +61,8 @@ The project workload defaults to 500 passages per document and five passages per
 beat. It generates unique frozen IDs, Unicode prose, speakers and linear links.
 It measures indexing, warm searches, cloning saved inputs, opening an authoring
 kernel with the full project context, cold/cached projection, ten single-passage
-edits, ten undos and ten redos. It reports source bytes, estimated retained history
+edits, ten undos and ten redos, then ten multiline and ID edits with undo.
+`--linked` makes all documents link to one shared destination. It reports source bytes, estimated retained history
 allocation and Linux process peak RSS. Opening here excludes filesystem discovery,
 index construction and painting: those are not one end-to-end project-open timing.
 
@@ -112,7 +113,7 @@ work, **not native frame pacing, text-input latency or GPU rendering**. Recovery
 queue submissions were below 0.05 ms in this run; the final durable flush took
 129 ms and reopened the latest draft correctly.
 
-## Kernel comparison on a valid project
+## First kernel comparison on a valid project
 
 [Before/after measurements](benchmarks/2026-09-16-kernel/README.md) use the same
 host and optimized bench profile, with unique block names/IDs and one default.
@@ -133,33 +134,55 @@ unchanged, not memory or cold-start wins. Retained history is 676 estimated byte
 after the extended transaction sequence. These are model timings, not native
 edit-to-paint measurements.
 
-Local validation reruns on reparsed documents, including markup, interpolation,
-metadata, conditions and effects. Project diagnostics are reused only when exact
-borrowed facts match: block definitions/defaults, IDs, echo targets, references,
-source locations and recovery participation. Added/removed documents and project
-completeness changes invalidate them. No probabilistic hash or unchecked source
-rewrite establishes equivalence. Schema ownership is immutable for a kernel;
-changing schema creates a fresh kernel as before. Unchanged document diagnostics
-also retain their shared allocation. Unchanged saved text uses allocation identity
-before falling back to byte equality, avoiding redundant corpus-wide text scans.
+## Incremental project validation and profiling
 
-The uncached batch validator remains the reference implementation. Differential
-tests cover every source fixture and edit sequences with schema validation,
-recovery, completeness transitions, removals, echo targets, ID conflicts, and
-related diagnostic location movement. Counter/allocation-identity tests verify
-that ordinary prose/markup edits actually reuse project work while updating local
-errors. Batch compilation and public validation APIs retain their existing checks.
+Local validation runs against the parsed document, then discards its full AST.
+Project facts retain only identities, block definitions/defaults, references, echo
+targets, source locations and recovery participation. Saved inputs, analyses and
+snapshots share source bytes. A reverse dependency index tracks definitions and
+consumers separately, so scenes sharing a destination do not form one giant
+revalidation group. Moving that destination's location does not change whether
+its blocks resolve; changing/removing its block definitions invalidates callers.
+
+Changed documents and affected dependents are validated with their required
+providers using the existing project validator. Only each target's diagnostics
+are published: context providers may omit their own unrelated dependencies.
+Completeness and global stable-ID recovery transitions conservatively refresh
+all documents. Schema changes create a new kernel. The uncached batch validator
+remains the differential oracle, including related diagnostic locations.
+
+```sh
+mise exec -- just profile-writer cpu 100000 /tmp/writer-cpu
+mise exec -- just profile-writer heap 10000 /tmp/writer-heap
+mise exec -- just check-writer-heap
+mise exec -- just bench-writer --passages 1000000 --linked --output /tmp/writer-linked.json
+```
+
+The profiler builds the existing optimized benchmark with line debug information,
+then runs the executable directly under Linux `perf` (DWARF stacks) or DHAT. It
+records environment/build metadata and refuses to overwrite a prior profile.
+DHAT is a development dependency, with its allocator enabled only in this bench
+under `heap-profile`; production allocation is unchanged. Instrumented reports
+include per-operation allocation counts/bytes and live/peak heap bytes. Their
+latencies and RSS are not compared with uninstrumented runs.
+
+`check-writer` (and therefore `just check`) runs both independent and shared-target
+10,000-passage heap checks. Bounds are 20 MB peak live heap and 4 MB allocated per
+wording/undo/redo/multiline/ID edit, using 500 passages per document. These are fixed
+corpus allocation contracts with measured headroom, not machine timing budgets.
+A private work-count test additionally prevents unrelated callers being revalidated;
+batch-equivalence tests cover joins, splits, removals, defaults, recovery, echo/ID
+collisions and context-only diagnostics. Keep bounds reviewed alongside raw heap
+evidence rather than increasing them to accommodate an unexplained regression.
 
 ## Remaining work and acceptance
 
-The remaining kernel frontier is incrementally maintained project indexes and
-per-dependent diagnostics for additions, removals, ID/reference changes and moved
-locations. Current invalidation deliberately falls back to project validation for
-these cases. Multiline edits move later diagnostic locations and therefore use that
-fallback too. Measure allocation ownership before claiming a memory improvement;
-this pass improves ordinary edit latency, not corpus memory. Large-scene topology
-invalidation after source/placement changes also remains scene-wide. Source view
-still opens the whole document in the existing code editor.
+Project discovery/indexing and cold validation still scale with corpus size.
+A high-fan-out semantic change legitimately invalidates all its dependents; global
+completeness/recovery changes can still require a full refresh. Context projection
+can also be expensive for a single enormous file or many colliding definitions.
+Source summaries and saved-search postings remain sizeable heap owners. Large-scene
+topology invalidation is still scene-wide, and Source view opens the whole document.
 
 Before claiming RPG production scale, extend these workloads to branching/fan-out,
 cycles, cross-scene references, long prose, diagnostics-heavy projects and prolonged
@@ -188,9 +211,9 @@ surface while layout, routing, culling and neighbourhood selection live in
 focused modules. Further splitting their remaining composition code would mostly
 move hook wiring rather than establish a new responsibility.
 
-The validation phase orchestration and its project-fact comparison live together
+The validation phase orchestration, compact facts and dependency index live together
 under `validation/incremental`. The statement validator is reduced to 282 lines
 by separating localisable-ID validation, whose ownership now spans both phases.
 The phases reuse existing checks rather than create a second set of diagnostic rules. Authoring state owns cache lifetime and snapshot
-sharing. No new public cache API, background kernel worker or dependency framework
+sharing. No new public cache API or background kernel worker
 is introduced by this optimisation.

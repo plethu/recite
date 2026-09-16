@@ -6,7 +6,9 @@ use super::{
 use recite_core::{ProjectSchema, Statement};
 
 mod facts;
-pub(crate) use facts::same_project_inputs;
+pub(crate) use facts::ProjectFacts;
+mod index;
+pub(crate) use index::ProjectIndex;
 
 #[derive(Clone, Copy, PartialEq)]
 pub(crate) enum ValidationPhase {
@@ -27,17 +29,31 @@ pub(crate) fn validate_local(
     }
 }
 
-pub(crate) fn validate_project<'a>(
-    inputs: impl IntoIterator<Item = ValidationInput<'a>>,
-    schema: Option<&'a ProjectSchema>,
+fn validate_context(
+    facts: &[&ProjectFacts],
     complete: bool,
-) -> ValidationReport {
-    let mut validator = Validator::for_phase(inputs, schema, complete, ValidationPhase::Project);
-    validator.validate();
-    sort_diagnostics_by_source(&mut validator.diagnostics);
-    ValidationReport {
-        diagnostics: validator.diagnostics,
+    stable_complete: bool,
+) -> Vec<recite_core::Diagnostic> {
+    let sources: Vec<_> = facts.iter().map(|facts| facts.project_source()).collect();
+    let inputs = sources
+        .iter()
+        .zip(facts)
+        .map(|(source, facts)| ValidationInput::new(source, facts.participation));
+    let mut validator = Validator::for_phase(inputs, None, complete, ValidationPhase::Project);
+    validator.stable_ids_complete = stable_complete;
+    // Context includes all default declarations for default-bearing targets. The index
+    // checks the single global missing-default diagnostic separately.
+    for input in validator.source_files.clone() {
+        validator.validate_source_file(input);
     }
+    if cfg!(test) {
+        VALIDATED_DOCUMENTS.with(|count| count.set(count.get() + facts.len()));
+    }
+    validator.diagnostics
+}
+
+thread_local! {
+    pub(crate) static VALIDATED_DOCUMENTS: std::cell::Cell<usize> = const { std::cell::Cell::new(0) };
 }
 
 impl<'a> Validator<'a> {
