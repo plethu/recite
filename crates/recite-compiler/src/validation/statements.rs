@@ -1,6 +1,6 @@
 use recite_core::{
     Block, Choice, Divert, Effect, IfBranch, Line, MatchArm, MatchBranch, MetadataTarget,
-    SourceFile, SourceId, Statement,
+    SourceFile, Statement,
 };
 
 use super::metadata::MetadataValidationContext;
@@ -152,29 +152,6 @@ impl<'a> Validator<'a> {
         }
     }
 
-    pub(crate) fn validate_line_localisable_id(&mut self, line: &'a Line) {
-        let SourceId::Frozen { .. } = &line.source_id else {
-            self.diagnostics.push(match &line.source_id {
-                SourceId::Missing => diagnostics::missing_line_id(line),
-                SourceId::Draft { .. } => diagnostics::draft_line_id(line),
-                SourceId::Malformed { .. } => diagnostics::malformed_line_id(line, &line.source_id),
-                SourceId::Frozen { .. } => unreachable!("frozen ID matched earlier"),
-            });
-            return;
-        };
-        let Some(id) = line.id.as_ref() else {
-            return;
-        };
-
-        if let Some(first_span) = self.localisable_ids.get(id.as_str())
-            && self.duplicate_id_is_in_scope(first_span, &line.span)
-        {
-            self.diagnostics
-                .push(diagnostics::duplicate_line_id(line, id, first_span.clone()));
-        } else {
-            self.localisable_ids.insert(id.as_str(), line.span.clone());
-        }
-    }
     pub(super) fn validate_choice(&mut self, source_file: &'a SourceFile, choice: &'a Choice) {
         if self.participation.ast_structure() == ValidationCompleteness::Complete {
             self.validate_span(source_file, &choice.span, O::Choice);
@@ -239,42 +216,6 @@ impl<'a> Validator<'a> {
             self.diagnostics
                 .push(diagnostics::missing_choice_target(choice));
         }
-    }
-    pub(crate) fn validate_choice_localisable_id(&mut self, choice: &'a Choice) {
-        if let SourceId::Frozen { .. } = &choice.source_id {
-            let Some(id) = choice.id.as_ref() else {
-                return;
-            };
-            if let Some(first_span) = self.localisable_ids.get(id.as_str())
-                && self.duplicate_id_is_in_scope(first_span, &choice.span)
-            {
-                self.diagnostics.push(diagnostics::duplicate_choice_id(
-                    choice,
-                    id,
-                    first_span.clone(),
-                ));
-            } else {
-                self.localisable_ids
-                    .insert(id.as_str(), choice.span.clone());
-            }
-        } else {
-            self.diagnostics.push(match &choice.source_id {
-                SourceId::Missing => diagnostics::missing_choice_id(choice),
-                SourceId::Draft { .. } => diagnostics::draft_choice_id(choice),
-                SourceId::Malformed { .. } => {
-                    diagnostics::malformed_choice_id(choice, &choice.source_id)
-                }
-                SourceId::Frozen { .. } => unreachable!("frozen ID matched earlier"),
-            });
-        }
-    }
-
-    fn duplicate_id_is_in_scope(
-        &self,
-        first_span: &recite_core::SourceSpan,
-        current_span: &recite_core::SourceSpan,
-    ) -> bool {
-        self.project_complete || first_span.file == current_span.file
     }
     pub(super) fn validate_divert(&mut self, source_file: &'a SourceFile, divert: &'a Divert) {
         if self.participation.ast_structure() == ValidationCompleteness::Complete {

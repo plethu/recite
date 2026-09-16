@@ -5,14 +5,18 @@ use recite_core::DocumentKey;
 pub fn source(passages: usize, first_id: usize, per_beat: usize) -> String {
     let mut source = String::new();
     for passage in 0..passages {
-        let beat = passage / per_beat;
+        let beat = first_id + passage / per_beat;
         if passage.is_multiple_of(per_beat) {
             if passage > 0 {
                 source.push_str(&format!("-> beat_{beat}\n\n"));
             }
             source.push_str(&format!(
                 ":: beat_{beat}{}\n",
-                if passage == 0 { " default" } else { "" }
+                if passage == 0 && first_id == 0 {
+                    " default"
+                } else {
+                    ""
+                }
             ));
         }
         let id = first_id + passage;

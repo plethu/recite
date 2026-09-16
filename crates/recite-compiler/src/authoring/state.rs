@@ -81,6 +81,7 @@ pub struct AuthoringKernel {
     open: BTreeMap<DocumentKey, OpenDocument>,
     analyses: BTreeMap<DocumentKey, DocumentAnalysis>,
     snapshot: AuthoringSnapshot,
+    project_diagnostics: BTreeMap<DocumentKey, Vec<Diagnostic>>,
     schema: Option<Arc<ProjectSchema>>,
     project_complete: bool,
 }
@@ -100,6 +101,7 @@ impl AuthoringKernel {
             saved: BTreeMap::new(),
             open: BTreeMap::new(),
             analyses: BTreeMap::new(),
+            project_diagnostics: BTreeMap::new(),
             snapshot: AuthoringSnapshot::new(generation, Vec::new(), None, true),
             schema: None,
             project_complete: true,
@@ -183,13 +185,24 @@ impl AuthoringKernel {
             changed_inputs.extend(old_effective.keys().map(|key| (*key).clone()));
             changed_inputs.extend(new_effective.keys().map(|key| (*key).clone()));
         }
-        let analyses = rebuild_analyses(
+        let (analyses, project_changed) = rebuild_analyses(
             std::mem::take(&mut self.analyses),
             &old_effective,
             &new_effective,
+            self.schema.as_deref(),
         );
-        let semantic = validate_analyses(&analyses, self.schema.as_deref(), project_complete);
-        let documents = build_documents(&new_effective, &analyses, &semantic, &self.snapshot);
+        let project_changed = project_changed || project_complete != self.project_complete;
+        if project_changed {
+            self.project_diagnostics =
+                validate_analyses(&analyses, self.schema.as_deref(), project_complete);
+        }
+        let documents = build_documents(
+            &new_effective,
+            &analyses,
+            &self.project_diagnostics,
+            &self.snapshot,
+            project_changed,
+        );
         let (changed, removed) = build_delta(changed_inputs, &self.snapshot, &documents);
         let delta = AnalysisDelta::new(self.snapshot.generation(), generation, changed, removed);
 
@@ -208,6 +221,7 @@ pub(crate) struct DocumentAnalysis {
     pub(crate) source_file: SourceFile,
     pub(crate) source_text: Arc<str>,
     pub(crate) parse_diagnostics: Arc<[Diagnostic]>,
+    pub(crate) local_diagnostics: Arc<[Diagnostic]>,
     pub(crate) summary: Arc<AuthoringSummary>,
     pub(crate) participation: ValidationParticipation,
     pub(crate) byte_len: usize,

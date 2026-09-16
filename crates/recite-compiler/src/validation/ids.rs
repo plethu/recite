@@ -4,12 +4,16 @@ use recite_core::{
     Block, BlockReference, Choice, ChoiceEcho, DivertTarget, SourceFile, SourceSpan, Statement,
 };
 
+use super::incremental::ValidationPhase;
 use super::participation::{ValidationCompleteness, ValidationInput, ValidationParticipation};
 use super::state::Validator;
 use crate::diagnostics;
 
 impl<'a> Validator<'a> {
     pub(super) fn validate_block_id(&mut self, source_file: &'a SourceFile, block: &'a Block) {
+        if self.phase == ValidationPhase::Local {
+            return;
+        }
         let key = (source_file.path.as_str(), block.id.as_str());
         if let Some(first_span) = self.block_ids.get(&key) {
             self.diagnostics.push(diagnostics::duplicate_block_id(
@@ -40,7 +44,7 @@ impl<'a> Validator<'a> {
         }
     }
     pub(super) fn validate_default_block(&mut self, block: &'a Block) {
-        if !block.is_default {
+        if self.phase == ValidationPhase::Local || !block.is_default {
             return;
         }
 
@@ -55,6 +59,9 @@ impl<'a> Validator<'a> {
         }
     }
     pub(super) fn validate_choice_echo(&mut self, choice: &'a Choice) {
+        if self.phase == ValidationPhase::Local {
+            return;
+        }
         let ChoiceEcho::Line(line_id) = &choice.echo else {
             return;
         };
@@ -73,6 +80,9 @@ impl<'a> Validator<'a> {
         target: &'a DivertTarget,
         span: &SourceSpan,
     ) {
+        if self.phase == ValidationPhase::Local {
+            return;
+        }
         let DivertTarget::Block(reference) = target else {
             return;
         };

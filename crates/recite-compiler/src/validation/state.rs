@@ -3,6 +3,7 @@ use std::collections::{BTreeMap, BTreeSet};
 use recite_core::{Block, Diagnostic, ProjectSchema, SourceFile, SourceSpan};
 
 use super::ids::collect_line_ids;
+use super::incremental::ValidationPhase;
 use super::participation::{
     ValidationCompleteness, ValidationInput, ValidationParticipation, aggregate_participation,
 };
@@ -13,6 +14,7 @@ use super::project::{
 use crate::diagnostics;
 
 pub(crate) struct Validator<'a> {
+    pub(super) phase: ValidationPhase,
     pub(crate) source_files: Vec<ValidationInput<'a>>,
     pub(crate) diagnostics: Vec<Diagnostic>,
     pub(super) schema: Option<&'a ProjectSchema>,
@@ -35,13 +37,33 @@ impl<'a> Validator<'a> {
         schema: Option<&'a ProjectSchema>,
         project_complete: bool,
     ) -> Self {
+        Self::for_phase(
+            source_files,
+            schema,
+            project_complete,
+            ValidationPhase::Complete,
+        )
+    }
+    pub(super) fn for_phase(
+        source_files: impl IntoIterator<Item = ValidationInput<'a>>,
+        schema: Option<&'a ProjectSchema>,
+        project_complete: bool,
+        phase: ValidationPhase,
+    ) -> Self {
         let mut source_files = source_files.into_iter().collect::<Vec<_>>();
         sort_validation_source_files_in_project_order(&mut source_files);
         let effective_participation = aggregate_participation(&source_files);
-        let blocks = collect_blocks(&source_files, &effective_participation);
-        let line_ids = collect_line_ids(&source_files, &effective_participation);
+        let (blocks, line_ids) = if phase == ValidationPhase::Local {
+            (BTreeMap::new(), BTreeSet::new())
+        } else {
+            (
+                collect_blocks(&source_files, &effective_participation),
+                collect_line_ids(&source_files, &effective_participation),
+            )
+        };
 
         Self {
+            phase,
             source_files,
             diagnostics: Vec::new(),
             schema,
@@ -104,6 +126,7 @@ impl<'a> Validator<'a> {
     #[cfg(feature = "bench-support")]
     fn empty_probe_state(schema: Option<&'a ProjectSchema>) -> Self {
         Self {
+            phase: ValidationPhase::Complete,
             source_files: Vec::new(),
             diagnostics: Vec::new(),
             schema,
@@ -132,7 +155,8 @@ impl<'a> Validator<'a> {
                     participation.block_definitions() == ValidationCompleteness::Complete
                 })
         });
-        if self.project_complete
+        if self.phase != ValidationPhase::Local
+            && self.project_complete
             && self.default_count == 0
             && !self.source_files.is_empty()
             && all_block_definitions_complete
@@ -149,7 +173,13 @@ impl<'a> Validator<'a> {
             .get(source_file.path.as_str())
             .copied()
             .unwrap_or_else(|| input.participation());
-        self.validate_source_path(source_file);
+        if self.phase != ValidationPhase::Local {
+            self.validate_source_path(source_file);
+        }
+        if self.phase == ValidationPhase::Project {
+            self.validate_project_statements(input);
+            return;
+        }
 
         for block in &source_file.blocks {
             self.validate_block(source_file, block);

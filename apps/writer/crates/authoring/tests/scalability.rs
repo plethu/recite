@@ -47,3 +47,24 @@ fn search_replaces_one_document_and_combines_speaker_with_unicode_words()
     assert_eq!(index.search("alice would", 1).1.len(), 1);
     Ok(())
 }
+
+#[cfg(feature = "benchmarks")]
+#[test]
+fn generated_project_has_unique_blocks_ids_and_one_default()
+-> Result<(), Box<dyn std::error::Error>> {
+    let documents = recite_writer_model::workload::project(1200, 500)?;
+    let document = Document::in_project(
+        documents[0].key().clone(),
+        documents[0].text(),
+        recite_writer_model::ProjectContext {
+            documents: documents.clone(),
+            schema: None,
+        },
+    )?;
+    assert!(
+        document.diagnostics().is_empty(),
+        "{:?}",
+        document.diagnostics()
+    );
+    Ok(())
+}

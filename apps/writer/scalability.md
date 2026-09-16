@@ -1,10 +1,12 @@
 # Writer scalability
 
-The writer now bounds much of its visible work, shares saved source text, and
-indexes project search. It is **not yet ready for comfortable million-passage
-editing**: a committed edit in the generated million-passage project still takes
-about 2.4 seconds. The remaining project-wide semantic validation and memory
-working set need another compiler/kernel pass. Freya remains the selected UI.
+The writer bounds much of its visible work, shares saved source text, and indexes
+project search. The authoring kernel now caches file-local validation separately
+from project diagnostics. On the corrected million-passage benchmark, ordinary
+single-line prose edits take about 14 ms, compared with 1.01 seconds before this
+kernel change. **This is not full million-passage readiness**: multiline edits
+and changes to project facts still take about a second, and peak process memory
+remains near 3 GiB. Freya remains the selected UI.
 
 ## Implemented boundaries
 
@@ -69,7 +71,14 @@ and verifies that selection changed. The recovery workload queues 100 drafts in 
 10,000-passage document, flushes and verifies the latest snapshot after reopening.
 These generated sources contain no game dialogue or proprietary assets.
 
-## Local results, 16 September 2026
+## Original diagnostic-heavy results, 16 September 2026
+
+The original generator repeated block names and default markers across documents.
+Those inputs caused project diagnostics: the numbers below describe that historical
+diagnostic-heavy workload, not a clean project. The generator has been corrected,
+its harness now asserts zero initial diagnostics, and the following kernel comparison
+reruns both versions against identical corrected sources. Original generator code
+is retained in commit `df12b87dc8071a1eb825cfd18be0e3329b291973`.
 
 AMD Ryzen AI 7 350, Linux x86_64, Rust 1.96.0. Project timings use the optimized
 bench profile; GUI and recovery timings use the unoptimized test profile.
@@ -103,15 +112,54 @@ work, **not native frame pacing, text-input latency or GPU rendering**. Recovery
 queue submissions were below 0.05 ms in this run; the final durable flush took
 129 ms and reopened the latest draft correctly.
 
+## Kernel comparison on a valid project
+
+[Before/after measurements](benchmarks/2026-09-16-kernel/README.md) use the same
+host and optimized bench profile, with unique block names/IDs and one default.
+The baseline is the compiler at `df12b87d`; both runs use the corrected generator
+and extended harness. Every initial snapshot has zero diagnostics.
+
+| Passages | Edit median before / after | After edit max | Multiline edit after | ID change after |
+| --- | --- | --- | --- | --- |
+| 10,000 | 7.01 / 1.39 ms | 1.73 ms | 11.23 ms | 9.45 ms |
+| 100,000 | 90.39 / 2.03 ms | 2.46 ms | 91.02 ms | 93.53 ms |
+| 1,000,000 | 1,007 / 14.01 ms | 15.92 ms | 1,040 ms | 1,059 ms |
+
+Edits have ten samples; multiline/ID changes have one sample each, followed by
+undo. Million-passage undo/redo medians are 13.97/13.93 ms. The corrected corpus
+contains 123,754,976 bytes. Peak RSS before/after is 3,183,692/3,183,644 KiB
+(about 3.04 GiB), and cold kernel opening is 3.30/3.38 seconds. Those are effectively
+unchanged, not memory or cold-start wins. Retained history is 676 estimated bytes
+after the extended transaction sequence. These are model timings, not native
+edit-to-paint measurements.
+
+Local validation reruns on reparsed documents, including markup, interpolation,
+metadata, conditions and effects. Project diagnostics are reused only when exact
+borrowed facts match: block definitions/defaults, IDs, echo targets, references,
+source locations and recovery participation. Added/removed documents and project
+completeness changes invalidate them. No probabilistic hash or unchecked source
+rewrite establishes equivalence. Schema ownership is immutable for a kernel;
+changing schema creates a fresh kernel as before. Unchanged document diagnostics
+also retain their shared allocation. Unchanged saved text uses allocation identity
+before falling back to byte equality, avoiding redundant corpus-wide text scans.
+
+The uncached batch validator remains the reference implementation. Differential
+tests cover every source fixture and edit sequences with schema validation,
+recovery, completeness transitions, removals, echo targets, ID conflicts, and
+related diagnostic location movement. Counter/allocation-identity tests verify
+that ordinary prose/markup edits actually reuse project work while updating local
+errors. Batch compilation and public validation APIs retain their existing checks.
+
 ## Remaining work and acceptance
 
-The next performance frontier is dependency-aware semantic validation in the
-shared authoring kernel, with correctness tests for cross-file references, schema
-changes, ID collisions and diagnostics invalidation. Moving validation off-thread
-alone would hide a stall while retaining its cost; measure allocation ownership
-and retain only the document analyses needed by the accepted project snapshot.
-Large-scene topology invalidation after source/placement changes also remains
-scene-wide. Source view still opens the whole document in the existing code editor.
+The remaining kernel frontier is incrementally maintained project indexes and
+per-dependent diagnostics for additions, removals, ID/reference changes and moved
+locations. Current invalidation deliberately falls back to project validation for
+these cases. Multiline edits move later diagnostic locations and therefore use that
+fallback too. Measure allocation ownership before claiming a memory improvement;
+this pass improves ordinary edit latency, not corpus memory. Large-scene topology
+invalidation after source/placement changes also remains scene-wide. Source view
+still opens the whole document in the existing code editor.
 
 Before claiming RPG production scale, extend these workloads to branching/fan-out,
 cycles, cross-scene references, long prose, diagnostics-heavy projects and prolonged
@@ -139,3 +187,10 @@ the application composition/root-state owner; `scene_map.rs` composes the map
 surface while layout, routing, culling and neighbourhood selection live in
 focused modules. Further splitting their remaining composition code would mostly
 move hook wiring rather than establish a new responsibility.
+
+The validation phase orchestration and its project-fact comparison live together
+under `validation/incremental`. The statement validator is reduced to 282 lines
+by separating localisable-ID validation, whose ownership now spans both phases.
+The phases reuse existing checks rather than create a second set of diagnostic rules. Authoring state owns cache lifetime and snapshot
+sharing. No new public cache API, background kernel worker or dependency framework
+is introduced by this optimisation.

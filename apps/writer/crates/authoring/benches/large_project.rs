@@ -54,6 +54,11 @@ fn main() -> Result<(), Box<dyn std::error::Error>> {
             },
         )
     })?;
+    let diagnostic_count = document.diagnostics().len();
+    assert_eq!(
+        diagnostic_count, 0,
+        "generated project must validate cleanly"
+    );
     let first = measure("project_script", &mut rows, || document.script_snapshot())?;
     for _ in 0..5 {
         let cached = measure("cached_script", &mut rows, || document.script_snapshot())?;
@@ -75,6 +80,22 @@ fn main() -> Result<(), Box<dyn std::error::Error>> {
     for _ in 0..10 {
         assert!(measure("redo", &mut rows, || document.redo())?);
     }
+    let multiline =
+        document
+            .source()
+            .replacen("The courier waits", "The courier waits\n  and wonders", 1);
+    measure("multiline_edit", &mut rows, || {
+        document.replace_source(document.revision(), multiline)
+    })?;
+    assert!(measure("multiline_undo", &mut rows, || document.undo())?);
+    let changed_id =
+        document
+            .source()
+            .replacen("@00000000000000000000", "@ffffffffffffffffffff", 1);
+    measure("id_edit", &mut rows, || {
+        document.replace_source(document.revision(), changed_id)
+    })?;
+    assert!(measure("id_undo", &mut rows, || document.undo())?);
     let peak = std::fs::read_to_string("/proc/self/status")
         .ok()
         .and_then(|text| {
@@ -84,7 +105,7 @@ fn main() -> Result<(), Box<dyn std::error::Error>> {
         });
     let report = json!({"os":std::env::consts::OS, "arch":std::env::consts::ARCH,
         "profile":"bench", "passages":passages, "documents":inputs.len(), "source_bytes":bytes,
-        "history_bytes":document.history_bytes(), "process_peak_rss":peak, "samples":rows});
+        "diagnostic_count":diagnostic_count, "history_bytes":document.history_bytes(), "process_peak_rss":peak, "samples":rows});
     let text = serde_json::to_string_pretty(&report)?;
     if let Some(path) = argument("--output") {
         std::fs::write(path, &text)?;
