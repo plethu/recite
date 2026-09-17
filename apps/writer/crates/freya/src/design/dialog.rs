@@ -10,6 +10,7 @@ pub(crate) struct Dialog {
     pub title: String,
     pub content: Element,
     pub actions: Element,
+    pub primary: super::DialogAction,
     pub focus_order: Vec<AccessibilityId>,
     pub close: EventHandler<()>,
     pub reduced_motion: bool,
@@ -23,7 +24,11 @@ impl Component for Dialog {
             t::transition(0., 1., reduced)
         });
         let close = self.close.clone();
-        let order = self.focus_order.clone();
+        let mut order = self.focus_order.clone();
+        if !self.primary.enabled {
+            order.retain(|id| *id != self.primary.id);
+        }
+        let primary = self.primary.clone();
         rect()
             .position(Position::new_global().top(0.).left(0.))
             .width(Size::window_percent(100.))
@@ -34,7 +39,11 @@ impl Component for Dialog {
             .on_pointer_down(|e: Event<PointerEventData>| e.stop_propagation())
             .on_all_press(|e: Event<PressEventData>| e.stop_propagation())
             .on_global_key_down(move |e: Event<KeyboardEventData>| {
-                if e.key == Key::Named(NamedKey::Escape) {
+                if super::keyboard::submit_key(&e) {
+                    e.stop_propagation();
+                    e.prevent_default();
+                    primary.run();
+                } else if e.key == Key::Named(NamedKey::Escape) {
                     e.stop_propagation();
                     e.prevent_default();
                     close.call(());
@@ -73,7 +82,12 @@ impl Component for Dialog {
                             .max_height(Size::window_percent(60.))
                             .child(self.content.clone()),
                     )
-                    .child(self.actions.clone()),
+                    .child(
+                        actions()
+                            .content(Content::Flex)
+                            .child(rect().width(Size::flex(1.)).child(self.actions.clone()))
+                            .child(self.primary.button()),
+                    ),
             )
     }
 }
@@ -86,3 +100,6 @@ pub(crate) fn actions() -> Rect {
         .main_align(Alignment::End)
         .cross_align(Alignment::Center)
 }
+
+#[cfg(test)]
+mod tests;

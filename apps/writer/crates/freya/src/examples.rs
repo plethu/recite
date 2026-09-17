@@ -3,7 +3,7 @@ use crate::{editing::Writer, palette};
 use freya::prelude::*;
 use recite_writer_model::WRITER_EXAMPLES;
 
-pub(super) fn navigation(writer: Writer, mut message: State<String>) -> Element {
+pub(super) fn navigation(writer: Writer, mut message: crate::feedback::Feedback) -> Element {
     let mut scenes = Vec::new();
     for (index, example) in WRITER_EXAMPLES.iter().enumerate() {
         scenes.push(crate::scene_navigation::SceneBranch {
@@ -15,8 +15,10 @@ pub(super) fn navigation(writer: Writer, mut message: State<String>) -> Element 
                 .as_ref()
                 .is_ok_and(|m| m.document().key().as_str() == example.name),
             open: EventHandler::new(move |()| match select(writer, index) {
-                Err(error) => message.set(error),
-                Ok(()) => writer.scene_opened(),
+                Err(error) => message.error(error),
+                Ok(()) => {
+                    let _ = writer.scene_opened();
+                }
             }),
         });
     }
@@ -75,6 +77,6 @@ pub(super) fn select_at(
         ));
         writer.buffers.prose.set(session.draft().to_owned());
     }
-    writer.message.set(String::new());
+    writer.message.clear();
     Ok(())
 }

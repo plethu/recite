@@ -172,8 +172,8 @@ pub use markup::{
 pub use po::{
     PluralRuleError, PoComment, PoCommentKind, PoDiagnosticKind, PoDocument, PoDocumentFingerprint,
     PoEdit, PoEditError, PoEntry, PoEntryField, PoEntryId, PoHeader, PoIoError, PoParseError,
-    PoParseReport, PoPreviousField, PoPreviousValue, PoTranslation, PoUnknownField, PoWriteError,
-    evaluate_plural_form, validate_plural_rule,
+    PoParseReport, PoPreviousField, PoPreviousValue, PoRefreshError, PoTranslation, PoUnknownField,
+    PoWriteError, evaluate_plural_form, validate_plural_rule,
 };
 pub use project::{
     ProjectDiscovery, ProjectFreshnessInput, ProjectManifest, ProjectManifestLoadReport,

@@ -569,12 +569,12 @@ writer-start-localisation = Start localisation
 writer-add-language = Add language
 writer-target-language = Translate into
 writer-language-example = Search languages, native names or locale codes
-writer-new-catalogue-path = Catalogue location
+writer-new-catalogue-path = Creates
 writer-create-catalogue = Create catalogue
 writer-cancel = Cancel
-writer-create-project-scope = Includes dialogue across the project and localisable schema text. The current scene includes applied edits, even before saving.
-writer-create-document-scope = Includes this document and its localisable schema text, including applied edits.
-writer-create-help = The locale names the PO file in your project’s locale folder. Translations start empty, ready here or in another PO editor.
+writer-create-project-scope = Translate project dialogue and schema text, including applied edits in this scene.
+writer-create-document-scope = Translate this document and its schema text, including applied edits.
+writer-create-help = Choose a language to see its catalogue location.
 writer-creating-catalogue = Preparing the catalogue…
 writer-catalogue-created = Catalogue created. Your translations can begin here.
 writer-invalid-language = Choose a recognised language from the list. Search by name or a locale code such as fr-CA. The dialogue language is independent of the app language.
@@ -597,3 +597,29 @@ writer-no-languages = No matching languages. Try a name or a registered locale c
 writer-unavailable-passage = No matching passage in this project
 
 writer-cofi-language = Welsh (Cofi)
+
+writer-refresh = Refresh from source
+writer-refresh-save = Update catalogue
+writer-refresh-added = New entries
+writer-refresh-changed = Changed source entries
+writer-refresh-removed = Removed entries
+writer-refresh-help = Translations and translator notes are retained. Changed source needs review; removed entries remain as obsolete records. Save or cancel this refresh.
+writer-refreshed = Catalogue refreshed.
+
+writer-source-updates = Source updates
+writer-refresh-scope = Update scope
+writer-refresh-scope-help = Includes all saved project scenes and the current unsaved writing. Updating this catalogue does not save your source files or change other languages.
+writer-refresh-recheck = Check source updates
+writer-refresh-done = Catalogue updated. Changed translations still need review; removed entries remain in the PO file.
+writer-refresh-review = Review translations
+writer-refresh-no-changes = No added, changed or removed source entries. You can still update extracted context notes.
+writer-nearby-source = Nearby source · source order
+writer-previous-source = Previous source · changes underlined
+writer-current-source = Current source · changes underlined
+writer-translator-notes = Translator notes
+
+writer-source-changed = Source changed · needs review
+
+writer-change-new = New passage
+writer-change-changed = Source changed
+writer-change-removed = Removed passage

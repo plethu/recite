@@ -29,6 +29,9 @@ impl Catalogue {
         let text = crate::project::read_regular(path).map_err(|e| e.to_string())?;
         let document =
             PoDocument::parse_with_path(path.to_string_lossy(), text).map_err(|e| e.to_string())?;
+        Ok(Self::from_document(path, document))
+    }
+    fn from_document(path: &Path, document: PoDocument) -> Self {
         let mut anchors: BTreeMap<String, Vec<PoEntryId>> = BTreeMap::new();
         for entry in document.entries() {
             if !entry.is_obsolete()
@@ -37,13 +40,13 @@ impl Catalogue {
                 anchors.entry(context.into()).or_default().push(entry.id());
             }
         }
-        Ok(Self {
+        Self {
             anchors,
             path: path.to_owned(),
             baseline: document.fingerprint(),
             document,
             drafts: BTreeMap::new(),
-        })
+        }
     }
     pub fn dirty(&self) -> bool {
         !self.drafts.is_empty()
@@ -156,6 +159,24 @@ impl Catalogue {
             }
         }
         *self = next;
+        Ok(())
+    }
+    pub(super) fn replace_refreshed(
+        &mut self,
+        document: PoDocument,
+        expected: &PoDocumentFingerprint,
+    ) -> Result<(), String> {
+        if self.dirty() {
+            return Err(wording(MsgId::WriterReloadDrafts));
+        }
+        if &self.document.fingerprint() != expected {
+            return Err(wording(MsgId::WriterCreationChanged));
+        }
+        crate::project::read_regular(&self.path).map_err(|e| e.to_string())?;
+        document
+            .write_atomically(&self.path, &self.baseline)
+            .map_err(|e| e.to_string())?;
+        *self = Self::from_document(&self.path, document);
         Ok(())
     }
     pub fn discard(&mut self, id: PoEntryId) {

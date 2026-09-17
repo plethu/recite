@@ -8,6 +8,7 @@ pub(crate) enum Screen {
     Write,
     Localise,
     Translations,
+    Updates,
 }
 
 #[derive(Clone, Debug, Default, PartialEq, Eq)]
@@ -39,6 +40,7 @@ impl fmt::Display for Location {
             Screen::Write => "/write",
             Screen::Localise => "/localise",
             Screen::Translations => "/translations",
+            Screen::Updates => "/source-updates",
         };
         let mut query = url::form_urlencoded::Serializer::new(String::new());
         if let Some(project) = &self.project {
@@ -99,6 +101,7 @@ impl FromStr for Location {
             "/" | "/write" => Screen::Write,
             "/localise" => Screen::Localise,
             "/translations" => Screen::Translations,
+            "/source-updates" => Screen::Updates,
             _ => return Err("Unknown writer screen"),
         };
         let mut result = Self {
@@ -131,6 +134,10 @@ impl FromStr for Location {
 }
 impl Routable for Location {
     const SITE_MAP: &'static [SiteMapSegment] = &[
+        SiteMapSegment {
+            segment_type: SegmentType::Static("source-updates"),
+            children: &[],
+        },
         SiteMapSegment {
             segment_type: SegmentType::Static("write"),
             children: &[],

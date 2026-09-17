@@ -125,3 +125,42 @@ fn comparison_is_bound_to_the_seen_external_version() -> Result<(), String> {
     );
     Ok(())
 }
+
+#[test]
+fn refresh_refuses_external_changes_and_unsaved_drafts() -> Result<(), String> {
+    let dir = tempfile::tempdir().map_err(|e| e.to_string())?;
+    let path = dir.path().join("fr.po");
+    let source = "msgctxt \"11111111111111111111\"\nmsgid \"Hello\"\nmsgstr \"Bonjour\"\n";
+    std::fs::write(&path, source).map_err(|e| e.to_string())?;
+    let mut catalogue = Catalogue::open(&path)?;
+    let baseline = catalogue.document.fingerprint();
+    let template =
+        PoDocument::parse(source.replace("Hello", "Hello again")).map_err(|e| e.to_string())?;
+    let refreshed = catalogue
+        .document
+        .refreshed(&template)
+        .map_err(|e| e.to_string())?;
+    let id = catalogue.document.entries()[0].id();
+    catalogue.update(
+        id,
+        Draft {
+            text: "Draft".into(),
+            reviewed: false,
+        },
+    );
+    assert!(
+        catalogue
+            .replace_refreshed(refreshed.clone(), &baseline)
+            .is_err()
+    );
+    catalogue.discard(id);
+    std::fs::write(&path, source.replace("Bonjour", "External")).map_err(|e| e.to_string())?;
+    assert!(catalogue.replace_refreshed(refreshed, &baseline).is_err());
+    assert!(
+        std::fs::read_to_string(&path)
+            .map_err(|e| e.to_string())?
+            .contains("External")
+    );
+    assert_eq!(catalogue.document.fingerprint(), baseline);
+    Ok(())
+}

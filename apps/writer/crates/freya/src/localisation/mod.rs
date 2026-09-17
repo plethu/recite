@@ -3,11 +3,13 @@ use messages::{MsgId, text as wording};
 pub(crate) mod catalogue;
 mod context;
 mod create;
+mod extraction;
 mod field;
 mod messages;
 mod navigation;
 mod panel;
 mod queue;
+pub(crate) mod refresh;
 mod setup;
 mod target;
 
@@ -24,12 +26,22 @@ enum Panel {
     Create,
 }
 
+#[derive(Clone, Copy, Default, PartialEq, Eq)]
+pub(crate) enum CatalogueView {
+    #[default]
+    Passage,
+    Queue,
+    Updates,
+}
+
 #[derive(Default)]
 pub(crate) struct Localisation {
     pub active: bool,
     pub(crate) catalogue: Option<Catalogue>,
     panel: Option<Panel>,
-    pub(crate) queue: bool,
+    pub(crate) view: CatalogueView,
+    pub(crate) refresh: Option<refresh::Preview>,
+    pub(crate) update_index: usize,
     pub focus: Option<String>,
 }
 impl Localisation {
@@ -65,8 +77,7 @@ pub(super) fn switch(writer: Writer) -> Element {
                 .flat()
                 .selected(active)
                 .on_press(move |_| {
-                    writer.navigate(|_| Ok(()));
-                    if writer.message.peek().is_empty() {
+                    if writer.try_navigate(|_| Ok(())).is_ok() {
                         state.write().active = true;
                         let first = writer
                             .buffers
@@ -147,10 +158,14 @@ impl Component for Surface {
                     Button::new()
                         .flat()
                         .on_press(move |_| {
-                            let next = !state.peek().queue;
-                            state.write().queue = next;
+                            let next = if state.peek().view == CatalogueView::Passage {
+                                CatalogueView::Queue
+                            } else {
+                                CatalogueView::Passage
+                            };
+                            state.write().view = next;
                         })
-                        .child(wording(if current.queue {
+                        .child(wording(if current.view != CatalogueView::Passage {
                             MsgId::WriterReadPassage
                         } else {
                             MsgId::WriterTranslationQueue
@@ -163,7 +178,7 @@ impl Component for Surface {
                     Button::new()
                         .filled()
                         .on_press(move |_| {
-                            writer.message.set(String::new());
+                            writer.message.clear();
                             state.write().panel = Some(Panel::Create);
                         })
                         .child(wording(MsgId::WriterStartLocalisation)),
@@ -175,6 +190,7 @@ impl Component for Surface {
                         .child(wording(MsgId::WriterOpenCatalogue)),
                 );
         }
+        let updates = current.view == CatalogueView::Updates;
         drop(current);
         rect()
             .a11y_id(writer.inspector_focus)
@@ -184,8 +200,14 @@ impl Component for Surface {
             .width(Size::fill())
             .height(Size::fill())
             .content(Content::Flex)
-            .child(header)
-            .child(if state.read().queue {
+            .maybe_child((!updates).then_some(header))
+            .child(if updates {
+                refresh::screen::RefreshScreen {
+                    writer,
+                    files: self.files,
+                }
+                .into_element()
+            } else if state.read().view == CatalogueView::Queue {
                 queue::QueueScreen { writer }.into_element()
             } else {
                 ScrollView::new_controlled(writer.scroll)
@@ -194,7 +216,7 @@ impl Component for Surface {
                     .child(reading)
                     .into_element()
             })
-            .child(panel::render(writer))
+            .child(panel::render(writer, self.files))
             .child(setup::Setup {
                 writer,
                 files: self.files,
@@ -214,3 +236,5 @@ pub(crate) fn close_drafts_message() -> String {
 pub(super) fn context(writer: Writer, beat: String) -> Element {
     context::Context { writer, beat }.into_element()
 }
+
+mod status;

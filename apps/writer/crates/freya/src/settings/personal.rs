@@ -61,6 +61,7 @@ pub(super) fn render(
     ] {
         content = content.child(crate::design::Options {
             name,
+            vim: config.ui.keymap == Keymap::Vim,
             labels,
             selected,
             ids: option_ids[index],

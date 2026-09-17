@@ -198,8 +198,7 @@ impl Component for EntryPage {
                         .flat()
                         .enabled(enabled)
                         .on_press(move |_| {
-                            writer.navigate(|_| Ok(()));
-                            if writer.message.peek().is_empty() {
+                            if writer.try_navigate(|_| Ok(())).is_ok() {
                                 page.set(destination);
                                 writer.inspector_focus.request_focus();
                             }

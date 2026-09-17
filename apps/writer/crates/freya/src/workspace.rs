@@ -94,6 +94,8 @@ impl Component for Workspace {
                 editor = editor.child(divider).child(pane);
             }
         }
+        let updates = writer.localisation.read().active
+            && writer.localisation.read().view == crate::localisation::CatalogueView::Updates;
         rect()
             .width(Size::flex(1.))
             .height(Size::fill())
@@ -102,13 +104,13 @@ impl Component for Workspace {
             .on_sized(move |e: Event<SizedEventData>| {
                 available.set_if_modified(e.area.width());
             })
-            .child(Sidebar {
+            .maybe_child((!updates).then_some(Sidebar {
                 writer,
                 visible: self.navigation_visible,
                 width: nav_width,
                 scenes: self.scenes.clone(),
-            })
-            .maybe_child(visible.then_some(Splitter {
+            }))
+            .maybe_child((visible && !updates).then_some(Splitter {
                 name: "Resize scene drawer",
                 width: navigation_width,
                 min: NAV_MIN,

@@ -20,14 +20,14 @@ pub fn editor_data(text: &str, source: bool, dark: bool) -> CodeEditorData {
     data
 }
 
-pub fn perform(
+pub(crate) fn perform(
     mut model: Session,
     mut editor: State<CodeEditorData>,
-    mut message: State<String>,
+    mut message: crate::feedback::Feedback,
     mut prose: State<String>,
     dark: bool,
     action: impl FnOnce(&mut Workbench) -> Result<(), WorkbenchError>,
-) {
+) -> Result<(), String> {
     let mut state = model.write();
     let outcome = match state.as_mut() {
         Ok(session) => {
@@ -46,18 +46,16 @@ pub fn perform(
                     ));
                 }
                 prose.set_if_modified(session.draft().to_owned());
-                String::new()
             })
         }
         Err(error) => {
-            message.set(error.to_string());
-            return;
+            message.error(error.to_string());
+            return Err(error.to_string());
         }
     };
-    message.set(match outcome {
-        Ok(text) => text,
-        Err(error) => error.to_string(),
-    });
+    let outcome = outcome.map_err(|error| error.to_string());
+    message.report(outcome.clone(), String::new());
+    outcome
 }
 
 #[derive(Clone, Copy, PartialEq)]
@@ -75,7 +73,7 @@ pub(crate) struct Writer {
     pub queue: crate::navigation::Queue,
     pub reference: State<Option<crate::reading_context::Reference>>,
     pub buffers: crate::buffers::Buffers,
-    pub message: State<String>,
+    pub message: crate::feedback::Feedback,
     pub dark: bool,
     pub scroll: ScrollController,
     pub pane: State<Pane>,
@@ -108,11 +106,11 @@ impl Writer {
         }
     }
 
-    pub fn scene_opened(mut self) {
+    pub fn scene_opened(mut self) -> Result<(), String> {
         self.selection.set(None);
         match self.preferences.peek().config.writer.view {
-            recite_config::WriterView::Map => self.navigate(Workbench::show_script),
-            recite_config::WriterView::Source => self.navigate(|m| m.select(View::Source)),
+            recite_config::WriterView::Map => self.try_navigate(Workbench::show_script),
+            recite_config::WriterView::Source => self.try_navigate(|m| m.select(View::Source)),
         }
     }
 
@@ -120,8 +118,7 @@ impl Writer {
         crate::navigation::step(self, forward);
     }
     pub fn pin(mut self) {
-        self.navigate(|_| Ok(()));
-        if !self.message.peek().is_empty() {
+        if self.try_navigate(|_| Ok(())).is_err() {
             return;
         }
         if let Ok(session) = self.buffers.model.peek().as_ref()
@@ -136,39 +133,52 @@ impl Writer {
         }
     }
     pub fn close_editor(mut self) {
-        self.navigate(|_| Ok(()));
-        if self.message.peek().is_empty() {
+        if self.try_navigate(|_| Ok(())).is_ok() {
             self.pane.set(Pane::Map);
             self.map_focus.request_focus();
         }
     }
     pub fn set_view(mut self, view: recite_config::WriterView) {
-        self.navigate(|m| match view {
+        let outcome = self.try_navigate(|m| match view {
             recite_config::WriterView::Map => m.show_script(),
             recite_config::WriterView::Source => m.select(View::Source),
         });
-        if self.message.peek().is_empty() {
+        if outcome.is_ok() {
             self.pane.set(Pane::Map);
             if let Err(e) = self
                 .preferences
                 .write()
                 .update(recite_config::UserConfigEdit::WriterView(view))
             {
-                self.message.set(e);
+                self.message.error(e);
             }
         }
     }
     /// Commit a prose editing session before changing context; source drafts stay explicit.
     pub fn navigate(self, action: impl FnOnce(&mut Workbench) -> Result<(), WorkbenchError>) {
-        self.perform(|session| {
+        let _ = self.try_navigate(action);
+    }
+
+    pub fn try_navigate(
+        self,
+        action: impl FnOnce(&mut Workbench) -> Result<(), WorkbenchError>,
+    ) -> Result<(), String> {
+        self.try_perform(|session| {
             if matches!(session.view(), View::Passage(_)) && session.has_draft() {
                 session.apply()?;
             }
             action(session)
-        });
+        })
     }
 
     pub fn perform(self, action: impl FnOnce(&mut Workbench) -> Result<(), WorkbenchError>) {
+        let _ = self.try_perform(action);
+    }
+
+    pub fn try_perform(
+        self,
+        action: impl FnOnce(&mut Workbench) -> Result<(), WorkbenchError>,
+    ) -> Result<(), String> {
         perform(
             self.buffers.model,
             self.buffers.editor,
@@ -176,7 +186,7 @@ impl Writer {
             self.buffers.prose,
             self.dark,
             action,
-        );
+        )
     }
 }
 

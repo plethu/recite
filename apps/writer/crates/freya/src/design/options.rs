@@ -8,6 +8,7 @@ pub(crate) struct Options {
     pub labels: [&'static str; 2],
     pub ids: [AccessibilityId; 2],
     pub selected: usize,
+    pub vim: bool,
     pub change: EventHandler<usize>,
 }
 
@@ -16,6 +17,7 @@ impl Component for Options {
         let colors = t::colors();
         let ids = self.ids;
         let selected = self.selected;
+        let vim = self.vim;
         let change = self.change.clone();
         let mut group = rect()
             .horizontal()
@@ -29,12 +31,16 @@ impl Component for Options {
             .a11y_role(AccessibilityRole::RadioGroup)
             .a11y_alt(self.name)
             .on_key_down(move |event: Event<KeyboardEventData>| {
-                let next = match event.key {
-                    Key::Named(NamedKey::ArrowLeft | NamedKey::ArrowUp) => 1 - selected,
-                    Key::Named(NamedKey::ArrowRight | NamedKey::ArrowDown) => 1 - selected,
-                    Key::Named(NamedKey::Home) => 0,
-                    Key::Named(NamedKey::End) => 1,
-                    _ => return,
+                let next = if super::keyboard::list_step(&event, vim).is_some() {
+                    1 - selected
+                } else {
+                    match event.key {
+                        Key::Named(NamedKey::ArrowLeft) => 1 - selected,
+                        Key::Named(NamedKey::ArrowRight) => 1 - selected,
+                        Key::Named(NamedKey::Home) => 0,
+                        Key::Named(NamedKey::End) => 1,
+                        _ => return,
+                    }
                 };
                 event.stop_propagation();
                 change.call(next);

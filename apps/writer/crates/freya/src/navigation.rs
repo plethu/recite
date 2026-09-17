@@ -39,7 +39,9 @@ fn snapshot(writer: Writer) -> Location {
     let mut location = Location {
         screen: if !state.active {
             Screen::Write
-        } else if state.queue {
+        } else if state.view == crate::localisation::CatalogueView::Updates {
+            Screen::Updates
+        } else if state.view == crate::localisation::CatalogueView::Queue {
             Screen::Translations
         } else {
             Screen::Localise
@@ -53,7 +55,11 @@ fn snapshot(writer: Writer) -> Location {
         project: root.map(|r| r.to_string_lossy().into_owned()),
         query: writer.queue.search.read().clone(),
         attention: *writer.queue.attention.read(),
-        page: *writer.queue.page.read(),
+        page: if state.view == crate::localisation::CatalogueView::Updates {
+            state.update_index
+        } else {
+            *writer.queue.page.read()
+        },
         ..Location::default()
     };
     if let Ok(model) = model.as_ref() {
@@ -91,7 +97,7 @@ pub(super) fn track(writer: Writer, mode: AppMode) {
                     .and_then(|location| apply(writer, &location));
                 if let Err(error) = result {
                     let mut message = writer.message;
-                    message.set(error);
+                    message.error(error);
                 }
             }
             let _ = router.replace(snapshot(writer));
@@ -129,7 +135,7 @@ pub(super) fn step(mut writer: Writer, forward: bool) {
         } else {
             router.go_forward();
         }
-        writer.message.set(error);
+        writer.message.error(error);
     }
 }
 
@@ -169,10 +175,7 @@ fn apply(mut writer: Writer, location: &Location) -> Result<(), String> {
             return Err(format!("Open the linked project first: {project}"));
         }
     }
-    writer.navigate(|_| Ok(()));
-    if !writer.message.peek().is_empty() {
-        return Err(writer.message.peek().clone());
-    }
+    writer.try_navigate(|_| Ok(()))?;
     let path = location.catalogue.as_ref().map(|p| {
         writer
             .files
@@ -230,22 +233,29 @@ fn apply(mut writer: Writer, location: &Location) -> Result<(), String> {
             crate::examples::select_at(writer, index, |model| select(model, location))?;
         }
     } else {
-        writer.navigate(|m| select(m, location));
-        if !writer.message.peek().is_empty() {
-            return Err(writer.message.peek().clone());
-        }
+        writer.try_navigate(|m| select(m, location))?;
     }
     {
         let mut state = writer.localisation.write();
         state.active = location.screen != Screen::Write;
-        state.queue = location.screen == Screen::Translations;
+        state.view = match location.screen {
+            Screen::Translations => crate::localisation::CatalogueView::Queue,
+            Screen::Updates => crate::localisation::CatalogueView::Updates,
+            _ => crate::localisation::CatalogueView::Passage,
+        };
+        if location.screen == Screen::Updates {
+            state.update_index = location.page;
+        }
         if catalogue_changed {
             state.catalogue = catalogue;
+            state.refresh = None;
         }
     }
     writer.queue.search.set(location.query.clone());
     writer.queue.attention.set(location.attention);
-    writer.queue.page.set(location.page);
+    if location.screen != Screen::Updates {
+        writer.queue.page.set(location.page);
+    }
     writer
         .pane
         .set(if location.beat.is_some() || location.passage.is_some() {
@@ -278,7 +288,7 @@ pub(super) fn open_passage(
     match apply(writer, &location) {
         Ok(()) => true,
         Err(error) => {
-            writer.message.set(error);
+            writer.message.error(error);
             false
         }
     }
@@ -308,10 +318,10 @@ pub(super) fn buttons(mut writer: Writer) -> Element {
             crate::controls::Icon::Link,
             move || {
                 let link = format!("recite://writer{}", snapshot(writer));
-                writer.message.set(match Clipboard::set(link) {
-                    Ok(()) => "Link copied.".into(),
-                    Err(e) => format!("Could not copy link: {e:?}"),
-                });
+                writer.message.report(
+                    Clipboard::set(link).map_err(|e| format!("Could not copy link: {e:?}")),
+                    "Link copied.".into(),
+                );
             },
         ))
         .into_element()

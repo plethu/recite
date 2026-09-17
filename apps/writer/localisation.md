@@ -42,8 +42,25 @@ locale or fallback configuration. Source-only drafting still needs no catalogue.
 
 The selected beat remains a full manuscript. Existing singular line and reply
 entries are matched by stable context ID and exact source text. Missing, ambiguous
-or changed source matches are not silently rewritten: update the catalogue with
-your existing POT/PO workflow. Conditional groups and destinations retain their
+or changed source matches are not silently rewritten. Use **Refresh from source**
+in the catalogue's file actions, or **Source updates** beside a missing entry.
+The dedicated screen replaces the scene drawer with a paged list of source excerpts
+and scene/beat/speaker metadata. Previous/current source has its changed word region
+underlined and bold; nearby extracted source appears in source order, not as an
+assertion about the runtime path. Existing translator notes are labelled explicitly;
+Recite does not infer author intent. **Read passage** opens the full dialogue.
+Back/Forward retains the selected change. **Check source updates** rebuilds a stale
+preview. **Update catalogue** applies the complete extraction without requiring
+individual inspection or approval. **Review translations** opens the attention queue
+afterwards; changed source stays distinct from reviewed translation. Leaving the screen before updating leaves the file untouched. Refresh includes
+the current source overlay and saved project scenes. It preserves translations,
+translator notes and unknown fields, replaces extracted context/location notes,
+marks changed source fuzzy, and keeps removed entries as obsolete records. Named
+variants follow their base context; new plural entries use the catalogue's existing
+plural rules. Ambiguous contexts and singular/plural shape changes are refused
+for explicit migration. Save refuses unsaved translation drafts, a changed source
+snapshot, or an externally changed PO file. No gettext executable is needed for
+refresh. Conditional groups and destinations retain their
 script structure. Source editing remains available in the left column.
 
 Translations are separate in-memory drafts that survive beat/workspace navigation.
@@ -78,7 +95,7 @@ for workspace history and links.
 ## Current limits
 
 This implements the accepted bilingual direction for existing singular PO entries.
-Existing-catalogue refresh/POT regeneration, plural and variant editing, catalogue-scale
+Plural and variant editing, catalogue-scale
 profiling, automatic file watching and launching a preferred external editor from
 the app are not implemented. External editors can edit the same PO file and the
 writer can compare/reload it; there is no private translation database.

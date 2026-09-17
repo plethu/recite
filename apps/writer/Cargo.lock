@@ -3923,6 +3923,7 @@ dependencies = [
  "recite-ui",
  "recite-writer-grammar",
  "recite-writer-model",
+ "rfd",
  "serde",
  "serde_json",
  "tempfile",

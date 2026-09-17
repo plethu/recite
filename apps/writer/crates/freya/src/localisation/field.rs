@@ -46,10 +46,23 @@ impl Component for TranslationField {
             return rect().into_element();
         };
         let Some(entry_id) = catalogue.entry_for(&self.passage.id, &self.passage.text) else {
-            return label()
-                .text(wording(MsgId::WriterNoEntry))
-                .font_size(t::TEXT_SMALL)
-                .color(palette::muted(writer.dark))
+            return rect()
+                .width(Size::fill())
+                .child(
+                    label()
+                        .text(wording(MsgId::WriterNoEntry))
+                        .font_size(t::TEXT_SMALL)
+                        .color(palette::muted(writer.dark)),
+                )
+                .child(
+                    Button::new()
+                        .flat()
+                        .on_press(move |_| {
+                            state.write().view = super::CatalogueView::Updates;
+                            state.write().refresh = None;
+                        })
+                        .child(wording(MsgId::WriterSourceUpdates)),
+                )
                 .into_element();
         };
         let Some(draft) = catalogue.draft(entry_id) else {
@@ -62,24 +75,12 @@ impl Component for TranslationField {
             identity.set(Some(next_identity));
         }
         let reviewed = draft.reviewed;
-        let status = if draft.text.trim().is_empty() {
-            wording(MsgId::WriterUntranslated)
-        } else if reviewed && changed {
-            wording(MsgId::WriterReviewPending)
-        } else if reviewed {
-            wording(MsgId::WriterReviewed)
-        } else {
-            wording(MsgId::WriterNeedsReview)
-        };
+        let status = super::status::TranslationStatus::for_entry(catalogue, entry_id).label();
         drop(current);
         let save = move || {
             let result = state.write().catalogue.as_mut().map(|c| c.save(entry_id));
             if let Some(result) = result {
-                message.set(
-                    result
-                        .err()
-                        .unwrap_or_else(|| wording(MsgId::WriterTranslationSaved)),
-                );
+                message.report(result, wording(MsgId::WriterTranslationSaved));
             }
         };
         let mut save_key = save;

@@ -59,9 +59,31 @@ macro_rules! vscode_command_message_ids {
 
 pub(super) const fn clients(id: MsgId) -> &'static [Client] {
     match id {
-        MsgId::WriterIncoming | MsgId::WriterSource | MsgId::WriterTranslation => {
-            &[Client::NativeGui]
-        }
+        MsgId::WriterRefresh
+        | MsgId::WriterRefreshSave
+        | MsgId::WriterRefreshAdded
+        | MsgId::WriterRefreshChanged
+        | MsgId::WriterRefreshRemoved
+        | MsgId::WriterRefreshHelp
+        | MsgId::WriterRefreshed
+        | MsgId::WriterSourceUpdates
+        | MsgId::WriterRefreshScope
+        | MsgId::WriterRefreshScopeHelp
+        | MsgId::WriterRefreshRecheck
+        | MsgId::WriterRefreshDone
+        | MsgId::WriterRefreshReview
+        | MsgId::WriterRefreshNoChanges
+        | MsgId::WriterNearbySource
+        | MsgId::WriterPreviousSource
+        | MsgId::WriterCurrentSource
+        | MsgId::WriterTranslatorNotes
+        | MsgId::WriterSourceChanged
+        | MsgId::WriterChangeNew
+        | MsgId::WriterChangeChanged
+        | MsgId::WriterChangeRemoved
+        | MsgId::WriterIncoming
+        | MsgId::WriterSource
+        | MsgId::WriterTranslation => &[Client::NativeGui],
         MsgId::WriterCompare
         | MsgId::WriterCompareHelp
         | MsgId::WriterKeepDrafts

@@ -28,8 +28,7 @@ impl Component for BeatHeading {
             }
         });
         let apply = move || {
-            writer.navigate(|m| m.rename_beat(&name.peek()));
-            if writer.message.peek().is_empty() {
+            if writer.try_navigate(|m| m.rename_beat(&name.peek())).is_ok() {
                 open.set(false);
                 writer.inspector_focus.request_focus();
             }

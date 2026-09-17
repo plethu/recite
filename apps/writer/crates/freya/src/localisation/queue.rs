@@ -22,11 +22,12 @@ impl Component for QueueScreen {
     }
 }
 fn render(writer: Writer) -> Element {
-    let mut state = writer.localisation;
+    let state = writer.localisation;
     let search = writer.queue.search;
     let mut attention = writer.queue.attention;
     let mut page = writer.queue.page;
     let search_id = use_a11y();
+    let mut active = use_state(|| None::<usize>);
     let filter_id = use_a11y();
     let row_ids: [AccessibilityId; 34] = std::array::from_fn(|_| use_a11y());
     let mut row_ids = row_ids.into_iter();
@@ -42,29 +43,7 @@ fn render(writer: Writer) -> Element {
                 .text(wording(MsgId::WriterTranslationQueue))
                 .font_size(t::TEXT_TITLE),
         )
-        .child(label().text(wording(MsgId::WriterQueueScope)))
-        .child(
-            Input::new(search)
-                .a11y_id(search_id)
-                .placeholder(wording(MsgId::WriterSearch))
-                .on_validate(move |value: InputValidator| {
-                    if *value.text() != *search.peek() {
-                        page.set(0);
-                    }
-                })
-                .width(Size::fill())
-                .on_pre_key_down(crate::closing::text_input_key),
-        )
-        .child(crate::design::checkbox(
-            filter_id,
-            wording(MsgId::WriterAttention),
-            only_attention,
-            move |_| {
-                let next = !*attention.peek();
-                attention.set(next);
-                page.set(0);
-            },
-        ));
+        .child(label().text(wording(MsgId::WriterQueueScope)));
     let model = writer.buffers.model.peek();
     if let (Some(catalogue), Ok(session)) = (&current.catalogue, model.as_ref()) {
         let passages = session.document().passage_snapshot().unwrap_or_default();
@@ -77,7 +56,9 @@ fn render(writer: Writer) -> Element {
                     return false;
                 }
                 let draft = catalogue.draft(entry.id());
-                (!only_attention || draft.as_ref().is_none_or(|d| !d.reviewed))
+                (!only_attention
+                    || super::status::TranslationStatus::for_entry(catalogue, entry.id())
+                        .needs_attention())
                     && (entry.source_text().to_lowercase().contains(&query)
                         || entry
                             .context()
@@ -90,11 +71,43 @@ fn render(writer: Writer) -> Element {
             })
             .collect();
         let count = matches.len();
-        content = content.child(label().text(format!(
-            "{}: {count}",
-            wording(MsgId::WriterMatchingEntries)
-        )));
         let current_page = (*page.read()).min(count.saturating_sub(1) / 32);
+        let destinations: Vec<_> = matches
+            .iter()
+            .skip(current_page * 32)
+            .take(32)
+            .map(|entry| Destination::resolve(entry, &passages))
+            .collect();
+        content = content
+            .child(crate::design::SearchField {
+                query: search,
+                id: search_id,
+                placeholder: wording(MsgId::WriterSearch),
+                active,
+                count: destinations.len(),
+                vim: writer.preferences.read().config.ui.keymap == recite_config::Keymap::Vim,
+                changed: EventHandler::new(move |()| page.set(0)),
+                activate: EventHandler::new(move |index: usize| {
+                    if let Some(Some(destination)) = destinations.get(index) {
+                        open(writer, destination);
+                    }
+                }),
+            })
+            .child(crate::design::checkbox(
+                filter_id,
+                wording(MsgId::WriterAttention),
+                only_attention,
+                move |_| {
+                    let next = !*attention.peek();
+                    attention.set(next);
+                    page.set(0);
+                    active.set(None);
+                },
+            ))
+            .child(label().text(format!(
+                "{}: {count}",
+                wording(MsgId::WriterMatchingEntries)
+            )));
         if count > 32 {
             let mut paging = rect().horizontal().spacing(t::SPACE_SM);
             for (caption, next, enabled) in [
@@ -116,7 +129,10 @@ fn render(writer: Writer) -> Element {
                     Button::new()
                         .a11y_id(id)
                         .enabled(enabled)
-                        .on_press(move |_| page.set(next))
+                        .on_press(move |_| {
+                            page.set(next);
+                            active.set(None);
+                        })
                         .child(caption),
                 );
             }
@@ -141,17 +157,16 @@ fn render(writer: Writer) -> Element {
                         .font_size(t::TEXT_SMALL),
                 ),
         );
-        for entry in matches.into_iter().skip(current_page * 32).take(32) {
+        for (index, entry) in matches
+            .into_iter()
+            .skip(current_page * 32)
+            .take(32)
+            .enumerate()
+        {
             let destination = Destination::resolve(entry, &passages);
             let draft = catalogue.draft(entry.id());
             let translation = draft.as_ref().map_or("", |d| d.text.as_str());
-            let status = if translation.is_empty() {
-                wording(MsgId::WriterUntranslated)
-            } else if draft.as_ref().is_some_and(|d| d.reviewed) {
-                wording(MsgId::WriterReviewed)
-            } else {
-                wording(MsgId::WriterAttention)
-            };
+            let status = super::status::TranslationStatus::for_entry(catalogue, entry.id()).label();
             let caption = destination.as_ref().map_or_else(
                 || wording(MsgId::WriterUnavailablePassage),
                 Destination::caption,
@@ -163,14 +178,12 @@ fn render(writer: Writer) -> Element {
                 Button::new()
                     .flat()
                     .a11y_id(id)
+                    .selected(*active.read() == Some(index))
                     .width(Size::fill())
                     .enabled(destination.is_some())
                     .on_press(move |_| {
-                        if let Some(destination) = &destination
-                            && destination.open(writer)
-                        {
-                            state.write().queue = false;
-                            writer.inspector_focus.request_focus();
+                        if let Some(destination) = &destination {
+                            open(writer, destination);
                         }
                     })
                     .child(
@@ -210,4 +223,12 @@ fn render(writer: Writer) -> Element {
         .height(Size::flex(1.))
         .child(content)
         .into_element()
+}
+
+fn open(writer: Writer, destination: &Destination) {
+    if destination.open(writer) {
+        let mut state = writer.localisation;
+        state.write().view = super::CatalogueView::Passage;
+        writer.inspector_focus.request_focus();
+    }
 }

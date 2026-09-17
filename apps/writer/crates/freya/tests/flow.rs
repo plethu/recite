@@ -149,6 +149,13 @@ fn rejected_prose_stays_visible_and_can_be_discarded() -> Result<(), Box<dyn std
         )
         .is_some()
     );
+    support::click(&mut test, "Dismiss message")?;
+    assert!(
+        test.find(|_, e| Label::try_downcast(e).filter(|l| l.text.as_ref() == "Discard draft"))
+            .is_some()
+    );
+    click(&mut test, "Source")?;
+    assert!(prose(&test, "-> END").is_some());
     click(&mut test, "Discard draft")?;
     assert!(prose(&test, "Is this the last tram?").is_some());
     Ok(())

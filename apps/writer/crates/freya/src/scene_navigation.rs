@@ -83,12 +83,21 @@ impl Component for SceneNavigation {
                 })
                 .unwrap_or_default()
         });
-        let mut collapsed = use_state(|| None::<String>);
+        let collapsed = use_state(|| None::<String>);
         let query = use_state(String::new);
+        let active = use_state(|| None::<usize>);
+        let id = use_a11y();
+        let mut scroll = use_scroll_controller(ScrollConfig::default);
+        use_after_side_effect(move || {
+            if let Some(index) = *active.read() {
+                scroll.scroll_to_y(-((index.saturating_sub(2) * 36) as i32));
+            }
+        });
         let needle = query.read().to_lowercase();
         let mut rows = Vec::new();
         for scene in &self.scenes {
-            let expanded = scene.active && collapsed.read().as_ref() != Some(&scene.caption);
+            let expanded = scene.active
+                && (!needle.is_empty() || collapsed.read().as_ref() != Some(&scene.caption));
             let mut beats = Vec::new();
             if expanded {
                 for (id, caption) in captions.read().iter() {
@@ -113,86 +122,124 @@ impl Component for SceneNavigation {
             }
         }
         let count = rows.len();
+        let destinations = rows.clone();
         rect()
             .width(Size::fill())
             .height(Size::flex(1.))
             .content(Content::Flex)
             .spacing(t::SPACE_XS)
+            .child(crate::design::SearchField {
+                query,
+                id,
+                placeholder: "Filter scenes and beats".into(),
+                active,
+                count,
+                vim: writer.preferences.read().config.ui.keymap == recite_config::Keymap::Vim,
+                changed: EventHandler::new(|()| {}),
+                activate: EventHandler::new(move |index: usize| {
+                    if let Some(row) = destinations.get(index) {
+                        activate_row(writer, collapsed, row);
+                    }
+                }),
+            })
+            .child(if count == 0 {
+                label().text("No matching scenes or beats").into_element()
+            } else {
+                rect().into_element()
+            })
             .child(
-                Input::new(query)
-                    .width(Size::fill())
-                    .placeholder("Filter scenes and beats")
-                    .on_pre_key_down(crate::closing::text_input_key),
-            )
-            .child(
-                VirtualScrollView::new_with_data(rows, move |index, rows| {
-                    let content = match &rows[index.index] {
-                        Row::Scene(scene, expanded) => {
-                            let scene = scene.clone();
-                            let expanded = *expanded;
-                            let caption = scene.caption.clone();
-                            Button::new()
-                                .flat()
-                                .selected(scene.active)
-                                .expanded(expanded)
-                                .width(Size::fill())
-                                .named(caption.clone())
-                                .on_press(move |_| {
-                                    if scene.active {
-                                        collapsed.set(if expanded {
-                                            Some(scene.caption.clone())
-                                        } else {
-                                            None
-                                        });
-                                    } else {
-                                        collapsed.set(None);
-                                        scene.open.call(());
-                                    }
-                                })
-                                .child(
-                                    rect()
-                                        .horizontal()
-                                        .width(Size::fill())
-                                        .spacing(t::SPACE_SM)
-                                        .child(label().text(if expanded { "▾" } else { "▸" }))
-                                        .child(label().text(caption)),
-                                )
-                                .into_element()
-                        }
-                        Row::Beat {
-                            id,
-                            caption,
-                            selected,
-                        } => {
-                            let id = id.clone();
-                            rect()
-                                .width(Size::fill())
-                                .padding((0., 0., 0., t::SPACE_XL))
-                                .child(controls::navigation_row(
-                                    caption.clone(),
-                                    *selected,
-                                    writer.dark,
-                                    move |_| {
-                                        let mut writer = writer;
-                                        writer.selection.set(Some(id.clone()));
-                                        writer.map_focus.request_focus();
-                                    },
-                                ))
-                                .into_element()
-                        }
-                    };
-                    rect()
-                        .key(index.index)
-                        .height(Size::px(36.))
-                        .width(Size::fill())
-                        .overflow(Overflow::Clip)
-                        .child(content)
-                        .into_element()
-                })
+                VirtualScrollView::new_with_data(
+                    (rows, *active.read()),
+                    move |index, (rows, active)| {
+                        let content = match &rows[index.index] {
+                            Row::Scene(scene, expanded) => {
+                                let scene = scene.clone();
+                                let expanded = *expanded;
+                                let caption = scene.caption.clone();
+                                Button::new()
+                                    .flat()
+                                    .selected(scene.active || *active == Some(index.index))
+                                    .expanded(expanded)
+                                    .width(Size::fill())
+                                    .named(caption.clone())
+                                    .on_press(move |_| {
+                                        activate_row(
+                                            writer,
+                                            collapsed,
+                                            &Row::Scene(scene.clone(), expanded),
+                                        )
+                                    })
+                                    .child(
+                                        rect()
+                                            .horizontal()
+                                            .width(Size::fill())
+                                            .spacing(t::SPACE_SM)
+                                            .child(label().text(if expanded {
+                                                "▾"
+                                            } else {
+                                                "▸"
+                                            }))
+                                            .child(label().text(caption)),
+                                    )
+                                    .into_element()
+                            }
+                            Row::Beat {
+                                id,
+                                caption,
+                                selected,
+                            } => {
+                                let id = id.clone();
+                                rect()
+                                    .width(Size::fill())
+                                    .padding((0., 0., 0., t::SPACE_XL))
+                                    .child(controls::navigation_row(
+                                        caption.clone(),
+                                        *selected || *active == Some(index.index),
+                                        writer.dark,
+                                        move |_| {
+                                            let mut writer = writer;
+                                            writer.selection.set(Some(id.clone()));
+                                            writer.map_focus.request_focus();
+                                        },
+                                    ))
+                                    .into_element()
+                            }
+                        };
+                        rect()
+                            .key(index.index)
+                            .height(Size::px(36.))
+                            .width(Size::fill())
+                            .overflow(Overflow::Clip)
+                            .child(content)
+                            .into_element()
+                    },
+                )
+                .scroll_controller(scroll)
                 .length(count)
                 .item_size(36.)
                 .height(Size::flex(1.))
                 .width(Size::fill()),
             )
+    }
+}
+
+fn activate_row(mut writer: Writer, mut collapsed: State<Option<String>>, row: &Row) {
+    match row {
+        Row::Scene(scene, expanded) => {
+            if scene.active {
+                collapsed.set(if *expanded {
+                    Some(scene.caption.clone())
+                } else {
+                    None
+                });
+            } else {
+                collapsed.set(None);
+                scene.open.call(());
+            }
+        }
+        Row::Beat { id, .. } => {
+            writer.selection.set(Some(id.clone()));
+            writer.map_focus.request_focus();
+        }
     }
 }

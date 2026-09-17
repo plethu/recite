@@ -6,13 +6,16 @@ use crate::{
 };
 use freya::prelude::*;
 
-pub(super) fn render(writer: Writer) -> Element {
+pub(super) fn render(
+    writer: Writer,
+    files: State<Option<crate::project::ProjectFiles>>,
+) -> Element {
     let mut state = writer.localisation;
     let mut message = writer.message;
     let path = use_state(String::new);
-    let ids: [AccessibilityId; 8] = std::array::from_fn(|_| use_a11y());
+    let ids: [AccessibilityId; 10] = std::array::from_fn(|_| use_a11y());
     let mut comparison = use_state(|| None::<super::catalogue::Comparison>);
-    let mut focus = vec![ids[0], ids[1], ids[3]];
+    let mut focus = vec![ids[0], ids[9], ids[1], ids[3]];
     let mut was_open = use_state(|| false);
     use_after_side_effect(move || {
         let open = state.read().panel == Some(super::Panel::Files);
@@ -24,17 +27,38 @@ pub(super) fn render(writer: Writer) -> Element {
     if state.read().panel != Some(super::Panel::Files) {
         return rect().into_element();
     }
+    let open = EventHandler::new(move |()| {
+        if path.peek().trim().is_empty() || comparison.peek().is_some() {
+            return;
+        }
+        if state.peek().dirty() {
+            message.error(wording(MsgId::WriterOpenDrafts));
+            return;
+        }
+        match Catalogue::open(std::path::Path::new(path.peek().as_str())) {
+            Ok(catalogue) => {
+                let mut value = state.write();
+                value.catalogue = Some(catalogue);
+                value.refresh = None;
+                value.view = super::CatalogueView::Passage;
+                value.panel = None;
+                message.clear();
+            }
+            Err(error) => message.error(error),
+        }
+    });
     let mut content = rect()
         .spacing(t::SPACE_SM)
         .width(Size::fill())
         .child(label().text(wording(MsgId::WriterCataloguePath)))
-        .child(
-            Input::new(path)
-                .placeholder("/path/to/fr.po")
-                .a11y_id(ids[0])
-                .width(Size::fill())
-                .on_pre_key_down(crate::closing::text_input_key),
-        )
+        .child(crate::design::PathField {
+            value: path,
+            id: ids[0],
+            browse_id: ids[9],
+            kind: crate::design::PathKind::Catalogue,
+            enabled: comparison.read().is_none(),
+            submit: open.clone(),
+        })
         .child(label().text(wording(MsgId::WriterFileWorkflow)));
     if let Some(catalogue) = &state.read().catalogue {
         focus.extend([ids[2], ids[4], ids[7]]);
@@ -46,11 +70,7 @@ pub(super) fn render(writer: Writer) -> Element {
                     .on_press(move |_| {
                         let result = state.write().catalogue.as_mut().map(Catalogue::reload);
                         if let Some(result) = result {
-                            message.set(
-                                result
-                                    .err()
-                                    .unwrap_or_else(|| wording(MsgId::WriterReloaded)),
-                            );
+                            message.report(result, wording(MsgId::WriterReloaded));
                         }
                     })
                     .child(wording(MsgId::WriterReload)),
@@ -64,7 +84,7 @@ pub(super) fn render(writer: Writer) -> Element {
                     if let Some(catalogue) = &state.peek().catalogue {
                         match catalogue.compare() {
                             Ok(text) => comparison.set(Some(text)),
-                            Err(error) => message.set(error),
+                            Err(error) => message.error(error),
                         }
                     }
                 })
@@ -76,10 +96,33 @@ pub(super) fn render(writer: Writer) -> Element {
             Button::new()
                 .a11y_id(ids[7])
                 .on_press(move |_| {
-                    message.set(String::new());
+                    message.clear();
                     state.write().panel = Some(super::Panel::Create);
                 })
                 .child(wording(MsgId::WriterAddLanguage)),
+        );
+    }
+    if state.read().catalogue.is_some() {
+        focus.push(ids[8]);
+        content = content.child(
+            Button::new()
+                .a11y_id(ids[8])
+                .on_press(move |_| {
+                    message.clear();
+                    match super::refresh::Preview::prepare(writer, files) {
+                        Ok(preview) => {
+                            comparison.set(None);
+                            let mut current = state.write();
+                            current.refresh = Some(preview);
+                            current.update_index = 0;
+                            current.view = super::CatalogueView::Updates;
+                            current.panel = None;
+                            writer.inspector_focus.request_focus();
+                        }
+                        Err(error) => message.error(error),
+                    }
+                })
+                .child(wording(MsgId::WriterRefresh)),
         );
     }
     if let Some(text) = comparison.read().as_ref() {
@@ -105,9 +148,9 @@ pub(super) fn render(writer: Writer) -> Element {
                             match expected {
                                 Ok(()) => {
                                     comparison.set(None);
-                                    message.set(wording(MsgId::WriterCompared));
+                                    message.info(wording(MsgId::WriterCompared));
                                 }
-                                Err(error) => message.set(error),
+                                Err(error) => message.error(error),
                             }
                         }
                     })
@@ -115,9 +158,10 @@ pub(super) fn render(writer: Writer) -> Element {
             );
         }
     }
-    if !message.read().is_empty() {
-        content = content.child(label().text(message.read().clone()));
+    if !message.is_empty() {
+        content = content.child(crate::feedback::NoticeView { feedback: message });
     }
+    focus.extend(message.focus_order());
     Dialog {
         title: wording(MsgId::WriterPoCatalogue),
         content: content.into_element(),
@@ -137,28 +181,13 @@ pub(super) fn render(writer: Writer) -> Element {
                     })
                     .child(wording(MsgId::WriterClose)),
             )
-            .child(
-                Button::new()
-                    .a11y_id(ids[1])
-                    .filled()
-                    .on_press(move |_| {
-                        if state.peek().dirty() {
-                            message.set(wording(MsgId::WriterOpenDrafts));
-                            return;
-                        }
-                        match Catalogue::open(std::path::Path::new(path.peek().as_str())) {
-                            Ok(catalogue) => {
-                                let mut value = state.write();
-                                value.catalogue = Some(catalogue);
-                                value.panel = None;
-                                message.set(String::new());
-                            }
-                            Err(error) => message.set(error),
-                        }
-                    })
-                    .child(wording(MsgId::WriterOpen)),
-            )
             .into_element(),
+        primary: crate::design::DialogAction {
+            id: ids[1],
+            caption: wording(MsgId::WriterOpen),
+            enabled: !path.read().trim().is_empty() && comparison.read().is_none(),
+            action: open,
+        },
     }
     .into_element()
 }

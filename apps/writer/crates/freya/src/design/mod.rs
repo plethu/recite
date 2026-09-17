@@ -17,3 +17,15 @@ pub(crate) mod palette;
 
 mod options;
 pub(crate) use options::Options;
+
+mod dialog_action;
+pub(crate) mod keyboard;
+pub(crate) use dialog_action::DialogAction;
+mod search_picker;
+pub(crate) use search_picker::{PickerOption, SearchPicker};
+
+mod search_field;
+pub(crate) use search_field::SearchField;
+
+mod path_field;
+pub(crate) use path_field::{PathField, PathKind};

@@ -23,15 +23,9 @@ pub(super) fn begin(
         return Err(wording(MsgId::WriterOpenDrafts));
     }
     let locale = create::language(locale)?;
-    writer.navigate(|_| Ok(()));
-    if !writer.message.peek().is_empty() {
-        return Err(writer.message.peek().clone());
-    }
+    let template = super::super::extraction::template(writer, files)?;
     let session = writer.buffers.model.peek();
     let session = session.as_ref().map_err(|e| e.to_string())?;
-    if session.has_draft() {
-        return Err(wording(MsgId::WriterCreateSourceDraft));
-    }
     let document = session.document();
     let project = files.peek();
     let root = project
@@ -43,31 +37,8 @@ pub(super) fn begin(
         Err(e) if e.kind() == std::io::ErrorKind::NotFound => {}
         Err(e) => return Err(e.to_string()),
     }
-    // Refresh other saved scenes, retaining the current unsaved source overlay.
-    let report = if project.is_some() {
-        let discovered = recite_config::discover_project(root).map_err(|e| e.to_string())?;
-        if !discovered.is_complete() {
-            return Err(wording(MsgId::WriterCreateIncomplete));
-        }
-        let context = crate::project_context::load(&discovered).map_err(|e| e.to_string())?;
-        let snapshot = recite_writer_model::Document::in_project(
-            document.key().clone(),
-            document.source(),
-            context,
-        )
-        .map_err(|e| e.to_string())?;
-        snapshot.extract_catalogue()
-    } else {
-        document.extract_catalogue()
-    };
-    let catalogue = report
-        .catalog
-        .ok_or_else(|| crate::project_context::diagnostic_messages(&report.diagnostics))?;
-    if catalogue.entries.is_empty() {
-        return Err(wording(MsgId::WriterCreateEmpty));
-    }
     Ok(Pending {
-        preparation: create::Preparation::start(catalogue.to_pot_string(), locale)?,
+        preparation: create::Preparation::start(template, locale)?,
         path,
         source: document.source_snapshot(),
         document: document.key().to_string(),

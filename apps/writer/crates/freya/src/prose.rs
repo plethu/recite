@@ -91,15 +91,14 @@ impl Component for ProseField {
             .read()
             .as_ref()
             .is_ok_and(|m| m.view() == &target);
-        let pending_error = selected
+        let pending_draft = selected
             && !id.is_focused()
             && writer
                 .buffers
                 .model
                 .read()
                 .as_ref()
-                .is_ok_and(|m| m.has_draft())
-            && !writer.message.read().is_empty();
+                .is_ok_and(|m| m.has_draft());
         let caption = match &passage.kind {
             PassageKind::Dialogue { speaker } => {
                 palette::display_name(speaker.as_deref().unwrap_or("Narration"))
@@ -190,13 +189,14 @@ impl Component for ProseField {
                             }),
                     ),
             )
-            .maybe_child(pending_error.then(|| {
+            .maybe_child(pending_draft.then(|| {
                 rect()
                     .spacing(t::SPACE_XS)
-                    .child(
-                        label()
-                            .text(writer.message.read().clone())
-                            .font_size(t::TEXT_SMALL),
+                    .maybe_child(
+                        writer
+                            .message
+                            .is_error()
+                            .then(|| label().text(writer.message.text()).font_size(t::TEXT_SMALL)),
                     )
                     .child(
                         Button::new()
@@ -221,24 +221,11 @@ fn details_content(writer: Writer, passage: &Passage) -> Element {
             .font_size(t::TEXT_SMALL),
     );
     if matches!(passage.kind, PassageKind::Choice { .. }) {
-        let mut destinations = writer
-            .buffers
-            .model
-            .peek()
-            .as_ref()
-            .map(|m| m.document().sections())
-            .unwrap_or_default();
-        destinations.push("END".into());
-        content = content.child(label().text("Change destination"));
-        for destination in destinations {
-            let caption = palette::display_name(&destination);
-            content = content.child(
-                Button::new()
-                    .flat()
-                    .on_press(move |_| writer.navigate(|m| m.attribute(&destination)))
-                    .child(caption),
-            );
-        }
+        content = content.child(crate::route_editor::RouteEditor {
+            writer,
+            owner: crate::route_editor::RouteOwner::Reply(passage.id.clone()),
+            heading: rect().into_element(),
+        });
     }
     content.into_element()
 }

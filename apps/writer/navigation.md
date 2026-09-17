@@ -41,3 +41,10 @@ and presentation. Route parsing is separate in `navigation/location.rs`;
 those operations must agree on the same location. They were reviewed as cohesive
 modules; splitting the shell or separating history capture from restoration would
 spread the state ownership without simplifying this change.
+
+Source-update review has its own `/source-updates` route. Its `page` parameter
+identifies the selected change index within the cached review; queue paging stays
+independent. Back/Forward restores that selection while the review remains in memory.
+A fresh linked session offers **Check source updates** to build the review from current
+project content; link data never authorises a catalogue write. Source-update review
+hides the scene drawer temporarily without changing the user's drawer preference.

@@ -89,7 +89,7 @@ fn workbench(mode: AppMode) -> Element {
     let search_focus = use_a11y();
     let selection = use_state(|| None::<String>);
     let search = use_state(String::new);
-    let message = use_state(String::new);
+    let message = crate::feedback::Feedback::new();
     let mut editor = use_state(move || {
         let state = model.peek();
         editor_data(
@@ -149,7 +149,15 @@ fn workbench(mode: AppMode) -> Element {
             if current == editing::Pane::Script {
                 inspector_focus.request_focus();
             } else if current == editing::Pane::Map {
-                map_focus.request_focus();
+                if model
+                    .peek()
+                    .as_ref()
+                    .is_ok_and(|m| m.view() == &View::Source)
+                {
+                    editor_id.request_focus();
+                } else {
+                    map_focus.request_focus();
+                }
             }
             previous_pane.set(current);
         }
@@ -253,18 +261,7 @@ fn workbench(mode: AppMode) -> Element {
         .child(scene::reading_surface(writer, active.clone()));
     let diagnostics = session.document().diagnostics();
     for diagnostic in &diagnostics {
-        let text = if source {
-            format!(
-                "{}:{} · {} · {}",
-                diagnostic.span.file,
-                diagnostic.span.start.line(),
-                diagnostic.code,
-                diagnostic.message
-            )
-        } else {
-            diagnostic.message.clone()
-        };
-        reading = reading.child(label().text(text).font_size(t::TEXT_BODY));
+        reading = reading.child(diagnostics::row(writer, editor_id, diagnostic));
     }
     let mut body = rect()
         .content(Content::Flex)
@@ -298,6 +295,11 @@ fn workbench(mode: AppMode) -> Element {
     } else {
         ""
     };
+    let notice_in_localisation = {
+        let localisation = writer.localisation.read();
+        localisation.modal_open()
+            || (localisation.active && localisation.view == localisation::CatalogueView::Updates)
+    };
     let mut root = rect()
         .expanded()
         .on_global_key_down(move |event: Event<KeyboardEventData>| {
@@ -311,7 +313,12 @@ fn workbench(mode: AppMode) -> Element {
                 event.stop_propagation();
                 event.prevent_default();
             } else if event.code == Code::F6 {
-                let mut regions = vec![sidebar_focus];
+                let mut regions = Vec::new();
+                if !(writer.localisation.peek().active
+                    && writer.localisation.peek().view == localisation::CatalogueView::Updates)
+                {
+                    regions.push(sidebar_focus);
+                }
                 if writer.localisation.peek().active {
                     regions.push(inspector_focus);
                 } else if source {
@@ -381,8 +388,8 @@ fn workbench(mode: AppMode) -> Element {
                     .text(format!("{saved} · {diagnostic_status}{preview_status}"))
                     .color(colors.text_secondary),
             )
-            .maybe(!message.read().is_empty(), |status| {
-                status.child(label().text(message.read().clone()))
+            .maybe(!message.is_empty() && !notice_in_localisation, |status| {
+                status.child(crate::feedback::NoticeView { feedback: message })
             }),
     );
     root = root.child(close_prompt).child(settings::render(
@@ -391,3 +398,7 @@ fn workbench(mode: AppMode) -> Element {
     ));
     root.into_element()
 }
+
+mod feedback;
+
+mod diagnostics;

@@ -13,7 +13,7 @@ pub(crate) struct FileChrome {
 
 pub(crate) fn controls(
     writer: crate::editing::Writer,
-    mut message: State<String>,
+    mut message: crate::feedback::Feedback,
     dark: bool,
 ) -> FileChrome {
     let buffers = writer.buffers;
@@ -24,6 +24,8 @@ pub(crate) fn controls(
             .find(|args| args[0] == "--project")
             .map_or_else(String::new, |args| args[1].clone())
     });
+    let path_id = use_a11y();
+    let browse_id = use_a11y();
     let mut files = writer.files;
     let mut project_panel_open = use_state(|| path.peek().is_empty());
     let job = use_state(|| None::<crate::project_loading::LoadJob>);
@@ -45,9 +47,11 @@ pub(crate) fn controls(
         if let Some(project) = files.write().as_mut()
             && let Err(error) = project.queue_checkpoint(workbench)
         {
-            message.set(format!(
-                "Draft recovery failed: {error}. Keep this window open and retry Save."
-            ));
+            message.error_with_action(
+                format!("Draft recovery failed: {error}. Keep this window open and retry Save."),
+                "Retry save".into(),
+                EventHandler::new(move |()| message.report(buffers.save(files), "Saved.".into())),
+            );
         }
     });
     let current = files.read();
@@ -56,10 +60,7 @@ pub(crate) fn controls(
         .spacing(t::SPACE_SM)
         .on_global_key_down(move |event: Event<KeyboardEventData>| {
             if crate::editing::is_save_key(&event) {
-                message.set(match buffers.save(files) {
-                    Ok(()) => "Saved.".into(),
-                    Err(error) => error,
-                });
+                message.report(buffers.save(files), "Saved.".into());
             }
         })
         .child(
@@ -76,10 +77,7 @@ pub(crate) fn controls(
                 .filled()
                 .enabled(current.is_some())
                 .on_press(move |_| {
-                    message.set(match buffers.save(files) {
-                        Ok(()) => "Saved.".into(),
-                        Err(error) => error,
-                    });
+                    message.report(buffers.save(files), "Saved.".into());
                 })
                 .child("Save"),
         )
@@ -96,15 +94,47 @@ pub(crate) fn controls(
         .spacing(t::SPACE_MD)
         .padding(t::SPACE_LG);
     if *project_panel_open.read() {
-        panel = panel.child(rect().horizontal().spacing(t::SPACE_SM)
-            .child(Input::new(path).on_pre_key_down(crate::closing::text_input_key).width(Size::px(440.)).placeholder("Project folder or recite.project.toml"))
-            .child(Button::new().on_press(move |_| {
-                if !buffers.can_leave(files.peek().as_ref()) {
-                    message.set("Save changes and apply or discard the draft before opening another project.".into());
-                    return;
-                }
-                crate::project_loading::start(job, path.peek().as_str().into(), message, writer.buffers);
-            }).child("Open project")));
+        let open = EventHandler::new(move |()| {
+            if !buffers.can_leave(files.peek().as_ref()) {
+                message.error(
+                    "Save changes and apply or discard the draft before opening another project."
+                        .into(),
+                );
+                return;
+            }
+            crate::project_loading::start(
+                job,
+                path.peek().as_str().into(),
+                message,
+                writer.buffers,
+            );
+        });
+        let submit = open.clone();
+        panel = panel.child(
+            rect()
+                .horizontal()
+                .content(Content::Flex)
+                .width(Size::fill())
+                .spacing(t::SPACE_SM)
+                .child(
+                    rect()
+                        .width(Size::flex(1.))
+                        .child(crate::design::PathField {
+                            value: path,
+                            id: path_id,
+                            browse_id,
+                            kind: crate::design::PathKind::Project,
+                            enabled: job.read().is_none(),
+                            submit,
+                        }),
+                )
+                .child(
+                    Button::new()
+                        .enabled(!path.read().trim().is_empty() && job.read().is_none())
+                        .on_press(move |_| open.call(()))
+                        .child("Open project"),
+                ),
+        );
         if let Some(project) = current.as_ref() {
             panel = panel.child(label().text(project.current.display().to_string()).color(crate::palette::muted(dark)))
                 .child(rect().horizontal().spacing(t::SPACE_SM)
@@ -113,10 +143,7 @@ pub(crate) fn controls(
                         let mut model = buffers.model;
                         let mut state = model.write();
                         if let Ok(workbench) = state.as_mut() && let Some(project) = files.write().as_mut() {
-                            message.set(match project.refresh(workbench) {
-                                Ok(()) => "Project refreshed. Restart preview to use the updated sources and schema.".into(),
-                                Err(error) => error.to_string(),
-                            });
+                            message.report(project.refresh(workbench).map_err(|error| error.to_string()), "Project refreshed. Restart preview to use the updated sources and schema.".into());
                         }
                     }).child("Refresh project context"))
                     .child(Button::new().flat().on_press(move |_| {
@@ -129,9 +156,9 @@ pub(crate) fn controls(
                             match result {
                                 Ok((copy, next)) => {
                                     buffers.install(next, dark);
-                                    message.set(format!("Loaded the disk version. Your previous session is in {}", copy.display()));
+                                    message.info(format!("Loaded the disk version. Your previous session is in {}", copy.display()));
                                 },
-                                Err(error) => message.set(error.to_string()),
+                                Err(error) => message.error(error.to_string()),
                             }
                         }
                     }).child("Keep recovery copy and reload disk")));
@@ -154,7 +181,7 @@ pub(crate) fn controls(
                 active: target == project.current,
                 open: EventHandler::new(move |()| {
                     if !buffers.can_leave(files.peek().as_ref()) {
-                        message.set(
+                        message.error(
                             "Save changes and apply or discard the draft before changing files."
                                 .into(),
                         );
@@ -164,12 +191,11 @@ pub(crate) fn controls(
                         match project.select(&target) {
                             Ok(next) => {
                                 buffers.install(next, dark);
-                                writer.scene_opened();
-                                if message.peek().is_empty() {
-                                    message.set("Scene opened.".into());
+                                if writer.scene_opened().is_ok() {
+                                    message.info("Scene opened.".into());
                                 }
                             }
-                            Err(error) => message.set(error.to_string()),
+                            Err(error) => message.error(error.to_string()),
                         }
                     }
                 }),

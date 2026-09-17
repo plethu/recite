@@ -14,6 +14,7 @@ enum Semantics {
     Button,
     Radio,
     Option,
+    MenuItem,
 }
 
 #[derive(Clone, PartialEq)]
@@ -53,6 +54,11 @@ impl Button {
     }
     pub fn expanded(mut self, expanded: bool) -> Self {
         self.expanded = Some(expanded);
+        self
+    }
+    pub fn menu_item(mut self) -> Self {
+        self.semantics = Semantics::MenuItem;
+        self.kind = Kind::Quiet;
         self
     }
     pub fn option(mut self, selected: bool) -> Self {
@@ -128,7 +134,9 @@ impl Component for Button {
         let leave = self.hover_changed.clone();
         let focused = id.is_focused();
         let emphasized = self.selected == Some(true) || (self.enabled && *hovered.read());
-        let background = if self.enabled && *pressed.read() {
+        let background = if !self.enabled {
+            colors.surface
+        } else if *pressed.read() {
             colors.pressed
         } else if self.semantics == Semantics::Radio && self.selected == Some(true) {
             colors.accent
@@ -148,7 +156,9 @@ impl Component for Button {
         } else {
             colors.ink
         };
-        let role = if self.semantics == Semantics::Option {
+        let role = if self.semantics == Semantics::MenuItem {
+            AccessibilityRole::MenuItem
+        } else if self.semantics == Semantics::Option {
             AccessibilityRole::ListBoxOption
         } else if self.semantics == Semantics::Radio {
             AccessibilityRole::RadioButton

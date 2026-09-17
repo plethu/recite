@@ -37,3 +37,13 @@ fn malformed_or_ambiguous_links_are_rejected() {
         assert!(link.parse::<Location>().is_err(), "{link}");
     }
 }
+
+#[test]
+fn source_update_links_keep_the_selected_change() {
+    let location: Location = "/source-updates?catalogue=locale%2Fcy-x-cofi.po&page=25"
+        .parse()
+        .expect("source update link");
+    assert_eq!(location.screen, Screen::Updates);
+    assert_eq!(location.page, 25);
+    assert_eq!(location.to_string().parse::<Location>(), Ok(location));
+}

@@ -31,6 +31,15 @@ impl PartialEq for ProjectSearch {
 impl Component for ProjectSearch {
     fn render(&self) -> impl IntoElement {
         let query = use_state(String::new);
+        let mut limit = use_state(|| 100usize);
+        let active = use_state(|| None::<usize>);
+        let id = use_a11y();
+        let mut scroll = use_scroll_controller(ScrollConfig::default);
+        use_after_side_effect(move || {
+            if let Some(index) = *active.read() {
+                scroll.scroll_to_y(-((index.saturating_sub(1) * 84) as i32));
+            }
+        });
         let writer = self.writer;
         let files = self.files;
         let index =
@@ -40,26 +49,48 @@ impl Component for ProjectSearch {
                 .read()
                 .0
                 .as_ref()
-                .map(|index| index.search(&query.read(), 100))
+                .map(|index| index.search(&query.read(), *limit.read()))
                 .unwrap_or_default()
         });
         let (total, hits) = &*results.read();
-        let mut content = rect().width(Size::fill()).spacing(t::SPACE_XS).child(
-            Input::new(query)
+        let mut content =
+            rect()
                 .width(Size::fill())
-                .placeholder("Search project words…")
-                .on_pre_key_down(crate::closing::text_input_key),
-        );
+                .spacing(t::SPACE_XS)
+                .child(crate::design::SearchField {
+                    query,
+                    id,
+                    placeholder: "Search project words…".into(),
+                    active,
+                    count: hits.len(),
+                    vim: writer.preferences.read().config.ui.keymap == recite_config::Keymap::Vim,
+                    changed: EventHandler::new(move |()| limit.set(100)),
+                    activate: EventHandler::new(move |index: usize| {
+                        let hit = results.peek().1.get(index).cloned();
+                        if let Some(hit) = hit {
+                            open_result(writer, files, &hit);
+                        }
+                    }),
+                });
         if !query.read().trim().is_empty() {
-            let list = VirtualScrollView::new_with_data(hits.clone(), move |item, hits| {
-                rect()
-                    .key(item.index)
-                    .width(Size::fill())
-                    .height(Size::px(84.))
-                    .overflow(Overflow::Clip)
-                    .child(result_row(writer, files, hits[item.index].clone()))
-                    .into_element()
-            })
+            let list = VirtualScrollView::new_with_data(
+                (hits.clone(), *active.read()),
+                move |item, (hits, active)| {
+                    rect()
+                        .key(item.index)
+                        .width(Size::fill())
+                        .height(Size::px(84.))
+                        .overflow(Overflow::Clip)
+                        .child(result_row(
+                            writer,
+                            files,
+                            hits[item.index].clone(),
+                            *active == Some(item.index),
+                        ))
+                        .into_element()
+                },
+            )
+            .scroll_controller(scroll)
             .length(hits.len())
             .item_size(84.)
             .height(Size::px(200.))
@@ -71,6 +102,20 @@ impl Component for ProjectSearch {
                         .font_size(t::TEXT_SMALL),
                 )
                 .child(list);
+            if hits.is_empty() {
+                content =
+                    content.child(label().text("No matching saved passages. Try fewer words."));
+            }
+            if hits.len() < *total {
+                content = content.child(
+                    Button::new()
+                        .on_press(move |_| {
+                            let next = *limit.peek() + 100;
+                            limit.set(next);
+                        })
+                        .child("Show more results"),
+                );
+            }
         }
         content
     }
@@ -80,6 +125,7 @@ fn result_row(
     writer: Writer,
     files: State<Option<ProjectFiles>>,
     hit: recite_writer_model::SearchHit,
+    active: bool,
 ) -> Element {
     let name = format!("{} · {} · {}", hit.document, hit.beat, hit.text);
     let caption = format!(
@@ -91,6 +137,7 @@ fn result_row(
     Button::new()
         .flat()
         .width(Size::fill())
+        .selected(active)
         .named(name)
         .on_press(move |_| open_result(writer, files, &hit))
         .child(
@@ -119,14 +166,14 @@ fn open_result(
         if !writer.buffers.can_leave(files.peek().as_ref()) {
             writer
                 .message
-                .set("Save changes before opening a result in another scene.".into());
+                .error("Save changes before opening a result in another scene.".into());
             return;
         }
         if let Some(project) = files.write().as_mut() {
             match project.select(&path) {
                 Ok(next) => writer.buffers.install(next, writer.dark),
                 Err(error) => {
-                    writer.message.set(error.to_string());
+                    writer.message.error(error.to_string());
                     return;
                 }
             }

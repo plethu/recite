@@ -78,3 +78,73 @@ Back/Forward and Copy link are compact, named controls in the common header.
 History covers modes, scenes, passage locations and queue state. Failed navigation
 keeps the current location and reports what must be saved or corrected. Settings
 and short setup/file operations remain dialogs; browsing the catalogue does not.
+
+## Search pickers and dialog submission
+
+`SearchPicker` owns a stable single field, an anchored overlay that flips above
+when necessary, virtualised result rows, pointer dismissal, and keyboard mode.
+Callers provide structured `PickerOption` values (title, optional native/context
+label, stable value), cached search results, and the selection action. They own
+validation and persistence. Opening a picker does not resize the dialog. Empty
+searches show guidance; matching results scroll rather than stopping at eight.
+Language search prioritises exact names and tags, and keeps its normalised ISO
+index cached. Rows omit empty or repeated native names.
+
+Arrow keys navigate in either keymap. With Vim enabled, the search opens in
+INSERT: j/k are text. Escape enters NORMAL, j/k navigate, and i or / resumes
+INSERT. Another Escape dismisses the picker; the following Escape dismisses the
+dialog. Enter chooses a result without submitting the surrounding form. Tab
+leaves the picker and follows the dialog's focus order.
+
+Every `Dialog` declares a `DialogAction`. Its primary button and Ctrl+Enter
+(Cmd+Enter on macOS) invoke the same enabled action. The button displays the
+platform modifier and return symbol; disabled actions cannot be submitted or
+entered through the dialog's tab order. Plain Enter retains control-specific
+behaviour. Text inputs and the project settings editor pass the submit shortcut
+to the dialog without inserting a newline.
+
+| Existing surface | Reuse decision |
+| --- | --- |
+| Start localisation / Add language | Shared picker, compact scope and derived-path text, Create catalogue action |
+| PO catalogue dialog | Open action; disabled for an empty path or unresolved comparison; comparison decisions remain explicit |
+| Personal settings | Preferences apply immediately; the dialog action is Close settings |
+| Project settings | Apply project changes is the dialog action; Close remains separate |
+| Exit confirmation | Close Recite or Save and close is the primary action; recovery remains a separate choice |
+| Passage actions | Shared j/k and arrow navigation policy; remains a short action menu |
+| Two-choice settings | Shared Vim list navigation; remains a radio group |
+| Scene/project search and translation queue | Retain their workspace layouts and context; no dropdown conversion |
+
+Native interaction tests cover dialog geometry, picker pointer selection, Vim
+modes, invalid/no selection, and submit routing from inputs and buttons. The
+keyboard glyph chooses the build target; macOS device/VoiceOver verification
+remains part of the packaging/platform proofs.
+
+## GUI quality pass
+
+Destination changes use `SearchPicker` beside the reply or continuation, including
+passage details. Results preserve source order and include an explicit End
+conversation option. Selection remains an ordinary undoable document edit.
+
+`SearchField` is the shared input for project search, the scene sidebar, and the
+translation queue. It owns clearing, input focus restoration, Arrow/Enter result
+navigation, and Vim INSERT/NORMAL boundaries. Clearing returns to text entry;
+Escape clears in ordinary mode, while Vim Escape first leaves INSERT. Callers
+retain result rendering, paging and context. Project search discloses its loaded
+count and can extend beyond the initial 100 matches. Scene search expands the
+active scene while filtering so collapsed beats remain discoverable.
+
+`TranslationStatus` owns both passage labels and queue attention membership. An
+unsaved review remains pending and visible in the attention queue until saved.
+
+`PathField` provides manual entry, Enter submission and asynchronous native
+Browse for project folders and PO files. Browsing is parented to the window;
+cancellation preserves the typed path and selection never implicitly opens it.
+The existing draft guards and file validation still own opening.
+
+`Feedback` distinguishes information from errors and offers dismissal and an
+optional recovery action. Operation results are independent of notice visibility.
+Notices render once in their active context; dialog notices contribute their
+controls to the focus order. Diagnostic rows retain code/file/line/column and can
+place the source cursor at a diagnostic in the current document. The source view
+keeps a bounded diagnostics list beside its editing surface. Passage menu items
+use the shared Button interaction and MenuItem semantics.

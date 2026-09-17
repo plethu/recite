@@ -23,11 +23,11 @@ impl Drop for LoadJob {
 pub(crate) fn start(
     mut job: State<Option<LoadJob>>,
     path: PathBuf,
-    mut message: State<String>,
+    mut message: crate::feedback::Feedback,
     buffers: crate::buffers::Buffers,
 ) {
     if job.peek().is_some() {
-        message.set("A project is still opening. Cancel it or wait for it to finish.".into());
+        message.info("A project is still opening. Cancel it or wait for it to finish.".into());
         return;
     }
     let (sender, result) = mpsc::sync_channel(1);
@@ -51,7 +51,7 @@ pub(crate) fn start(
                 .ok()
                 .map(|m| m.document().source_snapshot()),
         })),
-        Err(error) => message.set(format!("Could not start opening the project: {error}")),
+        Err(error) => message.error(format!("Could not start opening the project: {error}")),
     }
 }
 #[derive(Clone)]
@@ -100,19 +100,21 @@ impl Component for Loading {
                     .map(|m| m.document().source_snapshot());
                 job.set(None);
                 if cancelled {
-                    message.set("Project opening cancelled.".into());
+                    message.info("Project opening cancelled.".into());
                 } else if source != current || !self.writer.buffers.can_leave(files.peek().as_ref())
                 {
-                    message.set("The current document changed while loading. Save it before opening another project.".into());
+                    message.error("The current document changed while loading. Save it before opening another project.".into());
                 } else {
                     match loaded {
                         Ok((project, workbench)) => {
                             let recovered = project.has_recovery();
                             self.writer.buffers.install(workbench, self.writer.dark);
                             files.set(Some(project));
-                            self.writer.scene_opened();
+                            if self.writer.scene_opened().is_err() {
+                                return rect();
+                            }
                             panel.set(false);
-                            message.set(
+                            message.info(
                                 if recovered {
                                     "Recovered your previous session."
                                 } else {
@@ -123,7 +125,7 @@ impl Component for Loading {
                         }
                         Err(error) => {
                             panel.set(true);
-                            message.set(error.to_string());
+                            message.error(error.to_string());
                         }
                     }
                 }

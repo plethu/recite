@@ -49,7 +49,8 @@ pub(super) fn is_quit_key(event: &KeyboardEventData) -> bool {
 
 /// Text widgets otherwise consume shortcuts before global listeners see them.
 pub(super) fn text_input_key(event: Event<KeyboardEventData>) -> bool {
-    if crate::editing::is_workspace_key(&event)
+    if crate::design::keyboard::submit_key(&event)
+        || crate::editing::is_workspace_key(&event)
         || (event.modifiers == Modifiers::ALT
             && matches!(event.code, Code::ArrowLeft | Code::ArrowRight))
     {
@@ -82,7 +83,7 @@ pub(super) fn controls(
     buffers: Buffers,
     mut preferences: State<crate::preferences::Preferences>,
     localisation: State<crate::localisation::Localisation>,
-    mut message: State<String>,
+    mut message: crate::feedback::Feedback,
     mut files: State<Option<ProjectFiles>>,
 ) -> Element {
     let mut pending = use_state(|| None::<Prompt>);
@@ -107,7 +108,7 @@ pub(super) fn controls(
         CLOSE.with(|handler| {
             *handler.borrow_mut() = Some(Box::new(move || {
                 if localisation.peek().dirty() {
-                    message.set(crate::localisation::close_drafts_message());
+                    message.error(crate::localisation::close_drafts_message());
                     return CloseDecision::KeepOpen;
                 }
                 if pending.peek().is_some() {
@@ -153,32 +154,31 @@ pub(super) fn controls(
             })));
     let mut footer =
         crate::design::actions().child(action_button(actions[0], "Keep editing", cancel));
+    let primary;
     if prompt == Prompt::Unsaved {
-        footer = footer
-            .child(action_button(
-                actions[1],
-                "Keep recovery and close",
-                move || {
-                    buffers.harvest();
-                    let state = buffers.model.peek();
-                    if let (Ok(workbench), Some(project)) = (state.as_ref(), files.write().as_mut())
-                    {
-                        match project.checkpoint(workbench) {
-                            Ok(()) => close_window(),
-                            Err(error) => failure.set(Some(error.to_string())),
-                        }
-                    }
-                },
-            ))
-            .child(
-                action_button(actions[2], "Save and close", move || {
-                    match buffers.save(files) {
+        footer = footer.child(action_button(
+            actions[1],
+            "Keep recovery and close",
+            move || {
+                buffers.harvest();
+                let state = buffers.model.peek();
+                if let (Ok(workbench), Some(project)) = (state.as_ref(), files.write().as_mut()) {
+                    match project.checkpoint(workbench) {
                         Ok(()) => close_window(),
-                        Err(error) => failure.set(Some(error)),
+                        Err(error) => failure.set(Some(error.to_string())),
                     }
-                })
-                .filled(),
-            );
+                }
+            },
+        ));
+        primary = crate::design::DialogAction {
+            id: actions[2],
+            caption: "Save and close".into(),
+            enabled: true,
+            action: EventHandler::new(move |()| match buffers.save(files) {
+                Ok(()) => close_window(),
+                Err(error) => failure.set(Some(error)),
+            }),
+        };
     } else {
         content = content.child(crate::design::checkbox(
             actions[1],
@@ -189,22 +189,28 @@ pub(super) fn controls(
                 dont_ask.set(next);
             },
         ));
-        footer = footer.child(action_button(actions[2], "Close Recite", move || {
-            if *dont_ask.peek()
-                && let Err(error) = preferences
-                    .write()
-                    .update(recite_config::UserConfigEdit::WriterConfirmExit(false))
-            {
-                failure.set(Some(error));
-                return;
-            }
-            match flush_recovery(buffers, files) {
-                Ok(()) => close_window(),
-                Err(error) => failure.set(Some(error)),
-            }
-        }));
+        primary = crate::design::DialogAction {
+            id: actions[2],
+            caption: "Close Recite".into(),
+            enabled: true,
+            action: EventHandler::new(move |()| {
+                if *dont_ask.peek()
+                    && let Err(error) = preferences
+                        .write()
+                        .update(recite_config::UserConfigEdit::WriterConfirmExit(false))
+                {
+                    failure.set(Some(error));
+                    return;
+                }
+                match flush_recovery(buffers, files) {
+                    Ok(()) => close_window(),
+                    Err(error) => failure.set(Some(error)),
+                }
+            }),
+        };
     }
     crate::design::Dialog {
+        primary,
         title: if prompt == Prompt::Unsaved {
             "Unsaved changes".into()
         } else {

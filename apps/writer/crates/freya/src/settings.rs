@@ -68,7 +68,7 @@ pub(super) fn render(writer: Writer, files: State<Option<ProjectFiles>>) -> Elem
     let tab_order: Vec<_> = if on_project && project.peek().is_none() {
         vec![ids[0], ids[1], ids[9]]
     } else if on_project {
-        vec![ids[0], ids[1], editor_id, ids[8], ids[9]]
+        vec![ids[0], ids[1], editor_id, ids[9], ids[8]]
     } else {
         let config = &preferences.read().config;
         let selected = [
@@ -113,6 +113,12 @@ pub(super) fn render(writer: Writer, files: State<Option<ProjectFiles>>) -> Elem
                     .child("Project settings"),
             ),
     );
+    let mut primary = crate::design::DialogAction {
+        id: ids[9],
+        caption: "Close settings".into(),
+        enabled: true,
+        action: EventHandler::new(move |()| close()),
+    };
     if on_project {
         if let Some(settings) = project.read().as_ref() {
             content = content
@@ -133,15 +139,21 @@ pub(super) fn render(writer: Writer, files: State<Option<ProjectFiles>>) -> Elem
                             .font_size(t::TEXT_BODY)
                             .gutter(true)
                             .on_pre_key_down(|e: Event<KeyboardEventData>| {
-                                if matches!(e.key, Key::Named(NamedKey::Tab | NamedKey::Escape)) {
+                                if crate::design::keyboard::submit_key(&e)
+                                    || matches!(e.key, Key::Named(NamedKey::Tab | NamedKey::Escape))
+                                {
                                     return false;
                                 }
                                 e.stop_propagation();
                                 true
                             }),
                     ),
-                )
-                .child(action(ids[8], "Apply project changes", move || {
+                );
+            primary = crate::design::DialogAction {
+                id: ids[8],
+                caption: "Apply project changes".into(),
+                enabled: true,
+                action: EventHandler::new(move |()| {
                     let text = draft.peek().rope.to_string();
                     let result = project
                         .write()
@@ -163,7 +175,8 @@ pub(super) fn render(writer: Writer, files: State<Option<ProjectFiles>>) -> Elem
                         }
                         Err(e) => error.set(e),
                     }
-                }));
+                }),
+            };
         } else {
             content = content.child(label().text("Open a project to edit its settings."));
         }
@@ -176,15 +189,19 @@ pub(super) fn render(writer: Writer, files: State<Option<ProjectFiles>>) -> Elem
     if let Some(e) = preferences.read().error.clone() {
         content = content.child(label().text(e));
     }
+    let secondary = if on_project && project.peek().is_some() {
+        action(ids[9], "Close settings", close)
+    } else {
+        rect().into_element()
+    };
     crate::design::Dialog {
+        primary,
         title: "Settings".into(),
         reduced_motion: preferences.read().config.writer.reduced_motion,
         close: EventHandler::new(move |()| close()),
         content: content.into_element(),
         focus_order: tab_order,
-        actions: crate::design::actions()
-            .child(action(ids[9], "Close settings", close))
-            .into_element(),
+        actions: secondary,
     }
     .into_element()
 }

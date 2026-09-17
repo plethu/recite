@@ -46,6 +46,30 @@ pub(super) fn render(writer: Writer, editor_id: AccessibilityId) -> Element {
                     }),
             ),
         );
+    let diagnostics = writer
+        .buffers
+        .model
+        .read()
+        .as_ref()
+        .map(|model| model.document().diagnostics())
+        .unwrap_or_default();
+    if !diagnostics.is_empty() {
+        field = field.child(
+            ScrollView::new()
+                .width(Size::fill())
+                .height(Size::px(140.))
+                .child(
+                    rect().width(Size::fill()).children(
+                        diagnostics
+                            .iter()
+                            .map(|diagnostic| {
+                                crate::diagnostics::row(writer, editor_id, diagnostic)
+                            })
+                            .collect::<Vec<_>>(),
+                    ),
+                ),
+        );
+    }
     if writer
         .buffers
         .model
