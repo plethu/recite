@@ -49,7 +49,10 @@ pub(super) fn is_quit_key(event: &KeyboardEventData) -> bool {
 
 /// Text widgets otherwise consume shortcuts before global listeners see them.
 pub(super) fn text_input_key(event: Event<KeyboardEventData>) -> bool {
-    if crate::editing::is_workspace_key(&event) {
+    if crate::editing::is_workspace_key(&event)
+        || (event.modifiers == Modifiers::ALT
+            && matches!(event.code, Code::ArrowLeft | Code::ArrowRight))
+    {
         return false;
     }
     if crate::editing::is_save_key(&event) {
@@ -78,6 +81,8 @@ enum Prompt {
 pub(super) fn controls(
     buffers: Buffers,
     mut preferences: State<crate::preferences::Preferences>,
+    localisation: State<crate::localisation::Localisation>,
+    mut message: State<String>,
     mut files: State<Option<ProjectFiles>>,
 ) -> Element {
     let mut pending = use_state(|| None::<Prompt>);
@@ -101,6 +106,10 @@ pub(super) fn controls(
     use_hook(move || {
         CLOSE.with(|handler| {
             *handler.borrow_mut() = Some(Box::new(move || {
+                if localisation.peek().dirty() {
+                    message.set(crate::localisation::close_drafts_message());
+                    return CloseDecision::KeepOpen;
+                }
                 if pending.peek().is_some() {
                     return CloseDecision::KeepOpen;
                 }

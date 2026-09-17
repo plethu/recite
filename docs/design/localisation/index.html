@@ -1,0 +1,46 @@
+<!doctype html>
+<html lang="en">
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Recite · localisation wireframe</title>
+<link rel="stylesheet" href="wireframe.css">
+<body>
+<a class="skip" href="#main">Skip to writing</a>
+<div class="lab" aria-label="Prototype controls">
+  <strong>Wireframe 03</strong><span>Sample data · changes last until reload</span>
+  <fieldset class="segments"><legend>Project scenario</legend>
+    <label><input type="radio" name="scenario" value="draft" checked>Initial draft</label>
+    <label><input type="radio" name="scenario" value="localised">Localised project</label>
+  </fieldset>
+  <button id="external">Simulate external edit</button>
+  <button id="theme" aria-pressed="false">Dark appearance</button>
+  <a href="README.md">Design brief</a>
+</div>
+<header class="app-header"><span class="wordmark">recite.</span><span>The relay station <span class="muted">/</span> Relay Hub</span>
+  <nav aria-label="Workspace"><button id="write-tab" aria-pressed="true">Write</button><button id="locale-tab" aria-pressed="false">Localisation</button></nav>
+</header>
+<div class="workspace">
+<aside class="navigator" aria-label="Scenes and beats">
+  <p class="eyebrow">Scenes</p>
+  <details open><summary>Relay Hub</summary><div id="beat-nav"></div></details>
+  <details><summary>Floodgate Waterfall</summary><p class="muted inset">Outside this sample</p></details>
+  <details><summary>Last Tram Linear</summary><p class="muted inset">Outside this sample</p></details>
+  <p class="nav-note">Beats in source order.<br>Branches stay in the graph.</p>
+</aside>
+<main id="main" tabindex="-1">
+<section id="writing"><div class="manuscript"><p class="eyebrow">Relay Hub / Script</p><h1 id="write-title"></h1><div id="write-manuscript"></div></div></section>
+<section id="setup" hidden><div class="empty"><p class="eyebrow">Localisation</p><h1>When the story is ready to travel.</h1><p>Keep writing in your source language for as long as you need. When translations begin, connect the PO files your team already uses.</p><button class="primary" id="connect">Try a connected catalogue</button><p class="muted">Opens the sample French catalogue. No files are created or imported.</p></div></section>
+<section id="catalogue" hidden>
+  <div class="catalogue-head"><div class="catalogue-identity"><h1>French <span class="muted small">fr-FR</span></h1><button id="files" class="file-identity" aria-label="Catalogue details for locale/fr-FR.po">locale/fr-FR.po <span aria-hidden="true">⌄</span></button></div><button id="queue-open" class="queue-open">Translation queue <span id="coverage"></span> →</button></div>
+  <div id="external-notice" class="notice" hidden><span><strong>The PO file changed elsewhere.</strong> Your drafts are still here.</span><button id="compare">Compare changes</button></div>
+  <article class="bilingual" aria-label="Bilingual beat manuscript"><p class="eyebrow">Relay Hub</p><h2 id="entry-title"></h2><div id="beat-manuscript"></div></article>
+
+</section>
+</main>
+</div>
+<footer><span id="announcement" role="status">Initial draft · source text only</span><span>Interaction study · not the native editor</span></footer>
+<dialog id="file-dialog" aria-labelledby="file-title"><form method="dialog"><div class="section-head"><h2 id="file-title">One catalogue, your choice of editor</h2><button aria-label="Close catalogue details">×</button></div><p><code>locale/fr-FR.po</code></p><p>Recite and your preferred PO editor work on this same file. No separate translation database.</p><p class="muted">In the native app, this surface would offer “Open in external editor” and “Reveal file”. This browser wireframe does not launch applications or write files.</p><div class="dialog-actions"><button>Done</button></div></form></dialog>
+<dialog id="conflict-dialog" aria-labelledby="conflict-title"><div class="section-head"><h2 id="conflict-title">Choose what to keep</h2><button id="close-conflict" aria-label="Close comparison">×</button></div><p>Station History · French</p><div class="parallel"><section><h3>Your draft</h3><p class="prose" id="your-version"></p></section><section><h3>From the PO file</h3><p class="prose" id="disk-version"></p></section></div><p class="muted">This comparison is simulated. Neither choice touches a real file.</p><div class="dialog-actions"><button id="keep">Keep my draft</button><button id="use-disk" class="primary">Use file version</button></div></dialog>
+<dialog id="queue-dialog" aria-labelledby="queue-title"><div class="section-head"><h2 id="queue-title">Translation queue</h2><button id="queue-close" aria-label="Close translation queue">×</button></div><p class="muted">Across the sample catalogue · open a passage in its full beat.</p><div class="queue-tools"><label>Show <select id="filter"><option value="all">All entries</option><option value="review">Needs review</option><option value="empty">Untranslated</option></select></label><label>Find <input type="search" id="search" placeholder="Source or translation"></label></div><div id="entries"></div></dialog>
+<script src="wireframe.js"></script>
+</body></html>

@@ -5,52 +5,6 @@ use crate::{
     palette,
 };
 use freya::prelude::*;
-#[derive(Default)]
-pub(crate) struct Trail {
-    document: String,
-    beats: Vec<String>,
-    cursor: usize,
-}
-impl Trail {
-    pub fn visit(&mut self, document: &str, beat: &str) {
-        if self.document != document {
-            self.document = document.into();
-            self.beats.clear();
-            self.cursor = 0;
-        }
-        if self
-            .beats
-            .get(self.cursor)
-            .is_some_and(|current| current == beat)
-        {
-            return;
-        }
-        self.beats.truncate(self.cursor + 1);
-        self.beats.push(beat.into());
-        if self.beats.len() > 128 {
-            self.beats.remove(0);
-        }
-        self.cursor = self.beats.len() - 1;
-    }
-    pub fn destination(&self, document: &str, forward: bool) -> Option<String> {
-        if self.document != document {
-            return None;
-        }
-        let index = if forward {
-            self.cursor.checked_add(1)?
-        } else {
-            self.cursor.checked_sub(1)?
-        };
-        self.beats.get(index).cloned()
-    }
-    pub fn step(&mut self, forward: bool) {
-        if forward {
-            self.cursor += 1;
-        } else {
-            self.cursor -= 1;
-        }
-    }
-}
 #[derive(Clone, PartialEq)]
 pub(crate) struct Reference {
     pub document: String,

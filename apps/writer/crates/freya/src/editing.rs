@@ -69,7 +69,10 @@ pub(crate) enum Pane {
 
 #[derive(Clone, Copy)]
 pub(crate) struct Writer {
-    pub trail: State<crate::reading_context::Trail>,
+    pub localisation: State<crate::localisation::Localisation>,
+    pub files: State<Option<crate::project::ProjectFiles>>,
+    pub examples: State<std::collections::BTreeMap<String, Workbench>>,
+    pub queue: crate::navigation::Queue,
     pub reference: State<Option<crate::reading_context::Reference>>,
     pub buffers: crate::buffers::Buffers,
     pub message: State<String>,
@@ -89,14 +92,6 @@ pub(crate) struct Writer {
 
 impl Writer {
     pub fn inspect(mut self, block: &str) {
-        if let Ok(session) = self.buffers.model.peek().as_ref()
-            && let Ok(Some(current)) = session.selected_block()
-        {
-            self.trail
-                .write()
-                .visit(session.document().key().as_str(), &current);
-        }
-        self.selection.set(Some(block.to_owned()));
         self.navigate(|m| m.inspect_block(block));
         if self
             .buffers
@@ -105,11 +100,7 @@ impl Writer {
             .as_ref()
             .is_ok_and(|m| m.selected_block().ok().flatten().as_deref() == Some(block))
         {
-            if let Ok(session) = self.buffers.model.peek().as_ref() {
-                self.trail
-                    .write()
-                    .visit(session.document().key().as_str(), block);
-            }
+            self.selection.set(Some(block.to_owned()));
             self.pane.set(Pane::Script);
             self.inspector_focus.request_focus();
             self.scroll
@@ -117,27 +108,16 @@ impl Writer {
         }
     }
 
-    pub fn history_step(mut self, forward: bool) {
-        let document = self
-            .buffers
-            .model
-            .peek()
-            .as_ref()
-            .ok()
-            .map(|m| m.document().key().to_string())
-            .unwrap_or_default();
-        let target = self.trail.peek().destination(&document, forward);
-        if let Some(target) = target {
-            self.navigate(|m| m.inspect_block(&target));
-            if self.message.peek().is_empty() {
-                self.trail.write().step(forward);
-                self.selection.set(Some(target));
-                self.pane.set(Pane::Script);
-                self.inspector_focus.request_focus();
-                self.scroll
-                    .scroll_to(ScrollPosition::Start, Direction::Vertical);
-            }
+    pub fn scene_opened(mut self) {
+        self.selection.set(None);
+        match self.preferences.peek().config.writer.view {
+            recite_config::WriterView::Map => self.navigate(Workbench::show_script),
+            recite_config::WriterView::Source => self.navigate(|m| m.select(View::Source)),
         }
+    }
+
+    pub fn history_step(self, forward: bool) {
+        crate::navigation::step(self, forward);
     }
     pub fn pin(mut self) {
         self.navigate(|_| Ok(()));

@@ -12,6 +12,19 @@ pub(super) fn toolbar(writer: Writer, actions: Option<Element>) -> Element {
     };
     let source = session.view() == &View::Source;
     let scene_name = palette::display_name(session.document().key().as_str());
+    let header = rect()
+        .horizontal()
+        .content(Content::Flex)
+        .width(Size::fill())
+        .padding((8., 16.))
+        .cross_align(Alignment::Center)
+        .child(crate::navigation::buttons(writer))
+        .child(label().text(scene_name).font_size(t::TEXT_HEADING))
+        .child(rect().width(Size::flex(1.)))
+        .child(crate::localisation::switch(writer));
+    if writer.localisation.read().active {
+        return header.into_element();
+    }
     let mut pane = writer.pane;
     let mut toolbar = rect()
         .width(Size::fill())
@@ -20,31 +33,6 @@ pub(super) fn toolbar(writer: Writer, actions: Option<Element>) -> Element {
         .cross_align(Alignment::Center)
         .spacing(t::SPACE_SM)
         .padding((8., 16.))
-        .child(label().text(scene_name).font_size(t::TEXT_HEADING))
-        .child(
-            controls::IconButton::new("Previous beat", controls::Icon::Back, move || {
-                writer.history_step(false)
-            })
-            .enabled(
-                writer
-                    .trail
-                    .read()
-                    .destination(session.document().key().as_str(), false)
-                    .is_some(),
-            ),
-        )
-        .child(
-            controls::IconButton::new("Next beat", controls::Icon::Forward, move || {
-                writer.history_step(true)
-            })
-            .enabled(
-                writer
-                    .trail
-                    .read()
-                    .destination(session.document().key().as_str(), true)
-                    .is_some(),
-            ),
-        )
         .child(rect().width(Size::flex(1.)))
         .child(
             Button::new()
@@ -92,5 +80,9 @@ pub(super) fn toolbar(writer: Writer, actions: Option<Element>) -> Element {
     if let Some(actions) = actions {
         toolbar = toolbar.child(actions);
     }
-    toolbar.into_element()
+    rect()
+        .width(Size::fill())
+        .child(header)
+        .child(toolbar)
+        .into_element()
 }

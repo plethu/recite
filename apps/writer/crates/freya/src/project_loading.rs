@@ -110,6 +110,7 @@ impl Component for Loading {
                             let recovered = project.has_recovery();
                             self.writer.buffers.install(workbench, self.writer.dark);
                             files.set(Some(project));
+                            self.writer.scene_opened();
                             panel.set(false);
                             message.set(
                                 if recovered {

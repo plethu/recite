@@ -20,6 +20,9 @@ mod recovery;
 mod route_editor;
 pub use closing::request_close;
 mod field;
+mod localisation;
+mod navigation;
+pub use navigation::InitialRoute;
 mod preferences;
 mod preview_panel;
 mod prose;
@@ -43,7 +46,7 @@ enum AppMode {
 }
 
 pub fn app() -> Element {
-    workbench(AppMode::Examples)
+    navigation::app(AppMode::Examples)
 }
 
 /// Optional source for embedding and repeatable headless workloads.
@@ -52,12 +55,12 @@ pub struct InitialSource(pub String);
 
 /// The original Alice scene retained for interaction regressions.
 pub fn regression_app() -> Element {
-    workbench(AppMode::Regression)
+    navigation::app(AppMode::Regression)
 }
 
 /// Opens the file-backed writer with project discovery and recovery.
 pub fn editor_app() -> Element {
-    workbench(AppMode::Project)
+    navigation::app(AppMode::Project)
 }
 
 fn workbench(mode: AppMode) -> Element {
@@ -84,7 +87,7 @@ fn workbench(mode: AppMode) -> Element {
     let inspector_focus = use_a11y();
     let sidebar_focus = use_a11y();
     let search_focus = use_a11y();
-    let mut selection = use_state(|| None::<String>);
+    let selection = use_state(|| None::<String>);
     let search = use_state(String::new);
     let message = use_state(String::new);
     let mut editor = use_state(move || {
@@ -152,10 +155,20 @@ fn workbench(mode: AppMode) -> Element {
         }
     });
     let expanded = use_state(std::collections::BTreeSet::new);
-    let trail = use_state(reading_context::Trail::default);
+    let files = use_state(|| None);
+    let examples = use_state(std::collections::BTreeMap::new);
+    let queue = navigation::Queue {
+        search: use_state(String::new),
+        attention: use_state(|| false),
+        page: use_state(|| 0),
+    };
     let reference = use_state(|| None::<reading_context::Reference>);
+    let localisation = use_state(localisation::Localisation::default);
     let writer = editing::Writer {
-        trail,
+        localisation,
+        files,
+        examples,
+        queue,
         reference,
         scroll,
         pane,
@@ -174,27 +187,18 @@ fn workbench(mode: AppMode) -> Element {
     };
     let navigation_visible = use_state(|| true);
     let file_chrome = (mode == AppMode::Project).then(|| files::controls(writer, message, night));
-    let example_scenes =
-        (mode == AppMode::Examples).then(|| examples::navigation(writer, message, night));
+    let example_scenes = (mode == AppMode::Examples).then(|| examples::navigation(writer, message));
     let empty_files = use_state(|| None);
-    let mut displayed_document = use_state(String::new);
-    let document = model
-        .peek()
-        .as_ref()
-        .ok()
-        .map(|m| m.document().key().to_string())
-        .unwrap_or_default();
-    if *displayed_document.peek() != document {
-        displayed_document.set(document);
-        selection.set(None);
-        match preferences.peek().config.writer.view {
-            recite_config::WriterView::Map => writer.navigate(Workbench::show_script),
-            recite_config::WriterView::Source => writer.navigate(|m| m.select(View::Source)),
-        }
-    }
+    use_hook(move || match preferences.peek().config.writer.view {
+        recite_config::WriterView::Map => writer.navigate(Workbench::show_script),
+        recite_config::WriterView::Source => writer.navigate(|m| m.select(View::Source)),
+    });
+    navigation::track(writer, mode);
     let close_prompt = closing::controls(
         buffers,
         preferences,
+        localisation,
+        message,
         file_chrome
             .as_ref()
             .map_or(empty_files, |chrome| chrome.files),
@@ -269,6 +273,7 @@ fn workbench(mode: AppMode) -> Element {
         .height(Size::flex(1.))
         .child(workspace::Workspace {
             writer,
+            files: file_chrome.as_ref().map_or(empty_files, |c| c.files),
             source,
             navigation_visible,
             scenes,
@@ -296,12 +301,20 @@ fn workbench(mode: AppMode) -> Element {
     let mut root = rect()
         .expanded()
         .on_global_key_down(move |event: Event<KeyboardEventData>| {
-            if *writer.settings_open.peek() {
+            if *writer.settings_open.peek() || writer.localisation.peek().modal_open() {
                 return;
             }
-            if event.code == Code::F6 {
+            if event.modifiers == Modifiers::ALT
+                && matches!(event.code, Code::ArrowLeft | Code::ArrowRight)
+            {
+                writer.history_step(event.code == Code::ArrowRight);
+                event.stop_propagation();
+                event.prevent_default();
+            } else if event.code == Code::F6 {
                 let mut regions = vec![sidebar_focus];
-                if source {
+                if writer.localisation.peek().active {
+                    regions.push(inspector_focus);
+                } else if source {
                     regions.push(editor_id);
                 } else {
                     regions.push(map_focus);
@@ -326,6 +339,15 @@ fn workbench(mode: AppMode) -> Element {
                 event.prevent_default();
             } else {
                 closing::keyboard(event);
+            }
+        })
+        .on_pointer_down(move |event: Event<PointerEventData>| {
+            if matches!(
+                event.button(),
+                Some(MouseButton::Back | MouseButton::Forward)
+            ) {
+                writer.history_step(event.button() == Some(MouseButton::Forward));
+                event.stop_propagation();
             }
         })
         .content(Content::Flex)

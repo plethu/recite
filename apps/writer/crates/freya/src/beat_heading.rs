@@ -96,16 +96,18 @@ impl Component for BeatHeading {
                     ),
             );
         }
-        row = row.child(crate::controls::IconButton::new(
-            "Pin reference",
-            crate::controls::Icon::Pin,
-            move || writer.pin(),
-        ));
-        row = row.child(crate::controls::IconButton::new(
-            "Close beat editor",
-            crate::controls::Icon::Close,
-            move || writer.close_editor(),
-        ));
+        if !writer.localisation.read().active {
+            row = row.child(crate::controls::IconButton::new(
+                "Pin reference",
+                crate::controls::Icon::Pin,
+                move || writer.pin(),
+            ));
+            row = row.child(crate::controls::IconButton::new(
+                "Close beat editor",
+                crate::controls::Icon::Close,
+                move || writer.close_editor(),
+            ));
+        }
         rect().width(Size::fill()).spacing(t::SPACE_XS).child(row)
             .maybe_child((*open.read()).then(|| label()
                 .text("Beat identifier · letters, digits and underscores · Enter to apply · Esc to cancel")

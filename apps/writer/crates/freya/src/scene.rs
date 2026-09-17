@@ -10,7 +10,7 @@ pub(super) fn reading_surface(writer: Writer, active: Element) -> Element {
     let Ok(session) = state.as_ref() else {
         return active;
     };
-    if session.view() == &View::Source {
+    if session.view() == &View::Source && !writer.localisation.read().active {
         return active;
     }
     let blocks = match session.document().script_snapshot() {
@@ -19,7 +19,11 @@ pub(super) fn reading_surface(writer: Writer, active: Element) -> Element {
     };
     let mut script = rect()
         .width(Size::fill())
-        .max_width(Size::px(820.))
+        .max_width(Size::px(if writer.localisation.read().translating() {
+            1320.
+        } else {
+            820.
+        }))
         .spacing(t::SPACE_MD);
     for id in session.selected_block().ok().flatten().iter() {
         let Some(index) = blocks.iter().position(|block| &block.id == id) else {
@@ -34,6 +38,13 @@ pub(super) fn reading_surface(writer: Writer, active: Element) -> Element {
                     writer,
                     id: id.clone(),
                 })
+                .maybe_child(
+                    writer
+                        .localisation
+                        .read()
+                        .active
+                        .then(|| crate::localisation::context(writer, id.clone())),
+                )
                 .child(crate::script_entries::EntryPage {
                     writer,
                     blocks: blocks.clone(),
@@ -42,23 +53,25 @@ pub(super) fn reading_surface(writer: Writer, active: Element) -> Element {
                 }),
         );
     }
-    script = script.child(
-        rect()
-            .horizontal()
-            .spacing(t::SPACE_XS)
-            .child(
-                Button::new()
-                    .flat()
-                    .on_press(move |_| writer.navigate(Workbench::add_line))
-                    .child("Add line"),
-            )
-            .child(
-                Button::new()
-                    .flat()
-                    .on_press(move |_| writer.navigate(Workbench::add_choice))
-                    .child("Add reply"),
-            ),
-    );
+    if !writer.localisation.read().active {
+        script = script.child(
+            rect()
+                .horizontal()
+                .spacing(t::SPACE_XS)
+                .child(
+                    Button::new()
+                        .flat()
+                        .on_press(move |_| writer.navigate(Workbench::add_line))
+                        .child("Add line"),
+                )
+                .child(
+                    Button::new()
+                        .flat()
+                        .on_press(move |_| writer.navigate(Workbench::add_choice))
+                        .child("Add reply"),
+                ),
+        );
+    }
     script.into_element()
 }
 

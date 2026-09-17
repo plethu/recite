@@ -256,7 +256,9 @@ pub(super) fn locale_fallbacks(locale: &str) -> Vec<String> {
         if parent.is_empty() {
             break;
         }
-        if !fallbacks.iter().any(|fallback| fallback == parent) {
+        if parent.parse::<language_tags::LanguageTag>().is_ok()
+            && !fallbacks.iter().any(|fallback| fallback == parent)
+        {
             fallbacks.push(parent.to_owned());
         }
         current = parent;

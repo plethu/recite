@@ -1,51 +1,80 @@
 //! Temporary example sessions retain edits, drafts, and undo when switching scenes.
-use crate::{
-    editing::{Writer, editor_data},
-    palette,
-};
+use crate::{editing::Writer, palette};
 use freya::prelude::*;
-use recite_writer_model::{View, WRITER_EXAMPLES};
+use recite_writer_model::WRITER_EXAMPLES;
 
-pub(super) fn navigation(writer: Writer, mut message: State<String>, dark: bool) -> Element {
-    let mut buffers = writer.buffers;
-    let mut parked = use_state(std::collections::BTreeMap::new);
-    let mut selected = use_state(|| 0_usize);
+pub(super) fn navigation(writer: Writer, mut message: State<String>) -> Element {
     let mut scenes = Vec::new();
     for (index, example) in WRITER_EXAMPLES.iter().enumerate() {
         scenes.push(crate::scene_navigation::SceneBranch {
             caption: palette::display_name(example.name),
-            active: *selected.read() == index,
-            open: EventHandler::new(move |()| {
-                let previous = *selected.peek();
-                if previous == index {
-                    return;
-                }
-                buffers.harvest();
-                let next = parked
-                    .write()
-                    .remove(&index)
-                    .unwrap_or_else(|| example.open());
-                let mut next = match next {
-                    Ok(next) => Ok(next),
-                    Err(error) => {
-                        message.set(error.to_string());
-                        return;
-                    }
-                };
-                std::mem::swap(&mut *buffers.model.write(), &mut next);
-                parked.write().insert(previous, next);
-                selected.set(index);
-                if let Ok(session) = buffers.model.peek().as_ref() {
-                    buffers.editor.set(editor_data(
-                        session.draft(),
-                        session.view() == &View::Source,
-                        dark,
-                    ));
-                    buffers.prose.set(session.draft().to_owned());
-                }
-                message.set(String::new());
+            active: writer
+                .buffers
+                .model
+                .read()
+                .as_ref()
+                .is_ok_and(|m| m.document().key().as_str() == example.name),
+            open: EventHandler::new(move |()| match select(writer, index) {
+                Err(error) => message.set(error),
+                Ok(()) => writer.scene_opened(),
             }),
         });
     }
     crate::scene_navigation::SceneNavigation { writer, scenes }.into_element()
+}
+
+/// Swap complete temporary sessions so browser history never discards drafts.
+pub(super) fn select(writer: Writer, index: usize) -> Result<(), String> {
+    select_at(writer, index, |_| Ok(()))
+}
+
+pub(super) fn select_at(
+    mut writer: Writer,
+    index: usize,
+    select: impl FnOnce(
+        &mut recite_writer_model::Workbench,
+    ) -> Result<(), recite_writer_model::WorkbenchError>,
+) -> Result<(), String> {
+    let example = &WRITER_EXAMPLES[index];
+    let current = writer
+        .buffers
+        .model
+        .peek()
+        .as_ref()
+        .map_err(|e| e.to_string())?
+        .document()
+        .key()
+        .to_string();
+    if current == example.name {
+        return Ok(());
+    }
+    writer.buffers.harvest();
+    let next = {
+        let mut parked = writer.examples.write();
+        if let Some(next) = parked.get_mut(example.name) {
+            select(next).map_err(|e| e.to_string())?;
+            parked
+                .remove(example.name)
+                .ok_or("Example session disappeared.")?
+        } else {
+            let mut next = example.open().map_err(|e| e.to_string())?;
+            select(&mut next).map_err(|e| e.to_string())?;
+            next
+        }
+    };
+    let previous = std::mem::replace(&mut *writer.buffers.model.write(), Ok(next));
+    if let Ok(previous) = previous {
+        writer.examples.write().insert(current, previous);
+    }
+    let state = writer.buffers.model.peek();
+    if let Ok(session) = state.as_ref() {
+        writer.buffers.editor.set(crate::editing::editor_data(
+            session.draft(),
+            matches!(session.view(), recite_writer_model::View::Source),
+            writer.dark,
+        ));
+        writer.buffers.prose.set(session.draft().to_owned());
+    }
+    writer.message.set(String::new());
+    Ok(())
 }

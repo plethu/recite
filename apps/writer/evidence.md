@@ -12,6 +12,8 @@ component interactions. The shared user configuration has additional tests in
 
 ## Remaining acceptance
 
+- Cross-platform writer packaging and installation, including the required
+  [desktop deep-link registration and activation checks](packaging.md) in #79.
 - Physical screen-reader, IME, BiDi, and native window-management acceptance.
 - Native trackpad pinch is not forwarded by the pinned Freya backend. Component
   tests cover scroll-to-pan and Ctrl+scroll zoom over cards, but do not establish
@@ -20,8 +22,11 @@ component interactions. The shared user configuration has additional tests in
   but that does not establish native platform acceptance.
 - The pinned Freya CodeEditor preedit presentation defect; see the
   [upstream evidence](upstream-code-editor-preedit.md).
-- Full localisation/PO editing, authoring structured conditions and effects,
-  preview condition inputs, and scene-manifest-specific build selection.
+- Localisation beyond the implemented singular-entry workflow: catalogue
+  refresh after source changes, plural/variant editing, and locale/fallback
+  preview; see [the current localisation limits](localisation.md#current-limits).
+- Authoring structured conditions and effects, preview condition inputs, and
+  scene-manifest-specific build selection.
 
 Script presents existing conditions and effects without executing them.
 Preview uses Recite's runtime; game-side effects remain caller-owned requests.

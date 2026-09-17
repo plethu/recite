@@ -8,6 +8,7 @@ use std::ops::Range;
 mod document;
 mod entry;
 mod parser;
+mod review;
 mod write;
 
 pub use document::PoEditError;

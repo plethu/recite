@@ -4,6 +4,7 @@ use freya::prelude::*;
 #[derive(Clone, Copy, PartialEq)]
 pub(super) enum Icon {
     Back,
+    Link,
     Forward,
     Pin,
     Close,
@@ -19,6 +20,7 @@ pub(super) enum Icon {
 impl Icon {
     fn render(self) -> Element {
         let shape = match self {
+            Self::Link => "<path d='M10 13l4-2M9 16H7a4 4 0 0 1 0-8h3M15 8h2a4 4 0 0 1 0 8h-3'/>",
             Self::Back => "<path d='M15 5l-7 7 7 7'/>",
             Self::Forward => "<path d='M9 5l7 7-7 7'/>",
             Self::Pin => "<path d='M8 3h8l-1 7 4 4H5l4-4-1-7M12 14v8'/>",

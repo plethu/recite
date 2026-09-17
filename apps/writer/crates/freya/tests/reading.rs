@@ -23,10 +23,10 @@ fn pinned_context_survives_navigation_and_history() -> Result<(), Box<dyn std::e
     support::click(&mut test, "Missing Courier")?;
     support::click(&mut test, "Edit Missing Courier")?;
     assert!(has_prose(&test, "Our courier is two days late"));
-    support::click(&mut test, "Previous beat")?;
+    support::click(&mut test, "Back")?;
     assert!(has_prose(&test, "If you're here about"));
     assert!(!has_prose(&test, "Our courier is two days late"));
-    support::click(&mut test, "Next beat")?;
+    support::click(&mut test, "Forward")?;
     assert!(has_prose(&test, "Our courier is two days late"));
     assert!(has_text(&test, "Pinned snapshot"));
     support::click(&mut test, "Unpin reference")?;

@@ -27,6 +27,18 @@ impl Component for ProseField {
         let passage = self.passage.clone();
         let id = use_a11y();
         let details = use_state(|| false);
+        let restore_anchor = passage.id.clone();
+        let mut localisation = writer.localisation;
+        use_after_side_effect(move || {
+            let restore = {
+                let state = localisation.read();
+                !state.active && state.focus.as_ref() == Some(&restore_anchor)
+            };
+            if restore {
+                localisation.write().focus = None;
+                id.request_focus();
+            }
+        });
         let mut hovered = use_state(|| false);
         let initial = passage.text.clone();
         let mut text = use_state(move || initial);

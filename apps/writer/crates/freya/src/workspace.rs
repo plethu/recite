@@ -17,6 +17,7 @@ const MAP_MIN: f32 = 320.;
 #[derive(Clone)]
 pub(super) struct Workspace {
     pub writer: Writer,
+    pub files: State<Option<crate::project::ProjectFiles>>,
     pub source: bool,
     pub navigation_visible: State<bool>,
     pub scenes: Element,
@@ -77,7 +78,13 @@ impl Component for Workspace {
             .content(Content::Flex)
             .width(Size::fill())
             .height(Size::flex(1.));
-        if self.source {
+        if writer.localisation.read().active {
+            editor = editor.child(crate::localisation::Surface {
+                writer,
+                reading: self.reading.clone(),
+                files: self.files,
+            });
+        } else if self.source {
             editor = editor.child(pane);
         } else if editing && left {
             editor = editor.child(pane).child(divider).child(self.map.clone());

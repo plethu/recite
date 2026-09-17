@@ -9,6 +9,13 @@ enum Kind {
     Primary,
 }
 
+#[derive(Clone, Copy, PartialEq)]
+enum Semantics {
+    Button,
+    Radio,
+    Option,
+}
+
 #[derive(Clone, PartialEq)]
 pub(crate) struct Button {
     children: Vec<Element>,
@@ -19,7 +26,7 @@ pub(crate) struct Button {
     enabled: bool,
     selected: Option<bool>,
     checked: Option<bool>,
-    radio: bool,
+    semantics: Semantics,
     expanded: Option<bool>,
     kind: Kind,
     width: Size,
@@ -37,7 +44,7 @@ impl Button {
             enabled: true,
             selected: None,
             checked: None,
-            radio: false,
+            semantics: Semantics::Button,
             expanded: None,
             kind: Kind::Secondary,
             width: Size::auto(),
@@ -48,8 +55,13 @@ impl Button {
         self.expanded = Some(expanded);
         self
     }
+    pub fn option(mut self, selected: bool) -> Self {
+        self.semantics = Semantics::Option;
+        self.selected = Some(selected);
+        self
+    }
     pub fn radio(mut self, selected: bool) -> Self {
-        self.radio = true;
+        self.semantics = Semantics::Radio;
         self.selected = Some(selected);
         self
     }
@@ -118,7 +130,7 @@ impl Component for Button {
         let emphasized = self.selected == Some(true) || (self.enabled && *hovered.read());
         let background = if self.enabled && *pressed.read() {
             colors.pressed
-        } else if self.radio && self.selected == Some(true) {
+        } else if self.semantics == Semantics::Radio && self.selected == Some(true) {
             colors.accent
         } else if emphasized {
             colors.hover
@@ -130,13 +142,15 @@ impl Component for Button {
             }
         };
         let color = if (self.kind == Kind::Primary && !emphasized)
-            || (self.radio && self.selected == Some(true))
+            || (self.semantics == Semantics::Radio && self.selected == Some(true))
         {
             colors.on_accent
         } else {
             colors.ink
         };
-        let role = if self.radio {
+        let role = if self.semantics == Semantics::Option {
+            AccessibilityRole::ListBoxOption
+        } else if self.semantics == Semantics::Radio {
             AccessibilityRole::RadioButton
         } else if self.checked.is_some() {
             AccessibilityRole::CheckBox
@@ -181,7 +195,10 @@ impl Component for Button {
         if let Some(name) = &self.name {
             control = control.a11y_alt(name.clone());
         }
-        if let Some(checked) = self.checked.or(self.selected) {
+        if self.semantics == Semantics::Option {
+            let selected = self.selected.unwrap_or(false);
+            control = control.a11y_builder(move |node| node.set_selected(selected));
+        } else if let Some(checked) = self.checked.or(self.selected) {
             control = control.a11y_builder(move |node| {
                 node.set_toggled(if checked {
                     accesskit::Toggled::True

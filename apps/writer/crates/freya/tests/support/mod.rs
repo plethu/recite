@@ -32,7 +32,9 @@ pub fn open_beat(test: &mut TestingRunner) -> Result<(), Box<dyn std::error::Err
                 .map(|_| node.layout().area)
         })
         .ok_or("beat card")?;
-    test.click_cursor((f64::from(area.center().x), f64::from(area.center().y)));
+    // A graph card can extend below the viewport in a small window. Its title
+    // remains visible; the geometric centre may be behind the connections pane.
+    test.click_cursor((f64::from(area.center().x), f64::from(area.min_y() + 20.)));
     test.poll_n(std::time::Duration::from_millis(16), 8);
     Ok(())
 }

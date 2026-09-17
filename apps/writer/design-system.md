@@ -56,3 +56,25 @@ not a compatible version substitution. See the
 Acceptance requires native gesture delivery, viewport routing, scale and phase
 handling, cancellation, and physical trackpad checks. Ctrl+scroll remains a
 separate interaction, not evidence that pinch works.
+
+Localisation uses a full-width bilingual beat manuscript beside the existing
+scene tree. Source structure, replies, conditions and destinations come from the
+same paged script renderer. The workspace switch sits above writing-specific
+Map/Source controls; PO paths and catalogue actions sit beside the language.
+Translation draft controls belong to their passage. Review state is stored as
+gettext's `fuzzy` flag, and a review checkbox change remains explicitly pending
+until saved. The queue has its own routed screen. Its search, filter and page survive a
+round trip to the manuscript through Back/Forward. New localisation UI text comes from the shared Fluent resource.
+
+Catalogue setup is disclosed in context: **Start localisation** is the primary
+empty-state action, with **Open PO catalogue** as the quieter existing-work path.
+Once connected, **Add language** lives behind the catalogue filename. Setup asks
+for a language through a searchable dropdown, shows the locale-derived filename
+and extraction scope, and returns
+to the same beat. No permanent language-administration panel occupies the script.
+
+The mode switch uses verbs: Write / Localise (Localize in US English). Workspace
+Back/Forward and Copy link are compact, named controls in the common header.
+History covers modes, scenes, passage locations and queue state. Failed navigation
+keeps the current location and reports what must be saved or corrected. Settings
+and short setup/file operations remain dialogs; browsing the catalogue does not.

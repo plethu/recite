@@ -1,7 +1,12 @@
 use freya::prelude::*;
 
 fn main() {
-    let file_backed = std::env::args().nth(1).as_deref() == Some("--project");
+    let file_backed = std::env::args().any(|arg| arg == "--project");
+    let args: Vec<_> = std::env::args().collect();
+    let initial_route = args
+        .windows(2)
+        .find(|pair| pair[0] == "--route")
+        .map(|pair| pair[1].clone());
     let title = if file_backed {
         "Recite writer"
     } else {
@@ -11,6 +16,10 @@ fn main() {
     launch(
         LaunchConfig::new().with_window(
             WindowConfig::new(move || {
+                // Command-line arguments are fixed for this window's lifetime.
+                if let Some(route) = initial_route.clone() {
+                    use_provide_context(move || recite_writer::InitialRoute(route));
+                }
                 let _preferences = use_provide_context(|| {
                     recite_config::UserConfigStore::discover().map_err(|e| e.to_string())
                 });

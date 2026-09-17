@@ -42,3 +42,15 @@ Native builds need Freya/Skia prerequisites (clang, CMake, pkg-config, and GTK 3
 development libraries on Linux) and a working desktop session. Linux execution
 and component tests do not establish macOS, Windows, screen-reader, or physical
 IME acceptance. See [remaining validation](evidence.md).
+
+Creating a dialogue PO catalogue from the Localise workspace requires GNU
+gettext (`msginit` on `PATH`). Install gettext before running the writer's full
+test gate, which exercises real catalogue creation. Existing PO editing works
+without it. See [the localisation workflow](localisation.md).
+
+The writer uses Freya routing for workspace [history and links](navigation.md),
+including Back/Forward across scenes and the translation queue.
+
+Cross-platform installation and packaging remain outstanding; the
+[packaging requirements](packaging.md) include desktop deep-link registration,
+project activation and delivery to a running window.

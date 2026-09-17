@@ -27,6 +27,7 @@ impl PartialEq for EntryPage {
 impl Component for EntryPage {
     fn render(&self) -> impl IntoElement {
         let mut page = use_state(|| 0usize);
+        let mut previous_selection = use_state(|| None::<String>);
         let writer = self.writer;
         let origin = self.blocks[self.block].id.as_str();
         let mut entries = self.blocks[self.block].entries.as_slice();
@@ -38,6 +39,24 @@ impl Component for EntryPage {
                 return rect().into_element();
             };
             entries = nested;
+        }
+        let selected = writer
+            .buffers
+            .model
+            .read()
+            .as_ref()
+            .ok()
+            .and_then(|session| match session.view() {
+                recite_writer_model::View::Passage(id) => Some(id.clone()),
+                _ => None,
+            });
+        if *previous_selection.peek() != selected {
+            if let Some(id) = &selected
+                && let Some(index) = entries.iter().position(|entry| contains_passage(entry, id))
+            {
+                page.set(index / PAGE_SIZE);
+            }
+            previous_selection.set(selected);
         }
         let top_level = self.path.is_empty();
         let pages = entries.len().div_ceil(PAGE_SIZE).max(1);
@@ -73,12 +92,27 @@ impl Component for EntryPage {
                                     ..Default::default()
                                 })
                                 .fill(palette::rule(writer.dark)),
-                        )
-                        .child(crate::prose::ProseField {
-                            writer,
-                            passage: passage.clone(),
-                            reply_number: choice.then_some(reply_number),
-                        });
+                        );
+                    let prose = crate::prose::ProseField {
+                        writer,
+                        passage: passage.clone(),
+                        reply_number: choice.then_some(reply_number),
+                    };
+                    if writer.localisation.read().translating() {
+                        row = row.child(
+                            rect()
+                                .horizontal()
+                                .content(Content::Flex)
+                                .width(Size::fill())
+                                .spacing(t::SPACE_LG)
+                                .child(rect().width(Size::flex(1.)).child(prose))
+                                .child(rect().width(Size::flex(1.)).child(
+                                    crate::localisation::translation(writer, passage.clone()),
+                                )),
+                        );
+                    } else {
+                        row = row.child(prose);
+                    }
                     if let PassageKind::Choice {
                         destination: Some(destination),
                     } = &passage.kind
@@ -87,7 +121,9 @@ impl Component for EntryPage {
                             writer,
                             origin,
                             destination,
-                            Some(crate::route_editor::RouteOwner::Reply(passage.id.clone())),
+                            (!writer.localisation.read().active).then(|| {
+                                crate::route_editor::RouteOwner::Reply(passage.id.clone())
+                            }),
                         ));
                     }
                     surface = surface.child(row);
@@ -97,7 +133,8 @@ impl Component for EntryPage {
                         writer,
                         origin,
                         destination,
-                        top_level.then(|| crate::route_editor::RouteOwner::Beat(origin.into())),
+                        (top_level && !writer.localisation.read().active)
+                            .then(|| crate::route_editor::RouteOwner::Beat(origin.into())),
                     ));
                     in_choices = false;
                 }
@@ -177,5 +214,15 @@ impl Component for EntryPage {
                 .child(surface);
         }
         surface.into_element()
+    }
+}
+
+fn contains_passage(entry: &ScriptEntry, id: &str) -> bool {
+    match entry {
+        ScriptEntry::Passage(passage) => passage.id == id,
+        ScriptEntry::Group { entries, .. } => {
+            entries.iter().any(|entry| contains_passage(entry, id))
+        }
+        _ => false,
     }
 }

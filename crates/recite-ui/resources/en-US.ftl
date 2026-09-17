@@ -516,3 +516,84 @@ neovim-command-watch-running = A Recite watch is already running.
 neovim-command-watch-not-running = No Recite watch is running.
 neovim-command-watch-stop-timeout = Recite watch did not stop cooperatively; terminating it.
 neovim-command-watch-status = Recite watch: {$detail}
+
+# Native writer localisation workspace
+writer-write = Write
+writer-localisation = Localize
+writer-localise = Localise
+writer-matching-entries = Matching entries
+writer-catalogue = Catalogue
+writer-translation-queue = Translation queue
+writer-optional = Localisation is optional. Start when your story is ready.
+writer-open-catalogue = Open PO catalogue
+writer-no-entry = No matching current PO entry. Update this catalogue in your PO editor.
+writer-untranslated = Untranslated
+writer-review-pending = Review pending save
+writer-reviewed = Reviewed
+writer-needs-review = Needs review
+writer-saved = Saved
+writer-unsaved = Unsaved changes
+writer-translation-saved = Translation saved to PO.
+writer-placeholder = Write a translation…
+writer-save = Save
+writer-discard = Discard draft
+writer-catalogue-path = PO catalogue path
+writer-file-workflow = The same file can be edited in Recite or your preferred PO editor. Drafts remain in this window until saved.
+writer-reload = Reload external changes
+writer-reloaded = Catalogue reloaded from disk.
+writer-close = Close
+writer-open = Open
+writer-po-catalogue = PO catalogue
+writer-close-drafts = Save or discard PO translation drafts before closing Recite.
+writer-open-drafts = Save or discard translation drafts before changing catalogue.
+writer-reload-drafts = Save or discard catalogue drafts before loading external changes.
+writer-empty-review = An empty translation cannot be reviewed.
+writer-queue-scope = Catalogue passages · open a passage in its full beat
+writer-search = Search source, translation, scene or ID
+writer-attention = Needs attention
+writer-no-matches = No matching passages.
+writer-previous = Previous
+writer-next = Next
+
+writer-compare = Compare external changes
+writer-compare-help = For each changed passage: source, your draft, then the current file version. Keeping drafts does not save them.
+writer-keep-drafts = Keep my drafts
+writer-use-file = Discard drafts and use file
+writer-compared = External version accepted. Review your drafts before saving.
+
+writer-incoming = Incoming prompts
+writer-source = Source
+writer-translation = Translation
+
+writer-start-localisation = Start localisation
+writer-add-language = Add language
+writer-target-language = Translate into
+writer-language-example = Search languages, native names or locale codes
+writer-new-catalogue-path = Catalogue location
+writer-create-catalogue = Create catalogue
+writer-cancel = Cancel
+writer-create-project-scope = Includes dialogue across the project and localisable schema text. The current scene includes applied edits, even before saving.
+writer-create-document-scope = Includes this document and its localisable schema text, including applied edits.
+writer-create-help = The locale names the PO file in your project’s locale folder. Translations start empty, ready here or in another PO editor.
+writer-creating-catalogue = Preparing the catalogue…
+writer-catalogue-created = Catalogue created. Your translations can begin here.
+writer-invalid-language = Choose a recognised language from the list. Search by name or a locale code such as fr-CA. The dialogue language is independent of the app language.
+writer-gettext-missing = Catalogue creation needs gettext’s msginit. Install gettext and try again, or open an existing PO catalogue.
+writer-creation-failed = The catalogue could not be prepared. No destination file was written.
+writer-plural-unknown = The installed gettext has no plural rules for this language. Update its language data, or open a PO catalogue prepared with those rules. No file was created.
+writer-catalogue-exists = A file already exists at this path. Choose another path, or open that catalogue to continue its translations.
+writer-creation-changed = The source or translation drafts changed while preparing the catalogue. Try again with the current text.
+writer-create-source-draft = Apply or discard the Source view draft before creating a catalogue, so it matches the manuscript.
+writer-po-extension = Use a filename ending in .po for the new catalogue.
+writer-create-incomplete = The whole project could not be read. Resolve its discovery errors before creating a catalogue.
+writer-create-empty = There is no localisable text to extract yet. Add dialogue with stable IDs before creating a catalogue.
+
+writer-choose-language = Choose language
+
+writer-read-passage = Read passage
+
+writer-no-languages = No matching languages. Try a name or a registered locale code.
+
+writer-unavailable-passage = No matching passage in this project
+
+writer-cofi-language = Welsh (Cofi)

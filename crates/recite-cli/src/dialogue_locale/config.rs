@@ -1,8 +1,8 @@
 use std::collections::BTreeMap;
 use std::path::PathBuf;
 
+use language_tags::LanguageTag;
 use recite_core::LocaleId;
-use unic_langid::LanguageIdentifier;
 
 use super::{
     DialogueCatalogProvider, DialogueCatalogSource, DialogueTraversalPreview,
@@ -97,12 +97,12 @@ impl LoadedDialoguePreview {
 }
 
 fn parse_locale(value: &str, field: &'static str) -> Result<LocaleId, CliError> {
-    let locale =
-        value
-            .parse::<LanguageIdentifier>()
-            .map_err(|_| CliError::DialogueLocaleInvalid {
-                field,
-                locale: value.to_owned(),
-            })?;
+    let locale = value
+        .replace('_', "-")
+        .parse::<LanguageTag>()
+        .map_err(|_| CliError::DialogueLocaleInvalid {
+            field,
+            locale: value.to_owned(),
+        })?;
     LocaleId::new(locale.to_string()).map_err(CliError::Core)
 }

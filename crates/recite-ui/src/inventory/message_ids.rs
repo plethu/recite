@@ -1,4 +1,16 @@
 message_ids! {
+    WriterIncoming,
+    WriterSource,
+    WriterTranslation,
+
+    WriterCompare,
+    WriterCompareHelp,
+    WriterKeepDrafts,
+    WriterUseFile,
+    WriterCompared,
+
+    WriterStartLocalisation, WriterAddLanguage, WriterTargetLanguage, WriterLanguageExample, WriterNewCataloguePath, WriterCreateCatalogue, WriterCancel, WriterCreateProjectScope, WriterCreateDocumentScope, WriterCreateHelp, WriterCreatingCatalogue, WriterCatalogueCreated, WriterInvalidLanguage, WriterGettextMissing, WriterCreationFailed, WriterPluralUnknown, WriterCatalogueExists, WriterCreationChanged, WriterCreateSourceDraft, WriterPoExtension, WriterCreateIncomplete, WriterCreateEmpty,
+    WriterChooseLanguage, WriterReadPassage, WriterNoLanguages, WriterUnavailablePassage, WriterCofiLanguage, WriterWrite, WriterLocalise, WriterMatchingEntries, WriterLocalisation, WriterCatalogue, WriterTranslationQueue, WriterOptional, WriterOpenCatalogue, WriterNoEntry, WriterUntranslated, WriterReviewPending, WriterReviewed, WriterNeedsReview, WriterSaved, WriterUnsaved, WriterTranslationSaved, WriterPlaceholder, WriterSave, WriterDiscard, WriterCataloguePath, WriterFileWorkflow, WriterReload, WriterReloaded, WriterClose, WriterOpen, WriterPoCatalogue, WriterCloseDrafts, WriterOpenDrafts, WriterReloadDrafts, WriterEmptyReview, WriterQueueScope, WriterSearch, WriterAttention, WriterNoMatches, WriterPrevious, WriterNext,
     CliHelpAbout, CliHelpUsageHeading, CliHelpCommandsHeading, CliHelpArgumentsHeading, CliHelpOptionsHeading,
     CliHelpCommandValidate, CliHelpCommandCompile, CliHelpCommandExtract, CliHelpCommandCheckIds, CliHelpCommandCheckMarkup,
     CliHelpCommandCheckMetadata, CliHelpCommandValidateProject, CliHelpCommandCheckFresh, CliHelpCommandInspectSchema, CliHelpCommandExplain, CliHelpCommandWatch,

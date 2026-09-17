@@ -59,6 +59,77 @@ macro_rules! vscode_command_message_ids {
 
 pub(super) const fn clients(id: MsgId) -> &'static [Client] {
     match id {
+        MsgId::WriterIncoming | MsgId::WriterSource | MsgId::WriterTranslation => {
+            &[Client::NativeGui]
+        }
+        MsgId::WriterCompare
+        | MsgId::WriterCompareHelp
+        | MsgId::WriterKeepDrafts
+        | MsgId::WriterUseFile
+        | MsgId::WriterCompared => &[Client::NativeGui],
+        MsgId::WriterWrite
+        | MsgId::WriterLocalise
+        | MsgId::WriterMatchingEntries
+        | MsgId::WriterChooseLanguage
+        | MsgId::WriterReadPassage
+        | MsgId::WriterNoLanguages
+        | MsgId::WriterUnavailablePassage
+        | MsgId::WriterCofiLanguage
+        | MsgId::WriterLocalisation
+        | MsgId::WriterCatalogue
+        | MsgId::WriterTranslationQueue
+        | MsgId::WriterStartLocalisation
+        | MsgId::WriterAddLanguage
+        | MsgId::WriterTargetLanguage
+        | MsgId::WriterLanguageExample
+        | MsgId::WriterNewCataloguePath
+        | MsgId::WriterCreateCatalogue
+        | MsgId::WriterCancel
+        | MsgId::WriterCreateProjectScope
+        | MsgId::WriterCreateDocumentScope
+        | MsgId::WriterCreateHelp
+        | MsgId::WriterCreatingCatalogue
+        | MsgId::WriterCatalogueCreated
+        | MsgId::WriterInvalidLanguage
+        | MsgId::WriterGettextMissing
+        | MsgId::WriterCreationFailed
+        | MsgId::WriterPluralUnknown
+        | MsgId::WriterCatalogueExists
+        | MsgId::WriterCreationChanged
+        | MsgId::WriterCreateSourceDraft
+        | MsgId::WriterPoExtension
+        | MsgId::WriterCreateIncomplete
+        | MsgId::WriterCreateEmpty
+        | MsgId::WriterOptional
+        | MsgId::WriterOpenCatalogue
+        | MsgId::WriterNoEntry
+        | MsgId::WriterUntranslated
+        | MsgId::WriterReviewPending
+        | MsgId::WriterReviewed
+        | MsgId::WriterNeedsReview
+        | MsgId::WriterSaved
+        | MsgId::WriterUnsaved
+        | MsgId::WriterTranslationSaved
+        | MsgId::WriterPlaceholder
+        | MsgId::WriterSave
+        | MsgId::WriterDiscard
+        | MsgId::WriterCataloguePath
+        | MsgId::WriterFileWorkflow
+        | MsgId::WriterReload
+        | MsgId::WriterReloaded
+        | MsgId::WriterClose
+        | MsgId::WriterOpen
+        | MsgId::WriterPoCatalogue
+        | MsgId::WriterCloseDrafts
+        | MsgId::WriterOpenDrafts
+        | MsgId::WriterReloadDrafts
+        | MsgId::WriterEmptyReview
+        | MsgId::WriterQueueScope
+        | MsgId::WriterSearch
+        | MsgId::WriterAttention
+        | MsgId::WriterNoMatches
+        | MsgId::WriterPrevious
+        | MsgId::WriterNext => &[Client::NativeGui],
         tui_message_ids!() => &[Client::Tui],
         vscode_command_message_ids!() => &[Client::VsCode, Client::VsCodium],
         MsgId::LspClientDisplayName | MsgId::LspClientRestartExhausted => &[

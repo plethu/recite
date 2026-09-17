@@ -251,6 +251,12 @@ BiDi/RTL, text scaling, high contrast, non-colour cues, status announcements,
 save conflicts, recovery, reduced motion, and packaging on each claimed platform.
 These checks reuse the shared authoring fixtures and semantics.
 
+Writer packaging is still outstanding. Its acceptance includes `recite://`
+registration on every supported OS, opening the linked project on cold launch,
+delivery to an already-running window, and the existing unsaved-edit guards.
+The [packaging requirements](../apps/writer/packaging.md) define the installation,
+upgrade and uninstall smoke evidence tracked in #79.
+
 **Exit gate:** the decision record and platform evidence establish the chosen
 frontend's support, dependencies, known limitations, maintenance cost, and
 reconsideration triggers. Selection does not imply platform acceptance.

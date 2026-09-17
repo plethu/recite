@@ -124,8 +124,18 @@ impl ProjectFiles {
         self.recovery.queue(recovery)
     }
     pub fn select(&mut self, path: &Path) -> Result<Workbench, FileError> {
+        self.select_at(path, |_| Ok(()))
+    }
+
+    pub fn select_at(
+        &mut self,
+        path: &Path,
+        select: impl FnOnce(&mut Workbench) -> Result<(), recite_writer_model::WorkbenchError>,
+    ) -> Result<Workbench, FileError> {
         if path == self.current {
-            return self.workbench();
+            let mut workbench = self.workbench()?;
+            select(&mut workbench)?;
+            return Ok(workbench);
         }
         if !self.paths.iter().any(|candidate| candidate == path) {
             return Err(FileError::Selection);
@@ -143,7 +153,8 @@ impl ProjectFiles {
             search: self.search.clone(),
         };
         next.update_saved_context()?;
-        let workbench = next.workbench()?;
+        let mut workbench = next.workbench()?;
+        select(&mut workbench)?;
         *self = next;
         Ok(workbench)
     }

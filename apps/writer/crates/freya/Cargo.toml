@@ -10,13 +10,19 @@ publish.workspace = true
 atomic-write-file = "0.3.1"
 accesskit = "0.24.1"
 recite-writer-grammar = { path = "../grammar" }
-freya = { version = "=0.5.0-rc.4", features = ["code-editor", "sdk"] }
+freya = { version = "=0.5.0-rc.4", features = ["code-editor", "sdk", "router"] }
 recite-writer-model.workspace = true
 # The same Skia package used by Freya; draw graph paths without raster SVG assets.
 skia-safe = { package = "freya-skia-safe", version = "=0.99.1", default-features = false }
 
+recite-ui = { path = "../../../../crates/recite-ui" }
 recite-config = { path = "../../../../crates/recite-config" }
 tempfile = "3"
+unic-langid = "0.9"
+language-tags = "0.3.2"
+url = "2.5"
+isolang = { version = "2.4", features = ["local_names", "list_languages"] }
+wait-timeout = "0.2.1"
 thiserror = "2"
 recite-core = { path = "../../../../crates/recite-core" }
 recite-compiler = { path = "../../../../crates/recite-compiler" }

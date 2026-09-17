@@ -18,13 +18,13 @@ pub(crate) fn controls(
 ) -> FileChrome {
     let buffers = writer.buffers;
     let path = use_state(|| {
-        if std::env::args().nth(1).as_deref() == Some("--project") {
-            std::env::args().nth(2).unwrap_or_default()
-        } else {
-            String::new()
-        }
+        std::env::args()
+            .collect::<Vec<_>>()
+            .windows(2)
+            .find(|args| args[0] == "--project")
+            .map_or_else(String::new, |args| args[1].clone())
     });
-    let mut files = use_state(|| None::<ProjectFiles>);
+    let mut files = writer.files;
     let mut project_panel_open = use_state(|| path.peek().is_empty());
     let job = use_state(|| None::<crate::project_loading::LoadJob>);
     use_hook(move || {
@@ -164,7 +164,10 @@ pub(crate) fn controls(
                         match project.select(&target) {
                             Ok(next) => {
                                 buffers.install(next, dark);
-                                message.set("Scene opened.".into());
+                                writer.scene_opened();
+                                if message.peek().is_empty() {
+                                    message.set("Scene opened.".into());
+                                }
                             }
                             Err(error) => message.set(error.to_string()),
                         }
