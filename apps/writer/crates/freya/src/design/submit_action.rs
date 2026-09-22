@@ -1,15 +1,15 @@
-//! A dialog's button and submit shortcut invoke the same guarded action.
+//! Dialog and workspace submission share one guarded action and shortcut hint.
 use super::{Button, keyboard, tokens as t};
 use freya::prelude::*;
 
 #[derive(Clone, PartialEq)]
-pub(crate) struct DialogAction {
+pub(crate) struct SubmitAction {
     pub id: AccessibilityId,
     pub caption: String,
     pub enabled: bool,
     pub action: EventHandler<()>,
 }
-impl DialogAction {
+impl SubmitAction {
     pub fn run(&self) {
         if self.enabled {
             self.action.call(());
@@ -29,11 +29,7 @@ impl DialogAction {
                     .spacing(t::SPACE_MD)
                     .cross_align(Alignment::Center)
                     .child(label().text(self.caption.clone()))
-                    .child(
-                        label()
-                            .text(keyboard::submit_hint())
-                            .font_size(t::TEXT_SMALL),
-                    ),
+                    .child(label().text(keyboard::submit_hint()).font_size(t::small())),
             )
     }
 }

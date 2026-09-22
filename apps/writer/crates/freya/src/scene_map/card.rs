@@ -9,8 +9,7 @@ use crate::{editing::Writer, palette};
 use freya::prelude::*;
 use recite_writer_model::{PassageKind, ScriptBlock, ScriptEntry};
 
-// Below this scale, the map becomes a structural overview instead of tiny prose.
-pub(super) const DIALOGUE_ZOOM: f32 = 0.6;
+pub(super) use crate::design::DIALOGUE_ZOOM;
 
 #[derive(Clone)]
 pub(super) struct Card {
@@ -41,7 +40,8 @@ impl PartialEq for Card {
 }
 impl Component for Card {
     fn render(&self) -> impl IntoElement {
-        let writer = self.writer;
+        let mut writer = self.writer;
+        let mut presses = use_state(|| (0_u64, false));
         let zoom = self.zoom;
         let mut hovered = self.hovered;
         let pan = self.pan;
@@ -71,59 +71,15 @@ impl Component for Card {
         if self.ending {
             title.push_str(" · end");
         }
-        let mut content = rect()
-            .width(Size::fill())
-            .height(Size::fill())
-            .padding(10. * zoom)
-            .spacing(4. * zoom)
-            .background(palette::reading(writer.dark))
-            .border(
-                Border::new()
-                    .width(if self.selected { 2. } else { 1. })
-                    .fill(if self.selected {
-                        palette::accent(writer.dark)
-                    } else if active {
-                        palette::muted(writer.dark)
-                    } else {
-                        palette::rule(writer.dark)
-                    }),
-            )
-            .overflow(Overflow::Clip);
-        if zoom >= 0.2 {
-            content = content.child(
-                label()
-                    .text(title.clone())
-                    .font_size((18. * zoom).max(14.))
-                    .max_lines(1),
-            );
-        }
-        if zoom >= 0.4 {
-            content = content.child(
-                label()
-                    .text(synopsis.speaker)
-                    .font_size((11. * zoom).max(11.))
-                    .max_lines(1)
-                    .color(palette::muted(writer.dark)),
-            );
-        }
-        if zoom >= DIALOGUE_ZOOM {
-            content = content.child(
-                label()
-                    .text(synopsis.prose)
-                    .font_family("serif")
-                    .font_size((17. * zoom).max(14.))
-                    .max_lines(if zoom < 0.8 { 2 } else { 3 }),
-            );
-        }
-        if zoom >= 0.4 && !synopsis.annotations.is_empty() {
-            content = content.child(
-                label()
-                    .text(synopsis.annotations.join(" · "))
-                    .font_size((11. * zoom).max(11.))
-                    .max_lines(1)
-                    .color(palette::muted(writer.dark)),
-            );
-        }
+        let content = crate::design::BeatCard {
+            title: title.clone(),
+            speaker: synopsis.speaker,
+            excerpt: synopsis.prose,
+            annotations: synopsis.annotations.join(" · "),
+            selected: self.selected,
+            active,
+            zoom,
+        };
         rect()
             .position(
                 Position::new_absolute()
@@ -150,13 +106,27 @@ impl Component for Card {
                     .a11y_id(focus)
                     .a11y_focusable(false)
                     .a11y_role(AccessibilityRole::Button)
-                    .a11y_alt(format!("Edit {title}"))
+                    .a11y_alt(format!("Select {title}"))
                     .a11y_builder(move |node| node.set_description(description.clone()))
                     .cursor(CursorIcon::Pointer)
                     .on_press(move |event: Event<PressEventData>| {
                         event.stop_propagation();
-                        focus.request_focus();
-                        writer.inspect(&id);
+                        writer.map_focus.request_focus();
+                        let (generation, double) = *presses.peek();
+                        let generation = generation.wrapping_add(1);
+                        presses.set((generation, !double));
+                        if !double {
+                            spawn(async move {
+                                timer(std::time::Duration::from_millis(400)).await;
+                                if presses.peek().0 == generation {
+                                    presses.set((generation, false));
+                                }
+                            });
+                        }
+                        writer.selection.set(Some(id.clone()));
+                        if double {
+                            writer.inspect(&id);
+                        }
                     })
                     .child(content),
             )

@@ -6,11 +6,13 @@ use freya::prelude::*;
 pub(crate) enum PathKind {
     Project,
     Catalogue,
+    Schema,
 }
 impl PathKind {
     fn title(self) -> &'static str {
         match self {
             Self::Project => "Browse for project folder",
+            Self::Schema => "Browse for standalone schema source",
             Self::Catalogue => "Browse for PO catalogue",
         }
     }
@@ -47,6 +49,7 @@ impl Component for PathField {
                     .width(Size::flex(1.))
                     .placeholder(match kind {
                         PathKind::Project => "Project folder or recite.project.toml",
+                        PathKind::Schema => "/path/to/schema.toml",
                         PathKind::Catalogue => "/path/to/fr.po",
                     })
                     .on_pre_key_down(move |event: Event<KeyboardEventData>| {
@@ -98,6 +101,12 @@ impl Component for PathField {
                             };
                             let selected = match kind {
                                 PathKind::Project => dialog.pick_folder().await,
+                                PathKind::Schema => {
+                                    dialog
+                                        .add_filter("Standalone schema", &["toml"])
+                                        .pick_file()
+                                        .await
+                                }
                                 PathKind::Catalogue => {
                                     dialog.add_filter("PO catalogue", &["po"]).pick_file().await
                                 }

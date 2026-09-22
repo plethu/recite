@@ -21,10 +21,24 @@ pub enum FileError {
     Workbench(#[from] recite_writer_model::WorkbenchError),
     #[error("The project has no Recite source files.")]
     Empty,
+    #[error(
+        "A document changed after rename review. Review the rename again, or undo subsequent edits first."
+    )]
+    StaleRename,
+    #[error(
+        "This project has no schema. Configure its generated schema in recite.project.toml first."
+    )]
+    NoSchema,
+    #[error(
+        "Choose a standalone TOML source with the same producer identity as this generated schema."
+    )]
+    SchemaOwnership,
+    #[error("Save this document before closing it. Your draft remains open.")]
+    UnsavedDocument,
     #[error("The selected file is no longer in this project.")]
     Selection,
     #[error(
-        "This file changed on disk. Your edits remain open. Use Keep recovery copy and reload disk to retain both versions."
+        "This file changed on disk. Your edits remain open. Compare the versions before saving."
     )]
     Conflict,
     #[error("Refusing to replace a symbolic link or a non-regular file.")]

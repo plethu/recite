@@ -43,7 +43,7 @@ fn options_select_explicitly_and_arrow_keys_keep_tab_order_in_the_dialog()
     key(&mut test, NamedKey::ArrowRight, Code::ArrowRight);
     key(&mut test, NamedKey::Tab, Code::Tab);
     let view = *platform.focused_accessibility_id.peek();
-    support::click(&mut test, "Preferred view: Map")?;
+    support::click(&mut test, "Writing view: Map")?;
     assert_eq!(*platform.focused_accessibility_id.peek(), view);
     Ok(())
 }

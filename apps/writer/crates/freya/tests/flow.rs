@@ -40,6 +40,7 @@ fn capture(test: &mut TestingRunner, name: &str) -> Result<(), Box<dyn std::erro
 fn map_first_and_independent_branch_previews() -> Result<(), Box<dyn std::error::Error>> {
     let mut test = TestingRunner::new(recite_writer::app, Size2D::new(1440., 1000.), |_| {}, 1.).0;
     settle(&mut test);
+    support::click(&mut test, "Map")?;
     assert!(prose(&test, "If you're here").is_none());
     capture(&mut test, "hub-map.png")?;
     support::open_beat(&mut test)?;
@@ -166,6 +167,7 @@ fn arranging_a_card_tracks_pointer_and_keyboard_without_changing_source()
 -> Result<(), Box<dyn std::error::Error>> {
     let mut test = TestingRunner::new(recite_writer::app, Size2D::new(1440., 1000.), |_| {}, 1.).0;
     settle(&mut test);
+    support::click(&mut test, "Map")?;
     let handle = |test: &TestingRunner| {
         test.find(|node, element| {
             Rect::try_downcast(element)
@@ -205,7 +207,7 @@ fn arranging_a_card_tracks_pointer_and_keyboard_without_changing_source()
     settle(&mut test);
     let nudged = handle(&test).ok_or("nudged handle")?;
     assert!(nudged.min_x() > moved.min_x());
-    click(&mut test, "Arrange automatically")?;
+    support::click(&mut test, "Arrange automatically")?;
     assert_eq!(handle(&test), Some(before));
     click(&mut test, "Source")?;
     assert!(prose(&test, "31000000000000000001").is_some());
@@ -229,6 +231,7 @@ fn map_pan_zoom_and_persistent_nudge_use_the_same_visible_coordinates()
     )
     .0;
     settle(&mut test);
+    support::click(&mut test, "Map")?;
     let grip = |test: &TestingRunner| {
         test.find(|node, element| {
             Rect::try_downcast(element)
@@ -282,7 +285,7 @@ fn map_pan_zoom_and_persistent_nudge_use_the_same_visible_coordinates()
     let panned = grip(&test).ok_or("panned grip")?;
     assert!((panned.min_x() - moved.min_x() - 32.).abs() < 1.);
     assert!(prose(&test, "If you're here").is_none());
-    click(&mut test, "100%")?;
+    support::click(&mut test, "Reset zoom")?;
     click(&mut test, "Fit")?;
     let fitted = grip(&test).ok_or("fitted grip")?;
     assert_ne!(fitted, panned);
@@ -299,6 +302,7 @@ fn map_pan_zoom_and_persistent_nudge_use_the_same_visible_coordinates()
     )
     .0;
     settle(&mut reopened);
+    support::click(&mut reopened, "Map")?;
     let restored = grip(&reopened).ok_or("restored grip")?;
     assert!((restored.min_x() - moved.min_x()).abs() < 1.);
     Ok(())
@@ -309,6 +313,7 @@ fn map_overview_omits_miniature_dialogue_and_restores_it_at_working_zoom()
 -> Result<(), Box<dyn std::error::Error>> {
     let mut test = TestingRunner::new(recite_writer::app, Size2D::new(1440., 1000.), |_| {}, 1.).0;
     settle(&mut test);
+    support::click(&mut test, "Map")?;
     click(&mut test, "Floodgate Waterfall")?;
     let dialogue = |test: &TestingRunner| {
         test.find(|_, e| {
@@ -324,7 +329,7 @@ fn map_overview_omits_miniature_dialogue_and_restores_it_at_working_zoom()
             .is_some()
     );
     capture(&mut test, "waterfall-overview.png")?;
-    click(&mut test, "100%")?;
+    support::click(&mut test, "Reset zoom")?;
     assert!(dialogue(&test).is_some());
     Ok(())
 }

@@ -7,6 +7,7 @@ use serde::Deserialize;
 pub struct WriterConfig {
     /// Ask before an ordinary exit. Unsaved-work protection remains mandatory.
     pub confirm_exit: bool,
+    pub presentation: WriterPresentation,
     pub view: WriterView,
     pub pane_side: WriterPaneSide,
     pub theme: WriterTheme,
@@ -18,7 +19,8 @@ impl Default for WriterConfig {
     fn default() -> Self {
         Self {
             confirm_exit: true,
-            view: WriterView::Map,
+            presentation: WriterPresentation::default(),
+            view: WriterView::Script,
             pane_side: WriterPaneSide::Right,
             theme: WriterTheme::Light,
             reduced_motion: false,
@@ -32,6 +34,7 @@ impl Default for WriterConfig {
 #[serde(rename_all = "lowercase")]
 pub enum WriterView {
     #[default]
+    Script,
     Map,
     Source,
 }
@@ -53,3 +56,6 @@ pub enum WriterTheme {
     Light,
     Dark,
 }
+
+mod presentation;
+pub use presentation::{WriterPresentation, WriterPresentationError, WriterPresentationField};

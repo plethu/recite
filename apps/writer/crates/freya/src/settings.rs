@@ -6,6 +6,7 @@ use crate::{
 };
 use freya::{code_editor::*, prelude::*};
 mod personal;
+mod typography;
 
 pub(super) fn render(writer: Writer, files: State<Option<ProjectFiles>>) -> Element {
     let mut project_tab = use_state(|| false);
@@ -15,6 +16,9 @@ pub(super) fn render(writer: Writer, files: State<Option<ProjectFiles>>) -> Elem
     let mut error = use_state(String::new);
     let previous_focus = use_state(|| *Platform::get().focused_accessibility_id.peek());
     let editor_id = use_a11y();
+    let source_viewport = crate::source_editor::EditorViewport::new();
+    let config_id = use_a11y();
+    let config_visible = use_state(|| false);
     let ids = [
         use_a11y(),
         use_a11y(),
@@ -28,10 +32,18 @@ pub(super) fn render(writer: Writer, files: State<Option<ProjectFiles>>) -> Elem
         use_a11y(),
     ];
     let option_ids = [
-        [ids[2], use_a11y()],
-        [ids[3], use_a11y()],
-        [ids[4], use_a11y()],
-        [use_a11y(), use_a11y()],
+        [ids[2], use_a11y(), use_a11y()],
+        [ids[3], use_a11y(), use_a11y()],
+        [ids[4], use_a11y(), use_a11y()],
+        [use_a11y(), use_a11y(), use_a11y()],
+    ];
+    let size_ids = [
+        use_a11y(),
+        use_a11y(),
+        use_a11y(),
+        use_a11y(),
+        use_a11y(),
+        use_a11y(),
     ];
     let preferences = writer.preferences;
     let mut visible = writer.settings_open;
@@ -74,7 +86,11 @@ pub(super) fn render(writer: Writer, files: State<Option<ProjectFiles>>) -> Elem
         let selected = [
             usize::from(config.writer.theme == recite_config::WriterTheme::Dark),
             usize::from(config.ui.keymap == recite_config::Keymap::Vim),
-            usize::from(config.writer.view == recite_config::WriterView::Source),
+            match config.writer.view {
+                recite_config::WriterView::Script => 0,
+                recite_config::WriterView::Map => 1,
+                recite_config::WriterView::Source => 2,
+            },
             usize::from(config.writer.pane_side == recite_config::WriterPaneSide::Right),
         ];
         vec![
@@ -84,9 +100,16 @@ pub(super) fn render(writer: Writer, files: State<Option<ProjectFiles>>) -> Elem
             option_ids[1][selected[1]],
             option_ids[2][selected[2]],
             option_ids[3][selected[3]],
+            size_ids[0],
+            size_ids[1],
+            size_ids[2],
+            size_ids[3],
+            size_ids[4],
+            size_ids[5],
             ids[5],
             ids[6],
             ids[7],
+            config_id,
             ids[9],
         ]
     };
@@ -99,23 +122,31 @@ pub(super) fn render(writer: Writer, files: State<Option<ProjectFiles>>) -> Elem
                     .flat()
                     .selected(!on_project)
                     .a11y_id(ids[0])
-                    .named("User preferences")
+                    .named(crate::messages::text(
+                        crate::messages::MsgId::WriterGuiUserPreferences,
+                    ))
                     .on_press(move |_| project_tab.set(false))
-                    .child("User preferences"),
+                    .child(crate::messages::text(
+                        crate::messages::MsgId::WriterGuiUserPreferences,
+                    )),
             )
             .child(
                 crate::design::Button::new()
                     .flat()
                     .selected(on_project)
                     .a11y_id(ids[1])
-                    .named("Project settings")
+                    .named(crate::messages::text(
+                        crate::messages::MsgId::WriterGuiProjectSettings,
+                    ))
                     .on_press(move |_| project_tab.set(true))
-                    .child("Project settings"),
+                    .child(crate::messages::text(
+                        crate::messages::MsgId::WriterGuiProjectSettings,
+                    )),
             ),
     );
-    let mut primary = crate::design::DialogAction {
+    let mut primary = crate::design::SubmitAction {
         id: ids[9],
-        caption: "Close settings".into(),
+        caption: "Done".into(),
         enabled: true,
         action: EventHandler::new(move |()| close()),
     };
@@ -125,31 +156,44 @@ pub(super) fn render(writer: Writer, files: State<Option<ProjectFiles>>) -> Elem
                 .child(
                     label()
                         .text(settings.path().display().to_string())
-                        .font_size(t::TEXT_SMALL),
+                        .font_size(t::small()),
                 )
                 .child(
                     label()
-                        .text("Project manifest · changes affect everyone using this project.")
-                        .font_size(t::TEXT_SMALL),
+                        .text(crate::messages::text(
+                            crate::messages::MsgId::WriterGuiProjectSettingsHint,
+                        ))
+                        .font_size(t::small()),
                 )
                 .child(
-                    rect().height(Size::px(340.)).child(
-                        CodeEditor::new(draft, editor_id)
-                            .font_family("monospace")
-                            .font_size(t::TEXT_BODY)
-                            .gutter(true)
-                            .on_pre_key_down(|e: Event<KeyboardEventData>| {
-                                if crate::design::keyboard::submit_key(&e)
-                                    || matches!(e.key, Key::Named(NamedKey::Tab | NamedKey::Escape))
-                                {
-                                    return false;
-                                }
-                                e.stop_propagation();
-                                true
-                            }),
-                    ),
+                    rect()
+                        .height(Size::px(340.))
+                        .child(crate::source_editor::EditorSurface {
+                            editor: draft,
+                            viewport: source_viewport,
+                            id: editor_id,
+                            size: t::body(),
+                            content: CodeEditor::new(draft, editor_id)
+                                .scroll_controller(source_viewport.scroll)
+                                .font_family("monospace")
+                                .font_size(t::body())
+                                .gutter(false)
+                                .on_pre_key_down(|e: Event<KeyboardEventData>| {
+                                    if crate::design::keyboard::submit_key(&e)
+                                        || matches!(
+                                            e.key,
+                                            Key::Named(NamedKey::Tab | NamedKey::Escape)
+                                        )
+                                    {
+                                        return false;
+                                    }
+                                    e.stop_propagation();
+                                    true
+                                })
+                                .into_element(),
+                        }),
                 );
-            primary = crate::design::DialogAction {
+            primary = crate::design::SubmitAction {
                 id: ids[8],
                 caption: "Apply project changes".into(),
                 enabled: true,
@@ -178,10 +222,20 @@ pub(super) fn render(writer: Writer, files: State<Option<ProjectFiles>>) -> Elem
                 }),
             };
         } else {
-            content = content.child(label().text("Open a project to edit its settings."));
+            content = content.child(label().text(crate::messages::text(
+                crate::messages::MsgId::WriterGuiOpenAProjectToEditItsSettings,
+            )));
         }
     } else {
-        content = content.child(personal::render(writer, &ids[2..8], option_ids, error));
+        content = content.child(personal::render(
+            writer,
+            &ids[2..8],
+            option_ids,
+            size_ids,
+            error,
+            config_id,
+            config_visible,
+        ));
     }
     if !error.read().is_empty() {
         content = content.child(label().text(error.read().clone()));
@@ -195,6 +249,7 @@ pub(super) fn render(writer: Writer, files: State<Option<ProjectFiles>>) -> Elem
         rect().into_element()
     };
     crate::design::Dialog {
+        dismissal_only: !on_project || project.peek().is_none(),
         primary,
         title: "Settings".into(),
         reduced_motion: preferences.read().config.writer.reduced_motion,

@@ -1,13 +1,14 @@
 # Recite writer
 
-The maintained Freya application for editing Recite dialogue. Scenes open as
-maps of beats, branches, convergences, and returns. Select a beat to write beside
-the map, or expand independent one-level branch previews to compare replies.
-Source uses the same document and compiler diagnostics. Map placement is saved
-in personal writer state; pan and zoom leave the dialogue untouched.
-Map opens at 100% around the entry beat. Map/Source and presentation preferences
-are saved in personal Settings. Fit provides a structural overview;
-zooming out hides dialogue and reply labels while keeping beat titles readable.
+The maintained Freya application for editing Recite dialogue. Script opens the
+selected beat in a reading column, with branch previews for comparing replies.
+Map shows beats, branches, convergences and returns; it can stand alone or sit
+beside Script. Source uses the same document and compiler diagnostics.
+
+Script is the first-use default. Existing Map and Source preferences are kept.
+Presentation settings and map placement are personal; pan and zoom leave the
+dialogue untouched. Commands (Ctrl/Cmd+Shift+P) searches actions, and Go to scene
+or beat (Ctrl/Cmd+P) searches the open project or temporary examples.
 
 From the repository root:
 

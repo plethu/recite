@@ -6,7 +6,6 @@ pub(super) enum Icon {
     Back,
     Link,
     Forward,
-    Pin,
     Close,
     Confirm,
     Sidebar,
@@ -15,15 +14,21 @@ pub(super) enum Icon {
     Redo,
     ZoomIn,
     ZoomOut,
+    Search,
+    ChevronDown,
 }
 
 impl Icon {
-    fn render(self) -> Element {
+    pub(crate) fn render(self) -> Element {
+        self.into_element()
+    }
+    pub(crate) fn colored(self, color: Color) -> Element {
         let shape = match self {
+            Self::Search => "<circle cx='10.5' cy='10.5' r='6.5'/><path d='m16 16 5 5'/>",
+            Self::ChevronDown => "<path d='m6 9 6 6 6-6'/>",
             Self::Link => "<path d='M10 13l4-2M9 16H7a4 4 0 0 1 0-8h3M15 8h2a4 4 0 0 1 0 8h-3'/>",
             Self::Back => "<path d='M15 5l-7 7 7 7'/>",
             Self::Forward => "<path d='M9 5l7 7-7 7'/>",
-            Self::Pin => "<path d='M8 3h8l-1 7 4 4H5l4-4-1-7M12 14v8'/>",
             Self::Close => "<path d='M6 6l12 12M18 6L6 18'/>",
             Self::Confirm => "<path d='M5 12l4 4L19 6'/>",
             Self::Settings => {
@@ -39,9 +44,9 @@ impl Icon {
             "<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24' fill='none' stroke='black' stroke-width='1.6' stroke-linecap='round' stroke-linejoin='round'>{shape}</svg>"
         );
         SvgViewer::new(Bytes::from(svg.into_bytes()))
-            .width(Size::px(20.))
-            .height(Size::px(20.))
-            .stroke(use_theme().read().colors.text_primary)
+            .width(Size::px(crate::design::tokens::ICON_SIZE))
+            .height(Size::px(crate::design::tokens::ICON_SIZE))
+            .stroke(color)
             .into_element()
     }
 }
@@ -78,9 +83,13 @@ impl Component for IconButton {
                 .flat()
                 .enabled(self.enabled)
                 .named(self.name.clone())
-                .width(Size::px(crate::design::tokens::CONTROL_HEIGHT))
+                .width(Size::px(crate::design::tokens::control_height()))
                 .on_press(move |_| action.call(()))
-                .child(self.icon.render()),
+                .child(self.icon.colored(if self.enabled {
+                    crate::design::tokens::colors().ink
+                } else {
+                    crate::design::tokens::colors().muted
+                })),
         )
     }
 }
@@ -122,5 +131,11 @@ impl Component for NavigationRow {
                     .text_align(TextAlign::Left),
             )
             .into_element()
+    }
+}
+
+impl Component for Icon {
+    fn render(&self) -> impl IntoElement {
+        self.colored(crate::design::tokens::colors().ink)
     }
 }

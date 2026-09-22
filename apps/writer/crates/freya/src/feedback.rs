@@ -123,7 +123,9 @@ impl Component for NoticeView {
             Button::new()
                 .flat()
                 .a11y_id(feedback.dismiss_id)
-                .named("Dismiss message")
+                .named(crate::messages::text(
+                    crate::messages::MsgId::WriterGuiDismissMessage,
+                ))
                 .on_press(move |_| feedback.clear())
                 .child("×"),
         )

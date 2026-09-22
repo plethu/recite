@@ -14,12 +14,16 @@ fn range(text: &str, other: &str) -> std::ops::Range<usize> {
     words[..prefix].iter().map(|s| s.len()).sum()
         ..words[..words.len() - suffix].iter().map(|s| s.len()).sum()
 }
-pub(super) fn render(text: &str, other: &str) -> Element {
+pub(super) fn render(text: &str, other: &str, code: bool) -> Element {
     let changed = range(text, other);
     paragraph()
         .width(Size::fill())
-        .font_size(t::TEXT_PROSE)
-        .font_family("serif")
+        .font_size(if code {
+            t::code_size()
+        } else {
+            t::prose_size()
+        })
+        .font_family(if code { "monospace" } else { "serif" })
         .span(Span::new(text[..changed.start].to_owned()))
         .span(
             Span::new(text[changed.clone()].to_owned())

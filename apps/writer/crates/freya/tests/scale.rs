@@ -23,6 +23,7 @@ fn large_scene_keeps_mounted_nodes_bounded() -> Result<(), Box<dyn std::error::E
     .0;
     test.poll_n(Duration::from_millis(16), 6);
     let first_ms = WallTime.end(started).as_secs_f64() * 1000.;
+    support::click(&mut test, "Map")?;
     let mounted = test
         .find_many(|_, element| {
             Rect::try_downcast(element)
@@ -30,14 +31,17 @@ fn large_scene_keeps_mounted_nodes_bounded() -> Result<(), Box<dyn std::error::E
                     rect.accessibility
                         .builder
                         .label()
-                        .is_some_and(|label| label.starts_with("Edit "))
+                        .is_some_and(|label| label.starts_with("Select "))
                 })
                 .map(|_| ())
         })
         .len();
-    assert!(mounted < 100, "{mounted} mounted cards for {beats} beats");
+    assert!(
+        (1..100).contains(&mounted),
+        "{mounted} mounted cards for {beats} beats"
+    );
     support::open_beat(&mut test)?;
-    support::click(&mut test, "Close beat editor")?;
+    support::click(&mut test, "Map")?;
     let selected = |test: &TestingRunner| {
         test.find(|_, element| {
             Rect::try_downcast(element).and_then(|r| {

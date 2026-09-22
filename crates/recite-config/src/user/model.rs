@@ -4,7 +4,10 @@ use recite_ui::UiLocale;
 use serde::Deserialize;
 
 mod writer;
-pub use writer::{WriterConfig, WriterPaneSide, WriterTheme, WriterView};
+pub use writer::{
+    WriterConfig, WriterPaneSide, WriterPresentation, WriterPresentationError,
+    WriterPresentationField, WriterTheme, WriterView,
+};
 
 mod presence;
 pub(super) use presence::UserConfigFieldPresence;
@@ -43,6 +46,7 @@ pub enum UserConfigField {
     /// Whether the native writer asks before ordinary exit.
     WriterConfirmExit,
     WriterView,
+    WriterPresentation,
     WriterPaneSide,
     WriterTheme,
     WriterReducedMotion,

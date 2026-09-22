@@ -160,14 +160,17 @@ fn main() -> Result<(), Box<dyn std::error::Error>> {
         let peak_bytes = dhat::HeapStats::get().max_bytes;
         dhat::assert!(peak_bytes < 20_000_000);
         for row in &rows {
-            if matches!(
-                row["operation"].as_str(),
-                Some("edit" | "undo" | "redo" | "multiline_edit" | "id_edit")
-            ) {
+            let budget = match row["operation"].as_str() {
+                Some("index") => Some(55_000_000),
+                Some("project_script") => Some(3_200_000),
+                Some("edit" | "undo" | "redo" | "multiline_edit" | "id_edit") => Some(4_000_000),
+                _ => None,
+            };
+            if let Some(budget) = budget {
                 dhat::assert!(
                     row["allocated_bytes"]
                         .as_u64()
-                        .is_some_and(|bytes| bytes < 4_000_000)
+                        .is_some_and(|bytes| bytes < budget)
                 );
             }
         }

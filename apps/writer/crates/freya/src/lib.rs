@@ -1,3 +1,12 @@
+mod builds;
+mod commands;
+mod declarations;
+mod document_tabs;
+mod external;
+mod presentation;
+mod rename;
+mod rules;
+mod source_editor;
 use crate::design::tokens as t;
 mod beat_heading;
 mod branch_preview;
@@ -21,6 +30,7 @@ mod route_editor;
 pub use closing::request_close;
 mod field;
 mod localisation;
+mod messages;
 mod navigation;
 pub use navigation::InitialRoute;
 mod preferences;
@@ -79,6 +89,12 @@ fn workbench(mode: AppMode) -> Element {
     });
     let store = use_try_consume::<Result<recite_config::UserConfigStore, String>>();
     let preferences = use_state(move || preferences::Preferences::load(store));
+    let mut reduced_motion = use_state(|| preferences.peek().config.writer.reduced_motion);
+    use_provide_context(|| design::ReducedMotion(reduced_motion));
+    use_side_effect(move || {
+        reduced_motion.set_if_modified(preferences.read().config.writer.reduced_motion)
+    });
+    use_provide_context(move || presentation::Typography(preferences));
     let initially_dark = preferences.peek().config.writer.theme == recite_config::WriterTheme::Dark;
     let mut dark = use_state(move || initially_dark);
     let mut theme = use_init_theme(move || palette::theme(initially_dark));
@@ -124,7 +140,10 @@ fn workbench(mode: AppMode) -> Element {
         }
     });
     let editor_id = use_a11y();
+    let rules = use_state(|| None);
     let buffers = buffers::Buffers {
+        bookmarks: buffers::Bookmarks::new(),
+        rules,
         model,
         editor,
         prose,
@@ -142,10 +161,12 @@ fn workbench(mode: AppMode) -> Element {
     let night = *dark.read();
     let scroll = use_scroll_controller(ScrollConfig::default);
     let pane = use_state(|| editing::Pane::Map);
-    let mut previous_pane = use_state(|| editing::Pane::Map);
+    let mut previous_pane = use_state(|| None);
     use_after_side_effect(move || {
         let current = *pane.read();
-        if *previous_pane.peek() != current {
+        let previous = *previous_pane.peek();
+        previous_pane.set_if_modified(Some(current));
+        if previous.is_some_and(|pane| pane != current) {
             if current == editing::Pane::Script {
                 inspector_focus.request_focus();
             } else if current == editing::Pane::Map {
@@ -159,7 +180,6 @@ fn workbench(mode: AppMode) -> Element {
                     map_focus.request_focus();
                 }
             }
-            previous_pane.set(current);
         }
     });
     let expanded = use_state(std::collections::BTreeSet::new);
@@ -173,6 +193,10 @@ fn workbench(mode: AppMode) -> Element {
     let reference = use_state(|| None::<reading_context::Reference>);
     let localisation = use_state(localisation::Localisation::default);
     let writer = editing::Writer {
+        command_search: commands::Search::new(),
+        source_viewport: source_editor::EditorViewport::new(),
+        layout: presentation::Layout::new(preferences),
+        trial: preview_panel::TrialInputs::new(),
         localisation,
         files,
         examples,
@@ -193,20 +217,16 @@ fn workbench(mode: AppMode) -> Element {
         selection,
         search,
     };
-    let navigation_visible = use_state(|| true);
+    let navigation_visible = writer.layout.navigation;
     let file_chrome = (mode == AppMode::Project).then(|| files::controls(writer, message, night));
     let example_scenes = (mode == AppMode::Examples).then(|| examples::navigation(writer, message));
     let empty_files = use_state(|| None);
-    use_hook(move || match preferences.peek().config.writer.view {
-        recite_config::WriterView::Map => writer.navigate(Workbench::show_script),
-        recite_config::WriterView::Source => writer.navigate(|m| m.select(View::Source)),
+    use_hook(move || {
+        let _ = writer.scene_opened();
     });
     navigation::track(writer, mode);
     let close_prompt = closing::controls(
-        buffers,
-        preferences,
-        localisation,
-        message,
+        writer,
         file_chrome
             .as_ref()
             .map_or(empty_files, |chrome| chrome.files),
@@ -263,7 +283,7 @@ fn workbench(mode: AppMode) -> Element {
     for diagnostic in &diagnostics {
         reading = reading.child(diagnostics::row(writer, editor_id, diagnostic));
     }
-    let mut body = rect()
+    let body = rect()
         .content(Content::Flex)
         .horizontal()
         .width(Size::fill())
@@ -279,9 +299,6 @@ fn workbench(mode: AppMode) -> Element {
             reading: reading.into_element(),
             active,
         });
-    if *pane.read() == editing::Pane::Preview {
-        body = body.child(preview_panel::render(writer));
-    }
     let saved = file_chrome
         .as_ref()
         .map_or("Temporary example", |chrome| chrome.status.as_str());
@@ -300,55 +317,14 @@ fn workbench(mode: AppMode) -> Element {
         localisation.modal_open()
             || (localisation.active && localisation.view == localisation::CatalogueView::Updates)
     };
-    let mut root = rect()
+    let mut root = t::interface()
         .expanded()
         .on_global_key_down(move |event: Event<KeyboardEventData>| {
-            if *writer.settings_open.peek() || writer.localisation.peek().modal_open() {
-                return;
-            }
-            if event.modifiers == Modifiers::ALT
-                && matches!(event.code, Code::ArrowLeft | Code::ArrowRight)
-            {
-                writer.history_step(event.code == Code::ArrowRight);
-                event.stop_propagation();
-                event.prevent_default();
-            } else if event.code == Code::F6 {
-                let mut regions = Vec::new();
-                if !(writer.localisation.peek().active
-                    && writer.localisation.peek().view == localisation::CatalogueView::Updates)
-                {
-                    regions.push(sidebar_focus);
-                }
-                if writer.localisation.peek().active {
-                    regions.push(inspector_focus);
-                } else if source {
-                    regions.push(editor_id);
-                } else {
-                    regions.push(map_focus);
-                    if *pane.peek() == editing::Pane::Script {
-                        regions.push(inspector_focus);
-                    }
-                }
-                let focused = *Platform::get().focused_accessibility_id.peek();
-                let index = regions.iter().position(|id| *id == focused).unwrap_or(0);
-                let step = if event.modifiers.contains(Modifiers::SHIFT) {
-                    regions.len() - 1
-                } else {
-                    1
-                };
-                regions[(index + step) % regions.len()].request_focus();
-                event.stop_propagation();
-                event.prevent_default();
-            } else if editing::is_workspace_key(&event) {
-                let mut settings = writer.settings_open;
-                settings.set(true);
-                event.stop_propagation();
-                event.prevent_default();
-            } else {
-                closing::keyboard(event);
-            }
+            commands::keyboard(writer, source, editor_id, event);
         })
         .on_pointer_down(move |event: Event<PointerEventData>| {
+            let mut completion = writer.source_viewport.completion;
+            completion.set_if_modified(false);
             if matches!(
                 event.button(),
                 Some(MouseButton::Back | MouseButton::Forward)
@@ -358,7 +334,7 @@ fn workbench(mode: AppMode) -> Element {
             }
         })
         .content(Content::Flex)
-        .font_size(t::TEXT_BODY)
+        .font_size(t::body())
         .background(colors.background)
         .color(colors.text_primary)
         .child(
@@ -368,7 +344,9 @@ fn workbench(mode: AppMode) -> Element {
                 .background(palette::rule(night)),
         );
     if let Some(chrome) = &file_chrome {
-        root = root.child(chrome.project_panel.clone());
+        root = root
+            .child(chrome.services.clone())
+            .child(chrome.project_panel.clone());
     }
     root = root.child(body).child(
         rect()
@@ -392,13 +370,25 @@ fn workbench(mode: AppMode) -> Element {
                 status.child(crate::feedback::NoticeView { feedback: message })
             }),
     );
-    root = root.child(close_prompt).child(settings::render(
-        writer,
-        file_chrome.as_ref().map_or(empty_files, |c| c.files),
-    ));
+    root = root
+        .child(commands::Palette { writer })
+        .child(close_prompt)
+        .child(settings::render(
+            writer,
+            file_chrome.as_ref().map_or(empty_files, |c| c.files),
+        ));
     root.into_element()
 }
 
 mod feedback;
 
 mod diagnostics;
+
+mod field_completion;
+
+mod field_actions;
+
+/// Native production-component specimen; does not open files or save preferences.
+pub fn design_app() -> Element {
+    design::specimen::app()
+}

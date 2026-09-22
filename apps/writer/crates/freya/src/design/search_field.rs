@@ -40,15 +40,46 @@ impl Component for SearchField {
             let _ = query.read();
             active.set_if_modified(None);
         });
+        let colors = t::colors();
         rect()
+            .background(colors.inset)
+            .shadow(super::material::inset(1.))
+            .corner_radius(t::RADIUS)
+            .border(
+                Border::new()
+                    .width(if id.is_focused() { t::FOCUS_WIDTH } else { 1. })
+                    .fill(if id.is_focused() {
+                        colors.accent
+                    } else {
+                        colors.boundary
+                    }),
+            )
+            .cross_align(Alignment::Center)
+            .padding(t::SPACE_XS)
             .on_global_pointer_down(move |_| refocus.set_if_modified(false))
             .horizontal()
             .content(Content::Flex)
             .width(Size::fill())
-            .spacing(t::SPACE_XS)
+            .child(
+                rect()
+                    .padding((0., t::SPACE_XS))
+                    .child(crate::controls::Icon::Search.colored(colors.muted)),
+            )
             .child(
                 Input::new(query)
                     .a11y_id(id)
+                    .height(Size::px(t::control_height() - 2. * t::SPACE_XS))
+                    .theme_layout(InputLayoutThemePartial {
+                        padding: Some(Preference::Specific(Gaps::new(2., 8., 2., 8.))),
+                        ..Default::default()
+                    })
+                    .theme_colors(InputColorsThemePartial {
+                        background: Some(Preference::Specific(Color::TRANSPARENT)),
+                        focus_background: Some(Preference::Specific(Color::TRANSPARENT)),
+                        border_fill: Some(Preference::Specific(Color::TRANSPARENT)),
+                        focus_border_fill: Some(Preference::Specific(Color::TRANSPARENT)),
+                        ..Default::default()
+                    })
                     .width(Size::flex(1.))
                     .placeholder(self.placeholder.clone())
                     .on_validate(move |value: InputValidator| {
@@ -111,6 +142,8 @@ impl Component for SearchField {
             .child(
                 Button::new()
                     .flat()
+                    .compact()
+                    .width(Size::px(t::control_height() - 2. * t::SPACE_XS))
                     .named(format!("Clear {}", self.placeholder))
                     .enabled(!query.read().is_empty())
                     .on_press(move |_| {
@@ -121,7 +154,7 @@ impl Component for SearchField {
                         id.request_focus();
                         refocus.set(true);
                     })
-                    .child("×"),
+                    .child(crate::controls::Icon::Close.colored(colors.muted)),
             )
     }
 }

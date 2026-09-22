@@ -2,14 +2,14 @@
 use freya::prelude::*;
 
 #[derive(Clone, Copy, PartialEq)]
-pub(super) enum Framing {
+pub(crate) enum Framing {
     Entry,
     Fit,
     Free,
 }
 
 #[derive(Clone, Copy, PartialEq)]
-pub(super) struct Camera {
+pub(crate) struct Camera {
     pub zoom: f32,
     pub x: f32,
     pub y: f32,

@@ -19,6 +19,10 @@ pub enum EditError {
         "This document changed after the editing field was opened. Reload the field before applying it."
     )]
     Stale,
+    #[error("{argument} needs a valid {expected} value.")]
+    InvalidRuleValue { argument: String, expected: String },
+    #[error("Cannot apply rules: {0}")]
+    InvalidRules(String),
     #[error("This content needs Source view: {0}")]
     SourceRequired(&'static str),
     #[error("The selected passage no longer exists or has no unique frozen ID.")]
@@ -151,6 +155,10 @@ impl Document {
         Ok(())
     }
 
+    pub fn can_undo(&self) -> bool {
+        self.history.can_undo()
+    }
+
     pub fn undo(&mut self) -> Result<bool, EditError> {
         let Some(source) = self.history.undo_source(&self.source) else {
             return Ok(false);
@@ -177,6 +185,10 @@ impl Document {
             return Err(EditError::Stale);
         }
         Ok(())
+    }
+
+    pub(crate) fn project_context(&self) -> ProjectContext {
+        self.context.clone()
     }
 
     pub(crate) fn kernel(&self) -> &AuthoringKernel {

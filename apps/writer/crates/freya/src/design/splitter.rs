@@ -4,7 +4,8 @@ use freya::prelude::*;
 
 #[derive(Clone, PartialEq)]
 pub(crate) struct Splitter {
-    pub name: &'static str,
+    pub name: String,
+    pub changed: EventHandler<f32>,
     pub width: State<f32>,
     pub min: f32,
     pub max: f32,
@@ -16,6 +17,8 @@ impl Component for Splitter {
         let id = use_a11y();
         let mut drag = use_state(|| None::<(f64, f32, f32)>);
         let mut width = self.width;
+        let committed = self.changed.clone();
+        let adjusted = self.changed.clone();
         let (min, max, direction) = (self.min, self.max.max(self.min), self.direction);
         rect()
             .width(Size::px(t::SPLITTER_WIDTH))
@@ -24,7 +27,7 @@ impl Component for Splitter {
             .a11y_id(id)
             .a11y_focusable(true)
             .a11y_role(AccessibilityRole::Splitter)
-            .a11y_alt(self.name)
+            .a11y_alt(self.name.clone())
             .a11y_builder(move |node| {
                 node.set_numeric_value(f64::from(width.read().clamp(min, max)));
                 node.set_min_numeric_value(f64::from(min));
@@ -55,6 +58,7 @@ impl Component for Splitter {
                 let current = *drag.peek();
                 if let Some((_, _, proposed)) = current {
                     width.set_if_modified(proposed);
+                    committed.call(proposed);
                     drag.set(None);
                     e.stop_propagation();
                     e.prevent_default();
@@ -76,6 +80,7 @@ impl Component for Splitter {
                     _ => return,
                 };
                 width.set_if_modified(next.clamp(min, max));
+                adjusted.call(next.clamp(min, max));
                 e.stop_propagation();
                 e.prevent_default();
             })

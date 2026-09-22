@@ -1,16 +1,25 @@
 //! A bilingual manuscript over the same beat selection and ordinary PO files.
+pub(crate) mod watching;
 use messages::{MsgId, text as wording};
 pub(crate) mod catalogue;
+mod close_drafts;
+mod comparison;
+pub(crate) use close_drafts::CloseDrafts;
 mod context;
+mod manuscript;
+pub(super) use manuscript::{columns, source_passage};
 mod create;
+mod entry;
 mod extraction;
 mod field;
-mod messages;
+mod language_picker;
+pub(crate) mod messages;
 mod navigation;
 mod panel;
 mod queue;
 pub(crate) mod refresh;
 mod setup;
+pub(crate) use language_picker::LanguagePicker;
 mod target;
 
 use crate::{
@@ -32,6 +41,8 @@ pub(crate) enum CatalogueView {
     Passage,
     Queue,
     Updates,
+    Compare,
+    Entry,
 }
 
 #[derive(Default)]
@@ -43,8 +54,27 @@ pub(crate) struct Localisation {
     pub(crate) refresh: Option<refresh::Preview>,
     pub(crate) update_index: usize,
     pub focus: Option<String>,
+    pub(crate) entry_context: Option<String>,
+    comparison: Option<catalogue::Comparison>,
+    comparison_return: CatalogueView,
 }
 impl Localisation {
+    pub(crate) fn install(&mut self, catalogue: Option<Catalogue>) -> Result<(), String> {
+        if self.dirty() {
+            return Err(
+                "Save or discard translation drafts before opening another catalogue.".into(),
+            );
+        }
+        if let Some(current) = self.catalogue.as_mut() {
+            current.flush_recovery()?;
+        }
+        self.catalogue = catalogue;
+        self.refresh = None;
+        self.comparison = None;
+        self.entry_context = None;
+        self.view = CatalogueView::Passage;
+        Ok(())
+    }
     pub fn translating(&self) -> bool {
         self.active && self.catalogue.is_some()
     }
@@ -58,52 +88,59 @@ impl Localisation {
 
 pub(super) fn switch(writer: Writer) -> Element {
     let mut state = writer.localisation;
+    let mut pane = writer.pane;
     let active = state.read().active;
-    rect()
-        .horizontal()
-        .spacing(t::SPACE_XS)
-        .child(
-            Button::new()
-                .flat()
-                .selected(!active)
-                .on_press(move |_| {
-                    state.write().active = false;
-                    writer.inspector_focus.request_focus();
-                })
-                .child(wording(MsgId::WriterWrite)),
-        )
-        .child(
-            Button::new()
-                .flat()
-                .selected(active)
-                .on_press(move |_| {
-                    if writer.try_navigate(|_| Ok(())).is_ok() {
-                        state.write().active = true;
-                        let first = writer
-                            .buffers
-                            .model
-                            .peek()
-                            .as_ref()
-                            .ok()
-                            .and_then(|session| {
-                                session
-                                    .selected_block()
-                                    .ok()
-                                    .flatten()
-                                    .is_none()
-                                    .then(|| session.document().sections().into_iter().next())
-                                    .flatten()
-                            });
-                        if let Some(first) = first {
-                            writer.inspect(&first);
-                        }
-                    }
-                })
-                .child(messages::mode_label(
-                    &writer.preferences.read().config.ui.locale,
-                )),
-        )
-        .into_element()
+    crate::design::Segments {
+        name: "Activity".into(),
+        labels: [
+            wording(MsgId::WriterWrite),
+            messages::mode_label(&writer.preferences.read().config.ui.locale),
+        ],
+        ids: [use_a11y(), use_a11y()],
+        selected: usize::from(active),
+        vim: false,
+        width: Size::px(172.),
+        change: EventHandler::new(move |index| {
+            if index == 0 {
+                state.write().active = false;
+                if *pane.peek() == crate::editing::Pane::Preview {
+                    pane.set(crate::editing::Pane::Script);
+                }
+                writer.inspector_focus.request_focus();
+            } else {
+                let _ = enter(writer);
+            }
+        }),
+    }
+    .into_element()
+}
+
+/// Enter through the selected beat, whether invoked by the switch or Commands.
+pub(crate) fn enter(mut writer: Writer) -> Result<(), String> {
+    writer.try_navigate(|_| Ok(()))?;
+    let beat = writer.selection.peek().clone().or_else(|| {
+        writer
+            .buffers
+            .model
+            .peek()
+            .as_ref()
+            .ok()
+            .and_then(|session| {
+                session
+                    .selected_block()
+                    .ok()
+                    .flatten()
+                    .or_else(|| session.document().sections().into_iter().next())
+            })
+    });
+    if let Some(beat) = beat {
+        writer.try_navigate(|m| m.inspect_block(&beat))?;
+        writer.selection.set(Some(beat));
+    }
+    writer.localisation.write().active = true;
+    writer.pane.set(crate::editing::Pane::Script);
+    writer.inspector_focus.request_focus();
+    Ok(())
 }
 
 #[derive(Clone)]
@@ -139,7 +176,11 @@ impl Component for Surface {
                 .map_or_else(|| wording(MsgId::WriterCatalogue), |h| h.value().to_owned())
                 .to_owned();
             header = header
-                .child(label().text(language).font_size(t::TEXT_HEADING))
+                .child(
+                    label()
+                        .text(setup::languages::caption(&language).unwrap_or(language))
+                        .font_size(t::heading()),
+                )
                 .child(
                     Button::new()
                         .flat()
@@ -201,12 +242,19 @@ impl Component for Surface {
             .height(Size::fill())
             .content(Content::Flex)
             .maybe_child((!updates).then_some(header))
+            .maybe_child(
+                (state.read().view == CatalogueView::Passage).then(|| manuscript::header(writer)),
+            )
             .child(if updates {
                 refresh::screen::RefreshScreen {
                     writer,
                     files: self.files,
                 }
                 .into_element()
+            } else if state.read().view == CatalogueView::Compare {
+                comparison::ExternalComparison { writer }.into_element()
+            } else if state.read().view == CatalogueView::Entry {
+                entry::EntryEditor { writer }.into_element()
             } else if state.read().view == CatalogueView::Queue {
                 queue::QueueScreen { writer }.into_element()
             } else {
@@ -229,12 +277,32 @@ pub(super) fn translation(writer: Writer, passage: recite_writer_model::Passage)
     field::TranslationField { writer, passage }.into_element()
 }
 
+mod status;
+
+mod context_data;
+mod entry_context;
+
 pub(crate) fn close_drafts_message() -> String {
     wording(MsgId::WriterCloseDrafts)
 }
 
-pub(super) fn context(writer: Writer, beat: String) -> Element {
-    context::Context { writer, beat }.into_element()
+pub(crate) fn show_unsaved(mut writer: Writer) {
+    let mut state = writer.localisation.write();
+    let context = state.catalogue.as_ref().and_then(|c| {
+        c.document
+            .entries()
+            .iter()
+            .find(|e| c.changed(e.id()))
+            .and_then(|e| e.context())
+            .map(str::to_owned)
+    });
+    state.panel = None;
+    state.active = true;
+    state.view = if context.is_some() {
+        CatalogueView::Entry
+    } else {
+        CatalogueView::Queue
+    };
+    state.entry_context = context;
+    writer.message.clear();
 }
-
-mod status;

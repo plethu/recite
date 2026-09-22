@@ -9,12 +9,16 @@ enum Kind {
     Primary,
 }
 
+#[cfg(test)]
+mod tests;
+
 #[derive(Clone, Copy, PartialEq)]
 enum Semantics {
     Button,
     Radio,
     Option,
     MenuItem,
+    Tab,
 }
 
 #[derive(Clone, PartialEq)]
@@ -31,6 +35,7 @@ pub(crate) struct Button {
     expanded: Option<bool>,
     kind: Kind,
     width: Size,
+    compact: bool,
     key: DiffKey,
 }
 
@@ -49,11 +54,22 @@ impl Button {
             expanded: None,
             kind: Kind::Secondary,
             width: Size::auto(),
+            compact: false,
             key: DiffKey::None,
         }
     }
+    pub fn compact(mut self) -> Self {
+        self.compact = true;
+        self
+    }
     pub fn expanded(mut self, expanded: bool) -> Self {
         self.expanded = Some(expanded);
+        self
+    }
+    pub fn tab(mut self, selected: bool) -> Self {
+        self.semantics = Semantics::Tab;
+        self.selected = Some(selected);
+        self.kind = Kind::Quiet;
         self
     }
     pub fn menu_item(mut self) -> Self {
@@ -132,31 +148,52 @@ impl Component for Button {
         let action = self.action.clone();
         let enter = self.hover_changed.clone();
         let leave = self.hover_changed.clone();
-        let focused = id.is_focused();
-        let emphasized = self.selected == Some(true) || (self.enabled && *hovered.read());
+        let focused = use_focus(id)() == Focus::Keyboard;
+        let selected = self.selected == Some(true);
+        let filled = self.kind == Kind::Primary;
+        let segment = self.semantics == Semantics::Radio;
         let background = if !self.enabled {
-            colors.surface
+            if self.kind == Kind::Quiet {
+                Color::TRANSPARENT
+            } else {
+                colors.inset
+            }
         } else if *pressed.read() {
-            colors.pressed
-        } else if self.semantics == Semantics::Radio && self.selected == Some(true) {
-            colors.accent
-        } else if emphasized {
-            colors.hover
+            if filled {
+                Color::lerp(colors.accent, colors.on_accent, 0.16)
+            } else {
+                colors.pressed
+            }
+        } else if segment {
+            if *hovered.read() && !selected {
+                colors.hover.with_a(100)
+            } else {
+                Color::TRANSPARENT
+            }
+        } else if selected {
+            colors.selection
+        } else if *hovered.read() {
+            if filled {
+                Color::lerp(colors.accent, colors.on_accent, 0.08)
+            } else {
+                colors.hover
+            }
         } else {
             match self.kind {
                 Kind::Quiet => Color::TRANSPARENT,
-                Kind::Secondary => colors.surface,
+                Kind::Secondary => colors.inset,
                 Kind::Primary => colors.accent,
             }
         };
-        let color = if (self.kind == Kind::Primary && !emphasized)
-            || (self.semantics == Semantics::Radio && self.selected == Some(true))
-        {
+        let color = if filled && self.enabled {
             colors.on_accent
         } else {
             colors.ink
         };
-        let role = if self.semantics == Semantics::MenuItem {
+        let background = super::motion::surface(background, *pressed.read());
+        let role = if self.semantics == Semantics::Tab {
+            AccessibilityRole::Tab
+        } else if self.semantics == Semantics::MenuItem {
             AccessibilityRole::MenuItem
         } else if self.semantics == Semantics::Option {
             AccessibilityRole::ListBoxOption
@@ -168,24 +205,34 @@ impl Component for Button {
             AccessibilityRole::Button
         };
         let border_color = if focused {
-            colors.accent
-        } else if self.kind == Kind::Secondary {
+            if filled {
+                colors.on_accent
+            } else {
+                colors.accent
+            }
+        } else if self.kind == Kind::Secondary && !segment {
             colors.rule
         } else {
             Color::TRANSPARENT
         };
         let mut control = rect()
+            .horizontal()
             .a11y_id(id)
             .a11y_focusable(self.enabled)
             .a11y_role(role)
             .width(self.width.clone())
-            .min_height(Size::px(t::CONTROL_HEIGHT - 2. * t::SPACE_SM))
-            .padding(Gaps::new(
-                t::SPACE_XS,
-                t::SPACE_SM,
-                t::SPACE_XS,
-                t::SPACE_SM,
-            ))
+            .min_height(Size::px(if self.compact || segment {
+                t::control_height() - 2. * t::SPACE_XS
+            } else {
+                t::control_height()
+            }))
+            .font_size(t::body())
+            .font_weight(if selected || filled || segment {
+                FontWeight::MEDIUM
+            } else {
+                FontWeight::NORMAL
+            })
+            .padding((0., t::SPACE_SM))
             .corner_radius(t::RADIUS)
             .main_align(Alignment::Center)
             .cross_align(Alignment::Center)
@@ -202,10 +249,13 @@ impl Component for Button {
             } else {
                 CursorIcon::Default
             });
+        if !self.enabled {
+            control = control.a11y_builder(|node| node.set_disabled());
+        }
         if let Some(name) = &self.name {
             control = control.a11y_alt(name.clone());
         }
-        if self.semantics == Semantics::Option {
+        if matches!(self.semantics, Semantics::Option | Semantics::Tab) {
             let selected = self.selected.unwrap_or(false);
             control = control.a11y_builder(move |node| node.set_selected(selected));
         } else if let Some(checked) = self.checked.or(self.selected) {
@@ -223,13 +273,19 @@ impl Component for Button {
         if self.enabled {
             control = control
                 .on_pointer_enter(move |_| { hovered.set(true); if let Some(enter) = &enter { enter.call(true); } })
-                .on_pointer_leave(move |_| { hovered.set(false); if let Some(leave) = &leave { leave.call(false); } })
+                .on_pointer_leave(move |_| { hovered.set(false); pressed.set(false); if let Some(leave) = &leave { leave.call(false); } })
                 .on_pointer_down(move |event: Event<PointerEventData>| {
                     if event.is_primary() { pressed.set(true); event.stop_propagation(); }
                 })
                 .on_global_pointer_press(move |_| { pressed.set_if_modified(false); })
+                .on_global_key_up(move |event: Event<KeyboardEventData>| {
+                    if event.is_press_event() { pressed.set_if_modified(false); }
+                })
                 .on_all_press(move |event: Event<PressEventData>| {
                     if matches!(event.data(), PressEventData::Mouse(data) if data.button != Some(MouseButton::Left)) { return; }
+                    // Form submission must not also activate the focused checkbox or action.
+                    if matches!(event.data(), PressEventData::Keyboard(data) if super::keyboard::submit_key(data)) { return; }
+                    if matches!(event.data(), PressEventData::Keyboard(_)) { pressed.set_if_modified(true); }
                     event.stop_propagation(); id.request_focus();
                     if let Some(action) = &action { action.call(event); }
                 });

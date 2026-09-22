@@ -193,7 +193,7 @@ pub(super) fn persist(document: &PoDocument, path: &Path) -> Result<Catalogue, S
     if let Ok(directory) = fs::File::open(parent) {
         let _ = directory.sync_all();
     }
-    Catalogue::open(path)
+    Catalogue::open_recoverable(path)
 }
 
 #[cfg(test)]

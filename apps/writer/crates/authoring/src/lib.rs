@@ -15,7 +15,7 @@ mod workbench;
 pub use document::{Document, EditError, ProjectContext};
 pub use examples::{WRITER_EXAMPLES, WriterExample};
 pub use flow::{SceneLink, scene_links};
-pub use preview::{Preview, PreviewError, PreviewPage};
+pub use preview::{Preview, PreviewError, PreviewPage, PreviewSetup};
 pub use projection::{Passage, PassageKind};
 pub use recovery::RecoveredDraft;
 pub use script::{ScriptBlock, ScriptEntry};
@@ -33,3 +33,14 @@ pub use search::{SearchHit, SearchIndex};
 
 #[cfg(feature = "benchmarks")]
 pub mod workload;
+
+pub use recite_runtime::{ConditionExpectedType, ConditionValue, EffectAck};
+
+mod completion;
+pub use completion::SourceCompletions;
+
+mod rules;
+pub use rules::{ReplyRules, RuleArgument, RuleEffect, RuleExpression};
+
+mod rename;
+pub use rename::{ProjectRename, RenameChange, rename_manifest_source};

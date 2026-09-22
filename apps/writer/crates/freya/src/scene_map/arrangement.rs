@@ -94,7 +94,7 @@ impl Component for Handle {
                                 0.
                             },
                         )
-                        .child(label().text("⠿").font_size(t::TEXT_HEADING)),
+                        .child(label().text("⠿").font_size(t::heading())),
                 ),
         )
     }

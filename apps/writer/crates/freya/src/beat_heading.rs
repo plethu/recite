@@ -1,6 +1,7 @@
 //! Named beat editing stays beside the script, with an explicit rename transaction.
 use crate::design::Button;
 use crate::design::tokens as t;
+use crate::design::tokens::ProseTypography;
 use crate::{editing::Writer, palette};
 use freya::prelude::*;
 
@@ -45,8 +46,8 @@ impl Component for BeatHeading {
                 .child(
                     rect()
                         .width(Size::flex(1.))
-                        .font_family("serif")
-                        .font_size(t::TEXT_TITLE)
+                        .prose_font()
+                        .font_size(t::title())
                         .child(
                             Input::new(name)
                                 .a11y_id(input_id)
@@ -81,7 +82,9 @@ impl Component for BeatHeading {
                     .flat()
                     .width(Size::flex(1.))
                     .a11y_id(title_id)
-                    .named("Rename beat")
+                    .named(crate::messages::text(
+                        crate::messages::MsgId::WriterRenameProject,
+                    ))
                     .on_press(move |_| {
                         name.set(initial.clone());
                         open.set(true);
@@ -90,27 +93,38 @@ impl Component for BeatHeading {
                         label()
                             .text(palette::display_name(&self.id))
                             .width(Size::fill())
-                            .font_family("serif")
-                            .font_size(t::TEXT_TITLE),
+                            .prose_font()
+                            .font_size(t::title()),
                     ),
             );
         }
         if !writer.localisation.read().active {
-            row = row.child(crate::controls::IconButton::new(
-                "Pin reference",
-                crate::controls::Icon::Pin,
-                move || writer.pin(),
-            ));
-            row = row.child(crate::controls::IconButton::new(
-                "Close beat editor",
-                crate::controls::Icon::Close,
-                move || writer.close_editor(),
-            ));
+            row = row.child(
+                Button::new()
+                    .flat()
+                    .named("Pin reference")
+                    .on_press(move |_| writer.pin())
+                    .child("Pin reference"),
+            );
+            if !writer.layout.standalone() {
+                row = row.child(crate::controls::IconButton::new(
+                    "Close beat editor",
+                    crate::controls::Icon::Close,
+                    move || writer.close_editor(),
+                ));
+            }
         }
-        rect().width(Size::fill()).spacing(t::SPACE_XS).child(row)
-            .maybe_child((*open.read()).then(|| label()
-                .text("Beat identifier · letters, digits and underscores · Enter to apply · Esc to cancel")
-                .font_size(t::TEXT_SMALL)))
+        rect()
+            .width(Size::fill())
+            .spacing(t::SPACE_XS)
+            .child(row)
+            .maybe_child((*open.read()).then(|| {
+                label()
+                    .text(crate::messages::text(
+                        crate::messages::MsgId::WriterGuiBeatIdentifierHint,
+                    ))
+                    .font_size(t::small())
+            }))
     }
     fn render_key(&self) -> DiffKey {
         DiffKey::from(&self.id)

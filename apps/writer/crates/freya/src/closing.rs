@@ -1,4 +1,5 @@
 //! One close policy for native window requests and application keyboard shortcuts.
+mod blockers;
 use crate::design::tokens as t;
 use crate::{buffers::Buffers, project::ProjectFiles};
 use freya::prelude::*;
@@ -18,18 +19,12 @@ pub fn request_close() -> CloseDecision {
 }
 
 fn close_window() {
-    let platform = Platform::get();
-    platform
-        .clone()
-        .with_window(None, move |window| platform.close_window(window.id()));
+    Platform::get().close_window(Platform::window_id());
 }
 
 pub(super) fn keyboard(event: Event<KeyboardEventData>) {
     let quit = is_quit_key(&event);
-    let escape = event.key == Key::Named(NamedKey::Escape)
-        && event.modifiers.is_empty()
-        && Platform::get().focused_accessibility_id.peek().0 == 0;
-    if quit || escape {
+    if quit {
         event.stop_propagation();
         event.prevent_default();
         if matches!(request_close(), CloseDecision::Close) {
@@ -77,15 +72,18 @@ pub(super) fn text_input_key(event: Event<KeyboardEventData>) -> bool {
 enum Prompt {
     Exit,
     Unsaved,
+    Translations,
+    Blockers,
 }
 
 pub(super) fn controls(
-    buffers: Buffers,
-    mut preferences: State<crate::preferences::Preferences>,
-    localisation: State<crate::localisation::Localisation>,
-    mut message: crate::feedback::Feedback,
-    mut files: State<Option<ProjectFiles>>,
+    writer: crate::editing::Writer,
+    files: State<Option<ProjectFiles>>,
 ) -> Element {
+    let buffers = writer.buffers;
+    let mut preferences = writer.preferences;
+    let localisation = writer.localisation;
+
     let mut pending = use_state(|| None::<Prompt>);
     let mut failure = use_state(|| None::<String>);
     let mut dont_ask = use_state(|| false);
@@ -107,8 +105,19 @@ pub(super) fn controls(
     use_hook(move || {
         CLOSE.with(|handler| {
             *handler.borrow_mut() = Some(Box::new(move || {
+                if files.peek().as_ref().is_some_and(|p| {
+                    p.builds.busy()
+                        || p.declarations
+                            .as_ref()
+                            .is_some_and(|s| s.busy() || s.dirty())
+                }) {
+                    previous_focus.set(Some(*platform.focused_accessibility_id.peek()));
+                    pending.set(Some(Prompt::Blockers));
+                    return CloseDecision::KeepOpen;
+                }
                 if localisation.peek().dirty() {
-                    message.error(crate::localisation::close_drafts_message());
+                    previous_focus.set(Some(*platform.focused_accessibility_id.peek()));
+                    pending.set(Some(Prompt::Translations));
                     return CloseDecision::KeepOpen;
                 }
                 if pending.peek().is_some() {
@@ -117,7 +126,7 @@ pub(super) fn controls(
                 let mut dirty = files.peek().is_some() && !buffers.can_leave(files.peek().as_ref());
                 let mut close_error = None;
                 if !dirty && !preferences.peek().config.writer.confirm_exit {
-                    match flush_recovery(buffers, files) {
+                    match flush_recovery(buffers, files, localisation) {
                         Ok(()) => return CloseDecision::Close,
                         Err(error) => {
                             dirty = true;
@@ -140,6 +149,39 @@ pub(super) fn controls(
     let Some(prompt) = *pending.read() else {
         return rect().into_element();
     };
+    if prompt == Prompt::Blockers {
+        return blockers::Blockers {
+            writer,
+            cancel: EventHandler::new(move |()| cancel()),
+            retry: EventHandler::new(move |()| {
+                pending.set(None);
+                if matches!(request_close(), CloseDecision::Close) {
+                    close_window();
+                }
+            }),
+        }
+        .into_element();
+    }
+    if prompt == Prompt::Translations {
+        return crate::localisation::CloseDrafts {
+            writer,
+            cancel: EventHandler::new(move |()| cancel()),
+            resolved: EventHandler::new(move |()| {
+                if files.peek().is_some() && !buffers.can_leave(files.peek().as_ref()) {
+                    pending.set(Some(Prompt::Unsaved));
+                } else {
+                    match flush_recovery(buffers, files, localisation) {
+                        Ok(()) => close_window(),
+                        Err(error) => {
+                            failure.set(Some(error));
+                            pending.set(Some(Prompt::Unsaved));
+                        }
+                    }
+                }
+            }),
+        }
+        .into_element();
+    }
     let mut content =
         rect()
             .spacing(t::SPACE_MD)
@@ -161,22 +203,24 @@ pub(super) fn controls(
             "Keep recovery and close",
             move || {
                 buffers.harvest();
-                let state = buffers.model.peek();
-                if let (Ok(workbench), Some(project)) = (state.as_ref(), files.write().as_mut()) {
-                    match project.checkpoint(workbench) {
-                        Ok(()) => close_window(),
-                        Err(error) => failure.set(Some(error.to_string())),
-                    }
+                match flush_recovery(buffers, files, localisation) {
+                    Ok(()) => close_window(),
+                    Err(error) => failure.set(Some(error)),
                 }
             },
         ));
-        primary = crate::design::DialogAction {
+        primary = crate::design::SubmitAction {
             id: actions[2],
             caption: "Save and close".into(),
             enabled: true,
-            action: EventHandler::new(move |()| match buffers.save(files) {
-                Ok(()) => close_window(),
-                Err(error) => failure.set(Some(error)),
+            action: EventHandler::new(move |()| {
+                match buffers
+                    .save_all(files)
+                    .and_then(|_| flush_recovery(buffers, files, localisation))
+                {
+                    Ok(()) => close_window(),
+                    Err(error) => failure.set(Some(error)),
+                }
             }),
         };
     } else {
@@ -189,7 +233,7 @@ pub(super) fn controls(
                 dont_ask.set(next);
             },
         ));
-        primary = crate::design::DialogAction {
+        primary = crate::design::SubmitAction {
             id: actions[2],
             caption: "Close Recite".into(),
             enabled: true,
@@ -202,7 +246,7 @@ pub(super) fn controls(
                     failure.set(Some(error));
                     return;
                 }
-                match flush_recovery(buffers, files) {
+                match flush_recovery(buffers, files, localisation) {
                     Ok(()) => close_window(),
                     Err(error) => failure.set(Some(error)),
                 }
@@ -210,6 +254,7 @@ pub(super) fn controls(
         };
     }
     crate::design::Dialog {
+        dismissal_only: false,
         primary,
         title: if prompt == Prompt::Unsaved {
             "Unsaved changes".into()
@@ -240,7 +285,22 @@ fn action_button(
 
 // A clean source can still have a queued recovery deletion after undo or save.
 // Closing must observe its durability result instead of relying on Drop.
-fn flush_recovery(buffers: Buffers, mut files: State<Option<ProjectFiles>>) -> Result<(), String> {
+fn flush_recovery(
+    buffers: Buffers,
+    mut files: State<Option<ProjectFiles>>,
+    mut localisation: State<crate::localisation::Localisation>,
+) -> Result<(), String> {
+    if let Some(catalogue) = localisation.write().catalogue.as_mut() {
+        catalogue.flush_recovery()?;
+    }
+    if let Some(source) = files
+        .write()
+        .as_mut()
+        .and_then(|p| p.declarations.as_mut())
+        .and_then(|s| s.source.as_mut())
+    {
+        source.flush_recovery().map_err(|e| e.to_string())?;
+    }
     buffers.harvest();
     let model = buffers.model.peek();
     if let (Ok(workbench), Some(project)) = (model.as_ref(), files.write().as_mut()) {

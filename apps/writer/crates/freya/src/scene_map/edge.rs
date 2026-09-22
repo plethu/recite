@@ -33,14 +33,14 @@ impl Component for Edge {
                     reduced,
                 )
             });
-        let initial_opacity = if self.dimmed { 0.65 } else { 1. };
+        let initial_opacity = if self.dimmed { 0.25 } else { 1. };
         let current_opacity = use_hook(|| Rc::new(Cell::new(initial_opacity)));
         let previous_opacity = current_opacity.clone();
         let opacity = use_animation_with_dependencies(&self.dimmed, move |config, dimmed| {
             config.on_change(OnChange::Rerun);
             crate::design::tokens::transition(
                 previous_opacity.get(),
-                if *dimmed { 0.65 } else { 1. },
+                if *dimmed { 0.25 } else { 1. },
                 reduced,
             )
         });
@@ -62,11 +62,8 @@ impl Component for Edge {
         } else {
             Color::from_rgb(146, 153, 142)
         };
-        let accent = if self.dark {
-            Color::from_rgb(180, 203, 164)
-        } else {
-            Color::from_rgb(72, 99, 77)
-        };
+        let p = crate::design::palette::Palette::new(self.dark);
+        let accent = Color::from_rgb(p.accent.r(), p.accent.g(), p.accent.b());
         let layer = |color: Color, thickness: f32| {
             let curve = curve.clone();
             let arrow = arrow.clone();
@@ -80,6 +77,8 @@ impl Component for Edge {
                 paint.set_style(PaintStyle::Stroke);
                 paint.set_color(color);
                 paint.set_stroke_width(thickness / zoom.max(0.25));
+                paint.set_stroke_cap(skia_safe::paint::Cap::Round);
+                paint.set_stroke_join(skia_safe::paint::Join::Round);
                 paint.set_path_effect(PathEffect::dash(dash, 0.));
                 if let Some(curve) = &curve {
                     canvas.draw_path(curve, &paint);

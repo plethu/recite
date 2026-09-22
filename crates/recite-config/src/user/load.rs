@@ -97,6 +97,7 @@ struct RawUserConfig {
 #[serde(deny_unknown_fields)]
 struct RawWriterConfig {
     confirm_exit: Option<bool>,
+    presentation: Option<super::WriterPresentation>,
     view: Option<super::WriterView>,
     pane_side: Option<super::WriterPaneSide>,
     theme: Option<super::WriterTheme>,
@@ -144,6 +145,7 @@ pub(super) fn parse_user_config(
 
     let field_presence = UserConfigFieldPresence {
         writer_confirm_exit: raw.writer.confirm_exit.is_some(),
+        writer_presentation: raw.writer.presentation.is_some(),
         writer_view: raw.writer.view.is_some(),
         writer_pane_side: raw.writer.pane_side.is_some(),
         writer_theme: raw.writer.theme.is_some(),
@@ -167,6 +169,7 @@ pub(super) fn parse_user_config(
     };
     let config = UserConfig {
         writer: super::WriterConfig {
+            presentation: raw.writer.presentation.unwrap_or_default(),
             pane_side: raw.writer.pane_side.unwrap_or(defaults.writer.pane_side),
             view: raw.writer.view.unwrap_or(defaults.writer.view),
             theme: raw.writer.theme.unwrap_or(defaults.writer.theme),

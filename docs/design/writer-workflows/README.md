@@ -1,5 +1,8 @@
 # Writer workflow study · 04
 
+The [remaining-workflow study · 05](remaining/index.html) extends the unresolved
+forms, rules, preview, schema, source and project flows in one linked review.
+
 Open [index.html](index.html) directly in a browser. No build or server is needed.
 The study is disposable, uses sample data, and changes no project files. Edits
 survive navigation within the study; reload resets them. The strip above the app

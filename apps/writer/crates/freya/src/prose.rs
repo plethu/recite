@@ -107,7 +107,7 @@ impl Component for ProseField {
                 .reply_number
                 .map_or_else(|| "Reply".into(), |number| format!("Reply {number}")),
         };
-        let actions = crate::passage_menu::render(writer, details);
+        let actions = crate::passage_menu::render(writer, details, &passage);
         let mut buffers = writer.buffers;
         rect()
             .width(Size::fill())
@@ -116,7 +116,7 @@ impl Component for ProseField {
             .on_pointer_leave(move |_| hovered.set(false))
             .child(
                 rect()
-                    .height(Size::px(t::PROSE_META_HEIGHT))
+                    .height(Size::px(t::prose_meta_height()))
                     .width(Size::fill())
                     .horizontal()
                     .content(Content::Flex)
@@ -124,70 +124,67 @@ impl Component for ProseField {
                     .child(
                         label()
                             .text(caption)
-                            .font_size(t::TEXT_SMALL)
+                            .font_size(t::small())
                             .color(palette::muted(writer.dark)),
                     )
                     .child(rect().width(Size::flex(1.)))
                     .maybe_child(selected.then_some(actions)),
             )
             .child(
-                rect()
-                    .font_family("serif")
-                    .font_size(t::TEXT_HEADING)
-                    .child(
-                        Input::new(text)
-                            .a11y_id(id)
-                            .multiline(true)
-                            .width(Size::fill())
-                            .height(Size::Inner)
-                            .on_pre_key_down(move |event: Event<KeyboardEventData>| {
-                                if event.key == Key::Named(NamedKey::Escape) {
-                                    event.stop_propagation();
-                                    writer.close_editor();
-                                    false
+                t::prose().child(
+                    Input::new(text)
+                        .a11y_id(id)
+                        .multiline(true)
+                        .width(Size::fill())
+                        .height(Size::Inner)
+                        .on_pre_key_down(move |event: Event<KeyboardEventData>| {
+                            if event.key == Key::Named(NamedKey::Escape) {
+                                event.stop_propagation();
+                                writer.close_editor();
+                                false
+                            } else {
+                                crate::closing::text_input_key(event)
+                            }
+                        })
+                        .on_validate(move |value: InputValidator| {
+                            let selected = buffers
+                                .model
+                                .peek()
+                                .as_ref()
+                                .is_ok_and(|m| m.view() == &target);
+                            if !selected {
+                                writer.navigate(|m| m.select(target.clone()));
+                            }
+                            if let Ok(session) = buffers.model.write().as_mut() {
+                                if session.view() == &target {
+                                    let draft = value.text().clone();
+                                    session.set_draft(draft.clone());
+                                    buffers.prose.set_if_modified(draft);
                                 } else {
-                                    crate::closing::text_input_key(event)
+                                    value.set_valid(false);
                                 }
-                            })
-                            .on_validate(move |value: InputValidator| {
-                                let selected = buffers
-                                    .model
-                                    .peek()
-                                    .as_ref()
-                                    .is_ok_and(|m| m.view() == &target);
-                                if !selected {
-                                    writer.navigate(|m| m.select(target.clone()));
-                                }
-                                if let Ok(session) = buffers.model.write().as_mut() {
-                                    if session.view() == &target {
-                                        let draft = value.text().clone();
-                                        session.set_draft(draft.clone());
-                                        buffers.prose.set_if_modified(draft);
-                                    } else {
-                                        value.set_valid(false);
-                                    }
-                                }
-                            })
-                            .theme_colors(InputColorsThemePartial {
-                                background: Some(Preference::Specific(Color::TRANSPARENT)),
-                                focus_background: Some(Preference::Specific(palette::reading(
-                                    writer.dark,
-                                ))),
-                                border_fill: Some(Preference::Specific(if *hovered.read() {
-                                    palette::rule(writer.dark)
-                                } else {
-                                    Color::TRANSPARENT
-                                })),
-                                focus_border_fill: Some(Preference::Specific(
-                                    palette::accent(writer.dark) * focus_ink.get().value(),
-                                )),
-                                ..Default::default()
-                            })
-                            .theme_layout(InputLayoutThemePartial {
-                                corner_radius: Some(Preference::Specific(3.0.into())),
-                                inner_margin: Some(Preference::Specific(t::SPACE_XS.into())),
-                            }),
-                    ),
+                            }
+                        })
+                        .theme_colors(InputColorsThemePartial {
+                            background: Some(Preference::Specific(Color::TRANSPARENT)),
+                            focus_background: Some(Preference::Specific(palette::reading(
+                                writer.dark,
+                            ))),
+                            border_fill: Some(Preference::Specific(if *hovered.read() {
+                                palette::rule(writer.dark)
+                            } else {
+                                palette::rule(writer.dark).with_a(65)
+                            })),
+                            focus_border_fill: Some(Preference::Specific(
+                                palette::accent(writer.dark) * focus_ink.get().value(),
+                            )),
+                            ..Default::default()
+                        })
+                        .theme_layout(InputLayoutThemePartial {
+                            corner_radius: Some(Preference::Specific(3.0.into())),
+                            padding: Some(Preference::Specific(t::SPACE_XS.into())),
+                        }),
+                ),
             )
             .maybe_child(pending_draft.then(|| {
                 rect()
@@ -196,7 +193,7 @@ impl Component for ProseField {
                         writer
                             .message
                             .is_error()
-                            .then(|| label().text(writer.message.text()).font_size(t::TEXT_SMALL)),
+                            .then(|| label().text(writer.message.text()).font_size(t::small())),
                     )
                     .child(
                         Button::new()
@@ -207,7 +204,9 @@ impl Component for ProseField {
                                     Ok(())
                                 })
                             })
-                            .child("Discard draft"),
+                            .child(crate::messages::text(
+                                crate::messages::MsgId::WriterDiscardDraft,
+                            )),
                     )
             }))
             .maybe_child((*details.read() && selected).then(|| details_content(writer, &passage)))
@@ -218,13 +217,26 @@ fn details_content(writer: Writer, passage: &Passage) -> Element {
     let mut content = rect().width(Size::fill()).spacing(t::SPACE_XS).child(
         label()
             .text(format!("{}@{}", passage.label, passage.id))
-            .font_size(t::TEXT_SMALL),
+            .font_size(t::small()),
     );
-    if matches!(passage.kind, PassageKind::Choice { .. }) {
+    if let PassageKind::Choice { destination } = &passage.kind {
+        let destination = destination.as_deref().map_or_else(
+            || "No destination".to_owned(),
+            |target| {
+                if target == "END" {
+                    "End conversation".to_owned()
+                } else {
+                    crate::palette::display_name(target)
+                }
+            },
+        );
         content = content.child(crate::route_editor::RouteEditor {
             writer,
             owner: crate::route_editor::RouteOwner::Reply(passage.id.clone()),
-            heading: rect().into_element(),
+            heading: label()
+                .text(destination)
+                .font_size(t::small())
+                .into_element(),
         });
     }
     content.into_element()

@@ -1,10 +1,15 @@
+mod catalogue;
+mod setup;
+pub use setup::PreviewSetup;
+
 use recite_compiler::{CompileInput, CompileOptions, compile_inputs, compile_inputs_with_schema};
 use recite_core::{
     ChoiceId, CompiledAssetId, CompiledDialogue, CompilerVersion, ProjectSchema, SchemaFingerprint,
     SourceMapId,
 };
 use recite_runtime::{
-    DialogueChoice, PreviewEvent, PreviewInputs, PreviewOptions, PreviewSession, PreviewSnapshot,
+    ConditionAnswer, ConditionValue, DialogueChoice, DialogueEffectMode, EffectAck, PreviewCommand,
+    PreviewConditionRequest, PreviewEvent, PreviewInputs, PreviewSession,
 };
 
 use crate::Document;
@@ -19,6 +24,8 @@ pub enum PreviewError {
     Runtime(#[from] recite_runtime::DialogueError),
     #[error(transparent)]
     Preview(#[from] recite_runtime::PreviewError),
+    #[error(transparent)]
+    Locale(#[from] recite_runtime::LocaleError),
     #[error("Repair the scene diagnostics before starting a new preview.")]
     InvalidSource,
     #[error("Preview needs condition input before it can continue.")]
@@ -31,14 +38,24 @@ pub struct PreviewPage {
     pub choices: Vec<DialogueChoice>,
     pub ended: bool,
     pub effects: Vec<recite_runtime::DialogueEffectRequest>,
+    pub condition: Option<PreviewConditionRequest>,
+    pub waiting_effect: Option<recite_core::EffectId>,
 }
 
 /// The compiled asset remains fixed until an explicit new preview is started.
 pub struct Preview {
-    asset: CompiledDialogue,
-    state: Option<PreviewSnapshot>,
+    session: OwnedPreview,
     revision: i64,
-    entry: Option<String>,
+    catalogues: catalogue::TrialCatalogues,
+    values: recite_runtime::InterpolationValues,
+}
+
+self_cell::self_cell! {
+    struct OwnedPreview {
+        owner: CompiledDialogue,
+        #[covariant]
+        dependent: PreviewSession,
+    }
 }
 
 impl Preview {
@@ -47,6 +64,21 @@ impl Preview {
     }
 
     pub fn at_block(document: &Document, block: Option<&str>) -> Result<Self, PreviewError> {
+        Self::configured(document, block, PreviewSetup::default())
+    }
+
+    pub fn configured(
+        document: &Document,
+        block: Option<&str>,
+        setup: PreviewSetup,
+    ) -> Result<Self, PreviewError> {
+        let trial_options = setup.options();
+        let expected = document
+            .extract_catalogue()
+            .catalog
+            .ok_or(PreviewError::InvalidSource)?;
+        let catalogues =
+            catalogue::TrialCatalogues::new(setup.catalogues, &setup.policy, &expected)?;
         let snapshot = document.kernel().snapshot();
         let inputs = snapshot
             .documents()
@@ -67,11 +99,21 @@ impl Preview {
         };
         let asset = report.asset.ok_or(PreviewError::InvalidSource)?.dialogue;
         Ok(Self {
-            asset,
-            state: None,
+            session: OwnedPreview::try_new(asset, |asset| {
+                PreviewSession::new(asset, block, trial_options)
+            })?,
             revision: document.revision(),
-            entry: block.map(str::to_owned),
+            catalogues,
+            values: setup.values,
         })
+    }
+
+    pub fn trace(&self) -> &recite_runtime::PreviewTrace {
+        self.session.borrow_dependent().trace()
+    }
+
+    pub fn events(&self) -> &[PreviewEvent] {
+        self.session.borrow_dependent().trace().events()
     }
 
     pub const fn revision(&self) -> i64 {
@@ -79,16 +121,37 @@ impl Preview {
     }
 
     pub fn advance(&mut self, choice: Option<ChoiceId>) -> Result<PreviewPage, PreviewError> {
-        let mut session =
-            PreviewSession::new(&self.asset, self.entry.as_deref(), PreviewOptions::new())?;
-        if let Some(snapshot) = &self.state {
-            session.restore(snapshot.clone())?;
-        }
-        let output = if let Some(choice) = choice {
-            session.choose(choice, PreviewInputs::new())
-        } else {
-            session.step(PreviewInputs::new())
-        };
+        self.dispatch(choice.map_or(PreviewCommand::Advance, |choice_id| {
+            PreviewCommand::Choose { choice_id }
+        }))
+    }
+
+    pub fn answer(
+        &mut self,
+        request: &PreviewConditionRequest,
+        value: ConditionValue,
+    ) -> Result<PreviewPage, PreviewError> {
+        self.dispatch(PreviewCommand::Answer {
+            request_id: request.id(),
+            answer: ConditionAnswer::Value(value),
+        })
+    }
+
+    pub fn acknowledge(
+        &mut self,
+        id: recite_core::EffectId,
+        ack: EffectAck,
+    ) -> Result<PreviewPage, PreviewError> {
+        self.dispatch(PreviewCommand::Acknowledge { effect_id: id, ack })
+    }
+
+    fn dispatch(&mut self, command: PreviewCommand) -> Result<PreviewPage, PreviewError> {
+        let inputs = PreviewInputs::new()
+            .with_locale_provider(&self.catalogues)
+            .with_interpolation_values(&self.values);
+        let output = self
+            .session
+            .with_dependent_mut(|_, session| session.dispatch(command, inputs));
         let mut page = PreviewPage::default();
         for event in output.events() {
             match event {
@@ -99,21 +162,30 @@ impl Preview {
                         .map_or_else(|| "Choose a reply".to_owned(), |line| line.text.clone());
                     page.choices = prompt.choices().to_vec();
                 }
-                PreviewEvent::End { .. } => {
+                PreviewEvent::End { deferred_effects } => {
+                    page.effects.clone_from(deferred_effects);
                     page.text = "End conversation".to_owned();
                     page.ended = true;
                 }
-                PreviewEvent::ChoiceSelected { .. } => {}
+                PreviewEvent::ChoiceSelected { .. }
+                | PreviewEvent::ChoiceAccepted { .. }
+                | PreviewEvent::ConditionResult { .. }
+                | PreviewEvent::EffectAcknowledged { .. } => {}
+                PreviewEvent::ConditionRequested(request) => {
+                    page.condition = Some(request.clone());
+                }
                 PreviewEvent::EffectRequested(effect)
                 | PreviewEvent::DeferredEffectScheduled(effect) => {
                     page.text = "Effect requested".into();
                     page.effects.push(effect.clone());
+                    if effect.mode == DialogueEffectMode::Blocking {
+                        page.waiting_effect = Some(effect.id.clone());
+                    }
                 }
                 PreviewEvent::Error(error) => return Err(error.clone().into()),
                 _ => return Err(PreviewError::UnsupportedRequest),
             }
         }
-        self.state = Some(session.snapshot()?);
         Ok(page)
     }
 }

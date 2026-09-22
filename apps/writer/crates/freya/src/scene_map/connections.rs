@@ -8,7 +8,8 @@ pub(super) fn panel(
     writer: Writer,
     selected: &str,
     links: &[SceneLink],
-    active: State<Option<SceneLink>>,
+    mut active: State<Option<SceneLink>>,
+    mut open: State<bool>,
 ) -> Element {
     let mut groups = rect()
         .width(Size::fill())
@@ -32,7 +33,7 @@ pub(super) fn panel(
             rect()
                 .key(item.index)
                 .width(Size::fill())
-                .height(Size::px(96.))
+                .height(Size::px(64.))
                 .overflow(Overflow::Clip)
                 .child(Connection {
                     writer,
@@ -44,36 +45,58 @@ pub(super) fn panel(
         })
         .key(format!("{selected}:{heading}"))
         .length(count)
-        .item_size(96.)
+        .item_size(64.)
         .width(Size::fill())
-        .height(Size::px(if count == 0 { 0. } else { 160. }));
+        .height(Size::px(if count == 0 { 0. } else { 136. }));
         groups = groups.child(
             rect()
                 .width(Size::flex(1.))
                 .a11y_role(AccessibilityRole::List)
                 .a11y_alt(format!("{heading} connections"))
                 .spacing(t::SPACE_SM)
-                .child(label().text(heading).font_size(t::TEXT_SMALL))
-                .child(rect().width(Size::fill()).child(group).maybe_child(
-                    (count == 0).then(|| label().text("None").font_size(t::TEXT_SMALL)),
-                )),
+                .child(label().text(heading).font_size(t::small()))
+                .child(
+                    rect()
+                        .width(Size::fill())
+                        .child(group)
+                        .maybe_child((count == 0).then(|| {
+                            label()
+                                .text(crate::messages::text(crate::messages::MsgId::WriterGuiNone))
+                                .font_size(t::small())
+                        })),
+                ),
         );
     }
     rect()
         .width(Size::fill())
         .spacing(t::SPACE_SM)
         .child(
-            label()
-                .text(format!("Connections · {}", palette::display_name(selected)))
-                .font_size(t::TEXT_BODY),
+            crate::design::Button::new()
+                .flat()
+                .named(crate::messages::text(
+                    crate::messages::MsgId::WriterGuiConnections,
+                ))
+                .expanded(*open.read())
+                .on_press(move |_| {
+                    let next = !*open.peek();
+                    open.set(next);
+                    active.set(None);
+                })
+                .child(format!(
+                    "{} Connections · {}",
+                    if *open.read() { "▾" } else { "▸" },
+                    palette::display_name(selected)
+                )),
         )
-        .child(
+        .maybe_child((*open.read()).then(|| {
             label()
-                .text("Hover or focus a connection to highlight its route. Select to navigate.")
-                .font_size(t::TEXT_SMALL)
-                .color(palette::muted(writer.dark)),
-        )
-        .child(groups)
+                .text(crate::messages::text(
+                    crate::messages::MsgId::WriterGuiConnectionHelp,
+                ))
+                .font_size(t::small())
+                .color(palette::muted(writer.dark))
+        }))
+        .maybe_child((*open.read()).then_some(groups))
         .into_element()
 }
 
@@ -95,6 +118,7 @@ impl PartialEq for Connection {
 
 impl Component for Connection {
     fn render(&self) -> impl IntoElement {
+        let colors = t::colors();
         let focus = use_a11y();
         let mut active = self.active;
         let mut hovered = use_state(|| false);
@@ -142,10 +166,12 @@ impl Component for Connection {
                     .child(
                         label()
                             .text(endpoints.clone())
+                            .max_lines(1)
+                            .text_overflow(TextOverflow::Ellipsis)
                             .width(Size::flex(1.))
-                            .font_size(t::TEXT_BODY),
+                            .font_size(t::body()),
                     )
-                    .maybe_child((!ending).then(|| label().text("›").font_size(t::TEXT_BODY))),
+                    .maybe_child((!ending).then(|| label().text("›").font_size(t::body()))),
             )
             .child(
                 label()
@@ -154,8 +180,10 @@ impl Component for Connection {
                     } else {
                         detail.clone()
                     })
-                    .font_size(t::TEXT_SMALL)
-                    .color(palette::muted(writer.dark)),
+                    .font_size(t::small())
+                    .max_lines(2)
+                    .text_overflow(TextOverflow::Ellipsis)
+                    .color(colors.muted),
             );
         if ending {
             rect()
@@ -167,6 +195,7 @@ impl Component for Connection {
                 .into_element()
         } else {
             crate::design::Button::new()
+                .flat()
                 .a11y_id(focus)
                 .width(Size::fill())
                 .named(format!("{action}. {endpoints}. {detail}"))

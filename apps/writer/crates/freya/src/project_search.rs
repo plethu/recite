@@ -99,12 +99,13 @@ impl Component for ProjectSearch {
                 .child(
                     label()
                         .text(format!("{} of {total} saved passages", hits.len()))
-                        .font_size(t::TEXT_SMALL),
+                        .font_size(t::small()),
                 )
                 .child(list);
             if hits.is_empty() {
-                content =
-                    content.child(label().text("No matching saved passages. Try fewer words."));
+                content = content.child(label().text(crate::messages::text(
+                    crate::messages::MsgId::WriterGuiNoMatchingSavedPassagesTryFewerWords,
+                )));
             }
             if hits.len() < *total {
                 content = content.child(
@@ -113,7 +114,9 @@ impl Component for ProjectSearch {
                             let next = *limit.peek() + 100;
                             limit.set(next);
                         })
-                        .child("Show more results"),
+                        .child(crate::messages::text(
+                            crate::messages::MsgId::WriterGuiShowMoreResults,
+                        )),
                 );
             }
         }
@@ -143,15 +146,15 @@ fn result_row(
         .child(
             rect()
                 .width(Size::fill())
-                .child(label().text(caption).font_size(t::TEXT_SMALL))
-                .child(label().text(excerpt).font_size(t::TEXT_SMALL)),
+                .child(label().text(caption).font_size(t::small()))
+                .child(label().text(excerpt).font_size(t::small())),
         )
         .into_element()
 }
 
 fn open_result(
     mut writer: Writer,
-    mut files: State<Option<ProjectFiles>>,
+    files: State<Option<ProjectFiles>>,
     hit: &recite_writer_model::SearchHit,
 ) {
     let path = files
@@ -162,22 +165,17 @@ fn open_result(
         return;
     };
     let same = files.peek().as_ref().is_some_and(|p| p.current == path);
-    if !same {
-        if !writer.buffers.can_leave(files.peek().as_ref()) {
-            writer
-                .message
-                .error("Save changes before opening a result in another scene.".into());
-            return;
-        }
-        if let Some(project) = files.write().as_mut() {
-            match project.select(&path) {
-                Ok(next) => writer.buffers.install(next, writer.dark),
-                Err(error) => {
-                    writer.message.error(error.to_string());
-                    return;
-                }
+    if !same
+        && let Err(error) = writer.buffers.switch(files, &path, writer.dark, |m| {
+            if m.view() == &recite_writer_model::View::Block(hit.beat.clone()) {
+                Ok(())
+            } else {
+                m.inspect_block(&hit.beat)
             }
-        }
+        })
+    {
+        writer.message.error(error);
+        return;
     }
     writer.inspect(&hit.beat);
 }

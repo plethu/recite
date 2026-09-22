@@ -1,5 +1,6 @@
 mod worker;
-pub(super) use worker::RecoveryStore;
+pub(crate) use worker::SnapshotStore;
+pub(crate) type RecoveryStore = SnapshotStore<Recovery>;
 // A locked, atomic recovery snapshot beside each edited document.
 use std::{
     fs::{self, File, OpenOptions},
@@ -29,14 +30,25 @@ impl Recovery {
     }
 }
 
-struct RecoveryDisk {
+pub(crate) trait Snapshot:
+    Clone + PartialEq + Serialize + serde::de::DeserializeOwned + Send + 'static
+{
+    fn valid_version(&self) -> bool;
+}
+impl Snapshot for Recovery {
+    fn valid_version(&self) -> bool {
+        self.version == 1
+    }
+}
+
+struct RecoveryDisk<T: Snapshot> {
     path: PathBuf,
     // OS lock is released even after a process crash; the empty lock file remains.
     _lock: File,
-    persisted: Option<Recovery>,
+    persisted: Option<T>,
 }
 
-impl RecoveryDisk {
+impl<T: Snapshot> RecoveryDisk<T> {
     pub fn open(source: &Path) -> Result<Self, FileError> {
         let path = sidecar(source, ".recite-editor-recovery.json");
         let lock_path = sidecar(source, ".recite-editor-recovery.lock");
@@ -58,8 +70,8 @@ impl RecoveryDisk {
         })?;
         let persisted = match read_regular(&path) {
             Ok(text) => {
-                let recovery: Recovery = serde_json::from_str(&text)?;
-                if recovery.version != 1 {
+                let recovery: T = serde_json::from_str(&text)?;
+                if !recovery.valid_version() {
                     return Err(FileError::RecoveryVersion);
                 }
                 Some(recovery)
@@ -74,11 +86,11 @@ impl RecoveryDisk {
         })
     }
 
-    pub fn snapshot(&self) -> Option<&Recovery> {
+    pub fn snapshot(&self) -> Option<&T> {
         self.persisted.as_ref()
     }
 
-    pub fn persist(&mut self, recovery: Option<Recovery>) -> Result<(), FileError> {
+    pub fn persist(&mut self, recovery: Option<T>) -> Result<(), FileError> {
         if recovery == self.persisted {
             return Ok(());
         }

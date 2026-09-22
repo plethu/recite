@@ -159,9 +159,12 @@ impl Workbench {
         self.select(View::Passage(id))
     }
     pub fn start_preview(&mut self) -> Result<(), WorkbenchError> {
+        self.start_preview_with(crate::PreviewSetup::default())
+    }
+    pub fn start_preview_with(&mut self, setup: crate::PreviewSetup) -> Result<(), WorkbenchError> {
         self.require_applied()?;
         let selected = self.selected_block()?;
-        let mut preview = Preview::at_block(&self.document, selected.as_deref())?;
+        let mut preview = Preview::configured(&self.document, selected.as_deref(), setup)?;
         let page = preview.advance(None)?;
         self.preview = Some(preview);
         self.page = Some(page);
@@ -181,6 +184,40 @@ impl Workbench {
         self.page = Some(preview.advance(choice)?);
         Ok(())
     }
+    pub fn answer_preview(
+        &mut self,
+        value: recite_runtime::ConditionValue,
+    ) -> Result<(), WorkbenchError> {
+        let request = self
+            .page
+            .as_ref()
+            .and_then(|p| p.condition.clone())
+            .ok_or(WorkbenchError::NoPreview)?;
+        let preview = self.preview.as_mut().ok_or(WorkbenchError::NoPreview)?;
+        self.page = Some(preview.answer(&request, value)?);
+        Ok(())
+    }
+    pub fn acknowledge_preview(
+        &mut self,
+        ack: recite_runtime::EffectAck,
+    ) -> Result<(), WorkbenchError> {
+        let id = self
+            .page
+            .as_ref()
+            .and_then(|p| p.waiting_effect.clone())
+            .ok_or(WorkbenchError::NoPreview)?;
+        let preview = self.preview.as_mut().ok_or(WorkbenchError::NoPreview)?;
+        self.page = Some(preview.acknowledge(id, ack)?);
+        Ok(())
+    }
+    pub fn preview_trace(&self) -> Option<&recite_runtime::PreviewTrace> {
+        self.preview.as_ref().map(Preview::trace)
+    }
+
+    pub fn preview_events(&self) -> &[recite_runtime::PreviewEvent] {
+        self.preview.as_ref().map_or(&[], Preview::events)
+    }
+
     pub fn preview_page(&self) -> Option<&PreviewPage> {
         self.page.as_ref()
     }

@@ -132,7 +132,7 @@ production suppressions must carry a narrow scope and rationale.
 | `crates/recite-lsp/src/tests/availability/completion.rs` | 373 | test/support | lsp/tests | review | #176: contextual selector completion coverage |
 | `crates/recite-benchmarks/src/report/mod.rs` | 389 | production | benchmarks | cohesive | Report aggregation boundary |
 | `crates/recite-benchmarks/src/report/fixture.rs` | 387 | production | benchmarks | cohesive | Fixture report model |
-| `crates/recite-cli/src/dialogue_locale/catalog.rs` | 284 | production | cli/localisation | review | #180/#191: catalogue loading and validated plural-arm evidence remain a cohesive provider boundary |
+| `crates/recite-cli/src/dialogue_locale/catalog.rs` | 286 | production | cli/localisation | review | #180/#191: catalogue loading and validated plural-arm evidence remain a cohesive provider boundary |
 | `crates/recite-cli/src/runtime_fixture/trace/model.rs` | 263 | production | cli/runtime-fixture | review | #180: trace output model keeps localized templates and structured metadata distinct |
 | `crates/recite-godot/src/adapter.rs` | 361 | production | godot | review | Host adapter lifecycle boundary |
 | `crates/recite-lsp/src/server.rs` | 279 | production | lsp/server | review | #164: request dispatch and protocol lifecycle remain the server boundary; notification lifecycle handlers are split into a focused protocol module |
@@ -244,3 +244,4 @@ production suppressions must carry a narrow scope and rationale.
 | `tests/editor-parity/mutate_fixture.py` | 478 | test/support | editor-parity/tests | review | #202: editor-parity contract mutations for host records and evidence boundaries remain one fixture mutation suite; split before another evidence family |
 | `tests/lint-suppressions/check.sh` | 398 | test/support | lint-policy/tests | review | Hostile suppression-policy fixture scenarios remain one executable contract suite |
 | `tests/maintainability/check.sh` | 376 | test/support | maintainability/tests | review | Core Rust threshold, baseline, zero-SHA, and inherited-debt fixtures remain one contract suite |
+| `crates/recite-compiler/tests/authoring_catalog_summary.rs` | 372 | test/support | compiler/localisation-tests | review | Catalogue identity, fallback candidates and summary counts share one provider contract suite, including private-use locale coverage |

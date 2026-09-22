@@ -8,6 +8,8 @@ pub(crate) struct PickerOption {
     pub value: String,
     pub title: String,
     pub detail: String,
+    /// Human-facing tag or context, independent of the opaque selection value.
+    pub annotation: String,
 }
 
 #[derive(Clone, PartialEq)]
@@ -44,8 +46,13 @@ impl Component for SearchPicker {
         let choose = self.choose.clone();
         let vim = self.vim;
         let colors = t::colors();
+        let mut previous_query = use_state(|| None::<String>);
         use_after_side_effect(move || {
-            let _ = query.read();
+            let current = query.read().clone();
+            if previous_query.peek().as_ref() == Some(&current) {
+                return;
+            }
+            previous_query.set(Some(current));
             active.set_if_modified(0);
             scroll.scroll_to(ScrollPosition::Start, Direction::Vertical);
         });
@@ -93,7 +100,10 @@ impl Component for SearchPicker {
                                 .rem_euclid(options.len() as isize)
                                 as usize;
                             active.set(next);
-                            scroll.scroll_to_y(-((next.saturating_sub(2) * 56) as i32));
+                            scroll.scroll_to_y(
+                                -((next.saturating_sub(2) * t::picker_row_height() as usize)
+                                    as i32),
+                            );
                         }
                         event.stop_propagation();
                         event.prevent_default();
@@ -145,7 +155,7 @@ impl Component for SearchPicker {
                                     self.selected.clone()
                                 }),
                         )
-                        .child(label().text("▾")),
+                        .child(crate::controls::Icon::ChevronDown.colored(colors.muted)),
                 )
                 .into_element()
         };
@@ -164,7 +174,7 @@ impl Component for SearchPicker {
                 }
             })
             .width(Size::fill())
-            .height(Size::px(t::CONTROL_HEIGHT))
+            .height(Size::px(t::control_height()))
             .on_sized(move |event: Event<SizedEventData>| anchor.set_if_modified(Some(event.area)))
             .child(field);
         if *self.open.read()
@@ -173,10 +183,41 @@ impl Component for SearchPicker {
             let options = self.options.clone();
             let choose = self.choose.clone();
             let count = options.len();
-            let height = (count.min(4) * 56) as f32;
-            let window = Platform::get().root_size.read().height;
-            let top = if area.max_y() + height + 54. > window {
-                (area.min_y() - height - 54.).max(8.)
+            let height = count.min(5) as f32 * t::picker_row_height();
+            let hint = if count == 0 {
+                Some(if self.query.read().trim().is_empty() {
+                    self.empty_hint.clone()
+                } else {
+                    self.no_matches.clone()
+                })
+            } else if vim {
+                Some(
+                    if *normal.read() {
+                        "NORMAL · j k / ↑ ↓ · Enter"
+                    } else {
+                        "INSERT · ↑ ↓ · Enter · Esc → NORMAL"
+                    }
+                    .into(),
+                )
+            } else {
+                None
+            };
+            let popup_height = height
+                + 2. * t::SPACE_XS
+                + if hint.is_some() {
+                    t::control_height()
+                } else {
+                    0.
+                };
+            let window_size = *Platform::get().root_size.read();
+            let window = window_size.height;
+            let width = area
+                .width()
+                .min(t::PICKER_MAX_WIDTH)
+                .min((window_size.width - 16.).max(0.));
+            let left = area.min_x().min((window_size.width - width - 8.).max(8.));
+            let top = if area.max_y() + popup_height + 6. > window {
+                (area.min_y() - popup_height - 6.).max(8.)
             } else {
                 area.max_y() + 6.
             };
@@ -192,7 +233,7 @@ impl Component for SearchPicker {
                     }
                     rect()
                         .key(item.index)
-                        .height(Size::px(56.))
+                        .height(Size::px(t::picker_row_height()))
                         .width(Size::fill())
                         .child(
                             button
@@ -211,31 +252,21 @@ impl Component for SearchPicker {
                 },
             )
             .length(count)
-            .item_size(56.)
+            .item_size(t::picker_row_height())
             .scroll_controller(scroll)
             .scroll_with_arrows(false)
             .height(Size::px(height))
             .width(Size::fill());
-            let hint = if self.query.read().trim().is_empty() {
-                self.empty_hint.clone()
-            } else if count == 0 {
-                self.no_matches.clone()
-            } else if vim && *normal.read() {
-                "NORMAL · j k / ↑ ↓ · Enter".into()
-            } else if vim {
-                "INSERT · ↑ ↓ · Enter · Esc → NORMAL".into()
-            } else {
-                "↑ ↓ · Enter".into()
-            };
-            root = root.child(
-                rect()
-                    .position(Position::new_global().left(area.min_x()).top(top))
-                    .width(Size::px(area.width()))
-                    .height(Size::px(height + 44.))
-                    .layer(Layer::Overlay)
-                    .background(colors.surface)
+            root = root.child(super::motion::Appear {
+                area: Area::new((left, top).into(), Size2D::new(width, popup_height)),
+                content: rect()
+                    .width(Size::fill())
+                    .height(Size::fill())
+                    .background(colors.floating)
+                    .padding(t::SPACE_XS)
+                    .shadow((0., 6., 20., 0., colors.shadow))
                     .border(Border::new().width(1.).fill(colors.rule))
-                    .corner_radius(t::RADIUS)
+                    .corner_radius(t::DIALOG_RADIUS)
                     .on_sized(move |event: Event<SizedEventData>| {
                         popup.set_if_modified(Some(event.area))
                     })
@@ -256,14 +287,15 @@ impl Component for SearchPicker {
                             .a11y_alt(self.name.clone())
                             .child(list),
                     )
-                    .child(
+                    .maybe_child(hint.map(|hint| {
                         label()
                             .text(hint)
-                            .font_size(t::TEXT_SMALL)
+                            .font_size(t::small())
                             .color(colors.muted)
-                            .padding(t::SPACE_SM),
-                    ),
-            );
+                            .padding(t::SPACE_SM)
+                    }))
+                    .into_element(),
+            });
         }
         root
     }
@@ -277,7 +309,7 @@ fn option_row(option: &PickerOption, muted: Color) -> Rect {
         name = name.child(
             label()
                 .text(option.detail.clone())
-                .font_size(t::TEXT_SMALL)
+                .font_size(t::small())
                 .color(muted),
         );
     }
@@ -286,11 +318,12 @@ fn option_row(option: &PickerOption, muted: Color) -> Rect {
         .content(Content::Flex)
         .width(Size::fill())
         .cross_align(Alignment::Center)
+        .spacing(t::SPACE_SM)
         .child(name)
-        .child(
+        .maybe_child((!option.annotation.is_empty()).then(|| {
             label()
-                .text(option.value.clone())
-                .font_size(t::TEXT_SMALL)
-                .color(muted),
-        )
+                .text(option.annotation.clone())
+                .font_size(t::small())
+                .color(muted)
+        }))
 }

@@ -26,6 +26,14 @@ pub struct Passage {
 pub(crate) fn passages(source: &str) -> Result<Vec<Passage>, EditError> {
     let parsed = parse(DOCUMENT_NAME, source);
     let lowered = parsed.lower_source_file();
+    passages_from(source, &parsed, &lowered)
+}
+
+pub(crate) fn passages_from(
+    source: &str,
+    parsed: &recite_parser::Parse,
+    lowered: &recite_parser::LoweredSourceFile,
+) -> Result<Vec<Passage>, EditError> {
     if !lowered.diagnostics.is_empty() {
         return Err(EditError::SourceRequired("repair the syntax diagnostics"));
     }

@@ -15,11 +15,10 @@ struct DocumentIndex {
     hits: Vec<SearchHit>,
     words: BTreeMap<String, Vec<usize>>,
 }
-fn words(text: &str) -> BTreeSet<String> {
+fn words(text: &str) -> impl Iterator<Item = String> + '_ {
     text.split(|c: char| !c.is_alphanumeric() && c != '_')
         .filter(|word| !word.is_empty())
         .map(str::to_lowercase)
-        .collect()
 }
 impl DocumentIndex {
     pub fn build(documents: &[SavedDocument]) -> Self {
@@ -49,11 +48,15 @@ impl DocumentIndex {
                             speaker,
                             text: text.clone(),
                         };
-                        for word in words(&format!(
-                            "{} {} {} {}",
-                            hit.document, hit.beat, hit.speaker, hit.text
-                        )) {
-                            index.words.entry(word).or_default().push(id);
+                        for field in [&hit.document, &hit.beat, &hit.speaker, &hit.text] {
+                            for word in words(field) {
+                                let postings = index.words.entry(word).or_default();
+                                // Hits arrive in source order, so the last ID deduplicates
+                                // repeated words within and across this hit's fields.
+                                if postings.last() != Some(&id) {
+                                    postings.push(id);
+                                }
+                            }
                         }
                         index.hits.push(hit);
                     });
@@ -63,8 +66,7 @@ impl DocumentIndex {
         index
     }
     /// All query words must match. Results preserve document/source order.
-    pub fn search(&self, query: &str, limit: usize) -> (usize, Vec<SearchHit>) {
-        let terms = words(query);
+    pub fn search(&self, terms: &BTreeSet<String>, limit: usize) -> (usize, Vec<SearchHit>) {
         if terms.is_empty() {
             return (0, Vec::new());
         }
@@ -131,10 +133,11 @@ impl SearchIndex {
         self.len() == 0
     }
     pub fn search(&self, query: &str, limit: usize) -> (usize, Vec<SearchHit>) {
+        let terms = words(query).collect();
         let mut count = 0;
         let mut hits = Vec::new();
         for (_, document) in &self.documents {
-            let (found, matches) = document.search(query, limit.saturating_sub(hits.len()));
+            let (found, matches) = document.search(&terms, limit.saturating_sub(hits.len()));
             count += found;
             hits.extend(matches);
         }

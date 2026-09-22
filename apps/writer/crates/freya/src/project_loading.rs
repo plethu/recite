@@ -142,7 +142,7 @@ impl Component for Loading {
                         } else {
                             "Opening project…"
                         })
-                        .font_size(t::TEXT_SMALL),
+                        .font_size(t::small()),
                 )
                 .child(
                     Button::new()
@@ -153,7 +153,9 @@ impl Component for Loading {
                                 current.cancelled = true;
                             }
                         })
-                        .child("Cancel opening"),
+                        .child(crate::messages::text(
+                            crate::messages::MsgId::WriterGuiCancelOpening,
+                        )),
                 )
         }))
     }

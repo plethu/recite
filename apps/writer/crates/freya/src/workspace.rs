@@ -40,11 +40,16 @@ impl PartialEq for Workspace {
 impl Component for Workspace {
     fn render(&self) -> impl IntoElement {
         let writer = self.writer;
-        let mut available = use_state(|| 1200.);
-        let navigation_width = use_state(|| 224_f32);
-        let script_width = use_state(|| 520_f32);
-        let visible = *self.navigation_visible.read();
-        let editing = !self.source && *writer.pane.read() == Pane::Script;
+        let mut available = writer.layout.available;
+        let navigation_width = writer.layout.drawer_width;
+        let script_width = writer.layout.script_width;
+        let focus = *writer.layout.focus.read();
+        let standalone = writer.layout.standalone();
+        let visible = writer.layout.navigation_expanded();
+        let show_split = writer.layout.show_split(writer);
+        let full_script =
+            !self.source && (standalone || *writer.pane.read() == Pane::Script) && !show_split;
+        let editing = !self.source && *writer.pane.read() == Pane::Script && show_split;
         let left = writer.preferences.read().config.writer.pane_side == WriterPaneSide::Left;
         let nav_max = NAV_MAX.min(
             (*available.read()
@@ -59,32 +64,55 @@ impl Component for Workspace {
         let nav_width = if visible {
             (*navigation_width.read()).clamp(NAV_MIN, nav_max)
         } else {
-            t::COLLAPSED_DRAWER_WIDTH
+            t::collapsed_drawer_width()
         };
         let script_max = SCRIPT_MAX.min(
             (*available.read() - nav_width - MAP_MIN - 2. * t::SPLITTER_WIDTH).max(SCRIPT_MIN),
         );
         let pane_width = (*script_width.read()).clamp(SCRIPT_MIN, script_max);
-        let pane = self.writing_pane(pane_width);
+        let pane = self.writing_pane(if full_script {
+            f32::INFINITY
+        } else {
+            pane_width
+        });
         let divider = Splitter {
-            name: "Resize script pane",
+            name: crate::messages::text(crate::messages::MsgId::WriterWorkspaceResizeScript),
             width: script_width,
             min: SCRIPT_MIN,
             max: script_max,
             direction: if left { 1. } else { -1. },
+            changed: EventHandler::new(move |width| {
+                crate::presentation::resize(
+                    writer,
+                    recite_config::WriterPresentationField::ScriptWidth,
+                    width,
+                )
+            }),
         };
         let mut editor = rect()
             .horizontal()
             .content(Content::Flex)
             .width(Size::fill())
             .height(Size::flex(1.));
-        if writer.localisation.read().active {
+        if *writer.pane.read() == Pane::Disk {
+            editor = editor.child(crate::external::ExternalScreen { writer });
+        } else if *writer.pane.read() == Pane::Rename {
+            editor = editor.child(crate::rename::RenameScreen { writer });
+        } else if *writer.pane.read() == Pane::Build {
+            editor = editor.child(crate::builds::BuildScreen { writer });
+        } else if *writer.pane.read() == Pane::Declarations {
+            editor = editor.child(crate::declarations::Declarations { writer });
+        } else if *writer.pane.read() == Pane::Rules {
+            editor = editor.child(crate::rules::RulesScreen { writer });
+        } else if *writer.pane.read() == Pane::Preview {
+            editor = editor.child(crate::preview_panel::PreviewScreen { writer });
+        } else if writer.localisation.read().active {
             editor = editor.child(crate::localisation::Surface {
                 writer,
                 reading: self.reading.clone(),
                 files: self.files,
             });
-        } else if self.source {
+        } else if self.source || full_script {
             editor = editor.child(pane);
         } else if editing && left {
             editor = editor.child(pane).child(divider).child(self.map.clone());
@@ -104,18 +132,26 @@ impl Component for Workspace {
             .on_sized(move |e: Event<SizedEventData>| {
                 available.set_if_modified(e.area.width());
             })
-            .maybe_child((!updates).then_some(Sidebar {
+            .maybe_child((!updates && !focus).then_some(Sidebar {
                 writer,
                 visible: self.navigation_visible,
                 width: nav_width,
+                expanded: visible,
                 scenes: self.scenes.clone(),
             }))
             .maybe_child((visible && !updates).then_some(Splitter {
-                name: "Resize scene drawer",
+                name: crate::messages::text(crate::messages::MsgId::WriterWorkspaceResizeDrawer),
                 width: navigation_width,
                 min: NAV_MIN,
                 max: nav_max,
                 direction: 1.,
+                changed: EventHandler::new(move |width| {
+                    crate::presentation::resize(
+                        writer,
+                        recite_config::WriterPresentationField::DrawerWidth,
+                        width,
+                    )
+                }),
             }))
             .child(
                 rect()
@@ -124,6 +160,7 @@ impl Component for Workspace {
                     .width(Size::flex(1.))
                     .height(Size::fill())
                     .background(palette::reading(writer.dark))
+                    .maybe_child((!focus).then_some(crate::document_tabs::DocumentTabs { writer }))
                     .child(self.toolbar.clone())
                     .child(editor),
             )
@@ -140,14 +177,14 @@ impl Workspace {
             .a11y_focusable(true)
             .a11y_role(AccessibilityRole::Group)
             .a11y_alt("Beat editor")
-            .width(if source {
+            .width(if source || !width.is_finite() {
                 Size::fill()
             } else {
                 Size::px(width)
             })
             .height(Size::fill())
             .on_key_down(move |e: Event<KeyboardEventData>| {
-                if e.key == Key::Named(NamedKey::Escape) && !source {
+                if e.key == Key::Named(NamedKey::Escape) && !source && !writer.layout.standalone() {
                     e.stop_propagation();
                     writer.close_editor();
                 }
@@ -158,7 +195,18 @@ impl Workspace {
                 ScrollView::new_controlled(writer.scroll)
                     .height(Size::flex(1.))
                     .width(Size::fill())
-                    .child(self.reading.clone())
+                    .child(
+                        rect()
+                            .width(Size::fill())
+                            .cross_align(Alignment::Center)
+                            .padding((t::SPACE_MD, t::SPACE_LG))
+                            .child(
+                                rect()
+                                    .width(Size::fill())
+                                    .max_width(Size::px(t::prose_size() * 34.))
+                                    .child(self.reading.clone()),
+                            ),
+                    )
                     .into_element()
             })
             .maybe_child((!source).then_some(crate::reading_context::ReferencePanel { writer }))

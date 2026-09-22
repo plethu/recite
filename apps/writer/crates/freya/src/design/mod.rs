@@ -16,11 +16,11 @@ pub(crate) use reveal::Reveal;
 pub(crate) mod palette;
 
 mod options;
-pub(crate) use options::Options;
+pub(crate) use options::{Options, Segments};
 
-mod dialog_action;
 pub(crate) mod keyboard;
-pub(crate) use dialog_action::DialogAction;
+mod submit_action;
+pub(crate) use submit_action::SubmitAction;
 mod search_picker;
 pub(crate) use search_picker::{PickerOption, SearchPicker};
 
@@ -29,3 +29,16 @@ pub(crate) use search_field::SearchField;
 
 mod path_field;
 pub(crate) use path_field::{PathField, PathKind};
+
+mod comparison;
+pub(crate) use comparison::{ComparisonRow, ComparisonView};
+
+mod motion;
+pub(crate) use motion::ReducedMotion;
+
+mod beat_card;
+pub(crate) use beat_card::{BeatCard, DIALOGUE_ZOOM};
+
+pub(crate) mod specimen;
+
+mod material;

@@ -119,7 +119,7 @@ fn whole_scene_source_and_dark_theme_render() -> Result<(), Box<dyn std::error::
     click_label(&mut test, "Try scene")?;
     capture(&mut test, "script-preview.png")?;
     click_label(&mut test, "Continue")?;
-    click_label(&mut test, "Close preview")?;
+    click_label(&mut test, "Return to writing")?;
     support::dark_theme(&mut test)?;
     capture(&mut test, "script-dark.png")?;
     click_label(&mut test, "Source")?;
@@ -135,7 +135,7 @@ fn whole_scene_source_and_dark_theme_render() -> Result<(), Box<dyn std::error::
     capture(&mut test, "source-dark.png")?;
     support::click(&mut test, "Settings")?;
     support::click(&mut test, "Theme: Light")?;
-    support::click(&mut test, "Close settings")?;
+    support::click(&mut test, "Done")?;
     capture(&mut test, "source-light.png")?;
     Ok(())
 }
@@ -228,9 +228,11 @@ fn project_open_save_and_conflict_keep_the_authored_text() -> Result<(), Box<dyn
     let recovery_path = dir.path().join("scene.recite.recite-editor-recovery.json");
     assert!(std::fs::read_to_string(&recovery_path)?.contains("A saved question."));
     click_label(&mut test, "Second")?;
+    assert!(recovery_path.exists());
+    click_label(&mut test, "Scene")?;
     assert!(
-        test.find(|_, element| Label::try_downcast(element)
-            .filter(|l| l.text.contains("before changing files")))
+        test.find(|_, element| Paragraph::try_downcast(element)
+            .filter(|p| p.spans.iter().any(|s| s.text == "A saved question.")))
             .is_some()
     );
     assert_eq!(
@@ -288,6 +290,7 @@ fn line_details_can_be_opened_and_closed_without_panicking()
     test.poll_n(std::time::Duration::from_millis(16), 15);
     click_label(&mut test, "Passage actions ▾")?;
     click_label(&mut test, "Line / choice details")?;
+    capture(&mut test, "passage-inspector.png")?;
     assert!(
         test.find(|_, element| Label::try_downcast(element)
             .filter(|label| label.text.contains("7701ceab59d2adfa057a")))

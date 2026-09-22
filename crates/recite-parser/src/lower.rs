@@ -81,6 +81,24 @@ impl<'source, 'diagnostics> Lowerer<'source, 'diagnostics> {
         }
     }
 
+    // A sole statement needs one slot, not Vec's default four large AST slots.
+    // Bodies that may contain more statements keep normal growth.
+    pub(super) fn reserve_single_statement(
+        &self,
+        statements: &mut Vec<Statement>,
+        cursor: &crate::body::BodyCursor,
+        next_index: usize,
+    ) {
+        if statements.capacity() == 0
+            && self.lines[next_index..]
+                .iter()
+                .find(|line| !line.trimmed_content().is_empty())
+                .is_none_or(|line| cursor.is_boundary(*line))
+        {
+            statements.reserve_exact(1);
+        }
+    }
+
     pub(super) fn mark(&mut self, class: SourceRecoveryClass) {
         self.recovery.mark(class);
     }

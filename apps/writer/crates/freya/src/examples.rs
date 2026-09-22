@@ -17,7 +17,7 @@ pub(super) fn navigation(writer: Writer, mut message: crate::feedback::Feedback)
             open: EventHandler::new(move |()| match select(writer, index) {
                 Err(error) => message.error(error),
                 Ok(()) => {
-                    let _ = writer.scene_opened();
+                    let _ = writer.resume_scene();
                 }
             }),
         });
@@ -50,6 +50,7 @@ pub(super) fn select_at(
     if current == example.name {
         return Ok(());
     }
+    writer.remember_scene();
     writer.buffers.harvest();
     let next = {
         let mut parked = writer.examples.write();
@@ -77,6 +78,8 @@ pub(super) fn select_at(
         ));
         writer.buffers.prose.set(session.draft().to_owned());
     }
+    drop(state);
+    writer.buffers.restore();
     writer.message.clear();
     Ok(())
 }

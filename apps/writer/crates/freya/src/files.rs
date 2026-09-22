@@ -5,6 +5,7 @@ use freya::prelude::*;
 
 pub(crate) struct FileChrome {
     pub actions: Element,
+    pub services: Element,
     pub project_panel: Element,
     pub scenes: Element,
     pub status: String,
@@ -28,6 +29,12 @@ pub(crate) fn controls(
     let browse_id = use_a11y();
     let mut files = writer.files;
     let mut project_panel_open = use_state(|| path.peek().is_empty());
+    let mut project_controls = writer.layout.project_controls;
+    use_hook(move || {
+        project_controls.set(Some(EventHandler::new(move |()| {
+            project_panel_open.set(true)
+        })))
+    });
     let job = use_state(|| None::<crate::project_loading::LoadJob>);
     use_hook(move || {
         if !path.peek().is_empty() {
@@ -44,9 +51,11 @@ pub(crate) fn controls(
         let Ok(workbench) = state.as_ref() else {
             return;
         };
-        if let Some(project) = files.write().as_mut()
-            && let Err(error) = project.queue_checkpoint(workbench)
-        {
+        let failure = files
+            .write()
+            .as_mut()
+            .and_then(|project| project.queue_checkpoint(workbench).err());
+        if let Some(error) = failure {
             message.error_with_action(
                 format!("Draft recovery failed: {error}. Keep this window open and retry Save."),
                 "Retry save".into(),
@@ -58,11 +67,6 @@ pub(crate) fn controls(
     let actions = rect()
         .horizontal()
         .spacing(t::SPACE_SM)
-        .on_global_key_down(move |event: Event<KeyboardEventData>| {
-            if crate::editing::is_save_key(&event) {
-                message.report(buffers.save(files), "Saved.".into());
-            }
-        })
         .child(
             Button::new()
                 .flat()
@@ -70,17 +74,35 @@ pub(crate) fn controls(
                     let next = !*project_panel_open.peek();
                     project_panel_open.set(next);
                 })
-                .child("Project"),
+                .child(crate::messages::text(
+                    crate::messages::MsgId::WriterGuiProject,
+                )),
         )
         .child(
             Button::new()
                 .filled()
                 .enabled(current.is_some())
                 .on_press(move |_| {
-                    message.report(buffers.save(files), "Saved.".into());
+                    crate::commands::Command::Save.run(writer);
                 })
-                .child("Save"),
+                .child(
+                    if current
+                        .as_ref()
+                        .zip(buffers.model.read().as_ref().ok())
+                        .is_some_and(|(project, model)| project.project_edit_pending(model))
+                    {
+                        crate::messages::text(crate::messages::MsgId::WriterSaveProject)
+                    } else {
+                        "Save".into()
+                    },
+                ),
         )
+        .into_element();
+    let services = rect()
+        .child(crate::localisation::watching::CatalogueWatch { writer })
+        .child(crate::external::WatchPoll { writer })
+        .child(crate::builds::BuildPoll { writer })
+        .child(crate::declarations::ProducerPoll { writer })
         .child(crate::recovery::status::RecoveryStatus { files })
         .child(crate::project_loading::Loading {
             writer,
@@ -132,10 +154,54 @@ pub(crate) fn controls(
                     Button::new()
                         .enabled(!path.read().trim().is_empty() && job.read().is_none())
                         .on_press(move |_| open.call(()))
-                        .child("Open project"),
+                        .child(crate::messages::text(
+                            crate::messages::MsgId::WriterGuiOpenProject,
+                        )),
                 ),
         );
         if let Some(project) = current.as_ref() {
+            panel = panel
+                .child(
+                    Button::new()
+                        .flat()
+                        .on_press(move |_| {
+                            project_panel_open.set(false);
+                            crate::external::open(writer);
+                        })
+                        .child(crate::messages::text(
+                            crate::messages::MsgId::WriterCompareDisk,
+                        )),
+                )
+                .child(
+                    Button::new()
+                        .flat()
+                        .on_press(move |_| crate::external::open_editor(writer))
+                        .child(crate::messages::text(
+                            crate::messages::MsgId::WriterSaveExternal,
+                        )),
+                );
+            panel = panel.child(
+                Button::new()
+                    .flat()
+                    .on_press(move |_| {
+                        project_panel_open.set(false);
+                        crate::builds::open(writer);
+                    })
+                    .child(crate::messages::text(
+                        crate::messages::MsgId::WriterBuildScenes,
+                    )),
+            );
+            panel = panel.child(
+                Button::new()
+                    .flat()
+                    .on_press(move |_| {
+                        project_panel_open.set(false);
+                        crate::declarations::open(writer);
+                    })
+                    .child(crate::messages::text(
+                        crate::messages::MsgId::WriterDeclarations,
+                    )),
+            );
             panel = panel.child(label().text(project.current.display().to_string()).color(crate::palette::muted(dark)))
                 .child(rect().horizontal().spacing(t::SPACE_SM)
                     .child(Button::new().flat().on_press(move |_| {
@@ -145,7 +211,7 @@ pub(crate) fn controls(
                         if let Ok(workbench) = state.as_mut() && let Some(project) = files.write().as_mut() {
                             message.report(project.refresh(workbench).map_err(|error| error.to_string()), "Project refreshed. Restart preview to use the updated sources and schema.".into());
                         }
-                    }).child("Refresh project context"))
+                    }).child(crate::messages::text(crate::messages::MsgId::WriterGuiRefreshProjectContext)))
                     .child(Button::new().flat().on_press(move |_| {
                         buffers.harvest();
                         let state = buffers.model.peek();
@@ -161,7 +227,7 @@ pub(crate) fn controls(
                                 Err(error) => message.error(error.to_string()),
                             }
                         }
-                    }).child("Keep recovery copy and reload disk")));
+                    }).child(crate::messages::text(crate::messages::MsgId::WriterGuiKeepRecoveryCopyAndReloadDisk))));
         }
     }
     let project_panel = if *project_panel_open.read() {
@@ -179,25 +245,11 @@ pub(crate) fn controls(
             scenes.push(crate::scene_navigation::SceneBranch {
                 caption,
                 active: target == project.current,
-                open: EventHandler::new(move |()| {
-                    if !buffers.can_leave(files.peek().as_ref()) {
-                        message.error(
-                            "Save changes and apply or discard the draft before changing files."
-                                .into(),
-                        );
-                        return;
+                open: EventHandler::new(move |()| match writer.open_document(&target) {
+                    Ok(()) => {
+                        message.info("Scene opened.".into());
                     }
-                    if let Some(project) = files.write().as_mut() {
-                        match project.select(&target) {
-                            Ok(next) => {
-                                buffers.install(next, dark);
-                                if writer.scene_opened().is_ok() {
-                                    message.info("Scene opened.".into());
-                                }
-                            }
-                            Err(error) => message.error(error.to_string()),
-                        }
-                    }
+                    Err(error) => message.error(error),
                 }),
             });
         }
@@ -217,6 +269,7 @@ pub(crate) fn controls(
     .to_owned();
     FileChrome {
         actions,
+        services,
         project_panel,
         scenes: rect()
             .width(Size::fill())

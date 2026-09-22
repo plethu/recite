@@ -10,10 +10,11 @@ pub(crate) struct Dialog {
     pub title: String,
     pub content: Element,
     pub actions: Element,
-    pub primary: super::DialogAction,
+    pub primary: super::SubmitAction,
     pub focus_order: Vec<AccessibilityId>,
     pub close: EventHandler<()>,
     pub reduced_motion: bool,
+    pub dismissal_only: bool,
 }
 impl Component for Dialog {
     fn render(&self) -> impl IntoElement {
@@ -29,6 +30,19 @@ impl Component for Dialog {
             order.retain(|id| *id != self.primary.id);
         }
         let primary = self.primary.clone();
+        let primary_button = if self.dismissal_only {
+            let action = self.primary.clone();
+            super::Button::new()
+                .flat()
+                .a11y_id(action.id)
+                .enabled(action.enabled)
+                .named(action.caption.clone())
+                .child(action.caption.clone())
+                .on_press(move |_| action.run())
+                .into_element()
+        } else {
+            self.primary.button().into_element()
+        };
         rect()
             .position(Position::new_global().top(0.).left(0.))
             .width(Size::window_percent(100.))
@@ -63,18 +77,19 @@ impl Component for Dialog {
             .child(
                 rect()
                     .width(Size::window_percent(90.))
-                    .max_width(Size::px(620.))
+                    .max_width(Size::px(620. * t::ui_scale()))
                     .max_height(Size::window_percent(90.))
                     .padding(t::SPACE_XL)
                     .spacing(t::SPACE_XL)
                     .corner_radius(t::DIALOG_RADIUS)
-                    .background(colors.surface)
+                    .background(colors.floating)
+                    .shadow((0., 12., 36., 0., colors.shadow))
                     .color(colors.ink)
                     .border(Border::new().width(1.).fill(colors.rule))
                     .a11y_role(AccessibilityRole::Dialog)
                     .a11y_alt(self.title.clone())
                     .opacity(ink.get().value())
-                    .child(label().text(self.title.clone()).font_size(t::TEXT_TITLE))
+                    .child(label().text(self.title.clone()).font_size(t::title()))
                     .child(
                         ScrollView::new()
                             .height(Size::auto())
@@ -86,7 +101,7 @@ impl Component for Dialog {
                         actions()
                             .content(Content::Flex)
                             .child(rect().width(Size::flex(1.)).child(self.actions.clone()))
-                            .child(self.primary.button()),
+                            .child(primary_button),
                     ),
             )
     }

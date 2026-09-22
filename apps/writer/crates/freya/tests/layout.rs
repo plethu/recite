@@ -90,8 +90,8 @@ fn pane_resize_is_bounded_and_script_side_changes_without_losing_the_beat()
     drag(&mut test, "Resize script pane", -900.)?;
     assert_eq!(area(&test, "Beat editor").ok_or("editor")?.width(), 800.);
     support::click(&mut test, "Settings")?;
-    support::click(&mut test, "Script pane: Left")?;
-    support::click(&mut test, "Close settings")?;
+    support::click(&mut test, "Script pane (split view): Left")?;
+    support::click(&mut test, "Done")?;
     let script = area(&test, "Beat editor").ok_or("editor")?;
     let map = area(&test, "Scene map.").ok_or("map")?;
     assert!(script.max_x() < map.min_x());
@@ -132,10 +132,14 @@ fn arrange_keeps_zoom_and_drawer_reveal_keeps_text_geometry()
 -> Result<(), Box<dyn std::error::Error>> {
     let mut test = TestingRunner::new(recite_writer::app, Size2D::new(1440., 1000.), |_| {}, 1.).0;
     test.poll_n(std::time::Duration::from_millis(16), 12);
+    support::click(&mut test, "Map")?;
     support::click(&mut test, "Zoom out")?;
-    let width = area(&test, "Edit Relay Desk").ok_or("card")?.width();
+    let width = area(&test, "Select Relay Desk").ok_or("card")?.width();
     support::click(&mut test, "Arrange automatically")?;
-    assert_eq!(area(&test, "Edit Relay Desk").ok_or("card")?.width(), width);
+    assert_eq!(
+        area(&test, "Select Relay Desk").ok_or("card")?.width(),
+        width
+    );
     support::click(&mut test, "Hide scenes")?;
     let show = area(&test, "Show scenes").ok_or("toggle")?;
     test.click_cursor((f64::from(show.center().x), f64::from(show.center().y)));
@@ -154,7 +158,7 @@ fn shared_buttons_use_pointer_cursors_and_modals_fit_a_small_window()
     let mut test = TestingRunner::new(recite_writer::app, Size2D::new(900., 650.), |_| {}, 1.).0;
     test.poll_n(std::time::Duration::from_millis(16), 12);
     support::open_beat(&mut test)?;
-    for caption in ["Rename beat", "Close beat editor"] {
+    for caption in ["Rename beat", "Pin reference"] {
         let button = test
             .find(|node, e| {
                 Rect::try_downcast(e)
@@ -169,13 +173,13 @@ fn shared_buttons_use_pointer_cursors_and_modals_fit_a_small_window()
     support::click(&mut test, "Settings")?;
     let settings = area(&test, "Settings").ok_or("settings")?;
     assert!(settings.min_y() >= 0. && settings.max_y() <= 650.);
-    let close = area(&test, "Close settings").ok_or("close settings")?;
+    let close = area(&test, "Done").ok_or("close settings")?;
     assert!(close.max_y() <= 650.);
     if let Ok(dir) = std::env::var("RECITE_WRITER_CAPTURE_DIR") {
         std::fs::create_dir_all(&dir)?;
         test.render_to_file(std::path::Path::new(&dir).join("settings-small.png"));
     }
-    support::click(&mut test, "Close settings")?;
+    support::click(&mut test, "Done")?;
     recite_writer::request_close();
     test.poll_n(std::time::Duration::from_millis(16), 12);
     let keep = area(&test, "Keep editing").ok_or("keep editing")?;

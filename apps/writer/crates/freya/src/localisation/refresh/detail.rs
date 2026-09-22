@@ -1,4 +1,5 @@
-use super::{changes::Change, diff};
+use super::changes::Change;
+use crate::design::tokens::ProseTypography;
 use crate::localisation::messages::{MsgId, text as wording};
 use crate::{
     design::{Button, tokens as t},
@@ -9,15 +10,11 @@ pub(super) fn render(change: &Change, writer: Writer) -> Element {
     let mut detail = rect()
         .width(Size::fill())
         .spacing(t::SPACE_LG)
-        .child(
-            label()
-                .text(change.caption.clone())
-                .font_size(t::TEXT_SMALL),
-        )
+        .child(label().text(change.caption.clone()).font_size(t::small()))
         .child(
             label()
                 .text(wording(change.kind.label()))
-                .font_size(t::TEXT_HEADING),
+                .font_size(t::heading()),
         );
     if !change.nearby.is_empty() {
         detail = detail.child(label().text(wording(MsgId::WriterNearbySource)));
@@ -25,16 +22,16 @@ pub(super) fn render(change: &Change, writer: Writer) -> Element {
             detail = detail.child(label().text(text.clone()));
         }
     }
-    for (title, text, other) in [
-        (MsgId::WriterPreviousSource, &change.old, &change.new),
-        (MsgId::WriterCurrentSource, &change.new, &change.old),
-    ] {
-        if let Some(text) = text {
-            detail = detail
-                .child(label().text(wording(title)))
-                .child(diff::render(text, other.as_deref().unwrap_or("")));
-        }
-    }
+    detail = detail.child(crate::design::ComparisonView {
+        code: false,
+        before: wording(MsgId::WriterPreviousSource),
+        after: wording(MsgId::WriterCurrentSource),
+        rows: vec![crate::design::ComparisonRow {
+            caption: change.caption.clone(),
+            before: change.old.clone(),
+            after: change.new.clone(),
+        }],
+    });
     detail = detail
         .child(label().text(wording(MsgId::WriterTranslation)))
         .child(
@@ -44,8 +41,8 @@ pub(super) fn render(change: &Change, writer: Writer) -> Element {
                 } else {
                     change.translation.clone()
                 })
-                .font_size(t::TEXT_PROSE)
-                .font_family("serif"),
+                .font_size(t::prose_size())
+                .prose_font(),
         );
     if !change.notes.is_empty() {
         detail = detail.child(label().text(wording(MsgId::WriterTranslatorNotes)));

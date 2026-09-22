@@ -27,14 +27,15 @@ impl Document {
         Ok(self.script_snapshot()?.to_vec())
     }
     pub(crate) fn project_script(&self) -> Result<Vec<ScriptBlock>, EditError> {
-        let parsed = parse(self.key().as_str(), self.source()).lower_source_file();
-        if !parsed.diagnostics.is_empty() {
+        let parsed = parse(self.key().as_str(), self.source());
+        let lowered = parsed.lower_source_file();
+        if !lowered.diagnostics.is_empty() {
             return Err(EditError::SourceRequired("repair the syntax diagnostics"));
         }
-        let passages = self.passage_snapshot()?;
+        let passages = self.passage_snapshot_from(&parsed, &lowered)?;
         let passages: std::collections::BTreeMap<_, _> =
             passages.iter().map(|p| (p.id.as_str(), p)).collect();
-        Ok(parsed
+        Ok(lowered
             .source_file
             .blocks
             .iter()

@@ -7,19 +7,17 @@ use recite_config::{Keymap, UserConfigEdit as Edit, WriterPaneSide, WriterTheme,
 pub(super) fn render(
     writer: Writer,
     ids: &[AccessibilityId],
-    option_ids: [[AccessibilityId; 2]; 4],
+    option_ids: [[AccessibilityId; 3]; 4],
+    size_ids: [AccessibilityId; 6],
     error: State<String>,
+    config_id: AccessibilityId,
+    mut config_visible: State<bool>,
 ) -> Element {
     let config = writer.preferences.read().config.clone();
     let mut content = rect()
         .width(Size::fill())
         .padding((0., t::SPACE_SM, 0., 0.))
-        .spacing(t::SPACE_SM)
-        .child(
-            label()
-                .text(writer.preferences.read().path.clone())
-                .font_size(t::TEXT_SMALL),
-        );
+        .spacing(t::SPACE_SM);
     for (index, name, labels, selected, edits) in [
         (
             0,
@@ -39,18 +37,8 @@ pub(super) fn render(
             [Edit::Keymap(Keymap::Standard), Edit::Keymap(Keymap::Vim)],
         ),
         (
-            2,
-            "Preferred view",
-            ["Map", "Source"],
-            usize::from(config.writer.view == WriterView::Source),
-            [
-                Edit::WriterView(WriterView::Map),
-                Edit::WriterView(WriterView::Source),
-            ],
-        ),
-        (
             3,
-            "Script pane",
+            "Script pane (split view)",
             ["Left", "Right"],
             usize::from(config.writer.pane_side == WriterPaneSide::Right),
             [
@@ -59,17 +47,43 @@ pub(super) fn render(
             ],
         ),
     ] {
+        if index == 0 || index == 1 {
+            content = content.child(section(
+                writer.dark,
+                if index == 0 { "Appearance" } else { "Editing" },
+            ));
+        }
         content = content.child(crate::design::Options {
-            name,
+            name: name.into(),
             vim: config.ui.keymap == Keymap::Vim,
-            labels,
+            labels: labels.map(str::to_owned),
             selected,
-            ids: option_ids[index],
+            ids: [option_ids[index][0], option_ids[index][1]],
             change: EventHandler::new(move |index: usize| {
                 update(writer, edits[index].clone(), error)
             }),
         });
     }
+    content = content.child(crate::design::Options {
+        name: crate::messages::text(crate::messages::MsgId::WriterWorkspaceWritingView),
+        labels: [
+            crate::commands::Command::Script.label(writer),
+            crate::commands::Command::Map.label(writer),
+            crate::commands::Command::Source.label(writer),
+        ],
+        selected: match config.writer.view {
+            WriterView::Script => 0,
+            WriterView::Map => 1,
+            WriterView::Source => 2,
+        },
+        ids: option_ids[2],
+        vim: config.ui.keymap == Keymap::Vim,
+        change: EventHandler::new(move |index| {
+            writer.set_view([WriterView::Script, WriterView::Map, WriterView::Source][index])
+        }),
+    });
+    content = content.child(super::typography::controls(writer, size_ids));
+    content = content.child(section(writer.dark, "Behaviour"));
     for (id, caption, checked, edit) in [
         (
             ids[3],
@@ -95,10 +109,44 @@ pub(super) fn render(
         }));
     }
     content
+        .maybe_child((config.ui.keymap == Keymap::Vim).then(|| {
+            label()
+                .text(crate::messages::text(
+                    crate::messages::MsgId::WriterGuiVimHelp,
+                ))
+                .font_size(t::small())
+        }))
+        .child(
+            crate::design::Button::new()
+                .flat()
+                .a11y_id(config_id)
+                .named(crate::messages::text(
+                    crate::messages::MsgId::WriterGuiConfigurationFile,
+                ))
+                .expanded(*config_visible.read())
+                .on_press(move |_| {
+                    let next = !*config_visible.peek();
+                    config_visible.set(next);
+                })
+                .child(crate::messages::text(
+                    crate::messages::MsgId::WriterGuiConfigurationFile,
+                )),
+        )
+        .maybe_child((*config_visible.read()).then(|| {
+            label()
+                .text(writer.preferences.read().path.clone())
+                .font_size(t::small())
+        }))
+        .into_element()
+}
+fn section(dark: bool, title: &'static str) -> Element {
+    rect()
+        .padding((t::SPACE_SM, 0., 0., 0.))
         .child(
             label()
-                .text("Vim: h j k l navigate · i edit · / find a beat · Escape returns to the map")
-                .font_size(t::TEXT_SMALL),
+                .text(title)
+                .font_size(t::small())
+                .color(crate::palette::muted(dark)),
         )
         .into_element()
 }

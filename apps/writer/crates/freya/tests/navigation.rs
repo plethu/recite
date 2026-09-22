@@ -91,9 +91,17 @@ fn queue_is_a_screen_and_back_restores_its_search() -> Result<(), Box<dyn std::e
             .filter(|r| r.accessibility.builder.role() == AccessibilityRole::Dialog))
             .is_none()
     );
+    let count = test
+        .find(|node, e| {
+            Label::try_downcast(e)
+                .filter(|label| label.text == "Matching entries: 41")
+                .map(|_| node.layout().area)
+        })
+        .ok_or("queue count")?;
+    assert!(count.height() < 40., "count must fit beside the filter");
     support::click(&mut test, &first.text.chars().take(180).collect::<String>())?;
     assert!(!has_text(&test, "Matching entries"));
-    assert!(has_text(&test, "Replies"));
+    assert!(has_text(&test, "Edit translation"));
     support::click(&mut test, "Back")?;
     assert!(has_input(&test, &query));
     assert!(!has_text(&test, &format!("{query} synthetic 0")));
@@ -151,7 +159,7 @@ fn fill(
 }
 
 #[test]
-fn blocked_back_preserves_edits_and_history_until_the_scene_is_saved()
+fn back_and_forward_preserve_edits_without_requiring_a_save()
 -> Result<(), Box<dyn std::error::Error>> {
     let dir = tempfile::tempdir()?;
     std::fs::write(
@@ -177,13 +185,11 @@ fn blocked_back_preserves_edits_and_history_until_the_scene_is_saved()
     support::click(&mut test, "B")?;
     fill(&mut test, "Other scene.", "Keep my changed scene.")?;
     support::click(&mut test, "Back")?;
-    assert!(has_input(&test, "Keep my changed scene."));
-    assert!(has_text(&test, "Save changes and apply or discard"));
-    support::click(&mut test, "Save")?;
-    assert!(std::fs::read_to_string(&second)?.contains("Keep my changed scene."));
-    support::click(&mut test, "Back")?;
     assert!(!has_input(&test, "Keep my changed scene."));
+    assert!(std::fs::read_to_string(&second)?.contains("Other scene."));
     support::click(&mut test, "Forward")?;
     assert!(has_input(&test, "Keep my changed scene."));
+    support::click(&mut test, "Save")?;
+    assert!(std::fs::read_to_string(&second)?.contains("Keep my changed scene."));
     Ok(())
 }

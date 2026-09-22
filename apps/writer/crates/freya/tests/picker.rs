@@ -75,7 +75,7 @@ fn vim_picker_preserves_insert_text_and_navigates_in_normal_mode()
     support::click(&mut test, "Settings")?;
     support::click(&mut test, "Keymap: Vim")?;
     submit(&mut test);
-    assert!(!has(&test, "Close settings"));
+    assert!(!has(&test, "Done"));
     start(&mut test)?;
     support::click(&mut test, "Choose language")?;
     test.write_text("jkbzz");
@@ -250,5 +250,55 @@ fn vim_navigation_is_shared_by_settings_options_and_passage_menus()
         platform.focused_accessibility_node.peek().label(),
         Some("Add choice")
     );
+    Ok(())
+}
+
+#[test]
+fn reply_destination_is_disclosed_and_escape_returns_to_its_trigger()
+-> Result<(), Box<dyn std::error::Error>> {
+    let mut test = TestingRunner::new(recite_writer::app, Size2D::new(1440., 1000.), |_| {}, 1.).0;
+    support::open_beat(&mut test)?;
+    assert!(!has(&test, "Find a destination…"));
+    support::click(&mut test, "Change destination…")?;
+    test.write_text("station history");
+    test.poll_n(std::time::Duration::from_millis(16), 6);
+    key(
+        &mut test,
+        Key::Named(NamedKey::Escape),
+        Code::Escape,
+        Modifiers::empty(),
+    );
+    key(
+        &mut test,
+        Key::Named(NamedKey::Enter),
+        Code::Enter,
+        Modifiers::empty(),
+    );
+    test.write_text("station history");
+    test.poll_n(std::time::Duration::from_millis(16), 6);
+    key(
+        &mut test,
+        Key::Named(NamedKey::Enter),
+        Code::Enter,
+        Modifiers::empty(),
+    );
+    assert!(!has(&test, "▸ Missing Courier"));
+    assert!(has(&test, "▸ Station History"));
+    Ok(())
+}
+
+#[test]
+fn settings_discloses_technical_details_and_contextual_keymap_help()
+-> Result<(), Box<dyn std::error::Error>> {
+    let mut test = TestingRunner::new(recite_writer::app, Size2D::new(1000., 900.), |_| {}, 1.).0;
+    support::click(&mut test, "Settings")?;
+    assert!(has(&test, "Appearance") && has(&test, "Editing") && has(&test, "Behaviour"));
+    assert!(!has(&test, "Vim: h j k l"));
+    assert!(has(&test, "Done"));
+    support::click(&mut test, "Configuration file")?;
+    support::click(&mut test, "Keymap: Vim")?;
+    assert!(has(&test, "Vim: h j k l"));
+    support::click(&mut test, "Done")?;
+    assert!(!has(&test, "Done"));
     Ok(())
 }

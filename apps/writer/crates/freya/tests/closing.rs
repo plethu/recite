@@ -68,7 +68,7 @@ fn quit_shortcut_from_prose_opens_a_named_confirmation_and_escape_cancels()
 }
 
 #[test]
-fn unfocused_escape_opens_confirmation_but_focused_escape_does_not()
+fn escape_never_opens_exit_confirmation_with_or_without_focus()
 -> Result<(), Box<dyn std::error::Error>> {
     let (mut test, platform) = TestingRunner::new(
         recite_writer::app,
@@ -83,7 +83,7 @@ fn unfocused_escape_opens_confirmation_but_focused_escape_does_not()
         Code::Escape,
         Modifiers::empty(),
     );
-    assert!(confirmation(&test));
+    assert!(!confirmation(&test));
     key(
         &mut test,
         Key::Named(NamedKey::Escape),

@@ -105,6 +105,23 @@ impl ProjectBuildRequest {
         &self.targets
     }
 
+    /// Restrict publication to one asset declared by the captured manifest.
+    /// All project sources remain inputs so cross-scene references are validated.
+    /// Returns false for an unknown asset and leaves the request unchanged.
+    #[must_use]
+    pub fn select_asset(&mut self, asset: &str) -> bool {
+        if !self
+            .targets
+            .iter()
+            .any(|candidate| candidate.asset_id() == asset)
+        {
+            return false;
+        }
+        self.targets
+            .retain(|candidate| candidate.asset_id() == asset);
+        true
+    }
+
     /// Non-error preparation diagnostics, such as overlapping-root warnings.
     #[must_use]
     pub fn diagnostics(&self) -> &[Diagnostic] {

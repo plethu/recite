@@ -41,7 +41,7 @@ fn default_examples_switch_without_losing_field_drafts_or_applied_edits()
     }
     support::click(&mut test, "Settings")?;
     support::click(&mut test, "Theme: Light")?;
-    support::click(&mut test, "Close settings")?;
+    support::click(&mut test, "Done")?;
     click(&mut test, "Floodgate Waterfall")?;
     assert!(
         test.find(|_, element| Paragraph::try_downcast(element)

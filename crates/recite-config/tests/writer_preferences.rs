@@ -285,3 +285,49 @@ fn pane_side_defaults_to_right_and_rejects_invalid_or_project_owned_values()
     assert_eq!(std::fs::read_to_string(path)?, source);
     Ok(())
 }
+
+#[test]
+fn script_defaults_preserve_explicit_views_and_validate_presentation()
+-> Result<(), Box<dyn std::error::Error>> {
+    use recite_config::{WriterPresentation, WriterPresentationField as Field, WriterView};
+    let root = tempfile::tempdir()?;
+    let path = root.path().join("config.toml");
+    let store = UserConfigStore::new(resolve_config_path(
+        Platform::Linux,
+        &PlatformRoots::new(),
+        Some(&path),
+    )?);
+    std::fs::write(&path, "config_version = 1\n")?;
+    assert_eq!(store.load()?.config.writer.view, WriterView::Script);
+    for (saved, view) in [("map", WriterView::Map), ("source", WriterView::Source)] {
+        std::fs::write(
+            &path,
+            format!(
+                "config_version = 1\n[writer]\nview = '{saved}' # chosen\n[writer.presentation]\nreading_size = 20 # font\n"
+            ),
+        )?;
+        let presentation = WriterPresentation::default()
+            .with_value(Field::ReadingSize, 24)?
+            .with_value(Field::UiScale, 200)?
+            .with_split(true);
+        store.update(UserConfigEdit::WriterPresentation(presentation))?;
+        let config = store.load()?.config;
+        assert_eq!(config.writer.view, view);
+        assert_eq!(config.writer.presentation, presentation);
+        assert!(std::fs::read_to_string(&path)?.contains("# chosen"));
+        assert!(std::fs::read_to_string(&path)?.contains("# font"));
+    }
+    for (field, value) in [
+        ("reading_size", 13),
+        ("source_size", 29),
+        ("ui_scale", 0),
+        ("drawer_width", 900),
+        ("script_width", -1),
+    ] {
+        let source = format!("config_version = 1\n[writer.presentation]\n{field} = {value}\n");
+        std::fs::write(&path, &source)?;
+        assert!(store.load().is_err(), "{field}");
+        assert_eq!(std::fs::read_to_string(&path)?, source);
+    }
+    Ok(())
+}

@@ -8,27 +8,36 @@ pub(super) struct Sidebar {
     pub writer: Writer,
     pub visible: State<bool>,
     pub width: f32,
+    pub expanded: bool,
     pub scenes: Element,
 }
 impl PartialEq for Sidebar {
     fn eq(&self, other: &Self) -> bool {
         self.writer.dark == other.writer.dark
+            && self.expanded == other.expanded
             && self.width == other.width
             && self.scenes == other.scenes
     }
 }
 impl Component for Sidebar {
     fn render(&self) -> impl IntoElement {
-        render(self.writer, self.visible, self.width, self.scenes.clone())
+        render(
+            self.writer,
+            self.visible,
+            self.width,
+            self.expanded,
+            self.scenes.clone(),
+        )
     }
 }
 fn render(
     mut writer: Writer,
     mut navigation_visible: State<bool>,
     width: f32,
+    visible: bool,
     scenes: Element,
 ) -> Element {
-    let visible = *navigation_visible.read();
+    let constrained = *writer.layout.available.read() < 900. * t::ui_scale();
     let colors = use_theme().read().colors.clone();
     let body = rect()
         .height(Size::fill())
@@ -40,8 +49,10 @@ fn render(
         .a11y_alt("Scenes and beats")
         .child(
             label()
-                .text("Scenes")
-                .font_size(t::TEXT_SMALL)
+                .text(crate::messages::text(
+                    crate::messages::MsgId::WriterGuiScenes,
+                ))
+                .font_size(t::small())
                 .color(colors.text_secondary),
         )
         .child(scenes);
@@ -53,31 +64,37 @@ fn render(
         .width(Size::px(if visible {
             width
         } else {
-            t::COLLAPSED_DRAWER_WIDTH
+            t::collapsed_drawer_width()
         }))
         .height(Size::fill())
         .content(Content::Flex)
         .overflow(Overflow::Clip)
         .child(
             rect()
-                .height(Size::px(48.))
+                .height(Size::px(t::control_height() + 16.))
                 .width(Size::fill())
                 .maybe_child(visible.then(|| {
                     rect()
                         .padding((8., 12.))
-                        .child(label().text("recite.").font_size(t::TEXT_TITLE))
+                        .child(label().text("recite.").font_size(t::title()))
                 }))
                 .child(
                     rect()
                         .position(Position::new_absolute().right(4.).top(8.))
                         .child(controls::IconButton::new(
-                            if visible {
+                            if constrained {
+                                "Go to scene or beat"
+                            } else if visible {
                                 "Hide scenes"
                             } else {
                                 "Show scenes"
                             },
                             controls::Icon::Sidebar,
                             move || {
+                                if constrained {
+                                    crate::commands::Command::GoTo.run(writer);
+                                    return;
+                                }
                                 let next = !*navigation_visible.peek();
                                 navigation_visible.set(next);
                             },
@@ -95,7 +112,7 @@ fn render(
         )
         .child(
             rect()
-                .height(Size::px(48.))
+                .height(Size::px(t::control_height() + 16.))
                 .width(Size::fill())
                 .padding((8., 4.))
                 .child(controls::IconButton::new(

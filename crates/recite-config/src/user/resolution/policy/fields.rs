@@ -100,3 +100,10 @@ user_policy!(
     WriterPaneSide,
     [ConfigAuthority::User]
 );
+
+user_policy!(
+    WriterPresentationPolicy,
+    UserConfigField::WriterPresentation,
+    crate::WriterPresentation,
+    [ConfigAuthority::User]
+);

@@ -9,7 +9,7 @@ use recite_core::{PoDocument, PoDocumentFingerprint};
 use std::path::PathBuf;
 mod changes;
 mod detail;
-mod diff;
+
 pub(super) mod screen;
 
 pub(crate) struct Preview {

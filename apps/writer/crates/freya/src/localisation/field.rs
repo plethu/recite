@@ -1,5 +1,6 @@
 use super::catalogue::Draft;
 use super::messages::{MsgId, text as wording};
+use crate::design::tokens::ProseTypography;
 use crate::{
     design::{Button, tokens as t},
     editing::Writer,
@@ -51,7 +52,7 @@ impl Component for TranslationField {
                 .child(
                     label()
                         .text(wording(MsgId::WriterNoEntry))
-                        .font_size(t::TEXT_SMALL)
+                        .font_size(t::small())
                         .color(palette::muted(writer.dark)),
                 )
                 .child(
@@ -69,13 +70,22 @@ impl Component for TranslationField {
             return rect().into_element();
         };
         let changed = catalogue.changed(entry_id);
-        let next_identity = (catalogue.path.clone(), entry_id, draft.text.clone());
+        let next_identity = (
+            catalogue.path.clone(),
+            entry_id,
+            draft.forms.first().cloned().unwrap_or_default(),
+        );
         if identity.peek().as_ref() != Some(&next_identity) {
-            text.set_if_modified(draft.text.clone());
+            text.set_if_modified(draft.forms.first().cloned().unwrap_or_default());
             identity.set(Some(next_identity));
         }
         let reviewed = draft.reviewed;
         let status = super::status::TranslationStatus::for_entry(catalogue, entry_id).label();
+        let status = if changed {
+            format!("{status} · {}", wording(MsgId::WriterUnsaved))
+        } else {
+            status
+        };
         drop(current);
         let save = move || {
             let result = state.write().catalogue.as_mut().map(|c| c.save(entry_id));
@@ -90,48 +100,45 @@ impl Component for TranslationField {
             .spacing(t::SPACE_XS)
             .child(
                 rect()
-                    .height(Size::px(t::PROSE_META_HEIGHT))
+                    .height(Size::px(t::prose_meta_height()))
                     .cross_align(Alignment::Center)
                     .child(
                         label()
                             .text(status)
-                            .font_size(t::TEXT_SMALL)
+                            .font_size(t::small())
                             .color(palette::muted(writer.dark)),
                     ),
             )
             .child(
-                rect()
-                    .font_family("serif")
-                    .font_size(t::TEXT_HEADING)
-                    .child(
-                        Input::new(text)
-                            .a11y_id(input_id)
-                            .multiline(true)
-                            .width(Size::fill())
-                            .height(Size::Inner)
-                            .placeholder(wording(MsgId::WriterPlaceholder))
-                            .on_pre_key_down(move |event: Event<KeyboardEventData>| {
-                                if crate::editing::is_save_key(&event) {
-                                    event.stop_propagation();
-                                    event.prevent_default();
-                                    save_key();
-                                    false
-                                } else {
-                                    crate::closing::text_input_key(event)
-                                }
-                            })
-                            .on_validate(move |value: InputValidator| {
-                                if let Some(catalogue) = state.write().catalogue.as_mut() {
-                                    catalogue.update(
-                                        entry_id,
-                                        Draft {
-                                            text: value.text().clone(),
-                                            reviewed: false,
-                                        },
-                                    );
-                                }
-                            }),
-                    ),
+                rect().prose_font().font_size(t::heading()).child(
+                    Input::new(text)
+                        .a11y_id(input_id)
+                        .multiline(true)
+                        .width(Size::fill())
+                        .height(Size::Inner)
+                        .placeholder(wording(MsgId::WriterPlaceholder))
+                        .on_pre_key_down(move |event: Event<KeyboardEventData>| {
+                            if crate::editing::is_save_key(&event) {
+                                event.stop_propagation();
+                                event.prevent_default();
+                                save_key();
+                                false
+                            } else {
+                                crate::closing::text_input_key(event)
+                            }
+                        })
+                        .on_validate(move |value: InputValidator| {
+                            if let Some(catalogue) = state.write().catalogue.as_mut() {
+                                catalogue.update(
+                                    entry_id,
+                                    Draft {
+                                        forms: vec![value.text().clone()],
+                                        reviewed: false,
+                                    },
+                                );
+                            }
+                        }),
+                ),
             );
         let mut footer = rect()
             .horizontal()
@@ -139,8 +146,8 @@ impl Component for TranslationField {
             .width(Size::fill())
             .cross_align(Alignment::Center)
             .spacing(t::SPACE_XS);
-        if !draft.text.trim().is_empty() {
-            footer = footer.child(crate::design::checkbox(
+        if !draft.forms.iter().all(|text| text.trim().is_empty()) {
+            footer = footer.child(rect().width(Size::flex(1.)).child(crate::design::checkbox(
                 review_id,
                 wording(MsgId::WriterReviewed),
                 reviewed,
@@ -152,19 +159,10 @@ impl Component for TranslationField {
                         catalogue.update(entry_id, draft);
                     }
                 },
-            ));
+            )));
+        } else {
+            footer = footer.child(rect().width(Size::flex(1.)));
         }
-        footer = footer.child(rect().width(Size::flex(1.))).child(
-            label()
-                .text(if changed {
-                    wording(MsgId::WriterUnsaved)
-                } else if draft.text.trim().is_empty() {
-                    String::new()
-                } else {
-                    wording(MsgId::WriterSaved)
-                })
-                .font_size(t::TEXT_SMALL),
-        );
         if changed {
             footer = footer
                 .child(

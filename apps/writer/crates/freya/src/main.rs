@@ -3,11 +3,14 @@ use freya::prelude::*;
 fn main() {
     let file_backed = std::env::args().any(|arg| arg == "--project");
     let args: Vec<_> = std::env::args().collect();
+    let specimen = args.iter().any(|arg| arg == "--design-system");
     let initial_route = args
         .windows(2)
         .find(|pair| pair[0] == "--route")
         .map(|pair| pair[1].clone());
-    let title = if file_backed {
+    let title = if specimen {
+        "Recite — Component specimen"
+    } else if file_backed {
         "Recite writer"
     } else {
         "Recite — Writer examples"
@@ -16,6 +19,9 @@ fn main() {
     launch(
         LaunchConfig::new().with_window(
             WindowConfig::new(move || {
+                if specimen {
+                    return recite_writer::design_app();
+                }
                 // Command-line arguments are fixed for this window's lifetime.
                 if let Some(route) = initial_route.clone() {
                     use_provide_context(move || recite_writer::InitialRoute(route));
@@ -38,7 +44,13 @@ fn main() {
                     recite_writer::app()
                 }
             })
-            .with_on_close(|_, _| recite_writer::request_close())
+            .with_on_close(move |_, _| {
+                if specimen {
+                    CloseDecision::Close
+                } else {
+                    recite_writer::request_close()
+                }
+            })
             .with_title(title)
             .with_size(1200., 800.)
             .with_min_size(900., 650.),

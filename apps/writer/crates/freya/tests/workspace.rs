@@ -29,8 +29,16 @@ fn keyboard_and_vim_share_selection_editing_and_focus_return()
     );
     support::click(&mut test, "Settings")?;
     support::click(&mut test, "Keymap: Vim")?;
-    support::click(&mut test, "Close settings")?;
-    // F6 enters the graph; j selects below the entry and Enter opens its editor.
+    support::click(&mut test, "Done")?;
+    support::click(&mut test, "Map")?;
+    // Map opens with graph focus. Cycle through the drawer back to the graph.
+    key(
+        &mut test,
+        Code::F6,
+        Key::Named(NamedKey::F6),
+        Modifiers::empty(),
+    );
+    // j selects below the entry and Enter opens its editor.
     key(
         &mut test,
         Code::F6,

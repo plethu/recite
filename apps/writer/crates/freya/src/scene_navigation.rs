@@ -108,7 +108,19 @@ impl Component for SceneNavigation {
                         beats.push(Row::Beat {
                             id: id.clone(),
                             caption: caption.clone(),
-                            selected: writer.selection.read().as_ref() == Some(id),
+                            selected: if writer.localisation.read().active {
+                                writer
+                                    .buffers
+                                    .model
+                                    .read()
+                                    .as_ref()
+                                    .ok()
+                                    .and_then(|m| m.selected_block().ok().flatten())
+                                    .as_ref()
+                                    == Some(id)
+                            } else {
+                                writer.selection.read().as_ref() == Some(id)
+                            },
                         });
                     }
                 }
@@ -143,7 +155,11 @@ impl Component for SceneNavigation {
                 }),
             })
             .child(if count == 0 {
-                label().text("No matching scenes or beats").into_element()
+                label()
+                    .text(crate::messages::text(
+                        crate::messages::MsgId::WriterGuiNoMatchingScenesOrBeats,
+                    ))
+                    .into_element()
             } else {
                 rect().into_element()
             })
@@ -197,9 +213,7 @@ impl Component for SceneNavigation {
                                         *selected || *active == Some(index.index),
                                         writer.dark,
                                         move |_| {
-                                            let mut writer = writer;
-                                            writer.selection.set(Some(id.clone()));
-                                            writer.map_focus.request_focus();
+                                            select_beat(writer, &id);
                                         },
                                     ))
                                     .into_element()
@@ -223,7 +237,7 @@ impl Component for SceneNavigation {
     }
 }
 
-fn activate_row(mut writer: Writer, mut collapsed: State<Option<String>>, row: &Row) {
+fn activate_row(writer: Writer, mut collapsed: State<Option<String>>, row: &Row) {
     match row {
         Row::Scene(scene, expanded) => {
             if scene.active {
@@ -238,8 +252,19 @@ fn activate_row(mut writer: Writer, mut collapsed: State<Option<String>>, row: &
             }
         }
         Row::Beat { id, .. } => {
-            writer.selection.set(Some(id.clone()));
-            writer.map_focus.request_focus();
+            select_beat(writer, id);
         }
+    }
+}
+
+fn select_beat(mut writer: Writer, id: &str) {
+    if writer.localisation.peek().active {
+        writer.localisation.write().view = crate::localisation::CatalogueView::Passage;
+        writer.inspect(id);
+    } else if writer.layout.standalone() {
+        writer.inspect(id);
+    } else {
+        writer.selection.set(Some(id.to_owned()));
+        writer.map_focus.request_focus();
     }
 }

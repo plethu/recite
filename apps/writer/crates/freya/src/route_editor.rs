@@ -26,8 +26,8 @@ impl PartialEq for RouteEditor {
 impl Component for RouteEditor {
     fn render(&self) -> impl IntoElement {
         let writer = self.writer;
-        let open = use_state(|| false);
-        let query = use_state(String::new);
+        let mut open = use_state(|| false);
+        let mut query = use_state(String::new);
         let id = use_a11y();
         let input_id = use_a11y();
         let options = use_memo(move || {
@@ -52,6 +52,7 @@ impl Component for RouteEditor {
                         (title.to_lowercase().contains(&needle)
                             || value.to_lowercase().contains(&needle))
                         .then(|| crate::design::PickerOption {
+                            annotation: String::new(),
                             detail: if value == "END" {
                                 "Finish this conversation".into()
                             } else {
@@ -68,8 +69,33 @@ impl Component for RouteEditor {
         rect()
             .width(Size::fill())
             .spacing(t::SPACE_XS)
-            .child(self.heading.clone())
-            .child(crate::design::SearchPicker {
+            .child(
+                rect()
+                    .horizontal()
+                    .width(Size::fill())
+                    .content(Content::Flex)
+                    .cross_align(Alignment::Center)
+                    .spacing(t::SPACE_SM)
+                    .child(self.heading.clone())
+                    .child(
+                        crate::design::Button::new()
+                            .flat()
+                            .a11y_id(id)
+                            .named(crate::messages::text(
+                                crate::messages::MsgId::WriterGuiChangeDestination,
+                            ))
+                            .expanded(*open.read())
+                            .on_press(move |_| {
+                                query.set(String::new());
+                                let next = !*open.peek();
+                                open.set(next);
+                            })
+                            .child(crate::messages::text(
+                                crate::messages::MsgId::WriterGuiChange,
+                            )),
+                    ),
+            )
+            .maybe_child((*open.read()).then(|| crate::design::SearchPicker {
                 id,
                 input_id,
                 name: "Change destination…".into(),
@@ -94,6 +120,6 @@ impl Component for RouteEditor {
                         }
                     });
                 }),
-            })
+            }))
     }
 }

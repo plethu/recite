@@ -48,6 +48,7 @@ impl Component for Context {
             body = body.child(
                 Button::new()
                     .flat()
+                    .expanded(*expanded.read())
                     .on_press(move |_| {
                         let next = !*expanded.peek();
                         expanded.set(next);
@@ -60,9 +61,10 @@ impl Component for Context {
                     )),
             );
             if *expanded.read() {
+                let mut prompts = rect().width(Size::fill()).spacing(t::SPACE_XS);
                 for link in incoming.iter().take(32) {
                     let origin = link.origin.clone();
-                    body = body.child(
+                    prompts = prompts.child(
                         Button::new()
                             .flat()
                             .on_press(move |_| writer.inspect(&origin))
@@ -73,42 +75,20 @@ impl Component for Context {
                             )),
                     );
                 }
+                body = body.child(
+                    ScrollView::new()
+                        .width(Size::fill())
+                        .height(Size::px(
+                            (incoming.len().min(4) as f32) * (t::control_height() + t::SPACE_XS),
+                        ))
+                        .max_height(Size::window_percent(20.))
+                        .child(prompts),
+                );
             }
         }
-        if writer.localisation.read().catalogue.is_none() {
-            return body;
-        }
-        let language = writer
-            .localisation
-            .read()
-            .catalogue
-            .as_ref()
-            .and_then(|c| {
-                c.document
-                    .headers()
-                    .iter()
-                    .find(|h| h.key() == "Language")
-                    .map(|h| h.value().to_owned())
-            })
-            .unwrap_or_else(|| text(MsgId::WriterTranslation));
-        body.child(
-            rect()
-                .horizontal()
-                .content(Content::Flex)
-                .width(Size::fill())
-                .spacing(t::SPACE_LG)
-                .child(
-                    rect().width(Size::flex(1.)).child(
-                        label()
-                            .text(text(MsgId::WriterSource))
-                            .font_size(t::TEXT_SMALL),
-                    ),
-                )
-                .child(
-                    rect()
-                        .width(Size::flex(1.))
-                        .child(label().text(language).font_size(t::TEXT_SMALL)),
-                ),
-        )
+        body
+    }
+    fn render_key(&self) -> DiffKey {
+        DiffKey::from(&self.beat)
     }
 }

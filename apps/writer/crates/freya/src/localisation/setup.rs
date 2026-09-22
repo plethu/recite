@@ -4,14 +4,14 @@ use super::{
     messages::{MsgId, text as wording},
 };
 use crate::{
-    design::{Button, Dialog, DialogAction, SearchPicker, tokens as t},
+    design::{Button, Dialog, SearchPicker, SubmitAction, tokens as t},
     editing::Writer,
     project::ProjectFiles,
 };
 use freya::prelude::*;
 use std::path::PathBuf;
 
-mod languages;
+pub(crate) mod languages;
 mod request;
 use request::{Pending, begin};
 
@@ -75,16 +75,30 @@ impl Component for Setup {
                     match result {
                         Ok(catalogue) => {
                             let mut current = state.write();
-                            current.catalogue = Some(catalogue);
-                            current.refresh = None;
-                            current.view = super::CatalogueView::Passage;
-                            current.panel = None;
-                            locale.set(String::new());
-                            choosing.set(false);
-                            message.info(wording(MsgId::WriterCatalogueCreated));
-                            writer.inspector_focus.request_focus();
+                            if let Err(error) = current.install(Some(catalogue)) {
+                                message.error(error);
+                            } else {
+                                current.view = super::CatalogueView::Passage;
+                                current.panel = None;
+                                locale.set(String::new());
+                                choosing.set(false);
+                                message.info(wording(MsgId::WriterCatalogueCreated));
+                                writer.inspector_focus.request_focus();
+                            }
                         }
-                        Err(error) => message.error(error),
+                        Err(error) => {
+                            if state.peek().dirty() {
+                                message.error_with_action(
+                                    error,
+                                    crate::messages::text(
+                                        crate::messages::MsgId::WriterGuiOpenUnsavedTranslations,
+                                    ),
+                                    EventHandler::new(move |()| super::show_unsaved(writer)),
+                                );
+                            } else {
+                                message.error(error);
+                            }
+                        }
                     }
                 }
             }
@@ -104,7 +118,7 @@ impl Component for Setup {
             .spacing(t::SPACE_SM)
             .child(
                 label()
-                    .font_size(t::TEXT_SMALL)
+                    .font_size(t::small())
                     .color(colors.muted)
                     .text(wording(if files.peek().is_some() {
                         MsgId::WriterCreateProjectScope
@@ -130,7 +144,7 @@ impl Component for Setup {
                     locale.set(option.value);
                 }),
             })
-            .child(label().font_size(t::TEXT_SMALL).color(colors.muted).text(
+            .child(label().font_size(t::small()).color(colors.muted).text(
                 suggestion.as_ref().map_or_else(
                     || wording(MsgId::WriterCreateHelp),
                     |path| {
@@ -173,6 +187,7 @@ impl Component for Setup {
         }
         focus.extend(message.focus_order());
         Dialog {
+            dismissal_only: false,
             title: wording(if state.peek().catalogue.is_some() {
                 MsgId::WriterAddLanguage
             } else {
@@ -190,7 +205,7 @@ impl Component for Setup {
                         .child(wording(MsgId::WriterCancel)),
                 )
                 .into_element(),
-            primary: DialogAction {
+            primary: SubmitAction {
                 id: ids[3],
                 caption: wording(MsgId::WriterCreateCatalogue),
                 enabled,
@@ -202,7 +217,19 @@ impl Component for Setup {
                             message.clear();
                             ids[2].request_focus();
                         }
-                        Err(error) => message.error(error),
+                        Err(error) => {
+                            if state.peek().dirty() {
+                                message.error_with_action(
+                                    error,
+                                    crate::messages::text(
+                                        crate::messages::MsgId::WriterGuiOpenUnsavedTranslations,
+                                    ),
+                                    EventHandler::new(move |()| super::show_unsaved(writer)),
+                                );
+                            } else {
+                                message.error(error);
+                            }
+                        }
                     }
                 }),
             },

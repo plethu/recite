@@ -21,7 +21,7 @@ impl Component for RecoveryStatus {
                 .text(format!(
                     "Recovery failed: {error}. Retry Save or keep editing."
                 ))
-                .font_size(t::TEXT_SMALL)
+                .font_size(t::small())
         }))
     }
 }

@@ -6,7 +6,7 @@ use super::super::{
 use crate::design::PickerOption;
 use std::sync::OnceLock;
 
-pub(super) fn caption(tag: &str) -> Option<String> {
+pub(crate) fn caption(tag: &str) -> Option<String> {
     let choice = locale_option(tag)?;
     Some(format!("{} · {}", choice.title, choice.value))
 }
@@ -16,6 +16,7 @@ fn locale_option(tag: &str) -> Option<PickerOption> {
     let value = locale.to_string();
     if locale.is_cofi() {
         return Some(PickerOption {
+            annotation: value.clone(),
             value,
             title: wording(MsgId::WriterCofiLanguage),
             detail: String::new(),
@@ -30,13 +31,14 @@ fn locale_option(tag: &str) -> Option<PickerOption> {
     let language = isolang::Language::from_639_1(locale.base().language.as_str())
         .or_else(|| isolang::Language::from_639_3(locale.base().language.as_str()))?;
     Some(PickerOption {
+        annotation: value.clone(),
         value,
         title: language.to_name().into(),
         detail: language.to_autonym().unwrap_or_default().into(),
     })
 }
 
-pub(super) fn matches(query: &str) -> Vec<PickerOption> {
+pub(crate) fn matches(query: &str) -> Vec<PickerOption> {
     let query = query.trim().to_lowercase();
     if query.is_empty() {
         return Vec::new();
@@ -101,6 +103,7 @@ fn search_index() -> &'static [SearchEntry] {
                 let name = language.to_name();
                 SearchEntry {
                     option: PickerOption {
+                        annotation: tag.into(),
                         value: tag.into(),
                         title: name.into(),
                         detail: native.into(),
@@ -113,6 +116,7 @@ fn search_index() -> &'static [SearchEntry] {
             let (title, detail) = name.split_once(" · ").unwrap_or((name, ""));
             SearchEntry {
                 option: PickerOption {
+                    annotation: (*tag).into(),
                     value: (*tag).into(),
                     title: title.into(),
                     detail: detail.into(),

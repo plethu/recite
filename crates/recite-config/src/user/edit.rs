@@ -15,6 +15,7 @@ pub enum UserConfigEdit {
     ShowUnavailableChoices(bool),
     WriterConfirmExit(bool),
     WriterView(WriterView),
+    WriterPresentation(super::WriterPresentation),
     WriterPaneSide(WriterPaneSide),
     WriterTheme(WriterTheme),
     WriterReducedMotion(bool),
@@ -34,6 +35,7 @@ impl UserConfigEdit {
             Self::ShowUnavailableChoices(v) => config.play.show_unavailable_choices = *v,
             Self::WriterConfirmExit(v) => config.writer.confirm_exit = *v,
             Self::WriterView(v) => config.writer.view = *v,
+            Self::WriterPresentation(v) => config.writer.presentation = *v,
             Self::WriterPaneSide(v) => config.writer.pane_side = *v,
             Self::WriterTheme(v) => config.writer.theme = *v,
             Self::WriterReducedMotion(v) => config.writer.reduced_motion = *v,
@@ -42,7 +44,22 @@ impl UserConfigEdit {
     }
 
     pub(super) fn apply(&self, document: &mut DocumentMut) {
+        if let Self::WriterPresentation(presentation) = self {
+            use super::WriterPresentationField::*;
+            for field in [ReadingSize, SourceSize, UiScale, DrawerWidth, ScriptWidth] {
+                replace_value(
+                    &mut document["writer"]["presentation"][field.key()],
+                    i64::from(presentation.value(field)).into(),
+                );
+            }
+            replace_value(
+                &mut document["writer"]["presentation"]["split"],
+                presentation.split().into(),
+            );
+            return;
+        }
         let (section, field, value): (_, _, Value) = match self {
+            Self::WriterPresentation(_) => unreachable!("presentation handled above"),
             Self::UiLocale(locale) => ("ui", "locale", locale.to_string().into()),
             Self::Keymap(keymap) => (
                 "ui",
@@ -89,6 +106,7 @@ impl UserConfigEdit {
                 "writer",
                 "view",
                 match view {
+                    WriterView::Script => "script",
                     WriterView::Map => "map",
                     WriterView::Source => "source",
                 }
@@ -116,11 +134,13 @@ impl UserConfigEdit {
             Self::WriterZoomToPointer(value) => ("writer", "zoom_to_pointer", (*value).into()),
             Self::WriterConfirmExit(confirm) => ("writer", "confirm_exit", (*confirm).into()),
         };
-        let slot = &mut document[section][field];
-        let mut value = value;
-        if let Some(previous) = slot.as_value() {
-            *value.decor_mut() = previous.decor().clone();
-        }
-        *slot = toml_edit::Item::Value(value);
+        replace_value(&mut document[section][field], value);
     }
+}
+
+fn replace_value(slot: &mut toml_edit::Item, mut value: Value) {
+    if let Some(previous) = slot.as_value() {
+        *value.decor_mut() = previous.decor().clone();
+    }
+    *slot = toml_edit::Item::Value(value);
 }

@@ -30,6 +30,17 @@ component interactions. The shared user configuration has additional tests in
 Script presents existing conditions and effects without executing them.
 Preview uses Recite's runtime; game-side effects remain caller-owned requests.
 
+## Deferred: prose caret and selection restoration
+
+TBD pending [Freya #2308](https://github.com/marc2332/freya/issues/2308): retain the
+exact prose caret and selection when scene or view changes remount Input.
+Session bookmarks and the associated remount tests will follow a supported
+upstream approach. This does not block the current GUI completion pass. Draft
+retention and existing Source caret/selection restoration remain in scope.
+
+The [GUI acceptance checklist](../../docs/design/writer-gui-acceptance.md) records
+the current hands-on pass and this exception.
+
 ## Large-project work
 
 The [scalability report](scalability.md) records the implemented cache, rendering,

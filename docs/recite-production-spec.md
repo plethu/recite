@@ -1871,6 +1871,11 @@ game code. Standalone projects without an engine producer must instead have a
 source-owning declarative producer path; the GUI edits that source and invokes
 deterministic generation rather than editing the manifest.
 
+The writer's explicit source-navigation and generation registration is specified
+in [Schema producer registration](schema-producer-registration.md). Registration
+loading never executes a command; validated generated output is published only
+after an author-requested generation succeeds.
+
 #### 10.2.1 Standalone TOML source contract
 
 The standalone source-owning producer uses a versioned, map-shaped TOML

@@ -80,7 +80,7 @@ fn inline_rename_can_be_cancelled_validated_and_undone() -> Result<(), Box<dyn s
         )
         .is_some()
     );
-    support::click(&mut test, "Close beat editor")?;
+    support::click(&mut test, "Map")?;
     assert!(
         test.find(|_, e| Rect::try_downcast(e)
             .filter(|r| r.accessibility.builder.label() == Some("Rename beat")))

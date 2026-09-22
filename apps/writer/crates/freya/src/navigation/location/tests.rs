@@ -47,3 +47,37 @@ fn source_update_links_keep_the_selected_change() {
     assert_eq!(location.page, 25);
     assert_eq!(location.to_string().parse::<Location>(), Ok(location));
 }
+
+#[test]
+fn reply_rule_links_require_a_target_and_preserve_it_in_history() {
+    let route: Location = "/reply-rules?scene=hello.recite&passage=22222222222222222222"
+        .parse()
+        .expect("reply route");
+    assert_eq!(route.to_string().parse::<Location>(), Ok(route.clone()));
+    let other = Location {
+        passage: Some("33333333333333333333".into()),
+        ..route.clone()
+    };
+    assert!(!route.same_place(&other));
+    assert!("/reply-rules".parse::<Location>().is_err());
+    assert!(
+        "/reply-rules?passage=22222222222222222222&view=source"
+            .parse::<Location>()
+            .is_err()
+    );
+}
+
+#[test]
+fn explicit_writing_views_round_trip_and_legacy_links_remain_valid() {
+    for view in ["script", "map", "source"] {
+        let link = format!("/write?scene=relay_hub&view={view}");
+        let parsed = link.parse::<Location>().expect("writing view");
+        assert_eq!(parsed.to_string().parse::<Location>(), Ok(parsed));
+    }
+    assert!(
+        "/write?scene=relay_hub&beat=relay_desk"
+            .parse::<Location>()
+            .is_ok()
+    );
+    assert!("/write?view=unknown".parse::<Location>().is_err());
+}

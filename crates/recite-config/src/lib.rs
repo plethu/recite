@@ -8,7 +8,12 @@
 
 mod capabilities;
 mod path;
+mod producer;
 mod project;
+pub use producer::{
+    DeclarationSource, PRODUCER_REGISTRATION_FILE, ProducerCommand, ProducerRegistration,
+    ProducerRegistrationError,
+};
 mod user;
 
 pub use capabilities::{
@@ -33,6 +38,7 @@ pub use user::{
     ShowUnavailableChoicesPolicy, StateUpdateError, TextFileStore, TuiColorMode, TuiContrast,
     UiConfig, UiLocalePolicy, UserConfig, UserConfigEdit, UserConfigField, UserConfigStore,
     UserStateFile, WriterConfig, WriterConfirmExitPolicy, WriterPaneSide, WriterPaneSidePolicy,
+    WriterPresentation, WriterPresentationError, WriterPresentationField, WriterPresentationPolicy,
     WriterReducedMotionPolicy, WriterTheme, WriterThemePolicy, WriterView, WriterViewPolicy,
     WriterZoomToPointerPolicy, load_user_config, load_user_config_from, load_user_config_path,
     resolve_field, resolve_user_config,

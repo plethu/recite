@@ -19,6 +19,7 @@ pub struct ResolvedUserConfig {
     contrast: ResolvedField<TuiContrast>,
     show_unavailable_choices: ResolvedField<bool>,
     writer_confirm_exit: ResolvedField<bool>,
+    writer_presentation: ResolvedField<crate::WriterPresentation>,
     writer_view: ResolvedField<super::super::WriterView>,
     writer_pane_side: ResolvedField<super::super::WriterPaneSide>,
     writer_theme: ResolvedField<super::super::WriterTheme>,
@@ -27,6 +28,9 @@ pub struct ResolvedUserConfig {
 }
 
 impl ResolvedUserConfig {
+    pub const fn writer_presentation(&self) -> &ResolvedField<crate::WriterPresentation> {
+        &self.writer_presentation
+    }
     pub const fn writer_view(&self) -> &ResolvedField<super::super::WriterView> {
         &self.writer_view
     }
@@ -109,6 +113,16 @@ pub fn resolve_user_config(
     let ui = &loaded.config.ui;
     let play = &loaded.config.play;
     ResolvedUserConfig {
+        writer_presentation: resolve_field(
+            super::policy::WriterPresentationPolicy,
+            crate::WriterPresentation::default(),
+            loaded
+                .field_is_explicit(UserConfigField::WriterPresentation)
+                .then(|| {
+                    AuthorityValue::new(ConfigAuthority::User, loaded.config.writer.presentation)
+                }),
+        )
+        .unwrap_or_else(|_| unreachable!("writer presentation is user owned")),
         writer_view: resolve_field(
             super::policy::WriterViewPolicy,
             super::super::WriterConfig::default().view,

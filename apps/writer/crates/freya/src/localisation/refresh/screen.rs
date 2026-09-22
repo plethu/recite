@@ -41,7 +41,7 @@ impl Component for RefreshScreen {
                     .child(
                         label()
                             .text(wording(MsgId::WriterSourceUpdates))
-                            .font_size(t::TEXT_TITLE),
+                            .font_size(t::title()),
                     )
                     .child(
                         Button::new()
@@ -75,7 +75,7 @@ impl Component for RefreshScreen {
                 label()
                     .width(Size::flex(1.))
                     .text(caption)
-                    .font_size(t::TEXT_SMALL),
+                    .font_size(t::small()),
             );
         }
         body = body.child(
@@ -130,7 +130,7 @@ impl Component for RefreshScreen {
                                             wording(change.kind.label()),
                                             change.caption
                                         ))
-                                        .font_size(t::TEXT_SMALL),
+                                        .font_size(t::small()),
                                 ),
                         ),
                 );

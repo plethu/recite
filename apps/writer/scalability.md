@@ -167,7 +167,8 @@ include per-operation allocation counts/bytes and live/peak heap bytes. Their
 latencies and RSS are not compared with uninstrumented runs.
 
 `check-writer` (and therefore `just check`) runs both independent and shared-target
-10,000-passage heap checks. Bounds are 20 MB peak live heap and 4 MB allocated per
+10,000-passage heap checks. Bounds are 20 MB peak live heap, 55 MB allocated for
+indexing, 3.2 MB for cold script projection, and 4 MB allocated per
 wording/undo/redo/multiline/ID edit, using 500 passages per document. These are fixed
 corpus allocation contracts with measured headroom, not machine timing budgets.
 A private work-count test additionally prevents unrelated callers being revalidated;
@@ -217,3 +218,10 @@ by separating localisable-ID validation, whose ownership now spans both phases.
 The phases reuse existing checks rather than create a second set of diagnostic rules. Authoring state owns cache lifetime and snapshot
 sharing. No new public cache API or background kernel worker
 is introduced by this optimisation.
+
+The September 18 optimization pass removes temporary search-word collections,
+shares the cold projection parse, and avoids unused statement slots in singleton
+bodies. The index/projection budgets protect those measured savings. See the
+[writer measurements](../../docs/design/writer-performance-findings.md) and
+[parser investigation](../../docs/design/parser-allocation-findings.md) for
+workload-specific benefits and CPU tradeoffs.

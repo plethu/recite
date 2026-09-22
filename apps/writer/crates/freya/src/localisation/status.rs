@@ -18,7 +18,7 @@ impl TranslationStatus {
         let Some(draft) = catalogue.draft(id) else {
             return Self::Untranslated;
         };
-        if draft.text.trim().is_empty() {
+        if draft.forms.iter().any(|text| text.trim().is_empty()) {
             Self::Untranslated
         } else if draft.reviewed && catalogue.changed(id) {
             Self::ReviewPending

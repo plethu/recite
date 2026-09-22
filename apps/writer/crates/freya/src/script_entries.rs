@@ -63,6 +63,7 @@ impl Component for EntryPage {
         let current = (*page.read()).min(pages - 1);
         let start = current * PAGE_SIZE;
         let mut surface = rect().width(Size::fill()).spacing(t::SPACE_XS);
+        let translating = writer.localisation.read().translating();
         let mut in_choices = false;
         let mut reply_number = entries[..start].iter().filter(|entry| matches!(entry, ScriptEntry::Passage(p) if matches!(p.kind, PassageKind::Choice { .. }))).count();
         for (index, entry) in entries.iter().enumerate().skip(start).take(PAGE_SIZE) {
@@ -72,8 +73,10 @@ impl Component for EntryPage {
                     if choice && !in_choices {
                         surface = surface.child(
                             label()
-                                .text("Replies")
-                                .font_size(t::TEXT_SMALL)
+                                .text(crate::messages::text(
+                                    crate::messages::MsgId::WriterGuiReplies,
+                                ))
+                                .font_size(t::small())
                                 .color(palette::muted(writer.dark)),
                         );
                     }
@@ -84,58 +87,64 @@ impl Component for EntryPage {
                     let mut row = rect()
                         .key(passage.id.clone())
                         .width(Size::fill())
-                        .padding((t::SPACE_XS, 0.))
-                        .border(
-                            Border::new()
-                                .width(BorderWidth {
-                                    top: if choice { 1. } else { 0. },
-                                    ..Default::default()
-                                })
-                                .fill(palette::rule(writer.dark)),
-                        );
-                    let prose = crate::prose::ProseField {
-                        writer,
-                        passage: passage.clone(),
-                        reply_number: choice.then_some(reply_number),
-                    };
-                    if writer.localisation.read().translating() {
-                        row = row.child(
-                            rect()
-                                .horizontal()
-                                .content(Content::Flex)
-                                .width(Size::fill())
-                                .spacing(t::SPACE_LG)
-                                .child(rect().width(Size::flex(1.)).child(prose))
-                                .child(rect().width(Size::flex(1.)).child(
-                                    crate::localisation::translation(writer, passage.clone()),
-                                )),
-                        );
+                        .padding((t::SPACE_XS, 0.));
+                    let localising = writer.localisation.read().active;
+                    let prose = if localising {
+                        crate::localisation::source_passage(
+                            writer,
+                            passage,
+                            choice.then_some(reply_number),
+                        )
                     } else {
-                        row = row.child(prose);
-                    }
+                        crate::prose::ProseField {
+                            writer,
+                            passage: passage.clone(),
+                            reply_number: choice.then_some(reply_number),
+                        }
+                        .into_element()
+                    };
+                    let mut source = rect().width(Size::fill()).spacing(t::SPACE_XS).child(prose);
                     if let PassageKind::Choice {
                         destination: Some(destination),
                     } = &passage.kind
                     {
-                        row = row.child(jump(
+                        source = source.child(jump(
                             writer,
                             origin,
                             destination,
-                            (!writer.localisation.read().active).then(|| {
+                            (!localising).then(|| {
                                 crate::route_editor::RouteOwner::Reply(passage.id.clone())
                             }),
                         ));
                     }
+                    if writer.localisation.read().translating() {
+                        row = row.child(crate::localisation::columns(
+                            writer.dark,
+                            source.into_element(),
+                            crate::localisation::translation(writer, passage.clone()),
+                        ));
+                    } else {
+                        row = row.child(source);
+                    }
                     surface = surface.child(row);
                 }
                 ScriptEntry::Jump(destination) => {
-                    surface = surface.child(jump(
+                    let destination = jump(
                         writer,
                         origin,
                         destination,
                         (top_level && !writer.localisation.read().active)
                             .then(|| crate::route_editor::RouteOwner::Beat(origin.into())),
-                    ));
+                    );
+                    surface = surface.child(if writer.localisation.read().translating() {
+                        crate::localisation::columns(
+                            writer.dark,
+                            destination,
+                            rect().into_element(),
+                        )
+                    } else {
+                        destination
+                    });
                     in_choices = false;
                 }
                 ScriptEntry::Effect(text) => {
@@ -146,7 +155,7 @@ impl Component for EntryPage {
                                     "Effect request · {}",
                                     text.trim_start_matches('!').trim()
                                 ))
-                                .font_size(t::TEXT_SMALL)
+                                .font_size(t::small())
                                 .color(palette::muted(writer.dark)),
                         ),
                     );
@@ -155,9 +164,9 @@ impl Component for EntryPage {
                 ScriptEntry::Group { heading, .. } => {
                     surface = surface.child(
                         rect()
-                            .padding((4., 12.))
+                            .padding((t::SPACE_XS, if translating { 0. } else { t::SPACE_MD }))
                             .spacing(t::SPACE_XS)
-                            .child(label().text(heading.clone()).font_size(t::TEXT_SMALL))
+                            .child(label().text(heading.clone()).font_size(t::small()))
                             .child(EntryPage {
                                 writer,
                                 blocks: self.blocks.clone(),
@@ -172,7 +181,7 @@ impl Component for EntryPage {
                     in_choices = false;
                 }
                 ScriptEntry::Source(text) => {
-                    surface = surface.child(label().text(text.clone()).font_size(t::TEXT_BODY));
+                    surface = surface.child(label().text(text.clone()).font_size(t::body()));
                     in_choices = false;
                 }
             }
@@ -187,7 +196,7 @@ impl Component for EntryPage {
                         (start + PAGE_SIZE).min(entries.len()),
                         entries.len()
                     ))
-                    .font_size(t::TEXT_SMALL),
+                    .font_size(t::small()),
             );
             for (caption, destination, enabled) in [
                 ("Previous passages", current.saturating_sub(1), current > 0),

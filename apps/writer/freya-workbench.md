@@ -17,13 +17,18 @@ Switch scenes in the sidebar. Applied edits, field drafts, undo history, and
 preview state stay with each example for the lifetime of the window; nothing
 is saved to disk. Closing the window discards these temporary sessions.
 
-Map and Source are workspace views. Your choice is a user preference, shared
-across scenes and restored next time. Map includes single-beat conversations.
-Select a card to open its writing pane; the **Close beat editor** icon or Escape returns to the map.
+Script, Map and Source are workspace views. Script is the first-use default;
+existing Map and Source preferences remain valid. Each open scene retains its
+view and selection within the window. Script shows the selected beat, with an
+optional **Script + Map** split. **Focus writing** hides the surrounding controls
+until **Exit focus writing** restores them.
+
+In Map, click a card to select it; use **Open script**, Enter or a double click
+to open its writing pane; the **Close beat editor** icon or Escape returns to the map.
 Select the title to rename the beat in place; Enter applies and Escape cancels.
 Renaming uses the shared undo history and updates its references.
 The sidebar opens each scene as an accordion, with its beats indented underneath
-in source order. Selecting a beat highlights it without opening its editor.
+in source order. Selecting a beat opens it in Script and highlights it in Map.
 Start/end labels identify entry and exit points; the graph shows branching and
 convergence rather than imposing a false parent-child hierarchy on beats.
 
@@ -42,7 +47,14 @@ Drag the divider beside the scene drawer or script pane to resize it. The
 drawer allows 180–360 logical pixels and the script pane 320–800, constrained
 by the space needed for the graph. Focus a divider and use Left/Right to resize,
 or Home/End to reach its bounds. Settings includes **Script pane: Left/Right**;
-this preference is restored next launch. Widths remain local to the window.
+this preference and the divider widths are restored next launch.
+
+Settings also controls reading size, Source size and UI scale independently.
+**Commands** (Ctrl/Cmd+Shift+P) searches workspace actions; **Go to scene or beat**
+(Ctrl/Cmd+P) searches scene names and beat IDs. Search cancellation returns focus
+to the invoking control. Source completion keeps typing in the editor: Ctrl+Space
+opens candidates, arrows select, Enter accepts a selected result, and Escape
+dismisses. Tab keeps its ordinary editor behaviour.
 
 Card positions survive reopening in `writer-layouts.json`, beside the resolved
 user configuration. Project scenes are identified by their full discovered file
@@ -155,6 +167,20 @@ unaccepted field draft. Opening that file again restores the session. Source
 files are changed only by Save. A process crash releases the recovery lock;
 another writer cannot own the same file's recovery snapshot at the same time.
 The empty `.recite-editor-recovery.lock` file may remain and need not be removed.
+
+PO translation drafts also have a locked recovery snapshot beside their catalogue.
+Reopen that same catalogue to restore unsaved translations. Standalone declaration
+TOML drafts recover when you bind the same source again; the source association
+itself is not persisted. Incomplete TOML is retained. Neither recovery path
+overwrites externally changed files: the original baseline remains the save
+conflict boundary. Background snapshots are coalesced, so a crash can lose the
+latest edit that has not reached disk. Explicit save, discard and close wait
+for recovery cleanup.
+
+Closing with translation drafts lists the affected entries and offers direct
+navigation, save-all and discard-all actions. Declaration drafts and running
+jobs have a separate close dialog with save, discard, cancellation and navigation
+controls. Failures leave the app open.
 
 Use Ctrl+Q on Linux/Windows or Cmd+Q on macOS to quit. Escape quits only when
 no element has focus; focused controls and dialogs consume it first. Native

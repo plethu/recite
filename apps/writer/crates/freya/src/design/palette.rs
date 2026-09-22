@@ -1,25 +1,55 @@
+//! Semantic colour ownership for both Freya widgets and custom map painting.
 use freya::{code_editor::*, prelude::*};
+mod theme;
+pub use theme::theme;
 
-pub fn theme(dark: bool) -> Theme {
-    let mut theme = if dark {
-        dark_theme().with_dark_code_editor()
-    } else {
-        light_theme().with_light_code_editor()
-    };
-    let colors = &mut theme.colors;
-    colors.primary = color(dark, (72, 99, 77), (180, 203, 164));
-    colors.background = color(dark, (245, 242, 237), (32, 33, 36));
-    colors.surface_primary = color(dark, (236, 232, 226), (48, 50, 55));
-    colors.surface_secondary = colors.surface_primary;
-    colors.surface_tertiary = color(dark, (255, 253, 250), (41, 42, 45));
-    colors.text_primary = text(dark);
-    colors.text_secondary = color(dark, (101, 97, 91), (188, 184, 177));
-    colors.border = color(dark, (130, 125, 117), (162, 159, 153));
-    colors.border_focus = colors.primary;
-    colors.focus = color(dark, (224, 232, 220), (62, 77, 64));
-    theme.set("code_editor", EditorThemePreference::from(editor(dark)));
-    theme.set("code_editor_syntax", syntax(dark));
+#[derive(Clone, Copy)]
+pub(crate) struct Palette {
+    pub canvas: Color,
+    pub surface: Color,
+    pub inset: Color,
+    pub floating: Color,
+    pub rule: Color,
+    pub boundary: Color,
+    pub ink: Color,
+    pub muted: Color,
+    pub accent: Color,
+    pub on_accent: Color,
+    pub selection: Color,
+    pub hover: Color,
+    pub pressed: Color,
+    pub shadow: Color,
+    pub error: Color,
+}
+impl Palette {
+    pub fn new(dark: bool) -> Self {
+        Self {
+            canvas: color(dark, (240, 240, 237), (29, 31, 33)),
+            surface: color(dark, (255, 254, 251), (38, 41, 43)),
+            inset: color(dark, (244, 244, 240), (30, 33, 35)),
+            floating: color(dark, (255, 254, 252), (48, 52, 54)),
+            rule: color(dark, (217, 219, 212), (64, 69, 71)),
+            boundary: color(dark, (129, 125, 116), (133, 142, 141)),
+            ink: color(dark, (47, 48, 44), (234, 233, 226)),
+            muted: color(dark, (79, 82, 77), (198, 203, 197)),
+            accent: color(dark, (60, 89, 68), (177, 205, 179)),
+            on_accent: color(dark, (255, 254, 252), (27, 40, 30)),
+            selection: color(dark, (220, 232, 220), (51, 72, 58)),
+            hover: color(dark, (235, 236, 232), (56, 61, 62)),
+            pressed: color(dark, (218, 221, 215), (72, 79, 79)),
+            shadow: Color::from_argb(if dark { 85 } else { 28 }, 0, 0, 0),
+            error: color(dark, (150, 63, 54), (242, 179, 166)),
+        }
+    }
+}
+
+pub fn current() -> Palette {
+    let theme = use_theme();
+    let theme = theme.read();
     theme
+        .get::<Palette>("writer_palette")
+        .copied()
+        .unwrap_or_else(|| Palette::new(false))
 }
 
 pub fn syntax(dark: bool) -> EditorSyntaxTheme {
@@ -44,39 +74,25 @@ pub fn syntax(dark: bool) -> EditorSyntaxTheme {
     theme
 }
 
-fn editor(dark: bool) -> EditorTheme {
-    let mut editor = if dark {
-        EditorTheme::dark()
-    } else {
-        EditorTheme::light()
-    };
-    editor.background = color(dark, (255, 253, 250), (41, 42, 45));
-    editor.text = text(dark);
-    editor.cursor = editor.text;
-    editor.line_selected_background = color(dark, (236, 232, 226), (48, 50, 55));
-    editor.highlight = color(dark, (224, 232, 220), (62, 77, 64));
-    editor
-}
-
 fn color(dark: bool, light: (u8, u8, u8), night: (u8, u8, u8)) -> Color {
     let (r, g, b) = if dark { night } else { light };
     Color::from_rgb(r, g, b)
 }
 
 pub fn reading(dark: bool) -> Color {
-    color(dark, (255, 253, 250), (41, 42, 45))
+    Palette::new(dark).surface
 }
 pub fn muted(dark: bool) -> Color {
-    color(dark, (101, 97, 91), (188, 184, 177))
+    Palette::new(dark).muted
 }
 pub fn rule(dark: bool) -> Color {
-    color(dark, (215, 210, 202), (73, 74, 77))
+    Palette::new(dark).rule
 }
 pub fn accent(dark: bool) -> Color {
-    color(dark, (72, 99, 77), (180, 203, 164))
+    Palette::new(dark).accent
 }
-pub fn selection(dark: bool) -> Color {
-    color(dark, (224, 232, 220), (62, 77, 64))
+pub fn text(dark: bool) -> Color {
+    Palette::new(dark).ink
 }
 
 pub fn display_name(identifier: &str) -> String {
@@ -95,6 +111,5 @@ pub fn display_name(identifier: &str) -> String {
         .join(" ")
 }
 
-pub fn text(dark: bool) -> Color {
-    color(dark, (50, 47, 43), (234, 231, 225))
-}
+#[cfg(test)]
+mod tests;

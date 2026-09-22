@@ -1,0 +1,23 @@
+<!doctype html>
+<html lang="en-GB">
+<head>
+<meta charset="utf-8"><meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Recite · Remaining workflows</title>
+<link rel="stylesheet" href="../study.css"><link rel="stylesheet" href="study.css">
+</head>
+<body class="dark">
+<a class="skip" href="#main">Skip to workspace</a>
+<aside class="lab" aria-label="Study controls">
+<strong>Workflow study · 05</strong><span>Interactive sample · no real files or game actions</span>
+<label>Inspect <select id="screen"><option value="localise">Plural + variant translation</option><option value="updates">Source updates</option><option value="rules">Reply rules</option><option value="preview">Preview + trace</option><option value="schema">Schema ownership</option><option value="source">Source + diagnostics</option><option value="build">Build scope</option><option value="files">External changes</option></select></label>
+<details id="scenarios"><summary>Sample scenarios</summary><div class="scenario-panel"><label>Declaration owner<select id="owner"><option value="standalone">Standalone TOML</option><option value="engine">Engine-owned</option><option value="readonly">Unknown producer</option></select></label><button data-act="missing-metadata">Missing plural rule</button><button data-act="complex">Unsupported expression</button><button data-act="stale-schema">Stale schema</button><button data-act="fail-schema">Generation failure</button><button data-act="external">External edit</button><label><input id="fail-build" type="checkbox">Fail next build</label></div></details><button id="theme">Light appearance</button><a href="README.md">Review guide</a>
+</aside>
+<header><a class="wordmark" href="#rules">recite.</a><button id="back" aria-label="Go back">←</button><span>The relay station</span><nav aria-label="Mode"><a href="#rules" data-mode="write">Write</a><a href="#localise" data-mode="localise">Localise</a></nav></header>
+<div class="shell">
+<aside class="scenes" aria-label="Project navigation"><h2>Scenes</h2><details open><summary>Relay Hub</summary><a href="#rules">Relay Desk</a><a href="#localise">Tickets</a></details><details id="project-tools"><summary>Project</summary><a href="#schema">Declarations</a><a href="#build">Build scenes</a><a href="#files">Files &amp; changes</a></details></aside>
+<main id="main" tabindex="-1"></main>
+</div>
+<footer><span id="status" role="status" aria-live="polite">Sample workspace · changes last until reload</span><a href="../index.html">Earlier workflow study</a></footer>
+<script src="primitives.js"></script>
+<script src="study.js"></script>
+</body></html>

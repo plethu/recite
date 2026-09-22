@@ -21,13 +21,15 @@ pub fn editor_data(text: &str, source: bool, dark: bool) -> CodeEditorData {
 }
 
 pub(crate) fn perform(
-    mut model: Session,
-    mut editor: State<CodeEditorData>,
+    buffers: crate::buffers::Buffers,
     mut message: crate::feedback::Feedback,
-    mut prose: State<String>,
     dark: bool,
     action: impl FnOnce(&mut Workbench) -> Result<(), WorkbenchError>,
 ) -> Result<(), String> {
+    buffers.remember();
+    let mut model = buffers.model;
+    let mut editor = buffers.editor;
+    let mut prose = buffers.prose;
     let mut state = model.write();
     let outcome = match state.as_mut() {
         Ok(session) => {
@@ -44,6 +46,11 @@ pub(crate) fn perform(
                         matches!(session.view(), View::Source),
                         dark,
                     ));
+                }
+                if session.view() == &View::Source {
+                    buffers
+                        .bookmarks
+                        .restore(session.document().key().as_str(), &mut editor.write());
                 }
                 prose.set_if_modified(session.draft().to_owned());
             })
@@ -63,10 +70,19 @@ pub(crate) enum Pane {
     Map,
     Script,
     Preview,
+    Rules,
+    Declarations,
+    Disk,
+    Rename,
+    Build,
 }
 
 #[derive(Clone, Copy)]
 pub(crate) struct Writer {
+    pub command_search: crate::commands::Search,
+    pub source_viewport: crate::source_editor::EditorViewport,
+    pub layout: crate::presentation::Layout,
+    pub trial: crate::preview_panel::TrialInputs,
     pub localisation: State<crate::localisation::Localisation>,
     pub files: State<Option<crate::project::ProjectFiles>>,
     pub examples: State<std::collections::BTreeMap<String, Workbench>>,
@@ -107,13 +123,70 @@ impl Writer {
     }
 
     pub fn scene_opened(mut self) -> Result<(), String> {
+        let recovered_source = self
+            .buffers
+            .model
+            .peek()
+            .as_ref()
+            .is_ok_and(|m| m.view() == &View::Source && m.has_draft());
+        if recovered_source {
+            self.layout.view.set(recite_config::WriterView::Source);
+            self.pane.set(Pane::Map);
+            return Ok(());
+        }
         self.selection.set(None);
-        match self.preferences.peek().config.writer.view {
-            recite_config::WriterView::Map => self.try_navigate(Workbench::show_script),
-            recite_config::WriterView::Source => self.try_navigate(|m| m.select(View::Source)),
+        self.layout
+            .view
+            .set(self.preferences.peek().config.writer.view);
+        if *self.layout.view.peek() == recite_config::WriterView::Source {
+            self.try_navigate(|m| m.select(View::Source))
+        } else {
+            self.try_navigate(Workbench::show_script)?;
+            if self.layout.standalone() {
+                self.ensure_beat()?;
+            }
+            Ok(())
         }
     }
-
+    pub fn ensure_beat(mut self) -> Result<(), String> {
+        if self
+            .buffers
+            .model
+            .peek()
+            .as_ref()
+            .is_ok_and(|m| m.view() != &View::Source && m.selected_block().ok().flatten().is_some())
+        {
+            self.pane.set(Pane::Script);
+            return Ok(());
+        }
+        let id = {
+            let state = self.buffers.model.peek();
+            let model = state.as_ref().map_err(|e| e.to_string())?;
+            let blocks = model
+                .document()
+                .script_snapshot()
+                .map_err(|e| e.to_string())?;
+            model
+                .selected_block()
+                .ok()
+                .flatten()
+                .or_else(|| self.selection.peek().clone())
+                .filter(|id| blocks.iter().any(|b| &b.id == id))
+                .or_else(|| {
+                    blocks
+                        .iter()
+                        .find(|b| b.is_default)
+                        .or(blocks.first())
+                        .map(|b| b.id.clone())
+                })
+        };
+        if let Some(id) = id {
+            self.try_navigate(|m| m.inspect_block(&id))?;
+            self.selection.set(Some(id));
+        }
+        self.pane.set(Pane::Script);
+        Ok(())
+    }
     pub fn history_step(self, forward: bool) {
         crate::navigation::step(self, forward);
     }
@@ -134,17 +207,25 @@ impl Writer {
     }
     pub fn close_editor(mut self) {
         if self.try_navigate(|_| Ok(())).is_ok() {
+            self.layout.view.set(recite_config::WriterView::Map);
             self.pane.set(Pane::Map);
             self.map_focus.request_focus();
         }
     }
     pub fn set_view(mut self, view: recite_config::WriterView) {
         let outcome = self.try_navigate(|m| match view {
-            recite_config::WriterView::Map => m.show_script(),
+            recite_config::WriterView::Script | recite_config::WriterView::Map => m.show_script(),
             recite_config::WriterView::Source => m.select(View::Source),
         });
         if outcome.is_ok() {
+            self.localisation.write().active = false;
+            self.layout.view.set(view);
             self.pane.set(Pane::Map);
+            if view == recite_config::WriterView::Script
+                && let Err(error) = self.ensure_beat()
+            {
+                self.message.error(error);
+            }
             if let Err(e) = self
                 .preferences
                 .write()
@@ -179,14 +260,7 @@ impl Writer {
         self,
         action: impl FnOnce(&mut Workbench) -> Result<(), WorkbenchError>,
     ) -> Result<(), String> {
-        perform(
-            self.buffers.model,
-            self.buffers.editor,
-            self.message,
-            self.buffers.prose,
-            self.dark,
-            action,
-        )
+        perform(self.buffers, self.message, self.dark, action)
     }
 }
 
@@ -201,7 +275,8 @@ pub(super) fn is_save_key(event: &KeyboardEventData) -> bool {
 }
 
 pub(super) fn is_workspace_key(event: &KeyboardEventData) -> bool {
-    event.code == Code::F6
+    crate::commands::shortcut(event).is_some()
+        || event.code == Code::F6
         || (event.code == Code::Comma
             && event.modifiers
                 == if cfg!(target_os = "macos") {

@@ -49,6 +49,9 @@ pub(crate) struct History {
     bytes: usize,
 }
 impl History {
+    pub fn can_undo(&self) -> bool {
+        !self.undo.is_empty()
+    }
     pub fn record(&mut self, change: Change) {
         self.bytes -= self.redo.iter().map(Change::bytes).sum::<usize>();
         self.redo.clear();

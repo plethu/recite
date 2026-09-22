@@ -1,5 +1,267 @@
 pub(super) const fn key(id: super::MsgId) -> Option<&'static str> {
     match id {
+        super::MsgId::WriterWorkspaceMenu => Some("writer-workspace-menu"),
+        super::MsgId::WriterRulesActions => Some("writer-rules-actions"),
+        super::MsgId::WriterWorkspacePresentation => Some("writer-workspace-presentation"),
+        super::MsgId::WriterWorkspaceIncrease => Some("writer-workspace-increase"),
+        super::MsgId::WriterWorkspaceDecrease => Some("writer-workspace-decrease"),
+        super::MsgId::WriterWorkspaceCloseCommands => Some("writer-workspace-close-commands"),
+        super::MsgId::WriterWorkspaceNoCommandResults => {
+            Some("writer-workspace-no-command-results")
+        }
+        super::MsgId::WriterWorkspaceGoToSearch => Some("writer-workspace-go-to-search"),
+        super::MsgId::WriterWorkspaceCommandSearch => Some("writer-workspace-command-search"),
+        super::MsgId::WriterWorkspaceCommandUnavailable => {
+            Some("writer-workspace-command-unavailable")
+        }
+        super::MsgId::WriterWorkspaceSaveAll => Some("writer-workspace-save-all"),
+        super::MsgId::WriterWorkspaceSave => Some("writer-workspace-save"),
+        super::MsgId::WriterWorkspaceRedo => Some("writer-workspace-redo"),
+        super::MsgId::WriterWorkspaceUndo => Some("writer-workspace-undo"),
+        super::MsgId::WriterWorkspaceOpenScript => Some("writer-workspace-open-script"),
+        super::MsgId::WriterWorkspaceResizeDrawer => Some("writer-workspace-resize-drawer"),
+        super::MsgId::WriterWorkspaceResizeScript => Some("writer-workspace-resize-script"),
+        super::MsgId::WriterWorkspaceUiScale => Some("writer-workspace-ui-scale"),
+        super::MsgId::WriterWorkspaceSourceSize => Some("writer-workspace-source-size"),
+        super::MsgId::WriterWorkspaceReadingSize => Some("writer-workspace-reading-size"),
+        super::MsgId::WriterWorkspaceExitFocus => Some("writer-workspace-exit-focus"),
+        super::MsgId::WriterWorkspaceFocusWriting => Some("writer-workspace-focus-writing"),
+        super::MsgId::WriterWorkspaceGoTo => Some("writer-workspace-go-to"),
+        super::MsgId::WriterWorkspaceCommands => Some("writer-workspace-commands"),
+        super::MsgId::WriterWorkspaceSplitView => Some("writer-workspace-split-view"),
+        super::MsgId::WriterWorkspaceWritingView => Some("writer-workspace-writing-view"),
+        super::MsgId::WriterWorkspaceSourceView => Some("writer-workspace-source-view"),
+        super::MsgId::WriterWorkspaceMapView => Some("writer-workspace-map-view"),
+        super::MsgId::WriterWorkspaceScriptView => Some("writer-workspace-script-view"),
+        super::MsgId::WriterGuiVimHelp => Some("writer-gui-vim-help"),
+        super::MsgId::WriterGuiUserPreferences => Some("writer-gui-user-preferences"),
+        super::MsgId::WriterGuiUnpinReference => Some("writer-gui-unpin-reference"),
+        super::MsgId::WriterGuiTryScene => Some("writer-gui-try-scene"),
+        super::MsgId::WriterGuiTogglePinnedReference => Some("writer-gui-toggle-pinned-reference"),
+        super::MsgId::WriterGuiTargetIsOutsideThisScene => {
+            Some("writer-gui-target-is-outside-this-scene")
+        }
+        super::MsgId::WriterGuiSourceReadOnly => Some("writer-gui-source-read-only"),
+        super::MsgId::WriterGuiShowMoreResults => Some("writer-gui-show-more-results"),
+        super::MsgId::WriterGuiScenes => Some("writer-gui-scenes"),
+        super::MsgId::WriterGuiSaveAllTranslationDrafts => {
+            Some("writer-gui-save-all-translation-drafts")
+        }
+        super::MsgId::WriterGuiResetZoom => Some("writer-gui-reset-zoom"),
+        super::MsgId::WriterGuiReplies => Some("writer-gui-replies"),
+        super::MsgId::WriterGuiRefreshProjectContext => Some("writer-gui-refresh-project-context"),
+        super::MsgId::WriterGuiProjectSettings => Some("writer-gui-project-settings"),
+        super::MsgId::WriterGuiProjectSettingsHint => Some("writer-gui-project-settings-hint"),
+        super::MsgId::WriterGuiProject => Some("writer-gui-project"),
+        super::MsgId::WriterGuiPreviewLimit => Some("writer-gui-preview-limit"),
+        super::MsgId::WriterGuiPassageActions => Some("writer-gui-passage-actions"),
+        super::MsgId::WriterGuiOpenUnsavedTranslations => {
+            Some("writer-gui-open-unsaved-translations")
+        }
+        super::MsgId::WriterGuiOpenProject => Some("writer-gui-open-project"),
+        super::MsgId::WriterGuiOpenAProjectToEditItsSettings => {
+            Some("writer-gui-open-a-project-to-edit-its-settings")
+        }
+        super::MsgId::WriterGuiOpenAProjectFirst => Some("writer-gui-open-a-project-first"),
+        super::MsgId::WriterGuiNone => Some("writer-gui-none"),
+        super::MsgId::WriterGuiNoMatchingScenesOrBeats => {
+            Some("writer-gui-no-matching-scenes-or-beats")
+        }
+        super::MsgId::WriterGuiNoMatchingSavedPassagesTryFewerWords => {
+            Some("writer-gui-no-matching-saved-passages-try-fewer-words")
+        }
+        super::MsgId::WriterGuiMapHelp => Some("writer-gui-map-help"),
+        super::MsgId::WriterGuiKeepRecoveryCopyAndReloadDisk => {
+            Some("writer-gui-keep-recovery-copy-and-reload-disk")
+        }
+        super::MsgId::WriterGuiKeepEditing => Some("writer-gui-keep-editing"),
+        super::MsgId::WriterGuiConnectionHelp => Some("writer-gui-connection-help"),
+        super::MsgId::WriterGuiHelp => Some("writer-gui-help"),
+        super::MsgId::WriterGuiFit => Some("writer-gui-fit"),
+        super::MsgId::WriterGuiEndConversation => Some("writer-gui-end-conversation"),
+        super::MsgId::WriterGuiEditSource => Some("writer-gui-edit-source"),
+        super::MsgId::WriterGuiDismissMessage => Some("writer-gui-dismiss-message"),
+        super::MsgId::WriterGuiMapGestureHelp => Some("writer-gui-map-gesture-help"),
+        super::MsgId::WriterGuiConnections => Some("writer-gui-connections"),
+        super::MsgId::WriterGuiConfigurationFile => Some("writer-gui-configuration-file"),
+        super::MsgId::WriterGuiCompleteCtrlSpace => Some("writer-gui-complete-ctrl-space"),
+        super::MsgId::WriterGuiChange => Some("writer-gui-change"),
+        super::MsgId::WriterGuiChangeDestination => Some("writer-gui-change-destination"),
+        super::MsgId::WriterGuiCancelRunningJobs => Some("writer-gui-cancel-running-jobs"),
+        super::MsgId::WriterGuiCancelOpening => Some("writer-gui-cancel-opening"),
+        super::MsgId::WriterGuiBeatIdentifierHint => Some("writer-gui-beat-identifier-hint"),
+        super::MsgId::WriterGuiArrangeAutomatically => Some("writer-gui-arrange-automatically"),
+        super::MsgId::WriterGuiArrange => Some("writer-gui-arrange"),
+        super::MsgId::WriterGuiAddReply => Some("writer-gui-add-reply"),
+        super::MsgId::WriterGuiAddLine => Some("writer-gui-add-line"),
+        super::MsgId::WriterGuiAddBeat => Some("writer-gui-add-beat"),
+        super::MsgId::WriterGuiJobsPending => Some("writer-gui-jobs-pending"),
+        super::MsgId::WriterReloadGenerated => Some("writer-reload-generated"),
+
+        super::MsgId::WriterReloadProducer => Some("writer-reload-producer"),
+        super::MsgId::WriterProducerNotRegistered => Some("writer-producer-not-registered"),
+        super::MsgId::WriterGenerating => Some("writer-generating"),
+        super::MsgId::WriterRegenerate => Some("writer-regenerate"),
+        super::MsgId::WriterConfigureSourceEditor => Some("writer-configure-source-editor"),
+        super::MsgId::WriterOpenDeclarationSource => Some("writer-open-declaration-source"),
+        super::MsgId::WriterProducerFinished => Some("writer-producer-finished"),
+
+        super::MsgId::WriterReloadSchemaSource => Some("writer-reload-schema-source"),
+
+        super::MsgId::WriterExternalOpening => Some("writer-external-opening"),
+        super::MsgId::WriterCatalogueChanged => Some("writer-catalogue-changed"),
+
+        super::MsgId::WriterSaveProject => Some("writer-save-project"),
+
+        super::MsgId::WriterSearchDeclarations => Some("writer-search-declarations"),
+        super::MsgId::WriterChanges => Some("writer-changes"),
+        super::MsgId::WriterLine => Some("writer-line"),
+
+        super::MsgId::WriterBackDeclarations => Some("writer-back-declarations"),
+
+        super::MsgId::WriterReturnWriting => Some("writer-return-writing"),
+        super::MsgId::WriterProposedSource => Some("writer-proposed-source"),
+
+        super::MsgId::WriterUseEditableDraft => Some("writer-use-editable-draft"),
+
+        super::MsgId::WriterDiskDraftHint => Some("writer-disk-draft-hint"),
+        super::MsgId::WriterDiskChanged => Some("writer-disk-changed"),
+        super::MsgId::WriterExternalOpened => Some("writer-external-opened"),
+        super::MsgId::WriterSaveExternal => Some("writer-save-external"),
+        super::MsgId::WriterCompareDisk => Some("writer-compare-disk"),
+
+        super::MsgId::WriterRenameProject => Some("writer-rename-project"),
+        super::MsgId::WriterRenameReview => Some("writer-rename-review"),
+        super::MsgId::WriterRenameApply => Some("writer-rename-apply"),
+        super::MsgId::WriterRenameHint => Some("writer-rename-hint"),
+        super::MsgId::WriterRenameName => Some("writer-rename-name"),
+        super::MsgId::WriterRenameFrom => Some("writer-rename-from"),
+        super::MsgId::WriterRenameApplied => Some("writer-rename-applied"),
+
+        super::MsgId::WriterBuildScenes => Some("writer-build-scenes"),
+        super::MsgId::WriterBuildSaved => Some("writer-build-saved"),
+        super::MsgId::WriterSaveBuild => Some("writer-save-build"),
+        super::MsgId::WriterBuildAll => Some("writer-build-all"),
+        super::MsgId::WriterBuildScope => Some("writer-build-scope"),
+        super::MsgId::WriterBuildInputs => Some("writer-build-inputs"),
+        super::MsgId::WriterBuilding => Some("writer-building"),
+        super::MsgId::WriterBuildCancelling => Some("writer-build-cancelling"),
+
+        super::MsgId::WriterDeclarations => Some("writer-declarations"),
+        super::MsgId::WriterUnknownProducer => Some("writer-unknown-producer"),
+        super::MsgId::WriterDeclarationCondition => Some("writer-declaration-condition"),
+        super::MsgId::WriterDeclarationEffect => Some("writer-declaration-effect"),
+        super::MsgId::WriterDeclarationSpeaker => Some("writer-declaration-speaker"),
+        super::MsgId::WriterDeclarationRegistry => Some("writer-declaration-registry"),
+        super::MsgId::WriterDeclarationSourceDetails => Some("writer-declaration-source-details"),
+        super::MsgId::WriterBindSource => Some("writer-bind-source"),
+        super::MsgId::WriterEditDeclarationSource => Some("writer-edit-declaration-source"),
+        super::MsgId::WriterGenerateSchema => Some("writer-generate-schema"),
+        super::MsgId::WriterSchemaCurrent => Some("writer-schema-current"),
+        super::MsgId::WriterSchemaStale => Some("writer-schema-stale"),
+        super::MsgId::WriterSchemaReadOnly => Some("writer-schema-read-only"),
+        super::MsgId::WriterBrowseSchema => Some("writer-browse-schema"),
+        super::MsgId::WriterSourceSaved => Some("writer-source-saved"),
+
+        super::MsgId::WriterAllChanges => Some("writer-all-changes"),
+        super::MsgId::WriterChange => Some("writer-change"),
+
+        super::MsgId::WriterOpenDocuments => Some("writer-open-documents"),
+        super::MsgId::WriterSaveCloseDocument => Some("writer-save-close-document"),
+        super::MsgId::WriterCloseDocumentDraft => Some("writer-close-document-draft"),
+        super::MsgId::WriterShowContext => Some("writer-show-context"),
+        super::MsgId::WriterHideContext => Some("writer-hide-context"),
+        super::MsgId::WriterNoChanges => Some("writer-no-changes"),
+
+        super::MsgId::WriterRulesAny => Some("writer-rules-any"),
+        super::MsgId::WriterRulesAll => Some("writer-rules-all"),
+        super::MsgId::WriterRulesMatch => Some("writer-rules-match"),
+        super::MsgId::WriterRulesGroup => Some("writer-rules-group"),
+        super::MsgId::WriterRulesDestination => Some("writer-rules-destination"),
+        super::MsgId::WriterRulesTitle => Some("writer-rules-title"),
+        super::MsgId::WriterRulesApply => Some("writer-rules-apply"),
+        super::MsgId::WriterRulesDiscard => Some("writer-rules-discard"),
+        super::MsgId::WriterRulesOpen => Some("writer-rules-open"),
+        super::MsgId::WriterRulesReturn => Some("writer-rules-return"),
+        super::MsgId::WriterRulesSource => Some("writer-rules-source"),
+        super::MsgId::WriterRulesAvailability => Some("writer-rules-availability"),
+        super::MsgId::WriterRulesAlways => Some("writer-rules-always"),
+        super::MsgId::WriterRulesMakeAlways => Some("writer-rules-make-always"),
+        super::MsgId::WriterRulesChosen => Some("writer-rules-chosen"),
+        super::MsgId::WriterRulesNoEffects => Some("writer-rules-no-effects"),
+        super::MsgId::WriterRulesPreserved => Some("writer-rules-preserved"),
+        super::MsgId::WriterRulesSourceChanged => Some("writer-rules-source-changed"),
+        super::MsgId::WriterRulesNegate => Some("writer-rules-negate"),
+        super::MsgId::WriterRulesRemoveNegation => Some("writer-rules-remove-negation"),
+        super::MsgId::WriterRulesDelivery => Some("writer-rules-delivery"),
+        super::MsgId::WriterRulesRemove => Some("writer-rules-remove"),
+        super::MsgId::WriterRulesImmediate => Some("writer-rules-immediate"),
+        super::MsgId::WriterRulesBlocking => Some("writer-rules-blocking"),
+        super::MsgId::WriterRulesDeferred => Some("writer-rules-deferred"),
+        super::MsgId::WriterRulesSearchValues => Some("writer-rules-search-values"),
+        super::MsgId::WriterRulesChooseValue => Some("writer-rules-choose-value"),
+        super::MsgId::WriterRulesNoValues => Some("writer-rules-no-values"),
+        super::MsgId::WriterRulesAddEffect => Some("writer-rules-add-effect"),
+        super::MsgId::WriterRulesAddCondition => Some("writer-rules-add-condition"),
+        super::MsgId::WriterRulesChooseDeclaration => Some("writer-rules-choose-declaration"),
+        super::MsgId::WriterRulesNoDeclarations => Some("writer-rules-no-declarations"),
+
+        super::MsgId::WriterApplyDraft => Some("writer-apply-draft"),
+        super::MsgId::WriterDiscardDraft => Some("writer-discard-draft"),
+
+        super::MsgId::WriterReturnTranslation => Some("writer-return-translation"),
+        super::MsgId::WriterTrialSaved => Some("writer-trial-saved"),
+        super::MsgId::WriterTrialDrafts => Some("writer-trial-drafts"),
+        super::MsgId::WriterSourceRevision => Some("writer-source-revision"),
+
+        super::MsgId::WriterCompleteSource => Some("writer-complete-source"),
+        super::MsgId::WriterFilterCompletions => Some("writer-filter-completions"),
+        super::MsgId::WriterNoCompletions => Some("writer-no-completions"),
+
+        super::MsgId::WriterLookupMatched => Some("writer-lookup-matched"),
+        super::MsgId::WriterLookupMissing => Some("writer-lookup-missing"),
+        super::MsgId::WriterTrialEnded => Some("writer-trial-ended"),
+        super::MsgId::WriterTrialChoice => Some("writer-trial-choice"),
+        super::MsgId::WriterTrialDeferred => Some("writer-trial-deferred"),
+        super::MsgId::WriterTrialEffect => Some("writer-trial-effect"),
+
+        super::MsgId::WriterTrialInputs => Some("writer-trial-inputs"),
+        super::MsgId::WriterTrialInputsHelp => Some("writer-trial-inputs-help"),
+        super::MsgId::WriterSourceOnly => Some("writer-source-only"),
+        super::MsgId::WriterIncludeDrafts => Some("writer-include-drafts"),
+        super::MsgId::WriterTrialInvalidValue => Some("writer-trial-invalid-value"),
+
+        super::MsgId::WriterEntryPluralInvalid => Some("writer-entry-plural-invalid"),
+        super::MsgId::WriterExternalStructureChanged => Some("writer-external-structure-changed"),
+
+        super::MsgId::WriterPreview => Some("writer-preview"),
+        super::MsgId::WriterRestartPreview => Some("writer-restart-preview"),
+        super::MsgId::WriterClosePreview => Some("writer-close-preview"),
+        super::MsgId::WriterContinue => Some("writer-continue"),
+        super::MsgId::WriterTrue => Some("writer-true"),
+        super::MsgId::WriterFalse => Some("writer-false"),
+        super::MsgId::WriterConditionInput => Some("writer-condition-input"),
+        super::MsgId::WriterConditionAnswer => Some("writer-condition-answer"),
+        super::MsgId::WriterAcknowledge => Some("writer-acknowledge"),
+        super::MsgId::WriterEffectFailed => Some("writer-effect-failed"),
+        super::MsgId::WriterPreviewTrace => Some("writer-preview-trace"),
+        super::MsgId::WriterPreviewStale => Some("writer-preview-stale"),
+        super::MsgId::WriterAwaitingEffect => Some("writer-awaiting-effect"),
+        super::MsgId::WriterSampleFailure => Some("writer-sample-failure"),
+
+        super::MsgId::WriterUnified => Some("writer-unified"),
+        super::MsgId::WriterSideBySide => Some("writer-side-by-side"),
+        super::MsgId::WriterDraftVersion => Some("writer-draft-version"),
+        super::MsgId::WriterDiskVersion => Some("writer-disk-version"),
+        super::MsgId::WriterMissingVersion => Some("writer-missing-version"),
+        super::MsgId::WriterWording => Some("writer-wording"),
+        super::MsgId::WriterDefaultWording => Some("writer-default-wording"),
+        super::MsgId::WriterPluralForm => Some("writer-plural-form"),
+        super::MsgId::WriterPluralRule => Some("writer-plural-rule"),
+        super::MsgId::WriterEntryEditor => Some("writer-entry-editor"),
+        super::MsgId::WriterComparisonResolution => Some("writer-comparison-resolution"),
+        super::MsgId::WriterCompareReturn => Some("writer-compare-return"),
+
         super::MsgId::WriterChangeNew => Some("writer-change-new"),
         super::MsgId::WriterChangeChanged => Some("writer-change-changed"),
         super::MsgId::WriterChangeRemoved => Some("writer-change-removed"),

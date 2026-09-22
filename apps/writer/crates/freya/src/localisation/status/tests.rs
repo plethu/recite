@@ -20,7 +20,7 @@ fn an_unsaved_review_remains_in_attention_until_saved() -> Result<(), Box<dyn st
     catalogue.update(
         id,
         Draft {
-            text: "Bonjour".into(),
+            forms: vec!["Bonjour".into()],
             reviewed: true,
         },
     );
@@ -36,7 +36,7 @@ fn an_unsaved_review_remains_in_attention_until_saved() -> Result<(), Box<dyn st
     catalogue.update(
         id,
         Draft {
-            text: "  ".into(),
+            forms: vec!["  ".into()],
             reviewed: false,
         },
     );

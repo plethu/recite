@@ -1,7 +1,7 @@
 //! A beat's script and explicit links to its neighbouring beats.
 use crate::design::Button;
 use crate::design::tokens as t;
-use crate::{controls::navigation_row, editing::Writer, palette};
+use crate::{editing::Writer, palette};
 use freya::prelude::*;
 use recite_writer_model::{View, Workbench};
 
@@ -34,17 +34,12 @@ pub(super) fn reading_surface(writer: Writer, active: Element) -> Element {
                 .key(id.clone())
                 .width(Size::fill())
                 .spacing(t::SPACE_XS)
-                .child(crate::beat_heading::BeatHeading {
-                    writer,
-                    id: id.clone(),
-                })
-                .maybe_child(
-                    writer
-                        .localisation
-                        .read()
-                        .active
-                        .then(|| crate::localisation::context(writer, id.clone())),
-                )
+                .maybe_child((!writer.localisation.read().active).then(|| {
+                    crate::beat_heading::BeatHeading {
+                        writer,
+                        id: id.clone(),
+                    }
+                }))
                 .child(crate::script_entries::EntryPage {
                     writer,
                     blocks: blocks.clone(),
@@ -62,13 +57,17 @@ pub(super) fn reading_surface(writer: Writer, active: Element) -> Element {
                     Button::new()
                         .flat()
                         .on_press(move |_| writer.navigate(Workbench::add_line))
-                        .child("Add line"),
+                        .child(crate::messages::text(
+                            crate::messages::MsgId::WriterGuiAddLine,
+                        )),
                 )
                 .child(
                     Button::new()
                         .flat()
                         .on_press(move |_| writer.navigate(Workbench::add_choice))
-                        .child("Add reply"),
+                        .child(crate::messages::text(
+                            crate::messages::MsgId::WriterGuiAddReply,
+                        )),
                 ),
         );
     }
@@ -83,8 +82,10 @@ pub(super) fn jump(
 ) -> Element {
     if target == "END" {
         let heading = label()
-            .text("End conversation")
-            .font_size(t::TEXT_SMALL)
+            .text(crate::messages::text(
+                crate::messages::MsgId::WriterGuiEndConversation,
+            ))
+            .font_size(t::small())
             .color(palette::muted(writer.dark))
             .into_element();
         return route_heading(writer, heading, owner);
@@ -105,21 +106,21 @@ pub(super) fn jump(
         .spacing(t::SPACE_XS)
         .child(route_heading(
             writer,
-            navigation_row(
-                format!(
+            Button::new()
+                .flat()
+                .expanded(open)
+                .child(format!(
                     "{} {}",
                     if open { "▾" } else { "▸" },
                     palette::display_name(target)
-                ),
-                false,
-                writer.dark,
-                move |_| {
+                ))
+                .on_press(move |_| {
                     let mut entries = expanded.write();
                     if !entries.remove(&key) {
                         entries.insert(key.clone());
                     }
-                },
-            ),
+                })
+                .into_element(),
             owner,
         ));
     if open {
@@ -133,8 +134,10 @@ pub(super) fn jump(
         } else {
             result = result.child(
                 label()
-                    .text("Target is outside this scene")
-                    .font_size(t::TEXT_SMALL),
+                    .text(crate::messages::text(
+                        crate::messages::MsgId::WriterGuiTargetIsOutsideThisScene,
+                    ))
+                    .font_size(t::small()),
             );
         }
     }

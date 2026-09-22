@@ -37,8 +37,24 @@ fn snapshot(writer: Writer) -> Location {
     let files = writer.files.read();
     let root = files.as_ref().map(|f| f.root());
     let mut location = Location {
-        screen: if !state.active {
+        screen: if *writer.pane.read() == Pane::Disk {
+            Screen::Disk
+        } else if *writer.pane.read() == Pane::Rename {
+            Screen::Rename
+        } else if *writer.pane.read() == Pane::Build {
+            Screen::Build
+        } else if *writer.pane.read() == Pane::Declarations {
+            Screen::Declarations
+        } else if *writer.pane.read() == Pane::Rules {
+            Screen::Rules
+        } else if *writer.pane.read() == Pane::Preview {
+            Screen::Preview
+        } else if !state.active {
             Screen::Write
+        } else if state.view == crate::localisation::CatalogueView::Compare {
+            Screen::Compare
+        } else if state.view == crate::localisation::CatalogueView::Entry {
+            Screen::Entry
         } else if state.view == crate::localisation::CatalogueView::Updates {
             Screen::Updates
         } else if state.view == crate::localisation::CatalogueView::Queue {
@@ -46,6 +62,9 @@ fn snapshot(writer: Writer) -> Location {
         } else {
             Screen::Localise
         },
+        entry: (state.active && state.view == crate::localisation::CatalogueView::Entry)
+            .then(|| state.entry_context.clone())
+            .flatten(),
         catalogue: state.catalogue.as_ref().map(|c| {
             root.and_then(|root| c.path.strip_prefix(root).ok())
                 .unwrap_or(&c.path)
@@ -65,12 +84,22 @@ fn snapshot(writer: Writer) -> Location {
     if let Ok(model) = model.as_ref() {
         location.document = model.document().key().to_string();
         location.source = model.view() == &View::Source;
+        location.view = (!location.source).then(|| *writer.layout.view.read());
         if !location.source && (*writer.pane.read() != Pane::Map || state.active) {
             location.beat = model.selected_block().ok().flatten();
             if let View::Passage(id) = model.view() {
                 location.passage = Some(id.clone());
             }
         }
+    }
+    if location.screen == Screen::Rules {
+        location.source = false;
+        location.passage = writer
+            .buffers
+            .rules
+            .read()
+            .as_ref()
+            .map(|r| r.passage.clone());
     }
     location
 }
@@ -96,8 +125,7 @@ pub(super) fn track(writer: Writer, mode: AppMode) {
                     .map_err(str::to_owned)
                     .and_then(|location| apply(writer, &location));
                 if let Err(error) = result {
-                    let mut message = writer.message;
-                    message.error(error);
+                    report_error(writer, error);
                 }
             }
             let _ = router.replace(snapshot(writer));
@@ -115,7 +143,7 @@ pub(super) fn track(writer: Writer, mode: AppMode) {
     });
 }
 
-pub(super) fn step(mut writer: Writer, forward: bool) {
+pub(super) fn step(writer: Writer, forward: bool) {
     if writer.localisation.peek().modal_open() || *writer.settings_open.peek() {
         return;
     }
@@ -135,7 +163,7 @@ pub(super) fn step(mut writer: Writer, forward: bool) {
         } else {
             router.go_forward();
         }
-        writer.message.error(error);
+        report_error(writer, error);
     }
 }
 
@@ -148,7 +176,7 @@ fn select(model: &mut Workbench, location: &Location) -> Result<(), WorkbenchErr
     {
         return Err(recite_writer_model::EditError::Destination.into());
     }
-    let view = if location.source {
+    let view = if location.source || location.screen == Screen::Rules {
         Some(View::Source)
     } else if let Some(passage) = &location.passage {
         Some(View::Passage(passage.clone()))
@@ -175,6 +203,7 @@ fn apply(mut writer: Writer, location: &Location) -> Result<(), String> {
             return Err(format!("Open the linked project first: {project}"));
         }
     }
+    writer.remember_scene();
     writer.try_navigate(|_| Ok(()))?;
     let path = location.catalogue.as_ref().map(|p| {
         writer
@@ -194,8 +223,11 @@ fn apply(mut writer: Writer, location: &Location) -> Result<(), String> {
         if writer.localisation.peek().dirty() {
             return Err(crate::localisation::close_drafts_message());
         }
+        if let Some(current) = writer.localisation.write().catalogue.as_mut() {
+            current.flush_recovery()?;
+        }
         path.as_ref()
-            .map(|p| crate::localisation::catalogue::Catalogue::open(p))
+            .map(|p| crate::localisation::catalogue::Catalogue::open_recoverable(p))
             .transpose()?
     } else {
         None
@@ -211,20 +243,15 @@ fn apply(mut writer: Writer, location: &Location) -> Result<(), String> {
         .to_string();
     if !location.document.is_empty() && location.document != current {
         if writer.files.peek().is_some() {
-            if !writer.buffers.can_leave(writer.files.peek().as_ref()) {
-                return Err(
-                    "Save changes and apply or discard the draft before changing files.".into(),
-                );
-            }
-            let mut files = writer.files.write();
-            let project = files.as_mut().ok_or("Open the linked project first.")?;
-            let path = project
-                .path_for_document(&location.document)
+            let path = writer
+                .files
+                .peek()
+                .as_ref()
+                .and_then(|project| project.path_for_document(&location.document))
                 .ok_or("The linked scene is not in this project.")?;
-            let next = project
-                .select_at(&path, |m| select(m, location))
-                .map_err(|e| e.to_string())?;
-            writer.buffers.install(next, writer.dark);
+            writer
+                .buffers
+                .switch(writer.files, &path, writer.dark, |m| select(m, location))?;
         } else {
             let index = recite_writer_model::WRITER_EXAMPLES
                 .iter()
@@ -237,18 +264,29 @@ fn apply(mut writer: Writer, location: &Location) -> Result<(), String> {
     }
     {
         let mut state = writer.localisation.write();
-        state.active = location.screen != Screen::Write;
+        if catalogue_changed {
+            state.install(catalogue)?;
+        }
+        state.active = !matches!(
+            location.screen,
+            Screen::Write
+                | Screen::Preview
+                | Screen::Rules
+                | Screen::Declarations
+                | Screen::Build
+                | Screen::Rename
+                | Screen::Disk
+        );
+        state.entry_context = location.entry.clone();
         state.view = match location.screen {
             Screen::Translations => crate::localisation::CatalogueView::Queue,
             Screen::Updates => crate::localisation::CatalogueView::Updates,
+            Screen::Compare => crate::localisation::CatalogueView::Compare,
+            Screen::Entry => crate::localisation::CatalogueView::Entry,
             _ => crate::localisation::CatalogueView::Passage,
         };
         if location.screen == Screen::Updates {
             state.update_index = location.page;
-        }
-        if catalogue_changed {
-            state.catalogue = catalogue;
-            state.refresh = None;
         }
     }
     writer.queue.search.set(location.query.clone());
@@ -256,23 +294,68 @@ fn apply(mut writer: Writer, location: &Location) -> Result<(), String> {
     if location.screen != Screen::Updates {
         writer.queue.page.set(location.page);
     }
-    writer
-        .pane
-        .set(if location.beat.is_some() || location.passage.is_some() {
-            Pane::Script
-        } else {
-            Pane::Map
+    if location.screen == Screen::Rules {
+        let passage = location
+            .passage
+            .as_deref()
+            .ok_or("A reply-rules link needs a passage.")?;
+        let retained = writer.buffers.rules.peek().as_ref().is_some_and(|r| {
+            r.passage == passage
+                && writer
+                    .buffers
+                    .model
+                    .peek()
+                    .as_ref()
+                    .is_ok_and(|m| r.belongs_to(m.document()))
+                && r.source()
+                    .is_ok_and(|source| source == writer.buffers.editor.peek().rope)
         });
+        if !retained {
+            crate::rules::open(writer, passage)?;
+        }
+    }
+    if location.screen == Screen::Declarations {
+        crate::declarations::try_open(writer)?;
+    }
+    if location.screen == Screen::Build {
+        crate::builds::try_open(writer)?;
+    }
+    if location.screen == Screen::Rename {
+        crate::rename::open(writer);
+    }
+    if location.screen == Screen::Disk {
+        crate::external::try_open(writer)?;
+    }
+    writer.pane.set(if location.screen == Screen::Disk {
+        Pane::Disk
+    } else if location.screen == Screen::Rename {
+        Pane::Rename
+    } else if location.screen == Screen::Build {
+        Pane::Build
+    } else if location.screen == Screen::Declarations {
+        Pane::Declarations
+    } else if location.screen == Screen::Rules {
+        Pane::Rules
+    } else if location.screen == Screen::Preview {
+        Pane::Preview
+    } else if location.beat.is_some() || location.passage.is_some() {
+        Pane::Script
+    } else {
+        Pane::Map
+    });
+    writer.layout.view.set(if location.source {
+        recite_config::WriterView::Source
+    } else {
+        location.view.unwrap_or(recite_config::WriterView::Map)
+    });
     writer.selection.set(location.beat.clone());
     writer.inspector_focus.request_focus();
-    writer
-        .scroll
-        .scroll_to(ScrollPosition::Start, Direction::Vertical);
+    writer.restore_scroll();
     Ok(())
 }
 
 pub(super) fn open_passage(
-    mut writer: Writer,
+    writer: Writer,
     document: Option<&str>,
     beat: &str,
     passage: &str,
@@ -288,7 +371,7 @@ pub(super) fn open_passage(
     match apply(writer, &location) {
         Ok(()) => true,
         Err(error) => {
-            writer.message.error(error);
+            report_error(writer, error);
             false
         }
     }
@@ -329,3 +412,15 @@ pub(super) fn buttons(mut writer: Writer) -> Element {
 
 #[cfg(test)]
 mod tests;
+
+fn report_error(mut writer: Writer, error: String) {
+    if writer.localisation.peek().dirty() {
+        writer.message.error_with_action(
+            error,
+            crate::messages::text(crate::messages::MsgId::WriterGuiOpenUnsavedTranslations),
+            EventHandler::new(move |()| crate::localisation::show_unsaved(writer)),
+        );
+    } else {
+        writer.message.error(error);
+    }
+}

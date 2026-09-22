@@ -16,6 +16,17 @@ impl Document {
         let value: Arc<[Passage]> = crate::projection::passages(self.source())?.into();
         Ok(self.projections.passages.get_or_init(|| value).clone())
     }
+    pub(crate) fn passage_snapshot_from(
+        &self,
+        parsed: &recite_parser::Parse,
+        lowered: &recite_parser::LoweredSourceFile,
+    ) -> Result<Arc<[Passage]>, EditError> {
+        if let Some(value) = self.projections.passages.get() {
+            return Ok(value.clone());
+        }
+        let value = crate::projection::passages_from(self.source(), parsed, lowered)?.into();
+        Ok(self.projections.passages.get_or_init(|| value).clone())
+    }
     pub fn script_snapshot(&self) -> Result<Arc<[ScriptBlock]>, EditError> {
         if let Some(value) = self.projections.script.get() {
             return Ok(value.clone());

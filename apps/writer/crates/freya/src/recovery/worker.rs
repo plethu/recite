@@ -1,5 +1,5 @@
 //! One disk owner, one pending snapshot. Explicit persistence waits for durability.
-use super::{Recovery, RecoveryDisk};
+use super::{RecoveryDisk, Snapshot};
 use crate::project::FileError;
 use std::{
     path::Path,
@@ -7,24 +7,31 @@ use std::{
     thread::JoinHandle,
 };
 
-#[derive(Default)]
-struct Pending {
-    next: Option<(u64, Option<Recovery>)>,
+struct Pending<T: Snapshot> {
+    next: Option<(u64, Option<T>)>,
     completed: u64,
     error: Option<String>,
     stopping: bool,
 }
-pub(crate) struct RecoveryStore {
-    snapshot: Option<Recovery>,
+pub(crate) struct SnapshotStore<T: Snapshot> {
+    snapshot: Option<T>,
     sequence: u64,
-    pending: Arc<(Mutex<Pending>, Condvar)>,
+    pending: Arc<(Mutex<Pending<T>>, Condvar)>,
     worker: Option<JoinHandle<()>>,
 }
-impl RecoveryStore {
+impl<T: Snapshot> SnapshotStore<T> {
     pub fn open(source: &Path) -> Result<Self, FileError> {
         let mut disk = RecoveryDisk::open(source)?;
         let snapshot = disk.snapshot().cloned();
-        let pending = Arc::new((Mutex::new(Pending::default()), Condvar::new()));
+        let pending = Arc::new((
+            Mutex::new(Pending {
+                next: None,
+                completed: 0,
+                error: None,
+                stopping: false,
+            }),
+            Condvar::new(),
+        ));
         let shared = pending.clone();
         let worker = std::thread::Builder::new().name("recite-recovery".into()).spawn(move || {
             let result = std::panic::catch_unwind(std::panic::AssertUnwindSafe(|| run(&mut disk, &shared)));
@@ -50,10 +57,10 @@ impl RecoveryStore {
             .error
             .clone()
     }
-    pub fn snapshot(&self) -> Option<&Recovery> {
+    pub fn snapshot(&self) -> Option<&T> {
         self.snapshot.as_ref()
     }
-    pub fn queue(&mut self, snapshot: Option<Recovery>) -> Result<(), FileError> {
+    pub fn queue(&mut self, snapshot: Option<T>) -> Result<(), FileError> {
         let previous_error = self
             .pending
             .0
@@ -64,7 +71,7 @@ impl RecoveryStore {
         self.submit(snapshot)?;
         previous_error.map_or(Ok(()), |error| Err(FileError::BackgroundRecovery(error)))
     }
-    fn submit(&mut self, snapshot: Option<Recovery>) -> Result<(), FileError> {
+    fn submit(&mut self, snapshot: Option<T>) -> Result<(), FileError> {
         let mut state = self.pending.0.lock().unwrap_or_else(|e| e.into_inner());
         if state.stopping {
             return Err(FileError::BackgroundRecovery(
@@ -84,7 +91,7 @@ impl RecoveryStore {
         }
         Ok(())
     }
-    pub fn persist(&mut self, snapshot: Option<Recovery>) -> Result<(), FileError> {
+    pub fn persist(&mut self, snapshot: Option<T>) -> Result<(), FileError> {
         self.submit(snapshot)?;
         self.flush()
     }
@@ -103,7 +110,7 @@ impl RecoveryStore {
             .map_or(Ok(()), |error| Err(FileError::BackgroundRecovery(error)))
     }
 }
-impl Drop for RecoveryStore {
+impl<T: Snapshot> Drop for SnapshotStore<T> {
     fn drop(&mut self) {
         // Save/close call persist explicitly to report errors. Drop still drains queued work.
         let mut state = self.pending.0.lock().unwrap_or_else(|e| e.into_inner());
@@ -115,7 +122,7 @@ impl Drop for RecoveryStore {
         }
     }
 }
-fn run(disk: &mut RecoveryDisk, shared: &(Mutex<Pending>, Condvar)) {
+fn run<T: Snapshot>(disk: &mut RecoveryDisk<T>, shared: &(Mutex<Pending<T>>, Condvar)) {
     loop {
         let mut state = shared.0.lock().unwrap_or_else(|e| e.into_inner());
         while state.next.is_none() && !state.stopping {

@@ -1,5 +1,5 @@
 use super::*;
-use crate::design::{DialogAction, keyboard};
+use crate::design::{SubmitAction, keyboard};
 use freya_testing::prelude::*;
 
 fn form() -> impl IntoElement {
@@ -9,6 +9,7 @@ fn form() -> impl IntoElement {
     let field = use_a11y();
     let button = use_a11y();
     Dialog {
+        dismissal_only: false,
         title: "Test form".into(),
         reduced_motion: true,
         content: rect()
@@ -23,7 +24,7 @@ fn form() -> impl IntoElement {
         actions: rect().into_element(),
         focus_order: vec![field, button],
         close: EventHandler::new(|()| {}),
-        primary: DialogAction {
+        primary: SubmitAction {
             id: button,
             caption: "Submit".into(),
             enabled: !query.read().is_empty(),

@@ -88,7 +88,7 @@ impl BodyCursor {
         }
     }
 
-    fn is_boundary(&self, line: LogicalLine<'_>) -> bool {
+    pub(crate) fn is_boundary(&self, line: LogicalLine<'_>) -> bool {
         match self.boundary {
             BodyBoundary::NextBlock => {
                 classify_line(line) == ClassifiedLine::Statement(StatementMarker::Block)

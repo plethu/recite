@@ -11,7 +11,7 @@ pub(super) struct Destination {
 }
 impl Destination {
     pub fn resolve(entry: &PoEntry, passages: &[Passage]) -> Option<Self> {
-        let anchor = entry.context()?;
+        let anchor = entry.context()?.split('&').next()?;
         if let Some(passage) = passages
             .iter()
             .find(|p| p.id == anchor && p.text == entry.source_text())
@@ -38,8 +38,8 @@ impl Destination {
     }
     pub fn caption(&self) -> String {
         self.document.as_ref().map_or_else(
-            || self.beat.clone(),
-            |document| format!("{document} · {}", self.beat),
+            || crate::palette::display_name(&self.beat),
+            |document| format!("{document} · {}", crate::palette::display_name(&self.beat)),
         )
     }
     pub fn open(&self, writer: Writer) -> bool {

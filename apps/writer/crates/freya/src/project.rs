@@ -1,5 +1,9 @@
 //! File ownership for the retained editor.
-mod save;
+mod external;
+mod manifest;
+mod rename;
+pub(crate) mod save;
+mod sessions;
 use crate::recovery::{Recovery, RecoveryStore};
 use recite_writer_model::{Document, ProjectContext, Workbench};
 
@@ -12,6 +16,17 @@ mod error;
 pub use error::FileError;
 
 pub struct ProjectFiles {
+    manifest: manifest::ManifestDraft,
+    pub watch: Result<crate::external::Watch, String>,
+    pub handoff: Option<crate::external::Handoff>,
+    pub external: Option<external::ExternalComparison>,
+    pub rename_review: Option<rename::RenameReview>,
+    rename_undo: Vec<rename::RenameUndo>,
+    rename_redo: Vec<rename::RenameUndo>,
+    pub builds: crate::builds::Builds,
+    pub declarations: Option<crate::declarations::Session>,
+    closed_tabs: std::collections::BTreeSet<PathBuf>,
+    retained: std::collections::BTreeMap<PathBuf, sessions::Retained>,
     pub paths: Vec<PathBuf>,
     pub current: PathBuf,
     saved: std::sync::Arc<str>,
@@ -56,7 +71,20 @@ impl ProjectFiles {
             .iter()
             .map(|d| (d.path().to_owned(), d.key().as_str().to_owned()))
             .collect();
+        let manifest = manifest::ManifestDraft::open(&root)?;
+        let watch = crate::external::Watch::new(&root);
         Ok(Self {
+            manifest,
+            watch,
+            external: None,
+            handoff: None,
+            builds: Default::default(),
+            rename_review: None,
+            rename_undo: Vec::new(),
+            rename_redo: Vec::new(),
+            declarations: None,
+            closed_tabs: Default::default(),
+            retained: Default::default(),
             paths,
             current,
             saved,
@@ -68,6 +96,25 @@ impl ProjectFiles {
         })
     }
 
+    pub fn navigation_targets(&self) -> Vec<(String, Vec<String>)> {
+        self.retained_context(self.context.clone())
+            .documents
+            .iter()
+            .map(|document| {
+                let parsed = recite_parser::parse(document.key().as_str(), document.text())
+                    .lower_source_file();
+                (
+                    document.key().to_string(),
+                    parsed
+                        .source_file
+                        .blocks
+                        .iter()
+                        .map(|block| block.id.to_string())
+                        .collect(),
+                )
+            })
+            .collect()
+    }
     pub fn search_index(&self) -> std::sync::Arc<recite_writer_model::SearchIndex> {
         self.search.clone()
     }
@@ -90,6 +137,16 @@ impl ProjectFiles {
     }
 
     pub fn workbench(&mut self) -> Result<Workbench, FileError> {
+        // Complete an interrupted multi-file checkpoint before restoring sessions.
+        let pending = self.manifest.pending().clone();
+        for (name, recovery) in pending {
+            let path = self.path_for_document(&name).ok_or(FileError::Selection)?;
+            if path == self.current {
+                self.recovery.persist(Some(recovery))?;
+            } else {
+                RecoveryStore::open(&path)?.persist(Some(recovery))?;
+            }
+        }
         let recovered = self.recovery.snapshot();
         let source = recovered.map_or(self.saved.as_ref(), |r| r.draft.source());
         let key = recite_core::DocumentKey::new(self.document_name()?)
@@ -102,11 +159,21 @@ impl ProjectFiles {
             recovery.draft.restore(&mut workbench)?;
             self.saved = recovery.baseline.clone();
         }
+        let original = self.current.clone();
+        let affected = self.manifest.affected().to_vec();
+        for name in affected {
+            let path = self.path_for_document(&name).ok_or(FileError::Selection)?;
+            self.switch(&mut workbench, &path, |_| Ok(()))?;
+        }
+        self.switch(&mut workbench, &original, |_| Ok(()))?;
+        if !self.manifest.pending().is_empty() {
+            self.manifest.checkpointed()?;
+        }
         Ok(workbench)
     }
 
     pub fn has_recovery(&self) -> bool {
-        self.recovery.snapshot().is_some()
+        self.recovery.snapshot().is_some() || self.manifest.dirty()
     }
 
     pub fn checkpoint(&mut self, workbench: &Workbench) -> Result<(), FileError> {
@@ -116,49 +183,18 @@ impl ProjectFiles {
     }
 
     pub fn recovery_error(&self) -> Option<String> {
-        self.recovery.error()
+        self.recovery.error().or_else(|| {
+            self.declarations
+                .as_ref()
+                .and_then(|s| s.source.as_ref())
+                .and_then(|s| s.recovery_error())
+        })
     }
     pub fn queue_checkpoint(&mut self, workbench: &Workbench) -> Result<(), FileError> {
         let recovery = (workbench.has_draft() || self.dirty(workbench.document().source()))
             .then(|| Recovery::new(self.saved.clone(), workbench.recovery()));
         self.recovery.queue(recovery)
     }
-    pub fn select(&mut self, path: &Path) -> Result<Workbench, FileError> {
-        self.select_at(path, |_| Ok(()))
-    }
-
-    pub fn select_at(
-        &mut self,
-        path: &Path,
-        select: impl FnOnce(&mut Workbench) -> Result<(), recite_writer_model::WorkbenchError>,
-    ) -> Result<Workbench, FileError> {
-        if path == self.current {
-            let mut workbench = self.workbench()?;
-            select(&mut workbench)?;
-            return Ok(workbench);
-        }
-        if !self.paths.iter().any(|candidate| candidate == path) {
-            return Err(FileError::Selection);
-        }
-        let saved = read_regular(path)?.into();
-        let recovery = RecoveryStore::open(path)?;
-        let mut next = Self {
-            paths: self.paths.clone(),
-            current: path.to_owned(),
-            saved,
-            root: self.root.clone(),
-            context: self.context.clone(),
-            recovery,
-            names: self.names.clone(),
-            search: self.search.clone(),
-        };
-        next.update_saved_context()?;
-        let mut workbench = next.workbench()?;
-        select(&mut workbench)?;
-        *self = next;
-        Ok(workbench)
-    }
-
     /// Preserve the complete local session before accepting the disk version.
     pub fn reload(&mut self, workbench: &Workbench) -> Result<(PathBuf, Workbench), FileError> {
         let report = recite_config::discover_project(&self.root)?;
@@ -170,8 +206,9 @@ impl ProjectFiles {
         let key = recite_core::DocumentKey::new(self.document_name()?)
             .map_err(recite_writer_model::EditError::from)
             .map_err(recite_writer_model::WorkbenchError::from)?;
-        let document = Document::in_project(key, disk.clone(), context.clone())
-            .map_err(recite_writer_model::WorkbenchError::from)?;
+        let document =
+            Document::in_project(key, disk.clone(), self.retained_context(context.clone()))
+                .map_err(recite_writer_model::WorkbenchError::from)?;
         let next = Workbench::from_document(document)?;
         let path = self.export(workbench)?;
         self.recovery.persist(None)?;
@@ -191,7 +228,9 @@ impl ProjectFiles {
             return Err(FileError::Selection);
         }
         let context = crate::project_context::load(&report)?;
-        workbench.refresh_project(context.clone())?;
+        self.manifest
+            .refresh(report.manifest().source().source_text());
+        workbench.refresh_project(self.retained_context(context.clone()))?;
         self.paths = report
             .documents()
             .iter()

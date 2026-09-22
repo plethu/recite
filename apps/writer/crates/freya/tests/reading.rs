@@ -20,8 +20,16 @@ fn pinned_context_survives_navigation_and_history() -> Result<(), Box<dyn std::e
     support::open_beat(&mut test)?;
     support::click(&mut test, "Pin reference")?;
     assert!(has_text(&test, "Pinned snapshot"));
+    assert!(has_text(&test, "Read only"));
+    support::click(&mut test, "Toggle pinned reference")?;
+    assert!(!has_text(&test, "Read only"));
+    support::click(&mut test, "Toggle pinned reference")?;
+    if let Ok(dir) = std::env::var("RECITE_WRITER_CAPTURE_DIR") {
+        std::fs::create_dir_all(&dir)?;
+        test.render_to_file(std::path::Path::new(&dir).join("pinned-reference.png"));
+    }
     support::click(&mut test, "Missing Courier")?;
-    support::click(&mut test, "Edit Missing Courier")?;
+    support::click(&mut test, "Open script")?;
     assert!(has_prose(&test, "Our courier is two days late"));
     support::click(&mut test, "Back")?;
     assert!(has_prose(&test, "If you're here about"));
@@ -111,5 +119,50 @@ fn long_beat_pages_commit_prose_and_keep_undo() -> Result<(), Box<dyn std::error
     support::click(&mut test, "Next passages")?;
     assert!(has_text(&test, "Passages 1–32"));
     assert!(has_prose(&test, ":: syntax_is_not_prose"));
+    Ok(())
+}
+
+#[test]
+fn long_paragraph_keeps_its_geometry_when_appearance_changes()
+-> Result<(), Box<dyn std::error::Error>> {
+    let sentence = "The courier waits beside the café. Beacon0 remains unanswered.";
+    let source = recite_writer_model::workload::source(24, 0, 1).replacen(
+        sentence,
+        &format!("{sentence} ").repeat(12),
+        1,
+    );
+    let mut test = TestingRunner::new(
+        recite_writer::regression_app,
+        Size2D::new(1400., 1000.),
+        |runner| runner.provide_root_context(move || recite_writer::InitialSource(source)),
+        1.,
+    )
+    .0;
+    support::open_beat(&mut test)?;
+    let mut sizes = Vec::new();
+    for appearance in ["light", "dark"] {
+        if appearance == "dark" {
+            support::dark_theme(&mut test)?;
+        }
+        let area = test
+            .find(|node, element| {
+                Paragraph::try_downcast(element)
+                    .filter(|p| {
+                        p.spans
+                            .iter()
+                            .any(|span| span.text.contains("Beacon0 remains"))
+                    })
+                    .map(|_| node.layout().area)
+            })
+            .ok_or("long paragraph")?;
+        sizes.push(area.size);
+        if let Ok(directory) = std::env::var("RECITE_WRITER_CAPTURE_DIR") {
+            std::fs::create_dir_all(&directory)?;
+            test.render_to_file(
+                std::path::Path::new(&directory).join(format!("long-paragraph-{appearance}.png")),
+            );
+        }
+    }
+    assert_eq!(sizes[0], sizes[1]);
     Ok(())
 }

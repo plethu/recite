@@ -54,7 +54,7 @@ impl Component for Checkbox {
                             .maybe_child(self.checked.then(|| {
                                 label()
                                     .text("✓")
-                                    .font_size(t::TEXT_SMALL)
+                                    .font_size(t::small())
                                     .color(colors.on_accent)
                             })),
                     )

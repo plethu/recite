@@ -40,7 +40,17 @@ fn po_open_edit_and_close_protection_are_native_interactions()
     let dir = tempfile::tempdir()?;
     let path = dir.path().join("fr.po");
     std::fs::write(&path, source)?;
-    let mut test = TestingRunner::new(recite_writer::app, Size2D::new(1600., 1100.), |_| {}, 1.).0;
+    let width: f32 = std::env::var("RECITE_GUI_TEST_WIDTH")
+        .ok()
+        .map(|s| s.parse())
+        .transpose()?
+        .unwrap_or(1600.);
+    let height: f32 = std::env::var("RECITE_GUI_TEST_HEIGHT")
+        .ok()
+        .map(|s| s.parse())
+        .transpose()?
+        .unwrap_or(1100.);
+    let mut test = TestingRunner::new(recite_writer::app, Size2D::new(width, height), |_| {}, 1.).0;
     support::open_beat(&mut test)?;
     support::click(&mut test, "Localize")?;
     support::click(&mut test, "Open PO catalogue")?;
@@ -55,10 +65,46 @@ fn po_open_edit_and_close_protection_are_native_interactions()
     test.write_text(path.to_string_lossy());
     submit_dialog(&mut test);
     assert!(has_text(&test, "Translation queue"));
+    assert!(has_text(&test, "Source · read only"));
+    assert!(!has_text(
+        &test,
+        "Missing Courier → Let me ask about something else."
+    ));
+    assert!(
+        test.find(|_, e| Paragraph::try_downcast(e).filter(|p| p
+            .spans
+            .iter()
+            .any(|s| s.text.contains("If you're here about the transmitter"))))
+            .is_none()
+    );
+    support::click(&mut test, "▸ Station History")?;
+    let preview = test
+        .find(|node, e| {
+            Rect::try_downcast(e)
+                .filter(|r| {
+                    r.accessibility.builder.label() == Some("Destination preview · read only")
+                })
+                .map(|_| node.layout().area)
+        })
+        .ok_or("source preview")?;
+    let translation = test
+        .find(|node, e| {
+            Paragraph::try_downcast(e)
+                .filter(|p| {
+                    p.spans
+                        .iter()
+                        .any(|s| s.text.contains("Write a translation"))
+                })
+                .map(|_| node.layout().area)
+        })
+        .ok_or("translation column")?;
+    assert!(preview.max_x() < translation.min_x());
+
     if let Ok(path) = std::env::var("RECITE_WRITER_SCREENSHOT") {
         test.render_to_file(path);
     }
 
+    support::click(&mut test, "▾ Station History")?;
     let area = test
         .find(|node, e| {
             Paragraph::try_downcast(e)
@@ -74,10 +120,51 @@ fn po_open_edit_and_close_protection_are_native_interactions()
     test.write_text("A translation draft");
     test.sync_and_update();
     assert!(has_text(&test, "Unsaved changes"));
+    let label_area = |caption: &str| {
+        test.find(|node, e| {
+            Label::try_downcast(e)
+                .filter(|l| l.text.as_ref() == caption)
+                .map(|_| node.layout().area)
+        })
+        .ok_or_else(|| format!("Missing {caption}"))
+    };
+    let save_area = label_area("Save")?;
+    let discard_area = label_area("Discard draft")?;
+    let review_area = label_area("Reviewed")?;
+    assert!(
+        save_area.width() > 20. && save_area.height() < 32.,
+        "Save must not wrap vertically"
+    );
+    assert!(review_area.max_x() < save_area.min_x());
+    assert!(save_area.max_x() < discard_area.min_x());
+    assert!(discard_area.max_x() < width);
+    assert!((save_area.center().y - review_area.center().y).abs() < 4.);
+    if let Ok(path) = std::env::var("RECITE_WRITER_SCREENSHOT") {
+        test.render_to_file(format!("{path}.active.png"));
+    }
+    support::click(&mut test, "Translation queue")?;
+    assert!(has_text(&test, "Relay Desk"));
+    assert!(!has_text(&test, "relay_desk ·"));
+    if let Ok(path) = std::env::var("RECITE_WRITER_SCREENSHOT") {
+        test.render_to_file(format!("{path}.queue.png"));
+    }
+    support::click(&mut test, "Read passage")?;
+
     assert!(matches!(
         recite_writer::request_close(),
         CloseDecision::KeepOpen
     ));
+    test.sync_and_update();
+    test.poll_n(std::time::Duration::from_millis(16), 15);
+    assert!(has_text(&test, "Unsaved translations"));
+    assert!(has_text(&test, "A translation draft"));
+    assert!(has_text(&test, "Save all and quit"));
+    if let Ok(path) = std::env::var("RECITE_WRITER_SCREENSHOT") {
+        test.render_to_file(format!("{path}.close.png"));
+    }
+    support::click(&mut test, "Keep editing")?;
+    assert!(has_text(&test, "Edit translation"));
+    support::click(&mut test, "Read passage")?;
     support::click(&mut test, "fr.po")?;
     support::click(&mut test, "Add language")?;
     support::click(&mut test, "Choose language")?;
@@ -90,13 +177,26 @@ fn po_open_edit_and_close_protection_are_native_interactions()
     let external =
         std::fs::read_to_string(&path)?.replace("msgstr \"\"", "msgstr \"External version\"");
     std::fs::write(&path, external)?;
+    assert!(matches!(
+        recite_writer::request_close(),
+        CloseDecision::KeepOpen
+    ));
+    test.poll_n(std::time::Duration::from_millis(16), 15);
+    support::click(&mut test, "Save all and quit")?;
+    assert!(has_text(&test, "Could not save"));
+    assert!(has_text(&test, "Your drafts are still available"));
+    assert!(has_text(&test, "Unsaved translations"));
+    support::click(&mut test, "Open Relay Desk")?;
+    assert!(has_text(&test, "Edit translation"));
+    support::click(&mut test, "Read passage")?;
+
     support::click(&mut test, "fr.po")?;
     support::click(&mut test, "Compare external changes")?;
     support::click(&mut test, "Keep my drafts")?;
-    support::click(&mut test, "Close")?;
+    support::click(&mut test, "Use as editable draft")?;
     support::click(&mut test, "Save")?;
     assert!(std::fs::read_to_string(path)?.contains("A translation draft"));
-    support::click(&mut test, "Write")?;
+    support::click(&mut test, "Edit source")?;
     assert!(has_text(&test, "Replies"));
     Ok(())
 }
@@ -208,6 +308,13 @@ fn start_localisation_creates_a_catalogue_and_returns_to_the_same_beat()
     fill_placeholder(&mut test, "Search languages", "fr-CA")?;
     support::click(&mut test, "French (Canada) · fr-CA")?;
     support::click(&mut test, "Create catalogue")?;
+    for _ in 0..100 {
+        if has_text(&test, "A file already exists") {
+            break;
+        }
+        std::thread::sleep(std::time::Duration::from_millis(10));
+        test.poll_n(std::time::Duration::from_millis(16), 5);
+    }
     assert!(has_text(&test, "A file already exists"));
     assert_eq!(std::fs::read(&path)?, baseline);
     support::click(&mut test, "Cancel")?;
@@ -284,7 +391,7 @@ fn source_refresh_previews_cancels_and_saves_without_losing_translation()
     assert!(!has_text(&test, "Update catalogue"));
     assert_eq!(std::fs::read_to_string(&path)?, source);
     support::click(&mut test, "Forward")?;
-    assert!(!has_text(&test, "Previous source"));
+    assert!(has_text(&test, "Not present in this version"));
     support::click(&mut test, &first.text.chars().take(100).collect::<String>())?;
     assert!(has_text(&test, "Previous source"));
     if let Ok(path) = std::env::var("RECITE_REFRESH_SCREENSHOT") {
@@ -343,5 +450,26 @@ fn refresh_refuses_a_project_changed_after_preview() -> Result<(), Box<dyn std::
     support::click(&mut test, "Update catalogue")?;
     assert!(has_text(&test, "changed while preparing"));
     assert_eq!(std::fs::read_to_string(&path)?, "");
+    Ok(())
+}
+
+#[test]
+fn localisation_sidebar_opens_the_beat_it_highlights() -> Result<(), Box<dyn std::error::Error>> {
+    let mut test = TestingRunner::new(recite_writer::app, Size2D::new(1400., 1000.), |_| {}, 1.).0;
+    support::open_beat(&mut test)?;
+    support::click(&mut test, "Courier Route")?;
+    support::click(&mut test, "Localize")?;
+    assert!(has_text(&test, "The old flood road."));
+    support::click(&mut test, "Missing Courier")?;
+    assert!(has_text(&test, "Our courier is two days late."));
+    assert!(!has_text(&test, "The old flood road."));
+    support::click(&mut test, "Edit source")?;
+    assert!(
+        test.find(|_, e| Paragraph::try_downcast(e).filter(|p| p
+            .spans
+            .iter()
+            .any(|s| s.text.contains("Our courier is two days late."))))
+            .is_some()
+    );
     Ok(())
 }
