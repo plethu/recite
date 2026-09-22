@@ -32,7 +32,7 @@ pub fn theme(dark: bool) -> Theme {
             background: Preference::Specific(p.inset),
             focus_background: Preference::Specific(p.surface),
             color: Preference::Specific(p.ink),
-            placeholder_color: Preference::Specific(p.muted),
+            placeholder_color: Preference::Specific(p.placeholder),
             border_fill: Preference::Specific(p.boundary),
             focus_border_fill: Preference::Specific(p.accent),
         },

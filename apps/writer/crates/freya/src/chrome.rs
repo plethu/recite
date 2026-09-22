@@ -89,9 +89,7 @@ pub(super) fn toolbar(writer: Writer, actions: Option<Element>) -> Element {
                 "Redo",
                 crate::controls::Icon::Redo,
                 move || Command::Redo.run(writer),
-            ))
-            .maybe_child((!compact && tools).then(|| Command::Split.button(writer)))
-            .maybe_child((!compact && tools).then(|| Command::Focus.button(writer)));
+            ));
     }
     if !focus
         && !compact

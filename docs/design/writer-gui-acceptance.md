@@ -174,6 +174,31 @@ Use disposable copies and one writer window per file.
 Recovery is asynchronous: a process killed before the next snapshot reaches disk
 can lose the latest edit. It must not corrupt the last durable snapshot.
 
+## Interaction corrections from desktop screenshots
+
+Writing-layout actions now live in Workspace, without duplicate Split and Focus
+buttons in the toolbar. Map zoom controls sit together beside beat search and
+move below it in a narrow pane. Hovering a card reveals replies on both its
+incoming and outgoing connections.
+
+Scene search uses a shorter, dimmer placeholder and tighter icon spacing. Its
+clear button appears only when there is text to clear and retains the shared
+Button's pointer and focus behaviour. Settings uses a six-tooth cog and closes
+on backdrop clicks through the shared Dialog dismissal callback.
+
+Command-palette scrolling no longer resets on layout updates. Command, project
+and scene searches and source completion share the same guarded selection-reveal
+hook. The palette regression fails with the old effect and passes with the guard.
+The control review found ordinary actions already using Button or IconButton;
+remaining direct pointer handlers cover editor focus, graph gestures, splitters
+and propagation boundaries.
+
+For desktop testing, scroll well down the command list and leave it idle, then
+filter it and navigate with the arrow keys. Check both appearances, the empty and
+filled scene search, incoming reply labels, Workspace layout actions, and clicking
+inside and outside Settings. Test captures and headless input checks do not
+establish physical trackpad or window-system behaviour.
+
 ## Keyboard, size and motion
 
 At a normal window size and about 900 by 650, repeat the important steps using

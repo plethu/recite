@@ -25,6 +25,7 @@ impl Component for Dialog {
             t::transition(0., 1., reduced)
         });
         let close = self.close.clone();
+        let backdrop_close = close.clone();
         let mut order = self.focus_order.clone();
         if !self.primary.enabled {
             order.retain(|id| *id != self.primary.id);
@@ -51,7 +52,12 @@ impl Component for Dialog {
             .center()
             .background(Color::from_argb(110, 0, 0, 0))
             .on_pointer_down(|e: Event<PointerEventData>| e.stop_propagation())
-            .on_all_press(|e: Event<PressEventData>| e.stop_propagation())
+            .on_all_press(move |e: Event<PressEventData>| {
+                e.stop_propagation();
+                if matches!(e.data(), PressEventData::Mouse(data) if data.button == Some(MouseButton::Left)) {
+                    backdrop_close.call(());
+                }
+            })
             .on_global_key_down(move |e: Event<KeyboardEventData>| {
                 if super::keyboard::submit_key(&e) {
                     e.stop_propagation();
@@ -86,6 +92,8 @@ impl Component for Dialog {
                     .shadow((0., 12., 36., 0., colors.shadow))
                     .color(colors.ink)
                     .border(Border::new().width(1.).fill(colors.rule))
+                    .on_pointer_down(|e: Event<PointerEventData>| e.stop_propagation())
+                    .on_all_press(|e: Event<PressEventData>| e.stop_propagation())
                     .a11y_role(AccessibilityRole::Dialog)
                     .a11y_alt(self.title.clone())
                     .opacity(ink.get().value())

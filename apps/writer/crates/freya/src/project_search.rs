@@ -34,12 +34,8 @@ impl Component for ProjectSearch {
         let mut limit = use_state(|| 100usize);
         let active = use_state(|| None::<usize>);
         let id = use_a11y();
-        let mut scroll = use_scroll_controller(ScrollConfig::default);
-        use_after_side_effect(move || {
-            if let Some(index) = *active.read() {
-                scroll.scroll_to_y(-((index.saturating_sub(1) * 84) as i32));
-            }
-        });
+        let scroll = use_scroll_controller(ScrollConfig::default);
+        crate::design::use_list_reveal(Some(query), active, scroll, 84., 1);
         let writer = self.writer;
         let files = self.files;
         let index =

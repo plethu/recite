@@ -176,7 +176,13 @@ conversation option. Selection remains an ordinary undoable document edit.
 translation queue. It owns clearing, input focus restoration, Arrow/Enter result
 navigation, and Vim INSERT/NORMAL boundaries. Clearing returns to text entry;
 Escape clears in ordinary mode, while Vim Escape first leaves INSERT. Callers
-retain result rendering, paging and context. Project search discloses its loaded
+retain result rendering, paging and context. Empty searches omit the clear button;
+entered queries use the shared Button with its pointer and keyboard behaviour.
+Placeholder text has its own contrast-checked colour, and the icon/input spacing
+leaves room for the shorter scene-search prompt. `use_list_reveal` owns selection
+reveal for command, project and scene search and source completion. It scrolls
+when the query or keyboard selection changes; reactive layout bounds alone must
+not override manual scrolling. Project search discloses its loaded
 count and can extend beyond the initial 100 matches. Scene search expands the
 active scene while filtering so collapsed beats remain discoverable.
 

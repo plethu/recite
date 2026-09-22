@@ -131,10 +131,16 @@ impl Toolbar {
                         crate::closing::text_input_key(event)
                     }),
             );
+        let colors = crate::design::palette::Palette::new(writer.dark);
         let zoom_controls = rect()
             .horizontal()
             .cross_align(Alignment::Center)
-            .spacing(t::SPACE_SM)
+            .spacing(t::SPACE_XS)
+            .a11y_role(AccessibilityRole::Group)
+            .a11y_alt("Map zoom")
+            .corner_radius(t::RADIUS)
+            .background(colors.inset)
+            .border(Border::new().width(1.).fill(colors.rule))
             .child(crate::controls::IconButton::new(
                 "Zoom out",
                 crate::controls::Icon::ZoomOut,
@@ -175,7 +181,6 @@ impl Toolbar {
             .content(Content::Flex)
             .spacing(t::SPACE_SM)
             .child(search)
-            .maybe_child((!compact).then(|| rect().width(Size::flex(1.))))
             .child(zoom_controls);
         rect()
             .width(Size::fill())

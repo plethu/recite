@@ -55,6 +55,10 @@ fn body_and_supporting_text_remain_readable_across_surfaces_and_interactions() {
             }
         }
         for surface in [p.surface, p.inset, p.floating] {
+            assert!(
+                contrast(p.placeholder, surface) >= 4.5,
+                "placeholder contrast: dark={dark}"
+            );
             assert!(contrast(p.accent, surface) >= 3.);
             assert!(contrast(p.boundary, surface) >= 3.);
         }

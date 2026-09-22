@@ -87,12 +87,8 @@ impl Component for SceneNavigation {
         let query = use_state(String::new);
         let active = use_state(|| None::<usize>);
         let id = use_a11y();
-        let mut scroll = use_scroll_controller(ScrollConfig::default);
-        use_after_side_effect(move || {
-            if let Some(index) = *active.read() {
-                scroll.scroll_to_y(-((index.saturating_sub(2) * 36) as i32));
-            }
-        });
+        let scroll = use_scroll_controller(ScrollConfig::default);
+        crate::design::use_list_reveal(Some(query), active, scroll, 36., 2);
         let needle = query.read().to_lowercase();
         let mut rows = Vec::new();
         for scene in &self.scenes {
@@ -143,7 +139,7 @@ impl Component for SceneNavigation {
             .child(crate::design::SearchField {
                 query,
                 id,
-                placeholder: "Filter scenes and beats".into(),
+                placeholder: "Find scene or beat…".into(),
                 active,
                 count,
                 vim: writer.preferences.read().config.ui.keymap == recite_config::Keymap::Vim,

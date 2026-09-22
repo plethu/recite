@@ -62,7 +62,7 @@ impl Component for SearchField {
             .width(Size::fill())
             .child(
                 rect()
-                    .padding((0., t::SPACE_XS))
+                    .padding((0., 2.))
                     .child(crate::controls::Icon::Search.colored(colors.muted)),
             )
             .child(
@@ -70,10 +70,11 @@ impl Component for SearchField {
                     .a11y_id(id)
                     .height(Size::px(t::control_height() - 2. * t::SPACE_XS))
                     .theme_layout(InputLayoutThemePartial {
-                        padding: Some(Preference::Specific(Gaps::new(2., 8., 2., 8.))),
+                        padding: Some(Preference::Specific(Gaps::new(2., 2., 2., 2.))),
                         ..Default::default()
                     })
                     .theme_colors(InputColorsThemePartial {
+                        placeholder_color: Some(Preference::Specific(colors.placeholder)),
                         background: Some(Preference::Specific(Color::TRANSPARENT)),
                         focus_background: Some(Preference::Specific(Color::TRANSPARENT)),
                         border_fill: Some(Preference::Specific(Color::TRANSPARENT)),
@@ -139,13 +140,12 @@ impl Component for SearchField {
                         }
                     }),
             )
-            .child(
+            .maybe_child((!query.read().is_empty()).then(|| {
                 Button::new()
                     .flat()
                     .compact()
                     .width(Size::px(t::control_height() - 2. * t::SPACE_XS))
                     .named(format!("Clear {}", self.placeholder))
-                    .enabled(!query.read().is_empty())
                     .on_press(move |_| {
                         query.set(String::new());
                         active.set(None);
@@ -154,8 +154,8 @@ impl Component for SearchField {
                         id.request_focus();
                         refocus.set(true);
                     })
-                    .child(crate::controls::Icon::Close.colored(colors.muted)),
-            )
+                    .child(crate::controls::Icon::Close.colored(colors.muted))
+            }))
     }
 }
 

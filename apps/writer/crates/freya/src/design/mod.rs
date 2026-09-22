@@ -42,3 +42,6 @@ pub(crate) use beat_card::{BeatCard, DIALOGUE_ZOOM};
 pub(crate) mod specimen;
 
 mod material;
+
+mod search_scroll;
+pub(crate) use search_scroll::use_list_reveal;

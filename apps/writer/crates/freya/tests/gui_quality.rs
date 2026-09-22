@@ -89,9 +89,9 @@ fn project_search_can_continue_past_one_hundred_and_clear_without_losing_input()
 fn scene_search_has_empty_feedback_and_opens_a_match_from_the_keyboard()
 -> Result<(), Box<dyn std::error::Error>> {
     let mut test = TestingRunner::new(recite_writer::app, Size2D::new(1200., 900.), |_| {}, 1.).0;
-    fill(&mut test, "Filter scenes and beats", "no such scene")?;
+    fill(&mut test, "Find scene or beat…", "no such scene")?;
     assert!(has(&test, "No matching scenes or beats"));
-    support::click(&mut test, "Clear Filter scenes and beats")?;
+    support::click(&mut test, "Clear Find scene or beat…")?;
     test.write_text("Last Tram");
     test.poll_n(std::time::Duration::from_millis(16), 5);
     key(&mut test, NamedKey::ArrowDown);

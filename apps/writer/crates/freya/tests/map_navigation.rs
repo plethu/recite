@@ -204,3 +204,23 @@ fn dialogue_and_hovered_replies_remain_visible_at_seventy_percent()
     }
     Ok(())
 }
+
+#[test]
+fn hovering_a_destination_shows_the_reply_that_leads_into_it()
+-> Result<(), Box<dyn std::error::Error>> {
+    let mut test = TestingRunner::new(recite_writer::app, (1440., 1000.).into(), |_| {}, 1.).0;
+    support::dark_theme(&mut test)?;
+    support::click(&mut test, "Map")?;
+    support::click(&mut test, "Zoom out")?;
+    support::click(&mut test, "Zoom out")?;
+    let card = named_area(&test, "Select Station History").ok_or("destination card")?;
+    test.move_cursor(card.center().to_f64());
+    test.poll_n(std::time::Duration::from_millis(16), 12);
+    assert!(caption_area(&test, "What happened to this place?").is_some());
+    assert!(caption_area(&test, "Do you ever get an answer?").is_some());
+    if let Ok(directory) = std::env::var("RECITE_WRITER_CAPTURE_DIR") {
+        std::fs::create_dir_all(&directory)?;
+        test.render_to_file(std::path::Path::new(&directory).join("incoming-reply-hover.png"));
+    }
+    Ok(())
+}

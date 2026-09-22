@@ -99,7 +99,7 @@ pub(crate) fn keyboard(mut writer: Writer, event: &Event<KeyboardEventData>) -> 
 impl Component for Completion {
     fn render(&self) -> impl IntoElement {
         let colors = t::colors();
-        let mut scroll = use_scroll_controller(ScrollConfig::default);
+        let scroll = use_scroll_controller(ScrollConfig::default);
         let writer = self.writer;
         let editor_id = self.editor_id;
         let mut state = writer.source_viewport;
@@ -116,12 +116,7 @@ impl Component for Completion {
                 None
             }
         });
-        use_after_side_effect(move || {
-            if let Some(index) = *state.candidate.read() {
-                scroll
-                    .scroll_to_y(-(index.saturating_sub(4) as f32 * t::picker_row_height()) as i32);
-            }
-        });
+        crate::design::use_list_reveal(None, state.candidate, scroll, t::picker_row_height(), 4);
         let mut root = rect().child(
             Button::new()
                 .flat()

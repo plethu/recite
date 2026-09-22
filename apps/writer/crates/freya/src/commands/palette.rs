@@ -54,6 +54,7 @@ impl Component for Palette {
         let input = use_a11y();
         let close_id = use_a11y();
         let mut previous = use_state(|| None);
+        let mut scroll = use_scroll_controller(ScrollConfig::default);
         let mode = *writer.command_search.mode.read();
         use_after_side_effect(move || {
             let mode = *writer.command_search.mode.read();
@@ -61,6 +62,7 @@ impl Component for Palette {
                 previous.set(mode);
                 query.set(String::new());
                 if mode.is_some() {
+                    scroll.scroll_to_y(0);
                     input.request_focus();
                 }
             }
@@ -89,11 +91,7 @@ impl Component for Palette {
                 .map(|(_, item)| item)
                 .collect::<Vec<_>>()
         });
-        let mut scroll = use_scroll_controller(ScrollConfig::default);
-        use_after_side_effect(move || {
-            let index = active.read().unwrap_or(0);
-            scroll.scroll_to_y(-(index.saturating_sub(3) as f32 * t::picker_row_height()) as i32);
-        });
+        crate::design::use_list_reveal(Some(query), active, scroll, t::picker_row_height(), 3);
         let Some(mode) = mode else {
             return rect().into_element();
         };

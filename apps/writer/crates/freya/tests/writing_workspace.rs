@@ -26,9 +26,13 @@ fn standalone_script_split_and_focus_restore_the_workspace() -> Result {
     let mut test = TestingRunner::new(recite_writer::app, (1440., 1000.).into(), |_| {}, 1.).0;
     assert!(named(&test, "Beat editor").is_some());
     assert!(!has_map(&test));
+    assert!(named(&test, "Script + Map").is_none());
+    assert!(named(&test, "Focus writing").is_none());
+    support::click(&mut test, "Workspace")?;
     support::click(&mut test, "Script + Map")?;
     assert!(has_map(&test));
     let before = named(&test, "Beat editor").ok_or("split editor")?;
+    support::click(&mut test, "Workspace")?;
     support::click(&mut test, "Focus writing")?;
     assert!(!has_map(&test));
     assert!(named(&test, "Hide scenes").is_none());

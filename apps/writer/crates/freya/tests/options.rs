@@ -43,8 +43,36 @@ fn options_select_explicitly_and_arrow_keys_keep_tab_order_in_the_dialog()
     key(&mut test, NamedKey::ArrowRight, Code::ArrowRight);
     key(&mut test, NamedKey::Tab, Code::Tab);
     let view = *platform.focused_accessibility_id.peek();
-    support::click(&mut test, "Writing view: Map")?;
-    assert_eq!(*platform.focused_accessibility_id.peek(), view);
+    let dialog = test
+        .find(|node, e| {
+            Rect::try_downcast(e)
+                .filter(|r| r.accessibility.builder.role() == AccessibilityRole::Dialog)
+                .map(|_| node.layout().area)
+        })
+        .ok_or("settings dialog")?;
+    let map = test
+        .find(|node, e| {
+            Rect::try_downcast(e)
+                .filter(|r| {
+                    r.accessibility.builder.label() == Some("Writing view: Map")
+                        && dialog.contains(node.layout().area.center())
+                })
+                .map(|_| node.layout().area)
+        })
+        .ok_or("Map preference inside Settings")?;
+    test.click_cursor((f64::from(map.center().x), f64::from(map.center().y)));
+    test.poll_n(std::time::Duration::from_millis(16), 4);
+    assert_ne!(*platform.focused_accessibility_id.peek(), view);
+    assert!(
+        test.find(|node, e| {
+            Rect::try_downcast(e).filter(|r| {
+                r.accessibility.builder.label() == Some("Writing view: Map")
+                    && dialog.contains(node.layout().area.center())
+                    && r.accessibility.builder.toggled() == Some(accesskit::Toggled::True)
+            })
+        })
+        .is_some()
+    );
     Ok(())
 }
 

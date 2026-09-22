@@ -222,6 +222,7 @@ fn render(writer: Writer, scene: String) -> Element {
     for (link, route) in links.iter().zip(routes) {
         if view.zoom < card::DIALOGUE_ZOOM
             || (hovered.read().as_deref() != Some(&link.origin)
+                && hovered.read().as_deref() != Some(&link.destination)
                 && connection.read().as_ref() != Some(link))
         {
             continue;

@@ -62,6 +62,9 @@ fn text_entry_vim_navigation_activation_and_clear_share_state()
     assert!(area.min_y() >= t::SPACE_XS);
     assert!(area.max_y() <= 32. - t::SPACE_XS);
     assert!(area.max_x() <= 700. - t::SPACE_XS);
+    test.move_cursor((f64::from(area.center().x), f64::from(area.center().y)));
+    test.sync_and_update();
+    assert_eq!(test.cursor_icon(), CursorIcon::Pointer);
     test.click_cursor((f64::from(area.center().x), f64::from(area.center().y)));
     test.poll_n(std::time::Duration::from_millis(16), 4);
     assert!(has(&test, "Query: "));
