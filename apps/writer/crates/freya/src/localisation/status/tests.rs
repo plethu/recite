@@ -27,12 +27,14 @@ fn an_unsaved_review_remains_in_attention_until_saved() -> Result<(), Box<dyn st
     let status = TranslationStatus::for_entry(&catalogue, id);
     assert_eq!(status, TranslationStatus::ReviewPending);
     assert!(status.needs_attention());
+    assert!(TranslationStatus::entry_label(&catalogue, id).contains("Unsaved changes"));
     catalogue.save(id)?;
     assert_eq!(
         TranslationStatus::for_entry(&catalogue, id),
         TranslationStatus::Reviewed
     );
     assert!(!TranslationStatus::for_entry(&catalogue, id).needs_attention());
+    assert!(!TranslationStatus::entry_label(&catalogue, id).contains("Unsaved changes"));
     catalogue.update(
         id,
         Draft {

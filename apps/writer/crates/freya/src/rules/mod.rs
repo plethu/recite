@@ -116,11 +116,15 @@ impl Component for RulesScreen {
             .model
             .read()
             .as_ref()
-            .map_err(ToString::to_string)
+            .map_err(|error| Some(error.to_string()))
             .and_then(|m| {
                 rules
                     .validate_draft(m.document())
-                    .map_err(|e| e.to_string())
+                    .map_err(|error| match error {
+                        // Value errors render beside their owning input.
+                        recite_writer_model::EditError::InvalidRuleValue { .. } => None,
+                        other => Some(other.to_string()),
+                    })
             });
         let consistent = rules.source().is_ok_and(|source| source == current_source);
         let enabled = rules.changed() && validation.is_ok() && consistent;
@@ -258,7 +262,7 @@ impl Component for RulesScreen {
                     .color(colors.muted),
             );
         } else if rules.changed()
-            && let Err(error) = validation
+            && let Err(Some(error)) = validation
         {
             body = body.child(label().text(error).color(colors.muted));
         }

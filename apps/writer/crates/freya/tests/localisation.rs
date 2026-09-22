@@ -143,6 +143,7 @@ fn po_open_edit_and_close_protection_are_native_interactions()
         test.render_to_file(format!("{path}.active.png"));
     }
     support::click(&mut test, "Translation queue")?;
+    assert!(has_text(&test, "Needs review · Unsaved changes"));
     assert!(has_text(&test, "Relay Desk"));
     assert!(!has_text(&test, "relay_desk ·"));
     if let Ok(path) = std::env::var("RECITE_WRITER_SCREENSHOT") {

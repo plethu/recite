@@ -74,7 +74,8 @@ impl RuleArgument {
     pub(super) fn changed(&self) -> bool {
         self.value != self.original
     }
-    pub(super) fn validate(&self) -> Result<(), EditError> {
+    /// Validate this draft value using the same rules as reply submission.
+    pub fn validate(&self) -> Result<(), EditError> {
         let valid = match self.kind {
             SchemaTypeRef::Int => self.value.parse::<i64>().is_ok(),
             SchemaTypeRef::Float => self.value.parse::<f64>().is_ok_and(f64::is_finite),

@@ -180,6 +180,30 @@ fn shared_buttons_use_pointer_cursors_and_modals_fit_a_small_window()
         test.render_to_file(std::path::Path::new(&dir).join("settings-small.png"));
     }
     support::click(&mut test, "Done")?;
+    let help = test
+        .find(|node, e| {
+            Label::try_downcast(e)
+                .filter(|label| label.text == "Help")
+                .map(|_| node.layout().area)
+        })
+        .ok_or("map help")?;
+    assert!(help.height() < 24., "Help must stay on one line");
+    let search = test
+        .find(|node, e| {
+            Paragraph::try_downcast(e)
+                .filter(|p| p.spans.iter().any(|span| span.text == "Find a beat…"))
+                .map(|_| node.layout().area)
+        })
+        .ok_or("map search")?;
+    let divider = area(&test, "Resize script pane").ok_or("split divider")?;
+    assert!(search.width() >= 200.);
+    assert!(
+        search.max_x() <= divider.max_x(),
+        "search stays inside the map pane"
+    );
+    if let Ok(dir) = std::env::var("RECITE_WRITER_CAPTURE_DIR") {
+        test.render_to_file(std::path::Path::new(&dir).join("narrow-split-map.png"));
+    }
     recite_writer::request_close();
     test.poll_n(std::time::Duration::from_millis(16), 12);
     let keep = area(&test, "Keep editing").ok_or("keep editing")?;

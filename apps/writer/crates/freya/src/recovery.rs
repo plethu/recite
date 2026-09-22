@@ -44,8 +44,17 @@ impl Snapshot for Recovery {
 struct RecoveryDisk<T: Snapshot> {
     path: PathBuf,
     // OS lock is released even after a process crash; the empty lock file remains.
-    _lock: File,
+    lock: File,
     persisted: Option<T>,
+}
+
+impl<T: Snapshot> Drop for RecoveryDisk<T> {
+    fn drop(&mut self) {
+        // Release ownership even if a concurrently spawned child still holds a
+        // duplicate descriptor before exec. Closing our descriptor alone waits
+        // for every duplicate to close. A process crash still releases the lock.
+        let _ = self.lock.unlock();
+    }
 }
 
 impl<T: Snapshot> RecoveryDisk<T> {
@@ -81,7 +90,7 @@ impl<T: Snapshot> RecoveryDisk<T> {
         };
         Ok(Self {
             path,
-            _lock: lock,
+            lock,
             persisted,
         })
     }

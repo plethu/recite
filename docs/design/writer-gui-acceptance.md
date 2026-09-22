@@ -83,6 +83,32 @@ the existing helpers.
 The post-commit screenshot critique is a separate design review. Passing tests
 and bounds checks does not settle visual quality or physical-device acceptance.
 
+## Screenshot-review corrections
+
+The four follow-ups from the independent screenshot review are implemented:
+
+- Narrow split-map panes place action pairs, search and zoom controls on separate
+  rows. Help stays on one line, and the search field stays inside the map pane.
+- Rule argument errors appear once beside their field and name the condition or
+  effect. A collapsed effect retains its error summary. Parameter labels still
+  come from the schema when available.
+- Ordinary beat selection keeps surrounding routes visible and avoids accenting
+  the whole return-route bundle. Strong fading belongs to connection inspection.
+- Translation queues use the same unsaved-status label as passage editing; saving
+  removes the unsaved indicator without changing the review-state rules.
+
+A recovery regression exposed during verification is also fixed: dropping the
+recovery owner explicitly releases its lock, even while a duplicate descriptor
+exists. The duplicate-descriptor regression failed before the fix and passes
+with it; the existing exclusive-owner checks remain in place.
+
+Regression coverage checks narrow map bounds, inline and collapsed-effect errors,
+and unsaved queue status before and after saving.
+
+The map toolbar now owns its responsive composition in a separate module. The
+remaining scene-map module composes map state and rendering; the condition,
+queue and rules-screen modules retain their existing component responsibilities.
+
 ## Implemented in the final pass
 
 - Closing identifies translation and declaration drafts and provides save,

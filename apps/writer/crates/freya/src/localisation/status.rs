@@ -14,6 +14,14 @@ pub(super) enum TranslationStatus {
     NeedsReview,
 }
 impl TranslationStatus {
+    pub fn entry_label(catalogue: &Catalogue, id: PoEntryId) -> String {
+        let status = Self::for_entry(catalogue, id).label();
+        if catalogue.changed(id) {
+            format!("{status} · {}", text(MsgId::WriterUnsaved))
+        } else {
+            status
+        }
+    }
     pub fn for_entry(catalogue: &Catalogue, id: PoEntryId) -> Self {
         let Some(draft) = catalogue.draft(id) else {
             return Self::Untranslated;

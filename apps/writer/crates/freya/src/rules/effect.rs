@@ -34,12 +34,13 @@ impl Component for EffectControl {
             reorder,
         } = *self;
         let mut expanded = use_state(|| false);
+        let colors = t::colors();
         let mut body = rect()
             .width(Size::fill())
             .spacing(t::SPACE_MD)
             .padding(t::SPACE_MD)
             .corner_radius(t::RADIUS)
-            .background(t::colors().surface)
+            .background(colors.surface)
             .child(
                 rect()
                     .horizontal()
@@ -115,11 +116,26 @@ impl Component for EffectControl {
                 body = body.child(ArgumentField {
                     vim: writer.preferences.read().config.ui.keymap == recite_config::Keymap::Vim,
                     argument: argument.clone(),
+                    owner: effect.function.clone(),
                     change: EventHandler::new(move |value: String| {
                         super::change(writer, |r| r.effects[index].arguments[arg].value = value)
                     }),
                 });
             }
+        } else if let Some(error) = effect
+            .arguments
+            .iter()
+            .find_map(|argument| argument.validate().err())
+        {
+            body = body.child(
+                label()
+                    .text(format!(
+                        "{}: {error}",
+                        crate::palette::display_name(&effect.function)
+                    ))
+                    .font_size(t::small())
+                    .color(colors.error),
+            );
         }
         body.into_element()
     }

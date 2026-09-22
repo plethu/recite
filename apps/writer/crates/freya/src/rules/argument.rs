@@ -5,11 +5,18 @@ use recite_writer_model::RuleArgument;
 #[derive(Clone, PartialEq)]
 pub(super) struct ArgumentField {
     pub argument: RuleArgument,
+    pub owner: String,
     pub change: EventHandler<String>,
     pub vim: bool,
 }
 impl Component for ArgumentField {
     fn render(&self) -> impl IntoElement {
+        let colors = t::colors();
+        let error = self
+            .argument
+            .validate()
+            .err()
+            .map(|error| format!("{}: {error}", crate::palette::display_name(&self.owner)));
         let initial = self.argument.value.clone();
         let mut value = use_state(move || initial);
         let current = self.argument.value.clone();
@@ -27,6 +34,7 @@ impl Component for ArgumentField {
         let field = if self.argument.choices.is_empty() {
             Input::new(value)
                 .width(Size::fill())
+                .a11y_id(input_id)
                 .placeholder(caption.clone())
                 .on_pre_key_down(crate::closing::text_input_key)
                 .on_validate(move |input: InputValidator| change.call(input.text().clone()))
@@ -81,9 +89,15 @@ impl Component for ArgumentField {
                         label()
                             .text(self.argument.type_name.clone())
                             .font_size(t::small())
-                            .color(t::colors().muted),
+                            .color(colors.muted),
                     ),
             )
             .child(field)
+            .maybe_child(error.map(|message| {
+                label()
+                    .text(message)
+                    .font_size(t::small())
+                    .color(colors.error)
+            }))
     }
 }

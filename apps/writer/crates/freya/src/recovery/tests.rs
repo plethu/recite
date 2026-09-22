@@ -129,3 +129,21 @@ fn background_recovery_timing() -> Result<(), Box<dyn std::error::Error>> {
     );
     Ok(())
 }
+
+#[test]
+fn recovery_owner_releases_lock_even_while_a_duplicate_descriptor_exists()
+-> Result<(), Box<dyn std::error::Error>> {
+    let directory = tempfile::tempdir()?;
+    let source = directory.path().join("scene.recite");
+    let disk = RecoveryDisk::<Recovery>::open(&source)?;
+    let duplicate = disk.lock.try_clone()?;
+    assert!(matches!(
+        RecoveryDisk::<Recovery>::open(&source),
+        Err(FileError::RecoveryInUse)
+    ));
+    drop(disk);
+    let reopened = RecoveryDisk::<Recovery>::open(&source)?;
+    drop(reopened);
+    drop(duplicate);
+    Ok(())
+}

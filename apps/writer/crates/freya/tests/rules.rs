@@ -85,6 +85,16 @@ fn typed_rule_draft_survives_source_and_history_without_applying() -> TestResult
         })
         .ok_or("apply button")?;
     assert!(disabled);
+    let errors = test.find_many(|node, e| {
+        Label::try_downcast(e)
+            .filter(|label| label.text.contains("needs a valid whole number"))
+            .map(|label| (node.layout().area, label.text.to_string()))
+    });
+    assert_eq!(errors.len(), 1, "show the error once, at its field");
+    assert!(errors[0].1.starts_with("Standing:"));
+    assert!(errors[0].0.min_y() >= input.max_y());
+    assert!(errors[0].0.min_y() - input.max_y() < 45.);
+
     submit(&mut test);
     test.render_to_file("/tmp/recite-reply-rules-dark.png");
     support::click(&mut test, "Edit in Source")?;
@@ -142,6 +152,16 @@ fn expanded_effect_edit_and_reorder_keep_the_right_arguments() -> TestResult {
     for _ in 0.."gate_latch".len() {
         test.press_key(Key::Named(NamedKey::Backspace));
     }
+    test.poll_n(std::time::Duration::from_millis(16), 4);
+    support::click(&mut test, "Edit effect 1")?;
+    assert!(
+        test.find(|_, e| Label::try_downcast(e)
+            .filter(|label| label.text.starts_with("Play Sfx: Argument 1 needs")))
+            .is_some(),
+        "a collapsed invalid effect keeps its error visible"
+    );
+    support::click(&mut test, "Edit effect 1")?;
+    test.click_cursor((f64::from(input.center().x), f64::from(input.center().y)));
     test.write_text("bell");
     test.poll_n(std::time::Duration::from_millis(16), 8);
     support::click(&mut test, "Move effect 1 down")?;

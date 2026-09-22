@@ -125,6 +125,7 @@ impl Component for ConditionControl {
                         vim: writer.preferences.read().config.ui.keymap
                             == recite_config::Keymap::Vim,
                         argument: argument.clone(),
+                        owner: function.clone(),
                         change: EventHandler::new(move |value: String| {
                             super::change(writer, |rules| {
                                 if let Some(root) = &mut rules.condition

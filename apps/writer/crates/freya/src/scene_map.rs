@@ -11,6 +11,7 @@ mod navigation;
 mod placement;
 mod routing;
 mod scope;
+mod toolbar;
 mod topology;
 use crate::{editing::Writer, palette};
 use freya::prelude::*;
@@ -64,7 +65,7 @@ fn render(writer: Writer, scene: String) -> Element {
     let viewport = use_state(|| (900., 650.));
     let pan = use_state(|| None::<(f64, f64)>);
     let mut hovered = use_state(|| None::<String>);
-    let mut show_help = use_state(|| false);
+    let show_help = use_state(|| false);
     let connections_open = use_state(|| false);
     let mut connection = use_state(|| None::<recite_writer_model::SceneLink>);
     let script = use_memo(move || {
@@ -181,8 +182,8 @@ fn render(writer: Writer, scene: String) -> Element {
             route: route.clone(),
             zoom: view.zoom,
             returning: link.returning,
-            highlighted: incident,
-            dimmed: emphasis.is_some() && !incident,
+            highlighted: incident && (connection.read().is_some() || !link.returning),
+            dimmed: connection.read().is_some() && !incident,
             conditional: link.conditional,
             dark: writer.dark,
             reduced_motion: writer.preferences.read().config.writer.reduced_motion,
@@ -270,140 +271,7 @@ fn render(writer: Writer, scene: String) -> Element {
         blocks.clone(),
         nodes.clone(),
     );
-    let mut pane = writer.pane;
     let error = positions.read().error.clone();
-    let actions = rect()
-        .horizontal()
-        .cross_align(Alignment::Center)
-        .spacing(t::SPACE_SM)
-        .child(
-            Button::new()
-                .flat()
-                .enabled(writer.selection.read().is_some())
-                .on_press(move |_| {
-                    let selected = writer.selection.peek().clone();
-                    if let Some(id) = selected {
-                        writer.inspect(&id);
-                    }
-                })
-                .child(crate::messages::text(
-                    crate::messages::MsgId::WriterWorkspaceOpenScript,
-                )),
-        )
-        .child(
-            Button::new()
-                .flat()
-                .on_press(move |_| {
-                    writer.navigate(recite_writer_model::Workbench::add_beat);
-                    pane.set(crate::editing::Pane::Script);
-                })
-                .child(crate::messages::text(
-                    crate::messages::MsgId::WriterGuiAddBeat,
-                )),
-        )
-        .child(
-            Button::new()
-                .flat()
-                .on_press(move |_| {
-                    positions.write().reset(&scene);
-                    camera.write().framing = camera::Framing::Free;
-                })
-                .named(crate::messages::text(
-                    crate::messages::MsgId::WriterGuiArrangeAutomatically,
-                ))
-                .child(crate::messages::text(
-                    crate::messages::MsgId::WriterGuiArrange,
-                )),
-        )
-        .child(
-            Button::new()
-                .flat()
-                .named(crate::messages::text(
-                    crate::messages::MsgId::WriterGuiMapHelp,
-                ))
-                .expanded(*show_help.read())
-                .on_press(move |_| {
-                    let next = !*show_help.peek();
-                    show_help.set(next);
-                })
-                .child(crate::messages::text(crate::messages::MsgId::WriterGuiHelp)),
-        );
-    let navigation = rect()
-        .horizontal()
-        .cross_align(Alignment::Center)
-        .spacing(t::SPACE_SM)
-        .width(Size::fill())
-        .content(Content::Flex)
-        .child(
-            rect()
-                .width(Size::flex(1.))
-                .max_width(Size::px(320.))
-                .child(
-                    Input::new(writer.search)
-                        .a11y_id(writer.search_focus)
-                        .width(Size::fill())
-                        .height(Size::px(t::control_height()))
-                        .placeholder("Find a beat…")
-                        .on_pre_key_down(move |event: Event<KeyboardEventData>| {
-                            if event.code == Code::Escape {
-                                writer.map_focus.request_focus();
-                                event.stop_propagation();
-                                return false;
-                            }
-                            if event.code == Code::Enter {
-                                let query = writer.search.peek().to_lowercase();
-                                if let Ok(m) = writer.buffers.model.peek().as_ref()
-                                    && let Ok(blocks) = m.document().script()
-                                    && let Some(block) = blocks.iter().find(|b| {
-                                        palette::display_name(&b.id).to_lowercase().contains(&query)
-                                    })
-                                {
-                                    selected_state.set(Some(block.id.clone()));
-                                    writer.map_focus.request_focus();
-                                }
-                                event.stop_propagation();
-                                return false;
-                            }
-                            crate::closing::text_input_key(event)
-                        }),
-                ),
-        )
-        .child(rect().width(Size::flex(1.)))
-        .child(crate::controls::IconButton::new(
-            "Zoom out",
-            crate::controls::Icon::ZoomOut,
-            move || {
-                let zoom = camera.peek().zoom / 1.2;
-                camera.write().zoom_to(zoom, *viewport.peek());
-            },
-        ))
-        .child(
-            Button::new()
-                .flat()
-                .named(crate::messages::text(
-                    crate::messages::MsgId::WriterGuiResetZoom,
-                ))
-                .on_press(move |_| {
-                    camera.write().zoom_to(1., *viewport.peek());
-                })
-                .child(format!("{:.0}%", camera.read().zoom * 100.)),
-        )
-        .child(crate::controls::IconButton::new(
-            "Zoom in",
-            crate::controls::Icon::ZoomIn,
-            move || {
-                let zoom = camera.peek().zoom * 1.2;
-                camera.write().zoom_to(zoom, *viewport.peek());
-            },
-        ))
-        .child(
-            Button::new()
-                .flat()
-                .on_press(move |_| {
-                    camera.write().fit(*viewport.peek(), bounds);
-                })
-                .child(crate::messages::text(crate::messages::MsgId::WriterGuiFit)),
-        );
     rect()
         .key("scene-map")
         .background(palette::Palette::new(writer.dark).canvas)
@@ -444,8 +312,18 @@ fn render(writer: Writer, scene: String) -> Element {
                         }),
                 )
         }))
-        .child(actions)
-        .child(navigation)
+        .child(
+            toolbar::Toolbar {
+                writer,
+                scene,
+                camera,
+                viewport,
+                positions,
+                bounds,
+                show_help,
+            }
+            .render(),
+        )
         .maybe_child((*show_help.read()).then(|| {
             label()
                 .text(crate::messages::text(

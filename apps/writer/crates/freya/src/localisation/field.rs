@@ -80,12 +80,7 @@ impl Component for TranslationField {
             identity.set(Some(next_identity));
         }
         let reviewed = draft.reviewed;
-        let status = super::status::TranslationStatus::for_entry(catalogue, entry_id).label();
-        let status = if changed {
-            format!("{status} · {}", wording(MsgId::WriterUnsaved))
-        } else {
-            status
-        };
+        let status = super::status::TranslationStatus::entry_label(catalogue, entry_id);
         drop(current);
         let save = move || {
             let result = state.write().catalogue.as_mut().map(|c| c.save(entry_id));

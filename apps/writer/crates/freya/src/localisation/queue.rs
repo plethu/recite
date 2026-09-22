@@ -187,7 +187,7 @@ fn render(writer: Writer) -> Element {
             let translation = draft
                 .as_ref()
                 .map_or_else(String::new, |d| d.forms.join(" · "));
-            let status = super::status::TranslationStatus::for_entry(catalogue, entry.id()).label();
+            let status = super::status::TranslationStatus::entry_label(catalogue, entry.id());
             let caption = destination.as_ref().map_or_else(
                 || wording(MsgId::WriterUnavailablePassage),
                 Destination::caption,
