@@ -278,3 +278,24 @@ fn watched_external_change_returns_an_unsaved_editable_draft()
     assert!(has(&test, "Hello."));
     Ok(())
 }
+
+#[test]
+fn project_settings_cannot_exclude_the_active_scene() -> Result<(), Box<dyn std::error::Error>> {
+    let dir = fixture()?;
+    let manifest = dir.path().join("recite.project.toml");
+    let original = std::fs::read_to_string(&manifest)?;
+    let mut test = open(dir.path())?;
+    support::click(&mut test, "Settings")?;
+    support::click(&mut test, "Project settings")?;
+    fill(
+        &mut test,
+        "format_version",
+        &format!("{original}\n[discovery]\nexcludes = ['a.recite']\n"),
+    )?;
+    support::click(&mut test, "Apply project changes")?;
+    assert_eq!(std::fs::read_to_string(&manifest)?, original);
+    assert!(has(&test, "Project changes would remove an open document"));
+    support::click(&mut test, "Close settings")?;
+    assert!(has(&test, "Hello."));
+    Ok(())
+}

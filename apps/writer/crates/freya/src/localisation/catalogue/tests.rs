@@ -423,3 +423,34 @@ fn recovery_restores_drafts_without_overwriting_changed_catalogue() -> Result<()
     assert!(!Catalogue::open_recoverable(&path)?.dirty());
     Ok(())
 }
+
+#[test]
+fn plural_header_case_does_not_block_reviewed_edits() -> Result<(), Box<dyn std::error::Error>> {
+    for header in ["Plural-Forms", "plural-forms", "pLuRaL-fOrMs"] {
+        let dir = tempfile::tempdir()?;
+        let path = dir.path().join("fr.po");
+        let source = format!(
+            "msgid \"\"\nmsgstr \"Language: fr\\n{header}: nplurals=2; plural=(n > 1);\\n\"\n\n#, fuzzy\nmsgctxt \"22222222222222222222\"\nmsgid \"ticket\"\nmsgid_plural \"tickets\"\nmsgstr[0] \"billet\"\nmsgstr[1] \"billets\"\n"
+        );
+        std::fs::write(&path, source)?;
+        let mut catalogue = Catalogue::open(&path)?;
+        let id = catalogue
+            .entry_for("22222222222222222222", "ticket")
+            .ok_or("entry")?;
+        assert_eq!(catalogue.plural_rule(), Some("nplurals=2; plural=(n > 1);"));
+        catalogue.update(
+            id,
+            Draft {
+                forms: vec!["ticket traduit".into(), "tickets traduits".into()],
+                reviewed: true,
+            },
+        );
+        catalogue.save(id)?;
+        let reopened = Catalogue::open(&path)?;
+        let draft = reopened.draft(id).ok_or("saved entry")?;
+        assert_eq!(draft.forms, ["ticket traduit", "tickets traduits"]);
+        assert!(draft.reviewed);
+        assert!(std::fs::read_to_string(&path)?.contains(&format!("{header}:")));
+    }
+    Ok(())
+}

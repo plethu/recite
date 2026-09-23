@@ -21,6 +21,8 @@ pub enum ProjectSettingsError {
         #[source]
         source: io::Error,
     },
+    #[error("Project changes would remove an open document: {0}")]
+    OpenDocument(PathBuf),
     #[error("The project manifest does not exist")]
     Missing,
     #[error("Project settings changed on disk. Reopen Settings to reload them.")]
@@ -49,12 +51,32 @@ impl ProjectSettings {
     }
 
     pub fn save(&mut self, replacement: &str) -> Result<(), ProjectSettingsError> {
+        self.save_preserving_documents(replacement, &[])
+    }
+
+    /// Save only if every canonical document path remains in the prospective
+    /// project. Authoring clients pass their active and retained sessions here.
+    /// Validation runs under the same manifest lock as the conflict check.
+    pub fn save_preserving_documents(
+        &mut self,
+        replacement: &str,
+        documents: &[PathBuf],
+    ) -> Result<(), ProjectSettingsError> {
         TextFileStore::new(self.path.clone())
             .update(|current| {
                 if current != Some(self.source.as_str()) {
                     return Err(ProjectSettingsError::Conflict);
                 }
-                validate(&self.path, replacement)?;
+                let report = validate(&self.path, replacement)?;
+                for path in documents {
+                    if !report
+                        .documents()
+                        .iter()
+                        .any(|document| document.path() == path)
+                    {
+                        return Err(ProjectSettingsError::OpenDocument(path.clone()));
+                    }
+                }
                 Ok(replacement.to_owned())
             })
             .map_err(|error| match error {
@@ -66,9 +88,21 @@ impl ProjectSettings {
     }
 }
 
-fn validate(path: &Path, text: &str) -> Result<(), ProjectSettingsError> {
+fn validate(
+    path: &Path,
+    text: &str,
+) -> Result<super::ProjectDiscoveryReport, ProjectSettingsError> {
     let root = path.parent().ok_or(ProjectSettingsError::Missing)?;
-    super::manifest::discover_source(root.to_owned(), path.to_owned(), text)?;
+    let report = super::manifest::discover_source(root.to_owned(), path.to_owned(), text)?;
+    if !report.is_complete() {
+        return Err(ProjectSettingsError::Validation(
+            report
+                .diagnostics()
+                .iter()
+                .map(|diagnostic| diagnostic.as_core_diagnostic())
+                .collect(),
+        ));
+    }
     let loaded = CoreManifest::load_str_with_spans(path.to_string_lossy(), text);
     if !loaded.diagnostics.is_empty() {
         return Err(ProjectSettingsError::Validation(loaded.diagnostics));
@@ -95,5 +129,5 @@ fn validate(path: &Path, text: &str) -> Result<(), ProjectSettingsError> {
     if !diagnostics.is_empty() {
         return Err(ProjectSettingsError::Validation(diagnostics));
     }
-    Ok(())
+    Ok(report)
 }

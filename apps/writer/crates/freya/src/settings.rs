@@ -223,7 +223,19 @@ pub(super) fn render(writer: Writer, files: State<Option<ProjectFiles>>) -> Elem
                         .write()
                         .as_mut()
                         .ok_or("No project".into())
-                        .and_then(|p| p.save(&text).map_err(project_error));
+                        .and_then(|p| {
+                            let files = files.peek();
+                            let files = files.as_ref().ok_or("No project")?;
+                            let model = writer.buffers.model.peek();
+                            let model = model.as_ref().map_err(|e| e.to_string())?;
+                            let documents = files
+                                .open_documents(model)
+                                .into_iter()
+                                .map(|(path, _)| path)
+                                .collect::<Vec<_>>();
+                            p.save_preserving_documents(&text, &documents)
+                                .map_err(project_error)
+                        });
                     match result {
                         Ok(()) => {
                             let mut model = writer.buffers.model;

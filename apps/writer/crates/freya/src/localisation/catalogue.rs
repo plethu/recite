@@ -284,7 +284,7 @@ impl Catalogue {
         self.document
             .headers()
             .iter()
-            .find(|h| h.key() == "Plural-Forms")
+            .find(|h| h.key().eq_ignore_ascii_case("Plural-Forms"))
             .map(|h| h.value())
     }
     pub fn discard(&mut self, id: PoEntryId) {
