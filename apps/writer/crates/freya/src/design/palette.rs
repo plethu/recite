@@ -51,23 +51,23 @@ impl Palette {
     }
     pub fn new(dark: bool) -> Self {
         Self {
-            canvas: color(dark, (240, 240, 237), (29, 31, 33)),
-            surface: color(dark, (255, 254, 251), (38, 41, 43)),
-            inset: color(dark, (244, 244, 240), (30, 33, 35)),
-            floating: color(dark, (255, 254, 252), (48, 52, 54)),
-            rule: color(dark, (217, 219, 212), (64, 69, 71)),
-            boundary: color(dark, (129, 125, 116), (133, 142, 141)),
-            ink: color(dark, (47, 48, 44), (234, 233, 226)),
-            muted: color(dark, (79, 82, 77), (198, 203, 197)),
-            placeholder: color(dark, (108, 110, 105), (153, 160, 155)),
-            accent: color(dark, (60, 89, 68), (177, 205, 179)),
-            on_accent: color(dark, (255, 254, 252), (27, 40, 30)),
-            selection: color(dark, (231, 233, 229), (57, 63, 60)),
-            hover: color(dark, (235, 236, 232), (56, 61, 62)),
-            pressed: color(dark, (213, 215, 212), (72, 76, 75)),
+            canvas: color(dark, (239, 233, 225), (27, 24, 30)),
+            surface: color(dark, (250, 246, 239), (36, 32, 39)),
+            inset: color(dark, (243, 237, 229), (29, 26, 33)),
+            floating: color(dark, (255, 251, 245), (46, 41, 49)),
+            rule: color(dark, (216, 206, 201), (65, 57, 68)),
+            boundary: color(dark, (127, 116, 119), (153, 139, 154)),
+            ink: color(dark, (48, 36, 49), (243, 233, 223)),
+            muted: color(dark, (83, 69, 81), (207, 192, 203)),
+            placeholder: color(dark, (113, 98, 109), (175, 157, 172)),
+            accent: color(dark, (104, 62, 98), (212, 174, 204)),
+            on_accent: color(dark, (255, 251, 245), (40, 25, 39)),
+            selection: color(dark, (234, 221, 232), (59, 44, 59)),
+            hover: color(dark, (238, 229, 231), (54, 46, 56)),
+            pressed: color(dark, (218, 203, 215), (69, 55, 69)),
             backdrop: Color::from_argb(110, 0, 0, 0),
             shadow: Color::from_argb(if dark { 85 } else { 28 }, 0, 0, 0),
-            error: color(dark, (150, 63, 54), (246, 191, 178)),
+            error: color(dark, (137, 51, 48), (246, 191, 178)),
         }
     }
 }

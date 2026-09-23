@@ -131,7 +131,7 @@ pub(super) fn run(command: Command, mut writer: Writer) {
             Ok(())
         }
         Command::Settings => {
-            writer.settings_open.set(true);
+            crate::settings::open(writer, *Platform::get().focused_accessibility_id.peek());
             Ok(())
         }
     };

@@ -109,6 +109,14 @@ impl Component for NoticeView {
             } else {
                 AccessibilityRole::Status
             })
+            .a11y_builder(|node| {
+                node.set_live(if notice.kind == Kind::Error {
+                    accesskit::Live::Assertive
+                } else {
+                    accesskit::Live::Polite
+                });
+                node.set_live_atomic();
+            })
             .child(label().width(Size::flex(1.)).text(notice.text));
         if let Some((caption, action)) = notice.action {
             row = row.child(

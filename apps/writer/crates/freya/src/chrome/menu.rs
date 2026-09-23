@@ -73,7 +73,11 @@ pub(super) fn render(writer: Writer, writing: bool) -> Element {
                     .on_press(move |_| {
                         open.set(false);
                         trigger.request_focus();
-                        command.run(writer);
+                        if command == Command::Settings {
+                            crate::settings::open(writer, trigger);
+                        } else {
+                            command.run(writer);
+                        }
                     })
                     .child(label().width(Size::fill()).text(command.label(writer))),
             );

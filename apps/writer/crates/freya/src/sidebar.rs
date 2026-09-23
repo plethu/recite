@@ -32,7 +32,7 @@ impl Component for Sidebar {
     }
 }
 fn render(
-    mut writer: Writer,
+    writer: Writer,
     mut navigation_visible: State<bool>,
     width: f32,
     visible: bool,
@@ -82,9 +82,15 @@ fn render(
                 .height(Size::px(t::control_height() + 16.))
                 .width(Size::fill())
                 .maybe_child(visible.then(|| {
-                    rect()
-                        .padding((8., 12.))
-                        .child(label().text("recite.").font_size(t::title()))
+                    rect().padding((8., 12.)).child(
+                        SvgViewer::new(Bytes::from_static(include_bytes!(
+                            "../../../../../assets/identity/recite-wordmark.svg"
+                        )))
+                        .width(Size::px(86. * t::ui_scale()))
+                        .height(Size::px(27. * t::ui_scale()))
+                        .color(t::colors().ink)
+                        .a11y_alt("Recite"),
+                    )
                 }))
                 .child(
                     rect()
@@ -126,7 +132,7 @@ fn render(
                 .child(controls::IconButton::new(
                     "Settings",
                     controls::Icon::Settings,
-                    move || writer.settings_open.set(true),
+                    move || crate::commands::Command::Settings.run(writer),
                 )),
         )
         .into_element()

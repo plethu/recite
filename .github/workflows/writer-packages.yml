@@ -1,0 +1,187 @@
+name: Writer package previews
+
+on:
+  workflow_dispatch:
+  pull_request:
+    paths:
+      - 'apps/writer/**'
+      - 'assets/identity/**'
+      - 'crates/**'
+      - 'Cargo.toml'
+      - 'Cargo.lock'
+      - 'scripts/package-writer*'
+      - 'scripts/check-writer-package*'
+      - 'scripts/check-writer-desktop-links.py'
+      - 'tests/writer-packaging/**'
+      - 'tests/writer-flatpak/**'
+      - 'scripts/check-writer-flatpak*'
+      - 'flake.nix'
+      - 'flake.lock'
+      - 'nix/**'
+      - '.mise.toml'
+      - '.github/workflows/writer-packages.yml'
+
+permissions:
+  contents: read
+
+jobs:
+  flatpak:
+    name: Flatpak ${{ matrix.arch }}
+    runs-on: ${{ matrix.runner }}
+    timeout-minutes: 120
+    strategy:
+      fail-fast: false
+      matrix:
+        include:
+          - arch: x86_64
+            runner: ubuntu-24.04
+          - arch: aarch64
+            runner: ubuntu-24.04-arm
+    steps:
+      - name: Check out source
+        uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          persist-credentials: false
+      - name: Install Flatpak build tools
+        run: sudo apt-get update && sudo apt-get install -y flatpak flatpak-builder appstream desktop-file-utils dbus-x11
+      - name: Install SDK in disposable runner
+        run: |
+          flatpak remote-add --user --if-not-exists flathub https://dl.flathub.org/repo/flathub.flatpakrepo
+          flatpak install --user --noninteractive flathub org.gnome.Sdk//50 org.freedesktop.Sdk.Extension.rust-stable//25.08 org.freedesktop.Sdk.Extension.llvm22//25.08
+      - name: Validate desktop metadata
+        run: |
+          desktop-file-validate apps/writer/packaging/flatpak/io.github.plethu.recite.desktop
+          appstreamcli validate --no-net apps/writer/packaging/flatpak/io.github.plethu.recite.metainfo.xml
+          python3 scripts/check-writer-flatpak.py --builder
+      - name: Build and inspect Flatpak
+        run: dbus-run-session -- scripts/package-writer-flatpak.sh target/writer-flatpak
+      - name: Upload Flatpak preview
+        uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02 # v4.6.2
+        with:
+          name: recite-writer-flatpak-${{ matrix.arch }}-preview
+          path: |
+            target/writer-flatpak/io.github.plethu.recite.flatpak
+            target/writer-flatpak/SHA256SUMS
+          retention-days: 7
+          if-no-files-found: error
+
+  nix:
+    name: Nix ${{ matrix.system }}
+    runs-on: ${{ matrix.runner }}
+    timeout-minutes: 120
+    strategy:
+      fail-fast: false
+      matrix:
+        include:
+          - system: x86_64-linux
+            runner: ubuntu-24.04
+          - system: aarch64-linux
+            runner: ubuntu-24.04-arm
+          - system: aarch64-darwin
+            runner: macos-15
+          - system: x86_64-darwin
+            runner: macos-15-intel
+    steps:
+      - name: Check out source
+        uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          persist-credentials: false
+      - name: Install Nix
+        uses: cachix/install-nix-action@13d8dd58da0234aa297dedd986986ccb8e7f3e24
+      - name: Build and check native flake packages
+        run: nix flake check --print-build-logs
+      - name: Exercise packaged entrypoints
+        run: |
+          nix run .#recite -- --help
+          nix run .#recite-writer -- --help
+          nix run .#recite-writer -- --version
+      - name: Check development tools
+        run: nix develop --command sh -ec 'rustc --version; cargo --version; command -v clang++; command -v msginit'
+
+  package:
+    name: ${{ matrix.platform }} ${{ matrix.arch }} preview
+    runs-on: ${{ matrix.runner }}
+    timeout-minutes: 75
+    strategy:
+      fail-fast: false
+      matrix:
+        include:
+          - platform: linux
+            arch: x86_64
+            runner: ubuntu-24.04
+          - platform: macos
+            arch: arm64
+            runner: macos-15
+          - platform: macos
+            arch: x86_64
+            runner: macos-15-intel
+          - platform: windows
+            arch: x86_64
+            runner: windows-2025
+    steps:
+      - name: Check out source
+        uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          persist-credentials: false
+
+      - name: Install repository Rust toolchain
+        uses: jdx/mise-action@3c2e0cf82a5b2e5249f0d3635a4d83d0ae861518 # v4.2.5
+        with:
+          install_args: rust
+
+      - name: Install Python for package checks
+        uses: actions/setup-python@e797f83bcb11b83ae66e0230d6156d7c80228e7c # v6.0.0
+        with:
+          python-version: '3.12'
+
+      - name: Cache Rust dependencies and build output
+        uses: Swatinem/rust-cache@6323deb102c322ba6fcbdcafc7e3dddab59af2b6 # v2.9.2
+        with:
+          workspaces: apps/writer
+
+      - name: Install Linux native build dependencies
+        if: matrix.platform == 'linux'
+        run: sudo apt-get update && sudo apt-get install -y libssl-dev pkg-config cmake libgtk-3-dev libclang-dev binutils xvfb dbus-x11 libglib2.0-bin
+
+      - name: Check package configuration
+        shell: bash
+        run: |
+          python tests/writer-packaging/check.py
+          python scripts/package-writer.py --platform '${{ matrix.platform }}' --check-config > /dev/null
+
+      - name: Install pinned cargo-packager
+        run: cargo install cargo-packager --version 0.11.8 --locked
+
+      - name: Build native package preview
+        run: python scripts/package-writer.py --platform '${{ matrix.platform }}'
+
+      - name: Inspect artifact and run installed CLI
+        run: python scripts/check-writer-package.py --platform '${{ matrix.platform }}' --arch '${{ matrix.arch }}' target/writer-packages/${{ matrix.platform }}
+
+      - name: Check disposable Windows install and uninstall
+        if: matrix.platform == 'windows'
+        shell: pwsh
+        run: ./scripts/check-writer-package-windows.ps1 -ArtifactDirectory target/writer-packages/windows
+
+      - name: Check Linux desktop links in a private session
+        if: matrix.platform == 'linux'
+        shell: bash
+        run: |
+          extracted=$(mktemp -d)
+          trap 'rm -rf "$extracted"' EXIT
+          dpkg-deb --extract target/writer-packages/linux/*.deb "$extracted"
+          xvfb-run -a python scripts/check-writer-desktop-links.py "$extracted"
+
+      - name: Upload preview package and checksums
+        uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02 # v4.6.2
+        with:
+          name: recite-writer-${{ matrix.platform }}-${{ matrix.arch }}-preview
+          path: |
+            target/writer-packages/${{ matrix.platform }}/**/*.deb
+            target/writer-packages/${{ matrix.platform }}/**/*.dmg
+            target/writer-packages/${{ matrix.platform }}/**/*.exe
+            target/writer-packages/${{ matrix.platform }}/**/*.zip
+            target/writer-packages/${{ matrix.platform }}/SHA256SUMS
+            target/writer-packages/${{ matrix.platform }}/runtime-abi.json
+          retention-days: 7
+          if-no-files-found: error

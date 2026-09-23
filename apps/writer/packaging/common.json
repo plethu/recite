@@ -1,0 +1,16 @@
+{
+  "name": "recite-writer",
+  "productName": "Recite Writer",
+  "identifier": "io.github.plethu.recite",
+  "version": "0.0.0",
+  "category": "GraphicsAndDesign",
+  "description": "Write and localise deterministic dialogue for games",
+  "homepage": "https://github.com/plethu/recite",
+  "licenseFile": "LICENSE",
+  "binaries": [{ "path": "recite-writer", "main": true }],
+  "resources": [
+    { "src": "LICENSE", "target": "licenses/LICENSE" },
+    { "src": "LICENSE-MIT", "target": "licenses/LICENSE-MIT" },
+    { "src": "LICENSE-APACHE", "target": "licenses/LICENSE-APACHE" }
+  ]
+}

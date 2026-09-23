@@ -96,6 +96,7 @@ pub(crate) struct Writer {
     pub pane: State<Pane>,
     pub preferences: State<crate::preferences::Preferences>,
     pub settings_open: State<bool>,
+    pub settings_return_focus: State<AccessibilityId>,
     pub map_focus: AccessibilityId,
     pub sidebar_focus: AccessibilityId,
     pub inspector_focus: AccessibilityId,

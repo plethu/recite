@@ -1,4 +1,6 @@
 //! Freya owns history; the workspace validates locations before accepting them.
+#[cfg(target_os = "linux")]
+pub(crate) mod activation;
 mod location;
 use crate::{
     AppMode,
@@ -11,6 +13,14 @@ use recite_writer_model::{View, Workbench, WorkbenchError};
 /// Initial workspace link for native hosts. Project links resolve within the opened project.
 #[derive(Clone)]
 pub struct InitialRoute(pub String);
+#[cfg(target_os = "linux")]
+#[derive(Clone, Copy)]
+pub(crate) struct NavigationReady(pub(crate) State<bool>);
+
+pub(crate) fn project_from_route(route: &str) -> Result<Option<std::path::PathBuf>, String> {
+    let location = route.parse::<Location>().map_err(str::to_owned)?;
+    Ok(location.project.map(std::path::PathBuf::from))
+}
 
 #[derive(Clone, Copy)]
 pub(crate) struct Queue {
@@ -109,10 +119,17 @@ fn snapshot(writer: Writer) -> Location {
 /// does not flood Back history.
 pub(super) fn track(writer: Writer, mode: AppMode) {
     let initial = use_try_consume::<InitialRoute>();
+    let startup_project = use_try_consume::<crate::InitialProject>();
     let mut pending = use_state(move || initial.map(|r| r.0));
     let mut started = use_state(|| false);
+    #[cfg(target_os = "linux")]
+    use_provide_context(move || NavigationReady(started));
     use_after_side_effect(move || {
-        let ready = mode != AppMode::Project || writer.files.read().is_some();
+        let ready = mode != AppMode::Project
+            || writer.files.read().is_some()
+            || startup_project
+                .as_ref()
+                .is_none_or(|project| project.0.is_none());
         if !ready {
             return;
         }
@@ -129,15 +146,15 @@ pub(super) fn track(writer: Writer, mode: AppMode) {
                 }
             }
             let _ = router.replace(snapshot(writer));
-            return;
-        }
-        let next = snapshot(writer);
-        let current = router.current::<Location>();
-        if next != current {
-            if next.same_place(&current) {
-                let _ = router.replace(next);
-            } else {
-                let _ = router.push(next);
+        } else {
+            let next = snapshot(writer);
+            let current = router.current::<Location>();
+            if next != current {
+                if next.same_place(&current) {
+                    let _ = router.replace(next);
+                } else {
+                    let _ = router.push(next);
+                }
             }
         }
     });
@@ -194,24 +211,30 @@ fn select(model: &mut Workbench, location: &Location) -> Result<(), WorkbenchErr
 }
 
 fn apply(mut writer: Writer, location: &Location) -> Result<(), String> {
+    let files = writer.files.peek();
     if let Some(project) = &location.project {
-        let files = writer.files.peek();
-        if files
-            .as_ref()
-            .is_none_or(|f| f.root() != std::path::Path::new(project))
-        {
+        let linked_root = recite_config::discover_project(project)
+            .map_err(|error| format!("The linked project is unavailable: {error}"))?
+            .manifest()
+            .project_root()
+            .to_owned();
+        if files.as_ref().is_none_or(|f| f.root() != linked_root) {
             return Err(format!("Open the linked project first: {project}"));
         }
     }
+    let path = location
+        .catalogue
+        .as_ref()
+        .map(|catalogue| {
+            files.as_ref().map_or_else(
+                || Ok(std::path::PathBuf::from(catalogue)),
+                |files| catalogue_path(files.root(), catalogue),
+            )
+        })
+        .transpose()?;
+    drop(files);
     writer.remember_scene();
     writer.try_navigate(|_| Ok(()))?;
-    let path = location.catalogue.as_ref().map(|p| {
-        writer
-            .files
-            .peek()
-            .as_ref()
-            .map_or_else(|| std::path::PathBuf::from(p), |f| f.root().join(p))
-    });
     let current_catalogue = writer
         .localisation
         .peek()
@@ -352,6 +375,23 @@ fn apply(mut writer: Writer, location: &Location) -> Result<(), String> {
     writer.inspector_focus.request_focus();
     writer.restore_scroll();
     Ok(())
+}
+
+fn catalogue_path(root: &std::path::Path, relative: &str) -> Result<std::path::PathBuf, String> {
+    use std::path::Component;
+    let relative = std::path::Path::new(relative);
+    if !relative
+        .components()
+        .all(|part| matches!(part, Component::Normal(_)))
+    {
+        return Err("The linked catalogue must be relative to the project.".into());
+    }
+    let path = std::fs::canonicalize(root.join(relative))
+        .map_err(|error| format!("The linked catalogue is unavailable: {error}"))?;
+    if !path.starts_with(root) {
+        return Err("The linked catalogue is outside the project.".into());
+    }
+    Ok(path)
 }
 
 pub(super) fn open_passage(

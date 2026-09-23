@@ -35,6 +35,15 @@ fn click(test: &mut TestingRunner, caption: &str) -> Result<(), Box<dyn std::err
 #[test]
 fn notice_retry_and_dismiss_have_distinct_effects() -> Result<(), Box<dyn std::error::Error>> {
     let mut test = TestingRunner::new(form, Size2D::new(700., 300.), |_| {}, 1.).0;
+    assert!(
+        test.find(
+            |_, e| Rect::try_downcast(e).filter(|r| r.accessibility.builder.role()
+                == AccessibilityRole::Alert
+                && r.accessibility.builder.live() == Some(accesskit::Live::Assertive)
+                && r.accessibility.builder.is_live_atomic())
+        )
+        .is_some()
+    );
     click(&mut test, "Dismiss message")?;
     assert!(
         test.find(|_, e| Label::try_downcast(e).filter(|l| l.text.as_ref() == "Retried: false"))
@@ -51,9 +60,13 @@ fn notice_retry_and_dismiss_have_distinct_effects() -> Result<(), Box<dyn std::e
             .is_some()
     );
     assert!(
-        test.find(|_, e| Rect::try_downcast(e)
-            .filter(|r| r.accessibility.builder.role() == AccessibilityRole::Status))
-            .is_some()
+        test.find(
+            |_, e| Rect::try_downcast(e).filter(|r| r.accessibility.builder.role()
+                == AccessibilityRole::Status
+                && r.accessibility.builder.live() == Some(accesskit::Live::Polite)
+                && r.accessibility.builder.is_live_atomic())
+        )
+        .is_some()
     );
     Ok(())
 }

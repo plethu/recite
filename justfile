@@ -70,10 +70,29 @@ writer *args:
 # Verify the maintained native application and its source-editing model.
 check-writer:
     python3 scripts/check-writer-colors.py
+    just check-writer-packaging
     cargo fmt --manifest-path apps/writer/Cargo.toml --all -- --check
     cargo test --locked --manifest-path apps/writer/Cargo.toml --workspace
     cargo clippy --locked --manifest-path apps/writer/Cargo.toml --workspace --all-targets --all-features -- -D warnings
     just check-writer-heap
+
+# Platform-independent package metadata and runtime dependency checks.
+check-writer-packaging:
+    python3 tests/writer-packaging/check.py
+    python3 scripts/package-writer.py --check-config > /dev/null
+    python3 scripts/check-writer-flatpak.py
+
+# Repeatable keyboard, accessibility metadata, scaling and contrast checks.
+check-writer-accessibility:
+    python3 scripts/check-writer-colors.py
+    cargo test --locked --manifest-path apps/writer/Cargo.toml -p recite-writer --test accessibility --test commands --test keybindings --test options --test picker --test text_input --test writing_workspace
+    cargo test --locked --manifest-path apps/writer/Cargo.toml -p recite-writer --lib design::
+    cargo test --locked --manifest-path apps/writer/Cargo.toml -p recite-writer --lib feedback::
+
+# Linux AT-SPI bridge; needs python3-gi, dbus-run-session and a display or Xvfb.
+probe-writer-native-accessibility *args:
+    cargo build --locked --manifest-path apps/writer/Cargo.toml -p recite-writer
+    /usr/bin/python3 scripts/check-writer-native-accessibility.py apps/writer/target/debug/recite-writer "$@"
 
 # Fixed-corpus allocation regression checks; no wall-clock budget.
 check-writer-heap:

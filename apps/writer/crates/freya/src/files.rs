@@ -19,12 +19,11 @@ pub(crate) fn controls(
     dark: bool,
 ) -> FileChrome {
     let buffers = writer.buffers;
-    let path = use_state(|| {
-        std::env::args()
-            .collect::<Vec<_>>()
-            .windows(2)
-            .find(|args| args[0] == "--project")
-            .map_or_else(String::new, |args| args[1].clone())
+    let initial = use_try_consume::<crate::InitialProject>();
+    let path = use_state(move || {
+        initial
+            .and_then(|value| value.0)
+            .map_or_else(String::new, |path| path.to_string_lossy().into_owned())
     });
     let path_id = use_a11y();
     let browse_id = use_a11y();
@@ -118,7 +117,7 @@ pub(crate) fn controls(
         .padding(t::SPACE_LG);
     if *project_panel_open.read() {
         let open = EventHandler::new(move |()| {
-            if !buffers.can_leave(files.peek().as_ref()) {
+            if !crate::project_loading::can_switch_project(writer) {
                 message.error(
                     "Save changes and apply or discard the draft before opening another project."
                         .into(),

@@ -114,6 +114,7 @@ impl Component for Dialog {
                     .on_pointer_down(|e: Event<PointerEventData>| e.stop_propagation())
                     .on_all_press(|e: Event<PressEventData>| e.stop_propagation())
                     .a11y_role(AccessibilityRole::Dialog)
+                    .a11y_builder(|node| node.set_modal())
                     .a11y_alt(self.title.clone())
                     .opacity(ink.get().value())
                     .child(label().text(self.title.clone()).font_size(t::title()))

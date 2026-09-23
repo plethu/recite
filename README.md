@@ -1,4 +1,7 @@
-# recite
+<picture>
+  <source media="(prefers-color-scheme: dark)" srcset="assets/identity/recite-wordmark-reversed.svg">
+  <img src="assets/identity/recite-wordmark.svg" alt="Recite" width="260">
+</picture>
 
 > Words are events, they do things, change things.
 >
@@ -81,6 +84,10 @@ Start with the [first-scene
 guide](docs-site/src/content/docs/getting-started/first-scene.md). The [install
 guide](docs-site/src/content/docs/getting-started/install.md) also covers
 installing directly from Git.
+
+The [Nix flake](nix/README.md) provides the CLI and Writer packages. The
+[Writer packaging guide](apps/writer/packaging.md) covers Flatpak and native
+desktop previews.
 
 The [production spec](docs/recite-production-spec.md) is the detailed contract,
 and the [v1 roadmap](docs/roadmap.md) records what is still missing.

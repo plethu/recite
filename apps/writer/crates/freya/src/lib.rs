@@ -1,3 +1,4 @@
+mod activation;
 mod builds;
 mod commands;
 mod declarations;
@@ -7,6 +8,12 @@ mod presentation;
 mod rename;
 mod rules;
 mod source_editor;
+mod startup;
+pub use activation::{Activation, ActivationHost, ActivationInbox};
+pub use startup::{InitialProject, Startup};
+pub fn startup_help() -> &'static str {
+    startup::HELP
+}
 use crate::design::tokens as t;
 mod beat_heading;
 mod branch_preview;
@@ -107,6 +114,7 @@ fn workbench(mode: AppMode) -> Element {
     let mut dark = use_state(move || initially_dark);
     let mut theme = use_init_theme(move || palette::theme(initially_dark));
     let settings_open = use_state(|| false);
+    let settings_return_focus = use_state(|| *Platform::get().focused_accessibility_id.peek());
     let modal_count = use_state(|| 0usize);
     use_provide_context(move || design::ModalState(modal_count));
     let map_focus = use_a11y();
@@ -220,6 +228,7 @@ fn workbench(mode: AppMode) -> Element {
         dark: night,
         preferences,
         settings_open,
+        settings_return_focus,
         map_focus,
         sidebar_focus,
         inspector_focus,

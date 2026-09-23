@@ -1,0 +1,5 @@
+{
+  "formats": ["nsis"],
+  "icons": ["apps/writer/packaging/icons/recite-writer.ico"],
+  "nsis": { "installMode": "currentUser" }
+}

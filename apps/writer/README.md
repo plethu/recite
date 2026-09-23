@@ -1,6 +1,7 @@
 # Recite writer
 
-The maintained Freya application for editing Recite dialogue. Script opens the
+The maintained Freya application for editing Recite dialogue, currently a preview.
+Script opens the
 selected beat in a reading column, with branch previews for comparing replies.
 Map shows beats, branches, convergences and returns; it can stand alone or sit
 beside Script. Source uses the same document and compiler diagnostics.
@@ -15,10 +16,13 @@ From the repository root:
 ```sh
 mise exec -- just writer
 mise exec -- just writer --project /path/to/project
+mise exec -- just writer --examples
 mise exec -- just check-writer
+mise exec -- just check-writer-accessibility
 ```
 
-The default opens three original examples: a recurring conversation hub,
+The default opens the project welcome screen. `--examples` opens three original
+examples: a recurring conversation hub,
 a branching and reconverging evacuation, and a three-line conversation.
 Example edits live only for the window's lifetime. Project mode provides
 explicit save, crash recovery, and external-edit conflict protection.
@@ -52,6 +56,6 @@ without it. See [the localisation workflow](localisation.md).
 The writer uses Freya routing for workspace [history and links](navigation.md),
 including Back/Forward across scenes and the translation queue.
 
-Cross-platform installation and packaging remain outstanding; the
-[packaging requirements](packaging.md) include desktop deep-link registration,
-project activation and delivery to a running window.
+Flatpak, Nix, and native preview package definitions and artifact checks are available; see
+[packaging](packaging.md) for build instructions, desktop-link support and
+the remaining platform acceptance work.

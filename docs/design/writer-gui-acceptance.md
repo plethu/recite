@@ -4,6 +4,46 @@ This is the final hands-on pass for the GUI milestone, excluding distribution.
 Automated checks do not establish native screen-reader, input-method or physical
 display behavior. Keep milestone #170 open until those requirements have evidence.
 
+## Preview checkpoint and repeatable checks
+
+The writer remains a preview while the library and text-editor integrations take
+priority. Further substantial GUI design work should follow use by interested
+writers. The maintainer does not need to become its primary usability tester.
+
+Run `mise exec -- just check-writer-accessibility` for the focused automated pass.
+These tests also run in `check-writer` and the existing CI writer gate. They cover
+button names, modal metadata, forward and reverse keyboard focus, focus restoration
+after Commands opens Settings, and keeping focused settings controls inside the
+dialog at 100% and 200% UI scale in a 900 by 650 window. A writing workflow replaces
+source, applies it and reads the result in Script without pointer input. The pass
+also includes shortcut rebinding, pickers, palette scrolling, synthetic text
+input, enlarged workspace layouts, contrast and reduced-motion component checks.
+Status messages carry polite live-region metadata; errors carry assertive
+metadata. Neither metadata nor synthetic input proves native announcements or
+input-method behaviour.
+
+The pinned upstream CodeEditor exposes an unnamed TextInput within Recite's named
+Source editor group and does not present IME preedit text. Its API does not expose
+an accessible-name property. These remain accessibility limitations; the button
+name audit is not a claim that every input passes. The existing preedit probe
+records that gap. Prose inputs have separate composition coverage.
+
+On Linux, `mise exec -- just probe-writer-native-accessibility` launches only the
+component specimen, with a private D-Bus session and temporary settings. It needs
+a display (or Xvfb), Python GI/AT-SPI bindings and the AT-SPI daemons. It queries
+the real accessibility tree and reports observed focus and action support as JSON.
+Add `--require-actions` to fail unless both operations affect the app.
+
+The September 23 native probe found the named button through AT-SPI, but focus
+requests had no effect and the button exposed no action. Freya 0.5.0-rc.7's native
+renderer ignores `ActionRequested`. This is a known accessibility blocker, not
+an unperformed test. Keep it visible until the host handles native actions and
+the strict probe passes; the normal probe reports `limited` for this result.
+
+Native screen-reader and input-method testing, physical scrolling, and sessions
+with prospective writers remain unverified. Record that evidence when testers
+are available; passing this automated pass does not close those acceptance items.
+
 ## Keyboard, colour and press feedback
 
 Settings offers monochrome colours in both light and dark themes, persistent

@@ -15,6 +15,11 @@ enum Page {
 }
 mod typography;
 
+pub(super) fn open(mut writer: Writer, invoker: AccessibilityId) {
+    writer.settings_return_focus.set(invoker);
+    writer.settings_open.set(true);
+}
+
 pub(super) fn render(writer: Writer, files: State<Option<ProjectFiles>>) -> Element {
     let mut page = use_state(|| Page::Personal);
     let shortcut_settings = shortcuts::Shortcuts::new();
@@ -24,7 +29,6 @@ pub(super) fn render(writer: Writer, files: State<Option<ProjectFiles>>) -> Elem
     let mut project = use_state(|| None::<recite_config::ProjectSettings>);
     let mut draft = use_state(|| editor_data("", false, writer.dark));
     let mut error = use_state(String::new);
-    let previous_focus = use_state(|| *Platform::get().focused_accessibility_id.peek());
     let editor_id = use_a11y();
     let source_viewport = crate::source_editor::EditorViewport::new();
     let config_id = use_a11y();
@@ -68,7 +72,6 @@ pub(super) fn render(writer: Writer, files: State<Option<ProjectFiles>>) -> Elem
             ids[0].request_focus();
         }
     });
-    let mut previous_focus = previous_focus;
     let mut close = move || {
         if *page.peek() == Page::Keyboard && shortcut_settings.editing() {
             shortcut_settings.cancel();
@@ -76,14 +79,13 @@ pub(super) fn render(writer: Writer, files: State<Option<ProjectFiles>>) -> Elem
         }
         shortcut_settings.cancel();
         visible.set(false);
-        previous_focus.peek().request_focus();
+        writer.settings_return_focus.peek().request_focus();
     };
     if !*visible.read() {
         opened.set_if_modified(false);
         return rect().into_element();
     }
     if !*opened.peek() {
-        previous_focus.set(*Platform::get().focused_accessibility_id.peek());
         project.set(None);
         if let Some(files) = files.peek().as_ref() {
             match recite_config::ProjectSettings::open(files.root()) {

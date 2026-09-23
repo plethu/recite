@@ -1,4 +1,31 @@
 use super::*;
+
+#[test]
+fn flatpak_configured_tools_keep_arguments_and_watch_the_host_child() {
+    let directory = Path::new("/home/writer/project with spaces");
+    let mut command = configured_process(Path::new("./tools/schema producer"), directory, true);
+    command.arg("a file; $(not-a-shell).json");
+    assert_eq!(command.get_program(), "/usr/bin/flatpak-spawn");
+    assert_eq!(command.get_current_dir(), Some(directory));
+    assert_eq!(
+        command.get_args().collect::<Vec<_>>(),
+        [
+            "--host",
+            "--watch-bus",
+            "--directory=/home/writer/project with spaces",
+            "--",
+            "./tools/schema producer",
+            "a file; $(not-a-shell).json",
+        ]
+    );
+}
+
+#[test]
+fn native_configured_tools_run_directly() {
+    let command = configured_process(Path::new("schema-producer"), Path::new("."), false);
+    assert_eq!(command.get_program(), "schema-producer");
+    assert_eq!(command.get_args().count(), 0);
+}
 #[cfg(unix)]
 #[test]
 fn staged_generation_validates_identity_without_touching_live_output()

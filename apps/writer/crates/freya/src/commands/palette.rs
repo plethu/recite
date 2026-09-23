@@ -38,6 +38,9 @@ impl Item {
     fn run(&self, mut writer: Writer) {
         writer.command_search.close();
         match self {
+            Self::Command(Command::Settings) => {
+                crate::settings::open(writer, *writer.command_search.return_focus.peek());
+            }
             Self::Command(c) => c.run(writer),
             Self::Target(t) => {
                 if let Err(error) = t.open(writer) {

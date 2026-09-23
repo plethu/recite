@@ -76,8 +76,8 @@ pub(super) fn command(
     } else {
         program.to_owned()
     };
-    let mut command = Command::new(program);
-    command.current_dir(directory).stdin(Stdio::null());
+    let in_flatpak = cfg!(target_os = "linux") && Path::new("/.flatpak-info").is_file();
+    let mut command = configured_process(&program, &directory, in_flatpak);
     for arg in spec.args() {
         let mut expanded = arg.clone();
         for (key, value) in replacements {
@@ -86,6 +86,26 @@ pub(super) fn command(
         command.arg(expanded);
     }
     Ok(command)
+}
+
+fn configured_process(program: &Path, directory: &Path, in_flatpak: bool) -> Command {
+    let mut command = if in_flatpak {
+        // Only explicitly configured producer/editor commands use the host.
+        // WATCH_BUS also terminates the host child when cancellation kills this proxy.
+        let mut command = Command::new("/usr/bin/flatpak-spawn");
+        let mut working_directory = std::ffi::OsString::from("--directory=");
+        working_directory.push(directory);
+        command
+            .args(["--host", "--watch-bus"])
+            .arg(working_directory)
+            .arg("--")
+            .arg(program);
+        command
+    } else {
+        Command::new(program)
+    };
+    command.current_dir(directory).stdin(Stdio::null());
+    command
 }
 fn generate(
     root: &Path,

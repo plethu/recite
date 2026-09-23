@@ -1,0 +1,10 @@
+[Desktop Entry]
+Type=Application
+Name=Recite Writer
+Comment=Write and localise deterministic dialogue for games
+Exec=recite-writer %u
+Icon=io.github.plethu.recite
+Categories=Development;
+MimeType=x-scheme-handler/recite;
+Terminal=false
+StartupNotify=true

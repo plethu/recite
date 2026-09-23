@@ -24,15 +24,25 @@ Open a link on startup, with the corresponding project:
 mise exec -- just writer --project /path/to/project --route 'recite://writer/translations?catalogue=locale/fr.po&q=hello'
 ```
 
-For the bundled examples, omit `--project`. Embedded native hosts can provide
-`InitialRoute(String)` as a root context. Unavailable scenes, invalid parameters
+Links copied from a saved project include its path and can be passed directly as
+`recite-writer 'recite://writer/…?project=…'`; the launcher opens that project
+before resolving the location. If `--project` is also supplied, both paths must
+identify the same project. A catalogue must resolve inside that project.
+
+For the bundled examples, pass `--examples`. Embedded native hosts can provide
+`InitialProject` and `InitialRoute(String)` as root contexts. Unavailable scenes, invalid parameters
 and links identifying a different project report an error without replacing the
 current scene. Freya's router owns the history; the workspace applies its draft
 and file checks before accepting the location.
 
-Desktop protocol registration and delivering a link into an already-running
-window are required [packaging work](packaging.md), tracked in #79. The command-line entry point and route
-format work now. Dialogs, preview playback and pinned reference snapshots are
+On Linux, another launch forwards its project and link to the existing
+project-writer window, including a window opened at the welcome screen. Opening
+another project uses the shared loader and refuses to replace unsaved work.
+If a clean project opens but its linked location is unavailable, the error
+identifies that partial result and the opened project stays selected.
+Examples and the component specimen remain independent windows.
+Desktop installation acceptance and the other platforms remain
+[packaging work](packaging.md), tracked in #79. Dialogs, preview playback and pinned reference snapshots are
 transient workspace state and are not encoded in links.
 
 The app shell in `lib.rs` remains the composition owner for shared editor state
