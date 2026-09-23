@@ -26,7 +26,7 @@ examples: a recurring conversation hub,
 a branching and reconverging evacuation, and a three-line conversation.
 Example edits live only for the window's lifetime. Project mode provides
 explicit save, crash recovery, and external-edit conflict protection.
-See the [writer guide](freya-workbench.md).
+See the [writer guide](guide.md).
 
 ## Ownership
 
@@ -46,7 +46,7 @@ and comparison harnesses have been removed; Git history retains that research.
 Native builds need Freya/Skia prerequisites (clang, CMake, pkg-config, and GTK 3
 development libraries on Linux) and a working desktop session. Linux execution
 and component tests do not establish macOS, Windows, screen-reader, or physical
-IME acceptance. See [remaining validation](evidence.md).
+IME acceptance. See [remaining validation](acceptance.md).
 
 Creating a dialogue PO catalogue from the Localise workspace requires GNU
 gettext (`msginit` on `PATH`). Install gettext before running the writer's full

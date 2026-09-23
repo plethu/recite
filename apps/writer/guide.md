@@ -1,4 +1,4 @@
-# Freya file-backed writer
+# Writer guide
 
 The native writer uses Freya and the shared Recite authoring kernel. Run from the repository root:
 
@@ -6,7 +6,8 @@ The native writer uses Freya and the shared Recite authoring kernel. Run from th
 mise exec -- cargo run --locked --manifest-path apps/writer/Cargo.toml -p recite-writer
 ```
 
-Without arguments, the writer opens three original temporary examples:
+Without arguments, Writer opens the project welcome screen. `--project PATH`
+opens a project; `--examples` opens three temporary examples:
 
 - **Relay Hub**: recurring topics, nested returns, and schema-checked requests
   to set a quest flag and change disposition.
@@ -224,12 +225,13 @@ Preview compiles that same set of effective sources and schema. Script starts
 at the selected passage's block; Source starts at the compiled default block.
 Cross-file links use the normal Recite reference rules. Existing previews keep
 their compiled input until explicitly restarted. Effect requests are displayed without executing game operations. Conditions
-still require preview inputs before traversal can continue. Scene-manifest-specific
-build outputs and runtime fixture inputs remain to be connected.
+still require preview inputs before traversal can continue. Use the project build and trial controls to choose the scene and supply
+condition answers; effects remain explicit requests rather than game operations.
 
-Project localisation, catalogue editing, completion, and the complete
-accessibility/platform requirements remain outstanding. Field drafts must be
-applied before their content contributes to diagnostics or preview.
+Project localisation and catalogue editing are covered in the
+[localisation guide](localisation.md). Apply field drafts before they contribute
+to diagnostics or preview. Native accessibility/platform requirements remain in
+[acceptance](acceptance.md).
 
 ## Writing trial
 
@@ -241,7 +243,7 @@ focus restoration, and whether the recovered field matches what you left.
 Component and filesystem tests cover these transitions. Physical IME/BiDi,
 screen-reader operation, native window-manager closing, and macOS/Windows
 acceptance still need hands-on checks. The pinned CodeEditor preedit limitation
-remains recorded in the [text-input evidence](evidence.md).
+remains recorded in the [acceptance checks](acceptance.md).
 
 Focused verification for this isolated workspace:
 

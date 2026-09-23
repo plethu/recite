@@ -40,7 +40,7 @@ Singular catalogues do not require plural metadata. Opening and editing existing
 PO files do not require gettext. Creating a catalogue does not change runtime
 locale or fallback configuration. Source-only drafting still needs no catalogue.
 
-The selected beat remains a full manuscript. Existing singular line and reply
+The selected beat remains a full manuscript. Line and reply
 entries are matched by stable context ID and exact source text. Missing, ambiguous
 or changed source matches are not silently rewritten. Use **Refresh from source**
 in the catalogue's file actions, or **Source updates** beside a missing entry.
@@ -68,7 +68,8 @@ Save writes that passage to the actual PO file. Unreviewed drafts carry `fuzzy`;
 marking Reviewed clears it only after shared PO validation succeeds. Translation
 edits clear pending review. Ctrl/Cmd+S in a translation field saves that translation.
 The window refuses to close while PO drafts remain; save or explicitly discard
-them first. Unsaved PO edits currently have no crash-recovery journal.
+them first. PO drafts use the shared asynchronous recovery worker. On reopening, recovered
+drafts retain the original disk baseline, so external edits still cause conflicts.
 
 The catalogue path opens file actions. Reload accepts external changes only when
 there are no local drafts. Compare shows source, draft and file text for each
@@ -92,17 +93,26 @@ fabricated navigation target. Large beats retain the script's 32-entry paging;
 selection from the queue reveals the relevant page. See [navigation](navigation.md)
 for workspace history and links.
 
-## Current limits
+## Plurals, variants and preview
 
-This implements the accepted bilingual direction for existing singular PO entries.
-Plural and variant editing, catalogue-scale
-profiling, automatic file watching and launching a preferred external editor from
-the app are not implemented. External editors can edit the same PO file and the
-writer can compare/reload it; there is no private translation database.
+A plural entry edits all arms together using the catalogue's validated
+`Plural-Forms` header. Header names are case-insensitive. Review applies to the
+whole entry; invalid placeholders or plural metadata refuse the save without
+losing drafts. Named variants have independent drafts and review state. The
+entry count control identifies the arm selected by the plural rule.
 
-Headless Freya interaction tests cover creation, cancellation, invalid language,
-existing-path refusal, opening/editing/saving PO, unsaved-close
-protection, external comparison, and returning to writing. Core tests cover fuzzy
-flag preservation and review-time placeholder validation. Physical keyboard/IME,
-screen-reader use, native visual acceptance and frame pacing still need hands-on
-checks. The browser study remains in `docs/design/localisation` for design review.
+Trial preview exposes language, count and fallback controls. It uses the shared
+runtime and catalogue validation; previewing drafts neither saves nor reviews
+them. Source or catalogue changes mark an existing trial stale.
+
+## Limits and checks
+
+Catalogue-scale profiling and automatic file watching remain outstanding.
+External PO editors can edit the same file; Compare and Reload handle conflicts
+without introducing a private translation database.
+
+Headless interaction tests cover creation, cancellation, invalid language,
+existing-path refusal, open/edit/save, plural and variant drafts, review,
+external comparison, source refresh and preview locale controls. Shared PO tests
+protect unknown data, comments, fuzzy flags and placeholder validation. Physical
+keyboard/IME and screen-reader workflows remain in [acceptance](acceptance.md).

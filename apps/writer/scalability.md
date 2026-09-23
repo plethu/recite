@@ -200,28 +200,26 @@ not establish those targets. Keep the writer centred on a conversation and nearb
 context; project-wide production navigation can add authored folders/tags without
 inventing a hierarchy from graph connectivity.
 
-## Implementation review
+## Search and projection measurements
 
-Projection caches and history belong to the document model; disk ownership and
-job lifecycle belong to the frontend. Neither changes runtime traversal or the
-public saved-document constructor/accessors. Recovery still uses the existing
-serialized format. File buffers, project errors, reading context, script paging
-and cached graph geometry now have separate owners. The larger `lib.rs` remains
-the application composition/root-state owner; `scene_map.rs` composes the map
-surface while layout, routing, culling and neighbourhood selection live in
-focused modules. Further splitting their remaining composition code would mostly
-move hook wiring rather than establish a new responsibility.
+The September 18 pass removed temporary search-word collections, shared the cold
+projection parse, and avoided unused statement slots in singleton parser bodies.
+No public AST or persistent format changed. Five alternating baseline/combined
+runs per workload used 100,000 lines in 200 documents, pinned to CPU 2. Branching
+workloads added 40,000 replies. These are median summed model-operation times,
+not GUI frame latency; separate DHAT runs measured 10,000 lines.
 
-The validation phase orchestration, compact facts and dependency index live together
-under `validation/incremental`. The statement validator is reduced to 282 lines
-by separating localisable-ID validation, whose ownership now spans both phases.
-The phases reuse existing checks rather than create a second set of diagnostic rules. Authoring state owns cache lifetime and snapshot
-sharing. No new public cache API or background kernel worker
-is introduced by this optimisation.
+| Workload | Model time ms, before → after | Cumulative allocated MB, before → after |
+| --- | ---: | ---: |
+| Linear, independent | 687.16 → 640.61 | 389.38 → 369.59 |
+| Linear, linked | 735.02 → 695.32 | 407.21 → 387.41 |
+| Branching, independent | 964.82 → 907.47 | 651.31 → 570.10 |
+| Branching, linked | 1041.49 → 979.31 | 676.14 → 594.93 |
 
-The September 18 optimization pass removes temporary search-word collections,
-shares the cold projection parse, and avoids unused statement slots in singleton
-bodies. The index/projection budgets protect those measured savings. See the
-[writer measurements](../../docs/design/writer-performance-findings.md) and
-[parser investigation](../../docs/design/parser-allocation-findings.md) for
-workload-specific benefits and CPU tradeoffs.
+Peak live heap fell roughly 2–2.4%; the main gain was lower allocation churn.
+Opening and plain-edit timings were essentially unchanged. The parser-only
+comment workload regressed about 7% (0.14 ms per 10,000 comments), so this is
+not a blanket parser speedup. Keep CPU and DHAT runs separate.
+The 10,000-passage heap gate caps index allocation at 55 MB and cold projection
+at 3.2 MB, alongside the peak/edit bounds. Native frame pacing, GPU memory and
+long-session use still require separate measurements.

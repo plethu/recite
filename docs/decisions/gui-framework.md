@@ -16,8 +16,7 @@ The toolkit choice may be reconsidered for a concrete accessibility, text-input,
 distribution, or maintenance blocker. The pinned Freya RC remains subject to
 repeatable regression checks before upgrades. Selection does not establish
 screen-reader, physical IME, BiDi, packaging, macOS, or Windows acceptance.
-See the [writer validation record](../../apps/writer/evidence.md) and
-[upstream handoff](../../apps/writer/freya-upstream-handoff.md).
+See the [writer acceptance checks and known limits](../../apps/writer/acceptance.md).
 
 The GUI and accessibility milestones remain governed by their full contracts.
 A working native window does not replace those acceptance gates.

@@ -242,7 +242,7 @@ framework enthusiasm.
 Freya was selected by the maintainer on 2026-09-08. The
 [decision record](decisions/gui-framework.md) records that choice and the
 conditions for reconsidering it. The [maintained writer](../apps/writer/README.md)
-uses the accepted [visual language](gui-visual-language.md). Retired candidate
+uses the shared [design system](../apps/writer/design-system.md). Retired candidate
 implementations and comparison harnesses are retained in Git history.
 
 Platform and accessibility acceptance remain open. The writer must demonstrate

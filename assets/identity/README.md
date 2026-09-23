@@ -14,7 +14,7 @@ MIT OR Apache-2.0 license and do not require a font installation.
 
 Plum is `#683e62`, ink is `#241f27`, and the reversed mark is warm paper
 `#f3e9df`. Preserve the letterforms when recolouring for a light or dark surface.
-The exploratory sheets remain in `docs/design/identity`.
+Rejected sketches and audition sheets are retained in Git history.
 
 To regenerate desktop formats, render the icon SVG to a 1024-pixel PNG with
 `rsvg-convert`, then use Pillow to export a 512-pixel PNG, a multi-resolution ICO
