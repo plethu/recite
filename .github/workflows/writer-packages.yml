@@ -47,7 +47,7 @@ jobs:
       - name: Install SDK in disposable runner
         run: |
           flatpak remote-add --user --if-not-exists flathub https://dl.flathub.org/repo/flathub.flatpakrepo
-          flatpak install --user --noninteractive flathub org.gnome.Sdk//50 org.freedesktop.Sdk.Extension.rust-stable//25.08 org.freedesktop.Sdk.Extension.llvm22//25.08
+          flatpak install --user --noninteractive flathub org.gnome.Platform//50 org.gnome.Sdk//50 org.freedesktop.Sdk.Extension.rust-stable//25.08 org.freedesktop.Sdk.Extension.llvm22//25.08
       - name: Validate desktop metadata
         run: |
           desktop-file-validate apps/writer/packaging/flatpak/io.github.plethu.recite.desktop
