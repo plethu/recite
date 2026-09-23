@@ -234,6 +234,9 @@ impl Catalogue {
         if &next.baseline != expected {
             return Err(wording(MsgId::WriterCompare));
         }
+        if !keep_drafts {
+            return self.adopt(next);
+        }
         for (id, draft) in &self.drafts {
             let entry = self
                 .document
@@ -248,16 +251,11 @@ impl Catalogue {
                 .entry(target)
                 .ok_or_else(|| wording(MsgId::WriterNoEntry))?;
             if target_entry.plural_source_text() != entry.plural_source_text()
-                || (keep_drafts && self.plural_rule() != next.plural_rule())
+                || self.plural_rule() != next.plural_rule()
             {
                 return Err(wording(MsgId::WriterExternalStructureChanged));
             }
-            let mut chosen = if keep_drafts {
-                draft.clone()
-            } else {
-                next.draft(target)
-                    .ok_or_else(|| wording(MsgId::WriterNoEntry))?
-            };
+            let mut chosen = draft.clone();
             chosen.reviewed = false;
             next.drafts.insert(target, chosen);
         }

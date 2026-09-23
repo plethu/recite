@@ -69,7 +69,12 @@ def load_config(target, target_dir, output_dir):
     if manifest["workspace"]["package"]["license"] != "MIT OR Apache-2.0":
         raise ValueError("writer license differs from package licenses")
 
-    config["licenseFile"] = str(ROOT / config["licenseFile"])
+    if target == "macos":
+        # cargo-packager turns licenseFile into an interactive DMG EULA.
+        # Licence texts are already included as bundle resources.
+        config.pop("licenseFile")
+    else:
+        config["licenseFile"] = str(ROOT / config["licenseFile"])
     for resource in config["resources"]:
         resource["src"] = str(ROOT / resource["src"])
     config["icons"] = [str(ROOT / icon) for icon in config["icons"]]
@@ -110,7 +115,8 @@ def main():
     target_dir = (args.target_dir or ROOT / "apps/writer/target").resolve()
     output_dir = (args.output_dir or ROOT / "target/writer-packages" / target).resolve()
     config = load_config(target, target_dir, output_dir)
-    for path in [config["licenseFile"], *config["icons"]]:
+    inputs = config["icons"] + ([config["licenseFile"]] if "licenseFile" in config else [])
+    for path in inputs:
         if not Path(path).is_file():
             parser.error(f"missing packaging input: {path}")
     for resource in config["resources"]:

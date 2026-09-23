@@ -76,8 +76,9 @@ modules:
         commit: b8fcf307f1f347089e3c46eb4451d27f32ebc8d3
         dest: skia/third_party/externals/spirv-cross
     build-commands:
-      # Skia's system WebP codec uses the demux library in addition to libwebp.
-      - cargo --offline --frozen rustc --manifest-path apps/writer/Cargo.toml -p recite-writer --bin recite-writer --release -j 4 -- -l dylib=webpdemux
+      # Append demux after Skia's static objects: GNU ld drops earlier shared
+      # libraries under --as-needed (LLVM lld is less order-sensitive).
+      - cargo --offline --frozen rustc --manifest-path apps/writer/Cargo.toml -p recite-writer --bin recite-writer --release -j 4 -- -C link-arg=-lwebpdemux
       - install -Dm755 apps/writer/target/release/recite-writer /app/bin/recite-writer
       - install -Dm644 apps/writer/packaging/flatpak/io.github.plethu.recite.desktop /app/share/applications/io.github.plethu.recite.desktop
       - install -Dm644 apps/writer/packaging/flatpak/io.github.plethu.recite.metainfo.xml /app/share/metainfo/io.github.plethu.recite.metainfo.xml

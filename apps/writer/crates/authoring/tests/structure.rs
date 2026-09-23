@@ -116,3 +116,37 @@ fn linear_continuation_can_connect_a_new_beat_without_a_choice()
     assert!(!session.document().source().contains("-> new_beat_1"));
     Ok(())
 }
+
+#[test]
+fn generated_beat_names_respect_other_project_documents() -> Result<(), Box<dyn std::error::Error>>
+{
+    use recite_compiler::SavedDocument;
+    use recite_core::DocumentKey;
+    use recite_writer_model::{Document, ProjectContext, Workbench};
+
+    let other = ":: new_beat_1\n-> END\n\n:: new_beat_3\n-> END\n";
+    let context = ProjectContext {
+        documents: vec![SavedDocument::new(DocumentKey::new("other.recite")?, other)],
+        schema: None,
+    };
+    let document = Document::in_project(
+        DocumentKey::new("current.recite")?,
+        ":: start default\n-> END\n",
+        context,
+    )?;
+    let mut session = Workbench::from_document(document)?;
+    for expected in ["new_beat_2", "new_beat_4"] {
+        session.add_beat()?;
+        assert_eq!(session.selected_block()?.as_deref(), Some(expected));
+        assert!(
+            session.document().diagnostics().is_empty(),
+            "{:?}",
+            session.document().diagnostics()
+        );
+    }
+    session.undo()?;
+    session.add_beat()?;
+    assert_eq!(session.selected_block()?.as_deref(), Some("new_beat_4"));
+    session.start_preview()?;
+    Ok(())
+}

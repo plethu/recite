@@ -118,12 +118,12 @@ def check_macos(directory, expected_arch):
         subprocess.run(
             ["hdiutil", "attach", "-nobrowse", "-readonly", "-mountpoint", str(mount), str(dmg)],
             check=True,
-            capture_output=True,
+            stdin=subprocess.DEVNULL,
         )
         try:
             one(mount, ".app")
         finally:
-            subprocess.run(["hdiutil", "detach", str(mount)], check=True, capture_output=True)
+            subprocess.run(["hdiutil", "detach", str(mount)], check=True)
     plist = plistlib.loads((bundle / "Contents/Info.plist").read_bytes())
     if plist.get("CFBundleIdentifier") != "io.github.plethu.recite":
         raise ValueError("unexpected macOS bundle ID")

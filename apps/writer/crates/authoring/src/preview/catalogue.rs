@@ -133,17 +133,19 @@ impl LocaleProvider for TrialCatalogues {
                 .name()
                 .map_or_else(|| base.clone(), |v| format!("{base}&{v}"));
             let matched = self.entry(candidate.locale(), &context, source, Some(plural));
-            let rule = matched.and_then(|(_, input)| plural_rule(input));
+            let rule = matched
+                .and_then(|(_, input)| plural_rule(input))
+                .or_else(|| self.rule(candidate.locale()));
             let arm = rule.and_then(|rule| recite_core::evaluate_plural_form(rule, count).ok());
             let entry = matched.map(|(entry, _)| entry);
             let translation = arm
                 .and_then(|arm| entry?.plural_translations().get(arm))
                 .map(|arm| arm.text())
                 .filter(|t| !t.is_empty());
-            let outcome = if arm.is_none() {
-                PluralResolutionOutcome::MissingPluralForms
-            } else if entry.is_none() {
+            let outcome = if entry.is_none() {
                 PluralResolutionOutcome::MissingEntry
+            } else if arm.is_none() {
+                PluralResolutionOutcome::MissingPluralForms
             } else if translation.is_none() {
                 PluralResolutionOutcome::MissingTranslation
             } else {

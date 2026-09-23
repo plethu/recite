@@ -80,11 +80,17 @@ impl Document {
     pub fn add_beat(&mut self, expected: i64) -> Result<String, EditError> {
         self.check_revision(expected)?;
         self.script()?;
-        let sections = self.sections();
+        let snapshot = self.kernel().snapshot();
         let mut number = 1;
         let id = loop {
             let candidate = format!("new_beat_{number}");
-            if !sections.contains(&candidate) {
+            if !snapshot.documents().iter().any(|document| {
+                document
+                    .summary()
+                    .blocks()
+                    .iter()
+                    .any(|block| block.id().as_str() == candidate)
+            }) {
                 break candidate;
             }
             number += 1;

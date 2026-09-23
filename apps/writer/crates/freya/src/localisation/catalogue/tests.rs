@@ -223,7 +223,7 @@ fn plural_review_is_atomic_and_variant_drafts_are_independent() -> Result<(), St
 }
 
 #[test]
-fn external_resolution_preserves_all_plural_arms_as_unreviewed_drafts() -> Result<(), String> {
+fn choosing_the_disk_catalogue_discards_plural_drafts() -> Result<(), String> {
     let dir = tempfile::tempdir().map_err(|e| e.to_string())?;
     let path = dir.path().join("fr.po");
     let source = "msgid \"\"\nmsgstr \"Language: fr\\nPlural-Forms: nplurals=2; plural=(n > 1);\\n\"\n\nmsgctxt \"22222222222222222222\"\nmsgid \"ticket\"\nmsgid_plural \"22222222222222222222\"\nmsgstr[0] \"billet\"\nmsgstr[1] \"billets\"\n";
@@ -245,8 +245,8 @@ fn external_resolution_preserves_all_plural_arms_as_unreviewed_drafts() -> Resul
     catalogue.accept_external(false, &comparison.fingerprint)?;
     let draft = catalogue.draft(id).ok_or("draft")?;
     assert_eq!(draft.forms, ["titre", "titres"]);
-    assert!(!draft.reviewed);
-    assert!(catalogue.dirty());
+    assert!(draft.reviewed);
+    assert!(!catalogue.dirty());
     assert!(!Catalogue::open(&path)?.dirty());
     Ok(())
 }
@@ -451,6 +451,44 @@ fn plural_header_case_does_not_block_reviewed_edits() -> Result<(), Box<dyn std:
         assert_eq!(draft.forms, ["ticket traduit", "tickets traduits"]);
         assert!(draft.reviewed);
         assert!(std::fs::read_to_string(&path)?.contains(&format!("{header}:")));
+    }
+    Ok(())
+}
+
+#[test]
+fn discarding_external_conflicts_accepts_removed_entries_and_clears_recovery()
+-> Result<(), Box<dyn std::error::Error>> {
+    for changed in [
+        SOURCE.replace("Hello {name}", "Goodbye {name}"),
+        "msgid \"\"\nmsgstr \"Language: fr\\n\"\n".into(),
+    ] {
+        let dir = tempfile::tempdir()?;
+        let path = dir.path().join("fr.po");
+        std::fs::write(&path, SOURCE)?;
+        let mut catalogue = Catalogue::open_recoverable(&path)?;
+        catalogue.update(
+            PoEntryId::new(0),
+            Draft {
+                forms: vec!["Draft {name}".into()],
+                reviewed: true,
+            },
+        );
+        catalogue.flush_recovery()?;
+        std::fs::write(&path, &changed)?;
+        let comparison = catalogue.compare()?;
+        std::fs::write(&path, format!("# newer\n{changed}"))?;
+        assert!(
+            catalogue
+                .accept_external(false, &comparison.fingerprint)
+                .is_err()
+        );
+        assert!(catalogue.dirty());
+        let comparison = catalogue.compare()?;
+        catalogue.accept_external(false, &comparison.fingerprint)?;
+        assert!(!catalogue.dirty());
+        assert_eq!(catalogue.document.source(), format!("# newer\n{changed}"));
+        drop(catalogue);
+        assert!(!Catalogue::open_recoverable(&path)?.dirty());
     }
     Ok(())
 }

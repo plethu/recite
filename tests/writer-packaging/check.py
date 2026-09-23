@@ -42,6 +42,11 @@ class PackageConfigTests(unittest.TestCase):
                     self.assertEqual(
                         bool(config.get("deepLinkProtocols")), target == "linux"
                     )
+                    self.assertEqual("licenseFile" in config, target != "macos")
+                    self.assertEqual(
+                        {Path(resource["src"]).name for resource in config["resources"]},
+                        {"LICENSE", "LICENSE-MIT", "LICENSE-APACHE"},
+                    )
                     for icon in config["icons"]:
                         self.assertTrue(Path(icon).is_file(), icon)
                     for resource in config["resources"]:

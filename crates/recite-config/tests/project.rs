@@ -101,10 +101,16 @@ fn explicit_file_and_missing_path_find_the_nearest_manifest() {
 
     let report =
         discover_project(temp.path().join("src/dialogue.recite")).expect("explicit source path");
-    assert_eq!(report.manifest().project_root(), temp.path());
+    assert_eq!(
+        report.manifest().project_root(),
+        temp.path().canonicalize().expect("canonical project root")
+    );
     let report =
         discover_project(temp.path().join("src/new/dialogue.recite")).expect("missing source path");
-    assert_eq!(report.manifest().project_root(), temp.path());
+    assert_eq!(
+        report.manifest().project_root(),
+        temp.path().canonicalize().expect("canonical project root")
+    );
 }
 
 #[test]

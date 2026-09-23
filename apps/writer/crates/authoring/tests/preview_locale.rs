@@ -37,6 +37,16 @@ fn trial_uses_fixed_plural_values_and_records_variant_locale_fallback()
     );
     assert_eq!(trace.matched_arm, Some(1));
     assert_eq!(trace.attempts.len(), 4);
+    use recite_runtime::PluralResolutionOutcome;
+    for attempt in &trace.attempts[..3] {
+        assert_eq!(attempt.outcome, PluralResolutionOutcome::MissingEntry);
+    }
+    let missing_variant = trace.attempts[..3]
+        .iter()
+        .find(|a| a.locale == "fr")
+        .ok_or("French variant attempt")?;
+    assert_eq!(missing_variant.selected_arm, Some(1));
+    assert_eq!(trace.attempts[3].outcome, PluralResolutionOutcome::Matched);
     let mut next = Preview::configured(&document, None, setup)?;
     assert_eq!(next.advance(None)?.text, "1 billet");
     Ok(())
