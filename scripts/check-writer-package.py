@@ -83,7 +83,9 @@ def check_linux(directory):
         if unknown:
             raise ValueError(f"review unmapped writer runtime libraries: {sorted(unknown)}")
         declared = {part.strip().split(" (")[0] for part in metadata.get("Depends", "").split(",")}
-        missing = {debian_for_library[library] for library in needed} - declared
+        # Winit loads this at runtime, so ELF DT_NEEDED cannot discover it.
+        runtime_dependencies = {"libxkbcommon-x11-0"}
+        missing = ({debian_for_library[library] for library in needed} | runtime_dependencies) - declared
         if missing:
             raise ValueError(f"Debian package lacks runtime dependencies: {sorted(missing)}")
         libc_dependency = next((part.strip() for part in metadata.get("Depends", "").split(",") if part.strip().startswith("libc6")), "")

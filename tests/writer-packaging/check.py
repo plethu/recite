@@ -104,7 +104,7 @@ class PackageConfigTests(unittest.TestCase):
             control.write_text(
                 "Package: recite-writer\nVersion: 0.0.0\nArchitecture: amd64\n"
                 "Maintainer: Recite contributors <noreply@example.invalid>\n"
-                f"Depends: libc6 (>= {abi['minimumGlibc']})\nDescription: test fixture\n"
+                f"Depends: libc6 (>= {abi['minimumGlibc']}), libxkbcommon-x11-0\nDescription: test fixture\n"
             )
             desktop = payload / "usr/share/applications/recite-writer.desktop"
             desktop.parent.mkdir(parents=True)
@@ -116,6 +116,12 @@ class PackageConfigTests(unittest.TestCase):
             artifact = base / "recite-writer.deb"
             self.build_deb_fixture(payload, artifact)
             package_check.check_linux(base)
+            complete_control = control.read_text()
+            control.write_text(complete_control.replace(", libxkbcommon-x11-0", ""))
+            self.build_deb_fixture(payload, artifact)
+            with self.assertRaisesRegex(ValueError, "libxkbcommon-x11-0"):
+                package_check.check_linux(base)
+            control.write_text(complete_control)
             desktop.write_text("[Desktop Entry]\nExec=recite-writer\n")
             self.build_deb_fixture(payload, artifact)
             with self.assertRaisesRegex(ValueError, "one URL"):
@@ -124,7 +130,7 @@ class PackageConfigTests(unittest.TestCase):
             control.write_text(
                 "Package: recite-writer\nVersion: 0.0.0\nArchitecture: amd64\n"
                 "Maintainer: Recite contributors <noreply@example.invalid>\n"
-                "Depends: libc6 (>= 2.1)\nDescription: test fixture\n"
+                "Depends: libc6 (>= 2.1), libxkbcommon-x11-0\nDescription: test fixture\n"
             )
             self.build_deb_fixture(payload, artifact)
             with self.assertRaisesRegex(ValueError, "below the packaged ELF requirement"):
