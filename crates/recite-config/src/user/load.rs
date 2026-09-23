@@ -102,6 +102,9 @@ struct RawWriterConfig {
     pane_side: Option<super::WriterPaneSide>,
     theme: Option<super::WriterTheme>,
     reduced_motion: Option<bool>,
+    monochrome: Option<bool>,
+    shortcut_hints: Option<bool>,
+    shortcuts: Option<super::WriterShortcuts>,
     zoom_to_pointer: Option<bool>,
 }
 
@@ -148,6 +151,9 @@ pub(super) fn parse_user_config(
         writer_presentation: raw.writer.presentation.is_some(),
         writer_view: raw.writer.view.is_some(),
         writer_pane_side: raw.writer.pane_side.is_some(),
+        writer_monochrome: raw.writer.monochrome.is_some(),
+        writer_shortcut_hints: raw.writer.shortcut_hints.is_some(),
+        writer_shortcuts: raw.writer.shortcuts.is_some(),
         writer_theme: raw.writer.theme.is_some(),
         writer_reduced_motion: raw.writer.reduced_motion.is_some(),
         writer_zoom_to_pointer: raw.writer.zoom_to_pointer.is_some(),
@@ -172,6 +178,12 @@ pub(super) fn parse_user_config(
             presentation: raw.writer.presentation.unwrap_or_default(),
             pane_side: raw.writer.pane_side.unwrap_or(defaults.writer.pane_side),
             view: raw.writer.view.unwrap_or(defaults.writer.view),
+            monochrome: raw.writer.monochrome.unwrap_or(defaults.writer.monochrome),
+            shortcut_hints: raw
+                .writer
+                .shortcut_hints
+                .unwrap_or(defaults.writer.shortcut_hints),
+            shortcuts: raw.writer.shortcuts.unwrap_or(defaults.writer.shortcuts),
             theme: raw.writer.theme.unwrap_or(defaults.writer.theme),
             reduced_motion: raw
                 .writer

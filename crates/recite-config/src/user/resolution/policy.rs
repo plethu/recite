@@ -160,6 +160,7 @@ where
 mod fields;
 pub use fields::{
     ColorPolicy, ContrastPolicy, KeyHintsPolicy, KeymapPolicy, ShowUnavailableChoicesPolicy,
-    UiLocalePolicy, WriterConfirmExitPolicy, WriterPaneSidePolicy, WriterPresentationPolicy,
-    WriterReducedMotionPolicy, WriterThemePolicy, WriterViewPolicy, WriterZoomToPointerPolicy,
+    UiLocalePolicy, WriterConfirmExitPolicy, WriterMonochromePolicy, WriterPaneSidePolicy,
+    WriterPresentationPolicy, WriterReducedMotionPolicy, WriterShortcutHintsPolicy,
+    WriterShortcutsPolicy, WriterThemePolicy, WriterViewPolicy, WriterZoomToPointerPolicy,
 };

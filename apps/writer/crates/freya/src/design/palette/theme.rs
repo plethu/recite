@@ -4,7 +4,7 @@ use crate::design::tokens as t;
 use freya::{code_editor::*, prelude::*};
 
 pub fn theme(dark: bool) -> Theme {
-    let p = Palette::new(dark);
+    let p = Palette::with_mode(dark, super::monochrome());
     let mut theme = if dark { dark_theme() } else { light_theme() };
     let c = &mut theme.colors;
     c.primary = p.accent;
@@ -73,16 +73,16 @@ pub fn theme(dark: bool) -> Theme {
             font_size: Preference::Specific(t::small()),
         },
     );
-    let mut editor = if dark {
-        EditorTheme::dark()
-    } else {
-        EditorTheme::light()
+    let editor = EditorTheme {
+        background: p.surface,
+        text: p.ink,
+        cursor: p.ink,
+        line_selected_background: p.hover,
+        highlight: p.selection,
+        gutter_selected: p.ink,
+        gutter_unselected: p.muted,
+        whitespace: p.muted,
     };
-    editor.background = p.surface;
-    editor.text = p.ink;
-    editor.cursor = p.ink;
-    editor.line_selected_background = p.hover;
-    editor.highlight = p.selection;
     theme.set("code_editor", EditorThemePreference::from(editor));
     theme.set("code_editor_syntax", syntax(dark));
     theme

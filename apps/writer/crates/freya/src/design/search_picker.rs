@@ -38,6 +38,7 @@ impl Component for SearchPicker {
         let list_id = use_a11y();
         let active_id = use_a11y();
         let mut normal = use_state(|| false);
+        let keys = super::list_keys::ListKeys::new();
         let mut active = use_state(|| 0usize);
         let mut anchor = use_state(|| None::<Area>);
         let mut popup = use_state(|| None::<Area>);
@@ -80,6 +81,7 @@ impl Component for SearchPicker {
                         return false;
                     }
                     if event.key == Key::Named(NamedKey::Escape) {
+                        keys.cancel();
                         event.stop_propagation();
                         event.prevent_default();
                         if vim && !*normal.peek() {
@@ -91,14 +93,15 @@ impl Component for SearchPicker {
                         return false;
                     }
                     if event.key == Key::Named(NamedKey::Tab) {
+                        keys.cancel();
                         open.set(false);
                         return false;
                     }
-                    if let Some(step) = keyboard::list_step(&event, vim && *normal.peek()) {
-                        if !options.is_empty() {
-                            let next = (*active.peek() as isize + step)
-                                .rem_euclid(options.len() as isize)
-                                as usize;
+                    let current = *active.peek();
+                    if let Some(next) =
+                        keys.navigate(&event, vim && *normal.peek(), Some(current), options.len())
+                    {
+                        if let Some(next) = next {
                             active.set(next);
                             scroll.scroll_to_y(
                                 -((next.saturating_sub(2) * t::picker_row_height() as usize)
@@ -162,6 +165,7 @@ impl Component for SearchPicker {
         let expanded = *open.read();
         let has_options = !self.options.is_empty();
         let mut root = rect()
+            .on_global_pointer_down(move |_| keys.cancel())
             .a11y_role(AccessibilityRole::ComboBox)
             .a11y_alt(self.name.clone())
             .a11y_builder(move |node| {
@@ -192,8 +196,10 @@ impl Component for SearchPicker {
                 })
             } else if vim {
                 Some(
-                    if *normal.read() {
-                        "NORMAL · j k / ↑ ↓ · Enter"
+                    if keys.pending() {
+                        "g → g first · Esc cancel"
+                    } else if *normal.read() {
+                        "NORMAL · gg G j k / ↑ ↓ · Enter"
                     } else {
                         "INSERT · ↑ ↓ · Enter · Esc → NORMAL"
                     }

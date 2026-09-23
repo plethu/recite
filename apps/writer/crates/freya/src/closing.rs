@@ -18,6 +18,12 @@ pub fn request_close() -> CloseDecision {
     })
 }
 
+pub(super) fn close() {
+    if matches!(request_close(), CloseDecision::Close) {
+        close_window();
+    }
+}
+
 fn close_window() {
     Platform::get().close_window(Platform::window_id());
 }
@@ -44,6 +50,12 @@ pub(super) fn is_quit_key(event: &KeyboardEventData) -> bool {
 
 /// Text widgets otherwise consume shortcuts before global listeners see them.
 pub(super) fn text_input_key(event: Event<KeyboardEventData>) -> bool {
+    if matches!(
+        event.key,
+        Key::Named(NamedKey::Control | NamedKey::Meta | NamedKey::Alt | NamedKey::Shift)
+    ) {
+        return false;
+    }
     if crate::design::keyboard::submit_key(&event)
         || crate::editing::is_workspace_key(&event)
         || (event.modifiers == Modifiers::ALT

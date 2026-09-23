@@ -104,6 +104,7 @@ pub(crate) fn app() -> Element {
                 )
                 .child(Button::new().enabled(false).child("Save changes"))
                 .child(Segments {
+                    shortcuts: None,
                     name: "Writing view".into(),
                     labels: ["Map".into(), "Source".into()],
                     ids: [use_a11y(), use_a11y()],
@@ -130,6 +131,7 @@ pub(crate) fn app() -> Element {
                                 .color(p.muted),
                         )
                         .child(SearchField {
+                            insert_request: None,
                             query,
                             id: use_a11y(),
                             placeholder: "Search scene names…".into(),

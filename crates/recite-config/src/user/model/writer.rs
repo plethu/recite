@@ -12,6 +12,9 @@ pub struct WriterConfig {
     pub pane_side: WriterPaneSide,
     pub theme: WriterTheme,
     pub reduced_motion: bool,
+    pub monochrome: bool,
+    pub shortcut_hints: bool,
+    pub shortcuts: WriterShortcuts,
     pub zoom_to_pointer: bool,
 }
 
@@ -24,6 +27,9 @@ impl Default for WriterConfig {
             pane_side: WriterPaneSide::Right,
             theme: WriterTheme::Light,
             reduced_motion: false,
+            monochrome: false,
+            shortcut_hints: false,
+            shortcuts: WriterShortcuts::default(),
             zoom_to_pointer: true,
         }
     }
@@ -59,3 +65,6 @@ pub enum WriterTheme {
 
 mod presentation;
 pub use presentation::{WriterPresentation, WriterPresentationError, WriterPresentationField};
+
+mod shortcuts;
+pub use shortcuts::{ShortcutError, WriterCommand, WriterShortcut, WriterShortcuts};

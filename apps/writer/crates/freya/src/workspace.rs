@@ -172,6 +172,15 @@ impl Workspace {
         let source = self.source;
         rect()
             .key("writing-pane")
+            .on_pointer_down(move |_| {
+                writer.vim.enter(writer.inspector_focus);
+                if !source {
+                    writer.inspector_focus.request_focus();
+                }
+            })
+            .on_sized(move |e: Event<SizedEventData>| {
+                writer.vim.area(writer.inspector_focus, e.area)
+            })
             .content(Content::Flex)
             .a11y_id(writer.inspector_focus)
             .a11y_focusable(true)
@@ -184,6 +193,7 @@ impl Workspace {
             })
             .height(Size::fill())
             .on_key_down(move |e: Event<KeyboardEventData>| {
+                writer.vim.enter(writer.inspector_focus);
                 if e.key == Key::Named(NamedKey::Escape) && !source && !writer.layout.standalone() {
                     e.stop_propagation();
                     writer.close_editor();

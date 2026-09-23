@@ -42,6 +42,10 @@ impl PartialEq for SceneNavigation {
 impl Component for SceneNavigation {
     fn render(&self) -> impl IntoElement {
         let writer = self.writer;
+        use_drop(move || {
+            let mut matches = writer.vim.matches;
+            matches.set(Vec::new());
+        });
         let projected = use_memo(move || {
             writer
                 .buffers
@@ -84,9 +88,9 @@ impl Component for SceneNavigation {
                 .unwrap_or_default()
         });
         let collapsed = use_state(|| None::<String>);
-        let query = use_state(String::new);
+        let query = writer.vim.query;
         let active = use_state(|| None::<usize>);
-        let id = use_a11y();
+        let id = writer.vim.search_id;
         let scroll = use_scroll_controller(ScrollConfig::default);
         crate::design::use_list_reveal(Some(query), active, scroll, 36., 2);
         let needle = query.read().to_lowercase();
@@ -129,6 +133,17 @@ impl Component for SceneNavigation {
                 rows.extend(beats);
             }
         }
+        let mut matches = writer.vim.matches;
+        matches.set_if_modified(if needle.is_empty() {
+            Vec::new()
+        } else {
+            rows.iter()
+                .filter_map(|r| match r {
+                    Row::Beat { id, .. } => Some(id.clone()),
+                    _ => None,
+                })
+                .collect()
+        });
         let count = rows.len();
         let destinations = rows.clone();
         rect()
@@ -137,6 +152,7 @@ impl Component for SceneNavigation {
             .content(Content::Flex)
             .spacing(t::SPACE_XS)
             .child(crate::design::SearchField {
+                insert_request: Some(writer.vim.insert_requested),
                 query,
                 id,
                 placeholder: "Find scene or beat…".into(),

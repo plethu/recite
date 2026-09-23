@@ -86,6 +86,7 @@ fn render(writer: Writer) -> Element {
             .collect();
         content = content
             .child(crate::design::SearchField {
+                insert_request: None,
                 query: search,
                 id: search_id,
                 placeholder: wording(MsgId::WriterSearch),

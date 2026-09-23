@@ -4,6 +4,53 @@ This is the final hands-on pass for the GUI milestone, excluding distribution.
 Automated checks do not establish native screen-reader, input-method or physical
 display behavior. Keep milestone #170 open until those requirements have evidence.
 
+## Keyboard, colour and press feedback
+
+Settings offers monochrome colours in both light and dark themes, persistent
+shortcut hints, and a Keyboard shortcuts page. The bindings list shows each action and its current keys. Select a row and press
+a new combination, then save. Conflicts name the other action and require an
+explicit replacement. “Choose keys separately” lets users select modifiers one
+at a time and then press a single key. Each binding can be reset or unassigned.
+Holding Ctrl (Command on macOS) reveals chips beside bound workspace actions.
+In Vim mode, `:` opens Commands; enter `w`, `wa`, or `q` to use the existing
+save, save-all, or close action. Close still observes unsaved-work protection.
+`Ctrl+o` / `Ctrl+i` navigate history. `Ctrl+w`, followed by `h/j/k/l`, focuses
+an available pane in that direction; a prompt shows the available destinations
+and Escape cancels. These modifier chords also work while editing.
+
+From navigation, `/` enters the scene/beat search, retaining its query; `n` / `N`
+open the next/previous matching beat in the current scene. Search fields show
+INSERT or NORMAL. Escape leaves insertion; `i`, `a`, or `/` resumes it.
+`gg` / `G` jump to the first/last result in search lists and pickers. Literal
+characters remain text in editors and insertion mode. Navigation actions are
+also available in Commands and can receive alternative chords in Keyboard
+shortcuts; the Vim gestures remain navigation defaults. Explicitly assigned
+chords take precedence over the modified defaults. This is Vim-style navigation,
+not full Vim editing or an Ex-command interpreter.
+
+F6 and Shift+F6 move between workspace regions. Dialog buttons scroll into view
+when focused; pressing a button moves its contents while keeping its hit target fixed.
+Reduce animation also applies to this feedback.
+
+The Commands list now renders rows at the same height used by its virtual scroll
+model. Its regression test uses small scroll steps across row boundaries as well
+as checking that idle layout does not undo manual scrolling.
+
+`mise exec -- just check-writer` includes semantic colour ownership linting and
+contrast tests for light, dark and monochrome palettes. Tests cover supporting
+and error text, syntax tokens, primary actions, gradients, focus indicators and
+map edges. They use the WCAG AA thresholds of 4.5:1 for normal text and 3:1 for
+required non-text indicators ([WCAG 2.2](https://www.w3.org/TR/WCAG22/)). These
+checks do not establish whole-app conformance: actual rendering, clipping,
+assistive-technology announcements and platform behaviour still need inspection.
+
+For the native pass, try the Commands list with both a wheel and trackpad; rebind
+Commands to F8 and invoke it while editing Source; use settings entirely from the
+keyboard in a short window; and check the two monochrome themes with enlarged
+text. Test modifier hints with the operating system's Sticky Keys as well as the
+always-visible option. Check screen-reader names, shortcut announcements, focus
+restoration and the shortcut-save status message on each supported platform.
+
 ## September 22 workspace test pass
 
 The writer now uses Freya 0.5.0-rc.7 without the vendored scroll patch. Script is

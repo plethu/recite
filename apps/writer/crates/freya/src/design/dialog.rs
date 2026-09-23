@@ -5,6 +5,13 @@ use freya::{
     prelude::*,
 };
 
+/// Window-level navigation must also defer when a dialog's text field loses focus.
+#[derive(Clone, Copy)]
+pub(crate) struct ModalState(pub State<usize>);
+pub(crate) fn modal_open() -> bool {
+    try_consume_context::<ModalState>().is_some_and(|state| *state.0.peek() > 0)
+}
+
 #[derive(Clone, PartialEq)]
 pub(crate) struct Dialog {
     pub title: String,
@@ -18,6 +25,17 @@ pub(crate) struct Dialog {
 }
 impl Component for Dialog {
     fn render(&self) -> impl IntoElement {
+        let modal = try_consume_context::<ModalState>();
+        use_hook(move || {
+            if let Some(mut state) = modal {
+                *state.0.write() += 1;
+            }
+        });
+        use_drop(move || {
+            if let Some(mut state) = modal {
+                *state.0.write() -= 1;
+            }
+        });
         let colors = t::colors();
         let reduced = self.reduced_motion;
         let ink = use_animation(move |config| {
@@ -50,7 +68,8 @@ impl Component for Dialog {
             .height(Size::window_percent(100.))
             .layer(100)
             .center()
-            .background(Color::from_argb(110, 0, 0, 0))
+            .background(colors.backdrop)
+            .on_key_down(|e: Event<KeyboardEventData>| e.stop_propagation())
             .on_pointer_down(|e: Event<PointerEventData>| e.stop_propagation())
             .on_all_press(move |e: Event<PressEventData>| {
                 e.stop_propagation();
@@ -98,13 +117,7 @@ impl Component for Dialog {
                     .a11y_alt(self.title.clone())
                     .opacity(ink.get().value())
                     .child(label().text(self.title.clone()).font_size(t::title()))
-                    .child(
-                        ScrollView::new()
-                            .height(Size::auto())
-                            .width(Size::fill())
-                            .max_height(Size::window_percent(60.))
-                            .child(self.content.clone()),
-                    )
+                    .child(super::focus_scroll::Body(self.content.clone()))
                     .child(
                         actions()
                             .content(Content::Flex)

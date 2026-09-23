@@ -17,6 +17,9 @@ pub enum UserConfigEdit {
     WriterView(WriterView),
     WriterPresentation(super::WriterPresentation),
     WriterPaneSide(WriterPaneSide),
+    WriterMonochrome(bool),
+    WriterShortcutHints(bool),
+    WriterShortcuts(super::WriterShortcuts),
     WriterTheme(WriterTheme),
     WriterReducedMotion(bool),
     WriterZoomToPointer(bool),
@@ -37,6 +40,9 @@ impl UserConfigEdit {
             Self::WriterView(v) => config.writer.view = *v,
             Self::WriterPresentation(v) => config.writer.presentation = *v,
             Self::WriterPaneSide(v) => config.writer.pane_side = *v,
+            Self::WriterMonochrome(v) => config.writer.monochrome = *v,
+            Self::WriterShortcutHints(v) => config.writer.shortcut_hints = *v,
+            Self::WriterShortcuts(v) => config.writer.shortcuts = v.clone(),
             Self::WriterTheme(v) => config.writer.theme = *v,
             Self::WriterReducedMotion(v) => config.writer.reduced_motion = *v,
             Self::WriterZoomToPointer(v) => config.writer.zoom_to_pointer = *v,
@@ -44,6 +50,14 @@ impl UserConfigEdit {
     }
 
     pub(super) fn apply(&self, document: &mut DocumentMut) {
+        if let Self::WriterShortcuts(shortcuts) = self {
+            let mut table = toml_edit::Table::new();
+            for (command, binding) in shortcuts.overrides() {
+                table[command.key()] = toml_edit::value(binding.as_str());
+            }
+            document["writer"]["shortcuts"] = toml_edit::Item::Table(table);
+            return;
+        }
         if let Self::WriterPresentation(presentation) = self {
             use super::WriterPresentationField::*;
             for field in [ReadingSize, SourceSize, UiScale, DrawerWidth, ScriptWidth] {
@@ -59,6 +73,7 @@ impl UserConfigEdit {
             return;
         }
         let (section, field, value): (_, _, Value) = match self {
+            Self::WriterShortcuts(_) => unreachable!("shortcuts handled above"),
             Self::WriterPresentation(_) => unreachable!("presentation handled above"),
             Self::UiLocale(locale) => ("ui", "locale", locale.to_string().into()),
             Self::Keymap(keymap) => (
@@ -130,6 +145,8 @@ impl UserConfigEdit {
                 }
                 .into(),
             ),
+            Self::WriterMonochrome(value) => ("writer", "monochrome", (*value).into()),
+            Self::WriterShortcutHints(value) => ("writer", "shortcut_hints", (*value).into()),
             Self::WriterReducedMotion(value) => ("writer", "reduced_motion", (*value).into()),
             Self::WriterZoomToPointer(value) => ("writer", "zoom_to_pointer", (*value).into()),
             Self::WriterConfirmExit(confirm) => ("writer", "confirm_exit", (*confirm).into()),

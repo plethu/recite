@@ -19,8 +19,8 @@ fn contrast(a: Color, b: Color) -> f64 {
 
 #[test]
 fn body_and_supporting_text_remain_readable_across_surfaces_and_interactions() {
-    for dark in [false, true] {
-        let p = Palette::new(dark);
+    for (dark, monochrome) in [(false, false), (false, true), (true, false), (true, true)] {
+        let p = Palette::with_mode(dark, monochrome);
         for background in [
             p.canvas,
             p.surface,
@@ -30,7 +30,7 @@ fn body_and_supporting_text_remain_readable_across_surfaces_and_interactions() {
             p.hover,
             p.pressed,
         ] {
-            for text in [p.ink, p.muted] {
+            for text in [p.ink, p.muted, p.error] {
                 assert!(
                     contrast(text, background) >= 4.5,
                     "dark={dark}, text={text:?}, background={background:?}"
@@ -62,5 +62,114 @@ fn body_and_supporting_text_remain_readable_across_surfaces_and_interactions() {
             assert!(contrast(p.accent, surface) >= 3.);
             assert!(contrast(p.boundary, surface) >= 3.);
         }
+    }
+}
+
+#[test]
+fn syntax_and_focus_contrast_cover_both_colour_modes() {
+    for (dark, monochrome) in [(false, false), (false, true), (true, false), (true, true)] {
+        let p = Palette::with_mode(dark, monochrome);
+        let syntax = syntax_with_mode(dark, monochrome);
+        for surface in [p.surface, p.inset, p.hover, p.selection] {
+            let EditorSyntaxTheme {
+                text,
+                whitespace,
+                attribute,
+                boolean,
+                comment,
+                constant,
+                constructor,
+                escape,
+                function,
+                function_macro,
+                function_method,
+                keyword,
+                label,
+                module,
+                number,
+                operator,
+                property,
+                punctuation,
+                punctuation_bracket,
+                punctuation_delimiter,
+                punctuation_special,
+                string,
+                string_escape,
+                string_special,
+                tag,
+                text_literal,
+                text_reference,
+                text_title,
+                text_uri,
+                text_emphasis,
+                type_,
+                variable,
+                variable_builtin,
+                variable_parameter,
+            } = syntax.clone();
+            for ink in [
+                text,
+                whitespace,
+                attribute,
+                boolean,
+                comment,
+                constant,
+                constructor,
+                escape,
+                function,
+                function_macro,
+                function_method,
+                keyword,
+                label,
+                module,
+                number,
+                operator,
+                property,
+                punctuation,
+                punctuation_bracket,
+                punctuation_delimiter,
+                punctuation_special,
+                string,
+                string_escape,
+                string_special,
+                tag,
+                text_literal,
+                text_reference,
+                text_title,
+                text_uri,
+                text_emphasis,
+                type_,
+                variable,
+                variable_builtin,
+                variable_parameter,
+            ] {
+                assert!(
+                    contrast(ink, surface) >= 4.5,
+                    "syntax: dark={dark} monochrome={monochrome}, {ink:?} over {surface:?}: {}",
+                    contrast(ink, surface)
+                );
+                if monochrome {
+                    assert_eq!((ink.r(), ink.g()), (ink.g(), ink.b()));
+                }
+            }
+        }
+        for surface in [
+            p.canvas,
+            p.surface,
+            p.inset,
+            p.floating,
+            p.selection,
+            p.hover,
+            p.pressed,
+        ] {
+            assert!(
+                contrast(p.accent, surface) >= 3.,
+                "focus: {dark} {monochrome}"
+            );
+        }
+        assert!(
+            contrast(p.boundary, p.canvas) >= 3.,
+            "map edges: {dark} {monochrome}"
+        );
     }
 }

@@ -86,6 +86,9 @@ pub(super) fn key(
             writer.inspect(&block.id);
         }
     } else if event.code == Code::Slash {
+        if vim {
+            return;
+        }
         writer.search_focus.request_focus();
     } else {
         return;

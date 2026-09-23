@@ -6,10 +6,20 @@ use crate::{
 };
 use freya::{code_editor::*, prelude::*};
 mod personal;
+mod shortcuts;
+#[derive(Clone, Copy, PartialEq)]
+enum Page {
+    Personal,
+    Project,
+    Keyboard,
+}
 mod typography;
 
 pub(super) fn render(writer: Writer, files: State<Option<ProjectFiles>>) -> Element {
-    let mut project_tab = use_state(|| false);
+    let mut page = use_state(|| Page::Personal);
+    let shortcut_settings = shortcuts::Shortcuts::new();
+    let keyboard_tab = use_a11y();
+    let access_ids = [use_a11y(), use_a11y()];
     let mut opened = use_state(|| false);
     let mut project = use_state(|| None::<recite_config::ProjectSettings>);
     let mut draft = use_state(|| editor_data("", false, writer.dark));
@@ -45,6 +55,12 @@ pub(super) fn render(writer: Writer, files: State<Option<ProjectFiles>>) -> Elem
         use_a11y(),
         use_a11y(),
     ];
+    let personal_controls = personal::Controls {
+        options: option_ids,
+        typography: size_ids,
+        behaviour: [access_ids[0], access_ids[1], ids[5], ids[6], ids[7]],
+        config: config_id,
+    };
     let preferences = writer.preferences;
     let mut visible = writer.settings_open;
     use_after_side_effect(move || {
@@ -54,6 +70,11 @@ pub(super) fn render(writer: Writer, files: State<Option<ProjectFiles>>) -> Elem
     });
     let mut previous_focus = previous_focus;
     let mut close = move || {
+        if *page.peek() == Page::Keyboard && shortcut_settings.editing() {
+            shortcut_settings.cancel();
+            return;
+        }
+        shortcut_settings.cancel();
         visible.set(false);
         previous_focus.peek().request_focus();
     };
@@ -76,43 +97,24 @@ pub(super) fn render(writer: Writer, files: State<Option<ProjectFiles>>) -> Elem
         }
         opened.set(true);
     }
-    let on_project = *project_tab.read();
-    let tab_order: Vec<_> = if on_project && project.peek().is_none() {
+    let on_project = *page.read() == Page::Project;
+    let on_keyboard = *page.read() == Page::Keyboard;
+    let mut tab_order: Vec<_> = if on_keyboard {
+        let mut order = vec![ids[0], ids[1]];
+        order.extend(shortcut_settings.focus_order());
+        order.push(ids[9]);
+        order
+    } else if on_project && project.peek().is_none() {
         vec![ids[0], ids[1], ids[9]]
     } else if on_project {
         vec![ids[0], ids[1], editor_id, ids[9], ids[8]]
     } else {
-        let config = &preferences.read().config;
-        let selected = [
-            usize::from(config.writer.theme == recite_config::WriterTheme::Dark),
-            usize::from(config.ui.keymap == recite_config::Keymap::Vim),
-            match config.writer.view {
-                recite_config::WriterView::Script => 0,
-                recite_config::WriterView::Map => 1,
-                recite_config::WriterView::Source => 2,
-            },
-            usize::from(config.writer.pane_side == recite_config::WriterPaneSide::Right),
-        ];
-        vec![
-            ids[0],
-            ids[1],
-            option_ids[0][selected[0]],
-            option_ids[1][selected[1]],
-            option_ids[2][selected[2]],
-            option_ids[3][selected[3]],
-            size_ids[0],
-            size_ids[1],
-            size_ids[2],
-            size_ids[3],
-            size_ids[4],
-            size_ids[5],
-            ids[5],
-            ids[6],
-            ids[7],
-            config_id,
-            ids[9],
-        ]
+        let mut order = vec![ids[0], ids[1]];
+        order.extend(personal_controls.focus_order(&preferences.read().config));
+        order.push(ids[9]);
+        order
     };
+    tab_order.insert(2, keyboard_tab);
     let mut content = rect().width(Size::fill()).spacing(t::SPACE_MD).child(
         rect()
             .horizontal()
@@ -120,12 +122,12 @@ pub(super) fn render(writer: Writer, files: State<Option<ProjectFiles>>) -> Elem
             .child(
                 crate::design::Button::new()
                     .flat()
-                    .selected(!on_project)
+                    .selected(*page.read() == Page::Personal)
                     .a11y_id(ids[0])
                     .named(crate::messages::text(
                         crate::messages::MsgId::WriterGuiUserPreferences,
                     ))
-                    .on_press(move |_| project_tab.set(false))
+                    .on_press(move |_| page.set(Page::Personal))
                     .child(crate::messages::text(
                         crate::messages::MsgId::WriterGuiUserPreferences,
                     )),
@@ -138,19 +140,35 @@ pub(super) fn render(writer: Writer, files: State<Option<ProjectFiles>>) -> Elem
                     .named(crate::messages::text(
                         crate::messages::MsgId::WriterGuiProjectSettings,
                     ))
-                    .on_press(move |_| project_tab.set(true))
+                    .on_press(move |_| page.set(Page::Project))
                     .child(crate::messages::text(
                         crate::messages::MsgId::WriterGuiProjectSettings,
                     )),
+            )
+            .child(
+                crate::design::Button::new()
+                    .flat()
+                    .a11y_id(keyboard_tab)
+                    .named("Keyboard shortcuts")
+                    .selected(on_keyboard)
+                    .child("Keyboard shortcuts")
+                    .on_press(move |_| page.set(Page::Keyboard)),
             ),
     );
     let mut primary = crate::design::SubmitAction {
         id: ids[9],
-        caption: "Done".into(),
+        caption: if on_keyboard && shortcut_settings.editing() {
+            "Back to shortcuts"
+        } else {
+            "Done"
+        }
+        .into(),
         enabled: true,
         action: EventHandler::new(move |()| close()),
     };
-    if on_project {
+    if on_keyboard {
+        content = content.child(shortcut_settings.render(writer));
+    } else if on_project {
         if let Some(settings) = project.read().as_ref() {
             content = content
                 .child(
@@ -229,11 +247,8 @@ pub(super) fn render(writer: Writer, files: State<Option<ProjectFiles>>) -> Elem
     } else {
         content = content.child(personal::render(
             writer,
-            &ids[2..8],
-            option_ids,
-            size_ids,
+            personal_controls,
             error,
-            config_id,
             config_visible,
         ));
     }

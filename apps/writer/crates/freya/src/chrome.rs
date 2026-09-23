@@ -1,4 +1,5 @@
 //! Shared scene identity and explicit writing views.
+use crate::commands::CommandExt;
 mod menu;
 use crate::{
     commands::Command,
@@ -54,6 +55,9 @@ pub(super) fn toolbar(writer: Writer, actions: Option<Element>) -> Element {
     if tools && !focus {
         views = views
             .child(Segments {
+                shortcuts: Some(
+                    [Command::Script, Command::Map, Command::Source].map(|c| c.shortcut(writer)),
+                ),
                 name: text(MsgId::WriterWorkspaceWritingView),
                 labels: [
                     Command::Script.label(writer),

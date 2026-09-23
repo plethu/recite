@@ -79,6 +79,7 @@ pub(crate) enum Pane {
 
 #[derive(Clone, Copy)]
 pub(crate) struct Writer {
+    pub vim: crate::commands::Navigation,
     pub command_search: crate::commands::Search,
     pub source_viewport: crate::source_editor::EditorViewport,
     pub layout: crate::presentation::Layout,
@@ -276,6 +277,9 @@ pub(super) fn is_save_key(event: &KeyboardEventData) -> bool {
 
 pub(super) fn is_workspace_key(event: &KeyboardEventData) -> bool {
     crate::commands::shortcut(event).is_some()
+        || (crate::commands::vim_modifier_key(event)
+            && try_consume_context::<crate::presentation::Typography>()
+                .is_some_and(|p| p.0.peek().config.ui.keymap == recite_config::Keymap::Vim))
         || event.code == Code::F6
         || (event.code == Code::Comma
             && event.modifiers

@@ -69,6 +69,7 @@ writer *args:
 
 # Verify the maintained native application and its source-editing model.
 check-writer:
+    python3 scripts/check-writer-colors.py
     cargo fmt --manifest-path apps/writer/Cargo.toml --all -- --check
     cargo test --locked --manifest-path apps/writer/Cargo.toml --workspace
     cargo clippy --locked --manifest-path apps/writer/Cargo.toml --workspace --all-targets --all-features -- -D warnings

@@ -1,18 +1,45 @@
 //! Personal presentation controls; persistence belongs to the shared preference session.
+use crate::commands::CommandExt;
 use crate::design::tokens as t;
 use crate::editing::Writer;
 use freya::prelude::*;
 use recite_config::{Keymap, UserConfigEdit as Edit, WriterPaneSide, WriterTheme, WriterView};
 
+pub(super) struct Controls {
+    pub options: [[AccessibilityId; 3]; 4],
+    pub typography: [AccessibilityId; 6],
+    pub behaviour: [AccessibilityId; 5],
+    pub config: AccessibilityId,
+}
+impl Controls {
+    pub fn focus_order(&self, config: &recite_config::UserConfig) -> Vec<AccessibilityId> {
+        let view = match config.writer.view {
+            WriterView::Script => 0,
+            WriterView::Map => 1,
+            WriterView::Source => 2,
+        };
+        let mut order = vec![
+            self.options[0][usize::from(config.writer.theme == WriterTheme::Dark)],
+            self.behaviour[0],
+            self.options[1][usize::from(config.ui.keymap == Keymap::Vim)],
+            self.options[3][usize::from(config.writer.pane_side == WriterPaneSide::Right)],
+            self.options[2][view],
+        ];
+        order.extend(self.typography);
+        order.extend(&self.behaviour[1..]);
+        order.push(self.config);
+        order
+    }
+}
 pub(super) fn render(
     writer: Writer,
-    ids: &[AccessibilityId],
-    option_ids: [[AccessibilityId; 3]; 4],
-    size_ids: [AccessibilityId; 6],
+    controls: Controls,
     error: State<String>,
-    config_id: AccessibilityId,
     mut config_visible: State<bool>,
 ) -> Element {
+    let option_ids = controls.options;
+    let size_ids = controls.typography;
+    let config_id = controls.config;
     let config = writer.preferences.read().config.clone();
     let mut content = rect()
         .width(Size::fill())
@@ -63,6 +90,20 @@ pub(super) fn render(
                 update(writer, edits[index].clone(), error)
             }),
         });
+        if index == 0 {
+            content = content.child(crate::design::checkbox(
+                controls.behaviour[0],
+                "Monochrome colours",
+                config.writer.monochrome,
+                move |_| {
+                    update(
+                        writer,
+                        Edit::WriterMonochrome(!config.writer.monochrome),
+                        error,
+                    )
+                },
+            ));
+        }
     }
     content = content.child(crate::design::Options {
         name: crate::messages::text(crate::messages::MsgId::WriterWorkspaceWritingView),
@@ -86,19 +127,25 @@ pub(super) fn render(
     content = content.child(section(writer.dark, "Behaviour"));
     for (id, caption, checked, edit) in [
         (
-            ids[3],
+            controls.behaviour[1],
+            "Always show shortcut hints",
+            config.writer.shortcut_hints,
+            Edit::WriterShortcutHints(!config.writer.shortcut_hints),
+        ),
+        (
+            controls.behaviour[2],
             "Reduce animation",
             config.writer.reduced_motion,
             Edit::WriterReducedMotion(!config.writer.reduced_motion),
         ),
         (
-            ids[4],
+            controls.behaviour[3],
             "Zoom around the pointer",
             config.writer.zoom_to_pointer,
             Edit::WriterZoomToPointer(!config.writer.zoom_to_pointer),
         ),
         (
-            ids[5],
+            controls.behaviour[4],
             "Confirm before closing",
             config.writer.confirm_exit,
             Edit::WriterConfirmExit(!config.writer.confirm_exit),

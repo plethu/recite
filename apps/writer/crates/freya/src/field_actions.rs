@@ -1,4 +1,5 @@
 //! Source submission shares the dialog and routed-editor shortcut policy.
+use crate::commands::CommandExt;
 use crate::{
     design::{Button, SubmitAction},
     editing::Writer,

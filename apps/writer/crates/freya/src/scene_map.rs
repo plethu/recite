@@ -251,7 +251,7 @@ fn render(writer: Writer, scene: String) -> Element {
                     rect()
                         .width(Size::fill())
                         .padding((3. * view.zoom, 6. * view.zoom))
-                        .background(palette::Palette::new(writer.dark).canvas)
+                        .background(palette::current().canvas)
                         .corner_radius(t::RADIUS)
                         .child(
                             label()
@@ -275,7 +275,7 @@ fn render(writer: Writer, scene: String) -> Element {
     let error = positions.read().error.clone();
     rect()
         .key("scene-map")
-        .background(palette::Palette::new(writer.dark).canvas)
+        .background(palette::current().canvas)
         .width(Size::flex(1.))
         .height(Size::fill())
         .content(Content::Flex)

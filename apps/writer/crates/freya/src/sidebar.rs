@@ -1,4 +1,5 @@
 //! A stable navigation rail with an animated scene outline and fixed settings footer.
+use crate::commands::CommandExt;
 use crate::design::tokens as t;
 use crate::{controls, editing::Writer};
 use freya::prelude::*;
@@ -40,6 +41,8 @@ fn render(
     let constrained = *writer.layout.available.read() < 900. * t::ui_scale();
     let colors = use_theme().read().colors.clone();
     let body = rect()
+        .on_sized(move |e: Event<SizedEventData>| writer.vim.area(writer.sidebar_focus, e.area))
+        .on_key_down(move |_| writer.vim.enter(writer.sidebar_focus))
         .height(Size::fill())
         .content(Content::Flex)
         .width(Size::fill())
@@ -57,6 +60,11 @@ fn render(
         )
         .child(scenes);
     rect()
+        .on_pointer_down(move |_| {
+            writer.vim.enter(writer.sidebar_focus);
+            writer.sidebar_focus.request_focus();
+        })
+        .on_key_down(move |_| writer.vim.enter(writer.sidebar_focus))
         .a11y_id(writer.sidebar_focus)
         .a11y_focusable(true)
         .a11y_role(AccessibilityRole::Navigation)

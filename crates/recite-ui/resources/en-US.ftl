@@ -908,7 +908,7 @@ writer-gui-unpin-reference = Unpin reference
 
 writer-gui-user-preferences = User preferences
 
-writer-gui-vim-help = Vim: h j k l navigate · i edit · / find a beat · Escape returns to the map
+writer-gui-vim-help = Vim: h j k l navigate · / find · n N matches · gg G list ends · Ctrl+o / Ctrl+i history · Ctrl+w then h j k l panes · : commands (w / wa / q) · Escape leaves text entry
 
 writer-workspace-script-view = Script
 

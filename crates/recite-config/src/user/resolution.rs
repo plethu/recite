@@ -9,7 +9,8 @@ pub use invocation::InvocationOverrides;
 pub use policy::{
     AuthorityValue, ColorPolicy, ContrastPolicy, FieldPolicy, FieldProvenance,
     FieldResolutionError, KeyHintsPolicy, KeymapPolicy, ResolvedField,
-    ShowUnavailableChoicesPolicy, UiLocalePolicy, WriterConfirmExitPolicy, WriterPaneSidePolicy,
-    WriterPresentationPolicy, WriterReducedMotionPolicy, WriterThemePolicy, WriterViewPolicy,
+    ShowUnavailableChoicesPolicy, UiLocalePolicy, WriterConfirmExitPolicy, WriterMonochromePolicy,
+    WriterPaneSidePolicy, WriterPresentationPolicy, WriterReducedMotionPolicy,
+    WriterShortcutHintsPolicy, WriterShortcutsPolicy, WriterThemePolicy, WriterViewPolicy,
     WriterZoomToPointerPolicy, resolve_field,
 };

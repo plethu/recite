@@ -5,6 +5,7 @@ use freya::prelude::*;
 #[derive(Clone, PartialEq)]
 pub(crate) struct SearchField {
     pub query: State<String>,
+    pub insert_request: Option<State<bool>>,
     pub id: AccessibilityId,
     pub placeholder: String,
     pub active: State<Option<usize>>,
@@ -18,6 +19,7 @@ impl Component for SearchField {
         let mut query = self.query;
         let mut active = self.active;
         let mut normal = use_state(|| false);
+        let keys = super::list_keys::ListKeys::new();
         let mut refocus = use_state(|| false);
         let Self {
             id,
@@ -27,6 +29,16 @@ impl Component for SearchField {
             changed,
             ..
         } = self.clone();
+        let insert_request = self.insert_request;
+        use_after_side_effect(move || {
+            if let Some(mut requested) = insert_request
+                && *requested.read()
+            {
+                normal.set(false);
+                id.request_focus();
+                requested.set(false);
+            }
+        });
         // Input's outside-click handler can clear focus after the clear button runs.
         // Retain this request until the next pointer/key interaction, without a timer.
         use_after_side_effect(move || {
@@ -41,7 +53,7 @@ impl Component for SearchField {
             active.set_if_modified(None);
         });
         let colors = t::colors();
-        rect()
+        let field = rect()
             .background(colors.inset)
             .shadow(super::material::inset(1.))
             .corner_radius(t::RADIUS)
@@ -56,7 +68,10 @@ impl Component for SearchField {
             )
             .cross_align(Alignment::Center)
             .padding(t::SPACE_XS)
-            .on_global_pointer_down(move |_| refocus.set_if_modified(false))
+            .on_global_pointer_down(move |_| {
+                refocus.set_if_modified(false);
+                keys.cancel();
+            })
             .horizontal()
             .content(Content::Flex)
             .width(Size::fill())
@@ -90,16 +105,15 @@ impl Component for SearchField {
                     })
                     .on_pre_key_down(move |event: Event<KeyboardEventData>| {
                         refocus.set_if_modified(false);
-                        if let Some(step) = keyboard::list_step(&event, vim && *normal.peek()) {
-                            if count > 0 {
-                                let next = active
-                                    .peek()
-                                    .map_or(if step > 0 { 0 } else { count - 1 }, |i| {
-                                        (i as isize + step).rem_euclid(count as isize) as usize
-                                    });
+                        let current = *active.peek();
+                        if let Some(next) =
+                            keys.navigate(&event, vim && *normal.peek(), current, count)
+                        {
+                            if let Some(next) = next {
                                 active.set(Some(next));
                             }
                             event.stop_propagation();
+                            event.prevent_default();
                             return false;
                         }
                         if event.modifiers.is_empty() {
@@ -123,7 +137,9 @@ impl Component for SearchField {
                                     return false;
                                 }
                                 Key::Character(key)
-                                    if vim && *normal.peek() && (key == "i" || key == "a") =>
+                                    if vim
+                                        && *normal.peek()
+                                        && (key == "i" || key == "a" || key == "/") =>
                                 {
                                     normal.set(false);
                                     event.stop_propagation();
@@ -133,6 +149,9 @@ impl Component for SearchField {
                             }
                         }
                         if vim && *normal.peek() {
+                            if keyboard::vim_workspace_key(&event) {
+                                return false;
+                            }
                             event.stop_propagation();
                             false
                         } else {
@@ -155,7 +174,12 @@ impl Component for SearchField {
                         refocus.set(true);
                     })
                     .child(crate::controls::Icon::Close.colored(colors.muted))
-            }))
+            }));
+        rect()
+            .width(Size::fill())
+            .spacing(t::SPACE_XS)
+            .child(field)
+            .maybe_child(vim.then(|| keys.mode(*normal.read())))
     }
 }
 

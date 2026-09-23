@@ -1,7 +1,12 @@
 //! One command vocabulary for visible actions, search and workspace shortcuts.
 mod keyboard;
+mod vim;
+pub(crate) use vim::{Navigation, modifier_key as vim_modifier_key};
+mod shortcuts;
+pub(crate) use shortcuts::{Hints, hint, shortcut};
 mod palette;
 pub(crate) use keyboard::keyboard;
+pub(crate) use vim::keyboard as vim_keyboard;
 mod execute;
 mod targets;
 use crate::{
@@ -11,31 +16,7 @@ use crate::{
 use freya::prelude::*;
 pub(crate) use palette::Palette;
 
-#[derive(Clone, Copy, Debug, PartialEq, Eq)]
-pub(crate) enum Command {
-    Script,
-    Map,
-    Source,
-    Split,
-    Focus,
-    Commands,
-    GoTo,
-    OpenProject,
-    Save,
-    SaveAll,
-    Apply,
-    Undo,
-    Redo,
-    AddBeat,
-    AddLine,
-    AddReply,
-    Preview,
-    Localise,
-    Declarations,
-    Build,
-    Rename,
-    Settings,
-}
+pub(crate) use recite_config::WriterCommand as Command;
 #[derive(Clone, Copy, Debug, PartialEq, Eq)]
 pub(crate) enum SearchMode {
     Commands,
@@ -63,73 +44,76 @@ impl Search {
         self.return_focus.peek().request_focus();
     }
 }
-impl Command {
-    pub const ALL: &[Self] = &[
-        Self::Script,
-        Self::Map,
-        Self::Source,
-        Self::Split,
-        Self::Focus,
-        Self::GoTo,
-        Self::OpenProject,
-        Self::Save,
-        Self::SaveAll,
-        Self::Apply,
-        Self::Undo,
-        Self::Redo,
-        Self::AddBeat,
-        Self::AddLine,
-        Self::AddReply,
-        Self::Preview,
-        Self::Localise,
-        Self::Declarations,
-        Self::Build,
-        Self::Rename,
-        Self::Settings,
-    ];
-    pub fn label(self, writer: Writer) -> String {
-        text(match self {
-            Self::Script => MsgId::WriterWorkspaceScriptView,
-            Self::Map => MsgId::WriterWorkspaceMapView,
-            Self::Source => MsgId::WriterWorkspaceSourceView,
-            Self::Split => MsgId::WriterWorkspaceSplitView,
-            Self::Focus if *writer.layout.focus.read() => MsgId::WriterWorkspaceExitFocus,
-            Self::Focus => MsgId::WriterWorkspaceFocusWriting,
-            Self::Commands => MsgId::WriterWorkspaceCommands,
-            Self::GoTo => MsgId::WriterWorkspaceGoTo,
-            Self::OpenProject => MsgId::WriterGuiOpenProject,
-            Self::Save => MsgId::WriterWorkspaceSave,
-            Self::SaveAll => MsgId::WriterWorkspaceSaveAll,
-            Self::Apply => MsgId::WriterApplyDraft,
-            Self::Undo => MsgId::WriterWorkspaceUndo,
-            Self::Redo => MsgId::WriterWorkspaceRedo,
-            Self::AddBeat => MsgId::WriterGuiAddBeat,
-            Self::AddLine => MsgId::WriterGuiAddLine,
-            Self::AddReply => MsgId::WriterGuiAddReply,
-            Self::Preview => MsgId::WriterGuiTryScene,
-            Self::Localise => MsgId::WriterLocalise,
-            Self::Declarations => MsgId::WriterDeclarations,
-            Self::Build => MsgId::WriterBuildScenes,
-            Self::Rename => MsgId::WriterRenameProject,
-            Self::Settings => MsgId::WriterGuiUserPreferences,
-        })
+pub(crate) trait CommandExt {
+    fn label(self, writer: Writer) -> String;
+    fn shortcut(self, writer: Writer) -> String;
+    fn enabled(self, writer: Writer) -> bool;
+    fn button(self, writer: Writer) -> crate::design::Button;
+    fn run(self, writer: Writer);
+}
+impl CommandExt for Command {
+    fn run(self, writer: Writer) {
+        execute::run(self, writer);
     }
-    pub fn shortcut(self) -> String {
-        let primary = if cfg!(target_os = "macos") {
-            "Cmd"
-        } else {
-            "Ctrl"
-        };
+    fn label(self, writer: Writer) -> String {
         match self {
-            Self::Commands => format!("{primary}+Shift+P"),
-            Self::GoTo => format!("{primary}+P"),
-            Self::Save => format!("{primary}+S"),
-            Self::Settings => format!("{primary}+,"),
-            Self::Apply => format!("{primary}+Enter"),
-            _ => String::new(),
+            Self::Script => text(MsgId::WriterWorkspaceScriptView),
+            Self::Map => text(MsgId::WriterWorkspaceMapView),
+            Self::Source => text(MsgId::WriterWorkspaceSourceView),
+            Self::Split => text(MsgId::WriterWorkspaceSplitView),
+            Self::Focus if *writer.layout.focus.read() => text(MsgId::WriterWorkspaceExitFocus),
+            Self::Focus => text(MsgId::WriterWorkspaceFocusWriting),
+            Self::Commands => text(MsgId::WriterWorkspaceCommands),
+            Self::GoTo => text(MsgId::WriterWorkspaceGoTo),
+            Self::OpenProject => text(MsgId::WriterGuiOpenProject),
+            Self::Save => text(MsgId::WriterWorkspaceSave),
+            Self::SaveAll => text(MsgId::WriterWorkspaceSaveAll),
+            Self::Apply => text(MsgId::WriterApplyDraft),
+            Self::Undo => text(MsgId::WriterWorkspaceUndo),
+            Self::Redo => text(MsgId::WriterWorkspaceRedo),
+            Self::AddBeat => text(MsgId::WriterGuiAddBeat),
+            Self::AddLine => text(MsgId::WriterGuiAddLine),
+            Self::AddReply => text(MsgId::WriterGuiAddReply),
+            Self::Preview => text(MsgId::WriterGuiTryScene),
+            Self::Localise => text(MsgId::WriterLocalise),
+            Self::Declarations => text(MsgId::WriterDeclarations),
+            Self::Build => text(MsgId::WriterBuildScenes),
+            Self::Rename => text(MsgId::WriterRenameProject),
+            Self::Settings => text(MsgId::WriterGuiUserPreferences),
+
+            Self::Back => "Back".into(),
+            Self::Forward => "Forward".into(),
+            Self::Find => "Find scene or beat".into(),
+            Self::NextMatch => "Next search match".into(),
+            Self::PreviousMatch => "Previous search match".into(),
+            Self::PaneLeft => "Focus pane left".into(),
+            Self::PaneRight => "Focus pane right".into(),
+            Self::PaneUp => "Focus pane above".into(),
+            Self::PaneDown => "Focus pane below".into(),
+            Self::Close => "Close application".into(),
         }
     }
-    pub fn enabled(self, writer: Writer) -> bool {
+    fn shortcut(self, writer: Writer) -> String {
+        if self == Self::Apply {
+            return crate::design::keyboard::submit_hint().into();
+        }
+        writer
+            .preferences
+            .read()
+            .config
+            .writer
+            .shortcuts
+            .binding(self)
+            .replace(
+                "Primary",
+                if cfg!(target_os = "macos") {
+                    "Cmd"
+                } else {
+                    "Ctrl"
+                },
+            )
+    }
+    fn enabled(self, writer: Writer) -> bool {
         if matches!(
             self,
             Self::Save | Self::SaveAll | Self::Declarations | Self::Build | Self::Rename
@@ -158,27 +142,13 @@ impl Command {
         }
         true
     }
-    pub fn button(self, writer: Writer) -> crate::design::Button {
+    fn button(self, writer: Writer) -> crate::design::Button {
         crate::design::Button::new()
             .flat()
             .enabled(self.enabled(writer))
             .named(self.label(writer))
+            .shortcut(self.shortcut(writer))
             .on_press(move |_| self.run(writer))
             .child(self.label(writer))
-    }
-}
-
-pub(crate) fn shortcut(event: &KeyboardEventData) -> Option<Command> {
-    let primary = if cfg!(target_os = "macos") {
-        Modifiers::META
-    } else {
-        Modifiers::CONTROL
-    };
-    match (event.code, event.modifiers) {
-        (Code::KeyP, mods) if mods == primary | Modifiers::SHIFT => Some(Command::Commands),
-        (Code::KeyP, mods) if mods == primary => Some(Command::GoTo),
-        (Code::KeyS, mods) if mods == primary => Some(Command::Save),
-        (Code::Comma, mods) if mods == primary => Some(Command::Settings),
-        _ => None,
     }
 }

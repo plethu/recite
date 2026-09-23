@@ -1,6 +1,9 @@
 //! Independent line-number gutter avoids rc.7's shared horizontal scroll bounds.
 use super::EditorViewport;
-use freya::{code_editor::CodeEditorData, prelude::*};
+use freya::{
+    code_editor::{CodeEditorData, EditorSyntaxTheme},
+    prelude::*,
+};
 
 #[derive(Clone)]
 pub(crate) struct EditorSurface {
@@ -24,6 +27,23 @@ impl Component for EditorSurface {
         let mut editor = self.editor;
         use_side_effect_with_deps(&self.size, move |size| {
             editor.write().measure(*size, "monospace")
+        });
+        let theme = get_theme_or_default();
+        let mut previous_theme = use_state(|| None::<EditorSyntaxTheme>);
+        use_side_effect(move || {
+            let Some(syntax) = theme
+                .read()
+                .get::<EditorSyntaxTheme>("code_editor_syntax")
+                .cloned()
+            else {
+                return;
+            };
+            if previous_theme.peek().as_ref() != Some(&syntax) {
+                previous_theme.set(Some(syntax.clone()));
+                let mut data = editor.write();
+                data.set_theme(syntax);
+                data.parse();
+            }
         });
         self.viewport.observe(self.editor, self.size);
         rect()

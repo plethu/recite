@@ -131,7 +131,7 @@ impl Toolbar {
                         crate::closing::text_input_key(event)
                     }),
             );
-        let colors = crate::design::palette::Palette::new(writer.dark);
+        let colors = crate::design::palette::current();
         let zoom_controls = rect()
             .horizontal()
             .cross_align(Alignment::Center)

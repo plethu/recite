@@ -22,12 +22,24 @@ pub struct ResolvedUserConfig {
     writer_presentation: ResolvedField<crate::WriterPresentation>,
     writer_view: ResolvedField<super::super::WriterView>,
     writer_pane_side: ResolvedField<super::super::WriterPaneSide>,
+    writer_monochrome: ResolvedField<bool>,
+    writer_shortcut_hints: ResolvedField<bool>,
+    writer_shortcuts: ResolvedField<crate::WriterShortcuts>,
     writer_theme: ResolvedField<super::super::WriterTheme>,
     writer_reduced_motion: ResolvedField<bool>,
     writer_zoom_to_pointer: ResolvedField<bool>,
 }
 
 impl ResolvedUserConfig {
+    pub const fn writer_shortcuts(&self) -> &ResolvedField<crate::WriterShortcuts> {
+        &self.writer_shortcuts
+    }
+    pub const fn writer_shortcut_hints(&self) -> &ResolvedField<bool> {
+        &self.writer_shortcut_hints
+    }
+    pub const fn writer_monochrome(&self) -> &ResolvedField<bool> {
+        &self.writer_monochrome
+    }
     pub const fn writer_presentation(&self) -> &ResolvedField<crate::WriterPresentation> {
         &self.writer_presentation
     }
@@ -138,6 +150,39 @@ pub fn resolve_user_config(
                 .field_is_explicit(UserConfigField::WriterPaneSide)
                 .then(|| {
                     AuthorityValue::new(ConfigAuthority::User, loaded.config.writer.pane_side)
+                }),
+        )
+        .unwrap_or_else(|_| unreachable!("writer preferences are user owned")),
+        writer_monochrome: resolve_field(
+            super::policy::WriterMonochromePolicy,
+            super::super::WriterConfig::default().monochrome,
+            loaded
+                .field_is_explicit(UserConfigField::WriterMonochrome)
+                .then(|| {
+                    AuthorityValue::new(ConfigAuthority::User, loaded.config.writer.monochrome)
+                }),
+        )
+        .unwrap_or_else(|_| unreachable!("writer preferences are user owned")),
+        writer_shortcut_hints: resolve_field(
+            super::policy::WriterShortcutHintsPolicy,
+            super::super::WriterConfig::default().shortcut_hints,
+            loaded
+                .field_is_explicit(UserConfigField::WriterShortcutHints)
+                .then(|| {
+                    AuthorityValue::new(ConfigAuthority::User, loaded.config.writer.shortcut_hints)
+                }),
+        )
+        .unwrap_or_else(|_| unreachable!("writer preferences are user owned")),
+        writer_shortcuts: resolve_field(
+            super::policy::WriterShortcutsPolicy,
+            super::super::WriterConfig::default().shortcuts,
+            loaded
+                .field_is_explicit(UserConfigField::WriterShortcuts)
+                .then(|| {
+                    AuthorityValue::new(
+                        ConfigAuthority::User,
+                        loaded.config.writer.shortcuts.clone(),
+                    )
                 }),
         )
         .unwrap_or_else(|_| unreachable!("writer preferences are user owned")),

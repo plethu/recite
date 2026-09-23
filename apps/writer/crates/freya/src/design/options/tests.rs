@@ -10,6 +10,7 @@ fn specimen() -> impl IntoElement {
     use_provide_context(|| ReducedMotion(reduced));
     rect()
         .child(Segments {
+            shortcuts: None,
             name: "View".into(),
             labels: ["Map".into(), "Source".into()],
             ids: [use_a11y(), use_a11y()],
@@ -80,4 +81,29 @@ fn selection_travels_reverses_and_respects_reduced_motion_without_moving_targets
     test.click_cursor(source.center().to_f64());
     test.poll_n(Duration::from_millis(1), 2);
     assert!((indicator(&test).min_x() - start.min_x() - start.width()).abs() < 1.);
+}
+
+#[test]
+fn segment_captions_remain_centered_inside_their_hit_targets() {
+    let mut test = TestingRunner::new(specimen, (400., 200.).into(), |_| {}, 1.).0;
+    test.poll_n(Duration::from_millis(16), 5);
+    for title in ["Map", "Source"] {
+        let button = test
+            .find(|node, element| {
+                Rect::try_downcast(element)
+                    .filter(|r| {
+                        r.accessibility.builder.label() == Some(format!("View: {title}").as_str())
+                    })
+                    .map(|_| node.layout().area)
+            })
+            .expect("segment");
+        let caption = test
+            .find(|node, element| {
+                Label::try_downcast(element)
+                    .filter(|label| label.text == title)
+                    .map(|_| node.layout().area)
+            })
+            .expect("caption");
+        assert!((button.center().x - caption.center().x).abs() < 1.);
+    }
 }

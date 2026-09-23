@@ -91,6 +91,7 @@ pub(super) fn switch(writer: Writer) -> Element {
     let mut pane = writer.pane;
     let active = state.read().active;
     crate::design::Segments {
+        shortcuts: None,
         name: "Activity".into(),
         labels: [
             wording(MsgId::WriterWrite),

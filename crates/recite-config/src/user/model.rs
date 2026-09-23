@@ -5,8 +5,9 @@ use serde::Deserialize;
 
 mod writer;
 pub use writer::{
-    WriterConfig, WriterPaneSide, WriterPresentation, WriterPresentationError,
-    WriterPresentationField, WriterTheme, WriterView,
+    ShortcutError, WriterCommand, WriterConfig, WriterPaneSide, WriterPresentation,
+    WriterPresentationError, WriterPresentationField, WriterShortcut, WriterShortcuts, WriterTheme,
+    WriterView,
 };
 
 mod presence;
@@ -48,6 +49,9 @@ pub enum UserConfigField {
     WriterView,
     WriterPresentation,
     WriterPaneSide,
+    WriterMonochrome,
+    WriterShortcutHints,
+    WriterShortcuts,
     WriterTheme,
     WriterReducedMotion,
     WriterZoomToPointer,

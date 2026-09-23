@@ -222,7 +222,7 @@ fn vim_navigation_is_shared_by_settings_options_and_passage_menus()
     );
     assert_eq!(
         platform.focused_accessibility_node.peek().label(),
-        Some("Dark")
+        Some("Theme: Dark")
     );
     submit(&mut test);
     support::open_beat(&mut test)?;
@@ -290,13 +290,47 @@ fn reply_destination_is_disclosed_and_escape_returns_to_its_trigger()
 #[test]
 fn settings_discloses_technical_details_and_contextual_keymap_help()
 -> Result<(), Box<dyn std::error::Error>> {
-    let mut test = TestingRunner::new(recite_writer::app, Size2D::new(1000., 900.), |_| {}, 1.).0;
+    let (mut test, platform) = TestingRunner::new(
+        recite_writer::app,
+        Size2D::new(1000., 900.),
+        |r| r.provide_root_context(Platform::get),
+        1.,
+    );
     support::click(&mut test, "Settings")?;
     assert!(has(&test, "Appearance") && has(&test, "Editing") && has(&test, "Behaviour"));
     assert!(!has(&test, "Vim: h j k l"));
     assert!(has(&test, "Done"));
-    support::click(&mut test, "Configuration file")?;
-    support::click(&mut test, "Keymap: Vim")?;
+    for name in ["Configuration file", "Keymap: Standard"] {
+        for _ in 0..24 {
+            if platform.focused_accessibility_node.peek().label() == Some(name) {
+                break;
+            }
+            key(
+                &mut test,
+                Key::Named(NamedKey::Tab),
+                Code::Tab,
+                Modifiers::empty(),
+            );
+        }
+        assert_eq!(
+            platform.focused_accessibility_node.peek().label(),
+            Some(name)
+        );
+        key(
+            &mut test,
+            Key::Named(if name == "Configuration file" {
+                NamedKey::Enter
+            } else {
+                NamedKey::ArrowRight
+            }),
+            if name == "Configuration file" {
+                Code::Enter
+            } else {
+                Code::ArrowRight
+            },
+            Modifiers::empty(),
+        );
+    }
     assert!(has(&test, "Vim: h j k l"));
     support::click(&mut test, "Done")?;
     assert!(!has(&test, "Done"));

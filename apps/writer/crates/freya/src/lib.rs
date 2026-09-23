@@ -95,10 +95,20 @@ fn workbench(mode: AppMode) -> Element {
         reduced_motion.set_if_modified(preferences.read().config.writer.reduced_motion)
     });
     use_provide_context(move || presentation::Typography(preferences));
+    let mut shortcut_modifiers = use_state(Modifiers::empty);
+    use_provide_context(|| commands::Hints(shortcut_modifiers));
+    use_side_effect(move || {
+        if !*Platform::get().is_app_focused.read() {
+            shortcut_modifiers.set_if_modified(Modifiers::empty());
+        }
+    });
+    let mut previous_monochrome = use_state(|| preferences.peek().config.writer.monochrome);
     let initially_dark = preferences.peek().config.writer.theme == recite_config::WriterTheme::Dark;
     let mut dark = use_state(move || initially_dark);
     let mut theme = use_init_theme(move || palette::theme(initially_dark));
     let settings_open = use_state(|| false);
+    let modal_count = use_state(|| 0usize);
+    use_provide_context(move || design::ModalState(modal_count));
     let map_focus = use_a11y();
     let inspector_focus = use_a11y();
     let sidebar_focus = use_a11y();
@@ -106,7 +116,7 @@ fn workbench(mode: AppMode) -> Element {
     let selection = use_state(|| None::<String>);
     let search = use_state(String::new);
     let message = crate::feedback::Feedback::new();
-    let mut editor = use_state(move || {
+    let editor = use_state(move || {
         let state = model.peek();
         editor_data(
             state.as_ref().map_or("", Workbench::draft),
@@ -150,12 +160,11 @@ fn workbench(mode: AppMode) -> Element {
     };
     use_side_effect(move || {
         let next = preferences.read().config.writer.theme == recite_config::WriterTheme::Dark;
-        if next != *dark.peek() {
+        let monochrome = preferences.read().config.writer.monochrome;
+        if next != *dark.peek() || monochrome != *previous_monochrome.peek() {
+            previous_monochrome.set(monochrome);
             dark.set(next);
             theme.set(palette::theme(next));
-            let mut data = editor.write();
-            data.set_theme(palette::syntax(next));
-            data.parse();
         }
     });
     let night = *dark.read();
@@ -193,6 +202,7 @@ fn workbench(mode: AppMode) -> Element {
     let reference = use_state(|| None::<reading_context::Reference>);
     let localisation = use_state(localisation::Localisation::default);
     let writer = editing::Writer {
+        vim: commands::Navigation::new(),
         command_search: commands::Search::new(),
         source_viewport: source_editor::EditorViewport::new(),
         layout: presentation::Layout::new(preferences),
@@ -217,6 +227,16 @@ fn workbench(mode: AppMode) -> Element {
         selection,
         search,
     };
+    use_after_side_effect(move || {
+        if *modal_count.read() > 0
+            || writer.preferences.read().config.ui.keymap != recite_config::Keymap::Vim
+            || *writer.settings_open.read()
+            || writer.localisation.read().modal_open()
+            || writer.command_search.mode.read().is_some()
+        {
+            writer.vim.cancel();
+        }
+    });
     let navigation_visible = writer.layout.navigation;
     let file_chrome = (mode == AppMode::Project).then(|| files::controls(writer, message, night));
     let example_scenes = (mode == AppMode::Examples).then(|| examples::navigation(writer, message));
@@ -319,10 +339,20 @@ fn workbench(mode: AppMode) -> Element {
     };
     let mut root = t::interface()
         .expanded()
+        .on_key_down(move |event: Event<KeyboardEventData>| commands::vim_keyboard(writer, &event))
+        .on_global_pointer_down(move |_| writer.vim.cancel())
+        .on_global_key_up(move |event: Event<KeyboardEventData>| {
+            shortcut_modifiers.set_if_modified(event.modifiers);
+        })
         .on_global_key_down(move |event: Event<KeyboardEventData>| {
+            shortcut_modifiers.set_if_modified(event.modifiers);
+            if Platform::get().focused_accessibility_id.peek().0 == 0 {
+                commands::vim_keyboard(writer, &event);
+            }
             commands::keyboard(writer, source, editor_id, event);
         })
         .on_pointer_down(move |event: Event<PointerEventData>| {
+            writer.vim.cancel();
             let mut completion = writer.source_viewport.completion;
             completion.set_if_modified(false);
             if matches!(
@@ -334,6 +364,7 @@ fn workbench(mode: AppMode) -> Element {
             }
         })
         .content(Content::Flex)
+        .maybe_child(writer.vim.hint(writer))
         .font_size(t::body())
         .background(colors.background)
         .color(colors.text_primary)

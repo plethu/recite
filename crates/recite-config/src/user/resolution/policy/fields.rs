@@ -107,3 +107,24 @@ user_policy!(
     crate::WriterPresentation,
     [ConfigAuthority::User]
 );
+
+user_policy!(
+    WriterMonochromePolicy,
+    UserConfigField::WriterMonochrome,
+    bool,
+    [ConfigAuthority::User]
+);
+
+user_policy!(
+    WriterShortcutHintsPolicy,
+    UserConfigField::WriterShortcutHints,
+    bool,
+    [ConfigAuthority::User]
+);
+
+user_policy!(
+    WriterShortcutsPolicy,
+    UserConfigField::WriterShortcuts,
+    crate::WriterShortcuts,
+    [ConfigAuthority::User]
+);

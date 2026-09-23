@@ -49,6 +49,17 @@ impl Component for SourceField {
                             .gutter(false)
                             .show_whitespace(false)
                             .on_pre_key_down(move |event: Event<KeyboardEventData>| {
+                                if matches!(
+                                    event.key,
+                                    Key::Named(
+                                        NamedKey::Control
+                                            | NamedKey::Meta
+                                            | NamedKey::Alt
+                                            | NamedKey::Shift
+                                    )
+                                ) {
+                                    return false;
+                                }
                                 if crate::field_completion::keyboard(writer, &event) {
                                     return false;
                                 }
@@ -102,11 +113,11 @@ impl Component for SourceField {
                         rect()
                             .width(Size::fill())
                             .padding(t::SPACE_SM)
-                            .background(crate::design::palette::Palette::new(writer.dark).inset)
+                            .background(crate::design::palette::current().inset)
                             .border(
                                 Border::new()
                                     .width(1.)
-                                    .fill(crate::design::palette::Palette::new(writer.dark).rule),
+                                    .fill(crate::design::palette::current().rule),
                             )
                             .children(
                                 diagnostics

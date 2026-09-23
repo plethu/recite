@@ -76,3 +76,33 @@ fn shortcut_respects_disabled_state_and_submits_once_from_input_or_button()
     assert!(calls(&test, 3));
     Ok(())
 }
+
+#[test]
+fn dialog_contains_character_navigation_events() {
+    fn app() -> impl IntoElement {
+        let mut leaked = use_state(|| false);
+        rect()
+            .expanded()
+            .on_key_down(move |event: Event<KeyboardEventData>| {
+                if keyboard::vim_commands_key(&event) {
+                    leaked.set(true);
+                }
+            })
+            .child(form())
+            .child(
+                rect()
+                    .position(Position::new_global().top(0.).left(0.))
+                    .child(label().text(format!("Leaked: {}", leaked.read()))),
+            )
+    }
+    let mut test = TestingRunner::new(app, Size2D::new(900., 650.), |_| {}, 1.).0;
+    test.write_text("ready");
+    test.press_key(Key::Named(NamedKey::Tab));
+    test.poll_n(std::time::Duration::from_millis(16), 4);
+    test.press_key(Key::Character(":".into()));
+    test.poll_n(std::time::Duration::from_millis(16), 4);
+    assert!(
+        test.find(|_, e| Label::try_downcast(e).filter(|l| l.text == "Leaked: false"))
+            .is_some()
+    );
+}

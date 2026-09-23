@@ -13,7 +13,7 @@ pub(super) fn controls(writer: Writer, ids: [AccessibilityId; 6]) -> Element {
         label()
             .text(text(MsgId::WriterWorkspacePresentation))
             .font_size(t::small())
-            .color(crate::design::palette::Palette::new(writer.dark).muted),
+            .color(crate::design::palette::current().muted),
     );
     for (index, field, caption, step) in [
         (0, Field::ReadingSize, MsgId::WriterWorkspaceReadingSize, 1),

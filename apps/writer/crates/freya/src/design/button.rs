@@ -28,6 +28,7 @@ pub(crate) struct Button {
     hover_changed: Option<EventHandler<bool>>,
     id: Option<AccessibilityId>,
     name: Option<String>,
+    shortcut: Option<String>,
     enabled: bool,
     selected: Option<bool>,
     checked: Option<bool>,
@@ -47,6 +48,7 @@ impl Button {
             hover_changed: None,
             id: None,
             name: None,
+            shortcut: None,
             enabled: true,
             selected: None,
             checked: None,
@@ -57,6 +59,10 @@ impl Button {
             compact: false,
             key: DiffKey::None,
         }
+    }
+    pub fn shortcut(mut self, shortcut: String) -> Self {
+        self.shortcut = (!shortcut.is_empty()).then_some(shortcut);
+        self
     }
     pub fn compact(mut self) -> Self {
         self.compact = true;
@@ -143,6 +149,8 @@ impl Component for Button {
         let colors = t::colors();
         let fallback = use_a11y();
         let id = self.id.unwrap_or(fallback);
+        let mut area = use_state(|| None);
+        super::focus_scroll::use_reveal(id, area);
         let mut hovered = use_state(|| false);
         let mut pressed = use_state(|| false);
         let action = self.action.clone();
@@ -191,6 +199,12 @@ impl Component for Button {
             colors.ink
         };
         let background = super::motion::surface(background, *pressed.read());
+        let down = self.enabled && *pressed.read();
+        let depth = super::motion::travel(
+            if down { 1. } else { 0. },
+            if down { 0 } else { 80 },
+            freya::animation::Function::Cubic,
+        );
         let role = if self.semantics == Semantics::Tab {
             AccessibilityRole::Tab
         } else if self.semantics == Semantics::MenuItem {
@@ -210,6 +224,10 @@ impl Component for Button {
             } else {
                 colors.accent
             }
+        } else if selected {
+            colors.accent
+        } else if down {
+            colors.boundary
         } else if self.kind == Kind::Secondary && !segment {
             colors.rule
         } else {
@@ -217,6 +235,7 @@ impl Component for Button {
         };
         let mut control = rect()
             .horizontal()
+            .on_sized(move |event: Event<SizedEventData>| area.set_if_modified(Some(event.area)))
             .a11y_id(id)
             .a11y_focusable(self.enabled)
             .a11y_role(role)
@@ -237,6 +256,7 @@ impl Component for Button {
             .main_align(Alignment::Center)
             .cross_align(Alignment::Center)
             .background(background)
+            .shadow(super::material::inset(depth))
             .color(if self.enabled { color } else { colors.muted })
             .border(
                 Border::new()
@@ -252,8 +272,12 @@ impl Component for Button {
         if !self.enabled {
             control = control.a11y_builder(|node| node.set_disabled());
         }
-        if let Some(name) = &self.name {
-            control = control.a11y_alt(name.clone());
+        if let Some(shortcut) = self.shortcut.clone() {
+            control =
+                control.a11y_builder(move |node| node.set_keyboard_shortcut(shortcut.clone()));
+        }
+        if let Some(name) = self.name.clone().or_else(|| content_name(&self.children)) {
+            control = control.a11y_alt(name);
         }
         if matches!(self.semantics, Semantics::Option | Semantics::Tab) {
             let selected = self.selected.unwrap_or(false);
@@ -290,9 +314,51 @@ impl Component for Button {
                     if let Some(action) = &action { action.call(event); }
                 });
         }
-        control.children(self.children.clone())
+        if self.enabled {
+            control = control.maybe_child(
+                self.shortcut
+                    .as_deref()
+                    .and_then(|binding| crate::commands::hint(binding, *area.read())),
+            );
+        }
+        control.child(
+            rect()
+                .horizontal()
+                .width(if self.width == Size::auto() {
+                    Size::auto()
+                } else {
+                    Size::fill()
+                })
+                .cross_align(Alignment::Center)
+                .main_align(Alignment::Center)
+                .offset_y(depth)
+                .children(self.children.clone()),
+        )
     }
     fn render_key(&self) -> DiffKey {
         self.key.clone()
     }
+}
+
+// A press-depth wrapper must not hide a text-only button's accessible name.
+// Custom components still supply an explicit name through `named`.
+fn content_name(children: &[Element]) -> Option<String> {
+    let words: Vec<_> = children
+        .iter()
+        .filter_map(|child| {
+            let Element::Element {
+                element, elements, ..
+            } = child
+            else {
+                return None;
+            };
+            let mut node = element.accessibility().builder.clone();
+            element.finish_accessibility(&mut node);
+            node.value()
+                .or_else(|| node.label())
+                .map(str::to_owned)
+                .or_else(|| content_name(elements))
+        })
+        .collect();
+    (!words.is_empty()).then(|| words.join(" "))
 }

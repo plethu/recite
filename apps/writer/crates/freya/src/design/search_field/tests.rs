@@ -11,6 +11,7 @@ fn form() -> impl IntoElement {
     rect()
         .width(Size::fill())
         .child(SearchField {
+            insert_request: None,
             query,
             id,
             placeholder: "Find".into(),
@@ -78,4 +79,23 @@ fn text_entry_vim_navigation_activation_and_clear_share_state()
             .map(|l| l.text.to_string()))
     );
     Ok(())
+}
+
+#[test]
+fn vim_list_jumps_are_sequences_only_in_normal_mode() {
+    let mut test = TestingRunner::new(form, Size2D::new(700., 400.), |_| {}, 1.).0;
+    test.poll_n(std::time::Duration::from_millis(16), 4);
+    test.write_text("ggG");
+    key(&mut test, Key::Named(NamedKey::Escape));
+    assert!(has(&test, "NORMAL"));
+    key(&mut test, Key::Character("G".into()));
+    assert!(has(&test, "Active: Some(2)"));
+    key(&mut test, Key::Character("g".into()));
+    assert!(has(&test, "g → g first · Esc cancel"));
+    assert!(has(&test, "Active: Some(2)"));
+    key(&mut test, Key::Character("g".into()));
+    assert!(has(&test, "Active: Some(0)"));
+    assert!(has(&test, "Query: ggG"));
+    key(&mut test, Key::Character("i".into()));
+    assert!(has(&test, "INSERT"));
 }

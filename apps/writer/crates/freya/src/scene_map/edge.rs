@@ -57,12 +57,8 @@ impl Component for Edge {
         };
         let curve = Path::from_svg(&self.route.path);
         let arrow = Path::from_svg(&self.route.arrow);
-        let base = if self.dark {
-            Color::from_rgb(146, 152, 143)
-        } else {
-            Color::from_rgb(146, 153, 142)
-        };
-        let p = crate::design::palette::Palette::new(self.dark);
+        let p = crate::design::palette::current();
+        let base = Color::from_rgb(p.boundary.r(), p.boundary.g(), p.boundary.b());
         let accent = Color::from_rgb(p.accent.r(), p.accent.g(), p.accent.b());
         let layer = |color: Color, thickness: f32| {
             let curve = curve.clone();

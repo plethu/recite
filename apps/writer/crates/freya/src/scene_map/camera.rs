@@ -81,6 +81,7 @@ pub(super) fn viewport(
         .height(Size::flex(1.))
         .overflow(Overflow::Clip)
         .on_sized(move |e: Event<SizedEventData>| {
+            writer.vim.area(id, e.area);
             size.set_if_modified((e.area.width(), e.area.height()));
         })
         .on_pointer_down(move |e: Event<PointerEventData>| {
@@ -114,7 +115,10 @@ pub(super) fn viewport(
         .on_global_key_up(move |e: Event<KeyboardEventData>| {
             control.set_if_modified(e.modifiers.contains(Modifiers::CONTROL));
         })
-        .on_key_down(move |e| super::navigation::key(e, writer, &blocks, &nodes))
+        .on_key_down(move |e| {
+            writer.vim.enter(id);
+            super::navigation::key(e, writer, &blocks, &nodes);
+        })
         .on_wheel(move |e: Event<WheelEventData>| {
             let mut c = camera.write();
             if *control.peek() {

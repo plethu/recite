@@ -80,16 +80,27 @@ fn surface(test: &TestingRunner) -> (Area, Color) {
 fn pointer_and_keyboard_show_pressed_state_without_moving_the_target_or_double_activation() {
     let mut test = TestingRunner::new(specimen, Size2D::new(300., 120.), |_| {}, 1.).0;
     test.poll_n(Duration::from_millis(16), 4);
+    let text_y = |test: &TestingRunner| {
+        test.find(|node, element| {
+            Label::try_downcast(element)
+                .filter(|label| label.text == "Action")
+                .map(|_| node.layout().area.min_y())
+        })
+        .expect("button caption")
+    };
+    let resting_text = text_y(&test);
     let (area, resting) = surface(&test);
     test.press_cursor(area.center().to_f64());
     test.poll_n(Duration::from_millis(16), 6);
     let (held_area, held) = surface(&test);
     assert_eq!(area, held_area);
     assert_ne!(resting, held);
+    assert!((text_y(&test) - resting_text - 1.).abs() < 0.01);
     test.release_cursor(area.center().to_f64());
     test.move_cursor(CursorPoint::new(299., 119.));
     test.poll_n(Duration::from_millis(16), 12);
     assert_eq!(resting, surface(&test).1);
+    assert!((text_y(&test) - resting_text).abs() < 0.01);
     test.send_event(PlatformEvent::Keyboard {
         name: KeyboardEventName::KeyDown,
         key: Key::Named(NamedKey::Enter),
@@ -112,4 +123,34 @@ fn pointer_and_keyboard_show_pressed_state_without_moving_the_target_or_double_a
         )
         .is_some()
     );
+}
+
+#[test]
+fn press_depth_preserves_content_names_and_explicit_accessible_names() {
+    let (mut test, platform) = TestingRunner::new(
+        || {
+            rect()
+                .child(Button::new().child("Cancel"))
+                .child(Button::new().named("Save all documents").child("Save all"))
+        },
+        (300., 200.).into(),
+        |r| r.provide_root_context(Platform::get),
+        1.,
+    );
+    test.poll_n(Duration::from_millis(16), 4);
+    for name in ["Cancel", "Save all documents"] {
+        let area = test
+            .find(|node, element| {
+                Rect::try_downcast(element)
+                    .filter(|r| r.accessibility.builder.label() == Some(name))
+                    .map(|_| node.layout().area)
+            })
+            .expect("named button");
+        test.click_cursor(area.center().to_f64());
+        test.poll_n(Duration::from_millis(16), 4);
+        assert_eq!(
+            platform.focused_accessibility_node.peek().label(),
+            Some(name)
+        );
+    }
 }

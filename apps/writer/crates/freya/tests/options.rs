@@ -37,10 +37,20 @@ fn options_select_explicitly_and_arrow_keys_keep_tab_order_in_the_dialog()
         .ok_or("Light option")?;
     assert_eq!(light, Some(accesskit::Toggled::True));
     key(&mut test, NamedKey::Tab, Code::Tab);
+    assert_eq!(
+        platform.focused_accessibility_node.peek().label(),
+        Some("Monochrome colours")
+    );
+    key(&mut test, NamedKey::Tab, Code::Tab);
     let keymap = *platform.focused_accessibility_id.peek();
     support::click(&mut test, "Keymap: Standard")?;
     assert_eq!(*platform.focused_accessibility_id.peek(), keymap);
     key(&mut test, NamedKey::ArrowRight, Code::ArrowRight);
+    key(&mut test, NamedKey::Tab, Code::Tab);
+    assert_eq!(
+        platform.focused_accessibility_node.peek().label(),
+        Some("Script pane (split view): Right")
+    );
     key(&mut test, NamedKey::Tab, Code::Tab);
     let view = *platform.focused_accessibility_id.peek();
     let dialog = test

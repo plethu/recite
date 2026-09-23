@@ -1,4 +1,5 @@
 //! Less frequent workspace actions remain reachable at every text size.
+use crate::commands::CommandExt;
 use crate::{
     commands::Command,
     design::{Button, tokens as t},

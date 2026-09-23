@@ -2735,11 +2735,30 @@ show_unavailable_choices = true
 
 [writer]
 confirm_exit = true
-view = "map"            # "map" or "source"
+view = "script"         # "script", "map", or "source"
 theme = "light"         # "light" or "dark"
+monochrome = false
+shortcut_hints = false # true keeps shortcut chips visible without holding a modifier
 reduced_motion = false
 zoom_to_pointer = true
 ```
+
+Workspace shortcuts can be changed in **Settings → Keyboard shortcuts**. The
+optional `[writer.shortcuts]` table uses action names such as `commands`, `save`,
+`save_all`, `script`, `map`, `source`, `focus`, and `split`. Values use portable
+chords such as `"Primary+Shift+P"` or `"F8"`; `Primary` means Command on macOS and
+Ctrl elsewhere. An empty string disables an assignment. Missing entries use the
+defaults. Duplicate assignments, unmodified character keys, and reserved editing
+or navigation keys are rejected when loading or saving. Apply, Undo and Redo stay
+with the focused editor. These bindings never enter project files.
+
+The native writer's Vim navigation adds `:` for Commands (`w`, `wa`, and `q`
+invoke Save, Save all, and Close), `/` for scene/beat search, `n`/`N` for matching
+beats, and `gg`/`G` for search-list boundaries. `Ctrl+o`/`Ctrl+i` follow navigation
+history; `Ctrl+w` followed by `h/j/k/l` moves between visible panes. Pending pane
+sequences show their destinations and can be cancelled with Escape. Search fields
+show INSERT/NORMAL; character navigation does not replace text insertion. The
+navigation actions also accept alternative workspace chords in Keyboard shortcuts.
 
 The native writer confirms routine closure unless `writer.confirm_exit` is false.
 This preference never bypasses unsaved project protection. Writer presentation

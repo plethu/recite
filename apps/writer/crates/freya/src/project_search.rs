@@ -54,6 +54,7 @@ impl Component for ProjectSearch {
                 .width(Size::fill())
                 .spacing(t::SPACE_XS)
                 .child(crate::design::SearchField {
+                    insert_request: None,
                     query,
                     id,
                     placeholder: "Search project words…".into(),

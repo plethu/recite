@@ -32,6 +32,7 @@ impl<const N: usize> Component for Options<N> {
                     .child(label().text(self.name.clone())),
             )
             .child(Segments {
+                shortcuts: None,
                 name: self.name.clone(),
                 labels: self.labels.clone(),
                 ids: self.ids,
@@ -52,6 +53,7 @@ impl<const N: usize> Component for Options<N> {
 pub(crate) struct Segments<const N: usize = 2> {
     pub name: String,
     pub labels: [String; N],
+    pub shortcuts: Option<[String; N]>,
     pub ids: [AccessibilityId; N],
     pub selected: usize,
     pub vim: bool,
@@ -78,7 +80,7 @@ impl<const N: usize> Component for Segments<N> {
             .height(Size::px((size.read().height - 2. * t::SPACE_XS).max(0.)))
             .corner_radius(t::RADIUS)
             .background(colors.selection)
-            .border(Border::new().width(1.).fill(colors.rule));
+            .border(Border::new().width(1.).fill(colors.accent));
         let ids = self.ids;
         let selected = self.selected;
         let vim = self.vim;
@@ -123,6 +125,11 @@ impl<const N: usize> Component for Segments<N> {
                     .radio(index == selected)
                     .width(Size::flex(1.))
                     .a11y_id(ids[index])
+                    .shortcut(
+                        self.shortcuts
+                            .as_ref()
+                            .map_or_else(String::new, |s| s[index].clone()),
+                    )
                     .named(format!("{}: {caption}", self.name))
                     .on_press(move |_| change.call(index))
                     .child(caption.clone()),
