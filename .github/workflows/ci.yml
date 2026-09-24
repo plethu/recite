@@ -5,44 +5,50 @@ on:
     branches:
       - main
   pull_request:
+    branches:
+      - main
     types:
       - opened
       - synchronize
       - reopened
-      - edited
-      - labeled
-      - unlabeled
+
+  workflow_dispatch:
+  schedule:
+    - cron: "23 5 * * 1"
 
 permissions:
   contents: read
 
 concurrency:
-  group: ci-${{ github.workflow }}-${{ github.ref }}
+  group: ci-${{ github.workflow }}-${{ github.event_name }}-${{ github.ref }}
   cancel-in-progress: true
 
 jobs:
+  changes:
+    name: Select CI coverage
+    runs-on: ubuntu-24.04
+    timeout-minutes: 5
+    outputs:
+      rust: ${{ steps.scope.outputs.rust }}
+      windows-publisher: ${{ steps.scope.outputs.windows-publisher }}
+      docs: ${{ steps.scope.outputs.docs }}
+      editor: ${{ steps.scope.outputs.editor }}
+      benchmark-smoke: ${{ steps.scope.outputs.benchmark-smoke }}
+      maintainability: ${{ steps.scope.outputs.maintainability }}
+      packages: ${{ steps.scope.outputs.packages }}
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          fetch-depth: 0
+          persist-credentials: false
+      - id: scope
+        name: Inspect complete changed-file list
+        run: python3 scripts/ci-scope.py
+
   git-policy:
     name: Git workflow policy
     runs-on: ubuntu-24.04
     timeout-minutes: 5
-    env:
-      RECITE_PR_TITLE: ${{ github.event.pull_request.title }}
-      RECITE_PR_BODY: ${{ github.event.pull_request.body }}
-      # Only the coordinator's final milestone PR carries this label and uses
-      # an integration/<topic> head branch targeting main. Local checks may
-      # set RECITE_INTEGRATION_PR=1 explicitly instead.
-      RECITE_INTEGRATION_LABEL: >-
-        ${{ github.event_name == 'pull_request' &&
-            contains(github.event.pull_request.labels.*.name, 'workflow/integration') &&
-            '1' || '0' }}
-      RECITE_PR_BASE_REF: >-
-        ${{ github.event_name == 'pull_request' &&
-            github.event.pull_request.base.ref || '' }}
-      RECITE_INTEGRATION_PR: >-
-        ${{ github.event_name == 'pull_request' &&
-            contains(github.event.pull_request.labels.*.name, 'workflow/integration') &&
-            startsWith(github.event.pull_request.head.ref, 'integration/') &&
-            '1' || '0' }}
     steps:
       - name: Check out source change
         uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
@@ -53,8 +59,25 @@ jobs:
           fetch-depth: 0
           persist-credentials: false
 
-      - name: Check branch and commit policy
+      # PR metadata and commit policy are checked by the base-owned trusted
+      # workflow, including edits to titles, bodies and integration labels.
+      - name: Check merged commit policy
+        if: github.event_name == 'push'
         run: scripts/check-git-policy.sh
+
+      - name: Install lightweight checkers
+        uses: jdx/mise-action@3c2e0cf82a5b2e5249f0d3635a4d83d0ae861518 # v4.2.5
+        with:
+          install_args: typos aqua:rhysd/actionlint
+
+      - name: Check spelling
+        run: typos
+
+      - name: Validate workflow syntax
+        run: actionlint -shellcheck= -pyflakes=
+
+      - name: Check CI selection and result contracts
+        run: python3 -m unittest discover -s tests/ci -p 'test_*.py'
 
       - name: Check integration-mode policy fixtures
         run: bash tests/git-policy/check-integration.sh
@@ -63,6 +86,8 @@ jobs:
         run: tests/check-pr-review-gates/check-rollup-fixtures.sh
 
   rust:
+    needs: changes
+    if: needs.changes.outputs.rust == 'true'
     name: Rust gates
     runs-on: ubuntu-24.04
     timeout-minutes: 30
@@ -99,6 +124,8 @@ jobs:
         run: xvfb-run -a just probe-writer-native-accessibility
 
   windows-publisher:
+    needs: changes
+    if: needs.changes.outputs.windows-publisher == 'true'
     name: Windows publisher contract
     runs-on: windows-latest
     timeout-minutes: 30
@@ -134,6 +161,8 @@ jobs:
           windows_drive_and_unc_uri_shapes_are_stable
 
   docs:
+    needs: changes
+    if: needs.changes.outputs.docs == 'true'
     name: Documentation
     runs-on: ubuntu-24.04
     timeout-minutes: 15
@@ -145,11 +174,15 @@ jobs:
 
       - name: Install repository toolchain
         uses: jdx/mise-action@3c2e0cf82a5b2e5249f0d3635a4d83d0ae861518 # v4.2.5
+        with:
+          install_args: node pnpm
 
       - name: Verify documentation
         run: scripts/check-docs.sh
 
   editor:
+    needs: changes
+    if: needs.changes.outputs.editor == 'true'
     name: VS Code and Helix clients
     runs-on: ubuntu-24.04
     timeout-minutes: 10
@@ -161,6 +194,11 @@ jobs:
 
       - name: Install repository toolchain
         uses: jdx/mise-action@3c2e0cf82a5b2e5249f0d3635a4d83d0ae861518 # v4.2.5
+        with:
+          install_args: rust node pnpm aqua:BurntSushi/ripgrep
+
+      - name: Cache Rust dependencies and build output
+        uses: Swatinem/rust-cache@6323deb102c322ba6fcbdcafc7e3dddab59af2b6 # v2.9.2
 
       - name: Install editor workspace metadata
         run: scripts/install-js-dependencies.sh
@@ -175,6 +213,8 @@ jobs:
         run: tests/editor-hosts/helix/check.sh
 
   benchmark-smoke:
+    needs: changes
+    if: needs.changes.outputs.benchmark-smoke == 'true'
     # This checks that the tiny benchmark targets build and execute. It does
     # not compare timings or enforce the performance thresholds in §19.8.
     name: Benchmark smoke
@@ -188,6 +228,8 @@ jobs:
 
       - name: Install repository toolchain
         uses: jdx/mise-action@3c2e0cf82a5b2e5249f0d3635a4d83d0ae861518 # v4.2.5
+        with:
+          install_args: rust
 
       - name: Cache Rust dependencies and build output
         uses: Swatinem/rust-cache@6323deb102c322ba6fcbdcafc7e3dddab59af2b6 # v2.9.2
@@ -196,6 +238,8 @@ jobs:
         run: scripts/benchmark-smoke.sh
 
   maintainability:
+    needs: changes
+    if: needs.changes.outputs.maintainability == 'true'
     name: Maintainability
     runs-on: ubuntu-24.04
     timeout-minutes: 10
@@ -229,14 +273,19 @@ jobs:
           scripts/check-ast-grep.sh
           scripts/check-lint-suppressions.sh
           just fmt-check
-          just spelling
           just unused-deps
           just supply-chain
+
+  packages:
+    needs: changes
+    if: needs.changes.outputs.packages == 'true'
+    uses: ./.github/workflows/writer-packages.yml
 
   required-check:
     name: required-check
     if: always()
     needs:
+      - changes
       - git-policy
       - rust
       - docs
@@ -244,23 +293,14 @@ jobs:
       - maintainability
       - windows-publisher
       - editor
+      - packages
     runs-on: ubuntu-24.04
     timeout-minutes: 5
     steps:
-      - name: Require project lanes
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          persist-credentials: false
+      - name: Require every selected lane
         env:
-          BENCHMARK_RESULT: ${{ needs.benchmark-smoke.result }}
-          DOCS_RESULT: ${{ needs.docs.result }}
-          GIT_POLICY_RESULT: ${{ needs.git-policy.result }}
-          MAINTAINABILITY_RESULT: ${{ needs.maintainability.result }}
-          RUST_RESULT: ${{ needs.rust.result }}
-          WINDOWS_PUBLISHER_RESULT: ${{ needs.windows-publisher.result }}
-          EDITOR_RESULT: ${{ needs.editor.result }}
-        run: |
-          test "$GIT_POLICY_RESULT" = success
-          test "$RUST_RESULT" = success
-          test "$DOCS_RESULT" = success
-          test "$BENCHMARK_RESULT" = success
-          test "$MAINTAINABILITY_RESULT" = success
-          test "$WINDOWS_PUBLISHER_RESULT" = success
-          test "$EDITOR_RESULT" = success
+          RECITE_CI_NEEDS: ${{ toJSON(needs) }}
+        run: python3 scripts/check-ci-results.py

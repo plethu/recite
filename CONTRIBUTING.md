@@ -81,9 +81,8 @@ or replace the release benchmark baseline.
   pull-request files. Keep that boundary intact when changing workflow or
   policy files; ordinary CI remains a separate, untrusted pull-request lane.
   The repository's deterministic fixture gate also performs static workflow
-  assertions. Run `actionlint` locally when it is available; it is not
-  installed by the repository toolchain, so CI records static coverage rather
-  than downloading an unpinned validator.
+  assertions. Pinned `actionlint` validates workflow syntax, expressions and
+  reusable-workflow wiring in CI and the complete local gate.
 - Current development is issue-led and branch-based, using short-lived,
   purpose-first branches from `main` under `feat/`, `fix/`, `refactor/`,
   `perf/`, `ci/`, `docs/`, `test/`, `build/`, `chore/`, `spike/`, `release/`,
@@ -101,12 +100,55 @@ or replace the release benchmark baseline.
   sentence and no agent-attribution trailers.
 - The canonical local quality gate is `mise exec -- just check`
   (`scripts/verify.sh`). It loads the scoped `maintainability` mise
-  environment for the pinned ast-grep check. GitHub Actions runs separate Git
-  policy, Rust, documentation, benchmark, and maintainability lanes, followed
-  by the required-check rollup, on every push to `main` and on pull requests
-  (`.github/workflows/ci.yml`). The base-owned trusted policy lane is a separate
+  environment for the pinned ast-grep check. GitHub Actions selects affected
+  lanes on pushes to `main` and pull requests (`.github/workflows/ci.yml`),
+  then validates their results with the unconditional `required-check` rollup.
+  The base-owned trusted policy lane is a separate
   `pull_request_target` check (`.github/workflows/trusted-policy.yml`);
   required CI and branch protection remain authoritative for the final
   protected PR. Focused checks are acceptable for narrow documentation or
   instruction-only changes; run the full gate locally for broad or high-risk
   code changes.
+
+## CI coverage
+
+`scripts/ci-scope.py` selects checks using the complete Git diff, including
+deleted paths and both sides of renames. Pull requests use their merge base;
+pushes compare the previous and current commit. Unknown paths and shared Cargo
+or toolchain inputs select the complete suite. A missing comparison revision
+fails the required check instead of silently skipping coverage.
+
+| Changed surface | Selected checks, in addition to policy, spelling, workflow validation and CI fixtures |
+| --- | --- |
+| Markdown and documentation | Documentation build and schema examples |
+| Core Rust | Rust, adapters, writer UI/accessibility, Windows contracts, editor clients, benchmark smoke, maintainability |
+| Writer source | Rust, adapters, writer UI/accessibility, maintainability |
+| VS Code or Helix | Editor clients and maintainability |
+| Schema and shared fixtures | Rust, Windows, docs, editor clients, benchmark smoke, maintainability |
+| Packaging definitions or assets | Native, Nix and Flatpak packages, docs, maintainability |
+| Cargo manifests/locks, shared toolchain, CI routing, unknown inputs | Complete suite, including packages |
+
+The Rust lane retains the existing writer tests and Linux native accessibility
+probe. Source changes can still reveal platform-specific packaging failures in
+the weekly run; run **Writer package previews** manually before a release or
+when changing platform-dependent source. All ten package jobs run for changed
+packaging/build inputs, on the Monday 05:23 UTC complete run, and on demand.
+The **CI** workflow also supports a manual complete run. These jobs build and
+inspect packages; they do not replace installed-package or manual accessibility
+acceptance.
+
+Title, body and label edits rerun only the trusted policy workflow. Its
+base-owned checks validate current metadata and the commit range; source CI is
+not restarted. Changes to source still cancel superseded runs.
+
+The required rollup accepts a skipped lane only when selection explicitly says
+it is unaffected. A failed selector, missing result, cancellation, or unexpected
+skip blocks the rollup. Package results are included through the reusable
+workflow, so package failures cannot leave the aggregate green.
+
+Inspect selection locally and run its regression tests with:
+
+```sh
+python3 scripts/ci-scope.py --base origin/main --head HEAD
+python3 -m unittest discover -s tests/ci -p 'test_*.py'
+```
