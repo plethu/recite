@@ -48,15 +48,24 @@ pub struct IncomingRoute {
 }
 
 #[derive(Clone)]
-pub struct ActivationInbox(Arc<Mutex<Receiver<IncomingRoute>>>);
+pub struct ActivationInbox {
+    receiver: Arc<Mutex<Receiver<IncomingRoute>>>,
+    polling: Arc<AtomicBool>,
+}
 
 impl ActivationInbox {
     pub(crate) fn new(receiver: Receiver<IncomingRoute>) -> Self {
-        Self(Arc::new(Mutex::new(receiver)))
+        Self {
+            receiver: Arc::new(Mutex::new(receiver)),
+            polling: Arc::new(AtomicBool::new(false)),
+        }
     }
 
     pub(crate) fn try_next(&self) -> Option<IncomingRoute> {
-        self.0.lock().ok()?.try_recv().ok()
+        // Socket ownership precedes window creation. Do not queue requests
+        // until the UI has started consuming them.
+        self.polling.store(true, Ordering::Release);
+        self.receiver.lock().ok()?.try_recv().ok()
     }
 }
 
@@ -155,24 +164,31 @@ fn owner(lock: File, socket: PathBuf) -> Result<Activation, String> {
     let (sender, receiver) = mpsc::sync_channel(QUEUE_SIZE);
     let stop = Arc::new(AtomicBool::new(false));
     let worker_stop = stop.clone();
+    let inbox = ActivationInbox::new(receiver);
+    let polling = inbox.polling.clone();
     let worker = thread::Builder::new()
         .name("recite-writer-activation".into())
-        .spawn(move || serve(listener, sender, worker_stop))
+        .spawn(move || serve(listener, sender, worker_stop, polling))
         .map_err(|e| format!("Could not start writer activation: {e}"))?;
     Ok(Activation::Owner(ActivationHost {
         _lock: lock,
         socket,
         stop,
         worker: Some(worker),
-        inbox: ActivationInbox::new(receiver),
+        inbox,
     }))
 }
 
-fn serve(listener: UnixListener, sender: SyncSender<IncomingRoute>, stop: Arc<AtomicBool>) {
+fn serve(
+    listener: UnixListener,
+    sender: SyncSender<IncomingRoute>,
+    stop: Arc<AtomicBool>,
+    polling: Arc<AtomicBool>,
+) {
     while !stop.load(Ordering::Acquire) {
         match listener.accept() {
             Ok((mut stream, _)) => {
-                let _ = handle(&mut stream, &sender);
+                let _ = handle(&mut stream, &sender, &polling);
             }
             Err(error) if error.kind() == io::ErrorKind::WouldBlock => thread::sleep(ACCEPT_PAUSE),
             Err(error) => {
@@ -183,7 +199,11 @@ fn serve(listener: UnixListener, sender: SyncSender<IncomingRoute>, stop: Arc<At
     }
 }
 
-fn handle(stream: &mut UnixStream, sender: &SyncSender<IncomingRoute>) -> Result<(), String> {
+fn handle(
+    stream: &mut UnixStream,
+    sender: &SyncSender<IncomingRoute>,
+    polling: &AtomicBool,
+) -> Result<(), String> {
     let request: Request = match read_frame(stream) {
         Ok(request) => request,
         Err(error) => {
@@ -206,6 +226,13 @@ fn handle(stream: &mut UnixStream, sender: &SyncSender<IncomingRoute>) -> Result
             return Ok(());
         }
     };
+    if !polling.load(Ordering::Acquire) {
+        write_frame(
+            stream,
+            &Receipt::Refused("The writer is still opening a project.".into()),
+        )?;
+        return Ok(());
+    }
     let (reply, result) = mpsc::channel();
     let cancelled = Arc::new(AtomicBool::new(false));
     if sender

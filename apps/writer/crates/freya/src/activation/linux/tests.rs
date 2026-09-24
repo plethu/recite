@@ -14,6 +14,7 @@ fn process_owner() -> Result<(), Box<dyn std::error::Error>> {
         return Ok(());
     };
     let owner = owner(claim_at(Path::new(&directory), None, None)?);
+    assert!(owner.inbox().try_next().is_none());
     fs::write(Path::new(&directory).join("ready"), "ready")?;
     let deadline = monotonic_now() + Duration::from_secs(8);
     while monotonic_now() < deadline {
@@ -98,5 +99,36 @@ fn unsafe_state_entries_are_rejected() -> Result<(), Box<dyn std::error::Error>>
     let lock = dir.path().join("writer.lock");
     std::os::unix::fs::symlink("/dev/null", &lock)?;
     assert!(claim_at(dir.path(), None, None).is_err());
+    Ok(())
+}
+
+#[test]
+fn cold_owner_refuses_forwarding_until_the_ui_polls() -> Result<(), Box<dyn std::error::Error>> {
+    let dir = tempfile::tempdir()?;
+    let private = dir.path().join("private");
+    let owner = owner(claim_at(&private, None, None)?);
+    let error = match claim_at(&private, None, Some("recite://writer/write")) {
+        Err(error) => error,
+        Ok(_) => return Err("cold owner accepted a request before UI startup".into()),
+    };
+    assert_eq!(error, "The writer is still opening a project.");
+    // A refused cold-start request must never be applied later.
+    assert!(owner.inbox().try_next().is_none());
+    let forwarder = thread::spawn(move || claim_at(&private, None, Some("recite://writer/write")));
+    let deadline = monotonic_now() + IO_TIMEOUT;
+    loop {
+        if let Some(request) = owner.inbox().try_next() {
+            request.reply.send(Ok(()))?;
+            break;
+        }
+        if monotonic_now() >= deadline {
+            return Err("ready owner did not receive activation".into());
+        }
+        thread::sleep(ACCEPT_PAUSE);
+    }
+    assert!(matches!(
+        forwarder.join().map_err(|_| "forwarder panicked")??,
+        Activation::Forwarded
+    ));
     Ok(())
 }
