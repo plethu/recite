@@ -67,6 +67,16 @@ fn dialog(test: &TestingRunner) -> Result<Area> {
     .ok_or_else(|| "open dialog".into())
 }
 
+fn focused_control_is_visible(test: &TestingRunner, platform: &Platform) -> Result<bool> {
+    let focused = platform.focused_accessibility_node.peek();
+    let bounds = focused.bounds().ok_or("focused control bounds")?;
+    let surface = dialog(test)?;
+    Ok(bounds.x0 >= f64::from(surface.min_x()) - 1.
+        && bounds.x1 <= f64::from(surface.max_x()) + 1.
+        && bounds.y0 >= f64::from(surface.min_y()) - 1.
+        && bounds.y1 <= f64::from(surface.max_y()) + 1.)
+}
+
 fn audit_buttons(test: &TestingRunner) {
     let controls = test.find_many(|node, element| {
         let data = element.accessibility();
@@ -126,16 +136,21 @@ fn settings_keyboard_cycle_stays_visible_and_returns_focus_at_large_sizes() -> R
             if !seen.insert(id) {
                 break;
             }
+            // Focus, reveal scrolling, layout, and accessibility commits settle
+            // separately. Wait for the contract, not a fixed four-frame sample.
+            for _ in 0..16 {
+                if focused_control_is_visible(&test, &platform)? {
+                    break;
+                }
+                test.poll_n(Duration::from_millis(16), 1);
+            }
             let focused = platform.focused_accessibility_node.peek().clone();
             let name = focused.label().expect("focused control name");
             assert!(!name.trim().is_empty());
             let bounds = focused.bounds().expect("focused control bounds");
             let surface = dialog(&test)?;
             assert!(
-                bounds.x0 >= f64::from(surface.min_x()) - 1.
-                    && bounds.x1 <= f64::from(surface.max_x()) + 1.
-                    && bounds.y0 >= f64::from(surface.min_y()) - 1.
-                    && bounds.y1 <= f64::from(surface.max_y()) + 1.,
+                focused_control_is_visible(&test, &platform)?,
                 "{scale}%: {name} is outside dialog: {bounds:?}, {surface:?}"
             );
             named_key(&mut test, NamedKey::Tab, Code::Tab);
