@@ -184,7 +184,7 @@ impl Document {
                 + 1,
         )
         .map_err(|_| EditError::Position)?;
-        let candidate = Self::open(self.key().clone(), next.clone())?;
+        let candidate = Self::in_project(self.key().clone(), next.clone(), self.project_context())?;
         let plan = candidate
             .kernel()
             .snapshot()

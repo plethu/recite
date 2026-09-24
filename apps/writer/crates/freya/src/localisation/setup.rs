@@ -70,7 +70,12 @@ impl Component for Setup {
                     let result = if !unchanged || state.peek().dirty() {
                         Err(wording(MsgId::WriterCreationChanged))
                     } else {
-                        result.and_then(|document| create::persist(&document, &job.path))
+                        result.and_then(|document| {
+                            if super::extraction::template(writer, files)? != job.template {
+                                return Err(wording(MsgId::WriterCreationChanged));
+                            }
+                            create::persist(&document, &job.path)
+                        })
                     };
                     match result {
                         Ok(catalogue) => {

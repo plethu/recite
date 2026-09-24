@@ -92,9 +92,10 @@ pub(super) fn run(command: Command, mut writer: Writer) {
             .map(|()| writer.pane.set(Pane::Script)),
         Command::AddLine => writer.try_navigate(Workbench::add_line),
         Command::AddReply => writer.try_navigate(Workbench::add_choice),
-        Command::Preview => writer
-            .try_navigate(Workbench::start_preview)
-            .map(|()| writer.pane.set(Pane::Preview)),
+        Command::Preview => writer.try_navigate(Workbench::start_preview).map(|()| {
+            writer.trial.snapshot.set(None);
+            writer.pane.set(Pane::Preview);
+        }),
         Command::Localise => crate::localisation::enter(writer),
         Command::Declarations => crate::declarations::try_open(writer),
         Command::Build => crate::builds::try_open(writer),

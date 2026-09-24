@@ -22,6 +22,8 @@ pub(crate) struct Catalogue {
     pub path: PathBuf,
     pub document: PoDocument,
     baseline: PoDocumentFingerprint,
+    // Retained by trial runs; replacement also invalidates snapshots after reload.
+    revision: std::sync::Arc<()>,
     drafts: BTreeMap<PoEntryId, Draft>,
     recovery: Option<crate::recovery::SnapshotStore<recovery::SnapshotData>>,
     recovery_failure: Option<String>,
@@ -44,6 +46,7 @@ impl Catalogue {
             }
         }
         Self {
+            revision: std::sync::Arc::new(()),
             recovery: None,
             recovery_failure: None,
             anchors,
@@ -52,6 +55,9 @@ impl Catalogue {
             document,
             drafts: BTreeMap::new(),
         }
+    }
+    pub(crate) fn revision(&self) -> std::sync::Arc<()> {
+        self.revision.clone()
     }
     pub fn dirty(&self) -> bool {
         !self.drafts.is_empty()
@@ -101,6 +107,7 @@ impl Catalogue {
         } else {
             self.drafts.insert(id, draft);
         }
+        self.revision = std::sync::Arc::new(());
         self.queue_recovery();
     }
     pub fn save(&mut self, id: PoEntryId) -> Result<(), String> {
@@ -124,6 +131,7 @@ impl Catalogue {
         let fingerprint = candidate
             .write_atomically(&self.path, &self.baseline)
             .map_err(|e| e.to_string())?;
+        self.revision = std::sync::Arc::new(());
         self.document = candidate;
         self.baseline = fingerprint;
         for id in ids {
@@ -287,6 +295,7 @@ impl Catalogue {
     }
     pub fn discard(&mut self, id: PoEntryId) {
         self.drafts.remove(&id);
+        self.revision = std::sync::Arc::new(());
         self.queue_recovery();
     }
 }

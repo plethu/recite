@@ -1,6 +1,7 @@
 //! A deliberate runtime trial. Requests are answered by the author, never the game.
 mod controls;
 mod prepare;
+mod snapshot;
 mod trace;
 use crate::design::tokens::ProseTypography;
 use crate::messages::{MsgId, text};
@@ -10,6 +11,7 @@ use crate::{
 };
 use freya::prelude::*;
 use recite_writer_model::{ConditionExpectedType, ConditionValue, EffectAck};
+pub(crate) use snapshot::Snapshot;
 
 #[derive(Clone)]
 pub(super) struct PreviewScreen {
@@ -61,9 +63,9 @@ impl Component for PreviewScreen {
         }
         panel = panel.child(controls::Controls { writer });
         if let Some(caption) = writer.trial.snapshot.read().as_ref() {
-            panel = panel.child(label().text(caption.clone()).font_size(t::small()));
+            panel = panel.child(label().text(caption.caption.clone()).font_size(t::small()));
         }
-        if session.is_some_and(|s| s.preview_stale()) {
+        if session.is_some_and(|s| s.preview_stale()) || writer.trial.catalogue_stale(writer) {
             panel = panel.child(label().text(text(MsgId::WriterPreviewStale)));
         }
         let Some(page) = page else {
@@ -187,9 +189,15 @@ pub(crate) struct TrialInputs {
     pub variant: State<String>,
     pub include_drafts: State<bool>,
     pub values: State<std::collections::BTreeMap<String, String>>,
-    pub snapshot: State<Option<String>>,
+    pub snapshot: State<Option<Snapshot>>,
 }
 impl TrialInputs {
+    pub(crate) fn catalogue_stale(&self, writer: Writer) -> bool {
+        self.snapshot
+            .read()
+            .as_ref()
+            .is_some_and(|snapshot| snapshot.stale(writer.localisation.read().catalogue.as_ref()))
+    }
     pub fn new() -> Self {
         Self {
             snapshot: use_state(|| None),

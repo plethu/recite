@@ -52,19 +52,23 @@ impl Component for Controls {
                                 .as_ref()
                                 .map(|m| m.document().revision())
                                 .unwrap_or_default();
-                            writer.trial.snapshot.set(Some(format!(
-                                "{} · {} · {} {revision}",
-                                if locale.peek().is_empty() {
-                                    text(MsgId::WriterSourceOnly)
-                                } else {
-                                    locale.peek().clone()
-                                },
-                                text(if *include_drafts.peek() {
-                                    MsgId::WriterTrialDrafts
-                                } else {
-                                    MsgId::WriterTrialSaved
-                                }),
-                                text(MsgId::WriterSourceRevision)
+                            writer.trial.snapshot.set(Some(super::Snapshot::capture(
+                                format!(
+                                    "{} · {} · {} {revision}",
+                                    if locale.peek().is_empty() {
+                                        text(MsgId::WriterSourceOnly)
+                                    } else {
+                                        locale.peek().clone()
+                                    },
+                                    text(if *include_drafts.peek() {
+                                        MsgId::WriterTrialDrafts
+                                    } else {
+                                        MsgId::WriterTrialSaved
+                                    }),
+                                    text(MsgId::WriterSourceRevision)
+                                ),
+                                !locale.peek().is_empty(),
+                                writer.localisation.peek().catalogue.as_ref(),
                             )));
                         }
                     }

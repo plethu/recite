@@ -162,6 +162,14 @@ fn rename_review_changes_both_documents_and_undo_restores_them()
     }
     support::click(&mut test, "Apply rename")?;
     assert!(has(&test, "Rename applied"));
+    let manifest = dir.path().join("recite.project.toml");
+    let before_settings = std::fs::read_to_string(&manifest)?;
+    support::click(&mut test, "Settings")?;
+    support::click(&mut test, "Project settings")?;
+    support::click(&mut test, "Apply project changes")?;
+    assert!(has(&test, "Save or undo the pending project rename"));
+    assert_eq!(std::fs::read_to_string(&manifest)?, before_settings);
+    support::click(&mut test, "Close settings")?;
     support::click(&mut test, "Save project")?;
     assert!(std::fs::read_to_string(dir.path().join("a.recite"))?.contains(":: renamed"));
     assert!(std::fs::read_to_string(dir.path().join("b.recite"))?.contains("a.recite::renamed"));

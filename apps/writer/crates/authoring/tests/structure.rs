@@ -150,3 +150,33 @@ fn generated_beat_names_respect_other_project_documents() -> Result<(), Box<dyn 
     session.start_preview()?;
     Ok(())
 }
+
+#[test]
+fn inserted_anchor_avoids_ids_in_other_documents() -> Result<(), Box<dyn std::error::Error>> {
+    use recite_compiler::SavedDocument;
+    use recite_core::DocumentKey;
+    use recite_writer_model::{Document, ProjectContext};
+    let mut document = Document::open(
+        DocumentKey::new("current.recite")?,
+        ":: start default\n-> END\n",
+    )?;
+    let first = document.add_line(document.revision(), "start")?;
+    document.undo()?;
+    document.refresh_project(ProjectContext {
+        documents: vec![SavedDocument::new(
+            DocumentKey::new("other.recite")?,
+            format!(":: elsewhere\n> other@{first}\n  Existing.\n-> END\n"),
+        )],
+        schema: None,
+    })?;
+    let second = document.add_line(document.revision(), "start")?;
+    assert_ne!(first, second);
+    assert!(
+        document.diagnostics().is_empty(),
+        "{:?}",
+        document.diagnostics()
+    );
+    document.undo()?;
+    assert_eq!(document.add_line(document.revision(), "start")?, second);
+    Ok(())
+}

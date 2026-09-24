@@ -228,6 +228,9 @@ pub(super) fn render(writer: Writer, files: State<Option<ProjectFiles>>) -> Elem
                             let files = files.as_ref().ok_or("No project")?;
                             let model = writer.buffers.model.peek();
                             let model = model.as_ref().map_err(|e| e.to_string())?;
+                            if files.project_edit_pending(model) {
+                                return Err("Save or undo the pending project rename before changing project settings.".into());
+                            }
                             let documents = files
                                 .open_documents(model)
                                 .into_iter()

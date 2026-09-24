@@ -12,6 +12,7 @@ pub(super) struct Pending {
     pub(super) path: PathBuf,
     pub(super) source: Arc<str>,
     pub(super) document: String,
+    pub(super) template: String,
 }
 
 pub(super) fn begin(
@@ -38,7 +39,8 @@ pub(super) fn begin(
         Err(e) => return Err(e.to_string()),
     }
     Ok(Pending {
-        preparation: create::Preparation::start(template, locale)?,
+        preparation: create::Preparation::start(template.clone(), locale)?,
+        template,
         path,
         source: document.source_snapshot(),
         document: document.key().to_string(),

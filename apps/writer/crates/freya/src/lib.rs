@@ -336,7 +336,9 @@ fn workbench(mode: AppMode) -> Element {
     } else {
         format!("{} diagnostics", diagnostics.len())
     };
-    let preview_status = if session.preview_page().is_some() && session.preview_stale() {
+    let preview_status = if session.preview_page().is_some()
+        && (session.preview_stale() || writer.trial.catalogue_stale(writer))
+    {
         " · Preview is out of date"
     } else {
         ""
