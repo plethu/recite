@@ -1,4 +1,3 @@
-mod preview_revision;
 use super::*;
 const SOURCE: &str = "# translator note\nmsgctxt \"11111111111111111111\"\nmsgid \"Hello {name}\"\nmsgstr \"Bonjour {name}\"\n";
 

@@ -70,6 +70,22 @@ impl Session {
         }
         Ok(Some(registration))
     }
+    pub(crate) fn matches_schema(&self, relative: Option<&str>) -> bool {
+        relative.is_some_and(|path| self.root.join(path) == self.output)
+    }
+    pub(crate) fn check_project_settings(&self, source: &str) -> Result<(), FileError> {
+        let loaded =
+            recite_core::ProjectManifest::load_str_with_spans("recite.project.toml", source);
+        let source = loaded
+            .source
+            .ok_or(FileError::Validation(loaded.diagnostics))?;
+        if !self.matches_schema(source.manifest().project.schema.as_deref())
+            && (self.dirty() || self.busy())
+        {
+            return Err(FileError::SchemaSessionActive);
+        }
+        Ok(())
+    }
     pub fn reload_generated(&mut self) -> Result<(), FileError> {
         if self.busy() {
             return Err(FileError::UnsavedDocument);

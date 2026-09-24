@@ -411,3 +411,46 @@ fn interrupted_project_checkpoint_restores_every_recorded_document()
     assert_eq!(fs::read_to_string(dir.path().join("other.recite"))?, second);
     Ok(())
 }
+
+#[test]
+fn refresh_invalidates_declarations_when_schema_changes() -> Result<(), Box<dyn std::error::Error>>
+{
+    let (dir, mut files) = project()?;
+    let schema = recite_core::SchemaSource::load_str(
+        "schema.toml",
+        "schema_version = 1\n[producer]\nid = 'dialogue'\n",
+    )
+    .source
+    .ok_or("schema")?
+    .export_json();
+    fs::write(dir.path().join("first.json"), &schema)?;
+    fs::write(dir.path().join("second.json"), &schema)?;
+    let manifest = dir.path().join("recite.project.toml");
+    let base = fs::read_to_string(&manifest)?;
+    fs::write(
+        &manifest,
+        base.replace("[project]", "[project]\nschema = 'first.json'"),
+    )?;
+    let mut model = files.workbench()?;
+    files.refresh(&mut model)?;
+    files.declarations = Some(crate::declarations::Session::open(dir.path())?);
+    fs::write(
+        &manifest,
+        base.replace("[project]", "[project]\nschema = 'second.json'"),
+    )?;
+    files.refresh(&mut model)?;
+    assert!(files.declarations.is_none());
+    files.declarations = Some(crate::declarations::Session::open(dir.path())?);
+    assert!(
+        files
+            .declarations
+            .as_ref()
+            .ok_or("declarations")?
+            .output
+            .ends_with("second.json")
+    );
+    fs::write(&manifest, base)?;
+    files.refresh(&mut model)?;
+    assert!(files.declarations.is_none());
+    Ok(())
+}

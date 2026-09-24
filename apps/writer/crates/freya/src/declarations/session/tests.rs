@@ -107,6 +107,10 @@ args=["-c", "cp fixture.json \"$1\"", "producer", "{output}"]
     session.reload_registration();
     assert!(!std::fs::read_to_string(&session.output)?.contains("Updated"));
     session.start_generation()?;
+    assert!(matches!(
+        session.check_project_settings("format_version = 1\n[project]\nschema = 'next.json'\n"),
+        Err(FileError::SchemaSessionActive)
+    ));
     std::fs::write(&session.output, "external edit")?;
     let result = loop {
         if let Some(result) = poll_generation(&mut session) {
@@ -168,5 +172,33 @@ fn declaration_recovery_restores_invalid_drafts_and_keeps_disk_conflicts()
             .draft
             .contains("External")
     );
+    Ok(())
+}
+
+#[test]
+fn dirty_declarations_refuse_schema_replacement_and_removal()
+-> Result<(), Box<dyn std::error::Error>> {
+    let (_dir, mut session) = session()?;
+    let original = "format_version = 1\n[project]\nschema = 'schema.json'\n";
+    let replacement = original.replace("schema.json", "next.json");
+    let removed = "format_version = 1\n[project]\n";
+    session.check_project_settings(&replacement)?;
+    session
+        .source
+        .as_mut()
+        .ok_or("source")?
+        .draft
+        .push_str("\n# unsaved");
+    session.check_project_settings(original)?;
+    assert!(matches!(
+        session.check_project_settings(&replacement),
+        Err(FileError::SchemaSessionActive)
+    ));
+    assert!(matches!(
+        session.check_project_settings(removed),
+        Err(FileError::SchemaSessionActive)
+    ));
+    session.discard()?;
+    session.check_project_settings(removed)?;
     Ok(())
 }

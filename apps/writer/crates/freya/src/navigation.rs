@@ -193,6 +193,13 @@ fn select(model: &mut Workbench, location: &Location) -> Result<(), WorkbenchErr
     {
         return Err(recite_writer_model::EditError::Destination.into());
     }
+    if location.screen == Screen::Rules {
+        let passage = location
+            .passage
+            .as_deref()
+            .ok_or(recite_writer_model::EditError::Destination)?;
+        model.document().reply_rules(passage)?;
+    }
     let view = if location.source || location.screen == Screen::Rules {
         Some(View::Source)
     } else if let Some(passage) = &location.passage {

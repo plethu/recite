@@ -1,4 +1,6 @@
 use super::*;
+const SOURCE: &str =
+    "msgctxt \"11111111111111111111\"\nmsgid \"Hello {name}\"\nmsgstr \"Bonjour {name}\"\n";
 use crate::preview_panel::Snapshot;
 
 #[test]

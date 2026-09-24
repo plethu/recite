@@ -227,10 +227,32 @@ impl ProjectFiles {
         if !report.documents().iter().any(|d| d.path() == self.current) {
             return Err(FileError::Selection);
         }
+        let schema_changed = self.declarations.as_ref().is_some_and(|session| {
+            !session.matches_schema(
+                report
+                    .manifest()
+                    .source()
+                    .manifest()
+                    .project
+                    .schema
+                    .as_deref(),
+            )
+        });
+        if schema_changed
+            && self
+                .declarations
+                .as_ref()
+                .is_some_and(|session| session.dirty() || session.busy())
+        {
+            return Err(FileError::SchemaSessionActive);
+        }
         let context = crate::project_context::load(&report)?;
         self.manifest
             .refresh(report.manifest().source().source_text());
         workbench.refresh_project(self.retained_context(context.clone()))?;
+        if schema_changed {
+            self.declarations = None;
+        }
         self.paths = report
             .documents()
             .iter()

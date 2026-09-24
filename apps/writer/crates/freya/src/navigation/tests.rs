@@ -16,7 +16,6 @@ fn inconsistent_beat_and_passage_link_does_not_change_selection() -> Result<(), 
     assert_eq!(model.view(), &before);
     Ok(())
 }
-
 #[test]
 fn linked_catalogue_must_stay_inside_its_project() -> Result<(), Box<dyn std::error::Error>> {
     let root = tempfile::tempdir()?;
@@ -179,6 +178,17 @@ fn received_route_updates_history_and_refuses_a_source_draft()
         1.,
     );
     test.poll_n(std::time::Duration::from_millis(16), 40);
+    for passage in ["missing", "33333333333333333333"] {
+        let rejected = target
+            .replace("/write?", "/reply-rules?")
+            .replace("&beat=other", "")
+            + "&passage="
+            + passage;
+        let result = submitted_route(&sender, rejected)?;
+        test.poll_n(std::time::Duration::from_millis(16), 10);
+        assert!(result.try_recv()?.is_err());
+        assert!(!contains_paragraph(&test, "Other scene."));
+    }
     let received = submitted_route(&sender, target.clone())?;
     test.poll_n(std::time::Duration::from_millis(16), 10);
     assert_eq!(received.try_recv()?, Ok(()));

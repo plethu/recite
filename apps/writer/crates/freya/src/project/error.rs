@@ -33,6 +33,10 @@ pub enum FileError {
         "Choose a standalone TOML source with the same producer identity as this generated schema."
     )]
     SchemaOwnership,
+    #[error(
+        "Save or discard declaration changes and wait for generation to finish before changing the project schema."
+    )]
+    SchemaSessionActive,
     #[error("Save this document before closing it. Your draft remains open.")]
     UnsavedDocument,
     #[error("The selected file is no longer in this project.")]

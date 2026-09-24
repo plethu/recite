@@ -231,6 +231,9 @@ pub(super) fn render(writer: Writer, files: State<Option<ProjectFiles>>) -> Elem
                             if files.project_edit_pending(model) {
                                 return Err("Save or undo the pending project rename before changing project settings.".into());
                             }
+                            if let Some(declarations) = &files.declarations {
+                                declarations.check_project_settings(&text).map_err(|e| e.to_string())?;
+                            }
                             let documents = files
                                 .open_documents(model)
                                 .into_iter()
