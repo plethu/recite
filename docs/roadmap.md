@@ -236,6 +236,11 @@ without a GUI workbench; editor docs contain tested setup instructions.
 
 ### 5. Native GUI Strategy and Accessibility Proof
 
+**Status:** PR #215 merged on 2026-09-24, closing #54 and #123 and delivering
+the selected framework, accessibility requirements and test plan, and native
+writer preview. Platform and assistive-technology acceptance remains tracked
+in #170 and #79; this milestone's full proof gate is still open.
+
 **Outcome:** Recite chooses its GUI strategy from evidence rather than
 framework enthusiasm.
 
@@ -251,9 +256,11 @@ BiDi/RTL, text scaling, high contrast, non-colour cues, status announcements,
 save conflicts, recovery, reduced motion, and packaging on each claimed platform.
 These checks reuse the shared authoring fixtures and semantics.
 
-Writer packaging is still outstanding. Its acceptance includes `recite://`
-registration on every supported OS, opening the linked project on cold launch,
-delivery to an already-running window, and the existing unsaved-edit guards.
+PR #215 includes native package definitions, Flatpak and Nix builds, and
+hosted package checks. Installed-package acceptance is still outstanding. It
+includes `recite://` registration on every supported OS, opening the linked
+project on cold launch, delivery to an already-running window, and the existing
+unsaved-edit guards.
 The [packaging requirements](../apps/writer/packaging.md) define the installation,
 upgrade and uninstall smoke evidence tracked in #79.
 
@@ -262,6 +269,12 @@ frontend's support, dependencies, known limitations, maintenance cost, and
 reconsideration triggers. Selection does not imply platform acceptance.
 
 ### 6. GUI Workbench
+
+**Status:** PR #215 delivers the Freya authoring preview, including Script,
+Source, and Map views, producer-backed declarations, lossless PO editing, and
+shared runtime preview. #170 remains open for the full platform, accessibility,
+and authoring acceptance gate. Current evidence and limitations are recorded in
+[the writer acceptance record](../apps/writer/acceptance.md).
 
 **Outcome:** writers can use an accessible standalone workbench without losing
 the text-first workflow.
@@ -402,11 +415,11 @@ remain authoritative if the tracker is split again.
 | Language, schema, and localisation readiness | Complete (0 open; 12 closed milestone items; delivered by PR #183 and correction PR #184) | 18 |
 | Shared authoring kernel and preview | Complete (0 open; 8 closed milestone items; delivered by PR #191; #167, #168, and #185 complete) | 19 |
 | Editor integration parity | Complete (0 open; 18 closed milestone items; delivered by PR #207 after PRs #198, #200, and #204) | 20 |
-| Native GUI strategy and accessibility proof | [#54 GUI strategy](https://github.com/plethu/recite/issues/54), [#123 accessibility requirements](https://github.com/plethu/recite/issues/123) (2 open) | 21 |
+| Native GUI strategy and accessibility proof | Strategy and conformance plan delivered by PR #215 (#54 and #123 closed; 0 open owner issues); platform proof remains in #170 and #79 | 21 |
 | GUI workbench | [#170 GUI workbench](https://github.com/plethu/recite/issues/170) (1 open) | 22 |
 | Engine companions | #49, #83–#86, #132–#134 (8 open) | 23 |
 | Distribution, adoption, and migration | #38, #56, #57, #60, #99, #100–#103 (bounded subset importers), #104 (10 open) | 24 |
-| Serious v1 release | #77–#81, #109 (6 open) | 25 |
+| Serious v1 release | #77–#81, #109, #206 (7 open) | 25 |
 | Post-v1 / no milestone (non-exhaustive tracker group) | #74, #119, #121, #126 (4 open); generated host-language bindings and other deferred directions still need future ownership | — |
 
 M17 is complete with 0 open and 8 closed milestone items. PR #174 delivered the
@@ -448,10 +461,11 @@ discovery, and kernel seam. Editor Integration Parity implementation landed on
 foundations. PR #204 delivered bounded Linux host records and closed #51 and
 #202; PR #207 closed #53 and #192 and completed the M20 exit gate on 2026-09-07.
 PR #210 subsequently added bounded Helix support and a Ki evaluation outside
-the v1 parity contract. Native GUI Strategy and Accessibility Proof (milestone
-21), tracked by #54 and #123, may proceed independently because completed
-editor clients are not its entry gate. Substantial language, runtime, CLI, LSP,
-benchmark, FFI, Godot, and Unity work already exists, but each area remains
-subject to its milestone exit gate. The largest remaining structural gaps are
-the native GUI/accessibility decision, the GUI workbench, and the Godot, Unity,
-and Bevy companion and distribution paths.
+the v1 parity contract. PR #215 merged on 2026-09-24 and closed #54 and #123,
+delivering the GUI strategy, accessibility conformance plan, and maintained
+writer preview. Native authoring and accessibility acceptance remains in #170;
+installed-package and desktop-link acceptance remains in #79. Substantial
+language, runtime, CLI, LSP, benchmark, FFI, Godot, and Unity work already
+exists, but each area remains subject to its milestone exit gate. The largest
+remaining gaps are GUI platform and accessibility acceptance, and the Godot,
+Unity, and Bevy companion and distribution paths.
