@@ -3615,8 +3615,10 @@ The runtime should prefer shared immutable compiled data plus compact session st
 
 ### 19.8 Regression Policy
 
-CI should run a fast, non-comparative benchmark smoke suite on every pull
-request and a fuller benchmark suite on release branches or scheduled jobs. The
+CI should run a fast, non-comparative benchmark smoke suite on pull requests
+that affect core Rust, benchmark fixtures, or shared build inputs, and on the weekly
+complete CI run. Documentation-only changes do not require benchmark builds.
+A fuller benchmark suite belongs on release branches or scheduled jobs. The
 pull-request smoke suite must use the existing `crates/recite-benchmarks`
 Criterion targets with `RECITE_BENCH_SCALES=tiny` and explicit
 compiler/runtime/preview bench target commands. It proves that the tiny

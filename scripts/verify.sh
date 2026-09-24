@@ -102,6 +102,7 @@ echo "== developer tool checks =="
   just spelling
   just unused-deps
   just supply-chain
+  actionlint -shellcheck= -pyflakes=
 )
 
 echo "== Git workflow policy =="
@@ -110,6 +111,10 @@ echo "== Git workflow policy =="
 echo
 echo "== Git workflow integration policy fixtures =="
 bash "$repo_root/tests/git-policy/check-integration.sh" "$repo_root"
+
+echo
+echo "== CI selection and result contracts =="
+python3 -m unittest discover -s "$repo_root/tests/ci" -p 'test_*.py'
 
 echo
 echo "== maintainability fixtures and changed-surface check =="

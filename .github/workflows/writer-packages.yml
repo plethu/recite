@@ -1,25 +1,10 @@
 name: Writer package previews
 
+# Called by CI for packaging/build inputs and its weekly complete run.
+# Maintainers can also dispatch this workflow before a release.
 on:
+  workflow_call:
   workflow_dispatch:
-  pull_request:
-    paths:
-      - 'apps/writer/**'
-      - 'assets/identity/**'
-      - 'crates/**'
-      - 'Cargo.toml'
-      - 'Cargo.lock'
-      - 'scripts/package-writer*'
-      - 'scripts/check-writer-package*'
-      - 'scripts/check-writer-desktop-links.py'
-      - 'tests/writer-packaging/**'
-      - 'tests/writer-flatpak/**'
-      - 'scripts/check-writer-flatpak*'
-      - 'flake.nix'
-      - 'flake.lock'
-      - 'nix/**'
-      - '.mise.toml'
-      - '.github/workflows/writer-packages.yml'
 
 permissions:
   contents: read

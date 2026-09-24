@@ -49,5 +49,6 @@ wall-clock values, nondeterministic ordering, and debug-only formatting.
   surfaces are involved.
 - Benchmark and scale evidence support the serious-v1 release outcome (roadmap
   milestone 9 / GitHub milestone 25). Issue #109 owns the release benchmark
-  baseline; benchmark smoke remains a required pull-request check, while
-  numeric budgets remain evidence until that baseline is established.
+  baseline. Require benchmark smoke for affected changes and complete CI runs
+  as defined in production spec §19.8; numeric budgets remain evidence until
+  that baseline is established.
