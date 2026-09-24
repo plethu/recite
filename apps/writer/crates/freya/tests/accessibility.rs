@@ -67,10 +67,31 @@ fn dialog(test: &TestingRunner) -> Result<Area> {
     .ok_or_else(|| "open dialog".into())
 }
 
+fn dialog_viewport(test: &TestingRunner) -> Result<Area> {
+    let dialog = test
+        .find(|node, element| {
+            (element.accessibility().builder.role() == AccessibilityRole::Dialog).then_some(node)
+        })
+        .ok_or("open dialog")?;
+    let mut children = dialog.children();
+    while let Some(node) = children.pop() {
+        if node.element().accessibility().builder.role() == AccessibilityRole::ScrollView {
+            return Ok(node.layout().area);
+        }
+        children.extend(node.children());
+    }
+    Err("dialog scroll viewport".into())
+}
+
 fn focused_control_is_visible(test: &TestingRunner, platform: &Platform) -> Result<bool> {
     let focused = platform.focused_accessibility_node.peek();
     let bounds = focused.bounds().ok_or("focused control bounds")?;
-    let surface = dialog(test)?;
+    let dialog_area = dialog(test)?;
+    let surface = if focused.label() == Some("Done") {
+        dialog_area
+    } else {
+        dialog_viewport(test)?
+    };
     Ok(bounds.x0 >= f64::from(surface.min_x()) - 1.
         && bounds.x1 <= f64::from(surface.max_x()) + 1.
         && bounds.y0 >= f64::from(surface.min_y()) - 1.

@@ -40,6 +40,12 @@ pub(super) fn use_reveal(id: AccessibilityId, area: State<Option<Area>>) {
         if *revealed.peek() {
             return;
         }
+        // Freya already scrolls fully clipped controls into view. Let that
+        // wheel event settle before correcting any remaining partial clipping.
+        // Applying both deltas against the old layout scrolls past the target.
+        if !visible.intersects(&target) {
+            return;
+        }
         revealed.set(true);
         let delta = if target.min_y() < visible.min_y() {
             visible.min_y() - target.min_y()
