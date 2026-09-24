@@ -40,9 +40,12 @@ impl ProjectFiles {
         };
         let disk = comparison.disk.clone();
         let copy = self.export(model)?;
+        model.set_draft(next);
+        if !keep {
+            model.apply()?;
+        }
         self.saved = disk.into();
         self.update_saved_context()?;
-        model.set_draft(next);
         self.checkpoint(model)?;
         Ok(copy)
     }
@@ -55,3 +58,6 @@ impl ProjectFiles {
         baseline.is_some_and(|baseline| read_regular(path).map_or(true, |disk| disk != baseline))
     }
 }
+
+#[cfg(test)]
+mod tests;

@@ -1,6 +1,55 @@
 use super::*;
 
 #[test]
+fn excluded_retained_scene_keeps_its_draft_navigation_and_save_path()
+-> Result<(), Box<dyn std::error::Error>> {
+    let dir = tempfile::tempdir()?;
+    let root = dir.path().canonicalize()?;
+    let manifest = root.join("recite.project.toml");
+    let original_manifest = "format_version = 1\n[project]\n";
+    std::fs::write(&manifest, original_manifest)?;
+    let a = root.join("a.recite");
+    let b = root.join("b.recite");
+    let source = ":: start default\n> line@11111111111111111111\n  Original.\n-> END\n";
+    let changed = source.replace("Original.", "Unsaved.");
+    std::fs::write(&a, source)?;
+    std::fs::write(&b, ":: other\n-> END\n")?;
+    let mut files = ProjectFiles::open(&root)?;
+    let mut current = files.workbench()?;
+    current.select(recite_writer_model::View::Source)?;
+    current.set_draft(changed.clone());
+    files.switch(&mut current, &b, |_| Ok(()))?;
+    let tabs = files.open_documents(&current);
+    std::fs::write(
+        &manifest,
+        "format_version = 1\n[project]\n[discovery]\nexcludes = ['a.recite']\n",
+    )?;
+
+    assert!(matches!(
+        files.refresh(&mut current),
+        Err(FileError::SessionExcluded(path)) if path == a
+    ));
+    assert_eq!(files.current, b);
+    assert_eq!(files.open_documents(&current), tabs);
+    assert_eq!(files.manifest.text(), original_manifest);
+    assert_eq!(std::fs::read_to_string(&a)?, source);
+    files.switch(&mut current, &a, |_| Ok(()))?;
+    assert!(current.has_draft());
+    assert_eq!(current.draft(), changed);
+    files.switch(&mut current, &b, |_| Ok(()))?;
+    files.save_retained()?;
+    assert_eq!(std::fs::read_to_string(&a)?, changed);
+    assert!(!files.retained_dirty());
+
+    std::fs::write(&manifest, original_manifest)?;
+    files.refresh(&mut current)?;
+    files.switch(&mut current, &a, |_| Ok(()))?;
+    assert_eq!(current.document().source(), changed);
+    assert!(!current.has_draft());
+    Ok(())
+}
+
+#[test]
 fn extraction_uses_retained_edits_and_refreshes_clean_scenes()
 -> Result<(), Box<dyn std::error::Error>> {
     let dir = tempfile::tempdir()?;

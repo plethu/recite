@@ -224,8 +224,10 @@ impl ProjectFiles {
         if !report.is_complete() {
             return Err(FileError::Incomplete);
         }
-        if !report.documents().iter().any(|d| d.path() == self.current) {
-            return Err(FileError::Selection);
+        for path in self.session_paths() {
+            if !report.documents().iter().any(|d| d.path() == path) {
+                return Err(FileError::SessionExcluded(path.clone()));
+            }
         }
         let schema_changed = self.declarations.as_ref().is_some_and(|session| {
             !session.matches_schema(

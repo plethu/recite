@@ -234,11 +234,7 @@ pub(super) fn render(writer: Writer, files: State<Option<ProjectFiles>>) -> Elem
                             if let Some(declarations) = &files.declarations {
                                 declarations.check_project_settings(&text).map_err(|e| e.to_string())?;
                             }
-                            let documents = files
-                                .open_documents(model)
-                                .into_iter()
-                                .map(|(path, _)| path)
-                                .collect::<Vec<_>>();
+                            let documents = files.session_paths().cloned().collect::<Vec<_>>();
                             p.save_preserving_documents(&text, &documents)
                                 .map_err(project_error)
                         });

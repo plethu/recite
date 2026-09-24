@@ -39,6 +39,10 @@ pub enum FileError {
     SchemaSessionActive,
     #[error("Save this document before closing it. Your draft remains open.")]
     UnsavedDocument,
+    #[error(
+        "The manifest excludes a retained document: {0}. Restore its project inclusion before refreshing; its edits remain open."
+    )]
+    SessionExcluded(std::path::PathBuf),
     #[error("The selected file is no longer in this project.")]
     Selection,
     #[error(

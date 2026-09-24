@@ -13,6 +13,11 @@ pub(super) struct Retained {
     pub(super) recovery: RecoveryStore,
 }
 impl ProjectFiles {
+    /// Include closed tabs: their sessions still own history and recovery state.
+    pub(crate) fn session_paths(&self) -> impl Iterator<Item = &PathBuf> {
+        std::iter::once(&self.current).chain(self.retained.keys())
+    }
+
     pub(super) fn retained_context(
         &self,
         mut context: recite_writer_model::ProjectContext,
