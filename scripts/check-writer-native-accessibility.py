@@ -27,10 +27,10 @@ ACCESSIBLE = "org.a11y.atspi.Accessible"
 ROOT = "/org/a11y/atspi/accessible/root"
 
 
-def call(bus, address, interface, method, arguments=None):
+def call(bus, address, interface, method, arguments=None, *, flags=Gio.DBusCallFlags.NONE):
     return bus.call_sync(
         address[0], address[1], interface, method, arguments, None,
-        Gio.DBusCallFlags.NONE, 2000, None,
+        flags, 2000, None,
     ).unpack()
 
 
@@ -44,7 +44,7 @@ def wait_for(operation, description, process, timeout=20):
     last_error = None
     while time.monotonic() < deadline:
         if process.poll() is not None:
-            raise RuntimeError(f"Writer exited with {process.returncode}: {description}")
+            raise RuntimeError(f"Child process exited with {process.returncode}: {description}")
         try:
             value = operation()
             if value:
@@ -111,7 +111,9 @@ def probe(binary, require_actions):
     # which does not run inside this private session.
     with child_process([registry_binary], env=dict(os.environ, AT_SPI_BUS_ADDRESS=address),
                        stdout=subprocess.DEVNULL, stderr=subprocess.DEVNULL) as registry_process:
-        wait_for(lambda: call(bus, registry, ACCESSIBLE, "GetChildren") or True,
+        # Do not activate a competing registry while our child acquires its name.
+        wait_for(lambda: call(bus, registry, ACCESSIBLE, "GetChildren",
+                              flags=Gio.DBusCallFlags.NO_AUTO_START) or True,
                  "private AT-SPI registry", registry_process)
         run_specimen(binary, bus, registry, require_actions)
 
