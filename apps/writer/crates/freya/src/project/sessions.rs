@@ -23,6 +23,23 @@ impl ProjectFiles {
         context
     }
 
+    /// Catalogue extraction refreshes clean scenes from disk and overlays applied
+    /// unsaved edits. Unapplied drafts must be resolved before extraction.
+    pub(crate) fn catalogue_context(
+        &self,
+        mut context: recite_writer_model::ProjectContext,
+    ) -> Result<recite_writer_model::ProjectContext, FileError> {
+        for session in self.retained.values() {
+            if session.model.has_draft() {
+                return Err(FileError::UnsavedDocument);
+            }
+            if session.model.document().source() != session.baseline.as_ref() {
+                overlay(&mut context, &session.model);
+            }
+        }
+        Ok(context)
+    }
+
     /// The current document and every retained session, in project order.
     pub fn open_documents(&self, current: &Workbench) -> Vec<(PathBuf, bool)> {
         self.paths
@@ -177,3 +194,6 @@ fn overlay(context: &mut recite_writer_model::ProjectContext, model: &Workbench)
         *slot = saved;
     }
 }
+
+#[cfg(test)]
+mod tests;

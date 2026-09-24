@@ -18,13 +18,16 @@ pub(super) fn template(
     let root = project
         .as_ref()
         .map_or(std::path::Path::new("."), |p| p.root());
-    // Refresh other saved scenes, retaining the current unsaved source overlay.
-    let report = if project.is_some() {
+    // Refresh saved scenes, retaining applied unsaved edits from every open scene.
+    let report = if let Some(project) = project.as_ref() {
         let discovered = recite_config::discover_project(root).map_err(|e| e.to_string())?;
         if !discovered.is_complete() {
             return Err(wording(MsgId::WriterCreateIncomplete));
         }
         let context = crate::project_context::load(&discovered).map_err(|e| e.to_string())?;
+        let context = project
+            .catalogue_context(context)
+            .map_err(|e| e.to_string())?;
         let snapshot = recite_writer_model::Document::in_project(
             document.key().clone(),
             document.source(),
